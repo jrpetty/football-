@@ -21,18 +21,20 @@ import { KITS } from '../config'
 // Limb rotations are about X. Because the model faces +Z, a positive angle
 // swings a limb *backwards* and a negative one forwards.
 interface Limb {
-  hip: THREE.Group // shoulder for an arm
-  knee: THREE.Group // elbow for an arm
+  hip: THREE.Bone // shoulder for an arm
+  knee: THREE.Bone // elbow for an arm
   foot?: THREE.Object3D
 }
 
-interface Mats {
+export interface Mats {
   jersey: THREE.Material
   shorts: THREE.Material
   socks: THREE.Material
   skin: THREE.Material
   boot: THREE.Material
   hair: THREE.Material
+  // What the hands are wearing: bare skin for an outfield player, gloves for a keeper.
+  hand: THREE.Material
 }
 
 const MODEL_HEIGHT = 1.9 // the proportions below are built at this height
@@ -42,9 +44,16 @@ export class PlayerRig {
   readonly ring: THREE.Mesh
   private body = new THREE.Group() // scaled to real human height
   private root = new THREE.Group() // bob, lean and bank live here
-  private hips = new THREE.Group()
-  private torso = new THREE.Group()
-  private head = new THREE.Group()
+  // The joints are bones. The body is one skinned mesh per material rather than
+  // a mesh per limb, which is the difference between about eight draw calls a
+  // player and about twenty-five — and in a six-a-side match that is the
+  // difference between the players being a fifth of the frame's work and being
+  // most of it.
+  private hips = new THREE.Bone()
+  private torso = new THREE.Bone()
+  private head = new THREE.Bone()
+  private bones: THREE.Bone[] = []
+  private skinned: THREE.SkinnedMesh[] = []
   private legs: Limb[] = []
   private arms: Limb[] = []
 
@@ -57,30 +66,40 @@ export class PlayerRig {
   // contact pose can write them freely without corrupting the run cycle.
   private spine = { rootX: 0, rootZ: 0, hipsY: 0, torsoY: 0, torsoX: 0 }
 
-  constructor(mats: Mats, team: 'home' | 'away', role: string, num: number) {
+  // A joint: a bone hung off `parent` at (x, y, z).
+  private bone(parent: THREE.Object3D, x = 0, y = 0, z = 0): THREE.Bone {
+    const b = new THREE.Bone()
+    b.position.set(x, y, z)
+    parent.add(b)
+    this.bones.push(b)
+    return b
+  }
+
+  // hairStyle: 0 a short crop, 1 close-shaved, 2 longer on top.
+  constructor(mats: Mats, team: 'home' | 'away', role: string, num: number, hairStyle = 0) {
     this.group.add(this.body)
     this.body.add(this.root)
     this.root.add(this.hips)
     this.hips.add(this.torso)
+    this.bones.push(this.hips, this.torso)
 
     const kit = KITS[team]
 
     // ---- torso ----
-    const pelvis = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.24, 0.26), mats.shorts)
-    pelvis.position.y = 0.02
-    pelvis.castShadow = true
+    const pelvis = new THREE.Mesh(new THREE.CapsuleGeometry(0.13, 0.1, 2, 10), mats.shorts)
+    pelvis.scale.set(1.5, 1, 1.05)
+    pelvis.position.y = 0.03
     this.hips.add(pelvis)
 
     // Torso in two parts so the silhouette tapers. A single capsule read as a
     // slab: same width at the shoulders as at the belt, which is what made the
     // body look like a sign rather than a person.
-    const chest = new THREE.Mesh(new THREE.CapsuleGeometry(0.22, 0.26, 3, 10), mats.jersey)
+    const chest = new THREE.Mesh(new THREE.CapsuleGeometry(0.22, 0.26, 3, 12), mats.jersey)
     chest.scale.set(1.24, 1, 0.78)
     chest.position.y = 0.46
-    chest.castShadow = true
     this.torso.add(chest)
 
-    const waist = new THREE.Mesh(new THREE.CapsuleGeometry(0.19, 0.14, 3, 8), mats.jersey)
+    const waist = new THREE.Mesh(new THREE.CapsuleGeometry(0.19, 0.14, 2, 10), mats.jersey)
     waist.scale.set(1.05, 1, 0.72)
     waist.position.y = 0.18
     this.torso.add(waist)
@@ -88,13 +107,14 @@ export class PlayerRig {
     // Deltoid caps, so the arms grow out of the shoulders instead of being
     // stuck onto the side of a box.
     for (const side of [-1, 1]) {
-      const delt = new THREE.Mesh(new THREE.SphereGeometry(0.105, 8, 6), mats.jersey)
+      const delt = new THREE.Mesh(new THREE.SphereGeometry(0.108, 8, 5), mats.jersey)
       delt.scale.set(1, 0.9, 0.85)
       delt.position.set(0.245 * side, 0.55, 0)
       this.torso.add(delt)
     }
 
-    // Squad number across the shoulders.
+    // Squad number across the shoulders. The one part of the body that is not
+    // skinned: it has a texture and a transparency of its own.
     const numTex = new THREE.CanvasTexture(numberTexture(num, kit.secondary))
     numTex.colorSpace = THREE.SRGBColorSpace
     const back = new THREE.Mesh(
@@ -103,44 +123,52 @@ export class PlayerRig {
     )
     back.position.set(0, 0.42, -0.185)
     back.rotation.y = Math.PI
+    back.userData.keep = true
     this.torso.add(back)
 
-    // ---- head, on its own group so it can be held level while the body works ----
+    // ---- head, on its own bone so it can be held level while the body works ----
     this.torso.add(this.head)
+    this.bones.push(this.head)
     this.head.position.y = 0.62
-    // The head is eleven pieces that never move relative to each other — neck,
-    // skull, hair, nape, two eyes, two brows, two ears and a nose — and they
-    // use two materials between them. Built as eleven meshes that was eleven
-    // draw calls per player per frame, times eight players in a match, for a
-    // cluster of geometry the size of a fist.
-    //
-    // So they are merged into one mesh per material. Nothing about how it looks
-    // changes; the head is still the difference between a person and a
-    // mannequin when the camera comes in close. It is just two calls instead of
-    // eleven.
+    // The head is a dozen pieces that never move relative to each other — neck,
+    // skull, hair, nape, two eyes, two brows, two ears and a nose — and they use
+    // two materials between them, so they are merged into one geometry per
+    // material before they are baked into the body.
     const skinParts: THREE.BufferGeometry[] = []
     const hairParts: THREE.BufferGeometry[] = []
 
-    const neck = new THREE.CylinderGeometry(0.065, 0.08, 0.12, 6)
+    const neck = new THREE.CylinderGeometry(0.065, 0.08, 0.12, 8)
     neck.translate(0, 0.03, 0)
     skinParts.push(neck)
 
-    const skull = new THREE.SphereGeometry(0.145, 12, 10)
+    const skull = new THREE.SphereGeometry(0.145, 14, 10)
     skull.scale(1, 1.06, 1.04)
     skull.translate(0, 0.19, 0)
     skinParts.push(skull)
 
-    // Hair used to sweep 0.6π down from the crown, which is most of the sphere —
-    // dark material over nearly the whole head, so close up it read as a blank
-    // helmet. A cap over the top third leaves a face below it.
-    const hair = new THREE.SphereGeometry(0.152, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.38)
-    hair.translate(0, 0.2, 0)
-    hairParts.push(hair)
-
-    // The back of the head keeps its hair all the way down to the nape.
-    const nape = new THREE.SphereGeometry(0.15, 10, 8, Math.PI * 0.62, Math.PI * 0.76, Math.PI * 0.2, Math.PI * 0.5)
-    nape.translate(0, 0.19, 0)
-    hairParts.push(nape)
+    // Hair is a cap over the top of the skull and, for the longer styles, a
+    // nape that keeps it down the back of the head. A cap over the whole sphere
+    // reads as a helmet; over the top third it leaves a face below it.
+    if (hairStyle === 1) {
+      const crop = new THREE.SphereGeometry(0.1475, 14, 6, 0, Math.PI * 2, 0, Math.PI * 0.33)
+      crop.scale(1, 1.06, 1.04)
+      crop.translate(0, 0.19, 0)
+      hairParts.push(crop)
+    } else {
+      const reach = hairStyle === 2 ? 0.42 : 0.38
+      const hair = new THREE.SphereGeometry(hairStyle === 2 ? 0.158 : 0.152, 14, 8, 0, Math.PI * 2, 0, Math.PI * reach)
+      hair.translate(0, 0.2, 0)
+      hairParts.push(hair)
+      const nape = new THREE.SphereGeometry(0.15, 10, 6, Math.PI * 0.62, Math.PI * 0.76, Math.PI * 0.2, Math.PI * (hairStyle === 2 ? 0.62 : 0.5))
+      nape.translate(0, 0.19, 0)
+      hairParts.push(nape)
+      if (hairStyle === 2) {
+        const top = new THREE.SphereGeometry(0.09, 10, 8)
+        top.scale(1.15, 0.7, 1.3)
+        top.translate(0, 0.335, 0.03)
+        hairParts.push(top)
+      }
+    }
 
     // A face, at the smallest scale that still reads: two eyes, a brow, ears.
     for (const side of [-1, 1]) {
@@ -164,74 +192,70 @@ export class PlayerRig {
     nose.translate(0, 0.182, 0.142)
     skinParts.push(nose)
 
-    const skinMesh = new THREE.Mesh(mergeGeometries(skinParts)!, mats.skin)
-    skinMesh.castShadow = true
-    this.head.add(skinMesh)
+    this.head.add(new THREE.Mesh(mergeGeometries(skinParts)!, mats.skin))
     this.head.add(new THREE.Mesh(mergeGeometries(hairParts)!, mats.hair))
 
     // ---- legs: hip → thigh → knee → shin → foot ----
     for (const side of [-1, 1]) {
-      const hip = new THREE.Group()
-      hip.position.set(0.115 * side, 0.0, 0)
-      this.hips.add(hip)
+      const hip = this.bone(this.hips, 0.115 * side, 0, 0)
 
       // The leg was shorts to the knee and socks below it — no skin anywhere,
       // which is what made the players look like they were wearing tights.
       // A real kit shows bare leg from mid-thigh to just below the knee.
-      const shortLeg = new THREE.Mesh(new THREE.CapsuleGeometry(0.1, 0.09, 3, 8), mats.shorts)
-      shortLeg.position.y = -0.13
+      const shortLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.108, 0.128, 0.25, 9), mats.shorts)
+      shortLeg.position.y = -0.125
       hip.add(shortLeg)
 
-      const thigh = new THREE.Mesh(new THREE.CapsuleGeometry(0.088, 0.16, 3, 8), mats.skin)
-      thigh.position.y = -0.29
-      thigh.castShadow = true
+      const thigh = new THREE.Mesh(new THREE.CapsuleGeometry(0.086, 0.16, 2, 9), mats.skin)
+      thigh.position.y = -0.3
       hip.add(thigh)
 
-      const knee = new THREE.Group()
-      knee.position.y = -0.44
-      hip.add(knee)
+      const knee = this.bone(hip, 0, -0.44, 0)
 
       // Bare shin down to where the sock starts, then the sock to the ankle.
-      const shin = new THREE.Mesh(new THREE.CapsuleGeometry(0.07, 0.08, 3, 8), mats.skin)
+      const shin = new THREE.Mesh(new THREE.CapsuleGeometry(0.068, 0.08, 2, 8), mats.skin)
       shin.position.y = -0.08
-      shin.castShadow = true
       knee.add(shin)
 
-      const sock = new THREE.Mesh(new THREE.CapsuleGeometry(0.072, 0.16, 3, 8), mats.socks)
+      const sock = new THREE.Mesh(new THREE.CapsuleGeometry(0.072, 0.16, 2, 8), mats.socks)
       sock.position.y = -0.27
       knee.add(sock)
 
-      const foot = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.085, 0.27), mats.boot)
-      foot.position.set(0, -0.42, 0.055)
-      foot.castShadow = true
-      knee.add(foot)
+      // The foot is a joint of its own, because it stays level while the shin
+      // swings. A boot: a rounded toe box on a sole, longer than it is wide.
+      const foot = this.bone(knee, 0, -0.42, 0.055)
+      const boot = new THREE.Mesh(new THREE.CapsuleGeometry(0.056, 0.14, 2, 8), mats.boot)
+      boot.rotation.x = Math.PI / 2
+      boot.scale.set(1.12, 1, 0.78)
+      foot.add(boot)
 
       this.legs.push({ hip, knee, foot })
     }
 
-    // ---- arms: shoulder → upper arm → elbow → forearm ----
-    const sleeveMat = role === 'GK' ? mats.jersey : mats.jersey
+    // ---- arms: shoulder → upper arm → elbow → forearm → hand ----
     for (const side of [-1, 1]) {
-      const shoulder = new THREE.Group()
-      shoulder.position.set(0.265 * side, 0.55, 0)
-      this.torso.add(shoulder)
+      const shoulder = this.bone(this.torso, 0.265 * side, 0.55, 0)
 
-      const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.088, 0.08, 0.15, 6), sleeveMat)
+      const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.082, 0.15, 8), mats.jersey)
       sleeve.position.y = -0.06
       shoulder.add(sleeve)
 
-      const upper = new THREE.Mesh(new THREE.CapsuleGeometry(0.062, 0.16, 3, 6), mats.skin)
+      const upper = new THREE.Mesh(new THREE.CapsuleGeometry(0.06, 0.16, 2, 8), mats.skin)
       upper.position.y = -0.17
-      upper.castShadow = true
       shoulder.add(upper)
 
-      const elbow = new THREE.Group()
-      elbow.position.y = -0.29
-      shoulder.add(elbow)
+      const elbow = this.bone(shoulder, 0, -0.29, 0)
 
-      const fore = new THREE.Mesh(new THREE.CapsuleGeometry(0.055, 0.16, 3, 6), mats.skin)
+      const fore = new THREE.Mesh(new THREE.CapsuleGeometry(0.052, 0.15, 2, 7), mats.skin)
       fore.position.y = -0.14
       elbow.add(fore)
+
+      // Hands. Bare skin, or gloves on a keeper — which are bigger, because
+      // that is what a glove is.
+      const hand = new THREE.Mesh(new THREE.SphereGeometry(role === 'GK' ? 0.066 : 0.05, 7, 5), mats.hand)
+      hand.scale.set(1, 1.15, 0.8)
+      hand.position.y = -0.325
+      elbow.add(hand)
 
       this.arms.push({ hip: shoulder, knee: elbow })
     }
@@ -248,6 +272,7 @@ export class PlayerRig {
     this.ring.rotation.x = -Math.PI / 2
     this.ring.position.y = 0.05
     this.ring.visible = false
+    this.ring.userData.keep = true
     this.group.add(this.ring)
 
     // Scale the assembled body to a real footballer's height. Measuring it
@@ -257,6 +282,65 @@ export class PlayerRig {
     if (h > 0.1) this.body.scale.setScalar(PLAYER.height / h)
     // Sit the feet on the turf.
     this.root.position.y = (PLAYER.height / MODEL_HEIGHT) * 0.88
+
+    this.bake()
+  }
+
+  // Turn the assembled parts into a skinned body.
+  //
+  // Every mesh built above hangs off a bone. Here each one is moved into the
+  // rest pose's space, tagged as belonging wholly to the bone it hangs from
+  // (rigid skinning — nothing bends at a joint here, the joints are the seams)
+  // and merged with every other piece that shares its material. What comes out
+  // is a handful of skinned meshes sharing one skeleton, which move exactly as
+  // the parts did because they follow the same bones.
+  private bake() {
+    this.group.updateMatrixWorld(true)
+    const groupInv = new THREE.Matrix4().copy(this.group.matrixWorld).invert()
+    const index = new Map<THREE.Object3D, number>(this.bones.map((b, i) => [b, i]))
+    const buckets = new Map<THREE.Material, THREE.BufferGeometry[]>()
+    const parts: THREE.Mesh[] = []
+    this.group.traverse((o) => {
+      const m = o as THREE.Mesh
+      if (m.isMesh && !m.userData.keep) parts.push(m)
+    })
+    const rel = new THREE.Matrix4()
+    for (const m of parts) {
+      let owner: THREE.Object3D | null = m.parent
+      while (owner && !index.has(owner)) owner = owner.parent
+      if (!owner) continue
+      const g = m.geometry.clone()
+      rel.multiplyMatrices(groupInv, m.matrixWorld)
+      g.applyMatrix4(rel)
+      const n = g.getAttribute('position').count
+      const ids = new Uint16Array(n * 4)
+      const weights = new Float32Array(n * 4)
+      for (let i = 0; i < n; i++) {
+        ids[i * 4] = index.get(owner)!
+        weights[i * 4] = 1
+      }
+      g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(ids, 4))
+      g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(weights, 4))
+      const mat = m.material as THREE.Material
+      if (!buckets.has(mat)) buckets.set(mat, [])
+      buckets.get(mat)!.push(g)
+      m.parent!.remove(m)
+      m.geometry.dispose()
+    }
+
+    const skeleton = new THREE.Skeleton(this.bones)
+    for (const [mat, geos] of buckets) {
+      const mesh = new THREE.SkinnedMesh(mergeGeometries(geos)!, mat)
+      // The hair takes no shadow of its own: it is a skin over a skull that
+      // already casts one.
+      mesh.castShadow = (mat as THREE.MeshStandardMaterial).userData.noShadow !== true
+      // A body that dives or slides leaves the bounds it was bound in.
+      mesh.frustumCulled = false
+      this.group.add(mesh)
+      mesh.bind(skeleton, mesh.matrixWorld)
+      this.skinned.push(mesh)
+      for (const g of geos) g.dispose()
+    }
   }
 
   // Pose the skeleton for this frame.
@@ -641,25 +725,78 @@ export class PlayerRig {
 
   setVisible(v: boolean) {
     this.body.visible = v
+    for (const m of this.skinned) m.visible = v
   }
 }
 
-// Build the material set for a team's kit once and share it across every player.
-export function makeKitMaterials(team: 'home' | 'away', role: string): Mats {
+// What makes one footballer look like somebody else. Nothing about it is
+// anything the simulation knows: it is picked from the player's id, so every
+// screen in a match agrees about who is who without a byte going over the wire.
+const SKINS = ['#f0c8a6', '#e2ae84', '#c58b5e', '#94623f', '#63402a']
+const HAIRS = ['#1d130d', '#38230f', '#5f3f22', '#a98449', '#17171b', '#6c341b']
+
+export interface Look {
+  skin: THREE.MeshStandardMaterial
+  hair: THREE.MeshStandardMaterial
+  hairStyle: number
+}
+
+const skinCache = new Map<string, THREE.MeshStandardMaterial>()
+const hairCache = new Map<string, THREE.MeshStandardMaterial>()
+
+export function lookFor(id: number): Look {
+  const skinC = SKINS[(id * 7 + 3) % SKINS.length]
+  const hairC = HAIRS[(id * 5 + 1) % HAIRS.length]
+  let skin = skinCache.get(skinC)
+  if (!skin) skinCache.set(skinC, (skin = new THREE.MeshStandardMaterial({ color: skinC, roughness: 0.82 })))
+  let hair = hairCache.get(hairC)
+  if (!hair) {
+    hair = new THREE.MeshStandardMaterial({ color: hairC, roughness: 0.9 })
+    hair.userData.noShadow = true
+    hairCache.set(hairC, hair)
+  }
+  return { skin, hair, hairStyle: (id * 3 + 1) % 3 }
+}
+
+// The kit for a team, built once and shared across every player on it. Skin and
+// hair come from lookFor(); everything else about the shirt is the club's.
+export function makeKitMaterials(team: 'home' | 'away', role: string, look: Look = lookFor(0)): Mats {
   const kit = KITS[team]
   const style = team === 'home' ? 'stripes' : 'hoops'
-  const jerseyCanvas =
-    role === 'GK'
-      ? kitTexture(kit.gk, '#1a1d24', '#0f1116', 'hoops')
-      : kitTexture(kit.primary, kit.secondary, kit.accent, style)
-  const map = new THREE.CanvasTexture(jerseyCanvas)
-  map.colorSpace = THREE.SRGBColorSpace
+  const key = `${team}:${role === 'GK' ? 'GK' : 'OUT'}`
+  let base = kitCache.get(key)
+  if (!base) {
+    const jerseyCanvas =
+      role === 'GK'
+        ? kitTexture(kit.gk, '#1a1d24', '#0f1116', 'hoops')
+        : kitTexture(kit.primary, kit.secondary, kit.accent, style)
+    const map = new THREE.CanvasTexture(jerseyCanvas)
+    map.colorSpace = THREE.SRGBColorSpace
+    map.anisotropy = 4
+    base = {
+      jersey: new THREE.MeshStandardMaterial({ map, roughness: 0.68 }),
+      shorts: new THREE.MeshStandardMaterial({ color: role === 'GK' ? '#1a1d24' : kit.accent, roughness: 0.72 }),
+      socks: new THREE.MeshStandardMaterial({ color: role === 'GK' ? '#22262e' : kit.secondary, roughness: 0.82 }),
+      boot: new THREE.MeshStandardMaterial({ color: '#14161c', roughness: 0.35, metalness: 0.1 }),
+      glove: new THREE.MeshStandardMaterial({ color: role === 'GK' ? '#f4f4f4' : '#ffffff', roughness: 0.6 }),
+    }
+    kitCache.set(key, base)
+  }
   return {
-    jersey: new THREE.MeshStandardMaterial({ map, roughness: 0.68 }),
-    shorts: new THREE.MeshStandardMaterial({ color: role === 'GK' ? '#1a1d24' : kit.accent, roughness: 0.72 }),
-    socks: new THREE.MeshStandardMaterial({ color: role === 'GK' ? '#22262e' : kit.secondary, roughness: 0.82 }),
-    skin: new THREE.MeshStandardMaterial({ color: '#e5b08a', roughness: 0.85 }),
-    boot: new THREE.MeshStandardMaterial({ color: '#14161c', roughness: 0.35, metalness: 0.1 }),
-    hair: new THREE.MeshStandardMaterial({ color: '#2c211b', roughness: 0.95 }),
+    jersey: base.jersey,
+    shorts: base.shorts,
+    socks: base.socks,
+    boot: base.boot,
+    skin: look.skin,
+    hair: look.hair,
+    hand: role === 'GK' ? base.glove : look.skin,
   }
 }
+
+const kitCache = new Map<string, {
+  jersey: THREE.Material
+  shorts: THREE.Material
+  socks: THREE.Material
+  boot: THREE.Material
+  glove: THREE.Material
+}>()

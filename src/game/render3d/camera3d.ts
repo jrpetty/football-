@@ -23,6 +23,51 @@ export class Camera3D {
 
   constructor(aspect: number) {
     this.cam = new THREE.PerspectiveCamera(62, aspect, 0.1, 400)
+    this.fovNow = this.baseFov
+  }
+
+  // ---- feel ----
+  //
+  // Two things that make the camera a part of the game rather than a window on
+  // it. The field of view opens a little as you sprint and narrows as you wind
+  // up a strike — pace and effort you can see in the edges of the picture — and
+  // things that hit hard shake it. Both are presentation only: the view never
+  // changes what you aim at, since aim is yaw, which they don't touch.
+
+  // The setting the player chose; everything below is relative to it.
+  baseFov = 62
+  // How far behind, and how high above, the player the third-person camera sits.
+  distance = 7.5
+  height = 3.4
+  private fovNow = 62
+  private trauma = 0
+  private shakeOff = new THREE.Vector3()
+
+  // Something hit hard. 0–1, and they add.
+  punch(amount: number) {
+    this.trauma = Math.min(1, this.trauma + amount)
+  }
+
+  // Once per drawn frame, after the camera has been placed.
+  finish(dt: number, pace: number, effort: number) {
+    const target = this.baseFov + pace * 6 - effort * 3
+    this.fovNow += (target - this.fovNow) * (1 - Math.exp(-6 * dt))
+    if (Math.abs(this.cam.fov - this.fovNow) > 0.01) {
+      this.cam.fov = this.fovNow
+      this.cam.updateProjectionMatrix()
+    }
+    this.trauma = Math.max(0, this.trauma - dt * 1.1)
+    // Take last frame's shake off before putting this frame's on, so it never
+    // accumulates whether or not the camera was re-placed in between.
+    this.cam.position.sub(this.shakeOff)
+    const t = this.trauma * this.trauma
+    const k = performance.now() / 1000
+    this.shakeOff.set(
+      (Math.sin(k * 61) + Math.sin(k * 37 + 1.3)) * 0.5 * t * 0.32,
+      (Math.sin(k * 53 + 2.1) + Math.sin(k * 29 + 0.4)) * 0.5 * t * 0.26,
+      (Math.sin(k * 47 + 4.2) + Math.sin(k * 33 + 3.1)) * 0.5 * t * 0.32,
+    )
+    this.cam.position.add(this.shakeOff)
   }
 
   setAspect(a: number) {
@@ -49,6 +94,7 @@ export class Camera3D {
   // replay exists is that from behind your own player you never actually see
   // the thing you just did, so the camera has to go somewhere you can't.
   orbit(px: number, py: number, pz: number, angle: number, dist = 11, height = 4.5) {
+    this.shakeOff.set(0, 0, 0)
     this.cam.position.set(px + Math.cos(angle) * dist, height + pz * 0.5, py + Math.sin(angle) * dist)
     this.cam.lookAt(px, pz + 0.8, py)
     this.cam.updateMatrixWorld(true)
@@ -72,6 +118,7 @@ export class Camera3D {
     const k = 1 - Math.exp(-9 * dt)
     this.curPos.lerp(this.tmpPos, k)
     this.curLook.lerp(this.tmpLook, k)
+    this.shakeOff.set(0, 0, 0)
     this.cam.position.copy(this.curPos)
     this.cam.lookAt(this.curLook)
   }
@@ -81,8 +128,8 @@ export class Camera3D {
     const fx = Math.cos(this.yaw)
     const fz = Math.sin(this.yaw)
     if (this.mode === 'third') {
-      const dist = 7.5
-      const height = 3.4 - this.pitch * 4
+      const dist = this.distance
+      const height = this.height - this.pitch * 4
       this.tmpPos.set(px - fx * dist, height, py - fz * dist)
       this.tmpLook.set(px + fx * 4, 1.3, py + fz * 4)
       const k = 1 - Math.exp(-12 * dt)
@@ -97,6 +144,7 @@ export class Camera3D {
         this.curPos.z + fz * cp,
       )
     }
+    this.shakeOff.set(0, 0, 0)
     this.cam.position.copy(this.curPos)
     this.cam.lookAt(this.curLook)
   }

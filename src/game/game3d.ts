@@ -361,10 +361,27 @@ export class Game3D {
     drawReplayOverlay(this.ctx, this.cssW, this.cssH, label, progress)
   }
 
+  // What is worth shaking the picture for: a goal, anything off the woodwork, a
+  // hard contact close to you. Far-off things happen in silence.
+  private shakeFor(me: { x: number; y: number } | null | undefined) {
+    for (const e of this.scene.fresh) {
+      const near = me ? Math.hypot(e.x - me.x, e.y - me.y) : 99
+      if (e.type === 'goal') this.cam3.punch(0.7)
+      else if (e.type === 'post') this.cam3.punch(near < 14 ? 0.22 : 0.08)
+      else if (e.type === 'tackle' && near < 5) this.cam3.punch(0.14)
+      else if (e.type === 'kick' && e.speed > 16 && near < 4) this.cam3.punch(Math.min(0.2, 0.04 + (e.speed - 16) / 90))
+    }
+  }
+
   private render(locked: boolean, dt: number) {
     const controlledId = this.world.getControlledPlayer()?.id ?? -1
     const first = this.cam3.mode === 'first'
     this.scene.sync(this.world, controlledId, !first, first ? controlledId : -1, dt)
+    this.shakeFor(this.world.getControlledPlayer())
+    const me = this.world.getControlledPlayer()
+    const pace = me && me.sprinting ? Math.min(1, Math.hypot(me.vx, me.vy) / 8) : 0
+    const effort = this.human.chargeType ? this.human.charge : 0
+    this.cam3.finish(dt, pace, effort)
     this.scene.render(this.cam3.cam)
 
     this.ctx.clearRect(0, 0, this.cssW, this.cssH)

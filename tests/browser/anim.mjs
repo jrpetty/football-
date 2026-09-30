@@ -30,10 +30,10 @@ const out = await pg.evaluate(() => {
   // Locate the joints structurally, so minified field names don't matter.
   const body = rig.group.children[0]
   const root = body.children[0]
-  const hips = root.children.find((c) => c.type === 'Group')
-  const torso = hips.children.find((c) => c.type === 'Group')
+  const hips = root.children.find((c) => c.isBone)
+  const torso = hips.children.find((c) => c.isBone)
   // Leg hips are the Groups parented to `hips` other than the torso.
-  const legHips = hips.children.filter((c) => c.type === 'Group' && c !== torso)
+  const legHips = hips.children.filter((c) => c.isBone && c !== torso)
 
   const rows = []
   const play = (label, kind, power) => {

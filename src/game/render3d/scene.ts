@@ -17,7 +17,7 @@ import {
 import { Fx } from './fx'
 import { DISPLAY } from '../ui/fonts'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
-import { PlayerRig, makeKitMaterials } from './rig'
+import { PlayerRig, lookFor, makeKitMaterials } from './rig'
 
 // Simulation → Three.js coordinate map: the pitch plane (sim x, y) becomes the
 // ground plane (X, Z); ball height (sim z) becomes world Y (up).
@@ -32,7 +32,6 @@ export class Scene3D {
   readonly renderer: THREE.WebGLRenderer
   private ball!: THREE.Mesh
   private players = new Map<number, PlayerRig>()
-  private kitMats = new Map<string, ReturnType<typeof makeKitMaterials>>()
   private maxAniso = 4
   private targetRings: THREE.Mesh[] = []
   // The back of each net, and how far it is currently pushed out.
@@ -46,12 +45,14 @@ export class Scene3D {
   private trailLine: THREE.Line | null = null
   // Particles, and the things that happened this frame that they were made for.
   readonly fx = new Fx()
+  private tmpDir = new THREE.Vector3()
   private seenEffects = new WeakSet<Effect>()
   // Effects that appeared for the first time this frame. The camera reads these
   // to decide what is worth shaking for.
   readonly fresh: Effect[] = []
 
   private q: (typeof QUALITY)[Quality]
+  private fill!: THREE.DirectionalLight
 
   constructor(container: HTMLElement, quality: Quality = 'medium') {
     const q = QUALITY[quality]
@@ -97,6 +98,10 @@ export class Scene3D {
   }
 
   render(camera: THREE.Camera) {
+    // The fill light shines the way the camera looks.
+    camera.getWorldDirection(this.tmpDir)
+    this.fill.position.copy(camera.position)
+    this.fill.target.position.copy(camera.position).add(this.tmpDir)
     this.fx.setView(this.renderer.domElement.height, (camera as THREE.PerspectiveCamera).fov ?? 60)
     this.renderer.render(this.scene, camera)
   }
@@ -165,6 +170,15 @@ export class Scene3D {
     rim.target.position.copy(v3(FIELD.length / 2, FIELD.width / 2))
     this.scene.add(rim)
     this.scene.add(rim.target)
+
+    // A soft fill that rides with the camera. The floodlight is high and to one
+    // side, so from behind a player their back is in shade and a kit is a dark
+    // shape; a light from where you are looking is what lifts the side of a
+    // body you can see. It carries no shadows and costs one more term in the
+    // lighting loop.
+    this.fill = new THREE.DirectionalLight('#dfe9ff', 0.6)
+    this.scene.add(this.fill)
+    this.scene.add(this.fill.target)
 
     // The floodlights, as one light. Four banks of lamps at the corners are
     // several hundred lights; from the ground what they do is put a single
@@ -752,7 +766,7 @@ export class Scene3D {
         if (!tag) {
           const sprite = new THREE.Sprite()
           sprite.userData.tag = true
-          sprite.scale.set(2.2, 0.55, 1)
+          sprite.scale.set(1.9, 0.475, 1)
           this.scene.add(sprite)
           tag = { sprite, text, claimed }
           this.tags.set(p.id, tag)
@@ -784,13 +798,8 @@ export class Scene3D {
   private ensurePlayer(id: number, team: 'home' | 'away', role: string, num: number): PlayerRig {
     const existing = this.players.get(id)
     if (existing) return existing
-    const key = `${team}:${role === 'GK' ? 'GK' : 'OUT'}`
-    let mats = this.kitMats.get(key)
-    if (!mats) {
-      mats = makeKitMaterials(team, role)
-      this.kitMats.set(key, mats)
-    }
-    const rig = new PlayerRig(mats, team, role, num)
+    const look = lookFor(id)
+    const rig = new PlayerRig(makeKitMaterials(team, role, look), team, role, num, look.hairStyle)
     this.scene.add(rig.group)
     this.players.set(id, rig)
     return rig
@@ -1093,7 +1102,9 @@ export class Scene3D {
       const dy = bp.y - this.lastBall.y
       const dz = cz - this.lastBall.z
       const d = Math.hypot(dx, dy, dz)
-      if (d < 3) {
+      // Anything further than this in one frame is a ball that was put somewhere
+      // rather than one that travelled.
+      if (d < 12) {
         const n = Math.min(10, Math.max(1, Math.ceil(d / 0.14)))
         for (let i = 1; i <= n; i++) {
           const t = i / n
