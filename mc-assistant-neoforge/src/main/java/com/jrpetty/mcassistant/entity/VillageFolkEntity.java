@@ -354,14 +354,56 @@ public class VillageFolkEntity extends AssistantEntity {
             return;
         }
         mindTheRoute();                                // a carrier's round is chosen, not clicked
+        putBackIfLost();
         if (peekJob() != null) return;                 // already busy
         if (resting()) return;                         // off the clock for a bit
         if (movedOnFromSpentGround()) return;          // this patch is finished
         if (changedTrade()) return;                    // the village lost a trade
         if (raisedAChild()) return;                    // the village grew
 
+        // A storekeeper works the chests directly and has nothing to haul: its
+        // days were spent standing at the heart (two runs, two storekeepers, not
+        // a stroke of work in three game days). It bakes and it builds.
+        if (stationTask() == StationTask.STORE && idleHands()) return;
         if (workedOut() && lendAHand()) return;        // my trade has nothing: help
         considerVillageWork();
+    }
+
+    /** The nearest this hand has got to its plot since it last stopped getting
+     *  nearer, and how long it has gone without getting nearer. */
+    private double lostBest = Double.MAX_VALUE;
+    private int lostFor;
+
+    /**
+     * A hand that cannot get back to its plot — at the bottom of a ravine it
+     * walked into after ore, in a cave, on an island the terrain made, behind a
+     * cliff the pathfinder will not climb — stands where it is for the rest of
+     * the game: the leash keeps asking for a route there is not. Ten of a
+     * village's twenty were found in that state on a plains map, three game days
+     * in, without one stroke of work between them, and a miner was holding
+     * seventy cobblestone fifty blocks from its mine. Half a minute of getting
+     * no nearer, in the working day with nothing to do, and it is put back on its
+     * plot.
+     */
+    private void putBackIfLost() {
+        WorkZone zone = workZone();
+        if (zone == null || peekJob() != null || !onShift() || onBreak()
+            || zone.containsColumn(blockPosition())) {
+            lostFor = 0;
+            lostBest = Double.MAX_VALUE;
+            return;
+        }
+        double away = Math.sqrt(zone.center().distSqr(blockPosition()));
+        if (away < lostBest - 6.0) {                    // getting somewhere
+            lostBest = away;
+            lostFor = 0;
+            return;
+        }
+        lostFor += 100;                                 // once a folk agenda
+        if (lostFor < 1800) return;
+        lostFor = 0;
+        lostBest = Double.MAX_VALUE;
+        rescueToPlot();
     }
 
     /**
@@ -712,10 +754,25 @@ public class VillageFolkEntity extends AssistantEntity {
 
     @Nullable
     private BlockPos surfaceAt(int x, int z) {
-        if (!level().isLoaded(new BlockPos(x, level().getSeaLevel(), z))) return null;
+        if (!chunkReady(x, z)) return null;
         int y = level().getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
         if (y <= level().getMinBuildHeight() + 1) return null;
         return new BlockPos(x, y, z);
+    }
+
+    /** Is the chunk holding this column fully loaded RIGHT NOW? Reading a block
+     *  in one that is not makes the server generate it on the spot, on the tick
+     *  thread, with the whole game held up: on a real world a survey of where to
+     *  farm froze the server for four seconds at a time, in every new village. */
+    private boolean chunkReady(int x, int z) {
+        return level().getChunkSource().getChunkNow(x >> 4, z >> 4) != null;
+    }
+
+    /** Are all four corners of the box round this spot loaded? A survey reads the
+     *  whole box, so it may only run where every chunk it will touch is here. */
+    private boolean boxReady(BlockPos pos, int r) {
+        return chunkReady(pos.getX() - r, pos.getZ() - r) && chunkReady(pos.getX() + r, pos.getZ() - r)
+            && chunkReady(pos.getX() - r, pos.getZ() + r) && chunkReady(pos.getX() + r, pos.getZ() + r);
     }
 
     /**
@@ -741,6 +798,7 @@ public class VillageFolkEntity extends AssistantEntity {
 
     /** Water to hand and soft ground around it: a field, in other words. */
     private boolean farmable(BlockPos pos) {
+        if (!boxReady(pos, 6)) return false;
         boolean water = false;
         int soil = 0;
         // Reads every block in an 13x5x13 box, and did so to the last block
@@ -767,6 +825,7 @@ public class VillageFolkEntity extends AssistantEntity {
 
     /** Open water, and enough of it to be worth a rod. */
     private boolean fishable(BlockPos pos) {
+        if (!boxReady(pos, 6)) return false;
         int water = 0;
         for (BlockPos p : BlockPos.betweenClosed(pos.offset(-6, -3, -6), pos.offset(6, 1, 6))) {
             if (level().getBlockState(p).is(Blocks.WATER) && ++water >= 12) return true;
@@ -776,6 +835,7 @@ public class VillageFolkEntity extends AssistantEntity {
 
     /** Standing timber, and enough of it to be worth walking to. */
     private boolean woodland(BlockPos pos) {
+        if (!boxReady(pos, 6)) return false;
         int logs = 0;
         for (BlockPos p : BlockPos.betweenClosed(pos.offset(-6, -2, -6), pos.offset(6, 6, 6))) {
             if (level().getBlockState(p).is(BlockTags.LOGS)) logs++;
@@ -786,6 +846,7 @@ public class VillageFolkEntity extends AssistantEntity {
 
     /** Stone under the boots, and not the middle of somebody's field. */
     private boolean diggable(BlockPos pos) {
+        if (!boxReady(pos, 3)) return false;
         int stone = 0;
         for (BlockPos p : BlockPos.betweenClosed(pos.offset(-3, -6, -3), pos.offset(3, -1, 3))) {
             if (level().getBlockState(p).is(BlockTags.BASE_STONE_OVERWORLD)) stone++;

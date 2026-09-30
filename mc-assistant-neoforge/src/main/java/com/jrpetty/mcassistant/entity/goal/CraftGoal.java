@@ -255,17 +255,33 @@ public class CraftGoal extends Goal {
         boolean carried = assistant.countMatching(s -> s.is(Items.CRAFTING_TABLE)) > 0;
         if (!carried && assistant.countMatching(PLANK) < 4) return false;
         BlockPos feet = assistant.feetPos();
-        for (Direction dir : Direction.Plane.HORIZONTAL) {
-            BlockPos pos = feet.relative(dir);
-            if (assistant.level().getBlockState(pos).canBeReplaced()
-                && assistant.level().getBlockState(pos.below()).isSolid()) {
-                if (carried) assistant.removeMatching(s -> s.is(Items.CRAFTING_TABLE), 1);
-                else assistant.removeMatching(PLANK, 4);
-                assistant.level().setBlockAndUpdate(pos, Blocks.CRAFTING_TABLE.defaultBlockState());
-                assistant.say("Setting up a crafting table here.");
-                return true;
+        // The four tiles round the feet first, then anywhere close with something
+        // to stand a table on. "Beside me" is often no place at all — a hand at a
+        // chest, a fence, a wall, on a slope, in the crowd at the heart — and a
+        // smelter that carried a table and stood in such a spot read "no crafting
+        // table here and I lack four planks" for three game days, and never made
+        // its furnace.
+        BlockPos best = null;
+        double bestScore = Double.MAX_VALUE;
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                for (int dy = -1; dy <= 1; dy++) {
+                    BlockPos pos = feet.offset(dx, dy, dz);
+                    if (dx == 0 && dz == 0 && dy <= 0) continue;               // where we stand
+                    if (!assistant.level().getBlockState(pos).canBeReplaced()) continue;
+                    if (!assistant.level().getFluidState(pos).isEmpty()) continue;
+                    if (!assistant.level().getBlockState(pos.below()).isSolid()) continue;
+                    if (assistant.getBoundingBox().intersects(new net.minecraft.world.phys.AABB(pos))) continue;
+                    double score = pos.distSqr(feet) + Math.abs(dy) * 3.0;
+                    if (score < bestScore) { bestScore = score; best = pos; }
+                }
             }
         }
-        return false;
+        if (best == null) return false;
+        if (carried) assistant.removeMatching(s -> s.is(Items.CRAFTING_TABLE), 1);
+        else assistant.removeMatching(PLANK, 4);
+        assistant.level().setBlockAndUpdate(best, Blocks.CRAFTING_TABLE.defaultBlockState());
+        assistant.say("Setting up a crafting table here.");
+        return true;
     }
 }

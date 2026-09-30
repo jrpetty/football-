@@ -633,8 +633,9 @@ public final class Villages {
 
     /** Long enough that a village grows over days rather than minutes. A
      *  settlement that threw up every building the hour it was founded would
-     *  not feel like one. */
-    private static final long PROJECT_GAP = 9600L;   // eight minutes
+     *  not feel like one — but eight minutes between one and the next meant that
+     *  a player who watched a village for half an hour saw two buildings go up. */
+    private static final long PROJECT_GAP = 4800L;   // four minutes
 
     public static boolean projectDue(UUID villageId, long gameTime) {
         return gameTime - LAST_PROJECT.getOrDefault(villageId, -PROJECT_GAP) >= PROJECT_GAP;

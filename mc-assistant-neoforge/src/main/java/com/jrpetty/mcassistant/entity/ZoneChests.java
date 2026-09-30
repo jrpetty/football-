@@ -119,13 +119,14 @@ public final class ZoneChests {
 
         for (int cx = min.getX() >> 4; cx <= (max.getX() >> 4); cx++) {
             for (int cz = min.getZ() >> 4; cz <= (max.getZ() >> 4); cz++) {
-                if (!level.hasChunk(cx, cz)) {
-                    // Never happens around a ticking entity, but probing the
-                    // slice keeps the answer identical if it ever does.
-                    probe(level, min, max, cx, cz, out);
-                    continue;
-                }
-                LevelChunk chunk = level.getChunk(cx, cz);
+                // A chunk that is not loaded right now holds no chest anybody can
+                // reach. Asking for it anyway made the server generate it, on the
+                // tick thread, while everything waited: a hauler choosing its route
+                // over ninety-six blocks froze a real world for a second and a half,
+                // and the block-by-block probe this used to fall back on (sixteen
+                // thousand block reads a slice, each loading the chunk) was worse.
+                LevelChunk chunk = level.getChunkSource().getChunkNow(cx, cz);
+                if (chunk == null) continue;
                 // Copy out of the live map: a consumer may empty a chest while
                 // walking this list, and we will not hold the chunk's iterator.
                 for (var entry : chunk.getBlockEntities().entrySet()) {
@@ -143,20 +144,6 @@ public final class ZoneChests {
         return out;
     }
 
-    private static void probe(Level level, BlockPos min, BlockPos max,
-                              int cx, int cz, List<Found> out) {
-        int x0 = Math.max(min.getX(), cx << 4), x1 = Math.min(max.getX(), (cx << 4) + 15);
-        int z0 = Math.max(min.getZ(), cz << 4), z1 = Math.min(max.getZ(), (cz << 4) + 15);
-        for (BlockPos pos : BlockPos.betweenClosed(
-                new BlockPos(x0, min.getY(), z0), new BlockPos(x1, max.getY(), z1))) {
-            BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof Container && (!settlerAsking() || isVillageStore(be))
-                && !isPrivate(level, pos)) {
-                out.add(new Found(pos.immutable(), be));
-            }
-        }
-    }
-
     /**
      * Yours alone: a container with a SIGN on it — any of its four sides or
      * sitting on its lid — is invisible to every assistant. Nothing is taken
@@ -171,7 +158,9 @@ public final class ZoneChests {
     public static boolean isPrivate(Level level, BlockPos chest) {
         for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
             if (d == net.minecraft.core.Direction.DOWN) continue;   // under a chest: not a mark
-            if (level.getBlockState(chest.relative(d)).getBlock()
+            BlockPos beside = chest.relative(d);
+            if (level.getChunkSource().getChunkNow(beside.getX() >> 4, beside.getZ() >> 4) == null) continue;
+            if (level.getBlockState(beside).getBlock()
                     instanceof net.minecraft.world.level.block.SignBlock) {
                 return true;
             }
