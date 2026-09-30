@@ -24,7 +24,7 @@ export class Sfx {
   // single time you load the page is exactly the kind of thing that makes
   // people stop turning it on at all.
   muted = store.get('muted')
-  volume = 0.75
+  volume = store.get('volume')
 
   // Called on the first user gesture. Safe to call repeatedly.
   unlock() {
@@ -59,6 +59,15 @@ export class Sfx {
     store.set('muted', m)
     if (this.master && this.ctx) {
       this.master.gain.setTargetAtTime(m ? 0 : this.volume, this.ctx.currentTime, 0.05)
+    }
+  }
+
+  // The master level, 0–1. Applied live if the audio is already running.
+  setVolume(v: number) {
+    this.volume = Math.min(1, Math.max(0, v))
+    store.set('volume', this.volume)
+    if (this.master && this.ctx && !this.muted) {
+      this.master.gain.setTargetAtTime(this.volume, this.ctx.currentTime, 0.05)
     }
   }
 

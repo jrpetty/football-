@@ -206,6 +206,50 @@ const ok = (name: string, pass: boolean, detail: string) =>
   )
 }
 
+// ---- 9b. the newer settings are held to the same standard -------------------
+{
+  // Field of view, look sensitivity, volume and the rest are numbers a person
+  // drags a slider to. A blob that says fov 900 or volume "loud" must not reach
+  // the camera or the audio graph: 900° is a fish-eye you cannot play in, and a
+  // NaN gain is silence with no explanation.
+  const write = (o: object) => {
+    fake.raw.set('open-pitch', JSON.stringify({ v: 1, ...o }))
+    return new (store.constructor as new () => typeof store)()
+  }
+  const bad = write({ fov: 900, lookSens: 'fast', volume: 7, hudScale: -3, camDist: 'huge', invertY: 'yes', showFps: 0, tutorialSeen: 1 })
+  ok(
+    'nonsense presentation settings are clamped or defaulted',
+    bad.get('fov') === 100 &&
+      bad.get('lookSens') === 1 &&
+      bad.get('volume') === 1 &&
+      bad.get('hudScale') === 0.8 &&
+      bad.get('camDist') === 'standard' &&
+      bad.get('invertY') === false &&
+      bad.get('showFps') === true &&
+      bad.get('tutorialSeen') === false,
+    `fov 900 → ${bad.get('fov')}, volume 7 → ${bad.get('volume')}, HUD size -3 → ${bad.get('hudScale')}, camera "huge" → ${bad.get('camDist')}, look "fast" → ${bad.get('lookSens')}`,
+  )
+  const good = write({ fov: 75, lookSens: 1.7, volume: 0.3, hudScale: 1.25, camDist: 'far', invertY: true, showFps: false, tutorialSeen: true })
+  ok(
+    'and real ones come back as they were saved',
+    good.get('fov') === 75 &&
+      good.get('lookSens') === 1.7 &&
+      good.get('volume') === 0.3 &&
+      good.get('hudScale') === 1.25 &&
+      good.get('camDist') === 'far' &&
+      good.get('invertY') === true &&
+      good.get('showFps') === false &&
+      good.get('tutorialSeen') === true,
+    `fov ${good.get('fov')}, look ${good.get('lookSens')}, volume ${good.get('volume')}, camera ${good.get('camDist')}, inverted ${good.get('invertY')}`,
+  )
+  const old = write({ heightSens: 3 })
+  ok(
+    'a save from before they existed gets the defaults',
+    old.get('fov') === 62 && old.get('camDist') === 'standard' && old.get('volume') === 0.75 && old.get('heightSens') === 3,
+    `an old blob with only a sensitivity: fov ${old.get('fov')}, volume ${old.get('volume')}, sensitivity kept at ${old.get('heightSens')}`,
+  )
+}
+
 // ---- 10. a blob from another version is discarded, not misread --------------
 {
   fake.raw.set('open-pitch', JSON.stringify({ v: 999, name: 'GHOST', binds: { shield: 'KeyZ' } }))

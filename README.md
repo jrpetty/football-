@@ -6,9 +6,11 @@ animation-locked outcomes and no pay-to-win. Every dribble, pass and shot is a
 real-time physics calculation: the ball has **spin, curve, height, bounce and
 momentum**, and players carry momentum too.
 
-It runs entirely in the browser — no install, no account, no server. Play a
-match against the AI, or drop into free-play training, in either a **3D
-first/third-person view** or a **2D top-down view**.
+It runs entirely in the browser — no install, no account, no server. Drop into
+free-play **training** on your own, or **play online** with friends (peer to peer,
+or through a small relay), in either a **3D first/third-person view** or a **2D
+top-down view**. There is no AI: every shirt is a seat, and the ones nobody has
+taken just stand there.
 
 > **Note on scope.** The original design targets Unreal Engine 5. That can't run
 > or be verified in a browser sandbox, so this is a complete, genuinely playable
@@ -36,6 +38,41 @@ npm run preview
 
 Vanilla TypeScript, no UI framework. The simulation, 2D renderer and HUD are
 dependency-free; the 3D view uses **Three.js** for WebGL rendering.
+
+---
+
+## Looking and feel
+
+The 3D game is a **night match under floodlights**: a raked stadium with a lit
+crowd (home end blue, away end red), LED hoardings, floodlight masts, a striped
+and scuffed pitch, a ball painted as a real truncated icosahedron so you can *see*
+it spin, and players with their own faces — skin, hair and build come from the
+shirt's id, so every screen in an online match agrees about who is who. Turf
+flies off a strike, a hard-hit ball leaves a streak, the woodwork throws sparks,
+a goal fires a confetti cannon, and the camera opens as you sprint and shakes for
+goals and hard contact. All of it is presentation: none of it can change what a
+shot does.
+
+The title screen is the real stadium at the moment before kick-off, with a camera
+drifting round the ball. Everything you can change lives in the **settings
+drawer** (title screen, or *Settings* on the pause screen), and takes effect the
+moment you close it — even mid-match:
+
+- **How to play** — every move on the mouse, with its button lit, and the rest of
+  the keys.
+- **Controls** — kick height and curve sensitivity, mouse-look sensitivity,
+  invert-Y, and every key (click one and press the one you want).
+- **Display** — field of view, camera distance, HUD size, frame-rate readout.
+- **Audio** — volume and mute.
+- **Match** — position, team size, half length and keepers for a match you host.
+
+Everything is remembered between visits.
+
+New here? **Learn the touch** (on the title screen, and under *How to play*) is a
+nine-step lesson in the real game — look, run, touch, strike, shape it, jump,
+shield, slide, score. Each step ends when the world says the thing happened, not
+when you have read the text, so it cannot be passed by clicking at nothing.
+**Enter** skips a step.
 
 ---
 
@@ -155,7 +192,10 @@ src/game/
   control/   input → Command: human.ts (2D, mouse-aim) · human3d.ts (mouse-look)
   render/    2D top-down: camera (world↔screen, follow/zoom) + canvas renderer
   render3d/  3D: Three.js scene builder + first/third-person camera
-  ui/        HUD (scoreboard, stamina, power meter, minimap) + DOM screens
+  ui/        HUD (scoreboard, stamina, power meter, minimap, ball pointer),
+             DOM screens + settings drawer, the title screen's live backdrop, fonts
+  render3d/fx  pooled particles (turf, dust, sparks, ball trail, confetti)
+  match/tutorial  the guided first lesson
   config.ts  every tunable number
   main.ts    bootstrap; picks the 2D Game or the 3D Game3D by the chosen view
   game3d.ts  the 3D game loop (WebGL scene + HUD overlay + pointer lock)
@@ -173,13 +213,12 @@ the game itself is one codebase.
 
 The design document's later phases map onto this foundation:
 
-- **Playable now** — core physics engine, match vs AI, free-play/training,
-  goalkeeper mechanics, **both a 3D (first/third-person) and a 2D top-down
+- **Playable now** — core physics engine, online matches, free-play/training
+  with unlimited goals and a guided lesson, goalkeeper mechanics, **both a 3D (first/third-person) and a 2D top-down
   view**, a live stats HUD, and custom match settings (team size 3–6, half
   length, single-keeper mode).
-- **Next** — nicer 3D player models & animation, replay capture, more set-piece
-  detail (free-kick walls), weather & surface effects on ball physics, cosmetic
-  customization, day/night pitches.
+- **Next** — more set-piece detail, weather & surface effects on ball physics,
+  cosmetic customization, more drills.
 - **Later** — online play (rollback netcode), ranked matchmaking & seasons,
   tournaments.
 

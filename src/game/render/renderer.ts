@@ -1,4 +1,5 @@
 import { BALL, DUMMY, FIELD, KITS, PLAYER } from '../config'
+import { UI } from '../ui/fonts'
 import { clamp01 } from '../core/math'
 import type { Player } from '../entities/player'
 import type { World } from '../match/world'
@@ -328,7 +329,7 @@ export class Renderer {
 
     // Number.
     ctx.fillStyle = kit.secondary
-    ctx.font = `${Math.max(8, r * 0.9)}px system-ui, sans-serif`
+    ctx.font = `700 ${Math.max(8, r * 0.9)}px ${UI}`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillText(String(p.number), s.x, s.y)
@@ -350,7 +351,7 @@ export class Renderer {
     if (r > 5) {
       const name = world.nameFor(p)
       const claimed = world.isClaimed(p)
-      ctx.font = `${Math.max(9, r * 0.85)}px system-ui, sans-serif`
+      ctx.font = `700 ${Math.max(9, r * 0.85)}px ${UI}`
       ctx.textAlign = 'center'
       ctx.textBaseline = 'bottom'
       const ty = s.y - r - 5

@@ -74,6 +74,20 @@ export class World {
   lastGoalTeam: Team | null = null
   // Where and how hard the net was last struck, for the mesh to react to.
   netHit: { team: Team; y: number; z: number; power: number; age: number } | null = null
+
+  // What the shirt you control has done since the session began. Kept by the
+  // simulation rather than the screen because "the ball left at 31 m/s" is a
+  // fact about the ball, and because the tutorial has to be able to tell a real
+  // strike from a click that did nothing.
+  session = {
+    touches: 0,
+    strikes: 0,
+    goals: 0,
+    // Fastest ball you have hit, in m/s.
+    topSpeed: 0,
+    // The last strike: how fast it left and how the wrist shaped it.
+    lastStrike: { speed: 0, loft: 0, spin: 0 },
+  }
   // Training's one piece of goal bookkeeping. A goal is counted once, when the
   // ball crosses the line, and is not counted again until the ball has actually
   // left the goal — not until a timer runs out, so the next one can be scored
@@ -639,6 +653,24 @@ export class World {
   lastKickDebug: { type: string; power: number; loft: number; spin: number } | null = null
 
   private executeKick(p: Player, cmd: Command) {
+    this.executeKickInner(p, cmd)
+    // Counted after the fact, from what the ball actually did: however a contact
+    // was played (off the turf, out of the air, with a skill), what it left at
+    // is what it left at.
+    if (p.id === this.controlledId && this.config.humanControlled !== false) {
+      const kick = cmd.kick!
+      if (kick.type === 'touch') {
+        this.session.touches++
+      } else {
+        const speed = this.ball.speed
+        this.session.strikes++
+        this.session.topSpeed = Math.max(this.session.topSpeed, speed)
+        this.session.lastStrike = { speed, loft: kick.loft, spin: kick.spin }
+      }
+    }
+  }
+
+  private executeKickInner(p: Player, cmd: Command) {
     const kick = cmd.kick!
     this.playedSinceGoal = true
     // Taking the ball off someone is now just playing it while they had it —
@@ -1445,6 +1477,7 @@ export class World {
     this.score[scorer]++
     if (this.config.mode === 'training') {
       this.stats[scorer].goals++
+      this.session.goals++
       // The drill needs to see the ball as it went in — spin, position and all —
       // so it is told before anything gets repositioned.
       this.drills?.goal(this)

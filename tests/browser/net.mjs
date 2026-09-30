@@ -19,8 +19,8 @@ const open = async (tag) => {
   pg.on('console', m => { if (m.type()==='error') errs.push(`[${tag}] ${m.text()}`) })
   await pg.goto(`file://${process.cwd()}/open-pitch.html?debug`)
   await pg.waitForTimeout(700)
-  await pg.click('text=🎮 Immersive 3D')
-  await pg.click('text=🌐  Play Online')
+  await pg.click('[data-seg="view"][data-val="3d"]')
+  await pg.click('[data-act="online"]')
   await pg.waitForTimeout(300)
   return pg
 }

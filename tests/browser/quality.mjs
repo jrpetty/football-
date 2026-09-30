@@ -32,8 +32,8 @@ const read = async (label) => {
   await pg.goto(url)
   await pg.waitForTimeout(600)
   await pg.click(`[data-seg="quality"][data-val="${label}"]`)
-  await pg.click('text=🎮 Immersive 3D')
-  await pg.click('text=🎯  Training')
+  await pg.click('[data-seg="view"][data-val="3d"]')
+  await pg.click('[data-act="training"]')
   await pg.waitForTimeout(2200)
   const out = await pg.evaluate(() => {
     const w = window.__world

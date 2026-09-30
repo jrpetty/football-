@@ -20,7 +20,8 @@
     "test:perf": "node tests/browser/perf.mjs",
     "test:quality": "node tests/browser/quality.mjs",
     "test:training": "node tests/browser/training.mjs",
-    "test:fx": "node tests/browser/fx.mjs"
+    "test:fx": "node tests/browser/fx.mjs",
+    "test:menu": "node tests/browser/menu.mjs"
   },
   "devDependencies": {
     "typescript": "^5.5.4",

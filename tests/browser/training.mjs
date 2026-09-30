@@ -37,8 +37,8 @@ const pg = await b.newPage({ viewport: { width: 900, height: 560 } })
 pg.on('pageerror', (e) => errs.push(e.message))
 await pg.goto(url)
 await pg.waitForTimeout(700)
-await pg.click('text=🎮 Immersive 3D')
-await pg.click('text=🎯  Training')
+await pg.click('[data-seg="view"][data-val="3d"]')
+await pg.click('[data-act="training"]')
 await pg.waitForTimeout(1800)
 
 // Take the controls, and stop drawing.

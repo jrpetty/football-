@@ -89,7 +89,12 @@ export class Scene3D {
   }
 
   dispose() {
+    this.fx.dispose()
     this.renderer.dispose()
+    // Browsers keep a handful of WebGL contexts alive and start killing the
+    // oldest past that. The title screen and every match each own one, so let
+    // this one go now rather than when the garbage collector gets round to it.
+    this.renderer.forceContextLoss()
     this.renderer.domElement.remove()
   }
 

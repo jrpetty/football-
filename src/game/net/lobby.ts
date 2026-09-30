@@ -2,6 +2,7 @@ import { RtcTransport, WsTransport } from './transport'
 import { store } from '../core/store'
 import { playerName, setPlayerName } from './identity'
 import type { Transport } from './transport'
+import { glyph } from '../ui/screens'
 
 // The online lobby.
 //
@@ -40,8 +41,8 @@ export class Lobby {
 
   render(root: HTMLElement) {
     root.innerHTML = `
-      <div class="panel menu net">
-        <div class="brand"><div class="logo">🌐</div><div>
+      <div class="center"><div class="panel net">
+        <div class="brand">${glyph()}<div>
           <h1>PLAY ONLINE</h1>
           <p class="tag">The host runs the match. Everyone else plays a shirt in it.</p>
         </div></div>
@@ -89,7 +90,7 @@ export class Lobby {
 
         <div class="netstatus" data-status></div>
         <div class="actions"><button class="btn" data-net="back">← Back</button></div>
-      </div>`
+      </div></div>`
     this.wire(root)
   }
 

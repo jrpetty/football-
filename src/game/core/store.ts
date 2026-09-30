@@ -30,6 +30,16 @@ export interface Saved {
   heightSens: number
   curveSens: number
   muted: boolean
+  // How the game is presented and felt — none of it is anything the
+  // simulation can see, which is exactly why it is safe to let people change.
+  lookSens: number // mouse-look multiplier
+  invertY: boolean
+  fov: number // vertical field of view, degrees
+  camDist: 'close' | 'standard' | 'far'
+  volume: number // 0..1
+  hudScale: number // 0.8..1.5
+  showFps: boolean
+  tutorialSeen: boolean
   binds: Record<string, string>
   bests: Record<string, DrillBest>
   relayUrl: string
@@ -48,6 +58,14 @@ const DEFAULTS: Saved = {
   heightSens: 2,
   curveSens: 1,
   muted: false,
+  lookSens: 1,
+  invertY: false,
+  fov: 62,
+  camDist: 'standard',
+  volume: 0.75,
+  hudScale: 1,
+  showFps: true,
+  tutorialSeen: false,
   binds: {},
   bests: {},
   relayUrl: 'ws://localhost:8787',
@@ -89,6 +107,14 @@ function sane(s: Saved): Saved {
     halfLength: oneOf(s.halfLength, [60, 120, 180] as const, DEFAULTS.halfLength),
     singleKeeper: s.singleKeeper === true,
     muted: s.muted === true,
+    invertY: s.invertY === true,
+    showFps: s.showFps !== false,
+    tutorialSeen: s.tutorialSeen === true,
+    lookSens: num(s.lookSens, 0.25, 3, DEFAULTS.lookSens),
+    fov: num(s.fov, 50, 100, DEFAULTS.fov),
+    camDist: oneOf(s.camDist, ['close', 'standard', 'far'] as const, DEFAULTS.camDist),
+    volume: num(s.volume, 0, 1, DEFAULTS.volume),
+    hudScale: num(s.hudScale, 0.8, 1.5, DEFAULTS.hudScale),
     heightSens: num(s.heightSens, 0.4, 5, DEFAULTS.heightSens),
     curveSens: num(s.curveSens, 0.2, 3, DEFAULTS.curveSens),
     relayUrl: typeof s.relayUrl === 'string' ? s.relayUrl.slice(0, 200) : DEFAULTS.relayUrl,

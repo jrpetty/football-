@@ -14,7 +14,7 @@ const b = await chromium.launch({
 })
 const errs = []
 const results = []
-const ok = (name, pass, detail) => results.push(`${pass ? 'PASS' : 'FAIL'}  ${name.padEnd(44)} ${detail}`)
+const ok = (name, pass, detail) => results.push(`${pass ? 'PASS' : 'FAIL'}  ${name.padEnd(48)} ${detail}`)
 
 // file:// blocks localStorage in Chromium, so serve the build over http.
 const { createServer } = await import('node:http')
@@ -30,7 +30,10 @@ const url = `http://127.0.0.1:${server.address().port}/?debug`
 const pg = await b.newPage({ viewport: { width: 1000, height: 640 } })
 pg.on('pageerror', (e) => errs.push(e.message))
 await pg.goto(url)
-await pg.waitForTimeout(600)
+await pg.waitForTimeout(900)
+// The key list lives in the settings drawer, opened from the title screen.
+await pg.click('[data-open="controls"]')
+await pg.waitForTimeout(200)
 
 // ---- 1. the controls list is really bound to the bindings -------------------
 {
@@ -90,7 +93,9 @@ await pg.waitForTimeout(600)
   await pg.dispatchEvent('[data-f="name"]', 'input')
   await pg.waitForTimeout(400)
   await pg.reload()
-  await pg.waitForTimeout(600)
+  await pg.waitForTimeout(900)
+  await pg.click('[data-open="controls"]')
+  await pg.waitForTimeout(200)
   const jump = (await pg.textContent('[data-bind="jump"]')).trim()
   const sens = await pg.inputValue('input[data-sens="height"]')
   const name = await pg.inputValue('[data-f="name"]')
@@ -109,13 +114,17 @@ await pg.waitForTimeout(600)
   await pg.keyboard.press('KeyB')
   await pg.waitForTimeout(150)
   await pg.reload()
-  await pg.waitForTimeout(600)
-  const foot = await pg.textContent('.controls')
+  await pg.waitForTimeout(900)
+  await pg.click('[data-open="how"]')
+  await pg.waitForTimeout(200)
+  const foot = await pg.textContent('.drawer .body')
   ok(
     'the written instructions follow the binding',
     foot.includes('Hold B to shield'),
     `the shield paragraph now says "Hold B to shield"`,
   )
+  await pg.click('[data-tab="controls"]')
+  await pg.waitForTimeout(150)
   await pg.click('[data-act="resetkeys"]')
   await pg.waitForTimeout(200)
 }
@@ -126,8 +135,10 @@ await pg.waitForTimeout(600)
   // anything. The row was still listening: the first key you pressed in the
   // match got swallowed and bound to whatever you had clicked.
   await pg.click('[data-bind="shield"]')
-  await pg.click('text=🎮 Immersive 3D')
-  await pg.click('text=🎯  Training')
+  // Straight to the pitch with the row still armed. The drawer would normally
+  // be in the way — closing it abandons the rebind on its own — so this goes
+  // round it, which is what leaves the armed row for the game to trip over.
+  await pg.evaluate(() => document.querySelector('[data-act="training"]').click())
   await pg.waitForTimeout(1600)
   await pg.keyboard.press('KeyW')
   await pg.waitForTimeout(200)
@@ -135,20 +146,23 @@ await pg.waitForTimeout(600)
   // which a headless page never had.
   await pg.keyboard.press('KeyP')
   await pg.waitForTimeout(500)
+  await pg.click('[data-act="settings"]')
+  await pg.waitForTimeout(300)
   const shield = (await pg.textContent('[data-bind="shield"]')).trim()
   ok(
     'walking away from a rebind does not steal the next key',
     shield === 'Q',
     `armed shield, left for the pitch, pressed W — shield is still ${shield}`,
   )
+  await pg.click('.drawer .foot [data-close]')
   await pg.click('[data-act="menu"]')
-  await pg.waitForTimeout(600)
+  await pg.waitForTimeout(900)
 }
 
 // ---- 8. name tags ------------------------------------------------------------
 {
-  await pg.click('text=🎮 Immersive 3D')
-  await pg.click('text=🎯  Training')
+  await pg.click('[data-seg="view"][data-val="3d"]')
+  await pg.click('[data-act="training"]')
   await pg.waitForTimeout(2200)
   const tags = await pg.evaluate(() => {
     const game = window.__game

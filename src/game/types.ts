@@ -74,7 +74,8 @@ export interface MatchConfig {
   position: Role // the one player you are for the whole match
   heightSens: number // Kick Height Sensitivity — flick-up → loft
   curveSens: number // Kick Curve Sensitivity — sideways flick → spin
-  humanControlled?: boolean // false = both teams fully AI (testing / attract mode)
+  humanControlled?: boolean // false = nobody drives the shirt (the title screen's stage, tests)
+  tutorial?: boolean // training with the guided first-touch lesson on top
 }
 
 export interface Stats {

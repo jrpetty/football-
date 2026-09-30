@@ -86,8 +86,8 @@ const run = async (label, viewText, seconds = 6) => {
   pg.on('pageerror', (e) => errs.push(e.message))
   await pg.goto(url)
   await pg.waitForTimeout(700)
-  await pg.click(`text=${viewText}`)
-  await pg.click('text=🎯  Training')
+  await pg.click(viewText)
+  await pg.click('[data-act="training"]')
   await pg.waitForTimeout(2500) // let it settle before measuring
   await pg.evaluate(INSTRUMENT)
   await pg.waitForTimeout(seconds * 1000)
@@ -97,8 +97,8 @@ const run = async (label, viewText, seconds = 6) => {
 }
 
 const rows = []
-rows.push(await run('3D training', '🎮 Immersive 3D'))
-rows.push(await run('2D training', '🗺️ Classic 2D'))
+rows.push(await run('3D training', '[data-seg="view"][data-val="3d"]'))
+rows.push(await run('2D training', '[data-seg="view"][data-val="2d"]'))
 await b.close()
 server.close()
 

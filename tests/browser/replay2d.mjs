@@ -26,9 +26,15 @@ const check = async (label, buttonText) => {
   pg.on('pageerror', (e) => errs.push(e.message))
   await pg.goto(`file://${process.cwd()}/open-pitch.html?debug`)
   await pg.waitForTimeout(900)
-  await pg.click(`text=${buttonText}`)
-  await pg.click('text=🎯  Training')
+  await pg.click(buttonText)
+  await pg.click('[data-act="training"]')
   await pg.waitForTimeout(1500)
+  // A headless page never holds the pointer, so the 3D game sits behind its
+  // "click to play" card — which is drawn in the middle of the screen and would
+  // read as the game changing when the replay takes it away. Have the lock.
+  await pg.evaluate(() => {
+    try { Object.defineProperty(window.__game.input, 'pointerLocked', { get: () => true }) } catch { /* 2D */ }
+  })
 
   const sample = () =>
     pg.evaluate(() => {
@@ -87,7 +93,7 @@ const check = async (label, buttonText) => {
   return ok && !errs.length
 }
 
-const a = await check('2D', '🗺️ Classic 2D')
-const c = await check('3D', '🎮 Immersive 3D')
+const a = await check('2D', '[data-seg="view"][data-val="2d"]')
+const c = await check('3D', '[data-seg="view"][data-val="3d"]')
 await b.close()
 process.exit(a && c ? 0 : 1)

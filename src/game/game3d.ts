@@ -1,14 +1,19 @@
 import { SIM } from './config'
+import { store } from './core/store'
 import { sfx } from './audio/sfx'
 import { InputManager } from './core/input'
 import { Human3DController } from './control/human3d'
 import { World } from './match/world'
+import * as THREE from 'three'
 import { Camera3D } from './render3d/camera3d'
 import { Scene3D } from './render3d/scene'
 import { Hud } from './ui/hud'
 import type { NetInfo } from './ui/hud'
 import { DRILL_INFO } from './match/drills'
+import { Tutorial } from './match/tutorial'
+import { sessionLine } from './ui/summary'
 import { Screens } from './ui/screens'
+import { DISPLAY, UI } from './ui/fonts'
 import { drawReplayOverlay } from './ui/replayOverlay'
 import { Replay } from './match/replay'
 import { HostSession, ClientSession } from './net/session'
@@ -40,6 +45,8 @@ export class Game3D {
   private cssW = 0
   private cssH = 0
   private endShown = false
+  // The guided first lesson, when that is what this session is.
+  private tutorial: Tutorial | null = null
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -56,6 +63,8 @@ export class Game3D {
     this.human = new Human3DController({ height: config.heightSens, curve: config.curveSens })
     this.scene = new Scene3D(container, config.quality)
     this.cam3 = new Camera3D(1)
+    this.applySettings()
+    if (config.tutorial) this.tutorial = new Tutorial()
     this.world = new World(config)
     // Your own shirt carries your name from the start, not just once you go
     // online — in training it is the only tag on the pitch.
@@ -63,6 +72,20 @@ export class Game3D {
     // Face down the pitch to start (home attacks +x → yaw 0; away → π).
     this.cam3.yaw = 0
     this.resize()
+  }
+
+  // The presentation settings, read from where the settings screen writes them:
+  // how the mouse turns the view, how wide it sees and how far back it sits.
+  // None of it can change what the simulation does — aim is yaw, and yaw is
+  // whatever the mouse says whatever its scale.
+  private applySettings() {
+    const cam = this.cam3
+    cam.baseFov = store.get('fov')
+    cam.lookSens = store.get('lookSens')
+    cam.invertY = store.get('invertY')
+    const [distance, height] = { close: [6, 2.7], standard: [7.5, 3.4], far: [9.6, 4.3] }[store.get('camDist')]
+    cam.distance = distance
+    cam.height = height
   }
 
   start() {
@@ -194,6 +217,7 @@ export class Game3D {
 
   stop() {
     this.running = false
+    this.screens.onSettings = () => {}
     document.removeEventListener('pointerlockchange', this.onLockChange)
     this.canvas.removeEventListener('mousedown', this.onCanvasDown)
     this.input.exitPointerLock()
@@ -266,6 +290,7 @@ export class Game3D {
         const cmd = this.human.buildCommand(this.world, this.cam3, this.input, dt)
         this.world.update(dt, cmd)
         this.netUpdate(dt, cmd)
+        this.watchLesson(cmd, dt)
         if (cp) this.cam3.update(cp.x, cp.y, dt)
       } else {
         // Nobody is driving: the world still steps — the ball keeps rolling and
@@ -318,11 +343,15 @@ export class Game3D {
     this.screens.onResume = () => this.resume()
     this.screens.onRestart = () => this.hooks.restart()
     this.screens.onMenu = () => this.hooks.toMenu()
-    this.screens.showPause()
+    // A slider moved from the pause screen is felt on the next frame, so you can
+    // watch what it does through the gap behind the drawer.
+    this.screens.onSettings = () => this.applySettings()
+    this.screens.showPause(sessionLine(this.world))
   }
 
   private resume() {
     this.paused = false
+    this.applySettings()
     this.screens.hide()
   }
 
@@ -361,6 +390,42 @@ export class Game3D {
     drawReplayOverlay(this.ctx, this.cssW, this.cssH, label, progress)
   }
 
+  // Where the ball is on the screen, or which edge it went off. Screen space is
+  // the HUD's, so the projection is done here where the camera is.
+  private ballV = new THREE.Vector3()
+  private ballOnScreen(): { x: number; y: number; on: boolean; metres: number } {
+    const w = this.world
+    const bp = w.ball.renderPos(w.renderAlpha)
+    const v = this.ballV.set(bp.x, bp.z + 0.11, bp.y).project(this.cam3.cam)
+    const behind = v.z > 1
+    let { x, y } = v
+    if (behind) {
+      // Behind the camera the projection is mirrored, and the point can land
+      // anywhere including the middle of the screen; push it out to an edge on
+      // the same bearing so the pointer says "turn round".
+      const m = Math.max(Math.abs(x), Math.abs(y), 1e-3)
+      x = (-x / m) * 1.6
+      y = (-y / m) * 1.6
+    }
+    const me = w.getControlledPlayer()
+    return {
+      x: (x * 0.5 + 0.5) * this.cssW,
+      y: (-y * 0.5 + 0.5) * this.cssH,
+      on: !behind && Math.abs(x) < 0.94 && Math.abs(y) < 0.9,
+      metres: me ? Math.hypot(w.ball.x - me.x, w.ball.y - me.y) : 0,
+    }
+  }
+
+  // The lesson watches what you just did, and is finished with once — after
+  // which it never nags you again from the title screen.
+  private watchLesson(cmd: Command, dt: number) {
+    const t = this.tutorial
+    if (!t) return
+    if (!t.finished && this.input.justPressed('Enter')) t.skip(this.world)
+    t.observe(this.world, cmd, dt)
+    if (t.finished && !store.get('tutorialSeen')) store.set('tutorialSeen', true)
+  }
+
   // What is worth shaking the picture for: a goal, anything off the woodwork, a
   // hard contact close to you. Far-off things happen in silence.
   private shakeFor(me: { x: number; y: number } | null | undefined) {
@@ -397,25 +462,49 @@ export class Game3D {
         mode: this.config.mode,
         zoomLabel: this.spectating ? 'spectating' : this.cam3.mode === 'first' ? '1st person' : '3rd person',
         net: this.netInfo(),
+        ball: this.ballOnScreen(),
+        coach: this.tutorial?.coach(this.world) ?? null,
       },
       this.cssW,
       this.cssH,
     )
     // Aiming reticle (centre) when locked; a prompt to click when not.
+    const cx = this.cssW / 2
+    const cy = this.cssH / 2
     if (locked) {
-      this.ctx.strokeStyle = 'rgba(255,255,255,0.7)'
-      this.ctx.lineWidth = 2
+      // A ring with a dot, outlined dark so it holds up on turf and on sky.
+      this.ctx.lineWidth = 3
+      this.ctx.strokeStyle = 'rgba(4,7,12,0.7)'
       this.ctx.beginPath()
-      this.ctx.arc(this.cssW / 2, this.cssH / 2, 4, 0, Math.PI * 2)
+      this.ctx.arc(cx, cy, 5, 0, Math.PI * 2)
+      this.ctx.stroke()
+      this.ctx.lineWidth = 1.6
+      this.ctx.strokeStyle = 'rgba(238,242,247,0.92)'
+      this.ctx.beginPath()
+      this.ctx.arc(cx, cy, 5, 0, Math.PI * 2)
       this.ctx.stroke()
     } else if (!this.paused) {
-      this.ctx.fillStyle = 'rgba(6,12,9,0.55)'
-      this.ctx.fillRect(this.cssW / 2 - 150, this.cssH / 2 - 26, 300, 52)
-      this.ctx.fillStyle = '#eaf1ff'
-      this.ctx.font = '600 18px system-ui, sans-serif'
+      const bw = 330
+      const bh = 76
+      this.ctx.fillStyle = 'rgba(6,10,17,0.84)'
+      this.ctx.beginPath()
+      this.ctx.moveTo(cx - bw / 2, cy - bh / 2)
+      this.ctx.lineTo(cx + bw / 2 - 14, cy - bh / 2)
+      this.ctx.lineTo(cx + bw / 2, cy - bh / 2 + 14)
+      this.ctx.lineTo(cx + bw / 2, cy + bh / 2)
+      this.ctx.lineTo(cx - bw / 2, cy + bh / 2)
+      this.ctx.closePath()
+      this.ctx.fill()
+      this.ctx.fillStyle = '#c4ff45'
+      this.ctx.fillRect(cx - bw / 2, cy - bh / 2, 5, bh)
       this.ctx.textAlign = 'center'
       this.ctx.textBaseline = 'middle'
-      this.ctx.fillText('Click to look around & play', this.cssW / 2, this.cssH / 2)
+      this.ctx.fillStyle = '#eef2f7'
+      this.ctx.font = `900 30px ${DISPLAY}`
+      this.ctx.fillText('CLICK TO PLAY', cx, cy - 8)
+      this.ctx.fillStyle = '#8b9bb2'
+      this.ctx.font = `600 13px ${UI}`
+      this.ctx.fillText('Mouse to look · Esc to let go', cx, cy + 20)
     }
   }
 }

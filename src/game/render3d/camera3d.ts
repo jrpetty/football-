@@ -75,10 +75,16 @@ export class Camera3D {
     this.cam.updateProjectionMatrix()
   }
 
+  // How the player likes the mouse: a multiplier on the base sensitivity, and
+  // whether pushing forward looks down.
+  lookSens = 1
+  invertY = false
+
   // Mouse deltas from pointer lock.
   look(dx: number, dy: number, sens = 0.0022) {
-    this.yaw += dx * sens
-    this.pitch = clamp(this.pitch - dy * sens, -0.6, 0.45)
+    const k = sens * this.lookSens
+    this.yaw += dx * k
+    this.pitch = clamp(this.pitch - dy * k * (this.invertY ? -1 : 1), -0.6, 0.45)
   }
 
   toggle() {

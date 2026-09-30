@@ -17,6 +17,9 @@ import { Lobby } from './net/lobby'
 import type { NetHandoff } from './net/lobby'
 import { playerName, clientToken } from './net/identity'
 import { Screens } from './ui/screens'
+import { MenuBackdrop } from './ui/backdrop'
+import { sessionLine } from './ui/summary'
+import { store } from './core/store'
 import { drawReplayOverlay } from './ui/replayOverlay'
 import { Game3D } from './game3d'
 import type { Hooks } from './game3d'
@@ -254,7 +257,7 @@ class Game {
     this.screens.onResume = () => this.resume()
     this.screens.onRestart = () => this.hooks.restart()
     this.screens.onMenu = () => this.hooks.toMenu()
-    this.screens.showPause()
+    this.screens.showPause(sessionLine(this.world))
   }
 
   private resume() {
@@ -334,11 +337,33 @@ function boot() {
   let game: RunningGame | null = null
   let lastConfig: MatchConfig | null = null
 
+  // The title screen's live stage. It is only ever there between matches.
+  let backdrop: MenuBackdrop | null = null
+  function startBackdrop() {
+    screens.backdrop = false
+    if (backdrop || !MenuBackdrop.wanted()) return
+    try {
+      container.innerHTML = ''
+      backdrop = new MenuBackdrop(container, store.get('quality'))
+      screens.backdrop = true
+    } catch {
+      // No WebGL, or a context we could not get: the title screen paints its own.
+      backdrop = null
+      container.innerHTML = ''
+    }
+  }
+  function stopBackdrop() {
+    backdrop?.stop()
+    backdrop = null
+    screens.backdrop = false
+  }
+
   const hooks: Hooks = {
     toMenu: () => {
       game?.stop()
       game = null
       resetStage()
+      startBackdrop()
       screens.showMenu()
     },
     restart: () => {
@@ -358,6 +383,7 @@ function boot() {
     // ?ai in the URL runs both teams on AI (used to measure balance in tests).
     if (location.search.includes('ai')) config = { ...config, humanControlled: false }
     lastConfig = config
+    stopBackdrop()
     screens.hide()
     resetStage()
     game =
@@ -396,10 +422,17 @@ function boot() {
     net = null
     startGame(config)
   }
+  screens.onTutorial = (config) => {
+    net = null
+    startGame(config)
+  }
   // The menu waits a moment for its typeface — they are embedded, so it is a
   // moment — and so does anything that paints text into a texture, since a
   // canvas keeps whatever font it had when it drew.
-  void fontsReady().then(() => screens.showMenu())
+  void fontsReady().then(() => {
+    startBackdrop()
+    screens.showMenu()
+  })
 }
 
 // Wait for the document to be parsed before looking for the canvas. Vite's
