@@ -142,12 +142,47 @@ const ok = (name, pass, detail) => results.push(`${pass ? 'PASS' : 'FAIL'}  ${na
   await pg.click('[data-tab="audio"]')
   await setRange('volume', 0.4)
   const vol = await pg.evaluate(() => ({ v: window.__sfx.volume, saved: JSON.parse(localStorage.getItem('open-pitch') || '{}').volume }))
-  await pg.waitForTimeout(400)
+  // Saving is debounced, and a page busy drawing a frame every few hundred
+  // milliseconds can be late with it: wait for the write rather than for a time.
+  await pg.waitForFunction(() => JSON.parse(localStorage.getItem('open-pitch') || '{}').volume === 0.4, null, { timeout: 5000 }).catch(() => {})
   const saved = await pg.evaluate(() => JSON.parse(localStorage.getItem('open-pitch') || '{}'))
   ok('volume, field of view and the rest are saved', vol.v === 0.4 && saved.volume === 0.4 && saved.fov === 96 && saved.camDist === 'close' && saved.invertY === true && saved.lookSens === 2,
     `on disk: volume ${saved.volume}, fov ${saved.fov}, camera ${saved.camDist}, invert ${saved.invertY}, look ${saved.lookSens}`)
 
+  // The shot pre-view is a setting like the rest: on by default, and when it is
+  // off no amount of charging draws it.
+  await pg.click('[data-tab="display"]')
+  await pg.click('.drawer .foot [data-close]')
+  await pg.click('[data-act="resume"]')
+  await pg.waitForTimeout(400)
+  await pg.evaluate(() => {
+    const w = window.__world, p = w.getControlledPlayer()
+    p.x = 6; p.y = 19; p.vx = 0; p.vy = 0; p.heading = 0
+    w.ball.setPos(6.7, 19, 0); w.ball.stop()
+    window.__game.human.buildCommand = () => ({ move: { x: 0, y: 0 }, aim: { x: 1, y: 0 }, sprint: false, walk: false, chargePass: false, chargeShot: false, kick: null, jump: false, shield: false, slide: false })
+    Object.defineProperty(window.__game.input, 'pointerLocked', { get: () => true })
+    window.__game.human.previewKick = { type: 'strike', power: 0.6, aim: { x: 1, y: 0 }, loft: 0.6, spin: 0.4 }
+    window.__scene = Object.values(window.__game).find((v) => v && v.players instanceof Map)
+  })
+  await pg.waitForTimeout(1800)
+  const shown = await pg.evaluate(() => window.__scene.previewPts.visible)
+  await pg.keyboard.press('KeyP')
+  await pg.waitForTimeout(500)
+  await pg.click('[data-act="settings"]')
+  await pg.click('[data-tab="display"]')
+  await pg.uncheck('input[data-set="shotPreview"]')
+  await pg.click('.drawer .foot [data-close]')
+  await pg.click('[data-act="resume"]')
+  await pg.waitForTimeout(1800)
+  const hidden = await pg.evaluate(() => ({ visible: window.__scene.previewPts.visible, kick: !!window.__game.human.previewKick }))
+  ok('the shot pre-view is drawn by default and a setting turns it off', shown === true && hidden.visible === false && hidden.kick,
+    `charging with it on: line ${shown ? 'drawn' : 'missing'}; after switching it off in the drawer, still charging: line ${hidden.visible ? 'drawn' : 'gone'}`)
+
   // Escape closes the drawer and nothing else.
+  await pg.keyboard.press('KeyP')
+  await pg.waitForTimeout(500)
+  await pg.click('[data-act="settings"]')
+  await pg.waitForTimeout(300)
   await pg.keyboard.press('Escape')
   await pg.waitForTimeout(200)
   const esc = await pg.evaluate(() => ({ drawer: !!document.querySelector('.drawer'), pause: !!document.querySelector('[data-act="resume"]') }))

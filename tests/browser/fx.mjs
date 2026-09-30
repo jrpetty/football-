@@ -151,6 +151,40 @@ const S = (fn, arg) => pg.evaluate(fn, arg)
   ok('and stopping closes it again', Math.abs(after - still) < 0.7, `${after}° a couple of seconds after stopping`)
 }
 
+// ---- 3b. the shot pre-view ---------------------------------------------------------------
+{
+  await S(() => {
+    window.__next = () => window.__mk({})
+    const w = window.__world, p = w.getControlledPlayer()
+    p.x = 6; p.y = 19; p.vx = 0; p.vy = 0; p.heading = 0
+    w.ball.setPos(6.7, 19, 0); w.ball.stop()
+    // What the controller reports while a strike charges.
+    window.__game.human.previewKick = { type: 'strike', power: 0.6, aim: { x: 1, y: 0 }, loft: 0.6, spin: 0.4 }
+  })
+  await wait(1500)
+  const on = await S(() => {
+    const sc = window.__scene
+    const pts = sc.previewPts
+    const a = pts.geometry.getAttribute('position')
+    const n = pts.geometry.drawRange.count
+    return {
+      pointsVisible: pts.visible,
+      ringVisible: sc.previewRing.visible,
+      n,
+      first: [+a.getX(0).toFixed(2), +a.getZ(0).toFixed(2)],
+      ring: [+sc.previewRing.position.x.toFixed(1), +sc.previewRing.position.z.toFixed(1)],
+    }
+  })
+  ok('while a strike charges in training, a line is drawn from the ball',
+    on.pointsVisible && on.ringVisible && on.n > 20 && Math.abs(on.first[0] - 6.8) < 0.5,
+    `${on.n} dots starting at x=${on.first[0]}, a ring where it comes down (x=${on.ring[0]})`)
+
+  await S(() => { window.__game.human.previewKick = null })
+  await wait(700)
+  const off = await S(() => ({ p: window.__scene.previewPts.visible, r: window.__scene.previewRing.visible }))
+  ok('and it goes when you let go', !off.p && !off.r, `dots visible: ${off.p}, ring visible: ${off.r}`)
+}
+
 // ---- 4. the players --------------------------------------------------------------------
 {
   const r = await S(() => {

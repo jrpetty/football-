@@ -50,7 +50,7 @@ export class Game3D {
 
   constructor(
     private canvas: HTMLCanvasElement,
-    container: HTMLElement,
+    private container: HTMLElement,
     private config: MatchConfig,
     private input: InputManager,
     private screens: Screens,
@@ -62,6 +62,7 @@ export class Game3D {
     canvas.classList.add('hud-only', 'unlocked')
     this.human = new Human3DController({ height: config.heightSens, curve: config.curveSens })
     this.scene = new Scene3D(container, config.quality)
+    container.classList.add('vignette')
     this.cam3 = new Camera3D(1)
     this.applySettings()
     if (config.tutorial) this.tutorial = new Tutorial()
@@ -223,6 +224,7 @@ export class Game3D {
     this.input.exitPointerLock()
     this.canvas.classList.remove('hud-only', 'unlocked')
     this.scene.dispose()
+    this.container.classList.remove('vignette')
   }
 
   private onCanvasDown = () => {
@@ -265,6 +267,7 @@ export class Game3D {
       const f = this.replay.focus(this.world)
       this.cam3.orbit(f.x, f.y, f.z, this.replayAngle)
       this.scene.sync(this.world, -1, false, -1, dt, true)
+      this.scene.syncPreview(null)
       this.scene.render(this.cam3.cam)
       this.drawReplayOverlay()
       // Consume this frame's key presses, as every other frame does. Left
@@ -442,6 +445,10 @@ export class Game3D {
     const controlledId = this.world.getControlledPlayer()?.id ?? -1
     const first = this.cam3.mode === 'first'
     this.scene.sync(this.world, controlledId, !first, first ? controlledId : -1, dt)
+    // Training only, and only while a strike is charging: the world's own account
+    // of where letting go now would send it.
+    const aiming = this.config.mode === 'training' && !this.paused && store.get('shotPreview') && this.human.previewKick
+    this.scene.syncPreview(aiming ? this.world.previewStrike(this.human.previewKick!) : null)
     this.shakeFor(this.world.getControlledPlayer())
     const me = this.world.getControlledPlayer()
     const pace = me && me.sprinting ? Math.min(1, Math.hypot(me.vx, me.vy) / 8) : 0

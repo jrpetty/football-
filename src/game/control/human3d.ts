@@ -3,7 +3,7 @@ import type { InputManager } from '../core/input'
 import type { Camera3D } from '../render3d/camera3d'
 import type { World } from '../match/world'
 import { emptyCommand } from '../types'
-import type { Command } from '../types'
+import type { Command, KickRequest } from '../types'
 import type { Vec2 } from '../core/vec'
 import { AimTracker, ChargeButton, FlickTracker, makeKick, shapeFromFlick, skillFromFlick } from './strike'
 
@@ -33,6 +33,10 @@ export class Human3DController {
   charge = 0
   liveLoft = 0
   liveSpin = 0
+  // The strike that letting go this instant would make, while one is charging —
+  // the same request the release builds, so a pre-view of it is a pre-view of
+  // what will happen.
+  previewKick: KickRequest | null = null
 
   constructor(public sens: Sensitivity = { height: CONTROL.heightSensitivity, curve: CONTROL.curveSensitivity }) {}
 
@@ -83,6 +87,15 @@ export class Human3DController {
       this.liveLoft = 0
       this.liveSpin = 0
     }
+
+    this.previewKick = this.strike.held
+      ? makeKick(
+          'strike',
+          Math.max(this.strike.fraction(CONTROL.strikeCharge), 0.08),
+          this.aim.settled(look),
+          shapeFromFlick(this.flick.flick(), this.sens.height, this.sens.curve),
+        )
+      : null
 
     // --- release: the strike (pass / shot, decided by power) ---
     if (input.mouseReleased.left) {

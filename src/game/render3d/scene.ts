@@ -46,6 +46,10 @@ export class Scene3D {
   // Particles, and the things that happened this frame that they were made for.
   readonly fx = new Fx()
   private tmpDir = new THREE.Vector3()
+  // The stands' materials, and how worked up the crowd is: a goal sets it to
+  // one, and it falls away over a couple of seconds.
+  private crowdMats: THREE.MeshStandardMaterial[] = []
+  private excite = 0
   private seenEffects = new WeakSet<Effect>()
   // Effects that appeared for the first time this frame. The camera reads these
   // to decide what is worth shaking for.
@@ -85,6 +89,8 @@ export class Scene3D {
     this.buildGoals()
     this.buildBall()
     this.buildBallBlob()
+    this.buildPreview()
+    this.buildCornerFlags()
     for (const o of this.fx.group) this.scene.add(o)
   }
 
@@ -419,6 +425,7 @@ export class Scene3D {
           side: THREE.DoubleSide,
         }),
       )
+      this.crowdMats.push(stand.material as THREE.MeshStandardMaterial)
       stand.position.set(x, standH / 2, z)
       stand.rotation.order = 'YXZ'
       stand.rotation.y = rotY
@@ -717,6 +724,92 @@ export class Scene3D {
     this.ball.quaternion.premultiply(this.ballSpinQ)
   }
 
+  // ---- corner flags ----
+  //
+  // Four poles and four flags in the corners, inside the glass. A pitch without
+  // them is a rectangle; with them it is a football pitch. Two draw calls.
+  private buildCornerFlags() {
+    const L = FIELD.length
+    const W = FIELD.width
+    const poles: THREE.BufferGeometry[] = []
+    const flags: THREE.BufferGeometry[] = []
+    for (const [x, z, dx] of [[0.3, 0.3, 1], [L - 0.3, 0.3, -1], [0.3, W - 0.3, 1], [L - 0.3, W - 0.3, -1]] as const) {
+      const pole = new THREE.CylinderGeometry(0.014, 0.014, 1.6, 6)
+      pole.translate(x, 0.8, z)
+      poles.push(pole)
+      // A pennant, streaming towards the middle of the pitch.
+      const flag = new THREE.BufferGeometry()
+      flag.setAttribute('position', new THREE.Float32BufferAttribute([x, 1.58, z, x, 1.26, z, x + dx * 0.42, 1.42, z], 3))
+      flag.setAttribute('normal', new THREE.Float32BufferAttribute([0, 0, 1, 0, 0, 1, 0, 0, 1], 3))
+      flag.setAttribute('uv', new THREE.Float32BufferAttribute([0, 1, 0, 0, 1, 0.5], 2))
+      flag.setIndex([0, 1, 2])
+      flags.push(flag)
+    }
+    this.scene.add(new THREE.Mesh(mergeGeometries(poles)!, new THREE.MeshStandardMaterial({ color: '#f2f4f8', roughness: 0.5 })))
+    this.scene.add(new THREE.Mesh(mergeGeometries(flags)!, new THREE.MeshStandardMaterial({ color: '#ffd35a', roughness: 0.7, side: THREE.DoubleSide, emissive: '#5a4300' })))
+  }
+
+  // ---- the shot pre-view ----
+  //
+  // A dotted line along the flight a charging strike would have, and a ring where
+  // it first comes down. The line is the world's own answer to "where would this
+  // go" (World.previewStrike) drawn as it is given; nothing here works anything
+  // out.
+  private previewPts!: THREE.Points
+  private previewRing!: THREE.Mesh
+
+  private buildPreview() {
+    const geo = new THREE.BufferGeometry()
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(200 * 3), 3).setUsage(THREE.DynamicDrawUsage))
+    this.previewPts = new THREE.Points(
+      geo,
+      new THREE.PointsMaterial({
+        map: this.tex(glowTexture()),
+        color: '#c4ff45',
+        size: 0.24,
+        sizeAttenuation: true,
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        toneMapped: false,
+        fog: false,
+      }),
+    )
+    this.previewPts.frustumCulled = false
+    this.previewPts.visible = false
+    this.scene.add(this.previewPts)
+
+    const ringGeo = new THREE.TorusGeometry(0.55, 0.04, 6, 36)
+    ringGeo.rotateX(Math.PI / 2)
+    this.previewRing = new THREE.Mesh(
+      ringGeo,
+      new THREE.MeshBasicMaterial({ color: '#c4ff45', transparent: true, opacity: 0.9, toneMapped: false, fog: false, depthWrite: false }),
+    )
+    this.previewRing.visible = false
+    this.scene.add(this.previewRing)
+  }
+
+  syncPreview(pv: ReturnType<World['previewStrike']>, time = performance.now() / 1000) {
+    if (!pv) {
+      this.previewPts.visible = false
+      this.previewRing.visible = false
+      return
+    }
+    const attr = this.previewPts.geometry.getAttribute('position') as THREE.BufferAttribute
+    const n = Math.min(pv.points.length, 200)
+    for (let i = 0; i < n; i++) {
+      const p = pv.points[i]
+      attr.setXYZ(i, p.x, p.z + BALL.radius, p.y)
+    }
+    attr.needsUpdate = true
+    this.previewPts.geometry.setDrawRange(0, n)
+    this.previewPts.visible = true
+    const at = pv.land ?? pv.points[pv.points.length - 1]
+    this.previewRing.position.set(at.x, 0.03, at.y)
+    this.previewRing.scale.setScalar(1 + Math.sin(time * 6) * 0.07)
+    this.previewRing.visible = true
+  }
+
   // ---- name tags ----
   //
   // You could not tell who anybody was. Every shirt is a seat somebody may or
@@ -967,21 +1060,53 @@ export class Scene3D {
     )
 
     // ---- wall: a bibbed mannequin ----
-    const kitMat = new THREE.MeshStandardMaterial({ color: '#5b6779', roughness: 0.85 })
-    const torso = new THREE.CapsuleGeometry(0.3, 1.0, 3, 10)
-    torso.translate(0, 0.95, 0)
-    const guard = new THREE.BoxGeometry(0.52, 0.15, 0.16)
-    guard.translate(0, 0.66, 0.25)
-    add(mergeGeometries([torso, guard])!, kitMat, wall, true, true)
+    //
+    // A man rather than a barrel: two legs, a tapered trunk, shoulders, and arms
+    // brought across the front the way a wall stands to protect itself. Built
+    // as three merged geometries, one per material, so it costs what the barrel
+    // did.
+    const kitMat = new THREE.MeshStandardMaterial({ color: '#4d5a6e', roughness: 0.85 })
+    const kit: THREE.BufferGeometry[] = []
+    for (const side of [-1, 1]) {
+      const leg = new THREE.CylinderGeometry(0.085, 0.065, 0.84, 8)
+      leg.translate(0.1 * side, 0.49, 0)
+      kit.push(leg)
+    }
+    const trunk = new THREE.CylinderGeometry(0.235, 0.185, 0.62, 12)
+    trunk.translate(0, 1.2, 0)
+    kit.push(trunk)
+    const shoulders = new THREE.CapsuleGeometry(0.095, 0.3, 3, 8)
+    shoulders.rotateZ(Math.PI / 2)
+    shoulders.translate(0, 1.47, 0)
+    kit.push(shoulders)
+    // Arms from each shoulder down and across to where the hands meet.
+    const hand = new THREE.Vector3(0, 0.99, 0.22)
+    for (const side of [-1, 1]) {
+      const from = new THREE.Vector3(0.27 * side, 1.44, 0.02)
+      const to = hand.clone()
+      const dir = to.clone().sub(from)
+      const len = dir.length()
+      const arm = new THREE.CapsuleGeometry(0.058, Math.max(0.05, len - 0.12), 3, 6)
+      arm.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize()))
+      arm.translate((from.x + to.x) / 2, (from.y + to.y) / 2, (from.z + to.z) / 2)
+      kit.push(arm)
+    }
+    add(mergeGeometries(kit)!, kitMat, wall, true, true)
 
-    const bib = new THREE.CapsuleGeometry(0.315, 0.5, 3, 10)
-    bib.translate(0, 1.12, 0)
-    // No shadow: it is a skin over the torso, which is already casting one.
+    const bib = new THREE.CylinderGeometry(0.248, 0.222, 0.44, 12)
+    bib.translate(0, 1.25, 0)
+    // No shadow: it is a skin over the trunk, which is already casting one.
     add(bib, new THREE.MeshStandardMaterial({ color: '#e8d43a', roughness: 0.7 }), wall, true, false)
 
-    const head = new THREE.SphereGeometry(0.16, 8, 6)
-    head.translate(0, 1.66, 0)
-    add(head, new THREE.MeshStandardMaterial({ color: '#c8a284', roughness: 0.8 }), wall, true, false)
+    const skin: THREE.BufferGeometry[] = []
+    const neck = new THREE.CylinderGeometry(0.05, 0.06, 0.1, 8)
+    neck.translate(0, 1.6, 0)
+    skin.push(neck)
+    const head = new THREE.SphereGeometry(0.125, 10, 8)
+    head.scale(1, 1.08, 1)
+    head.translate(0, 1.72, 0)
+    skin.push(head)
+    add(mergeGeometries(skin)!, new THREE.MeshStandardMaterial({ color: '#c8a284', roughness: 0.8 }), wall, true, false)
   }
 
   private syncDummies(world: World) {
@@ -1143,6 +1268,13 @@ export class Scene3D {
     }
 
     fx.update(dt)
+
+    // The crowd: a steady glow, and on a goal a storm of camera flashes.
+    this.excite = Math.max(0, this.excite - dt * 0.5)
+    const t = performance.now() / 1000
+    this.crowdMats.forEach((m, i) => {
+      m.emissiveIntensity = 0.85 + this.excite * (0.35 + 0.4 * Math.sin(t * 31 + i * 2.1))
+    })
   }
 
   private burst(world: World, e: Effect) {
@@ -1170,6 +1302,7 @@ export class Scene3D {
         fx.sparks(e.x, e.y, 0.3, 0.3)
         break
       case 'goal': {
+        this.excite = 1
         // A cannon of paper from the mouth of the goal that was scored in.
         const end = e.x < FIELD.length / 2 ? 0 : FIELD.length
         const inward = end === 0 ? 1 : -1

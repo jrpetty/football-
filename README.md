@@ -74,6 +74,12 @@ shield, slide, score. Each step ends when the world says the thing happened, not
 when you have read the text, so it cannot be passed by clicking at nothing.
 **Enter** skips a step.
 
+In training, charging a strike draws a **dotted line** from the ball to where
+it would come down — your flick included. It is the simulation's own answer, not
+an estimate: the strike and the preview share one piece of code
+(`World.strikePlan`), and a test holds the line to within a centimetre of the
+ball's real track. Switch it off under *Display* to learn the flick by feel.
+
 ---
 
 ## Controls

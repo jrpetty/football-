@@ -39,6 +39,8 @@ export interface Saved {
   volume: number // 0..1
   hudScale: number // 0.8..1.5
   showFps: boolean
+  // In training, a dotted line from the ball showing where a charging strike would go.
+  shotPreview: boolean
   tutorialSeen: boolean
   binds: Record<string, string>
   bests: Record<string, DrillBest>
@@ -65,6 +67,7 @@ const DEFAULTS: Saved = {
   volume: 0.75,
   hudScale: 1,
   showFps: true,
+  shotPreview: true,
   tutorialSeen: false,
   binds: {},
   bests: {},
@@ -109,6 +112,7 @@ function sane(s: Saved): Saved {
     muted: s.muted === true,
     invertY: s.invertY === true,
     showFps: s.showFps !== false,
+    shotPreview: s.shotPreview !== false,
     tutorialSeen: s.tutorialSeen === true,
     lookSens: num(s.lookSens, 0.25, 3, DEFAULTS.lookSens),
     fov: num(s.fov, 50, 100, DEFAULTS.fov),

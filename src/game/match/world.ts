@@ -652,6 +652,141 @@ export class World {
   // Last kick the simulation actually received — surfaced for debugging/tuning.
   lastKickDebug: { type: string; power: number; loft: number; spin: number } | null = null
 
+  // The numbers behind a strike played off the turf: how fast it leaves, at
+  // what angle, with what spin — everything up to the moment the ball is let go.
+  //
+  // It is a method of its own because two things need the same answer. The
+  // strike itself, and the training pre-view, which shows where a strike would
+  // go before you hit it. Written once, the preview cannot drift from what the
+  // ball then does. `noise` is where the small imperfection comes from: a
+  // strike rolls dice, a preview passes zero.
+  private strikePlan(p: Player, kick: KickRequest, aim0: Vec2, power: number, loft: number, noise: () => number) {
+    let aim = aim0
+    let speed: number
+    switch (kick.type) {
+      case 'touch':
+        speed = KICK.touchMin + (KICK.touchMax - KICK.touchMin) * power
+        break
+      case 'strike':
+        speed = KICK.strikeMin + (KICK.strikeMax - KICK.strikeMin) * power
+        break
+      case 'shot':
+        speed = KICK.shotMin + (KICK.shotMax - KICK.shotMin) * power
+        break
+      case 'through':
+        speed = (KICK.passMin + (KICK.passMax - KICK.passMin) * power) * KICK.throughBias
+        break
+      case 'clear':
+        speed = KICK.shotMax * 0.85
+        break
+      default:
+        speed = KICK.passMin + (KICK.passMax - KICK.passMin) * power
+    }
+
+    // Striking is meant to be deterministic — where the ball goes is your aim and
+    // your flick, not a dice roll. Only a whisper of scatter remains, growing
+    // with power and fatigue, so a full-blooded strike is marginally less
+    // precise than a measured one.
+    // Which boot this comes off, and whether it's the good one. Decided by
+    // which side of you the ball is on, exactly as it is for the animation —
+    // so shifting the ball onto your stronger foot before you hit it is a real
+    // decision with a real payoff.
+    const foot: 0 | 1 = V.cross(p.facing, V.sub(this.ball.pos, p.pos)) > 0 ? 0 : 1
+    const weak = foot !== p.strongFoot && kick.type !== 'touch'
+    if (weak) speed *= PLAYER.weakFootPower
+
+    const baseSpread =
+      (kick.type === 'touch' ? 0.15 : 0.3 + power * 0.9) + (weak ? PLAYER.weakFootSpread * power : 0)
+    const spreadRad = ((baseSpread + (1 - p.energy) * 0.6) * Math.PI) / 180
+    aim = V.rotate(aim, noise() * spreadRad)
+
+    // Curve: mostly the player's deliberate sideways flick, plus a little from
+    // striking across the body, plus a touch of natural imperfection.
+    const velDir = p.speed > 1 ? V.normalize(p.vel) : p.facing
+    // Side-spin, as the speed of the ball's surface: mostly the player's
+    // deliberate sideways flick, plus a little from striking across the body,
+    // plus a touch of natural imperfection. Scaled by the ball's own pace,
+    // because that is what spin is — you cannot put 8 m/s of surface on a ball
+    // you have rolled 4 m.
+    let spin = kick.spin * KICK.sideSpin * speed
+    spin +=
+      V.cross(velDir, aim) *
+      KICK.sideSpin *
+      KICK.sideSpinAcrossBody *
+      (0.4 + 0.6 * power) *
+      speed
+    spin += noise() * 0.12
+    if (weak) spin *= PLAYER.weakFootSpin
+
+    // Loft, and the spin that comes with the technique. Getting under the ball
+    // lifts it and leaves backspin on it, so a chip floats and hangs; coming
+    // over the top drives it flat with topspin, so it dips and then skids on.
+    // Launch angle. A neutral strike gets the natural lift of a ball coming off
+    // the laces; flicking up climbs from there toward a full lofted ball, and
+    // flicking down takes it away — reaching the floor well before the flick is
+    // maxed out, so a low driven pass is a normal thing to play rather than a
+    // perfectly executed one.
+    const natural = CONTROL.naturalLoft * power
+    const driven = loft < 0 ? clamp(loft / CONTROL.driveLoft, 0, 1) : 0
+    const maxLoft =
+      CONTROL.loftAngleSoft - (CONTROL.loftAngleSoft - CONTROL.loftAngleHard) * power
+    const angle = loft >= 0 ? natural + loft * (maxLoft - natural) : natural * (1 - driven)
+    // Struck through the middle rather than under it, so more of it is pace.
+    speed *= 1 + CONTROL.driveBonus * driven
+    const vz = Math.sin(angle) * speed
+    const horiz = Math.cos(angle) * speed
+    // How much spin the technique leaves on the ball, as the speed of its own
+    // surface. Coming over the top puts topspin on, so the ball arrives at the
+    // turf already close to rolling and skids on. Getting under it leaves
+    // backspin — but that's a scooping motion, so a delicate chip floats and
+    // checks while a full-blooded long ball is struck through and carries less.
+    const vSpin =
+      loft > 0
+        ? -loft * CONTROL.backspinFromLoft * (1 - 0.55 * power) * speed
+        : driven * CONTROL.topspinFromLoft * speed
+    return { aim, speed, horiz, vz, spin, vSpin, foot }
+  }
+
+  // Where a strike would go if you let go right now. For the training pre-view.
+  //
+  // The same plan the strike itself uses, flown on a ball of its own, so the
+  // world is not touched — and, since it is the same plan, it is a fair account
+  // of what the ball will do rather than a picture of what it might. It knows
+  // nothing about bodies, posts or walls: it is the flight, and the first place
+  // it comes down. Null whenever a strike would not be played off the turf (the
+  // ball is out of reach, or in the air, or you are in no position to kick).
+  previewStrike(kick: KickRequest): { points: { x: number; y: number; z: number }[]; land: { x: number; y: number } | null; peak: number } | null {
+    const p = this.getControlledPlayer()
+    if (!p || !this.canKick(p, 'strike')) return null
+    if (this.ball.z > PLAYER.controlHeight + p.z) return null
+    const power = clamp(kick.power, 0, 1)
+    const loft = clamp(kick.loft, -1, 1)
+    const aim = V.len(kick.aim) > 0.01 ? V.normalize(kick.aim) : p.facing
+    const plan = this.strikePlan(p, kick, aim, power, loft, () => 0)
+    const b = new Ball()
+    b.x = p.x + plan.aim.x * (p.radius + BALL.radius + 0.05)
+    b.y = p.y + plan.aim.y * (p.radius + BALL.radius + 0.05)
+    b.z = plan.vz > 0 ? 0.15 : 0
+    b.launch(plan.aim.x * plan.horiz, plan.aim.y * plan.horiz, plan.vz, plan.spin, p.team, p.id, plan.vSpin)
+    const points: { x: number; y: number; z: number }[] = [{ x: b.x, y: b.y, z: b.z }]
+    let land: { x: number; y: number } | null = null
+    let peak = 0
+    let bounces = 0
+    // Three seconds of flight at the simulation's own rate, kept to every other step.
+    for (let i = 0; i < 360; i++) {
+      b.integrate()
+      if (i % 2 === 1) points.push({ x: b.x, y: b.y, z: b.z })
+      peak = Math.max(peak, b.z)
+      if (b.justBounced) {
+        if (!land) land = { x: b.x, y: b.y }
+        if (++bounces >= 2) break
+      }
+      if (b.x < 0 || b.x > FIELD.length || b.y < 0 || b.y > FIELD.width) break
+      if (!b.airborne && b.speed < 0.5) break
+    }
+    return { points, land, peak }
+  }
+
   private executeKick(p: Player, cmd: Command) {
     this.executeKickInner(p, cmd)
     // Counted after the fact, from what the ball actually did: however a contact
@@ -703,88 +838,9 @@ export class World {
       }
     }
 
-    let speed: number
-    switch (kick.type) {
-      case 'touch':
-        speed = KICK.touchMin + (KICK.touchMax - KICK.touchMin) * power
-        break
-      case 'strike':
-        speed = KICK.strikeMin + (KICK.strikeMax - KICK.strikeMin) * power
-        break
-      case 'shot':
-        speed = KICK.shotMin + (KICK.shotMax - KICK.shotMin) * power
-        break
-      case 'through':
-        speed = (KICK.passMin + (KICK.passMax - KICK.passMin) * power) * KICK.throughBias
-        break
-      case 'clear':
-        speed = KICK.shotMax * 0.85
-        break
-      default:
-        speed = KICK.passMin + (KICK.passMax - KICK.passMin) * power
-    }
-
-    // Striking is meant to be deterministic — where the ball goes is your aim and
-    // your flick, not a dice roll. Only a whisper of scatter remains, growing
-    // with power and fatigue, so a full-blooded strike is marginally less
-    // precise than a measured one.
-    // Which boot this comes off, and whether it's the good one. Decided by
-    // which side of you the ball is on, exactly as it is for the animation —
-    // so shifting the ball onto your stronger foot before you hit it is a real
-    // decision with a real payoff.
-    const foot: 0 | 1 = V.cross(p.facing, V.sub(this.ball.pos, p.pos)) > 0 ? 0 : 1
-    const weak = foot !== p.strongFoot && kick.type !== 'touch'
-    if (weak) speed *= PLAYER.weakFootPower
-
-    const baseSpread =
-      (kick.type === 'touch' ? 0.15 : 0.3 + power * 0.9) + (weak ? PLAYER.weakFootSpread * power : 0)
-    const spreadRad = ((baseSpread + (1 - p.energy) * 0.6) * Math.PI) / 180
-    aim = V.rotate(aim, (Math.random() * 2 - 1) * spreadRad)
-
-    // Curve: mostly the player's deliberate sideways flick, plus a little from
-    // striking across the body, plus a touch of natural imperfection.
-    const velDir = p.speed > 1 ? V.normalize(p.vel) : p.facing
-    // Side-spin, as the speed of the ball's surface: mostly the player's
-    // deliberate sideways flick, plus a little from striking across the body,
-    // plus a touch of natural imperfection. Scaled by the ball's own pace,
-    // because that is what spin is — you cannot put 8 m/s of surface on a ball
-    // you have rolled 4 m.
-    let spin = kick.spin * KICK.sideSpin * speed
-    spin +=
-      V.cross(velDir, aim) *
-      KICK.sideSpin *
-      KICK.sideSpinAcrossBody *
-      (0.4 + 0.6 * power) *
-      speed
-    spin += (Math.random() * 2 - 1) * 0.12
-    if (weak) spin *= PLAYER.weakFootSpin
-
-    // Loft, and the spin that comes with the technique. Getting under the ball
-    // lifts it and leaves backspin on it, so a chip floats and hangs; coming
-    // over the top drives it flat with topspin, so it dips and then skids on.
-    // Launch angle. A neutral strike gets the natural lift of a ball coming off
-    // the laces; flicking up climbs from there toward a full lofted ball, and
-    // flicking down takes it away — reaching the floor well before the flick is
-    // maxed out, so a low driven pass is a normal thing to play rather than a
-    // perfectly executed one.
-    const natural = CONTROL.naturalLoft * power
-    const driven = loft < 0 ? clamp(loft / CONTROL.driveLoft, 0, 1) : 0
-    const maxLoft =
-      CONTROL.loftAngleSoft - (CONTROL.loftAngleSoft - CONTROL.loftAngleHard) * power
-    const angle = loft >= 0 ? natural + loft * (maxLoft - natural) : natural * (1 - driven)
-    // Struck through the middle rather than under it, so more of it is pace.
-    speed *= 1 + CONTROL.driveBonus * driven
-    const vz = Math.sin(angle) * speed
-    const horiz = Math.cos(angle) * speed
-    // How much spin the technique leaves on the ball, as the speed of its own
-    // surface. Coming over the top puts topspin on, so the ball arrives at the
-    // turf already close to rolling and skids on. Getting under it leaves
-    // backspin — but that's a scooping motion, so a delicate chip floats and
-    // checks while a full-blooded long ball is struck through and carries less.
-    const vSpin =
-      loft > 0
-        ? -loft * CONTROL.backspinFromLoft * (1 - 0.55 * power) * speed
-        : driven * CONTROL.topspinFromLoft * speed
+    const plan = this.strikePlan(p, kick, aim, power, loft, () => Math.random() * 2 - 1)
+    aim = plan.aim
+    const { speed, horiz, vz, spin, vSpin, foot } = plan
 
     // A close-control move reshapes where the touch goes.
     if (kick.type === 'touch' && kick.skill) {

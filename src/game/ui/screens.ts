@@ -63,9 +63,10 @@ const NUMBERS: Record<string, { key: 'lookSens' | 'fov' | 'hudScale' | 'volume';
   hudScale: { key: 'hudScale', fmt: (v) => `${Math.round(v * 100)}%` },
   volume: { key: 'volume', fmt: (v) => `${Math.round(v * 100)}%`, apply: (v) => sfx.setVolume(v) },
 }
-const SWITCHES: Record<string, { key: 'invertY' | 'showFps'; apply?: (v: boolean) => void }> = {
+const SWITCHES: Record<string, { key: 'invertY' | 'showFps' | 'shotPreview'; apply?: (v: boolean) => void }> = {
   invertY: { key: 'invertY' },
   showFps: { key: 'showFps' },
+  shotPreview: { key: 'shotPreview' },
 }
 
 export class Screens {
@@ -376,7 +377,8 @@ export class Screens {
       <div class="row"><span class="lab">Camera distance</span><span class="hint">How far behind your player the third-person camera sits.</span>
         <div class="segmented wide" data-group="camDist">${this.seg('camDist', 'close', cam === 'close', 'Close')}${this.seg('camDist', 'standard', cam === 'standard', 'Standard')}${this.seg('camDist', 'far', cam === 'far', 'Far')}</div></div>
       ${this.slider('hudScale', 'HUD size', 'The scoreboard, meters and panels.', 0.8, 1.5, 0.05, store.get('hudScale'))}
-      ${this.toggle('showFps', 'Show frame rate', 'Top right, next to the camera name.', store.get('showFps'))}`
+      ${this.toggle('showFps', 'Show frame rate', 'Top right, next to the camera name.', store.get('showFps'))}
+      ${this.toggle('shotPreview', 'Shot preview in training', 'While a strike charges, a dotted line shows where it would go and where it would come down — your flick included. Switch it off to learn it by feel.', store.get('shotPreview'))}`
   }
 
   private audioHtml(): string {

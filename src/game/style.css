@@ -63,6 +63,17 @@ button {
   display: block;
 }
 
+/* In a match the picture is pulled in a little at the edges, which is what
+   makes a rendered pitch look like it was filmed. It is over the WebGL canvas
+   and under the HUD. */
+#scene3d.vignette::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 125% 105% at 50% 50%, rgba(2, 4, 8, 0) 58%, rgba(2, 4, 8, 0.4) 100%);
+}
+
 #pitch {
   position: fixed;
   inset: 0;
