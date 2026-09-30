@@ -17,6 +17,58 @@ Everything is obtainable in **survival**.
 | **The world** | Villages generate as you explore (config `naturalVillages`), in groups of three to five. |
 | **Vanilla villagers** | Turned into folk as you meet them (config `replaceVillagers`). Trading with them stops working; wandering traders are untouched. |
 
+## From the first spawner to the Nether Age
+
+Place a spawner and walk away. Everything below happens on its own, and each step
+is there for a reason the village can see.
+
+1. **Founding.** The first folk founds the village where the spawner stood, with a
+   chest of founding stores: bread, seed, carrots and potatoes, saplings, torches,
+   planks, cobblestone, four chests, string. Every folk carries rations, stone tools,
+   a bench and a chest of its own.
+2. **Trades and ground.** Each takes the trade the village is shortest of (farmers
+   first, then miners, woodcutters, a smelter; a watch, a carrier, a storekeeper, a
+   rancher and a fisher as it grows), stakes ground that suits it, sets its chest down
+   and works.
+3. **The storehouse, first.** For its first half hour the founding planks, stone and
+   chests are kept for it. It goes up within minutes: four chests under one roof.
+4. **A shelter, then houses.** *Why:* a village has room for twelve, and every house
+   is room for five more (a shelter three, the meeting hall six). Two fed folk in
+   work raise a child only while there is room, so the village builds a house
+   whenever it is nearly full. That loop (food → children → hands → materials →
+   houses → room → children) is what makes it grow.
+5. **A well** at the middle marks the camp as a village, and the Wood Age asks for it
+   with timber, food in the stores, the storehouse, the shelter and enough houses.
+6. **The Stone Age:** quarry stone and coal, a **wall** round the village (it follows
+   the ground), more houses, a **smeltery** of three furnaces, and a **meeting hall**.
+7. **The Iron Age:** iron for the watch's armour and everybody's tools, a
+   **workshop** and a **watchtower**. **Diamond Age:** diamonds and a **lighthouse**.
+   **Nether Age:** obsidian for a way out of the world.
+
+Each age is announced once in chat (the only thing a village ever says).
+`/village status` shows what it is short of, how much room it has, and what it
+will build next and why.
+
+### The buildings
+
+| Building | Footprint | What it is |
+|---|---|---|
+| Storehouse | 5×5 | Walls, a raised roof, four chests inside |
+| Shelter | 5×5 | Walls and a raised roof: somewhere out of the night |
+| House | 5×5 | Floor, walls four high with windows and a doorway, stepped roof; bench, furnace, chest, light, two beds when there is wool |
+| Well | 3×3 | Stone curb, four fence posts, a roof and a light |
+| Wall | ring of 27 | Three high above the ground wherever the ground is, a gate on one side, lit corners |
+| Smeltery | 5×5 | Three furnaces, two chests, a bench |
+| Meeting hall | 7×7 | Walls four high with windows all round, stepped roof, two chests, a bench, light |
+| Workshop | 5×5 | Bench, furnace, chest |
+| Watchtower | 3×3 | A lookout platform up a ladder |
+| Lighthouse | 3×3 | Twelve high, ladder inside, lit crown |
+| Pen | 7×7 | Fence ring with a gate, once there is a rancher |
+
+Builders pick the flattest nearby lot that costs least, level it (filling the low
+side, felling any tree in the way and keeping the wood), and build from what they
+actually carry: stone before planks, planks before logs.
+
 ## What they do
 
 * **Trades** — at ten folk: four farmers, three miners, two woodcutters, one

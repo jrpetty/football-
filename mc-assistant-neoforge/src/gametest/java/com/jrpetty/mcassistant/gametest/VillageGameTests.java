@@ -188,6 +188,13 @@ public class VillageGameTests {
             "the watchtower has a ladder shaft — the stocking must know");
         helper.assertTrue(BuildGoal.partCounts("lighthouse", 13).getOrDefault(BuildGoal.Part.LADDER, 0) > 0,
             "the lighthouse has a ladder shaft — the stocking must know");
+        var well = BuildGoal.partCounts("well", 13);
+        helper.assertTrue(well.getOrDefault(BuildGoal.Part.FENCE, 0) == 8 && well.getOrDefault(BuildGoal.Part.TORCH, 0) == 1,
+            "the well has four posts two high and a light, wants " + well);
+        var hall = BuildGoal.partCounts("hall", 13);
+        helper.assertTrue(hall.getOrDefault(BuildGoal.Part.CHEST, 0) == 2 && hall.getOrDefault(BuildGoal.Part.CRAFTING_TABLE, 0) == 1
+                && hall.getOrDefault(BuildGoal.Part.BLOCK, 0) > house.getOrDefault(BuildGoal.Part.BLOCK, 0),
+            "the meeting hall is the biggest thing a village builds, with two chests and a bench, wants " + hall);
         var pen = BuildGoal.partCounts("pen", 13);
         helper.assertTrue(pen.getOrDefault(BuildGoal.Part.FENCE, 0) >= 20 && pen.getOrDefault(BuildGoal.Part.GATE, 0) == 1,
             "the pen is a ring of fence with a gate, wants " + pen);
@@ -311,6 +318,46 @@ public class VillageGameTests {
                 helper.succeed();
             } else if (t >= 3000) {
                 helper.fail("the storehouse was not built among the trees in 3000 ticks: " + builder.debugLine());
+            }
+        });
+    }
+
+    /** The two new designs, raised for real: a meeting hall (seven across, the stepped roof
+     *  five blocks up — within a builder's reach from its own floor) and a well. */
+    @GameTest(template = EMPTY, timeoutTicks = 6400, batch = "t13_hall_and_well")
+    public static void t13_hall_and_well(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(1000);
+        Kit.hold(level, 3600, 3600, 48);
+        Kit.prepare(level, 3600, 3600, 48);
+        BlockPos heart = Kit.surface(level, 3600, 3600);
+        VillageFolkEntity builder = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(builder != null, "could not found a village for the hall");
+        Villages.Village v = Villages.nearest(level, heart, 100);
+        BlockPos hallAt = Kit.surface(level, 3614, 3600);
+        BlockPos wellAt = Kit.surface(level, 3590, 3600);
+        for (int i = 0; i < 4; i++) builder.insertItem(new ItemStack(Items.COBBLESTONE, 64));
+        builder.insertItem(new ItemStack(Items.CHEST, 2));
+        builder.insertItem(new ItemStack(Items.CRAFTING_TABLE, 2));
+        builder.insertItem(new ItemStack(Items.TORCH, 8));
+        builder.insertItem(new ItemStack(Items.GLASS, 16));
+        builder.insertItem(new ItemStack(Items.OAK_FENCE, 8));
+        builder.enqueue(Job.buildAt("hall", hallAt, Direction.WEST, 0));
+        builder.enqueue(Job.buildAt("well", wellAt, Direction.EAST, 0));
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (t % 1200 == 0) Kit.log("t13 @" + t + " built=" + Villages.builtList(v.id()) + " — " + builder.debugLine());
+            var built = Villages.builtList(v.id());
+            if (built.contains("hall") && built.contains("well")) {
+                boolean ridge = !level.getBlockState(hallAt.above(5)).isAir();
+                boolean roof = !level.getBlockState(wellAt.above(3)).isAir();
+                Kit.log("t13 hall and well stand at tick " + t + "; hall ridge " + ridge + ", well roof " + roof);
+                helper.assertTrue(ridge, "the hall's stepped roof should be up (five above the floor)");
+                helper.assertTrue(roof, "the well should have its roof");
+                helper.succeed();
+            } else if (t >= 6200) {
+                helper.fail("hall and well not both built in 6200 ticks: " + built + " — " + builder.debugLine());
             }
         });
     }

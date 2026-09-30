@@ -42,7 +42,13 @@ public class BuildGoal extends Goal {
 
     public static final Set<String> STRUCTURES = Set.of(
         "wall", "platform", "shelter", "smeltery", "storage", "workshop", "watchtower",
-        "house", "room", "pen", "fortify", "lighthouse", "column");
+        "house", "room", "pen", "fortify", "lighthouse", "column", "well", "hall");
+
+    /** Half the width of a structure's footprint: the meeting hall is seven across, the
+     *  rest five or less. The ground work and the stocking read it. */
+    public static int halfOf(String structure) {
+        return "hall".equals(structure) ? 3 : 2;
+    }
 
     /** What goes in a blueprint cell. */
     public enum Part { BLOCK, FURNACE, CHEST, CRAFTING_TABLE, TORCH, LADDER, FENCE, GATE, WINDOW, BED,
@@ -217,7 +223,9 @@ public class BuildGoal extends Goal {
         layout(structure, base, facing, centered, perimeterRadius, plan);
         // A settlement's builders level and clear the ground they build on; a hired
         // assistant building beside a player's own trees and terraces does not.
-        if (centered && assistant.isSettler() && !"fortify".equals(structure)) addTerrainWork(base);
+        if (centered && assistant.isSettler()) {
+            if ("fortify".equals(structure)) followTheGround(base); else addTerrainWork(base, halfOf(structure));
+        }
         // What is in the way comes down first; then bottom-up, so nothing floats while we work.
         this.plan.sort(java.util.Comparator
             .comparingInt((Placement p) -> p.part() == Part.CLEAR ? 0 : 1)
@@ -270,20 +278,40 @@ public class BuildGoal extends Goal {
      * they are what lets a village raise its storehouse on a hillside instead of
      * waiting for the one flat acre the world may not have made.
      */
-    private void addTerrainWork(BlockPos base) {
+    private void addTerrainWork(BlockPos base, int half) {
         java.util.Set<BlockPos> taken = new java.util.HashSet<>();
         for (Placement p : plan) taken.add(p.pos());
-        for (BlockPos c : fillCells(assistant.level(), base)) {
+        for (BlockPos c : fillCells(assistant.level(), base, half)) {
             if (taken.add(c)) plan.add(new Placement(c, Part.BLOCK));
         }
-        for (int dx = -3; dx <= 3; dx++) {
-            for (int dz = -3; dz <= 3; dz++) {
-                for (int dy = 0; dy <= 4; dy++) {
+        for (int dx = -half - 1; dx <= half + 1; dx++) {
+            for (int dz = -half - 1; dz <= half + 1; dz++) {
+                for (int dy = 0; dy <= 5; dy++) {
                     BlockPos c = base.offset(dx, dy, dz);
                     if (isInTheWay(assistant.level(), c, assistant.level().getBlockState(c))) plan.add(new Placement(c, Part.CLEAR));
                 }
             }
         }
+    }
+
+    /**
+     * A wall round a village is three blocks high above the GROUND, wherever the ground is.
+     * The blueprint is drawn at one height: on a hillside half the ring would be buried in the
+     * slope and the rest hang in the air over the valley, which keeps out nothing. Each
+     * column is lifted or dropped to stand on the ground it is at.
+     */
+    private void followTheGround(BlockPos base) {
+        List<Placement> moved = new ArrayList<>(plan.size());
+        Map<Long, Integer> ground = new java.util.HashMap<>();
+        for (Placement p : plan) {
+            int x = p.pos().getX();
+            int z = p.pos().getZ();
+            int g = ground.computeIfAbsent(BlockPos.asLong(x, 0, z),
+                k -> assistant.level().hasChunk(x >> 4, z >> 4) ? groundTop(assistant.level(), x, z) : base.getY());
+            moved.add(new Placement(new BlockPos(x, g + (p.pos().getY() - base.getY()), z), p.part()));
+        }
+        plan.clear();
+        plan.addAll(moved);
     }
 
     /** Leaves nobody placed: a tree's own, which rot and are in the way. */
@@ -328,9 +356,14 @@ public class BuildGoal extends Goal {
      * disagree about how much stone a hillside takes.
      */
     public static List<BlockPos> fillCells(net.minecraft.world.level.Level level, BlockPos anchor) {
+        return fillCells(level, anchor, 2);
+    }
+
+    /** As above, for a footprint {@code half} blocks each side of the middle. */
+    public static List<BlockPos> fillCells(net.minecraft.world.level.Level level, BlockPos anchor, int half) {
         List<BlockPos> out = new ArrayList<>();
-        for (int dx = -2; dx <= 2; dx++) {
-            for (int dz = -2; dz <= 2; dz++) {
+        for (int dx = -half; dx <= half; dx++) {
+            for (int dz = -half; dz <= half; dz++) {
                 int x = anchor.getX() + dx;
                 int z = anchor.getZ() + dz;
                 if (!level.hasChunk(x >> 4, z >> 4)) continue;
@@ -659,6 +692,8 @@ public class BuildGoal extends Goal {
                             }
                         }
                         out.add(new Placement(col.above(4), Part.BLOCK)); // roof
+                        // and a stepped ridge over the middle of it
+                        if (Math.abs(dx) <= 1 && Math.abs(dz) <= 1) out.add(new Placement(col.above(5), Part.BLOCK));
                     }
                 }
                 // A livable home: workbench, furnace, chest at the back; lit inside.
@@ -773,6 +808,56 @@ public class BuildGoal extends Goal {
                 out.add(new Placement(cell(base, right, facing, -1, -1).above(7), Part.TORCH));
                 out.add(new Placement(cell(base, right, facing, 1, -1).above(7), Part.TORCH));
             }
+            case "well" -> {
+                // The village well: a stone curb round an open middle, a post at each
+                // corner, a roof on the posts and a light on the roof. It is what marks a
+                // camp as a village to anybody walking up to it.
+                BlockPos center = centered ? feet : feet.relative(facing, 3);
+                for (int dx = -1; dx <= 1; dx++) {
+                    for (int dz = -1; dz <= 1; dz++) {
+                        BlockPos col = cell(center, right, facing, dx, dz);
+                        if (dx != 0 || dz != 0) out.add(new Placement(col, Part.BLOCK));      // the curb
+                        if (Math.abs(dx) == 1 && Math.abs(dz) == 1) {
+                            out.add(new Placement(col.above(1), Part.FENCE));                // the posts
+                            out.add(new Placement(col.above(2), Part.FENCE));
+                        }
+                        out.add(new Placement(col.above(3), Part.BLOCK));                    // the roof
+                    }
+                }
+                out.add(new Placement(center.above(4), Part.TORCH));
+            }
+            case "hall" -> {
+                // The meeting hall: seven by seven, walls four high with a door on the side
+                // facing the heart and windows in every wall, a stepped roof, and inside what
+                // the village keeps in common — two chests, a bench, and light.
+                BlockPos center = centered ? feet : feet.relative(facing, 5);
+                for (int dx = -3; dx <= 3; dx++) {
+                    for (int dz = -3; dz <= 3; dz++) {
+                        boolean edge = Math.abs(dx) == 3 || Math.abs(dz) == 3;
+                        BlockPos col = cell(center, right, facing, dx, dz);
+                        if (edge) {
+                            boolean door = dx == 0 && dz == -3;
+                            boolean window = !door && !(Math.abs(dx) == 3 && Math.abs(dz) == 3)
+                                && ((Math.abs(dz) == 3 && Math.abs(dx) == 2) || (Math.abs(dx) == 3 && Math.abs(dz) == 2)
+                                    || (Math.abs(dx) == 3 && dz == 0) || (dz == 3 && dx == 0));
+                            for (int h = 0; h <= 3; h++) {
+                                if (door && h <= 1) continue;
+                                out.add(new Placement(col.above(h), window && (h == 1 || h == 2) ? Part.WINDOW : Part.BLOCK));
+                            }
+                        }
+                        out.add(new Placement(col.above(4), Part.BLOCK));                    // roof
+                        if (Math.abs(dx) <= 2 && Math.abs(dz) <= 2) {
+                            out.add(new Placement(col.above(5), Part.BLOCK));                // stepped
+                        }
+                    }
+                }
+                out.add(new Placement(cell(center, right, facing, -2, 2), Part.CHEST));
+                out.add(new Placement(cell(center, right, facing, 2, 2), Part.CHEST));
+                out.add(new Placement(cell(center, right, facing, 0, 2), Part.CRAFTING_TABLE));
+                out.add(new Placement(cell(center, right, facing, -2, -2), Part.TORCH));
+                out.add(new Placement(cell(center, right, facing, 2, -2), Part.TORCH));
+                out.add(new Placement(cell(center, right, facing, 0, 0), Part.TORCH));
+            }
             default -> { }
         }
     }
@@ -791,6 +876,8 @@ public class BuildGoal extends Goal {
                     }
                 }
                 out.add(new Placement(col.above(3), Part.BLOCK)); // roof
+                // A raised middle to the roof, so it reads as a building and not a crate.
+                if (Math.abs(dx) <= 1 && Math.abs(dz) <= 1) out.add(new Placement(col.above(4), Part.BLOCK));
             }
         }
     }

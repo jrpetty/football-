@@ -218,6 +218,9 @@ public final class VillageCommands {
                 Villages.stock(level, v.centre(), t, Villages.storesRadius(v.id())));
         }
         sb.append(". Built: ").append(Villages.builtList(v.id()));
+        sb.append(". Room for ").append(Villages.housing(v.id()));
+        String next = Villages.nextProject(v.id());
+        sb.append(". Next: ").append(Villages.whyBuild(v.id(), next));
         sb.append(". Short of:");
         java.util.List<Villages.Need> needs = Villages.needs(level, v.id());
         if (needs.isEmpty()) sb.append(" nothing — about to come of age.");

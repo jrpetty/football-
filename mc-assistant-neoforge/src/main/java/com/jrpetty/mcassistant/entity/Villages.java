@@ -464,6 +464,7 @@ public final class Villages {
                         < com.jrpetty.mcassistant.village.VillageMath.housesWanted(folk, false)) {
                     wants.add(new Need("houses", Task.BUILD, 1));
                 }
+                if (built(villageId, "well") < 1) wants.add(new Need("a well", Task.BUILD, 1));
             }
             case STONE -> {
                 // Quarry, wall, and a fire to work by.
@@ -477,6 +478,7 @@ public final class Villages {
                     wants.add(new Need("more houses", Task.BUILD, 1));
                 }
                 if (built(villageId, "smeltery") < 1) wants.add(new Need("a smeltery", Task.BUILD, 1));
+                if (built(villageId, "hall") < 1) wants.add(new Need("a meeting hall", Task.BUILD, 1));
                 need(wants, level, v, "food in the stores", Task.FOOD, foodNow);
             }
             case IRON -> {
@@ -758,12 +760,17 @@ public final class Villages {
 
         if (built(villageId, "storage") < 1) return "storage";
         if (built(villageId, "shelter") < 1) return "shelter";
+        // Room before anything else: a village with every home full stops growing, and
+        // growing is the whole of how it gets the hands for everything after this.
+        if (folk >= housing(villageId) - 2) return "house";
         if (built(villageId, "house") < Math.max(1, folk / 4)) return "house";
+        if (built(villageId, "well") < 1) return "well";
         if (at == Age.WOOD) return null;
 
         if (built(villageId, "fortify") < 1) return "fortify";        // the wall
         if (built(villageId, "house") < Math.max(2, folk / 3)) return "house";
         if (built(villageId, "smeltery") < 1) return "smeltery";
+        if (built(villageId, "hall") < 1) return "hall";
         if (at == Age.STONE) return null;
 
         if (built(villageId, "workshop") < 1) return "workshop";
@@ -774,6 +781,39 @@ public final class Villages {
 
         if (built(villageId, "lighthouse") < 1) return "lighthouse";
         return penIfWanted(villageId, folk);
+    }
+
+    /**
+     * How many people this village has room for. A village is founded with room for
+     * twelve — the founders sleep rough round the heart — and every home it builds is
+     * room for five more: the shelter three, the meeting hall six. Two fed folk in work
+     * raise a child only while there is room for one, so a village grows exactly as
+     * fast as it builds homes, and that is the reason it builds them.
+     */
+    public static int housing(UUID villageId) {
+        return 12 + 5 * built(villageId, "house") + 3 * built(villageId, "shelter") + 6 * built(villageId, "hall");
+    }
+
+    /** Why the village wants the building it wants next, in a line a player can read. */
+    public static String whyBuild(UUID villageId, @Nullable String project) {
+        if (project == null) return "nothing for now — the village is gathering what its age asks for";
+        int folk = headcount(villageId);
+        return switch (project) {
+            case "storage" -> "a storehouse, so what is gathered has somewhere to go";
+            case "shelter" -> "a shelter, somewhere to wait out the first nights";
+            case "house" -> folk >= housing(villageId) - 2
+                ? "a house: " + folk + " live here and there is room for " + housing(villageId) + ", and nobody is born without room"
+                : "a house: a village of " + folk + " wants " + Math.max(1, folk / 4) + " at least";
+            case "well" -> "a well at the heart, the mark of a village rather than a camp";
+            case "fortify" -> "a wall round the village, against the things that come out at night";
+            case "smeltery" -> "a smeltery, three furnaces for the ore the mines bring up";
+            case "hall" -> "a meeting hall, which a village must have before the Iron Age";
+            case "workshop" -> "a workshop, where iron becomes tools";
+            case "watchtower" -> "a watchtower, to see trouble coming";
+            case "lighthouse" -> "a lighthouse, so anyone out after dark can find the way home";
+            case "pen" -> "a pen, for the rancher's herd";
+            default -> "the " + project;
+        };
     }
 
     /** A pen, once the place is big enough to keep a rancher — but LAST, after

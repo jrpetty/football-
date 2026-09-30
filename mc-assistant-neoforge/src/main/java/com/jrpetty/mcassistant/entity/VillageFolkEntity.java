@@ -1143,6 +1143,8 @@ public class VillageFolkEntity extends AssistantEntity {
             >= com.jrpetty.mcassistant.AssistantConfig.villageGrowthCap()) {
             return false;
         }
+        // Nobody is born without somewhere to live: see Villages.housing.
+        if (Villages.headcount(village) >= Villages.housing(village)) return false;
         if (!Villages.mayBirth(village, level().getGameTime())) return false;
         // Somebody to raise it with, near enough to count as living together,
         // in the same trade-less sense: fed, in work, and not this one.
@@ -1346,8 +1348,10 @@ public class VillageFolkEntity extends AssistantEntity {
         if (!stockedFor(project, site)) {
             // Setting about making a chest or a furnace takes a few seconds, so look again in
             // thirty; a wait for stone takes minutes.
-            if (madeAFixture) { madeAFixture = false; Villages.retryIn(village, now, 600L); }
-            else Villages.retrySoon(village, now);
+            // (Not if the same making has been set in hand four times running: whatever is
+            // stopping it will not have changed in thirty seconds.)
+            if (madeAFixture && fixtureTries < 4) { madeAFixture = false; Villages.retryIn(village, now, 600L); }
+            else { madeAFixture = false; Villages.retrySoon(village, now); }
             return;
         }
         Villages.noteAttempt(village, now);
@@ -1394,7 +1398,7 @@ public class VillageFolkEntity extends AssistantEntity {
         int blocks = BuildGoal.partCounts(project, site.radius()).getOrDefault(BuildGoal.Part.BLOCK, 0);
         blocks += blocks / 10 + 2;
         // A hillside takes stone to build up to the floor.
-        if (!project.equals("fortify")) blocks += BuildGoal.fillCells(level(), site.anchor()).size();
+        if (!project.equals("fortify")) blocks += BuildGoal.fillCells(level(), site.anchor(), BuildGoal.halfOf(project)).size();
         int carried = countCarried(BuildGoal::isBuildingBlock);
         // Three parts in four is enough to begin: the rest is dug while the walls go up, and
         // a build that waited for every last block stood in front of its list for days.
@@ -1444,7 +1448,7 @@ public class VillageFolkEntity extends AssistantEntity {
             BuildGoal.partCounts(project, site.radius());
         int blocks = need.getOrDefault(BuildGoal.Part.BLOCK, 0);
         blocks += blocks / 10 + 2;                              // a margin for the cells that are lost
-        if (!project.equals("fortify")) blocks += BuildGoal.fillCells(level(), site.anchor()).size();   // and the ground to build up
+        if (!project.equals("fortify")) blocks += BuildGoal.fillCells(level(), site.anchor(), BuildGoal.halfOf(project)).size();   // and the ground to build up
 
         // Timber and stone: only worth a trip if the village has enough.
         int carried = countCarried(BuildGoal::isBuildingBlock);
@@ -1478,6 +1482,9 @@ public class VillageFolkEntity extends AssistantEntity {
                 boolean making = craftNow(fx.recipe(), want - have);
                 buildNote("build: " + (making ? "making " : "cannot make ") + (want - have) + " " + fx.recipe());
                 if (making) { Villages.leadProgress(village, getUUID(), now); madeAFixture = true; }
+                String ask = fx.recipe() + " x" + (want - have);
+                fixtureTries = ask.equals(lastFixtureAsk) ? fixtureTries + 1 : 0;
+                lastFixtureAsk = ask;
                 return false;                                    // made, or cannot be: either way, not this visit
             }
         }
@@ -1499,6 +1506,9 @@ public class VillageFolkEntity extends AssistantEntity {
 
     /** This visit set about making a fixture (so the next look is soon). */
     private boolean madeAFixture;
+    /** The last fixture set in hand, and how many visits running it has been the same one. */
+    private String lastFixtureAsk = "";
+    private int fixtureTries;
 
     /** A blueprint part a builder must have in hand, and what makes one. */
     private record Fixture(BuildGoal.Part part, String recipe) {}

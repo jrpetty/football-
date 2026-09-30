@@ -163,6 +163,7 @@ public class CraftGoal extends Goal {
                 tablePos = findTable();
                 stuckTicks = 0;
                 if (tablePos == null && !placeOwnTable()) {
+                    if (sourceATable()) return;          // making one first; this craft waits behind it
                     finish("I need a crafting table for " + pretty(job.arg())
                         + " — none nearby, and I lack 4 planks to make one.");
                     return;
@@ -226,6 +227,29 @@ public class CraftGoal extends Goal {
         for (int i = js.size() - 1; i >= 0; i--) assistant.enqueueFront(js.get(i));
         assistant.say("Don't have the parts for " + pretty(arg) + " — getting them first: "
             + String.join(", ", r.narration()) + ".");
+        this.job = null;
+        this.plan = null;
+        assistant.getNavigation().stop();
+        return true;
+    }
+
+    /**
+     * No bench anywhere and none in the pack: make one first, then come back to this.
+     * The planner that queued this craft counted the cobblestone for a furnace and never
+     * asked where the three-by-three grid was to come from, so a builder with a pack of
+     * stone and no bench "made a furnace" every thirty seconds for a whole game day.
+     */
+    private boolean sourceATable() {
+        Integer last = sourcedAt.get("crafting_table");
+        if (last != null && assistant.tickCount - last < 600) return false;
+        com.jrpetty.mcassistant.entity.CraftPlanner.Result r =
+            com.jrpetty.mcassistant.entity.CraftPlanner.plan(assistant, "crafting_table", 1);
+        if (r.jobs().isEmpty() || !r.blockers().isEmpty()) return false;
+        if (sourcedAt.size() > 32) sourcedAt.clear();
+        sourcedAt.put("crafting_table", assistant.tickCount);
+        List<Job> js = r.jobs();
+        for (int i = js.size() - 1; i >= 0; i--) assistant.enqueueFront(js.get(i));
+        assistant.say("No bench here — making one first: " + String.join(", ", r.narration()) + ".");
         this.job = null;
         this.plan = null;
         assistant.getNavigation().stop();
