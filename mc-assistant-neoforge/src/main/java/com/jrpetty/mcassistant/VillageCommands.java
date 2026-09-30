@@ -69,26 +69,8 @@ public final class VillageCommands {
     private static int raiseMany(CommandContext<CommandSourceStack> ctx,
                                  net.minecraft.server.level.ServerLevel level,
                                  net.minecraft.core.BlockPos ground, float yaw, int count) {
-        int stood = 0;
-        for (int i = 0; i < count; i++) {
-            // Scattered, not stacked. A hundred folk stood up on one square make a
-            // crowd, and a crowd of more than twenty-four in one place is crushed
-            // by the game's own entity-cramming rule: a hundred settlers on a
-            // real-terrain server were seventy-eight by the end of their first
-            // minute. A sunflower spiral (the golden angle) puts each on ground of
-            // its own, about a block and a half apart, out to a dozen blocks.
-            net.minecraft.core.BlockPos at = ground;
-            if (i > 0) {
-                double angle = i * 2.399963229728653;
-                double reach = 1.5 + 1.1 * Math.sqrt(i);
-                int x = ground.getX() + (int) Math.round(Math.cos(angle) * reach);
-                int z = ground.getZ() + (int) Math.round(Math.sin(angle) * reach);
-                if (level.getChunkSource().getChunkNow(x >> 4, z >> 4) != null) at = groundAt(level, x, z);
-            }
-            VillageFolkEntity folk = VillageFolkSpawnerBlock.raise(level, at, yaw);
-            if (folk == null) break;
-            stood++;
-        }
+        // Scattered, not stacked: see VillageFolkSpawnerBlock.raiseParty.
+        int stood = VillageFolkSpawnerBlock.raiseParty(level, ground, yaw, count);
         if (stood == 0) {
             ctx.getSource().sendFailure(Component.literal(
                 "Nobody could be settled here — the village is at its cap."));

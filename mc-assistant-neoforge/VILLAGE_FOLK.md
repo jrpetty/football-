@@ -11,7 +11,7 @@ Everything is obtainable in **survival**.
 
 | How | What you do |
 |---|---|
-| **Village Folk Spawner** (recommended) | Craft it — 8 bread round a gold ingot — and *place* it. The first one founds a village on the spot and leaves the founding stores in a chest where it stood; each one placed after that, within reach, adds a settler. |
+| **Village Folk Spawner** (recommended) | Craft it — 8 bread round a gold ingot — and *place* it. The first one founds a village of eight on the spot (the same start a village the world grows gets) and leaves the founding stores in a chest where it stood; each one placed after that, within reach, adds one settler. That is the last thing a village needs from you. |
 | **Village Charter** | Right-click the ground. Same result as the spawner; craftable with paper, bread, a gold ingot, seeds and a chest. |
 | **/village spawn [1-100]** | Stands folk up two blocks ahead of you. `spawnat <x> <z> [n]` for the console. |
 | **The world** | Villages generate as you explore (config `naturalVillages`), in groups of three to five. |
@@ -19,11 +19,13 @@ Everything is obtainable in **survival**.
 
 ## From the first spawner to the Nether Age
 
-Place a spawner and walk away. Everything below happens on its own, and each step
-is there for a reason the village can see.
+Place a spawner and walk away. Nothing below needs you: no commands, no orders, no
+chests to fill, no player nearby (a village keeps its own ground loaded, and the
+real-terrain tests run on a server with nobody on it). Everything happens on its
+own, and each step is there for a reason the village can see.
 
-1. **Founding.** The first folk founds the village where the spawner stood, with a
-   chest of founding stores: bread, seed, carrots and potatoes, saplings, torches,
+1. **Founding.** Eight folk stand up where the spawner stood and found the village,
+   with a chest of founding stores: bread, seed, carrots and potatoes, saplings, torches,
    planks, cobblestone, four chests, string. Every folk carries rations, stone tools,
    a bench and a chest of its own.
 2. **Trades and ground.** Each takes the trade the village is shortest of (farmers

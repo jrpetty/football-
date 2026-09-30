@@ -42,8 +42,9 @@ public class VillageCharterItem extends Item {
         // as any other — it used to have a copy of its own that had quietly
         // fallen behind the real one.
         boolean founding = Villages.nearest(level, spot, Villages.VILLAGE_RANGE * 2) == null;
-        VillageFolkEntity folk = VillageFolkSpawnerBlock.raise(level, spot, player.getYRot());
-        if (folk == null) {
+        int stood = VillageFolkSpawnerBlock.raiseParty(level, spot, player.getYRot(),
+            founding ? VillageFolkSpawnerBlock.foundingParty() : 1);
+        if (stood == 0) {
             player.displayClientMessage(Component.literal(
                 "That village is full at "
                     + com.jrpetty.mcassistant.AssistantConfig.villageGrowthCap()
@@ -53,10 +54,12 @@ public class VillageCharterItem extends Item {
         // Settling, choosing a trade and claiming ground all happen on the
         // folk's own agenda a moment from now — this only puts them there.
 
+        Villages.Village v = Villages.nearest(level, spot, Villages.VILLAGE_RANGE * 2);
+        int total = v == null ? stood : Villages.headcount(v.id());
         player.displayClientMessage(Component.literal(
             founding
-                ? "A village is founded here. They'll sort themselves out."
-                : Villages.headcount(folk.ownerId()) + " have settled here."), true);
+                ? "A village of " + total + " is founded here. They will run it themselves."
+                : total + " live here now."), true);
         if (!player.getAbilities().instabuild) ctx.getItemInHand().shrink(1);
         return InteractionResult.CONSUME;
     }

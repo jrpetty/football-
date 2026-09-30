@@ -20,14 +20,15 @@ import net.minecraft.world.phys.Vec3;
 import javax.annotation.Nullable;
 
 /**
- * The Village Folk Spawner: place it, and a settler stands up.
+ * The Village Folk Spawner: place it, and a village stands up.
  *
  * <p>Exactly the Assistant Spawner's shape — a block you craft, place and
  * spend — because that is the one way of getting a hand into the world here
  * that has been proven to work. The first one placed founds a settlement on
- * the spot and leaves the founding stores beside it; every one placed after
- * that within reach adds a settler to it. No charter to right-click, no
- * command to remember.
+ * the spot with a founding party ({@link #foundingParty}) and leaves the
+ * founding stores where it stood; every one placed after that within reach
+ * adds a settler to it. No charter to right-click, no command to remember,
+ * and nothing more to do.
  */
 public class VillageFolkSpawnerBlock extends Block {
 
@@ -48,16 +49,62 @@ public class VillageFolkSpawnerBlock extends Block {
         // taken the chest with it.
         server.levelEvent(2001, pos, Block.getId(state));
         server.removeBlock(pos, false);
-        VillageFolkEntity folk = raise(server, pos, player.getYRot());
-        if (folk == null) {
+        boolean founding = Villages.nearest(server, pos, Villages.VILLAGE_RANGE * 2) == null;
+        int stood = raiseParty(server, pos, player.getYRot(), founding ? foundingParty() : 1);
+        if (stood == 0) {
             player.sendSystemMessage(Component.literal(
                 "<Village> That settlement is full. Found another further out."));
             // Give the block back rather than eating it.
             server.setBlockAndUpdate(pos, state);
             return;
         }
-        player.displayClientMessage(Component.literal(
-            Villages.headcount(folk.ownerId()) + " settled here — they will sort themselves out."), true);
+        Villages.Village v = Villages.nearest(server, pos, Villages.VILLAGE_RANGE * 2);
+        int total = v == null ? stood : Villages.headcount(v.id());
+        player.displayClientMessage(Component.literal(founding
+            ? "A village of " + total + " is founded here. They will run it themselves."
+            : total + " live here now. They will run it themselves."), true);
+    }
+
+    /**
+     * How many stand up when a spawner or a charter FOUNDS a village: as many as
+     * a village the world grows by itself starts with ({@code villageMinFolk}).
+     * One settler on its own can never raise a child and cannot farm, dig, fell
+     * and build at once, so a founding of one was a village only if the player
+     * kept crafting and placing spawners. Placing one is the last thing asked of
+     * the player: from here the village finds its trades, its ground, its lots
+     * and its children on its own.
+     */
+    public static int foundingParty() {
+        return Math.max(2, com.jrpetty.mcassistant.AssistantConfig.villageMinFolk());
+    }
+
+    /**
+     * Stand {@code count} settlers up around {@code at}, the first exactly there
+     * (founding the village and its stores if there is none), the rest scattered
+     * on a sunflower spiral so nobody stands on anybody. Returns how many stood.
+     */
+    public static int raiseParty(ServerLevel server, BlockPos at, float yaw, int count) {
+        int stood = 0;
+        for (int i = 0; i < count; i++) {
+            // A hundred folk stood up on one square make a crowd, and a crowd of
+            // more than twenty-four in one place is crushed by the game's own
+            // entity-cramming rule. The golden angle puts each on ground of its
+            // own, about a block and a half apart.
+            BlockPos spot = at;
+            if (i > 0) {
+                double angle = i * 2.399963229728653;
+                double reach = 1.5 + 1.1 * Math.sqrt(i);
+                int x = at.getX() + (int) Math.round(Math.cos(angle) * reach);
+                int z = at.getZ() + (int) Math.round(Math.sin(angle) * reach);
+                if (server.getChunkSource().getChunkNow(x >> 4, z >> 4) != null) {
+                    spot = new BlockPos(x, server.getHeight(
+                        net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z), z);
+                }
+            }
+            if (raise(server, spot, yaw) == null) break;
+            stood++;
+        }
+        return stood;
     }
 
     /**

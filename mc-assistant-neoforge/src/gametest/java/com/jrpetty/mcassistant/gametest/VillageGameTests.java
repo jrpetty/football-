@@ -111,11 +111,25 @@ public class VillageGameTests {
             List<VillageFolkEntity> folk = level.getEntitiesOfClass(VillageFolkEntity.class, around(ground, 12));
             Kit.log("t02 folk near the block: " + folk.size()
                 + (folk.isEmpty() ? "" : " — " + folk.get(0).debugLine()));
-            helper.assertTrue(folk.size() == 1, "placing the spawner should stand exactly one folk up, found " + folk.size());
+            int party = VillageFolkSpawnerBlock.foundingParty();
+            helper.assertTrue(folk.size() == party,
+                "placing the first spawner should found a village of " + party + ", found " + folk.size());
             helper.assertTrue(level.getBlockState(ground).is(Blocks.CHEST),
                 "the founding stores should stand where the block stood, found " + level.getBlockState(ground));
             // It may have eaten a loaf by now (it heals by eating): what matters is that it carries a store.
             helper.assertTrue(folk.get(0).countFood() >= 12, "a folk should carry its bread, has food=" + folk.get(0).countFood());
+            java.util.Set<java.util.UUID> villages = new java.util.HashSet<>();
+            for (VillageFolkEntity f : folk) villages.add(f.ownerId());
+            helper.assertTrue(villages.size() == 1, "the founding party should be one village, found " + villages.size());
+            // A second spawner, placed within reach, adds one settler to that village.
+            BlockPos next = Kit.surface(level, 2610, 2600);   // clear of the party
+            ItemStack more = new ItemStack(McAssistantMod.FOLK_SPAWNER_ITEM.get());
+            player.setItemInHand(InteractionHand.MAIN_HAND, more);
+            more.useOn(new UseOnContext(player, InteractionHand.MAIN_HAND,
+                new BlockHitResult(Vec3.atCenterOf(next.below()), Direction.UP, next.below(), false)));
+            int after = level.getEntitiesOfClass(VillageFolkEntity.class, around(ground, 16)).size();
+            Kit.log("t02 after a second spawner: " + after);
+            helper.assertTrue(after == party + 1, "a second spawner should add exactly one, found " + after);
             helper.succeed();
         });
     }
@@ -137,7 +151,9 @@ public class VillageGameTests {
             List<VillageFolkEntity> folk = level.getEntitiesOfClass(VillageFolkEntity.class, around(ground, 12));
             Kit.log("t03 folk near the click: " + folk.size()
                 + (folk.isEmpty() ? "" : " — " + folk.get(0).debugLine()));
-            helper.assertTrue(folk.size() == 1, "the charter should stand exactly one folk up, found " + folk.size());
+            helper.assertTrue(folk.size() == VillageFolkSpawnerBlock.foundingParty(),
+                "the charter should found a village of " + VillageFolkSpawnerBlock.foundingParty()
+                + ", found " + folk.size());
             helper.succeed();
         });
     }
