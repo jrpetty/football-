@@ -187,7 +187,7 @@ def raid(r, x, z):
     say("RAID at dusk: " + r.cmd("execute if entity @e[tag=raid]"))
 
 
-def village(r, biome, count=12, compact=False, days=3, label=None):
+def village(r, biome, count=12, compact=False, days=3, label=None, raided=True):
     setup(r)
     spot = where(r, "biome minecraft:" + biome)
     if spot is None:
@@ -204,10 +204,11 @@ def village(r, biome, count=12, compact=False, days=3, label=None):
         sprint(r, upto - done)
         done = upto
         if upto == 13500:
-            raid(r, x, z)
-            continue
+            if raided:
+                raid(r, x, z)
+                continue
         report(r, x, z, "%s day %.2f" % (label or biome, done / 24000.0), compact)
-        if upto == 15000:
+        if upto == 15000 and raided:
             say("after the raid: " + r.cmd("execute if entity @e[tag=raid]"))
         if upto >= 24000 * 2:
             say("village list: " + r.cmd("village list").replace("\n", " | "))
@@ -331,6 +332,10 @@ def main():
         elif scenario == "crowd":
             # A hundred settlers, the cap: is the server still a server?
             village(r, "plains", count=100, compact=True)
+        elif scenario == "pair":
+            # What a survival player actually starts with: one or two spawner items, not
+            # twelve folk. Can two settlers found a village that grows?
+            village(r, "forest", count=2, days=5, label="pair forest", raided=False)
         elif scenario == "long":
             # Ten game days in a forest: does the village grow up — ages, houses,
             # births — or only get through three days?

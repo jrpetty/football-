@@ -61,6 +61,8 @@ public class BuildGoal extends Goal {
     @Nullable private String building;
     private int workTicks;
     private int stuckTicks;
+    /** Ticks spent waiting for the builder's own feet to move off a cell. */
+    private int standTicks;
     /** The nearest the builder has got to the cell it is walking to. */
     private double nearest = Double.MAX_VALUE;
     /** Cells given up on since the last block went down. */
@@ -175,6 +177,7 @@ public class BuildGoal extends Goal {
         this.placed = 0;
         this.workTicks = 0;
         this.stuckTicks = 0;
+        this.standTicks = 0;
         this.nearest = Double.MAX_VALUE;
         this.skipped = 0;
         this.perimeterRadius = 5;
@@ -212,7 +215,9 @@ public class BuildGoal extends Goal {
             : ("fortify".equals(structure) && assistant.getHome() != null
                 ? assistant.getHome() : assistant.feetPos());
         layout(structure, base, facing, centered, perimeterRadius, plan);
-        if (centered && !"fortify".equals(structure)) addTerrainWork(base);
+        // A settlement's builders level and clear the ground they build on; a hired
+        // assistant building beside a player's own trees and terraces does not.
+        if (centered && assistant.isSettler() && !"fortify".equals(structure)) addTerrainWork(base);
         // What is in the way comes down first; then bottom-up, so nothing floats while we work.
         this.plan.sort(java.util.Comparator
             .comparingInt((Placement p) -> p.part() == Part.CLEAR ? 0 : 1)
@@ -307,6 +312,15 @@ public class BuildGoal extends Goal {
         return isNaturalLeaves(st) || (st.is(net.minecraft.tags.BlockTags.LOGS) && isTreeLog(level, pos));
     }
 
+    /** The height of the ground at a column — the first free block above it — seeing
+     *  through a tree's trunk: a tree standing on a lot is something to fell, not a
+     *  five-block cliff. */
+    public static int groundTop(net.minecraft.world.level.Level level, int x, int z) {
+        int h = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+        while (h > level.getMinBuildHeight() + 1 && isTreeLog(level, new BlockPos(x, h - 1, z))) h--;
+        return h;
+    }
+
     /**
      * The cells under a building's footprint that the ground does not reach: the
      * columns between the top of the ground and the floor level. Counted by the
@@ -320,7 +334,7 @@ public class BuildGoal extends Goal {
                 int x = anchor.getX() + dx;
                 int z = anchor.getZ() + dz;
                 if (!level.hasChunk(x >> 4, z >> 4)) continue;
-                int top = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+                int top = groundTop(level, x, z);
                 for (int y = Math.max(top, anchor.getY() - 8); y < anchor.getY(); y++) {
                     out.add(new BlockPos(x, y, z));
                 }
@@ -361,14 +375,29 @@ public class BuildGoal extends Goal {
             // (A cell was marked for clearing when the plan was made, while the tree still had
             // its leaves; by the time its turn comes the leaves round a trunk may be gone,
             // so it is only asked whether there is still a trunk or a leaf there.)
-            if (p.part() == Part.CLEAR ? (st.is(net.minecraft.tags.BlockTags.LOGS) || isNaturalLeaves(st))
-                : (st.canBeReplaced()
-                    && !assistant.getBoundingBox().intersects(new net.minecraft.world.phys.AABB(p.pos())))) {
-                target = p;
-                break;
+            if (p.part() == Part.CLEAR) {
+                if (st.is(net.minecraft.tags.BlockTags.LOGS) || isNaturalLeaves(st)) { target = p; break; }
+            } else if (st.canBeReplaced()) {
+                if (!assistant.getBoundingBox().intersects(new net.minecraft.world.phys.AABB(p.pos()))) {
+                    target = p;
+                    break;
+                }
+                // The builder is standing in it. Step aside and come back to this cell: it used
+                // to be skipped for good, which left holes in the floor where the builder had
+                // stood while it filled the low side of a hillside.
+                BlockPos at = p.pos();
+                if (assistant.getNavigation().isDone()) {
+                    int side = (standTicks / 25) % 4;
+                    int ox = side == 0 ? 3 : side == 2 ? -3 : 0;
+                    int oz = side == 1 ? 3 : side == 3 ? -3 : 0;
+                    assistant.getNavigation().moveTo(at.getX() + 0.5 + ox, at.getY() + 1, at.getZ() + 0.5 + oz, 1.1D);
+                }
+                if (++standTicks > 100) { cursor++; standTicks = 0; }     // not for ever
+                return;
             }
             cursor++;
             stuckTicks = 0;
+            standTicks = 0;
             nearest = Double.MAX_VALUE;
         }
         if (target == null) {
@@ -401,6 +430,14 @@ public class BuildGoal extends Goal {
             } else if (++stuckTicks > (assistant.getNavigation().isDone() ? 100 : 300)) {
                 // (A route that goes round a hill takes the builder away from the
                 // cell before it brings it back, so one still being followed gets longer.)
+                // A settler with no way to the ground it was given — a river between, a cliff —
+                // is set down beside it, as a hand that cannot reach its plot is. Only when that
+                // too is impossible is the cell given up.
+                if (assistant.isSettler() && assistant.putBeside(pos)) {
+                    stuckTicks = 0;
+                    nearest = Double.MAX_VALUE;
+                    return;
+                }
                 cursor++; // can't get there — skip that cell
                 stuckTicks = 0;
                 nearest = Double.MAX_VALUE;

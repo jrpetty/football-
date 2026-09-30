@@ -47,6 +47,9 @@ Everything is obtainable in **survival**.
   and planks before logs. For its
   first ten minutes a village keeps the founding planks, stone and chests for
   its storehouse.
+* **Evenings** — at home for the night a folk takes on rations from the stores;
+  two folk who are home and fed can raise a child (so a village that starts from
+  two spawner items can grow).
 * **Breaks** — one a day, at an hour of each folk's own.
 * **Pace** — a folk works a little over twice as fast as a hired assistant and
   wears a tool a third as fast: a village that dug a block every five seconds
@@ -101,9 +104,17 @@ Every push to CI:
   so the ground work — filling the low side, felling the tree in the way — runs;
 * runs ten game days in a forest, to see whether a village grows up (ages,
   houses, births) or only gets through three days;
+* runs a real game client on a virtual display (software OpenGL), has it join a
+  server, stands a village and some armoured folk in front of it and publishes
+  screenshots (`smoke-*.png`) and the client's log, because nothing else in CI
+  ever draws a folk;
 * lets a world found villages as ground generates, the way exploring does;
 * founds a village, saves and stops the server, starts the same world again,
   and checks the village came back and carries on.
+
+Every folk's tick and every village event handler runs inside a guard
+(`[MCA-GUARD]` in the log): a bug in a folk's thinking is written down and that one
+folk misses a beat, rather than the exception stopping the server.
 
 A watcher thread in the mod writes the server thread's stack to the log
 whenever a tick takes longer than a second and a half (`MCA-STALL`), so a freeze
@@ -111,6 +122,6 @@ can be traced to the call that caused it. The reports print those stacks, the
 chunk queue (`MCA-CHUNKS`), and why a village was or was not building
 (`MCA-BUILD`).
 
-The reports are published to the `village-test-latest` release: `vt-report.txt`
-and `real-<scenario>.txt`. Each dashboard line says what one folk is doing and
+The reports are published to the `village-test-latest` release: `vt-report.txt`,
+`real-<scenario>.txt` and `smoke.txt` with its pictures. Each dashboard line says what one folk is doing and
 why it is not doing more.

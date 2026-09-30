@@ -104,6 +104,10 @@ public final class VillageSpawner {
      */
     @SubscribeEvent
     public static void onChunkLoad(ChunkEvent.Load event) {
+        com.jrpetty.mcassistant.Guard.run("natural-village chunk watch", () -> onChunkLoadGuarded(event));
+    }
+
+    private static void onChunkLoadGuarded(ChunkEvent.Load event) {
         if (!AssistantConfig.naturalVillages()) return;
         if (!(event.getLevel() instanceof ServerLevel level)) return;
         if (level.dimension() != Level.OVERWORLD) return;
@@ -127,6 +131,10 @@ public final class VillageSpawner {
     /** One cell a second, from the server tick, once its wait is over. */
     @SubscribeEvent
     public static void onServerTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
+        com.jrpetty.mcassistant.Guard.run("natural-village founding", () -> onServerTickGuarded(event));
+    }
+
+    private static void onServerTickGuarded(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
         if (event.getServer().getTickCount() % 20 != 0) return;
         Cell c = WAITING.peek();
         if (c == null || c.readyAt() > c.level().getGameTime()) return;
@@ -238,7 +246,10 @@ public final class VillageSpawner {
 
     @Nullable
     private static BlockPos groundAt(ServerLevel level, int x, int z) {
-        int y = level.getHeight(Heightmap.Types.WORLD_SURFACE_WG, x, z);
+        // The height of the ground, not of a tree's crown — and of the live heightmap: a
+        // chunk that is loaded has dropped its worldgen ones, and asking for those logs
+        // an "Unprimed heightmap" error for every column (twenty in a natural-founding run).
+        int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
         if (y <= level.getMinBuildHeight() + 1) return null;
         return new BlockPos(x, y, z);
     }
@@ -255,7 +266,7 @@ public final class VillageSpawner {
         int lowest = Integer.MAX_VALUE, highest = Integer.MIN_VALUE;
         for (int dx = -12; dx <= 12; dx += 6) {
             for (int dz = -12; dz <= 12; dz += 6) {
-                int y = level.getHeight(Heightmap.Types.WORLD_SURFACE_WG,
+                int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
                     ground.getX() + dx, ground.getZ() + dz);
                 lowest = Math.min(lowest, y);
                 highest = Math.max(highest, y);

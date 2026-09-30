@@ -186,6 +186,11 @@ public class DepositGoal extends Goal {
                 bestDistSq = distSq;
                 stuckTicks = 0;
             } else if (++stuckTicks > 300) {
+                if (assistant.isSettler() && assistant.putBeside(chestPos)) {
+                    stuckTicks = 0;
+                    bestDistSq = Double.MAX_VALUE;
+                    return;
+                }
                 finish("I couldn't reach the chest.");
             }
             return;

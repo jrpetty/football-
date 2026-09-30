@@ -23,7 +23,7 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from soak import Rcon, say  # noqa: E402
+from soak import Rcon, say, where  # noqa: E402
 
 USER = "Dev"
 FOLK = "mc_assistant:village_folk"
@@ -77,21 +77,26 @@ def main():
     for c in ("gamerule doDaylightCycle false", "time set 6000", "weather clear 1000000",
               "gamerule doMobSpawning false", "gamemode creative %s" % USER):
         r.cmd(c)
-    time.sleep(10)
-    pos = position(r)
-    if pos is None:
-        return
-    px, py, pz = pos
-    cx, cz = int(px) + 14, int(pz)
-    say("the player is at %.0f, %.0f, %.0f; the village goes at %d, %d" % (px, py, pz, cx, cz))
+    # Open ground, so the pictures are of the folk and not of a tree: a savanna.
+    spot = where(r, "biome minecraft:savanna") or where(r, "biome minecraft:plains") or (0, 0)
+    cx, cz = spot
+    say("the village goes at %d, %d" % (cx, cz))
+    say("moving the player: " + r.cmd("spreadplayers %d %d 0 2 false %s" % (cx - 14, cz, USER)))
+    time.sleep(20)                                    # the ground arrives at the client
     say("spawn: " + r.cmd("village spawnat %d %d 12" % (cx, cz)))
-    time.sleep(25)
+    time.sleep(30)
     say("folk in the world: " + r.cmd("execute if entity @e[type=%s]" % FOLK))
-    # A look at the whole village from where the player stands.
-    r.cmd("execute as %s at @s run tp @s ~ ~1 ~ facing %d %d %d" % (USER, cx, int(py), cz))
-    time.sleep(8)
-    shot("1-village")
-    say("alive after the first look: %s" % client_alive())
+    pos = position(r)
+    py = int(pos[1]) if pos else 70
+
+    def look_at_the_village(label):
+        # From fourteen blocks off and a little above, at the middle of it.
+        r.cmd("execute positioned %d %d %d run tp %s ~-14 ~3 ~ facing ~ ~1 ~" % (cx, py, cz, USER))
+        time.sleep(8)
+        shot(label)
+        say("alive after %s: %s" % (label, client_alive()))
+
+    look_at_the_village("1-village")
 
     # Armour on the three nearest, every slot, so the armour layer has something to draw.
     near = "execute at %s run item replace entity @e[type=%s,limit=3,sort=nearest] " % (USER, FOLK)
@@ -99,19 +104,20 @@ def main():
                        ("armor.legs", "minecraft:iron_leggings"), ("armor.feet", "minecraft:diamond_boots")):
         r.cmd(near + "%s with %s" % (slot, item))
     time.sleep(3)
-    # Stand beside the nearest one and look it in the face.
-    r.cmd("execute at %s as @e[type=%s,limit=1,sort=nearest] at @s run tp %s ~2 ~ ~2 facing ~ ~1.6 ~" % (USER, FOLK, USER))
-    time.sleep(6)
+    # In front of one of the dressed ones, at its own height, looking it in the face.
+    r.cmd("execute at %s as @e[type=%s,limit=1,sort=nearest] at @s run tp %s ^ ^ ^4 facing ~ ~1.6 ~" % (USER, FOLK, USER))
+    time.sleep(8)
     shot("2-close")
     say("alive after the close look: %s" % client_alive())
-    # And from the other side, a moment later: they walk, so this is another folk.
-    r.cmd("execute at %s as @e[type=%s,limit=1,sort=furthest] at @s run tp %s ~-2 ~ ~-2 facing ~ ~1.6 ~" % (USER, FOLK, USER))
-    time.sleep(6)
+    # And one that is not dressed: the smock alone.
+    r.cmd("execute at %s as @e[type=%s,limit=1,sort=furthest] at @s run tp %s ^ ^ ^4 facing ~ ~1.6 ~" % (USER, FOLK, USER))
+    time.sleep(8)
     shot("3-another")
-    # Wait a little longer, and look once more at everyone, from above.
-    r.cmd("execute as %s at @s run tp @s %d %d %d facing %d %d %d" % (USER, cx, int(py) + 9, cz - 16, cx, int(py), cz))
+    # A quarter of an hour of the day later, from the other side.
     time.sleep(20)
-    shot("4-from-above")
+    r.cmd("execute positioned %d %d %d run tp %s ~14 ~3 ~ facing ~ ~1 ~" % (cx, py, cz, USER))
+    time.sleep(8)
+    shot("4-other-side")
     alive = client_alive()
     say("alive at the end: %s" % alive)
     say("PASS the client drew the village and kept running" if alive else "FAIL the client died while drawing the village")

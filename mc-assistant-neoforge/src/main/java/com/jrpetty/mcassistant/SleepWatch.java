@@ -26,6 +26,10 @@ public final class SleepWatch {
 
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
+        com.jrpetty.mcassistant.Guard.run("sleep watch", () -> onServerTickGuarded(event));
+    }
+
+    private static void onServerTickGuarded(ServerTickEvent.Post event) {
         // Once a second is plenty; sleeping is not a per-tick decision.
         if (event.getServer().getTickCount() % 20 != 0) return;
 

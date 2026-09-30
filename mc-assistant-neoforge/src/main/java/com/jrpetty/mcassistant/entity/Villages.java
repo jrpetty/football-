@@ -84,7 +84,7 @@ public final class Villages {
         POP.clear();
         LAST_BIRTH.clear();
         SITES.clear();
-        CELLS.clear();
+        LOT_TAKEN.clear();
         BAD_LOTS.clear();
         WHY_NOT.clear();
         LAPS.clear();
@@ -149,7 +149,7 @@ public final class Villages {
         POP.remove(villageId);
         LAST_BIRTH.remove(villageId);
         SITES.remove(villageId);
-        CELLS.remove(villageId);
+        LOT_TAKEN.remove(villageId);
         BAD_LOTS.remove(villageId);
         WHY_NOT.remove(villageId);
         LAPS.remove(villageId);
@@ -646,8 +646,17 @@ public final class Villages {
      *  a player who watched a village for half an hour saw two buildings go up. */
     private static final long PROJECT_GAP = 4800L;   // four minutes
 
+    /** The wait between one project and the next. Four minutes for the twelve a village
+     *  is founded with, shorter as it grows: fifty folk have more hands to spare and
+     *  a great deal more to put up, and waiting the same four minutes between houses
+     *  left a big village standing in front of the list. */
+    private static long gapFor(UUID villageId) {
+        return Math.max(1200L, PROJECT_GAP * 12L / Math.max(12, headcount(villageId)));
+    }
+
     public static boolean projectDue(UUID villageId, long gameTime) {
-        return gameTime - LAST_PROJECT.getOrDefault(villageId, -PROJECT_GAP) >= PROJECT_GAP;
+        long gap = gapFor(villageId);
+        return gameTime - LAST_PROJECT.getOrDefault(villageId, -gap) >= gap;
     }
 
     /** Somebody has set off to build something. Paces the next project;
@@ -661,13 +670,22 @@ public final class Villages {
      *  gap: look again in two. (The very first look, seconds after founding,
      *  always finds an almost empty larder — and used to cost eight minutes.) */
     public static void retrySoon(UUID villageId, long gameTime) {
-        LAST_PROJECT.put(villageId, gameTime - PROJECT_GAP + 2400L);
+        long gap = gapFor(villageId);
+        LAST_PROJECT.put(villageId, gameTime - gap + Math.min(2400L, gap / 2));
+    }
+
+    /** Look again in this many ticks (the lead has set about making a fixture, which takes seconds,
+     *  not the minutes a wait for stone does). */
+    public static void retryIn(UUID villageId, long gameTime, long delay) {
+        long gap = gapFor(villageId);
+        LAST_PROJECT.put(villageId, gameTime - gap + Math.min(delay, gap));
     }
 
     /** Somebody looked for a lot and there was none to be had yet (the ground
      *  still arriving, or all of it rough): look again in a minute. */
     public static void retryShortly(UUID villageId, long gameTime) {
-        LAST_PROJECT.put(villageId, gameTime - PROJECT_GAP + 1200L);
+        long gap = gapFor(villageId);
+        LAST_PROJECT.put(villageId, gameTime - gap + Math.min(1200L, gap / 4));
     }
 
     /** Something actually went up. Only finished buildings count toward the
@@ -698,7 +716,7 @@ public final class Villages {
     private static final Map<UUID, Long> FOUNDED = new ConcurrentHashMap<>();
 
     /** How long the storehouse has first call on a new village's planks, stone and chests. */
-    private static final long STOREHOUSE_FIRST = 12000L;       // ten minutes
+    private static final long STOREHOUSE_FIRST = 36000L;       // half an hour
 
     /**
      * Is the storehouse still to be raised, in a village young enough that the
@@ -835,7 +853,8 @@ public final class Villages {
     public record Site(BlockPos anchor, net.minecraft.core.Direction facing, int radius) {}
 
     private static final Map<UUID, Map<String, Site>> SITES = new ConcurrentHashMap<>();
-    private static final Map<UUID, Integer> CELLS = new ConcurrentHashMap<>();
+    /** Which lots (by index in LOTS) are spoken for: chosen for a project, built on, or given up. */
+    private static final Map<UUID, java.util.Set<Integer>> LOT_TAKEN = new ConcurrentHashMap<>();
     /** Lots the builders found they could not get to, as the column of the lot's middle. */
     private static final Map<UUID, java.util.Set<Long>> BAD_LOTS = new ConcurrentHashMap<>();
     /** The most a lot's ground may stand above or below the ground at the heart. */
@@ -893,35 +912,45 @@ public final class Villages {
             if (ground != null) site = new Site(ground, net.minecraft.core.Direction.NORTH, WALL_RADIUS);
         } else {
             java.util.Set<Long> bad = BAD_LOTS.computeIfAbsent(villageId, k -> ConcurrentHashMap.newKeySet());
+            java.util.Set<Integer> taken = LOT_TAKEN.computeIfAbsent(villageId, k -> ConcurrentHashMap.newKeySet());
             int heartGround = heartGround(level, v.centre());
             int laps = LAPS.getOrDefault(villageId, 0);
-            int i = CELLS.getOrDefault(villageId, 0);
-            int looked = 0;
-            while (looked < 64 && site == null) {
-                if (i >= LOTS.length) {                           // every lot has had its look: begin again at the heart, less particular
-                    i = 0;
-                    LAPS.merge(villageId, 1, Integer::sum);
-                    break;
-                }
+            // Look at the lots nearest the heart, and of the first few that will do take the
+            // one that costs least to build on — a flat lot a ring further out beats a slope
+            // that wants fifty blocks of stone under its floor, which a young village may not
+            // have for a day.
+            int bestIndex = -1;
+            int bestScore = Integer.MAX_VALUE;
+            int valid = 0;
+            int free = 0;
+            boolean waiting = false;
+            for (int i = 0; i < LOTS.length && valid < 8; i++) {
+                if (taken.contains(i)) continue;
                 int[] c = LOTS[i];
                 int x = v.centre().getX() + c[0] * PITCH;
                 int z = v.centre().getZ() + c[1] * PITCH;
-                // A lot whose ground has not arrived yet has not been found wanting.
-                // The ring of chunks round a new village comes in over its first
-                // minute, and every lot looked at before that was written off for
-                // good: the village was left with whatever was far enough out to
-                // be loaded already — on the plains map, a hilltop forty blocks up
-                // that nobody could walk to.
-                if (!lotLoaded(level, x, z)) break;
-                i++;
-                looked++;
                 if (bad.contains(BlockPos.asLong(x, 0, z))) continue;
+                free++;
+                // A lot whose ground has not arrived yet has not been found wanting. The ring
+                // of chunks round a new village comes in over its first minute, and every lot
+                // looked at before that used to be written off for good.
+                if (!lotLoaded(level, x, z)) { waiting = true; continue; }
                 BlockPos ground = groundFor(level, x, z, true, heartGround, laps, whyNot(villageId));
-                if (ground != null) {
+                if (ground == null) continue;
+                valid++;
+                int ring = Math.max(Math.abs(c[0]), Math.abs(c[1]));
+                int score = com.jrpetty.mcassistant.entity.goal.BuildGoal.fillCells(level, ground).size() + 4 * ring;
+                if (score < bestScore) {
+                    bestScore = score;
+                    bestIndex = i;
                     site = new Site(ground, facingOf(c[0], c[1]), 0);
                 }
             }
-            CELLS.put(villageId, i);
+            if (site != null) {
+                taken.add(bestIndex);
+            } else if (!waiting && free > 0) {
+                LAPS.merge(villageId, 1, Integer::sum);         // a whole look and nothing: less particular next time
+            }
         }
         if (site != null) pending.put(project, site);
         return site;
@@ -939,27 +968,37 @@ public final class Villages {
         }
         LEAD.remove(villageId);
         LEAD_AT.remove(villageId);
-        LAST_PROJECT.put(villageId, gameTime - PROJECT_GAP + 600L);
+        long gap = gapFor(villageId);
+        LAST_PROJECT.put(villageId, gameTime - gap + Math.min(600L, gap / 8));
     }
 
     private static final int WET = 0, CLIFF = 1, HEIGHT = 2, TRUNK = 3, BLOCKED = 4, TAKEN = 5;
-    private static final Map<UUID, int[]> WHY_NOT = new ConcurrentHashMap<>();
 
-    private static int[] whyNot(UUID villageId) {
-        return WHY_NOT.computeIfAbsent(villageId, k -> new int[6]);
+    /** What a village's lot search turned down, and the last cliff it saw (where, and how high). */
+    private static final class Why {
+        final int[] n = new int[6];
+        String lastCliff = "";
     }
 
-    private static void why(@Nullable int[] why, int reason) {
-        if (why != null) why[reason]++;
+    private static final Map<UUID, Why> WHY_NOT = new ConcurrentHashMap<>();
+
+    private static Why whyNot(UUID villageId) {
+        return WHY_NOT.computeIfAbsent(villageId, k -> new Why());
+    }
+
+    private static void why(@Nullable Why why, int reason) {
+        if (why != null) why.n[reason]++;
     }
 
     /** Where the lot search has got to and what it has turned down, for the log:
      *  a village that cannot build has a reason, and it is one of these. */
     public static String lotReport(UUID villageId) {
-        int[] w = WHY_NOT.getOrDefault(villageId, new int[6]);
-        return "lap " + LAPS.getOrDefault(villageId, 0) + ", lot " + CELLS.getOrDefault(villageId, 0) + " of " + LOTS.length
+        Why why = WHY_NOT.get(villageId);
+        int[] w = why == null ? new int[6] : why.n;
+        return "lap " + LAPS.getOrDefault(villageId, 0) + ", " + LOT_TAKEN.getOrDefault(villageId, java.util.Set.of()).size() + " of " + LOTS.length + " lots spoken for"
             + "; turned down: wet " + w[WET] + ", cliff " + w[CLIFF] + ", too high or low " + w[HEIGHT]
-            + ", trunk " + w[TRUNK] + ", built on or rocky " + w[BLOCKED] + ", given up " + w[TAKEN];
+            + ", built on or rocky " + w[BLOCKED] + ", given up " + w[TAKEN]
+            + (why == null || why.lastCliff.isEmpty() ? "" : "; last cliff " + why.lastCliff);
     }
 
     /** Is the ground a lot here would stand on all in the world yet? */
@@ -1001,14 +1040,12 @@ public final class Villages {
      */
     @Nullable
     private static BlockPos groundFor(net.minecraft.server.level.ServerLevel level, int x, int z,
-                                      boolean needsClearance, int heartGround, int laps, @Nullable int[] why) {
+                                      boolean needsClearance, int heartGround, int laps, @Nullable Why why) {
         int lo = Integer.MAX_VALUE, hi = Integer.MIN_VALUE;
         for (int dx = -3; dx <= 3; dx += 3) {
             for (int dz = -3; dz <= 3; dz += 3) {
                 if (!level.hasChunk((x + dx) >> 4, (z + dz) >> 4)) return null;
-                int h = level.getHeight(
-                    net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
-                    x + dx, z + dz);
+                int h = com.jrpetty.mcassistant.entity.goal.BuildGoal.groundTop(level, x + dx, z + dz);
                 // The ground itself has to be dry and something a wall can stand on.
                 net.minecraft.world.level.block.state.BlockState top =
                     level.getBlockState(new BlockPos(x + dx, h - 1, z + dz));
@@ -1018,7 +1055,11 @@ public final class Villages {
             }
         }
         int slope = hi - lo;
-        if (slope > 4 + Math.min(laps, 2)) { why(why, CLIFF); return null; }       // a cliff, not a lot
+        if (slope > 4 + Math.min(laps, 2)) {                 // a cliff, not a lot
+            why(why, CLIFF);
+            if (why != null) why.lastCliff = x + "," + z + " from " + lo + " to " + hi;
+            return null;
+        }
         int y = slope <= 2 ? (lo + hi) / 2 : hi;
         // Level ground is not enough: it has to be ground the heart's people can walk to.
         // A plateau forty blocks above the village is flat and is nobody's lot.

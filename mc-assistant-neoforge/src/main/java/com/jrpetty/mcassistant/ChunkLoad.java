@@ -162,6 +162,10 @@ public final class ChunkLoad {
 
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
+        com.jrpetty.mcassistant.Guard.run("the chunk queue", () -> onServerTickGuarded(event));
+    }
+
+    private static void onServerTickGuarded(ServerTickEvent.Post event) {
         if (WANTED.isEmpty()) return;
         int forced = 0;
         boolean hard = false;

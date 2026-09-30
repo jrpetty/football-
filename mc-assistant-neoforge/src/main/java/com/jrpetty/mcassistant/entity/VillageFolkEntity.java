@@ -174,6 +174,24 @@ public class VillageFolkEntity extends AssistantEntity {
         return net.minecraft.sounds.SoundEvents.VILLAGER_DEATH;
     }
 
+    /**
+     * The one place every folk's thinking meets the game's loop, and the last
+     * thing standing between a bug in any of it and a crash report. An exception
+     * that got out of here stops the server; this writes it to the log (see Guard)
+     * and lets the one folk miss a beat.
+     */
+    @Override
+    public void tick() {
+        try {
+            super.tick();
+        } catch (VirtualMachineError | ThreadDeath fatal) {
+            throw fatal;
+        } catch (Throwable t) {
+            com.jrpetty.mcassistant.Guard.struck("a village folk's tick",
+                getName().getString() + " at " + blockPosition().toShortString(), t);
+        }
+    }
+
     @Override
     public void aiStep() {
         super.aiStep();
@@ -283,6 +301,37 @@ public class VillageFolkEntity extends AssistantEntity {
     }
 
     // ------------------------------ the errand to the stores -----------------
+
+    private int rationTick = -100000;
+
+    /**
+     * Evening, at home, with the larder a short walk away and tomorrow's plot a long
+     * one: take on rations for the day. A village of fifty on the ten-day run had
+     * four hundred and ninety-eight food in its stores and half its folk at zero,
+     * because the only time a hand went to the stores was when it had nothing left
+     * to eat — out on a plot a hundred blocks from them.
+     */
+    private boolean restockRations() {
+        BlockPos heart = villageCentre;
+        UUID village = ownerId();
+        if (heart == null || village == null || peekJob() != null) return false;
+        if (tickCount - rationTick < 6000) return false;                     // once a night
+        if (heart.distSqr(blockPosition()) > 48.0 * 48.0) return false;     // only those who are home
+        // Rations, not seed: a farmer's carrots and potatoes are for the ground.
+        int have = countMatching(st -> st.get(net.minecraft.core.component.DataComponents.FOOD) != null
+            && !(stationTask() == StationTask.FARM
+                && (st.is(net.minecraft.world.item.Items.CARROT) || st.is(net.minecraft.world.item.Items.POTATO))));
+        if (have >= 10) return false;
+        int radius = Math.min(112, Math.max(32, Villages.storesRadius(village)));
+        if (findChestWithNear(heart,
+                com.jrpetty.mcassistant.entity.goal.WithdrawGoal.matcherFor("food"), radius) == null) {
+            return false;
+        }
+        rationTick = tickCount;
+        enqueue(Job.withdrawAt("food", 12 - have, heart, radius));
+        noteGate("evening: taking on " + (12 - have) + " rations");
+        return true;
+    }
 
     private int fetchTick = -100000;
 
@@ -402,7 +451,12 @@ public class VillageFolkEntity extends AssistantEntity {
             // Everybody is at the heart after dark, with nothing to do — which is
             // exactly when the wheat gets baked. Indoors, next to the stores,
             // one errand at a time for the whole village.
-            if (peekJob() == null && getNavigation().isDone()) bakeErrand();
+            if (peekJob() == null && getNavigation().isDone()) {
+                if (!restockRations()) bakeErrand();
+            }
+            // Home for the night is where two folk are at last near each other: a village of
+            // two, one at its field and one at its mine all day, could never have a child.
+            raisedAChild(24.0);
             return;
         }
         mindTheRoute();                                // a carrier's round is chosen, not clicked
@@ -411,7 +465,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (resting()) return;                         // off the clock for a bit
         if (movedOnFromSpentGround()) return;          // this patch is finished
         if (changedTrade()) return;                    // the village lost a trade
-        if (raisedAChild()) return;                    // the village grew
+        if (raisedAChild(12.0)) return;                // the village grew
 
         // A storekeeper works the chests directly and has nothing to haul: its
         // days were spent standing at the heart (two runs, two storekeepers, not
@@ -1074,7 +1128,7 @@ public class VillageFolkEntity extends AssistantEntity {
      * settlement that cannot feed itself stops growing on its own, without
      * anybody having to write a rule about it. That is the whole check.
      */
-    private boolean raisedAChild() {
+    private boolean raisedAChild(double range) {
         if (!com.jrpetty.mcassistant.AssistantConfig.villageBreeding()) return false;
         if (!(level() instanceof net.minecraft.server.level.ServerLevel server)) return false;
         UUID village = ownerId();
@@ -1098,7 +1152,7 @@ public class VillageFolkEntity extends AssistantEntity {
             if (other.stationTask() == StationTask.NONE) continue;
             if (other.countFood() < 2) continue;
             if (other.tickCount - other.breedTick < 6000) continue;
-            if (other.distanceToSqr(this) > 12.0 * 12.0) continue;
+            if (other.distanceToSqr(this) > range * range) continue;
             partner = other;
             break;
         }
@@ -1289,7 +1343,13 @@ public class VillageFolkEntity extends AssistantEntity {
         //
         // A look that finds the stores not yet up to it is not a project begun,
         // so it costs two minutes and not the eight that pace real building.
-        if (!stockedFor(project, site)) { Villages.retrySoon(village, now); return; }
+        if (!stockedFor(project, site)) {
+            // Setting about making a chest or a furnace takes a few seconds, so look again in
+            // thirty; a wait for stone takes minutes.
+            if (madeAFixture) { madeAFixture = false; Villages.retryIn(village, now, 600L); }
+            else Villages.retrySoon(village, now);
+            return;
+        }
         Villages.noteAttempt(village, now);
         buildNote("build: raising the " + project);
         enqueue(Job.buildAt(project, site.anchor(), site.facing(), site.radius()));
@@ -1336,8 +1396,11 @@ public class VillageFolkEntity extends AssistantEntity {
         // A hillside takes stone to build up to the floor.
         if (!project.equals("fortify")) blocks += BuildGoal.fillCells(level(), site.anchor()).size();
         int carried = countCarried(BuildGoal::isBuildingBlock);
-        return carried >= blocks
-            || carried + storesHold(heart, buildStoresRadius(), BuildGoal::isBuildingBlock) >= blocks;
+        // Three parts in four is enough to begin: the rest is dug while the walls go up, and
+        // a build that waited for every last block stood in front of its list for days.
+        int least = blocks * 3 / 4;
+        return carried >= least
+            || carried + storesHold(heart, buildStoresRadius(), BuildGoal::isBuildingBlock) >= least;
     }
 
     /** How far from the heart the builder reads and draws on the stores: as far
@@ -1385,9 +1448,10 @@ public class VillageFolkEntity extends AssistantEntity {
 
         // Timber and stone: only worth a trip if the village has enough.
         int carried = countCarried(BuildGoal::isBuildingBlock);
+        int least = blocks * 3 / 4;                             // enough to begin with: see affordsTimberFor
         if (carried < blocks) {
             int inStores = storesHold(heart, buildStoresRadius(), BuildGoal::isBuildingBlock);
-            if (carried + inStores < blocks) { buildNote("build: stores hold " + inStores + ", need " + (blocks - carried)); return false; }      // not yet
+            if (carried + inStores < least) { buildNote("build: stores hold " + inStores + ", need " + (least - carried)); return false; }      // not yet
             // The cheapest first: stone before planks, planks before logs.
             int got = 0;
             for (int tier = 0; tier <= 2 && got < blocks - carried; tier++) {
@@ -1413,7 +1477,7 @@ public class VillageFolkEntity extends AssistantEntity {
             if (have < want) {
                 boolean making = craftNow(fx.recipe(), want - have);
                 buildNote("build: " + (making ? "making " : "cannot make ") + (want - have) + " " + fx.recipe());
-                if (making) Villages.leadProgress(village, getUUID(), now);
+                if (making) { Villages.leadProgress(village, getUUID(), now); madeAFixture = true; }
                 return false;                                    // made, or cannot be: either way, not this visit
             }
         }
@@ -1429,9 +1493,12 @@ public class VillageFolkEntity extends AssistantEntity {
             if (have < want) drawFrom(heart, item, want - have, buildStoresRadius());
         }
         int blocksNow = countCarried(BuildGoal::isBuildingBlock);
-        if (blocksNow < blocks) buildNote("build: carrying " + blocksNow + " of " + blocks + " blocks");
-        return blocksNow >= blocks;
+        if (blocksNow < least) buildNote("build: carrying " + blocksNow + " of " + blocks + " blocks");
+        return blocksNow >= least;
     }
+
+    /** This visit set about making a fixture (so the next look is soon). */
+    private boolean madeAFixture;
 
     /** A blueprint part a builder must have in hand, and what makes one. */
     private record Fixture(BuildGoal.Part part, String recipe) {}

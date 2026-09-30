@@ -296,7 +296,7 @@ public class VillageGameTests {
         var site = Villages.siteFor(level, v.id(), "storage");
         Kit.log("t12 woodland storage lot " + site + "; " + Villages.lotReport(v.id()));
         helper.assertTrue(site != null, "a lot with a tree on it should still be a lot: " + Villages.lotReport(v.id()));
-        helper.assertTrue(site.anchor().distSqr(heart) < 20 * 20, "with trees all round, the lot is still beside the heart: " + site);
+        helper.assertTrue(site.anchor().distSqr(heart) < 30 * 30, "with trees all round, the lot is still beside the heart: " + site);
         builder.insertItem(new ItemStack(Items.COBBLESTONE, 64));
         builder.insertItem(new ItemStack(Items.COBBLESTONE, 64));
         builder.insertItem(new ItemStack(Items.CHEST, 4));

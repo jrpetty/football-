@@ -108,6 +108,10 @@ public final class VillagerTakeover {
      */
     @SubscribeEvent
     public static void onEntityJoin(EntityJoinLevelEvent event) {
+        com.jrpetty.mcassistant.Guard.run("villager takeover (join)", () -> onEntityJoinGuarded(event));
+    }
+
+    private static void onEntityJoinGuarded(EntityJoinLevelEvent event) {
         if (suspended || !AssistantConfig.replaceVillagers()) return;
         if (event.getLevel().isClientSide) return;
         if (!(event.getEntity() instanceof Villager villager)) return;
@@ -130,6 +134,10 @@ public final class VillagerTakeover {
      */
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
+        com.jrpetty.mcassistant.Guard.run("villager takeover (sweep)", () -> onServerTickGuarded(event));
+    }
+
+    private static void onServerTickGuarded(ServerTickEvent.Post event) {
         if (!suspended) {
             int done = 0;
             Pending next;
