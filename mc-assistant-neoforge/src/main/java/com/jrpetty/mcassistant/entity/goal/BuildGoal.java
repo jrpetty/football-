@@ -45,7 +45,9 @@ public class BuildGoal extends Goal {
         "house", "room", "pen", "fortify", "lighthouse", "column");
 
     /** What goes in a blueprint cell. */
-    public enum Part { BLOCK, FURNACE, CHEST, CRAFTING_TABLE, TORCH, LADDER, FENCE, GATE, WINDOW, BED }
+    public enum Part { BLOCK, FURNACE, CHEST, CRAFTING_TABLE, TORCH, LADDER, FENCE, GATE, WINDOW, BED,
+        /** Not a part: something natural in the building's way that comes down first (leaves). */
+        CLEAR }
 
     private record Placement(BlockPos pos, Part part) {}
 
@@ -134,6 +136,7 @@ public class BuildGoal extends Goal {
             case GATE -> s -> s.is(ItemTags.FENCE_GATES);
             case WINDOW -> s -> s.is(Items.GLASS) || s.is(Items.GLASS_PANE);
             case BED -> s -> s.is(ItemTags.BEDS);
+            case CLEAR -> s -> false;
         };
     }
 
@@ -149,6 +152,7 @@ public class BuildGoal extends Goal {
             case GATE -> "a fence gate (\"craft a fence gate\")";
             case WINDOW -> "glass";
             case BED -> "a bed (\"craft a bed\" — 3 wool, 3 planks)";
+            case CLEAR -> "nothing";
         };
     }
 
@@ -208,9 +212,11 @@ public class BuildGoal extends Goal {
             : ("fortify".equals(structure) && assistant.getHome() != null
                 ? assistant.getHome() : assistant.feetPos());
         layout(structure, base, facing, centered, perimeterRadius, plan);
-        // Bottom-up so nothing floats while we work.
+        if (centered && !"fortify".equals(structure)) addTerrainWork(base);
+        // What is in the way comes down first; then bottom-up, so nothing floats while we work.
         this.plan.sort(java.util.Comparator
-            .comparingInt((Placement p) -> p.pos().getY())
+            .comparingInt((Placement p) -> p.part() == Part.CLEAR ? 0 : 1)
+            .thenComparingInt((Placement p) -> p.pos().getY())
             .thenComparingDouble(p -> p.pos().distSqr(assistant.feetPos())));
 
         // Tally what's still needed vs what we carry — no cheating: every
@@ -251,6 +257,78 @@ public class BuildGoal extends Goal {
             : "Building a " + structure + " — " + totalPending + " parts to place.");
     }
 
+    /**
+     * The ground is not always level. A building is laid out at one height, and
+     * the ground under its footprint is whatever the world made: a column that
+     * stops short of the floor is built up to it (so nothing hangs over a drop),
+     * and natural leaves in the space it will occupy come down first. Together
+     * they are what lets a village raise its storehouse on a hillside instead of
+     * waiting for the one flat acre the world may not have made.
+     */
+    private void addTerrainWork(BlockPos base) {
+        java.util.Set<BlockPos> taken = new java.util.HashSet<>();
+        for (Placement p : plan) taken.add(p.pos());
+        for (BlockPos c : fillCells(assistant.level(), base)) {
+            if (taken.add(c)) plan.add(new Placement(c, Part.BLOCK));
+        }
+        for (int dx = -3; dx <= 3; dx++) {
+            for (int dz = -3; dz <= 3; dz++) {
+                for (int dy = 0; dy <= 4; dy++) {
+                    BlockPos c = base.offset(dx, dy, dz);
+                    if (isInTheWay(assistant.level(), c, assistant.level().getBlockState(c))) plan.add(new Placement(c, Part.CLEAR));
+                }
+            }
+        }
+    }
+
+    /** Leaves nobody placed: a tree's own, which rot and are in the way. */
+    private static boolean isNaturalLeaves(BlockState st) {
+        return st.is(net.minecraft.tags.BlockTags.LEAVES)
+            && !(st.hasProperty(net.minecraft.world.level.block.LeavesBlock.PERSISTENT)
+                && st.getValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT));
+    }
+
+    /** Is this log part of a growing tree — has a tree's own leaves within three
+     *  blocks — rather than somebody's wall? Only a tree's is ever taken down. */
+    public static boolean isTreeLog(net.minecraft.world.level.Level level, BlockPos pos) {
+        if (!level.getBlockState(pos).is(net.minecraft.tags.BlockTags.LOGS)) return false;
+        for (int dx = -3; dx <= 3; dx++) {
+            for (int dy = -3; dy <= 3; dy++) {
+                for (int dz = -3; dz <= 3; dz++) {
+                    if (isNaturalLeaves(level.getBlockState(pos.offset(dx, dy, dz)))) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /** Is this something the ground work takes down: a tree's leaves or trunk? */
+    private static boolean isInTheWay(net.minecraft.world.level.Level level, BlockPos pos, BlockState st) {
+        return isNaturalLeaves(st) || (st.is(net.minecraft.tags.BlockTags.LOGS) && isTreeLog(level, pos));
+    }
+
+    /**
+     * The cells under a building's footprint that the ground does not reach: the
+     * columns between the top of the ground and the floor level. Counted by the
+     * people who stock a build as well as by the builder, so the two cannot
+     * disagree about how much stone a hillside takes.
+     */
+    public static List<BlockPos> fillCells(net.minecraft.world.level.Level level, BlockPos anchor) {
+        List<BlockPos> out = new ArrayList<>();
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                int x = anchor.getX() + dx;
+                int z = anchor.getZ() + dz;
+                if (!level.hasChunk(x >> 4, z >> 4)) continue;
+                int top = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+                for (int y = Math.max(top, anchor.getY() - 8); y < anchor.getY(); y++) {
+                    out.add(new BlockPos(x, y, z));
+                }
+            }
+        }
+        return out;
+    }
+
     @Override
     public void stop() {
         this.job = null;
@@ -280,8 +358,12 @@ public class BuildGoal extends Goal {
         while (cursor < plan.size()) {
             Placement p = plan.get(cursor);
             BlockState st = assistant.level().getBlockState(p.pos());
-            if (st.canBeReplaced()
-                && !assistant.getBoundingBox().intersects(new net.minecraft.world.phys.AABB(p.pos()))) {
+            // (A cell was marked for clearing when the plan was made, while the tree still had
+            // its leaves; by the time its turn comes the leaves round a trunk may be gone,
+            // so it is only asked whether there is still a trunk or a leaf there.)
+            if (p.part() == Part.CLEAR ? (st.is(net.minecraft.tags.BlockTags.LOGS) || isNaturalLeaves(st))
+                : (st.canBeReplaced()
+                    && !assistant.getBoundingBox().intersects(new net.minecraft.world.phys.AABB(p.pos())))) {
                 target = p;
                 break;
             }
@@ -339,6 +421,22 @@ public class BuildGoal extends Goal {
 
         BlockState state;
         Part part = target.part();
+        if (part == Part.CLEAR) {
+            // Taken down like anybody would: what it gives goes in the pack (a tree's
+            // trunk is wood the village wants), not on the floor to rot.
+            BlockState there = assistant.level().getBlockState(pos);
+            if (assistant.level() instanceof net.minecraft.server.level.ServerLevel server) {
+                for (ItemStack drop : net.minecraft.world.level.block.Block.getDrops(
+                        there, server, pos, null, assistant, assistant.getMainHandItem())) {
+                    ItemStack left = assistant.insertItem(drop);
+                    if (!left.isEmpty()) net.minecraft.world.level.block.Block.popResource(server, pos, left);
+                }
+            }
+            assistant.level().destroyBlock(pos, false, assistant);
+            assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+            cursor++;
+            return;
+        }
         if (isBlockPart(part)) {
             state = takeBlockMatching(itemFor(part));
             if (state == null) {
@@ -409,22 +507,40 @@ public class BuildGoal extends Goal {
             // Beds are laid by layBed, which needs two cells; this is only the
             // fallback the switch demands.
             case BED -> Blocks.RED_BED.defaultBlockState();
+            case CLEAR -> Blocks.AIR.defaultBlockState();
         };
+    }
+
+    /** What a block costs the village to spend on a wall: stone and the like are
+     *  free for the digging, planks are the tools and chests of the day after,
+     *  and logs are the planks. A builder spends the cheapest it has, so a
+     *  village short of trees does not wall itself in with the last of its wood
+     *  and then stand about with no pickaxe. */
+    public static int blockCost(ItemStack s) {
+        if (s.is(net.minecraft.tags.ItemTags.LOGS)) return 2;
+        if (s.is(net.minecraft.tags.ItemTags.PLANKS)) return 1;
+        return 0;
     }
 
     /** Consume one matching BlockItem from the pack; its block is what we place. */
     @Nullable
     private BlockState takeBlockMatching(Predicate<ItemStack> pred) {
         var inv = assistant.getInventoryItems();
+        int best = -1;
+        int bestCost = Integer.MAX_VALUE;
         for (int i = 0; i < inv.size(); i++) {
             ItemStack s = inv.get(i);
-            if (s.isEmpty() || !pred.test(s) || !(s.getItem() instanceof BlockItem bi)) continue;
-            BlockState state = bi.getBlock().defaultBlockState();
-            s.shrink(1);
-            if (s.isEmpty()) inv.set(i, ItemStack.EMPTY);
-            return state;
+            if (s.isEmpty() || !pred.test(s) || !(s.getItem() instanceof BlockItem)) continue;
+            int cost = blockCost(s);
+            if (cost < bestCost) { best = i; bestCost = cost; }
+            if (cost == 0) break;
         }
-        return null;
+        if (best < 0) return null;
+        ItemStack s = inv.get(best);
+        BlockState state = ((BlockItem) s.getItem()).getBlock().defaultBlockState();
+        s.shrink(1);
+        if (s.isEmpty()) inv.set(best, ItemStack.EMPTY);
+        return state;
     }
 
     // ------------------------------ blueprints ------------------------------

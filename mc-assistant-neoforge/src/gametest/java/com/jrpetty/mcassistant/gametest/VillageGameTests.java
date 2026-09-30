@@ -5,6 +5,7 @@ import com.jrpetty.mcassistant.VillagerTakeover;
 import com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock;
 import com.jrpetty.mcassistant.entity.AssistantEntity;
 import com.jrpetty.mcassistant.entity.AssistantEntity.StationTask;
+import com.jrpetty.mcassistant.entity.Job;
 import com.jrpetty.mcassistant.entity.VillageFolkEntity;
 import com.jrpetty.mcassistant.entity.goal.BuildGoal;
 import com.jrpetty.mcassistant.entity.Villages;
@@ -19,7 +20,9 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.block.Blocks;
@@ -217,6 +220,99 @@ public class VillageGameTests {
         helper.assertTrue(next != null && !next.anchor().equals(first.anchor()) && !next.anchor().equals(other.anchor()),
             "a refused lot must give way to another, not come round again");
         helper.succeed();
+    }
+
+    /** Ground that is not flat: a hillside, climbing a block for every two. A village
+     *  gets a lot on it, and its builder fills the low side up to the floor instead of
+     *  leaving the walls hanging over a drop. */
+    @GameTest(template = EMPTY, timeoutTicks = 3200, batch = "t11_hillside")
+    public static void t11_hillside(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(1000);
+        Kit.hold(level, 3300, 3300, 70);
+        Kit.prepare(level, 3300, 3300, 70);
+        for (int dx = -40; dx <= 40; dx++) {
+            int rise = Math.max(0, Math.min(12, (dx + 12) / 2));
+            for (int dz = -40; dz <= 40; dz++) {
+                BlockPos g = Kit.surface(level, 3300 + dx, 3300 + dz);
+                for (int i = 0; i < rise; i++) level.setBlock(g.above(i), Blocks.DIRT.defaultBlockState(), 3);
+                if (rise > 0) level.setBlock(g.above(rise - 1), Blocks.GRASS_BLOCK.defaultBlockState(), 3);
+            }
+        }
+        BlockPos heart = Kit.surface(level, 3300, 3300);
+        VillageFolkEntity builder = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(builder != null, "could not found a village on the hillside");
+        Villages.Village v = Villages.nearest(level, heart, 100);
+        var site = Villages.siteFor(level, v.id(), "storage");
+        Kit.log("t11 hillside storage lot " + site + "; " + Villages.lotReport(v.id()));
+        helper.assertTrue(site != null, "a hillside should still give a lot: " + Villages.lotReport(v.id()));
+        int fill = BuildGoal.fillCells(level, site.anchor()).size();
+        Kit.log("t11 the lot needs " + fill + " blocks to build up to its floor");
+        builder.insertItem(new ItemStack(Items.COBBLESTONE, 64));
+        builder.insertItem(new ItemStack(Items.COBBLESTONE, 64));
+        builder.insertItem(new ItemStack(Items.COBBLESTONE, 64));
+        builder.insertItem(new ItemStack(Items.CHEST, 4));
+        builder.insertItem(new ItemStack(Items.TORCH, 4));
+        builder.enqueue(Job.buildAt("storage", site.anchor(), site.facing(), site.radius()));
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (t % 600 == 0) Kit.log("t11 @" + t + " built=" + Villages.builtList(v.id()) + " — " + builder.debugLine());
+            if (Villages.builtList(v.id()).contains("storage")) {
+                int hanging = 0;
+                for (int dx = -2; dx <= 2; dx++) {
+                    for (int dz = -2; dz <= 2; dz++) {
+                        BlockPos floor = site.anchor().offset(dx, -1, dz);
+                        if (level.getBlockState(floor).isAir()) hanging++;
+                    }
+                }
+                Kit.log("t11 the storehouse stands at tick " + t + "; " + hanging + " of 25 floor cells hang over air");
+                helper.assertTrue(hanging == 0, "the low side should have been built up, " + hanging + " cells hang");
+                helper.succeed();
+            } else if (t >= 3000) {
+                helper.fail("the storehouse was not built on the hillside in 3000 ticks: " + builder.debugLine());
+            }
+        });
+    }
+
+    /** Trees where the first lots are: the lot is taken anyway, and the builder fells
+     *  what is in the way and keeps the wood. */
+    @GameTest(template = EMPTY, timeoutTicks = 3200, batch = "t12_woodland")
+    public static void t12_woodland(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(1000);
+        Kit.hold(level, 3400, 3400, 70);
+        Kit.prepare(level, 3400, 3400, 70);
+        BlockPos heart = Kit.surface(level, 3400, 3400);
+        for (int dx = -9; dx <= 9; dx += 9) {
+            for (int dz = -9; dz <= 9; dz += 9) {
+                if (dx != 0 || dz != 0) Kit.wildTree(level, heart.getX() + dx, heart.getZ() + dz);
+            }
+        }
+        VillageFolkEntity builder = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(builder != null, "could not found a village in the wood");
+        Villages.Village v = Villages.nearest(level, heart, 100);
+        var site = Villages.siteFor(level, v.id(), "storage");
+        Kit.log("t12 woodland storage lot " + site + "; " + Villages.lotReport(v.id()));
+        helper.assertTrue(site != null, "a lot with a tree on it should still be a lot: " + Villages.lotReport(v.id()));
+        helper.assertTrue(site.anchor().distSqr(heart) < 20 * 20, "with trees all round, the lot is still beside the heart: " + site);
+        builder.insertItem(new ItemStack(Items.COBBLESTONE, 64));
+        builder.insertItem(new ItemStack(Items.COBBLESTONE, 64));
+        builder.insertItem(new ItemStack(Items.CHEST, 4));
+        builder.insertItem(new ItemStack(Items.TORCH, 4));
+        builder.enqueue(Job.buildAt("storage", site.anchor(), site.facing(), site.radius()));
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (t % 600 == 0) Kit.log("t12 @" + t + " built=" + Villages.builtList(v.id()) + " — " + builder.debugLine());
+            if (Villages.builtList(v.id()).contains("storage")) {
+                int logs = builder.countMatching(st -> st.is(ItemTags.LOGS));
+                Kit.log("t12 the storehouse stands at tick " + t + "; the builder carries " + logs + " logs from the tree");
+                helper.succeed();
+            } else if (t >= 3000) {
+                helper.fail("the storehouse was not built among the trees in 3000 ticks: " + builder.debugLine());
+            }
+        });
     }
 
     // ===================================================== vanilla villagers

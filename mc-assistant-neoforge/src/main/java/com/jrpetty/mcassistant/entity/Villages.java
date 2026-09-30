@@ -86,6 +86,8 @@ public final class Villages {
         SITES.clear();
         CELLS.clear();
         BAD_LOTS.clear();
+        WHY_NOT.clear();
+        LAPS.clear();
         FOUNDED.clear();
         LEAD.clear();
         LEAD_AT.clear();
@@ -149,6 +151,8 @@ public final class Villages {
         SITES.remove(villageId);
         CELLS.remove(villageId);
         BAD_LOTS.remove(villageId);
+        WHY_NOT.remove(villageId);
+        LAPS.remove(villageId);
         FOUNDED.remove(villageId);
         LEAD.remove(villageId);
         LEAD_AT.remove(villageId);
@@ -660,6 +664,12 @@ public final class Villages {
         LAST_PROJECT.put(villageId, gameTime - PROJECT_GAP + 2400L);
     }
 
+    /** Somebody looked for a lot and there was none to be had yet (the ground
+     *  still arriving, or all of it rough): look again in a minute. */
+    public static void retryShortly(UUID villageId, long gameTime) {
+        LAST_PROJECT.put(villageId, gameTime - PROJECT_GAP + 1200L);
+    }
+
     /** Something actually went up. Only finished buildings count toward the
      *  village's ages — a village that could not find the timber has not got
      *  a storehouse, however many times it tried. */
@@ -829,7 +839,11 @@ public final class Villages {
     /** Lots the builders found they could not get to, as the column of the lot's middle. */
     private static final Map<UUID, java.util.Set<Long>> BAD_LOTS = new ConcurrentHashMap<>();
     /** The most a lot's ground may stand above or below the ground at the heart. */
-    private static final int LOT_RISE = 8;
+    private static final int LOT_RISE = 12;
+    /** How many times round its lots a village has been without finding one. Each
+     *  lap lets the ground be a little rougher, so a village founded on a
+     *  mountainside is not left without a storehouse for ever. */
+    private static final Map<UUID, Integer> LAPS = new ConcurrentHashMap<>();
 
     /** Nine blocks a lot: a five-by-five house or store and a margin. */
     private static final int PITCH = 9;
@@ -875,15 +889,20 @@ public final class Villages {
 
         Site site = null;
         if (project.equals("fortify")) {
-            BlockPos ground = groundFor(level, v.centre().getX(), v.centre().getZ(), false, Integer.MIN_VALUE);
+            BlockPos ground = groundFor(level, v.centre().getX(), v.centre().getZ(), false, Integer.MIN_VALUE, 0, null);
             if (ground != null) site = new Site(ground, net.minecraft.core.Direction.NORTH, WALL_RADIUS);
         } else {
             java.util.Set<Long> bad = BAD_LOTS.computeIfAbsent(villageId, k -> ConcurrentHashMap.newKeySet());
             int heartGround = heartGround(level, v.centre());
+            int laps = LAPS.getOrDefault(villageId, 0);
             int i = CELLS.getOrDefault(villageId, 0);
             int looked = 0;
-            while (looked < 16 && site == null) {
-                if (i >= LOTS.length) { i = 0; break; }          // every lot has had its look: begin again at the heart
+            while (looked < 64 && site == null) {
+                if (i >= LOTS.length) {                           // every lot has had its look: begin again at the heart, less particular
+                    i = 0;
+                    LAPS.merge(villageId, 1, Integer::sum);
+                    break;
+                }
                 int[] c = LOTS[i];
                 int x = v.centre().getX() + c[0] * PITCH;
                 int z = v.centre().getZ() + c[1] * PITCH;
@@ -897,7 +916,7 @@ public final class Villages {
                 i++;
                 looked++;
                 if (bad.contains(BlockPos.asLong(x, 0, z))) continue;
-                BlockPos ground = groundFor(level, x, z, true, heartGround);
+                BlockPos ground = groundFor(level, x, z, true, heartGround, laps, whyNot(villageId));
                 if (ground != null) {
                     site = new Site(ground, facingOf(c[0], c[1]), 0);
                 }
@@ -914,12 +933,33 @@ public final class Villages {
         Map<String, Site> pending = SITES.get(villageId);
         Site gone = pending == null ? null : pending.remove(project);
         if (gone != null) {
+            why(whyNot(villageId), TAKEN);
             BAD_LOTS.computeIfAbsent(villageId, k -> ConcurrentHashMap.newKeySet())
                 .add(BlockPos.asLong(gone.anchor().getX(), 0, gone.anchor().getZ()));
         }
         LEAD.remove(villageId);
         LEAD_AT.remove(villageId);
         LAST_PROJECT.put(villageId, gameTime - PROJECT_GAP + 600L);
+    }
+
+    private static final int WET = 0, CLIFF = 1, HEIGHT = 2, TRUNK = 3, BLOCKED = 4, TAKEN = 5;
+    private static final Map<UUID, int[]> WHY_NOT = new ConcurrentHashMap<>();
+
+    private static int[] whyNot(UUID villageId) {
+        return WHY_NOT.computeIfAbsent(villageId, k -> new int[6]);
+    }
+
+    private static void why(@Nullable int[] why, int reason) {
+        if (why != null) why[reason]++;
+    }
+
+    /** Where the lot search has got to and what it has turned down, for the log:
+     *  a village that cannot build has a reason, and it is one of these. */
+    public static String lotReport(UUID villageId) {
+        int[] w = WHY_NOT.getOrDefault(villageId, new int[6]);
+        return "lap " + LAPS.getOrDefault(villageId, 0) + ", lot " + CELLS.getOrDefault(villageId, 0) + " of " + LOTS.length
+            + "; turned down: wet " + w[WET] + ", cliff " + w[CLIFF] + ", too high or low " + w[HEIGHT]
+            + ", trunk " + w[TRUNK] + ", built on or rocky " + w[BLOCKED] + ", given up " + w[TAKEN];
     }
 
     /** Is the ground a lot here would stand on all in the world yet? */
@@ -947,13 +987,21 @@ public final class Villages {
     }
 
     /**
-     * Flat, dry, clear ground for a five-by-five building centred here — or
-     * null. The anchor is the first free block above the ground, which is the
-     * floor level every blueprint is measured from.
+     * Level-enough, dry, clear-enough ground for a five-by-five building
+     * centred here — or null. The anchor is the first free block above the
+     * ground, which is the floor level every blueprint is measured from.
+     *
+     * <p>Ground that is nearly flat is built on where it lies. Ground that is
+     * not — a hillside, a bank — is built UP to: the anchor is the highest of
+     * the nine heights sampled, and the builder fills the columns that stop short
+     * of the floor and takes down the tree leaves in the way (BuildGoal). The
+     * first version insisted on ground flat to two blocks across seven, and on
+     * rolling country found none within sixty-three blocks of the heart: a
+     * village that never built a thing.
      */
     @Nullable
     private static BlockPos groundFor(net.minecraft.server.level.ServerLevel level, int x, int z,
-                                      boolean needsClearance, int heartGround) {
+                                      boolean needsClearance, int heartGround, int laps, @Nullable int[] why) {
         int lo = Integer.MAX_VALUE, hi = Integer.MIN_VALUE;
         for (int dx = -3; dx <= 3; dx += 3) {
             for (int dz = -3; dz <= 3; dz += 3) {
@@ -961,30 +1009,40 @@ public final class Villages {
                 int h = level.getHeight(
                     net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
                     x + dx, z + dz);
+                // The ground itself has to be dry and something a wall can stand on.
+                net.minecraft.world.level.block.state.BlockState top =
+                    level.getBlockState(new BlockPos(x + dx, h - 1, z + dz));
+                if (!top.getFluidState().isEmpty() || !top.isSolid()) { why(why, WET); return null; }
                 lo = Math.min(lo, h);
                 hi = Math.max(hi, h);
             }
         }
-        if (hi - lo > 2) return null;                         // a slope, not a lot
-        int y = (lo + hi) / 2;
+        int slope = hi - lo;
+        if (slope > 4 + Math.min(laps, 2)) { why(why, CLIFF); return null; }       // a cliff, not a lot
+        int y = slope <= 2 ? (lo + hi) / 2 : hi;
         // Level ground is not enough: it has to be ground the heart's people can walk to.
         // A plateau forty blocks above the village is flat and is nobody's lot.
-        if (heartGround != Integer.MIN_VALUE && Math.abs(y - heartGround) > LOT_RISE) return null;
+        if (heartGround != Integer.MIN_VALUE && Math.abs(y - heartGround) > LOT_RISE + 8 * Math.min(laps, 2)) { why(why, HEIGHT); return null; }
         BlockPos at = new BlockPos(x, y, z);
-        net.minecraft.world.level.block.state.BlockState under = level.getBlockState(at.below());
-        if (!under.isSolid() || !under.getFluidState().isEmpty()) return null;   // water, or air
         if (!needsClearance) return at;
-        // Something already stands here — a tree, a house, a field — if much of
-        // the footprint is not open air or something soft.
+        // Something already stands here — a house, a field, a rock — if much of the
+        // footprint is not open air or something soft. A tree is not counted: the
+        // builder takes its leaves and trunk down (BuildGoal), and gets the wood.
         int blocked = 0;
         for (int dx = -3; dx <= 3; dx++) {
             for (int dz = -3; dz <= 3; dz++) {
                 for (int dy = 0; dy <= 1; dy++) {
-                    if (!level.getBlockState(at.offset(dx, dy, dz)).canBeReplaced()) blocked++;
+                    BlockPos c = at.offset(dx, dy, dz);
+                    net.minecraft.world.level.block.state.BlockState st = level.getBlockState(c);
+                    if (st.canBeReplaced() || st.is(net.minecraft.tags.BlockTags.LEAVES)) continue;
+                    if (st.is(net.minecraft.tags.BlockTags.LOGS)
+                            && com.jrpetty.mcassistant.entity.goal.BuildGoal.isTreeLog(level, c)) continue;
+                    blocked++;
                 }
             }
         }
-        return blocked > 10 ? null : at;
+        if (blocked > 10 + 12 * Math.min(laps, 2)) { why(why, BLOCKED); return null; }
+        return at;
     }
 
     /** What an idle hand should be gathering for the age the village is in —

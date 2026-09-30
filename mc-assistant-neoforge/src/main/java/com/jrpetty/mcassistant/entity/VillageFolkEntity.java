@@ -1270,7 +1270,11 @@ public class VillageFolkEntity extends AssistantEntity {
         // Ground for it, picked once and kept: a build interrupted at dusk must
         // pick up where it left off, not start again somewhere else.
         Villages.Site site = Villages.siteFor(server, village, project);
-        if (site == null) { buildNote("build: no lot for the " + project); Villages.retrySoon(village, now); return; }
+        if (site == null) {
+            buildNote("build: no lot for the " + project + " (" + Villages.lotReport(village) + ")");
+            Villages.retryShortly(village, now);
+            return;
+        }
         // No point taking charge of a building the village cannot yet afford —
         // the lead does not lend itself out while it holds the post.
         if (!affordsTimberFor(project, site)) { buildNote("build: cannot afford the " + project); Villages.retrySoon(village, now); return; }
@@ -1329,6 +1333,8 @@ public class VillageFolkEntity extends AssistantEntity {
         if (heart == null) return false;
         int blocks = BuildGoal.partCounts(project, site.radius()).getOrDefault(BuildGoal.Part.BLOCK, 0);
         blocks += blocks / 10 + 2;
+        // A hillside takes stone to build up to the floor.
+        if (!project.equals("fortify")) blocks += BuildGoal.fillCells(level(), site.anchor()).size();
         int carried = countCarried(BuildGoal::isBuildingBlock);
         return carried >= blocks
             || carried + storesHold(heart, buildStoresRadius(), BuildGoal::isBuildingBlock) >= blocks;
@@ -1375,14 +1381,20 @@ public class VillageFolkEntity extends AssistantEntity {
             BuildGoal.partCounts(project, site.radius());
         int blocks = need.getOrDefault(BuildGoal.Part.BLOCK, 0);
         blocks += blocks / 10 + 2;                              // a margin for the cells that are lost
+        if (!project.equals("fortify")) blocks += BuildGoal.fillCells(level(), site.anchor()).size();   // and the ground to build up
 
         // Timber and stone: only worth a trip if the village has enough.
         int carried = countCarried(BuildGoal::isBuildingBlock);
         if (carried < blocks) {
             int inStores = storesHold(heart, buildStoresRadius(), BuildGoal::isBuildingBlock);
             if (carried + inStores < blocks) { buildNote("build: stores hold " + inStores + ", need " + (blocks - carried)); return false; }      // not yet
-            int got = drawFrom(heart, BuildGoal::isBuildingBlock,
-                blocks - carried, buildStoresRadius());
+            // The cheapest first: stone before planks, planks before logs.
+            int got = 0;
+            for (int tier = 0; tier <= 2 && got < blocks - carried; tier++) {
+                final int cost = tier;
+                got += drawFrom(heart, st -> BuildGoal.isBuildingBlock(st) && BuildGoal.blockCost(st) == cost,
+                    blocks - carried - got, buildStoresRadius());
+            }
             if (got > 0) Villages.leadProgress(village, getUUID(), now);
         }
 

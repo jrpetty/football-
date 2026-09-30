@@ -125,6 +125,25 @@ final class Kit {
         }
     }
 
+    /** A tree the way the world grows one: its leaves are not persistent, so they are
+     *  what a builder taking a tree down is looking for. */
+    static void wildTree(ServerLevel level, int x, int z) {
+        BlockPos base = surface(level, x, z);
+        for (int i = 0; i < 5; i++) {
+            level.setBlock(base.above(i), Blocks.OAK_LOG.defaultBlockState(), 3);
+        }
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                for (int dy = 3; dy <= 5; dy++) {
+                    if (Math.abs(dx) == 2 && Math.abs(dz) == 2) continue;
+                    if (dx == 0 && dz == 0 && dy < 5) continue;
+                    level.setBlock(base.offset(dx, dy, dz),
+                        Blocks.OAK_LEAVES.defaultBlockState().setValue(LeavesBlock.PERSISTENT, false), 3);
+                }
+            }
+        }
+    }
+
     static void forest(ServerLevel level, int cx, int cz, int spread, int trees, long seed) {
         RandomSource rnd = RandomSource.create(seed);
         for (int i = 0; i < trees; i++) {

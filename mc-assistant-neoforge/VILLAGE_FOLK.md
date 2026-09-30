@@ -38,12 +38,19 @@ Everything is obtainable in **survival**.
 * **Building** — one project at a time, one lead builder per project, on a lot
   chosen once on the village's own grid: storage, shelter, houses, then (as the
   village comes of age) a wall, a smeltery, a workshop, a watchtower, a
-  lighthouse. A lot is flat, clear, dry and within eight blocks of the ground
-  at the heart; if the builders cannot get to it (three cells in a row out of
-  reach and nothing standing) it is given up and another is chosen. For its
+  lighthouse. A lot is dry, within twelve blocks of the ground at the heart and
+  no steeper than four blocks across; the builder fills the low side up to the
+  floor and fells any tree in the way (keeping the wood). If the builders cannot
+  get to a lot (three cells in a row out of reach and nothing standing) it is
+  given up and another is chosen; a village that has been all round its lots
+  without a find is less particular the next time. Stone is spent before planks,
+  and planks before logs. For its
   first ten minutes a village keeps the founding planks, stone and chests for
   its storehouse.
 * **Breaks** — one a day, at an hour of each folk's own.
+* **Pace** — a folk works a little over twice as fast as a hired assistant and
+  wears a tool a third as fast: a village that dug a block every five seconds
+  raised one building a game day.
 * **Days** — the day shift works the day, then goes home; the watch keeps the
   night. Nobody builds, mines or moves house after dark. Sleeping in a bed skips
   the night for everybody, wherever you are.
@@ -90,6 +97,8 @@ Every push to CI:
 * settles a hundred folk on one map and reports what that costs a tick;
 * checks a generated vanilla village's villagers are converted without
   freezing the server;
+* builds a storehouse on a hillside and among trees (game tests `t11`, `t12`),
+  so the ground work — filling the low side, felling the tree in the way — runs;
 * runs ten game days in a forest, to see whether a village grows up (ages,
   houses, births) or only gets through three days;
 * lets a world found villages as ground generates, the way exploring does;
