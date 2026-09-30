@@ -460,8 +460,8 @@ public final class Villages {
                 need(wants, level, v, "timber", Task.LOGS,
                     com.jrpetty.mcassistant.village.VillageMath.timberWanted(folk));
                 if (built(villageId, "shelter") < 1) wants.add(new Need("a shelter", Task.BUILD, 1));
-                if (built(villageId, "house")
-                        < com.jrpetty.mcassistant.village.VillageMath.housesWanted(folk, false)) {
+                // Houses are measured the way they are used: room for everybody, and some to spare.
+                if (built(villageId, "house") < 1 || folk >= housing(villageId) - 2) {
                     wants.add(new Need("houses", Task.BUILD, 1));
                 }
                 if (built(villageId, "well") < 1) wants.add(new Need("a well", Task.BUILD, 1));
@@ -473,8 +473,7 @@ public final class Villages {
                 need(wants, level, v, "coal", Task.COAL,
                     com.jrpetty.mcassistant.village.VillageMath.coalWanted(folk));
                 if (built(villageId, "fortify") < 1) wants.add(new Need("a wall around the village", Task.BUILD, 1));
-                if (built(villageId, "house")
-                        < com.jrpetty.mcassistant.village.VillageMath.housesWanted(folk, true)) {
+                if (folk >= housing(villageId) - 5) {
                     wants.add(new Need("more houses", Task.BUILD, 1));
                 }
                 if (built(villageId, "smeltery") < 1) wants.add(new Need("a smeltery", Task.BUILD, 1));
@@ -762,13 +761,13 @@ public final class Villages {
         if (built(villageId, "shelter") < 1) return "shelter";
         // Room before anything else: a village with every home full stops growing, and
         // growing is the whole of how it gets the hands for everything after this.
-        if (folk >= housing(villageId) - 2) return "house";
-        if (built(villageId, "house") < Math.max(1, folk / 4)) return "house";
+        if (folk >= housing(villageId) - 2 || built(villageId, "house") < 1) return "house";
         if (built(villageId, "well") < 1) return "well";
         if (at == Age.WOOD) return null;
 
         if (built(villageId, "fortify") < 1) return "fortify";        // the wall
-        if (built(villageId, "house") < Math.max(2, folk / 3)) return "house";
+        // A Stone Age village keeps a few homes spare, not just one.
+        if (folk >= housing(villageId) - 5) return "house";
         if (built(villageId, "smeltery") < 1) return "smeltery";
         if (built(villageId, "hall") < 1) return "hall";
         if (at == Age.STONE) return null;
@@ -801,9 +800,8 @@ public final class Villages {
         return switch (project) {
             case "storage" -> "a storehouse, so what is gathered has somewhere to go";
             case "shelter" -> "a shelter, somewhere to wait out the first nights";
-            case "house" -> folk >= housing(villageId) - 2
-                ? "a house: " + folk + " live here and there is room for " + housing(villageId) + ", and nobody is born without room"
-                : "a house: a village of " + folk + " wants " + Math.max(1, folk / 4) + " at least";
+            case "house" -> "a house: " + folk + " live here and there is room for " + housing(villageId)
+                + ", and nobody is born without room";
             case "well" -> "a well at the heart, the mark of a village rather than a camp";
             case "fortify" -> "a wall round the village, against the things that come out at night";
             case "smeltery" -> "a smeltery, three furnaces for the ore the mines bring up";
