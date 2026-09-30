@@ -195,9 +195,10 @@ public final class VillageMath {
     // itself well fed and then starved. A village works out what it needs from
     // how many mouths and hands it actually has.
 
-    /** Meals one pair of hands eats in a Minecraft day, at the default
-     *  upkeep of one ration per 3000 ticks against a 24000-tick day. */
-    public static final int MEALS_PER_DAY = 8;
+    /** Meals one pair of hands eats in a Minecraft day. A folk eats a ration
+     *  every 4500 ticks of work (the assistants' 3000, and half as much again:
+     *  villagers are not hired hands on a clock), against a 24000-tick day. */
+    public static final int MEALS_PER_DAY = 5;
 
     /** Iron in a full set of armour: helmet 5, chest 8, legs 7, boots 4. */
     public static final int ARMOUR_SET = 24;
@@ -259,12 +260,18 @@ public final class VillageMath {
 
     /** Timber: what the houses on the list are actually made of. */
     public static int timberWanted(int folk) {
-        return Math.max(128, housesWanted(folk, false) * 96);
+        // Forty-eight a house: a house is seventy-odd blocks of which the floor and
+        // much of the wall go up in stone when there is any. At ninety-six a
+        // house the nineteen folk of a three-day-old village wanted three hundred
+        // and eighty-four logs and planks in the stores before they would call
+        // themselves out of the Wood Age — more than they would ever have, because
+        // every house they built spent it.
+        return Math.max(96, housesWanted(folk, false) * 48);
     }
 
     /** Stone: the wall, the smeltery, and the houses that follow them. */
     public static int stoneWanted(int folk) {
-        return Math.max(256, folk * 24);
+        return Math.max(192, folk * 16);
     }
 
     /** Coal: fuel for the forge, and torches for everybody down a hole. */

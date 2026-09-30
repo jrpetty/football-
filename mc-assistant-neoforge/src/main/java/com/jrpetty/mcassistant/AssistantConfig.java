@@ -130,12 +130,13 @@ public final class AssistantConfig {
             .defineInRange("villageGrowthCap", 100, 2, 500);
         VILLAGE_LOADED_CHUNKS = b.comment(
                 "How many chunks around its heart a settlement keeps ticking while",
-                "nobody is there, as a radius. Eight is a 17x17 square, about what",
-                "vanilla keeps awake around world spawn. A town bigger than this ring",
-                "still works — its outer fields just wait until somebody is in the",
-                "area. Raise it if your machine can pay for it; the cost is the",
-                "square of the number.")
-            .defineInRange("villageLoadedChunks", 8, 2, 24);
+                "nobody is there, as a radius. Six is a 13x13 square (169 chunks): the",
+                "heart, the stores and every building lot. Each folk also keeps the",
+                "chunks round its own plot awake, so the fields work either way; a",
+                "village that generates in every direction as you explore keeps one",
+                "such ring apiece for ever, and the cost is the square of the number.",
+                "Raise it if your machine can pay for it.")
+            .defineInRange("villageLoadedChunks", 6, 2, 24);
         REPLACE_VILLAGERS = b.comment(
                 "Turn the game's own villagers into Village Folk as you meet them, so",
                 "they work the village they already live in — its houses, beds, chests,",
@@ -177,7 +178,7 @@ public final class AssistantConfig {
     public static int villageMaxFolk() { return read(VILLAGE_MAX_FOLK, 12); }
     public static boolean villageBreeding() { return read(VILLAGE_BREEDING, true); }
     public static int villageGrowthCap() { return read(VILLAGE_GROWTH_CAP, 100); }
-    public static int villageLoadedChunks() { return read(VILLAGE_LOADED_CHUNKS, 8); }
+    public static int villageLoadedChunks() { return read(VILLAGE_LOADED_CHUNKS, 6); }
     public static boolean replaceVillagers() { return read(REPLACE_VILLAGERS, true); }
     public static boolean protectTradedVillagers() { return read(PROTECT_TRADED_VILLAGERS, false); }
 

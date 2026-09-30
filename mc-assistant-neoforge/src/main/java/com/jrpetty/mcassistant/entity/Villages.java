@@ -85,6 +85,8 @@ public final class Villages {
         LAST_BIRTH.clear();
         SITES.clear();
         CELLS.clear();
+        BAD_LOTS.clear();
+        FOUNDED.clear();
         LEAD.clear();
         LEAD_AT.clear();
         LAST_BAKE.clear();
@@ -135,6 +137,7 @@ public final class Villages {
     public static Village found(Level level, BlockPos centre) {
         Village v = new Village(UUID.randomUUID(), centre.immutable(), level.dimension());
         ALL.put(v.id(), v);
+        FOUNDED.put(v.id(), level.getGameTime());
         return v;
     }
 
@@ -145,6 +148,8 @@ public final class Villages {
         LAST_BIRTH.remove(villageId);
         SITES.remove(villageId);
         CELLS.remove(villageId);
+        BAD_LOTS.remove(villageId);
+        FOUNDED.remove(villageId);
         LEAD.remove(villageId);
         LEAD_AT.remove(villageId);
         LAST_BAKE.remove(villageId);
@@ -675,6 +680,37 @@ public final class Villages {
         return n;
     }
 
+    /** Has the village got one of these standing? */
+    public static boolean hasBuilt(UUID villageId, String structure) {
+        return built(villageId, structure) > 0;
+    }
+
+    private static final Map<UUID, Long> FOUNDED = new ConcurrentHashMap<>();
+
+    /** How long the storehouse has first call on a new village's planks, stone and chests. */
+    private static final long STOREHOUSE_FIRST = 12000L;       // ten minutes
+
+    /**
+     * Is the storehouse still to be raised, in a village young enough that the
+     * stock it was founded with belongs to the storehouse?
+     *
+     * <p>Every hand came out of the founding with a chest to set down, a
+     * bench and tools — and then, each one, went back to the stores for spares:
+     * planks for a pick, a chest for its plot. Twelve hands drained forty-eight
+     * planks and four chests in the first minutes, and the building that was
+     * meant to be made of them (four chests, seventy blocks) could then not be
+     * afforded for three game days on a map with few trees. The builder draws
+     * on the stores directly and is not asked to wait; everyone else leaves the
+     * timber, the stone and the chests alone until the storehouse stands — or ten
+     * minutes go by, so that a village which cannot build one is not starved of
+     * planks for ever.
+     */
+    public static boolean storehouseFirst(UUID villageId, long gameTime) {
+        if (built(villageId, "storage") > 0) return false;
+        long since = FOUNDED.computeIfAbsent(villageId, k -> gameTime);
+        return gameTime - since < STOREHOUSE_FIRST;
+    }
+
     /**
      * What the settlement should put up next, or null when it is content for
      * now. Buildings follow the age: a village in the Wood Age puts up timber
@@ -790,6 +826,10 @@ public final class Villages {
 
     private static final Map<UUID, Map<String, Site>> SITES = new ConcurrentHashMap<>();
     private static final Map<UUID, Integer> CELLS = new ConcurrentHashMap<>();
+    /** Lots the builders found they could not get to, as the column of the lot's middle. */
+    private static final Map<UUID, java.util.Set<Long>> BAD_LOTS = new ConcurrentHashMap<>();
+    /** The most a lot's ground may stand above or below the ground at the heart. */
+    private static final int LOT_RISE = 8;
 
     /** Nine blocks a lot: a five-by-five house or store and a margin. */
     private static final int PITCH = 9;
@@ -835,16 +875,29 @@ public final class Villages {
 
         Site site = null;
         if (project.equals("fortify")) {
-            BlockPos ground = groundFor(level, v.centre().getX(), v.centre().getZ(), false);
+            BlockPos ground = groundFor(level, v.centre().getX(), v.centre().getZ(), false, Integer.MIN_VALUE);
             if (ground != null) site = new Site(ground, net.minecraft.core.Direction.NORTH, WALL_RADIUS);
         } else {
+            java.util.Set<Long> bad = BAD_LOTS.computeIfAbsent(villageId, k -> ConcurrentHashMap.newKeySet());
+            int heartGround = heartGround(level, v.centre());
             int i = CELLS.getOrDefault(villageId, 0);
             int looked = 0;
-            while (i < LOTS.length && looked < 16 && site == null) {
-                int[] c = LOTS[i++];
+            while (looked < 16 && site == null) {
+                if (i >= LOTS.length) { i = 0; break; }          // every lot has had its look: begin again at the heart
+                int[] c = LOTS[i];
+                int x = v.centre().getX() + c[0] * PITCH;
+                int z = v.centre().getZ() + c[1] * PITCH;
+                // A lot whose ground has not arrived yet has not been found wanting.
+                // The ring of chunks round a new village comes in over its first
+                // minute, and every lot looked at before that was written off for
+                // good: the village was left with whatever was far enough out to
+                // be loaded already — on the plains map, a hilltop forty blocks up
+                // that nobody could walk to.
+                if (!lotLoaded(level, x, z)) break;
+                i++;
                 looked++;
-                BlockPos ground = groundFor(level, v.centre().getX() + c[0] * PITCH,
-                    v.centre().getZ() + c[1] * PITCH, true);
+                if (bad.contains(BlockPos.asLong(x, 0, z))) continue;
+                BlockPos ground = groundFor(level, x, z, true, heartGround);
                 if (ground != null) {
                     site = new Site(ground, facingOf(c[0], c[1]), 0);
                 }
@@ -853,6 +906,37 @@ public final class Villages {
         }
         if (site != null) pending.put(project, site);
         return site;
+    }
+
+    /** The builders could not get to this lot: give it up, never pick it again,
+     *  and have another look in half a minute. */
+    public static void rejectSite(UUID villageId, String project, long gameTime) {
+        Map<String, Site> pending = SITES.get(villageId);
+        Site gone = pending == null ? null : pending.remove(project);
+        if (gone != null) {
+            BAD_LOTS.computeIfAbsent(villageId, k -> ConcurrentHashMap.newKeySet())
+                .add(BlockPos.asLong(gone.anchor().getX(), 0, gone.anchor().getZ()));
+        }
+        LEAD.remove(villageId);
+        LEAD_AT.remove(villageId);
+        LAST_PROJECT.put(villageId, gameTime - PROJECT_GAP + 600L);
+    }
+
+    /** Is the ground a lot here would stand on all in the world yet? */
+    private static boolean lotLoaded(net.minecraft.server.level.ServerLevel level, int x, int z) {
+        for (int dx = -3; dx <= 3; dx += 3) {
+            for (int dz = -3; dz <= 3; dz += 3) {
+                if (!level.hasChunk((x + dx) >> 4, (z + dz) >> 4)) return false;
+            }
+        }
+        return true;
+    }
+
+    /** The height of the ground at the heart, or MIN_VALUE if it is not loaded. */
+    private static int heartGround(net.minecraft.server.level.ServerLevel level, BlockPos centre) {
+        if (!level.hasChunk(centre.getX() >> 4, centre.getZ() >> 4)) return Integer.MIN_VALUE;
+        return level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+            centre.getX(), centre.getZ());
     }
 
     /** Which way is "away from the heart" for a lot at this offset. */
@@ -869,7 +953,7 @@ public final class Villages {
      */
     @Nullable
     private static BlockPos groundFor(net.minecraft.server.level.ServerLevel level, int x, int z,
-                                      boolean needsClearance) {
+                                      boolean needsClearance, int heartGround) {
         int lo = Integer.MAX_VALUE, hi = Integer.MIN_VALUE;
         for (int dx = -3; dx <= 3; dx += 3) {
             for (int dz = -3; dz <= 3; dz += 3) {
@@ -883,6 +967,9 @@ public final class Villages {
         }
         if (hi - lo > 2) return null;                         // a slope, not a lot
         int y = (lo + hi) / 2;
+        // Level ground is not enough: it has to be ground the heart's people can walk to.
+        // A plateau forty blocks above the village is flat and is nobody's lot.
+        if (heartGround != Integer.MIN_VALUE && Math.abs(y - heartGround) > LOT_RISE) return null;
         BlockPos at = new BlockPos(x, y, z);
         net.minecraft.world.level.block.state.BlockState under = level.getBlockState(at.below());
         if (!under.isSolid() || !under.getFluidState().isEmpty()) return null;   // water, or air

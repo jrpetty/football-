@@ -201,6 +201,29 @@ public final class VillageSpawner {
         return false;
     }
 
+    /**
+     * Where this world will found natural villages near a spot: the anchor of
+     * every cell within a few cells that belongs to a cluster, nearest first. The
+     * ground still has to be liveable when its chunk loads. For the console
+     * ("where do I walk to find one?") and for the tests, which have to put the
+     * loaded ground where the world will look.
+     */
+    public static java.util.List<BlockPos> anchorsNear(ServerLevel level, BlockPos near, int cells) {
+        int spacing = Math.max(256, AssistantConfig.villageSpacing());
+        int cx = Math.floorDiv(near.getX(), spacing);
+        int cz = Math.floorDiv(near.getZ(), spacing);
+        java.util.List<BlockPos> out = new java.util.ArrayList<>();
+        for (int dx = -cells; dx <= cells; dx++) {
+            for (int dz = -cells; dz <= cells; dz++) {
+                if (inACluster(level, cx + dx, cz + dz)) out.add(anchorFor(level, cx + dx, cz + dz, spacing));
+            }
+        }
+        out.sort(java.util.Comparator.comparingDouble(a ->
+            (double) (a.getX() - near.getX()) * (a.getX() - near.getX())
+                + (double) (a.getZ() - near.getZ()) * (a.getZ() - near.getZ())));
+        return out;
+    }
+
     /** The candidate spot for a grid cell, fixed by the world seed. */
     private static BlockPos anchorFor(ServerLevel level, int cellX, int cellZ, int spacing) {
         RandomSource r = RandomSource.create(
@@ -332,7 +355,13 @@ public final class VillageSpawner {
         // a working one — without it the harvest has nowhere to go and the
         // whole trade jams on a full pack.
         folk.insertItem(new ItemStack(Items.CHEST));
-        folk.insertItem(new ItemStack(Items.WHEAT_SEEDS, 8));
+        folk.insertItem(new ItemStack(Items.WHEAT_SEEDS, 6));
+        // Roots are what a field is FOR: a wheat plant gives one ear and a few
+        // seeds, a carrot or a potato plant gives three or so to eat, and each of
+        // those is a plant again. A village that started with wheat alone was
+        // out of bread on its third day, waiting on the first harvest.
+        folk.insertItem(new ItemStack(Items.CARROT, 3));
+        folk.insertItem(new ItemStack(Items.POTATO, 3));
         folk.insertItem(new ItemStack(Items.OAK_SAPLING, 4));
     }
 
@@ -360,6 +389,8 @@ public final class VillageSpawner {
         if (!(level.getBlockEntity(at) instanceof Container chest)) return;
         List<ItemStack> stores = List.of(
             new ItemStack(Items.WHEAT_SEEDS, 32),
+            new ItemStack(Items.CARROT, 16),
+            new ItemStack(Items.POTATO, 16),
             new ItemStack(Items.OAK_SAPLING, 16),
             new ItemStack(Items.TORCH, 32),
             new ItemStack(Items.CRAFTING_TABLE, 1),

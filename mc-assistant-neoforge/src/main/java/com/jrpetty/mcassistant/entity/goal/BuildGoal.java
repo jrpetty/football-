@@ -59,6 +59,10 @@ public class BuildGoal extends Goal {
     @Nullable private String building;
     private int workTicks;
     private int stuckTicks;
+    /** The nearest the builder has got to the cell it is walking to. */
+    private double nearest = Double.MAX_VALUE;
+    /** Cells given up on since the last block went down. */
+    private int skipped;
     private int myGen;
     private int perimeterRadius = 5; // fortify ring radius (overridable for a big compound)
 
@@ -167,6 +171,8 @@ public class BuildGoal extends Goal {
         this.placed = 0;
         this.workTicks = 0;
         this.stuckTicks = 0;
+        this.nearest = Double.MAX_VALUE;
+        this.skipped = 0;
         this.perimeterRadius = 5;
         this.plan.clear();
 
@@ -251,7 +257,13 @@ public class BuildGoal extends Goal {
         assistant.getNavigation().stop();
     }
 
+    private static final org.slf4j.Logger LOG = com.mojang.logging.LogUtils.getLogger();
+
     private void finish(String message) {
+        if (assistant.isSettler()) {
+            LOG.info("[MCA-BUILD] tick {}: the {} (builder at {}, {} placed): {}", assistant.level().getGameTime(),
+                building, assistant.blockPosition().toShortString(), placed, message);
+        }
         assistant.say(message);
         assistant.noteJobOutcome(placed > 0);
         assistant.pollJob();
@@ -275,12 +287,14 @@ public class BuildGoal extends Goal {
             }
             cursor++;
             stuckTicks = 0;
+            nearest = Double.MAX_VALUE;
         }
         if (target == null) {
             // Only a building that actually has parts in the ground goes on the
             // village's list. A run that could not reach a single cell used to
             // walk off the end of its plan and report "Done" all the same.
             if (building != null && placed > 0) assistant.noteBuilt(building);
+            else if (building != null) assistant.noteBuildAbandoned(building);   // not one block went down: not this ground
             finish(placed > 0 ? "Done — placed " + placed + " parts."
                 : "Could not get at any of it — I'll try again.");
             return;
@@ -295,9 +309,25 @@ public class BuildGoal extends Goal {
             if (assistant.getNavigation().isDone()) {
                 assistant.getNavigation().moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 1.1D);
             }
-            if (++stuckTicks > 120) {
+            // Stuck is NOT GETTING NEARER, not "has been walking a while": a lot on
+            // the far side of a hill is a long walk, and counting the walk as stuck
+            // skipped cell after cell of the building before the builder arrived —
+            // and, when it never could arrive, spent ten thousand ticks doing it.
+            if (distSq < nearest - 1.0) {
+                nearest = distSq;
+                stuckTicks = 0;
+            } else if (++stuckTicks > (assistant.getNavigation().isDone() ? 100 : 300)) {
+                // (A route that goes round a hill takes the builder away from the
+                // cell before it brings it back, so one still being followed gets longer.)
                 cursor++; // can't get there — skip that cell
                 stuckTicks = 0;
+                nearest = Double.MAX_VALUE;
+                if (++skipped >= 3 && placed == 0 && building != null) {
+                    // Three cells in a row out of reach and nothing standing: the
+                    // ground is at fault, not the cells. Let the village choose another.
+                    assistant.noteBuildAbandoned(building);
+                    finish("I can't get to the ground for it — I'll look for another lot.");
+                }
             }
             return;
         }
@@ -340,6 +370,9 @@ public class BuildGoal extends Goal {
         }
         assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
         placed++;
+        skipped = 0;
+        nearest = Double.MAX_VALUE;
+        assistant.noteBuildProgress();
         cursor++;
     }
 

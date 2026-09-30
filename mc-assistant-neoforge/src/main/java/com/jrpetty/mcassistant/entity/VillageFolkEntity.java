@@ -79,6 +79,15 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected boolean drawsWages() { return false; }
 
+    /** A villager is not a hired hand on a clock: it eats a ration every four and a
+     *  half minutes of work where an assistant eats one every two and a half. Nineteen
+     *  mouths on a young village's first fields were eating more than five farmers
+     *  grew, and by the third day half of them stood at the heart with no rations. */
+    @Override
+    public int traitUpkeepPercent() {
+        return super.traitUpkeepPercent() * 3 / 2;
+    }
+
     /**
      * When the last of a settlement dies, its chunks stop being held open.
      * The force-load ticket is taken under the VILLAGE's id, and no entity's
@@ -126,6 +135,20 @@ public class VillageFolkEntity extends AssistantEntity {
     public void noteBuilt(String structure) {
         UUID village = ownerId();
         if (village != null) Villages.noteProject(village, structure, level().getGameTime());
+    }
+
+    /** The ground chosen for a building cannot be reached: the village picks another lot. */
+    @Override
+    public void noteBuildAbandoned(String structure) {
+        UUID village = ownerId();
+        if (village != null) Villages.rejectSite(village, structure, level().getGameTime());
+    }
+
+    /** The building is going up: the lead's term starts over with every block. */
+    @Override
+    public void noteBuildProgress() {
+        UUID village = ownerId();
+        if (village != null) Villages.leadProgress(village, getUUID(), level().getGameTime());
     }
 
     // ------------------------------ they sound like villagers too ------------
@@ -316,6 +339,7 @@ public class VillageFolkEntity extends AssistantEntity {
         UUID village = ownerId();
         for (String ask : asks) {
             if (alreadyCarrying(ask)) continue;             // have the makings: go and make it
+            if (storehouseHasFirstCall(ask)) { noteGate("fetch: the timber, stone and chests are for the storehouse"); continue; }
             int amount = ask.equals("cobble") ? 8 : (ask.equals("plank") ? 8
                 : (ask.equals("log") ? 2 : many));
             // Stone comes out of the ground where the mines are, a hill or two from
@@ -335,6 +359,16 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         noteGate("fetch: the stores hold none of " + java.util.Arrays.toString(asks));
         return false;
+    }
+
+    /** The founding timber, stone and chests are the storehouse's until it stands
+     *  (see Villages.storehouseFirst): a hand that wants spares waits, or makes
+     *  do with what it carries. */
+    private boolean storehouseHasFirstCall(String ask) {
+        UUID village = ownerId();
+        if (village == null) return false;
+        if (!(ask.equals("plank") || ask.equals("log") || ask.equals("cobble") || ask.equals("chest"))) return false;
+        return Villages.storehouseFirst(village, level().getGameTime());
     }
 
     /** Does the pack already hold enough of what this ask is for? A hand that
@@ -1185,32 +1219,33 @@ public class VillageFolkEntity extends AssistantEntity {
      */
     @Override
     protected boolean onBreak() {
-        return tickCount < restUntil;
+        return breakNow();
+    }
+
+    /**
+     * One break a working day, at an hour that is each folk's own. The first
+     * version counted ticks since the last break, night included — so every
+     * folk's clock had run out by morning and the whole village knocked off
+     * together at every dawn, nine hands of nineteen standing about at once.
+     * The hour comes from the folk's own id, so it is the same every day and
+     * different from its neighbour's.
+     */
+    private boolean breakNow() {
+        long day = level().getDayTime() % 24000L;
+        long bits = getUUID().getLeastSignificantBits();
+        long start = 1000L + Math.floorMod(bits, 8000L);
+        long length = 1200L + Math.floorMod(bits >>> 24, 1200L);
+        return day >= start && day < start + length;
     }
 
     private boolean resting() {
-        if (tickCount < restUntil) {
-            if (getNavigation().isDone() && villageCentre != null
-                && villageCentre.distSqr(blockPosition()) > 64.0) {
-                walkTo(villageCentre, 0.9D);
-            }
-            return true;
+        if (!breakNow()) return false;
+        if (getNavigation().isDone() && villageCentre != null
+            && villageCentre.distSqr(blockPosition()) > 64.0) {
+            walkTo(villageCentre, 0.9D);
         }
-        if (!restPhased) {
-            // Everybody was born on the same tick, so everybody's ten minutes on the
-            // job ended on the same tick and the whole village knocked off at once.
-            restPhased = true;
-            lastRest = tickCount - getRandom().nextInt(12000);
-        }
-        if (tickCount - lastRest < 12000) return false;   // ten minutes on the job
-        lastRest = tickCount;
-        restUntil = tickCount + 1200 + getRandom().nextInt(1200);
         return true;
     }
-
-    private int restUntil;
-    private int lastRest;
-    private boolean restPhased;
 
     // ------------------------------ the village's work -----------------------
 

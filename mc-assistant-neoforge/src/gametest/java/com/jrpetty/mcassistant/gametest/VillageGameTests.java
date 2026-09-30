@@ -210,6 +210,12 @@ public class VillageGameTests {
         helper.assertTrue(first.equals(again), "a project's lot must be chosen once and kept");
         helper.assertTrue(!first.anchor().equals(other.anchor()), "two projects must not share a lot");
         helper.assertTrue(Math.abs(first.anchor().getY() - heart.getY()) <= 1, "a lot on flat ground stands at ground level");
+        // A lot the builders could not walk to is given up, and not handed out again.
+        Villages.rejectSite(v.id(), "storage", level.getGameTime());
+        var next = Villages.siteFor(level, v.id(), "storage");
+        Kit.log("t09 storage lot after the first was refused: " + next);
+        helper.assertTrue(next != null && !next.anchor().equals(first.anchor()) && !next.anchor().equals(other.anchor()),
+            "a refused lot must give way to another, not come round again");
         helper.succeed();
     }
 
@@ -342,8 +348,12 @@ public class VillageGameTests {
                 // Mined and banked — whether it is still lying in a chest or has already
                 // gone into a wall (the builders draw on it as soon as it arrives).
                 int stoneBanked = chests.getOrDefault("stone", 0) + world.getOrDefault("cobble", 0);
-                // (The founding stores hold sixty-four cobblestone to start the walls.)
-                ex.that(stoneBanked > 64, "stone has been mined and banked beyond the founding gift " + stoneBanked);
+                // What the miners have dug, counted off their own deeds — the founding
+                // stores hold cobblestone, so what is in the chests says nothing about it.
+                int dug = 0;
+                for (AssistantEntity a : crew) dug += a.deedCount(AssistantEntity.Deed.BLOCKS_MINED);
+                Kit.log("  stone in chests + built: " + stoneBanked + "; blocks dug by the crew: " + dug);
+                ex.that(dug >= 20, "the miners have dug (" + dug + " blocks)");
                 ex.that(world.get("wheat") > 0 || chests.getOrDefault("wheat", 0) > 0,
                     "wheat has been grown (" + world.get("wheat") + " standing, " + chests.getOrDefault("wheat", 0) + " stored)");
                 ex.that(crew.size() >= 12, "nobody has died yet (" + crew.size() + " of 12+)");
@@ -364,7 +374,10 @@ public class VillageGameTests {
                 var chests = Kit.chestContents(level, cx, cz, 110);
                 var worldNow = Kit.census(level, cx, cz, 90);
                 int stoneBanked = chests.getOrDefault("stone", 0) + worldNow.getOrDefault("cobble", 0);
-                ex.that(stoneBanked > 64, "stone has been mined and banked beyond the founding gift (" + stoneBanked + ")");
+                int dug = 0;
+                for (AssistantEntity a : crew) dug += a.deedCount(AssistantEntity.Deed.BLOCKS_MINED);
+                Kit.log("  stone in chests + built: " + stoneBanked + "; blocks dug by the crew: " + dug);
+                ex.that(dug >= 100, "the miners keep digging (" + dug + " blocks)");
                 ex.that(crew.size() >= 11, "at most one lost in two days (" + crew.size() + ")");
                 Kit.log("  " + ex.summary());
             }

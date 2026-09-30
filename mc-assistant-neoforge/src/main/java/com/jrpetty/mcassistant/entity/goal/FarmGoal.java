@@ -472,7 +472,9 @@ public class FarmGoal extends Goal {
     private boolean mayGrow(Item seed) {
         int lvl = assistant.veteranLevel();
         if (seed == Items.WHEAT_SEEDS) return true;
-        if (seed == Items.CARROT || seed == Items.POTATO) return lvl >= 10;
+        // A settlement's farmers are not working their way up a ladder: the
+        // village's larder is the point, and a carrot is worth six ears of wheat.
+        if (seed == Items.CARROT || seed == Items.POTATO) return lvl >= 10 || assistant.isSettler();
         if (seed == Items.BEETROOT_SEEDS) return lvl >= 20;
         return lvl >= 30;   // melon and pumpkin stems
     }

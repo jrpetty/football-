@@ -30,11 +30,20 @@ Everything is obtainable in **survival**.
   rename it *Village Store* in an anvil. A sign on a chest still hides it from
   everybody.
 * **Food** — wheat is baked into bread by whoever is idle (including everybody
-  at dusk, indoors). A folk short of rations fetches some from the stores.
+  at dusk, indoors). A folk short of rations fetches some from the stores. A
+  folk eats one ration every four and a half minutes of work. Every folk is sent
+  out with carrots and potatoes as well as wheat seed, and any settler may sow
+  them: a root plant gives three or so to eat and each of those is a plant
+  again, where a wheat plant gives one ear.
 * **Building** — one project at a time, one lead builder per project, on a lot
   chosen once on the village's own grid: storage, shelter, houses, then (as the
   village comes of age) a wall, a smeltery, a workshop, a watchtower, a
-  lighthouse.
+  lighthouse. A lot is flat, clear, dry and within eight blocks of the ground
+  at the heart; if the builders cannot get to it (three cells in a row out of
+  reach and nothing standing) it is given up and another is chosen. For its
+  first ten minutes a village keeps the founding planks, stone and chests for
+  its storehouse.
+* **Breaks** — one a day, at an hour of each folk's own.
 * **Days** — the day shift works the day, then goes home; the watch keeps the
   night. Nobody builds, mines or moves house after dark. Sleeping in a bed skips
   the night for everybody, wherever you are.
@@ -50,6 +59,8 @@ only its owner (nobody, for folk) can rearrange the pack.
 
 ## Commands
 
+* `/village list` — every village the game knows of: where, how many live
+  there, what age, what has been built. Works from the console.
 * `/village status` — age, headcount, trades, what the stores hold, what has
   been built, what the village is short of. Works from the console.
 * `/village folk` — one line per folk: trade, ground, status, job, what is
@@ -73,9 +84,23 @@ Every push to CI:
   left alone for **three game days** on ground of the test's own making;
 * starts a real dedicated server with vanilla world generation, settles a
   village in a chosen biome over RCON (`tools/realworld/soak.py`), lets three
-  game days pass at full speed, and reports;
+  game days pass at full speed, puts a raid of zombies, skeletons, creepers and
+  spiders among the settlers at dusk, and reports — for plains, forest, taiga
+  and savanna;
+* settles a hundred folk on one map and reports what that costs a tick;
 * checks a generated vanilla village's villagers are converted without
-  freezing the server.
+  freezing the server;
+* runs ten game days in a forest, to see whether a village grows up (ages,
+  houses, births) or only gets through three days;
+* lets a world found villages as ground generates, the way exploring does;
+* founds a village, saves and stops the server, starts the same world again,
+  and checks the village came back and carries on.
+
+A watcher thread in the mod writes the server thread's stack to the log
+whenever a tick takes longer than a second and a half (`MCA-STALL`), so a freeze
+can be traced to the call that caused it. The reports print those stacks, the
+chunk queue (`MCA-CHUNKS`), and why a village was or was not building
+(`MCA-BUILD`).
 
 The reports are published to the `village-test-latest` release: `vt-report.txt`
 and `real-<scenario>.txt`. Each dashboard line says what one folk is doing and

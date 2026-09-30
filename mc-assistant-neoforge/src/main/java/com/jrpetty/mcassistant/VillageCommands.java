@@ -46,6 +46,8 @@ public final class VillageCommands {
                                 IntegerArgumentType.getInteger(ctx, "count")))))))
             .then(Commands.literal("folk").executes(VillageCommands::folk))
             .then(Commands.literal("list").executes(VillageCommands::list))
+            .then(Commands.literal("anchors").requires(src -> src.hasPermission(2))
+                .executes(VillageCommands::anchors))
             .then(Commands.literal("status").executes(VillageCommands::status)));
     }
 
@@ -125,6 +127,28 @@ public final class VillageCommands {
         if (crew.isEmpty()) return "?";
         Villages.Village v = Villages.get(crew.get(0).ownerId());
         return v == null ? "?" : v.centre().getX() + ", " + v.centre().getZ();
+    }
+
+    /** Where this world will found villages of its own near here. */
+    private static int anchors(CommandContext<CommandSourceStack> ctx) {
+        net.minecraft.server.level.ServerLevel level = ctx.getSource().getLevel();
+        net.minecraft.core.BlockPos here =
+            net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition());
+        java.util.List<net.minecraft.core.BlockPos> sites =
+            com.jrpetty.mcassistant.VillageSpawner.anchorsNear(level, here, 12);
+        if (sites.isEmpty()) {
+            ctx.getSource().sendSuccess(() -> Component.literal("No village sites within reach."), false);
+            return 0;
+        }
+        int shown = 0;
+        for (net.minecraft.core.BlockPos p : sites) {
+            if (shown++ >= 8) break;
+            final String line = "Village site at " + p.getX() + ", " + p.getZ()
+                + " (" + (int) Math.sqrt(p.distSqr(new net.minecraft.core.BlockPos(here.getX(), p.getY(), here.getZ())))
+                + " blocks away" + (AssistantConfig.naturalVillages() ? "" : "; natural villages are OFF") + ")";
+            ctx.getSource().sendSuccess(() -> Component.literal(line), false);
+        }
+        return sites.size();
     }
 
     /** Every village the game knows of, one line each — where they are, how many

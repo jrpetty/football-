@@ -187,7 +187,7 @@ def raid(r, x, z):
     say("RAID at dusk: " + r.cmd("execute if entity @e[tag=raid]"))
 
 
-def village(r, biome, count=12, compact=False):
+def village(r, biome, count=12, compact=False, days=3, label=None):
     setup(r)
     spot = where(r, "biome minecraft:" + biome)
     if spot is None:
@@ -199,16 +199,19 @@ def village(r, biome, count=12, compact=False):
     say("spawn: " + r.cmd("village spawnat %d %d %d" % (x, z, count)))
     say("spawning took %.1f s of wall clock" % (time.time() - began))
     done = 0
-    for upto in (300, 1500, 4500, 12000, 13500, 15000, 24000, 48000, 72000):
+    marks = [300, 1500, 4500, 12000, 13500, 15000] + [24000 * d for d in range(1, days + 1)]
+    for upto in marks:
         sprint(r, upto - done)
         done = upto
         if upto == 13500:
             raid(r, x, z)
             continue
-        report(r, x, z, "%s day %.2f" % (biome, done / 24000.0), compact)
+        report(r, x, z, "%s day %.2f" % (label or biome, done / 24000.0), compact)
         if upto == 15000:
             say("after the raid: " + r.cmd("execute if entity @e[tag=raid]"))
-    say("PASS the server ran three game days on %s" % biome)
+        if upto >= 24000 * 2:
+            say("village list: " + r.cmd("village list").replace("\n", " | "))
+    say("PASS the server ran %d game days on %s" % (days, label or biome))
 
 
 def takeover(r):
@@ -236,13 +239,20 @@ def takeover(r):
 def natural(r):
     """Nobody founds anything: the world is left to its own config, which lets
     villages appear as ground is generated — what a player who explores will
-    meet. Loads a wide patch of terrain the way exploring does (force-loading a
-    tile at a time) and reports whatever the game founded."""
+    meet. The world says where it will look (/village anchors); the ground
+    round the first few of those spots is loaded a chunk at a time, the way
+    walking up to them would, and whatever the game founds is reported."""
     setup(r)
-    tiles = [(-160, -160), (0, -160), (-160, 0), (0, 0), (160, -160), (160, 0), (-160, 160), (0, 160)]
-    for x, z in tiles:
-        say("forceload %d,%d: %s" % (x, z, r.cmd("forceload add %d %d %d %d" % (x, z, x + 150, z + 150))))
-        sprint(r, 200)
+    sites = r.cmd("village anchors")
+    say("the world's village sites: " + sites.replace("\n", " | "))
+    spots = [(int(a), int(b)) for a, b in re.findall(r"site at (-?\d+), (-?\d+)", sites)][:4]
+    if not spots:
+        say("SKIP this seed has no village sites within reach")
+        return
+    for x, z in spots:
+        say("forceload %d,%d: %s" % (x, z, r.cmd("forceload add %d %d %d %d" % (x - 48, z - 48, x + 48, z + 48))))
+        sprint(r, 300)
+    listing = ""
     for upto in (600, 3000, 12000, 24000):
         sprint(r, upto)
         say("== natural villages after %d more ticks (tick %d)" % (upto, gametime(r)))
@@ -254,7 +264,9 @@ def natural(r):
     if m:
         x, z = int(m.group(1)), int(m.group(2))
         report(r, x, z, "the first natural village")
-    say("PASS the server let villages found themselves and kept running")
+        say("PASS the world founded a village of its own and it kept running")
+    else:
+        say("FAIL no village was founded at any of the world's own sites")
 
 
 def restart1(r):
@@ -319,6 +331,10 @@ def main():
         elif scenario == "crowd":
             # A hundred settlers, the cap: is the server still a server?
             village(r, "plains", count=100, compact=True)
+        elif scenario == "long":
+            # Ten game days in a forest: does the village grow up — ages, houses,
+            # births — or only get through three days?
+            village(r, "forest", count=12, days=10, label="long forest")
         else:
             village(r, scenario)
     except (EOFError, OSError) as e:
