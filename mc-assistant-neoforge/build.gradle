@@ -66,6 +66,27 @@ tasks.named('test') {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Empirical tests. NOTHING below exists unless -Pgametest is passed, so the
+// jar build never sees it: a mistake in this block cannot break a release.
+// `./gradlew -Pgametest=true runGameTestServer` boots a real headless server
+// with the mod loaded, runs every registered game test, and exits non-zero if
+// any of them fail.
+// ---------------------------------------------------------------------------
+if (project.hasProperty('gametest')) {
+    neoForge {
+        runs {
+            gameTestServer {
+                type = "gameTestServer"
+                systemProperty 'neoforge.enabledGameTestNamespaces', mod_id
+            }
+        }
+    }
+    tasks.register('printClasspath') {
+        doLast { println sourceSets.main.compileClasspath.asPath }
+    }
+}
+
 processResources {
     var replaceProperties = [
         minecraft_version: minecraft_version,
