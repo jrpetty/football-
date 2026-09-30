@@ -142,6 +142,30 @@ public class VillageFolkEntity extends AssistantEntity {
     public void noteBuildAbandoned(String structure) {
         UUID village = ownerId();
         if (village != null) Villages.rejectSite(village, structure, level().getGameTime());
+        handBackTheBuild();
+    }
+
+    /** Has this hand drawn materials out of the stores for a building it may not finish? */
+    private boolean drewForBuild;
+
+    /**
+     * What a builder drew for a building it is not going to raise goes back into
+     * the stores, for whoever raises it. A taiga village's first builder gave up an
+     * unreachable lot for its storehouse with all four founding chests, sixty-four
+     * stone and twenty-six planks in its pack, and kept them: every hand that took
+     * the job on after it found the stores empty, could not make the chests out of
+     * nothing, and the village built nothing for three game days.
+     */
+    private void handBackTheBuild() {
+        drewForBuild = false;
+        if (villageCentre == null) return;
+        int r = buildStoresRadius();
+        int back = returnTo(villageCentre, BuildGoal::isBuildingBlock, 0, r);
+        back += returnTo(villageCentre, st -> st.is(net.minecraft.world.item.Items.CHEST), 1, r);
+        back += returnTo(villageCentre, st -> st.is(net.minecraft.world.item.Items.FURNACE), 1, r);
+        back += returnTo(villageCentre, st -> st.is(net.minecraft.world.item.Items.LADDER)
+            || st.is(net.minecraft.tags.ItemTags.FENCES) || st.is(net.minecraft.tags.ItemTags.FENCE_GATES), 0, r);
+        if (back > 0) buildNote("build: handed " + back + " back to the stores");
     }
 
     /** The building is going up: the lead's term starts over with every block. */
@@ -1338,7 +1362,12 @@ public class VillageFolkEntity extends AssistantEntity {
         if (!affordsTimberFor(project, site)) { buildNote("build: cannot afford the " + project); Villages.retrySoon(village, now); return; }
         // One hand raises a building from first load to last block, so the
         // materials pile up in one pack rather than being scattered.
-        if (!Villages.isLead(village, getUUID(), now)) { buildNote("build: another hand leads"); return; }
+        if (!Villages.isLead(village, getUUID(), now)) {
+            // A lead that lapsed with the building in its pack gives it up to the new one.
+            if (drewForBuild) handBackTheBuild();
+            buildNote("build: another hand leads");
+            return;
+        }
         // Load up FIRST. The builder places real items out of its own pack —
         // no cheating — and nothing was putting them there, so every volunteer
         // walked to the site empty-handed, read out a list of what it still
@@ -1375,7 +1404,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // heart" are what every idle hand thinks every couple of seconds.
         if (!(note.contains("afford") || note.contains("stores hold") || note.contains("making")
                 || note.contains("cannot make") || note.contains("carrying")
-                || note.contains("raising") || note.contains("no lot"))) {
+                || note.contains("raising") || note.contains("no lot") || note.contains("handed"))) {
             return;
         }
         String key = note.replaceAll("[0-9]+", "#");
@@ -1465,7 +1494,7 @@ public class VillageFolkEntity extends AssistantEntity {
                 got += drawFrom(heart, st -> BuildGoal.isBuildingBlock(st) && BuildGoal.blockCost(st) == cost,
                     blocks - carried - got, buildStoresRadius());
             }
-            if (got > 0) Villages.leadProgress(village, getUUID(), now);
+            if (got > 0) { Villages.leadProgress(village, getUUID(), now); drewForBuild = true; }
         }
 
         // The fixtures — a chest, a furnace, a bench, ladders, fences — from the
@@ -1478,12 +1507,12 @@ public class VillageFolkEntity extends AssistantEntity {
             if (have < want) {
                 int got = drawFrom(heart, item, want - have, buildStoresRadius());
                 have += got;
-                if (got > 0) Villages.leadProgress(village, getUUID(), now);
+                if (got > 0) { Villages.leadProgress(village, getUUID(), now); drewForBuild = true; }
             }
             if (have < want) {
                 boolean making = craftNow(fx.recipe(), want - have);
                 buildNote("build: " + (making ? "making " : "cannot make ") + (want - have) + " " + fx.recipe());
-                if (making) { Villages.leadProgress(village, getUUID(), now); madeAFixture = true; }
+                if (making) { Villages.leadProgress(village, getUUID(), now); madeAFixture = true; drewForBuild = true; }
                 String ask = fx.recipe() + " x" + (want - have);
                 fixtureTries = ask.equals(lastFixtureAsk) ? fixtureTries + 1 : 0;
                 lastFixtureAsk = ask;

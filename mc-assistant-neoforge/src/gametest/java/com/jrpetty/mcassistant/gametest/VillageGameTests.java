@@ -242,7 +242,31 @@ public class VillageGameTests {
         Kit.log("t09 storage lot after the first was refused: " + next);
         helper.assertTrue(next != null && !next.anchor().equals(first.anchor()) && !next.anchor().equals(other.anchor()),
             "a refused lot must give way to another, not come round again");
+        // A builder that gives a lot up hands what it drew for it back to the stores:
+        // the founding chests and the stone, for whoever builds it next.
+        int chestsBefore = storedAt(level, heart, net.minecraft.world.item.Items.CHEST);
+        int stoneBefore = storedAt(level, heart, net.minecraft.world.item.Items.COBBLESTONE);
+        int ownChests = f.countCarried(st -> st.is(net.minecraft.world.item.Items.CHEST));
+        f.insertItem(new ItemStack(net.minecraft.world.item.Items.CHEST, 4));
+        f.insertItem(new ItemStack(net.minecraft.world.item.Items.COBBLESTONE, 20));
+        f.noteBuildAbandoned("storage");
+        int chestsAfter = storedAt(level, heart, net.minecraft.world.item.Items.CHEST);
+        int stoneAfter = storedAt(level, heart, net.minecraft.world.item.Items.COBBLESTONE);
+        int keptChests = f.countCarried(st -> st.is(net.minecraft.world.item.Items.CHEST));
+        Kit.log("t09 handed back: chests " + chestsBefore + " -> " + chestsAfter + " (kept " + keptChests
+            + " of " + (ownChests + 4) + "), stone " + stoneBefore + " -> " + stoneAfter);
+        helper.assertTrue(stoneAfter - stoneBefore == 20, "the stone drawn for a given-up building goes back to the stores");
+        helper.assertTrue(keptChests == 1 && chestsAfter - chestsBefore == ownChests + 3,
+            "the chests drawn for a given-up building go back to the stores (one is kept for its own ground)");
         helper.succeed();
+    }
+
+    /** How many of this item the container at {@code pos} holds. */
+    private static int storedAt(ServerLevel level, BlockPos pos, net.minecraft.world.item.Item item) {
+        if (!(level.getBlockEntity(pos) instanceof net.minecraft.world.Container c)) return 0;
+        int n = 0;
+        for (int i = 0; i < c.getContainerSize(); i++) if (c.getItem(i).is(item)) n += c.getItem(i).getCount();
+        return n;
     }
 
     /** Ground that is not flat: a hillside, climbing a block for every two. A village

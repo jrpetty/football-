@@ -98,8 +98,9 @@ actually carry: stone before planks, planks before logs.
   no steeper than four blocks across; the builder fills the low side up to the
   floor and fells any tree in the way (keeping the wood). If the builders cannot
   get to a lot (three cells in a row out of reach and nothing standing) it is
-  given up and another is chosen; a village that has been all round its lots
-  without a find is less particular the next time. Stone is spent before planks,
+  given up and another is chosen, and the builder puts everything it drew for it
+  back in the stores for whoever raises it; a village that has been all round
+  its lots without a find is less particular the next time. Stone is spent before planks,
   and planks before logs. For its
   first ten minutes a village keeps the founding planks, stone and chests for
   its storehouse.
