@@ -214,7 +214,12 @@ public class MineGoal extends Goal {
         assistant.say(message);
         assistant.noteJobOutcome(oresMined > 0 || blocksMined > 8);
         assistant.pollJob();
-        autoSmeltOres(); // turn the raw metal we dug up into ingots automatically
+        // Turn the raw metal we dug up into ingots automatically — for a hired
+        // hand with a furnace of its own. A settler has none: the ore goes to the
+        // village's smelter with the rest of its haul, and a "smelt" job with no
+        // furnace only failed and backed the miner off for forty seconds after
+        // every run that turned up iron.
+        if (!assistant.isSettler()) autoSmeltOres();
         this.job = null;
         this.currentDig = null;
         this.moveTarget = null;

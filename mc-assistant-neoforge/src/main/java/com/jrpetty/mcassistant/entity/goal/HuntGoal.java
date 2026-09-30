@@ -88,7 +88,7 @@ public class HuntGoal extends Goal {
         assistant.say(message);
         assistant.noteJobOutcome(hunted > 0);
         assistant.pollJob();
-        autoCook(); // cook the raw meat we just got
+        if (!assistant.isSettler()) autoCook(); // cook the raw meat we just got (a settler has no fire: raw meat is food too)
         this.job = null;
         this.victim = null;
     }

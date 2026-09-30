@@ -6,6 +6,7 @@ import com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock;
 import com.jrpetty.mcassistant.entity.AssistantEntity;
 import com.jrpetty.mcassistant.entity.AssistantEntity.StationTask;
 import com.jrpetty.mcassistant.entity.VillageFolkEntity;
+import com.jrpetty.mcassistant.entity.goal.BuildGoal;
 import com.jrpetty.mcassistant.entity.Villages;
 import com.jrpetty.mcassistant.village.VillageMath;
 import net.minecraft.core.BlockPos;
@@ -159,6 +160,56 @@ public class VillageGameTests {
             for (String s : lines) helper.assertFalse(s.toLowerCase().contains("exception"), "folk threw: " + s);
             helper.succeed();
         });
+    }
+
+    // ============================================================ building
+
+    /** The blueprints are the single source of truth for what a builder must
+     *  carry. If a blueprint changes, what stocks it must follow — this is the
+     *  check that they are read from the same drawing. */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "t08_blueprints")
+    public static void t08_blueprints(GameTestHelper helper) {
+        for (String st : BuildGoal.STRUCTURES) {
+            Kit.log("t08 " + st + " needs " + BuildGoal.partCounts(st, 13));
+        }
+        var storage = BuildGoal.partCounts("storage", 13);
+        helper.assertTrue(storage.getOrDefault(BuildGoal.Part.CHEST, 0) == 4,
+            "the storehouse should take four chests, wants " + storage);
+        var house = BuildGoal.partCounts("house", 13);
+        helper.assertTrue(house.getOrDefault(BuildGoal.Part.FURNACE, 0) >= 1
+                && house.getOrDefault(BuildGoal.Part.CRAFTING_TABLE, 0) >= 1
+                && house.getOrDefault(BuildGoal.Part.CHEST, 0) >= 1,
+            "a house should want a furnace, a bench and a chest, wants " + house);
+        helper.assertTrue(BuildGoal.partCounts("watchtower", 13).getOrDefault(BuildGoal.Part.LADDER, 0) > 0,
+            "the watchtower has a ladder shaft — the stocking must know");
+        helper.assertTrue(BuildGoal.partCounts("lighthouse", 13).getOrDefault(BuildGoal.Part.LADDER, 0) > 0,
+            "the lighthouse has a ladder shaft — the stocking must know");
+        var pen = BuildGoal.partCounts("pen", 13);
+        helper.assertTrue(pen.getOrDefault(BuildGoal.Part.FENCE, 0) >= 20 && pen.getOrDefault(BuildGoal.Part.GATE, 0) == 1,
+            "the pen is a ring of fence with a gate, wants " + pen);
+        helper.succeed();
+    }
+
+    /** A village hands out building lots: flat, clear, claimed once. */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t09_lots")
+    public static void t09_lots(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 3100, 3100, 64);
+        BlockPos heart = Kit.surface(level, 3100, 3100);
+        VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(f != null, "could not found a village");
+        Villages.Village v = Villages.nearest(level, heart, 100);
+        helper.assertTrue(v != null, "no village to plan in");
+        var first = Villages.siteFor(level, v.id(), "storage");
+        var again = Villages.siteFor(level, v.id(), "storage");
+        var other = Villages.siteFor(level, v.id(), "shelter");
+        Kit.log("t09 storage lot " + first + ", again " + again + ", shelter lot " + other);
+        helper.assertTrue(first != null && other != null, "flat ground should give a lot for each project");
+        helper.assertTrue(first.equals(again), "a project's lot must be chosen once and kept");
+        helper.assertTrue(!first.anchor().equals(other.anchor()), "two projects must not share a lot");
+        helper.assertTrue(Math.abs(first.anchor().getY() - heart.getY()) <= 1, "a lot on flat ground stands at ground level");
+        helper.succeed();
     }
 
     // ===================================================== vanilla villagers
