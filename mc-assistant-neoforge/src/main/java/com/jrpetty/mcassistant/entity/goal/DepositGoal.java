@@ -312,6 +312,22 @@ public class DepositGoal extends Goal {
         BlockPos feet = assistant.feetPos();
         BlockPos best = null;
         double bestDist = Double.MAX_VALUE;
+        // The chests this hand is LINKED to come first. This looked only sixteen
+        // blocks and four up-and-down from where the hand happened to be
+        // standing, and a hillside miner is routinely ten blocks above the
+        // chest it set down at the foot of its hill: "no chest within sixteen
+        // blocks" every time, a deposit that failed, a backoff, and another
+        // deposit — for days, with a pack full of cobblestone and ore.
+        for (com.jrpetty.mcassistant.entity.ZoneChests.Found found : assistant.linkedChests()) {
+            if (!found.stillThere()) continue;
+            if (!com.jrpetty.mcassistant.entity.ZoneChests.isStashable(found)) continue;
+            double d = found.pos().distSqr(feet);
+            if (d < bestDist) {
+                bestDist = d;
+                best = found.pos();
+            }
+        }
+        if (best != null) return best;
         for (com.jrpetty.mcassistant.entity.ZoneChests.Found found
                 : com.jrpetty.mcassistant.entity.ZoneChests.around(
                     assistant.level(), feet, SEARCH_RADIUS, 4)) {

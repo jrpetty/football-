@@ -826,15 +826,22 @@ public class VillageFolkEntity extends AssistantEntity {
             if (held > fullest) { fullest = held; load = f.pos(); }
         }
         // One chest in the whole village is a village with nothing to carry
-        // between; leave the route alone and let the hand lend itself out.
-        if (depot != null && load != null) setHaulRoute(load, depot);
+        // between; leave the route alone and let the hand lend itself out. And a
+        // handful of odds and ends is not worth the walk.
+        if (depot != null && load != null && fullest >= 24) setHaulRoute(load, depot);
     }
 
     /** How much is actually sitting in this chest. */
+    /** What a chest is worth a trip: its goods weighted by how much the village
+     *  wants them (stone, timber, ore over wheat over odds and ends), and its
+     *  trade stock — seeds, saplings, tools — not counted at all. */
     private int stockIn(ZoneChests.Found f) {
         if (!(f.blockEntity() instanceof net.minecraft.world.Container box)) return 0;
         int n = 0;
-        for (int i = 0; i < box.getContainerSize(); i++) n += box.getItem(i).getCount();
+        for (int i = 0; i < box.getContainerSize(); i++) {
+            net.minecraft.world.item.ItemStack st = box.getItem(i);
+            n += st.getCount() * haulWeight(st);
+        }
         return n;
     }
 
