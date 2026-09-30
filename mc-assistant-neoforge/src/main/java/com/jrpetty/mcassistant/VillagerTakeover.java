@@ -51,12 +51,40 @@ public final class VillagerTakeover {
     public static volatile boolean suspended = false;
 
     /** Everything about a villager that the folk which replaces it needs. */
-    private record Snapshot(BlockPos where, float yaw, boolean baby, VillagerProfession trade) {}
+    private record Snapshot(BlockPos where, float yaw, boolean baby, VillagerProfession trade,
+                            @javax.annotation.Nullable BlockPos bed) {}
 
+    /** Reads the villager's own fields and nothing else: this is called from
+     *  the join event, where the world must not be touched at all. */
     private static Snapshot snap(Villager v) {
         return new Snapshot(v.blockPosition(), v.getYRot(), v.isBaby(),
-            v.getVillagerData().getProfession());
+            v.getVillagerData().getProfession(), v.getSleepingPos().orElse(null));
     }
+
+    /** A villager somebody is trading with is left alone until they are done. */
+    private static boolean busy(Villager v) {
+        return v.getTradingPlayer() != null;
+    }
+
+    /**
+     * Villagers the join event has taken off the board, waiting to become folk.
+     *
+     * <p>This is a queue and not a callback because of WHERE the event fires:
+     * for a village's own villagers it fires inside the chunk's FULL step of
+     * world generation, where reading or loading any other chunk can deadlock
+     * the server. And {@code server.execute(...)} does not defer anything from
+     * the server thread — it runs the task on the spot — so the "next tick"
+     * this used to promise was never coming. The event now writes down who was
+     * standing where and touches nothing; the tick handler does the rest.
+     */
+    private record Pending(ServerLevel level, Snapshot snap) {}
+
+    private static final java.util.concurrent.ConcurrentLinkedQueue<Pending> QUEUE =
+        new java.util.concurrent.ConcurrentLinkedQueue<>();
+
+    /** How many are turned into folk per tick — a whole village generating at
+     *  once should not all be built in one. */
+    private static final int PER_TICK = 6;
 
     /**
      * Should this villager become folk? By default: every one of them — that
@@ -84,11 +112,11 @@ public final class VillagerTakeover {
         if (event.getLevel().isClientSide) return;
         if (!(event.getEntity() instanceof Villager villager)) return;
         if (!(event.getLevel() instanceof ServerLevel level)) return;
-        if (!eligible(villager)) return;
+        if (!eligible(villager) || busy(villager)) return;
 
         Snapshot snap = snap(villager);
         event.setCanceled(true);
-        level.getServer().execute(() -> convert(level, snap));
+        QUEUE.add(new Pending(level, snap));
     }
 
     /**
@@ -102,6 +130,19 @@ public final class VillagerTakeover {
      */
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
+        if (!suspended) {
+            int done = 0;
+            Pending next;
+            while (done < PER_TICK && (next = QUEUE.poll()) != null) {
+                done++;
+                // A level from a world that has since been closed is not ours.
+                boolean ours = false;
+                for (ServerLevel l : event.getServer().getAllLevels()) {
+                    if (l == next.level()) { ours = true; break; }
+                }
+                if (ours) convert(next.level(), next.snap());
+            }
+        }
         if (event.getServer().getTickCount() % 100 != 0) return;
         for (ServerLevel level : event.getServer().getAllLevels()) sweep(level);
     }
@@ -111,10 +152,13 @@ public final class VillagerTakeover {
         if (suspended || !AssistantConfig.replaceVillagers()) return 0;
         java.util.List<Villager> found = new java.util.ArrayList<>();
         for (net.minecraft.world.entity.Entity e : level.getAllEntities()) {
-            if (e instanceof Villager v && v.isAlive() && eligible(v)) found.add(v);
+            if (e instanceof Villager v && v.isAlive() && eligible(v) && !busy(v)) found.add(v);
         }
         for (Villager v : found) {
             Snapshot snap = snap(v);
+            // Out of its bed first: a villager taken while asleep left the bed
+            // marked occupied for good, and nobody could ever sleep in it.
+            if (v.isSleeping()) v.stopSleeping();
             v.discard();
             convert(level, snap);
         }
@@ -127,6 +171,7 @@ public final class VillagerTakeover {
         // throw runs after its replacement is safely standing.
         VillageFolkEntity folk = McAssistantMod.VILLAGE_FOLK.get().create(level);
         if (folk == null) return;
+        freeBed(level, snap.bed());
         BlockPos where = snap.where();
         folk.moveTo(where.getX() + 0.5, where.getY(), where.getZ() + 0.5, snap.yaw(), 0.0F);
 
@@ -136,7 +181,10 @@ public final class VillagerTakeover {
         // name at once, so the next villager converted in this same tick
         // asks for a free name and does not get this one.
         folk.rename(com.jrpetty.mcassistant.entity.Names.freeFor(village.id()));
-        VillageSpawner.childKit(folk);
+        // A grown villager is sent out like any other adult: with its tools, not
+        // a child's two loaves. A converted mason given no pickaxe had to make
+        // one out of logs it could not find on a stony plot.
+        VillageSpawner.starterKit(folk);
         folk.joinVillage(village.id(), village.centre());
         level.addFreshEntity(folk);
         Villages.recordBirth(village.id());
@@ -153,8 +201,20 @@ public final class VillagerTakeover {
         }
     }
 
+    /** Mark a bed a villager was saved asleep in as free again. */
+    private static void freeBed(ServerLevel level, @javax.annotation.Nullable BlockPos bed) {
+        if (bed == null || !level.isLoaded(bed)) return;
+        BlockState st = level.getBlockState(bed);
+        if (st.getBlock() instanceof net.minecraft.world.level.block.BedBlock
+            && st.hasProperty(net.minecraft.world.level.block.BedBlock.OCCUPIED)
+            && st.getValue(net.minecraft.world.level.block.BedBlock.OCCUPIED)) {
+            level.setBlock(bed, st.setValue(net.minecraft.world.level.block.BedBlock.OCCUPIED, false), 3);
+        }
+    }
+
     /** Forget everything remembered about villages. For tests. */
     public static void resetForTests() {
+        QUEUE.clear();
         RING_TAKEN.clear();
         READ.clear();
         TALLY.clear();

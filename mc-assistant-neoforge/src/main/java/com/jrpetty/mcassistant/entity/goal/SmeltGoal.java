@@ -425,6 +425,9 @@ public class SmeltGoal extends Goal {
             if (assistant.level().getBlockState(pos).canBeReplaced()
                 && assistant.level().getBlockState(pos.below()).isSolid()) {
                 assistant.level().setBlockAndUpdate(pos, Blocks.FURNACE.defaultBlockState());
+                if (assistant.isSettler()) {
+                    com.jrpetty.mcassistant.entity.ZoneChests.mark(assistant.level(), pos);
+                }
                 inv.get(idx).shrink(1);
                 if (inv.get(idx).isEmpty()) inv.set(idx, ItemStack.EMPTY);
                 assistant.say("Setting down a furnace here.");

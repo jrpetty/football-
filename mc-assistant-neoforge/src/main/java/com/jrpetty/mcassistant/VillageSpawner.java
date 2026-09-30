@@ -69,10 +69,39 @@ public final class VillageSpawner {
             folk, AssistantConfig.villageLoadedChunks());
     }
 
-    /** Cells we have already looked at this session, so a chunk that loads and
-     *  unloads repeatedly is not re-examined every time. */
-    private static final Set<Long> CONSIDERED = new HashSet<>();
+    /** Cells we have already settled or ruled out this session, so a chunk that
+     *  loads and unloads repeatedly is not re-examined every time. */
+    private static final Set<Long> CONSIDERED = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
+    /** A cell whose anchor chunk has loaded, waiting for the world to settle. */
+    private record Cell(ServerLevel level, long key, BlockPos anchor, long readyAt) {}
+
+    private static final java.util.concurrent.ConcurrentLinkedQueue<Cell> WAITING =
+        new java.util.concurrent.ConcurrentLinkedQueue<>();
+    private static final Set<Long> QUEUED = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    /** How long a cell waits after its chunk loads before anybody looks at it:
+     *  long enough for the folk of a village that is ALREADY there (saved in
+     *  those chunks, loaded a moment after the chunk itself) to be found — a
+     *  restart used to found every natural village a second time on top of
+     *  itself. */
+    private static final long SETTLE_TICKS = 200L;
+
+    /** Forget everything remembered this session. For tests and world changes. */
+    public static void resetForTests() {
+        CONSIDERED.clear();
+        WAITING.clear();
+        QUEUED.clear();
+    }
+
+    /**
+     * A chunk has loaded: if it holds the anchor of a village cell, WRITE THAT
+     * DOWN and nothing else. This event fires inside the chunk's own loading —
+     * for a freshly generated chunk, inside its FULL step — and reading the
+     * height of a neighbouring chunk from here, or forcing a chunk ticket,
+     * waits on a chunk that cannot finish until this handler returns. The whole
+     * of the looking, and the founding, happens from the server tick.
+     */
     @SubscribeEvent
     public static void onChunkLoad(ChunkEvent.Load event) {
         if (!AssistantConfig.naturalVillages()) return;
@@ -84,33 +113,44 @@ public final class VillageSpawner {
         int cellX = Math.floorDiv(chunk.getMinBlockX(), spacing);
         int cellZ = Math.floorDiv(chunk.getMinBlockZ(), spacing);
         long cellKey = (long) cellX * 4294967311L + cellZ;
-        if (CONSIDERED.contains(cellKey)) return;
+        if (CONSIDERED.contains(cellKey) || QUEUED.contains(cellKey)) return;
         if (!inACluster(level, cellX, cellZ)) return;   // most of the map is empty on purpose
 
         BlockPos anchor = anchorFor(level, cellX, cellZ, spacing);
         // Only the chunk that actually contains the anchor does the work, so
         // this costs one comparison for every other chunk in the cell.
         if ((anchor.getX() >> 4) != chunk.x || (anchor.getZ() >> 4) != chunk.z) return;
+        if (!QUEUED.add(cellKey)) return;
+        WAITING.add(new Cell(level, cellKey, anchor, level.getGameTime() + SETTLE_TICKS));
+    }
 
-        if (Villages.nearest(level, anchor) != null) return;      // one already stands here
-        if (folkNearby(level, anchor)) return;                    // ...or its people do
+    /** One cell a second, from the server tick, once its wait is over. */
+    @SubscribeEvent
+    public static void onServerTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
+        if (event.getServer().getTickCount() % 20 != 0) return;
+        Cell c = WAITING.peek();
+        if (c == null || c.readyAt() > c.level().getGameTime()) return;
+        WAITING.poll();
+        QUEUED.remove(c.key());
+        boolean ours = false;
+        for (ServerLevel l : event.getServer().getAllLevels()) {
+            if (l == c.level()) { ours = true; break; }
+        }
+        if (!ours || CONSIDERED.contains(c.key())) return;
+
+        ServerLevel level = c.level();
+        BlockPos anchor = c.anchor();
+        // Not loaded any more: leave it. It is queued again the next time the
+        // chunk loads, and reading it now would only load it for us.
+        if (!level.hasChunk(anchor.getX() >> 4, anchor.getZ() >> 4)) return;
+        if (Villages.nearest(level, anchor) != null || folkNearby(level, anchor)) {
+            CONSIDERED.add(c.key());               // somebody already lives here
+            return;
+        }
         BlockPos ground = groundAt(level, anchor.getX(), anchor.getZ());
+        CONSIDERED.add(c.key());                    // from a tick, the answer is final
         if (ground == null || !liveable(level, ground)) return;
-
-        // Never build into a chunk that is still loading. Adding entities and
-        // setting blocks from inside the load event is how you corrupt the
-        // very chunk you are settling; the server runs this at the top of the
-        // next tick instead, by which time the ground is really there.
-        level.getServer().execute(() -> {
-            // Re-checked on the tick, when the neighbouring chunks the height
-            // samples come from are really loaded — and only NOW is the cell
-            // written off, so a site rejected because its surroundings had not
-            // generated yet gets another look rather than being lost for good.
-            if (Villages.nearest(level, ground) != null || folkNearby(level, ground)) return;
-            if (!liveable(level, ground)) return;
-            CONSIDERED.add(cellKey);
-            found(level, ground);
-        });
+        found(level, ground);
     }
 
     /** How many grid cells across a cluster's home region is. Villages come in
@@ -229,7 +269,9 @@ public final class VillageSpawner {
             folk.moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, r.nextFloat() * 360F, 0F);
             folk.rename(freshName(used));
             starterKit(folk);
+            folk.joinVillage(village.id(), village.centre());
             level.addFreshEntity(folk);
+            Villages.recordBirth(village.id());
             // Settling, choosing a trade and finding ground all happen on the
             // folk's own agenda within a few seconds of standing up.
         }
@@ -242,7 +284,7 @@ public final class VillageSpawner {
         // past four chunks, and a plot outside the ring is a plot nobody works
         // while you are away.
         ChunkLoad.setLoaded(level, village.id(), ground,
-            loadedRadiusFor(Villages.headcount(village.id())), true);
+            loadedRadiusFor(Math.max(size, Villages.headcount(village.id()))), true);
     }
 
     /**
@@ -305,6 +347,9 @@ public final class VillageSpawner {
         // village's founding stores hovering with a gap underneath.
         BlockPos at = ground;
         level.setBlockAndUpdate(at, Blocks.CHEST.defaultBlockState());
+        // Named before anything goes in: the village's own stores, and the only
+        // chests its folk will ever touch (see ZoneChests.MARK).
+        com.jrpetty.mcassistant.entity.ZoneChests.mark(level, at);
         if (!(level.getBlockEntity(at) instanceof Container chest)) return;
         List<ItemStack> stores = List.of(
             new ItemStack(Items.WHEAT_SEEDS, 32),

@@ -566,8 +566,16 @@ public final class Villages {
             when[0] = now;
             java.util.Arrays.fill(cache, 0);
             Task[] all = Task.values();
-            for (com.jrpetty.mcassistant.entity.ZoneChests.Found f
-                    : com.jrpetty.mcassistant.entity.ZoneChests.around(level, centre, radius, 64)) {
+            // What the VILLAGE holds is what carries the village's name, whoever
+            // happens to be asking (the command, a test, a folk).
+            boolean before = ZoneChests.askAs(true);
+            java.util.List<ZoneChests.Found> stores;
+            try {
+                stores = ZoneChests.around(level, centre, radius, 64);
+            } finally {
+                ZoneChests.askAs(before);
+            }
+            for (ZoneChests.Found f : stores) {
                 if (!f.stillThere() || !ZoneChests.isStashable(f)) continue;
                 net.minecraft.world.Container c = f.container();
                 for (int i = 0; i < c.getContainerSize(); i++) {

@@ -332,6 +332,11 @@ public class BuildGoal extends Goal {
             if (!layBed(pos, state)) { cursor++; return; }
         } else {
             assistant.level().setBlockAndUpdate(pos, state);
+            // What a settlement builds is the settlement's: the chests and
+            // furnaces of its storehouse carry its name.
+            if (assistant.isSettler() && (part == Part.CHEST || part == Part.FURNACE)) {
+                com.jrpetty.mcassistant.entity.ZoneChests.mark(assistant.level(), pos);
+            }
         }
         assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
         placed++;

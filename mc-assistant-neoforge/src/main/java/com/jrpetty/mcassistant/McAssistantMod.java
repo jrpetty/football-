@@ -144,6 +144,7 @@ public final class McAssistantMod {
         NeoForge.EVENT_BUS.register(SleepWatch.class);
         NeoForge.EVENT_BUS.register(VillagerTakeover.class);
         NeoForge.EVENT_BUS.register(VillageCommands.class);
+        NeoForge.EVENT_BUS.register(SessionReset.class);
     }
 
     private void onEntityAttributes(EntityAttributeCreationEvent event) {

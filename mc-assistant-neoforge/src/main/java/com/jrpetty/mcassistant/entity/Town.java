@@ -26,6 +26,12 @@ public final class Town {
 
     private static final Map<UUID, BlockPos> CENTER = new ConcurrentHashMap<>();
 
+    /** Forget every town and every posted need. For a world being closed. */
+    public static synchronized void resetAll() {
+        CENTER.clear();
+        NEEDS.clear();
+    }
+
     /** Mark a Job Board as this owner's town center. */
     public static void setCenter(UUID owner, BlockPos pos) {
         if (owner != null && pos != null) CENTER.put(owner, pos.immutable());

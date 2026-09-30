@@ -616,10 +616,35 @@ public class GatherGoal extends Goal {
             if (respectCrew && assistant.outsideMyShare(pos)) continue;
             double d = pos.distSqr(feet) + Math.abs(pos.getY() - feet.getY()) * 16.0;
             if (d < bestDist) {
+                // Last of all, and only for a candidate that would actually win:
+                // this reads a few hundred blocks. A settlement's woodcutter must
+                // not fell the pillars of its own houses.
+                if (request.kind() == Kind.LOGS && assistant.isSettler() && !looksLikeATree(pos)) continue;
                 bestDist = d;
                 best = pos.immutable();
             }
         }
         return best;
+    }
+
+    /**
+     * A log that belongs to a tree rather than to somebody's house. Follow the
+     * trunk up and look for leaves round the top of it: a tree has a crown, a
+     * house's corner post has a plank roof. Without this a woodcutter sent for
+     * timber pulled down the nearest logs there were, which in a village are
+     * the frames of the buildings the village had just put up.
+     */
+    private boolean looksLikeATree(BlockPos pos) {
+        net.minecraft.world.level.Level level = assistant.level();
+        BlockPos top = pos;
+        for (int i = 0; i < 40 && level.getBlockState(top.above()).is(net.minecraft.tags.BlockTags.LOGS); i++) {
+            top = top.above();
+        }
+        for (BlockPos p : BlockPos.betweenClosed(top.offset(-3, -1, -3), top.offset(3, 3, 3))) {
+            if (level.getBlockState(p).getBlock() instanceof net.minecraft.world.level.block.LeavesBlock) {
+                return true;
+            }
+        }
+        return false;
     }
 }

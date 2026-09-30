@@ -215,13 +215,18 @@ public class VillageGameTests {
 
     // ========================================================== the village
 
-    /** THE test: twelve folk from nothing, on generous ground, for a whole
-     *  game day. Nobody touches them. */
-    @GameTest(template = EMPTY, timeoutTicks = 26000, batch = "t10_village_of_twelve")
+    /** THE test: twelve folk from nothing, on generous ground, for three whole
+     *  game days. Nobody touches them. Crops grow five times faster than in a
+     *  real game, so that a farm has a harvest inside the test — nothing else
+     *  is sped up. */
+    @GameTest(template = EMPTY, timeoutTicks = 74000, batch = "t10_village_of_twelve")
     public static void t10_village_of_twelve(GameTestHelper helper) {
         final ServerLevel level = helper.getLevel();
         Kit.reset(level);
         level.getGameRules().getRule(GameRules.RULE_DAYLIGHT).set(true, level.getServer());
+        level.getGameRules().getRule(GameRules.RULE_WEATHER_CYCLE).set(false, level.getServer());
+        level.getGameRules().getRule(GameRules.RULE_RANDOMTICKING).set(15, level.getServer());
+        level.setWeatherParameters(1000000, 0, false, false);
         level.setDayTime(1000);
 
         final int cx = 3500, cz = 3500;
@@ -241,7 +246,7 @@ public class VillageGameTests {
             long t = helper.getTick();
             if (t >= nextDash[0]) {
                 Kit.dashboard(level, heart, "soak");
-                nextDash[0] = t < 1200 ? t + 300 : t + 1200;
+                nextDash[0] = t < 1200 ? t + 300 : (t < 12000 ? t + 1200 : t + 2400);
             }
             Villages.Village v = Villages.nearest(level, heart, 600);
             List<AssistantEntity> crew = v == null ? List.of() : Villages.folkOf(v.id());
@@ -288,6 +293,24 @@ public class VillageGameTests {
                 done[3] = true;
                 Kit.log("---- checkpoint 24000: a full day");
                 ex.that(crew.size() >= 11, "at most one lost in a day (" + crew.size() + " of 12+)");
+                var chests = Kit.chestContents(level, cx, cz, 110);
+                var world = Kit.census(level, cx, cz, 90);
+                ex.that(world.get("chests") >= 8, "folk have put chests down (" + world.get("chests") + ")");
+                ex.that(world.get("farmland") >= 20, "the fields are tilled (" + world.get("farmland") + ")");
+                Kit.log("  " + ex.summary());
+            }
+            if (!done[4] && t >= 48000) {
+                done[4] = true;
+                Kit.log("---- checkpoint 48000: two days");
+                var chests = Kit.chestContents(level, cx, cz, 110);
+                ex.that(chests.getOrDefault("stone", 0) > 0, "stone has reached a chest (" + chests.getOrDefault("stone", 0) + ")");
+                ex.that(crew.size() >= 11, "at most one lost in two days (" + crew.size() + ")");
+                Kit.log("  " + ex.summary());
+            }
+            if (!done[5] && t >= 72000) {
+                done[5] = true;
+                Kit.log("---- checkpoint 72000: three days");
+                ex.that(crew.size() >= 11, "at most one lost in three days (" + crew.size() + " of 12+)");
                 ex.that(v != null && !Villages.builtList(v.id()).isEmpty(),
                     "the village has built something: " + (v == null ? "-" : Villages.builtList(v.id())));
                 Kit.log("  " + ex.summary());

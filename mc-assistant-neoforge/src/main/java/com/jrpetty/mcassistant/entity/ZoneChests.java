@@ -29,6 +29,59 @@ public final class ZoneChests {
 
     private ZoneChests() {}
 
+    /**
+     * The name a container carries when it belongs to a village. Folk put it on
+     * every chest and furnace they place, and — the point — use ONLY containers
+     * that carry it. A village founded beside somebody's base used to read every
+     * unmarked chest within fifty blocks as its own stores: it drew its building
+     * timber out of the player's chests, fed itself from them, and stocked its
+     * smelter from them. Anything a player wants the village to use, they can
+     * name in an anvil.
+     */
+    public static final String MARK = "Village Store";
+
+    /**
+     * True while a village folk is thinking. Set for the whole of each folk's
+     * tick, so every chest question it asks — a dozen call sites, most of them
+     * many layers down — gets the village's answer without each one having to
+     * carry the fact with it. Never set for a hired assistant, whose owner's
+     * chests are exactly what it should use.
+     */
+    private static final ThreadLocal<Boolean> ASKING = ThreadLocal.withInitial(() -> Boolean.FALSE);
+
+    /** Is the thread asking a chest question doing so as a village? A thread
+     *  local, because in single player the client and the server tick the same
+     *  entity classes at the same time on different threads. */
+    public static boolean settlerAsking() { return ASKING.get(); }
+
+    /** Set who is asking; returns who was asking before, to restore. */
+    public static boolean askAs(boolean settler) {
+        boolean before = ASKING.get();
+        ASKING.set(settler);
+        return before;
+    }
+
+    /** Does this container belong to a village? */
+    public static boolean isVillageStore(BlockEntity be) {
+        if (!(be instanceof net.minecraft.world.Nameable named)) return false;
+        net.minecraft.network.chat.Component name = named.getCustomName();
+        return name != null && name.getString().toLowerCase().startsWith("village store");
+    }
+
+    /** Put the village's name on the container at this spot, if it has one to
+     *  put it on. Done straight after placing it, before anything goes in. */
+    public static void mark(Level level, BlockPos pos) {
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be == null) return;
+        be.applyComponents(
+            net.minecraft.core.component.DataComponentMap.builder()
+                .set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,
+                    net.minecraft.network.chat.Component.literal(MARK))
+                .build(),
+            net.minecraft.core.component.DataComponentPatch.EMPTY);
+        be.setChanged();
+    }
+
     /** A container and where it is. Holds the block entity so a stale entry
      *  (its chest broken since the scan) can be recognised and skipped. */
     public record Found(BlockPos pos, BlockEntity blockEntity) {
@@ -79,6 +132,7 @@ public final class ZoneChests {
                     BlockPos pos = entry.getKey();
                     BlockEntity be = entry.getValue();
                     if (be instanceof Container && inBox(pos, min, max)
+                        && (!settlerAsking() || isVillageStore(be))
                         && !isPrivate(level, pos)) {
                         out.add(new Found(pos.immutable(), be));
                     }
@@ -96,7 +150,8 @@ public final class ZoneChests {
         for (BlockPos pos : BlockPos.betweenClosed(
                 new BlockPos(x0, min.getY(), z0), new BlockPos(x1, max.getY(), z1))) {
             BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof Container && !isPrivate(level, pos)) {
+            if (be instanceof Container && (!settlerAsking() || isVillageStore(be))
+                && !isPrivate(level, pos)) {
                 out.add(new Found(pos.immutable(), be));
             }
         }

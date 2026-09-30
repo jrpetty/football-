@@ -88,6 +88,11 @@ public final class Requests {
 
     private static final Map<UUID, List<Request>> BOARD = new ConcurrentHashMap<>();
 
+    /** Forget every posted request. For a world being closed. */
+    public static void resetAll() {
+        BOARD.clear();
+    }
+
     /** Post a need, or refresh one already standing. */
     public static void post(UUID owner, UUID asker, Need need, int now) {
         if (owner == null || asker == null || need == null) return;

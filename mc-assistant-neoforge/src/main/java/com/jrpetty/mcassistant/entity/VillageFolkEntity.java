@@ -62,6 +62,9 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     public boolean isSettler() { return true; }
 
+    @Override
+    protected boolean selfDirected() { return false; }
+
     /** Nobody hired them, so nobody owes them a wage or a charge. They eat
      *  like anyone else — a village that cannot feed itself has failed at the
      *  one thing a village is for — but a settlement does not run on redstone
@@ -252,7 +255,7 @@ public class VillageFolkEntity extends AssistantEntity {
             }
             if (asks != null) break;
         }
-        if (asks == null) return false;
+        if (asks == null) { noteGate("fetch: nothing to ask the stores for"); return false; }
         // Rations are worth a longer walk than a chest: they are spread through
         // every field's chest, not kept in one shed. Everything else is looked
         // for around the heart, where the village keeps what it keeps.
@@ -267,8 +270,10 @@ public class VillageFolkEntity extends AssistantEntity {
                 continue;
             }
             enqueue(Job.withdrawAt(ask, amount, heart, radius));
+            noteGate("fetch: going for " + amount + " " + ask);
             return true;
         }
+        noteGate("fetch: the stores hold none of " + java.util.Arrays.toString(asks));
         return false;
     }
 
@@ -469,6 +474,11 @@ public class VillageFolkEntity extends AssistantEntity {
             // field looking for water that does not exist, try the next thing
             // the village wants — a settlement in a desert should end up
             // quarrying and cutting, not waiting for a farm it cannot have.
+            // Look somewhere ELSE next time. The bearing only ever turned when a
+            // mine was given up, so a farmer whose first octant had no water
+            // scanned the very same ground every minute until it gave up the
+            // trade — and a whole side of the village was never looked at.
+            searchBearing++;
             triedTrades++;
             if (triedTrades >= 3) {
                 triedTrades = 0;
@@ -491,12 +501,15 @@ public class VillageFolkEntity extends AssistantEntity {
      *  by how little ground it is fussy about: stone and timber are almost
      *  everywhere, a farm needs water, a forge needs nothing at all. */
     private StationTask nextTradeAfter(StationTask trade) {
-        StationTask[] order = { StationTask.WOOD, StationTask.MINE,
-                                StationTask.FARM, StationTask.SMELT };
-        for (int i = 0; i < order.length; i++) {
-            if (order[i] == trade) return order[(i + 1) % order.length];
-        }
-        return StationTask.WOOD;
+        // Never the forge: it is one trade for the whole village and works on
+        // what the others bring it, so a farmer with no water who became a
+        // smelter stood at an empty furnace for the rest of its life.
+        return switch (trade) {
+            case FARM -> StationTask.WOOD;
+            case WOOD -> StationTask.MINE;
+            case MINE -> StationTask.FARM;
+            default -> StationTask.WOOD;
+        };
     }
 
     private static int radiusFor(StationTask trade) {
@@ -836,13 +849,17 @@ public class VillageFolkEntity extends AssistantEntity {
         return true;
     }
 
-    /** When this one last CHECKED whether to raise a child. */
-    private int breedCheckTick = -100000;
+    /** When this one last CHECKED whether to raise a child. Both clocks start at
+     *  the folk's birth, not at "long ago": a hand that has only just been
+     *  stood up (or reloaded, which resets nothing that is saved) must not be
+     *  asked to raise a child on its first turn — a dozen founders standing at
+     *  the heart produced two babies in the first ten seconds. */
+    private int breedCheckTick;
     /** When this one last actually DID — the only thing a partner is judged on.
      *  These were one field, and every folk stamped it on its own check every
      *  five minutes, so at any moment every folk in the village had "just
      *  bred" and nobody ever qualified as a partner. No child was ever born. */
-    private int breedTick = -100000;
+    private int breedTick;
 
     /**
      * How a settlement grows its own people.
