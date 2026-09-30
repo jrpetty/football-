@@ -243,3 +243,136 @@ jobs:
             mc-assistant-neoforge/server-${{ matrix.scenario }}.log.gz
           overwrite_files: true
 
+
+  # -------------------------------------------------------------------------
+  # The client. A headless server never draws anything, so the smocks, the
+  # armour layer and the model under them live in code that has never been run.
+  # This starts a real dedicated server AND a real game client (software
+  # OpenGL on a virtual display), has the client join, puts a village and some
+  # armour in front of the player over RCON, and publishes screenshots.
+  # Like the others it can never fail the build.
+  # -------------------------------------------------------------------------
+  client:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Install a virtual display and software OpenGL
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb mesa-utils libgl1-mesa-dri libglx-mesa0 libxrandr2 libxxf86vm1 libxi6 libxcursor1 libxinerama1 imagemagick netcat-openbsd
+
+      - name: Prepare a server directory and a client directory
+        working-directory: mc-assistant-neoforge
+        run: |
+          mkdir -p run/config run-client
+          echo "eula=true" > run/eula.txt
+          cat > run/server.properties <<'EOF'
+          level-seed=7331
+          level-type=minecraft:normal
+          generate-structures=true
+          online-mode=false
+          spawn-protection=0
+          max-tick-time=-1
+          view-distance=8
+          simulation-distance=6
+          sync-chunk-writes=false
+          enable-rcon=true
+          rcon.port=25575
+          rcon.password=soak
+          broadcast-rcon-to-ops=false
+          motd=smoke
+          EOF
+          cat > run/config/mc_assistant-common.toml <<'EOF'
+          [villages]
+          naturalVillages = false
+          EOF
+          cat > run-client/options.txt <<'EOF'
+          onboardAccessibility:false
+          tutorialStep:none
+          pauseOnLostFocus:false
+          narrator:0
+          fancyGraphics:false
+          renderDistance:8
+          simulationDistance:6
+          maxFps:30
+          guiScale:2
+          joinedFirstServer:true
+          skipMultiplayerWarning:true
+          EOF
+
+      - name: Start the server
+        working-directory: mc-assistant-neoforge
+        run: |
+          chmod +x gradlew
+          nohup ./gradlew --no-daemon runServer > server-gradle.log 2>&1 &
+
+      - name: Start the client on a virtual display
+        working-directory: mc-assistant-neoforge
+        run: |
+          nohup Xvfb :99 -screen 0 1280x720x24 +extension GLX +render -noreset > xvfb.log 2>&1 &
+          sleep 3
+          export DISPLAY=:99
+          export LIBGL_ALWAYS_SOFTWARE=1
+          glxinfo -B > glxinfo.txt 2>&1 || true
+          head -12 glxinfo.txt
+          # The server has to be listening before the client is told to join it.
+          for i in $(seq 1 300); do nc -z localhost 25565 && break; sleep 5; done
+          nc -z localhost 25565 && echo "the server is listening"
+          nohup ./gradlew --no-daemon -Psmoke=true runSmoke > client-gradle.log 2>&1 &
+
+      - name: Look at the village
+        working-directory: mc-assistant-neoforge
+        run: |
+          export DISPLAY=:99
+          set +e
+          python3 tools/realworld/smoke.py | tee smoke.txt
+          echo "smoke exit: ${PIPESTATUS[0]}"
+          set -e
+          sleep 3
+
+      - name: Collect the logs
+        if: always()
+        working-directory: mc-assistant-neoforge
+        run: |
+          echo "[REAL] ---- glxinfo ----" >> smoke.txt
+          head -20 glxinfo.txt >> smoke.txt 2>/dev/null || true
+          echo "[REAL] ---- the client's log: anything it complained about ----" >> smoke.txt
+          grep -aE "Exception|Caused by|ERROR|FATAL|mc_assistant|GLFW|OpenGL|Crash" run-client/logs/latest.log 2>/dev/null | grep -av "Ambiguity\|^    at " | tail -120 >> smoke.txt || true
+          echo "[REAL] ---- the client's crash reports ----" >> smoke.txt
+          ls run-client/crash-reports 2>/dev/null >> smoke.txt || true
+          head -80 run-client/crash-reports/*.txt 2>/dev/null >> smoke.txt || true
+          echo "[REAL] ---- the last of the client's gradle output ----" >> smoke.txt
+          tail -40 client-gradle.log >> smoke.txt 2>/dev/null || true
+          echo "[REAL] ---- the server's log: anything from the mod ----" >> smoke.txt
+          grep -aE "Exception|Caused by|ERROR|mc_assistant|com\.jrpetty" run/logs/latest.log 2>/dev/null | grep -av "Ambiguity\|^    at " | tail -60 >> smoke.txt || true
+          gzip -c run-client/logs/latest.log > client.log.gz 2>/dev/null || true
+          wc -l smoke.txt
+          ls -la smoke-*.png || true
+
+      - name: Stop everything
+        if: always()
+        run: pkill -f "net.minecraft" || true; pkill -f "runServer" || true; pkill -f "runSmoke" || true; pkill Xvfb || true
+
+      - name: Publish the pictures and the report
+        if: always()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: village-test-latest
+          name: "Village behaviour test output (latest)"
+          prerelease: true
+          make_latest: "false"
+          body: "Raw output of the empirical village tests. Not a mod build."
+          files: |
+            mc-assistant-neoforge/smoke.txt
+            mc-assistant-neoforge/smoke-*.png
+            mc-assistant-neoforge/client.log.gz
+          overwrite_files: true

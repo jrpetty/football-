@@ -91,6 +91,24 @@ if (project.hasProperty('gametest')) {
     }
 }
 
+// ---------------------------------------------------------------------------
+// The client smoke test. `./gradlew -Psmoke=true runSmoke` starts the real game
+// client, which joins a dedicated server on localhost and is photographed by
+// CI (tools/realworld/smoke.py). Like the game tests, none of this exists
+// unless asked for, so a mistake here cannot break a release build.
+// ---------------------------------------------------------------------------
+if (project.hasProperty('smoke')) {
+    neoForge {
+        runs {
+            smoke {
+                client()
+                gameDirectory = file('run-client')
+                programArguments.addAll('--quickPlayMultiplayer', 'localhost:25565', '--width', '1280', '--height', '720')
+            }
+        }
+    }
+}
+
 processResources {
     var replaceProperties = [
         minecraft_version: minecraft_version,
