@@ -185,6 +185,11 @@ public class VillageFolkEntity extends AssistantEntity {
     public boolean workedOut() {
         if (settingUp()) return false;
         if (workZone() != null && tickCount - plotSince < 1800) return false;
+        // A hand on its way to its plot has not run out of work, it has not got
+        // there yet — every morning the whole village walked out from the heart
+        // "worked out", and lent itself to a woodpile in a field with no trees.
+        WorkZone zone = workZone();
+        if (zone != null && !zone.containsColumn(blockPosition())) return false;
         return super.workedOut();
     }
 
@@ -402,6 +407,10 @@ public class VillageFolkEntity extends AssistantEntity {
     private boolean takeOn(net.minecraft.server.level.ServerLevel server, Villages.Need need) {
         switch (need.task()) {
             case COAL -> {
+                // Only where there is some: a gather job sent to a place with none
+                // reads "nothing within sixteen blocks" and ends, and did, every
+                // couple of minutes, for every hand lending itself out.
+                if (!resourceNearby(com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.COAL, 16)) return false;
                 enqueue(Job.gather(com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.COAL,
                     Math.min(32, Math.max(8, need.amount()))));
                 enqueue(Job.deposit());
@@ -436,12 +445,14 @@ public class VillageFolkEntity extends AssistantEntity {
                 return true;
             }
             case LOGS -> {
+                if (!resourceNearby(com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.LOGS, 16)) return false;
                 enqueue(Job.gather(com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.LOGS,
                     Math.min(48, Math.max(16, need.amount()))));
                 enqueue(Job.deposit());
                 return true;
             }
             case STONE -> {
+                if (!resourceNearby(com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.STONE, 16)) return false;
                 enqueue(Job.gather(com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.STONE,
                     Math.min(64, Math.max(16, need.amount()))));
                 enqueue(Job.deposit());
@@ -452,6 +463,7 @@ public class VillageFolkEntity extends AssistantEntity {
                 // route picks the NEAREST chest, which is the one the ore was
                 // just taken out of, so the run moved the ore in a circle. The
                 // carry-what-is-wanted path above is the real courier.
+                if (!resourceNearby(com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.IRON, 16)) return false;
                 enqueue(Job.gather(com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.IRON,
                     Math.min(32, Math.max(8, need.amount()))));
                 enqueue(Job.deposit());
@@ -824,7 +836,9 @@ public class VillageFolkEntity extends AssistantEntity {
         BlockPos post = stationPos() != null ? stationPos() : blockPosition();
         BlockPos load = null;
         int fullest = 0;
-        for (ZoneChests.Found f : ZoneChests.around(level(), post, 64, 32)) {
+        // ...and far enough to reach the mines: the hill sixty blocks out is where
+        // the stone is, and its chest is the fullest one there is.
+        for (ZoneChests.Found f : ZoneChests.around(level(), post, 96, 32)) {
             if (!ZoneChests.isStashable(f)) continue;
             if (f.pos().equals(depot)) continue;           // never haul the depot to itself
             int held = stockIn(f);
@@ -1103,6 +1117,12 @@ public class VillageFolkEntity extends AssistantEntity {
             }
             return true;
         }
+        if (!restPhased) {
+            // Everybody was born on the same tick, so everybody's ten minutes on the
+            // job ended on the same tick and the whole village knocked off at once.
+            restPhased = true;
+            lastRest = tickCount - getRandom().nextInt(12000);
+        }
         if (tickCount - lastRest < 12000) return false;   // ten minutes on the job
         lastRest = tickCount;
         restUntil = tickCount + 1200 + getRandom().nextInt(1200);
@@ -1111,6 +1131,7 @@ public class VillageFolkEntity extends AssistantEntity {
 
     private int restUntil;
     private int lastRest;
+    private boolean restPhased;
 
     // ------------------------------ the village's work -----------------------
 
@@ -1126,22 +1147,22 @@ public class VillageFolkEntity extends AssistantEntity {
         if (peekJob() != null || !getNavigation().isDone()) return;
         if (!(level() instanceof net.minecraft.server.level.ServerLevel server)) return;
         long now = level().getGameTime();
-        if (!Villages.projectDue(village, now)) return;
+        if (!Villages.projectDue(village, now)) { brain("build: not due yet"); return; }
         String project = Villages.nextProject(village);
-        if (project == null) return;
+        if (project == null) { brain("build: nothing wanted"); return; }
         // Only a folk standing near the village heart takes the job on — the
         // buildings go up where people live, not wherever the volunteer was.
-        if (villageCentre.distSqr(blockPosition()) > 40.0 * 40.0) return;
+        if (villageCentre.distSqr(blockPosition()) > 40.0 * 40.0) { brain("build: too far from the heart"); return; }
         // Ground for it, picked once and kept: a build interrupted at dusk must
         // pick up where it left off, not start again somewhere else.
         Villages.Site site = Villages.siteFor(server, village, project);
-        if (site == null) { Villages.retrySoon(village, now); return; }
+        if (site == null) { brain("build: no lot for the " + project); Villages.retrySoon(village, now); return; }
         // No point taking charge of a building the village cannot yet afford —
         // the lead does not lend itself out while it holds the post.
-        if (!affordsTimberFor(project, site)) { Villages.retrySoon(village, now); return; }
+        if (!affordsTimberFor(project, site)) { brain("build: cannot afford the " + project); Villages.retrySoon(village, now); return; }
         // One hand raises a building from first load to last block, so the
         // materials pile up in one pack rather than being scattered.
-        if (!Villages.isLead(village, getUUID(), now)) return;
+        if (!Villages.isLead(village, getUUID(), now)) { brain("build: another hand leads"); return; }
         // Load up FIRST. The builder places real items out of its own pack —
         // no cheating — and nothing was putting them there, so every volunteer
         // walked to the site empty-handed, read out a list of what it still
@@ -1152,6 +1173,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // so it costs two minutes and not the eight that pace real building.
         if (!stockedFor(project, site)) { Villages.retrySoon(village, now); return; }
         Villages.noteAttempt(village, now);
+        brain("build: raising the " + project);
         enqueue(Job.buildAt(project, site.anchor(), site.facing(), site.radius()));
     }
 
@@ -1170,7 +1192,17 @@ public class VillageFolkEntity extends AssistantEntity {
         blocks += blocks / 10 + 2;
         int carried = countCarried(BuildGoal::isBuildingBlock);
         return carried >= blocks
-            || carried + storesHold(heart, BuildGoal::isBuildingBlock) >= blocks;
+            || carried + storesHold(heart, buildStoresRadius(), BuildGoal::isBuildingBlock) >= blocks;
+    }
+
+    /** How far from the heart the builder reads and draws on the stores: as far
+     *  as the village's own plan counts them, not the forty-eight blocks round
+     *  the storehouse — the woodpile is in the woods and the stone is at the mine,
+     *  and a plan that counted them while the builder could not reach them left
+     *  the village "short of timber" beside a full chest for days. */
+    private int buildStoresRadius() {
+        UUID village = ownerId();
+        return Math.min(112, Math.max(48, village == null ? 48 : Villages.storesRadius(village)));
     }
 
     /** How much of this the village's stores hold near its heart. */
@@ -1208,10 +1240,10 @@ public class VillageFolkEntity extends AssistantEntity {
         // Timber and stone: only worth a trip if the village has enough.
         int carried = countCarried(BuildGoal::isBuildingBlock);
         if (carried < blocks) {
-            int inStores = storesHold(heart, BuildGoal::isBuildingBlock);
-            if (carried + inStores < blocks) return false;      // not yet
+            int inStores = storesHold(heart, buildStoresRadius(), BuildGoal::isBuildingBlock);
+            if (carried + inStores < blocks) { brain("build: stores hold " + inStores + ", need " + (blocks - carried)); return false; }      // not yet
             int got = drawFrom(heart, BuildGoal::isBuildingBlock,
-                blocks - carried, 48);
+                blocks - carried, buildStoresRadius());
             if (got > 0) Villages.leadProgress(village, getUUID(), now);
         }
 
@@ -1223,12 +1255,14 @@ public class VillageFolkEntity extends AssistantEntity {
             var item = BuildGoal.itemForPart(fx.part());
             int have = countCarried(item);
             if (have < want) {
-                int got = drawFrom(heart, item, want - have, 48);
+                int got = drawFrom(heart, item, want - have, buildStoresRadius());
                 have += got;
                 if (got > 0) Villages.leadProgress(village, getUUID(), now);
             }
             if (have < want) {
-                if (craftNow(fx.recipe(), want - have)) Villages.leadProgress(village, getUUID(), now);
+                boolean making = craftNow(fx.recipe(), want - have);
+                brain("build: " + (making ? "making " : "cannot make ") + (want - have) + " " + fx.recipe());
+                if (making) Villages.leadProgress(village, getUUID(), now);
                 return false;                                    // made, or cannot be: either way, not this visit
             }
         }
@@ -1241,9 +1275,11 @@ public class VillageFolkEntity extends AssistantEntity {
             if (want == 0) continue;
             var item = BuildGoal.itemForPart(deco);
             int have = countCarried(item);
-            if (have < want) drawFrom(heart, item, want - have, 48);
+            if (have < want) drawFrom(heart, item, want - have, buildStoresRadius());
         }
-        return countCarried(BuildGoal::isBuildingBlock) >= blocks;
+        int blocksNow = countCarried(BuildGoal::isBuildingBlock);
+        if (blocksNow < blocks) brain("build: carrying " + blocksNow + " of " + blocks + " blocks");
+        return blocksNow >= blocks;
     }
 
     /** A blueprint part a builder must have in hand, and what makes one. */

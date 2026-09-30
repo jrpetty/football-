@@ -174,6 +174,19 @@ def setup(r):
         r.cmd(c)
 
 
+def raid(r, x, z):
+    """Dusk on the first day: the things that come out at night, put among the
+    settlers. Nothing spawns on a server nobody is playing on, so without this
+    the village never meets a monster and every defensive rule in the mod goes
+    untested. spreadplayers stands them on the surface round the heart."""
+    heart = "execute positioned %d 100 %d run " % (x, z)
+    for kind, n in (("zombie", 6), ("skeleton", 3), ("creeper", 2), ("spider", 2)):
+        for _ in range(n):
+            r.cmd(heart + 'summon minecraft:%s ~ ~ ~ {Tags:["raid"],PersistenceRequired:1b}' % kind)
+    r.cmd("spreadplayers %d %d 3 14 false @e[tag=raid]" % (x, z))
+    say("RAID at dusk: " + r.cmd("execute if entity @e[tag=raid]"))
+
+
 def village(r, biome, count=12, compact=False):
     setup(r)
     spot = where(r, "biome minecraft:" + biome)
@@ -186,10 +199,15 @@ def village(r, biome, count=12, compact=False):
     say("spawn: " + r.cmd("village spawnat %d %d %d" % (x, z, count)))
     say("spawning took %.1f s of wall clock" % (time.time() - began))
     done = 0
-    for upto in (300, 1500, 4500, 12000, 24000, 48000, 72000):
+    for upto in (300, 1500, 4500, 12000, 13500, 15000, 24000, 48000, 72000):
         sprint(r, upto - done)
         done = upto
-        report(r, x, z, "%s day %.1f" % (biome, done / 24000.0), compact)
+        if upto == 13500:
+            raid(r, x, z)
+            continue
+        report(r, x, z, "%s day %.2f" % (biome, done / 24000.0), compact)
+        if upto == 15000:
+            say("after the raid: " + r.cmd("execute if entity @e[tag=raid]"))
     say("PASS the server ran three game days on %s" % biome)
 
 

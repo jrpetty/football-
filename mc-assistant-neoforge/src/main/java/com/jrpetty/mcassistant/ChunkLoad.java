@@ -89,6 +89,10 @@ public final class ChunkLoad {
 
     /** What is still to be forced, nearest the centre first (insertion order). */
     private static final LinkedHashMap<Key, Want> WANTED = new LinkedHashMap<>();
+    /** What has been forced already. A village asks for its whole ring again every
+     *  time it grows, and every folk asks for its own patch every time it changes
+     *  its mind; without this each ask queued the whole square afresh. */
+    private static final java.util.HashSet<Key> FORCED = new java.util.HashSet<>();
     private static int asking;
     private static long lastReport;
 
@@ -101,6 +105,7 @@ public final class ChunkLoad {
     /** Forget everything queued (the world is closing or another is opening). */
     public static void reset() {
         WANTED.clear();
+        FORCED.clear();
         asking = 0;
         lastReport = 0;
     }
@@ -124,7 +129,9 @@ public final class ChunkLoad {
         if (!on) {
             for (int dx = -radius; dx <= radius; dx++) {
                 for (int dz = -radius; dz <= radius; dz++) {
-                    Want w = WANTED.remove(new Key(level.dimension(), owner, ChunkPos.asLong(cx + dx, cz + dz)));
+                    Key key = new Key(level.dimension(), owner, ChunkPos.asLong(cx + dx, cz + dz));
+                    FORCED.remove(key);
+                    Want w = WANTED.remove(key);
                     if (w != null) dropAsk(w);
                     CONTROLLER.forceChunk(level, owner, cx + dx, cz + dz, false, true);
                 }
@@ -140,7 +147,8 @@ public final class ChunkLoad {
         cells.sort(Comparator.comparingInt(c -> c[0] * c[0] + c[1] * c[1]));
         for (int[] c : cells) {
             Key key = new Key(level.dimension(), owner, ChunkPos.asLong(cx + c[0], cz + c[1]));
-            if (!WANTED.containsKey(key)) WANTED.put(key, new Want(level, owner, cx + c[0], cz + c[1]));
+            if (FORCED.contains(key) || WANTED.containsKey(key)) continue;
+            WANTED.put(key, new Want(level, owner, cx + c[0], cz + c[1]));
         }
     }
 
@@ -156,15 +164,16 @@ public final class ChunkLoad {
     public static void onServerTick(ServerTickEvent.Post event) {
         if (WANTED.isEmpty()) return;
         int forced = 0;
-        int scanned = 0;
         boolean hard = false;
-        Iterator<Want> it = WANTED.values().iterator();
-        while (it.hasNext() && forced < FORCED_PER_TICK && scanned++ < SCAN_PER_TICK) {
-            Want w = it.next();
-            boolean here = w.level.getChunkSource().getChunkNow(w.cx, w.cz) != null;
-            boolean overdue = !here && w.level.getGameTime() - w.since > PATIENCE_TICKS;
-            if (here || (overdue && !hard)) {
-                it.remove();
+        int waiting = 0;
+        int scanned = 0;
+        List<Key> done = new ArrayList<>();
+        for (java.util.Map.Entry<Key, Want> e : WANTED.entrySet()) {
+            if (forced >= FORCED_PER_TICK || scanned++ >= SCAN_PER_TICK) break;
+            Want w = e.getValue();
+            boolean loaded = w.level.getChunkSource().getChunkNow(w.cx, w.cz) != null;
+            boolean overdue = !loaded && w.level.getGameTime() - w.since > PATIENCE_TICKS;
+            if (loaded || (overdue && !hard)) {
                 long t0 = System.nanoTime();
                 CONTROLLER.forceChunk(w.level, w.owner, w.cx, w.cz, true, true);
                 // Only now let go of the plain ticket: the forced one holds the chunk.
@@ -172,21 +181,34 @@ public final class ChunkLoad {
                 long ms = (System.nanoTime() - t0) / 1_000_000L;
                 if (ms > 200) {
                     LOG.warn("[MCA-STALL] forcing chunk {},{} took {} ms{}", w.cx, w.cz, ms,
-                        here ? "" : " (it never arrived; loaded the hard way)");
+                        loaded ? "" : " (it never arrived; loaded the hard way)");
                 }
+                done.add(e.getKey());
                 forced++;
-                if (!here) hard = true;
-            } else if (!w.asked && asking < IN_FLIGHT) {
-                w.asked = true;
-                asking++;
-                ChunkPos pos = w.pos();
-                w.level.getChunkSource().addRegionTicket(ASK, pos, 0, pos);
+                if (!loaded) hard = true;
+            } else {
+                waiting++;
+                if (!w.asked && asking < IN_FLIGHT) {
+                    w.asked = true;
+                    asking++;
+                    ChunkPos pos = w.pos();
+                    w.level.getChunkSource().addRegionTicket(ASK, pos, 0, pos);
+                }
             }
+        }
+        for (Key k : done) {
+            WANTED.remove(k);
+            FORCED.add(k);
         }
         long now = event.getServer().getTickCount();
         if (!WANTED.isEmpty() && now - lastReport >= 1200) {
             lastReport = now;
-            LOG.info("[MCA-CHUNKS] {} chunks waiting to be forced, {} being generated", WANTED.size(), asking);
+            Want first = WANTED.values().iterator().next();
+            LOG.info("[MCA-CHUNKS] {} chunks waiting ({} of them not yet loaded), {} being generated, {} forced so far;"
+                    + " oldest waiting {},{} for {} ticks (loaded={}, asked={})",
+                WANTED.size(), waiting, asking, FORCED.size(), first.cx, first.cz,
+                first.level.getGameTime() - first.since,
+                first.level.getChunkSource().getChunkNow(first.cx, first.cz) != null, first.asked);
         }
     }
 }

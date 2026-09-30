@@ -95,6 +95,13 @@ public record Job(Type type, @Nullable GatherGoal.Kind kind, int amount,
         return new Job(Type.MINE, null, Math.max(-58, Math.min(100, targetY)), null, null);
     }
 
+    /** A mine dug facing a chosen way ("north", "east"...): a settler's shaft is
+     *  cut from the middle of its plot toward the rock, and a different way each
+     *  time, so every run is into ground nobody has dug yet. */
+    public static Job mine(int targetY, String facing) {
+        return new Job(Type.MINE, null, Math.max(-58, Math.min(100, targetY)), null, facing);
+    }
+
     public static Job hunt(@Nullable String animal, int amount) {
         return new Job(Type.HUNT, null, Math.max(1, Math.min(16, amount)), null, animal);
     }

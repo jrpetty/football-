@@ -290,12 +290,19 @@ public final class VillageSpawner {
     /**
      * What a child born in the village is sent out with, which is deliberately
      * LESS than its parents spent raising it: two loaves against the four that
-     * went in, so a settlement cannot breed its way to a full larder. No tools
-     * — the village makes those, the same as it makes everything else — but a
-     * chest, because a plot fifty blocks from the stores cannot borrow one and
-     * a hand with nowhere to put its output never starts its trade at all.
+     * went in, so a settlement cannot breed its way to a full larder. Wooden
+     * tools only — the village makes the better ones, the same as it makes
+     * everything else — and a chest, because a plot fifty blocks from the stores
+     * cannot borrow one and a hand with nowhere to put its output never starts
+     * its trade at all.
      */
     public static void childKit(VillageFolkEntity folk) {
+        // Wooden tools: a child that had to make its own pickaxe out of planks it
+        // had to fetch from stores sixty blocks away stood at the heart "needing a
+        // pickaxe" for a day — a third of the village's children at any moment.
+        folk.insertItem(new ItemStack(Items.WOODEN_PICKAXE));
+        folk.insertItem(new ItemStack(Items.WOODEN_AXE));
+        folk.insertItem(new ItemStack(Items.WOODEN_SWORD));
         folk.insertItem(new ItemStack(Items.BREAD, 2));
         folk.insertItem(new ItemStack(Items.CHEST));
         folk.insertItem(new ItemStack(Items.CRAFTING_TABLE));

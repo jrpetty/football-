@@ -121,6 +121,17 @@ public class FarmGoal extends Goal {
     public void tick() {
         if (!active) return;
 
+        // A field this size is never finished — something is always ripe — and a
+        // run only ends when there is nothing left to pick, so the harvest never
+        // left the farmer's pack: two farmers were found carrying four hundred
+        // items apiece (a hundred and seventy loaves' worth of wheat between
+        // them) while the village's stores stood short of food. A full pair of
+        // hands ends the run; the work brain banks the load and comes back.
+        if (assistant.isSettler() && harvested >= 12 && assistant.stashable() >= 40) {
+            finish("Full hands — off to the chest with this.");
+            return;
+        }
+
         if (targetPos == null || !targetStillValid()) {
             pickTarget();
             workTicks = 0;

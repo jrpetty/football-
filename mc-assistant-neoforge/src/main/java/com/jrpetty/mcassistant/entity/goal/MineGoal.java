@@ -112,6 +112,10 @@ public class MineGoal extends Goal {
         this.job = assistant.peekJob();
         this.myGen = assistant.taskGen();
         this.dir = Direction.fromYRot(assistant.getYRot());
+        if (assistant.peekJob() != null && assistant.peekJob().arg() != null) {
+            Direction chosen = Direction.byName(assistant.peekJob().arg());
+            if (chosen != null && chosen.getAxis().isHorizontal()) this.dir = chosen;
+        }
         this.cursor = assistant.feetPos();
         this.digQueue.clear();
         this.veinQueue.clear();
