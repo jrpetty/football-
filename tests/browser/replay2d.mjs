@@ -51,16 +51,26 @@ const check = async (label, buttonText) => {
   await pg.keyboard.press('KeyR')
   await pg.waitForTimeout(400)
   const during = await sample()
-  const state = await pg.evaluate(() => {
+  const read = () => pg.evaluate(() => {
     const g = window.__game
     const r = Object.values(g).find((v) => v && typeof v.progress === 'number' && 'playing' in v)
     return { playing: r?.playing, label: r?.label, progress: +(r?.progress ?? -1).toFixed(2) }
   })
+  const state = await read()
+  // A replay that is really playing gets further as time passes. The 3D game loop
+  // once died on the first replay frame, so its progress sat at 0 for ever — and
+  // this printed "REPLAY 0" next to 2D's 0.11 and passed anyway, because it only
+  // looked once.
+  await pg.waitForTimeout(1200)
+  const later = await read()
+  state.advanced = later.progress > state.progress + 0.03
+  state.later = later.progress
   if (process.env.SHOT) await pg.screenshot({ path: `${process.env.SHOT}-${label}.png` })
   await pg.close()
 
   const ok =
     state.playing &&
+    state.advanced &&
     state.label === 'REPLAY' &&
     during.band > 0.75 &&
     during.foot > 0.75 &&
@@ -71,7 +81,7 @@ const check = async (label, buttonText) => {
   console.log(
     `${ok && !errs.length ? 'PASS' : 'FAIL'}  ${label.padEnd(3)} top band ` +
       `${before.band} live → ${during.band} in replay · foot ${during.foot} · ` +
-      `middle untouched at ${during.mid} · ${state.label} ${state.progress}`,
+      `middle untouched at ${during.mid} · ${state.label} ${state.progress} → ${state.later}`,
   )
   if (errs.length) console.log('      pageerror:', errs.join(' | '))
   return ok && !errs.length

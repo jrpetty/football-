@@ -123,15 +123,30 @@ const run = (w: World, seconds: number, cmd: () => Command = emptyCommand) => {
   // Rather than hand-tune one trajectory, sweep a spread of "wide and bending
   // back" shots and require that the drill is solvable — that some honest curled
   // ball goes round the wall and in.
+  //
+  // Every shot has scatter, a weak foot and a little random spin, so any one of
+  // them scores only some of the time — measured over 300 tries each, between
+  // roughly a quarter and three quarters. The original six were: 34%, 24%, 0%,
+  // 60%, 78%, 0%. The two widest never work, so it was really four live shots, and
+  // the chance of all six missing on a healthy game was 4.4% — this test failed
+  // that often on code nobody had touched. So: drop the two that cannot work, and
+  // try the good ones round the spread, twice each. A failure now is a drill that
+  // cannot be solved rather than a bad afternoon: about one in ten thousand.
   let scored = 0
   let bestNote = ''
   for (const [ay, spin, power] of [
     [-0.20, 1.2, 0.68],
+    [-0.23, 1.3, 0.69],
     [-0.26, 1.4, 0.7],
-    [-0.32, 1.6, 0.72],
     [0.2, -1.2, 0.68],
+    [0.23, -1.3, 0.69],
     [0.26, -1.4, 0.7],
-    [0.32, -1.6, 0.72],
+    [-0.20, 1.2, 0.68],
+    [-0.23, 1.3, 0.69],
+    [-0.26, 1.4, 0.7],
+    [0.2, -1.2, 0.68],
+    [0.23, -1.3, 0.69],
+    [0.26, -1.4, 0.7],
   ] as const) {
     const t = stage('curl', { x: spot.x - 0.8, y: spot.y })
     t.w.ball.setPos(spot.x, spot.y, 0)
@@ -146,13 +161,15 @@ const run = (w: World, seconds: number, cmd: () => Command = emptyCommand) => {
     run(t.w, 4)
     if (t.w.score.home > 0) {
       scored++
-      if (!bestNote) bestNote = `${(ay > 0 ? 'right' : 'left')} of the wall, spin ${spin} — "${t.d.verdict?.text}"`
+      // (Not the drill's verdict text: it is on screen for 2.4 s and this shot has
+      // run for four, so by now it has gone and would print as "undefined".)
+      if (!bestNote) bestNote = `first one in went ${ay > 0 ? 'right' : 'left'} of the wall with spin ${spin}`
     }
   }
   ok(
     'bending it round the wall scores',
     scored > 0,
-    `${scored}/6 curled attempts found a way in — ${bestNote || 'none did'}`,
+    `${scored}/12 curled attempts found a way in — ${bestNote || 'none did'}`,
   )
   void w
   void d

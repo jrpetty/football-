@@ -164,12 +164,18 @@ export class Game3D {
           this.input.justPressed('Escape')) {
         this.replay.stop(this.world)
       }
-      return true
+      return this.replay.playing
     }
     this.replay.record(this.world, dt)
     const goals = this.world.score.home + this.world.score.away
-    if (goals !== this.lastGoals) {
-      this.lastGoals = goals
+    const scored = goals !== this.lastGoals
+    this.lastGoals = goals
+    // A goal replay plays the last six seconds at under half speed with the
+    // world stopped and your input ignored — about thirteen seconds, every
+    // time. That is right for a match and wrong for practice, where the whole
+    // point is the next shot: in training a goal never takes the game away
+    // from you, and R still gives you the replay whenever you want it.
+    if (scored && this.config.mode !== 'training') {
       this.replayAngle = 0
       this.replay.start(this.world, 'GOAL')
     } else if (this.input.did('replay')) {
@@ -210,6 +216,13 @@ export class Game3D {
 
   private tick = (now: number) => {
     if (!this.running) return
+    // The next frame is asked for first, before anything can return early. A
+    // replay used to end this function in a bare `return` that skipped the
+    // request at the bottom — so the moment any replay started the loop simply
+    // stopped, and the game froze on the replay's first frame for good. In a
+    // training session that was every goal. Nothing below can end the loop now;
+    // only stop() can, through `running`.
+    requestAnimationFrame(this.tick)
     const raw = Math.max(0, (now - this.last) / 1000)
     this.last = now
     // Report the true frame rate, but hand the simulation a bounded delta so a
@@ -230,6 +243,11 @@ export class Game3D {
       this.scene.sync(this.world, -1, false, -1, dt, true)
       this.scene.render(this.cam3.cam)
       this.drawReplayOverlay()
+      // Consume this frame's key presses, as every other frame does. Left
+      // unconsumed, the R that started a replay stayed "just pressed" for as long
+      // as the replay ran — so it also stopped it on the very next frame, and
+      // started it again the frame after that.
+      this.input.endFrame()
       return
     }
     if (!this.paused) {
@@ -273,7 +291,6 @@ export class Game3D {
       zoom: this.cam3.mode,
       view: '3d',
     }
-    requestAnimationFrame(this.tick)
   }
 
   private handleGlobalKeys() {

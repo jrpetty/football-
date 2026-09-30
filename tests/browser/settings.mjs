@@ -201,7 +201,7 @@ await pg.waitForTimeout(600)
   )
 }
 
-await pg.screenshot({ path: process.env.SHOT || 'settings.png' })
+await pg.screenshot({ path: process.env.SHOT || `${(await import('node:os')).tmpdir()}/settings.png` })
 await pg.close()
 await b.close()
 server.close()

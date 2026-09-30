@@ -274,6 +274,27 @@ export const NET = {
   maxGive: 0.85,
   spread: 1.35, // how far across the mesh the impact is felt
   settle: 2.6, // how fast it springs back
+  // The side netting hangs this far inside the post, not on it. It has to: a ball
+  // held against the post's own line rolls straight out into the post.
+  sideInset: 0.35,
+}
+
+// Training has no restart. Score as many as you like: nothing freezes, nothing
+// replays and the ball is not put back for you.
+//
+// What it does instead is what a net does — takes the shot, holds the ball for a
+// beat, and lets it roll back out through the mouth. It comes to rest a few
+// metres out in front of the goal and you go and get it, the way you would on a
+// real pitch, wherever you happen to be standing and with the drill still where
+// you left it.
+export const TRAINING = {
+  returnDelay: 0.7, // seconds the net holds it — long enough to see the ripple
+  returnSpeed: 7, // m/s it is rolled back out at
+  banner: 0.9, // how long GOAL! stays up; short, because the next one is coming
+  // How far out from the goal line the ball has to roll before the goal is
+  // behind it. Just past the net's depth: beyond this it cannot be the ball
+  // coming back off whoever is standing in the mouth.
+  clearDistance: 2.5,
 }
 
 export const WALL = {
@@ -365,13 +386,36 @@ export const AERIAL = {
 // strike, and your body becomes a soft, wide surface the ball dies against
 // instead of the hard one it pings off. Keeping it is then purely a matter of
 // where you stand.
+// What a body is allowed to do to the ball.
+//
+// The rule is one line: a body may take pace off the ball and may never put any
+// on. Every m/s the ball carries came from a click — a touch, a strike, a
+// cushion, a slide — or from the pitch it bounced off.
+//
+// That used to be untrue. A solid body pushed the ball out of overlap every
+// step and handed it 35% of its own velocity on top, so sprinting into a ball
+// at rest shoved it eleven metres at ten metres a second with nothing pressed:
+// it rode the front of your body until something stopped it. Nothing was
+// attached to anybody, and it played exactly as though it were.
+//
+// Now the ball only collides with a body when the *ball* is travelling into it.
+// Run at one that is sitting still and you pass over it. Hit one that is coming
+// at you and it comes back off you, softer — so a wall of players still blocks a
+// pass and a defender still deflects a shot, but a body is a wall the ball
+// bounces off and never a paddle that hits it.
+export const BODY = {
+  // How fast the ball has to be travelling into a body, by its own motion, for
+  // it to count as a hit. Below this a ball is just resting against somebody.
+  minClosing: 0.3,
+  restitution: 0.45, // pace that survives the bounce off an ordinary body
+}
+
 export const SHIELD = {
   speed: 2.4, // you are shuffling, not running
   // Side-on with an arm across, so you cover more ground than usual. This is
   // the whole mechanic: a bigger body, in the right place.
   bodyRadius: 0.66,
   keep: 0.12, // pace the ball retains off a shielding body — it deadens
-  carry: 0.85, // ...and takes your movement with it instead
   turnRate: 5.5, // rad/s you can pivot while shielding — deliberately slow
   // An opponent cannot play a ball your body is in front of. Measured as how
   // far their line to the ball passes from your centre, so it is geometry and

@@ -72,10 +72,20 @@ Two settings on the menu scale this, mirroring the ones PSO exposes: **Kick
 height sensitivity** and **Kick curve sensitivity**. Over-flick and you'll skin
 it — that risk is the point.
 
-**Dribbling is manual.** The ball is never glued to your feet: you knock it
-forward with touches and run onto it, so close control is a skill rather than a
-state. The power bar and a live LIFTED / DRIVEN / CURVE readout show what your
-flick is about to do before you commit.
+**Dribbling is manual, and it is all clicks.** The ball is never glued to your
+feet, and it is never pushed by your body either: run straight through a ball and
+it does not move. The only things that put pace on it are your two buttons (and a
+slide tackle). A body can only ever take pace *off* the ball — it is a wall the
+ball bounces off, never a paddle that hits it — so a defender still blocks a pass
+but you cannot dribble by running into it. You knock it forward with right-click
+touches and run onto it, so close control is a skill rather than a state. The
+power bar and a live LIFTED / DRIVEN / CURVE readout show what your flick is
+about to do before you commit.
+
+**Training never restarts.** Score as many as you like. There is no goal replay and
+no reset: the net holds the ball for a beat and rolls it back out through the
+mouth, and you go and get it wherever you are standing. `R` replays whatever you
+want, whenever you want it.
 
 ### You are one player
 

@@ -1,4 +1,4 @@
-import { AERIAL, BALL, CONTROL, DEFEND, DUEL, DUMMY, FIELD, GK, KICK, MATCH, NET, PLAYER, SHIELD, SIM, WALL } from '../config'
+import { AERIAL, BALL, BODY, CONTROL, DEFEND, DUEL, DUMMY, FIELD, GK, KICK, MATCH, NET, PLAYER, SHIELD, SIM, TRAINING, WALL } from '../config'
 import { clamp } from '../core/math'
 import * as V from '../core/vec'
 import type { Vec2 } from '../core/vec'
@@ -68,7 +68,16 @@ export class World {
   lastGoalTeam: Team | null = null
   // Where and how hard the net was last struck, for the mesh to react to.
   netHit: { team: Team; y: number; z: number; power: number; age: number } | null = null
-  private trainingResetIn = 0
+  // Training's one piece of goal bookkeeping. A goal is counted once, when the
+  // ball crosses the line, and is not counted again until the ball has actually
+  // left the goal — not until a timer runs out, so the next one can be scored
+  // the moment the ball is back out and not a moment sooner.
+  private goalLatch = false
+  // Has anyone played the ball since it went in? A click or a slide is what
+  // makes the next goal a new goal rather than the last one coming back.
+  private playedSinceGoal = false
+  private netHold = 0 // seconds until the net gives the ball back
+  private netReleased = false // it is being rolled back out; the mesh lets go of it
 
   // How far we are between the last physics step and the next, 0..1. Renderers
   // interpolate with this so motion looks smooth at any frame rate rather than
@@ -200,16 +209,6 @@ export class World {
     if (this.netHit) {
       this.netHit.age += dt
       if (this.netHit.age > 2.5) this.netHit = null
-    }
-    if (this.trainingResetIn > 0) {
-      this.trainingResetIn -= dt
-      if (this.trainingResetIn <= 0) {
-        if (!this.drills?.servesBalls()) this.resetTrainingBall()
-        else {
-          this.ball.setPos(FIELD.length / 2, FIELD.width / 2, 0)
-          this.ball.stop()
-        }
-      }
     }
     this.drills?.update(this, dt)
     const commands = this.buildCommands(humanCmd, dt)
@@ -635,6 +634,7 @@ export class World {
 
   private executeKick(p: Player, cmd: Command) {
     const kick = cmd.kick!
+    this.playedSinceGoal = true
     // Taking the ball off someone is now just playing it while they had it —
     // there is no tackle button to count instead, so the stat is measured from
     // what actually happened.
@@ -1010,6 +1010,7 @@ export class World {
     // Timed it right, so you're back up faster than someone who dived at air.
     p.slideRecover *= DEFEND.slideWonRecovery
     this.stats[p.team].tackles++
+    this.playedSinceGoal = true
     const pace = DEFEND.slideClear * (0.6 + 0.4 * clamp(p.speed / PLAYER.sprintSpeed, 0, 1))
     this.ball.setPos(cx + dir.x * 0.3, cy + dir.y * 0.3, 0.05)
     this.ball.launch(dir.x * pace, dir.y * pace, pace * 0.12, 0, p.team, p.id, 0)
@@ -1110,37 +1111,51 @@ export class World {
     }
   }
 
+  // A body is a wall the ball bounces off. It is never a paddle.
+  //
+  // The ball collides with a body only when the *ball* is travelling into it.
+  // Everything the body itself is doing — running, sprinting, turning — is
+  // ignored, so running into a ball at rest does nothing at all and the ball
+  // only ever leaves your feet because you clicked. What a body can still do is
+  // take pace off: a pass into a defender comes back off him, softer, and a
+  // shot at a wall of them is blocked. It can never add any (see BODY).
   private resolveBodyCollisions() {
+    const b = this.ball
+    // A ball the net is rolling back out is not stopped by whoever is standing in
+    // front of it. Score from close range and you are right in the mouth, and a
+    // returned ball that ran into you would rebound back over the line for a
+    // second goal, or die inside the net where you cannot reach it — you cannot
+    // step into the goal, and nothing but a click can move the ball now. So it
+    // rolls out through you, and the ordinary rules take over the moment it is
+    // clear of the goal or somebody plays it.
+    if (this.goalLatch && this.netReleased) return
     for (const p of this.players) {
-      // Nothing is attached to anybody, so every body is solid: the ball
-      // rebounds off a player's shins exactly like it rebounds off the boards.
       if (p.role === 'GK') continue // handled by saves
       if (p.kickCooldown > 0) continue
-      if (this.ball.z > 1.9 + p.z) continue
+      if (b.z > 1.9 + p.z) continue
       // Feet off the ground: the ball passes under you.
-      if (p.z > BALL.radius * 2 && this.ball.z < p.z - BALL.radius) continue
-      const dx = this.ball.x - p.x
-      const dy = this.ball.y - p.y
+      if (p.z > BALL.radius * 2 && b.z < p.z - BALL.radius) continue
+      const dx = b.x - p.x
+      const dy = b.y - p.y
       const dist = Math.hypot(dx, dy)
-      // Shielding turns your body from the hard surface a ball pings off into a
-      // wide soft one it dies against, and takes your movement with it. That is
-      // the entire mechanic — no attachment, no assist, just a different body.
+      // Shielding swaps a hard body for a wide soft one the ball dies against.
+      // It is the ball's pace that is deadened, not the ball that is moved.
       const shield = p.shielding
       const min = (shield ? SHIELD.bodyRadius : p.radius) + BALL.radius
-      if (dist < min && dist > 1e-4) {
-        const nx = dx / dist
-        const ny = dy / dist
-        // Push out of overlap.
-        this.ball.x = p.x + nx * min
-        this.ball.y = p.y + ny * min
-        // Reflect + inherit a little of the body's momentum.
-        this.ball.reflect(nx, ny, shield ? SHIELD.keep : 0.45, BALL.bodyGrip)
-        const carry = shield ? SHIELD.carry : 0.35
-        this.ball.vx += p.vx * carry
-        this.ball.vy += p.vy * carry
-        this.ball.lastTouchTeam = p.team
-        this.ball.lastTouchId = p.id
-      }
+      if (dist >= min || dist < 1e-4) continue
+      const nx = dx / dist
+      const ny = dy / dist
+      // How fast the ball is going into this body on its own account. Positive
+      // is toward it. The body's velocity is deliberately not part of this.
+      const closing = -(b.vx * nx + b.vy * ny)
+      if (closing < BODY.minClosing) continue
+      // Out of the overlap, and off it — with only the ball's own pace to work
+      // with, so what comes back is always less than what arrived.
+      b.x = p.x + nx * min
+      b.y = p.y + ny * min
+      b.reflect(nx, ny, shield ? SHIELD.keep : BODY.restitution, BALL.bodyGrip)
+      b.lastTouchTeam = p.team
+      b.lastTouchId = p.id
     }
   }
 
@@ -1275,7 +1290,9 @@ export class World {
     const inNet = b.x < 0 ? 'away' : b.x > FIELD.length ? 'home' : null
     if (inNet && F.inGoalMouthY(b.y)) {
       const hs = b.horizontalSpeed
-      if (hs > 0.05) {
+      // Once the net is giving the ball back it must not also be gripping it —
+      // the drag would stop a ball that is being rolled out before it left.
+      if (hs > 0.05 && !this.netReleased) {
         const drop = Math.min(hs, NET.drag * SIM.dt)
         b.vx -= (b.vx / hs) * drop
         b.vy -= (b.vy / hs) * drop
@@ -1286,23 +1303,103 @@ export class World {
       }
     }
 
+    // The sides of the net.
+    //
+    // There were none. A ball inside the goal that drifted a few centimetres
+    // past the post line stopped counting as "in the mouth", was treated as
+    // hitting the end boards from the pitch side, and was pushed back out by
+    // however far into the net it was — 2.3 m at the back — in a single step.
+    // Corner shots were teleported back onto the pitch after they had scored.
+    // Nobody saw it while the ball was being whisked away anyway; the moment the
+    // net started giving the ball back instead, it was the first thing to break.
+    //
+    // So the netting stops it sideways, softly, exactly as it stops it at the
+    // back. It hangs NET.sideInset inside the post rather than on it, the way
+    // slack netting does: a ball parked against the side net at the post's own
+    // line rolls straight out into the post and comes back in, for ever — which
+    // is what happened the first time this was written on the line.
+    //
+    // Only a ball that is genuinely inside (past the line, under the bar and
+    // within half a metre of the mouth) is held, and not at the line itself,
+    // where a ball that has just come through must not be nudged.
+    const depth = b.x < 0 ? -b.x : b.x - FIELD.length
+    if (inNet && b.z < FIELD.goalHeight && depth > 0.25) {
+      const [pa, pb] = F.goalPostYs()
+      const lo = pa + NET.sideInset
+      const hi = pb - NET.sideInset
+      if (b.y < lo && b.y > pa - 0.5) {
+        b.y = lo
+        b.vy = Math.abs(b.vy) * NET.restitution
+      } else if (b.y > hi && b.y < pb + 0.5) {
+        b.y = hi
+        b.vy = -Math.abs(b.vy) * NET.restitution
+      }
+    }
+
     // Goal lines. The mouth is an opening; everything else is a solid end wall.
     const throughMouth = F.inGoalMouthY(b.y) && b.z < FIELD.goalHeight
     if (!throughMouth) {
       if (b.x - r < 0 && b.vx < 0) this.bounceOffWall(1, 0, r - b.x)
       else if (b.x + r > FIELD.length && b.vx > 0) this.bounceOffWall(-1, 0, b.x + r - FIELD.length)
-    } else if (live && this.trainingResetIn <= 0) {
-      // Fully over the line inside the mouth — that's a goal. The ball is no
-      // longer teleported away the instant it crosses, so this has to be latched
-      // or it scores again on every frame it spends sitting in the net.
+    } else if (live && !this.goalLatch) {
+      // Fully over the line inside the mouth — that's a goal. The ball stays in
+      // the net rather than being whisked away the instant it crosses, so this
+      // has to be latched or it scores again on every step it spends there.
       if (b.x < 0) this.scoreGoal('away')
       else if (b.x > FIELD.length) this.scoreGoal('home')
     }
+    this.returnFromNet()
 
     // A ball that somehow gets behind the goal is stopped by the back of the net.
     const back = FIELD.goalDepth
     if (b.x < -back) { b.x = -back; b.vx = Math.abs(b.vx) * 0.2 }
     if (b.x > FIELD.length + back) { b.x = FIELD.length + back; b.vx = -Math.abs(b.vx) * 0.2 }
+  }
+
+  // Training: give the ball back.
+  //
+  // After a goal the net holds the ball for TRAINING.returnDelay — long enough
+  // to watch it ripple — and then rolls it out through the mouth, where it comes
+  // to rest a few metres in front of the goal. Nothing is teleported and nothing
+  // stops: the world keeps stepping throughout and you can be on your way to it
+  // before it has stopped rolling.
+  //
+  // The latch on scoring lifts when the ball is back out on the pitch, whoever
+  // put it there — the net, a click, the spawn key, a drill serving the next
+  // one — so the next goal counts the moment it is scored.
+  private returnFromNet() {
+    if (!this.goalLatch) return
+    const b = this.ball
+    // How far out on the pitch the ball is, from the nearer goal line. Negative
+    // is in the net.
+    const out = Math.min(b.x, FIELD.length - b.x)
+    if (out >= 0) {
+      // Out of the goal. That is not yet enough to allow another one: a ball
+      // that has just been rolled out can hit somebody standing in the mouth
+      // and come straight back over the line, and that is the *same* goal, not a
+      // second. It becomes a new chance when somebody has actually played it —
+      // a click or a slide — or when it has rolled clear of the goal altogether.
+      if (this.playedSinceGoal || out >= TRAINING.clearDistance) {
+        this.goalLatch = false
+        this.netReleased = false
+      }
+      return
+    }
+    if (this.netHold > 0) {
+      this.netHold -= SIM.dt
+      return
+    }
+    // Held long enough: roll it back out, down the line of the goal. Bodies do not
+    // stop it on the way (see resolveBodyCollisions), so once is enough.
+    if (!this.netReleased) {
+      this.netReleased = true
+      const out = b.x < 0 ? 1 : -1
+      b.vx = out * TRAINING.returnSpeed
+      // A gentle drift toward the middle of the mouth, so a ball that came to
+      // rest near a post is rolled out clear of it rather than along its edge.
+      b.vy = clamp((FIELD.width / 2 - b.y) * 0.35, -1, 1)
+      b.spin = 0
+    }
   }
 
   // Rebound off a barrier with the given inward normal, pushing the ball clear
@@ -1345,12 +1442,16 @@ export class World {
       // The drill needs to see the ball as it went in — spin, position and all —
       // so it is told before anything gets repositioned.
       this.drills?.goal(this)
-      this.setAnnounce('GOAL!', undefined, 1.2)
+      this.setAnnounce('GOAL!', undefined, TRAINING.banner)
       sfx.goal()
       this.pushEffect('goal', this.ball.x, this.ball.y)
-      // Let it fly into the net first — putting the ball back the instant it
-      // crosses the line throws away the best half-second in the game.
-      this.trainingResetIn = 1.1
+      // Nothing is reset. The ball flies on into the net, the net holds it for a
+      // beat, and then it is rolled back out (returnFromNet) — while the world
+      // carries on stepping, so you can be walking to it the whole time.
+      this.goalLatch = true
+      this.playedSinceGoal = false
+      this.netHold = TRAINING.returnDelay
+      this.netReleased = false
       return
     }
     this.stats[scorer].goals++
@@ -1484,6 +1585,7 @@ export class World {
   // ---- free play helper --------------------------------------------------
 
   spawnBallAt(pos: Vec2) {
+    this.playedSinceGoal = true
     this.ball.setPos(clamp(pos.x, 1, FIELD.length - 1), clamp(pos.y, 1, FIELD.width - 1), 0)
     this.ball.stop()
     this.possessorId = null

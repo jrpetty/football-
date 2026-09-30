@@ -150,7 +150,9 @@ export class Screens {
           Nothing on this pitch plays itself. Training is you, a ball and two
           empty goals — press <b>${keyLabel(binds.get('spawnBall'))}</b> to put the ball
           back in front of you, <b>${keyLabel(binds.get('nextDrill'))}</b> for the
-          next drill. Down one touchline there is a slalom of mannequins to
+          next drill. <b>Score as many as you like</b> — nothing resets after a goal:
+          the net holds the ball for a beat and rolls it back out, and <b>R</b>
+          replays whatever you want, when you want it. Down one touchline there is a slalom of mannequins to
           dribble and a five-man wall standing ten yards off a spot, both solid
           to you and to the ball, there whichever drill you are on. A match is
           other people: every shirt is a seat, and the ones nobody has taken
@@ -229,9 +231,13 @@ export class Screens {
         Flick diagonally to do both. Over-flick and you'll skin it.
       </div>
       <div class="flickhint">
-        <b>Nothing is glued to anybody.</b> The ball is never attached to a
-        player — it bounces off bodies and runs free unless someone is actually
-        playing it. That cuts both ways: your own touches have to be judged, and
+        <b>Your clicks move the ball. Your legs do not.</b> Nothing is glued to
+        anybody, and nothing is pushed by anybody either: run straight through a
+        ball and it does not budge. The only things that give it pace are your two
+        buttons (and a slide). A body is a wall the ball bounces off, never a paddle
+        that hits it — so a defender still blocks your pass, but you cannot dribble by
+        running into it: <b>tap right click</b> to knock it along as you go. That cuts
+        both ways: your own touches have to be judged, and
         an opponent's ball is always takeable. There is no tackle button, so you
         win it back with the same two clicks you use for everything else —
         <b>right click</b> to take it off them and keep it, <b>left click</b> to

@@ -28,3 +28,7 @@ node_modules/.tmp
 # One-file build output
 open-pitch.html
 dist-single
+
+# Screenshots the browser tests take. They go to the temp dir now; this stops one
+# ever being swept into a commit from the repo root again.
+/*.png

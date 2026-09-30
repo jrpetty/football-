@@ -138,8 +138,12 @@ class Game {
     }
     this.replay.record(this.world, dt)
     const goals = this.world.score.home + this.world.score.away
-    if (goals !== this.lastGoals) {
-      this.lastGoals = goals
+    const scored = goals !== this.lastGoals
+    this.lastGoals = goals
+    // See game3d.ts: a goal replay freezes the world for about thirteen seconds,
+    // which is right for a match and wrong for practice. In training a goal
+    // never takes the game away from you; R still replays on demand.
+    if (scored && this.config.mode !== 'training') {
       this.replay.start(this.world, 'GOAL')
     } else if (this.input.did('replay')) {
       this.replay.start(this.world, 'REPLAY')

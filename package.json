@@ -18,7 +18,8 @@
     "test:replay": "node tests/browser/replay2d.mjs",
     "test:settings": "node tests/browser/settings.mjs",
     "test:perf": "node tests/browser/perf.mjs",
-    "test:quality": "node tests/browser/quality.mjs"
+    "test:quality": "node tests/browser/quality.mjs",
+    "test:training": "node tests/browser/training.mjs"
   },
   "devDependencies": {
     "typescript": "^5.5.4",
