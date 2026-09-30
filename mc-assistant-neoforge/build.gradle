@@ -74,6 +74,10 @@ tasks.named('test') {
 // any of them fail.
 // ---------------------------------------------------------------------------
 if (project.hasProperty('gametest')) {
+    // The tests and their empty structure template live outside src/main, so
+    // the jar build never compiles them and never ships them.
+    sourceSets.main.java.srcDir 'src/gametest/java'
+    sourceSets.main.resources.srcDir 'src/gametest/resources'
     neoForge {
         runs {
             gameTestServer {

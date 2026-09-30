@@ -240,6 +240,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         return (a != null && a.isAlive()) ? a : null;
     }
 
+    /** Forget every crew on the register. For tests. */
+    public static void resetRegistryForTests() {
+        BY_OWNER.clear();
+    }
+
     public static List<AssistantEntity> allFor(UUID ownerId) {
         Map<String, AssistantEntity> m = BY_OWNER.get(ownerId);
         if (m == null) return List.of();
@@ -430,6 +435,42 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     }
 
     public java.util.List<String> missingEssentials() { return missingEssentials; }
+
+    /**
+     * One line saying exactly what this hand is doing and why it is not doing
+     * more: trade, ground, status, the job on its queue, what its checklist is
+     * missing, whether it is walking, what it is carrying. Used by the village
+     * command and by the tests — a folk that "does not work" has to be able to
+     * say WHY, or nobody can fix it.
+     */
+    public String debugLine() {
+        StringBuilder sb = new StringBuilder(160);
+        sb.append(assistantName).append(" L").append(veteranLevel())
+          .append(' ').append(stationTask.title)
+          .append(" hp=").append((int) getHealth())
+          .append(" at ").append(blockPosition().getX()).append(',').append(blockPosition().getY())
+          .append(',').append(blockPosition().getZ());
+        if (workZone != null) {
+            BlockPos c = workZone.center();
+            sb.append(" zone=").append(c.getX()).append(',').append(c.getZ())
+              .append(" r").append(workZone.radius())
+              .append(" d").append((int) Math.sqrt(c.distSqr(blockPosition())));
+        } else {
+            sb.append(" zone=none");
+        }
+        sb.append(" [").append(clientStatus()).append(']');
+        Job j = peekJob();
+        sb.append(" job=").append(j == null ? "-" : j.type() + (j.arg() != null ? ":" + j.arg() : ""));
+        sb.append(getNavigation().isDone() ? " idle-legs" : " walking");
+        sb.append(" auto=").append(autonomous ? 1 : 0).append(" mode=").append(mode);
+        if (!missingEssentials.isEmpty()) sb.append(" missing=").append(missingEssentials);
+        sb.append(" food=").append(countFood())
+          .append(" items=").append(countItems())
+          .append(" workedOut=").append(workedOut() ? 1 : 0)
+          .append(" sinceWork=").append(Math.min(99999, tickCount - lastWorkTick));
+        if (upkeepStalled) sb.append(" UPKEEP-STALLED");
+        return sb.toString();
+    }
 
     /** DepositGoal calls this when it reached a chest and could not fit anything
      *  in. Backs the deposit rung off so productive work resumes meanwhile. */

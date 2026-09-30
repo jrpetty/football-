@@ -1,0 +1,273 @@
+package com.jrpetty.mcassistant.gametest;
+
+import com.jrpetty.mcassistant.McAssistantMod;
+import com.jrpetty.mcassistant.VillagerTakeover;
+import com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock;
+import com.jrpetty.mcassistant.entity.AssistantEntity;
+import com.jrpetty.mcassistant.entity.AssistantEntity.StationTask;
+import com.jrpetty.mcassistant.entity.VillageFolkEntity;
+import com.jrpetty.mcassistant.entity.Villages;
+import com.jrpetty.mcassistant.village.VillageMath;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.gametest.framework.GameTest;
+import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.GameRules;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.gametest.GameTestHolder;
+import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * The village, RUN. Every test here boots the real mod inside a real headless
+ * server and watches what actually happens — not what the code says should.
+ *
+ * <p>Each test has its own batch so they run one at a time: they share a JVM,
+ * and therefore every static in the mod. Each also works far from the test
+ * arena, on ground of its own making, because a village needs room and the
+ * arena is eight blocks wide.
+ */
+@GameTestHolder("mc_assistant")
+@PrefixGameTestTemplate(false)
+public class VillageGameTests {
+
+    private static final String EMPTY = "empty";
+
+    private static AABB around(BlockPos p, double r) {
+        return new AABB(p.getX() - r, p.getY() - 20, p.getZ() - r, p.getX() + r, p.getY() + 20, p.getZ() + r);
+    }
+
+    // ============================================================ the basics
+
+    /** Does a folk exist, tick for ten seconds, and stay alive? A crash on
+     *  the entity tick kills the whole server, so this is also a smoke test. */
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "t01_boot")
+    public static void t01_boot(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        BlockPos at = Kit.surface(level, 2500, 2500);
+        VillageFolkEntity folk = McAssistantMod.VILLAGE_FOLK.get().create(level);
+        helper.assertTrue(folk != null, "the village_folk entity type cannot create an entity");
+        folk.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        level.addFreshEntity(folk);
+        helper.runAtTickTime(200, () -> {
+            Kit.log("t01 after 200 ticks: " + folk.debugLine());
+            helper.assertTrue(folk.isAlive(), "the folk died or vanished within ten seconds");
+            helper.succeed();
+        });
+    }
+
+    /** Placing the spawner block, exactly as a player does. */
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "t02_spawner_block")
+    public static void t02_spawner_block(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        BlockPos ground = Kit.surface(level, 2600, 2600);
+        ItemStack stack = new ItemStack(McAssistantMod.FOLK_SPAWNER_ITEM.get());
+        player.setItemInHand(InteractionHand.MAIN_HAND, stack);
+        BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(ground.below()), Direction.UP, ground.below(), false);
+        InteractionResult r = stack.useOn(new UseOnContext(player, InteractionHand.MAIN_HAND, hit));
+        Kit.log("t02 useOn result: " + r);
+        helper.runAtTickTime(40, () -> {
+            List<VillageFolkEntity> folk = level.getEntitiesOfClass(VillageFolkEntity.class, around(ground, 12));
+            Kit.log("t02 folk near the block: " + folk.size()
+                + (folk.isEmpty() ? "" : " — " + folk.get(0).debugLine()));
+            helper.assertTrue(folk.size() == 1, "placing the spawner should stand exactly one folk up, found " + folk.size());
+            helper.assertTrue(level.getBlockState(ground).is(Blocks.CHEST),
+                "the founding stores should stand where the block stood, found " + level.getBlockState(ground));
+            helper.assertTrue(folk.get(0).countFood() >= 16, "a folk should carry its bread, has food=" + folk.get(0).countFood());
+            helper.succeed();
+        });
+    }
+
+    /** Using the charter on the ground. */
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "t03_charter")
+    public static void t03_charter(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        BlockPos ground = Kit.surface(level, 2700, 2700);
+        ItemStack stack = new ItemStack(McAssistantMod.VILLAGE_CHARTER.get());
+        player.setItemInHand(InteractionHand.MAIN_HAND, stack);
+        BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(ground.below()), Direction.UP, ground.below(), false);
+        InteractionResult r = stack.useOn(new UseOnContext(player, InteractionHand.MAIN_HAND, hit));
+        Kit.log("t03 useOn result: " + r);
+        helper.runAtTickTime(40, () -> {
+            List<VillageFolkEntity> folk = level.getEntitiesOfClass(VillageFolkEntity.class, around(ground, 12));
+            Kit.log("t03 folk near the click: " + folk.size()
+                + (folk.isEmpty() ? "" : " — " + folk.get(0).debugLine()));
+            helper.assertTrue(folk.size() == 1, "the charter should stand exactly one folk up, found " + folk.size());
+            helper.succeed();
+        });
+    }
+
+    /** The /village command family, run as a console would. */
+    @GameTest(template = EMPTY, timeoutTicks = 600, batch = "t04_commands")
+    public static void t04_commands(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        List<String> said = Kit.command(level, "village spawnat 2800 2800 3");
+        Kit.log("t04 spawnat said: " + said);
+        List<String> folkLines = null;
+        helper.runAtTickTime(60, () -> {
+            BlockPos here = Kit.surface(level, 2800, 2800);
+            List<VillageFolkEntity> folk = level.getEntitiesOfClass(VillageFolkEntity.class, around(here, 20));
+            helper.assertTrue(folk.size() == 3, "/village spawnat 2800 2800 3 should make three folk, found " + folk.size());
+            List<String> status = Kit.command(level, "village status");
+            Kit.log("t04 status said: " + status);
+            List<String> lines = Kit.command(level, "village folk");
+            Kit.log("t04 folk said: " + lines);
+            helper.assertTrue(!status.isEmpty() && !lines.isEmpty(), "/village status and /village folk should both answer");
+            for (String s : status) helper.assertFalse(s.toLowerCase().contains("exception"), "status threw: " + s);
+            for (String s : lines) helper.assertFalse(s.toLowerCase().contains("exception"), "folk threw: " + s);
+            helper.succeed();
+        });
+    }
+
+    // ===================================================== vanilla villagers
+
+    /** A villager appears the ordinary way: the join event should catch it. */
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "t05_takeover_join")
+    public static void t05_takeover_join(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        BlockPos at = Kit.surface(level, 2900, 2900);
+        Villager v = EntityType.VILLAGER.create(level);
+        v.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        level.addFreshEntity(v);
+        helper.runAtTickTime(40, () -> {
+            int villagers = level.getEntitiesOfClass(Villager.class, around(at, 8)).size();
+            List<VillageFolkEntity> folk = level.getEntitiesOfClass(VillageFolkEntity.class, around(at, 8));
+            Kit.log("t05 villagers left: " + villagers + ", folk: " + folk.size());
+            helper.assertTrue(villagers == 0, "the villager should have been swapped out, " + villagers + " remain");
+            helper.assertTrue(folk.size() == 1, "one folk should stand where the villager was, found " + folk.size());
+            helper.succeed();
+        });
+    }
+
+    /** A villager that got into the world WITHOUT the join event catching it
+     *  — the way a chunk load or world generation delivers them. The periodic
+     *  sweep is what must find it. */
+    @GameTest(template = EMPTY, timeoutTicks = 600, batch = "t06_takeover_sweep")
+    public static void t06_takeover_sweep(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        BlockPos at = Kit.surface(level, 3000, 2900);
+        VillagerTakeover.suspended = true;
+        Villager v = EntityType.VILLAGER.create(level);
+        v.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        v.setVillagerXp(20);            // one somebody has traded with — the old guard's blind spot
+        v.setCustomName(net.minecraft.network.chat.Component.literal("Bob the Trader"));
+        level.addFreshEntity(v);
+        helper.runAtTickTime(20, () -> {
+            helper.assertTrue(level.getEntitiesOfClass(Villager.class, around(at, 8)).size() == 1,
+                "test setup: the villager should still be there while the takeover is suspended");
+            VillagerTakeover.suspended = false;
+        });
+        helper.runAtTickTime(240, () -> {
+            int villagers = level.getEntitiesOfClass(Villager.class, around(at, 8)).size();
+            int folk = level.getEntitiesOfClass(VillageFolkEntity.class, around(at, 8)).size();
+            Kit.log("t06 after the sweep: villagers " + villagers + ", folk " + folk);
+            helper.assertTrue(villagers == 0, "the sweep should have converted the villager, " + villagers + " remain");
+            helper.assertTrue(folk == 1, "one folk should have taken its place, found " + folk);
+            helper.succeed();
+        });
+    }
+
+    // ========================================================== the village
+
+    /** THE test: twelve folk from nothing, on generous ground, for a whole
+     *  game day. Nobody touches them. */
+    @GameTest(template = EMPTY, timeoutTicks = 26000, batch = "t10_village_of_twelve")
+    public static void t10_village_of_twelve(GameTestHelper helper) {
+        final ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.getGameRules().getRule(GameRules.RULE_DAYLIGHT).set(true, level.getServer());
+        level.setDayTime(1000);
+
+        final int cx = 3500, cz = 3500;
+        Kit.generousTerrain(level, cx, cz);
+        final BlockPos heart = Kit.surface(level, cx, cz);
+        for (int i = 0; i < 12; i++) {
+            VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+            helper.assertTrue(f != null, "raise() returned nobody for folk " + i);
+        }
+        Kit.log("t10 shape wanted for 12: " + java.util.Arrays.toString(VillageMath.shapeOf(12)));
+
+        final Kit.Expect ex = new Kit.Expect();
+        final long[] nextDash = {0};
+        final boolean[] done = new boolean[6];
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (t >= nextDash[0]) {
+                Kit.dashboard(level, heart, "soak");
+                nextDash[0] = t < 1200 ? t + 300 : t + 1200;
+            }
+            Villages.Village v = Villages.nearest(level, heart, 600);
+            List<AssistantEntity> crew = v == null ? List.of() : Villages.folkOf(v.id());
+
+            if (!done[0] && t >= 1500) {
+                done[0] = true;
+                Kit.log("---- checkpoint 1500: trades and ground");
+                ex.that(v != null, "a village exists");
+                ex.that(crew.size() == 12, "all twelve are alive (" + crew.size() + ")");
+                Map<StationTask, Integer> by = new EnumMap<>(StationTask.class);
+                int zoned = 0, indoor = 0;
+                for (AssistantEntity a : crew) {
+                    by.merge(a.stationTask(), 1, Integer::sum);
+                    if (a.workZone() != null) zoned++;
+                }
+                Kit.log("  trades: " + by);
+                ex.that(by.getOrDefault(StationTask.NONE, 0) == 0, "every folk has chosen a trade");
+                ex.that(by.getOrDefault(StationTask.FARM, 0) >= 3, "at least three farmers");
+                ex.that(by.getOrDefault(StationTask.WOOD, 0) >= 1, "at least one woodcutter");
+                ex.that(by.getOrDefault(StationTask.MINE, 0) >= 1, "at least one miner");
+                ex.that(zoned >= 9, "at least nine have claimed ground (" + zoned + ")");
+            }
+            if (!done[1] && t >= 4500) {
+                done[1] = true;
+                Kit.log("---- checkpoint 4500: past the checklist, actually working");
+                int ready = 0;
+                for (AssistantEntity a : crew) if (a.missingEssentials().isEmpty()) ready++;
+                ex.that(ready >= 9, "at least nine have nothing missing from their checklist (" + ready + ")");
+                var world = Kit.census(level, cx, cz, 90);
+                ex.that(world.get("farmland") > 0, "some ground has been tilled (" + world.get("farmland") + ")");
+            }
+            if (!done[2] && t >= 12000) {
+                done[2] = true;
+                Kit.log("---- checkpoint 12000: producing");
+                var chests = Kit.chestContents(level, cx, cz, 110);
+                ex.that(chests.getOrDefault("logs", 0) > 0, "logs have reached a chest " + chests.getOrDefault("logs", 0));
+                ex.that(chests.getOrDefault("stone", 0) > 0, "stone has reached a chest " + chests.getOrDefault("stone", 0));
+                var world = Kit.census(level, cx, cz, 90);
+                ex.that(world.get("wheat") > 0 || chests.getOrDefault("wheat", 0) > 0,
+                    "wheat has been grown (" + world.get("wheat") + " standing, " + chests.getOrDefault("wheat", 0) + " stored)");
+                ex.that(crew.size() == 12, "nobody has died yet (" + crew.size() + " of 12)");
+            }
+            if (!done[3] && t >= 24000) {
+                done[3] = true;
+                Kit.log("---- checkpoint 24000: a full day");
+                ex.that(crew.size() >= 11, "at most one lost in a day (" + crew.size() + " of 12)");
+                ex.that(v != null && !Villages.builtList(v.id()).isEmpty(),
+                    "the village has built something: " + (v == null ? "-" : Villages.builtList(v.id())));
+                Kit.log("  " + ex.summary());
+                if (ex.clean()) helper.succeed(); else helper.fail(ex.summary());
+            }
+        });
+    }
+}

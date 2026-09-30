@@ -1,0 +1,304 @@
+package com.jrpetty.mcassistant.gametest;
+
+import com.jrpetty.mcassistant.VillagerTakeover;
+import com.jrpetty.mcassistant.entity.AssistantEntity;
+import com.jrpetty.mcassistant.entity.Villages;
+import com.mojang.logging.LogUtils;
+import net.minecraft.commands.CommandSource;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.Container;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.world.entity.animal.Animal;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LeavesBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.phys.Vec3;
+import org.slf4j.Logger;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Everything the village tests share: a clean slate, a piece of terrain that
+ * looks like somewhere a village could live, a way to read the world back, and
+ * one-line-per-folk reporting. The reporting is the point. A test that only
+ * says "failed" is no use for a system this large; one that prints what every
+ * hand was doing and what the world looked like says where it stopped.
+ */
+final class Kit {
+
+    private Kit() {}
+
+    static final Logger LOG = LogUtils.getLogger();
+
+    static void log(String line) {
+        LOG.info("[VT] {}", line);
+    }
+
+    // ---------------------------------------------------------------- reset
+
+    /** A clean slate. Tests share one JVM, so they share every static. */
+    static void reset(ServerLevel level) {
+        VillagerTakeover.resetForTests();
+        List<Entity> doomed = new ArrayList<>();
+        for (Entity e : level.getAllEntities()) {
+            if (e instanceof AssistantEntity || e instanceof Villager) doomed.add(e);
+        }
+        for (Entity e : doomed) e.discard();
+        Villages.resetForTests();
+        AssistantEntity.resetRegistryForTests();
+    }
+
+    // -------------------------------------------------------------- terrain
+
+    /** The free block above the highest solid one at this column. */
+    static BlockPos surface(ServerLevel level, int x, int z) {
+        level.getChunk(x >> 4, z >> 4);
+        int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+        return new BlockPos(x, y, z);
+    }
+
+    /** Make sure every chunk in this square exists before anyone stands on it. */
+    static void prepare(ServerLevel level, int cx, int cz, int radius) {
+        for (int x = (cx - radius) >> 4; x <= (cx + radius) >> 4; x++) {
+            for (int z = (cz - radius) >> 4; z <= (cz + radius) >> 4; z++) {
+                level.getChunk(x, z);
+            }
+        }
+    }
+
+    /** Water at ground level: the grass under it becomes the pond. */
+    static void pond(ServerLevel level, int cx, int cz, int r) {
+        for (int dx = -r; dx <= r; dx++) {
+            for (int dz = -r; dz <= r; dz++) {
+                if (dx * dx + dz * dz > r * r) continue;
+                BlockPos top = surface(level, cx + dx, cz + dz).below();
+                level.setBlock(top, Blocks.WATER.defaultBlockState(), 3);
+            }
+        }
+    }
+
+    /** A five-log oak with a proper crown. Leaves are persistent so nothing decays. */
+    static void tree(ServerLevel level, int x, int z) {
+        BlockPos base = surface(level, x, z);
+        for (int i = 0; i < 5; i++) {
+            level.setBlock(base.above(i), Blocks.OAK_LOG.defaultBlockState(), 3);
+        }
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                for (int dy = 3; dy <= 5; dy++) {
+                    if (Math.abs(dx) == 2 && Math.abs(dz) == 2) continue;
+                    if (dx == 0 && dz == 0 && dy < 5) continue;
+                    level.setBlock(base.offset(dx, dy, dz),
+                        Blocks.OAK_LEAVES.defaultBlockState().setValue(LeavesBlock.PERSISTENT, true), 3);
+                }
+            }
+        }
+    }
+
+    static void forest(ServerLevel level, int cx, int cz, int spread, int trees, long seed) {
+        RandomSource rnd = RandomSource.create(seed);
+        for (int i = 0; i < trees; i++) {
+            tree(level, cx - spread + rnd.nextInt(spread * 2 + 1), cz - spread + rnd.nextInt(spread * 2 + 1));
+        }
+    }
+
+    /** A stone hill with coal and iron in it — somewhere a shaft could go. */
+    static void hill(ServerLevel level, int cx, int cz, int half, int height, long seed) {
+        RandomSource rnd = RandomSource.create(seed);
+        for (int dx = -half; dx <= half; dx++) {
+            for (int dz = -half; dz <= half; dz++) {
+                BlockPos g = surface(level, cx + dx, cz + dz);
+                for (int i = 0; i < height; i++) {
+                    double r = rnd.nextDouble();
+                    Block b = r < 0.05 ? Blocks.COAL_ORE : r < 0.08 ? Blocks.IRON_ORE : Blocks.STONE;
+                    level.setBlock(g.above(i), b.defaultBlockState(), 3);
+                }
+            }
+        }
+    }
+
+    static void cows(ServerLevel level, int cx, int cz, int n) {
+        for (int i = 0; i < n; i++) {
+            Animal cow = EntityType.COW.create(level);
+            if (cow == null) continue;
+            BlockPos p = surface(level, cx + (i % 3) * 2, cz + (i / 3) * 2);
+            cow.moveTo(p.getX() + 0.5, p.getY(), p.getZ() + 0.5, 0, 0);
+            level.addFreshEntity(cow);
+        }
+    }
+
+    /**
+     * Somewhere plausible to live: a ring of features round the heart — ponds
+     * with grass, woods, stone hills — with cattle. Deliberately generous:
+     * this tests whether the folk can WORK when the ground is right, so that
+     * when they do not, the reason cannot be the ground.
+     */
+    static void generousTerrain(ServerLevel level, int cx, int cz) {
+        prepare(level, cx, cz, 130);
+        // Near the heart, so an early folk finds something at once.
+        pond(level, cx + 18, cz + 4, 3);
+        forest(level, cx - 22, cz - 6, 7, 6, 11);
+        // The ring: farms, woods, hills, on every bearing.
+        int r = 56;
+        for (int i = 0; i < 8; i++) {
+            double a = i * Math.PI / 4.0;
+            int x = cx + (int) Math.round(Math.cos(a) * r);
+            int z = cz + (int) Math.round(Math.sin(a) * r);
+            switch (i % 3) {
+                case 0 -> pond(level, x, z, 3);
+                case 1 -> forest(level, x, z, 8, 7, 100 + i);
+                default -> hill(level, x, z, 8, 14, 200 + i);
+            }
+        }
+        cows(level, cx + 10, cz + 30, 6);
+    }
+
+    // ---------------------------------------------------------------- reading
+
+    /** What the world holds, counted from the blocks. */
+    static Map<String, Integer> census(ServerLevel level, int cx, int cz, int radius) {
+        Map<String, Integer> m = new LinkedHashMap<>();
+        for (String k : new String[]{"farmland", "wheat", "logs", "stone", "planks", "cobble",
+                                     "chests", "furnaces", "beds", "tables", "doors", "torches"}) m.put(k, 0);
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        int minY = level.getMinBuildHeight(), maxY = minY + 70;
+        for (int x = cx - radius; x <= cx + radius; x++) {
+            for (int z = cz - radius; z <= cz + radius; z++) {
+                if (!level.hasChunk(x >> 4, z >> 4)) continue;
+                for (int y = minY; y < maxY; y++) {
+                    var st = level.getBlockState(p.set(x, y, z));
+                    if (st.isAir()) continue;
+                    Block b = st.getBlock();
+                    if (b == Blocks.FARMLAND) bump(m, "farmland");
+                    else if (b == Blocks.WHEAT) bump(m, "wheat");
+                    else if (st.is(BlockTags.LOGS)) bump(m, "logs");
+                    else if (b == Blocks.STONE) bump(m, "stone");
+                    else if (st.is(BlockTags.PLANKS)) bump(m, "planks");
+                    else if (b == Blocks.COBBLESTONE) bump(m, "cobble");
+                    else if (b == Blocks.CHEST) bump(m, "chests");
+                    else if (b == Blocks.FURNACE) bump(m, "furnaces");
+                    else if (st.is(BlockTags.BEDS)) bump(m, "beds");
+                    else if (b == Blocks.CRAFTING_TABLE) bump(m, "tables");
+                    else if (st.is(BlockTags.DOORS)) bump(m, "doors");
+                    else if (b == Blocks.TORCH || b == Blocks.WALL_TORCH) bump(m, "torches");
+                }
+            }
+        }
+        return m;
+    }
+
+    private static void bump(Map<String, Integer> m, String k) {
+        m.merge(k, 1, Integer::sum);
+    }
+
+    /** What is sitting in the chests, by kind. */
+    static Map<String, Integer> chestContents(ServerLevel level, int cx, int cz, int radius) {
+        Map<String, Integer> m = new LinkedHashMap<>();
+        for (int chunkX = (cx - radius) >> 4; chunkX <= (cx + radius) >> 4; chunkX++) {
+            for (int chunkZ = (cz - radius) >> 4; chunkZ <= (cz + radius) >> 4; chunkZ++) {
+                if (!level.hasChunk(chunkX, chunkZ)) continue;
+                LevelChunk chunk = level.getChunk(chunkX, chunkZ);
+                for (BlockEntity be : new ArrayList<>(chunk.getBlockEntities().values())) {
+                    if (!(be instanceof Container c)) continue;
+                    if (be instanceof net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity) continue;
+                    for (int i = 0; i < c.getContainerSize(); i++) {
+                        ItemStack s = c.getItem(i);
+                        if (s.isEmpty()) continue;
+                        m.merge(kind(s), s.getCount(), Integer::sum);
+                    }
+                }
+            }
+        }
+        return m;
+    }
+
+    private static String kind(ItemStack s) {
+        if (s.is(Items.BREAD) || s.get(DataComponents.FOOD) != null) return "food";
+        if (s.is(ItemTags.LOGS)) return "logs";
+        if (s.is(ItemTags.PLANKS)) return "planks";
+        if (s.is(Items.COBBLESTONE) || s.is(Items.STONE) || s.is(Items.COBBLED_DEEPSLATE)) return "stone";
+        if (s.is(Items.COAL) || s.is(Items.CHARCOAL)) return "coal";
+        if (s.is(Items.RAW_IRON) || s.is(Items.IRON_INGOT)) return "iron";
+        if (s.is(Items.WHEAT)) return "wheat";
+        if (s.is(Items.WHEAT_SEEDS)) return "seeds";
+        if (s.is(ItemTags.SAPLINGS)) return "saplings";
+        Item i = s.getItem();
+        return net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(i).getPath();
+    }
+
+    /** The whole picture, one line per folk. */
+    static void dashboard(ServerLevel level, BlockPos heart, String label) {
+        Villages.Village v = Villages.nearest(level, heart, 600);
+        StringBuilder sb = new StringBuilder("== ").append(label).append(" @tick ")
+            .append(level.getGameTime()).append(" day=").append(level.getDayTime() % 24000L);
+        if (v == null) {
+            log(sb.append(" — NO VILLAGE").toString());
+            return;
+        }
+        List<AssistantEntity> crew = Villages.folkOf(v.id());
+        sb.append(": ").append(crew.size()).append(" alive of ").append(Villages.headcount(v.id()))
+          .append(", ").append(Villages.ageOf(v.id()).label)
+          .append(", built=").append(Villages.builtList(v.id()));
+        log(sb.toString());
+        log("   world " + census(level, heart.getX(), heart.getZ(), 90));
+        log("   chests " + chestContents(level, heart.getX(), heart.getZ(), 90));
+        for (Villages.Need n : Villages.needs(level, v.id())) {
+            log("   short of " + n.what() + " (" + n.task() + " x" + n.amount() + ")");
+        }
+        for (AssistantEntity a : crew) log("   " + a.debugLine());
+    }
+
+    // --------------------------------------------------------------- commands
+
+    /** Run a command and hand back everything it said. */
+    static List<String> command(ServerLevel level, String text) {
+        List<String> said = new ArrayList<>();
+        CommandSource sink = new CommandSource() {
+            @Override public void sendSystemMessage(Component c) { said.add(c.getString()); }
+            @Override public boolean acceptsSuccess() { return true; }
+            @Override public boolean acceptsFailure() { return true; }
+            @Override public boolean shouldInformAdmins() { return false; }
+        };
+        CommandSourceStack src = level.getServer().createCommandSourceStack()
+            .withSource(sink).withLevel(level).withPosition(Vec3.ZERO);
+        level.getServer().getCommands().performPrefixedCommand(src, text);
+        return said;
+    }
+
+    // ------------------------------------------------------------ expectations
+
+    /** Collects what should be true, says which is not, and fails once at the end. */
+    static final class Expect {
+        private final List<String> failures = new ArrayList<>();
+
+        void that(boolean ok, String what) {
+            log((ok ? "  ok    " : "  FAIL  ") + what);
+            if (!ok) failures.add(what);
+        }
+
+        String summary() {
+            return failures.isEmpty() ? "" : failures.size() + " expectation(s) failed: "
+                + String.join(" | ", failures);
+        }
+
+        boolean clean() { return failures.isEmpty(); }
+    }
+}

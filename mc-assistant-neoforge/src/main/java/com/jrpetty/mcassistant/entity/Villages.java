@@ -74,6 +74,23 @@ public final class Villages {
         new Slot(AssistantEntity.StationTask.RANCH, 1, 14),
         new Slot(AssistantEntity.StationTask.FISH, 1, 16));
 
+    /** Forget every settlement. For tests, which share one JVM and would
+     *  otherwise inherit each other's villages. */
+    public static void resetForTests() {
+        ALL.clear();
+        AGE.clear();
+        BUILT.clear();
+        LAST_PROJECT.clear();
+        POP.clear();
+        STOCK.clear();
+        STOCK_TICK.clear();
+    }
+
+    /** Every settlement this session knows about. */
+    public static java.util.List<Village> every() {
+        return new ArrayList<>(ALL.values());
+    }
+
     public static void register(Village village) {
         ALL.put(village.id(), village);
     }

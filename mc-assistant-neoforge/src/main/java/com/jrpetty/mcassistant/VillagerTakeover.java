@@ -12,6 +12,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 /**
  * The villages that are already there.
@@ -43,59 +44,121 @@ public final class VillagerTakeover {
      *  founded one uses would cut it into two or three rival settlements. */
     private static final int JOIN_RANGE = Villages.VILLAGE_RANGE * 2;
 
+    /** Test hook: while set, neither path converts anything. Lets a test put a
+     *  villager into the world exactly the way a chunk load or world generation
+     *  would — without the join event getting to it first — and then prove the
+     *  periodic sweep finds it anyway. */
+    public static volatile boolean suspended = false;
+
+    /** Everything about a villager that the folk which replaces it needs. */
+    private record Snapshot(BlockPos where, float yaw, boolean baby, VillagerProfession trade) {}
+
+    private static Snapshot snap(Villager v) {
+        return new Snapshot(v.blockPosition(), v.getYRot(), v.isBaby(),
+            v.getVillagerData().getProfession());
+    }
+
+    /**
+     * Should this villager become folk? By default: every one of them — that
+     * is what was asked for, and a swap that skips the villagers you have
+     * actually met (which in an existing world means the ones with trade
+     * experience, a name or gossip) looks exactly like a swap that does not
+     * work. Protecting the ones you have traded with is a switch in the
+     * config, and it is off.
+     */
+    private static boolean eligible(Villager villager) {
+        if (!AssistantConfig.protectTradedVillagers()) return true;
+        if (villager.getVillagerXp() > 0 || villager.hasCustomName()) return false;
+        return villager.getGossips().getGossipEntries().isEmpty();
+    }
+
+    /**
+     * The fast path: a villager joining the world. It is taken off the board
+     * before it ever ticks and a folk is stood up in its place on the next
+     * tick — adding an entity from inside the event that is adding an entity
+     * is how you corrupt a chunk you are only trying to move into.
+     */
     @SubscribeEvent
     public static void onEntityJoin(EntityJoinLevelEvent event) {
-        if (!AssistantConfig.replaceVillagers()) return;
+        if (suspended || !AssistantConfig.replaceVillagers()) return;
         if (event.getLevel().isClientSide) return;
         if (!(event.getEntity() instanceof Villager villager)) return;
         if (!(event.getLevel() instanceof ServerLevel level)) return;
-        // A villager somebody has TRADED with, named, or CURED is somebody's —
-        // a mending librarian or a cured-discount farmer is hours of a
-        // player's work, and this must never eat it. A cure leaves no trade
-        // experience behind, only gossip, so gossip is checked too. Only the
-        // ones standing about become folk.
-        if (villager.getVillagerXp() > 0 || villager.hasCustomName()) return;
-        if (!villager.getGossips().getGossipEntries().isEmpty()) return;
+        if (!eligible(villager)) return;
 
-        // Take the villager off the board before it ever ticks, and stand a
-        // folk up in its place on the next tick — adding an entity from
-        // inside the event that is adding an entity is how you corrupt a
-        // chunk you are only trying to move into.
-        BlockPos where = villager.blockPosition();
-        float yaw = villager.getYRot();
-        boolean baby = villager.isBaby();
-        VillagerProfession trade = villager.getVillagerData().getProfession();
+        Snapshot snap = snap(villager);
         event.setCanceled(true);
+        level.getServer().execute(() -> convert(level, snap));
+    }
 
-        level.getServer().execute(() -> {
-            // THE FOLK FIRST. The villager is already gone; anything that can
-            // throw runs after its replacement is safely standing.
-            VillageFolkEntity folk = McAssistantMod.VILLAGE_FOLK.get().create(level);
-            if (folk == null) return;
-            folk.moveTo(where.getX() + 0.5, where.getY(), where.getZ() + 0.5, yaw, 0.0F);
+    /**
+     * The safety net: a periodic sweep over every villager already standing in
+     * the world. The join event is not a reliable way to meet every villager —
+     * whether it fires at all depends on HOW the entity got into the level
+     * (freshly spawned, loaded from a saved chunk, or placed by a structure
+     * during world generation), and a villager that slips past it simply
+     * stays a villager for ever. Nothing here depends on that: whoever is in
+     * the world, whichever way they arrived, is found within five seconds.
+     */
+    @SubscribeEvent
+    public static void onServerTick(ServerTickEvent.Post event) {
+        if (event.getServer().getTickCount() % 100 != 0) return;
+        for (ServerLevel level : event.getServer().getAllLevels()) sweep(level);
+    }
 
-            Villages.Village village = Villages.nearest(level, where, JOIN_RANGE);
-            if (village == null) village = Villages.found(level, where);
-            // Named, then joined: joining files it on the register under that
-            // name at once, so the next villager converted in this same tick
-            // asks for a free name and does not get this one.
-            folk.rename(com.jrpetty.mcassistant.entity.Names.freeFor(village.id()));
-            VillageSpawner.childKit(folk);
-            folk.joinVillage(village.id(), village.centre());
-            level.addFreshEntity(folk);
-            Villages.recordBirth(village.id());
-            keepAwake(level, village);
-            // Its own chunk and the ones round it, read off NOW, while it is
-            // certainly loaded — each chunk once per village, ever.
-            creditWhatStands(level, village.id(), where);
-            // A villager that had a trade keeps doing roughly what it did. One
-            // that never picked one takes whatever the village is short of,
-            // which is what every other folk does.
-            AssistantEntity.StationTask took = tradeFor(trade);
-            if (took != AssistantEntity.StationTask.NONE && !baby) {
-                folk.setStation(folk.blockPosition(), took);
-            }
-        });
+    /** Convert every eligible villager in this level right now. */
+    public static int sweep(ServerLevel level) {
+        if (suspended || !AssistantConfig.replaceVillagers()) return 0;
+        java.util.List<Villager> found = new java.util.ArrayList<>();
+        for (net.minecraft.world.entity.Entity e : level.getAllEntities()) {
+            if (e instanceof Villager v && v.isAlive() && eligible(v)) found.add(v);
+        }
+        for (Villager v : found) {
+            Snapshot snap = snap(v);
+            v.discard();
+            convert(level, snap);
+        }
+        return found.size();
+    }
+
+    /** Stand a folk up where the villager was, in the village it belonged to. */
+    private static void convert(ServerLevel level, Snapshot snap) {
+        // THE FOLK FIRST. The villager is already gone; anything that can
+        // throw runs after its replacement is safely standing.
+        VillageFolkEntity folk = McAssistantMod.VILLAGE_FOLK.get().create(level);
+        if (folk == null) return;
+        BlockPos where = snap.where();
+        folk.moveTo(where.getX() + 0.5, where.getY(), where.getZ() + 0.5, snap.yaw(), 0.0F);
+
+        Villages.Village village = Villages.nearest(level, where, JOIN_RANGE);
+        if (village == null) village = Villages.found(level, where);
+        // Named, then joined: joining files it on the register under that
+        // name at once, so the next villager converted in this same tick
+        // asks for a free name and does not get this one.
+        folk.rename(com.jrpetty.mcassistant.entity.Names.freeFor(village.id()));
+        VillageSpawner.childKit(folk);
+        folk.joinVillage(village.id(), village.centre());
+        level.addFreshEntity(folk);
+        Villages.recordBirth(village.id());
+        keepAwake(level, village);
+        // Its own chunk and the ones round it, read off NOW, while it is
+        // certainly loaded — each chunk once per village, ever.
+        creditWhatStands(level, village.id(), where);
+        // A villager that had a trade keeps doing roughly what it did. One
+        // that never picked one takes whatever the village is short of,
+        // which is what every other folk does.
+        AssistantEntity.StationTask took = tradeFor(snap.trade());
+        if (took != AssistantEntity.StationTask.NONE && !snap.baby()) {
+            folk.setStation(folk.blockPosition(), took);
+        }
+    }
+
+    /** Forget everything remembered about villages. For tests. */
+    public static void resetForTests() {
+        RING_TAKEN.clear();
+        READ.clear();
+        TALLY.clear();
+        suspended = false;
     }
 
     /** The ring each village has been given so far, so a chunk's worth of

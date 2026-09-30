@@ -42,6 +42,7 @@ public final class AssistantConfig {
     public static final ModConfigSpec.IntValue VILLAGE_GROWTH_CAP;
     public static final ModConfigSpec.IntValue VILLAGE_LOADED_CHUNKS;
     public static final ModConfigSpec.BooleanValue REPLACE_VILLAGERS;
+    public static final ModConfigSpec.BooleanValue PROTECT_TRADED_VILLAGERS;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -141,10 +142,15 @@ public final class AssistantConfig {
                 "furnaces and fields — instead of standing about. The settlement is",
                 "credited with the buildings it plainly already has.",
                 "THIS REMOVES TRADING with those villagers: they are gone, replaced by",
-                "people who work. Villagers you have TRADED WITH or NAMED are never",
-                "touched — a mending librarian is yours. Wandering traders are untouched.",
-                "Turn it off to keep vanilla villages exactly as they are.")
+                "people who work. Wandering traders are untouched. Turn it off to keep",
+                "vanilla villages exactly as they are.")
             .define("replaceVillagers", true);
+        PROTECT_TRADED_VILLAGERS = b.comment(
+                "Leave alone any villager you have traded with, named or cured. Off by",
+                "default: the swap is meant to be complete, and a swap that skips the",
+                "villagers you have actually met looks exactly like one that does not work.",
+                "Turn it on to keep a curated trading hall.")
+            .define("protectTradedVillagers", false);
         b.pop();
 
         SPEC = b.build();
@@ -173,6 +179,7 @@ public final class AssistantConfig {
     public static int villageGrowthCap() { return read(VILLAGE_GROWTH_CAP, 100); }
     public static int villageLoadedChunks() { return read(VILLAGE_LOADED_CHUNKS, 8); }
     public static boolean replaceVillagers() { return read(REPLACE_VILLAGERS, true); }
+    public static boolean protectTradedVillagers() { return read(PROTECT_TRADED_VILLAGERS, false); }
 
     /** Config values throw if read before the file is loaded (early world gen,
      *  datagen, a dedicated server still booting) — fall back rather than crash. */

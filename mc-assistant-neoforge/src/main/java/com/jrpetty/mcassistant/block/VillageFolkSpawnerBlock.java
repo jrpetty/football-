@@ -43,23 +43,28 @@ public class VillageFolkSpawnerBlock extends Block {
             || !(placer instanceof ServerPlayer player)) {
             return;
         }
+        // The block is spent by being placed. Take it away FIRST: the founding
+        // stores stand where it stood, and removing it afterwards would have
+        // taken the chest with it.
+        server.levelEvent(2001, pos, Block.getId(state));
+        server.removeBlock(pos, false);
         VillageFolkEntity folk = raise(server, pos, player.getYRot());
         if (folk == null) {
             player.sendSystemMessage(Component.literal(
                 "<Village> That settlement is full. Found another further out."));
-            return;   // the block stays; mine it back
+            // Give the block back rather than eating it.
+            server.setBlockAndUpdate(pos, state);
+            return;
         }
         player.displayClientMessage(Component.literal(
             Villages.headcount(folk.ownerId()) + " settled here — they will sort themselves out."), true);
-        // Placing spends the spawner: one block, one settler.
-        server.levelEvent(2001, pos, Block.getId(state));
-        server.removeBlock(pos, false);
     }
 
     /**
-     * Stand one settler up at this spot, founding a village if there is none
-     * within reach. Shared with the /village command, so both do exactly the
-     * same thing. Returns null when the settlement is at its cap.
+     * Stand one settler up beside this spot, founding a village if there is
+     * none within reach. {@code at} must be a FREE ground-level position — air
+     * over something solid. Shared with the /village command, so both do
+     * exactly the same thing. Returns null when the settlement is at its cap.
      */
     @Nullable
     public static VillageFolkEntity raise(ServerLevel server, BlockPos at, float yaw) {
@@ -80,8 +85,9 @@ public class VillageFolkSpawnerBlock extends Block {
         Villages.recordBirth(village.id());
         if (founding) {
             // The founding stores, and the ground kept awake — the same start
-            // a village the world grew gets.
-            VillageSpawner.supplyChest(server, at.above());
+            // a village the world grew gets. `at` is a free ground-level spot,
+            // so that is exactly where a chest stands.
+            VillageSpawner.supplyChest(server, at);
         }
         com.jrpetty.mcassistant.ChunkLoad.setLoaded(server, village.id(), village.centre(),
             VillageSpawner.loadedRadiusFor(Villages.headcount(village.id())), true);

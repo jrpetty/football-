@@ -87,44 +87,21 @@ jobs:
           java-version: "21"
           cache: gradle
 
-      - name: Probe the real GameTest API
+      - name: Run the village on a real headless server
         working-directory: mc-assistant-neoforge
         run: |
           chmod +x gradlew
-          # compileJava first: it is what MATERIALISES the Minecraft/NeoForge
-          # jars on disk, and printClasspath only lists paths.
-          ./gradlew --no-daemon -q -Pgametest=true compileJava printClasspath > cp.raw 2> cp.err || true
-          CP=$(tail -1 cp.raw)
-          {
-            echo "### classpath entries: $(echo "$CP" | tr ':' '\n' | wc -l)"
-            echo "### the ones that exist and look like Minecraft/NeoForge:"
-            for j in $(echo "$CP" | tr ':' ' '); do
-              if [ -e "$j" ]; then echo "  EXISTS $(du -h "$j" | cut -f1) $j"; else echo "  MISSING $j"; fi
-            done | grep -iE 'neoforge|minecraft|neoform|MISSING' | head -40
-            echo "### gametest-ish classes on the classpath"
-            for j in $(echo "$CP" | tr ':' ' '); do
-              unzip -l "$j" 2>/dev/null | awk '{print $4}' | grep -iE 'gametest' | sed "s|^|$(basename "$j"): |"
-            done | sort -u | head -300
-            for c in net.neoforged.neoforge.event.RegisterGameTestsEvent \
-                     net.minecraft.gametest.framework.GameTest \
-                     net.minecraft.gametest.framework.GameTestHelper \
-                     net.minecraft.gametest.framework.GameTestServer \
-                     net.minecraft.gametest.framework.GameTestInfo \
-                     net.minecraft.server.ServerTickRateManager; do
-              echo; echo "##### javap $c"
-              javap -cp "$CP" -p "$c" 2>&1 | grep -v '^Picked up'
-            done
-            for c in $(for j in $(echo "$CP" | tr ':' ' '); do unzip -l "$j" 2>/dev/null | awk '{print $4}' | grep -E '^net/neoforged/neoforge/gametest/.*\.class$'; done | sort -u | sed 's|/|.|g; s|\.class$||' | head -30); do
-              echo; echo "##### javap $c"
-              javap -cp "$CP" -p "$c" 2>&1 | grep -v '^Picked up'
-            done
-            echo; echo "##### ServerLevel entity iteration"
-            javap -cp "$CP" -p net.minecraft.server.level.ServerLevel 2>&1 | grep -E 'getAllEntities|getEntities|getEntity\(' 
-          } > probe.txt 2>&1
-          wc -l probe.txt
-          cat cp.err | tail -5
+          set +e
+          ./gradlew --no-daemon -Pgametest=true runGameTestServer 2>&1 | tee gametest.log
+          echo "gradle exit: ${PIPESTATUS[0]}"
+          set -e
+          # The part worth reading: our own reporting, the framework's verdicts,
+          # and any crash — without the thousands of lines of engine start-up.
+          grep -aE "\[VT\]|GAME TEST|Game Test|game test|required|FAILED|Exception|Caused by|^\s+at com\.jrpetty|Crash|crash report|ERROR|Test '|test '|batch|Batch" gametest.log > vt-report.txt || true
+          wc -l gametest.log vt-report.txt
+          gzip -k -f gametest.log
 
-      - name: Publish probe
+      - name: Publish the report
         if: always()
         uses: softprops/action-gh-release@v2
         with:
@@ -134,5 +111,6 @@ jobs:
           make_latest: "false"
           body: "Raw output of the empirical village tests. Not a mod build."
           files: |
-            mc-assistant-neoforge/probe.txt
+            mc-assistant-neoforge/vt-report.txt
+            mc-assistant-neoforge/gametest.log.gz
           overwrite_files: true
