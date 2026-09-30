@@ -82,6 +82,11 @@ public final class Villages {
         BUILT.clear();
         LAST_PROJECT.clear();
         POP.clear();
+        LAST_BIRTH.clear();
+        SITES.clear();
+        CELLS.clear();
+        LEAD.clear();
+        LEAD_AT.clear();
         STOCK.clear();
         STOCK_TICK.clear();
     }
@@ -136,6 +141,11 @@ public final class Villages {
      *  off it, so nothing keeps pointing at a village nobody lives in. */
     public static void forget(UUID villageId) {
         POP.remove(villageId);
+        LAST_BIRTH.remove(villageId);
+        SITES.remove(villageId);
+        CELLS.remove(villageId);
+        LEAD.remove(villageId);
+        LEAD_AT.remove(villageId);
         ALL.remove(villageId);
         AGE.remove(villageId);
         BUILT.remove(villageId);
@@ -177,6 +187,27 @@ public final class Villages {
     /** Somebody was born here. */
     public static void recordBirth(UUID villageId) {
         POP.merge(villageId, 1, Integer::sum);
+    }
+
+    private static final Map<UUID, Long> LAST_BIRTH = new ConcurrentHashMap<>();
+
+    /**
+     * May this settlement raise another child yet? One clock for the whole
+     * village, because the per-folk clocks alone let a dozen fed hands stood
+     * together produce a child every few seconds. The gap shortens as the
+     * village grows — a hundred folk can raise a child every half minute,
+     * twelve every few minutes — so growth is steady rather than explosive at
+     * either end.
+     */
+    public static boolean mayBirth(UUID villageId, long gameTime) {
+        int folk = Math.max(1, headcount(villageId));
+        long gap = Math.max(600L, Math.min(6000L, 12000L / (folk / 4 + 1)));
+        return gameTime - LAST_BIRTH.getOrDefault(villageId, -gap) >= gap;
+    }
+
+    /** A child was raised here just now (starts the village's clock). */
+    public static void noteBirth(UUID villageId, long gameTime) {
+        LAST_BIRTH.put(villageId, gameTime);
     }
 
     /** Somebody died here — the one thing that makes a village smaller. */
@@ -435,9 +466,6 @@ public final class Villages {
                     wants.add(new Need("more houses", Task.BUILD, 1));
                 }
                 if (built(villageId, "smeltery") < 1) wants.add(new Need("a smeltery", Task.BUILD, 1));
-                if (folk >= 14 && built(villageId, "pen") < 1) {
-                    wants.add(new Need("a pen for the animals", Task.BUILD, 1));
-                }
                 need(wants, level, v, "food in the stores", Task.FOOD, foodNow);
             }
             case IRON -> {
@@ -539,7 +567,7 @@ public final class Villages {
             java.util.Arrays.fill(cache, 0);
             Task[] all = Task.values();
             for (com.jrpetty.mcassistant.entity.ZoneChests.Found f
-                    : com.jrpetty.mcassistant.entity.ZoneChests.around(level, centre, radius, 8)) {
+                    : com.jrpetty.mcassistant.entity.ZoneChests.around(level, centre, radius, 64)) {
                 if (!f.stillThere() || !ZoneChests.isStashable(f)) continue;
                 net.minecraft.world.Container c = f.container();
                 for (int i = 0; i < c.getContainerSize(); i++) {
@@ -547,6 +575,12 @@ public final class Villages {
                     if (st.isEmpty()) continue;
                     for (Task t : all) {
                         if (matches(t, st)) cache[t.ordinal()] += st.getCount();
+                    }
+                    // Wheat is not food, but it is three to a loaf and every
+                    // field grows it. A larder that ignored it read "short of
+                    // food" beside chests of it, and the ages never turned.
+                    if (st.is(net.minecraft.world.item.Items.WHEAT)) {
+                        cache[Task.FOOD.ordinal()] += st.getCount() / 3;
                     }
                 }
             }
@@ -602,12 +636,24 @@ public final class Villages {
         LAST_PROJECT.put(villageId, gameTime);
     }
 
+    /** Somebody looked, and the stores were not yet up to it. That is not a
+     *  project started, so it must not cost the village its whole eight-minute
+     *  gap: look again in two. (The very first look, seconds after founding,
+     *  always finds an almost empty larder — and used to cost eight minutes.) */
+    public static void retrySoon(UUID villageId, long gameTime) {
+        LAST_PROJECT.put(villageId, gameTime - PROJECT_GAP + 2400L);
+    }
+
     /** Something actually went up. Only finished buildings count toward the
      *  village's ages — a village that could not find the timber has not got
      *  a storehouse, however many times it tried. */
     public static void noteProject(UUID villageId, String structure, long gameTime) {
         LAST_PROJECT.put(villageId, gameTime);
         BUILT.computeIfAbsent(villageId, k -> new ArrayList<>()).add(structure);
+        Map<String, Site> pending = SITES.get(villageId);
+        if (pending != null) pending.remove(structure);      // its ground is spoken for now
+        LEAD.remove(villageId);                              // and the next one starts fresh
+        LEAD_AT.remove(villageId);
     }
 
     private static int built(UUID villageId, String structure) {
@@ -645,16 +691,187 @@ public final class Villages {
         if (built(villageId, "smeltery") < 1) return "smeltery";
         if (at == Age.STONE) return null;
 
-        // A pen, once the place is big enough to keep a rancher. It was never
-        // on this list at all, so the one trade that needs a fence around its
-        // animals worked an open field and watched them wander off.
-        if (folk >= 14 && built(villageId, "pen") < 1) return "pen";
         if (built(villageId, "workshop") < 1) return "workshop";
-        if (folk >= 8 && built(villageId, "watchtower") < 1) return "watchtower";
-        if (at == Age.IRON) return null;
+        // Whatever the headcount: the Iron Age asks for it, and a village
+        // that has lost people must still be able to finish its list.
+        if (built(villageId, "watchtower") < 1) return "watchtower";
+        if (at == Age.IRON) return penIfWanted(villageId, folk);
 
         if (built(villageId, "lighthouse") < 1) return "lighthouse";
-        return null;
+        return penIfWanted(villageId, folk);
+    }
+
+    /** A pen, once the place is big enough to keep a rancher — but LAST, after
+     *  everything an age actually asks for. It used to sit ahead of the
+     *  workshop and the watchtower, and its fences were never made, so a
+     *  village of fourteen could never finish the Iron Age. */
+    @Nullable
+    private static String penIfWanted(UUID villageId, int folk) {
+        return folk >= 14 && built(villageId, "pen") < 1 ? "pen" : null;
+    }
+
+    // ---- who is raising the next building ----
+
+    private static final Map<UUID, UUID> LEAD = new ConcurrentHashMap<>();
+    private static final Map<UUID, Long> LEAD_AT = new ConcurrentHashMap<>();
+    private static final long LEAD_TERM = 6000L;      // five minutes without progress
+
+    /**
+     * Is this hand the one raising the village's next building? The first to
+     * ask becomes the lead and stays it: its pack is where the timber, the
+     * chests and the ladders pile up over several visits, so the next
+     * volunteer must not start again from nothing with a pack of its own —
+     * half a building's fixtures scattered across a dozen packs is a building
+     * nobody can ever start. The post passes on when the lead dies, is nowhere
+     * to be found, or five minutes go by without it getting anywhere.
+     */
+    public static boolean isLead(UUID villageId, UUID me, long now) {
+        UUID cur = LEAD.get(villageId);
+        Long since = LEAD_AT.get(villageId);
+        boolean valid = cur != null && since != null && now - since < LEAD_TERM && livesHere(villageId, cur);
+        if (!valid) {
+            LEAD.put(villageId, me);
+            LEAD_AT.put(villageId, now);
+            return true;
+        }
+        return cur.equals(me);
+    }
+
+    /** Is this hand the lead right now (without taking the post if it is free)? */
+    public static boolean holdsTheLead(UUID villageId, UUID me, long now) {
+        UUID cur = LEAD.get(villageId);
+        Long since = LEAD_AT.get(villageId);
+        return me.equals(cur) && since != null && now - since < LEAD_TERM;
+    }
+
+    /** The lead got somewhere — a load drawn, a fixture crafted: the term restarts. */
+    public static void leadProgress(UUID villageId, UUID me, long now) {
+        if (me.equals(LEAD.get(villageId))) LEAD_AT.put(villageId, now);
+    }
+
+    private static boolean livesHere(UUID villageId, UUID folk) {
+        for (AssistantEntity a : AssistantEntity.allFor(villageId)) {
+            if (a.isAlive() && a.getUUID().equals(folk)) return true;
+        }
+        return false;
+    }
+
+    // ---- where the buildings go ----
+
+    /** Where a building goes: the spot it is centred on, which way it faces
+     *  (its door is on the heart's side), and — for a wall — how big a ring. */
+    public record Site(BlockPos anchor, net.minecraft.core.Direction facing, int radius) {}
+
+    private static final Map<UUID, Map<String, Site>> SITES = new ConcurrentHashMap<>();
+    private static final Map<UUID, Integer> CELLS = new ConcurrentHashMap<>();
+
+    /** Nine blocks a lot: a five-by-five house or store and a margin. */
+    private static final int PITCH = 9;
+    /** The wall rings the first lots. */
+    private static final int WALL_RADIUS = 13;
+
+    /** Lot offsets in the order buildings claim them: the ring closest to the
+     *  heart first, working round. */
+    private static final int[][] LOTS = lots();
+
+    private static int[][] lots() {
+        List<int[]> cells = new ArrayList<>();
+        for (int r = 1; r <= 7; r++) {
+            for (int x = -r; x <= r; x++) {
+                for (int z = -r; z <= r; z++) {
+                    if (Math.max(Math.abs(x), Math.abs(z)) == r) cells.add(new int[]{ x, z });
+                }
+            }
+        }
+        cells.sort(java.util.Comparator.<int[]>comparingInt(c -> Math.max(Math.abs(c[0]), Math.abs(c[1])))
+            .thenComparingDouble(c -> Math.atan2(c[1], c[0])));
+        return cells.toArray(new int[0][]);
+    }
+
+    /**
+     * Where this project goes up — chosen ONCE and kept until it stands.
+     *
+     * <p>Buildings used to go up wherever the volunteer happened to be
+     * standing, four blocks in front of it. Any interruption — a fight, a
+     * shelter, the end of the day — and the retry laid the blueprint out again
+     * somewhere else, leaving the first attempt half-built behind and never
+     * finishing the second. A lot is claimed on the village's own grid, flat
+     * and clear, and the job is anchored to it, so a build picks up where it
+     * left off.
+     */
+    @Nullable
+    public static Site siteFor(net.minecraft.server.level.ServerLevel level, UUID villageId, String project) {
+        Village v = get(villageId);
+        if (v == null) return null;
+        Map<String, Site> pending = SITES.computeIfAbsent(villageId, k -> new ConcurrentHashMap<>());
+        Site have = pending.get(project);
+        if (have != null) return have;
+
+        Site site = null;
+        if (project.equals("fortify")) {
+            BlockPos ground = groundFor(level, v.centre().getX(), v.centre().getZ(), false);
+            if (ground != null) site = new Site(ground, net.minecraft.core.Direction.NORTH, WALL_RADIUS);
+        } else {
+            int i = CELLS.getOrDefault(villageId, 0);
+            int looked = 0;
+            while (i < LOTS.length && looked < 16 && site == null) {
+                int[] c = LOTS[i++];
+                looked++;
+                BlockPos ground = groundFor(level, v.centre().getX() + c[0] * PITCH,
+                    v.centre().getZ() + c[1] * PITCH, true);
+                if (ground != null) {
+                    site = new Site(ground, facingOf(c[0], c[1]), 0);
+                }
+            }
+            CELLS.put(villageId, i);
+        }
+        if (site != null) pending.put(project, site);
+        return site;
+    }
+
+    /** Which way is "away from the heart" for a lot at this offset. */
+    private static net.minecraft.core.Direction facingOf(int dx, int dz) {
+        return Math.abs(dx) >= Math.abs(dz)
+            ? (dx >= 0 ? net.minecraft.core.Direction.EAST : net.minecraft.core.Direction.WEST)
+            : (dz >= 0 ? net.minecraft.core.Direction.SOUTH : net.minecraft.core.Direction.NORTH);
+    }
+
+    /**
+     * Flat, dry, clear ground for a five-by-five building centred here — or
+     * null. The anchor is the first free block above the ground, which is the
+     * floor level every blueprint is measured from.
+     */
+    @Nullable
+    private static BlockPos groundFor(net.minecraft.server.level.ServerLevel level, int x, int z,
+                                      boolean needsClearance) {
+        int lo = Integer.MAX_VALUE, hi = Integer.MIN_VALUE;
+        for (int dx = -3; dx <= 3; dx += 3) {
+            for (int dz = -3; dz <= 3; dz += 3) {
+                if (!level.hasChunk((x + dx) >> 4, (z + dz) >> 4)) return null;
+                int h = level.getHeight(
+                    net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                    x + dx, z + dz);
+                lo = Math.min(lo, h);
+                hi = Math.max(hi, h);
+            }
+        }
+        if (hi - lo > 2) return null;                         // a slope, not a lot
+        int y = (lo + hi) / 2;
+        BlockPos at = new BlockPos(x, y, z);
+        net.minecraft.world.level.block.state.BlockState under = level.getBlockState(at.below());
+        if (!under.isSolid() || !under.getFluidState().isEmpty()) return null;   // water, or air
+        if (!needsClearance) return at;
+        // Something already stands here — a tree, a house, a field — if much of
+        // the footprint is not open air or something soft.
+        int blocked = 0;
+        for (int dx = -3; dx <= 3; dx++) {
+            for (int dz = -3; dz <= 3; dz++) {
+                for (int dy = 0; dy <= 1; dy++) {
+                    if (!level.getBlockState(at.offset(dx, dy, dz)).canBeReplaced()) blocked++;
+                }
+            }
+        }
+        return blocked > 10 ? null : at;
     }
 
     /** What an idle hand should be gathering for the age the village is in —

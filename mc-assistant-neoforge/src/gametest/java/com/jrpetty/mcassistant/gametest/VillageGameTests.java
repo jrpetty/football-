@@ -53,12 +53,31 @@ public class VillageGameTests {
 
     // ============================================================ the basics
 
+    /** Every recipe the mod ships must actually PARSE. In 1.21.1 an ingredient
+     *  written as a bare string is silently dropped at load, and the item then
+     *  cannot be crafted in survival — which nothing else would notice. */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "t00_recipes")
+    public static void t00_recipes(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        StringBuilder missing = new StringBuilder();
+        for (String id : new String[]{"assistant_spawner", "job_board", "place_marker",
+                                      "zone_marker", "village_charter", "village_folk_spawner"}) {
+            var key = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mc_assistant", id);
+            boolean there = level.getServer().getRecipeManager().byKey(key).isPresent();
+            Kit.log("t00 recipe " + id + ": " + (there ? "loaded" : "MISSING"));
+            if (!there) missing.append(id).append(' ');
+        }
+        helper.assertTrue(missing.length() == 0, "recipes that did not load: " + missing);
+        helper.succeed();
+    }
+
     /** Does a folk exist, tick for ten seconds, and stay alive? A crash on
      *  the entity tick kills the whole server, so this is also a smoke test. */
     @GameTest(template = EMPTY, timeoutTicks = 400, batch = "t01_boot")
     public static void t01_boot(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
+        Kit.hold(level, 2500, 2500, 48);
         BlockPos at = Kit.surface(level, 2500, 2500);
         VillageFolkEntity folk = McAssistantMod.VILLAGE_FOLK.get().create(level);
         helper.assertTrue(folk != null, "the village_folk entity type cannot create an entity");
@@ -77,6 +96,7 @@ public class VillageGameTests {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        Kit.hold(level, 2600, 2600, 48);
         BlockPos ground = Kit.surface(level, 2600, 2600);
         ItemStack stack = new ItemStack(McAssistantMod.FOLK_SPAWNER_ITEM.get());
         player.setItemInHand(InteractionHand.MAIN_HAND, stack);
@@ -101,6 +121,7 @@ public class VillageGameTests {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        Kit.hold(level, 2700, 2700, 48);
         BlockPos ground = Kit.surface(level, 2700, 2700);
         ItemStack stack = new ItemStack(McAssistantMod.VILLAGE_CHARTER.get());
         player.setItemInHand(InteractionHand.MAIN_HAND, stack);
@@ -121,6 +142,7 @@ public class VillageGameTests {
     public static void t04_commands(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
+        Kit.hold(level, 2800, 2800, 48);
         List<String> said = Kit.command(level, "village spawnat 2800 2800 3");
         Kit.log("t04 spawnat said: " + said);
         List<String> folkLines = null;
@@ -146,6 +168,7 @@ public class VillageGameTests {
     public static void t05_takeover_join(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
+        Kit.hold(level, 2900, 2900, 48);
         BlockPos at = Kit.surface(level, 2900, 2900);
         Villager v = EntityType.VILLAGER.create(level);
         v.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
@@ -167,6 +190,7 @@ public class VillageGameTests {
     public static void t06_takeover_sweep(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
+        Kit.hold(level, 3000, 2900, 48);
         BlockPos at = Kit.surface(level, 3000, 2900);
         VillagerTakeover.suspended = true;
         Villager v = EntityType.VILLAGER.create(level);
@@ -201,6 +225,7 @@ public class VillageGameTests {
         level.setDayTime(1000);
 
         final int cx = 3500, cz = 3500;
+        Kit.hold(level, cx, cz, 140);
         Kit.generousTerrain(level, cx, cz);
         final BlockPos heart = Kit.surface(level, cx, cz);
         for (int i = 0; i < 12; i++) {
@@ -225,7 +250,7 @@ public class VillageGameTests {
                 done[0] = true;
                 Kit.log("---- checkpoint 1500: trades and ground");
                 ex.that(v != null, "a village exists");
-                ex.that(crew.size() == 12, "all twelve are alive (" + crew.size() + ")");
+                ex.that(crew.size() >= 12, "all twelve are still here (" + crew.size() + ")");
                 Map<StationTask, Integer> by = new EnumMap<>(StationTask.class);
                 int zoned = 0, indoor = 0;
                 for (AssistantEntity a : crew) {
@@ -257,12 +282,12 @@ public class VillageGameTests {
                 var world = Kit.census(level, cx, cz, 90);
                 ex.that(world.get("wheat") > 0 || chests.getOrDefault("wheat", 0) > 0,
                     "wheat has been grown (" + world.get("wheat") + " standing, " + chests.getOrDefault("wheat", 0) + " stored)");
-                ex.that(crew.size() == 12, "nobody has died yet (" + crew.size() + " of 12)");
+                ex.that(crew.size() >= 12, "nobody has died yet (" + crew.size() + " of 12+)");
             }
             if (!done[3] && t >= 24000) {
                 done[3] = true;
                 Kit.log("---- checkpoint 24000: a full day");
-                ex.that(crew.size() >= 11, "at most one lost in a day (" + crew.size() + " of 12)");
+                ex.that(crew.size() >= 11, "at most one lost in a day (" + crew.size() + " of 12+)");
                 ex.that(v != null && !Villages.builtList(v.id()).isEmpty(),
                     "the village has built something: " + (v == null ? "-" : Villages.builtList(v.id())));
                 Kit.log("  " + ex.summary());

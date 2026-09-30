@@ -2,8 +2,8 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "P": "minecraft:paper",
-    "S": "minecraft:stick"
+    "P": { "item": "minecraft:paper" },
+    "S": { "item": "minecraft:stick" }
   },
   "pattern": [
     "P",

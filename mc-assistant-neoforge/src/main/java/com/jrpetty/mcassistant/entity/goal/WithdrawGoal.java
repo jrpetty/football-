@@ -27,7 +27,9 @@ public class WithdrawGoal extends Goal {
     @Nullable private Job job;
     @Nullable private BlockPos chestPos;
     private int stuckTicks;
+    private double bestDistSq = Double.MAX_VALUE;
     private int myGen;
+    private String word = "";
 
     public WithdrawGoal(AssistantEntity assistant) {
         this.assistant = assistant;
@@ -46,6 +48,15 @@ public class WithdrawGoal extends Goal {
             case "everything", "stuff", "my stuff", "all", "loot", "item" -> s -> true;
             case "log", "wood" -> s -> s.is(ItemTags.LOGS);
             case "plank" -> s -> s.is(ItemTags.PLANKS);
+            // Exact, not "contains": "chest" would take a chestplate, "axe" a
+            // pickaxe and a waxed block, "furnace" a blast furnace.
+            case "chest" -> s -> s.is(net.minecraft.world.item.Items.CHEST);
+            case "furnace" -> s -> s.is(net.minecraft.world.item.Items.FURNACE);
+            case "axe" -> s -> BuiltInRegistries.ITEM.getKey(s.getItem()).getPath().endsWith("_axe");
+            case "fuel" -> s -> s.is(net.minecraft.world.item.Items.COAL)
+                || s.is(net.minecraft.world.item.Items.CHARCOAL)
+                || s.is(ItemTags.LOGS) || s.is(ItemTags.PLANKS);
+            case "ore" -> AssistantEntity.SMELTABLE_ORE;
             case "stone", "cobble", "cobblestone", "rock" -> s ->
                 BuiltInRegistries.ITEM.getKey(s.getItem()).getPath().contains("cobble")
                     || BuiltInRegistries.ITEM.getKey(s.getItem()).getPath().equals("stone");
@@ -78,14 +89,37 @@ public class WithdrawGoal extends Goal {
         this.job = assistant.peekJob();
         this.myGen = assistant.taskGen();
         this.stuckTicks = 0;
+        this.bestDistSq = Double.MAX_VALUE;
         this.chestPos = null;
         if (job == null || job.arg() == null) {
             finish("I didn't catch what to fetch.");
             return;
         }
-        this.chestPos = assistant.findChestWith(matcherFor(job.arg()), 24);
+        // "word" fetches from the chests around the hand; "word@x y z" from
+        // the chests around that spot — the village stores, fetched from the
+        // plot sixty blocks out.
+        String arg = job.arg();
+        BlockPos anchor = null;
+        int radius = 32;
+        int at = arg.indexOf('@');
+        if (at >= 0) {
+            String[] p = arg.substring(at + 1).split(" ");
+            arg = arg.substring(0, at);
+            if (p.length == 3 || p.length == 4) {
+                try {
+                    anchor = new BlockPos(Integer.parseInt(p[0]), Integer.parseInt(p[1]),
+                        Integer.parseInt(p[2]));
+                    if (p.length == 4) radius = Integer.parseInt(p[3]);
+                } catch (NumberFormatException ignored) { }
+            }
+        }
+        this.word = arg;
+        this.chestPos = anchor != null
+            ? assistant.findChestWithNear(anchor, matcherFor(word), radius)
+            : assistant.findChestWith(matcherFor(word), 24);
         if (chestPos == null) {
-            finish("I can't find a chest with " + job.arg() + " within 24 blocks.");
+            finish("I can't find a chest with " + word + " "
+                + (anchor != null ? "in the stores." : "within 24 blocks."));
         }
     }
 
@@ -118,7 +152,13 @@ public class WithdrawGoal extends Goal {
                 assistant.getNavigation().moveTo(
                     chestPos.getX() + 0.5, chestPos.getY(), chestPos.getZ() + 0.5, 1.1D);
             }
-            if (++stuckTicks > 140) {
+            // Progress-based, not a fixed number of ticks: the village stores
+            // can be a long walk from the plot, and a fixed budget gave up on
+            // every one of them halfway there.
+            if (distSq < bestDistSq - 1.0) {
+                bestDistSq = distSq;
+                stuckTicks = 0;
+            } else if (++stuckTicks > 300) {
                 finish("I couldn't reach the chest.");
             }
             return;
@@ -130,7 +170,7 @@ public class WithdrawGoal extends Goal {
             return;
         }
 
-        Predicate<ItemStack> match = matcherFor(job.arg());
+        Predicate<ItemStack> match = matcherFor(word);
         int wanted = job.amount();
         int moved = 0;
         for (int i = 0; i < container.getContainerSize() && moved < wanted; i++) {
@@ -148,7 +188,7 @@ public class WithdrawGoal extends Goal {
         container.setChanged();
         assistant.rememberChest(chestPos, container);
         finish(moved > 0
-            ? "Got " + moved + " " + job.arg() + " from the chest."
-            : "That chest had no " + job.arg() + " (or my pack is full).");
+            ? "Got " + moved + " " + word + " from the chest."
+            : "That chest had no " + word + " (or my pack is full).");
     }
 }

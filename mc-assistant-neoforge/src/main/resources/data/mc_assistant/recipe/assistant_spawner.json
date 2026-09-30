@@ -2,8 +2,8 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "R": "minecraft:rotten_flesh",
-    "D": "minecraft:diamond"
+    "R": { "item": "minecraft:rotten_flesh" },
+    "D": { "item": "minecraft:diamond" }
   },
   "pattern": [
     "RRR",

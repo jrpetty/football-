@@ -54,6 +54,21 @@ public record Job(Type type, @Nullable GatherGoal.Kind kind, int amount,
         return new Job(Type.WITHDRAW, null, Math.max(1, Math.min(MAX_AMOUNT, amount)), null, itemWord);
     }
 
+    /** Withdraw from the chests around a GIVEN spot rather than around the
+     *  hand — how a folk out on its plot fetches what it is short of from the
+     *  village stores at the heart. arg = "word@x y z r". */
+    public static Job withdrawAt(String itemWord, int amount, net.minecraft.core.BlockPos anchor) {
+        return withdrawAt(itemWord, amount, anchor, 32);
+    }
+
+    /** As above, looking as far as {@code radius} blocks around the spot. */
+    public static Job withdrawAt(String itemWord, int amount, net.minecraft.core.BlockPos anchor,
+                                 int radius) {
+        return new Job(Type.WITHDRAW, null, Math.max(1, Math.min(MAX_AMOUNT, amount)), null,
+            itemWord + "@" + anchor.getX() + " " + anchor.getY() + " " + anchor.getZ()
+                + " " + Math.max(8, Math.min(160, radius)));
+    }
+
     public static Job farm() {
         return new Job(Type.FARM, null, 0, null, null);
     }

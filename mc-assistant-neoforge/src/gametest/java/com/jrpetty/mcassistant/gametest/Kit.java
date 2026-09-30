@@ -75,6 +75,18 @@ final class Kit {
         return new BlockPos(x, y, z);
     }
 
+    /** Keep every chunk in this square loaded and ticking for the whole test.
+     *  Tests run far from anyone, so without this the ground under a folk is
+     *  unloaded a moment after it is made and the test measures the chunk
+     *  system, not the village. */
+    static void hold(ServerLevel level, int cx, int cz, int radius) {
+        for (int x = (cx - radius) >> 4; x <= (cx + radius) >> 4; x++) {
+            for (int z = (cz - radius) >> 4; z <= (cz + radius) >> 4; z++) {
+                level.setChunkForced(x, z, true);
+            }
+        }
+    }
+
     /** Make sure every chunk in this square exists before anyone stands on it. */
     static void prepare(ServerLevel level, int cx, int cz, int radius) {
         for (int x = (cx - radius) >> 4; x <= (cx + radius) >> 4; x++) {

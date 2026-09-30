@@ -249,7 +249,14 @@ public final class CraftPlanner {
                                     Map<String, Integer> resPack, Map<String, Integer> resChest,
                                     Set<Item> path, int depth) {
         switch (base) {
-            case LOG -> { jobs.add(Job.gather(GatherGoal.Kind.LOGS, qty)); narration.add("gather " + qty + " logs"); }
+            case LOG -> {
+                // No tree in reach of a hand that can only work its own ground
+                // is not a plan, it is a gather that comes back empty — and a
+                // plan that comes back empty re-plans itself, for ever.
+                if (a.isSettler() && !a.logsInReach()) { blockers.add(qty + " logs"); return; }
+                jobs.add(Job.gather(GatherGoal.Kind.LOGS, qty));
+                narration.add("gather " + qty + " logs");
+            }
             case COBBLE -> { jobs.add(Job.gather(GatherGoal.Kind.STONE, qty)); narration.add("gather " + qty + " stone"); }
             case COAL -> { jobs.add(Job.gather(GatherGoal.Kind.COAL, qty)); narration.add("gather " + qty + " coal"); }
             case DIRT -> { jobs.add(Job.gather(GatherGoal.Kind.DIRT, qty)); narration.add("gather " + qty + " dirt"); }

@@ -25,6 +25,9 @@ public class DepositGoal extends Goal {
     private int stuckTicks;
     private int stashStartTick = -1;   // when it started loading this chest
     private double bestDistSq = Double.MAX_VALUE;
+    private int hops;              // full chests tried this run
+    /** Set when the destination is a supply route: only what it asked for goes. */
+    @Nullable private java.util.function.Predicate<ItemStack> routeOnly;
     private int myGen;
 
     public DepositGoal(AssistantEntity assistant) {
@@ -51,9 +54,14 @@ public class DepositGoal extends Goal {
         this.myGen = assistant.taskGen();
         this.active = true;
         this.stuckTicks = 0;
+        this.hops = 0;
+        this.routeOnly = null;
         this.bestDistSq = Double.MAX_VALUE;
-        if (assistant.countItems() == 0) {
-            finish("Nothing to stash — my pack is empty.");
+        if (assistant.stashable() == 0) {
+            // Nothing above what this hand keeps for its own work. Not a dry
+            // run, not a full chest — just no errand, so it must not back the
+            // trade off or walk anywhere to find that out.
+            finishNothing();
             return;
         }
         // A town-work deposit names its depot. Otherwise: does a crewmate
@@ -70,8 +78,11 @@ public class DepositGoal extends Goal {
             targeted = assistant.usablePreferredChest();
         }
         if (targeted == null) {
-            targeted = com.jrpetty.mcassistant.entity.Supply.routeFor(assistant);
-            if (targeted != null) {
+            com.jrpetty.mcassistant.entity.Supply.Route route =
+                com.jrpetty.mcassistant.entity.Supply.routeFor(assistant);
+            if (route != null) {
+                targeted = route.chest();
+                routeOnly = route.only();
                 assistant.sayRoutine("Running this load over to where it's wanted.");
             }
         }
@@ -96,12 +107,22 @@ public class DepositGoal extends Goal {
     public void stop() {
         this.active = false;
         this.chestPos = null;
+        this.routeOnly = null;
         this.fixedTarget = false;
         this.stashStartTick = -1;
         assistant.getNavigation().stop();
     }
 
     private void finish(String message) { finish(message, false); }
+
+    /** The run had nothing to do: drop it, touch nothing else. */
+    private void finishNothing() {
+        assistant.pollJob();
+        this.active = false;
+        this.chestPos = null;
+        this.stashStartTick = -1;
+        assistant.getNavigation().stop();
+    }
 
     /** End the job without narrating it — routine stashing is not news. */
     private void finishQuiet(boolean productive) {
@@ -198,6 +219,7 @@ public class DepositGoal extends Goal {
         for (int i = 0; i < items.size(); i++) {
             ItemStack stack = items.get(i);
             if (stack.isEmpty()) continue;
+            if (routeOnly != null && !routeOnly.test(stack)) continue;   // not what they asked for
             int keep = 0;
             int reserve = assistant.depositReserve(stack);
             if (reserve > 0) {
@@ -229,11 +251,19 @@ public class DepositGoal extends Goal {
             finishQuiet(true);
             return;
         }
+        // Nothing moved because there was nothing to move (all of it is kit),
+        // not because the chest was full: go home rather than trying another
+        // chest, and another, and another. With two chests that each had a
+        // free slot this bounced between them for ever.
+        if (assistant.stashable() == 0) {
+            finishNothing();
+            return;
+        }
         // A full chest is not a full STATION: walk to the next linked chest
         // with room and take the loading pause again, instead of writing the
         // whole deposit off for five minutes.
         BlockPos next = assistant.nextChestWithRoom(chestPos);
-        if (next != null) {
+        if (next != null && ++hops <= 4) {
             assistant.sayRoutine("That chest is full — using the next one.");
             chestPos = next;
             stashStartTick = -1;

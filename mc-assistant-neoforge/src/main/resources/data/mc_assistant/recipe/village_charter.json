@@ -2,11 +2,11 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "P": "minecraft:paper",
-    "B": "minecraft:bread",
-    "G": "minecraft:gold_ingot",
-    "S": "minecraft:wheat_seeds",
-    "C": "minecraft:chest"
+    "P": { "item": "minecraft:paper" },
+    "B": { "item": "minecraft:bread" },
+    "G": { "item": "minecraft:gold_ingot" },
+    "S": { "item": "minecraft:wheat_seeds" },
+    "C": { "item": "minecraft:chest" }
   },
   "pattern": [
     "PPP",

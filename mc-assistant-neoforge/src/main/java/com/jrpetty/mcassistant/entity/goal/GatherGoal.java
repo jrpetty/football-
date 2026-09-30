@@ -109,6 +109,11 @@ public class GatherGoal extends Goal {
     /** The wood ladder: a hand below level 10 fells only oak and birch. */
     private boolean rankAllows(Kind kind, BlockState state) {
         if (kind != Kind.LOGS || assistant.veteranLevel() >= 10) return true;
+        // A settlement cannot choose its biome. In a taiga, a cherry grove or a
+        // mangrove swamp there is no oak and no birch, so a level-one woodcutter
+        // was allowed nothing, found nothing, earned no experience, and never
+        // reached the level that would have let it fell a spruce.
+        if (assistant.isSettler()) return true;
         return state.is(net.minecraft.world.level.block.Blocks.OAK_LOG)
             || state.is(net.minecraft.world.level.block.Blocks.BIRCH_LOG)
             || state.is(net.minecraft.world.level.block.Blocks.STRIPPED_OAK_LOG)

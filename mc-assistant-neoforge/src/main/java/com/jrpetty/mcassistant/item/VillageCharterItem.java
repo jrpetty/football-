@@ -1,8 +1,6 @@
 package com.jrpetty.mcassistant.item;
 
-import com.jrpetty.mcassistant.McAssistantMod;
-import com.jrpetty.mcassistant.entity.AssistantEntity;
-import com.jrpetty.mcassistant.entity.Names;
+import com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock;
 import com.jrpetty.mcassistant.entity.VillageFolkEntity;
 import com.jrpetty.mcassistant.entity.Villages;
 import net.minecraft.core.BlockPos;
@@ -11,13 +9,9 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.context.UseOnContext;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 
 /**
  * Village Charter — right-click the ground and somebody comes to live there.
@@ -41,58 +35,29 @@ public class VillageCharterItem extends Item {
             || !(ctx.getPlayer() instanceof ServerPlayer player)) {
             return InteractionResult.PASS;
         }
-        BlockPos spot = ctx.getClickedPos().above();
+        BlockPos spot = ctx.getClickedPos().relative(ctx.getClickedFace());
 
-        Villages.Village village = Villages.nearest(level, spot);
-        boolean founding = village == null;
-        if (founding) {
-            village = Villages.found(level, spot);
-            // The same founding stores a world-grown settlement gets. Without
-            // this a chartered village began with nothing but what its people
-            // carried, and some of what is in that chest — string above all —
-            // is not something a village can ever make for itself.
-            com.jrpetty.mcassistant.VillageSpawner.supplyChest(level, spot);
-        }
-
-        int headcount = Villages.headcount(village.id());
-        // The cap that matters is how large a settlement may GROW to, not the
-        // ten its trade shares are measured against — a village that raises
-        // its own people past ten should not refuse a newcomer at the gate.
-        int cap = com.jrpetty.mcassistant.AssistantConfig.villageGrowthCap();
-        if (headcount >= cap) {
+        // The same path the spawner block and the /village command take, so a
+        // chartered settler is founded, kitted, kept awake and counted exactly
+        // as any other — it used to have a copy of its own that had quietly
+        // fallen behind the real one.
+        boolean founding = Villages.nearest(level, spot, Villages.VILLAGE_RANGE * 2) == null;
+        VillageFolkEntity folk = VillageFolkSpawnerBlock.raise(level, spot, player.getYRot());
+        if (folk == null) {
             player.displayClientMessage(Component.literal(
-                "That village is full at " + cap + ". Found another further out."), true);
+                "That village is full at "
+                    + com.jrpetty.mcassistant.AssistantConfig.villageGrowthCap()
+                    + ". Found another further out."), true);
             return InteractionResult.CONSUME;
         }
-
-        VillageFolkEntity folk = McAssistantMod.VILLAGE_FOLK.get().create(level);
-        if (folk == null) return InteractionResult.CONSUME;
-        folk.moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, player.getYRot(), 0.0F);
-        folk.rename(freshName(village.id()));
-        com.jrpetty.mcassistant.VillageSpawner.starterKit(folk);
-        level.addFreshEntity(folk);
         // Settling, choosing a trade and claiming ground all happen on the
         // folk's own agenda a moment from now — this only puts them there.
 
         player.displayClientMessage(Component.literal(
             founding
                 ? "A village is founded here. They'll sort themselves out."
-                : Villages.folkOf(village.id()).size() + " have settled here."), true);
+                : Villages.headcount(folk.ownerId()) + " have settled here."), true);
         if (!player.getAbilities().instabuild) ctx.getItemInHand().shrink(1);
         return InteractionResult.CONSUME;
     }
-
-    /** A name nobody in this village is using yet. */
-    private static String freshName(java.util.UUID villageId) {
-        Set<String> used = new HashSet<>();
-        for (AssistantEntity a : Villages.folkOf(villageId)) {
-            used.add(a.getAssistantName().toLowerCase());
-        }
-        List<String> pool = Names.POOL;
-        for (String candidate : pool) {
-            if (!used.contains(candidate.toLowerCase())) return candidate;
-        }
-        return "folk_" + (used.size() + 1);
-    }
-
 }

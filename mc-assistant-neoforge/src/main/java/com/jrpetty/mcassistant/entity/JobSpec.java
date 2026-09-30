@@ -106,7 +106,10 @@ public final class JobSpec {
                 needChest(a, stores, gaps, 1);
             }
             case RANCH -> {
-                if (!held(a, stores, s -> s.is(Items.SHEARS))) gaps.add("shears");
+                // Shears only for a hired hand. A settlement has no iron to spare
+                // for them and nothing to make them from, and the herd is worked
+                // without: the station brain shears only when it is carrying a pair.
+                if (!a.isSettler() && !held(a, stores, s -> s.is(Items.SHEARS))) gaps.add("shears");
                 // Without livestock a rancher is a permanent silent no-op, and
                 // it cannot obtain animals itself; without feed every breed job
                 // aborts the moment it starts.
@@ -124,8 +127,7 @@ public final class JobSpec {
             }
             case SMELT -> {
                 if (!furnaceIn(stores)) gaps.add("a furnace in the zone");
-                boolean fuel = held(a, stores, s -> s.is(Items.COAL) || s.is(Items.CHARCOAL))
-                    || a.countCarried(s -> s.is(ItemTags.LOGS) || s.is(ItemTags.PLANKS)) > 0;
+                boolean fuel = held(a, stores, AssistantEntity.SMELT_FUEL);
                 if (!fuel) gaps.add("fuel (coal or logs)");
                 if (!held(a, stores, AssistantEntity.SMELTABLE_ORE)) {
                     gaps.add("raw ore in the input chest");

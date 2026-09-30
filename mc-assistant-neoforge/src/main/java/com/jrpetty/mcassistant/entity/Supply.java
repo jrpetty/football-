@@ -39,12 +39,22 @@ public final class Supply {
         s -> s.get(DataComponents.FOOD) != null;
 
     /**
+     * Where a load should go, and WHICH PART of it. The deposit used to move the
+     * whole pack into whatever chest the route named — so a miner running ore
+     * to the smelter emptied its cobble, dirt and spare tools into the same
+     * chest, filled it in two trips, and the routing stopped for want of room.
+     * Only what the far end asked for travels; the rest stays for the ordinary
+     * stash.
+     */
+    public record Route(BlockPos chest, Predicate<ItemStack> only) {}
+
+    /**
      * Where this load should really go, or null to stash it as usual.
      *
      * @param carrier the bot about to deposit
      */
     @Nullable
-    public static BlockPos routeFor(AssistantEntity carrier) {
+    public static Route routeFor(AssistantEntity carrier) {
         if (carrier.getOwnerId() == null) return null;
         if (carrier.stationTask() == AssistantEntity.StationTask.HAUL) return null; // has its own run
 
@@ -57,12 +67,12 @@ public final class Supply {
                 if (!mate.getUUID().equals(asked.asker()) || !mate.isAlive()) continue;
                 if (mate.distanceToSqr(carrier) > REACH * REACH) break;
                 BlockPos chest = roomIn(mate);
-                if (chest != null) return chest;
+                if (chest != null) return new Route(chest, asked.need().matches);
                 break;
             }
         }
 
-        BlockPos best = null;
+        Route best = null;
         double bestDist = Double.MAX_VALUE;
 
         for (AssistantEntity mate : AssistantEntity.allFor(carrier.getOwnerId())) {
@@ -71,12 +81,15 @@ public final class Supply {
             if (d > REACH * REACH || d >= bestDist) continue;
 
             Predicate<ItemStack> wanted = wants(carrier, mate);
-            if (wanted == null || carrier.countCarried(wanted) <= 0) continue;
+            // What could actually be handed over — not what is merely held. A
+            // farmer's seeds are wanted by a rancher and every folk holds
+            // bread, but all of it is kit the deposit will refuse to move.
+            if (wanted == null || carrier.countStashable(wanted) <= 0) continue;
 
             BlockPos chest = roomIn(mate);
             if (chest == null) continue;
             bestDist = d;
-            best = chest;
+            best = new Route(chest, wanted);
         }
         return best;
     }

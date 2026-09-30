@@ -127,10 +127,15 @@ public final class VillageCommands {
     }
 
     private static int status(CommandContext<CommandSourceStack> ctx) {
-        ServerPlayer player = ctx.getSource().getPlayer();
-        if (player == null) return 0;
-        Villages.Village v = Villages.nearest(player.serverLevel(), player.blockPosition(),
-            Villages.VILLAGE_RANGE * 2);
+        // From wherever the command was run — a player, a command block, or
+        // the console (which has no player and used to get NOTHING back).
+        net.minecraft.server.level.ServerLevel level = ctx.getSource().getLevel();
+        net.minecraft.core.BlockPos here =
+            net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition());
+        Villages.Village v = Villages.nearest(level, here, Villages.VILLAGE_RANGE * 4);
+        if (v == null && ctx.getSource().getPlayer() == null && !Villages.every().isEmpty()) {
+            v = Villages.every().get(0);
+        }
         if (v == null) {
             ctx.getSource().sendSuccess(() -> Component.literal("No village within reach."), false);
             return 0;
@@ -154,11 +159,11 @@ public final class VillageCommands {
         for (Villages.Task t : Villages.Task.values()) {
             if (t == Villages.Task.BUILD || t == Villages.Task.HANDS || t == Villages.Task.NONE) continue;
             sb.append(' ').append(t.name().toLowerCase()).append(' ').append(
-                Villages.stock(player.serverLevel(), v.centre(), t, Villages.storesRadius(v.id())));
+                Villages.stock(level, v.centre(), t, Villages.storesRadius(v.id())));
         }
         sb.append(". Built: ").append(Villages.builtList(v.id()));
         sb.append(". Short of:");
-        java.util.List<Villages.Need> needs = Villages.needs(player.serverLevel(), v.id());
+        java.util.List<Villages.Need> needs = Villages.needs(level, v.id());
         if (needs.isEmpty()) sb.append(" nothing — about to come of age.");
         for (Villages.Need n : needs) sb.append(' ').append(n.what()).append(';');
         ctx.getSource().sendSuccess(() -> Component.literal(sb.toString()), false);

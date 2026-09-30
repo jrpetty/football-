@@ -126,7 +126,7 @@ public final class Requests {
     public static Request matching(UUID owner, AssistantEntity carrier, int now) {
         for (Request r : open(owner, now)) {
             if (r.asker().equals(carrier.getUUID())) continue;
-            if (carrier.countCarried(r.need().matches) > 0) return r;
+            if (carrier.countStashable(r.need().matches) > 0) return r;
         }
         return null;
     }

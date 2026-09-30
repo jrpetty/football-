@@ -63,7 +63,17 @@ public class AssistantMenu extends AbstractContainerMenu {
         // Backpack: 3 rows x 9, top-left.
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
-                this.addSlot(new Slot(container, col + row * 9, 8 + col * 18, 18 + row * 18));
+                this.addSlot(new Slot(container, col + row * 9, 8 + col * 18, 18 + row * 18) {
+                    @Override
+                    public boolean mayPlace(ItemStack stack) {
+                        return mayHandle(playerInv.player);
+                    }
+
+                    @Override
+                    public boolean mayPickup(Player player) {
+                        return mayHandle(player);
+                    }
+                });
             }
         }
 
@@ -73,7 +83,12 @@ public class AssistantMenu extends AbstractContainerMenu {
             this.addSlot(new Slot(container, AssistantInventoryContainer.BACKPACK + i, 8 + i * 18, 78) {
                 @Override
                 public boolean mayPlace(ItemStack stack) {
-                    return acceptsEquipment(assistant, eq, stack);
+                    return mayHandle(playerInv.player) && acceptsEquipment(assistant, eq, stack);
+                }
+
+                @Override
+                public boolean mayPickup(Player player) {
+                    return mayHandle(player);
                 }
 
                 @Override
@@ -116,6 +131,17 @@ public class AssistantMenu extends AbstractContainerMenu {
         return assistant;
     }
 
+    /** May this player put things in and take things out? Only the owner may.
+     *  Anyone else is looking through a window: a settlement's people can be
+     *  inspected by whoever walks up, and must not be robbed by them. */
+    private boolean mayHandle(@Nullable Player player) {
+        if (assistant == null || player == null) return true;
+        // The owner is not known to the client, so only the server can say no;
+        // a refused click is put right by the server's next sync.
+        if (player.level().isClientSide) return true;
+        return assistant.isOwner(player);
+    }
+
     @Override
     public boolean stillValid(Player player) {
         return container.stillValid(player);
@@ -132,6 +158,7 @@ public class AssistantMenu extends AbstractContainerMenu {
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
         ItemStack result = ItemStack.EMPTY;
+        if (!mayHandle(player)) return result;              // look, don't touch
         Slot slot = this.slots.get(index);
         if (slot == null || !slot.hasItem()) return result;
 

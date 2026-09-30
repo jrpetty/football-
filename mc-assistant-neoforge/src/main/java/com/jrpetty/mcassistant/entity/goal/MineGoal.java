@@ -595,6 +595,17 @@ public class MineGoal extends Goal {
      */
     private boolean mayDig(BlockPos pos) {
         if (!assistant.inZoneColumn(pos)) return false;
+        // Anything somebody put there is not rock. The chest at the head of
+        // the shaft is the first thing the miner's next run faces, and it broke
+        // it — spilling the whole stored haul on the floor. The same goes for a
+        // furnace, a bench, a bed or a door of a house it burrows under.
+        net.minecraft.world.level.block.state.BlockState there = assistant.level().getBlockState(pos);
+        if (there.hasBlockEntity()
+            || there.is(net.minecraft.world.level.block.Blocks.CRAFTING_TABLE)
+            || there.is(net.minecraft.tags.BlockTags.BEDS)
+            || there.is(net.minecraft.tags.BlockTags.DOORS)) {
+            return false;
+        }
         com.jrpetty.mcassistant.entity.WorkZone zone = assistant.workZone();
         if (zone == null) return true;               // unzoned: old behaviour
         int floor = Math.min(zone.depth(), zone.min().getY());

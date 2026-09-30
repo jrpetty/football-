@@ -97,7 +97,10 @@ public class AssistantInventoryContainer implements Container {
 
     @Override
     public boolean stillValid(Player player) {
-        return assistant.isAlive() && assistant.isOwner(player)
+        // A settlement's people can be looked at by anybody — that is what
+        // right-clicking one is for. Looking is all it allows: the menu makes
+        // every slot read-only for anyone but the owner.
+        return assistant.isAlive() && (assistant.isOwner(player) || assistant.openToAnyone())
             && player.distanceToSqr(assistant) <= 64.0;
     }
 

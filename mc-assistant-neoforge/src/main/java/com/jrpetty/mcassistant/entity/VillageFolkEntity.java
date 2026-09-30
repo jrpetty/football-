@@ -1,5 +1,6 @@
 package com.jrpetty.mcassistant.entity;
 
+import com.jrpetty.mcassistant.entity.goal.BuildGoal;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.tags.BlockTags;
@@ -57,6 +58,9 @@ public class VillageFolkEntity extends AssistantEntity {
      */
     @Override
     protected boolean speaksInChat() { return false; }
+
+    @Override
+    public boolean isSettler() { return true; }
 
     /** Nobody hired them, so nobody owes them a wage or a charge. They eat
      *  like anyone else — a village that cannot feed itself has failed at the
@@ -150,7 +154,122 @@ public class VillageFolkEntity extends AssistantEntity {
         if (level().isClientSide) return;
         if (tickCount - agendaTick < 100) return;   // folk think slowly, on purpose
         agendaTick = tickCount;
+        keepTrail();
         agenda();
+    }
+
+    // ------------------------------ getting started --------------------------
+
+    /** Guards keep the watch through the night; nobody else does. */
+    private void keepShift() {
+        Shift want = stationTask() == StationTask.GUARD ? Shift.ALWAYS : Shift.DAY;
+        if (shift() != want) setShift(want);
+    }
+
+    /** Where this hand's ground was when the agenda last looked, and since when. */
+    @Nullable private WorkZone lastPlot;
+    private int plotSince;
+
+    /**
+     * "Worked out" means the trade HAD work and has run dry — not that it never
+     * began. A hand still setting up (no chest yet, no forge) or only just
+     * arrived at its ground has finished nothing, and every rung that reads
+     * this — lending a hand elsewhere, giving the ground up as spent — used to
+     * fire for a brand-new folk on its very first turn, before it had put down
+     * a chest or turned a single sod.
+     */
+    @Override
+    public boolean workedOut() {
+        if (settingUp()) return false;
+        if (workZone() != null && tickCount - plotSince < 1800) return false;
+        return super.workedOut();
+    }
+
+    /** A running record of what this hand has been doing — job and status,
+     *  newest last — kept so that a hand which is not getting anywhere can be
+     *  asked how it got there. Read by the village command and the tests. */
+    private final StringBuilder trail = new StringBuilder();
+    private String trailLast = "";
+
+    private void keepTrail() {
+        WorkZone zone = workZone();
+        if (!java.util.Objects.equals(lastPlot, zone)) {
+            lastPlot = zone;
+            plotSince = tickCount;
+        }
+        Job j = peekJob();
+        String now = (j == null ? "-" : j.type().name())
+            + (missingEssentials().isEmpty() ? "" : "!" + missingEssentials().size());
+        if (now.equals(trailLast)) return;
+        trailLast = now;
+        trail.append(tickCount).append(':').append(now).append(' ');
+        if (trail.length() > 480) {
+            int cut = trail.indexOf(" ", trail.length() - 360);
+            trail.delete(0, cut < 0 ? trail.length() - 360 : cut + 1);
+        }
+    }
+
+    @Override
+    protected String debugExtra() {
+        return trail.length() == 0 ? "" : " trail=" + trail.toString().trim();
+    }
+
+    // ------------------------------ the errand to the stores -----------------
+
+    private int fetchTick = -100000;
+
+    /**
+     * Short of something the plot cannot supply and the chests here do not
+     * hold? The settlement keeps stores of its own, at its heart, and a folk
+     * that belongs to it walks there and takes what it needs — a chest to put
+     * down, a furnace, a tool, a ration — exactly as a person sent out without
+     * their spade would go back to the shed for it.
+     */
+    @Override
+    protected boolean fetchFromStores() {
+        BlockPos heart = villageCentre;
+        if (heart == null || peekJob() != null) return false;
+        if (tickCount - fetchTick < 900) return false;          // an errand every 45 s at most
+        fetchTick = tickCount;
+
+        String[] asks = null;    // what to look for, best first
+        int many = 1;
+        for (String gap : missingEssentials()) {
+            // The tool itself first; failing that the makings, which the craft
+            // rung turns into one on its next visit (it needs a bench, which
+            // every folk carries).
+            if (gap.startsWith("food")) { asks = new String[]{ "food" }; many = 12; }
+            else if (gap.startsWith("a pickaxe")) asks = new String[]{ "pickaxe", "plank", "log" };
+            else if (gap.startsWith("an axe")) asks = new String[]{ "axe", "plank", "log" };
+            else if (gap.startsWith("a sword")) asks = new String[]{ "sword", "plank" };
+            else if (gap.startsWith("a fishing rod")) asks = new String[]{ "fishing rod" };
+            else if (gap.startsWith("shears")) asks = new String[]{ "shears" };
+            else if (gap.startsWith("a furnace")) asks = new String[]{ "furnace", "cobble" };
+            else if (gap.startsWith("fuel")) { asks = new String[]{ "fuel" }; many = 16; }
+            else if (gap.startsWith("raw ore")) { asks = new String[]{ "ore" }; many = 32; }
+            else if (gap.equals("a chest in the zone") || gap.equals("2 chests in the zone")) {
+                asks = new String[]{ "chest", "plank", "log" };
+            }
+            if (asks != null) break;
+        }
+        if (asks == null) return false;
+        // Rations are worth a longer walk than a chest: they are spread through
+        // every field's chest, not kept in one shed. Everything else is looked
+        // for around the heart, where the village keeps what it keeps.
+        UUID village = ownerId();
+        for (String ask : asks) {
+            int amount = ask.equals("cobble") ? 8 : (ask.equals("plank") ? 8
+                : (ask.equals("log") ? 2 : many));
+            int radius = ask.equals("food") || ask.equals("ore") || ask.equals("fuel")
+                ? Math.min(112, Math.max(32, Villages.storesRadius(village))) : 32;
+            if (findChestWithNear(heart,
+                    com.jrpetty.mcassistant.entity.goal.WithdrawGoal.matcherFor(ask), radius) == null) {
+                continue;
+            }
+            enqueue(Job.withdrawAt(ask, amount, heart, radius));
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -161,6 +280,13 @@ public class VillageFolkEntity extends AssistantEntity {
     private void agenda() {
         if (ownerId() == null) { settle(); return; }
         if (workZone() == null) { takeUpATrade(); return; }
+        // The watch works the night, everybody else works the day. Without this
+        // every folk counted as "worked out" the moment the sun went down (it
+        // records no work while it is parked at home), so all night it lent
+        // itself out, walked its plot for a chest, and — worse — decided its
+        // mine was spent and staked a new one.
+        keepShift();
+        if (!onShift()) return;
         mindTheRoute();                                // a carrier's round is chosen, not clicked
         if (peekJob() != null) return;                 // already busy
         if (resting()) return;                         // off the clock for a bit
@@ -184,11 +310,18 @@ public class VillageFolkEntity extends AssistantEntity {
         if (!(level() instanceof net.minecraft.server.level.ServerLevel server)) return false;
         UUID village = ownerId();
         if (village == null) return false;
+        // Raising a building: the pack is full of it, and lending a hand would
+        // mean banking it straight back into the stores it came out of.
+        if (holdsBuildLead()) return false;
 
         // First, be a courier. Anything in the pack that somebody else's trade
         // wants is a delivery, and delivering beats fetching because the goods
-        // already exist. The deposit run routes it to whoever needs it.
-        if (countItems() > 0 && Supply.routeFor(this) != null) {
+        // already exist. The deposit run routes it to whoever needs it — and
+        // only what is ABOVE this hand's own reserve counts (see stashable),
+        // else it walked to the far end of the village every five seconds to
+        // deliver nothing.
+        if (tickCount - lastCourierTick >= 600 && stashable() > 0 && Supply.routeFor(this) != null) {
+            lastCourierTick = tickCount;
             sayRoutine("Nothing to do in my own line — running this where it's wanted.");
             enqueue(Job.deposit());
             return true;
@@ -202,6 +335,7 @@ public class VillageFolkEntity extends AssistantEntity {
     }
 
     private int lastHelpTick = -100000;
+    private int lastCourierTick = -100000;
 
     /** Can this hand do anything about that particular want? */
     private boolean takeOn(net.minecraft.server.level.ServerLevel server, Villages.Need need) {
@@ -220,7 +354,7 @@ public class VillageFolkEntity extends AssistantEntity {
                 // the seam can be found at all — which is why no settlement
                 // could ever leave the Diamond Age.
                 if (stationTask() == StationTask.MINE) return deepenShaft();
-                if (countItems() > 0) { enqueue(Job.deposit()); return true; }
+                if (stashable() > 0) { enqueue(Job.deposit()); return true; }
                 return false;
             }
             case OBSIDIAN -> {
@@ -229,7 +363,7 @@ public class VillageFolkEntity extends AssistantEntity {
                 // the pickaxe. It is down there already; the lava is what it
                 // has been walking round for weeks.
                 if (stationTask() != StationTask.MINE) {
-                    if (countItems() > 0) { enqueue(Job.deposit()); return true; }
+                    if (stashable() > 0) { enqueue(Job.deposit()); return true; }
                     return false;
                 }
                 if (countCarried(st -> st.is(net.minecraft.world.item.Items.DIAMOND_PICKAXE)) == 0) {
@@ -264,8 +398,12 @@ public class VillageFolkEntity extends AssistantEntity {
             }
             case FOOD -> {
                 // Get what has been grown into the stores first — it exists
-                // already, which beats anything that has to be made.
-                if (countItems() > 0) {
+                // already, which beats anything that has to be made. Only what
+                // is above this hand's own reserve, though: every folk always
+                // carries its rations and its kit, so "anything in the pack"
+                // was always true, the deposit moved nothing, and the hunt
+                // below could never happen.
+                if (countStashable(st -> st.get(net.minecraft.core.component.DataComponents.FOOD) != null) > 0) {
                     enqueue(Job.deposit());
                     return true;
                 }
@@ -596,7 +734,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // the storehouse is at the heart by definition.
         BlockPos depot = null;
         double depotDist = Double.MAX_VALUE;
-        for (ZoneChests.Found f : ZoneChests.around(level(), heart, 32, 10)) {
+        for (ZoneChests.Found f : ZoneChests.around(level(), heart, 32, 24)) {
             if (!ZoneChests.isStashable(f)) continue;      // a furnace is not a depot
             double d = f.pos().distSqr(heart);
             if (d < depotDist) { depotDist = d; depot = f.pos(); }
@@ -611,7 +749,7 @@ public class VillageFolkEntity extends AssistantEntity {
         BlockPos post = stationPos() != null ? stationPos() : blockPosition();
         BlockPos load = null;
         int fullest = 0;
-        for (ZoneChests.Found f : ZoneChests.around(level(), post, 64, 12)) {
+        for (ZoneChests.Found f : ZoneChests.around(level(), post, 64, 32)) {
             if (!ZoneChests.isStashable(f)) continue;
             if (f.pos().equals(depot)) continue;           // never haul the depot to itself
             int held = stockIn(f);
@@ -672,7 +810,10 @@ public class VillageFolkEntity extends AssistantEntity {
     private boolean movedOnFromSpentGround() {
         StationTask trade = stationTask();
         if (trade != StationTask.MINE && trade != StationTask.WOOD) return false;
-        if (!workedOut()) { spentSince = 0; return false; }
+        // Off the clock is not "found nothing": a night parked at home records
+        // no work either, and a folk that gave up its shaft every dusk had a
+        // new plot, no chest, and no way of making one out on bare stone.
+        if (!onShift() || onBreak() || !workedOut()) { spentSince = 0; return false; }
         if (spentSince == 0) { spentSince = tickCount; return false; }
         // Three solid minutes of finding nothing: long enough that a slow
         // patch is not abandoned, short enough that nobody stands in a
@@ -735,6 +876,7 @@ public class VillageFolkEntity extends AssistantEntity {
             >= com.jrpetty.mcassistant.AssistantConfig.villageGrowthCap()) {
             return false;
         }
+        if (!Villages.mayBirth(village, level().getGameTime())) return false;
         // Somebody to raise it with, near enough to count as living together,
         // in the same trade-less sense: fed, in work, and not this one.
         VillageFolkEntity partner = null;
@@ -783,6 +925,7 @@ public class VillageFolkEntity extends AssistantEntity {
         child.joinVillage(village, villageCentre);
         server.addFreshEntity(child);
         Villages.recordBirth(village);
+        Villages.noteBirth(village, level().getGameTime());
         // The settlement is bigger than it was, so it keeps more ground awake.
         // Re-taken at the new radius, which is a superset of the old one, so
         // nothing is dropped and nothing is doubled.
@@ -895,86 +1038,133 @@ public class VillageFolkEntity extends AssistantEntity {
         UUID village = ownerId();
         if (village == null || villageCentre == null) return;
         if (peekJob() != null || !getNavigation().isDone()) return;
+        if (!(level() instanceof net.minecraft.server.level.ServerLevel server)) return;
         long now = level().getGameTime();
         if (!Villages.projectDue(village, now)) return;
         String project = Villages.nextProject(village);
         if (project == null) return;
         // Only a folk standing near the village heart takes the job on — the
         // buildings go up where people live, not wherever the volunteer was.
-        if (villageCentre.distSqr(blockPosition()) > 32.0 * 32.0) return;
-        // Only the ATTEMPT is recorded here, which is what paces the projects.
-        // Whether it actually went up is reported by the build itself — this
-        // used to mark the storehouse "built" the moment somebody set off to
-        // build it, so a village that could not find the timber ticked the job
-        // off its list anyway and never built it at all.
-        Villages.noteAttempt(village, now);
+        if (villageCentre.distSqr(blockPosition()) > 40.0 * 40.0) return;
+        // Ground for it, picked once and kept: a build interrupted at dusk must
+        // pick up where it left off, not start again somewhere else.
+        Villages.Site site = Villages.siteFor(server, village, project);
+        if (site == null) { Villages.retrySoon(village, now); return; }
+        // No point taking charge of a building the village cannot yet afford —
+        // the lead does not lend itself out while it holds the post.
+        if (!affordsTimberFor(project, site)) { Villages.retrySoon(village, now); return; }
+        // One hand raises a building from first load to last block, so the
+        // materials pile up in one pack rather than being scattered.
+        if (!Villages.isLead(village, getUUID(), now)) return;
         // Load up FIRST. The builder places real items out of its own pack —
         // no cheating — and nothing was putting them there, so every volunteer
         // walked to the site empty-handed, read out a list of what it still
         // needed and gave up on the spot. No village ever built anything, which
         // means no village ever left the Wood Age either.
-        if (!stockedFor(project)) return;
-        enqueue(Job.build(project));
+        //
+        // A look that finds the stores not yet up to it is not a project begun,
+        // so it costs two minutes and not the eight that pace real building.
+        if (!stockedFor(project, site)) { Villages.retrySoon(village, now); return; }
+        Villages.noteAttempt(village, now);
+        enqueue(Job.buildAt(project, site.anchor(), site.facing(), site.radius()));
     }
 
-    /** Everything a shell is made of, and the fixtures that go inside it. */
-    private static boolean buildStock(net.minecraft.world.item.ItemStack s) {
-        return com.jrpetty.mcassistant.entity.goal.BuildGoal.isBuildingBlock(s)
-            || s.is(net.minecraft.world.item.Items.CHEST)
-            || s.is(net.minecraft.world.item.Items.FURNACE)
-            || s.is(net.minecraft.world.item.Items.CRAFTING_TABLE)
-            || s.is(net.minecraft.world.item.Items.LADDER)
-            || s.is(net.minecraft.world.item.Items.TORCH)
-            || s.is(net.minecraft.world.item.Items.GLASS);
+    /** Does this hand hold the village's building lead right now? Such a hand
+     *  does not go off lending itself out with a pack full of a building. */
+    private boolean holdsBuildLead() {
+        UUID village = ownerId();
+        return village != null && Villages.holdsTheLead(village, getUUID(), level().getGameTime());
     }
 
-    /** Chests, furnaces and benches this blueprint blocks on, in that order. */
-    private static int[] fixturesFor(String project) {
-        return switch (project) {
-            case "storage" -> new int[]{ 4, 0, 0 };
-            case "smeltery" -> new int[]{ 2, 3, 1 };
-            case "workshop", "house" -> new int[]{ 1, 1, 1 };
-            default -> new int[]{ 0, 0, 0 };
-        };
+    /** Enough timber and stone in the pack and the stores for the shell alone? */
+    private boolean affordsTimberFor(String project, Villages.Site site) {
+        BlockPos heart = villageCentre;
+        if (heart == null) return false;
+        int blocks = BuildGoal.partCounts(project, site.radius()).getOrDefault(BuildGoal.Part.BLOCK, 0);
+        blocks += blocks / 10 + 2;
+        int carried = countCarried(BuildGoal::isBuildingBlock);
+        return carried >= blocks
+            || carried + storesHold(heart, BuildGoal::isBuildingBlock) >= blocks;
     }
 
-    /** Roughly what the shell alone costs, so a volunteer does not set off
-     *  with a handful of planks for a building that wants a hundred. */
-    private static int blocksFor(String project) {
-        return switch (project) {
-            case "house" -> 120;
-            case "wall", "platform", "pen" -> 40;
-            default -> 90;
-        };
+    /** How much of this the village's stores hold near its heart. */
+    private int storesHold(BlockPos heart, java.util.function.Predicate<net.minecraft.world.item.ItemStack> what) {
+        return ZoneChests.countIn(
+            ZoneChests.around(level(), heart, 48, 32).stream()
+                .filter(f -> f.stillThere() && ZoneChests.isStashable(f)).toList(),
+            what);
     }
 
     /**
-     * Fill the pack from the village stores, and make up whatever fixture the
+     * Fill the pack from the village stores, and make up whatever the
      * blueprint is short of. Returns false when the settlement genuinely does
-     * not have the materials yet — the attempt is still recorded, so the next
-     * try is paced rather than hammered, and the gather plan will have moved
-     * timber and stone into the stores by then.
+     * not have the materials yet — nothing is drawn in that case, so a village
+     * that cannot afford a building does not strip its own stores to find out.
+     *
+     * <p>Counted from the blueprint itself (BuildGoal.partCounts), so what is
+     * fetched is exactly what the builder will place.
      */
-    private boolean stockedFor(String project) {
+    private boolean stockedFor(String project, Villages.Site site) {
         BlockPos heart = villageCentre;
-        if (heart == null) return false;
-        drawFrom(heart, VillageFolkEntity::buildStock, 384, 48);
+        UUID village = ownerId();
+        if (heart == null || village == null) return false;
+        long now = level().getGameTime();
+        java.util.Map<BuildGoal.Part, Integer> need =
+            BuildGoal.partCounts(project, site.radius());
+        int blocks = need.getOrDefault(BuildGoal.Part.BLOCK, 0);
+        blocks += blocks / 10 + 2;                              // a margin for the cells that are lost
 
-        int[] want = fixturesFor(project);
-        int chests = countCarried(s -> s.is(net.minecraft.world.item.Items.CHEST));
-        int furnaces = countCarried(s -> s.is(net.minecraft.world.item.Items.FURNACE));
-        int benches = countCarried(s -> s.is(net.minecraft.world.item.Items.CRAFTING_TABLE));
-        // One craft a visit: the planner queues real jobs, and a build that
-        // needs three furnaces gets them over three visits rather than fighting
-        // over one pack of cobble.
-        if (chests < want[0] && craftNow("chest", want[0] - chests)) return false;
-        if (furnaces < want[1] && craftNow("furnace", want[1] - furnaces)) return false;
-        if (benches < want[2] && craftNow("crafting_table", want[2] - benches)) return false;
-        if (chests < want[0] || furnaces < want[1] || benches < want[2]) return false;
+        // Timber and stone: only worth a trip if the village has enough.
+        int carried = countCarried(BuildGoal::isBuildingBlock);
+        if (carried < blocks) {
+            int inStores = storesHold(heart, BuildGoal::isBuildingBlock);
+            if (carried + inStores < blocks) return false;      // not yet
+            int got = drawFrom(heart, BuildGoal::isBuildingBlock,
+                blocks - carried, 48);
+            if (got > 0) Villages.leadProgress(village, getUUID(), now);
+        }
 
-        return countCarried(com.jrpetty.mcassistant.entity.goal.BuildGoal::isBuildingBlock)
-            >= blocksFor(project);
+        // The fixtures — a chest, a furnace, a bench, ladders, fences — from the
+        // stores if they are there, made if they are not. One craft a visit.
+        for (Fixture fx : FIXTURES) {
+            int want = need.getOrDefault(fx.part(), 0);
+            if (want == 0) continue;
+            var item = BuildGoal.itemForPart(fx.part());
+            int have = countCarried(item);
+            if (have < want) {
+                int got = drawFrom(heart, item, want - have, 48);
+                have += got;
+                if (got > 0) Villages.leadProgress(village, getUUID(), now);
+            }
+            if (have < want) {
+                if (craftNow(fx.recipe(), want - have)) Villages.leadProgress(village, getUUID(), now);
+                return false;                                    // made, or cannot be: either way, not this visit
+            }
+        }
+        // Decorations are taken if the stores have them, never waited for.
+        for (var deco : java.util.List.of(
+                BuildGoal.Part.TORCH,
+                BuildGoal.Part.WINDOW,
+                BuildGoal.Part.BED)) {
+            int want = need.getOrDefault(deco, 0);
+            if (want == 0) continue;
+            var item = BuildGoal.itemForPart(deco);
+            int have = countCarried(item);
+            if (have < want) drawFrom(heart, item, want - have, 48);
+        }
+        return countCarried(BuildGoal::isBuildingBlock) >= blocks;
     }
+
+    /** A blueprint part a builder must have in hand, and what makes one. */
+    private record Fixture(BuildGoal.Part part, String recipe) {}
+
+    private static final java.util.List<Fixture> FIXTURES = java.util.List.of(
+        new Fixture(BuildGoal.Part.CHEST, "chest"),
+        new Fixture(BuildGoal.Part.FURNACE, "furnace"),
+        new Fixture(BuildGoal.Part.CRAFTING_TABLE, "crafting_table"),
+        new Fixture(BuildGoal.Part.LADDER, "ladder"),
+        new Fixture(BuildGoal.Part.FENCE, "oak_fence"),
+        new Fixture(BuildGoal.Part.GATE, "oak_fence_gate"));
 
     // ------------------------------ persistence ------------------------------
 

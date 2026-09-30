@@ -2,8 +2,8 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "P": "minecraft:oak_planks",
-    "B": "minecraft:book"
+    "P": { "item": "minecraft:oak_planks" },
+    "B": { "item": "minecraft:book" }
   },
   "pattern": [
     "PPP",

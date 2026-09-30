@@ -256,6 +256,7 @@ public final class VillageSpawner {
     public static void childKit(VillageFolkEntity folk) {
         folk.insertItem(new ItemStack(Items.BREAD, 2));
         folk.insertItem(new ItemStack(Items.CHEST));
+        folk.insertItem(new ItemStack(Items.CRAFTING_TABLE));
         folk.insertItem(new ItemStack(Items.WHEAT_SEEDS, 4));
     }
 
@@ -271,6 +272,12 @@ public final class VillageSpawner {
         folk.insertItem(new ItemStack(Items.BREAD, 16));
         folk.insertItem(new ItemStack(Items.STONE_AXE));
         folk.insertItem(new ItemStack(Items.STONE_PICKAXE));
+        folk.insertItem(new ItemStack(Items.STONE_SWORD));
+        // A bench to carry. Half of what a village lives on is a three-by-three
+        // recipe — bread off the wheat, a chest, a furnace, ladders — and a
+        // farmer on a plot with no trees has nothing to make a bench FROM, so
+        // wheat piled up in the chest and nobody ever ate any of it.
+        folk.insertItem(new ItemStack(Items.CRAFTING_TABLE));
         // A chest of its own. The station brain plants this the first time it
         // has something to put away, which is what turns a claimed field into
         // a working one — without it the harvest has nowhere to go and the

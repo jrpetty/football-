@@ -84,6 +84,27 @@ public class BuildGoal extends Goal {
         return com.jrpetty.mcassistant.BlockLore.structural(s);
     }
 
+    /**
+     * What a blueprint is made of, counted from the blueprint itself — so the
+     * people who stock a build do it from the same drawing the builder works
+     * from, and cannot drift out of step with it. (The hand-kept tallies had
+     * no ladders for the watchtower and lighthouse, no fences for the pen, and
+     * said ninety blocks for a wall that wants three hundred.)
+     */
+    public static Map<Part, Integer> partCounts(String structure, int perimeterRadius) {
+        List<Placement> cells = new ArrayList<>();
+        layout(structure, new BlockPos(0, 64, 0), Direction.NORTH, true,
+            Math.max(4, Math.min(16, perimeterRadius)), cells);
+        Map<Part, Integer> counts = new EnumMap<>(Part.class);
+        for (Placement p : cells) counts.merge(p.part(), 1, Integer::sum);
+        return counts;
+    }
+
+    /** The item a part is placed from, for the people stocking a build. */
+    public static Predicate<ItemStack> itemForPart(Part part) {
+        return itemFor(part);
+    }
+
     /** Parts placed from any matching item (block taken from the item itself). */
     private static boolean isBlockPart(Part part) {
         return part == Part.BLOCK || part == Part.FENCE || part == Part.GATE || part == Part.WINDOW;
@@ -196,6 +217,9 @@ public class BuildGoal extends Goal {
         }
         int totalPending = pending.values().stream().mapToInt(Integer::intValue).sum();
         if (totalPending == 0) {
+            // Every cell is already filled: the last run finished the work and
+            // was cut off before it could say so. It counts.
+            if (structure != null) assistant.noteBuilt(structure);
             finish("Looks already built.");
             return;
         }
@@ -253,8 +277,12 @@ public class BuildGoal extends Goal {
             stuckTicks = 0;
         }
         if (target == null) {
-            if (building != null) assistant.noteBuilt(building);
-            finish("Done — placed " + placed + " parts.");
+            // Only a building that actually has parts in the ground goes on the
+            // village's list. A run that could not reach a single cell used to
+            // walk off the end of its plan and report "Done" all the same.
+            if (building != null && placed > 0) assistant.noteBuilt(building);
+            finish(placed > 0 ? "Done — placed " + placed + " parts."
+                : "Could not get at any of it — I'll try again.");
             return;
         }
 

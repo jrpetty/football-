@@ -72,8 +72,12 @@ public class CraftGoal extends Goal {
     private int stuckTicks;
     @Nullable private BlockPos tablePos;
     private int myGen;
-    @Nullable private String lastSourced; // loop guard for auto-sourcing
-    private int lastSourcedTick = -100000;
+    // Loop guard for auto-sourcing: when each thing was last sourced. One slot
+    // was not enough — a plan that ends "gather logs, craft planks, craft
+    // sticks" alternated between planks and sticks, each one clearing the
+    // guard for the other, and re-queued itself every ten ticks for ever when
+    // there was no tree to be had.
+    private final java.util.Map<String, Integer> sourcedAt = new java.util.HashMap<>();
 
     public CraftGoal(AssistantEntity assistant) {
         this.assistant = assistant;
@@ -208,14 +212,15 @@ public class CraftGoal extends Goal {
         if (job == null || plan == null || crafted > 0) return false;
         String arg = job.arg();
         if (arg == null) return false;
-        if (arg.equals(lastSourced) && assistant.tickCount - lastSourcedTick < 600) return false;
+        Integer last = sourcedAt.get(arg);
+        if (last != null && assistant.tickCount - last < 600) return false;
         int yield = Math.max(1, plan.output().get().getCount());
         int wanted = Math.max(1, (job.amount() - crafted) * yield);
         com.jrpetty.mcassistant.entity.CraftPlanner.Result r =
             com.jrpetty.mcassistant.entity.CraftPlanner.plan(assistant, arg, wanted);
         if (r.jobs().isEmpty() || !r.blockers().isEmpty()) return false; // can't fully self-source
-        lastSourced = arg;
-        lastSourcedTick = assistant.tickCount;
+        if (sourcedAt.size() > 32) sourcedAt.clear();
+        sourcedAt.put(arg, assistant.tickCount);
         assistant.pollJob(); // drop this craft — the plan re-adds a fresh craft at the end
         List<Job> js = r.jobs();
         for (int i = js.size() - 1; i >= 0; i--) assistant.enqueueFront(js.get(i));

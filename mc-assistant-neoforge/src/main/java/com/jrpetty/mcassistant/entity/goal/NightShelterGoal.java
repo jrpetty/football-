@@ -64,6 +64,11 @@ public class NightShelterGoal extends Goal {
     @Override
     public boolean canUse() {
         if (!a.isAutonomous() || a.isRetreating()) return false;
+        // A settler goes home at night; it does not wall itself into the hole
+        // it is standing in. A miner sealed itself in whenever any monster was
+        // inside a forty-block box — including ones down a cave — and could
+        // stay sealed well into the day with its work queue blocked behind it.
+        if (a.isSettler()) return false;
         return a.level().isNight() ? nightNeed() : dayBreakout();
     }
 
