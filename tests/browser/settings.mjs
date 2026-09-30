@@ -154,7 +154,7 @@ await pg.waitForTimeout(600)
     const game = window.__game
     const scene = Object.values(game).find((v) => v && v.players instanceof Map && v.players.size)
     const w = window.__world
-    const sprites = scene.scene.children.filter((c) => c.isSprite)
+    const sprites = scene.scene.children.filter((c) => c.isSprite && c.userData.tag)
     // A tag should sit above the head of the player it belongs to. Every
     // player is checked, not just one: a single tag in the right place could
     // be a coincidence, all of them cannot.

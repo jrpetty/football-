@@ -20,6 +20,12 @@ export interface Effect {
   t: number
   life: number
   color?: string
+  // How fast the ball was going, and which way, at the moment it happened — so a
+  // presentation layer can make a hard strike look harder than a tap without
+  // having to reconstruct it. Never read by the simulation.
+  speed: number
+  dx: number
+  dy: number
 }
 
 export interface Announce {
@@ -1596,7 +1602,14 @@ export class World {
 
   private pushEffect(type: Effect['type'], x: number, y: number) {
     const life = type === 'goal' ? 1.6 : type === 'save' ? 0.7 : 0.4
-    this.effects.push({ type, x, y, t: 0, life })
+    const b = this.ball
+    const h = Math.hypot(b.vx, b.vy)
+    this.effects.push({
+      type, x, y, t: 0, life,
+      speed: b.speed,
+      dx: h > 1e-3 ? b.vx / h : 1,
+      dy: h > 1e-3 ? b.vy / h : 0,
+    })
     if (this.effects.length > 40) this.effects.shift()
   }
 

@@ -1,0 +1,48 @@
+/* The two typefaces the game speaks in, embedded rather than fetched.
+
+   Big Shoulders Display carries everything that is announced — the wordmark, the
+   scoreboard, the score, a number on a shirt. Barlow is what you read. Both are
+   latin-only woff2, which is ~120 KB between them, and the single-file build
+   folds them into the page as data URIs so the game still has nothing to fetch. */
+@font-face {
+  font-family: 'Big Shoulders Display';
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+  src: url('../../node_modules/@fontsource/big-shoulders-display/files/big-shoulders-display-latin-700-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Big Shoulders Display';
+  font-style: normal;
+  font-weight: 800;
+  font-display: block;
+  src: url('../../node_modules/@fontsource/big-shoulders-display/files/big-shoulders-display-latin-800-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Big Shoulders Display';
+  font-style: normal;
+  font-weight: 900;
+  font-display: block;
+  src: url('../../node_modules/@fontsource/big-shoulders-display/files/big-shoulders-display-latin-900-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Barlow';
+  font-style: normal;
+  font-weight: 500;
+  font-display: block;
+  src: url('../../node_modules/@fontsource/barlow/files/barlow-latin-500-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Barlow';
+  font-style: normal;
+  font-weight: 600;
+  font-display: block;
+  src: url('../../node_modules/@fontsource/barlow/files/barlow-latin-600-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Barlow';
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+  src: url('../../node_modules/@fontsource/barlow/files/barlow-latin-700-normal.woff2') format('woff2');
+}

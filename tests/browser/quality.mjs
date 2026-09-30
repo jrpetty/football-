@@ -40,7 +40,7 @@ const read = async (label) => {
     const s = Object.values(window.__game).find((v) => v && v.players instanceof Map)
     const r = s.renderer
     const c = r.domElement
-    const light = s.scene.children.find((o) => o.isDirectionalLight)
+    const light = s.scene.children.find((o) => o.isDirectionalLight && o.userData.floodlight)
     return {
       pixelRatio: r.getPixelRatio(),
       pixels: c.width * c.height,

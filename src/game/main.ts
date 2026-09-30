@@ -1,4 +1,6 @@
+import './fonts.css'
 import './style.css'
+import { fontsReady } from './ui/fonts'
 import { SIM } from './config'
 import { sfx } from './audio/sfx'
 import { InputManager } from './core/input'
@@ -394,7 +396,10 @@ function boot() {
     net = null
     startGame(config)
   }
-  screens.showMenu()
+  // The menu waits a moment for its typeface — they are embedded, so it is a
+  // moment — and so does anything that paints text into a texture, since a
+  // canvas keeps whatever font it had when it drew.
+  void fontsReady().then(() => screens.showMenu())
 }
 
 // Wait for the document to be parsed before looking for the canvas. Vite's

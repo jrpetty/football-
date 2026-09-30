@@ -3,15 +3,19 @@ import { Sky } from 'three/examples/jsm/objects/Sky.js'
 import { BALL, FIELD, NET, QUALITY, WALL } from '../config'
 import type { Quality } from '../config'
 import * as F from '../match/field'
-import type { World } from '../match/world'
+import type { Effect, World } from '../match/world'
 import {
   adTexture,
   ballTexture,
   crowdTexture,
+  floodlightTexture,
+  glowTexture,
   grassTexture,
   normalFromCanvas,
   pitchOverlayTexture,
 } from './textures'
+import { Fx } from './fx'
+import { DISPLAY } from '../ui/fonts'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { PlayerRig, makeKitMaterials } from './rig'
 
@@ -40,6 +44,12 @@ export class Scene3D {
     at: { y: number; z: number }
   }> = {}
   private trailLine: THREE.Line | null = null
+  // Particles, and the things that happened this frame that they were made for.
+  readonly fx = new Fx()
+  private seenEffects = new WeakSet<Effect>()
+  // Effects that appeared for the first time this frame. The camera reads these
+  // to decide what is worth shaking for.
+  readonly fresh: Effect[] = []
 
   private q: (typeof QUALITY)[Quality]
 
@@ -59,13 +69,13 @@ export class Scene3D {
     // spare, and the first thing to go when there isn't.
     this.renderer.shadowMap.type = quality === 'high' ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping
-    this.renderer.toneMappingExposure = 0.62
+    this.renderer.toneMappingExposure = 0.9
     this.renderer.domElement.style.position = 'fixed'
     this.renderer.domElement.style.inset = '0'
     container.appendChild(this.renderer.domElement)
     this.maxAniso = Math.min(this.renderer.capabilities.getMaxAnisotropy(), q.aniso)
 
-    this.scene.fog = new THREE.Fog('#b7d2e6', 95, 240)
+    this.scene.fog = new THREE.Fog('#26324f', 110, 300)
 
     this.buildSkyAndLights()
     this.buildPitch()
@@ -74,6 +84,7 @@ export class Scene3D {
     this.buildGoals()
     this.buildBall()
     this.buildBallBlob()
+    for (const o of this.fx.group) this.scene.add(o)
   }
 
   dispose() {
@@ -86,6 +97,7 @@ export class Scene3D {
   }
 
   render(camera: THREE.Camera) {
+    this.fx.setView(this.renderer.domElement.height, (camera as THREE.PerspectiveCamera).fov ?? 60)
     this.renderer.render(this.scene, camera)
   }
 
@@ -104,7 +116,13 @@ export class Scene3D {
   // ---- sky, sun, lighting ----
 
   private buildSkyAndLights() {
-    const phi = THREE.MathUtils.degToRad(90 - 32)
+    // Dusk, under floodlights. The sun is a few degrees off the horizon behind
+    // the far stand, so what is left of the sky is a deep blue going to a warm
+    // band at the rim of the stadium — and the pitch is lit by the lamps, which
+    // is why it glows against everything round it. A pitch lit like a grey
+    // afternoon looks like a texture on a plane; a pitch under lights in a dark
+    // bowl looks like the place a match is played.
+    const phi = THREE.MathUtils.degToRad(90 + 1.5)
     const theta = THREE.MathUtils.degToRad(150)
     const sun = new THREE.Vector3().setFromSphericalCoords(1, phi, theta)
 
@@ -119,10 +137,10 @@ export class Scene3D {
     const sky = new Sky()
     sky.scale.setScalar(4000)
     const u = sky.material.uniforms
-    u.turbidity.value = 6
-    u.rayleigh.value = 1.4
-    u.mieCoefficient.value = 0.006
-    u.mieDirectionalG.value = 0.8
+    u.turbidity.value = 9
+    u.rayleigh.value = 2.4
+    u.mieCoefficient.value = 0.008
+    u.mieDirectionalG.value = 0.92
     u.sunPosition.value.copy(sun)
 
     const bakeScene = new THREE.Scene()
@@ -131,23 +149,40 @@ export class Scene3D {
     const cubeCam = new THREE.CubeCamera(1, 10000, cube)
     cubeCam.update(this.renderer, bakeScene)
     this.scene.background = cube.texture
+    // The sky is baked at daylight strength; night is that, turned down.
+    this.scene.backgroundIntensity = 0.55
     sky.geometry.dispose()
     sky.material.dispose()
 
-    this.scene.add(new THREE.HemisphereLight('#dcecff', '#3a5a3f', 0.7))
-    this.scene.add(new THREE.AmbientLight('#ffffff', 0.18))
+    // Sky and ground bounce: cool light from above, dark grass below.
+    this.scene.add(new THREE.HemisphereLight('#7f9bd0', '#1c3323', 0.62))
 
-    const dir = new THREE.DirectionalLight('#fff4de', 2.4)
-    dir.position.copy(sun.clone().multiplyScalar(80)).add(v3(FIELD.length / 2, FIELD.width / 2, 0))
+    // What is left of the sun: a warm, low light from behind the far stand.
+    // It carries no shadows; it is there to catch the edge of everything
+    // standing on the pitch.
+    const rim = new THREE.DirectionalLight('#ff9c62', 0.85)
+    rim.position.copy(sun.clone().multiplyScalar(80)).add(v3(FIELD.length / 2, FIELD.width / 2, 0))
+    rim.target.position.copy(v3(FIELD.length / 2, FIELD.width / 2))
+    this.scene.add(rim)
+    this.scene.add(rim.target)
+
+    // The floodlights, as one light. Four banks of lamps at the corners are
+    // several hundred lights; from the ground what they do is put a single
+    // hard, bright, slightly cool light high above the pitch, and that is what
+    // this is. It is the only light that casts a shadow.
+    const dir = new THREE.DirectionalLight('#fff4e2', 2.5)
+    dir.position.set(FIELD.length / 2 + 26, 68, FIELD.width / 2 - 30)
     dir.target.position.copy(v3(FIELD.length / 2, FIELD.width / 2))
     dir.castShadow = this.q.shadows
+    // Tests, and anything else that needs to find *the* light, look for this.
+    dir.userData.floodlight = true
     // The shadow frustum only has to cover the things that cast — the players,
     // the ball, the goals and the training apparatus, all of which are on the
     // pitch. It was ±45 m, a 90 m box swallowing the whole stadium, at 2048².
     // Fitting it to the pitch instead means each texel covers a third of the
     // ground it used to, so 1024² is now *sharper* than the old 2048² as well
     // as being a quarter of the fill.
-    const pad = 6
+    const pad = 8
     dir.shadow.mapSize.set(this.q.shadowMap || 1024, this.q.shadowMap || 1024)
     const cam = dir.shadow.camera as THREE.OrthographicCamera
     const half = Math.max(FIELD.length, FIELD.width) / 2 + pad
@@ -188,7 +223,7 @@ export class Scene3D {
         map: this.tex(grass, outR, outR),
         normalMap: mkNormal(outR, outR),
         normalScale: new THREE.Vector2(0.5, 0.5),
-        color: '#7d8f7a',
+        color: '#4d6b56',
         roughness: 1,
       }),
     )
@@ -274,8 +309,11 @@ export class Scene3D {
       face.translate(x + Math.sin(rotY) * 0.145, bh / 2, z + Math.cos(rotY) * 0.145)
       faces.push(face)
     }
-    mkBoard(L + m * 2, cx, -m, Math.PI)
-    mkBoard(L + m * 2, cx, W + m, 0)
+    // Each board's lettering faces the pitch. (The two along the touchlines used
+    // to be turned the other way round, so from the pitch — from anywhere anyone
+    // plays — they were blank back-faces.)
+    mkBoard(L + m * 2, cx, -m, 0)
+    mkBoard(L + m * 2, cx, W + m, Math.PI)
     mkBoard(W + m * 2, -m, cz, Math.PI / 2)
     mkBoard(W + m * 2, L + m, cz, -Math.PI / 2)
 
@@ -293,62 +331,162 @@ export class Scene3D {
     adTex.wrapS = adTex.wrapT = THREE.RepeatWrapping
     const adBoards = new THREE.Mesh(
       mergeGeometries(faces)!,
-      new THREE.MeshStandardMaterial({ map: adTex, roughness: 0.45 }),
+      // Lit from inside: an LED hoarding is a light source, and at night it is
+      // the brightest thing at the edge of the pitch.
+      new THREE.MeshStandardMaterial({
+        map: adTex,
+        emissiveMap: adTex,
+        emissive: '#ffffff',
+        emissiveIntensity: 0.8,
+        roughness: 0.5,
+      }),
     )
     adBoards.receiveShadow = true
     this.scene.add(adBoards)
 
-    // Raked crowd stands forming a shallow bowl.
-    const crowdCanvas = crowdTexture()
+    // The stands: a raked bowl on all four sides, with the home fans behind one
+    // goal, the away fans behind the other, and a mixed crowd along the sides.
+    // Each side is built in its own frame (facing +z, the pitch in front) and
+    // placed, so the same numbers describe all four.
     const standDepth = 28
     const standH = 16
     const gap = m + 2.5
-    const addStand = (w: number, x: number, z: number, rotY: number) => {
-      const t = this.tex(crowdCanvas, Math.max(1, Math.round(w / 14)), 1)
-      const s = new THREE.Mesh(
+    const rake = 0.62
+    // The plane is `standDepth` long and leans at `rake` off the flat: that
+    // reaches `run` metres back from the hoardings and `standH` up.
+    const run = standDepth * Math.cos(rake)
+    const crowds = { home: crowdTexture('home'), away: crowdTexture('away'), mixed: crowdTexture('mixed') }
+
+    // Everything that isn't the crowd itself is merged by material, so the whole
+    // shell of the stadium — apron, back wall, roof, lights — is three draw calls
+    // however many sides there are.
+    const concrete: THREE.BufferGeometry[] = []
+    const roofs: THREE.BufferGeometry[] = []
+    const strips: THREE.BufferGeometry[] = []
+    // Put a box, given in a stand's own frame (facing +z, the pitch in front of
+    // it), where that stand really is.
+    const put = (
+      geo: THREE.BufferGeometry, sx: number, sz: number, rotY: number,
+      ly: number, lz: number, into: THREE.BufferGeometry[],
+    ) => {
+      const cos = Math.cos(rotY)
+      const sin = Math.sin(rotY)
+      const pos = geo.getAttribute('position') as THREE.BufferAttribute
+      const nor = geo.getAttribute('normal') as THREE.BufferAttribute
+      for (let i = 0; i < pos.count; i++) {
+        const lx = pos.getX(i)
+        const gz = pos.getZ(i) + lz
+        pos.setXYZ(i, sx + lx * cos + gz * sin, pos.getY(i) + ly, sz - lx * sin + gz * cos)
+        const nx = nor.getX(i)
+        const nz = nor.getZ(i)
+        nor.setXYZ(i, nx * cos + nz * sin, nor.getY(i), -nx * sin + nz * cos)
+      }
+      into.push(geo)
+    }
+
+    const addStand = (w: number, x: number, z: number, rotY: number, kind: keyof typeof crowds) => {
+      const t = this.tex(crowds[kind], Math.max(1, Math.round(w / 34)), 1)
+      const stand = new THREE.Mesh(
         new THREE.PlaneGeometry(w, standDepth),
-        // The stands face away from the sun, so a little self-illumination keeps
-        // the crowd readable instead of a black wall.
+        // The crowd lights itself: the stands face away from the lamps, and a
+        // night crowd that is only lit by them is a black wall with a few
+        // bright dots.
         new THREE.MeshStandardMaterial({
           map: t,
           emissiveMap: t,
           emissive: '#ffffff',
-          emissiveIntensity: 0.75,
+          emissiveIntensity: 0.85,
           roughness: 1,
           side: THREE.DoubleSide,
         }),
       )
-      s.position.set(x, standH / 2, z)
-      s.rotation.order = 'YXZ'
-      s.rotation.y = rotY
-      s.rotation.x = -Math.PI / 2 + 0.62
-      s.receiveShadow = true
-      this.scene.add(s)
-    }
-    addStand(L + m * 2 + standDepth, cx, -gap - standDepth * 0.32, 0)
-    addStand(L + m * 2 + standDepth, cx, W + gap + standDepth * 0.32, Math.PI)
-    addStand(W + m * 2 + standDepth, -gap - standDepth * 0.32, cz, Math.PI / 2)
-    addStand(W + m * 2 + standDepth, L + gap + standDepth * 0.32, cz, -Math.PI / 2)
+      stand.position.set(x, standH / 2, z)
+      stand.rotation.order = 'YXZ'
+      stand.rotation.y = rotY
+      stand.rotation.x = -Math.PI / 2 + rake
+      stand.receiveShadow = true
+      this.scene.add(stand)
 
-    // Floodlight pylons at the four corners.
-    const poleMat = new THREE.MeshStandardMaterial({ color: '#7c8794', metalness: 0.6, roughness: 0.45 })
-    const lampMat = new THREE.MeshStandardMaterial({
-      color: '#fdfbe6',
-      emissive: '#fff6c8',
-      emissiveIntensity: 1.5,
-      roughness: 0.3,
-    })
-    for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) {
-      const px = cx + sx * (L / 2 + m + 5)
-      const pz = cz + sz * (W / 2 + m + 5)
-      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.5, 26, 6), poleMat)
-      pole.position.set(px, 13, pz)
-      this.scene.add(pole)
-      const rig = new THREE.Mesh(new THREE.BoxGeometry(4.4, 1.7, 0.5), lampMat)
-      rig.position.set(px, 25.6, pz)
-      rig.lookAt(v3(cx, W / 2, 2))
-      this.scene.add(rig)
+      const front = run / 2
+      const back = -run / 2
+      // A concrete apron under the front row, and the wall behind the top one.
+      put(new THREE.BoxGeometry(w, 2.4, 0.8), x, z, rotY, 1.2, front - 0.7, concrete)
+      put(new THREE.BoxGeometry(w, 6, 0.8), x, z, rotY, standH + 1.4, back - 0.2, concrete)
+      // A canopy over the top rows, and the row of lights along its edge — which
+      // is what a stadium's roof looks like from the pitch at night.
+      put(new THREE.BoxGeometry(w, 0.5, 10), x, z, rotY, standH + 4.2, back + 4.6, roofs)
+      put(new THREE.BoxGeometry(w, 0.24, 0.3), x, z, rotY, standH + 3.9, back + 9.7, strips)
     }
+    const off = gap + standDepth * 0.32
+    const wLong = L + m * 2 + standDepth
+    const wShort = W + m * 2 + standDepth
+    addStand(wLong, cx, -off, 0, 'mixed')
+    addStand(wLong, cx, W + off, Math.PI, 'mixed')
+    addStand(wShort, -off, cz, Math.PI / 2, 'home')
+    addStand(wShort, L + off, cz, -Math.PI / 2, 'away')
+
+    const shell = (geos: THREE.BufferGeometry[], mat: THREE.Material) => {
+      const mesh = new THREE.Mesh(mergeGeometries(geos)!, mat)
+      mesh.receiveShadow = false
+      this.scene.add(mesh)
+    }
+    shell(concrete, new THREE.MeshStandardMaterial({ color: '#2a313e', emissive: '#0e131c', roughness: 0.95 }))
+    shell(roofs, new THREE.MeshStandardMaterial({ color: '#26334a', emissive: '#0d1526', roughness: 0.8, metalness: 0.2 }))
+    shell(strips, new THREE.MeshBasicMaterial({ color: '#dbe8ff', fog: false }))
+
+    // ---- floodlight pylons ----
+    //
+    // At the four corners: a mast, and at the top a bank of lamps turned to face
+    // the middle of the pitch, with a bloom of light round it. The lamps are
+    // what the eye reads as "night match" before it reads anything else, and
+    // the bloom is a point sprite because a real one is a post-process this game
+    // doesn't run.
+    const metal: THREE.BufferGeometry[] = []
+    const headFace: THREE.BufferGeometry[] = []
+    const aim = new THREE.Object3D()
+    const glowAt: number[] = []
+    for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) {
+      const px = cx + sx * (L / 2 + m + 6)
+      const pz = cz + sz * (W / 2 + m + 6)
+      const mast = new THREE.CylinderGeometry(0.34, 0.6, 33, 6)
+      mast.translate(px, 16.5, pz)
+      metal.push(mast)
+
+      aim.position.set(px, 33.5, pz)
+      aim.lookAt(cx, 0, cz)
+      aim.updateMatrix()
+      const back = new THREE.BoxGeometry(6.4, 4.4, 0.7)
+      back.applyMatrix4(aim.matrix)
+      metal.push(back)
+      const face = new THREE.PlaneGeometry(6, 4)
+      face.translate(0, 0, 0.4)
+      face.applyMatrix4(aim.matrix)
+      headFace.push(face)
+
+      glowAt.push(px - sx * 1.5, 33.5, pz - sz * 1.5)
+    }
+    shell(metal, new THREE.MeshStandardMaterial({ color: '#4d5665', metalness: 0.5, roughness: 0.55 }))
+    const lampTex = this.tex(floodlightTexture())
+    shell(headFace, new THREE.MeshBasicMaterial({ map: lampTex, toneMapped: false, fog: false }))
+
+    // The bloom round each bank: one draw call for all four.
+    const glowGeo = new THREE.BufferGeometry()
+    glowGeo.setAttribute('position', new THREE.Float32BufferAttribute(glowAt, 3))
+    const glow = new THREE.Points(
+      glowGeo,
+      new THREE.PointsMaterial({
+        map: this.tex(glowTexture()),
+        size: 26,
+        sizeAttenuation: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        transparent: true,
+        toneMapped: false,
+        fog: false,
+      }),
+    )
+    glow.frustumCulled = false
+    this.scene.add(glow)
   }
 
   // ---- the enclosing barrier ----
@@ -483,7 +621,7 @@ export class Scene3D {
 
   private buildBallBlob() {
     if (this.q.shadows) return
-    const geo = new THREE.CircleGeometry(BALL.radius * 1.6, 16)
+    const geo = new THREE.CircleGeometry(BALL.radius * 2.1, 20)
     geo.rotateX(-Math.PI / 2)
     this.ballBlob = new THREE.Mesh(
       geo,
@@ -502,11 +640,18 @@ export class Scene3D {
     ;(b.material as THREE.MeshBasicMaterial).opacity = 0.34 * (1 - lift * 0.55)
   }
 
+  // The ball is drawn a third larger than it is. It is 22 cm across; from
+  // seven metres behind a player that is a dozen pixels, and it is the one
+  // thing on the screen the whole game is about. Every real football game
+  // makes the same call. The simulation still uses the true radius.
+  private static readonly BALL_VIS = 1.3
+
   private buildBall() {
     const map = this.tex(ballTexture())
+    map.anisotropy = this.maxAniso
     this.ball = new THREE.Mesh(
-      new THREE.SphereGeometry(BALL.radius, 20, 14),
-      new THREE.MeshStandardMaterial({ map, roughness: 0.38, metalness: 0.03 }),
+      new THREE.SphereGeometry(BALL.radius * Scene3D.BALL_VIS, 32, 20),
+      new THREE.MeshStandardMaterial({ map, roughness: 0.34, metalness: 0.02 }),
     )
     this.ball.castShadow = true
     this.scene.add(this.ball)
@@ -569,23 +714,29 @@ export class Scene3D {
     c.width = 256
     c.height = 64
     const g = c.getContext('2d')!
-    g.font = '600 34px system-ui, sans-serif'
     g.textAlign = 'center'
     g.textBaseline = 'middle'
-    // An empty shirt is drawn faintly and in outline: present, but plainly not
-    // a person.
+    g.lineJoin = 'round'
+    const label = text.toUpperCase()
+    // An empty shirt is drawn faintly, with no rule under it: present, but
+    // plainly not a person.
     if (claimed) {
-      g.fillStyle = 'rgba(8,12,20,0.55)'
-      roundRectPath(g, 8, 12, 240, 40, 10)
-      g.fill()
-      g.fillStyle = team === 'home' ? '#bfe0ff' : '#ffd2d2'
-      g.fillText(text, 128, 33)
+      g.font = `800 34px ${DISPLAY}`
+      const w = Math.min(232, g.measureText(label).width)
+      g.lineWidth = 7
+      g.strokeStyle = 'rgba(6,10,18,0.85)'
+      g.strokeText(label, 128, 30, 232)
+      g.fillStyle = '#ffffff'
+      g.fillText(label, 128, 30, 232)
+      g.fillStyle = team === 'home' ? '#4c93ff' : '#ff5c5c'
+      g.fillRect(128 - w / 2, 50, w, 4)
     } else {
-      g.strokeStyle = 'rgba(255,255,255,0.35)'
-      g.lineWidth = 2
-      g.font = '500 28px system-ui, sans-serif'
-      g.fillStyle = 'rgba(255,255,255,0.42)'
-      g.fillText(text, 128, 33)
+      g.font = `700 28px ${DISPLAY}`
+      g.lineWidth = 5
+      g.strokeStyle = 'rgba(6,10,18,0.5)'
+      g.strokeText(label, 128, 32, 232)
+      g.fillStyle = 'rgba(255,255,255,0.5)'
+      g.fillText(label, 128, 32, 232)
     }
     return c
   }
@@ -600,6 +751,7 @@ export class Scene3D {
         tag?.sprite.material.dispose()
         if (!tag) {
           const sprite = new THREE.Sprite()
+          sprite.userData.tag = true
           sprite.scale.set(2.2, 0.55, 1)
           this.scene.add(sprite)
           tag = { sprite, text, claimed }
@@ -907,6 +1059,113 @@ export class Scene3D {
     ;(line.material as THREE.LineBasicMaterial).opacity = 0.85 * Math.max(0, 1 - d.trailAge / 6)
   }
 
+  // ---- particles ----
+  //
+  // Everything here is a consequence of something the simulation already did —
+  // an effect it raised, a ball that is moving fast, a body that is moving fast
+  // — turned into something to look at. It never feeds back.
+  private lastBall = new THREE.Vector3(NaN, 0, 0)
+  private lastVz = 0
+  private footTimer = new Map<number, number>()
+
+  private syncFx(world: World, dt: number) {
+    const fx = this.fx
+    this.fresh.length = 0
+    for (const e of world.effects) {
+      if (this.seenEffects.has(e)) continue
+      this.seenEffects.add(e)
+      // A replay, or joining a match in progress, can hand over effects that
+      // are already old; nobody wants a burst for something that ended.
+      if (e.t > 0.2) continue
+      this.fresh.push(e)
+      this.burst(world, e)
+    }
+
+    const b = world.ball
+    const bp = b.renderPos(world.renderAlpha)
+    const cz = bp.z + BALL.radius
+    const speed = b.speed
+
+    // The streak behind a hard-hit ball: one glint per ~14 cm of its path, so
+    // it is continuous however far it moves in a frame.
+    if (speed > 11 && !Number.isNaN(this.lastBall.x)) {
+      const dx = bp.x - this.lastBall.x
+      const dy = bp.y - this.lastBall.y
+      const dz = cz - this.lastBall.z
+      const d = Math.hypot(dx, dy, dz)
+      if (d < 3) {
+        const n = Math.min(10, Math.max(1, Math.ceil(d / 0.14)))
+        for (let i = 1; i <= n; i++) {
+          const t = i / n
+          fx.trail(this.lastBall.x + dx * t, this.lastBall.y + dy * t, this.lastBall.z + dz * t, speed)
+        }
+      }
+    }
+    this.lastBall.set(bp.x, bp.y, cz)
+
+    // A puff where a hard-hit ball lands.
+    if (this.lastVz < -3 && b.vz > 0.05 && bp.z < 0.4) {
+      fx.dust(bp.x, bp.y, Math.min(1, -this.lastVz / 14), b.vx, b.vy)
+    }
+    this.lastVz = b.vz
+
+    // Feet: dust behind anyone at a sprint, and a spray from a slide.
+    for (const p of world.players) {
+      const sliding = p.slideTimer > 0
+      const pace = Math.hypot(p.vx, p.vy)
+      if (p.z > 0.05 || (!sliding && pace < 6.3)) {
+        this.footTimer.delete(p.id)
+        continue
+      }
+      let t = (this.footTimer.get(p.id) ?? 0) - dt
+      if (t <= 0) {
+        if (sliding) fx.turf(p.x, p.y, p.vx / (pace || 1), p.vy / (pace || 1), 0.35)
+        else fx.footDust(p.x, p.y, p.vx, p.vy)
+        t = sliding ? 0.05 : 0.1
+      }
+      this.footTimer.set(p.id, t)
+    }
+
+    fx.update(dt)
+  }
+
+  private burst(world: World, e: Effect) {
+    const fx = this.fx
+    const k = Math.min(1, Math.max(0, (e.speed - 3) / 24))
+    const z = world.ball.z + BALL.radius
+    switch (e.type) {
+      case 'kick':
+        fx.turf(e.x, e.y, e.dx, e.dy, k)
+        if (k > 0.5) fx.flash(e.x, e.y, 0.2, 0.35 + k * 0.5, 0.12)
+        break
+      case 'tackle':
+        fx.dust(e.x, e.y, 0.9)
+        fx.turf(e.x, e.y, e.dx, e.dy, 0.7)
+        break
+      case 'save':
+        fx.dust(e.x, e.y, 0.35)
+        fx.flash(e.x, e.y, 1, 0.6, 0.15)
+        break
+      case 'post':
+        fx.sparks(e.x, e.y, z, Math.max(0.25, k))
+        break
+      case 'spawn':
+        fx.flash(e.x, e.y, 0.3, 1.4, 0.35, 0.6, 0.85, 1)
+        fx.sparks(e.x, e.y, 0.3, 0.3)
+        break
+      case 'goal': {
+        // A cannon of paper from the mouth of the goal that was scored in.
+        const end = e.x < FIELD.length / 2 ? 0 : FIELD.length
+        const inward = end === 0 ? 1 : -1
+        fx.confetti(end + inward * 1.2, FIELD.width / 2, 1.2, inward, 0, [
+          [1, 0.85, 0.3], [1, 1, 1], [0.35, 0.65, 1], [1, 0.45, 0.4], [0.5, 1, 0.6],
+        ])
+        fx.flash(end + inward * 0.8, FIELD.width / 2, 1.3, 2.6, 0.4, 1, 0.9, 0.6)
+        break
+      }
+    }
+  }
+
   // ---- per-frame sync ----
 
   sync(
@@ -924,13 +1183,14 @@ export class Scene3D {
     const a = world.renderAlpha
     const b = world.ball
     const bp = b.renderPos(a)
-    this.ball.position.set(bp.x, bp.z + BALL.radius, bp.y)
+    this.ball.position.set(bp.x, bp.z + BALL.radius * Scene3D.BALL_VIS, bp.y)
     this.syncBallBlob(bp.x, bp.y, bp.z)
     this.spinBall(b, dt)
 
     this.syncNets(world, dt)
     this.syncDrills(world)
     this.syncDummies(world)
+    this.syncFx(world, dt)
 
     for (const p of world.players) {
       const rig = this.ensurePlayer(p.id, p.team, p.role, p.number)
@@ -941,15 +1201,4 @@ export class Scene3D {
     }
     this.syncTags(world, hideId, hideTags)
   }
-}
-
-// Local to the tag canvas; the HUD has its own.
-function roundRectPath(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
-  g.beginPath()
-  g.moveTo(x + r, y)
-  g.arcTo(x + w, y, x + w, y + h, r)
-  g.arcTo(x + w, y + h, x, y + h, r)
-  g.arcTo(x, y + h, x, y, r)
-  g.arcTo(x, y, x + w, y, r)
-  g.closePath()
 }
