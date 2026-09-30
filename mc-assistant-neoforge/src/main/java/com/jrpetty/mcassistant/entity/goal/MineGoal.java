@@ -296,7 +296,7 @@ public class MineGoal extends Goal {
             if (returnIndex < 0) {
                 finish(returnReason != null ? returnReason
                     : "Back at the shaft head — got " + oresMined + " ore. Stashing now.");
-                if (assistant.countItems() > 0) assistant.enqueueFront(Job.deposit());
+                if (assistant.stashable() > 0) assistant.enqueueFront(Job.deposit());
                 return;
             }
             moveTarget = stairPath.get(returnIndex--);
@@ -531,7 +531,7 @@ public class MineGoal extends Goal {
         assistant.setJumping(false);
         finish(returnReason != null ? returnReason
             : "Back at the surface — " + oresMined + " ore.");
-        if (assistant.countItems() > 0) assistant.enqueueFront(Job.deposit());
+        if (assistant.stashable() > 0) assistant.enqueueFront(Job.deposit());
     }
 
     /** A direction the descent can actually take from here, starting with the

@@ -132,13 +132,23 @@ final class Kit {
         }
     }
 
-    /** A stone hill with coal and iron in it — somewhere a shaft could go. */
+    /**
+     * A stone hill with coal and iron in it — somewhere a shaft could go. A
+     * MOUND, not a block: the sides slope by less than a block a step, the way
+     * a real hillside does, so a miner can walk up it and dig down from the
+     * top. The first version was a sheer-sided slab fourteen blocks high that
+     * nobody could climb, which tested nothing about mining except that a
+     * miner cannot dig a hole in flat ground beside a cliff.
+     */
     static void hill(ServerLevel level, int cx, int cz, int half, int height, long seed) {
         RandomSource rnd = RandomSource.create(seed);
         for (int dx = -half; dx <= half; dx++) {
             for (int dz = -half; dz <= half; dz++) {
+                int ring = Math.max(Math.abs(dx), Math.abs(dz));
+                int h = (int) Math.floor(height * (1.0 - ring / (double) (half + 1)));
+                if (h <= 0) continue;
                 BlockPos g = surface(level, cx + dx, cz + dz);
-                for (int i = 0; i < height; i++) {
+                for (int i = 0; i < h; i++) {
                     double r = rnd.nextDouble();
                     Block b = r < 0.05 ? Blocks.COAL_ORE : r < 0.08 ? Blocks.IRON_ORE : Blocks.STONE;
                     level.setBlock(g.above(i), b.defaultBlockState(), 3);
@@ -177,7 +187,7 @@ final class Kit {
             switch (i % 3) {
                 case 0 -> pond(level, x, z, 3);
                 case 1 -> forest(level, x, z, 8, 7, 100 + i);
-                default -> hill(level, x, z, 8, 14, 200 + i);
+                default -> hill(level, x, z, 14, 12, 200 + i);
             }
         }
         cows(level, cx + 10, cz + 30, 6);

@@ -57,6 +57,7 @@ public class WithdrawGoal extends Goal {
                 || s.is(net.minecraft.world.item.Items.CHARCOAL)
                 || s.is(ItemTags.LOGS) || s.is(ItemTags.PLANKS);
             case "ore" -> AssistantEntity.SMELTABLE_ORE;
+            case "wheat" -> s -> s.is(net.minecraft.world.item.Items.WHEAT);
             case "stone", "cobble", "cobblestone", "rock" -> s ->
                 BuiltInRegistries.ITEM.getKey(s.getItem()).getPath().contains("cobble")
                     || BuiltInRegistries.ITEM.getKey(s.getItem()).getPath().equals("stone");

@@ -217,6 +217,43 @@ public class VillageFolkEntity extends AssistantEntity {
         return trail.length() == 0 ? "" : " trail=" + trail.toString().trim();
     }
 
+    // ------------------------------ hands with nothing of their own to do ----
+
+    /** Put idle hands to the village's use. True if it queued something or is
+     *  already busy, false if there is nothing worth doing. */
+    private boolean idleHands() {
+        if (peekJob() != null) return true;
+        if (bakeErrand()) return true;
+        if (onShift()) considerVillageWork();        // no building after dark
+        return peekJob() != null;
+    }
+
+    /**
+     * Wheat is not food until somebody bakes it, and the farmers — who are
+     * never idle while there is a crop to tend — never get the moment to. So
+     * the village's idle hands do: fetch a batch from the stores, bake it at
+     * the bench every folk carries, and bank the bread. One errand at a time
+     * across the whole village.
+     */
+    private boolean bakeErrand() {
+        UUID village = ownerId();
+        BlockPos heart = villageCentre;
+        if (village == null || heart == null || peekJob() != null) return false;
+        long now = level().getGameTime();
+        if (!Villages.mayBake(village, now)) return false;
+        int held = countCarried(st -> st.is(net.minecraft.world.item.Items.WHEAT));
+        int radius = Math.min(112, Math.max(32, Villages.storesRadius(village)));
+        int inStores = storesHold(heart, radius,
+            st -> st.is(net.minecraft.world.item.Items.WHEAT));
+        if (held + inStores < 9) return false;
+        Villages.noteBake(village, now);
+        int take = Math.min(24, inStores);
+        if (held < 9 && take > 0) enqueue(Job.withdrawAt("wheat", take, heart, radius));
+        enqueue(Job.craft("bread", Math.max(1, Math.min(8, (held + take) / 3))));
+        enqueue(Job.deposit());
+        return true;
+    }
+
     // ------------------------------ the errand to the stores -----------------
 
     private int fetchTick = -100000;
@@ -247,11 +284,19 @@ public class VillageFolkEntity extends AssistantEntity {
             else if (gap.startsWith("a sword")) asks = new String[]{ "sword", "plank" };
             else if (gap.startsWith("a fishing rod")) asks = new String[]{ "fishing rod" };
             else if (gap.startsWith("shears")) asks = new String[]{ "shears" };
-            else if (gap.startsWith("a furnace")) asks = new String[]{ "furnace", "cobble" };
+            else if (gap.startsWith("a furnace")) {
+                if (countMatching(st -> st.is(net.minecraft.world.item.Items.FURNACE)) == 0) {
+                    asks = new String[]{ "furnace", "cobble" };
+                }
+            }
             else if (gap.startsWith("fuel")) { asks = new String[]{ "fuel" }; many = 16; }
             else if (gap.startsWith("raw ore")) { asks = new String[]{ "ore" }; many = 32; }
             else if (gap.equals("a chest in the zone") || gap.equals("2 chests in the zone")) {
-                asks = new String[]{ "chest", "plank", "log" };
+                // Carrying one already? Then what is missing is the PLOT to
+                // set it down on, and no errand to the stores will supply that.
+                if (countMatching(st -> st.is(net.minecraft.world.item.Items.CHEST)) == 0) {
+                    asks = new String[]{ "chest", "plank", "log" };
+                }
             }
             if (asks != null) break;
         }
@@ -291,7 +336,13 @@ public class VillageFolkEntity extends AssistantEntity {
         // itself out, walked its plot for a chest, and — worse — decided its
         // mine was spent and staked a new one.
         keepShift();
-        if (!onShift()) return;
+        if (!onShift()) {
+            // Everybody is at the heart after dark, with nothing to do — which is
+            // exactly when the wheat gets baked. Indoors, next to the stores,
+            // one errand at a time for the whole village.
+            if (peekJob() == null && getNavigation().isDone()) bakeErrand();
+            return;
+        }
         mindTheRoute();                                // a carrier's round is chosen, not clicked
         if (peekJob() != null) return;                 // already busy
         if (resting()) return;                         // off the clock for a bit
@@ -456,7 +507,13 @@ public class VillageFolkEntity extends AssistantEntity {
         // same tick for ever.
         // Staggered by entity id: a hundred folk all failing to find ground on
         // the same tick, once a minute, is a hundred searches in one tick.
-        if (tickCount - searchFailTick < 1200 + (getId() % 12) * 100) { roam(); return; }
+        if (tickCount - searchFailTick < 1200 + (getId() % 12) * 100) {
+            // No ground of its own yet. A pair of hands stood at the heart is
+            // the village's to use — baking, building — rather than a pair
+            // wandering the square until a plot turns up.
+            if (!idleHands()) roam();
+            return;
+        }
         searchFailTick = tickCount;
 
         // Claim the trade BEFORE going to look for ground. The village works
@@ -1106,8 +1163,13 @@ public class VillageFolkEntity extends AssistantEntity {
 
     /** How much of this the village's stores hold near its heart. */
     private int storesHold(BlockPos heart, java.util.function.Predicate<net.minecraft.world.item.ItemStack> what) {
+        return storesHold(heart, 48, what);
+    }
+
+    private int storesHold(BlockPos heart, int radius,
+                           java.util.function.Predicate<net.minecraft.world.item.ItemStack> what) {
         return ZoneChests.countIn(
-            ZoneChests.around(level(), heart, 48, 32).stream()
+            ZoneChests.around(level(), heart, radius, 32).stream()
                 .filter(f -> f.stillThere() && ZoneChests.isStashable(f)).toList(),
             what);
     }

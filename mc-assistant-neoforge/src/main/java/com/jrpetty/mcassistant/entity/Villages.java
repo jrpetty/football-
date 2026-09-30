@@ -87,6 +87,7 @@ public final class Villages {
         CELLS.clear();
         LEAD.clear();
         LEAD_AT.clear();
+        LAST_BAKE.clear();
         STOCK.clear();
         STOCK_TICK.clear();
     }
@@ -146,6 +147,7 @@ public final class Villages {
         CELLS.remove(villageId);
         LEAD.remove(villageId);
         LEAD_AT.remove(villageId);
+        LAST_BAKE.remove(villageId);
         ALL.remove(villageId);
         AGE.remove(villageId);
         BUILT.remove(villageId);
@@ -716,6 +718,21 @@ public final class Villages {
     @Nullable
     private static String penIfWanted(UUID villageId, int folk) {
         return folk >= 14 && built(villageId, "pen") < 1 ? "pen" : null;
+    }
+
+    // ---- who is baking ----
+
+    private static final Map<UUID, Long> LAST_BAKE = new ConcurrentHashMap<>();
+
+    /** One bread errand at a time for the whole village: a dozen idle hands at
+     *  the heart at dusk would otherwise all walk to the same chest for the
+     *  same wheat. */
+    public static boolean mayBake(UUID villageId, long gameTime) {
+        return gameTime - LAST_BAKE.getOrDefault(villageId, -1200L) >= 1200L;
+    }
+
+    public static void noteBake(UUID villageId, long gameTime) {
+        LAST_BAKE.put(villageId, gameTime);
     }
 
     // ---- who is raising the next building ----
