@@ -34,9 +34,11 @@ is there for a reason the village can see.
    chests are kept for it. It goes up within minutes: four chests under one roof.
 4. **A shelter, then houses.** *Why:* a village has room for twelve, and every house
    is room for five more (a shelter three, the meeting hall six). Two fed folk in
-   work raise a child only while there is room, so the village builds a house
-   whenever it is nearly full. That loop (food → children → hands → materials →
-   houses → room → children) is what makes it grow.
+   work raise a child only while there is room **and** the stores hold a day's
+   meals for everybody, so the village builds a house whenever it is nearly full
+   and farms ahead of its mouths. That loop (food put by → children → hands →
+   materials → houses → room → children) is what makes it grow, and because
+   children come out of a surplus, the larder each age asks for is there too.
 5. **A well** at the middle marks the camp as a village, and the Wood Age asks for it
    with timber, food in the stores, the storehouse, the shelter and enough houses.
 6. **The Stone Age:** quarry stone and coal, a **wall** round the village (it follows
@@ -46,8 +48,8 @@ is there for a reason the village can see.
    **Nether Age:** obsidian for a way out of the world.
 
 Each age is announced once in chat (the only thing a village ever says).
-`/village status` shows what it is short of, how much room it has, and what it
-will build next and why.
+`/village status` shows what it is short of, how much room it has, whether it is
+growing (and if not, what it is waiting for), and what it will build next and why.
 
 ### The buildings
 
@@ -113,7 +115,8 @@ actually carry: stone before planks, planks before logs.
   what the village needs. A village that reaches a new age says so, once, in
   chat. Folk themselves never speak.
 * **Growth** — two folk who are fed and in work, standing together, have a
-  chance of raising a child, paced across the whole village. Cap: 100 by
+  chance of raising a child, paced across the whole village, while there is room
+  and the stores hold a day's meals for everybody. Cap: 100 by
   default, 500 at most (`villageGrowthCap`).
 
 Right-click a folk to see what it carries and what it is doing. You can look;

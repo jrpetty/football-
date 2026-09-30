@@ -207,14 +207,20 @@ public final class VillageMath {
     public static final int TOOL_IRON = 3;
 
     /**
-     * Food the stores should hold: a day and a half of actual meals for
-     * actual people, with a floor so a hamlet still keeps a sensible larder.
-     * At ten folk that is about the sixty-four it always was; at a hundred it
-     * is twelve hundred, because a hundred people eat a hundred people's
-     * worth.
+     * Food the stores should hold: a day of actual meals for actual people,
+     * with a floor so a hamlet still keeps a sensible larder. At ten folk that
+     * is the sixty-four it always was; at a hundred it is five hundred, because
+     * a hundred people eat a hundred people's worth. It is the same day's meals
+     * a village must have put by before it raises a child ({@link #larderForBirth}),
+     * so a village that is growing is a village whose larder is full.
      */
     public static int foodWanted(int folk) {
-        return Math.max(64, (int) Math.round(folk * MEALS_PER_DAY * 1.5));
+        return Math.max(64, folk * MEALS_PER_DAY);
+    }
+
+    /** Food in the stores before a child is raised: a day's meals for everybody. */
+    public static int larderForBirth(int folk) {
+        return Math.max(0, folk) * MEALS_PER_DAY;
     }
 
     /** Iron to put a full set of armour on every watchman — the first call on

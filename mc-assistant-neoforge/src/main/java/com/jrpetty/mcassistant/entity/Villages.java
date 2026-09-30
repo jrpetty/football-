@@ -793,6 +793,38 @@ public final class Villages {
         return 12 + 5 * built(villageId, "house") + 3 * built(villageId, "shelter") + 6 * built(villageId, "hall");
     }
 
+    /**
+     * Food the stores must hold before anybody raises a child: a day's meals for
+     * everybody already here. Children are raised out of what is put by, not out
+     * of the last loaf. Three real-terrain villages grew from twelve to twenty-five
+     * and thirty while their stores fell from a hundred and twenty to eight: every
+     * surplus became a child, the stores never reached what the Wood Age asks for,
+     * and a forest village of forty-one with eight buildings never left it.
+     */
+    public static int larderForBirth(UUID villageId) {
+        return com.jrpetty.mcassistant.village.VillageMath.larderForBirth(headcount(villageId));
+    }
+
+    /** True when the village's stores hold enough food for it to raise children. */
+    public static boolean larderFull(net.minecraft.server.level.ServerLevel level, UUID villageId) {
+        Village v = get(villageId);
+        if (v == null) return false;
+        return stock(level, v.centre(), Task.FOOD, storesRadius(villageId)) >= larderForBirth(villageId);
+    }
+
+    /** Whether the village is growing and, if not, what it is waiting for. */
+    public static String growthNote(net.minecraft.server.level.ServerLevel level, UUID villageId) {
+        int folk = headcount(villageId);
+        if (folk >= com.jrpetty.mcassistant.AssistantConfig.villageGrowthCap()) return "no — at the cap";
+        if (folk >= housing(villageId)) return "no — every home is full, a house comes first";
+        Village v = get(villageId);
+        if (v == null) return "no";
+        int food = stock(level, v.centre(), Task.FOOD, storesRadius(villageId));
+        int want = larderForBirth(villageId);
+        if (food < want) return "no — the stores hold " + food + " food and a child needs " + want + " put by";
+        return "yes";
+    }
+
     /** Why the village wants the building it wants next, in a line a player can read. */
     public static String whyBuild(UUID villageId, @Nullable String project) {
         if (project == null) return "nothing for now — the village is gathering what its age asks for";

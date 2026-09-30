@@ -1146,6 +1146,8 @@ public class VillageFolkEntity extends AssistantEntity {
         // Nobody is born without somewhere to live: see Villages.housing.
         if (Villages.headcount(village) >= Villages.housing(village)) return false;
         if (!Villages.mayBirth(village, level().getGameTime())) return false;
+        // Nor without a day's food put by: see Villages.larderForBirth.
+        if (!Villages.larderFull(server, village)) return false;
         // Somebody to raise it with, near enough to count as living together,
         // in the same trade-less sense: fed, in work, and not this one.
         VillageFolkEntity partner = null;
