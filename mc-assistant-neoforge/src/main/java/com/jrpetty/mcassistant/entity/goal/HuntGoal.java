@@ -74,17 +74,28 @@ public class HuntGoal extends Goal {
 
     @Override
     public void stop() {
-        if (victim != null && assistant.getTarget() == victim) {
-            assistant.setTarget(null);
-        }
+        letGoOfPrey();
         this.job = null;
         this.victim = null;
     }
 
-    private void finish(String message) {
-        if (victim != null && assistant.getTarget() == victim) {
+    /** Drop the animal this hunt was aimed at. A killed animal is not dropped by
+     *  the kill: the hunt forgot it as soon as it fell, and the dead cow stayed
+     *  the hand's TARGET. Every job goal refuses to start while the hand has a
+     *  target, so the next job — the deposit that follows every hunt — sat at
+     *  the head of the queue for the rest of the day, the rest of the week:
+     *  a hand that hunted once never worked again. An animal is never a target
+     *  anybody else set, so any animal target is this hunt's to clear. */
+    private void letGoOfPrey() {
+        net.minecraft.world.entity.LivingEntity t = assistant.getTarget();
+        if (t == null) return;
+        if (t == victim || t instanceof Animal || !t.isAlive() || t.isRemoved()) {
             assistant.setTarget(null);
         }
+    }
+
+    private void finish(String message) {
+        letGoOfPrey();
         assistant.say(message);
         assistant.noteJobOutcome(hunted > 0);
         assistant.pollJob();
@@ -116,6 +127,7 @@ public class HuntGoal extends Goal {
         if (victim != null && (!victim.isAlive() || victim.isRemoved())) {
             if (lastVictimPos != null) sweepDrops(lastVictimPos);
             hunted++;
+            letGoOfPrey();
             victim = null;
         }
 

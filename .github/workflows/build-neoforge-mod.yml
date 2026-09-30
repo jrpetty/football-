@@ -132,7 +132,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        scenario: [plains, forest, taiga, savanna, takeover]
+        scenario: [plains, forest, taiga, savanna, takeover, crowd]
     steps:
       - uses: actions/checkout@v4
 
@@ -186,7 +186,13 @@ jobs:
           sleep 5
           # Whatever the server complained about while it ran.
           echo "[REAL] ---- server log: warnings and errors from the mod ----" >> real-${{ matrix.scenario }}.txt
-          grep -aE "Exception|Caused by|ERROR|mc_assistant|com\.jrpetty" run/logs/latest.log | grep -av "Ambiguity\|Advanced terminal" | tail -150 >> real-${{ matrix.scenario }}.txt || true
+          grep -aE "Exception|Caused by|ERROR|mc_assistant|com\.jrpetty" run/logs/latest.log | grep -av "Ambiguity\|Advanced terminal\|^    at " | tail -150 >> real-${{ matrix.scenario }}.txt || true
+          # Every time the server stood still for more than a second and a half, and
+          # what it was doing (the stack), plus how the chunk queue was getting on.
+          echo "[REAL] ---- stalls (the server thread's stack when a tick took over 1.5 s) ----" >> real-${{ matrix.scenario }}.txt
+          grep -a -A 42 "MCA-STALL" run/logs/latest.log | head -700 >> real-${{ matrix.scenario }}.txt || true
+          echo "[REAL] ---- chunk queue ----" >> real-${{ matrix.scenario }}.txt
+          grep -a "MCA-CHUNKS" run/logs/latest.log | head -60 >> real-${{ matrix.scenario }}.txt || true
           gzip -c run/logs/latest.log > server-${{ matrix.scenario }}.log.gz || true
           wc -l real-${{ matrix.scenario }}.txt
 

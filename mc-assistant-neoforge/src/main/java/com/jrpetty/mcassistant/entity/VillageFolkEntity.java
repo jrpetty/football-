@@ -308,7 +308,12 @@ public class VillageFolkEntity extends AssistantEntity {
         for (String ask : asks) {
             int amount = ask.equals("cobble") ? 8 : (ask.equals("plank") ? 8
                 : (ask.equals("log") ? 2 : many));
+            // Stone comes out of the ground where the mines are, a hill or two from
+            // the heart, and lies in their chests until a hauler moves it: a smelter
+            // that only looked round the heart for cobble to make its furnace from
+            // never found any and never smelted a thing.
             int radius = ask.equals("food") || ask.equals("ore") || ask.equals("fuel")
+                    || ask.equals("cobble") || ask.equals("plank") || ask.equals("log")
                 ? Math.min(112, Math.max(32, Villages.storesRadius(village))) : 32;
             if (findChestWithNear(heart,
                     com.jrpetty.mcassistant.entity.goal.WithdrawGoal.matcherFor(ask), radius) == null) {

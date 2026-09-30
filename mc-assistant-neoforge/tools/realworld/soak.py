@@ -74,17 +74,26 @@ class Rcon:
         return rid, rtype, data[8:-2].decode("utf-8", "replace")
 
     def cmd(self, text):
-        """Run a command. Replies over 4096 bytes arrive in pieces, so a second,
-        deliberately unknown request is sent behind it: its answer marks the end."""
+        """Run a command and return everything it printed.
+
+        Vanilla's RCON server reads with a single recv and gives up on the
+        connection if a second packet has arrived in the same read, so two
+        requests must never be in flight at once — and a slow command (a village
+        founding takes seconds) makes that overlap certain. The reply to a long
+        answer comes in 4096-byte pieces with no "last one" flag, so a second,
+        deliberately unknown request is sent once the FIRST piece has arrived;
+        its answer marks the end."""
         want = self._send(2, text)
-        end = self._send(100, "")
         out = []
+        end = None
         while True:
             rid, _, body = self._recv()
-            if rid == end:
-                break
             if rid == want:
                 out.append(body)
+                if end is None:
+                    end = self._send(100, "")
+            elif end is not None and rid == end:
+                break
         return "".join(out).strip()
 
 
@@ -94,8 +103,11 @@ def gametime(r):
 
 
 def sprint(r, ticks):
-    """Run this many ticks as fast as the machine will go, and wait for them."""
+    """Run this many ticks as fast as the machine will go, and wait for them.
+    Says how fast that was: a village that is fine at twelve folk and grinds at
+    a hundred is a finding, and this is where it shows."""
     start = gametime(r)
+    began = time.time()
     r.cmd("tick sprint %dt" % ticks)
     stalled = 0
     last = start
@@ -103,6 +115,9 @@ def sprint(r, ticks):
         time.sleep(4)
         now = gametime(r)
         if now >= start + ticks:
+            took = max(0.001, time.time() - began)
+            say("sprint: %d ticks in %.0f s = %.1f ms a tick (%.0f tps)"
+                % (ticks, took, 1000.0 * took / ticks, ticks / took))
             return now
         if now == last:
             stalled += 1
@@ -124,11 +139,31 @@ def where(r, what, dim="minecraft:overworld"):
     return int(m.group(1)), int(m.group(3))
 
 
-def report(r, x, z, label):
+def report(r, x, z, label, compact=False):
     at = "execute positioned %d 64 %d run " % (x, z)
     say("== %s @tick %d" % (label, gametime(r)))
     say("STATUS " + r.cmd(at + "village status").replace("\n", " | "))
-    for line in r.cmd(at + "village folk").split("\n"):
+    lines = [l for l in r.cmd(at + "village folk").split("\n") if l.strip()]
+    if not compact:
+        for line in lines:
+            say("  " + line)
+        return
+    # A hundred lines a checkpoint is more than anybody reads: tally instead.
+    trades, idle, gated, frozen = {}, 0, 0, 0
+    for line in lines[1:]:
+        m = re.search(r" L\d+ (\w[\w ]*?) hp=", line)
+        if m:
+            trades[m.group(1)] = trades.get(m.group(1), 0) + 1
+        if " job=- " in line:
+            idle += 1
+        if "missing=[" in line:
+            gated += 1
+        m = re.search(r"sinceWork=(\d+)", line)
+        if m and int(m.group(1)) > 6000:
+            frozen += 1
+    say("TALLY %d folk; trades %s; %d with no job, %d missing something, %d not worked in 5 min"
+        % (max(0, len(lines) - 1), trades, idle, gated, frozen))
+    for line in lines[1:9]:
         say("  " + line)
 
 
@@ -139,20 +174,22 @@ def setup(r):
         r.cmd(c)
 
 
-def village(r, biome):
+def village(r, biome, count=12, compact=False):
     setup(r)
     spot = where(r, "biome minecraft:" + biome)
     if spot is None:
         say("SKIP no %s within reach of this seed" % biome)
         return
     x, z = spot
-    say("village goes at %d, %d (%s)" % (x, z, biome))
-    say("spawn: " + r.cmd("village spawnat %d %d 12" % (x, z)))
+    say("village of %d goes at %d, %d (%s)" % (count, x, z, biome))
+    began = time.time()
+    say("spawn: " + r.cmd("village spawnat %d %d %d" % (x, z, count)))
+    say("spawning took %.1f s of wall clock" % (time.time() - began))
     done = 0
     for upto in (300, 1500, 4500, 12000, 24000, 48000, 72000):
         sprint(r, upto - done)
         done = upto
-        report(r, x, z, "%s day %.1f" % (biome, done / 24000.0))
+        report(r, x, z, "%s day %.1f" % (biome, done / 24000.0), compact)
     say("PASS the server ran three game days on %s" % biome)
 
 
@@ -185,6 +222,9 @@ def main():
     try:
         if scenario == "takeover":
             takeover(r)
+        elif scenario == "crowd":
+            # A hundred settlers, the cap: is the server still a server?
+            village(r, "plains", count=100, compact=True)
         else:
             village(r, scenario)
     except (EOFError, OSError) as e:

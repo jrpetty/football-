@@ -41,5 +41,6 @@ public final class SessionReset {
         AssistantEntity.resetRegistryForTests();
         Town.resetAll();
         Requests.resetAll();
+        ChunkLoad.reset();
     }
 }
