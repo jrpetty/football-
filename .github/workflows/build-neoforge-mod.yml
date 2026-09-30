@@ -91,10 +91,16 @@ jobs:
         working-directory: mc-assistant-neoforge
         run: |
           chmod +x gradlew
-          ./gradlew --no-daemon -q -Pgametest=true printClasspath > cp.raw 2> cp.err || true
+          # compileJava first: it is what MATERIALISES the Minecraft/NeoForge
+          # jars on disk, and printClasspath only lists paths.
+          ./gradlew --no-daemon -q -Pgametest=true compileJava printClasspath > cp.raw 2> cp.err || true
           CP=$(tail -1 cp.raw)
           {
             echo "### classpath entries: $(echo "$CP" | tr ':' '\n' | wc -l)"
+            echo "### the ones that exist and look like Minecraft/NeoForge:"
+            for j in $(echo "$CP" | tr ':' ' '); do
+              if [ -e "$j" ]; then echo "  EXISTS $(du -h "$j" | cut -f1) $j"; else echo "  MISSING $j"; fi
+            done | grep -iE 'neoforge|minecraft|neoform|MISSING' | head -40
             echo "### gametest-ish classes on the classpath"
             for j in $(echo "$CP" | tr ':' ' '); do
               unzip -l "$j" 2>/dev/null | awk '{print $4}' | grep -iE 'gametest' | sed "s|^|$(basename "$j"): |"
