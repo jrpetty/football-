@@ -233,6 +233,76 @@ def takeover(r):
     say("PASS the server generated a vanilla village and kept running")
 
 
+def natural(r):
+    """Nobody founds anything: the world is left to its own config, which lets
+    villages appear as ground is generated — what a player who explores will
+    meet. Loads a wide patch of terrain the way exploring does (force-loading a
+    tile at a time) and reports whatever the game founded."""
+    setup(r)
+    tiles = [(-160, -160), (0, -160), (-160, 0), (0, 0), (160, -160), (160, 0), (-160, 160), (0, 160)]
+    for x, z in tiles:
+        say("forceload %d,%d: %s" % (x, z, r.cmd("forceload add %d %d %d %d" % (x, z, x + 150, z + 150))))
+        sprint(r, 200)
+    for upto in (600, 3000, 12000, 24000):
+        sprint(r, upto)
+        say("== natural villages after %d more ticks (tick %d)" % (upto, gametime(r)))
+        listing = r.cmd("village list")
+        for line in listing.split("\n"):
+            say("  " + line)
+    # One of them, close up.
+    m = re.search(r"Village at (-?\d+), (-?\d+)", listing)
+    if m:
+        x, z = int(m.group(1)), int(m.group(2))
+        report(r, x, z, "the first natural village")
+    say("PASS the server let villages found themselves and kept running")
+
+
+def restart1(r):
+    """The first half of "did it survive a restart": found a village, let a day
+    pass, save the world and let the server be stopped."""
+    setup(r)
+    spot = where(r, "biome minecraft:plains")
+    if spot is None:
+        say("SKIP no plains within reach of this seed")
+        return
+    x, z = spot
+    say("village goes at %d, %d" % (x, z))
+    say("spawn: " + r.cmd("village spawnat %d %d 12" % (x, z)))
+    done = 0
+    for upto in (300, 4500, 24000):
+        sprint(r, upto - done)
+        done = upto
+        report(r, x, z, "before the restart, tick %d" % done)
+    say("village list before: " + r.cmd("village list").replace("\n", " | "))
+    say("saved: " + r.cmd("save-all flush"))
+    say("STOPPING: the world is on disk")
+
+
+def restart2(r):
+    """The second half: the same world, a new server. Did the village come back
+    — the same people, the same age, the same buildings — and does it carry on?"""
+    for c in ("gamerule doDaylightCycle true", "gamerule doWeatherCycle false",
+              "gamerule randomTickSpeed 15", "weather clear 1000000"):
+        r.cmd(c)
+    say("village list straight after the restart: " + r.cmd("village list").replace("\n", " | "))
+    sprint(r, 300)
+    listing = r.cmd("village list")
+    say("village list 300 ticks on: " + listing.replace("\n", " | "))
+    m = re.search(r"Village at (-?\d+), (-?\d+)", listing)
+    if not m:
+        say("FAIL the village did not come back")
+        return
+    x, z = int(m.group(1)), int(m.group(2))
+    report(r, x, z, "after the restart")
+    done = 0
+    for upto in (4500, 24000):
+        sprint(r, upto - done)
+        done = upto
+        report(r, x, z, "a day after the restart" if upto == 24000 else "after the restart +%d" % upto)
+    say("village list at the end: " + r.cmd("village list").replace("\n", " | "))
+    say("PASS the village came back from a restart and carried on")
+
+
 def main():
     scenario = sys.argv[1] if len(sys.argv) > 1 else "plains"
     r = Rcon()
@@ -240,6 +310,12 @@ def main():
     try:
         if scenario == "takeover":
             takeover(r)
+        elif scenario == "restart1":
+            restart1(r)
+        elif scenario == "restart2":
+            restart2(r)
+        elif scenario == "natural":
+            natural(r)
         elif scenario == "crowd":
             # A hundred settlers, the cap: is the server still a server?
             village(r, "plains", count=100, compact=True)

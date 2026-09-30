@@ -364,7 +364,12 @@ public final class VillageSpawner {
             new ItemStack(Items.TORCH, 32),
             new ItemStack(Items.CRAFTING_TABLE, 1),
             new ItemStack(Items.CHEST, 4),
-            new ItemStack(Items.OAK_PLANKS, 32),
+            new ItemStack(Items.OAK_PLANKS, 48),
+            // A storehouse is seventy-odd blocks. With planks alone the first
+            // building waited on the woodcutters — a day or more on a map with few
+            // trees, and on a plains map for ever. A stack of cobblestone to start
+            // the walls means the first thing goes up in the first minutes.
+            new ItemStack(Items.COBBLESTONE, 64),
             new ItemStack(Items.BREAD, 32),
             // Two lengths of string. Nothing a village does produces any, and
             // a rod is three sticks and two string — so without this the one

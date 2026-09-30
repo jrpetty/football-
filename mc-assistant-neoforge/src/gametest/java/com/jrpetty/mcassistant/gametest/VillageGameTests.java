@@ -338,8 +338,12 @@ public class VillageGameTests {
                 Kit.log("---- checkpoint 12000: producing");
                 var chests = Kit.chestContents(level, cx, cz, 110);
                 ex.that(chests.getOrDefault("logs", 0) > 0, "logs have reached a chest " + chests.getOrDefault("logs", 0));
-                ex.that(chests.getOrDefault("stone", 0) > 0, "stone has reached a chest " + chests.getOrDefault("stone", 0));
                 var world = Kit.census(level, cx, cz, 90);
+                // Mined and banked — whether it is still lying in a chest or has already
+                // gone into a wall (the builders draw on it as soon as it arrives).
+                int stoneBanked = chests.getOrDefault("stone", 0) + world.getOrDefault("cobble", 0);
+                // (The founding stores hold sixty-four cobblestone to start the walls.)
+                ex.that(stoneBanked > 64, "stone has been mined and banked beyond the founding gift " + stoneBanked);
                 ex.that(world.get("wheat") > 0 || chests.getOrDefault("wheat", 0) > 0,
                     "wheat has been grown (" + world.get("wheat") + " standing, " + chests.getOrDefault("wheat", 0) + " stored)");
                 ex.that(crew.size() >= 12, "nobody has died yet (" + crew.size() + " of 12+)");
@@ -358,7 +362,9 @@ public class VillageGameTests {
                 done[4] = true;
                 Kit.log("---- checkpoint 48000: two days");
                 var chests = Kit.chestContents(level, cx, cz, 110);
-                ex.that(chests.getOrDefault("stone", 0) > 0, "stone has reached a chest (" + chests.getOrDefault("stone", 0) + ")");
+                var worldNow = Kit.census(level, cx, cz, 90);
+                int stoneBanked = chests.getOrDefault("stone", 0) + worldNow.getOrDefault("cobble", 0);
+                ex.that(stoneBanked > 64, "stone has been mined and banked beyond the founding gift (" + stoneBanked + ")");
                 ex.that(crew.size() >= 11, "at most one lost in two days (" + crew.size() + ")");
                 Kit.log("  " + ex.summary());
             }

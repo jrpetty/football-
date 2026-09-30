@@ -132,7 +132,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        scenario: [plains, forest, taiga, savanna, takeover, crowd]
+        scenario: [plains, forest, taiga, savanna, takeover, crowd, natural, restart]
     steps:
       - uses: actions/checkout@v4
 
@@ -165,9 +165,12 @@ jobs:
           EOF
           # The scenario places its own village; keep the world's natural ones
           # from crowding the measurement.
-          cat > run/config/mc_assistant-common.toml <<'EOF'
+          # Every scenario places its own village, so the world's natural ones would
+          # only crowd the measurement — except the one that is about them.
+          if [ "${{ matrix.scenario }}" = "natural" ]; then NATURAL=true; else NATURAL=false; fi
+          cat > run/config/mc_assistant-common.toml <<EOF
           [villages]
-          naturalVillages = false
+          naturalVillages = ${NATURAL}
           EOF
 
       - name: Start the server
@@ -180,20 +183,46 @@ jobs:
         working-directory: mc-assistant-neoforge
         run: |
           set +e
-          python3 tools/realworld/soak.py "${{ matrix.scenario }}" | tee real-${{ matrix.scenario }}.txt
+          FIRST="${{ matrix.scenario }}"
+          # "restart" is two runs of one world: found and save, then start again.
+          if [ "$FIRST" = "restart" ]; then FIRST=restart1; fi
+          python3 tools/realworld/soak.py "$FIRST" | tee real-${{ matrix.scenario }}.txt
           echo "soak exit: ${PIPESTATUS[0]}"
           set -e
           sleep 5
-          # Whatever the server complained about while it ran.
+
+      - name: Start the same world again and see what came back
+        if: matrix.scenario == 'restart'
+        working-directory: mc-assistant-neoforge
+        run: |
+          # Wait for the first server to finish saving and exit.
+          for i in $(seq 1 90); do pgrep -f "runServer" > /dev/null || break; sleep 2; done
+          sleep 3
+          cp run/logs/latest.log first-run.log || true
+          nohup ./gradlew --no-daemon runServer > server-gradle2.log 2>&1 &
+          set +e
+          python3 tools/realworld/soak.py restart2 | tee -a real-restart.txt
+          echo "soak exit: ${PIPESTATUS[0]}"
+          set -e
+          sleep 5
+
+      - name: Collect the server log
+        if: always()
+        working-directory: mc-assistant-neoforge
+        run: |
+          # Whatever the server complained about while it ran (both runs, for the
+          # restart scenario).
           echo "[REAL] ---- server log: warnings and errors from the mod ----" >> real-${{ matrix.scenario }}.txt
-          grep -aE "Exception|Caused by|ERROR|mc_assistant|com\.jrpetty" run/logs/latest.log | grep -av "Ambiguity\|Advanced terminal\|^    at " | tail -150 >> real-${{ matrix.scenario }}.txt || true
+          cat first-run.log run/logs/latest.log 2>/dev/null | grep -aE "Exception|Caused by|ERROR|mc_assistant|com\.jrpetty" | grep -av "Ambiguity\|Advanced terminal\|^    at " | tail -150 >> real-${{ matrix.scenario }}.txt || true
           # Every time the server stood still for more than a second and a half, and
           # what it was doing (the stack), plus how the chunk queue was getting on.
           echo "[REAL] ---- stalls (the server thread's stack when a tick took over 1.5 s) ----" >> real-${{ matrix.scenario }}.txt
-          grep -a -A 42 "MCA-STALL" run/logs/latest.log | head -700 >> real-${{ matrix.scenario }}.txt || true
+          cat first-run.log run/logs/latest.log 2>/dev/null | grep -a -A 42 "MCA-STALL" | head -700 >> real-${{ matrix.scenario }}.txt || true
+          echo "[REAL] ---- why the village was or was not building ----" >> real-${{ matrix.scenario }}.txt
+          cat first-run.log run/logs/latest.log 2>/dev/null | grep -a "MCA-BUILD" | head -150 >> real-${{ matrix.scenario }}.txt || true
           echo "[REAL] ---- chunk queue ----" >> real-${{ matrix.scenario }}.txt
-          grep -a "MCA-CHUNKS" run/logs/latest.log | head -60 >> real-${{ matrix.scenario }}.txt || true
-          gzip -c run/logs/latest.log > server-${{ matrix.scenario }}.log.gz || true
+          cat first-run.log run/logs/latest.log 2>/dev/null | grep -a "MCA-CHUNKS" | head -60 >> real-${{ matrix.scenario }}.txt || true
+          cat first-run.log run/logs/latest.log 2>/dev/null | gzip -c > server-${{ matrix.scenario }}.log.gz || true
           wc -l real-${{ matrix.scenario }}.txt
 
       - name: Stop the server

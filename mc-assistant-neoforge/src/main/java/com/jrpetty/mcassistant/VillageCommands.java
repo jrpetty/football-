@@ -45,6 +45,7 @@ public final class VillageCommands {
                             .executes(ctx -> spawnAt(ctx,
                                 IntegerArgumentType.getInteger(ctx, "count")))))))
             .then(Commands.literal("folk").executes(VillageCommands::folk))
+            .then(Commands.literal("list").executes(VillageCommands::list))
             .then(Commands.literal("status").executes(VillageCommands::status)));
     }
 
@@ -124,6 +125,23 @@ public final class VillageCommands {
         if (crew.isEmpty()) return "?";
         Villages.Village v = Villages.get(crew.get(0).ownerId());
         return v == null ? "?" : v.centre().getX() + ", " + v.centre().getZ();
+    }
+
+    /** Every village the game knows of, one line each — where they are, how many
+     *  live there, how far along they are. */
+    private static int list(CommandContext<CommandSourceStack> ctx) {
+        java.util.List<Villages.Village> all = Villages.every();
+        if (all.isEmpty()) {
+            ctx.getSource().sendSuccess(() -> Component.literal("No villages yet."), false);
+            return 0;
+        }
+        for (Villages.Village v : all) {
+            final String line = "Village at " + v.centre().getX() + ", " + v.centre().getZ()
+                + " — " + Villages.headcount(v.id()) + " folk (" + Villages.loadedCount(v.id())
+                + " loaded), " + Villages.ageOf(v.id()).label + ", built " + Villages.builtList(v.id());
+            ctx.getSource().sendSuccess(() -> Component.literal(line), false);
+        }
+        return all.size();
     }
 
     private static int spawn(CommandContext<CommandSourceStack> ctx, int count) {

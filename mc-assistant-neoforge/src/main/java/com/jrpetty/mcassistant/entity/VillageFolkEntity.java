@@ -287,7 +287,11 @@ public class VillageFolkEntity extends AssistantEntity {
             else if (gap.startsWith("a pickaxe")) asks = new String[]{ "pickaxe", "plank", "log" };
             else if (gap.startsWith("an axe")) asks = new String[]{ "axe", "plank", "log" };
             else if (gap.startsWith("a sword")) asks = new String[]{ "sword", "plank" };
-            else if (gap.startsWith("a fishing rod")) asks = new String[]{ "fishing rod" };
+            // A rod is three sticks and two string, and the village keeps its
+            // string at the heart while the fisher's pond is sixty blocks out:
+            // the fisher asked the stores for a ready-made rod, found none, and
+            // stood at its empty pond for three game days.
+            else if (gap.startsWith("a fishing rod")) { asks = new String[]{ "fishing rod", "string", "plank" }; many = 2; }
             else if (gap.startsWith("shears")) asks = new String[]{ "shears" };
             else if (gap.startsWith("a furnace")) {
                 if (countMatching(st -> st.is(net.minecraft.world.item.Items.FURNACE)) == 0) {
@@ -311,6 +315,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // for around the heart, where the village keeps what it keeps.
         UUID village = ownerId();
         for (String ask : asks) {
+            if (alreadyCarrying(ask)) continue;             // have the makings: go and make it
             int amount = ask.equals("cobble") ? 8 : (ask.equals("plank") ? 8
                 : (ask.equals("log") ? 2 : many));
             // Stone comes out of the ground where the mines are, a hill or two from
@@ -330,6 +335,19 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         noteGate("fetch: the stores hold none of " + java.util.Arrays.toString(asks));
         return false;
+    }
+
+    /** Does the pack already hold enough of what this ask is for? A hand that
+     *  kept asking the stores for string it was already carrying never got round
+     *  to the planks it was missing. */
+    private boolean alreadyCarrying(String ask) {
+        return switch (ask) {
+            case "string" -> countCarried(st -> st.is(net.minecraft.world.item.Items.STRING)) >= 2;
+            case "plank" -> countCarried(st -> st.is(net.minecraft.tags.ItemTags.PLANKS)) >= 4;
+            case "log" -> countCarried(st -> st.is(net.minecraft.tags.ItemTags.LOGS)) >= 1;
+            case "cobble" -> countCarried(st -> st.is(net.minecraft.world.item.Items.COBBLESTONE)) >= 8;
+            default -> false;
+        };
     }
 
     /**
@@ -1208,22 +1226,22 @@ public class VillageFolkEntity extends AssistantEntity {
         if (peekJob() != null || !getNavigation().isDone()) return;
         if (!(level() instanceof net.minecraft.server.level.ServerLevel server)) return;
         long now = level().getGameTime();
-        if (!Villages.projectDue(village, now)) { brain("build: not due yet"); return; }
+        if (!Villages.projectDue(village, now)) { buildNote("build: not due yet"); return; }
         String project = Villages.nextProject(village);
-        if (project == null) { brain("build: nothing wanted"); return; }
+        if (project == null) { buildNote("build: nothing wanted"); return; }
         // Only a folk standing near the village heart takes the job on — the
         // buildings go up where people live, not wherever the volunteer was.
-        if (villageCentre.distSqr(blockPosition()) > 40.0 * 40.0) { brain("build: too far from the heart"); return; }
+        if (villageCentre.distSqr(blockPosition()) > 40.0 * 40.0) { buildNote("build: too far from the heart"); return; }
         // Ground for it, picked once and kept: a build interrupted at dusk must
         // pick up where it left off, not start again somewhere else.
         Villages.Site site = Villages.siteFor(server, village, project);
-        if (site == null) { brain("build: no lot for the " + project); Villages.retrySoon(village, now); return; }
+        if (site == null) { buildNote("build: no lot for the " + project); Villages.retrySoon(village, now); return; }
         // No point taking charge of a building the village cannot yet afford —
         // the lead does not lend itself out while it holds the post.
-        if (!affordsTimberFor(project, site)) { brain("build: cannot afford the " + project); Villages.retrySoon(village, now); return; }
+        if (!affordsTimberFor(project, site)) { buildNote("build: cannot afford the " + project); Villages.retrySoon(village, now); return; }
         // One hand raises a building from first load to last block, so the
         // materials pile up in one pack rather than being scattered.
-        if (!Villages.isLead(village, getUUID(), now)) { brain("build: another hand leads"); return; }
+        if (!Villages.isLead(village, getUUID(), now)) { buildNote("build: another hand leads"); return; }
         // Load up FIRST. The builder places real items out of its own pack —
         // no cheating — and nothing was putting them there, so every volunteer
         // walked to the site empty-handed, read out a list of what it still
@@ -1234,9 +1252,34 @@ public class VillageFolkEntity extends AssistantEntity {
         // so it costs two minutes and not the eight that pace real building.
         if (!stockedFor(project, site)) { Villages.retrySoon(village, now); return; }
         Villages.noteAttempt(village, now);
-        brain("build: raising the " + project);
+        buildNote("build: raising the " + project);
         enqueue(Job.buildAt(project, site.anchor(), site.facing(), site.radius()));
     }
+
+    private static final org.slf4j.Logger BUILD_LOG = com.mojang.logging.LogUtils.getLogger();
+    private static final java.util.Map<UUID, String> LAST_BUILD_NOTE = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Why the village is not building (or that it is), in the server log: a line
+     *  whenever the answer changes. A village that builds one house a game day
+     *  has a reason, and it is different every time. */
+    private void buildNote(String note) {
+        brain(note);
+        UUID village = ownerId();
+        if (village == null) return;
+        // Only the answers that say something: "not due yet" and "too far from the
+        // heart" are what every idle hand thinks every couple of seconds.
+        if (!(note.contains("afford") || note.contains("stores hold") || note.contains("making")
+                || note.contains("cannot make") || note.contains("carrying")
+                || note.contains("raising") || note.contains("no lot"))) {
+            return;
+        }
+        String key = note.replaceAll("[0-9]+", "#");
+        if (key.equals(LAST_BUILD_NOTE.get(village))) return;
+        LAST_BUILD_NOTE.put(village, key);
+        BUILD_LOG.info("[MCA-BUILD] tick {}: {} — {}", level().getGameTime(), assistantNameForLog(), note);
+    }
+
+    private String assistantNameForLog() { return getName().getString(); }
 
     /** Does this hand hold the village's building lead right now? Such a hand
      *  does not go off lending itself out with a pack full of a building. */
@@ -1302,7 +1345,7 @@ public class VillageFolkEntity extends AssistantEntity {
         int carried = countCarried(BuildGoal::isBuildingBlock);
         if (carried < blocks) {
             int inStores = storesHold(heart, buildStoresRadius(), BuildGoal::isBuildingBlock);
-            if (carried + inStores < blocks) { brain("build: stores hold " + inStores + ", need " + (blocks - carried)); return false; }      // not yet
+            if (carried + inStores < blocks) { buildNote("build: stores hold " + inStores + ", need " + (blocks - carried)); return false; }      // not yet
             int got = drawFrom(heart, BuildGoal::isBuildingBlock,
                 blocks - carried, buildStoresRadius());
             if (got > 0) Villages.leadProgress(village, getUUID(), now);
@@ -1322,7 +1365,7 @@ public class VillageFolkEntity extends AssistantEntity {
             }
             if (have < want) {
                 boolean making = craftNow(fx.recipe(), want - have);
-                brain("build: " + (making ? "making " : "cannot make ") + (want - have) + " " + fx.recipe());
+                buildNote("build: " + (making ? "making " : "cannot make ") + (want - have) + " " + fx.recipe());
                 if (making) Villages.leadProgress(village, getUUID(), now);
                 return false;                                    // made, or cannot be: either way, not this visit
             }
@@ -1339,7 +1382,7 @@ public class VillageFolkEntity extends AssistantEntity {
             if (have < want) drawFrom(heart, item, want - have, buildStoresRadius());
         }
         int blocksNow = countCarried(BuildGoal::isBuildingBlock);
-        if (blocksNow < blocks) brain("build: carrying " + blocksNow + " of " + blocks + " blocks");
+        if (blocksNow < blocks) buildNote("build: carrying " + blocksNow + " of " + blocks + " blocks");
         return blocksNow >= blocks;
     }
 
