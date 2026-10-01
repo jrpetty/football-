@@ -73,14 +73,15 @@ def showcase(r, cx, cz, look):
              x, y + tall * 0.4, z, wait=5 if i else 9)
     say("alive after the buildings: %s" % client_alive())
     # The town.
-    tx, ty, tz = cx - 300, 150, cz - 200
+    # Below the clouds (they are at 192): a camera above them photographs clouds.
+    tx, ty, tz = cx - 300, 118, cz - 200
     r.cmd("tp %s %d %d %d" % (USER, tx, ty + 60, tz + 60))
     time.sleep(10)
     out = r.cmd("execute positioned %d %d %d run village showcase town" % (tx, ty, tz))
     say("town: " + out[:300])
     time.sleep(6)
     look("t1-town-air", tx + 62, ty + 58, tz + 74, tx, ty, tz, wait=12)
-    look("t2-town-high", tx + 4, ty + 95, tz + 40, tx, ty, tz - 4, wait=8)
+    look("t2-town-high", tx + 4, ty + 68, tz + 34, tx, ty, tz - 4, wait=8)
     look("t3-town-avenue", tx + 1, ty + 1, tz + 48, tx, ty + 3, tz, wait=8)
     look("t4-town-square", tx + 9, ty + 9, tz + 11, tx - 18, ty + 2, tz - 5, wait=8)
     look("t5-town-homes", tx + 52, ty + 14, tz + 52, tx + 26, ty + 2, tz + 26, wait=8)
