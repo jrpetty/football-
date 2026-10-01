@@ -477,7 +477,14 @@ public final class Raids {
         double sx = stand.getX() + 0.5, sz = stand.getZ() + 0.5;
         double dx = g.getX() - sx, dz = g.getZ() - sz, dy = g.getY() - stand.getY();
         boolean up = dx * dx + dz * dz < 0.9 && dy > -0.4 && dy < 1.5;
+        // A step off the middle of the post: back onto it before it walks off the edge.
+        if (!up && dx * dx + dz * dz < 4.0 && dy > -0.4 && dy < 1.5) {
+            g.teleportTo(sx, stand.getY(), sz);
+            up = true;
+        }
         if (up) {
+            if (dx * dx + dz * dz > 0.12) g.teleportTo(sx, stand.getY(), sz);
+            g.setDeltaMovement(0.0, Math.min(0.0, g.getDeltaMovement().y), 0.0);
             g.holdPost(stand);
             CLIMB.remove(g.getUUID());
             g.getNavigation().stop();
@@ -497,6 +504,13 @@ public final class Raids {
         if (atFoot || g.onClimbable()) {
             // Up the ladder: pushing into the wall on a ladder is climbing it.
             g.getNavigation().stop();
+            // At the top of the ladder: straight onto the post, not over the far side of the wall.
+            if (g.getY() >= stand.getY() - 1.2) {
+                g.teleportTo(sx, stand.getY(), sz);
+                g.setDeltaMovement(0.0, 0.0, 0.0);
+                CLIMB.remove(g.getUUID());
+                return true;
+            }
             g.getMoveControl().setWantedPosition(sx, stand.getY(), sz, 1.0D);
             long started = CLIMB.computeIfAbsent(g.getUUID(), k -> level.getGameTime());
             if (level.getGameTime() - started > 120L) {

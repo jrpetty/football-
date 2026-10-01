@@ -280,6 +280,7 @@ public final class Market {
         if (Ledger.paidOn(id) >= day) return;
         Ledger.paid(id, day);
         mint(level, v);
+        trade(v);
         payWages(level, v);
         if (marketDay(id, day)) {
             level.playSound(null, v.centre(), SoundEvents.BELL_BLOCK, SoundSource.BLOCKS, 3.0F, 1.0F);
@@ -303,6 +304,17 @@ public final class Market {
         while (took < bars && TownWork.take(level, v, s -> s.is(Items.GOLD_INGOT), 1)) took++;
         if (took > 0) Ledger.addCoins(id, took * COINS_PER_GOLD);
         return took * COINS_PER_GOLD;
+    }
+
+    /** Passing traders buy a little of what the village makes, every day: coin enough that a
+     *  village's treasury never runs quite dry, so it can always pay a player for its work. */
+    public static int trade(Villages.Village v) {
+        UUID id = v.id();
+        int head = Math.max(1, Villages.headcount(id));
+        if (Ledger.coins(id) >= 10 * head) return 0;
+        int in = Math.max(2, head / 3) + Villages.ageOf(id).ordinal();
+        Ledger.addCoins(id, in);
+        return in;
     }
 
     /** A folk's wage for a day's work: a coin, and one more at each of levels ten and twenty-five. */

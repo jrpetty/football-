@@ -30,7 +30,7 @@ import java.util.List;
  */
 public class TalkScreen extends Screen {
 
-    private static final int W = 360, H = 336;
+    private static final int W = 360, H = 356;
     private static final int SPEECH_LINES = 6;
 
     private FolkReplyPayload last;
@@ -82,6 +82,10 @@ public class TalkScreen extends Screen {
             new Choice("The council", TalkTopic.COUNCIL, "", "Who sits on the council, and what it voted to build. Say \"you should build a tavern\" to put it to the vote"),
             new Choice("Pay a fine", TalkTopic.FINE, "", "Pay what you owe the village"),
             new Choice("Neighbours?", TalkTopic.RIVALS, "", "What this village thinks of the villages round about. Say \"make peace with ...\" or worse"),
+            new Choice("Quest board", TalkTopic.QUESTS, "", "What the village wants done, and what it pays. The board is on the meeting hall"),
+            new Choice("Hire you?", TalkTopic.HIRE, "", "Four coins a day: it goes with you, fights for you, carries for you, and comes home with a story"),
+            new Choice("Build my house", TalkTopic.COMMISSION, "", "Bring 64 planks, 32 cobblestone and 8 glass, and the builders put up a house for you"),
+            new Choice("Town ledger", TalkTopic.LEDGER, "", "A book of the village's affairs: the stores, who lives where, what is going up, what it is short of"),
         };
         for (int i = 0; i < grid.length; i++) {
             Choice c = grid[i];
@@ -105,7 +109,7 @@ public class TalkScreen extends Screen {
         int sayY = row + bh + 6;
         say = new EditBox(font, x, sayY, W - 16 - 2 * 46 - 6, 18, Component.literal("Say something"));
         say.setMaxLength(FolkTalkPayload.MAX_TEXT);
-        say.setHint(Component.literal("Say anything… (try a name)"));
+        say.setHint(Component.literal("Say anything… (a name, or \"could I have 16 bread?\")"));
         addRenderableWidget(say);
         addRenderableWidget(Button.builder(Component.literal("Say"), b -> sayTyped())
             .bounds(x + W - 16 - 2 * 46 - 3, sayY, 46, 18).build());

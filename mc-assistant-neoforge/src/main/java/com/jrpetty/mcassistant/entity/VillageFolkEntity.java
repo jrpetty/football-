@@ -262,6 +262,7 @@ public class VillageFolkEntity extends AssistantEntity {
             laterLine = null;
         }
         Leisure.tick(this);
+        if (hiredBy != null && tickCount % 20 == 0 && level() instanceof net.minecraft.server.level.ServerLevel out) Hire.tick(this, out);
         // The bell is ringing: a guard with a bow makes for its post on the wall and lets nothing
         // outside draw it through the gate. Only a monster at arm's length is fought on the way.
         if (tickCount % 5 == 0 && onWatch() && !holdingAPost() && Raids.headingForPost(this)) {
@@ -473,12 +474,58 @@ public class VillageFolkEntity extends AssistantEntity {
 
     public void stopFollowing() { companion = null; }
 
+    // ------------------------------ hired for an adventure (Hire) ----------------
+
+    @Nullable UUID hiredBy;
+    String hiredName = "";
+    long hiredUntil, hiredSince;
+    int hiredKills;
+    final java.util.Set<String> hiredSaw = new java.util.LinkedHashSet<>();
+    /** What it carried when it set out (what it has more of at the end is the employer's share). */
+    final java.util.Map<net.minecraft.world.item.Item, Integer> hiredPack = new java.util.HashMap<>();
+
+    public boolean isHired() { return hiredBy != null; }
+
+    @Nullable public UUID hiredBy() { return hiredBy; }
+
+    /** Out with somebody who hired it: it fights what threatens them, like the watch does. */
+    @Override
+    protected boolean hiredToFight() { return hiredBy != null; }
+
+    void hire(net.minecraft.world.entity.player.Player p, long until) {
+        if (hiredBy == null || !hiredBy.equals(p.getUUID())) {
+            hiredBy = p.getUUID();
+            hiredName = p.getName().getString();
+            hiredSince = level().getGameTime();
+            hiredKills = 0;
+            hiredSaw.clear();
+            hiredPack.clear();
+            for (net.minecraft.world.item.ItemStack st : getInventoryItems()) {
+                if (!st.isEmpty()) hiredPack.merge(st.getItem(), st.getCount(), Integer::sum);
+            }
+        }
+        hiredUntil = until;
+        companion = p.getUUID();
+        companionUntil = Integer.MAX_VALUE;
+        stopTalking();
+    }
+
+    void unhire() {
+        hiredBy = null;
+        hiredName = "";
+        hiredPack.clear();
+        hiredSaw.clear();
+        companion = null;
+    }
+
     /** The player it is walking with, while it is; it heads home when the time is up
      *  or the player has gone too far ahead. */
     @Nullable
     public net.minecraft.world.entity.player.Player companionPlayer() {
         if (companion == null) return null;
         net.minecraft.world.entity.player.Player p = level().getPlayerByUUID(companion);
+        // Hired: it goes where its employer goes, by night as by day, however far.
+        if (companion.equals(hiredBy)) return p != null && p.isAlive() ? p : null;
         if (p == null || !p.isAlive() || p.distanceToSqr(this) > 48.0 * 48.0 || tickCount >= companionUntil
                 || level().isNight() && stationTask() != StationTask.GUARD) {
             if (p != null && p.isAlive()) {
@@ -4165,6 +4212,14 @@ public class VillageFolkEntity extends AssistantEntity {
         if (mentor != null) tag.putUUID("Mentor", mentor);
         if (apprenticeTo != StationTask.NONE) tag.putString("Apprentice", apprenticeTo.name());
         tag.putBoolean("FrailTold", frailTold);
+        if (hiredBy != null) {
+            tag.putUUID("HiredBy", hiredBy);
+            tag.putLong("HiredUntil", hiredUntil);
+            tag.putLong("HiredSince", hiredSince);
+            tag.putInt("HiredKills", hiredKills);
+            tag.putString("HiredSaw", String.join("|", hiredSaw));
+            tag.putString("HiredName", hiredName);
+        }
         tag.putInt("Purse", purse);
         if (isBaby()) tag.putBoolean("Child", true);
         if (villageCentre != null) tag.putLong("VillageCentre", villageCentre.asLong());
@@ -4209,6 +4264,17 @@ public class VillageFolkEntity extends AssistantEntity {
             this.apprenticeTo = StationTask.NONE;
         }
         this.frailTold = tag.getBoolean("FrailTold");
+        if (tag.hasUUID("HiredBy")) {
+            this.hiredBy = tag.getUUID("HiredBy");
+            this.hiredUntil = tag.getLong("HiredUntil");
+            this.hiredSince = tag.getLong("HiredSince");
+            this.hiredKills = tag.getInt("HiredKills");
+            this.hiredName = tag.getString("HiredName");
+            this.hiredSaw.clear();
+            for (String b : tag.getString("HiredSaw").split("\\|")) if (!b.isEmpty()) hiredSaw.add(b);
+            this.companion = hiredBy;
+            this.companionUntil = Integer.MAX_VALUE;
+        }
         this.purse = tag.getInt("Purse");
         if (tag.getBoolean("Child")) setChild(true);
         if (tag.contains("VillageCentre")) {

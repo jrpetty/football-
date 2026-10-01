@@ -232,6 +232,8 @@ public final class Villages {
         Council.resetForTests();
         Laws.resetForTests();
         Diplomacy.resetForTests();
+        Quests.resetForTests();
+        Services.resetForTests();
         Cafe.resetForTests();
         Roads.reset();
         LAST_PROJECT.clear();
@@ -1009,10 +1011,6 @@ public final class Villages {
         return null;
     }
 
-    /**
-     * Everything the village would build now, most pressing first. The first one not
-     * set aside is the next project (see {@link #defer}); the rest wait their turn.
-     */
     /** The amenities in the order the council voted for (a graveyard that is wanted for the dead
      *  stays first: that is not a question for a vote). */
     static List<String> voted(UUID villageId, List<String> extras) {
@@ -1025,6 +1023,10 @@ public final class Villages {
         return out;
     }
 
+    /**
+     * Everything the village would build now, most pressing first. The first one not
+     * set aside is the next project (see {@link #defer}); the rest wait their turn.
+     */
     public static List<String> projectsWanted(UUID villageId) {
         List<String> out = new ArrayList<>();
         int folk = headcount(villageId);

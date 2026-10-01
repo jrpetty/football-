@@ -60,6 +60,8 @@ public final class VillageCommands {
             .then(Commands.literal("standing").executes(VillageCommands::standing))
             // How the villages stand with each other: allies, feuds, tribute.
             .then(Commands.literal("relations").executes(VillageCommands::relations))
+            // The nearest village's town ledger, as a book: stores, residents, building, shortages.
+            .then(Commands.literal("ledger").executes(VillageCommands::ledger))
             // Talk with the nearest folk, as a right-click would (for scripts and tests).
             .then(Commands.literal("talk").requires(src -> src.hasPermission(2))
                 .executes(ctx -> talk(ctx, ""))
@@ -137,6 +139,19 @@ public final class VillageCommands {
             player.level().getDayTime() / 24000L);
         if (!player.getInventory().add(book)) player.drop(book, false);
         ctx.getSource().sendSuccess(() -> Component.literal("The chronicle of " + Villages.name(v.id()) + "."), false);
+        return 1;
+    }
+
+    private static int ledger(CommandContext<CommandSourceStack> ctx) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        Villages.Village v = Villages.nearest(player.level(), player.blockPosition(), Villages.VILLAGE_RANGE * 2);
+        if (v == null) {
+            ctx.getSource().sendFailure(Component.literal("No village near enough to keep a ledger."));
+            return 0;
+        }
+        net.minecraft.world.item.ItemStack book = com.jrpetty.mcassistant.entity.Services.ledger(player.serverLevel(), v.id());
+        if (!player.getInventory().add(book)) player.drop(book, false);
+        ctx.getSource().sendSuccess(() -> Component.literal("The town ledger of " + Villages.name(v.id()) + "."), false);
         return 1;
     }
 
@@ -487,6 +502,11 @@ public final class VillageCommands {
             if (!citizens.isEmpty()) sb.append("; citizens ").append(String.join(", ", citizens.values()));
             String n = com.jrpetty.mcassistant.entity.Diplomacy.status(id);
             if (n != null) sb.append(". Neighbours: ").append(n);
+            java.util.List<String> board = new java.util.ArrayList<>();
+            for (var q : com.jrpetty.mcassistant.entity.Quests.postings(id)) board.add(q.words() + " (" + q.reward + ")");
+            sb.append(". Quest board: ").append(board.isEmpty() ? "nothing posted" : String.join("; ", board));
+            var lent = com.jrpetty.mcassistant.entity.Services.onLoan(id);
+            if (!lent.isEmpty()) sb.append(". On loan: ").append(lent);
         }
         java.util.List<VillageFolkEntity> people = new java.util.ArrayList<>();
         for (AssistantEntity a : Villages.folkOf(v.id())) if (a instanceof VillageFolkEntity f) people.add(f);

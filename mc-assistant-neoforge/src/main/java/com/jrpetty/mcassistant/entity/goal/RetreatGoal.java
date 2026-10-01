@@ -36,13 +36,15 @@ public class RetreatGoal extends Goal {
                 || assistant.tickCount - assistant.lastDamageTick() < 100)) {
             return true;
         }
-        // ...or a fight we should break off even above the HP floor.
-        return assistant.shouldDisengage() && assistant.threatCount(10.0) > 0;
+        // ...or a fight we should break off even above the HP floor. Not a guard on the watch:
+        // outnumbered is what a wall is for.
+        return !assistant.onWatch() && assistant.shouldDisengage() && assistant.threatCount(10.0) > 0;
     }
 
     @Override
     public boolean canContinueToUse() {
         // Keep retreating until decently healed OR the pack of threats has thinned.
+        if (assistant.onWatch()) return assistant.getHealth() < assistant.getMaxHealth() * 0.5F;
         return assistant.getHealth() < assistant.getMaxHealth() * 0.7F
             || assistant.threatCount(8.0) >= 2;
     }

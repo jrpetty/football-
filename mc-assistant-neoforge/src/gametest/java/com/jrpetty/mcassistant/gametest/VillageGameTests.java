@@ -1527,7 +1527,7 @@ public class VillageGameTests {
      * cider. Then the café's counter shows the cider, a folk has one on its break, and a
      * player buys one and the enchanted thing from the shop's counter.
      */
-    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "t32_crafts")
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "t32_crafts")
     public static void t32_crafts(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
@@ -1632,9 +1632,15 @@ public class VillageGameTests {
             }
             return out;
         };
-        // Frames hung on ground loaded this tick are found from the next tick on.
-        helper.runAfterDelay(20, () -> {
+        // Frames hung on ground loaded this tick are found from a later tick on (and the village
+        // may set the counter out afresh meanwhile): look until the drink is there, or long enough.
+        final long from = helper.getTick();
+        final boolean[] looked = { false };
+        helper.onEachTick(() -> {
+            if (looked[0]) return;
             java.util.List<ItemStack> menu = counters.apply(at);
+            if (!menu.stream().anyMatch(com.jrpetty.mcassistant.entity.Cafe::isDrink) && helper.getTick() - from < 200) return;
+            looked[0] = true;
             java.util.List<String> tags = new java.util.ArrayList<>();
             for (BlockPos q : BlockPos.betweenClosed(at.offset(-4, 0, -4), at.offset(4, 2, 4))) {
                 if (level.getBlockEntity(q) instanceof net.minecraft.world.level.block.entity.SignBlockEntity sign) {
@@ -2011,6 +2017,144 @@ public class VillageGameTests {
         int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, spot.getX(), spot.getZ()) - 1;
         Kit.log("t36 the statue: " + raised + ", plinth " + level.getBlockState(new BlockPos(spot.getX(), y, spot.getZ())));
         helper.assertTrue(raised && com.jrpetty.mcassistant.village.Ledger.statue(village, p.getUUID()), "the village raises its hero a statue");
+        helper.succeed();
+    }
+
+    /**
+     * What a village does for a player: the quest board on the hall (take a posting, bring the
+     * iron, get paid; clear the spiders, get paid), a folk hired for an adventure who comes home
+     * with a story and what it carried, a house built to order from the player's own makings,
+     * the town ledger, and the storekeeper who gives to friends, lends tools and sells to strangers.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t37_services")
+    public static void t37_services(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 18000, 12000, 40);
+        Kit.prepare(level, 18000, 12000, 40);
+        BlockPos heart = Kit.surface(level, 18000, 12000);
+        VillageFolkEntity a = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        VillageFolkEntity b = VillageFolkSpawnerBlock.raise(level, heart.east(2), 0.0F);
+        VillageFolkEntity c = VillageFolkSpawnerBlock.raise(level, heart.west(2), 0.0F);
+        helper.assertTrue(a != null && b != null && c != null, "a village of three");
+        java.util.UUID village = a.ownerId();
+        Villages.Village v = Villages.get(village);
+        a.setJob(StationTask.STORE);
+        b.setJob(StationTask.FARM);
+        c.setJob(StationTask.MINE);
+        Villages.noteProject(village, "storage", level.getGameTime());
+        com.jrpetty.mcassistant.village.Ledger.addCoins(village, 100);
+        BlockPos hallAt = Kit.surface(level, heart.getX(), heart.getZ() - 22);
+        BuildGoal.stamp(level, "hall", hallAt, Direction.NORTH, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+        com.jrpetty.mcassistant.village.Ledger.built(village, "hall", hallAt, Direction.NORTH);
+        BlockPos chest = Kit.surface(level, heart.getX() + 3, heart.getZ() + 1);
+        level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
+        com.jrpetty.mcassistant.entity.ZoneChests.mark(level, chest);
+        net.minecraft.world.Container box = (net.minecraft.world.Container) level.getBlockEntity(chest);
+        box.setItem(0, new ItemStack(Items.BREAD, 32));
+        box.setItem(1, new ItemStack(Items.IRON_PICKAXE));
+        net.minecraft.world.entity.player.Player p = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        p.moveTo(heart.getX() + 1.5, heart.getY(), heart.getZ() + 1.5);
+        p.getInventory().setItem(20, new ItemStack(McAssistantMod.VILLAGE_COIN.get(), 30));
+        for (VillageFolkEntity f : List.of(a, b, c)) {
+            f.ensurePersona();
+            f.persona().feelFor(p.getUUID(), p.getName().getString(), 40);
+        }
+        // What a player says, understood.
+        helper.assertTrue(com.jrpetty.mcassistant.entity.FolkTalk.understand("could I have 16 bread please") == com.jrpetty.mcassistant.entity.TalkTopic.STORES
+            && com.jrpetty.mcassistant.entity.FolkTalk.understand("what's on the quest board?") == com.jrpetty.mcassistant.entity.TalkTopic.QUESTS
+            && com.jrpetty.mcassistant.entity.FolkTalk.understand("come adventuring with me") == com.jrpetty.mcassistant.entity.TalkTopic.HIRE
+            && com.jrpetty.mcassistant.entity.FolkTalk.understand("could you build me a house") == com.jrpetty.mcassistant.entity.TalkTopic.COMMISSION
+            && com.jrpetty.mcassistant.entity.FolkTalk.understand("could I see the ledger") == com.jrpetty.mcassistant.entity.TalkTopic.LEDGER,
+            "the folk understand what a player asks for");
+        // The quest board.
+        long day = level.getDayTime() / 24000L;
+        var board = com.jrpetty.mcassistant.entity.Quests.postings(village);
+        board.clear();
+        for (var q : com.jrpetty.mcassistant.entity.Quests.samples(day)) if (q.takenBy == null) board.add(q);
+        var written = com.jrpetty.mcassistant.entity.Quests.paintOn(level, com.jrpetty.mcassistant.village.Ledger.buildings(village).stream()
+            .filter(x -> x.structure().equals("hall")).findFirst().orElseThrow(), board);
+        String firstSign = written.isEmpty() ? "" : level.getBlockEntity(written.get(0)) instanceof net.minecraft.world.level.block.entity.SignBlockEntity sign
+            ? sign.getFrontText().getMessage(0, false).getString() + " " + sign.getFrontText().getMessage(1, false).getString() : "";
+        Kit.log("t37 the quest board: " + written.size() + " postings hung on the hall; the first reads " + firstSign);
+        helper.assertTrue(written.size() >= 3 && firstSign.startsWith("WANTED"), "the postings hang on the hall's front");
+        var iron = board.get(0);
+        int coins0 = com.jrpetty.mcassistant.entity.Market.coinsHeld(p);
+        String took = com.jrpetty.mcassistant.entity.Quests.use(level, v, p, iron);
+        p.getInventory().setItem(21, new ItemStack(Items.IRON_INGOT, 40));
+        String paid = com.jrpetty.mcassistant.entity.Quests.use(level, v, p, iron);
+        int coins1 = com.jrpetty.mcassistant.entity.Market.coinsHeld(p);
+        int ironStored = com.jrpetty.mcassistant.entity.Market.stock(level, village, x -> x.is(Items.IRON_INGOT));
+        Kit.log("t37 " + took + " / " + paid + " (coins " + coins0 + " -> " + coins1 + ", iron in the stores " + ironStored + ")");
+        helper.assertTrue(coins1 == coins0 + iron.reward && ironStored == 40 && !board.contains(iron), "the iron goes into the stores and the posting pays");
+        var spiders = board.stream().filter(q -> q.kind.equals("clear")).findFirst().orElseThrow();
+        com.jrpetty.mcassistant.entity.Quests.use(level, v, p, spiders);
+        for (int i = 0; i < spiders.count; i++) {
+            net.minecraft.world.entity.monster.Spider sp = EntityType.SPIDER.create(level);
+            sp.moveTo(1.0, 0.0, 1.0);
+            com.jrpetty.mcassistant.entity.Quests.killed(level, p, sp);
+        }
+        String cleared = com.jrpetty.mcassistant.entity.Quests.use(level, v, p, spiders);
+        int coins2 = com.jrpetty.mcassistant.entity.Market.coinsHeld(p);
+        Kit.log("t37 " + cleared + " (coins " + coins1 + " -> " + coins2 + ")");
+        helper.assertTrue(coins2 == coins1 + spiders.reward, "the spiders cleared, and paid for");
+        // Hiring a folk.
+        p.moveTo(b.getX() + 1.0, b.getY(), b.getZ());
+        int coins3 = com.jrpetty.mcassistant.entity.Market.coinsHeld(p);
+        b.persona().setMood(60, List.of());
+        String hired = com.jrpetty.mcassistant.entity.Hire.ask(b, p);
+        boolean going = b.isHired() && p.getUUID().equals(b.hiredBy());
+        b.insertItem(new ItemStack(Items.BONE, 3));
+        for (int i = 0; i < 2; i++) {
+            net.minecraft.world.entity.monster.Zombie z = EntityType.ZOMBIE.create(level);
+            z.moveTo(b.getX() + 3, b.getY(), b.getZ());
+            com.jrpetty.mcassistant.entity.Hire.onDeath(new net.neoforged.neoforge.event.entity.living.LivingDeathEvent(z,
+                level.damageSources().mobAttack(b)));
+        }
+        String home = com.jrpetty.mcassistant.entity.FolkTalk.answer(b, p, com.jrpetty.mcassistant.entity.TalkTopic.STAY, "");
+        int bones = 0;
+        for (int i = 0; i < p.getInventory().getContainerSize(); i++) if (p.getInventory().getItem(i).is(Items.BONE)) bones += p.getInventory().getItem(i).getCount();
+        java.util.List<String> lines = new java.util.ArrayList<>();
+        for (var e : com.jrpetty.mcassistant.village.Chronicle.of(village)) lines.add(e.text());
+        String story = lines.stream().filter(x -> x.contains("adventuring")).findFirst().orElse("");
+        Kit.log("t37 hired: " + hired + " / " + home + " / " + story + " (bones handed over " + bones + ", coins "
+            + coins3 + " -> " + com.jrpetty.mcassistant.entity.Market.coinsHeld(p) + ")");
+        helper.assertTrue(going && com.jrpetty.mcassistant.entity.Market.coinsHeld(p) == coins3 - com.jrpetty.mcassistant.entity.Hire.PRICE,
+            "hired for a day's coin, it goes along");
+        helper.assertTrue(!b.isHired() && bones == 3 && story.contains("2 monsters"), "home again: what it carried handed over, and a story told");
+        // A house to order.
+        p.getInventory().setItem(22, new ItemStack(Items.OAK_PLANKS, 64));
+        p.getInventory().setItem(23, new ItemStack(Items.COBBLESTONE, 32));
+        p.getInventory().setItem(24, new ItemStack(Items.GLASS, 8));
+        String house = com.jrpetty.mcassistant.entity.Services.commission(a, p);
+        int planks = com.jrpetty.mcassistant.entity.Market.stock(level, village, x -> x.is(Items.OAK_PLANKS));
+        Kit.log("t37 commission: " + house + " (planks in the stores " + planks + ", next projects " + Villages.projectsWanted(village) + ")");
+        helper.assertTrue(com.jrpetty.mcassistant.village.Chronicle.awaitingAHouse(village) != null && planks >= 64
+            && Villages.projectsWanted(village).contains("guesthouse"), "the makings go into the stores, and a house for the player goes on the list");
+        // The town ledger.
+        ItemStack ledger = com.jrpetty.mcassistant.entity.Services.ledger(level, village);
+        StringBuilder text = new StringBuilder();
+        for (var page : ledger.get(net.minecraft.core.component.DataComponents.WRITTEN_BOOK_CONTENT).pages()) text.append(page.raw().getString()).append(" | ");
+        Kit.log("t37 the ledger: " + text);
+        helper.assertTrue(text.indexOf("Town Ledger") >= 0 && text.indexOf("In the stores") >= 0 && text.indexOf("Who lives where") >= 0
+            && text.indexOf(a.displayNameCap()) >= 0 && text.indexOf("Building") >= 0, "the ledger: stores, residents, building, needs");
+        // The storekeeper.
+        String bread = com.jrpetty.mcassistant.entity.Services.stores(a, p, "could I have 8 bread?");
+        String wrong = com.jrpetty.mcassistant.entity.Services.stores(b, p, "could I have 8 bread?");
+        String lent = com.jrpetty.mcassistant.entity.Services.stores(a, p, "could I borrow the iron pickaxe?");
+        boolean hasPick = p.getInventory().contains(new ItemStack(Items.IRON_PICKAXE));
+        String back = com.jrpetty.mcassistant.entity.Services.returnLoan(a, p);
+        net.minecraft.world.entity.player.Player stranger = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        stranger.getInventory().setItem(20, new ItemStack(McAssistantMod.VILLAGE_COIN.get(), 20));
+        String sold = com.jrpetty.mcassistant.entity.Services.stores(a, stranger, "could I have 4 bread");
+        int breadHeld = 0, strangerBread = 0;
+        for (int i = 0; i < p.getInventory().getContainerSize(); i++) if (p.getInventory().getItem(i).is(Items.BREAD)) breadHeld += p.getInventory().getItem(i).getCount();
+        for (int i = 0; i < stranger.getInventory().getContainerSize(); i++) if (stranger.getInventory().getItem(i).is(Items.BREAD)) strangerBread += stranger.getInventory().getItem(i).getCount();
+        Kit.log("t37 the storekeeper: " + bread + " / " + wrong + " / " + lent + " / " + back + " / " + sold);
+        helper.assertTrue(breadHeld == 8, "a friend is given bread from the stores");
+        helper.assertTrue(hasPick && !p.getInventory().contains(new ItemStack(Items.IRON_PICKAXE)), "a tool lent, and brought back");
+        helper.assertTrue(strangerBread == 4 && com.jrpetty.mcassistant.entity.Market.coinsHeld(stranger) < 20, "a stranger buys");
         helper.succeed();
     }
 

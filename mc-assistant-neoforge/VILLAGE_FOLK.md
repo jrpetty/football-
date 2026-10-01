@@ -859,6 +859,66 @@ square**: your likeness (your own face) in gold armour with a golden sword, on a
 plinth, with a plaque bearing your name and the day. The square has room for three
 heroes.
 
+### Work, coin and services
+
+**Earning coin.** There are three ways:
+* **Sell to the village.** Right-click a market stall with what the village is buying
+  (the stall's sign says what). It pays from the treasury, and what you sell goes into
+  the stores.
+* **Do its errands.** Errands for the village are paid in coin as well as goods.
+* **Answer the quest board.** See below.
+
+Passing traders buy a little of what every village makes each day, so the treasury never
+runs quite dry.
+
+**The quest board** hangs on the front of the meeting hall (on the storehouse until there
+is a hall). Real postings, worked out from what the village needs right now:
+* **Wanted:** what it is short of for its next building or age ("40 iron for the
+  smeltery", "48 logs for a new house"), and what its trades need (wool for the tailor,
+  lapis for the enchanter, nether wart for the brewer, flowers for the hives, sugar for
+  the café).
+* **Clear:** monsters about where the village works ("clear 5 spiders from the east mine",
+  "the zombies from the north fields").
+
+To use a posting:
+1. Right-click it to take it on. Your name goes on it.
+2. Bring what it asks for and right-click it again; it goes straight into the stores. A
+   little at a time is fine.
+3. When it is done, right-click once more to claim the reward from the treasury.
+
+A new posting goes up most mornings. One nobody takes, or nobody finishes, comes down
+after four days. Ask any folk "Quest board" to hear what is on it.
+
+**Hire a folk.** "Hire you?" costs four coins a day, and the folk must know you. It
+leaves its work and goes with you, day and night, wherever you go. It catches up if left
+behind, fights whatever attacks you or whatever you attack, and picks up what falls. Ask
+again to pay for another day.
+
+When the time is up, or you say "go back to your day", it:
+* hands over everything it carried for you (into the stores if you are not there);
+* goes home with a story: how many days it was gone, the monsters it saw off and the
+  lands it saw. The story goes into the village's history, so it is retold at the tavern.
+
+**A house to order.** Bring 64 planks, 32 cobblestone and 8 glass and say "build me a
+house". The makings go into the stores. The builders put up a house for you on one of
+the town's lots, and you get its key when it stands.
+
+**The town ledger.** Ask "Town ledger" (or `/village ledger`) for a book of the village's
+affairs as they stand today:
+* the treasury and the contentment;
+* everything in the stores;
+* who lives where (and which house), and the guests' houses;
+* what is going up next;
+* what it is short of;
+* the quest board.
+
+**The storekeeper serves you.** Ask the storekeeper (the elder, if there is none) for
+something from the stores: "could I have 16 bread?", "could I borrow the iron pickaxe?".
+* **A friend or a citizen** is given food and goods free, up to a stack a day. Tools,
+  weapons and armour are lent: "Hand over" gives them back. Anything not returned within
+  five days is remembered against you.
+* **A stranger** pays the market's price and a little over.
+
 ### Neighbours: rivals, allies and feuds
 
 Villages within about six hundred blocks of each other have dealings, and what each
@@ -992,6 +1052,7 @@ only its owner (nobody, for folk) can rearrange the pack.
   rivals and family, under a line on the village's couples and friendships.
 * `/village chronicle` — the nearest village's history, as a written book.
 * `/village standing` — what every village you have met thinks of you.
+* `/village ledger` — the nearest village's town ledger, as a book.
 * `/village relations` — every pair of neighbouring villages: allies, friends, uneasy,
   in a feud, how far apart, and whether they are kin.
 * `/village talk [words]` — (operators) talk with the nearest folk, as a right-click
@@ -1042,6 +1103,9 @@ Every push to CI:
 * puts the council to the vote, makes a player a citizen, fines, tries and banishes a
   thief seen at the stores, lets two villages built too close together fall out, makes
   peace between them, and raises a statue to a hero (game test `t36`);
+* takes on and pays out quest-board postings, hires a folk who comes home with a story and
+  what it carried, commissions a house from a player's makings, writes the town ledger,
+  and has the storekeeper give, lend and sell (game test `t37`);
 * lives a life (game test `t35`): a child apprenticed to a parent grows up into the
   trade with a few levels' knack; a folk past its years dies in its sleep and is
   recorded among the dead; a graveyard gets its headstone with the name on it; the

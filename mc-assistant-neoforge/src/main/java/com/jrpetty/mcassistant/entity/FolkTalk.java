@@ -113,8 +113,12 @@ public final class FolkTalk {
             case HOBBY -> hobby(f);
             case JOKE -> joke(f);
             case HELP -> Errands.offer(f, p);
-            case DELIVER -> Trade.live(f, p) && !(Errands.live(f, p.getUUID()) && Errands.canDeliver(f, p))
-                ? Trade.close(f, p) : Errands.deliver(f, p);
+            case DELIVER -> {
+                String back = Services.returnLoan(f, p);
+                if (!back.isEmpty()) yield back;
+                yield Trade.live(f, p) && !(Errands.live(f, p.getUUID()) && Errands.canDeliver(f, p))
+                    ? Trade.close(f, p) : Errands.deliver(f, p);
+            }
             case TRADE -> Trade.offer(f, p);
             case GOSSIP -> gossipFor(f, p);
             case MEMORY -> memories(f);
@@ -128,6 +132,11 @@ public final class FolkTalk {
             case PROPOSE -> Council.propose(f, p, text);
             case PEACE -> Diplomacy.peace(f, p, text);
             case STIR -> Diplomacy.stir(f, p, text);
+            case QUESTS -> Quests.talk(f, p);
+            case HIRE -> Hire.ask(f, p);
+            case COMMISSION -> Services.commission(f, p);
+            case LEDGER -> Services.ledgerFor(f, p);
+            case STORES -> Services.stores(f, p, text);
             default -> puzzled(f);
         };
         // Somebody who can't stand you says as little as it can.
@@ -136,7 +145,7 @@ public final class FolkTalk {
                 "Go away. I haven't forgotten.", "Hmph.");
         }
         boolean answering = switch (topic) {
-            case HOW, DOING, ABOUT, PEOPLE, VILLAGE, DREAMS, HOBBY, MEMORY, REPUTE, GOSSIP, COUNCIL, RIVALS -> true;
+            case HOW, DOING, ABOUT, PEOPLE, VILLAGE, DREAMS, HOBBY, MEMORY, REPUTE, GOSSIP, COUNCIL, RIVALS, QUESTS -> true;
             default -> false;
         };
         return manner(f, said, answering);
@@ -904,6 +913,10 @@ public final class FolkTalk {
 
     static String stay(VillageFolkEntity f, net.minecraft.world.entity.player.Player p) {
         RandomSource r = f.getRandom();
+        if (f.isHired() && p.getUUID().equals(f.hiredBy()) && f.level() instanceof net.minecraft.server.level.ServerLevel level) {
+            Hire.home(f, level, false, p);
+            return "Home it is, then. What a time we had!";
+        }
         if (!f.isFollowing(p)) return pick(r, "Back to it, then.", "Right you are.");
         f.stopFollowing();
         me(f).feelFor(p.getUUID(), p.getName().getString(), 4);
@@ -921,6 +934,12 @@ public final class FolkTalk {
         if (has(t, "make peace", "peace with", "olive branch", "patch things up", "end the feud", "settle the feud")) return TalkTopic.PEACE;
         if (has(t, "stir trouble", "stir up", "rumours about", "rumors about", "they say about you", "saying about you")) return TalkTopic.STIR;
         if (has(t, "pay my fine", "pay the fine", "my fine", "what i owe", "my debt", "pay what")) return TalkTopic.FINE;
+        if (has(t, "quest", "notice board", "the board", "bount", "postings", "work going")) return TalkTopic.QUESTS;
+        if (has(t, "hire", "adventur", "sell your sword", "bodyguard", "escort", "come exploring")) return TalkTopic.HIRE;
+        if (has(t, "build me a house", "build me a home", "commission", "a house for me", "house of my own", "my own house")) return TalkTopic.COMMISSION;
+        if (has(t, "ledger", "the accounts", "the books", "what's in the stores", "whats in the stores", "the stock")) return TalkTopic.LEDGER;
+        if (has(t, "could i have", "can i have", "may i have", "i'd like", "id like", "borrow", "lend me", "sell me", "from the stores",
+                "from the storehouse", "do you have any", "got any") && Services.itemNamed(t) != null) return TalkTopic.STORES;
         if (has(t, "live here", "citizen", "settle here", "move here", "join the village", "join your village")) return TalkTopic.CITIZEN;
         if (Council.named(t) != null && has(t, "build a", "build an", "should build", "you need a", "propose", "how about a", "vote for")) return TalkTopic.PROPOSE;
         if (has(t, "council", "the vote", "voting", "who decides")) return TalkTopic.COUNCIL;

@@ -31,7 +31,12 @@ public enum TalkTopic {
     RIVALS("What of the other villages?"),
     PROPOSE(""),
     PEACE(""),
-    STIR("");
+    STIR(""),
+    QUESTS("What's on the quest board?"),
+    HIRE("Come adventuring with me?"),
+    COMMISSION("Could you build me a house?"),
+    LEDGER("Could I see the town ledger?"),
+    STORES("");
 
     public final String line;
 

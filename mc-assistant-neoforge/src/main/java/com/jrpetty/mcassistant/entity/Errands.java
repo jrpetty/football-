@@ -276,6 +276,22 @@ public final class Errands {
         };
         p.giveExperiencePoints(xp);
         StringBuilder said = new StringBuilder(pickOf(r, "That's everything! ", "You did it! ", "Wonderful! "));
+        // Work for the village is paid work: coin from the treasury.
+        UUID home = f.ownerId();
+        if (home != null && !kind.equals(WANT)) {
+            int wage;
+            if (kind.equals(SUPPLY)) {
+                Market.Good g = Market.goodFor(Quests.sample(me.errandItem()));
+                wage = (int) Math.max(2, Math.min(30, Math.round((g == null ? 0.5 : g.value()) * me.errandCount() * 0.8)));
+            } else {
+                wage = 5;
+            }
+            int paid = com.jrpetty.mcassistant.village.Ledger.takeCoins(home, wage);
+            if (paid < 2) paid = 2;                                          // the elder's own purse, at a pinch
+            ItemStack coins = new ItemStack(com.jrpetty.mcassistant.McAssistantMod.VILLAGE_COIN.get(), paid);
+            if (!p.getInventory().add(coins)) p.drop(coins, false);
+            said.append("Here's ").append(paid).append(" coins for your trouble. ");
+        }
         // A bed of its own at last: laid out at the camp, and slept in tonight.
         if ("bed".equals(me.errandItem()) && f.layGivenBed()) said.append("A bed of my own! I'll sleep well tonight. ");
         // Something from the village's own stores.

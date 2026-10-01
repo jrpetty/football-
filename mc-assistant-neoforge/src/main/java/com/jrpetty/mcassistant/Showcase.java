@@ -328,6 +328,18 @@ public final class Showcase {
         }
         if (field != null) view("t11-scarecrow", field.offset(-8, 3, -8), field.offset(2, 0, 2));
         view("t13-night-street", heart.offset(1, 1, 50), heart.offset(0, 3, 14));
+        // The quest board on the meeting hall, with the sort of thing a village posts.
+        for (Ledger.Building b : STAGED) {
+            if (!b.structure().equals("hall")) continue;
+            List<BlockPos> notes = com.jrpetty.mcassistant.entity.Quests.paintOn(level, b,
+                com.jrpetty.mcassistant.entity.Quests.samples(level.getDayTime() / 24000L));
+            if (!notes.isEmpty()) {
+                BlockPos first = notes.get(0);
+                Direction front = b.facing().getOpposite();
+                view("t22-quest-board", first.relative(front, 4).above(1), first);
+            }
+            break;
+        }
         // A hero's statue on the square, in the likeness of whoever is looking.
         List<net.minecraft.server.level.ServerPlayer> lookers = level.players();
         BlockPos spot = heart.offset(5, 0, -5);
