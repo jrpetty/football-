@@ -134,6 +134,15 @@ export class Mission {
     this.time = 0
     this.van = { res: {}, items: [] }
     this.fires = []
+    // fire light comes from a fixed pool: adding a light mid-run would make
+    // every material on the street compile its shader again
+    this.fireLights = []
+    for (let i = 0; i < 4; i++) {
+      const l = new THREE.PointLight('#ff8a3a', 0, 10, 1.6)
+      l.position.set(0, -50, 0)
+      this.scene.add(l)
+      this.fireLights.push(l)
+    }
     this.lures = []
     this.throwing = null
     // a co-op run: everyone builds the same street from the run's seed
@@ -1178,16 +1187,22 @@ export class Mission {
       grp.add(fl)
     }
     this.scene.add(grp)
-    const light = new THREE.PointLight('#ff8a3a', 0, r * 6, 1.6)
+    // the oldest fire gives up its light when the pool runs out
+    let light = this.fireLights.find((l) => !this.fires.some((f) => f.light === l))
+    if (!light) {
+      const old = this.fires.find((f) => f.light)
+      light = old.light
+      old.light = null
+    }
+    light.distance = r * 6
     light.position.set(x, y + 1.2, z)
-    this.scene.add(light)
     this.fires.push({ x, y, z, r, life, t: 0, grp, light, agent })
   }
   updateFires(dt) {
     for (const f of [...this.fires]) {
       f.t += dt
       const fade = f.life > 1e8 ? 1 : clamp((f.life - f.t) / 1.5, 0, 1)
-      f.light.intensity = 30 * f.r * fade * (0.8 + Math.sin(this.time * 11 + f.x) * 0.1 + Math.sin(this.time * 7 + f.z) * 0.1)
+      if (f.light) f.light.intensity = 30 * f.r * fade * (0.8 + Math.sin(this.time * 11 + f.x) * 0.1 + Math.sin(this.time * 7 + f.z) * 0.1)
       f.grp.scale.setScalar(Math.max(0.01, fade))
       if (Math.random() < dt * 6 * f.r) this.fx.smoke(new THREE.Vector3(f.x + (Math.random() - 0.5) * f.r, f.y + 1.5, f.z + (Math.random() - 0.5) * f.r), { size: 1 + f.r * 0.3, life: 3, color: '#2a2624', a: 0.4, vy: 1.6 })
       if (Math.random() < dt * 10) this.fx.ember(new THREE.Vector3(f.x + (Math.random() - 0.5) * f.r, f.y + 0.6, f.z + (Math.random() - 0.5) * f.r), 0.6)
@@ -1197,7 +1212,10 @@ export class Mission {
       }
       if (f.t >= f.life) {
         this.scene.remove(f.grp)
-        this.scene.remove(f.light)
+        if (f.light) {
+          f.light.intensity = 0
+          f.light.position.set(0, -50, 0)
+        }
         this.fires = this.fires.filter((x) => x !== f)
       }
     }

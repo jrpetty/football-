@@ -348,6 +348,7 @@ export function renderSettings(ui) {
     row('Graphics quality', seg(Object.entries(GFXQ).map(([k, q]) => [k, q.label]), st.quality || 'high', (v) => ((st.quality = v), g.applySettings(), ui.closeModal(), ui.openSettings()))),
     row('Tilt-shift focus', seg([[true, 'On'], [false, 'Off']], st.tilt !== false, (v) => ((st.tilt = v), g.applySettings(), ui.closeModal(), ui.openSettings()))),
     row('Edge scrolling', seg([[true, 'On'], [false, 'Off']], st.edgePan !== false, (v) => ((st.edgePan = v), g.applySettings(), ui.closeModal(), ui.openSettings()))),
+    row(h('span', { 'data-tip': 'When the frame rate drops, draw at a slightly lower resolution to stay smooth, and go back up when it recovers.' }, 'Auto resolution'), seg([[true, 'On'], [false, 'Off']], st.autoRes !== false, (v) => ((st.autoRes = v), g.applySettings(), ui.closeModal(), ui.openSettings()))),
     row('Volume', volumeControl(g, { wide: true })),
     h('p.note', 'Controls: drag or WASD to move, scroll to zoom, right-drag or Q/E to rotate. Space pauses, 1–3 set the speed.'),
     S && !S.over && ui.game.running ? saveSection(ui) : null,

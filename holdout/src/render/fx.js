@@ -327,10 +327,11 @@ export class FX {
       d.renderOrder = 1
       this.scene.add(d)
     }
+    // a new shader only when the decal gains or loses a texture
+    if (!d.material.map !== !map) d.material.needsUpdate = true
     d.material.map = map
     d.material.color.set(color)
     d.material.opacity = opacity
-    d.material.needsUpdate = true
     d.position.set(pos.x + (Math.random() - 0.5) * 0.3, 0.012 + this.decals.length * 0.0001, pos.z + (Math.random() - 0.5) * 0.3)
     d.rotation.z = Math.random() * 6
     d.scale.setScalar(size * (0.7 + Math.random() * 0.6))

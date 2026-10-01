@@ -707,6 +707,15 @@ export class Session {
     if (!this.c) return
     const t = this.t
     for (const k in t) t[k] -= dt
+    // a page that was frozen (a slow load, a long hitch) heard nothing in the
+    // meantime: that silence is not the other side's, so it does not count
+    const at = now()
+    const frozen = this.lastTick ? at - this.lastTick : 0
+    this.lastTick = at
+    if (frozen > 3) {
+      if (this.heard) this.heard += frozen
+      for (const P of this.peers.values()) P.seen += frozen
+    }
     if (this.role === 'host') {
       if (t.delta <= 0) {
         t.delta = DELTA_EVERY

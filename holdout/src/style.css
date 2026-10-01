@@ -2,7 +2,7 @@
    glass with stencilled headers and hazard-amber accents. Desktop first. */
 :root {
   --bg: #0f110e;
-  --glass: rgba(16, 19, 15, 0.86);
+  --glass: rgba(16, 19, 15, 0.9);
   --glass-2: rgba(24, 28, 22, 0.92);
   --panel-3: #262b22;
   --panel-4: #2f352a;
@@ -193,7 +193,7 @@ section .bar { margin: 8px 0 2px; }
 .nav.dim { opacity: 0.3; pointer-events: none; }
 .navbtn {
   appearance: none; width: 68px; padding: 9px 4px 7px; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer;
-  background: var(--glass); border: 1px solid var(--line-2); border-radius: 10px; color: var(--fg); box-shadow: var(--shadow); backdrop-filter: blur(8px);
+  background: var(--glass); border: 1px solid var(--line-2); border-radius: 10px; color: var(--fg); box-shadow: var(--shadow);
   font: 600 11.5px var(--font-display); text-transform: uppercase; letter-spacing: 0.1em; transition: border-color 0.12s, background 0.12s;
 }
 .navbtn svg { width: 22px; height: 22px; color: var(--muted); transition: color 0.12s; }
@@ -209,7 +209,7 @@ section .bar { margin: 8px 0 2px; }
 /* ---------------------------------------------------------------- drawer */
 .panel {
   position: absolute; right: 14px; top: 72px; bottom: 14px; width: 440px; max-width: calc(100vw - 110px);
-  background: var(--glass); border: 1px solid var(--line-2); border-radius: 14px; box-shadow: var(--shadow); backdrop-filter: blur(12px);
+  background: var(--glass); border: 1px solid var(--line-2); border-radius: 14px; box-shadow: var(--shadow);
   display: flex; flex-direction: column; overflow: hidden; animation: slideIn 0.16s ease-out;
 }
 .panel.wide { width: 760px; }
@@ -423,7 +423,7 @@ section .bar { margin: 8px 0 2px; }
 /* ---------------------------------------------------------------- build dock */
 .dock {
   position: absolute; left: 96px; right: 14px; bottom: 14px; max-width: 1400px; margin: 0 auto;
-  background: var(--glass); border: 1px solid var(--line-2); border-radius: 14px; box-shadow: var(--shadow); backdrop-filter: blur(12px);
+  background: var(--glass); border: 1px solid var(--line-2); border-radius: 14px; box-shadow: var(--shadow);
   padding: 8px 10px 10px; animation: dockIn 0.16s ease-out; transition: opacity 0.2s, transform 0.2s;
 }
 .dock.placing { opacity: 0.25; transform: translateY(20px); pointer-events: none; }
@@ -495,7 +495,7 @@ section .bar { margin: 8px 0 2px; }
 
 /* ---------------------------------------------------------------- modals */
 .modals { position: fixed; inset: 0; z-index: 20; pointer-events: none; }
-.mwrap { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(4, 5, 4, 0.55); backdrop-filter: blur(3px); pointer-events: auto; animation: fade 0.15s; }
+.mwrap { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(4, 5, 4, 0.62); pointer-events: auto; animation: fade 0.15s; }
 @keyframes fade { from { opacity: 0.45; } }
 .modal { width: min(760px, calc(100vw - 32px)); max-height: calc(100vh - 60px); overflow-y: auto; background: var(--glass-2); border: 1px solid var(--line-2); border-radius: 16px; box-shadow: var(--shadow); padding: 22px 24px; animation: pop 0.18s ease-out; }
 .modal.small { width: min(480px, calc(100vw - 32px)); }
@@ -579,10 +579,10 @@ section .bar { margin: 8px 0 2px; }
 }
 
 /* ---------------------------------------------------------------- city map */
-.loading.soft { background: rgba(8, 9, 7, 0.72); backdrop-filter: blur(4px); animation: fade 0.2s ease-out; }
+.loading.soft { background: rgba(8, 9, 7, 0.8); animation: fade 0.2s ease-out; }
 .maptop {
   position: absolute; left: 14px; right: 470px; top: 14px; display: flex; align-items: center; gap: 14px; padding: 8px 14px 8px 8px;
-  background: var(--glass); border: 1px solid var(--line-2); border-radius: 12px; box-shadow: var(--shadow); backdrop-filter: blur(12px);
+  background: var(--glass); border: 1px solid var(--line-2); border-radius: 12px; box-shadow: var(--shadow);
 }
 .maptop .btn span { display: inline-flex; }
 .maptop .btn svg { width: 16px; height: 16px; }
@@ -691,7 +691,7 @@ section .bar { margin: 8px 0 2px; }
 .mhud .mtoasts, .mhud .tip, .mhud .mhelp, .mhud .selbox, .mhud .pausebanner { pointer-events: none; }
 .mtop { position: absolute; left: 14px; right: 14px; top: 14px; display: flex; align-items: flex-start; gap: 14px; pointer-events: none; }
 .mtop > * { pointer-events: auto; }
-.mlocard { display: flex; align-items: center; gap: 10px; padding: 8px 14px 8px 8px; background: var(--glass); border: 1px solid var(--line-2); border-radius: 12px; box-shadow: var(--shadow); backdrop-filter: blur(10px); }
+.mlocard { display: flex; align-items: center; gap: 10px; padding: 8px 14px 8px 8px; background: var(--glass); border: 1px solid var(--line-2); border-radius: 12px; box-shadow: var(--shadow); }
 .mlocard .lvlbadge { width: 36px; height: 36px; font-size: 20px; border-radius: 9px; }
 .mlocard b { display: block; font: 700 18px var(--font-display); letter-spacing: 0.02em; }
 .mlocard small { color: var(--muted); font-size: 12px; }
@@ -776,7 +776,7 @@ section .bar { margin: 8px 0 2px; }
 body.aiming #c { cursor: crosshair !important; }
 
 /* ---------------------------------------------------------------- vision: minimap, sounds, memory */
-.minimap { position: absolute; right: 14px; top: 84px; width: 248px; padding: 6px 6px 6px; background: var(--glass); border: 1px solid var(--line-2); border-radius: 12px; box-shadow: var(--shadow); backdrop-filter: blur(10px); }
+.minimap { position: absolute; right: 14px; top: 84px; width: 248px; padding: 6px 6px 6px; background: var(--glass); border: 1px solid var(--line-2); border-radius: 12px; box-shadow: var(--shadow); }
 .mm-head { display: flex; justify-content: space-between; align-items: baseline; padding: 0 4px 5px; font: 600 11px var(--font-display); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
 .mm-head small { font: 500 11px var(--font-body); letter-spacing: 0; text-transform: none; color: var(--dim); }
 .mm-head small b { color: var(--fg); font-weight: 600; }

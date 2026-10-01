@@ -18,7 +18,9 @@ export function canvasMat(key, size, draw, opts = {}) {
   const c = document.createElement('canvas')
   c.width = size[0]
   c.height = size[1]
-  draw(c.getContext('2d'), c.width, c.height)
+  // painted on the CPU (some read their pixels back): a GPU canvas would
+  // stall on every read
+  draw(c.getContext('2d', { willReadFrequently: true }), c.width, c.height)
   const t = new THREE.CanvasTexture(c)
   t.colorSpace = THREE.SRGBColorSpace
   t.anisotropy = 8

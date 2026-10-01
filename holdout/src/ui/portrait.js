@@ -2,6 +2,7 @@
 // cached as images for the UI.
 import * as THREE from 'three'
 import { makeSurvivorCharacter, survivorLookKey } from '../world/agents.js'
+import { compileFor } from '../render/warmup.js'
 
 const cache = new Map()
 let P = null
@@ -22,10 +23,14 @@ function setup(renderer) {
   const rt = new THREE.WebGLRenderTarget(384, 384, hdr ? { type: THREE.FloatType } : {})
   rt.texture.colorSpace = hdr ? THREE.LinearSRGBColorSpace : THREE.SRGBColorSpace
   const buf = hdr ? new Float32Array(384 * 384 * 4) : new Uint8Array(384 * 384 * 4)
+  // plain CPU canvases: the pixels come from the CPU, and a GPU canvas would
+  // have to be read back again to encode the image
   const canvas = document.createElement('canvas')
   canvas.width = canvas.height = 384
+  canvas.getContext('2d', { willReadFrequently: true })
   const out = document.createElement('canvas')
   out.width = out.height = 192
+  out.getContext('2d', { willReadFrequently: true })
   P = { scene, cam, rt, buf, canvas, out, renderer, hdr }
 }
 // three.js ACESFilmicToneMapping (Hill's RRT+ODT fit), then the sRGB curve.
@@ -49,15 +54,63 @@ function toneMap(src, dst) {
     dst[i + 3] = Math.round(Math.min(1, Math.max(0, src[i + 3])) * 255)
   }
 }
+// Drawing a portrait takes a render and a read back from the graphics card.
+// Done on the spot, a panel full of new faces froze the game, so portraits are
+// drawn one at a time between frames: until then a picture shows a quiet
+// silhouette, and swaps to the face when it is ready.
+const SIL = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><defs><radialGradient id="g" cx="50%" cy="40%" r="62%"><stop offset="0" stop-color="#3d4237"/><stop offset="1" stop-color="#20241d"/></radialGradient></defs><circle cx="96" cy="80" r="33" fill="url(#g)"/><path d="M28 192c5-46 32-68 68-68s63 22 68 68z" fill="url(#g)"/></svg>'
+const silhouette = typeof Blob !== 'undefined' ? new Blob([SIL], { type: 'image/svg+xml' }) : null
+const pending = new Map() // look key -> { key, s, url }
+const queue = []
+let busy = false
+const keyOf = (s) => survivorLookKey(s) + '|' + (s.look.hair?.style || '') + (s.look.hair?.color || '')
+
 export function portrait(s, renderer) {
   if (!renderer) return ''
-  const key = survivorLookKey(s) + '|' + (s.look.hair?.style || '') + (s.look.hair?.color || '')
-  if (cache.has(key)) return cache.get(key)
+  const key = keyOf(s)
+  const done = cache.get(key)
+  if (done) return done
+  let p = pending.get(key)
+  if (!p) {
+    p = { key, s, url: URL.createObjectURL(silhouette) }
+    pending.set(key, p)
+    queue.push(p)
+    // not now: the panel asking for it opens first
+    if (!busy) later(() => pump(renderer))
+  }
+  return p.url
+}
+// when the browser has a moment to spare
+const later = (fn) => (window.requestIdleCallback ? requestIdleCallback(fn, { timeout: 400 }) : setTimeout(fn, 16))
+function pump(renderer) {
+  if (busy || !queue.length) return
+  busy = true
+  const p = queue.shift()
+  draw(p.s, renderer)
+    .then(
+      (url) => {
+        cache.set(p.key, url)
+        for (const img of document.querySelectorAll('img')) if (img.src === p.url) img.src = url
+        setTimeout(() => URL.revokeObjectURL(p.url), 30000)
+      },
+      // a face that cannot be drawn keeps its silhouette
+      () => cache.set(p.key, p.url),
+    )
+    .finally(() => {
+      pending.delete(p.key)
+      // the next one a frame or so later
+      busy = false
+      if (queue.length) later(() => pump(renderer))
+    })
+}
+async function draw(s, renderer) {
   if (!P) setup(renderer)
   const ch = makeSurvivorCharacter(s)
   for (let i = 0; i < 6; i++) ch.update(0.2, 'idle', { snap: true })
   ch.root.rotation.y = -0.35
   P.scene.add(ch.root)
+  // a face can wear materials not drawn yet: compile them first, off the frame
+  await compileFor(renderer, ch.root, P.cam, P.scene)
   const hgt = s.look.height || 1
   P.cam.position.set(0.32, 1.69 * hgt, 1.13)
   P.cam.lookAt(0, 1.585 * hgt, 0)
@@ -70,11 +123,19 @@ export function portrait(s, renderer) {
   r.setClearColor(0x000000, 0)
   r.clear()
   r.render(P.scene, P.cam)
-  r.readRenderTargetPixels(P.rt, 0, 0, 384, 384, P.buf)
   r.setRenderTarget(prevRT)
   r.setClearColor(prevClear, prevAlpha)
+  // read back without stalling the frame where the renderer can
+  let read = null
+  try {
+    if (r.readRenderTargetPixelsAsync) read = r.readRenderTargetPixelsAsync(P.rt, 0, 0, 384, 384, P.buf)
+  } catch {
+    read = null
+  }
+  if (!read) r.readRenderTargetPixels(P.rt, 0, 0, 384, 384, P.buf)
   P.scene.remove(ch.root)
   ch.dispose()
+  if (read) await read
   // flip vertically into a canvas, then downscale for smooth edges
   const g = P.canvas.getContext('2d')
   const img = g.createImageData(384, 384)
@@ -89,10 +150,15 @@ export function portrait(s, renderer) {
   o.clearRect(0, 0, 192, 192)
   o.imageSmoothingQuality = 'high'
   o.drawImage(P.canvas, 0, 0, 192, 192)
-  const url = P.out.toDataURL('image/png')
-  cache.set(key, url)
-  return url
+  const blob = await new Promise((res) => P.out.toBlob(res, 'image/png'))
+  if (!blob) throw new Error('no portrait')
+  return URL.createObjectURL(blob)
 }
 export function forgetPortrait(s) {
-  for (const k of [...cache.keys()]) if (k.startsWith(survivorLookKey(s))) cache.delete(k)
+  const k0 = survivorLookKey(s)
+  for (const [k, url] of [...cache.entries()]) {
+    if (!k.startsWith(k0)) continue
+    cache.delete(k)
+    setTimeout(() => URL.revokeObjectURL(url), 30000)
+  }
 }

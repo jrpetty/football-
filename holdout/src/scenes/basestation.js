@@ -12,7 +12,7 @@ import { h, clamp, rand } from '../core/util.js'
 
 const _dir = new THREE.Vector3()
 const EMPTY = { lights: [], emitters: [], flames: [], spots: [], beds: [], seats: [], anims: [], blink: [], roofs: [] }
-const BLUEPRINT = new THREE.MeshStandardMaterial({ color: '#9ad0ff', emissive: '#4aa0ff', emissiveIntensity: 0.6, transparent: true, opacity: 0.22, depthWrite: false, roughness: 0.4 })
+export const BLUEPRINT = new THREE.MeshStandardMaterial({ color: '#9ad0ff', emissive: '#4aa0ff', emissiveIntensity: 0.6, transparent: true, opacity: 0.22, depthWrite: false, roughness: 0.4 })
 const _v = new THREE.Vector3()
 
 export class StationView {

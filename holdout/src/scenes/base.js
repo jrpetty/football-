@@ -26,8 +26,8 @@ import { sfx, setAmbience } from '../core/audio.js'
 import { bus, h, rand, clamp, fmt } from '../core/util.js'
 import { icon } from '../ui/icons.js'
 
-const GHOST_OK = new THREE.MeshStandardMaterial({ color: '#9ae6a0', emissive: '#3a8a4a', emissiveIntensity: 0.5, transparent: true, opacity: 0.55, depthWrite: false })
-const GHOST_BAD = new THREE.MeshStandardMaterial({ color: '#ff8a8a', emissive: '#a02020', emissiveIntensity: 0.6, transparent: true, opacity: 0.5, depthWrite: false })
+export const GHOST_OK = new THREE.MeshStandardMaterial({ color: '#9ae6a0', emissive: '#3a8a4a', emissiveIntensity: 0.5, transparent: true, opacity: 0.55, depthWrite: false })
+export const GHOST_BAD = new THREE.MeshStandardMaterial({ color: '#ff8a8a', emissive: '#a02020', emissiveIntensity: 0.6, transparent: true, opacity: 0.5, depthWrite: false })
 const LIGHTS = 8
 const _tint = new THREE.Vector3(1, 1, 1)
 

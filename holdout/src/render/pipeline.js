@@ -75,16 +75,22 @@ export class Pipeline {
     r.toneMapping = THREE.NoToneMapping
     r.shadowMap.enabled = true
     r.shadowMap.type = THREE.PCFShadowMap
+    // checking every new shader for errors waits on the graphics card each
+    // time, a visible hitch; ?shaders turns the check back on for debugging
+    r.debug.checkShaderErrors = /[?&]shaders\b/.test(location.search)
     this.quality = 'high'
     this.tiltShift = true
     this.composers = new Map()
     this.exposure = 1
     this.size = { w: 1, h: 1 }
+    // automatic resolution: a slow machine trades a little sharpness for a
+    // steady frame rate, and gets it back when frames are quick again
+    this.dyn = { on: true, scale: 1, ema: 1 / 60, t: 0 }
   }
   setQuality(q) {
     this.quality = QUALITY[q] ? q : 'high'
     const Q = QUALITY[this.quality]
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, Q.dpr))
+    this.renderer.setPixelRatio(this.ratio())
     this.renderer.shadowMap.enabled = true
     for (const c of this.composers.values()) c.composer.dispose()
     this.composers.clear()
@@ -92,6 +98,33 @@ export class Pipeline {
   }
   get Q() {
     return QUALITY[this.quality]
+  }
+  ratio() {
+    return Math.min(window.devicePixelRatio || 1, this.Q.dpr) * (this.dyn.on ? this.dyn.scale : 1)
+  }
+  setAutoRes(on) {
+    if (this.dyn.on === on) return
+    this.dyn.on = on
+    this.dyn.scale = 1
+    this.renderer.setPixelRatio(this.ratio())
+    this.resize(this.size.w, this.size.h)
+  }
+  // called once per drawn frame
+  adapt(dt) {
+    const d = this.dyn
+    // hitches (a loading card, a tab switch) say nothing about the steady rate
+    if (!d.on || !(dt > 0) || dt > 0.25) return
+    d.ema += (dt - d.ema) * 0.05
+    d.t += dt
+    if (d.t < 2.5) return
+    d.t = 0
+    let k = d.scale
+    if (d.ema > 1 / 42 && k > 0.6) k = Math.max(0.6, k - 0.1)
+    else if (d.ema < 1 / 56 && k < 1) k = Math.min(1, k + 0.1)
+    if (k === d.scale) return
+    d.scale = Math.round(k * 10) / 10
+    this.renderer.setPixelRatio(this.ratio())
+    this.resize(this.size.w, this.size.h)
   }
   resize(w, h) {
     this.size = { w, h }

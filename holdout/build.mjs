@@ -12,12 +12,15 @@ const args = process.argv.slice(2)
 const fragment = args.includes('--fragment')
 const outArg = args.indexOf('--out')
 const out = outArg >= 0 ? resolve(args[outArg + 1]) : join(here, '..', 'holdout.html')
+// --debug keeps names readable, for profiling
+const debug = args.includes('--debug')
 
 const res = await build({
   entryPoints: [join(here, 'src', 'main.js')],
   bundle: true,
   format: 'iife',
-  minify: true,
+  minify: !debug,
+  keepNames: debug,
   target: 'es2020',
   write: false,
   legalComments: 'none',

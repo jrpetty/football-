@@ -342,6 +342,12 @@ export class Labels {
     const w = window.innerWidth
     const h = window.innerHeight
     const cam = camera.position
+    // touch the DOM only when something changed: a still camera writes nothing
+    const show = (it, on) => {
+      if (it.shown === on) return
+      it.shown = on
+      it.wrap.style.display = on ? '' : 'none'
+    }
     for (const it of this.items) {
       if (it.life) {
         it.age += dt
@@ -353,24 +359,34 @@ export class Labels {
       const visible = !it.scene || it.scene === activeScene
       const p = typeof it.pos === 'function' ? it.pos() : it.pos?.isObject3D ? it.pos.getWorldPosition(_v) : it.pos
       if (!visible || !p || it.hidden) {
-        if (it.wrap.style.display !== 'none') it.wrap.style.display = 'none'
+        show(it, false)
         continue
       }
       if (it.maxDist && cam.distanceTo(p) > it.maxDist) {
-        if (it.wrap.style.display !== 'none') it.wrap.style.display = 'none'
+        show(it, false)
         continue
       }
       _v.set(p.x, p.y + it.offsetY + (it.rise ? (it.age / it.life) * it.rise : 0), p.z)
       _v.project(camera)
       if (_v.z > 1 || _v.x < -1.15 || _v.x > 1.15 || _v.y < -1.15 || _v.y > 1.15) {
-        if (it.wrap.style.display !== 'none') it.wrap.style.display = 'none'
+        show(it, false)
         continue
       }
-      if (it.wrap.style.display === 'none') it.wrap.style.display = ''
+      show(it, true)
       const x = (_v.x * 0.5 + 0.5) * w
       const y = (-_v.y * 0.5 + 0.5) * h
-      it.wrap.style.transform = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0)`
-      if (it.life) it.wrap.style.opacity = String(Math.min(1, (1 - it.age / it.life) * 2.2))
+      const tr = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0)`
+      if (tr !== it.tr) {
+        it.tr = tr
+        it.wrap.style.transform = tr
+      }
+      if (it.life) {
+        const o = Math.min(1, (1 - it.age / it.life) * 2.2).toFixed(2)
+        if (o !== it.op) {
+          it.op = o
+          it.wrap.style.opacity = o
+        }
+      }
     }
   }
 }

@@ -386,7 +386,16 @@ npm run build        # writes ../holdout.html
 
 The code is plain ES modules in `src/`. `build.mjs` bundles them with esbuild
 into one HTML file, and `node build.mjs --out FILE --fragment` writes just the
-page body. `node dev-build.mjs src/dev/<viewer>.js out.html` builds the model,
+page body. `--debug` keeps function names readable for profiling, and
+`?shaders` in the address turns three.js's shader error checks back on (they
+are off because each check waits on the graphics card).
+
+Things that keep frames smooth: shaders for every station, the placement
+ghosts and a survivor portrait are compiled in the background after loading;
+a run or the city map compiles and uploads behind its loading card; portraits
+are drawn one at a time between frames; fire light comes from a fixed pool
+(adding a light recompiles every material); and *Auto resolution* in Settings
+lowers the render resolution a little when the frame rate drops. `node dev-build.mjs src/dev/<viewer>.js out.html` builds the model,
 character, station and lighting viewers used while modelling.
 
 ```

@@ -1,5 +1,6 @@
 // Boot, loading screen, title, scene switching (camp, city map, supply runs),
 // the simulation loop, hotkeys, settings and saving.
+import './core/threefix.js'
 import { Pipeline } from './render/pipeline.js'
 import { initView, view, groundAt } from './render/view.js'
 import { pregenerate } from './render/texgen.js'
@@ -10,6 +11,7 @@ import { Coop } from './net/coop.js'
 import { newCode } from './net/transport.js'
 import { lobbyCard, joinError } from './ui/lobby.js'
 import { Pings } from './ui/pings.js'
+import { warmUp, compileFor, preRender } from './render/warmup.js'
 import { econTick, initSchedules, autoResolveRaid, scheduleRaid } from './game/economy.js'
 import * as belts from './game/belts.js'
 import * as stateMod from './game/state.js'
@@ -124,6 +126,8 @@ class Game {
     loading.remove()
     if (intent && (this.net || NET.role === 'host')) this.startNet(intent)
     else this.title(saved)
+    // compile the shaders the camp will need while nothing is happening
+    setTimeout(() => warmUp(this), 2500)
     view.input.onKey = (e) => {
       if (this.onKey(e)) e._handled = true
     }
@@ -171,6 +175,7 @@ class Game {
     }
     const q = st.quality || 'high'
     const tilt = st.tilt !== false
+    this.pipe.setAutoRes(st.autoRes !== false)
     const changedQ = q !== this.pipe.quality || tilt !== this.pipe.tiltShift
     this.pipe.tiltShift = tilt
     if (changedQ || first) this.pipe.setQuality(q)
@@ -251,7 +256,7 @@ class Game {
   // A friend's co-op run sets out with some of this player's survivors:
   // build the same street and follow the leader's game.
   startCoopRemote(run) {
-    if (this.mission) return this.coop?.leave(run.id)
+    if (this.mission || this.starting) return this.coop?.leave(run.id)
     const loc = this.city.locs.find((l) => l.id === run.locId)
     if (!loc) return
     if (this.scene === this.map) {
@@ -267,10 +272,19 @@ class Game {
     const ids = Object.values(run.roster).flat()
     const lo = { ...run.loadout }
     if (lo.stash === -1) lo.stash = Infinity
-    this.mission = new Mission(this, loc, ids, { ...lo, coop: { run, role: 'joiner', seed: run.seed } })
-    this.scene = this.mission
-    view.input.handler = this.mission
-    this.coop.flushPending(this.mission)
+    const card = this.missionCard(loc)
+    setTimeout(() => {
+      this.starting = false
+      // the run may have ended while the card was going up
+      if (this.coop.active?.id !== run.id) return this.missionFailed(card, null, 'The run was over before your squad got there.')
+      try {
+        this.mission = new Mission(this, loc, ids, { ...lo, coop: { run, role: 'joiner', seed: run.seed } })
+      } catch (e) {
+        return this.missionFailed(card, e)
+      }
+      this.enterMission(this.mission, card)
+      this.coop.flushPending(this.mission)
+    }, 40)
   }
   endCoopRemote(report) {
     const m = this.mission
@@ -499,13 +513,27 @@ class Game {
     const card = h('div.loading.soft', h('div.ld-card', h('div.logo', 'ASHFORD'), h('span', 'Surveying the city…')))
     document.getElementById('hud').append(card)
     setTimeout(() => {
+      let ok = false
       try {
         this.map = new CityMap(this)
+        ok = true
       } finally {
+        if (!ok) {
+          card.remove()
+          this.mapLoading = false
+        }
+      }
+      // its shaders and geometry get ready behind the card too
+      const r = this.pipe.renderer
+      const show = () => {
+        if (!this.mapLoading) return
+        preRender(r, this.map.scene, view.camera)
         card.remove()
         this.mapLoading = false
+        go()
       }
-      go()
+      compileFor(r, this.map.scene, view.camera).then(show)
+      setTimeout(show, 6000)
     }, 60)
   }
   closeMap() {
@@ -522,14 +550,72 @@ class Game {
     this.ui.showCamp(false)
     // alone, the trip there passes in a blink; with friends, time is shared
     if (NET.role === 'solo') this.fastForward(loadout.travel || 0)
-    this.mission = new Mission(this, loc, ids, loadout)
-    const run = loadout.coop?.run
-    if (run) this.net?.say(null, `${Object.keys(run.roster).map((p) => S.mp.players[p]?.name || 'Someone').join(' and ')} set out together for ${loc.name} with ${ids.length} survivors.`)
-    else if (NET.role !== 'solo') this.net?.say(null, `${this.net.name} set out for ${loc.name} with ${ids.length} ${ids.length === 1 ? 'survivor' : 'survivors'}.`)
-    this.scene = this.mission
-    view.input.handler = this.mission
-    completeGoal('firstRun')
-    save()
+    // the card goes up first and the street is built behind it
+    const card = this.missionCard(loc)
+    setTimeout(() => {
+      this.starting = false
+      try {
+        this.mission = new Mission(this, loc, ids, loadout)
+      } catch (e) {
+        this.missionFailed(card, e)
+        return
+      }
+      const run = loadout.coop?.run
+      if (run) this.net?.say(null, `${Object.keys(run.roster).map((p) => S.mp.players[p]?.name || 'Someone').join(' and ')} set out together for ${loc.name} with ${ids.length} survivors.`)
+      else if (NET.role !== 'solo') this.net?.say(null, `${this.net.name} set out for ${loc.name} with ${ids.length} ${ids.length === 1 ? 'survivor' : 'survivors'}.`)
+      this.enterMission(this.mission, card)
+      completeGoal('firstRun')
+      save()
+    }, 40)
+  }
+  missionCard(loc) {
+    this.scene = null
+    view.input.handler = null
+    this.starting = true
+    const card = h('div.loading.soft', h('div.ld-card', h('div.logo', loc?.name || 'The city'), h('span', 'Heading in…')))
+    document.getElementById('hud').append(card)
+    return card
+  }
+  // a street that could not be built: back to camp rather than stuck
+  missionFailed(card, e, why = 'The squad could not get there. Try again.') {
+    if (e) console.error('holdout: the run could not start', e)
+    card?.remove()
+    this.starting = false
+    this.mission = null
+    this.scene = this.base
+    if (this.baseCam) view.rig.restore(this.baseCam)
+    this.base.enter()
+    view.input.handler = this.base
+    this.ui.showCamp(true)
+    this.ui.toast(why, 'bad')
+  }
+  // The street is built; its shaders compile in the background behind a
+  // short card (a street has dozens, and compiling them in the first frame
+  // froze the game), then the run begins.
+  enterMission(m, card = this.missionCard(m.loc)) {
+    this.starting = false
+    let done = false
+    const go = () => {
+      if (done) return
+      done = true
+      card.remove()
+      if (this.mission !== m || m.over) return
+      this.scene = m
+      view.input.handler = m
+    }
+    // one still update first: the street sets up its torches and the sky's
+    // light on its first frame, and shaders depend on both
+    try {
+      m.update(0)
+    } catch {}
+    compileFor(this.pipe.renderer, m.scene, view.camera).then(() => {
+      if (done || this.mission !== m) return
+      preRender(this.pipe.renderer, m.scene, view.camera)
+      // let the card paint over that before the street appears
+      setTimeout(go, 30)
+    })
+    // never wait on it for long
+    setTimeout(go, 6000)
   }
   endMission(report) {
     const m = this.mission
@@ -617,6 +703,7 @@ class Game {
       else this.pipe.render(scene.scene, view.camera, dt)
       this.pings.update(dt, scene.scene)
       view.labels.update(dt, view.camera, scene.scene)
+      this.pipe.adapt(dt)
     }
     this.ui?.update(dt)
   }
@@ -625,6 +712,8 @@ class Game {
 const game = new Game()
 window.__holdout = game
 window.__view = view
+// handles for tests and profiling
+window.__dbg = { compileFor }
 Object.defineProperty(window, '__S', { get: () => S })
 window.__belts = belts
 window.__state = stateMod
