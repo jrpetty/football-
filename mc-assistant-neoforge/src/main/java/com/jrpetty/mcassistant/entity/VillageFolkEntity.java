@@ -705,6 +705,12 @@ public class VillageFolkEntity extends AssistantEntity {
         persona.setMood(m, keys);
     }
 
+    /** The old walk; everybody else runs when there is a long way to go. */
+    @Override
+    protected boolean fitToRun() {
+        return super.fitToRun() && !isOld();
+    }
+
     /** A happy village works faster, a miserable one slower (Contentment). */
     @Override
     protected int villageWorkPercent() {

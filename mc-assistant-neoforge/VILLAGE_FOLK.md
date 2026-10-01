@@ -511,6 +511,10 @@ Better tools mean faster work too:
 * Each level of Efficiency on a tool makes it an eighth quicker.
 * The crafts work quicker with their own building, and slower without it.
 
+**On the move they act like players.** On a long walk a folk breaks into a run, now and
+then jumping in its stride on open ground. It stops running when it gets there, when it
+reaches water, or when it is too hungry or too old to run.
+
 **Children** come more easily in good times and less in bad, but never stop while
 there is any food at all:
 

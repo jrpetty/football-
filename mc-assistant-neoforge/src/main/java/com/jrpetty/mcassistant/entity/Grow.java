@@ -209,6 +209,23 @@ public final class Grow {
             if (level.getBlockState(p.pos()).isAir()) continue;
             off.add(p);
         }
+        // Whatever stands where the new ladder goes up (the old chest): its contents into the stores.
+        for (BuildGoal.Placement q : will) {
+            if (q.part() != BuildGoal.Part.LADDER || q.pos().getY() >= b.anchor().getY() + 3) continue;
+            BlockState there = level.getBlockState(q.pos());
+            if (there.isAir() || there.is(Blocks.LADDER) || there.canBeReplaced()) continue;
+            if (level.getBlockEntity(q.pos()) instanceof net.minecraft.world.Container c) {
+                for (int i = 0; i < c.getContainerSize(); i++) {
+                    net.minecraft.world.item.ItemStack st = c.removeItemNoUpdate(i);
+                    if (!st.isEmpty()) {
+                        net.minecraft.world.item.ItemStack left = Market.intoStores(level, id, st);
+                        if (!left.isEmpty()) net.minecraft.world.Containers.dropItemStack(level, q.pos().getX() + 0.5,
+                            q.pos().getY() + 0.5, q.pos().getZ() + 0.5, left);
+                    }
+                }
+            }
+            level.setBlock(q.pos(), Blocks.AIR.defaultBlockState(), 2 | 16);
+        }
         if (!off.isEmpty()) {
             off.sort((x, y) -> y.pos().getY() - x.pos().getY());
             int n = 0;
