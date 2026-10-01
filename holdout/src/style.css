@@ -1087,3 +1087,10 @@ body.aiming #c { cursor: crosshair !important; }
 .leadcard b { display: flex; align-items: center; gap: 6px; color: #d8b8ff; font: 700 14px var(--font-display); }
 .leadcard b i svg { width: 15px; height: 15px; }
 .leadcard small { color: var(--muted); }
+/* ---- gear swapping */
+.eslot.locked .es-item { opacity: 0.6; cursor: not-allowed; }
+.gearpick h3 { margin: 12px 0 6px; }
+.swapwrap { position: relative; }
+.swapwrap.locked .icard { opacity: 0.45; }
+.swaplock { position: absolute; top: 8px; right: 8px; display: inline-flex; align-items: center; gap: 4px; font: 700 11px var(--font-display); color: var(--bad); background: rgba(20,20,18,0.85); padding: 2px 6px; border-radius: 5px; }
+.swaplock svg { width: 12px; height: 12px; }

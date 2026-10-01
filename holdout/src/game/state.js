@@ -191,17 +191,26 @@ export function equippedItem(s, slot) {
 export function equipped(s, slot) {
   return equippedItem(s, slot)?.id || null
 }
-export function equip(s, u) {
+// Gear only changes hands in camp: not for anyone out on a run or holding
+// an outpost.
+export const gearLock = (s) => (s?.status === 'mission' ? 'Out on a run' : s?.status === 'outpost' ? 'Holding an outpost' : null)
+// Equip an item. Taken from someone else, it is a swap: they get whatever
+// this survivor had in that slot.
+export function equip(s, u, o = {}) {
   const it = itemOf(u)
-  if (!it) return
+  if (!it || gearLock(s)) return false
   const slot = ITEMS[it.id].slot
   const prev = ownerOf(u)
-  if (prev) prev.equip[slot] = null
+  if (prev && prev !== s && gearLock(prev)) return false
+  const mine = s.equip[slot]
+  if (prev && prev !== s) prev.equip[slot] = o.swap !== false && mine ? mine : null
   s.equip[slot] = u
-  s.hp = Math.min(s.hp, survivorStats(s).maxHp)
+  for (const x of [s, prev]) if (x) x.hp = Math.min(x.hp, survivorStats(x).maxHp)
   bus.emit('change')
+  return true
 }
 export function unequip(s, slot) {
+  if (gearLock(s)) return false
   s.equip[slot] = null
   s.hp = Math.min(s.hp, survivorStats(s).maxHp)
   bus.emit('change')

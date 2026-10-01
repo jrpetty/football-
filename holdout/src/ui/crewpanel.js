@@ -1,7 +1,7 @@
 // Crew: the roster, each survivor's sheet (skills, traits, equipment, job),
 // and the armory of items with equip, sell and repair shortcuts.
 import { RES, ITEMS, QUALITY, RARITY, MODS, STATIONS, OCCUPATIONS, SKILLS, SKILL_KEYS, UTILITIES, TRAITS, INFECTION, SEC_PER_DAY, PERKS, PERK_LEVELS } from '../game/data.js'
-import { S, getS, survivorStats, survivorLevel, equip, unequip, itemOf, itemName, itemValue, removeItem, ownerOf, workEff, assign, slots, workersOf, gain, day, killSurvivor, log, infectionStage, treatInfection, researchDone, choosePerk, perkOf } from '../game/state.js'
+import { S, getS, survivorStats, survivorLevel, equip, unequip, gearLock, itemOf, itemName, itemValue, removeItem, ownerOf, workEff, assign, slots, workersOf, gain, day, killSurvivor, log, infectionStage, treatInfection, researchDone, choosePerk, perkOf } from '../game/state.js'
 import { sellMult } from '../game/economy.js'
 import { sfx } from '../core/audio.js'
 import { bus, h, fmt, clamp } from '../core/util.js'
@@ -94,13 +94,15 @@ function stat(label, v, tip = null) {
 function equipSlot(ui, s, slot) {
   const it = itemOf(s.equip[slot])
   const label = { weapon: 'Weapon', armor: 'Armor', gear: 'Gear' }[slot]
+  const lock = gearLock(s)
+  const open = lock ? () => (sfx('error'), ui.toast(`${s.first} is away (${lock.toLowerCase()}): gear can only change hands in camp.`, 'bad')) : () => pickItem(ui, s, slot)
   return h(
-    'div.eslot',
+    'div.eslot' + (lock ? '.locked' : ''),
     h('span.es-label', label),
     it
-      ? h('div.es-item', { onclick: () => pickItem(ui, s, slot) }, h('b', itemName(it)), qualityTag(it.q), h('span.es-stat', ITEMS[it.id].slot === 'gear' ? ITEMS[it.id].desc : ''), it.mods?.length ? h('span.mod', MODS[it.mods[0]].name) : null, condBar(it))
-      : h('div.es-item.empty', { onclick: () => pickItem(ui, s, slot) }, slot === 'weapon' ? 'Fists' : 'Nothing'),
-    it ? h('button.mini', { onclick: () => (unequip(s, slot), ui.refreshPanel()) }, 'Remove') : null,
+      ? h('div.es-item', { onclick: open, 'data-tip': lock ? `Locked: ${lock.toLowerCase()}` : 'Click to change or swap with someone' }, h('b', itemName(it)), qualityTag(it.q), h('span.es-stat', ITEMS[it.id].slot === 'gear' ? ITEMS[it.id].desc : ''), it.mods?.length ? h('span.mod', MODS[it.mods[0]].name) : null, condBar(it))
+      : h('div.es-item.empty', { onclick: open }, slot === 'weapon' ? 'Fists' : 'Nothing'),
+    it && !lock ? h('button.mini', { onclick: () => (unequip(s, slot), ui.refreshPanel()) }, 'Remove') : null,
   )
 }
 function utilSlot(ui, s) {
@@ -148,29 +150,41 @@ export function pickJob(ui, s) {
     { actions: [h('button.btn.ghost', { onclick: () => close() }, 'Close')] },
   )
 }
+// Pick gear for a slot: from storage, or swapped with someone else in camp.
 export function pickItem(ui, s, slot) {
-  const items = S.items.filter((it) => ITEMS[it.id].slot === slot).sort((a, b) => itemValue(b) - itemValue(a))
+  const all = S.items.filter((it) => ITEMS[it.id].slot === slot).sort((a, b) => itemValue(b) - itemValue(a))
+  const free = all.filter((it) => !ownerOf(it.uid))
+  const held = all.filter((it) => ownerOf(it.uid) && ownerOf(it.uid) !== s)
+  const mine = itemOf(s.equip[slot])
   let close
+  const take = (it) => {
+    const who = ownerOf(it.uid)
+    if (!equip(s, it.uid)) return sfx('error')
+    sfx('select')
+    if (who && who !== s) ui.toast(mine ? `${s.first} and ${who.first} swapped: ${who.first} now has the ${itemName(mine)}.` : `${s.first} took the ${itemName(it)} from ${who.first}.`, 'good')
+    close()
+    ui.refreshPanel()
+  }
   close = ui.modal(
     h(
-      'div',
+      'div.gearpick',
       h('h2', `${slot[0].toUpperCase() + slot.slice(1)} for ${s.first}`),
-      items.length
-        ? h(
-            'div.igrid',
-            items.map((it) =>
-              itemCard(it, {
-                selected: s.equip[slot] === it.uid,
-                onclick: () => {
-                  equip(s, it.uid)
-                  sfx('select')
-                  close()
-                  ui.refreshPanel()
-                },
+      mine ? h('p.note', `${s.first} has the ${itemName(mine)}. Taking something another survivor carries swaps them: they get the ${itemName(mine)}.`) : null,
+      h('h3', 'In storage', h('small', `${free.length}`)),
+      free.length ? h('div.igrid', free.map((it) => itemCard(it, { onclick: () => take(it) }))) : h('p.note', 'Nothing like that in storage. Craft it at a bench, find it on a run or buy it from the trader.'),
+      held.length
+        ? [
+            h('h3', 'Carried by others', h('small', 'click to swap')),
+            h(
+              'div.igrid',
+              held.map((it) => {
+                const who = ownerOf(it.uid)
+                const lock = gearLock(who)
+                return h('div.swapwrap' + (lock ? '.locked' : ''), { 'data-tip': lock ? `${who.first}: ${lock.toLowerCase()}. Gear only changes hands in camp.` : `Swap with ${who.first}` }, itemCard(it, { onclick: lock ? null : () => take(it) }), lock ? h('span.swaplock', h('i', { html: icon('lock') }), lock) : null)
               }),
             ),
-          )
-        : h('p.note', 'Nothing like that in storage. Craft it at a bench, find it on a run or buy it from the trader.'),
+          ]
+        : null,
     ),
     { actions: [h('button.btn.ghost', { onclick: () => close() }, 'Close')] },
   )
@@ -264,8 +278,9 @@ function giveItem(ui, it) {
           return h(
             'button.pickrow',
             {
+              disabled: !!gearLock(s),
               onclick: () => {
-                equip(s, it.uid)
+                if (!equip(s, it.uid)) return sfx('error')
                 sfx('select')
                 close()
                 ui.refreshPanel()
