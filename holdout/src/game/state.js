@@ -77,6 +77,17 @@ export const seasonIdx = (d = day()) => Math.floor((d - 1) / SEASON_DAYS) % SEAS
 export const season = (d = day()) => SEASONS[seasonIdx(d)]
 export const seasonDay = (d = day()) => ((d - 1) % SEASON_DAYS) + 1
 export const year = (d = day()) => Math.floor((d - 1) / (SEASON_DAYS * SEASONS.length)) + 1
+// How far the leaves have turned: they start in the last days of summer,
+// peak through autumn and go brown in winter.
+export function leafTurn(t = S.time) {
+  const d = t / DAY_MIN
+  const y = d % (SEASON_DAYS * 4)
+  const sd = SEASON_DAYS
+  if (y < sd) return 0 // spring: fresh green
+  if (y < 2 * sd) return Math.max(0, (y - 2 * sd + 1.5) / 1.5) // late summer
+  if (y < 3 * sd) return 1
+  return 1 + Math.min(1, (y - 3 * sd) / 2) * 0.7 // winter
+}
 
 // ---------------------------------------------------------------- survivors
 export function randomLook(female) {

@@ -16,7 +16,7 @@ import * as CB from '../models/citybuildings.js'
 import { locationModel } from '../models/citylandmarks.js'
 import { gableRoof } from '../models/parts.js'
 import { SIDEWALK, RIVER_W, HIGHWAY_Z, HIGHWAY_W, FACE_ROT, route } from '../world/city.js'
-import { S, hour, season } from '../game/state.js'
+import { S, hour, season, leafTurn } from '../game/state.js'
 import { LEVEL_COLORS } from '../game/data.js'
 import { MapPanel } from '../ui/mappanel.js'
 import { clamp, smooth } from '../core/util.js'
@@ -1247,6 +1247,7 @@ export class CityMap {
   update(dt) {
     WEATHER.uSnow.value = season().heat ? 0.32 : 0
     WEATHER.uSnowHole.value.set(0, 0, 0, 0)
+    WEATHER.uAutumn.value = leafTurn()
     this.t += dt
     const hr = hour()
     const night = nightFactor(hr)

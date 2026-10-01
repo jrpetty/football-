@@ -9,6 +9,7 @@ import { econTick, initSchedules, autoResolveRaid, scheduleRaid } from './game/e
 import * as belts from './game/belts.js'
 import * as stateMod from './game/state.js'
 import * as econMod from './game/economy.js'
+import { WEATHER as WX } from './render/materials.js'
 import { STATIONS, GAME_MIN_PER_SEC, SEC_PER_DAY, RES } from './game/data.js'
 
 const OFFLINE_DIV = 15 // real seconds away per second of camp work
@@ -402,4 +403,5 @@ Object.defineProperty(window, '__S', { get: () => S })
 window.__belts = belts
 window.__state = stateMod
 window.__econ = econMod
+window.__weather = WX
 game.boot()

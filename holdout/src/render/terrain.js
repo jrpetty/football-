@@ -313,9 +313,30 @@ transformed.y *= 1.0 - 0.6 * uSnow;
 const foliageMats = {}
 export function foliageMaterial(key = 'leaf') {
   if (foliageMats[key]) return foliageMats[key]
+  const broadleaf = key.startsWith('leaf') && key !== 'leafCardAutumn'
   const m = cloneMat(mat(key), (sh) => {
     sh.uniforms.uWindTime = wind.time
     sh.uniforms.uWindStrength = wind.strength
+    if (broadleaf) {
+      // seasons: in autumn each tree turns its own gold, orange or red; in
+      // winter what is left goes brown under the snow
+      sh.uniforms.uAutumn = WEATHER.uAutumn
+      sh.fragmentShader = sh.fragmentShader
+        .replace('#include <common>', '#include <common>\nuniform float uAutumn;')
+        .replace(
+          '#include <color_fragment>',
+          `#include <color_fragment>
+  if (uAutumn > 0.0) {
+    float tn = fract(sin(dot(floor(vWW.xz * 0.28), vec2(12.9898, 78.233))) * 43758.5453);
+    float ln = fract(sin(dot(floor(vWW.xyz * 2.1), vec3(12.9898, 78.233, 37.719))) * 43758.5453);
+    vec3 hue = tn < 0.4 ? vec3(0.78, 0.5, 0.1) : tn < 0.75 ? vec3(0.82, 0.32, 0.07) : vec3(0.62, 0.12, 0.06);
+    hue = mix(hue, vec3(0.42, 0.3, 0.16), smoothstep(1.0, 1.8, uAutumn));
+    float l = dot(diffuseColor.rgb, vec3(0.333));
+    float k = clamp(uAutumn, 0.0, 1.0) * (0.55 + 0.45 * tn) * (0.75 + 0.25 * ln);
+    diffuseColor.rgb = mix(diffuseColor.rgb, hue * (0.55 + 1.4 * l), k);
+  }`,
+        )
+    }
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\n' + WIND_PARS)
       .replace(
@@ -329,7 +350,7 @@ export function foliageMaterial(key = 'leaf') {
   transformed.z += cos(ph * 0.7) * hk * 0.6 * transformed.y * uWindStrength;
 #endif`,
       )
-  }, '-fol')
+  }, broadleaf ? '-fol-s' : '-fol')
   foliageMats[key] = m
   return m
 }

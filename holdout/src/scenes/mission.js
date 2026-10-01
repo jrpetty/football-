@@ -25,7 +25,7 @@ import { genLevel } from '../world/levelgen.js'
 import { OffsetGrid } from '../core/grid.js'
 import { FACE_ROT, SIDEWALK, lotToWorld } from '../world/city.js'
 import { LOCATIONS, CONTAINERS, ITEMS, RARITY, RES, QUALITY, zombieMix, LEVEL_COLORS, UTILITIES } from '../game/data.js'
-import { S, getS, gain, addItem, gainXP, killSurvivor, hour, day, completeGoal, log, survivorStats, makeSurvivor, addMoraleEvent, researchDone, season } from '../game/state.js'
+import { S, getS, gain, addItem, gainXP, killSurvivor, hour, day, completeGoal, log, survivorStats, makeSurvivor, addMoraleEvent, researchDone, season, leafTurn } from '../game/state.js'
 import { scheduleRaid } from '../game/economy.js'
 import { sfx, setAmbience } from '../core/audio.js'
 import { h, rand, rint, pick, chance, weighted, clamp, fmtTime, bus, fmt } from '../core/util.js'
@@ -1502,6 +1502,7 @@ export class Mission {
       this.snowHole = isFinite(x0) ? [x0, z0, x1, z1] : [0, 0, 0, 0]
     }
     WEATHER.uSnowHole.value.set(...this.snowHole)
+    WEATHER.uAutumn.value = leafTurn()
     if (this.over) return
     const hr = hour()
     const night = nightFactor(hr)

@@ -129,7 +129,8 @@ export function allMaterials() {
 // noise texture sampled triplanar, so it costs no UVs and no extra geometry.
 // uSnowHole: a world-space xz rectangle (x0, z0, x1, z1) kept free of snow
 // below 3.4 m, so building interiors on runs stay dry.
-export const WEATHER = { tNoise: { value: null }, uWeather: { value: 1 }, uSnow: { value: 0 }, uSnowHole: { value: new THREE.Vector4(0, 0, 0, 0) } }
+// uAutumn: 0 green, 1 full autumn colour, up to 2 for winter brown.
+export const WEATHER = { tNoise: { value: null }, uWeather: { value: 1 }, uSnow: { value: 0 }, uSnowHole: { value: new THREE.Vector4(0, 0, 0, 0) }, uAutumn: { value: 0 } }
 const WEATHER_VERT = /* glsl */ `
 {
   vec4 wwp = vec4(transformed, 1.0);

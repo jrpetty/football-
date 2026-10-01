@@ -18,7 +18,7 @@ import { BeltMixin } from './basebelts.js'
 import { stationModel } from '../models/stations.js'
 import { makeSurvivorCharacter } from '../world/agents.js'
 import { STATIONS, RES, EXPANSIONS } from '../game/data.js'
-import { S, BASE, bounds, hour, stationSize, workersOf, gateTiles, expansionAvailable, expansionCost, season } from '../game/state.js'
+import { S, BASE, bounds, hour, stationSize, workersOf, gateTiles, expansionAvailable, expansionCost, season, leafTurn } from '../game/state.js'
 import { power } from '../game/economy.js'
 import { sfx, setAmbience } from '../core/audio.js'
 import { bus, h, rand, clamp, fmt } from '../core/util.js'
@@ -123,6 +123,7 @@ export class BaseScene {
     }
     this.entered = true
     this.snowInit = false
+    this.leafInit = false
     this.syncStations()
     this.people.sync()
     this.fence.refresh()
@@ -585,6 +586,8 @@ export class BaseScene {
     }
     WEATHER.uSnow.value += (snowGoal - WEATHER.uSnow.value) * Math.min(1, simDt * 0.012)
     WEATHER.uSnowHole.value.set(0, 0, 0, 0)
+    WEATHER.uAutumn.value += (leafTurn() - WEATHER.uAutumn.value) * (this.leafInit ? Math.min(1, simDt * 0.01) : 1)
+    this.leafInit = true
     this.world.terrain.material.userData.uniforms.uWet.value += ((rain ? 0.85 : 0) - this.world.terrain.material.userData.uniforms.uWet.value) * Math.min(1, dt * 0.05)
     if (this.world.refresh()) this.repaintT = 0
     if (S.expanding) {
