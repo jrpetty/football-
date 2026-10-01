@@ -48,14 +48,17 @@ own, and each step is there for a reason the village can see.
    houses, a **smeltery** of three furnaces, and a **meeting hall**. The miners take
    their mines down to the iron seam (height 16, where this game puts the most
    iron) to be ready for the next age.
-7. **The Iron Age:** iron for the watch's armour and everybody's tools — each miner
-   has an iron pickaxe made from the stores — a **workshop**, a **watchtower** and a
-   **market**.
-8. **The Diamond Age:** every other miner with an iron pickaxe goes down to the
-   diamonds near the bottom of the world; twice the Iron Age's iron, a
-   **lighthouse** and a **chapel**.
-9. **The Nether Age:** a diamond pickaxe for the miners, obsidian, and an obsidian
-   **gateway** (never lit).
+7. **The Iron Age:** iron in the stores for the watch's armour and a smith's stock, a
+   **workshop**, a **watchtower** and a **market**. Iron is kept for the age: a folk
+   makes itself iron armour or iron tools only out of what the village holds beyond
+   what it is saving.
+8. **The Diamond Age:** every other miner has an iron pickaxe made from the stores
+   and takes its mine down to the diamonds near the bottom of the world; twice the
+   Iron Age's iron, a **lighthouse** and a **chapel**.
+9. **The Nether Age:** one miner gets the village's diamond pickaxe and a bucket of
+   water, and makes the obsidian the way a player does — water poured on the lava
+   down at the bottom of the world, the obsidian broken out, the hole stopped — and
+   the village raises an obsidian **gateway** (never lit).
 10. **And then it never stops.** A village that has come through every age raises
     **great works** — a granary, barracks, a monument, round and round, each on new
     ground — and every one asks the stores for a quarter more food, stone and iron
@@ -174,7 +177,8 @@ together ("20 folk: 3 couples, 9 friendships, 1 rivalry; 4 born here"), and
   its storehouse.
 * **Feeding itself** — farmers work any ground, wet or dry (a crop grows on dry
   farmland, slower, and never lets it dry back), and a farmer with no water on its
-  plot has a bucket of water made from the stores once the village has three iron.
+  plot has a bucket of water made from the stores (three iron) when the village is
+  hungry.
   A hungry village — less than half a day's meals put by — turns a miner or a
   woodcutter whose stone or timber is piled high into a farmer, and a smelter with
   no ore burns logs into charcoal when the village is short of coal. A folk that
