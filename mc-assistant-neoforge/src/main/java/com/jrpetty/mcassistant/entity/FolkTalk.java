@@ -65,6 +65,7 @@ public final class FolkTalk {
         long day = f.level().getDayTime() / 24000L;
         Persona.Opinion op = me.opinionOf(p.getUUID(), p.getName().getString());
         if (topic == TalkTopic.SAY) topic = understand(text);
+        boolean firstMeeting = op.lastTalkDay < 0 && op.lastGiftDay < 0;
         // A word a day goes a long way.
         if (op.lastTalkDay != day && topic != TalkTopic.BYE) {
             op.lastTalkDay = day;
@@ -78,7 +79,7 @@ public final class FolkTalk {
         }
         f.startTalking(p);
         String said = switch (topic) {
-            case OPEN -> greet(f, p, op);
+            case OPEN -> greet(f, p, op, firstMeeting);
             case HOW -> howAreYou(f);
             case DOING -> doing(f, p);
             case ABOUT -> aboutMe(f);
@@ -175,7 +176,7 @@ public final class FolkTalk {
 
     // ------------------------------------------------------------------ topics
 
-    static String greet(VillageFolkEntity f, net.minecraft.world.entity.player.Player p, Persona.Opinion op) {
+    static String greet(VillageFolkEntity f, net.minecraft.world.entity.player.Player p, Persona.Opinion op, boolean first) {
         RandomSource r = f.getRandom();
         String you = p.getName().getString();
         Persona me = f.persona();
@@ -184,7 +185,6 @@ public final class FolkTalk {
         if (f.isSleeping()) return "Zzz… mm? Oh — it's the middle of the night. Talk in the morning.";
         if (aff <= -50) return pick(r, "Oh. You.", "What do you want?", "Stay back.");
         if (aff <= -15) return pick(r, "Hm. " + you + ".", "Oh. It's you.", "What is it?");
-        boolean first = aff <= 2 && op.lastGiftDay < 0 && me.memories().stream().noneMatch(m -> m.text().contains(you));
         if (first) {
             String job = f.stationTask() == AssistantEntity.StationTask.NONE ? "new here"
                 : "the village " + f.stationTask().title.toLowerCase(Locale.ROOT);
