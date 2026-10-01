@@ -6,7 +6,7 @@ import { view, pickAt, groundAt } from '../render/view.js'
 import { isNight } from '../render/sky.js'
 import { STATIONS, zombieMix, ITEMS } from '../game/data.js'
 import { S, day, bounds, workersOf, survivorStats, fenceMax, completeGoal, log, killSurvivor, getS, gateTiles, addMoraleEvent } from '../game/state.js'
-import { scheduleRaid, power } from '../game/economy.js'
+import { scheduleRaid, power, finishGame } from '../game/economy.js'
 import { sfx, setAmbience } from '../core/audio.js'
 import { rand, pick, chance, weighted, clamp, angleLerp } from '../core/util.js'
 
@@ -57,7 +57,7 @@ export const RaidMixin = {
   // ---------------------------------------------------------------- start
   startRaid(R) {
     const sides = ['n', 'e', 'w', 's']
-    S.raid = { count: R.count, killed: 0, spawned: 0, t: 0, side: pick(sides), side2: chance(R.size >= 2 || R.blood ? 0.7 : 0.25) ? pick(sides) : null, acc: 0, blood: !!R.blood, lvl: R.lvl }
+    S.raid = { count: R.count, killed: 0, spawned: 0, t: 0, side: pick(sides), side2: chance(R.size >= 2 || R.blood ? 0.7 : 0.25) ? pick(sides) : null, acc: 0, blood: !!R.blood, lvl: R.lvl, finale: !!R.finale }
     this.mode = 'raid'
     this.cancelPlacing()
     this.cancelLinking()
@@ -367,6 +367,7 @@ export const RaidMixin = {
     this.mode = 'base'
     S.stats.raids++
     completeGoal('surviveHorde')
+    if (R.finale) S.finale = null
     scheduleRaid()
     setAmbience(0.035)
     this.people.setVisible(true)
@@ -374,6 +375,7 @@ export const RaidMixin = {
     this.fence.refresh()
     this.game.ui?.raidHud(false)
     log(won ? `The horde is dead. ${report.killed} zombies put down.` : 'The horde broke through and ransacked the camp.', won ? 'good' : 'bad')
+    if (R.finale) return finishGame(won)
     this.game.ui?.raidReport(report)
   },
 

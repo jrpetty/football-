@@ -14,7 +14,7 @@ const resChipSigned = (k, v) => h('span.ci', { style: { '--c': RES[k].color } },
 import { renderStation } from './stationpanel.js'
 import { renderSurvivor, renderCrew, renderItems } from './crewpanel.js'
 import { renderProgress } from './progresspanel.js'
-import { renderMarket, renderGoals, renderLog, renderFence, renderExpansion, renderProduction, renderPower, renderMorale, renderSettings, recruitModal, raidReportModal, missionReportModal, gameOverModal, menuModal, hordeInfo } from './camppanels.js'
+import { victoryModal, renderMarket, renderLog, renderFence, renderExpansion, renderProduction, renderPower, renderMorale, renderSettings, recruitModal, raidReportModal, missionReportModal, gameOverModal, menuModal, hordeInfo } from './camppanels.js'
 
 const NAV = [
   { id: 'build', label: 'Build', key: 'B', icon: 'build', primary: true },
@@ -23,7 +23,7 @@ const NAV = [
   { id: 'trade', label: 'Trade', key: 'T', icon: 'market' },
   { id: 'camp', label: 'Camp', key: 'P', icon: 'production' },
   { id: 'map', label: 'Map', key: 'M', icon: 'map' },
-  { id: 'goals', label: 'Progress', key: 'G', icon: 'goals' },
+  { id: 'progress', label: 'Progress', key: 'G', icon: 'goals' },
   { id: 'log', label: 'Log', key: 'L', icon: 'log' },
 ]
 
@@ -116,7 +116,7 @@ export class UI {
     sfx('click')
     if (id === 'build') return this.toggleBuild()
     if (id === 'map') return this.game.openMap()
-    const fns = { crew: () => this.openCrew(), items: () => this.openItems(), trade: () => this.openMarket(), camp: () => this.openProduction(), goals: () => this.openGoals(), log: () => this.openLog() }
+    const fns = { crew: () => this.openCrew(), items: () => this.openItems(), trade: () => this.openMarket(), camp: () => this.openProduction(), progress: () => this.openProgress(), log: () => this.openLog() }
     if (this.panelKey === id) return this.closePanel()
     fns[id]?.()
   }
@@ -128,7 +128,7 @@ export class UI {
       return true
     }
     if (S.raid) return false
-    const map = { b: 'build', c: 'crew', i: 'items', t: 'trade', p: 'camp', m: 'map', g: 'goals', l: 'log' }
+    const map = { b: 'build', c: 'crew', i: 'items', t: 'trade', p: 'camp', m: 'map', g: 'progress', l: 'log' }
     if (map[k] && !e.ctrlKey && !e.metaKey && !this.game.base?.placing) {
       this.navClick(map[k])
       return true
@@ -384,8 +384,8 @@ export class UI {
   openMarket() {
     this.openPanel('trade', () => renderMarket(this), { wide: true })
   }
-  openGoals() {
-    this.openPanel('goals', () => renderProgress(this), { wide: true, live: true })
+  openProgress() {
+    this.openPanel('progress', () => renderProgress(this), { wide: true, live: true })
   }
   openLog() {
     this.openPanel('log', () => renderLog(this), { live: true })
@@ -438,6 +438,10 @@ export class UI {
   }
   missionReport(r) {
     this.modal(missionReportModal(this, r))
+  }
+  victory(held) {
+    let close
+    close = this.modal(victoryModal(this, held, () => close()), { locked: true })
   }
   gameOver() {
     this.modal(gameOverModal(this), { small: true, locked: true })

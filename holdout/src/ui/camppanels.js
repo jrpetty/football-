@@ -103,15 +103,7 @@ function buyRes(ui, x, price) {
   ui.refreshPanel()
 }
 
-// ---------------------------------------------------------------- goals & log
-export function renderGoals(ui) {
-  const rows = GOALS.map((g) => {
-    const st = S.goals[g.id]
-    return h('div.goal' + (st === 'claimed' ? '.claimed' : st === 'done' ? '.done' : ''), h('i', { html: icon(st ? 'check' : 'goals') }), h('div.g-main', h('b', g.text), costList(g.reward, { small: true, have: false })), st === 'done' ? h('button.btn.go.small', { onclick: () => (claimGoal(g.id), sfx('coin'), ui.refreshPanel()) }, 'Claim') : null)
-  })
-  const done = GOALS.filter((g) => S.goals[g.id]).length
-  return ui.frame('Goals', `${done} / ${GOALS.length} complete`, rows, { icon: 'goals' })
-}
+// ---------------------------------------------------------------- log
 export function renderLog(ui) {
   return ui.frame('Camp log', `Day ${day()}`, h('div.log', S.log.slice(0, 80).map((e) => h('div.le.' + (e.kind || 'plain'), h('span.t', `D${Math.floor(e.t / 1440) + 1} ${clockStr(e.t)}`), h('span', e.text)))), { icon: 'log' })
 }
@@ -418,6 +410,19 @@ export function missionReportModal(ui, r) {
     r.lost?.length ? h('p.bad', `Left behind: ${r.lost.join(', ')}`) : null,
     r.injured?.length ? h('p.bad', `Injured: ${r.injured.join(', ')}`) : null,
     h('div.mactions', h('button.btn.go', { onclick: () => ui.closeModal() }, 'Continue')),
+  )
+}
+// The coast answered: the end of the story (play can go on).
+export function victoryModal(ui, held, close) {
+  const alive = S.survivors.length
+  return h(
+    'div.gameover.victory',
+    h('div.logo.big', 'THE COAST ANSWERED'),
+    h('p', held ? `Dawn on day ${day()}. Headlights on the north road, then a column of armoured trucks from the coast. You held the last night, and the Signal brought them.` : `Dawn on day ${day()}. The camp is in ruins, but the trucks from the coast made it through. Everyone still standing is going home.`),
+    h('div.statgrid', h('div.stat', h('span', 'Days'), h('b', day())), h('div.stat', h('span', 'Survivors'), h('b', alive)), h('div.stat', h('span', 'Zombies killed'), h('b', S.stats.kills)), h('div.stat', h('span', 'Supply runs'), h('b', S.stats.runs)), h('div.stat', h('span', 'Hordes held'), h('b', S.stats.raids)), h('div.stat', h('span', 'Recruited'), h('b', S.stats.recruited))),
+    S.stats.memorial.length ? h('section.card', h('h3', 'They did not see it'), S.stats.memorial.slice(0, 10).map((m) => h('div.kv', h('span', `${m.name}, ${m.occ}`), h('small', `Day ${m.day} · ${m.cause}`)))) : null,
+    h('p.note', 'You can stay: the camp keeps going, the dead keep coming, and there is always more to build.'),
+    h('div.mactions', h('button.btn.go.big', { onclick: () => close() }, 'Stay with the camp'), h('button.btn.big.ghost', { onclick: () => ui.game.confirmNew() }, 'Start a new camp')),
   )
 }
 export function gameOverModal(ui) {

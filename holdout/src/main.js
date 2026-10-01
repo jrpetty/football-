@@ -8,6 +8,7 @@ import { S, newGame, hasSave, load, save, day, log, wipeSave, buildCost, newStat
 import { econTick, initSchedules, autoResolveRaid, scheduleRaid } from './game/economy.js'
 import * as belts from './game/belts.js'
 import * as stateMod from './game/state.js'
+import * as econMod from './game/economy.js'
 import { STATIONS, GAME_MIN_PER_SEC, SEC_PER_DAY, RES } from './game/data.js'
 
 const OFFLINE_DIV = 15 // real seconds away per second of camp work
@@ -230,6 +231,16 @@ class Game {
         this.pendingRaidReport = rep
       } else this.ui.raidReport(rep)
     })
+    bus.on('victory', ({ held }) => {
+      sfx('complete')
+      save()
+      backupSave()
+      setTimeout(() => this.ui.victory(held), 900)
+    })
+    bus.on('signalPhase', (p) => {
+      if (p >= 5) this.ui.toast('The Signal reaches the coast. Every dead thing in the city heard it too. Hold one more night.', 'bad')
+      else this.ui.toast(`The Signal: phase ${p} complete`, 'good')
+    })
     bus.on('gameover', () => {
       this.running = false
       this.ui.gameOver()
@@ -390,4 +401,5 @@ window.__view = view
 Object.defineProperty(window, '__S', { get: () => S })
 window.__belts = belts
 window.__state = stateMod
+window.__econ = econMod
 game.boot()

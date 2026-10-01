@@ -12,8 +12,8 @@ export const SEC_PER_DAY = DAY_MIN / GAME_MIN_PER_SEC
 // ---------------------------------------------------------------- resources
 // cat: needs | materials | ammo | supplies | cash. capMul scales storage.
 export const RES = {
-  food: { name: 'Food', cat: 'needs', color: '#e0a54a', sell: 2, desc: 'Canned goods and crops. Everyone eats about 2 a day.' },
-  water: { name: 'Water', cat: 'needs', color: '#58a9dc', sell: 2, desc: 'Clean drinking water. Everyone drinks about 2.4 a day.' },
+  food: { name: 'Food', cat: 'needs', color: '#e0a54a', sell: 2, capMul: 1.6, desc: 'Canned goods and crops. Everyone eats about 2 a day.' },
+  water: { name: 'Water', cat: 'needs', color: '#58a9dc', sell: 2, capMul: 1.4, desc: 'Clean drinking water. Everyone drinks about 2.4 a day.' },
   meds: { name: 'Medicine', cat: 'needs', color: '#e8606e', sell: 14, capMul: 0.5, desc: 'Treats wounds. Used for first aid kits and in the Infirmary.' },
   wood: { name: 'Wood', cat: 'materials', color: '#b07a45', sell: 1, desc: 'Building and crafting. Comes from the Lumber Yard and furniture.' },
   scrap: { name: 'Scrap', cat: 'materials', color: '#9a8a76', sell: 1, desc: 'Junk metal. Smelted into metal at the Forge.' },
@@ -63,7 +63,7 @@ export const SEASONS = [
   { id: 'spring', name: 'Spring', farm: 1.0, collector: 1.25, water: 1.0, heat: 0, color: '#9ad07a', weather: { clear: 36, hazy: 14, overcast: 18, rain: 26, fog: 6 }, desc: 'Rain and new growth. The collectors fill fast.' },
   { id: 'summer', name: 'Summer', farm: 1.15, collector: 0.7, water: 1.3, heat: 0, color: '#f0c050', weather: { clear: 60, hazy: 22, overcast: 8, rain: 8, fog: 2 }, desc: 'Long hot days: everyone drinks 30% more, and the farms do well.' },
   { id: 'autumn', name: 'Autumn', farm: 1.4, collector: 1.0, water: 1.0, heat: 0, color: '#e08a40', weather: { clear: 34, hazy: 16, overcast: 20, rain: 16, fog: 14 }, desc: 'Harvest: the farms yield 40% more. Fog rolls in more often.' },
-  { id: 'winter', name: 'Winter', farm: 0.3, collector: 0.45, water: 1.0, heat: 0.8, color: '#a8d0f0', weather: { clear: 30, hazy: 12, overcast: 26, snow: 26, fog: 6 }, desc: 'Snow. The farms barely grow and the collectors freeze. Everyone needs heat: the camp burns wood (or fuel) through the day.' },
+  { id: 'winter', name: 'Winter', farm: 0.45, collector: 0.55, water: 1.0, heat: 0.8, color: '#a8d0f0', weather: { clear: 30, hazy: 12, overcast: 26, snow: 26, fog: 6 }, desc: 'Snow. The farms barely grow and the collectors freeze. Everyone needs heat: the camp burns wood (or fuel) through the day.' },
 ]
 
 // ---------------------------------------------------------------- skills
@@ -527,8 +527,8 @@ export const TIERS = [
   null,
   { name: 'Foothold', phase: 0, blurb: 'Make the yard livable: fire for metal, belts for hauling, a wall worth the name.' },
   { name: 'Workshop', phase: 0, blurb: 'Chemistry, fabrication and the first look at the old broadcast mast.' },
-  { name: 'Power', phase: 1, blurb: 'Generators, electronics and better belts. The camp starts to hum.' },
-  { name: 'Industry', phase: 1, blurb: 'Machine tools, research and steel walls.' },
+  { name: 'Power', phase: 1, blurb: 'Generators, electronics and steel walls. The camp starts to hum.' },
+  { name: 'Industry', phase: 1, blurb: 'Machine tools, research, better belts and more land.' },
   { name: 'Automation', phase: 2, blurb: 'Fast belts, an outer ring of land and machines that run themselves.' },
   { name: 'Fortress', phase: 2, blurb: 'Fortified walls, power cells and transmitter coils.' },
   { name: 'Overdrive', phase: 3, blurb: 'Overclocking and the amplifiers the Signal needs.' },
@@ -543,10 +543,10 @@ export const MILESTONES = {
   signal: { tier: 2, name: 'The Signal', desc: 'Old maps show a broadcast mast on the hill. If it could reach the coast, someone might come.', cost: { metal: 120, wood: 200, parts: 20 }, unlocks: { stations: ['mast'] } },
   power: { tier: 3, name: 'Power', desc: 'Generators, perimeter floodlights and auto-turrets.', cost: { metal: 120, parts: 30, electronics: 10, fuel: 30 }, unlocks: { stations: ['generator', 'floodlight', 'turret'] } },
   electronics: { tier: 3, name: 'Electronics', desc: 'A soldering bench and a radio that reaches further than the fence.', cost: { metal: 80, wiring: 40, electronics: 12 }, unlocks: { stations: ['electronics', 'radio'] } },
-  rollers: { tier: 3, name: 'Rubber Rollers', desc: 'Cured rubber belts on proper rollers, and the land to use them on.', cost: { rubber: 40, metal: 60 }, unlocks: { belt: 2, exp: ['e1', 's1'] } },
+  rollers: { tier: 4, name: 'Rubber Rollers', desc: 'Cured rubber belts on proper rollers, and the land to use them on.', cost: { rubber: 40, metal: 60 }, unlocks: { belt: 2, exp: ['e1', 's1'] } },
   machining: { tier: 4, name: 'Machining', desc: 'Lathes, a press and a winding bench.', cost: { steel: 80, wiring: 60, parts: 40 }, unlocks: { stations: ['assembler'] } },
   research: { tier: 4, name: 'Research', desc: 'A desk, a microscope and every manual the runs bring home.', cost: { electronics: 20, parts: 30, cloth: 30, schematic: 1 }, unlocks: { stations: ['research'] } },
-  sheetmetal: { tier: 4, name: 'Sheet Metal', desc: 'Steel-faced walls, and panels that drink the sun.', cost: { steel: 60, metal: 200 }, unlocks: { fence: 2, stations: ['solar'] } },
+  sheetmetal: { tier: 3, name: 'Sheet Metal', desc: 'Steel-faced walls, and panels that drink the sun.', cost: { steel: 60, metal: 200 }, unlocks: { fence: 2, stations: ['solar'] } },
   automation: { tier: 5, name: 'Automation', desc: 'Better relays: automated stations run 50% faster.', cost: { circuits: 20, motors: 6, electronics: 20 }, unlocks: { flags: ['autoBoost'] } },
   motorbelts: { tier: 5, name: 'Motor Belts', desc: 'Motor-driven belts on steel frames.', cost: { motors: 20, steel: 100 }, unlocks: { belt: 3 } },
   outerring: { tier: 5, name: 'Outer Ring', desc: 'Survey the land beyond the first expansions.', cost: { steel: 120, wood: 400, metal: 300 }, unlocks: { exp: ['n2', 'e2', 's2', 'w2'] } },

@@ -257,7 +257,7 @@ function effectBlock(ui, st, pinfo) {
           h('p.note', P.desc),
           rows,
           h('div.kv', h('span', 'Hand over what storage has'), h('button.btn.small.go', { onclick: () => (deliverSignal() ? (sfx('build'), ui.toast('Delivered to the mast', 'good')) : (sfx('error'), ui.toast('Nothing in storage the mast still needs', 'bad')), ui.refreshPanel()) }, 'Deliver')),
-          h('p.note', 'Belts into the mast deliver as they arrive. ', h('a.link', { onclick: () => ui.openGoals() }, 'All phases')),
+          h('p.note', 'Belts into the mast deliver as they arrive. ', h('a.link', { onclick: () => ui.openProgress() }, 'All phases')),
         ),
       )
       break

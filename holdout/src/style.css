@@ -958,3 +958,5 @@ body.aiming #c { cursor: crosshair !important; }
 
 .panel.xwide { width: 900px; }
 .spark svg { width: 48px; }
+.gameover.victory .logo.big { font-size: 46px; color: #f6d07a; text-align: center; margin-bottom: 10px; }
+.gameover.victory > p { font-size: 15px; line-height: 1.55; color: #e8e2cc; }

@@ -3,8 +3,9 @@
 // recruits, distress calls, hordes and the black market.
 import {
   RES, STOCK_KEYS, AMMO_KEYS, ITEMS, QUALITY, MODS, STATIONS, FENCE, RECIPES, EXPANSIONS, HORDES, OCCUPATIONS, LOCATIONS,
-  GAME_MIN_PER_SEC, DAY_MIN, SEC_PER_DAY, RARITY, ALT_RECIPES, INFECTION, OUTPOST,
+  GAME_MIN_PER_SEC, DAY_MIN, SEC_PER_DAY, RARITY, ALT_RECIPES, INFECTION, OUTPOST, SIGNAL,
 } from './data.js'
+const SIGNAL_PHASES = SIGNAL.length
 import {
   S, day, hour, bounds, log, gain, pay, canAfford, capOf, stationSize, workersOf, workEff, gainXP, completeGoal,
   survivorStats, itemOf, addItem, repairCost, orderSpec, rollQuality, rebuildFence, fenceMax, makeSurvivor, killSurvivor,
@@ -298,10 +299,11 @@ export function econTick(dt, opts = {}) {
   for (const s of S.survivors) {
     if (s.status === 'mission') continue
     const st = survivorStats(s)
-    if (S.hungry || S.cold) s.hp = Math.max(1, s.hp - dt * (S.hungry && S.cold ? 0.15 : 0.1))
+    // hunger and cold wear the healthy down; the injured still mend, slowly
+    if ((S.hungry || S.cold) && s.status !== 'injured') s.hp = Math.max(1, s.hp - dt * (S.hungry && S.cold ? 0.15 : 0.1))
     else if (s.status === 'ok' || s.status === 'outpost') s.hp = Math.min(st.maxHp, s.hp + dt * 0.1)
     else if (s.status === 'injured') {
-      s.hp = Math.min(st.maxHp, s.hp + dt * 0.035)
+      s.hp = Math.min(st.maxHp, s.hp + dt * (S.hungry || S.cold ? 0.012 : 0.035))
       if (s.hp >= st.maxHp * 0.7) {
         s.status = 'ok'
         log(`${s.first} has recovered.`, 'good')
@@ -874,13 +876,25 @@ function spawnEvent() {
 // the calendar, decides how big hordes get.
 export function threatLevel() {
   const exp = Object.values(S.expansions).filter((v) => v === 'done').length
-  return campTier() * 1.1 + (S.signal?.phase || 0) * 0.9 + S.survivors.length / 5 + exp * 0.5 + Math.min(day(), 60) / 10
+  return campTier() * 1.3 + (S.signal?.phase || 0) + S.survivors.length / 8 + exp * 0.4 + Math.min(day(), 100) / 20
 }
 export const BLOOD_MOON_EVERY = 7
 // Days on which the night horde is a Blood Moon.
-export const isBloodMoonDay = (d) => d >= BLOOD_MOON_EVERY && d % BLOOD_MOON_EVERY === 0
+export const isBloodMoonDay = (d) => d >= 14 && d % BLOOD_MOON_EVERY === 0
+// When the Signal's last phase is done, the broadcast draws every dead thing
+// in the city: one last Blood Moon horde before the evacuation convoy comes.
+bus.on('signalPhase', (p) => {
+  if (p >= SIGNAL_PHASES && S && !S.won) {
+    S.finale = { at: S.time + 14 * 60 }
+    scheduleRaid()
+  }
+})
 export function scheduleRaid(first = false) {
   const T = threatLevel()
+  if (S.finale && !S.won) {
+    S.nextRaid = { at: Math.max(S.finale.at, S.time + 60), size: 3, count: 120 + Math.floor(T * 2), warned: false, blood: true, lvl: 5, finale: true }
+    return
+  }
   let sizeIdx
   if (first || T < 3) sizeIdx = 0
   else if (T < 6) sizeIdx = chance(0.6) ? 0 : 1
@@ -895,14 +909,15 @@ export function scheduleRaid(first = false) {
     if (S.time > (d - 1) * DAY_MIN + 22 * 60) d++
     while (!isBloodMoonDay(d)) d++
     const bm = (d - 1) * DAY_MIN + 22 * 60
-    if (bm <= at + 4 * 60) {
+    // it replaces any horde due up to 20 h before it, so the two never stack
+    if (bm <= at + 20 * 60) {
       at = bm
       blood = true
       sizeIdx = Math.min(3, sizeIdx + 1)
     }
   }
   const H = HORDES[sizeIdx]
-  const count = Math.round((rint(H.min, H.max) + Math.floor(T * 1.2)) * (blood ? 1.6 : 1))
+  const count = Math.round((rint(H.min, H.max) + Math.floor(T * 1.2)) * (blood ? 1.5 : 1))
   const lvl = clamp(1 + Math.floor(T / 4) + (blood ? 1 : 0), 1, 5)
   S.nextRaid = { at, size: sizeIdx, count, warned: false, blood, lvl }
 }
@@ -911,6 +926,7 @@ export function raidIntel() {
   if (!r) return null
   const towers = countType('watchtower')
   const H = HORDES[r.size]
+  if (r.finale) return { in: r.at - S.time, name: 'The last night', count: r.count, size: 3, known: true, blood: true, finale: true, threat: threatLevel() }
   return { in: r.at - S.time, name: r.blood ? `Blood Moon: ${towers ? H.name.toLowerCase() : 'a horde'}` : towers ? H.name : 'Unknown horde', count: towers ? r.count : null, size: r.size, known: !!towers, blood: !!r.blood, threat: threatLevel() }
 }
 // A horde hits while nobody is watching (e.g. during a run).
@@ -927,7 +943,8 @@ export function autoResolveRaid(R, offline = false) {
   const pinfo = powerInfo()
   for (const st of S.stations) if (st.type === 'turret' && pinfo.powered.has(st.id) && S.res.pammo > 5) def += STATIONS.turret.dmg[st.level - 1] / STATIONS.turret.rate[st.level - 1]
   const fence = FENCE[S.fence.level].hp * 0.08
-  const horde = R.count * (10 + day() * 0.6)
+  // a zombie's weight in the fight follows its level (set by threat), not the day
+  const horde = R.count * (12 + (R.lvl || clamp(1 + Math.floor(day() / 4), 1, 5)) * 6) * (R.blood ? 1.1 : 1)
   const ratio = (def * 3 + fence) / Math.max(1, horde)
   const report = { count: R.count, injured: [], dead: [], lost: {}, ratio }
   for (const k of ['pammo', 'rammo', 'shells']) S.res[k] = Math.max(0, S.res[k] - Math.min(S.res[k], R.count))
@@ -958,9 +975,19 @@ export function autoResolveRaid(R, offline = false) {
   S.stats.raids++
   S.stats.kills += Math.round(R.count * clamp(ratio, 0.3, 1))
   completeGoal('surviveHorde')
+  if (R.finale) finishGame(ratio >= 0.55)
   log(`${offline ? 'While you were away, a' : 'A'} horde of ${R.count} hit the camp. ${report.injured.length ? report.injured.length + ' injured.' : 'No one was hurt.'}${report.dead.length ? ' ' + report.dead.join(', ') + ' did not make it.' : ''}`, report.dead.length ? 'bad' : '')
   bus.emit('raidResolved', report)
   return report
+}
+
+// The last night is over: the convoy comes at dawn.
+export function finishGame(held) {
+  if (S.won) return
+  S.won = day()
+  S.finale = null
+  log(held ? 'Dawn. The convoy from the coast rolls up to the gate. You held.' : 'Dawn. The camp is in ruins, but the convoy from the coast made it. Those still standing are going home.', 'story')
+  bus.emit('victory', { held })
 }
 
 // ---------------------------------------------------------------- market
