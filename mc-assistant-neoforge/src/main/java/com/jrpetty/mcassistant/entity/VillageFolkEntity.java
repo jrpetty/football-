@@ -565,15 +565,17 @@ public class VillageFolkEntity extends AssistantEntity {
         int have = countMatching(st -> st.get(net.minecraft.core.component.DataComponents.FOOD) != null
             && !(stationTask() == StationTask.FARM
                 && (st.is(net.minecraft.world.item.Items.CARROT) || st.is(net.minecraft.world.item.Items.POTATO))));
-        if (have >= 10) return false;
+        // A day's meals, not two: what is in a pack is not in the stores, and the village
+        // reads its larder (and decides to raise children) from the stores.
+        if (have >= 6) return false;
         int radius = Math.min(112, Math.max(32, Villages.storesRadius(village)));
         if (findChestWithNear(heart,
                 com.jrpetty.mcassistant.entity.goal.WithdrawGoal.matcherFor("food"), radius) == null) {
             return false;
         }
         rationTick = tickCount;
-        enqueue(Job.withdrawAt("food", 12 - have, heart, radius));
-        noteGate("evening: taking on " + (12 - have) + " rations");
+        enqueue(Job.withdrawAt("food", 8 - have, heart, radius));
+        noteGate("evening: taking on " + (8 - have) + " rations");
         return true;
     }
 
@@ -719,6 +721,9 @@ public class VillageFolkEntity extends AssistantEntity {
         if (movedOnFromSpentGround()) return;          // this patch is finished
         pickaxeFromTheStores();                        // the iron, and then the diamond, pickaxe
         shearsFromTheStores();                         // a rancher's shears, for the wool
+        bucketFromTheStores();                         // a farmer's water, for a field of any size
+        if (unstuckFromGround()) return;               // a plot that cannot be set up is given up
+        if (turnedToTheFields()) return;               // a hungry village needs farmers
         if (seekTheSeam()) return;                     // dig where the village's metal is
         if (changedTrade()) return;                    // the village lost a trade
         if (raisedAChild(12.0)) return;                // the village grew
@@ -1935,6 +1940,108 @@ public class VillageFolkEntity extends AssistantEntity {
             made++;
         }
         return made;
+    }
+
+    private int bucketCheckTick = -100000;
+
+    /**
+     * A farmer whose plot has no water grows its crops three times slower on dry
+     * farmland. A bucket of water (three iron) is a pond in the middle of the field and
+     * eighty squares of wet ground round it: once the village has the iron, a farmer
+     * with dry ground and no bucket has one made from the stores.
+     */
+    private void bucketFromTheStores() {
+        if (stationTask() != StationTask.FARM || villageCentre == null || ownerId() == null) return;
+        if (tickCount - bucketCheckTick < 2400) return;
+        bucketCheckTick = tickCount;
+        WorkZone zone = workZone();
+        if (zone == null) return;
+        if (countCarried(st -> st.is(net.minecraft.world.item.Items.WATER_BUCKET)
+                || st.is(net.minecraft.world.item.Items.BUCKET)) > 0) return;
+        BlockPos c = zone.center();
+        int r = Math.min(8, zone.radius());
+        for (BlockPos p : BlockPos.betweenClosed(c.offset(-r, -3, -r), c.offset(r, 3, r))) {
+            if (level().getFluidState(p).is(net.minecraft.tags.FluidTags.WATER)) return;   // water already
+        }
+        if (ironFromTheStores(3)) {
+            insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.WATER_BUCKET));
+            brain("a bucket of water from the stores, for the field");
+        }
+    }
+
+    /** Since when this folk has been missing something its trade needs to start. */
+    private int stuckSince = -1;
+
+    /**
+     * Ground that cannot be set up is given up. A farmer was staked on ground where its
+     * chest would not go down ("no room beside me") and stood there sixteen game days
+     * without turning a sod. A folk missing something for a whole working day looks
+     * for new ground for the same trade somewhere else.
+     */
+    private boolean unstuckFromGround() {
+        if (missingEssentials().isEmpty() || !onShift()) { stuckSince = -1; return false; }
+        if (stuckSince < 0) { stuckSince = tickCount; return false; }
+        if (tickCount - stuckSince < 12000) return false;
+        stuckSince = -1;
+        StationTask trade = stationTask();
+        if (trade == StationTask.NONE || trade == StationTask.GUARD || trade == StationTask.HAUL
+                || trade == StationTask.STORE) return false;
+        avoidHere = workZone();
+        searchBearing++;
+        BlockPos site = findSite(trade, radiusFor(trade));
+        avoidHere = null;
+        if (site == null) return false;
+        setStation(site, trade);
+        assignPlot(WorkZone.around(site, radiusFor(trade), depthFor(trade, site)), patchNameFor(trade));
+        setAutonomous(true);
+        brain("gave up ground it could not set up, for new ground");
+        return true;
+    }
+
+    private int fieldsCheckTick = -100000;
+
+    /**
+     * A hungry village needs farmers more than it needs another thousand stone. When
+     * the stores hold less than half a day's meals and this folk's own trade has piled
+     * up twice what the village asks for of it — a miner with the stone, a woodcutter
+     * with the timber — it takes up farming, unless it is the last of its trade or half
+     * the village already farms. (The b159 long game: twelve folk, four farmers, stone
+     * eleven hundred, food eight, for sixteen game days.)
+     */
+    private boolean turnedToTheFields() {
+        StationTask mine = stationTask();
+        if (mine != StationTask.MINE && mine != StationTask.WOOD) return false;
+        UUID village = ownerId();
+        if (village == null || villageCentre == null
+                || !(level() instanceof net.minecraft.server.level.ServerLevel server)) return false;
+        if (tickCount - fieldsCheckTick < 6000) return false;
+        fieldsCheckTick = tickCount;
+        int folk = Villages.headcount(village);
+        int r = Villages.storesRadius(village);
+        int food = Villages.stock(server, villageCentre, Villages.Task.FOOD, r);
+        if (food * 2 >= Villages.larderForBirth(village)) return false;
+        int surplus = mine == StationTask.MINE
+            ? Villages.stock(server, villageCentre, Villages.Task.STONE, r)
+                - 2 * com.jrpetty.mcassistant.village.VillageMath.stoneWanted(folk)
+            : Villages.stock(server, villageCentre, Villages.Task.LOGS, r)
+                - 2 * com.jrpetty.mcassistant.village.VillageMath.timberWanted(folk);
+        if (surplus <= 0) return false;
+        int farmers = 0, same = 0;
+        for (AssistantEntity a : Villages.folkOf(village)) {
+            if (a.stationTask() == StationTask.FARM) farmers++;
+            if (a.stationTask() == mine) same++;
+        }
+        if (same <= 1 || farmers * 2 >= folk) return false;
+        avoidHere = workZone();
+        BlockPos site = findSite(StationTask.FARM, radiusFor(StationTask.FARM));
+        avoidHere = null;
+        if (site == null) return false;
+        setStation(site, StationTask.FARM);
+        assignPlot(WorkZone.around(site, radiusFor(StationTask.FARM), depthFor(StationTask.FARM, site)),
+            patchNameFor(StationTask.FARM));
+        setAutonomous(true);
+        brain("the village is hungry: took up farming");
+        return true;
     }
 
     private int charcoalCheckTick = -100000;

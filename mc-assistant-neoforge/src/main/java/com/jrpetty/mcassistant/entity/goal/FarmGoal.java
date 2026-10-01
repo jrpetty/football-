@@ -246,12 +246,15 @@ public class FarmGoal extends Goal {
                     if (targetPos != null) { mode = Mode.WATER; claim(); return; }
                 }
             }
-            // No dry-farming fallback. Farmland with no water within four
-            // blocks dries out and reverts to dirt, so tilling it is work that
-            // undoes itself — and it left plots of bare dirt all over a zone
-            // that looked like the bot had wandered off mid-job. If there is no
-            // water and no bucket to make some, the field is not ready and
-            // saying so is more use than digging it up.
+            // No dry-farming fallback for a hired hand. Farmland with no water within
+            // four blocks dries out and reverts to dirt when nothing grows on it, so
+            // tilling it is work that undoes itself — and it left plots of bare dirt
+            // all over a zone that looked like the bot had wandered off mid-job.
+            // A settler tills and plants in one go, so its dry field holds (growable).
+            if (assistant.isSettler()) {
+                targetPos = nearest(this::isTillable);
+                if (targetPos != null) { mode = Mode.TILL; claim(); return; }
+            }
         }
         if (!hasPlantable()) {
             targetPos = findGrass();
@@ -276,7 +279,7 @@ public class FarmGoal extends Goal {
         return switch (mode) {
             case HARVEST -> isHarvestable(targetPos, st);
             case SEEDS -> isGrass(st);
-            case TILL -> isTillable(targetPos) && hydrated(targetPos);
+            case TILL -> isTillable(targetPos) && growable(targetPos);
             case WATER -> isTillable(targetPos);
         };
     }
@@ -329,7 +332,7 @@ public class FarmGoal extends Goal {
             if (assistant.equipToolNamed("_hoe")) {
                 assistant.damageHeldTool();
             }
-            if (!hydrated(pos)) { skip.add(pos.immutable()); return; }
+            if (!growable(pos)) { skip.add(pos.immutable()); return; }
             assistant.level().setBlockAndUpdate(pos, Blocks.FARMLAND.defaultBlockState());
             assistant.level().playSound(null, pos, net.minecraft.sounds.SoundEvents.HOE_TILL,
                 net.minecraft.sounds.SoundSource.BLOCKS, 1.0F, 1.0F);
@@ -545,7 +548,19 @@ public class FarmGoal extends Goal {
     private BlockPos findGap() {
         return nearest(pos -> assistant.level().getBlockState(pos).is(Blocks.FARMLAND)
             && isPlantableSpace(pos.above())
-            && hydrated(pos));
+            && growable(pos));
+    }
+
+    /**
+     * Will a crop grow here? Within reach of water, always. A settlement's farmer also
+     * farms dry ground: a crop grows on dry farmland (about a third as fast), and
+     * farmland with a crop on it never dries back to dirt — it is EMPTY dry farmland
+     * that reverts, and this tills and plants in one go. A village whose farmers would
+     * only till beside water had fields of six crops on a plains map and starved: the
+     * stores held eight food for sixteen game days and the village never grew again.
+     */
+    private boolean growable(BlockPos farm) {
+        return hydrated(farm) || assistant.isSettler();
     }
 
     @Nullable
