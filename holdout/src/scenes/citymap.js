@@ -1240,7 +1240,7 @@ export class CityMap {
     if (e.key === 'Escape') {
       if (this.sel) this.select(null)
       else this.game.closeMap()
-    }
+    } else if (e.key.toLowerCase() === 'm' && !e.ctrlKey && !e.metaKey) this.game.closeMap()
   }
 
   // ---------------------------------------------------------------- frame

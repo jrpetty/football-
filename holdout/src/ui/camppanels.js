@@ -363,6 +363,7 @@ export function menuModal(ui) {
     h('p.note', `Day ${day()} · ${plural(S.survivors.length, 'survivor')}`),
     h('button.btn.big', { onclick: () => ui.closeModal() }, 'Resume'),
     h('button.btn', { onclick: () => (save(), ui.toast('Saved', 'good'), ui.closeModal()) }, 'Save now'),
+    h('button.btn', { onclick: () => (ui.closeModal(), ui.openManual()) }, 'Field manual'),
     h('button.btn', { onclick: () => (ui.closeModal(), ui.openSettings()) }, 'Settings'),
     h('button.btn.ghost.danger', { onclick: () => ui.confirm('Start over?', 'This camp will be lost for good.', 'Start over', () => g.newGame(), { danger: true }) }, 'New camp'),
   )

@@ -14,6 +14,7 @@ const resChipSigned = (k, v) => h('span.ci', { style: { '--c': RES[k].color } },
 import { renderStation } from './stationpanel.js'
 import { renderSurvivor, renderCrew, renderItems } from './crewpanel.js'
 import { renderProgress } from './progresspanel.js'
+import { manualModal } from './manual.js'
 import { victoryModal, renderMarket, renderLog, renderFence, renderExpansion, renderProduction, renderPower, renderMorale, renderSettings, recruitModal, raidReportModal, missionReportModal, gameOverModal, menuModal, hordeInfo } from './camppanels.js'
 
 const NAV = [
@@ -72,6 +73,7 @@ export class UI {
       'div.nav',
       NAV.map((n) => h('button.navbtn' + (n.primary ? '.primary' : ''), { 'data-nav': n.id, 'data-tip': `${n.label} <kbd>${n.key}</kbd>`, onclick: () => this.navClick(n.id) }, h('i', { html: icon(n.icon) }), h('span', n.label))),
       h('div.navsep'),
+      h('button.navbtn.small', { 'data-tip': 'Field manual <kbd>F1</kbd>', onclick: () => this.openManual() }, h('span.qm', '?')),
       h('button.navbtn.small', { 'data-tip': 'Settings', onclick: () => this.openSettings() }, h('i', { html: icon('settings') })),
       h('button.navbtn.small', { 'data-tip': 'Menu <kbd>Esc</kbd>', onclick: () => this.openMenu() }, h('i', { html: icon('menu') })),
     )
@@ -123,11 +125,17 @@ export class UI {
   onKey(e) {
     if (e.target instanceof HTMLInputElement) return false
     const k = e.key.toLowerCase()
+    if (k === 'f1') {
+      e.preventDefault?.()
+      this.openManual()
+      return true
+    }
     if (this.modalRoot.children.length) {
       if (k === 'escape') this.closeModal()
       return true
     }
-    if (S.raid) return false
+    // camp hotkeys belong to the camp: runs and the city map have their own
+    if (S.raid || this.game.scene !== this.game.base) return false
     const map = { b: 'build', c: 'crew', i: 'items', t: 'trade', p: 'camp', m: 'map', g: 'progress', l: 'log' }
     if (map[k] && !e.ctrlKey && !e.metaKey && !this.game.base?.placing) {
       this.navClick(map[k])
@@ -408,6 +416,12 @@ export class UI {
   openSettings() {
     this.modal(renderSettings(this), { small: true })
   }
+  openManual(page) {
+    if (this.modalRoot.querySelector('.manual')) return this.closeModal()
+    const M = this.game.mission
+    if (M && this.game.scene === M && !M.paused) ((M.paused = true), M.renderPause?.())
+    this.modal(manualModal(this, page), { xl: true })
+  }
   openMenu() {
     this.modal(menuModal(this), { small: true })
   }
@@ -617,12 +631,12 @@ export class UI {
   }
 
   // ---------------------------------------------------------------- modals
-  modal(content, { small = false, actions = null, onClose = null, locked = false } = {}) {
+  modal(content, { small = false, xl = false, actions = null, onClose = null, locked = false } = {}) {
     const close = () => {
       wrap.remove()
       onClose?.()
     }
-    const card = h('div.modal' + (small ? '.small' : ''), content, actions ? h('div.mactions', actions) : null)
+    const card = h('div.modal' + (small ? '.small' : '') + (xl ? '.xl' : ''), content, actions ? h('div.mactions', actions) : null)
     const wrap = h('div.mwrap', { onclick: (e) => !locked && e.target === wrap && close() }, card)
     wrap._close = close
     this.modalRoot.append(wrap)
