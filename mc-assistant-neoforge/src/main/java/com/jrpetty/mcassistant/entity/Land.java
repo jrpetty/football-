@@ -49,7 +49,11 @@ public final class Land {
     /** The ground at a column: the first free block above it, looking through trees. */
     @Nullable
     public static BlockPos surface(ServerLevel level, int x, int z) {
-        int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+        // Only ground that is loaded already: asking for the height of a chunk that is not would
+        // load (or generate) it there and then, and stall the server for seconds.
+        net.minecraft.world.level.chunk.LevelChunk chunk = level.getChunkSource().getChunkNow(x >> 4, z >> 4);
+        if (chunk == null) return null;
+        int y = chunk.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x & 15, z & 15) + 1;
         if (y <= level.getMinBuildHeight() + 1) return null;
         BlockPos at = new BlockPos(x, y, z);
         int guard = 0;
@@ -62,6 +66,16 @@ public final class Land {
         return at;
     }
 
+    /** Is every chunk within r of here loaded already (so reading it loads nothing)? */
+    public static boolean areaLoaded(ServerLevel level, BlockPos c, int r) {
+        for (int cx = (c.getX() - r) >> 4; cx <= (c.getX() + r) >> 4; cx++) {
+            for (int cz = (c.getZ() - r) >> 4; cz <= (c.getZ() + r) >> 4; cz++) {
+                if (level.getChunkSource().getChunkNow(cx, cz) == null) return false;
+            }
+        }
+        return true;
+    }
+
     /** How rough a piece of ground is: the spread of heights over ±16, sampled every four blocks.
      *  Max value if any of it is water or not loaded. */
     public static int roughness(ServerLevel level, BlockPos centre) {
@@ -72,7 +86,7 @@ public final class Land {
         for (int dx = -16; dx <= 16; dx += 4) {
             for (int dz = -16; dz <= 16; dz += 4) {
                 int x = centre.getX() + dx, z = centre.getZ() + dz;
-                if (!level.hasChunk(x >> 4, z >> 4)) return Integer.MAX_VALUE;
+                if (level.getChunkSource().getChunkNow(x >> 4, z >> 4) == null) return Integer.MAX_VALUE;
                 BlockPos s = surface(level, x, z);
                 if (s == null) return Integer.MAX_VALUE;
                 if (!level.getBlockState(s.below()).getFluidState().isEmpty() && Math.abs(dx) <= 8 && Math.abs(dz) <= 8) {
@@ -100,7 +114,7 @@ public final class Land {
         for (int dx = -reach; dx <= reach; dx += 8) {
             for (int dz = -reach; dz <= reach; dz += 8) {
                 int x = around.getX() + dx, z = around.getZ() + dz;
-                if (!level.hasChunk(x >> 4, z >> 4)) continue;
+                if (level.getChunkSource().getChunkNow(x >> 4, z >> 4) == null) continue;
                 BlockPos g = surface(level, x, z);
                 if (g == null) continue;
                 BlockState under = level.getBlockState(g.below());
@@ -172,7 +186,7 @@ public final class Land {
         for (int i = 0; i < look && done < changes; i++) {
             int c = (cursor + i) % cells;
             int x = v.centre().getX() - r + c % side, z = v.centre().getZ() - r + c / side;
-            if (!level.isLoaded(new BlockPos(x, target, z))) continue;
+            if (!areaLoaded(level, new BlockPos(x, target, z), 1)) continue;
             boolean worked = false;
             for (int[] zn : zones) if (Math.abs(x - zn[0]) <= zn[2] && Math.abs(z - zn[1]) <= zn[2]) { worked = true; break; }
             if (worked) continue;

@@ -319,7 +319,7 @@ public final class Quests {
     /** Write the postings onto the board. */
     public static void paint(ServerLevel level, Villages.Village v) {
         Ledger.Building b = hall(v.id());
-        if (b == null || !level.isLoaded(b.anchor())) return;
+        if (b == null || !Land.areaLoaded(level, b.anchor(), 12)) return;
         paintOn(level, b, postings(v.id()));
     }
 

@@ -59,7 +59,7 @@ public final class Waterfront {
         for (AssistantEntity a : Villages.folkOf(id)) {
             if (!(a instanceof VillageFolkEntity f) || f.workZone() == null) continue;
             BlockPos c = f.workZone().center();
-            if (!level.isLoaded(c)) continue;
+            if (!Land.areaLoaded(level, c, 20)) continue;
             if (f.stationTask() == AssistantEntity.StationTask.FISH) {
                 Dock d = dockFor(level, id, f);
                 if (d != null) moor(level, d);

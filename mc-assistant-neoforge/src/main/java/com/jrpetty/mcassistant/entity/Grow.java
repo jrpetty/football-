@@ -85,7 +85,7 @@ public final class Grow {
         if (age.ordinal() < Villages.Age.STONE.ordinal()) return 0;
         int done = 0;
         for (Ledger.Building b : Ledger.buildings(id)) {
-            if (!b.structure().equals("house") || !level.isLoaded(b.anchor())) continue;
+            if (!b.structure().equals("house") || !Land.areaLoaded(level, b.anchor(), 7)) continue;
             done += garden(level, id, b);
             if (done >= budget) break;
             done += reface(level, b, age, budget - done, Ledger.grown(id, b.anchor()));
