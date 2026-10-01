@@ -749,7 +749,8 @@ public class BuildGoal extends Goal {
             assistant.level().setBlockAndUpdate(pos, state);
             // What a settlement builds is the settlement's: the chests and
             // furnaces of its storehouse carry its name.
-            if (assistant.isSettler() && (part == Part.CHEST || part == Part.FURNACE)) {
+            if (assistant.isSettler() && (part == Part.CHEST || part == Part.FURNACE || part == Part.BARREL)
+                    && !"guesthouse".equals(building)) {
                 com.jrpetty.mcassistant.entity.ZoneChests.mark(assistant.level(), pos);
             }
         }

@@ -136,6 +136,8 @@ public class VillageFolkEntity extends AssistantEntity {
         UUID village = ownerId();
         if (village != null) Villages.noteProject(village, structure, level().getGameTime());
         drewForBuild = false;                     // what is left over is cargo again
+        // ...and goes back to the storehouse, not to the builder's own field seventy blocks out.
+        if (stashable() > 0) enqueue(storesDeposit());
     }
 
     /**
@@ -153,7 +155,14 @@ public class VillageFolkEntity extends AssistantEntity {
                 || s.is(net.minecraft.world.item.Items.LADDER) || s.is(net.minecraft.world.item.Items.OBSIDIAN)
                 || s.is(net.minecraft.world.item.Items.GLASS) || s.is(net.minecraft.world.item.Items.TORCH)
                 || s.is(net.minecraft.tags.ItemTags.FENCES) || s.is(net.minecraft.tags.ItemTags.FENCE_GATES)
-                || s.is(net.minecraft.tags.ItemTags.BEDS)) {
+                || s.is(net.minecraft.tags.ItemTags.BEDS)
+                // and the finishing it cut for the building: roof stairs and slabs, doors,
+                // panes, lanterns, barrels, hay, rugs, flowers
+                || s.is(net.minecraft.tags.ItemTags.STAIRS) || s.is(net.minecraft.tags.ItemTags.SLABS)
+                || s.is(net.minecraft.tags.ItemTags.WOODEN_DOORS) || s.is(net.minecraft.world.item.Items.GLASS_PANE)
+                || s.is(net.minecraft.world.item.Items.LANTERN) || s.is(net.minecraft.world.item.Items.BARREL)
+                || s.is(net.minecraft.world.item.Items.HAY_BLOCK) || s.is(net.minecraft.tags.ItemTags.WOOL_CARPETS)
+                || s.is(net.minecraft.tags.ItemTags.SMALL_FLOWERS) || s.is(net.minecraft.world.item.Items.WATER_BUCKET)) {
             return 64 * 27;
         }
         return 0;
@@ -1268,7 +1277,7 @@ public class VillageFolkEntity extends AssistantEntity {
         int take = Math.min(24, inStores);
         if (held < 9 && take > 0) enqueue(Job.withdrawAt("wheat", take, heart, radius));
         enqueue(Job.craft("bread", Math.max(1, Math.min(8, (held + take) / 3))));
-        enqueue(Job.deposit());
+        enqueue(storesDeposit());
         return true;
     }
 
@@ -1371,7 +1380,7 @@ public class VillageFolkEntity extends AssistantEntity {
             // never found any and never smelted a thing.
             int radius = ask.equals("food") || ask.equals("ore") || ask.equals("fuel")
                     || ask.equals("cobble") || ask.equals("plank") || ask.equals("log")
-                ? Math.min(112, Math.max(32, Villages.storesRadius(village))) : 32;
+                ? Math.min(112, Math.max(32, Villages.storesRadius(village))) : Villages.STORE_AREA + 2;
             if (findChestWithNear(heart,
                     com.jrpetty.mcassistant.entity.goal.WithdrawGoal.matcherFor(ask), radius) == null) {
                 continue;
@@ -1382,6 +1391,50 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         noteGate("fetch: the stores hold none of " + java.util.Arrays.toString(asks));
         return false;
+    }
+
+    private int kitTick = -100000;
+
+    /**
+     * The trade's own supplies, when they run low: a farmer's seed, a woodcutter's saplings,
+     * a miner's torches, a rancher's feed, a guard's arrows. They are kept in the stores at
+     * the heart (the founding chest brings them, the carriers bring the rest) and were only
+     * ever looked for in a folk's own plot chests, so a farmer whose field ate its seed stood
+     * breaking grass for more while the storehouse had a chest of it.
+     */
+    private boolean kitFromTheStores() {
+        if (tickCount - kitTick < 1800) return false;
+        kitTick = tickCount;
+        BlockPos heart = villageCentre;
+        String[] kit = kitShort();
+        if (kit == null || heart == null || !onShift()) return false;
+        int radius = Villages.STORE_AREA + 2;
+        for (String ask : kit) {
+            java.util.function.Predicate<net.minecraft.world.item.ItemStack> what =
+                com.jrpetty.mcassistant.entity.goal.WithdrawGoal.matcherFor(ask);
+            if (ZoneChests.countIn(linkedChests(), what) >= 8) return false;   // its own chest has plenty
+            if (findChestWithNear(heart, what, radius) == null) continue;
+            enqueue(Job.withdrawAt(ask, 16, heart, radius));
+            brain("fetching " + ask + " from the stores");
+            return true;
+        }
+        return false;
+    }
+
+    /** The supplies of this folk's trade it is running out of, as things to ask the stores for; or null. */
+    @Nullable
+    private String[] kitShort() {
+        return switch (stationTask()) {
+            case FARM -> countCarried(st -> st.is(net.minecraft.world.item.Items.WHEAT_SEEDS) || st.is(net.minecraft.world.item.Items.CARROT)
+                    || st.is(net.minecraft.world.item.Items.POTATO) || st.is(net.minecraft.world.item.Items.BEETROOT_SEEDS)) < 8
+                ? new String[]{ "wheat seeds", "carrot", "potato" } : null;
+            case WOOD -> countCarried(st -> st.is(net.minecraft.tags.ItemTags.SAPLINGS)) < 4 ? new String[]{ "sapling" } : null;
+            case MINE -> countCarried(st -> st.is(net.minecraft.world.item.Items.TORCH)) < 8 ? new String[]{ "torch" } : null;
+            case RANCH -> countCarried(st -> st.is(net.minecraft.world.item.Items.WHEAT)) < 8 ? new String[]{ "wheat" } : null;
+            case GUARD -> countCarried(st -> st.is(net.minecraft.world.item.Items.BOW) || st.is(net.minecraft.world.item.Items.CROSSBOW)) > 0
+                    && countCarried(st -> st.is(net.minecraft.tags.ItemTags.ARROWS)) < 16 ? new String[]{ "arrow" } : null;
+            default -> null;
+        };
     }
 
     /** The founding timber, stone and chests are the storehouse's until it stands
@@ -1451,6 +1504,7 @@ public class VillageFolkEntity extends AssistantEntity {
             return;
         }
         mindTheRoute();                                // a carrier's round is chosen, not clicked
+        workInTheBuilding();                           // the smelter in the smeltery, the storekeeper in the storehouse
         putBackIfLost();
         // Tools from the stores, busy or not: they are made on the spot, and a miner
         // almost always has a mine job queued — so behind the busy check below, a miner
@@ -1466,6 +1520,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (seekTheSeam()) return;                     // dig where the village's metal is
         if (turnedToTheFields()) return;               // a hungry village needs farmers (busy or not)
         if (peekJob() != null) return;                 // already busy
+        if (kitFromTheStores()) return;                // seed, saplings, torches, feed, arrows
         if (resting()) return;                         // off the clock for a bit
         if (movedOnFromSpentGround()) return;          // this patch is finished
         if (unstuckFromGround()) return;               // a plot that cannot be set up is given up
@@ -1542,7 +1597,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (tickCount - lastCourierTick >= 600 && stashable() > 0 && Supply.routeFor(this) != null) {
             lastCourierTick = tickCount;
             sayRoutine("Nothing to do in my own line — running this where it's wanted.");
-            enqueue(Job.deposit());
+            enqueue(storesDeposit());
             return true;
         }
 
@@ -1566,7 +1621,7 @@ public class VillageFolkEntity extends AssistantEntity {
                 if (!resourceNearby(com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.COAL, 16)) return false;
                 enqueue(Job.gather(com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.COAL,
                     Math.min(32, Math.max(8, need.amount()))));
-                enqueue(Job.deposit());
+                enqueue(storesDeposit());
                 return true;
             }
             case DIAMOND -> {
@@ -1577,7 +1632,7 @@ public class VillageFolkEntity extends AssistantEntity {
                 // the seam can be found at all — which is why no settlement
                 // could ever leave the Diamond Age.
                 if (stationTask() == StationTask.MINE) return deepenShaft();
-                if (stashable() > 0) { enqueue(Job.deposit()); return true; }
+                if (stashable() > 0) { enqueue(storesDeposit()); return true; }
                 return false;
             }
             case OBSIDIAN -> {
@@ -1586,7 +1641,7 @@ public class VillageFolkEntity extends AssistantEntity {
                 // the pickaxe. It is down there already; the lava is what it
                 // has been walking round for weeks.
                 if (stationTask() != StationTask.MINE) {
-                    if (stashable() > 0) { enqueue(Job.deposit()); return true; }
+                    if (stashable() > 0) { enqueue(storesDeposit()); return true; }
                     return false;
                 }
                 if (countCarried(st -> st.is(net.minecraft.world.item.Items.DIAMOND_PICKAXE)) == 0) {
@@ -1594,21 +1649,21 @@ public class VillageFolkEntity extends AssistantEntity {
                 }
                 enqueue(Job.gather(com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.OBSIDIAN,
                     Math.min(16, Math.max(4, need.amount()))));
-                enqueue(Job.deposit());
+                enqueue(storesDeposit());
                 return true;
             }
             case LOGS -> {
                 if (!resourceNearby(com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.LOGS, 16)) return false;
                 enqueue(Job.gather(com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.LOGS,
                     Math.min(48, Math.max(16, need.amount()))));
-                enqueue(Job.deposit());
+                enqueue(storesDeposit());
                 return true;
             }
             case STONE -> {
                 if (!resourceNearby(com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.STONE, 16)) return false;
                 enqueue(Job.gather(com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.STONE,
                     Math.min(64, Math.max(16, need.amount()))));
-                enqueue(Job.deposit());
+                enqueue(storesDeposit());
                 return true;
             }
             case IRON -> {
@@ -1619,7 +1674,7 @@ public class VillageFolkEntity extends AssistantEntity {
                 if (!resourceNearby(com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.IRON, 16)) return false;
                 enqueue(Job.gather(com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.IRON,
                     Math.min(32, Math.max(8, need.amount()))));
-                enqueue(Job.deposit());
+                enqueue(storesDeposit());
                 return true;
             }
             case FOOD -> {
@@ -1630,7 +1685,7 @@ public class VillageFolkEntity extends AssistantEntity {
                 // was always true, the deposit moved nothing, and the hunt
                 // below could never happen.
                 if (countStashable(st -> st.get(net.minecraft.core.component.DataComponents.FOOD) != null) > 0) {
-                    enqueue(Job.deposit());
+                    enqueue(storesDeposit());
                     return true;
                 }
                 // Then hunt. A field takes days; a herd on the doorstep is
@@ -1639,7 +1694,7 @@ public class VillageFolkEntity extends AssistantEntity {
                 // answer and somebody has to be planting it.
                 if (stationTask() != StationTask.FARM && adultAnimalsNearby(24) >= 2) {
                     enqueue(Job.hunt(null, 3));
-                    enqueue(Job.deposit());
+                    enqueue(storesDeposit());
                     return true;
                 }
                 return false;
@@ -2221,6 +2276,7 @@ public class VillageFolkEntity extends AssistantEntity {
     // ------------------------------ the carrier's round ---------------------
 
     private int routeTick = -100000;
+    private int storesFullTick = -100000;
 
     /**
      * A hauler's round, chosen rather than clicked. There is no wand and no
@@ -2236,19 +2292,23 @@ public class VillageFolkEntity extends AssistantEntity {
      */
     private void mindTheRoute() {
         if (stationTask() != StationTask.HAUL) return;
-        if (tickCount - routeTick < 2400) return;
+        if (tickCount - routeTick < 1200) return;
         routeTick = tickCount;
         BlockPos heart = villageCentre;
-        if (heart == null) return;
+        UUID village = ownerId();
+        if (heart == null || village == null || !(level() instanceof net.minecraft.server.level.ServerLevel server)) return;
 
-        // The depot is whatever chest sits closest to the middle. A tight look:
-        // the storehouse is at the heart by definition.
-        BlockPos depot = null;
-        double depotDist = Double.MAX_VALUE;
-        for (ZoneChests.Found f : ZoneChests.around(level(), heart, 32, 24)) {
-            if (!ZoneChests.isStashable(f)) continue;      // a furnace is not a depot
-            double d = f.pos().distSqr(heart);
-            if (d < depotDist) { depotDist = d; depot = f.pos(); }
+        // The depot is the storehouse: its chests first, then the founding chest and the
+        // other stores round the square — whichever has room (Villages.depot). It used to be
+        // the one chest nearest the middle, which was the founding chest, every time; the
+        // storehouse was never filled and the founding chest was full by the second day.
+        BlockPos depot = Villages.depot(server, village);
+        if (depot == null) {
+            if (tickCount - storesFullTick > 4800) {
+                storesFullTick = tickCount;
+                say("The stores are full — the village needs another storehouse chest.");
+            }
+            return;
         }
         // The load is the fullest chest near THIS carrier's own post, not the
         // fullest in the settlement. A town of a hundred has several carriers
@@ -2257,21 +2317,100 @@ public class VillageFolkEntity extends AssistantEntity {
         // place uncollected — and a scan of the whole town, per carrier, every
         // two minutes, is a bill nobody wants to pay either. Each has its own
         // post on its own bearing, so a sector each falls out of it.
-        BlockPos post = stationPos() != null ? stationPos() : blockPosition();
-        BlockPos load = null;
-        int fullest = 0;
-        // ...and far enough to reach the mines: the hill sixty blocks out is where
-        // the stone is, and its chest is the fullest one there is.
-        for (ZoneChests.Found f : ZoneChests.around(level(), post, 96, 32)) {
-            if (!ZoneChests.isStashable(f)) continue;
-            if (f.pos().equals(depot)) continue;           // never haul the depot to itself
-            int held = stockIn(f);
-            if (held > fullest) { fullest = held; load = f.pos(); }
+        // Everything worth fetching, out from the heart as far as the village's plots go:
+        // the fields', woods' and mines' chests, and what the furnaces have made (their output
+        // was taken out only while a smelt was running, and otherwise sat there for good).
+        // Never the stores themselves, and never a player's guest house.
+        int reach = Math.min(112, Math.max(48, Villages.storesRadius(village)));
+        java.util.List<BlockPos> loads = new java.util.ArrayList<>();
+        java.util.List<Integer> worth = new java.util.ArrayList<>();
+        for (ZoneChests.Found f : ZoneChests.around(level(), heart, reach, 32)) {
+            if (!f.stillThere()) continue;
+            boolean furnace = f.blockEntity() instanceof net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
+            if (!furnace && (!ZoneChests.isStashable(f) || Villages.inStoreArea(village, f.pos()))) continue;
+            if (Villages.inAGuestHouse(village, f.pos())) continue;
+            int held = furnace ? furnaceOutput(f) : stockIn(f);
+            if (held < (furnace ? 4 : 24)) continue;      // a handful is not worth the walk
+            int at = 0;
+            while (at < worth.size() && worth.get(at) >= held) at++;
+            loads.add(at, f.pos().immutable());
+            worth.add(at, held);
         }
-        // One chest in the whole village is a village with nothing to carry
-        // between; leave the route alone and let the hand lend itself out. And a
-        // handful of odds and ends is not worth the walk.
-        if (depot != null && load != null && fullest >= 24) setHaulRoute(load, depot);
+        if (loads.isEmpty()) return;
+        // Several carriers share the round: each takes the next fullest after the ones
+        // before it, so they are not all on the same chest.
+        int rank = 0;
+        for (AssistantEntity mate : Villages.folkOf(village)) {
+            if (mate != this && mate.stationTask() == StationTask.HAUL && mate.getUUID().compareTo(getUUID()) < 0) rank++;
+        }
+        setHaulRoute(loads.get(rank % loads.size()), depot);
+    }
+
+    private int buildingCheckTick = -100000;
+
+    /**
+     * The smelter works in the smeltery and the storekeeper in the storehouse, once they
+     * stand. Their posts were staked a few blocks from the heart before there were any
+     * buildings, and stayed there: the smeltery's three furnaces were never lit, and the
+     * storekeeper sorted the chests round its post and never the storehouse's.
+     */
+    private void workInTheBuilding() {
+        StationTask trade = stationTask();
+        if (trade != StationTask.SMELT && trade != StationTask.STORE) return;
+        if (tickCount - buildingCheckTick < 1200) return;
+        buildingCheckTick = tickCount;
+        UUID village = ownerId();
+        if (village == null) return;
+        BlockPos at = Villages.builtAt(village, trade == StationTask.SMELT ? "smeltery" : "storage");
+        WorkZone zone = workZone();
+        if (at == null || (zone != null && zone.center().distSqr(at) <= 4)) return;
+        assignPlot(WorkZone.around(at, 5, WorkZone.DEFAULT_DEPTH), patchNameFor(trade));
+        setStation(at, trade);
+        brain("moved into the " + (trade == StationTask.SMELT ? "smeltery" : "storehouse"));
+    }
+
+    /** A village's storekeeper keeps its stores in order from the first day, not from its
+     *  tenth level: nothing else a storekeeper does earns it the experience to get there. */
+    @Override
+    public boolean can(Ability a) {
+        if (a == Ability.STORE_SORT && stationTask() == StationTask.STORE) return true;
+        return super.can(a);
+    }
+
+    /** What a furnace has made and nobody has taken out, weighted like a chest's goods. */
+    private int furnaceOutput(ZoneChests.Found f) {
+        if (!(f.blockEntity() instanceof net.minecraft.world.Container box) || box.getContainerSize() < 3) return 0;
+        net.minecraft.world.item.ItemStack st = box.getItem(2);
+        return st.getCount() * Math.max(1, haulWeight(st));
+    }
+
+    /** The delivery chest, or the next store with room when it is full. */
+    @Override
+    @Nullable
+    protected BlockPos freshDepot(BlockPos current) {
+        UUID village = ownerId();
+        if (village == null || !(level() instanceof net.minecraft.server.level.ServerLevel server)) return current;
+        if (level().getBlockEntity(current) instanceof net.minecraft.world.Container c) {
+            for (int i = 0; i < c.getContainerSize(); i++) if (c.getItem(i).isEmpty()) return current;
+        }
+        BlockPos next = Villages.depot(server, village);
+        return next != null ? next : current;
+    }
+
+    /** The pickup has nothing left worth the walk: choose the next round at once. */
+    @Override
+    protected void routeSpent() {
+        if (tickCount - routeTick > 200) routeTick = -100000;
+    }
+
+    /** A load for the village's stores: to the storehouse (or the next store with room). */
+    private Job storesDeposit() {
+        UUID village = ownerId();
+        if (village != null && level() instanceof net.minecraft.server.level.ServerLevel server) {
+            BlockPos depot = Villages.depot(server, village);
+            if (depot != null) return Job.depositAt(depot);
+        }
+        return Job.deposit();
     }
 
     /** How much is actually sitting in this chest. */
@@ -3248,6 +3387,9 @@ public class VillageFolkEntity extends AssistantEntity {
         StationTask trade = stationTask();
         if (trade == StationTask.NONE || trade == StationTask.GUARD || trade == StationTask.HAUL
                 || trade == StationTask.STORE) return false;
+        // The smeltery is the smelter's ground for good (workInTheBuilding): short of ore
+        // or coal it waits for the carriers, it does not wander off to stake new ground.
+        if (trade == StationTask.SMELT && ownerId() != null && Villages.builtAt(ownerId(), "smeltery") != null) return false;
         avoidHere = workZone();
         searchBearing++;
         BlockPos site = findSite(trade, radiusFor(trade));
@@ -3451,6 +3593,14 @@ public class VillageFolkEntity extends AssistantEntity {
                 built.add(net.minecraft.nbt.StringTag.valueOf(s));
             }
             tag.put("VillageBuilt", built);
+            // ...and where the stores and the smeltery stand, so the carriers fill the
+            // storehouse after a restart, not whatever chest is nearest the heart.
+            net.minecraft.nbt.CompoundTag at = new net.minecraft.nbt.CompoundTag();
+            for (String b : new String[]{ "storage", "smeltery" }) {
+                BlockPos p = Villages.builtAt(village, b);
+                if (p != null) at.putLong(b, p.asLong());
+            }
+            if (!at.isEmpty()) tag.put("VillageBuiltAt", at);
             // The roll rides on its people, the same as the age and the
             // buildings do. Without it a restart forgets how many live here
             // and the place sizes its larder for whoever happens to be loaded.
@@ -3483,6 +3633,8 @@ public class VillageFolkEntity extends AssistantEntity {
                 }
                 Villages.restore(level(), id, villageCentre, age, built,
                     tag.getInt("VillagePop"));
+                net.minecraft.nbt.CompoundTag at = tag.getCompound("VillageBuiltAt");
+                for (String b : at.getAllKeys()) Villages.rememberBuiltAt(id, b, BlockPos.of(at.getLong(b)));
             }
         }
     }

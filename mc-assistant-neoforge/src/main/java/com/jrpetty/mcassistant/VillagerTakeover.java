@@ -307,10 +307,16 @@ public final class VillagerTakeover {
                     if (!read.add(net.minecraft.world.level.ChunkPos.asLong(cx, cz))) continue;
                     net.minecraft.world.level.chunk.LevelChunk chunk = level.getChunk(cx, cz);
                     for (BlockEntity be : new java.util.ArrayList<>(chunk.getBlockEntities().values())) {
-                        if (be instanceof AbstractFurnaceBlockEntity) tally[2]++;
-                        else if (be instanceof net.minecraft.world.level.block.entity.ChestBlockEntity
+                        if (be instanceof AbstractFurnaceBlockEntity) {
+                            tally[2]++;
+                            com.jrpetty.mcassistant.entity.ZoneChests.mark(level, be.getBlockPos());
+                        } else if (be instanceof net.minecraft.world.level.block.entity.ChestBlockEntity
                             || be instanceof net.minecraft.world.level.block.entity.BarrelBlockEntity) {
                             tally[1]++;
+                            // The village's chests and barrels are its stores now: its folk can
+                            // reach them and its carriers fill them. (Counted and never marked,
+                            // a village taken over had storage on paper and none to use.)
+                            com.jrpetty.mcassistant.entity.ZoneChests.mark(level, be.getBlockPos());
                         }
                     }
                     // Beds have no block entity, so the ground is read — this

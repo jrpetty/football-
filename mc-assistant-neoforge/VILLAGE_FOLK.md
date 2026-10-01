@@ -508,7 +508,37 @@ The village's chronicle records what you did. An errand lapses after three days.
   Store**. Folk use *only* containers with that name, so a village founded next
   to your base leaves your chests alone. To let them use a chest of yours,
   rename it *Village Store* in an anvil. A sign on a chest still hides it from
-  everybody.
+  everybody. The chests and barrels of a vanilla village a spawner takes over
+  become its stores too. Your guest house's chest is never one.
+* **The storehouse** — the village's stores are the chests round its square,
+  and the storehouse's come first. Every load for the stores goes to the
+  storehouse: a builder's leftovers, a miner's or woodcutter's surplus, the
+  bread baked at dusk. When its chests are full, the load goes to the next
+  store with room (the founding chest, then the granary, the market and the
+  workshop). When every store is full, the carrier says so.
+* **Carriers** — a carrier's round is chosen, not set with the wand. Every
+  minute it looks at every chest and furnace out to where the village's plots
+  reach. That includes the farms', woods' and mines' chests and anything the
+  furnaces have finished. It walks to the fullest and carries the load to the
+  storehouse. When a pickup is empty, it picks the next one. Two carriers take
+  the fullest and the next fullest, so they don't both go to the same chest.
+  A carrier only takes a furnace's finished goods, never the ore or fuel in it.
+  It leaves sixteen carrots and sixteen potatoes in a farm chest for planting,
+  and never takes seed, saplings or torches.
+* **Drawing from the stores** — anybody short of something goes to the stores
+  for it: rations, a tool or the makings of one, fuel, ore, a chest, a furnace.
+  When a trade's own supplies run low, a folk fetches them from the storehouse
+  before it runs out:
+  * a farmer's seed, carrots and potatoes;
+  * a woodcutter's saplings;
+  * a miner's torches;
+  * a rancher's wheat;
+  * a guard's arrows.
+
+  Builders draw their timber and stone from the stores. Once the smeltery
+  stands, the smelter works in it, lights its three furnaces and empties them
+  every round. Once the storehouse stands, the storekeeper works in it and
+  keeps it sorted from its first day.
 * **Food** — wheat is baked into bread by whoever is idle (including everybody
   at dusk, indoors). A folk short of rations fetches some from the stores. A
   folk eats one ration every four and a half minutes of work. Every folk is sent
@@ -607,6 +637,8 @@ Every push to CI:
   alone for up to sixty game days, with a line a day saying how many folk, which
   age, how many buildings, its renown and how many villages the world now holds —
   published every ten minutes while it runs (`real-epic.txt`);
+* fills a storehouse from a field's chest and a furnace's output with a real carrier,
+  and has a farmer who has run out of seed fetch it from there (game test `t28`);
 * raises the later ages' buildings and a great work for real (game test `t14`), and
   checks the order a village builds in all the way past the last age, and that a
   grown village founds a colony (`t15`, `t16`);

@@ -428,7 +428,7 @@ public class VillageGameTests {
                 boolean ridge = !level.getBlockState(hallAt.above(9)).isAir();
                 boolean roof = !level.getBlockState(wellAt.above(3)).isAir();
                 Kit.log("t13 hall and well stand at tick " + t + "; hall ridge " + ridge + ", well roof " + roof);
-                boolean stairs = level.getBlockState(hallAt.above(8).relative(Direction.NORTH)).getBlock()
+                boolean stairs = level.getBlockState(hallAt.above(5).relative(Direction.NORTH, 4)).getBlock()
                     instanceof net.minecraft.world.level.block.StairBlock;
                 Kit.log("t13 the hall's roof is of stairs: " + stairs);
                 helper.assertTrue(ridge, "the hall's ridge should be up (nine above the floor)");
@@ -1207,6 +1207,102 @@ public class VillageGameTests {
                     && com.jrpetty.mcassistant.VillageSpawner.campBeds(level, chest).size() == 4,
                 "a bed brought to a folk is laid at the camp, and it is that folk's");
             helper.succeed();
+        });
+    }
+
+    // ============================================================ the stores
+
+    private static int holding(ServerLevel level, BlockPos at, net.minecraft.world.item.Item item) {
+        if (!(level.getBlockEntity(at) instanceof net.minecraft.world.Container c)) return -1;
+        int n = 0;
+        for (int i = 0; i < c.getContainerSize(); i++) if (c.getItem(i).is(item)) n += c.getItem(i).getCount();
+        return n;
+    }
+
+    /**
+     * The carriers stock the storehouse. A field's chest and a furnace's finished ingots are
+     * carried in to the storehouse's chest, not to the founding chest nearer the heart; the
+     * field keeps its seed and its seed carrots, the furnace its ore. Then a farmer who has
+     * run out of seed draws it from the storehouse.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 8000, batch = "t28_stores")
+    public static void t28_stores(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(1000);
+        Kit.hold(level, 10800, 10800, 64);
+        Kit.prepare(level, 10800, 10800, 64);
+        BlockPos heart = Kit.surface(level, 10800, 10800);
+        VillageFolkEntity carrier = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(carrier != null, "a village to carry for");
+        carrier.setJob(StationTask.HAUL);
+        java.util.UUID village = carrier.ownerId();
+        // The storehouse's chest north of the square; a field's chest and a furnace out in the plots.
+        BlockPos store = Kit.surface(level, 10808, 10778);
+        BlockPos field = Kit.surface(level, 10840, 10804);
+        BlockPos oven = Kit.surface(level, 10760, 10804);
+        level.setBlockAndUpdate(store, Blocks.CHEST.defaultBlockState());
+        level.setBlockAndUpdate(field, Blocks.CHEST.defaultBlockState());
+        level.setBlockAndUpdate(oven, Blocks.FURNACE.defaultBlockState());
+        for (BlockPos p : List.of(store, field, oven)) com.jrpetty.mcassistant.entity.ZoneChests.mark(level, p);
+        Villages.builtAtForTests(village, "storage", store);
+        net.minecraft.world.Container fieldBox = (net.minecraft.world.Container) level.getBlockEntity(field);
+        fieldBox.setItem(0, new ItemStack(Items.COBBLESTONE, 64));
+        fieldBox.setItem(1, new ItemStack(Items.WHEAT, 40));
+        fieldBox.setItem(2, new ItemStack(Items.CARROT, 20));
+        fieldBox.setItem(3, new ItemStack(Items.WHEAT_SEEDS, 10));
+        net.minecraft.world.Container ovenBox = (net.minecraft.world.Container) level.getBlockEntity(oven);
+        ovenBox.setItem(0, new ItemStack(Items.RAW_IRON, 8));
+        ovenBox.setItem(2, new ItemStack(Items.IRON_INGOT, 16));
+        BlockPos depot = Villages.depot(level, village);
+        Kit.log("t28 stores " + Villages.storeChests(level, village) + "; the depot " + depot + ", the storehouse " + store);
+        helper.assertTrue(store.equals(depot), "loads go to the storehouse, not the founding chest nearer the heart: " + depot);
+
+        VillageFolkEntity[] farmer = new VillageFolkEntity[1];
+        long[] stocked = { -1 };
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (level.getDayTime() % 24000 > 11000) level.setDayTime(1000);   // carrying is day work
+            Villages.noteAttempt(village, level.getGameTime());                 // and nobody builds meanwhile
+            int ingots = holding(level, store, Items.IRON_INGOT), cobble = holding(level, store, Items.COBBLESTONE);
+            if (t % 600 == 0) {
+                Kit.log("t28 @" + t + " store: iron " + ingots + ", cobble " + cobble + ", wheat "
+                    + holding(level, store, Items.WHEAT) + ", seeds " + holding(level, store, Items.WHEAT_SEEDS)
+                    + "; field: cobble " + holding(level, field, Items.COBBLESTONE) + ", carrots " + holding(level, field, Items.CARROT)
+                    + "; furnace out " + ovenBox.getItem(2).getCount() + " — " + carrier.debugLine()
+                    + (farmer[0] == null ? "" : " | " + farmer[0].debugLine()));
+            }
+            if (stocked[0] < 0) {
+                if (ingots >= 16 && cobble >= 64) {
+                    stocked[0] = t;
+                    Kit.log("t28 the storehouse is stocked at tick " + t + ": field carrots " + holding(level, field, Items.CARROT)
+                        + ", field seeds " + holding(level, field, Items.WHEAT_SEEDS) + ", furnace ore " + ovenBox.getItem(0).getCount());
+                    helper.assertTrue(holding(level, field, Items.CARROT) == 16, "the field keeps sixteen carrots to plant");
+                    helper.assertTrue(holding(level, field, Items.WHEAT_SEEDS) == 10, "and all its seed");
+                    helper.assertTrue(ovenBox.getItem(0).is(Items.RAW_IRON) && ovenBox.getItem(0).getCount() == 8,
+                        "the furnace keeps its ore; only what it made is carried");
+                    // Now a farmer with no seed, and seed in the storehouse.
+                    ((net.minecraft.world.Container) level.getBlockEntity(store)).setItem(26, new ItemStack(Items.WHEAT_SEEDS, 32));
+                    VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, Kit.surface(level, 10800, 10830), 0.0F);
+                    helper.assertTrue(f != null, "a farmer for the village");
+                    f.removeMatching(st -> st.is(Items.WHEAT_SEEDS) || st.is(Items.CARROT) || st.is(Items.POTATO)
+                        || st.is(Items.BEETROOT_SEEDS), 999);
+                    f.setJob(StationTask.FARM);
+                    farmer[0] = f;
+                } else if (t >= 5000) {
+                    helper.fail("the storehouse was not stocked in 5000 ticks: iron " + ingots + ", cobble " + cobble
+                        + " — " + carrier.debugLine());
+                }
+                return;
+            }
+            int seeds = farmer[0].countCarried(st -> st.is(Items.WHEAT_SEEDS));
+            if (seeds >= 8) {
+                Kit.log("t28 the farmer drew " + seeds + " seed from the storehouse by tick " + t
+                    + " (the storehouse has " + holding(level, store, Items.WHEAT_SEEDS) + " left)");
+                helper.succeed();
+            } else if (t - stocked[0] >= 2600) {
+                helper.fail("a farmer with no seed did not draw any from the storehouse in 2600 ticks — " + farmer[0].debugLine());
+            }
         });
     }
 

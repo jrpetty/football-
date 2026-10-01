@@ -205,6 +205,7 @@ public final class Villages {
         ALL.clear();
         AGE.clear();
         BUILT.clear();
+        BUILT_AT.clear();
         LAST_PROJECT.clear();
         POP.clear();
         LAST_BIRTH.clear();
@@ -288,6 +289,7 @@ public final class Villages {
         ALL.remove(villageId);
         AGE.remove(villageId);
         BUILT.remove(villageId);
+        BUILT_AT.remove(villageId);
         LAST_PROJECT.remove(villageId);
     }
 
@@ -857,6 +859,8 @@ public final class Villages {
         LAST_PROJECT.put(villageId, gameTime);
         BUILT.computeIfAbsent(villageId, k -> new ArrayList<>()).add(structure);
         Map<String, Site> pending = SITES.get(villageId);
+        Site raised = pending == null ? null : pending.get(structure);
+        if (raised != null) BUILT_AT.computeIfAbsent(villageId, k -> new ConcurrentHashMap<>()).putIfAbsent(structure, raised.anchor());
         if ("guesthouse".equals(structure)) {
             com.jrpetty.mcassistant.village.Chronicle.Guest g = com.jrpetty.mcassistant.village.Chronicle.awaitingAHouse(villageId);
             Site site = pending == null ? null : pending.get(structure);
@@ -1215,6 +1219,76 @@ public final class Villages {
      *  lap lets the ground be a little rougher, so a village founded on a
      *  mountainside is not left without a storehouse for ever. */
     private static final Map<UUID, Integer> LAPS = new ConcurrentHashMap<>();
+
+    // ---- the stores ----
+
+    /** Where the first of each kind of building went up (the storehouse, the smeltery). Memory
+     *  only, like the rest of the register: the folk carry it over a restart. */
+    private static final Map<UUID, Map<String, BlockPos>> BUILT_AT = new ConcurrentHashMap<>();
+
+    @Nullable
+    public static BlockPos builtAt(UUID villageId, String structure) {
+        Map<String, BlockPos> m = BUILT_AT.get(villageId);
+        return m == null ? null : m.get(structure);
+    }
+
+    /** Put back where a building stands, from what a folk remembers (the first to load wins). */
+    public static void rememberBuiltAt(UUID villageId, String structure, BlockPos at) {
+        BUILT_AT.computeIfAbsent(villageId, k -> new ConcurrentHashMap<>()).putIfAbsent(structure, at.immutable());
+    }
+
+    /** Tests: say where a building stands. */
+    public static void builtAtForTests(UUID villageId, String structure, BlockPos at) {
+        BUILT_AT.computeIfAbsent(villageId, k -> new ConcurrentHashMap<>()).put(structure, at.immutable());
+    }
+
+    /** How far round the heart the village's own stores are: the square, and the storehouse,
+     *  granary, market and workshop that face it (village/TownPlan). */
+    public static final int STORE_AREA = 30;
+
+    /** Is this one of the stores at the heart (not a field's chest, not a mine's)? */
+    public static boolean inStoreArea(UUID villageId, BlockPos pos) {
+        Village v = get(villageId);
+        if (v == null) return false;
+        return Math.max(Math.abs(pos.getX() - v.centre().getX()), Math.abs(pos.getZ() - v.centre().getZ())) <= STORE_AREA
+            && Math.abs(pos.getY() - v.centre().getY()) <= 16;
+    }
+
+    /**
+     * The village's stores at its heart, in the order they are filled: the storehouse's own
+     * chests first, then the founding chest at the heart, then the other stores round the
+     * square (the granary, the market, the workshop). Never the player's guest house.
+     */
+    public static List<BlockPos> storeChests(net.minecraft.server.level.ServerLevel level, UUID villageId) {
+        Village v = get(villageId);
+        if (v == null) return List.of();
+        BlockPos house = builtAt(villageId, "storage");
+        List<BlockPos> out = new ArrayList<>();
+        boolean before = ZoneChests.askAs(true);
+        try {
+            for (ZoneChests.Found f : ZoneChests.around(level, v.centre(), STORE_AREA, 16)) {
+                if (!f.stillThere() || !ZoneChests.isStashable(f)) continue;
+                if (inAGuestHouse(villageId, f.pos())) continue;
+                out.add(f.pos().immutable());
+            }
+        } finally {
+            ZoneChests.askAs(before);
+        }
+        BlockPos heart = v.centre();
+        out.sort(java.util.Comparator.<BlockPos>comparingInt(p -> house != null && p.distSqr(house) <= 36 ? 0 : 1)
+            .thenComparingDouble(p -> p.distSqr(heart)));
+        return out;
+    }
+
+    /** Where a load for the stores goes: the first store with an empty slot, or null if every one is full. */
+    @Nullable
+    public static BlockPos depot(net.minecraft.server.level.ServerLevel level, UUID villageId) {
+        for (BlockPos p : storeChests(level, villageId)) {
+            if (!(level.getBlockEntity(p) instanceof net.minecraft.world.Container c)) continue;
+            for (int i = 0; i < c.getContainerSize(); i++) if (c.getItem(i).isEmpty()) return p;
+        }
+        return null;
+    }
 
     /** The wall rings the square (village/TownPlan). */
     private static final int WALL_RADIUS = com.jrpetty.mcassistant.village.TownPlan.PLAZA;

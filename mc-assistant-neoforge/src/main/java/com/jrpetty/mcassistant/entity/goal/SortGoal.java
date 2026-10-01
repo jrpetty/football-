@@ -113,6 +113,17 @@ public class SortGoal extends Goal {
         // was posted to is the room it actually sorts.
         BlockPos feet = assistant.stationSearchOrigin();
         java.util.Set<Long> seen = new java.util.HashSet<>();
+        // A village's storekeeper sorts the village's stores: its marked chests and barrels,
+        // never a chest of a player's that happens to stand nearby.
+        if (assistant.isSettler()) {
+            for (com.jrpetty.mcassistant.entity.ZoneChests.Found f
+                    : com.jrpetty.mcassistant.entity.ZoneChests.around(assistant.level(), feet, RADIUS, 5)) {
+                if (f.stillThere() && com.jrpetty.mcassistant.entity.ZoneChests.isStashable(f) && seen.add(f.pos().asLong())) {
+                    chests.add(f.pos().immutable());
+                }
+            }
+            return;
+        }
         // Every remembered chest that's still loaded — the storage room may be a
         // few blocks past our scan radius, so don't gate remembered ones on range.
         for (BlockPos remembered : assistant.rememberedChests()) {
