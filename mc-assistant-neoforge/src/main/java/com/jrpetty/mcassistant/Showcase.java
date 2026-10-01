@@ -252,6 +252,45 @@ public final class Showcase {
         com.jrpetty.mcassistant.entity.Villages.Village staged = new com.jrpetty.mcassistant.entity.Villages.Village(SHOWCASE, heart, level.dimension());
         com.jrpetty.mcassistant.entity.Watch.keepAt(level, staged, heart, true);
         com.jrpetty.mcassistant.entity.Watch.bell(level, staged, true);
+        // The graveyard's first graves, and the tavern of an evening.
+        String[][] dead = { { "Old Bramble", "of old age" }, { "Wren", "by misfortune" }, { "Ash", "of old age" },
+            { "Holt", "when the raiders came" }, { "Fen", "of old age" } };
+        for (Ledger.Building b : STAGED) {
+            if (b.structure().equals("graveyard")) {
+                Direction back = b.facing(), right = back.getClockWise();
+                for (int i = 0; i < dead.length; i++) {
+                    int[] plot = com.jrpetty.mcassistant.entity.Graves.PLOTS[i];
+                    BlockPos mound = b.anchor().relative(right, plot[0]).relative(back, plot[1]);
+                    com.jrpetty.mcassistant.entity.Graves.headstone(level, mound.relative(back), mound, back.getOpposite(),
+                        new Ledger.Grave(dead[i][0], 2 + i, 40 + 7 * i, dead[i][1], "", "", "Farmer"));
+                }
+                view("t20-graveyard", b.anchor().relative(back.getOpposite(), 7).above(3), b.anchor());
+            } else if (b.structure().equals("tavern")) {
+                com.jrpetty.mcassistant.entity.Tavern.board(level, b);
+                Direction back = b.facing(), right = back.getClockWise();
+                int k = 0;
+                for (int[] at : new int[][]{ { 1, -2 }, { 3, -2 }, { 1, 1 }, { 3, 1 }, { -1, 0 } }) {
+                    com.jrpetty.mcassistant.entity.VillageFolkEntity f = com.jrpetty.mcassistant.McAssistantMod.VILLAGE_FOLK.get().create(level);
+                    if (f == null) continue;
+                    BlockPos p = b.anchor().relative(right, at[0]).relative(back, at[1]);
+                    float yaw = right.getOpposite().toYRot() + (k % 2 == 0 ? 0.0F : 180.0F);
+                    f.moveTo(p.getX() + 0.5, p.getY(), p.getZ() + 0.5, yaw, 0.0F);
+                    f.setYHeadRot(yaw);
+                    f.setYBodyRot(yaw);
+                    com.jrpetty.mcassistant.entity.AssistantEntity.StationTask[] trades = {
+                        com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.FARM, com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.MINE,
+                        com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.SMITH, com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.COOK,
+                        com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.WOOD };
+                    f.makeShowcase(trades[k % trades.length]);
+                    f.rename(trades[k % trades.length].title);
+                    f.addTag("folk_lineup");
+                    level.addFreshEntity(f);
+                    k++;
+                }
+                view("t19-tavern", b.anchor().relative(back.getOpposite(), 3).relative(right, 3).above(1),
+                    b.anchor().relative(back, 3).relative(right, -1));
+            }
+        }
         // The café's counter and the shop's, set out (the showcase has no stores to set them from).
         for (Ledger.Building b : STAGED) {
             if (b.structure().equals("cafe")) {
@@ -308,6 +347,7 @@ public final class Showcase {
             g.setYHeadRot(180.0F);
             g.setYBodyRot(180.0F);
             g.makeShowcase(com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.GUARD);
+            g.rename("Guard");
             g.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BOW));
             g.addTag("folk_lineup");
             level.addFreshEntity(g);
@@ -328,9 +368,11 @@ public final class Showcase {
             m.addTag("folk_lineup");
             level.addFreshEntity(m);
         }
-        out.add("VIEW t17-raid-wall " + heart.getX() + " " + (heart.getY() + 5) + " " + (heart.getZ() - 4)
+        // From inside the square, beside the monument, looking up at the watch on the north wall;
+        // and from out on the avenue, where the band is, looking back at the shut gate.
+        out.add("VIEW t17-raid-wall " + (heart.getX() + 5) + " " + (heart.getY() + 4) + " " + (heart.getZ() - 3)
             + " " + heart.getX() + " " + (heart.getY() + 3) + " " + (gate.getZ()));
-        out.add("VIEW t18-raid-gate " + (heart.getX() + 7) + " " + (heart.getY() + 3) + " " + (gate.getZ() - 12)
+        out.add("VIEW t18-raid-gate " + (heart.getX() + 1) + " " + (heart.getY() + 3) + " " + (gate.getZ() - 11)
             + " " + heart.getX() + " " + (heart.getY() + 2) + " " + gate.getZ());
         return out;
     }

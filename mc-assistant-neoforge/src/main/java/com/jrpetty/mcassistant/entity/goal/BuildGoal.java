@@ -707,7 +707,8 @@ public class BuildGoal extends Goal {
             return;
         }
 
-        if (++workTicks < 6) {
+        // A block about every third of a second: quicker in a happy village, slower in a sad one.
+        if (++workTicks < assistant.buildPaceTicks()) {
             return;
         }
         workTicks = 0;

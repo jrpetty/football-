@@ -45,6 +45,12 @@ public final class Ledger extends SavedData {
     /** When each colony's last caravan set out. */
     private final Map<UUID, Long> caravan = new HashMap<>();
 
+    /** Somebody of the village who has died: for the graveyard, the chapel's memorial and the register. */
+    public record Grave(String name, long born, long died, String cause, String parents, String partner, String trade) {}
+
+    /** The village's dead, in the order they died. */
+    private final Map<UUID, List<Grave>> graves = new HashMap<>();
+
     /** Without a server (a plain unit test) the register is kept here instead. */
     private static Ledger loose;
 
@@ -89,6 +95,7 @@ public final class Ledger extends SavedData {
         any |= l.mother.remove(village) != null;
         any |= l.road.remove(village) != null;
         any |= l.caravan.remove(village) != null;
+        any |= l.graves.remove(village) != null;
         if (any) l.setDirty();
     }
 
@@ -185,6 +192,22 @@ public final class Ledger extends SavedData {
         l.setDirty();
     }
 
+    /** Somebody died: into the village's record of its dead. */
+    public static void buried(UUID village, Grave g) {
+        Ledger l = of();
+        if (l == null) return;
+        l.graves.computeIfAbsent(village, k -> new ArrayList<>()).add(g);
+        l.setDirty();
+    }
+
+    /** The village's dead, first to last. */
+    public static List<Grave> graves(UUID village) {
+        Ledger l = of();
+        if (l == null) return List.of();
+        List<Grave> g = l.graves.get(village);
+        return g == null ? List.of() : List.copyOf(g);
+    }
+
     public static Ledger load(CompoundTag tag, HolderLookup.Provider registries) {
         Ledger l = new Ledger();
         for (Tag t : tag.getList("Villages", Tag.TAG_COMPOUND)) {
@@ -203,6 +226,13 @@ public final class Ledger extends SavedData {
             if (v.hasUUID("Mother")) l.mother.put(id, v.getUUID("Mother"));
             if (v.contains("Road")) l.road.put(id, v.getIntArray("Road"));
             if (v.contains("Caravan")) l.caravan.put(id, v.getLong("Caravan"));
+            List<Grave> dead = new ArrayList<>();
+            for (Tag e : v.getList("Graves", Tag.TAG_COMPOUND)) {
+                CompoundTag g = (CompoundTag) e;
+                dead.add(new Grave(g.getString("Name"), g.getLong("Born"), g.getLong("Died"), g.getString("Cause"),
+                    g.getString("Parents"), g.getString("Partner"), g.getString("Trade")));
+            }
+            if (!dead.isEmpty()) l.graves.put(id, dead);
         }
         return l;
     }
@@ -214,6 +244,7 @@ public final class Ledger extends SavedData {
         ids.addAll(treasury.keySet());
         ids.addAll(paid.keySet());
         ids.addAll(mother.keySet());
+        ids.addAll(graves.keySet());
         for (UUID id : ids) {
             CompoundTag v = new CompoundTag();
             v.putUUID("Id", id);
@@ -231,6 +262,19 @@ public final class Ledger extends SavedData {
                 all.add(one);
             }
             v.put("Buildings", all);
+            ListTag dead = new ListTag();
+            for (Grave g : graves.getOrDefault(id, List.of())) {
+                CompoundTag one = new CompoundTag();
+                one.putString("Name", g.name());
+                one.putLong("Born", g.born());
+                one.putLong("Died", g.died());
+                one.putString("Cause", g.cause());
+                one.putString("Parents", g.parents());
+                one.putString("Partner", g.partner());
+                one.putString("Trade", g.trade());
+                dead.add(one);
+            }
+            if (!dead.isEmpty()) v.put("Graves", dead);
             villages.add(v);
         }
         tag.put("Villages", villages);

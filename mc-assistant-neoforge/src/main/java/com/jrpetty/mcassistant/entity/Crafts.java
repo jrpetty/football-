@@ -68,7 +68,12 @@ public final class Crafts {
         Villages.Village v = village == null ? null : Villages.get(village);
         if (v == null) return false;
         int last = LAST.getOrDefault(f.getUUID(), -100000);
-        if (f.tickCount - last < EVERY && f.tickCount >= last) return false;
+        // Quicker for a veteran, a cheerful hand and a happy village; slower without the craft's
+        // own building and its tools (the anvil, the brewing stand, the enchanting table...).
+        int every = EVERY * (100 - f.workBonusPercent()) / 100;
+        String building = VillageFolkEntity.buildingFor(f.stationTask());
+        if (building != null && Villages.builtAt(v.id(), building) == null) every = every * 3 / 2;
+        if (f.tickCount - last < every && f.tickCount >= last) return false;
         LAST.put(f.getUUID(), f.tickCount);
         return now(f, level, v);
     }

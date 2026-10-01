@@ -226,6 +226,9 @@ public final class Villages {
         TownLife.resetForTests();
         Crafts.resetForTests();
         Raids.resetForTests();
+        Contentment.resetForTests();
+        RestDay.resetForTests();
+        Tavern.resetForTests();
         Cafe.resetForTests();
         Roads.reset();
         LAST_PROJECT.clear();
@@ -364,8 +367,13 @@ public final class Villages {
      * either end.
      */
     public static boolean mayBirth(UUID villageId, long gameTime) {
+        return mayBirth(villageId, gameTime, 1);
+    }
+
+    /** As mayBirth, with the gap between births stretched this many times (lean times). */
+    public static boolean mayBirth(UUID villageId, long gameTime, int stretch) {
         int folk = Math.max(1, headcount(villageId));
-        long gap = Math.max(600L, Math.min(6000L, 12000L / (folk / 4 + 1)));
+        long gap = Math.max(600L, Math.min(6000L, 12000L / (folk / 4 + 1))) * Math.max(1, stretch);
         return gameTime - LAST_BIRTH.getOrDefault(villageId, -gap) >= gap;
     }
 
@@ -1023,6 +1031,9 @@ public final class Villages {
         // after everything the age asks for and its homes: they never hold an age back.
         List<String> extras = new ArrayList<>();
         if (folk >= 14 && built(villageId, "cafe") < 1) extras.add("cafe");
+        if (folk >= 12 && built(villageId, "tavern") < 1) extras.add("tavern");
+        // Somewhere to lay the dead, once there are any; another when it is full.
+        if (com.jrpetty.mcassistant.village.Ledger.graves(villageId).size() > Graves.room(villageId)) extras.add(0, "graveyard");
         if (at == Age.STONE) { housesForBeds(villageId, folk, out); out.addAll(extras); return out; }
 
         if (built(villageId, "workshop") < 1) out.add("workshop");
@@ -1138,8 +1149,12 @@ public final class Villages {
         if (v == null) return "no";
         int food = stock(level, v.centre(), Task.FOOD, storesRadius(villageId));
         int want = larderForBirth(villageId);
-        if (food < want) return "no — the stores hold " + food + " food and a child needs " + want + " put by";
-        return "yes";
+        int content = Contentment.score(villageId);
+        int plenty = want * (content >= 70 ? 3 : content >= 50 ? 4 : 5) / 5;
+        if (food >= plenty) return "yes, the village being " + Contentment.word(content);
+        int lean = Math.max(4, want * 2 / 5);
+        if (food >= lean) return "slowly — lean times: " + food + " food put by, " + plenty + " would be plenty";
+        return "no — the stores hold " + food + " food and even lean times need " + lean + " put by";
     }
 
     /** Why the village wants the building it wants next, in a line a player can read. */
@@ -1166,6 +1181,8 @@ public final class Villages {
             case "market" -> "a market, stalls under one roof for what the village makes";
             case "chapel" -> "a chapel, which the Diamond Age asks for";
             case "cafe" -> "a café, where folk can sit down to a drink and a bite on their break";
+            case "tavern" -> "a tavern, for the evenings: a fire, a tune and a story";
+            case "graveyard" -> "a graveyard, to lay our dead to rest";
             case "smithy" -> "a smithy, for the watch's armour and the miners' picks";
             case "shop" -> "a shop, to sell what the village's crafts make";
             case "brewery" -> "a brewery, for the brewer's potions";

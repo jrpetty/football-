@@ -93,6 +93,7 @@ public final class TownLife {
                 chimney(level, b);
                 addressSign(level, id, v.centre(), b);
                 if (b.structure().equals("house")) washingLine(level, b);
+                if (b.structure().equals("tavern")) Tavern.board(level, b);
             }
         }
         // A street corner.
@@ -104,6 +105,8 @@ public final class TownLife {
         if (Villages.ageOf(id).ordinal() >= Villages.Age.STONE.ordinal() && turn % 6 == 0) {
             stalls(level, id, v.centre(), storeGoods(level, id));
         }
+        // The graves the village owes its dead, and the chapel's memorial.
+        if (turn % 10 == 5) Graves.tend(level, id);
         // The café's and the shop's counters.
         if (turn % 6 == 3) {
             Cafe.dress(level, v, "cafe");
@@ -128,6 +131,7 @@ public final class TownLife {
             addressSign(level, village, heart, b);
             if (b.structure().equals("house")) washingLine(level, b);
             if (b.structure().equals("cafe")) Cafe.setOut(level, village, b, Cafe.menuGoods(level, village));
+            if (b.structure().equals("tavern")) Tavern.board(level, b);
             if (b.structure().equals("shop")) Cafe.setOut(level, village, b, Cafe.shopGoods(level, village));
         }
         int reach = 0;
@@ -473,9 +477,17 @@ public final class TownLife {
     /** One of this, in a counter's frame (the café's and the shop's too). Returns whether the
      *  counter changed. */
     static boolean frameOn(ServerLevel level, BlockPos at, ItemStack want) {
+        return frameOn(level, at, want, false);
+    }
+
+    /** As frameOn; a shop's counter (the café's, the shop's) only sells, it doesn't buy. */
+    static boolean frameOn(ServerLevel level, BlockPos at, ItemStack want, boolean counter) {
         ItemFrame frame = null;
         for (ItemFrame f : level.getEntitiesOfClass(ItemFrame.class, new AABB(at))) {
-            if (f.getTags().contains("mca_stall")) { frame = f; break; }
+            if (!f.getTags().contains("mca_stall")) continue;
+            // One frame to a counter: a second hung while the first was out of sight goes.
+            if (frame == null) frame = f;
+            else f.discard();
         }
         if (frame == null) {
             if (want.isEmpty() || !level.getBlockState(at).isAir()) return false;
@@ -485,6 +497,7 @@ public final class TownLife {
             t.putBoolean("Invisible", true);
             frame.load(t);
             frame.addTag("mca_stall");
+            if (counter) frame.addTag("mca_counter");
             level.addFreshEntity(frame);
         }
         ItemStack now = frame.getItem();

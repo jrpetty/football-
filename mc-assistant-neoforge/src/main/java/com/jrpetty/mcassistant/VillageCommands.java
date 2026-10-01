@@ -451,6 +451,13 @@ public final class VillageCommands {
             sb.append(". Treasury: ").append(com.jrpetty.mcassistant.village.Ledger.coins(v.id())).append(" coins, ")
               .append(saved).append(" in purses; market ").append(toMarket == 0 ? "today" : "in " + toMarket + " days");
         }
+        sb.append(". Contentment: ").append(com.jrpetty.mcassistant.entity.Contentment.line(level, v.id()));
+        {
+            long today = level.getDayTime() / 24000L;
+            int rest = 0;
+            while (rest < 7 && !com.jrpetty.mcassistant.entity.RestDay.today(v.id(), today + rest)) rest++;
+            sb.append(". Day of rest: ").append(rest == 0 ? "today" : rest < 7 ? "in " + rest + " days" : "not yet (from the Stone Age, after a week)");
+        }
         {
             String alarm = com.jrpetty.mcassistant.entity.Raids.why(v.id());
             int gates = com.jrpetty.mcassistant.entity.Watch.gates(level, v.id()).size();

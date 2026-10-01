@@ -285,6 +285,7 @@ public class VillageFolkEntity extends AssistantEntity {
             if (home != null) {
                 TownWork.tick(townLevel, home);
                 TownLife.tick(townLevel, home);         // lit windows, chimney smoke, washing, stalls, signs
+                Contentment.daily(townLevel, home);     // how it is doing; at its worst, folk leave
             }
         }
         if (withAPlayer) return;
@@ -635,10 +636,24 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         if (persona.ambitionMet()) { m += 5; why.add(new Object[]{"dream", 9}); }
         if (day - persona.feastDay <= 1) { m += 8; why.add(new Object[]{"feast", 8}); }
+        if (day - griefDay <= 2) { m -= 12; why.add(new Object[]{"grief", 12}); }
+        if (day - quarrelDay <= 0) { m -= 6; why.add(new Object[]{"quarrel", 6}); }
+        if (village != null) {
+            if (RestDay.justRested(village, day)) { m += 5; why.add(new Object[]{"rested", 5}); }
+            int content = Contentment.score(village);
+            if (content >= 80) { m += 4; why.add(new Object[]{"thriving", 4}); }
+            else if (content < 25) { m -= 6; why.add(new Object[]{"miserable", 6}); }
+        }
         why.sort((a, b) -> Integer.compare((Integer) b[1], (Integer) a[1]));
         java.util.List<String> keys = new java.util.ArrayList<>();
         for (Object[] w : why) keys.add((String) w[0]);
         persona.setMood(m, keys);
+    }
+
+    /** A happy village works faster, a miserable one slower (Contentment). */
+    @Override
+    protected int villageWorkPercent() {
+        return Contentment.workPercent(ownerId()) + (isOld() ? -10 : 0);
     }
 
     /** A good mood makes for quick hands, a black one for slow ones. */
@@ -779,15 +794,27 @@ public class VillageFolkEntity extends AssistantEntity {
         if (!level().isClientSide && village != null && !showcase) {
             long day = level().getDayTime() / 24000L;
             Raids.fell(village);
-            Villages.tell(village, day, displayNameCap() + " died");
+            Contentment.loss(village, day);
+            int age = ageYears();
+            String how = passing ? "of old age" : Raids.underAlarm(village) ? "when the raiders came" : "by misfortune";
+            com.jrpetty.mcassistant.village.Ledger.buried(village, new com.jrpetty.mcassistant.village.Ledger.Grave(
+                displayNameCap(), bornDay, day, how, life.parents(), life.partnerName(), stationTask().title));
+            Villages.tell(village, day, passing
+                ? displayNameCap() + " died peacefully in their sleep, aged " + age
+                : displayNameCap() + " died, aged " + age);
             Gatherings.mourn(village, displayNameCap(), day);
             for (AssistantEntity a : Villages.folkOf(village)) {
                 if (!(a instanceof VillageFolkEntity f) || f == this) continue;
                 int warmth = f.life.affinity(getUUID());
-                if (warmth >= Social.FRIEND || getUUID().equals(f.life.partner())) {
+                boolean partner = getUUID().equals(f.life.partner());
+                if (warmth >= Social.FRIEND || partner) {
                     f.persona.remember(day, "I lost " + displayNameCap(), 8);
-                    f.persona.hurt(day);
+                    f.griefDay = day;
+                    f.griefFor = displayNameCap();
                 }
+                // A widow or widower may love again one day; until now they stayed "partnered"
+                // to the dead for good, and could neither court nor raise another child.
+                if (partner) f.life.widowed();
             }
         }
         super.die(cause);
@@ -806,6 +833,11 @@ public class VillageFolkEntity extends AssistantEntity {
     private int beats;
     private long driftDay = -1;
     private int socialWalkTick = -1000;
+    /** Whom it is grieving for, and since when. */
+    long griefDay = -100;
+    String griefFor = "";
+    /** The last day it had words with somebody. */
+    private long quarrelDay = -10;
 
     private static final net.minecraft.network.syncher.EntityDataAccessor<String> DATA_SOCIAL =
         net.minecraft.network.syncher.SynchedEntityData.defineId(
@@ -956,12 +988,71 @@ public class VillageFolkEntity extends AssistantEntity {
                     other.getX(), other.getY() + 2.0, other.getZ(), 5, 0.3, 0.2, 0.3, 0.0);
             }
         }
+        // A village that is going badly hears about it.
+        if (offWork && !isSleeping() && !isBaby() && getRandom().nextInt(14) == 0
+                && level().getNearestPlayer(this, 16.0) != null) {
+            String moan = Contentment.grumble(server, village, getRandom());
+            if (moan != null) FolkTalk.speak(this, moan);
+        }
+        // And now and then two who can't abide each other have words.
+        quarrel(near, server, village, day, offWork);
         String line = life.clientLine();
         if (persona.rolled()) {
             line += "|" + Persona.moodWord(persona.mood()) + "|" + persona.hobby().doing + "|"
                 + (persona.ambitionMet() ? "done — " + persona.ambition().done : persona.ambition().hope);
         }
         if (!line.equals(this.entityData.get(DATA_SOCIAL))) this.entityData.set(DATA_SOCIAL, line);
+    }
+
+    /**
+     * Words between two who can't abide each other: rare (each folk a quarrel a day at most,
+     * and one beat in eight when a rival is at hand off work), loud, and soon over. They face
+     * each other, say their piece, and stalk off; both are the worse for it that day, and so
+     * is the grudge. Once in a while, though, it clears the air.
+     */
+    private void quarrel(java.util.List<VillageFolkEntity> near, net.minecraft.server.level.ServerLevel server,
+                         UUID village, long day, boolean offWork) {
+        if (!offWork || quarrelDay >= day || isBaby() || isSleeping() || getRandom().nextInt(8) != 0) return;
+        for (VillageFolkEntity other : near) {
+            if (other.isBaby() || other.isSleeping() || other.quarrelDay >= day) continue;
+            if (life.affinity(other.getUUID()) > Social.RIVAL) continue;
+            quarrelDay = day;
+            other.quarrelDay = day;
+            getLookControl().setLookAt(other, 30.0F, 30.0F);
+            other.getLookControl().setLookAt(this, 30.0F, 30.0F);
+            net.minecraft.util.RandomSource r = getRandom();
+            String[][] rows = {
+                { "You took my spot at the well again!", "It's not YOUR spot!" },
+                { "Your chickens were in my carrots!", "Prove it!" },
+                { "Do you have to whistle all day?", "Do you have to complain all day?" },
+                { "That was my bread and you know it.", "Finders keepers." },
+                { "You never pull your weight.", "Says the one who naps at noon!" } };
+            String[] row = rows[r.nextInt(rows.length)];
+            FolkTalk.speak(this, row[0]);
+            other.sayLater(row[1], 40);
+            server.sendParticles(net.minecraft.core.particles.ParticleTypes.ANGRY_VILLAGER, getX(), getY() + 2.1, getZ(), 3, 0.3, 0.2, 0.3, 0.0);
+            server.sendParticles(net.minecraft.core.particles.ParticleTypes.ANGRY_VILLAGER, other.getX(), other.getY() + 2.1, other.getZ(), 3, 0.3, 0.2, 0.3, 0.0);
+            playSound(net.minecraft.sounds.SoundEvents.VILLAGER_NO, 0.9F, 0.9F);
+            if (r.nextInt(5) == 0) {
+                // It clears the air.
+                life.feel(other.getUUID(), other.displayNameCap(), 25);
+                other.life.feel(getUUID(), displayNameCap(), 25);
+                other.sayLater(FolkTalk.pick(r, "...Oh, let's not fight. Truce?", "Fine. I'm sorry. There."), 100);
+                persona.remember(day, "I made it up with " + other.displayNameCap(), 4);
+            } else {
+                life.feel(other.getUUID(), other.displayNameCap(), -5);
+                other.life.feel(getUUID(), displayNameCap(), -5);
+                persona.remember(day, "I had words with " + other.displayNameCap(), 3);
+                // Then off in a huff, the other way.
+                double dx = getX() - other.getX(), dz = getZ() - other.getZ();
+                double len = Math.max(0.1, Math.sqrt(dx * dx + dz * dz));
+                BlockPos away = surfaceAt((int) (getX() + dx / len * 10), (int) (getZ() + dz / len * 10));
+                if (away != null) walkTo(away, 1.0D);
+            }
+            refreshMood();
+            other.refreshMood();
+            return;
+        }
     }
 
     /** Two who have grown as close as two folk get pledge themselves; the village
@@ -1005,9 +1096,27 @@ public class VillageFolkEntity extends AssistantEntity {
             setChild(false);
             persona.remember(day, "I grew up", 8);
             UUID village = ownerId();
-            if (village != null) Villages.tell(village, day, displayNameCap() + " grew up");
-            FolkTalk.speak(this, FolkTalk.pick(getRandom(), "I'm all grown up!", "Time I learned a trade.",
-                "No more playing — I'm a grown-up now."));
+            // An apprentice takes up the trade it learned, unless the village has more than enough
+            // hands at it already, and starts it with a few years' knack already in its hands.
+            String learned = null;
+            if (village != null && apprenticeTo != StationTask.NONE && apprenticeTo != StationTask.GUARD
+                    && !Villages.overStaffed(village, apprenticeTo)) {
+                setStation(blockPosition(), apprenticeTo);
+                awardXp(APPRENTICE_XP);
+                learned = apprenticeTo.title.toLowerCase(java.util.Locale.ROOT);
+                String teacher = mentorName();
+                persona.remember(day, "I learned my trade from " + teacher, 7);
+                if (level() instanceof net.minecraft.server.level.ServerLevel sl && mentor != null
+                        && sl.getEntity(mentor) instanceof VillageFolkEntity m) {
+                    m.persona.remember(day, "I taught " + displayNameCap() + " the trade", 6);
+                    m.life.feel(getUUID(), displayNameCap(), 10);
+                }
+            }
+            if (village != null) Villages.tell(village, day, displayNameCap() + " grew up"
+                + (learned == null ? "" : " and became a " + learned + ", as " + mentorName() + " taught them"));
+            FolkTalk.speak(this, learned != null
+                ? FolkTalk.pick(getRandom(), "I'm a " + learned + " now, like " + mentorName() + "!", "All grown up, and I know my trade.")
+                : FolkTalk.pick(getRandom(), "I'm all grown up!", "Time I learned a trade.", "No more playing — I'm a grown-up now."));
             return;
         }
         if (level().isNight() || Raids.underAlarm(ownerId())) {
@@ -1015,6 +1124,8 @@ public class VillageFolkEntity extends AssistantEntity {
             return;
         }
         if (!(level() instanceof net.minecraft.server.level.ServerLevel server) || villageCentre == null) return;
+        // Mornings, once it is old enough: at a grown-up's side at work, learning the trade.
+        if (day - bornDay >= 1 && level().getDayTime() % 24000L < 7000L && apprentice(server)) return;
         // Tag with the other children, when there are any.
         java.util.List<VillageFolkEntity> kids = level().getEntitiesOfClass(VillageFolkEntity.class,
             getBoundingBox().inflate(20.0), f -> f != this && f.isAlive() && f.isBaby() && !f.isSleeping());
@@ -1061,6 +1172,120 @@ public class VillageFolkEntity extends AssistantEntity {
     }
 
     public long bornDay() { return bornDay; }
+
+    // ------------------------------ growing old --------------------------------
+
+    /** Years a child grows a day (it is grown at eighteen, three days old). */
+    static final int CHILD_YEARS_A_DAY = 6;
+    /** Years a grown folk ages in a day. */
+    static final int YEARS_A_DAY = 2;
+    /** The age folk are old at: slower about the place and at work. */
+    public static final int OLD_AT = 60;
+    /** What an apprenticeship is worth when it is over: a few levels' knack. */
+    static final int APPRENTICE_XP = 400;
+
+    /** Whose apprentice it is (a child), and in what trade. */
+    @Nullable private UUID mentor;
+    private StationTask apprenticeTo = StationTask.NONE;
+    private String mentorName = "";
+    private boolean frailTold;
+    /** It is dying of old age, in its sleep. */
+    private boolean passing;
+
+    /** How old it is, in years as folk count them. The founders were grown when the village began. */
+    public int ageYears() {
+        long day = level().getDayTime() / 24000L;
+        if (bornDay == UNKNOWN) {
+            if (isBaby()) bornDay = day;
+            else bornDay = day - GROW_DAYS - (2 + Math.floorMod(getUUID().hashCode(), 21)) / YEARS_A_DAY;
+        }
+        long days = Math.max(0, day - bornDay);
+        if (isBaby()) return (int) Math.min(17, days * CHILD_YEARS_A_DAY);
+        return (int) (18 + Math.max(0, days - GROW_DAYS) * YEARS_A_DAY);
+    }
+
+    /** The age it will live to: seventy to a hundred. */
+    public int lifespan() { return 70 + Math.floorMod(getUUID().hashCode() >> 5, 31); }
+
+    public boolean isOld() { return !isBaby() && ageYears() >= OLD_AT; }
+
+    /** Once a day: very old folk grow frail, and at the end of their years die in their sleep. */
+    private void growingOld(long day) {
+        if (isBaby() || showcase || ownerId() == null) return;
+        int age = ageYears(), end = lifespan();
+        if (age >= end - 4 && !frailTold) {
+            frailTold = true;
+            Villages.tell(ownerId(), day, displayNameCap() + " is very frail now, at " + age);
+        }
+        long t = level().getDayTime() % 24000L;
+        if (age >= end && (isSleeping() || t < 1500L)) {
+            passing = true;
+            kill();
+        }
+    }
+
+    private String mentorName() {
+        return mentorName.isEmpty() ? "my teacher" : mentorName;
+    }
+
+    /**
+     * A child's morning at a grown-up's side: a parent's if one is at work, else whoever is
+     * best at the trade the village most needs. Watching, fetching, having a go. Returns
+     * true while it is with its teacher.
+     */
+    private boolean apprentice(net.minecraft.server.level.ServerLevel server) {
+        UUID village = ownerId();
+        if (village == null) return false;
+        VillageFolkEntity teacher = mentor == null ? null
+            : server.getEntity(mentor) instanceof VillageFolkEntity m && m.isAlive() && !m.isBaby() ? m : null;
+        if (teacher == null || teacher.stationTask() == StationTask.NONE) {
+            teacher = chooseMentor(village);
+            if (teacher == null) return false;
+            mentor = teacher.getUUID();
+            mentorName = teacher.displayNameCap();
+            apprenticeTo = teacher.stationTask();
+            persona.remember(level().getDayTime() / 24000L, "I started learning " + apprenticeTo.title.toLowerCase(java.util.Locale.ROOT)
+                + " from " + mentorName, 5);
+        }
+        mentorName = teacher.displayNameCap();
+        apprenticeTo = teacher.stationTask();
+        if (!teacher.onShift() || teacher.isSleeping() || teacher.trip() != null) return false;
+        hobbyNow = "learning " + apprenticeTo.title.toLowerCase(java.util.Locale.ROOT) + " from " + mentorName;
+        if (distanceToSqr(teacher) > 3.0 * 3.0) {
+            if (getNavigation().isDone() || tickCount % 40 == 0) walkTo(teacher.blockPosition(), 1.1D);
+            return true;
+        }
+        getLookControl().setLookAt(teacher, 30.0F, 30.0F);
+        if (getRandom().nextInt(12) == 0) swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+        if (getRandom().nextInt(40) == 0 && level().getNearestPlayer(this, 16.0) != null) {
+            FolkTalk.speak(this, FolkTalk.pick(getRandom(), "Like this?", "Can I have a go?", "Why do you do it that way?",
+                "I'm going to be a " + apprenticeTo.title.toLowerCase(java.util.Locale.ROOT) + " too!"));
+            teacher.sayLater(FolkTalk.pick(getRandom(), "That's it — gently now.", "Watch my hands.", "You'll get the knack.",
+                "Not bad at all!"), 40);
+        }
+        return true;
+    }
+
+    /** A parent at work, or else the most practised hand at the trade the village needs most. */
+    @Nullable
+    private VillageFolkEntity chooseMentor(UUID village) {
+        VillageFolkEntity parent = null, best = null;
+        StationTask wanted = Villages.needed(village);
+        int bestLevel = -1;
+        for (AssistantEntity a : Villages.folkOf(village)) {
+            if (!(a instanceof VillageFolkEntity f) || f == this || f.isBaby() || f.stationTask() == StationTask.NONE) continue;
+            if (f.stationTask() == StationTask.GUARD) continue;
+            if (life.parents().contains(f.displayNameCap()) && (parent == null || !Villages.overStaffed(village, f.stationTask()))) parent = f;
+            if (f.stationTask() == wanted && f.veteranLevel() > bestLevel) { bestLevel = f.veteranLevel(); best = f; }
+        }
+        return parent != null ? parent : best;
+    }
+
+    /** The trade it is learning, if it is somebody's apprentice. */
+    public StationTask apprenticedTo() { return apprenticeTo; }
+
+    /** Tests only: the day's look at its years, now. */
+    public void growOldForTests() { growingOld(level().getDayTime() / 24000L); }
 
     /** Tests only: a child born this many days ago. */
     public void bornDaysAgo(long days) { bornDay = level().getDayTime() / 24000L - days; }
@@ -1173,6 +1398,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (t < 12000L || t >= bedtime) return false;
         if (isBaby()) return false;
         if (Gatherings.attend(this, t)) return true;
+        if (Tavern.evening(this, t)) return true;
         if (Leisure.evening(this, t)) return true;
         socialise();
         return true;
@@ -1277,6 +1503,8 @@ public class VillageFolkEntity extends AssistantEntity {
         // The bell: every guard turns out, whichever watch it keeps; nobody else works.
         UUID alarmed = ownerId();
         if (alarmed != null && Raids.underAlarm(alarmed)) return stationTask() == StationTask.GUARD;
+        // The day of rest: nobody works but the watch.
+        if (alarmed != null && stationTask() != StationTask.GUARD && RestDay.now(alarmed, level().getDayTime()) != null) return false;
         if (stationTask() != StationTask.GUARD || shift() != Shift.ALWAYS || !level().isNight()) return super.onShift();
         return firstWatch() == (level().getDayTime() % 24000L < MIDNIGHT);
     }
@@ -1573,8 +1801,17 @@ public class VillageFolkEntity extends AssistantEntity {
      * somewhere, have a trade, have ground to work it on — and only once all
      * that is settled, look up and see what the village still needs building.
      */
+    private long agedDay = -1;
+
     private void agenda() {
         if (ownerId() == null) { settle(); return; }
+        long today = level().getDayTime() / 24000L;
+        if (agedDay != today) {
+            agedDay = today;
+            growingOld(today);
+            if (!isAlive()) return;
+            refreshOldAgeGait();
+        }
         if (isBaby()) { childhood(); return; }
         // On the road with a caravan: that is the day's work, day and night until it is home.
         if (trip != null && level() instanceof net.minecraft.server.level.ServerLevel road) {
@@ -2548,7 +2785,55 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected boolean bedtime() {
         if (Raids.underAlarm(ownerId()) && bedPos() == null && !isBaby()) return Raids.shelter(this);
+        // The day of rest, by day: the service, the games, walking out — not bed at noon.
+        if (!Raids.underAlarm(ownerId()) && RestDay.now(ownerId(), level().getDayTime()) != null) {
+            if (!RestDay.spend(this)) socialise();
+            return true;
+        }
         return super.bedtime();
+    }
+
+    // ------------------------------ moving away ----------------------------------
+
+    /**
+     * Leave this village for another (Contentment): off the old roll and onto the new, its
+     * plot and its bed given up, and set down at the new village's heart to start again.
+     */
+    public void leaveFor(net.minecraft.server.level.ServerLevel level, Villages.Village to) {
+        UUID from = ownerId();
+        long day = level.getDayTime() / 24000L;
+        clearQueue();
+        stopFollowing();
+        setWorkZone(null);
+        forgetBed();
+        if (from != null) Villages.recordDeath(from);
+        joinVillage(to.id(), to.centre());
+        Villages.recordBirth(to.id());
+        BlockPos at = Contentment.arrival(level, to, getRandom());
+        teleportTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5);
+        persona.remember(day, "I left " + (from == null ? "home" : Villages.name(from)) + " for " + Villages.name(to.id()), 9);
+        FolkTalk.speak(this, FolkTalk.pick(getRandom(), "A fresh start.", "Hello! I've come to live here.", "I hope it's better here."));
+    }
+
+    /** Leave for good, with nowhere to go (Contentment): out of the world. */
+    public void walkOut() {
+        FolkTalk.speak(this, FolkTalk.pick(getRandom(), "I can't stay here any longer. Goodbye.", "I'm off to find a better life."));
+        discard();
+    }
+
+    private static final net.minecraft.resources.ResourceLocation OLD_GAIT =
+        net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mc_assistant", "old_age");
+
+    /** The old walk a little slower. */
+    private void refreshOldAgeGait() {
+        var speed = getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
+        if (speed == null) return;
+        if (isOld()) {
+            speed.addOrUpdateTransientModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(OLD_GAIT, -0.15D,
+                net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+        } else {
+            speed.removeModifier(OLD_GAIT);
+        }
     }
 
     /** The crafts' work (Crafts, Cafe): a piece at a time, out of the stores and back. */
@@ -2735,9 +3020,16 @@ public class VillageFolkEntity extends AssistantEntity {
         // went on raising children: a long game held three hundred folk in six villages
         // by its thirtieth day, at twenty milliseconds a tick.
         if (Villages.worldHeadcount() >= com.jrpetty.mcassistant.AssistantConfig.villageWorldCap()) return false;
-        if (!Villages.mayBirth(village, level().getGameTime())) return false;
-        // Nor without a day's food put by: see Villages.larderForBirth.
-        if (!Villages.larderFull(server, village)) return false;
+        // How the village is doing sets the pace: a thriving village wants less put by and has
+        // children readily; a hard-pressed one has them rarely — but still has them, if there is
+        // any food put by at all, so a bad spell is never the end of a village.
+        int content = Contentment.of(server, village).score();
+        int food = Villages.stock(server, villageCentre, Villages.Task.FOOD, Villages.storesRadius(village));
+        int want = Villages.larderForBirth(village);
+        boolean plenty = food * 5 >= want * (content >= 70 ? 3 : content >= 50 ? 4 : 5);
+        boolean lean = !plenty && food * 5 >= Math.max(20, want * 2);
+        if (!plenty && !lean) return false;
+        if (!Villages.mayBirth(village, level().getGameTime(), lean ? 3 : 1)) return false;
         // Somebody to raise it with, near enough to count as living together,
         // in the same trade-less sense: fed, in work, and not this one. Its
         // partner if it has one about, else the one it is closest to, else (so a
@@ -2762,7 +3054,8 @@ public class VillageFolkEntity extends AssistantEntity {
         // stood together, once every five minutes, one time in three: a
         // settlement fills out over a few in-game days rather than doubling
         // overnight.
-        if (getRandom().nextInt(3) != 0) return false;
+        int odds = lean ? 8 : content >= 70 ? 2 : content >= 50 ? 3 : 4;
+        if (getRandom().nextInt(odds) != 0) return false;
         return raiseChildWith(partner) != null;
     }
 
@@ -3856,6 +4149,9 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         if (showcase) tag.putBoolean("Showcase", true);
         tag.putLong("BornDay", bornDay);
+        if (mentor != null) tag.putUUID("Mentor", mentor);
+        if (apprenticeTo != StationTask.NONE) tag.putString("Apprentice", apprenticeTo.name());
+        tag.putBoolean("FrailTold", frailTold);
         tag.putInt("Purse", purse);
         if (isBaby()) tag.putBoolean("Child", true);
         if (villageCentre != null) tag.putLong("VillageCentre", villageCentre.asLong());
@@ -3893,6 +4189,13 @@ public class VillageFolkEntity extends AssistantEntity {
         if (tag.contains("Persona")) persona.load(tag.getCompound("Persona"));
         this.showcase = tag.getBoolean("Showcase");
         this.bornDay = tag.contains("BornDay") ? tag.getLong("BornDay") : UNKNOWN;
+        this.mentor = tag.hasUUID("Mentor") ? tag.getUUID("Mentor") : null;
+        try {
+            this.apprenticeTo = tag.contains("Apprentice") ? StationTask.valueOf(tag.getString("Apprentice")) : StationTask.NONE;
+        } catch (IllegalArgumentException e) {
+            this.apprenticeTo = StationTask.NONE;
+        }
+        this.frailTold = tag.getBoolean("FrailTold");
         this.purse = tag.getInt("Purse");
         if (tag.getBoolean("Child")) setChild(true);
         if (tag.contains("VillageCentre")) {

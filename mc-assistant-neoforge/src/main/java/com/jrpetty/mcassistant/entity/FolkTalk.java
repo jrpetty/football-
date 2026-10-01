@@ -293,7 +293,23 @@ public final class FolkTalk {
             sb.append(' ').append(pick(r, "I've " + coins + " coins put by.", "I've saved " + coins + " coins, you know.",
                 coins + " coins in my purse, and more by market day."));
         }
+        List<String> want = needs(f);
+        if (!want.isEmpty()) sb.append(' ').append(pick(r, "What I could do with is ", "What I need is ", "If I'm honest I need "))
+            .append(want.get(0)).append('.');
         return sb.toString();
+    }
+
+    /** What a folk needs and hasn't got, most pressing first: food, a bed, sleep, company, a bit of fun. */
+    public static List<String> needs(VillageFolkEntity f) {
+        List<String> out = new ArrayList<>();
+        long day = f.level().getDayTime() / 24000L;
+        Persona me = f.persona();
+        if (f.countFood() == 0) out.add("something to eat");
+        if (f.bedPos() == null && !f.isBaby()) out.add("a bed of my own");
+        if (me.sleptDay < day - 1 && me.since() >= 0 && day > me.since() + 1) out.add("a good night's sleep");
+        if (f.life().friends().isEmpty() && f.life().partner() == null && me.since() >= 0 && day - me.since() > 2) out.add("a friend or two");
+        if (me.hobbyDay() < day - 3 && me.since() >= 0 && day - me.since() > 3) out.add("time for some " + me.hobby().word);
+        return out;
     }
 
     /** A reason for a mood, as the folk would put it. */
@@ -322,6 +338,12 @@ public final class FolkTalk {
             case "dream" -> "And I did it, you know — " + me.ambition().done + ".";
             case "busy" -> "Busy, mind. Always busy.";
             case "feast" -> pick(r, "What a night that was at the heart of the village!", "I'm still full from the feast.");
+            case "grief" -> f.griefFor.isEmpty() ? "We lost somebody dear." : pick(r, "I keep thinking about " + f.griefFor + ".",
+                "It's hard, without " + f.griefFor + ".");
+            case "quarrel" -> "I had words with somebody today. Still cross about it.";
+            case "rested" -> pick(r, "We had our day of rest — I feel like new.", "A day off does a body good.");
+            case "thriving" -> pick(r, "The village is doing so well!", "Have you ever seen a happier place?");
+            case "miserable" -> pick(r, "Everybody's so low round here.", "This village has seen better days.");
             default -> "";
         };
     }
@@ -331,6 +353,10 @@ public final class FolkTalk {
         Persona me = f.persona();
         if (f.isFollowing(p)) return pick(r, "Walking with you, of course!", "Following you. Where are we off to?");
         if (f.isSleeping()) return "Sleeping, until you woke me.";
+        String rest = RestDay.now(f.ownerId(), f.level().getDayTime());
+        if (rest != null && f.stationTask() != AssistantEntity.StationTask.GUARD && !Raids.underAlarm(f.ownerId())) {
+            return pick(r, "It's our day of rest! ", "No work today — ") + "it's " + rest + ".";
+        }
         String alarm = Raids.why(f.ownerId());
         if (alarm != null) {
             if (f.stationTask() == AssistantEntity.StationTask.GUARD) {
@@ -456,6 +482,12 @@ public final class FolkTalk {
         if (f.level() instanceof ServerLevel server) {
             List<Villages.Need> needs = Villages.needs(server, village);
             if (!needs.isEmpty()) sb.append("What we need now is ").append(needs.get(0).what()).append(". ");
+            Contentment.View c = Contentment.of(server, village);
+            if (c.score() >= 60 && !c.good().isEmpty()) {
+                sb.append("We're ").append(c.word()).append(" here — ").append(c.good().get(r.nextInt(c.good().size()))).append(". ");
+            } else if (c.score() < 40 && !c.bad().isEmpty()) {
+                sb.append("Truth is, we're ").append(c.word()).append(": ").append(c.bad().get(0)).append(". ");
+            }
         }
         List<Villages.News> all = Villages.news(village);
         List<Villages.News> fresh = new ArrayList<>();

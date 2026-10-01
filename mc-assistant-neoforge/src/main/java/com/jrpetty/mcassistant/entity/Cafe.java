@@ -258,7 +258,7 @@ public final class Cafe {
             BlockPos at = tops.get(k);
             if (!level.getBlockState(at).is(Blocks.BARREL)) continue;          // not built yet
             ItemStack want = k < goods.size() ? goods.get(k) : ItemStack.EMPTY;
-            if (TownLife.frameOn(level, at.above(), want)) changed++;
+            if (TownLife.frameOn(level, at.above(), want, true)) changed++;
             priceTag(level, village, at, f.door(), want);
         }
         return changed;

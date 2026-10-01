@@ -174,6 +174,18 @@ public final class Social {
             b.affinity = 100;
         }
 
+        /** Its partner died: free to find somebody again one day (the memory stays). */
+        public void widowed() {
+            partner = null;
+            partnerName = "";
+        }
+
+        /** Two whose natures rub: one of them has a trait that is the other's opposite. */
+        public boolean clashesWith(Life other) {
+            for (Trait t : traits) if (other.has(t.opposite())) return true;
+            return false;
+        }
+
         public void setParents(String mother, String father) {
             parents = mother + " and " + father;
         }
@@ -324,6 +336,10 @@ public final class Social {
     public static int warmth(Life a, Life b, boolean sameTrade, boolean offWork, RandomSource r) {
         if (a.has(Trait.GRUMPY) && b.has(Trait.GRUMPY) && r.nextInt(3) == 0) return -4;
         if (a.has(Trait.GRUMPY) && r.nextInt(6) == 0) return -3;
+        // Now and then two natures just rub each other up the wrong way: the tidy and the
+        // easygoing, the chatterbox and the quiet one. Not often — most such pairs get on —
+        // but over the weeks one or two of them in a village fall out properly.
+        if (a.clashesWith(b) && r.nextInt(14) == 0) return -4;
         int gain = 1 + (sameTrade ? 1 : 0) + (offWork ? 1 : 0) + (b.has(Trait.CHEERFUL) ? 1 : 0);
         if (a.has(Trait.SOCIABLE)) gain += 1 + gain / 2;
         if (a.has(Trait.SHY)) gain = Math.max(1, gain * 2 / 3);

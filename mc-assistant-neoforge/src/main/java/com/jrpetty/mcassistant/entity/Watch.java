@@ -98,19 +98,25 @@ public final class Watch {
         return s.isAir() || s.getBlock() instanceof DoorBlock || s.canBeReplaced();
     }
 
-    /** The top of the wall in a column: the highest solid block near the anchor's height, or null. */
+    /** The top of the wall in a column: the highest block of masonry with masonry under it (the
+     *  wall is three high), looked for well above and below the anchor's height, since the wall
+     *  follows the ground. Lanterns, slabs of other stuff, snow and air above it are passed over. */
     @Nullable
     static BlockPos wallTop(ServerLevel level, int x, int z, int aroundY) {
-        for (int y = aroundY + 8; y >= aroundY - 4; y--) {
+        for (int y = aroundY + 12; y >= aroundY - 12; y--) {
             BlockPos p = new BlockPos(x, y, z);
-            BlockState s = level.getBlockState(p);
-            if (s.isAir() || !s.isSolid()) continue;
-            String path = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(s.getBlock()).getPath();
-            boolean masonry = path.contains("stone") || path.contains("cobble") || path.contains("brick")
-                || path.contains("andesite") || path.contains("diorite") || path.contains("granite") || path.contains("deepslate");
-            return masonry ? p : null;
+            if (masonry(level.getBlockState(p)) && masonry(level.getBlockState(p.below()))) return p;
         }
         return null;
+    }
+
+    static boolean masonry(BlockState s) {
+        if (s.isAir() || !s.isSolid()) return false;
+        String path = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(s.getBlock()).getPath();
+        if (path.contains("ore") || path.contains("grass") || path.contains("dirt")) return false;
+        return path.contains("stone") || path.contains("cobble") || path.contains("brick")
+            || path.contains("andesite") || path.contains("diorite") || path.contains("granite") || path.contains("deepslate")
+            || path.contains("tuff") || path.contains("blackstone");
     }
 
     // ------------------------------------------------------------------ the posts

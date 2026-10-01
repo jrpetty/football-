@@ -381,7 +381,9 @@ public final class Market {
         Villages.Village v = Villages.nearest(level, pos, 40);
         if (v == null) return;
         Player p = e.getEntity();
-        p.displayClientMessage(Component.literal(deal(level, v, p, frame.getItem())), true);
+        // A shop's counter sells; only the market's stalls buy what you bring.
+        String said = frame.getTags().contains("mca_counter") ? buy(level, v, p, frame.getItem()) : deal(level, v, p, frame.getItem());
+        p.displayClientMessage(Component.literal(said), true);
     }
 
     /**
@@ -400,6 +402,15 @@ public final class Market {
             if (g == null) return "The village doesn't buy " + hand.getHoverName().getString() + ".";
             return sell(level, v, p, hand, g, md);
         }
+        return buy(level, v, p, shown);
+    }
+
+    /** A player buys a lot of what is on a counter, with coin from their pack. Returns what to tell them. */
+    public static String buy(ServerLevel level, Villages.Village v, Player p, ItemStack shown) {
+        UUID id = v.id();
+        Standing.Title title = Standing.of(id, p.getUUID(), level.getGameTime()).title();
+        if (title == Standing.Title.OUTCAST) return "Nobody here will trade with you.";
+        boolean md = marketDay(id, level.getDayTime() / 24000L);
         if (shown.isEmpty()) return "Nothing on this counter today.";
         Good g = goodFor(shown);
         if (g == null) return "That's not for sale.";
@@ -515,7 +526,7 @@ public final class Market {
         return n;
     }
 
-    private static void payOut(Player p, int n) {
+    static void payOut(Player p, int n) {
         for (int i = 0; i < p.getInventory().getContainerSize() && n > 0; i++) {
             ItemStack s = p.getInventory().getItem(i);
             if (!isCoin(s)) continue;

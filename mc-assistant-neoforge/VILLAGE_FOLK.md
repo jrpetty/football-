@@ -320,6 +320,9 @@ with plain blocks, so a building is never held up.
 | Gateway | 9×5 | The Nether Age's obsidian frame on a stone dais between lantern pillars |
 | Wall | ring of 27 | Round the square: battlements, a gate onto each avenue, lantern pillars, corner towers |
 | Pen | 7×7 | Fence ring with a gate, once there is a rancher |
+| Tavern | 11×11 | Broad timber inn: stone hearth with its fire and chimney, a bar of casks, tables and benches, note blocks, lanterns |
+| Graveyard | 9×9 | Fenced plot with a gate, a path to a stone cross, lanterns on the corner posts, twelve graves |
+| House, grown | 9×9 | The family house with a second storey: a ladder up to two more beds and a chest under the eaves |
 | Café | 9×9 | Bright timber room with big windows on the street, a counter of casks, a smoker behind it, little tables and chairs, flowers by the door |
 | Shop | 9×9 | Timber shopfront with a window either side of the door, a counter of casks with the goods on it, shelves of barrels behind |
 | Smithy | 9×9 | Stone forge open to the street between log pillars: two furnaces under a brick hood, the anvil, a grindstone, a quenching tub, a bench and chests |
@@ -453,16 +456,140 @@ Besides its two traits every folk has:
   it never forgets.
 * **A mood**, worked out from its own life:
   * Up: a night in its own bed, food in its pack, a partner, friends, a present, an
-    evening at its pastime, the village coming of age.
+    evening at its pastime, the village coming of age, a day of rest, a thriving village.
   * Down: hunger, sleeping rough, loneliness, rain (unless it likes rain), work it
-    can't do, being hit, a hungry village.
+    can't do, being hit, a hungry village, grief for somebody lost, a quarrel, a
+    miserable village.
   * A happy folk works a little quicker, and a miserable one slower.
+* **Needs.** Ask how it is and it tells you what it could do with: something to eat,
+  a bed of its own, a good night's sleep, a friend or two, time for its pastime.
 * **Memories** — its children born, the ages it saw the village come into, a friend
   lost, a present from you, the day you hit it.
 * **What it thinks of you** — each player separately.
 
 The village keeps its own **news**: who is together now, who had a child, what went
 up, who died, whose dream came true. Folk pass it on.
+
+### How the village is doing
+
+Every village has a **contentment** score out of a hundred, shown by `/village status`.
+It is made up of:
+
+| Part | Up to | What counts |
+|---|---|---|
+| Food | 25 | The larder against what the village would want put by for a child |
+| Homes | 20 | Folk with a bed of their own; less if there are more folk than homes |
+| Mood | 25 | Its people's moods, on average |
+| Safety | 10 | Less after a death, while the bell rings, or with no wall from the Stone Age |
+| Things to enjoy | 10 | Two each for a well, a market, a café, a tavern and a chapel |
+| Wages | 5 | Paid this morning or yesterday |
+| Rest | 5 | A day of rest kept this week |
+
+What the score does:
+
+| Score | Word | Effect |
+|---|---|---|
+| 80+ | thriving | Folk work 10% faster and raise children readily |
+| 60+ | content | Folk work 5% faster |
+| 40+ | getting by | No change |
+| 25+ | unhappy | Folk work 5% slower and grumble about what is wrong |
+| under 25 | miserable | Folk work 10% slower. After three miserable days, somebody leaves |
+
+Leaving works like this:
+
+* One folk leaves at a time, every other day at most, and never below eight. The one
+  with least to keep it goes: no partner, not the elder, not on the watch, the
+  fewest friends.
+* It goes to the happiest village nearby with room, or off into the world. The
+  village's history records why.
+
+Better tools mean faster work too:
+
+* The right tool sets the pace by its tier, from wood to netherite. Bare hands, or a
+  tool that is no use on the block, are slower than the worst tool.
+* Hard blocks (ore, deepslate, obsidian) take longer than earth and stone.
+* Each level of Efficiency on a tool makes it an eighth quicker.
+* The crafts work quicker with their own building, and slower without it.
+
+**Children** come more easily in good times and less in bad, but never stop while
+there is any food at all:
+
+* A thriving village needs only three fifths of the usual larder put by, and has a
+  child at one chance in two. A content one needs four fifths, at one in three.
+* In lean times (two fifths of the larder) a child still comes, at one chance in
+  eight and at a third of the usual pace.
+* A widow or widower may love and marry again.
+
+**Quarrels.** Most folk get on. Now and then two whose natures rub (the tidy and the
+easygoing, the chatterbox and the quiet one) fall out. Two who can't abide each
+other occasionally have words when they meet off work:
+
+* They face each other, say their piece, and stalk off.
+* Both are cross for the day.
+* Once in a while it clears the air and they make up.
+
+### Growing up, growing old
+
+* **Apprentices.** From its second day a child spends its mornings at a grown-up's
+  side at work, watching and having a go. The teacher is a parent at work, or else the
+  most practised hand at the trade the village needs most. When the child grows up it
+  takes up that trade (unless the village has more than enough hands at it) with a few
+  levels' knack already. The village's history records who taught whom.
+* **Age.**
+  * A child is grown at eighteen, three days after it is born.
+  * Grown folk age two years a day. The founders were grown when the village began.
+  * From sixty folk are old: they walk a little slower and work a little slower.
+  * Each folk lives to between seventy and a hundred.
+  * A few years before the end, the village hears that they are very frail. At the
+    end of their years they die peacefully in their sleep.
+  * Ask a folk about itself and it tells you its age. The register gives everyone's.
+* **The dead.** Everyone who dies is remembered: name, the days they lived, how they
+  died, their parents, their partner and their trade.
+  * Once a village has lost somebody it builds a **graveyard** on the edge of town: a
+    fenced plot with a gate, a path to a stone cross, lanterns on the corner posts and
+    twelve graves.
+  * Each of the dead gets a carved headstone and a mound, with their name and their
+    days on the stone. When it is full the village builds another.
+  * The chapel keeps a **memorial**: boards along the nave, "In loving memory", three
+    names to a board.
+* **The register** (ask a folk "who lives here?") now lists, after the living:
+  * the dead ("In memory");
+  * the **family trees**: every couple who came from outside the village, and under
+    them their children, grandchildren and great-grandchildren, a dash deeper for each
+    generation, with a dagger by those who have died.
+
+### The tavern
+
+Once it has twelve folk, a Stone Age village builds a **tavern**: a broad timber inn
+with a stone hearth and its fire, a bar of casks, tables and benches, note blocks in
+the corner, and lanterns hung low.
+
+* Off-work folk drop in two evenings in five. They stand about the tables and the
+  fire and tell stories, things that really happened, out of the village's history
+  ("Remember when the raiders came at the north gate? That was 3 days back."), and
+  somebody answers.
+* Once there are a few in, the **music** starts: a jig early in the evening, a slow
+  air later, with the bass on the note blocks themselves.
+* **Buy a round.** Right-click the board on the bar ("Buy a round, a coin a head").
+  Everybody in the tavern raises a glass to you and thinks better of you (once an
+  evening), and the village remembers it.
+
+### The day of rest
+
+Once a week, never on market day, a village past its first week and out of the Wood
+Age keeps a **day of rest**. Nobody works but the watch.
+
+* **The morning service.** The bell rings and everybody goes to the chapel, or
+  gathers round the well if there isn't one. The elder gives thanks for the week:
+  the things in the village's history.
+* **Games on the square** (late morning to the afternoon): tag, with the children in
+  it too.
+* **Walking out** (the afternoon): couples walk together, and the unattached walk
+  out with whoever they are sweet on. That is how sweethearts become partners.
+
+Folk feel the better for it the next day.
+
+**Running.** On a long walk, folk who are fed and well break into a run.
 
 ## Life together
 
@@ -831,6 +958,15 @@ Every push to CI:
   (game test `t29`);
 * lays the road between a village and its colony, over a pond, with its signposts,
   and sends a caravan of bread down it and home again (game test `t31`);
+* lives a life (game test `t35`): a child apprenticed to a parent grows up into the
+  trade with a few levels' knack; a folk past its years dies in its sleep and is
+  recorded among the dead; a graveyard gets its headstone with the name on it; the
+  register remembers the dead and the families; and a player buys a round in the
+  tavern for the two in there, a coin a head;
+* checks how a village is doing (game test `t34`): contentment rising when the larder
+  fills, bare hands slower than a wooden pick and wood slower than iron (ore slower
+  than stone), the day of rest's morning service with nobody at work, and a widow
+  free to love again and grieving;
 * raids a walled village at night (game test `t33`): four gates hung, the bell and the
   ladders put up, a raiding party at a gate, every gate shut and the bell ringing, the
   guard up its ladder and holding its post on the wall while the farmer stops work, then
