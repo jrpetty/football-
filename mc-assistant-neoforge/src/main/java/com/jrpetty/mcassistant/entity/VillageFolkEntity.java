@@ -745,6 +745,7 @@ public class VillageFolkEntity extends AssistantEntity {
         shearsFromTheStores();                         // a rancher's shears, for the wool
         stoneToolFromTheStores();                      // no more wooden tools once there is stone
         bucketFromTheStores();                         // a farmer's water, when the village is hungry
+        obsidianFromLava();                            // the gateway's obsidian, made where the lava is
         // The mine's depth too: the next run digs at the new one. Behind the busy check
         // it never ran, and every mine staked in the Wood Age stayed at forty-odd for the
         // rest of the game — copper and coal by the hundred, iron one or two a day.
@@ -1070,8 +1071,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (at.ordinal() < Villages.Age.STONE.ordinal()) return false;
         int floor = level().getMinBuildHeight() + 8;
         int want = Math.max(floor, IRON_SEAM_Y);
-        if (at.ordinal() >= Villages.Age.DIAMOND.ordinal() && pickTierCarried() >= 3
-                && (getUUID().getLeastSignificantBits() & 1L) == 0L) {
+        if (at.ordinal() >= Villages.Age.DIAMOND.ordinal() && pickTierCarried() >= 3 && deepMiner()) {
             want = floor;
         }
         if (zone.depth() <= want + 4) return false;              // there already, or deeper
@@ -1097,7 +1097,11 @@ public class VillageFolkEntity extends AssistantEntity {
         Villages.Age at = Villages.ageOf(ownerId());
         int r = buildStoresRadius();
         net.minecraft.world.item.Item diamond = net.minecraft.world.item.Items.DIAMOND;
-        if (at.ordinal() >= Villages.Age.NETHER.ordinal() && pickTierCarried() < 4) {
+        // One diamond pickaxe in the village, for the one who makes the obsidian — more
+        // only out of diamonds beyond what the age asks for. Three apiece for twenty
+        // miners would be sixty diamonds, and the gateway waits on eighteen.
+        if (at.ordinal() >= Villages.Age.NETHER.ordinal() && pickTierCarried() < 4 && deepMiner()
+                && (!anyoneCarriesADiamondPick() || diamondsToSpare())) {
             int before = countCarried(st -> st.is(diamond));
             int got = before >= 3 ? 0 : drawFrom(villageCentre, st -> st.is(diamond), 3 - before, r);
             if (before + got >= 3) {
@@ -1111,10 +1115,106 @@ public class VillageFolkEntity extends AssistantEntity {
         // Iron pickaxes when the diamonds want them, not before: a stone one breaks iron
         // ore, and an Iron Age village that spent each iron that came in on pickaxes and
         // buckets held none of the hundred and fifty its age asks for.
-        if (at.ordinal() >= Villages.Age.DIAMOND.ordinal() && pickTierCarried() < 3 && ironFromTheStores(3)) {
+        // Only for the miners that go down for the diamonds: the rest work the iron seam,
+        // where stone does.
+        if (at.ordinal() >= Villages.Age.DIAMOND.ordinal() && pickTierCarried() < 3 && deepMiner()
+                && ironFromTheStores(3)) {
             insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_PICKAXE));
             brain("an iron pickaxe made from the stores");
         }
+    }
+
+    /**
+     * Every other miner of the village, counted in a fixed order, goes deep: the first
+     * always does. Odd and even ids did the same for a town of twenty, and left a village
+     * whose two miners both drew odd with nobody looking for diamonds at all.
+     */
+    private boolean deepMiner() {
+        UUID village = ownerId();
+        if (village == null) return false;
+        UUID me = getUUID();
+        int before = 0;
+        for (AssistantEntity mate : Villages.folkOf(village)) {
+            if (mate == this || mate.stationTask() != StationTask.MINE) continue;
+            if (mate.getUUID().compareTo(me) < 0) before++;
+        }
+        return before % 2 == 0;
+    }
+
+    private boolean anyoneCarriesADiamondPick() {
+        for (AssistantEntity mate : Villages.folkOf(ownerId())) {
+            if (mate != this && mate.pickTierCarried() >= 4) return true;
+        }
+        return false;
+    }
+
+    private boolean diamondsToSpare() {
+        UUID village = ownerId();
+        if (village == null || villageCentre == null
+                || !(level() instanceof net.minecraft.server.level.ServerLevel server)) return false;
+        int want = 2 * com.jrpetty.mcassistant.village.VillageMath.diamondsWanted(Villages.headcount(village));
+        return Villages.stock(server, villageCentre, Villages.Task.DIAMOND, Villages.storesRadius(village)) >= want + 3;
+    }
+
+    private int obsidianTick = -100000;
+
+    /**
+     * Obsidian is made, not found. The gateway wants ten, and the only way the village
+     * had of getting them was to come across obsidian already lying in the world, which a
+     * mine at the bottom of the world almost never does — though the lava it walls off
+     * every few blocks down there is everywhere. A miner with the village's diamond
+     * pickaxe and a bucket of water does what a player does: water on a lava pool's
+     * surface, the obsidian broken out one block at a time, and the hole stopped with
+     * cobblestone where there is still lava behind it.
+     */
+    public void obsidianFromLava() {
+        if (stationTask() != StationTask.MINE || villageCentre == null || ownerId() == null) return;
+        if (tickCount - obsidianTick < 200) return;
+        obsidianTick = tickCount;
+        UUID village = ownerId();
+        if (Villages.ageOf(village) != Villages.Age.NETHER || Villages.hasBuilt(village, "gateway")) return;
+        if (pickTierCarried() < 4) return;
+        if (!(level() instanceof net.minecraft.server.level.ServerLevel server)) return;
+        net.minecraft.world.item.Item obsidian = net.minecraft.world.item.Items.OBSIDIAN;
+        int have = Villages.stock(server, villageCentre, Villages.Task.OBSIDIAN, Villages.storesRadius(village))
+            + countCarried(st -> st.is(obsidian));
+        if (have >= com.jrpetty.mcassistant.village.VillageMath.obsidianWanted(Villages.headcount(village))) return;
+        // Only where there is lava to pour on: the bucket is not made for nothing.
+        BlockPos me = blockPosition();
+        BlockPos lava = null;
+        double best = Double.MAX_VALUE;
+        for (BlockPos p : BlockPos.betweenClosed(me.offset(-6, -4, -6), me.offset(6, 2, 6))) {
+            net.minecraft.world.level.material.FluidState f = level().getFluidState(p);
+            if (!f.is(net.minecraft.tags.FluidTags.LAVA) || !f.isSource()) continue;
+            boolean open = false;
+            for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
+                if (level().getBlockState(p.relative(d)).isAir()) { open = true; break; }
+            }
+            if (!open) continue;                    // a pool's surface, not lava inside the rock
+            double dist = p.distSqr(me);
+            if (dist < best) { best = dist; lava = p.immutable(); }
+        }
+        if (lava == null) return;
+        if (countCarried(st -> st.is(net.minecraft.world.item.Items.WATER_BUCKET)) == 0) {
+            if (!ironFromTheStores(3)) return;
+            insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.WATER_BUCKET));
+            brain("a bucket of water from the stores, for the lava");
+        }
+        boolean behind = false;
+        for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
+            if (!level().getFluidState(lava.relative(d)).isEmpty()) { behind = true; break; }
+        }
+        level().setBlockAndUpdate(lava, behind ? Blocks.COBBLESTONE.defaultBlockState() : Blocks.AIR.defaultBlockState());
+        level().playSound(null, lava, net.minecraft.sounds.SoundEvents.LAVA_EXTINGUISH,
+            net.minecraft.sounds.SoundSource.BLOCKS, 0.5F, 2.6F);
+        server.sendParticles(net.minecraft.core.particles.ParticleTypes.LARGE_SMOKE,
+            lava.getX() + 0.5, lava.getY() + 1.0, lava.getZ() + 0.5, 6, 0.3, 0.2, 0.3, 0.0);
+        getLookControl().setLookAt(lava.getX() + 0.5, lava.getY() + 0.5, lava.getZ() + 0.5);
+        equipBestTool(Blocks.OBSIDIAN.defaultBlockState());
+        swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+        damageHeldTool();
+        insertItem(new net.minecraft.world.item.ItemStack(obsidian));
+        brain("water on the lava: obsidian for the gateway (" + (have + 1) + ")");
     }
 
     private int stoneToolTick = -100000;

@@ -76,6 +76,9 @@ public final class Villages {
 
     /** Forget every settlement. For tests, which share one JVM and would
      *  otherwise inherit each other's villages. */
+    /** Tests only: put a village straight into an age. */
+    public static void ageForTests(UUID id, Age age) { AGE.put(id, age); }
+
     public static void resetForTests() {
         ALL.clear();
         AGE.clear();

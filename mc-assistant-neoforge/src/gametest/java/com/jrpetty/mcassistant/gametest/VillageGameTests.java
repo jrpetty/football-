@@ -656,6 +656,40 @@ public class VillageGameTests {
         });
     }
 
+    /** The gateway's obsidian is made where the lava is: a Nether Age miner with a diamond
+     *  pickaxe and a bucket of water turns a lava pool's surface into obsidian and takes it. */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t19_obsidian")
+    public static void t19_obsidian(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 6400, 6400, 32);
+        Kit.prepare(level, 6400, 6400, 32);
+        BlockPos heart = Kit.surface(level, 6400, 6400);
+        VillageFolkEntity miner = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(miner != null, "a miner for the lava");
+        helper.runAtTickTime(20, () -> {
+            Villages.ageForTests(miner.ownerId(), Villages.Age.NETHER);
+            miner.setJob(com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.MINE);
+            miner.insertItem(new ItemStack(Items.DIAMOND_PICKAXE));
+            miner.insertItem(new ItemStack(Items.WATER_BUCKET));
+            // A lava source let into the ground three blocks off, open to the air above.
+            BlockPos top = Kit.surface(level, miner.getBlockX() + 3, miner.getBlockZ());
+            BlockPos lava = top.below();
+            level.setBlock(top, Blocks.AIR.defaultBlockState(), 3);
+            level.setBlock(lava, Blocks.LAVA.defaultBlockState(), 3);
+            int before = miner.countCarried(st -> st.is(Items.OBSIDIAN));
+            miner.obsidianFromLava();
+            int after = miner.countCarried(st -> st.is(Items.OBSIDIAN));
+            boolean gone = level.getFluidState(lava).isEmpty();
+            Kit.log("t19 obsidian " + before + " -> " + after + ", lava there now " + !gone
+                + ", block " + level.getBlockState(lava).getBlock());
+            helper.assertTrue(after == before + 1, "water on the lava gives an obsidian: " + before + " -> " + after);
+            helper.assertTrue(gone, "the lava is gone from where it was");
+            helper.assertTrue(miner.countCarried(st -> st.is(Items.WATER_BUCKET)) == 1, "the water bucket is kept");
+            helper.succeed();
+        });
+    }
+
     // ===================================================== vanilla villagers
 
     /** A villager appears the ordinary way: the join event should catch it. */
