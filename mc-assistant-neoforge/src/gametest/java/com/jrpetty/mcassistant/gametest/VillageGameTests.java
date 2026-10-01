@@ -573,7 +573,7 @@ public class VillageGameTests {
             la.traits().add(com.jrpetty.mcassistant.entity.Social.Trait.GENEROUS);
             lb.traits().clear();
             lb.traits().add(com.jrpetty.mcassistant.entity.Social.Trait.CHEERFUL);
-            lb.traits().add(com.jrpetty.mcassistant.entity.Social.Trait.HARDWORKING);
+            lb.traits().add(com.jrpetty.mcassistant.entity.Social.Trait.SOCIABLE);
             for (int i = 0; i < 20; i++) {
                 a.socialBeat();
                 b.socialBeat();
