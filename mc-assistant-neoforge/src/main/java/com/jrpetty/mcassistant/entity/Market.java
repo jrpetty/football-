@@ -122,6 +122,17 @@ public final class Market {
         good("Glass bottles", Items.GLASS_BOTTLE, 0.15, 8, Villages.Task.NONE),
         good("Cocoa beans", Items.COCOA_BEANS, 0.3, 8, Villages.Task.NONE),
         good("Sugar", Items.SUGAR, 0.1, 16, Villages.Task.NONE),
+        // What the trades need and the village can never make for itself (Trades.kit): a player
+        // who brings it from the Nether, a swamp or a jungle is paid well for it.
+        good("Blaze rod", Items.BLAZE_ROD, 4.0, 1, Villages.Task.NONE),
+        good("Blaze powder", Items.BLAZE_POWDER, 2.0, 2, Villages.Task.NONE),
+        good("Nether wart", Items.NETHER_WART, 0.5, 8, Villages.Task.NONE),
+        good("Soul sand", Items.SOUL_SAND, 0.5, 4, Villages.Task.NONE),
+        good("Slime balls", Items.SLIME_BALL, 1.5, 2, Villages.Task.NONE),
+        good("Leads", Items.LEAD, 2.0, 1, Villages.Task.NONE),
+        good("Flint", Items.FLINT, 0.2, 8, Villages.Task.NONE),
+        good("Sand", Items.SAND, 0.05, 32, Villages.Task.NONE),
+        good("Bones", Items.BONE, 0.1, 16, Villages.Task.NONE),
         // What the crafts make, sold one at a time at the shop and the café.
         good("Iron pickaxe", Items.IRON_PICKAXE, 6.0, 1, Villages.Task.NONE),
         good("Iron sword", Items.IRON_SWORD, 4.0, 1, Villages.Task.NONE),

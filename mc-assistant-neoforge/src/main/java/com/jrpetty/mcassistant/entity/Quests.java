@@ -162,20 +162,35 @@ public final class Quests {
             options.add(bring(item, count, purpose(n.task(), id), day));
             break;
         }
-        // What its trades want.
+        // What its trades are short of (Trades): only what the village really is running low on,
+        // and the hard things above all — the Nether's blaze powder and wart, slime for leads,
+        // cocoa from the jungle.
         String[][] trades = {
-            { "TAILOR", "white_wool", "16", "the tailor's loom" },
-            { "ENCHANT", "lapis_lazuli", "16", "the enchanter's table" },
-            { "BREW", "nether_wart", "8", "the brewery" },
-            { "BEEKEEP", "flowers", "12", "the hives" },
-            { "SMITH", "iron", "24", "the smithy" },
-            { "COOK", "sugar", "16", "the café's cakes" },
+            { "TAILOR", "white_wool", "16", "the tailor's loom", "8" },
+            { "ENCHANT", "lapis_lazuli", "16", "the enchanter's table", "6" },
+            { "ENCHANT", "sugar_cane", "12", "the enchanter's paper", "3" },
+            { "ENCHANT", "leather", "4", "the enchanter's books", "1" },
+            { "BREW", "nether_wart", "8", "the brewery", "2" },
+            { "BREW", "blaze_powder", "4", "the brewing stand's fire", "2" },
+            { "BREW", "melon_slice", "6", "the watch's healing potions", "1" },
+            { "BEEKEEP", "flowers", "12", "the hives", "4" },
+            { "SMITH", "iron", "24", "the smithy", "8" },
+            { "SMITH", "feather", "16", "the watch's arrows", "4" },
+            { "RANCH", "lead", "2", "bringing wild animals home to the pen", "1" },
+            { "COOK", "sugar", "16", "the café's cakes", "2" },
+            { "COOK", "cocoa_beans", "8", "the café's cookies and cocoa", "1" },
+            { "FISH", "string", "6", "the fishers' rods", "2" },
         };
         for (String[] t : trades) {
             if (already.contains("bring:" + t[1])) continue;
             boolean has = false;
             for (AssistantEntity a : Villages.folkOf(id)) if (a.stationTask().name().equals(t[0])) { has = true; break; }
-            if (has) options.add(bring(t[1], Integer.parseInt(t[2]), t[3], day));
+            if (!has) continue;
+            java.util.function.Predicate<ItemStack> what = t[1].equals("sugar")
+                ? x -> x.is(Items.SUGAR) || x.is(Items.SUGAR_CANE) : Errands.matcher(t[1]);
+            int have = Market.stock(level, id, what);
+            for (AssistantEntity a : Villages.folkOf(id)) have += a.countCarried(what);
+            if (have < Integer.parseInt(t[4])) options.add(bring(t[1], Integer.parseInt(t[2]), t[3], day));
         }
         // Monsters near where the village works.
         Posting hunt = hunt(level, v, day, already);

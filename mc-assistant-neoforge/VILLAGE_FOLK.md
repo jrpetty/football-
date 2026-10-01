@@ -349,6 +349,13 @@ Everything after that the village makes for itself:
 * **Guards.** When the bell rings, each guard takes a healing potion from the
   stores along with its bow and arrows, and drinks it if badly hurt.
 
+**Where you come in.** What the village can never make for itself, it will buy:
+blaze rods and powder, nether wart and soul sand, slime balls and leads, flint, sand
+and bones are all on the stalls' buying list. The quest board asks for what a trade is
+actually running short of: blaze powder for the brewing stand's fire, lapis or cane for
+the enchanter, feathers for the watch's arrows, a lead for the rancher, cocoa for the
+café, and so on.
+
 Ask any folk **"How does your trade work?"** to hear its own account of its work:
 its tools, what it uses, where its work goes, and what it is short of. **"What is
 the village short of?"** gives the next age's wants and every trade's empty
