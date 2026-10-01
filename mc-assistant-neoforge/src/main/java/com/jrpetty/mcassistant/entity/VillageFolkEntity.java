@@ -242,8 +242,10 @@ public class VillageFolkEntity extends AssistantEntity {
     public void aiStep() {
         super.aiStep();
         if (level().isClientSide) return;
+        if (showcase) return;
         if (tickCount - agendaTick < 100) return;   // folk think slowly, on purpose
         agendaTick = tickCount;
+        flyTheColours();
         if (!life.rolled()) life.roll(getRandom(), null, null);
         keepTrail();
         agenda();
@@ -261,11 +263,42 @@ public class VillageFolkEntity extends AssistantEntity {
         net.minecraft.network.syncher.SynchedEntityData.defineId(
             VillageFolkEntity.class, net.minecraft.network.syncher.EntityDataSerializers.STRING);
 
+    /** Which of the village colours its watch wears; -1 for a folk of no village. */
+    private static final net.minecraft.network.syncher.EntityDataAccessor<Integer> DATA_BANNER =
+        net.minecraft.network.syncher.SynchedEntityData.defineId(
+            VillageFolkEntity.class, net.minecraft.network.syncher.EntityDataSerializers.INT);
+
     @Override
     protected void defineSynchedData(net.minecraft.network.syncher.SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
         builder.define(DATA_SOCIAL, "");
+        builder.define(DATA_BANNER, -1);
     }
+
+    /** The village's colours, for the client: a guard's tabard and shield are dyed in them. */
+    public int clientBanner() { return this.entityData.get(DATA_BANNER); }
+
+    private void flyTheColours() {
+        UUID village = ownerId();
+        int banner = village == null ? -1 : Math.floorMod(village.hashCode(), 64);
+        if (this.entityData.get(DATA_BANNER) != banner) this.entityData.set(DATA_BANNER, banner);
+    }
+
+    /**
+     * A folk stood up to be looked at (/village lineup): it belongs to no village,
+     * works no ground and goes nowhere — it only wears its trade's clothes and holds
+     * its trade's tool.
+     */
+    private boolean showcase;
+
+    public void makeShowcase(StationTask trade) {
+        this.showcase = true;
+        setNoAi(true);
+        setInvulnerable(true);
+        setJob(trade);
+    }
+
+    public boolean isShowcase() { return showcase; }
 
     /** This folk's personality, friends, partner and family. */
     public Social.Life life() { return life; }
@@ -2439,6 +2472,7 @@ public class VillageFolkEntity extends AssistantEntity {
         CompoundTag social = new CompoundTag();
         life.save(social);
         tag.put("Social", social);
+        if (showcase) tag.putBoolean("Showcase", true);
         if (villageCentre != null) tag.putLong("VillageCentre", villageCentre.asLong());
         UUID village = ownerId();
         if (village != null) {
@@ -2463,6 +2497,7 @@ public class VillageFolkEntity extends AssistantEntity {
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
         if (tag.contains("Social")) life.load(tag.getCompound("Social"));
+        this.showcase = tag.getBoolean("Showcase");
         if (tag.contains("VillageCentre")) {
             this.villageCentre = BlockPos.of(tag.getLong("VillageCentre"));
             // The register lives in memory only; the first folk to load puts

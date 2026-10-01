@@ -22,6 +22,7 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  *   /village spawn            one settler where you stand
  *   /village spawn 12         twelve — a full starting village
  *   /village status           who lives here, what age, what they are short of
+ *   /village lineup           one folk of every trade, dressed, to look at (ops)
  * </pre>
  */
 public final class VillageCommands {
@@ -49,7 +50,67 @@ public final class VillageCommands {
             .then(Commands.literal("list").executes(VillageCommands::list))
             .then(Commands.literal("anchors").requires(src -> src.hasPermission(2))
                 .executes(VillageCommands::anchors))
-            .then(Commands.literal("status").executes(VillageCommands::status)));
+            .then(Commands.literal("status").executes(VillageCommands::status))
+            // One folk of every trade, in its clothes and with its tool, stood in a
+            // row to be looked at. Clear them with /kill @e[tag=folk_lineup].
+            .then(Commands.literal("lineup").requires(src -> src.hasPermission(2))
+                .executes(VillageCommands::lineup)));
+    }
+
+    private static int lineup(CommandContext<CommandSourceStack> ctx) {
+        net.minecraft.server.level.ServerLevel level = ctx.getSource().getLevel();
+        net.minecraft.world.phys.Vec3 at = ctx.getSource().getPosition();
+        float yaw = ctx.getSource().getRotation().y;
+        // Four blocks ahead of whoever asked, across their line of sight, facing them.
+        double fx = -Math.sin(Math.toRadians(yaw)), fz = Math.cos(Math.toRadians(yaw));
+        double sx = -fz, sz = fx;
+        AssistantEntity.StationTask[] trades = AssistantEntity.StationTask.values();
+        int stood = 0;
+        for (int i = 0; i < trades.length; i++) {
+            double off = (i - (trades.length - 1) / 2.0) * 1.6;
+            double x = at.x + fx * 4.0 + sx * off;
+            double z = at.z + fz * 4.0 + sz * off;
+            net.minecraft.core.BlockPos ground = groundAt(level, (int) Math.floor(x), (int) Math.floor(z));
+            VillageFolkEntity folk = McAssistantMod.VILLAGE_FOLK.get().create(level);
+            if (folk == null) continue;
+            float face = yaw + 180.0F;
+            folk.moveTo(x, ground.getY(), z, face, 0.0F);
+            folk.setYHeadRot(face);
+            folk.setYBodyRot(face);
+            folk.makeShowcase(trades[i]);
+            folk.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new net.minecraft.world.item.ItemStack(
+                switch (trades[i]) {
+                    case FARM -> net.minecraft.world.item.Items.IRON_HOE;
+                    case WOOD -> net.minecraft.world.item.Items.IRON_AXE;
+                    case MINE -> net.minecraft.world.item.Items.IRON_PICKAXE;
+                    case RANCH -> net.minecraft.world.item.Items.SHEARS;
+                    case GUARD -> net.minecraft.world.item.Items.IRON_SWORD;
+                    case SMELT -> net.minecraft.world.item.Items.IRON_INGOT;
+                    case FISH -> net.minecraft.world.item.Items.FISHING_ROD;
+                    case STORE -> net.minecraft.world.item.Items.BOOK;
+                    case HAUL -> net.minecraft.world.item.Items.CHEST;
+                    case NONE -> net.minecraft.world.item.Items.AIR;
+                }));
+            folk.setCustomName(Component.literal(switch (trades[i]) {
+                case FARM -> "Farmer";
+                case WOOD -> "Lumberjack";
+                case MINE -> "Miner";
+                case RANCH -> "Rancher";
+                case GUARD -> "Guard";
+                case SMELT -> "Smelter";
+                case FISH -> "Fisher";
+                case STORE -> "Storekeeper";
+                case HAUL -> "Hauler";
+                case NONE -> "Newcomer";
+            }));
+            folk.setCustomNameVisible(true);
+            folk.addTag("folk_lineup");
+            if (level.addFreshEntity(folk)) stood++;
+        }
+        final int n = stood;
+        ctx.getSource().sendSuccess(() -> Component.literal(
+            "Stood " + n + " folk up, one of every trade. /kill @e[tag=folk_lineup] clears them."), false);
+        return n;
     }
 
     /** The free ground-level spot a couple of blocks ahead of this position. */

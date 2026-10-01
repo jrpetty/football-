@@ -36,8 +36,13 @@ public final class ClientSetup {
     @SubscribeEvent
     public static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(McAssistantMod.ASSISTANT.get(), AssistantRenderer::new);
-        // Folk are villagers, not uniformed staff — see VillagerFolkRenderer.
-        event.registerEntityRenderer(McAssistantMod.VILLAGE_FOLK.get(), VillagerFolkRenderer::new);
+        // Folk wear the clothes of their trade — see FolkRenderer and FolkModel.
+        event.registerEntityRenderer(McAssistantMod.VILLAGE_FOLK.get(), FolkRenderer::new);
+    }
+
+    @SubscribeEvent
+    public static void onRegisterLayers(EntityRenderersEvent.RegisterLayerDefinitions event) {
+        event.registerLayerDefinition(FolkModel.LAYER, FolkModel::createBodyLayer);
     }
 
     @SubscribeEvent

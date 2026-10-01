@@ -104,6 +104,40 @@ Builders pick the flattest nearby lot that costs least, level it (filling the lo
 side, felling any tree in the way and keeping the wood), and build from what they
 actually carry: stone before planks, planks before logs.
 
+## How they look
+
+A folk has a villager's head and nose on a body that can hold things: real arms
+that swing as it walks, carry its tool in its hand and swing that tool when it
+works. Who it is and what it does are two different things, and both show:
+
+* **Who it is** — one of ten faces, chosen by its id so it always looks the same:
+  six skin tones, seven hair colours, short, long, cropped or balding hair, blue,
+  green, brown or grey eyes, and a beard on some.
+* **What it does** — every trade has its own clothes and kit:
+
+| Trade | What it wears |
+|---|---|
+| Newcomer | An undyed wool tunic to the shins, a rope belt, a hood in its own colour |
+| Farmer | Denim overalls over a checked shirt, a neckerchief, a broad straw hat with a red band, a seed pouch |
+| Lumberjack | Flannel in its own colour, braces, canvas trousers, a knitted cap with a bobble, a beard, the day's logs on a frame on its back |
+| Miner | A dusty jacket and leather harness, a tool belt, gloves, knee pads and steel toes, a hard hat with a lamp, a lantern on its belt — both glow in the dark |
+| Rancher | A leather waistcoat over a shirt in its own colour, chaps, a wool shawl, a wide hat with its brim turned up, a coil of rope |
+| Guard | A quilted gambeson under a tabard in **its village's colours** with the village's gold bell, a kettle hat, a shield in the same colours on its back, a scabbard |
+| Smelter | Short sleeves, heavy gauntlets, a scorched leather apron with tongs in its pocket, goggles pushed up on its forehead |
+| Fisher | A yellow oilskin coat and sou'wester with a long back brim, tall rubber boots, a wicker creel on its back |
+| Storekeeper | A white shirt with sleeve garters, a waistcoat in its own colour with a watch chain, pinstripes, spectacles, a derby, a ledger at its belt and a quill behind its ear |
+| Hauler | A canvas jacket with four pockets, a scarf in its own colour, puttees, a tweed flat cap, and a big pack with a bedroll and a pan; it leans into the load as it walks |
+
+A guard that has been given armour wears it, and its helmet goes on instead of
+its hat. Every village has its own colours, so you can tell whose watch you are
+looking at. The trade's tool still floats over a folk's head from far enough off
+that its clothes cannot be read, and a barrier floats over one that has stopped
+because it is missing something.
+
+`/village lineup` (operators) stands one folk of every trade in a row in front
+of you, dressed and holding its tool. `/kill @e[tag=folk_lineup]` clears them.
+The pictures and the shape are made by `tools/folk_art.py`, which writes both.
+
 ## People, not workers
 
 Every folk is somebody. Each is born with two traits, and they change how it lives:
@@ -212,6 +246,8 @@ only its owner (nobody, for folk) can rearrange the pack.
   been built, what the village is short of. Works from the console.
 * `/village people` — who everybody is: trade, temperament, partner, friends,
   rivals and family, under a line on the village's couples and friendships.
+* `/village lineup` — (operators) one folk of every trade, dressed and holding
+  its tool, stood in a row in front of you to be looked at.
 * `/village folk` — one line per folk: trade, ground, status, job, what is
   missing, what it carries (`pack=`), what it last tried at the essentials
   gate (`gate=`), and a trail of the jobs it has run.

@@ -118,6 +118,37 @@ def main():
     r.cmd("execute positioned %d %d %d run tp %s ~14 ~3 ~ facing ~ ~1 ~" % (cx, py, cz, USER))
     time.sleep(8)
     shot("4-other-side")
+
+    # The lineup: one folk of every trade in its clothes, holding its tool, stood
+    # in a row on open ground — from the front, close up three at a time, from
+    # behind (the packs, the shield, the logs, the creel), and the miner's lamp
+    # at night.
+    say("lineup ground: " + r.cmd("spreadplayers %d %d 0 1 false %s" % (cx + 40, cz, USER)))
+    time.sleep(10)
+    r.cmd("execute as %s at @s run tp @s ~ ~ ~ 0 0" % USER)
+    time.sleep(1)
+    say("lineup: " + r.cmd("execute as %s at @s run village lineup" % USER))
+    say("lineup folk: " + r.cmd("execute if entity @e[tag=folk_lineup]"))
+    lp = position(r)
+    if lp:
+        px, py, pz = lp
+        line = pz + 4.0
+
+        def look(label, x, y, z, fx, fy, fz, wait=6):
+            r.cmd("tp %s %.2f %.2f %.2f facing %.2f %.2f %.2f" % (USER, x, y, z, fx, fy, fz))
+            time.sleep(wait)
+            shot(label)
+
+        look("5-lineup", px, py + 1.2, line - 10.5, px, py + 1.0, line, wait=8)
+        look("6-lineup-left", px + 5.6, py + 0.2, line - 3.6, px + 5.6, py + 1.2, line)
+        look("7-lineup-middle", px, py + 0.2, line - 3.6, px, py + 1.2, line)
+        look("8-lineup-right", px - 5.6, py + 0.2, line - 3.6, px - 5.6, py + 1.2, line)
+        look("9-lineup-back", px, py + 1.0, line + 6.0, px, py + 1.0, line)
+        r.cmd("time set 18000")
+        miner = px + (4.5 - 3) * 1.6          # the fourth in the row is the miner
+        look("10-lamp-at-night", miner, py + 0.4, line - 3.0, miner, py + 1.4, line, wait=8)
+        r.cmd("time set 6000")
+        say("alive after the lineup: %s" % client_alive())
     alive = client_alive()
     say("alive at the end: %s" % alive)
     say("PASS the client drew the village and kept running" if alive else "FAIL the client died while drawing the village")
