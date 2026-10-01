@@ -906,10 +906,20 @@ public final class Villages {
         return stock(level, v.centre(), Task.FOOD, storesRadius(villageId)) >= larderForBirth(villageId);
     }
 
+    /** Every village's folk, together: what the whole world holds. */
+    public static int worldHeadcount() {
+        int n = 0;
+        for (Village v : every()) n += headcount(v.id());
+        return n;
+    }
+
     /** Whether the village is growing and, if not, what it is waiting for. */
     public static String growthNote(net.minecraft.server.level.ServerLevel level, UUID villageId) {
         int folk = headcount(villageId);
         if (folk >= com.jrpetty.mcassistant.AssistantConfig.villageGrowthCap()) return "no — at the cap";
+        if (worldHeadcount() >= com.jrpetty.mcassistant.AssistantConfig.villageWorldCap()) {
+            return "no — the world holds as many folk as it may (villageWorldCap)";
+        }
         if (folk >= housing(villageId)) return "no — every home is full, a house comes first";
         Village v = get(villageId);
         if (v == null) return "no";

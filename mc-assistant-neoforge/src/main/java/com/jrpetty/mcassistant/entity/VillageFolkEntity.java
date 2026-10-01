@@ -1560,6 +1560,10 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         // Nobody is born without somewhere to live: see Villages.housing.
         if (Villages.headcount(village) >= Villages.housing(village)) return false;
+        // Nor past what the whole world may hold. Colonies stopped at the world's cap but
+        // went on raising children: a long game held three hundred folk in six villages
+        // by its thirtieth day, at twenty milliseconds a tick.
+        if (Villages.worldHeadcount() >= com.jrpetty.mcassistant.AssistantConfig.villageWorldCap()) return false;
         if (!Villages.mayBirth(village, level().getGameTime())) return false;
         // Nor without a day's food put by: see Villages.larderForBirth.
         if (!Villages.larderFull(server, village)) return false;

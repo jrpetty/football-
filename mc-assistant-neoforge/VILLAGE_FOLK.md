@@ -217,7 +217,7 @@ only its owner (nobody, for folk) can rearrange the pack.
 `naturalVillages`, `villageSpacing`, `villageMinFolk`, `villageMaxFolk`,
 `villageBreeding`, `villageGrowthCap`, `villageLoadedChunks`, `replaceVillagers`,
 `protectTradedVillagers`, `villageColonies` (on), `villageColonyAt` (40),
-`villageWorldCap` (240).
+`villageWorldCap` (200).
 
 ## How this is tested
 
