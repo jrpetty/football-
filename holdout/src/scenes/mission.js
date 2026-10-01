@@ -90,10 +90,10 @@ function cutaway(base, U) {
     if (k >= uCutN) break;
     vec4 R = uCutR[k];
     vec2 d = cwp.xz - R.xy;
-    if (abs(d.x) > R.z + 0.8 || abs(d.y) > R.w + 0.8) continue;
+    if (abs(d.x) > R.z + 1.3 || abs(d.y) > R.w + 1.3) continue;
     vec2 n = vec2(0.0);
-    if (abs(abs(d.x) - R.z) < 0.8) n.x = sign(d.x);
-    if (abs(abs(d.y) - R.w) < 0.8) n.y = sign(d.y);
+    if (abs(abs(d.x) - R.z) < 1.3) n.x = sign(d.x);
+    if (abs(abs(d.y) - R.w) < 1.3) n.y = sign(d.y);
     float f = max(n.x * uCutDir.x, n.y * uCutDir.y);
     cut = max(cut, smoothstep(0.12, 0.35, f));
   }
@@ -248,7 +248,8 @@ export class Mission {
       [lv.zFront, lv.zRoad0],
       [lv.zRoad1, lv.zFar],
     ]) {
-      b.box(len, 0.18, z1 - z0, { mat: 'pavers', color: '#b8b2a6', x: xm, y: 0.06, z: (z0 + z1) / 2, ao: 0, shadow: false })
+      b.box(len, 0.18, z1 - z0, { mat: 'concrete', color: '#b4b0a8', x: xm, y: 0.06, z: (z0 + z1) / 2, ao: 0, shadow: false })
+      for (let x = X0; x < X1; x += 1.6) b.box(0.03, 0.01, z1 - z0 - 0.3, { mat: 'plain', color: '#7a766e', x, y: 0.152, z: (z0 + z1) / 2, ao: 0, shadow: false })
       const curb = z0 === lv.zFront ? z1 : z0
       b.box(len, 0.2, 0.22, { mat: 'concrete', color: '#c8c4bc', x: xm, y: 0.05, z: curb, ao: 0 })
     }
@@ -462,7 +463,14 @@ export class Mission {
     const b = new Builder()
     for (const p of lv.pave) {
       b.box(p.x1 - p.x0, 0.06, p.z1 - p.z0, { mat: p.mat === 'gravel' ? 'gravel' : p.mat, color: p.c, x: (p.x0 + p.x1) / 2, y: 0, z: (p.z0 + p.z1) / 2, shadow: false, ao: 0 })
-      if (p.stalls) for (let x = p.x0 + 2; x < p.x1 - 1; x += 2.7) b.box(0.12, 0.01, 4.6, { mat: 'plain', color: '#e8e4d8', x, y: 0.034, z: p.z1 - 4, shadow: false, ao: 0 })
+      // worn paint: each stall line is a few broken dashes
+      if (p.stalls)
+        for (let x = p.x0 + 2; x < p.x1 - 1; x += 2.7)
+          for (let z = p.z1 - 6.3; z < p.z1 - 1.7; ) {
+            const len = Math.min(p.z1 - 1.7 - z, 0.5 + Math.random() * 1.6)
+            b.box(0.11, 0.01, len, { mat: 'concrete', color: '#a6a296', x, y: 0.034, z: z + len / 2, shadow: false, ao: 0 })
+            z += len + Math.random() * 0.35
+          }
     }
     // fences around our lot and the neighbours'
     const fence = (ax, az, bx, bz, kind) => {
@@ -640,7 +648,7 @@ export class Mission {
     if (this.loadout.van === false) {
       this.vanGroup = null
     } else {
-      const g = vanModel({ color: '#5a6a5a' })
+      const g = vanModel({})
       g.position.set(lv.van.x, 0, lv.van.z)
       g.rotation.y = lv.van.rot
       g.traverse((o) => {
@@ -1573,7 +1581,7 @@ export class Mission {
       (this.pauseEl = h('div.pausebanner', { hidden: true }, 'PAUSED · Space to resume')),
     )
     document.getElementById('hud').appendChild(this.root)
-    setTimeout(() => this.helpEl?.remove(), 26000)
+    setTimeout(() => this.helpEl?.remove(), 16000)
     this.aimRing = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: ringTex(), color: new THREE.Color('#ff9a40').multiplyScalar(1.6), transparent: true, depthWrite: false }))
     this.aimRing.rotation.x = -Math.PI / 2
     this.aimRing.visible = false
