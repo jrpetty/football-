@@ -63,8 +63,9 @@ public final class Waterfront {
             if (f.stationTask() == AssistantEntity.StationTask.FISH) {
                 Dock d = dockFor(level, id, f);
                 if (d != null) moor(level, d);
-            } else if (f.stationTask() == AssistantEntity.StationTask.FARM
-                    && Villages.ageOf(id).ordinal() >= Villages.Age.STONE.ordinal()) {
+            } else if (f.stationTask() == AssistantEntity.StationTask.FARM) {
+                // From the first day: a field put on dry ground (no water near the village)
+                // gets its channels at once, not an age later.
                 irrigate(level, id, c, f.workZone().radius(), 12);
             }
         }

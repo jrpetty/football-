@@ -155,11 +155,16 @@ public final class Raids {
         // the change, so a folk who opens a door to go through isn't fought by the watch.
         boolean shut = (t >= 13000L && t < 23000L) || a != null;
         if (Watch.isShut(id) != shut) Watch.shut(level, id, shut);
-        // Trouble?
+        // Trouble? Monsters only ring the bell inside a wall: a village without one has no
+        // bell to ring and nowhere to shut itself in, and its folk are indoors at night anyway.
+        // Rung for monsters about an open village, the bell rang the first night in every
+        // new village, and in one it never stopped: a creeper and a skeleton in the shade kept
+        // the whole village indoors for three days, with nobody working at all.
         int inside = threatsInside(level, v);
+        boolean walled = Watch.wall(id) != null;
         Raid vanilla = level.getRaidAt(v.centre());
         boolean bigRaid = vanilla != null && vanilla.isActive();
-        if (a == null && (inside >= TOO_MANY || bigRaid)) {
+        if (a == null && ((walled && inside >= TOO_MANY) || bigRaid)) {
             a = raise(level, v, bigRaid ? "a raid" : "monsters inside the wall", null);
         }
         if (a == null && raidTonight(level, v, day, t)) a = band(level, v, day);
@@ -177,18 +182,26 @@ public final class Raids {
             withdraw(level, a);
             left = 0;
         }
-        boolean quiet = inside == 0 && left == 0 && !bigRaid;
+        // Over when the band is gone and the monsters with it — or, by day, when there are only
+        // a stray one or two left (the watch deals with those on its rounds, and the day's work
+        // does not wait on a creeper in the shade), or when the bell has rung for five minutes
+        // of daylight without a band to fight.
+        boolean day = t >= 0L && t < 12500L;
+        boolean quiet = left == 0 && !bigRaid
+            && (inside == 0 || (day && inside < TOO_MANY) || (day && !a.raid && now - a.since > 6000L));
         if (!quiet) { a.quietSince = -1L; return; }
         if (a.quietSince < 0) a.quietSince = now;
         else if (now - a.quietSince >= 200L) end(level, v, a);
     }
 
-    /** Hostile things inside the wall (or near the heart of a village without one). */
+    /** Hostile things inside the wall (or near the heart of a village without one), up where the
+     *  folk are: one in a cave under the town is no danger to anybody, and can't be got at. */
     static int threatsInside(ServerLevel level, Villages.Village v) {
         int r = Watch.R + 2;
         BlockPos c = v.centre();
         AABB box = new AABB(c.getX() - r, c.getY() - 12, c.getZ() - r, c.getX() + r + 1, c.getY() + 16, c.getZ() + r + 1);
-        return level.getEntitiesOfClass(Mob.class, box, m -> m.isAlive() && hostile(m)).size();
+        return level.getEntitiesOfClass(Mob.class, box, m -> m.isAlive() && hostile(m)
+            && (m.getY() >= c.getY() - 4 || level.canSeeSky(m.blockPosition()))).size();
     }
 
     static boolean hostile(Entity e) {

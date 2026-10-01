@@ -2641,6 +2641,56 @@ public class VillageGameTests {
         helper.succeed();
     }
 
+    /**
+     * A farmer puts its field by the water nearest the village: a pond just past the town's
+     * edge one way, another twice as far the other, and the field goes on the near one's bank.
+     * And monsters about a village with no wall don't ring the bell (it rang the first night
+     * in every new village, and in one never stopped: nobody worked for three days).
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t42_fields")
+    public static void t42_fields(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(1000);
+        Kit.hold(level, 26000, 12000, 120);
+        Kit.prepare(level, 26000, 12000, 120);
+        BlockPos heart = Kit.surface(level, 26000, 12000);
+        VillageFolkEntity farmer = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(farmer != null, "a village");
+        java.util.UUID village = farmer.ownerId();
+        int reach = Villages.townReach(village);
+        int nearX = heart.getX() + reach + 12, farZ = heart.getZ() - (reach + 45);
+        Kit.pond(level, nearX, heart.getZ(), 3);
+        Kit.pond(level, heart.getX(), farZ, 3);
+        BlockPos site = farmer.fieldSiteForTests();
+        int fromPond = site == null ? -1 : Math.max(Math.abs(site.getX() - nearX), Math.abs(site.getZ() - heart.getZ()));
+        int fromHeart = site == null ? -1 : Math.max(Math.abs(site.getX() - heart.getX()), Math.abs(site.getZ() - heart.getZ()));
+        Kit.log("t42 the town reaches " + reach + "; ponds at " + (reach + 12) + " east and " + (reach + 45)
+            + " north; the field goes at " + site + ", " + fromPond + " from the near pond, " + fromHeart + " from the heart");
+        helper.assertTrue(site != null && fromPond <= 9, "the field goes on the bank of the nearest water");
+        // Monsters about a village with no wall, at night: no bell.
+        level.setDayTime(14000);
+        for (int i = 0; i < 5; i++) {
+            net.minecraft.world.entity.monster.Zombie z = EntityType.ZOMBIE.create(level);
+            z.moveTo(heart.getX() + 3.5 + i, heart.getY(), heart.getZ() + 3.5, 0.0F, 0.0F);
+            z.setPersistenceRequired();
+            level.addFreshEntity(z);
+        }
+        final long from = helper.getTick();
+        helper.onEachTick(() -> {
+            if (helper.getTick() - from < 40) return;
+            int near = level.getEntitiesOfClass(net.minecraft.world.entity.monster.Zombie.class, new AABB(heart).inflate(12)).size();
+            Villages.Village v = Villages.get(village);
+            com.jrpetty.mcassistant.entity.Raids.tick(level, v);
+            boolean bell = com.jrpetty.mcassistant.entity.Raids.underAlarm(village);
+            Kit.log("t42 " + near + " zombies about the open village; the bell " + (bell ? "rings" : "is quiet"));
+            for (net.minecraft.world.entity.monster.Zombie z : level.getEntitiesOfClass(net.minecraft.world.entity.monster.Zombie.class,
+                    new AABB(heart).inflate(16))) z.discard();
+            helper.assertTrue(near >= 4 && !bell, "monsters about a village with no wall don't ring a bell it hasn't got");
+            helper.succeed();
+        });
+    }
+
     /** The rest of t35, once the child is grown: old age, the grave, the register, the tavern. */
     private static void rest(GameTestHelper helper, ServerLevel level, java.util.UUID village, Villages.Village v, BlockPos heart,
                              VillageFolkEntity mum, VillageFolkEntity dad, VillageFolkEntity child) {

@@ -180,7 +180,12 @@ public final class FolkTalk {
     /** Words said out loud: a bubble over the folk's head for whoever is near. */
     public static void speak(VillageFolkEntity f, String text) {
         if (text == null || text.isBlank() || !(f.level() instanceof ServerLevel)) return;
-        if (f.level().getNearestPlayer(f, 24.0) == null) return;        // nobody to hear it
+        // Nobody to hear it (a player watching in spectator mode hears it too).
+        boolean heard = false;
+        for (net.minecraft.world.entity.player.Player p : f.level().players()) {
+            if (p.distanceToSqr(f) < 24.0 * 24.0) { heard = true; break; }
+        }
+        if (!heard) return;
         String said = text.length() > 170 ? text.substring(0, 167) + "…" : text;
         int ticks = Math.min(200, 60 + said.length() * 2);
         PacketDistributor.sendToPlayersTrackingEntity(f, new FolkSpeechPayload(f.getId(), said, ticks));

@@ -2576,7 +2576,17 @@ public class VillageFolkEntity extends AssistantEntity {
             // from how far a plot can end up, and neither can be reasoned
             // about while the woodcutter quietly reaches a third further than
             // everybody else.
-            case FARM -> scan(from, SCAN, 6, radius, p -> clear.test(p) && farmable(p));
+            // A field goes by the nearest water to the village (just outside the town's own
+            // ground), whichever way it lies: farmers used to look on their own bearing, fifty
+            // blocks out and a scan beyond that, and walked seventy or eighty blocks to a pond
+            // while there was a river by the town. No water anywhere near: the nearest good
+            // soil, and the channel the field needs is cut to it.
+            case FARM -> {
+                BlockPos wet = nearestWaterField(heart, outdoor && town != null ? Villages.townReach(town) + radius + 2 : 8,
+                    radius, clear);
+                if (wet == null) wet = scan(from, SCAN, 6, radius, p -> clear.test(p) && farmable(p));
+                yield wet != null ? wet : scan(from, SCAN, 6, radius, p -> clear.test(p) && soilField(p));
+            }
             case WOOD -> scan(from, SCAN, 6, radius, p -> clear.test(p) && woodland(p));
             case MINE -> scan(from, SCAN, 6, radius, p -> clear.test(p) && diggable(p));
             // A pen goes where the animals already are and a jetty goes on
@@ -2675,6 +2685,59 @@ public class VillageFolkEntity extends AssistantEntity {
             if (mate == this) continue;
             WorkZone theirs = mate.workZone();
             if (theirs != null && mine.overlaps(theirs)) return true;
+        }
+        return false;
+    }
+
+    /**
+     * The field nearest the village with water beside it: rings out from the heart (from the
+     * edge of the town, where fields begin), a block or three at a time, looking at the top
+     * of each column for water, and putting the field on the bank beside the first water
+     * whose bank has room for a field nobody else is working.
+     */
+    @Nullable
+    private BlockPos nearestWaterField(BlockPos heart, int from, int plotRadius,
+                                       java.util.function.Predicate<BlockPos> clear) {
+        neighbours = Villages.folkOf(ownerId());
+        try {
+            for (int r = Math.max(4, from); r <= from + SCAN; r += 3) {
+                for (int dx = -r; dx <= r; dx += 3) {
+                    for (int dz = -r; dz <= r; dz += 3) {
+                        if (Math.max(Math.abs(dx), Math.abs(dz)) < r - 2) continue;    // the ring only
+                        int x = heart.getX() + dx, z = heart.getZ() + dz;
+                        if (!chunkReady(x, z)) continue;
+                        BlockPos top = new BlockPos(x, level().getHeight(Heightmap.Types.WORLD_SURFACE, x, z) - 1, z);
+                        if (!level().getFluidState(top).is(net.minecraft.tags.FluidTags.WATER)) continue;
+                        // The bank beside it: a few blocks off the water, on soil.
+                        for (net.minecraft.core.Direction d : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+                            for (int k = 3; k <= 5; k++) {
+                                BlockPos site = surfaceAt(x + d.getStepX() * k, z + d.getStepZ() * k);
+                                if (site == null || !level().getBlockState(site.below()).is(BlockTags.DIRT)) continue;
+                                if (Math.abs(site.getY() - top.getY()) > 3 || taken(site, plotRadius)) continue;
+                                if (clear.test(site) && farmable(site)) return site;
+                            }
+                        }
+                    }
+                }
+            }
+            return null;
+        } finally {
+            neighbours = null;
+        }
+    }
+
+    /** Where this folk would put a field now (the tests). */
+    @Nullable
+    public BlockPos fieldSiteForTests() {
+        return findSite(StationTask.FARM, radiusFor(StationTask.FARM));
+    }
+
+    /** Good soil and room for a field, though dry: the last resort (Waterfront cuts its channel). */
+    private boolean soilField(BlockPos pos) {
+        if (!boxReady(pos, 6)) return false;
+        int soil = 0;
+        for (BlockPos p : BlockPos.betweenClosed(pos.offset(-5, -1, -5), pos.offset(5, 0, 5))) {
+            if (level().getBlockState(p).is(BlockTags.DIRT) && level().getBlockState(p.above()).canBeReplaced() && ++soil >= 40) return true;
         }
         return false;
     }

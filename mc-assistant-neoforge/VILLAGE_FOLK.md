@@ -199,7 +199,11 @@ Once a village has its wall, it sees to its own safety.
   Once there is a chapel, its bell rings too.
 
 **When the bell rings.** It rings when four or more monsters get inside the wall,
-when a raid comes to the village, or when a raiding party is sighted.
+when a raid comes to the village, or when a raiding party is sighted. A village with
+no wall yet has no bell to ring: its folk are indoors at night anyway. Monsters in
+caves under the town don't count. By day the bell stops once there are only one or
+two monsters left (the watch deals with those on its rounds), so a creeper in the
+shade can't keep the whole village indoors.
 
 * The gates are shut and every guard turns out, whichever watch it keeps.
 * A guard with a bow (its own, or one from the stores with arrows) walks to its post,
@@ -349,6 +353,11 @@ Everything after that the village makes for itself:
   brewer, the beekeeper and the café, and windows.
 * **Guards.** When the bell rings, each guard takes a healing potion from the
   stores along with its bow and arrows, and drinks it if badly hurt.
+
+**Where the fields go.** A farmer puts its field on the bank of the water nearest the
+village, just outside the town's own ground, whichever way that is. If there is no
+water anywhere near, it takes the nearest good soil and cuts irrigation channels
+through it from the first day.
 
 **Where you come in.** What the village can never make for itself, it will buy:
 blaze rods and powder, nether wart and soul sand, slime balls and leads, flint, sand
@@ -1256,6 +1265,8 @@ Every push to CI:
   in (made of a melon slice and gold), and three potions of healing come out to the
   stores; the beekeeper sets down the hive it brought, the swarm comes out, and a
   second hive is made of three honeycomb and six planks;
+* puts a farmer's field by the nearest of two ponds, and checks that monsters about a
+  village with no wall don't ring the bell (game test `t42`);
 * runs the links between the trades (game test `t41`): the first farmer brings cane and
   plants it on the water's edge, then cuts it down to its bottom; a rancher milks a cow,
   walks a wild sheep twenty-six blocks home on a lead and keeps the lead, then — nothing
