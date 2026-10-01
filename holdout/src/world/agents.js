@@ -2,7 +2,7 @@
 // Used by horde attacks on the camp and by supply runs. Visuals come from the
 // skinned Character; weapons, armor and packs match what each survivor carries.
 import * as THREE from 'three'
-import { Character, OUTFITS, zombieOutfit, rngFrom } from '../models/character.js'
+import { Character, OUTFITS, zombieOutfit, rngFrom, hashStr } from '../models/character.js'
 import { weaponModel, holdStyle } from '../models/weapons.js'
 import { ZOMBIES, ITEMS } from '../game/data.js'
 import { survivorStats, gainXP, equippedItem, wear, S } from '../game/state.js'
@@ -11,6 +11,7 @@ import { clamp, angleLerp, rand, chance, h } from '../core/util.js'
 import { view } from '../render/view.js'
 
 const _v = new THREE.Vector3()
+const ZVARIANTS = 10
 const ZSKIN = ['#8f9a80', '#7d8a74', '#9a9e8a', '#76826e', '#a0a08e', '#8a9488']
 
 // ---------------------------------------------------------------- looks
@@ -560,7 +561,9 @@ export class SurvivorAgent extends Agent {
 export class ZombieAgent extends Agent {
   constructor(world, type, x, z, level = 1, theme = null) {
     const def = ZOMBIES[type]
-    const seed = Math.floor(Math.random() * 1e6)
+    // a handful of looks per type and theme, sharing geometry between zombies
+    const vs = Math.floor(Math.random() * ZVARIANTS)
+    const seed = (hashStr(type + '|' + (theme || '')) + vs * 7919) % 1000003
     const r = rngFrom(seed)
     const outfit = type === 'armored' ? zombieOutfit('riot', r) : zombieOutfit(theme, r)
     const ch = new Character({
@@ -571,6 +574,7 @@ export class ZombieAgent extends Agent {
       outfit,
       seed,
       zombie: { kind: type },
+      cacheKey: `z|${type}|${theme || ''}|${vs}`,
     })
     super(world, ch, x, z)
     if (def.scale !== 1) this.root.scale.setScalar(def.scale)

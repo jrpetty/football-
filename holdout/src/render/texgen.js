@@ -26,6 +26,22 @@ function vnoise(x, y, p, seed) {
   const v11 = hash(a1, b1, seed)
   return v00 + (v10 - v00) * fx + (v01 - v00) * fy + (v00 - v10 - v01 + v11) * fx * fy
 }
+// Value noise tiling every px cells across and py cells down (anisotropic).
+function vn2(x, y, px, py, seed) {
+  const x0 = Math.floor(x)
+  const y0 = Math.floor(y)
+  const fx = sm(x - x0)
+  const fy = sm(y - y0)
+  const a = ((x0 % px) + px) % px
+  const b = ((y0 % py) + py) % py
+  const a1 = (a + 1) % px
+  const b1 = (b + 1) % py
+  const v00 = hash(a, b, seed)
+  const v10 = hash(a1, b, seed)
+  const v01 = hash(a, b1, seed)
+  const v11 = hash(a1, b1, seed)
+  return v00 + (v10 - v00) * fx + (v01 - v00) * fy + (v00 - v10 - v01 + v11) * fx * fy
+}
 // Fractal noise in [0,1]. u,v in [0,1); base = cells across at octave 0.
 function fbm(u, v, base, oct, seed, gain = 0.5) {
   let sum = 0
@@ -1042,6 +1058,126 @@ const GEN = {
       }
     }
     return finish(t, { normalStrength: 2 })
+  },
+  cloth2(n) {
+    // fine plain weave with slubbed threads: shirts, trousers, jackets
+    const t = new Tex(n)
+    const F = 128
+    for (let y = 0; y < n; y++) {
+      for (let x = 0; x < n; x++) {
+        const u = x / n
+        const v = y / n
+        const i = y * n + x
+        const cx = Math.floor(u * F)
+        const cy = Math.floor(v * F)
+        const tx = (u * F) % 1
+        const ty = (v * F) % 1
+        const over = (cx + cy) % 2 === 0
+        const h = over ? 0.25 + Math.sin(tx * Math.PI) * 0.75 : 0.25 + Math.sin(ty * Math.PI) * 0.75
+        const tone = over ? hash(cx, 0, 402) : hash(0, cy, 403)
+        const dirt = fbm(u, v, 4, 4, 404)
+        const c = 226 + (tone - 0.5) * 16 + h * 10 - dirt * 20
+        C[0] = c
+        C[1] = c * 0.99
+        C[2] = c * 0.975
+        t.set(i, C, h * 0.55 + tone * 0.25, 0.9 + tone * 0.06)
+      }
+    }
+    return finish(t, { normalStrength: 1.1 })
+  },
+  denim(n) {
+    // 3/1 twill: diagonal ribs of indigo warp with white weft flecks (tinted by vertex colour)
+    const t = new Tex(n)
+    const F = 112
+    for (let y = 0; y < n; y++) {
+      for (let x = 0; x < n; x++) {
+        const u = x / n
+        const v = y / n
+        const i = y * n + x
+        const cx = Math.floor(u * F)
+        const cy = Math.floor(v * F)
+        const tx = (u * F) % 1
+        const ty = (v * F) % 1
+        const warpOn = (((cx + cy) % 4) + 4) % 4 !== 0
+        const prof = warpOn ? Math.sin(tx * Math.PI) : Math.sin(ty * Math.PI)
+        const slub = vn2(u * F, v * 6, F, 6, 411)
+        const fade = fbm(u, v, 3, 4, 412)
+        const c = warpOn ? 176 + slub * 46 + fade * 22 + prof * 12 : 238 + fade * 12
+        C[0] = c
+        C[1] = c
+        C[2] = c
+        t.set(i, C, prof * 0.7, 0.9)
+      }
+    }
+    return finish(t, { normalStrength: 1.3 })
+  },
+  leather(n) {
+    // pebbled hide with a few creases
+    const t = new Tex(n)
+    const W = [0, 0, 0]
+    for (let y = 0; y < n; y++) {
+      for (let x = 0; x < n; x++) {
+        const u = x / n
+        const v = y / n
+        const i = y * n + x
+        worley(u, v, 48, 421, W)
+        const peb = Math.min(1, (W[1] - W[0]) * 3)
+        const cr = Math.abs(fbm(u, v, 3, 4, 422) - 0.5)
+        const crease = cr < 0.02 ? 1 - cr / 0.02 : 0
+        const blot = fbm(u, v, 5, 4, 423)
+        const c = 196 + peb * 22 + blot * 30 - crease * 50
+        C[0] = c
+        C[1] = c * 0.97
+        C[2] = c * 0.93
+        t.set(i, C, peb * 0.6 - crease * 0.5, 0.48 + blot * 0.25 + crease * 0.2)
+      }
+    }
+    return finish(t, { normalStrength: 2.2 })
+  },
+  hairTex(n) {
+    // strands running down the texture
+    const t = new Tex(n)
+    for (let y = 0; y < n; y++) {
+      for (let x = 0; x < n; x++) {
+        const u = x / n
+        const v = y / n
+        const i = y * n + x
+        const s1 = vn2(u * 220, v * 5, 220, 5, 431)
+        const s2 = vn2(u * 60, v * 3, 60, 3, 432)
+        const s3 = vn2(u * 14, v * 2, 14, 2, 433)
+        const s = s1 * 0.5 + s2 * 0.3 + s3 * 0.2
+        const c = 128 + s * 127
+        C[0] = c
+        C[1] = c
+        C[2] = c
+        t.set(i, C, s, 0.95 - s * 0.12)
+      }
+    }
+    return finish(t, { normalStrength: 2.5 })
+  },
+  knit(n) {
+    // stockinette: columns of V stitches, for beanies, cuffs and jumpers
+    const t = new Tex(n)
+    const F = 32
+    const R = 40
+    for (let y = 0; y < n; y++) {
+      for (let x = 0; x < n; x++) {
+        const u = x / n
+        const v = y / n
+        const i = y * n + x
+        const lx = ((u * F) % 1) - 0.5
+        const ly = (v * R) % 1
+        const d = Math.abs(Math.abs(lx) - (0.08 + ly * 0.36))
+        const h = clamp01(1 - d / 0.2) * (0.6 + 0.4 * Math.sin(ly * Math.PI))
+        const tone = hash(Math.floor(u * F), Math.floor(v * R), 441)
+        const c = 196 + h * 46 + (tone - 0.5) * 10
+        C[0] = c
+        C[1] = c
+        C[2] = c * 0.98
+        t.set(i, C, h, 0.95)
+      }
+    }
+    return finish(t, { normalStrength: 2.4 })
   },
   skinTex(n) {
     // subtle pores/blotches for characters (white base)

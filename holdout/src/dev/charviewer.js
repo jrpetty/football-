@@ -67,7 +67,56 @@ if (mode === 'outfits') {
     chars.push(ch)
   })
 }
+if (mode === 'portraits') {
+  // head-and-shoulders renders like the UI portraits, in a grid
+  const ps = new THREE.Scene()
+  ps.add(new THREE.HemisphereLight('#dfe6ee', '#3a3028', 1.9))
+  const key = new THREE.DirectionalLight('#fff0dc', 3.4)
+  key.position.set(1.4, 2.6, 2.6)
+  const rim = new THREE.DirectionalLight('#a8c0ff', 2.6)
+  rim.position.set(-2.2, 2, -1.6)
+  const fill = new THREE.DirectionalLight('#ffd8b0', 0.8)
+  fill.position.set(-1.5, 1.2, 2)
+  ps.add(key, rim, fill)
+  const cam = new THREE.PerspectiveCamera(27, 1, 0.1, 20)
+  const R = pipe.renderer
+  const grid = document.createElement('canvas')
+  const N = 256
+  const cols = 8
+  const list = occs.slice(0, 16)
+  grid.width = cols * N
+  grid.height = Math.ceil(list.length / cols) * N
+  grid.style.cssText = 'position:fixed;left:0;top:0;width:100%;z-index:5;background:#223'
+  document.body.appendChild(grid)
+  const g2 = grid.getContext('2d')
+  const rt = new THREE.WebGLRenderTarget(N, N)
+  rt.texture.colorSpace = THREE.SRGBColorSpace
+  const buf = new Uint8Array(N * N * 4)
+  const zmb = q.get('z')
+  list.forEach((occ, i) => {
+    const spec = zmb
+      ? { skin: ['#8f9a80', '#7d8a74', '#9a9e8a', '#76826e'][i % 4], hair: { style: ['short', 'long', 'bald', 'buzz', 'curly', 'side'][i % 6], color: '#3a3028' }, build: 1, female: i % 3 === 1, outfit: zombieOutfit([null, 'hospital', 'police', 'worker', 'military', 'chef'][i % 6], rngFrom(i + 11)), seed: i + 20, zombie: { kind: 'walker' } }
+      : { skin: SKIN_TONES[i % SKIN_TONES.length], hair: { style: ['short', 'long', 'ponytail', 'buzz', 'curly', 'side', 'bun', 'bald', 'mohawk'][i % 9], color: HAIR_COLORS[i % HAIR_COLORS.length] }, face: { beard: [null, 'beard', null, 'mustache', 'goatee', null][i % 6] }, build: 0.95 + (i % 3) * 0.08, female: i % 2 === 1, outfit: OUTFITS[occ], seed: i + 1 }
+    const ch = new Character(spec)
+    for (let k = 0; k < 6; k++) ch.update(0.2, 'idle', { snap: true })
+    ch.root.rotation.y = -0.35
+    ps.add(ch.root)
+    cam.position.set(0.3, 1.7, 1.05)
+    cam.lookAt(0, 1.6, 0)
+    R.setRenderTarget(rt)
+    R.setClearColor(0x2a3040, 1)
+    R.clear()
+    R.render(ps, cam)
+    R.readRenderTargetPixels(rt, 0, 0, N, N, buf)
+    R.setRenderTarget(null)
+    ps.remove(ch.root)
+    const img = g2.createImageData(N, N)
+    for (let y = 0; y < N; y++) img.data.set(buf.subarray((N - 1 - y) * N * 4, (N - y) * N * 4), y * N * 4)
+    g2.putImageData(img, (i % cols) * N, Math.floor(i / cols) * N)
+  })
+}
 const hour = parseFloat(q.get('h') || '15')
+view.rig.minDist = 0.6
 view.rig.jump(0, 0, parseFloat(q.get('d') || '9'))
 view.rig.yaw = view.rig.yawGoal = parseFloat(q.get('yaw') || '0.5')
 let last = performance.now()

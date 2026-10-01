@@ -87,7 +87,14 @@ export class Builder {
   }
   // Add a geometry (shared or fresh) with options.
   add(geo, o = {}) {
-    const g = geo.index ? geo.toNonIndexed() : geo.clone()
+    // skinned builders keep parts indexed (cheaper to merge and to skin)
+    const g = this.keepIndex ? geo.clone() : geo.index ? geo.toNonIndexed() : geo.clone()
+    if (this.keepIndex && !g.index) {
+      const n = g.attributes.position.count
+      const ix = new (n > 65535 ? Uint32Array : Uint16Array)(n)
+      for (let i = 0; i < n; i++) ix[i] = i
+      g.setIndex(new THREE.BufferAttribute(ix, 1))
+    }
     if (!g.attributes.uv) g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2))
     if (!g.attributes.normal) g.computeVertexNormals()
     const keep = o.keepColor && g.attributes.color
