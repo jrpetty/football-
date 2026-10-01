@@ -9,6 +9,7 @@ export const pick = (arr) => arr[Math.floor(Math.random() * arr.length)]
 export const chance = (p) => Math.random() < p
 export const dist = (ax, az, bx, bz) => Math.hypot(ax - bx, az - bz)
 export const angleLerp = (a, b, t) => {
+  t = t < 0 ? 0 : t > 1 ? 1 : t
   let d = ((b - a + Math.PI) % (Math.PI * 2)) - Math.PI
   if (d < -Math.PI) d += Math.PI * 2
   return a + d * t

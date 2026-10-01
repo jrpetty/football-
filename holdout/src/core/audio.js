@@ -160,6 +160,24 @@ const SFX = {
   },
   down: () => tone(220, 0.6, { type: 'sawtooth', gain: 0.07, freqEnd: 90 }),
   truck: () => noise(1.4, { freq: 160, gain: 0.2, attack: 0.3 }),
+  boom: () => {
+    noise(1.6, { freq: 900, freqEnd: 60, gain: 0.9, attack: 0.002 })
+    tone(70, 0.9, { type: 'sine', gain: 0.5, freqEnd: 30 })
+  },
+  fire: () => {
+    noise(0.5, { type: 'bandpass', freq: 600, q: 0.7, gain: 0.25, attack: 0.01 })
+    noise(1.4, { freq: 300, gain: 0.12, attack: 0.2 })
+  },
+  glass: () => {
+    for (let k = 0; k < 4; k++) tone(2400 + Math.random() * 2400, 0.12, { type: 'triangle', gain: 0.05, delay: k * 0.03 })
+    noise(0.2, { type: 'highpass', freq: 3000, gain: 0.2 })
+  },
+  beep: () => tone(1320, 0.09, { type: 'square', gain: 0.05 }),
+  throw: () => noise(0.25, { type: 'bandpass', freq: 700, freqEnd: 1800, q: 1.5, gain: 0.12, attack: 0.03 }),
+  unlock: () => {
+    tone(520, 0.07, { type: 'square', gain: 0.05 })
+    tone(780, 0.09, { type: 'square', gain: 0.05, delay: 0.08 })
+  },
 }
 
 export function sfx(id, throttleMs = 40) {

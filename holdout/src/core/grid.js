@@ -246,3 +246,35 @@ class Heap {
     return top
   }
 }
+
+// A grid seen through a world offset: world (x, z) = tile (x - ox, z - oz).
+// Lets agents walk a level built in its own frame (e.g. a lot centred on 0).
+export class OffsetGrid {
+  constructor(g, ox, oz) {
+    this.g = g
+    this.ox = ox
+    this.oz = oz
+    this.w = g.w
+    this.h = g.h
+  }
+  open(x, z) {
+    return this.g.open(x - this.ox, z - this.oz)
+  }
+  inb(x, z) {
+    return this.g.inb(x - this.ox, z - this.oz)
+  }
+  path(sx, sz, tx, tz, maxIter) {
+    const p = this.g.path(sx - this.ox, sz - this.oz, tx - this.ox, tz - this.oz, maxIter)
+    return p ? p.map((w) => ({ x: w.x + this.ox, z: w.z + this.oz })) : null
+  }
+  los(ax, az, bx, bz) {
+    return this.g.los(ax - this.ox, az - this.oz, bx - this.ox, bz - this.oz)
+  }
+  walkLine(ax, az, bx, bz) {
+    return this.g.walkLine(ax - this.ox, az - this.oz, bx - this.ox, bz - this.oz)
+  }
+  nearestOpen(x, z, maxR, pred) {
+    const n = this.g.nearestOpen(x - this.ox, z - this.oz, maxR, pred ? (i, j) => pred(i + this.ox, j + this.oz) : null)
+    return n ? { x: n.x + this.ox, z: n.z + this.oz } : null
+  }
+}

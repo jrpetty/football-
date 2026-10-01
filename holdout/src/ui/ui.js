@@ -1,0 +1,605 @@
+// The interface: top bar (time, horde timer, resources, power, morale, crew,
+// speed), the left nav, a right-hand detail drawer, the bottom build dock,
+// toasts, tooltips, modals, the raid HUD and reports.
+import { RES, TOP_BAR, STATIONS, STATION_CATS, AMMO_KEYS, FENCE, EXPANSIONS, HORDES, OCCUPATIONS, SEC_PER_HOUR, GAME_MIN_PER_SEC } from '../game/data.js'
+import { S, day, hour, clockStr, gameDur, capOf, bedCount, buildCost, reqMet, canAfford, countType, maxLevelOf, expansionAvailable, expansionCost, fenceUpgradeCost, getS, survivorStats } from '../game/state.js'
+import { raidIntel, campFlow, power, moraleFactors } from '../game/economy.js'
+import { WEATHER } from '../render/sky.js'
+import { sfx } from '../core/audio.js'
+import { bus, h, fmt, fmtTime, clamp } from '../core/util.js'
+import { icon } from './icons.js'
+import { costList, resIcon, bar, plural } from './common.js'
+import { renderStation } from './stationpanel.js'
+import { renderSurvivor, renderCrew, renderItems } from './crewpanel.js'
+import { renderMarket, renderGoals, renderLog, renderFence, renderExpansion, renderProduction, renderPower, renderMorale, renderSettings, recruitModal, raidReportModal, missionReportModal, gameOverModal, menuModal, hordeInfo } from './camppanels.js'
+
+const NAV = [
+  { id: 'build', label: 'Build', key: 'B', icon: 'build', primary: true },
+  { id: 'crew', label: 'Crew', key: 'C', icon: 'people' },
+  { id: 'items', label: 'Items', key: 'I', icon: 'items' },
+  { id: 'trade', label: 'Trade', key: 'T', icon: 'market' },
+  { id: 'camp', label: 'Camp', key: 'P', icon: 'production' },
+  { id: 'map', label: 'Map', key: 'M', icon: 'map' },
+  { id: 'goals', label: 'Goals', key: 'G', icon: 'goals' },
+  { id: 'log', label: 'Log', key: 'L', icon: 'log' },
+]
+
+export class UI {
+  constructor(game) {
+    this.game = game
+    this.root = document.getElementById('hud')
+    this.panelKey = null
+    this.panelFn = null
+    this.panelT = 0
+    this.topT = 0
+    this.feedItems = []
+    this.buildCat = 'living'
+    this.build()
+    this.offs = []
+    const on = (ev, fn) => this.offs.push(bus.on(ev, fn))
+    on('log', (e) => this.feedPush(e))
+    on('goal', (g) => this.toast(`Goal complete: ${g.text}`, 'good'))
+    on('levelup', (s, sk) => this.toast(`${s.first} reached level ${s.skills[sk]}`, 'good'))
+    on('crafted', (st, r, it) => {
+      if (it && it.q >= 2) sfx('rare')
+    })
+    on('broken', (it) => this.toast('An item broke from wear. Repair it at a bench.', 'bad'))
+    on('event', (ev) => this.toast(ev.kind === 'distress' ? 'Radio: a distress call. Check the map.' : 'A supply drop came down. Check the map.', 'story'))
+    on('weather', () => (this.topT = 0))
+    on('newDay', (d) => this.toast(`Day ${d}`, 'story'))
+  }
+  dispose() {
+    for (const off of this.offs) off()
+    this.root.innerHTML = ''
+  }
+  get pipe() {
+    return this.game.pipe
+  }
+
+  // ---------------------------------------------------------------- shell
+  build() {
+    const R = this.root
+    R.innerHTML = ''
+    this.top = h('div.topbar')
+    this.nav = h(
+      'div.nav',
+      NAV.map((n) => h('button.navbtn' + (n.primary ? '.primary' : ''), { 'data-nav': n.id, 'data-tip': `${n.label} <kbd>${n.key}</kbd>`, onclick: () => this.navClick(n.id) }, h('i', { html: icon(n.icon) }), h('span', n.label))),
+      h('div.navsep'),
+      h('button.navbtn.small', { 'data-tip': 'Settings', onclick: () => this.openSettings() }, h('i', { html: icon('settings') })),
+      h('button.navbtn.small', { 'data-tip': 'Menu <kbd>Esc</kbd>', onclick: () => this.openMenu() }, h('i', { html: icon('menu') })),
+    )
+    this.panel = h('aside.panel', { hidden: true })
+    this.dock = h('div.dock', { hidden: true })
+    this.feed = h('div.feed')
+    this.toasts = h('div.toasts')
+    this.tip = h('div.tip', { hidden: true })
+    this.placebar = h('div.placebar', { hidden: true })
+    this.raidbar = h('div.raidbar', { hidden: true })
+    this.modalRoot = h('div.modals')
+    R.append(this.top, this.nav, this.panel, this.dock, this.feed, this.toasts, this.placebar, this.raidbar, this.tip, this.modalRoot)
+    // delegated tooltips for anything with data-tip
+    R.addEventListener('mouseover', (e) => {
+      const t = e.target.closest?.('[data-tip]')
+      if (t) {
+        this.elTip = t
+        this.showTip(t.getAttribute('data-tip'), e.clientX, e.clientY)
+      }
+    })
+    R.addEventListener('mousemove', (e) => {
+      if (this.elTip) this.placeTip(e.clientX, e.clientY)
+    })
+    R.addEventListener('mouseout', (e) => {
+      if (this.elTip && !this.elTip.contains(e.relatedTarget)) {
+        this.elTip = null
+        this.tip.hidden = true
+      }
+    })
+    this.renderTop()
+  }
+  showCamp(v) {
+    this.top.hidden = !v
+    this.nav.hidden = !v
+    this.feed.hidden = !v
+    if (!v) {
+      this.closePanel()
+      this.dock.hidden = true
+    }
+  }
+  navClick(id) {
+    sfx('click')
+    if (id === 'build') return this.toggleBuild()
+    if (id === 'map') return this.game.openMap()
+    const fns = { crew: () => this.openCrew(), items: () => this.openItems(), trade: () => this.openMarket(), camp: () => this.openProduction(), goals: () => this.openGoals(), log: () => this.openLog() }
+    if (this.panelKey === id) return this.closePanel()
+    fns[id]?.()
+  }
+  onKey(e) {
+    if (e.target instanceof HTMLInputElement) return false
+    const k = e.key.toLowerCase()
+    if (this.modalRoot.children.length) {
+      if (k === 'escape') this.closeModal()
+      return true
+    }
+    if (S.raid) return false
+    const map = { b: 'build', c: 'crew', i: 'items', t: 'trade', p: 'camp', m: 'map', g: 'goals', l: 'log' }
+    if (map[k] && !e.ctrlKey && !e.metaKey && !this.game.base?.placing) {
+      this.navClick(map[k])
+      return true
+    }
+    if (k === 'f' && !this.game.base?.placing) {
+      this.openFence()
+      return true
+    }
+    if (k === 'h') {
+      this.openHorde()
+      return true
+    }
+    if (k === 'escape') {
+      if (this.game.base?.placing) return false
+      if (!this.dock.hidden) {
+        this.dock.hidden = true
+        return true
+      }
+      if (this.panelKey) {
+        this.closePanel()
+        return true
+      }
+      this.openMenu()
+      return true
+    }
+    return false
+  }
+
+  // ---------------------------------------------------------------- top bar
+  renderTop() {
+    const T = this.top
+    T.innerHTML = ''
+    const w = S.weather?.type || 'clear'
+    const night = hour() >= 20.5 || hour() < 5.5
+    this.clockEl = h('b')
+    this.dayEl = h('span')
+    const wIcon = w === 'rain' ? 'rain' : w === 'fog' ? 'fog' : w === 'overcast' || w === 'hazy' ? 'cloud' : night ? 'moon' : 'sun'
+    this.hordeBtn = h('button.horde', { onclick: () => this.openHorde(), 'data-tip': 'Horde intel <kbd>H</kbd>' }, h('i.ic', { html: icon('horde') }), h('div', h('small'), h('b')))
+    this.resEls = {}
+    const chips = h(
+      'div.res',
+      [...TOP_BAR.filter((k) => k !== 'cash'), 'ammo', 'cash'].map((k) => {
+        const el = h('button.rchip', { onclick: () => this.openProduction(), style: { '--c': k === 'ammo' ? RES.pammo.color : RES[k].color } }, h('i.ic', { html: k === 'ammo' ? icon('ammo') : resIcon(k) }), h('b'), h('i.fill'), h('em.rate'))
+        el.addEventListener('mouseenter', () => (this.hoverRes = k))
+        el.addEventListener('mouseleave', () => (this.hoverRes = null))
+        this.resEls[k] = el
+        return el
+      }),
+    )
+    this.pwEl = h('button.rchip.pw', { onclick: () => this.openPower() }, h('i.ic', { html: icon('bolt') }), h('b'))
+    this.morEl = h('button.rchip.mor', { onclick: () => this.openMorale() }, h('i.ic', { html: icon('morale') }), h('b'))
+    this.popEl = h('button.rchip.pop', { onclick: () => this.openCrew() }, h('i.ic', { html: icon('people') }), h('b'))
+    const speeds = [
+      [0, icon('pause'), 'Pause <kbd>Space</kbd>'],
+      [1, '1×', 'Normal speed <kbd>1</kbd>'],
+      [2, '2×', 'Fast <kbd>2</kbd>'],
+      [4, '4×', 'Fastest <kbd>3</kbd>'],
+    ]
+    this.speedEl = h(
+      'div.speed',
+      speeds.map(([v, label, tip]) => h('button', { 'data-v': v, 'data-tip': tip, html: label, onclick: () => this.game.setSpeed(v) })),
+    )
+    T.append(
+      h('div.brand', h('div.logo', 'HOLDOUT'), h('div.clock', h('i.ic', { html: icon(wIcon), 'data-tip': WEATHER[w]?.name || w }), this.dayEl, this.clockEl)),
+      this.hordeBtn,
+      chips,
+      h('div.meters', this.pwEl, this.morEl, this.popEl),
+      this.speedEl,
+    )
+    this.weatherShown = w
+    this.updateTop()
+  }
+  updateTop() {
+    if (!S) return
+    if ((S.weather?.type || 'clear') !== this.weatherShown) return this.renderTop()
+    this.dayEl.textContent = `Day ${day()}`
+    this.clockEl.textContent = clockStr()
+    const flow = this.flowCache || {}
+    for (const [k, el] of Object.entries(this.resEls)) {
+      let v
+      let cap
+      let rate
+      if (k === 'ammo') {
+        v = AMMO_KEYS.reduce((a, x) => a + S.res[x], 0)
+        cap = AMMO_KEYS.reduce((a, x) => a + capOf(x), 0)
+        rate = AMMO_KEYS.reduce((a, x) => a + (flow[x] || 0), 0)
+      } else {
+        v = S.res[k]
+        cap = capOf(k)
+        rate = flow[k] || 0
+      }
+      el.querySelector('b').textContent = fmt(v)
+      const f = el.querySelector('.fill')
+      if (cap !== Infinity) f.style.width = `${clamp(v / cap, 0, 1) * 100}%`
+      else f.style.width = '0'
+      el.classList.toggle('full', cap !== Infinity && v >= cap - 0.5)
+      el.classList.toggle('empty', (k === 'food' || k === 'water') && v < 1)
+      el.classList.toggle('low', (k === 'food' || k === 'water') && v >= 1 && rate < 0 && v / -rate < 1)
+      const re = el.querySelector('.rate')
+      const r = Math.round(rate)
+      re.textContent = r ? (r > 0 ? '+' : '') + r : ''
+      re.className = 'rate' + (r > 0 ? ' up' : r < 0 ? ' down' : '')
+      el.setAttribute('data-tip', this.resTip(k, v, cap, rate))
+    }
+    const p = power()
+    this.pwEl.querySelector('b').textContent = `${fmt(p.used)}/${fmt(p.supply)}`
+    this.pwEl.classList.toggle('short', p.demand > p.supply + 0.01)
+    this.pwEl.setAttribute('data-tip', `<b>Power</b>${p.supply ? `${p.supply} available, ${p.demand} wanted.` : 'No power. Build a Generator or Solar Array.'}`)
+    const m = Math.round(S.morale)
+    this.morEl.querySelector('b').textContent = m
+    this.morEl.className = 'rchip mor' + (m < 25 ? ' bad' : m >= 65 ? ' good' : '')
+    this.morEl.setAttribute('data-tip', `<b>Morale ${m}</b>${m < 25 ? 'Dangerously low: people work slower and may leave.' : m >= 65 ? 'High spirits: everyone works faster.' : 'Steady.'}`)
+    const beds = bedCount()
+    this.popEl.querySelector('b').textContent = `${S.survivors.length}/${beds}`
+    this.popEl.setAttribute('data-tip', `<b>${plural(S.survivors.length, 'survivor')}</b>${beds} beds. Build or upgrade Bunkhouses to take in more.`)
+    for (const b of this.speedEl.children) b.classList.toggle('on', +b.dataset.v === (S.speed ?? 1))
+    this.updateHorde()
+  }
+  resTip(k, v, cap, rate) {
+    if (k === 'ammo') return `<b>Ammunition</b>${AMMO_KEYS.map((a) => `${RES[a].name}: ${fmt(S.res[a])}`).join('<br>')}<br><em>${rate >= 0 ? '+' : ''}${Math.round(rate)} a day</em>`
+    const R = RES[k]
+    const days = rate < 0 && v > 0 ? ` · lasts ${(v / -rate).toFixed(1)} days` : ''
+    return `<b>${R.name}</b>${fmt(v)}${cap !== Infinity ? ` / ${fmt(cap)}` : ''}<br><em>${rate >= 0 ? '+' : ''}${Math.round(rate)} a day${days}</em><br><small>${R.desc}</small>`
+  }
+  updateHorde() {
+    const I = raidIntel()
+    const el = this.hordeBtn
+    if (S.raid) {
+      el.className = 'horde now'
+      el.querySelector('small').textContent = 'Under attack'
+      el.querySelector('b').textContent = `${S.raid.count - S.raid.killed} left`
+      return
+    }
+    if (!I) return
+    const mins = I.in
+    el.className = 'horde' + (mins < 60 ? ' urgent imminent' : mins < 180 ? ' urgent' : '')
+    el.querySelector('small').textContent = I.known ? `${I.name} · ${I.count}` : 'Horde incoming'
+    el.querySelector('b').textContent = gameDur(mins)
+  }
+  openHorde() {
+    this.openPanel('horde', () => hordeInfo(this), { live: true })
+  }
+
+  // ---------------------------------------------------------------- tooltips
+  showTip(html, x, y) {
+    if (!html) {
+      this.tip.hidden = true
+      return
+    }
+    this.tip.innerHTML = html
+    this.tip.hidden = false
+    this.placeTip(x, y)
+  }
+  placeTip(x, y) {
+    const t = this.tip
+    const w = t.offsetWidth
+    const hh = t.offsetHeight
+    let tx = x + 16
+    let ty = y + 18
+    if (tx + w > window.innerWidth - 8) tx = x - w - 12
+    if (ty + hh > window.innerHeight - 8) ty = y - hh - 12
+    t.style.transform = `translate(${Math.max(6, tx)}px, ${Math.max(6, ty)}px)`
+  }
+  hoverTip(html, x, y) {
+    if (this.elTip) return
+    this.showTip(html, x, y)
+  }
+
+  // ---------------------------------------------------------------- feed & toasts
+  feedPush(e) {
+    if (!e.text) return
+    const el = h('div.fe.' + (e.kind || 'plain'), h('span.t', clockStr()), h('span', e.text))
+    this.feed.prepend(el)
+    while (this.feed.children.length > 6) this.feed.lastChild.remove()
+    setTimeout(() => el.classList.add('old'), 9000)
+    setTimeout(() => el.remove(), 20000)
+  }
+  toast(msg, kind = '') {
+    const el = h('div.toast' + (kind ? '.' + kind : ''), msg)
+    this.toasts.append(el)
+    while (this.toasts.children.length > 4) this.toasts.firstChild.remove()
+    setTimeout(() => el.classList.add('out'), 3200)
+    setTimeout(() => el.remove(), 3700)
+  }
+
+  // ---------------------------------------------------------------- drawer panel
+  openPanel(key, fn, { live = false, wide = false } = {}) {
+    this.panelKey = key
+    this.panelFn = fn
+    this.panelLive = live
+    this.panel.hidden = false
+    this.panel.classList.toggle('wide', !!wide)
+    for (const b of this.nav.querySelectorAll('[data-nav]')) b.classList.toggle('on', b.dataset.nav === key)
+    this.refreshPanel(true)
+  }
+  refreshPanel(force = false) {
+    if (!this.panelFn) return
+    const scroll = this.panel.querySelector('.pbody')?.scrollTop || 0
+    const content = this.panelFn()
+    if (!content) return this.closePanel()
+    this.panel.innerHTML = ''
+    this.panel.append(content)
+    const body = this.panel.querySelector('.pbody')
+    if (body && !force) body.scrollTop = scroll
+  }
+  closePanel() {
+    this.panelKey = null
+    this.panelFn = null
+    this.panel.hidden = true
+    this.panel.innerHTML = ''
+    for (const b of this.nav.querySelectorAll('[data-nav]')) b.classList.remove('on')
+    if (this.game.base) {
+      this.game.base.select(null)
+      this.game.base.selectedPerson = null
+    }
+  }
+  // Standard drawer layout: header (title, subtitle, close) + scrolling body.
+  frame(title, sub, body, { icon: ic = null, extra = null, tabs = null } = {}) {
+    return h(
+      'div.pframe',
+      h('header.phead', ic ? h('i.pic', { html: icon(ic) }) : null, h('div.ptitle', h('h2', title), sub ? h('div.psub', sub) : null), extra, h('button.x', { onclick: () => this.closePanel(), 'data-tip': 'Close <kbd>Esc</kbd>', html: icon('close') })),
+      tabs,
+      h('div.pbody', body),
+    )
+  }
+
+  // ---------------------------------------------------------------- routing
+  openStation(id) {
+    const st = S.stations.find((s) => s.id === id)
+    if (!st) return
+    this.game.base?.select(id)
+    this.openPanel('station:' + id, () => renderStation(this, id), { live: true })
+  }
+  openSurvivor(id) {
+    if (this.game.base) this.game.base.selectedPerson = id
+    this.openPanel('survivor:' + id, () => renderSurvivor(this, id), { live: true })
+  }
+  openCrew() {
+    this.openPanel('crew', () => renderCrew(this), { live: true, wide: true })
+  }
+  openItems() {
+    this.openPanel('items', () => renderItems(this), { wide: true })
+  }
+  openMarket() {
+    this.openPanel('trade', () => renderMarket(this), { wide: true })
+  }
+  openGoals() {
+    this.openPanel('goals', () => renderGoals(this))
+  }
+  openLog() {
+    this.openPanel('log', () => renderLog(this), { live: true })
+  }
+  openFence() {
+    this.openPanel('fence', () => renderFence(this), { live: true })
+  }
+  openExpansion(id) {
+    this.openPanel('exp:' + id, () => renderExpansion(this, id), { live: true })
+  }
+  openProduction() {
+    this.openPanel('camp', () => renderProduction(this), { live: true, wide: true })
+  }
+  openPower() {
+    this.openPanel('power', () => renderPower(this), { live: true })
+  }
+  openMorale() {
+    this.openPanel('morale', () => renderMorale(this), { live: true })
+  }
+  openSettings() {
+    this.modal(renderSettings(this), { small: true })
+  }
+  openMenu() {
+    this.modal(menuModal(this), { small: true })
+  }
+  showRecruit() {
+    if (!S.recruit.pending) return
+    this.modal(recruitModal(this), { small: false })
+  }
+  raidReport(r) {
+    this.modal(raidReportModal(this, r), { small: true })
+  }
+  missionReport(r) {
+    this.modal(missionReportModal(this, r))
+  }
+  gameOver() {
+    this.modal(gameOverModal(this), { small: true, locked: true })
+  }
+
+  // ---------------------------------------------------------------- build dock
+  toggleBuild(force) {
+    const show = force ?? this.dock.hidden
+    this.dock.hidden = !show
+    for (const b of this.nav.querySelectorAll('[data-nav="build"]')) b.classList.toggle('on', show)
+    if (show) this.renderBuild()
+  }
+  renderBuild() {
+    const D = this.dock
+    D.innerHTML = ''
+    const cats = [...STATION_CATS, { id: 'walls', name: 'Walls & Land' }]
+    const tabs = h(
+      'div.dtabs',
+      cats.map((c) => h('button' + (c.id === this.buildCat ? '.on' : ''), { onclick: () => ((this.buildCat = c.id), this.renderBuild()) }, c.name)),
+      h('span.dhint', 'Click a card, then click the ground. ', h('kbd', 'R'), ' rotates, ', h('kbd', 'Shift'), ' places several, ', h('kbd', 'Esc'), ' cancels.'),
+      h('button.x', { onclick: () => this.toggleBuild(false), html: icon('close') }),
+    )
+    let cards
+    if (this.buildCat === 'walls') cards = this.landCards()
+    else
+      cards = Object.entries(STATIONS)
+        .filter(([, d]) => d.cat === this.buildCat && !d.fixed)
+        .map(([type, d]) => {
+          const cost = buildCost(type)
+          const ok = canAfford(cost)
+          const req = reqMet(type)
+          const have = countType(type, 0)
+          const reqTxt = d.req ? Object.entries(d.req).map(([t, l]) => `${STATIONS[t].name} L${l}`).join(', ') : ''
+          return h(
+            'button.bcard' + (!req ? '.locked' : !ok ? '.poor' : ''),
+            {
+              onclick: () => {
+                if (!req) return this.toast(`Needs ${reqTxt}`, 'bad'), sfx('error')
+                this.game.base.startPlacing(type)
+                sfx('click')
+              },
+              'data-tip': `<b>${d.name}</b>${d.desc}${d.workers[0] ? `<br><em>${d.workers[0]} worker${d.workers[0] > 1 ? 's' : ''} at level 1</em>` : ''}${reqTxt ? `<br><span class="bad">Requires ${reqTxt}</span>` : ''}`,
+            },
+            h('div.bc-name', d.name, have ? h('span.have', `×${have}`) : null),
+            h('div.bc-size', `${d.size[0]}×${d.size[1]} · ${d.levels} level${d.levels > 1 ? 's' : ''}`),
+            req ? costList(cost, { small: true }) : h('div.bc-lock', h('i', { html: icon('lock') }), reqTxt),
+          )
+        })
+    D.append(tabs, h('div.dcards', cards))
+  }
+  landCards() {
+    const out = []
+    const next = FENCE[S.fence.level + 1]
+    if (next) {
+      const cost = fenceUpgradeCost()
+      out.push(
+        h(
+          'button.bcard.wide' + (!canAfford(cost) ? '.poor' : ''),
+          { onclick: () => this.openFence(), 'data-tip': `<b>${next.name}</b>${next.hp} strength per section (now ${FENCE[S.fence.level].hp}).` },
+          h('div.bc-name', `Upgrade wall: ${next.name}`),
+          h('div.bc-size', S.fence.building ? 'Under construction' : `${FENCE[S.fence.level].name} → ${next.name}`),
+          costList(cost, { small: true }),
+        ),
+      )
+    }
+    for (const X of EXPANSIONS) {
+      const avail = expansionAvailable(X.id)
+      const status = S.expansions[X.id]
+      if (status === 'done') continue
+      const cost = expansionCost(X.id)
+      out.push(
+        h(
+          'button.bcard.wide' + (!avail ? '.locked' : !canAfford(cost) ? '.poor' : ''),
+          { onclick: () => this.openExpansion(X.id), 'data-tip': `<b>${X.name}</b>${X.desc}` },
+          h('div.bc-name', X.name, h('span.have', X.side.toUpperCase() + X.ring)),
+          h('div.bc-size', status === 'building' ? 'Clearing now' : avail ? 'Expand the camp' : X.ring === 2 ? 'Expand this side once first' : 'Unavailable'),
+          avail ? costList(cost, { small: true }) : h('div.bc-lock', h('i', { html: icon('lock') }), 'Locked'),
+        ),
+      )
+    }
+    return out
+  }
+
+  // ---------------------------------------------------------------- placement bar
+  showPlaceBar(name, move) {
+    const P = this.placebar
+    P.hidden = false
+    P.innerHTML = ''
+    this.dock.classList.add('placing')
+    P.append(
+      h('b', move ? `Moving ${name}` : `Placing ${name}`),
+      h('span.pb-ok'),
+      h('button.btn.small', { onclick: () => this.game.base.rotatePlacing() }, h('i', { html: icon('rotate') }), 'Rotate', h('kbd', 'R')),
+      h('button.btn.small.ghost', { onclick: () => this.game.base.cancelPlacing() }, 'Cancel', h('kbd', 'Esc')),
+    )
+  }
+  placeOk(ok) {
+    const el = this.placebar.querySelector('.pb-ok')
+    if (el) {
+      el.textContent = ok ? 'Click to place' : 'Blocked here'
+      el.className = 'pb-ok ' + (ok ? 'good' : 'bad')
+    }
+  }
+  hidePlaceBar() {
+    this.placebar.hidden = true
+    this.dock.classList.remove('placing')
+    if (!this.dock.hidden) this.renderBuild()
+  }
+
+  // ---------------------------------------------------------------- raid HUD
+  raidHud(on) {
+    this.raidbar.hidden = !on
+    this.nav.classList.toggle('dim', on)
+    if (on) {
+      this.closePanel()
+      this.dock.hidden = true
+      this.updateRaidBar(true)
+    }
+  }
+  updateRaidBar(rebuild = false) {
+    const base = this.game.base
+    if (!S.raid || !base) return
+    const R = this.raidbar
+    if (rebuild || !R.querySelector('.rb-squad') || R.querySelector('.rb-squad').children.length !== base.squad.length) {
+      R.innerHTML = ''
+      R.append(
+        h('div.rb-head', h('i', { html: icon('horde') }), h('b.rb-left'), h('span.rb-ammo')),
+        h(
+          'div.rb-squad',
+          base.squad.map((a, i) =>
+            h('button.rb-def', { onclick: () => base.selectDefender(a), 'data-tip': `${a.data.name}<br><em>${a.st.weapon.name}</em>` }, h('img', { src: this.game.portrait(a.data) }), h('span', h('kbd', i + 1), a.data.first), h('div.bar.hp', h('i'))),
+          ),
+        ),
+        h('div.rb-hint', 'Select a defender, then right-click to move or attack. Click a downed friend with someone selected to revive them.'),
+      )
+    }
+    R.querySelector('.rb-left').textContent = `Horde · ${Math.max(0, S.raid.count - S.raid.killed)} left`
+    R.querySelector('.rb-ammo').innerHTML = AMMO_KEYS.map((k) => `<span style="--c:${RES[k].color}">${RES[k].short} ${fmt(S.res[k])}</span>`).join('')
+    base.squad.forEach((a, i) => {
+      const el = R.querySelector('.rb-squad').children[i]
+      if (!el) return
+      el.classList.toggle('sel', base.selectedDef === a)
+      el.classList.toggle('down', a.downed)
+      el.querySelector('.bar i').style.width = `${clamp(a.hp / a.maxHp, 0, 1) * 100}%`
+    })
+  }
+
+  // ---------------------------------------------------------------- modals
+  modal(content, { small = false, actions = null, onClose = null, locked = false } = {}) {
+    const close = () => {
+      wrap.remove()
+      onClose?.()
+    }
+    const card = h('div.modal' + (small ? '.small' : ''), content, actions ? h('div.mactions', actions) : null)
+    const wrap = h('div.mwrap', { onclick: (e) => !locked && e.target === wrap && close() }, card)
+    wrap._close = close
+    this.modalRoot.append(wrap)
+    return close
+  }
+  closeModal() {
+    const last = this.modalRoot.lastChild
+    last?._close?.()
+  }
+  confirm(title, text, yes, fn, { danger = false } = {}) {
+    let close
+    close = this.modal(h('div', h('h2', title), h('p', text)), {
+      small: true,
+      actions: [h('button.btn.ghost', { onclick: () => close() }, 'Cancel'), h('button.btn' + (danger ? '.danger' : '.go'), { onclick: () => (close(), fn()) }, yes)],
+    })
+  }
+
+  // ---------------------------------------------------------------- loop
+  update(dt) {
+    this.topT -= dt
+    if (this.topT <= 0) {
+      this.topT = 0.25
+      this.flowT = (this.flowT ?? 0) - 0.25
+      if (this.flowT <= 0) {
+        this.flowT = 1
+        this.flowCache = campFlow()
+      }
+      this.updateTop()
+    }
+    if (this.panelLive && this.panelFn) {
+      this.panelT -= dt
+      if (this.panelT <= 0 && !this.panel.matches(':hover:active') && !this.panel.querySelector('input:focus, select:focus')) {
+        this.panelT = 1
+        this.refreshPanel()
+      }
+    }
+    if (S.raid) {
+      this.rbT = (this.rbT ?? 0) - dt
+      if (this.rbT <= 0) {
+        this.rbT = 0.2
+        this.updateRaidBar()
+      }
+    }
+  }
+}
