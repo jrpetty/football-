@@ -1228,8 +1228,6 @@ public class VillageFolkEntity extends AssistantEntity {
      */
     private void stoneToolFromTheStores() {
         if (villageCentre == null || ownerId() == null) return;
-        if (tickCount - stoneToolTick < 2400) return;
-        stoneToolTick = tickCount;
         net.minecraft.world.item.Item tool;
         String kind;
         switch (stationTask()) {
@@ -1246,6 +1244,11 @@ public class VillageFolkEntity extends AssistantEntity {
             return path.endsWith(suffix) && !path.startsWith("wooden") && !path.startsWith("golden");
         }) > 0;
         if (better) return;
+        // Looked at often, made at once: a stone pickaxe is worn through in a hundred and
+        // thirty blocks, and a miner whose pick broke stood "needing a pickaxe" for up to
+        // two minutes before the next look.
+        if (tickCount - stoneToolTick < 400) return;
+        stoneToolTick = tickCount;
         int r = buildStoresRadius();
         java.util.function.Predicate<net.minecraft.world.item.ItemStack> stone =
             st -> st.is(net.minecraft.world.item.Items.COBBLESTONE) || st.is(net.minecraft.world.item.Items.COBBLED_DEEPSLATE);
