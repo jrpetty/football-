@@ -1,12 +1,13 @@
 // The station drawer: workers, what the station is doing and producing,
 // crafting orders (queue, recipes, mods, repairs), automation, upgrades.
-import { RES, STATIONS, RECIPES, MODS, ITEMS, QUALITY, OCCUPATIONS, SKILLS, SKILL_KEYS, REPAIR, SEC_PER_DAY, FENCE } from '../game/data.js'
+import { RES, STATIONS, RECIPES, MODS, ITEMS, QUALITY, OCCUPATIONS, SKILLS, SKILL_KEYS, REPAIR, SEC_PER_DAY, FENCE, ALT_RECIPES, BELTS, BELT_BONUS } from '../game/data.js'
 import {
   S, workersOf, slots, assign, workEff, bestFor, upgradeCost, startUpgrade, demolish, installModule, recipesFor, modsFor, queueMax, orderRecipe,
   orderMod, orderRepair, cancelOrder, moveOrder, orderSpec, qualityOdds, itemOf, itemName, canAfford, survivorStats, capOf, bedCount, getS, ownerOf,
   repairCost, repairTime, gameDur, stationSize,
 } from '../game/state.js'
-import { stationFlow, power, isAutomated, stationRate, solarOutput, kitchenSaving, constructSpeed, raidIntel } from '../game/economy.js'
+import { stationFlow, power, isAutomated, stationRate, solarOutput, kitchenSaving, constructSpeed, raidIntel, activeRecipe, activeSingle, recipeUnlocked, recipeTarget } from '../game/economy.js'
+import { linksOf, inputsOf, outputsOf, linkPerDay, linkState, upgradeCostOf, upgradeLink, removeLink, beltBonus, pulled } from '../game/belts.js'
 import { sfx } from '../core/audio.js'
 import { bus, h, fmt, clamp } from '../core/util.js'
 import { icon } from './icons.js'
@@ -29,6 +30,8 @@ export function renderStation(ui, id) {
     const ws = workerBlock(ui, st)
     if (ws) body.push(ws)
     body.push(...effectBlock(ui, st, pinfo))
+    const logi = logisticsBlock(ui, st)
+    if (logi) body.push(logi)
     const chain = chainBlock(st)
     if (chain) body.push(chain)
     if (D.queue || st.type === 'infirmary') body.push(benchBlock(ui, st))
@@ -130,7 +133,7 @@ function stationIO(type) {
     give(D.recipe.out)
     give(D.recipe.bonus)
   }
-  for (const m of Object.values(D.modes || {})) {
+  for (const m of Object.values(D.recipes || {})) {
     take(m.in)
     give(m.out)
   }
@@ -253,10 +256,11 @@ function effectBlock(ui, st, pinfo) {
     case 'floodlight':
       out.push(card('Floodlight', h('p.note', 'Lights the ground outside the wall at night. Defenders nearby shoot at full accuracy in the dark.'), h('div.kv', h('span', 'Uses'), h('b', `${D.power} power at night`)), powerToggle(ui, st, pinfo)))
       break
-    case 'ammo':
-      out.push(ammoBlock(ui, st, flow))
-      break
     default:
+      if (D.recipes) {
+        out.push(recipesBlock(ui, st, flow))
+        break
+      }
       if (D.recipe) {
         const R = D.recipe
         const tm = Array.isArray(R.time) ? R.time[lv - 1] : R.time
@@ -278,30 +282,135 @@ function powerToggle(ui, st, pinfo) {
   const on = st.autoOn !== false
   return h('div.kv', h('span', pinfo.powered.has(st.id) ? h('em.good', 'Powered') : on ? h('em.bad', 'No power') : h('em', 'Switched off')), h('button.mini', { onclick: () => ((st.autoOn = !on), ui.refreshPanel()) }, on ? 'Switch off' : 'Switch on'))
 }
-function ammoBlock(ui, st, flow) {
-  const D = STATIONS.ammo
-  const lv = st.level
+// Multi-recipe production: Auto keeps every product near its target.
+const TSTEP = { pammo: 20, rammo: 20, shells: 10, metal: 20, gunpowder: 10, chemicals: 5, parts: 5, wiring: 5, steel: 5, rubber: 5, cells: 2, circuits: 2, motors: 1, coils: 1, amps: 1, molotov: 1, pipebomb: 1 }
+function recipesBlock(ui, st, flow) {
+  const D = STATIONS[st.type]
   const mode = st.mode || 'auto'
+  const ids = Object.keys(D.recipes)
+  const outOf = (id) => Object.keys(activeRecipe(st, id).out)[0]
+  const label = (id) => RES[outOf(id)].short || RES[outOf(id)].name
+  const opts = [['auto', 'Auto'], ...ids.filter((id) => recipeUnlocked(st, id)).map((id) => [id, label(id)])]
   const rows = [
-    h('p.note', 'Pick a calibre, or leave it on Auto to keep the lowest one topped up to its target.'),
-    seg([['auto', 'Auto'], ['pammo', '9mm'], ['rammo', '7.62'], ['shells', '12ga']], mode, (v) => ((st.mode = v), ui.refreshPanel())),
+    h('p.note', 'Auto works on whichever product is furthest below its target and has what it needs. Pick one to make only that. Set a target to 0 to stop making it.'),
+    seg(opts, mode, (v) => ((st.mode = v), ui.refreshPanel())),
   ]
-  for (const k of ['pammo', 'rammo', 'shells']) {
-    const M = D.modes[k]
-    const tgt = st.targets?.[k] ?? 100
+  for (const id of ids) {
+    const R = activeRecipe(st, id)
+    const k = outOf(id)
+    const lock = !recipeUnlocked(st, id)
+    const step = TSTEP[k] ?? 5
+    const tgt = recipeTarget(st, id)
+    const alt = st.alts?.[id] ? ALT_RECIPES[st.alts[id]] : null
     rows.push(
       h(
-        'div.ammorow' + (st.curMode === k && st.active ? '.on' : ''),
-        h('span.an', { style: { '--c': RES[k].color } }, RES[k].name),
+        'div.ammorow' + (st.curMode === id && st.active ? '.on' : '') + (lock ? '.locked' : ''),
+        h('span.an', { style: { '--c': RES[k].color }, 'data-tip': `<b>${RES[k].name}</b>${RES[k].desc}` }, RES[k].name, alt ? h('em.alt', ` · ${alt.name}`) : null),
         h('span.ah', fmt(S.res[k])),
-        h('span.at', 'target ', stepper(Math.round(tgt / 20), 0, 60, (v) => ((st.targets[k] = v * 20), ui.refreshPanel()), (v) => v * 20)),
-        h('span.ab', costList(M.in, { small: true }), ' → ', resChip(k, M.out[k]), h('small', ` ${M.time[lv - 1]}s`)),
+        !lock && pulled(st, k)
+          ? h('span.at', { 'data-tip': 'A belt takes this to another station, so it is made whenever the belt has room. Set the target to 0 to stop.' }, h('i.inl', { html: icon('belt') }), 'on demand', stepper(Math.round(tgt / step), 0, 60, (v) => ((st.targets[id] = v * step), ui.refreshPanel()), (v) => (v ? 'on' : 'off')))
+          : lock
+          ? h('span.at', h('i.inl', { html: icon('lock') }), `Level ${R.lvl}`)
+          : h('span.at', 'target ', stepper(Math.round(tgt / step), 0, 60, (v) => ((st.targets[id] = v * step), ui.refreshPanel()), (v) => v * step)),
+        h('span.ab', costList(R.in, { small: true }), ' → ', resChip(k, R.out[k]), h('small', ` ${R.time[st.level - 1]}s`)),
       ),
     )
   }
   rows.push(rateRow('Per day now', flow))
   rows.push(bar(clamp(st.progress || 0, 0, 1), 'prod'))
-  return h('section.card', h('h3', 'Press'), ...rows)
+  return h('section.card', h('h3', 'Production', h('small', st.curMode ? `Making ${RES[outOf(st.curMode)].name.toLowerCase()}` : st.stalled || '')), ...rows)
+}
+
+// ---------------------------------------------------------------- belts
+// Which belts leave and arrive here, how full they run, and buttons to lay
+// new ones. Anything without a belt is carried to and from storage by hand.
+function currentRecipe(st) {
+  const D = STATIONS[st.type]
+  if (D.recipe) return activeSingle(st)
+  if (D.recipes && st.curMode && D.recipes[st.curMode]) return activeRecipe(st, st.curMode)
+  return null
+}
+function logisticsBlock(ui, st) {
+  const D = STATIONS[st.type]
+  const depot = st.type === 'storage'
+  const mine = linksOf(st)
+  const usable = (r) => !r.lvl || r.lvl <= st.level
+  let outs = []
+  let ins = []
+  if (!depot) {
+    const live = []
+    if (D.recipe) live.push(activeSingle(st))
+    if (D.recipes) for (const id of Object.keys(D.recipes)) if (usable(D.recipes[id])) live.push(activeRecipe(st, id))
+    const has = (k, dir) => mine.some((l) => (dir === 'out' ? l.from : l.to) === st.id && l.res === k)
+    outs = outputsOf(st).filter((k) => has(k, 'out') || D.passive?.[k] || live.some((r) => r.out?.[k]))
+    ins = inputsOf(st).filter((k) => has(k, 'in') || st.type === 'generator' || live.some((r) => r.in?.[k] > 0))
+    if (!ins.length && !outs.length) return null
+  } else if (!mine.length) {
+    return h('section.card.logi', h('h3', h('span', h('i.inl', { html: icon('belt') }), 'Belts')), h('p.note', 'A depot can feed any station by belt: open that station and choose a belt in. Belts from producers can end here too.'))
+  }
+  const flow = stationFlow(st, power())
+  const R = currentRecipe(st)
+  const bonus = beltBonus(st, R)
+  const linkRow = (l) => {
+    const out = l.from === st.id
+    const other = S.stations.find((x) => x.id === (out ? l.to : l.from))
+    const cap = linkPerDay(l.tier, l.res)
+    const now = (l.flow || 0) * SEC_PER_DAY
+    const state = linkState(l)
+    const up = upgradeCostOf(l)
+    const T = BELTS[l.tier]
+    return h(
+      'div.lrow.' + state,
+      h('span.ldir', out ? '→' : '←'),
+      h('span.lname', { onclick: () => other && ui.openStation(other.id), 'data-tip': state === 'backed' ? (out ? 'The far end is full, so goods are queueing.' : 'This station is full, so the belt is queueing.') : '' }, other ? STATIONS[other.type].name : '?', state === 'backed' ? h('em.bad', ' · full') : null),
+      h('span.ltier', { style: { '--c': T.color }, 'data-tip': `<b>${T.name}</b>${T.desc}<br>${Math.round(l.len)} m long, ${l.items.length} on it now.` }, `Mk${l.tier}`),
+      h('span.lbar', { 'data-tip': `Moving ${fmt(now)} of a possible ${fmt(cap)} a day` }, bar(now / cap, 'belt' + (now > cap * 0.9 ? '.max' : ''))),
+      up
+        ? h('button.mini', { disabled: !canAfford(up), 'data-tip': `<b>Upgrade to ${BELTS[l.tier + 1].name}</b>${BELTS[l.tier + 1].desc}<br>${Object.entries(up).map(([k, v]) => `${v} ${RES[k].name.toLowerCase()}`).join(', ')}`, onclick: () => (upgradeLink(l) ? (sfx('build'), ui.toast(`${BELTS[l.tier].name} running`, 'good')) : sfx('error'), ui.refreshPanel()), html: icon('up') })
+        : h('span.lmax', 'max'),
+      h('button.mini', { 'data-tip': 'Take the belt down. Half its materials come back.', onclick: () => (removeLink(l), sfx('dismantle'), ui.refreshPanel()), html: icon('close') }),
+    )
+  }
+  const addBtn = (k, dir) =>
+    h('button.mini.ladd', { 'data-tip': dir === 'out' ? `Lay a belt carrying ${RES[k].name.toLowerCase()} to another station or a depot` : `Lay a belt bringing ${RES[k].name.toLowerCase()} here from a station that makes it, or a depot`, onclick: () => ui.game.base.startLinking(st, k, dir) }, h('i', { html: icon('plus') }), 'Belt')
+  const rate = (k, sign) => {
+    const v = Math.abs(flow[k] || 0)
+    return v >= 0.05 && Math.sign(flow[k] || 0) === sign ? h('small.lrate', `${sign > 0 ? '+' : '−'}${v < 10 ? v.toFixed(1) : Math.round(v)} a day`) : null
+  }
+  const section = (keys, dir) => {
+    const rows = []
+    const hauled = []
+    for (const k of keys) {
+      const ls = mine.filter((l) => (dir === 'out' ? l.from : l.to) === st.id && l.res === k)
+      if (!ls.length) {
+        hauled.push(k)
+        continue
+      }
+      const cap = ls.reduce((a, l) => a + linkPerDay(l.tier, l.res), 0)
+      const need = Math.abs(flow[k] || 0)
+      rows.push(h('div.lres', resTag(k), rate(k, dir === 'out' ? 1 : -1), need > cap * 1.02 ? h('em.bad.lwarn', { 'data-tip': `Needs ${fmt(need)} a day but the belts carry ${fmt(cap)}. Upgrade them or add another.` }, 'belts too slow') : null, addBtn(k, dir)))
+      for (const l of ls) rows.push(linkRow(l))
+    }
+    if (hauled.length) rows.push(h('div.lhaul', h('span', dir === 'out' ? 'Carried to storage:' : 'Fetched from storage:'), hauled.map((k) => h('button.lchip', { style: { '--c': RES[k].color }, 'data-tip': `${RES[k].name} goes by hand. Click to belt it ${dir === 'out' ? 'away' : 'in'}.`, onclick: () => ui.game.base.startLinking(st, k, dir) }, h('i.ic', { html: resIcon(k) }), RES[k].short || RES[k].name, h('b', '+')))))
+    return rows
+  }
+  const body = []
+  if (depot) {
+    const ks = [...new Set(mine.map((l) => l.res))]
+    for (const k of ks) {
+      body.push(h('div.lres', resTag(k)))
+      for (const l of mine.filter((x) => x.res === k)) body.push(linkRow(l))
+    }
+  } else {
+    if (outs.length) body.push(h('div.lhead', 'Out'), ...section(outs, 'out'))
+    if (ins.length) body.push(h('div.lhead', 'In'), ...section(ins, 'in'))
+  }
+  const hint = depot
+    ? null
+    : bonus > 1
+      ? h('p.note.good', `Belts save the hauling: working ${Math.round((bonus - 1) * 100)}% faster.`)
+      : h('p.note', `Belt every input and every output to save the hauling: +${Math.round(BELT_BONUS * 100)}% speed for each side.`)
+  return h('section.card.logi', h('h3', h('span', h('i.inl', { html: icon('belt') }), 'Belts'), h('small', bonus > 1 ? `+${Math.round((bonus - 1) * 100)}% speed` : mine.length ? `${mine.length} connected` : 'none yet')), hint, body)
 }
 
 // ---------------------------------------------------------------- crafting benches
@@ -513,7 +622,11 @@ function benefits(st, next) {
   const out = []
   if (D.workers[i] > D.workers[i - 1]) out.push(`${D.workers[i]} worker slots`)
   if (D.recipe?.time && Array.isArray(D.recipe.time)) out.push(`Each batch ${Math.round((1 - D.recipe.time[i] / D.recipe.time[i - 1]) * 100)}% faster`)
-  if (D.modes) out.push('Presses ammo faster')
+  if (D.recipes) {
+    out.push('Works faster')
+    const fresh = Object.entries(D.recipes).filter(([, r]) => (r.lvl || 1) === next).map(([, r]) => RES[Object.keys(r.out)[0]].name)
+    if (fresh.length) out.push(`Can make ${fresh.join(', ')}`)
+  }
   if (D.passive) for (const [k, arr] of Object.entries(D.passive)) out.push(`${arr[i]} ${RES[k].name.toLowerCase()} a day`)
   if (D.beds) out.push(`${D.beds[i]} beds`)
   if (D.cap) out.push(`+${D.cap[i]} storage`)

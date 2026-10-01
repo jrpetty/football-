@@ -72,6 +72,18 @@ export const ICON = {
   pause: svg('<path d="M8 5v14M16 5v14"/>'),
   rotate: svg('<path d="M4 12a8 8 0 0 1 14-5.3L20 9"/><path d="M20 4v5h-5"/><path d="M20 12a8 8 0 0 1-14 5.3L4 15"/><path d="M4 20v-5h5"/>'),
   check: svg('<path d="M5 12l5 5 9-10"/>'),
+  steel: svg('<path d="M5 5h14M5 19h14M12 5v14"/><path d="M7.5 5v2.2M16.5 5v2.2M7.5 19v-2.2M16.5 19v-2.2"/>'),
+  wiring: svg('<circle cx="9" cy="12" r="5.5"/><circle cx="9" cy="12" r="2"/><path d="M14.5 12c3 0 2.5 5 6.5 5"/>'),
+  rubber: svg('<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><path d="M12 3.5v2.5M12 18v2.5M3.5 12H6M18 12h2.5"/>'),
+  circuits: svg('<rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="M7 9h4l2 3h4M7 15h3l2-3"/><circle cx="17" cy="9" r="1.1"/><circle cx="17" cy="15" r="1.1"/>'),
+  motors: svg('<rect x="3.5" y="7" width="12" height="10" rx="2"/><path d="M15.5 12h5M7.5 7V5h4v2M7 10.5h5M7 13.5h5"/>'),
+  coils: svg('<path d="M2.5 12h2.5M19 12h2.5"/><path d="M5 12c0-5 3.5-5 3.5 0s3.5 5 3.5 0 3.5-5 3.5 0 3.5 5 3.5 0"/>'),
+  cells: svg('<rect x="6" y="5" width="12" height="16" rx="2"/><path d="M10 3h4M12 9.5v6M9 12.5h6"/>'),
+  amps: svg('<path d="M12 11.5V21M9 21h6"/><circle cx="12" cy="9" r="2"/><path d="M8.2 5.2a5.5 5.5 0 0 0 0 7.6M15.8 5.2a5.5 5.5 0 0 1 0 7.6M5.3 2.5a9.5 9.5 0 0 0 0 13M18.7 2.5a9.5 9.5 0 0 1 0 13"/>'),
+  schematic: svg('<rect x="3.5" y="3.5" width="17" height="17" rx="1"/><path d="M8 8h8v8H8zM8 12h8M12 8v8"/>'),
+  specimen: svg('<path d="M9 3h6M10 3v13a2 2 0 0 0 4 0V3"/><path d="M10 10.5h4"/><path d="M17.5 8.5c1.4 1.2 1.8 3 .9 4.8"/>'),
+  core: svg('<path d="M12 2.5l8.2 4.75v9.5L12 21.5l-8.2-4.75v-9.5z"/><path d="M13 7l-4 5.5h3l-1 4.5 4-5.5h-3z"/>'),
+  belt: svg('<rect x="2.5" y="13" width="19" height="5.5" rx="2.75"/><circle cx="5.3" cy="15.75" r="1"/><circle cx="18.7" cy="15.75" r="1"/><path d="M9.5 15.75h5"/><rect x="8.5" y="5.5" width="7" height="6" rx="1"/><path d="M12 5.5v6"/>'),
   sound: svg('<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/>'),
 }
 export const icon = (k) => ICON[k] || ''

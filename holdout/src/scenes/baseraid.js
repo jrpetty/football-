@@ -60,6 +60,7 @@ export const RaidMixin = {
     S.raid = { count: R.count, killed: 0, spawned: 0, t: 0, side: pick(sides), side2: chance(R.size >= 2 ? 0.7 : 0.25) ? pick(sides) : null, acc: 0 }
     this.mode = 'raid'
     this.cancelPlacing()
+    this.cancelLinking()
     this.selectedDef = null
     this.removeWanderers()
     this.squad = []

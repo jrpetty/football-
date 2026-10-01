@@ -173,8 +173,11 @@ export function renderProduction(ui) {
   const groups = [
     ['needs', 'Needs'],
     ['materials', 'Materials'],
+    ['components', 'Components'],
     ['ammo', 'Ammunition'],
     ['supplies', 'Supplies'],
+    ['project', 'Signal parts'],
+    ['research', 'Research'],
   ]
   const producers = {}
   const pinfo = power()
@@ -222,7 +225,7 @@ export function renderProduction(ui) {
         ),
     ),
   )
-  return ui.frame('Camp overview', `Everyone eats ${needs.food.toFixed(1)} food and drinks ${needs.water.toFixed(1)} water a day`, [h('div.cols2', h('div', ...tables.slice(0, 2)), h('div', ...tables.slice(2), stations))], { icon: 'production' })
+  return ui.frame('Camp overview', `Everyone eats ${needs.food.toFixed(1)} food and drinks ${needs.water.toFixed(1)} water a day`, [h('div.cols2', h('div', ...tables.slice(0, 3)), h('div', ...tables.slice(3), stations))], { icon: 'production' })
 }
 export function renderPower(ui) {
   const p = power()

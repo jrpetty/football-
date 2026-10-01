@@ -3,7 +3,7 @@
 // recruits, distress calls, hordes and the black market.
 import {
   RES, STOCK_KEYS, AMMO_KEYS, ITEMS, QUALITY, MODS, STATIONS, FENCE, RECIPES, EXPANSIONS, HORDES, OCCUPATIONS, LOCATIONS,
-  GAME_MIN_PER_SEC, DAY_MIN, SEC_PER_DAY, RARITY,
+  GAME_MIN_PER_SEC, DAY_MIN, SEC_PER_DAY, RARITY, ALT_RECIPES,
 } from './data.js'
 import {
   S, day, hour, bounds, log, gain, pay, canAfford, capOf, stationSize, workersOf, workEff, gainXP, completeGoal,
@@ -11,6 +11,7 @@ import {
   bedCount, countType, maxLevelOf, addMoraleEvent, itemName, moraleMult, available, getS,
 } from './state.js'
 import { bus, pick, rint, rand, chance, clamp, weighted } from '../core/util.js'
+import { tickLinks, beltBonus, belted, pulled, outCap } from './belts.js'
 
 // ---------------------------------------------------------------- power
 export function powerNeed(st) {
@@ -36,7 +37,7 @@ export function powerInfo() {
       const op = workersOf(st).filter((s) => s.status === 'ok')[0]
       let p = STATIONS.generator.power[st.level - 1]
       if (op) p *= 1 + (OCCUPATIONS[op.occ].fx.station?.generator || 0) + 0.03 * op.skills.tech
-      if (S.res.fuel > 0.05) {
+      if (S.res.fuel > 0.05 || (st.buf?.in?.fuel || 0) > 0.05) {
         supply += p
         gen += p
       }
@@ -116,14 +117,15 @@ export function stationFlow(st, pinfo = power()) {
   if (st.building || st.level < 1) return flow
   if (d.passive) for (const [k, arr] of Object.entries(d.passive)) add(k, arr[st.level - 1] * (S.weather.type === 'rain' ? 2 : 1))
   if (d.recipe && rate > 0) {
-    const tm = Array.isArray(d.recipe.time) ? d.recipe.time[st.level - 1] : d.recipe.time
-    const cyc = (rate * SEC_PER_DAY) / tm
-    for (const [k, v] of Object.entries(d.recipe.out)) add(k, v * cyc)
-    for (const [k, v] of Object.entries(d.recipe.in)) add(k, -v * cyc)
+    const R = activeSingle(st)
+    const tm = Array.isArray(R.time) ? R.time[st.level - 1] : R.time
+    const cyc = (rate * beltBonus(st, R) * SEC_PER_DAY) / tm
+    for (const [k, v] of Object.entries(R.out)) add(k, v * cyc)
+    for (const [k, v] of Object.entries(R.in)) add(k, -v * cyc)
   }
-  if (d.modes && rate > 0) {
-    const m = d.modes[st.curMode || 'pammo']
-    const cyc = (rate * SEC_PER_DAY) / m.time[st.level - 1]
+  if (d.recipes && rate > 0 && st.curMode && d.recipes[st.curMode] && st.active) {
+    const m = activeRecipe(st, st.curMode)
+    const cyc = (rate * beltBonus(st, m) * SEC_PER_DAY) / m.time[st.level - 1]
     for (const [k, v] of Object.entries(m.out)) add(k, v * cyc)
     for (const [k, v] of Object.entries(m.in)) add(k, -v * cyc)
   }
@@ -169,7 +171,14 @@ export function econTick(dt, opts = {}) {
     const load = Math.min(1, pinfo.used / Math.max(pinfo.supply, 0.01))
     for (const st of S.stations) {
       if (st.type !== 'generator' || st.level < 1 || st.building) continue
-      S.res.fuel = Math.max(0, S.res.fuel - (dt / STATIONS.generator.burn[st.level - 1]) * load)
+      let burn = (dt / STATIONS.generator.burn[st.level - 1]) * load
+      const b = st.buf?.in
+      if (b?.fuel > 0) {
+        const t = Math.min(b.fuel, burn)
+        b.fuel -= t
+        burn -= t
+      }
+      S.res.fuel = Math.max(0, S.res.fuel - burn)
     }
   }
 
@@ -221,13 +230,17 @@ export function econTick(dt, opts = {}) {
     if (isAutomated(st, pinfo)) anyAuto = true
     if (d.passive) {
       const mult = S.weather.type === 'rain' ? 2 : 1
-      for (const [k, arr] of Object.entries(d.passive)) gain({ [k]: (arr[st.level - 1] * mult / SEC_PER_DAY) * dt })
+      for (const [k, arr] of Object.entries(d.passive)) {
+        const v = (arr[st.level - 1] * mult / SEC_PER_DAY) * dt
+        if (belted(st, k)) st.buf.out[k] = Math.min(outCap(k), (st.buf.out[k] || 0) + v)
+        else gain({ [k]: v })
+      }
       st.active = true
     }
     if (st.type === 'solar') st.active = solarOutput() > 0.05
     for (const s of workersOf(st)) if (s.status === 'ok' && d.skill) gainXP(s, d.skill, 0.2 * dt)
-    if (d.recipe) tickProcessor(st, d.recipe, rate, dt)
-    else if (d.modes) tickAmmo(st, rate, dt)
+    if (d.recipe) tickProcessor(st, activeSingle(st), rate, dt)
+    else if (d.recipes) tickMulti(st, d, rate, dt)
     else if (st.type === 'infirmary') tickInfirmary(st, rate, dt)
     else if (d.queue) tickBench(st, rate, dt)
     if (st.type === 'training') tickTraining(st, dt)
@@ -248,6 +261,7 @@ export function econTick(dt, opts = {}) {
     if (d.workers[st.level - 1] && !workersOf(st).length && !isAutomated(st, pinfo) && !['generator', 'watchtower', 'radio', 'training'].includes(st.type)) st.stalled = st.stalled || 'No workers'
   }
   if (anyAuto) completeGoal('automate')
+  tickLinks(dt)
 
   // ---- recovery
   for (const s of S.survivors) {
@@ -316,70 +330,166 @@ export function econTick(dt, opts = {}) {
 function tickProcessor(st, R, rate, dt) {
   if (rate <= 0) return
   const tm = Array.isArray(R.time) ? R.time[st.level - 1] : R.time
-  // Respect the stock limit (Forge/Still) so inputs aren't burned for nothing.
+  // Respect the stock limit (the Still) so inputs aren't burned for nothing,
+  // unless a belt is pulling the product to another station.
   const outKey = Object.keys(R.out)[0]
-  if (st.limit != null && S.res[outKey] >= st.limit) {
+  if (st.limit != null && S.res[outKey] >= st.limit && !pulled(st, outKey)) {
     st.stalled = `Stopped: ${RES[outKey].name.toLowerCase()} at limit (${st.limit})`
     return
   }
   st.active = true
-  st.progress += (dt * rate) / tm
+  st.progress += (dt * rate * beltBonus(st, R)) / tm
   let guard = 0
   while (st.progress >= 1 && guard++ < 20) {
-    if (!canAfford(R.in)) {
-      st.stalled = 'Missing ' + Object.keys(R.in).filter((k) => S.res[k] < R.in[k]).map((k) => RES[k].name.toLowerCase()).join(', ')
+    if (!hasInputs(st, R.in)) {
+      st.stalled = 'Missing ' + Object.keys(R.in).filter((k) => stockFor(st, k) < R.in[k]).map((k) => RES[k].name.toLowerCase()).join(', ')
       st.progress = 1
       st.active = false
       break
     }
-    if (Object.keys(R.out).every((k) => S.res[k] >= capOf(k) - 0.5)) {
-      st.stalled = 'Storage full'
+    const full = outputBlocked(st, R.out)
+    if (full) {
+      st.stalled = full
       st.progress = 1
       st.active = false
       break
     }
-    for (const [k, v] of Object.entries(R.in)) S.res[k] -= v
-    gain(R.out)
+    takeInputs(st, R.in)
+    giveOutputs(st, R.out)
     if (R.bonus) for (const [k, p] of Object.entries(R.bonus)) if (chance(p)) gain({ [k]: 1 })
     st.progress -= 1
     bus.emit('produced', st, R.out)
   }
 }
 
-// Ammo Press: produces the chosen calibre, or the one furthest below its target
-// that it has the materials for.
-function pickAmmoMode(st) {
-  const M = STATIONS.ammo.modes
-  if (st.mode && st.mode !== 'auto') return S.res[st.mode] < (st.targets?.[st.mode] ?? 1e9) ? st.mode : null
-  const want = ['pammo', 'rammo', 'shells']
-    .filter((k) => (st.targets?.[k] ?? 100) > 0 && S.res[k] < (st.targets?.[k] ?? 100))
-    .sort((a, b) => S.res[a] / (st.targets?.[a] ?? 100) - S.res[b] / (st.targets?.[b] ?? 100))
-  if (!want.length) return null
-  return want.find((k) => canAfford(M[k].in)) || want[0]
+// Multi-recipe processors (Forge, Chemistry Lab, Ammo Press, Fabricator,
+// Machine Shop): run the chosen recipe, or on Auto the product furthest
+// below its target that there are materials for.
+export const recipeTarget = (st, id) => st.targets?.[id] ?? STATIONS[st.type].targets?.[id] ?? 50
+export function activeRecipe(st, id) {
+  const R = STATIONS[st.type].recipes[id]
+  const alt = st.alts?.[id]
+  return alt && ALT_RECIPES[alt] ? { ...R, ...ALT_RECIPES[alt].recipe, lvl: R.lvl } : R
 }
-function tickAmmo(st, rate, dt) {
+export function activeSingle(st) {
+  const R = STATIONS[st.type].recipe
+  const alt = st.alts?._
+  return alt && ALT_RECIPES[alt] ? { ...R, ...ALT_RECIPES[alt].recipe } : R
+}
+export function recipeUnlocked(st, id) {
+  const R = STATIONS[st.type].recipes[id]
+  return !!R && (R.lvl || 1) <= st.level
+}
+// A product is wanted while it is below its target, or, when a belt carries
+// it to another station, while that belt has room (belts pull on demand).
+function pickRecipe(st, D) {
+  const out1 = (r) => Object.keys(r.out)[0]
+  const wanted = (id) => {
+    if (!recipeUnlocked(st, id)) return false
+    const R = activeRecipe(st, id)
+    const k = out1(R)
+    if (pulled(st, k)) return recipeTarget(st, id) > 0 && !outputBlocked(st, R.out)
+    return S.res[k] < recipeTarget(st, id)
+  }
+  const fill = (id) => {
+    const R = activeRecipe(st, id)
+    const k = out1(R)
+    return pulled(st, k) ? (st.buf.out[k] || 0) / outCap(k, R.out[k]) : S.res[k] / Math.max(1e-6, recipeTarget(st, id))
+  }
+  if (st.mode && st.mode !== 'auto') return wanted(st.mode) ? st.mode : null
+  const want = Object.keys(D.recipes)
+    .filter((id) => recipeTarget(st, id) > 0 && wanted(id))
+    .sort((a, b) => fill(a) - fill(b))
+  if (!want.length) return null
+  // stay on the current product while it still has what it needs
+  if (st.curMode && want.includes(st.curMode) && hasInputs(st, activeRecipe(st, st.curMode).in) && st.progress > 0.02) return st.curMode
+  return want.find((id) => hasInputs(st, activeRecipe(st, id).in)) || want[0]
+}
+function tickMulti(st, D, rate, dt) {
   if (rate <= 0) return
-  const mode = pickAmmoMode(st)
-  st.curMode = mode
-  if (!mode) {
-    st.stalled = 'All ammo at target'
+  const id = pickRecipe(st, D)
+  if (id !== st.curMode) {
+    st.curMode = id
+    st.progress = 0
+  }
+  if (!id) {
+    const jam = Object.keys(D.recipes).some((rid) => {
+      const R = activeRecipe(st, rid)
+      return recipeUnlocked(st, rid) && pulled(st, Object.keys(R.out)[0]) && outputBlocked(st, R.out)
+    })
+    st.stalled = jam ? 'Output belt backed up' : st.mode && st.mode !== 'auto' ? 'At target' : 'Everything at target'
     return
   }
-  const M = STATIONS.ammo.modes[mode]
+  const R = activeRecipe(st, id)
   st.active = true
-  st.progress += (dt * rate) / M.time[st.level - 1]
+  st.progress += (dt * rate * beltBonus(st, R)) / R.time[st.level - 1]
   if (st.progress >= 1) {
-    if (!canAfford(M.in)) {
-      st.stalled = 'Missing ' + Object.keys(M.in).filter((k) => S.res[k] < M.in[k]).map((k) => RES[k].name.toLowerCase()).join(', ')
+    if (!hasInputs(st, R.in)) {
+      st.stalled = 'Missing ' + Object.keys(R.in).filter((k) => stockFor(st, k) < R.in[k]).map((k) => RES[k].name.toLowerCase()).join(', ')
       st.progress = 1
       st.active = false
       return
     }
-    for (const [k, v] of Object.entries(M.in)) S.res[k] -= v
-    gain(M.out)
+    const full = outputBlocked(st, R.out)
+    if (full) {
+      st.stalled = full
+      st.progress = 1
+      st.active = false
+      return
+    }
+    takeInputs(st, R.in)
+    giveOutputs(st, R.out)
     st.progress -= 1
-    bus.emit('produced', st, M.out)
+    bus.emit('produced', st, R.out)
   }
+}
+
+// ---------------------------------------------------------------- station inputs and outputs
+// A station draws what it needs from its input buffer first (filled by
+// belts), then hand-hauls the rest from storage. What it makes goes to its
+// output buffer if a belt carries it away, otherwise straight into storage.
+function stockFor(st, k) {
+  return (st.buf?.in?.[k] || 0) + (S.res[k] || 0)
+}
+export function hasInputs(st, inp) {
+  for (const [k, v] of Object.entries(inp)) if (stockFor(st, k) < v - 1e-6) return false
+  return true
+}
+function takeInputs(st, inp) {
+  for (const [k, v] of Object.entries(inp)) {
+    let need = v
+    const b = st.buf?.in
+    if (b && b[k] > 0) {
+      const t = Math.min(b[k], need)
+      b[k] -= t
+      need -= t
+    }
+    if (need > 0) S.res[k] = Math.max(0, S.res[k] - need)
+  }
+}
+// Why a finished batch has nowhere to go, or null.
+function outputBlocked(st, out) {
+  let unbelted = false
+  let room = false
+  for (const [k, v] of Object.entries(out)) {
+    if (belted(st, k)) {
+      if ((st.buf?.out?.[k] || 0) + v > outCap(k, v) + 1e-6) return 'Output belt backed up'
+    } else {
+      unbelted = true
+      if (S.res[k] < capOf(k) - 0.5) room = true
+    }
+  }
+  return unbelted && !room ? 'Storage full' : null
+}
+function giveOutputs(st, out) {
+  const rest = {}
+  for (const [k, v] of Object.entries(out)) {
+    if (belted(st, k)) {
+      st.buf = st.buf || { in: {}, out: {} }
+      st.buf.out[k] = (st.buf.out[k] || 0) + v
+    } else rest[k] = v
+  }
+  if (Object.keys(rest).length) gain(rest)
 }
 
 // Crafting benches work through their order list. Resources are paid when a

@@ -6,6 +6,7 @@ import { pregenerate } from './render/texgen.js'
 import { initAudio, sfx, setSound } from './core/audio.js'
 import { S, newGame, hasSave, load, save, day, log, wipeSave, buildCost, newStation, pay, canAfford, completeGoal } from './game/state.js'
 import { econTick, initSchedules, autoResolveRaid, scheduleRaid } from './game/economy.js'
+import * as belts from './game/belts.js'
 import { STATIONS, GAME_MIN_PER_SEC } from './game/data.js'
 import { BaseScene } from './scenes/base.js'
 import { CityMap } from './scenes/citymap.js'
@@ -366,4 +367,5 @@ const game = new Game()
 window.__holdout = game
 window.__view = view
 Object.defineProperty(window, '__S', { get: () => S })
+window.__belts = belts
 game.boot()

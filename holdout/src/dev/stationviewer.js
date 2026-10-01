@@ -46,6 +46,7 @@ types.forEach((type, i) => {
   const z = Math.floor(i / cols) * cell
   m.position.set(x, 0, z)
   scene.add(m)
+  if (q.get('roofs') === '0') for (const [n, p] of Object.entries(m.userData.pivots || {})) if (n.startsWith('roof')) p.visible = false
   const I = m.userData.info || {}
   for (const f of I.flames || []) {
     for (let k = 0; k < 2; k++) {

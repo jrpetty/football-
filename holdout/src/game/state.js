@@ -3,7 +3,7 @@
 import {
   RES, RES_KEYS, STOCK_KEYS, SKILLS, SKILL_KEYS, SKILL_MAX, xpForLevel, OCCUPATIONS, OCC_KEYS, TRAITS, TRAIT_KEYS,
   FIRST_NAMES, FEMALE_NAMES, LAST_NAMES, ITEMS, QUALITY, MODS, STATIONS, FENCE, RECIPES, REPAIR, EXPANSIONS, EXPANSION_DEPTH,
-  GOALS, DAY_MIN, UTILITIES,
+  GOALS, DAY_MIN, UTILITIES, BELTS, BELT_STACK,
 } from './data.js'
 import { bus, uid, pick, rint, rand, chance, clamp, store, weighted } from '../core/util.js'
 import { SKIN_TONES, HAIR_COLORS } from '../models/character.js'
@@ -401,8 +401,10 @@ export function newStation(type, x, z, rot = 0, level = 0) {
     autoOn: true,
     module: false,
     limit: d.limit ? 200 : null,
-    mode: type === 'ammo' ? 'auto' : null,
-    targets: type === 'ammo' ? { pammo: 300, rammo: 160, shells: 90 } : null,
+    mode: d.recipes ? 'auto' : null,
+    targets: d.recipes ? { ...d.targets } : null,
+    alts: {},
+    buf: { in: {}, out: {} },
     maintain: !!REPAIR[type],
     trainSkill: 'auto',
   }
@@ -421,15 +423,41 @@ export function startUpgrade(st) {
 export function demolish(st) {
   if (STATIONS[st.type].fixed) return
   for (const s of workersOf(st)) s.job = null
+  for (const l of (S.links || []).filter((x) => x.from === st.id || x.to === st.id)) removeLink(l)
   const d = STATIONS[st.type]
   const refund = {}
   for (let i = 0; i < st.level; i++) for (const [k, v] of Object.entries(d.cost[i])) refund[k] = (refund[k] || 0) + Math.floor(v / 2)
   if (st.module) refund.module = 1
   for (const o of st.orders) if (o.paid) for (const [k, v] of Object.entries(o.paid)) refund[k] = (refund[k] || 0) + v
+  for (const b of [st.buf?.in, st.buf?.out]) for (const [k, v] of Object.entries(b || {})) if (v > 0) refund[k] = (refund[k] || 0) + v
   gain(refund)
   S.stations = S.stations.filter((x) => x !== st)
   bus.emit('stations')
 }
+// ---------------------------------------------------------------- belts
+// Routing, building and moving items live in belts.js; the bookkeeping that
+// demolishing a station also needs lives here.
+export function linkCost(tier, len) {
+  const out = {}
+  for (const [k, v] of Object.entries(BELTS[tier].cost)) out[k] = Math.max(1, Math.ceil(v * len))
+  return out
+}
+// Take a belt down: half its cost back (all of it if `frac` is 1), and what
+// was riding it, or waiting to get on it, goes into storage.
+export function removeLink(l, frac = 0.5) {
+  const refund = {}
+  for (const [k, v] of Object.entries(linkCost(l.tier, l.len))) refund[k] = Math.floor(v * frac)
+  refund[l.res] = (refund[l.res] || 0) + l.items.length * (BELT_STACK[l.res] || 1)
+  S.links = S.links.filter((x) => x !== l)
+  const src = S.stations.find((x) => x.id === l.from)
+  if (src?.buf?.out?.[l.res] && !S.links.some((x) => x.from === src.id && x.res === l.res)) {
+    refund[l.res] += src.buf.out[l.res]
+    src.buf.out[l.res] = 0
+  }
+  gain(refund)
+  bus.emit('links')
+}
+
 export function installModule(st) {
   const d = STATIONS[st.type]
   if (!d.auto || st.module || st.level < d.auto) return false
@@ -630,6 +658,8 @@ export function newGame() {
     recruit: { next: 0, pending: null },
     market: null,
     looted: {},
+    explored: {},
+    links: [],
     events: [],
     goals: {},
     stats: { kills: 0, runs: 0, deaths: 0, recruited: 0, raids: 0, crafted: 0, memorial: [] },
@@ -693,7 +723,26 @@ export function load(data) {
   S.raid = null
   S.speed = 1
   for (const k of RES_KEYS) if (S.res[k] == null) S.res[k] = 0
+  migrate()
   return S
+}
+// Bring older saves up to date with newer systems.
+function migrate() {
+  for (const st of S.stations) {
+    const d = STATIONS[st.type]
+    if (!d) continue
+    st.buf = st.buf || { in: {}, out: {} }
+    st.alts = st.alts || {}
+    if (d.recipes) {
+      st.targets = { ...d.targets, ...(st.targets || {}) }
+      if (!st.mode || (st.mode !== 'auto' && !d.recipes[st.mode])) st.mode = 'auto'
+      // orders for recipes that moved to continuous production are refunded
+      for (const o of st.orders || []) if (o.kind === 'recipe' && !RECIPES.find((r) => r.id === o.recipe) && o.paid) for (const [k, v] of Object.entries(o.paid)) S.res[k] = (S.res[k] || 0) + v
+      st.orders = (st.orders || []).filter((o) => o.kind !== 'recipe' || RECIPES.find((r) => r.id === o.recipe))
+    }
+  }
+  S.links = S.links || []
+  S.explored = S.explored || {}
 }
 export const wipeSave = () => store.del(SAVE_KEY)
 

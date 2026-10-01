@@ -32,6 +32,20 @@ export const RES = {
   pipebomb: { name: 'Pipe Bomb', cat: 'supplies', color: '#c8c8c8', sell: 45, capMul: 0.15, desc: 'Utility item: a loud blast that shreds everything close by.' },
   noisemaker: { name: 'Noise Maker', cat: 'supplies', color: '#58d0ff', sell: 25, capMul: 0.15, desc: 'Utility item: beeps for 15 s and lures nearby zombies to it.' },
   module: { name: 'Automation Module', cat: 'supplies', color: '#7ad0ff', sell: 90, capMul: 0.1, desc: 'Lets a station run on generator power with nobody assigned.' },
+  // components: the factory's intermediate goods
+  steel: { name: 'Steel', cat: 'components', color: '#8aa6bc', sell: 8, capMul: 0.5, desc: 'Metal hardened at the Forge (level 2). Motors, belts, heavy walls.' },
+  wiring: { name: 'Wiring', cat: 'components', color: '#d68a4a', sell: 5, capMul: 0.6, desc: 'Copper stripped from scrap and electronics and spooled at the Fabricator.' },
+  rubber: { name: 'Rubber', cat: 'components', color: '#5a5a62', sell: 5, capMul: 0.5, desc: 'Cured from fuel and chemicals at the Chemistry Lab. Belts and seals.' },
+  circuits: { name: 'Circuit Boards', short: 'Circuits', cat: 'components', color: '#5ac87a', sell: 18, capMul: 0.3, desc: 'Assembled at the Machine Shop. Turrets, radios and the Signal.' },
+  motors: { name: 'Motors', cat: 'components', color: '#d0a456', sell: 30, capMul: 0.25, desc: 'Rewound electric motors from the Machine Shop. Fast belts, heavy machines, the Signal.' },
+  // the Signal: parts for the broadcast mast
+  coils: { name: 'Transmitter Coils', short: 'Coils', cat: 'project', color: '#e07a50', sell: 45, capMul: 0.2, desc: 'Hand-wound coils for the broadcast mast. Machine Shop, level 2.' },
+  cells: { name: 'Power Cells', short: 'Cells', cat: 'project', color: '#6ad8c8', sell: 40, capMul: 0.2, desc: 'Sealed batteries from the Chemistry Lab (level 3). They store power and feed the mast.' },
+  amps: { name: 'Signal Amplifiers', short: 'Amplifiers', cat: 'project', color: '#ecc65e', sell: 120, capMul: 0.1, desc: 'The heart of the broadcast. Machine Shop, level 3.' },
+  // research
+  schematic: { name: 'Schematics', cat: 'research', color: '#8ab4ec', sell: 25, capMul: 0.1, desc: 'Plans and manuals found on runs. Study them at the Research Desk for alternate recipes.' },
+  specimen: { name: 'Specimens', cat: 'research', color: '#b6d65a', sell: 20, capMul: 0.1, desc: 'Tissue from special infected. Research turns them into antivirals and more.' },
+  core: { name: 'Power Cores', short: 'Cores', cat: 'research', color: '#ff9ad4', sell: 150, capMul: 0.05, desc: 'Rare military power regulators. Each one overclocks an automated station by 50%.' },
   cash: { name: 'Cash', cat: 'cash', color: '#86c67a', sell: 1, desc: 'Trade currency for the black market.' },
 }
 export const RES_KEYS = Object.keys(RES)
@@ -288,10 +302,14 @@ export const STATIONS = {
   },
   forge: {
     name: 'Forge', cat: 'production', size: [4, 4], levels: 3, skill: 'tech',
-    desc: 'Smelts scrap into usable metal, fired with wood. Set a limit so it does not eat all your scrap.',
+    desc: 'Smelts scrap into metal, fired with wood. At level 2 it hardens metal into steel. Set targets so it doesn\'t eat all your scrap.',
     cost: [{ wood: 30, scrap: 40 }, { metal: 30, parts: 6, scrap: 20 }, { metal: 60, parts: 14 }],
     time: [30, 60, 100], workers: [1, 1, 2], auto: 2, autoPower: 2, autoRate: 1.2,
-    recipe: { in: { scrap: 3, wood: 1 }, out: { metal: 2 }, time: [22, 17, 13] }, limit: true,
+    recipes: {
+      metal: { lvl: 1, in: { scrap: 3, wood: 1 }, out: { metal: 2 }, time: [22, 17, 13] },
+      steel: { lvl: 2, in: { metal: 2, fuel: 1 }, out: { steel: 1 }, time: [30, 30, 24] },
+    },
+    targets: { metal: 200, steel: 60 },
   },
   still: {
     name: 'Biofuel Still', cat: 'production', size: [4, 3], levels: 3, skill: 'tech',
@@ -314,9 +332,18 @@ export const STATIONS = {
   },
   chemlab: {
     name: 'Chemistry Lab', cat: 'crafting', size: [5, 4], levels: 3, skill: 'tech',
-    desc: 'Mixes gunpowder for the Ammo Press, molotovs and pipe bombs for runs, and refines chemicals.',
+    desc: 'Refines chemicals from fuel and scrap, mixes gunpowder for the Ammo Press, cures rubber, fills molotovs and pipe bombs, and seals power cells. Keeps each product topped up to its target.',
     cost: [{ wood: 30, metal: 20, chemicals: 6 }, { metal: 40, parts: 10, chemicals: 10 }, { metal: 60, parts: 20, electronics: 6 }],
-    time: [35, 65, 100], workers: [1, 1, 2], auto: 3, autoPower: 2, autoRate: 1, queue: [3, 4, 6],
+    time: [35, 65, 100], workers: [1, 1, 2], auto: 2, autoPower: 2, autoRate: 1,
+    recipes: {
+      chemicals: { lvl: 1, in: { fuel: 1, scrap: 2 }, out: { chemicals: 1 }, time: [40, 32, 26] },
+      gunpowder: { lvl: 1, in: { chemicals: 2, wood: 1 }, out: { gunpowder: 3 }, time: [30, 24, 19] },
+      molotov: { lvl: 1, in: { fuel: 2, cloth: 1 }, out: { molotov: 1 }, time: [20, 16, 13] },
+      rubber: { lvl: 2, in: { fuel: 2, chemicals: 1 }, out: { rubber: 2 }, time: [34, 34, 27] },
+      pipebomb: { lvl: 2, in: { metal: 2, gunpowder: 4, electronics: 1 }, out: { pipebomb: 1 }, time: [45, 45, 36] },
+      cells: { lvl: 3, in: { chemicals: 3, metal: 1, electronics: 2 }, out: { cells: 1 }, time: [55, 55, 55] },
+    },
+    targets: { chemicals: 20, gunpowder: 60, molotov: 4, rubber: 20, pipebomb: 2, cells: 0 },
   },
 
   workbench: {
@@ -336,11 +363,36 @@ export const STATIONS = {
     desc: 'Presses metal and gunpowder into rounds. Choose a calibre, or let it keep the lowest one topped up.',
     cost: [{ metal: 35, parts: 8 }, { metal: 50, parts: 15 }, { metal: 70, parts: 25, electronics: 4 }],
     time: [35, 65, 95], workers: [1, 1, 2], auto: 2, autoPower: 2, autoRate: 1.2,
-    modes: {
-      pammo: { in: { metal: 1, gunpowder: 1 }, out: { pammo: 12 }, time: [18, 14, 11] },
-      rammo: { in: { metal: 1, gunpowder: 2 }, out: { rammo: 8 }, time: [22, 17, 13] },
-      shells: { in: { metal: 1, gunpowder: 1, scrap: 1 }, out: { shells: 6 }, time: [20, 15, 12] },
+    recipes: {
+      pammo: { lvl: 1, in: { metal: 1, gunpowder: 1 }, out: { pammo: 12 }, time: [18, 14, 11] },
+      rammo: { lvl: 1, in: { metal: 1, gunpowder: 2 }, out: { rammo: 8 }, time: [22, 17, 13] },
+      shells: { lvl: 1, in: { metal: 1, gunpowder: 1, scrap: 1 }, out: { shells: 6 }, time: [20, 15, 12] },
     },
+    targets: { pammo: 300, rammo: 160, shells: 90 },
+  },
+  fabricator: {
+    name: 'Fabricator', cat: 'crafting', size: [4, 4], levels: 3, skill: 'craft', req: { workbench: 1 },
+    desc: 'A salvaged production line that turns raw scrap into components around the clock: parts, and copper wiring stripped from old cable. Belt it up and it never stops.',
+    cost: [{ wood: 30, metal: 25, scrap: 30 }, { metal: 45, parts: 12, wiring: 10 }, { steel: 30, parts: 20, motors: 2 }],
+    time: [35, 70, 110], workers: [1, 2, 2], auto: 2, autoPower: 1, autoRate: 1,
+    recipes: {
+      parts: { lvl: 1, in: { scrap: 4, metal: 1 }, out: { parts: 2 }, time: [20, 16, 12] },
+      wiring: { lvl: 1, in: { scrap: 2, electronics: 1 }, out: { wiring: 3 }, time: [24, 19, 15] },
+    },
+    targets: { parts: 40, wiring: 40 },
+  },
+  assembler: {
+    name: 'Machine Shop', cat: 'crafting', size: [5, 4], levels: 3, skill: 'tech', req: { fabricator: 1, forge: 2 },
+    desc: 'Lathes, a press and a winding bench. Assembles circuit boards and motors, and at higher levels the coils and amplifiers the Signal needs.',
+    cost: [{ metal: 50, parts: 20, wiring: 20 }, { steel: 40, motors: 3, circuits: 6 }, { steel: 80, motors: 8, circuits: 16 }],
+    time: [50, 90, 140], workers: [1, 2, 3], auto: 2, autoPower: 2, autoRate: 1,
+    recipes: {
+      circuits: { lvl: 1, in: { electronics: 2, wiring: 2, chemicals: 1 }, out: { circuits: 1 }, time: [40, 32, 25] },
+      motors: { lvl: 1, in: { steel: 2, wiring: 3, parts: 2 }, out: { motors: 1 }, time: [60, 48, 38] },
+      coils: { lvl: 2, in: { wiring: 4, steel: 1, circuits: 1 }, out: { coils: 1 }, time: [50, 50, 40] },
+      amps: { lvl: 3, in: { motors: 1, circuits: 2, coils: 2 }, out: { amps: 1 }, time: [90, 90, 90] },
+    },
+    targets: { circuits: 10, motors: 6, coils: 0, amps: 0 },
   },
   tailor: {
     name: 'Tailor Station', cat: 'crafting', size: [5, 4], levels: 3, skill: 'craft',
@@ -379,6 +431,21 @@ export const STATION_CATS = [
   { id: 'crafting', name: 'Crafting' },
   { id: 'defense', name: 'Defense' },
 ]
+
+// Conveyor belts between stations (and to and from storage). Items ride
+// them at the tier's speed, spaced at least `gap` metres apart, so each tier
+// carries rate = speed / gap items a second. A station whose inputs arrive
+// by belt, or whose output leaves by belt, saves the time spent carrying:
+// +15% for each side.
+export const BELTS = [
+  null,
+  { name: 'Belt Mk1', speed: 0.5, gap: 2.0, cost: { scrap: 2, wood: 1 }, color: '#8a7a62', desc: 'Salvaged rubber on scrap rails. Carries 120 a day.' },
+  { name: 'Belt Mk2', speed: 1.0, gap: 1.5, cost: { metal: 1, rubber: 1 }, color: '#d8a020', desc: 'Proper rollers and a cured belt. Carries 320 a day.' },
+  { name: 'Belt Mk3', speed: 2.0, gap: 1.2, cost: { steel: 1, motors: 0.25 }, color: '#4a8ac8', desc: 'Motor-driven, steel-framed. Carries 800 a day.' },
+]
+export const BELT_BONUS = 0.15
+// How many units ride in one belt item.
+export const BELT_STACK = { pammo: 10, rammo: 10, shells: 5 }
 
 // Perimeter wall levels; upgrade cost is per 10 m of wall.
 export const FENCE = [
@@ -422,12 +489,6 @@ export const RECIPES = [
   { id: 'riot', station: 'tailor', lvl: 3, item: 'riot', in: { cloth: 28, metal: 38, parts: 14 }, time: 90, cat: 'Armor' },
   { id: 'military', station: 'tailor', lvl: 3, item: 'military', in: { cloth: 36, metal: 48, parts: 22, electronics: 2 }, time: 120, cat: 'Armor' },
 
-  // Chemistry Lab
-  { id: 'chemicals', station: 'chemlab', lvl: 1, out: { chemicals: 1 }, in: { fuel: 1, scrap: 2 }, time: 40, cat: 'Materials' },
-  { id: 'gunpowder', station: 'chemlab', lvl: 1, out: { gunpowder: 3 }, in: { chemicals: 2, wood: 1 }, time: 30, cat: 'Materials' },
-  { id: 'molotov', station: 'chemlab', lvl: 1, out: { molotov: 1 }, in: { fuel: 2, cloth: 1 }, time: 20, cat: 'Throwables' },
-  { id: 'pipebomb', station: 'chemlab', lvl: 2, out: { pipebomb: 1 }, in: { metal: 2, gunpowder: 4, electronics: 1 }, time: 45, cat: 'Throwables' },
-
   // Electronics Bench
   { id: 'flashlight', station: 'electronics', lvl: 1, item: 'flashlight', in: { electronics: 2, parts: 2, scrap: 2 }, time: 30, cat: 'Gadgets' },
   { id: 'noisemaker', station: 'electronics', lvl: 1, out: { noisemaker: 1 }, in: { electronics: 1, parts: 1 }, time: 25, cat: 'Gadgets' },
@@ -441,6 +502,26 @@ export const RECIPES = [
   { id: 'medkit', station: 'infirmary', lvl: 1, out: { medkit: 1 }, in: { cloth: 4, meds: 2 }, time: 25, cat: 'Medical' },
   { id: 'meds', station: 'infirmary', lvl: 2, out: { meds: 1 }, in: { chemicals: 2, water: 2 }, time: 35, cat: 'Medical' },
 ]
+// Alternate recipes: different inputs for the same product, unlocked by
+// researching schematics found on runs. A station runs either its standard
+// recipe or one alternate per product. base '_' = the station's only recipe.
+export const ALT_RECIPES = {
+  castMetal: { station: 'forge', base: 'metal', name: 'Cast Metal', desc: 'Fired with fuel instead of wood.', recipe: { in: { scrap: 3, fuel: 1 }, out: { metal: 2 } } },
+  charcoalSteel: { station: 'forge', base: 'steel', name: 'Charcoal Steel', desc: 'Carburised in a charcoal bed: no fuel, more wood.', recipe: { in: { metal: 2, wood: 3 }, out: { steel: 1 } } },
+  pigSteel: { station: 'forge', base: 'steel', name: 'Pig Steel', desc: 'Straight from scrap, skipping the metal stage. Slow.', recipe: { in: { scrap: 7, fuel: 1 }, out: { steel: 1 }, time: [40, 40, 32] } },
+  blackPowder: { station: 'chemlab', base: 'gunpowder', name: 'Black Powder', desc: 'Charcoal-heavy powder: half the chemicals.', recipe: { in: { chemicals: 1, wood: 3 }, out: { gunpowder: 3 } } },
+  cropSolvent: { station: 'chemlab', base: 'chemicals', name: 'Crop Solvent', desc: 'Fermented from food instead of fuel.', recipe: { in: { food: 3, scrap: 1 }, out: { chemicals: 1 } } },
+  stampedParts: { station: 'fabricator', base: 'parts', name: 'Stamped Parts', desc: 'Pressed from clean metal: faster, no scrap.', recipe: { in: { metal: 2 }, out: { parts: 2 }, time: [14, 11, 8] } },
+  scrapParts: { station: 'fabricator', base: 'parts', name: 'Salvaged Parts', desc: 'Picked out of scrap alone. Slow but needs no metal.', recipe: { in: { scrap: 7 }, out: { parts: 2 }, time: [30, 24, 18] } },
+  cableStrip: { station: 'fabricator', base: 'wiring', name: 'Cable Stripping', desc: 'Copper from old cable runs: no electronics needed.', recipe: { in: { scrap: 5 }, out: { wiring: 2 } } },
+  solderBoards: { station: 'assembler', base: 'circuits', name: 'Soldered Boards', desc: 'Hand-soldered, no etching chemicals.', recipe: { in: { electronics: 3, wiring: 1 }, out: { circuits: 1 } } },
+  rewoundMotors: { station: 'assembler', base: 'motors', name: 'Rewound Motors', desc: 'Old motors rewound: less steel, more wire.', recipe: { in: { steel: 1, wiring: 6, parts: 2 }, out: { motors: 1 } } },
+  compactRounds: { station: 'ammo', base: 'pammo', name: 'Compact Rounds', desc: 'Lighter loads: more 9mm from the same powder.', recipe: { in: { metal: 1, gunpowder: 1 }, out: { pammo: 16 } } },
+  hydroponics: { station: 'farm', base: '_', name: 'Hydroponic Beds', desc: 'Recirculating water: half as much per crop.', recipe: { in: { water: 0.25 }, out: { food: 1 } } },
+  cellulose: { station: 'still', base: '_', name: 'Cellulose Still', desc: 'Ferments wood pulp: no food needed.', recipe: { in: { wood: 3, water: 1 }, out: { fuel: 1 } } },
+  magnetCrane: { station: 'scrapyard', base: '_', name: 'Magnet Crane', desc: 'Pulls more parts and boards out of the wrecks.', recipe: { bonus: { parts: 0.12, electronics: 0.05 } } },
+}
+
 // Repair cost per 100% condition, by bench (scaled by item value).
 export const REPAIR = {
   workbench: { metal: 3, scrap: 4 },

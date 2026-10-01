@@ -512,6 +512,24 @@ export class UI {
     this.dock.classList.remove('placing')
     if (!this.dock.hidden) this.renderBuild()
   }
+  // Laying a belt: what is being connected and how to finish.
+  showLinkBar(title, hint) {
+    const P = this.placebar
+    this.closePanel()
+    P.hidden = false
+    P.innerHTML = ''
+    P.classList.add('linkbar')
+    P.append(
+      h('i.pb-ic', { html: icon('belt') }),
+      h('b', title),
+      h('span.pb-ok.good', hint),
+      h('button.btn.small.ghost', { onclick: () => this.game.base.cancelLinking(true) }, 'Cancel', h('kbd', 'Esc')),
+    )
+  }
+  hideLinkBar() {
+    this.placebar.hidden = true
+    this.placebar.classList.remove('linkbar')
+  }
 
   // ---------------------------------------------------------------- raid HUD
   raidHud(on) {

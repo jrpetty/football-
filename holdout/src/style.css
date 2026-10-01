@@ -799,3 +799,34 @@ body.aiming #c { cursor: crosshair !important; }
 .subhead { margin: 12px 0 6px; font: 600 11px var(--font-display); letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
 .sq-sk .eye { color: #9ad8f0; display: inline-flex; align-items: center; gap: 3px; }
 .sq-sk .eye svg { width: 13px; height: 13px; }
+
+/* ---- belts */
+.logi .lhead { margin: 8px 0 2px; font: 600 11px var(--font-display); letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); }
+.logi .lhead:first-of-type { margin-top: 2px; }
+.logi .lres { display: flex; align-items: center; gap: 8px; padding: 5px 0 1px; }
+.logi .lres .lrate { color: var(--muted); font-size: 12px; }
+.logi .lres .lwarn { font-size: 12px; }
+.logi .lres .ladd { margin-left: auto; }
+.mini.ladd { display: inline-flex; align-items: center; gap: 3px; padding-right: 8px; }
+.mini.ladd i svg { width: 13px; height: 13px; }
+.logi .lrow { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto 74px auto auto; align-items: center; gap: 7px; padding: 3px 0 3px 4px; font-size: 13px; }
+.logi .lrow .ldir { color: var(--dim); font-weight: 700; text-align: center; }
+.logi .lrow .lname { cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #e2dcc8; }
+.logi .lrow .lname:hover { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
+.logi .lrow .ltier { font: 700 11px/1 var(--font-display); letter-spacing: 0.04em; padding: 3px 6px; border-radius: 4px; color: #fff; background: color-mix(in srgb, var(--c) 34%, transparent); border: 1px solid color-mix(in srgb, var(--c) 80%, transparent); }
+.logi .lrow .lmax { font-size: 11px; color: var(--dim); width: 28px; text-align: center; }
+.logi .lrow .bar { height: 6px; margin: 0; }
+.logi .lrow.idle .lname { color: var(--muted); }
+.bar.belt i { background: linear-gradient(90deg, #3e9a6a, #7ad89a); }
+.bar.belt.max i { background: linear-gradient(90deg, #c88a2a, var(--accent)); }
+.logi .lhaul { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: 7px; font-size: 12px; color: var(--muted); }
+.logi .lhaul > span { margin-right: 2px; }
+.lchip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px 2px 5px; border-radius: 99px; border: 1px dashed var(--line-2); background: rgba(255,255,255,0.03); font: 600 12px var(--font-display); color: var(--fg); cursor: pointer; }
+.lchip .ic { color: var(--c); }
+.lchip .ic svg { width: 13px; height: 13px; }
+.lchip b { color: var(--accent); font-weight: 700; }
+.lchip:hover { border-style: solid; border-color: var(--accent); background: rgba(234,165,60,0.08); }
+.placebar.linkbar { border-color: rgba(74,224,176,0.45); }
+.placebar .pb-ic { color: #4ae0b0; }
+.placebar .pb-ic svg { width: 20px; height: 20px; }
+.ammorow .at .inl svg { width: 13px; height: 13px; }

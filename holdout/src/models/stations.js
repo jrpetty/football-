@@ -14,6 +14,7 @@ import {
 } from './parts.js'
 import { STATIONS2 } from './stations2.js'
 import { HD } from './stationsHD.js'
+import { HD2 } from './stationsHD2.js'
 import { slab, deck, boardWall, windowPane, door, frame, hangingTools, carWreck, roof } from './stationkit.js'
 export { slab, deck, boardWall, windowPane, door, frame, carWreck }
 
@@ -997,7 +998,7 @@ export function stationModel(type, level) {
     const [w, d] = def.size
     const I = { w, d, lights: [], emitters: [], flames: [], spots: [], beds: [], seats: [], anims: [], blink: [], roofs: [] }
     const b = new Builder()
-    const fn = HD[type] || M[type] || STATIONS2[type]
+    const fn = HD[type] || HD2[type] || M[type] || STATIONS2[type]
     if (fn) fn(b, Math.max(1, level), I)
     else b.box(w - 0.4, 1, d - 0.4, { mat: 'wood', y: 0.5 })
     const g = b.build()

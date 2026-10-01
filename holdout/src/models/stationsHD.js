@@ -2786,3 +2786,6 @@ export const HD = {
   },
 
 }
+
+// shared with stationsHD2.js
+export { steelShed, timberShed, cncMill, hangBulb, shavings, stains, pole }

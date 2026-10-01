@@ -14,6 +14,7 @@ import { FenceView } from './basefence.js'
 import { StationView } from './basestation.js'
 import { CampPeople } from './basepeople.js'
 import { RaidMixin } from './baseraid.js'
+import { BeltMixin } from './basebelts.js'
 import { stationModel } from '../models/stations.js'
 import { makeSurvivorCharacter } from '../world/agents.js'
 import { STATIONS, RES, EXPANSIONS } from '../game/data.js'
@@ -87,7 +88,9 @@ export class BaseScene {
     on('produced', (st, out) => this.showProduce(st, out))
     on('expanded', () => this.onExpanded())
     on('expansions', () => this.world.refresh(true))
+    on('links', () => this.syncBelts())
     this.syncStations()
+    this.initBelts()
     this.fence.refresh()
     this.repaint()
     this.world.refresh(true)
@@ -97,6 +100,7 @@ export class BaseScene {
   }
   dispose() {
     for (const off of this.offs) off()
+    this.disposeBelts()
     view.labels.clearScene(this.scene)
     this.atmo.dispose()
     this.game.pipe.forget(this.scene)
@@ -278,6 +282,7 @@ export class BaseScene {
     // keep a lane open from the gate
     const g = gateTiles(b)
     if (x < g[2] + 3 && x + w > g[0] - 2 && z + d > b.z1 - 5) return false
+    if (this.beltBlocks(x, z, w, d, move)) return false
     const grid = this.grid
     for (let i = x - 1; i <= x + w; i++) {
       for (let j = z - 1; j <= z + d; j++) {
@@ -303,6 +308,7 @@ export class BaseScene {
       st.rot = P.rot
       this.cancelPlacing()
       this.syncStations()
+      this.afterMove(st)
       this.repaint()
       sfx('build')
       bus.emit('change')
@@ -388,6 +394,7 @@ export class BaseScene {
   // ---------------------------------------------------------------- input
   pickables() {
     const list = [...this.stationViews.values()].map((v) => v.group)
+    for (const v of this.beltViews.values()) list.push(v.group)
     for (const w of this.people.workers) list.push(w.root)
     if (this.visitor) list.push(this.visitor.ch.root)
     return list
@@ -396,6 +403,7 @@ export class BaseScene {
     return false
   }
   onTap(x, y, e) {
+    if (this.linking) return this.onLinkTap(x, y, e)
     if (this.placing) {
       this.updatePlacing(x, y)
       if (e.button === 2) return this.cancelPlacing()
@@ -421,6 +429,15 @@ export class BaseScene {
       this.selectedPerson = pk.s.id
       this.game.ui?.openSurvivor(pk.s.id)
       sfx('click')
+    } else if (pk?.type === 'belt') {
+      // a belt opens the station it serves (the depot end is the less useful one)
+      const l = pk.link
+      const end = S.stations.find((x) => x.id === l.from && x.type !== 'storage') || S.stations.find((x) => x.id === l.to)
+      if (end) {
+        this.select(end.id)
+        this.game.ui?.openStation(end.id)
+        sfx('click')
+      }
     } else {
       const p = groundAt(x, y)
       const b = bounds()
@@ -448,6 +465,7 @@ export class BaseScene {
   }
   onHover(x, y) {
     if (this.placing) return this.updatePlacing(x, y)
+    if (this.linking) return this.onLinkHover(x, y)
     const now = performance.now()
     if (now - (this.hoverT || 0) < 60) return
     this.hoverT = now
@@ -467,11 +485,16 @@ export class BaseScene {
       const s = pk.s
       tip = `<b>${s.name}</b><span>${s.status === 'injured' ? 'Injured' : s.job ? STATIONS[S.stations.find((x) => x.id === s.job)?.type]?.name || '' : 'No job'}</span>`
     } else if (pk?.type === 'visitor') tip = '<b>Someone at the gate</b><span>Click to talk</span>'
+    else if (pk?.type === 'belt') tip = this.beltTip(pk.link)
     this.game.ui?.hoverTip(tip, x, y)
   }
   onKey(e) {
     if (e._handled) return
     const k = e.key.toLowerCase()
+    if (this.linking) {
+      if (k === 'escape') this.cancelLinking(true)
+      return
+    }
     if (this.placing) {
       if (k === 'r') this.rotatePlacing()
       if (k === 'escape') this.cancelPlacing()
@@ -569,6 +592,7 @@ export class BaseScene {
       v.update(dt, ctx)
     }
     this.updateLights(dt, night)
+    this.updateBelts(dt, simDt)
     if (S.raid) this.updateRaid(simDt)
     else {
       this.people.update(dt, simDt)
@@ -581,4 +605,4 @@ export class BaseScene {
     setAmbience(S.raid ? 0.06 : 0.035)
   }
 }
-Object.assign(BaseScene.prototype, RaidMixin)
+Object.assign(BaseScene.prototype, RaidMixin, BeltMixin)
