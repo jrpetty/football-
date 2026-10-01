@@ -2,7 +2,7 @@
 // speed), the left nav, a right-hand detail drawer, the bottom build dock,
 // toasts, tooltips, modals, the raid HUD and reports.
 import { RES, TOP_BAR, STATIONS, STATION_CATS, AMMO_KEYS, FENCE, EXPANSIONS, HORDES, OCCUPATIONS, SEC_PER_HOUR, GAME_MIN_PER_SEC, MILESTONES, SEASON_DAYS } from '../game/data.js'
-import { S, day, hour, clockStr, gameDur, capOf, bedCount, buildCost, reqMet, canAfford, countType, maxLevelOf, expansionAvailable, expansionCost, fenceUpgradeCost, getS, survivorStats, unlockedBy, msDone, season, seasonDay, year } from '../game/state.js'
+import { NET, S, day, hour, clockStr, gameDur, capOf, bedCount, buildCost, reqMet, canAfford, countType, maxLevelOf, expansionAvailable, expansionCost, fenceUpgradeCost, getS, survivorStats, unlockedBy, msDone, season, seasonDay, year } from '../game/state.js'
 import { raidIntel, campFlow, power, moraleFactors } from '../game/economy.js'
 import { WEATHER } from '../render/sky.js'
 import { sfx } from '../core/audio.js'
@@ -18,6 +18,7 @@ import { manualModal } from './manual.js'
 import { motorPool } from './motorpool.js'
 import { renderJournal } from './journal.js'
 import { storyBadge } from '../game/story.js'
+import { renderPlayers, feedChat, netChip, updateNetChip } from './netui.js'
 import { victoryModal, renderMarket, renderLog, renderFence, renderExpansion, renderProduction, renderPower, renderMorale, renderSettings, recruitModal, raidReportModal, missionReportModal, gameOverModal, menuModal, hordeInfo } from './camppanels.js'
 
 const NAV = [
@@ -122,7 +123,7 @@ export class UI {
     sfx('click')
     if (id === 'build') return this.toggleBuild()
     if (id === 'map') return this.game.openMap()
-    const fns = { crew: () => this.openCrew(), items: () => this.openItems(), trade: () => this.openMarket(), camp: () => this.openProduction(), progress: () => this.openProgress(), journal: () => this.openJournal(), log: () => this.openLog() }
+    const fns = { players: () => this.openPlayers(), crew: () => this.openCrew(), items: () => this.openItems(), trade: () => this.openMarket(), camp: () => this.openProduction(), progress: () => this.openProgress(), journal: () => this.openJournal(), log: () => this.openLog() }
     if (this.panelKey === id) return this.closePanel()
     fns[id]?.()
   }
@@ -138,8 +139,16 @@ export class UI {
       if (k === 'escape') this.closeModal()
       return true
     }
+    if (NET.role !== 'solo' && k === 'enter' && (this.game.scene === this.game.base || this.game.scene === this.game.map)) {
+      this.openChat()
+      return true
+    }
     // camp hotkeys belong to the camp: runs and the city map have their own
     if (S.raid || this.game.scene !== this.game.base) return false
+    if (k === 'o' && NET.role !== 'solo') {
+      this.navClick('players')
+      return true
+    }
     const map = { b: 'build', c: 'crew', i: 'items', t: 'trade', p: 'camp', m: 'map', g: 'progress', j: 'journal', l: 'log' }
     if (map[k] && !e.ctrlKey && !e.metaKey && !this.game.base?.placing) {
       this.navClick(map[k])
@@ -201,14 +210,14 @@ export class UI {
       [4, '4×', 'Fastest <kbd>3</kbd>'],
     ]
     this.speedEl = h(
-      'div.speed',
+      'div.speed' + (NET.role === 'client' ? '.locked' : ''),
       speeds.map(([v, label, tip]) => h('button', { 'data-v': v, 'data-tip': tip, html: label, onclick: () => this.game.setSpeed(v) })),
     )
     T.append(
       h('div.brand', h('div.logo', 'HOLDOUT'), h('div.clock', h('i.ic', { html: icon(wIcon), 'data-tip': WEATHER[w]?.name || w }), this.dayEl, this.seasonEl, this.clockEl)),
       this.hordeBtn,
       chips,
-      h('div.meters', this.pwEl, this.morEl, this.popEl),
+      h('div.meters', this.pwEl, this.morEl, this.popEl, NET.role !== 'solo' ? (this.netEl ??= netChip(this)) : null),
       this.speedEl,
     )
     this.weatherShown = w
@@ -419,6 +428,63 @@ export class UI {
   }
   openSettings() {
     this.modal(renderSettings(this), { small: true })
+  }
+  // ---------------------------------------------------------------- multiplayer
+  netReady() {
+    if (this.nav.querySelector('[data-nav=players]')) return
+    const b = h('button.navbtn', { 'data-nav': 'players', 'data-tip': 'Players <kbd>O</kbd>', onclick: () => this.navClick('players') }, h('i', { html: icon('people') }), h('span', 'Players'))
+    this.nav.querySelector('.navsep').before(b)
+    this.chatIn = h('input.inp', { placeholder: 'Say something… (Enter to send, Esc to close)', maxLength: 240 })
+    this.chatbar = h('div.chatbar', { hidden: true }, this.chatIn)
+    this.chatIn.addEventListener('keydown', (e) => {
+      e.stopPropagation()
+      if (e.key === 'Enter') {
+        const t = this.chatIn.value.trim()
+        if (t) this.game.net?.say(NET.pid, t)
+        this.closeChat()
+      } else if (e.key === 'Escape') this.closeChat()
+    })
+    this.chatIn.addEventListener('blur', () => setTimeout(() => this.closeChat(), 100))
+    this.root.append(this.chatbar)
+    this.renderTop()
+    for (const m of (this.game.net?.chat || []).slice(-4)) feedChat(this.feed, m)
+  }
+  openChat() {
+    if (!this.chatbar) return
+    this.chatbar.hidden = false
+    this.feed.classList.add('chatting')
+    this.chatIn.value = ''
+    setTimeout(() => this.chatIn.focus(), 0)
+  }
+  closeChat() {
+    if (!this.chatbar || this.chatbar.hidden) return
+    this.chatbar.hidden = true
+    this.feed.classList.remove('chatting')
+    this.chatIn.blur()
+  }
+  netChat(m) {
+    feedChat(this.feed, m)
+    if (m.pid && m.pid !== NET.pid) sfx('click')
+    if (this.panelKey === 'players') this.refreshPanel(true)
+  }
+  openPlayers() {
+    this.openPanel('players', () => renderPlayers(this), { live: true, wide: true })
+  }
+  netProblem(code) {
+    const why = { not_permitted: 'Hosting here needs permission to send to the artifact’s live room: edit access, or contributor access if the owner opened it up. You can still join a friend’s camp, or host from the standalone file.', 'code-taken': 'Another camp is already using this code (or the last session has not timed out yet).', offline: 'The connection service could not be reached. Check your internet connection.', timeout: 'The connection service did not answer in time.' }[code] || `Something went wrong (${code}).`
+    let close
+    close = this.modal(h('div', h('h2', 'Friends can’t reach your camp yet'), h('p', why), h('p.note', 'You can keep playing: the camp runs and saves as normal.')), {
+      small: true,
+      actions: [h('button.btn.ghost', { onclick: () => close() }, 'Play on'), h('button.btn.go', { onclick: () => location.reload() }, 'Try again')],
+    })
+  }
+  netGone(why) {
+    this.closePanel()
+    this.modal(h('div', h('h2', 'Disconnected'), h('p', why), h('p.note', 'Nothing is lost: the host keeps the camp. Join again when they are back.')), {
+      small: true,
+      locked: true,
+      actions: [h('button.btn.ghost', { onclick: () => this.game.leaveNet() }, 'Title screen'), h('button.btn.go', { onclick: () => location.reload() }, 'Rejoin')],
+    })
   }
   openJournal() {
     this.openPanel('journal', () => renderJournal(this), { live: true, wide: true })
@@ -681,6 +747,7 @@ export class UI {
         this.nav.querySelector('[data-nav=journal]')?.classList.toggle('badge', storyBadge() > 0)
       }
       this.updateTop()
+      if (this.netEl) updateNetChip(this.netEl, this.game.net)
     }
     if (this.panelLive && this.panelFn) {
       this.panelT -= dt

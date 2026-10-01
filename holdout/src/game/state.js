@@ -11,8 +11,23 @@ import { SKIN_TONES, HAIR_COLORS } from '../models/character.js'
 import { signalLock, signalDiscount } from './story.js'
 
 export const SAVE_KEY = 'holdout.save.v2'
+export const MP_SAVE_KEY = 'holdout.mpsave.v1'
 export let S = null
 export const setState = (s) => (S = s)
+
+// ---------------------------------------------------------------- multiplayer
+// solo, host (runs the camp, saves it) or client (mirrors the host's camp).
+export const NET = { role: 'solo', pid: null }
+const saveKey = () => (NET.role === 'host' ? MP_SAVE_KEY : SAVE_KEY)
+export const leaderOf = (sid) => (NET.role === 'solo' ? null : S.mp?.owner?.[sid] || null)
+// Whether this player may give orders to a survivor: their own, or nobody's.
+export function canControl(s) {
+  if (NET.role === 'solo' || !s) return true
+  const o = S.mp?.owner?.[s.id || s]
+  return !o || o === NET.pid
+}
+export const playerOf = (pid) => S.mp?.players?.[pid] || null
+export const myCrew = () => S.survivors.filter((s) => canControl(s))
 
 // ---------------------------------------------------------------- camp geometry
 export const BASE = { W: 112, H: 112, START: [40, 72] }
@@ -685,7 +700,7 @@ export function startExpansion(id) {
 
 // ---------------------------------------------------------------- log/goals
 export function log(text, kind = '') {
-  S.log.unshift({ t: S.time, text, kind })
+  S.log.unshift({ id: uid('l'), t: S.time, text, kind })
   if (S.log.length > 80) S.log.length = 80
   bus.emit('log', { text, kind })
 }
@@ -869,7 +884,7 @@ export function outpostProblem(loc, crew) {
 export function claimOutpost(loc, crew) {
   if (outpostProblem(loc, crew) || !pay(OUTPOST.cost[0])) return false
   S.outposts = S.outposts || []
-  S.outposts.push({ locId: loc.id, name: loc.name, type: loc.type, level: 1, crew: crew.map((s) => s.id), since: day(), hp: 100 })
+  S.outposts.push({ id: uid('o'), locId: loc.id, name: loc.name, type: loc.type, level: 1, crew: crew.map((s) => s.id), since: day(), hp: 100 })
   for (const s of crew) {
     s.job = null
     s.status = 'outpost'
@@ -1066,7 +1081,7 @@ export function moraleMult() {
   return 0.8 + 0.4 * clamp(S.morale ?? 50, 0, 100) / 100
 }
 export function addMoraleEvent(text, amount, days = 1.5) {
-  S.moraleEvents.push({ text, amount, until: S.time + days * DAY_MIN, start: S.time, days })
+  S.moraleEvents.push({ id: uid('m'), text, amount, until: S.time + days * DAY_MIN, start: S.time, days })
 }
 
 // ---------------------------------------------------------------- new game
@@ -1137,12 +1152,12 @@ export function newGame() {
 
 // ---------------------------------------------------------------- save/load
 export function save() {
-  if (!S || S.over) return false
+  if (!S || S.over || NET.role === 'client') return false
   S.saved = Date.now()
-  return store.set(SAVE_KEY, JSON.stringify(S))
+  return store.set(saveKey(), JSON.stringify(S))
 }
-export function hasSave() {
-  const raw = store.get(SAVE_KEY)
+export function hasSave(key = SAVE_KEY) {
+  const raw = store.get(key)
   if (!raw) return null
   try {
     const d = JSON.parse(raw)
@@ -1181,6 +1196,11 @@ function migrate() {
   S.signal = S.signal || { phase: 0, paid: {} }
   S.research = S.research || { done: {}, alts: [], pick: null }
   S.outposts = S.outposts || []
+  // log lines, events and records carry ids so camps can be shared
+  for (const e of S.log) e.id ??= uid('l')
+  for (const e of S.events || []) e.id ??= uid('e')
+  for (const o of S.outposts) o.id ??= uid('o')
+  for (const m of S.moraleEvents || []) m.id ??= uid('m')
   // camps from before the motor pool had a running van
   if (!S.vehicles) S.vehicles = [{ id: 'van', kind: 'van', name: 'The Van', cond: 75, since: 1 }]
   for (const v of S.vehicles) v.out = false
@@ -1213,31 +1233,32 @@ function migrate() {
     }
   }
 }
-export const wipeSave = () => store.del(SAVE_KEY)
+export const wipeSave = () => NET.role !== 'client' && store.del(saveKey())
 
 // ---- backups, export and import
 // Three rolling daily backups live beside the save, so months of progress
 // never hang on a single write. A camp can also leave the browser as a file.
 export const BACKUP_KEY = 'holdout.backups.v2'
+const backupKey = () => (NET.role === 'host' ? 'holdout.mpbackups.v1' : BACKUP_KEY)
 function readBackups() {
   try {
-    return JSON.parse(store.get(BACKUP_KEY) || '[]')
+    return JSON.parse(store.get(backupKey()) || '[]')
   } catch {
     return []
   }
 }
 export function backupSave() {
-  if (!S || S.over) return false
+  if (!S || S.over || NET.role === 'client') return false
   let list = readBackups().filter((b) => b.day !== day())
   list.unshift({ day: day(), at: Date.now(), pop: S.survivors.length, data: JSON.stringify(S) })
   list = list.slice(0, 3)
-  if (store.set(BACKUP_KEY, JSON.stringify(list))) return true
-  return store.set(BACKUP_KEY, JSON.stringify(list.slice(0, 1)))
+  if (store.set(backupKey(), JSON.stringify(list))) return true
+  return store.set(backupKey(), JSON.stringify(list.slice(0, 1)))
 }
 export const listBackups = () => readBackups().map((b) => ({ day: b.day, at: b.at, pop: b.pop }))
 export function restoreBackup(i) {
   const b = readBackups()[i]
-  return !!b && store.set(SAVE_KEY, b.data)
+  return !!b && store.set(saveKey(), b.data)
 }
 export function exportSave() {
   S.saved = Date.now()

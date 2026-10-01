@@ -4,7 +4,7 @@ import { RES, STOCK_KEYS, ITEMS, QUALITY, RARITY, STATIONS, FENCE, EXPANSIONS, G
 import {
   S, day, clockStr, gameDur, capOf, bedCount, canAfford, pay, gain, addItem, itemName, fenceMax, repairFenceCost, repairFence, fenceUpgradeCost, upgradeFence,
   expansionCost, startExpansion, expansionAvailable, claimGoal, survivorLevel, perimeter, save, wipeSave, countType, workersOf, survivorStats,
-  unlockedBy, msDone, fenceUnlocked, listBackups, restoreBackup, exportSave, importSave,
+  unlockedBy, msDone, fenceUnlocked, listBackups, restoreBackup, exportSave, importSave, NET,
 } from '../game/state.js'
 import { upkeepNeeds, campFlow, stationFlow, power, powerNeed, isAutomated, boilerFuel, sourcePower, solarOutput, windOutput, moraleFactors, dailyNeeds, constructSpeed, raidIntel, threatLevel, isBloodMoonDay, sellMult, buyMult, resSellPrice, acceptRecruit, declineRecruit } from '../game/economy.js'
 import { QUALITY as GFXQ } from '../render/pipeline.js'
@@ -413,10 +413,13 @@ export function menuModal(ui) {
     h('h2', 'Holdout'),
     h('p.note', `Day ${day()} · ${plural(S.survivors.length, 'survivor')}`),
     h('button.btn.big', { onclick: () => ui.closeModal() }, 'Resume'),
-    h('button.btn', { onclick: () => (save(), ui.toast('Saved', 'good'), ui.closeModal()) }, 'Save now'),
+    NET.role === 'client' ? null : h('button.btn', { onclick: () => (save(), ui.toast('Saved', 'good'), ui.closeModal()) }, 'Save now'),
+    NET.role === 'solo' ? null : h('button.btn', { onclick: () => (ui.closeModal(), ui.openPlayers()) }, 'Players and chat'),
     h('button.btn', { onclick: () => (ui.closeModal(), ui.openManual()) }, 'Field manual'),
     h('button.btn', { onclick: () => (ui.closeModal(), ui.openSettings()) }, 'Settings'),
-    h('button.btn.ghost.danger', { onclick: () => ui.confirm('Start over?', 'This camp will be lost for good.', 'Start over', () => g.newGame(), { danger: true }) }, 'New camp'),
+    NET.role === 'solo'
+      ? h('button.btn.ghost.danger', { onclick: () => ui.confirm('Start over?', 'This camp will be lost for good.', 'Start over', () => g.newGame(), { danger: true }) }, 'New camp')
+      : h('button.btn.ghost.danger', { onclick: () => ui.confirm(NET.role === 'host' ? 'Close the camp?' : 'Leave the camp?', NET.role === 'host' ? 'Everyone is disconnected. The camp is saved; host it again from the title screen.' : 'Back to the title screen. Join again any time with the code.', NET.role === 'host' ? 'Close camp' : 'Leave', () => g.leaveNet(), { danger: true }) }, NET.role === 'host' ? 'Close the camp' : 'Leave the camp'),
   )
 }
 export function recruitModal(ui) {

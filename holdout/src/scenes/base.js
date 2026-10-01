@@ -14,11 +14,13 @@ import { FenceView } from './basefence.js'
 import { StationView } from './basestation.js'
 import { CampPeople } from './basepeople.js'
 import { RaidMixin } from './baseraid.js'
+import { RaidNetMixin } from './raidnet.js'
+import { netMarkers } from '../ui/netui.js'
 import { BeltMixin } from './basebelts.js'
 import { stationModel } from '../models/stations.js'
 import { makeSurvivorCharacter } from '../world/agents.js'
 import { STATIONS, RES, EXPANSIONS } from '../game/data.js'
-import { S, BASE, bounds, hour, stationSize, workersOf, gateTiles, expansionAvailable, expansionCost, season, leafTurn } from '../game/state.js'
+import { NET, S, BASE, bounds, hour, stationSize, workersOf, gateTiles, expansionAvailable, expansionCost, season, leafTurn } from '../game/state.js'
 import { power } from '../game/economy.js'
 import { sfx, setAmbience } from '../core/audio.js'
 import { bus, h, rand, clamp, fmt } from '../core/util.js'
@@ -419,7 +421,7 @@ export class BaseScene {
       this.confirmPlacing(e.shift)
       return
     }
-    if (S.raid) return this.onRaidTap(x, y, e)
+    if (S.raid) return NET.role === 'client' ? this.mirrorTap(x, y, e) : this.onRaidTap(x, y, e)
     if (e.button === 2) return
     const hit = pickAt(x, y, this.pickables())
     const pk = hit?.pick
@@ -477,7 +479,7 @@ export class BaseScene {
     const now = performance.now()
     if (now - (this.hoverT || 0) < 60) return
     this.hoverT = now
-    if (S.raid) return this.onRaidHover?.(x, y)
+    if (S.raid) return NET.role === 'client' ? null : this.onRaidHover?.(x, y)
     const hit = pickAt(x, y, this.pickables())
     const pk = hit?.pick
     this.hovered = pk?.type === 'station' ? pk.st.id : null
@@ -621,11 +623,19 @@ export class BaseScene {
     }
     this.updateLights(dt, night)
     this.updateBelts(dt, simDt)
-    if (S.raid) this.updateRaid(simDt)
-    else {
+    // a guest's camp mirrors the host's: raids arrive as a stream, and the
+    // stragglers at the wall belong to the host's simulation
+    if (NET.role === 'client') {
+      if (S.raid || this.mirror) this.updateMirror(dt)
+      if (!S.raid) this.people.update(dt, simDt)
+    } else if (S.raid) {
+      this.updateRaid(simDt)
+      if (NET.role === 'host') this.raidStream(dt)
+    } else {
       this.people.update(dt, simDt)
       this.updateWanderers?.(simDt, night)
     }
+    if (NET.role !== 'solo') netMarkers(this, dt)
     this.updateVisitor(dt)
     this.updatePlots()
     this.fx.setViewport(window.innerHeight, view.camera.fov)
@@ -633,4 +643,4 @@ export class BaseScene {
     setAmbience(S.raid ? 0.06 : 0.035)
   }
 }
-Object.assign(BaseScene.prototype, RaidMixin, BeltMixin)
+Object.assign(BaseScene.prototype, RaidMixin, RaidNetMixin, BeltMixin)

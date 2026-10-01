@@ -6,12 +6,14 @@ import {
   orderMod, orderRepair, cancelOrder, moveOrder, orderSpec, qualityOdds, itemOf, itemName, canAfford, survivorStats, capOf, bedCount, getS, ownerOf,
   repairCost, repairTime, gameDur, stationSize, signalNeed, deliverSignal, signalPhase, signalCost, signalBlocked, researchCost,
   researchLock, startResearch, cancelResearch, pickAlt, altsFor, researchDone, installCore, removeCore, coreBoost, hasFlag, msDone,
+  canControl,
 } from '../game/state.js'
 import { stationFlow, power, powerNeed, isAutomated, stationRate, solarOutput, windOutput, boilerFuel, sourcePower, HAND_RATE, kitchenSaving, constructSpeed, raidIntel, activeRecipe, activeSingle, recipeUnlocked, recipeTarget } from '../game/economy.js'
 import { linksOf, inputsOf, outputsOf, linkPerDay, linkState, upgradeCostOf, upgradeLink, removeLink, beltBonus, pulled } from '../game/belts.js'
 import { sfx } from '../core/audio.js'
 import { bus, h, fmt, clamp } from '../core/util.js'
 import { icon } from './icons.js'
+import { leaderChip } from './netui.js'
 import { costList, resChip, resIcon, bar, qualityTag, condBar, itemCard, seg, stepper, plural } from './common.js'
 
 const CAT_ICON = { living: 'gate', production: 'production', crafting: 'hammer', defense: 'shield', power: 'bolt' }
@@ -75,7 +77,7 @@ function workerBlock(ui, st) {
           h('img.por', { src: ui.game.portrait(s), onclick: () => ui.openSurvivor(s.id) }),
           h('div.ws-info', h('b', { onclick: () => ui.openSurvivor(s.id) }, s.name), h('span', OCCUPATIONS[s.occ].name, perk ? h('em.good', ` +${Math.round(perk * 100)}%`) : null, s.status === 'injured' ? h('em.bad', ' · injured') : null)),
           h('div.ws-eff', { 'data-tip': `Works at ${Math.round(e * 100)}% speed${D.skill ? ` (${SKILLS[D.skill].name} ${s.skills[D.skill]})` : ''}` }, `${Math.round(e * 100)}%`),
-          h('button.mini', { onclick: () => (assign(s, null), sfx('click'), ui.refreshPanel()) }, 'Remove'),
+          canControl(s) ? h('button.mini', { onclick: () => (assign(s, null), sfx('click'), ui.refreshPanel()) }, 'Remove') : leaderChip(s),
         ),
       )
     } else rows.push(h('button.wslot.empty', { onclick: () => pickWorker(ui, st) }, h('i', { html: icon('plus') }), 'Assign a survivor'))
@@ -85,7 +87,7 @@ function workerBlock(ui, st) {
 }
 export function pickWorker(ui, st) {
   const D = STATIONS[st.type]
-  const list = S.survivors.filter((s) => s.status !== 'mission' && s.job !== st.id).map((s) => ({ s, e: workEff(s, st.type) || 0.0001 }))
+  const list = S.survivors.filter((s) => s.status !== 'mission' && s.job !== st.id && canControl(s)).map((s) => ({ s, e: workEff(s, st.type) || 0.0001 }))
   list.sort((a, b) => b.e - a.e)
   let close
   close = ui.modal(

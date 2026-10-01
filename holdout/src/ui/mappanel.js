@@ -2,7 +2,7 @@
 // clock and horde timer) and the planner: what a location holds and how
 // dangerous it is, the drive there, who goes and what they carry.
 import { LOCATIONS, ROOMS, CONTAINERS, RES, ITEMS, ZOMBIES, zombieMix, LEVEL_COLORS, OCCUPATIONS, STATIONS, GAME_MIN_PER_SEC, INFECTION, OUTPOST, VEHICLES } from '../game/data.js'
-import { S, day, clockStr, gameDur, survivorStats, getS, hasFlag, outpostAt, outpostProblem, claimOutpost, outpostYield, outpostUpgradeCost, upgradeOutpost, abandonOutpost, canAfford, travelCost, vehicleOf, vehicleProblem, usableVehicles, pay } from '../game/state.js'
+import { S, day, clockStr, gameDur, survivorStats, getS, hasFlag, outpostAt, outpostProblem, claimOutpost, outpostYield, outpostUpgradeCost, upgradeOutpost, abandonOutpost, canAfford, travelCost, vehicleOf, vehicleProblem, usableVehicles, pay, canControl, NET } from '../game/state.js'
 import { raidIntel } from '../game/economy.js'
 import { leadsAt } from '../game/story.js'
 import { sfx } from '../core/audio.js'
@@ -162,7 +162,7 @@ export class MapPanel {
       .filter((m) => m.w > 0.6)
       .map((m) => ZOMBIES[m.t].name + 's')
     // squad
-    const av = S.survivors.filter((s) => s.status !== 'mission' && s.status !== 'outpost')
+    const av = S.survivors.filter((s) => s.status !== 'mission' && s.status !== 'outpost' && canControl(s))
     const sick = (s) => s.infection >= INFECTION.sick
     for (const id of [...this.squad]) if (!av.find((s) => s.id === id && s.status === 'ok' && !sick(s))) this.squad.delete(id)
     if (!this.squad.size && !this.suggested) {
@@ -337,7 +337,7 @@ export class MapPanel {
     sfx(T.V.stash ? 'truck' : 'click')
     const ids = squad.map((s) => s.id)
     if (veh) {
-      veh.out = true
+      veh.out = NET.role === 'solo' ? true : NET.pid
       bus.emit('vehicles')
     }
     this.squad.clear()

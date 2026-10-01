@@ -1,11 +1,12 @@
 // Crew: the roster, each survivor's sheet (skills, traits, equipment, job),
 // and the armory of items with equip, sell and repair shortcuts.
 import { RES, ITEMS, QUALITY, RARITY, MODS, STATIONS, OCCUPATIONS, SKILLS, SKILL_KEYS, UTILITIES, TRAITS, INFECTION, SEC_PER_DAY, PERKS, PERK_LEVELS } from '../game/data.js'
-import { S, getS, survivorStats, survivorLevel, equip, unequip, gearLock, itemOf, itemName, itemValue, removeItem, ownerOf, workEff, assign, slots, workersOf, gain, day, killSurvivor, log, infectionStage, treatInfection, researchDone, choosePerk, perkOf } from '../game/state.js'
+import { canControl, S, getS, survivorStats, survivorLevel, equip, unequip, gearLock, itemOf, itemName, itemValue, removeItem, ownerOf, workEff, assign, slots, workersOf, gain, day, killSurvivor, log, infectionStage, treatInfection, researchDone, choosePerk, perkOf } from '../game/state.js'
 import { sellMult } from '../game/economy.js'
 import { sfx } from '../core/audio.js'
 import { bus, h, fmt, clamp } from '../core/util.js'
 import { icon } from './icons.js'
+import { leaderChip, leaderBanner } from './netui.js'
 import { costList, resChip, bar, qualityTag, condBar, itemCard, skillRows, traitTags, hpBar, seg, plural, resIcon } from './common.js'
 
 // ---------------------------------------------------------------- one survivor
@@ -86,7 +87,14 @@ export function renderSurvivor(ui, id) {
       'Send away',
     ),
   )
-  return ui.frame(s.name, h('span', OCCUPATIONS[s.occ].name), [head, infectionCard(ui, s), perksCard(ui, s), jobRow, slotsEl, stats, skills, actions], { icon: 'people' })
+  // another player leads this survivor: look, don't touch
+  const ctl = canControl(s)
+  if (!ctl) for (const el of [jobRow, slotsEl, actions]) el.inert = true
+  const perks = perksCard(ui, s)
+  if (!ctl && perks) perks.inert = true
+  const inf = infectionCard(ui, s)
+  if (!ctl && inf) inf.inert = true
+  return ui.frame(s.name, h('span', OCCUPATIONS[s.occ].name, leaderChip(s)), [leaderBanner(s), head, inf, perks, jobRow, slotsEl, stats, skills, actions], { icon: 'people' })
 }
 function stat(label, v, tip = null) {
   return h('div.stat', tip ? { 'data-tip': `<b>${label}</b>${tip}` } : null, h('span', label), h('b', v))
@@ -179,7 +187,7 @@ export function pickItem(ui, s, slot) {
               'div.igrid',
               held.map((it) => {
                 const who = ownerOf(it.uid)
-                const lock = gearLock(who)
+                const lock = gearLock(who) || (canControl(who) ? null : 'Led by another player')
                 return h('div.swapwrap' + (lock ? '.locked' : ''), { 'data-tip': lock ? `${who.first}: ${lock.toLowerCase()}. Gear only changes hands in camp.` : `Swap with ${who.first}` }, itemCard(it, { onclick: lock ? null : () => take(it) }), lock ? h('span.swaplock', h('i', { html: icon('lock') }), lock) : null)
               }),
             ),
@@ -208,7 +216,7 @@ export function renderCrew(ui) {
     return h(
       'div.crewrow' + (s.status === 'injured' ? '.hurt' : s.status === 'mission' || s.status === 'outpost' ? '.away' : ''),
       { onclick: () => ui.openSurvivor(s.id) },
-      h('span.cr-name', h('img.por.sm', { src: ui.game.portrait(s) }), h('span', h('b', s.name, s.perkChoices?.length ? h('i.perktag', { 'data-tip': 'A perk to choose' }, '★') : null, s.infection > 0 ? h('i.inftag', { 'data-tip': `${infectionStage(s)} · ${Math.round(s.infection)}%` }, `${Math.round(s.infection)}%`) : null), h('small', OCCUPATIONS[s.occ].name))),
+      h('span.cr-name', h('img.por.sm', { src: ui.game.portrait(s) }), h('span', h('b', leaderChip(s, true), s.name, s.perkChoices?.length ? h('i.perktag', { 'data-tip': 'A perk to choose' }, '★') : null, s.infection > 0 ? h('i.inftag', { 'data-tip': `${infectionStage(s)} · ${Math.round(s.infection)}%` }, `${Math.round(s.infection)}%`) : null), h('small', OCCUPATIONS[s.occ].name))),
       h('span.cr-job', s.status === 'mission' ? 'On a run' : s.status === 'outpost' ? 'At an outpost' : job ? STATIONS[job.type].name : h('em', 'None')),
       ...SKILL_KEYS.map((k) => h('span.sk' + (s.skills[k] >= 6 ? '.hi' : s.skills[k] <= 1 ? '.lo' : ''), s.skills[k])),
       h('span.cr-wpn', st.weapon.name),
@@ -265,7 +273,7 @@ export function renderItems(ui) {
 }
 function giveItem(ui, it) {
   const slot = ITEMS[it.id].slot
-  const list = S.survivors.filter((s) => s.status !== 'mission')
+  const list = S.survivors.filter((s) => s.status !== 'mission' && canControl(s))
   let close
   close = ui.modal(
     h(

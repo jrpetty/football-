@@ -495,6 +495,7 @@ export class SurvivorAgent extends Agent {
     W.fx.muzzle(muzzle)
     W.fx.tracer(muzzle, endP, st.weaponId === 'crossbow' ? '#c8b080' : '#ffd890')
     this.ch.fire()
+    this.shots = (this.shots || 0) + 1
     const id = st.weaponId
     sfx(id === 'shotgun' ? 'shotgun' : id === 'rifle' ? 'rifle' : id === 'smg' || id === 'ar' ? 'smg' : id === 'crossbow' ? 'crossbow' : 'pistol', 30)
     W.noise?.(this.pos.x, this.pos.z, st.noise * st.noiseMult)

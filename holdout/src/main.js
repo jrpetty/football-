@@ -4,7 +4,10 @@ import { Pipeline } from './render/pipeline.js'
 import { initView, view } from './render/view.js'
 import { pregenerate } from './render/texgen.js'
 import { initAudio, sfx, setSound } from './core/audio.js'
-import { S, newGame, hasSave, load, save, day, log, wipeSave, buildCost, newStation, pay, canAfford, completeGoal, backupSave, vehicleOf, wearVehicle } from './game/state.js'
+import { S, newGame, hasSave, load, save, day, log, wipeSave, buildCost, newStation, pay, canAfford, completeGoal, backupSave, vehicleOf, wearVehicle, NET, MP_SAVE_KEY } from './game/state.js'
+import { Session, readIntent, writeIntent, me, initMp } from './net/mp.js'
+import { newCode } from './net/transport.js'
+import { lobbyCard, joinError } from './ui/lobby.js'
 import { econTick, initSchedules, autoResolveRaid, scheduleRaid } from './game/economy.js'
 import * as belts from './game/belts.js'
 import * as stateMod from './game/state.js'
@@ -63,13 +66,49 @@ class Game {
     note.textContent = 'Building the camp…'
     fill.style.width = '80%'
     await new Promise((r) => setTimeout(r, 30))
-    const saved = hasSave()
-    if (saved) {
-      load(saved)
-      this.catchUp()
+    // multiplayer: the title screen asked to host or join (kept across reloads)
+    const intent = readIntent()
+    let saved = null
+    if (intent?.mode === 'join') {
+      note.textContent = `Joining camp ${intent.code}…`
+      try {
+        const who = me()
+        this.net = new Session(this, 'client', intent.code, who)
+        await this.net.join()
+      } catch (e) {
+        this.net?.close()
+        this.net = null
+        NET.role = 'solo'
+        writeIntent(null)
+        this.joinFailed = joinError(e.message)
+      }
+    }
+    if (this.net) {
+      saved = S
+    } else if (intent?.mode === 'host') {
+      NET.role = 'host'
+      NET.pid = me().pid
+      saved = intent.fresh ? null : hasSave(MP_SAVE_KEY)
+      if (saved) {
+        load(saved)
+        this.catchUp()
+      } else {
+        newGame()
+        initSchedules()
+        // keep the graphics settings from single player
+        const solo = hasSave()
+        if (solo?.settings) S.settings = { ...S.settings, ...solo.settings }
+      }
+      if (!S.mp) initMp(newCode(), { ...me(), name: intent.name || me().name })
     } else {
-      newGame()
-      initSchedules()
+      saved = hasSave()
+      if (saved) {
+        load(saved)
+        this.catchUp()
+      } else {
+        newGame()
+        initSchedules()
+      }
     }
     this.makeCity()
     this.applySettings(true)
@@ -80,11 +119,17 @@ class Game {
     fill.style.width = '100%'
     await new Promise((r) => setTimeout(r, 60))
     loading.remove()
-    this.title(saved)
+    if (intent && (this.net || NET.role === 'host')) this.startNet(intent)
+    else this.title(saved)
     view.input.onKey = (e) => {
       if (this.onKey(e)) e._handled = true
     }
-    requestAnimationFrame((t) => this.frame(t))
+    const loop = (t) => {
+      requestAnimationFrame(loop)
+      this.frame(t)
+    }
+    requestAnimationFrame(loop)
+    this.startTicker()
     const unlock = () => initAudio()
     window.addEventListener('pointerdown', unlock)
     window.addEventListener('keydown', unlock)
@@ -114,6 +159,12 @@ class Game {
   }
   applySettings(first = false) {
     const st = S.settings
+    // a guest's settings are their own, kept apart from the shared camp
+    if (NET.role === 'client') {
+      try {
+        localStorage.setItem('holdout.mpsettings', JSON.stringify(st))
+      } catch {}
+    }
     const q = st.quality || 'high'
     const tilt = st.tilt !== false
     const changedQ = q !== this.pipe.quality || tilt !== this.pipe.tiltShift
@@ -147,6 +198,7 @@ class Game {
           'div.tbtns',
           saved ? h('button.btn.go.big', { onclick: () => this.start(false) }, `Continue · Day ${day()}`) : h('button.btn.go.big', { onclick: () => this.start(false) }, 'Start'),
           saved ? h('button.btn.big.ghost', { onclick: () => this.confirmNew() }, 'New camp') : null,
+          h('button.btn.big.ghost', { onclick: () => this.showLobby() }, 'Multiplayer'),
           h('button.btn.big.ghost', { onclick: () => this.ui?.openSettings() ?? this.quickSettings() }, 'Settings'),
         ),
         h('p.fine', 'Best on a PC with a mouse. Progress saves in this browser.'),
@@ -155,6 +207,41 @@ class Game {
     document.getElementById('hud').append(el)
     this.titleEl = el
     view.rig.jump(56, 58, 54)
+    if (this.joinFailed) this.showLobby(this.joinFailed)
+    else if (/^#join[A-Za-z0-9]{5}$/.test(location.hash)) this.showLobby(null, location.hash.slice(5).toUpperCase())
+  }
+  // The multiplayer card, in place of the title card.
+  showLobby(error = null, code = '') {
+    const card = this.titleEl.querySelector('.tcard')
+    card.hidden = true
+    const lob = lobbyCard(this, { error, code, back: () => (lob.remove(), (card.hidden = false)) })
+    this.titleEl.append(lob)
+  }
+  // Hosting or joining: straight into the camp, then open the connection.
+  startNet(intent) {
+    this.start()
+    if (NET.role === 'host') {
+      this.net = new Session(this, 'host', S.mp.code, { ...me(), name: S.mp.players[me().pid]?.name || intent.name || me().name })
+      if (!S.mp.players[NET.pid]) initMp(S.mp.code, me())
+      this.net.host().then(
+        () => this.ui.toast(`Hosting camp ${S.mp.code}. Friends join with this code.`, 'good'),
+        (e) => this.ui.netProblem(e.message),
+      )
+    } else this.ui.toast(`Joined ${S.mp.players[S.mp.host]?.name || 'the host'}'s camp`, 'good')
+    this.ui.netReady()
+  }
+  // Leave a multiplayer camp for the title screen (the host saves first).
+  leaveNet() {
+    if (NET.role === 'host') save()
+    this.net?.close()
+    writeIntent(null)
+    setTimeout(() => location.reload(), 250)
+  }
+  netGone(why) {
+    if (this.goneShown) return
+    this.goneShown = true
+    this.running = false
+    this.ui?.netGone(why)
   }
   quickSettings() {
     this.ui = new UI(this)
@@ -184,6 +271,7 @@ class Game {
   }
   newGame() {
     wipeSave()
+    writeIntent(null)
     location.reload()
   }
   // While the game is closed the crew keeps working, at a fraction of the
@@ -272,6 +360,7 @@ class Game {
     return false
   }
   setSpeed(v) {
+    if (NET.role === 'client') return this.ui?.toast('The host sets the pace of the camp.', '')
     if (S.raid && v > 1) v = 1
     if (v) this.lastSpeed = v
     S.speed = v
@@ -332,8 +421,10 @@ class Game {
   startMission(loc, ids, loadout = {}) {
     this.map.close()
     this.ui.showCamp(false)
-    this.fastForward(loadout.travel || 0)
+    // alone, the trip there passes in a blink; with friends, time is shared
+    if (NET.role === 'solo') this.fastForward(loadout.travel || 0)
     this.mission = new Mission(this, loc, ids, loadout)
+    if (NET.role !== 'solo') this.net?.say(null, `${this.net.name} set out for ${loc.name} with ${ids.length} ${ids.length === 1 ? 'survivor' : 'survivors'}.`)
     this.scene = this.mission
     view.input.handler = this.mission
     completeGoal('firstRun')
@@ -351,7 +442,8 @@ class Game {
     setTimeout(() => {
       m.dispose()
       this.mission = null
-      this.fastForward(m.loadout?.travel || 0)
+      if (NET.role === 'solo') this.fastForward(m.loadout?.travel || 0)
+      else this.net?.say(null, `${this.net.name}'s squad ${report.result === 'extracted' ? 'made it home from' : report.result === 'wiped' ? 'was lost at' : 'came back from'} ${m.loc?.name || 'the city'}.`)
       this.scene = this.base
       if (this.baseCam) view.rig.restore(this.baseCam)
       this.base.enter()
@@ -368,16 +460,32 @@ class Game {
     }, report.result === 'extracted' ? 400 : 1600)
   }
   // ---------------------------------------------------------------- loop
-  frame(t) {
-    requestAnimationFrame((tt) => this.frame(tt))
-    const dt = Math.max(0, Math.min(0.1, (t - this.last) / 1000))
+  // A hidden tab gets no animation frames. With friends connected the camp
+  // must not stop, so a tiny worker clock keeps the simulation and the
+  // connection going (without drawing) while the tab is in the background.
+  startTicker() {
+    try {
+      const src = URL.createObjectURL(new Blob(['setInterval(() => postMessage(0), 100)'], { type: 'text/javascript' }))
+      this.ticker = new Worker(src)
+      this.ticker.onmessage = () => {
+        if (document.hidden && this.net && this.running) this.frame(performance.now(), true)
+      }
+    } catch {
+      this.ticker = null
+    }
+  }
+  frame(t, hidden = false) {
+    const dt = Math.max(0, Math.min(hidden ? 1 : 0.1, (t - this.last) / 1000))
     this.last = t
     const inBase = this.scene === this.base
     // On a run the camp clock slows so a run costs hours, not half a day.
-    const speed = this.running ? (inBase ? (S.raid ? 1 : S.speed ?? 1) : this.mission ? 0.35 : S.speed ?? 1) : 1
-    const paused = this.mission?.paused || (inBase && speed === 0)
+    // With friends the camp keeps one pace for everyone, set by the host.
+    const mp = NET.role !== 'solo'
+    const speed = this.running ? (mp ? (S.raid ? 1 : S.speed ?? 1) : inBase ? (S.raid ? 1 : S.speed ?? 1) : this.mission ? 0.35 : S.speed ?? 1) : 1
+    const paused = mp ? !speed : this.mission?.paused || (inBase && speed === 0)
     const simDt = dt * (speed || 0)
-    if (this.running && !paused && simDt > 0) {
+    if (this.running && !paused && simDt > 0 && NET.role === 'client') this.net.guestTick(simDt)
+    else if (this.running && !paused && simDt > 0) {
       let left = simDt
       while (left > 0) {
         const step = Math.min(0.25, left)
@@ -389,6 +497,12 @@ class Game {
         this.saveT = 20
         save()
       }
+    }
+    this.net?.update(dt)
+    if (hidden) {
+      // a horde fight still plays out (and streams to friends) unseen
+      if (S.raid && this.scene === this.base) this.base.update(dt, simDt)
+      return
     }
     if (!this.titleEl) view.input.update(dt)
     else view.rig.yawGoal += dt * 0.04

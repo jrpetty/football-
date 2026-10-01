@@ -1,8 +1,9 @@
 // The field manual: one modal, a chapter list on the left and the page on
 // the right. Numbers come from the game data so the manual stays true when
 // the balance moves.
-import { BELTS, BELT_BONUS, SEASONS, SEASON_DAYS, INFECTION, PERK_LEVELS, SKILL_MAX, OUTPOST, SIGNAL, TIERS, CORE_SLOTS, CORE_BOOST, SEC_PER_DAY } from '../game/data.js'
-import { S } from '../game/state.js'
+import { BELTS, BELT_BONUS, SEASONS, SEASON_DAYS, INFECTION, PERK_LEVELS, SKILL_MAX, OUTPOST, SIGNAL, TIERS, CORE_SLOTS, CORE_BOOST, SEC_PER_DAY, STATIONS, UPKEEP, VEHICLES, VAN_REPAIR, RES } from '../game/data.js'
+import { S, travelCost } from '../game/state.js'
+import { HAND_RATE } from '../game/economy.js'
 import { sfx } from '../core/audio.js'
 import { h } from '../core/util.js'
 import { icon } from './icons.js'
@@ -134,7 +135,7 @@ const CHAPTERS = [
     body: () => [
       P('Every few nights a horde comes for the wall. Its size follows the camp\'s threat level, and threat grows with what you have achieved: milestone tiers, Signal phases, how many people live here and how far the walls reach. Time survived adds a little.'),
       h('h4', 'Blood Moons'),
-      P('From day 14, every seventh night is a Blood Moon. The sky goes red, the horde is half again as big, and the dead are tougher and faster. The Horde panel shows the date of the next one. Plan supply runs around it.'),
+      P('From day 21, every seventh night is a Blood Moon. The sky goes red, the horde is half again as big, and the dead are tougher and faster. The Horde panel shows the date of the next one. Plan supply runs around it.'),
       h('h4', 'Holding the line'),
       h(
         'ul',
@@ -194,6 +195,128 @@ const CHAPTERS = [
     ],
   },
   {
+    id: 'materials',
+    name: 'Metal and machines',
+    icon: 'hammer',
+    body: () => [
+      P('Everything past the first few tents is built from metal, and metal has to be made. Scrap from runs and the Scrap Yard is the ore of this world.'),
+      h(
+        'ol.mn-arc',
+        h('li', h('b', 'Metal bars. '), 'The Forge melts scrap into bars. Bars build the simple things: a bench, a farm plot, the first wall.'),
+        h('li', h('b', 'Plates and bolts. '), 'Bars are cut into plates and threaded into bolts, by hand at the Workbench or by the Fabricator. Every upgraded station asks for them.'),
+        h('li', h('b', 'Coal and steel. '), 'The Charcoal Kiln bakes wood into coal. A level 2 Forge folds coal into bars to make steel.'),
+        h('li', h('b', 'Beams. '), 'Steel and bolts become structural beams at a level 2 Workbench or in the Machine Shop. Pylons, the mast and the top tiers are made of them.'),
+      ),
+      h('h4', 'By hand or by machine'),
+      P(`Anything a machine makes, a survivor can make at a bench, only slower. Machines (the Fabricator, Assembler, Electronics Bench and the rest) need power. Without it, their crew still works them by hand at ${pct(HAND_RATE)} speed. With power and belts feeding them, they run day and night.`),
+    ],
+  },
+  {
+    id: 'power',
+    name: 'Power',
+    icon: 'power',
+    body: () => [
+      P('Power comes from engines you feed and from the weather. The Power panel (in the Camp overview) shows where every unit comes from and where it goes.'),
+      h(
+        'div.mn-grid',
+        tip(STATIONS.boiler.name, `${STATIONS.boiler.power.join(' / ')} power by level. Burns wood, or coal for three times as long, only as hard as the camp needs.`),
+        tip(STATIONS.generator.name, `${STATIONS.generator.power.join(' / ')} power from diesel fuel. Steady and strong, and thirsty.`),
+        tip(STATIONS.solar.name, 'Free in daylight, nothing at night. Clouds cut it.'),
+        tip(STATIONS.wind.name, 'Free whenever the wind blows. Storms and snow are best, still fog the worst.'),
+        tip(STATIONS.battery.name, 'Stores power that solar and wind make beyond what the camp is using, and gives it back after dark.'),
+      ),
+      h('h4', 'Who gets power first'),
+      P('When there is not enough, defence goes first (turrets and floodlights), then machines with people working them, then automation. The rest wait in the dark. Fuel engines burn only for the load they carry, so build renewables and a battery bank to save coal and diesel.'),
+    ],
+  },
+  {
+    id: 'upkeep',
+    name: 'Upkeep',
+    icon: 'wrench',
+    body: () => [
+      P('A camp wears out. Each day it uses a little of what you have, enough that a camp that stops scavenging slowly runs down, but never so much that it bleeds you dry.'),
+      h(
+        'ul',
+        h('li', `Each survivor: ${UPKEEP.person.cloth} cloth and ${UPKEEP.person.meds} meds a day for clothes, bedding and small cuts.`),
+        h('li', `Each station: ${UPKEEP.station.scrap} scrap a day per level for patching.`),
+        h('li', `Upgraded stations: ${UPKEEP.upgraded.bolts} bolts a day for every level past the first.`),
+        h('li', `Machines: ${UPKEEP.machine.parts} parts a day per level.`),
+      ),
+      P(`If the stores cannot cover it, the camp falls into disrepair: every station works at ${pct(UPKEEP.slow)} and morale drops until the shortfall is made good. The Camp overview shows the daily bill.`),
+    ],
+  },
+  {
+    id: 'travel',
+    name: 'Travel and vehicles',
+    icon: 'truck',
+    body: () => {
+      const rows = [['Next door', 0.25], ['Four streets over', 0.7], ['Across town', 1.2], ['Out on the highway', 2.5]]
+      return [
+        P('Every survivor on a run carries food and water for the trip there and back. Next door costs almost nothing; the far side of the city costs a great deal on foot. Vehicles cut the provisions but burn fuel.'),
+        h(
+          'table.vtable',
+          h('tr', h('th', ''), h('th', 'On foot'), h('th', 'Bicycles'), h('th', 'Vehicle')),
+          rows.map(([label, km]) => h('tr', h('td', h('b', label), h('small', ` ${km} km`)), ['foot', 'bikes', 'van'].map((k) => {
+            const c = travelCost(km, k, 1)
+            return h('td', `${c.food} / ${c.water}`, c.fuel ? h('small.dim', ` +${c.fuel} fuel`) : null)
+          }))),
+        ),
+        h('p.note', 'Food and water per person, there and back.'),
+        h('h4', 'Getting wheels'),
+        h(
+          'ul',
+          h('li', `The van in the yard is dead. It needs ${Object.entries(VAN_REPAIR).map(([k, n]) => `${n} ${RES[k].name.toLowerCase()}`).join(', ')}. Strip wrecked cars on runs for tyres and batteries.`),
+          h('li', 'Bicycles are made at the Workbench: a cheap first step off your feet.'),
+          h('li', 'Some cars on runs still work. Find their keys in the building, or let a mechanic, ex-con or engineer hotwire one, and it drives home with you.'),
+          h('li', `The vehicle decides what comes home: on foot and on bikes only what the squad carries; a car's boot holds about ${VEHICLES.car.stash}; the van and the truck take everything.`),
+        ),
+      ]
+    },
+  },
+  {
+    id: 'story',
+    name: 'The story',
+    icon: 'book',
+    body: () => [
+      P('Ashford fell for a reason, and some of the people who know why are still out there. The Journal (J) keeps every thread you have found: what you know, and where it might lead.'),
+      h(
+        'ul',
+        h('li', 'Notes turn up in desks, filing cabinets, lockers and bookshelves on runs. Some are just people\'s last words; some point somewhere.'),
+        h('li', 'Leads show on the city map in violet. A thread rarely says exactly where to go: it narrows things down, and you check the places it might be.'),
+        h('li', 'People in camp sometimes ask you to find someone they lost. Those trails go cold after a week.'),
+        h('li', 'Two Signal phases need more than parts: someone who knows the dish array, and the codes Coastal Command will answer to.'),
+      ),
+    ],
+  },
+  {
+    id: 'gear',
+    name: 'Gear and swapping',
+    icon: 'items',
+    body: () => [
+      P('Weapons, armour and gear move between survivors in camp. Open someone\'s sheet, click a slot and pick from storage or from what others carry: taking someone else\'s item swaps it, so they get yours.'),
+      P('Gear only changes hands at home. Someone out on a run or holding an outpost keeps what they left with.'),
+    ],
+  },
+  {
+    id: 'multiplayer',
+    name: 'Playing together',
+    icon: 'people',
+    body: () => [
+      P('Multiplayer (on the title screen) runs a camp of its own, separate from your single-player save. One player hosts: their browser runs the camp and keeps the save. Friends join with the five-letter camp code.'),
+      h(
+        'ul',
+        h('li', 'Everyone builds, crafts, researches and trades for the same camp, and everyone sees it change live.'),
+        h('li', 'The host hands survivors out in the Players panel (O). You give orders only to the survivors you lead, plus anyone nobody leads. Whoever rescues or recruits someone leads them.'),
+        h('li', 'Runs are your own: pick a squad from your survivors and go, while friends run elsewhere. What you bring home lands in the shared stores.'),
+        h('li', 'The camp keeps one pace for everyone, set by the host, and it does not slow down while someone is on a run.'),
+        h('li', 'When the horde comes, the host\'s camp fights it and everyone watches live. Select the defenders you lead and right-click to move them or pick a target.'),
+        h('li', 'Press Enter to chat. Coloured rings show where your friends are looking.'),
+        h('li', 'If someone drops out mid-run, their squad walks home with nothing. If the host leaves, the camp waits, saved, until they host again.'),
+      ),
+      P('Inside Claude, camps connect through the artifact\'s live room: friends open the same artifact and see your camp in the list. The standalone file connects browser to browser over the internet.'),
+    ],
+  },
+  {
     id: 'keys',
     name: 'Controls',
     icon: 'settings',
@@ -212,6 +335,9 @@ const CHAPTERS = [
         ['M', 'City map'],
         ['G', 'Progress'],
         ['L', 'Log'],
+        ['J', 'Journal'],
+        ['O', 'Players (multiplayer)'],
+        ['Enter', 'Chat (multiplayer)'],
         ['F', 'Wall'],
         ['H', 'Horde intel'],
         ['R', 'Rotate while placing'],
