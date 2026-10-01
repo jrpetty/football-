@@ -1960,6 +1960,15 @@ public class VillageFolkEntity extends AssistantEntity {
                 if (got > 0) { Villages.leadProgress(village, getUUID(), now); drewForBuild = true; }
             }
             if (have < want) {
+                // Made on the spot from what the stores hold, the way the tools are: the
+                // crafting planner only looks in chests twenty-four blocks round the builder,
+                // and a town's stores are spread over a hundred and more — a long game sat in
+                // the Stone Age for thirteen days with three thousand stone and seventeen
+                // hundred logs in its chests, "cannot make 1 furnace", and no smeltery.
+                int made = madeFromStores(fx.part(), want - have);
+                if (made > 0) { have += made; drewForBuild = true; Villages.leadProgress(village, getUUID(), now); }
+            }
+            if (have < want) {
                 boolean making = fx.recipe() != null && craftNow(fx.recipe(), want - have);
                 String what = fx.recipe() != null ? fx.recipe() : fx.part().name().toLowerCase();
                 buildNote("build: " + (making ? "making " : "cannot make ") + (want - have) + " " + what);
@@ -2027,6 +2036,69 @@ public class VillageFolkEntity extends AssistantEntity {
             made++;
         }
         return made;
+    }
+
+    /**
+     * A building's fixtures made out of the stores' own materials: a chest of eight
+     * planks, a furnace of eight cobblestone, a bench of four planks, fences, gates and
+     * ladders of planks (a log is four planks). All or nothing for each one; returns how
+     * many were made.
+     */
+    private int madeFromStores(BuildGoal.Part part, int wanted) {
+        if (villageCentre == null || wanted <= 0) return 0;
+        net.minecraft.world.item.Item product;
+        int planksEach = 0, stoneEach = 0, perBatch = 1;
+        switch (part) {
+            case CHEST -> { product = net.minecraft.world.item.Items.CHEST; planksEach = 8; }
+            case FURNACE -> { product = net.minecraft.world.item.Items.FURNACE; stoneEach = 8; }
+            case CRAFTING_TABLE -> { product = net.minecraft.world.item.Items.CRAFTING_TABLE; planksEach = 4; }
+            case FENCE -> { product = net.minecraft.world.item.Items.OAK_FENCE; planksEach = 5; perBatch = 3; }
+            case GATE -> { product = net.minecraft.world.item.Items.OAK_FENCE_GATE; planksEach = 4; }
+            case LADDER -> { product = net.minecraft.world.item.Items.LADDER; planksEach = 4; perBatch = 3; }
+            default -> { return 0; }
+        }
+        int r = buildStoresRadius();
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> planks =
+            st -> st.is(net.minecraft.tags.ItemTags.PLANKS);
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> logs =
+            st -> st.is(net.minecraft.tags.ItemTags.LOGS);
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> stone =
+            st -> st.is(net.minecraft.world.item.Items.COBBLESTONE) || st.is(net.minecraft.world.item.Items.COBBLED_DEEPSLATE);
+        int made = 0;
+        while (made < wanted) {
+            int needPlanks = planksEach, needStone = stoneEach;
+            int planksBefore = countCarried(planks), logsBefore = countCarried(logs), stoneBefore = countCarried(stone);
+            if (needStone > 0 && stoneBefore < needStone) drawFrom(villageCentre, stone, needStone - stoneBefore, r);
+            if (needPlanks > 0) {
+                int wood = countCarried(planks) + 4 * countCarried(logs);
+                if (wood < needPlanks) drawFrom(villageCentre, planks, needPlanks - wood, r);
+                wood = countCarried(planks) + 4 * countCarried(logs);
+                if (wood < needPlanks) drawFrom(villageCentre, logs, (needPlanks - wood + 3) / 4, r);
+            }
+            boolean enough = countCarried(stone) >= needStone
+                && countCarried(planks) + 4 * countCarried(logs) >= needPlanks;
+            if (!enough) {
+                returnTo(villageCentre, stone, stoneBefore, r);
+                returnTo(villageCentre, planks, planksBefore, r);
+                returnTo(villageCentre, logs, logsBefore, r);
+                break;
+            }
+            if (needStone > 0) removeMatching(stone, needStone);
+            if (needPlanks > 0) {
+                int fromPlanks = removeMatching(planks, needPlanks);
+                int rest = needPlanks - fromPlanks;
+                if (rest > 0) {
+                    int logsUsed = (rest + 3) / 4;
+                    removeMatching(logs, logsUsed);
+                    int spare = logsUsed * 4 - rest;
+                    if (spare > 0) insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_PLANKS, spare));
+                }
+            }
+            insertItem(new net.minecraft.world.item.ItemStack(product, perBatch));
+            made += perBatch;
+        }
+        if (made > 0) brain("made " + made + " " + part.name().toLowerCase() + " from the stores");
+        return Math.min(made, wanted);
     }
 
     private int bucketCheckTick = -100000;
