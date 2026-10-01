@@ -13,6 +13,7 @@ Everything is obtainable in **survival**.
 |---|---|
 | **Village Folk Spawner** (recommended) | Craft it — 8 bread round a gold ingot — and *place* it. The first one founds a village of eight on the spot (the same start a village the world grows gets) and leaves the founding stores in a chest where it stood; each one placed after that, within reach, adds one settler. That is the last thing a village needs from you. |
 | **Village Charter** | Right-click the ground. Same result as the spawner; craftable with paper, bread, a gold ingot, seeds and a chest. |
+| **Where to find them** | In creative, everything the mod adds is in its own **Village Folk** tab (the spawner is also under Functional Blocks). In survival, every recipe is in the recipe book from the moment you join; the spawner is a gold ingot in the middle of the crafting grid with bread in all eight squares round it. |
 | **/village spawn [1-100]** | Stands folk up two blocks ahead of you. `spawnat <x> <z> [n]` for the console. |
 | **The world** | Villages generate as you explore (config `naturalVillages`), in groups of three to five. |
 | **Vanilla villagers** | Turned into folk as you meet them (config `replaceVillagers`). Trading with them stops working; wandering traders are untouched. |

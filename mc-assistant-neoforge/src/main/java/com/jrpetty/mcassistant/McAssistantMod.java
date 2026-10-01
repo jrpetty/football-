@@ -41,6 +41,8 @@ public final class McAssistantMod {
         DeferredRegister.create(Registries.MENU, MODID);
     private static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(MODID);
     private static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(MODID);
+    private static final DeferredRegister<net.minecraft.world.item.CreativeModeTab> TABS =
+        DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
 
     public static final DeferredHolder<EntityType<?>, EntityType<AssistantEntity>> ASSISTANT =
         ENTITY_TYPES.register("assistant", () -> EntityType.Builder
@@ -125,6 +127,24 @@ public final class McAssistantMod {
     public static final DeferredItem<net.minecraft.world.item.Item> VILLAGE_COIN =
         ITEMS.registerSimpleItem("village_coin");
 
+    /** The mod's own creative tab: everything it adds, in one place, the village folk spawner first. */
+    public static final DeferredHolder<net.minecraft.world.item.CreativeModeTab, net.minecraft.world.item.CreativeModeTab> TAB =
+        TABS.register("village_folk", () -> net.minecraft.world.item.CreativeModeTab.builder()
+            .title(net.minecraft.network.chat.Component.translatable("itemGroup.mc_assistant"))
+            .icon(() -> new net.minecraft.world.item.ItemStack(FOLK_SPAWNER_ITEM.get()))
+            .withTabsBefore(CreativeModeTabs.SPAWN_EGGS)
+            .displayItems((params, out) -> {
+                out.accept(FOLK_SPAWNER_ITEM.get());
+                out.accept(VILLAGE_CHARTER.get());
+                out.accept(VILLAGE_COIN.get());
+                out.accept(ASSISTANT_SPAWNER_ITEM.get());
+                out.accept(JOB_BOARD_ITEM.get());
+                out.accept(ZONE_MARKER.get());
+                out.accept(PLACE_MARKER.get());
+                out.accept(MEMORY_CORE.get());
+            })
+            .build());
+
     /** Master switch for the chat / slash / voice command layer. Off while the
      *  specialisation flow (spawner -> management screen -> zone marker) is the
      *  way you run a crew; the parser and voice engine stay built, just idle. */
@@ -137,6 +157,7 @@ public final class McAssistantMod {
         MENU_TYPES.register(modBus);
         BLOCKS.register(modBus);
         ITEMS.register(modBus);
+        TABS.register(modBus);
         modBus.addListener(this::onEntityAttributes);
         modBus.addListener(this::onBuildCreativeTabs);
         modBus.addListener(ChunkLoad::onRegisterControllers);
