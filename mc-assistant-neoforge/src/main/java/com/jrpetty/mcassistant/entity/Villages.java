@@ -206,6 +206,7 @@ public final class Villages {
         AGE.clear();
         BUILT.clear();
         BUILT_AT.clear();
+        TownLife.resetForTests();
         LAST_PROJECT.clear();
         POP.clear();
         LAST_BIRTH.clear();
@@ -290,6 +291,7 @@ public final class Villages {
         AGE.remove(villageId);
         BUILT.remove(villageId);
         BUILT_AT.remove(villageId);
+        com.jrpetty.mcassistant.village.Ledger.forget(villageId);
         LAST_PROJECT.remove(villageId);
     }
 
@@ -860,7 +862,11 @@ public final class Villages {
         BUILT.computeIfAbsent(villageId, k -> new ArrayList<>()).add(structure);
         Map<String, Site> pending = SITES.get(villageId);
         Site raised = pending == null ? null : pending.get(structure);
-        if (raised != null) BUILT_AT.computeIfAbsent(villageId, k -> new ConcurrentHashMap<>()).putIfAbsent(structure, raised.anchor());
+        if (raised != null) {
+            BUILT_AT.computeIfAbsent(villageId, k -> new ConcurrentHashMap<>()).putIfAbsent(structure, raised.anchor());
+            // And into the register of the town's buildings, kept with the world (TownLife hangs on it).
+            com.jrpetty.mcassistant.village.Ledger.built(villageId, structure, raised.anchor(), raised.facing());
+        }
         if ("guesthouse".equals(structure)) {
             com.jrpetty.mcassistant.village.Chronicle.Guest g = com.jrpetty.mcassistant.village.Chronicle.awaitingAHouse(villageId);
             Site site = pending == null ? null : pending.get(structure);

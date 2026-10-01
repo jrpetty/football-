@@ -272,7 +272,10 @@ public class VillageFolkEntity extends AssistantEntity {
         // The town's streets, worn and paved and lit a little at a time (TownWork).
         if (ownerId() != null && level() instanceof net.minecraft.server.level.ServerLevel townLevel) {
             Villages.Village home = Villages.get(ownerId());
-            if (home != null) TownWork.tick(townLevel, home);
+            if (home != null) {
+                TownWork.tick(townLevel, home);
+                TownLife.tick(townLevel, home);         // lit windows, chimney smoke, washing, stalls, signs
+            }
         }
         if (withAPlayer) return;
         keepTrail();

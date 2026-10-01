@@ -2,6 +2,8 @@ package com.jrpetty.mcassistant;
 
 import com.jrpetty.mcassistant.entity.goal.Blueprints;
 import com.jrpetty.mcassistant.entity.goal.BuildGoal;
+import com.jrpetty.mcassistant.entity.TownLife;
+import com.jrpetty.mcassistant.village.Ledger;
 import com.jrpetty.mcassistant.village.TownPlan;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -179,6 +181,8 @@ public final class Showcase {
             }
         }
         // The buildings, each where the plan puts it.
+        STAGED.clear();
+        VIEWS.clear();
         java.util.Set<Long> taken = new java.util.HashSet<>();
         List<String> wanted = new ArrayList<>(List.of("storage", "market", "workshop", "smeltery", "hall", "chapel",
             "barracks", "watchtower", "watchtower", "watchtower", "watchtower", "granary", "guesthouse", "lighthouse",
@@ -195,13 +199,75 @@ public final class Showcase {
                 for (long c : lot.cells()) if (taken.contains(c)) { free = false; break; }
                 if (!free) continue;
                 for (long c : lot.cells()) taken.add(c);
-                BuildGoal.stamp(level, name, heart.offset(lot.x(), 0, lot.z()),
-                    com.jrpetty.mcassistant.entity.Villages.direction(lot.back()), 13, painter(PALETTES[k++ % PALETTES.length]));
+                Direction back = com.jrpetty.mcassistant.entity.Villages.direction(lot.back());
+                BuildGoal.stamp(level, name, heart.offset(lot.x(), 0, lot.z()), back, 13, painter(PALETTES[k++ % PALETTES.length]));
+                STAGED.add(new Ledger.Building(name, heart.offset(lot.x(), 0, lot.z()), back));
                 n++;
                 break;
             }
         }
+        // A field on a lot of its own, with its scarecrow.
+        BlockPos field = null;
+        for (TownPlan.Lot lot : TownPlan.candidates("house")) {
+            if (lot.kind() != TownPlan.Kind.LOT || lot.distance() + lot.halfAcross() > reach) continue;
+            boolean free = true;
+            for (long c : lot.cells()) if (taken.contains(c)) { free = false; break; }
+            if (!free) continue;
+            for (long c : lot.cells()) taken.add(c);
+            field = heart.offset(lot.x(), 0, lot.z());
+            break;
+        }
+        if (field != null) {
+            for (int dx = -4; dx <= 4; dx++) {
+                for (int dz = -4; dz <= 4; dz++) {
+                    BlockPos g = field.offset(dx, -1, dz);
+                    if (dx == 0 && dz == 0) { level.setBlock(g, Blocks.WATER.defaultBlockState(), 3); continue; }
+                    level.setBlock(g, Blocks.FARMLAND.defaultBlockState()
+                        .setValue(net.minecraft.world.level.block.FarmBlock.MOISTURE, 7), 2 | 16);
+                    Block crop = (dx + 4) / 3 == 1 ? Blocks.CARROTS : (dx + 4) / 3 == 2 ? Blocks.POTATOES : Blocks.WHEAT;
+                    level.setBlock(g.above(), ((net.minecraft.world.level.block.CropBlock) crop).getStateForAge(7), 2 | 16);
+                }
+            }
+            TownLife.scarecrow(level, field, 5);
+        }
+        // The town's life: chimneys, numbers and names by the doors, washing, stalls, street signs.
+        TownLife.dressNow(level, SHOWCASE, heart, STAGED, List.of(
+            net.minecraft.world.item.Items.BREAD, net.minecraft.world.item.Items.CARROT, net.minecraft.world.item.Items.APPLE,
+            net.minecraft.world.item.Items.PUMPKIN, net.minecraft.world.item.Items.MELON_SLICE, net.minecraft.world.item.Items.EGG,
+            net.minecraft.world.item.Items.WHITE_WOOL, net.minecraft.world.item.Items.IRON_INGOT, net.minecraft.world.item.Items.HONEYCOMB,
+            net.minecraft.world.item.Items.COOKED_COD, net.minecraft.world.item.Items.SWEET_BERRIES, net.minecraft.world.item.Items.POTATO));
+        // Where to stand to look at each of them.
+        view("t7-stall", heart.offset(3, 1, 9), heart.offset(8, 1, 8));
+        view("t8-street-sign", heart.offset(0, 1, 14), heart.offset(3, 1, 17));
+        for (Ledger.Building b : STAGED) {
+            if (!b.structure().equals("house")) continue;
+            Direction front = b.facing().getOpposite(), right = b.facing().getClockWise();
+            view("t9-house-number", b.anchor().relative(front, 7).relative(right, 1), b.anchor().relative(front, 4).relative(right, 1).above());
+            view("t12-chimneys", b.anchor().relative(front, 14).relative(right, 6).above(9), b.anchor().above(7));
+            break;
+        }
+        for (Ledger.Building b : STAGED) {
+            if (!b.structure().equals("house") || (b.facing() != Direction.NORTH && b.facing() != Direction.WEST)) continue;
+            Direction right = b.facing().getClockWise();
+            view("t10-washing", b.anchor().relative(b.facing(), 7).relative(right, 6),
+                b.anchor().relative(b.facing(), 6).relative(right, -1).above(2));
+            break;
+        }
+        if (field != null) view("t11-scarecrow", field.offset(-8, 3, -8), field.offset(2, 0, 2));
+        view("t13-night-street", heart.offset(1, 1, 50), heart.offset(0, 3, 14));
         return n;
+    }
+
+    /** The buildings of the last town laid out, for its lights (/village showcase lights). */
+    public static final List<Ledger.Building> STAGED = new ArrayList<>();
+    /** Where to stand to look at the town's details: "VIEW name x y z tx ty tz". */
+    public static final List<String> VIEWS = new ArrayList<>();
+    /** The showcase town's own name for its streets. */
+    public static final java.util.UUID SHOWCASE = java.util.UUID.nameUUIDFromBytes("mca-showcase".getBytes());
+
+    private static void view(String name, BlockPos eye, BlockPos at) {
+        VIEWS.add("VIEW " + name + " " + eye.getX() + " " + eye.getY() + " " + eye.getZ()
+            + " " + at.getX() + " " + at.getY() + " " + at.getZ());
     }
 
     private static boolean lamp(int dx, int dz) {

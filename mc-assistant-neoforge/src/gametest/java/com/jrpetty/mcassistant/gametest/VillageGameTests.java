@@ -1306,6 +1306,126 @@ public class VillageGameTests {
         });
     }
 
+    // ============================================================ the town's life
+
+    /**
+     * The small things: a house and a storehouse raised on the plan's lots, and round them a
+     * fire in the hearth, a number by the door with the family's names, a washing line, the
+     * windows lit after dark, a street sign at the corner, stalls on the square with the
+     * stores' goods on them, and a scarecrow in a field.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t29_town_life")
+    public static void t29_town_life(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(6000);
+        Kit.hold(level, 11400, 11400, 48);
+        Kit.prepare(level, 11400, 11400, 48);
+        BlockPos heart = Kit.surface(level, 11400, 11400);
+        VillageFolkEntity folk = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(folk != null, "a village");
+        java.util.UUID village = folk.ownerId();
+        Villages.Village v = Villages.get(village);
+        // A house whose back is to the north (so it has the washing line), and the storehouse.
+        com.jrpetty.mcassistant.village.TownPlan.Lot home = null;
+        for (com.jrpetty.mcassistant.village.TownPlan.Lot l : com.jrpetty.mcassistant.village.TownPlan.candidates("house")) {
+            if (l.kind() == com.jrpetty.mcassistant.village.TownPlan.Kind.LOT && l.back() == com.jrpetty.mcassistant.village.TownPlan.NORTH
+                    && l.distance() < 40) { home = l; break; }
+        }
+        helper.assertTrue(home != null, "a lot for a house");
+        BlockPos houseAt = Kit.surface(level, heart.getX() + home.x(), heart.getZ() + home.z());
+        Direction houseBack = Villages.direction(home.back());
+        com.jrpetty.mcassistant.village.TownPlan.Lot civic = com.jrpetty.mcassistant.village.TownPlan.candidates("storage").get(0);
+        BlockPos storeAt = Kit.surface(level, heart.getX() + civic.x(), heart.getZ() + civic.z());
+        Direction storeBack = Villages.direction(civic.back());
+        BuildGoal.stamp(level, "house", houseAt, houseBack, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+        BuildGoal.stamp(level, "storage", storeAt, storeBack, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.BIRCH));
+        com.jrpetty.mcassistant.village.Ledger.built(village, "house", houseAt, houseBack);
+        com.jrpetty.mcassistant.village.Ledger.built(village, "storage", storeAt, storeBack);
+        var all = com.jrpetty.mcassistant.village.Ledger.buildings(village);
+        helper.assertTrue(all.size() == 2, "the ledger has both buildings: " + all);
+        var house = all.get(0);
+        // A field of farmland to stand a scarecrow by.
+        BlockPos field = heart.offset(-30, 0, -30);
+        field = Kit.surface(level, field.getX(), field.getZ());
+        for (int dx = -3; dx <= 3; dx++) for (int dz = -3; dz <= 3; dz++) {
+            level.setBlock(field.offset(dx, -1, dz), Blocks.FARMLAND.defaultBlockState(), 3);
+        }
+        com.jrpetty.mcassistant.entity.TownLife.dressNow(level, village, heart, all,
+            List.of(Items.BREAD, Items.CARROT, Items.APPLE, Items.WHITE_WOOL, Items.IRON_INGOT, Items.EGG));
+        boolean crow = com.jrpetty.mcassistant.entity.TownLife.scarecrow(level, field, 4);
+
+        var fit = com.jrpetty.mcassistant.entity.TownLife.fittings(house);
+        Kit.log("t29 the house: " + fit.windows().size() + " windows, door " + fit.door() + ", chimneys " + fit.chimneys()
+            + ", address " + java.util.Arrays.toString(com.jrpetty.mcassistant.entity.TownLife.address(village, heart, house)));
+        helper.assertTrue(!fit.chimneys().isEmpty() && level.getBlockState(fit.chimneys().get(0).above()).is(Blocks.CAMPFIRE),
+            "a fire in the house's hearth, smoking from its chimney");
+        // The sign by the door.
+        String signText = null;
+        for (BlockPos p : BlockPos.betweenClosed(fit.door().offset(-2, 0, -2), fit.door().offset(2, 2, 2))) {
+            if (level.getBlockEntity(p) instanceof net.minecraft.world.level.block.entity.SignBlockEntity sign) {
+                StringBuilder t = new StringBuilder();
+                for (int i = 0; i < 4; i++) t.append(sign.getFrontText().getMessage(i, false).getString()).append(" / ");
+                signText = t.toString();
+            }
+        }
+        Kit.log("t29 the sign by the door: " + signText);
+        helper.assertTrue(signText != null && signText.startsWith("No. "), "a number by the house's door");
+        // The washing line behind it.
+        BlockPos line = houseAt.relative(houseBack, fit.half()[1] + 1).above(2);
+        int banners = 0;
+        for (BlockPos p : BlockPos.betweenClosed(line.relative(houseBack).offset(-4, 0, -4), line.relative(houseBack).offset(4, 0, 4))) {
+            if (level.getBlockState(p).getBlock() instanceof net.minecraft.world.level.block.WallBannerBlock) banners++;
+        }
+        Kit.log("t29 the washing line: " + level.getBlockState(line) + ", " + banners + " things on it");
+        helper.assertTrue(level.getBlockState(line).getBlock() instanceof net.minecraft.world.level.block.FenceBlock && banners == 4,
+            "a washing line behind the house with the wash on it");
+        // The windows after dark.
+        com.jrpetty.mcassistant.entity.TownLife.lightsNow(level, all, true);
+        int lit = 0, lamps = 0;
+        for (BlockPos w : fit.windows()) if (level.getBlockState(w).is(Blocks.YELLOW_STAINED_GLASS_PANE)) lit++;
+        for (BlockPos in : fit.insides()) if (in != null && level.getBlockState(in).is(Blocks.LIGHT)) lamps++;
+        com.jrpetty.mcassistant.entity.TownLife.lightsNow(level, all, false);
+        int still = 0;
+        for (BlockPos w : fit.windows()) if (level.getBlockState(w).is(Blocks.YELLOW_STAINED_GLASS_PANE)) still++;
+        Kit.log("t29 lights: " + lit + " of " + fit.windows().size() + " windows lit, " + lamps + " lamps; after dawn " + still);
+        helper.assertTrue(lit >= fit.windows().size() / 2 && lamps > 0 && still == 0, "the windows light up after dark and go out at dawn");
+        // A street sign at the corner of the South Road and the street round the square.
+        BlockPos post = Kit.surface(level, heart.getX() + 3, heart.getZ() + 17).below(2);   // under the lantern
+        java.util.List<String> names = new java.util.ArrayList<>();
+        for (Direction d : Direction.Plane.HORIZONTAL) {
+            if (level.getBlockEntity(post.relative(d)) instanceof net.minecraft.world.level.block.entity.SignBlockEntity sign) {
+                names.add(sign.getFrontText().getMessage(1, false).getString());
+            }
+        }
+        Kit.log("t29 the corner of " + names + " (post " + level.getBlockState(post.below()) + ")");
+        helper.assertTrue(names.contains("South Road") && names.size() == 2, "a street sign with both streets' names");
+        // The stalls, and the goods on them.
+        int stalls = 0, goods = 0;
+        for (int[] s : new int[][]{ { 8, 8 }, { -8, 8 }, { 8, -8 }, { -8, -8 } }) {
+            if (level.getBlockState(Kit.surface(level, heart.getX() + s[0], heart.getZ() + s[1]).below(4)).is(Blocks.BARREL)
+                    || !level.getEntitiesOfClass(net.minecraft.world.entity.decoration.ItemFrame.class,
+                        around(heart.offset(s[0], 0, s[1]), 3)).isEmpty()) stalls++;
+        }
+        for (var f : level.getEntitiesOfClass(net.minecraft.world.entity.decoration.ItemFrame.class, around(heart, 14))) {
+            if (f.getTags().contains("mca_stall") && !f.getItem().isEmpty()) goods++;
+        }
+        Kit.log("t29 the square: " + stalls + " stalls, " + goods + " goods out on them");
+        helper.assertTrue(stalls == 4 && goods == 6, "four stalls on the square with the stores' goods on them");
+        Kit.log("t29 the field's scarecrow: " + crow);
+        helper.assertTrue(crow, "a scarecrow by the field");
+        // And the village's own visits light the windows when night falls.
+        level.setDayTime(18000);
+        com.jrpetty.mcassistant.entity.TownLife.resetForTests();
+        com.jrpetty.mcassistant.entity.TownLife.tick(level, v);
+        int night = 0;
+        for (BlockPos w : fit.windows()) if (level.getBlockState(w).is(Blocks.YELLOW_STAINED_GLASS_PANE)) night++;
+        Kit.log("t29 at midnight " + night + " windows are lit");
+        helper.assertTrue(night > 0, "the village lights its own windows at night");
+        level.setDayTime(6000);
+        helper.succeed();
+    }
+
     // ===================================================== vanilla villagers
 
     /** A villager appears the ordinary way: the join event should catch it. */

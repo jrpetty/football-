@@ -71,7 +71,18 @@ public final class VillageCommands {
             // town laid out to the plan. For the pictures; builds from a palette, not the stores.
             .then(Commands.literal("showcase").requires(src -> src.hasPermission(2))
                 .then(Commands.literal("buildings").executes(ctx -> showcase(ctx, false)))
-                .then(Commands.literal("town").executes(ctx -> showcase(ctx, true)))));
+                .then(Commands.literal("town").executes(ctx -> showcase(ctx, true)))
+                // The staged town's windows lit, as they are after dark, or put out.
+                .then(Commands.literal("lights")
+                    .then(Commands.literal("on").executes(ctx -> showcaseLights(ctx, true)))
+                    .then(Commands.literal("off").executes(ctx -> showcaseLights(ctx, false))))));
+    }
+
+    private static int showcaseLights(CommandContext<CommandSourceStack> ctx, boolean on) {
+        com.jrpetty.mcassistant.entity.TownLife.lightsNow(ctx.getSource().getLevel(), Showcase.STAGED, on);
+        ctx.getSource().sendSuccess(() -> Component.literal("LIGHTS " + (on ? "on" : "off") + " in "
+            + Showcase.STAGED.size() + " buildings"), false);
+        return Showcase.STAGED.size();
     }
 
     private static int showcase(CommandContext<CommandSourceStack> ctx, boolean town) {
@@ -80,7 +91,7 @@ public final class VillageCommands {
         if (town) {
             int n = Showcase.town(level, at);
             ctx.getSource().sendSuccess(() -> Component.literal("TOWN " + at.getX() + " " + at.getY() + " " + at.getZ()
-                + " with " + n + " buildings"), false);
+                + " with " + n + " buildings | " + String.join(" | ", Showcase.VIEWS)), false);
             return n;
         }
         java.util.List<String> lines = Showcase.buildings(level, at);

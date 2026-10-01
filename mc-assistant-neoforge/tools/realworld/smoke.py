@@ -85,8 +85,23 @@ def showcase(r, cx, cz, look):
     look("t3-town-avenue", tx + 1, ty + 1, tz + 48, tx, ty + 3, tz, wait=8)
     look("t4-town-square", tx + 9, ty + 9, tz + 11, tx - 18, ty + 2, tz - 5, wait=8)
     look("t5-town-homes", tx + 52, ty + 14, tz + 52, tx + 26, ty + 2, tz + 26, wait=8)
+    # The town's life, close up: a stall on the square, a street sign, a house's number,
+    # the washing, a scarecrow, the chimneys' smoke.
+    views = re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out)
+    say("views: %s" % ", ".join(v[0] for v in views))
+    for name, x, y, z, ax, ay, az in views:
+        if "night" in name:
+            continue
+        look(name, int(x) + 0.5, int(y), int(z) + 0.5, int(ax) + 0.5, int(ay) + 0.5, int(az) + 0.5, wait=6)
+    # By night, every window lit.
     r.cmd("time set 18000")
+    say("lights: " + r.cmd("village showcase lights on"))
     look("t6-town-night", tx + 62, ty + 58, tz + 74, tx, ty, tz, wait=10)
+    for name, x, y, z, ax, ay, az in views:
+        if "night" in name:
+            look(name, int(x) + 0.5, int(y), int(z) + 0.5, int(ax) + 0.5, int(ay) + 0.5, int(az) + 0.5, wait=8)
+    look("t14-night-homes", tx + 52, ty + 14, tz + 52, tx + 26, ty + 2, tz + 26, wait=8)
+    r.cmd("village showcase lights off")
     r.cmd("time set 6000")
     say("alive after the town: %s" % client_alive())
 

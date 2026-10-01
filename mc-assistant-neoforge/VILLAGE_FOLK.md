@@ -105,6 +105,33 @@ The streets are worn into paths where people live. From the Iron Age the avenues
 are cobbled and lit by lamp posts every few blocks. Fields, woods and mines are
 staked outside the town, so it always has ground to grow into.
 
+### Life in town
+
+The village keeps a register of every building it raises: what it is, where it
+stands and which way it faces. It is saved with the world. The details below are
+added a little at a time round those buildings:
+
+* **Lit windows.** After dark the windows of each building turn a warm yellow and
+  the room behind them is lit. The buildings light up one by one through the
+  evening, and their lights go out one by one before dawn.
+* **Chimney smoke.** Every chimney has a fire on top, so smoke rises over the
+  town's roofs.
+* **Washing lines.** Behind the houses, in the yard two rows of houses share, a
+  washing line hangs between two posts with the wash pegged out on it.
+* **Scarecrows.** Every farmer's field gets a scarecrow at one corner: a post, a
+  straw body with its arms out, and a pumpkin head turned toward the crops.
+* **Market stalls.** From the Stone Age, four stalls stand on the square under
+  striped awnings. The goods the stores hold most of are set out on their
+  counters. Passers-by can look but can't take them.
+* **Street names.** Every street has a name, and each half of a street has its
+  own. The avenues are the North, South, East and West Roads; the other streets
+  have names like Mill Lane or Orchard Row. A sign post with a lantern stands at
+  every crossing, with each street's name on the side facing it.
+* **House numbers.** A sign by every door gives the number and the street, and
+  for a house, the names of the folk who sleep there. Numbers go up from the
+  avenue outward, odd on one side of the street and even on the other. Other
+  buildings have their name over the door: *The Storehouse*, *The Smeltery*.
+
 ### The buildings
 
 Every building is drawn. Each drawing is a text file in
@@ -637,6 +664,10 @@ Every push to CI:
   alone for up to sixty game days, with a line a day saying how many folk, which
   age, how many buildings, its renown and how many villages the world now holds —
   published every ten minutes while it runs (`real-epic.txt`);
+* raises a house and a storehouse on the plan's lots and checks the town's life round
+  them: the chimney fire, the door's number and names, the washing line, the windows lit
+  by night and dark by day, a street sign, the stalls and their goods, a scarecrow
+  (game test `t29`);
 * fills a storehouse from a field's chest and a furnace's output with a real carrier,
   and has a farmer who has run out of seed fetch it from there (game test `t28`);
 * raises the later ages' buildings and a great work for real (game test `t14`), and
