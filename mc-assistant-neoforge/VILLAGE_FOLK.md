@@ -266,6 +266,10 @@ The buttons ask:
 | What do you hope for? | Its dream, and how far it has got |
 | What do you do for fun? | Its pastime |
 | Tell me a joke | One of its jokes (a grump won't) |
+| Trade? | A bundle of what its work makes, for an emerald (see below) |
+| Gossip? | Who is sweet on whom, who can't stand whom, what's said about other players, and what's said about you |
+| Residents? | The village register (see "Your place in a village") |
+| I'm sorry | An apology, for whatever you did. A folk accepts one a day |
 
 You can also **type anything** into the box ("how are you?", "will you come with
 me?", "who are your friends?"…). It works out what you mean from your words.
@@ -283,6 +287,27 @@ What a folk says depends on who it is and what it thinks of you:
   favourite food, delights it. Food and useful things please it. Something it hates is
   refused, and it thinks the worse of you for offering. Up to three presents a day
   count.
+* **Trade.** Every trade has its goods:
+
+  | Trade | Goods |
+  |---|---|
+  | Farmer | Bread, wheat, carrots, potatoes |
+  | Woodcutter | Logs, planks, saplings |
+  | Miner | Coal, cobblestone, raw copper, lapis, redstone |
+  | Rancher | Wool, leather, eggs, meat |
+  | Fisher | Cod, salmon |
+  | Smelter | Charcoal, glass, smooth stone |
+  | Guard | Arrows |
+
+  A folk offers a bundle of what it can spare, from its own pack or the village
+  stores, for an emerald. When the village is short of something, it will take some
+  of that instead ("Or 16 cobblestone — we're short of it, and I'd sooner have
+  that."). The offer shows under the village line. Carry the price and press **Hand
+  over**.
+  * It never sells what the village is short of.
+  * A friend of the village gets half as much again for the same price, and an
+    honoured guest or hero gets double.
+  * Someone unwelcome pays double. An outcast is not sold anything.
 * **Ask a favour** — if it likes you well enough, once a day it gives you something
   from its trade: bread, logs, coal, wool, fish, torches, arrows.
 * **Ask it to come with you.** It walks with you for a while, then heads home. It may

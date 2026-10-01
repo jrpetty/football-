@@ -22,7 +22,9 @@ public enum TalkTopic {
     MEMORY("What do you remember?"),
     REPUTE("What do people think of me?"),
     CHRONICLE("Could I read the village's history?"),
-    CENSUS("Who lives here?");
+    CENSUS("Who lives here?"),
+    TRADE("Got anything to trade?"),
+    GOSSIP("Heard any gossip?");
 
     public final String line;
 

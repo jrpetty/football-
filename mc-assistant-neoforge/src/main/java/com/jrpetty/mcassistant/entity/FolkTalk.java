@@ -113,7 +113,10 @@ public final class FolkTalk {
             case HOBBY -> hobby(f);
             case JOKE -> joke(f);
             case HELP -> Errands.offer(f, p);
-            case DELIVER -> Errands.deliver(f, p);
+            case DELIVER -> Trade.live(f, p) && !(Errands.live(f, p.getUUID()) && Errands.canDeliver(f, p))
+                ? Trade.close(f, p) : Errands.deliver(f, p);
+            case TRADE -> Trade.offer(f, p);
+            case GOSSIP -> gossipFor(f, p);
             case MEMORY -> memories(f);
             case REPUTE -> repute(f, p);
             case CHRONICLE -> chronicle(f, p, op, day);
@@ -125,7 +128,11 @@ public final class FolkTalk {
             said = pick(f.getRandom(), "I've nothing to say to you.", "Leave me be.",
                 "Go away. I haven't forgotten.", "Hmph.");
         }
-        return manner(f, said);
+        boolean answering = switch (topic) {
+            case HOW, DOING, ABOUT, PEOPLE, VILLAGE, DREAMS, HOBBY, MEMORY, REPUTE, GOSSIP -> true;
+            default -> false;
+        };
+        return manner(f, said, answering);
     }
 
     /** Right-click: open the talk screen with a greeting. */
@@ -144,10 +151,11 @@ public final class FolkTalk {
             where = Villages.name(f.ownerId()) + " · " + Villages.ageOf(f.ownerId()).label + " · you: "
                 + Standing.titleIn(f.ownerId(), v.title());
         }
-        String errand = Errands.live(f, p.getUUID()) ? "Asked you to " + Errands.describe(me) : "";
+        String errand = Errands.live(f, p.getUUID()) ? "Asked you to " + Errands.describe(me)
+            : Trade.live(f, p) ? "Offers you " + Trade.describe(f) : "";
         PacketDistributor.sendToPlayer(p, new FolkReplyPayload(f.getId(), open, f.displayNameCap(), about, said,
             me.mood(), Persona.moodWord(me.mood()), aff, Persona.standing(aff), f.isFollowing(p), asked,
-            where, errand, Errands.canDeliver(f, p)));
+            where, errand, Errands.canDeliver(f, p) || Trade.canPay(f, p)));
     }
 
     /** Words said out loud: a bubble over the folk's head for whoever is near. */
@@ -167,11 +175,16 @@ public final class FolkTalk {
 
     /** The folk's own way of putting things. */
     static String manner(VillageFolkEntity f, String said) {
+        return manner(f, said, false);
+    }
+
+    /** As above; {@code answering} when what it said answers a question about itself or the village. */
+    static String manner(VillageFolkEntity f, String said, boolean answering) {
         Social.Life life = f.life();
         RandomSource r = f.getRandom();
         if (said.isEmpty()) return said;
         if (life.has(Social.Trait.GRUMPY) && r.nextInt(3) == 0) {
-            said = pick(r, "Hmph. ", "Well. ", "If you must know: ") + said;
+            said = (answering ? pick(r, "Hmph. ", "Well. ", "If you must know: ") : pick(r, "Hmph. ", "Well. ")) + said;
         } else if (life.has(Social.Trait.SHY) && r.nextInt(3) == 0) {
             said = pick(r, "Oh — um. ", "I… well. ", "Oh! Sorry. ") + said;
         } else if (life.has(Social.Trait.CHEERFUL) && r.nextInt(3) == 0) {
@@ -469,6 +482,8 @@ public final class FolkTalk {
                 + "! When I grow up I'm going to be a " + dream + "!";
             case PEOPLE -> parents.isEmpty() ? "I don't know who my mum and dad are." : "My mum and dad are " + parents + "! They're the best.";
             case JOKE -> pick(r, "Knock knock! …You're supposed to say who's there!", "What's brown and sticky? A stick! Hee hee!");
+            case TRADE -> pick(r, "I'll swap you my shiny rock for… um… a cookie!", "I've got a stick. It's a really good stick. Not for sale.");
+            case GOSSIP -> pick(r, "Shhh! I saw two grown-ups holding hands behind the well!", "I know a secret! …I'm not telling.");
             case DREAMS -> "I want to be a " + dream + " like the big ones!";
             case BYE -> "Bye bye!";
             default -> pick(r, "Wanna see my rock?", "Hee hee!", "Are you a hero? You look like a hero.",
@@ -832,6 +847,8 @@ public final class FolkTalk {
     public static TalkTopic understand(String text) {
         String t = " " + text.toLowerCase(Locale.ROOT).replaceAll("[^a-z' ]", " ") + " ";
         if (has(t, "joke", "funny", "make me laugh")) return TalkTopic.JOKE;
+        if (has(t, "trade", "buy", "sell", "emerald", "barter", "a deal", "for sale", "wares")) return TalkTopic.TRADE;
+        if (has(t, "gossip", "rumour", "rumor", "secret", "scandal", "word is", "what do people say")) return TalkTopic.GOSSIP;
         if (has(t, "can i help", "need anything", "anything i can do", "help you", "any work", "a task", "a job for me")) return TalkTopic.HELP;
         if (has(t, "here's what", "here is what", "brought you", "i brought", "i've got the", "hand over", "i did it", "done it")) return TalkTopic.DELIVER;
         if (has(t, "remember", "memory", "memories", "the old days", "a story", "tell me a story")) return TalkTopic.MEMORY;
@@ -923,6 +940,57 @@ public final class FolkTalk {
         if (warmth <= Social.RIVAL) back = pick(r, "Hmph yourself.", "Likewise, I'm sure.");
         else back = pick(r, "Aye.", "It is, isn't it?", "Ha! True enough.", "Mm-hm.", "Tell me about it.");
         b.sayLater(back, 40);
+    }
+
+    /**
+     * "Heard any gossip?" Who is sweet on whom, who can't stand whom, what is said
+     * about other players — and, lowered voice, about you.
+     */
+    static String gossipFor(VillageFolkEntity f, net.minecraft.world.entity.player.Player p) {
+        RandomSource r = f.getRandom();
+        UUID village = f.ownerId();
+        if (village == null) return "I've not been here long enough to hear any.";
+        List<String> said = new ArrayList<>();
+        List<VillageFolkEntity> folk = new ArrayList<>();
+        for (AssistantEntity a : Villages.folkOf(village)) {
+            if (a instanceof VillageFolkEntity g && g.life().rolled() && !g.isBaby()) folk.add(g);
+        }
+        for (VillageFolkEntity a : folk) {
+            for (Social.Bond b : a.life().friends()) {
+                boolean family = a.life().parents().contains(b.name) || folk.stream().anyMatch(
+                    o -> o.displayNameCap().equals(b.name) && o.life().parents().contains(a.displayNameCap()));
+                if (b.affinity >= Social.CLOSE && a.life().partner() == null && !family && !b.name.equals(f.displayNameCap())
+                        && !a.displayNameCap().equals(f.displayNameCap())) {
+                    said.add("Between you and me, " + a.displayNameCap() + " is sweet on " + b.name + ".");
+                }
+            }
+            for (Social.Bond b : a.life().rivals()) {
+                if (a.displayNameCap().compareTo(b.name) < 0) {
+                    said.add(a.displayNameCap() + " and " + b.name + " can't stand each other. Don't sit them together at the feast.");
+                }
+            }
+            if (a == f || !a.persona().rolled()) continue;
+            UUID other = a.persona().talkedAbout();
+            if (other != null && !other.equals(p.getUUID())) {
+                String name = a.persona().nameOf(other);
+                said.add(a.persona().affinity(other) >= 0
+                    ? "Word is " + name + " is a good sort. " + a.displayNameCap() + " says so, anyway."
+                    : a.displayNameCap() + " says " + name + " is trouble. I'd not cross them.");
+            }
+        }
+        Standing.View v = Standing.of(village, p.getUUID(), f.level().getGameTime());
+        if (!v.bestFriend().isEmpty() && !v.bestFriend().equals(f.displayNameCap())) {
+            said.add("Don't tell anyone I told you, but " + v.bestFriend() + " thinks the world of you.");
+        }
+        if (!v.worstCritic().isEmpty() && !v.worstCritic().equals(f.displayNameCap())) {
+            said.add("I'd keep clear of " + v.worstCritic() + " if I were you. Not a kind word for you.");
+        }
+        List<Villages.News> n = Villages.news(village);
+        if (!n.isEmpty()) said.add("Did you hear? " + cap(n.get(0).text()) + ".");
+        if (said.isEmpty()) return pick(r, "Nothing worth repeating. It's been quiet.", "Gossip? Me? Never.");
+        String line = said.get(r.nextInt(said.size()));
+        if (f.life().has(Social.Trait.SHY)) line = "Oh — well, I shouldn't, but… " + line;
+        return line;
     }
 
     /** One folk telling another what it thinks of a player, out loud — they may be listening. */

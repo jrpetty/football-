@@ -30,7 +30,7 @@ import java.util.List;
  */
 public class TalkScreen extends Screen {
 
-    private static final int W = 360, H = 296;
+    private static final int W = 360, H = 316;
     private static final int SPEECH_LINES = 6;
 
     private FolkReplyPayload last;
@@ -60,7 +60,9 @@ public class TalkScreen extends Screen {
     private int left() { return (width - W) / 2; }
     private int top() { return (height - H) / 2; }
 
-    private record Choice(String label, TalkTopic topic) {}
+    private record Choice(String label, TalkTopic topic, String text, String tip) {
+        Choice(String label, TalkTopic topic) { this(label, topic, "", topic.line); }
+    }
 
     @Override
     protected void init() {
@@ -73,26 +75,29 @@ public class TalkScreen extends Screen {
             new Choice("Memories?", TalkTopic.MEMORY), new Choice("Pastimes?", TalkTopic.HOBBY),
             new Choice("Can I help?", TalkTopic.HELP), new Choice("A favour?", TalkTopic.FAVOUR),
             new Choice("My standing?", TalkTopic.REPUTE), new Choice("A joke!", TalkTopic.JOKE),
+            new Choice("Trade?", TalkTopic.TRADE), new Choice("Gossip?", TalkTopic.GOSSIP),
+            new Choice("Residents?", TalkTopic.CENSUS),
+            new Choice("I'm sorry", TalkTopic.SAY, "I'm sorry", "Apologise for whatever you did"),
         };
         for (int i = 0; i < grid.length; i++) {
             Choice c = grid[i];
-            Button b = Button.builder(Component.literal(c.label()), btn -> ask(c.topic(), ""))
+            Button b = Button.builder(Component.literal(c.label()), btn -> ask(c.topic(), c.text()))
                 .bounds(x + (i % cols) * (bw + 3), y + (i / cols) * (bh + 2), bw, bh).build();
-            b.setTooltip(Tooltip.create(Component.literal(c.topic().line)));
+            b.setTooltip(Tooltip.create(Component.literal(c.tip())));
             addRenderableWidget(b);
         }
-        int row = y + 3 * (bh + 2);
+        int row = y + (grid.length / cols) * (bh + 2);
         gift = addRenderableWidget(Button.builder(Component.literal("Give…"), b -> ask(TalkTopic.GIFT, ""))
             .bounds(x, row, bw, bh).build());
         deliver = addRenderableWidget(Button.builder(Component.literal("Hand over"), b -> ask(TalkTopic.DELIVER, ""))
             .bounds(x + (bw + 3), row, bw, bh).build());
-        deliver.setTooltip(Tooltip.create(Component.literal("Give it what it asked you for")));
+        deliver.setTooltip(Tooltip.create(Component.literal("Give it what it asked you for, or pay for what it offered")));
         walk = addRenderableWidget(Button.builder(Component.literal(last.following() ? "Go home" : "Come along"),
                 b -> ask(last.following() ? TalkTopic.STAY : TalkTopic.FOLLOW, ""))
             .bounds(x + 2 * (bw + 3), row, bw, bh).build());
         Button book = addRenderableWidget(Button.builder(Component.literal("History"), b -> ask(TalkTopic.CHRONICLE, ""))
             .bounds(x + 3 * (bw + 3), row, bw, bh).build());
-        book.setTooltip(Tooltip.create(Component.literal("Ask for a copy of the village's chronicle (or type \"who lives here?\" for its register)")));
+        book.setTooltip(Tooltip.create(Component.literal("Ask for a copy of the village's chronicle")));
         int sayY = row + bh + 6;
         say = new EditBox(font, x, sayY, W - 16 - 2 * 46 - 6, 18, Component.literal("Say something"));
         say.setMaxLength(FolkTalkPayload.MAX_TEXT);

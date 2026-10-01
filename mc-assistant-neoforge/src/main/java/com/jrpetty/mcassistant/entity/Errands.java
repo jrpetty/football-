@@ -159,7 +159,7 @@ public final class Errands {
         return options[r.nextInt(options.length)];
     }
 
-    private static String supplyItem(Villages.Task task) {
+    static String supplyItem(Villages.Task task) {
         return switch (task) {
             case IRON -> "iron";
             case COAL -> "coal";
@@ -183,7 +183,7 @@ public final class Errands {
         };
     }
 
-    private static int supplyCount(String item, int short_) {
+    static int supplyCount(String item, int short_) {
         return switch (item) {
             case "iron" -> clamp(short_ / 3, 4, 16);
             case "coal" -> clamp(short_ / 2, 8, 32);

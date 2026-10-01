@@ -1084,6 +1084,43 @@ public class VillageGameTests {
         });
     }
 
+    /** A miner with copper to spare sells a bundle for an emerald, and keeps the emerald. */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "t26_trade")
+    public static void t26_trade(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 9200, 9200, 32);
+        BlockPos heart = Kit.surface(level, 9200, 9200);
+        VillageFolkEntity a = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(a != null, "a folk");
+        helper.runAtTickTime(20, () -> {
+            a.ensurePersona();
+            a.setJob(com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.MINE);
+            a.insertItem(new ItemStack(Items.RAW_COPPER, 20));
+            net.minecraft.world.entity.player.Player you = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+            you.getInventory().add(new ItemStack(Items.EMERALD, 1));
+            String offer = com.jrpetty.mcassistant.entity.FolkTalk.answer(a, you,
+                com.jrpetty.mcassistant.entity.TalkTopic.TRADE, "");
+            Kit.log("t26 the offer: " + offer);
+            helper.assertTrue(offer.contains("raw copper") && com.jrpetty.mcassistant.entity.Trade.canPay(a, you),
+                "it offers what it has to spare, for what you can pay: " + offer);
+            String done = com.jrpetty.mcassistant.entity.FolkTalk.answer(a, you,
+                com.jrpetty.mcassistant.entity.TalkTopic.DELIVER, "");
+            int copper = 0, emeralds = 0;
+            for (int i = 0; i < you.getInventory().getContainerSize(); i++) {
+                ItemStack st = you.getInventory().getItem(i);
+                if (st.is(Items.RAW_COPPER)) copper += st.getCount();
+                if (st.is(Items.EMERALD)) emeralds += st.getCount();
+            }
+            Kit.log("t26 the deal: " + done + " — you have " + copper + " raw copper, " + emeralds + " emeralds; "
+                + a.displayNameCap() + " has " + a.countCarried(st -> st.is(Items.EMERALD)) + " emerald(s)");
+            helper.assertTrue(copper >= 8 && emeralds == 0 && a.countCarried(st -> st.is(Items.EMERALD)) == 1,
+                "the goods change hands, and so does the price");
+            helper.assertTrue(!com.jrpetty.mcassistant.entity.Trade.live(a, you), "and the deal is done");
+            helper.succeed();
+        });
+    }
+
     // ===================================================== vanilla villagers
 
     /** A villager appears the ordinary way: the join event should catch it. */
