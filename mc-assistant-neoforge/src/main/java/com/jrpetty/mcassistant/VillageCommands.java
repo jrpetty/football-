@@ -45,6 +45,7 @@ public final class VillageCommands {
                             .executes(ctx -> spawnAt(ctx,
                                 IntegerArgumentType.getInteger(ctx, "count")))))))
             .then(Commands.literal("folk").executes(VillageCommands::folk))
+            .then(Commands.literal("people").executes(VillageCommands::people))
             .then(Commands.literal("list").executes(VillageCommands::list))
             .then(Commands.literal("anchors").requires(src -> src.hasPermission(2))
                 .executes(VillageCommands::anchors))
@@ -102,6 +103,50 @@ public final class VillageCommands {
             ctx.getSource().sendSuccess(() -> Component.literal(line), false);
         }
         return crew.size();
+    }
+
+    /**
+     * Who lives here as people rather than as workers: each folk's trade and
+     * temperament, its partner, its friends and anyone it does not get on with, and
+     * its family — and above them, how the village hangs together.
+     */
+    private static int people(CommandContext<CommandSourceStack> ctx) {
+        net.minecraft.server.level.ServerLevel level = ctx.getSource().getLevel();
+        net.minecraft.core.BlockPos here = net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition());
+        Villages.Village v = Villages.nearest(level, here, Villages.VILLAGE_RANGE * 4);
+        if (v == null && !Villages.every().isEmpty()) v = Villages.every().get(0);
+        if (v == null) {
+            ctx.getSource().sendSuccess(() -> Component.literal("No village yet."), false);
+            return 0;
+        }
+        java.util.List<VillageFolkEntity> folk = new java.util.ArrayList<>();
+        for (AssistantEntity a : Villages.folkOf(v.id())) if (a instanceof VillageFolkEntity f) folk.add(f);
+        final String summary = community(folk);
+        ctx.getSource().sendSuccess(() -> Component.literal(summary), false);
+        for (VillageFolkEntity f : folk) {
+            final String line = f.life().describe(f.displayNameCap(), f.stationTask().title);
+            ctx.getSource().sendSuccess(() -> Component.literal(line), false);
+        }
+        return folk.size();
+    }
+
+    /** "12 folk: 3 couples, 9 friendships, 1 rivalry; 4 children born here." */
+    public static String community(java.util.List<VillageFolkEntity> folk) {
+        int couples = 0, friendships = 0, rivalries = 0, born = 0;
+        java.util.Set<java.util.UUID> here = new java.util.HashSet<>();
+        for (VillageFolkEntity f : folk) here.add(f.getUUID());
+        for (VillageFolkEntity f : folk) {
+            com.jrpetty.mcassistant.entity.Social.Life l = f.life();
+            if (l.partner() != null && here.contains(l.partner())
+                    && f.getUUID().compareTo(l.partner()) < 0) couples++;
+            friendships += l.friends().size();
+            rivalries += l.rivals().size();
+            if (!l.parents().isEmpty()) born++;
+        }
+        return folk.size() + " folk: " + couples + (couples == 1 ? " couple, " : " couples, ")
+            + friendships / 2 + (friendships / 2 == 1 ? " friendship, " : " friendships, ")
+            + rivalries / 2 + (rivalries / 2 == 1 ? " rivalry" : " rivalries")
+            + "; " + born + " born here.";
     }
 
     private static String v_centre(java.util.List<AssistantEntity> crew,
@@ -202,6 +247,9 @@ public final class VillageCommands {
         sb.append(". Built: ").append(Villages.builtList(v.id()));
         sb.append(". Room for ").append(Villages.housing(v.id()));
         sb.append(". Growing: ").append(Villages.growthNote(level, v.id()));
+        java.util.List<VillageFolkEntity> people = new java.util.ArrayList<>();
+        for (AssistantEntity a : Villages.folkOf(v.id())) if (a instanceof VillageFolkEntity f) people.add(f);
+        sb.append(". Community: ").append(community(people));
         if (Villages.renown(v.id()) > 0) sb.append(". Renown ").append(Villages.renown(v.id()));
         long colonies = Villages.builtList(v.id()).stream().filter("colony"::equals).count();
         if (colonies > 0) sb.append(". Colonies founded: ").append(colonies);

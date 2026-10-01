@@ -222,8 +222,232 @@ public class VillageFolkEntity extends AssistantEntity {
         if (level().isClientSide) return;
         if (tickCount - agendaTick < 100) return;   // folk think slowly, on purpose
         agendaTick = tickCount;
+        if (!life.rolled()) life.roll(getRandom(), null, null);
         keepTrail();
         agenda();
+        if (++beats % 2 == 0) socialBeat();
+    }
+
+    // ------------------------------ who they are, and who they like ----------
+
+    private final Social.Life life = new Social.Life();
+    private int beats;
+    private long driftDay = -1;
+    private int socialWalkTick = -1000;
+
+    private static final net.minecraft.network.syncher.EntityDataAccessor<String> DATA_SOCIAL =
+        net.minecraft.network.syncher.SynchedEntityData.defineId(
+            VillageFolkEntity.class, net.minecraft.network.syncher.EntityDataSerializers.STRING);
+
+    @Override
+    protected void defineSynchedData(net.minecraft.network.syncher.SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(DATA_SOCIAL, "");
+    }
+
+    /** This folk's personality, friends, partner and family. */
+    public Social.Life life() { return life; }
+
+    /** "traits|partner|friends|rivals|family", for the folk's own screen. */
+    public String clientSocial() { return this.entityData.get(DATA_SOCIAL); }
+
+    /** Off work right now: on its break, or the day is over (the watch never is). */
+    public boolean offWorkNow() { return !onShift() || onBreak(); }
+
+    /**
+     * Ten seconds of village life. Whoever this folk is standing with — the two
+     * nearest, within a few steps — it warms to (or, a grump, takes against) by
+     * how they are both made; a friend gets a smile, a partner a heart, a rival a
+     * scowl; and a generous folk hands a ration to a friend who has none. Once a day
+     * every feeling drifts back a little, so friendships are the ones kept up.
+     */
+    public void socialBeat() {
+        UUID village = ownerId();
+        if (village == null || !(level() instanceof net.minecraft.server.level.ServerLevel server)) return;
+        long day = level().getDayTime() / 24000L;
+        if (driftDay != day) {
+            if (driftDay >= 0) life.drift();
+            driftDay = day;
+        }
+        boolean offWork = offWorkNow();
+        java.util.List<VillageFolkEntity> near = level().getEntitiesOfClass(VillageFolkEntity.class,
+            getBoundingBox().inflate(4.0), f -> f != this && f.isAlive() && village.equals(f.ownerId()));
+        near.sort(java.util.Comparator.comparingDouble(f -> f.distanceToSqr(this)));
+        for (int i = 0; i < Math.min(2, near.size()); i++) {
+            VillageFolkEntity other = near.get(i);
+            if (!other.life.rolled()) continue;
+            int delta = Social.warmth(life, other.life, other.stationTask() == stationTask(), offWork, getRandom());
+            life.feel(other.getUUID(), other.displayNameCap(), delta);
+            if (isSleeping() || other.isSleeping()) continue;
+            int now = life.affinity(other.getUUID());
+            boolean partners = other.getUUID().equals(life.partner());
+            if (offWork) getLookControl().setLookAt(other, 30.0F, 30.0F);
+            if (partners && getRandom().nextInt(2) == 0) {
+                server.sendParticles(net.minecraft.core.particles.ParticleTypes.HEART,
+                    getX(), getY() + 2.2, getZ(), 1, 0.2, 0.1, 0.2, 0.0);
+            } else if (now >= Social.FRIEND && getRandom().nextInt(3) == 0) {
+                server.sendParticles(net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER,
+                    getX(), getY() + 2.0, getZ(), 3, 0.3, 0.2, 0.3, 0.0);
+                if (offWork) playSound(net.minecraft.sounds.SoundEvents.VILLAGER_AMBIENT, 0.6F,
+                    0.9F + getRandom().nextFloat() * 0.3F);
+            } else if (now <= Social.RIVAL && getRandom().nextInt(2) == 0) {
+                server.sendParticles(net.minecraft.core.particles.ParticleTypes.ANGRY_VILLAGER,
+                    getX(), getY() + 2.0, getZ(), 1, 0.2, 0.1, 0.2, 0.0);
+                if (offWork) playSound(net.minecraft.sounds.SoundEvents.VILLAGER_NO, 0.6F, 1.0F);
+            }
+            // A generous folk does not watch a friend go hungry.
+            if (life.has(Social.Trait.GENEROUS) && now >= Social.FRIEND
+                    && other.countFood() < 3 && countFood() >= 6 && shareARation(other)) {
+                other.life.feel(getUUID(), displayNameCap(), 6);
+                life.feel(other.getUUID(), other.displayNameCap(), 2);
+                swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+                server.sendParticles(net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER,
+                    other.getX(), other.getY() + 2.0, other.getZ(), 5, 0.3, 0.2, 0.3, 0.0);
+            }
+        }
+        String line = life.clientLine();
+        if (!line.equals(this.entityData.get(DATA_SOCIAL))) this.entityData.set(DATA_SOCIAL, line);
+    }
+
+    /** Hand two rations to a friend: whatever food is in the pack, as it is. */
+    private boolean shareARation(VillageFolkEntity friend) {
+        net.minecraft.core.NonNullList<net.minecraft.world.item.ItemStack> pack = getInventoryItems();
+        for (int i = 0; i < pack.size(); i++) {
+            net.minecraft.world.item.ItemStack st = pack.get(i);
+            if (st.isEmpty() || st.get(net.minecraft.core.component.DataComponents.FOOD) == null) continue;
+            int give = Math.min(2, st.getCount());
+            net.minecraft.world.item.ItemStack left = friend.insertItem(st.copyWithCount(give));
+            int given = give - left.getCount();
+            if (given <= 0) return false;
+            st.shrink(given);
+            if (st.isEmpty()) pack.set(i, net.minecraft.world.item.ItemStack.EMPTY);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Time off, spent the way this folk is made: with its partner, else its best
+     * friend, if they are free too; a sociable one with whoever is about; a shy one
+     * on its own, a curious one wandering the edge of the village. A rival is walked
+     * away from.
+     */
+    private void socialise() {
+        if (!(level() instanceof net.minecraft.server.level.ServerLevel server) || villageCentre == null) return;
+        if (!getNavigation().isDone() && tickCount - socialWalkTick < 100) return;
+        UUID rivalId = life.worstRival();
+        if (rivalId != null && server.getEntity(rivalId) instanceof VillageFolkEntity rival
+                && rival.isAlive() && rival.distanceToSqr(this) < 16.0) {
+            double dx = getX() - rival.getX(), dz = getZ() - rival.getZ();
+            double len = Math.max(0.1, Math.sqrt(dx * dx + dz * dz));
+            BlockPos away = surfaceAt((int) (getX() + dx / len * 8), (int) (getZ() + dz / len * 8));
+            if (away != null) { walkTo(away, 0.9D); socialWalkTick = tickCount; }
+            return;
+        }
+        VillageFolkEntity mate = company(server);
+        if (mate != null) {
+            if (distanceToSqr(mate) > 9.0) {
+                if (getNavigation().isDone() || tickCount - socialWalkTick >= 100) {
+                    walkTo(mate.blockPosition(), 0.8D);
+                    socialWalkTick = tickCount;
+                }
+            } else {
+                getNavigation().stop();
+                getLookControl().setLookAt(mate, 30.0F, 30.0F);
+            }
+            return;
+        }
+        if (!getNavigation().isDone()) return;
+        int reach = life.has(Social.Trait.CURIOUS) ? 24 : life.has(Social.Trait.SHY) ? 12 : 6;
+        if (villageCentre.distSqr(blockPosition()) > (double) (reach + 4) * (reach + 4)) {
+            walkTo(villageCentre, 0.9D);
+            socialWalkTick = tickCount;
+        } else if (getRandom().nextInt(4) == 0) {
+            BlockPos to = surfaceAt(villageCentre.getX() + getRandom().nextInt(2 * reach + 1) - reach,
+                villageCentre.getZ() + getRandom().nextInt(2 * reach + 1) - reach);
+            if (to != null) { walkTo(to, 0.7D); socialWalkTick = tickCount; }
+        }
+    }
+
+    /** Who this folk wants to be with now: its partner, its best friend, or (if it is
+     *  sociable) whoever is nearest — so long as they are off work too. */
+    @Nullable
+    private VillageFolkEntity company(net.minecraft.server.level.ServerLevel server) {
+        for (UUID id : new UUID[]{life.partner(), life.bestFriend()}) {
+            if (id == null) continue;
+            if (server.getEntity(id) instanceof VillageFolkEntity f && f.isAlive() && !f.isSleeping()
+                    && f.offWorkNow() && f.distanceToSqr(this) < 48.0 * 48.0) {
+                return f;
+            }
+        }
+        if (!life.has(Social.Trait.SOCIABLE) || ownerId() == null) return null;
+        UUID village = ownerId();
+        VillageFolkEntity best = null;
+        double nearest = 16.0 * 16.0;
+        for (VillageFolkEntity f : level().getEntitiesOfClass(VillageFolkEntity.class, getBoundingBox().inflate(16.0),
+                f -> f != this && f.isAlive() && !f.isSleeping() && village.equals(f.ownerId()) && f.offWorkNow())) {
+            if (life.affinity(f.getUUID()) <= Social.RIVAL) continue;
+            double d = f.distanceToSqr(this);
+            if (d < nearest) { nearest = d; best = f; }
+        }
+        return best;
+    }
+
+    /**
+     * The evening: the day's work is done and it is not yet bedtime, so folk are
+     * together at the heart — partners side by side, friends with friends. The
+     * sociable stay up longest and the hard workers turn in first.
+     */
+    @Override
+    protected boolean eveningSocial() {
+        long t = level().getDayTime() % 24000L;
+        long bedtime = 14000L + Math.floorMod(getUUID().getMostSignificantBits(), 600L)
+            + (life.has(Social.Trait.SOCIABLE) ? 1500L : 0L) - (life.has(Social.Trait.HARDWORKING) ? 800L : 0L);
+        if (t < 12000L || t >= bedtime) return false;
+        socialise();
+        return true;
+    }
+
+    /**
+     * A bed anywhere in the village, not only within a few steps of the heart: the
+     * houses stand on lots up to fifty blocks out. Read from the chunks' own lists of
+     * beds, so it costs nothing however big the place is; the nearest free one wins.
+     */
+    @Override
+    protected boolean findABed(BlockPos base) {
+        UUID village = ownerId();
+        if (villageCentre == null || village == null
+                || !(level() instanceof net.minecraft.server.level.ServerLevel server)) {
+            return super.findABed(base);
+        }
+        int reach = Math.min(6, Math.max(3, Villages.storesRadius(village) / 16));
+        int cx = villageCentre.getX() >> 4, cz = villageCentre.getZ() >> 4;
+        BlockPos best = null;
+        double bestDist = Double.MAX_VALUE;
+        for (int x = cx - reach; x <= cx + reach; x++) {
+            for (int z = cz - reach; z <= cz + reach; z++) {
+                net.minecraft.world.level.chunk.LevelChunk chunk = server.getChunkSource().getChunkNow(x, z);
+                if (chunk == null) continue;
+                for (net.minecraft.world.level.block.entity.BlockEntity be : chunk.getBlockEntities().values()) {
+                    if (!(be instanceof net.minecraft.world.level.block.entity.BedBlockEntity)) continue;
+                    BlockPos p = be.getBlockPos();
+                    if (!bedOnOffer(p)) continue;
+                    double d = p.distSqr(blockPosition());
+                    if (d < bestDist) { bestDist = d; best = p; }
+                }
+            }
+        }
+        if (best == null) return false;
+        takeBed(best);
+        return true;
+    }
+
+    @Override
+    protected String debugExtra() {
+        String social = " traits=" + life.traitsLabel().replace(' ', '-')
+            + (life.partner() != null ? " partner=" + life.partnerName() : "")
+            + " friends=" + life.friends().size();
+        return social + (trail.length() == 0 ? "" : " trail=" + trail.toString().trim());
     }
 
     // ------------------------------ getting started --------------------------
@@ -282,10 +506,6 @@ public class VillageFolkEntity extends AssistantEntity {
         }
     }
 
-    @Override
-    protected String debugExtra() {
-        return trail.length() == 0 ? "" : " trail=" + trail.toString().trim();
-    }
 
     // ------------------------------ hands with nothing of their own to do ----
 
@@ -464,6 +684,12 @@ public class VillageFolkEntity extends AssistantEntity {
      */
     private void agenda() {
         if (ownerId() == null) { settle(); return; }
+        // Nobody goes looking for ground after dark: a folk with no trade yet spends the
+        // night like everybody else, and looks in the morning.
+        if (workZone() == null && !onShift()) {
+            if (!isSleeping() && peekJob() == null) bedtime();
+            return;
+        }
         if (workZone() == null) { takeUpATrade(); return; }
         // The watch works the night, everybody else works the day. Without this
         // every folk counted as "worked out" the moment the sun went down (it
@@ -472,6 +698,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // mine was spent and staked a new one.
         keepShift();
         if (!onShift()) {
+            if (isSleeping()) return;                  // asleep: nothing until morning
             // Everybody is at the heart after dark, with nothing to do — which is
             // exactly when the wheat gets baked. Indoors, next to the stores,
             // one errand at a time for the whole village.
@@ -481,6 +708,8 @@ public class VillageFolkEntity extends AssistantEntity {
             // Home for the night is where two folk are at last near each other: a village of
             // two, one at its field and one at its mine all day, could never have a child.
             raisedAChild(24.0);
+            // Then the evening with the others, and then bed.
+            if (peekJob() == null) bedtime();
             return;
         }
         mindTheRoute();                                // a carrier's round is chosen, not clicked
@@ -489,6 +718,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (resting()) return;                         // off the clock for a bit
         if (movedOnFromSpentGround()) return;          // this patch is finished
         pickaxeFromTheStores();                        // the iron, and then the diamond, pickaxe
+        shearsFromTheStores();                         // a rancher's shears, for the wool
         if (seekTheSeam()) return;                     // dig where the village's metal is
         if (changedTrade()) return;                    // the village lost a trade
         if (raisedAChild(12.0)) return;                // the village grew
@@ -835,8 +1065,8 @@ public class VillageFolkEntity extends AssistantEntity {
         net.minecraft.world.item.Item diamond = net.minecraft.world.item.Items.DIAMOND;
         if (at.ordinal() >= Villages.Age.NETHER.ordinal() && pickTierCarried() < 4) {
             int before = countCarried(st -> st.is(diamond));
-            int got = drawFrom(villageCentre, st -> st.is(diamond), 3, r);
-            if (got >= 3) {
+            int got = before >= 3 ? 0 : drawFrom(villageCentre, st -> st.is(diamond), 3 - before, r);
+            if (before + got >= 3) {
                 removeMatching(st -> st.is(diamond), 3);
                 insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND_PICKAXE));
                 brain("a diamond pickaxe made from the stores");
@@ -844,33 +1074,9 @@ public class VillageFolkEntity extends AssistantEntity {
             }
             returnTo(villageCentre, st -> st.is(diamond), before, r);
         }
-        if (at.ordinal() >= Villages.Age.IRON.ordinal() && pickTierCarried() < 3) {
-            java.util.function.Predicate<net.minecraft.world.item.ItemStack> ingot =
-                st -> st.is(net.minecraft.world.item.Items.IRON_INGOT);
-            java.util.function.Predicate<net.minecraft.world.item.ItemStack> raw =
-                st -> st.is(net.minecraft.world.item.Items.RAW_IRON);
-            java.util.function.Predicate<net.minecraft.world.item.ItemStack> fuel =
-                st -> st.is(net.minecraft.world.item.Items.COAL) || st.is(net.minecraft.world.item.Items.CHARCOAL);
-            int ingotsBefore = countCarried(ingot), rawBefore = countCarried(raw), fuelBefore = countCarried(fuel);
-            int ingots = Math.min(3, ingotsBefore + drawFrom(villageCentre, ingot, Math.max(0, 3 - ingotsBefore), r));
-            int raws = 0;
-            if (ingots < 3) {
-                int want = 3 - ingots;
-                raws = Math.min(want, rawBefore + drawFrom(villageCentre, raw, Math.max(0, want - rawBefore), r));
-                drawFrom(villageCentre, fuel, Math.max(0, raws - fuelBefore), r);
-            }
-            if (ingots + raws >= 3 && countCarried(fuel) >= raws) {
-                removeMatching(ingot, ingots);
-                removeMatching(raw, raws);
-                removeMatching(fuel, raws);
-                insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_PICKAXE));
-                brain("an iron pickaxe made from the stores");
-                return;
-            }
-            // Not enough yet: what was taken goes back.
-            returnTo(villageCentre, ingot, ingotsBefore, r);
-            returnTo(villageCentre, raw, rawBefore, r);
-            returnTo(villageCentre, fuel, fuelBefore, r);
+        if (at.ordinal() >= Villages.Age.IRON.ordinal() && pickTierCarried() < 3 && ironFromTheStores(3)) {
+            insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_PICKAXE));
+            brain("an iron pickaxe made from the stores");
         }
     }
 
@@ -1276,28 +1482,47 @@ public class VillageFolkEntity extends AssistantEntity {
         // Nor without a day's food put by: see Villages.larderForBirth.
         if (!Villages.larderFull(server, village)) return false;
         // Somebody to raise it with, near enough to count as living together,
-        // in the same trade-less sense: fed, in work, and not this one.
+        // in the same trade-less sense: fed, in work, and not this one. Its
+        // partner if it has one about, else the one it is closest to, else (so a
+        // village of strangers still grows) whoever is there.
         VillageFolkEntity partner = null;
+        int warmest = Integer.MIN_VALUE;
         for (AssistantEntity mate : Villages.folkOf(village)) {
             if (mate == this || !(mate instanceof VillageFolkEntity other)) continue;
             if (other.stationTask() == StationTask.NONE) continue;
             if (other.countFood() < 2) continue;
             if (other.tickCount - other.breedTick < 6000) continue;
             if (other.distanceToSqr(this) > range * range) continue;
-            partner = other;
-            break;
+            // Somebody else's partner is not on offer, and nor is a rival.
+            if (other.life.partner() != null && !other.life.partner().equals(getUUID())) continue;
+            int warmth = other.getUUID().equals(life.partner()) ? 1000 : life.affinity(other.getUUID());
+            if (warmth <= Social.RIVAL) continue;
+            if (warmth > warmest) { warmest = warmth; partner = other; }
         }
         if (partner == null) return false;
+        if (life.partner() != null && !life.partner().equals(partner.getUUID())) return false;
         // A chance, not a certainty. Two fed hands in work who happen to be
         // stood together, once every five minutes, one time in three: a
         // settlement fills out over a few in-game days rather than doubling
         // overnight.
         if (getRandom().nextInt(3) != 0) return false;
+        return raiseChildWith(partner) != null;
+    }
 
+    /**
+     * Raise a child with this partner, now: what it costs, who it is, whose it is.
+     * The village's rules about when (room, food put by, the pace of births) are
+     * {@link #raisedAChild}'s; this is the raising itself.
+     */
+    @Nullable
+    public VillageFolkEntity raiseChildWith(VillageFolkEntity partner) {
+        if (!(level() instanceof net.minecraft.server.level.ServerLevel server)) return null;
+        UUID village = ownerId();
+        if (village == null || villageCentre == null) return null;
         // It costs what it costs. Both parents put the food in, which is what
         // makes a hungry village stop growing by itself.
         if (removeMatching(s -> s.get(net.minecraft.core.component.DataComponents.FOOD) != null, 2) < 2) {
-            return false;
+            return null;
         }
         partner.removeMatching(
             s -> s.get(net.minecraft.core.component.DataComponents.FOOD) != null, 2);
@@ -1306,7 +1531,7 @@ public class VillageFolkEntity extends AssistantEntity {
 
         VillageFolkEntity child = com.jrpetty.mcassistant.McAssistantMod.VILLAGE_FOLK.get()
             .create(server);
-        if (child == null) return false;
+        if (child == null) return null;
         child.moveTo(getX(), getY(), getZ(), getYRot(), 0.0F);
         child.rename(Names.freeFor(village));
         // Less than its parents spent on it — see childKit. A village that
@@ -1321,6 +1546,20 @@ public class VillageFolkEntity extends AssistantEntity {
         // headcount, and set both halves back to the Wood Age. It is given the
         // village it was born into, and its agenda picks up from there.
         child.joinVillage(village, villageCentre);
+        // A family: the two who raised it are partners from now on, and the child
+        // takes after one of them and knows whose it is.
+        if (life.partner() == null) life.partnerWith(partner.getUUID(), partner.displayNameCap());
+        if (partner.life.partner() == null) partner.life.partnerWith(getUUID(), displayNameCap());
+        life.hadAChild();
+        partner.life.hadAChild();
+        child.life.roll(getRandom(), life, partner.life);
+        child.life.setParents(displayNameCap(), partner.displayNameCap());
+        child.life.feel(getUUID(), displayNameCap(), 70);
+        child.life.feel(partner.getUUID(), partner.displayNameCap(), 70);
+        life.feel(child.getUUID(), child.displayNameCap(), 70);
+        partner.life.feel(child.getUUID(), child.displayNameCap(), 70);
+        server.sendParticles(net.minecraft.core.particles.ParticleTypes.HEART,
+            getX(), getY() + 2.0, getZ(), 6, 0.6, 0.3, 0.6, 0.0);
         server.addFreshEntity(child);
         Villages.recordBirth(village);
         Villages.noteBirth(village, level().getGameTime());
@@ -1333,7 +1572,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // Choosing whichever trade the village is now short of, and finding
         // ground for it, happen on the child's own agenda a moment from now —
         // exactly as they did for its parents.
-        return true;
+        return child;
     }
 
 
@@ -1418,17 +1657,20 @@ public class VillageFolkEntity extends AssistantEntity {
     private boolean breakNow() {
         long day = level().getDayTime() % 24000L;
         long bits = getUUID().getLeastSignificantBits();
+        // Partners take their break together: both work it out from the same one of
+        // their two ids, so it is the same hour for both.
+        UUID partner = life.partner();
+        if (partner != null && partner.getLeastSignificantBits() < bits) bits = partner.getLeastSignificantBits();
         long start = 1000L + Math.floorMod(bits, 8000L);
         long length = 1200L + Math.floorMod(bits >>> 24, 1200L);
+        if (life.has(Social.Trait.HARDWORKING)) length /= 2;
+        if (life.has(Social.Trait.EASYGOING)) length = length * 3 / 2;
         return day >= start && day < start + length;
     }
 
     private boolean resting() {
         if (!breakNow()) return false;
-        if (getNavigation().isDone() && villageCentre != null
-            && villageCentre.distSqr(blockPosition()) > 64.0) {
-            walkTo(villageCentre, 0.9D);
-        }
+        socialise();
         return true;
     }
 
@@ -1646,11 +1888,132 @@ public class VillageFolkEntity extends AssistantEntity {
             if (want == 0) continue;
             var item = BuildGoal.itemForPart(deco);
             int have = countCarried(item);
-            if (have < want) drawFrom(heart, item, want - have, buildStoresRadius());
+            if (have < want) have += drawFrom(heart, item, want - have, buildStoresRadius());
+            // Beds are made, not only found: three wool and three planks from the stores.
+            if (deco == BuildGoal.Part.BED && have < want) makeBeds(want - have);
         }
         int blocksNow = countCarried(BuildGoal::isBuildingBlock);
         if (blocksNow < least) buildNote("build: carrying " + blocksNow + " of " + blocks + " blocks");
         return blocksNow >= least;
+    }
+
+    /**
+     * Beds for a house, made from what the stores hold — three wool and three planks
+     * each, the colour of the wool. Nothing made a bed before: a house went up with
+     * none unless a bed happened to be lying in the stores, and nobody slept in one.
+     */
+    private int makeBeds(int wanted) {
+        if (villageCentre == null) return 0;
+        int r = buildStoresRadius();
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> wool =
+            st -> st.is(net.minecraft.tags.ItemTags.WOOL);
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> planks =
+            st -> st.is(net.minecraft.tags.ItemTags.PLANKS);
+        int made = 0;
+        for (int i = 0; i < wanted; i++) {
+            int woolBefore = countCarried(wool), planksBefore = countCarried(planks);
+            if (woolBefore < 3) drawFrom(villageCentre, wool, 3 - woolBefore, r);
+            if (planksBefore < 3) drawFrom(villageCentre, planks, 3 - planksBefore, r);
+            if (countCarried(wool) < 3 || countCarried(planks) < 3) {
+                returnTo(villageCentre, wool, woolBefore, r);
+                returnTo(villageCentre, planks, planksBefore, r);
+                break;
+            }
+            net.minecraft.world.item.Item bed = net.minecraft.world.item.Items.WHITE_BED;
+            for (net.minecraft.world.item.ItemStack st : getInventoryItems()) {
+                if (!wool.test(st)) continue;
+                String colour = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(st.getItem())
+                    .getPath().replace("_wool", "");
+                net.minecraft.world.item.Item matching = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(
+                    net.minecraft.resources.ResourceLocation.withDefaultNamespace(colour + "_bed"));
+                if (matching != net.minecraft.world.item.Items.AIR) bed = matching;
+                break;
+            }
+            removeMatching(wool, 3);
+            removeMatching(planks, 3);
+            insertItem(new net.minecraft.world.item.ItemStack(bed));
+            made++;
+        }
+        return made;
+    }
+
+    private int charcoalCheckTick = -100000;
+
+    /**
+     * Coal is what the Stone Age asks for, and a mine meets it only where a seam
+     * happens to be: four Stone Age villages on real maps held none. A smelter with no
+     * ore to run, in a village short of coal, burns logs from the stores into charcoal
+     * (which counts as coal): half of them to burn, half as fuel.
+     */
+    @Override
+    protected boolean burnCharcoal() {
+        UUID village = ownerId();
+        if (village == null || villageCentre == null
+                || !(level() instanceof net.minecraft.server.level.ServerLevel server)) return false;
+        if (tickCount - charcoalCheckTick < 1200) return false;
+        charcoalCheckTick = tickCount;
+        boolean wanted = false;
+        for (Villages.Need n : Villages.needs(server, village)) {
+            if (n.task() == Villages.Task.COAL) { wanted = true; break; }
+        }
+        if (!wanted) return false;
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> logs =
+            st -> st.is(net.minecraft.tags.ItemTags.LOGS);
+        int have = countCarried(logs);
+        if (have < 16) have += drawFrom(villageCentre, logs, 16 - have, buildStoresRadius());
+        if (have < 4) return false;
+        enqueue(Job.smelt("logs", have / 2));
+        brain("burning " + have / 2 + " logs into charcoal for the village");
+        return true;
+    }
+
+    private int shearsCheckTick = -100000;
+
+    /**
+     * A rancher needs shears for the wool the beds are made of, and shears are two
+     * iron: once the village has some (the Stone Age on, when the mines reach the
+     * iron), a rancher with none has a pair made from the stores.
+     */
+    private void shearsFromTheStores() {
+        if (stationTask() != StationTask.RANCH || villageCentre == null || ownerId() == null) return;
+        if (tickCount - shearsCheckTick < 2400) return;
+        shearsCheckTick = tickCount;
+        if (Villages.ageOf(ownerId()).ordinal() < Villages.Age.STONE.ordinal()) return;
+        if (countCarried(st -> st.is(net.minecraft.world.item.Items.SHEARS)) > 0) return;
+        if (ironFromTheStores(2)) {
+            insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.SHEARS));
+            brain("shears made from the stores");
+        }
+    }
+
+    /** Take this much iron out of the stores to make something with: ingots first, raw
+     *  iron and a coal to smelt each after. All or nothing — what was drawn goes back. */
+    private boolean ironFromTheStores(int amount) {
+        int r = buildStoresRadius();
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> ingot =
+            st -> st.is(net.minecraft.world.item.Items.IRON_INGOT);
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> raw =
+            st -> st.is(net.minecraft.world.item.Items.RAW_IRON);
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> fuel =
+            st -> st.is(net.minecraft.world.item.Items.COAL) || st.is(net.minecraft.world.item.Items.CHARCOAL);
+        int ingotsBefore = countCarried(ingot), rawBefore = countCarried(raw), fuelBefore = countCarried(fuel);
+        int ingots = Math.min(amount, ingotsBefore + drawFrom(villageCentre, ingot, Math.max(0, amount - ingotsBefore), r));
+        int raws = 0;
+        if (ingots < amount) {
+            int want = amount - ingots;
+            raws = Math.min(want, rawBefore + drawFrom(villageCentre, raw, Math.max(0, want - rawBefore), r));
+            drawFrom(villageCentre, fuel, Math.max(0, raws - fuelBefore), r);
+        }
+        if (ingots + raws >= amount && countCarried(fuel) >= raws) {
+            removeMatching(ingot, ingots);
+            removeMatching(raw, raws);
+            removeMatching(fuel, raws);
+            return true;
+        }
+        returnTo(villageCentre, ingot, ingotsBefore, r);
+        returnTo(villageCentre, raw, rawBefore, r);
+        returnTo(villageCentre, fuel, fuelBefore, r);
+        return false;
     }
 
     /** This visit set about making a fixture (so the next look is soon). */
@@ -1679,6 +2042,9 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
+        CompoundTag social = new CompoundTag();
+        life.save(social);
+        tag.put("Social", social);
         if (villageCentre != null) tag.putLong("VillageCentre", villageCentre.asLong());
         UUID village = ownerId();
         if (village != null) {
@@ -1702,6 +2068,7 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
+        if (tag.contains("Social")) life.load(tag.getCompound("Social"));
         if (tag.contains("VillageCentre")) {
             this.villageCentre = BlockPos.of(tag.getLong("VillageCentre"));
             // The register lives in memory only; the first folk to load puts

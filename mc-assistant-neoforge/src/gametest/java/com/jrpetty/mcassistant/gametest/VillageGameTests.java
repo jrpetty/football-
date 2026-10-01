@@ -552,6 +552,105 @@ public class VillageGameTests {
         });
     }
 
+    /** People, not workers: time spent together makes friends, a generous friend feeds a
+     *  hungry one, raising a child makes partners and a family, and all of it is kept. */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t17_social")
+    public static void t17_social(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 5600, 5600, 32);
+        BlockPos heart = Kit.surface(level, 5600, 5600);
+        VillageFolkEntity a = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        VillageFolkEntity b = VillageFolkSpawnerBlock.raise(level, heart.east(), 0.0F);
+        helper.assertTrue(a != null && b != null && a.ownerId().equals(b.ownerId()), "two folk of one village");
+        com.jrpetty.mcassistant.entity.Social.Life la = a.life(), lb = b.life();
+        la.traits().clear();
+        la.traits().add(com.jrpetty.mcassistant.entity.Social.Trait.SOCIABLE);
+        la.traits().add(com.jrpetty.mcassistant.entity.Social.Trait.GENEROUS);
+        lb.traits().clear();
+        lb.traits().add(com.jrpetty.mcassistant.entity.Social.Trait.CHEERFUL);
+        lb.traits().add(com.jrpetty.mcassistant.entity.Social.Trait.HARDWORKING);
+        for (int i = 0; i < 20; i++) {
+            a.socialBeat();
+            b.socialBeat();
+        }
+        int ab = la.affinity(b.getUUID()), ba = lb.affinity(a.getUUID());
+        Kit.log("t17 after twenty beats together: a->b " + ab + ", b->a " + ba);
+        helper.assertTrue(ab >= com.jrpetty.mcassistant.entity.Social.FRIEND && ba >= com.jrpetty.mcassistant.entity.Social.FRIEND,
+            "two folk who spend their time together become friends: " + ab + " / " + ba);
+        // A generous friend does not let a friend go hungry.
+        b.removeMatching(st -> st.get(net.minecraft.core.component.DataComponents.FOOD) != null, 999);
+        a.insertItem(new ItemStack(Items.BREAD, 10));
+        a.socialBeat();
+        Kit.log("t17 b's food after a generous friend's beat: " + b.countFood());
+        helper.assertTrue(b.countFood() > 0, "a generous folk shares a ration with a hungry friend");
+        // A child: partners, a family, a trait from a parent.
+        a.insertItem(new ItemStack(Items.BREAD, 4));
+        b.insertItem(new ItemStack(Items.BREAD, 4));
+        VillageFolkEntity child = a.raiseChildWith(b);
+        helper.assertTrue(child != null, "the two could raise a child");
+        com.jrpetty.mcassistant.entity.Social.Life lc = child.life();
+        Kit.log("t17 family: " + lc.describe(child.displayNameCap(), "child") + " / " + la.describe(a.displayNameCap(), "first"));
+        helper.assertTrue(b.getUUID().equals(la.partner()) && a.getUUID().equals(lb.partner()), "parents become partners");
+        helper.assertTrue(lc.parents().contains(a.displayNameCap()) && lc.parents().contains(b.displayNameCap()),
+            "the child knows whose it is: " + lc.parents());
+        helper.assertTrue(la.children() == 1 && lb.children() == 1, "both parents count the child");
+        boolean takesAfter = false;
+        for (var t : lc.traits()) takesAfter |= la.has(t) || lb.has(t);
+        helper.assertTrue(lc.traits().size() == 2 && takesAfter, "the child takes after a parent: " + lc.traits());
+        // Kept across a save.
+        net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
+        la.save(tag);
+        com.jrpetty.mcassistant.entity.Social.Life back = new com.jrpetty.mcassistant.entity.Social.Life();
+        back.load(tag);
+        helper.assertTrue(back.describe("x", "y").equals(la.describe("x", "y")),
+            "a folk's personality and friends survive a save: " + back.describe("x", "y"));
+        helper.succeed();
+    }
+
+    /** Night: a folk finds a bed in the village (not just one beside the heart) and
+     *  sleeps in it, and is up and about by morning. */
+    @GameTest(template = EMPTY, timeoutTicks = 4000, batch = "t18_sleep")
+    public static void t18_sleep(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 6000, 6000, 40);
+        Kit.prepare(level, 6000, 6000, 40);
+        BlockPos heart = Kit.surface(level, 6000, 6000);
+        VillageFolkEntity folk = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(folk != null, "a folk to put to bed");
+        // A house sixteen blocks out with a bed in it: further than the old twelve-block search.
+        BlockPos foot = Kit.surface(level, 6016, 6000);
+        BlockPos head = foot.east();
+        level.setBlock(foot, Blocks.RED_BED.defaultBlockState()
+            .setValue(net.minecraft.world.level.block.BedBlock.FACING, Direction.EAST)
+            .setValue(net.minecraft.world.level.block.BedBlock.PART, net.minecraft.world.level.block.state.properties.BedPart.FOOT), 3);
+        level.setBlock(head, Blocks.RED_BED.defaultBlockState()
+            .setValue(net.minecraft.world.level.block.BedBlock.FACING, Direction.EAST)
+            .setValue(net.minecraft.world.level.block.BedBlock.PART, net.minecraft.world.level.block.state.properties.BedPart.HEAD), 3);
+        level.setDayTime(18000);                       // the middle of the night
+        long[] slept = {-1};
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (slept[0] < 0) {
+                if (level.getDayTime() % 24000 < 15000) level.setDayTime(18000);   // keep it night
+                if (folk.isSleeping()) {
+                    slept[0] = t;
+                    Kit.log("t18 asleep at tick " + t + " in the bed at " + folk.getSleepingPos().orElse(null));
+                    level.setDayTime(1000);            // and morning comes
+                } else if (t % 400 == 0) {
+                    Kit.log("t18 @" + t + " not asleep yet — " + folk.debugLine());
+                }
+                if (t >= 3000) helper.fail("no folk asleep in 3000 ticks of night: " + folk.debugLine());
+            } else if (!folk.isSleeping()) {
+                Kit.log("t18 up at tick " + t + ", " + (t - slept[0]) + " ticks after morning came");
+                helper.succeed();
+            } else if (t - slept[0] > 800) {
+                helper.fail("still asleep 800 ticks into the morning");
+            }
+        });
+    }
+
     // ===================================================== vanilla villagers
 
     /** A villager appears the ordinary way: the join event should catch it. */

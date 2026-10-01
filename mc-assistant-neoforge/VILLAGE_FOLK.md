@@ -101,6 +101,45 @@ Builders pick the flattest nearby lot that costs least, level it (filling the lo
 side, felling any tree in the way and keeping the wood), and build from what they
 actually carry: stone before planks, planks before logs.
 
+## People, not workers
+
+Every folk is somebody. Each is born with two traits, and they change how it lives:
+
+| Trait | What it does |
+|---|---|
+| Hardworking | A short break, and first to bed |
+| Easygoing | A long break |
+| Sociable | Warms to people fast, seeks company on its break and stays up latest |
+| Shy | Warms slowly and keeps to itself |
+| Cheerful | Everybody warms to it a little faster |
+| Grumpy | Warms slowly, and sometimes takes against people (two grumps most of all) |
+| Generous | Hands rations to a friend who has none |
+| Curious | Spends its time off wandering the edges of the village |
+
+**Friendships** grow out of time spent near each other: working side by side, a break
+together, the evening at the heart. They drift a little each day, so the ones that
+last are the ones kept up. When two friends meet you see it: they turn to each other,
+there is a happy face and a villager's murmur; two rivals scowl (an angry face) and
+walk away from each other.
+
+**Partners and families.** A folk raises children with its partner if it has one,
+else with whoever it is closest to; the two who raise a child are partners from then
+on. Partners take their break at the same hour and spend their evenings side by side
+(hearts between them). A child knows whose it is and takes one trait from a parent.
+
+**The day** runs like anyone's: work, one break at the folk's own hour, then at dusk
+the village gathers at the heart — partners together, friends with friends, the shy
+at the edge — until bedtime (later for the sociable, earlier for the hard workers),
+when everybody goes to a bed of its own anywhere in the village and sleeps until
+morning. Builders make the beds for the houses from wool and planks in the stores, and
+a rancher has shears made once the village has iron, so the wool keeps coming.
+
+**Seeing it.** Right-click a folk: its traits are on the title line, and hovering the
+title shows its partner, friends, anyone it does not get on with, and its family.
+`/village people` lists everybody that way, under a line saying how the village hangs
+together ("20 folk: 3 couples, 9 friendships, 1 rivalry; 4 born here"), and
+`/village status` carries that line too.
+
 ## What they do
 
 * **Trades** — at ten folk: four farmers, three miners, two woodcutters, one
@@ -160,6 +199,8 @@ only its owner (nobody, for folk) can rearrange the pack.
   there, what age, what has been built. Works from the console.
 * `/village status` — age, headcount, trades, what the stores hold, what has
   been built, what the village is short of. Works from the console.
+* `/village people` — who everybody is: trade, temperament, partner, friends,
+  rivals and family, under a line on the village's couples and friendships.
 * `/village folk` — one line per folk: trade, ground, status, job, what is
   missing, what it carries (`pack=`), what it last tried at the essentials
   gate (`gate=`), and a trail of the jobs it has run.

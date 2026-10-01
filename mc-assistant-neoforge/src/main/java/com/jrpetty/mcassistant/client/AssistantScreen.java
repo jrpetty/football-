@@ -107,6 +107,14 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
         // y=68 — on top of the third row of backpack slots — and the equipment
         // caption ran off the right-hand edge of the panel entirely.
         String mode = a != null ? a.getMode().name() : "?";
+        // A settler takes no orders, so it has no mode worth showing: what shows is
+        // who it is (hover the title for its partner, friends and family).
+        if (a instanceof com.jrpetty.mcassistant.entity.VillageFolkEntity folk) {
+            String traits = folk.clientSocial().split("\\|", -1)[0];
+            mode = traits.isEmpty() ? "" : traits;
+        }
+        int modeMax = imageWidth - 16 - this.font.width(this.title) - 8;
+        mode = clipTo(mode, Math.max(20, modeMax));
         g.drawString(this.font, Component.literal(mode),
             imageWidth - 8 - this.font.width(mode), 6, Ui.FAINT, false);
         g.drawString(this.font, Component.literal("gear"), 8 + 6 * 18 + 4, 82,
@@ -173,5 +181,20 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.render(g, mouseX, mouseY, partialTick);
         this.renderTooltip(g, mouseX, mouseY);
+        // A settler's life, on the title line: personality, partner, friends, family.
+        AssistantEntity a = this.menu.getAssistant();
+        if (a instanceof com.jrpetty.mcassistant.entity.VillageFolkEntity folk
+                && mouseX >= leftPos && mouseX < leftPos + imageWidth
+                && mouseY >= topPos + 2 && mouseY < topPos + 16) {
+            String[] f = folk.clientSocial().split("\\|", -1);
+            java.util.List<Component> lines = new java.util.ArrayList<>();
+            lines.add(Component.literal(a.displayNameCap()));
+            if (f.length > 0 && !f[0].isEmpty()) lines.add(Component.literal("Personality: " + f[0]));
+            if (f.length > 1 && !f[1].isEmpty()) lines.add(Component.literal("Partner: " + f[1]));
+            lines.add(Component.literal("Friends: " + (f.length > 2 && !f[2].isEmpty() ? f[2] : "none yet")));
+            if (f.length > 3 && !f[3].isEmpty()) lines.add(Component.literal("Does not get on with: " + f[3]));
+            if (f.length > 4 && !f[4].isEmpty()) lines.add(Component.literal("Family: " + f[4]));
+            g.renderComponentTooltip(this.font, lines, mouseX, mouseY);
+        }
     }
 }

@@ -143,6 +143,11 @@ def report(r, x, z, label, compact=False):
     at = "execute positioned %d 64 %d run " % (x, z)
     say("== %s @tick %d" % (label, gametime(r)))
     say("STATUS " + r.cmd(at + "village status").replace("\n", " | "))
+    people = [l for l in r.cmd(at + "village people").split("\n") if l.strip()]
+    if people:
+        say("PEOPLE " + people[0])
+        for line in people[1:7]:
+            say("  person: " + line)
     lines = [l for l in r.cmd(at + "village folk").split("\n") if l.strip()]
     if not compact:
         for line in lines:
@@ -249,9 +254,11 @@ def epic(r, days, minutes, biome="plains"):
         names = [b.strip() for b in built.group(1).split(",") if b.strip()] if built else []
         renown = re.search(r"Renown (\d+)", status)
         colonies = names.count("colony")
-        say("DAY %d: %s folk, %s, %d buildings, renown %s, %d villages in the world (%d colonies from this one), %d folk in all, %.0f min"
+        community = re.search(r"Community: \d+ folk: ([^;]*)", status)
+        say("DAY %d: %s folk, %s, %d buildings, renown %s, %d villages in the world (%d colonies from this one), %d folk in all, %s, %.0f min"
             % (day, folk, age, len(names) - colonies, renown.group(1) if renown else "0",
-               len(villages), colonies, world, (time.time() - began) / 60.0))
+               len(villages), colonies, world, community.group(1) if community else "no community line",
+               (time.time() - began) / 60.0))
         if age != last_age:
             say("AGE on day %d: %s" % (day, age))
             last_age = age
