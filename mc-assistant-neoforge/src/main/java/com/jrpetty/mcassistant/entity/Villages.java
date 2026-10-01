@@ -93,6 +93,30 @@ public final class Villages {
         java.util.Deque<News> d = NEWS.computeIfAbsent(villageId, k -> new java.util.concurrent.ConcurrentLinkedDeque<>());
         d.addFirst(new News(day, text));
         while (d.size() > 12) d.pollLast();
+        com.jrpetty.mcassistant.village.Chronicle.record(villageId, day, text);
+    }
+
+    // ------------------------------ a village's name --------------------------
+
+    private static final String[] NAME_HEADS = {
+        "Oak", "Ash", "Elm", "Birch", "Willow", "Thorn", "Stone", "Brook", "Mill", "Hollow",
+        "Fern", "Moss", "Red", "Green", "Black", "White", "High", "Low", "Fox", "Wolf",
+        "Raven", "Hart", "Bramble", "Cold", "Wind", "Sun", "Mead", "Heather", "Clay", "Iron",
+        "Alder", "Hazel", "Rush", "Swan", "Linden", "Rowan", "Marsh", "Dun", "Kings", "Bell",
+    };
+    private static final String[] NAME_TAILS = {
+        "hollow", "ford", "brook", "field", "stead", "wick", "ton", "bury", "dale", "holm",
+        "mere", "cross", "well", "combe", "ridge", "haven", "moor", "gate", "thorpe", "leigh",
+        "worth", "by", "hurst", "den", "fold",
+    };
+
+    /** A village's name: its own, the same for ever, worked out from who it is. */
+    public static String name(UUID villageId) {
+        long a = villageId.getMostSignificantBits(), b = villageId.getLeastSignificantBits();
+        String head = NAME_HEADS[(int) Math.floorMod(a ^ (a >>> 29), (long) NAME_HEADS.length)];
+        String tail = NAME_TAILS[(int) Math.floorMod(b ^ (b >>> 31), (long) NAME_TAILS.length)];
+        if (head.toLowerCase(java.util.Locale.ROOT).endsWith(tail)) tail = "ton";
+        return head + tail;
     }
 
     public static List<News> news(UUID villageId) {
@@ -118,6 +142,7 @@ public final class Villages {
     }
 
     public static void resetForTests() {
+        Standing.resetForTests();
         NEWS.clear();
         AGED_ON.clear();
         ALL.clear();
@@ -184,6 +209,8 @@ public final class Villages {
         Village v = new Village(UUID.randomUUID(), centre.immutable(), level.dimension());
         ALL.put(v.id(), v);
         FOUNDED.put(v.id(), level.getGameTime());
+        com.jrpetty.mcassistant.village.Chronicle.record(v.id(), level.getDayTime() / 24000L,
+            name(v.id()) + " was founded");
         return v;
     }
 
@@ -592,7 +619,7 @@ public final class Villages {
         Village v = get(villageId);
         String where = v == null ? "" : " (" + v.centre().getX() + ", " + v.centre().getZ() + ")";
         net.minecraft.network.chat.Component line = net.minecraft.network.chat.Component.literal(
-            "A village has entered " + next.label + where + ".")
+            name(villageId) + " has entered " + next.label + where + ".")
             .withStyle(net.minecraft.ChatFormatting.GOLD);
         for (net.minecraft.server.level.ServerPlayer p : level.players()) {
             p.sendSystemMessage(line);

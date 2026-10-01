@@ -785,6 +785,93 @@ public class VillageGameTests {
         });
     }
 
+    /** A village has a name and a history, and a player has a standing in it: ask a
+     *  folk how you can help and it sets you an errand from what the village needs;
+     *  hand it over and you are rewarded, and the village thinks better of you; turn
+     *  it against you and nobody will talk to you; and folk will tell you what they
+     *  think of each other. */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t21_errands")
+    public static void t21_errands(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 7200, 7200, 32);
+        BlockPos heart = Kit.surface(level, 7200, 7200);
+        VillageFolkEntity folk = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        VillageFolkEntity other = VillageFolkSpawnerBlock.raise(level, heart.east(2), 0.0F);
+        helper.assertTrue(folk != null && other != null, "two folk of one village");
+        level.setDayTime(1000);
+        helper.runAtTickTime(20, () -> {
+            java.util.UUID village = folk.ownerId();
+            String name = Villages.name(village);
+            helper.assertTrue(!name.isEmpty() && name.equals(Villages.name(village)), "a village has a name of its own");
+            long day = level.getDayTime() / 24000L;
+            Villages.tell(village, day, "the test bell was rung");
+            boolean written = com.jrpetty.mcassistant.village.Chronicle.of(village).stream()
+                .anyMatch(e -> e.text().equals("the test bell was rung"));
+            helper.assertTrue(written, "what happens goes into the village's history");
+            ItemStack book = com.jrpetty.mcassistant.entity.Chronicles.book(village, day);
+            var content = book.get(net.minecraft.core.component.DataComponents.WRITTEN_BOOK_CONTENT);
+            helper.assertTrue(content != null && content.pages().size() >= 2, "the chronicle is a book with pages");
+            Kit.log("t21 " + name + "'s chronicle: " + content.pages().size() + " pages, titled "
+                + content.title().raw());
+
+            folk.life().traits().clear();
+            folk.life().traits().add(com.jrpetty.mcassistant.entity.Social.Trait.CHEERFUL);
+            folk.life().traits().add(com.jrpetty.mcassistant.entity.Social.Trait.GENEROUS);
+            folk.ensurePersona();
+            other.ensurePersona();
+            net.minecraft.world.entity.player.Player you = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+            com.jrpetty.mcassistant.entity.Persona me = folk.persona();
+            String asked = com.jrpetty.mcassistant.entity.FolkTalk.answer(folk, you, com.jrpetty.mcassistant.entity.TalkTopic.HELP, "");
+            Kit.log("t21 asked how to help: " + asked + " [" + com.jrpetty.mcassistant.entity.Errands.describe(me) + "]");
+            helper.assertTrue(me.hasErrand() && you.getUUID().equals(me.errandFor()), "asking to help gets an errand: " + asked);
+            if (!me.errandKind().equals("hunt")) {
+                ItemStack bring = new ItemStack(switch (me.errandItem()) {
+                    case "food" -> Items.BREAD;
+                    case "logs" -> Items.OAK_LOG;
+                    case "stone" -> Items.COBBLESTONE;
+                    case "iron" -> Items.IRON_INGOT;
+                    case "coal" -> Items.COAL;
+                    case "diamond" -> Items.DIAMOND;
+                    case "obsidian" -> Items.OBSIDIAN;
+                    case "flowers" -> Items.POPPY;
+                    case "fish" -> Items.COD;
+                    case "book" -> Items.BOOK;
+                    case "note_block" -> Items.NOTE_BLOCK;
+                    default -> net.minecraft.core.registries.BuiltInRegistries.ITEM.get(
+                        net.minecraft.resources.ResourceLocation.withDefaultNamespace(me.errandItem()));
+                }, me.errandCount());
+                you.getInventory().add(bring);
+                helper.assertTrue(com.jrpetty.mcassistant.entity.Errands.canDeliver(folk, you), "the errand can be handed over");
+                int xpBefore = you.totalExperience;
+                String done = com.jrpetty.mcassistant.entity.FolkTalk.answer(folk, you, com.jrpetty.mcassistant.entity.TalkTopic.DELIVER, "");
+                Kit.log("t21 handed over: " + done + " (xp " + xpBefore + " -> " + you.totalExperience + ")");
+                helper.assertTrue(!me.hasErrand(), "a delivered errand is done: " + done);
+                helper.assertTrue(you.totalExperience > xpBefore, "and rewarded with experience");
+                com.jrpetty.mcassistant.entity.Standing.View view = com.jrpetty.mcassistant.entity.Standing.of(
+                    village, you.getUUID(), level.getGameTime() + 1000);
+                Kit.log("t21 standing after the errand: " + com.jrpetty.mcassistant.entity.Standing.titleIn(village, view.title())
+                    + " (warmth " + view.score() + ", known to " + view.knownBy() + ")");
+                helper.assertTrue(view.title().atLeast(com.jrpetty.mcassistant.entity.Standing.Title.FRIEND),
+                    "helping the village makes you its friend: " + view.title());
+            }
+            // Folk on each other.
+            String ofOther = com.jrpetty.mcassistant.entity.FolkTalk.answer(folk, you, com.jrpetty.mcassistant.entity.TalkTopic.SAY,
+                "what do you think of " + other.displayNameCap() + "?");
+            Kit.log("t21 asked about " + other.displayNameCap() + ": " + ofOther);
+            helper.assertTrue(ofOther.contains(other.displayNameCap()), "a folk speaks of another by name: " + ofOther);
+            // A village turned against you.
+            me.feelFor(you.getUUID(), "x", -200);
+            other.persona().feelFor(you.getUUID(), "x", -200);
+            com.jrpetty.mcassistant.entity.Standing.stir(village, you.getUUID());
+            String shut = com.jrpetty.mcassistant.entity.FolkTalk.answer(folk, you, com.jrpetty.mcassistant.entity.TalkTopic.HOW, "");
+            Kit.log("t21 as an outcast: " + shut);
+            helper.assertTrue(com.jrpetty.mcassistant.entity.Standing.of(village, you.getUUID(), level.getGameTime() + 2000).title()
+                == com.jrpetty.mcassistant.entity.Standing.Title.OUTCAST, "a village can turn against you");
+            helper.succeed();
+        });
+    }
+
     // ===================================================== vanilla villagers
 
     /** A villager appears the ordinary way: the join event should catch it. */

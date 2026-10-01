@@ -165,10 +165,17 @@ public final class Colonies {
         LAST.put(id, now);
         if (stood == 0) return false;
         Villages.noteColony(id);
+        long day = level.getDayTime() / 24000L;
+        Villages.Village colony = Villages.nearest(level, ground, 40);
+        String colonyName = colony == null || colony.id().equals(id) ? "a new village" : Villages.name(colony.id());
+        Villages.tell(id, day, "settlers left to found " + colonyName);
+        if (colony != null && !colony.id().equals(id)) {
+            Villages.tell(colony.id(), day, "settlers from " + Villages.name(id) + " founded " + colonyName);
+        }
         // Like coming of age, a new village is a thing worth being told about.
         net.minecraft.network.chat.Component line = net.minecraft.network.chat.Component.literal(
-            "The village at " + mother.centre().getX() + ", " + mother.centre().getZ()
-                + " has founded a new village at " + ground.getX() + ", " + ground.getZ() + ".")
+            Villages.name(id) + " (" + mother.centre().getX() + ", " + mother.centre().getZ()
+                + ") has founded " + colonyName + " at " + ground.getX() + ", " + ground.getZ() + ".")
             .withStyle(net.minecraft.ChatFormatting.GOLD);
         for (net.minecraft.server.level.ServerPlayer p : level.players()) p.sendSystemMessage(line);
         com.mojang.logging.LogUtils.getLogger().info("[MCA-COLONY] {} folk from {} founded a village at {}",

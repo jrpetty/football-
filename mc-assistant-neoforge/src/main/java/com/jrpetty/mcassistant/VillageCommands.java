@@ -24,6 +24,8 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  *   /village status           who lives here, what age, what they are short of
  *   /village lineup           one folk of every trade, dressed, to look at (ops)
  *   /village talk [words]     talk with the nearest folk, as a right-click would (ops)
+ *   /village chronicle        the nearest village's history, as a book
+ *   /village standing         what every village you have met thinks of you
  * </pre>
  */
 public final class VillageCommands {
@@ -52,6 +54,10 @@ public final class VillageCommands {
             .then(Commands.literal("anchors").requires(src -> src.hasPermission(2))
                 .executes(VillageCommands::anchors))
             .then(Commands.literal("status").executes(VillageCommands::status))
+            // The nearest village's history, as a book.
+            .then(Commands.literal("chronicle").executes(VillageCommands::chronicle))
+            // What every village you have met thinks of you.
+            .then(Commands.literal("standing").executes(VillageCommands::standing))
             // Talk with the nearest folk, as a right-click would (for scripts and tests).
             .then(Commands.literal("talk").requires(src -> src.hasPermission(2))
                 .executes(ctx -> talk(ctx, ""))
@@ -77,6 +83,38 @@ public final class VillageCommands {
         else com.jrpetty.mcassistant.entity.FolkTalk.handle(near.get(0), player,
             com.jrpetty.mcassistant.entity.TalkTopic.SAY, words);
         return 1;
+    }
+
+    private static int chronicle(CommandContext<CommandSourceStack> ctx) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        Villages.Village v = Villages.nearest(player.level(), player.blockPosition(), Villages.VILLAGE_RANGE * 2);
+        if (v == null) {
+            ctx.getSource().sendFailure(Component.literal("No village near enough to have a history."));
+            return 0;
+        }
+        net.minecraft.world.item.ItemStack book = com.jrpetty.mcassistant.entity.Chronicles.book(v.id(),
+            player.level().getDayTime() / 24000L);
+        if (!player.getInventory().add(book)) player.drop(book, false);
+        ctx.getSource().sendSuccess(() -> Component.literal("The chronicle of " + Villages.name(v.id()) + "."), false);
+        return 1;
+    }
+
+    private static int standing(CommandContext<CommandSourceStack> ctx) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        int n = 0;
+        for (Villages.Village v : Villages.every()) {
+            com.jrpetty.mcassistant.entity.Standing.View view = com.jrpetty.mcassistant.entity.Standing.of(
+                v.id(), player.getUUID(), player.level().getGameTime());
+            if (view.knownBy() == 0) continue;
+            n++;
+            final String line = com.jrpetty.mcassistant.entity.Standing.titleIn(v.id(), view.title())
+                + " — known to " + view.knownBy() + ", warmth " + view.score()
+                + (view.bestFriend().isEmpty() ? "" : ", dearest to " + view.bestFriend())
+                + (view.worstCritic().isEmpty() ? "" : ", distrusted by " + view.worstCritic());
+            ctx.getSource().sendSuccess(() -> Component.literal(line), false);
+        }
+        if (n == 0) ctx.getSource().sendSuccess(() -> Component.literal("No village knows you yet. Go and say hello."), false);
+        return n;
     }
 
     private static int lineup(CommandContext<CommandSourceStack> ctx) {
@@ -274,7 +312,7 @@ public final class VillageCommands {
         }
         for (Villages.Village v : all) {
             final String line = "Village at " + v.centre().getX() + ", " + v.centre().getZ()
-                + " — " + Villages.headcount(v.id()) + " folk (" + Villages.loadedCount(v.id())
+                + " (" + Villages.name(v.id()) + ") — " + Villages.headcount(v.id()) + " folk (" + Villages.loadedCount(v.id())
                 + " loaded), " + Villages.ageOf(v.id()).label + ", built " + Villages.builtList(v.id());
             ctx.getSource().sendSuccess(() -> Component.literal(line), false);
         }
@@ -311,7 +349,7 @@ public final class VillageCommands {
         }
         StringBuilder sb = new StringBuilder();
         sb.append("Village at ").append(v.centre().getX()).append(", ").append(v.centre().getZ())
-          .append(" — ").append(Villages.headcount(v.id())).append(" folk (")
+          .append(" (").append(Villages.name(v.id())).append(") — ").append(Villages.headcount(v.id())).append(" folk (")
           .append(Villages.loadedCount(v.id())).append(" loaded), ")
           .append(Villages.ageOf(v.id()).label).append('.');
         java.util.Map<AssistantEntity.StationTask, Integer> trades =

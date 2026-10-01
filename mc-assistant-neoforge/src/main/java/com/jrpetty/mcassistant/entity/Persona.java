@@ -75,11 +75,16 @@ public final class Persona {
         Gift(String words) { this.words = words; }
     }
 
-    private static final String[] QUIRKS = {
-        "hums while working", "collects pretty stones", "never misses a sunrise",
-        "talks to the chickens", "is afraid of the dark", "counts everything twice",
-        "can't sit still", "keeps a diary", "names every tool", "hates the rain",
-        "loves the rain", "tells terrible jokes", "always knows the time", "whistles badly",
+    /** A quirk as others say it, and as the folk says it of itself. */
+    private static final String[][] QUIRKS = {
+        {"hums while working", "hum while I work"}, {"collects pretty stones", "collect pretty stones"},
+        {"never misses a sunrise", "never miss a sunrise"}, {"talks to the chickens", "talk to the chickens"},
+        {"is afraid of the dark", "am afraid of the dark"}, {"counts everything twice", "count everything twice"},
+        {"can't sit still", "can't sit still"}, {"keeps a diary", "keep a diary"},
+        {"names every tool", "name every tool I own"}, {"hates the rain", "hate the rain"},
+        {"loves the rain", "love the rain"}, {"tells terrible jokes", "tell terrible jokes"},
+        {"always knows the time", "always know the time"}, {"whistles badly", "whistle, badly"},
+        {"sings in the bath", "sing in the bath"}, {"remembers every birthday", "remember every birthday"},
     };
 
     private static final String[] FOODS = {
@@ -98,6 +103,8 @@ public final class Persona {
         long lastGiftDay = -1;
         int giftsToday;
         long lastFavourDay = -1;
+        long lastBookDay = -1;
+        long lastSorryDay = -1;
 
         Opinion(String name, int affinity) {
             this.name = name;
@@ -136,6 +143,55 @@ public final class Persona {
     public Ambition ambition() { return ambition; }
     public boolean ambitionMet() { return ambitionMet; }
     public String quirk() { return quirk; }
+
+    /** The quirk in the folk's own words: "I hum while I work". */
+    public String quirkOfMine() {
+        for (String[] q : QUIRKS) if (q[0].equals(quirk)) return q[1];
+        return quirk;
+    }
+
+    // ------------------------------------------------------------- an errand
+    //
+    // Something it has asked one player to do: bring the village what it is short
+    // of, bring it something it wants, or clear the monsters off. One at a time.
+
+    String errandKind = "";
+    @Nullable UUID errandFor;
+    String errandItem = "";
+    int errandCount;
+    int errandDone;
+    long errandDay = -1;
+
+    public boolean hasErrand() { return !errandKind.isEmpty(); }
+    public String errandKind() { return errandKind; }
+    @Nullable public UUID errandFor() { return errandFor; }
+    public String errandItem() { return errandItem; }
+    public int errandCount() { return errandCount; }
+    public int errandDone() { return errandDone; }
+    public long errandDay() { return errandDay; }
+
+    public void setErrand(String kind, UUID player, String item, int count, long day) {
+        errandKind = kind;
+        errandFor = player;
+        errandItem = item;
+        errandCount = count;
+        errandDone = 0;
+        errandDay = day;
+    }
+
+    public void errandProgress(int n) { errandDone = Math.min(errandCount, errandDone + n); }
+
+    public void clearErrand() {
+        errandKind = "";
+        errandFor = null;
+        errandItem = "";
+        errandCount = 0;
+        errandDone = 0;
+        errandDay = -1;
+    }
+
+    /** Has it ever spoken with this player? */
+    public boolean knows(UUID player) { return players.containsKey(player); }
     public String food() { return food; }
     public Gift loves() { return loves; }
     public Gift hates() { return hates; }
@@ -160,7 +216,7 @@ public final class Persona {
         if (trade == AssistantEntity.StationTask.FARM && r.nextInt(3) == 0) h = Hobby.GARDENING;
         if (trade == AssistantEntity.StationTask.WOOD && r.nextInt(3) == 0) h = Hobby.WHITTLING;
         hobby = h;
-        quirk = QUIRKS[r.nextInt(QUIRKS.length)];
+        quirk = QUIRKS[r.nextInt(QUIRKS.length)][0];
         food = FOODS[r.nextInt(FOODS.length)];
         loves = switch (hobby) {
             case GARDENING -> Gift.FLOWERS;
@@ -312,9 +368,20 @@ public final class Persona {
             one.putLong("Gift", e.getValue().lastGiftDay);
             one.putInt("Gifts", e.getValue().giftsToday);
             one.putLong("Favour", e.getValue().lastFavourDay);
+            one.putLong("Book", e.getValue().lastBookDay);
             ops.add(one);
         }
         tag.put("Players", ops);
+        if (hasErrand()) {
+            CompoundTag e = new CompoundTag();
+            e.putString("Kind", errandKind);
+            if (errandFor != null) e.putUUID("For", errandFor);
+            e.putString("Item", errandItem);
+            e.putInt("Count", errandCount);
+            e.putInt("Done", errandDone);
+            e.putLong("Day", errandDay);
+            tag.put("Errand", e);
+        }
     }
 
     public void load(CompoundTag tag) {
@@ -347,7 +414,16 @@ public final class Persona {
             o.lastGiftDay = one.getLong("Gift");
             o.giftsToday = one.getInt("Gifts");
             o.lastFavourDay = one.contains("Favour") ? one.getLong("Favour") : -1;
+            o.lastBookDay = one.contains("Book") ? one.getLong("Book") : -1;
             players.put(one.getUUID("Id"), o);
+        }
+        clearErrand();
+        if (tag.contains("Errand")) {
+            CompoundTag e = tag.getCompound("Errand");
+            if (e.hasUUID("For")) {
+                setErrand(e.getString("Kind"), e.getUUID("For"), e.getString("Item"), e.getInt("Count"), e.getLong("Day"));
+                errandDone = e.getInt("Done");
+            }
         }
     }
 

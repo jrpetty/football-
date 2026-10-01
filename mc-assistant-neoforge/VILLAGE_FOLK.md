@@ -275,6 +275,61 @@ in a bubble over its head, readable day or night, for whoever is near:
 * "Got one!" at the water's edge;
 * "I did it!" when a dream comes true.
 
+## Your place in a village
+
+**Every village has a name** (Oakford, Ravenmere, Hollowby…) and **a history**: when
+it was founded, every building raised, every age it came into, every birth,
+partnership and death, every dream that came true, every colony it sent out, and what
+players did for it. Ask any folk for a copy ("History") and it hands you the
+village's chronicle as a written book. `/village chronicle` does the same.
+
+**Walking into a village** you are told where you are: its name, its age, how many
+live there, and what you are to it.
+
+**Your standing** in a village is what its people think of you, taken together, and
+it is earned one person at a time:
+
+| Standing | What it means |
+|---|---|
+| Outcast | Nobody will talk to you (a present may still mend things) |
+| Unwelcome | Folk are cold with you, and people talk |
+| Stranger / Visitor | Folk are making their minds up |
+| Friend of the village | Favours come easier, from everybody |
+| Honoured guest | Folk come along with you more readily |
+| Hero | Everybody says so |
+
+Ask a folk "My standing?" and it tells you, including who thinks the world of you
+and who doesn't trust you. `/village standing` lists every village that knows you.
+
+**Errands.** Ask "Can I help?" and a folk tells you what it needs:
+* Usually it is what the village is short of for its next age: iron for the watch's
+  armour, logs for the next house, coal, stone, food, diamonds, obsidian. Each folk
+  asks within its own trade first.
+* With nothing short, it asks for something of its own: the diamond it dreams of,
+  flowers for its garden, a book, fish, a note block, its favourite food.
+* On some days it asks you to clear five monsters from around the village.
+
+Bring the things (they count from your pack, a little at a time if you like) and
+"Hand over". What you bring goes into the village's stores, toward its next age. You
+get back:
+* experience;
+* something from the stores;
+* the folk's gratitude, and a little from everybody in the village;
+* for a personal favour, **a keepsake the folk made itself**, with its name on it
+  ("Fen's carved bowl", "Willa's star chart").
+
+The village's chronicle records what you did. An errand lapses after three days.
+
+**More to say:**
+* Ask a folk about anyone in the village by name ("what do you think of Bryn?") and
+  it tells you: partner, parent, close friend, nodding acquaintance or rival, with
+  some gossip.
+* "Memories?" brings out its fondest and latest memories. Folk who have lived in the
+  village twenty days remember how it all began.
+* Saying sorry can mend a little of what a hit broke.
+* A folk remembers what you did together: it thanks you again for the present, asks
+  how the errand is going, or keeps its distance.
+
 ## What they do
 
 * **Trades** — at ten folk: four farmers, three miners, two woodcutters, one
@@ -344,6 +399,8 @@ only its owner (nobody, for folk) can rearrange the pack.
   been built, what the village is short of. Works from the console.
 * `/village people` — who everybody is: trade, temperament, partner, friends,
   rivals and family, under a line on the village's couples and friendships.
+* `/village chronicle` — the nearest village's history, as a written book.
+* `/village standing` — what every village you have met thinks of you.
 * `/village talk [words]` — (operators) talk with the nearest folk, as a right-click
   would; with words, say them to it.
 * `/village lineup` — (operators) one folk of every trade, dressed and holding

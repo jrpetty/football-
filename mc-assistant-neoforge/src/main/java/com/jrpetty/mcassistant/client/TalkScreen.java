@@ -6,6 +6,7 @@ import com.jrpetty.mcassistant.net.FolkTalkPayload;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.network.chat.Component;
@@ -20,24 +21,31 @@ import org.lwjgl.glfw.GLFW;
 import java.util.List;
 
 /**
- * Talking with a folk, face to face: who it is, how it feels and what it thinks of
- * you up top, its likeness beside what it just said, and things to say to it — or
- * type your own. Closing the screen says goodbye.
+ * Talking with a folk, face to face.
+ *
+ * <p>Up top: its likeness, who it is, how it feels, what it thinks of you, what its
+ * village thinks of you, and anything it has asked you to do. Below that, what it
+ * just said (scroll for more). Then things to say — or type your own. Closing the
+ * screen says goodbye.
  */
 public class TalkScreen extends Screen {
 
-    private static final int W = 330, H = 236;
+    private static final int W = 360, H = 296;
+    private static final int SPEECH_LINES = 6;
 
     private FolkReplyPayload last;
     private String asked = "";
+    private int scroll;
     private EditBox say;
     private Button gift;
     private Button walk;
+    private Button deliver;
     private boolean saidBye;
 
     public TalkScreen(FolkReplyPayload first) {
         super(Component.literal(first.name()));
         this.last = first;
+        this.asked = first.asked();
     }
 
     public int entityId() { return last.entityId(); }
@@ -45,40 +53,55 @@ public class TalkScreen extends Screen {
     public void update(FolkReplyPayload reply) {
         this.last = reply;
         this.asked = reply.asked();
-        if (walk != null) walk.setMessage(Component.literal(reply.following() ? "Go back to your day" : "Come with me"));
+        this.scroll = 0;
+        if (walk != null) walk.setMessage(Component.literal(reply.following() ? "Go home" : "Come along"));
     }
 
     private int left() { return (width - W) / 2; }
     private int top() { return (height - H) / 2; }
 
+    private record Choice(String label, TalkTopic topic) {}
+
     @Override
     protected void init() {
-        int x = left() + 8, y = top() + 128;
-        int bw = (W - 24) / 3, bh = 18, gap = 2;
-        TalkTopic[] grid = {
-            TalkTopic.HOW, TalkTopic.DOING, TalkTopic.ABOUT,
-            TalkTopic.PEOPLE, TalkTopic.VILLAGE, TalkTopic.DREAMS,
-            TalkTopic.HOBBY, TalkTopic.JOKE, TalkTopic.FAVOUR,
+        int x = left() + 8, y = top() + 172;
+        int cols = 4, bw = (W - 16 - (cols - 1) * 3) / cols, bh = 18;
+        Choice[] grid = {
+            new Choice("How are you?", TalkTopic.HOW), new Choice("Your work?", TalkTopic.DOING),
+            new Choice("About you", TalkTopic.ABOUT), new Choice("Your family?", TalkTopic.PEOPLE),
+            new Choice("Any news?", TalkTopic.VILLAGE), new Choice("Your hopes?", TalkTopic.DREAMS),
+            new Choice("Memories?", TalkTopic.MEMORY), new Choice("Pastimes?", TalkTopic.HOBBY),
+            new Choice("Can I help?", TalkTopic.HELP), new Choice("A favour?", TalkTopic.FAVOUR),
+            new Choice("My standing?", TalkTopic.REPUTE), new Choice("A joke!", TalkTopic.JOKE),
         };
         for (int i = 0; i < grid.length; i++) {
-            TalkTopic t = grid[i];
-            addRenderableWidget(Button.builder(Component.literal(t.line), b -> ask(t, ""))
-                .bounds(x + (i % 3) * (bw + 4), y + (i / 3) * (bh + gap), bw, bh).build());
+            Choice c = grid[i];
+            Button b = Button.builder(Component.literal(c.label()), btn -> ask(c.topic(), ""))
+                .bounds(x + (i % cols) * (bw + 3), y + (i / cols) * (bh + 2), bw, bh).build();
+            b.setTooltip(Tooltip.create(Component.literal(c.topic().line)));
+            addRenderableWidget(b);
         }
-        int row = y + 3 * (bh + gap);
+        int row = y + 3 * (bh + 2);
         gift = addRenderableWidget(Button.builder(Component.literal("Give…"), b -> ask(TalkTopic.GIFT, ""))
             .bounds(x, row, bw, bh).build());
-        walk = addRenderableWidget(Button.builder(Component.literal(last.following() ? "Go back to your day" : "Come with me"),
+        deliver = addRenderableWidget(Button.builder(Component.literal("Hand over"), b -> ask(TalkTopic.DELIVER, ""))
+            .bounds(x + (bw + 3), row, bw, bh).build());
+        deliver.setTooltip(Tooltip.create(Component.literal("Give it what it asked you for")));
+        walk = addRenderableWidget(Button.builder(Component.literal(last.following() ? "Go home" : "Come along"),
                 b -> ask(last.following() ? TalkTopic.STAY : TalkTopic.FOLLOW, ""))
-            .bounds(x + bw + 4, row, bw, bh).build());
-        addRenderableWidget(Button.builder(Component.literal("Goodbye"), b -> onClose())
-            .bounds(x + 2 * (bw + 4), row, bw, bh).build());
-        say = new EditBox(font, x, row + bh + 6, W - 16 - 54, 18, Component.literal("Say something"));
+            .bounds(x + 2 * (bw + 3), row, bw, bh).build());
+        Button book = addRenderableWidget(Button.builder(Component.literal("History"), b -> ask(TalkTopic.CHRONICLE, ""))
+            .bounds(x + 3 * (bw + 3), row, bw, bh).build());
+        book.setTooltip(Tooltip.create(Component.literal("Ask for a copy of the village's chronicle")));
+        int sayY = row + bh + 6;
+        say = new EditBox(font, x, sayY, W - 16 - 2 * 46 - 6, 18, Component.literal("Say something"));
         say.setMaxLength(FolkTalkPayload.MAX_TEXT);
-        say.setHint(Component.literal("Say something…"));
+        say.setHint(Component.literal("Say anything… (try a name)"));
         addRenderableWidget(say);
         addRenderableWidget(Button.builder(Component.literal("Say"), b -> sayTyped())
-            .bounds(x + W - 16 - 50, row + bh + 6, 50, 18).build());
+            .bounds(x + W - 16 - 2 * 46 - 3, sayY, 46, 18).build());
+        addRenderableWidget(Button.builder(Component.literal("Bye"), b -> onClose())
+            .bounds(x + W - 16 - 46, sayY, 46, 18).build());
     }
 
     private void ask(TalkTopic topic, String text) {
@@ -103,6 +126,13 @@ public class TalkScreen extends Screen {
     }
 
     @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        int lines = font.split(FormattedText.of(last.said()), W - 82).size();
+        scroll = Math.max(0, Math.min(Math.max(0, lines - SPEECH_LINES), scroll - (int) Math.signum(scrollY)));
+        return true;
+    }
+
+    @Override
     public void onClose() {
         if (!saidBye) {
             saidBye = true;
@@ -122,39 +152,56 @@ public class TalkScreen extends Screen {
         }
         ItemStack held = minecraft.player.getMainHandItem();
         gift.active = !held.isEmpty();
-        gift.setMessage(Component.literal(held.isEmpty() ? "Give (hold it)" : "Give " + held.getHoverName().getString()));
+        gift.setMessage(Component.literal(held.isEmpty() ? "Give…" : "Give " + held.getHoverName().getString()));
+        deliver.active = last.canDeliver();
     }
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.render(g, mouseX, mouseY, partialTick);
-        int x = left(), y = top();
+        int x = left(), y = top(), tx = x + 66, tw = W - 74;
         // Who, and how things stand.
-        g.drawString(font, Component.literal(last.name()), x + 64, y + 8, 0xFFFFE9A8, true);
+        g.drawString(font, Component.literal(last.name()), tx, y + 8, 0xFFFFE9A8, true);
         int ny = y + 20;
-        for (FormattedCharSequence line : font.split(FormattedText.of(last.about()), W - 72)) {
-            g.drawString(font, line, x + 64, ny, 0xFFBFC7D5, false);
+        for (FormattedCharSequence line : font.split(FormattedText.of(last.about()), tw)) {
+            g.drawString(font, line, tx, ny, 0xFFBFC7D5, false);
             ny += 10;
         }
-        g.drawString(font, Component.literal("Mood: " + face(last.mood()) + " " + last.moodWord()), x + 64, ny + 2,
+        g.drawString(font, Component.literal("Mood: " + face(last.mood()) + " " + last.moodWord()), tx, ny + 2,
             moodColour(last.mood()), false);
-        g.drawString(font, Component.literal(hearts(last.affinity()) + "  It " + last.standing() + "."), x + 64, ny + 13,
-            last.affinity() < -10 ? 0xFFE07070 : 0xFFF0A0B8, false);
-        // What was asked, and what it said.
-        int sy = y + 74;
-        g.fill(x + 60, sy - 4, x + W - 8, y + 122, 0x60000000);
-        if (!asked.isEmpty()) {
-            g.drawString(font, Component.literal("You: " + asked), x + 66, sy, 0xFF9AA3B2, false);
-            sy += 11;
+        g.drawString(font, Component.literal(hearts(last.affinity()) + "  " + last.name() + " " + last.standing() + "."),
+            tx, ny + 13, last.affinity() < -10 ? 0xFFE07070 : 0xFFF0A0B8, false);
+        int vy = ny + 24;
+        for (FormattedCharSequence line : font.split(FormattedText.of(last.village()), tw)) {
+            g.drawString(font, line, tx, vy, 0xFF9FD3E8, false);
+            vy += 10;
         }
-        List<FormattedCharSequence> lines = font.split(FormattedText.of(last.said()), W - 80);
-        for (int i = 0; i < Math.min(lines.size(), asked.isEmpty() ? 4 : 3); i++) {
-            g.drawString(font, lines.get(i), x + 66, sy + i * 10, 0xFFFFFFFF, false);
+        if (!last.errand().isEmpty()) {
+            for (FormattedCharSequence line : font.split(FormattedText.of(last.errand()), tw)) {
+                g.drawString(font, line, tx, vy, 0xFFFFC857, false);
+                vy += 10;
+            }
+        }
+        // What was asked, and what it said.
+        int sy = y + 106;
+        g.fill(x + 8, sy - 4, x + W - 8, y + 168, 0x66000000);
+        int line0 = sy;
+        if (!asked.isEmpty()) {
+            g.drawString(font, Component.literal("You: " + asked), x + 14, line0, 0xFF9AA3B2, false);
+            line0 += 11;
+        }
+        List<FormattedCharSequence> lines = font.split(FormattedText.of(last.said()), W - 30);
+        int room = asked.isEmpty() ? SPEECH_LINES : SPEECH_LINES - 1;
+        for (int i = 0; i < room && scroll + i < lines.size(); i++) {
+            g.drawString(font, lines.get(scroll + i), x + 14, line0 + i * 10, 0xFFFFFFFF, false);
+        }
+        if (lines.size() > room) {
+            g.drawString(font, Component.literal(scroll + room < lines.size() ? "▼" : "▲"), x + W - 18, y + 156, 0xFF9AA3B2, false);
         }
         // Its likeness.
         if (minecraft != null && minecraft.level != null
                 && minecraft.level.getEntity(last.entityId()) instanceof LivingEntity folk) {
-            InventoryScreen.renderEntityInInventoryFollowsMouse(g, x + 6, y + 6, x + 56, y + 120, 34, 0.0625F,
+            InventoryScreen.renderEntityInInventoryFollowsMouse(g, x + 8, y + 6, x + 60, y + 90, 30, 0.0625F,
                 mouseX, mouseY, folk);
         }
     }
@@ -173,6 +220,10 @@ public class TalkScreen extends Screen {
     @Override
     public boolean isPauseScreen() {
         return false;
+    }
+
+    private static String capital(String s) {
+        return s.isEmpty() ? s : Character.toUpperCase(s.charAt(0)) + s.substring(1);
     }
 
     private static String face(int mood) {

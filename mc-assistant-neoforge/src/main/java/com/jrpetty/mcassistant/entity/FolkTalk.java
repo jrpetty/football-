@@ -78,6 +78,21 @@ public final class FolkTalk {
             return bye(f, p);
         }
         f.startTalking(p);
+        // A village that has turned against you closes ranks.
+        UUID village = f.ownerId();
+        if (village != null && me.affinity(p.getUUID()) < 0 && topic != TalkTopic.GIFT
+                && Standing.of(village, p.getUUID(), f.level().getGameTime()).title() == Standing.Title.OUTCAST) {
+            return manner(f, pick(f.getRandom(), "We don't want you here.", "Nobody here will talk to you. Go away.",
+                "After what you've done? Leave."));
+        }
+        String lower = text.toLowerCase(Locale.ROOT);
+        if (!text.isEmpty() && (lower.contains("sorry") || lower.contains("apolog"))) {
+            return manner(f, apology(f, p, op, day));
+        }
+        if (!text.isEmpty()) {
+            VillageFolkEntity other = mentioned(f, lower);
+            if (other != null) return manner(f, opinionOf(f, other));
+        }
         String said = switch (topic) {
             case OPEN -> greet(f, p, op, firstMeeting);
             case HOW -> howAreYou(f);
@@ -92,6 +107,11 @@ public final class FolkTalk {
             case STAY -> stay(f, p);
             case HOBBY -> hobby(f);
             case JOKE -> joke(f);
+            case HELP -> Errands.offer(f, p);
+            case DELIVER -> Errands.deliver(f, p);
+            case MEMORY -> memories(f);
+            case REPUTE -> repute(f, p);
+            case CHRONICLE -> chronicle(f, p, op, day);
             default -> puzzled(f);
         };
         // Somebody who can't stand you says as little as it can.
@@ -112,8 +132,16 @@ public final class FolkTalk {
         int aff = me.affinity(p.getUUID());
         String about = f.stationTask().title + " · " + f.life().traitsLabel().toLowerCase(Locale.ROOT)
             + " · loves " + me.hobby().doing;
+        String where = "";
+        if (f.ownerId() != null) {
+            Standing.View v = Standing.of(f.ownerId(), p.getUUID(), f.level().getGameTime());
+            where = Villages.name(f.ownerId()) + " · " + Villages.ageOf(f.ownerId()).label + " · you: "
+                + Standing.titleIn(f.ownerId(), v.title());
+        }
+        String errand = Errands.live(f, p.getUUID()) ? "Asked you to " + Errands.describe(me) : "";
         PacketDistributor.sendToPlayer(p, new FolkReplyPayload(f.getId(), open, f.displayNameCap(), about, said,
-            me.mood(), Persona.moodWord(me.mood()), aff, Persona.standing(aff), f.isFollowing(p), asked));
+            me.mood(), Persona.moodWord(me.mood()), aff, Persona.standing(aff), f.isFollowing(p), asked,
+            where, errand, Errands.canDeliver(f, p)));
     }
 
     /** Words said out loud: a bubble over the folk's head for whoever is near. */
@@ -188,11 +216,26 @@ public final class FolkTalk {
         if (first) {
             String job = f.stationTask() == AssistantEntity.StationTask.NONE ? "new here"
                 : "the village " + f.stationTask().title.toLowerCase(Locale.ROOT);
+            if (f.ownerId() != null) job += ", here in " + Villages.name(f.ownerId());
             if (life.has(Social.Trait.GRUMPY)) return "Name's " + f.displayNameCap() + ". I'm " + job + ". What do you want?";
             if (life.has(Social.Trait.SHY)) return "Oh — hello. I'm " + f.displayNameCap() + ". I'm " + job + ".";
             if (life.has(Social.Trait.SOCIABLE)) return "A new face! Welcome, welcome. I'm " + f.displayNameCap()
                 + ", " + job + ". And you are " + you + "? Lovely.";
             return "Hello, stranger. I'm " + f.displayNameCap() + ", " + job + ".";
+        }
+        // What the two of you have done lately.
+        long day = f.level().getDayTime() / 24000L;
+        if (Errands.live(f, p.getUUID()) && r.nextBoolean()) {
+            return pick(r, "Hello, " + you + ". ", "Ah, " + you + "! ") + "Any luck? I asked you to "
+                + Errands.describe(me) + ".";
+        }
+        for (Persona.Memory m : me.memories()) {
+            if (day - m.day() > 2 || !m.text().startsWith(you + " ")) continue;
+            String did = m.text().substring(you.length() + 1);
+            if (m.weight() < 0) return pick(r, "Oh. You. I've not forgotten — you " + did.replace(" me", " me") + ".",
+                "Keep your distance. You " + did + ".");
+            if (r.nextInt(3) == 0) break;
+            return pick(r, "Hello again, " + you + "! ", you + "! ") + "Thank you again — you " + did + ".";
         }
         if (aff >= 55) return pick(r, you + "! Good to see you.", "There you are, " + you + "!",
             "Ah, my friend " + you + ".", you + "! I was hoping you'd come by.");
@@ -291,7 +334,7 @@ public final class FolkTalk {
         else sb.append("I've been ");
         sb.append(days <= 1 ? "and I'm new to all this. " : "and I've been here " + days + " days now. ");
         if (life.rolled()) sb.append("People say I'm ").append(life.traitsLabel().toLowerCase(Locale.ROOT)).append(". ");
-        sb.append("I ").append(me.quirk()).append(". ");
+        sb.append("I ").append(me.quirkOfMine()).append(". ");
         sb.append("When I've time to myself it's ").append(me.hobby().doing).append(", ");
         sb.append("and I'd do anything for ").append(foodWords(me.food())).append('.');
         return sb.toString();
@@ -345,8 +388,9 @@ public final class FolkTalk {
         UUID village = f.ownerId();
         RandomSource r = f.getRandom();
         if (village == null) return "News? I don't even have a village yet.";
-        StringBuilder sb = new StringBuilder("We're in ").append(Villages.ageOf(village).label).append(", ")
-            .append(Villages.headcount(village)).append(" of us. ");
+        int folk = Villages.headcount(village);
+        StringBuilder sb = new StringBuilder(Villages.name(village)).append("'s in ").append(Villages.ageOf(village).label)
+            .append(", ").append(folk <= 1 ? "and it's just me so far. " : folk + " of us. ");
         if (f.level() instanceof ServerLevel server) {
             List<Villages.Need> needs = Villages.needs(server, village);
             if (!needs.isEmpty()) sb.append("What we need now is ").append(needs.get(0).what()).append(". ");
@@ -376,13 +420,135 @@ public final class FolkTalk {
         String progress = switch (me.ambition()) {
             case MASTER -> " I'm level " + f.veteranLevel() + " at my trade. Ten will do.";
             case FAMILY -> " " + (f.life().children() == 0 ? "No children yet." : f.life().children() + " so far.");
-            case FRIENDS -> " I've " + f.life().friends().size() + " good friends so far.";
+            case FRIENDS -> f.life().friends().isEmpty() ? " No real friends yet, but I'm working on it."
+                : " I've " + f.life().friends().size() + " good " + (f.life().friends().size() == 1 ? "friend" : "friends") + " so far.";
             case DIAMOND -> " Not found one yet. They say they're deep down by the lava.";
             case NETHER, GREAT_WORK -> " We're in " + (f.ownerId() == null ? "no age at all" : Villages.ageOf(f.ownerId()).label) + " now.";
             case GARDEN -> " " + me.flowersPlanted() + " flowers planted so far.";
             case WELL_FED -> " Full stores, that's all I ask.";
         };
         return pick(r, "Me? I want ", "One day I'd like ", "What I really want is ") + me.ambition().hope + "." + progress;
+    }
+
+    static String memories(VillageFolkEntity f) {
+        Persona me = f.persona();
+        RandomSource r = f.getRandom();
+        long day = f.level().getDayTime() / 24000L;
+        StringBuilder sb = new StringBuilder();
+        Persona.Memory fond = me.fondest();
+        Persona.Memory last = me.latest();
+        if (fond == null && last == null) return "Remember? I've not been here long enough to have much to remember.";
+        if (fond != null) {
+            sb.append(pick(r, "The best day I've had here? ", "I'll never forget the day ", "Fondest memory? "))
+                .append(memoryWords(fond, day)).append(". ");
+        }
+        if (last != null && last != fond) {
+            sb.append(last.weight() < 0 ? "And lately — " : "Just lately, ").append(memoryWords(last, day)).append('.');
+        }
+        // The old ones tell you how it all began.
+        if (f.ownerId() != null && me.since() >= 0 && day - me.since() >= 20) {
+            List<com.jrpetty.mcassistant.village.Chronicle.Entry> past = com.jrpetty.mcassistant.village.Chronicle.of(f.ownerId());
+            if (past.size() > 2) {
+                com.jrpetty.mcassistant.village.Chronicle.Entry early = past.get(1 + r.nextInt(Math.min(4, past.size() - 1)));
+                sb.append(" I'm old enough to remember when ").append(early.text()).append(", on day ")
+                    .append(early.day()).append(". Things were different then.");
+            }
+        }
+        return sb.toString().trim();
+    }
+
+    private static String memoryWords(Persona.Memory m, long today) {
+        long ago = today - m.day();
+        String when = ago <= 0 ? "today" : ago == 1 ? "yesterday" : ago + " days ago";
+        String text = m.text();
+        if (text.startsWith("I ") || text.startsWith("I'")) text = "when " + text;
+        return text + " — " + when;
+    }
+
+    static String repute(VillageFolkEntity f, net.minecraft.world.entity.player.Player p) {
+        RandomSource r = f.getRandom();
+        UUID village = f.ownerId();
+        if (village == null) return "People? I don't know anybody well enough to say.";
+        Standing.View v = Standing.of(village, p.getUUID(), f.level().getGameTime());
+        String name = Villages.name(village);
+        StringBuilder sb = new StringBuilder();
+        switch (v.title()) {
+            case HERO -> sb.append("You? You're the hero of ").append(name).append("! Everybody says so.");
+            case HONOURED -> sb.append("You're an honoured guest in ").append(name).append(". People speak well of you.");
+            case FRIEND -> sb.append("Folk here count you a friend of ").append(name).append('.');
+            case VISITOR -> sb.append("Around ").append(name).append("? You're a visitor. People are making their minds up.");
+            case STRANGER -> sb.append("Nobody here really knows you yet.");
+            case UNWELCOME -> sb.append("Honestly? You're not welcome in ").append(name).append(". People talk.");
+            case OUTCAST -> sb.append("You're an outcast here, and you know why.");
+        }
+        sb.append(' ').append(v.knownBy()).append(v.knownBy() == 1 ? " of us knows you" : " of us know you");
+        if (!v.bestFriend().isEmpty()) sb.append(", and ").append(v.bestFriend()).append(" thinks the world of you");
+        sb.append('.');
+        if (!v.worstCritic().isEmpty()) sb.append(' ').append(v.worstCritic()).append(" doesn't trust you, mind.");
+        if (v.title() == Standing.Title.FRIEND && r.nextBoolean()) {
+            sb.append(" Keep helping and they'll make you an honoured guest.");
+        }
+        return sb.toString();
+    }
+
+    /** The village's history, as a book. */
+    static String chronicle(VillageFolkEntity f, net.minecraft.world.entity.player.Player p, Persona.Opinion op, long day) {
+        UUID village = f.ownerId();
+        if (village == null) return "There's no history to read — there's no village yet.";
+        if (op.lastBookDay == day) return "I gave you a copy already today!";
+        ItemStack book = Chronicles.book(village, f.level().getDayTime() / 24000L);
+        if (!p.getInventory().add(book)) p.drop(book, false);
+        op.lastBookDay = day;
+        return pick(f.getRandom(), "Here — our chronicle. Everything that's happened in " + Villages.name(village) + ".",
+            "Of course! Here's a copy of " + Villages.name(village) + "'s history. Mind the pages.");
+    }
+
+    static String apology(VillageFolkEntity f, net.minecraft.world.entity.player.Player p, Persona.Opinion op, long day) {
+        if (op.affinity >= 0 && day - f.persona().hurtDay > 3) return "Sorry? Whatever for?";
+        if (op.lastSorryDay == day) return "You've said sorry. Now show me.";
+        op.lastSorryDay = day;
+        f.persona().feelFor(p.getUUID(), p.getName().getString(), f.life().has(Social.Trait.GRUMPY) ? 2 : 5);
+        return pick(f.getRandom(), "…Apology accepted. Just don't do it again.", "Hmm. I'll think about it.",
+            "Thank you for saying so.");
+    }
+
+    /** Somebody in the village it was asked about by name. */
+    @Nullable
+    static VillageFolkEntity mentioned(VillageFolkEntity f, String lower) {
+        if (f.ownerId() == null) return null;
+        for (AssistantEntity a : Villages.folkOf(f.ownerId())) {
+            if (!(a instanceof VillageFolkEntity g) || g == f) continue;
+            String name = g.displayNameCap().toLowerCase(Locale.ROOT);
+            if (name.length() >= 3 && (" " + lower.replaceAll("[^a-z ]", " ") + " ").contains(" " + name + " ")) return g;
+        }
+        return null;
+    }
+
+    /** "What do you think of Bryn?" */
+    static String opinionOf(VillageFolkEntity f, VillageFolkEntity g) {
+        RandomSource r = f.getRandom();
+        Social.Life life = f.life();
+        String name = g.displayNameCap();
+        if (g.getUUID().equals(life.partner())) {
+            return pick(r, name + "? " + name + " is my partner. I'd be lost without them.",
+                name + " and I are together. Best thing that ever happened to me.");
+        }
+        if (life.parents().contains(name)) return name + "'s my " + pick(r, "mother", "father", "parent") + ". I owe them everything.";
+        if (g.life().parents().contains(f.displayNameCap())) return name + " is my child. Growing up so fast.";
+        int warmth = life.affinity(g.getUUID());
+        StringBuilder sb = new StringBuilder();
+        if (warmth >= Social.CLOSE) sb.append(name).append("? One of my closest friends.");
+        else if (warmth >= Social.FRIEND) sb.append(name).append("'s a good friend.");
+        else if (warmth <= Social.RIVAL) sb.append(life.has(Social.Trait.GRUMPY) ? "Don't talk to me about " + name + "."
+            : name + " and I don't get along, I'm afraid.");
+        else if (warmth > 5) sb.append(name).append("? Nice enough. We say hello.");
+        else sb.append(pick(r, "I don't really know " + name + ".", name + "? We've hardly spoken."));
+        if (g.persona().rolled() && r.nextBoolean()) {
+            sb.append(' ').append(pick(r, name + " " + g.persona().quirk() + ", you know.",
+                "Spends every evening " + g.persona().hobby().doing + ".",
+                "Works as the " + g.stationTask().title.toLowerCase(Locale.ROOT) + "."));
+        }
+        return sb.toString();
     }
 
     static String bye(VillageFolkEntity f, net.minecraft.world.entity.player.Player p) {
@@ -525,6 +691,8 @@ public final class FolkTalk {
         Persona.Opinion op = me.opinionOf(p.getUUID(), you);
         long day = f.level().getDayTime() / 24000L;
         int need = f.life().has(Social.Trait.GENEROUS) ? 10 : 25;
+        if (f.ownerId() != null && Standing.of(f.ownerId(), p.getUUID(), f.level().getGameTime()).title()
+                .atLeast(Standing.Title.FRIEND)) need -= 10;          // a friend of the village is everybody's friend
         if (op.affinity < need) {
             return f.life().has(Social.Trait.GRUMPY) ? "Earn it first." : pick(r,
                 "I don't know you well enough for that, " + you + ".", "Maybe when we know each other better.");
@@ -570,6 +738,8 @@ public final class FolkTalk {
         int aff = me.affinity(p.getUUID());
         if (f.isFollowing(p)) return "I'm right behind you.";
         int need = life.has(Social.Trait.SOCIABLE) || life.has(Social.Trait.CURIOUS) ? 20 : 30;
+        if (f.ownerId() != null && Standing.of(f.ownerId(), p.getUUID(), f.level().getGameTime()).title()
+                .atLeast(Standing.Title.HONOURED)) need -= 15;
         if (aff < need) return pick(r, "Go with you? I hardly know you.", "Where? With a stranger? No, thank you.");
         if (me.mood() < 30) return pick(r, "I'm not in the mood for wandering.", "Not today. I'd be poor company.");
         if (f.isSleeping() || f.level().isNight() && f.stationTask() != AssistantEntity.StationTask.GUARD) {
@@ -605,6 +775,11 @@ public final class FolkTalk {
     public static TalkTopic understand(String text) {
         String t = " " + text.toLowerCase(Locale.ROOT).replaceAll("[^a-z' ]", " ") + " ";
         if (has(t, "joke", "funny", "make me laugh")) return TalkTopic.JOKE;
+        if (has(t, "can i help", "need anything", "anything i can do", "help you", "any work", "a task", "a job for me")) return TalkTopic.HELP;
+        if (has(t, "here's what", "here is what", "brought you", "i brought", "i've got the", "hand over", "i did it", "done it")) return TalkTopic.DELIVER;
+        if (has(t, "remember", "memory", "memories", "the old days", "a story", "tell me a story")) return TalkTopic.MEMORY;
+        if (has(t, "think of me", "about me", "my reputation", "people say", "do they like me", "am i welcome")) return TalkTopic.REPUTE;
+        if (has(t, "history", "chronicle", "the past", "founded")) return TalkTopic.CHRONICLE;
         if (has(t, "how are you", "how're you", "you ok", "feeling", "how do you feel", "mood", "happy", "sad")) return TalkTopic.HOW;
         if (has(t, "follow", "come with", "come along", "join me", "adventure", "walk with")) return TalkTopic.FOLLOW;
         if (has(t, " stay ", "go back", "go home", "you can go", "wait here", "back to work", "dismiss")) return TalkTopic.STAY;
