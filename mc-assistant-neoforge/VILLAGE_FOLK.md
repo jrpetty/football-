@@ -172,7 +172,14 @@ together ("20 folk: 3 couples, 9 friendships, 1 rivalry; 4 born here"), and
   and planks before logs. For its
   first ten minutes a village keeps the founding planks, stone and chests for
   its storehouse.
-* **Evenings** — at home for the night a folk takes on rations from the stores;
+* **Feeding itself** — farmers work any ground, wet or dry (a crop grows on dry
+  farmland, slower, and never lets it dry back), and a farmer with no water on its
+  plot has a bucket of water made from the stores once the village has three iron.
+  A hungry village — less than half a day's meals put by — turns a miner or a
+  woodcutter whose stone or timber is piled high into a farmer, and a smelter with
+  no ore burns logs into charcoal when the village is short of coal. A folk that
+  cannot set its ground up for a whole working day finds new ground.
+* **Evenings** — at home for the night a folk takes on a day's rations from the stores;
   two folk who are home and fed can raise a child (so a village that starts from
   two spawner items can grow).
 * **Breaks** — one a day, at an hour of each folk's own.
