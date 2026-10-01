@@ -63,6 +63,7 @@ public final class FolkEvents {
             IN.remove(player.getUUID());
             return;
         }
+        com.jrpetty.mcassistant.entity.Welcome.check((ServerLevel) player.level(), player, now);
         if (now.equals(was)) return;
         IN.put(player.getUUID(), now);
         Standing.View view = Standing.of(now, player.getUUID(), player.level().getGameTime());

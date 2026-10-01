@@ -331,6 +331,11 @@ public final class Persona {
 
     public void meetAmbition() { ambitionMet = true; }
 
+    /** The day of the last feast, wedding or celebration it went to. */
+    long feastDay = -100;
+
+    public void feasted(long day) { feastDay = day; }
+
     // ------------------------------------------------------------- saving
 
     public void save(CompoundTag tag) {
@@ -349,6 +354,7 @@ public final class Persona {
         tag.putLong("GiftDay", giftDay);
         tag.putString("GiftFrom", giftFrom);
         tag.putInt("Flowers", flowersPlanted);
+        tag.putLong("FeastDay", feastDay);
         ListTag mem = new ListTag();
         for (Memory m : memories) {
             CompoundTag one = new CompoundTag();
@@ -400,6 +406,7 @@ public final class Persona {
         giftDay = tag.contains("GiftDay") ? tag.getLong("GiftDay") : -100;
         giftFrom = tag.getString("GiftFrom");
         flowersPlanted = tag.getInt("Flowers");
+        feastDay = tag.contains("FeastDay") ? tag.getLong("FeastDay") : -100;
         memories.clear();
         for (Tag t : tag.getList("Memories", Tag.TAG_COMPOUND)) {
             CompoundTag one = (CompoundTag) t;

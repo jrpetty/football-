@@ -872,6 +872,118 @@ public class VillageGameTests {
         });
     }
 
+    /** A village's life together: two who grow close enough pledge themselves and
+     *  the village holds their wedding; a child is born small, plays, and grows up
+     *  in three days; every seventh evening is a feast; a death is a vigil. */
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "t22_village_life")
+    public static void t22_village_life(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 7600, 7600, 32);
+        BlockPos heart = Kit.surface(level, 7600, 7600);
+        VillageFolkEntity a = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        VillageFolkEntity b = VillageFolkSpawnerBlock.raise(level, heart.east(), 0.0F);
+        helper.assertTrue(a != null && b != null, "two folk of one village");
+        level.setDayTime(1000);
+        VillageFolkEntity[] child = new VillageFolkEntity[1];
+        helper.runAtTickTime(20, () -> {
+            java.util.UUID village = a.ownerId();
+            b.moveTo(a.getX() + 1.0, a.getY(), a.getZ(), 0.0F, 0.0F);
+            a.ensurePersona();
+            b.ensurePersona();
+            a.life().feel(b.getUUID(), b.displayNameCap(), 90);
+            b.life().feel(a.getUUID(), a.displayNameCap(), 90);
+            a.socialBeat();
+            long day = level.getDayTime() / 24000L;
+            Kit.log("t22 courtship: " + a.displayNameCap() + " & " + b.displayNameCap() + " partners "
+                + b.getUUID().equals(a.life().partner()) + ", tonight " + com.jrpetty.mcassistant.entity.Gatherings.tonight(village, day));
+            helper.assertTrue(b.getUUID().equals(a.life().partner()) && a.getUUID().equals(b.life().partner()),
+                "two who grow that close pledge themselves");
+            helper.assertTrue(com.jrpetty.mcassistant.entity.Gatherings.tonight(village, day)
+                == com.jrpetty.mcassistant.entity.Gatherings.Kind.WEDDING, "and the village holds a wedding");
+            a.insertItem(new ItemStack(Items.BREAD, 8));
+            b.insertItem(new ItemStack(Items.BREAD, 8));
+            child[0] = a.raiseChildWith(b);
+            helper.assertTrue(child[0] != null && child[0].isBaby(), "a child is born a child");
+            helper.assertTrue(child[0].getBbHeight() < a.getBbHeight() * 0.7F,
+                "and small: " + child[0].getBbHeight() + " against " + a.getBbHeight());
+            String chat = com.jrpetty.mcassistant.entity.FolkTalk.answer(child[0],
+                helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL), com.jrpetty.mcassistant.entity.TalkTopic.ABOUT, "");
+            Kit.log("t22 the child " + child[0].displayNameCap() + " says: " + chat);
+            child[0].bornDaysAgo(com.jrpetty.mcassistant.entity.VillageFolkEntity.GROW_DAYS);
+            // The calendar: a feast every seventh evening, a vigil after a death.
+            java.util.UUID elsewhere = java.util.UUID.randomUUID();
+            helper.assertTrue(com.jrpetty.mcassistant.entity.Gatherings.tonight(elsewhere, 13)
+                == com.jrpetty.mcassistant.entity.Gatherings.Kind.FEAST, "every seventh evening is a feast");
+            com.jrpetty.mcassistant.entity.Gatherings.mourn(elsewhere, "Old Tom", 20);
+            helper.assertTrue(com.jrpetty.mcassistant.entity.Gatherings.tonight(elsewhere, 20)
+                == com.jrpetty.mcassistant.entity.Gatherings.Kind.VIGIL, "a death is a vigil");
+        });
+        helper.runAtTickTime(260, () -> {
+            Kit.log("t22 three days on: " + child[0].displayNameCap() + " a child still? " + child[0].isBaby()
+                + ", height " + child[0].getBbHeight());
+            helper.assertTrue(!child[0].isBaby() && child[0].getBbHeight() > 1.5F, "a child grows up in three days");
+            helper.succeed();
+        });
+    }
+
+    /** A village that takes a player to its heart: as its honoured guest it resolves
+     *  to build them a house, keeps the bed for them and hands them the key; as its
+     *  hero it holds a night in their honour and gives them its medal. */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t23_welcome")
+    public static void t23_welcome(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 8000, 8000, 32);
+        BlockPos heart = Kit.surface(level, 8000, 8000);
+        java.util.List<VillageFolkEntity> folk = new java.util.ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart.east(i), 0.0F);
+            helper.assertTrue(f != null, "folk " + i);
+            folk.add(f);
+        }
+        level.setDayTime(1000);
+        helper.runAtTickTime(20, () -> {
+            java.util.UUID village = folk.get(0).ownerId();
+            net.minecraft.world.entity.player.Player you = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+            long t = level.getGameTime();
+            for (VillageFolkEntity f : folk) {
+                f.ensurePersona();
+                f.persona().feelFor(you.getUUID(), you.getName().getString(), 40);
+            }
+            com.jrpetty.mcassistant.entity.Standing.stir(village, you.getUUID());
+            Villages.noteProject(village, "storage", t);
+            com.jrpetty.mcassistant.entity.Welcome.check(level, you, village);
+            var guest = com.jrpetty.mcassistant.village.Chronicle.guest(village, you.getUUID());
+            helper.assertTrue(guest != null, "an honoured guest is to have a house");
+            helper.assertTrue(Villages.projectsWanted(village).contains("guesthouse"),
+                "and the village sets about building it: " + Villages.projectsWanted(village));
+            Villages.noteProject(village, "guesthouse", t);
+            helper.assertTrue(guest.built, "the house goes up");
+            helper.assertTrue(Villages.inAGuestHouse(village, new BlockPos((int) guest.x, (int) guest.y, (int) guest.z)),
+                "its bed is kept for the guest");
+            String key = com.jrpetty.mcassistant.entity.FolkTalk.answer(folk.get(1), you, com.jrpetty.mcassistant.entity.TalkTopic.OPEN, "");
+            Kit.log("t23 the key: " + key);
+            boolean hasKey = false;
+            for (ItemStack st : you.getInventory().items) hasKey |= st.is(Items.TRIPWIRE_HOOK);
+            helper.assertTrue(hasKey, "the guest is handed the key: " + key);
+            // A hero.
+            for (VillageFolkEntity f : folk) f.persona().feelFor(you.getUUID(), you.getName().getString(), 40);
+            com.jrpetty.mcassistant.entity.Standing.stir(village, you.getUUID());
+            com.jrpetty.mcassistant.entity.Welcome.check(level, you, village);
+            long day = level.getDayTime() / 24000L;
+            helper.assertTrue(guest.hero, "a village names its hero");
+            helper.assertTrue(com.jrpetty.mcassistant.entity.Gatherings.tonight(village, day)
+                == com.jrpetty.mcassistant.entity.Gatherings.Kind.HONOUR, "and celebrates them tonight");
+            String medal = com.jrpetty.mcassistant.entity.FolkTalk.answer(folk.get(2), you, com.jrpetty.mcassistant.entity.TalkTopic.OPEN, "");
+            Kit.log("t23 the medal: " + medal);
+            boolean hasMedal = false;
+            for (ItemStack st : you.getInventory().items) hasMedal |= st.is(Items.GOLD_NUGGET);
+            helper.assertTrue(hasMedal, "and gives them its medal: " + medal);
+            helper.succeed();
+        });
+    }
+
     // ===================================================== vanilla villagers
 
     /** A villager appears the ordinary way: the join event should catch it. */

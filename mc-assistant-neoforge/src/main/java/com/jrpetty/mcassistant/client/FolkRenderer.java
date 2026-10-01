@@ -106,7 +106,8 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
 
     @Override
     protected void scale(VillageFolkEntity folk, PoseStack pose, float partialTick) {
-        pose.scale(0.9375F, 0.9375F, 0.9375F);      // a villager's own size
+        float s = folk.isBaby() ? 0.9375F * 0.55F : 0.9375F;     // a villager's own size; a child's half of it
+        pose.scale(s, s, s);
     }
 
     private static int trade(AssistantEntity folk) {
@@ -121,7 +122,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         public void render(PoseStack pose, MultiBufferSource buffer, int light, VillageFolkEntity folk,
                            float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks,
                            float netHeadYaw, float headPitch) {
-            if (folk.isInvisible()) return;
+            if (folk.isInvisible() || folk.isBaby()) return;
             renderColoredCutoutModel(getParentModel(), OUTFIT[trade(folk)], pose, buffer, light, folk, -1);
         }
     }
@@ -134,7 +135,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         public void render(PoseStack pose, MultiBufferSource buffer, int light, VillageFolkEntity folk,
                            float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks,
                            float netHeadYaw, float headPitch) {
-            if (folk.isInvisible()) return;
+            if (folk.isInvisible() || folk.isBaby()) return;
             int t = trade(folk);
             if (DYE[t] == null) return;
             int rgb;

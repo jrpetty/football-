@@ -34,6 +34,64 @@ public final class Chronicle extends SavedData {
     private final Map<UUID, List<Entry>> history = new HashMap<>();
     private final Map<UUID, Long> founded = new HashMap<>();
 
+    /**
+     * A player a village has taken to its heart: the house it resolved to build them
+     * (and where it stands, once it does), whether they have its key, and whether the
+     * village has named them its hero.
+     */
+    public static final class Guest {
+        public final UUID player;
+        public String name;
+        public long x, y, z;
+        public boolean built, keyGiven, hero, medalGiven;
+
+        Guest(UUID player, String name) {
+            this.player = player;
+            this.name = name;
+        }
+    }
+
+    private final Map<UUID, List<Guest>> guests = new HashMap<>();
+
+    /** This village's record of this player, or null. */
+    @Nullable
+    public static Guest guest(UUID village, UUID player) {
+        Chronicle c = of();
+        if (c == null) return null;
+        for (Guest g : c.guests.getOrDefault(village, List.of())) if (g.player.equals(player)) return g;
+        return null;
+    }
+
+    public static Guest welcome(UUID village, UUID player, String name) {
+        Chronicle c = of();
+        Guest g = guest(village, player);
+        if (g != null || c == null) return g;
+        g = new Guest(player, name);
+        c.guests.computeIfAbsent(village, k -> new ArrayList<>()).add(g);
+        c.setDirty();
+        return g;
+    }
+
+    /** The guest whose house the village still has to build, if any. */
+    @Nullable
+    public static Guest awaitingAHouse(UUID village) {
+        Chronicle c = of();
+        if (c == null) return null;
+        for (Guest g : c.guests.getOrDefault(village, List.of())) if (!g.built) return g;
+        return null;
+    }
+
+    public static List<Guest> guests(UUID village) {
+        Chronicle c = of();
+        return c == null ? List.of() : new ArrayList<>(c.guests.getOrDefault(village, List.of()));
+    }
+
+    /** Something about a guest changed: write it down. */
+    public static void touch() {
+        Chronicle c = of();
+        if (c != null) c.setDirty();
+    }
+
     @Nullable
     private static Chronicle of() {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
@@ -83,6 +141,21 @@ public final class Chronicle extends SavedData {
             }
             c.history.put(id, lines);
             if (v.contains("Founded")) c.founded.put(id, v.getLong("Founded"));
+            List<Guest> gs = new ArrayList<>();
+            for (Tag e : v.getList("Guests", Tag.TAG_COMPOUND)) {
+                CompoundTag one = (CompoundTag) e;
+                if (!one.hasUUID("Player")) continue;
+                Guest g = new Guest(one.getUUID("Player"), one.getString("Name"));
+                g.x = one.getLong("X");
+                g.y = one.getLong("Y");
+                g.z = one.getLong("Z");
+                g.built = one.getBoolean("Built");
+                g.keyGiven = one.getBoolean("Key");
+                g.hero = one.getBoolean("Hero");
+                g.medalGiven = one.getBoolean("Medal");
+                gs.add(g);
+            }
+            if (!gs.isEmpty()) c.guests.put(id, gs);
         }
         return c;
     }
@@ -103,6 +176,44 @@ public final class Chronicle extends SavedData {
                 lines.add(one);
             }
             v.put("Lines", lines);
+            ListTag gs = new ListTag();
+            for (Guest g : guests.getOrDefault(e.getKey(), List.of())) {
+                CompoundTag one = new CompoundTag();
+                one.putUUID("Player", g.player);
+                one.putString("Name", g.name);
+                one.putLong("X", g.x);
+                one.putLong("Y", g.y);
+                one.putLong("Z", g.z);
+                one.putBoolean("Built", g.built);
+                one.putBoolean("Key", g.keyGiven);
+                one.putBoolean("Hero", g.hero);
+                one.putBoolean("Medal", g.medalGiven);
+                gs.add(one);
+            }
+            v.put("Guests", gs);
+            all.add(v);
+        }
+        // A village with guests but no history yet (not likely, but never lose a house).
+        for (Map.Entry<UUID, List<Guest>> e : guests.entrySet()) {
+            if (history.containsKey(e.getKey())) continue;
+            CompoundTag v = new CompoundTag();
+            v.putUUID("Id", e.getKey());
+            v.put("Lines", new ListTag());
+            ListTag gs = new ListTag();
+            for (Guest g : e.getValue()) {
+                CompoundTag one = new CompoundTag();
+                one.putUUID("Player", g.player);
+                one.putString("Name", g.name);
+                one.putLong("X", g.x);
+                one.putLong("Y", g.y);
+                one.putLong("Z", g.z);
+                one.putBoolean("Built", g.built);
+                one.putBoolean("Key", g.keyGiven);
+                one.putBoolean("Hero", g.hero);
+                one.putBoolean("Medal", g.medalGiven);
+                gs.add(one);
+            }
+            v.put("Guests", gs);
             all.add(v);
         }
         tag.put("Villages", all);

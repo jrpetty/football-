@@ -93,6 +93,9 @@ public final class FolkTalk {
             VillageFolkEntity other = mentioned(f, lower);
             if (other != null) return manner(f, opinionOf(f, other));
         }
+        if (f.isBaby() && topic != TalkTopic.GIFT) return child(f, p, topic, op);
+        String kept = topic == TalkTopic.OPEN ? Welcome.handOver(f, p) : "";
+        if (!kept.isEmpty()) return manner(f, kept.trim());
         String said = switch (topic) {
             case OPEN -> greet(f, p, op, firstMeeting);
             case HOW -> howAreYou(f);
@@ -287,6 +290,7 @@ public final class FolkTalk {
             case "short" -> "The village is short of food, though.";
             case "dream" -> "And I did it, you know — " + me.ambition().done + ".";
             case "busy" -> "Busy, mind. Always busy.";
+            case "feast" -> pick(r, "What a night that was at the heart of the village!", "I'm still full from the feast.");
             default -> "";
         };
     }
@@ -428,6 +432,33 @@ public final class FolkTalk {
             case WELL_FED -> " Full stores, that's all I ask.";
         };
         return pick(r, "Me? I want ", "One day I'd like ", "What I really want is ") + me.ambition().hope + "." + progress;
+    }
+
+    /** A child talks like a child. */
+    static String child(VillageFolkEntity f, net.minecraft.world.entity.player.Player p, TalkTopic topic, Persona.Opinion op) {
+        RandomSource r = f.getRandom();
+        long day = f.level().getDayTime() / 24000L;
+        long age = f.bornDay() < 0 ? 0 : day - f.bornDay();
+        String parents = f.life().parents();
+        if (op.affinity < 5 && topic == TalkTopic.OPEN) {
+            return pick(r, "Mum says I'm not to talk to strangers.", "…Who are you?", "Hello! Are you a giant?");
+        }
+        String[] trades = {"miner", "farmer", "guard", "fisher", "builder", "smelter"};
+        String dream = trades[Math.floorMod(f.getUUID().hashCode(), trades.length)];
+        return switch (topic) {
+            case HOW -> pick(r, "I'm good! I found a really shiny rock!", "Hungry. When's supper?",
+                "Great! I'm winning at tag!");
+            case DOING -> pick(r, "Playing tag! You can't catch me!", "Following " + (parents.isEmpty() ? "the grown-ups" : parents.split(" and ")[0]) + " around.",
+                "Exploring! Don't tell anyone.");
+            case ABOUT -> "I'm " + f.displayNameCap() + "! I'm " + (age <= 0 ? "brand new" : age + (age == 1 ? " day" : " days") + " old")
+                + "! When I grow up I'm going to be a " + dream + "!";
+            case PEOPLE -> parents.isEmpty() ? "I don't know who my mum and dad are." : "My mum and dad are " + parents + "! They're the best.";
+            case JOKE -> pick(r, "Knock knock! …You're supposed to say who's there!", "What's brown and sticky? A stick! Hee hee!");
+            case DREAMS -> "I want to be a " + dream + " like the big ones!";
+            case BYE -> "Bye bye!";
+            default -> pick(r, "Wanna see my rock?", "Hee hee!", "Are you a hero? You look like a hero.",
+                "Mum says I have to be in bed when it's dark.", "Can you do a handstand?");
+        };
     }
 
     static String memories(VillageFolkEntity f) {

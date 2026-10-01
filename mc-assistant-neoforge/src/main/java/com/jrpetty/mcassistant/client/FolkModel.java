@@ -229,6 +229,14 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
 
         head.yRot = netHeadYaw * Mth.DEG_TO_RAD;
         head.xRot = headPitch * Mth.DEG_TO_RAD;
+        // A child: a big head on a small body, and no trade's clothes yet.
+        float headSize = young ? 1.3F : 1.0F;
+        head.xScale = headSize;
+        head.yScale = headSize;
+        head.zScale = headSize;
+        if (young) {
+            for (int i = 0; i < worn.length; i++) worn[i].visible = false;
+        }
 
         // Walking: legs and arms in step, as a player walks.
         float step = limbSwing * 0.6662F;

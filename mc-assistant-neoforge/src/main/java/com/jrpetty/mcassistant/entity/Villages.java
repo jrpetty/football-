@@ -129,6 +129,15 @@ public final class Villages {
         return AGED_ON.getOrDefault(villageId, -100L);
     }
 
+    /** Is this spot inside a house the village built for a player? */
+    public static boolean inAGuestHouse(UUID villageId, BlockPos pos) {
+        for (com.jrpetty.mcassistant.village.Chronicle.Guest g : com.jrpetty.mcassistant.village.Chronicle.guests(villageId)) {
+            if (!g.built) continue;
+            if (Math.abs(pos.getX() - g.x) <= 6 && Math.abs(pos.getZ() - g.z) <= 6 && Math.abs(pos.getY() - g.y) <= 4) return true;
+        }
+        return false;
+    }
+
     /** "the meeting hall", "a new house": a building as folk would speak of it. */
     public static String spoken(String structure) {
         return switch (structure) {
@@ -137,12 +146,14 @@ public final class Villages {
             case "house" -> "a new house";
             case "hall" -> "the meeting hall";
             case "pen" -> "the animal pen";
+            case "guesthouse" -> "a house for the village's honoured guest";
             default -> "the " + structure;
         };
     }
 
     public static void resetForTests() {
         Standing.resetForTests();
+        Gatherings.resetForTests();
         NEWS.clear();
         AGED_ON.clear();
         ALL.clear();
@@ -796,10 +807,24 @@ public final class Villages {
      *  village's ages — a village that could not find the timber has not got
      *  a storehouse, however many times it tried. */
     public static void noteProject(UUID villageId, String structure, long gameTime) {
-        if (!"colony".equals(structure)) tell(villageId, gameTime / 24000L, spoken(structure) + " went up");
+        if (!"colony".equals(structure) && !"guesthouse".equals(structure)) tell(villageId, gameTime / 24000L, spoken(structure) + " went up");
         LAST_PROJECT.put(villageId, gameTime);
         BUILT.computeIfAbsent(villageId, k -> new ArrayList<>()).add(structure);
         Map<String, Site> pending = SITES.get(villageId);
+        if ("guesthouse".equals(structure)) {
+            com.jrpetty.mcassistant.village.Chronicle.Guest g = com.jrpetty.mcassistant.village.Chronicle.awaitingAHouse(villageId);
+            Site site = pending == null ? null : pending.get(structure);
+            Village v = get(villageId);
+            BlockPos at = site != null ? site.anchor() : v != null ? v.centre() : BlockPos.ZERO;
+            if (g != null) {
+                g.built = true;
+                g.x = at.getX();
+                g.y = at.getY();
+                g.z = at.getZ();
+                com.jrpetty.mcassistant.village.Chronicle.touch();
+                tell(villageId, gameTime / 24000L, g.name + "'s house went up");
+            }
+        }
         if (pending != null) pending.remove(structure);      // its ground is spoken for now
         LEAD.remove(villageId);                              // and the next one starts fresh
         LEAD_AT.remove(villageId);
@@ -904,6 +929,9 @@ public final class Villages {
         boolean house = folk >= housing(villageId) - 2 || built(villageId, "house") < 1;
         if (house) out.add("house");
         if (built(villageId, "well") < 1) out.add("well");
+        // A house for the player the village has taken to its heart.
+        if (com.jrpetty.mcassistant.village.Chronicle.awaitingAHouse(villageId) != null
+                && built(villageId, "storage") > 0) out.add("guesthouse");
         if (at == Age.WOOD) return out;
 
         if (built(villageId, "fortify") < 1) out.add("fortify");        // the wall
@@ -1011,6 +1039,10 @@ public final class Villages {
         if (project == null) return "nothing for now — the village is gathering what its age asks for";
         int folk = headcount(villageId);
         return switch (project) {
+            case "guesthouse" -> {
+                com.jrpetty.mcassistant.village.Chronicle.Guest g = com.jrpetty.mcassistant.village.Chronicle.awaitingAHouse(villageId);
+                yield "a house for " + (g == null ? "an honoured guest" : g.name) + ", the village's honoured guest";
+            }
             case "storage" -> "a storehouse, so what is gathered has somewhere to go";
             case "shelter" -> "a shelter, somewhere to wait out the first nights";
             case "house" -> "a house: " + folk + " live here and there is room for " + housing(villageId)

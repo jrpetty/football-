@@ -213,6 +213,37 @@ Besides its two traits every folk has:
 The village keeps its own **news**: who is together now, who had a child, what went
 up, who died, whose dream came true. Folk pass it on.
 
+## Life together
+
+A village keeps some evenings together, at its heart, once the day's work is done:
+
+* **Weddings.** Two folk who grow as fond of each other as folk get pledge
+  themselves ("Will you… marry me?" — "Yes! Yes, of course!"). The next evening the
+  village holds the wedding:
+  * the couple stand at the heart and the village gathers in a ring round them;
+  * the bell rings, the two say their vows, and there are hearts;
+  * the guests cheer ("Kiss! Kiss!") and dance, and they like the couple the
+    better for it.
+  
+  The chronicle records it.
+* **Celebrations.** The evening a village comes into a new age, everybody turns
+  out and there are fireworks over the heart.
+* **Feasts.** Every seventh evening: food passed round, music, dancing, toasts to the
+  village. Everyone is in a better mood the next day.
+* **Vigils.** The evening after a death, the village gathers quietly at the heart for
+  the one it lost.
+
+**Children.** A child is born small (a big head on a little body), in plain
+clothes, with no trade. For three days it plays:
+* tag with the other children ("Tag! You're it!" — "Can't catch me!");
+* trailing after its mother or father;
+* exploring round the heart;
+* bed when it is dark.
+
+Then it grows up ("I'm all grown up!") and takes up a trade. Children talk like
+children: ask one about itself and it will tell you what it is going to be when it
+grows up.
+
 ## Talking with them
 
 **Right-click a folk to talk.** The conversation screen shows:
@@ -300,6 +331,21 @@ it is earned one person at a time:
 
 Ask a folk "My standing?" and it tells you, including who thinks the world of you
 and who doesn't trust you. `/village standing` lists every village that knows you.
+
+**What a village does for you.**
+* **Honoured guest.** The village resolves to build you **a house of your own**
+  (folk tell you so). It goes on the village's list like any other building, and the
+  builders raise it on a lot of its own. When it stands, the next folk you talk to
+  hands you **its key**, named and marked with where the house is. Nobody in the
+  village will sleep in its bed: it is yours.
+* **Hero.** The village holds **a night in your honour**:
+  * everybody at the heart and fireworks overhead ("Three cheers for…!");
+  * the next folk you talk to gives you **the village's medal**, inscribed with the
+    day you earned it.
+  
+  The chronicle records both, for good.
+* **Outcast.** Folk keep away from you, the guards keep an eye on you ("I've got my
+  eye on you."), and nobody will talk to you, though a present may still mend things.
 
 **Errands.** Ask "Can I help?" and a folk tells you what it needs:
 * Usually it is what the village is short of for its next age: iron for the watch's

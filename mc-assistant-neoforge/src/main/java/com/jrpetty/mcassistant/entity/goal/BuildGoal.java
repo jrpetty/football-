@@ -43,7 +43,7 @@ public class BuildGoal extends Goal {
     public static final Set<String> STRUCTURES = Set.of(
         "wall", "platform", "shelter", "smeltery", "storage", "workshop", "watchtower",
         "house", "room", "pen", "fortify", "lighthouse", "column", "well", "hall",
-        "market", "chapel", "gateway", "granary", "barracks", "monument");
+        "market", "chapel", "gateway", "granary", "barracks", "monument", "guesthouse");
 
     /** Half the width of a structure's footprint: the meeting hall, the market, the
      *  barracks, the chapel's length and the gateway's step are seven across, the rest
@@ -718,7 +718,7 @@ public class BuildGoal extends Goal {
                 floor(out, center, right, facing, 2);     // a proper floor
                 out.add(new Placement(cell(center, right, facing, 0, 0), Part.TORCH));
             }
-            case "house" -> {
+            case "house", "guesthouse" -> {
                 BlockPos center = centered ? feet : feet.relative(facing, 4);
                 floor(out, center, right, facing, 2);
                 for (int dx = -2; dx <= 2; dx++) {
