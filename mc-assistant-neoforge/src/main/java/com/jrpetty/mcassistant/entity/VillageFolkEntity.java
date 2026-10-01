@@ -1413,7 +1413,7 @@ public class VillageFolkEntity extends AssistantEntity {
             java.util.function.Predicate<net.minecraft.world.item.ItemStack> what =
                 com.jrpetty.mcassistant.entity.goal.WithdrawGoal.matcherFor(ask);
             if (ZoneChests.countIn(linkedChests(), what) >= 8) return false;   // its own chest has plenty
-            if (findChestWithNear(heart, what, radius) == null) continue;
+            if (storesHold(heart, radius, what) < 8) continue;                 // not worth the walk for a few
             enqueue(Job.withdrawAt(ask, 16, heart, radius));
             brain("fetching " + ask + " from the stores");
             return true;
@@ -2869,7 +2869,7 @@ public class VillageFolkEntity extends AssistantEntity {
             int[] g = BuildGoal.footprint(project);
             blocks += BuildGoal.fillCells(level(), site.anchor(), site.facing(), g[0], g[1]).size();
         }
-        int carried = countCarried(BuildGoal::isBuildingBlock);
+        int carried = countCarried(BuildGoal::isBuildingBlock) + roofPiecesCarried();
         // Three parts in four is enough to begin: the rest is dug while the walls go up, and
         // a build that waited for every last block stood in front of its list for days.
         int least = blocks * 3 / 4;
@@ -3006,9 +3006,18 @@ public class VillageFolkEntity extends AssistantEntity {
             // And without the wool, the founders' bedding comes in from the camp.
             if (deco == BuildGoal.Part.BED && have < want) bedsFromTheCamp(want - have);
         }
-        int blocksNow = countCarried(BuildGoal::isBuildingBlock);
+        // The roof's stairs and slabs count: they are cut from the planks and laid in place of
+        // blocks. Counted without them, a builder that had cut its roof out of the founding planks
+        // was always "carrying 128 of 216", never began, and a village of twelve built nothing.
+        int blocksNow = countCarried(BuildGoal::isBuildingBlock) + roofPiecesCarried();
         if (blocksNow < least) buildNote("build: carrying " + blocksNow + " of " + blocks + " blocks");
         return blocksNow >= least;
+    }
+
+    /** Roof stairs and slabs in the pack, which stand in for blocks of the roof. */
+    private int roofPiecesCarried() {
+        return countCarried(st -> (st.is(net.minecraft.tags.ItemTags.STAIRS) || st.is(net.minecraft.tags.ItemTags.SLABS))
+            && !BuildGoal.isBuildingBlock(st));
     }
 
     // ------------------------------ the right materials for a drawn building ----------------
