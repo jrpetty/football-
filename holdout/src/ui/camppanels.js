@@ -318,19 +318,36 @@ export function renderSettings(ui) {
     S && !S.over && ui.game.running ? saveSection(ui) : null,
   )
 }
+// The viewer's download service when the game runs as a claude.ai artifact,
+// else null. Asked once; a standalone file has no window.claude at all.
+let dlHost = null
+const savesHost = () => (dlHost ??= window.claude?.use ? window.claude.use('downloads').catch(() => null) : Promise.resolve(null))
 // Export, import and the rolling daily backups.
 function saveSection(ui) {
   const backups = listBackups()
-  const download = () => {
-    const blob = new Blob([exportSave()], { type: 'application/json' })
+  const download = async () => {
+    sfx('click')
+    const name = `holdout-day-${day()}.json`
+    const data = exportSave()
+    // Inside the claude.ai viewer a page cannot download by itself: the
+    // viewer offers the file instead. A standalone copy uses a plain link.
+    const dl = await savesHost()
+    if (dl) {
+      try {
+        await dl.save({ filename: name, data })
+        ui.toast('Save exported', 'good')
+      } catch (e) {
+        if (e?.code !== 'declined') ui.toast('This view cannot save files. Open the standalone game to export.', 'bad')
+      }
+      return
+    }
     const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob)
-    a.download = `holdout-day-${day()}.json`
+    a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' }))
+    a.download = name
     document.body.append(a)
     a.click()
     a.remove()
     setTimeout(() => URL.revokeObjectURL(a.href), 2000)
-    sfx('click')
   }
   const file = h('input', { type: 'file', accept: '.json,application/json', style: { display: 'none' } })
   file.addEventListener('change', async () => {
