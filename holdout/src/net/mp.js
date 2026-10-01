@@ -194,7 +194,7 @@ export class Session {
       this.joined = resolve
       const hello = () => this.c.send({ t: 'hello', pid: this.pid, name: this.name, v: PROTO })
       hello()
-      const iv = setInterval(() => (this.H ? clearInterval(iv) : hello()), 2500)
+      const iv = setInterval(() => (this.H ? clearInterval(iv) : hello()), 4000)
       setTimeout(() => {
         if (this.H) return
         clearInterval(iv)
@@ -213,6 +213,7 @@ export class Session {
     return o
   }
   close() {
+    this.status = 'gone'
     try {
       if (this.role === 'host') this.c?.send({ t: 'bye' })
       else this.c?.send({ t: 'bye' }, this.hostPeer)
@@ -268,6 +269,9 @@ export class Session {
     // a reload or a second tab replaces the old connection
     for (const [peer, P] of this.peers) if (P.pid === pid && peer !== from) this.peers.delete(peer)
     const fresh = !this.peers.has(from)
+    // a hello repeated while the camp is still on its way gets no second copy
+    const old = this.peers.get(from)
+    if (old && now() - (old.snapAt || 0) < 8) return
     this.peers.set(from, { pid, seen: now() })
     const players = S.mp.players
     const used = new Set(Object.values(players).map((p) => p.color))
@@ -283,6 +287,11 @@ export class Session {
     this.advertise()
   }
   sendSnap(peer, pid) {
+    const P = this.peers.get(peer)
+    if (P) {
+      if (now() - (P.snapAt || 0) < 4) return
+      P.snapAt = now()
+    }
     this.tickDelta(true)
     this.c.send({ t: 'snap', n: this.n, s: this.shadow, hist: S.hist || null, belts: this.beltFrame(), you: pid, chat: this.chat.slice(-20) }, peer)
   }
@@ -550,7 +559,16 @@ export class Session {
   }
   // Guests run a light clock between diffs; belts glide along on their own.
   guestTick(simDt) {
-    S.time += simDt * GAME_MIN_PER_SEC
+    // follow the host's clock: never more than a few seconds ahead of the
+    // last time it spoke, and catch up quickly when far behind
+    const rate = GAME_MIN_PER_SEC
+    if (this.hostTime == null) S.time += simDt * rate
+    else {
+      const want = this.hostTime + Math.min(now() - this.hostAt, 3) * (S.raid ? 1 : S.speed ?? 1) * rate
+      S.time = Math.min(S.time + simDt * rate, want + 1)
+      if (want - S.time > 90) S.time = want
+      else if (want > S.time) S.time += (want - S.time) * Math.min(1, simDt * 1.5)
+    }
     for (const l of S.links || []) {
       const it = l.items
       if (!it?.length || !BELTS[l.tier]) continue

@@ -276,3 +276,132 @@ balance problems, all fixed before shipping:
 - The Signal Mast grows through six visible stages, with a beacon that turns
   on at the top.
 - Belts carry instanced cargo with per-tier frames and status lamps.
+
+## 7. v4: depth, the road and friends
+
+v4 answers four requests: make building feel like an industry (every station
+made of materials you smelt and shape, power you have to generate), make the
+city cost something to cross, give the long game a story, and let friends play
+one camp together in the browser.
+
+### Materials
+The Satisfactory lesson is that a factory feels earned when every part has a
+lineage. v3 had components, but stations were still built from raw scrap and
+wood. v4 adds a ladder in between:
+- scrap is smelted into **metal bars** (Forge), wood is baked into **coal**
+  (Charcoal Kiln);
+- bars are shaped into **plates** and **bolts**, by hand at the Workbench or by
+  the powered Fabricator; bars and coal make **steel** (Forge level 2); steel
+  and bolts make **beams** (Workbench level 2, Machine Shop);
+- level 1 of every station costs simple materials, so a new camp is never
+  stuck; every upgrade, the walls, the mast and the top tiers need plates,
+  bolts and beams.
+
+Hand crafting and machines share recipes. A machine without power is worked
+by hand at half speed: power is a multiplier, never a lock.
+
+### Power
+Fuel engines first, renewables later, storage last, the arc every factory game
+uses because it teaches the grid a piece at a time:
+- tier 1 **Steam Engine**: wood, or coal at three times the burn time, and only
+  as much fuel as the load needs;
+- tier 3 **Generator** on diesel;
+- **Solar** and (tier 5) **Wind**, free but weather-bound;
+- (tier 6) **Battery Bank**, which only charges from renewables, so it rewards
+  building them.
+When supply runs short, defence is served first, then staffed machines, then
+automation. The Power panel shows every source, the fuel mix and every user.
+
+### Upkeep
+Upkeep exists to keep runs worth taking for a camp that is already
+self-sufficient in food and water. It scales with the camp (cloth and meds per
+person, scrap per station level, bolts for upgrades, parts for machines) and
+is paid continuously. Missing it costs 15% work speed and some morale, never
+lives. After the first simulation pass the per-level rates were cut (scrap
+0.25 to 0.15, bolts 0.6 to 0.35) because big camps spent most of their scrap
+on patching.
+
+### The road
+Distance is the city's real currency. Provisions per person for a round trip
+follow `0.3 + 2·km + 8·km²`, so next door is almost free and the far side of
+the map on foot is a serious decision. Vehicles cut provisions to a quarter or
+a third and burn fuel by the kilometre. The van starts dead and the parts to
+fix it come from wrecks on runs, so the first vehicle is a small quest. Cars
+can be found running, keyed or hotwired. The vehicle also decides the haul:
+on foot you bring home what you carry.
+
+### The story
+Long camps need reasons beyond numbers. Five threads (the van, a radio
+engineer, the company that made the virus, the coast's codes, a lost convoy)
+are told through notes and people found on runs. Clues narrow a thread to a
+few places rather than marking one, so following a lead is still a choice of
+where to risk a run. Two Signal phases are gated on the story, each with a
+slower fallback (research) or none (the codebook), which ties the end of the
+factory game to the city.
+
+### Multiplayer
+Requirements: browser only, invite and join, a host's save separate from
+single player, survivors assigned to players, everyone in the same live camp.
+
+**Authority.** The host's browser runs the simulation and keeps the save.
+Guests never run the economy. This avoids divergence in a simulation full of
+randomness and keeps cheating out of the question.
+
+**State sync.** The camp state is one JSON tree. The host diffs it against
+what guests last received a few times a second. The diff format knows keyed
+records (survivors, stations, items, belts, log lines by id), patches records
+in place so scene objects keep their identity, rounds numbers to what is worth
+sending and ignores drift below a small tolerance. Belt cargo positions and
+history graphs travel on slower channels of their own. A joining guest gets
+one compressed snapshot, then numbered diffs; a gap triggers a resync.
+
+**Guest actions.** Guests keep the existing UI code unchanged: every panel
+mutates the local state as in single player. A periodic diff of that state
+against the last confirmed one becomes a patch for the host. Resource changes
+travel as amounts to add, so two players spending at once both pay. The host
+checks each patch (survivors you do not lead are refused, spending beyond
+storage is refused), applies it and acknowledges it in its next diff. The
+guest keeps unacknowledged patches on top of every diff from the host, so its
+screen never flickers back, and a refusal simply drops the patch.
+
+**Runs and raids.** Runs are local to the player who launched them; what they
+bring home arrives as an ordinary patch. Raids are fought by the host's
+simulation and streamed to guests as zombie and defender positions at five
+frames a second, rendered with puppets that interpolate between frames. Guests
+can order the defenders they lead; the host's game carries the orders out.
+
+**Transports.** One interface over three carriers. Inside claude.ai the
+artifact viewer's live room: a named room per camp, the lobby room's presence
+lists open camps, and guests without permission to send events fall back to a
+presence mailbox the host acknowledges. The standalone file uses WebRTC data
+channels through PeerJS. BroadcastChannel connects tabs for testing. Frames
+are JSON; large messages are deflated, base64'd and split to fit the room's
+4 KiB limit, and paced under its rate budget.
+
+### Measured pacing (v4)
+The v3 scripted player, updated to pay travel provisions, repair the van,
+craft plates, bolts and beams, follow story leads and research its way past
+the dish array, run for 300 days on several seeds:
+
+| Mark | v3 | v4 |
+| --- | --- | --- |
+| Van running | | 9 to 20 |
+| Tier 2 | about 20 | 37 to 51 |
+| Signal phase 1 | 28 to 33 | 51 to 53 |
+| Signal phase 2 | 54 to 66 | 74 to 90 |
+| Signal phase 3 | 146 to 195 | 240 to 270 |
+
+Every seed survived past day 400 with 30+ survivors. A thoughtful human
+moves faster than this script, which never lays belts, so the real arc should
+land between the two columns. The first passes exposed four problems, all
+fixed:
+- Once a Blood Moon broke through, every defender was injured, every
+  following horde broke through too, and the camp starved. Injured survivors
+  now still defend at a fraction, a breach buys a day and a half before the
+  next horde, breaches take 15 to 35% of the stores instead of up to half,
+  and the first Blood Moon comes on day 21.
+- Kilns, stills and steam engines burned the last wood and food the people
+  needed. Factories now leave a few days of food, water and (near winter)
+  firewood untouched, and say so on the station.
+- Upkeep on a big camp ate most of its scrap. The per-level rates were cut.
+- The script never ordered beams; a human sees the Signal's cost and will.

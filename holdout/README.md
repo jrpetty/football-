@@ -8,6 +8,13 @@ into a 3D city where they only see what they can actually see. Hordes grow with
 what you build. The long goal is to rebuild a broadcast mast in five phases,
 call the coast for an evacuation, and hold out through the last night.
 
+v4 adds a full materials ladder (scrap to bars to plates, bolts, steel and
+beams, by hand or by machine), a real power grid (steam engines on wood and
+coal, diesel, solar, wind and batteries), camp upkeep, travel costs and a
+motor pool, a story told through notes, leads and people found in the city,
+gear swapping in camp, and **browser multiplayer**: one player hosts, friends
+join with a code, and each of you leads your own survivors in the same camp.
+
 It is built to be played over weeks and months. A camp day lasts about eight
 real minutes at normal speed, the milestone board runs to tier 8, and a careful
 player reaches the final Signal phase somewhere past day 250.
@@ -19,6 +26,15 @@ mouse and keyboard, a 1600×900 or larger window, and a dedicated GPU for the
 High and Ultra presets. Settings also has Low and Medium for weaker machines.
 Press `F1` in the game for the field manual.
 
+**Play together:** press **Multiplayer** on the title screen. A multiplayer
+camp is saved apart from your single-player camp. One player hosts; friends
+join with the five-letter code. Inside Claude, friends open the same artifact
+and pick your camp from the list (invite them from the share menu). With the
+standalone file, everyone needs the same file and an internet connection: the
+browsers connect directly over WebRTC, using the free PeerJS broker to find
+each other. Most home connections work; a few strict office or mobile networks
+block direct connections.
+
 ## Controls
 
 | Where | Input | Does |
@@ -27,7 +43,8 @@ Press `F1` in the game for the field manual.
 | | Scroll, `+` / `-` | Zoom |
 | | Q / E, middle-drag (right-drag in camp and on the map) | Rotate the camera |
 | | `F1` | Field manual (pauses a run) |
-| Camp | `B` `C` `I` `T` `P` `M` `G` `L` | Build, Crew, Items, Trade, Camp overview, Map, Progress, Log |
+| Camp | `B` `C` `I` `T` `P` `M` `G` `J` `L` | Build, Crew, Items, Trade, Camp overview, Map, Progress, Journal, Log |
+| | `O`, `Enter` | Players panel and chat (multiplayer) |
 | | `F` / `H` | The wall / horde intel |
 | | `Space`, `1` `2` `3` | Pause, 1×, 2×, 4× speed |
 | | `R`, `Shift`, `Enter`, `Esc` | While placing: rotate, place several, confirm, cancel |
@@ -50,12 +67,12 @@ and the factory grow together.
 
 | Tier | Name | Milestones | Needs |
 | --- | --- | --- | --- |
-| 1 | Foothold | Smelter (Forge), Conveyors (Belt Mk1), Palisade (log wall, two expansions) | |
+| 1 | Foothold | Smelter (Forge, Charcoal Kiln), Steam Power (Steam Engine), Conveyors (Belt Mk1), Palisade (log wall, two expansions) | |
 | 2 | Workshop | Chemistry (Chemistry Lab, Ammo Press), Fabrication (Fabricator, Weapons, Tailor), The Signal (the mast) | |
-| 3 | Power | Power (Generator, Floodlight, Turret), Electronics (Electronics Bench, Radio Tower), Sheet Metal (wall, Solar Array) | Signal phase 1 |
+| 3 | Power | Diesel Power (Generator, Floodlight, Turret), Electronics (Electronics Bench, Radio Tower), Sheet Metal (wall, Solar Array) | Signal phase 1 |
 | 4 | Industry | Rubber Rollers (Belt Mk2, two expansions), Machining (Machine Shop), Research (Research Desk) | Signal phase 1 |
-| 5 | Automation | Automation (automated stations +50%), Motor Belts (Belt Mk3), Outer Ring (four expansions) | Signal phase 2 |
-| 6 | Fortress | Fortification (wall), Power Cells, Transmitter Coils | Signal phase 2 |
+| 5 | Automation | Automation (automated stations +50%), Motor Belts (Belt Mk3), Wind Power (Wind Turbine), Outer Ring (four expansions) | Signal phase 2 |
+| 6 | Fortress | Fortification (wall), Power Cells (cells, Battery Bank), Transmitter Coils | Signal phase 2 |
 | 7 | Overdrive | Overclocking (power cores), Amplifiers, Field Rations (camp eats 15% less) | Signal phase 3 |
 | 8 | Exodus | Convoys (outposts), Arsenal (better crafting quality), Beacon (more and better recruits) | Signal phase 3 |
 
@@ -64,8 +81,11 @@ The old goals live on as **starter tasks** under Progress, with a reward each.
 ### The Signal
 The Signal Mast is a 20-metre lattice tower raised in five phases: clear it,
 power it, raise the dish array, tune it, and call the coast. Each phase asks
-for hundreds, then thousands, of components: steel, wiring, rubber, circuits,
-motors, coils, power cells and amplifiers. Deliver by hand from the Progress
+for hundreds, then thousands, of components: plates, bolts, beams, steel,
+wiring, rubber, circuits, motors, coils, power cells and amplifiers. Phase 3
+also needs someone who can phase the dish array (Dana, if you find her, or
+Broadcast Engineering research), and the last phase needs the Harbor Light
+codebook. Deliver by hand from the Progress
 panel or belt parts straight into the mast. The tower visibly grows with each
 phase. When the last phase is done, the biggest horde of the game comes for
 the camp. Survive it and the convoy comes.
@@ -74,7 +94,7 @@ the camp. Survive it and the convoy comes.
 - **Threat** sets horde size and toughness. It comes from what the camp has
   achieved: tier, Signal phase, population and expansions, plus a little for
   days survived (capped at day 100).
-- **Blood Moons:** from day 14, every seventh night brings a horde half again
+- **Blood Moons:** from day 21, every seventh night brings a horde half again
   as big, with tougher and faster dead and a red sky.
 - **Offline progress:** close the game and the crew keeps working at one
   fifteenth of real time, up to three camp days. The clock waits for you, so no
@@ -110,12 +130,32 @@ and a lamp on each belt shows whether it is flowing, waiting or backed up.
 - Belts upgrade in place. Moving a station reroutes its belts. Logistics
   research makes every belt carry 25% more.
 
-### The components ladder
+### The materials ladder
 - **Raw:** scrap, wood, water, food, fuel.
-- **Refined:** metal, chemicals, gunpowder, cloth, parts.
-- **Components:** steel (Forge level 2), wiring and electronics (Fabricator),
-  rubber and power cells (Chemistry Lab), circuits, motors, transmitter coils
-  and amplifiers (Machine Shop).
+- **Smelted:** the Forge melts scrap into **metal bars**. The Charcoal Kiln
+  bakes wood into **coal**.
+- **Shaped:** bars become **plates** and **bolts**, at the Workbench by hand or
+  in the Fabricator by machine. A level 2 Forge folds bars and coal into
+  **steel**; steel and bolts make structural **beams** (Workbench level 2 or
+  the Machine Shop).
+- **Components:** wiring and electronics (Fabricator), rubber and power cells
+  (Chemistry Lab), circuits, motors, transmitter coils and amplifiers (Machine
+  Shop).
+- Level 1 of every station is built from simple stuff. Upgrades, the wall, the
+  mast and the top tiers need plates, bolts and beams.
+- Anything a machine makes can be made by hand at a bench, slower. Machines
+  need power; unpowered, their crew works them by hand at half speed.
+
+### Power
+- **Steam Engine** (tier 1): burns wood, or coal for three times as long, only
+  as hard as the load needs. 4 / 7 / 11 power by level.
+- **Generator** (tier 3): diesel, 9 / 15 / 24 power.
+- **Solar Array** (daylight) and **Wind Turbine** (better in storms and snow,
+  useless in still fog) cost nothing to run.
+- **Battery Bank** stores what solar and wind make beyond the load and gives
+  it back at night.
+- When power is short, defence gets it first, then staffed machines, then
+  automation. The Power panel shows every source and every user.
 
 ### Research and power cores
 - The **Research Desk** studies **schematics** found on runs. Each study offers
@@ -164,11 +204,34 @@ loot table that fits it.
   call every infected nearby, and bloaters burst into an infectious cloud.
   Hidden traps wait in the dark; scouts spot them from much further away.
 
-Runs still work as before: up to four survivors with their own gear, the van
-burns fuel (walking takes three times as long), noise draws the dead, packs
-fill up and loot is only safe once it is in the van, and a horde timer runs on
-every run. A downed survivor bleeds out in 40 seconds unless a teammate helps
-them up.
+Runs still work as before: up to four survivors with their own gear, noise
+draws the dead, packs fill up and loot is only safe once it is stashed, and a
+horde timer runs on every run. A downed survivor bleeds out in 40 seconds
+unless a teammate helps them up.
+
+### Travel and the motor pool
+- Every survivor carries food and water for the round trip: per person,
+  `(0.3 + 2·km + 8·km²)` food and 1.2 times that in water, scaled by how they
+  travel. Next door (0.25 km) is about 1 food on foot; four streets over
+  (0.7 km) about 6; across town (1.2 km) about 14; the highway (2.5 km) over 55.
+- **On foot** costs full provisions, takes three times as long and stashes
+  nothing beyond what the squad carries. **Bicycles** (Workbench) cost 60% and
+  move at 60% speed. **Cars** cost 30% plus fuel and have a 90-unit boot. **The
+  van** and the **armoured truck** carry everything.
+- The camp's van starts dead: it needs a car battery, four tyres, parts, bolts
+  and fuel. Strip wrecked cars on runs for tyres and batteries.
+- Now and then a car on a run still works: find its keys in the building, or
+  let a mechanic, ex-con or engineer hotwire it (slow and noisy). It drives
+  home and joins the motor pool. Vehicles wear a little every trip.
+
+### The story
+- Five threads run through the city: the dead van, a radio engineer
+  broadcasting from somewhere near the mast, the biotech company that started
+  it, the codes Coastal Command will answer to, and a convoy truck that never
+  arrived. The **Journal** (`J`) keeps what you know and where it might lead.
+- Notes turn up in desks, cabinets, lockers and shelves. Clues narrow a thread
+  down to a handful of places; leads show violet on the city map.
+- People in camp ask you to find relatives. Those trails go cold in a week.
 
 ## Survival
 
@@ -196,6 +259,13 @@ them up.
   bunkhouse, a farm plot, a rain collector, a storage depot and a workbench.
 - Every survivor eats about 2 food and drinks 2.4 water a day. If food or water
   runs out, everyone weakens and works at 60%.
+- **Upkeep:** each day the camp wears through a little: 0.15 cloth and 0.02
+  meds per survivor, 0.15 scrap per station level, bolts for upgraded stations
+  and parts for machines. Short on any of it and the camp falls into
+  disrepair: stations work at 85% and morale drops until it is paid.
+- **Gear swapping:** in camp, click any equipment slot to take from storage or
+  from another survivor (they swap). Gear stays put while someone is on a run
+  or at an outpost.
 - Survivors without a job build whatever is under construction. When nothing
   is going up, they forage the yard for a little wood and scrap.
 - Morale comes from beds, hot meals, the fire, the wall and recent events. High
@@ -212,6 +282,32 @@ them up.
   power, and it runs with nobody assigned.
 - The **black market** buys and sells. Its stock changes at dawn.
 - **Distress calls and supply drops** appear on the city map for a while.
+
+## Multiplayer
+
+- The **host** runs the camp: the simulation, the save (separate from their
+  single-player camp) and the final say on every change. **Guests** get the
+  whole camp when they join, then compact diffs a few times a second.
+- Whatever a guest does changes their screen at once. The difference goes to
+  the host, which checks it (do they lead that survivor? is there enough in
+  storage?), applies it and confirms it, or turns it down and the guest's
+  screen snaps back.
+- **Who leads whom:** the host hands survivors to players in the Players panel
+  (`O`). You give orders only to your own survivors and to anyone nobody leads.
+  Whoever rescues or recruits someone leads them.
+- **Runs** play out on each player's own machine, several at once. What they
+  bring home lands in the shared stores. If someone drops out mid-run, their
+  squad walks home with nothing.
+- One camp clock for everyone, set by the host. It does not slow down while
+  someone is on a run.
+- **Raids** are fought in the host's camp and streamed to everyone. Select a
+  defender you lead and right-click to move or pick a target; the host's
+  game carries the order out.
+- Chat with `Enter`. Coloured rings show where each friend is looking.
+- **Connections:** inside Claude, the artifact's live room (friends open the
+  same artifact; camps being hosted show up in the list). The standalone file
+  uses WebRTC through PeerJS. `?net=tabs` connects tabs of one browser for
+  testing, and `?as=Name` plays as someone else in the same browser.
 
 ## Development
 
@@ -230,17 +326,26 @@ character, station and lighting viewers used while modelling.
 src/
   main.js            boot, title screen, scene switching, offline catch-up,
                      main loop
+  net/
+    transport.js     the carriers: claude.ai room, PeerJS, BroadcastChannel;
+                     framing, compression and chunking
+    delta.js         structural diffs with keyed records and rounding
+    mp.js            sessions: snapshots, diffs, guest patches, permissions,
+                     event forwarding, chat
   game/
     data.js          every definition: resources, jobs, skills, perks, items,
                      stations, recipes, belts, milestones, the Signal,
                      research, seasons, infection, outposts, locations, zombies
     state.js         game state, survivors, milestones, research, outposts,
-                     saving, backups, export and import
+                     vehicles, saving, backups, export and import
+    story.js         story threads, clues, leads, notes, personal requests
+    storydata.js     the story's text: threads, notes, people
     economy.js       the camp simulation: production, crafting, power, morale,
                      seasons, infection, threat, hordes, outposts, the market
     belts.js         belt routing, rates, buffers and the belt simulation
   scenes/
     base*.js         the camp: stations, people, belts, fence, horde fights
+    raidnet.js       raids streamed from the host to guests
     citymap.js       the 3D city map, squad planner and convoys
     mission*.js      supply runs: interiors, looting, sight, traps, extraction
   world/
@@ -252,7 +357,8 @@ src/
                      mast, furniture, weapons, vehicles, city
   render/            pipeline (SSAO, bloom, SMAA, tilt-shift), fog of war,
                      sky, terrain, snow and seasons, materials, effects
-  ui/                HUD, panels, progress board, field manual
+  ui/                HUD, panels, progress board, field manual, journal,
+                     motor pool, lobby and Players panel
   core/              audio, A* grid, utilities
 ```
 
