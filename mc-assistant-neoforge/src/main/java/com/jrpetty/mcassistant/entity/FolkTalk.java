@@ -357,6 +357,20 @@ public final class FolkTalk {
             case STORE -> "Keeping the stores in order. You wouldn't believe the mess.";
             case HAUL -> "Carrying for everyone. My back knows all about it.";
             case NONE -> "Looking for a trade. The village will tell me what it needs.";
+            case SMITH -> pick(r, "At the forge" + place + ". Picks for the mine, blades for the watch.",
+                "Hammering iron" + place + ". Hear that ring? That's a good blade.");
+            case TAILOR -> pick(r, "At the loom" + place + ". Beds, rugs, banners — whatever the village is short of.",
+                "Sewing" + place + ". Somebody always needs a new bed.");
+            case BEEKEEP -> pick(r, "Seeing to the hives" + place + ". Mind the bees — they know me, not you.",
+                "With the bees" + place + ". Honey's nearly ready.");
+            case BREW -> pick(r, "Brewing" + place + ". Something for the watch's cuts and bruises.",
+                "Minding the brews" + place + ". Don't touch the green one.");
+            case ENCHANT -> pick(r, "In the library" + place + ", putting a little magic into the village's tools.",
+                "Reading, mostly. And enchanting" + place + " — a blade that never dulls.");
+            case COOK -> pick(r, "Cooking at the café" + place + ". Pull up a seat!",
+                "In the café" + place + " — the cider's fresh today.");
+            case SHOP -> pick(r, "Minding the shop" + place + ". Have a look round!",
+                "Behind the counter" + place + ". Tools, potions, beds — what are you after?");
         };
         if (!f.missingEssentials().isEmpty()) work += " Or I would be, if I had " + f.missingEssentials().get(0) + ".";
         if (f.life().has(Social.Trait.HARDWORKING) && r.nextBoolean()) work += " Can't stop long.";

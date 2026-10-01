@@ -104,6 +104,11 @@ public final class TownLife {
         if (Villages.ageOf(id).ordinal() >= Villages.Age.STONE.ordinal() && turn % 6 == 0) {
             stalls(level, id, v.centre(), storeGoods(level, id));
         }
+        // The café's and the shop's counters.
+        if (turn % 6 == 3) {
+            Cafe.dress(level, v, "cafe");
+            Cafe.dress(level, v, "shop");
+        }
         // A field's scarecrow.
         List<AssistantEntity> farmers = new ArrayList<>();
         for (AssistantEntity a : Villages.folkOf(id)) {
@@ -122,6 +127,8 @@ public final class TownLife {
             chimney(level, b);
             addressSign(level, village, heart, b);
             if (b.structure().equals("house")) washingLine(level, b);
+            if (b.structure().equals("cafe")) Cafe.setOut(level, village, b, Cafe.menuGoods(level, village));
+            if (b.structure().equals("shop")) Cafe.setOut(level, village, b, Cafe.shopGoods(level, village));
         }
         int reach = 0;
         for (Ledger.Building b : all) {
@@ -150,7 +157,7 @@ public final class TownLife {
 
     /** Buildings with a hearth in them: their chimney tops smoke. */
     private static final Set<String> HEARTHS = Set.of("house", "guesthouse", "smeltery", "workshop", "hall",
-        "barracks", "granary", "shelter", "storage", "market", "chapel");
+        "barracks", "granary", "shelter", "storage", "market", "chapel", "smithy", "brewery", "cafe");
 
     public static Fittings fittings(Ledger.Building b) {
         return FITTINGS.computeIfAbsent(b, k -> {
@@ -458,29 +465,37 @@ public final class TownLife {
     private static void setOut(ServerLevel level, BlockPos ground, Direction front, List<Item> goods) {
         List<BlockPos> top = counter(ground, front);
         for (int k = 0; k < top.size(); k++) {
-            BlockPos at = top.get(k).above();
             Item want = goods.get(k);
-            ItemFrame frame = null;
-            for (ItemFrame f : level.getEntitiesOfClass(ItemFrame.class, new AABB(at))) {
-                if (f.getTags().contains("mca_stall")) { frame = f; break; }
-            }
-            if (frame == null) {
-                if (want == null || !level.getBlockState(at).isAir()) continue;
-                frame = new ItemFrame(level, at, Direction.UP);
-                net.minecraft.nbt.CompoundTag t = frame.saveWithoutId(new net.minecraft.nbt.CompoundTag());
-                t.putBoolean("Fixed", true);
-                t.putBoolean("Invisible", true);
-                frame.load(t);
-                frame.addTag("mca_stall");
-                level.addFreshEntity(frame);
-            }
-            ItemStack now = frame.getItem();
-            if (want == null) {
-                if (!now.isEmpty()) frame.setItem(ItemStack.EMPTY, false);
-            } else if (!now.is(want)) {
-                frame.setItem(new ItemStack(want), false);
-            }
+            frameOn(level, top.get(k).above(), want == null ? ItemStack.EMPTY : new ItemStack(want));
         }
+    }
+
+    /** One of this, in a counter's frame (the café's and the shop's too). Returns whether the
+     *  counter changed. */
+    static boolean frameOn(ServerLevel level, BlockPos at, ItemStack want) {
+        ItemFrame frame = null;
+        for (ItemFrame f : level.getEntitiesOfClass(ItemFrame.class, new AABB(at))) {
+            if (f.getTags().contains("mca_stall")) { frame = f; break; }
+        }
+        if (frame == null) {
+            if (want.isEmpty() || !level.getBlockState(at).isAir()) return false;
+            frame = new ItemFrame(level, at, Direction.UP);
+            net.minecraft.nbt.CompoundTag t = frame.saveWithoutId(new net.minecraft.nbt.CompoundTag());
+            t.putBoolean("Fixed", true);
+            t.putBoolean("Invisible", true);
+            frame.load(t);
+            frame.addTag("mca_stall");
+            level.addFreshEntity(frame);
+        }
+        ItemStack now = frame.getItem();
+        if (want.isEmpty()) {
+            if (now.isEmpty()) return false;
+            frame.setItem(ItemStack.EMPTY, false);
+            return true;
+        }
+        if (ItemStack.isSameItemSameComponents(now, want)) return false;
+        frame.setItem(want.copyWithCount(1), false);
+        return true;
     }
 
     /** What the stores hold most of, best first: what a market would have out. */
@@ -501,7 +516,9 @@ public final class TownLife {
     }
 
     private static boolean forSale(ItemStack s) {
-        return Market.goodFor(s) != null && !s.isDamageableItem() && !s.is(Items.CHEST) && !s.is(Items.FURNACE) && !s.is(Items.CRAFTING_TABLE)
+        // The stalls are for the farms' and the mines' goods: what the crafts make, one at a
+        // time, is sold at the shop and the café.
+        return Market.goodFor(s) != null && !s.isDamageableItem() && s.getMaxStackSize() > 1 && !s.is(Items.POTION) && !s.is(Items.CHEST) && !s.is(Items.FURNACE) && !s.is(Items.CRAFTING_TABLE)
             && !s.is(Items.TORCH) && !s.is(Items.LADDER) && !s.is(Items.STICK) && !s.is(Items.DIRT)
             && !s.is(Items.COBBLESTONE) && !s.is(Items.WHEAT_SEEDS);
     }
@@ -672,7 +689,7 @@ public final class TownLife {
         return out;
     }
 
-    private static void write(SignBlockEntity sign, String[] lines) {
+    static void write(SignBlockEntity sign, String[] lines) {
         SignText now = sign.getFrontText();
         boolean same = true;
         for (int i = 0; i < 4; i++) {

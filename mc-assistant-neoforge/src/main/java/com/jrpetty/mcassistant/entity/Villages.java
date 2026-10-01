@@ -54,7 +54,15 @@ public final class Villages {
      * <p>{@code from} is the headcount at which the trade becomes worth having
      * at all — a village of four has no business keeping a guard.
      */
-    private record Slot(AssistantEntity.StationTask trade, int weight, int from) {}
+    private record Slot(AssistantEntity.StationTask trade, int weight, int from, Age age, int max) {
+        Slot(AssistantEntity.StationTask trade, int weight, int from) { this(trade, weight, from, Age.WOOD, Integer.MAX_VALUE); }
+
+        /** Does a village of this many, in this age, want the trade at all? */
+        boolean wanted(int total, Age at) { return total >= from && at.ordinal() >= age.ordinal(); }
+
+        /** Its share of a village this size, never past the most the village wants of it. */
+        double target(int total) { return Math.min(max, weight * total / (double) VILLAGE_SIZE); }
+    }
 
     private static final List<Slot> SLOTS = List.of(
         new Slot(AssistantEntity.StationTask.FARM, 4, 1),
@@ -72,7 +80,16 @@ public final class Villages {
         new Slot(AssistantEntity.StationTask.HAUL, 1, 12),
         new Slot(AssistantEntity.StationTask.STORE, 1, 13),
         new Slot(AssistantEntity.StationTask.RANCH, 1, 14),
-        new Slot(AssistantEntity.StationTask.FISH, 1, 16));
+        new Slot(AssistantEntity.StationTask.FISH, 1, 16),
+        // The crafts, as a village grows into them: each wants its age and its building
+        // (Crafts, Cafe), and one or two hands at most, however big the town.
+        new Slot(AssistantEntity.StationTask.COOK, 1, 14, Age.STONE, 2),
+        new Slot(AssistantEntity.StationTask.SMITH, 1, 16, Age.IRON, 1),
+        new Slot(AssistantEntity.StationTask.TAILOR, 1, 18, Age.STONE, 1),
+        new Slot(AssistantEntity.StationTask.SHOP, 1, 18, Age.IRON, 1),
+        new Slot(AssistantEntity.StationTask.BEEKEEP, 1, 20, Age.STONE, 2),
+        new Slot(AssistantEntity.StationTask.BREW, 1, 22, Age.DIAMOND, 1),
+        new Slot(AssistantEntity.StationTask.ENCHANT, 1, 24, Age.NETHER, 1));
 
     /** Forget every settlement. For tests, which share one JVM and would
      *  otherwise inherit each other's villages. */
@@ -207,6 +224,8 @@ public final class Villages {
         BUILT.clear();
         BUILT_AT.clear();
         TownLife.resetForTests();
+        Crafts.resetForTests();
+        Cafe.resetForTests();
         Roads.reset();
         LAST_PROJECT.clear();
         POP.clear();
@@ -423,12 +442,13 @@ public final class Villages {
         // and count against the ROLL, not the room: a newborn in a town of a
         // hundred with thirty loaded must not size its village at thirty.
         int total = Math.max(1, Math.max(folk.size(), headcount(villageId)));
+        Age at = villageId == null ? Age.WOOD : ageOf(villageId);
         AssistantEntity.StationTask best = AssistantEntity.StationTask.FARM;
         double bestDeficit = -Double.MAX_VALUE;
         int bestWeight = 0;
         for (Slot slot : SLOTS) {
-            if (total < slot.from()) continue;          // too small to want one yet
-            double target = slot.weight() * total / (double) VILLAGE_SIZE;
+            if (!slot.wanted(total, at)) continue;      // too small (or too young) to want one yet
+            double target = slot.target(total);
             double deficit = target - have.getOrDefault(slot.trade(), 0);
             // Ties break toward the trade the village wants most of, which
             // keeps a young settlement growing food before it grows anything
@@ -460,8 +480,10 @@ public final class Villages {
                 have.merge(a.stationTask(), 1, Integer::sum);
             }
         }
+        Age at = villageId == null ? Age.WOOD : ageOf(villageId);
         for (Slot slot : SLOTS) {
-            if (total < slot.from()) continue;       // too small to want one yet
+            if (!slot.wanted(total, at)) continue;   // too small (or too young) to want one yet
+            if (slot.age() != Age.WOOD) continue;    // a craft is never worth taking a farmer off the fields for
             if (have.getOrDefault(slot.trade(), 0) == 0) return slot.trade();
         }
         return null;
@@ -481,7 +503,7 @@ public final class Villages {
         for (AssistantEntity a : folk) if (a.stationTask() == trade) have++;
         for (Slot slot : SLOTS) {
             if (slot.trade() != trade) continue;
-            double target = slot.weight() * total / (double) VILLAGE_SIZE;
+            double target = slot.target(total);
             // One over the share, and never below one: the last farmer in a
             // village is not spare however the arithmetic reads.
             return have > Math.max(1, (int) Math.ceil(target));
@@ -996,6 +1018,7 @@ public final class Villages {
         if (!house && folk >= housing(villageId) - 5) out.add("house");
         if (built(villageId, "smeltery") < 1) out.add("smeltery");
         if (built(villageId, "hall") < 1) out.add("hall");
+        if (folk >= 14 && built(villageId, "cafe") < 1) out.add("cafe");
         if (at == Age.STONE) { housesForBeds(villageId, folk, out); return out; }
 
         if (built(villageId, "workshop") < 1) out.add("workshop");
@@ -1005,13 +1028,19 @@ public final class Villages {
         if (built(villageId, "market") < 1) out.add("market");
         String pen = penIfWanted(villageId, folk);
         if (pen != null) out.add(pen);
+        // The crafts' buildings come after everything the age itself asks for: a smithy and a
+        // shop are what a big Iron Age town has, not what makes it one.
+        if (folk >= 16 && built(villageId, "smithy") < 1) out.add("smithy");
+        if (folk >= 18 && built(villageId, "shop") < 1) out.add("shop");
         if (at == Age.IRON) { housesForBeds(villageId, folk, out); return out; }
 
         if (built(villageId, "lighthouse") < 1) out.add("lighthouse");
         if (built(villageId, "chapel") < 1) out.add("chapel");
+        if (folk >= 22 && built(villageId, "brewery") < 1) out.add("brewery");
         if (at == Age.DIAMOND) { housesForBeds(villageId, folk, out); return out; }
 
         if (built(villageId, "gateway") < 1) out.add("gateway");
+        if (folk >= 24 && built(villageId, "library") < 1) out.add("library");
         housesForBeds(villageId, folk, out);   // (the Nether Age: before the great works)
         // And then the great works, one after another for as long as the village stands:
         // a town that has been everywhere its ages lead goes on building.
@@ -1131,6 +1160,11 @@ public final class Villages {
             case "pen" -> "a pen, for the rancher's herd";
             case "market" -> "a market, stalls under one roof for what the village makes";
             case "chapel" -> "a chapel, which the Diamond Age asks for";
+            case "cafe" -> "a café, where folk can sit down to a drink and a bite on their break";
+            case "smithy" -> "a smithy, for the watch's armour and the miners' picks";
+            case "shop" -> "a shop, to sell what the village's crafts make";
+            case "brewery" -> "a brewery, for the brewer's potions";
+            case "library" -> "a library, where the enchanter keeps its books";
             case "gateway" -> "a gateway of obsidian, the way out of the world the Nether Age is named for";
             case "granary" -> "a granary (great work " + (renown(villageId) + 1) + "): a town that has come through every age goes on building";
             case "barracks" -> "barracks (great work " + (renown(villageId) + 1) + "), room for six more and a home for the watch";
@@ -1236,7 +1270,13 @@ public final class Villages {
     @Nullable
     public static BlockPos builtAt(UUID villageId, String structure) {
         Map<String, BlockPos> m = BUILT_AT.get(villageId);
-        return m == null ? null : m.get(structure);
+        BlockPos at = m == null ? null : m.get(structure);
+        if (at != null) return at;
+        // After a restart: the ledger (which the world keeps) knows where everything stands.
+        for (com.jrpetty.mcassistant.village.Ledger.Building b : com.jrpetty.mcassistant.village.Ledger.buildings(villageId)) {
+            if (b.structure().equals(structure)) return b.anchor();
+        }
+        return null;
     }
 
     /** Put back where a building stands, from what a folk remembers (the first to load wins). */

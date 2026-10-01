@@ -1,0 +1,95 @@
+# The cafe: a bright timber room with big windows on the street, a counter of
+# casks where the cook serves, a smoker and a bench behind it, little tables
+# with cloths and chairs round them, flowers by the door, lanterns overhead.
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name cafe
+layer -1
+.........
+.FFFFFFF.
+.FfffffFF
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FFFFFFF.
+..d...d..
+layer 0
+.........
+.LwwwwwL.
+.wM.TCCwS
+.wQQQQ.w.
+.w.....w.
+.wP...Pw.
+.w>...<w.
+.LwwDwwL.
+..*...*..
+layer 1
+.........
+.LWWWWWL.
+.W.....WS
+.G.....G.
+.G.....G.
+.GX...XG.
+.W.....W.
+.LGG.GGL.
+.........
+layer 2
+.........
+.LWWWWWL.
+.W.....WS
+.W..j..W.
+.W.....W.
+.W..j..W.
+.W.....W.
+.LWWWWWL.
+..j...j..
+layer 3
+vvvvvvvvv
+.L-----L.
+.|fffff|S
+.|fffff|.
+.|fffff|.
+.|fffff|.
+.|fffff|.
+.L-----L.
+^^^^^^^^^
+layer 4
+.........
+vvvvvvvvv
+.W.....WS
+.W.....W.
+.W.....W.
+.W.....W.
+.W.....W.
+^^^^^^^^^
+.........
+layer 5
+.........
+.........
+vvvvvvvvS
+.W.....W.
+.W.....W.
+.W.....W.
+^^^^^^^^^
+.........
+.........
+layer 6
+.........
+.........
+........S
+vvvvvvvvv
+.W.....W.
+^^^^^^^^^
+.........
+.........
+.........
+layer 7
+.........
+.........
+........S
+.........
+_________
+.........
+.........
+.........
+.........

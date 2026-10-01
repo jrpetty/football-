@@ -118,13 +118,46 @@ public final class Market {
         good("Glass", Items.GLASS, 0.2, 8, Villages.Task.NONE),
         good("Arrows", Items.ARROW, 0.1, 16, Villages.Task.NONE),
         good("Torches", Items.TORCH, 0.1, 16, Villages.Task.NONE),
-        good("Books", Items.BOOK, 2.0, 1, Villages.Task.NONE));
+        good("Books", Items.BOOK, 2.0, 1, Villages.Task.NONE),
+        good("Glass bottles", Items.GLASS_BOTTLE, 0.15, 8, Villages.Task.NONE),
+        good("Cocoa beans", Items.COCOA_BEANS, 0.3, 8, Villages.Task.NONE),
+        good("Sugar", Items.SUGAR, 0.1, 16, Villages.Task.NONE),
+        // What the crafts make, sold one at a time at the shop and the café.
+        good("Iron pickaxe", Items.IRON_PICKAXE, 6.0, 1, Villages.Task.NONE),
+        good("Iron sword", Items.IRON_SWORD, 4.0, 1, Villages.Task.NONE),
+        good("Iron axe", Items.IRON_AXE, 6.0, 1, Villages.Task.NONE),
+        good("Iron shovel", Items.IRON_SHOVEL, 3.0, 1, Villages.Task.NONE),
+        good("Iron hoe", Items.IRON_HOE, 4.0, 1, Villages.Task.NONE),
+        good("Shears", Items.SHEARS, 4.0, 1, Villages.Task.NONE),
+        good("Bucket", Items.BUCKET, 5.0, 1, Villages.Task.NONE),
+        good("Iron helmet", Items.IRON_HELMET, 9.0, 1, Villages.Task.NONE),
+        good("Iron chestplate", Items.IRON_CHESTPLATE, 14.0, 1, Villages.Task.NONE),
+        good("Iron leggings", Items.IRON_LEGGINGS, 12.0, 1, Villages.Task.NONE),
+        good("Iron boots", Items.IRON_BOOTS, 7.0, 1, Villages.Task.NONE),
+        new Good("Bed", s -> s.is(ItemTags.BEDS), 4.0, 1, Villages.Task.NONE),
+        new Good("Rugs", s -> s.is(ItemTags.WOOL_CARPETS), 0.3, 4, Villages.Task.NONE),
+        new Good("Banner", s -> s.is(ItemTags.BANNERS), 2.5, 1, Villages.Task.NONE));
+
+    /** The café's drinks, each its own good; then the brewer's potions. */
+    private static final List<Good> DRINKS_AND_POTIONS = drinksAndPotions();
+
+    private static List<Good> drinksAndPotions() {
+        List<Good> out = new ArrayList<>();
+        for (Cafe.Drink d : Cafe.DRINKS) {
+            out.add(new Good(d.name(), s -> d.id().equals(Cafe.drinkOf(s)), 0.8, 1, Villages.Task.NONE));
+        }
+        out.add(new Good("Potion", s -> s.is(Items.POTION) && !Cafe.isDrink(s)
+            && s.getOrDefault(net.minecraft.core.component.DataComponents.POTION_CONTENTS,
+                net.minecraft.world.item.alchemy.PotionContents.EMPTY).hasEffects(), 4.0, 1, Villages.Task.NONE));
+        return out;
+    }
 
     /** What the market calls this thing, or null if it does not deal in it. */
     @Nullable
     public static Good goodFor(ItemStack s) {
         if (s.isEmpty() || isCoin(s)) return null;
         for (Good g : GOODS) if (g.what().test(s)) return g;
+        for (Good g : DRINKS_AND_POTIONS) if (g.what().test(s)) return g;
         return null;
     }
 
@@ -369,29 +402,65 @@ public final class Market {
         if (shown.isEmpty()) return "Nothing on this counter today.";
         Good g = goodFor(shown);
         if (g == null) return "That's not for sale.";
-        Item it = shown.getItem();
-        int stock = stock(level, id, s -> s.is(it));
-        if (stock < g.bundle()) return "They've not got " + g.bundle() + " " + g.name().toLowerCase() + " to spare just now.";
-        int price = sellPrice(g, stock, md);
+        // The very thing on the counter: this potion, this drink, this enchanted pick.
+        Predicate<ItemStack> same = s -> ItemStack.isSameItemSameComponents(s, shown);
+        String lot = lotName(g, shown);
+        int stock = stock(level, id, same);
+        if (stock < g.bundle()) return "They've not got " + lot + " to spare just now.";
+        int price = price(g, shown, stock, md);
         if (title == Standing.Title.UNWELCOME) price *= 2;
         else if (title.atLeast(Standing.Title.FRIEND)) price = Math.max(1, price - price / 10);
+        if (p.isShiftKeyDown()) return lot + ": " + price + coinWord(price) + ". Right-click to buy.";
         int coins = coinsHeld(p);
         if (coins < price) {
-            return g.bundle() + " " + g.name().toLowerCase() + " for " + price + coinWord(price) + ". You have " + coins + ".";
+            return lot + " for " + price + coinWord(price) + ". You have " + coins + ".";
         }
-        if (!TownWork.take(level, v, s -> s.is(it), g.bundle())) return "They've not got that to spare just now.";
+        if (!TownWork.take(level, v, same, g.bundle())) return "They've not got that to spare just now.";
         payOut(p, price);
         Ledger.addCoins(id, price);
-        ItemStack lot = new ItemStack(it, g.bundle());
-        if (!p.getInventory().add(lot)) p.drop(lot, false);
+        ItemStack bought = shown.copyWithCount(g.bundle());
+        if (!p.getInventory().add(bought)) p.drop(bought, false);
         thanks(level, v, p);
-        return "Bought " + g.bundle() + " " + g.name().toLowerCase() + " for " + price + coinWord(price) + ".";
+        return "Bought " + lot + " for " + price + coinWord(price) + ".";
+    }
+
+    /** What a lot of this is called: "8 bread", or the thing's own name when it is one thing. */
+    private static String lotName(Good g, ItemStack shown) {
+        return g.bundle() > 1 ? g.bundle() + " " + g.name().toLowerCase() : shown.getHoverName().getString();
+    }
+
+    /** What the village asks for a lot of what is on a counter: more for an enchanted thing. */
+    static int price(Good g, ItemStack shown, int stock, boolean marketDay) {
+        int p = sellPrice(g, stock, marketDay);
+        return shown.isEnchanted() ? p * 3 : p;
+    }
+
+    /** A counter's price tag: what is on it and what a lot costs. */
+    public static String[] tagLines(ServerLevel level, UUID village, ItemStack shown) {
+        if (shown.isEmpty()) return new String[]{ "", "Sold out", "", "" };
+        Good g = goodFor(shown);
+        if (g == null) return new String[]{ "", "", "", "" };
+        boolean md = marketDay(village, level.getDayTime() / 24000L);
+        int p = price(g, shown, stock(level, village, s -> ItemStack.isSameItemSameComponents(s, shown)), md);
+        String name = g.bundle() > 1 ? g.bundle() + " " + g.name() : shown.getHoverName().getString();
+        String one = name, two = "";
+        if (name.length() > 15) {
+            int cut = name.lastIndexOf(' ', 15);
+            if (cut <= 0) cut = 15;
+            one = name.substring(0, cut).trim();
+            two = name.substring(cut).trim();
+            if (two.length() > 15) two = two.substring(0, 15);
+        }
+        return new String[]{ one, two, p + coinWord(p), md ? "Market day!" : "" };
     }
 
     private static String sell(ServerLevel level, Villages.Village v, Player p, ItemStack hand, Good g, boolean md) {
         UUID id = v.id();
         if (hand.getCount() < g.bundle()) return "The village buys " + g.name().toLowerCase() + " by the " + g.bundle() + ".";
+        if (hand.isDamaged()) return "Nobody here wants a worn " + hand.getHoverName().getString().toLowerCase() + ".";
         int price = buyPrice(g, stock(level, id, g.what()), md);
+        if (hand.isEnchanted()) price *= 2;
+        if (p.isShiftKeyDown()) return "The village would pay " + price + coinWord(price) + " for " + lotName(g, hand) + ".";
         if (Ledger.coins(id) < price) return "The village hasn't the coin to pay for that.";
         ItemStack lot = hand.copyWithCount(g.bundle());
         ItemStack left = intoStores(level, id, lot);

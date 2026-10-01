@@ -1520,6 +1520,159 @@ public class VillageGameTests {
     }
 
     /**
+     * The crafts, from one village's stores: a blacksmith beats iron into a pick or a blade, a
+     * tailor makes a bed, a beekeeper sets up a hive and takes its honey, a brewer brews
+     * healing, an enchanter binds books and enchants the smith's work, a cook makes apple
+     * cider. Then the café's counter shows the cider, a folk has one on its break, and a
+     * player buys one and the enchanted thing from the shop's counter.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "t32_crafts")
+    public static void t32_crafts(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(7000);
+        Kit.hold(level, 13600, 12000, 32);
+        Kit.prepare(level, 13600, 12000, 32);
+        BlockPos heart = Kit.surface(level, 13600, 12000);
+        VillageFolkEntity folk = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(folk != null, "a village");
+        java.util.UUID village = folk.ownerId();
+        Villages.Village v = Villages.get(village);
+        Villages.ageForTests(village, Villages.Age.NETHER);
+        BlockPos chest = Kit.surface(level, heart.getX() + 4, heart.getZ());
+        level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
+        com.jrpetty.mcassistant.entity.ZoneChests.mark(level, chest);
+        net.minecraft.world.Container box = (net.minecraft.world.Container) level.getBlockEntity(chest);
+        box.setItem(0, new ItemStack(Items.IRON_INGOT, 40));
+        box.setItem(1, new ItemStack(Items.OAK_PLANKS, 32));
+        box.setItem(2, new ItemStack(Items.WHITE_WOOL, 16));
+        box.setItem(3, new ItemStack(Items.GLASS_BOTTLE, 6));
+        box.setItem(4, new ItemStack(Items.GLASS, 6));
+        box.setItem(5, new ItemStack(Items.MELON_SLICE, 4));
+        box.setItem(6, new ItemStack(Items.GOLD_NUGGET, 4));
+        box.setItem(7, new ItemStack(Items.SUGAR_CANE, 6));
+        box.setItem(8, new ItemStack(Items.LEATHER, 2));
+        box.setItem(9, new ItemStack(Items.LAPIS_LAZULI, 9));
+        box.setItem(10, new ItemStack(Items.APPLE, 8));
+        box.setItem(11, new ItemStack(Items.POTATO, 20));
+        java.util.function.ToIntFunction<java.util.function.Predicate<ItemStack>> stock =
+            what -> com.jrpetty.mcassistant.entity.Market.stock(level, village, what);
+
+        // The blacksmith.
+        folk.setJob(StationTask.SMITH);
+        int iron = stock.applyAsInt(s -> s.is(Items.IRON_INGOT));
+        boolean smithed = com.jrpetty.mcassistant.entity.Crafts.now(folk, level, v);
+        int ironTools = stock.applyAsInt(s -> s.isDamageableItem()
+            && net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(s.getItem()).getPath().startsWith("iron_"));
+        Kit.log("t32 the blacksmith: " + smithed + ", iron " + iron + " -> " + stock.applyAsInt(s -> s.is(Items.IRON_INGOT))
+            + ", iron things in the stores " + ironTools);
+        helper.assertTrue(smithed && ironTools >= 1 && stock.applyAsInt(s -> s.is(Items.IRON_INGOT)) < iron,
+            "the blacksmith makes iron tools or armour out of the stores' iron");
+        // The tailor.
+        folk.setJob(StationTask.TAILOR);
+        java.util.function.Predicate<ItemStack> cloth = s -> s.is(ItemTags.BEDS) || s.is(ItemTags.WOOL_CARPETS) || s.is(ItemTags.BANNERS);
+        int clothBefore = stock.applyAsInt(cloth);
+        boolean tailored = com.jrpetty.mcassistant.entity.Crafts.now(folk, level, v);
+        Kit.log("t32 the tailor: " + tailored + ", beds/rugs/banners " + clothBefore + " -> " + stock.applyAsInt(cloth));
+        helper.assertTrue(tailored && stock.applyAsInt(cloth) > clothBefore, "the tailor makes a bed (or rugs, or a banner) from wool");
+        // The beekeeper: a hive, then the honey once it is full.
+        folk.setJob(StationTask.BEEKEEP);
+        boolean hived = com.jrpetty.mcassistant.entity.Crafts.now(folk, level, v);
+        BlockPos hive = null;
+        BlockPos c = folk.workZone().center();
+        for (BlockPos q : BlockPos.betweenClosed(c.offset(-6, -3, -6), c.offset(6, 4, 6))) {
+            if (level.getBlockState(q).is(Blocks.BEEHIVE)) { hive = q.immutable(); break; }
+        }
+        helper.assertTrue(hived && hive != null, "the beekeeper sets up a hive");
+        level.setBlock(hive, level.getBlockState(hive).setValue(net.minecraft.world.level.block.BeehiveBlock.HONEY_LEVEL, 5), 3);
+        boolean harvested = com.jrpetty.mcassistant.entity.Crafts.now(folk, level, v);
+        int honey = stock.applyAsInt(s -> s.is(Items.HONEY_BOTTLE) || s.is(Items.HONEYCOMB));
+        Kit.log("t32 the beekeeper: hive at " + hive.toShortString() + ", harvested " + harvested + ", honey " + honey
+            + ", bees " + level.getEntitiesOfClass(net.minecraft.world.entity.animal.Bee.class, new AABB(hive).inflate(8)).size());
+        helper.assertTrue(harvested && honey >= 1, "the beekeeper takes the honey from a full hive");
+        // The brewer.
+        folk.setJob(StationTask.BREW);
+        boolean brewed = com.jrpetty.mcassistant.entity.Crafts.now(folk, level, v);
+        int healing = stock.applyAsInt(s -> s.is(Items.POTION)
+            && s.getOrDefault(net.minecraft.core.component.DataComponents.POTION_CONTENTS,
+                net.minecraft.world.item.alchemy.PotionContents.EMPTY).is(net.minecraft.world.item.alchemy.Potions.HEALING));
+        Kit.log("t32 the brewer: " + brewed + ", potions of healing " + healing);
+        helper.assertTrue(brewed && healing == 3, "the brewer brews three potions of healing from a melon and gold");
+        // The enchanter: two books bound, then the smith's work enchanted.
+        folk.setJob(StationTask.ENCHANT);
+        int spells = 0;
+        for (int i = 0; i < 3; i++) if (com.jrpetty.mcassistant.entity.Crafts.now(folk, level, v)) spells++;
+        int enchanted = stock.applyAsInt(ItemStack::isEnchanted);
+        Kit.log("t32 the enchanter: " + spells + " pieces of work, enchanted things " + enchanted
+            + ", lapis left " + stock.applyAsInt(s -> s.is(Items.LAPIS_LAZULI)));
+        helper.assertTrue(spells >= 2 && enchanted >= 1, "the enchanter binds books and enchants the smith's work with lapis");
+        // The cook.
+        folk.setJob(StationTask.COOK);
+        boolean cooked = com.jrpetty.mcassistant.entity.Crafts.now(folk, level, v);
+        int drinks = stock.applyAsInt(com.jrpetty.mcassistant.entity.Cafe::isDrink);
+        Kit.log("t32 the cook: " + cooked + ", drinks " + drinks);
+        helper.assertTrue(cooked && drinks == 3, "the cook makes three apple ciders");
+
+        // The café, its counter set out.
+        BlockPos at = Kit.surface(level, heart.getX(), heart.getZ() - 16);
+        BuildGoal.stamp(level, "cafe", at, Direction.NORTH, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+        com.jrpetty.mcassistant.village.Ledger.built(village, "cafe", at, Direction.NORTH);
+        BlockPos shopAt = Kit.surface(level, heart.getX() + 16, heart.getZ() - 16);
+        BuildGoal.stamp(level, "shop", shopAt, Direction.NORTH, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+        com.jrpetty.mcassistant.village.Ledger.built(village, "shop", shopAt, Direction.NORTH);
+        com.jrpetty.mcassistant.entity.TownLife.dressNow(level, village, heart,
+            com.jrpetty.mcassistant.village.Ledger.buildings(village), java.util.List.of());
+        java.util.function.Function<BlockPos, java.util.List<ItemStack>> counters = where -> {
+            java.util.List<ItemStack> out = new java.util.ArrayList<>();
+            for (net.minecraft.world.entity.decoration.ItemFrame f : level.getEntitiesOfClass(
+                    net.minecraft.world.entity.decoration.ItemFrame.class, new AABB(where).inflate(6),
+                    f -> f.getTags().contains("mca_stall"))) {
+                if (!f.getItem().isEmpty()) out.add(f.getItem().copy());
+            }
+            return out;
+        };
+        java.util.List<ItemStack> menu = counters.apply(at);
+        java.util.List<String> tags = new java.util.ArrayList<>();
+        for (BlockPos q : BlockPos.betweenClosed(at.offset(-4, 0, -4), at.offset(4, 2, 4))) {
+            if (level.getBlockEntity(q) instanceof net.minecraft.world.level.block.entity.SignBlockEntity sign) {
+                tags.add(sign.getFrontText().getMessage(0, false).getString() + " / " + sign.getFrontText().getMessage(2, false).getString());
+            }
+        }
+        Kit.log("t32 the café's counter: " + menu.stream().map(s -> s.getHoverName().getString()).toList() + "; tags " + tags);
+        helper.assertTrue(menu.stream().anyMatch(com.jrpetty.mcassistant.entity.Cafe::isDrink),
+            "the café's counter has the cider on it");
+        helper.assertTrue(tags.stream().anyMatch(t -> t.startsWith("Apple Cider")), "with a price tag in front");
+        // A folk on its break.
+        folk.earn(10);
+        int purse = folk.purse();
+        String had = com.jrpetty.mcassistant.entity.Cafe.folkBuys(level, v, folk);
+        Kit.log("t32 at the café " + folk.displayNameCap() + " had " + had + "; purse " + purse + " -> " + folk.purse());
+        helper.assertTrue(had != null && folk.purse() < purse, "a folk buys a drink or a bite at the café out of its wages");
+        // A player at the café's counter, and at the shop's.
+        net.minecraft.world.entity.player.Player p = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        p.getInventory().setItem(20, new ItemStack(McAssistantMod.VILLAGE_COIN.get(), 64));
+        ItemStack cider = menu.stream().filter(com.jrpetty.mcassistant.entity.Cafe::isDrink).findFirst().orElse(ItemStack.EMPTY);
+        String bought = com.jrpetty.mcassistant.entity.Market.deal(level, v, p, cider);
+        folk.setJob(StationTask.SHOP);
+        String shopped = com.jrpetty.mcassistant.entity.Cafe.keepShop(level, v);
+        java.util.List<ItemStack> wares = counters.apply(shopAt);
+        ItemStack best = wares.stream().filter(ItemStack::isEnchanted).findFirst().orElse(ItemStack.EMPTY);
+        String boughtToo = com.jrpetty.mcassistant.entity.Market.deal(level, v, p, best);
+        int drinksHeld = 0, enchantedHeld = 0;
+        for (int i = 0; i < p.getInventory().getContainerSize(); i++) {
+            ItemStack s = p.getInventory().getItem(i);
+            if (com.jrpetty.mcassistant.entity.Cafe.isDrink(s)) drinksHeld += s.getCount();
+            if (s.isEnchanted()) enchantedHeld++;
+        }
+        Kit.log("t32 the player: " + bought + " / the shopkeeper: " + shopped + ", wares "
+            + wares.stream().map(s -> s.getHoverName().getString()).toList() + " / " + boughtToo
+            + " (" + com.jrpetty.mcassistant.entity.Market.coinsHeld(p) + " coins left)");
+        helper.assertTrue(drinksHeld == 1, "a player buys a cider at the café");
+        helper.assertTrue(enchantedHeld == 1, "and an enchanted thing from the shop");
+        helper.succeed();
+    }
+
+    /**
      * A village and the colony it founded: the road between them laid from one avenue to the
      * other, a bridge where it crosses water, a signpost at each end; then a caravan that sets
      * out with the mother's surplus bread, unloads it in the colony's stores, and comes home.

@@ -65,7 +65,9 @@ public class BuildGoal extends Goal {
         CLEAR,
         /** The finishing: a door, a lantern, water in a well, hay, barrels, flowers, a rug, an anvil,
          *  a cauldron, a bell. Each is put in if the village has it, and left out if not. */
-        DOOR, LANTERN, WATER, HAY, BARREL, FLOWER, CARPET, ANVIL, CAULDRON, BELL }
+        DOOR, LANTERN, WATER, HAY, BARREL, FLOWER, CARPET, ANVIL, CAULDRON, BELL,
+        /** The furniture of the crafts' buildings: put in if the village has it (or can make it). */
+        BOOKSHELF, LECTERN, ENCHANTING, BREWING, SMOKER, LOOM, GRINDSTONE }
 
     /** One block of a building: where, what part, what it is for (Blueprints.Style), and which way it faces. */
     public record Placement(BlockPos pos, Part part, Blueprints.Style style, Blueprints.Way way) {
@@ -200,7 +202,14 @@ public class BuildGoal extends Goal {
         return part == Part.BLOCK || part == Part.FENCE || part == Part.GATE || part == Part.WINDOW
             || part == Part.OBSIDIAN || part == Part.DOOR || part == Part.LANTERN || part == Part.HAY
             || part == Part.BARREL || part == Part.FLOWER || part == Part.CARPET || part == Part.ANVIL
-            || part == Part.CAULDRON || part == Part.BELL;
+            || part == Part.CAULDRON || part == Part.BELL || isFurniture(part);
+    }
+
+    /** The crafts' furniture: a bookshelf, a lectern, an enchanting table, a brewing stand,
+     *  a smoker, a loom, a grindstone. */
+    public static boolean isFurniture(Part part) {
+        return part == Part.BOOKSHELF || part == Part.LECTERN || part == Part.ENCHANTING || part == Part.BREWING
+            || part == Part.SMOKER || part == Part.LOOM || part == Part.GRINDSTONE;
     }
 
     /** Decorative parts skipped (not blocked-on) when we lack the item. */
@@ -211,7 +220,7 @@ public class BuildGoal extends Goal {
         return part == Part.TORCH || part == Part.WINDOW || part == Part.BED || part == Part.DOOR
             || part == Part.LANTERN || part == Part.WATER || part == Part.HAY || part == Part.BARREL
             || part == Part.FLOWER || part == Part.CARPET || part == Part.ANVIL || part == Part.CAULDRON
-            || part == Part.BELL;
+            || part == Part.BELL || isFurniture(part);
     }
 
     /** Things that hang from, stand on or lie on something else go in last, when it is there. */
@@ -244,6 +253,13 @@ public class BuildGoal extends Goal {
             case ANVIL -> s -> s.is(ItemTags.ANVIL);
             case CAULDRON -> s -> s.is(Items.CAULDRON);
             case BELL -> s -> s.is(Items.BELL);
+            case BOOKSHELF -> s -> s.is(Items.BOOKSHELF);
+            case LECTERN -> s -> s.is(Items.LECTERN);
+            case ENCHANTING -> s -> s.is(Items.ENCHANTING_TABLE);
+            case BREWING -> s -> s.is(Items.BREWING_STAND);
+            case SMOKER -> s -> s.is(Items.SMOKER);
+            case LOOM -> s -> s.is(Items.LOOM);
+            case GRINDSTONE -> s -> s.is(Items.GRINDSTONE);
         };
     }
 
@@ -271,6 +287,13 @@ public class BuildGoal extends Goal {
             case ANVIL -> "an anvil";
             case CAULDRON -> "a cauldron";
             case BELL -> "a bell";
+            case BOOKSHELF -> "bookshelves";
+            case LECTERN -> "a lectern";
+            case ENCHANTING -> "an enchanting table";
+            case BREWING -> "a brewing stand";
+            case SMOKER -> "a smoker";
+            case LOOM -> "a loom";
+            case GRINDSTONE -> "a grindstone";
         };
     }
 
@@ -811,6 +834,13 @@ public class BuildGoal extends Goal {
             case ANVIL -> Blocks.ANVIL.defaultBlockState();
             case CAULDRON -> Blocks.CAULDRON.defaultBlockState();
             case BELL -> Blocks.BELL.defaultBlockState();
+            case BOOKSHELF -> Blocks.BOOKSHELF.defaultBlockState();
+            case LECTERN -> Blocks.LECTERN.defaultBlockState();
+            case ENCHANTING -> Blocks.ENCHANTING_TABLE.defaultBlockState();
+            case BREWING -> Blocks.BREWING_STAND.defaultBlockState();
+            case SMOKER -> Blocks.SMOKER.defaultBlockState();
+            case LOOM -> Blocks.LOOM.defaultBlockState();
+            case GRINDSTONE -> Blocks.GRINDSTONE.defaultBlockState();
         };
     }
 
@@ -923,6 +953,18 @@ public class BuildGoal extends Goal {
                 || st.getBlock() instanceof net.minecraft.world.level.block.AnvilBlock) {
             Direction d = way.getAxis().isHorizontal() ? way : facing;
             st = st.setValue(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING, d);
+        }
+        if (st.getBlock() instanceof net.minecraft.world.level.block.LecternBlock
+                || st.getBlock() instanceof net.minecraft.world.level.block.LoomBlock
+                || st.getBlock() instanceof net.minecraft.world.level.block.SmokerBlock) {
+            Direction d = way.getAxis().isHorizontal() ? way : facing.getOpposite();
+            st = st.setValue(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING, d);
+        }
+        if (st.getBlock() instanceof net.minecraft.world.level.block.GrindstoneBlock) {
+            Direction d = way.getAxis().isHorizontal() ? way : facing.getOpposite();
+            st = st.setValue(net.minecraft.world.level.block.GrindstoneBlock.FACING, d)
+                .setValue(net.minecraft.world.level.block.GrindstoneBlock.FACE,
+                    net.minecraft.world.level.block.state.properties.AttachFace.FLOOR);
         }
         if (st.getBlock() instanceof net.minecraft.world.level.block.BellBlock) {
             Direction d = way.getAxis().isHorizontal() ? way : facing;

@@ -50,7 +50,8 @@ SIZE = 128
 # the folk's own right. The feet stand on y = 24.
 
 TRADES = ["none", "farmer", "lumberjack", "miner", "rancher", "guard",
-          "smelter", "fisher", "storekeeper", "hauler"]
+          "smelter", "fisher", "storekeeper", "hauler",
+          "blacksmith", "tailor", "beekeeper", "brewer", "enchanter", "cook", "shopkeeper"]
 
 PARTS = [
     # The body every folk has: a villager's head and nose, a coat over a body,
@@ -127,6 +128,49 @@ PARTS = [
     ("hauler_pack", "body", (0, 0, 0), (0, 0, 0), [(64, 10, -4, 0.5, 3.6, 8, 10, 4, 0)], "hauler"),
     ("hauler_roll", "body", (0, 0, 0), (0, 0, 0), [(88, 10, -5, -2.5, 4.1, 10, 3, 3, 0)], "hauler"),
     ("hauler_pan", "body", (0, 0, 0), (0, 0, 0), [(114, 10, 4, 3, 5, 1, 4, 3, 0)], "hauler"),
+
+    # Blacksmith: a long scorched apron, a headscarf knotted behind, a hammer at its hip.
+    ("blacksmith_apron", "body", (0, 0, 0), (0, 0, 0), [(64, 0, -4, 1.5, -4.5, 8, 15, 1, 0)], "blacksmith"),
+    ("blacksmith_scarf", "head", (0, 0, 0), (0, 0, 0), [(64, 17, -4, -10, -4, 8, 3, 8, 0.6)], "blacksmith"),
+    ("blacksmith_knot", "head", (0, 0, 0), (0, 0, 0), [(96, 17, -1, -9, 4.4, 2, 2, 1, 0)], "blacksmith"),
+    ("blacksmith_hammer", "body", (0, 0, 0), (0, 0, 0),
+     [(100, 0, 4.2, 8, -1, 1, 6, 1, 0), (104, 0, 3.7, 6.5, -2, 2, 2, 3, 0)], "blacksmith"),
+
+    # Tailor: a beret, a tape measure round its neck, a spool of thread at its belt.
+    ("tailor_beret", "head", (0, 0, 0), (0, 0, 0), [(64, 0, -4.5, -11, -4.5, 9, 2, 9, 0)], "tailor"),
+    ("tailor_tape", "body", (0, 0, 0), (0, 0, 0), [(64, 12, -4.5, -0.6, -3.5, 9, 1, 7, 0)], "tailor"),
+    ("tailor_spool", "body", (0, 0, 0), (0, 0, 0), [(100, 0, 1, 9.5, -4.5, 2, 3, 1, 0)], "tailor"),
+
+    # Beekeeper: a wide hat with a veil of netting to the shoulders, and a smoker at its belt.
+    ("beekeeper_crown", "head", (0, 0, 0), (0, 0, 0), [(64, 0, -4, -12, -4, 8, 3, 8, 0.6)], "beekeeper"),
+    ("beekeeper_brim", "head", (0, 0, 0), (0, 0, 0), [(64, 11, -7, -9, -7, 14, 1, 14, 0)], "beekeeper"),
+    ("beekeeper_veil", "head", (0, 0, 0), (0, 0, 0), [(64, 26, -6, -8.5, -6, 12, 9, 12, 0)], "beekeeper"),
+    ("beekeeper_smoker", "body", (0, 0, 0), (0, 0, 0), [(104, 0, 1.5, 8.5, -5, 2, 4, 2, 0)], "beekeeper"),
+
+    # Brewer: a soft cap, a stained apron and a belt of little vials.
+    ("brewer_cap", "head", (0, 0, 0), (0, 0, 0), [(64, 0, -4, -11, -4, 8, 2, 8, 0.6)], "brewer"),
+    ("brewer_apron", "body", (0, 0, 0), (0, 0, 0), [(64, 16, -4, 2, -4.5, 8, 13, 1, 0)], "brewer"),
+    ("brewer_vial_a", "body", (0, 0, 0), (0, 0, 0), [(100, 12, -3, 7.5, -5.6, 1, 2, 1, 0)], "brewer"),
+    ("brewer_vial_b", "body", (0, 0, 0), (0, 0, 0), [(104, 12, -1, 7.5, -5.6, 1, 2, 1, 0)], "brewer"),
+    ("brewer_vial_c", "body", (0, 0, 0), (0, 0, 0), [(108, 12, 1, 7.5, -5.6, 1, 2, 1, 0)], "brewer"),
+
+    # Enchanter: a tall pointed hat and a book of spells at its belt.
+    ("enchanter_hat_base", "head", (0, 0, 0), (0, 0, 0), [(64, 0, -5, -11, -5, 10, 2, 10, 0.3)], "enchanter"),
+    ("enchanter_hat_mid", "head", (0, 0, 0), (0, 0, 0), [(64, 12, -3, -14, -3, 6, 3, 6, 0)], "enchanter"),
+    ("enchanter_hat_tip", "head", (0, 0, 0), (0, 0, 0), [(88, 12, -1.5, -17, -1.5, 3, 3, 3, 0)], "enchanter"),
+    ("enchanter_book", "body", (0, 0, 0), (0, 0, 0), [(104, 0, -4.5, 9, -4.5, 3, 4, 1, 0)], "enchanter"),
+
+    # Cook: a tall white toque, an apron, and a wooden spoon tucked in its belt.
+    ("cook_band", "head", (0, 0, 0), (0, 0, 0), [(64, 0, -4, -11, -4, 8, 2, 8, 0.6)], "cook"),
+    ("cook_puff", "head", (0, 0, 0), (0, 0, 0), [(64, 12, -4.5, -15, -4.5, 9, 4, 9, 0)], "cook"),
+    ("cook_apron", "body", (0, 0, 0), (0, 0, 0), [(64, 26, -4, 2, -4.5, 8, 13, 1, 0)], "cook"),
+    ("cook_spoon", "body", (0, 0, 0), (0, 0, 0), [(100, 0, 3.5, 7.5, -4.5, 1, 5, 1, 0)], "cook"),
+
+    # Shopkeeper: a cap with a green visor, a striped apron and a coin purse.
+    ("shopkeeper_cap", "head", (0, 0, 0), (0, 0, 0), [(64, 0, -4, -10, -4, 8, 2, 8, 0.6)], "shopkeeper"),
+    ("shopkeeper_visor", "head", (0, 0, 0), (0, 0, 0), [(96, 0, -3.5, -8.5, -7, 7, 1, 3, 0)], "shopkeeper"),
+    ("shopkeeper_apron", "body", (0, 0, 0), (0, 0, 0), [(64, 12, -4, 3, -4.5, 8, 12, 1, 0)], "shopkeeper"),
+    ("shopkeeper_pouch", "body", (0, 0, 0), (0, 0, 0), [(100, 12, 1, 9, -5, 3, 3, 1, 0)], "shopkeeper"),
 ]
 
 
@@ -1223,6 +1267,235 @@ def outfit_hauler():
     return cv
 
 
+def apron_box(cv, name, base, scorch=(), pocket_row=None, stripes=None):
+    """A bib apron, front and back: edges darker, scorch marks, an optional pocket."""
+    ap = Box(cv, name)
+    la = cloth(base, 6, 140) if stripes is None else (lambda x, y: grain(base if x % 2 == 0 else stripes, x, y, 3, 141))
+
+    def front(x, y, w, h):
+        if y == 0 and x in (0, w - 1):
+            return False
+        c = la(x, y)
+        if x in (0, w - 1) or y == h - 1:
+            c = lit(c, 0.82)
+        if (x, y) in scorch:
+            c = lit(base, 0.45)
+        if pocket_row is not None and 2 <= x <= w - 3 and y == pocket_row:
+            c = lit(base, 0.7)
+        return c
+    ap.fill("front", front)
+    ap.fill("back", lambda x, y, w, h: False if y == 0 and x in (0, w - 1) else lit(la(x, y), 0.85))
+    for face in ("right", "left", "top", "bottom"):
+        ap.fill(face, lambda x, y, w, h: lit(base, 0.72))
+    return ap
+
+
+def outfit_blacksmith():
+    """Bare forearms black with soot, a sleeveless shirt, a long scorched leather
+    apron, a red headscarf, heavy boots; a hammer at its hip."""
+    cv = Canvas()
+    shirt = (70, 62, 58)
+    sh = cloth(shirt, 6, 150)
+    coat_to(cv, sh, 12)
+    sleeves(cv, sh, 2, cuff=lit(shirt, 0.8))
+    for name in ("right_arm", "left_arm"):
+        arm = Box(cv, name)
+        for y in range(5, 11):
+            arm.put("front", (y * 3) % 4, y, (92, 74, 64))               # soot on the forearms
+        arm.around(lambda s, y, sw, h, face, x: grain((52, 40, 32), s, y, 4, 151) if y >= 9 else None)
+    legs(cv, cloth((58, 50, 46), 5, 152), leather((40, 30, 24)), boot_from=8, sole=(22, 18, 16))
+    apron_box(cv, "blacksmith_apron", (88, 58, 36), scorch=((2, 5), (5, 9), (3, 12), (6, 3), (1, 10)), pocket_row=7)
+    sc = (162, 40, 36)
+    scarf = Box(cv, "blacksmith_scarf")
+    scarf.all(lambda face, x, y, w, h: grain(sc, x, y, 7, 153) if (x + y) % 5 else lit(sc, 0.8))
+    scarf.fill("bottom", lambda x, y, w, h: False if 1 <= x <= 6 and 1 <= y <= 6 else lit(sc, 0.7))
+    Box(cv, "blacksmith_knot").all(lambda face, x, y, w, h: lit(sc, 0.85))
+    hm = Box(cv, "blacksmith_hammer")
+    hm.all(lambda face, x, y, w, h: grain((112, 80, 50), x, y, 5, 154))
+    head = Canvas()
+    # the hammer's iron head is the second box: paint its faces on the same picture
+    fs = faces(104, 0, 2, 2, 3)
+    for face, (fx, fy, fw, fh) in fs.items():
+        for yy in range(fh):
+            for xx in range(fw):
+                cv.set(fx + xx, fy + yy, grain((92, 94, 102), xx, yy, 6, 155))
+    face_paint(cv, [(1, 8, (84, 70, 62)), (6, 7, (80, 66, 58))])
+    return cv
+
+
+def outfit_tailor():
+    """A crisp shirt, a waistcoat in its own colour, neat trousers, a beret;
+    a yellow tape measure round its neck and a spool at its belt."""
+    cv = Canvas()
+    shirt = (238, 234, 222)
+    sh = cloth(shirt, 4, 160)
+    coat = coat_to(cv, sh, 12)
+    wc = dyed((122, 44, 66), 228)
+    wcf = cloth(wc, 5, 161)
+    coat.fill("front", lambda x, y, w, h: (wcf(x, y) if (x <= 2 or x >= 5) or y >= 3 else None) if y < 11 else None)
+    coat.fill("right", lambda x, y, w, h: wcf(x, y) if y < 11 else None)
+    coat.fill("left", lambda x, y, w, h: wcf(x, y) if y < 11 else None)
+    coat.fill("back", lambda x, y, w, h: wcf(x, y) if y < 11 else None)
+    for y in range(3, 11, 2):
+        coat.put("front", 4, y, (226, 204, 120))                         # buttons
+    for (x, y) in ((1, 6), (2, 6), (1, 7)):
+        coat.put("front", x, y, (214, 60, 60))                           # a pincushion's pins
+    coat.row(11, lambda x: grain((44, 40, 46), x, 11, 3, 162))
+    sleeves(cv, sh, 9, cuff=(246, 244, 238))
+    legs(cv, cloth((70, 68, 80), 4, 163), lambda x, y: grain((36, 30, 30), x, y, 3, 164), boot_from=10, sole=(22, 18, 18))
+    be = dyed((58, 58, 110), 222)
+    bt = Box(cv, "tailor_beret")
+    bt.all(lambda face, x, y, w, h: grain(be, x, y, 6, 165))
+    bt.fill("top", lambda x, y, w, h: lit(be, 0.85) if (x, y) == (4, 4) else grain(be, x, y, 6, 165))
+    tape = Box(cv, "tailor_tape")
+    tape.all(lambda face, x, y, w, h: (232, 196, 70) if x % 3 else (60, 50, 30))
+    tape.fill("top", lambda x, y, w, h: False if 1 <= x <= w - 2 and 1 <= y <= h - 2 else (232, 196, 70))
+    tape.fill("bottom", lambda x, y, w, h: False if 1 <= x <= w - 2 and 1 <= y <= h - 2 else (210, 176, 62))
+    sp = Box(cv, "tailor_spool")
+    sp.all(lambda face, x, y, w, h: (150, 110, 70) if y in (0, h - 1) else (70, 120, 190))
+    return cv
+
+
+def outfit_beekeeper():
+    """A white bee-suit, gloves and boots, a wide hat with a net veil to the
+    shoulders; a smoker at its belt."""
+    cv = Canvas()
+    suit = (232, 230, 222)
+    sf = cloth(suit, 5, 170)
+    coat = coat_to(cv, sf, 18)
+    for y in (6, 12):
+        coat.row(y, lambda x: lit(suit, 0.9))                            # seams
+    coat.put("front", 3, 4, (196, 170, 70))                              # zip pull
+    for y in range(0, 17):
+        coat.put("front", 4, y, lit(suit, 0.86))                         # the zip
+    sleeves(cv, sf, 11, cuff=lit(suit, 0.88))
+    for name in ("right_arm", "left_arm"):
+        arm = Box(cv, name)
+        arm.around(lambda s, y, sw, h, face, x: grain((214, 186, 120), s, y, 4, 171) if y >= 8 else None)   # gloves
+    legs(cv, sf, leather((210, 206, 196)), boot_from=9, sole=(60, 58, 54))
+    st = (226, 206, 150)
+    cr = Box(cv, "beekeeper_crown")
+    crown(cr, lambda x, y: grain(st, x, y, 5, 172), band=(70, 64, 54))
+    brim(Box(cv, "beekeeper_brim"), lambda x, y: grain(st, x, y, 5, 173), lit(st, 0.82))
+    veil = Box(cv, "beekeeper_veil")
+    net = (34, 34, 30)
+
+    def mesh(x, y, w, h):
+        return net if (x % 2 == 0 or y % 2 == 0) else False
+    for face in ("right", "front", "left", "back"):
+        veil.fill(face, mesh)
+    veil.fill("top", lambda x, y, w, h: False)
+    veil.fill("bottom", lambda x, y, w, h: False)
+    sm = Box(cv, "beekeeper_smoker")
+    sm.all(lambda face, x, y, w, h: (150, 150, 158) if y > 0 else (90, 90, 96))
+    sm.fill("top", lambda x, y, w, h: (40, 40, 42))
+    return cv
+
+
+def outfit_brewer():
+    """A homespun shirt with rolled sleeves, a stained apron, a soft cap; a belt
+    of three little vials, green, red and blue."""
+    cv = Canvas()
+    shirt = (190, 170, 130)
+    sh = cloth(shirt, 6, 180)
+    coat = coat_to(cv, sh, 13)
+    belt(coat, 11, strap=(78, 52, 32), buckle=(190, 160, 80))
+    sleeves(cv, sh, 6, cuff=lit(shirt, 0.82))
+    legs(cv, cloth((80, 70, 60), 5, 181), leather((70, 48, 30)), boot_from=9, sole=(30, 24, 20))
+    apron_box(cv, "brewer_apron", (176, 166, 140), scorch=((2, 4), (5, 8), (3, 10)), pocket_row=6)
+    ap = Box(cv, "brewer_apron")
+    for (x, y, c) in ((2, 4, (90, 150, 70)), (5, 8, (150, 60, 90)), (3, 10, (70, 90, 160))):
+        ap.put("front", x, y, c)                                         # stains of the day's brews
+    cp = (96, 70, 110)
+    Box(cv, "brewer_cap").all(lambda face, x, y, w, h: grain(cp, x, y, 6, 182))
+    for name, glass in (("brewer_vial_a", (90, 200, 90)), ("brewer_vial_b", (210, 60, 70)), ("brewer_vial_c", (80, 120, 230))):
+        v = Box(cv, name)
+        v.all(lambda face, x, y, w, h, glass=glass: (150, 110, 70) if y == 0 else glass)
+    return cv
+
+
+def outfit_enchanter():
+    """A long robe to the ankles, deep blue with silver stars, a tall pointed hat;
+    a book of spells at its belt."""
+    cv = Canvas()
+    robe = dyed((52, 44, 120), 220)
+    rf = cloth(robe, 6, 190)
+
+    def starry(x, y):
+        if noise(x, y, 191) > 0.86:
+            return (214, 216, 236)
+        return rf(x, y)
+    coat = coat_to(cv, starry, 18)
+    coat.row(17, lambda x: (196, 170, 80))                               # gold hem
+    belt(coat, 9, strap=(150, 120, 50), buckle=(220, 200, 120))
+    sleeves(cv, starry, 11, cuff=(196, 170, 80))
+    legs(cv, starry, leather((50, 40, 60)), boot_from=11, sole=(24, 20, 30))
+    base = Box(cv, "enchanter_hat_base")
+    base.all(lambda face, x, y, w, h: starry(x, y))
+    base.fill("bottom", lambda x, y, w, h: False if 2 <= x <= 7 and 2 <= y <= 7 else lit(robe, 0.7))
+    Box(cv, "enchanter_hat_mid").all(lambda face, x, y, w, h: starry(x + 3, y + 5))
+    tip = Box(cv, "enchanter_hat_tip")
+    tip.all(lambda face, x, y, w, h: (214, 216, 236) if (face == "top") else starry(x + 7, y + 9))
+    bk = Box(cv, "enchanter_book")
+    bk.all(lambda face, x, y, w, h: grain((110, 40, 90), x, y, 4, 192))
+    bk.fill("right", lambda x, y, w, h: (232, 222, 196))
+    bk.fill("front", lambda x, y, w, h: (220, 196, 90) if (x, y) in ((1, 1), (1, 2)) else None)
+    face_paint(cv, [])
+    return cv
+
+
+def outfit_cook():
+    """Chef's whites: a double-breasted jacket, check trousers, a striped apron and
+    a tall toque; a wooden spoon at its belt."""
+    cv = Canvas()
+    white = (240, 238, 232)
+    wf = cloth(white, 4, 200)
+    coat = coat_to(cv, wf, 12)
+    for (x, y) in ((2, 2), (5, 2), (2, 5), (5, 5), (2, 8), (5, 8)):
+        coat.put("front", x, y, (210, 200, 180))                         # its two rows of buttons
+    coat.row(0, lambda x: (196, 52, 48))                                 # a red neckerchief
+    sleeves(cv, wf, 9, cuff=(226, 224, 218))
+
+    def check(x, y):
+        return (60, 60, 64) if (x // 2 + y // 2) % 2 else (226, 224, 220)
+    legs(cv, check, lambda x, y: grain((34, 30, 30), x, y, 3, 201), boot_from=10, sole=(20, 18, 18))
+    apron_box(cv, "cook_apron", (232, 228, 218), stripes=(70, 100, 160))
+    Box(cv, "cook_band").all(lambda face, x, y, w, h: grain(white, x, y, 3, 202))
+    puff = Box(cv, "cook_puff")
+    puff.all(lambda face, x, y, w, h: lit(white, 0.92) if (x % 3 == 0 and face != "top") else grain(white, x, y, 3, 203))
+    Box(cv, "cook_spoon").all(lambda face, x, y, w, h: grain((170, 126, 76), x, y, 5, 204))
+    return cv
+
+
+def outfit_shopkeeper():
+    """Shirtsleeves with garters, a bow tie, a green-and-white striped apron, a cap
+    with a green visor; a purse of coin at its belt."""
+    cv = Canvas()
+    shirt = (230, 226, 210)
+    sh = cloth(shirt, 4, 210)
+    coat = coat_to(cv, sh, 12)
+    coat.put("front", 3, 1, (150, 40, 44))                               # the bow tie
+    coat.put("front", 4, 1, (150, 40, 44))
+    coat.put("front", 2, 1, (120, 32, 36))
+    coat.put("front", 5, 1, (120, 32, 36))
+    coat.row(11, lambda x: grain((60, 46, 36), x, 11, 3, 211))
+    sleeves(cv, sh, 9, cuff=(240, 238, 230))
+    for name in ("right_arm", "left_arm"):
+        Box(cv, name).row(3, (60, 120, 70))                              # sleeve garters
+    legs(cv, cloth((78, 70, 62), 4, 212), lambda x, y: grain((50, 36, 26), x, y, 3, 213), boot_from=10, sole=(26, 20, 16))
+    green = dyed((48, 120, 72), 232)
+    apron_box(cv, "shopkeeper_apron", green, stripes=(232, 230, 220))
+    cap = Box(cv, "shopkeeper_cap")
+    crown(cap, lambda x, y: grain((232, 228, 216), x, y, 3, 214), band=(48, 120, 72))
+    vs = Box(cv, "shopkeeper_visor")
+    vs.all(lambda face, x, y, w, h: (60, 150, 90))
+    vs.fill("bottom", lambda x, y, w, h: (40, 110, 66))
+    pu = Box(cv, "shopkeeper_pouch")
+    pu.all(lambda face, x, y, w, h: grain((120, 84, 48), x, y, 4, 215))
+    pu.fill("front", lambda x, y, w, h: (214, 180, 70) if (x, y) == (1, 1) else None)
+    return cv
+
+
 OUTFITS = {
     "none": outfit_none,
     "farmer": outfit_farmer,
@@ -1234,9 +1507,17 @@ OUTFITS = {
     "fisher": outfit_fisher,
     "storekeeper": outfit_storekeeper,
     "hauler": outfit_hauler,
+    "blacksmith": outfit_blacksmith,
+    "tailor": outfit_tailor,
+    "beekeeper": outfit_beekeeper,
+    "brewer": outfit_brewer,
+    "enchanter": outfit_enchanter,
+    "cook": outfit_cook,
+    "shopkeeper": outfit_shopkeeper,
 }
 GLOWS = {"miner": miner_glow}
-DYED = ("none", "farmer", "lumberjack", "rancher", "guard", "storekeeper", "hauler")
+DYED = ("none", "farmer", "lumberjack", "rancher", "guard", "storekeeper", "hauler",
+        "tailor", "enchanter", "shopkeeper")
 
 
 # ------------------------------------------------------------------------ Java

@@ -157,7 +157,7 @@ public final class VillageCommands {
         AssistantEntity.StationTask[] trades = AssistantEntity.StationTask.values();
         int stood = 0;
         for (int i = 0; i < trades.length; i++) {
-            double off = (i - (trades.length - 1) / 2.0) * 1.6;
+            double off = (i - (trades.length - 1) / 2.0) * 1.4;
             double x = at.x + fx * 4.0 + sx * off;
             double z = at.z + fz * 4.0 + sz * off;
             net.minecraft.core.BlockPos ground = groundAt(level, (int) Math.floor(x), (int) Math.floor(z));
@@ -179,6 +179,13 @@ public final class VillageCommands {
                     case FISH -> net.minecraft.world.item.Items.FISHING_ROD;
                     case STORE -> net.minecraft.world.item.Items.BOOK;
                     case HAUL -> net.minecraft.world.item.Items.CHEST;
+                    case SMITH -> net.minecraft.world.item.Items.MACE;
+                    case TAILOR -> net.minecraft.world.item.Items.STRING;
+                    case BEEKEEP -> net.minecraft.world.item.Items.HONEYCOMB;
+                    case BREW -> net.minecraft.world.item.Items.POTION;
+                    case ENCHANT -> net.minecraft.world.item.Items.ENCHANTED_BOOK;
+                    case COOK -> net.minecraft.world.item.Items.BREAD;
+                    case SHOP -> McAssistantMod.VILLAGE_COIN.get();
                     case NONE -> net.minecraft.world.item.Items.AIR;
                 }));
             folk.rename(switch (trades[i]) {
@@ -192,6 +199,7 @@ public final class VillageCommands {
                 case STORE -> "Storekeeper";
                 case HAUL -> "Hauler";
                 case NONE -> "Newcomer";
+                default -> trades[i].title;
             });
             folk.addTag("folk_lineup");
             if (level.addFreshEntity(folk)) stood++;

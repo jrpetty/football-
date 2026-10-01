@@ -33,7 +33,8 @@ public final class Showcase {
     /** The buildings, in the order they are shown. */
     public static final List<String> ORDER = List.of(
         "house", "guesthouse", "storage", "shelter", "well", "smeltery", "workshop", "granary",
-        "market", "watchtower", "lighthouse", "monument", "gateway", "hall", "chapel", "barracks");
+        "market", "watchtower", "lighthouse", "monument", "gateway", "hall", "chapel", "barracks",
+        "smithy", "brewery", "library", "cafe", "shop");
 
     /** A palette: the woods and stones a building is made of. */
     public record Palette(Block walls, Block frame, Block roofStair, Block roofSlab, Block roofBlock, Block floor,
@@ -92,6 +93,13 @@ public final class Showcase {
                 case ANVIL -> Blocks.ANVIL;
                 case CAULDRON -> Blocks.CAULDRON;
                 case BELL -> Blocks.BELL;
+                case BOOKSHELF -> Blocks.BOOKSHELF;
+                case LECTERN -> Blocks.LECTERN;
+                case ENCHANTING -> Blocks.ENCHANTING_TABLE;
+                case BREWING -> Blocks.BREWING_STAND;
+                case SMOKER -> Blocks.SMOKER;
+                case LOOM -> Blocks.LOOM;
+                case GRINDSTONE -> Blocks.GRINDSTONE;
                 case CLEAR -> null;
             };
             return b == null ? null : b.defaultBlockState();
@@ -184,7 +192,8 @@ public final class Showcase {
         STAGED.clear();
         VIEWS.clear();
         java.util.Set<Long> taken = new java.util.HashSet<>();
-        List<String> wanted = new ArrayList<>(List.of("storage", "market", "workshop", "smeltery", "hall", "chapel",
+        List<String> wanted = new ArrayList<>(List.of("storage", "market", "cafe", "shop", "workshop", "smeltery", "smithy",
+            "brewery", "library", "hall", "chapel",
             "barracks", "watchtower", "watchtower", "watchtower", "watchtower", "granary", "guesthouse", "lighthouse",
             "gateway"));
         for (int i = 0; i < 22; i++) wanted.add("house");
@@ -236,6 +245,24 @@ public final class Showcase {
             net.minecraft.world.item.Items.PUMPKIN, net.minecraft.world.item.Items.MELON_SLICE, net.minecraft.world.item.Items.EGG,
             net.minecraft.world.item.Items.WHITE_WOOL, net.minecraft.world.item.Items.IRON_INGOT, net.minecraft.world.item.Items.HONEYCOMB,
             net.minecraft.world.item.Items.COOKED_COD, net.minecraft.world.item.Items.SWEET_BERRIES, net.minecraft.world.item.Items.POTATO));
+        // The café's counter and the shop's, set out (the showcase has no stores to set them from).
+        for (Ledger.Building b : STAGED) {
+            if (b.structure().equals("cafe")) {
+                List<net.minecraft.world.item.ItemStack> menu = new ArrayList<>();
+                for (int i = 0; i < 3; i++) menu.add(com.jrpetty.mcassistant.entity.Cafe.drink(com.jrpetty.mcassistant.entity.Cafe.DRINKS.get(i)));
+                menu.add(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.PUMPKIN_PIE));
+                com.jrpetty.mcassistant.entity.Cafe.setOut(level, SHOWCASE, b, menu);
+                view("t15-cafe", inside(b, 2), b.anchor().relative(b.facing(), 1));
+            } else if (b.structure().equals("shop")) {
+                com.jrpetty.mcassistant.entity.Cafe.setOut(level, SHOWCASE, b, List.of(
+                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_PICKAXE),
+                    net.minecraft.world.item.alchemy.PotionContents.createItemStack(net.minecraft.world.item.Items.POTION,
+                        net.minecraft.world.item.alchemy.Potions.HEALING),
+                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.RED_BED),
+                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.HONEY_BOTTLE)));
+                view("t16-shop", inside(b, 2), b.anchor());
+            }
+        }
         // Where to stand to look at each of them.
         view("t7-stall", heart.offset(3, 1, 9), heart.offset(8, 1, 8));
         view("t8-street-sign", heart.offset(0, 1, 14), heart.offset(3, 1, 17));
@@ -264,6 +291,13 @@ public final class Showcase {
     public static final List<String> VIEWS = new ArrayList<>();
     /** The showcase town's own name for its streets. */
     public static final java.util.UUID SHOWCASE = java.util.UUID.nameUUIDFromBytes("mca-showcase".getBytes());
+
+    /** A spot inside a building, this far in from its door, at eye height. */
+    private static BlockPos inside(Ledger.Building b, int fromDoor) {
+        int[] half = BuildGoal.footprint(b.structure());
+        Direction front = b.facing().getOpposite();
+        return b.anchor().relative(front, Math.max(1, half[1] - fromDoor)).above();
+    }
 
     private static void view(String name, BlockPos eye, BlockPos at) {
         VIEWS.add("VIEW " + name + " " + eye.getX() + " " + eye.getY() + " " + eye.getZ()

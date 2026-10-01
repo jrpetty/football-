@@ -202,13 +202,16 @@ def main():
         shot(label)
 
     r.cmd("gamemode spectator %s" % USER)
-    look("5-lineup", px, py + 0.4, line - 11.0, px, py + 1.0, line, wait=8)
-    look("6-lineup-left", px + 5.6, py - 0.4, line - 3.4, px + 5.6, py + 1.1, line)
+    # Seventeen of them now, 1.4 apart: five close-ups of three or four at a time.
+    look("5-lineup", px, py + 0.6, line - 14.0, px, py + 1.0, line, wait=8)
+    look("6-lineup-left", px + 4.9, py - 0.4, line - 3.4, px + 4.9, py + 1.1, line)
+    look("6b-lineup-far-left", px + 9.8, py - 0.4, line - 3.4, px + 9.8, py + 1.1, line)
     look("7-lineup-middle", px, py - 0.4, line - 3.4, px, py + 1.1, line)
-    look("8-lineup-right", px - 5.6, py - 0.4, line - 3.4, px - 5.6, py + 1.1, line)
-    look("9-lineup-back", px, py + 0.2, line + 6.5, px, py + 1.0, line)
+    look("8-lineup-right", px - 4.9, py - 0.4, line - 3.4, px - 4.9, py + 1.1, line)
+    look("8b-lineup-far-right", px - 9.8, py - 0.4, line - 3.4, px - 9.8, py + 1.1, line)
+    look("9-lineup-back", px, py + 0.4, line + 9.0, px, py + 1.0, line)
     r.cmd("time set 18000")
-    miner = px + (4.5 - 3) * 1.6          # the fourth in the row is the miner
+    miner = px + (8 - 3) * 1.4            # the fourth in the row is the miner
     look("10-lamp-at-night", miner, py - 0.5, line - 2.6, miner, py + 1.4, line, wait=8)
     r.cmd("time set 6000")
     r.cmd("gamemode creative %s" % USER)

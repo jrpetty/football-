@@ -130,6 +130,13 @@ public final class Blueprints {
         key('a', BuildGoal.Part.ANVIL, Style.NONE, Way.RIGHT);
         key('&', BuildGoal.Part.CAULDRON, Style.NONE, Way.UP);
         key('e', BuildGoal.Part.BELL, Style.NONE, Way.FRONT);
+        key('K', BuildGoal.Part.BOOKSHELF, Style.NONE, Way.UP);
+        key('r', BuildGoal.Part.LECTERN, Style.NONE, Way.FRONT);
+        key('E', BuildGoal.Part.ENCHANTING, Style.NONE, Way.UP);
+        key('I', BuildGoal.Part.BREWING, Style.NONE, Way.UP);
+        key('M', BuildGoal.Part.SMOKER, Style.NONE, Way.FRONT);
+        key('N', BuildGoal.Part.LOOM, Style.NONE, Way.FRONT);
+        key('V', BuildGoal.Part.GRINDSTONE, Style.NONE, Way.FRONT);
     }
 
     private static final Map<String, List<Cell>> DRAWINGS = new ConcurrentHashMap<>();

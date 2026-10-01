@@ -53,7 +53,8 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
 
     /** The trades whose outfit has a part dyed in its wearer's (or its village's) colour. */
     private static final java.util.Set<String> DYED = java.util.Set.of(
-        "none", "farmer", "lumberjack", "rancher", "guard", "storekeeper", "hauler");
+        "none", "farmer", "lumberjack", "rancher", "guard", "storekeeper", "hauler",
+        "tailor", "enchanter", "shopkeeper");
 
     static {
         for (int i = 0; i < FolkModel.TRADES.length; i++) {
@@ -301,6 +302,13 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
             case FISH -> Items.FISHING_ROD;
             case STORE -> Items.CHEST;
             case HAUL -> Items.HOPPER;
+            case SMITH -> Items.ANVIL;
+            case TAILOR -> Items.WHITE_WOOL;
+            case BEEKEEP -> Items.HONEYCOMB;
+            case BREW -> Items.BREWING_STAND;
+            case ENCHANT -> Items.ENCHANTED_BOOK;
+            case COOK -> Items.CAKE;
+            case SHOP -> Items.EMERALD;
             case NONE -> Items.AIR;
         });
     }

@@ -185,6 +185,61 @@ added a little at a time round those buildings:
     will tell you where it is headed; ask to trade and it will offer what it is
     carrying.
 
+### The crafts, the café and the shop
+
+As a village grows, some of the newcomers take up a craft instead of the fields. Each
+craft wants an age and a headcount, and the village keeps only one or two of each
+however big it gets. Nobody is taken off the farms to fill one; crafts go to folk
+born or grown up into a big enough village.
+
+| Trade | From | Works at | What it does |
+|---|---|---|---|
+| Cook | Stone Age, 14 folk | the café | Bakes potatoes, roasts meat and fish, bakes bread, cookies and pumpkin pie, and makes drinks |
+| Tailor | Stone Age, 18 folk | the workshop | Makes beds (in the colour of the wool), rugs and banners |
+| Beekeeper | Stone Age, 20 folk | a meadow outside town | Sets up two hives, plants flowers round them, and takes the honey (or the comb, without bottles) when a hive is full |
+| Blacksmith | Iron Age, 16 folk | the smithy | Makes iron picks for the miners, swords and armour for the watch, shears, buckets, axes and hoes, and keeps a few of each in the stores |
+| Shopkeeper | Iron Age, 18 folk | the shop | Sets out what the crafts have made on the shop's counter |
+| Brewer | Diamond Age, 22 folk | the brewery | Brews potions three at a time: healing for the watch, then swiftness, night vision, leaping, water breathing, fire resistance and strength |
+| Enchanter | Nether Age, 24 folk | the library | Binds books from cane and leather, then enchants the village's iron and diamond tools and armour with lapis |
+
+Every craft works out of the village's stores and puts what it makes back into
+them, a piece of work every twenty seconds or so. A blacksmith always leaves a few
+bars of iron for the village, and a cook never uses the last of the seed crops.
+
+**Drinks.** The cook makes six drinks, three bottles at a time (from glass bottles,
+or glass). Each does a little good:
+
+| Drink | Made from | Does |
+|---|---|---|
+| Apple Cider | apples | absorption for a minute |
+| Berry Juice | sweet berries | jump boost for a minute |
+| Honey Tea | a honey bottle | regeneration for ten seconds |
+| Hot Cocoa | cocoa beans | a little food |
+| Melon Juice | melon slices | speed for a minute |
+| Carrot Juice | carrots | night vision for a minute and a half |
+
+**The café and the shop.** Each has a counter of casks. Every cask has one thing
+on it, in a frame, and a price tag in front. The café shows its drinks first, then
+whatever food is ready; the shop shows enchanted things first, then potions, then
+tools, armour, beds, rugs, banners, books and honey. A counter is only stocked
+while the village has a cook (for the café) or a shopkeeper (for the shop).
+
+* Right-click a counter to buy what is on it with village coin from your pack.
+  Crouch and right-click to ask the price first.
+* An enchanted thing costs three times as much. The village won't buy worn tools
+  from you, and pays double for enchanted ones.
+* Folk drop in to the café about one break in three, if they have a couple of coins
+  saved. They buy a drink or a bite, have it there and then, and the coin goes back
+  to the treasury.
+
+**Buildings.** A village builds a café from the Stone Age once it has 14 folk, a
+smithy (16) and a shop (18) in the Iron Age, a brewery (22) in the Diamond Age and
+a library (24) in the Nether Age. These come after everything the age itself asks
+for, so they never hold a village back from its next age. The builder makes their
+furniture from the stores: a smoker, loom, grindstone, bookshelves, a lectern, a
+brewing stand (from a blaze rod) and an enchanting table (from a book, two diamonds
+and four obsidian). Anything it can't make is left out.
+
 ### The buildings
 
 Every building is drawn. Each drawing is a text file in
@@ -217,6 +272,11 @@ with plain blocks, so a building is never held up.
 | Gateway | 9×5 | The Nether Age's obsidian frame on a stone dais between lantern pillars |
 | Wall | ring of 27 | Round the square: battlements, a gate onto each avenue, lantern pillars, corner towers |
 | Pen | 7×7 | Fence ring with a gate, once there is a rancher |
+| Café | 9×9 | Bright timber room with big windows on the street, a counter of casks, a smoker behind it, little tables and chairs, flowers by the door |
+| Shop | 9×9 | Timber shopfront with a window either side of the door, a counter of casks with the goods on it, shelves of barrels behind |
+| Smithy | 9×9 | Stone forge open to the street between log pillars: two furnaces under a brick hood, the anvil, a grindstone, a quenching tub, a bench and chests |
+| Brewery | 9×9 | Timber still-house on a stone footing: two brewing stands on a stone bench, cauldrons, casks, a window to the street |
+| Library | 9×9 | Stone hall with tall windows, walls lined with bookshelves, an enchanting table on a carpet between lecterns |
 
 Builders take the place the town plan has for the building. Of the first few good
 lots they pick the one that costs least to build on. They level it (filling the low
@@ -723,6 +783,12 @@ Every push to CI:
   (game test `t29`);
 * lays the road between a village and its colony, over a pond, with its signposts,
   and sends a caravan of bread down it and home again (game test `t31`);
+* runs every craft once from one village's stores (game test `t32`): the blacksmith
+  makes iron tools, the tailor a bed, the beekeeper a hive and then its honey, the
+  brewer three potions of healing, the enchanter books and then an enchanted tool,
+  the cook three apple ciders; the café's counter shows the cider with its price tag,
+  a folk buys something there, and a player buys a cider and the enchanted thing
+  from the shop's counter;
 * checks the money (game test `t30`): a new village's purse, gold minted into coin,
   a day's wages, prices that move with the stores, a folk's market-day treat, a
   player buying bread at a stall and selling iron, and the stalls' price signs;

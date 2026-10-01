@@ -138,6 +138,13 @@ public final class ClientSetup {
                 case FISH -> Items.FISHING_ROD;
                 case STORE -> Items.CHEST;
                 case HAUL -> Items.HOPPER;
+                case SMITH -> Items.ANVIL;
+                case TAILOR -> Items.WHITE_WOOL;
+                case BEEKEEP -> Items.HONEYCOMB;
+                case BREW -> Items.BREWING_STAND;
+                case ENCHANT -> Items.ENCHANTED_BOOK;
+                case COOK -> Items.CAKE;
+                case SHOP -> Items.EMERALD;
                 case NONE -> Items.AIR;
             });
         }

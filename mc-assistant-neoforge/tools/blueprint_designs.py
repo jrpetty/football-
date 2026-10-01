@@ -735,7 +735,216 @@ banded stone, a crown of light, and lanterns at the four corners.""")
     b.write()
 
 
+def smithy():
+    b = B("smithy", 4, 4, """The smithy: a stone forge open to the street between two log pillars, two
+furnaces under a brick hood, the anvil before them, a grindstone, a quenching
+tub, the smith's bench and its chests of finished tools.""")
+    b.fill(-3, 3, -1, -3, 3, "F")
+    b.fill(-2, 2, -1, -2, 2, "S")
+    for h in (0, 1, 2):
+        b.ring(-3, 3, h, -3, 3, "S" if h == 0 else "W", corner="L")
+        for x in (-2, -1, 0, 1, 2):
+            b.set(x, h, -3, ".")
+    for h in (0, 1, 2):
+        b.set(-3, h, -3, "L")
+        b.set(3, h, -3, "L")
+    b.set(-3, 1, 1, "G")
+    b.set(3, 1, 1, "G")
+    b.set(-1, 0, 2, "U")
+    b.set(1, 0, 2, "U")
+    b.set(0, 0, 2, "Z")
+    b.set(0, 0, 0, "a")
+    b.set(2, 0, -1, "V")
+    b.set(2, 0, 1, "&")
+    b.set(-2, 0, 1, "C")
+    b.set(-2, 0, -1, "T")
+    b.set(-2, 1, 1, "t")
+    b.ring(-3, 3, 3, -3, 3, "-", corner="L")
+    for z in range(-2, 3):
+        b.set(-3, 3, z, "|")
+        b.set(3, 3, z, "|")
+    b.fill(-2, 2, 3, -2, 2, "f")
+    hip(b, -4, 4, -4, 4, 3)
+    for h in range(1, 9):                                   # the forge's brick hood and chimney
+        for x in (-1, 0, 1):
+            if h >= 4 or x == 0 or h >= 2:
+                cur = b.get(x, h, 2)
+                if h >= 1 and (cur in (None, ".", "f", "-", "^", "v", "<", ">", "_") and h >= 3):
+                    b.set(x, h, 2, "Z")
+        b.set(0, h, 2, "Z") if h >= 1 else None
+    b.set(-1, 1, 2, "Z")
+    b.set(1, 1, 2, "Z")
+    b.set(-2, 2, -4, "j")
+    b.set(2, 2, -4, "j")
+    b.write()
+
+
+def brewery():
+    b = B("brewery", 4, 4, """The brewery: a timber still-house on a stone footing, two brewing stands on a
+stone bench, cauldrons of water, casks along the wall, a chest of finished
+brews, a glass window to the street, lanterns hung low over the work.""")
+    b.ring(-3, 3, -1, -3, 3, "F")
+    b.fill(-2, 2, -1, -2, 2, "f")
+    for h in (0, 1, 2):
+        b.ring(-3, 3, h, -3, 3, "w" if h == 0 else "W", corner="L")
+    b.set(0, 0, -3, "D")
+    b.set(0, 1, -3, ".")
+    for x in (-2, 2):
+        b.set(x, 1, -3, "G")
+    for z in (-1, 1):
+        b.set(-3, 1, z, "G")
+        b.set(3, 1, z, "G")
+    for x in (-1, 1):
+        b.set(x, 0, 2, "S")                                 # the stone bench
+        b.set(x, 1, 2, "I")                                 # brewing stands on it
+    b.set(0, 0, 2, "&")
+    b.set(2, 0, 2, "&")
+    for z in (-1, 0, 1):
+        b.set(-2, 0, z, "Q")                                # the casks
+    b.set(-2, 1, 0, "Q")
+    b.set(2, 0, 0, "C")
+    b.set(2, 0, -2, "T")
+    b.ring(-3, 3, 3, -3, 3, "-", corner="L")
+    for z in range(-2, 3):
+        b.set(-3, 3, z, "|")
+        b.set(3, 3, z, "|")
+    b.fill(-2, 2, 3, -2, 2, "f")
+    gable_x(b, -4, 4, -4, 4, 3, gable_x0=-3, gable_x1=3)
+    b.set(0, 2, 0, "j")
+    b.set(-2, 2, -4, "j")
+    b.set(2, 2, -4, "j")
+    for h in range(0, 8):                                   # a chimney for the stills
+        b.set(4, h, 1, "S")
+    b.set(4, -1, 1, "F")
+    b.write()
+
+
+def library():
+    b = B("library", 4, 5, """The library: a stone hall with tall windows, its walls lined with bookshelves,
+an enchanting table in the middle of a carpet, lecterns either side of it,
+and lanterns hung from the beams. The enchanter works here.""")
+    b.ring(-3, 3, -1, -4, 4, "F")
+    b.fill(-2, 2, -1, -3, 3, "f")
+    for h in (0, 1, 2, 3):
+        b.ring(-3, 3, h, -4, 4, "S" if h == 0 else "W", corner="L")
+    b.set(0, 0, -4, "D")
+    b.set(0, 1, -4, ".")
+    for z in (-2, 0, 2):
+        for h in (1, 2):
+            b.set(-3, h, z, "G")
+            b.set(3, h, z, "G")
+    for x in (-2, -1, 1, 2):
+        for h in (0, 1):
+            b.set(x, h, 3, "K")                             # shelves along the back wall
+    for z in (-3, -1, 1):
+        for h in (0, 1):
+            pass
+    for z in (-1, 1, 3):
+        b.set(-2, 0, z, "K")
+        b.set(2, 0, z, "K")
+    b.set(-2, 1, 1, "K")
+    b.set(2, 1, 1, "K")
+    for x in (-1, 0, 1):
+        for z in (-1, 0, 1):
+            b.set(x, 0, z, "X")                             # the carpet
+    b.set(0, 0, 0, "E")
+    b.set(-1, 0, -2, "r")
+    b.set(1, 0, -2, "r")
+    b.ring(-3, 3, 4, -4, 4, "-", corner="L")
+    for z in range(-3, 4):
+        b.set(-3, 4, z, "|")
+        b.set(3, 4, z, "|")
+    b.fill(-2, 2, 4, -3, 3, "f")
+    gable_z(b, -4, 4, -5, 5, 4, gable_z0=-4, gable_z1=4)
+    for z in (-2, 2):
+        b.set(0, 3, z, "j")
+    b.set(-2, 2, -5, "j")
+    b.set(2, 2, -5, "j")
+    b.write()
+
+
+def cafe():
+    b = B("cafe", 4, 4, """The cafe: a bright timber room with big windows on the street, a counter of
+casks where the cook serves, a smoker and a bench behind it, little tables
+with cloths and chairs round them, flowers by the door, lanterns overhead.""")
+    b.ring(-3, 3, -1, -3, 3, "F")
+    b.fill(-2, 2, -1, -2, 2, "f")
+    for h in (0, 1, 2):
+        b.ring(-3, 3, h, -3, 3, "w" if h == 0 else "W", corner="L")
+    b.set(0, 0, -3, "D")
+    b.set(0, 1, -3, ".")
+    for x in (-2, -1, 1, 2):
+        b.set(x, 1, -3, "G")                                # the big front windows
+    for z in (-1, 0, 1):
+        b.set(-3, 1, z, "G")
+        b.set(3, 1, z, "G")
+    for x in (-2, -1, 0, 1):
+        b.set(x, 0, 1, "Q")                                 # the counter
+    b.set(-2, 0, 2, "M")                                    # the smoker behind it
+    b.set(0, 0, 2, "T")
+    b.set(1, 0, 2, "C")
+    b.set(2, 0, 2, "C")
+    b.set(2, 0, -1, "P")                                    # a table with its cloth
+    b.set(2, 1, -1, "X")
+    b.set(2, 0, -2, "<")                                    # and its chairs
+    b.set(-2, 0, -1, "P")
+    b.set(-2, 1, -1, "X")
+    b.set(-2, 0, -2, ">")
+    b.ring(-3, 3, 3, -3, 3, "-", corner="L")
+    for z in range(-2, 3):
+        b.set(-3, 3, z, "|")
+        b.set(3, 3, z, "|")
+    b.fill(-2, 2, 3, -2, 2, "f")
+    gable_x(b, -4, 4, -4, 4, 3, gable_x0=-3, gable_x1=3)
+    b.set(0, 2, -1, "j")
+    b.set(0, 2, 1, "j")
+    b.set(-2, 2, -4, "j")
+    b.set(2, 2, -4, "j")
+    b.set(-2, -1, -4, "d")                                  # flowers either side of the door
+    b.set(-2, 0, -4, "*")
+    b.set(2, -1, -4, "d")
+    b.set(2, 0, -4, "*")
+    for h in range(0, 8):
+        b.set(4, h, 2, "S")
+    b.set(4, -1, 2, "F")
+    b.write()
+
+
+def shop():
+    b = B("shop", 4, 4, """The shop: a timber shopfront with a wide window either side of the door, a
+counter of casks across the room with the day's goods laid out on it, shelves
+of barrels and chests behind it, and a lantern over the door.""")
+    b.ring(-3, 3, -1, -3, 3, "F")
+    b.fill(-2, 2, -1, -2, 2, "f")
+    for h in (0, 1, 2):
+        b.ring(-3, 3, h, -3, 3, "w" if h == 0 else "W", corner="L")
+    b.set(0, 0, -3, "D")
+    b.set(0, 1, -3, ".")
+    for x in (-2, -1, 1, 2):
+        b.set(x, 1, -3, "G")
+    for z in (-1, 1):
+        b.set(-3, 1, z, "G")
+        b.set(3, 1, z, "G")
+    for x in (-2, -1, 1, 2):
+        b.set(x, 0, 0, "Q")                                 # the counter, a gap to get behind
+    for x in (-2, -1, 0, 1, 2):
+        b.set(x, 0, 2, "Q" if x % 2 else "C")               # shelves of barrels and chests
+        b.set(x, 1, 2, "Q")
+    b.set(0, 1, 0, "l")
+    b.ring(-3, 3, 3, -3, 3, "-", corner="L")
+    for z in range(-2, 3):
+        b.set(-3, 3, z, "|")
+        b.set(3, 3, z, "|")
+    b.fill(-2, 2, 3, -2, 2, "f")
+    gable_x(b, -4, 4, -4, 4, 3, gable_x0=-3, gable_x1=3)
+    b.set(0, 2, -4, "j")
+    b.set(-2, 2, 1, "j")
+    b.set(2, 2, 1, "j")
+    b.write()
+
+
 ALL = [house, guesthouse, storage, shelter, well, smeltery, workshop, hall, market, watchtower,
+       smithy, brewery, library, cafe, shop,
        lighthouse, chapel, gateway, granary, barracks, monument]
 
 if __name__ == "__main__":
