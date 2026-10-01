@@ -247,8 +247,14 @@ public final class Land {
             || s.is(Blocks.SANDSTONE) || s.is(Blocks.TERRACOTTA);
     }
 
-    /** Within (or right beside) something the village built. */
+    /** Within (or right beside) something the village built, or is building. */
     static boolean inABuilding(UUID village, BlockPos at) {
+        for (Map.Entry<String, Villages.Site> e : Villages.sitesOf(village).entrySet()) {
+            int[] half = com.jrpetty.mcassistant.entity.goal.BuildGoal.footprint(e.getKey());
+            int r = Math.max(Math.max(half[0], half[1]), e.getValue().radius()) + 2;
+            BlockPos c = e.getValue().anchor();
+            if (Math.abs(at.getX() - c.getX()) <= r && Math.abs(at.getZ() - c.getZ()) <= r) return true;
+        }
         for (Ledger.Building b : Ledger.buildings(village)) {
             if (b.structure().equals("fortify")) {
                 int d = Math.max(Math.abs(at.getX() - b.anchor().getX()), Math.abs(at.getZ() - b.anchor().getZ()));

@@ -1298,6 +1298,12 @@ public final class Villages {
     public record Site(BlockPos anchor, net.minecraft.core.Direction facing, int radius) {}
 
     private static final Map<UUID, Map<String, Site>> SITES = new ConcurrentHashMap<>();
+
+    /** The buildings this village is putting up now: their sites, by structure. */
+    public static Map<String, Site> sitesOf(UUID villageId) {
+        Map<String, Site> s = SITES.get(villageId);
+        return s == null ? Map.of() : Map.copyOf(s);
+    }
     /** Which squares of the town plan are spoken for (TownPlan.cellKey): chosen for a project or built on. */
     private static final Map<UUID, java.util.Set<Long>> LOT_TAKEN = new ConcurrentHashMap<>();
     /** Lots the builders found they could not get to, as the column of the lot's middle. */

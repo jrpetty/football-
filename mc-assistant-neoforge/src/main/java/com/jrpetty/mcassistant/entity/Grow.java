@@ -144,6 +144,12 @@ public final class Grow {
         if (!level.getBlockState(at).isAir()) return false;
         BlockState ground = level.getBlockState(at.below());
         if (!(ground.is(Blocks.GRASS_BLOCK) || ground.is(Blocks.DIRT) || ground.is(Blocks.COARSE_DIRT) || ground.is(Blocks.PODZOL))) return false;
+        for (Map.Entry<String, Villages.Site> e : Villages.sitesOf(village).entrySet()) {
+            int[] half = BuildGoal.footprint(e.getKey());
+            int r = Math.max(half[0], half[1]) + 1;
+            BlockPos c = e.getValue().anchor();
+            if (Math.abs(at.getX() - c.getX()) <= r && Math.abs(at.getZ() - c.getZ()) <= r) return false;   // going up there
+        }
         for (Ledger.Building o : Ledger.buildings(village)) {
             if (o == b || o.anchor().equals(b.anchor())) continue;
             int[] half = BuildGoal.footprint(o.structure());

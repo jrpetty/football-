@@ -94,8 +94,10 @@ public final class Watch {
         return null;
     }
 
+    /** Room to stand: air, a door, a plant — or the post's own ladder (once it is up, the foot of
+     *  the post is a ladder; that must not make the post vanish when the posts are looked over). */
     private static boolean roomy(BlockState s) {
-        return s.isAir() || s.getBlock() instanceof DoorBlock || s.canBeReplaced();
+        return s.isAir() || s.getBlock() instanceof DoorBlock || s.canBeReplaced() || s.is(Blocks.LADDER);
     }
 
     /** The top of the wall in a column: the highest block of masonry with masonry under it (the
