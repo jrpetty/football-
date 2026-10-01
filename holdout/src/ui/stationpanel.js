@@ -1,6 +1,6 @@
 // The station drawer: workers, what the station is doing and producing,
 // crafting orders (queue, recipes, mods, repairs), automation, upgrades.
-import { RES, STATIONS, RECIPES, MODS, ITEMS, QUALITY, OCCUPATIONS, SKILLS, SKILL_KEYS, REPAIR, SEC_PER_DAY, FENCE, ALT_RECIPES, BELTS, BELT_BONUS, SIGNAL, RESEARCH, CORE_SLOTS } from '../game/data.js'
+import { RES, STATIONS, RECIPES, MODS, ITEMS, QUALITY, OCCUPATIONS, SKILLS, SKILL_KEYS, REPAIR, SEC_PER_DAY, FENCE, ALT_RECIPES, BELTS, BELT_BONUS, SIGNAL, RESEARCH, CORE_SLOTS, VEHICLES } from '../game/data.js'
 import {
   S, workersOf, slots, assign, workEff, bestFor, upgradeCost, startUpgrade, demolish, installModule, recipesFor, modsFor, queueMax, orderRecipe,
   orderMod, orderRepair, cancelOrder, moveOrder, orderSpec, qualityOdds, itemOf, itemName, canAfford, survivorStats, capOf, bedCount, getS, ownerOf,
@@ -579,7 +579,7 @@ function oddsLine(st) {
 function orderName(o) {
   if (o.kind === 'recipe') {
     const r = RECIPES.find((x) => x.id === o.recipe)
-    return r.item ? ITEMS[r.item].name : `${Object.values(r.out)[0]} ${RES[Object.keys(r.out)[0]].name}`
+    return r.vehicle ? VEHICLES[r.vehicle].name : r.item ? ITEMS[r.item].name : `${Object.values(r.out)[0]} ${RES[Object.keys(r.out)[0]].name}`
   }
   const it = itemOf(o.item)
   if (o.kind === 'mod') return `${MODS[o.mod].name} → ${it ? itemName(it) : '?'}`
@@ -633,9 +633,9 @@ function recipesTab(ui, st) {
           .map((r) => {
             const rlock = r.research && !researchDone(r.research)
             const locked = r.lvl > st.level || rlock
-            const outName = r.item ? ITEMS[r.item].name : RES[Object.keys(r.out)[0]].name
+            const outName = r.vehicle ? VEHICLES[r.vehicle].name : r.item ? ITEMS[r.item].name : RES[Object.keys(r.out)[0]].name
             const outN = r.out ? Object.values(r.out)[0] : 1
-            const tip = r.item ? `<b>${ITEMS[r.item].name}</b>${ITEMS[r.item].desc || ''}<br><em>${r.item ? itemStatLineSafe(r.item) : ''}</em>` : `<b>${outName}</b>${RES[Object.keys(r.out)[0]].desc}`
+            const tip = r.vehicle ? `<b>${outName}</b>${r.desc || VEHICLES[r.vehicle].desc}` : r.item ? `<b>${ITEMS[r.item].name}</b>${ITEMS[r.item].desc || ''}<br><em>${r.item ? itemStatLineSafe(r.item) : ''}</em>` : `<b>${outName}</b>${RES[Object.keys(r.out)[0]].desc}`
             const add = (repeat, keep = null) => {
               const err = orderRecipe(st, r.id, repeat, keep)
               if (err) {

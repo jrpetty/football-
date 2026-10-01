@@ -1,11 +1,11 @@
 // The city map's interface: a top bar (back to camp, the danger legend, the
 // clock and horde timer) and the planner: what a location holds and how
 // dangerous it is, the drive there, who goes and what they carry.
-import { LOCATIONS, ROOMS, CONTAINERS, RES, ITEMS, ZOMBIES, zombieMix, LEVEL_COLORS, OCCUPATIONS, STATIONS, GAME_MIN_PER_SEC, INFECTION, OUTPOST } from '../game/data.js'
-import { S, day, clockStr, gameDur, survivorStats, getS, hasFlag, outpostAt, outpostProblem, claimOutpost, outpostYield, outpostUpgradeCost, upgradeOutpost, abandonOutpost, canAfford } from '../game/state.js'
+import { LOCATIONS, ROOMS, CONTAINERS, RES, ITEMS, ZOMBIES, zombieMix, LEVEL_COLORS, OCCUPATIONS, STATIONS, GAME_MIN_PER_SEC, INFECTION, OUTPOST, VEHICLES } from '../game/data.js'
+import { S, day, clockStr, gameDur, survivorStats, getS, hasFlag, outpostAt, outpostProblem, claimOutpost, outpostYield, outpostUpgradeCost, upgradeOutpost, abandonOutpost, canAfford, travelCost, vehicleOf, vehicleProblem, usableVehicles, pay } from '../game/state.js'
 import { raidIntel } from '../game/economy.js'
 import { sfx } from '../core/audio.js'
-import { h, fmt, clamp } from '../core/util.js'
+import { h, fmt, clamp, bus } from '../core/util.js'
 import { icon } from './icons.js'
 import { resIcon, hpBar, plural, costList, bar } from './common.js'
 
@@ -42,13 +42,16 @@ export function infectedRange(loc) {
   const base = Math.round(4 + loc.level * 3 + area * 0.6)
   return [base, base + 2 + loc.level]
 }
-// Drive time (game minutes) and fuel for a round trip of `dist` metres.
-export function travelInfo(dist) {
+// Everything a trip of `dist` metres (one way) costs with a vehicle kind
+// and a squad of n: provisions, fuel, minutes each way, what can be stashed.
+export function tripInfo(dist, kind, n) {
   const km = dist / 1000
-  const fuel = Math.max(1, Math.round(km * 1.6))
-  const drive = Math.round(8 + dist / 55)
-  const van = (S.res.fuel || 0) >= fuel
-  return { km, fuel, drive, walk: drive * 3, van, min: van ? drive : drive * 3 }
+  const V = VEHICLES[kind] || VEHICLES.foot
+  const c = travelCost(km, kind, n)
+  const min = Math.round((8 + dist / 55) / V.speed)
+  const canFood = (S.res.food || 0) >= c.food && (S.res.water || 0) >= c.water
+  const canFuel = (S.res.fuel || 0) >= c.fuel
+  return { km, kind, V, ...c, min, canFood, canFuel, ok: canFood && canFuel }
 }
 // Rough fighting strength for the odds estimate.
 export function squadPower(s) {
@@ -90,7 +93,8 @@ export class MapPanel {
       h('div.mt-title', h('b', 'Ashford'), h('small', 'Danger rises the further you go from camp')),
       h('div.mt-legend', LEVEL_COLORS.map((c, i) => h('span', { style: { '--c': c }, 'data-tip': ['Level 1: houses, flats and corner stores', 'Level 2: offices, diners, gas stations, hardware', 'Level 3: pharmacies, supermarkets, garages, the school', 'Level 4: hospital, fire station, gun stores, warehouses', 'Level 5: police station and the military checkpoint'][i] }, `L${i + 1}`))),
       h('div.mt-clock', h('span', { html: icon(clockStr().slice(0, 2) >= 20 || clockStr().slice(0, 2) < 6 ? 'moon' : 'sun') }), `Day ${day()}`, h('b', clockStr())),
-      h('div.mt-res', { 'data-tip': 'Fuel for the van. A round trip costs fuel by distance; without enough the squad walks.' }, h('i', { html: resIcon('fuel') }), h('b', fmt(S.res.fuel || 0)), h('small', 'fuel')),
+      h('div.mt-res', { 'data-tip': 'Food and water for the trip: every survivor carries provisions, more the further out, and far more on foot.' }, h('i', { html: resIcon('food') }), h('b', fmt(S.res.food || 0)), h('i', { html: resIcon('water') }), h('b', fmt(S.res.water || 0))),
+      h('div.mt-res', { 'data-tip': 'Fuel for vehicles: they burn it by the kilometre, there and back.' }, h('i', { html: resIcon('fuel') }), h('b', fmt(S.res.fuel || 0)), h('small', 'fuel')),
       intel ? h('div.mt-horde' + (intel.in < 120 ? '.soon' : ''), h('span', { html: icon('horde') }), h('small', intel.known ? intel.name : 'Horde'), h('b', gameDur(intel.in))) : null,
     )
   }
@@ -155,7 +159,6 @@ export class MapPanel {
     const mix = zombieMix(loc.level, L.zombieTheme)
       .filter((m) => m.w > 0.6)
       .map((m) => ZOMBIES[m.t].name + 's')
-    const T = travelInfo(this.map.routeLen || 1000)
     // squad
     const av = S.survivors.filter((s) => s.status !== 'mission' && s.status !== 'outpost')
     const sick = (s) => s.infection >= INFECTION.sick
@@ -166,6 +169,9 @@ export class MapPanel {
       for (const s of pickable.slice(0, Math.min(3, Math.max(1, pickable.length - 1)))) this.squad.add(s.id)
     }
     const squad = [...this.squad].map((id) => getS(id)).filter(Boolean)
+    const vid = this.pickVehicle()
+    const veh = vid === 'foot' ? null : vehicleOf(vid)
+    const T = tripInfo(this.map.routeLen || 1000, veh ? veh.kind : 'foot', Math.max(1, squad.length))
     const pw = squad.reduce((a, s) => a + squadPower(s), 0)
     const threat = ((z0 + z1) / 2) * (6 + loc.level * 4)
     const ratio = pw / threat
@@ -173,6 +179,21 @@ export class MapPanel {
     const left = S.survivors.filter((s) => s.status === 'ok' && !this.squad.has(s.id)).length
     const intel = raidIntel()
     const away = T.min * 2 + 150 + loc.level * 25
+    const veh0 = h(
+      'div.vehpick',
+      [['foot', null], ...(S.vehicles || []).map((v) => [v.id, v])].map(([id, v]) => {
+        const k = v ? v.kind : 'foot'
+        const why = v ? vehicleProblem(v) : null
+        const t = tripInfo(this.map.routeLen || 1000, k, Math.max(1, squad.length))
+        return h(
+          'button.veh' + (id === vid ? '.on' : '') + (why ? '.off' : ''),
+          { disabled: !!why, 'data-tip': `<b>${v ? v.name : 'On foot'}</b>${VEHICLES[k].desc}${why ? `<br><em>${why}</em>` : ''}`, onclick: () => ((this.vehId = id), sfx('click'), this.render()) },
+          h('b', v ? v.name : 'On foot'),
+          h('small', why ? why.split(':')[0] : `${t.food} food · ${t.water} water${t.fuel ? ` · ${t.fuel} fuel` : ''}`),
+          v && !why ? h('i.vcond', { style: { width: `${v.cond}%` } }) : null,
+        )
+      }),
+    )
     const lowAmmo = squad.some((s) => {
       const st = survivorStats(s)
       return st.gun && (S.res[st.ammoType] || 0) < 15
@@ -221,9 +242,12 @@ export class MapPanel {
         h(
           'div.mfacts',
           h('div', h('small', 'Infected'), h('b', `${z0}–${z1}`), h('em', mix.join(', '))),
-          h('div', h('small', 'Drive'), h('b', `${T.km.toFixed(1)} km`), h('em', T.van ? `${gameDur(T.drive)} each way` : `On foot: ${gameDur(T.walk)}`)),
-          h('div', h('small', 'Fuel'), h('b' + (T.van ? '' : '.bad'), `${T.fuel}`), h('em', T.van ? `${fmt(S.res.fuel)} in store` : 'Not enough: walking')),
+          h('div', h('small', 'Distance'), h('b', `${T.km.toFixed(1)} km`), h('em', `${gameDur(T.min)} each way · ${T.V === VEHICLES.foot ? 'walking' : T.V.name.toLowerCase()}`)),
+          h('div', { 'data-tip': `Food and water the squad carries for the trip there and back: about ${T.perFood.toFixed(1)} food each. ${T.V.prov < 1 ? `Riding cuts it to ${Math.round(T.V.prov * 100)}% of walking.` : 'Further places cost far more on foot.'}` }, h('small', 'Provisions'), h('b' + (T.canFood ? '' : '.bad'), `${T.food} food · ${T.water} water`), h('em', `for ${squad.length || 1} · ${fmt(S.res.food)} / ${fmt(S.res.water)} in store`)),
+          T.fuel ? h('div', h('small', 'Fuel'), h('b' + (T.canFuel ? '' : '.bad'), `${T.fuel}`), h('em', `${fmt(S.res.fuel)} in store`)) : null,
         ),
+        h('h3', 'Getting there', h('small', h('a.link', { onclick: () => this.game.ui.openMotorPool() }, 'Motor pool'))),
+        veh0,
         h('h3', 'Likely finds'),
         h(
           'div.lootchips',
@@ -242,11 +266,13 @@ export class MapPanel {
           h('span', `${left} stay${left === 1 ? 's' : ''} behind.`),
           intel && intel.in < away ? h('span.bad', `Horde due in ${gameDur(intel.in)}: the camp may fight without them.`) : null,
           lowAmmo ? h('span.bad', 'Low on ammo for their guns.') : null,
-          !T.van ? h('span.bad', 'No fuel for the van: no stash, slow trip.') : null,
+          !T.V.stash ? h('span.dim', `${T.V.name}: no stash, only what they carry.`) : T.V.stash < Infinity ? h('span.dim', `The car's boot holds about ${T.V.stash}.`) : null,
+          !T.canFood ? h('span.bad', 'Not enough food and water for the trip.') : !T.canFuel ? h('span.bad', 'Not enough fuel.') : null,
+          T.V === VEHICLES.foot && T.food >= 6 * Math.max(1, squad.length) ? h('span.bad', 'A long walk: find a vehicle for places this far out.') : null,
         ),
         outpostAt(loc.id)
           ? h('button.btn.big', { disabled: true }, 'Your outpost')
-          : h('button.btn.go.big', { disabled: !squad.length || !!looted || this.map.launching, onclick: () => this.deploy(loc, squad, T) }, looted ? 'Already looted' : h('span', { html: icon('truck') }), looted ? null : T.van ? ' Roll out' : ' Head out on foot'),
+          : h('button.btn.go.big', { disabled: !squad.length || !!looted || this.map.launching || !T.ok, onclick: () => this.deploy(loc, squad, T, veh) }, looted ? 'Already looted' : h('span', { html: icon(T.V.stash ? 'truck' : 'run') }), looted ? null : T.V.stash ? ' Roll out' : T.V === VEHICLES.foot ? ' Head out on foot' : ' Ride out'),
       ),
     )
   }
@@ -291,14 +317,29 @@ export class MapPanel {
       why && squad.length ? h('p.note.bad', why) : null,
     )
   }
-  deploy(loc, squad, T) {
-    if (!squad.length) return
-    sfx('truck')
+  // The vehicle for the next run: the player's pick if it can go, else the
+  // best one that can.
+  pickVehicle() {
+    const vs = usableVehicles()
+    if (this.vehId === 'foot' || vs.some((v) => v.id === this.vehId)) return this.vehId
+    for (const k of ['van', 'truck', 'car', 'bikes']) {
+      const v = vs.find((x) => x.kind === k)
+      if (v) return v.id
+    }
+    return 'foot'
+  }
+  deploy(loc, squad, T, veh) {
+    if (!squad.length || !T.ok) return
+    if (!pay({ food: T.food, water: T.water, fuel: T.fuel })) return sfx('error')
+    sfx(T.V.stash ? 'truck' : 'click')
     const ids = squad.map((s) => s.id)
-    if (T.van) S.res.fuel -= T.fuel
+    if (veh) {
+      veh.out = true
+      bus.emit('vehicles')
+    }
     this.squad.clear()
     this.suggested = false
-    this.map.launch(loc, ids, { van: T.van, travel: T.min, dist: this.map.routeLen, fuel: T.van ? T.fuel : 0 })
+    this.map.launch(loc, ids, { vehicle: T.kind, vehId: veh?.id || null, look: veh?.look, van: T.V.stash > 0, stash: T.V.stash, travel: T.min, dist: this.map.routeLen, km: T.km, fuel: T.fuel, food: T.food, water: T.water })
   }
 }
 export const minutesToSec = (m) => m / GAME_MIN_PER_SEC

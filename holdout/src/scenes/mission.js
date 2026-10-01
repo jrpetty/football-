@@ -24,8 +24,8 @@ import { SurvivorAgent, ZombieAgent } from '../world/agents.js'
 import { genLevel } from '../world/levelgen.js'
 import { OffsetGrid } from '../core/grid.js'
 import { FACE_ROT, SIDEWALK, lotToWorld } from '../world/city.js'
-import { LOCATIONS, CONTAINERS, ITEMS, RARITY, RES, QUALITY, zombieMix, LEVEL_COLORS, UTILITIES } from '../game/data.js'
-import { S, getS, gain, addItem, gainXP, killSurvivor, hour, day, completeGoal, log, survivorStats, makeSurvivor, addMoraleEvent, researchDone, season, leafTurn } from '../game/state.js'
+import { LOCATIONS, CONTAINERS, ITEMS, RARITY, RES, QUALITY, zombieMix, LEVEL_COLORS, UTILITIES, VEHICLES } from '../game/data.js'
+import { S, getS, gain, addItem, gainXP, killSurvivor, hour, day, completeGoal, log, survivorStats, makeSurvivor, addMoraleEvent, researchDone, season, leafTurn, addVehicle } from '../game/state.js'
 import { scheduleRaid } from '../game/economy.js'
 import { sfx, setAmbience } from '../core/audio.js'
 import { h, rand, rint, pick, chance, weighted, clamp, fmtTime, bus, fmt } from '../core/util.js'
@@ -37,8 +37,14 @@ import { TrapsMixin } from './missiontraps.js'
 
 const TAU = Math.PI * 2
 // How much room things take in a pack.
-const LOAD = { food: 1, water: 1, wood: 1, scrap: 1, metal: 1.5, cloth: 0.5, parts: 0.5, electronics: 0.5, chemicals: 1, gunpowder: 0.5, fuel: 1, pammo: 0.02, rammo: 0.03, shells: 0.05, meds: 0.3, medkit: 1, molotov: 1, pipebomb: 1, noisemaker: 0.5, module: 2, cash: 0, steel: 1.5, wiring: 0.5, rubber: 0.8, circuits: 0.4, motors: 2, coils: 1, cells: 1, amps: 2, schematic: 0.2, specimen: 0.3, core: 1, antiviral: 0.3 }
+const LOAD = { coal: 1, plates: 1, bolts: 0.05, beams: 3, carBattery: 3, tyres: 2, food: 1, water: 1, wood: 1, scrap: 1, metal: 1.5, cloth: 0.5, parts: 0.5, electronics: 0.5, chemicals: 1, gunpowder: 0.5, fuel: 1, pammo: 0.02, rammo: 0.03, shells: 0.05, meds: 0.3, medkit: 1, molotov: 1, pipebomb: 1, noisemaker: 0.5, module: 2, cash: 0, steel: 1.5, wiring: 0.5, rubber: 0.8, circuits: 0.4, motors: 2, coils: 1, cells: 1, amps: 2, schematic: 0.2, specimen: 0.3, core: 1, antiviral: 0.3 }
 const ITEM_LOAD = 4
+// How likely a run turns up a car that still runs, by location type.
+const CAR_FIND = { house: 0.35, garage: 0.6, gas: 0.45, hardware: 0.3, apartment: 0.25, warehouse: 0.3, police: 0.3, firestation: 0.3 }
+const KEY_SPOTS = new Set(['cabinet', 'counter', 'desk', 'dresser', 'locker', 'filing', 'toolchest', 'register', 'firelocker'])
+// Who can start a car without keys: mechanics, ex-cons, engineers, or
+// anyone with a toolkit or real engineering skill.
+const canHotwire = (a) => ['mechanic', 'excon', 'engineer'].includes(a.data.occ) || (a.st.dismantle >= 1.35 && a.data.skills.tech >= 3) || a.data.skills.tech >= 7
 const CH = { fridge: 1.9, cabinet: 2.1, counter: 1.2, wardrobe: 2.1, dresser: 1.3, desk: 1.2, filing: 1.4, bookshelf: 1.95, trash: 1.0, shelf: 1.8, register: 1.4, toolrack: 1.9, medcab: 1.8, locker: 1.95, gunlocker: 1.8, safe: 0.9, crate: 1.1, pallet: 2.6, milcrate: 1.0, server: 2.0, tv: 1.5, chemshelf: 2.0, toolchest: 1.15, firelocker: 1.95, dumpster: 1.3, pump: 1.9, shed: 2.3, car: 1.5 }
 const WALL_EXT = 3.1
 const WALL_INT = 2.35
@@ -148,8 +154,11 @@ export class Mission {
     this.spawnInitial()
     this.placeTraps()
     this.setupEvent()
+    this.setupCars()
     const walkie = this.squad.some((a) => a.st.walkie)
-    this.hordeIn = clamp(175 - this.level * 13, 95, 165) + (walkie ? 45 : 0) + (loadout.van ? 0 : 25)
+    this.vehicle = VEHICLES[loadout.vehicle] || (loadout.van === false ? VEHICLES.foot : VEHICLES.van)
+    this.stashCap = loadout.stash ?? (loadout.van === false ? 0 : Infinity)
+    this.hordeIn = clamp(175 - this.level * 13, 95, 165) + (walkie ? 45 : 0) + (this.stashCap ? 0 : 25) + (this.vehicle.armor || 0)
     this.hordeOn = false
     this.spawnT = 0
     view.rig.minDist = 9
@@ -655,10 +664,12 @@ export class Mission {
   }
   buildVan() {
     const lv = this.lv
-    if (this.loadout.van === false) {
+    const kind = this.loadout.vehicle || (this.loadout.van === false ? 'foot' : 'van')
+    if (kind === 'foot' || kind === 'bikes') {
       this.vanGroup = null
+      if (kind === 'bikes') this.bikesAtEvac()
     } else {
-      const g = vanModel({})
+      const g = kind === 'car' ? carModel({ seed: this.loadout.look || 7, wreck: 0, kind: 'sedan' }) : vanModel(kind === 'truck' ? { color: '#5a6248' } : {})
       g.position.set(lv.van.x, 0, lv.van.z)
       g.rotation.y = lv.van.rot
       g.traverse((o) => {
@@ -864,6 +875,7 @@ export class Mission {
   workTime(agent, c, kind) {
     if (c.def?.isTrap) return c.armed ? this.disarmTime(agent, c) : null
     if (kind === 'take') return 0.8
+    if (kind === 'hotwire') return c.drive?.keys ? 2 : (['mechanic', 'excon'].includes(agent.data.occ) ? 7 : 10) / Math.max(0.8, agent.st.dismantle)
     if (kind === 'search') {
       if (c.stash) return 1
       if (c.locked && !agent.st.picklock && !c.smash) return null
@@ -877,7 +889,7 @@ export class Mission {
     wk.sfxT = (wk.sfxT || 0) - dt
     if (wk.noiseT <= 0) {
       wk.noiseT = 1
-      const n = wk.kind === 'dismantle' ? 7 : wk.c.smash ? 12 : 1.6
+      const n = wk.kind === 'dismantle' ? 7 : wk.kind === 'hotwire' ? (wk.c.drive?.keys ? 3 : 6) : wk.c.smash ? 12 : 1.6
       this.noise(agent.pos.x, agent.pos.z, n * agent.st.noiseMult)
     }
     if (wk.sfxT <= 0) {
@@ -892,6 +904,22 @@ export class Mission {
   finishWork(agent, c, kind) {
     if (c.def?.isTrap) return this.finishDisarm(agent, c)
     const pos = new THREE.Vector3(c.x, (CH[c.kind] || 1.2) + 0.4, c.z)
+    if (kind === 'hotwire') {
+      if (!c.drive || c.drive.started) return
+      c.drive.started = true
+      c.label?.el.classList.add('started')
+      view.labels.float(this.scene, pos, 'Engine running', 'good')
+      this.fx.smoke?.(new THREE.Vector3(c.x, 0.4, c.z), { size: 0.5, life: 2, color: '#5a5654', a: 0.4, vy: 0.5 })
+      sfx('truck')
+      this.toast(`${agent.data.first} got the car started. It drives home with you when you leave.`, 'good')
+      gainXP(agent.data, 'tech', 6)
+      return
+    }
+    if (kind === 'search' && c.carKeys && !c.searched) {
+      c.carKeys.drive.keys = true
+      view.labels.float(this.scene, pos.clone().setY(pos.y + 0.6), 'Car keys!', 'item')
+      this.toast(`${agent.data.first} found a set of car keys. One of the cars out front should start.`, 'good')
+    }
     if (kind === 'search') {
       let found
       if (c.stash) {
@@ -1343,6 +1371,7 @@ export class Mission {
       this.hoverC = c
       this.tip.hidden = !c
       if (c?.def?.isTrap) this.tip.innerHTML = `<b>${c.def.name}</b><span>${c.trap.desc}</span><small>Right-click: disarm for parts</small>`
+      else if (c?.drive) this.tip.innerHTML = c.drive.started ? `<b>Your car</b><span>Engine running: it drives home with you.</span>` : `<b>${c.def.name}</b><span>This one might still run. ${c.drive.keys ? 'You have its keys.' : 'Find the keys inside, or hotwire it.'}</span><small>Click for options</small>`
       else if (c) this.tip.innerHTML = `<b>${c.def.name}</b><span>${c.stash ? 'Loot left inside' : c.searched ? 'Searched · can be broken down' : c.locked ? 'Locked' : 'Not searched'}</span><small>Right-click: ${c.stash || !c.searched ? 'search' : 'break down'}</small>`
     }
     if (c) this.tip.style.transform = `translate(${x + 16}px, ${y + 14}px)`
@@ -1457,7 +1486,15 @@ export class Mission {
       sfx('click')
       return
     }
-    menu.append(h('div.cm-title', h('b', c.def.name), h('span', c.stash ? 'Loot left inside' : c.searched ? 'Already searched' : c.locked ? 'Locked' : `Level ${this.level} location`)))
+    menu.append(h('div.cm-title', h('b', c.drive?.started ? 'Your car' : c.def.name), h('span', c.drive?.started ? 'Engine running' : c.drive ? 'This one might still run' : c.stash ? 'Loot left inside' : c.searched ? 'Already searched' : c.locked ? 'Locked' : `Level ${this.level} location`)))
+    if (c.drive && !c.drive.started) {
+      if (c.drive.keys) menu.append(btn('Start it', `${who} · keys · 2s`, () => helper.command({ type: 'hotwire', c }), !helper))
+      else {
+        const wirer = this.pickHelper(c, canHotwire)
+        menu.append(btn('Hotwire it', wirer ? `${wirer.data.first} · ${this.workTime(wirer, c, 'hotwire').toFixed(0)}s · noisy` : 'Needs a mechanic, ex-con or engineer (or a toolkit and some know-how)', () => wirer.command({ type: 'hotwire', c }), !wirer))
+        menu.append(h('div.cm-note', 'Or search the house for its keys.'))
+      }
+    }
     if (c.stash) menu.append(btn('Take the rest', `${who} · ${c.stash.length} lot${c.stash.length === 1 ? '' : 's'}`, () => helper.command({ type: 'search', c }), !helper))
     else if (!c.searched) {
       if (c.locked) {
@@ -1470,7 +1507,7 @@ export class Mission {
       }
     }
     const strip = Object.keys(c.def.strip || {}).map((k) => RES[k].name.toLowerCase()).join(', ')
-    if (strip) {
+    if (strip && !c.drive?.started) {
       const dt = helper ? this.workTime(helper, c, 'dismantle') : c.def.time * 2
       menu.append(btn('Break it down', `${who} · ${dt.toFixed(1)}s · loud · ${strip}`, () => helper.command({ type: 'dismantle', c }), !helper, '.loud'))
     }
@@ -1594,20 +1631,83 @@ export class Mission {
       this.renderSquad()
     } else n.finish(0.016, 'idle')
   }
+  // What is already stashed, by carrying weight.
+  stashLoad() {
+    let n = this.van.items.length * ITEM_LOAD
+    for (const [k, v] of Object.entries(this.van.res)) n += v * (LOAD[k] ?? 1)
+    return n
+  }
   unloadAtVan() {
-    if (this.loadout.van === false) return
+    if (!this.stashCap) return
     const V = this.lv.van
     for (const a of this.squad) {
       if (a.downed || !a.pack.load) continue
       const E = this.lv.evac
       if (Math.hypot(a.pos.x - V.x, a.pos.z - V.z) > 4.2 && Math.hypot(a.pos.x - E.x, a.pos.z - E.z) > E.r + 0.3) continue
-      for (const [k, v] of Object.entries(a.pack.res)) this.van.res[k] = (this.van.res[k] || 0) + v
-      this.van.items.push(...a.pack.items)
-      a.pack = { res: {}, items: [], load: 0 }
-      view.labels.float(this.scene, a.chestPos(2.2), 'Stashed in the van', 'good')
+      let room = this.stashCap - this.stashLoad()
+      if (room < 0.5) {
+        if (!a.fullWarned) this.toast(`The ${this.vehicle.name.toLowerCase()} is full. The rest rides home in packs.`)
+        a.fullWarned = true
+        continue
+      }
+      const keep = { res: {}, items: [], load: 0 }
+      for (const it of a.pack.items) {
+        if (room >= ITEM_LOAD) {
+          this.van.items.push(it)
+          room -= ITEM_LOAD
+        } else {
+          keep.items.push(it)
+          keep.load += ITEM_LOAD
+        }
+      }
+      for (const [k, v] of Object.entries(a.pack.res)) {
+        const w = LOAD[k] ?? 1
+        const fit = w > 0 ? Math.min(v, Math.floor(room / w + 1e-6)) : v
+        if (fit > 0) {
+          this.van.res[k] = (this.van.res[k] || 0) + fit
+          room -= fit * w
+        }
+        if (v - fit > 0) {
+          keep.res[k] = v - fit
+          keep.load += (v - fit) * w
+        }
+      }
+      if (keep.load >= a.pack.load - 1e-6) continue
+      a.pack = keep
+      view.labels.float(this.scene, a.chestPos(2.2), keep.load ? 'Stashed what fits' : `Stashed in the ${this.vehicle.name.replace(/^The /, '').toLowerCase()}`, 'good')
       sfx('loot')
       this.updateHaul()
     }
+  }
+  // Bicycles leaning by the evac point: nowhere to stash, but a quick ride home.
+  bikesAtEvac() {
+    const E = this.lv.evac
+    const b = new Builder()
+    for (let i = 0; i < 4; i++) {
+      b.at({ x: E.x - 1.2 + i * 0.75, z: E.z - E.r - 0.6, ry: 0.15 * (i - 1.5), rz: 0.25 }, () => {
+        for (const s of [-0.5, 0.5]) b.torus(0.33, 0.025, { mat: 'rubber', color: '#1a1a1a', y: 0.35, z: s, ry: Math.PI / 2, rs: 6, ts2: 18 })
+        b.beam([0, 0.35, -0.5], [0, 0.75, 0.05], 0.04, 0.04, { mat: 'paint', color: ['#c8302a', '#2a5a9a', '#3a7a4a', '#d8a020'][i] })
+        b.beam([0, 0.35, 0.5], [0, 0.75, 0.05], 0.04, 0.04, { mat: 'paint', color: ['#c8302a', '#2a5a9a', '#3a7a4a', '#d8a020'][i] })
+        b.beam([0, 0.75, 0.05], [0, 0.85, 0.45], 0.03, 0.03, { mat: 'steel', color: '#8a8e92' })
+        b.box(0.5, 0.025, 0.025, { mat: 'steel', color: '#8a8e92', y: 0.88, z: 0.45 })
+        b.box(0.12, 0.05, 0.22, { mat: 'leather', color: '#1a1a1a', y: 0.82, z: -0.12 })
+      })
+    }
+    const g = b.build()
+    g.traverse((o) => o.isMesh && (o.castShadow = true))
+    this.scene.add(g)
+  }
+  // Now and then a car here still runs: find its keys inside, or hotwire it.
+  setupCars() {
+    const cars = this.containers.filter((c) => c.kind === 'car' && c.model !== 'humvee' && c.seed % 3 !== 0)
+    if (!cars.length) return
+    const owned = (S.vehicles || []).filter((v) => v.kind === 'car').length
+    if (owned >= 3 || !chance((CAR_FIND[this.loc.type] ?? 0.15) * (owned ? 0.6 : 1))) return
+    const c = pick(cars)
+    c.drive = { keys: false, started: false }
+    const inside = this.containers.filter((x) => !x.locked && KEY_SPOTS.has(x.kind))
+    if (inside.length && chance(0.75)) pick(inside).carKeys = c
+    c.label?.el.classList.add('drivable')
   }
   updateLights(night) {
     if (!this.torches) {
@@ -1727,7 +1827,7 @@ export class Mission {
     for (const [k, v] of Object.entries(tot.res).sort((a, b) => b[1] - a[1])) if (v > 0) parts.push(h('span.hres', { style: { '--c': RES[k].color }, 'data-tip': RES[k].name }, h('i', { html: resIcon(k) }), fmt(v)))
     for (const id of tot.items) parts.push(h('span.hitem', { style: { '--c': RARITY[ITEMS[id].rarity].color } }, ITEMS[id].name))
     this.haulEl.innerHTML = ''
-    const vanTxt = this.loadout.van === false ? 'On foot: only what you carry' : 'Loot is safe once it is in the van'
+    const vanTxt = !this.stashCap ? `${this.vehicle.name}: only what you carry` : this.stashCap === Infinity ? `Loot is safe once it is in the ${this.vehicle.name.replace(/^The /, '').toLowerCase()}` : `Car boot: ${Math.round(this.stashLoad())} / ${this.stashCap}`
     this.haulEl.append(h('div.hhead', h('b', 'Haul'), h('small', vanTxt)), h('div.hlist', parts.length ? parts : h('span.dim', 'Nothing yet')))
   }
   updateHud(dt) {
@@ -1826,9 +1926,15 @@ export class Mission {
         d.status = d.hp < a.maxHp * 0.3 ? 'injured' : 'ok'
         if (d.status === 'injured') report.injured.push(d.first)
       }
+      const car = this.containers.find((c) => c.drive?.started && !c.gone)
+      if (car) {
+        const v = addVehicle('car', { cond: rint(40, 80), look: car.seed, log: `The squad drove a car home from ${this.loc.name}.` })
+        report.vehicle = v.name
+      }
       const got = Object.values(report.loot).reduce((a, b) => a + b, 0)
+      const came = this.stashCap ? `The ${this.vehicle.name.replace(/^The /, '').toLowerCase()} came back` : report.vehicle ? 'The squad drove home in a car they got running,' : this.vehicle === VEHICLES.bikes ? 'The squad cycled home' : 'The squad walked home'
       report.title = `Back from ${this.loc.name}`
-      report.text = `${got ? `The van came back with ${got} supplies` : 'The van came back nearly empty'}${report.items.length ? ` and ${report.items.length} item${report.items.length === 1 ? '' : 's'}` : ''}.${this.kills ? ` ${this.kills} infected put down.` : ''}${report.rescued ? ` ${report.rescued} came home with you.` : ''}`
+      report.text = `${got ? `${came} with ${got} supplies` : `${came} nearly empty`}${report.items.length ? ` and ${report.items.length} item${report.items.length === 1 ? '' : 's'}` : ''}.${this.kills ? ` ${this.kills} infected put down.` : ''}${report.rescued ? ` ${report.rescued} came home with you.` : ''}${report.vehicle && this.stashCap ? ' They drove home a car that still runs, too.' : ''}`
       log(`The squad returned from ${this.loc.name}.`, 'good')
     } else {
       for (const a of this.squad) {
@@ -1847,7 +1953,7 @@ export class Mission {
       report.text = `The squad was overrun at ${this.loc.name}. Whatever they found is gone.`
       log(`The run to ${this.loc.name} went badly wrong.`, 'bad')
     }
-    for (const s of S.survivors) if (s.status === 'mission') s.status = 'ok'
+    for (const a of this.squad) if (a.data.status === 'mission') a.data.status = 'ok'
     this.game.endMission(report)
   }
   dispose() {

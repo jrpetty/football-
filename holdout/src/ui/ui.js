@@ -15,6 +15,7 @@ import { renderStation } from './stationpanel.js'
 import { renderSurvivor, renderCrew, renderItems } from './crewpanel.js'
 import { renderProgress } from './progresspanel.js'
 import { manualModal } from './manual.js'
+import { motorPool } from './motorpool.js'
 import { victoryModal, renderMarket, renderLog, renderFence, renderExpansion, renderProduction, renderPower, renderMorale, renderSettings, recruitModal, raidReportModal, missionReportModal, gameOverModal, menuModal, hordeInfo } from './camppanels.js'
 
 const NAV = [
@@ -415,6 +416,14 @@ export class UI {
   }
   openSettings() {
     this.modal(renderSettings(this), { small: true })
+  }
+  openMotorPool() {
+    const wrap = h('div.motorpool')
+    const draw = () => {
+      wrap.replaceChildren(...motorPool(this, draw))
+    }
+    draw()
+    this.modal(wrap, {})
   }
   openManual(page) {
     if (this.modalRoot.querySelector('.manual')) return this.closeModal()

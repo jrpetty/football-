@@ -31,6 +31,20 @@ const VEH = ['sedan', 'hatch', 'suv', 'pickup', 'van', 'truck', 'semi', 'bus', '
 const PROPS = ['bale', 'booth', 'lamp', 'signal', 'hydrant', 'bench', 'trash', 'mailbox', 'busstop', 'pole', 'poleT', 'barrier', 'sandbags', 'hesco', 'policeline', 'container', 'dumpster', 'pallets', 'tires', 'rubble', 'tent', 'tomb', 'cross', 'billboard', 'swing', 'boat', 'boxcar', 'tanker', 'flatcar', 'loco', 'tie', 'crane', 'pylon', 'car-pile']
 const TINTED = { container: ['corrugated'], dumpster: ['paint'], mailbox: ['paint'], tent: ['canvas'], boxcar: ['corrugated'], tanker: ['paint'], flatcar: ['corrugated'], loco: ['paint'] }
 
+// A squad heading out on foot or by bike: a few figures round a glowing pin.
+function squadMarker(kind) {
+  const b = new Builder()
+  for (let i = 0; i < 3; i++) {
+    const x = (i - 1) * 0.9
+    b.cyl(0.22, 0.26, 1.1, { mat: 'paint', color: ['#c8a050', '#5a7a9a', '#8a5a4a'][i], x, y: 0.75, z: i === 1 ? -0.5 : 0, seg: 8 })
+    b.sphere(0.2, { mat: 'skin', color: '#c8a088', x, y: 1.5, z: i === 1 ? -0.5 : 0, ws: 8, hs: 6 })
+    if (kind === 'bikes') b.torus(0.4, 0.06, { mat: 'rubber', color: '#1a1a1a', x, y: 0.4, z: (i === 1 ? -0.5 : 0) + 0.5, ry: Math.PI / 2, rs: 5, ts2: 12 })
+  }
+  b.cyl(0.08, 0.08, 4, { mat: 'glowAmber', color: '#ffffff', y: 3.5, seg: 6 })
+  b.sphere(0.35, { mat: 'glowAmber', color: '#ffffff', y: 5.6, ws: 10, hs: 6 })
+  return b.build()
+}
+
 export class CityMap {
   constructor(game) {
     this.game = game
@@ -1211,20 +1225,28 @@ export class CityMap {
   // The van pulls out of camp and follows the route before the run starts.
   launch(loc, ids, loadout) {
     if (this.launching) return
-    if (!this.van) {
-      this.van = mapVehicleModel('van')
-      this.van.traverse((o) => {
-        if (!o.isMesh || o.material.userData?.key !== 'paint') return
-        const c = o.geometry.attributes.color
-        for (let i = 0; i < c.count; i++) c.setXYZ(i, c.getX(i) * 0.36, c.getY(i) * 0.42, c.getZ(i) * 0.36)
-      })
-      this.van.scale.setScalar(1.8)
-      this.scene.add(this.van)
+    const kind = loadout.vehicle || 'van'
+    this.launchModels = this.launchModels || {}
+    if (!this.launchModels[kind]) {
+      const m = kind === 'foot' || kind === 'bikes' ? squadMarker(kind) : mapVehicleModel(kind === 'car' ? 'sedan' : kind === 'truck' ? 'mtruck' : 'van')
+      const tint = { van: [0.36, 0.42, 0.36], truck: [0.09, 0.1, 0.04], car: [0.5, 0.12, 0.08] }[kind]
+      if (tint)
+        m.traverse((o) => {
+          if (!o.isMesh || o.material.userData?.key !== 'paint') return
+          const c = o.geometry.attributes.color
+          for (let i = 0; i < c.count; i++) c.setXYZ(i, c.getX(i) * tint[0], c.getY(i) * tint[1], c.getZ(i) * tint[2])
+        })
+      m.scale.setScalar(kind === 'foot' || kind === 'bikes' ? 2.2 : 1.8)
+      this.scene.add(m)
+      this.launchModels[kind] = m
     }
+    for (const [k, m] of Object.entries(this.launchModels)) m.visible = k === kind
+    this.van = this.launchModels[kind]
     const pts = this.routePts || [[this.city.camp.x, this.city.camp.z], [loc.x, loc.z]]
     const cum = [0]
     for (let k = 1; k < pts.length; k++) cum.push(cum[k - 1] + Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]))
-    this.launching = { loc, ids, loadout, t: 0, dur: clamp(cum[cum.length - 1] / 900, 2.2, 4.2), pts, cum }
+    const slow = kind === 'foot' ? 1.7 : kind === 'bikes' ? 1.3 : 1
+    this.launching = { loc, ids, loadout, t: 0, dur: clamp((cum[cum.length - 1] / 900) * slow, 2.2, 4.2 * slow), pts, cum }
     this.van.visible = true
     this.panel?.render()
   }

@@ -341,10 +341,14 @@ export function vanModel(o = {}) {
   b.box(0.7, 0.32, 0.9, { mat: 'metal', color: '#33332f', x: -0.35, y: 0.42, z: 0.15 })
   b.cyl(0.045, 0.045, 2.6, { mat: 'metal', color: '#3a3836', x: -0.62, y: 0.33, z: -1.6, rx: Math.PI / 2, seg: 10 })
   b.cyl(0.05, 0.045, 0.14, { mat: 'rust', color: '#ffffff', x: -0.62, y: 0.33, z: -2.94, rx: Math.PI / 2, seg: 10 })
-  // wheels and fender flares
+  // wheels and fender flares; a dead van sits on blocks with two wheels off
+  const gone = o.broken ? new Set([`-1:${zf}`, `1:${zr}`]) : null
   for (const side of [-1, 1]) {
     for (const z of [zr, zf]) {
-      wheelHD(b, { x: side * 0.86, z, r: R, w: 0.28, side, rim: '#4a4c44' })
+      if (gone?.has(`${side}:${z}`)) {
+        for (let k = 0; k < 2; k++) b.box(0.39, 0.19, 0.19, { mat: 'concrete', color: '#c8c4bc', x: side * 0.7, y: 0.095 + k * 0.19, z: z + (k ? 0.05 : -0.04), ry: k * 0.35 })
+        b.cyl(0.05, 0.05, 0.3, { mat: 'metal', color: '#3a3836', x: side * 0.78, y: R, z, rz: Math.PI / 2, seg: 8 })
+      } else wheelHD(b, { x: side * 0.86, z, r: R, w: 0.28, side, rim: '#4a4c44' })
       b.torus(Ra - 0.02, 0.055, { mat: 'rubber', color: '#262624', x: side * (W / 2 + 0.01), y: ay, z, ry: Math.PI / 2, rz: 0.16, arc: Math.PI - 0.32, rs: 6, ts2: 18, sx: 0.8 })
       b.box(0.02, 0.36, 0.3, { mat: 'rubber', color: '#1a1a1a', x: side * 0.86, y: 0.36, z: z - 0.56 })
     }
@@ -518,6 +522,13 @@ export function vanModel(o = {}) {
   b.box(0.012, 0.004, 1.2, { mat: 'plain', color: '#2a2822', x: 0.82, y: 1.25, z: 2.2, rx: -0.13, ao: 0 })
   b.box(0.012, 0.004, 1.2, { mat: 'plain', color: '#2a2822', x: -0.82, y: 1.25, z: 2.2, rx: -0.13, ao: 0 })
   b.box(0.14, 0.03, 0.05, { mat: 'metal', color: '#3a3a36', y: 1.17, z: 2.84 })
+  if (o.broken) {
+    // bonnet propped open, an engine part on the ground and a flat tyre
+    b.at({ y: 1.3, z: 1.75, rx: -1.05 }, () => b.box(1.7, 0.035, 1.15, { mat: 'paint', color: top, z: 0.57 }))
+    b.beam([0.6, 1.25, 2.4], [0.55, 2.05, 2.05], 0.02, 0.02, { mat: 'steel', color: '#5a5a5a' })
+    b.torus(0.3, 0.1, { mat: 'rubber', color: '#1e1e1e', x: -1.65, y: 0.11, z: 1.2, rx: Math.PI / 2, rs: 6, ts2: 18, sz: 0.7 })
+    b.box(0.35, 0.25, 0.28, { mat: 'rust', color: '#8a7a6a', x: 1.55, y: 0.13, z: 2.3, ry: 0.5 })
+  }
   return b.build()
 }
 // School bus (yellow, conventional nose) or city transit bus. o: { color, seed, wreck, kind }

@@ -6,7 +6,7 @@ import {
   expansionCost, startExpansion, expansionAvailable, claimGoal, survivorLevel, perimeter, save, wipeSave, countType, workersOf, survivorStats,
   unlockedBy, msDone, fenceUnlocked, listBackups, restoreBackup, exportSave, importSave,
 } from '../game/state.js'
-import { campFlow, stationFlow, power, powerNeed, isAutomated, boilerFuel, sourcePower, solarOutput, windOutput, moraleFactors, dailyNeeds, constructSpeed, raidIntel, threatLevel, isBloodMoonDay, sellMult, buyMult, resSellPrice, acceptRecruit, declineRecruit } from '../game/economy.js'
+import { upkeepNeeds, campFlow, stationFlow, power, powerNeed, isAutomated, boilerFuel, sourcePower, solarOutput, windOutput, moraleFactors, dailyNeeds, constructSpeed, raidIntel, threatLevel, isBloodMoonDay, sellMult, buyMult, resSellPrice, acceptRecruit, declineRecruit } from '../game/economy.js'
 import { QUALITY as GFXQ } from '../render/pipeline.js'
 import { sfx, setSound } from '../core/audio.js'
 import { bus, h, fmt, clamp } from '../core/util.js'
@@ -174,6 +174,7 @@ export function renderProduction(ui) {
     ['ammo', 'Ammunition'],
     ['supplies', 'Supplies'],
     ['project', 'Signal parts'],
+    ['vehicle', 'Vehicle parts'],
     ['research', 'Research'],
   ]
   const producers = {}
@@ -223,7 +224,29 @@ export function renderProduction(ui) {
         ),
     ),
   )
-  return ui.frame('Camp overview', `Everyone eats ${needs.food.toFixed(1)} food and drinks ${needs.water.toFixed(1)} water a day`, [bottlenecks(ui), h('div.cols2', h('div', ...tables.slice(0, 3)), h('div', ...tables.slice(3), stations))], { icon: 'production' })
+  return ui.frame('Camp overview', `Everyone eats ${needs.food.toFixed(1)} food and drinks ${needs.water.toFixed(1)} water a day`, [bottlenecks(ui), upkeepCard(), h('div.cols2', h('div', ...tables.slice(0, 3)), h('div', ...tables.slice(3), stations))], { icon: 'production' })
+}
+// What keeping the camp standing costs a day, and how long the stock lasts.
+function upkeepCard() {
+  const up = Object.entries(upkeepNeeds()).filter(([, v]) => v >= 0.01).sort((a, b) => b[1] - a[1])
+  const days = (k, v) => (S.res[k] || 0) / Math.max(v, 1e-6)
+  const low = up.filter(([k, v]) => days(k, v) < 3)
+  return h(
+    'section.card.upkeep' + (S.disrepair ? '.bad' : ''),
+    h('h3', 'Upkeep', h('small', S.disrepair ? 'in disrepair: everyone works 15% slower' : 'per day')),
+    h(
+      'div.upk',
+      up.map(([k, v]) =>
+        h(
+          'span.ci' + (days(k, v) < 3 ? '.low' : ''),
+          { style: { '--c': RES[k].color }, 'data-tip': `<b>${RES[k].name}</b>${fmt(S.res[k] || 0)} in store: ${days(k, v) > 99 ? 'months' : `${days(k, v).toFixed(1)} days`}` },
+          h('i.ic', { html: resIcon(k) }),
+          `${v < 10 ? v.toFixed(1) : Math.round(v)} ${RES[k].short || RES[k].name}`,
+        ),
+      ),
+    ),
+    h('p.note', S.disrepair ? `Out of ${RES[S.disrepair].name.toLowerCase()}. Restock it and the camp recovers at once.` : low.length ? `Running low: ${low.map(([k]) => RES[k].name.toLowerCase()).join(', ')}. Cloth and medicine mostly come from runs.` : 'Clothes, bedding and bandages wear out; every station needs patching, and upgraded ones and machines need bolts and parts.'),
+  )
 }
 // The last four days of a stock as a little line, scaled to storage.
 function spark(arr, cap, color) {

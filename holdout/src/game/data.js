@@ -51,6 +51,9 @@ export const RES = {
   schematic: { name: 'Schematics', cat: 'research', color: '#8ab4ec', sell: 25, capMul: 0.1, desc: 'Plans and manuals found on runs. Study them at the Research Desk for alternate recipes.' },
   specimen: { name: 'Specimens', cat: 'research', color: '#b6d65a', sell: 20, capMul: 0.1, desc: 'Tissue from special infected. Research turns them into antivirals and more.' },
   core: { name: 'Power Cores', short: 'Cores', cat: 'research', color: '#ff9ad4', sell: 150, capMul: 0.05, desc: 'Rare military power regulators. Each one overclocks an automated station by 50%.' },
+  // vehicle parts: stripped from abandoned cars on runs
+  carBattery: { name: 'Car Battery', short: 'Battery', cat: 'vehicle', color: '#c8302a', sell: 18, capMul: 0.04, desc: 'A twelve-volt battery that still holds a charge. Pulled from cars and garages. Gets a dead vehicle started.' },
+  tyres: { name: 'Tyres', cat: 'vehicle', color: '#5a5a5e', sell: 6, capMul: 0.08, desc: 'Tyres with some tread left, pulled off wrecks. Vans, cars and bicycles need them.' },
   cash: { name: 'Cash', cat: 'cash', color: '#86c67a', sell: 1, desc: 'Trade currency for the black market.' },
 }
 export const RES_KEYS = Object.keys(RES)
@@ -58,6 +61,38 @@ export const STOCK_KEYS = RES_KEYS.filter((k) => k !== 'cash')
 export const AMMO_KEYS = ['pammo', 'rammo', 'shells']
 export const UTILITIES = ['medkit', 'molotov', 'pipebomb', 'noisemaker']
 export const TOP_BAR = ['food', 'water', 'meds', 'wood', 'scrap', 'metal', 'parts', 'fuel', 'cash']
+
+// ---------------------------------------------------------------- travel
+// Getting to a run and back. Every survivor who goes carries provisions for
+// the trip, more the further it is: per person a round trip costs
+// a + b·km + c·km² food (km along the roads, one way) and 1.2× that in
+// water, times the vehicle's share. Vehicles burn fuel per km driven
+// (there and back) and wear down; on foot is slow and nothing gets stashed.
+export const TRAVEL = { a: 0.3, b: 2, c: 8, water: 1.2 }
+export const VEHICLES = {
+  foot: { name: 'On foot', prov: 1, fuelKm: 0, speed: 1 / 3, stash: 0, desc: 'Slow, and everything has to be carried home. Long walks eat food and water.' },
+  bikes: { name: 'Bicycles', prov: 0.6, fuelKm: 0, speed: 0.6, stash: 0, wear: 0.4, desc: 'Twice as fast as walking and lighter on provisions. Still nowhere to stash loot.' },
+  car: { name: 'Car', prov: 0.3, fuelKm: 0.9, speed: 1, stash: 90, wear: 1, desc: 'Four seats and a boot for about 90 units of loot. Light on fuel.' },
+  van: { name: 'The Van', prov: 0.25, fuelKm: 1.4, speed: 1, stash: Infinity, wear: 1, desc: 'The camp\'s old van: room for everything you can carry out of a building.' },
+  truck: { name: 'Armoured Truck', prov: 0.25, fuelKm: 2.2, speed: 0.85, stash: Infinity, wear: 0.6, armor: 40, desc: 'Plated, slow and thirsty. The dead take longer to gather around it (+40 s before the horde).' },
+}
+// What getting the van running again takes, and the cost of mending any
+// vehicle per point of lost condition.
+export const VAN_REPAIR = { carBattery: 1, tyres: 4, parts: 12, bolts: 40, fuel: 10 }
+export const VEHICLE_FIX = { parts: 0.12, bolts: 0.5 }
+
+// ---------------------------------------------------------------- upkeep
+// Everything wears out. Per survivor a day: clothes, bedding and bandages,
+// and a little medicine for coughs and cuts. Per station level a day: scrap
+// for patching; from level 2, bolts; machines and power plants also eat
+// spare parts. Paid a little at a time from storage.
+export const UPKEEP = {
+  person: { cloth: 0.15, meds: 0.02 },
+  station: { scrap: 0.25 },
+  upgraded: { bolts: 0.6 },
+  machine: { parts: 0.06 },
+  slow: 0.85, // work speed while the camp is in disrepair
+}
 
 // ---------------------------------------------------------------- seasons
 // A year is four seasons of six days. Weather weights, farm and collector
@@ -679,6 +714,7 @@ export const RECIPES = [
   { id: 'parts', station: 'workbench', lvl: 1, out: { parts: 2 }, in: { scrap: 4, metal: 1 }, time: 22, cat: 'Materials' },
   { id: 'wiringHand', station: 'workbench', lvl: 1, out: { wiring: 1 }, in: { scrap: 4 }, time: 30, cat: 'Materials' },
   { id: 'beams', station: 'workbench', lvl: 2, out: { beams: 1 }, in: { steel: 3, bolts: 6 }, time: 60, cat: 'Materials' },
+  { id: 'bikes', station: 'workbench', lvl: 1, vehicle: 'bikes', in: { metal: 12, parts: 8, tyres: 2, cloth: 4 }, time: 90, cat: 'Vehicles', desc: 'Four salvaged bicycles: faster runs on less food.' },
   { id: 'bat', station: 'workbench', lvl: 1, item: 'bat', in: { wood: 10 }, time: 25, cat: 'Melee' },
   { id: 'crowbar', station: 'workbench', lvl: 1, item: 'crowbar', in: { metal: 6, scrap: 2 }, time: 30, cat: 'Melee' },
   { id: 'spear', station: 'workbench', lvl: 1, item: 'spear', in: { wood: 8, metal: 2, cloth: 1 }, time: 35, cat: 'Melee' },
@@ -778,14 +814,14 @@ const P = {
   trash: [{ r: 'cloth', n: [1, 3], w: 3 }, { r: 'scrap', n: [2, 5], w: 4 }, { r: 'parts', n: [1, 1], w: 1 }, { r: 'food', n: [1, 2], w: 2 }],
   shelf: [{ r: 'food', n: [3, 8], w: 6 }, { r: 'water', n: [3, 7], w: 5 }, { r: 'meds', n: [1, 2], w: 0.6 }, { r: 'cloth', n: [1, 4], w: 1 }, { r: 'chemicals', n: [1, 3], w: 0.8 }],
   register: [{ r: 'cash', n: [20, 60], w: 1 }],
-  tools: [{ r: 'scrap', n: [3, 8], w: 4 }, { r: 'metal', n: [2, 5], w: 3 }, { r: 'parts', n: [1, 4], w: 3 }, { r: 'bolts', n: [6, 20], w: 3 }, { r: 'wood', n: [3, 8], w: 3 }, { r: 'chemicals', n: [1, 3], w: 1 }, { i: 'pipe', w: 0.5 }, { i: 'crowbar', w: 0.4 }, { i: 'bat', w: 0.3 }, { i: 'toolkit', w: 0.2 }, { i: 'lockpicks', w: 0.15 }, { i: 'machete', w: 0.12 }],
+  tools: [{ r: 'carBattery', n: [1, 1], w: 0.35 }, { r: 'scrap', n: [3, 8], w: 4 }, { r: 'metal', n: [2, 5], w: 3 }, { r: 'parts', n: [1, 4], w: 3 }, { r: 'bolts', n: [6, 20], w: 3 }, { r: 'wood', n: [3, 8], w: 3 }, { r: 'chemicals', n: [1, 3], w: 1 }, { i: 'pipe', w: 0.5 }, { i: 'crowbar', w: 0.4 }, { i: 'bat', w: 0.3 }, { i: 'toolkit', w: 0.2 }, { i: 'lockpicks', w: 0.15 }, { i: 'machete', w: 0.12 }],
   medcab: [{ r: 'meds', n: [1, 4], w: 6 }, { r: 'cloth', n: [2, 4], w: 2 }, { r: 'chemicals', n: [1, 2], w: 1 }, { r: 'medkit', n: [1, 1], w: 0.8 }],
   locker: [{ r: 'cloth', n: [2, 5], w: 3 }, { r: 'pammo', n: [8, 24], w: 3 }, { r: 'cash', n: [10, 30], w: 2 }, { i: 'jacket', w: 0.4 }, { i: 'vest', w: 0.25 }, { i: 'flashlight', w: 0.4 }, { i: 'pistol', w: 0.25 }, { i: 'walkie', w: 0.08 }, { i: 'binoculars', w: 0.12 }],
   gunlocker: [{ r: 'pammo', n: [20, 50], w: 4 }, { r: 'rammo', n: [10, 30], w: 2 }, { r: 'shells', n: [8, 20], w: 2 }, { i: 'pistol', w: 1 }, { i: 'revolver', w: 0.6 }, { i: 'shotgun', w: 0.5 }, { i: 'rifle', w: 0.3 }, { i: 'smg', w: 0.2 }, { i: 'ar', w: 0.07 }, { i: 'vest', w: 0.3 }],
   safe: [{ r: 'cash', n: [80, 220], w: 5 }, { r: 'meds', n: [2, 5], w: 1 }, { r: 'electronics', n: [2, 4], w: 1 }, { r: 'schematic', n: [1, 1], w: 0.6 }, { r: 'core', n: [1, 1], w: 0.2 }, { i: 'revolver', w: 0.4 }, { i: 'walkie', w: 0.2 }, { i: 'katana', w: 0.04 }],
   crate: [{ r: 'wood', n: [5, 12], w: 3 }, { r: 'scrap', n: [5, 12], w: 3 }, { r: 'metal', n: [3, 8], w: 2 }, { r: 'bolts', n: [8, 24], w: 1.5 }, { r: 'coal', n: [3, 8], w: 0.8 }, { r: 'plates', n: [2, 5], w: 0.6 }, { r: 'parts', n: [2, 5], w: 2 }, { r: 'cloth', n: [4, 9], w: 2 }, { r: 'fuel', n: [2, 5], w: 1 }, { r: 'electronics', n: [1, 3], w: 0.8 }],
   milcrate: [{ r: 'rammo', n: [20, 60], w: 4 }, { r: 'pammo', n: [20, 60], w: 3 }, { r: 'shells', n: [10, 24], w: 2 }, { r: 'parts', n: [4, 9], w: 2 }, { r: 'meds', n: [2, 5], w: 1 }, { r: 'electronics', n: [2, 5], w: 1 }, { r: 'pipebomb', n: [1, 2], w: 0.6 }, { r: 'schematic', n: [1, 1], w: 0.5 }, { r: 'core', n: [1, 1], w: 0.22 }, { i: 'rifle', w: 0.4 }, { i: 'smg', w: 0.35 }, { i: 'ar', w: 0.2 }, { i: 'military', w: 0.12 }, { i: 'riot', w: 0.2 }, { i: 'walkie', w: 0.3 }, { i: 'nvg', w: 0.06 }, { i: 'binoculars', w: 0.25 }, { i: 'thermal', w: 0.04 }],
-  car: [{ r: 'fuel', n: [2, 6], w: 4 }, { r: 'parts', n: [1, 3], w: 2 }, { r: 'electronics', n: [1, 2], w: 1 }, { r: 'cash', n: [5, 20], w: 1 }, { r: 'water', n: [1, 3], w: 1 }],
+  car: [{ r: 'fuel', n: [2, 6], w: 4 }, { r: 'carBattery', n: [1, 1], w: 0.6 }, { r: 'parts', n: [1, 3], w: 2 }, { r: 'electronics', n: [1, 2], w: 1 }, { r: 'cash', n: [5, 20], w: 1 }, { r: 'water', n: [1, 3], w: 1 }],
   pump: [{ r: 'fuel', n: [4, 10], w: 1 }],
   dumpster: [{ r: 'food', n: [1, 3], w: 2 }, { r: 'cloth', n: [2, 5], w: 3 }, { r: 'scrap', n: [3, 7], w: 4 }, { r: 'bolts', n: [3, 10], w: 1 }, { r: 'wood', n: [2, 5], w: 2 }, { r: 'parts', n: [1, 2], w: 1 }],
   electronic: [{ r: 'electronics', n: [2, 5], w: 5 }, { r: 'parts', n: [1, 3], w: 2 }, { r: 'scrap', n: [2, 4], w: 2 }, { r: 'schematic', n: [1, 1], w: 0.35 }, { r: 'core', n: [1, 1], w: 0.05 }],
@@ -815,7 +851,7 @@ export const CONTAINERS = {
   crate: { name: 'Supply Crate', pool: P.crate, rolls: [2, 3], time: 3, strip: { wood: [5, 9] }, model: 'crate' },
   pallet: { name: 'Pallet Rack', pool: P.crate, rolls: [2, 3], time: 3.5, strip: { metal: [4, 8], wood: [3, 6], bolts: [4, 10] }, model: 'pallet', big: true },
   milcrate: { name: 'Military Crate', pool: P.milcrate, rolls: [2, 3], time: 4, strip: { wood: [4, 7], metal: [2, 5] }, model: 'milcrate' },
-  car: { name: 'Abandoned Car', pool: P.car, rolls: [1, 2], time: 3.5, strip: { scrap: [10, 16], parts: [2, 4], bolts: [4, 10], cloth: [1, 3], electronics: [0, 1] }, model: 'car', big: true },
+  car: { name: 'Abandoned Car', pool: P.car, rolls: [1, 2], time: 3.5, strip: { scrap: [10, 16], parts: [2, 4], bolts: [4, 10], tyres: [1, 3], carBattery: [0, 1], cloth: [1, 3], electronics: [0, 1] }, model: 'car', big: true },
   pump: { name: 'Fuel Pump', pool: P.pump, rolls: [1, 1], time: 4, strip: { scrap: [5, 9], parts: [1, 2] }, model: 'pump' },
   dumpster: { name: 'Dumpster', pool: P.dumpster, rolls: [1, 2], time: 3, strip: { scrap: [6, 10] }, model: 'dumpster' },
   server: { name: 'Server Rack', pool: P.electronic, rolls: [1, 2], time: 3.5, strip: { electronics: [1, 3], scrap: [3, 5] }, model: 'server' },

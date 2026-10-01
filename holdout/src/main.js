@@ -4,7 +4,7 @@ import { Pipeline } from './render/pipeline.js'
 import { initView, view } from './render/view.js'
 import { pregenerate } from './render/texgen.js'
 import { initAudio, sfx, setSound } from './core/audio.js'
-import { S, newGame, hasSave, load, save, day, log, wipeSave, buildCost, newStation, pay, canAfford, completeGoal, backupSave } from './game/state.js'
+import { S, newGame, hasSave, load, save, day, log, wipeSave, buildCost, newStation, pay, canAfford, completeGoal, backupSave, vehicleOf, wearVehicle } from './game/state.js'
 import { econTick, initSchedules, autoResolveRaid, scheduleRaid } from './game/economy.js'
 import * as belts from './game/belts.js'
 import * as stateMod from './game/state.js'
@@ -340,6 +340,13 @@ class Game {
   }
   endMission(report) {
     const m = this.mission
+    // the vehicle comes home a little more worn
+    const v = vehicleOf(m.loadout?.vehId)
+    if (v) {
+      v.out = false
+      wearVehicle(v, m.loadout.km || 1)
+      bus.emit('vehicles')
+    }
     setTimeout(() => {
       m.dispose()
       this.mission = null

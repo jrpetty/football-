@@ -279,6 +279,25 @@ function ruinsModel(seed) {
 }
 
 // ---------------------------------------------------------------- world
+// Four bicycles in a rack, for the motor pool by the gate.
+function bikeRack() {
+  const b = new Builder()
+  b.box(2.6, 0.06, 0.08, { mat: 'steel', color: '#8a8e92', y: 0.45 })
+  for (const x of [-1.25, 1.25]) b.box(0.06, 0.45, 0.06, { mat: 'steel', color: '#8a8e92', x, y: 0.22 })
+  for (let i = 0; i < 4; i++) {
+    b.at({ x: -0.95 + i * 0.63, ry: Math.PI / 2, rz: 0.05 * (i - 1.5) }, () => {
+      const col = ['#c8302a', '#2a5a9a', '#3a7a4a', '#d8a020'][i]
+      for (const s of [-0.5, 0.5]) b.torus(0.33, 0.025, { mat: 'rubber', color: '#1a1a1a', y: 0.35, z: s, ry: Math.PI / 2, rs: 6, ts2: 18 })
+      b.beam([0, 0.35, -0.5], [0, 0.75, 0.05], 0.04, 0.04, { mat: 'paint', color: col })
+      b.beam([0, 0.35, 0.5], [0, 0.75, 0.05], 0.04, 0.04, { mat: 'paint', color: col })
+      b.beam([0, 0.75, 0.05], [0, 0.85, 0.45], 0.03, 0.03, { mat: 'steel', color: '#8a8e92' })
+      b.box(0.5, 0.025, 0.025, { mat: 'steel', color: '#8a8e92', y: 0.88, z: 0.45 })
+      b.box(0.12, 0.05, 0.22, { mat: 'leather', color: '#1a1a1a', y: 0.82, z: -0.12 })
+    })
+  }
+  return b.build()
+}
+
 export class BaseWorld {
   constructor(base, opts = {}) {
     this.base = base
@@ -471,12 +490,8 @@ export class BaseWorld {
         else if (k < 0.93) cinderBlocks(B, { n: 3 + Math.floor(rnd() * 4), seed: Math.floor(rnd() * 99) })
       })
     }
-    // the supply van, parked just inside the gate
-    const van = vanModel({ color: '#cfc8b4' })
-    van.position.set(gx - 5.2, 0, b.z1 - 3.2)
-    van.rotation.y = Math.PI * 0.92
     const g = new THREE.Group()
-    g.add(B.build(), van)
+    g.add(B.build())
     g.traverse((o) => {
       if (o.isMesh) {
         o.castShadow = true
@@ -493,6 +508,48 @@ export class BaseWorld {
       if (grid.inb(x, z) && !grid.owner[grid.i(x, z)]) grid.set(x, z, BLOCK, 1, 'decor')
     }
     this.vanPos = { x: gx - 5.2, z: b.z1 - 3.2 }
+    this.buildVehicles()
+  }
+  // The motor pool: the van just inside the gate (on blocks until it is
+  // repaired), anything else parked outside by the road. Vehicles out on a
+  // run are missing.
+  buildVehicles() {
+    if (this.vehGroup) {
+      this.scene.remove(this.vehGroup)
+      this.vehGroup.traverse((o) => o.isMesh && o.geometry.dispose())
+    }
+    const g = new THREE.Group()
+    const b = bounds()
+    const gx = this.gateX()
+    let slot = 0
+    for (const v of S.vehicles || []) {
+      if (v.out) continue
+      let m = null
+      if (v.kind === 'van') {
+        m = vanModel({ color: '#cfc8b4', broken: !!v.broken })
+        m.position.set(gx - 5.2, 0, b.z1 - 3.2)
+        m.rotation.y = Math.PI * 0.92
+      } else {
+        const x = gx + 5 + slot * 3.4
+        const z = b.z1 + 4.2
+        slot++
+        if (v.kind === 'car') m = carModel({ seed: v.look || 3, wreck: 0, kind: 'sedan' })
+        else if (v.kind === 'truck') m = vanModel({ color: '#5a6248', low: '#3a3e30' })
+        else m = bikeRack()
+        m.position.set(x, 0, z)
+        m.rotation.y = Math.PI / 2 + 0.08 * (slot % 2 ? 1 : -1)
+      }
+      m.traverse((o) => {
+        if (o.isMesh) {
+          o.castShadow = true
+          o.receiveShadow = true
+        }
+      })
+      m.userData.pick = { type: 'vehicle', id: v.id }
+      g.add(m)
+    }
+    this.vehGroup = g
+    this.scene.add(g)
   }
   rebuildGrass(count = this.grassCount) {
     if (this.grass) this.grass.dispose()

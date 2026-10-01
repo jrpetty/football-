@@ -4,7 +4,7 @@ import {
   RES, RES_KEYS, STOCK_KEYS, SKILLS, SKILL_KEYS, SKILL_MAX, xpForLevel, OCCUPATIONS, OCC_KEYS, TRAITS, TRAIT_KEYS,
   FIRST_NAMES, FEMALE_NAMES, LAST_NAMES, ITEMS, QUALITY, MODS, STATIONS, FENCE, RECIPES, REPAIR, EXPANSIONS, EXPANSION_DEPTH,
   GOALS, DAY_MIN, UTILITIES, BELTS, BELT_STACK, TIERS, MILESTONES, SIGNAL, RESEARCH, ALT_RECIPES, CORE_SLOTS, CORE_BOOST, INFECTION,
-  SEASONS, SEASON_DAYS, PERKS, PERK_LEVELS, OUTPOST, LOCATIONS,
+  SEASONS, SEASON_DAYS, PERKS, PERK_LEVELS, OUTPOST, LOCATIONS, VEHICLES, TRAVEL, VAN_REPAIR, VEHICLE_FIX,
 } from './data.js'
 import { bus, uid, pick, rint, rand, chance, clamp, store, weighted } from '../core/util.js'
 import { SKIN_TONES, HAIR_COLORS } from '../models/character.js'
@@ -544,6 +544,7 @@ export function orderRecipe(st, recipeId, repeat = 1, keep = null) {
   const r = RECIPES.find((x) => x.id === recipeId)
   if (!r || r.lvl > st.level) return 'Needs a higher level bench'
   if (r.research && !researchDone(r.research)) return `Needs research: ${RESEARCH[r.research].name}`
+  if (r.vehicle && ((S.vehicles || []).some((v) => v.kind === r.vehicle) || st.orders.some((o) => o.recipe === r.id))) return 'The camp already has them'
   return addOrder(st, { kind: 'recipe', recipe: r.id, repeat, keep })
 }
 export function orderMod(st, modId, itemUid) {
@@ -739,6 +740,7 @@ export function completeMilestone(id) {
   if (!m || msDone(id) || tierLock(m.tier) || !pay(m.cost)) return false
   S.milestones[id] = day()
   log(`Milestone reached: ${m.name}.`, 'good')
+  if (id === 'convoys' && !(S.vehicles || []).some((v) => v.kind === 'truck')) addVehicle('truck', { log: 'An armoured truck rolls in through the gate: plated, slow and thirsty.' })
   addMoraleEvent(`Milestone: ${m.name}`, 5, 1.5)
   bus.emit('milestone', id)
   bus.emit('change')
@@ -886,6 +888,68 @@ export function abandonOutpost(o, why = null) {
   bus.emit('outposts')
 }
 
+// ---------------------------------------------------------------- vehicles and travel
+// The camp's motor pool. The old van starts dead in the yard; bicycles are
+// made at the Workbench; cars are found on runs (keys or a hotwire); the
+// armoured truck comes with the Convoys milestone or the lost convoy.
+export const vehicleOf = (id) => (S.vehicles || []).find((v) => v.id === id) || null
+export function addVehicle(kind, o = {}) {
+  S.vehicles = S.vehicles || []
+  const n = S.vehicles.filter((v) => v.kind === kind).length
+  const v = { id: uid('v'), kind, name: o.name || (n ? `${VEHICLES[kind].name} ${n + 1}` : VEHICLES[kind].name), cond: o.cond ?? 100, since: day(), look: o.look ?? Math.floor(Math.random() * 1e6) }
+  S.vehicles.push(v)
+  log(o.log || `${v.name} joined the motor pool.`, 'good')
+  bus.emit('vehicles')
+  return v
+}
+// Why a vehicle can't go out, or null.
+export function vehicleProblem(v) {
+  if (!v) return null
+  if (v.broken) return v.kind === 'van' ? 'Dead: needs a battery, tyres and parts' : 'Broken down'
+  if (v.cond < 10) return 'Too worn to drive: repair it'
+  if (v.out) return 'Out on a run'
+  return null
+}
+export const usableVehicles = () => (S.vehicles || []).filter((v) => !vehicleProblem(v))
+// Provisions and fuel for a round trip of `km` (one way, along the roads).
+export function travelCost(km, kind, n) {
+  const V = VEHICLES[kind] || VEHICLES.foot
+  const per = (TRAVEL.a + TRAVEL.b * km + TRAVEL.c * km * km) * V.prov
+  return {
+    food: Math.max(n ? 1 : 0, Math.ceil(per * n)),
+    water: Math.max(n ? 1 : 0, Math.ceil(per * TRAVEL.water * n)),
+    fuel: V.fuelKm ? Math.max(1, Math.ceil(V.fuelKm * km * 2)) : 0,
+    perFood: per,
+  }
+}
+export function vehicleRepairCost(v) {
+  if (v.broken && v.kind === 'van') return { ...VAN_REPAIR }
+  const miss = 100 - v.cond
+  if (miss < 1) return null
+  const out = {}
+  for (const [k, per] of Object.entries(VEHICLE_FIX)) out[k] = Math.max(1, Math.ceil(per * miss * (v.kind === 'bikes' ? 0.3 : v.kind === 'truck' ? 1.6 : 1)))
+  if (v.cond < 50 && v.kind !== 'bikes') out.tyres = 1
+  return out
+}
+export function repairVehicle(v) {
+  const c = vehicleRepairCost(v)
+  if (!c || !pay(c)) return false
+  const was = v.broken
+  v.broken = false
+  v.cond = was ? 70 : 100
+  log(was ? `${v.name} coughs, shudders and starts. The camp has wheels again.` : `${v.name} is patched up.`, 'good')
+  if (was) addMoraleEvent('The van runs again', 6, 1.5)
+  bus.emit('vehicles')
+  bus.emit('change')
+  return true
+}
+// Every trip wears a vehicle down a little, more on long drives.
+export function wearVehicle(v, km) {
+  if (!v) return
+  v.cond = Math.max(0, v.cond - (1.5 + km * 2.4) * (VEHICLES[v.kind].wear ?? 1))
+  if (v.cond < 10) log(`${v.name} needs repairs before it goes out again.`, 'bad')
+}
+
 // ---------------------------------------------------------------- research
 // One project at a time at the Research Desk. Studying a schematic ends in
 // a choice of three alternate recipes; everything else is a lasting effect.
@@ -1004,6 +1068,7 @@ export function newGame() {
     signal: { phase: 0, paid: {} },
     research: { done: {}, alts: [], pick: null },
     outposts: [],
+    vehicles: [{ id: 'van', kind: 'van', name: 'The Van', cond: 0, broken: true, since: 1 }],
     events: [],
     goals: {},
     stats: { kills: 0, runs: 0, deaths: 0, recruited: 0, raids: 0, crafted: 0, memorial: [] },
@@ -1090,6 +1155,9 @@ function migrate() {
   S.signal = S.signal || { phase: 0, paid: {} }
   S.research = S.research || { done: {}, alts: [], pick: null }
   S.outposts = S.outposts || []
+  // camps from before the motor pool had a running van
+  if (!S.vehicles) S.vehicles = [{ id: 'van', kind: 'van', name: 'The Van', cond: 75, since: 1 }]
+  for (const v of S.vehicles) v.out = false
   for (const s of S.survivors) {
     if (s.perks) continue
     s.perks = []

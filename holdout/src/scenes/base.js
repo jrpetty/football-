@@ -90,6 +90,7 @@ export class BaseScene {
     on('expanded', () => this.onExpanded())
     on('expansions', () => this.world.refresh(true))
     on('links', () => this.syncBelts())
+    on('vehicles', () => this.world.buildVehicles())
     this.syncStations()
     this.initBelts()
     this.fence.refresh()
@@ -400,6 +401,7 @@ export class BaseScene {
     for (const v of this.beltViews.values()) list.push(v.group)
     for (const w of this.people.workers) list.push(w.root)
     if (this.visitor) list.push(this.visitor.ch.root)
+    if (this.world.vehGroup) list.push(...this.world.vehGroup.children)
     return list
   }
   onPress() {
@@ -431,6 +433,9 @@ export class BaseScene {
     } else if (pk?.type === 'person') {
       this.selectedPerson = pk.s.id
       this.game.ui?.openSurvivor(pk.s.id)
+      sfx('click')
+    } else if (pk?.type === 'vehicle') {
+      this.game.ui?.openMotorPool()
       sfx('click')
     } else if (pk?.type === 'belt') {
       // a belt opens the station it serves (the depot end is the less useful one)
@@ -489,6 +494,10 @@ export class BaseScene {
       tip = `<b>${s.name}</b><span>${s.status === 'injured' ? 'Injured' : s.job ? STATIONS[S.stations.find((x) => x.id === s.job)?.type]?.name || '' : 'No job'}</span>`
     } else if (pk?.type === 'visitor') tip = '<b>Someone at the gate</b><span>Click to talk</span>'
     else if (pk?.type === 'belt') tip = this.beltTip(pk.link)
+    else if (pk?.type === 'vehicle') {
+      const v = (S.vehicles || []).find((x) => x.id === pk.id)
+      if (v) tip = `<b>${v.name}</b><span>${v.broken ? 'Dead: needs a battery, tyres and parts' : `Condition ${Math.round(v.cond)}%`}</span><small>Click for the motor pool</small>`
+    }
     this.game.ui?.hoverTip(tip, x, y)
   }
   onKey(e) {

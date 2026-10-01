@@ -64,6 +64,9 @@ function makeRing(color = '#f0c060') {
 }
 
 // ---------------------------------------------------------------- base agent
+// Orders that walk to a container and work at it for a while.
+const WORK_ORDERS = new Set(['search', 'dismantle', 'hotwire'])
+
 export class Agent {
   constructor(world, ch, x, z) {
     this.world = world
@@ -212,7 +215,7 @@ export class SurvivorAgent extends Agent {
     this.ring.visible = v
     this.labelEl.classList.toggle('sel', v)
   }
-  // order: {type:'move', x, z} | {type:'search'|'dismantle', c} | {type:'attack', z} | {type:'revive', a} | {type:'throw', item, x, z}
+  // order: {type:'move', x, z} | {type:'search'|'dismantle'|'hotwire', c} | {type:'attack', z} | {type:'revive', a} | {type:'throw', item, x, z}
   command(order) {
     if (this.downed) return false
     this.order = order
@@ -221,7 +224,7 @@ export class SurvivorAgent extends Agent {
     if (order.type === 'move') {
       this.moveTo(order.x, order.z)
       this.anchor = { x: order.x, z: order.z }
-    } else if (order.type === 'search' || order.type === 'dismantle') {
+    } else if (WORK_ORDERS.has(order.type)) {
       const spot = this.world.accessTile(order.c, this)
       if (!spot) {
         this.order = null
@@ -387,7 +390,7 @@ export class SurvivorAgent extends Agent {
       return
     }
     const threat = this.findThreat()
-    const busyWork = o && (o.type === 'search' || o.type === 'dismantle') && this.work
+    const busyWork = o && WORK_ORDERS.has(o.type) && this.work
     const underAttack = this.hurtT > 0
     if (threat && (!busyWork || underAttack || this.dist(threat) < 2.2)) {
       mode = this.fight(threat, dt)
@@ -395,7 +398,7 @@ export class SurvivorAgent extends Agent {
       return
     }
     if (o?.type === 'attack' && (!o.z || o.z.dead)) this.order = null
-    if (o && (o.type === 'search' || o.type === 'dismantle')) {
+    if (o && WORK_ORDERS.has(o.type)) {
       const c = o.c
       if (c.gone || (o.type === 'search' && c.searched)) {
         this.order = null
@@ -418,7 +421,7 @@ export class SurvivorAgent extends Agent {
         this.face(c.x, c.z, dt)
         wk.t += dt
         this.showProg(wk.t / wk.total)
-        mode = wk.kind === 'search' ? 'search' : 'hammer'
+        mode = wk.kind === 'search' || wk.kind === 'hotwire' ? 'search' : 'hammer'
         W.workTick?.(this, wk, dt)
         if (wk.t >= wk.total) {
           W.finishWork(this, c, wk.kind)

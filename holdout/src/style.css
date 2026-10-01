@@ -1012,3 +1012,42 @@ body.aiming #c { cursor: crosshair !important; }
   .mn-side button { font-size: 0; justify-content: center; }
   .mn-stages { grid-template-columns: 1fr 1fr; }
 }
+/* ---- upkeep */
+.upkeep .upk { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 6px; }
+.upkeep .upk .ci { padding: 3px 8px; border-radius: 6px; background: rgba(255,255,255,0.04); border: 1px solid var(--line); font-size: 13px; }
+.upkeep .upk .ci.low { border-color: rgba(239,106,82,0.6); color: #ffb8a8; }
+.upkeep.bad { border-color: rgba(239,106,82,0.5); background: linear-gradient(180deg, rgba(239,106,82,0.08), transparent); }
+/* ---- drivable cars on runs */
+.lootmark.drivable { width: 16px; height: 16px; background: #5ad8c8; box-shadow: 0 0 0 4px rgba(90, 216, 200, 0.22), 0 0 12px rgba(90, 216, 200, 0.75); opacity: 1; }
+.lootmark.drivable.started { background: #8ce07a; box-shadow: 0 0 0 5px rgba(140, 224, 122, 0.3), 0 0 16px rgba(140, 224, 122, 0.9); animation: bob 1.2s ease-in-out infinite; }
+.cm-note { padding: 4px 10px 6px; color: var(--muted); font-size: 12px; }
+/* ---- motor pool and vehicle choice */
+.motorpool { display: flex; flex-direction: column; gap: 10px; }
+.mp-head { display: flex; align-items: center; gap: 10px; }
+.mp-head i { width: 26px; height: 26px; color: var(--accent); }
+.mp-head h2 { margin: 0; }
+.mp-head small { color: var(--muted); margin-left: auto; }
+.vtable { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.vtable th { text-align: left; font: 700 11px var(--font-display); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding: 4px 6px; border-bottom: 1px solid var(--line); }
+.vtable td { padding: 6px; border-bottom: 1px dashed var(--line); }
+.vtable td small { color: var(--dim); }
+.vehicle h3 small.good { color: var(--good); }
+.vehicle h3 small.bad { color: var(--bad); }
+.vehicle.down { border-color: rgba(239,106,82,0.35); }
+.vstats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 6px 0 8px; }
+.vstats span { display: flex; flex-direction: column; padding: 6px 8px; border-radius: 6px; background: rgba(255,255,255,0.03); border: 1px solid var(--line); }
+.vstats small { color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+.vchk { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; margin: 8px 0; }
+.vrow { display: grid; grid-template-columns: 18px 1fr auto 16px; align-items: center; gap: 6px; padding: 4px 6px; border-radius: 6px; background: rgba(255,255,255,0.03); }
+.vrow .ic svg, .vrow .tick svg { width: 15px; height: 15px; }
+.vrow .tick { color: var(--bad); }
+.vrow.have .tick { color: var(--good); }
+.vehpick { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 6px; margin-bottom: 8px; }
+.veh { position: relative; appearance: none; text-align: left; display: flex; flex-direction: column; gap: 2px; padding: 7px 9px 9px; border-radius: 8px; border: 1px solid var(--line-2); background: rgba(255,255,255,0.03); color: var(--fg); cursor: pointer; overflow: hidden; }
+.veh b { font: 700 13px var(--font-display); }
+.veh small { color: var(--muted); font-size: 11.5px; }
+.veh:hover { background: rgba(255,255,255,0.06); }
+.veh.on { border-color: var(--accent); background: rgba(234,165,60,0.12); }
+.veh.off { opacity: 0.5; cursor: not-allowed; }
+.veh .vcond { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--good); opacity: 0.8; }
+.mt-res b + i { margin-left: 8px; }

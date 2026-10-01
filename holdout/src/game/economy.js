@@ -3,7 +3,7 @@
 // recruits, distress calls, hordes and the black market.
 import {
   RES, STOCK_KEYS, AMMO_KEYS, ITEMS, QUALITY, MODS, STATIONS, FENCE, RECIPES, EXPANSIONS, HORDES, OCCUPATIONS, LOCATIONS,
-  GAME_MIN_PER_SEC, DAY_MIN, SEC_PER_DAY, SEC_PER_HOUR, RARITY, ALT_RECIPES, INFECTION, OUTPOST, SIGNAL,
+  GAME_MIN_PER_SEC, DAY_MIN, SEC_PER_DAY, SEC_PER_HOUR, UPKEEP, RARITY, ALT_RECIPES, INFECTION, OUTPOST, SIGNAL,
 } from './data.js'
 const SIGNAL_PHASES = SIGNAL.length
 import {
@@ -11,7 +11,7 @@ import {
   survivorStats, itemOf, addItem, repairCost, orderSpec, rollQuality, rebuildFence, fenceMax, makeSurvivor, killSurvivor,
   bedCount, countType, maxLevelOf, addMoraleEvent, itemName, moraleMult, available, getS, isUnlocked, hasFlag, feedSignal,
   researchDone, finishResearch, coreBoost, treatInfection, season, seasonIdx, campTier, perkOf,
-  outpostYield, abandonOutpost,
+  outpostYield, abandonOutpost, addVehicle,
 } from './state.js'
 import { bus, pick, rint, rand, chance, clamp, weighted } from '../core/util.js'
 import { tickLinks, beltBonus, belted, pulled, outCap } from './belts.js'
@@ -152,6 +152,7 @@ export function stationRate(st, pinfo) {
   let r = 0
   for (const s of workersOf(st)) if (s.status === 'ok') r += workEff(s, st.type)
   if (d.machine && !pinfo.powered.has(st.id)) r *= HAND_RATE
+  if (S.disrepair) r *= UPKEEP.slow
   if (isAutomated(st, pinfo)) r += d.autoRate * (hasFlag('autoBoost') ? 1.5 : 1) * (1 + coreBoost() * (st.cores || 0))
   return r
 }
@@ -186,6 +187,26 @@ export function dailyNeeds() {
 export function heatNeed() {
   const k = season().heat
   return k ? { wood: k * S.survivors.length, coal: (k / 3) * S.survivors.length, fuel: (k / 3) * S.survivors.length } : null
+}
+
+// Upkeep a day: survivors wear through clothes, bedding and bandages;
+// stations need patching, bolts once upgraded, spare parts if they are
+// machines or power plants. Short on any of it, the camp falls into
+// disrepair: everything works 15% slower and morale sags until restocked.
+export function upkeepNeeds() {
+  const out = {}
+  const add = (o, k = 1) => {
+    for (const [r, v] of Object.entries(o)) out[r] = (out[r] || 0) + v * k
+  }
+  add(UPKEEP.person, S.survivors.filter((s) => s.status !== 'outpost').length)
+  for (const st of S.stations) {
+    const d = STATIONS[st.type]
+    if (st.level < 1 || d.fixed || st.type === 'mast') continue
+    add(UPKEEP.station, st.level)
+    if (st.level >= 2) add(UPKEEP.upgraded, st.level - 1)
+    if (d.machine || d.power) add(UPKEEP.machine, st.level)
+  }
+  return out
 }
 
 // Idle survivors (no job) help build, or forage when nothing is going up.
@@ -239,6 +260,7 @@ export function campFlow() {
   const n = dailyNeeds()
   total.food = (total.food || 0) - n.food
   total.water = (total.water || 0) - n.water
+  for (const [k, v] of Object.entries(upkeepNeeds())) total[k] = (total[k] || 0) - v
   const heat = heatNeed()
   if (heat) {
     if (S.res.wood > 1) total.wood = (total.wood || 0) - heat.wood
@@ -278,6 +300,19 @@ export function econTick(dt, opts = {}) {
   }
   if (cold && !S.cold) log('The camp is out of wood, coal and fuel. Everyone is freezing.', 'bad')
   S.cold = cold
+  // upkeep, a little at a time
+  let short = null
+  for (const [k, v] of Object.entries(upkeepNeeds())) {
+    const need = (v / SEC_PER_DAY) * dt
+    if ((S.res[k] || 0) >= need) S.res[k] -= need
+    else {
+      S.res[k] = 0
+      short = short || k
+    }
+  }
+  if (short && !S.disrepair) log(`Out of ${RES[short].name.toLowerCase()} for upkeep. Things are falling apart: everyone works slower until it is restocked.`, 'bad')
+  if (!short && S.disrepair) log('Upkeep is covered again. The camp is back in good repair.', 'good')
+  S.disrepair = short
   const hungry = S.survivors.length > 0 && (S.res.food <= 0.01 || S.res.water <= 0.01)
   if (hungry && !S.hungry) log(S.res.water <= 0.01 ? 'Out of water! Everyone is weakening.' : 'Out of food! Everyone is weakening.', 'bad')
   S.hungry = hungry
@@ -733,7 +768,10 @@ function completeOrder(st, o) {
   o.paid = null
   if (o.kind === 'recipe') {
     const r = RECIPES.find((x) => x.id === o.recipe)
-    if (r.item) {
+    if (r.vehicle) {
+      addVehicle(r.vehicle, { log: `${STATIONS[st.type].name}: four bicycles, oiled and ready.` })
+      bus.emit('crafted', st, r)
+    } else if (r.item) {
       const q = rollQuality(st)
       const it = addItem(r.item, { q })
       log(`${STATIONS[st.type].name}: made ${itemName(it)}.`, q >= 2 ? 'good' : '')
@@ -871,6 +909,7 @@ export function moraleFactors() {
   if (S.res.food <= 0.01) f.push({ text: 'No food', v: -25 })
   if (S.res.water <= 0.01) f.push({ text: 'No water', v: -25 })
   if (S.cold) f.push({ text: 'Freezing', v: -15 })
+  if (S.disrepair) f.push({ text: 'Camp in disrepair', v: -6 })
   else if (season().heat) f.push({ text: 'Warm through winter', v: 2 })
   const bunks = S.stations.filter((s) => s.type === 'bunkhouse' && s.level > 0)
   if (bunks.length) f.push({ text: 'Bunk comfort', v: Math.round(bunks.reduce((a, s) => a + s.level, 0) / bunks.length * 4) })
