@@ -738,13 +738,16 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         mindTheRoute();                                // a carrier's round is chosen, not clicked
         putBackIfLost();
-        if (peekJob() != null) return;                 // already busy
-        if (resting()) return;                         // off the clock for a bit
-        if (movedOnFromSpentGround()) return;          // this patch is finished
+        // Tools from the stores, busy or not: they are made on the spot, and a miner
+        // almost always has a mine job queued — so behind the busy check below, a miner
+        // whose pickaxe had worn out stood "needing a pickaxe" for days.
         pickaxeFromTheStores();                        // the iron, and then the diamond, pickaxe
         shearsFromTheStores();                         // a rancher's shears, for the wool
         stoneToolFromTheStores();                      // no more wooden tools once there is stone
         bucketFromTheStores();                         // a farmer's water, when the village is hungry
+        if (peekJob() != null) return;                 // already busy
+        if (resting()) return;                         // off the clock for a bit
+        if (movedOnFromSpentGround()) return;          // this patch is finished
         if (unstuckFromGround()) return;               // a plot that cannot be set up is given up
         if (turnedToTheFields()) return;               // a hungry village needs farmers
         if (seekTheSeam()) return;                     // dig where the village's metal is
