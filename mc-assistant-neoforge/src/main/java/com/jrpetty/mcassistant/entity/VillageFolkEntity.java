@@ -743,7 +743,8 @@ public class VillageFolkEntity extends AssistantEntity {
         if (movedOnFromSpentGround()) return;          // this patch is finished
         pickaxeFromTheStores();                        // the iron, and then the diamond, pickaxe
         shearsFromTheStores();                         // a rancher's shears, for the wool
-        bucketFromTheStores();                         // a farmer's water, for a field of any size
+        stoneToolFromTheStores();                      // no more wooden tools once there is stone
+        bucketFromTheStores();                         // a farmer's water, when the village is hungry
         if (unstuckFromGround()) return;               // a plot that cannot be set up is given up
         if (turnedToTheFields()) return;               // a hungry village needs farmers
         if (seekTheSeam()) return;                     // dig where the village's metal is
@@ -1101,10 +1102,64 @@ public class VillageFolkEntity extends AssistantEntity {
             }
             returnTo(villageCentre, st -> st.is(diamond), before, r);
         }
-        if (at.ordinal() >= Villages.Age.IRON.ordinal() && pickTierCarried() < 3 && ironFromTheStores(3)) {
+        // Iron pickaxes when the diamonds want them, not before: a stone one breaks iron
+        // ore, and an Iron Age village that spent each iron that came in on pickaxes and
+        // buckets held none of the hundred and fifty its age asks for.
+        if (at.ordinal() >= Villages.Age.DIAMOND.ordinal() && pickTierCarried() < 3 && ironFromTheStores(3)) {
             insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_PICKAXE));
             brain("an iron pickaxe made from the stores");
         }
+    }
+
+    private int stoneToolTick = -100000;
+
+    /**
+     * Children are sent out with wooden tools, and nothing gave them better ones: a
+     * village of thirty-five on its sixteenth day had miners digging the iron seam with
+     * wooden pickaxes, which break iron ore for nothing, and one with no pickaxe at all.
+     * A folk whose trade tool is wood, or missing, has a stone one made from the stores:
+     * three cobblestone and a plank.
+     */
+    private void stoneToolFromTheStores() {
+        if (villageCentre == null || ownerId() == null) return;
+        if (tickCount - stoneToolTick < 2400) return;
+        stoneToolTick = tickCount;
+        net.minecraft.world.item.Item tool;
+        String kind;
+        switch (stationTask()) {
+            case MINE -> { tool = net.minecraft.world.item.Items.STONE_PICKAXE; kind = "_pickaxe"; }
+            case WOOD -> { tool = net.minecraft.world.item.Items.STONE_AXE; kind = "_axe"; }
+            case GUARD -> { tool = net.minecraft.world.item.Items.STONE_SWORD; kind = "_sword"; }
+            case FARM -> { tool = net.minecraft.world.item.Items.STONE_HOE; kind = "_hoe"; }
+            default -> { return; }
+        }
+        final String suffix = kind;
+        boolean better = countCarried(st -> {
+            if (st.isEmpty()) return false;
+            String path = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(st.getItem()).getPath();
+            return path.endsWith(suffix) && !path.startsWith("wooden") && !path.startsWith("golden");
+        }) > 0;
+        if (better) return;
+        int r = buildStoresRadius();
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> stone =
+            st -> st.is(net.minecraft.world.item.Items.COBBLESTONE) || st.is(net.minecraft.world.item.Items.COBBLED_DEEPSLATE);
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> plank =
+            st -> st.is(net.minecraft.tags.ItemTags.PLANKS) || st.is(net.minecraft.world.item.Items.STICK);
+        int stoneBefore = countCarried(stone), plankBefore = countCarried(plank);
+        if (stoneBefore < 3) drawFrom(villageCentre, stone, 3 - stoneBefore, r);
+        if (plankBefore < 1) drawFrom(villageCentre, plank, 1, r);
+        if (countCarried(stone) >= 3 && countCarried(plank) >= 1) {
+            removeMatching(stone, 3);
+            removeMatching(plank, 1);
+            // The wooden one goes; a pack is not a museum.
+            removeMatching(st -> net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(st.getItem())
+                .getPath().equals("wooden" + suffix), 1);
+            insertItem(new net.minecraft.world.item.ItemStack(tool));
+            brain("a stone" + suffix.replace('_', ' ') + " made from the stores");
+            return;
+        }
+        returnTo(villageCentre, stone, stoneBefore, r);
+        returnTo(villageCentre, plank, plankBefore, r);
     }
 
     private String patchNameFor(StationTask trade) {
@@ -1980,6 +2035,11 @@ public class VillageFolkEntity extends AssistantEntity {
         if (zone == null) return;
         if (countCarried(st -> st.is(net.minecraft.world.item.Items.WATER_BUCKET)
                 || st.is(net.minecraft.world.item.Items.BUCKET)) > 0) return;
+        // Only while the village is hungry: dry ground feeds a village that is not, and
+        // the iron is what its age asks for.
+        if (!(level() instanceof net.minecraft.server.level.ServerLevel server)
+                || Villages.stock(server, villageCentre, Villages.Task.FOOD, Villages.storesRadius(ownerId()))
+                    >= Villages.larderForBirth(ownerId())) return;
         BlockPos c = zone.center();
         int r = Math.min(8, zone.radius());
         for (BlockPos p : BlockPos.betweenClosed(c.offset(-r, -3, -r), c.offset(r, 3, r))) {
