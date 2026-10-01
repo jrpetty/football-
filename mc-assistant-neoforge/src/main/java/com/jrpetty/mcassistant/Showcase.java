@@ -249,7 +249,7 @@ public final class Showcase {
             net.minecraft.world.item.Items.WHITE_WOOL, net.minecraft.world.item.Items.IRON_INGOT, net.minecraft.world.item.Items.HONEYCOMB,
             net.minecraft.world.item.Items.COOKED_COD, net.minecraft.world.item.Items.SWEET_BERRIES, net.minecraft.world.item.Items.POTATO));
         // The wall's gates, the watch's ladders and the alarm bell.
-        Villages.Village staged = new Villages.Village(SHOWCASE, heart, level.dimension());
+        com.jrpetty.mcassistant.entity.Villages.Village staged = new com.jrpetty.mcassistant.entity.Villages.Village(SHOWCASE, heart, level.dimension());
         com.jrpetty.mcassistant.entity.Watch.keepAt(level, staged, heart, true);
         com.jrpetty.mcassistant.entity.Watch.bell(level, staged, true);
         // The café's counter and the shop's, set out (the showcase has no stores to set them from).
