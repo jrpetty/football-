@@ -1039,6 +1039,71 @@ export class CityMap {
       m.el.classList.toggle('sel', this.sel === L.loc)
       m.el.classList.toggle('hov', this.hover === L.loc)
     }
+    this.syncConvoys()
+  }
+
+  // ---------------------------------------------------------------- convoys
+  // Every outpost runs a truck home and back along the roads, keeping right.
+  syncConvoys() {
+    const C = (this.convoys = this.convoys || new Map())
+    const want = new Set((S.outposts || []).map((o) => o.locId))
+    for (const [id, c] of C) {
+      if (want.has(id)) continue
+      this.scene.remove(c.truck)
+      c.truck.traverse((o) => o.geometry?.dispose())
+      C.delete(id)
+    }
+    for (const o of S.outposts || []) {
+      if (C.has(o.locId)) continue
+      const loc = this.city.locs.find((l) => l.id === o.locId)
+      if (!loc) continue
+      const r = route(this.city, this.city.campNode, loc.node)
+      const pts = [[this.city.camp.x, this.city.camp.z], ...(r?.pts || []), [loc.x, loc.z]].filter((p, k, A) => !k || Math.hypot(p[0] - A[k - 1][0], p[1] - A[k - 1][1]) > 0.5)
+      const cum = [0]
+      for (let k = 1; k < pts.length; k++) cum.push(cum[k - 1] + Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]))
+      const len = cum[cum.length - 1]
+      if (len < 1) continue
+      const truck = mapVehicleModel('mtruck')
+      truck.traverse((m) => {
+        if (!m.isMesh || m.material.userData?.key !== 'paint') return
+        const col = m.geometry.attributes.color
+        for (let i = 0; i < col.count; i++) col.setXYZ(i, col.getX(i) * 0.085, col.getY(i) * 0.1, col.getZ(i) * 0.035)
+      })
+      truck.scale.setScalar(1.6)
+      this.scene.add(truck)
+      C.set(o.locId, { pts, cum, len, truck, s: Math.random() * len, dir: Math.random() < 0.5 ? 1 : -1, wait: 0, rot: null })
+    }
+  }
+  updateConvoys(dt) {
+    if (!this.convoys) return
+    for (const c of this.convoys.values()) {
+      if (c.wait > 0) c.wait -= dt
+      else {
+        c.s += c.dir * dt * 55
+        // a pause at each end to load and unload
+        if (c.s >= c.len) ((c.s = c.len), (c.dir = -1), (c.wait = 5))
+        else if (c.s <= 0) ((c.s = 0), (c.dir = 1), (c.wait = 5))
+      }
+      let k = 1
+      while (k < c.cum.length - 1 && c.cum[k] < c.s) k++
+      const a = c.pts[k - 1]
+      const b = c.pts[k]
+      const seg = Math.max(0.001, c.cum[k] - c.cum[k - 1])
+      const t = clamp((c.s - c.cum[k - 1]) / seg, 0, 1)
+      const dx = ((b[0] - a[0]) / seg) * c.dir
+      const dz = ((b[1] - a[1]) / seg) * c.dir
+      // fade the lane offset in and out at the ends so it parks on the spot
+      const lane = 3.4 * clamp(Math.min(c.s, c.len - c.s) / 20, 0, 1)
+      const x = a[0] + (b[0] - a[0]) * t - dz * lane
+      const z = a[1] + (b[1] - a[1]) * t + dx * lane
+      c.truck.position.set(x, Math.max(0, this.heightAt(x, z)) + 0.1, z)
+      const want = Math.atan2(dx, dz)
+      if (c.rot === null) c.rot = want
+      let d = want - c.rot
+      d = Math.atan2(Math.sin(d), Math.cos(d))
+      c.rot += d * Math.min(1, dt * 5)
+      c.truck.rotation.y = c.rot
+    }
   }
 
   // ---------------------------------------------------------------- route
@@ -1274,6 +1339,7 @@ export class CityMap {
     }
     if (this.routeMat) this.routeMat.uniforms.t.value = this.t
     this.updateLaunch(dt)
+    this.updateConvoys(dt)
     this.fx.setViewport(window.innerHeight, view.camera.fov)
     this.fx.update(dt)
     const far = view.rig.dist > 700

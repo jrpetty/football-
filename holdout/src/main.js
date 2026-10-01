@@ -137,10 +137,10 @@ class Game {
         h('p.tag', 'The city fell weeks ago. A handful of you made it to an old lumber yard on the edge of town. Keep them alive.'),
         h(
           'ul.tfeat',
-          h('li', h('b', 'Build the camp. '), 'Twenty-five stations, each with three levels: farms and filters, forges and chemistry labs, gunsmiths and tailors, generators and turrets.'),
-          h('li', h('b', 'Run the benches. '), 'Queue orders, keep stock topped up, fit mods, repair worn gear, automate with modules and power.'),
-          h('li', h('b', 'Scavenge the city. '), 'Pick a building on the map and a squad, then search it room by room. Stay together: loners get swarmed.'),
-          h('li', h('b', 'Push the walls out. '), 'Clear the woods, the wrecking lot and the freight yard to grow. And hold the wall when the horde comes.'),
+          h('li', h('b', 'Build a machine. '), 'Belt forges, labs and machine shops into production lines, from scrap to steel to circuits. Unlock tiers, study schematics, overclock with power cores.'),
+          h('li', h('b', 'See only what they see. '), 'Runs are dark until your people walk in. Scouts sense through walls; the nearsighted miss what is coming.'),
+          h('li', h('b', 'Survive the seasons. '), 'Bites infect, winters freeze, Blood Moons bring the dead in force. Hordes grow with everything you build.'),
+          h('li', h('b', 'Call the coast. '), 'Rebuild the old broadcast mast in five phases, then hold the last night. A campaign for weeks, not hours.'),
         ),
         h(
           'div.tbtns',

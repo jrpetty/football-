@@ -182,3 +182,97 @@ draws on, and then sets out each system, why it is there, and how it works.
    progress, save export and import.
 5. A graphics pass (fog look, seasons, belts, lighting, effects), UI for every
    system, an in-game field manual, long simulations for pacing, then ship.
+
+## 6. As built
+
+Everything in sections 4.1 to 4.5 shipped except where noted below. These are
+the places where the shipped game differs from the plan, and why.
+
+### Production
+- **Rates are per camp day, not per minute.** A camp day is eight real
+  minutes, and daily figures match how the rest of the camp is read (food per
+  day, water per day). The belts carry 120, 320 and 800 items a day.
+- **No hand-hauling penalty.** Slowing every unbelted station to 70% made the
+  early game feel worse without teaching anything. Instead a station gets
+  +15% for each side that is fully belted, so belts are a pure reward. A
+  station belted to a consumer also runs **on demand**: it makes what the next
+  station needs. That is the part of Satisfactory that makes a line feel
+  designed.
+- **Routing:** a Dijkstra search over (tile, heading). A corner costs as much
+  as 2.5 m of belt and crossing another belt costs 4 m, so belts run straight
+  and only cross when they must. Every belt runs on posts above head height,
+  and where two cross, the newer one runs a layer higher. Belts cost per tile, so compact layouts still pay.
+- **The milestone board is the Progress panel**, not a Command Post at the
+  campfire. Deliveries come straight from storage. A building you have to walk
+  to added nothing.
+- **No station levels 4 and 5.** Tiers unlock new stations, belts, walls,
+  land, recipes and camp-wide bonuses instead. Extra levels on every station
+  would have meant re-balancing all 29 of them.
+- **The Machine Shop shipped** (internally `assembler`), with the Fabricator
+  as a second component station for parts, wiring and electronics.
+- **Power cores:** up to three per station, +50% each (+75% after Core
+  Tuning), for 250% to 325% speed. Power draw scales with speed to the power
+  1.5.
+
+### Survival
+- **Injuries** stayed as one "injured" state with healing over time. Minor
+  and severe injuries were cut: infection already makes a bite matter.
+- **Infection** climbs 40 points a day, so about two and a half days from bite
+  to turning. Fever (30) costs work speed and health, turning (70) halves work
+  and grounds the survivor. An antiviral cures below 60.
+- **Winter** has no greenhouses or heaters. Farms drop to 45% and collectors to
+  55%, and the camp burns wood (or fuel) for heat. A freezing camp loses morale
+  and health, so autumn stockpiling is the plan.
+- **Perks** are two choices per skill at levels 5, 10 and 15, rather than class
+  lines. Any survivor can grow in any direction they work in.
+
+### The city
+- **Districts, infestation levels and nests were cut.** Threat already scales
+  with the camp, and a second difficulty dial on the map made the two hard to
+  read together. The Signal is the endgame instead.
+- **Outposts** can be claimed on any location you have run (not one you have
+  cleared), held by one to three survivors, and upgraded twice. Convoy trucks
+  shuttle between camp and each outpost on the city map.
+
+### Pacing
+- **Threat** is `tier × 1.3 + Signal phase + population / 8 + expansions × 0.4
+  + min(day, 100) / 20`. A Blood Moon replaces any horde due within 20 hours of
+  it, so the two never stack.
+- **Offline progress** gives one fifteenth of the time away, capped at three
+  camp days, and **holds the clock**: no hordes, no day rollover and no events
+  while the game is closed. Resolving hordes automatically while the player
+  could not respond felt like punishment for closing the game.
+- **The finale** is a scripted last horde after Signal phase 5. Holding it
+  wins the game.
+
+### Measured pacing
+A scripted player in a headless simulation of the real economy code, run for
+250 to 357 days across several seeds:
+
+| Mark | Day |
+| --- | --- |
+| Tier 2 | about 20 |
+| Signal phase 1 | 28 to 33 |
+| Signal phase 2 | 54 to 66 |
+| Signal phase 3 | 146 to 195 |
+| Tier 7 | 176 to 300 |
+| Tier 8 | from about 277 |
+
+The camp survived past day 290 in every seed. The runs also exposed five
+balance problems, all fixed before shipping:
+- A Blood Moon could stack on a normal horde the same night.
+- Injured survivors never recovered while the camp was hungry.
+- The auto-resolved horde grew with the day count instead of the threat.
+- Winter starved camps that had not stockpiled.
+- Mid-game threat outpaced the walls. Sheet metal moved from tier 4 to tier 3.
+
+### Graphics
+- The fog of war, wall-sense tint and x-ray silhouettes follow section 4.1.
+- Snow builds up on roofs, terrain and grass in winter, with falling flakes.
+  It stays out of interiors on runs.
+- Broadleaf trees turn gold and red through late summer and autumn and go
+  brown under the winter snow.
+- Blood Moons tint the whole grade red.
+- The Signal Mast grows through six visible stages, with a beacon that turns
+  on at the top.
+- Belts carry instanced cargo with per-tier frames and status lamps.
