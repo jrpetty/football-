@@ -530,7 +530,7 @@ public class VillageGameTests {
         Villages.restore(level, late, new BlockPos(4600, 64, 4600), Villages.Age.NETHER, raised, 20);
         List<String> order = new java.util.ArrayList<>();
         int roomBefore = Villages.housing(late);
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 8; i++) {
             String next = Villages.nextProject(late);
             order.add(next);
             if (next == null) break;
@@ -538,8 +538,9 @@ public class VillageGameTests {
         }
         Kit.log("t15 past the last age: " + order + ", renown " + Villages.renown(late)
             + ", room " + roomBefore + " -> " + Villages.housing(late));
-        helper.assertTrue(order.equals(List.of("gateway", "granary", "barracks", "monument", "granary")),
-            "the Nether Age raises its gateway, then the great works go round: " + order);
+        // Twenty folk: the café, the smithy and the shop after the gateway, before the great works.
+        helper.assertTrue(order.equals(List.of("gateway", "cafe", "smithy", "shop", "granary", "barracks", "monument", "granary")),
+            "the Nether Age raises its gateway, its amenities, then the great works go round: " + order);
         helper.assertTrue(Villages.renown(late) == 4, "four great works raised, renown " + Villages.renown(late));
         helper.assertTrue(Villages.housing(late) == roomBefore + 6, "the barracks are room for six more");
         helper.succeed();
@@ -1631,45 +1632,154 @@ public class VillageGameTests {
             }
             return out;
         };
-        java.util.List<ItemStack> menu = counters.apply(at);
-        java.util.List<String> tags = new java.util.ArrayList<>();
-        for (BlockPos q : BlockPos.betweenClosed(at.offset(-4, 0, -4), at.offset(4, 2, 4))) {
-            if (level.getBlockEntity(q) instanceof net.minecraft.world.level.block.entity.SignBlockEntity sign) {
-                tags.add(sign.getFrontText().getMessage(0, false).getString() + " / " + sign.getFrontText().getMessage(2, false).getString());
+        // Frames hung on ground loaded this tick are found from the next tick on.
+        helper.runAfterDelay(20, () -> {
+            java.util.List<ItemStack> menu = counters.apply(at);
+            java.util.List<String> tags = new java.util.ArrayList<>();
+            for (BlockPos q : BlockPos.betweenClosed(at.offset(-4, 0, -4), at.offset(4, 2, 4))) {
+                if (level.getBlockEntity(q) instanceof net.minecraft.world.level.block.entity.SignBlockEntity sign) {
+                    tags.add(sign.getFrontText().getMessage(0, false).getString() + " / " + sign.getFrontText().getMessage(2, false).getString());
+                }
+            }
+            Kit.log("t32 the café's counter: " + menu.stream().map(s -> s.getHoverName().getString()).toList() + "; tags " + tags);
+            helper.assertTrue(menu.stream().anyMatch(com.jrpetty.mcassistant.entity.Cafe::isDrink),
+                "the café's counter has the cider on it");
+            helper.assertTrue(tags.stream().anyMatch(t -> t.startsWith("Apple Cider")), "with a price tag in front");
+            // A folk on its break.
+            folk.earn(10);
+            int purse = folk.purse();
+            String had = com.jrpetty.mcassistant.entity.Cafe.folkBuys(level, v, folk);
+            Kit.log("t32 at the café " + folk.displayNameCap() + " had " + had + "; purse " + purse + " -> " + folk.purse());
+            helper.assertTrue(had != null && folk.purse() < purse, "a folk buys a drink or a bite at the café out of its wages");
+            // A player at the café's counter, and at the shop's.
+            net.minecraft.world.entity.player.Player p = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+            p.getInventory().setItem(20, new ItemStack(McAssistantMod.VILLAGE_COIN.get(), 64));
+            ItemStack cider = menu.stream().filter(com.jrpetty.mcassistant.entity.Cafe::isDrink).findFirst().orElse(ItemStack.EMPTY);
+            String bought = com.jrpetty.mcassistant.entity.Market.deal(level, v, p, cider);
+            folk.setJob(StationTask.SHOP);
+            String shopped = com.jrpetty.mcassistant.entity.Cafe.keepShop(level, v);
+            java.util.List<ItemStack> wares = counters.apply(shopAt);
+            ItemStack best = wares.stream().filter(ItemStack::isEnchanted).findFirst().orElse(ItemStack.EMPTY);
+            String boughtToo = com.jrpetty.mcassistant.entity.Market.deal(level, v, p, best);
+            int drinksHeld = 0, enchantedHeld = 0;
+            for (int i = 0; i < p.getInventory().getContainerSize(); i++) {
+                ItemStack s = p.getInventory().getItem(i);
+                if (com.jrpetty.mcassistant.entity.Cafe.isDrink(s)) drinksHeld += s.getCount();
+                if (s.isEnchanted()) enchantedHeld++;
+            }
+            Kit.log("t32 the player: " + bought + " / the shopkeeper: " + shopped + ", wares "
+                + wares.stream().map(s -> s.getHoverName().getString()).toList() + " / " + boughtToo
+                + " (" + com.jrpetty.mcassistant.entity.Market.coinsHeld(p) + " coins left)");
+            helper.assertTrue(drinksHeld == 1, "a player buys a cider at the café");
+            helper.assertTrue(enchantedHeld == 1, "and an enchanted thing from the shop");
+            helper.succeed();
+        });
+    }
+
+    /**
+     * A raid on a walled village. The wall is up; the village hangs its four gates and puts up
+     * the alarm bell and the ladders to the watch's posts. After dark a raiding party comes at
+     * a gate: the bell rings, the gates are shut, the guard climbs to its post on the wall and
+     * holds it there with its bow, and everybody else stops work for shelter. When the band is
+     * gone the bell stops, the night goes into the village's history, and in the morning the
+     * gates are opened again.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 1600, batch = "t33_raid")
+    public static void t33_raid(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(14000);
+        Kit.hold(level, 14400, 12000, 56);
+        Kit.prepare(level, 14400, 12000, 56);
+        BlockPos heart = Kit.surface(level, 14400, 12000);
+        VillageFolkEntity guard = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        VillageFolkEntity farmer = VillageFolkSpawnerBlock.raise(level, heart.east(2), 0.0F);
+        helper.assertTrue(guard != null && farmer != null, "a village of two");
+        java.util.UUID village = guard.ownerId();
+        Villages.Village v = Villages.get(village);
+        helper.assertTrue(village.equals(farmer.ownerId()), "both of the one village");
+        Villages.ageForTests(village, Villages.Age.STONE);
+        guard.setJob(StationTask.GUARD);
+        farmer.setJob(StationTask.FARM);
+        guard.insertItem(new ItemStack(Items.BOW));
+        guard.insertItem(new ItemStack(Items.ARROW, 48));
+        // The wall, as a village's builder leaves it.
+        BuildGoal.stamp(level, "fortify", heart, Direction.NORTH, com.jrpetty.mcassistant.village.TownPlan.PLAZA,
+            com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+        Villages.noteProject(village, "fortify", level.getGameTime());
+        Villages.builtAtForTests(village, "fortify", heart);
+        int gates = com.jrpetty.mcassistant.entity.Watch.keep(level, v, true);
+        BlockPos bell = com.jrpetty.mcassistant.entity.Watch.bell(level, v, true);
+        java.util.List<com.jrpetty.mcassistant.entity.Watch.Post> posts = com.jrpetty.mcassistant.entity.Watch.posts(level, village);
+        int ladders = 0;
+        for (var p : posts) if (level.getBlockState(p.foot()).is(Blocks.LADDER)) ladders++;
+        Kit.log("t33 the wall: " + gates + " gates hung, bell at " + bell + ", " + posts.size() + " posts, " + ladders + " ladders");
+        helper.assertTrue(gates == 4, "a gate hung in each of the wall's four gaps, got " + gates);
+        helper.assertTrue(bell != null && level.getBlockState(bell).is(Blocks.BELL), "the alarm bell on the square");
+        helper.assertTrue(posts.size() >= 4 && ladders == posts.size(), "the watch's posts on the wall, a ladder to each");
+        // A raiding party.
+        var alarm = com.jrpetty.mcassistant.entity.Raids.raidNow(level, v);
+        int band = com.jrpetty.mcassistant.entity.Raids.bandSize(village);
+        int shutDoors = 0, allDoors = 0;
+        for (var g : com.jrpetty.mcassistant.entity.Watch.gates(level, village)) {
+            for (BlockPos d : g.doors()) {
+                allDoors++;
+                if (!level.getBlockState(d).getValue(net.minecraft.world.level.block.DoorBlock.OPEN)) shutDoors++;
             }
         }
-        Kit.log("t32 the café's counter: " + menu.stream().map(s -> s.getHoverName().getString()).toList() + "; tags " + tags);
-        helper.assertTrue(menu.stream().anyMatch(com.jrpetty.mcassistant.entity.Cafe::isDrink),
-            "the café's counter has the cider on it");
-        helper.assertTrue(tags.stream().anyMatch(t -> t.startsWith("Apple Cider")), "with a price tag in front");
-        // A folk on its break.
-        folk.earn(10);
-        int purse = folk.purse();
-        String had = com.jrpetty.mcassistant.entity.Cafe.folkBuys(level, v, folk);
-        Kit.log("t32 at the café " + folk.displayNameCap() + " had " + had + "; purse " + purse + " -> " + folk.purse());
-        helper.assertTrue(had != null && folk.purse() < purse, "a folk buys a drink or a bite at the café out of its wages");
-        // A player at the café's counter, and at the shop's.
-        net.minecraft.world.entity.player.Player p = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
-        p.getInventory().setItem(20, new ItemStack(McAssistantMod.VILLAGE_COIN.get(), 64));
-        ItemStack cider = menu.stream().filter(com.jrpetty.mcassistant.entity.Cafe::isDrink).findFirst().orElse(ItemStack.EMPTY);
-        String bought = com.jrpetty.mcassistant.entity.Market.deal(level, v, p, cider);
-        folk.setJob(StationTask.SHOP);
-        String shopped = com.jrpetty.mcassistant.entity.Cafe.keepShop(level, v);
-        java.util.List<ItemStack> wares = counters.apply(shopAt);
-        ItemStack best = wares.stream().filter(ItemStack::isEnchanted).findFirst().orElse(ItemStack.EMPTY);
-        String boughtToo = com.jrpetty.mcassistant.entity.Market.deal(level, v, p, best);
-        int drinksHeld = 0, enchantedHeld = 0;
-        for (int i = 0; i < p.getInventory().getContainerSize(); i++) {
-            ItemStack s = p.getInventory().getItem(i);
-            if (com.jrpetty.mcassistant.entity.Cafe.isDrink(s)) drinksHeld += s.getCount();
-            if (s.isEnchanted()) enchantedHeld++;
-        }
-        Kit.log("t32 the player: " + bought + " / the shopkeeper: " + shopped + ", wares "
-            + wares.stream().map(s -> s.getHoverName().getString()).toList() + " / " + boughtToo
-            + " (" + com.jrpetty.mcassistant.entity.Market.coinsHeld(p) + " coins left)");
-        helper.assertTrue(drinksHeld == 1, "a player buys a cider at the café");
-        helper.assertTrue(enchantedHeld == 1, "and an enchanted thing from the shop");
-        helper.succeed();
+        Kit.log("t33 the raid: " + band + " raiders (" + com.jrpetty.mcassistant.entity.Raids.why(village) + "), "
+            + shutDoors + " of " + allDoors + " doors shut; the farmer on shift " + farmer.onShift() + ", the guard " + guard.onShift());
+        helper.assertTrue(alarm != null && band >= 3, "a raiding party of three or more");
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Raids.underAlarm(village), "the bell is ringing");
+        helper.assertTrue(allDoors == 12 && shutDoors == allDoors, "every gate shut");
+        helper.assertTrue(!farmer.onShift() && guard.onShift(), "the guard turns out, the farmer stops work");
+        final long[] upAt = { -1 };
+        final boolean[] cleared = { false };
+        final long[] endedAt = { -1 };
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (t % 5 == 0) com.jrpetty.mcassistant.entity.Raids.guardDuty(guard);
+            if (upAt[0] < 0 && guard.holdingAPost()) {
+                upAt[0] = t;
+                Kit.log("t33 the guard is on the wall at tick " + t + " (" + guard.blockPosition().toShortString()
+                    + ", post " + guard.post().toShortString() + ")");
+            }
+            if (upAt[0] >= 0 && !cleared[0] && t >= upAt[0] + 40) {
+                // The band is beaten off.
+                for (java.util.UUID u : com.jrpetty.mcassistant.entity.Raids.band(village)) {
+                    if (level.getEntity(u) instanceof net.minecraft.world.entity.LivingEntity m && m.isAlive()) m.kill();
+                }
+                cleared[0] = true;
+            }
+            if (cleared[0] && endedAt[0] < 0) {
+                if (t % 20 == 0) com.jrpetty.mcassistant.entity.Raids.tick(level, v);
+                if (!com.jrpetty.mcassistant.entity.Raids.underAlarm(village)) {
+                    endedAt[0] = t;
+                    java.util.List<String> lines = new java.util.ArrayList<>();
+                    for (var e : com.jrpetty.mcassistant.village.Chronicle.of(village)) lines.add(e.text());
+                    String last = lines.isEmpty() ? "" : lines.get(lines.size() - 1);
+                    Kit.log("t33 the bell stopped at tick " + t + "; the chronicle: " + last + "; the guard came down to "
+                        + guard.blockPosition().toShortString() + "; the farmer on shift " + farmer.onShift());
+                    helper.assertTrue(lines.stream().anyMatch(x -> x.contains("raiders came at the")), "the raid goes into the village's history");
+                    helper.assertTrue(guard.post() == null, "the guard comes down off the wall");
+                    // Morning: the gates are opened again.
+                    level.setDayTime(24000L + 1000L);
+                    com.jrpetty.mcassistant.entity.Raids.tick(level, v);
+                    int open = 0;
+                    for (var g : com.jrpetty.mcassistant.entity.Watch.gates(level, village)) {
+                        for (BlockPos d : g.doors()) {
+                            if (level.getBlockState(d).getValue(net.minecraft.world.level.block.DoorBlock.OPEN)) open++;
+                        }
+                    }
+                    Kit.log("t33 in the morning " + open + " of " + allDoors + " doors open");
+                    helper.assertTrue(open == allDoors, "the gates opened in the morning");
+                    helper.succeed();
+                }
+            }
+            if (t == 1500 && upAt[0] < 0) {
+                helper.fail("the guard never got onto the wall: " + guard.debugLine());
+            }
+        });
     }
 
     /**

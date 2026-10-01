@@ -166,7 +166,8 @@ public class VillageFolkEntity extends AssistantEntity {
                 || s.is(net.minecraft.world.item.Items.BOOKSHELF) || s.is(net.minecraft.world.item.Items.LECTERN)
                 || s.is(net.minecraft.world.item.Items.ENCHANTING_TABLE) || s.is(net.minecraft.world.item.Items.BREWING_STAND)
                 || s.is(net.minecraft.world.item.Items.SMOKER) || s.is(net.minecraft.world.item.Items.LOOM)
-                || s.is(net.minecraft.world.item.Items.GRINDSTONE)) {
+                || s.is(net.minecraft.world.item.Items.GRINDSTONE) || s.is(net.minecraft.world.item.Items.CAMPFIRE)
+                || s.is(net.minecraft.world.item.Items.NOTE_BLOCK)) {
             return 64 * 27;
         }
         return 0;
@@ -777,6 +778,7 @@ public class VillageFolkEntity extends AssistantEntity {
         UUID village = ownerId();
         if (!level().isClientSide && village != null && !showcase) {
             long day = level().getDayTime() / 24000L;
+            Raids.fell(village);
             Villages.tell(village, day, displayNameCap() + " died");
             Gatherings.mourn(village, displayNameCap(), day);
             for (AssistantEntity a : Villages.folkOf(village)) {
@@ -1008,7 +1010,7 @@ public class VillageFolkEntity extends AssistantEntity {
                 "No more playing — I'm a grown-up now."));
             return;
         }
-        if (level().isNight()) {
+        if (level().isNight() || Raids.underAlarm(ownerId())) {
             if (!isSleeping() && peekJob() == null) bedtime();
             return;
         }
@@ -1165,6 +1167,7 @@ public class VillageFolkEntity extends AssistantEntity {
      */
     @Override
     protected boolean eveningSocial() {
+        if (Raids.underAlarm(ownerId())) return false;       // the bell is ringing: no evening out
         long t = level().getDayTime() % 24000L;
         long bedtime = bedtimeTick();
         if (t < 12000L || t >= bedtime) return false;
@@ -1271,6 +1274,9 @@ public class VillageFolkEntity extends AssistantEntity {
      */
     @Override
     public boolean onShift() {
+        // The bell: every guard turns out, whichever watch it keeps; nobody else works.
+        UUID alarmed = ownerId();
+        if (alarmed != null && Raids.underAlarm(alarmed)) return stationTask() == StationTask.GUARD;
         if (stationTask() != StationTask.GUARD || shift() != Shift.ALWAYS || !level().isNight()) return super.onShift();
         return firstWatch() == (level().getDayTime() % 24000L < MIDNIGHT);
     }
@@ -1573,6 +1579,13 @@ public class VillageFolkEntity extends AssistantEntity {
         // On the road with a caravan: that is the day's work, day and night until it is home.
         if (trip != null && level() instanceof net.minecraft.server.level.ServerLevel road) {
             Caravans.drive(this, road);
+            return;
+        }
+        // The bell is ringing: everybody but the watch drops what it is doing and gets indoors
+        // (the watch's orders are in its station brain: Raids.guardDuty).
+        if (Raids.underAlarm(ownerId()) && stationTask() != StationTask.GUARD) {
+            if (peekJob() != null) clearQueue();
+            if (!isSleeping()) bedtime();
             return;
         }
         // Nobody goes looking for ground after dark: a folk with no trade yet spends the
@@ -2507,6 +2520,37 @@ public class VillageFolkEntity extends AssistantEntity {
         };
     }
 
+    // ------------------------------ the watch ------------------------------------
+
+    /** Where this guard stands on the wall while the bell rings (Raids), or null. */
+    @Nullable private BlockPos post;
+
+    @Nullable public BlockPos post() { return post; }
+
+    public void holdPost(@Nullable BlockPos at) { post = at == null ? null : at.immutable(); }
+
+    @Override
+    public boolean holdingAPost() {
+        return post != null && distanceToSqr(post.getX() + 0.5, post.getY(), post.getZ() + 0.5) < 2.5;
+    }
+
+    @Override
+    public boolean onWatch() {
+        return stationTask() == StationTask.GUARD && Raids.underAlarm(ownerId());
+    }
+
+    @Override
+    protected boolean watchDuty() {
+        return Raids.guardDuty(this);
+    }
+
+    /** No bed of its own when the bell rings: into the nearest of the village's buildings. */
+    @Override
+    protected boolean bedtime() {
+        if (Raids.underAlarm(ownerId()) && bedPos() == null && !isBaby()) return Raids.shelter(this);
+        return super.bedtime();
+    }
+
     /** The crafts' work (Crafts, Cafe): a piece at a time, out of the stores and back. */
     @Override
     protected boolean craftWork() {
@@ -3151,7 +3195,9 @@ public class VillageFolkEntity extends AssistantEntity {
                 BuildGoal.Part.BREWING,
                 BuildGoal.Part.SMOKER,
                 BuildGoal.Part.LOOM,
-                BuildGoal.Part.GRINDSTONE)) {
+                BuildGoal.Part.GRINDSTONE,
+                BuildGoal.Part.CAMPFIRE,
+                BuildGoal.Part.NOTE_BLOCK)) {
             int want = need.getOrDefault(deco, 0);
             if (want == 0) continue;
             var item = BuildGoal.itemForPart(deco);
@@ -3371,6 +3417,10 @@ public class VillageFolkEntity extends AssistantEntity {
                 java.util.Map.entry(BOOKS, 3)); }
             case BREWING -> { return makeFromStores(net.minecraft.world.item.Items.BREWING_STAND, wanted, heart, r, 0,
                 java.util.Map.entry(BLAZE_RODS, 1), java.util.Map.entry(COBBLE, 3)); }
+            case CAMPFIRE -> { return makeFromStores(net.minecraft.world.item.Items.CAMPFIRE, wanted, heart, r, 2,
+                java.util.Map.entry(LOGS, 3), java.util.Map.entry(COAL, 1)); }
+            case NOTE_BLOCK -> { return makeFromStores(net.minecraft.world.item.Items.NOTE_BLOCK, wanted, heart, r, 8,
+                java.util.Map.entry(REDSTONE, 1)); }
             case ENCHANTING -> { return makeFromStores(net.minecraft.world.item.Items.ENCHANTING_TABLE, wanted, heart, r, 0,
                 java.util.Map.entry(BOOKS, 1), java.util.Map.entry(DIAMONDS, 2), java.util.Map.entry(OBSIDIAN, 4)); }
             default -> { return 0; }
@@ -3389,6 +3439,10 @@ public class VillageFolkEntity extends AssistantEntity {
         st -> st.is(net.minecraft.world.item.Items.BLAZE_ROD);
     private static final java.util.function.Predicate<net.minecraft.world.item.ItemStack> DIAMONDS =
         st -> st.is(net.minecraft.world.item.Items.DIAMOND);
+    private static final java.util.function.Predicate<net.minecraft.world.item.ItemStack> COAL =
+        st -> st.is(net.minecraft.world.item.Items.COAL) || st.is(net.minecraft.world.item.Items.CHARCOAL);
+    private static final java.util.function.Predicate<net.minecraft.world.item.ItemStack> REDSTONE =
+        st -> st.is(net.minecraft.world.item.Items.REDSTONE);
     private static final java.util.function.Predicate<net.minecraft.world.item.ItemStack> OBSIDIAN =
         st -> st.is(net.minecraft.world.item.Items.OBSIDIAN);
 

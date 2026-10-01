@@ -185,6 +185,54 @@ added a little at a time round those buildings:
     will tell you where it is headed; ask to trade and it will offer what it is
     carrying.
 
+### The watch, the gates and raids
+
+Once a village has its wall, it sees to its own safety.
+
+* **Gates.** Each of the wall's four gaps gets a gate: stone posts, a lintel and
+  three spruce doors. Stone and planks come from the stores. The doors stand open by
+  day and are shut at dusk. Folk let themselves through, as you would; a zombie can't.
+* **The watch's posts.** Two places on each side of the wall where a guard stands
+  between the battlements, with a ladder up the inside of the wall to each.
+* **The alarm bell.** A bell on a stone plinth on the square, rung when trouble comes.
+  Once there is a chapel, its bell rings too.
+
+**When the bell rings.** It rings when four or more monsters get inside the wall,
+when a raid comes to the village, or when a raiding party is sighted.
+
+* The gates are shut and every guard turns out, whichever watch it keeps.
+* A guard with a bow (its own, or one from the stores with arrows) walks to its post,
+  climbs the ladder and shoots from the wall. Posts on the side under attack are
+  manned first. A guard with no bow holds the nearest gate from the inside.
+* Everybody else drops their work and gets indoors: home to their own bed, or into
+  the nearest of the village's buildings. Children too.
+* When it is quiet again the bell stops and the guards come down. The night goes into
+  the village's history: how many came, how many the watch killed, and who fell.
+
+**Raiding parties.** About one night in five, a walled village with at least ten
+folk and a watch is raided.
+
+* A band comes at one of its gates after dark. It is bigger the more guards there are
+  to meet it, and no more than ten.
+* Stone Age: zombies and a skeleton. Iron Age: spiders join them. From the Diamond
+  Age: pillagers and vindicators.
+* The band goes for the village's people. What is left of it slinks off at dawn.
+* If you kill raiders, every folk in the village thinks better of you, and the village
+  remembers that you stood with it.
+* `villageRaids = false` in the config turns raids off. There are none on Peaceful.
+
+**Arms for the watch.**
+
+* The blacksmith makes a bow for every guard (three string, three sticks) and keeps
+  arrows stocked: a flint head, or a chipped stone one, on a stick. Four arrows with a
+  feather, two without.
+* The tailor spins string from wool when the stores run short.
+* Any guard may draw a bow while the bell rings; other times a bow is still level-20
+  work.
+
+`/village status` shows the watch: whether the bell is ringing and why, how many gates
+there are and whether they are shut, and how many posts are on the wall.
+
 ### The crafts, the café and the shop
 
 As a village grows, some of the newcomers take up a craft instead of the fields. Each
@@ -783,6 +831,11 @@ Every push to CI:
   (game test `t29`);
 * lays the road between a village and its colony, over a pond, with its signposts,
   and sends a caravan of bread down it and home again (game test `t31`);
+* raids a walled village at night (game test `t33`): four gates hung, the bell and the
+  ladders put up, a raiding party at a gate, every gate shut and the bell ringing, the
+  guard up its ladder and holding its post on the wall while the farmer stops work, then
+  the bell stopping when the band is beaten off, the raid in the village's history, the
+  guard back down, and the gates open again in the morning;
 * runs every craft once from one village's stores (game test `t32`): the blacksmith
   makes iron tools, the tailor a bed, the beekeeper a hive and then its honey, the
   brewer three potions of healing, the enchanter books and then an enchanted tool,

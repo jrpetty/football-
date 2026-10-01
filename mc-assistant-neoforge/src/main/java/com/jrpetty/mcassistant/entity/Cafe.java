@@ -216,7 +216,12 @@ public final class Cafe {
             for (BuildGoal.Placement p : plan) {
                 if (p.part() == BuildGoal.Part.BARREL && !planned.contains(p.pos().above())) out.add(p.pos());
             }
-            out.sort((a, c) -> a.getX() != c.getX() ? Integer.compare(a.getX(), c.getX()) : Integer.compare(a.getZ(), c.getZ()));
+            // The counter proper first (low, and nearest the door), then the shelves behind it.
+            BlockPos door = TownLife.fittings(k).door();
+            BlockPos toward = door != null ? door : k.anchor();
+            out.sort(java.util.Comparator.comparingInt(BlockPos::getY)
+                .thenComparingDouble(p -> p.distSqr(toward))
+                .thenComparingInt(BlockPos::getX).thenComparingInt(BlockPos::getZ));
             return List.copyOf(out);
         });
     }

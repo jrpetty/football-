@@ -67,9 +67,13 @@ public class BowAttackGoal extends Goal {
         assistant.getLookControl().setLookAt(t, 30.0F, 30.0F);
 
         double distSq = assistant.distanceToSqr(t);
+        // On the wall: the post is the post. No backing off it, no walking down to close in.
+        boolean post = assistant.holdingAPost();
         // Keep creepers well outside their fuse range; other mobs at bow range.
         double minSq = t instanceof Creeper ? 81.0 : 36.0;
-        if (distSq < minSq) {
+        if (post) {
+            assistant.getNavigation().stop();
+        } else if (distSq < minSq) {
             Vec3 away = assistant.position().subtract(t.position());
             if (away.lengthSqr() > 0.01) {
                 away = away.normalize();
@@ -83,7 +87,7 @@ public class BowAttackGoal extends Goal {
         }
 
         ItemStack hand = assistant.getMainHandItem();
-        boolean inRange = distSq <= 225.0 && assistant.hasLineOfSight(t);
+        boolean inRange = distSq <= (post ? 784.0 : 225.0) && assistant.hasLineOfSight(t);
         if (hand.is(Items.CROSSBOW)) {
             tickCrossbow(t, hand, inRange);
             return;

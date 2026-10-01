@@ -1,0 +1,356 @@
+package com.jrpetty.mcassistant.entity;
+
+import com.jrpetty.mcassistant.village.TownPlan;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.BellBlock;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.DoorBlock;
+import net.minecraft.world.level.block.LadderBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BellAttachType;
+import net.minecraft.world.level.block.state.properties.DoorHingeSide;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
+
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * What a walled village keeps for its own safety, put in by the village itself once its
+ * wall is up (Raids decides when they are wanted):
+ * <ul>
+ * <li><b>Gates.</b> The wall leaves a gap on each avenue. Each gets a gate: stone posts, a
+ *     lintel, and three wooden doors between them. The doors stand open by day and are
+ *     shut at dusk (and whenever the bell rings). Folk open a door to pass, as anybody
+ *     would; a zombie can't.</li>
+ * <li><b>The watch's posts.</b> Two places on each side of the wall where a guard stands
+ *     between the battlements, with a ladder up the inside of the wall to each.</li>
+ * <li><b>The alarm bell.</b> A bell on a stone plinth on the square, rung when trouble
+ *     comes (the chapel's bell rings with it, once there is one).</li>
+ * </ul>
+ */
+public final class Watch {
+
+    private Watch() {}
+
+    /** The wall's line, from the heart (the fortify's radius). */
+    static final int R = TownPlan.PLAZA;
+    /** Where the watch stands on each side of the wall, either side of the gate. */
+    static final int[] POSTS = { -7, 7 };
+    /** The alarm bell's place on the square. */
+    static final int[] BELL_AT = { -5, 5 };
+
+    static final Direction[] SIDES = { Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST };
+
+    /** A guard's place on the wall: where it stands, the foot of its ladder, and the way it looks out. */
+    public record Post(BlockPos stand, BlockPos foot, Direction out) {}
+
+    /** A gate: its doors (their lower halves) and the cell just inside it. */
+    public record Gate(Direction out, List<BlockPos> doors, BlockPos inside) {}
+
+    private static final Map<UUID, List<Post>> POSTS_OF = new ConcurrentHashMap<>();
+    private static final Map<UUID, List<Gate>> GATES_OF = new ConcurrentHashMap<>();
+    private static final Map<UUID, Long> SEEN = new ConcurrentHashMap<>();
+    private static final Map<UUID, Boolean> SHUT = new ConcurrentHashMap<>();
+
+    public static void resetForTests() {
+        POSTS_OF.clear();
+        GATES_OF.clear();
+        SEEN.clear();
+        SHUT.clear();
+        CHAPEL_BELL.clear();
+    }
+
+    /** The wall's anchor (the ground at the heart), or null if the village has no wall. */
+    @Nullable
+    static BlockPos wall(UUID village) {
+        if (!Villages.hasBuilt(village, "fortify")) return null;
+        return Villages.builtAt(village, "fortify");
+    }
+
+    /** A cell of the wall: on this side, this far along it (along runs clockwise). */
+    static BlockPos cell(BlockPos anchor, Direction side, int along) {
+        return anchor.relative(side, R).relative(side.getClockWise(), along);
+    }
+
+    /** The floor of a column near this height: the lowest place with solid ground under it and
+     *  room (air, or a door) for two above. */
+    @Nullable
+    static BlockPos floorAt(ServerLevel level, int x, int z, int aroundY) {
+        for (int y = aroundY - 6; y <= aroundY + 6; y++) {
+            BlockPos p = new BlockPos(x, y, z);
+            BlockState under = level.getBlockState(p.below());
+            if (!under.isSolid() || under.getBlock() instanceof DoorBlock) continue;
+            if (!roomy(level.getBlockState(p)) || !roomy(level.getBlockState(p.above()))) continue;
+            return p;
+        }
+        return null;
+    }
+
+    private static boolean roomy(BlockState s) {
+        return s.isAir() || s.getBlock() instanceof DoorBlock || s.canBeReplaced();
+    }
+
+    /** The top of the wall in a column: the highest solid block near the anchor's height, or null. */
+    @Nullable
+    static BlockPos wallTop(ServerLevel level, int x, int z, int aroundY) {
+        for (int y = aroundY + 8; y >= aroundY - 4; y--) {
+            BlockPos p = new BlockPos(x, y, z);
+            BlockState s = level.getBlockState(p);
+            if (s.isAir() || !s.isSolid()) continue;
+            String path = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(s.getBlock()).getPath();
+            boolean masonry = path.contains("stone") || path.contains("cobble") || path.contains("brick")
+                || path.contains("andesite") || path.contains("diorite") || path.contains("granite") || path.contains("deepslate");
+            return masonry ? p : null;
+        }
+        return null;
+    }
+
+    // ------------------------------------------------------------------ the posts
+
+    /** The watch's posts on a village's wall, worked out (and their ladders put up) once in a while. */
+    public static List<Post> posts(ServerLevel level, UUID village) {
+        BlockPos a = wall(village);
+        if (a == null) return List.of();
+        return postsAt(level, village, a);
+    }
+
+    /** The posts on a wall anchored here (the showcase's has no village behind it). */
+    public static List<Post> postsAt(ServerLevel level, UUID village, BlockPos a) {
+        List<Post> known = POSTS_OF.get(village);
+        if (known != null) return known;
+        List<Post> out = new ArrayList<>();
+        for (Direction side : SIDES) {
+            for (int along : POSTS) {
+                BlockPos c = cell(a, side, along);
+                if (!level.isLoaded(c)) continue;
+                BlockPos top = wallTop(level, c.getX(), c.getZ(), a.getY());
+                if (top == null) continue;
+                BlockPos stand = top.above();
+                if (!level.getBlockState(stand).isAir() || !level.getBlockState(stand.above()).isAir()) continue;
+                BlockPos in = c.relative(side.getOpposite());
+                BlockPos foot = floorAt(level, in.getX(), in.getZ(), a.getY());
+                if (foot == null || foot.getY() > top.getY()) continue;
+                out.add(new Post(stand, foot, side));
+            }
+        }
+        List<Post> done = List.copyOf(out);
+        if (!done.isEmpty()) POSTS_OF.put(village, done);
+        return done;
+    }
+
+    /** A ladder up the inside of the wall at a post, where there is room for one. */
+    static void ladder(ServerLevel level, Post p) {
+        BlockState ladder = Blocks.LADDER.defaultBlockState().setValue(LadderBlock.FACING, p.out().getOpposite());
+        for (int y = p.foot().getY(); y < p.stand().getY(); y++) {
+            BlockPos at = new BlockPos(p.foot().getX(), y, p.foot().getZ());
+            BlockState s = level.getBlockState(at);
+            if (s.is(Blocks.LADDER)) continue;
+            if (!s.isAir() && !s.canBeReplaced()) return;
+            if (!ladder.canSurvive(level, at)) return;
+            level.setBlock(at, ladder, 3);
+        }
+    }
+
+    // ------------------------------------------------------------------ the gates
+
+    /** The village's gates as they stand: hung once there is wall either side of a gap. */
+    public static List<Gate> gates(ServerLevel level, UUID village) {
+        List<Gate> g = GATES_OF.get(village);
+        return g == null ? List.of() : g;
+    }
+
+    /**
+     * Look the wall over: hang any gate that is missing (out of the stores, or for nothing in
+     * the showcase), and put up the posts' ladders. Returns how many gates stand.
+     */
+    public static int keep(ServerLevel level, Villages.Village v, boolean free) {
+        BlockPos a = wall(v.id());
+        if (a == null) return 0;
+        return keepAt(level, v, a, free);
+    }
+
+    /** As keep, for a wall anchored here. */
+    public static int keepAt(ServerLevel level, Villages.Village v, BlockPos a, boolean free) {
+        List<Gate> out = new ArrayList<>();
+        for (Direction side : SIDES) {
+            Gate gate = gate(level, v, a, side, free);
+            if (gate != null) out.add(gate);
+        }
+        GATES_OF.put(v.id(), List.copyOf(out));
+        POSTS_OF.remove(v.id());
+        for (Post p : postsAt(level, v.id(), a)) ladder(level, p);
+        return out.size();
+    }
+
+    /** The lower half of a door in this column near this height, or null. */
+    @Nullable
+    private static BlockPos doorIn(ServerLevel level, BlockPos c, int aroundY) {
+        for (int y = aroundY - 6; y <= aroundY + 6; y++) {
+            BlockPos p = new BlockPos(c.getX(), y, c.getZ());
+            BlockState s = level.getBlockState(p);
+            if (s.getBlock() instanceof DoorBlock && s.getValue(DoorBlock.HALF) == DoubleBlockHalf.LOWER) return p;
+        }
+        return null;
+    }
+
+    @Nullable
+    private static Gate gate(ServerLevel level, Villages.Village v, BlockPos a, Direction side, boolean free) {
+        for (int along = -2; along <= 2; along++) if (!level.isLoaded(cell(a, side, along))) return null;
+        // Hung already: its doors are what is in the gap.
+        List<BlockPos> doors = new ArrayList<>();
+        for (int along = -1; along <= 1; along++) {
+            BlockPos d = doorIn(level, cell(a, side, along), a.getY());
+            if (d != null) doors.add(d);
+        }
+        if (!doors.isEmpty()) {
+            return new Gate(side, List.copyOf(doors), doors.get(doors.size() / 2).relative(side.getOpposite(), 2));
+        }
+        // Only where there is wall either side: a gate in a gap with no wall round it is a door in a field.
+        boolean walled = false;
+        for (int along : new int[]{ -3, 3 }) {
+            BlockPos c = cell(a, side, along);
+            if (wallTop(level, c.getX(), c.getZ(), a.getY()) != null) walled = true;
+        }
+        if (!walled) return null;
+        List<BlockPos> floors = new ArrayList<>();
+        for (int along = -2; along <= 2; along++) {
+            BlockPos c = cell(a, side, along);
+            BlockPos f = floorAt(level, c.getX(), c.getZ(), a.getY());
+            if (f == null) return null;
+            floors.add(f);
+        }
+        // Everything it needs must be free: where a player has built something, no gate.
+        for (BlockPos f : floors) {
+            for (int h = 0; h <= 2; h++) {
+                BlockState s = level.getBlockState(f.above(h));
+                if (!s.isAir() && !s.canBeReplaced()) return null;
+            }
+        }
+        if (!free && !(TownWork.take(level, v, st -> st.is(ItemTags.PLANKS), 6)
+                && TownWork.take(level, v, st -> st.is(Items.COBBLESTONE) || st.is(Items.STONE_BRICKS), 10))) return null;
+        BlockState stone = Blocks.STONE_BRICKS.defaultBlockState();
+        for (int i : new int[]{ 0, 4 }) {
+            for (int h = 0; h <= 2; h++) level.setBlock(floors.get(i).above(h), stone, 3);
+        }
+        for (int i = 1; i <= 3; i++) {
+            BlockPos f = floors.get(i);
+            level.setBlock(f.above(2), stone, 3);
+            BlockState door = Blocks.SPRUCE_DOOR.defaultBlockState()
+                .setValue(DoorBlock.FACING, side)
+                .setValue(DoorBlock.HINGE, i == 1 ? DoorHingeSide.LEFT : DoorHingeSide.RIGHT)
+                .setValue(DoorBlock.OPEN, true);
+            level.setBlock(f, door.setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER), 3);
+            level.setBlock(f.above(), door.setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER), 3);
+            doors.add(f);
+        }
+        for (int i : new int[]{ 0, 2, 4 }) {
+            BlockPos top = floors.get(i).above(3);
+            if (level.getBlockState(top).isAir()) level.setBlock(top, Blocks.STONE_BRICK_SLAB.defaultBlockState(), 3);
+        }
+        if (!free) Villages.tell(v.id(), level.getDayTime() / 24000L, "the " + side.getName() + " gate was hung");
+        return new Gate(side, List.copyOf(doors), floors.get(2).relative(side.getOpposite(), 2));
+    }
+
+    /** Shut (or open) every gate of the village. Returns how many doors moved. */
+    public static int shut(ServerLevel level, UUID village, boolean shut) {
+        int moved = 0;
+        for (Gate g : gates(level, village)) {
+            for (BlockPos d : g.doors()) {
+                BlockState s = level.getBlockState(d);
+                if (!(s.getBlock() instanceof DoorBlock door)) continue;
+                if (s.getValue(DoorBlock.OPEN) == !shut) continue;
+                door.setOpen(null, level, s, d, !shut);
+                moved++;
+            }
+        }
+        SHUT.put(village, shut);
+        return moved;
+    }
+
+    /** Are the gates shut now (as far as the watch last left them)? */
+    public static boolean isShut(UUID village) {
+        return SHUT.getOrDefault(village, false);
+    }
+
+    /** The nearest gate to a spot, or null. */
+    @Nullable
+    public static Gate nearestGate(ServerLevel level, UUID village, BlockPos from) {
+        Gate best = null;
+        double bd = Double.MAX_VALUE;
+        for (Gate g : gates(level, village)) {
+            double d = g.inside().distSqr(from);
+            if (d < bd) { bd = d; best = g; }
+        }
+        return best;
+    }
+
+    // ------------------------------------------------------------------ the bell
+
+    private static final Map<UUID, BlockPos> CHAPEL_BELL = new ConcurrentHashMap<>();
+
+    /** The alarm bell on the square, put up if it is missing. Returns where it hangs, or null. */
+    @Nullable
+    public static BlockPos bell(ServerLevel level, Villages.Village v, boolean free) {
+        BlockPos at = v.centre().offset(BELL_AT[0], 0, BELL_AT[1]);
+        if (!level.isLoaded(at)) return null;
+        for (int y = v.centre().getY() - 6; y <= v.centre().getY() + 7; y++) {
+            BlockPos p = new BlockPos(at.getX(), y, at.getZ());
+            if (level.getBlockState(p).is(Blocks.BELL)) return p;
+        }
+        BlockPos floor = floorAt(level, at.getX(), at.getZ(), v.centre().getY());
+        if (floor == null) return null;
+        if (!free && !TownWork.take(level, v, st -> st.is(Items.COBBLESTONE) || st.is(Items.STONE_BRICKS), 2)) return null;
+        level.setBlock(floor, Blocks.STONE_BRICKS.defaultBlockState(), 3);
+        BlockPos b = floor.above();
+        level.setBlock(b, Blocks.BELL.defaultBlockState()
+            .setValue(BellBlock.FACING, Direction.NORTH)
+            .setValue(BellBlock.ATTACHMENT, BellAttachType.FLOOR), 3);
+        return b;
+    }
+
+    /** The chapel's bell, if the village has a chapel with one. */
+    @Nullable
+    private static BlockPos chapelBell(ServerLevel level, UUID village) {
+        BlockPos known = CHAPEL_BELL.get(village);
+        if (known != null && level.getBlockState(known).is(Blocks.BELL)) return known;
+        BlockPos chapel = Villages.builtAt(village, "chapel");
+        if (chapel == null || !level.isLoaded(chapel)) return null;
+        for (BlockPos p : BlockPos.betweenClosed(chapel.offset(-11, 6, -11), chapel.offset(11, 12, 11))) {
+            if (level.getBlockState(p).is(Blocks.BELL)) {
+                CHAPEL_BELL.put(village, p.immutable());
+                return p.immutable();
+            }
+        }
+        return null;
+    }
+
+    /** Ring the alarm: the square's bell, and the chapel's. */
+    public static void ring(ServerLevel level, Villages.Village v) {
+        List<BlockPos> bells = new ArrayList<>();
+        BlockPos square = bell(level, v, false);
+        if (square != null) bells.add(square);
+        BlockPos chapel = chapelBell(level, v.id());
+        if (chapel != null) bells.add(chapel);
+        for (BlockPos b : bells) {
+            BlockState s = level.getBlockState(b);
+            if (s.getBlock() instanceof BellBlock bell) bell.attemptToRing(level, b, s.getValue(BellBlock.FACING));
+        }
+        if (bells.isEmpty()) {
+            level.playSound(null, v.centre(), net.minecraft.sounds.SoundEvents.BELL_BLOCK,
+                net.minecraft.sounds.SoundSource.BLOCKS, 3.0F, 1.0F);
+        }
+    }
+
+    /** Is this spot inside the wall? */
+    public static boolean inside(UUID village, BlockPos heart, BlockPos p) {
+        return Math.max(Math.abs(p.getX() - heart.getX()), Math.abs(p.getZ() - heart.getZ())) < R;
+    }
+}

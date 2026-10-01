@@ -137,6 +137,8 @@ public final class Blueprints {
         key('M', BuildGoal.Part.SMOKER, Style.NONE, Way.FRONT);
         key('N', BuildGoal.Part.LOOM, Style.NONE, Way.FRONT);
         key('V', BuildGoal.Part.GRINDSTONE, Style.NONE, Way.FRONT);
+        key('h', BuildGoal.Part.CAMPFIRE, Style.NONE, Way.UP);
+        key('m', BuildGoal.Part.NOTE_BLOCK, Style.NONE, Way.UP);
     }
 
     private static final Map<String, List<Cell>> DRAWINGS = new ConcurrentHashMap<>();

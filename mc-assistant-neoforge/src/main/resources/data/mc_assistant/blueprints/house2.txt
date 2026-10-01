@@ -1,0 +1,146 @@
+# The house grown up: the family cottage given a second storey once the village
+# is in the Iron Age. The same rooms below (four beds, the bench and the stove),
+# a ladder up through the floor to two more beds and a chest under the eaves,
+# windows all round both floors, and the chimney carried up past the new roof.
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name house2
+layer -1
+.........
+.FFFFFFF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffFF
+.FfffffF.
+.FFFFFFF.
+....k....
+layer 0
+.........
+.LwwwwwL.
+.w..H..w.
+.wBB.BBw.
+.w.....w.
+.w.....wS
+.wT...Uw.
+.LwwDwwL.
+.........
+layer 1
+.........
+.LWGWGWL.
+.W..H..W.
+.G.....G.
+.W.....W.
+.G.....GS
+.Wt....W.
+.LGW.WGL.
+.........
+layer 2
+.........
+.LWWWWWL.
+.W..H..W.
+.W.....W.
+.W..j..W.
+.W.....WS
+.W.....W.
+.LWWWWWL.
+..j...j..
+layer 3
+.........
+.L-----L.
+.|ffHff|.
+.|fffff|.
+.|fffff|.
+.|fffff|S
+.|fffff|.
+.L-----L.
+.........
+layer 4
+.........
+.LWWWWWL.
+.W..H..W.
+.WB...BW.
+.W.....W.
+.W.....WS
+.W.C.X.W.
+.LWWWWWL.
+.........
+layer 5
+.........
+.LWGWGWL.
+.W.....W.
+.G.....G.
+.W.....W.
+.G.....GS
+.W.....W.
+.LGWGWGL.
+.........
+layer 6
+.........
+.LWWWWWL.
+.W.....W.
+.W.....W.
+.W..j..W.
+.W.....WS
+.W.....W.
+.LWWWWWL.
+.........
+layer 7
+vvvvvvvvv
+.L-----L.
+.|fffff|.
+.|fffff|.
+.|fffff|.
+.|fffff|S
+.|fffff|.
+.L-----L.
+^^^^^^^^^
+layer 8
+.........
+vvvvvvvvv
+.W.....W.
+.W.....W.
+.W.....W.
+.W.....WS
+.W.....W.
+^^^^^^^^^
+.........
+layer 9
+.........
+.........
+vvvvvvvvv
+.W.....W.
+.G.....G.
+.W.....WS
+^^^^^^^^^
+.........
+.........
+layer 10
+.........
+.........
+.........
+vvvvvvvvv
+.W.....W.
+^^^^^^^^S
+.........
+.........
+.........
+layer 11
+.........
+.........
+.........
+.........
+_________
+........S
+.........
+.........
+.........
+layer 12
+.........
+.........
+.........
+.........
+.........
+........S
+.........
+.........
+.........

@@ -943,8 +943,151 @@ of barrels and chests behind it, and a lantern over the door.""")
     b.write()
 
 
+def tavern():
+    b = B("tavern", 5, 5, """The tavern: a broad timber inn on a stone footing. A big stone hearth at the
+back with its fire, a bar of casks down one side with the barrels behind it,
+tables with cloths and benches for the evening, a corner for the music with
+its note blocks, lanterns hung low, and a lamp either side of the door.""")
+    W_, D_ = 4, 4
+    b.ring(-W_, W_, -1, -D_, D_, "F")
+    b.fill(-W_ + 1, W_ - 1, -1, -D_ + 1, D_ - 1, "f")
+    b.set(0, -1, -D_ - 1, "k")
+    for h in (0, 1, 2, 3):
+        b.ring(-W_, W_, h, -D_, D_, "w" if h == 0 else "W", corner="L")
+    b.set(0, 0, -D_, "D")
+    b.set(0, 1, -D_, ".")
+    for x in (-3, -2, 2, 3):
+        b.set(x, 1, -D_, "G")
+        b.set(x, 2, -D_, "G")
+    for z in (-2, 0, 2):
+        b.set(-W_, 1, z, "G")
+        b.set(W_, 1, z, "G")
+        b.set(-W_, 2, z, "G")
+        b.set(W_, 2, z, "G")
+    # the hearth: a stone breast in the back wall, the fire in it, the chimney behind
+    for x in (-1, 0, 1):
+        for h in (0, 1, 2, 3):
+            b.set(x, h, D_, "S")
+    b.set(0, 0, D_, "h")
+    for h in range(-1, 10):
+        b.set(0, h, D_ + 1, "S" if h >= 0 else "F")
+    b.set(-1, 0, D_ - 1, "k")
+    b.set(1, 0, D_ - 1, "k")
+    # the bar: casks down the left, the barkeep's room behind, barrels on the back wall
+    for z in (-1, 0, 1, 2):
+        b.set(-2, 0, z, "Q")
+    b.set(-3, 0, 3, "Q")
+    b.set(-3, 1, 3, "Q")
+    b.set(-3, 0, 2, "C")
+    # tables with their cloths, benches either side
+    for z in (-2, 1):
+        b.set(2, 0, z, "P")
+        b.set(2, 1, z, "X")
+        b.set(1, 0, z, ">")
+        b.set(3, 0, z, "<")
+    # the music: two note blocks by the hearth
+    b.set(2, 0, 3, "m")
+    b.set(3, 0, 3, "m")
+    b.ring(-W_, W_, 4, -D_, D_, "-", corner="L")
+    for z in range(-D_ + 1, D_):
+        b.set(-W_, 4, z, "|")
+        b.set(W_, 4, z, "|")
+    b.fill(-W_ + 1, W_ - 1, 4, -D_ + 1, D_ - 1, "f")
+    for (x, z) in ((0, -1), (2, -2), (2, 1), (-1, 2)):
+        b.set(x, 3, z, "j")
+    gable_x(b, -W_ - 1, W_ + 1, -D_ - 1, D_ + 1, 4, gable_x0=-W_, gable_x1=W_)
+    b.set(-W_, 6, 0, "G")
+    b.set(W_, 6, 0, "G")
+    for x in (-2, 2):
+        b.set(x, 3, -D_ - 1, "j")
+    b.write()
+
+
+def graveyard():
+    b = B("graveyard", 4, 4, """The graveyard: a fenced plot of grass with a gate, a path up the middle to a
+stone cross, lanterns on the corner posts, and twelve graves either side of
+the path. Each headstone is raised as one of the village dies, with a name
+and the years they lived.""")
+    b.fill(-4, 4, -1, -4, 4, "d")
+    b.ring(-4, 4, 0, -4, 4, "P")
+    b.set(0, 0, -4, "g")
+    for (x, z) in ((-4, -4), (4, -4), (-4, 4), (4, 4)):
+        b.set(x, 1, z, "l")
+    # the cross at the head of the path
+    for h in (0, 1, 2, 3):
+        b.set(0, h, 3, "S")
+    b.set(-1, 2, 3, "S")
+    b.set(1, 2, 3, "S")
+    b.set(0, -1, 3, "F")
+    b.write()
+
+
+def house2():
+    b = B("house2", 4, 4, """The house grown up: the family cottage given a second storey once the village
+is in the Iron Age. The same rooms below (four beds, the bench and the stove),
+a ladder up through the floor to two more beds and a chest under the eaves,
+windows all round both floors, and the chimney carried up past the new roof.""")
+    b.ring(-3, 3, -1, -3, 3, "F")
+    b.fill(-2, 2, -1, -2, 2, "f")
+    b.set(0, -1, -4, "k")
+    for h in (0, 1, 2):
+        b.ring(-3, 3, h, -3, 3, "w" if h == 0 else "W", corner="L")
+    b.set(0, 0, -3, "D")
+    b.set(0, 1, -3, ".")
+    for x in (-2, 2):
+        b.set(x, 1, -3, "G")
+    for x in (-1, 1):
+        b.set(x, 1, 3, "G")
+    for z in (-1, 1):
+        b.set(-3, 1, z, "G")
+        b.set(3, 1, z, "G")
+    for x in (-2, -1, 1, 2):
+        b.set(x, 0, 1, "B")
+    b.set(-2, 0, -2, "T")
+    b.set(2, 0, -2, "U")
+    b.set(-2, 1, -2, "t")
+    # the floor between the storeys, with the ladder's hole
+    b.ring(-3, 3, 3, -3, 3, "-", corner="L")
+    for z in range(-2, 3):
+        b.set(-3, 3, z, "|")
+        b.set(3, 3, z, "|")
+    b.fill(-2, 2, 3, -2, 2, "f")
+    for h in (0, 1, 2, 3, 4):
+        b.set(0, h, 2, "H")
+    # upstairs
+    for h in (4, 5, 6):
+        b.ring(-3, 3, h, -3, 3, "W", corner="L")
+    for x in (-2, 0, 2):
+        b.set(x, 5, -3, "G")
+    for z in (-1, 1):
+        b.set(-3, 5, z, "G")
+        b.set(3, 5, z, "G")
+    b.set(-1, 5, 3, "G")
+    b.set(1, 5, 3, "G")
+    b.set(-2, 4, 1, "B")
+    b.set(2, 4, 1, "B")
+    b.set(-1, 4, -2, "C")
+    b.set(1, 4, -2, "X")
+    b.set(0, 6, 0, "j")
+    b.set(0, 2, 0, "j")
+    for x in (-2, 2):
+        b.set(x, 2, -4, "j")
+    b.ring(-3, 3, 7, -3, 3, "-", corner="L")
+    for z in range(-2, 3):
+        b.set(-3, 7, z, "|")
+        b.set(3, 7, z, "|")
+    b.fill(-2, 2, 7, -2, 2, "f")
+    gable_x(b, -4, 4, -4, 4, 7, gable_x0=-3, gable_x1=3)
+    b.set(-3, 9, 0, "G")
+    b.set(3, 9, 0, "G")
+    for h in range(0, 13):
+        b.set(4, h, -1, "S")
+    b.set(4, -1, -1, "F")
+    b.write()
+
+
 ALL = [house, guesthouse, storage, shelter, well, smeltery, workshop, hall, market, watchtower,
-       smithy, brewery, library, cafe, shop,
+       smithy, brewery, library, cafe, shop, tavern, graveyard, house2,
        lighthouse, chapel, gateway, granary, barracks, monument]
 
 if __name__ == "__main__":

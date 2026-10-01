@@ -170,6 +170,20 @@ public final class Crafts {
             new Smithing(Items.IRON_AXE, 3, 2, 1),
             new Smithing(Items.IRON_HOE, 2, 2, 1),
             new Smithing(Items.IRON_SHOVEL, 1, 2, 1));
+        // The watch's bows and arrows, turn about with the iron work: a guard on the wall with
+        // nothing to shoot is no guard, and a miner with a broken pick is no miner.
+        boolean fletchFirst = (level.getGameTime() / EVERY) % 2 == 0;
+        if (fletchFirst) {
+            String fletched = fletch(level, v, guards(v));
+            if (fletched != null) return fletched;
+        }
+        String forged = forge(level, v, wants);
+        if (forged != null || fletchFirst) return forged;
+        return fletch(level, v, guards(v));
+    }
+
+    @Nullable
+    private static String forge(ServerLevel level, Villages.Village v, List<Smithing> wants) {
         int iron = stock(level, v, s -> s.is(Items.IRON_INGOT));
         for (Smithing w : wants) {
             Item it = w.item();
@@ -181,6 +195,30 @@ public final class Crafts {
             ItemStack made = new ItemStack(it);
             store(level, v, made.copy());
             return name(made);
+        }
+        return null;
+    }
+
+    /** A bow for every guard (three string, three sticks), and arrows for them (a head of flint,
+     *  or a chipped stone one, on a stick; four with a feather to fletch them, two without). */
+    @Nullable
+    static String fletch(ServerLevel level, Villages.Village v, int watch) {
+        if (watch <= 0) return null;
+        if (stock(level, v, s -> s.is(Items.BOW)) < watch && stock(level, v, s -> s.is(Items.STRING)) >= 3
+                && stock(level, v, s -> s.is(ItemTags.PLANKS)) >= 2) {
+            if (!take(level, v, s -> s.is(Items.STRING), 3)) return null;
+            sticks(level, v, 3);
+            store(level, v, new ItemStack(Items.BOW));
+            return "a bow for the watch";
+        }
+        if (stock(level, v, s -> s.is(Items.ARROW)) < 32 * watch && stock(level, v, s -> s.is(ItemTags.PLANKS)) >= 1) {
+            boolean flint = take(level, v, s -> s.is(Items.FLINT), 1);
+            if (!flint && !take(level, v, s -> s.is(Items.COBBLESTONE), 1)) return null;
+            sticks(level, v, 1);
+            boolean feather = take(level, v, s -> s.is(Items.FEATHER), 1);
+            ItemStack arrows = new ItemStack(Items.ARROW, feather ? 4 : 2);
+            store(level, v, arrows.copy());
+            return name(arrows);
         }
         return null;
     }
@@ -200,6 +238,13 @@ public final class Crafts {
             ItemStack bed = new ItemStack(byColour(colour, "_bed", Items.RED_BED));
             store(level, v, bed.copy());
             return name(bed);
+        }
+        // String for the smith's bows and the fishers' rods, spun from the wool.
+        if (stock(level, v, s -> s.is(Items.STRING)) < 6 && have >= 4) {
+            if (!take(level, v, wool, 1)) return null;
+            ItemStack string = new ItemStack(Items.STRING, 4);
+            store(level, v, string.copy());
+            return "four lengths of string, spun from wool";
         }
         if (stock(level, v, s -> s.is(ItemTags.WOOL_CARPETS)) < 8 && have >= 2) {
             Item colour = woolColour(level, v);

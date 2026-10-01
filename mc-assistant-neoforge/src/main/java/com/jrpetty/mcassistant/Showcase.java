@@ -34,7 +34,7 @@ public final class Showcase {
     public static final List<String> ORDER = List.of(
         "house", "guesthouse", "storage", "shelter", "well", "smeltery", "workshop", "granary",
         "market", "watchtower", "lighthouse", "monument", "gateway", "hall", "chapel", "barracks",
-        "smithy", "brewery", "library", "cafe", "shop");
+        "smithy", "brewery", "library", "cafe", "shop", "tavern", "graveyard", "house2");
 
     /** A palette: the woods and stones a building is made of. */
     public record Palette(Block walls, Block frame, Block roofStair, Block roofSlab, Block roofBlock, Block floor,
@@ -100,6 +100,8 @@ public final class Showcase {
                 case SMOKER -> Blocks.SMOKER;
                 case LOOM -> Blocks.LOOM;
                 case GRINDSTONE -> Blocks.GRINDSTONE;
+                case CAMPFIRE -> Blocks.CAMPFIRE;
+                case NOTE_BLOCK -> Blocks.NOTE_BLOCK;
                 case CLEAR -> null;
             };
             return b == null ? null : b.defaultBlockState();
@@ -192,11 +194,12 @@ public final class Showcase {
         STAGED.clear();
         VIEWS.clear();
         java.util.Set<Long> taken = new java.util.HashSet<>();
-        List<String> wanted = new ArrayList<>(List.of("storage", "market", "cafe", "shop", "workshop", "smeltery", "smithy",
-            "brewery", "library", "hall", "chapel",
+        List<String> wanted = new ArrayList<>(List.of("storage", "market", "cafe", "shop", "tavern", "workshop", "smeltery",
+            "smithy", "brewery", "library", "hall", "chapel", "graveyard",
             "barracks", "watchtower", "watchtower", "watchtower", "watchtower", "granary", "guesthouse", "lighthouse",
             "gateway"));
-        for (int i = 0; i < 22; i++) wanted.add("house");
+        // An old town: the houses near the square have grown a second storey.
+        for (int i = 0; i < 22; i++) wanted.add(i % 3 == 0 ? "house2" : "house");
         int k = 0;
         for (String name : wanted) {
             int[] half = BuildGoal.footprint(name);
@@ -245,6 +248,10 @@ public final class Showcase {
             net.minecraft.world.item.Items.PUMPKIN, net.minecraft.world.item.Items.MELON_SLICE, net.minecraft.world.item.Items.EGG,
             net.minecraft.world.item.Items.WHITE_WOOL, net.minecraft.world.item.Items.IRON_INGOT, net.minecraft.world.item.Items.HONEYCOMB,
             net.minecraft.world.item.Items.COOKED_COD, net.minecraft.world.item.Items.SWEET_BERRIES, net.minecraft.world.item.Items.POTATO));
+        // The wall's gates, the watch's ladders and the alarm bell.
+        Villages.Village staged = new Villages.Village(SHOWCASE, heart, level.dimension());
+        com.jrpetty.mcassistant.entity.Watch.keepAt(level, staged, heart, true);
+        com.jrpetty.mcassistant.entity.Watch.bell(level, staged, true);
         // The café's counter and the shop's, set out (the showcase has no stores to set them from).
         for (Ledger.Building b : STAGED) {
             if (b.structure().equals("cafe")) {
@@ -283,6 +290,49 @@ public final class Showcase {
         if (field != null) view("t11-scarecrow", field.offset(-8, 3, -8), field.offset(2, 0, 2));
         view("t13-night-street", heart.offset(1, 1, 50), heart.offset(0, 3, 14));
         return n;
+    }
+
+    /**
+     * A raid on the staged town, after dark: the gates shut, the watch on the north wall with
+     * their bows, and a band of zombies and a skeleton at the north gate. Returns where to stand
+     * to look at it ("VIEW name x y z tx ty tz").
+     */
+    public static List<String> raid(ServerLevel level, BlockPos heart) {
+        List<String> out = new ArrayList<>();
+        com.jrpetty.mcassistant.entity.Watch.shut(level, SHOWCASE, true);
+        for (com.jrpetty.mcassistant.entity.Watch.Post p : com.jrpetty.mcassistant.entity.Watch.postsAt(level, SHOWCASE, heart)) {
+            if (p.out() != Direction.NORTH) continue;
+            com.jrpetty.mcassistant.entity.VillageFolkEntity g = com.jrpetty.mcassistant.McAssistantMod.VILLAGE_FOLK.get().create(level);
+            if (g == null) continue;
+            g.moveTo(p.stand().getX() + 0.5, p.stand().getY(), p.stand().getZ() + 0.5, 180.0F, 0.0F);
+            g.setYHeadRot(180.0F);
+            g.setYBodyRot(180.0F);
+            g.makeShowcase(com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.GUARD);
+            g.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BOW));
+            g.addTag("folk_lineup");
+            level.addFreshEntity(g);
+        }
+        BlockPos gate = heart.relative(Direction.NORTH, com.jrpetty.mcassistant.village.TownPlan.PLAZA);
+        for (int i = 0; i < 6; i++) {
+            BlockPos at = gate.relative(Direction.NORTH, 3 + (i % 2) * 2).relative(Direction.EAST, (i - 3) * 2 + 1);
+            int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, at.getX(), at.getZ());
+            net.minecraft.world.entity.Mob m = i == 5 ? net.minecraft.world.entity.EntityType.SKELETON.create(level)
+                : net.minecraft.world.entity.EntityType.ZOMBIE.create(level);
+            if (m == null) continue;
+            if (i == 5) m.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BOW));
+            m.moveTo(at.getX() + 0.5, y, at.getZ() + 0.5, 0.0F, 0.0F);
+            m.setYHeadRot(0.0F);
+            m.setYBodyRot(0.0F);
+            m.setNoAi(true);
+            m.setPersistenceRequired();
+            m.addTag("folk_lineup");
+            level.addFreshEntity(m);
+        }
+        out.add("VIEW t17-raid-wall " + heart.getX() + " " + (heart.getY() + 5) + " " + (heart.getZ() - 4)
+            + " " + heart.getX() + " " + (heart.getY() + 3) + " " + (gate.getZ()));
+        out.add("VIEW t18-raid-gate " + (heart.getX() + 7) + " " + (heart.getY() + 3) + " " + (gate.getZ() - 12)
+            + " " + heart.getX() + " " + (heart.getY() + 2) + " " + gate.getZ());
+        return out;
     }
 
     /** The buildings of the last town laid out, for its lights (/village showcase lights). */

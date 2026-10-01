@@ -39,6 +39,7 @@ public final class AssistantConfig {
     public static final ModConfigSpec.IntValue VILLAGE_MIN_FOLK;
     public static final ModConfigSpec.IntValue VILLAGE_MAX_FOLK;
     public static final ModConfigSpec.BooleanValue VILLAGE_BREEDING;
+    public static final ModConfigSpec.BooleanValue VILLAGE_RAIDS;
     public static final ModConfigSpec.IntValue VILLAGE_GROWTH_CAP;
     public static final ModConfigSpec.IntValue VILLAGE_LOADED_CHUNKS;
     public static final ModConfigSpec.BooleanValue REPLACE_VILLAGERS;
@@ -117,6 +118,10 @@ public final class AssistantConfig {
             .defineInRange("villageMinFolk", 8, 1, 60);
         VILLAGE_MAX_FOLK = b.comment("Most folk a new settlement is founded with.")
             .defineInRange("villageMaxFolk", 12, 1, 60);
+        VILLAGE_RAIDS = b.comment(
+                "Raiders come at walled villages with a watch, about one night in five:",
+                "the bell rings, the guards take the walls, everybody else goes indoors.")
+            .define("villageRaids", true);
         VILLAGE_BREEDING = b.comment(
                 "Let settlements grow their own people. Two folk who are fed and in work",
                 "have a chance of raising a child, which costs them the food it takes.",
@@ -194,6 +199,7 @@ public final class AssistantConfig {
     public static int villageMinFolk() { return read(VILLAGE_MIN_FOLK, 8); }
     public static int villageMaxFolk() { return read(VILLAGE_MAX_FOLK, 12); }
     public static boolean villageBreeding() { return read(VILLAGE_BREEDING, true); }
+    public static boolean villageRaids() { return read(VILLAGE_RAIDS, true); }
     public static int villageGrowthCap() { return read(VILLAGE_GROWTH_CAP, 100); }
     public static int villageLoadedChunks() { return read(VILLAGE_LOADED_CHUNKS, 6); }
     public static boolean replaceVillagers() { return read(REPLACE_VILLAGERS, true); }

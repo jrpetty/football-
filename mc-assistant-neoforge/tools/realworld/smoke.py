@@ -101,6 +101,12 @@ def showcase(r, cx, cz, look):
         if "night" in name:
             look(name, int(x) + 0.5, int(y), int(z) + 0.5, int(ax) + 0.5, int(ay) + 0.5, int(az) + 0.5, wait=8)
     look("t14-night-homes", tx + 52, ty + 14, tz + 52, tx + 26, ty + 2, tz + 26, wait=8)
+    # A raid on the town by night: the watch on the north wall, a band at the gate.
+    raid = r.cmd("execute positioned %d %d %d run village showcase raid" % (tx, ty, tz))
+    say("raid: " + raid[:300])
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", raid):
+        look(name, int(x) + 0.5, int(y), int(z) + 0.5, int(ax) + 0.5, int(ay) + 0.5, int(az) + 0.5, wait=8)
+    r.cmd("kill @e[tag=folk_lineup,type=!player]")
     r.cmd("village showcase lights off")
     r.cmd("time set 6000")
     say("alive after the town: %s" % client_alive())
@@ -218,7 +224,7 @@ def main():
 
     # Talking with a folk: right-click opens a conversation (here /village talk does
     # the same for the nearest one). The farmer, second in the row, face to face.
-    farmer = px + (4.5 - 1) * 1.6
+    farmer = px + (8 - 1) * 1.4            # second in a row of seventeen, 1.4 apart
     look("11-talk-hello", farmer, py, line - 2.2, farmer, py + 1.4, line, wait=4)
     say("talk: " + r.cmd("execute as %s at @s run village talk" % USER))
     time.sleep(4)

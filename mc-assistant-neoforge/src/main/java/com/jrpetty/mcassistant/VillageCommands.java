@@ -72,10 +72,19 @@ public final class VillageCommands {
             .then(Commands.literal("showcase").requires(src -> src.hasPermission(2))
                 .then(Commands.literal("buildings").executes(ctx -> showcase(ctx, false)))
                 .then(Commands.literal("town").executes(ctx -> showcase(ctx, true)))
+                // A raid on the staged town at night: the watch on the wall, a band at the gate.
+                .then(Commands.literal("raid").executes(VillageCommands::showcaseRaid))
                 // The staged town's windows lit, as they are after dark, or put out.
                 .then(Commands.literal("lights")
                     .then(Commands.literal("on").executes(ctx -> showcaseLights(ctx, true)))
                     .then(Commands.literal("off").executes(ctx -> showcaseLights(ctx, false))))));
+    }
+
+    private static int showcaseRaid(CommandContext<CommandSourceStack> ctx) {
+        net.minecraft.core.BlockPos at = net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition());
+        java.util.List<String> views = Showcase.raid(ctx.getSource().getLevel(), at);
+        ctx.getSource().sendSuccess(() -> Component.literal("RAID | " + String.join(" | ", views)), false);
+        return views.size();
     }
 
     private static int showcaseLights(CommandContext<CommandSourceStack> ctx, boolean on) {
@@ -441,6 +450,14 @@ public final class VillageCommands {
             int toMarket = com.jrpetty.mcassistant.entity.Market.daysToMarket(v.id(), today);
             sb.append(". Treasury: ").append(com.jrpetty.mcassistant.village.Ledger.coins(v.id())).append(" coins, ")
               .append(saved).append(" in purses; market ").append(toMarket == 0 ? "today" : "in " + toMarket + " days");
+        }
+        {
+            String alarm = com.jrpetty.mcassistant.entity.Raids.why(v.id());
+            int gates = com.jrpetty.mcassistant.entity.Watch.gates(level, v.id()).size();
+            int posts = com.jrpetty.mcassistant.entity.Watch.posts(level, v.id()).size();
+            sb.append(". Watch: ").append(alarm != null ? "THE BELL IS RINGING (" + alarm + ")" : "quiet")
+              .append(", ").append(gates).append(" gates ").append(com.jrpetty.mcassistant.entity.Watch.isShut(v.id()) ? "shut" : "open")
+              .append(", ").append(posts).append(" posts on the wall");
         }
         java.util.List<VillageFolkEntity> people = new java.util.ArrayList<>();
         for (AssistantEntity a : Villages.folkOf(v.id())) if (a instanceof VillageFolkEntity f) people.add(f);

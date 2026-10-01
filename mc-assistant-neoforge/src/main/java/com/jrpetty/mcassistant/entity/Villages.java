@@ -225,6 +225,7 @@ public final class Villages {
         BUILT_AT.clear();
         TownLife.resetForTests();
         Crafts.resetForTests();
+        Raids.resetForTests();
         Cafe.resetForTests();
         Roads.reset();
         LAST_PROJECT.clear();
@@ -1018,8 +1019,11 @@ public final class Villages {
         if (!house && folk >= housing(villageId) - 5) out.add("house");
         if (built(villageId, "smeltery") < 1) out.add("smeltery");
         if (built(villageId, "hall") < 1) out.add("hall");
-        if (folk >= 14 && built(villageId, "cafe") < 1) out.add("cafe");
-        if (at == Age.STONE) { housesForBeds(villageId, folk, out); return out; }
+        // The amenities (a café, the crafts' buildings) go on a list of their own, built
+        // after everything the age asks for and its homes: they never hold an age back.
+        List<String> extras = new ArrayList<>();
+        if (folk >= 14 && built(villageId, "cafe") < 1) extras.add("cafe");
+        if (at == Age.STONE) { housesForBeds(villageId, folk, out); out.addAll(extras); return out; }
 
         if (built(villageId, "workshop") < 1) out.add("workshop");
         // Whatever the headcount: the Iron Age asks for it, and a village
@@ -1030,18 +1034,19 @@ public final class Villages {
         if (pen != null) out.add(pen);
         // The crafts' buildings come after everything the age itself asks for: a smithy and a
         // shop are what a big Iron Age town has, not what makes it one.
-        if (folk >= 16 && built(villageId, "smithy") < 1) out.add("smithy");
-        if (folk >= 18 && built(villageId, "shop") < 1) out.add("shop");
-        if (at == Age.IRON) { housesForBeds(villageId, folk, out); return out; }
+        if (folk >= 16 && built(villageId, "smithy") < 1) extras.add("smithy");
+        if (folk >= 18 && built(villageId, "shop") < 1) extras.add("shop");
+        if (at == Age.IRON) { housesForBeds(villageId, folk, out); out.addAll(extras); return out; }
 
         if (built(villageId, "lighthouse") < 1) out.add("lighthouse");
         if (built(villageId, "chapel") < 1) out.add("chapel");
-        if (folk >= 22 && built(villageId, "brewery") < 1) out.add("brewery");
-        if (at == Age.DIAMOND) { housesForBeds(villageId, folk, out); return out; }
+        if (folk >= 22 && built(villageId, "brewery") < 1) extras.add("brewery");
+        if (at == Age.DIAMOND) { housesForBeds(villageId, folk, out); out.addAll(extras); return out; }
 
         if (built(villageId, "gateway") < 1) out.add("gateway");
-        if (folk >= 24 && built(villageId, "library") < 1) out.add("library");
+        if (folk >= 24 && built(villageId, "library") < 1) extras.add("library");
         housesForBeds(villageId, folk, out);   // (the Nether Age: before the great works)
+        out.addAll(extras);
         // And then the great works, one after another for as long as the village stands:
         // a town that has been everywhere its ages lead goes on building.
         out.add(nextGreatWork(villageId));

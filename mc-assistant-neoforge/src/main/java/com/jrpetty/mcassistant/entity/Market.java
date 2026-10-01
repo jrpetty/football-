@@ -129,6 +129,7 @@ public final class Market {
         good("Iron shovel", Items.IRON_SHOVEL, 3.0, 1, Villages.Task.NONE),
         good("Iron hoe", Items.IRON_HOE, 4.0, 1, Villages.Task.NONE),
         good("Shears", Items.SHEARS, 4.0, 1, Villages.Task.NONE),
+        good("Bow", Items.BOW, 3.0, 1, Villages.Task.NONE),
         good("Bucket", Items.BUCKET, 5.0, 1, Villages.Task.NONE),
         good("Iron helmet", Items.IRON_HELMET, 9.0, 1, Villages.Task.NONE),
         good("Iron chestplate", Items.IRON_CHESTPLATE, 14.0, 1, Villages.Task.NONE),

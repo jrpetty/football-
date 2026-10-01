@@ -43,7 +43,10 @@ public class BuildGoal extends Goal {
     public static final Set<String> STRUCTURES = Set.of(
         "wall", "platform", "shelter", "smeltery", "storage", "workshop", "watchtower",
         "house", "room", "pen", "fortify", "lighthouse", "column", "well", "hall",
-        "market", "chapel", "gateway", "granary", "barracks", "monument", "guesthouse");
+        "market", "chapel", "gateway", "granary", "barracks", "monument", "guesthouse",
+        // the crafts' buildings and the amenities: missing here, a village's builder was told
+        // "I can build: ..." and the café, the shop and the smithy never went up
+        "cafe", "shop", "smithy", "brewery", "library", "tavern", "graveyard", "house2");
 
     /** Half the width of a structure's footprint: the meeting hall, the market, the
      *  barracks, the chapel's length and the gateway's step are seven across, the rest
@@ -67,7 +70,9 @@ public class BuildGoal extends Goal {
          *  a cauldron, a bell. Each is put in if the village has it, and left out if not. */
         DOOR, LANTERN, WATER, HAY, BARREL, FLOWER, CARPET, ANVIL, CAULDRON, BELL,
         /** The furniture of the crafts' buildings: put in if the village has it (or can make it). */
-        BOOKSHELF, LECTERN, ENCHANTING, BREWING, SMOKER, LOOM, GRINDSTONE }
+        BOOKSHELF, LECTERN, ENCHANTING, BREWING, SMOKER, LOOM, GRINDSTONE,
+        /** A tavern's hearth fire and its note blocks. */
+        CAMPFIRE, NOTE_BLOCK }
 
     /** One block of a building: where, what part, what it is for (Blueprints.Style), and which way it faces. */
     public record Placement(BlockPos pos, Part part, Blueprints.Style style, Blueprints.Way way) {
@@ -209,7 +214,8 @@ public class BuildGoal extends Goal {
      *  a smoker, a loom, a grindstone. */
     public static boolean isFurniture(Part part) {
         return part == Part.BOOKSHELF || part == Part.LECTERN || part == Part.ENCHANTING || part == Part.BREWING
-            || part == Part.SMOKER || part == Part.LOOM || part == Part.GRINDSTONE;
+            || part == Part.SMOKER || part == Part.LOOM || part == Part.GRINDSTONE || part == Part.CAMPFIRE
+            || part == Part.NOTE_BLOCK;
     }
 
     /** Decorative parts skipped (not blocked-on) when we lack the item. */
@@ -260,6 +266,8 @@ public class BuildGoal extends Goal {
             case SMOKER -> s -> s.is(Items.SMOKER);
             case LOOM -> s -> s.is(Items.LOOM);
             case GRINDSTONE -> s -> s.is(Items.GRINDSTONE);
+            case CAMPFIRE -> s -> s.is(Items.CAMPFIRE);
+            case NOTE_BLOCK -> s -> s.is(Items.NOTE_BLOCK);
         };
     }
 
@@ -294,6 +302,8 @@ public class BuildGoal extends Goal {
             case SMOKER -> "a smoker";
             case LOOM -> "a loom";
             case GRINDSTONE -> "a grindstone";
+            case CAMPFIRE -> "a fire for the hearth";
+            case NOTE_BLOCK -> "note blocks";
         };
     }
 
@@ -841,6 +851,8 @@ public class BuildGoal extends Goal {
             case SMOKER -> Blocks.SMOKER.defaultBlockState();
             case LOOM -> Blocks.LOOM.defaultBlockState();
             case GRINDSTONE -> Blocks.GRINDSTONE.defaultBlockState();
+            case CAMPFIRE -> Blocks.CAMPFIRE.defaultBlockState();
+            case NOTE_BLOCK -> Blocks.NOTE_BLOCK.defaultBlockState();
         };
     }
 

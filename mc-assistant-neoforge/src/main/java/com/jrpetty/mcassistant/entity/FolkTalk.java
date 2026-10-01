@@ -331,6 +331,14 @@ public final class FolkTalk {
         Persona me = f.persona();
         if (f.isFollowing(p)) return pick(r, "Walking with you, of course!", "Following you. Where are we off to?");
         if (f.isSleeping()) return "Sleeping, until you woke me.";
+        String alarm = Raids.why(f.ownerId());
+        if (alarm != null) {
+            if (f.stationTask() == AssistantEntity.StationTask.GUARD) {
+                return f.post() != null ? pick(r, "Holding the wall! ", "On my post — ") + cap(alarm) + "."
+                    : pick(r, "Holding the gate. ", "Getting to my post — ") + cap(alarm) + "!";
+            }
+            return pick(r, "Keeping indoors till the bell stops — ", "Hiding, like you should be! ") + alarm + ".";
+        }
         if (f.trip() != null) {
             String where = Villages.name(f.trip().destination());
             return f.trip().homeward() ? "Taking the caravan home to " + where + ", with what they could spare."
