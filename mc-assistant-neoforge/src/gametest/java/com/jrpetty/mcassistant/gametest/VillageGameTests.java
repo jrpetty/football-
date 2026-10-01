@@ -501,9 +501,13 @@ public class VillageGameTests {
             "with the wall set aside the smeltery should go up meanwhile, got " + meanwhile);
 
         java.util.UUID late = java.util.UUID.randomUUID();
-        Villages.restore(level, late, new BlockPos(4600, 64, 4600), Villages.Age.NETHER,
-            List.of("storage", "shelter", "house", "house", "house", "well", "fortify", "smeltery", "hall",
-                "workshop", "watchtower", "market", "pen", "lighthouse", "chapel"), 20);
+        // Homes enough for its twenty (a village short of beds builds houses first).
+        List<String> raised = new java.util.ArrayList<>(List.of("storage", "shelter", "well", "fortify", "smeltery",
+            "hall", "workshop", "watchtower", "market", "pen", "lighthouse", "chapel"));
+        int homes = (20 + com.jrpetty.mcassistant.village.VillageMath.BEDS_PER_HOUSE - 1)
+            / com.jrpetty.mcassistant.village.VillageMath.BEDS_PER_HOUSE;
+        for (int i = 0; i < homes; i++) raised.add("house");
+        Villages.restore(level, late, new BlockPos(4600, 64, 4600), Villages.Age.NETHER, raised, 20);
         List<String> order = new java.util.ArrayList<>();
         int roomBefore = Villages.housing(late);
         for (int i = 0; i < 5; i++) {
