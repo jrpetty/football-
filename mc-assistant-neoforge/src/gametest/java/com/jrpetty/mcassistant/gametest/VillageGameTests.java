@@ -1733,6 +1733,7 @@ public class VillageGameTests {
         helper.assertTrue(com.jrpetty.mcassistant.entity.Raids.underAlarm(village), "the bell is ringing");
         helper.assertTrue(allDoors == 12 && shutDoors == allDoors, "every gate shut");
         helper.assertTrue(!farmer.onShift() && guard.onShift(), "the guard turns out, the farmer stops work");
+        final int doorsTotal = allDoors;
         final long[] upAt = { -1 };
         final boolean[] cleared = { false };
         final long[] endedAt = { -1 };
@@ -1771,8 +1772,8 @@ public class VillageGameTests {
                             if (level.getBlockState(d).getValue(net.minecraft.world.level.block.DoorBlock.OPEN)) open++;
                         }
                     }
-                    Kit.log("t33 in the morning " + open + " of " + allDoors + " doors open");
-                    helper.assertTrue(open == allDoors, "the gates opened in the morning");
+                    Kit.log("t33 in the morning " + open + " of " + doorsTotal + " doors open");
+                    helper.assertTrue(open == doorsTotal, "the gates opened in the morning");
                     helper.succeed();
                 }
             }
