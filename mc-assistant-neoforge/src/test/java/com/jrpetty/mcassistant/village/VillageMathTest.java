@@ -187,7 +187,7 @@ class VillageMathTest {
     }
 
     @Test
-    @DisplayName("the iron target actually pays for the armour it promises")
+    @DisplayName("the iron target pays for the watch's armour and a smith's stock")
     void ironCoversTheWatchAndTheTools() {
         for (int folk = 1; folk <= MAX_FOLK; folk++) {
             int guards = Math.max(1, VillageMath.shapeOf(folk)[VillageMath.GUARD]);
@@ -195,8 +195,8 @@ class VillageMathTest {
                 "at " + folk + " folk the watch's armour is under-funded");
             assertTrue(
                 VillageMath.ironWanted(folk)
-                    >= VillageMath.ironForTheWatch(folk) + VillageMath.ironForTools(folk),
-                "at " + folk + " folk the iron target does not cover watch + tools");
+                    >= VillageMath.ironForTheWatch(folk) + VillageMath.SMITH_STOCK,
+                "at " + folk + " folk the iron target does not cover the watch and a smith's stock");
             assertTrue(VillageMath.ironForEveryone(folk) >= VillageMath.ironForTheWatch(folk),
                 "arming everybody costs less than arming the watch at " + folk);
         }

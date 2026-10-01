@@ -243,10 +243,18 @@ public final class VillageMath {
         return folk * ARMOUR_SET;
     }
 
-    /** What the Iron Age is actually asking for: the watch in armour and
-     *  everybody in decent tools. */
+    /** A smith's working stock: what the workshop keeps in hand for tools as they wear. */
+    public static final int SMITH_STOCK = 32;
+
+    /**
+     * What the Iron Age is actually asking for: the watch in armour, and a smith's stock
+     * for the tools. It asked for a decent tool in every hand on top — three iron a head,
+     * four hundred for a village of a hundred — and the real-terrain long games, whose
+     * miners bring in a handful of iron a day, reached the Iron Age by day six and could
+     * never leave it.
+     */
     public static int ironWanted(int folk) {
-        return Math.max(64, ironForTheWatch(folk) + ironForTools(folk));
+        return Math.max(64, ironForTheWatch(folk) + SMITH_STOCK);
     }
 
     /** Diamonds: a pickaxe for every mining crew, and never fewer than the
