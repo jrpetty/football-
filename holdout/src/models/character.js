@@ -116,6 +116,7 @@ export const OUTFITS = {
   excon: { top: { kind: 'tank', color: '#d6d2ca', sleeves: 'none' }, legs: { kind: 'jeans', color: '#2a3448' }, shoes: { kind: 'boots', color: '#1a1a1a' }, extras: ['tattoos', 'bandana'] },
   drifter: { top: { kind: 'coat', color: '#5a4a3a', inner: '#7a6a5a', sleeves: 'long', open: true, collar: true }, legs: { kind: 'jeans', color: '#3a3a3a' }, shoes: { kind: 'boots', color: '#3a2a1e' }, hat: { kind: 'beanie', color: '#5a3a2a' }, extras: ['scarf'] },
   guard: { top: { kind: 'uniform', color: '#2a2a2e', sleeves: 'long', collar: true }, legs: { kind: 'slacks', color: '#1e1e22' }, shoes: { kind: 'boots', color: '#111' }, hat: { kind: 'cap', color: '#1e1e22' }, extras: ['dutybelt', 'securityvest'] },
+  scout: { top: { kind: 'jacket', color: '#4a5236', sleeves: 'long', collar: true, open: true, inner: '#3a3a32' }, legs: { kind: 'cargo', color: '#4a4a36', camo: true }, shoes: { kind: 'boots', color: '#3a2e22' }, hat: { kind: 'beanie', color: '#3a4030' }, extras: ['scarf', 'pouches'] },
 }
 const CIVILIAN_TOPS = [
   { kind: 'tee', sleeves: 'short' },
@@ -136,6 +137,10 @@ export function zombieOutfit(theme, r) {
   if (theme === 'military') return { ...OUTFITS.soldier, hat: { kind: 'helmet', color: '#4a5038' }, armor: r() < 0.5 ? 'military' : null }
   if (theme === 'worker') return { top: { kind: 'tee', color: pickR(r, CIV_COLORS), sleeves: 'short' }, legs: { kind: 'jeans', color: pickR(r, PANTS_COLORS) }, shoes: { kind: 'boots', color: '#5a4030' }, hat: r() < 0.6 ? { kind: 'hardhat', color: '#f0c020' } : null, extras: ['hivis'] }
   if (theme === 'chef') return OUTFITS.chef
+  // special infected: each one reads at a glance
+  if (theme === 'screamer') return { top: { kind: 'gown', color: '#d8d4c4', sleeves: 'none' }, legs: { kind: 'bare' }, shoes: { kind: 'bare' }, extras: [] }
+  if (theme === 'stalker') return { top: { kind: 'hoodie', color: '#1e2220', sleeves: 'long' }, legs: { kind: 'jeans', color: '#1a1e22' }, shoes: { kind: 'boots', color: '#141414' }, extras: [] }
+  if (theme === 'bloater') return { top: { kind: 'tank', color: '#8a8a6a', sleeves: 'none' }, legs: { kind: 'slacks', color: '#4a4436' }, shoes: { kind: 'bare' }, extras: [] }
   const top = { ...pickR(r, CIVILIAN_TOPS), color: pickR(r, CIV_COLORS) }
   if (top.open) top.inner = pickR(r, CIV_COLORS)
   return {

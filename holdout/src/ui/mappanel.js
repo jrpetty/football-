@@ -199,7 +199,7 @@ export class MapPanel {
           'div.sq-main',
           h('div.sq-name', h('b', s.name), h('small', OCCUPATIONS[s.occ].name)),
           h('div.sq-gear', h('span', st.weapon.name + (st.weaponBroken ? ' (broken)' : '')), st.armorItem ? h('span', ITEMS[st.armorItem.id].name) : null, util ? h('span.util', h('i', { html: resIcon(s.util) }), `${RES[s.util].name} ×${util}`) : null),
-          h('div.sq-sk', h('span', `MEL ${s.skills.melee}`), h('span', `RNG ${s.skills.ranged}`), h('span', `SCV ${s.skills.scavenge}`), job ? h('span.job', `leaves ${STATIONS[job.type]?.name || job.type}`) : null),
+          h('div.sq-sk', h('span', `MEL ${s.skills.melee}`), h('span', `RNG ${s.skills.ranged}`), h('span', `SCV ${s.skills.scavenge}`), h('span.eye', { 'data-tip': `Sight ${Math.round(st.sight)} m · hearing ${Math.round(st.hearing)} m${st.wallSense ? ` · sees through a wall (${st.wallSense} m)` : ''}` }, h('i', { html: icon('eye') }), `${Math.round(st.sight)} m${st.wallSense ? ' +wall' : ''}`), job ? h('span.job', `leaves ${STATIONS[job.type]?.name || job.type}`) : null),
           hpBar(s),
         ),
         h('span.sq-tick', hurt ? 'Injured' : on ? h('i', { html: icon('check') }) : ''),

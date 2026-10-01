@@ -32,6 +32,8 @@ import { h, rand, rint, pick, chance, weighted, clamp, fmtTime, bus, fmt } from 
 import { icon } from '../ui/icons.js'
 import { resIcon } from '../ui/common.js'
 import { infectedRange } from '../ui/mappanel.js'
+import { VisionMixin } from './missionvision.js'
+import { TrapsMixin } from './missiontraps.js'
 
 const TAU = Math.PI * 2
 // How much room things take in a pack.
@@ -144,6 +146,7 @@ export class Mission {
     })
     this.takeUtilities()
     this.spawnInitial()
+    this.placeTraps()
     this.setupEvent()
     const walkie = this.squad.some((a) => a.st.walkie)
     this.hordeIn = clamp(175 - this.level * 13, 95, 165) + (walkie ? 45 : 0) + (loadout.van ? 0 : 25)
@@ -159,6 +162,7 @@ export class Mission {
     view.rig.jump((E.x + this.lv.bld.cx) / 2, E.z - 6, 30)
     view.rig.yaw = view.rig.yawGoal = 0.35
     this.buildHud()
+    this.setupVision()
     this.select(this.squad[0])
     sfx('truck')
     log(`The squad reached ${loc.name}.`, 'story')
@@ -444,7 +448,7 @@ export class Mission {
       if (w > 1.5) {
         const name = (this.loc.name || '').split(' ').slice(-2).join(' ').toUpperCase()
         b.box(w + 0.16, 0.86, 0.16, { material: this.cutMat('paint'), color: '#2a2e2a', x: dc.x, y: WALL_EXT + 0.5, z: dc.z + 0.2 })
-        b.plane(w, 0.7, { material: plateMat(name, '#e8e0c8', '#2a2420'), x: dc.x, y: WALL_EXT + 0.5, z: dc.z + 0.285, shadow: false })
+        b.plane(w, 0.7, { material: cutaway(plateMat(name, '#e8e0c8', '#2a2420'), this.cutU), x: dc.x, y: WALL_EXT + 0.5, z: dc.z + 0.285, shadow: false })
       }
     }
     this.addStatic(b)
@@ -858,6 +862,7 @@ export class Mission {
     return cand[0]
   }
   workTime(agent, c, kind) {
+    if (c.def?.isTrap) return c.armed ? this.disarmTime(agent, c) : null
     if (kind === 'take') return 0.8
     if (kind === 'search') {
       if (c.stash) return 1
@@ -867,6 +872,7 @@ export class Mission {
     return (c.def.time * 1.8 + 2) / agent.st.dismantle
   }
   workTick(agent, wk, dt) {
+    if (wk.c.def?.isTrap) return
     wk.noiseT = (wk.noiseT || 0) - dt
     wk.sfxT = (wk.sfxT || 0) - dt
     if (wk.noiseT <= 0) {
@@ -884,6 +890,7 @@ export class Mission {
     }
   }
   finishWork(agent, c, kind) {
+    if (c.def?.isTrap) return this.finishDisarm(agent, c)
     const pos = new THREE.Vector3(c.x, (CH[c.kind] || 1.2) + 0.4, c.z)
     if (kind === 'search') {
       let found
@@ -1173,7 +1180,8 @@ export class Mission {
     const s = this.agentAt(x, y, this.squad)
     const z = this.agentAt(x, y, this.zombies.filter((z) => !z.dead))
     const c = this.containerAt(x, y)
-    const opts = [s && { type: 'survivor', a: s.a, d: s.d - 0.6 }, z && { type: 'zombie', z: z.a, d: z.d - 0.4 }, c && { type: 'container', c: c.c, d: c.d }].filter(Boolean)
+    const t = this.trapAt(x, y)
+    const opts = [s && { type: 'survivor', a: s.a, d: s.d - 0.6 }, z && !z.a.fogHidden && { type: 'zombie', z: z.a, d: z.d - 0.4 }, c && { type: 'container', c: c.c, d: c.d }, t && { type: 'trap', c: t.t, d: t.d - 0.5 }].filter(Boolean)
     opts.sort((a, b) => a.d - b.d)
     return opts[0] || null
   }
@@ -1246,6 +1254,15 @@ export class Mission {
       if (who.length) sfx('move')
       return
     }
+    if (hit?.type === 'trap') {
+      const helper = this.pickHelper(hit.c)
+      if (command && helper) {
+        helper.command({ type: 'dismantle', c: hit.c })
+        sfx('move')
+        return
+      }
+      return this.openMenu(hit.c, x, y)
+    }
     if (hit?.type === 'container') {
       if (command && this.selected.size) return this.defaultAction(hit.c)
       return this.openMenu(hit.c, x, y)
@@ -1291,11 +1308,12 @@ export class Mission {
     }
     const hit = this.hitTest(x, y)
     view.canvas.style.cursor = hit ? 'pointer' : ''
-    const c = hit?.type === 'container' ? hit.c : null
+    const c = hit?.type === 'container' || hit?.type === 'trap' ? hit.c : null
     if (c !== this.hoverC) {
       this.hoverC = c
       this.tip.hidden = !c
-      if (c) this.tip.innerHTML = `<b>${c.def.name}</b><span>${c.stash ? 'Loot left inside' : c.searched ? 'Searched · can be broken down' : c.locked ? 'Locked' : 'Not searched'}</span><small>Right-click: ${c.stash || !c.searched ? 'search' : 'break down'}</small>`
+      if (c?.def?.isTrap) this.tip.innerHTML = `<b>${c.def.name}</b><span>${c.trap.desc}</span><small>Right-click: disarm for parts</small>`
+      else if (c) this.tip.innerHTML = `<b>${c.def.name}</b><span>${c.stash ? 'Loot left inside' : c.searched ? 'Searched · can be broken down' : c.locked ? 'Locked' : 'Not searched'}</span><small>Right-click: ${c.stash || !c.searched ? 'search' : 'break down'}</small>`
     }
     if (c) this.tip.style.transform = `translate(${x + 16}px, ${y + 14}px)`
   }
@@ -1397,6 +1415,18 @@ export class Mission {
     const helper = this.pickHelper(c)
     const who = helper ? helper.data.first : 'nobody'
     const btn = (label, sub, fn, disabled = false, cls = '') => h('button.cm-btn' + cls, { disabled, onclick: (e) => (e.stopPropagation(), fn(), this.closeMenu()) }, h('span', label), h('small', sub))
+    if (c.def?.isTrap) {
+      const t = helper ? this.disarmTime(helper, c) : c.trap.disarm
+      const gets = Object.entries(c.trap.yield).map(([k, n]) => `${n} ${RES[k].name.toLowerCase()}`).join(', ')
+      menu.append(h('div.cm-title', h('b', c.def.name), h('span', c.trap.desc)))
+      menu.append(btn('Disarm', `${who} · ${t.toFixed(1)}s · ${gets}`, () => helper.command({ type: 'dismantle', c }), !helper))
+      menu.hidden = false
+      this.menuOpen = true
+      const r = menu.getBoundingClientRect()
+      menu.style.transform = `translate(${Math.max(10, Math.min(x + 10, window.innerWidth - r.width - 10))}px, ${Math.max(10, Math.min(y + 10, window.innerHeight - r.height - 10))}px)`
+      sfx('click')
+      return
+    }
     menu.append(h('div.cm-title', h('b', c.def.name), h('span', c.stash ? 'Loot left inside' : c.searched ? 'Already searched' : c.locked ? 'Locked' : `Level ${this.level} location`)))
     if (c.stash) menu.append(btn('Take the rest', `${who} · ${c.stash.length} lot${c.stash.length === 1 ? '' : 's'}`, () => helper.command({ type: 'search', c }), !helper))
     else if (!c.searched) {
@@ -1467,6 +1497,8 @@ export class Mission {
       })
       this.updateThrown(dt)
       this.updateFires(dt)
+      this.updateTraps(dt)
+      this.updateClouds(dt)
       this.updateNpc()
       this.unloadAtVan()
       for (const c of this.containers) {
@@ -1494,6 +1526,7 @@ export class Mission {
       if (team.length && team.every((x) => x.downed)) this.end('wiped')
     } else for (const s of this.squad) s.sync()
     this.updateLights(night)
+    this.updateVision(this.paused ? 0 : dt)
     this.fx.setViewport(window.innerHeight, view.camera.fov)
     this.fx.update(this.paused ? 0 : dt)
     this.evacRing.material.opacity = 0.45 + Math.sin(performance.now() / 330) * 0.25
@@ -1579,7 +1612,7 @@ export class Mission {
       ),
       this.haulEl,
       h('div.mbottom', (this.squadEl = h('div.squad')), this.utilEl, h('div.mact', h('button.btn.ghost', { onclick: () => this.selectAll(), 'data-tip': 'Select everyone <kbd>Tab</kbd>' }, 'All'), this.extractBtn)),
-      (this.helpEl = h('div.mhelp', h('b', 'Supply run'), ' Click a survivor (or drag a box), then right-click to move, attack or search. Click a fitting for options. Bring your finds back to the van, then everyone into the green circle to leave.')),
+      (this.helpEl = h('div.mhelp', h('b', 'Supply run'), ' You only see what your people see: rooms reveal as you walk in, and ripples mark what they hear. Click a survivor (or drag a box), then right-click to move, attack or search. Watch for traps. Bring finds to the van, then everyone into the green circle to leave.')),
       this.toastEl,
       this.menu,
       this.tip,
@@ -1674,7 +1707,7 @@ export class Mission {
     const inZone = standing.filter((a) => Math.hypot(a.pos.x - E.x, a.pos.z - E.z) <= E.r + 0.3)
     const ready = standing.length > 0 && inZone.length === standing.length
     this.extractBtn.disabled = !ready
-    this.extractBtn.textContent = ready ? 'Leave' : `Leave (${inZone.length}/${standing.length} at the van)`
+    this.extractBtn.textContent = ready ? 'Leave' : `Leave · ${inZone.length}/${standing.length} at van`
   }
   toast(msg, kind = '') {
     const t = h('div.mt' + (kind ? '.' + kind : ''), msg)
@@ -1706,6 +1739,7 @@ export class Mission {
   end(result) {
     if (this.over) return
     this.over = true
+    this.saveVision()
     const report = { result, loc: this.loc, loot: {}, items: [], lost: [...(this.lost || [])], injured: [] }
     const L = this.level
     // unused utility items go back into storage
@@ -1787,8 +1821,10 @@ export class Mission {
     this.terrain?.mesh.geometry.dispose()
     this.atmo.dispose()
     this.fx.dispose()
+    this.disposeVision()
   }
 }
+Object.assign(Mission.prototype, VisionMixin, TrapsMixin)
 
 // Merge a built model group into a builder, keeping its vertex colours.
 function mergeGroup(b, g, o = {}) {

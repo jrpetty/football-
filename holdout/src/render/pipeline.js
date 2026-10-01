@@ -7,6 +7,7 @@ import {
   VignetteEffect, NoiseEffect, TiltShiftEffect, BlendFunction, Effect, KernelSize,
 } from 'postprocessing'
 import { N8AOPostPass } from 'n8ao'
+import { FowEffect } from './fow.js'
 
 const exposureFrag = /* glsl */ `
 uniform float exposure;
@@ -118,6 +119,14 @@ export class Pipeline {
       ao.configuration.gammaCorrection = false
       composer.addPass(ao)
     }
+    // fog of war for scenes that ask for it (supply runs): its own pass on HDR
+    // colour, so bloom and the grade only ever see what the squad can see
+    let fow = null
+    if (scene.userData.fowUniforms) {
+      fow = new FowEffect(scene.userData.fowUniforms)
+      fow.mainCamera = camera
+      composer.addPass(new EffectPass(camera, fow))
+    }
     const exposure = new ExposureEffect(this.exposure)
     const effects = [exposure]
     let bloom = null
@@ -142,7 +151,7 @@ export class Pipeline {
     }
     composer.addPass(new EffectPass(camera, new SMAAEffect({ preset: Q.smaa })))
     composer.setSize(this.size.w, this.size.h)
-    c = { composer, ao, bloom, grade, exposure, tilt, tone }
+    c = { composer, ao, bloom, grade, exposure, tilt, tone, fow }
     this.composers.set(scene, c)
     return c
   }

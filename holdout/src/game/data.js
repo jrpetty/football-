@@ -60,7 +60,7 @@ export const OCCUPATIONS = {
   doctor: { name: 'Doctor', skills: { medic: 5, craft: 1 }, perk: 'Heals twice as fast at the Infirmary and revives the downed in half the time.', fx: { healMult: 2, reviveMult: 0.5 }, stations: ['infirmary'] },
   nurse: { name: 'Nurse', skills: { medic: 4, survival: 1 }, perk: 'Squadmates within 4 m on a run slowly regain health.', fx: { aura: 1.2 }, stations: ['infirmary'] },
   paramedic: { name: 'Paramedic', skills: { medic: 3, scavenge: 1, melee: 1 }, perk: 'Moves 12% faster and revives the downed 30% faster.', fx: { speed: 0.12, reviveMult: 0.7 }, stations: ['infirmary'] },
-  police: { name: 'Police Officer', skills: { ranged: 4, melee: 2 }, perk: '+20% damage with pistols and revolvers.', fx: { pistolDmg: 0.2 } },
+  police: { name: 'Police Officer', skills: { ranged: 4, melee: 2 }, perk: '+20% damage with pistols and revolvers. Hears 3 m further.', fx: { pistolDmg: 0.2, hearing: 3 } },
   soldier: { name: 'Soldier', skills: { ranged: 5, melee: 2 }, perk: '+20% damage with every firearm and +15 health.', fx: { gunDmg: 0.2, hp: 15 } },
   firefighter: { name: 'Firefighter', skills: { melee: 3, build: 2 }, perk: '+30 health, dismantles 35% faster, axes hit 20% harder, immune to fire.', fx: { hp: 30, dismantle: 0.35, axeDmg: 0.2, fireproof: 1 } },
   farmer: { name: 'Farmer', skills: { survival: 5, build: 1 }, perk: 'Farm Plots produce 50% more when they work there.', fx: { station: { farm: 0.5 } }, stations: ['farm'] },
@@ -71,16 +71,17 @@ export const OCCUPATIONS = {
   engineer: { name: 'Engineer', skills: { tech: 4, build: 2 }, perk: 'Still, Chemistry Lab, Ammo Press and Radio +40%. Upgrades cost 15% less.', fx: { station: { still: 0.4, chemlab: 0.4, ammo: 0.4, radio: 0.4 }, discount: 0.15 }, stations: ['chemlab', 'still', 'ammo'] },
   tailor: { name: 'Tailor', skills: { craft: 4, survival: 1 }, perk: 'Tailor Station +60%, and much likelier to make Fine and Masterwork armor.', fx: { station: { tailor: 0.6 }, quality: { tailor: 2 } }, stations: ['tailor'] },
   gunsmith: { name: 'Gunsmith', skills: { craft: 5, ranged: 1 }, perk: 'Weapons Station and Ammo Press +50%, and much likelier to make Fine and Masterwork guns.', fx: { station: { weapons: 0.5, ammo: 0.5 }, quality: { weapons: 2 } }, stations: ['weapons', 'ammo'] },
-  hunter: { name: 'Hunter', skills: { ranged: 3, survival: 2, scavenge: 1 }, perk: 'Rifles and crossbows deal 25% more damage. Makes less noise.', fx: { rifleDmg: 0.25, noise: -0.3 } },
+  hunter: { name: 'Hunter', skills: { ranged: 3, survival: 2, scavenge: 1 }, perk: 'Rifles and crossbows deal 25% more damage, makes less noise and sees 3 m further.', fx: { rifleDmg: 0.25, noise: -0.3, sight: 3 } },
   athlete: { name: 'Athlete', skills: { melee: 2, scavenge: 2 }, perk: 'Moves 20% faster and carries more.', fx: { speed: 0.2, carry: 10 } },
   student: { name: 'Student', skills: { scavenge: 1, craft: 1 }, perk: 'Learns every skill 50% faster.', fx: { xp: 0.5 } },
   teacher: { name: 'Teacher', skills: { survival: 1, medic: 1 }, perk: 'At the Training Yard, everyone training learns 40% faster.', fx: { teach: 0.4 }, stations: ['training'] },
   plumber: { name: 'Plumber', skills: { survival: 2, tech: 2 }, perk: 'Water Filter +50%.', fx: { station: { filter: 0.5 } }, stations: ['filter'] },
   builder: { name: 'Construction Worker', skills: { build: 5, melee: 1 }, perk: 'Scrap Yard +30%. Construction and expansions 30% faster.', fx: { station: { scrapyard: 0.3 }, construct: 0.3 }, stations: ['scrapyard', 'lumber'] },
   clerk: { name: 'Store Clerk', skills: { scavenge: 3 }, perk: 'While in camp, the black market pays 12% more and charges 8% less.', fx: { market: 0.12 } },
-  excon: { name: 'Ex-Con', skills: { scavenge: 3, melee: 2 }, perk: 'Picks locks without lockpicks.', fx: { picklock: 1 } },
-  drifter: { name: 'Drifter', skills: { scavenge: 2, survival: 2, melee: 1 }, perk: 'Finds 15% more loot on runs and carries more.', fx: { loot: 0.15, carry: 8 } },
-  guard: { name: 'Security Guard', skills: { melee: 3, ranged: 2 }, perk: 'On a Watchtower, deals 30% more damage.', fx: { station: { watchtower: 0.3 } }, stations: ['watchtower'] },
+  excon: { name: 'Ex-Con', skills: { scavenge: 3, melee: 2 }, perk: 'Picks locks without lockpicks and hears trouble coming from 4 m further.', fx: { picklock: 1, hearing: 4 } },
+  drifter: { name: 'Drifter', skills: { scavenge: 2, survival: 2, melee: 1 }, perk: 'Finds 15% more loot on runs, carries more and hears 3 m further.', fx: { loot: 0.15, carry: 8, hearing: 3 } },
+  scout: { name: 'Scout', skills: { scavenge: 2, ranged: 2, survival: 1 }, perk: 'Wall sense: sees movement through one wall within 6 m. Spots traps from 7 m and sees 2 m further.', fx: { sight: 2, wallSense: 6, trapSpot: 7 } },
+  guard: { name: 'Security Guard', skills: { melee: 3, ranged: 2 }, perk: 'On a Watchtower, deals 30% more damage. Trained eyes: sees 2 m further.', fx: { station: { watchtower: 0.3 }, sight: 2 }, stations: ['watchtower'] },
 }
 export const OCC_KEYS = Object.keys(OCCUPATIONS)
 
@@ -99,6 +100,13 @@ export const TRAITS = {
   frail: { name: 'Frail', good: false, desc: '-15 health.', fx: { hp: -15 } },
   lazy: { name: 'Lazy', good: false, desc: 'Works 15% slower.', fx: { work: -0.15 } },
   coward: { name: 'Coward', good: false, desc: '-15% damage.', fx: { dmg: -0.15 } },
+  eagle: { name: 'Eagle-Eyed', good: true, desc: 'Sees 4 m further on runs.', fx: { sight: 4 }, excl: ['nearsighted'] },
+  keenEars: { name: 'Keen Hearing', good: true, desc: 'Hears zombies moving 7 m further away, even through walls.', fx: { hearing: 7 }, excl: ['hardHearing'] },
+  catEyes: { name: "Cat's Eyes", good: true, desc: 'Sees much better in the dark.', fx: { nightSight: 0.35 }, excl: ['nightBlind'] },
+  sixthSense: { name: 'Sixth Sense', good: true, rare: true, desc: 'Feels movement through one wall within 4 m.', fx: { wallSense: 4 } },
+  nearsighted: { name: 'Nearsighted', good: false, desc: 'Sees 5 m less far. Everything past arm\'s length is a blur.', fx: { sight: -5 }, excl: ['eagle'] },
+  hardHearing: { name: 'Hard of Hearing', good: false, desc: 'Hears 7 m less far.', fx: { hearing: -7 }, excl: ['keenEars'] },
+  nightBlind: { name: 'Night-Blind', good: false, desc: 'Nearly blind after dark.', fx: { nightSight: -0.3 }, excl: ['catEyes'] },
 }
 export const TRAIT_KEYS = Object.keys(TRAITS)
 
@@ -150,7 +158,9 @@ export const ITEMS = {
 
   packS: { name: 'Small Backpack', slot: 'gear', rarity: 'common', carry: 15, util: 1, value: 60, desc: 'Carries 15 more and holds 1 more utility item.', pack: 'small' },
   packL: { name: 'Hiking Pack', slot: 'gear', rarity: 'uncommon', carry: 35, util: 2, value: 180, desc: 'Carries 35 more and holds 2 more utility items.', pack: 'large' },
-  flashlight: { name: 'Flashlight', slot: 'gear', rarity: 'common', search: 0.3, nightSight: 0.5, value: 50, desc: 'Searches 30% faster and helps see at night.' },
+  flashlight: { name: 'Flashlight', slot: 'gear', rarity: 'common', search: 0.3, nightSight: 0.5, torch: 1, value: 50, desc: 'Searches 30% faster and throws a long beam after dark.' },
+  binoculars: { name: 'Binoculars', slot: 'gear', rarity: 'uncommon', sight: 5, trapSpot: 2, value: 130, desc: 'Sees 5 m further and spots traps sooner.' },
+  thermal: { name: 'Thermal Goggles', slot: 'gear', rarity: 'epic', wallSense: 8, nightSight: 0.7, value: 820, desc: 'Body heat shows through one wall within 8 m. Good in the dark.' },
   lockpicks: { name: 'Lockpicks', slot: 'gear', rarity: 'uncommon', picklock: 1, value: 120, desc: 'Opens locked safes, lockers and doors quietly.' },
   toolkit: { name: 'Toolkit', slot: 'gear', rarity: 'uncommon', dismantle: 0.4, value: 140, desc: 'Dismantles 40% faster and salvages more.' },
   walkie: { name: 'Walkie-Talkie', slot: 'gear', rarity: 'rare', walkie: 1, value: 300, desc: 'The squad hears the horde coming: on runs it arrives 45 s later.' },
@@ -424,6 +434,8 @@ export const RECIPES = [
   { id: 'walkie', station: 'electronics', lvl: 2, item: 'walkie', in: { electronics: 6, parts: 4, metal: 2 }, time: 60, cat: 'Gadgets' },
   { id: 'module', station: 'electronics', lvl: 2, out: { module: 1 }, in: { electronics: 5, parts: 6, metal: 6 }, time: 80, cat: 'Automation' },
   { id: 'nvg', station: 'electronics', lvl: 3, item: 'nvg', in: { electronics: 12, parts: 8, metal: 4 }, time: 120, cat: 'Gadgets' },
+  { id: 'binoculars', station: 'electronics', lvl: 1, item: 'binoculars', in: { metal: 4, parts: 3, electronics: 1 }, time: 40, cat: 'Gadgets' },
+  { id: 'thermal', station: 'electronics', lvl: 3, item: 'thermal', in: { electronics: 16, parts: 10, metal: 4, chemicals: 3 }, time: 150, cat: 'Gadgets' },
 
   // Infirmary
   { id: 'medkit', station: 'infirmary', lvl: 1, out: { medkit: 1 }, in: { cloth: 4, meds: 2 }, time: 25, cat: 'Medical' },
@@ -463,17 +475,17 @@ const P = {
   register: [{ r: 'cash', n: [20, 60], w: 1 }],
   tools: [{ r: 'scrap', n: [3, 8], w: 4 }, { r: 'metal', n: [2, 5], w: 3 }, { r: 'parts', n: [1, 4], w: 3 }, { r: 'wood', n: [3, 8], w: 3 }, { r: 'chemicals', n: [1, 3], w: 1 }, { i: 'pipe', w: 0.5 }, { i: 'crowbar', w: 0.4 }, { i: 'bat', w: 0.3 }, { i: 'toolkit', w: 0.2 }, { i: 'lockpicks', w: 0.15 }, { i: 'machete', w: 0.12 }],
   medcab: [{ r: 'meds', n: [1, 4], w: 6 }, { r: 'cloth', n: [2, 4], w: 2 }, { r: 'chemicals', n: [1, 2], w: 1 }, { r: 'medkit', n: [1, 1], w: 0.8 }],
-  locker: [{ r: 'cloth', n: [2, 5], w: 3 }, { r: 'pammo', n: [8, 24], w: 3 }, { r: 'cash', n: [10, 30], w: 2 }, { i: 'jacket', w: 0.4 }, { i: 'vest', w: 0.25 }, { i: 'flashlight', w: 0.4 }, { i: 'pistol', w: 0.25 }, { i: 'walkie', w: 0.08 }],
+  locker: [{ r: 'cloth', n: [2, 5], w: 3 }, { r: 'pammo', n: [8, 24], w: 3 }, { r: 'cash', n: [10, 30], w: 2 }, { i: 'jacket', w: 0.4 }, { i: 'vest', w: 0.25 }, { i: 'flashlight', w: 0.4 }, { i: 'pistol', w: 0.25 }, { i: 'walkie', w: 0.08 }, { i: 'binoculars', w: 0.12 }],
   gunlocker: [{ r: 'pammo', n: [20, 50], w: 4 }, { r: 'rammo', n: [10, 30], w: 2 }, { r: 'shells', n: [8, 20], w: 2 }, { i: 'pistol', w: 1 }, { i: 'revolver', w: 0.6 }, { i: 'shotgun', w: 0.5 }, { i: 'rifle', w: 0.3 }, { i: 'smg', w: 0.2 }, { i: 'ar', w: 0.07 }, { i: 'vest', w: 0.3 }],
   safe: [{ r: 'cash', n: [80, 220], w: 5 }, { r: 'meds', n: [2, 5], w: 1 }, { r: 'electronics', n: [2, 4], w: 1 }, { i: 'revolver', w: 0.4 }, { i: 'walkie', w: 0.2 }, { i: 'katana', w: 0.04 }],
   crate: [{ r: 'wood', n: [5, 12], w: 3 }, { r: 'scrap', n: [5, 12], w: 3 }, { r: 'metal', n: [3, 8], w: 2 }, { r: 'parts', n: [2, 5], w: 2 }, { r: 'cloth', n: [4, 9], w: 2 }, { r: 'fuel', n: [2, 5], w: 1 }, { r: 'electronics', n: [1, 3], w: 0.8 }],
-  milcrate: [{ r: 'rammo', n: [20, 60], w: 4 }, { r: 'pammo', n: [20, 60], w: 3 }, { r: 'shells', n: [10, 24], w: 2 }, { r: 'parts', n: [4, 9], w: 2 }, { r: 'meds', n: [2, 5], w: 1 }, { r: 'electronics', n: [2, 5], w: 1 }, { r: 'pipebomb', n: [1, 2], w: 0.6 }, { i: 'rifle', w: 0.4 }, { i: 'smg', w: 0.35 }, { i: 'ar', w: 0.2 }, { i: 'military', w: 0.12 }, { i: 'riot', w: 0.2 }, { i: 'walkie', w: 0.3 }, { i: 'nvg', w: 0.06 }],
+  milcrate: [{ r: 'rammo', n: [20, 60], w: 4 }, { r: 'pammo', n: [20, 60], w: 3 }, { r: 'shells', n: [10, 24], w: 2 }, { r: 'parts', n: [4, 9], w: 2 }, { r: 'meds', n: [2, 5], w: 1 }, { r: 'electronics', n: [2, 5], w: 1 }, { r: 'pipebomb', n: [1, 2], w: 0.6 }, { i: 'rifle', w: 0.4 }, { i: 'smg', w: 0.35 }, { i: 'ar', w: 0.2 }, { i: 'military', w: 0.12 }, { i: 'riot', w: 0.2 }, { i: 'walkie', w: 0.3 }, { i: 'nvg', w: 0.06 }, { i: 'binoculars', w: 0.25 }, { i: 'thermal', w: 0.04 }],
   car: [{ r: 'fuel', n: [2, 6], w: 4 }, { r: 'parts', n: [1, 3], w: 2 }, { r: 'electronics', n: [1, 2], w: 1 }, { r: 'cash', n: [5, 20], w: 1 }, { r: 'water', n: [1, 3], w: 1 }],
   pump: [{ r: 'fuel', n: [4, 10], w: 1 }],
   dumpster: [{ r: 'food', n: [1, 3], w: 2 }, { r: 'cloth', n: [2, 5], w: 3 }, { r: 'scrap', n: [3, 7], w: 4 }, { r: 'wood', n: [2, 5], w: 2 }, { r: 'parts', n: [1, 2], w: 1 }],
   electronic: [{ r: 'electronics', n: [2, 5], w: 5 }, { r: 'parts', n: [1, 3], w: 2 }, { r: 'scrap', n: [2, 4], w: 2 }],
   chem: [{ r: 'chemicals', n: [2, 6], w: 6 }, { r: 'fuel', n: [1, 3], w: 1 }, { r: 'meds', n: [1, 2], w: 0.5 }],
-  fireLocker: [{ r: 'meds', n: [1, 3], w: 2 }, { r: 'cloth', n: [3, 6], w: 2 }, { r: 'medkit', n: [1, 1], w: 1 }, { i: 'axe', w: 0.6 }, { i: 'jacket', w: 0.5 }, { i: 'flashlight', w: 0.5 }, { i: 'crowbar', w: 0.5 }],
+  fireLocker: [{ r: 'meds', n: [1, 3], w: 2 }, { r: 'cloth', n: [3, 6], w: 2 }, { r: 'medkit', n: [1, 1], w: 1 }, { i: 'axe', w: 0.6 }, { i: 'jacket', w: 0.5 }, { i: 'flashlight', w: 0.5 }, { i: 'crowbar', w: 0.5 }, { i: 'thermal', w: 0.03 }],
   shed: [{ r: 'wood', n: [4, 9], w: 3 }, { r: 'scrap', n: [3, 8], w: 3 }, { r: 'fuel', n: [1, 4], w: 2 }, { r: 'chemicals', n: [1, 3], w: 1 }, { i: 'crowbar', w: 0.3 }, { i: 'bat', w: 0.2 }],
 }
 
@@ -563,6 +575,10 @@ export const ZOMBIES = {
   brute: { name: 'Brute', hp: 210, speed: 1.0, dmg: 22, rate: 1.7, scale: 1.25, sight: 5, xp: 14, build: 1.35 },
   crawler: { name: 'Crawler', hp: 40, speed: 0.6, dmg: 10, rate: 1.1, scale: 1, sight: 4, xp: 4, crawl: true },
   armored: { name: 'Riot Walker', hp: 70, speed: 1.15, dmg: 9, rate: 1.3, scale: 1, sight: 6, xp: 8, armor: 0.45 },
+  // special infected
+  stalker: { name: 'Stalker', hp: 70, speed: 2.4, dmg: 13, rate: 0.85, scale: 0.97, sight: 13, xp: 12, build: 0.82, stalk: true, skin: '#5d6656', desc: 'Keeps to the dark, creeps closer while nobody is looking and lunges from close range.' },
+  screamer: { name: 'Screamer', hp: 44, speed: 1.5, dmg: 5, rate: 1.2, scale: 0.95, sight: 11, xp: 11, build: 0.86, scream: true, skin: '#c9c6b2', desc: 'When it sees you it shrieks: every infected nearby comes running, and more arrive from the street.' },
+  bloater: { name: 'Bloater', hp: 130, speed: 0.85, dmg: 10, rate: 1.6, scale: 1.12, sight: 5, xp: 13, build: 1.65, burst: true, skin: '#9aa274', desc: 'Swollen with gas. Bursts when it dies, leaving a cloud that burns and infects.' },
 }
 export function zombieMix(level, theme = null) {
   const m = [
@@ -572,7 +588,20 @@ export function zombieMix(level, theme = null) {
     { t: 'brute', w: level >= 3 ? level * 0.7 - 1 : 0 },
   ]
   if (theme === 'police' || theme === 'military') m.push({ t: 'armored', w: level * 0.8 })
+  if (level >= 2) m.push({ t: 'screamer', w: 0.25 + level * 0.18 })
+  if (level >= 2) m.push({ t: 'bloater', w: 0.2 + level * 0.15 })
+  if (level >= 3) m.push({ t: 'stalker', w: level * 0.3 - 0.4 })
   return m
+}
+
+// Traps left by the survivors who held a place before you. Hidden until
+// somebody spots them: scouts from several metres, everyone else only up
+// close and not always. Zombies set them off too.
+export const TRAPS = {
+  tripwire: { name: 'Tripwire alarm', minLevel: 1, w: 3, disarm: 2.5, yield: { parts: 1, scrap: 2 }, desc: 'Tin cans on a wire. Loud enough to wake the street.' },
+  beartrap: { name: 'Bear trap', minLevel: 1, w: 2.5, disarm: 3, dmg: 32, hold: 4, yield: { metal: 2, parts: 1 }, desc: 'Steel jaws. Bites deep and holds whoever steps in it.' },
+  shotgun: { name: 'Shotgun trap', minLevel: 3, w: 1.6, disarm: 4, dmg: 58, radius: 2.4, yield: { shells: 4, parts: 2, metal: 1 }, desc: 'A sawn-off rigged to a door. One shell, close range.' },
+  mine: { name: 'Pipe-bomb trap', minLevel: 4, w: 1.2, disarm: 5, dmg: 95, radius: 4, yield: { gunpowder: 3, parts: 2 }, desc: 'A pressure plate wired to a pipe bomb.' },
 }
 
 export const HORDES = [

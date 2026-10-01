@@ -101,7 +101,7 @@ export class Agent {
   }
   // Follow the current path. Returns true on the frame it arrives.
   step(dt, speedMult = 1) {
-    if (!this.path) {
+    if (!this.path || this.snared > 0) {
       this.curSpeed = 0
       return false
     }
@@ -300,6 +300,7 @@ export class SurvivorAgent extends Agent {
     for (const z of W.zombies) {
       if (z.dead) continue
       const d = this.dist(z)
+      if (W.canTarget && !W.canTarget(z)) continue
       if (gun) {
         if (d > reach) continue
         if (!W.grid.los(this.pos.x, this.pos.z, z.pos.x, z.pos.z)) continue
@@ -565,16 +566,16 @@ export class ZombieAgent extends Agent {
     const vs = Math.floor(Math.random() * ZVARIANTS)
     const seed = (hashStr(type + '|' + (theme || '')) + vs * 7919) % 1000003
     const r = rngFrom(seed)
-    const outfit = type === 'armored' ? zombieOutfit('riot', r) : zombieOutfit(theme, r)
+    const outfit = type === 'armored' ? zombieOutfit('riot', r) : def.stalk || def.scream || def.burst ? zombieOutfit(type, r) : zombieOutfit(theme, r)
     const ch = new Character({
-      skin: ZSKIN[Math.floor(r() * ZSKIN.length)],
+      skin: def.skin || ZSKIN[Math.floor(r() * ZSKIN.length)],
       hair: { style: ['short', 'long', 'bald', 'buzz', 'side', 'curly'][Math.floor(r() * 6)], color: ['#3a3028', '#2a2420', '#5a4a3a', '#6a6a62'][Math.floor(r() * 4)] },
       build: def.build || 1,
       female: r() < 0.4,
       outfit,
       seed,
       zombie: { kind: type },
-      cacheKey: `z|${type}|${theme || ''}|${vs}`,
+      cacheKey: `z|${type}|${def.stalk || def.scream || def.burst ? '' : theme || ''}|${vs}`,
     })
     super(world, ch, x, z)
     if (def.scale !== 1) this.root.scale.setScalar(def.scale)
@@ -600,6 +601,8 @@ export class ZombieAgent extends Agent {
     this.burn = 0
     this.stun = 0
     this.lured = null
+    this.screamCool = 0
+    this.lunge = 0
     const bar = h('div.hpbar.z', h('i'))
     this.label = view.labels.add(h('div.alabel.zl', bar), () => this.pos, { offsetY: 1.95 * def.scale, scene: world.scene })
     this.labelBar = bar.firstChild
@@ -629,6 +632,7 @@ export class ZombieAgent extends Agent {
     this.path = null
     this.label.remove()
     sfx('zdie', 80)
+    if (this.def.burst) this.world.onBurst?.(this)
     this.world.fx.blood(this.chestPos(0.6), true)
     if (from?.data) {
       from.data.kills++
@@ -661,9 +665,11 @@ export class ZombieAgent extends Agent {
     this.swing = Math.max(0, this.swing - dt * 2.5)
     this.think -= dt
     this.groanT -= dt
+    this.screamCool -= dt
+    this.lunge = Math.max(0, this.lunge - dt)
     if (this.groanT <= 0) {
       this.groanT = rand(6, 16)
-      if (W.nearCamera?.(this.pos)) sfx('groan', 900)
+      if (W.nearCamera?.(this.pos) && !this.def.stalk) sfx('groan', 900)
     }
     if (this.stun > 0) {
       this.stun -= dt
@@ -691,6 +697,36 @@ export class ZombieAgent extends Agent {
         speed = this.path ? this.speed : 0
         anim = this.def.crawl ? 'zcrawl' : this.path ? 'zwalk' : 'zidle'
       }
+    } else if (this.state === 'stalk' && this.target) {
+      // creep closer while unseen; freeze when watched; lunge from close in
+      const t = this.target
+      const d = t.dead || t.downed ? 1e9 : this.dist(t)
+      if (d > 28) {
+        this.state = 'idle'
+        this.target = null
+      } else if (d <= 4.6) {
+        this.state = 'chase'
+        this.lunge = 1.3
+        sfx('groan', 300)
+        W.noise?.(this.pos.x, this.pos.z, 4, this)
+      } else {
+        const watched = W.isWatched?.(this) && d > 6
+        if (watched) {
+          this.path = null
+          this.face(t.pos.x, t.pos.z, dt)
+          anim = 'zidle'
+        } else {
+          this.repath -= dt
+          if (this.repath <= 0 || !this.path) {
+            this.repath = 0.6
+            this.moveTo(t.pos.x, t.pos.z)
+          }
+          const night = W.isNight?.() ? 1.3 : 1
+          this.step(dt, 0.75 * night)
+          speed = this.speed * 0.75 * night
+          anim = 'zwalk'
+        }
+      }
     } else if (this.state === 'chase' && this.target) {
       const t = this.target
       if (t.dead || t.downed) {
@@ -704,8 +740,10 @@ export class ZombieAgent extends Agent {
           if (this.cool <= 0) {
             this.cool = this.def.rate
             this.swing = 1
+            const k = this.lunge > 0 ? 1.6 : 1
+            this.lunge = 0
             setTimeout(() => {
-              if (!this.dead && !t.dead && this.dist(t) < 1.7) t.hurt(this.dmg * rand(0.8, 1.2), this)
+              if (!this.dead && !t.dead && this.dist(t) < 1.7) t.hurt(this.dmg * k * rand(0.8, 1.2), this)
             }, 280)
           }
           anim = this.def.crawl ? 'zcrawl' : 'zattack'
@@ -718,9 +756,10 @@ export class ZombieAgent extends Agent {
               this.target = null
             }
           }
-          this.step(dt)
-          speed = this.speed
-          anim = this.def.crawl ? 'zcrawl' : this.def.speed > 2 ? 'zrun' : 'zwalk'
+          const boost = this.lunge > 0 ? 1.75 : 1
+          this.step(dt, boost)
+          speed = this.speed * boost
+          anim = this.def.crawl ? 'zcrawl' : this.def.speed * boost > 2 ? 'zrun' : 'zwalk'
         }
       }
     } else if (this.state === 'investigate') {
@@ -744,7 +783,7 @@ export class ZombieAgent extends Agent {
     }
     this.ch.update(dt, anim, { speed: this.path ? speed : 0, swing: 1 - this.swing })
     this.labelBar.style.width = `${clamp(this.hp / this.maxHp, 0, 1) * 100}%`
-    this.label.wrap.style.visibility = this.label.hidden ? 'hidden' : ''
+    this.label.wrap.style.visibility = this.label.hidden || this.fogHidden ? 'hidden' : ''
     this.sync()
     return false
   }
@@ -767,12 +806,23 @@ export class ZombieAgent extends Agent {
       }
     }
     if (best) {
+      if (this.def.scream && this.screamCool <= 0 && W.mode === 'mission') {
+        this.screamCool = 11
+        W.onScream?.(this)
+      }
+      if (this.def.stalk && this.state !== 'chase') {
+        this.state = 'stalk'
+        this.target = best
+        return
+      }
       if (this.state !== 'chase') {
         if (W.nearCamera?.(this.pos)) sfx('groan', 500)
         W.noise?.(this.pos.x, this.pos.z, 3, this)
       }
       this.state = 'chase'
       this.target = best
+    } else if (this.state === 'stalk') {
+      // keeps hunting its last target even out of sight
     } else if (this.state === 'chase' && (!this.target || this.target.downed || this.dist(this.target) > sight * 1.5)) {
       this.state = 'idle'
       this.target = null

@@ -98,11 +98,12 @@ export function makeSurvivor(opts = {}) {
     const k = pick(SKILL_KEYS)
     skills[k] = Math.min(SKILL_MAX, skills[k] + 1)
   }
-  const goods = TRAIT_KEYS.filter((t) => TRAITS[t].good)
+  const goods = TRAIT_KEYS.filter((t) => TRAITS[t].good && (!TRAITS[t].rare || chance(0.25)))
   const bads = TRAIT_KEYS.filter((t) => !TRAITS[t].good)
   const traits = [pick(goods)]
-  if (chance(0.45)) traits.push(pick(bads))
-  else if (chance(0.3)) traits.push(pick(goods.filter((g) => g !== traits[0])))
+  const ok = (t) => !traits.includes(t) && !(TRAITS[t].excl || []).some((x) => traits.includes(x)) && !traits.some((x) => (TRAITS[x].excl || []).includes(t))
+  if (chance(0.45)) traits.push(pick(bads.filter(ok)))
+  else if (chance(0.3)) traits.push(pick(goods.filter(ok)))
   const first = opts.first || pick(FIRST_NAMES)
   const female = FEMALE_NAMES.has(first)
   const s = {
@@ -270,7 +271,13 @@ export function survivorStats(s) {
     pry: !!W.pry,
     knock: !!W.knock,
     walkie: !!Gd?.walkie,
-    nightSight: Gd?.nightSight || 0,
+    nightSight: clamp((Gd?.nightSight || 0) + fxSum(s, 'nightSight'), -0.4, 1),
+    // perception on runs (metres)
+    sight: Math.max(5, 11 + fxSum(s, 'sight') + (Gd?.sight || 0)),
+    hearing: Math.max(4, 12 + fxSum(s, 'hearing')),
+    wallSense: Math.max(fxSum(s, 'wallSense'), Gd?.wallSense || 0),
+    trapSpot: 2.5 + Math.max(fxSum(s, 'trapSpot'), 0) + (Gd?.trapSpot || 0),
+    torch: Gd?.torch || 0,
     revive: (OCCUPATIONS[s.occ].fx.reviveMult || 1) / (1 + 0.06 * (sk.medic - 1)),
     aura: (OCCUPATIONS[s.occ].fx.aura || 0) + (sk.medic >= 6 ? 0.4 : 0),
     carParts: fxSum(s, 'carParts'),

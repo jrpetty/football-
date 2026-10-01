@@ -56,6 +56,15 @@ export function renderSurvivor(ui, id) {
       stat('Noise', `${Math.round(st.noiseMult * 100)}%`),
       stat('Stealth', st.stealth ? `${Math.round(st.stealth * 100)}%` : '—'),
     ),
+    h('h4.subhead', 'Perception'),
+    h(
+      'div.statgrid',
+      stat('Sight', `${Math.round(st.sight)} m`, 'How far they see in daylight. Night, fog and facing away shorten it.'),
+      stat('Hearing', `${Math.round(st.hearing)} m`, 'Zombies moving within this range show as ripples, even through walls.'),
+      stat('Night', st.nightSight >= 0.95 ? 'Clear' : st.nightSight > 0.2 ? 'Good' : st.nightSight < -0.1 ? 'Poor' : 'Normal', st.torch ? 'Carries a flashlight: a long beam after dark.' : 'Everyone carries a small torch after dark.'),
+      stat('Wall sense', st.wallSense ? `${Math.round(st.wallSense)} m` : '—', 'Sees movement through one wall within this range.'),
+      stat('Trap spotting', `${st.trapSpot.toFixed(st.trapSpot % 1 ? 1 : 0)} m`, st.trapSpot > 4 ? 'Spots traps from this far without fail.' : 'Only notices traps up close, and not always.'),
+    ),
   )
   const skills = h('section.card', h('h3', 'Skills', h('small', 'Skills grow by doing: working stations, fighting, searching.')), skillRows(s))
   const actions = h(
@@ -78,8 +87,8 @@ export function renderSurvivor(ui, id) {
   )
   return ui.frame(s.name, h('span', OCCUPATIONS[s.occ].name), [head, jobRow, slotsEl, stats, skills, actions], { icon: 'people' })
 }
-function stat(label, v) {
-  return h('div.stat', h('span', label), h('b', v))
+function stat(label, v, tip = null) {
+  return h('div.stat', tip ? { 'data-tip': `<b>${label}</b>${tip}` } : null, h('span', label), h('b', v))
 }
 function equipSlot(ui, s, slot) {
   const it = itemOf(s.equip[slot])

@@ -178,6 +178,31 @@ const SFX = {
     tone(520, 0.07, { type: 'square', gain: 0.05 })
     tone(780, 0.09, { type: 'square', gain: 0.05, delay: 0.08 })
   },
+  // a zombie comes into view: a low tense sting
+  spot: () => {
+    tone(196, 0.32, { type: 'sawtooth', gain: 0.035, freqEnd: 185 })
+    tone(233, 0.28, { type: 'triangle', gain: 0.03, delay: 0.04 })
+  },
+  // a new room opens up
+  reveal: () => noise(0.6, { type: 'bandpass', freq: 500, freqEnd: 900, q: 0.8, gain: 0.05, attack: 0.15 }),
+  // a trap spotted / tripped
+  trapSpot: () => {
+    tone(980, 0.06, { type: 'triangle', gain: 0.05 })
+    tone(1240, 0.08, { type: 'triangle', gain: 0.05, delay: 0.07 })
+  },
+  snap: () => {
+    noise(0.12, { freq: 4200, freqEnd: 900, gain: 0.4 })
+    tone(140, 0.25, { type: 'square', gain: 0.08, freqEnd: 60 })
+  },
+  scream: () => {
+    tone(880, 0.9, { type: 'sawtooth', gain: 0.06, freqEnd: 1320 })
+    tone(1100, 0.8, { type: 'sawtooth', gain: 0.04, freqEnd: 1500, delay: 0.05 })
+    noise(0.9, { type: 'bandpass', freq: 2200, q: 2, gain: 0.08, attack: 0.05 })
+  },
+  burst: () => {
+    noise(0.5, { freq: 600, freqEnd: 120, gain: 0.45 })
+    tone(90, 0.4, { type: 'sine', gain: 0.12, freqEnd: 40 })
+  },
 }
 
 export function sfx(id, throttleMs = 40) {
