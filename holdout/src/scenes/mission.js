@@ -25,7 +25,7 @@ import { genLevel } from '../world/levelgen.js'
 import { OffsetGrid } from '../core/grid.js'
 import { FACE_ROT, SIDEWALK, lotToWorld } from '../world/city.js'
 import { LOCATIONS, CONTAINERS, ITEMS, RARITY, RES, QUALITY, zombieMix, LEVEL_COLORS, UTILITIES, VEHICLES } from '../game/data.js'
-import { S, getS, gain, addItem, gainXP, killSurvivor, hour, day, completeGoal, log, survivorStats, makeSurvivor, addMoraleEvent, researchDone, season, leafTurn, addVehicle } from '../game/state.js'
+import { NET, playerOf, S, getS, gain, addItem, gainXP, killSurvivor, hour, day, completeGoal, log, survivorStats, makeSurvivor, addMoraleEvent, researchDone, season, leafTurn, addVehicle } from '../game/state.js'
 import { scheduleRaid } from '../game/economy.js'
 import { sfx, setAmbience } from '../core/audio.js'
 import { h, rand, rint, pick, chance, weighted, clamp, fmtTime, bus, fmt } from '../core/util.js'
@@ -34,6 +34,7 @@ import { resIcon } from '../ui/common.js'
 import { infectedRange } from '../ui/mappanel.js'
 import { storyAt, foundStoryItem, rollNote, storyRunEnd, NOTES } from '../game/story.js'
 import { VisionMixin } from './missionvision.js'
+import { CoopMixin, agentStatus, stopTap } from './missioncoop.js'
 import { TrapsMixin } from './missiontraps.js'
 
 const TAU = Math.PI * 2
@@ -134,7 +135,10 @@ export class Mission {
     this.fires = []
     this.lures = []
     this.throwing = null
-    this.lv = genLevel(game.city, loc)
+    // a co-op run: everyone builds the same street from the run's seed
+    this.coop = loadout.coop || null
+    this.remote = this.coop?.role === 'joiner'
+    this.lv = genLevel(game.city, loc, this.coop ? { rnd: seeded(this.coop.seed) } : {})
     // agents walk in the lot's frame; the grid answers in its own tiles
     this.grid = new OffsetGrid(this.lv.grid, this.lv.x0, this.lv.z0)
     this.event = (S.events || []).find((e) => e.locId === loc.id && e.expires > S.time) || null
@@ -147,19 +151,25 @@ export class Mission {
     ids.forEach((id, k) => {
       const s = getS(id)
       if (!s) return
-      s.status = 'mission'
+      if (!this.remote) s.status = 'mission'
       const n = this.lv.grid.nearestOpen(E.x - this.lv.x0 + (k % 2) * 1.2 - 0.6, E.z - this.lv.z0 + Math.floor(k / 2) * 1.2 - 0.6, 4)
       const a = new SurvivorAgent(this, s, n.x + this.lv.x0 + 0.5, n.z + this.lv.z0 + 0.5)
       a.heading = Math.PI
       a.pack = { res: {}, items: [], load: 0 }
       this.squad.push(a)
     })
-    this.takeUtilities()
-    this.spawnInitial()
-    this.placeTraps()
-    this.setupEvent()
-    this.setupCars()
-    this.placeStoryItems()
+    if (this.remote) {
+      // the leader rolled the dice: zombies, traps, the caller and the cars come from them
+      this.utils = { medkit: 0, molotov: 0, pipebomb: 0, noisemaker: 0 }
+      this.traps = []
+    } else {
+      this.takeUtilities()
+      this.spawnInitial()
+      this.placeTraps()
+      this.setupEvent()
+      this.setupCars()
+      this.placeStoryItems()
+    }
     const walkie = this.squad.some((a) => a.st.walkie)
     this.vehicle = VEHICLES[loadout.vehicle] || (loadout.van === false ? VEHICLES.foot : VEHICLES.van)
     this.stashCap = loadout.stash ?? (loadout.van === false ? 0 : Infinity)
@@ -176,10 +186,11 @@ export class Mission {
     view.rig.jump((E.x + this.lv.bld.cx) / 2, E.z - 6, 30)
     view.rig.yaw = view.rig.yawGoal = 0.35
     this.buildHud()
+    if (this.coop) this.coopInit()
     this.setupVision()
-    this.select(this.squad[0])
+    this.select(this.squad.find((a) => this.canOrder(a)) || null)
     sfx('truck')
-    log(`The squad reached ${loc.name}.`, 'story')
+    if (!this.remote) log(`The squad reached ${loc.name}.`, 'story')
   }
   get rightClickCommands() {
     return true
@@ -726,6 +737,7 @@ export class Mission {
   spawnZombie(kind, i, j, theme = this.def.zombieTheme) {
     const c = this.center(i, j)
     const z = new ZombieAgent(this, kind, c.x, c.z, this.level, theme)
+    z.nid = this.znid = (this.znid || 0) + 1
     this.zombies.push(z)
     return z
   }
@@ -1109,6 +1121,10 @@ export class Mission {
       if (k >= 1) {
         this.scene.remove(f.m)
         this.flying = this.flying.filter((x) => x !== f)
+        if (f.remote) {
+          if (f.item === 'pipebomb') view.rig.shake = 1
+          continue
+        }
         this.detonate(f.item, f.to.x, f.to.z, f.agent)
       }
     }
@@ -1174,7 +1190,7 @@ export class Mission {
       f.grp.scale.setScalar(Math.max(0.01, fade))
       if (Math.random() < dt * 6 * f.r) this.fx.smoke(new THREE.Vector3(f.x + (Math.random() - 0.5) * f.r, f.y + 1.5, f.z + (Math.random() - 0.5) * f.r), { size: 1 + f.r * 0.3, life: 3, color: '#2a2624', a: 0.4, vy: 1.6 })
       if (Math.random() < dt * 10) this.fx.ember(new THREE.Vector3(f.x + (Math.random() - 0.5) * f.r, f.y + 0.6, f.z + (Math.random() - 0.5) * f.r), 0.6)
-      if (f.life < 1e8) {
+      if (f.life < 1e8 && !this.remote) {
         for (const z of this.zombies) if (!z.dead && Math.hypot(z.pos.x - f.x, z.pos.z - f.z) < f.r) z.ignite(5)
         for (const a of this.squad) if (!a.downed && !a.st.fireproof && Math.hypot(a.pos.x - f.x, a.pos.z - f.z) < f.r * 0.8) a.hurt(dt * 18, null)
       }
@@ -1204,7 +1220,7 @@ export class Mission {
       for (const s of this.selected) s.select(false)
       this.selected.clear()
     }
-    if (a && !a.downed && !a.npc) {
+    if (a && !a.downed && !a.npc && this.canOrder(a)) {
       if (add && this.selected.has(a)) {
         a.select(false)
         this.selected.delete(a)
@@ -1217,7 +1233,7 @@ export class Mission {
   }
   selectAll() {
     this.select(null)
-    for (const a of this.squad) if (!a.downed && !a.npc) this.select(a, true)
+    for (const a of this.squad) if (!a.downed && !a.npc && this.canOrder(a)) this.select(a, true)
   }
   agentAt(x, y, list) {
     const ray = screenRay(x, y)
@@ -1303,6 +1319,14 @@ export class Mission {
     void add
   }
   onTap(x, y, e) {
+    this.quiet = true
+    try {
+      return this.tapInner(x, y, e)
+    } finally {
+      this.quiet = false
+    }
+  }
+  tapInner(x, y, e) {
     this.closeMenu()
     if (this.over) return
     if (this.throwing) {
@@ -1403,9 +1427,10 @@ export class Mission {
     if (e._handled || this.over) return
     const k = e.key.toLowerCase()
     if (k === ' ') {
+      e.preventDefault()
+      if (this.coop) return this.toast('No pausing on a run with friends.')
       this.paused = !this.paused
       this.renderPause()
-      e.preventDefault()
       return
     }
     if (k === 'escape') {
@@ -1415,7 +1440,7 @@ export class Mission {
       return
     }
     const n = parseInt(e.key, 10)
-    const team = this.squad.filter((a) => !a.npc)
+    const team = this.squad.filter((a) => !a.npc && this.canOrder(a))
     if (n >= 1 && n <= team.length) {
       const a = team[n - 1]
       const now = performance.now()
@@ -1445,7 +1470,7 @@ export class Mission {
   pickHelper(target, need = null) {
     const p = target.pos || target
     let pool = [...this.selected].filter((a) => !a.downed && a !== target && (!need || need(a)))
-    if (!pool.length) pool = this.squad.filter((a) => !a.downed && !a.npc && a !== target && (!need || need(a)))
+    if (!pool.length) pool = this.squad.filter((a) => !a.downed && !a.npc && a !== target && this.canOrder(a) && (!need || need(a)))
     pool.sort((a, b) => Math.hypot(a.pos.x - p.x, a.pos.z - p.z) - Math.hypot(b.pos.x - p.x, b.pos.z - p.z))
     return pool[0] || null
   }
@@ -1455,7 +1480,12 @@ export class Mission {
       return this.toast(`No ${RES[kind].name.toLowerCase()} left`)
     }
     if (kind === 'medkit') {
-      const a = [...this.selected].find((x) => x.hp < x.maxHp) || this.squad.filter((x) => !x.downed && !x.npc).sort((p, q) => p.hp / p.maxHp - q.hp / q.maxHp)[0]
+      const a = [...this.selected].find((x) => x.hp < x.maxHp) || this.squad.filter((x) => !x.downed && !x.npc && this.canOrder(x)).sort((p, q) => p.hp / p.maxHp - q.hp / q.maxHp)[0]
+      if (this.remote) {
+        if (!a || a.hp >= a.maxHp) return this.toast('Nobody needs patching up')
+        a.command({ type: 'medkit' })
+        return sfx('click')
+      }
       if (!a || a.hp >= a.maxHp) return this.toast('Nobody needs patching up')
       this.utils.medkit--
       a.hp = Math.min(a.maxHp, a.hp + a.maxHp * (researchDone('fieldmed') ? 0.75 : 0.5))
@@ -1477,6 +1507,7 @@ export class Mission {
     this.cancelThrow()
     if (!who) return
     const d = Math.hypot(who.pos.x - x, who.pos.z - z)
+    if (this.remote) return who.command({ type: 'throw', item: kind, x, z })
     if (d > 16) {
       // walk closer first, then throw
       const dir = Math.atan2(x - who.pos.x, z - who.pos.z)
@@ -1579,7 +1610,8 @@ export class Mission {
     const cam = view.camera.position
     const B = this.lv.bld
     if (B) this.cutU.dir.value.set(cam.x - B.cx, cam.z - B.cz).normalize()
-    if (!this.paused) {
+    if (this.remote) this.coopJoinerTick(dt)
+    else if (!this.paused) {
       this.elapsed += dt
       this.time += dt
       for (const s of this.squad) {
@@ -1634,6 +1666,7 @@ export class Mission {
       }
       const team = this.squad.filter((x) => !x.npc)
       if (team.length && team.every((x) => x.downed)) this.end('wiped')
+      if (this.coop) this.coopLeaderTick(dt)
     } else for (const s of this.squad) s.sync()
     this.updateLights(night)
     this.updateVision(this.paused ? 0 : dt)
@@ -1837,22 +1870,29 @@ export class Mission {
     if (!this.squadEl) return
     this.squadEl.innerHTML = ''
     this.cards = new Map()
+    let n = 0
     this.squad
       .filter((a) => !a.npc)
-      .forEach((a, i) => {
+      .forEach((a) => {
         const bar = h('i')
         const load = h('i')
         const status = h('small.st')
+        // on a co-op run, a friend's survivors show whose they are
+        const mine = this.canOrder(a)
+        const P = mine ? null : playerOf(this.leaderOf(a))
+        const key = mine ? String(++n) : (P?.name || '?')[0]
         const card = h(
-          'button.scard' + (a.selected ? '.sel' : ''),
+          'button.scard' + (a.selected ? '.sel' : '') + (mine ? '' : '.theirs'),
           {
+            style: P ? { '--pc': P.color } : null,
+            'data-tip': P ? `Led by ${P.name.replace(/[<>&]/g, '')}` : null,
             onclick: (e) => {
               this.select(a, e.shiftKey)
               sfx('select')
             },
             ondblclick: () => view.rig.focus(a.pos.x, a.pos.z),
           },
-          h('span.key', String(i + 1)),
+          h('span.key', key),
           h('img', { src: this.game.portrait(a.data), alt: '' }),
           h('div.sc-info', h('b', a.data.first), status, h('div.hpbar', bar), h('div.loadbar', { 'data-tip': 'Pack' }, load)),
         )
@@ -1888,8 +1928,7 @@ export class Mission {
       card.classList.toggle('sel', a.selected)
       card.classList.toggle('down', a.downed)
       card.classList.toggle('full', a.pack.load >= a.st.carry - 1)
-      const m = a.lastMode
-      const st = a.downed ? `DOWN · ${Math.ceil(a.bleed)}s` : a.work ? (a.work.kind === 'search' ? 'Searching' : 'Breaking down') : a.order?.type === 'revive' ? 'Reviving' : a.order?.type === 'throw' ? 'Throwing' : m === 'swing' || m === 'aim' ? 'Fighting' : m === 'run' || m === 'walk' ? 'Moving' : a.pack.load >= a.st.carry - 1 ? 'Pack full' : 'Holding'
+      const st = this.remote ? a.remoteStatus || 'Holding' : agentStatus(a)
       if (status.textContent !== st) status.textContent = st
     }
     const standing = this.squad.filter((a) => !a.downed)
@@ -1907,6 +1946,7 @@ export class Mission {
     setTimeout(() => t.remove(), 4400)
   }
   tryExtract() {
+    if (this.remote) return this.toast(`${this.game.net ? 'The run leader' : 'The leader'} calls the extraction. Get your people to the green circle by the van.`)
     const standing = this.squad.filter((a) => !a.downed)
     const E = this.lv.evac
     if (standing.some((a) => Math.hypot(a.pos.x - E.x, a.pos.z - E.z) > E.r + 0.3)) return this.toast('Everyone still standing has to be inside the green circle by the van')
@@ -1999,9 +2039,12 @@ export class Mission {
     }
     for (const a of this.squad) if (a.data.status === 'mission') a.data.status = 'ok'
     storyRunEnd(this.loc.id, result, report)
+    if (this.coop) this.coopEnd(result, report)
     this.game.endMission(report)
   }
   dispose() {
+    this.restoreFloat?.()
+    if (this.coop) stopTap()
     for (const a of this.squad) a.remove()
     for (const z of this.zombies) z.remove()
     if (this.npc && !this.npc.joined) this.npc.remove()
@@ -2022,7 +2065,7 @@ export class Mission {
     this.disposeVision()
   }
 }
-Object.assign(Mission.prototype, VisionMixin, TrapsMixin)
+Object.assign(Mission.prototype, VisionMixin, TrapsMixin, CoopMixin)
 
 // Merge a built model group into a builder, keeping its vertex colours.
 function mergeGroup(b, g, o = {}) {

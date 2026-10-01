@@ -1,15 +1,18 @@
 # Thirty ideas for Holdout
 
-From the biggest to the smallest. None of these are built yet.
+From the biggest to the smallest. None of these are built yet. Three ideas
+from the first draft of this list (runs together, a camp that lives without
+its host, and pings) turned out too good to leave for later and shipped in v4;
+the three below that take their places are new.
 
 ## Huge
 
-1. **Co-op runs.** Two or more players on the same supply run, each moving
-   their own survivors in the same building, with the host simulating the
-   zombies and streaming them the way raids are streamed now.
-2. **A camp that lives without its host.** A small always-on server (or a
-   scheduled job) that runs the camp's simulation while nobody is playing, so a
-   multiplayer camp keeps working and friends can drop in at any time.
+1. **A shared city.** Always-on camps on one server share one city. Meet
+   another camp's squad in a building, trade at a neutral market, help each
+   other through a horde or race them to a story lead.
+2. **Server seasons.** Month-long events for every camp on a server at once: a
+   winter where the same great horde comes for everyone on the same night,
+   with a board of who held and what it cost them.
 3. **Rival camps.** Other survivor groups on the city map, run by the game or
    by other players: they trade, steal from outposts, race you to story items
    and sometimes attack.
@@ -79,5 +82,5 @@ From the biggest to the smallest. None of these are built yet.
     someone wears.
 29. **Achievements.** Small cosmetic unlocks: gate styles, banner colours,
     a gold belt.
-30. **Pings.** In multiplayer, click to drop a marker in the camp or on the
-    city map that everyone sees for a few seconds.
+30. **Quick calls.** A wheel of short calls for runs together ("Over here",
+    "Need help", "Pulling back") with a crackle of radio.

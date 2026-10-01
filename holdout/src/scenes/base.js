@@ -421,7 +421,7 @@ export class BaseScene {
       this.confirmPlacing(e.shift)
       return
     }
-    if (S.raid) return NET.role === 'client' ? this.mirrorTap(x, y, e) : this.onRaidTap(x, y, e)
+    if (S.raid) return this.mode === 'raid' ? this.onRaidTap(x, y, e) : this.mirrorTap(x, y, e)
     if (e.button === 2) return
     const hit = pickAt(x, y, this.pickables())
     const pk = hit?.pick
@@ -479,7 +479,7 @@ export class BaseScene {
     const now = performance.now()
     if (now - (this.hoverT || 0) < 60) return
     this.hoverT = now
-    if (S.raid) return NET.role === 'client' ? null : this.onRaidHover?.(x, y)
+    if (S.raid) return this.mode === 'raid' ? this.onRaidHover?.(x, y) : null
     const hit = pickAt(x, y, this.pickables())
     const pk = hit?.pick
     this.hovered = pk?.type === 'station' ? pk.st.id : null
@@ -625,12 +625,16 @@ export class BaseScene {
     this.updateBelts(dt, simDt)
     // a guest's camp mirrors the host's: raids arrive as a stream, and the
     // stragglers at the wall belong to the host's simulation
-    if (NET.role === 'client') {
+    const captain = this.game.net?.captain
+    if (NET.role === 'client' && !captain) {
       if (S.raid || this.mirror) this.updateMirror(dt)
       if (!S.raid) this.people.update(dt, simDt)
-    } else if (S.raid) {
+    } else if (S.raid && this.mode === 'raid') {
       this.updateRaid(simDt)
-      if (NET.role === 'host') this.raidStream(dt)
+      if (NET.role === 'host' || captain) this.raidStream(dt)
+    } else if (S.raid) {
+      // the host's horde is being fought by someone else: watch it
+      this.updateMirror(dt)
     } else {
       this.people.update(dt, simDt)
       this.updateWanderers?.(simDt, night)

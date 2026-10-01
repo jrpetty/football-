@@ -370,11 +370,38 @@ simulation and streamed to guests as zombie and defender positions at five
 frames a second, rendered with puppets that interpolate between frames. Guests
 can order the defenders they lead; the host's game carries the orders out.
 
-**Transports.** One interface over three carriers. Inside claude.ai the
+**Runs together.** A co-op run is played on the leader's machine, as a solo
+run is; nothing about the mission simulation changes. Friends build the same
+street: the layout is already seeded by the lot, and the run's own seed now
+drives the dice for loot and zombies, so everyone gets the same containers in
+the same places. What the leader's game still rolls on its own (traps, the
+caller, which containers hold story items or need keys, the cars) travels once
+as a setup message. After that the leader streams a frame about eight times a
+second: every survivor and zombie, containers and traps whose state changed,
+and the moments worth seeing (shots, blood, fire, throws, floating text, a few
+sounds), which friends' games replay on puppets. Friends' orders go to the
+leader as small messages, are checked against who leads that survivor, and
+are carried out there. Messages between players always pass through the host,
+which also notes which survivors a run leader answers for while out, so the
+results of the run (statuses, loot, injuries) are accepted when the leader's
+game reports them.
+
+**Always-on camps.** The same game code runs on a Node server in a worker
+thread with the renderer stubbed out, acting as the host. While players are
+on, it ticks in real time; with nobody on, it unloads, and on the next load it
+catches up the way a single-player camp does on return (slow pace, clock
+stopped, capped at three days). A horde cannot be fought by numbers alone when
+players are watching, so the server hands it to a player in camp (the raid
+captain), whose game runs the fight and streams it, sending the result back.
+If the captain drops, the rest is resolved by the numbers.
+
+**Transports.** One interface over four carriers. Inside claude.ai the
 artifact viewer's live room: a named room per camp, the lobby room's presence
 lists open camps, and guests without permission to send events fall back to a
 presence mailbox the host acknowledges. The standalone file uses WebRTC data
-channels through PeerJS. BroadcastChannel connects tabs for testing. Frames
+channels through PeerJS. On the Holdout website, a WebSocket to its server,
+which relays between browsers and hosts the always-on camps. BroadcastChannel
+connects tabs for testing. Frames
 are JSON; large messages are deflated, base64'd and split to fit the room's
 4 KiB limit, and paced under its rate budget.
 

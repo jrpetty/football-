@@ -28,12 +28,16 @@ Press `F1` in the game for the field manual.
 
 **Play together:** press **Multiplayer** on the title screen. A multiplayer
 camp is saved apart from your single-player camp. One player hosts; friends
-join with the five-letter code. Inside Claude, friends open the same artifact
-and pick your camp from the list (invite them from the share menu). With the
-standalone file, everyone needs the same file and an internet connection: the
-browsers connect directly over WebRTC, using the free PeerJS broker to find
-each other. Most home connections work; a few strict office or mobile networks
-block direct connections.
+join with the five-letter code, or pick the camp from the list. Each of you
+leads your own survivors, and you can head out on **supply runs together**:
+one street, everyone giving orders to their own people. On the Holdout
+website (the server in `server/`, ready for fly.io) you can also start an
+**always-on camp** that lives on the server, so nobody has to host and friends
+come and go as they like. Inside Claude, friends open the same artifact and
+pick your camp from the list (invite them from the share menu). With the
+standalone file, the browsers connect directly over WebRTC through the free
+PeerJS broker; most home connections work, a few strict office or mobile
+networks don't.
 
 ## Controls
 
@@ -44,7 +48,7 @@ block direct connections.
 | | Q / E, middle-drag (right-drag in camp and on the map) | Rotate the camera |
 | | `F1` | Field manual (pauses a run) |
 | Camp | `B` `C` `I` `T` `P` `M` `G` `J` `L` | Build, Crew, Items, Trade, Camp overview, Map, Progress, Journal, Log |
-| | `O`, `Enter` | Players panel and chat (multiplayer) |
+| | `O`, `Enter`, `Q` / Alt+click | Players panel, chat, ping a spot (multiplayer) |
 | | `F` / `H` | The wall / horde intel |
 | | `Space`, `1` `2` `3` | Pause, 1×, 2×, 4× speed |
 | | `R`, `Shift`, `Enter`, `Esc` | While placing: rotate, place several, confirm, cancel |
@@ -54,6 +58,7 @@ block direct connections.
 | | Left-click a container | Menu: search it (quiet) or break it down for materials (loud) |
 | | `Z` `X` `C` `V` | Molotov, pipe bomb, noise maker, first aid kit |
 | | `Enter`, `Space`, `F` | Extract at the van, pause, focus the selection |
+| | `Q` / Alt+click | Ping a spot for the friends on the run |
 | City map | `M`, `Esc` | Back to camp |
 
 ## The long game
@@ -293,21 +298,76 @@ unless a teammate helps them up.
   storage?), applies it and confirms it, or turns it down and the guest's
   screen snaps back.
 - **Who leads whom:** the host hands survivors to players in the Players panel
-  (`O`). You give orders only to your own survivors and to anyone nobody leads.
-  Whoever rescues or recruits someone leads them.
-- **Runs** play out on each player's own machine, several at once. What they
-  bring home lands in the shared stores. If someone drops out mid-run, their
-  squad walks home with nothing.
+  (`O`), or shares the unled ones out evenly. You give orders only to your own
+  survivors and to anyone nobody leads. Whoever rescues or recruits someone
+  leads them.
+- **Runs alone** play out on each player's own machine, several at once. What
+  they bring home lands in the shared stores. If someone drops out mid-run,
+  their squad walks home with nothing.
+- **Runs together:** plan a run on the city map and press *Invite friends*.
+  Everyone in camp gets a card and joins with up to four of their own
+  survivors (six on a run in all). The player who planned it leads: their game
+  runs the street and pays the trip. Friends build the same street from the
+  run's seed and follow a live stream of it (every survivor and zombie,
+  containers opened or broken, traps, shots, fire, finds), giving orders to
+  their own survivors, which travel to the leader's game. Sight is shared. If
+  the leader drops out, everyone else's survivors make their own way home.
 - One camp clock for everyone, set by the host. It does not slow down while
   someone is on a run.
 - **Raids** are fought in the host's camp and streamed to everyone. Select a
   defender you lead and right-click to move or pick a target; the host's
   game carries the order out.
-- Chat with `Enter`. Coloured rings show where each friend is looking.
+- Chat with `Enter`. Coloured rings show where each friend is looking; `Q` or
+  Alt+click pings a spot for everyone. Coming back after a while, you get a
+  summary of what happened since you were last in camp.
 - **Connections:** inside Claude, the artifact's live room (friends open the
-  same artifact; camps being hosted show up in the list). The standalone file
-  uses WebRTC through PeerJS. `?net=tabs` connects tabs of one browser for
-  testing, and `?as=Name` plays as someone else in the same browser.
+  same artifact; camps being hosted show up in the list). On the Holdout
+  website, a WebSocket to its server. The standalone file uses WebRTC through
+  PeerJS. `?net=tabs` connects tabs of one browser for testing, and
+  `?as=Name` plays as someone else in the same browser.
+
+### Always-on camps
+
+On the website, *Always-on camp* under Multiplayer makes a camp that lives on
+the server. The server runs the real game code for it in a worker thread, and
+whoever made it is its admin (hands out survivors, sets the pace, can kick).
+
+- It wakes when someone joins and goes back to disk two minutes after the last
+  player leaves.
+- While nobody is on, it catches up the way single player does: the crew works
+  at a slow pace and the clock waits, for up to three days of real time. No
+  horde comes while the camp is empty.
+- When a horde comes, the server hands the defence to a player in camp (the
+  admin first), whose game fights it live and streams it to everyone. If they
+  drop out mid-fight, or nobody is in camp, the fight is worked out by the
+  numbers.
+
+### The server and fly.io
+
+`server/server.mjs` is a small Node server: it serves the game page (gzip and
+brotli), relays hosted camps between browsers over WebSockets, runs always-on
+camps in worker threads and saves them to `DATA_DIR/camps/`.
+
+```bash
+npm run server:build   # builds server/public/index.html and server/dist/camp.mjs
+npm run server         # http://localhost:8080
+```
+
+To put it on [fly.io](https://fly.io) (from this `holdout` folder, with
+`flyctl` installed and logged in):
+
+```bash
+fly launch --no-deploy          # keep fly.toml; pick your own app name and region
+fly volumes create holdout_data --size 1 -r lhr   # same region as primary_region
+fly deploy
+fly scale count 1               # always-on camps live on one machine's volume
+```
+
+The machine sleeps when nobody is connected and wakes on the next visit (camps
+are saved on shutdown and catch up when loaded). `MAX_CAMPS` (200),
+`MAX_LOADED` (12) and `UNLOAD_AFTER_MS` (120000) tune the limits; anyone may
+start up to six camps an hour. `GET /healthz` answers for fly's checks and
+`GET /api/camps` lists the public camps.
 
 ## Development
 
@@ -327,11 +387,12 @@ src/
   main.js            boot, title screen, scene switching, offline catch-up,
                      main loop
   net/
-    transport.js     the carriers: claude.ai room, PeerJS, BroadcastChannel;
-                     framing, compression and chunking
+    transport.js     the carriers: claude.ai room, PeerJS, BroadcastChannel,
+                     WebSocket server; framing, compression and chunking
     delta.js         structural diffs with keyed records and rounding
     mp.js            sessions: snapshots, diffs, guest patches, permissions,
-                     event forwarding, chat
+                     event forwarding, chat, raid captains, relays
+    coop.js          co-op runs: forming a party, setting out, coming home
   game/
     data.js          every definition: resources, jobs, skills, perks, items,
                      stations, recipes, belts, milestones, the Signal,
@@ -347,7 +408,8 @@ src/
     base*.js         the camp: stations, people, belts, fence, horde fights
     raidnet.js       raids streamed from the host to guests
     citymap.js       the 3D city map, squad planner and convoys
-    mission*.js      supply runs: interiors, looting, sight, traps, extraction
+    mission*.js      supply runs: interiors, looting, sight, traps, extraction,
+                     and missioncoop.js, the co-op run stream
   world/
     city.js          seeded city layout: streets, districts, lots, locations
     levelgen.js      supply-run levels: floor plans, rooms, furniture, loot
@@ -358,7 +420,12 @@ src/
   render/            pipeline (SSAO, bloom, SMAA, tilt-shift), fog of war,
                      sky, terrain, snow and seasons, materials, effects
   ui/                HUD, panels, progress board, field manual, journal,
-                     motor pool, lobby and Players panel
+                     motor pool, lobby, Players panel and pings
+server/
+  server.mjs         the website: page, WebSocket relay, camp list, limits
+  camp.mjs           one always-on camp in a worker thread
+  build.mjs          bundles the page and the camp worker
+Dockerfile, fly.toml the fly.io deployment
   core/              audio, A* grid, utilities
 ```
 

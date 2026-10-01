@@ -5,7 +5,7 @@ import { SurvivorAgent, ZombieAgent } from '../world/agents.js'
 import { view, pickAt, groundAt } from '../render/view.js'
 import { isNight } from '../render/sky.js'
 import { STATIONS, zombieMix, ITEMS } from '../game/data.js'
-import { S, day, bounds, workersOf, survivorStats, fenceMax, completeGoal, log, killSurvivor, getS, gateTiles, addMoraleEvent } from '../game/state.js'
+import { NET, S, day, bounds, workersOf, survivorStats, fenceMax, completeGoal, log, killSurvivor, getS, gateTiles, addMoraleEvent } from '../game/state.js'
 import { scheduleRaid, power, finishGame } from '../game/economy.js'
 import { sfx, setAmbience } from '../core/audio.js'
 import { rand, pick, chance, weighted, clamp, angleLerp } from '../core/util.js'
@@ -368,15 +368,18 @@ export const RaidMixin = {
     this.mode = 'base'
     S.stats.raids++
     completeGoal('surviveHorde')
-    if (R.finale) S.finale = null
-    scheduleRaid()
+    if (R.finale && NET.role !== 'client') S.finale = null
+    // a guest who fought for the camp reports back; the host plans the next one
+    const net = this.game.net
+    if (NET.role !== 'client') scheduleRaid()
     setAmbience(0.035)
     this.people.setVisible(true)
     this.people.sync()
     this.fence.refresh()
     this.game.ui?.raidHud(false)
     log(won ? `The horde is dead. ${report.killed} zombies put down.` : 'The horde broke through and ransacked the camp.', won ? 'good' : 'bad')
-    if (R.finale) return finishGame(won)
+    if (net?.captain) net.captainDone(report, R.finale)
+    if (R.finale && NET.role !== 'client') return finishGame(won)
     this.game.ui?.raidReport(report)
   },
 

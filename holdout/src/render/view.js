@@ -195,6 +195,12 @@ export class Input {
       return
     }
     if (this.pointers.size === 1) {
+      // Alt+click marks the spot for friends
+      if (e.altKey && e.button === 0 && this.onPing?.(e.clientX, e.clientY)) {
+        this.pointers.delete(e.pointerId)
+        this.drag = null
+        return
+      }
       const rotate = e.button === 1 || (e.button === 2 && !this.handler?.rightClickCommands)
       const right = e.button === 2
       this.drag = { rotate, right, p0: groundAt(e.clientX, e.clientY), moved: false, x: e.clientX, y: e.clientY, button: e.button, custom: false }

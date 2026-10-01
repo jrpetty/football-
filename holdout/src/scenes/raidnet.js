@@ -19,7 +19,7 @@ export const RaidNetMixin = {
   // ---------------------------------------------------------------- host
   raidStream(dt) {
     const net = this.game.net
-    if (!net?.peers.size || !S.raid) return
+    if (!net || !S.raid || (!net.captain && !net.peers.size)) return
     this.rzT = (this.rzT ?? 0) - dt
     if (this.rzT > 0 || net.c.backlog > 3) return
     this.rzT = FRAME_EVERY
@@ -29,7 +29,9 @@ export const RaidNetMixin = {
       return [a.nid, a.type, r1(a.pos.x), r1(a.pos.z), r2(a.heading), r2(Math.max(0, a.hp / a.maxHp)), a.dead ? 1 : 0, moving ? 1 : 0, a.swing > 0.05 || (a.state === 'fence' && !moving) ? 1 : 0]
     })
     const s = (this.squad || []).map((a) => [a.data.id, r1(a.pos.x), r1(a.pos.z), r2(a.heading), a.lastMode || 'idle', r2(Math.max(0, a.hp / a.maxHp)), a.downed ? 1 : 0, a.shots || 0, a.tower ? 1 : 0, r1(a.pos.y || 0)])
-    net.c.send({ t: 'rz', z, s, k: S.raid.killed })
+    // a captain sends through the host, which passes it on to everyone
+    if (net.captain) net.c.send({ t: 'rz', z, s, k: S.raid.killed }, net.hostPeer)
+    else net.c.send({ t: 'rz', z, s, k: S.raid.killed })
   },
   // A guest's order for a defender they lead.
   raidCommand(pid, m) {

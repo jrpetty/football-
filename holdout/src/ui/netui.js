@@ -35,7 +35,7 @@ export function renderPlayers(ui) {
   const net = ui.game.net
   const mp = S.mp
   if (!mp || !net) return ui.frame('Players', '', [h('p.note', 'Not in a multiplayer camp.')], { icon: 'people' })
-  const host = NET.role === 'host'
+  const host = net.isAdmin()
   const online = net.online || new Set()
   const cams = net.cams || {}
   const players = Object.entries(mp.players).sort((a, b) => (b[0] === mp.host) - (a[0] === mp.host) || online.has(b[0]) - online.has(a[0]))
@@ -52,7 +52,11 @@ export function renderPlayers(ui) {
       'section.card.mp-code',
       h('div.mpc-main', h('small', 'Camp code'), h('b.code', mp.code), h('button.btn.small', { onclick: copy }, h('i', { html: icon('log') }), 'Copy')),
       h('div.mpc-side', h('span.netdot.' + st[1]), h('span', st[0]), h('small.dim', net.c?.kind === 'room' ? 'via Claude' : net.c?.kind === 'peer' ? 'browser to browser' : net.c?.kind === 'tabs' ? 'between tabs' : '')),
-      host ? h('p.note', net.c?.kind === 'room' ? 'Friends open this same artifact (invite them from the share menu), press Multiplayer on the title screen and pick your camp, or type the code.' : 'Friends open Holdout, press Multiplayer on the title screen and type this code. Everyone needs the same game file and an internet connection.') : null,
+      mp.server
+        ? h('p.note', 'An always-on camp: it lives on the server, so anyone with the code can come and go. While nobody is here the crew keeps working at a slow pace and the clock waits, as in single player. When a horde comes, a player in camp fights it live for everyone.')
+        : host
+          ? h('p.note', net.c?.kind === 'room' ? 'Friends open this same artifact (invite them from the share menu), press Multiplayer on the title screen and pick your camp, or type the code.' : net.c?.kind === 'ws' ? 'Friends open this website, press Multiplayer and pick your camp from the list, or type the code.' : 'Friends open Holdout, press Multiplayer on the title screen and type this code. Everyone needs the same game file and an internet connection.')
+          : null,
     ),
   )
   // who is here
@@ -67,7 +71,7 @@ export function renderPlayers(ui) {
         return h(
           'div.mp-player' + (here ? '' : '.away'),
           h('i.swatch', { style: { background: P.color } }),
-          h('div.mpp-main', h('b', P.name, pid === mp.host ? h('em.tag', 'host') : null, pid === NET.pid ? h('em.tag.you', 'you') : null), h('small', doing)),
+          h('div.mpp-main', h('b', P.name, pid === mp.host ? h('em.tag', 'host') : pid === mp.admin ? h('em.tag', 'admin') : null, pid === NET.pid ? h('em.tag.you', 'you') : null), h('small', doing)),
           h('span.mpp-crew', plural(mine.length, 'survivor')),
           host && pid !== NET.pid
             ? here
@@ -128,7 +132,8 @@ export function renderPlayers(ui) {
     if (e.key === 'Enter') send()
   })
   out.push(h('section.card', h('h3', 'Chat', h('small', 'Enter to talk from anywhere in camp')), h('div.mp-chat', net.chat.slice(-30).map(chatLine)), h('div.lb-row', input, h('button.btn.small', { onclick: send }, 'Send'))))
-  out.push(h('div.pactions', h('button.btn.small.ghost.danger', { onclick: () => ui.confirm(host ? 'Close the camp?' : 'Leave the camp?', host ? 'Everyone is disconnected. The camp is saved and you can host it again from the title screen.' : 'You go back to the title screen. You can join again with the code.', host ? 'Close camp' : 'Leave', () => ui.game.leaveNet(), { danger: true }) }, host ? 'Close the camp' : 'Leave the camp')))
+  const closes = NET.role === 'host'
+  out.push(h('div.pactions', h('button.btn.small.ghost.danger', { onclick: () => ui.confirm(closes ? 'Close the camp?' : 'Leave the camp?', closes ? 'Everyone is disconnected. The camp is saved and you can host it again from the title screen.' : mp.server ? 'You go back to the title screen. The camp carries on; come back any time with the code.' : 'You go back to the title screen. You can join again with the code.', closes ? 'Close camp' : 'Leave', () => ui.game.leaveNet(), { danger: true }) }, closes ? 'Close the camp' : 'Leave the camp')))
   return ui.frame('Players', `${mp.code} · ${online.size} here`, out, { icon: 'people' })
 }
 export function chatLine(m) {

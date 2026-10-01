@@ -151,6 +151,10 @@ const SFX = {
     noise(0.5, { type: 'bandpass', freq: 1800, q: 3, gain: 0.08 })
     tone(1200, 0.08, { type: 'sine', gain: 0.05, delay: 0.5 })
   },
+  ping: () => {
+    tone(1480, 0.09, { type: 'sine', gain: 0.07 })
+    tone(1980, 0.16, { type: 'sine', gain: 0.05, delay: 0.09 })
+  },
   coin: () => {
     tone(1200, 0.07, { type: 'square', gain: 0.04 })
     tone(1600, 0.12, { type: 'square', gain: 0.04, delay: 0.06 })
@@ -205,7 +209,10 @@ const SFX = {
   },
 }
 
+// Co-op runs listen in on the leader's sounds to replay them for friends.
+export const sfxTap = { fn: null }
 export function sfx(id, throttleMs = 40) {
+  sfxTap.fn?.(id)
   if (!ctx || !enabled || !SFX[id]) return
   if (!gate(id, throttleMs)) return
   try {

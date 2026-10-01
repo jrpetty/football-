@@ -3,7 +3,7 @@
 // and joining a friend's, by code or from the list of camps open here.
 import { hasSave, MP_SAVE_KEY } from '../game/state.js'
 import { me, saveMe, writeIntent, PROTO } from '../net/mp.js'
-import { roomLobby, carrierKind, LOBBY_KEY } from '../net/transport.js'
+import { roomLobby, carrierKind, LOBBY_KEY, serverCall } from '../net/transport.js'
 import { sfx } from '../core/audio.js'
 import { h } from '../core/util.js'
 
@@ -14,6 +14,10 @@ const WHY = {
   offline: 'Could not reach the connection service. Check your internet connection.',
   timeout: 'The connection timed out. Try again in a moment.',
   self: 'That is your own camp. Open it with Host instead.',
+  busy: 'The server is busy right now. Try again in a minute.',
+  'slow-down': 'You have started a lot of camps in the last hour. Try again later.',
+  full: 'The server holds as many camps as it can. Join one instead.',
+  'code-taken': 'That code is already in use.',
 }
 export const joinError = (code) => WHY[code] || `Could not join (${code}).`
 
@@ -77,7 +81,43 @@ export function lobbyCard(game, { error, code = '', back }) {
   }
 
   const open = h('div.lb-open', h('small.dim', 'Looking for camps…'))
+  const campRow = (c) => {
+    const ok = c.v === PROTO
+    const always = c.kind === 'server'
+    return h(
+      'div.lb-camp.small' + (always ? '.always' : ''),
+      h('div', h('b', String(c.name || 'A camp').slice(0, 40), always ? h('em.lb-tag', 'always on') : null), h('small', `Day ${+c.day || 1} · ${+c.pop || 0} survivors · ${+c.on || 0} playing now${ok ? '' : ' · different version'}`)),
+      h('button.btn' + (ok ? '.go' : ''), { disabled: !ok, onclick: () => join(String(c.code)) }, 'Join'),
+    )
+  }
   const how = h('p.fine')
+  const campName = h('input.inp', { maxLength: 40, placeholder: 'Camp name, e.g. The Lumber Yard', spellcheck: false })
+  const pub = h('input', { type: 'checkbox', checked: true })
+  const makeAlways = async (btn) => {
+    const n = keep()
+    if (!n) return
+    btn.disabled = true
+    sfx('click')
+    try {
+      const r = await serverCall({ op: 'create', name: campName.value.trim() || `${n}'s camp`, pid: p.pid, pname: n, public: pub.checked })
+      if (r.op !== 'created') throw new Error(r.why || 'busy')
+      writeIntent({ mode: 'join', code: r.code, name: n })
+      location.hash = ''
+      location.reload()
+    } catch (e) {
+      btn.disabled = false
+      err.textContent = joinError(e.message)
+      err.hidden = false
+      sfx('error')
+    }
+  }
+  const always = h(
+    'section.lb-sec',
+    { hidden: true },
+    h('h3', 'Always-on camp'),
+    h('p.note', 'A camp that lives on the server: nobody has to host. You are its admin: you hand out survivors and set the pace. While nobody is on, the crew keeps working slowly and the clock waits.'),
+    h('div.lb-row', campName, h('label.lb-check', pub, h('span', 'List it for everyone')), h('button.btn.go', { onclick: (e) => makeAlways(e.currentTarget) }, 'Start it')),
+  )
   const card = h(
     'div.tcard.lobby',
     h('div.logo.big', 'HOLDOUT'),
@@ -85,7 +125,8 @@ export function lobbyCard(game, { error, code = '', back }) {
     h('p.tag', 'One of you hosts the camp; the rest join with its code. Everyone builds and crafts for the same camp, each of you leads the survivors the host gives you, and you can be out on runs at the same time.'),
     h('label.lb-field', h('span', 'Your name'), name),
     err,
-    h('section.lb-sec', h('h3', 'Host'), hostBox),
+    h('section.lb-sec', h('h3', 'Host in your browser'), hostBox),
+    always,
     h('section.lb-sec', h('h3', 'Join a friend'), open, h('div.lb-row', codeIn, h('button.btn.go', { onclick: () => join() }, 'Join'))),
     how,
     h('div.tbtns', h('button.btn.ghost', { onclick: () => (sfx('click'), stop?.(), back()) }, 'Back')),
@@ -102,12 +143,27 @@ export function lobbyCard(game, { error, code = '', back }) {
           ...camps.map((x) => {
             const c = x.presence[LOBBY_KEY]
             const ok = c.v === PROTO
-            return h('div.lb-camp.small', h('div', h('b', String(c.name || 'A camp').slice(0, 40)), h('small', `Day ${+c.day || 1} · ${+c.pop || 0} survivors · ${+c.on || 1} playing${ok ? '' : ' · different version'}`)), h('button.btn' + (ok ? '.go' : ''), { disabled: !ok, onclick: () => join(String(c.code)) }, 'Join'))
+            return campRow({ ...c, on: +c.on || 1, v: ok ? PROTO : c.v })
           }),
         )
       }
       draw()
       stop = lobby.onPeers(draw, () => open.replaceChildren(h('small.dim', 'The camp list is not available here. Join with a code.')))
+    } else if (kind === 'ws') {
+      how.textContent = 'Camps on this server: hosted camps run in a player’s browser while they play; always-on camps live on the server, so friends can come and go whenever they like.'
+      const draw = async () => {
+        try {
+          const r = await (await fetch('/api/camps', { cache: 'no-store' })).json()
+          const camps = r.camps || []
+          open.replaceChildren(...(camps.length ? camps.map(campRow) : [h('small.dim', 'No camps yet. Start one, or ask a friend for their code.')]))
+        } catch {
+          open.replaceChildren(h('small.dim', 'Could not reach the server.'))
+        }
+      }
+      draw()
+      const iv = setInterval(draw, 4000)
+      stop = () => clearInterval(iv)
+      always.hidden = false
     } else {
       open.replaceChildren()
       how.textContent =

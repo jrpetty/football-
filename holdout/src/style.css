@@ -943,6 +943,7 @@ body.aiming #c { cursor: crosshair !important; }
 .away .aw-row { display: grid; grid-template-columns: 54px 1fr; gap: 8px; align-items: start; margin: 10px 0; }
 .away .aw-row small { padding-top: 3px; text-transform: uppercase; letter-spacing: 0.1em; font-size: 11px; }
 .away .aw-row > div { display: flex; flex-wrap: wrap; gap: 6px 12px; }
+.away .since { max-height: 44vh; overflow-y: auto; margin-top: 12px; }
 .savebox { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
 .savebox .btns { display: inline-flex; gap: 6px; }
 .backups { margin-top: 8px; }
@@ -1168,5 +1169,32 @@ body.aiming #c { cursor: crosshair !important; }
 .netchip { gap: 7px; min-width: 0; }
 .netchip small { font: 600 12px var(--font-display); letter-spacing: 0.16em; color: var(--muted); }
 .netmark { font: 700 12px var(--font-display); letter-spacing: 0.05em; color: #10120e; background: var(--c); padding: 1px 8px; border-radius: 99px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5); white-space: nowrap; pointer-events: none; }
+.pingmark { font: 700 12px var(--font-display); letter-spacing: 0.05em; color: #10120e; background: var(--c); padding: 2px 9px 2px 22px; border-radius: 99px; box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35), 0 4px 14px rgba(0, 0, 0, 0.55); white-space: nowrap; pointer-events: none; position: relative; animation: pingIn 0.35s cubic-bezier(0.2, 1.6, 0.4, 1); }
+.pingmark::before { content: ''; position: absolute; left: 7px; top: 50%; width: 9px; height: 9px; margin-top: -4.5px; border-radius: 50%; background: #10120e; box-shadow: 0 0 0 2px var(--c), 0 0 0 4px #10120e; animation: pingDot 0.9s ease-out infinite; }
+@keyframes pingIn { from { transform: translateY(8px) scale(0.6); opacity: 0; } }
+@keyframes pingDot { 50% { transform: scale(0.6); } }
 .speed.locked { opacity: 0.55; }
 .speed.locked button { cursor: not-allowed; }
+.lb-camp.always { border-color: rgba(114, 184, 224, 0.35); }
+.lb-tag { font: 600 10.5px var(--font-body); font-style: normal; letter-spacing: 0.08em; text-transform: uppercase; color: var(--info); border: 1px solid rgba(114, 184, 224, 0.4); border-radius: 4px; padding: 0 5px; margin-left: 8px; vertical-align: 2px; }
+.lb-check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; }
+.lb-check input { accent-color: var(--accent); }
+.lb-open { max-height: 260px; overflow-y: auto; }
+.scard.theirs { border-color: color-mix(in srgb, var(--pc) 60%, transparent); opacity: 0.86; cursor: default; }
+.scard.theirs .key { background: var(--pc); color: #10120e; }
+.coopcards { position: absolute; right: 16px; bottom: 16px; width: 340px; display: flex; flex-direction: column; gap: 8px; z-index: 3; }
+.panel:not([hidden]) ~ .coopcards { right: 476px; }
+.panel.wide:not([hidden]) ~ .coopcards { right: 792px; }
+.coopinv { background: rgba(14, 16, 12, 0.94); border: 1px solid color-mix(in srgb, var(--c) 50%, var(--line-2)); border-left: 4px solid var(--c); border-radius: 10px; padding: 10px 12px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 6px; animation: toastIn 0.25s ease-out; }
+.coopinv.joined { border-color: rgba(140, 207, 114, 0.5); }
+.ci-head { display: flex; align-items: center; gap: 8px; }
+.ci-head i svg { width: 16px; height: 16px; color: var(--c); }
+.ci-head b { font: 700 15px var(--font-display); letter-spacing: 0.02em; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ci-head .x { padding: 3px; margin: 0; }
+.ci-going { color: var(--muted); }
+.ci-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; }
+.coopcard.open { border-color: rgba(114, 184, 224, 0.4); }
+.coop-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 13.5px; }
+.coop-row .swatch { width: 11px; height: 11px; border-radius: 3px; flex: none; }
+.coop-row b { font-family: var(--font-display); min-width: 54px; }
+.pickrow.on { border-color: var(--accent); background: rgba(234, 165, 60, 0.1); }

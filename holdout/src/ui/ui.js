@@ -114,6 +114,7 @@ export class UI {
     this.top.hidden = !v
     this.nav.hidden = !v
     this.feed.hidden = !v
+    if (this.coopEl) this.coopEl.hidden = !v || !this.coopEl.children.length
     if (!v) {
       this.closePanel()
       this.dock.hidden = true
@@ -210,7 +211,7 @@ export class UI {
       [4, '4×', 'Fastest <kbd>3</kbd>'],
     ]
     this.speedEl = h(
-      'div.speed' + (NET.role === 'client' ? '.locked' : ''),
+      'div.speed' + (NET.role === 'client' && !this.game.net?.isAdmin() ? '.locked' : ''),
       speeds.map(([v, label, tip]) => h('button', { 'data-v': v, 'data-tip': tip, html: label, onclick: () => this.game.setSpeed(v) })),
     )
     T.append(
@@ -448,6 +449,69 @@ export class UI {
     this.root.append(this.chatbar)
     this.renderTop()
     for (const m of (this.game.net?.chat || []).slice(-4)) feedChat(this.feed, m)
+    this.coopChanged()
+  }
+  // Invitations to friends' runs, and the run you joined, at the bottom right.
+  coopChanged() {
+    const coop = this.game.coop
+    if (!coop) return
+    if (!this.coopEl) {
+      this.coopEl = h('div.coopcards')
+      this.root.append(this.coopEl)
+    }
+    const cards = []
+    for (const run of coop.runs.values()) {
+      if (run.leader === NET.pid) continue
+      const P = S.mp.players[run.leader]
+      const joined = coop.joined === run.id
+      const going = Object.entries(run.roster)
+        .map(([pid, ids]) => `${pid === NET.pid ? 'you' : S.mp.players[pid]?.name || '?'}: ${ids.map((id) => S.survivors.find((x) => x.id === id)?.first).filter(Boolean).join(', ')}`)
+        .join(' · ')
+      cards.push(
+        h(
+          'div.coopinv' + (joined ? '.joined' : ''),
+          { style: { '--c': P?.color || '#888' } },
+          h('div.ci-head', h('i', { html: icon('people') }), h('b', `${P?.name || 'Someone'} → ${run.locName}`), h('small', `L${run.level}`), h('button.x', { onclick: () => coop.dismiss(run.id), html: icon('close'), 'data-tip': 'Not this time' })),
+          h('small.ci-going', going),
+          joined
+            ? h('div.ci-row', h('span.good', 'You are going. Waiting for them to set out.'), h('button.btn.small.ghost', { onclick: () => coop.leave(run.id) }, 'Leave'))
+            : h('div.ci-row', h('span.dim', 'Bring survivors you lead.'), h('button.btn.small.go', { onclick: () => this.coopPick(run) }, 'Join')),
+        ),
+      )
+    }
+    this.coopEl.replaceChildren(...cards)
+    this.coopEl.hidden = !cards.length || this.top.hidden
+  }
+  coopPick(run) {
+    const coop = this.game.coop
+    const av = coop.available()
+    const room = Math.min(4, 6 - coop.total(run))
+    const pick = new Set()
+    let close
+    const body = h('div.picklist')
+    const draw = () => {
+      body.replaceChildren(
+        ...av.map((s) =>
+          h(
+            'button.pickrow' + (pick.has(s.id) ? '.on' : ''),
+            { onclick: () => (pick.has(s.id) ? pick.delete(s.id) : pick.size < room && pick.add(s.id), sfx('click'), draw()) },
+            h('img.por', { src: this.game.portrait(s) }),
+            h('div.pr-main', h('b', s.name), h('span', `${OCCUPATIONS[s.occ].name} · ${survivorStats(s).weapon.name}`)),
+            h('div.pr-job', pick.has(s.id) ? 'Going' : ''),
+          ),
+        ),
+      )
+    }
+    draw()
+    close = this.modal(
+      h('div', h('h2', `Join the run to ${run.locName}`), h('p.note', av.length ? `Pick up to ${room} of the survivors you lead.` : 'You have nobody free to send: injured, sick and busy survivors stay home.'), body),
+      {
+        actions: [
+          h('button.btn.ghost', { onclick: () => close() }, 'Cancel'),
+          h('button.btn.go', { onclick: () => (pick.size ? (coop.join(run.id, [...pick]), close()) : sfx('error')) }, 'Join the run'),
+        ],
+      },
+    )
   }
   openChat() {
     if (!this.chatbar) return
@@ -527,6 +591,23 @@ export class UI {
         gains.length ? h('div.aw-row', h('small', 'Made'), h('div', gains.map(([k, v]) => resChipSigned(k, v)))) : null,
         used.length ? h('div.aw-row', h('small', 'Used'), h('div', used.map(([k, v]) => resChipSigned(k, v)))) : null,
         !gains.length && !used.length ? h('p', 'Not much changed.') : null,
+      ),
+      { small: true, actions: [h('button.btn.go', { onclick: () => close() }, 'Back to it')] },
+    )
+  }
+  // A player back in a shared camp: what happened while they were gone.
+  sinceModal(from) {
+    const mins = S.time - from
+    const lines = S.log.filter((e) => e.t > from && e.kind).slice(0, 12)
+    const mine = S.survivors.filter((s) => S.mp?.owner?.[s.id] === NET.pid)
+    const hurt = mine.filter((s) => s.status === 'injured' || s.infection > 0)
+    let close
+    close = this.modal(
+      h(
+        'div.away',
+        h('h2', 'Since you were last here'),
+        h('p.note', `${mins >= 1440 ? `${(mins / 1440).toFixed(1)} days` : `${Math.round(mins / 60)} hours`} of camp time went by. It is day ${day()} now${mine.length ? `, and you lead ${plural(mine.length, 'survivor')}` : ''}.${hurt.length ? ` ${hurt.map((s) => s.first).join(', ')} ${hurt.length === 1 ? 'needs' : 'need'} looking after.` : ''}`),
+        lines.length ? h('div.log.since', lines.map((e) => h('div.le.' + e.kind, h('span.t', `D${Math.floor(e.t / 1440) + 1} ${clockStr(e.t)}`), h('span', e.text)))) : h('p', 'A quiet stretch: nothing worth telling.'),
       ),
       { small: true, actions: [h('button.btn.go', { onclick: () => close() }, 'Back to it')] },
     )

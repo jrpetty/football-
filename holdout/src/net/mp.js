@@ -27,6 +27,11 @@ const GUEST_POL = { skip: HOST_ONLY, kids: { res: { all: ADD }, stats: { all: AD
 // Bringing a guest's copy in line with the host's (exact, no sums).
 const FIX_POL = { skip: set('settings', 'saved', 'hist', 'time'), kids: { links: { each: { skip: set('items') } } } }
 const LOCAL = set('settings', 'time')
+// A guest fighting a horde for the camp (the raid captain) owns the raid.
+const CAPT_SKIP = new Set([...HOST_ONLY].filter((k) => k !== 'raid'))
+const GUEST_POL_CAPT = { ...GUEST_POL, skip: CAPT_SKIP }
+const FIX_POL_CAPT = { ...FIX_POL, skip: set('settings', 'saved', 'hist', 'time', 'raid') }
+const LOCAL_CAPT = set('settings', 'time', 'raid')
 
 // Host events that guests hear too (their listeners only draw and toast).
 const FORWARD = set('goal', 'levelup', 'perkReady', 'infected', 'turned', 'season', 'crafted', 'broken', 'event', 'weather', 'newDay', 'recruit', 'raidWarn', 'raidResolved', 'victory', 'gameover', 'death', 'built', 'produced', 'expanded', 'recruitJoined', 'recruitGone', 'log', 'signalPhase', 'raidStart')
@@ -131,7 +136,9 @@ export class Session {
     this.c = null
     this.chat = []
     this.cams = {}
-    this.online = new Set([who.pid])
+    // an always-on camp's host is the server itself, not a player
+    this.server = !!who.server
+    this.online = new Set(this.server ? [] : [who.pid])
     this.status = 'connecting'
     this.t = { delta: 0, belts: 0, hist: 0, cam: 0, flush: 0, beat: 0, owners: 0 }
     this.lastHist = ''
@@ -140,6 +147,7 @@ export class Session {
     // host
     this.peers = new Map() // peer -> {pid, seen}
     this.acks = {}
+    this.coopRuns = {} // run leader -> survivors they answer for while out
     this.n = 0
     this.shadow = null
     this.outEv = []
@@ -153,9 +161,10 @@ export class Session {
   }
 
   // ---------------------------------------------------------------- start
-  async host() {
+  async host(carrier = null) {
     this.shadow = clone(this.view())
     this.hookBus()
+    this.c = carrier
     // after a reload the broker can hold the old connection's name for a few
     // seconds: try again before giving up
     for (let tries = 0; !this.c; tries++) {
@@ -190,6 +199,12 @@ export class Session {
     this.c.on('msg', (m, from) => this.onGuest(m, from))
     this.c.on('status', (ok) => (this.status = ok ? 'live' : 'reconnecting'))
     this.c.on('left', (peer) => peer === this.hostPeer && this.hostLost())
+    this.c.on('host', (id) => {
+      // the host's browser came back on a new line: same camp, new address
+      this.hostPeer = id
+      this.heard = now()
+      this.askResync()
+    })
     return new Promise((resolve, reject) => {
       this.joined = resolve
       const hello = () => this.c.send({ t: 'hello', pid: this.pid, name: this.name, v: PROTO })
@@ -233,9 +248,9 @@ export class Session {
     this.unhook = () => (bus.emit = orig)
   }
   advertise() {
-    if (this.c?.kind !== 'room') return
+    if (!this.c?.advertise) return
     const players = Object.keys(S.mp.players).length
-    this.c.advertise({ code: this.code, name: (S.mp.players[this.pid]?.name || 'A') + "'s camp", day: day(), pop: S.survivors.length, on: this.online.size, players, v: PROTO })
+    this.c.advertise({ code: this.code, name: S.mp.name || (S.mp.players[this.pid]?.name || 'A') + "'s camp", day: day(), pop: S.survivors.length, on: this.online.size, players, v: PROTO, kind: this.server ? 'server' : 'hosted', public: S.mp.public !== false })
   }
   onHost(m, from) {
     if (!m || typeof m !== 'object') return
@@ -255,11 +270,96 @@ export class Session {
         return this.say(pid, String(m.text || '').slice(0, 240))
       case 'resync':
         return this.sendSnap(from, pid)
-      case 'rcmd':
+      case 'rcmd': {
+        // a horde fought by a captain: their game carries the order out
+        const cap = S.raid?.captain
+        if (cap && cap !== this.pid) return cap !== pid && this.c.send({ ...m, pid }, this.peerOf(cap))
         return this.game.base?.raidCommand?.(pid, m)
+      }
+      case 'rz':
+        if (S.raid?.captain === pid) this.c.send(m)
+        return
+      case 'raidDone':
+        if (S.raid?.captain !== pid && this.lastCaptain !== pid) return
+        this.lastCaptain = null
+        S.raid = null
+        return this.game.raidOver?.(m.report || {}, !!m.finale)
+      case 'captainNo':
+        if (S.raid?.captain === pid) this.captainLost()
+        return
+      case 'admin':
+        return this.adminOp(pid, m)
+      case 'relay':
+        return this.routeRelay(pid, m.to, m.d)
       case 'bye':
         return this.dropPeer(from, 'bye')
     }
+  }
+  // ---- messages between players (co-op runs), always through the host,
+  // which also notes who answers for which survivors while a run is out
+  relay(to, d) {
+    if (this.role === 'host') return this.routeRelay(this.pid, to, d)
+    this.c?.send({ t: 'relay', to, d }, this.hostPeer)
+  }
+  routeRelay(from, to, d) {
+    if (!d || typeof d !== 'object') return
+    if (d.k === 'runGo') this.coopRuns[from] = new Set(Object.values(d.roster || {}).flat().map(String))
+    else if (d.k === 'runClose') delete this.coopRuns[from]
+    // the leader's last word on everyone's survivors may still be on its way
+    else if (d.k === 'runEnd') {
+      const set = this.coopRuns[from]
+      setTimeout(() => this.coopRuns[from] === set && delete this.coopRuns[from], 15000)
+    }
+    const targets = to === '*' ? [...this.online] : [].concat(to)
+    for (const p of targets) {
+      if (p === from) continue
+      if (p === this.pid) {
+        if (!this.server) this.game.coop?.onRelay(from, d)
+        continue
+      }
+      const peer = this.peerOf(p)
+      if (peer) this.c.send({ t: 'relayed', from, d }, peer)
+    }
+  }
+  peerOf(pid) {
+    for (const [peer, P] of this.peers) if (P.pid === pid) return peer
+    return null
+  }
+  // ---- the camp's admin: the host, or the player who made a server camp
+  isAdmin(pid = this.pid) {
+    return (this.role === 'host' && pid === this.pid) || (!!S.mp?.admin && S.mp.admin === pid)
+  }
+  adminOp(pid, m) {
+    if (!this.isAdmin(pid)) return
+    if (m.op === 'assign') return this.assign(String(m.sid), m.pid ? String(m.pid) : null)
+    if (m.op === 'kick') return this.kick(String(m.pid))
+    if (m.op === 'forget') return this.forget(String(m.pid))
+    if (m.op === 'speed' && [0, 1, 2, 4].includes(m.v)) {
+      S.speed = m.v
+      this.t.delta = 0
+    }
+  }
+  // ---- raid captains: with nobody's browser running the camp, a horde is
+  // handed to a player who is in camp to fight live for everyone
+  raidTo(R) {
+    const inCamp = [...this.online].filter((p) => p !== this.pid && this.peerOf(p) && /^In camp/.test(this.cams[p]?.w || ''))
+    const pick = inCamp.find((p) => p === S.mp.admin) || inCamp[0]
+    if (!pick) return false
+    S.raid = { count: R.count, killed: 0, spawned: 0, t: 0, acc: 0, captain: pick, lvl: R.lvl, blood: !!R.blood, finale: !!R.finale, size: R.size, side: 's' }
+    this.raidR = R
+    this.lastCaptain = pick
+    this.c.send({ t: 'captain', R }, this.peerOf(pick))
+    this.say(null, `The horde is at the wall. ${S.mp.players[pick]?.name || 'Someone'} has the defence.`)
+    this.t.delta = 0
+    return true
+  }
+  captainLost() {
+    const R = S.raid
+    if (!R) return
+    const left = { ...(this.raidR || {}), count: Math.max(1, R.count - (R.killed || 0)), lvl: R.lvl, blood: R.blood, finale: R.finale }
+    S.raid = null
+    this.lastCaptain = null
+    this.game.raidAuto?.(left)
   }
   welcome(m, from) {
     if (m.v !== PROTO) return this.c.send({ t: 'full', why: 'version' }, from)
@@ -303,9 +403,14 @@ export class Session {
     this.online.delete(P.pid)
     delete this.cams[P.pid]
     this.camsDirty = true
+    // when they come back they hear what happened since
+    if (S.mp.players[P.pid]) S.mp.players[P.pid].left = Math.round(S.time)
     const name = S.mp.players[P.pid]?.name || 'Someone'
+    if (S.raid?.captain === P.pid) this.captainLost()
     // whoever was out on a run with them comes home with nothing
-    const back = S.survivors.filter((s) => s.status === 'mission' && S.mp.owner[s.id] === P.pid)
+    const run = this.coopRuns[P.pid]
+    delete this.coopRuns[P.pid]
+    const back = S.survivors.filter((s) => s.status === 'mission' && (S.mp.owner[s.id] === P.pid || run?.has(s.id)))
     for (const s of back) s.status = 'ok'
     for (const v of S.vehicles || []) if (v.out === P.pid) v.out = false
     if (back.length) bus.emit('change')
@@ -337,7 +442,8 @@ export class Session {
   }
   admit(pid, node) {
     const f = node[1]
-    for (const k of Object.keys(f)) if (HOST_ONLY.has(k)) delete f[k]
+    const captain = !!S.raid && S.raid.captain === pid
+    for (const k of Object.keys(f)) if (HOST_ONLY.has(k) && !(captain && k === 'raid')) delete f[k]
     if (f.res) {
       if (f.res[0] !== 2) delete f.res
       else
@@ -353,9 +459,11 @@ export class Session {
     if (sv) {
       if (sv[0] !== 3) return 'bad patch'
       const P = sv[2]
+      // the captain of a horde fight answers for every defender
+      const run = this.coopRuns[pid]
       const mine = (id) => {
         const o = S.mp.owner[id]
-        return !o || o === pid || !S.mp.players[o]
+        return captain || run?.has(id) || !o || o === pid || !S.mp.players[o]
       }
       if (P.m) for (const id of Object.keys(P.m)) if (!mine(id)) delete P.m[id]
       if (P.d) P.d = P.d.filter(mine)
@@ -441,7 +549,13 @@ export class Session {
         this.forceFull = true
         return this.game.ui?.toast(`The host turned that down: ${m.why}`, 'bad')
       case 'rz':
-        return this.game.base?.raidMirror?.(m)
+        return this.captain ? null : this.game.base?.raidMirror?.(m)
+      case 'relayed':
+        return this.game.coop?.onRelay(m.from, m.d)
+      case 'captain':
+        return this.game.captainRaid?.(m.R) ? (this.captain = true) : this.c.send({ t: 'captainNo' }, this.hostPeer)
+      case 'rcmd':
+        return this.captain && this.game.base?.raidCommand?.(m.pid, m)
       case 'who':
         return this.c.send({ t: 'hello', pid: this.pid, name: this.name, v: PROTO })
       case 'bye':
@@ -516,21 +630,22 @@ export class Session {
   // Bring this copy up to the host's, keeping changes still on their way.
   reconcile(node, full = false) {
     this.flush()
+    const local = this.captain ? LOCAL_CAPT : LOCAL
     if (node && !full && !this.pending.length) {
-      applyFields(S, node[1], { skip: LOCAL })
+      applyFields(S, node[1], { skip: local })
       applyFields(this.shadow, node[1])
       return
     }
     const target = clone(this.H)
     for (const p of this.pending) applyFields(target, p.d[1], { keepOrder: true })
-    const fix = diff(S, target, FIX_POL, '', true)
-    if (fix) applyFields(S, fix[1], { skip: LOCAL })
+    const fix = diff(S, target, this.captain ? FIX_POL_CAPT : FIX_POL, '', true)
+    if (fix) applyFields(S, fix[1], { skip: local })
     this.shadow = target
   }
   // Anything this player changed since the last look goes to the host.
   flush() {
     if (!this.shadow || !this.hostPeer) return
-    const node = diff(this.shadow, S, GUEST_POL)
+    const node = diff(this.shadow, S, this.captain ? GUEST_POL_CAPT : GUEST_POL)
     if (!node) return
     applyFields(this.shadow, node[1])
     const seq = ++this.seq
@@ -545,7 +660,7 @@ export class Session {
     const a = unpackArgs(args || [])
     if (ev === 'raidStart') return this.game.base?.mirrorRaid?.(true, a[0])
     if (ev === 'raidResolved') {
-      this.game.base?.mirrorRaid?.(false)
+      if (this.captainReported) return (this.captainReported = false)
       return bus.emit('raidResolved', a[0])
     }
     if (ev === 'signalPhase') return this.game.ui?.toast(a[0] >= 5 ? 'The Signal reaches the coast. Hold one more night.' : `The Signal: phase ${a[0]} complete`, a[0] >= 5 ? 'bad' : 'good')
@@ -579,12 +694,6 @@ export class Session {
         lim = it[i] - gap
       }
     }
-    if (this.hostTime != null) {
-      const want = this.hostTime + (now() - this.hostAt) * (S.raid ? 1 : S.speed ?? 1) * GAME_MIN_PER_SEC
-      const err = want - S.time
-      if (Math.abs(err) > 90) S.time = want
-      else S.time += err * Math.min(1, simDt * 1.5)
-    }
   }
 
   // ---------------------------------------------------------------- every frame
@@ -617,7 +726,7 @@ export class Session {
         for (const [peer, P] of this.peers) if (now() - P.seen > 25) this.dropPeer(peer, 'timeout')
         this.advertise()
       }
-      if (t.cam <= 0) {
+      if (t.cam <= 0 && !this.server) {
         t.cam = 1
         const c = this.myCam()
         if (JSON.stringify(c) !== JSON.stringify(this.cams[this.pid])) {
@@ -660,14 +769,22 @@ export class Session {
     for (const id of Object.keys(S.mp.owner)) if (!ids.has(id)) delete S.mp.owner[id]
   }
   // ---------------------------------------------------------------- shared actions
+  // the captain's fight is over: what happened goes to the host
+  captainDone(report, finale) {
+    if (!this.captain) return
+    this.flush()
+    this.captain = false
+    this.captainReported = true
+    this.c.send({ t: 'raidDone', report: { count: report.count, killed: report.killed, injured: report.injured, dead: report.dead, lost: report.lost, won: report.won }, finale }, this.hostPeer)
+  }
   assign(sid, pid) {
-    if (this.role !== 'host') return
+    if (this.role !== 'host') return this.isAdmin() && this.c.send({ t: 'admin', op: 'assign', sid, pid }, this.hostPeer)
     if (pid) S.mp.owner[sid] = pid
     else delete S.mp.owner[sid]
     this.t.delta = 0
   }
   kick(pid) {
-    if (this.role !== 'host') return
+    if (this.role !== 'host') return this.isAdmin() && this.c.send({ t: 'admin', op: 'kick', pid }, this.hostPeer)
     // kept out for a minute, so a reconnecting tab does not slip straight back
     ;(this.kicked ||= {})[pid] = now() + 60
     for (const [peer, P] of this.peers) if (P.pid === pid) {
@@ -676,7 +793,8 @@ export class Session {
     }
   }
   forget(pid) {
-    if (this.role !== 'host' || pid === this.pid || this.online.has(pid)) return
+    if (this.role !== 'host') return this.isAdmin() && this.c.send({ t: 'admin', op: 'forget', pid }, this.hostPeer)
+    if (pid === this.pid || this.online.has(pid)) return
     for (const [sid, o] of Object.entries(S.mp.owner)) if (o === pid) delete S.mp.owner[sid]
     delete S.mp.players[pid]
     this.t.delta = 0
@@ -685,6 +803,10 @@ export class Session {
     this.name = name
     if (this.role === 'host') S.mp.players[this.pid].name = name
     else this.c?.send({ t: 'hello', pid: this.pid, name, v: PROTO }, this.hostPeer)
+  }
+  setSpeed(v) {
+    if (this.role === 'host') S.speed = v
+    else if (this.isAdmin()) this.c.send({ t: 'admin', op: 'speed', v }, this.hostPeer)
   }
   raidOrder(sid, x, z) {
     this.c?.send({ t: 'rcmd', sid, x, z }, this.hostPeer)

@@ -7,13 +7,17 @@
   "scripts": {
     "build": "node build.mjs",
     "build:cdn": "node build.mjs --cdn",
-    "watch": "node build.mjs --watch"
+    "watch": "node build.mjs --watch",
+    "server:build": "node server/build.mjs",
+    "server": "node server/server.mjs",
+    "deploy": "fly deploy"
   },
   "dependencies": {
     "n8ao": "^2.0.1",
     "peerjs": "^1.5.5",
     "postprocessing": "^6.39.5",
-    "three": "0.186.1"
+    "three": "0.186.1",
+    "ws": "^8.22.0"
   },
   "devDependencies": {
     "esbuild": "0.28.2"

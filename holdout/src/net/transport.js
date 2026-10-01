@@ -32,12 +32,12 @@ function unb64(str) {
 }
 
 // ---------------------------------------------------------------- base
-class Carrier {
+export class Carrier {
   constructor(max, rate) {
     this.max = max // characters per frame
     this.rate = rate // frames per second (Infinity: no pacing)
     this.id = null
-    this.fns = { msg: new Set(), left: new Set(), status: new Set() }
+    this.fns = { msg: new Set(), left: new Set(), status: new Set(), host: new Set() }
     this.parts = new Map()
     this.txq = Promise.resolve()
     this.rxq = Promise.resolve()
@@ -310,6 +310,109 @@ class RoomCarrier extends Carrier {
   }
 }
 
+// ---------------------------------------------------------------- game server
+// Played from the Holdout server (fly.io or any Node host): one WebSocket to
+// the server, which relays frames between a camp's host and its guests. The
+// host can be a player's browser or the server itself (always-on camps).
+export const serverUrl = () => `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`
+class WsCarrier extends Carrier {
+  constructor() {
+    super(250000, Infinity)
+    this.kind = 'ws'
+    this.waits = []
+  }
+  connect() {
+    return new Promise((resolve, reject) => {
+      const ws = (this.ws = new WebSocket(serverUrl()))
+      const t = setTimeout(() => reject(new Error('offline')), 10000)
+      ws.onmessage = (e) => {
+        let m
+        try {
+          m = JSON.parse(e.data)
+        } catch {
+          return
+        }
+        if (m.op === 'id') {
+          this.id = m.id
+          clearTimeout(t)
+          resolve()
+        } else if (m.op === 'f') this.take(m.f, m.from)
+        else if (m.op === 'left') this.fire('left', m.id)
+        else if (m.op === 'host') this.fire('host', m.id)
+        else this.waits.shift()?.(m)
+      }
+      ws.onerror = () => reject(new Error('offline'))
+      ws.onclose = () => {
+        if (this.closed) return
+        this.fire('status', false)
+        this.retry()
+      }
+    })
+  }
+  ask(msg) {
+    return new Promise((resolve) => {
+      this.waits.push(resolve)
+      this.ws.send(JSON.stringify(msg))
+    })
+  }
+  async open(code, asHost) {
+    this.code = code
+    this.asHost = asHost
+    await this.connect()
+    await this.claim()
+    this.fire('status', true)
+  }
+  async claim() {
+    const r = await this.ask(this.asHost ? { op: 'host', code: this.code, token: this.token } : { op: 'join', code: this.code })
+    if (r.op === 'err') throw new Error(r.why)
+    if (r.token) this.token = r.token
+    this.hostId = r.host
+  }
+  // the line dropped: come back with the same code (a host keeps its room)
+  async retry() {
+    for (let i = 0; !this.closed; i++) {
+      await new Promise((r) => setTimeout(r, Math.min(8000, 800 * 2 ** i)))
+      try {
+        await this.connect()
+        await this.claim()
+        this.fire('status', true)
+        return
+      } catch {}
+    }
+  }
+  raw(f) {
+    if (this.ws?.readyState === 1) this.ws.send(JSON.stringify({ op: 'f', to: f.to, f }))
+  }
+  advertise(info) {
+    if (this.ws?.readyState === 1) this.ws.send(JSON.stringify({ op: 'adv', info }))
+  }
+  close() {
+    super.close()
+    this.closed = true
+    try {
+      this.ws?.close()
+    } catch {}
+  }
+}
+// Talk to the server outside a camp: the camp list, creating server camps.
+export async function serverCall(msg) {
+  const c = new WsCarrier()
+  await c.connect()
+  const r = await c.ask(msg)
+  c.close()
+  return r
+}
+let serverCheck
+// Is this page served by a Holdout server?
+export function onServer() {
+  if (serverCheck) return serverCheck
+  if (!/^https?:$/.test(location.protocol) || window.claude?.use) return (serverCheck = Promise.resolve(false))
+  return (serverCheck = fetch('/api/hello', { cache: 'no-store' })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((j) => !!j?.holdout)
+    .catch(() => false))
+}
+
 // ---------------------------------------------------------------- choosing
 let roomNs
 // The claude.ai room, or null outside the viewer.
@@ -321,8 +424,9 @@ export function roomLobby() {
 // Which carrier this page uses: ?net=tabs forces the tab channel (tests).
 export async function carrierKind() {
   const q = new URLSearchParams(location.search).get('net')
-  if (q === 'tabs' || q === 'peer') return q
+  if (q === 'tabs' || q === 'peer' || q === 'ws') return q
   if (await roomLobby()) return 'room'
+  if (await onServer()) return 'ws'
   return 'peer'
 }
 export async function openCarrier(code, asHost) {
@@ -330,6 +434,7 @@ export async function openCarrier(code, asHost) {
   let c
   if (kind === 'room') c = new RoomCarrier(await roomLobby())
   else if (kind === 'tabs') c = new TabCarrier()
+  else if (kind === 'ws') c = new WsCarrier()
   else c = new PeerCarrier()
   try {
     await c.open(code, asHost)

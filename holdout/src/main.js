@@ -1,13 +1,15 @@
 // Boot, loading screen, title, scene switching (camp, city map, supply runs),
 // the simulation loop, hotkeys, settings and saving.
 import { Pipeline } from './render/pipeline.js'
-import { initView, view } from './render/view.js'
+import { initView, view, groundAt } from './render/view.js'
 import { pregenerate } from './render/texgen.js'
 import { initAudio, sfx, setSound } from './core/audio.js'
-import { S, newGame, hasSave, load, save, day, log, wipeSave, buildCost, newStation, pay, canAfford, completeGoal, backupSave, vehicleOf, wearVehicle, NET, MP_SAVE_KEY } from './game/state.js'
+import { S, newGame, hasSave, load, save, day, log, wipeSave, buildCost, newStation, pay, canAfford, completeGoal, backupSave, vehicleOf, wearVehicle, NET, MP_SAVE_KEY, playerOf } from './game/state.js'
 import { Session, readIntent, writeIntent, me, initMp } from './net/mp.js'
+import { Coop } from './net/coop.js'
 import { newCode } from './net/transport.js'
 import { lobbyCard, joinError } from './ui/lobby.js'
+import { Pings } from './ui/pings.js'
 import { econTick, initSchedules, autoResolveRaid, scheduleRaid } from './game/economy.js'
 import * as belts from './game/belts.js'
 import * as stateMod from './game/state.js'
@@ -31,6 +33,7 @@ const GRASS = { low: 0, medium: 18000, high: 40000, ultra: 75000 }
 class Game {
   constructor() {
     this.pipe = null
+    this.pings = new Pings()
     this.scene = null
     this.base = null
     this.map = null
@@ -124,6 +127,7 @@ class Game {
     view.input.onKey = (e) => {
       if (this.onKey(e)) e._handled = true
     }
+    view.input.onPing = (x, y) => this.ping(x, y)
     const loop = (t) => {
       requestAnimationFrame(loop)
       this.frame(t)
@@ -220,6 +224,7 @@ class Game {
   // Hosting or joining: straight into the camp, then open the connection.
   startNet(intent) {
     this.start()
+    this.coop = new Coop(this)
     if (NET.role === 'host') {
       this.net = new Session(this, 'host', S.mp.code, { ...me(), name: S.mp.players[me().pid]?.name || intent.name || me().name })
       if (!S.mp.players[NET.pid]) initMp(S.mp.code, me())
@@ -227,7 +232,12 @@ class Game {
         () => this.ui.toast(`Hosting camp ${S.mp.code}. Friends join with this code.`, 'good'),
         (e) => this.ui.netProblem(e.message),
       )
-    } else this.ui.toast(`Joined ${S.mp.players[S.mp.host]?.name || 'the host'}'s camp`, 'good')
+    } else {
+      this.ui.toast(S.mp.server ? `Welcome to ${S.mp.name || 'the camp'}` : `Joined ${S.mp.players[S.mp.host]?.name || 'the host'}'s camp`, 'good')
+      // back after a while: what happened since
+      const left = S.mp.players[NET.pid]?.left
+      if (left != null && S.time - left >= 6 * 60) setTimeout(() => this.ui.sinceModal(left), 900)
+    }
     this.ui.netReady()
   }
   // Leave a multiplayer camp for the title screen (the host saves first).
@@ -236,6 +246,86 @@ class Game {
     this.net?.close()
     writeIntent(null)
     setTimeout(() => location.reload(), 250)
+  }
+  // A friend's co-op run sets out with some of this player's survivors:
+  // build the same street and follow the leader's game.
+  startCoopRemote(run) {
+    if (this.mission) return this.coop?.leave(run.id)
+    const loc = this.city.locs.find((l) => l.id === run.locId)
+    if (!loc) return
+    if (this.scene === this.map) {
+      this.map.close()
+      this.scene = this.base
+    }
+    if (this.scene === this.base) this.baseCam = view.rig.save()
+    this.base.cancelPlacing?.()
+    this.ui.closePanel()
+    this.ui.closeModal()
+    this.ui.toggleBuild(false)
+    this.ui.showCamp(false)
+    const ids = Object.values(run.roster).flat()
+    const lo = { ...run.loadout }
+    if (lo.stash === -1) lo.stash = Infinity
+    this.mission = new Mission(this, loc, ids, { ...lo, coop: { run, role: 'joiner', seed: run.seed } })
+    this.scene = this.mission
+    view.input.handler = this.mission
+    this.coop.flushPending(this.mission)
+  }
+  endCoopRemote(report) {
+    const m = this.mission
+    if (!m?.remote) return
+    m.over = true
+    setTimeout(() => {
+      m.dispose()
+      this.mission = null
+      this.scene = this.base
+      if (this.baseCam) view.rig.restore(this.baseCam)
+      this.base.enter()
+      view.input.handler = this.base
+      this.ui.showCamp(true)
+      if (report?.title) this.ui.missionReport({ loot: {}, items: [], lost: [], injured: [], ...report })
+      bus.emit('change')
+    }, 600)
+  }
+  // ---------------------------------------------------------------- pings
+  // Mark a spot for friends: in camp everyone sees it, on a co-op run the
+  // friends on that run. Returns false when there is nobody to show.
+  ping(sx = view.input.mouse.x, sy = view.input.mouse.y) {
+    if (NET.role === 'solo' || !this.net || !this.running) return false
+    const m = this.scene === this.mission && this.mission?.coop && !this.mission.over ? this.mission : null
+    if (this.scene !== this.base && !m) return false
+    const p = groundAt(sx, sy)
+    if (!p) return false
+    const now = performance.now()
+    if (now - (this.lastPing || 0) < 600) return true
+    this.lastPing = now
+    const d = { k: 'ping', x: Math.round(p.x * 10) / 10, z: Math.round(p.z * 10) / 10, w: m ? m.coop.run.id : 'camp' }
+    this.net.relay(m ? m.coopPeers() : '*', d)
+    this.showPing(NET.pid, d)
+    return true
+  }
+  showPing(pid, d) {
+    if (!Number.isFinite(d.x) || !Number.isFinite(d.z)) return
+    const m = this.mission
+    const inCamp = d.w === 'camp' && this.scene === this.base && !this.titleEl
+    const onRun = m && this.scene === m && m.coop?.run.id === d.w
+    if (!inCamp && !onRun) return
+    const P = playerOf(pid)
+    this.pings.add(inCamp ? this.base.scene : m.scene, d.x, inCamp ? 0 : m.floorY(d.x, d.z), d.z, P?.color || '#e8dcc0', pid === NET.pid ? 'You' : P?.name || 'Someone')
+    sfx('ping', 120)
+  }
+  // An always-on camp hands this player a horde to fight live for everyone.
+  captainRaid(R) {
+    // the host's word arrives before its diff saying so: trust the message
+    if (this.scene !== this.base || this.mission || this.mapLoading || this.base.mode === 'raid') return false
+    this.base.cancelPlacing()
+    this.ui.closePanel()
+    this.ui.closeModal()
+    this.net.captain = true
+    this.base.startRaid(R)
+    S.raid.captain = NET.pid
+    this.ui.toast('The horde is here and you have the defence. Everyone is watching.', 'bad')
+    return true
   }
   netGone(why) {
     if (this.goneShown) return
@@ -346,6 +436,7 @@ class Game {
     if (this.titleEl) return false
     if (this.ui?.onKey(e)) return true
     const k = e.key
+    if (k.toLowerCase() === 'q' && !e.ctrlKey && !e.metaKey && this.ping()) return true
     if (this.scene === this.base && !S.raid && !this.base.placing) {
       if (k === ' ') {
         e.preventDefault()
@@ -360,7 +451,12 @@ class Game {
     return false
   }
   setSpeed(v) {
-    if (NET.role === 'client') return this.ui?.toast('The host sets the pace of the camp.', '')
+    if (NET.role === 'client') {
+      if (!this.net?.isAdmin()) return this.ui?.toast('The camp’s admin sets the pace.', '')
+      this.net.setSpeed(v)
+      sfx('click')
+      return
+    }
     if (S.raid && v > 1) v = 1
     if (v) this.lastSpeed = v
     S.speed = v
@@ -419,12 +515,15 @@ class Game {
     this.ui.showCamp(true)
   }
   startMission(loc, ids, loadout = {}) {
+    if (!loadout.coop && this.coop?.joined) this.coop.leave()
     this.map.close()
     this.ui.showCamp(false)
     // alone, the trip there passes in a blink; with friends, time is shared
     if (NET.role === 'solo') this.fastForward(loadout.travel || 0)
     this.mission = new Mission(this, loc, ids, loadout)
-    if (NET.role !== 'solo') this.net?.say(null, `${this.net.name} set out for ${loc.name} with ${ids.length} ${ids.length === 1 ? 'survivor' : 'survivors'}.`)
+    const run = loadout.coop?.run
+    if (run) this.net?.say(null, `${Object.keys(run.roster).map((p) => S.mp.players[p]?.name || 'Someone').join(' and ')} set out together for ${loc.name} with ${ids.length} survivors.`)
+    else if (NET.role !== 'solo') this.net?.say(null, `${this.net.name} set out for ${loc.name} with ${ids.length} ${ids.length === 1 ? 'survivor' : 'survivors'}.`)
     this.scene = this.mission
     view.input.handler = this.mission
     completeGoal('firstRun')
@@ -512,6 +611,7 @@ class Game {
       scene.update(dt, this.titleEl ? dt : simDt)
       if (scene.render) scene.render(dt)
       else this.pipe.render(scene.scene, view.camera, dt)
+      this.pings.update(dt, scene.scene)
       view.labels.update(dt, view.camera, scene.scene)
     }
     this.ui?.update(dt)

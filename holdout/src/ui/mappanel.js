@@ -2,7 +2,8 @@
 // clock and horde timer) and the planner: what a location holds and how
 // dangerous it is, the drive there, who goes and what they carry.
 import { LOCATIONS, ROOMS, CONTAINERS, RES, ITEMS, ZOMBIES, zombieMix, LEVEL_COLORS, OCCUPATIONS, STATIONS, GAME_MIN_PER_SEC, INFECTION, OUTPOST, VEHICLES } from '../game/data.js'
-import { S, day, clockStr, gameDur, survivorStats, getS, hasFlag, outpostAt, outpostProblem, claimOutpost, outpostYield, outpostUpgradeCost, upgradeOutpost, abandonOutpost, canAfford, travelCost, vehicleOf, vehicleProblem, usableVehicles, pay, canControl, NET } from '../game/state.js'
+import { COOP_MAX } from '../net/coop.js'
+import { playerOf, S, day, clockStr, gameDur, survivorStats, getS, hasFlag, outpostAt, outpostProblem, claimOutpost, outpostYield, outpostUpgradeCost, upgradeOutpost, abandonOutpost, canAfford, travelCost, vehicleOf, vehicleProblem, usableVehicles, pay, canControl, NET } from '../game/state.js'
 import { raidIntel } from '../game/economy.js'
 import { leadsAt } from '../game/story.js'
 import { sfx } from '../core/audio.js'
@@ -171,9 +172,15 @@ export class MapPanel {
       for (const s of pickable.slice(0, Math.min(3, Math.max(1, pickable.length - 1)))) this.squad.add(s.id)
     }
     const squad = [...this.squad].map((id) => getS(id)).filter(Boolean)
+    // a run with friends: their survivors set out with yours
+    const coop = NET.role !== 'solo' ? this.game.coop : null
+    const run = coop?.mine?.locId === loc.id ? coop.mine : null
+    if (run) coop.setMine([...this.squad])
+    const friends = run ? Object.entries(run.roster).filter(([p]) => p !== NET.pid).flatMap(([, ids]) => ids.map(getS).filter(Boolean)) : []
+    const party = squad.length + friends.length
     const vid = this.pickVehicle()
     const veh = vid === 'foot' ? null : vehicleOf(vid)
-    const T = tripInfo(this.map.routeLen || 1000, veh ? veh.kind : 'foot', Math.max(1, squad.length))
+    const T = tripInfo(this.map.routeLen || 1000, veh ? veh.kind : 'foot', Math.max(1, party))
     const pw = squad.reduce((a, s) => a + squadPower(s), 0)
     const threat = ((z0 + z1) / 2) * (6 + loc.level * 4)
     const ratio = pw / threat
@@ -258,6 +265,7 @@ export class MapPanel {
         ),
         hints.items.length ? h('p.note', 'Chance of ', hints.items.map((i) => ITEMS[i].name).join(', ')) : null,
         this.outpostCard(loc, squad),
+        coop ? this.coopCard(loc, run, coop) : null,
         h('h3', 'Squad', h('small', `${this.squad.size}/${MAX_SQUAD} · click to add or remove`)),
         h('div.sqlist', rows),
       ),
@@ -275,7 +283,9 @@ export class MapPanel {
         ),
         outpostAt(loc.id)
           ? h('button.btn.big', { disabled: true }, 'Your outpost')
-          : h('button.btn.go.big', { disabled: !squad.length || (!!looted && !leads.length) || this.map.launching || !T.ok, onclick: () => this.deploy(loc, squad, T, veh) }, looted && !leads.length ? 'Already looted' : h('span', { html: icon(T.V.stash ? 'truck' : 'run') }), looted && !leads.length ? null : T.V.stash ? ' Roll out' : T.V === VEHICLES.foot ? ' Head out on foot' : ' Ride out'),
+          : run
+            ? h('button.btn.go.big', { disabled: !squad.length || this.map.launching || !T.ok, onclick: () => this.deploy(loc, squad, T, veh, run, friends) }, h('span', { html: icon('people') }), ` Set out together (${party})`)
+            : h('button.btn.go.big', { disabled: !squad.length || (!!looted && !leads.length) || this.map.launching || !T.ok, onclick: () => this.deploy(loc, squad, T, veh) }, looted && !leads.length ? 'Already looted' : h('span', { html: icon(T.V.stash ? 'truck' : 'run') }), looted && !leads.length ? null : T.V.stash ? ' Roll out' : T.V === VEHICLES.foot ? ' Head out on foot' : ' Ride out'),
       ),
     )
   }
@@ -331,18 +341,48 @@ export class MapPanel {
     }
     return 'foot'
   }
-  deploy(loc, squad, T, veh) {
+  // Friends in camp get an invite and bring survivors of their own.
+  coopCard(loc, run, coop) {
+    const other = coop.mine && !run ? coop.mine : null
+    if (other)
+      return h('div.card.coopcard', h('h3', 'Run with friends'), h('p.note', `You have a run to ${other.locName} open.`), h('div.kv', h('span', ''), h('button.btn.small.ghost', { onclick: () => (coop.close(), this.render()) }, 'Cancel that invite')))
+    if (!run)
+      return h(
+        'div.card.coopcard',
+        h('h3', 'Run with friends', h('small', `up to ${COOP_MAX} survivors`)),
+        h('p.note', 'Everyone in camp gets an invite and can bring survivors they lead. You lead the run; each friend gives orders to their own people, and everyone sees what any of them sees.'),
+        h('div.kv', h('span', ''), h('button.btn.small', { disabled: (this.game.net?.online.size || 1) < 2, 'data-tip': (this.game.net?.online.size || 1) < 2 ? 'Nobody else is in the camp right now' : null, onclick: () => (coop.open(loc, [...this.squad]), sfx('click'), this.render()) }, h('span', { html: icon('people') }), ' Invite friends')),
+      )
+    const rows = Object.entries(run.roster).map(([pid, ids]) => {
+      const P = playerOf(pid)
+      return h('div.coop-row', h('i.swatch', { style: { background: P?.color || '#888' } }), h('b', pid === NET.pid ? 'You' : P?.name || 'Someone'), h('span', ids.map((id) => getS(id)?.first).filter(Boolean).join(', ') || h('em.dim', 'picking…')))
+    })
+    return h(
+      'div.card.coopcard.open',
+      h('h3', 'Run with friends', h('small', `${coop.total(run)}/${COOP_MAX} going`)),
+      rows,
+      h('p.note', Object.keys(run.roster).length > 1 ? 'Set out when everyone is ready. Provisions are counted for the whole party.' : 'Waiting for friends: they see an invite in camp.'),
+      h('div.kv', h('span', ''), h('button.btn.small.ghost', { onclick: () => (coop.close(), this.render()) }, 'Cancel invite')),
+    )
+  }
+  deploy(loc, squad, T, veh, run = null, friends = []) {
     if (!squad.length || !T.ok) return
     if (!pay({ food: T.food, water: T.water, fuel: T.fuel })) return sfx('error')
     sfx(T.V.stash ? 'truck' : 'click')
-    const ids = squad.map((s) => s.id)
+    const ids = squad.map((s) => s.id).concat(friends.map((s) => s.id))
     if (veh) {
       veh.out = NET.role === 'solo' ? true : NET.pid
       bus.emit('vehicles')
     }
     this.squad.clear()
     this.suggested = false
-    this.map.launch(loc, ids, { vehicle: T.kind, vehId: veh?.id || null, look: veh?.look, van: T.V.stash > 0, stash: T.V.stash, travel: T.min, dist: this.map.routeLen, km: T.km, fuel: T.fuel, food: T.food, water: T.water })
+    const loadout = { vehicle: T.kind, vehId: veh?.id || null, look: veh?.look, van: T.V.stash > 0, stash: T.V.stash === Infinity ? -1 : T.V.stash, travel: T.min, dist: this.map.routeLen, km: T.km, fuel: T.fuel, food: T.food, water: T.water }
+    if (run) {
+      const r = this.game.coop.go(loadout)
+      loadout.coop = { run: r, role: 'leader', seed: r.seed }
+    }
+    if (loadout.stash === -1) loadout.stash = Infinity
+    this.map.launch(loc, ids, loadout)
   }
 }
 export const minutesToSec = (m) => m / GAME_MIN_PER_SEC

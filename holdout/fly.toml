@@ -1,0 +1,43 @@
+# fly.io config for the Holdout server. Change `app` to a name of your own
+# (fly launch suggests one), and `primary_region` to the one nearest you.
+app = "holdout-camp"
+primary_region = "lhr"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+  DATA_DIR = "/data"
+
+# Always-on camps are saved here. Keep the app on ONE machine: a volume
+# belongs to one machine, and the camps live on it.
+[[mounts]]
+  source = "holdout_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # The machine sleeps when nobody is connected and wakes on the next visit.
+  # Camps are saved on shutdown and catch up on what they missed when loaded.
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type = "connections"
+    soft_limit = 400
+    hard_limit = 500
+
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "30s"
+    method = "GET"
+    path = "/healthz"
+    timeout = "5s"
+
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1

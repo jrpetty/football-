@@ -189,7 +189,7 @@ export const VisionMixin = {
     if (this.visT <= 0) {
       this.visT = 0.06
       this.updateVisionNow()
-      if (dt > 0) this.spotTraps?.(0.06)
+      if (dt > 0 && !this.remote) this.spotTraps?.(0.06)
     }
     V.ease(dt)
     V.bake()
