@@ -215,6 +215,58 @@ def village(r, biome, count=12, compact=False, days=3, label=None, raided=True):
     say("PASS the server ran %d game days on %s" % (days, label or biome))
 
 
+def epic(r, days, minutes, biome="plains"):
+    """The long game. One village, founded the way a spawner founds one, left alone
+    for as many game days as the machine will run in the time it has: does it keep
+    evolving — ages, buildings, people, great works, colonies of its own — or does it
+    stall somewhere along the way? One DAY line a game day says where it has got to."""
+    setup(r)
+    spot = where(r, "biome minecraft:" + biome) or where(r, "biome minecraft:forest")
+    if spot is None:
+        say("SKIP no %s within reach of this seed" % biome)
+        return
+    x, z = spot
+    say("the long game: a village of 8 at %d, %d (%s), up to %d days or %d minutes" % (x, z, biome, days, minutes))
+    say("spawn: " + r.cmd("village spawnat %d %d 8" % (x, z)))
+    began = time.time()
+    last_age = None
+    for day in range(1, days + 1):
+        if day % 5 == 1:
+            # Dusk, with the things that come out at night among them (nothing spawns on
+            # a server with nobody on it, so the watch would otherwise never be tested).
+            sprint(r, 13500)
+            raid(r, x, z)
+            sprint(r, 10500)
+        else:
+            sprint(r, 24000)
+        status = r.cmd("execute positioned %d 64 %d run village status" % (x, z)).replace("\n", " ")
+        listing = r.cmd("village list")
+        villages = [l for l in listing.split("\n") if l.strip().startswith("Village at")]
+        world = sum(int(m) for m in re.findall(r"— (\d+) folk", listing))
+        m = re.search(r"— (\d+) folk.*?, (the \w+ Age)\.", status)
+        folk, age = (m.group(1), m.group(2)) if m else ("?", "?")
+        built = re.search(r"Built: \[([^\]]*)\]", status)
+        names = [b.strip() for b in built.group(1).split(",") if b.strip()] if built else []
+        renown = re.search(r"Renown (\d+)", status)
+        colonies = names.count("colony")
+        say("DAY %d: %s folk, %s, %d buildings, renown %s, %d villages in the world (%d colonies from this one), %d folk in all, %.0f min"
+            % (day, folk, age, len(names) - colonies, renown.group(1) if renown else "0",
+               len(villages), colonies, world, (time.time() - began) / 60.0))
+        if age != last_age:
+            say("AGE on day %d: %s" % (day, age))
+            last_age = age
+        say("STATUS " + status)
+        if day % 5 == 0 or day == 1:
+            report(r, x, z, "the long game, day %d" % day, compact=True)
+            for line in villages:
+                say("  " + line)
+        if time.time() - began > minutes * 60:
+            say("STOP the time this run had is spent, after %d game days" % day)
+            break
+    say("village list at the end: " + r.cmd("village list").replace("\n", " | "))
+    say("PASS the long game ran")
+
+
 def takeover(r):
     setup(r)
     spot = where(r, "structure minecraft:village_plains") or where(r, "structure minecraft:village_taiga")
@@ -336,6 +388,10 @@ def main():
             # What a survival player actually starts with: one or two spawner items, not
             # twelve folk. Can two settlers found a village that grows?
             village(r, "forest", count=2, days=5, label="pair forest", raided=False)
+        elif scenario == "epic":
+            days = int(sys.argv[2]) if len(sys.argv) > 2 else 60
+            minutes = int(sys.argv[3]) if len(sys.argv) > 3 else 300
+            epic(r, days, minutes)
         elif scenario == "long":
             # Ten game days in a forest: does the village grow up — ages, houses,
             # births — or only get through three days?

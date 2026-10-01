@@ -38,6 +38,7 @@ public final class SessionReset {
         Villages.resetForTests();
         VillagerTakeover.resetForTests();
         VillageSpawner.resetForTests();
+        Colonies.reset();
         AssistantEntity.resetRegistryForTests();
         Town.resetAll();
         Requests.resetAll();

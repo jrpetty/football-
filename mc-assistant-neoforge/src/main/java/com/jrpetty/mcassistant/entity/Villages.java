@@ -88,6 +88,7 @@ public final class Villages {
         BAD_LOTS.clear();
         WHY_NOT.clear();
         LAPS.clear();
+        DEFERRED.clear();
         FOUNDED.clear();
         LEAD.clear();
         LEAD_AT.clear();
@@ -488,24 +489,43 @@ public final class Villages {
                     com.jrpetty.mcassistant.village.VillageMath.ironWanted(folk));
                 if (built(villageId, "workshop") < 1) wants.add(new Need("a workshop", Task.BUILD, 1));
                 if (built(villageId, "watchtower") < 1) wants.add(new Need("a watchtower", Task.BUILD, 1));
+                if (built(villageId, "market") < 1) wants.add(new Need("a market", Task.BUILD, 1));
                 need(wants, level, v, "food in the stores", Task.FOOD, foodNow);
             }
             case DIAMOND -> {
                 need(wants, level, v, "diamonds", Task.DIAMOND,
                     com.jrpetty.mcassistant.village.VillageMath.diamondsWanted(folk));
-                // And now the armour is for EVERYBODY, not only the watch.
+                // Twice the Iron Age's metal. It asked for armour for EVERYBODY (twenty-four
+                // a head, nine hundred and sixty for a village of forty), which is a wall and
+                // not a goal: the best real-terrain village held nine.
                 need(wants, level, v, "iron", Task.IRON,
-                    com.jrpetty.mcassistant.village.VillageMath.ironForEveryone(folk));
+                    2 * com.jrpetty.mcassistant.village.VillageMath.ironWanted(folk));
                 if (built(villageId, "lighthouse") < 1) wants.add(new Need("a lighthouse", Task.BUILD, 1));
+                if (built(villageId, "chapel") < 1) wants.add(new Need("a chapel", Task.BUILD, 1));
+                need(wants, level, v, "food in the stores", Task.FOOD, foodNow);
             }
             case NETHER -> {
                 // The last thing a settlement builds for itself is a way out
-                // of the world it started in.
-                need(wants, level, v, "obsidian", Task.OBSIDIAN,
-                    com.jrpetty.mcassistant.village.VillageMath.obsidianWanted(folk));
-                need(wants, level, v, "diamonds", Task.DIAMOND,
-                    2 * com.jrpetty.mcassistant.village.VillageMath.diamondsWanted(folk));
-                need(wants, level, v, "food in the stores", Task.FOOD, foodNow);
+                // of the world it started in...
+                if (built(villageId, "gateway") < 1) {
+                    need(wants, level, v, "obsidian", Task.OBSIDIAN,
+                        com.jrpetty.mcassistant.village.VillageMath.obsidianWanted(folk));
+                    need(wants, level, v, "diamonds", Task.DIAMOND,
+                        2 * com.jrpetty.mcassistant.village.VillageMath.diamondsWanted(folk));
+                    wants.add(new Need("a gateway", Task.BUILD, 1));
+                    need(wants, level, v, "food in the stores", Task.FOOD, foodNow);
+                    break;
+                }
+                // ...and after that it never stops: every great work raised asks the
+                // stores for a quarter more of everything before the next.
+                int r = renown(villageId);
+                int more = 4 + r;                        // in quarters
+                need(wants, level, v, "food in the stores", Task.FOOD, foodNow * more / 4);
+                need(wants, level, v, "stone", Task.STONE,
+                    com.jrpetty.mcassistant.village.VillageMath.stoneWanted(folk) * more / 4);
+                need(wants, level, v, "iron", Task.IRON,
+                    com.jrpetty.mcassistant.village.VillageMath.ironWanted(folk) * more / 4);
+                wants.add(new Need("a " + nextGreatWork(villageId), Task.BUILD, 1));
             }
         }
         return wants;
@@ -656,6 +676,7 @@ public final class Villages {
     }
 
     public static boolean projectDue(UUID villageId, long gameTime) {
+        if (gameTime > CLOCK) CLOCK = gameTime;
         long gap = gapFor(villageId);
         return gameTime - LAST_PROJECT.getOrDefault(villageId, -gap) >= gap;
     }
@@ -687,6 +708,12 @@ public final class Villages {
     public static void retryShortly(UUID villageId, long gameTime) {
         long gap = gapFor(villageId);
         LAST_PROJECT.put(villageId, gameTime - gap + Math.min(1200L, gap / 4));
+    }
+
+    /** This village sent out a founding party. Written down beside its buildings, so it
+     *  is carried by the folk across a restart like everything else the village has done. */
+    public static void noteColony(UUID villageId) {
+        BUILT.computeIfAbsent(villageId, k -> new ArrayList<>()).add("colony");
     }
 
     /** Something actually went up. Only finished buildings count toward the
@@ -741,6 +768,30 @@ public final class Villages {
     }
 
     /**
+     * Projects set aside for now, and until when. A building with no ground for it, or
+     * one the stores cannot pay for yet, used to stand at the head of the list and hold
+     * up everything behind it: every Stone Age village on four real maps had "no lot for
+     * the fortify" for days, and the smeltery and the meeting hall waited behind the
+     * wall, so not one of them came of age. Set aside, it gets another look later and
+     * the next thing on the list goes up meanwhile.
+     */
+    private static final Map<UUID, Map<String, Long>> DEFERRED = new ConcurrentHashMap<>();
+    /** The latest game time any village has been asked about (see projectDue). */
+    private static volatile long CLOCK;
+
+    public static void defer(UUID villageId, String project, long until) {
+        DEFERRED.computeIfAbsent(villageId, k -> new ConcurrentHashMap<>()).put(project, until);
+    }
+
+    /** Not set aside: the village may take this project on now. */
+    private static boolean open(UUID villageId, String project) {
+        Map<String, Long> d = DEFERRED.get(villageId);
+        if (d == null) return true;
+        Long until = d.get(project);
+        return until == null || CLOCK >= until;
+    }
+
+    /**
      * What the settlement should put up next, or null when it is content for
      * now. Buildings follow the age: a village in the Wood Age puts up timber
      * — a store, a shelter, houses — and only once it is quarrying does it
@@ -753,33 +804,75 @@ public final class Villages {
      */
     @Nullable
     public static String nextProject(UUID villageId) {
+        for (String p : projectsWanted(villageId)) {
+            if (open(villageId, p)) return p;
+        }
+        return null;
+    }
+
+    /**
+     * Everything the village would build now, most pressing first. The first one not
+     * set aside is the next project (see {@link #defer}); the rest wait their turn.
+     */
+    public static List<String> projectsWanted(UUID villageId) {
+        List<String> out = new ArrayList<>();
         int folk = headcount(villageId);
-        if (folk == 0) return null;
+        if (folk == 0) return out;
         Age at = age(villageId);
 
-        if (built(villageId, "storage") < 1) return "storage";
-        if (built(villageId, "shelter") < 1) return "shelter";
+        if (built(villageId, "storage") < 1) out.add("storage");
+        if (built(villageId, "shelter") < 1) out.add("shelter");
         // Room before anything else: a village with every home full stops growing, and
         // growing is the whole of how it gets the hands for everything after this.
-        if (folk >= housing(villageId) - 2 || built(villageId, "house") < 1) return "house";
-        if (built(villageId, "well") < 1) return "well";
-        if (at == Age.WOOD) return null;
+        boolean house = folk >= housing(villageId) - 2 || built(villageId, "house") < 1;
+        if (house) out.add("house");
+        if (built(villageId, "well") < 1) out.add("well");
+        if (at == Age.WOOD) return out;
 
-        if (built(villageId, "fortify") < 1) return "fortify";        // the wall
+        if (built(villageId, "fortify") < 1) out.add("fortify");        // the wall
         // A Stone Age village keeps a few homes spare, not just one.
-        if (folk >= housing(villageId) - 5) return "house";
-        if (built(villageId, "smeltery") < 1) return "smeltery";
-        if (built(villageId, "hall") < 1) return "hall";
-        if (at == Age.STONE) return null;
+        if (!house && folk >= housing(villageId) - 5) out.add("house");
+        if (built(villageId, "smeltery") < 1) out.add("smeltery");
+        if (built(villageId, "hall") < 1) out.add("hall");
+        if (at == Age.STONE) return out;
 
-        if (built(villageId, "workshop") < 1) return "workshop";
+        if (built(villageId, "workshop") < 1) out.add("workshop");
         // Whatever the headcount: the Iron Age asks for it, and a village
         // that has lost people must still be able to finish its list.
-        if (built(villageId, "watchtower") < 1) return "watchtower";
-        if (at == Age.IRON) return penIfWanted(villageId, folk);
+        if (built(villageId, "watchtower") < 1) out.add("watchtower");
+        if (built(villageId, "market") < 1) out.add("market");
+        String pen = penIfWanted(villageId, folk);
+        if (pen != null) out.add(pen);
+        if (at == Age.IRON) return out;
 
-        if (built(villageId, "lighthouse") < 1) return "lighthouse";
-        return penIfWanted(villageId, folk);
+        if (built(villageId, "lighthouse") < 1) out.add("lighthouse");
+        if (built(villageId, "chapel") < 1) out.add("chapel");
+        if (at == Age.DIAMOND) return out;
+
+        if (built(villageId, "gateway") < 1) out.add("gateway");
+        // And then the great works, one after another for as long as the village stands:
+        // a town that has been everywhere its ages lead goes on building.
+        out.add(nextGreatWork(villageId));
+        return out;
+    }
+
+    /**
+     * What a village builds once it has come through every age: a granary, barracks and
+     * a monument, round and round, each on new ground and each asking the stores for more
+     * than the last (see {@link #renown}). It is what keeps a finished village growing.
+     */
+    public static final List<String> GREAT_WORKS = List.of("granary", "barracks", "monument");
+
+    /** How many great works this village has raised: its renown. */
+    public static int renown(UUID villageId) {
+        int n = 0;
+        for (String g : GREAT_WORKS) n += built(villageId, g);
+        return n;
+    }
+
+    /** The great work this village raises next. */
+    public static String nextGreatWork(UUID villageId) {
+        return GREAT_WORKS.get(renown(villageId) % GREAT_WORKS.size());
     }
 
     /**
@@ -790,7 +883,8 @@ public final class Villages {
      * fast as it builds homes, and that is the reason it builds them.
      */
     public static int housing(UUID villageId) {
-        return 12 + 5 * built(villageId, "house") + 3 * built(villageId, "shelter") + 6 * built(villageId, "hall");
+        return 12 + 5 * built(villageId, "house") + 3 * built(villageId, "shelter") + 6 * built(villageId, "hall")
+            + 6 * built(villageId, "barracks");
     }
 
     /**
@@ -842,6 +936,12 @@ public final class Villages {
             case "watchtower" -> "a watchtower, to see trouble coming";
             case "lighthouse" -> "a lighthouse, so anyone out after dark can find the way home";
             case "pen" -> "a pen, for the rancher's herd";
+            case "market" -> "a market, stalls under one roof for what the village makes";
+            case "chapel" -> "a chapel, which the Diamond Age asks for";
+            case "gateway" -> "a gateway of obsidian, the way out of the world the Nether Age is named for";
+            case "granary" -> "a granary (great work " + (renown(villageId) + 1) + "): a town that has come through every age goes on building";
+            case "barracks" -> "barracks (great work " + (renown(villageId) + 1) + "), room for six more and a home for the watch";
+            case "monument" -> "a monument (great work " + (renown(villageId) + 1) + ") to how far the village has come";
             default -> "the " + project;
         };
     }
@@ -978,7 +1078,17 @@ public final class Villages {
 
         Site site = null;
         if (project.equals("fortify")) {
+            // The wall rings the heart and follows the ground wherever it goes (BuildGoal), so
+            // it needs no lot, only the height of the heart to measure from. It used to be
+            // given one only where the heart itself would do for a house — dry, flat to four
+            // blocks, nothing standing — and every Stone Age village on four real maps had
+            // something at its heart (the founding stores, a building, a slope), had "no lot
+            // for the fortify" for days, and never came of age.
             BlockPos ground = groundFor(level, v.centre().getX(), v.centre().getZ(), false, Integer.MIN_VALUE, 0, null);
+            if (ground == null) {
+                int y = heartGround(level, v.centre());
+                if (y != Integer.MIN_VALUE) ground = new BlockPos(v.centre().getX(), y, v.centre().getZ());
+            }
             if (ground != null) site = new Site(ground, net.minecraft.core.Direction.NORTH, WALL_RADIUS);
         } else {
             java.util.Set<Long> bad = BAD_LOTS.computeIfAbsent(villageId, k -> ConcurrentHashMap.newKeySet());

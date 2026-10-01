@@ -214,6 +214,25 @@ public class VillageGameTests {
         var pen = BuildGoal.partCounts("pen", 13);
         helper.assertTrue(pen.getOrDefault(BuildGoal.Part.FENCE, 0) >= 20 && pen.getOrDefault(BuildGoal.Part.GATE, 0) == 1,
             "the pen is a ring of fence with a gate, wants " + pen);
+        // The later ages' buildings and the great works.
+        var market = BuildGoal.partCounts("market", 13);
+        helper.assertTrue(market.getOrDefault(BuildGoal.Part.FENCE, 0) == 24 && market.getOrDefault(BuildGoal.Part.CHEST, 0) == 2
+                && market.getOrDefault(BuildGoal.Part.CRAFTING_TABLE, 0) == 2 && market.getOrDefault(BuildGoal.Part.FURNACE, 0) == 1,
+            "the market is a roof on eight posts three high over two chests, two benches and a furnace, wants " + market);
+        var chapel = BuildGoal.partCounts("chapel", 13);
+        helper.assertTrue(chapel.getOrDefault(BuildGoal.Part.WINDOW, 0) == 13 && chapel.getOrDefault(BuildGoal.Part.CRAFTING_TABLE, 0) == 1,
+            "the chapel has thirteen windows and an altar, wants " + chapel);
+        var gateway = BuildGoal.partCounts("gateway", 13);
+        helper.assertTrue(gateway.getOrDefault(BuildGoal.Part.OBSIDIAN, 0) == 10 && gateway.getOrDefault(BuildGoal.Part.BLOCK, 0) == 4,
+            "the gateway is a ten-obsidian frame with stone corners, wants " + gateway);
+        var granary = BuildGoal.partCounts("granary", 13);
+        helper.assertTrue(granary.getOrDefault(BuildGoal.Part.CHEST, 0) == 3, "the granary holds three chests, wants " + granary);
+        var barracks = BuildGoal.partCounts("barracks", 13);
+        helper.assertTrue(barracks.getOrDefault(BuildGoal.Part.BED, 0) == 4 && barracks.getOrDefault(BuildGoal.Part.CHEST, 0) == 2,
+            "the barracks have four bunks and two chests, wants " + barracks);
+        var monument = BuildGoal.partCounts("monument", 13);
+        helper.assertTrue(monument.getOrDefault(BuildGoal.Part.BLOCK, 0) == 17 && monument.getOrDefault(BuildGoal.Part.TORCH, 0) == 1,
+            "the monument is a plinth, a step, a pillar and a light, wants " + monument);
         helper.succeed();
     }
 
@@ -399,6 +418,137 @@ public class VillageGameTests {
             } else if (t >= 6200) {
                 helper.fail("hall and well not both built in 6200 ticks: " + built + " — " + builder.debugLine());
             }
+        });
+    }
+
+    /** The later ages' buildings and a great work, raised for real: the market's fence
+     *  posts and roof, the gateway's obsidian frame, the monument's pillar. */
+    @GameTest(template = EMPTY, timeoutTicks = 9000, batch = "t14_great_works")
+    public static void t14_great_works(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(1000);
+        Kit.hold(level, 3800, 3800, 48);
+        Kit.prepare(level, 3800, 3800, 48);
+        BlockPos heart = Kit.surface(level, 3800, 3800);
+        VillageFolkEntity builder = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(builder != null, "could not found a village for the great works");
+        Villages.Village v = Villages.nearest(level, heart, 100);
+        BlockPos marketAt = Kit.surface(level, 3814, 3800);
+        BlockPos gateAt = Kit.surface(level, 3788, 3800);
+        BlockPos monumentAt = Kit.surface(level, 3800, 3814);
+        for (int i = 0; i < 2; i++) builder.insertItem(new ItemStack(Items.COBBLESTONE, 64));
+        builder.insertItem(new ItemStack(Items.OAK_FENCE, 24));
+        builder.insertItem(new ItemStack(Items.CHEST, 2));
+        builder.insertItem(new ItemStack(Items.CRAFTING_TABLE, 2));
+        builder.insertItem(new ItemStack(Items.FURNACE, 1));
+        builder.insertItem(new ItemStack(Items.TORCH, 8));
+        builder.insertItem(new ItemStack(Items.OBSIDIAN, 10));
+        builder.enqueue(Job.buildAt("market", marketAt, Direction.WEST, 0));
+        builder.enqueue(Job.buildAt("gateway", gateAt, Direction.EAST, 0));
+        builder.enqueue(Job.buildAt("monument", monumentAt, Direction.NORTH, 0));
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (level.getDayTime() % 24000 > 11000) level.setDayTime(1000);      // building is day work
+            if (t % 1200 == 0) Kit.log("t14 @" + t + " built=" + Villages.builtList(v.id()) + " — " + builder.debugLine());
+            var built = Villages.builtList(v.id());
+            if (built.contains("market") && built.contains("gateway") && built.contains("monument")) {
+                int fences = count(level, marketAt, 3, 0, 2, st -> st.is(net.minecraft.tags.BlockTags.FENCES));
+                int obsidian = count(level, gateAt, 3, 0, 4, st -> st.is(Blocks.OBSIDIAN));
+                boolean marketRoof = !level.getBlockState(marketAt.above(4)).isAir();
+                boolean pillar = !level.getBlockState(monumentAt.above(4)).isAir();
+                Kit.log("t14 stand at tick " + t + ": market fences " + fences + ", roof " + marketRoof
+                    + "; gateway obsidian " + obsidian + "; monument pillar " + pillar);
+                helper.assertTrue(fences == 24, "the market stands on eight posts three high, found " + fences + " fence");
+                helper.assertTrue(marketRoof, "the market's raised roof should be up");
+                helper.assertTrue(obsidian == 10, "the gateway is a frame of ten obsidian, found " + obsidian);
+                helper.assertTrue(pillar, "the monument's pillar should be up");
+                helper.succeed();
+            } else if (t >= 8800) {
+                helper.fail("market, gateway and monument not all built in 8800 ticks: " + built + " — " + builder.debugLine());
+            }
+        });
+    }
+
+    /** How many blocks round {@code at} (this far each way, these heights) match. */
+    private static int count(ServerLevel level, BlockPos at, int half, int lo, int hi,
+                             java.util.function.Predicate<net.minecraft.world.level.block.state.BlockState> what) {
+        int n = 0;
+        for (BlockPos p : BlockPos.betweenClosed(at.offset(-half, lo, -half), at.offset(half, hi, half))) {
+            if (what.test(level.getBlockState(p))) n++;
+        }
+        return n;
+    }
+
+    /** What a village builds next, and in what order, all the way past the last age: a
+     *  project that cannot go ahead is set aside and the next one goes up; a village that
+     *  has come through every age raises its gateway and then the great works, for ever. */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "t15_onward")
+    public static void t15_onward(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        long now = level.getGameTime();
+        java.util.UUID stone = java.util.UUID.randomUUID();
+        Villages.restore(level, stone, new BlockPos(4200, 64, 4200), Villages.Age.STONE,
+            List.of("storage", "shelter", "house", "house", "well"), 15);
+        Villages.projectDue(stone, now);
+        String first = Villages.nextProject(stone);
+        helper.assertTrue("fortify".equals(first), "a Stone Age village wants its wall first, got " + first);
+        Villages.defer(stone, "fortify", now + 1000000L);
+        String meanwhile = Villages.nextProject(stone);
+        Kit.log("t15 Stone Age: first " + first + ", with the wall set aside " + meanwhile);
+        helper.assertTrue("smeltery".equals(meanwhile),
+            "with the wall set aside the smeltery should go up meanwhile, got " + meanwhile);
+
+        java.util.UUID late = java.util.UUID.randomUUID();
+        Villages.restore(level, late, new BlockPos(4600, 64, 4600), Villages.Age.NETHER,
+            List.of("storage", "shelter", "house", "house", "house", "well", "fortify", "smeltery", "hall",
+                "workshop", "watchtower", "market", "pen", "lighthouse", "chapel"), 20);
+        List<String> order = new java.util.ArrayList<>();
+        int roomBefore = Villages.housing(late);
+        for (int i = 0; i < 5; i++) {
+            String next = Villages.nextProject(late);
+            order.add(next);
+            if (next == null) break;
+            Villages.noteProject(late, next, now);
+        }
+        Kit.log("t15 past the last age: " + order + ", renown " + Villages.renown(late)
+            + ", room " + roomBefore + " -> " + Villages.housing(late));
+        helper.assertTrue(order.equals(List.of("gateway", "granary", "barracks", "monument", "granary")),
+            "the Nether Age raises its gateway, then the great works go round: " + order);
+        helper.assertTrue(Villages.renown(late) == 4, "four great works raised, renown " + Villages.renown(late));
+        helper.assertTrue(Villages.housing(late) == roomBefore + 6, "the barracks are room for six more");
+        helper.succeed();
+    }
+
+    /** A grown village sends out a founding party: a new village of its own a long way
+     *  off, paid for out of the mother village's larder, and written down in its record. */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t16_colony")
+    public static void t16_colony(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 5000, 5000, 32);
+        Kit.hold(level, 5200, 5000, 32);
+        BlockPos heart = Kit.surface(level, 5000, 5000);
+        VillageFolkEntity founder = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(founder != null, "could not found the mother village");
+        Villages.Village mother = Villages.nearest(level, heart, 100);
+        int foodBefore = storedAt(level, heart, Items.BREAD);
+        BlockPos far = Kit.surface(level, 5200, 5000);
+        boolean sent = com.jrpetty.mcassistant.Colonies.found(level, mother, far, level.getGameTime());
+        helper.runAtTickTime(20, () -> {
+            Villages.Village colony = Villages.nearest(level, far, 40);
+            int folk = colony == null ? 0 : Villages.headcount(colony.id());
+            int foodAfter = storedAt(level, heart, Items.BREAD);
+            Kit.log("t16 colony sent " + sent + ": " + (colony == null ? "none" : colony.centre() + ", " + folk + " folk")
+                + "; mother's record " + Villages.builtList(mother.id()) + "; bread " + foodBefore + " -> " + foodAfter);
+            helper.assertTrue(sent && colony != null && !colony.id().equals(mother.id()),
+                "a new village should stand two hundred blocks out");
+            helper.assertTrue(folk == com.jrpetty.mcassistant.Colonies.party(),
+                "the colony is founded by a full party, found " + folk);
+            helper.assertTrue(Villages.builtList(mother.id()).contains("colony"), "the mother village remembers its colony");
+            helper.assertTrue(foodAfter < foodBefore, "the party is fed out of the mother village's larder");
+            helper.succeed();
         });
     }
 

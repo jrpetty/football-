@@ -43,6 +43,9 @@ public final class AssistantConfig {
     public static final ModConfigSpec.IntValue VILLAGE_LOADED_CHUNKS;
     public static final ModConfigSpec.BooleanValue REPLACE_VILLAGERS;
     public static final ModConfigSpec.BooleanValue PROTECT_TRADED_VILLAGERS;
+    public static final ModConfigSpec.BooleanValue VILLAGE_COLONIES;
+    public static final ModConfigSpec.IntValue VILLAGE_COLONY_AT;
+    public static final ModConfigSpec.IntValue VILLAGE_WORLD_CAP;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -152,6 +155,19 @@ public final class AssistantConfig {
                 "villagers you have actually met looks exactly like one that does not work.",
                 "Turn it on to keep a curated trading hall.")
             .define("protectTradedVillagers", false);
+        VILLAGE_COLONIES = b.comment(
+                "Let a grown village send settlers out to found a new village a couple of",
+                "hundred blocks away, which then grows up through the ages of its own.",
+                "This is how settlements spread across the map over a long game.")
+            .define("villageColonies", true);
+        VILLAGE_COLONY_AT = b.comment(
+                "How many people a village (of the Stone Age or later) must have before it",
+                "sends a founding party out. It sends one every two game days at most.")
+            .defineInRange("villageColonyAt", 40, 10, 500);
+        VILLAGE_WORLD_CAP = b.comment(
+                "The most Village Folk the whole world may hold before villages stop",
+                "sending out founding parties. Every one of them is a ticking entity.")
+            .defineInRange("villageWorldCap", 240, 20, 5000);
         b.pop();
 
         SPEC = b.build();
@@ -181,6 +197,9 @@ public final class AssistantConfig {
     public static int villageLoadedChunks() { return read(VILLAGE_LOADED_CHUNKS, 6); }
     public static boolean replaceVillagers() { return read(REPLACE_VILLAGERS, true); }
     public static boolean protectTradedVillagers() { return read(PROTECT_TRADED_VILLAGERS, false); }
+    public static boolean villageColonies() { return read(VILLAGE_COLONIES, true); }
+    public static int villageColonyAt() { return read(VILLAGE_COLONY_AT, 40); }
+    public static int villageWorldCap() { return read(VILLAGE_WORLD_CAP, 240); }
 
     /** Config values throw if read before the file is loaded (early world gen,
      *  datagen, a dedicated server still booting) — fall back rather than crash. */

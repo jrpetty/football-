@@ -245,7 +245,7 @@ public final class VillageSpawner {
     }
 
     @Nullable
-    private static BlockPos groundAt(ServerLevel level, int x, int z) {
+    static BlockPos groundAt(ServerLevel level, int x, int z) {
         // The height of the ground, not of a tree's crown — and of the live heightmap: a
         // chunk that is loaded has dropped its worldgen ones, and asking for those logs
         // an "Unprimed heightmap" error for every column (twenty in a natural-founding run).
@@ -259,7 +259,7 @@ public final class VillageSpawner {
      * and flat enough to build on — a village halfway up a cliff or standing
      * in a lake is not a village.
      */
-    private static boolean liveable(ServerLevel level, BlockPos ground) {
+    static boolean liveable(ServerLevel level, BlockPos ground) {
         if (ground.getY() < level.getSeaLevel()) return false;
         if (level.getBlockState(ground.below()).is(Blocks.WATER)) return false;
         if (level.getBlockState(ground.below()).isAir()) return false;

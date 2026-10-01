@@ -202,6 +202,9 @@ public final class VillageCommands {
         sb.append(". Built: ").append(Villages.builtList(v.id()));
         sb.append(". Room for ").append(Villages.housing(v.id()));
         sb.append(". Growing: ").append(Villages.growthNote(level, v.id()));
+        if (Villages.renown(v.id()) > 0) sb.append(". Renown ").append(Villages.renown(v.id()));
+        long colonies = Villages.builtList(v.id()).stream().filter("colony"::equals).count();
+        if (colonies > 0) sb.append(". Colonies founded: ").append(colonies);
         String next = Villages.nextProject(v.id());
         sb.append(". Next: ").append(Villages.whyBuild(v.id(), next));
         sb.append(". Short of:");

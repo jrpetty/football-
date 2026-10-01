@@ -488,6 +488,8 @@ public class VillageFolkEntity extends AssistantEntity {
         if (peekJob() != null) return;                 // already busy
         if (resting()) return;                         // off the clock for a bit
         if (movedOnFromSpentGround()) return;          // this patch is finished
+        pickaxeFromTheStores();                        // the iron, and then the diamond, pickaxe
+        if (seekTheSeam()) return;                     // dig where the village's metal is
         if (changedTrade()) return;                    // the village lost a trade
         if (raisedAChild(12.0)) return;                // the village grew
 
@@ -768,9 +770,108 @@ public class VillageFolkEntity extends AssistantEntity {
     }
 
     private int depthFor(StationTask trade, BlockPos site) {
-        return trade == StationTask.MINE
-            ? Math.max(level().getMinBuildHeight() + 8, site.getY() - 24)
-            : WorkZone.DEFAULT_DEPTH;
+        if (trade != StationTask.MINE) return WorkZone.DEFAULT_DEPTH;
+        int floor = level().getMinBuildHeight() + 8;
+        int shallow = site.getY() - 24;
+        UUID village = ownerId();
+        if (village != null && Villages.ageOf(village).ordinal() >= Villages.Age.STONE.ordinal()) {
+            return Math.max(floor, Math.min(shallow, IRON_SEAM_Y));
+        }
+        return Math.max(floor, shallow);
+    }
+
+    /**
+     * Where iron is thickest in the ground this game makes: around sixteen. A mine cut
+     * twenty-four under a hillside at seventy works the stone at forty-six, where there
+     * is next to none — every village on every real map held nine iron at most, and the
+     * Iron Age asks a village of twenty for a hundred and eight.
+     */
+    private static final int IRON_SEAM_Y = 16;
+    private int seamCheckTick = -100000;
+
+    /**
+     * A village's miners dig where its metal is. Once it is out of the Wood Age (stone it
+     * has; iron is what comes next) a mine is taken down to the iron seam; from the Diamond
+     * Age every other miner that carries an iron pickaxe goes on down to the diamonds,
+     * near the bottom of the world. The plot keeps its place; only its depth changes.
+     */
+    private boolean seekTheSeam() {
+        if (stationTask() != StationTask.MINE || peekJob() != null) return false;
+        WorkZone zone = workZone();
+        UUID village = ownerId();
+        if (zone == null || village == null) return false;
+        if (tickCount - seamCheckTick < 1200) return false;
+        seamCheckTick = tickCount;
+        Villages.Age at = Villages.ageOf(village);
+        if (at.ordinal() < Villages.Age.STONE.ordinal()) return false;
+        int floor = level().getMinBuildHeight() + 8;
+        int want = Math.max(floor, IRON_SEAM_Y);
+        if (at.ordinal() >= Villages.Age.DIAMOND.ordinal() && pickTierCarried() >= 3
+                && (getUUID().getLeastSignificantBits() & 1L) == 0L) {
+            want = floor;
+        }
+        if (zone.depth() <= want + 4) return false;              // there already, or deeper
+        assignPlot(WorkZone.around(zone.center(), zone.radius(), want), patchNameFor(StationTask.MINE));
+        setAutonomous(true);
+        brain("mine taken down to Y" + want + " for the " + (want == floor ? "diamonds" : "iron"));
+        return true;
+    }
+
+    private int pickCheckTick = -100000;
+
+    /**
+     * A stone pickaxe breaks iron ore for its iron and diamond ore for nothing, and only
+     * a diamond pickaxe takes obsidian. Nothing made a settler a better one: no village
+     * could ever have dug its way past the Iron Age. A miner of a village that has come
+     * to iron has one made out of the stores — three iron, and a coal to smelt each raw
+     * one — and in the Nether Age a diamond one out of three diamonds.
+     */
+    private void pickaxeFromTheStores() {
+        if (stationTask() != StationTask.MINE || villageCentre == null || ownerId() == null) return;
+        if (tickCount - pickCheckTick < 2400) return;
+        pickCheckTick = tickCount;
+        Villages.Age at = Villages.ageOf(ownerId());
+        int r = buildStoresRadius();
+        net.minecraft.world.item.Item diamond = net.minecraft.world.item.Items.DIAMOND;
+        if (at.ordinal() >= Villages.Age.NETHER.ordinal() && pickTierCarried() < 4) {
+            int before = countCarried(st -> st.is(diamond));
+            int got = drawFrom(villageCentre, st -> st.is(diamond), 3, r);
+            if (got >= 3) {
+                removeMatching(st -> st.is(diamond), 3);
+                insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND_PICKAXE));
+                brain("a diamond pickaxe made from the stores");
+                return;
+            }
+            returnTo(villageCentre, st -> st.is(diamond), before, r);
+        }
+        if (at.ordinal() >= Villages.Age.IRON.ordinal() && pickTierCarried() < 3) {
+            java.util.function.Predicate<net.minecraft.world.item.ItemStack> ingot =
+                st -> st.is(net.minecraft.world.item.Items.IRON_INGOT);
+            java.util.function.Predicate<net.minecraft.world.item.ItemStack> raw =
+                st -> st.is(net.minecraft.world.item.Items.RAW_IRON);
+            java.util.function.Predicate<net.minecraft.world.item.ItemStack> fuel =
+                st -> st.is(net.minecraft.world.item.Items.COAL) || st.is(net.minecraft.world.item.Items.CHARCOAL);
+            int ingotsBefore = countCarried(ingot), rawBefore = countCarried(raw), fuelBefore = countCarried(fuel);
+            int ingots = Math.min(3, ingotsBefore + drawFrom(villageCentre, ingot, Math.max(0, 3 - ingotsBefore), r));
+            int raws = 0;
+            if (ingots < 3) {
+                int want = 3 - ingots;
+                raws = Math.min(want, rawBefore + drawFrom(villageCentre, raw, Math.max(0, want - rawBefore), r));
+                drawFrom(villageCentre, fuel, Math.max(0, raws - fuelBefore), r);
+            }
+            if (ingots + raws >= 3 && countCarried(fuel) >= raws) {
+                removeMatching(ingot, ingots);
+                removeMatching(raw, raws);
+                removeMatching(fuel, raws);
+                insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_PICKAXE));
+                brain("an iron pickaxe made from the stores");
+                return;
+            }
+            // Not enough yet: what was taken goes back.
+            returnTo(villageCentre, ingot, ingotsBefore, r);
+            returnTo(villageCentre, raw, rawBefore, r);
+            returnTo(villageCentre, fuel, fuelBefore, r);
+        }
     }
 
     private String patchNameFor(StationTask trade) {
@@ -1064,7 +1165,9 @@ public class VillageFolkEntity extends AssistantEntity {
      */
     private boolean deepenShaft() {
         WorkZone zone = workZone();
-        if (zone == null || veteranLevel() < 20) return false;
+        // An iron pickaxe, not twenty levels of experience: a village's miners stood at
+        // level one after three game days, and diamond ore wants iron to break.
+        if (zone == null || pickTierCarried() < 3) return false;
         int floor = level().getMinBuildHeight() + 8;
         if (zone.depth() <= floor + 4) return false;          // already down there
         assignPlot(WorkZone.around(zone.center(), zone.radius(), floor),
@@ -1354,12 +1457,21 @@ public class VillageFolkEntity extends AssistantEntity {
         Villages.Site site = Villages.siteFor(server, village, project);
         if (site == null) {
             buildNote("build: no lot for the " + project + " (" + Villages.lotReport(village) + ")");
+            // Set aside, so the next thing on the list goes up meanwhile (Villages.defer).
+            Villages.defer(village, project, now + 6000L);
             Villages.retryShortly(village, now);
             return;
         }
         // No point taking charge of a building the village cannot yet afford —
         // the lead does not lend itself out while it holds the post.
-        if (!affordsTimberFor(project, site)) { buildNote("build: cannot afford the " + project); Villages.retrySoon(village, now); return; }
+        if (!affordsTimberFor(project, site)) {
+            buildNote("build: cannot afford the " + project);
+            // Something cheaper further down the list may be affordable now: the smeltery
+            // need not wait while the stone for the wall piles up.
+            Villages.defer(village, project, now + 2400L);
+            Villages.retrySoon(village, now);
+            return;
+        }
         // One hand raises a building from first load to last block, so the
         // materials pile up in one pack rather than being scattered.
         if (!Villages.isLead(village, getUUID(), now)) {
@@ -1377,6 +1489,9 @@ public class VillageFolkEntity extends AssistantEntity {
         // A look that finds the stores not yet up to it is not a project begun,
         // so it costs two minutes and not the eight that pace real building.
         if (!stockedFor(project, site)) {
+            // A part nobody can make (obsidian before anybody has found any), or a making
+            // that has not come to anything four visits running: set this one aside a while.
+            if (stuckOnAPart) Villages.defer(village, project, now + 2400L);
             // Setting about making a chest or a furnace takes a few seconds, so look again in
             // thirty; a wait for stone takes minutes.
             // (Not if the same making has been set in hand four times running: whatever is
@@ -1471,6 +1586,7 @@ public class VillageFolkEntity extends AssistantEntity {
      * fetched is exactly what the builder will place.
      */
     private boolean stockedFor(String project, Villages.Site site) {
+        stuckOnAPart = false;
         BlockPos heart = villageCentre;
         UUID village = ownerId();
         if (heart == null || village == null) return false;
@@ -1510,12 +1626,14 @@ public class VillageFolkEntity extends AssistantEntity {
                 if (got > 0) { Villages.leadProgress(village, getUUID(), now); drewForBuild = true; }
             }
             if (have < want) {
-                boolean making = craftNow(fx.recipe(), want - have);
-                buildNote("build: " + (making ? "making " : "cannot make ") + (want - have) + " " + fx.recipe());
+                boolean making = fx.recipe() != null && craftNow(fx.recipe(), want - have);
+                String what = fx.recipe() != null ? fx.recipe() : fx.part().name().toLowerCase();
+                buildNote("build: " + (making ? "making " : "cannot make ") + (want - have) + " " + what);
                 if (making) { Villages.leadProgress(village, getUUID(), now); madeAFixture = true; drewForBuild = true; }
-                String ask = fx.recipe() + " x" + (want - have);
+                String ask = what + " x" + (want - have);
                 fixtureTries = ask.equals(lastFixtureAsk) ? fixtureTries + 1 : 0;
                 lastFixtureAsk = ask;
+                stuckOnAPart = !making || fixtureTries >= 4;
                 return false;                                    // made, or cannot be: either way, not this visit
             }
         }
@@ -1537,12 +1655,14 @@ public class VillageFolkEntity extends AssistantEntity {
 
     /** This visit set about making a fixture (so the next look is soon). */
     private boolean madeAFixture;
+    /** This visit found a part that cannot be had, or a making that keeps coming to nothing. */
+    private boolean stuckOnAPart;
     /** The last fixture set in hand, and how many visits running it has been the same one. */
     private String lastFixtureAsk = "";
     private int fixtureTries;
 
-    /** A blueprint part a builder must have in hand, and what makes one. */
-    private record Fixture(BuildGoal.Part part, String recipe) {}
+    /** A blueprint part a builder must have in hand, and what makes one (null: nothing does). */
+    private record Fixture(BuildGoal.Part part, @Nullable String recipe) {}
 
     private static final java.util.List<Fixture> FIXTURES = java.util.List.of(
         new Fixture(BuildGoal.Part.CHEST, "chest"),
@@ -1550,7 +1670,9 @@ public class VillageFolkEntity extends AssistantEntity {
         new Fixture(BuildGoal.Part.CRAFTING_TABLE, "crafting_table"),
         new Fixture(BuildGoal.Part.LADDER, "ladder"),
         new Fixture(BuildGoal.Part.FENCE, "oak_fence"),
-        new Fixture(BuildGoal.Part.GATE, "oak_fence_gate"));
+        new Fixture(BuildGoal.Part.GATE, "oak_fence_gate"),
+        // Dug, never made: from the stores or not at all.
+        new Fixture(BuildGoal.Part.OBSIDIAN, null));
 
     // ------------------------------ persistence ------------------------------
 

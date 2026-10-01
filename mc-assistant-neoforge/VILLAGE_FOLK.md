@@ -44,10 +44,32 @@ own, and each step is there for a reason the village can see.
 5. **A well** at the middle marks the camp as a village, and the Wood Age asks for it
    with timber, food in the stores, the storehouse, the shelter and enough houses.
 6. **The Stone Age:** quarry stone and coal, a **wall** round the village (it follows
-   the ground), more houses, a **smeltery** of three furnaces, and a **meeting hall**.
-7. **The Iron Age:** iron for the watch's armour and everybody's tools, a
-   **workshop** and a **watchtower**. **Diamond Age:** diamonds and a **lighthouse**.
-   **Nether Age:** obsidian for a way out of the world.
+   the ground and goes round the houses, fields and ponds already there), more
+   houses, a **smeltery** of three furnaces, and a **meeting hall**. The miners take
+   their mines down to the iron seam (height 16, where this game puts the most
+   iron) to be ready for the next age.
+7. **The Iron Age:** iron for the watch's armour and everybody's tools — each miner
+   has an iron pickaxe made from the stores — a **workshop**, a **watchtower** and a
+   **market**.
+8. **The Diamond Age:** every other miner with an iron pickaxe goes down to the
+   diamonds near the bottom of the world; twice the Iron Age's iron, a
+   **lighthouse** and a **chapel**.
+9. **The Nether Age:** a diamond pickaxe for the miners, obsidian, and an obsidian
+   **gateway** (never lit).
+10. **And then it never stops.** A village that has come through every age raises
+    **great works** — a granary, barracks, a monument, round and round, each on new
+    ground — and every one asks the stores for a quarter more food, stone and iron
+    than the last. `/village status` shows its **renown** (great works raised).
+11. **Colonies.** From the Stone Age on, a village of forty sends a founding party of
+    eight a couple of hundred blocks out, fed from its own larder, and they found a
+    village of their own that climbs the ages from the start — at most one every two
+    game days from any one village, and never past the folk the whole world may
+    hold (`villageWorldCap`). Over a long game the settlements spread across the map.
+
+A project that cannot go ahead — no ground for it, the stores cannot pay for it yet,
+or a part nobody can make yet (obsidian) — is set aside for a few minutes and the
+next thing on the list goes up meanwhile, so one stuck building never holds up an
+age.
 
 Each age is announced once in chat (the only thing a village ever says).
 `/village status` shows what it is short of, how much room it has, whether it is
@@ -68,6 +90,12 @@ growing (and if not, what it is waiting for), and what it will build next and wh
 | Watchtower | 3×3 | A lookout platform up a ladder |
 | Lighthouse | 3×3 | Twelve high, ladder inside, lit crown |
 | Pen | 7×7 | Fence ring with a gate, once there is a rancher |
+| Market | 7×7 | A roof on eight fence posts over two chests, two benches and a furnace (Iron Age) |
+| Chapel | 5×7 | Walls four high with tall windows, a ridged roof, a lit altar (Diamond Age) |
+| Gateway | 4×5 | An obsidian portal frame with stone corners, never lit (Nether Age) |
+| Granary | 5×5 | Corners cut away, slit windows, stepped roof, three chests (great work) |
+| Barracks | 7×7 | Bunks, chests and a bench; room for six (great work) |
+| Monument | 3×3 | Plinth, step, pillar and a light (great work) |
 
 Builders pick the flattest nearby lot that costs least, level it (filling the low
 side, felling any tree in the way and keeping the wood), and build from what they
@@ -92,9 +120,10 @@ actually carry: stone before planks, planks before logs.
   them: a root plant gives three or so to eat and each of those is a plant
   again, where a wheat plant gives one ear.
 * **Building** — one project at a time, one lead builder per project, on a lot
-  chosen once on the village's own grid: storage, shelter, houses, then (as the
-  village comes of age) a wall, a smeltery, a workshop, a watchtower, a
-  lighthouse. A lot is dry, within twelve blocks of the ground at the heart and
+  chosen once on the village's own grid: storage, shelter, houses, a well, then
+  (as the village comes of age) a wall, a smeltery, a meeting hall, a workshop, a
+  watchtower, a market, a lighthouse, a chapel, a gateway, and after that the great
+  works for ever. A lot is dry, within twelve blocks of the ground at the heart and
   no steeper than four blocks across; the builder fills the low side up to the
   floor and fells any tree in the way (keeping the wood). If the builders cannot
   get to a lot (three cells in a row out of reach and nothing standing) it is
@@ -115,7 +144,7 @@ actually carry: stone before planks, planks before logs.
   night. Nobody builds, mines or moves house after dark. Sleeping in a bed skips
   the night for everybody, wherever you are.
 * **Ages** — Wood → Stone → Iron → Diamond → Nether, each with its own list of
-  what the village needs. A village that reaches a new age says so, once, in
+  what the village needs, then great works with no end. A village that reaches a new age says so, once, in
   chat. Folk themselves never speak.
 * **Growth** — two folk who are fed and in work, standing together, have a
   chance of raising a child, paced across the whole village, while there is room
@@ -139,7 +168,8 @@ only its owner (nobody, for folk) can rearrange the pack.
 
 `naturalVillages`, `villageSpacing`, `villageMinFolk`, `villageMaxFolk`,
 `villageBreeding`, `villageGrowthCap`, `villageLoadedChunks`, `replaceVillagers`,
-`protectTradedVillagers`.
+`protectTradedVillagers`, `villageColonies` (on), `villageColonyAt` (40),
+`villageWorldCap` (240).
 
 ## How this is tested
 
@@ -160,8 +190,14 @@ Every push to CI:
   freezing the server;
 * builds a storehouse on a hillside and among trees (game tests `t11`, `t12`),
   so the ground work — filling the low side, felling the tree in the way — runs;
-* runs ten game days in a forest, to see whether a village grows up (ages,
-  houses, births) or only gets through three days;
+* plays **the long game** in a workflow of its own that a push never cancels
+  (`village-long-soak.yml`): one village founded the way a spawner founds one, left
+  alone for up to sixty game days, with a line a day saying how many folk, which
+  age, how many buildings, its renown and how many villages the world now holds —
+  published every ten minutes while it runs (`real-epic.txt`);
+* raises the later ages' buildings and a great work for real (game test `t14`), and
+  checks the order a village builds in all the way past the last age, and that a
+  grown village founds a colony (`t15`, `t16`);
 * runs a real game client on a virtual display (software OpenGL), has it join a
   server, stands a village and some armoured folk in front of it and publishes
   screenshots (`smoke-*.png`) and the client's log, because nothing else in CI

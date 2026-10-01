@@ -132,7 +132,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        scenario: [plains, forest, taiga, savanna, takeover, crowd, natural, restart, long, pair]
+        scenario: [plains, forest, taiga, savanna, takeover, crowd, natural, restart, pair]
     steps:
       - uses: actions/checkout@v4
 

@@ -42,16 +42,21 @@ public class BuildGoal extends Goal {
 
     public static final Set<String> STRUCTURES = Set.of(
         "wall", "platform", "shelter", "smeltery", "storage", "workshop", "watchtower",
-        "house", "room", "pen", "fortify", "lighthouse", "column", "well", "hall");
+        "house", "room", "pen", "fortify", "lighthouse", "column", "well", "hall",
+        "market", "chapel", "gateway", "granary", "barracks", "monument");
 
-    /** Half the width of a structure's footprint: the meeting hall is seven across, the
-     *  rest five or less. The ground work and the stocking read it. */
+    /** Half the width of a structure's footprint: the meeting hall, the market, the
+     *  barracks, the chapel's length and the gateway's step are seven across, the rest
+     *  five or less. The ground work and the stocking read it. */
     public static int halfOf(String structure) {
-        return "hall".equals(structure) ? 3 : 2;
+        return switch (structure) {
+            case "hall", "market", "barracks", "chapel", "gateway" -> 3;
+            default -> 2;
+        };
     }
 
     /** What goes in a blueprint cell. */
-    public enum Part { BLOCK, FURNACE, CHEST, CRAFTING_TABLE, TORCH, LADDER, FENCE, GATE, WINDOW, BED,
+    public enum Part { BLOCK, FURNACE, CHEST, CRAFTING_TABLE, TORCH, LADDER, FENCE, GATE, WINDOW, BED, OBSIDIAN,
         /** Not a part: something natural in the building's way that comes down first (leaves). */
         CLEAR }
 
@@ -121,7 +126,8 @@ public class BuildGoal extends Goal {
 
     /** Parts placed from any matching item (block taken from the item itself). */
     private static boolean isBlockPart(Part part) {
-        return part == Part.BLOCK || part == Part.FENCE || part == Part.GATE || part == Part.WINDOW;
+        return part == Part.BLOCK || part == Part.FENCE || part == Part.GATE || part == Part.WINDOW
+            || part == Part.OBSIDIAN;
     }
 
     /** Decorative parts skipped (not blocked-on) when we lack the item. */
@@ -144,6 +150,7 @@ public class BuildGoal extends Goal {
             case GATE -> s -> s.is(ItemTags.FENCE_GATES);
             case WINDOW -> s -> s.is(Items.GLASS) || s.is(Items.GLASS_PANE);
             case BED -> s -> s.is(ItemTags.BEDS);
+            case OBSIDIAN -> s -> s.is(Items.OBSIDIAN);
             case CLEAR -> s -> false;
         };
     }
@@ -160,6 +167,7 @@ public class BuildGoal extends Goal {
             case GATE -> "a fence gate (\"craft a fence gate\")";
             case WINDOW -> "glass";
             case BED -> "a bed (\"craft a bed\" — 3 wool, 3 planks)";
+            case OBSIDIAN -> "obsidian";
             case CLEAR -> "nothing";
         };
     }
@@ -303,15 +311,42 @@ public class BuildGoal extends Goal {
     private void followTheGround(BlockPos base) {
         List<Placement> moved = new ArrayList<>(plan.size());
         Map<Long, Integer> ground = new java.util.HashMap<>();
+        Map<Long, Boolean> fits = new java.util.HashMap<>();
         for (Placement p : plan) {
             int x = p.pos().getX();
             int z = p.pos().getZ();
-            int g = ground.computeIfAbsent(BlockPos.asLong(x, 0, z),
+            long key = BlockPos.asLong(x, 0, z);
+            int g = ground.computeIfAbsent(key,
                 k -> assistant.level().hasChunk(x >> 4, z >> 4) ? groundTop(assistant.level(), x, z) : base.getY());
+            // The ring is laid out before anybody looks at what stands on it. Thirteen
+            // blocks out from the heart it crosses houses, fields and ponds: a wall through
+            // a house fills its rooms, across a field it buries the crop. It goes round them.
+            if (!fits.computeIfAbsent(key, k -> wallFits(assistant.level(), x, z, g))) continue;
             moved.add(new Placement(new BlockPos(x, g + (p.pos().getY() - base.getY()), z), p.part()));
         }
         plan.clear();
         plan.addAll(moved);
+    }
+
+    /** May the wall stand on this column: open ground the world made, not a floor, a
+     *  field, a path, water, or anything somebody has put up there? */
+    public static boolean wallFits(net.minecraft.world.level.Level level, int x, int z, int g) {
+        if (!level.hasChunk(x >> 4, z >> 4)) return false;
+        BlockState ground = level.getBlockState(new BlockPos(x, g - 1, z));
+        if (!ground.getFluidState().isEmpty()) return false;                     // a pond, a river
+        if (ground.is(Blocks.FARMLAND) || ground.is(Blocks.DIRT_PATH)) return false;
+        if (ground.is(net.minecraft.tags.BlockTags.PLANKS) || ground.is(Blocks.COBBLESTONE)
+            || ground.is(net.minecraft.tags.BlockTags.SLABS) || ground.is(net.minecraft.tags.BlockTags.STAIRS)
+            || ground.hasBlockEntity()) {
+            return false;                                                         // somebody's floor
+        }
+        for (int dy = 0; dy <= 4; dy++) {
+            BlockState st = level.getBlockState(new BlockPos(x, g + dy, z));
+            if (st.isAir() || isNaturalLeaves(st)) continue;
+            if (st.canBeReplaced() && st.getFluidState().isEmpty()) continue;   // grass, flowers, snow
+            return false;                                                         // a crop, a fence, a wall
+        }
+        return true;
     }
 
     /** Leaves nobody placed: a tree's own, which rot and are in the way. */
@@ -568,7 +603,7 @@ public class BuildGoal extends Goal {
         Direction toDoor = facing.getOpposite(); // face the entrance = accessible
         return switch (part) {
             // Block-from-item parts are placed inline via takeBlockMatching, never here.
-            case BLOCK, FENCE, GATE, WINDOW -> Blocks.COBBLESTONE.defaultBlockState();
+            case BLOCK, FENCE, GATE, WINDOW, OBSIDIAN -> Blocks.COBBLESTONE.defaultBlockState();
             case FURNACE -> Blocks.FURNACE.defaultBlockState().setValue(AbstractFurnaceBlock.FACING, toDoor);
             case CHEST -> Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, toDoor);
             case CRAFTING_TABLE -> Blocks.CRAFTING_TABLE.defaultBlockState();
@@ -857,6 +892,156 @@ public class BuildGoal extends Goal {
                 out.add(new Placement(cell(center, right, facing, -2, -2), Part.TORCH));
                 out.add(new Placement(cell(center, right, facing, 2, -2), Part.TORCH));
                 out.add(new Placement(cell(center, right, facing, 0, 0), Part.TORCH));
+            }
+            case "market" -> {
+                // An open market, seven across: a roof on eight fence posts, open on every
+                // side, and under it the stalls — two chests, two benches, a furnace — with
+                // a light in the middle. The Iron Age asks for it.
+                BlockPos center = centered ? feet : feet.relative(facing, 5);
+                for (int dx = -3; dx <= 3; dx++) {
+                    for (int dz = -3; dz <= 3; dz++) {
+                        BlockPos col = cell(center, right, facing, dx, dz);
+                        boolean post = (Math.abs(dx) == 3 || dx == 0) && (Math.abs(dz) == 3 || dz == 0)
+                            && !(dx == 0 && dz == 0);
+                        if (post) {
+                            for (int h = 0; h <= 2; h++) out.add(new Placement(col.above(h), Part.FENCE));
+                        }
+                        out.add(new Placement(col.above(3), Part.BLOCK));                    // roof
+                        if (Math.abs(dx) <= 1 && Math.abs(dz) <= 1) {
+                            out.add(new Placement(col.above(4), Part.BLOCK));                // raised middle
+                        }
+                    }
+                }
+                out.add(new Placement(cell(center, right, facing, -2, 1), Part.CHEST));
+                out.add(new Placement(cell(center, right, facing, 2, 1), Part.CHEST));
+                out.add(new Placement(cell(center, right, facing, -2, -1), Part.CRAFTING_TABLE));
+                out.add(new Placement(cell(center, right, facing, 2, -1), Part.CRAFTING_TABLE));
+                out.add(new Placement(cell(center, right, facing, 0, 2), Part.FURNACE));
+                out.add(new Placement(cell(center, right, facing, 0, 0), Part.TORCH));
+            }
+            case "chapel" -> {
+                // A chapel, five wide and seven long: walls four high with tall windows down
+                // both sides and one over the altar, the door at the end facing the heart, a
+                // pitched roof with a ridge three wide down its length, and a lit altar at the
+                // far end. The Diamond Age asks for it.
+                BlockPos center = centered ? feet : feet.relative(facing, 5);
+                for (int dx = -2; dx <= 2; dx++) {
+                    for (int dz = -3; dz <= 3; dz++) {
+                        boolean edge = Math.abs(dx) == 2 || Math.abs(dz) == 3;
+                        BlockPos col = cell(center, right, facing, dx, dz);
+                        if (edge) {
+                            boolean door = dx == 0 && dz == -3;
+                            for (int h = 0; h <= 3; h++) {
+                                if (door && h <= 1) continue;
+                                boolean window = (Math.abs(dx) == 2 && (dz == -2 || dz == 0 || dz == 2) && (h == 1 || h == 2))
+                                    || (dx == 0 && dz == 3 && h == 2);
+                                out.add(new Placement(col.above(h), window ? Part.WINDOW : Part.BLOCK));
+                            }
+                        }
+                        out.add(new Placement(col.above(4), Part.BLOCK));                    // eaves
+                        if (Math.abs(dx) <= 1) out.add(new Placement(col.above(5), Part.BLOCK));   // ridge
+                    }
+                }
+                out.add(new Placement(cell(center, right, facing, 0, 2), Part.CRAFTING_TABLE));   // the altar
+                out.add(new Placement(cell(center, right, facing, -1, 2), Part.TORCH));
+                out.add(new Placement(cell(center, right, facing, 1, 2), Part.TORCH));
+                out.add(new Placement(cell(center, right, facing, 0, -1), Part.TORCH));
+            }
+            case "gateway" -> {
+                // An obsidian gateway: the frame of a way into the Nether, four wide and five
+                // high, stone at the corners, with a light either side. Never lit — what
+                // comes through a lit one would come into the village. The Nether Age asks
+                // for it, and it takes the ten obsidian that age sends the miners for.
+                BlockPos base = centered ? feet : feet.relative(facing, 3);
+                for (int dx = -2; dx <= 1; dx++) {
+                    for (int h = 0; h <= 4; h++) {
+                        boolean side = dx == -2 || dx == 1;
+                        boolean end = h == 0 || h == 4;
+                        if (!side && !end) continue;                                         // the opening
+                        BlockPos c = cell(base, right, facing, dx, 0).above(h);
+                        out.add(new Placement(c, side && end ? Part.BLOCK : Part.OBSIDIAN));
+                    }
+                }
+                out.add(new Placement(cell(base, right, facing, -3, 0), Part.TORCH));
+                out.add(new Placement(cell(base, right, facing, 2, 0), Part.TORCH));
+            }
+            case "granary" -> {
+                // A granary: five across with its corners cut away, stone walls four high
+                // with slits to let the air through, a stepped roof, three chests of grain
+                // and a light. The first of the great works.
+                BlockPos center = centered ? feet : feet.relative(facing, 4);
+                for (int dx = -2; dx <= 2; dx++) {
+                    for (int dz = -2; dz <= 2; dz++) {
+                        if (Math.abs(dx) == 2 && Math.abs(dz) == 2) continue;                // no corners
+                        boolean edge = Math.abs(dx) == 2 || Math.abs(dz) == 2;
+                        BlockPos col = cell(center, right, facing, dx, dz);
+                        if (edge) {
+                            boolean door = dx == 0 && dz == -2;
+                            boolean slit = (Math.abs(dx) == 2 && dz == 0) || (dz == 2 && dx == 0);
+                            for (int h = 0; h <= 3; h++) {
+                                if (door && h <= 1) continue;
+                                out.add(new Placement(col.above(h), slit && h == 2 ? Part.WINDOW : Part.BLOCK));
+                            }
+                        }
+                        out.add(new Placement(col.above(4), Part.BLOCK));                    // roof
+                        if (Math.abs(dx) <= 1 && Math.abs(dz) <= 1) {
+                            out.add(new Placement(col.above(5), Part.BLOCK));                // stepped
+                        }
+                    }
+                }
+                out.add(new Placement(cell(center, right, facing, -1, 1), Part.CHEST));
+                out.add(new Placement(cell(center, right, facing, 0, 1), Part.CHEST));
+                out.add(new Placement(cell(center, right, facing, 1, 1), Part.CHEST));
+                out.add(new Placement(cell(center, right, facing, 0, -1), Part.TORCH));
+            }
+            case "barracks" -> {
+                // Barracks, seven by seven: walls three high with windows, a stepped roof,
+                // four bunks down the sides when there is wool, chests for the watch's kit, a
+                // bench and light. Room for six more, and a great work.
+                BlockPos center = centered ? feet : feet.relative(facing, 5);
+                for (int dx = -3; dx <= 3; dx++) {
+                    for (int dz = -3; dz <= 3; dz++) {
+                        boolean edge = Math.abs(dx) == 3 || Math.abs(dz) == 3;
+                        BlockPos col = cell(center, right, facing, dx, dz);
+                        if (edge) {
+                            boolean door = dx == 0 && dz == -3;
+                            boolean window = !door && ((Math.abs(dx) == 3 && Math.abs(dz) == 1)
+                                || (dz == 3 && Math.abs(dx) == 1));
+                            for (int h = 0; h <= 2; h++) {
+                                if (door && h <= 1) continue;
+                                out.add(new Placement(col.above(h), window && h == 1 ? Part.WINDOW : Part.BLOCK));
+                            }
+                        }
+                        out.add(new Placement(col.above(3), Part.BLOCK));                    // roof
+                        if (Math.abs(dx) <= 2 && Math.abs(dz) <= 2) {
+                            out.add(new Placement(col.above(4), Part.BLOCK));                // stepped
+                        }
+                    }
+                }
+                for (int sx = -2; sx <= 2; sx += 4) {
+                    out.add(new Placement(cell(center, right, facing, sx, -1), Part.BED));
+                    out.add(new Placement(cell(center, right, facing, sx, 1), Part.BED));
+                }
+                out.add(new Placement(cell(center, right, facing, -1, 2), Part.CHEST));
+                out.add(new Placement(cell(center, right, facing, 1, 2), Part.CHEST));
+                out.add(new Placement(cell(center, right, facing, 0, 2), Part.CRAFTING_TABLE));
+                out.add(new Placement(cell(center, right, facing, -1, -2), Part.TORCH));
+                out.add(new Placement(cell(center, right, facing, 1, -2), Part.TORCH));
+            }
+            case "monument" -> {
+                // A monument: a stone plinth, a cross-shaped step, a pillar and a light on
+                // top, for the village to be seen by. The great works come round to one of
+                // these every third time.
+                BlockPos base = centered ? feet : feet.relative(facing, 3);
+                for (int dx = -1; dx <= 1; dx++) {
+                    for (int dz = -1; dz <= 1; dz++) {
+                        BlockPos col = cell(base, right, facing, dx, dz);
+                        out.add(new Placement(col, Part.BLOCK));                             // plinth
+                        if (dx == 0 || dz == 0) out.add(new Placement(col.above(1), Part.BLOCK));  // step
+                    }
+                }
+                for (int h = 2; h <= 4; h++) out.add(new Placement(base.above(h), Part.BLOCK));  // pillar
+                out.add(new Placement(base.above(5), Part.TORCH));
             }
             default -> { }
         }
