@@ -67,6 +67,10 @@ public final class VillageCommands {
                 .executes(ctx -> talk(ctx, ""))
                 .then(Commands.argument("words", com.mojang.brigadier.arguments.StringArgumentType.greedyString())
                     .executes(ctx -> talk(ctx, com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "words")))))
+            // Have the nearest folk say something out loud, in its bubble (for scripts and tests).
+            .then(Commands.literal("say").requires(src -> src.hasPermission(2))
+                .then(Commands.argument("words", com.mojang.brigadier.arguments.StringArgumentType.greedyString())
+                    .executes(ctx -> sayAloud(ctx, com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "words")))))
             // One folk of every trade, in its clothes and with its tool, stood in a
             // row to be looked at. Clear them with /kill @e[tag=folk_lineup].
             .then(Commands.literal("lineup").requires(src -> src.hasPermission(2))
@@ -125,6 +129,20 @@ public final class VillageCommands {
         if (words.isBlank()) com.jrpetty.mcassistant.entity.FolkTalk.open(near.get(0), player);
         else com.jrpetty.mcassistant.entity.FolkTalk.handle(near.get(0), player,
             com.jrpetty.mcassistant.entity.TalkTopic.SAY, words);
+        return 1;
+    }
+
+    private static int sayAloud(CommandContext<CommandSourceStack> ctx, String words)
+            throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        java.util.List<VillageFolkEntity> near = player.level().getEntitiesOfClass(VillageFolkEntity.class,
+            player.getBoundingBox().inflate(8.0), VillageFolkEntity::isAlive);
+        near.sort(java.util.Comparator.comparingDouble(f -> f.distanceToSqr(player)));
+        if (near.isEmpty()) {
+            ctx.getSource().sendFailure(Component.literal("Nobody within eight blocks to say it."));
+            return 0;
+        }
+        com.jrpetty.mcassistant.entity.FolkTalk.speak(near.get(0), words);
         return 1;
     }
 

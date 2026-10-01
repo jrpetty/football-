@@ -216,9 +216,16 @@ def main():
     look("8-lineup-right", px - 4.9, py - 0.4, line - 3.4, px - 4.9, py + 1.1, line)
     look("8b-lineup-far-right", px - 9.8, py - 0.4, line - 3.4, px - 9.8, py + 1.1, line)
     look("9-lineup-back", px, py + 0.4, line + 9.0, px, py + 1.0, line)
+    # What a folk says out loud, in the bubble over its head: it must read by day against
+    # the sky, and by night.
+    r.cmd("tp %s %.2f %.2f %.2f 0 0" % (USER, px, py + 1, line - 3.0))
+    say("bubble: " + r.cmd("execute as %s at @s run village say Good morning! Lovely day for it, isn't it?" % USER))
+    look("9c-bubble-day", px, py + 0.2, line - 3.6, px, py + 2.6, line, wait=2)
     r.cmd("time set 18000")
     miner = px + (8 - 3) * 1.4            # the fourth in the row is the miner
     look("10-lamp-at-night", miner, py - 0.5, line - 2.6, miner, py + 1.4, line, wait=8)
+    say("bubble: " + r.cmd("execute as %s at @s run village say Still up? Mind how you go in the dark." % USER))
+    look("10b-bubble-night", miner, py + 0.2, line - 3.6, miner, py + 2.6, line, wait=2)
     r.cmd("time set 6000")
     r.cmd("gamemode creative %s" % USER)
 

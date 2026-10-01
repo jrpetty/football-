@@ -88,7 +88,7 @@ public class TalkScreen extends Screen {
             new Choice("Town ledger", TalkTopic.LEDGER, "", "A book of the village's affairs: the stores, who lives where, what is going up, what it is short of"),
             new Choice("Elder's orders", TalkTopic.ORDERS, "", "What the elder wants the village to put its back into. Tell the elder what you think it should order"),
             new Choice("Your trade?", TalkTopic.WORKINGS, "", "How its work goes: its tools, where it works, what it needs and where its work goes"),
-            new Choice("From the stores…", TalkTopic.STORES, "", "Ask the storekeeper for something: type what and how many"),
+            new Choice("Ask the stores", TalkTopic.STORES, "", "Ask the storekeeper for something: type what and how many"),
             new Choice("What's short?", TalkTopic.SHORT, "", "What the village is short of, and how you could help"),
         };
         for (int i = 0; i < grid.length; i++) {
@@ -120,7 +120,7 @@ public class TalkScreen extends Screen {
         int sayY = row + bh + 6;
         say = new EditBox(font, x, sayY, W - 16 - 2 * 46 - 6, 18, Component.literal("Say something"));
         say.setMaxLength(FolkTalkPayload.MAX_TEXT);
-        say.setHint(Component.literal("Say anything… (a name, or \"could I have 16 bread?\")"));
+        say.setHint(Component.literal("Say anything… (\"8 bread, please?\")"));
         addRenderableWidget(say);
         addRenderableWidget(Button.builder(Component.literal("Say"), b -> sayTyped())
             .bounds(x + W - 16 - 2 * 46 - 3, sayY, 46, 18).build());
