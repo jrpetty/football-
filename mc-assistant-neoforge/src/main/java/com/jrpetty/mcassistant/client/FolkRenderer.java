@@ -256,10 +256,19 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         pose.popPose();
     }
 
+    /** The bubble's panel: dark and nearly solid, so the words stand out against a bright sky. */
+    private static final int BUBBLE_PANEL = 0xC0101018;
+    /** The bubble's words: a warm yellow, readable on the dark panel by day and by night. */
+    private static final int BUBBLE_INK = 0xFFFFD94A;
+
     /**
-     * What a folk is saying out loud, in a bubble over its head: dark words on a pale
-     * ground, lit whatever the hour, a few short lines at most. Folk never speak in
-     * the chat — this is the only place their words appear outside a conversation.
+     * What a folk is saying out loud, in a bubble over its head: yellow words on a dark
+     * panel, lit whatever the hour, a few short lines at most. Folk never speak in the
+     * chat — this is the only place their words appear outside a conversation.
+     *
+     * <p>Drawn the way the game draws a name tag, in two passes: the panel first (with a
+     * faint ghost of the words, seen through walls), then the words on top of it. Drawn in
+     * one pass, the panel sat in front of the words and the bubble read as a pale blank.
      */
     private boolean bubble(VillageFolkEntity folk, PoseStack pose, MultiBufferSource buffer) {
         FolkTalkClient.Said said = FolkTalkClient.saying(folk.getId(), folk.level().getGameTime());
@@ -276,8 +285,11 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         for (int i = 0; i < lines.size(); i++) {
             net.minecraft.util.FormattedCharSequence line = lines.get(i);
             float x = -font.width(line) / 2.0F;
-            font.drawInBatch(line, x, i * 10.0F, 0xFF262626, false, matrix, buffer,
-                net.minecraft.client.gui.Font.DisplayMode.NORMAL, 0xE6F4EFE2,
+            font.drawInBatch(line, x, i * 10.0F, 0x20FFFFFF, false, matrix, buffer,
+                net.minecraft.client.gui.Font.DisplayMode.SEE_THROUGH, BUBBLE_PANEL,
+                net.minecraft.client.renderer.LightTexture.FULL_BRIGHT);
+            font.drawInBatch(line, x, i * 10.0F, BUBBLE_INK, false, matrix, buffer,
+                net.minecraft.client.gui.Font.DisplayMode.NORMAL, 0,
                 net.minecraft.client.renderer.LightTexture.FULL_BRIGHT);
         }
         pose.popPose();
