@@ -48,7 +48,10 @@ export const CoopMixin = {
   },
   canOrder(a) {
     if (!this.coop) return true
-    return !a.npc && this.leaderOf(a) === NET.pid
+    if (a.npc) return false
+    const p = this.leaderOf(a)
+    // a friend who dropped out leaves their survivors to the run's leader
+    return p === NET.pid || (this.coop.role === 'leader' && !!this.dropped?.has(p))
   },
   coopPeers() {
     return Object.keys(this.roster).filter((p) => p !== NET.pid)
@@ -133,7 +136,11 @@ export const CoopMixin = {
     this.coopT -= dt
     this.coopSlowT -= dt
     if (this.coopT > 0) return
-    this.coopT = FRAME
+    // the claude.ai room carries fewer frames a second; a line that is
+    // backing up skips a frame rather than falling behind
+    const line = this.game.net?.c
+    this.coopT = line?.kind === 'room' ? 0.25 : FRAME
+    if (line?.backlog > 3) return
     const f = { k: 'rf', t: r1(this.elapsed), ho: this.hordeOn ? 1 : 0 }
     f.a = this.squad.map((a) => {
       return [a.data.id, r2(a.pos.x), r2(a.pos.z), r2(a.heading), a.lastMode || 'idle', r1(a.hp), a.downed ? 1 : 0, Math.ceil(a.bleed || 0), a.shots || 0, a.progV == null ? -1 : r2(a.progV), r2(a.pos.y || 0), r1(a.pack?.load || 0), agentStatus(a), a.npc ? 1 : 0]
@@ -166,12 +173,31 @@ export const CoopMixin = {
     }
     if (this.coopSlowT <= 0) {
       this.coopSlowT = SLOW
+      this.checkDropped()
+      // now and then everything again, in case a frame was dropped on the way
+      if ((this.coopFull = (this.coopFull || 0) + 1) % 5 === 0) {
+        this.sentC.clear()
+        this.sentT.clear()
+      }
       f.van = this.van.res
       f.vi = this.van.items
       f.u = this.utils
       f.packs = Object.fromEntries(this.squad.map((a) => [a.data.id, a.pack ? { res: a.pack.res, items: a.pack.items } : null]))
     }
     this.coopSend(f)
+  },
+  // Friends who lost their connection hand their survivors to the leader.
+  checkDropped() {
+    const on = this.game.net?.online
+    if (!on) return
+    this.dropped ??= new Set()
+    for (const p of this.coopPeers()) {
+      if (on.has(p) || this.dropped.has(p)) continue
+      this.dropped.add(p)
+      const names = this.squad.filter((a) => this.leaderOf(a) === p).map((a) => a.data.first)
+      if (names.length) this.toast(`${playerOf(p)?.name || 'A friend'} dropped out. You lead ${names.join(' and ')} for the rest of the run.`, 'bad')
+      this.renderSquad()
+    }
   },
   // A friend's order for one of their survivors.
   coopOrder(pid, d) {
@@ -218,8 +244,9 @@ export const CoopMixin = {
     if (this.coop?.role !== 'leader') return
     // what happened to everyone's survivors reaches the host first
     this.game.net?.flush?.()
-    this.coopSend({ k: 'runEnd', result, report: { result, title: report.title, text: report.text, loot: report.loot, items: (report.items || []).map((it) => ({ uid: it.uid, id: it.id, q: it.q, cond: it.cond, mods: it.mods || [] })), injured: report.injured, lost: report.lost, rescued: report.rescued, vehicle: report.vehicle } })
-    this.game.coop?.ended(this.coop.run.id)
+    const last = { k: 'runEnd', result, report: { result, title: report.title, text: report.text, loot: report.loot, items: (report.items || []).map((it) => ({ uid: it.uid, id: it.id, q: it.q, cond: it.cond, mods: it.mods || [] })), injured: report.injured, lost: report.lost, rescued: report.rescued, vehicle: report.vehicle } }
+    this.coopSend(last)
+    this.game.coop?.ended(this.coop.run.id, { ...last, run: this.coop.run.id })
   },
 
   // ---------------------------------------------------------------- joiner
@@ -250,6 +277,8 @@ export const CoopMixin = {
   },
   // the dice-rolled parts of the street, as the leader rolled them
   coopApplySetup(s) {
+    if (this.setupDone) return
+    this.setupDone = true
     for (const [id, story, key, locked, drive, keysFor, name] of s.flags || []) {
       const c = this.containers.find((x) => x.id === id)
       if (!c) continue
@@ -496,9 +525,18 @@ export const CoopMixin = {
       if (t.label) t.label.hidden = this.vision && !this.vision.exploredAt(t.x, t.z)
     }
     this.time += dt
-    // the leader went quiet
+    // the leader went quiet: wait while the camp still sees them, give up
+    // soon once it does not
     const quiet = (performance.now() - this.lastFrameAt) / 1000
-    if (quiet > 20 && !this.over) this.game.coop?.leaderLost(this.coop.run.id)
+    const leader = this.coop.run.leader
+    const gone = this.game.net?.online && !this.game.net.online.has(leader)
+    if (this.pauseEl) {
+      this.pauseEl.hidden = quiet < 3 || this.over
+      if (!this.pauseEl.hidden) this.pauseEl.textContent = `Waiting for ${playerOf(leader)?.name || 'the run leader'}…`
+    }
+    // still there but quiet: the run may be over and the word lost on the way
+    if (!this.over && !gone && quiet > 5) this.game.coop?.askRun(this.coop.run.id, leader)
+    if (!this.over && ((gone && quiet > 6) || quiet > 90)) this.game.coop?.leaderLost(this.coop.run.id)
   },
 }
 

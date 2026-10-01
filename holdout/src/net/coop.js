@@ -80,9 +80,18 @@ export class Coop {
     this.changed()
     return run
   }
-  ended() {
+  // the run is over; its last word is kept for a friend who missed it
+  ended(id, last = null) {
+    if (last) this.lastEnd = last
     this.active = null
     this.changed()
+  }
+  // A friend who missed the start or the end of a run asks its leader again.
+  askRun(id, leader) {
+    const t = performance.now()
+    if (t - (this.askedAt || 0) < 3000) return
+    this.askedAt = t
+    this.net.relay(leader, { k: 'runAsk', id })
   }
 
   // ---------------------------------------------------------------- joiner
@@ -165,6 +174,7 @@ export class Coop {
         return this.changed()
       }
       case 'runGo': {
+        if (this.active?.id === d.id) return
         this.runs.delete(d.id)
         if (this.joined === d.id) this.joined = null
         if (d.roster?.[NET.pid]) {
@@ -178,11 +188,24 @@ export class Coop {
       case 'rf':
       case 'runEnd': {
         const m = this.game.mission
-        if (!m?.remote || m.coop.run.id !== d.run || m.coop.run.leader !== from) {
+        if (!m?.remote || m.over || m.coop.run.id !== d.run || m.coop.run.leader !== from) {
           if (this.active?.id === d.run) this.pending.push(d)
+          // the word that the run set out never came: ask for it
+          else if (this.joined === d.run && d.k !== 'runEnd') this.askRun(d.run, from)
           return
         }
         return this.toMission(m, d)
+      }
+      case 'runAsk': {
+        const a = this.active
+        if (a && a.id === d.id && a.leader === NET.pid && a.roster[from]) {
+          this.net.relay(from, { k: 'runGo', id: a.id, seed: a.seed, roster: a.roster, loadout: a.loadout, locId: a.locId })
+          const m = this.game.mission
+          if (m?.coop?.run.id === a.id && !m.remote && !m.over) this.net.relay(from, { k: 'rs', run: a.id, setup: m.coopSetup() })
+          return
+        }
+        if (this.lastEnd?.run === d.id) this.net.relay(from, this.lastEnd)
+        return
       }
       case 'ping':
         return this.game.showPing?.(from, { k: 'ping', x: +d.x, z: +d.z, w: String(d.w || '') })

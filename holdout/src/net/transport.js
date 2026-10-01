@@ -53,7 +53,14 @@ export class Carrier {
     return () => this.fns[ev].delete(fn)
   }
   fire(ev, ...a) {
-    for (const fn of [...this.fns[ev]]) fn(...a)
+    for (const fn of [...this.fns[ev]]) {
+      // one listener's bug must not lose the message for the rest
+      try {
+        fn(...a)
+      } catch (e) {
+        console.error('holdout net: handling a message failed', e)
+      }
+    }
   }
   // Queue a message. The JSON is taken now, so the caller may keep mutating.
   send(msg, to = null) {

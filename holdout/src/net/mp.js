@@ -310,6 +310,9 @@ export class Session {
       const set = this.coopRuns[from]
       setTimeout(() => this.coopRuns[from] === set && delete this.coopRuns[from], 15000)
     }
+    // a run's frames are worth dropping when the line backs up: the next one
+    // says it all again
+    if (d.k === 'rf' && this.c?.backlog > 8) return
     const targets = to === '*' ? [...this.online] : [].concat(to)
     for (const p of targets) {
       if (p === from) continue
@@ -410,7 +413,10 @@ export class Session {
     // whoever was out on a run with them comes home with nothing
     const run = this.coopRuns[P.pid]
     delete this.coopRuns[P.pid]
-    const back = S.survivors.filter((s) => s.status === 'mission' && (S.mp.owner[s.id] === P.pid || run?.has(s.id)))
+    // (unless a friend still out leads the run they are on)
+    const away = new Set()
+    for (const [p, set] of Object.entries(this.coopRuns)) if (this.online.has(p)) for (const id of set) away.add(id)
+    const back = S.survivors.filter((s) => s.status === 'mission' && !away.has(s.id) && (S.mp.owner[s.id] === P.pid || run?.has(s.id)))
     for (const s of back) s.status = 'ok'
     for (const v of S.vehicles || []) if (v.out === P.pid) v.out = false
     if (back.length) bus.emit('change')
@@ -723,7 +729,10 @@ export class Session {
       if (t.owners <= 0) {
         t.owners = 20
         this.tidyOwners()
-        for (const [peer, P] of this.peers) if (now() - P.seen > 25) this.dropPeer(peer, 'timeout')
+        // a silent line is dropped; through the server a closed socket says
+        // so itself, so only a long silence counts there
+        const quiet = this.c?.kind === 'ws' || this.c?.kind === 'server' ? 90 : 40
+        for (const [peer, P] of this.peers) if (now() - P.seen > quiet) this.dropPeer(peer, 'timeout')
         this.advertise()
       }
       if (t.cam <= 0 && !this.server) {

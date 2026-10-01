@@ -564,7 +564,7 @@ export class UI {
   openManual(page) {
     if (this.modalRoot.querySelector('.manual')) return this.closeModal()
     const M = this.game.mission
-    if (M && this.game.scene === M && !M.paused) ((M.paused = true), M.renderPause?.())
+    if (M && this.game.scene === M && !M.paused && !M.coop) ((M.paused = true), M.renderPause?.())
     this.modal(manualModal(this, page), { xl: true })
   }
   openMenu() {

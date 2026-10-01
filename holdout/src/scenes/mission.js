@@ -1823,7 +1823,8 @@ export class Mission {
     this.ammoEl = h('div.mammo')
     this.utilEl = h('div.mutils')
     this.boxEl = h('div.selbox', { hidden: true })
-    this.pauseBtn = h('button.btn.ghost.small', { onclick: () => ((this.paused = !this.paused), this.renderPause()), 'data-tip': 'Pause <kbd>Space</kbd>' }, 'Pause')
+    // no pausing a street friends are playing in
+    this.pauseBtn = h('button.btn.ghost.small', { hidden: !!this.coop, onclick: () => ((this.paused = !this.paused), this.renderPause()), 'data-tip': 'Pause <kbd>Space</kbd>' }, 'Pause')
     this.extractBtn = h('button.btn.go', { onclick: () => this.tryExtract() }, 'Leave')
     const ev = this.event
     this.root.append(

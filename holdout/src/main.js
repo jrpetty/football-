@@ -273,7 +273,8 @@ class Game {
   }
   endCoopRemote(report) {
     const m = this.mission
-    if (!m?.remote) return
+    if (!m?.remote || m.ending) return
+    m.ending = true
     m.over = true
     setTimeout(() => {
       m.dispose()
@@ -507,7 +508,7 @@ class Game {
     }, 60)
   }
   closeMap() {
-    this.map.close()
+    this.map?.close()
     this.scene = this.base
     view.rig.restore(this.baseCam)
     this.base.enter()
@@ -516,7 +517,7 @@ class Game {
   }
   startMission(loc, ids, loadout = {}) {
     if (!loadout.coop && this.coop?.joined) this.coop.leave()
-    this.map.close()
+    this.map?.close()
     this.ui.showCamp(false)
     // alone, the trip there passes in a blink; with friends, time is shared
     if (NET.role === 'solo') this.fastForward(loadout.travel || 0)
@@ -599,8 +600,10 @@ class Game {
     }
     this.net?.update(dt)
     if (hidden) {
-      // a horde fight still plays out (and streams to friends) unseen
+      // a horde fight still plays out (and streams to friends) unseen, and
+      // so does a run this player leads for friends
       if (S.raid && this.scene === this.base) this.base.update(dt, simDt)
+      else if (this.mission?.coop && !this.mission.remote && this.scene === this.mission) this.mission.update(Math.min(dt, 0.1))
       return
     }
     if (!this.titleEl) view.input.update(dt)
