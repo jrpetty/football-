@@ -8,7 +8,8 @@ import {
 import {
   S, day, hour, bounds, log, gain, pay, canAfford, capOf, stationSize, workersOf, workEff, gainXP, completeGoal,
   survivorStats, itemOf, addItem, repairCost, orderSpec, rollQuality, rebuildFence, fenceMax, makeSurvivor, killSurvivor,
-  bedCount, countType, maxLevelOf, addMoraleEvent, itemName, moraleMult, available, getS,
+  bedCount, countType, maxLevelOf, addMoraleEvent, itemName, moraleMult, available, getS, isUnlocked, hasFlag, feedSignal,
+  researchDone, finishResearch, coreBoost,
 } from './state.js'
 import { bus, pick, rint, rand, chance, clamp, weighted } from '../core/util.js'
 import { tickLinks, beltBonus, belted, pulled, outCap } from './belts.js'
@@ -17,7 +18,7 @@ import { tickLinks, beltBonus, belted, pulled, outCap } from './belts.js'
 export function powerNeed(st) {
   if (st.building || st.level < 1) return 0
   const d = STATIONS[st.type]
-  if (d.auto && st.level >= d.auto && st.module && st.autoOn !== false) return d.autoPower
+  if (d.auto && st.level >= d.auto && st.module && st.autoOn !== false) return d.autoPower * Math.pow(1 + coreBoost() * (st.cores || 0), 1.5) * (researchDone('efficiency') ? 0.75 : 1)
   if (st.type === 'turret' || st.type === 'floodlight') return st.autoOn === false ? 0 : d.power
   return 0
 }
@@ -66,7 +67,7 @@ export function stationRate(st, pinfo) {
   const d = STATIONS[st.type]
   let r = 0
   for (const s of workersOf(st)) if (s.status === 'ok') r += workEff(s, st.type)
-  if (isAutomated(st, pinfo)) r += d.autoRate
+  if (isAutomated(st, pinfo)) r += d.autoRate * (hasFlag('autoBoost') ? 1.5 : 1) * (1 + coreBoost() * (st.cores || 0))
   return r
 }
 export const isAutomated = (st, pinfo) => {
@@ -93,7 +94,7 @@ export function dailyNeeds() {
     food += s.traits.includes('glutton') ? 3 : 2
     water += 2.4
   }
-  return { food: food * (1 - kitchenSaving()), water }
+  return { food: food * (1 - kitchenSaving()) * (hasFlag('rations') ? 0.85 : 1), water }
 }
 
 // Idle survivors (no job) help build, or forage when nothing is going up.
@@ -242,8 +243,13 @@ export function econTick(dt, opts = {}) {
     if (d.recipe) tickProcessor(st, activeSingle(st), rate, dt)
     else if (d.recipes) tickMulti(st, d, rate, dt)
     else if (st.type === 'infirmary') tickInfirmary(st, rate, dt)
+    else if (st.type === 'research') tickResearch(st, rate, dt)
     else if (d.queue) tickBench(st, rate, dt)
     if (st.type === 'training') tickTraining(st, dt)
+    if (st.type === 'mast') {
+      feedSignal(st)
+      st.active = true
+    }
     if (st.type === 'kitchen') {
       st.active = rate > 0
       if (st.active) {
@@ -378,7 +384,7 @@ export function activeSingle(st) {
 }
 export function recipeUnlocked(st, id) {
   const R = STATIONS[st.type].recipes[id]
-  return !!R && (R.lvl || 1) <= st.level
+  return !!R && (R.lvl || 1) <= st.level && isUnlocked('recipe', st.type + '.' + id)
 }
 // A product is wanted while it is below its target, or, when a belt carries
 // it to another station, while that belt has room (belts pull on demand).
@@ -612,6 +618,22 @@ function tickInfirmary(st, rate, dt) {
   tickBench(st, rate, dt)
 }
 
+function tickResearch(st, rate, dt) {
+  const p = st.project
+  if (!p) {
+    st.stalled = S.research.pick ? 'Choose an alternate recipe' : 'No project'
+    return
+  }
+  if (rate <= 0) {
+    st.stalled = 'Needs a researcher'
+    return
+  }
+  st.active = true
+  p.left -= dt * rate
+  for (const s of workersOf(st)) if (s.status === 'ok') gainXP(s, 'tech', 0.15 * dt)
+  if (p.left <= 0) finishResearch(st)
+}
+
 function tickTraining(st, dt) {
   const d = STATIONS.training
   const trainees = workersOf(st).filter((s) => s.status === 'ok')
@@ -708,10 +730,11 @@ export function scheduleRecruit() {
   for (const st of radio) mult = Math.min(mult, STATIONS.radio.recruit[st.level - 1])
   const op = radio.flatMap((st) => workersOf(st)).find((s) => s.status === 'ok')
   if (op) mult *= 1 / (1 + 0.25 * workEff(op, 'radio'))
+  if (hasFlag('beacon')) mult *= 0.75
   S.recruit.next = S.time + rand(9, 15) * 60 * mult
 }
 function recruitQuality() {
-  return Math.min(4, Math.floor(day() / 6) + maxLevelOf('radio'))
+  return Math.min(5, Math.floor(day() / 6) + maxLevelOf('radio') + (hasFlag('beacon') ? 1 : 0))
 }
 // Distress calls and supply drops appear on the city map for a while.
 function spawnEvent() {

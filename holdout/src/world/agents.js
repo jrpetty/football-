@@ -5,7 +5,7 @@ import * as THREE from 'three'
 import { Character, OUTFITS, zombieOutfit, rngFrom, hashStr } from '../models/character.js'
 import { weaponModel, holdStyle } from '../models/weapons.js'
 import { ZOMBIES, ITEMS } from '../game/data.js'
-import { survivorStats, gainXP, equippedItem, wear, S } from '../game/state.js'
+import { survivorStats, gainXP, equippedItem, wear, S, researchDone } from '../game/state.js'
 import { sfx } from '../core/audio.js'
 import { clamp, angleLerp, rand, chance, h } from '../core/util.js'
 import { view } from '../render/view.js'
@@ -611,7 +611,8 @@ export class ZombieAgent extends Agent {
   hurt(dmg, from, o = {}) {
     if (this.dead) return
     const armor = this.def.armor || 0
-    const real = dmg * (1 - (from?.st?.gun ? armor : armor * 0.4))
+    let real = dmg * (1 - (from?.st?.gun ? armor : armor * 0.4))
+    if (from?.faction === 'survivor' && (this.def.stalk || this.def.scream || this.def.burst) && researchDone('biology')) real *= 1.25
     this.hp -= real
     this.world.fx.blood(this.chestPos(this.def.crawl ? 0.3 : 1.2))
     this.ch.flinch()

@@ -1,12 +1,13 @@
 // The station drawer: workers, what the station is doing and producing,
 // crafting orders (queue, recipes, mods, repairs), automation, upgrades.
-import { RES, STATIONS, RECIPES, MODS, ITEMS, QUALITY, OCCUPATIONS, SKILLS, SKILL_KEYS, REPAIR, SEC_PER_DAY, FENCE, ALT_RECIPES, BELTS, BELT_BONUS } from '../game/data.js'
+import { RES, STATIONS, RECIPES, MODS, ITEMS, QUALITY, OCCUPATIONS, SKILLS, SKILL_KEYS, REPAIR, SEC_PER_DAY, FENCE, ALT_RECIPES, BELTS, BELT_BONUS, SIGNAL, RESEARCH, CORE_SLOTS } from '../game/data.js'
 import {
   S, workersOf, slots, assign, workEff, bestFor, upgradeCost, startUpgrade, demolish, installModule, recipesFor, modsFor, queueMax, orderRecipe,
   orderMod, orderRepair, cancelOrder, moveOrder, orderSpec, qualityOdds, itemOf, itemName, canAfford, survivorStats, capOf, bedCount, getS, ownerOf,
-  repairCost, repairTime, gameDur, stationSize,
+  repairCost, repairTime, gameDur, stationSize, signalNeed, deliverSignal, signalPhase,
+  researchLock, startResearch, cancelResearch, pickAlt, altsFor, researchDone, installCore, removeCore, coreBoost, hasFlag, msDone,
 } from '../game/state.js'
-import { stationFlow, power, isAutomated, stationRate, solarOutput, kitchenSaving, constructSpeed, raidIntel, activeRecipe, activeSingle, recipeUnlocked, recipeTarget } from '../game/economy.js'
+import { stationFlow, power, powerNeed, isAutomated, stationRate, solarOutput, kitchenSaving, constructSpeed, raidIntel, activeRecipe, activeSingle, recipeUnlocked, recipeTarget } from '../game/economy.js'
 import { linksOf, inputsOf, outputsOf, linkPerDay, linkState, upgradeCostOf, upgradeLink, removeLink, beltBonus, pulled } from '../game/belts.js'
 import { sfx } from '../core/audio.js'
 import { bus, h, fmt, clamp } from '../core/util.js'
@@ -37,7 +38,7 @@ export function renderStation(ui, id) {
     if (D.queue || st.type === 'infirmary') body.push(benchBlock(ui, st))
     if (D.auto) body.push(autoBlock(ui, st, pinfo))
   }
-  body.push(upgradeBlock(ui, st))
+  if (st.type !== 'mast') body.push(upgradeBlock(ui, st))
   if (!D.fixed) body.push(actionsBlock(ui, st))
   return ui.frame(D.name, sub, body, { icon: CAT_ICON[D.cat] })
 }
@@ -239,6 +240,28 @@ function effectBlock(ui, st, pinfo) {
     case 'collector':
       out.push(card('Rainwater', rateRow('Collects', flow), h('p.note', 'Doubles in the rain. Nobody needs to work here.')))
       break
+    case 'research':
+      out.push(...researchBlock(ui, st))
+      break
+    case 'mast': {
+      const P = signalPhase()
+      const need = signalNeed()
+      if (!P) {
+        out.push(card('The Signal', h('p.good', 'All five phases are done. The mast calls the coast every night.')))
+        break
+      }
+      const rows = Object.entries(P.cost).map(([k, v]) => h('div.sig-row', resTag(k), bar((v - need[k]) / v, 'prod'), h('small', `${fmt(v - need[k])} / ${fmt(v)}`)))
+      out.push(
+        card(
+          `Phase ${S.signal.phase + 1} of ${SIGNAL.length}: ${P.name}`,
+          h('p.note', P.desc),
+          rows,
+          h('div.kv', h('span', 'Hand over what storage has'), h('button.btn.small.go', { onclick: () => (deliverSignal() ? (sfx('build'), ui.toast('Delivered to the mast', 'good')) : (sfx('error'), ui.toast('Nothing in storage the mast still needs', 'bad')), ui.refreshPanel()) }, 'Deliver')),
+          h('p.note', 'Belts into the mast deliver as they arrive. ', h('a.link', { onclick: () => ui.openGoals() }, 'All phases')),
+        ),
+      )
+      break
+    }
     case 'generator': {
       const fuelDay = -(flow.fuel || 0)
       out.push(card('Power', h('div.kv', h('span', 'Output'), h('b', `${D.power[lv - 1]} power${workersOf(st).length ? ' + operator' : ''}`)), h('div.kv', h('span', 'Camp use'), h('b', `${fmt(pinfo.used)} / ${fmt(pinfo.supply)}`)), h('div.kv', h('span', 'Fuel'), h('b', fuelDay ? `${fuelDay.toFixed(1)} a day · ${S.res.fuel > 0 ? `${(S.res.fuel / fuelDay).toFixed(1)} days left` : 'empty!'}` : 'Idle: nothing needs power')), h('p.note', 'Only burns fuel for what is switched on.')))
@@ -262,15 +285,94 @@ function effectBlock(ui, st, pinfo) {
         break
       }
       if (D.recipe) {
-        const R = D.recipe
+        const R = activeSingle(st)
         const tm = Array.isArray(R.time) ? R.time[lv - 1] : R.time
         const rows = [rateRow('Per day', flow), h('div.kv', h('span', 'One batch'), h('span', costList(R.in, { small: true }), ' → ', costList(R.out, { small: true, have: false }), h('small', ` · ${tm}s of work`)))]
         if (R.bonus) rows.push(h('p.note', 'Sometimes turns up ', Object.keys(R.bonus).map((k) => RES[k].name.toLowerCase()).join(' and '), '.'))
         if (D.limit) rows.push(limitControl(ui, st, Object.keys(R.out)[0]))
+        const alt = altPicker(ui, st, '_')
+        if (alt) rows.push(alt)
         rows.push(bar(clamp(st.progress || 0, 0, 1), 'prod'))
         out.push(card('Production', ...rows))
       }
   }
+  return out
+}
+// Choose between a recipe and the alternates researched for it.
+function altPicker(ui, st, base) {
+  const known = altsFor(st.type, base)
+  if (!known.length) return null
+  const cur = st.alts?.[base] || ''
+  const opts = [['', 'Standard'], ...known.map((a) => [a, ALT_RECIPES[a].name])]
+  return h(
+    'div.altpick',
+    h('span', h('i.inl', { html: icon('schematic') }), 'Recipe'),
+    seg(opts, cur, (v) => {
+      st.alts = st.alts || {}
+      if (v) st.alts[base] = v
+      else delete st.alts[base]
+      st.progress = 0
+      ui.refreshPanel()
+    }),
+    cur ? h('small', ALT_RECIPES[cur].desc) : null,
+  )
+}
+// ---------------------------------------------------------------- research desk
+function researchBlock(ui, st) {
+  const out = []
+  const card = (title, ...kids) => h('section.card', h('h3', ...[].concat(title)), ...kids)
+  const pick = S.research.pick
+  if (pick) {
+    out.push(
+      card(
+        ['Choose an alternate recipe', h('small', 'from the schematic you studied')],
+        h('p.note', 'Pick one. The other two go back into the pile for a later schematic.'),
+        h(
+          'div.altcards',
+          pick.map((a) => {
+            const A = ALT_RECIPES[a]
+            const D = STATIONS[A.station]
+            const base = A.base === '_' ? D.recipe : D.recipes[A.base]
+            const R = { ...base, ...A.recipe }
+            const have = S.stations.some((x) => x.type === A.station)
+            return h(
+              'div.altcard',
+              h('b', A.name),
+              h('small', `${D.name}${have ? '' : ' (not built yet)'}`),
+              h('p', A.desc),
+              R.in && R.out ? h('div.ab', costList(R.in, { small: true, have: false }), ' → ', costList(R.out, { small: true, have: false })) : null,
+              h('button.btn.small.go', { onclick: () => (pickAlt(a) && (sfx('complete'), ui.toast(`${A.name} unlocked at the ${D.name}`, 'good')), ui.refreshPanel()) }, 'Choose'),
+            )
+          }),
+        ),
+      ),
+    )
+  }
+  const p = st.project
+  if (p) {
+    const R = RESEARCH[p.id]
+    const rate = stationRate(st, power())
+    out.push(card(['Researching', h('small', rate > 0 ? `${gameDur((p.left / rate) * 3)} left` : 'Needs a researcher')], h('b', R.name), bar(1 - p.left / p.total, 'prod'), h('div.kv', h('span.note', R.desc), h('button.mini', { onclick: () => (cancelResearch(st), sfx('click'), ui.refreshPanel()), 'data-tip': 'Stop and get the materials back' }, 'Cancel'))))
+  }
+  const cats = [...new Set(Object.values(RESEARCH).map((r) => r.cat))]
+  const rows = []
+  for (const c of cats) {
+    rows.push(h('h4', c))
+    for (const [id, R] of Object.entries(RESEARCH)) {
+      if (R.cat !== c) continue
+      const done = researchDone(id) && !R.repeat
+      const lock = researchLock(id, st)
+      const ok = !lock && !p && canAfford(R.cost)
+      rows.push(
+        h(
+          'div.recipe.rs' + (done ? '.done' : lock ? '.locked' : ''),
+          h('div.r-main', { 'data-tip': `<b>${R.name}</b>${R.desc}` }, h('b', R.name, done ? h('em.good', ' · done') : null), h('span.r-sub', R.desc), done ? null : h('span.r-sub', costList(R.cost, { small: true }), h('small', ` · ${R.time}s of work`))),
+          done ? h('i.inl.good', { html: icon('check') }) : lock && lock !== 'Done' ? h('span.r-lock', h('i', { html: icon('lock') }), lock) : h('button.mini', { disabled: !ok, onclick: () => (startResearch(st, id) ? (sfx('click'), ui.toast(`Researching ${R.name}`)) : sfx('error'), ui.refreshPanel()) }, p ? 'Busy' : 'Start'),
+        ),
+      )
+    }
+  }
+  out.push(card(['Projects', h('small', `${Object.keys(S.research.done).length} done · ${S.research.alts.length} alternates known`)], h('p.note', 'Schematics and specimens come from supply runs: schematics from offices, schools and labs, specimens from the special infected.'), ...rows))
   return out
 }
 function limitControl(ui, st, outKey) {
@@ -315,6 +417,8 @@ function recipesBlock(ui, st, flow) {
         h('span.ab', costList(R.in, { small: true }), ' → ', resChip(k, R.out[k]), h('small', ` ${R.time[st.level - 1]}s`)),
       ),
     )
+    const picker = altPicker(ui, st, id)
+    if (picker) rows.push(picker)
   }
   rows.push(rateRow('Per day now', flow))
   rows.push(bar(clamp(st.progress || 0, 0, 1), 'prod'))
@@ -343,7 +447,8 @@ function logisticsBlock(ui, st) {
     if (D.recipes) for (const id of Object.keys(D.recipes)) if (usable(D.recipes[id])) live.push(activeRecipe(st, id))
     const has = (k, dir) => mine.some((l) => (dir === 'out' ? l.from : l.to) === st.id && l.res === k)
     outs = outputsOf(st).filter((k) => has(k, 'out') || D.passive?.[k] || live.some((r) => r.out?.[k]))
-    ins = inputsOf(st).filter((k) => has(k, 'in') || st.type === 'generator' || live.some((r) => r.in?.[k] > 0))
+    const need = st.type === 'mast' ? signalNeed() || {} : {}
+    ins = inputsOf(st).filter((k) => has(k, 'in') || st.type === 'generator' || need[k] > 0 || live.some((r) => r.in?.[k] > 0))
     if (!ins.length && !outs.length) return null
   } else if (!mine.length) {
     return h('section.card.logi', h('h3', h('span', h('i.inl', { html: icon('belt') }), 'Belts')), h('p.note', 'A depot can feed any station by belt: open that station and choose a belt in. Belts from producers can end here too.'))
@@ -481,7 +586,8 @@ function recipesTab(ui, st) {
         list
           .filter((r) => r.cat === c)
           .map((r) => {
-            const locked = r.lvl > st.level
+            const rlock = r.research && !researchDone(r.research)
+            const locked = r.lvl > st.level || rlock
             const outName = r.item ? ITEMS[r.item].name : RES[Object.keys(r.out)[0]].name
             const outN = r.out ? Object.values(r.out)[0] : 1
             const tip = r.item ? `<b>${ITEMS[r.item].name}</b>${ITEMS[r.item].desc || ''}<br><em>${r.item ? itemStatLineSafe(r.item) : ''}</em>` : `<b>${outName}</b>${RES[Object.keys(r.out)[0]].desc}`
@@ -500,7 +606,7 @@ function recipesTab(ui, st) {
               'div.recipe' + (locked ? '.locked' : ''),
               h('div.r-main', { 'data-tip': tip }, h('b', outN > 1 ? `${outN}× ${outName}` : outName), h('span.r-sub', costList(r.in, { small: true }), h('small', rate > 0.01 ? ` · ${Math.round(r.time / rate)}s each` : ` · ${r.time}s of work`))),
               locked
-                ? h('span.r-lock', h('i', { html: icon('lock') }), `Level ${r.lvl}`)
+                ? h('span.r-lock', h('i', { html: icon('lock') }), rlock ? `Research: ${RESEARCH[r.research].name}` : `Level ${r.lvl}`)
                 : h(
                     'div.r-btns',
                     h('button.mini', { disabled: full, onclick: () => add(1) }, '×1'),
@@ -597,6 +703,19 @@ function autoBlock(ui, st, pinfo) {
   } else {
     rows.push(h('div.kv', h('span', auto ? h('em.good', `Running automatically · ${Math.round(D.autoRate * 100)}% speed`) : st.autoOn === false ? h('em', 'Automation switched off') : h('em.bad', `Not enough power (needs ${D.autoPower})`)), h('button.mini', { onclick: () => ((st.autoOn = st.autoOn === false), ui.refreshPanel()) }, st.autoOn === false ? 'Switch on' : 'Switch off')))
     rows.push(h('div.kv', h('span', 'Power'), h('b', `${fmt(pinfo.used)} used of ${fmt(pinfo.supply)}`)))
+    if (hasFlag('cores')) {
+      const n = st.cores || 0
+      rows.push(
+        h(
+          'div.cores',
+          h('span', { 'data-tip': `Each power core adds ${Math.round(coreBoost() * 100)}% to automated speed. Power draw grows faster than speed.` }, h('i.inl', { html: icon('core') }), 'Power cores'),
+          h('span.slots', Array.from({ length: CORE_SLOTS }, (_, i) => h('i.slot' + (i < n ? '.on' : '')))),
+          h('button.mini', { disabled: n >= CORE_SLOTS || S.res.core < 1, onclick: () => (installCore(st) ? sfx('build') : sfx('error'), ui.refreshPanel()), 'data-tip': `Fit a core (you have ${Math.floor(S.res.core)})` }, h('i', { html: icon('plus') })),
+          h('button.mini', { disabled: !n, onclick: () => (removeCore(st) ? sfx('click') : null, ui.refreshPanel()), 'data-tip': 'Take a core out' }, h('i', { html: icon('minus') })),
+        ),
+      )
+      if (n) rows.push(h('p.note', `Overclocked: automation at ${Math.round(D.autoRate * (hasFlag('autoBoost') ? 1.5 : 1) * (1 + coreBoost() * n) * 100)}% speed, drawing ${fmt(powerNeed(st))} power.`))
+    }
   }
   return h('section.card', h('h3', h('span', h('i.inl', { html: icon('module') }), 'Automation'), h('small', st.module ? 'Module installed' : '')), rows)
 }

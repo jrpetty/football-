@@ -1,8 +1,8 @@
 // The interface: top bar (time, horde timer, resources, power, morale, crew,
 // speed), the left nav, a right-hand detail drawer, the bottom build dock,
 // toasts, tooltips, modals, the raid HUD and reports.
-import { RES, TOP_BAR, STATIONS, STATION_CATS, AMMO_KEYS, FENCE, EXPANSIONS, HORDES, OCCUPATIONS, SEC_PER_HOUR, GAME_MIN_PER_SEC } from '../game/data.js'
-import { S, day, hour, clockStr, gameDur, capOf, bedCount, buildCost, reqMet, canAfford, countType, maxLevelOf, expansionAvailable, expansionCost, fenceUpgradeCost, getS, survivorStats } from '../game/state.js'
+import { RES, TOP_BAR, STATIONS, STATION_CATS, AMMO_KEYS, FENCE, EXPANSIONS, HORDES, OCCUPATIONS, SEC_PER_HOUR, GAME_MIN_PER_SEC, MILESTONES } from '../game/data.js'
+import { S, day, hour, clockStr, gameDur, capOf, bedCount, buildCost, reqMet, canAfford, countType, maxLevelOf, expansionAvailable, expansionCost, fenceUpgradeCost, getS, survivorStats, unlockedBy, msDone } from '../game/state.js'
 import { raidIntel, campFlow, power, moraleFactors } from '../game/economy.js'
 import { WEATHER } from '../render/sky.js'
 import { sfx } from '../core/audio.js'
@@ -11,6 +11,7 @@ import { icon } from './icons.js'
 import { costList, resIcon, bar, plural } from './common.js'
 import { renderStation } from './stationpanel.js'
 import { renderSurvivor, renderCrew, renderItems } from './crewpanel.js'
+import { renderProgress } from './progresspanel.js'
 import { renderMarket, renderGoals, renderLog, renderFence, renderExpansion, renderProduction, renderPower, renderMorale, renderSettings, recruitModal, raidReportModal, missionReportModal, gameOverModal, menuModal, hordeInfo } from './camppanels.js'
 
 const NAV = [
@@ -20,7 +21,7 @@ const NAV = [
   { id: 'trade', label: 'Trade', key: 'T', icon: 'market' },
   { id: 'camp', label: 'Camp', key: 'P', icon: 'production' },
   { id: 'map', label: 'Map', key: 'M', icon: 'map' },
-  { id: 'goals', label: 'Goals', key: 'G', icon: 'goals' },
+  { id: 'goals', label: 'Progress', key: 'G', icon: 'goals' },
   { id: 'log', label: 'Log', key: 'L', icon: 'log' },
 ]
 
@@ -369,7 +370,7 @@ export class UI {
     this.openPanel('trade', () => renderMarket(this), { wide: true })
   }
   openGoals() {
-    this.openPanel('goals', () => renderGoals(this))
+    this.openPanel('goals', () => renderProgress(this), { wide: true, live: true })
   }
   openLog() {
     this.openPanel('log', () => renderLog(this), { live: true })
@@ -436,19 +437,24 @@ export class UI {
           const ok = canAfford(cost)
           const req = reqMet(type)
           const have = countType(type, 0)
-          const reqTxt = d.req ? Object.entries(d.req).map(([t, l]) => `${STATIONS[t].name} L${l}`).join(', ') : ''
+          const msId = unlockedBy('station', type)
+          const reqTxt = msId && !msDone(msId)
+            ? `Milestone: ${MILESTONES[msId].name} (tier ${MILESTONES[msId].tier})`
+            : d.unique && have
+              ? 'Only one per camp'
+              : d.req ? Object.entries(d.req).map(([t, l]) => `${STATIONS[t].name} L${l}`).join(', ') : ''
           return h(
             'button.bcard' + (!req ? '.locked' : !ok ? '.poor' : ''),
             {
               onclick: () => {
-                if (!req) return this.toast(`Needs ${reqTxt}`, 'bad'), sfx('error')
+                if (!req) return this.toast(reqTxt.startsWith('Milestone') || reqTxt.startsWith('Only') ? reqTxt : `Needs ${reqTxt}`, 'bad'), sfx('error')
                 this.game.base.startPlacing(type)
                 sfx('click')
               },
-              'data-tip': `<b>${d.name}</b>${d.desc}${d.workers[0] ? `<br><em>${d.workers[0]} worker${d.workers[0] > 1 ? 's' : ''} at level 1</em>` : ''}${reqTxt ? `<br><span class="bad">Requires ${reqTxt}</span>` : ''}`,
+              'data-tip': `<b>${d.name}</b>${d.desc}${d.workers[0] ? `<br><em>${d.workers[0]} worker${d.workers[0] > 1 ? 's' : ''} at level 1</em>` : ''}${reqTxt && !req ? `<br><span class="bad">${reqTxt.startsWith('Milestone') || reqTxt.startsWith('Only') ? reqTxt : `Requires ${reqTxt}`}</span>` : ''}`,
             },
             h('div.bc-name', d.name, have ? h('span.have', `×${have}`) : null),
-            h('div.bc-size', `${d.size[0]}×${d.size[1]} · ${d.levels} level${d.levels > 1 ? 's' : ''}`),
+            h('div.bc-size', type === 'mast' ? `${d.size[0]}×${d.size[1]} · 5 phases` : `${d.size[0]}×${d.size[1]} · ${d.levels} level${d.levels > 1 ? 's' : ''}`),
             req ? costList(cost, { small: true }) : h('div.bc-lock', h('i', { html: icon('lock') }), reqTxt),
           )
         })
@@ -459,13 +465,15 @@ export class UI {
     const next = FENCE[S.fence.level + 1]
     if (next) {
       const cost = fenceUpgradeCost()
+      const fm = unlockedBy('fence', S.fence.level + 1)
+      const flock = fm && !msDone(fm)
       out.push(
         h(
-          'button.bcard.wide' + (!canAfford(cost) ? '.poor' : ''),
-          { onclick: () => this.openFence(), 'data-tip': `<b>${next.name}</b>${next.hp} strength per section (now ${FENCE[S.fence.level].hp}).` },
+          'button.bcard.wide' + (flock ? '.locked' : !canAfford(cost) ? '.poor' : ''),
+          { onclick: () => this.openFence(), 'data-tip': `<b>${next.name}</b>${next.hp} strength per section (now ${FENCE[S.fence.level].hp}).${flock ? `<br><span class="bad">Milestone: ${MILESTONES[fm].name} (tier ${MILESTONES[fm].tier})</span>` : ''}` },
           h('div.bc-name', `Upgrade wall: ${next.name}`),
           h('div.bc-size', S.fence.building ? 'Under construction' : `${FENCE[S.fence.level].name} → ${next.name}`),
-          costList(cost, { small: true }),
+          flock ? h('div.bc-lock', h('i', { html: icon('lock') }), `Milestone: ${MILESTONES[fm].name}`) : costList(cost, { small: true }),
         ),
       )
     }
@@ -474,13 +482,15 @@ export class UI {
       const status = S.expansions[X.id]
       if (status === 'done') continue
       const cost = expansionCost(X.id)
+      const xm = unlockedBy('exp', X.id)
+      const xlock = xm && !msDone(xm) ? `Milestone: ${MILESTONES[xm].name}` : null
       out.push(
         h(
           'button.bcard.wide' + (!avail ? '.locked' : !canAfford(cost) ? '.poor' : ''),
-          { onclick: () => this.openExpansion(X.id), 'data-tip': `<b>${X.name}</b>${X.desc}` },
+          { onclick: () => this.openExpansion(X.id), 'data-tip': `<b>${X.name}</b>${X.desc}${xlock ? `<br><span class="bad">${xlock} (tier ${MILESTONES[xm].tier})</span>` : ''}` },
           h('div.bc-name', X.name, h('span.have', X.side.toUpperCase() + X.ring)),
-          h('div.bc-size', status === 'building' ? 'Clearing now' : avail ? 'Expand the camp' : X.ring === 2 ? 'Expand this side once first' : 'Unavailable'),
-          avail ? costList(cost, { small: true }) : h('div.bc-lock', h('i', { html: icon('lock') }), 'Locked'),
+          h('div.bc-size', status === 'building' ? 'Clearing now' : avail ? 'Expand the camp' : xlock ? 'Not yet surveyed' : X.ring === 2 ? 'Expand this side once first' : 'Unavailable'),
+          avail ? costList(cost, { small: true }) : h('div.bc-lock', h('i', { html: icon('lock') }), xlock || 'Locked'),
         ),
       )
     }

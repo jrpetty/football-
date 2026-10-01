@@ -11,7 +11,7 @@ import { mat } from '../render/materials.js'
 import { view, pickAt } from '../render/view.js'
 import { BELTS, RES, STATIONS, SEC_PER_DAY } from '../game/data.js'
 import { S, stationSize, canAfford } from '../game/state.js'
-import { BELT_Y, BELT_DY, planLink, addLink, linkProblem, linkState, linkPerDay, isDepot, rerouteLinks } from '../game/belts.js'
+import { BELT_Y, BELT_DY, planLink, addLink, linkProblem, linkState, linkPerDay, isDepot, rerouteLinks, beltSpeed } from '../game/belts.js'
 import { sfx } from '../core/audio.js'
 import { fmt } from '../core/util.js'
 
@@ -429,7 +429,7 @@ export const BeltMixin = {
   },
   // ---- per frame
   updateBelts(dt, simDt) {
-    for (let t = 1; t < BELTS.length; t++) if (beltMats[t]) beltMats[t].map.offset.y -= (BELTS[t].speed * simDt) / TEX_M
+    for (let t = 1; t < BELTS.length; t++) if (beltMats[t]) beltMats[t].map.offset.y -= (beltSpeed(t) * simDt) / TEX_M
     const counts = {}
     for (const k of SHAPES) counts[k] = 0
     const grow = (k, need) => {

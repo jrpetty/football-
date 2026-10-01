@@ -10,6 +10,7 @@ import {
   conveyor, hopper, benchClutter, stripeMat, decal, drum, componentDrawers, oscilloscope, crtMonitor, cage, pipeRun, solderIron, canopy, tinLeanTo,
 } from './detail.js'
 import { steelShed, timberShed, cncMill, hangBulb, stains } from './stationsHD.js'
+import { CONTAINER_MODELS as CM, DECOR_MODELS as DM } from './furniture.js'
 
 const TAU = Math.PI * 2
 const FACE_BACK = Math.PI
@@ -112,6 +113,69 @@ function boardMat(b, o = {}) {
       for (let k = 0; k < 5; k++) b.box(0.02, 0.012 + rnd() * 0.01, 0.015, { mat: 'plastic', color: ['#1a1a1a', '#c8a050', '#3a5ab0', '#a8a8a0'][k % 4], x: x - 0.05 + rnd() * 0.1, y: 0.02, z: -0.05 + (i % 2) * 0.12 + (rnd() - 0.5) * 0.06 })
     }
     for (let k = 0; k < 4; k++) b.box(0.08, 0.02, 0.06, { mat: 'plastic', color: '#d8d4c8', x: -0.28 + k * 0.09, y: 0.012, z: 0.17 })
+  })
+}
+
+// ---------------------------------------------------------------- lab bits
+function microscope(b, o) {
+  b.at({ x: o.x, y: o.y, z: o.z, ry: o.ry || 0.3 }, () => {
+    b.box(0.16, 0.03, 0.2, { mat: 'paint', color: '#2a2e32', y: 0.015 })
+    b.beam([0, 0.03, -0.07], [0, 0.26, -0.03], 0.04, 0.05, { mat: 'paint', color: '#e8e4dc' })
+    b.box(0.12, 0.015, 0.1, { mat: 'paint', color: '#2a2e32', y: 0.12, z: 0.01 })
+    b.beam([0, 0.2, 0.02], [0, 0.34, -0.05], 0.035, 0.035, { mat: 'paint', color: '#e8e4dc', round: true })
+    b.cyl(0.015, 0.015, 0.06, { mat: 'paint', color: '#2a2e32', y: 0.36, z: -0.06, seg: 8 })
+    b.cyl(0.012, 0.012, 0.05, { mat: 'chrome', color: '#c8ccd0', y: 0.16, z: 0.03, seg: 8 })
+  })
+}
+// Field manuals and binders, stacked.
+function manuals(b, rnd, o) {
+  let y = o.y
+  for (let i = 0; i < o.n; i++) {
+    const h = 0.025 + rnd() * 0.03
+    b.box(0.2 + rnd() * 0.06, h, 0.27 + rnd() * 0.04, { mat: 'paint', color: ['#3a5a8a', '#8a3a2a', '#d8c8a0', '#3a6a4a', '#2a2a2a'][i % 5], x: o.x + (rnd() - 0.5) * 0.03, y: y + h / 2, z: o.z, ry: (rnd() - 0.5) * 0.3 })
+    y += h
+  }
+}
+// Specimen jars, some glowing faintly; optionally in a crate.
+function jars(b, rnd, o) {
+  if (o.crate) crate(b, { x: o.x, z: o.z, w: 0.6, h: 0.32, d: 0.45, color: '#b8a080', open: true })
+  const y = o.y + (o.crate ? 0.32 : 0)
+  for (let i = 0; i < o.n; i++) {
+    const x = o.x - 0.2 + (i % 3) * 0.2
+    const z = o.z - 0.08 + Math.floor(i / 3) * 0.16
+    b.cyl(0.05, 0.05, 0.14, { mat: 'glass', color: '#d8f0e0', x, y: y + 0.07, z, seg: 10 })
+    b.cyl(0.042, 0.042, 0.09, { mat: rnd() < 0.5 ? 'glowGreen' : 'plastic', color: '#3a6a3a', x, y: y + 0.05, z, seg: 10 })
+    b.cyl(0.052, 0.052, 0.02, { mat: 'metal', color: '#8a8e92', x, y: y + 0.15, z, seg: 10 })
+  }
+}
+// A cork board of pinned blueprints and notes.
+function planBoard(b, rnd, o) {
+  b.at({ x: o.x, y: o.y, z: o.z }, () => {
+    b.box(o.w + 0.06, o.h + 0.06, 0.03, { mat: 'wood', color: '#6a4a2a' })
+    b.box(o.w, o.h, 0.02, { mat: 'plain', color: '#b08a5a', z: 0.01 })
+    for (let i = 0; i < 6; i++) {
+      const w = 0.22 + rnd() * 0.18
+      const h = 0.16 + rnd() * 0.14
+      const blue = rnd() < 0.6
+      const x = (rnd() - 0.5) * (o.w - w)
+      const y = (rnd() - 0.5) * (o.h - h)
+      b.box(w, h, 0.004, { mat: 'paint', color: blue ? '#2a5a9a' : '#e8e2d0', x, y, z: 0.022 + i * 0.001, rz: (rnd() - 0.5) * 0.12 })
+      if (blue) for (let k = 0; k < 3; k++) b.box(w * 0.7, 0.006, 0.002, { mat: 'paint', color: '#c8d8f0', x, y: y - h / 3 + k * (h / 3), z: 0.026 + i * 0.001 })
+      b.sphere(0.012, { mat: 'paint', color: '#c83a2a', x: x, y: y + h / 2 - 0.02, z: 0.03 })
+    }
+  })
+}
+function centrifuge(b, I, o) {
+  b.at({ x: o.x, y: o.y, z: o.z }, () => {
+    b.cyl(0.17, 0.19, 0.2, { mat: 'paint', color: '#e0e0dc', y: 0.1, seg: 18 })
+    b.box(0.12, 0.04, 0.012, { mat: 'glowBlue', color: '#102030', y: 0.12, z: 0.18 })
+    b.pivot('rotor', { y: 0.21 }, (p) => {
+      p.cyl(0.13, 0.13, 0.02, { mat: 'chrome', color: '#b8bcc0', seg: 14 })
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2
+        p.cyl(0.018, 0.018, 0.05, { mat: 'plastic', color: '#d8a020', x: Math.cos(a) * 0.09, y: 0.03, z: Math.sin(a) * 0.09, seg: 6 })
+      }
+    })
   })
 }
 
@@ -323,5 +387,74 @@ export const HD2 = {
     I.lights.push({ x: 0, y: 2.7, z: 0, color: '#e8f0ff', intensity: 4.5, dist: 11, when: 'night' })
     I.emitters.push({ kind: 'solder', x: -1.7, y: by + 0.1, z: -1.4, when: 'active' }, { kind: 'sparks', x: 1.55, y: 1.0, z: -0.9, when: 'active' })
     I.spots.push({ x: -1.4, z: -0.85, face: FACE_BACK, anim: 'type' }, { x: 1.5, z: -0.4, face: FACE_BACK, anim: 'search' }, { x: 1.6, z: 0.9, face: Math.PI / 2, anim: 'type' })
+  },
+
+  // ============================================================ RESEARCH DESK
+  // L1: a field desk under a tarp with a microscope and a pile of manuals.
+  // L2: a timber lab: specimen fridge, glassware, a board of pinned plans.
+  // L3: a steel lab: computers, a centrifuge, glowing specimen tanks.
+  research(b, L, I) {
+    const rnd = seeded(3300 + L)
+    const at = (x, z, ry, fn) => b.at({ x, z, ry }, () => fn())
+    if (L === 1) {
+      b.box(4.8, 0.02, 3.8, { mat: 'dirt', color: '#6a5a48', y: 0.0 })
+      slab(b, I, { w: 3.2, d: 2.0, z: -0.7, color: '#a8a49a' })
+      canopy(b, I, { x: 0.0, z: -0.6, w: 3.6, d: 2.3, hf: 2.4, hb: 2.0, color: '#4f6a7a', seed: 61 })
+      at(-0.55, -1.0, 0, () => CM.desk(b, seeded(3)))
+      microscope(b, { x: -0.75, y: 0.76, z: -1.05 })
+      manuals(b, rnd, { x: -0.2, y: 0.76, z: -1.1, n: 5 })
+      lantern(b, { x: -0.25, y: 0.76, z: -0.85 })
+      at(1.05, -1.15, 0, () => CM.bookshelf(b, seeded(7)))
+      jars(b, rnd, { x: 1.3, y: 0, z: 0.25, n: 5, crate: true })
+      at(-0.55, -0.35, Math.PI, () => DM.chair(b, seeded(2)))
+      crate(b, { x: -1.6, z: 0.5, w: 0.55, h: 0.45, d: 0.5, color: '#b8a888' })
+      manuals(b, rnd, { x: -1.6, y: 0.46, z: 0.5, n: 3 })
+      I.lights.push({ x: -0.25, y: 1.0, z: -0.85, color: '#ffb060', intensity: 2.2, dist: 6, when: 'night' })
+      I.spots.push({ x: -0.55, z: -0.35, face: FACE_BACK, anim: 'type', sit: 0.46 })
+      return
+    }
+    if (L === 2) {
+      timberShed(b, I, { w: 4.8, d: 3.4, seed: 71, leftOpen: 1.1 })
+      at(-1.2, -1.25, 0, () => CM.desk(b, seeded(5)))
+      microscope(b, { x: -1.45, y: 0.86, z: -1.3 })
+      manuals(b, rnd, { x: -0.85, y: 0.86, z: -1.35, n: 4 })
+      at(-1.2, -0.55, Math.PI, () => DM.chair(b, seeded(4)))
+      at(0.75, -1.2, 0, () => DM.labBench(b, seeded(9)))
+      planBoard(b, rnd, { x: -0.1, y: 1.55, z: -1.62, w: 1.1, h: 0.75 })
+      at(2.05, -0.2, -Math.PI / 2, () => CM.fridge(b, seeded(11)))
+      at(2.05, 0.8, -Math.PI / 2, () => CM.filing(b, seeded(13)))
+      jars(b, rnd, { x: 0.75, y: 0.92, z: -1.0, n: 4 })
+      benchLamp(b, { x: -0.7, y: 0.86, z: -1.2, ry: 0.4 })
+      hangBulb(b, I, 0.0, 2.3, -0.4)
+      I.spots.push({ x: -1.2, z: -0.55, face: FACE_BACK, anim: 'type', sit: 0.46 }, { x: 0.75, z: -0.5, face: FACE_BACK, anim: 'search' })
+      return
+    }
+    slab(b, I, { color: '#c4c0b8' })
+    steelShed(b, I, { w: 4.8, d: 3.6, h: 3.1, hb: 2.75, color: '#3e4e5a', clad: '#a8b0b4' })
+    at(-1.35, -1.3, 0, () => CM.desk(b, seeded(15)))
+    crtMonitor(b, { x: -1.55, y: 0.76, z: -1.4, color: '#c8c4b8' })
+    crtMonitor(b, { x: -1.0, y: 0.76, z: -1.4, color: '#c8c4b8', screen: undefined })
+    at(-1.35, -0.6, Math.PI, () => DM.chair(b, seeded(6)))
+    at(0.55, -1.3, 0, () => DM.labBench(b, seeded(17)))
+    microscope(b, { x: 0.2, y: 0.92, z: -1.4 })
+    centrifuge(b, I, { x: 0.95, y: 0.92, z: -1.35 })
+    at(2.1, -1.2, -Math.PI / 2, () => CM.server(b, seeded(19)))
+    planBoard(b, rnd, { x: -0.45, y: 1.75, z: -1.79, w: 1.5, h: 0.85 })
+    // specimen tanks: glass cylinders with something pale floating in green
+    for (const [x, z] of [[1.7, 0.75], [2.1, 0.75]]) {
+      b.cyl(0.2, 0.22, 0.12, { mat: 'paint', color: '#3a4248', x, y: 0.06, z, seg: 16 })
+      b.cyl(0.17, 0.17, 1.1, { mat: 'glowGreen', color: '#183a20', x, y: 0.67, z, seg: 16 })
+      b.cyl(0.19, 0.19, 1.14, { mat: 'glass', color: '#b8e8c8', x, y: 0.67, z, seg: 16 })
+      b.cyl(0.2, 0.2, 0.08, { mat: 'paint', color: '#3a4248', x, y: 1.28, z, seg: 16 })
+      b.sphere(0.07, { mat: 'skin', color: '#c8b8a0', x, y: 0.75 + rnd() * 0.2, z, sy: 1.6 })
+      cable(b, [[x, 1.32, z], [x - 0.2, 2.2, z - 0.4], [1.9, 2.5, -1.0]], { r: 0.012, sag: 0.08 })
+    }
+    at(-2.1, 0.4, Math.PI / 2, () => CM.chemshelf(b, seeded(21)))
+    jars(b, rnd, { x: 0.95, y: 0.92, z: -1.0, n: 5 })
+    fluoroLight(b, { x: -0.6, y: 2.55, z: -0.5, len: 1.4 })
+    fluoroLight(b, { x: 1.0, y: 2.55, z: -0.5, len: 1.4 })
+    I.lights.push({ x: 0, y: 2.5, z: -0.5, color: '#e0f0ff', intensity: 4, dist: 10, when: 'night' }, { x: 1.9, y: 0.8, z: 0.75, color: '#60ff90', intensity: 1.4, dist: 4, when: 'always' })
+    I.anims.push({ name: 'rotor', kind: 'spin', axis: 'y', speed: 14, when: 'active' })
+    I.spots.push({ x: -1.35, z: -0.6, face: FACE_BACK, anim: 'type', sit: 0.46 }, { x: 0.55, z: -0.55, face: FACE_BACK, anim: 'search' })
   },
 }

@@ -1,9 +1,10 @@
 // Camp-wide panels: trade, goals, log, the wall, expansions, production and
 // stockpiles, power, morale, settings, the gate visitor, reports and menus.
-import { RES, STOCK_KEYS, ITEMS, QUALITY, RARITY, STATIONS, FENCE, EXPANSIONS, GOALS, HORDES, OCCUPATIONS, SKILLS, SKILL_KEYS, TRAITS, SEC_PER_DAY, AMMO_KEYS } from '../game/data.js'
+import { RES, STOCK_KEYS, ITEMS, QUALITY, RARITY, STATIONS, FENCE, EXPANSIONS, GOALS, HORDES, OCCUPATIONS, SKILLS, SKILL_KEYS, TRAITS, SEC_PER_DAY, AMMO_KEYS, MILESTONES } from '../game/data.js'
 import {
   S, day, clockStr, gameDur, capOf, bedCount, canAfford, pay, gain, addItem, itemName, fenceMax, repairFenceCost, repairFence, fenceUpgradeCost, upgradeFence,
   expansionCost, startExpansion, expansionAvailable, claimGoal, survivorLevel, perimeter, save, wipeSave, countType, workersOf, survivorStats,
+  unlockedBy, msDone, fenceUnlocked,
 } from '../game/state.js'
 import { campFlow, stationFlow, power, powerNeed, isAutomated, moraleFactors, dailyNeeds, constructSpeed, raidIntel, sellMult, buyMult, resSellPrice, acceptRecruit, declineRecruit } from '../game/economy.js'
 import { QUALITY as GFXQ } from '../render/pipeline.js'
@@ -135,7 +136,11 @@ export function renderFence(ui) {
       h(
         'section.card',
         h('h3', `Upgrade: ${next.name}`, h('small', `${next.hp} strength`)),
-        S.fence.building ? [bar(1 - S.fence.building.left / S.fence.building.total, 'build'), h('p.note', 'Free survivors are raising the new wall.')] : [h('p.note', `Cost scales with the length of the wall (${perimeter()} m). Expand first and it costs more; upgrade first and expansions inherit the old wall level.`), h('div.kv', costList(c), h('button.btn.go.small', { disabled: !canAfford(c), onclick: () => (upgradeFence() ? (sfx('build'), ui.toast(`Building the ${next.name}`)) : sfx('error'), ui.refreshPanel()) }, 'Upgrade'))],
+        S.fence.building
+          ? [bar(1 - S.fence.building.left / S.fence.building.total, 'build'), h('p.note', 'Free survivors are raising the new wall.')]
+          : !fenceUnlocked()
+            ? [h('p.note.bad', `Needs the ${MILESTONES[unlockedBy('fence', S.fence.level + 1)].name} milestone (tier ${MILESTONES[unlockedBy('fence', S.fence.level + 1)].tier}). See Progress.`)]
+            : [h('p.note', `Cost scales with the length of the wall (${perimeter()} m). Expand first and it costs more; upgrade first and expansions inherit the old wall level.`), h('div.kv', costList(c), h('button.btn.go.small', { disabled: !canAfford(c), onclick: () => (upgradeFence() ? (sfx('build'), ui.toast(`Building the ${next.name}`)) : sfx('error'), ui.refreshPanel()) }, 'Upgrade'))],
       ),
     )
   } else body.push(h('p.note', 'This is the strongest wall you can build.'))
@@ -157,7 +162,7 @@ export function renderExpansion(ui, id) {
       h(
         'section.card',
         h('h3', 'Expand', h('small', `${X.time}s of work`)),
-        !avail ? h('p.note.bad', S.expanding ? 'Finish the current expansion first.' : 'Expand the inner strip on this side first.') : null,
+        !avail ? h('p.note.bad', unlockedBy('exp', id) && !msDone(unlockedBy('exp', id)) ? `Needs the ${MILESTONES[unlockedBy('exp', id)].name} milestone (tier ${MILESTONES[unlockedBy('exp', id)].tier}). See Progress.` : S.expanding ? 'Finish the current expansion first.' : 'Expand the inner strip on this side first.') : null,
         h('p.note', 'The wall moves out to enclose the new land, at its current level. Hordes get a little bigger as the camp grows.'),
         h('div.kv', costList(cost), h('button.btn.go.small', { disabled: !avail || !canAfford(cost) || !!S.expanding, onclick: () => (startExpansion(id) ? (sfx('build'), ui.toast(`Clearing ${X.name}`)) : sfx('error'), ui.refreshPanel()) }, 'Start')),
       ),

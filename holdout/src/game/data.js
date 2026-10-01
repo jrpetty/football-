@@ -31,6 +31,7 @@ export const RES = {
   molotov: { name: 'Molotov', cat: 'supplies', color: '#ff8a3a', sell: 20, capMul: 0.15, desc: 'Utility item: sets an area ablaze for several seconds.' },
   pipebomb: { name: 'Pipe Bomb', cat: 'supplies', color: '#c8c8c8', sell: 45, capMul: 0.15, desc: 'Utility item: a loud blast that shreds everything close by.' },
   noisemaker: { name: 'Noise Maker', cat: 'supplies', color: '#58d0ff', sell: 25, capMul: 0.15, desc: 'Utility item: beeps for 15 s and lures nearby zombies to it.' },
+  antiviral: { name: 'Antiviral', cat: 'supplies', color: '#8ae0c4', sell: 45, capMul: 0.15, desc: 'Cures an infection if it is given before the infection takes hold. Made at the Infirmary once researched.' },
   module: { name: 'Automation Module', cat: 'supplies', color: '#7ad0ff', sell: 90, capMul: 0.1, desc: 'Lets a station run on generator power with nobody assigned.' },
   // components: the factory's intermediate goods
   steel: { name: 'Steel', cat: 'components', color: '#8aa6bc', sell: 8, capMul: 0.5, desc: 'Metal hardened at the Forge (level 2). Motors, belts, heavy walls.' },
@@ -378,8 +379,9 @@ export const STATIONS = {
     recipes: {
       parts: { lvl: 1, in: { scrap: 4, metal: 1 }, out: { parts: 2 }, time: [20, 16, 12] },
       wiring: { lvl: 1, in: { scrap: 2, electronics: 1 }, out: { wiring: 3 }, time: [24, 19, 15] },
+      electronics: { lvl: 3, in: { scrap: 6, wiring: 2, chemicals: 1 }, out: { electronics: 1 }, time: [30, 30, 24] },
     },
-    targets: { parts: 40, wiring: 40 },
+    targets: { parts: 40, wiring: 40, electronics: 0 },
   },
   assembler: {
     name: 'Machine Shop', cat: 'crafting', size: [5, 4], levels: 3, skill: 'tech', req: { fabricator: 1, forge: 2 },
@@ -407,6 +409,17 @@ export const STATIONS = {
     time: [35, 65, 100], workers: [1, 1, 2], queue: [2, 3, 4],
   },
 
+  mast: {
+    name: 'Signal Mast', cat: 'living', size: [6, 6], levels: 6, skill: null, unique: true,
+    desc: 'The old broadcast mast, rebuilt one phase at a time. Deliver what each phase needs, by hand from storage or by belt, and it climbs higher.',
+    cost: [{ metal: 60, wood: 120 }, {}, {}, {}, {}, {}], time: [60, 0, 0, 0, 0, 0], workers: [0, 0, 0, 0, 0, 0],
+  },
+  research: {
+    name: 'Research Desk', cat: 'crafting', size: [5, 4], levels: 3, skill: 'tech', unique: true,
+    desc: 'Study schematics for alternate recipes, specimens for medicine against the infection, and power cores. Researchers with Engineering work faster.',
+    cost: [{ wood: 40, metal: 40, electronics: 10 }, { metal: 60, circuits: 8, parts: 20 }, { steel: 60, circuits: 20, cells: 6 }],
+    time: [45, 80, 120], workers: [1, 2, 2],
+  },
   watchtower: {
     name: 'Watchtower', cat: 'defense', size: [3, 3], levels: 3, skill: 'ranged',
     desc: 'A guard up here fires on the horde with extra damage, picks off night wanderers and spots hordes early.',
@@ -446,6 +459,81 @@ export const BELTS = [
 export const BELT_BONUS = 0.15
 // How many units ride in one belt item.
 export const BELT_STACK = { pammo: 10, rammo: 10, shells: 5 }
+
+// ---------------------------------------------------------------- milestones
+// The long road. Milestones are deliveries made at the campfire: pay the
+// cost and the camp learns something new. Tiers open in order; from tier 3
+// on, a tier also waits on a phase of the Signal (below). Unlock kinds:
+// stations, belt (tier), fence (level), exp (expansion ids), recipes
+// ([station, recipe]), and flags for camp-wide abilities.
+export const TIERS = [
+  null,
+  { name: 'Foothold', phase: 0, blurb: 'Make the yard livable: fire for metal, belts for hauling, a wall worth the name.' },
+  { name: 'Workshop', phase: 0, blurb: 'Chemistry, fabrication and the first look at the old broadcast mast.' },
+  { name: 'Power', phase: 1, blurb: 'Generators, electronics and better belts. The camp starts to hum.' },
+  { name: 'Industry', phase: 1, blurb: 'Machine tools, research and steel walls.' },
+  { name: 'Automation', phase: 2, blurb: 'Fast belts, an outer ring of land and machines that run themselves.' },
+  { name: 'Fortress', phase: 2, blurb: 'Fortified walls, power cells and transmitter coils.' },
+  { name: 'Overdrive', phase: 3, blurb: 'Overclocking and the amplifiers the Signal needs.' },
+  { name: 'Exodus', phase: 3, blurb: 'Everything the camp needs to reach the coast, and to hold out until then.' },
+]
+export const MILESTONES = {
+  smelter: { tier: 1, name: 'Smelter', desc: 'Stack a clay kiln and work out how hot it has to burn.', cost: { wood: 60, scrap: 80 }, unlocks: { stations: ['forge'] } },
+  conveyors: { tier: 1, name: 'Conveyors', desc: 'Salvaged rollers and old rubber: carry goods between stations without carrying them.', cost: { wood: 50, scrap: 60, parts: 4 }, unlocks: { belt: 1 } },
+  palisade: { tier: 1, name: 'Palisade', desc: 'Plans for a proper log wall, and for pushing it out into the woods.', cost: { wood: 150, cloth: 10 }, unlocks: { fence: 1, exp: ['w1', 'n1'] } },
+  chemistry: { tier: 2, name: 'Chemistry', desc: 'A school chemistry kit and a lot of nerve.', cost: { metal: 60, chemicals: 10, parts: 10 }, unlocks: { stations: ['chemlab', 'ammo'] } },
+  fabrication: { tier: 2, name: 'Fabrication', desc: 'A real production line for parts and wire, a gunsmith\'s bench and a tailor\'s.', cost: { metal: 100, parts: 20, scrap: 150 }, unlocks: { stations: ['fabricator', 'weapons', 'tailor'] } },
+  signal: { tier: 2, name: 'The Signal', desc: 'Old maps show a broadcast mast on the hill. If it could reach the coast, someone might come.', cost: { metal: 120, wood: 200, parts: 20 }, unlocks: { stations: ['mast'] } },
+  power: { tier: 3, name: 'Power', desc: 'Generators, perimeter floodlights and auto-turrets.', cost: { metal: 120, parts: 30, electronics: 10, fuel: 30 }, unlocks: { stations: ['generator', 'floodlight', 'turret'] } },
+  electronics: { tier: 3, name: 'Electronics', desc: 'A soldering bench and a radio that reaches further than the fence.', cost: { metal: 80, wiring: 40, electronics: 12 }, unlocks: { stations: ['electronics', 'radio'] } },
+  rollers: { tier: 3, name: 'Rubber Rollers', desc: 'Cured rubber belts on proper rollers, and the land to use them on.', cost: { rubber: 40, metal: 60 }, unlocks: { belt: 2, exp: ['e1', 's1'] } },
+  machining: { tier: 4, name: 'Machining', desc: 'Lathes, a press and a winding bench.', cost: { steel: 80, wiring: 60, parts: 40 }, unlocks: { stations: ['assembler'] } },
+  research: { tier: 4, name: 'Research', desc: 'A desk, a microscope and every manual the runs bring home.', cost: { electronics: 20, parts: 30, cloth: 30, schematic: 1 }, unlocks: { stations: ['research'] } },
+  sheetmetal: { tier: 4, name: 'Sheet Metal', desc: 'Steel-faced walls, and panels that drink the sun.', cost: { steel: 60, metal: 200 }, unlocks: { fence: 2, stations: ['solar'] } },
+  automation: { tier: 5, name: 'Automation', desc: 'Better relays: automated stations run 50% faster.', cost: { circuits: 20, motors: 6, electronics: 20 }, unlocks: { flags: ['autoBoost'] } },
+  motorbelts: { tier: 5, name: 'Motor Belts', desc: 'Motor-driven belts on steel frames.', cost: { motors: 20, steel: 100 }, unlocks: { belt: 3 } },
+  outerring: { tier: 5, name: 'Outer Ring', desc: 'Survey the land beyond the first expansions.', cost: { steel: 120, wood: 400, metal: 300 }, unlocks: { exp: ['n2', 'e2', 's2', 'w2'] } },
+  fortified: { tier: 6, name: 'Fortification', desc: 'Concrete-filled steel: the strongest wall there is.', cost: { steel: 200, metal: 400, parts: 60 }, unlocks: { fence: 3 } },
+  cells: { tier: 6, name: 'Power Cells', desc: 'Sealed batteries for the mast, mixed at the Chemistry Lab.', cost: { circuits: 40, chemicals: 60, metal: 80 }, unlocks: { recipes: [['chemlab', 'cells']] } },
+  coils: { tier: 6, name: 'Transmitter Coils', desc: 'Hand-wound coils for the mast, made at the Machine Shop.', cost: { circuits: 40, wiring: 120, steel: 60 }, unlocks: { recipes: [['assembler', 'coils']] } },
+  overclock: { tier: 7, name: 'Overclocking', desc: 'Fit power cores to automated stations to push them past their limits.', cost: { cells: 30, circuits: 60, motors: 10 }, unlocks: { flags: ['cores'] } },
+  amplifiers: { tier: 7, name: 'Amplifiers', desc: 'The heart of the broadcast, built at the Machine Shop.', cost: { coils: 40, circuits: 80, motors: 20 }, unlocks: { recipes: [['assembler', 'amps']] } },
+  rations: { tier: 7, name: 'Field Rations', desc: 'Better cooking and storage: the camp eats 15% less.', cost: { food: 400, water: 400, metal: 100 }, unlocks: { flags: ['rations'] } },
+  convoys: { tier: 8, name: 'Convoys', desc: 'Armoured trucks to hold ground out in the city.', cost: { motors: 60, steel: 200, fuel: 300 }, unlocks: { flags: ['outposts'] } },
+  arsenal: { tier: 8, name: 'Arsenal', desc: 'Rifled barrels and machined parts: weapons crafted here roll better quality.', cost: { steel: 150, motors: 20, parts: 120 }, unlocks: { flags: ['arsenal'] } },
+  beacon: { tier: 8, name: 'Beacon', desc: 'A long-range relay: more survivors find the camp, and better ones.', cost: { circuits: 120, coils: 30, cells: 30 }, unlocks: { flags: ['beacon'] } },
+}
+// The Signal: restore the broadcast mast in five phases. Phases 1-3 open
+// tiers; phase 5 calls the evacuation and ends the story (play can go on).
+export const SIGNAL = [
+  { name: 'Clear the Mast', desc: 'Cut back the rot, re-bolt the base sections and run new cable up the first stage.', cost: { steel: 50, wiring: 60, rubber: 20, metal: 150 } },
+  { name: 'Power the Mast', desc: 'A transformer shed and control boards so the mast can draw power at all.', cost: { circuits: 50, motors: 15, steel: 150, wiring: 100 } },
+  { name: 'Raise the Array', desc: 'Lift the upper stages and the dish array. Coils and cells to drive them.', cost: { coils: 60, cells: 40, motors: 40, circuits: 120 } },
+  { name: 'Tune the Signal', desc: 'Amplifier cabinets and a lot of patience with a frequency dial.', cost: { amps: 30, coils: 120, cells: 120, circuits: 250 } },
+  { name: 'Call the Coast', desc: 'Full power, every night, until somebody answers.', cost: { amps: 120, coils: 300, cells: 300, motors: 200, circuits: 600 } },
+]
+
+// ---------------------------------------------------------------- research
+// Projects at the Research Desk. time is work-seconds at 100% speed; lvl is
+// the desk level needed; req lists projects that must be done first.
+// Studying a schematic offers a choice of three alternate recipes.
+export const RESEARCH = {
+  schematic: { name: 'Study a Schematic', cat: 'Schematics', lvl: 1, cost: { schematic: 1, parts: 10, electronics: 2 }, time: 90, repeat: true, desc: 'Work through a set of plans found on a run, then choose one of three alternate recipes to unlock.' },
+  fieldmed: { name: 'Field Medicine', cat: 'Field', lvl: 1, cost: { meds: 15, cloth: 40 }, time: 150, desc: 'First aid kits heal three quarters of a survivor\'s health instead of half.' },
+  ballistics: { name: 'Ballistics', cat: 'Field', lvl: 1, cost: { schematic: 1, gunpowder: 40, parts: 30 }, time: 180, desc: 'Hand-loading and sight tuning: +10% firearm damage.' },
+  scavenging: { name: 'Scavenger Lore', cat: 'Field', lvl: 2, cost: { schematic: 2, parts: 40 }, time: 240, desc: 'Everyone searches 15% faster on runs.' },
+  biology: { name: 'Infected Biology', cat: 'Infection', lvl: 1, cost: { specimen: 3, chemicals: 15 }, time: 200, desc: 'Where the special infected are weak: +25% damage against stalkers, screamers and bloaters.' },
+  antiviral: { name: 'Antiviral Serum', cat: 'Infection', lvl: 1, cost: { specimen: 3, meds: 10, chemicals: 10 }, time: 160, desc: 'The Infirmary learns to make antivirals, a cure for an infection caught early.' },
+  immunity: { name: 'Immune Boosters', cat: 'Infection', lvl: 2, req: ['antiviral'], cost: { specimen: 8, meds: 20, circuits: 4 }, time: 320, desc: 'Bites are half as likely to infect.' },
+  vaccine: { name: 'Vaccine', cat: 'Infection', lvl: 3, req: ['immunity'], cost: { specimen: 16, cells: 6, meds: 40 }, time: 600, desc: 'Nobody in the camp can be infected any more.' },
+  efficiency: { name: 'Power Efficiency', cat: 'Engineering', lvl: 2, cost: { circuits: 10, wiring: 40 }, time: 240, desc: 'Automated stations draw 25% less power.' },
+  logistics: { name: 'Logistics', cat: 'Engineering', lvl: 2, cost: { schematic: 1, motors: 4, circuits: 6 }, time: 260, desc: 'Better belt tension and spacing: every belt carries 25% more.' },
+  coretuning: { name: 'Core Tuning', cat: 'Engineering', lvl: 3, cost: { core: 1, circuits: 20, cells: 4 }, time: 400, desc: 'Each power core overclocks a station by 75% instead of 50%.' },
+}
+// Power cores: each one fitted to an automated station adds to its speed;
+// power draw rises faster than output.
+export const CORE_SLOTS = 3
+export const CORE_BOOST = 0.5
 
 // Perimeter wall levels; upgrade cost is per 10 m of wall.
 export const FENCE = [
@@ -501,6 +589,7 @@ export const RECIPES = [
   // Infirmary
   { id: 'medkit', station: 'infirmary', lvl: 1, out: { medkit: 1 }, in: { cloth: 4, meds: 2 }, time: 25, cat: 'Medical' },
   { id: 'meds', station: 'infirmary', lvl: 2, out: { meds: 1 }, in: { chemicals: 2, water: 2 }, time: 35, cat: 'Medical' },
+  { id: 'antiviral', station: 'infirmary', lvl: 2, out: { antiviral: 1 }, in: { meds: 3, chemicals: 3 }, time: 60, cat: 'Medical', research: 'antiviral' },
 ]
 // Alternate recipes: different inputs for the same product, unlocked by
 // researching schematics found on runs. A station runs either its standard
@@ -549,8 +638,8 @@ const P = {
   kitchen: [{ r: 'food', n: [2, 6], w: 6 }, { r: 'water', n: [2, 5], w: 5 }, { r: 'cloth', n: [1, 3], w: 1 }, { r: 'chemicals', n: [1, 2], w: 0.6 }],
   fridge: [{ r: 'food', n: [3, 7], w: 6 }, { r: 'water', n: [2, 6], w: 5 }],
   closet: [{ r: 'cloth', n: [3, 7], w: 6 }, { i: 'jacket', w: 0.5 }, { i: 'packS', w: 0.3 }, { i: 'shoes', w: 0.4 }, { r: 'cash', n: [5, 20], w: 1 }],
-  desk: [{ r: 'cash', n: [5, 25], w: 4 }, { r: 'parts', n: [1, 2], w: 2 }, { r: 'electronics', n: [1, 2], w: 1.5 }, { r: 'cloth', n: [1, 3], w: 1 }, { i: 'flashlight', w: 0.4 }, { i: 'pistol', w: 0.12 }],
-  books: [{ r: 'cloth', n: [1, 3], w: 2 }, { r: 'cash', n: [3, 12], w: 2 }, { r: 'wood', n: [2, 4], w: 2 }],
+  desk: [{ r: 'cash', n: [5, 25], w: 4 }, { r: 'parts', n: [1, 2], w: 2 }, { r: 'electronics', n: [1, 2], w: 1.5 }, { r: 'cloth', n: [1, 3], w: 1 }, { r: 'schematic', n: [1, 1], w: 0.35 }, { i: 'flashlight', w: 0.4 }, { i: 'pistol', w: 0.12 }],
+  books: [{ r: 'cloth', n: [1, 3], w: 2 }, { r: 'cash', n: [3, 12], w: 2 }, { r: 'wood', n: [2, 4], w: 2 }, { r: 'schematic', n: [1, 1], w: 0.6 }],
   trash: [{ r: 'cloth', n: [1, 3], w: 3 }, { r: 'scrap', n: [2, 5], w: 4 }, { r: 'parts', n: [1, 1], w: 1 }, { r: 'food', n: [1, 2], w: 2 }],
   shelf: [{ r: 'food', n: [3, 8], w: 6 }, { r: 'water', n: [3, 7], w: 5 }, { r: 'meds', n: [1, 2], w: 0.6 }, { r: 'cloth', n: [1, 4], w: 1 }, { r: 'chemicals', n: [1, 3], w: 0.8 }],
   register: [{ r: 'cash', n: [20, 60], w: 1 }],
@@ -558,14 +647,14 @@ const P = {
   medcab: [{ r: 'meds', n: [1, 4], w: 6 }, { r: 'cloth', n: [2, 4], w: 2 }, { r: 'chemicals', n: [1, 2], w: 1 }, { r: 'medkit', n: [1, 1], w: 0.8 }],
   locker: [{ r: 'cloth', n: [2, 5], w: 3 }, { r: 'pammo', n: [8, 24], w: 3 }, { r: 'cash', n: [10, 30], w: 2 }, { i: 'jacket', w: 0.4 }, { i: 'vest', w: 0.25 }, { i: 'flashlight', w: 0.4 }, { i: 'pistol', w: 0.25 }, { i: 'walkie', w: 0.08 }, { i: 'binoculars', w: 0.12 }],
   gunlocker: [{ r: 'pammo', n: [20, 50], w: 4 }, { r: 'rammo', n: [10, 30], w: 2 }, { r: 'shells', n: [8, 20], w: 2 }, { i: 'pistol', w: 1 }, { i: 'revolver', w: 0.6 }, { i: 'shotgun', w: 0.5 }, { i: 'rifle', w: 0.3 }, { i: 'smg', w: 0.2 }, { i: 'ar', w: 0.07 }, { i: 'vest', w: 0.3 }],
-  safe: [{ r: 'cash', n: [80, 220], w: 5 }, { r: 'meds', n: [2, 5], w: 1 }, { r: 'electronics', n: [2, 4], w: 1 }, { i: 'revolver', w: 0.4 }, { i: 'walkie', w: 0.2 }, { i: 'katana', w: 0.04 }],
+  safe: [{ r: 'cash', n: [80, 220], w: 5 }, { r: 'meds', n: [2, 5], w: 1 }, { r: 'electronics', n: [2, 4], w: 1 }, { r: 'schematic', n: [1, 1], w: 0.6 }, { r: 'core', n: [1, 1], w: 0.2 }, { i: 'revolver', w: 0.4 }, { i: 'walkie', w: 0.2 }, { i: 'katana', w: 0.04 }],
   crate: [{ r: 'wood', n: [5, 12], w: 3 }, { r: 'scrap', n: [5, 12], w: 3 }, { r: 'metal', n: [3, 8], w: 2 }, { r: 'parts', n: [2, 5], w: 2 }, { r: 'cloth', n: [4, 9], w: 2 }, { r: 'fuel', n: [2, 5], w: 1 }, { r: 'electronics', n: [1, 3], w: 0.8 }],
-  milcrate: [{ r: 'rammo', n: [20, 60], w: 4 }, { r: 'pammo', n: [20, 60], w: 3 }, { r: 'shells', n: [10, 24], w: 2 }, { r: 'parts', n: [4, 9], w: 2 }, { r: 'meds', n: [2, 5], w: 1 }, { r: 'electronics', n: [2, 5], w: 1 }, { r: 'pipebomb', n: [1, 2], w: 0.6 }, { i: 'rifle', w: 0.4 }, { i: 'smg', w: 0.35 }, { i: 'ar', w: 0.2 }, { i: 'military', w: 0.12 }, { i: 'riot', w: 0.2 }, { i: 'walkie', w: 0.3 }, { i: 'nvg', w: 0.06 }, { i: 'binoculars', w: 0.25 }, { i: 'thermal', w: 0.04 }],
+  milcrate: [{ r: 'rammo', n: [20, 60], w: 4 }, { r: 'pammo', n: [20, 60], w: 3 }, { r: 'shells', n: [10, 24], w: 2 }, { r: 'parts', n: [4, 9], w: 2 }, { r: 'meds', n: [2, 5], w: 1 }, { r: 'electronics', n: [2, 5], w: 1 }, { r: 'pipebomb', n: [1, 2], w: 0.6 }, { r: 'schematic', n: [1, 1], w: 0.5 }, { r: 'core', n: [1, 1], w: 0.22 }, { i: 'rifle', w: 0.4 }, { i: 'smg', w: 0.35 }, { i: 'ar', w: 0.2 }, { i: 'military', w: 0.12 }, { i: 'riot', w: 0.2 }, { i: 'walkie', w: 0.3 }, { i: 'nvg', w: 0.06 }, { i: 'binoculars', w: 0.25 }, { i: 'thermal', w: 0.04 }],
   car: [{ r: 'fuel', n: [2, 6], w: 4 }, { r: 'parts', n: [1, 3], w: 2 }, { r: 'electronics', n: [1, 2], w: 1 }, { r: 'cash', n: [5, 20], w: 1 }, { r: 'water', n: [1, 3], w: 1 }],
   pump: [{ r: 'fuel', n: [4, 10], w: 1 }],
   dumpster: [{ r: 'food', n: [1, 3], w: 2 }, { r: 'cloth', n: [2, 5], w: 3 }, { r: 'scrap', n: [3, 7], w: 4 }, { r: 'wood', n: [2, 5], w: 2 }, { r: 'parts', n: [1, 2], w: 1 }],
-  electronic: [{ r: 'electronics', n: [2, 5], w: 5 }, { r: 'parts', n: [1, 3], w: 2 }, { r: 'scrap', n: [2, 4], w: 2 }],
-  chem: [{ r: 'chemicals', n: [2, 6], w: 6 }, { r: 'fuel', n: [1, 3], w: 1 }, { r: 'meds', n: [1, 2], w: 0.5 }],
+  electronic: [{ r: 'electronics', n: [2, 5], w: 5 }, { r: 'parts', n: [1, 3], w: 2 }, { r: 'scrap', n: [2, 4], w: 2 }, { r: 'schematic', n: [1, 1], w: 0.35 }, { r: 'core', n: [1, 1], w: 0.05 }],
+  chem: [{ r: 'chemicals', n: [2, 6], w: 6 }, { r: 'fuel', n: [1, 3], w: 1 }, { r: 'meds', n: [1, 2], w: 0.5 }, { r: 'specimen', n: [1, 1], w: 0.25 }],
   fireLocker: [{ r: 'meds', n: [1, 3], w: 2 }, { r: 'cloth', n: [3, 6], w: 2 }, { r: 'medkit', n: [1, 1], w: 1 }, { i: 'axe', w: 0.6 }, { i: 'jacket', w: 0.5 }, { i: 'flashlight', w: 0.5 }, { i: 'crowbar', w: 0.5 }, { i: 'thermal', w: 0.03 }],
   shed: [{ r: 'wood', n: [4, 9], w: 3 }, { r: 'scrap', n: [3, 8], w: 3 }, { r: 'fuel', n: [1, 4], w: 2 }, { r: 'chemicals', n: [1, 3], w: 1 }, { i: 'crowbar', w: 0.3 }, { i: 'bat', w: 0.2 }],
 }

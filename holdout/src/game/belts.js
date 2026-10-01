@@ -4,14 +4,15 @@
 // moves speed / gap items a second. What arrives fills the station's input
 // buffer; what a belted station makes waits in its output buffer for the
 // next free spot on the belt. Stations without belts haul from storage.
-import { STATIONS, BELTS, BELT_STACK, BELT_BONUS, ALT_RECIPES, SEC_PER_DAY } from './data.js'
-import { S, bounds, gateTiles, stationSize, pay, gain, capOf, linkCost, removeLink } from './state.js'
+import { STATIONS, BELTS, BELT_STACK, BELT_BONUS, ALT_RECIPES, SEC_PER_DAY, SIGNAL } from './data.js'
+import { S, bounds, gateTiles, stationSize, pay, gain, capOf, linkCost, removeLink, isUnlocked, researchDone } from './state.js'
 import { bus, uid } from '../core/util.js'
 
 export const BELT_Y = 2.45 // deck height of the lowest belts: survivors walk underneath
 export const BELT_DY = 0.62 // each crossing layer runs this much higher
 export const stackOf = (k) => BELT_STACK[k] || 1
-export const linkRate = (tier) => BELTS[tier].speed / BELTS[tier].gap // items a second
+export const beltSpeed = (tier) => BELTS[tier].speed * (researchDone('logistics') ? 1.25 : 1)
+export const linkRate = (tier) => beltSpeed(tier) / BELTS[tier].gap // items a second
 export const linkPerDay = (tier, k) => linkRate(tier) * stackOf(k) * SEC_PER_DAY
 export const isDepot = (st) => st?.type === 'storage'
 const byId = (id) => S.stations.find((s) => s.id === id)
@@ -27,8 +28,10 @@ function recipesOf(st) {
   return out
 }
 // Resources a station can take off a belt, in recipe order.
+const SIGNAL_INPUTS = [...new Set(SIGNAL.flatMap((p) => Object.keys(p.cost)))]
 export function inputsOf(st) {
   if (st.type === 'generator') return ['fuel']
+  if (st.type === 'mast') return SIGNAL_INPUTS
   const set = new Set()
   for (const r of recipesOf(st)) for (const [k, v] of Object.entries(r.in || {})) if (v > 0) set.add(k)
   return [...set]
@@ -46,6 +49,7 @@ export const givesOut = (st, k) => (isDepot(st) ? k !== 'cash' : outputsOf(st).i
 export function inCap(st, k) {
   if (isDepot(st)) return Infinity
   if (st.type === 'generator') return 10
+  if (st.type === 'mast') return 40 * stackOf(k)
   let m = 0
   for (const r of recipesOf(st)) m = Math.max(m, r.in?.[k] || 0)
   return Math.max(3 * stackOf(k), Math.ceil(m * 4))
@@ -245,6 +249,7 @@ function pickLayer(tiles, ignore = null) {
 // ---------------------------------------------------------------- building
 // Can a belt run from a to b with resource k? Returns null, or why not.
 export function linkProblem(a, b, k) {
+  if (!isUnlocked('belt', 1)) return 'Belts need the Conveyors milestone'
   if (!a || !b || a === b) return 'Pick another station'
   if (isDepot(a) && isDepot(b)) return 'Depots share one store already'
   if (!givesOut(a, k)) return `${STATIONS[a.type].name} doesn't make that`
@@ -269,9 +274,10 @@ export function addLink(a, b, k, tier = 1) {
   return l
 }
 export const upgradeCostOf = (l) => (l.tier < BELTS.length - 1 ? linkCost(l.tier + 1, l.len) : null)
+export const upgradeLocked = (l) => !isUnlocked('belt', l.tier + 1)
 export function upgradeLink(l) {
   const c = upgradeCostOf(l)
-  if (!c || !pay(c)) return false
+  if (!c || upgradeLocked(l) || !pay(c)) return false
   l.tier++
   bus.emit('links')
   return true
@@ -307,7 +313,7 @@ export function tickLinks(dt) {
     const src = byId(l.from)
     const dst = byId(l.to)
     if (!src || !dst) continue
-    const T = BELTS[l.tier]
+    const T = { gap: BELTS[l.tier].gap, speed: beltSpeed(l.tier) }
     const n = stackOf(l.res)
     const h = (T.gap * 0.8) / T.speed
     const before = l.moved

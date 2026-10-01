@@ -3,7 +3,7 @@
 import {
   RES, RES_KEYS, STOCK_KEYS, SKILLS, SKILL_KEYS, SKILL_MAX, xpForLevel, OCCUPATIONS, OCC_KEYS, TRAITS, TRAIT_KEYS,
   FIRST_NAMES, FEMALE_NAMES, LAST_NAMES, ITEMS, QUALITY, MODS, STATIONS, FENCE, RECIPES, REPAIR, EXPANSIONS, EXPANSION_DEPTH,
-  GOALS, DAY_MIN, UTILITIES, BELTS, BELT_STACK,
+  GOALS, DAY_MIN, UTILITIES, BELTS, BELT_STACK, TIERS, MILESTONES, SIGNAL, RESEARCH, ALT_RECIPES, CORE_SLOTS, CORE_BOOST,
 } from './data.js'
 import { bus, uid, pick, rint, rand, chance, clamp, store, weighted } from '../core/util.js'
 import { SKIN_TONES, HAIR_COLORS } from '../models/character.js'
@@ -52,6 +52,7 @@ export function expansionRect(id, s = S) {
 export function expansionAvailable(id) {
   const X = EXPANSIONS.find((e) => e.id === id)
   if (S.expansions[id]) return false
+  if (!isUnlocked('exp', id)) return false
   if (X.ring === 2 && S.expansions[X.side + '1'] !== 'done') return false
   return true
 }
@@ -234,7 +235,7 @@ export function survivorStats(s) {
   const gun = W.kind === 'gun'
   let dmg = 1 + fxSum(s, 'dmg')
   if (gun) {
-    dmg += 0.06 * (sk.ranged - 1) + fxSum(s, 'gunDmg')
+    dmg += 0.06 * (sk.ranged - 1) + fxSum(s, 'gunDmg') + (researchDone('ballistics') ? 0.1 : 0)
     if (W.pistol) dmg += fxSum(s, 'pistolDmg')
     if (W.rifle) dmg += fxSum(s, 'rifleDmg')
   } else {
@@ -262,7 +263,7 @@ export function survivorStats(s) {
     noise: W.noise * mf(wm, 'noise'),
     noiseMult: Math.max(0.2, 1 + fxSum(s, 'noise')),
     stealth: clamp((A?.stealth || 0) + mf(am, 'stealth', 0, 'add'), 0, 0.7),
-    search: 1 + 0.08 * (sk.scavenge - 1) + (Gd?.search || 0),
+    search: 1 + 0.08 * (sk.scavenge - 1) + (Gd?.search || 0) + (researchDone('scavenging') ? 0.15 : 0),
     loot: 1 + 0.04 * (sk.scavenge - 1) + fxSum(s, 'loot'),
     carry: Math.round(26 + sk.scavenge * 2 + fxSum(s, 'carry') + (Gd?.carry || 0)),
     utilSlots: 2 + (Gd?.util || 0),
@@ -358,6 +359,8 @@ export const stationSize = (st) => {
 export const countType = (type, minLevel = 1) => S.stations.filter((s) => s.type === type && s.level >= minLevel).length
 export const maxLevelOf = (type) => S.stations.filter((s) => s.type === type).reduce((a, s) => Math.max(a, s.level), 0)
 export function reqMet(type) {
+  if (!isUnlocked('station', type)) return false
+  if (STATIONS[type].unique && S.stations.some((s) => s.type === type)) return false
   const req = STATIONS[type].req
   if (!req) return true
   return Object.entries(req).every(([t, l]) => maxLevelOf(t) >= l)
@@ -382,7 +385,7 @@ function discount(cost) {
 }
 export function upgradeCost(st) {
   const d = STATIONS[st.type]
-  if (st.level >= d.levels) return null
+  if (st.level >= d.levels || st.type === 'mast') return null
   return discount(d.cost[st.level])
 }
 export const buildCost = (type) => discount(STATIONS[type].cost[0])
@@ -428,6 +431,8 @@ export function demolish(st) {
   const refund = {}
   for (let i = 0; i < st.level; i++) for (const [k, v] of Object.entries(d.cost[i])) refund[k] = (refund[k] || 0) + Math.floor(v / 2)
   if (st.module) refund.module = 1
+  if (st.cores) refund.core = st.cores
+  if (st.project) for (const [k, v] of Object.entries(RESEARCH[st.project.id].cost)) refund[k] = (refund[k] || 0) + v
   for (const o of st.orders) if (o.paid) for (const [k, v] of Object.entries(o.paid)) refund[k] = (refund[k] || 0) + v
   for (const b of [st.buf?.in, st.buf?.out]) for (const [k, v] of Object.entries(b || {})) if (v > 0) refund[k] = (refund[k] || 0) + v
   gain(refund)
@@ -484,6 +489,7 @@ export function addOrder(st, o) {
 export function orderRecipe(st, recipeId, repeat = 1, keep = null) {
   const r = RECIPES.find((x) => x.id === recipeId)
   if (!r || r.lvl > st.level) return 'Needs a higher level bench'
+  if (r.research && !researchDone(r.research)) return `Needs research: ${RESEARCH[r.research].name}`
   return addOrder(st, { kind: 'recipe', recipe: r.id, repeat, keep })
 }
 export function orderMod(st, modId, itemUid) {
@@ -540,6 +546,7 @@ export function qualityOdds(st) {
   }
   if (!ws.length) craft = 3 // automation makes standard parts
   const lv = st.level
+  if (hasFlag('arsenal')) perk += 0.6
   let pMaster = clamp(0.012 * (craft - 3) + perk * 0.05 + (lv - 1) * 0.02, 0, 0.3)
   let pFine = clamp(0.06 + 0.045 * (craft - 1) + perk * 0.1 + (lv - 1) * 0.06, 0, 0.7 - pMaster)
   let pCrude = clamp(0.3 - 0.08 * (craft - 1) - (lv - 1) * 0.1, 0, 0.3)
@@ -587,10 +594,11 @@ export function fenceUpgradeCost() {
   for (const [r, v] of Object.entries(next.per10)) out[r] = Math.ceil(v * k)
   return discount(out)
 }
+export const fenceUnlocked = () => isUnlocked('fence', S.fence.level + 1)
 export function upgradeFence() {
   const next = FENCE[S.fence.level + 1]
   const cost = fenceUpgradeCost()
-  if (!next || S.fence.building || !pay(cost)) return false
+  if (!next || S.fence.building || !fenceUnlocked() || !pay(cost)) return false
   S.fence.building = { left: next.time * (perimeter() / 128), total: next.time * (perimeter() / 128) }
   bus.emit('fence')
   return true
@@ -630,6 +638,198 @@ export function claimGoal(id) {
   bus.emit('change')
 }
 
+// ---------------------------------------------------------------- milestones
+// The milestone board and the Signal. Milestones are paid at the campfire;
+// each unlocks stations, belt tiers, wall levels, expansions, recipes or a
+// camp-wide ability. Tiers open in order, and later tiers also wait on a
+// phase of the Signal.
+const UNLOCK_BY = { station: {}, belt: {}, fence: {}, exp: {}, recipe: {}, flag: {} }
+for (const [id, m] of Object.entries(MILESTONES)) {
+  const u = m.unlocks
+  for (const t of u.stations || []) UNLOCK_BY.station[t] = id
+  if (u.belt) UNLOCK_BY.belt[u.belt] = id
+  if (u.fence) UNLOCK_BY.fence[u.fence] = id
+  for (const e of u.exp || []) UNLOCK_BY.exp[e] = id
+  for (const [st, r] of u.recipes || []) UNLOCK_BY.recipe[st + '.' + r] = id
+  for (const f of u.flags || []) UNLOCK_BY.flag[f] = id
+}
+export const msDone = (id) => !!S?.milestones?.[id]
+export const unlockedBy = (kind, key) => UNLOCK_BY[kind][key] || null
+export const isUnlocked = (kind, key) => {
+  const id = UNLOCK_BY[kind][key]
+  return !id || msDone(id)
+}
+export const hasFlag = (f) => !!UNLOCK_BY.flag[f] && msDone(UNLOCK_BY.flag[f])
+export function beltTierMax() {
+  let t = 0
+  for (let i = 1; i < BELTS.length; i++) if (isUnlocked('belt', i)) t = i
+  return t
+}
+export const tierMilestones = (n) => Object.keys(MILESTONES).filter((id) => MILESTONES[id].tier === n)
+// Why a tier is still shut, or null when it is open.
+export function tierLock(n) {
+  if (n <= 1) return null
+  const T = TIERS[n]
+  if (!T) return 'No such tier'
+  if (!tierMilestones(n - 1).every(msDone)) return `Finish tier ${n - 1} first`
+  if ((S.signal?.phase || 0) < T.phase) return `Needs Signal phase ${T.phase}: ${SIGNAL[T.phase - 1].name}`
+  return null
+}
+export function campTier() {
+  let t = 0
+  for (let n = 1; n < TIERS.length; n++) if (tierMilestones(n).every(msDone)) t = n
+  return t
+}
+export function completeMilestone(id) {
+  const m = MILESTONES[id]
+  if (!m || msDone(id) || tierLock(m.tier) || !pay(m.cost)) return false
+  S.milestones[id] = day()
+  log(`Milestone reached: ${m.name}.`, 'good')
+  addMoraleEvent(`Milestone: ${m.name}`, 5, 1.5)
+  bus.emit('milestone', id)
+  bus.emit('change')
+  return true
+}
+// ---- the Signal
+export const mastOf = () => S.stations.find((s) => s.type === 'mast' && s.level > 0) || null
+export const signalPhase = () => SIGNAL[S.signal?.phase || 0] || null
+export function signalNeed() {
+  const P = signalPhase()
+  if (!P) return null
+  const out = {}
+  for (const [k, v] of Object.entries(P.cost)) out[k] = Math.max(0, v - (S.signal.paid[k] || 0))
+  return out
+}
+// Hand over whatever storage has toward the current phase.
+export function deliverSignal() {
+  const need = signalNeed()
+  if (!need || !mastOf()) return 0
+  let n = 0
+  for (const [k, v] of Object.entries(need)) {
+    const t = Math.min(v, Math.floor(S.res[k] || 0))
+    if (t <= 0) continue
+    S.res[k] -= t
+    S.signal.paid[k] = (S.signal.paid[k] || 0) + t
+    n += t
+  }
+  if (n) bus.emit('res')
+  checkSignal()
+  return n
+}
+// Goods arriving at the mast by belt count toward the phase as they land.
+export function feedSignal(st) {
+  const need = signalNeed()
+  if (!need) return
+  for (const [k, v] of Object.entries(st.buf.in)) {
+    if (v <= 0) continue
+    const t = Math.min(v, need[k] || 0)
+    if (t <= 0) continue
+    st.buf.in[k] -= t
+    S.signal.paid[k] = (S.signal.paid[k] || 0) + t
+  }
+  checkSignal()
+}
+function checkSignal() {
+  const need = signalNeed()
+  if (!need || Object.values(need).some((v) => v > 0)) return
+  const P = signalPhase()
+  S.signal.phase++
+  S.signal.paid = {}
+  S.signal.at = S.signal.at || []
+  S.signal.at.push(day())
+  const m = mastOf()
+  if (m) m.level = Math.min(STATIONS.mast.levels, S.signal.phase + 1)
+  log(`The Signal: ${P.name} complete.${S.signal.phase < SIGNAL.length ? ` Next: ${SIGNAL[S.signal.phase].name}.` : ''}`, 'good')
+  addMoraleEvent(`The Signal: ${P.name}`, 10, 2)
+  bus.emit('stations')
+  bus.emit('signalPhase', S.signal.phase)
+  bus.emit('change')
+}
+
+// ---------------------------------------------------------------- research
+// One project at a time at the Research Desk. Studying a schematic ends in
+// a choice of three alternate recipes; everything else is a lasting effect.
+export const researchDone = (id) => !!S?.research?.done?.[id]
+export const altUnlocked = (id) => !!S?.research?.alts?.includes(id)
+export function researchLock(id, desk) {
+  const R = RESEARCH[id]
+  if (!R) return 'Unknown'
+  if (researchDone(id) && !R.repeat) return 'Done'
+  if (!desk || desk.level < R.lvl) return `Desk level ${R.lvl}`
+  for (const q of R.req || []) if (!researchDone(q)) return `First: ${RESEARCH[q].name}`
+  if (id === 'schematic' && S.research.pick) return 'Choose your last recipe first'
+  if (id === 'schematic' && !Object.keys(ALT_RECIPES).some((a) => !altUnlocked(a))) return 'Every alternate is known'
+  return null
+}
+export function startResearch(desk, id) {
+  const R = RESEARCH[id]
+  if (desk.project || researchLock(id, desk) || !pay(R.cost)) return false
+  desk.project = { id, left: R.time, total: R.time }
+  bus.emit('change')
+  return true
+}
+export function cancelResearch(desk) {
+  const p = desk.project
+  if (!p) return
+  gain(RESEARCH[p.id].cost)
+  desk.project = null
+  bus.emit('change')
+}
+export function finishResearch(desk) {
+  const id = desk.project.id
+  desk.project = null
+  if (id === 'schematic') {
+    S.research.pick = rollAlts(3)
+    log('Research: the schematic is worked out. Choose an alternate recipe at the Research Desk.', 'good')
+  } else {
+    S.research.done[id] = day()
+    log(`Research complete: ${RESEARCH[id].name}.`, 'good')
+  }
+  bus.emit('research', id)
+  bus.emit('change')
+}
+// Three alternates not yet known, favouring stations the camp has built.
+function rollAlts(n) {
+  const pool = Object.keys(ALT_RECIPES).filter((a) => !altUnlocked(a))
+  const out = []
+  while (out.length < n && pool.length) {
+    const ws = pool.map((a) => (S.stations.some((s) => s.type === ALT_RECIPES[a].station) ? 3 : 1))
+    let r = Math.random() * ws.reduce((x, y) => x + y, 0)
+    let i = 0
+    while (r > ws[i]) r -= ws[i++]
+    out.push(pool.splice(Math.min(i, pool.length - 1), 1)[0])
+  }
+  return out
+}
+export function pickAlt(id) {
+  if (!S.research.pick?.includes(id)) return false
+  S.research.alts.push(id)
+  S.research.pick = null
+  const A = ALT_RECIPES[id]
+  log(`New alternate recipe: ${A.name} (${STATIONS[A.station].name}).`, 'good')
+  bus.emit('change')
+  return true
+}
+// Alternates known for one of a station's recipes (base '_' = its only recipe).
+export const altsFor = (type, base) => Object.keys(ALT_RECIPES).filter((a) => ALT_RECIPES[a].station === type && ALT_RECIPES[a].base === base && altUnlocked(a))
+
+// ---- power cores
+export const coreBoost = () => (researchDone('coretuning') ? 0.75 : CORE_BOOST)
+export function installCore(st) {
+  const d = STATIONS[st.type]
+  if (!hasFlag('cores') || !d.auto || !st.module || (st.cores || 0) >= CORE_SLOTS || !pay({ core: 1 })) return false
+  st.cores = (st.cores || 0) + 1
+  bus.emit('change')
+  return true
+}
+export function removeCore(st) {
+  if (!st.cores) return false
+  st.cores--
+  gain({ core: 1 })
+  bus.emit('change')
+  return true
+}
+
 // ---------------------------------------------------------------- morale
 export function moraleMult() {
   if (!S) return 1
@@ -660,6 +860,9 @@ export function newGame() {
     looted: {},
     explored: {},
     links: [],
+    milestones: {},
+    signal: { phase: 0, paid: {} },
+    research: { done: {}, alts: [], pick: null },
     events: [],
     goals: {},
     stats: { kills: 0, runs: 0, deaths: 0, recruited: 0, raids: 0, crafted: 0, memorial: [] },
@@ -743,6 +946,17 @@ function migrate() {
   }
   S.links = S.links || []
   S.explored = S.explored || {}
+  S.signal = S.signal || { phase: 0, paid: {} }
+  S.research = S.research || { done: {}, alts: [], pick: null }
+  if (!S.milestones) {
+    // camps from before milestones keep what they built
+    S.milestones = {}
+    for (const [id, m] of Object.entries(MILESTONES)) {
+      const u = m.unlocks
+      const had = (u.stations || []).some((t) => S.stations.some((x) => x.type === t)) || (u.fence && S.fence.level >= u.fence) || (u.exp || []).some((e) => S.expansions[e])
+      if (had) S.milestones[id] = -1
+    }
+  }
 }
 export const wipeSave = () => store.del(SAVE_KEY)
 

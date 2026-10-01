@@ -25,7 +25,7 @@ import { genLevel } from '../world/levelgen.js'
 import { OffsetGrid } from '../core/grid.js'
 import { FACE_ROT, SIDEWALK, lotToWorld } from '../world/city.js'
 import { LOCATIONS, CONTAINERS, ITEMS, RARITY, RES, QUALITY, zombieMix, LEVEL_COLORS, UTILITIES } from '../game/data.js'
-import { S, getS, gain, addItem, gainXP, killSurvivor, hour, day, completeGoal, log, survivorStats, makeSurvivor, addMoraleEvent } from '../game/state.js'
+import { S, getS, gain, addItem, gainXP, killSurvivor, hour, day, completeGoal, log, survivorStats, makeSurvivor, addMoraleEvent, researchDone } from '../game/state.js'
 import { scheduleRaid } from '../game/economy.js'
 import { sfx, setAmbience } from '../core/audio.js'
 import { h, rand, rint, pick, chance, weighted, clamp, fmtTime, bus, fmt } from '../core/util.js'
@@ -37,7 +37,7 @@ import { TrapsMixin } from './missiontraps.js'
 
 const TAU = Math.PI * 2
 // How much room things take in a pack.
-const LOAD = { food: 1, water: 1, wood: 1, scrap: 1, metal: 1.5, cloth: 0.5, parts: 0.5, electronics: 0.5, chemicals: 1, gunpowder: 0.5, fuel: 1, pammo: 0.02, rammo: 0.03, shells: 0.05, meds: 0.3, medkit: 1, molotov: 1, pipebomb: 1, noisemaker: 0.5, module: 2, cash: 0 }
+const LOAD = { food: 1, water: 1, wood: 1, scrap: 1, metal: 1.5, cloth: 0.5, parts: 0.5, electronics: 0.5, chemicals: 1, gunpowder: 0.5, fuel: 1, pammo: 0.02, rammo: 0.03, shells: 0.05, meds: 0.3, medkit: 1, molotov: 1, pipebomb: 1, noisemaker: 0.5, module: 2, cash: 0, steel: 1.5, wiring: 0.5, rubber: 0.8, circuits: 0.4, motors: 2, coils: 1, cells: 1, amps: 2, schematic: 0.2, specimen: 0.3, core: 1, antiviral: 0.3 }
 const ITEM_LOAD = 4
 const CH = { fridge: 1.9, cabinet: 2.1, counter: 1.2, wardrobe: 2.1, dresser: 1.3, desk: 1.2, filing: 1.4, bookshelf: 1.95, trash: 1.0, shelf: 1.8, register: 1.4, toolrack: 1.9, medcab: 1.8, locker: 1.95, gunlocker: 1.8, safe: 0.9, crate: 1.1, pallet: 2.6, milcrate: 1.0, server: 2.0, tv: 1.5, chemshelf: 2.0, toolchest: 1.15, firelocker: 1.95, dumpster: 1.3, pump: 1.9, shed: 2.3, car: 1.5 }
 const WALL_EXT = 3.1
@@ -978,6 +978,15 @@ export class Mission {
   onKill(z, from) {
     S.stats.kills++
     this.kills = (this.kills || 0) + 1
+    // special infected leave tissue worth studying
+    if ((z.def.stalk || z.def.scream || z.def.burst) && chance(0.65)) {
+      const a = from?.pack && !from.npc ? from : this.squad.filter((x) => !x.npc && !x.downed).sort((p, q) => p.dist(z) - q.dist(z))[0]
+      if (a?.pack) {
+        a.pack.res.specimen = (a.pack.res.specimen || 0) + 1
+        view.labels.float(this.scene, z.chestPos(1.6), '+1 specimen', 'res')
+        this.toast(`${a.data.first} took a tissue sample from the ${z.def.name.toLowerCase()}.`, 'good')
+      }
+    }
   }
   onDowned(a) {
     this.toast(`${a.data.first} is down! Send someone to help them up.`, 'bad')
@@ -1376,7 +1385,7 @@ export class Mission {
       const a = [...this.selected].find((x) => x.hp < x.maxHp) || this.squad.filter((x) => !x.downed && !x.npc).sort((p, q) => p.hp / p.maxHp - q.hp / q.maxHp)[0]
       if (!a || a.hp >= a.maxHp) return this.toast('Nobody needs patching up')
       this.utils.medkit--
-      a.hp = Math.min(a.maxHp, a.hp + a.maxHp * 0.5)
+      a.hp = Math.min(a.maxHp, a.hp + a.maxHp * (researchDone('fieldmed') ? 0.75 : 0.5))
       view.labels.float(this.scene, a.chestPos(2), 'First aid kit', 'good')
       sfx('levelup')
       return this.renderUtils()
