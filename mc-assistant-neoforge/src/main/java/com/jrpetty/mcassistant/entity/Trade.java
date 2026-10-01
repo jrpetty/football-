@@ -130,7 +130,11 @@ public final class Trade {
                 said.append(" Or ").append(Errands.words(alt, altCount))
                     .append(" instead — we're short of it, and I'd sooner have that.");
             }
-            if (more > 1.0) said.append(pick(r, " A little extra, for a friend.", " I've put a bit more in, for you."));
+            if (title.atLeast(Standing.Title.FRIEND)) {
+                said.append(pick(r, " A little extra, for a friend of the village.", " I've put a bit more in, for you."));
+            } else if (more > 1.0) {
+                said.append(pick(r, " I've put a bit more in — I can't help myself.", " And a few over, because why not."));
+            }
             if (title == Standing.Title.UNWELCOME) said.append(" And that's the price for you. Take it or leave it.");
             said.append(" Hold out the price and hand it over.");
             return said.toString();

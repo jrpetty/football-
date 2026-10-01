@@ -179,6 +179,18 @@ def setup(r):
         r.cmd(c)
 
 
+def night(r, x, z, label):
+    """Midnight: who has a bed, and who is in it. Every folk should be asleep but the
+    guards keeping the watch."""
+    status = r.cmd("execute positioned %d 64 %d run village status" % (x, z)).replace("\n", " ")
+    m = re.search(r"Beds: (\d+) of (\d+) have one, (\d+) asleep, homes for (\d+), camp (\d+)", status)
+    if m:
+        say("NIGHT %s: %s of %s folk have a bed, %s asleep (homes hold %s, %s still at the camp)"
+            % (label, m.group(1), m.group(2), m.group(3), m.group(4), m.group(5)))
+    else:
+        say("NIGHT %s: no beds line in the status" % label)
+
+
 def raid(r, x, z):
     """Dusk on the first day: the things that come out at night, put among the
     settlers. Nothing spawns on a server nobody is playing on, so without this
@@ -204,10 +216,14 @@ def village(r, biome, count=12, compact=False, days=3, label=None, raided=True):
     say("spawn: " + r.cmd("village spawnat %d %d %d" % (x, z, count)))
     say("spawning took %.1f s of wall clock" % (time.time() - began))
     done = 0
-    marks = [300, 1500, 4500, 12000, 13500, 15000] + [24000 * d for d in range(1, days + 1)]
+    marks = sorted(set([300, 1500, 4500, 12000, 13500, 15000, 17000, 41000]
+                       + [24000 * d for d in range(1, days + 1)]))
     for upto in marks:
         sprint(r, upto - done)
         done = upto
+        if upto in (17000, 41000):
+            night(r, x, z, "%s night %d" % (label or biome, 1 + upto // 24000))
+            continue
         if upto == 13500:
             if raided:
                 raid(r, x, z)
@@ -241,9 +257,11 @@ def epic(r, days, minutes, biome="plains"):
             # a server with nobody on it, so the watch would otherwise never be tested).
             sprint(r, 13500)
             raid(r, x, z)
-            sprint(r, 10500)
+            sprint(r, 3500)
         else:
-            sprint(r, 24000)
+            sprint(r, 17000)
+        night(r, x, z, "the long game, night %d" % day)
+        sprint(r, 7000)
         status = r.cmd("execute positioned %d 64 %d run village status" % (x, z)).replace("\n", " ")
         listing = r.cmd("village list")
         villages = [l for l in listing.split("\n") if l.strip().startswith("Village at")]
@@ -255,9 +273,11 @@ def epic(r, days, minutes, biome="plains"):
         renown = re.search(r"Renown (\d+)", status)
         colonies = names.count("colony")
         community = re.search(r"Community: \d+ folk: ([^;]*)", status)
-        say("DAY %d: %s folk, %s, %d buildings, renown %s, %d villages in the world (%d colonies from this one), %d folk in all, %s, %.0f min"
+        beds = re.search(r"Beds: (\d+) of (\d+) have one, (\d+) asleep", status)
+        say("DAY %d: %s folk, %s, %d buildings, renown %s, %d villages in the world (%d colonies from this one), %d folk in all, %s, %s, %.0f min"
             % (day, folk, age, len(names) - colonies, renown.group(1) if renown else "0",
                len(villages), colonies, world, community.group(1) if community else "no community line",
+               ("beds %s/%s" % (beds.group(1), beds.group(2))) if beds else "no beds line",
                (time.time() - began) / 60.0))
         if age != last_age:
             say("AGE on day %d: %s" % (day, age))

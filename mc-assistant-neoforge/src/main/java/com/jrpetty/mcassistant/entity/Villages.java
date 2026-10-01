@@ -978,6 +978,7 @@ public final class Villages {
         // A house for the player the village has taken to its heart.
         if (com.jrpetty.mcassistant.village.Chronicle.awaitingAHouse(villageId) != null
                 && built(villageId, "storage") > 0) out.add("guesthouse");
+        housesForBeds(villageId, folk, out);
         if (at == Age.WOOD) return out;
 
         if (built(villageId, "fortify") < 1) out.add("fortify");        // the wall
@@ -985,6 +986,7 @@ public final class Villages {
         if (!house && folk >= housing(villageId) - 5) out.add("house");
         if (built(villageId, "smeltery") < 1) out.add("smeltery");
         if (built(villageId, "hall") < 1) out.add("hall");
+        housesForBeds(villageId, folk, out);
         if (at == Age.STONE) return out;
 
         if (built(villageId, "workshop") < 1) out.add("workshop");
@@ -994,17 +996,36 @@ public final class Villages {
         if (built(villageId, "market") < 1) out.add("market");
         String pen = penIfWanted(villageId, folk);
         if (pen != null) out.add(pen);
+        housesForBeds(villageId, folk, out);
         if (at == Age.IRON) return out;
 
         if (built(villageId, "lighthouse") < 1) out.add("lighthouse");
         if (built(villageId, "chapel") < 1) out.add("chapel");
+        housesForBeds(villageId, folk, out);
         if (at == Age.DIAMOND) return out;
 
         if (built(villageId, "gateway") < 1) out.add("gateway");
+        housesForBeds(villageId, folk, out);
         // And then the great works, one after another for as long as the village stands:
         // a town that has been everywhere its ages lead goes on building.
         out.add(nextGreatWork(villageId));
         return out;
+    }
+
+    /**
+     * A bed for everybody. Once what this age asks for is built, the village goes on
+     * raising houses for as long as it has more people than its homes have beds. It
+     * comes after the age's own buildings, so it never holds the village back, and it
+     * means a village always has a home in hand for whoever has none.
+     */
+    private static void housesForBeds(UUID villageId, int folk, List<String> out) {
+        if (folk > bedsPlanned(villageId) && !out.contains("house")) out.add("house");
+    }
+
+    /** Beds the village's homes hold: so many a house, four a barracks (the guest house is the player's). */
+    public static int bedsPlanned(UUID villageId) {
+        return com.jrpetty.mcassistant.village.VillageMath.BEDS_PER_HOUSE * built(villageId, "house")
+            + 4 * built(villageId, "barracks");
     }
 
     /**

@@ -172,6 +172,26 @@ when everybody goes to a bed of its own anywhere in the village and sleeps until
 morning. Builders make the beds for the houses from wool and planks in the stores, and
 a rancher has shears made once the village has iron, so the wool keeps coming.
 
+**Everybody sleeps, every night.**
+* **The founders' camp.** Settlers bring their bedding and lay it out round the
+  stores: a ring of beds about the heart, one each. Nobody spends the first nights on
+  their feet. As houses go up, a builder with no wool for new beds carries beds in
+  from the camp, and the camp empties into the houses.
+* **A bed for everyone.** Once the buildings its age asks for are up, a village keeps
+  building houses for as long as it has more people than its homes have beds.
+  `/village status` tells you how many have a bed, how many are asleep, and how many
+  beds are still at the camp.
+* **Families sleep under one roof.** A folk takes the free bed nearest its partner's,
+  and a child the one nearest its mother's or father's.
+* **The watch sleeps too.** The guards keep the night in two watches. Half stand the
+  first, from dusk to midnight, then go to bed. The other half sleep first and take
+  the second, from midnight to dawn. A village with one guard has it watch until
+  midnight and sleep after.
+* **Work stops at bedtime.** Whatever is left of the day's job waits for the morning.
+  The village's builder picks its building up again then, and the miner its mine.
+* **Nowhere to sleep?** Ask a folk with no bed "Can I help?" and it asks you for one.
+  Bring any bed and it lays it out by the heart and sleeps in it that night.
+
 **Seeing it.** Sneak and right-click a folk: its traits are on the title line, and
 hovering the title shows its partner, friends, anyone it does not get on with, its
 family, how it feels, what it loves doing and what it hopes for.
@@ -482,8 +502,8 @@ The village's chronicle records what you did. An errand lapses after three days.
 * **Pace** — a folk works a little over twice as fast as a hired assistant and
   wears a tool a third as fast: a village that dug a block every five seconds
   raised one building a game day.
-* **Days** — the day shift works the day, then goes home; the watch keeps the
-  night. Nobody builds, mines or moves house after dark. Sleeping in a bed skips
+* **Days** — the day shift works the day, then goes to bed; the watch keeps the
+  night in two halves, so every guard sleeps too. Nobody builds, mines or moves house after dark. Sleeping in a bed skips
   the night for everybody, wherever you are.
 * **Ages** — Wood → Stone → Iron → Diamond → Nether, each with its own list of
   what the village needs, then great works with no end. A village that reaches a new age says so, once, in

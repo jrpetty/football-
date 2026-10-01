@@ -85,6 +85,7 @@ public class VillageFolkSpawnerBlock extends Block {
      */
     public static int raiseParty(ServerLevel server, BlockPos at, float yaw, int count) {
         int stood = 0;
+        boolean founding = Villages.nearest(server, at, Villages.VILLAGE_RANGE * 2) == null;
         for (int i = 0; i < count; i++) {
             // A hundred folk stood up on one square make a crowd, and a crowd of
             // more than twenty-four in one place is crushed by the game's own
@@ -104,6 +105,8 @@ public class VillageFolkSpawnerBlock extends Block {
             if (raise(server, spot, yaw) == null) break;
             stood++;
         }
+        // A party founding a village pitches camp round its stores: a bed each.
+        if (founding && stood > 0) com.jrpetty.mcassistant.VillageSpawner.pitchCamp(server, at, stood);
         return stood;
     }
 

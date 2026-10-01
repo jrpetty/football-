@@ -1121,6 +1121,60 @@ public class VillageGameTests {
         });
     }
 
+    /** Everybody sleeps: two guards keep the night in two watches, the founders' camp
+     *  has a bed each, the village plans a house for every two people without one,
+     *  and a bed somebody brings a folk is laid at the camp and slept in. */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "t27_night")
+    public static void t27_night(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 9600, 9600, 32);
+        Kit.prepare(level, 9600, 9600, 24);
+        BlockPos heart = Kit.surface(level, 9600, 9600);
+        VillageFolkEntity a = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        VillageFolkEntity b = VillageFolkSpawnerBlock.raise(level, heart.east(), 0.0F);
+        VillageFolkEntity c = VillageFolkSpawnerBlock.raise(level, heart.west(), 0.0F);
+        helper.assertTrue(a != null && b != null && c != null, "three folk of one village");
+        helper.runAtTickTime(20, () -> {
+            java.util.UUID village = a.ownerId();
+            a.setJob(StationTask.GUARD);
+            b.setJob(StationTask.GUARD);
+            a.setShift(AssistantEntity.Shift.ALWAYS);
+            b.setShift(AssistantEntity.Shift.ALWAYS);
+            level.setDayTime(15000);
+            boolean aFirst = a.onShift(), bFirst = b.onShift();
+            level.setDayTime(20000);
+            boolean aSecond = a.onShift(), bSecond = b.onShift();
+            level.setDayTime(6000);
+            Kit.log("t27 watches: " + a.displayNameCap() + " " + aFirst + "/" + aSecond + ", "
+                + b.displayNameCap() + " " + bFirst + "/" + bSecond + "; by day " + a.onShift() + "/" + b.onShift());
+            helper.assertTrue(aFirst != bFirst && aSecond != bSecond && aFirst != aSecond,
+                "two guards keep the night in two watches, and each sleeps half of it");
+            helper.assertTrue(a.onShift() && b.onShift(), "and both are on duty by day");
+            // The founders' camp.
+            BlockPos chest = heart;
+            int laid = com.jrpetty.mcassistant.VillageSpawner.pitchCamp(level, chest, 3);
+            int camp = com.jrpetty.mcassistant.VillageSpawner.campBeds(level, chest).size();
+            Kit.log("t27 the camp: " + laid + " laid, " + camp + " standing");
+            helper.assertTrue(laid == 3 && camp == 3, "the founders lay a bed each round the heart");
+            // Houses until there is a bed for everyone.
+            Villages.noteProject(village, "storage", level.getGameTime());
+            Villages.noteProject(village, "shelter", level.getGameTime());
+            Villages.noteProject(village, "well", level.getGameTime());
+            Villages.noteProject(village, "house", level.getGameTime());
+            java.util.List<String> want = Villages.projectsWanted(village);
+            Kit.log("t27 3 folk, homes for " + Villages.bedsPlanned(village) + ": wanted " + want);
+            helper.assertTrue(Villages.bedsPlanned(village) >= 3 || want.contains("house"),
+                "a village with more people than its homes have beds builds another house");
+            // A bed somebody brings.
+            c.insertItem(new ItemStack(Items.RED_BED));
+            helper.assertTrue(c.layGivenBed() && c.bedPos() != null
+                    && com.jrpetty.mcassistant.VillageSpawner.campBeds(level, chest).size() == 4,
+                "a bed brought to a folk is laid at the camp, and it is that folk's");
+            helper.succeed();
+        });
+    }
+
     // ===================================================== vanilla villagers
 
     /** A villager appears the ordinary way: the join event should catch it. */

@@ -1050,14 +1050,29 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected boolean eveningSocial() {
         long t = level().getDayTime() % 24000L;
-        long bedtime = 14000L + Math.floorMod(getUUID().getMostSignificantBits(), 600L)
-            + (life.has(Social.Trait.SOCIABLE) ? 1500L : 0L) - (life.has(Social.Trait.HARDWORKING) ? 800L : 0L);
+        long bedtime = bedtimeTick();
         if (t < 12000L || t >= bedtime) return false;
         if (isBaby()) return false;
         if (Gatherings.attend(this, t)) return true;
         if (Leisure.evening(this, t)) return true;
         socialise();
         return true;
+    }
+
+    /**
+     * Past its bedtime with work still in hand: put it down. The evening's errands
+     * (rations, the baking) get until an hour after; then they wait too.
+     */
+    private void leaveWorkForTheMorning() {
+        Job j = peekJob();
+        if (j == null || j.type() == Job.Type.DEPOSIT) return;
+        long t = level().getDayTime() % 24000L;
+        if (t < 12000L) return;                             // before dusk: not tonight's business
+        boolean errand = j.type() == Job.Type.WITHDRAW || j.type() == Job.Type.CRAFT || j.type() == Job.Type.GO_HOME;
+        long cutoff = bedtimeTick() + (errand ? 1000L : 0L);
+        if (t < cutoff) return;
+        clearQueue();
+        brain("work left for the morning: " + j.label());
     }
 
     /**
@@ -1076,6 +1091,10 @@ public class VillageFolkEntity extends AssistantEntity {
         int cx = villageCentre.getX() >> 4, cz = villageCentre.getZ() >> 4;
         BlockPos best = null;
         double bestDist = Double.MAX_VALUE;
+        // A family sleeps under one roof: the bed nearest its partner's, else its
+        // mother's or father's, wins over the bed nearest where it happens to stand.
+        BlockPos near = familyBed(server);
+        BlockPos from = near != null ? near : blockPosition();
         for (int x = cx - reach; x <= cx + reach; x++) {
             for (int z = cz - reach; z <= cz + reach; z++) {
                 net.minecraft.world.level.chunk.LevelChunk chunk = server.getChunkSource().getChunkNow(x, z);
@@ -1084,7 +1103,7 @@ public class VillageFolkEntity extends AssistantEntity {
                     if (!(be instanceof net.minecraft.world.level.block.entity.BedBlockEntity)) continue;
                     BlockPos p = be.getBlockPos();
                     if (!bedOnOffer(p)) continue;
-                    double d = p.distSqr(blockPosition());
+                    double d = p.distSqr(from);
                     if (d < bestDist) { bestDist = d; best = p; }
                 }
             }
@@ -1092,6 +1111,21 @@ public class VillageFolkEntity extends AssistantEntity {
         if (best == null) return false;
         takeBed(best);
         return true;
+    }
+
+    /** Where its partner sleeps, else one of its parents (a child sleeps by its family). */
+    @Nullable
+    private BlockPos familyBed(net.minecraft.server.level.ServerLevel server) {
+        if (life.partner() != null && server.getEntity(life.partner()) instanceof VillageFolkEntity p && p.bedPos() != null) {
+            return p.bedPos();
+        }
+        if (!isBaby() && life.partner() != null) return null;
+        String parents = life.parents();
+        if (parents.isEmpty() || ownerId() == null) return null;
+        for (AssistantEntity a : Villages.folkOf(ownerId())) {
+            if (a instanceof VillageFolkEntity f && f.bedPos() != null && parents.contains(f.displayNameCap())) return f.bedPos();
+        }
+        return null;
     }
 
     @Override
@@ -1108,6 +1142,43 @@ public class VillageFolkEntity extends AssistantEntity {
     private void keepShift() {
         Shift want = stationTask() == StationTask.GUARD ? Shift.ALWAYS : Shift.DAY;
         if (shift() != want) setShift(want);
+    }
+
+    /** The middle of the night: the first watch hands over to the second. */
+    public static final long MIDNIGHT = 18000L;
+
+    /**
+     * The watch is kept in two halves, so that every guard sleeps every night: half the
+     * village's guards stand the first watch, from dusk to midnight, and then go to bed;
+     * the other half sleep first and stand the second, from midnight to dawn. A village
+     * with one guard has it watch until midnight and sleep after.
+     */
+    @Override
+    public boolean onShift() {
+        if (stationTask() != StationTask.GUARD || shift() != Shift.ALWAYS || !level().isNight()) return super.onShift();
+        return firstWatch() == (level().getDayTime() % 24000L < MIDNIGHT);
+    }
+
+    private int watchCheckTick = -100000;
+    private boolean firstWatch = true;
+
+    /** Does this guard stand the first watch? Every other guard of the village, in a fixed order. */
+    public boolean firstWatch() {
+        if (tickCount - watchCheckTick < 1200 && watchCheckTick >= 0) return firstWatch;
+        watchCheckTick = tickCount;
+        UUID village = ownerId();
+        if (village == null) return firstWatch = true;
+        int before = 0;
+        for (AssistantEntity mate : Villages.folkOf(village)) {
+            if (mate != this && mate.stationTask() == StationTask.GUARD && mate.getUUID().compareTo(getUUID()) < 0) before++;
+        }
+        return firstWatch = before % 2 == 0;
+    }
+
+    /** This folk's own hour for bed: a sociable one stays up, a hard worker turns in early. */
+    public long bedtimeTick() {
+        return 14000L + Math.floorMod(getUUID().getMostSignificantBits(), 600L)
+            + (life.has(Social.Trait.SOCIABLE) ? 1500L : 0L) - (life.has(Social.Trait.HARDWORKING) ? 800L : 0L);
     }
 
     /** Where this hand's ground was when the agenda last looked, and since when. */
@@ -1363,6 +1434,10 @@ public class VillageFolkEntity extends AssistantEntity {
             if (peekJob() == null && getNavigation().isDone()) {
                 if (!restockRations()) bakeErrand();
             }
+            // Work stops at bedtime. Whatever is left of the day's job waits for the morning
+            // (the village's builder takes its building up again then, the miner its mine):
+            // a folk with a job still queued never went to bed at all.
+            leaveWorkForTheMorning();
             // Home for the night is where two folk are at last near each other: a village of
             // two, one at its field and one at its mine all day, could never have a child.
             raisedAChild(24.0);
@@ -2751,11 +2826,54 @@ public class VillageFolkEntity extends AssistantEntity {
             int have = countCarried(item);
             if (have < want) have += drawFrom(heart, item, want - have, buildStoresRadius());
             // Beds are made, not only found: three wool and three planks from the stores.
-            if (deco == BuildGoal.Part.BED && have < want) makeBeds(want - have);
+            if (deco == BuildGoal.Part.BED && have < want) have += makeBeds(want - have);
+            // And without the wool, the founders' bedding comes in from the camp.
+            if (deco == BuildGoal.Part.BED && have < want) bedsFromTheCamp(want - have);
         }
         int blocksNow = countCarried(BuildGoal::isBuildingBlock);
         if (blocksNow < least) buildNote("build: carrying " + blocksNow + " of " + blocks + " blocks");
         return blocksNow >= least;
+    }
+
+    /**
+     * The camp round the heart is where the founders slept before there were houses.
+     * A builder with a house to furnish and no wool to make beds takes theirs up and
+     * carries them in: the camp empties into the houses as they go up.
+     */
+    private int bedsFromTheCamp(int wanted) {
+        if (villageCentre == null) return 0;
+        int took = 0;
+        for (BlockPos head : com.jrpetty.mcassistant.VillageSpawner.campBeds(level(), villageCentre)) {
+            if (took >= wanted) break;
+            net.minecraft.world.level.block.state.BlockState st = level().getBlockState(head);
+            if (!(st.getBlock() instanceof net.minecraft.world.level.block.BedBlock)
+                    || st.getValue(net.minecraft.world.level.block.BedBlock.OCCUPIED)) continue;
+            BlockPos foot = head.relative(st.getValue(net.minecraft.world.level.block.BedBlock.FACING).getOpposite());
+            net.minecraft.world.item.ItemStack bed = new net.minecraft.world.item.ItemStack(st.getBlock().asItem());
+            level().setBlock(foot, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2 | 16);
+            level().setBlock(head, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+            net.minecraft.world.item.ItemStack left = insertItem(bed);
+            if (!left.isEmpty()) spawnAtLocation(left);
+            took++;
+        }
+        if (took > 0) brain("took " + took + " bed" + (took == 1 ? "" : "s") + " in from the camp");
+        return took;
+    }
+
+    /** A bed somebody gave it: laid at the camp by the heart, and its own from tonight. */
+    public boolean layGivenBed() {
+        if (villageCentre == null || !(level() instanceof net.minecraft.server.level.ServerLevel server)) return false;
+        for (net.minecraft.world.item.ItemStack st : getInventoryItems()) {
+            if (!st.is(net.minecraft.tags.ItemTags.BEDS)
+                    || !(net.minecraft.world.level.block.Block.byItem(st.getItem()) instanceof net.minecraft.world.level.block.BedBlock bed)) continue;
+            if (!com.jrpetty.mcassistant.VillageSpawner.campBed(server, villageCentre, bed)) return false;
+            st.shrink(1);
+            for (BlockPos head : com.jrpetty.mcassistant.VillageSpawner.campBeds(server, villageCentre)) {
+                if (bedOnOffer(head) && level().getBlockState(head).getBlock() == bed) { takeBed(head); break; }
+            }
+            return true;
+        }
+        return false;
     }
 
     /**

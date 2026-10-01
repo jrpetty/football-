@@ -49,6 +49,7 @@ public final class Errands {
                 && !s.is(Items.SPIDER_EYE) && !s.is(Items.POISONOUS_POTATO);
             case "flowers" -> s -> s.is(ItemTags.SMALL_FLOWERS);
             case "fish" -> s -> s.is(ItemTags.FISHES);
+            case "bed" -> s -> s.is(ItemTags.BEDS);
             default -> {
                 net.minecraft.world.item.Item it = net.minecraft.core.registries.BuiltInRegistries.ITEM
                     .get(net.minecraft.resources.ResourceLocation.withDefaultNamespace(item));
@@ -71,6 +72,7 @@ public final class Errands {
             case "fish" -> count + " fish";
             case "book" -> one ? "a book" : count + " books";
             case "note_block" -> "a note block";
+            case "bed" -> one ? "a bed" : count + " beds";
             default -> count + " " + item.replace('_', ' ');
         };
     }
@@ -112,6 +114,12 @@ public final class Errands {
             return "Kind of you, but somebody else is already helping me with something.";
         }
         UUID village = f.ownerId();
+        // Nowhere to sleep comes before anything: a bed for itself.
+        if (village != null && f.bedPos() == null && !f.isBaby()) {
+            me.setErrand(WANT, p.getUUID(), "bed", 1, day);
+            return pickOf(r, "Since you ask… ", "Well, there is one thing. ")
+                + "I've nowhere to sleep — there aren't beds enough to go round yet. Could you bring me a bed? Any colour will do.";
+        }
         // What the village is short of, the folk's own trade first.
         if (village != null && f.level() instanceof ServerLevel server) {
             List<Villages.Need> needs = Villages.needs(server, village);
@@ -266,6 +274,8 @@ public final class Errands {
         };
         p.giveExperiencePoints(xp);
         StringBuilder said = new StringBuilder(pickOf(r, "That's everything! ", "You did it! ", "Wonderful! "));
+        // A bed of its own at last: laid out at the camp, and slept in tonight.
+        if ("bed".equals(me.errandItem()) && f.layGivenBed()) said.append("A bed of my own! I'll sleep well tonight. ");
         // Something from the village's own stores.
         ItemStack gift = fromTheStores(f);
         if (!gift.isEmpty()) {

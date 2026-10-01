@@ -371,6 +371,17 @@ public final class VillageCommands {
         }
         sb.append(". Built: ").append(Villages.builtList(v.id()));
         sb.append(". Room for ").append(Villages.housing(v.id()));
+        // Who has a bed, and (at night) who is in it.
+        int folkNow = 0, bedded = 0, asleep = 0;
+        for (AssistantEntity a : Villages.folkOf(v.id())) {
+            folkNow++;
+            net.minecraft.core.BlockPos bed = a.bedPos();
+            if (bed != null && level.getBlockState(bed).getBlock() instanceof net.minecraft.world.level.block.BedBlock) bedded++;
+            if (a.isSleeping()) asleep++;
+        }
+        sb.append(". Beds: ").append(bedded).append(" of ").append(folkNow).append(" have one, ")
+          .append(asleep).append(" asleep, homes for ").append(Villages.bedsPlanned(v.id()))
+          .append(", camp ").append(com.jrpetty.mcassistant.VillageSpawner.campBeds(level, v.centre()).size());
         sb.append(". Growing: ").append(Villages.growthNote(level, v.id()));
         java.util.List<VillageFolkEntity> people = new java.util.ArrayList<>();
         for (AssistantEntity a : Villages.folkOf(v.id())) if (a instanceof VillageFolkEntity f) people.add(f);

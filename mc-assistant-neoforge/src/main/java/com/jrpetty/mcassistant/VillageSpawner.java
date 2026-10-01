@@ -289,6 +289,7 @@ public final class VillageSpawner {
 
         Villages.Village village = Villages.found(level, ground);
         supplyChest(level, ground);
+        pitchCamp(level, ground, size);
 
         Set<String> used = new HashSet<>();
         for (int i = 0; i < size; i++) {
@@ -422,6 +423,72 @@ public final class VillageSpawner {
             chest.setItem(i, stores.get(i).copy());
         }
         chest.setChanged();
+    }
+
+    /** Where the camp's beds go round the heart: (dx, dz) of the foot; the head points away from the middle. */
+    private static final int[][] CAMP = {
+        {0, -3}, {3, 0}, {0, 3}, {-3, 0}, {-2, -3}, {3, -2}, {2, 3}, {-3, 2}, {2, -3}, {3, 2}, {-2, 3}, {-3, -2}};
+    private static final net.minecraft.world.level.block.Block[] BEDDING = {
+        Blocks.RED_BED, Blocks.BLUE_BED, Blocks.YELLOW_BED, Blocks.GREEN_BED, Blocks.WHITE_BED, Blocks.BROWN_BED,
+        Blocks.ORANGE_BED, Blocks.LIGHT_BLUE_BED, Blocks.PURPLE_BED, Blocks.CYAN_BED, Blocks.LIME_BED, Blocks.PINK_BED};
+
+    /**
+     * The founders' camp. Settlers come with their bedding, and lay it out round the
+     * stores: a ring of beds about the heart, heads out, one each. So nobody spends
+     * the first nights on their feet. As each house goes up, its builder carries beds
+     * in from here (VillageFolkEntity.bedsFromTheCamp), and the camp empties into the
+     * houses. Returns how many beds were laid.
+     */
+    public static int pitchCamp(ServerLevel level, BlockPos heart, int beds) {
+        int laid = 0;
+        for (int i = 0; i < CAMP.length && laid < beds; i++) {
+            if (layCampBed(level, heart, CAMP[i][0], CAMP[i][1], BEDDING[(laid + i) % BEDDING.length])) laid++;
+        }
+        return laid;
+    }
+
+    /** One more bed at the camp (a bed somebody gave a folk with none). */
+    public static boolean campBed(ServerLevel level, BlockPos heart, net.minecraft.world.level.block.Block bed) {
+        for (int[] c : CAMP) if (layCampBed(level, heart, c[0], c[1], bed)) return true;
+        return false;
+    }
+
+    private static boolean layCampBed(ServerLevel level, BlockPos heart, int dx, int dz,
+                                      net.minecraft.world.level.block.Block bed) {
+        net.minecraft.core.Direction out = Math.abs(dz) >= Math.abs(dx)
+            ? (dz < 0 ? net.minecraft.core.Direction.NORTH : net.minecraft.core.Direction.SOUTH)
+            : (dx < 0 ? net.minecraft.core.Direction.WEST : net.minecraft.core.Direction.EAST);
+        BlockPos foot = groundAt(level, heart.getX() + dx, heart.getZ() + dz);
+        if (foot == null || Math.abs(foot.getY() - heart.getY()) > 1) return false;
+        BlockPos head = foot.relative(out);
+        if (!level.getBlockState(foot).canBeReplaced() || !level.getBlockState(head).canBeReplaced()) return false;
+        if (!level.getBlockState(foot.below()).isFaceSturdy(level, foot.below(), net.minecraft.core.Direction.UP)
+                || !level.getBlockState(head.below()).isFaceSturdy(level, head.below(), net.minecraft.core.Direction.UP)) {
+            return false;
+        }
+        if (!level.getFluidState(foot).isEmpty() || !level.getFluidState(head).isEmpty()) return false;
+        net.minecraft.world.level.block.state.BlockState st = bed.defaultBlockState()
+            .setValue(net.minecraft.world.level.block.BedBlock.FACING, out);
+        level.setBlock(foot, st.setValue(net.minecraft.world.level.block.BedBlock.PART,
+            net.minecraft.world.level.block.state.properties.BedPart.FOOT), 3);
+        level.setBlock(head, st.setValue(net.minecraft.world.level.block.BedBlock.PART,
+            net.minecraft.world.level.block.state.properties.BedPart.HEAD), 3);
+        return true;
+    }
+
+    /** The heads of the beds still standing at a village's camp, nearest the heart first. */
+    public static List<BlockPos> campBeds(Level level, BlockPos heart) {
+        List<BlockPos> out = new java.util.ArrayList<>();
+        for (BlockPos p : BlockPos.betweenClosed(heart.offset(-4, -2, -4), heart.offset(4, 2, 4))) {
+            net.minecraft.world.level.block.state.BlockState st = level.getBlockState(p);
+            if (st.getBlock() instanceof net.minecraft.world.level.block.BedBlock
+                    && st.getValue(net.minecraft.world.level.block.BedBlock.PART)
+                        == net.minecraft.world.level.block.state.properties.BedPart.HEAD) {
+                out.add(p.immutable());
+            }
+        }
+        out.sort(java.util.Comparator.comparingDouble(p -> p.distSqr(heart)));
+        return out;
     }
 
     private static String freshName(Set<String> used) {
