@@ -157,10 +157,25 @@ public final class Land {
         int target = v.centre().getY() - 1;                       // the square's ground
         int cursor = CURSOR.getOrDefault(id, 0);
         int done = 0;
+        // Fields, mines, pens and fishing grounds are worked as they lie: left alone.
+        java.util.List<int[]> zones = new java.util.ArrayList<>();
+        for (AssistantEntity a : Villages.folkOf(id)) {
+            if (a.workZone() == null) continue;
+            switch (a.stationTask()) {
+                case FARM, MINE, RANCH, FISH -> {
+                    BlockPos zc = a.workZone().center();
+                    zones.add(new int[]{ zc.getX(), zc.getZ(), a.workZone().radius() + 2 });
+                }
+                default -> { }
+            }
+        }
         for (int i = 0; i < look && done < changes; i++) {
             int c = (cursor + i) % cells;
             int x = v.centre().getX() - r + c % side, z = v.centre().getZ() - r + c / side;
             if (!level.isLoaded(new BlockPos(x, target, z))) continue;
+            boolean worked = false;
+            for (int[] zn : zones) if (Math.abs(x - zn[0]) <= zn[2] && Math.abs(z - zn[1]) <= zn[2]) { worked = true; break; }
+            if (worked) continue;
             done += cell(level, v, x, z, target);
         }
         int next = (cursor + look) % cells;
