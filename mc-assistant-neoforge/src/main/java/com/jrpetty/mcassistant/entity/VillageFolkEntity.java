@@ -1149,8 +1149,12 @@ public class VillageFolkEntity extends AssistantEntity {
         int r = buildStoresRadius();
         java.util.function.Predicate<net.minecraft.world.item.ItemStack> stone =
             st -> st.is(net.minecraft.world.item.Items.COBBLESTONE) || st.is(net.minecraft.world.item.Items.COBBLED_DEEPSLATE);
+        // A log will do for the handle: woodcutters bank logs, not planks, and a village
+        // with seventeen hundred logs and no planks in its chests kept its miners on the
+        // wooden pickaxes they were born with.
         java.util.function.Predicate<net.minecraft.world.item.ItemStack> plank =
-            st -> st.is(net.minecraft.tags.ItemTags.PLANKS) || st.is(net.minecraft.world.item.Items.STICK);
+            st -> st.is(net.minecraft.tags.ItemTags.PLANKS) || st.is(net.minecraft.world.item.Items.STICK)
+                || st.is(net.minecraft.tags.ItemTags.LOGS);
         int stoneBefore = countCarried(stone), plankBefore = countCarried(plank);
         if (stoneBefore < 3) drawFrom(villageCentre, stone, 3 - stoneBefore, r);
         if (plankBefore < 1) drawFrom(villageCentre, plank, 1, r);
@@ -2009,7 +2013,7 @@ public class VillageFolkEntity extends AssistantEntity {
         java.util.function.Predicate<net.minecraft.world.item.ItemStack> wool =
             st -> st.is(net.minecraft.tags.ItemTags.WOOL);
         java.util.function.Predicate<net.minecraft.world.item.ItemStack> planks =
-            st -> st.is(net.minecraft.tags.ItemTags.PLANKS);
+            st -> st.is(net.minecraft.tags.ItemTags.PLANKS) || st.is(net.minecraft.tags.ItemTags.LOGS);
         int made = 0;
         for (int i = 0; i < wanted; i++) {
             int woolBefore = countCarried(wool), planksBefore = countCarried(planks);
