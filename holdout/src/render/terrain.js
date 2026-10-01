@@ -3,7 +3,7 @@
 // grass, and instanced scatter (trees, bushes, rocks) with swaying foliage.
 import * as THREE from 'three'
 import { texSet } from './texgen.js'
-import { mat } from './materials.js'
+import { mat, cloneMat, FOLIAGE_KEYS } from './materials.js'
 import { grassTuftGeometry } from '../models/nature.js'
 
 export const wind = { time: { value: 0 }, strength: { value: 1 } }
@@ -157,7 +157,7 @@ vec3 cGrass = antiTile(tGrass, wp / 5.5, kTile) * mix(uLush, uDry, smoothstep(0.
 vec3 cDirtT = antiTile(tDirt, wp / 6.0, kTile);
 vec3 cDirt = cDirtT * uDirtTint * (0.9 + nz2.g * 0.2);
 vec3 cMud = cDirtT * uMudTint;
-vec3 cGravel = antiTile(tGravel, wp / 1.3, kTile) * vec3(0.7, 0.68, 0.64);
+vec3 cGravel = antiTile(tGravel, wp / 1.3, kTile) * vec3(0.64, 0.6, 0.54);
 vec3 cForest = antiTile(tForest, wp / 4.0, kTile);
 tw4 = sp;
 twG = max(0.0, 1.0 - dot(sp, vec4(1.0)));
@@ -299,9 +299,7 @@ function grassMaterial() {
 const foliageMats = {}
 export function foliageMaterial(key = 'leaf') {
   if (foliageMats[key]) return foliageMats[key]
-  const base = mat(key)
-  const m = base.clone()
-  m.onBeforeCompile = (sh) => {
+  const m = cloneMat(mat(key), (sh) => {
     sh.uniforms.uWindTime = wind.time
     sh.uniforms.uWindStrength = wind.strength
     sh.vertexShader = sh.vertexShader
@@ -317,8 +315,7 @@ export function foliageMaterial(key = 'leaf') {
   transformed.z += cos(ph * 0.7) * hk * 0.6 * transformed.y * uWindStrength;
 #endif`,
       )
-  }
-  m.customProgramCacheKey = () => 'foliage-v1-' + key
+  }, '-fol')
   foliageMats[key] = m
   return m
 }
@@ -411,7 +408,7 @@ export class Scatter {
     model.traverse((o) => {
       if (!o.isMesh) return
       let material = o.material
-      if (windy && (material.userData?.key === 'leaf' || material.userData?.key === 'needle')) material = foliageMaterial(material.userData.key)
+      if (windy && FOLIAGE_KEYS.has(material.userData?.key)) material = foliageMaterial(material.userData.key)
       const g = o.geometry.clone()
       g.applyMatrix4(o.matrixWorld)
       const im = new THREE.InstancedMesh(g, material, max)

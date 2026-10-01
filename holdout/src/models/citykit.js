@@ -6,6 +6,7 @@ import * as THREE from 'three'
 import { Builder } from './kit.js'
 import { mat } from '../render/materials.js'
 import { foliageMaterial } from '../render/terrain.js'
+import { FOLIAGE_KEYS } from '../render/materials.js'
 
 const TAU = Math.PI * 2
 
@@ -22,7 +23,7 @@ export class InstSet {
       if (!o.isMesh) return
       let m = o.material
       const key = m.userData?.key
-      if (wind && (key === 'leaf' || key === 'needle')) m = foliageMaterial(key)
+      if (wind && FOLIAGE_KEYS.has(key)) m = foliageMaterial(key)
       const g = o.geometry.clone()
       g.applyMatrix4(o.matrixWorld)
       const im = new THREE.InstancedMesh(g, m, max)

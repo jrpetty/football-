@@ -2,6 +2,7 @@
 // ghost and scaffolding while it's being built), fading roofs, animated parts,
 // flames, smoke and steam, light anchors and a status label.
 import * as THREE from 'three'
+import { cloneMat } from '../render/materials.js'
 import { stationModel, scaffold } from '../models/stations.js'
 import { makeFlame } from '../render/fx.js'
 import { STATIONS, RES, RECIPES, MODS, ITEMS } from '../game/data.js'
@@ -9,6 +10,7 @@ import { S, stationSize, workersOf, itemOf, itemName } from '../game/state.js'
 import { view } from '../render/view.js'
 import { h, clamp, rand } from '../core/util.js'
 
+const _dir = new THREE.Vector3()
 const EMPTY = { lights: [], emitters: [], flames: [], spots: [], beds: [], seats: [], anims: [], blink: [], roofs: [] }
 const BLUEPRINT = new THREE.MeshStandardMaterial({ color: '#9ad0ff', emissive: '#4aa0ff', emissiveIntensity: 0.6, transparent: true, opacity: 0.22, depthWrite: false, roughness: 0.4 })
 const _v = new THREE.Vector3()
@@ -81,7 +83,7 @@ export class StationView {
         if (!p) continue
         p.traverse((o) => {
           if (!o.isMesh) return
-          o.material = o.material.clone()
+          o.material = cloneMat(o.material)
           o.material.transparent = true
           o.material.depthWrite = true
           this.roofMats.push({ m: o.material, mesh: o })
@@ -246,6 +248,9 @@ export class StationView {
         } else if (A.kind === 'pump') {
           const target = on ? Math.sin(t * (A.speed || 3)) * (A.amp || 0.3) : 0
           p.rotation[ax] = base.r[ax] + target
+        } else if (A.kind === 'conveyor') {
+          // items ride along the belt's own x axis, wrapping every gap
+          if (on) p.position.copy(base.p).addScaledVector(_dir.set(1, 0, 0).applyQuaternion(p.quaternion), (t * (A.speed || 0.3)) % (A.amp || 0.5))
         } else if (A.kind === 'slide') {
           if (on) p.position[ax] = base.p[ax] + Math.sin(t * (A.speed || 1) * Math.PI * 2) * (A.amp || 0.1)
         } else if (A.kind === 'shake') {

@@ -82,6 +82,7 @@ function frame(now) {
 }
 requestAnimationFrame(frame)
 window.__ready = true
+window.__perf = () => ({ calls: pipe.renderer.info.render.calls, tris: pipe.renderer.info.render.triangles, geos: pipe.renderer.info.memory.geometries })
 window.__S = S
 window.__base = base
 window.__cam = (x, z, d, yaw) => {

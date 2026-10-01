@@ -108,6 +108,22 @@ export function screenMat(kind = 'green') {
   })
 }
 
+// An irregular blob of rust, grime or paint lying in the local xy plane
+// (+z out): a thin extruded noisy ellipse, so wear never looks like a sticker.
+export function blob(b, w, h, o = {}) {
+  const rnd = o.rnd ?? seeded(o.seed ?? 5)
+  const n = 14
+  const pts = []
+  const k1 = rnd() * TAU
+  const k2 = rnd() * TAU
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * TAU
+    const r = 0.62 + 0.22 * Math.sin(a * 2 + k1) + 0.14 * Math.sin(a * 5 + k2) + rnd() * 0.18
+    pts.push([Math.cos(a) * r * w * 0.5, Math.sin(a) * r * h * 0.5 - (o.drip ? Math.max(0, -Math.sin(a)) * h * 0.4 * rnd() : 0)])
+  }
+  b.extrude(pts, o.t ?? 0.003, { mat: o.mat ?? 'rust', color: o.color ?? '#7e6656', x: o.x || 0, y: o.y || 0, z: o.z || 0, rx: o.rx || 0, ry: o.ry || 0, rz: o.rz || 0, ao: 0, shadow: false, curve: 1 })
+}
+
 // ---------------------------------------------------------------- containers
 export function crate(b, o = {}) {
   const w = o.w ?? 0.6
@@ -343,11 +359,11 @@ export function scrapPile(b, o = {}) {
       const y = (1 - d / rad) * rad * 0.25 + 0.05
       const k = rnd()
       if (k < 0.3) b.box(0.6 + rnd() * 0.7, 0.015, 0.5 + rnd() * 0.4, { mat: 'corrugated', color: pick(rnd, ['#b8b0a8', '#a89a8a', '#8aa0a8', '#c0a890']), x, y: y + 0.1, z, rx: (rnd() - 0.5) * 0.9, ry: rnd() * TAU, rz: (rnd() - 0.5) * 0.9 })
-      else if (k < 0.5) b.cyl(0.03 + rnd() * 0.04, 0.03 + rnd() * 0.04, 0.6 + rnd() * 1, { mat: 'rust', color: '#ffffff', x, y: y + 0.1, z, rx: Math.PI / 2 + (rnd() - 0.5) * 0.6, rz: rnd() * TAU, seg: 8 })
+      else if (k < 0.5) b.cyl(0.03 + rnd() * 0.04, 0.03 + rnd() * 0.04, 0.6 + rnd() * 1, { mat: 'rust', color: '#a89080', x, y: y + 0.1, z, rx: Math.PI / 2 + (rnd() - 0.5) * 0.6, rz: rnd() * TAU, seg: 8 })
       else if (k < 0.62) tire(b, { x, y: y + 0.08, z, rx: Math.PI / 2 + (rnd() - 0.5) * 0.8, rz: rnd() })
       else if (k < 0.75) b.box(0.3 + rnd() * 0.3, 0.2 + rnd() * 0.3, 0.25 + rnd() * 0.3, { mat: 'metal', color: pick(rnd, ['#5a6a78', '#8a4a3a', '#6a7a5a', '#9a9a90']), x, y: y + 0.15, z, rx: (rnd() - 0.5) * 0.5, ry: rnd() * TAU, rz: (rnd() - 0.5) * 0.5 })
-      else if (k < 0.85) b.torus(0.15 + rnd() * 0.12, 0.025, { mat: 'rust', color: '#ffffff', x, y: y + 0.1, z, rx: rnd() * 3, ry: rnd() * 3, arc: Math.PI * (1 + rnd()) })
-      else b.box(0.08, 0.08, 0.8 + rnd() * 0.8, { mat: 'rust', color: '#ffffff', x, y: y + 0.1, z, rx: (rnd() - 0.5) * 0.6, ry: rnd() * TAU })
+      else if (k < 0.85) b.torus(0.15 + rnd() * 0.12, 0.025, { mat: 'rust', color: '#a89080', x, y: y + 0.1, z, rx: rnd() * 3, ry: rnd() * 3, arc: Math.PI * (1 + rnd()) })
+      else b.box(0.08, 0.08, 0.8 + rnd() * 0.8, { mat: 'rust', color: '#a89080', x, y: y + 0.1, z, rx: (rnd() - 0.5) * 0.6, ry: rnd() * TAU })
     }
   })
 }

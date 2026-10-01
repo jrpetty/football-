@@ -208,15 +208,24 @@ export class Builder {
     const g = new THREE.ExtrudeGeometry(s, {
       depth,
       bevelEnabled: !!o.bevel,
-      bevelThickness: o.bevel || 0,
+      bevelThickness: o.bevelT ?? o.bevel ?? 0,
       bevelSize: o.bevel || 0,
-      bevelSegments: 1,
+      bevelSegments: o.bevelSeg ?? 1,
       curveSegments: o.curve ?? 8,
     })
     const ts = o.uv ?? texScale(o.mat || 'plain')
     scaleUV(g, 1 / ts, 1 / ts)
     g.translate(0, 0, -depth / 2)
     return this.add(g, o)
+  }
+  // A side profile [[z, y], ...] (counter-clockwise, front = +z) extruded
+  // across the x axis to width w: car bodies, machine housings, brackets.
+  profile(pts, w, o = {}) {
+    const bv = o.bevel ?? 0
+    this.push({ x: o.x || 0, y: o.y || 0, z: o.z || 0, ry: (o.ry || 0) - Math.PI / 2 })
+    this.extrude(pts, Math.max(0.001, w - 2 * (o.bevelT ?? bv)), { ...o, x: 0, y: 0, z: 0, ry: 0 })
+    this.pop()
+    return this
   }
   plane(w, h, o = {}) {
     const g = new THREE.PlaneGeometry(w, h)

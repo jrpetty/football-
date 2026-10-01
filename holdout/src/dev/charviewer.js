@@ -90,3 +90,7 @@ function frame(t) {
 }
 requestAnimationFrame(frame)
 window.__ready = true
+window.__cam = (x, z, d, yaw) => {
+  view.rig.jump(x, z, d)
+  if (yaw != null) view.rig.yaw = view.rig.yawGoal = yaw
+}

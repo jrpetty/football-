@@ -10,7 +10,7 @@ import { view, screenRay, groundAt } from '../render/view.js'
 import { Atmosphere, nightFactor, isNight } from '../render/sky.js'
 import { FX, makeFlame, tickFlames, ringTex } from '../render/fx.js'
 import { Splat, Terrain, wind } from '../render/terrain.js'
-import { mat, setNightGlow } from '../render/materials.js'
+import { mat, setNightGlow, cloneMat } from '../render/materials.js'
 import { Builder, seeded } from '../models/kit.js'
 import { CONTAINER_MODELS, DECOR_MODELS, addDecor } from '../models/furniture.js'
 import { carModel, vanModel, pickupModel } from '../models/vehicles.js'
@@ -74,8 +74,7 @@ function lootQuality(level) {
 // vertex: which outside wall of which building it sits on, and whether that
 // wall faces the camera.
 function cutaway(base, U) {
-  const m = base.clone()
-  m.onBeforeCompile = (sh) => {
+  return cloneMat(base, (sh) => {
     sh.uniforms.uCutR = U.rects
     sh.uniforms.uCutN = U.n
     sh.uniforms.uCutDir = U.dir
@@ -100,9 +99,7 @@ function cutaway(base, U) {
   if (cut > 0.0 && transformed.y > uCutY) transformed.y = mix(transformed.y, uCutY, cut);
 }`,
     )
-  }
-  m.customProgramCacheKey = () => 'cutaway-' + base.uuid
-  return m
+  }, '-cut')
 }
 
 export class Mission {

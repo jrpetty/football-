@@ -85,11 +85,12 @@ const mixc = (a, b, t, o) => {
 
 // ---------------------------------------------------------------- canvas
 class Tex {
-  constructor(n) {
+  constructor(n, alpha = false) {
     this.n = n
     this.rgb = new Float32Array(n * n * 3)
     this.h = new Float32Array(n * n)
     this.r = new Float32Array(n * n).fill(0.8)
+    this.a = alpha ? new Float32Array(n * n) : null
   }
   set(i, c, height, rough) {
     this.rgb[i * 3] = c[0]
@@ -113,7 +114,7 @@ function finish(t, { normalStrength = 2, rough = true } = {}) {
       albedo[i * 4] = Math.max(0, Math.min(255, t.rgb[i * 3]))
       albedo[i * 4 + 1] = Math.max(0, Math.min(255, t.rgb[i * 3 + 1]))
       albedo[i * 4 + 2] = Math.max(0, Math.min(255, t.rgb[i * 3 + 2]))
-      albedo[i * 4 + 3] = 255
+      albedo[i * 4 + 3] = t.a ? Math.round(clamp01(t.a[i]) * 255) : 255
       const xl = (x - 1 + n) % n
       const xr = (x + 1) % n
       const yu = (y - 1 + n) % n
@@ -146,11 +147,165 @@ function finish(t, { normalStrength = 2, rough = true } = {}) {
   return { map: mk(albedo, true), normalMap: mk(normal, false), roughnessMap: rough ? mk(rmap, false) : null }
 }
 
+
+// A cluster of leaves rasterised into an alpha card (used by leafcard*).
+function foliageCard(n, seed, o) {
+  const t = new Tex(n, true)
+  let s2 = seed
+  const rnd = () => ((s2 = (s2 * 16807) % 2147483647) / 2147483647)
+  const cols = o.cols.map(hex)
+  const twig = hex('#5a4630')
+  // twigs from the centre outwards
+  for (let k = 0; k < 9; k++) {
+    const a = rnd() * Math.PI * 2
+    const L = 0.2 + rnd() * 0.18
+    for (let j = 0; j < 80; j++) {
+      const u = 0.5 + Math.cos(a) * L * (j / 80)
+      const v = 0.5 + Math.sin(a) * L * (j / 80)
+      const i = Math.floor(v * n) * n + Math.floor(u * n)
+      if (i >= 0 && i < n * n) {
+        t.rgb[i * 3] = twig[0]
+        t.rgb[i * 3 + 1] = twig[1]
+        t.rgb[i * 3 + 2] = twig[2]
+        t.a[i] = 1
+        t.h[i] = 0.2
+      }
+    }
+  }
+  const leaves = []
+  for (let k = 0; k < o.leaves; k++) {
+    // denser towards the middle
+    const a = rnd() * Math.PI * 2
+    const d = Math.pow(rnd(), 0.5) * o.radius * (0.85 + 0.15 * Math.sin(a * 5))
+    leaves.push({ x: 0.5 + Math.cos(a) * d, y: 0.5 + Math.sin(a) * d, ang: a + (rnd() - 0.5) * 1.2, len: o.len[0] + rnd() * (o.len[1] - o.len[0]), wid: o.wid[0] + rnd() * (o.wid[1] - o.wid[0]), c: cols[Math.floor(rnd() * cols.length)], depth: rnd() })
+  }
+  leaves.sort((p, q) => p.depth - q.depth)
+  for (const L of leaves) {
+    const ca = Math.cos(L.ang)
+    const sa = Math.sin(L.ang)
+    const r = L.len
+    const x0 = Math.max(0, Math.floor((L.x - r) * n))
+    const x1 = Math.min(n - 1, Math.ceil((L.x + r) * n))
+    const y0 = Math.max(0, Math.floor((L.y - r) * n))
+    const y1 = Math.min(n - 1, Math.ceil((L.y + r) * n))
+    const shade = 0.75 + L.depth * 0.45
+    for (let py = y0; py <= y1; py++) for (let px = x0; px <= x1; px++) {
+      const dx = px / n - L.x
+      const dy = py / n - L.y
+      // leaf frame: u along the blade (0 at stem, 1 at tip), v across
+      const u = (dx * ca + dy * sa) / L.len
+      const v = (-dx * sa + dy * ca) / L.wid
+      if (u < 0 || u > 1) continue
+      const halfW = Math.sin(Math.PI * Math.pow(u, 0.8)) * 0.5
+      if (Math.abs(v) > halfW) continue
+      const i = py * n + px
+      const edge = Math.abs(v) / (halfW + 1e-4)
+      const rib = Math.abs(v) < 0.04 ? 0.82 : 1
+      const k = shade * rib * (1.05 - edge * 0.25)
+      t.rgb[i * 3] = L.c[0] * k
+      t.rgb[i * 3 + 1] = L.c[1] * k
+      t.rgb[i * 3 + 2] = L.c[2] * k
+      t.h[i] = 0.5 + L.depth * 0.5 - edge * edge * 0.3
+      t.r[i] = 0.6 + edge * 0.2
+      t.a[i] = 1
+    }
+  }
+  bleed(t, cols[0])
+  return finish(t, { normalStrength: 4 })
+}
+// Give transparent texels a sensible colour so filtering doesn't darken edges.
+function bleed(t, c) {
+  for (let i = 0; i < t.n * t.n; i++) {
+    if (t.a[i] > 0) continue
+    t.rgb[i * 3] = c[0]
+    t.rgb[i * 3 + 1] = c[1]
+    t.rgb[i * 3 + 2] = c[2]
+    t.h[i] = 0
+  }
+}
+
 // ---------------------------------------------------------------- generators
 const W = [0, 0, 0]
 const C = [0, 0, 0]
 
 const GEN = {
+
+  leafcard(n) {
+    // a cluster of broad leaves on twigs, alpha-cut, for tree and bush cards
+    return foliageCard(n, 911, { leaves: 520, len: [0.035, 0.06], wid: [0.016, 0.028], cols: ['#4e7a2e', '#5e8a36', '#6a9a3e', '#46702a', '#78a446', '#3e6224'], radius: 0.46 })
+  },
+  leafcardAutumn(n) {
+    return foliageCard(n, 913, { leaves: 520, len: [0.035, 0.06], wid: [0.016, 0.028], cols: ['#c8782a', '#d8962e', '#b05a22', '#e0a838', '#9a4a1e', '#c8862a'], radius: 0.46 })
+  },
+  needlecard(n) {
+    // a conifer spray: a twig with sub-twigs, each bristling with needles
+    const t = new Tex(n, true)
+    const rnd = (() => {
+      let s2 = 7
+      return () => ((s2 = (s2 * 16807) % 2147483647) / 2147483647)
+    })()
+    const cols = ['#34502a', '#3e5a2c', '#466434', '#2e4624', '#506e3a'].map(hex)
+    const twig = hex('#4a3a2a')
+    const put = (x, y, c, h) => {
+      const xi = Math.round(x * n)
+      const yi = Math.round(y * n)
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const px = xi + dx
+        const py = yi + dy
+        if (px < 0 || py < 0 || px >= n || py >= n) continue
+        const i = py * n + px
+        if (t.a[i] < 1 || h > t.h[i]) {
+          t.rgb[i * 3] = c[0]
+          t.rgb[i * 3 + 1] = c[1]
+          t.rgb[i * 3 + 2] = c[2]
+          t.h[i] = h
+          t.a[i] = 1
+          t.r[i] = 0.8
+        }
+      }
+    }
+    const line = (x0, y0, x1, y1, c, h0, h1, step = 0.6 / n) => {
+      const len = Math.hypot(x1 - x0, y1 - y0)
+      const k = Math.max(2, Math.ceil(len / step))
+      for (let j = 0; j <= k; j++) put(x0 + ((x1 - x0) * j) / k, y0 + ((y1 - y0) * j) / k, c, h0 + ((h1 - h0) * j) / k)
+    }
+    // a fern-shaped spray: a main twig from the base (left) to the tip (right),
+    // side twigs angled forwards, shorter towards the tip, all bristling with needles
+    const needles = (x0, y0, x1, y1, L) => {
+      const len = Math.hypot(x1 - x0, y1 - y0)
+      const k = Math.max(2, Math.ceil(len / (2.2 / n)))
+      const ux = (x1 - x0) / len
+      const uy = (y1 - y0) / len
+      for (let j = 0; j <= k; j++) {
+        const x = x0 + ((x1 - x0) * j) / k
+        const y = y0 + ((y1 - y0) * j) / k
+        const fade = 1 - (j / k) * 0.5
+        for (const sgn of [-1, 1]) {
+          // needle direction: rotate the twig direction forwards by ~50 degrees
+          const ang = Math.atan2(uy, ux) + sgn * (0.75 + rnd() * 0.35)
+          const nl = L * fade * (0.8 + rnd() * 0.4)
+          const c = cols[Math.floor(rnd() * cols.length)]
+          line(x, y, x + Math.cos(ang) * nl, y + Math.sin(ang) * nl, c, 0.55, 1.0)
+        }
+      }
+      line(x0, y0, x1, y1, twig, 0.35, 0.35)
+    }
+    const y0 = 0.5
+    for (let j = 0; j < 15; j++) {
+      const t = j / 15
+      const bx = 0.05 + t * 0.85
+      const by = y0 + t * 0.03
+      const side = j % 2 ? 1 : -1
+      const L = (0.42 - t * 0.36) * (0.85 + rnd() * 0.3)
+      const ang = side * (0.75 + rnd() * 0.25)
+      needles(bx, by, bx + Math.cos(ang) * L, by + Math.sin(ang) * L * 0.95, 0.035)
+      if (j % 3 === 0) needles(bx, by, bx + Math.cos(-ang) * L * 0.8, by + Math.sin(-ang) * L * 0.75, 0.032)
+    }
+    needles(0.04, y0, 0.97, y0 + 0.035, 0.045)
+    // bleed colour into transparent texels to avoid dark fringes
+    bleed(t, hex('#2e4a26'))
+    return finish(t, { normalStrength: 3 })
+  },
   dirt(n) {
     // packed earth: broad tonal patches, fine grit, faint cracks and sparse small stones
     const t = new Tex(n)
@@ -316,8 +471,8 @@ const GEN = {
   },
   gravel(n) {
     const t = new Tex(n)
-    const tones = ['#7d7a72', '#94918a', '#6a665e', '#a29d92', '#857f74'].map(hex)
-    const grout = hex('#3e3a33')
+    const tones = ['#7a7266', '#8e8676', '#635c52', '#9a9180', '#81796b', '#6e665a'].map(hex)
+    const grout = hex('#3a3229')
     for (let y = 0; y < n; y++) {
       for (let x = 0; x < n; x++) {
         const u = x / n
@@ -672,30 +827,74 @@ const GEN = {
     return finish(t, { normalStrength: 6 })
   },
   metal(n) {
-    // painted sheet metal with scratches and grime (white base, tinted per part)
+    // worked bare steel: brushed grain, mill scale, scratches, a little grime
     const t = new Tex(n)
     for (let y = 0; y < n; y++) {
       for (let x = 0; x < n; x++) {
         const u = x / n
         const v = y / n
         const i = y * n + x
-        const grime = fbm(u, v, 4, 5, 171)
-        const scratch = vnoise(u * 300, v * 6, 300, 172)
-        let c = 236 - grime * 50
-        let rough = 0.5 + grime * 0.3
-        if (scratch > 0.93) {
-          c = 250
-          rough = 0.25
+        const broad = fbm(u, v, 3, 4, 171)
+        const brush = vnoise(u * 2, v * 260, 2, 174) * 0.6 + vnoise(u * 5, v * 520, 5, 175) * 0.4
+        const grime = fbm(u, v, 7, 4, 176)
+        let c = 214 + (brush - 0.5) * 22 - Math.max(0, grime - 0.55) * 70 - (broad - 0.5) * 18
+        let rough = 0.36 + broad * 0.16 + Math.max(0, grime - 0.55) * 0.6
+        const scratch = vnoise(u * 360, v * 5, 360, 172)
+        if (scratch > 0.935) {
+          c += 18
+          rough = 0.22
         }
-        const chip = fbm(u, v, 14, 3, 173)
-        if (chip > 0.72) {
-          mixc([c, c, c], [120, 88, 60], (chip - 0.72) * 3.5, C)
+        C[0] = c
+        C[1] = c
+        C[2] = c * 1.015
+        const pit = vnoise(u * 90, v * 90, 90, 173)
+        if (pit > 0.86 && grime > 0.5) {
+          mixc(C, [118, 84, 58], (pit - 0.86) * 4, C)
           rough = 0.85
-        } else C[0] = C[1] = C[2] = c
-        t.set(i, C, grime * 0.2 - (chip > 0.72 ? 0.2 : 0), rough)
+        }
+        t.set(i, C, brush * 0.08 - Math.max(0, pit - 0.86) * 0.6, rough)
       }
     }
-    return finish(t, { normalStrength: 1.5 })
+    return finish(t, { normalStrength: 1.2 })
+  },
+  paint(n) {
+    // factory paint on sheet metal (white, tinted per part): near-flat with a
+    // soft orange peel, fine scratches, and a few chips through to primer and rust
+    const t = new Tex(n)
+    const primer = [168, 164, 154]
+    const rustC = [104, 66, 42]
+    for (let y = 0; y < n; y++) {
+      for (let x = 0; x < n; x++) {
+        const u = x / n
+        const v = y / n
+        const i = y * n + x
+        const broad = fbm(u, v, 3, 4, 401)
+        const peel = fbm(u, v, 48, 2, 402)
+        let c = 230 + (broad - 0.5) * 12 + (peel - 0.5) * 5
+        let rough = 0.4 + broad * 0.16
+        let h = peel * 0.12
+        const s1 = vnoise(u * 420, v * 6, 420, 403)
+        const s2 = vnoise(v * 380, u * 8, 380, 404)
+        if (s1 > 0.945 || s2 > 0.96) {
+          c += 10
+          rough = 0.32
+          h -= 0.04
+        }
+        C[0] = c
+        C[1] = c
+        C[2] = c
+        // rare small chips, clustered where the broad wear is highest
+        const chip = fbm(u, v, 28, 3, 405) * 0.7 + fbm(u, v, 5, 2, 406) * 0.3
+        if (chip > 0.765) {
+          const k = clamp01((chip - 0.765) * 18)
+          mixc(C, k > 0.6 ? rustC : primer, Math.min(1, k * 2.5), C)
+          rough = k > 0.6 ? 0.9 : 0.7
+          h -= 0.25
+        }
+        t.set(i, C, h, rough)
+      }
+    }
+    return finish(t, { normalStrength: 1.4 })
   },
   rust(n) {
     const t = new Tex(n)
@@ -865,7 +1064,7 @@ const GEN = {
 }
 
 const cache = new Map()
-const SIZES = { dirt: 1024, grass: 1024, asphalt: 1024, asphaltWorn: 512, concrete: 512, forest: 512, noise: 256 }
+const SIZES = { dirt: 1024, grass: 1024, asphalt: 1024, asphaltWorn: 512, concrete: 512, forest: 512, noise: 256, leafcard: 512, leafcardAutumn: 512, needlecard: 512 }
 // Get (and lazily generate) a texture set by name.
 export function texSet(name) {
   if (!cache.has(name)) {

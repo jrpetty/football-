@@ -26,7 +26,11 @@ const atmo = new Atmosphere(scene, pipe.renderer)
 const fx = new FX(scene)
 fx.setViewport(window.innerHeight, view.camera.fov)
 const level = parseInt(q.get('level') || '1', 10)
-const types = (q.get('types') || Object.keys(STATIONS).join(',')).split(',')
+let types = (q.get('types') || Object.keys(STATIONS).join(',')).split(',')
+const levelsQ = q.get('levels') ? q.get('levels').split(',').map(Number) : null
+const pairs = []
+for (const t of types) for (const l of levelsQ || [null]) pairs.push([t, l])
+types = pairs.map((p) => p[0])
 const cols = parseInt(q.get('cols') || '5', 10)
 const cell = parseFloat(q.get('cell') || '9')
 const gb = new Builder()
@@ -36,7 +40,7 @@ const anims = []
 const chars = []
 const occs = Object.keys(OUTFITS)
 types.forEach((type, i) => {
-  const lv = Math.min(level, STATIONS[type].levels)
+  const lv = Math.min(pairs[i][1] ?? level, STATIONS[type].levels)
   const m = q.get('scaffold') ? scaffold(...STATIONS[type].size) : stationModel(type, lv)
   const x = (i % cols) * cell
   const z = Math.floor(i / cols) * cell
@@ -108,6 +112,7 @@ function frame(now) {
     else if (A.kind === 'press') p.position[A.axis || 'y'] = e.base[A.axis || 'y'] - Math.abs(Math.sin(t * (A.speed || 1))) * (A.amp || 0.3)
     else if (A.kind === 'pump') p.rotation[A.axis || 'z'] = Math.sin(t * (A.speed || 3)) * (A.amp || 0.3)
     else if (A.kind === 'slide') p.position[A.axis || 'x'] = e.base[A.axis || 'x'] + Math.sin(t * (A.speed || 1)) * (A.amp || 0.1)
+    else if (A.kind === 'conveyor') p.position.copy(e.base).addScaledVector(new THREE.Vector3(1, 0, 0).applyQuaternion(p.quaternion), (t * (A.speed || 0.3)) % (A.amp || 0.5))
     else if (A.kind === 'grow') p.scale.setScalar(0.5 + 0.5 * ((t * 0.1) % 1))
   }
   for (const ch of chars) ch.update(dt, null, { speed: 0 })
