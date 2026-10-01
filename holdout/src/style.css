@@ -1174,6 +1174,39 @@ body.aiming #c { cursor: crosshair !important; }
 @keyframes pingIn { from { transform: translateY(8px) scale(0.6); opacity: 0; } }
 @keyframes pingDot { 50% { transform: scale(0.6); } }
 .speed.locked { opacity: 0.55; }
+/* the volume bar: a speaker that mutes, and a slider that fills with amber */
+.vol { position: relative; display: flex; align-items: center; gap: 4px; background: rgba(16, 19, 15, 0.82); border: 1px solid var(--line-2); border-radius: 7px; padding: 2px 9px 2px 2px; flex: none; }
+.vol-btn { appearance: none; border: 0; background: none; color: var(--accent-2); padding: 4px 6px; border-radius: 5px; cursor: pointer; display: flex; align-items: center; }
+.vol-btn svg { width: 17px; height: 17px; }
+.vol-btn:hover { color: var(--fg); background: rgba(255, 245, 220, 0.06); }
+.vol.off .vol-btn { color: var(--dim); }
+.vol-pop { display: flex; align-items: center; gap: 10px; }
+.vol-slider { -webkit-appearance: none; appearance: none; width: 78px; height: 18px; margin: 0; background: none; cursor: pointer; --v: 80%; }
+.vol-slider:focus { outline: none; }
+.vol-slider::-webkit-slider-runnable-track { height: 5px; border-radius: 3px; background: linear-gradient(90deg, var(--accent) var(--v), rgba(255, 245, 220, 0.14) var(--v)); }
+.vol-slider::-moz-range-track { height: 5px; border-radius: 3px; background: rgba(255, 245, 220, 0.14); }
+.vol-slider::-moz-range-progress { height: 5px; border-radius: 3px; background: var(--accent); }
+.vol-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 13px; height: 13px; margin-top: -4px; border-radius: 50%; background: var(--accent-2); border: 2px solid #1c1406; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5); transition: transform 0.12s; }
+.vol-slider::-moz-range-thumb { width: 11px; height: 11px; border-radius: 50%; background: var(--accent-2); border: 2px solid #1c1406; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5); }
+.vol-slider:hover::-webkit-slider-thumb, .vol-slider:active::-webkit-slider-thumb { transform: scale(1.2); }
+.vol-slider:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px rgba(234, 165, 60, 0.45); }
+.vol.off .vol-slider::-webkit-slider-thumb { background: var(--muted); }
+.vol.off .vol-slider::-moz-range-thumb { background: var(--muted); }
+/* the wide one, in Settings */
+.vol.wide { background: rgba(0, 0, 0, 0.3); border-color: var(--line); border-radius: 8px; padding: 3px 12px 3px 3px; }
+.vol.wide .vol-slider { width: 190px; }
+.vol-pct { min-width: 38px; text-align: right; font: 700 14px var(--font-display); color: var(--accent-2); font-variant-numeric: tabular-nums; }
+.vol.off .vol-pct { color: var(--dim); }
+/* on runs it sits beside the ammo count */
+.mright .vol { padding-right: 8px; }
+/* a narrower window keeps just the speaker; the bar drops down on hover */
+@media (max-width: 1500px) {
+  .topbar .vol { padding-right: 2px; }
+  .topbar .vol-pop { position: absolute; top: -1px; bottom: -1px; right: calc(100% - 1px); padding: 0 10px 0 12px; background: var(--glass-2); border: 1px solid var(--line-2); border-right: 0; border-radius: 8px 0 0 8px; box-shadow: var(--shadow); opacity: 0; pointer-events: none; transform: translateX(6px); transition: opacity 0.15s, transform 0.15s; z-index: 20; }
+  .topbar .vol:hover .vol-pop, .topbar .vol:focus-within .vol-pop { opacity: 1; pointer-events: auto; transform: none; }
+  .topbar .vol-slider { width: 120px; }
+}
+
 .speed.locked button { cursor: not-allowed; }
 .lb-camp.always { border-color: rgba(114, 184, 224, 0.35); }
 .lb-tag { font: 600 10.5px var(--font-body); font-style: normal; letter-spacing: 0.08em; text-transform: uppercase; color: var(--info); border: 1px solid rgba(114, 184, 224, 0.4); border-radius: 4px; padding: 0 5px; margin-left: 8px; vertical-align: 2px; }

@@ -1120,7 +1120,7 @@ export function newGame() {
     over: false,
     created: Date.now(),
     saved: Date.now(),
-    settings: { sound: true, quality: 'high', tilt: true, edgePan: true },
+    settings: { sound: true, volume: 0.8, quality: 'high', tilt: true, edgePan: true },
   }
   Object.assign(S.res, { food: 55, water: 60, meds: 4, wood: 110, scrap: 60, metal: 30, plates: 4, bolts: 24, cloth: 25, parts: 8, electronics: 4, chemicals: 4, gunpowder: 0, fuel: 14, pammo: 70, rammo: 0, shells: 12, medkit: 2, molotov: 1, cash: 150 })
   const founders = [pick(['soldier', 'police', 'firefighter', 'guard']), pick(['farmer', 'chef', 'plumber']), pick(['carpenter', 'builder', 'mechanic']), pick(['nurse', 'doctor', 'paramedic'])]

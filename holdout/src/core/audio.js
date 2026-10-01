@@ -5,7 +5,11 @@ let master = null
 let noiseBuf = null
 let ambience = null
 let enabled = true
+let volume = 0.8 // the player's volume, 0 to 1
 let lastPlay = {}
+// loudness follows the square of the slider, which is how ears hear it;
+// 80% is the level the game always had
+const level = () => (enabled ? 0.86 * volume * volume : 0)
 
 export function initAudio() {
   if (ctx) {
@@ -18,7 +22,7 @@ export function initAudio() {
     return
   }
   master = ctx.createGain()
-  master.gain.value = enabled ? 0.55 : 0
+  master.gain.value = level()
   master.connect(ctx.destination)
   noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate)
   const d = noiseBuf.getChannelData(0)
@@ -28,9 +32,14 @@ export function initAudio() {
 
 export function setSound(on) {
   enabled = on
-  if (master) master.gain.setTargetAtTime(on ? 0.55 : 0, ctx.currentTime, 0.05)
+  if (master) master.gain.setTargetAtTime(level(), ctx.currentTime, 0.05)
+}
+export function setVolume(v) {
+  volume = Math.max(0, Math.min(1, +v || 0))
+  if (master) master.gain.setTargetAtTime(level(), ctx.currentTime, 0.05)
 }
 export const soundOn = () => enabled
+export const getVolume = () => volume
 
 function noise(dur, { type = 'lowpass', freq = 1000, q = 1, gain = 0.5, attack = 0.002, decay = dur, freqEnd = null, pan = 0 } = {}) {
   const t = ctx.currentTime
@@ -213,7 +222,7 @@ const SFX = {
 export const sfxTap = { fn: null }
 export function sfx(id, throttleMs = 40) {
   sfxTap.fn?.(id)
-  if (!ctx || !enabled || !SFX[id]) return
+  if (!ctx || !enabled || volume <= 0 || !SFX[id]) return
   if (!gate(id, throttleMs)) return
   try {
     SFX[id]()

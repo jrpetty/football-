@@ -36,6 +36,7 @@ import { storyAt, foundStoryItem, rollNote, storyRunEnd, NOTES } from '../game/s
 import { VisionMixin } from './missionvision.js'
 import { CoopMixin, agentStatus, stopTap } from './missioncoop.js'
 import { TrapsMixin } from './missiontraps.js'
+import { volumeControl } from '../ui/volume.js'
 
 const TAU = Math.PI * 2
 // How much room things take in a pack.
@@ -1832,7 +1833,7 @@ export class Mission {
         'div.mtop',
         h('div.mlocard', h('span.lvlbadge', { style: { '--c': col } }, this.level), h('div', h('b', this.loc.name), h('small', `${L.name}${ev ? (ev.kind === 'distress' ? ' · rescue the survivor inside' : ' · supply drop in the yard') : ''}`))),
         this.timerEl,
-        h('div.mright', this.ammoEl, this.pauseBtn),
+        h('div.mright', this.ammoEl, volumeControl(this.game), this.pauseBtn),
       ),
       this.haulEl,
       h('div.mbottom', (this.squadEl = h('div.squad')), this.utilEl, h('div.mact', h('button.btn.ghost', { onclick: () => this.selectAll(), 'data-tip': 'Select everyone <kbd>Tab</kbd>' }, 'All'), this.extractBtn)),

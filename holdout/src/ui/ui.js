@@ -19,6 +19,7 @@ import { motorPool } from './motorpool.js'
 import { renderJournal } from './journal.js'
 import { storyBadge } from '../game/story.js'
 import { renderPlayers, feedChat, netChip, updateNetChip } from './netui.js'
+import { volumeControl } from './volume.js'
 import { victoryModal, renderMarket, renderLog, renderFence, renderExpansion, renderProduction, renderPower, renderMorale, renderSettings, recruitModal, raidReportModal, missionReportModal, gameOverModal, menuModal, hordeInfo } from './camppanels.js'
 
 const NAV = [
@@ -219,6 +220,7 @@ export class UI {
       this.hordeBtn,
       chips,
       h('div.meters', this.pwEl, this.morEl, this.popEl, NET.role !== 'solo' ? (this.netEl ??= netChip(this)) : null),
+      volumeControl(this.game),
       this.speedEl,
     )
     this.weatherShown = w

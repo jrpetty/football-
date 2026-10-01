@@ -3,7 +3,7 @@
 import { Pipeline } from './render/pipeline.js'
 import { initView, view, groundAt } from './render/view.js'
 import { pregenerate } from './render/texgen.js'
-import { initAudio, sfx, setSound } from './core/audio.js'
+import { initAudio, sfx, setSound, setVolume } from './core/audio.js'
 import { S, newGame, hasSave, load, save, day, log, wipeSave, buildCost, newStation, pay, canAfford, completeGoal, backupSave, vehicleOf, wearVehicle, NET, MP_SAVE_KEY, playerOf } from './game/state.js'
 import { Session, readIntent, writeIntent, me, initMp } from './net/mp.js'
 import { Coop } from './net/coop.js'
@@ -177,6 +177,7 @@ class Game {
     this.resize()
     view.input.edgePan = st.edgePan !== false
     setSound(st.sound !== false)
+    setVolume(st.volume ?? 0.8)
     if (this.base && !first) {
       this.base.atmo.setShadowSize(this.pipe.Q.shadow)
       this.base.world.grassCount = this.grassCount()
