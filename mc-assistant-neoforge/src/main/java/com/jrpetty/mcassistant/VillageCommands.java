@@ -426,6 +426,14 @@ public final class VillageCommands {
           .append(", camp ").append(com.jrpetty.mcassistant.VillageSpawner.campBeds(level, v.centre()).size());
         if (!late.isEmpty()) sb.append("; up: ").append(String.join(", ", late));
         sb.append(". Growing: ").append(Villages.growthNote(level, v.id()));
+        {
+            long today = level.getDayTime() / 24000L;
+            int saved = 0;
+            for (AssistantEntity a : Villages.folkOf(v.id())) if (a instanceof VillageFolkEntity f) saved += f.purse();
+            int toMarket = com.jrpetty.mcassistant.entity.Market.daysToMarket(v.id(), today);
+            sb.append(". Treasury: ").append(com.jrpetty.mcassistant.village.Ledger.coins(v.id())).append(" coins, ")
+              .append(saved).append(" in purses; market ").append(toMarket == 0 ? "today" : "in " + toMarket + " days");
+        }
         java.util.List<VillageFolkEntity> people = new java.util.ArrayList<>();
         for (AssistantEntity a : Villages.folkOf(v.id())) if (a instanceof VillageFolkEntity f) people.add(f);
         sb.append(". Community: ").append(community(people));

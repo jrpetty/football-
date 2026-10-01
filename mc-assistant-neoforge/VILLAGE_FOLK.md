@@ -132,6 +132,32 @@ added a little at a time round those buildings:
   avenue outward, odd on one side of the street and even on the other. Other
   buildings have their name over the door: *The Storehouse*, *The Smeltery*.
 
+### Money and the market
+
+* **Coin.** A *Village Coin* is a gold coin. A new village's treasury starts with
+  32. From the Iron Age the village mints more from the gold in its stores, nine
+  coins to an ingot, whenever the treasury runs low.
+* **Wages.** Every morning the treasury pays each working folk 1 coin, 2 from
+  level 10 and 3 from level 25, for as long as the coin lasts. Folk save what
+  they earn and will tell you how much they have put by.
+* **Market day.** Once a week, on a different day for every village, the bell
+  rings on the square in the morning and players nearby are told. On their break
+  that day, folk go to the stalls and buy a treat with their savings: their
+  favourite food if the stores have it. The coin goes back into the treasury.
+* **Prices.** Everything the market deals in has a worth. Its price moves with
+  how much of it the stores hold: dear when it is scarce, cheap when there is
+  plenty, and kinder on market day. Each stall has two signs:
+  * one listing the lots on its counter and their prices;
+  * one saying what the village is buying and what it pays.
+* **Trading at a stall.** Right-click a stall's counter:
+  * **To buy** what is on the counter, have coin in your pack.
+  * **To sell**, hold goods the village buys. It pays from its treasury and puts
+    them in its stores.
+
+  Friends of the village get a tenth off, the unwelcome pay double, and an outcast
+  can't trade at all. `/village status` shows the treasury, what is in the
+  folk's purses, and how many days until market day.
+
 ### The buildings
 
 Every building is drawn. Each drawing is a text file in
@@ -668,6 +694,9 @@ Every push to CI:
   them: the chimney fire, the door's number and names, the washing line, the windows lit
   by night and dark by day, a street sign, the stalls and their goods, a scarecrow
   (game test `t29`);
+* checks the money (game test `t30`): a new village's purse, gold minted into coin,
+  a day's wages, prices that move with the stores, a folk's market-day treat, a
+  player buying bread at a stall and selling iron, and the stalls' price signs;
 * fills a storehouse from a field's chest and a furnace's output with a real carrier,
   and has a farmer who has run out of seed fetch it from there (game test `t28`);
 * raises the later ages' buildings and a great work for real (game test `t14`), and

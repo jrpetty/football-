@@ -78,6 +78,7 @@ public final class TownLife {
         UUID id = v.id();
         if (now - LAST.getOrDefault(id, -100000L) < EVERY) return;
         LAST.put(id, now);
+        Market.tick(level, v);                      // the treasury, the morning's wages, the market bell
         List<Ledger.Building> all = Ledger.buildings(id);
         long time = level.getDayTime() % 24000L;
         for (Ledger.Building b : all) {
@@ -101,7 +102,7 @@ public final class TownLife {
         }
         // The stalls on the square, and what is on them.
         if (Villages.ageOf(id).ordinal() >= Villages.Age.STONE.ordinal() && turn % 6 == 0) {
-            stalls(level, v.centre(), storeGoods(level, id));
+            stalls(level, id, v.centre(), storeGoods(level, id));
         }
         // A field's scarecrow.
         List<AssistantEntity> farmers = new ArrayList<>();
@@ -127,7 +128,7 @@ public final class TownLife {
             reach = Math.max(reach, Math.max(Math.abs(b.anchor().getX() - heart.getX()), Math.abs(b.anchor().getZ() - heart.getZ())) + 6);
         }
         for (int[] c : corners(reach)) streetSign(level, village, heart, c);
-        for (int i = 0; i < STALLS.length; i++) stalls(level, heart, goods);
+        for (int i = 0; i < STALLS.length; i++) stalls(level, village, heart, goods);
     }
 
     /** Every window of these buildings lit (or put out), now. */
@@ -353,7 +354,7 @@ public final class TownLife {
         { Blocks.GREEN_WOOL, Blocks.WHITE_WOOL }, { Blocks.YELLOW_WOOL, Blocks.WHITE_WOOL } };
 
     /** Put up any stall that is missing (one a call), and set out the goods on all of them. */
-    static void stalls(ServerLevel level, BlockPos heart, List<Item> goods) {
+    static void stalls(ServerLevel level, UUID village, BlockPos heart, List<Item> goods) {
         boolean built = false;
         for (int i = 0; i < STALLS.length; i++) {
             BlockPos at = heart.offset(STALLS[i][0], 0, STALLS[i][1]);
@@ -372,7 +373,27 @@ public final class TownLife {
                 mine.add(idx < goods.size() ? goods.get(idx) : null);
             }
             setOut(level, ground, front, mine);
+            priceSigns(level, village, ground, front, mine);
         }
+    }
+
+    /** On a stall's front posts: what its goods cost, and what the village is buying. */
+    private static void priceSigns(ServerLevel level, UUID village, BlockPos ground, Direction front, List<Item> goods) {
+        Direction across = front.getClockWise();
+        BlockPos row = ground.relative(front);
+        signOn(level, row.relative(across, -2).above(), front, Market.sellLines(level, village, goods));
+        signOn(level, row.relative(across, 2).above(), front, Market.buyLines(level, village));
+    }
+
+    private static void signOn(ServerLevel level, BlockPos post, Direction front, String[] lines) {
+        if (!(level.getBlockState(post).getBlock() instanceof net.minecraft.world.level.block.FenceBlock)) return;
+        BlockPos at = post.relative(front);
+        BlockState there = level.getBlockState(at);
+        if (!(there.getBlock() instanceof WallSignBlock)) {
+            if (!there.isAir()) return;
+            level.setBlock(at, Blocks.SPRUCE_WALL_SIGN.defaultBlockState().setValue(WallSignBlock.FACING, front), 3);
+        }
+        if (level.getBlockEntity(at) instanceof SignBlockEntity sign) write(sign, lines);
     }
 
     /** The ground a stall stands (or would stand) on: the first floor down from above the square
@@ -480,7 +501,7 @@ public final class TownLife {
     }
 
     private static boolean forSale(ItemStack s) {
-        return !s.isDamageableItem() && !s.is(Items.CHEST) && !s.is(Items.FURNACE) && !s.is(Items.CRAFTING_TABLE)
+        return Market.goodFor(s) != null && !s.isDamageableItem() && !s.is(Items.CHEST) && !s.is(Items.FURNACE) && !s.is(Items.CRAFTING_TABLE)
             && !s.is(Items.TORCH) && !s.is(Items.LADDER) && !s.is(Items.STICK) && !s.is(Items.DIRT)
             && !s.is(Items.COBBLESTONE) && !s.is(Items.WHEAT_SEEDS);
     }

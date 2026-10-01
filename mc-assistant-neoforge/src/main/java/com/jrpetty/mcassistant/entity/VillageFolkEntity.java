@@ -309,6 +309,54 @@ public class VillageFolkEntity extends AssistantEntity {
 
     public Persona persona() { return persona; }
 
+    // ------------------------------ money --------------------------------------
+
+    /** What this folk has saved out of its wages (Market). */
+    private int purse;
+    /** The day it last spent at the market. */
+    private long shoppedDay = -1;
+
+    public int purse() { return purse; }
+
+    public void earn(int coins) { if (coins > 0) purse += coins; }
+
+    public boolean spend(int coins) {
+        if (coins <= 0 || purse < coins) return false;
+        purse -= coins;
+        return true;
+    }
+
+    /**
+     * Market day, on its break: off to a stall with some of its savings, and home with a
+     * treat. Each folk goes to the stall its id picks, so the square fills up evenly.
+     */
+    private boolean shopping(net.minecraft.server.level.ServerLevel server) {
+        UUID village = ownerId();
+        if (village == null || villageCentre == null || purse < 1 || isBaby()) return false;
+        long day = level().getDayTime() / 24000L;
+        if (shoppedDay == day || !Market.marketDay(village, day)) return false;
+        if (Villages.ageOf(village).ordinal() < Villages.Age.STONE.ordinal()) return false;
+        Villages.Village v = Villages.get(village);
+        if (v == null) return false;
+        int[][] stalls = { { 5, 8 }, { -5, 8 }, { 5, -8 }, { -5, -8 } };   // in front of each counter
+        int[] s = stalls[Math.floorMod(getUUID().hashCode(), stalls.length)];
+        BlockPos stand = villageCentre.offset(s[0], 0, s[1]);
+        if (blockPosition().distSqr(stand) > 9.0) {
+            if (getNavigation().isDone() || tickCount - socialWalkTick >= 100) {
+                walkTo(stand, 0.9D);
+                socialWalkTick = tickCount;
+            }
+            return true;
+        }
+        shoppedDay = day;
+        String bought = Market.folkBuys(server, v, this);
+        if (bought != null) {
+            say(getRandom().nextBoolean() ? "Some " + bought + " — just what I wanted." : "Market day! I treated myself to some " + bought + ".");
+            brain("bought " + bought + " at the market");
+        }
+        return true;
+    }
+
     @Nullable public BlockPos villageCentre() { return villageCentre; }
 
     @Nullable public String hobbyNow() { return hobbyNow; }
@@ -1009,6 +1057,7 @@ public class VillageFolkEntity extends AssistantEntity {
             if (away != null) { walkTo(away, 0.9D); socialWalkTick = tickCount; }
             return;
         }
+        if (shopping(server)) return;                 // market day: a treat from the stalls
         if (Leisure.listen(this, server)) return;
         VillageFolkEntity mate = company(server);
         if (mate != null) {
@@ -3591,6 +3640,7 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         if (showcase) tag.putBoolean("Showcase", true);
         tag.putLong("BornDay", bornDay);
+        tag.putInt("Purse", purse);
         if (isBaby()) tag.putBoolean("Child", true);
         if (villageCentre != null) tag.putLong("VillageCentre", villageCentre.asLong());
         UUID village = ownerId();
@@ -3627,6 +3677,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (tag.contains("Persona")) persona.load(tag.getCompound("Persona"));
         this.showcase = tag.getBoolean("Showcase");
         this.bornDay = tag.contains("BornDay") ? tag.getLong("BornDay") : UNKNOWN;
+        this.purse = tag.getInt("Purse");
         if (tag.getBoolean("Child")) setChild(true);
         if (tag.contains("VillageCentre")) {
             this.villageCentre = BlockPos.of(tag.getLong("VillageCentre"));

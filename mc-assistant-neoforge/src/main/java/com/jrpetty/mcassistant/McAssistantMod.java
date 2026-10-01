@@ -120,6 +120,11 @@ public final class McAssistantMod {
         ITEMS.registerItem("village_charter",
             com.jrpetty.mcassistant.item.VillageCharterItem::new);
 
+    /** A village's coin: minted from its gold from the Iron Age, paid out in wages, spent
+     *  at its stalls, and what a player is paid in when they sell to it. */
+    public static final DeferredItem<net.minecraft.world.item.Item> VILLAGE_COIN =
+        ITEMS.registerSimpleItem("village_coin");
+
     /** Master switch for the chat / slash / voice command layer. Off while the
      *  specialisation flow (spawner -> management screen -> zone marker) is the
      *  way you run a crew; the parser and voice engine stay built, just idle. */
@@ -148,6 +153,7 @@ public final class McAssistantMod {
         NeoForge.EVENT_BUS.register(SessionReset.class);
         NeoForge.EVENT_BUS.register(ChunkLoad.class);
         NeoForge.EVENT_BUS.register(StallWatch.class);
+        NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Market.class);
     }
 
     private void onEntityAttributes(EntityAttributeCreationEvent event) {
@@ -163,6 +169,9 @@ public final class McAssistantMod {
             event.accept(FOLK_SPAWNER_ITEM);
             event.accept(VILLAGE_CHARTER);
             event.accept(JOB_BOARD_ITEM);
+        }
+        if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
+            event.accept(VILLAGE_COIN);
         }
         if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
             event.accept(PLACE_MARKER);

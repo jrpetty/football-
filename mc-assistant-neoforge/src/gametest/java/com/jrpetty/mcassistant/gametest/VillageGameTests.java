@@ -1403,9 +1403,9 @@ public class VillageGameTests {
         // The stalls, and the goods on them.
         int stalls = 0, goods = 0;
         for (int[] s : new int[][]{ { 8, 8 }, { -8, 8 }, { 8, -8 }, { -8, -8 } }) {
-            if (level.getBlockState(Kit.surface(level, heart.getX() + s[0], heart.getZ() + s[1]).below(4)).is(Blocks.BARREL)
-                    || !level.getEntitiesOfClass(net.minecraft.world.entity.decoration.ItemFrame.class,
-                        around(heart.offset(s[0], 0, s[1]), 3)).isEmpty()) stalls++;
+            // A stall's awning is the top of its column.
+            if (level.getBlockState(Kit.surface(level, heart.getX() + s[0], heart.getZ() + s[1]).below())
+                    .is(net.minecraft.tags.BlockTags.WOOL)) stalls++;
         }
         for (var f : level.getEntitiesOfClass(net.minecraft.world.entity.decoration.ItemFrame.class, around(heart, 14))) {
             if (f.getTags().contains("mca_stall") && !f.getItem().isEmpty()) goods++;
@@ -1423,6 +1423,99 @@ public class VillageGameTests {
         Kit.log("t29 at midnight " + night + " windows are lit");
         helper.assertTrue(night > 0, "the village lights its own windows at night");
         level.setDayTime(6000);
+        helper.succeed();
+    }
+
+    /**
+     * Money: a new village's purse, coin minted from the stores' gold in the Iron Age, a
+     * day's wages, prices that move with the stores, a folk's market-day treat, and a player
+     * buying a lot of bread at a stall and selling the village some iron.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "t30_market")
+    public static void t30_market(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(7000);
+        Kit.hold(level, 12000, 12000, 32);
+        Kit.prepare(level, 12000, 12000, 32);
+        BlockPos heart = Kit.surface(level, 12000, 12000);
+        VillageFolkEntity folk = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(folk != null, "a village");
+        folk.setJob(StationTask.FARM);
+        java.util.UUID village = folk.ownerId();
+        Villages.Village v = Villages.get(village);
+        BlockPos chest = Kit.surface(level, heart.getX() + 4, heart.getZ());
+        level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
+        com.jrpetty.mcassistant.entity.ZoneChests.mark(level, chest);
+        net.minecraft.world.Container box = (net.minecraft.world.Container) level.getBlockEntity(chest);
+        box.setItem(0, new ItemStack(Items.BREAD, 64));
+        box.setItem(1, new ItemStack(Items.APPLE, 16));
+        box.setItem(2, new ItemStack(Items.COOKIE, 8));
+        box.setItem(3, new ItemStack(Items.GOLD_INGOT, 4));
+        Villages.ageForTests(village, Villages.Age.IRON);
+
+        // The founders' purse.
+        com.jrpetty.mcassistant.entity.Market.tick(level, v);
+        int opened = com.jrpetty.mcassistant.village.Ledger.coins(village);
+        // Gold into coin, when the treasury is low.
+        com.jrpetty.mcassistant.village.Ledger.takeCoins(village, opened);
+        int minted = com.jrpetty.mcassistant.entity.Market.mint(level, v);
+        // A day's wages.
+        int paid = com.jrpetty.mcassistant.entity.Market.payWages(level, v);
+        Kit.log("t30 the treasury opened with " + opened + "; minted " + minted + " from gold; paid " + paid
+            + " in wages; " + folk.displayNameCap() + " has " + folk.purse() + "; treasury " + com.jrpetty.mcassistant.village.Ledger.coins(village));
+        helper.assertTrue(opened == com.jrpetty.mcassistant.entity.Market.FOUNDING_PURSE, "a new village has the founders' purse");
+        helper.assertTrue(minted == 18 && ((ItemStack) box.getItem(3)).getCount() == 2, "two bars of gold minted into eighteen coins");
+        helper.assertTrue(paid == 1 && folk.purse() == 1, "a working folk is paid its wage");
+        // Prices move with the stores.
+        var bread = com.jrpetty.mcassistant.entity.Market.goodFor(new ItemStack(Items.BREAD));
+        int plenty = com.jrpetty.mcassistant.entity.Market.sellPrice(bread, 64, false);
+        int scarce = com.jrpetty.mcassistant.entity.Market.sellPrice(bread, 4, false);
+        int buys = com.jrpetty.mcassistant.entity.Market.buyPrice(bread, 64, false);
+        Kit.log("t30 eight bread: " + plenty + "c with plenty, " + scarce + "c when scarce; the village pays " + buys + "c");
+        helper.assertTrue(plenty < scarce && buys < plenty, "dear when scarce, cheap when plenty, and it buys for less than it sells");
+        int days = 0;
+        for (long d = 0; d < 7; d++) if (com.jrpetty.mcassistant.entity.Market.marketDay(village, d)) days++;
+        helper.assertTrue(days == 1, "one market day a week");
+        // A folk's treat.
+        folk.earn(10);
+        int before = folk.purse(), treasury = com.jrpetty.mcassistant.village.Ledger.coins(village);
+        String treat = com.jrpetty.mcassistant.entity.Market.folkBuys(level, v, folk);
+        Kit.log("t30 " + folk.displayNameCap() + " (likes " + folk.persona().food() + ") bought " + treat + "; purse "
+            + before + " -> " + folk.purse() + ", treasury " + treasury + " -> " + com.jrpetty.mcassistant.village.Ledger.coins(village));
+        helper.assertTrue(treat != null && folk.purse() < before
+            && com.jrpetty.mcassistant.village.Ledger.coins(village) == treasury + before - folk.purse(),
+            "a folk spends its savings on a treat, and the coin goes back to the treasury");
+        // A player at a stall.
+        net.minecraft.world.entity.player.Player p = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        p.getInventory().add(new ItemStack(McAssistantMod.VILLAGE_COIN.get(), 20));
+        treasury = com.jrpetty.mcassistant.village.Ledger.coins(village);
+        String bought = com.jrpetty.mcassistant.entity.Market.deal(level, v, p, new ItemStack(Items.BREAD));
+        int coins = com.jrpetty.mcassistant.entity.Market.coinsHeld(p);
+        int breadHeld = 0;
+        for (int i = 0; i < p.getInventory().getContainerSize(); i++) {
+            if (p.getInventory().getItem(i).is(Items.BREAD)) breadHeld += p.getInventory().getItem(i).getCount();
+        }
+        Kit.log("t30 the player: " + bought + " (" + coins + " coins left, " + breadHeld + " bread)");
+        helper.assertTrue(breadHeld == 8 && coins < 20 && com.jrpetty.mcassistant.village.Ledger.coins(village) == treasury + 20 - coins,
+            "a player buys a lot of bread with coin, and the coin goes into the treasury");
+        p.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(Items.IRON_INGOT, 8));
+        String sold = com.jrpetty.mcassistant.entity.Market.deal(level, v, p, ItemStack.EMPTY);
+        int after = com.jrpetty.mcassistant.entity.Market.coinsHeld(p);
+        Kit.log("t30 the player: " + sold + " (" + after + " coins now, " + p.getMainHandItem().getCount() + " iron in hand)");
+        helper.assertTrue(after > coins && p.getMainHandItem().getCount() == 4, "the village buys iron from a player for coin");
+        // The stalls' price signs.
+        com.jrpetty.mcassistant.entity.TownLife.dressNow(level, village, heart, java.util.List.of(),
+            java.util.List.of(Items.BREAD, Items.APPLE, Items.COOKIE));
+        java.util.List<String> signs = new java.util.ArrayList<>();
+        for (BlockPos q : BlockPos.betweenClosed(heart.offset(3, 0, 3), heart.offset(12, 4, 12))) {
+            if (level.getBlockEntity(q) instanceof net.minecraft.world.level.block.entity.SignBlockEntity sign) {
+                signs.add(sign.getFrontText().getMessage(0, false).getString() + " / " + sign.getFrontText().getMessage(1, false).getString());
+            }
+        }
+        Kit.log("t30 the stall's signs: " + signs);
+        helper.assertTrue(signs.stream().anyMatch(t -> t.startsWith("8 Bread ")) && signs.stream().anyMatch(t -> t.startsWith("We buy:")),
+            "a stall shows its prices, and what the village is buying");
         helper.succeed();
     }
 

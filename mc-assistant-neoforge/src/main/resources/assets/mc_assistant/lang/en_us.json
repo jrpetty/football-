@@ -13,5 +13,6 @@
   "key.mc_assistant.plots": "Plot Book (stake & crew ground)",
   "entity.mc_assistant.village_folk": "Village Folk",
   "item.mc_assistant.village_charter": "Village Charter",
-  "block.mc_assistant.village_folk_spawner": "Village Folk Spawner"
+  "block.mc_assistant.village_folk_spawner": "Village Folk Spawner",
+  "item.mc_assistant.village_coin": "Village Coin"
 }

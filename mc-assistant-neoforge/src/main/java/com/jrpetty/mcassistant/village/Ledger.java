@@ -34,6 +34,10 @@ public final class Ledger extends SavedData {
     public record Building(String structure, BlockPos anchor, Direction facing) {}
 
     private final Map<UUID, List<Building>> buildings = new HashMap<>();
+    /** The village's treasury, in coin; absent until it is first opened. */
+    private final Map<UUID, Integer> treasury = new HashMap<>();
+    /** The last day each village paid its wages. */
+    private final Map<UUID, Long> paid = new HashMap<>();
 
     /** Without a server (a plain unit test) the register is kept here instead. */
     private static Ledger loose;
@@ -72,7 +76,59 @@ public final class Ledger extends SavedData {
     /** The village is gone: forget its buildings. */
     public static void forget(UUID village) {
         Ledger l = of();
-        if (l != null && l.buildings.remove(village) != null) l.setDirty();
+        if (l == null) return;
+        boolean any = l.buildings.remove(village) != null;
+        any |= l.treasury.remove(village) != null;
+        any |= l.paid.remove(village) != null;
+        if (any) l.setDirty();
+    }
+
+    // ------------------------------------------------------------------ the treasury
+
+    /** Has this village a treasury yet? */
+    public static boolean hasTreasury(UUID village) {
+        Ledger l = of();
+        return l != null && l.treasury.containsKey(village);
+    }
+
+    /** The coin in the village's treasury. */
+    public static int coins(UUID village) {
+        Ledger l = of();
+        return l == null ? 0 : l.treasury.getOrDefault(village, 0);
+    }
+
+    /** Coin into the treasury (minted, or paid in at the stalls). */
+    public static void addCoins(UUID village, int n) {
+        Ledger l = of();
+        if (l == null || n < 0) return;
+        l.treasury.merge(village, n, Integer::sum);
+        l.setDirty();
+    }
+
+    /** Coin out of the treasury, as much as there is up to {@code n}; returns how much. */
+    public static int takeCoins(UUID village, int n) {
+        Ledger l = of();
+        if (l == null || n <= 0) return 0;
+        int have = l.treasury.getOrDefault(village, 0);
+        int took = Math.min(have, n);
+        if (took > 0) {
+            l.treasury.put(village, have - took);
+            l.setDirty();
+        }
+        return took;
+    }
+
+    /** The last day the village paid its wages, or -1. */
+    public static long paidOn(UUID village) {
+        Ledger l = of();
+        return l == null ? -1 : l.paid.getOrDefault(village, -1L);
+    }
+
+    public static void paid(UUID village, long day) {
+        Ledger l = of();
+        if (l == null) return;
+        l.paid.put(village, day);
+        l.setDirty();
     }
 
     public static Ledger load(CompoundTag tag, HolderLookup.Provider registries) {
@@ -86,7 +142,10 @@ public final class Ledger extends SavedData {
                 Direction d = Direction.from2DDataValue(b.getInt("Facing"));
                 all.add(new Building(b.getString("Name"), BlockPos.of(b.getLong("At")), d));
             }
-            l.buildings.put(v.getUUID("Id"), all);
+            UUID id = v.getUUID("Id");
+            if (!all.isEmpty()) l.buildings.put(id, all);
+            if (v.contains("Coins")) l.treasury.put(id, v.getInt("Coins"));
+            if (v.contains("Paid")) l.paid.put(id, v.getLong("Paid"));
         }
         return l;
     }
@@ -94,11 +153,16 @@ public final class Ledger extends SavedData {
     @Override
     public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
         ListTag villages = new ListTag();
-        for (Map.Entry<UUID, List<Building>> e : buildings.entrySet()) {
+        java.util.Set<UUID> ids = new java.util.HashSet<>(buildings.keySet());
+        ids.addAll(treasury.keySet());
+        ids.addAll(paid.keySet());
+        for (UUID id : ids) {
             CompoundTag v = new CompoundTag();
-            v.putUUID("Id", e.getKey());
+            v.putUUID("Id", id);
+            if (treasury.containsKey(id)) v.putInt("Coins", treasury.get(id));
+            if (paid.containsKey(id)) v.putLong("Paid", paid.get(id));
             ListTag all = new ListTag();
-            for (Building b : e.getValue()) {
+            for (Building b : buildings.getOrDefault(id, List.of())) {
                 CompoundTag one = new CompoundTag();
                 one.putString("Name", b.structure());
                 one.putLong("At", b.anchor().asLong());

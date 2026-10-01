@@ -288,6 +288,11 @@ public final class FolkTalk {
             String line = reason(f, why);
             if (!line.isEmpty()) sb.append(' ').append(line);
         }
+        int coins = f.purse();
+        if (coins >= 3) {
+            sb.append(' ').append(pick(r, "I've " + coins + " coins put by.", "I've saved " + coins + " coins, you know.",
+                coins + " coins in my purse, and more by market day."));
+        }
         return sb.toString();
     }
 
