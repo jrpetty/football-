@@ -6,7 +6,7 @@ import * as THREE from 'three'
 import { Atmosphere, nightFactor, isNight } from '../render/sky.js'
 import { FX, tickFlames } from '../render/fx.js'
 import { view, pickAt, groundAt } from '../render/view.js'
-import { setNightGlow } from '../render/materials.js'
+import { setNightGlow, WEATHER } from '../render/materials.js'
 import { wind } from '../render/terrain.js'
 import { Grid, BLOCK } from '../core/grid.js'
 import { BaseWorld } from './baseworld.js'
@@ -18,7 +18,7 @@ import { BeltMixin } from './basebelts.js'
 import { stationModel } from '../models/stations.js'
 import { makeSurvivorCharacter } from '../world/agents.js'
 import { STATIONS, RES, EXPANSIONS } from '../game/data.js'
-import { S, BASE, bounds, hour, stationSize, workersOf, gateTiles, expansionAvailable, expansionCost } from '../game/state.js'
+import { S, BASE, bounds, hour, stationSize, workersOf, gateTiles, expansionAvailable, expansionCost, season } from '../game/state.js'
 import { power } from '../game/economy.js'
 import { sfx, setAmbience } from '../core/audio.js'
 import { bus, h, rand, clamp, fmt } from '../core/util.js'
@@ -27,6 +27,7 @@ import { icon } from '../ui/icons.js'
 const GHOST_OK = new THREE.MeshStandardMaterial({ color: '#9ae6a0', emissive: '#3a8a4a', emissiveIntensity: 0.5, transparent: true, opacity: 0.55, depthWrite: false })
 const GHOST_BAD = new THREE.MeshStandardMaterial({ color: '#ff8a8a', emissive: '#a02020', emissiveIntensity: 0.6, transparent: true, opacity: 0.5, depthWrite: false })
 const LIGHTS = 8
+const _tint = new THREE.Vector3(1, 1, 1)
 
 export class BaseScene {
   constructor(game) {
@@ -121,6 +122,7 @@ export class BaseScene {
       view.rig.jump(fire ? fire.x + 2 : 56, fire ? fire.z + 3 : 58, 42)
     }
     this.entered = true
+    this.snowInit = false
     this.syncStations()
     this.people.sync()
     this.fence.refresh()
@@ -562,13 +564,27 @@ export class BaseScene {
     this.atmo.setWeather(S.weather?.type || 'clear')
     const a = this.atmo.update(hr, view.rig.target, view.rig.dist, dt)
     this.game.pipe.exposure = a.exposure
-    this.game.pipe.grade(this.scene, { saturation: a.saturation * 1.08 })
+    // a Blood Moon stains the night red, from an hour before it comes
+    const bm = night * (S.raid?.blood ? 1 : S.nextRaid?.blood && S.nextRaid.at - S.time < 90 ? clamp(1 - (S.nextRaid.at - S.time) / 90, 0, 1) : 0)
+    this.bloodK = (this.bloodK || 0) + (bm - (this.bloodK || 0)) * Math.min(1, dt * 0.8)
+    _tint.set(1 + this.bloodK * 0.32, 1 - this.bloodK * 0.22, 1 - this.bloodK * 0.26)
+    this.game.pipe.grade(this.scene, { saturation: a.saturation * 1.08 * (1 + this.bloodK * 0.2), tint: _tint })
     setNightGlow(night)
     tickFlames(this.t)
     wind.time.value = this.t
     wind.strength.value = S.weather?.type === 'rain' ? 1.8 : S.weather?.type === 'overcast' ? 1.3 : 1
     const rain = S.weather?.type === 'rain' ? 1 : 0
+    const snowing = S.weather?.type === 'snow' ? 1 : 0
     this.fx.setRain(rain * 0.9, view.rig.target)
+    this.fx.setSnow(snowing, view.rig.target)
+    // snow settles through winter and melts in spring
+    const snowGoal = season().heat ? (snowing ? 1 : 0.72) : 0
+    if (!this.snowInit) {
+      WEATHER.uSnow.value = snowGoal
+      this.snowInit = true
+    }
+    WEATHER.uSnow.value += (snowGoal - WEATHER.uSnow.value) * Math.min(1, simDt * 0.012)
+    WEATHER.uSnowHole.value.set(0, 0, 0, 0)
     this.world.terrain.material.userData.uniforms.uWet.value += ((rain ? 0.85 : 0) - this.world.terrain.material.userData.uniforms.uWet.value) * Math.min(1, dt * 0.05)
     if (this.world.refresh()) this.repaintT = 0
     if (S.expanding) {

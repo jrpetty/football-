@@ -3,7 +3,7 @@
 // grass, and instanced scatter (trees, bushes, rocks) with swaying foliage.
 import * as THREE from 'three'
 import { texSet } from './texgen.js'
-import { mat, cloneMat, FOLIAGE_KEYS } from './materials.js'
+import { mat, cloneMat, FOLIAGE_KEYS, WEATHER } from './materials.js'
 import { grassTuftGeometry } from '../models/nature.js'
 
 export const wind = { time: { value: 0 }, strength: { value: 1 } }
@@ -130,6 +130,7 @@ uniform vec3 uDry;
 uniform vec3 uDirtTint;
 uniform vec3 uMudTint;
 uniform float uWet;
+uniform float uSnow;
 varying vec3 vTW;
 varying vec3 vTN;
 vec4 tw4;
@@ -171,6 +172,13 @@ float tsum = dot(tw4, vec4(1.0)) + twG + 1e-4;
 tw4 /= tsum;
 twG /= tsum;
 vec3 tcol = cGrass * twG + cDirt * tw4.x + cGravel * tw4.y + cMud * tw4.z + cForest * tw4.w;
+if (uSnow > 0.0) {
+  // drifts lie thicker on grass and forest floor than on trodden dirt
+  float sn = nz.g * 0.5 + nz2.r * 0.35 + (twG + tw4.w) * 0.25 - tw4.z * 0.2;
+  float cover = smoothstep(0.56 - uSnow * 0.3, 0.76 - uSnow * 0.25, sn) * min(1.0, uSnow * 1.25);
+  vec3 snowC = vec3(0.5, 0.53, 0.58) * (0.88 + nz2.g * 0.16);
+  tcol = mix(tcol, snowC, clamp(cover, 0.0, 1.0));
+}
 diffuseColor.rgb *= tcol;
 `
 const TERRAIN_ROUGH = /* glsl */ `
@@ -212,6 +220,7 @@ export function terrainMaterial(splat) {
     uDirtTint: { value: new THREE.Color('#ffffff') },
     uMudTint: { value: new THREE.Color('#9a8a7a') },
     uWet: { value: 0 },
+    uSnow: WEATHER.uSnow,
   }
   m.userData.uniforms = u
   m.onBeforeCompile = (sh) => {
@@ -277,11 +286,16 @@ function grassMaterial() {
   m.onBeforeCompile = (sh) => {
     sh.uniforms.uWindTime = wind.time
     sh.uniforms.uWindStrength = wind.strength
+    sh.uniforms.uSnow = WEATHER.uSnow
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform float uSnow;')
+      .replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.42, 0.44, 0.41), uSnow * 0.65);')
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\n' + WIND_PARS)
+      .replace('#include <common>', '#include <common>\n' + WIND_PARS + '\nuniform float uSnow;')
       .replace(
         '#include <begin_vertex>',
         `#include <begin_vertex>
+transformed.y *= 1.0 - 0.6 * uSnow;
 #ifdef USE_INSTANCING
   vec3 ip = instanceMatrix[3].xyz;
   float hk = transformed.y * transformed.y * 3.0;

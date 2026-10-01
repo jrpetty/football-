@@ -4,9 +4,9 @@ import { RES, STOCK_KEYS, ITEMS, QUALITY, RARITY, STATIONS, FENCE, EXPANSIONS, G
 import {
   S, day, clockStr, gameDur, capOf, bedCount, canAfford, pay, gain, addItem, itemName, fenceMax, repairFenceCost, repairFence, fenceUpgradeCost, upgradeFence,
   expansionCost, startExpansion, expansionAvailable, claimGoal, survivorLevel, perimeter, save, wipeSave, countType, workersOf, survivorStats,
-  unlockedBy, msDone, fenceUnlocked,
+  unlockedBy, msDone, fenceUnlocked, listBackups, restoreBackup, exportSave, importSave,
 } from '../game/state.js'
-import { campFlow, stationFlow, power, powerNeed, isAutomated, moraleFactors, dailyNeeds, constructSpeed, raidIntel, sellMult, buyMult, resSellPrice, acceptRecruit, declineRecruit } from '../game/economy.js'
+import { campFlow, stationFlow, power, powerNeed, isAutomated, moraleFactors, dailyNeeds, constructSpeed, raidIntel, threatLevel, isBloodMoonDay, sellMult, buyMult, resSellPrice, acceptRecruit, declineRecruit } from '../game/economy.js'
 import { QUALITY as GFXQ } from '../render/pipeline.js'
 import { sfx, setSound } from '../core/audio.js'
 import { bus, h, fmt, clamp } from '../core/util.js'
@@ -204,6 +204,7 @@ export function renderProduction(ui) {
             'div.srow',
             { 'data-tip': `<b>${RES[k].name}</b>${RES[k].desc}${producers[k] ? '<br><em>' + producers[k].join('<br>') + '</em>' : ''}` },
             h('span.s-name', { style: { '--c': RES[k].color } }, h('i', { html: resIcon(k) }), RES[k].name),
+            spark(S.hist?.res?.[k], cap, RES[k].color),
             h('span.s-amt', fmt(v)),
             h('span.s-cap', bar(v / cap, '', null), h('small', `/ ${fmt(cap)}`)),
             h('span.s-rate' + (r > 0.05 ? '.up' : r < -0.05 ? '.down' : ''), Math.abs(r) < 0.05 ? '—' : `${r > 0 ? '+' : ''}${r.toFixed(Math.abs(r) < 10 ? 1 : 0)}/day`),
@@ -230,7 +231,29 @@ export function renderProduction(ui) {
         ),
     ),
   )
-  return ui.frame('Camp overview', `Everyone eats ${needs.food.toFixed(1)} food and drinks ${needs.water.toFixed(1)} water a day`, [h('div.cols2', h('div', ...tables.slice(0, 3)), h('div', ...tables.slice(3), stations))], { icon: 'production' })
+  return ui.frame('Camp overview', `Everyone eats ${needs.food.toFixed(1)} food and drinks ${needs.water.toFixed(1)} water a day`, [bottlenecks(ui), h('div.cols2', h('div', ...tables.slice(0, 3)), h('div', ...tables.slice(3), stations))], { icon: 'production' })
+}
+// The last four days of a stock as a little line, scaled to storage.
+function spark(arr, cap, color) {
+  if (!arr || arr.length < 2) return h('span.spark')
+  const W = 64
+  const H = 16
+  const top = Math.max(cap === Infinity ? 0 : cap, ...arr, 1)
+  const pts = arr.map((v, i) => `${((i / (arr.length - 1)) * W).toFixed(1)},${(H - 1 - (v / top) * (H - 2)).toFixed(1)}`)
+  const span = Math.round(arr.length / 24)
+  return h('span.spark', { 'data-tip': `The last ${span} day${span === 1 ? '' : 's'}: low ${fmt(Math.min(...arr))}, high ${fmt(Math.max(...arr))}`, html: `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><polyline points="${pts.join(' ')}" fill="none" stroke="${color}" stroke-width="1.4" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>` })
+}
+// Stations that are stuck, and why, worst first.
+function bottlenecks(ui) {
+  const why = (x) => (x.includes('belt') ? 0 : x.startsWith('Missing') ? 1 : x.includes('full') ? 2 : x.includes('No work') || x.includes('Needs a') ? 3 : 4)
+  const stuck = S.stations.filter((st) => st.stalled && !st.building && !/at target|stocked|No project|Everything/.test(st.stalled)).sort((a, b) => why(a.stalled) - why(b.stalled))
+  const jams = (S.links || []).filter((l) => (l.jam || 0) > 1.5).length
+  if (!stuck.length && !jams) return h('section.card.bneck.ok', h('h3', 'Bottlenecks', h('small', 'none')), h('p.note', 'Every station has what it needs.'))
+  return h(
+    'section.card.bneck',
+    h('h3', 'Bottlenecks', h('small', `${stuck.length} station${stuck.length === 1 ? '' : 's'} stuck${jams ? ` · ${jams} belt${jams > 1 ? 's' : ''} backed up` : ''}`)),
+    h('div.bnlist', stuck.slice(0, 8).map((st) => h('button.bn', { onclick: () => ui.openStation(st.id) }, h('b', STATIONS[st.type].name), h('span', st.stalled)))),
+  )
 }
 export function renderPower(ui) {
   const p = power()
@@ -266,6 +289,12 @@ export function renderMorale(ui) {
 }
 
 // ---------------------------------------------------------------- horde intel
+function nextBloodMoon() {
+  let d = day()
+  if (S.time > (d - 1) * 1440 + 22 * 60 + 120) d++
+  while (!isBloodMoonDay(d)) d++
+  return d
+}
 export function hordeInfo(ui) {
   const I = raidIntel()
   const defenders = S.survivors.filter((s) => s.status === 'ok')
@@ -273,7 +302,8 @@ export function hordeInfo(ui) {
   const towers = countType('watchtower')
   const turrets = countType('turret')
   const body = [
-    h('section.card', h('h3', 'Next horde'), I ? [h('div.kv', h('span', 'Arrives in'), h('b', gameDur(I.in))), h('div.kv', h('span', 'Size'), h('b', I.known ? `${I.name} · ${I.count} zombies` : 'Unknown')), I.known ? null : h('p.note', 'Build a Watchtower to see how big hordes are before they arrive.')] : h('p', 'No horde on the way.')),
+    h('section.card' + (I?.blood ? '.blood' : ''), h('h3', I?.blood ? 'Blood Moon' : 'Next horde'), I ? [h('div.kv', h('span', 'Arrives in'), h('b', gameDur(I.in))), h('div.kv', h('span', 'Size'), h('b', I.known ? `${I.name} · ${I.count} zombies` : 'Unknown')), I.blood ? h('p.note.bad', 'Every seventh night the dead come in force: a bigger horde, tougher and faster.') : null, I.known ? null : h('p.note', 'Build a Watchtower to see how big hordes are before they arrive.')] : h('p', 'No horde on the way.')),
+    h('section.card', h('h3', 'Threat', h('small', `level ${threatLevel().toFixed(1)}`)), h('p.note', 'Hordes grow with what the camp has achieved: milestone tiers, Signal phases, how many live here and how far the walls reach. Time survived adds a little.'), h('div.kv', h('span', 'Next Blood Moon'), h('b', `Day ${nextBloodMoon()}`))),
     h('section.card', h('h3', 'Your defense'), h('div.kv', h('span', 'Wall'), h('b', `${FENCE[S.fence.level].name} · ${fenceMax()} per section`)), h('div.kv', h('span', 'Defenders in camp'), h('b', `${defenders.length} (${guns} with guns)`)), h('div.kv', h('span', 'Watchtowers / turrets'), h('b', `${towers} / ${turrets}`)), h('div.kv', h('span', 'Ammo'), h('span', AMMO_KEYS.map((k) => resChip(k, S.res[k]))))),
     h('p.note', 'When the horde comes, everyone in camp grabs a weapon. Squads out on a run miss the fight: the camp defends itself without them.'),
   ]
@@ -293,6 +323,44 @@ export function renderSettings(ui) {
     row('Edge scrolling', seg([[true, 'On'], [false, 'Off']], st.edgePan !== false, (v) => ((st.edgePan = v), g.applySettings(), ui.closeModal(), ui.openSettings()))),
     row('Sound', seg([[true, 'On'], [false, 'Off']], st.sound !== false, (v) => ((st.sound = v), setSound(v), ui.closeModal(), ui.openSettings()))),
     h('p.note', 'Controls: drag or WASD to move, scroll to zoom, right-drag or Q/E to rotate. Space pauses, 1–3 set the speed.'),
+    S && !S.over && ui.game.running ? saveSection(ui) : null,
+  )
+}
+// Export, import and the rolling daily backups.
+function saveSection(ui) {
+  const backups = listBackups()
+  const download = () => {
+    const blob = new Blob([exportSave()], { type: 'application/json' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = `holdout-day-${day()}.json`
+    document.body.append(a)
+    a.click()
+    a.remove()
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000)
+    sfx('click')
+  }
+  const file = h('input', { type: 'file', accept: '.json,application/json', style: { display: 'none' } })
+  file.addEventListener('change', async () => {
+    const f = file.files?.[0]
+    if (!f) return
+    const err = importSave(await f.text())
+    if (err) return ui.toast(err, 'bad'), sfx('error')
+    ui.confirm('Load this camp?', 'Your current camp is replaced by the one in the file.', 'Load', () => location.reload())
+  })
+  return h(
+    'section.savebox',
+    h('h3', 'Your camp', h('small', 'Saved in this browser')),
+    h('div.kv', h('span', 'Take it with you, or keep a copy'), h('span.btns', h('button.btn.small', { onclick: download }, 'Export save'), h('button.btn.small.ghost', { onclick: () => file.click() }, 'Import'), file)),
+    backups.length
+      ? h(
+          'div.backups',
+          h('small', 'Daily backups'),
+          backups.map((b, i) =>
+            h('div.kv', h('span', `Day ${b.day} · ${b.pop ?? '?'} survivors · ${new Date(b.at).toLocaleString()}`), h('button.mini', { onclick: () => ui.confirm(`Go back to day ${b.day}?`, 'Your camp returns to this backup. Anything since then is lost.', 'Restore', () => (restoreBackup(i) ? location.reload() : ui.toast('Could not restore', 'bad')), { danger: true }) }, 'Restore')),
+          ),
+        )
+      : h('p.note', 'A backup is kept each new day (the last three).'),
   )
 }
 export function menuModal(ui) {

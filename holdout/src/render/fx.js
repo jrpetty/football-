@@ -429,7 +429,51 @@ export class FX {
     this.rain.mesh.visible = true
     this.rainFocus = focus
   }
+  // Snowfall: slow flakes drifting and swaying around the camera focus.
+  setSnow(intensity, focus) {
+    if (intensity <= 0) {
+      if (this.snow) this.snow.mesh.visible = false
+      this.snowOn = 0
+      return
+    }
+    this.snowOn = intensity
+    if (!this.snow) {
+      const n = 2800
+      const g = new THREE.OctahedronGeometry(0.035, 0)
+      const m = new THREE.MeshBasicMaterial({ color: '#f2f6ff', transparent: true, opacity: 0.9, depthWrite: false })
+      const mesh = new THREE.InstancedMesh(g, m, n)
+      mesh.frustumCulled = false
+      mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
+      this.scene.add(mesh)
+      const flakes = []
+      for (let i = 0; i < n; i++) flakes.push({ x: (Math.random() - 0.5) * 70, y: Math.random() * 24, z: (Math.random() - 0.5) * 70, v: 0.7 + Math.random() * 0.9, ph: Math.random() * 6.28, s: 0.6 + Math.random() * 0.9 })
+      this.snow = { mesh, flakes, t: 0 }
+    }
+    this.snow.mesh.visible = true
+    this.snowFocus = focus
+  }
   update(dt) {
+    if (this.snow && this.snowOn > 0) {
+      const S = this.snow
+      S.t += dt
+      const f = this.snowFocus || { x: 0, z: 0 }
+      const cnt = Math.floor(S.flakes.length * this.snowOn)
+      for (let i = 0; i < cnt; i++) {
+        const d = S.flakes[i]
+        d.y -= d.v * dt
+        d.x += Math.sin(S.t * 0.9 + d.ph) * 0.35 * dt + 0.25 * dt
+        d.z += Math.cos(S.t * 0.7 + d.ph * 1.3) * 0.25 * dt
+        if (d.y < 0) {
+          d.y += 24
+          d.x = (Math.random() - 0.5) * 70
+          d.z = (Math.random() - 0.5) * 70
+        }
+        this._m.makeScale(d.s, d.s, d.s).setPosition(f.x + d.x, d.y, f.z + d.z)
+        S.mesh.setMatrixAt(i, this._m)
+      }
+      S.mesh.count = cnt
+      S.mesh.instanceMatrix.needsUpdate = true
+    }
     // debris
     let n = 0
     for (let i = this.pool.length - 1; i >= 0; i--) {

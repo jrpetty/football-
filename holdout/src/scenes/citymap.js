@@ -8,7 +8,7 @@ import { view, screenRay } from '../render/view.js'
 import { Atmosphere, nightFactor } from '../render/sky.js'
 import { FX, makeFlame, tickFlames, ringTex } from '../render/fx.js'
 import { Splat, Terrain, wind } from '../render/terrain.js'
-import { mat, setNightGlow } from '../render/materials.js'
+import { mat, setNightGlow, WEATHER } from '../render/materials.js'
 import { texSet } from '../render/texgen.js'
 import { Builder, seeded } from '../models/kit.js'
 import { InstSet, PropList, mapTreeModel, mapVehicleModel, mapPropModel, CARS, LEAF, NEEDLE, FOREST, FOREST_FIR, signPlane, addSign } from '../models/citykit.js'
@@ -16,7 +16,7 @@ import * as CB from '../models/citybuildings.js'
 import { locationModel } from '../models/citylandmarks.js'
 import { gableRoof } from '../models/parts.js'
 import { SIDEWALK, RIVER_W, HIGHWAY_Z, HIGHWAY_W, FACE_ROT, route } from '../world/city.js'
-import { S, hour } from '../game/state.js'
+import { S, hour, season } from '../game/state.js'
 import { LEVEL_COLORS } from '../game/data.js'
 import { MapPanel } from '../ui/mappanel.js'
 import { clamp, smooth } from '../core/util.js'
@@ -1024,16 +1024,18 @@ export class CityMap {
     const evs = new Map((S.events || []).map((e) => [e.locId, e]))
     for (const L of this.markers) {
       const m = L.marker
-      const looted = !!S.looted[L.loc.id]
+      const post = (S.outposts || []).some((o) => o.locId === L.loc.id)
+      const looted = !!S.looted[L.loc.id] && !post
       const ev = evs.get(L.loc.id)
-      const col = looted ? '#6a6e6a' : m.col
+      const col = post ? '#5ad07a' : looted ? '#6a6e6a' : m.col
       m.head.material.color.set(col)
       m.head.material.emissive.set(col)
       m.beam.material.uniforms.color.value.set(col)
       m.ring.material.color.set(col).multiplyScalar(1.4)
       m.el.classList.toggle('looted', looted)
       m.el.classList.toggle('event', !!ev)
-      m.el.querySelector('i').textContent = ev ? (ev.kind === 'distress' ? 'SOS' : 'DROP') : looted ? 'looted' : ''
+      m.el.classList.toggle('outpost', post)
+      m.el.querySelector('i').textContent = ev ? (ev.kind === 'distress' ? 'SOS' : 'DROP') : post ? 'outpost' : looted ? 'looted' : ''
       m.el.classList.toggle('sel', this.sel === L.loc)
       m.el.classList.toggle('hov', this.hover === L.loc)
     }
@@ -1243,6 +1245,8 @@ export class CityMap {
 
   // ---------------------------------------------------------------- frame
   update(dt) {
+    WEATHER.uSnow.value = season().heat ? 0.32 : 0
+    WEATHER.uSnowHole.value.set(0, 0, 0, 0)
     this.t += dt
     const hr = hour()
     const night = nightFactor(hr)

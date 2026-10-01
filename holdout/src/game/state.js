@@ -3,7 +3,8 @@
 import {
   RES, RES_KEYS, STOCK_KEYS, SKILLS, SKILL_KEYS, SKILL_MAX, xpForLevel, OCCUPATIONS, OCC_KEYS, TRAITS, TRAIT_KEYS,
   FIRST_NAMES, FEMALE_NAMES, LAST_NAMES, ITEMS, QUALITY, MODS, STATIONS, FENCE, RECIPES, REPAIR, EXPANSIONS, EXPANSION_DEPTH,
-  GOALS, DAY_MIN, UTILITIES, BELTS, BELT_STACK, TIERS, MILESTONES, SIGNAL, RESEARCH, ALT_RECIPES, CORE_SLOTS, CORE_BOOST,
+  GOALS, DAY_MIN, UTILITIES, BELTS, BELT_STACK, TIERS, MILESTONES, SIGNAL, RESEARCH, ALT_RECIPES, CORE_SLOTS, CORE_BOOST, INFECTION,
+  SEASONS, SEASON_DAYS, PERKS, PERK_LEVELS, OUTPOST, LOCATIONS,
 } from './data.js'
 import { bus, uid, pick, rint, rand, chance, clamp, store, weighted } from '../core/util.js'
 import { SKIN_TONES, HAIR_COLORS } from '../models/character.js'
@@ -71,6 +72,12 @@ export const gameDur = (mins) => {
   return h > 0 ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}m`
 }
 
+// ---------------------------------------------------------------- seasons
+export const seasonIdx = (d = day()) => Math.floor((d - 1) / SEASON_DAYS) % SEASONS.length
+export const season = (d = day()) => SEASONS[seasonIdx(d)]
+export const seasonDay = (d = day()) => ((d - 1) % SEASON_DAYS) + 1
+export const year = (d = day()) => Math.floor((d - 1) / (SEASON_DAYS * SEASONS.length)) + 1
+
 // ---------------------------------------------------------------- survivors
 export function randomLook(female) {
   const style = female ? pick(['long', 'ponytail', 'bun', 'short', 'curly', 'side']) : pick(['short', 'side', 'buzz', 'buzz', 'curly', 'bald', 'long', 'mohawk'])
@@ -125,7 +132,10 @@ export function makeSurvivor(opts = {}) {
     runs: 0,
     joined: S ? day() : 1,
     age: rint(19, 58),
+    perks: [],
+    perkChoices: [],
   }
+  for (const [k, v] of Object.entries(skills)) PERK_LEVELS.forEach((lv, tier) => v >= lv && PERKS[k]?.[tier] && s.perkChoices.push({ skill: k, tier }))
   s.hp = survivorStats(s).maxHp
   return s
 }
@@ -133,9 +143,22 @@ export const getS = (id) => S.survivors.find((s) => s.id === id)
 export const available = () => S.survivors.filter((s) => s.status === 'ok')
 export const survivorLevel = (s) => Math.max(1, Math.round(SKILL_KEYS.reduce((a, k) => a + s.skills[k], 0) / 2.4))
 
+const PERK_BY_ID = {}
+for (const [skill, tiers] of Object.entries(PERKS)) tiers.forEach((pair, tier) => pair.forEach((p) => (PERK_BY_ID[p.id] = { ...p, skill, tier })))
+export const perkOf = (id) => PERK_BY_ID[id]
 function fxSum(s, key) {
   let v = OCCUPATIONS[s.occ].fx[key] || 0
   for (const t of s.traits) v += TRAITS[t].fx[key] || 0
+  for (const p of s.perks || []) {
+    const f = PERK_BY_ID[p]?.fx[key]
+    if (typeof f === 'number') v += f
+  }
+  return v
+}
+// Work bonus from perks at one station type.
+function perkStation(s, type) {
+  let v = 0
+  for (const p of s.perks || []) v += PERK_BY_ID[p]?.fx.station?.[type] || 0
   return v
 }
 export const occFx = (s) => OCCUPATIONS[s.occ].fx
@@ -253,7 +276,7 @@ export function survivorStats(s) {
     armorItem: aIt,
     gun,
     ammoType: gun ? W.ammo : null,
-    maxHp: Math.round(100 + fxSum(s, 'hp') + armorHp + (sk.melee + sk.build) * 1.5),
+    maxHp: Math.round(100 + fxSum(s, 'hp') + armorHp + (sk.melee + sk.build) * 1.5 - ((s.infection || 0) >= INFECTION.fever ? 15 : 0)),
     speed,
     dmg: W.dmg * dmg * wq.mult * mf(wm, 'dmg'),
     range: W.range * (gun ? 1 + 0.025 * (sk.ranged - 1) : 1) * mf(wm, 'range'),
@@ -263,7 +286,7 @@ export function survivorStats(s) {
     noise: W.noise * mf(wm, 'noise'),
     noiseMult: Math.max(0.2, 1 + fxSum(s, 'noise')),
     stealth: clamp((A?.stealth || 0) + mf(am, 'stealth', 0, 'add'), 0, 0.7),
-    search: 1 + 0.08 * (sk.scavenge - 1) + (Gd?.search || 0) + (researchDone('scavenging') ? 0.15 : 0),
+    search: 1 + 0.08 * (sk.scavenge - 1) + (Gd?.search || 0) + (researchDone('scavenging') ? 0.15 : 0) + fxSum(s, 'search'),
     loot: 1 + 0.04 * (sk.scavenge - 1) + fxSum(s, 'loot'),
     carry: Math.round(26 + sk.scavenge * 2 + fxSum(s, 'carry') + (Gd?.carry || 0)),
     utilSlots: 2 + (Gd?.util || 0),
@@ -279,8 +302,8 @@ export function survivorStats(s) {
     wallSense: Math.max(fxSum(s, 'wallSense'), Gd?.wallSense || 0),
     trapSpot: 2.5 + Math.max(fxSum(s, 'trapSpot'), 0) + (Gd?.trapSpot || 0),
     torch: Gd?.torch || 0,
-    revive: (OCCUPATIONS[s.occ].fx.reviveMult || 1) / (1 + 0.06 * (sk.medic - 1)),
-    aura: (OCCUPATIONS[s.occ].fx.aura || 0) + (sk.medic >= 6 ? 0.4 : 0),
+    revive: ((OCCUPATIONS[s.occ].fx.reviveMult || 1) * (1 - Math.min(0.7, fxSum(s, 'reviveFast')))) / (1 + 0.06 * (sk.medic - 1)),
+    aura: fxSum(s, 'aura') + (sk.medic >= 6 ? 0.4 : 0),
     carParts: fxSum(s, 'carParts'),
     fireproof: !!fxSum(s, 'fireproof'),
     xpMult: 1 + fxSum(s, 'xp'),
@@ -297,6 +320,13 @@ export function gainXP(s, skill, amt) {
     s.skills[skill]++
     bus.emit('levelup', s, skill)
     log(`${s.first} is now level ${s.skills[skill]} in ${SKILLS[skill].name}.`, 'good')
+    const tier = PERK_LEVELS.indexOf(s.skills[skill])
+    if (tier >= 0 && PERKS[skill]?.[tier]) {
+      s.perkChoices = s.perkChoices || []
+      if (!s.perkChoices.some((c) => c.skill === skill && c.tier === tier)) s.perkChoices.push({ skill, tier })
+      log(`${s.first} can choose a ${SKILLS[skill].name.toLowerCase()} perk.`, 'good')
+      bus.emit('perkReady', s)
+    }
   }
 }
 
@@ -306,14 +336,27 @@ export function workEff(s, type) {
   if (!def) return 0
   const sk = def.skill ? s.skills[def.skill] : 3
   let e = 0.62 + 0.08 * sk
-  e *= 1 + (OCCUPATIONS[s.occ].fx.station?.[type] || 0)
+  e *= 1 + (OCCUPATIONS[s.occ].fx.station?.[type] || 0) + perkStation(s, type)
   e *= 1 + fxSum(s, 'work')
   e *= moraleMult()
   if (S.hungry) e *= 0.6
+  if ((s.infection || 0) >= INFECTION.sick) e *= 0.5
+  else if ((s.infection || 0) >= INFECTION.fever) e *= 0.8
   if (s.status === 'injured') e = 0
   return e
 }
 export const bestFor = (type) => OCC_KEYS.filter((o) => OCCUPATIONS[o].stations?.includes(type)).map((o) => OCCUPATIONS[o].name)
+
+export function choosePerk(s, skill, tier, id) {
+  const i = (s.perkChoices || []).findIndex((c) => c.skill === skill && c.tier === tier)
+  if (i < 0 || !PERKS[skill][tier].some((p) => p.id === id)) return false
+  s.perkChoices.splice(i, 1)
+  s.perks = [...(s.perks || []), id]
+  s.hp = Math.min(s.hp, survivorStats(s).maxHp)
+  log(`${s.first} took the ${PERK_BY_ID[id].name} perk.`, 'good')
+  bus.emit('change')
+  return true
+}
 
 // ---------------------------------------------------------------- resources
 export function baseCap() {
@@ -542,7 +585,7 @@ export function qualityOdds(st) {
   let perk = 0
   for (const s of ws) {
     craft = Math.max(craft, STATIONS[st.type].skill === 'tech' ? s.skills.tech : s.skills.craft)
-    perk = Math.max(perk, (OCCUPATIONS[s.occ].fx.quality?.[st.type] || 0) + (s.traits.includes('steady') ? 1 : 0))
+    perk = Math.max(perk, (OCCUPATIONS[s.occ].fx.quality?.[st.type] || 0) + (s.traits.includes('steady') ? 1 : 0) + fxSum(s, 'craftQ'))
   }
   if (!ws.length) craft = 3 // automation makes standard parts
   const lv = st.level
@@ -746,6 +789,92 @@ function checkSignal() {
   bus.emit('change')
 }
 
+// ---------------------------------------------------------------- infection
+export function infectChance(s, base, dr = 0) {
+  if (researchDone('vaccine')) return 0
+  return base * (1 - dr) * (researchDone('immunity') ? 0.5 : 1) * (1 - fxSum(s, 'resist'))
+}
+// Returns true if this exposure infected someone who wasn't already.
+export function exposeInfection(s, base, dr = 0) {
+  if (!s || Math.random() >= infectChance(s, base, dr)) return false
+  const fresh = !(s.infection > 0)
+  s.infection = Math.max(s.infection || 0, 1)
+  if (fresh) {
+    log(`${s.name} has been infected.`, 'bad')
+    bus.emit('infected', s)
+  }
+  return fresh
+}
+export const infectionStage = (s) => (!(s.infection > 0) ? null : s.infection >= INFECTION.sick ? 'Turning' : s.infection >= INFECTION.fever ? 'Feverish' : 'Infected')
+// An antiviral cures an early infection, or knocks back a late one.
+export function treatInfection(s) {
+  if (!(s.infection > 0) || !pay({ antiviral: 1 })) return false
+  if (s.infection < INFECTION.cureBelow) {
+    s.infection = 0
+    log(`${s.first} is cured.`, 'good')
+    addMoraleEvent(`${s.first} beat the infection`, 6, 1)
+  } else {
+    s.infection = Math.max(1, s.infection - INFECTION.knock)
+    log(`The antiviral slowed ${s.first}'s infection, but it is too far along to cure.`, '')
+  }
+  bus.emit('change')
+  return true
+}
+
+// ---------------------------------------------------------------- outposts
+export const outpostAt = (locId) => (S.outposts || []).find((o) => o.locId === locId) || null
+// Why a place can't be claimed, or null.
+export function outpostProblem(loc, crew) {
+  if (!hasFlag('outposts')) return 'Needs the Convoys milestone (tier 8)'
+  if (outpostAt(loc.id)) return 'Already an outpost'
+  if (!S.explored?.[loc.id]) return 'Run it once first'
+  if ((S.outposts || []).length >= OUTPOST.max) return `At most ${OUTPOST.max} outposts`
+  if (!crew.length || crew.length > 3) return 'Pick one to three survivors to hold it'
+  if (!canAfford(OUTPOST.cost[0])) return 'Not enough materials'
+  return null
+}
+export function claimOutpost(loc, crew) {
+  if (outpostProblem(loc, crew) || !pay(OUTPOST.cost[0])) return false
+  S.outposts = S.outposts || []
+  S.outposts.push({ locId: loc.id, name: loc.name, type: loc.type, level: 1, crew: crew.map((s) => s.id), since: day(), hp: 100 })
+  for (const s of crew) {
+    s.job = null
+    s.status = 'outpost'
+  }
+  log(`${loc.name} is now an outpost, held by ${crew.map((s) => s.first).join(' and ')}.`, 'good')
+  addMoraleEvent('A foothold in the city', 6, 2)
+  bus.emit('change')
+  bus.emit('outposts')
+  return true
+}
+export function outpostYield(o) {
+  const n = o.n ?? o.crew.map(getS).filter(Boolean).length
+  const k = OUTPOST.mult[o.level - 1] * (OUTPOST.crew[Math.min(3, n) - 1] || 0) * (o.hp > 30 ? 1 : 0.4)
+  const out = {}
+  for (const [r, v] of Object.entries(OUTPOST.yield[o.type] || {})) out[r] = v * k
+  return out
+}
+export const outpostUpgradeCost = (o) => OUTPOST.cost[o.level] || null
+export function upgradeOutpost(o) {
+  const c = outpostUpgradeCost(o)
+  if (!c || !pay(c)) return false
+  o.level++
+  o.hp = 100
+  log(`${o.name} outpost fortified (level ${o.level}).`, 'good')
+  bus.emit('outposts')
+  return true
+}
+export function abandonOutpost(o, why = null) {
+  for (const id of o.crew) {
+    const s = getS(id)
+    if (s && s.status === 'outpost') s.status = s.hp < survivorStats(s).maxHp * 0.5 ? 'injured' : 'ok'
+  }
+  S.outposts = S.outposts.filter((x) => x !== o)
+  log(why || `The garrison left ${o.name} and came home.`, why ? 'bad' : '')
+  bus.emit('change')
+  bus.emit('outposts')
+}
+
 // ---------------------------------------------------------------- research
 // One project at a time at the Research Desk. Studying a schematic ends in
 // a choice of three alternate recipes; everything else is a lasting effect.
@@ -863,6 +992,7 @@ export function newGame() {
     milestones: {},
     signal: { phase: 0, paid: {} },
     research: { done: {}, alts: [], pick: null },
+    outposts: [],
     events: [],
     goals: {},
     stats: { kills: 0, runs: 0, deaths: 0, recruited: 0, raids: 0, crafted: 0, memorial: [] },
@@ -948,6 +1078,13 @@ function migrate() {
   S.explored = S.explored || {}
   S.signal = S.signal || { phase: 0, paid: {} }
   S.research = S.research || { done: {}, alts: [], pick: null }
+  S.outposts = S.outposts || []
+  for (const s of S.survivors) {
+    if (s.perks) continue
+    s.perks = []
+    s.perkChoices = []
+    for (const [k, v] of Object.entries(s.skills)) PERK_LEVELS.forEach((lv, tier) => v >= lv && PERKS[k]?.[tier] && s.perkChoices.push({ skill: k, tier }))
+  }
   if (!S.milestones) {
     // camps from before milestones keep what they built
     S.milestones = {}
@@ -959,6 +1096,49 @@ function migrate() {
   }
 }
 export const wipeSave = () => store.del(SAVE_KEY)
+
+// ---- backups, export and import
+// Three rolling daily backups live beside the save, so months of progress
+// never hang on a single write. A camp can also leave the browser as a file.
+export const BACKUP_KEY = 'holdout.backups.v2'
+function readBackups() {
+  try {
+    return JSON.parse(store.get(BACKUP_KEY) || '[]')
+  } catch {
+    return []
+  }
+}
+export function backupSave() {
+  if (!S || S.over) return false
+  let list = readBackups().filter((b) => b.day !== day())
+  list.unshift({ day: day(), at: Date.now(), pop: S.survivors.length, data: JSON.stringify(S) })
+  list = list.slice(0, 3)
+  if (store.set(BACKUP_KEY, JSON.stringify(list))) return true
+  return store.set(BACKUP_KEY, JSON.stringify(list.slice(0, 1)))
+}
+export const listBackups = () => readBackups().map((b) => ({ day: b.day, at: b.at, pop: b.pop }))
+export function restoreBackup(i) {
+  const b = readBackups()[i]
+  return !!b && store.set(SAVE_KEY, b.data)
+}
+export function exportSave() {
+  S.saved = Date.now()
+  return JSON.stringify({ game: 'holdout', exported: new Date().toISOString(), save: S })
+}
+// Returns null on success, or what is wrong with the file.
+export function importSave(text) {
+  let d
+  try {
+    d = JSON.parse(text)
+  } catch {
+    return 'That file is not a Holdout save.'
+  }
+  const save = d?.game === 'holdout' ? d.save : d
+  if (!save || save.version !== 2 || !Array.isArray(save.survivors) || !save.res) return 'That file is not a Holdout save.'
+  if (save.over) return 'That camp has fallen.'
+  save.saved = Date.now()
+  return store.set(SAVE_KEY, JSON.stringify(save)) ? null : 'The browser would not store it (storage full?).'
+}
 
 export function killSurvivor(s, cause) {
   S.stats.deaths++

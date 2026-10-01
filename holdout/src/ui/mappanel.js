@@ -1,13 +1,13 @@
 // The city map's interface: a top bar (back to camp, the danger legend, the
 // clock and horde timer) and the planner: what a location holds and how
 // dangerous it is, the drive there, who goes and what they carry.
-import { LOCATIONS, ROOMS, CONTAINERS, RES, ITEMS, ZOMBIES, zombieMix, LEVEL_COLORS, OCCUPATIONS, STATIONS, GAME_MIN_PER_SEC } from '../game/data.js'
-import { S, day, clockStr, gameDur, survivorStats, getS } from '../game/state.js'
+import { LOCATIONS, ROOMS, CONTAINERS, RES, ITEMS, ZOMBIES, zombieMix, LEVEL_COLORS, OCCUPATIONS, STATIONS, GAME_MIN_PER_SEC, INFECTION, OUTPOST } from '../game/data.js'
+import { S, day, clockStr, gameDur, survivorStats, getS, hasFlag, outpostAt, outpostProblem, claimOutpost, outpostYield, outpostUpgradeCost, upgradeOutpost, abandonOutpost, canAfford } from '../game/state.js'
 import { raidIntel } from '../game/economy.js'
 import { sfx } from '../core/audio.js'
 import { h, fmt, clamp } from '../core/util.js'
 import { icon } from './icons.js'
-import { resIcon, hpBar, plural } from './common.js'
+import { resIcon, hpBar, plural, costList, bar } from './common.js'
 
 const MAX_SQUAD = 4
 const DISTRICT = { residential: 'Residential streets', commercial: 'Shopping district', downtown: 'Downtown', industrial: 'Industrial zone', park: 'Parkland', military: 'Highway checkpoint' }
@@ -157,11 +157,12 @@ export class MapPanel {
       .map((m) => ZOMBIES[m.t].name + 's')
     const T = travelInfo(this.map.routeLen || 1000)
     // squad
-    const av = S.survivors.filter((s) => s.status !== 'mission')
-    for (const id of [...this.squad]) if (!av.find((s) => s.id === id && s.status === 'ok')) this.squad.delete(id)
+    const av = S.survivors.filter((s) => s.status !== 'mission' && s.status !== 'outpost')
+    const sick = (s) => s.infection >= INFECTION.sick
+    for (const id of [...this.squad]) if (!av.find((s) => s.id === id && s.status === 'ok' && !sick(s))) this.squad.delete(id)
     if (!this.squad.size && !this.suggested) {
       this.suggested = true
-      const pickable = av.filter((s) => s.status === 'ok').sort((a, b) => !!a.job - !!b.job || squadPower(b) - squadPower(a))
+      const pickable = av.filter((s) => s.status === 'ok' && !sick(s)).sort((a, b) => !!a.job - !!b.job || squadPower(b) - squadPower(a))
       for (const s of pickable.slice(0, Math.min(3, Math.max(1, pickable.length - 1)))) this.squad.add(s.id)
     }
     const squad = [...this.squad].map((id) => getS(id)).filter(Boolean)
@@ -179,7 +180,7 @@ export class MapPanel {
     const rows = av.map((s) => {
       const st = survivorStats(s)
       const on = this.squad.has(s.id)
-      const hurt = s.status === 'injured'
+      const hurt = s.status === 'injured' || sick(s)
       const job = s.job ? S.stations.find((x) => x.id === s.job) : null
       const util = s.util && st.utilSlots ? Math.min(st.utilSlots, S.res[s.util] || 0) : 0
       return h(
@@ -202,7 +203,7 @@ export class MapPanel {
           h('div.sq-sk', h('span', `MEL ${s.skills.melee}`), h('span', `RNG ${s.skills.ranged}`), h('span', `SCV ${s.skills.scavenge}`), h('span.eye', { 'data-tip': `Sight ${Math.round(st.sight)} m · hearing ${Math.round(st.hearing)} m${st.wallSense ? ` · sees through a wall (${st.wallSense} m)` : ''}` }, h('i', { html: icon('eye') }), `${Math.round(st.sight)} m${st.wallSense ? ' +wall' : ''}`), job ? h('span.job', `leaves ${STATIONS[job.type]?.name || job.type}`) : null),
           hpBar(s),
         ),
-        h('span.sq-tick', hurt ? 'Injured' : on ? h('i', { html: icon('check') }) : ''),
+        h('span.sq-tick', sick(s) ? 'Too sick' : hurt ? 'Injured' : on ? h('i', { html: icon('check') }) : ''),
       )
     })
     P.append(
@@ -229,6 +230,7 @@ export class MapPanel {
           hints.res.map((k) => h('span.ci', { style: { '--c': RES[k].color }, 'data-tip': RES[k].desc || RES[k].name }, h('i.ic', { html: resIcon(k) }), RES[k].name)),
         ),
         hints.items.length ? h('p.note', 'Chance of ', hints.items.map((i) => ITEMS[i].name).join(', ')) : null,
+        this.outpostCard(loc, squad),
         h('h3', 'Squad', h('small', `${this.squad.size}/${MAX_SQUAD} · click to add or remove`)),
         h('div.sqlist', rows),
       ),
@@ -242,8 +244,51 @@ export class MapPanel {
           lowAmmo ? h('span.bad', 'Low on ammo for their guns.') : null,
           !T.van ? h('span.bad', 'No fuel for the van: no stash, slow trip.') : null,
         ),
-        h('button.btn.go.big', { disabled: !squad.length || !!looted || this.map.launching, onclick: () => this.deploy(loc, squad, T) }, looted ? 'Already looted' : h('span', { html: icon('truck') }), looted ? null : T.van ? ' Roll out' : ' Head out on foot'),
+        outpostAt(loc.id)
+          ? h('button.btn.big', { disabled: true }, 'Your outpost')
+          : h('button.btn.go.big', { disabled: !squad.length || !!looted || this.map.launching, onclick: () => this.deploy(loc, squad, T) }, looted ? 'Already looted' : h('span', { html: icon('truck') }), looted ? null : T.van ? ' Roll out' : ' Head out on foot'),
       ),
+    )
+  }
+  // Hold a place you have run: claim it with the selected squad as the
+  // garrison, or run the outpost you already have there.
+  outpostCard(loc, squad) {
+    const o = outpostAt(loc.id)
+    const yieldChips = (y) => Object.entries(y).filter(([, v]) => v >= 0.05).map(([k, v]) => h('span.ci', { style: { '--c': RES[k].color }, 'data-tip': RES[k].name }, h('i.ic', { html: resIcon(k) }), v < 1 ? `${Math.round(v * 100)}%` : fmt(v)))
+    if (o) {
+      const crew = o.crew.map(getS).filter(Boolean)
+      const up = outpostUpgradeCost(o)
+      return h(
+        'div.card.outpost',
+        h('h3', `Outpost · level ${o.level}`, h('small', `held since day ${o.since}`)),
+        h('div.kv', h('span', 'Garrison'), h('b', crew.map((s) => s.first).join(', ') || 'nobody')),
+        h('div.kv', h('span', 'Defences'), bar(o.hp / 100, o.hp < 40 ? 'hp.low' : 'hp', `${Math.round(o.hp)}%`)),
+        h('div.kv', h('span', 'Convoy each morning'), h('span.flows', yieldChips(outpostYield(o)))),
+        o.last ? h('p.note', `Day ${o.last.day}: brought ${Object.entries(o.last.got).map(([k, v]) => `${v} ${RES[k].name.toLowerCase()}`).join(', ') || 'nothing (storage full)'}.`) : null,
+        h(
+          'div.kv',
+          up ? h('button.btn.small', { disabled: !canAfford(up), 'data-tip': `More goods and stronger walls.`, onclick: () => (upgradeOutpost(o) ? sfx('build') : sfx('error'), this.render()) }, `Fortify (${Object.entries(up).map(([k, v]) => `${v} ${RES[k].short || RES[k].name.toLowerCase()}`).join(', ')})`) : h('small', 'Fully fortified'),
+          h('button.btn.small.ghost', { onclick: () => (abandonOutpost(o), sfx('click'), this.render(), this.map.refreshMarkers?.()) }, 'Bring them home'),
+        ),
+      )
+    }
+    if (!hasFlag('outposts')) return S.explored?.[loc.id] ? h('p.note', 'Later (tier 8, Convoys) you can hold places like this as outposts that send goods home every day.') : null
+    const why = outpostProblem(loc, squad)
+    const y = outpostYield({ type: loc.type, level: 1, hp: 100, n: Math.min(3, squad.length || 2) })
+    return h(
+      'div.card.outpost.claim',
+      h('h3', 'Hold this place', h('small', `${(S.outposts || []).length}/${OUTPOST.max} outposts`)),
+      h('p.note', 'The squad you pick below stays here as a garrison. A convoy brings the goods home every morning, and sometimes the dead come for it.'),
+      h('div.kv', h('span', squad.length ? `With ${squad.length} holding it, per day` : 'Per day with two holding it'), h('span.flows', yieldChips(y))),
+      h('div.kv', costList(OUTPOST.cost[0], { small: true }), h('button.btn.small.go', { disabled: !!why, 'data-tip': why || 'Claim it with the selected squad', onclick: () => {
+        if (claimOutpost(loc, squad)) {
+          sfx('complete')
+          this.squad.clear()
+          this.map.refreshMarkers?.()
+          this.render()
+        } else sfx('error')
+      } }, 'Claim outpost')),
+      why && squad.length ? h('p.note.bad', why) : null,
     )
   }
   deploy(loc, squad, T) {

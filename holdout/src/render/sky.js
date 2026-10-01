@@ -41,6 +41,7 @@ export const WEATHER = {
   overcast: { name: 'Overcast', sun: 0.45, fog: 0.7, sat: 0.88, cloud: 0.8 },
   rain: { name: 'Rain', sun: 0.3, fog: 0.55, sat: 0.82, cloud: 1 },
   fog: { name: 'Fog', sun: 0.4, fog: 0.32, sat: 0.8, cloud: 0.6 },
+  snow: { name: 'Snow', sun: 0.5, fog: 0.6, sat: 0.74, cloud: 0.85 },
 }
 
 export class Atmosphere {

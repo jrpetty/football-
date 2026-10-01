@@ -1,14 +1,16 @@
 // The interface: top bar (time, horde timer, resources, power, morale, crew,
 // speed), the left nav, a right-hand detail drawer, the bottom build dock,
 // toasts, tooltips, modals, the raid HUD and reports.
-import { RES, TOP_BAR, STATIONS, STATION_CATS, AMMO_KEYS, FENCE, EXPANSIONS, HORDES, OCCUPATIONS, SEC_PER_HOUR, GAME_MIN_PER_SEC, MILESTONES } from '../game/data.js'
-import { S, day, hour, clockStr, gameDur, capOf, bedCount, buildCost, reqMet, canAfford, countType, maxLevelOf, expansionAvailable, expansionCost, fenceUpgradeCost, getS, survivorStats, unlockedBy, msDone } from '../game/state.js'
+import { RES, TOP_BAR, STATIONS, STATION_CATS, AMMO_KEYS, FENCE, EXPANSIONS, HORDES, OCCUPATIONS, SEC_PER_HOUR, GAME_MIN_PER_SEC, MILESTONES, SEASON_DAYS } from '../game/data.js'
+import { S, day, hour, clockStr, gameDur, capOf, bedCount, buildCost, reqMet, canAfford, countType, maxLevelOf, expansionAvailable, expansionCost, fenceUpgradeCost, getS, survivorStats, unlockedBy, msDone, season, seasonDay, year } from '../game/state.js'
 import { raidIntel, campFlow, power, moraleFactors } from '../game/economy.js'
 import { WEATHER } from '../render/sky.js'
 import { sfx } from '../core/audio.js'
 import { bus, h, fmt, fmtTime, clamp } from '../core/util.js'
 import { icon } from './icons.js'
 import { costList, resIcon, bar, plural } from './common.js'
+
+const resChipSigned = (k, v) => h('span.ci', { style: { '--c': RES[k].color } }, h('i.ic', { html: resIcon(k) }), `${v > 0 ? '+' : '−'}${fmt(Math.abs(v))}`)
 import { renderStation } from './stationpanel.js'
 import { renderSurvivor, renderCrew, renderItems } from './crewpanel.js'
 import { renderProgress } from './progresspanel.js'
@@ -41,6 +43,10 @@ export class UI {
     on('log', (e) => this.feedPush(e))
     on('goal', (g) => this.toast(`Goal complete: ${g.text}`, 'good'))
     on('levelup', (s, sk) => this.toast(`${s.first} reached level ${s.skills[sk]}`, 'good'))
+    on('perkReady', (s) => this.toast(`${s.first} can choose a perk`, 'good'))
+    on('infected', (s) => this.toast(`${s.first} is infected`, 'bad'))
+    on('turned', (s) => this.toast(`${s.first} turned. The others had to put them down.`, 'bad'))
+    on('season', (Z) => this.toast(`${Z.name} has come`, 'story'))
     on('crafted', (st, r, it) => {
       if (it && it.q >= 2) sfx('rare')
     })
@@ -159,7 +165,8 @@ export class UI {
     const night = hour() >= 20.5 || hour() < 5.5
     this.clockEl = h('b')
     this.dayEl = h('span')
-    const wIcon = w === 'rain' ? 'rain' : w === 'fog' ? 'fog' : w === 'overcast' || w === 'hazy' ? 'cloud' : night ? 'moon' : 'sun'
+    this.seasonEl = h('span.season')
+    const wIcon = w === 'rain' ? 'rain' : w === 'snow' ? 'snow' : w === 'fog' ? 'fog' : w === 'overcast' || w === 'hazy' ? 'cloud' : night ? 'moon' : 'sun'
     this.hordeBtn = h('button.horde', { onclick: () => this.openHorde(), 'data-tip': 'Horde intel <kbd>H</kbd>' }, h('i.ic', { html: icon('horde') }), h('div', h('small'), h('b')))
     this.resEls = {}
     const chips = h(
@@ -186,7 +193,7 @@ export class UI {
       speeds.map(([v, label, tip]) => h('button', { 'data-v': v, 'data-tip': tip, html: label, onclick: () => this.game.setSpeed(v) })),
     )
     T.append(
-      h('div.brand', h('div.logo', 'HOLDOUT'), h('div.clock', h('i.ic', { html: icon(wIcon), 'data-tip': WEATHER[w]?.name || w }), this.dayEl, this.clockEl)),
+      h('div.brand', h('div.logo', 'HOLDOUT'), h('div.clock', h('i.ic', { html: icon(wIcon), 'data-tip': WEATHER[w]?.name || w }), this.dayEl, this.seasonEl, this.clockEl)),
       this.hordeBtn,
       chips,
       h('div.meters', this.pwEl, this.morEl, this.popEl),
@@ -199,6 +206,13 @@ export class UI {
     if (!S) return
     if ((S.weather?.type || 'clear') !== this.weatherShown) return this.renderTop()
     this.dayEl.textContent = `Day ${day()}`
+    const Z = season()
+    if (this.seasonEl.textContent !== Z.name) {
+      this.seasonEl.textContent = Z.name
+      this.seasonEl.style.setProperty('--c', Z.color)
+    }
+    this.seasonEl.setAttribute('data-tip', `<b>${Z.name}, year ${year()}</b>Day ${seasonDay()} of ${SEASON_DAYS}. ${Z.desc}${S.cold ? '<br><span class="bad">Out of wood and fuel: the camp is freezing.</span>' : ''}`)
+    this.seasonEl.classList.toggle('cold', !!S.cold)
     this.clockEl.textContent = clockStr()
     const flow = this.flowCache || {}
     for (const [k, el] of Object.entries(this.resEls)) {
@@ -251,15 +265,15 @@ export class UI {
     const I = raidIntel()
     const el = this.hordeBtn
     if (S.raid) {
-      el.className = 'horde now'
-      el.querySelector('small').textContent = 'Under attack'
+      el.className = 'horde now' + (S.raid.blood ? ' blood' : '')
+      el.querySelector('small').textContent = S.raid.blood ? 'Blood Moon' : 'Under attack'
       el.querySelector('b').textContent = `${S.raid.count - S.raid.killed} left`
       return
     }
     if (!I) return
     const mins = I.in
-    el.className = 'horde' + (mins < 60 ? ' urgent imminent' : mins < 180 ? ' urgent' : '')
-    el.querySelector('small').textContent = I.known ? `${I.name} · ${I.count}` : 'Horde incoming'
+    el.className = 'horde' + (mins < 60 ? ' urgent imminent' : mins < 180 ? ' urgent' : '') + (I.blood ? ' blood' : '')
+    el.querySelector('small').textContent = I.known ? `${I.name} · ${I.count}` : I.blood ? 'Blood Moon rising' : 'Horde incoming'
     el.querySelector('b').textContent = gameDur(mins)
   }
   openHorde() {
@@ -309,12 +323,13 @@ export class UI {
   }
 
   // ---------------------------------------------------------------- drawer panel
-  openPanel(key, fn, { live = false, wide = false } = {}) {
+  openPanel(key, fn, { live = false, wide = false, xwide = false } = {}) {
     this.panelKey = key
     this.panelFn = fn
     this.panelLive = live
     this.panel.hidden = false
     this.panel.classList.toggle('wide', !!wide)
+    this.panel.classList.toggle('xwide', !!xwide)
     for (const b of this.nav.querySelectorAll('[data-nav]')) b.classList.toggle('on', b.dataset.nav === key)
     this.refreshPanel(true)
   }
@@ -382,7 +397,7 @@ export class UI {
     this.openPanel('exp:' + id, () => renderExpansion(this, id), { live: true })
   }
   openProduction() {
-    this.openPanel('camp', () => renderProduction(this), { live: true, wide: true })
+    this.openPanel('camp', () => renderProduction(this), { live: true, wide: true, xwide: true })
   }
   openPower() {
     this.openPanel('power', () => renderPower(this), { live: true })
@@ -402,6 +417,24 @@ export class UI {
   }
   raidReport(r) {
     this.modal(raidReportModal(this, r), { small: true })
+  }
+  // What the crew got done while the game was closed.
+  awayModal(r) {
+    const hrs = r.away / 3600
+    const gains = r.diff.filter(([, v]) => v > 0).slice(0, 10)
+    const used = r.diff.filter(([, v]) => v < 0).slice(0, 6)
+    let close
+    close = this.modal(
+      h(
+        'div.away',
+        h('h2', 'While you were away'),
+        h('p.note', `${hrs >= 1 ? `${hrs.toFixed(1)} hours` : `${Math.round(r.away / 60)} minutes`} away: the crew kept working for about ${r.days >= 1 ? `${r.days.toFixed(1)} days` : `${Math.round(r.days * 24)} hours`} of camp time. The clock waited for you, so no horde came.`),
+        gains.length ? h('div.aw-row', h('small', 'Made'), h('div', gains.map(([k, v]) => resChipSigned(k, v)))) : null,
+        used.length ? h('div.aw-row', h('small', 'Used'), h('div', used.map(([k, v]) => resChipSigned(k, v)))) : null,
+        !gains.length && !used.length ? h('p', 'Not much changed.') : null,
+      ),
+      { small: true, actions: [h('button.btn.go', { onclick: () => close() }, 'Back to it')] },
+    )
   }
   missionReport(r) {
     this.modal(missionReportModal(this, r))

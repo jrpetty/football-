@@ -4,11 +4,14 @@ import { Pipeline } from './render/pipeline.js'
 import { initView, view } from './render/view.js'
 import { pregenerate } from './render/texgen.js'
 import { initAudio, sfx, setSound } from './core/audio.js'
-import { S, newGame, hasSave, load, save, day, log, wipeSave, buildCost, newStation, pay, canAfford, completeGoal } from './game/state.js'
+import { S, newGame, hasSave, load, save, day, log, wipeSave, buildCost, newStation, pay, canAfford, completeGoal, backupSave } from './game/state.js'
 import { econTick, initSchedules, autoResolveRaid, scheduleRaid } from './game/economy.js'
 import * as belts from './game/belts.js'
 import * as stateMod from './game/state.js'
-import { STATIONS, GAME_MIN_PER_SEC } from './game/data.js'
+import { STATIONS, GAME_MIN_PER_SEC, SEC_PER_DAY, RES } from './game/data.js'
+
+const OFFLINE_DIV = 15 // real seconds away per second of camp work
+const OFFLINE_MAX_DAYS = 3
 import { BaseScene } from './scenes/base.js'
 import { CityMap } from './scenes/citymap.js'
 import { Mission } from './scenes/mission.js'
@@ -170,19 +173,32 @@ class Game {
     this.bindEvents()
     save()
     if (S.time < 9 * 60 && day() === 1) setTimeout(() => this.ui.toast('Click a station to see its workers, or press B to build.'), 1200)
+    if (this.awayReport) {
+      const r = this.awayReport
+      this.awayReport = null
+      setTimeout(() => this.ui.awayModal(r), 600)
+    }
   }
   newGame() {
     wipeSave()
     location.reload()
   }
-  // Time passes while the game is closed (capped at an hour of real time).
+  // While the game is closed the crew keeps working, at a fraction of the
+  // pace: two hours away is a day's production, up to three days. The camp
+  // clock stands still, so no horde ever hits an empty camp.
   catchUp() {
-    const away = Math.min(3600, (Date.now() - (S.saved || Date.now())) / 1000)
-    if (away < 30) return
+    const away = (Date.now() - (S.saved || Date.now())) / 1000
+    if (away < 120) return
+    const sim = Math.min(away / OFFLINE_DIV, OFFLINE_MAX_DAYS * SEC_PER_DAY)
     const before = { ...S.res }
-    for (let i = 0; i < Math.floor(away); i++) econTick(1, { offline: true })
-    const diff = Object.entries(S.res).map(([k, v]) => [k, Math.round(v - before[k])]).filter(([, v]) => v !== 0)
-    log(`While you were away (${Math.round(away / 60)} min): ${diff.slice(0, 8).map(([k, v]) => `${v > 0 ? '+' : ''}${v} ${k}`).join(', ') || 'nothing changed'}.`, 'story')
+    const keep = { time: S.time, weather: { ...S.weather } }
+    for (let left = sim; left > 0; left -= 1) econTick(Math.min(1, left), { offline: true })
+    S.time = keep.time
+    S.weather = keep.weather
+    const diff = Object.entries(S.res).map(([k, v]) => [k, v - (before[k] || 0)]).filter(([, v]) => Math.abs(v) >= 1).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
+    const hrs = away / 3600
+    this.awayReport = { away, days: sim / SEC_PER_DAY, diff }
+    log(`While you were away (${hrs >= 1 ? `${hrs.toFixed(1)} h` : `${Math.round(away / 60)} min`}) the crew kept working: ${diff.slice(0, 6).map(([k, v]) => `${v > 0 ? '+' : ''}${Math.round(v)} ${RES[k].name.toLowerCase()}`).join(', ') || 'nothing much changed'}.`, 'story')
   }
   bindEvents() {
     if (this.bound) return
@@ -219,6 +235,10 @@ class Game {
       this.ui.gameOver()
     })
     bus.on('death', (s) => this.ui.toast(`${s.first} is dead.`, 'bad'))
+    bus.on('newDay', () => {
+      save()
+      backupSave()
+    })
   }
   // ---------------------------------------------------------------- input
   onKey(e) {

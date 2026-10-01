@@ -57,7 +57,7 @@ export const RaidMixin = {
   // ---------------------------------------------------------------- start
   startRaid(R) {
     const sides = ['n', 'e', 'w', 's']
-    S.raid = { count: R.count, killed: 0, spawned: 0, t: 0, side: pick(sides), side2: chance(R.size >= 2 ? 0.7 : 0.25) ? pick(sides) : null, acc: 0 }
+    S.raid = { count: R.count, killed: 0, spawned: 0, t: 0, side: pick(sides), side2: chance(R.size >= 2 || R.blood ? 0.7 : 0.25) ? pick(sides) : null, acc: 0, blood: !!R.blood, lvl: R.lvl }
     this.mode = 'raid'
     this.cancelPlacing()
     this.cancelLinking()
@@ -131,7 +131,7 @@ export const RaidMixin = {
       x = n.x + 0.5
       z = n.z + 0.5
     }
-    const lvl = clamp(1 + Math.floor(day() / 4), 1, 5)
+    const lvl = R.lvl || clamp(1 + Math.floor(day() / 4), 1, 5)
     const zz = new ZombieAgent(this, weighted(zombieMix(lvl)).t, x, z, lvl)
     zz.state = 'fence'
     zz.root.traverse((o) => o.isMesh && (o.userData.pick = { type: 'zombie', z: zz }))

@@ -55,6 +55,17 @@ export const AMMO_KEYS = ['pammo', 'rammo', 'shells']
 export const UTILITIES = ['medkit', 'molotov', 'pipebomb', 'noisemaker']
 export const TOP_BAR = ['food', 'water', 'meds', 'wood', 'scrap', 'metal', 'parts', 'fuel', 'cash']
 
+// ---------------------------------------------------------------- seasons
+// A year is four seasons of six days. Weather weights, farm and collector
+// output, thirst, and in winter the wood (or fuel) burned to keep warm.
+export const SEASON_DAYS = 6
+export const SEASONS = [
+  { id: 'spring', name: 'Spring', farm: 1.0, collector: 1.25, water: 1.0, heat: 0, color: '#9ad07a', weather: { clear: 36, hazy: 14, overcast: 18, rain: 26, fog: 6 }, desc: 'Rain and new growth. The collectors fill fast.' },
+  { id: 'summer', name: 'Summer', farm: 1.15, collector: 0.7, water: 1.3, heat: 0, color: '#f0c050', weather: { clear: 60, hazy: 22, overcast: 8, rain: 8, fog: 2 }, desc: 'Long hot days: everyone drinks 30% more, and the farms do well.' },
+  { id: 'autumn', name: 'Autumn', farm: 1.4, collector: 1.0, water: 1.0, heat: 0, color: '#e08a40', weather: { clear: 34, hazy: 16, overcast: 20, rain: 16, fog: 14 }, desc: 'Harvest: the farms yield 40% more. Fog rolls in more often.' },
+  { id: 'winter', name: 'Winter', farm: 0.3, collector: 0.45, water: 1.0, heat: 0.8, color: '#a8d0f0', weather: { clear: 30, hazy: 12, overcast: 26, snow: 26, fog: 6 }, desc: 'Snow. The farms barely grow and the collectors freeze. Everyone needs heat: the camp burns wood (or fuel) through the day.' },
+]
+
 // ---------------------------------------------------------------- skills
 export const SKILLS = {
   melee: { name: 'Melee', short: 'MEL', desc: 'Hand-to-hand damage and swing speed.' },
@@ -67,7 +78,53 @@ export const SKILLS = {
   tech: { name: 'Engineering', short: 'ENG', desc: 'Forge, Generator, Still, Chemistry Lab, Electronics Bench, Radio.' },
 }
 export const SKILL_KEYS = Object.keys(SKILLS)
-export const SKILL_MAX = 10
+export const SKILL_MAX = 15
+// Careers: reaching level 5, 10 and 15 in a skill offers a choice of two
+// perks. fx keys add up with occupation and trait effects; `station` gives a
+// work bonus at those stations.
+export const PERK_LEVELS = [5, 10, 15]
+export const PERKS = {
+  melee: [
+    [{ id: 'brawler', name: 'Brawler', desc: '+15% melee damage.', fx: { meleeDmg: 0.15 } }, { id: 'thickSkin', name: 'Thick Skin', desc: '+20 health.', fx: { hp: 20 } }],
+    [{ id: 'executioner', name: 'Executioner', desc: 'Axes hit 30% harder.', fx: { axeDmg: 0.3 } }, { id: 'nimble', name: 'Nimble', desc: 'Moves 8% faster.', fx: { speed: 0.08 } }],
+    [{ id: 'butcher', name: 'Butcher', desc: '+25% melee damage.', fx: { meleeDmg: 0.25 } }, { id: 'juggernaut', name: 'Juggernaut', desc: '+40 health.', fx: { hp: 40 } }],
+  ],
+  ranged: [
+    [{ id: 'steadyAim', name: 'Steady Aim', desc: '+6% accuracy.', fx: { acc: 0.06 } }, { id: 'gunslinger', name: 'Gunslinger', desc: '+15% damage with pistols.', fx: { pistolDmg: 0.15 } }],
+    [{ id: 'rifleman', name: 'Rifleman', desc: '+20% damage with rifles.', fx: { rifleDmg: 0.2 } }, { id: 'quietShooter', name: 'Quiet Shooter', desc: 'Makes 25% less noise.', fx: { noise: -0.25 } }],
+    [{ id: 'deadeye', name: 'Deadeye', desc: '+10% accuracy.', fx: { acc: 0.1 } }, { id: 'gunNut', name: 'Gun Nut', desc: '+15% damage with every firearm.', fx: { gunDmg: 0.15 } }],
+  ],
+  scavenge: [
+    [{ id: 'packMule', name: 'Pack Mule', desc: 'Carries 12 more.', fx: { carry: 12 } }, { id: 'keenEye', name: 'Keen Eye', desc: 'Finds 10% more.', fx: { loot: 0.1 } }],
+    [{ id: 'quickHands', name: 'Quick Hands', desc: 'Searches 20% faster.', fx: { search: 0.2 } }, { id: 'pathfinder', name: 'Pathfinder', desc: 'Sees 3 m further and spots traps sooner.', fx: { sight: 3, trapSpot: 2 } }],
+    [{ id: 'hoarder', name: 'Hoarder', desc: 'Carries 25 more.', fx: { carry: 25 } }, { id: 'treasureHunter', name: 'Treasure Hunter', desc: 'Finds 20% more.', fx: { loot: 0.2 } }],
+  ],
+  build: [
+    [{ id: 'handyman', name: 'Handyman', desc: 'Builds 25% faster when free.', fx: { construct: 0.25 } }, { id: 'wrecker', name: 'Wrecker', desc: 'Breaks furniture down 25% faster.', fx: { dismantle: 0.25 } }],
+    [{ id: 'sawyer', name: 'Sawyer', desc: '+30% at the Lumber Yard and Scrap Yard.', fx: { station: { lumber: 0.3, scrapyard: 0.3 } } }, { id: 'sturdy', name: 'Sturdy', desc: '+20 health.', fx: { hp: 20 } }],
+    [{ id: 'architect', name: 'Architect', desc: 'Builds 50% faster when free.', fx: { construct: 0.5 } }, { id: 'demolisher', name: 'Demolisher', desc: 'Breaks furniture down 50% faster.', fx: { dismantle: 0.5 } }],
+  ],
+  craft: [
+    [{ id: 'tinkerer', name: 'Tinkerer', desc: 'Works 10% faster at every station.', fx: { work: 0.1 } }, { id: 'fineHands', name: 'Fine Hands', desc: 'Better odds of fine and masterwork items.', fx: { craftQ: 1 } }],
+    [{ id: 'lineWorker', name: 'Line Worker', desc: '+30% at the Fabricator and Ammo Press.', fx: { station: { fabricator: 0.3, ammo: 0.3 } } }, { id: 'artisan', name: 'Artisan', desc: 'Even better odds of fine and masterwork items.', fx: { craftQ: 1 } }],
+    [{ id: 'assemblyLine', name: 'Assembly Line', desc: 'Works 20% faster at every station.', fx: { work: 0.2 } }, { id: 'masterSmith', name: 'Master Smith', desc: 'The best odds of masterwork items.', fx: { craftQ: 2 } }],
+  ],
+  survival: [
+    [{ id: 'greenThumb', name: 'Green Thumb', desc: '+30% at the Farm Plot.', fx: { station: { farm: 0.3 } } }, { id: 'hardy', name: 'Hardy', desc: '15% less likely to be infected.', fx: { resist: 0.15 } }],
+    [{ id: 'campCook', name: 'Camp Cook', desc: '+40% at the Cookhouse.', fx: { station: { kitchen: 0.4 } } }, { id: 'ironGut', name: 'Iron Gut', desc: '25% less likely to be infected.', fx: { resist: 0.25 } }],
+    [{ id: 'homesteader', name: 'Homesteader', desc: '+40% at the Farm, Water Filter and Still.', fx: { station: { farm: 0.4, filter: 0.4, still: 0.4 } } }, { id: 'immune', name: 'Resistant', desc: 'Half as likely to be infected.', fx: { resist: 0.5 } }],
+  ],
+  medic: [
+    [{ id: 'triage', name: 'Triage', desc: 'Heals 30% faster at the Infirmary.', fx: { heal: 0.3 } }, { id: 'quickRevive', name: 'Quick Revive', desc: 'Gets the downed up 30% faster.', fx: { reviveFast: 0.3 } }],
+    [{ id: 'surgeon', name: 'Surgeon', desc: 'Heals 50% faster at the Infirmary.', fx: { heal: 0.5 } }, { id: 'calm', name: 'Calm Presence', desc: 'Squadmates nearby slowly regain health.', fx: { aura: 0.8 } }],
+    [{ id: 'chiefMedic', name: 'Chief Medic', desc: 'Heals 80% faster at the Infirmary.', fx: { heal: 0.8 } }, { id: 'guardian', name: 'Guardian Angel', desc: 'Revives 50% faster and heals the squad nearby.', fx: { reviveFast: 0.5, aura: 0.6 } }],
+  ],
+  tech: [
+    [{ id: 'mechanic2', name: 'Grease Monkey', desc: '+30% at the Generator and Forge.', fx: { station: { generator: 0.3, forge: 0.3 } } }, { id: 'wireman', name: 'Wireman', desc: '+30% at the Machine Shop and Electronics Bench.', fx: { station: { assembler: 0.3, electronics: 0.3 } } }],
+    [{ id: 'chemist', name: 'Chemist', desc: '+30% at the Chemistry Lab and Still.', fx: { station: { chemlab: 0.3, still: 0.3 } } }, { id: 'scientist', name: 'Scientist', desc: '+40% at the Research Desk.', fx: { station: { research: 0.4 } } }],
+    [{ id: 'chiefEngineer', name: 'Chief Engineer', desc: 'Works 20% faster at every station.', fx: { work: 0.2 } }, { id: 'genius', name: 'Genius', desc: '+60% at the Research Desk and learns 10% faster.', fx: { station: { research: 0.6 }, xp: 0.1 } }],
+  ],
+}
 export const xpForLevel = (lvl) => Math.round(30 * Math.pow(lvl, 1.55))
 
 // ---------------------------------------------------------------- occupations
@@ -530,6 +587,41 @@ export const RESEARCH = {
   logistics: { name: 'Logistics', cat: 'Engineering', lvl: 2, cost: { schematic: 1, motors: 4, circuits: 6 }, time: 260, desc: 'Better belt tension and spacing: every belt carries 25% more.' },
   coretuning: { name: 'Core Tuning', cat: 'Engineering', lvl: 3, cost: { core: 1, circuits: 20, cells: 4 }, time: 400, desc: 'Each power core overclocks a station by 75% instead of 50%.' },
 }
+// Infection: a bite (or bloater gas) can infect. It climbs toward 100 over
+// a few days; at 100 the survivor turns. The Infirmary slows it, and an
+// antiviral cures it while it is still below `cureBelow`.
+export const INFECTION = { bite: 0.06, gas: 0.04, perDay: 40, fever: 30, sick: 70, cureBelow: 60, infirmary: 0.35, knock: 35 }
+
+// Outposts (milestone: Convoys): a place you have run can be held by a
+// garrison of one to three. A convoy brings its goods home each morning;
+// now and then the dead come for it. Yields are per day at level 1.
+export const OUTPOST = {
+  max: 4,
+  cost: [{ metal: 80, wood: 120, parts: 15 }, { steel: 40, metal: 120, parts: 30 }, { steel: 100, motors: 6, circuits: 10 }],
+  mult: [1, 1.6, 2.3],
+  defense: [1, 1.5, 2.2],
+  crew: [0.7, 1, 1.25],
+  yield: {
+    house: { food: 8, water: 8, cloth: 6 },
+    apartment: { food: 10, water: 10, cloth: 8, cash: 15 },
+    store: { food: 18, water: 16 },
+    office: { electronics: 4, cloth: 6, cash: 30, schematic: 0.12 },
+    diner: { food: 24, water: 8 },
+    gas: { fuel: 22, scrap: 6 },
+    hardware: { scrap: 26, metal: 10, wood: 16, parts: 3 },
+    pharmacy: { meds: 5, chemicals: 5 },
+    supermarket: { food: 34, water: 28 },
+    garage: { parts: 6, scrap: 20, fuel: 6 },
+    school: { cloth: 12, electronics: 3, schematic: 0.12 },
+    hospital: { meds: 8, chemicals: 5, specimen: 0.2 },
+    firestation: { meds: 3, cloth: 10, fuel: 8 },
+    gunstore: { pammo: 40, shells: 12 },
+    warehouse: { wood: 30, metal: 14, parts: 4 },
+    police: { pammo: 30, rammo: 15, shells: 8 },
+    military: { rammo: 30, pammo: 30, core: 0.04 },
+  },
+}
+
 // Power cores: each one fitted to an automated station adds to its speed;
 // power draw rises faster than output.
 export const CORE_SLOTS = 3

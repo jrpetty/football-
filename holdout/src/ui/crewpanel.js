@@ -1,7 +1,7 @@
 // Crew: the roster, each survivor's sheet (skills, traits, equipment, job),
 // and the armory of items with equip, sell and repair shortcuts.
-import { RES, ITEMS, QUALITY, RARITY, MODS, STATIONS, OCCUPATIONS, SKILLS, SKILL_KEYS, UTILITIES, TRAITS } from '../game/data.js'
-import { S, getS, survivorStats, survivorLevel, equip, unequip, itemOf, itemName, itemValue, removeItem, ownerOf, workEff, assign, slots, workersOf, gain, day, killSurvivor, log } from '../game/state.js'
+import { RES, ITEMS, QUALITY, RARITY, MODS, STATIONS, OCCUPATIONS, SKILLS, SKILL_KEYS, UTILITIES, TRAITS, INFECTION, SEC_PER_DAY, PERKS, PERK_LEVELS } from '../game/data.js'
+import { S, getS, survivorStats, survivorLevel, equip, unequip, itemOf, itemName, itemValue, removeItem, ownerOf, workEff, assign, slots, workersOf, gain, day, killSurvivor, log, infectionStage, treatInfection, researchDone, choosePerk, perkOf } from '../game/state.js'
 import { sellMult } from '../game/economy.js'
 import { sfx } from '../core/audio.js'
 import { bus, h, fmt, clamp } from '../core/util.js'
@@ -14,7 +14,8 @@ export function renderSurvivor(ui, id) {
   if (!s) return null
   const st = survivorStats(s)
   const job = s.job ? S.stations.find((x) => x.id === s.job) : null
-  const status = s.status === 'mission' ? 'On a supply run' : s.status === 'injured' ? 'Injured · recovering' : job ? STATIONS[job.type].name : 'No job · builds and forages'
+  const post = s.status === 'outpost' ? (S.outposts || []).find((o) => o.crew.includes(s.id)) : null
+  const status = s.status === 'mission' ? 'On a supply run' : post ? `Holding the ${post.name} outpost` : s.status === 'injured' ? 'Injured · recovering' : job ? STATIONS[job.type].name : 'No job · builds and forages'
   const head = h(
     'div.sheet-head',
     h('img.por.big', { src: ui.game.portrait(s) }),
@@ -31,7 +32,7 @@ export function renderSurvivor(ui, id) {
     h('h3', 'Job', h('small', status)),
     h(
       'div.jobrow',
-      h('button.btn.small', { disabled: s.status === 'mission', onclick: () => pickJob(ui, s) }, h('i', { html: icon('hammer') }), job ? 'Change job' : 'Give a job'),
+      h('button.btn.small', { disabled: s.status === 'mission' || s.status === 'outpost', onclick: () => pickJob(ui, s) }, h('i', { html: icon('hammer') }), job ? 'Change job' : 'Give a job'),
       job ? h('button.btn.small.ghost', { onclick: () => (assign(s, null), ui.refreshPanel()) }, 'Unassign') : null,
       job ? h('button.btn.small.ghost', { onclick: () => ui.openStation(job.id) }, 'Open station') : null,
     ),
@@ -85,7 +86,7 @@ export function renderSurvivor(ui, id) {
       'Send away',
     ),
   )
-  return ui.frame(s.name, h('span', OCCUPATIONS[s.occ].name), [head, jobRow, slotsEl, stats, skills, actions], { icon: 'people' })
+  return ui.frame(s.name, h('span', OCCUPATIONS[s.occ].name), [head, infectionCard(ui, s), perksCard(ui, s), jobRow, slotsEl, stats, skills, actions], { icon: 'people' })
 }
 function stat(label, v, tip = null) {
   return h('div.stat', tip ? { 'data-tip': `<b>${label}</b>${tip}` } : null, h('span', label), h('b', v))
@@ -191,10 +192,10 @@ export function renderCrew(ui) {
     const job = s.job ? S.stations.find((x) => x.id === s.job) : null
     const st = survivorStats(s)
     return h(
-      'div.crewrow' + (s.status === 'injured' ? '.hurt' : s.status === 'mission' ? '.away' : ''),
+      'div.crewrow' + (s.status === 'injured' ? '.hurt' : s.status === 'mission' || s.status === 'outpost' ? '.away' : ''),
       { onclick: () => ui.openSurvivor(s.id) },
-      h('span.cr-name', h('img.por.sm', { src: ui.game.portrait(s) }), h('span', h('b', s.name), h('small', OCCUPATIONS[s.occ].name))),
-      h('span.cr-job', s.status === 'mission' ? 'On a run' : job ? STATIONS[job.type].name : h('em', 'None')),
+      h('span.cr-name', h('img.por.sm', { src: ui.game.portrait(s) }), h('span', h('b', s.name, s.perkChoices?.length ? h('i.perktag', { 'data-tip': 'A perk to choose' }, '★') : null, s.infection > 0 ? h('i.inftag', { 'data-tip': `${infectionStage(s)} · ${Math.round(s.infection)}%` }, `${Math.round(s.infection)}%`) : null), h('small', OCCUPATIONS[s.occ].name))),
+      h('span.cr-job', s.status === 'mission' ? 'On a run' : s.status === 'outpost' ? 'At an outpost' : job ? STATIONS[job.type].name : h('em', 'None')),
       ...SKILL_KEYS.map((k) => h('span.sk' + (s.skills[k] >= 6 ? '.hi' : s.skills[k] <= 1 ? '.lo' : ''), s.skills[k])),
       h('span.cr-wpn', st.weapon.name),
       h('span.cr-hp', bar(s.hp / st.maxHp, s.status === 'injured' ? 'hp.low' : 'hp')),
@@ -278,5 +279,45 @@ function giveItem(ui, it) {
       ),
     ),
     { actions: [h('button.btn.ghost', { onclick: () => close() }, 'Close')] },
+  )
+}
+
+// ---------------------------------------------------------------- infection
+function infectionCard(ui, s) {
+  if (!(s.infection > 0)) return null
+  const stage = infectionStage(s)
+  const left = ((100 - s.infection) / INFECTION.perDay) * SEC_PER_DAY * 3
+  const canCure = s.infection < INFECTION.cureBelow
+  const anti = researchDone('antiviral')
+  return h(
+    'section.card.infect',
+    h('h3', h('span', h('i.inl', { html: icon('specimen') }), stage), h('small', `${Math.round(s.infection)}% · turns in about ${Math.max(1, Math.round(left / 60))} h untreated`)),
+    h('div.bar.infect', h('i', { style: { width: `${Math.min(100, s.infection)}%` } }), h('b.mark', { style: { left: `${INFECTION.fever}%` } }), h('b.mark', { style: { left: `${INFECTION.cureBelow}%` } }), h('b.mark', { style: { left: `${INFECTION.sick}%` } })),
+    h('p.note', s.infection >= INFECTION.sick ? 'Too sick to go on runs and barely able to work. An antiviral can only slow it now.' : s.infection >= INFECTION.fever ? 'Feverish: works slower and has less health.' : 'No symptoms yet.', ' A patient at a staffed Infirmary gets worse much more slowly.'),
+    anti
+      ? h('div.kv', h('span', canCure ? 'An antiviral cures it now.' : `Past ${INFECTION.cureBelow}%: an antiviral knocks it back by ${INFECTION.knock}.`), h('button.btn.small' + (canCure ? '.go' : ''), { disabled: S.res.antiviral < 1, onclick: () => (treatInfection(s) ? (sfx('levelup'), ui.toast(canCure ? `${s.first} is cured` : 'Infection slowed', 'good')) : sfx('error'), ui.refreshPanel()), 'data-tip': `You have ${Math.floor(S.res.antiviral)} antiviral${S.res.antiviral === 1 ? '' : 's'}` }, 'Give antiviral'))
+      : h('p.note.bad', 'There is no cure yet. Research Antiviral Serum at the Research Desk (it needs specimens from special infected).'),
+  )
+}
+
+// ---------------------------------------------------------------- perks
+function perksCard(ui, s) {
+  const have = s.perks || []
+  const pending = s.perkChoices || []
+  if (!have.length && !pending.length) return h('section.card.perks', h('h3', 'Perks', h('small', `at level ${PERK_LEVELS.join(', ')} in any skill`)), h('p.note', 'Reach level 5 in a skill to choose the first perk for it.'))
+  return h(
+    'section.card.perks' + (pending.length ? '.ready' : ''),
+    h('h3', 'Perks', h('small', pending.length ? `${pending.length} to choose` : `${have.length} taken`)),
+    pending.map((c) =>
+      h(
+        'div.perkpick',
+        h('div.pp-head', h('b', `${SKILLS[c.skill].name} ${PERK_LEVELS[c.tier]}`), h('small', 'Choose one')),
+        h(
+          'div.pp-opts',
+          PERKS[c.skill][c.tier].map((p) => h('button.perkopt', { onclick: () => (choosePerk(s, c.skill, c.tier, p.id) && (sfx('levelup'), ui.toast(`${s.first}: ${p.name}`, 'good')), ui.refreshPanel()) }, h('b', p.name), h('span', p.desc))),
+        ),
+      ),
+    ),
+    have.length ? h('div.perklist', have.map((id) => { const p = perkOf(id); return p ? h('span.perkchip', { 'data-tip': `<b>${p.name}</b>${SKILLS[p.skill].name} ${PERK_LEVELS[p.tier]}: ${p.desc}` }, h('i', { html: icon('star') }), p.name) : null })) : null,
   )
 }

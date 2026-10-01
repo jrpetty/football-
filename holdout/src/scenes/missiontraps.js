@@ -271,7 +271,7 @@ export const TrapsMixin = {
         for (const a of this.squad) {
           if (a.downed || a.dead) continue
           if (Math.hypot(a.pos.x - c.x, a.pos.z - c.z) < c.r) {
-            a.hurt(4.5, null)
+            a.hurt(4.5, null, { gas: true })
             a.gassed = (a.gassed || 0) + 0.5
           }
         }

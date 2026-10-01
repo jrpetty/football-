@@ -10,7 +10,7 @@ import { view, screenRay, groundAt } from '../render/view.js'
 import { Atmosphere, nightFactor, isNight } from '../render/sky.js'
 import { FX, makeFlame, tickFlames, ringTex } from '../render/fx.js'
 import { Splat, Terrain, wind } from '../render/terrain.js'
-import { mat, setNightGlow, cloneMat } from '../render/materials.js'
+import { mat, setNightGlow, cloneMat, WEATHER } from '../render/materials.js'
 import { Builder, seeded } from '../models/kit.js'
 import { CONTAINER_MODELS, DECOR_MODELS, addDecor } from '../models/furniture.js'
 import { carModel, vanModel, pickupModel } from '../models/vehicles.js'
@@ -25,7 +25,7 @@ import { genLevel } from '../world/levelgen.js'
 import { OffsetGrid } from '../core/grid.js'
 import { FACE_ROT, SIDEWALK, lotToWorld } from '../world/city.js'
 import { LOCATIONS, CONTAINERS, ITEMS, RARITY, RES, QUALITY, zombieMix, LEVEL_COLORS, UTILITIES } from '../game/data.js'
-import { S, getS, gain, addItem, gainXP, killSurvivor, hour, day, completeGoal, log, survivorStats, makeSurvivor, addMoraleEvent, researchDone } from '../game/state.js'
+import { S, getS, gain, addItem, gainXP, killSurvivor, hour, day, completeGoal, log, survivorStats, makeSurvivor, addMoraleEvent, researchDone, season } from '../game/state.js'
 import { scheduleRaid } from '../game/economy.js'
 import { sfx, setAmbience } from '../core/audio.js'
 import { h, rand, rint, pick, chance, weighted, clamp, fmtTime, bus, fmt } from '../core/util.js'
@@ -988,6 +988,27 @@ export class Mission {
       }
     }
   }
+  // A survivor whose infection reaches 100 on a run turns where they stand.
+  checkTurning() {
+    for (const a of [...this.squad]) {
+      if (a.npc || a.dead || !(a.data.infection >= 100)) continue
+      const x = a.pos.x
+      const z = a.pos.z
+      this.toast(`${a.data.first} has turned!`, 'bad')
+      sfx('scream')
+      a.dead = true
+      a.remove()
+      this.squad = this.squad.filter((o) => o !== a)
+      this.selected.delete(a)
+      killSurvivor(a.data, `Turned on a supply run at ${this.loc.name}`)
+      this.lost = (this.lost || []).concat(a.data.first)
+      const zz = new ZombieAgent(this, 'walker', x, z, this.level, this.def.zombieTheme)
+      zz.state = 'chase'
+      this.zombies.push(zz)
+      this.renderSquad()
+      if (!this.squad.filter((o) => !o.npc).length) this.end('wiped')
+    }
+  }
   onDowned(a) {
     this.toast(`${a.data.first} is down! Send someone to help them up.`, 'bad')
   }
@@ -1466,6 +1487,21 @@ export class Mission {
 
   // ---------------------------------------------------------------- loop
   update(dt) {
+    WEATHER.uSnow.value = season().heat ? 0.6 : 0
+    if (!this.snowHole) {
+      // the buildings' footprint stays free of snow indoors
+      let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity
+      for (const B of this.lv.buildings || []) {
+        const a = this.center(B.i0, B.j0)
+        const b = this.center(B.i1, B.j1)
+        x0 = Math.min(x0, a.x - 0.5, b.x - 0.5)
+        z0 = Math.min(z0, a.z - 0.5, b.z - 0.5)
+        x1 = Math.max(x1, a.x + 0.5, b.x + 0.5)
+        z1 = Math.max(z1, a.z + 0.5, b.z + 0.5)
+      }
+      this.snowHole = isFinite(x0) ? [x0, z0, x1, z1] : [0, 0, 0, 0]
+    }
+    WEATHER.uSnowHole.value.set(...this.snowHole)
     if (this.over) return
     const hr = hour()
     const night = nightFactor(hr)
@@ -1508,6 +1544,7 @@ export class Mission {
       this.updateFires(dt)
       this.updateTraps(dt)
       this.updateClouds(dt)
+      this.checkTurning()
       this.updateNpc()
       this.unloadAtVan()
       for (const c of this.containers) {

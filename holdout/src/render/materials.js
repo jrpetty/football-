@@ -127,7 +127,9 @@ export function allMaterials() {
 // creeps up from the ground on walls and legs, dust settling on upward faces
 // and faint rain streaks running down vertical surfaces. Driven by one tiling
 // noise texture sampled triplanar, so it costs no UVs and no extra geometry.
-export const WEATHER = { tNoise: { value: null }, uWeather: { value: 1 } }
+// uSnowHole: a world-space xz rectangle (x0, z0, x1, z1) kept free of snow
+// below 3.4 m, so building interiors on runs stay dry.
+export const WEATHER = { tNoise: { value: null }, uWeather: { value: 1 }, uSnow: { value: 0 }, uSnowHole: { value: new THREE.Vector4(0, 0, 0, 0) } }
 const WEATHER_VERT = /* glsl */ `
 {
   vec4 wwp = vec4(transformed, 1.0);
@@ -139,7 +141,7 @@ const WEATHER_VERT = /* glsl */ `
 }
 `
 const WEATHER_FRAG = /* glsl */ `
-if (uWeather > 0.0) {
+if (uWeather > 0.0 || uSnow > 0.0) {
   vec3 bw = pow(abs(vWN), vec3(4.0));
   bw /= (bw.x + bw.y + bw.z + 1e-4);
   vec3 p = vWW * 0.22;
@@ -147,6 +149,7 @@ if (uWeather > 0.0) {
   vec3 q = vWW * 1.3 + 0.31;
   float nB = texture2D(tWNoise, q.zy).g * bw.x + texture2D(tWNoise, q.xz).g * bw.y + texture2D(tWNoise, q.xy).g * bw.z;
   float up = smoothstep(0.55, 0.92, vWN.y);
+  if (uWeather > 0.0) {
   // broad tone and a slight warm/cool drift
   float tone = 1.0 + ((nA.r - 0.5) * 0.2 + (nB - 0.5) * 0.06) * uWeather;
   diffuseColor.rgb *= tone * mix(vec3(1.0), vec3(1.05, 1.0, 0.92), clamp((nA.b - 0.5) * 1.8, -1.0, 1.0) * uWeather);
@@ -160,6 +163,16 @@ if (uWeather > 0.0) {
   float side = 1.0 - abs(vWN.y);
   float st = texture2D(tWNoise, vec2((vWW.x + vWW.z) * 1.9, vWW.y * 0.07)).g;
   diffuseColor.rgb *= 1.0 - side * smoothstep(0.56, 0.86, st) * 0.16 * uWeather;
+  }
+  // winter: snow settles on whatever faces up, patchy where the noise is
+  // low, and a little frost greys the sides
+  float inside = step(uSnowHole.x, vWW.x) * step(vWW.x, uSnowHole.z) * step(uSnowHole.y, vWW.z) * step(vWW.z, uSnowHole.w) * step(vWW.y, 3.4);
+  if (uSnow > 0.0 && inside < 0.5) {
+    float sUp = smoothstep(0.3, 0.8, vWN.y);
+    float cover = smoothstep(0.78 - uSnow * 0.36, 1.0 - uSnow * 0.3, nA.g * 0.55 + nB * 0.25 + sUp * 0.42);
+    diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.56, 0.59, 0.64), sUp * cover * min(1.0, uSnow * 1.2));
+    diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.46, 0.5, 0.55), (1.0 - sUp) * 0.08 * uSnow);
+  }
 }
 `
 // Patch a shader object (from onBeforeCompile) with the weathering layer.
@@ -167,9 +180,11 @@ export function weatherShader(sh) {
   if (!WEATHER.tNoise.value) WEATHER.tNoise.value = texSet('noise').map
   sh.uniforms.tWNoise = WEATHER.tNoise
   sh.uniforms.uWeather = WEATHER.uWeather
+  sh.uniforms.uSnow = WEATHER.uSnow
+  sh.uniforms.uSnowHole = WEATHER.uSnowHole
   sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWW;\nvarying vec3 vWN;').replace('#include <project_vertex>', WEATHER_VERT + '#include <project_vertex>')
   sh.fragmentShader = sh.fragmentShader
-    .replace('#include <common>', '#include <common>\nvarying vec3 vWW;\nvarying vec3 vWN;\nuniform sampler2D tWNoise;\nuniform float uWeather;')
+    .replace('#include <common>', '#include <common>\nvarying vec3 vWW;\nvarying vec3 vWN;\nuniform sampler2D tWNoise;\nuniform float uWeather;\nuniform float uSnow;\nuniform vec4 uSnowHole;')
     .replace('#include <color_fragment>', '#include <color_fragment>\n' + WEATHER_FRAG)
 }
 // Give a material the weathering layer; extra patches run after it.

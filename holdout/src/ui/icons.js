@@ -15,6 +15,7 @@ export const ICON = {
   cloud: svg('<path d="M7 18h10a4 4 0 0 0 .6-8A6 6 0 0 0 6 11a3.5 3.5 0 0 0 1 7z"/>'),
   rain: svg('<path d="M7 15h10a4 4 0 0 0 .6-8A6 6 0 0 0 6 8a3.5 3.5 0 0 0 1 7z"/><path d="M8 18l-1 3M12 18l-1 3M16 18l-1 3"/>'),
   fog: svg('<path d="M4 9h16M3 13h18M5 17h14"/>'),
+  snow: svg('<path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9"/><path d="M9.5 4.5L12 7l2.5-2.5M9.5 19.5L12 17l2.5 2.5"/>'),
   log: svg('<path d="M6 4h12v16H6z"/><path d="M9 8h6M9 12h6M9 16h4"/>'),
   items: svg('<path d="M7 7V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/><rect x="4" y="7" width="16" height="13" rx="2"/><path d="M4 12h16M11 12v2h2v-2"/>'),
   production: svg('<path d="M4 20V10l5 3V10l5 3V6l6 4v10z"/><path d="M8 17h2M14 17h2"/>'),

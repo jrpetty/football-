@@ -5,7 +5,8 @@ import * as THREE from 'three'
 import { Character, OUTFITS, zombieOutfit, rngFrom, hashStr } from '../models/character.js'
 import { weaponModel, holdStyle } from '../models/weapons.js'
 import { ZOMBIES, ITEMS } from '../game/data.js'
-import { survivorStats, gainXP, equippedItem, wear, S, researchDone } from '../game/state.js'
+import { survivorStats, gainXP, equippedItem, wear, S, researchDone, exposeInfection } from '../game/state.js'
+import { INFECTION } from '../game/data.js'
 import { sfx } from '../core/audio.js'
 import { clamp, angleLerp, rand, chance, h } from '../core/util.js'
 import { view } from '../render/view.js'
@@ -239,10 +240,16 @@ export class SurvivorAgent extends Agent {
     }
     return true
   }
-  hurt(dmg, from) {
+  hurt(dmg, from, o = {}) {
     if (this.downed || this.dead) return
     const real = dmg * (1 - this.st.dr)
     this.hp -= real
+    if (!this.npc && (from?.faction === 'zombie' || o.gas)) {
+      if (exposeInfection(this.data, o.gas ? INFECTION.gas : INFECTION.bite, o.gas ? 0 : this.st.dr)) {
+        this.world.toast?.(`${this.data.first} was ${o.gas ? 'poisoned by the gas' : 'bitten'}. Infected!`, 'bad')
+        view.labels.float(this.world.scene, this.chestPos(2.1), 'Infected', 'bad')
+      }
+    }
     this.hurtT = 1.2
     this.ch.flinch()
     this.world.fx.blood(this.chestPos(1.2))
@@ -260,7 +267,7 @@ export class SurvivorAgent extends Agent {
   useMedkit() {
     this.medkitUsed = true
     this.world.consumeMedkit?.(this)
-    this.hp = Math.min(this.maxHp, Math.max(this.hp, 0) + this.maxHp * 0.5)
+    this.hp = Math.min(this.maxHp, Math.max(this.hp, 0) + this.maxHp * (researchDone('fieldmed') ? 0.75 : 0.5))
     view.labels.float(this.world.scene, this.chestPos(2), 'First aid kit', 'good')
     sfx('levelup')
   }

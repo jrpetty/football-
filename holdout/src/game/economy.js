@@ -3,13 +3,14 @@
 // recruits, distress calls, hordes and the black market.
 import {
   RES, STOCK_KEYS, AMMO_KEYS, ITEMS, QUALITY, MODS, STATIONS, FENCE, RECIPES, EXPANSIONS, HORDES, OCCUPATIONS, LOCATIONS,
-  GAME_MIN_PER_SEC, DAY_MIN, SEC_PER_DAY, RARITY, ALT_RECIPES,
+  GAME_MIN_PER_SEC, DAY_MIN, SEC_PER_DAY, RARITY, ALT_RECIPES, INFECTION, OUTPOST,
 } from './data.js'
 import {
   S, day, hour, bounds, log, gain, pay, canAfford, capOf, stationSize, workersOf, workEff, gainXP, completeGoal,
   survivorStats, itemOf, addItem, repairCost, orderSpec, rollQuality, rebuildFence, fenceMax, makeSurvivor, killSurvivor,
   bedCount, countType, maxLevelOf, addMoraleEvent, itemName, moraleMult, available, getS, isUnlocked, hasFlag, feedSignal,
-  researchDone, finishResearch, coreBoost,
+  researchDone, finishResearch, coreBoost, treatInfection, season, seasonIdx, campTier, perkOf,
+  outpostYield, abandonOutpost,
 } from './state.js'
 import { bus, pick, rint, rand, chance, clamp, weighted } from '../core/util.js'
 import { tickLinks, beltBonus, belted, pulled, outCap } from './belts.js'
@@ -94,7 +95,13 @@ export function dailyNeeds() {
     food += s.traits.includes('glutton') ? 3 : 2
     water += 2.4
   }
-  return { food: food * (1 - kitchenSaving()) * (hasFlag('rations') ? 0.85 : 1), water }
+  return { food: food * (1 - kitchenSaving()) * (hasFlag('rations') ? 0.85 : 1), water: water * season().water }
+}
+
+// Winter heat: wood per survivor a day, or fuel at a third of that.
+export function heatNeed() {
+  const k = season().heat
+  return k ? { wood: k * S.survivors.length, fuel: (k / 3) * S.survivors.length } : null
 }
 
 // Idle survivors (no job) help build, or forage when nothing is going up.
@@ -103,7 +110,7 @@ export function constructSpeed() {
   let sp = 0.35
   for (const s of S.survivors) {
     if (s.status !== 'ok' || s.job) continue
-    sp += 0.3 * (0.62 + 0.08 * s.skills.build) * (1 + (OCCUPATIONS[s.occ].fx.construct || 0))
+    sp += 0.3 * (0.62 + 0.08 * s.skills.build) * (1 + (OCCUPATIONS[s.occ].fx.construct || 0) + (s.perks || []).reduce((a, p) => a + (perkOf(p)?.fx.construct || 0), 0))
   }
   return Math.min(3.2, sp * moraleMult())
 }
@@ -116,11 +123,11 @@ export function stationFlow(st, pinfo = power()) {
   const flow = {}
   const add = (k, v) => (flow[k] = (flow[k] || 0) + v)
   if (st.building || st.level < 1) return flow
-  if (d.passive) for (const [k, arr] of Object.entries(d.passive)) add(k, arr[st.level - 1] * (S.weather.type === 'rain' ? 2 : 1))
+  if (d.passive) for (const [k, arr] of Object.entries(d.passive)) add(k, arr[st.level - 1] * passiveMult(st))
   if (d.recipe && rate > 0) {
     const R = activeSingle(st)
     const tm = Array.isArray(R.time) ? R.time[st.level - 1] : R.time
-    const cyc = (rate * beltBonus(st, R) * SEC_PER_DAY) / tm
+    const cyc = (rate * beltBonus(st, R) * seasonMult(st) * SEC_PER_DAY) / tm
     for (const [k, v] of Object.entries(R.out)) add(k, v * cyc)
     for (const [k, v] of Object.entries(R.in)) add(k, -v * cyc)
   }
@@ -145,8 +152,15 @@ export function campFlow() {
   const n = dailyNeeds()
   total.food = (total.food || 0) - n.food
   total.water = (total.water || 0) - n.water
+  const heat = heatNeed()
+  if (heat) {
+    if (S.res.wood > 1) total.wood = (total.wood || 0) - heat.wood
+    else total.fuel = (total.fuel || 0) - heat.fuel
+  }
   return total
 }
+const passiveMult = (st) => (S.weather.type === 'rain' ? 2 : S.weather.type === 'snow' ? 0.6 : 1) * (st.type === 'collector' ? season().collector : 1)
+const seasonMult = (st) => (st.type === 'farm' ? season().farm : 1)
 
 // ---------------------------------------------------------------- econ tick
 export function econTick(dt, opts = {}) {
@@ -157,12 +171,23 @@ export function econTick(dt, opts = {}) {
   const pinfo = (pinfoCache = powerInfo())
 
   // ---- weather changes at dawn and sometimes midday
-  if (S.time >= S.weather.until) rollWeather()
+  if (S.time >= S.weather.until && !opts.offline) rollWeather()
 
   // ---- food & water
   const needs = dailyNeeds()
   S.res.food = Math.max(0, S.res.food - (needs.food / SEC_PER_DAY) * dt)
   S.res.water = Math.max(0, S.res.water - (needs.water / SEC_PER_DAY) * dt)
+  const heat = heatNeed()
+  let cold = false
+  if (heat) {
+    const w = (heat.wood / SEC_PER_DAY) * dt
+    const f = (heat.fuel / SEC_PER_DAY) * dt
+    if (S.res.wood >= w) S.res.wood -= w
+    else if (S.res.fuel >= f) S.res.fuel -= f
+    else cold = S.survivors.length > 0
+  }
+  if (cold && !S.cold) log('The camp is out of wood and fuel. Everyone is freezing.', 'bad')
+  S.cold = cold
   const hungry = S.survivors.length > 0 && (S.res.food <= 0.01 || S.res.water <= 0.01)
   if (hungry && !S.hungry) log(S.res.water <= 0.01 ? 'Out of water! Everyone is weakening.' : 'Out of food! Everyone is weakening.', 'bad')
   S.hungry = hungry
@@ -230,7 +255,7 @@ export function econTick(dt, opts = {}) {
     const rate = stationRate(st, pinfo)
     if (isAutomated(st, pinfo)) anyAuto = true
     if (d.passive) {
-      const mult = S.weather.type === 'rain' ? 2 : 1
+      const mult = passiveMult(st)
       for (const [k, arr] of Object.entries(d.passive)) {
         const v = (arr[st.level - 1] * mult / SEC_PER_DAY) * dt
         if (belted(st, k)) st.buf.out[k] = Math.min(outCap(k), (st.buf.out[k] || 0) + v)
@@ -273,8 +298,8 @@ export function econTick(dt, opts = {}) {
   for (const s of S.survivors) {
     if (s.status === 'mission') continue
     const st = survivorStats(s)
-    if (S.hungry) s.hp = Math.max(1, s.hp - dt * 0.1)
-    else if (s.status === 'ok') s.hp = Math.min(st.maxHp, s.hp + dt * 0.1)
+    if (S.hungry || S.cold) s.hp = Math.max(1, s.hp - dt * (S.hungry && S.cold ? 0.15 : 0.1))
+    else if (s.status === 'ok' || s.status === 'outpost') s.hp = Math.min(st.maxHp, s.hp + dt * 0.1)
     else if (s.status === 'injured') {
       s.hp = Math.min(st.maxHp, s.hp + dt * 0.035)
       if (s.hp >= st.maxHp * 0.7) {
@@ -285,6 +310,7 @@ export function econTick(dt, opts = {}) {
     }
   }
 
+  if (!opts.offline) tickInfection(dt)
   tickMorale(dt)
 
   // ---- recruits & distress calls
@@ -303,6 +329,9 @@ export function econTick(dt, opts = {}) {
       log(`A survivor is waiting at the gate: ${s.name}, ${OCCUPATIONS[s.occ].name}.`, 'story')
     }
   } else if (S.time >= S.recruit.next) scheduleRecruit()
+  // Offline catch-up runs with the clock held (see main.js): production
+  // only, no events, hordes or new days.
+  if (opts.offline) return
   S.events = S.events.filter((e) => e.expires > S.time)
   if (S.time >= (S.nextEvent || 0)) spawnEvent()
 
@@ -313,12 +342,7 @@ export function econTick(dt, opts = {}) {
       R.warned = true
       bus.emit('raidWarn', raidIntel())
     }
-    if (S.time >= R.at) {
-      if (opts.offline) {
-        autoResolveRaid(R, true)
-        scheduleRaid()
-      } else bus.emit('raidStart', R)
-    }
+    if (S.time >= R.at) bus.emit('raidStart', R)
   }
 
   // ---- day rollover
@@ -326,10 +350,75 @@ export function econTick(dt, opts = {}) {
     restockMarket()
     for (const k of Object.keys(S.looted)) if (S.looted[k] <= day()) delete S.looted[k]
     log(`Day ${day()} begins. ${S.survivors.length} survivors in camp.`, 'story')
+    if (seasonIdx() !== seasonIdx(day() - 1)) {
+      const Z = season()
+      log(`${Z.name} has come. ${Z.desc}`, 'story')
+      bus.emit('season', Z)
+    }
     if (S.morale < 18) desertion()
+    tickOutposts()
     bus.emit('newDay', day())
   }
-  if (Math.floor(prevHour) !== Math.floor(hour())) checkGoals()
+  if (Math.floor(prevHour) !== Math.floor(hour())) {
+    checkGoals()
+    sampleHistory()
+  }
+}
+
+// ---------------------------------------------------------------- outposts
+// Each morning the convoys come home with the outposts' goods. Now and then
+// the dead attack one: a strong garrison holds; a weak one takes losses, and
+// an outpost worn down to nothing is lost.
+function tickOutposts() {
+  for (const o of [...(S.outposts || [])]) {
+    const crew = o.crew.map(getS).filter((s) => s && s.status === 'outpost')
+    o.crew = crew.map((s) => s.id)
+    if (!crew.length) {
+      abandonOutpost(o, `${o.name} has nobody left to hold it. The outpost is lost.`)
+      continue
+    }
+    const got = outpostYield(o)
+    const lost = gain(got)
+    const brought = Object.entries(got).filter(([k, v]) => v - (lost[k] || 0) >= 1)
+    o.last = { day: day(), got: Object.fromEntries(brought.map(([k, v]) => [k, Math.round(v - (lost[k] || 0))])) }
+    // attacks
+    if (chance(0.07 + threatLevel() / 260)) {
+      let def = 0
+      for (const s of crew) {
+        const st = survivorStats(s)
+        def += (st.dmg / st.rate) * (st.gun ? 1.3 : 0.9) + st.maxHp * 0.12
+      }
+      def *= OUTPOST.defense[o.level - 1]
+      const atk = 18 + threatLevel() * 4 * rand(0.6, 1.4)
+      const ratio = def / atk
+      if (ratio >= 1) {
+        o.hp = Math.max(10, o.hp - rand(0, 12))
+        log(`The dead came for ${o.name}. ${crew.map((s) => s.first).join(' and ')} held them off.`, 'good')
+        for (const s of crew) gainXP(s, survivorStats(s).gun ? 'ranged' : 'melee', 20)
+      } else {
+        o.hp -= rand(25, 55) * (1.2 - ratio)
+        const hurt = pick(crew)
+        hurt.hp = Math.max(1, hurt.hp - survivorStats(hurt).maxHp * rand(0.3, 0.7))
+        if (chance(0.25 * (1 - ratio))) {
+          killSurvivor(hurt, `Killed holding the ${o.name} outpost`)
+        } else log(`${o.name} was overrun for a while. ${hurt.first} was hurt.`, 'bad')
+        if (o.hp <= 0) abandonOutpost(o, `${o.name} fell. The survivors made it home.`)
+      }
+      bus.emit('outposts')
+    } else o.hp = Math.min(100, o.hp + 8)
+  }
+}
+
+// ---------------------------------------------------------------- history
+// Stock levels sampled every in-game hour for the last four days (graphs).
+export const HIST_LEN = 96
+function sampleHistory() {
+  const H = (S.hist = S.hist || { res: {} })
+  for (const k of STOCK_KEYS) {
+    const a = (H.res[k] = H.res[k] || [])
+    a.push(Math.round(S.res[k] * 10) / 10)
+    if (a.length > HIST_LEN) a.shift()
+  }
 }
 
 // Continuous processors: farm, filter, lumber, scrap, forge, still.
@@ -344,7 +433,7 @@ function tickProcessor(st, R, rate, dt) {
     return
   }
   st.active = true
-  st.progress += (dt * rate * beltBonus(st, R)) / tm
+  st.progress += (dt * rate * beltBonus(st, R) * seasonMult(st)) / tm
   let guard = 0
   while (st.progress >= 1 && guard++ < 20) {
     if (!hasInputs(st, R.in)) {
@@ -605,8 +694,11 @@ function tickInfirmary(st, rate, dt) {
   const d = STATIONS.infirmary
   const medics = workersOf(st).filter((s) => s.status === 'ok')
   let healPower = 0
-  for (const m of medics) healPower += workEff(m, 'infirmary') * (OCCUPATIONS[m.occ].fx.healMult || 1)
-  const patients = S.survivors.filter((s) => s.status === 'injured' || (s.status === 'ok' && s.hp < survivorStats(s).maxHp * 0.6)).slice(0, d.beds[st.level - 1])
+  for (const m of medics) healPower += workEff(m, 'infirmary') * (OCCUPATIONS[m.occ].fx.healMult || 1) * (1 + (m.perks || []).reduce((a, p) => a + (perkOf(p)?.fx.heal || 0), 0))
+  const patients = S.survivors
+    .filter((s) => s.status !== 'mission' && (s.infection > 0 || s.status === 'injured' || (s.status === 'ok' && s.hp < survivorStats(s).maxHp * 0.6)))
+    .sort((a, b) => (b.infection || 0) - (a.infection || 0))
+    .slice(0, d.beds[st.level - 1])
   st.patients = patients.map((p) => p.id)
   if (patients.length && healPower > 0) {
     const per = (d.heal[st.level - 1] * healPower * dt * 2.2) / patients.length
@@ -646,6 +738,34 @@ function tickTraining(st, dt) {
   st.active = trainees.length > 0
 }
 
+// ---------------------------------------------------------------- infection
+// Infections climb day by day, slower for a patient at a staffed Infirmary,
+// whose medics also give antivirals when the camp has them. At 100 the
+// survivor turns: in camp the others have to put them down.
+function tickInfection(dt) {
+  const inf = S.stations.find((st) => st.type === 'infirmary' && st.level > 0 && !st.building && workersOf(st).some((w) => w.status === 'ok' && !(w.infection >= INFECTION.sick)))
+  for (const s of [...S.survivors]) {
+    if (!(s.infection > 0)) continue
+    const cared = inf && (inf.patients || []).includes(s.id)
+    if (cared && inf.autoTreat !== false && s.infection < INFECTION.cureBelow && S.res.antiviral >= 1) {
+      treatInfection(s)
+      continue
+    }
+    const before = s.infection
+    s.infection += (INFECTION.perDay / SEC_PER_DAY) * dt * (cared ? INFECTION.infirmary : 1)
+    if (before < INFECTION.fever && s.infection >= INFECTION.fever) log(`${s.first} is running a fever. The infection is spreading.`, 'bad')
+    if (before < INFECTION.sick && s.infection >= INFECTION.sick) {
+      log(`${s.first} is turning. Too sick to go out; an antiviral can only slow it now.`, 'bad')
+      bus.emit('turning', s)
+    }
+    if (s.infection >= 100 && s.status !== 'mission') {
+      killSurvivor(s, 'Turned after an infection and had to be put down')
+      addMoraleEvent(`${s.first} turned`, -12, 2)
+      bus.emit('turned', s)
+    }
+  }
+}
+
 // ---------------------------------------------------------------- expansions
 function finishExpansion() {
   const X = EXPANSIONS.find((e) => e.id === S.expanding.id)
@@ -667,6 +787,8 @@ export function moraleFactors() {
   f.push({ text: 'Baseline', v: 45 })
   if (S.res.food <= 0.01) f.push({ text: 'No food', v: -25 })
   if (S.res.water <= 0.01) f.push({ text: 'No water', v: -25 })
+  if (S.cold) f.push({ text: 'Freezing', v: -15 })
+  else if (season().heat) f.push({ text: 'Warm through winter', v: 2 })
   const bunks = S.stations.filter((s) => s.type === 'bunkhouse' && s.level > 0)
   if (bunks.length) f.push({ text: 'Bunk comfort', v: Math.round(bunks.reduce((a, s) => a + s.level, 0) / bunks.length * 4) })
   if (S.stations.some((s) => s.type === 'campfire')) f.push({ text: 'Campfire', v: 4 })
@@ -711,15 +833,9 @@ function desertion() {
 // ---------------------------------------------------------------- weather
 function rollWeather() {
   const h = hour()
-  const r = weighted([
-    { t: 'clear', w: 45 },
-    { t: 'hazy', w: 18 },
-    { t: 'overcast', w: 16 },
-    { t: 'rain', w: 15 },
-    { t: 'fog', w: 6 },
-  ]).t
+  const r = weighted(Object.entries(season().weather).map(([t, w]) => ({ t, w }))).t
   S.weather = { type: r, until: S.time + rand(6, 16) * 60 }
-  if (r !== 'clear' && r !== 'hazy') log(r === 'rain' ? 'It starts to rain. The collectors fill faster.' : r === 'fog' ? 'Fog rolls in. Zombies can\'t see far, and neither can you.' : 'Clouds roll over.', '')
+  if (r !== 'clear' && r !== 'hazy') log(r === 'rain' ? 'It starts to rain. The collectors fill faster.' : r === 'snow' ? 'Snow is falling.' : r === 'fog' ? 'Fog rolls in. Zombies can\'t see far, and neither can you.' : 'Clouds roll over.', '')
   bus.emit('weather', r)
 }
 
@@ -753,26 +869,49 @@ function spawnEvent() {
 }
 
 // ---------------------------------------------------------------- hordes
+// How much attention the camp draws: what it has built and how many it
+// shelters count for most; time survived adds a little, capped. This, not
+// the calendar, decides how big hordes get.
+export function threatLevel() {
+  const exp = Object.values(S.expansions).filter((v) => v === 'done').length
+  return campTier() * 1.1 + (S.signal?.phase || 0) * 0.9 + S.survivors.length / 5 + exp * 0.5 + Math.min(day(), 60) / 10
+}
+export const BLOOD_MOON_EVERY = 7
+// Days on which the night horde is a Blood Moon.
+export const isBloodMoonDay = (d) => d >= BLOOD_MOON_EVERY && d % BLOOD_MOON_EVERY === 0
 export function scheduleRaid(first = false) {
-  const d = day()
+  const T = threatLevel()
   let sizeIdx
-  if (first || d < 4) sizeIdx = 0
-  else if (d < 8) sizeIdx = chance(0.6) ? 0 : 1
-  else if (d < 14) sizeIdx = chance(0.55) ? 1 : 2
-  else if (d < 22) sizeIdx = chance(0.6) ? 2 : 3
+  if (first || T < 3) sizeIdx = 0
+  else if (T < 6) sizeIdx = chance(0.6) ? 0 : 1
+  else if (T < 10) sizeIdx = chance(0.55) ? 1 : 2
+  else if (T < 15) sizeIdx = chance(0.6) ? 2 : 3
   else sizeIdx = 3
+  let at = first ? 22 * 60 : S.time + rand(20, 32) * 60
+  // a Blood Moon night comes whatever else is on its way
+  let blood = false
+  if (!first) {
+    let d = day()
+    if (S.time > (d - 1) * DAY_MIN + 22 * 60) d++
+    while (!isBloodMoonDay(d)) d++
+    const bm = (d - 1) * DAY_MIN + 22 * 60
+    if (bm <= at + 4 * 60) {
+      at = bm
+      blood = true
+      sizeIdx = Math.min(3, sizeIdx + 1)
+    }
+  }
   const H = HORDES[sizeIdx]
-  const camp = Object.values(S.expansions).filter((v) => v === 'done').length + Math.floor(S.survivors.length / 4)
-  const count = rint(H.min, H.max) + Math.floor(d / 4) + camp
-  const at = first ? 22 * 60 : S.time + rand(20, 32) * 60
-  S.nextRaid = { at, size: sizeIdx, count, warned: false }
+  const count = Math.round((rint(H.min, H.max) + Math.floor(T * 1.2)) * (blood ? 1.6 : 1))
+  const lvl = clamp(1 + Math.floor(T / 4) + (blood ? 1 : 0), 1, 5)
+  S.nextRaid = { at, size: sizeIdx, count, warned: false, blood, lvl }
 }
 export function raidIntel() {
   const r = S.nextRaid
   if (!r) return null
   const towers = countType('watchtower')
   const H = HORDES[r.size]
-  return { in: r.at - S.time, name: towers ? H.name : 'Unknown horde', count: towers ? r.count : null, size: r.size, known: !!towers }
+  return { in: r.at - S.time, name: r.blood ? `Blood Moon: ${towers ? H.name.toLowerCase() : 'a horde'}` : towers ? H.name : 'Unknown horde', count: towers ? r.count : null, size: r.size, known: !!towers, blood: !!r.blood, threat: threatLevel() }
 }
 // A horde hits while nobody is watching (e.g. during a run).
 export function autoResolveRaid(R, offline = false) {
