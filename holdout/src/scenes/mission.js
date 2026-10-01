@@ -16,6 +16,7 @@ import { CONTAINER_MODELS, DECOR_MODELS, addDecor } from '../models/furniture.js
 import { carModel, vanModel, pickupModel } from '../models/vehicles.js'
 import { pineModel, broadleafModel } from '../models/nature.js'
 import { throwableModel } from '../models/weapons.js'
+import { plateMat } from '../models/detail.js'
 import { InstSet, PropList, mapTreeModel, mapVehicleModel, mapPropModel } from '../models/citykit.js'
 import * as CB from '../models/citybuildings.js'
 import { locationModel } from '../models/citylandmarks.js'
@@ -432,11 +433,19 @@ export class Mission {
       }
       b.box(alongX ? 1.0 : T_WALL + 0.1, 0.02, alongX ? T_WALL + 0.1 : 1.0, { mat: 'wood', color: '#6a5a48', x: c.x, y: 0.072, z: c.z, shadow: false, ao: 0 })
     }
-    // a sign over the front door
+    // a name board over the front door of shops and public buildings, kept
+    // within the front wall (homes don't get one)
     const B = lv.bld
-    if (B && !B.prefab) {
+    if (B && !B.prefab && this.loc.type !== 'house') {
       const dc = this.center(B.door.i, B.door.j)
-      b.box(Math.min(10, (B.i1 - B.i0) * 0.6), 0.9, 0.2, { material: this.cutMat('paint'), color: '#2a2e2a', x: dc.x, y: WALL_EXT + 0.55, z: dc.z + 0.2 })
+      const left = this.center(B.i0, B.j1).x
+      const right = this.center(B.i1, B.j1).x
+      const w = Math.min(7, (right - left) * 0.5, 2 * Math.min(dc.x - left, right - dc.x) - 0.4)
+      if (w > 1.5) {
+        const name = (this.loc.name || '').split(' ').slice(-2).join(' ').toUpperCase()
+        b.box(w + 0.16, 0.86, 0.16, { material: this.cutMat('paint'), color: '#2a2e2a', x: dc.x, y: WALL_EXT + 0.5, z: dc.z + 0.2 })
+        b.plane(w, 0.7, { material: plateMat(name, '#e8e0c8', '#2a2420'), x: dc.x, y: WALL_EXT + 0.5, z: dc.z + 0.285, shadow: false })
+      }
     }
     this.addStatic(b)
     // furniture

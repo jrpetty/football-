@@ -13,7 +13,7 @@ const pick = (r, a) => a[Math.floor(r() * a.length)]
 
 // ---------------------------------------------------------------- canvas materials
 const cmats = new Map()
-function canvasMat(key, size, draw, opts = {}) {
+export function canvasMat(key, size, draw, opts = {}) {
   if (cmats.has(key)) return cmats.get(key)
   const c = document.createElement('canvas')
   c.width = size[0]

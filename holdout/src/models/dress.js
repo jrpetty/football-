@@ -83,6 +83,9 @@ function fabric(h, o = {}) {
       const g = fbm3(x.x * 5.5 + sd * 7, x.yy * 5.5 + 3, x.z * 5.5)
       lerpC(c, c, g > 0.7 ? BLOOD : BLOOD2, smooth(0.55, 0.65, g) * blood)
     }
+    // white cloth in hard sun blooms; keep albedo below that
+    const lum = c.r * 0.3 + c.g * 0.59 + c.b * 0.11
+    if (lum > 0.5) c.multiplyScalar(0.5 / lum)
   }
 }
 // Skin with pores-scale mottling; on the dead, bruising, veins and gore.
@@ -1638,10 +1641,11 @@ function gore(c) {
     const y = y0 + rnd() * (y1 - y0)
     const q = p.at(y, {})
     b.rigid(bn)
-    onSurf(b, p, y, (rnd() - 0.5) * q.w * 1.2, rnd() < 0.65 ? 1 : -1, 0.0015, () => {
+    onSurf(b, p, y, (rnd() - 0.5) * q.w * 1.2, rnd() < 0.65 ? 1 : -1, 0.0008, () => {
       const big = p === A.torso
-      b.sphere(big ? 0.032 : 0.02, { mat: 'gloss', color: ['#4a0e0a', '#5e1410', '#3a0a08'][i % 3], sz: 0.22, sx: 1 + rnd() * 0.6, ws: 10, hs: 7 })
-      b.sphere(big ? 0.016 : 0.01, { mat: 'gloss', color: '#2a0604', z: 0.002, sz: 0.25, ws: 8, hs: 6 })
+      const r0 = big ? 0.026 : 0.016
+      b.ico(r0, { mat: 'gloss', color: ['#4a0e0a', '#561410', '#3a0a08'][i % 3], sz: 0.18, sx: 1 + rnd() * 0.7, rz: rnd() * 3, detail: 1, noise: 0.5 })
+      b.ico(r0 * 0.55, { mat: 'gloss', color: '#240504', z: 0.0015, sz: 0.2, sx: 1.3, rz: rnd() * 3, detail: 1, noise: 0.4 })
     })
   }
 }

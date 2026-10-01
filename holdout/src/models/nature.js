@@ -116,7 +116,7 @@ export function limb(b, pts, r0, r1, o = {}) {
 }
 // A foliage card: a quad with 0..1 UVs, centred at the origin, facing +z,
 // bent slightly so it doesn't read as a flat sheet.
-function card(b, w, h, o) {
+export function card(b, w, h, o) {
   const g = new THREE.PlaneGeometry(w, h, 2, 2)
   const p = g.attributes.position
   for (let i = 0; i < p.count; i++) {
@@ -129,7 +129,7 @@ function card(b, w, h, o) {
 }
 // A clump of leaf cards round a point, plus a dark inner core that fills the
 // gaps so the crown reads as solid from a distance.
-function leafClump(b, x, y, z, r, rnd, o = {}) {
+export function leafClump(b, x, y, z, r, rnd, o = {}) {
   const key = o.mat ?? 'leafCard'
   const n = o.n ?? 9
   const greens = o.colors ?? ['#ffffff', '#f0f4e8', '#e0e8d0', '#f8fff0']

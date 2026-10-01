@@ -6,6 +6,7 @@
 // Containers expose door/drawer pivots that swing open once searched.
 import { Builder, seeded } from './kit.js'
 import { shelfItems, crate as crateProp, barrel, pallet as palletProp, shadeHex, lantern } from './parts.js'
+import { HC, HDD } from './furnitureHD.js'
 
 const TAU = Math.PI * 2
 const pick = (r, a) => a[Math.floor(r() * a.length)]
@@ -610,6 +611,9 @@ D.bench = (b, r) => {
 }
 D.table2 = D.table
 
+// the high-detail builds replace the originals
+Object.assign(C, HC)
+Object.assign(D, HDD)
 export const CONTAINER_MODELS = C
 export const DECOR_MODELS = D
 

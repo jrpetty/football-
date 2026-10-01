@@ -671,8 +671,8 @@ export function containerModel(o = {}) {
   }
   return b.build()
 }
-export function forkliftModel() {
-  const b = new Builder()
+// Draw a forklift into any builder (decor merges it into a room).
+export function drawForklift(b) {
   const rnd = seeded(2)
   const yel = { mat: 'paint', color: '#d89a1a' }
   const blk = { mat: 'paint', color: '#222222' }
@@ -710,5 +710,9 @@ export function forkliftModel() {
   }
   for (const sx of [-1, 1]) b.box(0.18, 0.06, 0.1, { mat: 'glass', color: '#f0ead8', x: sx * 0.42, y: 1.9, z: 0.5 })
   blob(b, 0.4, 0.2, { rnd, x: 0.552, y: 0.6, z: -0.3, ry: Math.PI / 2, drip: true })
+}
+export function forkliftModel() {
+  const b = new Builder()
+  drawForklift(b)
   return b.build()
 }
