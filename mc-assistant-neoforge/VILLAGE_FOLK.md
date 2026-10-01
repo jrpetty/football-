@@ -354,7 +354,9 @@ blaze rods and powder, nether wart and soul sand, slime balls and leads, flint, 
 and bones are all on the stalls' buying list. The quest board asks for what a trade is
 actually running short of: blaze powder for the brewing stand's fire, lapis or cane for
 the enchanter, feathers for the watch's arrows, a lead for the rancher, cocoa for the
-café, and so on.
+café, and so on. Or give it straight to the folk whose trade needs it (a gift from the
+talk screen): a brewer handed blaze powder, a rancher a lead or an enchanter lapis
+thanks you for it warmly and puts it to work that day.
 
 Ask any folk **"How does your trade work?"** to hear its own account of its work:
 its tools, what it uses, where its work goes, and what it is short of. **"What is

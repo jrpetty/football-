@@ -137,6 +137,17 @@ public final class Trades {
         };
     }
 
+    /** What of a trade's this is, in words (a tool, a makings, its kit), or null if the trade has no use for it. */
+    @Nullable
+    public static String wants(StationTask t, ItemStack s) {
+        if (s.isEmpty() || t == StationTask.NONE) return null;
+        Trade trade = of(t);
+        for (Need n : trade.tools()) if (n.what().test(s)) return n.words();
+        for (Need n : trade.inputs()) if (n.what().test(s)) return n.words();
+        if (keeps(t, s) > 0) return "my work";
+        return null;
+    }
+
     // ------------------------------------------------------------------ talk
 
     /** "How does your trade work?" — in the folk's own words, with what it has and what it lacks. */

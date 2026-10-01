@@ -788,6 +788,12 @@ public final class FolkTalk {
         } else if (id.equals(me.food())) {
             delta = 12;
             said = pick(r, what + "! My favourite! Thank you!", "You remembered! " + what + " is my favourite.");
+        } else if (Trades.wants(f.stationTask(), held) != null) {
+            // Something its trade needs (Trades): it goes straight into the work.
+            delta = 8;
+            String need = Trades.wants(f.stationTask(), held);
+            said = pick(r, "Just what my trade needs — " + need + "! I'll put it to work today.",
+                what + "? That's exactly what I was short of. Thank you, " + you + ".");
         } else if (held.get(DataComponents.FOOD) != null || kind != null || held.is(ItemTags.LOGS)
             || held.is(Items.IRON_INGOT) || held.is(Items.COAL) || held.is(Items.TORCH)) {
             delta = 5;
