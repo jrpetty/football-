@@ -1,105 +1,105 @@
-# The family house: a timber-framed cottage on a stone footing, a steep pitched
-# roof with a stone chimney, glass in the windows, lanterns either side of the
-# door, and four beds: a family sleeps under one roof.
+# The smeltery: a stone forge, open to the street between two log pillars,
+# three furnaces along the back wall under a broad chimney, an anvil, and the
+# smelter's bench and chests.
 # Rows run from the back of the building (top) to the front (bottom, the door).
-name house
+name smeltery
 layer -1
 .........
 .FFFFFFF.
-.FfffffF.
-.FfffffF.
-.FfffffF.
-.FfffffFF
-.FfffffF.
+.FSSSSSF.
+.FSSSSSF.
+.FSSSSSF.
+.FSSSSSF.
+.FSSSSSF.
 .FFFFFFF.
-....k....
+.........
 layer 0
 .........
-.LwwwwwL.
-.w..C..w.
-.wBB.BBw.
-.w.....w.
-.w.....wS
-.wT...Uw.
-.LwwDwwL.
+.LSSSSSL.
+.SCUUUCS.
+.S.....S.
+.S....&S.
+.ST..a.S.
+.S.....S.
+.L.....L.
 .........
 layer 1
 .........
-.LWGWGWL.
-.W.....W.
+.LSSSSSL.
+.S.....S.
+.S.....S.
 .G.....G.
-.W.....W.
-.G.....GS
-.Wt....W.
-.LGW.WGL.
+.S.....S.
+.S.....S.
+.L.....L.
 .........
 layer 2
 .........
-.LWWWWWL.
-.W.....W.
-.W.....W.
-.W..j..W.
-.W.....WS
-.W.....W.
-.LWWWWWL.
+.LSSSSSL.
+.S.....S.
+.S.....S.
+.S.....S.
+.S.....S.
+.S.....S.
+.L.....L.
 ..j...j..
 layer 3
 vvvvvvvvv
-.L-----L.
+.L-ZZZ-L.
 .|fffff|.
 .|fffff|.
 .|fffff|.
-.|fffff|S
+.|fffff|.
 .|fffff|.
 .L-----L.
 ^^^^^^^^^
 layer 4
 .........
-vvvvvvvvv
+vvvZZZvvv
+.W.ZZZ.W.
 .W.....W.
 .W.....W.
 .W.....W.
-.W.....WS
 .W.....W.
 ^^^^^^^^^
 .........
 layer 5
 .........
-.........
-vvvvvvvvv
+...ZZZ...
+vvvZZZvvv
 .W.....W.
-.G.....G.
-.W.....WS
+.W.....W.
+.W.....W.
 ^^^^^^^^^
 .........
 .........
 layer 6
 .........
-.........
-.........
+...ZZZ...
+...ZZZ...
 vvvvvvvvv
 .W.....W.
-^^^^^^^^S
+^^^^^^^^^
 .........
 .........
 .........
 layer 7
 .........
-.........
-.........
+...ZZZ...
+...ZZZ...
 .........
 _________
-........S
+.........
 .........
 .........
 .........
 layer 8
 .........
+...zzz...
+...zzz...
 .........
 .........
 .........
-.........
-........S
 .........
 .........
 .........

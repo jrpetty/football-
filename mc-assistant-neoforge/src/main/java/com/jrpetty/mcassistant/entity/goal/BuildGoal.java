@@ -49,6 +49,10 @@ public class BuildGoal extends Goal {
      *  barracks, the chapel's length and the gateway's step are seven across, the rest
      *  five or less. The ground work and the stocking read it. */
     public static int halfOf(String structure) {
+        if (Blueprints.has(structure)) {
+            int[] g = Blueprints.groundHalf(structure);
+            return Math.max(g[0], g[1]);
+        }
         return switch (structure) {
             case "hall", "market", "barracks", "chapel", "gateway" -> 3;
             default -> 2;
@@ -58,9 +62,16 @@ public class BuildGoal extends Goal {
     /** What goes in a blueprint cell. */
     public enum Part { BLOCK, FURNACE, CHEST, CRAFTING_TABLE, TORCH, LADDER, FENCE, GATE, WINDOW, BED, OBSIDIAN,
         /** Not a part: something natural in the building's way that comes down first (leaves). */
-        CLEAR }
+        CLEAR,
+        /** The finishing: a door, a lantern, water in a well, hay, barrels, flowers, a rug, an anvil,
+         *  a cauldron, a bell. Each is put in if the village has it, and left out if not. */
+        DOOR, LANTERN, WATER, HAY, BARREL, FLOWER, CARPET, ANVIL, CAULDRON, BELL }
 
-    private record Placement(BlockPos pos, Part part) {}
+    /** One block of a building: where, what part, what it is for (Blueprints.Style), and which way it faces. */
+    public record Placement(BlockPos pos, Part part, Blueprints.Style style, Blueprints.Way way) {
+        Placement(BlockPos pos, Part part) { this(pos, part, Blueprints.Style.GENERIC, Blueprints.Way.UP); }
+        Placement at(BlockPos where) { return new Placement(where, part, style, way); }
+    }
 
     private final AssistantEntity assistant;
     @Nullable private Job job;
@@ -119,6 +130,66 @@ public class BuildGoal extends Goal {
         return counts;
     }
 
+    /** How many blocks of each style a building wants (its drawing's count), for the stocking. */
+    public static Map<Blueprints.Style, Integer> styleCounts(String structure) {
+        return Blueprints.has(structure) ? Blueprints.styleCounts(structure) : Map.of();
+    }
+
+    /** Every block of a building, laid out at an anchor facing a way: for the showcase and the tests. */
+    public static List<Placement> plan(String structure, BlockPos anchor, Direction facing, int radius) {
+        List<Placement> out = new ArrayList<>();
+        layout(structure, anchor, facing, true, Math.max(4, Math.min(16, radius)), out);
+        return out;
+    }
+
+    /**
+     * Put a whole building up at once, out of a chosen palette and not out of anybody's
+     * pack: the showcase (/village showcase), where every building a village can raise is
+     * set out to be looked at. Returns how many blocks went down.
+     */
+    public static int stamp(net.minecraft.server.level.ServerLevel level, String structure, BlockPos anchor,
+                            Direction facing, int radius, java.util.function.Function<Placement, BlockState> palette) {
+        List<Placement> cells = plan(structure, anchor, facing, radius);
+        cells.sort(java.util.Comparator.comparingInt((Placement p) -> finishing(p) ? 1 : 0)
+            .thenComparingInt(p -> p.pos().getY()));
+        int n = 0;
+        for (Placement p : cells) {
+            BlockState st = palette.apply(p);
+            if (st == null) continue;
+            BlockPos pos = p.pos();
+            if (p.part() == Part.BED) {
+                Direction lie = p.way() == Blueprints.Way.UP ? facing : Blueprints.world(p.way(), facing);
+                BlockState bed = st.setValue(net.minecraft.world.level.block.BedBlock.FACING, lie);
+                level.setBlock(pos, bed.setValue(net.minecraft.world.level.block.BedBlock.PART,
+                    net.minecraft.world.level.block.state.properties.BedPart.FOOT), 2 | 16);
+                level.setBlock(pos.relative(lie), bed.setValue(net.minecraft.world.level.block.BedBlock.PART,
+                    net.minecraft.world.level.block.state.properties.BedPart.HEAD), 2 | 16);
+                n += 2;
+                continue;
+            }
+            if (p.part() == Part.FURNACE || p.part() == Part.CHEST || p.part() == Part.LADDER) {
+                Direction d = p.way() == Blueprints.Way.UP || p.way() == Blueprints.Way.FRONT
+                    ? facing.getOpposite() : Blueprints.world(p.way(), facing);
+                st = st.setValue(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING, d);
+            } else {
+                st = orient(st, p, facing, level, pos);
+            }
+            if (p.part() == Part.DOOR) {
+                hangDoor(level, pos, st);
+            } else {
+                level.setBlock(pos, st, 2 | 16);
+            }
+            n++;
+        }
+        // Now everything is in place, join the panes and the fences up.
+        for (Placement p : cells) {
+            BlockState st = level.getBlockState(p.pos());
+            BlockState joined = net.minecraft.world.level.block.Block.updateFromNeighbourShapes(st, level, p.pos());
+            if (joined != st) level.setBlock(p.pos(), joined, 2 | 16);
+        }
+        return n;
+    }
+
     /** The item a part is placed from, for the people stocking a build. */
     public static Predicate<ItemStack> itemForPart(Part part) {
         return itemFor(part);
@@ -127,7 +198,9 @@ public class BuildGoal extends Goal {
     /** Parts placed from any matching item (block taken from the item itself). */
     private static boolean isBlockPart(Part part) {
         return part == Part.BLOCK || part == Part.FENCE || part == Part.GATE || part == Part.WINDOW
-            || part == Part.OBSIDIAN;
+            || part == Part.OBSIDIAN || part == Part.DOOR || part == Part.LANTERN || part == Part.HAY
+            || part == Part.BARREL || part == Part.FLOWER || part == Part.CARPET || part == Part.ANVIL
+            || part == Part.CAULDRON || part == Part.BELL;
     }
 
     /** Decorative parts skipped (not blocked-on) when we lack the item. */
@@ -135,7 +208,16 @@ public class BuildGoal extends Goal {
         // A bed is skipped, not blocked on: wool takes a rancher or a lucky
         // hunt, and a house with no bed is still a house. It gets one the next
         // time a house goes up with wool in the stores.
-        return part == Part.TORCH || part == Part.WINDOW || part == Part.BED;
+        return part == Part.TORCH || part == Part.WINDOW || part == Part.BED || part == Part.DOOR
+            || part == Part.LANTERN || part == Part.WATER || part == Part.HAY || part == Part.BARREL
+            || part == Part.FLOWER || part == Part.CARPET || part == Part.ANVIL || part == Part.CAULDRON
+            || part == Part.BELL;
+    }
+
+    /** Things that hang from, stand on or lie on something else go in last, when it is there. */
+    private static boolean finishing(Placement p) {
+        return p.part() == Part.LANTERN || p.part() == Part.TORCH || p.part() == Part.FLOWER
+            || p.part() == Part.CARPET || p.part() == Part.WATER || p.part() == Part.BELL;
     }
 
     private static Predicate<ItemStack> itemFor(Part part) {
@@ -152,6 +234,16 @@ public class BuildGoal extends Goal {
             case BED -> s -> s.is(ItemTags.BEDS);
             case OBSIDIAN -> s -> s.is(Items.OBSIDIAN);
             case CLEAR -> s -> false;
+            case DOOR -> s -> s.is(ItemTags.WOODEN_DOORS);
+            case LANTERN -> s -> s.is(Items.LANTERN) || s.is(Items.SOUL_LANTERN);
+            case WATER -> s -> s.is(Items.WATER_BUCKET);
+            case HAY -> s -> s.is(Items.HAY_BLOCK);
+            case BARREL -> s -> s.is(Items.BARREL);
+            case FLOWER -> s -> s.is(ItemTags.SMALL_FLOWERS);
+            case CARPET -> s -> s.is(ItemTags.WOOL_CARPETS);
+            case ANVIL -> s -> s.is(ItemTags.ANVIL);
+            case CAULDRON -> s -> s.is(Items.CAULDRON);
+            case BELL -> s -> s.is(Items.BELL);
         };
     }
 
@@ -169,6 +261,16 @@ public class BuildGoal extends Goal {
             case BED -> "a bed (\"craft a bed\" — 3 wool, 3 planks)";
             case OBSIDIAN -> "obsidian";
             case CLEAR -> "nothing";
+            case DOOR -> "a door";
+            case LANTERN -> "a lantern";
+            case WATER -> "a bucket of water";
+            case HAY -> "hay";
+            case BARREL -> "a barrel";
+            case FLOWER -> "flowers";
+            case CARPET -> "a rug";
+            case ANVIL -> "an anvil";
+            case CAULDRON -> "a cauldron";
+            case BELL -> "a bell";
         };
     }
 
@@ -232,11 +334,12 @@ public class BuildGoal extends Goal {
         // A settlement's builders level and clear the ground they build on; a hired
         // assistant building beside a player's own trees and terraces does not.
         if (centered && assistant.isSettler()) {
-            if ("fortify".equals(structure)) followTheGround(base); else addTerrainWork(base, halfOf(structure));
+            if ("fortify".equals(structure)) followTheGround(base); else addTerrainWork(base, structure);
         }
-        // What is in the way comes down first; then bottom-up, so nothing floats while we work.
+        // What is in the way comes down first; then bottom-up, so nothing floats while we work;
+        // and the lanterns, flowers and rugs last, when what they hang from or stand on is there.
         this.plan.sort(java.util.Comparator
-            .comparingInt((Placement p) -> p.part() == Part.CLEAR ? 0 : 1)
+            .comparingInt((Placement p) -> p.part() == Part.CLEAR ? 0 : finishing(p) ? 2 : 1)
             .thenComparingInt((Placement p) -> p.pos().getY())
             .thenComparingDouble(p -> p.pos().distSqr(assistant.feetPos())));
 
@@ -286,16 +389,20 @@ public class BuildGoal extends Goal {
      * they are what lets a village raise its storehouse on a hillside instead of
      * waiting for the one flat acre the world may not have made.
      */
-    private void addTerrainWork(BlockPos base, int half) {
+    private void addTerrainWork(BlockPos base, String structure) {
+        int[] g = footprint(structure);
+        int[] all = Blueprints.has(structure) ? Blueprints.fullHalf(structure) : new int[]{ g[0], g[1] };
         java.util.Set<BlockPos> taken = new java.util.HashSet<>();
         for (Placement p : plan) taken.add(p.pos());
-        for (BlockPos c : fillCells(assistant.level(), base, half)) {
-            if (taken.add(c)) plan.add(new Placement(c, Part.BLOCK));
+        for (BlockPos c : fillCells(assistant.level(), base, facing, g[0], g[1])) {
+            if (taken.add(c)) plan.add(new Placement(c, Part.BLOCK, Blueprints.Style.FOUNDATION, Blueprints.Way.UP));
         }
-        for (int dx = -half - 1; dx <= half + 1; dx++) {
-            for (int dz = -half - 1; dz <= half + 1; dz++) {
-                for (int dy = 0; dy <= 5; dy++) {
-                    BlockPos c = base.offset(dx, dy, dz);
+        Direction right = facing.getClockWise();
+        int top = Blueprints.has(structure) ? 12 : 5;
+        for (int dx = -all[0] - 1; dx <= all[0] + 1; dx++) {
+            for (int dz = -all[1] - 1; dz <= all[1] + 1; dz++) {
+                for (int dy = 0; dy <= top; dy++) {
+                    BlockPos c = cell(base, right, facing, dx, dz).above(dy);
                     if (isInTheWay(assistant.level(), c, assistant.level().getBlockState(c))) plan.add(new Placement(c, Part.CLEAR));
                 }
             }
@@ -322,7 +429,7 @@ public class BuildGoal extends Goal {
             // blocks out from the heart it crosses houses, fields and ponds: a wall through
             // a house fills its rooms, across a field it buries the crop. It goes round them.
             if (!fits.computeIfAbsent(key, k -> wallFits(assistant.level(), x, z, g))) continue;
-            moved.add(new Placement(new BlockPos(x, g + (p.pos().getY() - base.getY()), z), p.part()));
+            moved.add(p.at(new BlockPos(x, g + (p.pos().getY() - base.getY()), z)));
         }
         plan.clear();
         plan.addAll(moved);
@@ -400,6 +507,33 @@ public class BuildGoal extends Goal {
      */
     public static List<BlockPos> fillCells(net.minecraft.world.level.Level level, BlockPos anchor) {
         return fillCells(level, anchor, 2);
+    }
+
+    /** Half the width and half the depth of a building's footing (its drawing's, or the old square). */
+    public static int[] footprint(String structure) {
+        if (Blueprints.has(structure)) return Blueprints.groundHalf(structure);
+        int h = halfOf(structure);
+        return new int[]{ h, h };
+    }
+
+    /** As fillCells, for a footprint {@code hw} across and {@code hd} deep, turned to face {@code facing}. */
+    public static List<BlockPos> fillCells(net.minecraft.world.level.Level level, BlockPos anchor, Direction facing,
+                                           int hw, int hd) {
+        boolean turned = facing.getAxis() == Direction.Axis.X;
+        int wx = turned ? hd : hw, wz = turned ? hw : hd;
+        List<BlockPos> out = new ArrayList<>();
+        for (int dx = -wx; dx <= wx; dx++) {
+            for (int dz = -wz; dz <= wz; dz++) {
+                int x = anchor.getX() + dx;
+                int z = anchor.getZ() + dz;
+                if (!level.hasChunk(x >> 4, z >> 4)) continue;
+                int top = groundTop(level, x, z);
+                for (int y = Math.max(top, anchor.getY() - 8); y < anchor.getY(); y++) {
+                    out.add(new BlockPos(x, y, z));
+                }
+            }
+        }
+        return out;
     }
 
     /** As above, for a footprint {@code half} blocks each side of the middle. */
@@ -550,27 +684,54 @@ public class BuildGoal extends Goal {
             cursor++;
             return;
         }
-        if (isBlockPart(part)) {
+        if (part == Part.WATER) {
+            // Water for a well: a bucket of it poured in, the bucket kept.
+            if (assistant.removeMatching(itemFor(part), 1) < 1) { cursor++; return; }
+            ItemStack left = assistant.insertItem(new ItemStack(Items.BUCKET));
+            if (!left.isEmpty()) net.minecraft.world.level.block.Block.popResource(assistant.level(), pos, left);
+            assistant.level().setBlockAndUpdate(pos, Blocks.WATER.defaultBlockState());
+            assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+            placed++;
+            cursor++;
+            return;
+        }
+        if (part == Part.BLOCK && target.style() != Blueprints.Style.GENERIC) {
+            // What the drawing wants here, if the builder has it; any building block if not.
+            state = takeStyled(target.style());
+            if (state == null) {
+                finish("Ran out of " + craftHint(part) + " — placed " + placed + " parts so far.");
+                return;
+            }
+            state = orient(state, target, pos);
+        } else if (part == Part.WINDOW) {
+            state = takeBlockMatching(target.style() == Blueprints.Style.GLASS ? Blueprints_GLASS : Blueprints_PANE);
+            if (state == null) state = takeBlockMatching(itemFor(part));
+            if (state == null) { cursor++; return; }             // no glass: the window stays open
+            state = orient(state, target, pos);
+        } else if (isBlockPart(part)) {
             state = takeBlockMatching(itemFor(part));
             if (state == null) {
                 if (isDecorative(part)) { cursor++; return; } // no glass: skip the window
                 finish("Ran out of " + craftHint(part) + " — placed " + placed + " parts so far.");
                 return;
             }
+            state = orient(state, target, pos);
         } else {
             if (assistant.removeMatching(itemFor(part), 1) < 1) {
                 if (isDecorative(part)) { cursor++; return; } // no torches: skip, keep building
                 finish("Ran out of " + craftHint(part) + " — placed " + placed + " parts so far.");
                 return;
             }
-            state = stateFor(part);
+            state = stateFor(part, target.way());
         }
         if (part == Part.BED) {
             // A bed is TWO cells, which no other part is. If the second cell
             // is not free the whole thing is skipped rather than half a bed
             // being left in the wall — and the item is already spent, so the
             // next house gets it instead.
-            if (!layBed(pos, state)) { cursor++; return; }
+            if (!layBed(pos, state, bedHead(target))) { cursor++; return; }
+        } else if (part == Part.DOOR) {
+            if (!hangDoor(assistant.level(), pos, state)) { cursor++; return; }
         } else {
             assistant.level().setBlockAndUpdate(pos, state);
             // What a settlement builds is the settlement's: the chests and
@@ -590,8 +751,11 @@ public class BuildGoal extends Goal {
     /** Lay a bed foot-first into the room, head against the wall behind it.
      *  Somewhere to sleep is what turns a shell into a house, and it is how
      *  anybody living here skips a night. */
-    private boolean layBed(BlockPos foot, BlockState carried) {
-        Direction lie = facing;                      // head toward the back wall
+    private Direction bedHead(Placement p) {
+        return p.way() == Blueprints.Way.UP ? facing : Blueprints.world(p.way(), facing);
+    }
+
+    private boolean layBed(BlockPos foot, BlockState carried, Direction lie) {
         BlockPos head = foot.relative(lie);
         if (!assistant.level().getBlockState(head).canBeReplaced()) return false;
         if (!assistant.level().getBlockState(head.below()).isSolid()) return false;
@@ -607,8 +771,9 @@ public class BuildGoal extends Goal {
         return true;
     }
 
-    private BlockState stateFor(Part part) {
-        Direction toDoor = facing.getOpposite(); // face the entrance = accessible
+    private BlockState stateFor(Part part, Blueprints.Way way) {
+        Direction toDoor = way == Blueprints.Way.UP || way == Blueprints.Way.FRONT ? facing.getOpposite()
+            : Blueprints.world(way, facing);       // face the entrance (or the way the drawing says)
         return switch (part) {
             // Block-from-item parts are placed inline via takeBlockMatching, never here.
             case BLOCK, FENCE, GATE, WINDOW, OBSIDIAN -> Blocks.COBBLESTONE.defaultBlockState();
@@ -621,7 +786,155 @@ public class BuildGoal extends Goal {
             // fallback the switch demands.
             case BED -> Blocks.RED_BED.defaultBlockState();
             case CLEAR -> Blocks.AIR.defaultBlockState();
+            // The finishing is placed from the item itself (isBlockPart); this is the switch's fallback.
+            case DOOR -> Blocks.OAK_DOOR.defaultBlockState();
+            case LANTERN -> Blocks.LANTERN.defaultBlockState();
+            case WATER -> Blocks.WATER.defaultBlockState();
+            case HAY -> Blocks.HAY_BLOCK.defaultBlockState();
+            case BARREL -> Blocks.BARREL.defaultBlockState();
+            case FLOWER -> Blocks.POPPY.defaultBlockState();
+            case CARPET -> Blocks.RED_CARPET.defaultBlockState();
+            case ANVIL -> Blocks.ANVIL.defaultBlockState();
+            case CAULDRON -> Blocks.CAULDRON.defaultBlockState();
+            case BELL -> Blocks.BELL.defaultBlockState();
         };
+    }
+
+    // ------------------------------ the right material, set the right way ----------------
+
+    static final Predicate<ItemStack> Blueprints_PANE = s -> {
+        String p = path(s);
+        return p.endsWith("glass_pane");
+    };
+    static final Predicate<ItemStack> Blueprints_GLASS = s -> {
+        String p = path(s);
+        return p.equals("glass") || (p.endsWith("_stained_glass")) || p.equals("tinted_glass");
+    };
+
+    private static String path(ItemStack s) {
+        return s.isEmpty() ? "" : net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(s.getItem()).getPath();
+    }
+
+    /** Stone of the kind a footing or a wall is made of: cobble, stone, stone bricks and their kin. */
+    public static boolean isStoneLike(ItemStack s) {
+        if (!isBuildingBlock(s)) return false;
+        String p = path(s);
+        return p.contains("cobble") || p.contains("stone_brick") || p.equals("stone") || p.equals("smooth_stone")
+            || p.contains("deepslate") || p.contains("andesite") || p.contains("diorite") || p.contains("granite")
+            || p.contains("tuff") || p.contains("blackstone") || p.equals("mud_bricks") || p.contains("sandstone");
+    }
+
+    private static boolean isSoil(ItemStack s) {
+        return s.is(Items.DIRT) || s.is(Items.GRASS_BLOCK) || s.is(Items.COARSE_DIRT) || s.is(Items.ROOTED_DIRT)
+            || s.is(Items.PODZOL) || s.is(Items.MUD) || s.is(Items.MYCELIUM);
+    }
+
+    /** What a builder looks for first for a block of this style. */
+    public static Predicate<ItemStack> preferred(Blueprints.Style style) {
+        return switch (style) {
+            case FOUNDATION, WALL_LOW -> BuildGoal::isStoneLike;
+            case MASONRY -> s -> isStoneLike(s) && (path(s).contains("brick") || path(s).startsWith("polished"));
+            case BRICK -> s -> s.is(Items.BRICKS);
+            case FLOOR, WALL, ROOF_BLOCK -> s -> s.is(ItemTags.PLANKS);
+            case POST, BEAM_ACROSS, BEAM_ALONG -> s -> s.is(ItemTags.LOGS);
+            case ROOF_STAIR, ROOF_STAIR_TOP -> s -> s.is(ItemTags.WOODEN_STAIRS);
+            case ROOF_SLAB, ROOF_SLAB_TOP -> s -> s.is(ItemTags.WOODEN_SLABS);
+            case STONE_SLAB -> s -> s.is(ItemTags.SLABS) && !s.is(ItemTags.WOODEN_SLABS);
+            case STONE_STAIR -> s -> s.is(ItemTags.STAIRS) && !s.is(ItemTags.WOODEN_STAIRS);
+            case SOIL -> BuildGoal::isSoil;
+            case PANE -> Blueprints_PANE;
+            case GLASS -> Blueprints_GLASS;
+            default -> BuildGoal::isBuildingBlock;
+        };
+    }
+
+    /** What will do instead: the next best thing, and then any building block that is not earth. */
+    private static Predicate<ItemStack> secondBest(Blueprints.Style style) {
+        return switch (style) {
+            case MASONRY, BRICK -> BuildGoal::isStoneLike;
+            case ROOF_STAIR, ROOF_STAIR_TOP, ROOF_SLAB, ROOF_SLAB_TOP, POST, BEAM_ACROSS, BEAM_ALONG -> s -> s.is(ItemTags.PLANKS);
+            case STONE_SLAB, STONE_STAIR -> BuildGoal::isStoneLike;
+            case FLOOR, WALL, ROOF_BLOCK -> s -> s.is(ItemTags.LOGS);
+            default -> s -> false;
+        };
+    }
+
+    @Nullable
+    private BlockState takeStyled(Blueprints.Style style) {
+        BlockState st = takeBlockMatching(preferred(style));
+        if (st == null) st = takeBlockMatching(secondBest(style));
+        if (st == null && style != Blueprints.Style.SOIL) st = takeBlockMatching(s -> isBuildingBlock(s) && !isSoil(s));
+        if (st == null) st = takeBlockMatching(BuildGoal::isBuildingBlock);
+        return st;
+    }
+
+    /** Set a block the way the drawing has it: stairs facing and the right way up, logs lying the
+     *  right way, slabs high or low, a lantern hung, a barrel standing, panes and fences joined up. */
+    private BlockState orient(BlockState st, Placement p, BlockPos pos) {
+        return orient(st, p, facing, assistant.level(), pos);
+    }
+
+    public static BlockState orient(BlockState st, Placement p, Direction facing,
+                                    net.minecraft.world.level.LevelAccessor level, BlockPos pos) {
+        Blueprints.Style style = p.style();
+        Direction way = Blueprints.world(p.way(), facing);
+        if (st.hasProperty(net.minecraft.world.level.block.StairBlock.FACING) && st.getBlock() instanceof net.minecraft.world.level.block.StairBlock) {
+            Direction d = way.getAxis().isHorizontal() ? way : facing;
+            st = st.setValue(net.minecraft.world.level.block.StairBlock.FACING, d)
+                .setValue(net.minecraft.world.level.block.StairBlock.HALF,
+                    style == Blueprints.Style.ROOF_STAIR_TOP ? net.minecraft.world.level.block.state.properties.Half.TOP
+                        : net.minecraft.world.level.block.state.properties.Half.BOTTOM);
+        }
+        if (st.getBlock() instanceof net.minecraft.world.level.block.SlabBlock) {
+            st = st.setValue(net.minecraft.world.level.block.SlabBlock.TYPE,
+                style == Blueprints.Style.ROOF_SLAB_TOP ? net.minecraft.world.level.block.state.properties.SlabType.TOP
+                    : net.minecraft.world.level.block.state.properties.SlabType.BOTTOM);
+        }
+        if (st.hasProperty(net.minecraft.world.level.block.RotatedPillarBlock.AXIS)) {
+            Direction.Axis axis = switch (style) {
+                case BEAM_ACROSS -> facing.getClockWise().getAxis();
+                case BEAM_ALONG -> facing.getAxis();
+                default -> Direction.Axis.Y;
+            };
+            st = st.setValue(net.minecraft.world.level.block.RotatedPillarBlock.AXIS, axis);
+        }
+        if (st.getBlock() instanceof net.minecraft.world.level.block.LanternBlock) {
+            st = st.setValue(net.minecraft.world.level.block.LanternBlock.HANGING, style == Blueprints.Style.HANGING);
+        }
+        if (st.getBlock() instanceof net.minecraft.world.level.block.BarrelBlock) {
+            st = st.setValue(net.minecraft.world.level.block.BarrelBlock.FACING, Direction.UP);
+        }
+        if (st.getBlock() instanceof net.minecraft.world.level.block.FenceGateBlock
+                || st.getBlock() instanceof net.minecraft.world.level.block.DoorBlock
+                || st.getBlock() instanceof net.minecraft.world.level.block.AnvilBlock) {
+            Direction d = way.getAxis().isHorizontal() ? way : facing;
+            st = st.setValue(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING, d);
+        }
+        if (st.getBlock() instanceof net.minecraft.world.level.block.BellBlock) {
+            Direction d = way.getAxis().isHorizontal() ? way : facing;
+            st = st.setValue(net.minecraft.world.level.block.BellBlock.FACING, d);
+        }
+        if (st.getBlock() instanceof net.minecraft.world.level.block.IronBarsBlock
+                || st.getBlock() instanceof net.minecraft.world.level.block.FenceBlock
+                || st.getBlock() instanceof net.minecraft.world.level.block.WallBlock) {
+            st = net.minecraft.world.level.block.Block.updateFromNeighbourShapes(st, level, pos);
+        }
+        return st;
+    }
+
+    /** A door is two blocks: the lower half here, the upper above it. */
+    public static boolean hangDoor(net.minecraft.world.level.Level level, BlockPos lower, BlockState st) {
+        if (!(st.getBlock() instanceof net.minecraft.world.level.block.DoorBlock)) {
+            level.setBlockAndUpdate(lower, st);
+            return true;
+        }
+        if (!level.getBlockState(lower.above()).canBeReplaced()) return false;
+        level.setBlock(lower, st.setValue(net.minecraft.world.level.block.DoorBlock.HALF,
+            net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER), 2 | 16);
+        level.setBlock(lower.above(), st.setValue(net.minecraft.world.level.block.DoorBlock.HALF,
+            net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER), 3);
+        level.blockUpdated(lower, st.getBlock());
+        return true;
     }
 
     /** What a block costs the village to spend on a wall: stone and the like are
@@ -661,6 +974,17 @@ public class BuildGoal extends Goal {
     private static void layout(String structure, BlockPos feet, Direction facing,
                                boolean centered, int perimeterRadius, List<Placement> out) {
         Direction right = facing.getClockWise();
+        if (Blueprints.has(structure)) {
+            // Drawn: every block where the drawing has it. Built in front of a hired hand
+            // that was told to build one where it stands.
+            int[] half = Blueprints.fullHalf(structure);
+            BlockPos center = centered ? feet : feet.relative(facing, half[1] + 2);
+            for (Blueprints.Cell c : Blueprints.cells(structure)) {
+                out.add(new Placement(cell(center, right, facing, c.dx(), c.dz()).above(c.h()),
+                    c.key().part(), c.key().style(), c.key().way()));
+            }
+            return;
+        }
         switch (structure) {
             case "platform" -> {
                 BlockPos center = centered ? feet : feet.relative(facing, 3);
@@ -678,82 +1002,11 @@ public class BuildGoal extends Goal {
                     }
                 }
             }
-            case "shelter" -> {
-                BlockPos center = centered ? feet : feet.relative(facing, 4);
-                shell(out, center, right, facing);
-            }
-            case "smeltery" -> {
-                BlockPos center = centered ? feet : feet.relative(facing, 4);
-                shell(out, center, right, facing);
-                // Furnaces along the back interior wall, mouths toward the door.
-                for (int dx = -1; dx <= 1; dx++) {
-                    out.add(new Placement(cell(center, right, facing, dx, 1), Part.FURNACE));
-                }
-                // A chest on each side wall, a crafting table by the door.
-                out.add(new Placement(cell(center, right, facing, -1, 0), Part.CHEST));
-                out.add(new Placement(cell(center, right, facing, 1, 0), Part.CHEST));
-                out.add(new Placement(cell(center, right, facing, 1, -1), Part.CRAFTING_TABLE));
-                out.add(new Placement(cell(center, right, facing, -1, -1), Part.TORCH));
-            }
-            case "storage" -> {
-                BlockPos center = centered ? feet : feet.relative(facing, 4);
-                shell(out, center, right, facing);
-                out.add(new Placement(cell(center, right, facing, -1, 1), Part.CHEST));
-                out.add(new Placement(cell(center, right, facing, 1, 1), Part.CHEST));
-                out.add(new Placement(cell(center, right, facing, -1, 0), Part.CHEST));
-                out.add(new Placement(cell(center, right, facing, 1, 0), Part.CHEST));
-                out.add(new Placement(cell(center, right, facing, 0, 1), Part.TORCH));
-            }
-            case "workshop" -> {
-                BlockPos center = centered ? feet : feet.relative(facing, 4);
-                shell(out, center, right, facing);
-                out.add(new Placement(cell(center, right, facing, -1, 1), Part.CRAFTING_TABLE));
-                out.add(new Placement(cell(center, right, facing, 0, 1), Part.FURNACE));
-                out.add(new Placement(cell(center, right, facing, 1, 1), Part.CHEST));
-                out.add(new Placement(cell(center, right, facing, -1, -1), Part.TORCH));
-            }
             case "room" -> {
                 BlockPos center = centered ? feet : feet.relative(facing, 4);
                 shell(out, center, right, facing);       // walls + roof
                 floor(out, center, right, facing, 2);     // a proper floor
                 out.add(new Placement(cell(center, right, facing, 0, 0), Part.TORCH));
-            }
-            case "house", "guesthouse" -> {
-                BlockPos center = centered ? feet : feet.relative(facing, 4);
-                floor(out, center, right, facing, 2);
-                for (int dx = -2; dx <= 2; dx++) {
-                    for (int dz = -2; dz <= 2; dz++) {
-                        boolean edge = Math.abs(dx) == 2 || Math.abs(dz) == 2;
-                        BlockPos col = cell(center, right, facing, dx, dz);
-                        if (edge) {
-                            boolean isDoor = dx == 0 && dz == -2;
-                            boolean midWall = (dx == 0 || dz == 0) && !isDoor;
-                            for (int h = 0; h <= 3; h++) {           // 4-high walls
-                                if (isDoor && h <= 1) continue;      // doorway
-                                Part part = (h == 2 && midWall) ? Part.WINDOW : Part.BLOCK;
-                                out.add(new Placement(col.above(h), part));
-                            }
-                        }
-                        out.add(new Placement(col.above(4), Part.BLOCK)); // roof
-                        // and a stepped ridge over the middle of it
-                        if (Math.abs(dx) <= 1 && Math.abs(dz) <= 1) out.add(new Placement(col.above(5), Part.BLOCK));
-                    }
-                }
-                // A livable home: workbench, furnace, chest at the back; lit inside.
-                out.add(new Placement(cell(center, right, facing, -1, 1), Part.CRAFTING_TABLE));
-                out.add(new Placement(cell(center, right, facing, 0, 1), Part.FURNACE));
-                out.add(new Placement(cell(center, right, facing, 1, 1), Part.CHEST));
-                out.add(new Placement(cell(center, right, facing, 0, -1), Part.TORCH));
-                // And somewhere to sleep — TWO beds, laid along the side walls
-                // with their heads toward the back.
-                //
-                // There was one, and it was put where its head would land on
-                // the crafting table: a bed is two cells and this is the only
-                // part that is, so it kept finding the far half occupied and
-                // skipping itself. Nearly every house would have gone up with
-                // no bed in it and nothing to say why.
-                out.add(new Placement(cell(center, right, facing, -1, -1), Part.BED));
-                out.add(new Placement(cell(center, right, facing, 1, -1), Part.BED));
             }
             case "pen" -> {
                 BlockPos center = centered ? feet : feet.relative(facing, 5);
@@ -772,50 +1025,39 @@ public class BuildGoal extends Goal {
                 // torch on each corner so nothing spawns along it. `feet` here is
                 // the center (home if set) — the ring is built around it. The
                 // radius widens for a whole compound (perimeterRadius from the job).
+                // A village's wall rings its square and opens onto each of the four avenues
+                // (village/TownPlan): a gate five wide on every side, with a pillar and a lantern
+                // either side of it; battlements along the top; a squat tower at each corner.
+                // A hired hand's wall round a homestead keeps its one doorway at the front.
                 int r = perimeterRadius;
+                boolean town = r >= 12;
+                int gate = town ? com.jrpetty.mcassistant.village.TownPlan.AVENUE : 0;
+                Blueprints.Style stone = Blueprints.Style.MASONRY;
                 for (int dx = -r; dx <= r; dx++) {
                     for (int dz = -r; dz <= r; dz++) {
                         if (Math.abs(dx) != r && Math.abs(dz) != r) continue; // perimeter only
-                        if (dx == 0 && dz == -r) continue; // front-center doorway (left open)
+                        boolean corner = Math.abs(dx) == r && Math.abs(dz) == r;
+                        int along = Math.abs(dx) == r ? dz : dx;
+                        if (town ? Math.abs(along) <= gate && !corner : (dx == 0 && dz == -r)) continue;   // the gates
                         BlockPos col = cell(feet, right, facing, dx, dz);
-                        for (int h = 0; h <= 2; h++) {
-                            out.add(new Placement(col.above(h), Part.BLOCK));
+                        boolean pillar = town && Math.abs(along) == gate + 1 && !corner;
+                        int top = corner ? 4 : pillar ? 4 : 2;
+                        for (int h = 0; h <= top; h++) {
+                            out.add(new Placement(col.above(h), Part.BLOCK, stone, Blueprints.Way.UP));
+                        }
+                        if (corner || pillar) {
+                            out.add(new Placement(col.above(top + 1), Part.LANTERN, Blueprints.Style.NONE, Blueprints.Way.UP));
+                        } else if (town && Math.floorMod(along, 2) == 0) {
+                            out.add(new Placement(col.above(3), Part.BLOCK, Blueprints.Style.STONE_SLAB, Blueprints.Way.UP));
                         }
                     }
                 }
-                for (int sx = -1; sx <= 1; sx += 2) {
-                    for (int sz = -1; sz <= 1; sz += 2) {
-                        out.add(new Placement(
-                            cell(feet, right, facing, sx * r, sz * r).above(3), Part.TORCH));
-                    }
-                }
-            }
-            case "lighthouse" -> {
-                // A tall lit tower: a 3x3 hollow column with a ladder up the
-                // middle, a walled deck, and a four-torch crown — a landmark you
-                // can see (and path home to) from a long way off.
-                BlockPos base = centered ? feet : feet.relative(facing, 3);
-                int wallTop = 9, deck = 10, rim = 11, torch = 12;
-                for (int dx = -1; dx <= 1; dx++) {
-                    for (int dz = -1; dz <= 1; dz++) {
-                        boolean edge = Math.abs(dx) == 1 || Math.abs(dz) == 1;
-                        BlockPos col = cell(base, right, facing, dx, dz);
-                        if (edge) {
-                            for (int h = 0; h <= wallTop; h++) {
-                                if (dx == 0 && dz == -1 && h <= 1) continue; // doorway
-                                out.add(new Placement(col.above(h), Part.BLOCK));
-                            }
-                            out.add(new Placement(col.above(rim), Part.BLOCK)); // top rail
+                if (!town) {
+                    for (int sx = -1; sx <= 1; sx += 2) {
+                        for (int sz = -1; sz <= 1; sz += 2) {
+                            out.add(new Placement(
+                                cell(feet, right, facing, sx * r, sz * r).above(3), Part.TORCH));
                         }
-                        if (!(dx == 0 && dz == 0)) {
-                            out.add(new Placement(col.above(deck), Part.BLOCK)); // deck (shaft open)
-                        }
-                    }
-                }
-                for (int h = 0; h <= deck; h++) out.add(new Placement(base.above(h), Part.LADDER));
-                for (int sx = -1; sx <= 1; sx += 2) {
-                    for (int sz = -1; sz <= 1; sz += 2) {
-                        out.add(new Placement(cell(base, right, facing, sx, sz).above(torch), Part.TORCH));
                     }
                 }
             }
@@ -824,231 +1066,6 @@ public class BuildGoal extends Goal {
                 // a beacon it can build anywhere to mark a spot.
                 BlockPos base = centered ? feet : feet.relative(facing, 2);
                 for (int h = 0; h <= 4; h++) out.add(new Placement(base.above(h), Part.BLOCK));
-                out.add(new Placement(base.above(5), Part.TORCH));
-            }
-            case "watchtower" -> {
-                BlockPos base = centered ? feet : feet.relative(facing, 3);
-                for (int dx = -1; dx <= 1; dx++) {
-                    for (int dz = -1; dz <= 1; dz++) {
-                        boolean edge = Math.abs(dx) == 1 || Math.abs(dz) == 1;
-                        BlockPos col = cell(base, right, facing, dx, dz);
-                        if (edge) {
-                            for (int h = 0; h <= 4; h++) {
-                                if (dx == 0 && dz == -1 && h <= 1) continue; // doorway
-                                out.add(new Placement(col.above(h), Part.BLOCK));
-                            }
-                            out.add(new Placement(col.above(6), Part.BLOCK)); // rim
-                        }
-                        if (!(dx == 0 && dz == 0)) {
-                            out.add(new Placement(col.above(5), Part.BLOCK)); // deck (shaft stays open)
-                        }
-                    }
-                }
-                // Ladder shaft up the middle, hanging on the back wall.
-                for (int h = 0; h <= 5; h++) {
-                    out.add(new Placement(base.above(h), Part.LADDER));
-                }
-                out.add(new Placement(cell(base, right, facing, -1, -1).above(7), Part.TORCH));
-                out.add(new Placement(cell(base, right, facing, 1, -1).above(7), Part.TORCH));
-            }
-            case "well" -> {
-                // The village well: a stone curb round an open middle, a post at each
-                // corner, a roof on the posts and a light on the roof. It is what marks a
-                // camp as a village to anybody walking up to it.
-                BlockPos center = centered ? feet : feet.relative(facing, 3);
-                for (int dx = -1; dx <= 1; dx++) {
-                    for (int dz = -1; dz <= 1; dz++) {
-                        BlockPos col = cell(center, right, facing, dx, dz);
-                        if (dx != 0 || dz != 0) out.add(new Placement(col, Part.BLOCK));      // the curb
-                        if (Math.abs(dx) == 1 && Math.abs(dz) == 1) {
-                            out.add(new Placement(col.above(1), Part.FENCE));                // the posts
-                            out.add(new Placement(col.above(2), Part.FENCE));
-                        }
-                        out.add(new Placement(col.above(3), Part.BLOCK));                    // the roof
-                    }
-                }
-                out.add(new Placement(center.above(4), Part.TORCH));
-            }
-            case "hall" -> {
-                // The meeting hall: seven by seven, walls four high with a door on the side
-                // facing the heart and windows in every wall, a stepped roof, and inside what
-                // the village keeps in common — two chests, a bench, and light.
-                BlockPos center = centered ? feet : feet.relative(facing, 5);
-                for (int dx = -3; dx <= 3; dx++) {
-                    for (int dz = -3; dz <= 3; dz++) {
-                        boolean edge = Math.abs(dx) == 3 || Math.abs(dz) == 3;
-                        BlockPos col = cell(center, right, facing, dx, dz);
-                        if (edge) {
-                            boolean door = dx == 0 && dz == -3;
-                            boolean window = !door && !(Math.abs(dx) == 3 && Math.abs(dz) == 3)
-                                && ((Math.abs(dz) == 3 && Math.abs(dx) == 2) || (Math.abs(dx) == 3 && Math.abs(dz) == 2)
-                                    || (Math.abs(dx) == 3 && dz == 0) || (dz == 3 && dx == 0));
-                            for (int h = 0; h <= 3; h++) {
-                                if (door && h <= 1) continue;
-                                out.add(new Placement(col.above(h), window && (h == 1 || h == 2) ? Part.WINDOW : Part.BLOCK));
-                            }
-                        }
-                        out.add(new Placement(col.above(4), Part.BLOCK));                    // roof
-                        if (Math.abs(dx) <= 2 && Math.abs(dz) <= 2) {
-                            out.add(new Placement(col.above(5), Part.BLOCK));                // stepped
-                        }
-                    }
-                }
-                out.add(new Placement(cell(center, right, facing, -2, 2), Part.CHEST));
-                out.add(new Placement(cell(center, right, facing, 2, 2), Part.CHEST));
-                out.add(new Placement(cell(center, right, facing, 0, 2), Part.CRAFTING_TABLE));
-                out.add(new Placement(cell(center, right, facing, -2, -2), Part.TORCH));
-                out.add(new Placement(cell(center, right, facing, 2, -2), Part.TORCH));
-                out.add(new Placement(cell(center, right, facing, 0, 0), Part.TORCH));
-            }
-            case "market" -> {
-                // An open market, seven across: a roof on eight fence posts, open on every
-                // side, and under it the stalls — two chests, two benches, a furnace — with
-                // a light in the middle. The Iron Age asks for it.
-                BlockPos center = centered ? feet : feet.relative(facing, 5);
-                for (int dx = -3; dx <= 3; dx++) {
-                    for (int dz = -3; dz <= 3; dz++) {
-                        BlockPos col = cell(center, right, facing, dx, dz);
-                        boolean post = (Math.abs(dx) == 3 || dx == 0) && (Math.abs(dz) == 3 || dz == 0)
-                            && !(dx == 0 && dz == 0);
-                        if (post) {
-                            for (int h = 0; h <= 2; h++) out.add(new Placement(col.above(h), Part.FENCE));
-                        }
-                        out.add(new Placement(col.above(3), Part.BLOCK));                    // roof
-                        if (Math.abs(dx) <= 1 && Math.abs(dz) <= 1) {
-                            out.add(new Placement(col.above(4), Part.BLOCK));                // raised middle
-                        }
-                    }
-                }
-                out.add(new Placement(cell(center, right, facing, -2, 1), Part.CHEST));
-                out.add(new Placement(cell(center, right, facing, 2, 1), Part.CHEST));
-                out.add(new Placement(cell(center, right, facing, -2, -1), Part.CRAFTING_TABLE));
-                out.add(new Placement(cell(center, right, facing, 2, -1), Part.CRAFTING_TABLE));
-                out.add(new Placement(cell(center, right, facing, 0, 2), Part.FURNACE));
-                out.add(new Placement(cell(center, right, facing, 0, 0), Part.TORCH));
-            }
-            case "chapel" -> {
-                // A chapel, five wide and seven long: walls four high with tall windows down
-                // both sides and one over the altar, the door at the end facing the heart, a
-                // pitched roof with a ridge three wide down its length, and a lit altar at the
-                // far end. The Diamond Age asks for it.
-                BlockPos center = centered ? feet : feet.relative(facing, 5);
-                for (int dx = -2; dx <= 2; dx++) {
-                    for (int dz = -3; dz <= 3; dz++) {
-                        boolean edge = Math.abs(dx) == 2 || Math.abs(dz) == 3;
-                        BlockPos col = cell(center, right, facing, dx, dz);
-                        if (edge) {
-                            boolean door = dx == 0 && dz == -3;
-                            for (int h = 0; h <= 3; h++) {
-                                if (door && h <= 1) continue;
-                                boolean window = (Math.abs(dx) == 2 && (dz == -2 || dz == 0 || dz == 2) && (h == 1 || h == 2))
-                                    || (dx == 0 && dz == 3 && h == 2);
-                                out.add(new Placement(col.above(h), window ? Part.WINDOW : Part.BLOCK));
-                            }
-                        }
-                        out.add(new Placement(col.above(4), Part.BLOCK));                    // eaves
-                        if (Math.abs(dx) <= 1) out.add(new Placement(col.above(5), Part.BLOCK));   // ridge
-                    }
-                }
-                out.add(new Placement(cell(center, right, facing, 0, 2), Part.CRAFTING_TABLE));   // the altar
-                out.add(new Placement(cell(center, right, facing, -1, 2), Part.TORCH));
-                out.add(new Placement(cell(center, right, facing, 1, 2), Part.TORCH));
-                out.add(new Placement(cell(center, right, facing, 0, -1), Part.TORCH));
-            }
-            case "gateway" -> {
-                // An obsidian gateway: the frame of a way into the Nether, four wide and five
-                // high, stone at the corners, with a light either side. Never lit — what
-                // comes through a lit one would come into the village. The Nether Age asks
-                // for it, and it takes the ten obsidian that age sends the miners for.
-                BlockPos base = centered ? feet : feet.relative(facing, 3);
-                for (int dx = -2; dx <= 1; dx++) {
-                    for (int h = 0; h <= 4; h++) {
-                        boolean side = dx == -2 || dx == 1;
-                        boolean end = h == 0 || h == 4;
-                        if (!side && !end) continue;                                         // the opening
-                        BlockPos c = cell(base, right, facing, dx, 0).above(h);
-                        out.add(new Placement(c, side && end ? Part.BLOCK : Part.OBSIDIAN));
-                    }
-                }
-                out.add(new Placement(cell(base, right, facing, -3, 0), Part.TORCH));
-                out.add(new Placement(cell(base, right, facing, 2, 0), Part.TORCH));
-            }
-            case "granary" -> {
-                // A granary: five across with its corners cut away, stone walls four high
-                // with slits to let the air through, a stepped roof, three chests of grain
-                // and a light. The first of the great works.
-                BlockPos center = centered ? feet : feet.relative(facing, 4);
-                for (int dx = -2; dx <= 2; dx++) {
-                    for (int dz = -2; dz <= 2; dz++) {
-                        if (Math.abs(dx) == 2 && Math.abs(dz) == 2) continue;                // no corners
-                        boolean edge = Math.abs(dx) == 2 || Math.abs(dz) == 2;
-                        BlockPos col = cell(center, right, facing, dx, dz);
-                        if (edge) {
-                            boolean door = dx == 0 && dz == -2;
-                            boolean slit = (Math.abs(dx) == 2 && dz == 0) || (dz == 2 && dx == 0);
-                            for (int h = 0; h <= 3; h++) {
-                                if (door && h <= 1) continue;
-                                out.add(new Placement(col.above(h), slit && h == 2 ? Part.WINDOW : Part.BLOCK));
-                            }
-                        }
-                        out.add(new Placement(col.above(4), Part.BLOCK));                    // roof
-                        if (Math.abs(dx) <= 1 && Math.abs(dz) <= 1) {
-                            out.add(new Placement(col.above(5), Part.BLOCK));                // stepped
-                        }
-                    }
-                }
-                out.add(new Placement(cell(center, right, facing, -1, 1), Part.CHEST));
-                out.add(new Placement(cell(center, right, facing, 0, 1), Part.CHEST));
-                out.add(new Placement(cell(center, right, facing, 1, 1), Part.CHEST));
-                out.add(new Placement(cell(center, right, facing, 0, -1), Part.TORCH));
-            }
-            case "barracks" -> {
-                // Barracks, seven by seven: walls three high with windows, a stepped roof,
-                // four bunks down the sides when there is wool, chests for the watch's kit, a
-                // bench and light. Room for six more, and a great work.
-                BlockPos center = centered ? feet : feet.relative(facing, 5);
-                for (int dx = -3; dx <= 3; dx++) {
-                    for (int dz = -3; dz <= 3; dz++) {
-                        boolean edge = Math.abs(dx) == 3 || Math.abs(dz) == 3;
-                        BlockPos col = cell(center, right, facing, dx, dz);
-                        if (edge) {
-                            boolean door = dx == 0 && dz == -3;
-                            boolean window = !door && ((Math.abs(dx) == 3 && Math.abs(dz) == 1)
-                                || (dz == 3 && Math.abs(dx) == 1));
-                            for (int h = 0; h <= 2; h++) {
-                                if (door && h <= 1) continue;
-                                out.add(new Placement(col.above(h), window && h == 1 ? Part.WINDOW : Part.BLOCK));
-                            }
-                        }
-                        out.add(new Placement(col.above(3), Part.BLOCK));                    // roof
-                        if (Math.abs(dx) <= 2 && Math.abs(dz) <= 2) {
-                            out.add(new Placement(col.above(4), Part.BLOCK));                // stepped
-                        }
-                    }
-                }
-                for (int sx = -2; sx <= 2; sx += 4) {
-                    out.add(new Placement(cell(center, right, facing, sx, -1), Part.BED));
-                    out.add(new Placement(cell(center, right, facing, sx, 1), Part.BED));
-                }
-                out.add(new Placement(cell(center, right, facing, -1, 2), Part.CHEST));
-                out.add(new Placement(cell(center, right, facing, 1, 2), Part.CHEST));
-                out.add(new Placement(cell(center, right, facing, 0, 2), Part.CRAFTING_TABLE));
-                out.add(new Placement(cell(center, right, facing, -1, -2), Part.TORCH));
-                out.add(new Placement(cell(center, right, facing, 1, -2), Part.TORCH));
-            }
-            case "monument" -> {
-                // A monument: a stone plinth, a cross-shaped step, a pillar and a light on
-                // top, for the village to be seen by. The great works come round to one of
-                // these every third time.
-                BlockPos base = centered ? feet : feet.relative(facing, 3);
-                for (int dx = -1; dx <= 1; dx++) {
-                    for (int dz = -1; dz <= 1; dz++) {
-                        BlockPos col = cell(base, right, facing, dx, dz);
-                        out.add(new Placement(col, Part.BLOCK));                             // plinth
-                        if (dx == 0 || dz == 0) out.add(new Placement(col.above(1), Part.BLOCK));  // step
-                    }
-                }
-                for (int h = 2; h <= 4; h++) out.add(new Placement(base.above(h), Part.BLOCK));  // pillar
                 out.add(new Placement(base.above(5), Part.TORCH));
             }
             default -> { }

@@ -105,8 +105,13 @@ public class VillageFolkSpawnerBlock extends Block {
             if (raise(server, spot, yaw) == null) break;
             stood++;
         }
-        // A party founding a village pitches camp round its stores: a bed each.
-        if (founding && stood > 0) com.jrpetty.mcassistant.VillageSpawner.pitchCamp(server, at, stood);
+        // A party pitches camp round the village's stores: a bed each. (Founding it, round the
+        // stores it brings; joining one — a vanilla village taken over, say — round its heart.)
+        if (stood > 0) {
+            Villages.Village home = Villages.nearest(server, at, Villages.VILLAGE_RANGE * 2);
+            BlockPos heart = founding || home == null ? at : home.centre();
+            com.jrpetty.mcassistant.VillageSpawner.pitchCamp(server, heart, stood);
+        }
         return stood;
     }
 

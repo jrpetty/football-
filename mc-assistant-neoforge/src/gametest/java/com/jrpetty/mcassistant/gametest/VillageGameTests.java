@@ -205,8 +205,16 @@ public class VillageGameTests {
         helper.assertTrue(BuildGoal.partCounts("lighthouse", 13).getOrDefault(BuildGoal.Part.LADDER, 0) > 0,
             "the lighthouse has a ladder shaft — the stocking must know");
         var well = BuildGoal.partCounts("well", 13);
-        helper.assertTrue(well.getOrDefault(BuildGoal.Part.FENCE, 0) == 8 && well.getOrDefault(BuildGoal.Part.TORCH, 0) == 1,
-            "the well has four posts two high and a light, wants " + well);
+        helper.assertTrue(well.getOrDefault(BuildGoal.Part.FENCE, 0) == 8 && well.getOrDefault(BuildGoal.Part.LANTERN, 0) == 1
+                && well.getOrDefault(BuildGoal.Part.WATER, 0) == 1,
+            "the well has four posts two high, a lantern and water, wants " + well);
+        helper.assertTrue(house.getOrDefault(BuildGoal.Part.BED, 0) == com.jrpetty.mcassistant.village.VillageMath.BEDS_PER_HOUSE
+                && house.getOrDefault(BuildGoal.Part.DOOR, 0) == 1 && house.getOrDefault(BuildGoal.Part.WINDOW, 0) >= 8,
+            "a house sleeps a family of four, has a door and glass in its windows, wants " + house);
+        var houseStyles = BuildGoal.styleCounts("house");
+        helper.assertTrue(houseStyles.getOrDefault(com.jrpetty.mcassistant.entity.goal.Blueprints.Style.ROOF_STAIR, 0) >= 60
+                && houseStyles.getOrDefault(com.jrpetty.mcassistant.entity.goal.Blueprints.Style.POST, 0) >= 12,
+            "a house has a pitched roof of stairs and a timber frame, wants " + houseStyles);
         var hall = BuildGoal.partCounts("hall", 13);
         helper.assertTrue(hall.getOrDefault(BuildGoal.Part.CHEST, 0) == 2 && hall.getOrDefault(BuildGoal.Part.CRAFTING_TABLE, 0) == 1
                 && hall.getOrDefault(BuildGoal.Part.BLOCK, 0) > house.getOrDefault(BuildGoal.Part.BLOCK, 0),
@@ -216,23 +224,30 @@ public class VillageGameTests {
             "the pen is a ring of fence with a gate, wants " + pen);
         // The later ages' buildings and the great works.
         var market = BuildGoal.partCounts("market", 13);
-        helper.assertTrue(market.getOrDefault(BuildGoal.Part.FENCE, 0) == 24 && market.getOrDefault(BuildGoal.Part.CHEST, 0) == 2
+        helper.assertTrue(market.getOrDefault(BuildGoal.Part.CHEST, 0) == 2
                 && market.getOrDefault(BuildGoal.Part.CRAFTING_TABLE, 0) == 2 && market.getOrDefault(BuildGoal.Part.FURNACE, 0) == 1,
-            "the market is a roof on eight posts three high over two chests, two benches and a furnace, wants " + market);
+            "the market is a roof on posts over two chests, two benches and a furnace, wants " + market);
         var chapel = BuildGoal.partCounts("chapel", 13);
-        helper.assertTrue(chapel.getOrDefault(BuildGoal.Part.WINDOW, 0) == 13 && chapel.getOrDefault(BuildGoal.Part.CRAFTING_TABLE, 0) == 1,
-            "the chapel has thirteen windows and an altar, wants " + chapel);
+        helper.assertTrue(chapel.getOrDefault(BuildGoal.Part.WINDOW, 0) >= 20 && chapel.getOrDefault(BuildGoal.Part.CRAFTING_TABLE, 0) == 1,
+            "the chapel has tall windows and an altar, wants " + chapel);
         var gateway = BuildGoal.partCounts("gateway", 13);
-        helper.assertTrue(gateway.getOrDefault(BuildGoal.Part.OBSIDIAN, 0) == 10 && gateway.getOrDefault(BuildGoal.Part.BLOCK, 0) == 4,
-            "the gateway is a ten-obsidian frame with stone corners, wants " + gateway);
+        helper.assertTrue(gateway.getOrDefault(BuildGoal.Part.OBSIDIAN, 0) == 10 && gateway.getOrDefault(BuildGoal.Part.BLOCK, 0) >= 4,
+            "the gateway is a ten-obsidian frame on a stone dais, wants " + gateway);
         var granary = BuildGoal.partCounts("granary", 13);
         helper.assertTrue(granary.getOrDefault(BuildGoal.Part.CHEST, 0) == 3, "the granary holds three chests, wants " + granary);
         var barracks = BuildGoal.partCounts("barracks", 13);
-        helper.assertTrue(barracks.getOrDefault(BuildGoal.Part.BED, 0) == 4 && barracks.getOrDefault(BuildGoal.Part.CHEST, 0) == 2,
-            "the barracks have four bunks and two chests, wants " + barracks);
+        helper.assertTrue(barracks.getOrDefault(BuildGoal.Part.BED, 0) == 6 && barracks.getOrDefault(BuildGoal.Part.CHEST, 0) == 2,
+            "the barracks have six bunks and two chests, wants " + barracks);
         var monument = BuildGoal.partCounts("monument", 13);
-        helper.assertTrue(monument.getOrDefault(BuildGoal.Part.BLOCK, 0) == 17 && monument.getOrDefault(BuildGoal.Part.TORCH, 0) == 1,
+        helper.assertTrue(monument.getOrDefault(BuildGoal.Part.BLOCK, 0) >= 17 && monument.getOrDefault(BuildGoal.Part.LANTERN, 0) >= 1,
             "the monument is a plinth, a step, a pillar and a light, wants " + monument);
+        // Every drawing reads, and every building has a way in or is open.
+        for (String st : BuildGoal.STRUCTURES) {
+            if (!com.jrpetty.mcassistant.entity.goal.Blueprints.has(st)) continue;
+            int[] g = com.jrpetty.mcassistant.entity.goal.Blueprints.groundHalf(st);
+            Kit.log("t08 " + st + " stands " + (2 * g[0] + 1) + " by " + (2 * g[1] + 1) + ", "
+                + com.jrpetty.mcassistant.entity.goal.Blueprints.cells(st).size() + " blocks");
+        }
         helper.succeed();
     }
 
@@ -315,9 +330,7 @@ public class VillageGameTests {
         helper.assertTrue(site != null, "a hillside should still give a lot: " + Villages.lotReport(v.id()));
         int fill = BuildGoal.fillCells(level, site.anchor()).size();
         Kit.log("t11 the lot needs " + fill + " blocks to build up to its floor");
-        builder.insertItem(new ItemStack(Items.COBBLESTONE, 64));
-        builder.insertItem(new ItemStack(Items.COBBLESTONE, 64));
-        builder.insertItem(new ItemStack(Items.COBBLESTONE, 64));
+        for (int i = 0; i < 6; i++) builder.insertItem(new ItemStack(Items.COBBLESTONE, 64));
         builder.insertItem(new ItemStack(Items.CHEST, 4));
         builder.insertItem(new ItemStack(Items.TORCH, 4));
         builder.enqueue(Job.buildAt("storage", site.anchor(), site.facing(), site.radius()));
@@ -383,7 +396,7 @@ public class VillageGameTests {
 
     /** The two new designs, raised for real: a meeting hall (seven across, the stepped roof
      *  five blocks up — within a builder's reach from its own floor) and a well. */
-    @GameTest(template = EMPTY, timeoutTicks = 6400, batch = "t13_hall_and_well")
+    @GameTest(template = EMPTY, timeoutTicks = 12000, batch = "t13_hall_and_well")
     public static void t13_hall_and_well(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
@@ -396,34 +409,42 @@ public class VillageGameTests {
         Villages.Village v = Villages.nearest(level, heart, 100);
         BlockPos hallAt = Kit.surface(level, 3614, 3600);
         BlockPos wellAt = Kit.surface(level, 3590, 3600);
-        for (int i = 0; i < 4; i++) builder.insertItem(new ItemStack(Items.COBBLESTONE, 64));
+        for (int i = 0; i < 12; i++) builder.insertItem(new ItemStack(Items.COBBLESTONE, 64));
         builder.insertItem(new ItemStack(Items.CHEST, 2));
         builder.insertItem(new ItemStack(Items.CRAFTING_TABLE, 2));
         builder.insertItem(new ItemStack(Items.TORCH, 8));
-        builder.insertItem(new ItemStack(Items.GLASS, 16));
-        builder.insertItem(new ItemStack(Items.OAK_FENCE, 8));
+        builder.insertItem(new ItemStack(Items.GLASS_PANE, 48));
+        builder.insertItem(new ItemStack(Items.OAK_FENCE, 16));
+        builder.insertItem(new ItemStack(Items.OAK_STAIRS, 64));
+        builder.insertItem(new ItemStack(Items.OAK_STAIRS, 64));
+        builder.insertItem(new ItemStack(Items.OAK_STAIRS, 64));
         builder.enqueue(Job.buildAt("hall", hallAt, Direction.WEST, 0));
         builder.enqueue(Job.buildAt("well", wellAt, Direction.EAST, 0));
         helper.onEachTick(() -> {
             long t = helper.getTick();
+            if (level.getDayTime() % 24000 > 11000) level.setDayTime(1000);      // building is day work
             if (t % 1200 == 0) Kit.log("t13 @" + t + " built=" + Villages.builtList(v.id()) + " — " + builder.debugLine());
             var built = Villages.builtList(v.id());
             if (built.contains("hall") && built.contains("well")) {
-                boolean ridge = !level.getBlockState(hallAt.above(5)).isAir();
+                boolean ridge = !level.getBlockState(hallAt.above(9)).isAir();
                 boolean roof = !level.getBlockState(wellAt.above(3)).isAir();
                 Kit.log("t13 hall and well stand at tick " + t + "; hall ridge " + ridge + ", well roof " + roof);
-                helper.assertTrue(ridge, "the hall's stepped roof should be up (five above the floor)");
+                boolean stairs = level.getBlockState(hallAt.above(8).relative(Direction.NORTH)).getBlock()
+                    instanceof net.minecraft.world.level.block.StairBlock;
+                Kit.log("t13 the hall's roof is of stairs: " + stairs);
+                helper.assertTrue(ridge, "the hall's ridge should be up (nine above the floor)");
+                helper.assertTrue(stairs, "and its roof laid in stairs");
                 helper.assertTrue(roof, "the well should have its roof");
                 helper.succeed();
-            } else if (t >= 6200) {
-                helper.fail("hall and well not both built in 6200 ticks: " + built + " — " + builder.debugLine());
+            } else if (t >= 11800) {
+                helper.fail("hall and well not both built in 11800 ticks: " + built + " — " + builder.debugLine());
             }
         });
     }
 
     /** The later ages' buildings and a great work, raised for real: the market's fence
      *  posts and roof, the gateway's obsidian frame, the monument's pillar. */
-    @GameTest(template = EMPTY, timeoutTicks = 9000, batch = "t14_great_works")
+    @GameTest(template = EMPTY, timeoutTicks = 12000, batch = "t14_great_works")
     public static void t14_great_works(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
@@ -437,8 +458,8 @@ public class VillageGameTests {
         BlockPos marketAt = Kit.surface(level, 3814, 3800);
         BlockPos gateAt = Kit.surface(level, 3788, 3800);
         BlockPos monumentAt = Kit.surface(level, 3800, 3814);
-        for (int i = 0; i < 2; i++) builder.insertItem(new ItemStack(Items.COBBLESTONE, 64));
-        builder.insertItem(new ItemStack(Items.OAK_FENCE, 24));
+        for (int i = 0; i < 12; i++) builder.insertItem(new ItemStack(Items.COBBLESTONE, 64));
+        builder.insertItem(new ItemStack(Items.OAK_LOG, 64));
         builder.insertItem(new ItemStack(Items.CHEST, 2));
         builder.insertItem(new ItemStack(Items.CRAFTING_TABLE, 2));
         builder.insertItem(new ItemStack(Items.FURNACE, 1));
@@ -453,19 +474,19 @@ public class VillageGameTests {
             if (t % 1200 == 0) Kit.log("t14 @" + t + " built=" + Villages.builtList(v.id()) + " — " + builder.debugLine());
             var built = Villages.builtList(v.id());
             if (built.contains("market") && built.contains("gateway") && built.contains("monument")) {
-                int fences = count(level, marketAt, 3, 0, 2, st -> st.is(net.minecraft.tags.BlockTags.FENCES));
-                int obsidian = count(level, gateAt, 3, 0, 4, st -> st.is(Blocks.OBSIDIAN));
+                int posts = count(level, marketAt, 4, 0, 3, st -> st.is(net.minecraft.tags.BlockTags.LOGS));
+                int obsidian = count(level, gateAt, 4, 0, 5, st -> st.is(Blocks.OBSIDIAN));
                 boolean marketRoof = !level.getBlockState(marketAt.above(4)).isAir();
                 boolean pillar = !level.getBlockState(monumentAt.above(4)).isAir();
-                Kit.log("t14 stand at tick " + t + ": market fences " + fences + ", roof " + marketRoof
+                Kit.log("t14 stand at tick " + t + ": market posts " + posts + ", roof " + marketRoof
                     + "; gateway obsidian " + obsidian + "; monument pillar " + pillar);
-                helper.assertTrue(fences == 24, "the market stands on eight posts three high, found " + fences + " fence");
+                helper.assertTrue(posts >= 24, "the market stands on log posts four high, found " + posts + " log");
                 helper.assertTrue(marketRoof, "the market's raised roof should be up");
                 helper.assertTrue(obsidian == 10, "the gateway is a frame of ten obsidian, found " + obsidian);
                 helper.assertTrue(pillar, "the monument's pillar should be up");
                 helper.succeed();
-            } else if (t >= 8800) {
-                helper.fail("market, gateway and monument not all built in 8800 ticks: " + built + " — " + builder.debugLine());
+            } else if (t >= 11800) {
+                helper.fail("market, gateway and monument not all built in 11800 ticks: " + built + " — " + builder.debugLine());
             }
         });
     }

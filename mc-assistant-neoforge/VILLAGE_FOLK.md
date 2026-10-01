@@ -79,31 +79,73 @@ Each age is announced once in chat (the only thing a village ever says).
 `/village status` shows what it is short of, how much room it has, whether it is
 growing (and if not, what it is waiting for), and what it will build next and why.
 
+### The town
+
+A village is laid out as a town, to one plan, wherever it is founded:
+
+* **The square** at the heart: 25 blocks across, walled, with a gate on each side.
+  It holds the founders' camp and the stores in the middle, the well to the south and
+  the monument to the north. It is paved with cobblestone from the Stone Age and with
+  stone bricks from the Iron Age.
+* **The ring street** runs round the outside of the wall. **Four avenues**, five wide,
+  run out from the gates to the north, south, east and west. **A grid of streets**,
+  three wide, crosses the land every 25 blocks.
+* **The lots** are 11 blocks square, four to a block, and every one of them is on a
+  street:
+
+  | Where | What goes there | Which way it faces |
+  |---|---|---|
+  | North and south of the square | The storehouse, the market, the workshop and the smeltery | Onto the square |
+  | East and west of the square, two lots deep | The meeting hall, the chapel and the barracks | Onto the square |
+  | The four corners by the square | The watchtowers | — |
+  | Everywhere else | Homes, in rows back to back | Each row onto its own street |
+  | Out at the edge | The lighthouse, the pen and the gateway | — |
+
+The streets are worn into paths where people live. From the Iron Age the avenues
+are cobbled and lit by lamp posts every few blocks. Fields, woods and mines are
+staked outside the town, so it always has ground to grow into.
+
 ### The buildings
 
-| Building | Footprint | What it is |
-|---|---|---|
-| Storehouse | 5×5 | Walls, a raised roof, four chests inside |
-| Shelter | 5×5 | Walls and a raised roof: somewhere out of the night |
-| House | 5×5 | Floor, walls four high with windows and a doorway, stepped roof; bench, furnace, chest, light, two beds when there is wool |
-| Well | 3×3 | Stone curb, four fence posts, a roof and a light |
-| Wall | ring of 27 | Three high above the ground wherever the ground is, a gate on one side, lit corners |
-| Smeltery | 5×5 | Three furnaces, two chests, a bench |
-| Meeting hall | 7×7 | Walls four high with windows all round, stepped roof, two chests, a bench, light |
-| Workshop | 5×5 | Bench, furnace, chest |
-| Watchtower | 3×3 | A lookout platform up a ladder |
-| Lighthouse | 3×3 | Twelve high, ladder inside, lit crown |
-| Pen | 7×7 | Fence ring with a gate, once there is a rancher |
-| Market | 7×7 | A roof on eight fence posts over two chests, two benches and a furnace (Iron Age) |
-| Chapel | 5×7 | Walls four high with tall windows, a ridged roof, a lit altar (Diamond Age) |
-| Gateway | 4×5 | An obsidian portal frame with stone corners, never lit (Nether Age) |
-| Granary | 5×5 | Corners cut away, slit windows, stepped roof, three chests (great work) |
-| Barracks | 7×7 | Bunks, chests and a bench; room for six (great work) |
-| Monument | 3×3 | Plinth, step, pillar and a light (great work) |
+Every building is drawn. Each drawing is a text file in
+`data/mc_assistant/blueprints/`, and `tools/blueprints.py` renders them.
 
-Builders pick the flattest nearby lot that costs least, level it (filling the low
-side, felling any tree in the way and keeping the wood), and build from what they
-actually carry: stone before planks, planks before logs.
+What a building is made of depends on the village. The drawing says what each block
+is for: a stone footing, a log frame, plank walls, a roof of stairs. A builder lays
+the village's own materials there: its oak, spruce or birch, and its cobble.
+It cuts the roof's stairs and slabs, and the doors, from the stores' planks, the
+window panes from glass, and hay bales from wheat. Whatever it can't have, it builds
+with plain blocks, so a building is never held up.
+
+| Building | Size | What it is |
+|---|---|---|
+| House | 9×9 | Timber-framed cottage on a stone footing, steep roof with a chimney, glass windows, lanterns by the door. Inside: bench, furnace, chest and **four beds** |
+| Guest house | 9×11 | The house made finer for an honoured player: porch on posts, flower boxes, a rug, one bed |
+| Storehouse | 7×9 | Log-framed store with a gabled front, four chests and barrels |
+| Shelter | 7×7 | Four log posts, a low stone wall and a pitched roof |
+| Well | 5×5 | Stone curb round water, four posts, a little roof with a hanging lantern |
+| Smeltery | 9×9 | Stone forge open to the street, three furnaces under a brick chimney, anvil, bench and chests |
+| Workshop | 9×9 | Timber workroom with a wide door, two benches, furnace, barrels and a hayloft |
+| Granary | 7×7 | Squat store on a stone base, full of hay, three chests, hipped roof |
+| Market | 11×11 | Open hall on log posts under a broad hipped roof, stalls of hay and barrels, a fountain |
+| Meeting hall | 11×19 | Long timber hall: tall windows, double doors up steps, a long table, the elder's seat |
+| Chapel | 9×21 | Stone nave with tall windows, a bell tower over the door, pews, an altar and lights |
+| Barracks | 9×15 | Stone-and-timber dormitory with six bunks, chests, a bench and an anvil |
+| Watchtower | 7×7 | Stone tower three storeys high, ladder inside, battlemented deck with a lookout roof |
+| Lighthouse | 7×7 | Tall banded stone tower, ladder all the way up, glass lamp room, pointed roof |
+| Monument | 7×7 | Stepped plinth, banded pillar, lanterns at the corners and on top |
+| Gateway | 9×5 | The Nether Age's obsidian frame on a stone dais between lantern pillars |
+| Wall | ring of 27 | Round the square: battlements, a gate onto each avenue, lantern pillars, corner towers |
+| Pen | 7×7 | Fence ring with a gate, once there is a rancher |
+
+Builders take the place the town plan has for the building. Of the first few good
+lots they pick the one that costs least to build on. They level it (filling the low
+side, felling any tree in the way and keeping the wood) and build from what they
+actually carry.
+
+`/village showcase buildings` (an operator command) sets every building out on a
+stage to be looked at. `/village showcase town` lays out a whole grown town to the
+plan.
 
 ## How they look
 

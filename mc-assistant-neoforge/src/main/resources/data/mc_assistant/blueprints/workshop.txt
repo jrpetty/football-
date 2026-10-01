@@ -1,27 +1,26 @@
-# The family house: a timber-framed cottage on a stone footing, a steep pitched
-# roof with a stone chimney, glass in the windows, lanterns either side of the
-# door, and four beds: a family sleeps under one roof.
+# The workshop: a long timber workroom with a wide door to the street, two
+# benches, a furnace, the stores of the trade, barrels and a hayloft above.
 # Rows run from the back of the building (top) to the front (bottom, the door).
-name house
+name workshop
 layer -1
 .........
 .FFFFFFF.
 .FfffffF.
 .FfffffF.
 .FfffffF.
-.FfffffFF
+.FfffffF.
 .FfffffF.
 .FFFFFFF.
-....k....
+.........
 layer 0
 .........
 .LwwwwwL.
-.w..C..w.
-.wBB.BBw.
+.wTTUCQw.
+.w....Qw.
 .w.....w.
-.w.....wS
-.wT...Uw.
-.LwwDwwL.
+.w.....w.
+.wy...&w.
+.Lw...wL.
 .........
 layer 1
 .........
@@ -29,9 +28,9 @@ layer 1
 .W.....W.
 .G.....G.
 .W.....W.
-.G.....GS
-.Wt....W.
-.LGW.WGL.
+.G.....G.
+.W.....W.
+.LW...WL.
 .........
 layer 2
 .........
@@ -39,9 +38,9 @@ layer 2
 .W.....W.
 .W.....W.
 .W..j..W.
-.W.....WS
 .W.....W.
-.LWWWWWL.
+.W.....W.
+.LW---WL.
 ..j...j..
 layer 3
 vvvvvvvvv
@@ -49,17 +48,17 @@ vvvvvvvvv
 .|fffff|.
 .|fffff|.
 .|fffff|.
-.|fffff|S
+.|fffff|.
 .|fffff|.
 .L-----L.
 ^^^^^^^^^
 layer 4
 .........
 vvvvvvvvv
+.Wyy..yW.
 .W.....W.
 .W.....W.
 .W.....W.
-.W.....WS
 .W.....W.
 ^^^^^^^^^
 .........
@@ -68,8 +67,8 @@ layer 5
 .........
 vvvvvvvvv
 .W.....W.
-.G.....G.
-.W.....WS
+.W.....W.
+.W.....W.
 ^^^^^^^^^
 .........
 .........
@@ -79,7 +78,7 @@ layer 6
 .........
 vvvvvvvvv
 .W.....W.
-^^^^^^^^S
+^^^^^^^^^
 .........
 .........
 .........
@@ -89,17 +88,7 @@ layer 7
 .........
 .........
 _________
-........S
 .........
-.........
-.........
-layer 8
-.........
-.........
-.........
-.........
-.........
-........S
 .........
 .........
 .........

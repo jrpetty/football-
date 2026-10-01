@@ -66,7 +66,26 @@ public final class VillageCommands {
             // One folk of every trade, in its clothes and with its tool, stood in a
             // row to be looked at. Clear them with /kill @e[tag=folk_lineup].
             .then(Commands.literal("lineup").requires(src -> src.hasPermission(2))
-                .executes(VillageCommands::lineup)));
+                .executes(VillageCommands::lineup))
+            // Every building a village raises, set out on a stage to be looked at; or a whole
+            // town laid out to the plan. For the pictures; builds from a palette, not the stores.
+            .then(Commands.literal("showcase").requires(src -> src.hasPermission(2))
+                .then(Commands.literal("buildings").executes(ctx -> showcase(ctx, false)))
+                .then(Commands.literal("town").executes(ctx -> showcase(ctx, true)))));
+    }
+
+    private static int showcase(CommandContext<CommandSourceStack> ctx, boolean town) {
+        net.minecraft.server.level.ServerLevel level = ctx.getSource().getLevel();
+        net.minecraft.core.BlockPos at = net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition());
+        if (town) {
+            int n = Showcase.town(level, at);
+            ctx.getSource().sendSuccess(() -> Component.literal("TOWN " + at.getX() + " " + at.getY() + " " + at.getZ()
+                + " with " + n + " buildings"), false);
+            return n;
+        }
+        java.util.List<String> lines = Showcase.buildings(level, at);
+        ctx.getSource().sendSuccess(() -> Component.literal("SHOWCASE " + String.join(" | ", lines)), false);
+        return lines.size();
     }
 
     private static int talk(CommandContext<CommandSourceStack> ctx, String words)
@@ -373,15 +392,28 @@ public final class VillageCommands {
         sb.append(". Room for ").append(Villages.housing(v.id()));
         // Who has a bed, and (at night) who is in it.
         int folkNow = 0, bedded = 0, asleep = 0;
+        java.util.List<String> late = new java.util.ArrayList<>();
+        boolean night = level.isNight();
         for (AssistantEntity a : Villages.folkOf(v.id())) {
             folkNow++;
             net.minecraft.core.BlockPos bed = a.bedPos();
-            if (bed != null && level.getBlockState(bed).getBlock() instanceof net.minecraft.world.level.block.BedBlock) bedded++;
+            boolean has = bed != null && level.getBlockState(bed).getBlock() instanceof net.minecraft.world.level.block.BedBlock;
+            if (has) bedded++;
             if (a.isSleeping()) asleep++;
+            else if (night && has && late.size() < 6) {
+                // Who is up with a bed to go to, and why.
+                String why = a.onShift() ? "on watch"
+                    : a.getTarget() != null ? "fighting"
+                    : a.peekJob() != null ? a.peekJob().label()
+                    : bed.distSqr(a.blockPosition()) > 9 ? "on the way, " + (int) Math.sqrt(bed.distSqr(a.blockPosition())) + " off"
+                    : "by its bed";
+                late.add(a.displayNameCap() + " (" + why + ")");
+            }
         }
         sb.append(". Beds: ").append(bedded).append(" of ").append(folkNow).append(" have one, ")
           .append(asleep).append(" asleep, homes for ").append(Villages.bedsPlanned(v.id()))
           .append(", camp ").append(com.jrpetty.mcassistant.VillageSpawner.campBeds(level, v.centre()).size());
+        if (!late.isEmpty()) sb.append("; up: ").append(String.join(", ", late));
         sb.append(". Growing: ").append(Villages.growthNote(level, v.id()));
         java.util.List<VillageFolkEntity> people = new java.util.ArrayList<>();
         for (AssistantEntity a : Villages.folkOf(v.id())) if (a instanceof VillageFolkEntity f) people.add(f);

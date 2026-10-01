@@ -70,8 +70,16 @@ public final class VillageMath {
      */
     public static int searchReach(int folk) {
         double spread = 20.0 * Math.sqrt(Math.max(0, folk - 8));
-        return (int) Math.min(MAX_REACH, Math.round(12 + spread));
+        return (int) Math.min(MAX_REACH, Math.max(TOWN_FIELDS, Math.round(12 + spread)));
     }
+
+    /**
+     * The nearest a field, a wood or a mine is looked for: beyond the town's first
+     * block of lots (TownPlan: the square, the ring street, two lots and the next
+     * street, forty-one blocks), with a plot's own width to spare. The town's ground
+     * is for its streets and houses.
+     */
+    public static final int TOWN_FIELDS = 50;
 
     /** The furthest a plot can end up from the heart. EVERYTHING ELSE IS
      *  DERIVED FROM THIS rather than guessed alongside it — the ring, the
@@ -266,7 +274,7 @@ public final class VillageMath {
     }
 
     /** Beds the house blueprint actually lays. Two, along the side walls. */
-    public static final int BEDS_PER_HOUSE = 2;
+    public static final int BEDS_PER_HOUSE = 4;
 
     /** Roofs. Two beds apiece, so the crowded target beds out most of a town
      *  and the roomy one gets a young village started. */

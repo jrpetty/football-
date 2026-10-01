@@ -53,6 +53,43 @@ def position(r):
     return float(m.group(1)), float(m.group(2)), float(m.group(3))
 
 
+def showcase(r, cx, cz, look):
+    """Every building a village raises, each on a stage of its own (a picture of each,
+    from the front, a little to one side); then a whole town laid out to the plan, from
+    the air by day and by night, and down an avenue into the square."""
+    r.cmd("time set 6000")
+    r.cmd("gamemode spectator %s" % USER)
+    bx, by, bz = cx - 300, 150, cz + 200
+    r.cmd("tp %s %d %d %d" % (USER, bx + 20, by + 20, bz + 30))
+    time.sleep(10)
+    out = r.cmd("execute positioned %d %d %d run village showcase buildings" % (bx, by, bz))
+    say("showcase: " + out[:900])
+    found = re.findall(r"(\w+) (-?\d+) (-?\d+) (-?\d+)", out.replace("SHOWCASE", ""))
+    for i, (name, x, y, z) in enumerate(found):
+        x, y, z = int(x), int(y), int(z)
+        tall = {"lighthouse": 22, "watchtower": 13, "chapel": 15, "hall": 10, "barracks": 8}.get(name, 7)
+        back = {"hall": 26, "chapel": 28, "barracks": 22, "lighthouse": 24, "watchtower": 18}.get(name, 15)
+        look("b%02d-%s" % (i + 1, name), x + back * 0.45, y + tall * 0.55 + 2, z + back,
+             x, y + tall * 0.4, z, wait=5 if i else 9)
+    say("alive after the buildings: %s" % client_alive())
+    # The town.
+    tx, ty, tz = cx - 300, 150, cz - 200
+    r.cmd("tp %s %d %d %d" % (USER, tx, ty + 60, tz + 60))
+    time.sleep(10)
+    out = r.cmd("execute positioned %d %d %d run village showcase town" % (tx, ty, tz))
+    say("town: " + out[:300])
+    time.sleep(6)
+    look("t1-town-air", tx + 62, ty + 58, tz + 74, tx, ty, tz, wait=12)
+    look("t2-town-high", tx + 4, ty + 95, tz + 40, tx, ty, tz - 4, wait=8)
+    look("t3-town-avenue", tx + 1, ty + 1, tz + 48, tx, ty + 3, tz, wait=8)
+    look("t4-town-square", tx + 9, ty + 9, tz + 11, tx - 18, ty + 2, tz - 5, wait=8)
+    look("t5-town-homes", tx + 52, ty + 14, tz + 52, tx + 26, ty + 2, tz + 26, wait=8)
+    r.cmd("time set 18000")
+    look("t6-town-night", tx + 62, ty + 58, tz + 74, tx, ty, tz, wait=10)
+    r.cmd("time set 6000")
+    say("alive after the town: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")
@@ -181,6 +218,10 @@ def main():
     shot("15-talk-trade")
     say("alive after talking: %s" % client_alive())
     say("alive after the lineup: %s" % client_alive())
+    try:
+        showcase(r, cx, cz, look)
+    except Exception as e:  # noqa: BLE001
+        say("showcase failed: %s" % e)
     alive = client_alive()
     say("alive at the end: %s" % alive)
     say("PASS the client drew the village and kept running" if alive else "FAIL the client died while drawing the village")

@@ -1018,10 +1018,10 @@ public final class Villages {
         if (folk > bedsPlanned(villageId) && !out.contains("house")) out.add("house");
     }
 
-    /** Beds the village's homes hold: so many a house, four a barracks (the guest house is the player's). */
+    /** Beds the village's homes hold: four a house, six a barracks (the guest house is the player's). */
     public static int bedsPlanned(UUID villageId) {
         return com.jrpetty.mcassistant.village.VillageMath.BEDS_PER_HOUSE * built(villageId, "house")
-            + 4 * built(villageId, "barracks");
+            + 6 * built(villageId, "barracks");
     }
 
     /**
@@ -1205,8 +1205,8 @@ public final class Villages {
     public record Site(BlockPos anchor, net.minecraft.core.Direction facing, int radius) {}
 
     private static final Map<UUID, Map<String, Site>> SITES = new ConcurrentHashMap<>();
-    /** Which lots (by index in LOTS) are spoken for: chosen for a project, built on, or given up. */
-    private static final Map<UUID, java.util.Set<Integer>> LOT_TAKEN = new ConcurrentHashMap<>();
+    /** Which squares of the town plan are spoken for (TownPlan.cellKey): chosen for a project or built on. */
+    private static final Map<UUID, java.util.Set<Long>> LOT_TAKEN = new ConcurrentHashMap<>();
     /** Lots the builders found they could not get to, as the column of the lot's middle. */
     private static final Map<UUID, java.util.Set<Long>> BAD_LOTS = new ConcurrentHashMap<>();
     /** The most a lot's ground may stand above or below the ground at the heart. */
@@ -1216,27 +1216,35 @@ public final class Villages {
      *  mountainside is not left without a storehouse for ever. */
     private static final Map<UUID, Integer> LAPS = new ConcurrentHashMap<>();
 
-    /** Nine blocks a lot: a five-by-five house or store and a margin. */
-    private static final int PITCH = 9;
-    /** The wall rings the first lots. */
-    private static final int WALL_RADIUS = 13;
+    /** The wall rings the square (village/TownPlan). */
+    private static final int WALL_RADIUS = com.jrpetty.mcassistant.village.TownPlan.PLAZA;
 
-    /** Lot offsets in the order buildings claim them: the ring closest to the
-     *  heart first, working round. */
-    private static final int[][] LOTS = lots();
+    /**
+     * How far out the town's buildings reach, a block of the plan beyond the last one
+     * built on: the streets are laid that far, and fields, woods, mines and pens are
+     * staked outside it, so the town has its ground to grow into.
+     */
+    public static int townReach(UUID villageId) {
+        int b = 0;
+        for (String s : BUILT.getOrDefault(villageId, List.of())) if (!"colony".equals(s)) b++;
+        int rings = b <= 14 ? 1 : b <= 44 ? 2 : 3;
+        return com.jrpetty.mcassistant.village.TownPlan.RING + rings * com.jrpetty.mcassistant.village.TownPlan.PERIOD + 2;
+    }
 
-    private static int[][] lots() {
-        List<int[]> cells = new ArrayList<>();
-        for (int r = 1; r <= 7; r++) {
-            for (int x = -r; x <= r; x++) {
-                for (int z = -r; z <= r; z++) {
-                    if (Math.max(Math.abs(x), Math.abs(z)) == r) cells.add(new int[]{ x, z });
-                }
-            }
-        }
-        cells.sort(java.util.Comparator.<int[]>comparingInt(c -> Math.max(Math.abs(c[0]), Math.abs(c[1])))
-            .thenComparingDouble(c -> Math.atan2(c[1], c[0])));
-        return cells.toArray(new int[0][]);
+    /** Is this spot, with a plot this big round it, clear of the town's ground? */
+    public static boolean outsideTown(UUID villageId, BlockPos centre, BlockPos spot, int plotRadius) {
+        int d = Math.max(Math.abs(spot.getX() - centre.getX()), Math.abs(spot.getZ() - centre.getZ()));
+        return d - plotRadius > townReach(villageId);
+    }
+
+    /** A direction for the plan's numbering of them. */
+    public static net.minecraft.core.Direction direction(int back) {
+        return switch (back) {
+            case com.jrpetty.mcassistant.village.TownPlan.EAST -> net.minecraft.core.Direction.EAST;
+            case com.jrpetty.mcassistant.village.TownPlan.SOUTH -> net.minecraft.core.Direction.SOUTH;
+            case com.jrpetty.mcassistant.village.TownPlan.WEST -> net.minecraft.core.Direction.WEST;
+            default -> net.minecraft.core.Direction.NORTH;
+        };
     }
 
     /**
@@ -1274,42 +1282,51 @@ public final class Villages {
             if (ground != null) site = new Site(ground, net.minecraft.core.Direction.NORTH, WALL_RADIUS);
         } else {
             java.util.Set<Long> bad = BAD_LOTS.computeIfAbsent(villageId, k -> ConcurrentHashMap.newKeySet());
-            java.util.Set<Integer> taken = LOT_TAKEN.computeIfAbsent(villageId, k -> ConcurrentHashMap.newKeySet());
+            java.util.Set<Long> taken = LOT_TAKEN.computeIfAbsent(villageId, k -> ConcurrentHashMap.newKeySet());
             int heartGround = heartGround(level, v.centre());
             int laps = LAPS.getOrDefault(villageId, 0);
-            // Look at the lots nearest the heart, and of the first few that will do take the
-            // one that costs least to build on — a flat lot a ring further out beats a slope
-            // that wants fifty blocks of stone under its floor, which a young village may not
-            // have for a day.
-            int bestIndex = -1;
+            int[] half = com.jrpetty.mcassistant.entity.goal.BuildGoal.footprint(project);
+            // The town plan's places for this kind of building, best first; of the first few
+            // that will do, the one that costs least to build on — a flat lot a little further
+            // down the list beats a slope that wants fifty blocks of stone under its floor.
+            com.jrpetty.mcassistant.village.TownPlan.Lot best = null;
             int bestScore = Integer.MAX_VALUE;
             int valid = 0;
             int free = 0;
+            int index = 0;
             boolean waiting = false;
-            for (int i = 0; i < LOTS.length && valid < 8; i++) {
-                if (taken.contains(i)) continue;
-                int[] c = LOTS[i];
-                int x = v.centre().getX() + c[0] * PITCH;
-                int z = v.centre().getZ() + c[1] * PITCH;
+            for (com.jrpetty.mcassistant.village.TownPlan.Lot lot : com.jrpetty.mcassistant.village.TownPlan.candidates(project)) {
+                if (valid >= 6) break;
+                index++;
+                boolean spoken = false;
+                for (long cell : lot.cells()) if (taken.contains(cell)) { spoken = true; break; }
+                if (spoken) continue;
+                int x = v.centre().getX() + lot.x();
+                int z = v.centre().getZ() + lot.z();
                 if (bad.contains(BlockPos.asLong(x, 0, z))) continue;
+                // Too big for the lot (a hall on an ordinary lot): not this one.
+                if (half[0] > lot.halfAcross() || half[1] > lot.halfDeep()) continue;
                 free++;
+                net.minecraft.core.Direction back = direction(lot.back());
+                boolean turned = back.getAxis() == net.minecraft.core.Direction.Axis.X;
+                int hx = turned ? half[1] : half[0], hz = turned ? half[0] : half[1];
                 // A lot whose ground has not arrived yet has not been found wanting. The ring
                 // of chunks round a new village comes in over its first minute, and every lot
                 // looked at before that used to be written off for good.
-                if (!lotLoaded(level, x, z)) { waiting = true; continue; }
-                BlockPos ground = groundFor(level, x, z, true, heartGround, laps, whyNot(villageId));
+                if (!lotLoaded(level, x, z, hx, hz)) { waiting = true; continue; }
+                BlockPos ground = groundFor(level, x, z, hx, hz, true, heartGround, laps, whyNot(villageId));
                 if (ground == null) continue;
                 valid++;
-                int ring = Math.max(Math.abs(c[0]), Math.abs(c[1]));
-                int score = com.jrpetty.mcassistant.entity.goal.BuildGoal.fillCells(level, ground).size() + 4 * ring;
+                int score = com.jrpetty.mcassistant.entity.goal.BuildGoal.fillCells(level, ground, back, half[0], half[1]).size()
+                    + 6 * index;
                 if (score < bestScore) {
                     bestScore = score;
-                    bestIndex = i;
-                    site = new Site(ground, facingOf(c[0], c[1]), 0);
+                    best = lot;
+                    site = new Site(ground, back, 0);
                 }
             }
             if (site != null) {
-                taken.add(bestIndex);
+                for (long cell : best.cells()) taken.add(cell);
             } else if (!waiting && free > 0) {
                 LAPS.merge(villageId, 1, Integer::sum);         // a whole look and nothing: less particular next time
             }
@@ -1357,16 +1374,17 @@ public final class Villages {
     public static String lotReport(UUID villageId) {
         Why why = WHY_NOT.get(villageId);
         int[] w = why == null ? new int[6] : why.n;
-        return "lap " + LAPS.getOrDefault(villageId, 0) + ", " + LOT_TAKEN.getOrDefault(villageId, java.util.Set.of()).size() + " of " + LOTS.length + " lots spoken for"
+        return "lap " + LAPS.getOrDefault(villageId, 0) + ", " + LOT_TAKEN.getOrDefault(villageId, java.util.Set.of()).size() + " of "
+            + com.jrpetty.mcassistant.village.TownPlan.lots().size() + " lots spoken for"
             + "; turned down: wet " + w[WET] + ", cliff " + w[CLIFF] + ", too high or low " + w[HEIGHT]
             + ", built on or rocky " + w[BLOCKED] + ", given up " + w[TAKEN]
             + (why == null || why.lastCliff.isEmpty() ? "" : "; last cliff " + why.lastCliff);
     }
 
     /** Is the ground a lot here would stand on all in the world yet? */
-    private static boolean lotLoaded(net.minecraft.server.level.ServerLevel level, int x, int z) {
-        for (int dx = -3; dx <= 3; dx += 3) {
-            for (int dz = -3; dz <= 3; dz += 3) {
+    private static boolean lotLoaded(net.minecraft.server.level.ServerLevel level, int x, int z, int hx, int hz) {
+        for (int dx : new int[]{ -hx, 0, hx }) {
+            for (int dz : new int[]{ -hz, 0, hz }) {
                 if (!level.hasChunk((x + dx) >> 4, (z + dz) >> 4)) return false;
             }
         }
@@ -1380,12 +1398,6 @@ public final class Villages {
             centre.getX(), centre.getZ());
     }
 
-    /** Which way is "away from the heart" for a lot at this offset. */
-    private static net.minecraft.core.Direction facingOf(int dx, int dz) {
-        return Math.abs(dx) >= Math.abs(dz)
-            ? (dx >= 0 ? net.minecraft.core.Direction.EAST : net.minecraft.core.Direction.WEST)
-            : (dz >= 0 ? net.minecraft.core.Direction.SOUTH : net.minecraft.core.Direction.NORTH);
-    }
 
     /**
      * Level-enough, dry, clear-enough ground for a five-by-five building
@@ -1403,9 +1415,16 @@ public final class Villages {
     @Nullable
     private static BlockPos groundFor(net.minecraft.server.level.ServerLevel level, int x, int z,
                                       boolean needsClearance, int heartGround, int laps, @Nullable Why why) {
+        return groundFor(level, x, z, 3, 3, needsClearance, heartGround, laps, why);
+    }
+
+    /** As above, for a footprint {@code hx} blocks each side across x and {@code hz} across z. */
+    @Nullable
+    private static BlockPos groundFor(net.minecraft.server.level.ServerLevel level, int x, int z, int hx, int hz,
+                                      boolean needsClearance, int heartGround, int laps, @Nullable Why why) {
         int lo = Integer.MAX_VALUE, hi = Integer.MIN_VALUE;
-        for (int dx = -3; dx <= 3; dx += 3) {
-            for (int dz = -3; dz <= 3; dz += 3) {
+        for (int dx : new int[]{ -hx, 0, hx }) {
+            for (int dz : new int[]{ -hz, 0, hz }) {
                 if (!level.hasChunk((x + dx) >> 4, (z + dz) >> 4)) return null;
                 int h = com.jrpetty.mcassistant.entity.goal.BuildGoal.groundTop(level, x + dx, z + dz);
                 // The ground itself has to be dry and something a wall can stand on.
@@ -1432,8 +1451,8 @@ public final class Villages {
         // footprint is not open air or something soft. A tree is not counted: the
         // builder takes its leaves and trunk down (BuildGoal), and gets the wood.
         int blocked = 0;
-        for (int dx = -3; dx <= 3; dx++) {
-            for (int dz = -3; dz <= 3; dz++) {
+        for (int dx = -hx; dx <= hx; dx++) {
+            for (int dz = -hz; dz <= hz; dz++) {
                 for (int dy = 0; dy <= 1; dy++) {
                     BlockPos c = at.offset(dx, dy, dz);
                     net.minecraft.world.level.block.state.BlockState st = level.getBlockState(c);
@@ -1444,7 +1463,8 @@ public final class Villages {
                 }
             }
         }
-        if (blocked > 10 + 12 * Math.min(laps, 2)) { why(why, BLOCKED); return null; }
+        int area = (2 * hx + 1) * (2 * hz + 1);
+        if (blocked > Math.max(10, area / 5) + 12 * Math.min(laps, 2)) { why(why, BLOCKED); return null; }
         return at;
     }
 

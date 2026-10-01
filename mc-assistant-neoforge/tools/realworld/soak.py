@@ -185,8 +185,10 @@ def night(r, x, z, label):
     status = r.cmd("execute positioned %d 64 %d run village status" % (x, z)).replace("\n", " ")
     m = re.search(r"Beds: (\d+) of (\d+) have one, (\d+) asleep, homes for (\d+), camp (\d+)", status)
     if m:
-        say("NIGHT %s: %s of %s folk have a bed, %s asleep (homes hold %s, %s still at the camp)"
-            % (label, m.group(1), m.group(2), m.group(3), m.group(4), m.group(5)))
+        up = re.search(r"; up: (.*?)\. Room for|; up: (.*?)\. Growing", status)
+        say("NIGHT %s: %s of %s folk have a bed, %s asleep (homes hold %s, %s still at the camp)%s"
+            % (label, m.group(1), m.group(2), m.group(3), m.group(4), m.group(5),
+               ("; up: " + (up.group(1) or up.group(2))) if up else ""))
     else:
         say("NIGHT %s: no beds line in the status" % label)
 

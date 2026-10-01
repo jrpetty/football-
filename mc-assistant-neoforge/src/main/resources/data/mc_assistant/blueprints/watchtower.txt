@@ -1,0 +1,132 @@
+# The watchtower: a stone tower of three storeys, a ladder up the inside, a
+# battlemented deck with a pitched lookout roof, and lanterns for the watch.
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name watchtower
+layer -1
+.......
+.FFFFF.
+.FFFFF.
+.FFFFF.
+.FFFFF.
+.FFFFF.
+.......
+layer 0
+.......
+.LSSSL.
+.S.H.S.
+.S...S.
+.S...S.
+.LSDSL.
+.......
+layer 1
+.......
+.LSSSL.
+.S.H.S.
+.S...S.
+.S...S.
+.LS.SL.
+.......
+layer 2
+.......
+.LSSSL.
+.S.H.S.
+.S...S.
+.S...S.
+.LSSSL.
+.......
+layer 3
+.......
+.LSSSL.
+.S.H.S.
+.G...G.
+.S...S.
+.LSGSL.
+.......
+layer 4
+.......
+.LSSSL.
+.S.H.S.
+.S...S.
+.S...S.
+.LSSSL.
+.......
+layer 5
+.......
+.LSSSL.
+.S.H.S.
+.G...G.
+.S...S.
+.LSGSL.
+.......
+layer 6
+.......
+.LSSSL.
+.S.H.S.
+.S...S.
+.S...S.
+.LSSSL.
+.......
+layer 7
+.......
+.SSSSS.
+.SfHfS.
+.Sf.fS.
+.SfffS.
+.SSSSS.
+.......
+layer 8
+SSSSSSS
+SfffffS
+SffHffS
+SfffffS
+SfffffS
+SfffffS
+SSSSSSS
+layer 9
+S.S.S.S
+.P...P.
+S.....S
+.......
+S.....S
+.P...P.
+S.S.S.S
+layer 10
+.......
+.P...P.
+.......
+...j...
+.......
+.P...P.
+.......
+layer 11
+vvvvvvv
+>.....<
+>.....<
+>.....<
+>.....<
+>.....<
+^^^^^^^
+layer 12
+.......
+.vvvvv.
+.>...<.
+.>...<.
+.>...<.
+.^^^^^.
+.......
+layer 13
+.......
+.......
+..vvv..
+..>.<..
+..^^^..
+.......
+.......
+layer 14
+.......
+.......
+.......
+..._...
+.......
+.......
+.......

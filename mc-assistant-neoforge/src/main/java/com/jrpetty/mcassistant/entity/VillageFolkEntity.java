@@ -260,6 +260,11 @@ public class VillageFolkEntity extends AssistantEntity {
         refreshMood();
         dreamCameTrue();
         if (ownerId() != null) Villages.chooseElder(ownerId(), level().getDayTime() / 24000L);
+        // The town's streets, worn and paved and lit a little at a time (TownWork).
+        if (ownerId() != null && level() instanceof net.minecraft.server.level.ServerLevel townLevel) {
+            Villages.Village home = Villages.get(ownerId());
+            if (home != null) TownWork.tick(townLevel, home);
+        }
         if (withAPlayer) return;
         keepTrail();
         agenda();
@@ -2036,6 +2041,14 @@ public class VillageFolkEntity extends AssistantEntity {
         // where it starts costs nothing at all.
         int reach = com.jrpetty.mcassistant.village.VillageMath
             .searchReach(Villages.headcount(ownerId()));
+        // Fields, woods and mines are out beyond the town (village/TownPlan): the
+        // ground inside it is for streets and houses.
+        boolean outdoor = trade == StationTask.FARM || trade == StationTask.WOOD || trade == StationTask.MINE
+            || trade == StationTask.RANCH || trade == StationTask.FISH;
+        UUID town = ownerId();
+        if (outdoor && town != null) reach = Math.max(reach, Villages.townReach(town) + radius + 8);
+        java.util.function.Predicate<BlockPos> clear = p -> !outdoor || town == null
+            || Villages.outsideTown(town, heart, p, radius);
         BlockPos from = heart.offset(
             (int) Math.round(Math.cos(angle) * reach), 0,
             (int) Math.round(Math.sin(angle) * reach));
@@ -2045,15 +2058,15 @@ public class VillageFolkEntity extends AssistantEntity {
             // from how far a plot can end up, and neither can be reasoned
             // about while the woodcutter quietly reaches a third further than
             // everybody else.
-            case FARM -> scan(from, SCAN, 6, radius, this::farmable);
-            case WOOD -> scan(from, SCAN, 6, radius, this::woodland);
-            case MINE -> scan(from, SCAN, 6, radius, this::diggable);
+            case FARM -> scan(from, SCAN, 6, radius, p -> clear.test(p) && farmable(p));
+            case WOOD -> scan(from, SCAN, 6, radius, p -> clear.test(p) && woodland(p));
+            case MINE -> scan(from, SCAN, 6, radius, p -> clear.test(p) && diggable(p));
             // A pen goes where the animals already are and a jetty goes on
             // water — both were staking the village square, where a rancher
             // found nothing to breed and a fisher nothing to cast into, and
             // both trades were a silent no-op for the life of the settlement.
-            case RANCH -> scan(from, SCAN, 6, radius, this::pasture);
-            case FISH -> scan(from, SCAN, 6, radius, this::fishable);
+            case RANCH -> scan(from, SCAN, 6, radius, p -> clear.test(p) && pasture(p));
+            case FISH -> scan(from, SCAN, 6, radius, p -> clear.test(p) && fishable(p));
             // The indoor trades belong in the village rather than out in a
             // field — but not all three in the same square. Each takes its own
             // corner of the middle, on its own bearing, so the forge, the
@@ -2713,7 +2726,10 @@ public class VillageFolkEntity extends AssistantEntity {
         int blocks = BuildGoal.partCounts(project, site.radius()).getOrDefault(BuildGoal.Part.BLOCK, 0);
         blocks += blocks / 10 + 2;
         // A hillside takes stone to build up to the floor.
-        if (!project.equals("fortify")) blocks += BuildGoal.fillCells(level(), site.anchor(), BuildGoal.halfOf(project)).size();
+        if (!project.equals("fortify")) {
+            int[] g = BuildGoal.footprint(project);
+            blocks += BuildGoal.fillCells(level(), site.anchor(), site.facing(), g[0], g[1]).size();
+        }
         int carried = countCarried(BuildGoal::isBuildingBlock);
         // Three parts in four is enough to begin: the rest is dug while the walls go up, and
         // a build that waited for every last block stood in front of its list for days.
@@ -2764,10 +2780,18 @@ public class VillageFolkEntity extends AssistantEntity {
             BuildGoal.partCounts(project, site.radius());
         int blocks = need.getOrDefault(BuildGoal.Part.BLOCK, 0);
         blocks += blocks / 10 + 2;                              // a margin for the cells that are lost
-        if (!project.equals("fortify")) blocks += BuildGoal.fillCells(level(), site.anchor(), BuildGoal.halfOf(project)).size();   // and the ground to build up
+        if (!project.equals("fortify")) {                       // and the ground to build up
+            int[] g = BuildGoal.footprint(project);
+            blocks += BuildGoal.fillCells(level(), site.anchor(), site.facing(), g[0], g[1]).size();
+        }
+
+        // The right things for a drawn building first: stone for its footing, planks for its
+        // walls, logs for its frame, and the stairs and slabs of its roof cut from the planks.
+        int shaped = stockStyles(project, heart);
+        if (shaped > 0) { Villages.leadProgress(village, getUUID(), now); drewForBuild = true; }
 
         // Timber and stone: only worth a trip if the village has enough.
-        int carried = countCarried(BuildGoal::isBuildingBlock);
+        int carried = countCarried(BuildGoal::isBuildingBlock) + shaped;
         int least = blocks * 3 / 4;                             // enough to begin with: see affordsTimberFor
         if (carried < blocks) {
             int inStores = storesHold(heart, buildStoresRadius(), BuildGoal::isBuildingBlock);
@@ -2819,12 +2843,25 @@ public class VillageFolkEntity extends AssistantEntity {
         for (var deco : java.util.List.of(
                 BuildGoal.Part.TORCH,
                 BuildGoal.Part.WINDOW,
-                BuildGoal.Part.BED)) {
+                BuildGoal.Part.BED,
+                BuildGoal.Part.DOOR,
+                BuildGoal.Part.LANTERN,
+                BuildGoal.Part.HAY,
+                BuildGoal.Part.BARREL,
+                BuildGoal.Part.FLOWER,
+                BuildGoal.Part.CARPET,
+                BuildGoal.Part.ANVIL,
+                BuildGoal.Part.CAULDRON,
+                BuildGoal.Part.BELL,
+                BuildGoal.Part.WATER)) {
             int want = need.getOrDefault(deco, 0);
             if (want == 0) continue;
             var item = BuildGoal.itemForPart(deco);
             int have = countCarried(item);
             if (have < want) have += drawFrom(heart, item, want - have, buildStoresRadius());
+            // The finishing that is quickly made: doors and barrels from planks, panes from
+            // glass, hay from the wheat.
+            if (have < want) have += finishing(deco, want - have);
             // Beds are made, not only found: three wool and three planks from the stores.
             if (deco == BuildGoal.Part.BED && have < want) have += makeBeds(want - have);
             // And without the wool, the founders' bedding comes in from the camp.
@@ -2833,6 +2870,189 @@ public class VillageFolkEntity extends AssistantEntity {
         int blocksNow = countCarried(BuildGoal::isBuildingBlock);
         if (blocksNow < least) buildNote("build: carrying " + blocksNow + " of " + blocks + " blocks");
         return blocksNow >= least;
+    }
+
+    // ------------------------------ the right materials for a drawn building ----------------
+
+    /**
+     * Stock what a drawn building's blocks are for: stone for the footing and the stone
+     * walls, planks for the boards, logs for the frame, and the roof's stairs and slabs,
+     * cut on the spot from planks out of the stores (the village's own wood: oak roofs in
+     * oak country, spruce in the taiga). Best effort: whatever it cannot have, the builder
+     * makes do with plain blocks. Returns how many stairs and slabs it now carries, which
+     * are not building blocks but stand in for them.
+     */
+    private int stockStyles(String project, BlockPos heart) {
+        java.util.Map<com.jrpetty.mcassistant.entity.goal.Blueprints.Style, Integer> want = BuildGoal.styleCounts(project);
+        if (want.isEmpty()) return 0;
+        int r = buildStoresRadius();
+        java.util.function.ToIntFunction<com.jrpetty.mcassistant.entity.goal.Blueprints.Style[]> sum = styles -> {
+            int n = 0;
+            for (var st : styles) n += want.getOrDefault(st, 0);
+            return n;
+        };
+        int stone = sum.applyAsInt(new com.jrpetty.mcassistant.entity.goal.Blueprints.Style[]{
+            com.jrpetty.mcassistant.entity.goal.Blueprints.Style.FOUNDATION, com.jrpetty.mcassistant.entity.goal.Blueprints.Style.WALL_LOW,
+            com.jrpetty.mcassistant.entity.goal.Blueprints.Style.MASONRY, com.jrpetty.mcassistant.entity.goal.Blueprints.Style.BRICK});
+        int boards = sum.applyAsInt(new com.jrpetty.mcassistant.entity.goal.Blueprints.Style[]{
+            com.jrpetty.mcassistant.entity.goal.Blueprints.Style.FLOOR, com.jrpetty.mcassistant.entity.goal.Blueprints.Style.WALL,
+            com.jrpetty.mcassistant.entity.goal.Blueprints.Style.ROOF_BLOCK});
+        int logs = sum.applyAsInt(new com.jrpetty.mcassistant.entity.goal.Blueprints.Style[]{
+            com.jrpetty.mcassistant.entity.goal.Blueprints.Style.POST, com.jrpetty.mcassistant.entity.goal.Blueprints.Style.BEAM_ACROSS,
+            com.jrpetty.mcassistant.entity.goal.Blueprints.Style.BEAM_ALONG});
+        int stairs = sum.applyAsInt(new com.jrpetty.mcassistant.entity.goal.Blueprints.Style[]{
+            com.jrpetty.mcassistant.entity.goal.Blueprints.Style.ROOF_STAIR, com.jrpetty.mcassistant.entity.goal.Blueprints.Style.ROOF_STAIR_TOP});
+        int slabs = sum.applyAsInt(new com.jrpetty.mcassistant.entity.goal.Blueprints.Style[]{
+            com.jrpetty.mcassistant.entity.goal.Blueprints.Style.ROOF_SLAB, com.jrpetty.mcassistant.entity.goal.Blueprints.Style.ROOF_SLAB_TOP});
+        int stoneSlabs = want.getOrDefault(com.jrpetty.mcassistant.entity.goal.Blueprints.Style.STONE_SLAB, 0);
+        int stoneStairs = want.getOrDefault(com.jrpetty.mcassistant.entity.goal.Blueprints.Style.STONE_STAIR, 0);
+        topUp(heart, BuildGoal::isStoneLike, stone, r);
+        topUp(heart, st -> st.is(net.minecraft.tags.ItemTags.LOGS), logs, r);
+        // The roof first, out of the planks: it is the thing that makes a building look like one.
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> woodStairs = st -> st.is(net.minecraft.tags.ItemTags.WOODEN_STAIRS);
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> woodSlabs = st -> st.is(net.minecraft.tags.ItemTags.WOODEN_SLABS);
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> rockSlabs =
+            st -> st.is(net.minecraft.tags.ItemTags.SLABS) && !st.is(net.minecraft.tags.ItemTags.WOODEN_SLABS);
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> rockStairs =
+            st -> st.is(net.minecraft.tags.ItemTags.STAIRS) && !st.is(net.minecraft.tags.ItemTags.WOODEN_STAIRS);
+        topUp(heart, woodStairs, stairs, r);
+        if (countCarried(woodStairs) < stairs) cutFromPlanks("_stairs", 6, 4, stairs - countCarried(woodStairs), heart, r);
+        topUp(heart, woodSlabs, slabs, r);
+        if (countCarried(woodSlabs) < slabs) cutFromPlanks("_slab", 3, 6, slabs - countCarried(woodSlabs), heart, r);
+        topUp(heart, rockSlabs, stoneSlabs, r);
+        if (countCarried(rockSlabs) < stoneSlabs) cutFromStone(net.minecraft.world.item.Items.COBBLESTONE_SLAB, 3, 6,
+            stoneSlabs - countCarried(rockSlabs), heart, r);
+        topUp(heart, rockStairs, stoneStairs, r);
+        if (countCarried(rockStairs) < stoneStairs) cutFromStone(net.minecraft.world.item.Items.COBBLESTONE_STAIRS, 6, 4,
+            stoneStairs - countCarried(rockStairs), heart, r);
+        planksInHand(boards, heart, r);
+        return countCarried(woodStairs) + countCarried(woodSlabs) + countCarried(rockSlabs) + countCarried(rockStairs);
+    }
+
+    /** Have at least this many of a thing in the pack, out of the stores if they have it. */
+    private void topUp(BlockPos heart, java.util.function.Predicate<net.minecraft.world.item.ItemStack> what, int want, int r) {
+        int have = countCarried(what);
+        if (have < want) drawFrom(heart, what, want - have, r);
+    }
+
+    /** Planks in the pack: from the stores, or sawn from logs (four a log, of the log's own wood). */
+    private boolean planksInHand(int want, BlockPos heart, int r) {
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> planks = st -> st.is(net.minecraft.tags.ItemTags.PLANKS);
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> logs = st -> st.is(net.minecraft.tags.ItemTags.LOGS);
+        if (countCarried(planks) >= want) return true;
+        drawFrom(heart, planks, want - countCarried(planks), r);
+        if (countCarried(planks) >= want) return true;
+        int short_ = want - countCarried(planks);
+        int needLogs = (short_ + 3) / 4;
+        if (countCarried(logs) < needLogs) drawFrom(heart, logs, needLogs - countCarried(logs), r);
+        for (net.minecraft.world.item.ItemStack st : getInventoryItems()) {
+            if (short_ <= 0) break;
+            if (!logs.test(st)) continue;
+            net.minecraft.world.item.Item board = woodOf(st, "_planks");
+            while (short_ > 0 && !st.isEmpty()) {
+                st.shrink(1);
+                net.minecraft.world.item.ItemStack left = insertItem(new net.minecraft.world.item.ItemStack(board, 4));
+                if (!left.isEmpty()) spawnAtLocation(left);
+                short_ -= 4;
+            }
+        }
+        return countCarried(planks) >= want;
+    }
+
+    /** "oak_planks" + "_stairs" is "oak_stairs"; a log's wood likewise. Oak where there is no such thing. */
+    private static net.minecraft.world.item.Item woodOf(net.minecraft.world.item.ItemStack from, String suffix) {
+        String path = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(from.getItem()).getPath();
+        String wood = path.replace("stripped_", "").replace("_planks", "").replace("_log", "").replace("_wood", "")
+            .replace("_stem", "").replace("_hyphae", "").replace("_block", "");
+        net.minecraft.world.item.Item it = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(
+            net.minecraft.resources.ResourceLocation.withDefaultNamespace(wood + suffix));
+        if (it == net.minecraft.world.item.Items.AIR) {
+            it = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(
+                net.minecraft.resources.ResourceLocation.withDefaultNamespace("oak" + suffix));
+        }
+        return it;
+    }
+
+    /** Cut so many of a wooden thing (stairs, slabs, a door) from planks, the planks' own wood. */
+    private int cutFromPlanks(String suffix, int planksPer, int makesPer, int wanted, BlockPos heart, int r) {
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> planks = st -> st.is(net.minecraft.tags.ItemTags.PLANKS);
+        int made = 0;
+        int batches = (wanted + makesPer - 1) / makesPer;
+        for (int i = 0; i < batches; i++) {
+            if (!planksInHand(planksPer, heart, r)) break;
+            // The wood there is most of, so a roof is one colour.
+            net.minecraft.world.item.ItemStack most = net.minecraft.world.item.ItemStack.EMPTY;
+            for (net.minecraft.world.item.ItemStack st : getInventoryItems()) {
+                if (planks.test(st) && st.getCount() >= planksPer && st.getCount() > most.getCount()) most = st;
+            }
+            if (most.isEmpty()) break;
+            net.minecraft.world.item.Item product = woodOf(most, suffix);
+            most.shrink(planksPer);
+            net.minecraft.world.item.ItemStack left = insertItem(new net.minecraft.world.item.ItemStack(product, makesPer));
+            if (!left.isEmpty()) spawnAtLocation(left);
+            made += makesPer;
+        }
+        if (made > 0) brain("cut " + made + " " + suffix.substring(1) + " from planks");
+        return made;
+    }
+
+    /** Cut stone slabs or steps from cobblestone. */
+    private int cutFromStone(net.minecraft.world.item.Item product, int stonePer, int makesPer, int wanted, BlockPos heart, int r) {
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> cobble = st -> st.is(net.minecraft.world.item.Items.COBBLESTONE);
+        int made = 0;
+        while (made < wanted) {
+            if (countCarried(cobble) < stonePer) drawFrom(heart, cobble, stonePer - countCarried(cobble), r);
+            if (countCarried(cobble) < stonePer) break;
+            removeMatching(cobble, stonePer);
+            net.minecraft.world.item.ItemStack left = insertItem(new net.minecraft.world.item.ItemStack(product, makesPer));
+            if (!left.isEmpty()) spawnAtLocation(left);
+            made += makesPer;
+        }
+        return made;
+    }
+
+    /** Doors and barrels from planks, panes from glass, hay from wheat: the finishing made on the spot. */
+    private int finishing(BuildGoal.Part part, int wanted) {
+        if (villageCentre == null || wanted <= 0) return 0;
+        int r = buildStoresRadius();
+        BlockPos heart = villageCentre;
+        switch (part) {
+            case DOOR -> { return cutFromPlanks("_door", 6, 3, wanted, heart, r); }
+            case BARREL -> {
+                int made = 0;
+                for (int i = 0; i < wanted && planksInHand(7, heart, r); i++) {
+                    removeMatching(st -> st.is(net.minecraft.tags.ItemTags.PLANKS), 7);
+                    insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BARREL));
+                    made++;
+                }
+                return made;
+            }
+            case WINDOW -> {
+                java.util.function.Predicate<net.minecraft.world.item.ItemStack> glass = st -> st.is(net.minecraft.world.item.Items.GLASS);
+                int made = 0;
+                while (made < wanted) {
+                    if (countCarried(glass) < 6) drawFrom(heart, glass, 6 - countCarried(glass), r);
+                    if (countCarried(glass) < 6) break;
+                    removeMatching(glass, 6);
+                    insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GLASS_PANE, 16));
+                    made += 16;
+                }
+                return Math.min(made, wanted);
+            }
+            case HAY -> {
+                java.util.function.Predicate<net.minecraft.world.item.ItemStack> wheat = st -> st.is(net.minecraft.world.item.Items.WHEAT);
+                int made = 0;
+                while (made < wanted) {
+                    if (countCarried(wheat) < 9) drawFrom(heart, wheat, 9 - countCarried(wheat), r);
+                    if (countCarried(wheat) < 9) break;
+                    removeMatching(wheat, 9);
+                    insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.HAY_BLOCK));
+                    made++;
+                }
+                return made;
+            }
+            default -> { return 0; }
+        }
     }
 
     /**
