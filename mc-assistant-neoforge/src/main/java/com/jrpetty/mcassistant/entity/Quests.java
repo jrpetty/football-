@@ -320,27 +320,37 @@ public final class Quests {
     public static void paint(ServerLevel level, Villages.Village v) {
         Ledger.Building b = hall(v.id());
         if (b == null || !Land.areaLoaded(level, b.anchor(), 12)) return;
-        paintOn(level, b, postings(v.id()));
+        paintOn(level, b, postings(v.id()), Orders.sign(v.id()));
     }
 
     /** Hang these postings on this building's board. Returns the signs written. */
     public static List<BlockPos> paintOn(ServerLevel level, Ledger.Building b, List<Posting> board) {
+        return paintOn(level, b, board, null);
+    }
+
+    /**
+     * Hang the board: the elder's orders at its head (if there are any), then the postings.
+     * Returns the signs written.
+     */
+    public static List<BlockPos> paintOn(ServerLevel level, Ledger.Building b, List<Posting> board, @Nullable String[] orders) {
         List<BlockPos> spots = spots(level, b);
         List<BlockPos> written = new ArrayList<>();
         Direction front = b.facing().getOpposite();
+        int head = orders == null ? 0 : 1;
         for (int i = 0; i < spots.size(); i++) {
             BlockPos at = spots.get(i);
             BlockState s = level.getBlockState(at);
-            Posting p = i < board.size() ? board.get(i) : null;
+            Posting p = i >= head && i - head < board.size() ? board.get(i - head) : null;
+            boolean order = i < head;
             if (!(s.getBlock() instanceof WallSignBlock)) {
-                if (!s.isAir() || p == null) continue;
+                if (!s.isAir() || (p == null && !order)) continue;
                 BlockState sign = Blocks.BIRCH_WALL_SIGN.defaultBlockState().setValue(WallSignBlock.FACING, front);
                 if (!sign.canSurvive(level, at)) continue;
                 level.setBlock(at, sign, 3);
             }
             if (!(level.getBlockEntity(at) instanceof SignBlockEntity sign)) continue;
             sign.getPersistentData().putBoolean("mca_quest", true);
-            TownLife.write(sign, p == null ? new String[]{ "QUEST BOARD", "", "nothing posted", "today" } : lines(p));
+            TownLife.write(sign, order ? orders : p == null ? new String[]{ "QUEST BOARD", "", "nothing posted", "today" } : lines(p));
             written.add(at);
         }
         return written;
@@ -391,6 +401,16 @@ public final class Quests {
         int i = spots(level, b).indexOf(e.getPos());
         List<Posting> board = postings(v.id());
         e.setCanceled(true);
+        // The head of the board: the elder's orders.
+        if (Orders.sign(v.id()) != null) {
+            if (i == 0) {
+                Orders.Given g = Orders.given(v.id());
+                if (g != null) e.getEntity().sendSystemMessage(Component.literal("Elder " + g.by() + "'s orders: "
+                    + g.order().title + ". " + g.order().words).withStyle(ChatFormatting.GOLD));
+                return;
+            }
+            i--;
+        }
         if (i < 0 || i >= board.size()) {
             e.getEntity().displayClientMessage(Component.literal("Nothing posted there today."), true);
             return;

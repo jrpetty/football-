@@ -237,6 +237,7 @@ public final class Villages {
         Land.resetForTests();
         Grow.resetForTests();
         Waterfront.resetForTests();
+        Orders.resetForTests();
         Cafe.resetForTests();
         Roads.reset();
         LAST_PROJECT.clear();
@@ -465,7 +466,7 @@ public final class Villages {
         int bestWeight = 0;
         for (Slot slot : SLOTS) {
             if (!slot.wanted(total, at)) continue;      // too small (or too young) to want one yet
-            double target = slot.target(total);
+            double target = target(villageId, slot, total);
             double deficit = target - have.getOrDefault(slot.trade(), 0);
             // Ties break toward the trade the village wants most of, which
             // keeps a young settlement growing food before it grows anything
@@ -506,6 +507,31 @@ public final class Villages {
         return null;
     }
 
+    /** A trade's share of a village this size, as the elder's order shapes it (Orders): the order's
+     *  trades a little more, every other a little less. */
+    static double target(@Nullable UUID villageId, Slot slot, int total) {
+        int boost = Orders.boost(villageId, slot.trade());
+        double t = (slot.weight() + boost) * total / (double) VILLAGE_SIZE * Orders.scale(villageId);
+        int max = slot.max() == Integer.MAX_VALUE ? Integer.MAX_VALUE : slot.max() + Math.max(0, boost);
+        return Math.max(0.0, Math.min(max, t));
+    }
+
+    /** How many hands a trade has over (positive) or under (negative) its share, as the order has
+     *  it; a trade the village has no use for yet counts as having none to spare and none short. */
+    public static double share(@Nullable UUID villageId, AssistantEntity.StationTask trade) {
+        List<AssistantEntity> folk = folkOf(villageId);
+        int total = Math.max(1, Math.max(folk.size(), headcount(villageId)));
+        Age at = villageId == null ? Age.WOOD : ageOf(villageId);
+        int have = 0;
+        for (AssistantEntity a : folk) if (a.stationTask() == trade) have++;
+        for (Slot slot : SLOTS) {
+            if (slot.trade() != trade) continue;
+            if (!slot.wanted(total, at)) return 0.0;
+            return have - target(villageId, slot, total);
+        }
+        return 0.0;
+    }
+
     /**
      * Is this trade carrying more hands than the village's shape calls for?
      * The guard on re-badging: a village must never strip a trade that is
@@ -520,7 +546,7 @@ public final class Villages {
         for (AssistantEntity a : folk) if (a.stationTask() == trade) have++;
         for (Slot slot : SLOTS) {
             if (slot.trade() != trade) continue;
-            double target = slot.target(total);
+            double target = target(villageId, slot, total);
             // One over the share, and never below one: the last farmer in a
             // village is not spare however the arithmetic reads.
             return have > Math.max(1, (int) Math.ceil(target));

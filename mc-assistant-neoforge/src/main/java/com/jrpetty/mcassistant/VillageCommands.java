@@ -498,6 +498,8 @@ public final class VillageCommands {
             java.util.List<String> council = new java.util.ArrayList<>();
             for (VillageFolkEntity m : com.jrpetty.mcassistant.entity.Council.members(id)) council.add(m.displayNameCap());
             sb.append(". Council: ").append(council.isEmpty() ? "none" : String.join(", ", council));
+            com.jrpetty.mcassistant.entity.Orders.Order order = com.jrpetty.mcassistant.entity.Orders.current(id);
+            sb.append(". Elder's orders: ").append(order == null ? "none yet" : order.title);
             java.util.Map<java.util.UUID, String> citizens = com.jrpetty.mcassistant.village.Ledger.citizens(id);
             if (!citizens.isEmpty()) sb.append("; citizens ").append(String.join(", ", citizens.values()));
             String n = com.jrpetty.mcassistant.entity.Diplomacy.status(id);

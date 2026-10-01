@@ -61,6 +61,8 @@ public final class Ledger extends SavedData {
     private final Map<UUID, Map<UUID, String>> statues = new HashMap<>();
     /** The houses each village has given a second storey (by anchor). */
     private final Map<UUID, java.util.Set<Long>> grown = new HashMap<>();
+    /** Small things a village keeps (the elder's order...), by key. */
+    private final Map<UUID, Map<String, String>> notes = new HashMap<>();
     /** The houses whose old roof is off, their second storey going up (by anchor). */
     private final Map<UUID, java.util.Set<Long>> raising = new HashMap<>();
 
@@ -329,6 +331,19 @@ public final class Ledger extends SavedData {
         if (on ? set.add(anchor.asLong()) : set.remove(anchor.asLong())) l.setDirty();
     }
 
+    @Nullable
+    public static String note(UUID village, String key) {
+        Ledger l = of();
+        return l == null ? null : l.notes.getOrDefault(village, Map.of()).get(key);
+    }
+
+    public static void note(UUID village, String key, String value) {
+        Ledger l = of();
+        if (l == null) return;
+        l.notes.computeIfAbsent(village, k -> new HashMap<>()).put(key, value);
+        l.setDirty();
+    }
+
     public static int grownCount(UUID village) {
         Ledger l = of();
         return l == null ? 0 : l.grown.getOrDefault(village, java.util.Set.of()).size();
@@ -367,6 +382,8 @@ public final class Ledger extends SavedData {
                 CompoundTag c = (CompoundTag) e;
                 if (c.hasUUID("Id")) l.offences.computeIfAbsent(id, k -> new HashMap<>()).put(c.getUUID("Id"), java.util.Arrays.copyOf(c.getIntArray("R"), 3));
             }
+            CompoundTag kept = v.getCompound("Notes");
+            for (String k : kept.getAllKeys()) l.notes.computeIfAbsent(id, x -> new HashMap<>()).put(k, kept.getString(k));
             long[] raisingAt = v.getLongArray("Raising");
             if (raisingAt.length > 0) {
                 java.util.Set<Long> set = new java.util.HashSet<>();
@@ -402,6 +419,7 @@ public final class Ledger extends SavedData {
         ids.addAll(statues.keySet());
         ids.addAll(grown.keySet());
         ids.addAll(raising.keySet());
+        ids.addAll(notes.keySet());
         for (UUID id : ids) {
             CompoundTag v = new CompoundTag();
             v.putUUID("Id", id);
@@ -456,6 +474,12 @@ public final class Ledger extends SavedData {
                 raised.add(one);
             }
             if (!raised.isEmpty()) v.put("Statues", raised);
+            Map<String, String> kept = notes.getOrDefault(id, Map.of());
+            if (!kept.isEmpty()) {
+                CompoundTag n = new CompoundTag();
+                for (Map.Entry<String, String> e : kept.entrySet()) n.putString(e.getKey(), e.getValue());
+                v.put("Notes", n);
+            }
             java.util.Set<Long> going = raising.getOrDefault(id, java.util.Set.of());
             if (!going.isEmpty()) {
                 long[] arr = new long[going.size()];

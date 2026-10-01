@@ -296,7 +296,10 @@ public class VillageFolkEntity extends AssistantEntity {
         ensurePersona();
         refreshMood();
         dreamCameTrue();
-        if (ownerId() != null) Villages.chooseElder(ownerId(), level().getDayTime() / 24000L);
+        if (ownerId() != null) {
+            Villages.chooseElder(ownerId(), level().getDayTime() / 24000L);
+            if (level() instanceof net.minecraft.server.level.ServerLevel orders) Orders.consider(orders, ownerId(), level().getDayTime() / 24000L);
+        }
         // The town's streets, worn and paved and lit a little at a time (TownWork).
         if (ownerId() != null && level() instanceof net.minecraft.server.level.ServerLevel townLevel) {
             Villages.Village home = Villages.get(ownerId());
@@ -3250,8 +3253,13 @@ public class VillageFolkEntity extends AssistantEntity {
         if (Villages.loadedCount(village) * 5 < Villages.headcount(village) * 4) return false;
         StationTask mine = stationTask();
         StationTask vacancy = Villages.vacancy(village);
-        if (vacancy == null || vacancy == mine) return false;
-        if (!Villages.overStaffed(village, mine)) return false;
+        boolean ordered = false;
+        if (vacancy == null || vacancy == mine || !Villages.overStaffed(village, mine)) {
+            // Or the elder's order: a pair of hands this trade can spare, to the trade it wants.
+            vacancy = Orders.move(village, this, level().getDayTime() / 24000L);
+            if (vacancy == null || vacancy == mine) return false;
+            ordered = true;
+        }
 
         avoidHere = workZone();          // do not simply re-stake my own field
         BlockPos site = findSite(vacancy, radiusFor(vacancy));
@@ -3261,6 +3269,14 @@ public class VillageFolkEntity extends AssistantEntity {
         assignPlot(WorkZone.around(site, radiusFor(vacancy), depthFor(vacancy, site)),
             patchNameFor(vacancy));
         setAutonomous(true);
+        if (ordered) {
+            long day = level().getDayTime() / 24000L;
+            Orders.Order o = Orders.current(village);
+            FolkTalk.speak(this, FolkTalk.pick(getRandom(), "The elder wants more hands at the " + vacancy.label + " — off I go!",
+                "Orders are orders. " + FolkTalk.cap(vacancy.label) + " it is."));
+            Villages.tell(village, day, displayNameCap() + " gave up " + mine.label + " for " + vacancy.label
+                + (o == null ? "" : ", as the elder ordered"));
+        }
         return true;
     }
 

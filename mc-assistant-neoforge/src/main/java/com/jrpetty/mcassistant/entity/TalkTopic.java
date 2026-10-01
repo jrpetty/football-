@@ -36,7 +36,10 @@ public enum TalkTopic {
     HIRE("Come adventuring with me?"),
     COMMISSION("Could you build me a house?"),
     LEDGER("Could I see the town ledger?"),
-    STORES("");
+    STORES(""),
+    ORDERS("What are the elder's orders?"),
+    WORKINGS("How does your trade work?"),
+    SHORT("What is the village short of?");
 
     public final String line;
 

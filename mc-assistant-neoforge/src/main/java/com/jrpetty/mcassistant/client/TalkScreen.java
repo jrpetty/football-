@@ -67,7 +67,7 @@ public class TalkScreen extends Screen {
     @Override
     protected void init() {
         int x = left() + 8, y = top() + 172;
-        int cols = 4, bw = (W - 16 - (cols - 1) * 3) / cols, bh = 18;
+        int cols = 4, bw = (W - 16 - (cols - 1) * 3) / cols, bh = 15;
         Choice[] grid = {
             new Choice("How are you?", TalkTopic.HOW), new Choice("Your work?", TalkTopic.DOING),
             new Choice("About you", TalkTopic.ABOUT), new Choice("Your family?", TalkTopic.PEOPLE),
@@ -86,10 +86,21 @@ public class TalkScreen extends Screen {
             new Choice("Hire you?", TalkTopic.HIRE, "", "Four coins a day: it goes with you, fights for you, carries for you, and comes home with a story"),
             new Choice("Build my house", TalkTopic.COMMISSION, "", "Bring 64 planks, 32 cobblestone and 8 glass, and the builders put up a house for you"),
             new Choice("Town ledger", TalkTopic.LEDGER, "", "A book of the village's affairs: the stores, who lives where, what is going up, what it is short of"),
+            new Choice("Elder's orders", TalkTopic.ORDERS, "", "What the elder wants the village to put its back into. Tell the elder what you think it should order"),
+            new Choice("Your trade?", TalkTopic.WORKINGS, "", "How its work goes: its tools, where it works, what it needs and where its work goes"),
+            new Choice("From the stores…", TalkTopic.STORES, "", "Ask the storekeeper for something: type what and how many"),
+            new Choice("What's short?", TalkTopic.SHORT, "", "What the village is short of, and how you could help"),
         };
         for (int i = 0; i < grid.length; i++) {
             Choice c = grid[i];
-            Button b = Button.builder(Component.literal(c.label()), btn -> ask(c.topic(), c.text()))
+            Button b = Button.builder(Component.literal(c.label()), btn -> {
+                    if (c.topic() == TalkTopic.STORES) {                 // a question you finish yourself
+                        say.setValue("Could I have 8 bread?");
+                        setFocused(say);
+                    } else {
+                        ask(c.topic(), c.text());
+                    }
+                })
                 .bounds(x + (i % cols) * (bw + 3), y + (i / cols) * (bh + 2), bw, bh).build();
             b.setTooltip(Tooltip.create(Component.literal(c.tip())));
             addRenderableWidget(b);

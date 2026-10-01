@@ -2266,6 +2266,74 @@ public class VillageGameTests {
         helper.succeed();
     }
 
+    /**
+     * The elder's orders: the elder looks the village over and gives an order; a player it
+     * thinks well of can put another to it; the order shifts the village's make-up (one miner
+     * a day goes to the fields under "fill the larder"); it heads the quest board on the hall,
+     * and every folk can say what it is.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t39_orders")
+    public static void t39_orders(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 20000, 12000, 40);
+        Kit.prepare(level, 20000, 12000, 40);
+        BlockPos heart = Kit.surface(level, 20000, 12000);
+        StationTask[] trades = { StationTask.FARM, StationTask.FARM, StationTask.FARM, StationTask.FARM, StationTask.MINE,
+            StationTask.MINE, StationTask.MINE, StationTask.WOOD, StationTask.WOOD, StationTask.SMELT };
+        List<VillageFolkEntity> folk = new java.util.ArrayList<>();
+        for (int i = 0; i < trades.length; i++) {
+            VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart.offset(i % 5 * 2, 0, i / 5 * 2), 0.0F);
+            helper.assertTrue(f != null, "folk " + i);
+            f.setJob(trades[i]);
+            f.ensurePersona();
+            folk.add(f);
+        }
+        java.util.UUID village = folk.get(0).ownerId();
+        Villages.Village v = Villages.get(village);
+        long founded = Math.max(0L, com.jrpetty.mcassistant.village.Chronicle.foundedOn(village));
+        long day = founded + 3;
+        level.setDayTime(day * 24000L + 1000L);
+        Villages.chooseElder(village, day);
+        com.jrpetty.mcassistant.entity.Orders.consider(level, village, day);
+        var first = com.jrpetty.mcassistant.entity.Orders.current(village);
+        String elderName = Villages.elderName(village);
+        Kit.log("t39 elder " + elderName + " ordered " + first);
+        helper.assertTrue(first != null && !elderName.isEmpty(), "the elder gives an order");
+        VillageFolkEntity elder = null;
+        for (VillageFolkEntity f : folk) if (f.getUUID().equals(Villages.elder(village))) elder = f;
+        helper.assertTrue(elder != null, "the elder is one of them");
+        net.minecraft.world.entity.player.Player p = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        elder.persona().feelFor(p.getUUID(), p.getName().getString(), 60);
+        String asked = com.jrpetty.mcassistant.entity.Orders.talk(elder, p, "you should order the village to fill the larder");
+        var now = com.jrpetty.mcassistant.entity.Orders.current(village);
+        double farms = Villages.share(village, StationTask.FARM), mines = Villages.share(village, StationTask.MINE);
+        Kit.log("t39 petition: " + asked + " -> " + now + "; farms " + farms + ", mines " + mines);
+        helper.assertTrue(now == com.jrpetty.mcassistant.entity.Orders.Order.LARDER, "a friend of the elder can put an order to it");
+        helper.assertTrue(farms < 0 && mines > 0, "the order wants more farmers and can spare a miner");
+        VillageFolkEntity miner = folk.get(4);
+        StationTask moved = com.jrpetty.mcassistant.entity.Orders.move(village, miner, day);
+        StationTask again = com.jrpetty.mcassistant.entity.Orders.move(village, folk.get(5), day);
+        StationTask farmer = com.jrpetty.mcassistant.entity.Orders.move(village, folk.get(0), day + 1);
+        Kit.log("t39 a miner moves to " + moved + "; a second the same day " + again + "; a farmer " + farmer);
+        helper.assertTrue(moved == StationTask.FARM && again == null && farmer == null,
+            "one spare hand a day goes where the order wants it, and nobody leaves the ordered trade");
+        // The board, and what folk say.
+        BlockPos hallAt = Kit.surface(level, heart.getX(), heart.getZ() - 22);
+        BuildGoal.stamp(level, "hall", hallAt, Direction.NORTH, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+        com.jrpetty.mcassistant.village.Ledger.built(village, "hall", hallAt, Direction.NORTH);
+        com.jrpetty.mcassistant.entity.Quests.paint(level, v);
+        var hall = com.jrpetty.mcassistant.village.Ledger.buildings(village).stream().filter(x -> x.structure().equals("hall")).findFirst().orElseThrow();
+        var spots = com.jrpetty.mcassistant.entity.Quests.spots(level, hall);
+        String head = !spots.isEmpty() && level.getBlockEntity(spots.get(0)) instanceof net.minecraft.world.level.block.entity.SignBlockEntity sign
+            ? sign.getFrontText().getMessage(0, false).getString() + " / " + sign.getFrontText().getMessage(1, false).getString() : "";
+        String said = com.jrpetty.mcassistant.entity.Orders.talk(folk.get(9) == elder ? folk.get(8) : folk.get(9), p, "");
+        Kit.log("t39 the board's head: " + head + "; a folk says: " + said);
+        helper.assertTrue(head.startsWith("ELDER'S ORDERS / Fill the"), "the order heads the board on the hall");
+        helper.assertTrue(said.contains("fill the larder"), "and folk know it");
+        helper.succeed();
+    }
+
     /** The rest of t35, once the child is grown: old age, the grave, the register, the tavern. */
     private static void rest(GameTestHelper helper, ServerLevel level, java.util.UUID village, Villages.Village v, BlockPos heart,
                              VillageFolkEntity mum, VillageFolkEntity dad, VillageFolkEntity child) {

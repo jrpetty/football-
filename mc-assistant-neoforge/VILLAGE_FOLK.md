@@ -953,6 +953,39 @@ something from the stores: "could I have 16 bread?", "could I borrow the iron pi
   five days is remembered against you.
 * **A stranger** pays the market's price and a little over.
 
+### The elder's orders
+
+Every three days the village's elder looks the place over and gives an order: what it
+wants everybody to put their backs into. An order changes only the village's make-up: a
+few more hands in one trade, a few fewer in the others.
+
+| Order | Wants more | Given when |
+|---|---|---|
+| Fill the larder | farmers, fishers | the larder is low |
+| Timber for the builders | woodcutters | the builders are short of wood |
+| Dig deep | miners, a smelter | stone, iron or coal is short |
+| Man the walls | guards | lives were lost, the bell rang, or there is a feud |
+| Grow the herds | ranchers | a tailor needs wool |
+| Fill the stalls | the shop, the café, the smith, the tailor | a thriving Iron Age town |
+| To the water | fishers | food is short and there is a fisher |
+| Steady as we go | nobody | all is well |
+
+The elder's own nature and trade weigh in too: a hardworking elder digs, a generous one
+fills the larder, a grumpy one mans the walls, a sociable one fills the stalls. An
+order stands until something else is clearly wanted more.
+
+* **Folk follow it** one at a time, at most one a day. The one who moves comes from a
+  trade with a hand to spare, and never from a craft or from a trade the order wants. It
+  says so ("The elder wants more hands at the farming — off I go!") and the history
+  records it.
+* **The order heads the quest board** on the meeting hall ("ELDER'S ORDERS / Fill the
+  larder / - Bram"). Right-click it to read the order in full.
+* **Ask anyone** "Elder's orders" and they tell you what it is, and what the village is
+  building next.
+* **Have your say.** Tell the elder what you think it should order ("you should order the
+  village to dig for iron"). If it thinks well of you, or you are a citizen, it agrees.
+  `/village status` and the town ledger show the order too.
+
 ### Neighbours: rivals, allies and feuds
 
 Villages within about six hundred blocks of each other have dealings, and what each

@@ -137,6 +137,9 @@ public final class FolkTalk {
             case COMMISSION -> Services.commission(f, p);
             case LEDGER -> Services.ledgerFor(f, p);
             case STORES -> Services.stores(f, p, text);
+            case ORDERS -> Orders.talk(f, p, text);
+            case WORKINGS -> Trades.explain(f);
+            case SHORT -> Trades.shortages(f);
             default -> puzzled(f);
         };
         // Somebody who can't stand you says as little as it can.
@@ -145,7 +148,7 @@ public final class FolkTalk {
                 "Go away. I haven't forgotten.", "Hmph.");
         }
         boolean answering = switch (topic) {
-            case HOW, DOING, ABOUT, PEOPLE, VILLAGE, DREAMS, HOBBY, MEMORY, REPUTE, GOSSIP, COUNCIL, RIVALS, QUESTS -> true;
+            case HOW, DOING, ABOUT, PEOPLE, VILLAGE, DREAMS, HOBBY, MEMORY, REPUTE, GOSSIP, COUNCIL, RIVALS, QUESTS, ORDERS, WORKINGS, SHORT -> true;
             default -> false;
         };
         return manner(f, said, answering);
@@ -934,6 +937,9 @@ public final class FolkTalk {
         if (has(t, "make peace", "peace with", "olive branch", "patch things up", "end the feud", "settle the feud")) return TalkTopic.PEACE;
         if (has(t, "stir trouble", "stir up", "rumours about", "rumors about", "they say about you", "saying about you")) return TalkTopic.STIR;
         if (has(t, "pay my fine", "pay the fine", "my fine", "what i owe", "my debt", "pay what")) return TalkTopic.FINE;
+        if (has(t, "orders", "elder want", "elder say", "you should order", "order the village", "tell everyone to", "should put our backs")) return TalkTopic.ORDERS;
+        if (has(t, "how does your", "your trade work", "how do you work", "what do you need for", "your tools", "your workshop")) return TalkTopic.WORKINGS;
+        if (has(t, "short of", "running low", "what's short", "whats short", "what do you lack", "what does the village need")) return TalkTopic.SHORT;
         if (has(t, "quest", "notice board", "the board", "bount", "postings", "work going")) return TalkTopic.QUESTS;
         if (has(t, "hire", "adventur", "sell your sword", "bodyguard", "escort", "come exploring")) return TalkTopic.HIRE;
         if (has(t, "build me a house", "build me a home", "commission", "a house for me", "house of my own", "my own house")) return TalkTopic.COMMISSION;

@@ -171,6 +171,12 @@ public final class Services {
             entries.add("Next: " + String.join(", then ", words) + ".");
         }
         entries.add("Built so far: " + Ledger.buildings(village).size() + " buildings.");
+        // The elder's orders.
+        Orders.Order order = Orders.current(village);
+        if (order != null) {
+            entries.add("§lThe elder's orders§r");
+            entries.add(order.title + ". " + order.words);
+        }
         // What it is short of.
         entries.add("§lShort of§r");
         List<Villages.Need> needs = Villages.needs(level, village);
