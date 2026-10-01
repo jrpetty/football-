@@ -229,6 +229,9 @@ public final class Villages {
         Contentment.resetForTests();
         RestDay.resetForTests();
         Tavern.resetForTests();
+        Council.resetForTests();
+        Laws.resetForTests();
+        Diplomacy.resetForTests();
         Cafe.resetForTests();
         Roads.reset();
         LAST_PROJECT.clear();
@@ -734,6 +737,11 @@ public final class Villages {
     private static final Map<UUID, long[]> STOCK_TICK = new ConcurrentHashMap<>();
     private static final Map<UUID, int[]> STOCK = new ConcurrentHashMap<>();
 
+    /** Count the stores afresh at the next asking (tests, and anything that just filled them). */
+    public static void forgetStock() {
+        STOCK_TICK.clear();
+    }
+
     public static int stock(net.minecraft.server.level.ServerLevel level, BlockPos centre, Task task) {
         return stock(level, centre, task, 32);
     }
@@ -892,6 +900,7 @@ public final class Villages {
         if (!"colony".equals(structure) && !"guesthouse".equals(structure)) tell(villageId, gameTime / 24000L, spoken(structure) + " went up");
         LAST_PROJECT.put(villageId, gameTime);
         BUILT.computeIfAbsent(villageId, k -> new ArrayList<>()).add(structure);
+        Council.built(villageId, structure);
         Map<String, Site> pending = SITES.get(villageId);
         Site raised = pending == null ? null : pending.get(structure);
         if (raised != null) {
@@ -1004,6 +1013,18 @@ public final class Villages {
      * Everything the village would build now, most pressing first. The first one not
      * set aside is the next project (see {@link #defer}); the rest wait their turn.
      */
+    /** The amenities in the order the council voted for (a graveyard that is wanted for the dead
+     *  stays first: that is not a question for a vote). */
+    static List<String> voted(UUID villageId, List<String> extras) {
+        if (extras.size() < 2) return extras;
+        boolean yard = extras.get(0).equals("graveyard");
+        List<String> rest = new ArrayList<>(yard ? extras.subList(1, extras.size()) : extras);
+        List<String> out = new ArrayList<>();
+        if (yard) out.add("graveyard");
+        out.addAll(Council.order(villageId, rest));
+        return out;
+    }
+
     public static List<String> projectsWanted(UUID villageId) {
         List<String> out = new ArrayList<>();
         int folk = headcount(villageId);
@@ -1034,7 +1055,7 @@ public final class Villages {
         if (folk >= 12 && built(villageId, "tavern") < 1) extras.add("tavern");
         // Somewhere to lay the dead, once there are any; another when it is full.
         if (com.jrpetty.mcassistant.village.Ledger.graves(villageId).size() > Graves.room(villageId)) extras.add(0, "graveyard");
-        if (at == Age.STONE) { housesForBeds(villageId, folk, out); out.addAll(extras); return out; }
+        if (at == Age.STONE) { housesForBeds(villageId, folk, out); out.addAll(voted(villageId, extras)); return out; }
 
         if (built(villageId, "workshop") < 1) out.add("workshop");
         // Whatever the headcount: the Iron Age asks for it, and a village
@@ -1047,17 +1068,17 @@ public final class Villages {
         // shop are what a big Iron Age town has, not what makes it one.
         if (folk >= 16 && built(villageId, "smithy") < 1) extras.add("smithy");
         if (folk >= 18 && built(villageId, "shop") < 1) extras.add("shop");
-        if (at == Age.IRON) { housesForBeds(villageId, folk, out); out.addAll(extras); return out; }
+        if (at == Age.IRON) { housesForBeds(villageId, folk, out); out.addAll(voted(villageId, extras)); return out; }
 
         if (built(villageId, "lighthouse") < 1) out.add("lighthouse");
         if (built(villageId, "chapel") < 1) out.add("chapel");
         if (folk >= 22 && built(villageId, "brewery") < 1) extras.add("brewery");
-        if (at == Age.DIAMOND) { housesForBeds(villageId, folk, out); out.addAll(extras); return out; }
+        if (at == Age.DIAMOND) { housesForBeds(villageId, folk, out); out.addAll(voted(villageId, extras)); return out; }
 
         if (built(villageId, "gateway") < 1) out.add("gateway");
         if (folk >= 24 && built(villageId, "library") < 1) extras.add("library");
         housesForBeds(villageId, folk, out);   // (the Nether Age: before the great works)
-        out.addAll(extras);
+        out.addAll(voted(villageId, extras));
         // And then the great works, one after another for as long as the village stands:
         // a town that has been everywhere its ages lead goes on building.
         out.add(nextGreatWork(villageId));

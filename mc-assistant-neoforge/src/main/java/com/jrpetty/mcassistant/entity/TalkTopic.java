@@ -24,7 +24,14 @@ public enum TalkTopic {
     CHRONICLE("Could I read the village's history?"),
     CENSUS("Who lives here?"),
     TRADE("Got anything to trade?"),
-    GOSSIP("Heard any gossip?");
+    GOSSIP("Heard any gossip?"),
+    CITIZEN("May I live here?"),
+    COUNCIL("What's the council deciding?"),
+    FINE("I'd like to pay what I owe"),
+    RIVALS("What of the other villages?"),
+    PROPOSE(""),
+    PEACE(""),
+    STIR("");
 
     public final String line;
 

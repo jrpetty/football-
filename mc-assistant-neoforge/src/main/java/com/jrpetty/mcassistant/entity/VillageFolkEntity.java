@@ -262,6 +262,13 @@ public class VillageFolkEntity extends AssistantEntity {
             laterLine = null;
         }
         Leisure.tick(this);
+        // The bell is ringing: a guard with a bow makes for its post on the wall and lets nothing
+        // outside draw it through the gate. Only a monster at arm's length is fought on the way.
+        if (tickCount % 5 == 0 && onWatch() && !holdingAPost() && Raids.headingForPost(this)) {
+            net.minecraft.world.entity.LivingEntity t = getTarget();
+            if (t != null && distanceToSqr(t) > 9.0) setTarget(null);
+            if (getTarget() == null) Raids.guardDuty(this);
+        }
         if (tickCount % 40 == 0) greetPassersBy();
         // Somebody is talking to it, or it is out walking with somebody: its own day
         // waits until they are done.
@@ -638,6 +645,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (day - persona.feastDay <= 1) { m += 8; why.add(new Object[]{"feast", 8}); }
         if (day - griefDay <= 2) { m -= 12; why.add(new Object[]{"grief", 12}); }
         if (day - quarrelDay <= 0) { m -= 6; why.add(new Object[]{"quarrel", 6}); }
+        if (village != null && Diplomacy.sore(village, day)) { m -= 5; why.add(new Object[]{"feud", 5}); }
         if (village != null) {
             if (RestDay.justRested(village, day)) { m += 5; why.add(new Object[]{"rested", 5}); }
             int content = Contentment.score(village);
@@ -825,6 +833,11 @@ public class VillageFolkEntity extends AssistantEntity {
         super.registerGoals();
         this.goalSelector.addGoal(1, new com.jrpetty.mcassistant.entity.goal.TalkGoal(this));
         this.goalSelector.addGoal(1, new com.jrpetty.mcassistant.entity.goal.CompanionGoal(this));
+        // The watch turns a banished player out of the village on sight (Laws).
+        this.targetSelector.addGoal(2, new net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal<>(
+            this, net.minecraft.world.entity.player.Player.class, 10, true, false,
+            e -> stationTask() == StationTask.GUARD && villageCentre != null && Laws.outlaw(ownerId(), e)
+                && e.blockPosition().closerThan(villageCentre, 48)));
     }
 
     // ------------------------------ who they are, and who they like ----------

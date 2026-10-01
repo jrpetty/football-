@@ -410,6 +410,7 @@ public final class Market {
         UUID id = v.id();
         Standing.Title title = Standing.of(id, p.getUUID(), level.getGameTime()).title();
         if (title == Standing.Title.OUTCAST) return "Nobody here will trade with you.";
+        if (Laws.banished(id, p.getUUID(), level.getDayTime() / 24000L)) return "You're banished from " + Villages.name(id) + ". Nobody will serve you.";
         boolean md = marketDay(id, level.getDayTime() / 24000L);
         if (shown.isEmpty()) return "Nothing on this counter today.";
         Good g = goodFor(shown);
@@ -422,6 +423,7 @@ public final class Market {
         int price = price(g, shown, stock, md);
         if (title == Standing.Title.UNWELCOME) price *= 2;
         else if (title.atLeast(Standing.Title.FRIEND)) price = Math.max(1, price - price / 10);
+        if (Citizens.is(id, p.getUUID())) price = Math.max(1, price - Math.max(1, price / 10));   // a citizen's ten off
         if (p.isShiftKeyDown()) return lot + ": " + price + coinWord(price) + ". Right-click to buy.";
         int coins = coinsHeld(p);
         if (coins < price) {

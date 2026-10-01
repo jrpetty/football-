@@ -328,6 +328,16 @@ public final class Showcase {
         }
         if (field != null) view("t11-scarecrow", field.offset(-8, 3, -8), field.offset(2, 0, 2));
         view("t13-night-street", heart.offset(1, 1, 50), heart.offset(0, 3, 14));
+        // A hero's statue on the square, in the likeness of whoever is looking.
+        List<net.minecraft.server.level.ServerPlayer> lookers = level.players();
+        BlockPos spot = heart.offset(5, 0, -5);
+        BlockPos plinth = com.jrpetty.mcassistant.entity.Citizens.raise(level, spot, heart,
+            lookers.isEmpty() ? "A Hero" : lookers.get(0).getName().getString(),
+            lookers.isEmpty() ? null : lookers.get(0).getGameProfile(), "Showcase");
+        if (plinth != null) {
+            Direction toHeart = Direction.getNearest(heart.getX() - spot.getX(), 0, heart.getZ() - spot.getZ());
+            view("t21-statue", plinth.relative(toHeart, 4).relative(toHeart.getClockWise(), 1).above(2), plinth.above(1));
+        }
         return n;
     }
 

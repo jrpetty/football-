@@ -58,6 +58,8 @@ public final class VillageCommands {
             .then(Commands.literal("chronicle").executes(VillageCommands::chronicle))
             // What every village you have met thinks of you.
             .then(Commands.literal("standing").executes(VillageCommands::standing))
+            // How the villages stand with each other: allies, feuds, tribute.
+            .then(Commands.literal("relations").executes(VillageCommands::relations))
             // Talk with the nearest folk, as a right-click would (for scripts and tests).
             .then(Commands.literal("talk").requires(src -> src.hasPermission(2))
                 .executes(ctx -> talk(ctx, ""))
@@ -136,6 +138,16 @@ public final class VillageCommands {
         if (!player.getInventory().add(book)) player.drop(book, false);
         ctx.getSource().sendSuccess(() -> Component.literal("The chronicle of " + Villages.name(v.id()) + "."), false);
         return 1;
+    }
+
+    private static int relations(CommandContext<CommandSourceStack> ctx) {
+        java.util.List<String> lines = com.jrpetty.mcassistant.entity.Diplomacy.report();
+        if (lines.isEmpty()) {
+            ctx.getSource().sendSuccess(() -> Component.literal("No two villages near enough to have dealings yet."), false);
+            return 0;
+        }
+        for (String l : lines) ctx.getSource().sendSuccess(() -> Component.literal(l), false);
+        return lines.size();
     }
 
     private static int standing(CommandContext<CommandSourceStack> ctx) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
@@ -465,6 +477,16 @@ public final class VillageCommands {
             sb.append(". Watch: ").append(alarm != null ? "THE BELL IS RINGING (" + alarm + ")" : "quiet")
               .append(", ").append(gates).append(" gates ").append(com.jrpetty.mcassistant.entity.Watch.isShut(v.id()) ? "shut" : "open")
               .append(", ").append(posts).append(" posts on the wall");
+        }
+        {
+            java.util.UUID id = v.id();
+            java.util.List<String> council = new java.util.ArrayList<>();
+            for (VillageFolkEntity m : com.jrpetty.mcassistant.entity.Council.members(id)) council.add(m.displayNameCap());
+            sb.append(". Council: ").append(council.isEmpty() ? "none" : String.join(", ", council));
+            java.util.Map<java.util.UUID, String> citizens = com.jrpetty.mcassistant.village.Ledger.citizens(id);
+            if (!citizens.isEmpty()) sb.append("; citizens ").append(String.join(", ", citizens.values()));
+            String n = com.jrpetty.mcassistant.entity.Diplomacy.status(id);
+            if (n != null) sb.append(". Neighbours: ").append(n);
         }
         java.util.List<VillageFolkEntity> people = new java.util.ArrayList<>();
         for (AssistantEntity a : Villages.folkOf(v.id())) if (a instanceof VillageFolkEntity f) people.add(f);

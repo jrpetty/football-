@@ -81,7 +81,8 @@ public class BowAttackGoal extends Goal {
                     assistant.getX() + away.x * 5, assistant.getY(), assistant.getZ() + away.z * 5, 1.3D);
             }
         } else if (distSq > 196.0) {
-            assistant.getNavigation().moveTo(t, 1.2D);
+            // On the watch, a guard never goes out after them: the wall is where it fights from.
+            if (!assistant.onWatch()) assistant.getNavigation().moveTo(t, 1.2D);
         } else {
             assistant.getNavigation().stop();
         }

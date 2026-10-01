@@ -51,6 +51,15 @@ public final class Ledger extends SavedData {
     /** The village's dead, in the order they died. */
     private final Map<UUID, List<Grave>> graves = new HashMap<>();
 
+    /** The village's citizens: the players it counts as its own, by name. */
+    private final Map<UUID, Map<UUID, String>> citizens = new HashMap<>();
+    /** What each player has done against each village's laws: offences, coin owed, banished until (day). */
+    private final Map<UUID, Map<UUID, int[]>> offences = new HashMap<>();
+    /** What each pair of villages thinks of the other, -100 to 100 ("a|b", the lesser id first). */
+    private final Map<String, Integer> relations = new HashMap<>();
+    /** The players each village has raised a statue to. */
+    private final Map<UUID, Map<UUID, String>> statues = new HashMap<>();
+
     /** Without a server (a plain unit test) the register is kept here instead. */
     private static Ledger loose;
 
@@ -208,6 +217,89 @@ public final class Ledger extends SavedData {
         return g == null ? List.of() : List.copyOf(g);
     }
 
+    // ------------------------------------------------------------------ citizens, laws, neighbours
+
+    public static boolean citizen(UUID village, UUID player) {
+        Ledger l = of();
+        return l != null && l.citizens.getOrDefault(village, Map.of()).containsKey(player);
+    }
+
+    public static void addCitizen(UUID village, UUID player, String name) {
+        Ledger l = of();
+        if (l == null) return;
+        l.citizens.computeIfAbsent(village, k -> new HashMap<>()).put(player, name);
+        l.setDirty();
+    }
+
+    public static void removeCitizen(UUID village, UUID player) {
+        Ledger l = of();
+        if (l == null) return;
+        Map<UUID, String> m = l.citizens.get(village);
+        if (m != null && m.remove(player) != null) l.setDirty();
+    }
+
+    public static Map<UUID, String> citizens(UUID village) {
+        Ledger l = of();
+        if (l == null) return Map.of();
+        return Map.copyOf(l.citizens.getOrDefault(village, Map.of()));
+    }
+
+    /** A player's record against a village's laws: {offences, coin owed, banished until (day)}. */
+    public static int[] record(UUID village, UUID player) {
+        Ledger l = of();
+        if (l == null) return new int[3];
+        int[] r = l.offences.getOrDefault(village, Map.of()).get(player);
+        return r == null ? new int[3] : r.clone();
+    }
+
+    public static void record(UUID village, UUID player, int[] r) {
+        Ledger l = of();
+        if (l == null) return;
+        l.offences.computeIfAbsent(village, k -> new HashMap<>()).put(player, r.clone());
+        l.setDirty();
+    }
+
+    public static String pair(UUID a, UUID b) {
+        return a.compareTo(b) < 0 ? a + "|" + b : b + "|" + a;
+    }
+
+    /** What two villages think of each other (0 if they have never had dealings). */
+    public static int relation(UUID a, UUID b) {
+        Ledger l = of();
+        return l == null ? 0 : l.relations.getOrDefault(pair(a, b), 0);
+    }
+
+    public static boolean knowEachOther(UUID a, UUID b) {
+        Ledger l = of();
+        return l != null && l.relations.containsKey(pair(a, b));
+    }
+
+    public static int relate(UUID a, UUID b, int delta) {
+        Ledger l = of();
+        if (l == null) return 0;
+        int now = Math.max(-100, Math.min(100, l.relations.getOrDefault(pair(a, b), 0) + delta));
+        l.relations.put(pair(a, b), now);
+        l.setDirty();
+        return now;
+    }
+
+    public static boolean statue(UUID village, UUID player) {
+        Ledger l = of();
+        return l != null && l.statues.getOrDefault(village, Map.of()).containsKey(player);
+    }
+
+    public static int statues(UUID village) {
+        Ledger l = of();
+        return l == null ? 0 : l.statues.getOrDefault(village, Map.of()).size();
+    }
+
+    public static void raisedStatue(UUID village, UUID player, String name) {
+        Ledger l = of();
+        if (l == null) return;
+        l.statues.computeIfAbsent(village, k -> new HashMap<>()).put(player, name);
+        l.setDirty();
+    }
+
     public static Ledger load(CompoundTag tag, HolderLookup.Provider registries) {
         Ledger l = new Ledger();
         for (Tag t : tag.getList("Villages", Tag.TAG_COMPOUND)) {
@@ -233,7 +325,21 @@ public final class Ledger extends SavedData {
                     g.getString("Parents"), g.getString("Partner"), g.getString("Trade")));
             }
             if (!dead.isEmpty()) l.graves.put(id, dead);
+            for (Tag e : v.getList("Citizens", Tag.TAG_COMPOUND)) {
+                CompoundTag c = (CompoundTag) e;
+                if (c.hasUUID("Id")) l.citizens.computeIfAbsent(id, k -> new HashMap<>()).put(c.getUUID("Id"), c.getString("Name"));
+            }
+            for (Tag e : v.getList("Offences", Tag.TAG_COMPOUND)) {
+                CompoundTag c = (CompoundTag) e;
+                if (c.hasUUID("Id")) l.offences.computeIfAbsent(id, k -> new HashMap<>()).put(c.getUUID("Id"), java.util.Arrays.copyOf(c.getIntArray("R"), 3));
+            }
+            for (Tag e : v.getList("Statues", Tag.TAG_COMPOUND)) {
+                CompoundTag c = (CompoundTag) e;
+                if (c.hasUUID("Id")) l.statues.computeIfAbsent(id, k -> new HashMap<>()).put(c.getUUID("Id"), c.getString("Name"));
+            }
         }
+        CompoundTag rel = tag.getCompound("Relations");
+        for (String k : rel.getAllKeys()) l.relations.put(k, rel.getInt(k));
         return l;
     }
 
@@ -245,6 +351,9 @@ public final class Ledger extends SavedData {
         ids.addAll(paid.keySet());
         ids.addAll(mother.keySet());
         ids.addAll(graves.keySet());
+        ids.addAll(citizens.keySet());
+        ids.addAll(offences.keySet());
+        ids.addAll(statues.keySet());
         for (UUID id : ids) {
             CompoundTag v = new CompoundTag();
             v.putUUID("Id", id);
@@ -275,9 +384,36 @@ public final class Ledger extends SavedData {
                 dead.add(one);
             }
             if (!dead.isEmpty()) v.put("Graves", dead);
+            ListTag people = new ListTag();
+            for (Map.Entry<UUID, String> e : citizens.getOrDefault(id, Map.of()).entrySet()) {
+                CompoundTag one = new CompoundTag();
+                one.putUUID("Id", e.getKey());
+                one.putString("Name", e.getValue());
+                people.add(one);
+            }
+            if (!people.isEmpty()) v.put("Citizens", people);
+            ListTag crimes = new ListTag();
+            for (Map.Entry<UUID, int[]> e : offences.getOrDefault(id, Map.of()).entrySet()) {
+                CompoundTag one = new CompoundTag();
+                one.putUUID("Id", e.getKey());
+                one.putIntArray("R", e.getValue());
+                crimes.add(one);
+            }
+            if (!crimes.isEmpty()) v.put("Offences", crimes);
+            ListTag raised = new ListTag();
+            for (Map.Entry<UUID, String> e : statues.getOrDefault(id, Map.of()).entrySet()) {
+                CompoundTag one = new CompoundTag();
+                one.putUUID("Id", e.getKey());
+                one.putString("Name", e.getValue());
+                raised.add(one);
+            }
+            if (!raised.isEmpty()) v.put("Statues", raised);
             villages.add(v);
         }
         tag.put("Villages", villages);
+        CompoundTag rel = new CompoundTag();
+        for (Map.Entry<String, Integer> e : relations.entrySet()) rel.putInt(e.getKey(), e.getValue());
+        tag.put("Relations", rel);
         return tag;
     }
 }

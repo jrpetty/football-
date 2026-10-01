@@ -30,7 +30,7 @@ import java.util.List;
  */
 public class TalkScreen extends Screen {
 
-    private static final int W = 360, H = 316;
+    private static final int W = 360, H = 336;
     private static final int SPEECH_LINES = 6;
 
     private FolkReplyPayload last;
@@ -78,6 +78,10 @@ public class TalkScreen extends Screen {
             new Choice("Trade?", TalkTopic.TRADE), new Choice("Gossip?", TalkTopic.GOSSIP),
             new Choice("Residents?", TalkTopic.CENSUS),
             new Choice("I'm sorry", TalkTopic.SAY, "I'm sorry", "Apologise for whatever you did"),
+            new Choice("Live here?", TalkTopic.CITIZEN, "", "Ask to become a citizen: a vote on the council and a house of your own"),
+            new Choice("The council", TalkTopic.COUNCIL, "", "Who sits on the council, and what it voted to build. Say \"you should build a tavern\" to put it to the vote"),
+            new Choice("Pay a fine", TalkTopic.FINE, "", "Pay what you owe the village"),
+            new Choice("Neighbours?", TalkTopic.RIVALS, "", "What this village thinks of the villages round about. Say \"make peace with ...\" or worse"),
         };
         for (int i = 0; i < grid.length; i++) {
             Choice c = grid[i];

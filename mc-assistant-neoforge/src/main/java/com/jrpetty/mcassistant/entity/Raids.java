@@ -429,6 +429,14 @@ public final class Raids {
         return holdGate(level, v, g);
     }
 
+    /** Is this guard, with the bell ringing, on its way up to a post on the wall? */
+    public static boolean headingForPost(VillageFolkEntity g) {
+        UUID id = g.ownerId();
+        if (id == null || !ALARMS.containsKey(id) || !(g.level() instanceof ServerLevel level)) return false;
+        if (g.countCarried(s -> s.is(Items.BOW) || s.is(Items.CROSSBOW)) == 0 || !g.hasArrows()) return false;
+        return !Watch.posts(level, id).isEmpty();
+    }
+
     /** Bow and arrows out of the village's stores, if the guard has none of its own. */
     static void arm(ServerLevel level, Villages.Village v, VillageFolkEntity g) {
         if (g.countCarried(s -> s.is(Items.BOW) || s.is(Items.CROSSBOW)) == 0

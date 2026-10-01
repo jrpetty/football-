@@ -124,7 +124,8 @@ public final class Contentment {
         if (Raids.underAlarm(id)) safety -= 4;
         if (Villages.ageOf(id).ordinal() >= Villages.Age.STONE.ordinal() && !Villages.hasBuilt(id, "fortify")) safety -= 2;
         else if (Villages.hasBuilt(id, "fortify")) good.add("safe behind the wall");
-        safety = Math.max(0, safety);
+        safety += Diplomacy.safety(id, good, bad);
+        safety = Math.max(0, Math.min(10, safety));
         // Things to enjoy.
         int amenities = 0;
         for (String s : new String[]{ "well", "market", "cafe", "tavern", "chapel" }) {

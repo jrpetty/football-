@@ -158,6 +158,9 @@ public final class McAssistantMod {
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Caravans.class);
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Raids.class);
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Tavern.class);
+        NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Citizens.class);
+        NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Laws.class);
+        NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Diplomacy.class);
     }
 
     private void onEntityAttributes(EntityAttributeCreationEvent event) {

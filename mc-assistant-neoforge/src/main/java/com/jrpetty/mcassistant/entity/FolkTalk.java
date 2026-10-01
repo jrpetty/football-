@@ -82,7 +82,7 @@ public final class FolkTalk {
         f.startTalking(p);
         // A village that has turned against you closes ranks.
         UUID village = f.ownerId();
-        if (village != null && me.affinity(p.getUUID()) < 0 && topic != TalkTopic.GIFT
+        if (village != null && me.affinity(p.getUUID()) < 0 && topic != TalkTopic.GIFT && topic != TalkTopic.FINE
                 && Standing.of(village, p.getUUID(), f.level().getGameTime()).title() == Standing.Title.OUTCAST) {
             return manner(f, pick(f.getRandom(), "We don't want you here.", "Nobody here will talk to you. Go away.",
                 "After what you've done? Leave."));
@@ -121,15 +121,22 @@ public final class FolkTalk {
             case REPUTE -> repute(f, p);
             case CHRONICLE -> chronicle(f, p, op, day);
             case CENSUS -> census(f, p);
+            case CITIZEN -> Citizens.ask(f, p);
+            case COUNCIL -> Council.news(f);
+            case FINE -> Laws.pay(f, p);
+            case RIVALS -> Diplomacy.rivals(f);
+            case PROPOSE -> Council.propose(f, p, text);
+            case PEACE -> Diplomacy.peace(f, p, text);
+            case STIR -> Diplomacy.stir(f, p, text);
             default -> puzzled(f);
         };
         // Somebody who can't stand you says as little as it can.
-        if (me.affinity(p.getUUID()) <= -50 && topic != TalkTopic.GIFT && topic != TalkTopic.STAY) {
+        if (me.affinity(p.getUUID()) <= -50 && topic != TalkTopic.GIFT && topic != TalkTopic.STAY && topic != TalkTopic.FINE) {
             said = pick(f.getRandom(), "I've nothing to say to you.", "Leave me be.",
                 "Go away. I haven't forgotten.", "Hmph.");
         }
         boolean answering = switch (topic) {
-            case HOW, DOING, ABOUT, PEOPLE, VILLAGE, DREAMS, HOBBY, MEMORY, REPUTE, GOSSIP -> true;
+            case HOW, DOING, ABOUT, PEOPLE, VILLAGE, DREAMS, HOBBY, MEMORY, REPUTE, GOSSIP, COUNCIL, RIVALS -> true;
             default -> false;
         };
         return manner(f, said, answering);
@@ -341,6 +348,7 @@ public final class FolkTalk {
             case "grief" -> f.griefFor.isEmpty() ? "We lost somebody dear." : pick(r, "I keep thinking about " + f.griefFor + ".",
                 "It's hard, without " + f.griefFor + ".");
             case "quarrel" -> "I had words with somebody today. Still cross about it.";
+            case "feud" -> "It's the neighbours. After what they did, I can't settle.";
             case "rested" -> pick(r, "We had our day of rest — I feel like new.", "A day off does a body good.");
             case "thriving" -> pick(r, "The village is doing so well!", "Have you ever seen a happier place?");
             case "miserable" -> pick(r, "Everybody's so low round here.", "This village has seen better days.");
@@ -910,6 +918,13 @@ public final class FolkTalk {
     /** What a typed line is about, by the words in it. */
     public static TalkTopic understand(String text) {
         String t = " " + text.toLowerCase(Locale.ROOT).replaceAll("[^a-z' ]", " ") + " ";
+        if (has(t, "make peace", "peace with", "olive branch", "patch things up", "end the feud", "settle the feud")) return TalkTopic.PEACE;
+        if (has(t, "stir trouble", "stir up", "rumours about", "rumors about", "they say about you", "saying about you")) return TalkTopic.STIR;
+        if (has(t, "pay my fine", "pay the fine", "my fine", "what i owe", "my debt", "pay what")) return TalkTopic.FINE;
+        if (has(t, "live here", "citizen", "settle here", "move here", "join the village", "join your village")) return TalkTopic.CITIZEN;
+        if (Council.named(t) != null && has(t, "build a", "build an", "should build", "you need a", "propose", "how about a", "vote for")) return TalkTopic.PROPOSE;
+        if (has(t, "council", "the vote", "voting", "who decides")) return TalkTopic.COUNCIL;
+        if (has(t, "other village", "neighbour", "neighbor", "rival", "allies", "alliance", "feud", "tribute")) return TalkTopic.RIVALS;
         if (has(t, "joke", "funny", "make me laugh")) return TalkTopic.JOKE;
         if (has(t, "trade", "buy", "sell", "emerald", "barter", "a deal", "for sale", "wares")) return TalkTopic.TRADE;
         if (has(t, "gossip", "rumour", "rumor", "secret", "scandal", "word is", "what do people say")) return TalkTopic.GOSSIP;

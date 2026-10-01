@@ -812,6 +812,85 @@ The village's chronicle records what you did. An errand lapses after three days.
 * A folk remembers what you did together: it thanks you again for the present, asks
   how the errand is going, or keeps its distance.
 
+### Citizens, the council and the law
+
+**Citizenship.** Ask any folk "May I live here?" (the "Live here?" button). A friend of
+the village becomes one of its citizens:
+* free, if the village has already built you a house;
+* otherwise for twenty coins to the treasury, and the builders put up a house for you on
+  one of the town's lots.
+
+A citizen has a vote on the council, a tenth off at the shop and the café, and may take
+what it needs from the village's stores without it counting as theft. Your best title
+anywhere ("Hero of Oakford", "Citizen of Oakford", "Honoured guest of Oakford") is shown
+in gold after your name: over your head, in the player list and in chat. Players already
+on a team of their own are left alone.
+
+**The council** is the elder and the four folk the village thinks most of. Citizens
+each have a vote too. It decides which of the extras goes up first: the café, the
+tavern, the smithy, the shop, the brewery or the library.
+* Each councillor votes for what suits it: a cook for the café, a sociable soul for the
+  tavern, a guard or a miner for the smithy, a curious one for the library.
+* Tell any folk what you think the village should build ("you should build a tavern").
+  Councillors who like you vote your way, more so the better they like you, and gifts
+  help. A citizen's own vote goes to what it proposed.
+* The vote goes into the history ("the council voted 3 to 2 for a tavern, as Steve
+  proposed"). Ask "The council" to hear who sits on it and what it decided.
+
+**The law.** Somebody has to see it done: a folk within sixteen blocks, awake, with a
+clear view. Two things are against the law:
+* taking from the village's stores (unless you are a citizen);
+* breaking what the village built: its buildings, its wall and gates, its store chests.
+  Ground, trees and crops are anybody's to dig, cut and pick.
+
+What follows:
+1. **A fine** the first time: twice the worth of what you took, five coins for damage.
+   It comes out of your purse there and then, or is owed.
+2. **A trial** the second time. The council hears it and finds you guilty, three times
+   the fine, unless most of its members think well of you.
+3. **Banishment** the third time, for seven days. You lose your citizenship, nobody will
+   serve you at the counters, and the guards turn you out of the village on sight.
+
+Every offence costs you the village's good opinion, the witness's most of all. Ask any
+folk "Pay a fine" to pay what you owe.
+
+**Statues.** When you become a village's hero, it raises **a statue of you on the
+square**: your likeness (your own face) in gold armour with a golden sword, on a carved
+plinth, with a plaque bearing your name and the day. The square has room for three
+heroes.
+
+### Neighbours: rivals, allies and feuds
+
+Villages within about six hundred blocks of each other have dealings, and what each
+thinks of the other runs from -100 to 100:
+* **Land disputes.** Two villages whose lands overlap quarrel over the ground between
+  them, worse every day: boundary stones moved, trees felled on the wrong side.
+* **Kin.** A colony and its mother village start as family, and their caravans keep
+  them close.
+* **Comings and goings.** Traders come to market, a lad comes courting from the next
+  village, a sheep goes missing and the neighbours get the blame.
+* **Alliances** (60 and over). Each village sleeps sounder for the other (a little more
+  contentment). An ally that goes hungry is sent food from the other's stores.
+* **Feuds** (-50 and under). Scuffles at the boundary sour both villages' moods, and
+  each feud lies heavy on its village's contentment. Now and then the elders meet and
+  agree a truce.
+* **Tribute.** A village half again as big and at least as advanced, that thinks
+  nothing of a smaller neighbour, demands tribute every week from the smaller one's
+  treasury. Paying keeps an uneasy peace. Refusing, or being too poor, makes it worse.
+
+You can take a hand:
+* "Neighbours?" tells you what a folk thinks of the villages round about, and where
+  they lie.
+* "Make peace with Ravenmere": you carry gifts (ten coins) between them. That mends
+  25 points, and both villages think better of you.
+* "Stir up trouble about Ravenmere" / "the rumours about them": relations sour by 20.
+  One time in three somebody finds out who started it, and then both villages think
+  worse of you.
+
+Every alliance, feud, truce and tribute goes into both villages' history.
+`/village relations` lists every pair of neighbours and how they stand, and
+`/village status` gives the council, the citizens and the neighbours.
+
 ## What they do
 
 * **Trades** — at ten folk: four farmers, three miners, two woodcutters, one
@@ -913,6 +992,8 @@ only its owner (nobody, for folk) can rearrange the pack.
   rivals and family, under a line on the village's couples and friendships.
 * `/village chronicle` — the nearest village's history, as a written book.
 * `/village standing` — what every village you have met thinks of you.
+* `/village relations` — every pair of neighbouring villages: allies, friends, uneasy,
+  in a feud, how far apart, and whether they are kin.
 * `/village talk [words]` — (operators) talk with the nearest folk, as a right-click
   would; with words, say them to it.
 * `/village lineup` — (operators) one folk of every trade, dressed and holding
@@ -958,6 +1039,9 @@ Every push to CI:
   (game test `t29`);
 * lays the road between a village and its colony, over a pond, with its signposts,
   and sends a caravan of bread down it and home again (game test `t31`);
+* puts the council to the vote, makes a player a citizen, fines, tries and banishes a
+  thief seen at the stores, lets two villages built too close together fall out, makes
+  peace between them, and raises a statue to a hero (game test `t36`);
 * lives a life (game test `t35`): a child apprenticed to a parent grows up into the
   trade with a few levels' knack; a folk past its years dies in its sleep and is
   recorded among the dead; a graveyard gets its headstone with the name on it; the

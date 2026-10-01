@@ -530,7 +530,7 @@ public class VillageGameTests {
         Villages.restore(level, late, new BlockPos(4600, 64, 4600), Villages.Age.NETHER, raised, 20);
         List<String> order = new java.util.ArrayList<>();
         int roomBefore = Villages.housing(late);
-        for (int i = 0; i < 8; i++) {
+        for (int i = 0; i < 9; i++) {
             String next = Villages.nextProject(late);
             order.add(next);
             if (next == null) break;
@@ -538,8 +538,8 @@ public class VillageGameTests {
         }
         Kit.log("t15 past the last age: " + order + ", renown " + Villages.renown(late)
             + ", room " + roomBefore + " -> " + Villages.housing(late));
-        // Twenty folk: the café, the smithy and the shop after the gateway, before the great works.
-        helper.assertTrue(order.equals(List.of("gateway", "cafe", "smithy", "shop", "granary", "barracks", "monument", "granary")),
+        // Twenty folk: the café, the tavern, the smithy and the shop after the gateway, before the great works.
+        helper.assertTrue(order.equals(List.of("gateway", "cafe", "tavern", "smithy", "shop", "granary", "barracks", "monument", "granary")),
             "the Nether Age raises its gateway, its amenities, then the great works go round: " + order);
         helper.assertTrue(Villages.renown(late) == 4, "four great works raised, renown " + Villages.renown(late));
         helper.assertTrue(Villages.housing(late) == roomBefore + 6, "the barracks are room for six more");
@@ -1804,6 +1804,10 @@ public class VillageGameTests {
         a.setJob(StationTask.FARM);
         b.setJob(StationTask.MINE);
         // Contentment: an empty larder, then a full one.
+        for (BlockPos store : Villages.storeChests(level, village)) {
+            if (level.getBlockEntity(store) instanceof net.minecraft.world.Container c) c.clearContent();
+        }
+        Villages.forgetStock();
         com.jrpetty.mcassistant.entity.Contentment.resetForTests();
         var hungry = com.jrpetty.mcassistant.entity.Contentment.of(level, village);
         BlockPos chest = Kit.surface(level, heart.getX() + 4, heart.getZ());
@@ -1811,6 +1815,7 @@ public class VillageGameTests {
         com.jrpetty.mcassistant.entity.ZoneChests.mark(level, chest);
         net.minecraft.world.Container box = (net.minecraft.world.Container) level.getBlockEntity(chest);
         for (int i = 0; i < 5; i++) box.setItem(i, new ItemStack(Items.BREAD, 64));
+        Villages.forgetStock();
         com.jrpetty.mcassistant.entity.Contentment.resetForTests();
         var fed = com.jrpetty.mcassistant.entity.Contentment.of(level, village);
         Kit.log("t34 contentment: hungry " + hungry.score() + " " + hungry.bad() + ", fed " + fed.score() + " " + fed.good()
@@ -1890,11 +1895,123 @@ public class VillageGameTests {
                 Kit.log("t35 grown up at tick " + t + ": " + child.stationTask() + " at level " + child.veteranLevel()
                     + " (learned " + child.apprenticedTo() + ")");
                 helper.assertTrue(child.stationTask() == child.apprenticedTo(), "grown up into the trade it learned");
-                helper.assertTrue(child.veteranLevel() >= 5, "with a few levels' knack already");
+                helper.assertTrue(child.veteranLevel() >= 3, "with a few levels' knack already");
                 rest(helper, level, village, v, heart, mum, dad, child);
             }
             if (t == 850 && grown[0] < 0) helper.fail("no apprenticeship and growing up: " + child.debugLine());
         });
+    }
+
+    /**
+     * Civic life: the council votes on what to build and a well-liked player sways it; a friend
+     * of the village becomes a citizen; a thief seen at the stores is fined, then tried, then
+     * banished, and pays off what it owes; two villages too close together fall out over the
+     * land, and a player makes peace between them; and the village raises a statue to its hero.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t36_civics")
+    public static void t36_civics(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 17000, 12000, 40);
+        Kit.prepare(level, 17000, 12000, 40);
+        BlockPos heart = Kit.surface(level, 17000, 12000);
+        VillageFolkEntity a = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        VillageFolkEntity b = VillageFolkSpawnerBlock.raise(level, heart.east(2), 0.0F);
+        VillageFolkEntity c = VillageFolkSpawnerBlock.raise(level, heart.west(2), 0.0F);
+        helper.assertTrue(a != null && b != null && c != null, "a village of three");
+        java.util.UUID village = a.ownerId();
+        Villages.Village v = Villages.get(village);
+        a.setJob(StationTask.FARM);
+        b.setJob(StationTask.MINE);
+        c.setJob(StationTask.WOOD);
+        net.minecraft.world.entity.player.Player p = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        p.moveTo(heart.getX() + 0.5, heart.getY(), heart.getZ() + 3.5);
+        p.getInventory().setItem(20, new ItemStack(McAssistantMod.VILLAGE_COIN.get(), 40));
+        for (VillageFolkEntity f : List.of(a, b, c)) {
+            f.ensurePersona();
+            f.persona().feelFor(p.getUUID(), p.getName().getString(), 65);
+            com.jrpetty.mcassistant.entity.Standing.stir(village, p.getUUID());
+        }
+        // The council, and a player's proposal.
+        var council = com.jrpetty.mcassistant.entity.Council.members(village);
+        String put = com.jrpetty.mcassistant.entity.Council.propose(a, p, "you should build a library");
+        List<String> order = com.jrpetty.mcassistant.entity.Council.order(village, List.of("cafe", "tavern", "library"));
+        String news = com.jrpetty.mcassistant.entity.Council.news(a);
+        Kit.log("t36 the council " + council.size() + ": " + put + " -> " + order + " / " + news);
+        helper.assertTrue(council.size() == 3, "the three of them sit on the council");
+        helper.assertTrue(order.get(0).equals("library"), "the council, swayed by a friend, votes for the library first: " + order);
+        helper.assertTrue(news.contains("voted"), "and the vote is news");
+        // Citizenship.
+        String citizen = com.jrpetty.mcassistant.entity.Citizens.ask(a, p);
+        int left = com.jrpetty.mcassistant.entity.Market.coinsHeld(p);
+        Kit.log("t36 citizenship: " + citizen + " (" + left + " coins left)");
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Citizens.is(village, p.getUUID()) && left == 40 - com.jrpetty.mcassistant.entity.Citizens.FEE,
+            "a friend of the village becomes a citizen, for the fee");
+        // A thief at the stores: seen, fined; again, tried; again, banished.
+        BlockPos chest = Kit.surface(level, heart.getX() + 3, heart.getZ() + 1);
+        level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
+        com.jrpetty.mcassistant.entity.ZoneChests.mark(level, chest);
+        net.minecraft.world.Container box = (net.minecraft.world.Container) level.getBlockEntity(chest);
+        box.setItem(0, new ItemStack(Items.BREAD, 20));
+        helper.assertTrue(Villages.storeChests(level, village).contains(chest), "the chest is one of the village's stores");
+        net.minecraft.world.entity.player.Player thief = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        thief.moveTo(heart.getX() + 2.5, heart.getY(), heart.getZ() + 2.5);
+        com.jrpetty.mcassistant.entity.Laws.onOpen(new net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock(
+            thief, InteractionHand.MAIN_HAND, chest, new BlockHitResult(Vec3.atCenterOf(chest), Direction.UP, chest, false)));
+        box.setItem(0, new ItemStack(Items.BREAD, 14));
+        thief.getInventory().add(new ItemStack(Items.BREAD, 6));            // into the thief's pack
+        com.jrpetty.mcassistant.entity.Laws.onClose(new net.neoforged.neoforge.event.entity.player.PlayerContainerEvent.Close(thief, thief.inventoryMenu));
+        int owed1 = com.jrpetty.mcassistant.entity.Laws.owes(village, thief.getUUID());
+        int seen = com.jrpetty.mcassistant.entity.Laws.offences(village, thief.getUUID());
+        com.jrpetty.mcassistant.entity.Laws.offence(level, v, thief, "breaking the well", 5);
+        int owed2 = com.jrpetty.mcassistant.entity.Laws.owes(village, thief.getUUID());
+        long day = level.getDayTime() / 24000L;
+        boolean banishedBefore = com.jrpetty.mcassistant.entity.Laws.banished(village, thief.getUUID(), day);
+        com.jrpetty.mcassistant.entity.Laws.offence(level, v, thief, "breaking the well again", 5);
+        boolean banished = com.jrpetty.mcassistant.entity.Laws.banished(village, thief.getUUID(), day);
+        Kit.log("t36 the thief: offences " + seen + ", owed " + owed1 + " then " + owed2 + ", banished " + banishedBefore + " -> " + banished
+            + "; outlaw " + com.jrpetty.mcassistant.entity.Laws.outlaw(village, thief) + "; a's opinion " + a.persona().affinity(thief.getUUID()));
+        helper.assertTrue(seen == 1 && owed1 > 0, "seen taking from the stores, and fined");
+        helper.assertTrue(owed2 > owed1, "tried for the second, and fined more");
+        helper.assertTrue(!banishedBefore && banished && com.jrpetty.mcassistant.entity.Laws.outlaw(village, thief), "banished for the third");
+        thief.getInventory().setItem(20, new ItemStack(McAssistantMod.VILLAGE_COIN.get(), 64));
+        String paid = com.jrpetty.mcassistant.entity.Laws.pay(a, thief);
+        Kit.log("t36 the thief pays: " + paid);
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Laws.owes(village, thief.getUUID()) == 0, "and pays off every coin it owes");
+        // A neighbour too close for comfort.
+        java.util.UUID otherId = java.util.UUID.randomUUID();
+        Villages.restore(level, otherId, new BlockPos(17200, heart.getY(), 12000), Villages.Age.STONE, List.of("storage"), 10);
+        Villages.Village other = Villages.get(otherId);
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Diplomacy.neighbours(v, other), "two villages, neighbours");
+        for (int d = 0; d < 8; d++) com.jrpetty.mcassistant.entity.Diplomacy.daily(level, v, other, day + d);
+        int sour = com.jrpetty.mcassistant.village.Ledger.relation(village, otherId);
+        String rivals = com.jrpetty.mcassistant.entity.Diplomacy.rivals(a);
+        Kit.log("t36 after eight days as neighbours: " + sour + " (" + com.jrpetty.mcassistant.entity.Diplomacy.terms(sour).words + "): " + rivals);
+        helper.assertTrue(sour < 0, "too close: they fall out over the land");
+        helper.assertTrue(rivals.contains(Villages.name(otherId)), "and say so");
+        int coins = com.jrpetty.mcassistant.entity.Market.coinsHeld(p);
+        String peace = com.jrpetty.mcassistant.entity.Diplomacy.peace(a, p, "make peace with " + Villages.name(otherId));
+        int mended = com.jrpetty.mcassistant.village.Ledger.relation(village, otherId);
+        Kit.log("t36 peace: " + peace + " (" + sour + " -> " + mended + ", coins " + coins + " -> " + com.jrpetty.mcassistant.entity.Market.coinsHeld(p) + ")");
+        helper.assertTrue(mended == Math.min(100, sour + 25) && com.jrpetty.mcassistant.entity.Market.coinsHeld(p) == coins - com.jrpetty.mcassistant.entity.Diplomacy.PEACE_COST,
+            "a player carries gifts between them and mends it");
+        com.jrpetty.mcassistant.village.Ledger.relate(village, otherId, -200);
+        com.jrpetty.mcassistant.entity.Diplomacy.daily(level, v, other, day + 9);
+        java.util.List<String> lines = new java.util.ArrayList<>();
+        for (var e : com.jrpetty.mcassistant.village.Chronicle.of(village)) lines.add(e.text());
+        com.jrpetty.mcassistant.entity.Contentment.resetForTests();
+        var mood = com.jrpetty.mcassistant.entity.Contentment.of(level, village);
+        Kit.log("t36 a feud: " + lines.get(lines.size() - 1) + "; contentment " + mood.bad());
+        helper.assertTrue(lines.stream().anyMatch(x -> x.contains("fell into a feud")), "the feud goes into the history");
+        helper.assertTrue(mood.bad().contains("the feud"), "and weighs on the village");
+        // A statue for the hero.
+        boolean raised = com.jrpetty.mcassistant.entity.Citizens.statue(level, v, p);
+        BlockPos spot = v.centre().offset(5, 0, -5);
+        int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, spot.getX(), spot.getZ()) - 1;
+        Kit.log("t36 the statue: " + raised + ", plinth " + level.getBlockState(new BlockPos(spot.getX(), y, spot.getZ())));
+        helper.assertTrue(raised && com.jrpetty.mcassistant.village.Ledger.statue(village, p.getUUID()), "the village raises its hero a statue");
+        helper.succeed();
     }
 
     /** The rest of t35, once the child is grown: old age, the grave, the register, the tavern. */

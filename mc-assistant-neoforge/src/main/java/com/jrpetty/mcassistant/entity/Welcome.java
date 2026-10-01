@@ -46,6 +46,12 @@ public final class Welcome {
             say(level, p, you + "! The whole village is talking — you're the hero of " + Villages.name(village)
                 + "! Come to the heart tonight!");
         }
+        // And a statue on the square, once there is room for it.
+        if (v.title() == Standing.Title.HERO && !com.jrpetty.mcassistant.village.Ledger.statue(village, p.getUUID())
+                && level.getGameTime() % 200L < 50L) {
+            Villages.Village where = Villages.get(village);
+            if (where != null) Citizens.statue(level, where, p);
+        }
     }
 
     private static void say(ServerLevel level, Player p, String text) {
