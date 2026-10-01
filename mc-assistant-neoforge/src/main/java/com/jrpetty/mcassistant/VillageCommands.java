@@ -91,7 +91,7 @@ public final class VillageCommands {
                     case HAUL -> net.minecraft.world.item.Items.CHEST;
                     case NONE -> net.minecraft.world.item.Items.AIR;
                 }));
-            folk.setCustomName(Component.literal(switch (trades[i]) {
+            folk.rename(switch (trades[i]) {
                 case FARM -> "Farmer";
                 case WOOD -> "Lumberjack";
                 case MINE -> "Miner";
@@ -102,8 +102,7 @@ public final class VillageCommands {
                 case STORE -> "Storekeeper";
                 case HAUL -> "Hauler";
                 case NONE -> "Newcomer";
-            }));
-            folk.setCustomNameVisible(true);
+            });
             folk.addTag("folk_lineup");
             if (level.addFreshEntity(folk)) stood++;
         }

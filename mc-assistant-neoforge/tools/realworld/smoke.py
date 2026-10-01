@@ -119,36 +119,38 @@ def main():
     time.sleep(8)
     shot("4-other-side")
 
-    # The lineup: one folk of every trade in its clothes, holding its tool, stood
-    # in a row on open ground — from the front, close up three at a time, from
-    # behind (the packs, the shield, the logs, the creel), and the miner's lamp
-    # at night.
-    say("lineup ground: " + r.cmd("spreadplayers %d %d 0 1 false %s" % (cx + 40, cz, USER)))
-    time.sleep(10)
-    r.cmd("execute as %s at @s run tp @s ~ ~ ~ 0 0" % USER)
-    time.sleep(1)
+    # The lineup: one folk of every trade in its clothes, holding its tool, on a
+    # stone stage built in clear air (so the pictures are of the folk, not of
+    # whatever the terrain happened to be) — from the front, close up three at a
+    # time, from behind (the packs, the shield, the logs, the creel), and the
+    # miner's lamp at night.
+    sx, sy, sz = cx + 60, 150, cz
+    r.cmd("tp %s %d %d %d 0 0" % (USER, sx, sy + 1, sz))
+    time.sleep(10)                                    # the stage's chunks arrive
+    say("stage: " + r.cmd("fill %d %d %d %d %d %d minecraft:smooth_stone" % (sx - 12, sy, sz - 6, sx + 12, sy, sz + 12)))
+    r.cmd("fill %d %d %d %d %d %d minecraft:air" % (sx - 12, sy + 1, sz - 6, sx + 12, sy + 12, sz + 12))
+    r.cmd("tp %s %d.5 %d %d.5 0 0" % (USER, sx, sy + 1, sz))
+    time.sleep(3)
     say("lineup: " + r.cmd("execute as %s at @s run village lineup" % USER))
     say("lineup folk: " + r.cmd("execute if entity @e[tag=folk_lineup]"))
-    lp = position(r)
-    if lp:
-        px, py, pz = lp
-        line = pz + 4.0
+    px, py, pz = sx + 0.5, sy + 1.0, sz + 0.5
+    line = pz + 4.0
 
-        def look(label, x, y, z, fx, fy, fz, wait=6):
-            r.cmd("tp %s %.2f %.2f %.2f facing %.2f %.2f %.2f" % (USER, x, y, z, fx, fy, fz))
-            time.sleep(wait)
-            shot(label)
+    def look(label, x, y, z, fx, fy, fz, wait=6):
+        r.cmd("tp %s %.2f %.2f %.2f facing %.2f %.2f %.2f" % (USER, x, y, z, fx, fy, fz))
+        time.sleep(wait)
+        shot(label)
 
-        look("5-lineup", px, py + 1.2, line - 10.5, px, py + 1.0, line, wait=8)
-        look("6-lineup-left", px + 5.6, py + 0.2, line - 3.6, px + 5.6, py + 1.2, line)
-        look("7-lineup-middle", px, py + 0.2, line - 3.6, px, py + 1.2, line)
-        look("8-lineup-right", px - 5.6, py + 0.2, line - 3.6, px - 5.6, py + 1.2, line)
-        look("9-lineup-back", px, py + 1.0, line + 6.0, px, py + 1.0, line)
-        r.cmd("time set 18000")
-        miner = px + (4.5 - 3) * 1.6          # the fourth in the row is the miner
-        look("10-lamp-at-night", miner, py + 0.4, line - 3.0, miner, py + 1.4, line, wait=8)
-        r.cmd("time set 6000")
-        say("alive after the lineup: %s" % client_alive())
+    look("5-lineup", px, py + 0.6, line - 11.0, px, py + 1.0, line, wait=8)
+    look("6-lineup-left", px + 5.6, py, line - 3.4, px + 5.6, py + 1.1, line)
+    look("7-lineup-middle", px, py, line - 3.4, px, py + 1.1, line)
+    look("8-lineup-right", px - 5.6, py, line - 3.4, px - 5.6, py + 1.1, line)
+    look("9-lineup-back", px, py + 0.6, line + 7.0, px, py + 1.0, line)
+    r.cmd("time set 18000")
+    miner = px + (4.5 - 3) * 1.6          # the fourth in the row is the miner
+    look("10-lamp-at-night", miner, py, line - 2.8, miner, py + 1.3, line, wait=8)
+    r.cmd("time set 6000")
+    say("alive after the lineup: %s" % client_alive())
     alive = client_alive()
     say("alive at the end: %s" % alive)
     say("PASS the client drew the village and kept running" if alive else "FAIL the client died while drawing the village")
