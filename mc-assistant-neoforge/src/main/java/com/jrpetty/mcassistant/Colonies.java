@@ -171,6 +171,8 @@ public final class Colonies {
         Villages.tell(id, day, "settlers left to found " + colonyName);
         if (colony != null && !colony.id().equals(id)) {
             Villages.tell(colony.id(), day, "settlers from " + Villages.name(id) + " founded " + colonyName);
+            // Mother and daughter: a road between them, and caravans along it (Roads, Caravans).
+            com.jrpetty.mcassistant.village.Ledger.link(id, colony.id());
         }
         // Like coming of age, a new village is a thing worth being told about.
         net.minecraft.network.chat.Component line = net.minecraft.network.chat.Component.literal(

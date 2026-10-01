@@ -207,6 +207,7 @@ public final class Villages {
         BUILT.clear();
         BUILT_AT.clear();
         TownLife.resetForTests();
+        Roads.reset();
         LAST_PROJECT.clear();
         POP.clear();
         LAST_BIRTH.clear();

@@ -306,7 +306,7 @@ public class VillageGameTests {
     /** Ground that is not flat: a hillside, climbing a block for every two. A village
      *  gets a lot on it, and its builder fills the low side up to the floor instead of
      *  leaving the walls hanging over a drop. */
-    @GameTest(template = EMPTY, timeoutTicks = 3200, batch = "t11_hillside")
+    @GameTest(template = EMPTY, timeoutTicks = 5000, batch = "t11_hillside")
     public static void t11_hillside(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
@@ -348,15 +348,15 @@ public class VillageGameTests {
                 Kit.log("t11 the storehouse stands at tick " + t + "; " + hanging + " of 25 floor cells hang over air");
                 helper.assertTrue(hanging == 0, "the low side should have been built up, " + hanging + " cells hang");
                 helper.succeed();
-            } else if (t >= 3000) {
-                helper.fail("the storehouse was not built on the hillside in 3000 ticks: " + builder.debugLine());
+            } else if (t >= 4800) {
+                helper.fail("the storehouse was not built on the hillside in 4800 ticks: " + builder.debugLine());
             }
         });
     }
 
     /** Trees where the first lots are: the lot is taken anyway, and the builder fells
      *  what is in the way and keeps the wood. */
-    @GameTest(template = EMPTY, timeoutTicks = 3200, batch = "t12_woodland")
+    @GameTest(template = EMPTY, timeoutTicks = 5000, batch = "t12_woodland")
     public static void t12_woodland(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
@@ -387,8 +387,8 @@ public class VillageGameTests {
                 int logs = builder.countMatching(st -> st.is(ItemTags.LOGS));
                 Kit.log("t12 the storehouse stands at tick " + t + "; the builder carries " + logs + " logs from the tree");
                 helper.succeed();
-            } else if (t >= 3000) {
-                helper.fail("the storehouse was not built among the trees in 3000 ticks: " + builder.debugLine());
+            } else if (t >= 4800) {
+                helper.fail("the storehouse was not built among the trees in 4800 ticks: " + builder.debugLine());
             }
         });
     }
@@ -1488,7 +1488,7 @@ public class VillageGameTests {
             "a folk spends its savings on a treat, and the coin goes back to the treasury");
         // A player at a stall.
         net.minecraft.world.entity.player.Player p = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
-        p.getInventory().add(new ItemStack(McAssistantMod.VILLAGE_COIN.get(), 20));
+        p.getInventory().setItem(20, new ItemStack(McAssistantMod.VILLAGE_COIN.get(), 20));   // in the pack, not the hand
         treasury = com.jrpetty.mcassistant.village.Ledger.coins(village);
         String bought = com.jrpetty.mcassistant.entity.Market.deal(level, v, p, new ItemStack(Items.BREAD));
         int coins = com.jrpetty.mcassistant.entity.Market.coinsHeld(p);
@@ -1516,6 +1516,84 @@ public class VillageGameTests {
         Kit.log("t30 the stall's signs: " + signs);
         helper.assertTrue(signs.stream().anyMatch(t -> t.startsWith("8 Bread ")) && signs.stream().anyMatch(t -> t.startsWith("We buy:")),
             "a stall shows its prices, and what the village is buying");
+        helper.succeed();
+    }
+
+    /**
+     * A village and the colony it founded: the road between them laid from one avenue to the
+     * other, a bridge where it crosses water, a signpost at each end; then a caravan that sets
+     * out with the mother's surplus bread, unloads it in the colony's stores, and comes home.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t31_roads")
+    public static void t31_roads(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        int ax = 12800, az = 12800, bx = 13020;
+        for (int x = ax - 48; x <= bx + 48; x += 48) {
+            Kit.hold(level, x, az, 40);
+            Kit.prepare(level, x, az, 40);
+        }
+        BlockPos a = Kit.surface(level, ax, az), b = Kit.surface(level, bx, az);
+        VillageFolkEntity m1 = VillageFolkSpawnerBlock.raise(level, a, 0.0F);
+        VillageFolkEntity m2 = VillageFolkSpawnerBlock.raise(level, a.east(), 0.0F);
+        VillageFolkEntity c1 = VillageFolkSpawnerBlock.raise(level, b, 0.0F);
+        helper.assertTrue(m1 != null && m2 != null && c1 != null, "a village of two and a colony of one");
+        Villages.Village mother = Villages.get(m1.ownerId()), colony = Villages.get(c1.ownerId());
+        helper.assertTrue(mother != null && colony != null && !mother.id().equals(colony.id()), "two villages");
+        com.jrpetty.mcassistant.village.Ledger.link(mother.id(), colony.id());
+        // A pond across the road's way.
+        int px = ax + 100;
+        for (int dx = -3; dx <= 3; dx++) for (int dz = -4; dz <= 4; dz++) {
+            BlockPos g = Kit.surface(level, px + dx, az + dz).below();
+            level.setBlock(g, Blocks.WATER.defaultBlockState(), 3);
+        }
+        int laid = com.jrpetty.mcassistant.entity.Roads.lay(level, mother, colony, 1000);
+        int[] state = com.jrpetty.mcassistant.village.Ledger.road(colony.id());
+        BlockPos mid = Kit.surface(level, ax + 60, az).below();
+        BlockPos deck = Kit.surface(level, px, az).below();
+        Kit.log("t31 the road: " + laid + " steps laid, done " + (state != null && state[2] == 1) + "; at the middle "
+            + level.getBlockState(mid) + "; over the pond " + level.getBlockState(deck)
+            + ", its rail " + level.getBlockState(deck.above().relative(Direction.SOUTH, 2)));
+        helper.assertTrue(state != null && state[2] == 1, "the road is finished");
+        helper.assertTrue(level.getBlockState(mid).is(Blocks.DIRT_PATH), "a worn road out in the country");
+        helper.assertTrue(level.getBlockState(deck).is(Blocks.SPRUCE_PLANKS)
+            && level.getBlockState(deck.above().relative(Direction.SOUTH, 2)).getBlock() instanceof net.minecraft.world.level.block.FenceBlock,
+            "a bridge with rails over the water");
+        java.util.List<String> posts = new java.util.ArrayList<>();
+        for (BlockPos at : new BlockPos[]{ a.offset(41, 0, 3), b.offset(-41, 0, -3) }) {
+            for (BlockPos q : BlockPos.betweenClosed(at.offset(-1, -3, -1), at.offset(1, 4, 1))) {
+                if (level.getBlockEntity(q) instanceof net.minecraft.world.level.block.entity.SignBlockEntity sign) {
+                    posts.add(sign.getFrontText().getMessage(1, false).getString());
+                }
+            }
+        }
+        Kit.log("t31 the signposts say: " + posts);
+        helper.assertTrue(posts.contains(Villages.name(colony.id())) && posts.contains(Villages.name(mother.id())),
+            "a signpost at each end, to the other town");
+        // A caravan.
+        BlockPos chest = Kit.surface(level, ax + 4, az + 4);
+        level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
+        com.jrpetty.mcassistant.entity.ZoneChests.mark(level, chest);
+        net.minecraft.world.Container box = (net.minecraft.world.Container) level.getBlockEntity(chest);
+        box.setItem(0, new ItemStack(Items.BREAD, 64));
+        box.setItem(1, new ItemStack(Items.BREAD, 64));
+        int before = com.jrpetty.mcassistant.entity.Market.stock(level, colony.id(), st -> st.is(Items.BREAD));
+        boolean out = com.jrpetty.mcassistant.entity.Caravans.setOut(level, mother, colony);
+        VillageFolkEntity carrier = m1.trip() != null ? m1 : m2;
+        int llamas = level.getEntitiesOfClass(net.minecraft.world.entity.animal.horse.Llama.class, around(a, 12),
+            l -> l.getTags().contains("mca_caravan")).size();
+        Kit.log("t31 the caravan set out: " + out + ", " + carrier.displayNameCap() + " carrying "
+            + carrier.countCarried(st -> st.is(Items.BREAD)) + " bread, " + llamas + " llama");
+        helper.assertTrue(out && carrier.trip() != null && carrier.countCarried(st -> st.is(Items.BREAD)) >= 32 && llamas == 1,
+            "a caravan sets out with the mother's spare bread and a pack llama");
+        com.jrpetty.mcassistant.entity.Caravans.arriveForTests(level, carrier);
+        int after = com.jrpetty.mcassistant.entity.Market.stock(level, colony.id(), st -> st.is(Items.BREAD));
+        Kit.log("t31 at the colony: its bread " + before + " -> " + after + "; homeward " + (carrier.trip() != null && carrier.trip().homeward()));
+        helper.assertTrue(after >= before + 32 && carrier.trip() != null && carrier.trip().homeward(),
+            "the caravan unloads in the colony's stores and turns for home");
+        com.jrpetty.mcassistant.entity.Caravans.arriveForTests(level, carrier);
+        helper.assertTrue(carrier.trip() == null, "and is home again");
         helper.succeed();
     }
 

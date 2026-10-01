@@ -331,6 +331,11 @@ public final class FolkTalk {
         Persona me = f.persona();
         if (f.isFollowing(p)) return pick(r, "Walking with you, of course!", "Following you. Where are we off to?");
         if (f.isSleeping()) return "Sleeping, until you woke me.";
+        if (f.trip() != null) {
+            String where = Villages.name(f.trip().destination());
+            return f.trip().homeward() ? "Taking the caravan home to " + where + ", with what they could spare."
+                : "Taking the caravan to " + where + " — the colony needs what we've got.";
+        }
         String hobby = f.hobbyNow();
         if (hobby != null) return pick(r, "My own time now — ", "Day's work's done, so ") + hobby + ".";
         if (f.offWorkNow() && f.onShift()) return pick(r, "Taking a breather. ", "A short break. ") + "Back to work in a bit.";

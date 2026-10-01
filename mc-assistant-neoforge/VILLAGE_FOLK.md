@@ -158,6 +158,33 @@ added a little at a time round those buildings:
   can't trade at all. `/village status` shows the treasury, what is in the
   folk's purses, and how many days until market day.
 
+### Roads and caravans
+
+* **Roads.** When a village founds a colony, a road is laid between them. It runs
+  from the end of one town's avenue to the end of the other's and is built a few
+  steps at a time:
+  * a worn path three wide, following the land a step up or down at a time,
+    banked up over dips and cut through bumps, with trees and plants cleared;
+  * a plank bridge with rails and lanterns where it crosses water;
+  * a lamp post every so often.
+
+  The ground at the road's head is kept loaded while it is being laid, so the road
+  gets built even when nobody is near. When it is done, both towns record it in
+  their history. A signpost at each end gives the other town's name and how far
+  away it is. `/village status` shows how far along each road is.
+* **Caravans.** Every two days, in the morning, the village sends a caravan to
+  each of its colonies, usually led by a carrier:
+  * The carrier leads a pack llama in the village's colours and carries what the
+    stores have more than plenty of, the colony's needs first.
+  * It walks the road to the colony and unloads into the colony's stores. Then it
+    loads what the colony can spare that the mother village is short of, and
+    walks home.
+  * Players nearby are told when a caravan sets out, and both towns record each
+    delivery in their history.
+  * You can meet a caravan on the road. Ask the carrier what it is doing and it
+    will tell you where it is headed; ask to trade and it will offer what it is
+    carrying.
+
 ### The buildings
 
 Every building is drawn. Each drawing is a text file in
@@ -694,6 +721,8 @@ Every push to CI:
   them: the chimney fire, the door's number and names, the washing line, the windows lit
   by night and dark by day, a street sign, the stalls and their goods, a scarecrow
   (game test `t29`);
+* lays the road between a village and its colony, over a pond, with its signposts,
+  and sends a caravan of bread down it and home again (game test `t31`);
 * checks the money (game test `t30`): a new village's purse, gold minted into coin,
   a day's wages, prices that move with the stores, a folk's market-day treat, a
   player buying bread at a stall and selling iron, and the stalls' price signs;

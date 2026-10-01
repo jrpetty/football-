@@ -261,6 +261,11 @@ public class VillageFolkEntity extends AssistantEntity {
         // Somebody is talking to it, or it is out walking with somebody: its own day
         // waits until they are done.
         boolean withAPlayer = talkPartner() != null || companionPlayer() != null;
+        // On the road with a caravan: walked step by step, not thought about once in five seconds.
+        if (trip != null && !withAPlayer && tickCount % 10 == 0 && level() instanceof net.minecraft.server.level.ServerLevel road) {
+            Caravans.drive(this, road);
+            return;
+        }
         if (tickCount - agendaTick < 100) return;   // folk think slowly, on purpose
         agendaTick = tickCount;
         flyTheColours();
@@ -725,6 +730,7 @@ public class VillageFolkEntity extends AssistantEntity {
     /** A death in the village is news, and the ones who loved it remember. */
     @Override
     public void die(net.minecraft.world.damagesource.DamageSource cause) {
+        if (trip != null && level() instanceof net.minecraft.server.level.ServerLevel road) Caravans.abandon(road, this);
         UUID village = ownerId();
         if (!level().isClientSide && village != null && !showcase) {
             long day = level().getDayTime() / 24000L;
@@ -1520,6 +1526,11 @@ public class VillageFolkEntity extends AssistantEntity {
     private void agenda() {
         if (ownerId() == null) { settle(); return; }
         if (isBaby()) { childhood(); return; }
+        // On the road with a caravan: that is the day's work, day and night until it is home.
+        if (trip != null && level() instanceof net.minecraft.server.level.ServerLevel road) {
+            Caravans.drive(this, road);
+            return;
+        }
         // Nobody goes looking for ground after dark: a folk with no trade yet spends the
         // night like everybody else, and looks in the morning.
         if (workZone() == null && !onShift()) {
@@ -2774,8 +2785,16 @@ public class VillageFolkEntity extends AssistantEntity {
      */
     @Override
     protected boolean onBreak() {
-        return breakNow();
+        // On the road with a caravan, its own work waits until it is home.
+        return trip != null || breakNow();
     }
+
+    /** The caravan this folk is taking to a colony and back, or null (Caravans). */
+    @Nullable private Caravans.Trip trip;
+
+    @Nullable public Caravans.Trip trip() { return trip; }
+
+    public void trip(@Nullable Caravans.Trip t) { this.trip = t; }
 
     /**
      * One break a working day, at an hour that is each folk's own. The first

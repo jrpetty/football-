@@ -440,6 +440,13 @@ public final class VillageCommands {
         if (Villages.renown(v.id()) > 0) sb.append(". Renown ").append(Villages.renown(v.id()));
         long colonies = Villages.builtList(v.id()).stream().filter("colony"::equals).count();
         if (colonies > 0) sb.append(". Colonies founded: ").append(colonies);
+        for (java.util.Map.Entry<java.util.UUID, java.util.UUID> link : com.jrpetty.mcassistant.village.Ledger.links().entrySet()) {
+            java.util.UUID other = link.getValue().equals(v.id()) ? link.getKey() : link.getKey().equals(v.id()) ? link.getValue() : null;
+            if (other == null) continue;
+            double done = com.jrpetty.mcassistant.entity.Roads.progress(link.getKey());
+            sb.append(". Road to ").append(Villages.name(other)).append(": ")
+              .append(done < 0 ? "not begun" : done >= 1 ? "finished" : (int) (done * 100) + "%");
+        }
         String next = Villages.nextProject(v.id());
         sb.append(". Next: ").append(Villages.whyBuild(v.id(), next));
         sb.append(". Short of:");

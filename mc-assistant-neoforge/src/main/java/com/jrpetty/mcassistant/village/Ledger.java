@@ -38,6 +38,12 @@ public final class Ledger extends SavedData {
     private final Map<UUID, Integer> treasury = new HashMap<>();
     /** The last day each village paid its wages. */
     private final Map<UUID, Long> paid = new HashMap<>();
+    /** Each colony's mother village. */
+    private final Map<UUID, UUID> mother = new HashMap<>();
+    /** How far the road from each colony's mother to it has got: the next step, and the last step's height. */
+    private final Map<UUID, int[]> road = new HashMap<>();
+    /** When each colony's last caravan set out. */
+    private final Map<UUID, Long> caravan = new HashMap<>();
 
     /** Without a server (a plain unit test) the register is kept here instead. */
     private static Ledger loose;
@@ -80,7 +86,55 @@ public final class Ledger extends SavedData {
         boolean any = l.buildings.remove(village) != null;
         any |= l.treasury.remove(village) != null;
         any |= l.paid.remove(village) != null;
+        any |= l.mother.remove(village) != null;
+        any |= l.road.remove(village) != null;
+        any |= l.caravan.remove(village) != null;
         if (any) l.setDirty();
+    }
+
+    // ------------------------------------------------------------------ colonies, roads, caravans
+
+    /** This colony was founded from that village. */
+    public static void link(UUID motherVillage, UUID colony) {
+        Ledger l = of();
+        if (l == null || motherVillage.equals(colony)) return;
+        l.mother.put(colony, motherVillage);
+        l.setDirty();
+    }
+
+    /** Every colony and its mother village. */
+    public static Map<UUID, UUID> links() {
+        Ledger l = of();
+        return l == null ? Map.of() : new HashMap<>(l.mother);
+    }
+
+    /** The colony's road: {next step, height of the last step, done (1/0)}, or null if not begun. */
+    @Nullable
+    public static int[] road(UUID colony) {
+        Ledger l = of();
+        if (l == null) return null;
+        int[] r = l.road.get(colony);
+        return r == null ? null : r.clone();
+    }
+
+    public static void road(UUID colony, int next, int lastY, boolean done) {
+        Ledger l = of();
+        if (l == null) return;
+        l.road.put(colony, new int[]{ next, lastY, done ? 1 : 0 });
+        l.setDirty();
+    }
+
+    /** When the colony's last caravan set out (game time), or -1. */
+    public static long caravanAt(UUID colony) {
+        Ledger l = of();
+        return l == null ? -1 : l.caravan.getOrDefault(colony, -1L);
+    }
+
+    public static void caravanAt(UUID colony, long gameTime) {
+        Ledger l = of();
+        if (l == null) return;
+        l.caravan.put(colony, gameTime);
+        l.setDirty();
     }
 
     // ------------------------------------------------------------------ the treasury
@@ -146,6 +200,9 @@ public final class Ledger extends SavedData {
             if (!all.isEmpty()) l.buildings.put(id, all);
             if (v.contains("Coins")) l.treasury.put(id, v.getInt("Coins"));
             if (v.contains("Paid")) l.paid.put(id, v.getLong("Paid"));
+            if (v.hasUUID("Mother")) l.mother.put(id, v.getUUID("Mother"));
+            if (v.contains("Road")) l.road.put(id, v.getIntArray("Road"));
+            if (v.contains("Caravan")) l.caravan.put(id, v.getLong("Caravan"));
         }
         return l;
     }
@@ -156,11 +213,15 @@ public final class Ledger extends SavedData {
         java.util.Set<UUID> ids = new java.util.HashSet<>(buildings.keySet());
         ids.addAll(treasury.keySet());
         ids.addAll(paid.keySet());
+        ids.addAll(mother.keySet());
         for (UUID id : ids) {
             CompoundTag v = new CompoundTag();
             v.putUUID("Id", id);
             if (treasury.containsKey(id)) v.putInt("Coins", treasury.get(id));
             if (paid.containsKey(id)) v.putLong("Paid", paid.get(id));
+            if (mother.containsKey(id)) v.putUUID("Mother", mother.get(id));
+            if (road.containsKey(id)) v.putIntArray("Road", road.get(id));
+            if (caravan.containsKey(id)) v.putLong("Caravan", caravan.get(id));
             ListTag all = new ListTag();
             for (Building b : buildings.getOrDefault(id, List.of())) {
                 CompoundTag one = new CompoundTag();
