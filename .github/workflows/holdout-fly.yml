@@ -1,0 +1,73 @@
+name: Deploy Holdout to fly.io
+
+# Builds the Holdout game server (holdout/Dockerfile) on fly.io's remote
+# builder and deploys it. The first run also creates the app and the volume
+# the always-on camps are saved on.
+#
+# One-time setup: add a fly.io organization token as the repository secret
+# FLY_API_TOKEN (Settings → Secrets and variables → Actions). An app deploy
+# token is not enough the first time, because the app does not exist yet.
+# Optional repository variable FLY_ORG picks the fly organization (default
+# "personal"). The app name and region come from holdout/fly.toml.
+
+on:
+  push:
+    branches:
+      - claude/lucid-euler-t1kfg5
+    paths:
+      - 'holdout/**'
+      - '.github/workflows/holdout-fly.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: holdout-fly
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: holdout
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      FLY_ORG: ${{ vars.FLY_ORG || 'personal' }}
+    steps:
+      - name: Waiting for a fly.io token
+        if: env.FLY_API_TOKEN == ''
+        working-directory: .
+        run: |
+          echo "::notice::Add the repository secret FLY_API_TOKEN (a fly.io organization token), then re-run this workflow to deploy Holdout."
+          echo "### Holdout was not deployed: the FLY_API_TOKEN secret is not set yet" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/checkout@v4
+        if: env.FLY_API_TOKEN != ''
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+        if: env.FLY_API_TOKEN != ''
+
+      - name: Create the app and its volume (first run only)
+        if: env.FLY_API_TOKEN != ''
+        run: |
+          APP=$(sed -nE 's/^app *= *"([^"]+)".*/\1/p' fly.toml)
+          REGION=$(sed -nE 's/^primary_region *= *"([^"]+)".*/\1/p' fly.toml)
+          echo "APP=$APP" >> "$GITHUB_ENV"
+          if ! flyctl apps list --json | jq -e --arg a "$APP" 'map(select((.Name // .name) == $a)) | length > 0' > /dev/null; then
+            echo "Creating app $APP in organization $FLY_ORG"
+            flyctl apps create "$APP" --org "$FLY_ORG"
+          fi
+          if ! flyctl volumes list --app "$APP" --json | jq -e 'map(select((.name // .Name) == "holdout_data")) | length > 0' > /dev/null; then
+            echo "Creating the holdout_data volume in $REGION"
+            flyctl volumes create holdout_data --app "$APP" --region "$REGION" --size 1 --yes
+          fi
+
+      - name: Deploy
+        if: env.FLY_API_TOKEN != ''
+        # one machine: the always-on camps live on its volume
+        run: flyctl deploy --app "$APP" --remote-only --ha=false
+
+      - name: Where to play
+        if: env.FLY_API_TOKEN != ''
+        run: |
+          echo "### Holdout is live at https://$APP.fly.dev" >> "$GITHUB_STEP_SUMMARY"
+          echo "Holdout is live at https://$APP.fly.dev"

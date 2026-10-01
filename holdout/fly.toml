@@ -1,6 +1,6 @@
 # fly.io config for the Holdout server. Change `app` to a name of your own
 # (fly launch suggests one), and `primary_region` to the one nearest you.
-app = "holdout-camp"
+app = "holdout-jrpetty"
 primary_region = "lhr"
 
 [build]

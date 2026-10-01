@@ -353,14 +353,21 @@ npm run server:build   # builds server/public/index.html and server/dist/camp.mj
 npm run server         # http://localhost:8080
 ```
 
-To put it on [fly.io](https://fly.io) (from this `holdout` folder, with
-`flyctl` installed and logged in):
+**The easy way:** the repository's GitHub Action
+(`.github/workflows/holdout-fly.yml`) deploys it. Add a fly.io organization
+token as the repository secret `FLY_API_TOKEN` (Settings → Secrets and
+variables → Actions) and re-run the workflow, or push a change under
+`holdout/`. The first run creates the app named in `fly.toml` and its volume;
+the job summary prints the address, `https://<app>.fly.dev`. If fly says the
+app name is taken, change `app` in `fly.toml`.
+
+**By hand** (from this `holdout` folder, with `flyctl` installed and logged
+in):
 
 ```bash
-fly launch --no-deploy          # keep fly.toml; pick your own app name and region
-fly volumes create holdout_data --size 1 -r lhr   # same region as primary_region
-fly deploy
-fly scale count 1               # always-on camps live on one machine's volume
+fly apps create holdout-jrpetty                    # or the name you put in fly.toml
+fly volumes create holdout_data --size 1 -r lhr    # same region as primary_region
+fly deploy --ha=false                              # one machine: the camps live on its volume
 ```
 
 The machine sleeps when nobody is connected and wakes on the next visit (camps
