@@ -51,6 +51,7 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
     private static final String[][] WEARERS = {
         // BEGIN GENERATED WEARERS
         {"beard", "head", "beard"},
+        {"none_cloak", "body", "none"},
         {"farmer_crown", "head", "farmer"},
         {"farmer_brim", "head", "farmer"},
         {"farmer_pouch", "body", "farmer"},
@@ -143,6 +144,7 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         root.addOrReplaceChild("left_arm", CubeListBuilder.create().texOffs(44, 18).addBox(-1.0F, -2.0F, -2.0F, 4.0F, 12.0F, 4.0F), PartPose.offset(5.0F, 2.0F, 0.0F));
         root.addOrReplaceChild("right_leg", CubeListBuilder.create().texOffs(28, 34).addBox(-2.0F, 0.0F, -2.0F, 4.0F, 12.0F, 4.0F), PartPose.offset(-2.0F, 12.0F, 0.0F));
         root.addOrReplaceChild("left_leg", CubeListBuilder.create().texOffs(44, 34).addBox(-2.0F, 0.0F, -2.0F, 4.0F, 12.0F, 4.0F), PartPose.offset(2.0F, 12.0F, 0.0F));
+        body.addOrReplaceChild("none_cloak", CubeListBuilder.create().texOffs(64, 0).addBox(-4.5F, -0.6F, 3.6F, 9.0F, 14.0F, 1.0F), PartPose.ZERO);
         head.addOrReplaceChild("farmer_crown", CubeListBuilder.create().texOffs(64, 17).addBox(-4.0F, -12.0F, -4.0F, 8.0F, 4.0F, 8.0F, new CubeDeformation(0.6F)), PartPose.ZERO);
         head.addOrReplaceChild("farmer_brim", CubeListBuilder.create().texOffs(64, 0).addBox(-8.0F, -8.0F, -8.0F, 16.0F, 1.0F, 16.0F), PartPose.ZERO);
         body.addOrReplaceChild("farmer_pouch", CubeListBuilder.create().texOffs(96, 17).addBox(1.0F, 9.5F, -4.5F, 3.0F, 3.0F, 1.0F), PartPose.ZERO);

@@ -66,6 +66,9 @@ PARTS = [
     ("right_leg", None, (-2, 12, 0), (0, 0, 0), [(28, 34, -2, 0, -2, 4, 12, 4, 0)], "all"),
     ("left_leg", None, (2, 12, 0), (0, 0, 0), [(44, 34, -2, 0, -2, 4, 12, 4, 0)], "all"),
 
+    # Newcomer: a traveller's cloak, the same cloth as its hood.
+    ("none_cloak", "body", (0, 0, 0), (0, 0, 0), [(64, 0, -4.5, -0.6, 3.6, 9, 14, 1, 0)], "none"),
+
     # Farmer: a broad straw hat and a seed pouch.
     ("farmer_crown", "head", (0, 0, 0), (0, 0, 0), [(64, 17, -4, -12, -4, 8, 4, 8, 0.6)], "farmer"),
     ("farmer_brim", "head", (0, 0, 0), (0, 0, 0), [(64, 0, -8, -8, -8, 16, 1, 16, 0)], "farmer"),
@@ -628,6 +631,16 @@ def outfit_none():
         for y in range(h):
             hl.put(face, 4 if face == "right" else 3, y, lit(hood, 0.82))
     hl.fill("bottom", lambda x, y, w, h: False)
+    # The cloak down its back, hood-coloured, with a clasp at the throat.
+    ck = Box(cv, "none_cloak")
+    ck.all(lambda face, x, y, w, h: grain(hood, x, y, 6, 45))
+    ck.fill("back", lambda x, y, w, h: (lit(hood, 0.78) if x in (2, 6) and y > 2 else
+                                        (lit(hood, 0.7) if y == h - 1 else grain(hood, x, y, 6, 45))))
+    ck.fill("top", lambda x, y, w, h: lit(hood, 1.08))
+    coat.put("front", 0, 0, lit(hood, 0.9))                         # the cloak's edge over the shoulders
+    coat.put("front", 7, 0, lit(hood, 0.9))
+    coat.put("front", 3, 1, (176, 150, 80))                         # a brass clasp
+    coat.put("front", 4, 1, (150, 126, 66))
     legs(cv, cloth((96, 82, 62), 5, 44), leather((80, 58, 38)), boot_from=9)
     for name in ("right_leg", "left_leg"):
         leg = Box(cv, name)

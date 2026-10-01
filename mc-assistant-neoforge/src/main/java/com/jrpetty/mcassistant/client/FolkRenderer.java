@@ -80,6 +80,11 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         0xC0362F, 0x3A62B4, 0x3C8A4A, 0xD8A63A, 0x7C4CA0, 0x2E8A8E, 0x8A5634, 0x7E7E86, 0xD27A2E, 0x2E3C6E,
     };
 
+    /** A newcomer's hood and cloak: a traveller's undyed and plant-dyed cloths. */
+    private static final int[] CLOAKS = {
+        0x6B5A3A, 0x4E5E44, 0x5A4A6A, 0x3E4E66, 0x7A4434, 0x5E5E58, 0x6E6248, 0x3F5A55,
+    };
+
     private final ItemRenderer itemRenderer;
 
     public FolkRenderer(EntityRendererProvider.Context context) {
@@ -133,8 +138,11 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
             int t = trade(folk);
             if (DYE[t] == null) return;
             int rgb;
+            long id = folk.getUUID().getMostSignificantBits();
             if ("guard".equals(FolkModel.TRADES[t])) {
                 rgb = BANNERS[Math.floorMod(Math.max(0, folk.clientBanner()), BANNERS.length)];
+            } else if ("none".equals(FolkModel.TRADES[t])) {
+                rgb = CLOAKS[(int) Math.floorMod(id ^ (id >>> 31), (long) CLOAKS.length)];
             } else {
                 long bits = folk.getUUID().getMostSignificantBits();
                 rgb = DYES[(int) Math.floorMod(bits ^ (bits >>> 29) ^ t * 7L, (long) DYES.length)];

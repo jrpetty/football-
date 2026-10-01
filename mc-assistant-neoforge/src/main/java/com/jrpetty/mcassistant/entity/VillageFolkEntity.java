@@ -300,6 +300,9 @@ public class VillageFolkEntity extends AssistantEntity {
 
     public boolean isShowcase() { return showcase; }
 
+    @Override
+    protected boolean plainNameTag() { return showcase; }
+
     /** This folk's personality, friends, partner and family. */
     public Social.Life life() { return life; }
 

@@ -16,6 +16,7 @@ a hard failure; the pictures are read by a person.
 
 Every line of output starts [REAL], like soak.py.
 """
+import math
 import os
 import re
 import subprocess
@@ -136,20 +137,28 @@ def main():
     px, py, pz = sx + 0.5, sy + 1.0, sz + 0.5
     line = pz + 4.0
 
-    def look(label, x, y, z, fx, fy, fz, wait=6):
-        r.cmd("tp %s %.2f %.2f %.2f facing %.2f %.2f %.2f" % (USER, x, y, z, fx, fy, fz))
+    def look(label, x, y, z, tx, ty, tz, wait=6):
+        # A camera, not a player: spectator mode (nothing falls, no hand in the
+        # picture) and the angles worked out here — yaw 0 looks south (+z), a
+        # positive pitch looks down, from eyes 1.62 above the feet.
+        dx, dz = tx - x, tz - z
+        yaw = math.degrees(math.atan2(-dx, dz))
+        pitch = -math.degrees(math.atan2(ty - (y + 1.62), math.hypot(dx, dz)))
+        r.cmd("tp %s %.2f %.2f %.2f %.1f %.1f" % (USER, x, y, z, yaw, pitch))
         time.sleep(wait)
         shot(label)
 
-    look("5-lineup", px, py + 0.6, line - 11.0, px, py + 1.0, line, wait=8)
-    look("6-lineup-left", px + 5.6, py, line - 3.4, px + 5.6, py + 1.1, line)
-    look("7-lineup-middle", px, py, line - 3.4, px, py + 1.1, line)
-    look("8-lineup-right", px - 5.6, py, line - 3.4, px - 5.6, py + 1.1, line)
-    look("9-lineup-back", px, py + 0.6, line + 7.0, px, py + 1.0, line)
+    r.cmd("gamemode spectator %s" % USER)
+    look("5-lineup", px, py + 0.4, line - 11.0, px, py + 1.0, line, wait=8)
+    look("6-lineup-left", px + 5.6, py - 0.4, line - 3.4, px + 5.6, py + 1.1, line)
+    look("7-lineup-middle", px, py - 0.4, line - 3.4, px, py + 1.1, line)
+    look("8-lineup-right", px - 5.6, py - 0.4, line - 3.4, px - 5.6, py + 1.1, line)
+    look("9-lineup-back", px, py + 0.2, line + 6.5, px, py + 1.0, line)
     r.cmd("time set 18000")
     miner = px + (4.5 - 3) * 1.6          # the fourth in the row is the miner
-    look("10-lamp-at-night", miner, py, line - 2.8, miner, py + 1.3, line, wait=8)
+    look("10-lamp-at-night", miner, py - 0.5, line - 2.6, miner, py + 1.4, line, wait=8)
     r.cmd("time set 6000")
+    r.cmd("gamemode creative %s" % USER)
     say("alive after the lineup: %s" % client_alive())
     alive = client_alive()
     say("alive at the end: %s" % alive)
