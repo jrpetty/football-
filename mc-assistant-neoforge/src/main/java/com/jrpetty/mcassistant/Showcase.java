@@ -249,7 +249,7 @@ public final class Showcase {
             net.minecraft.world.item.Items.WHITE_WOOL, net.minecraft.world.item.Items.IRON_INGOT, net.minecraft.world.item.Items.HONEYCOMB,
             net.minecraft.world.item.Items.COOKED_COD, net.minecraft.world.item.Items.SWEET_BERRIES, net.minecraft.world.item.Items.POTATO));
         // The wall's gates, the watch's ladders and the alarm bell.
-        com.jrpetty.mcassistant.entity.Villages.Village home = new com.jrpetty.mcassistant.entity.Villages.Village(SHOWCASE, heart, level.dimension());
+        com.jrpetty.mcassistant.entity.Villages.Village staged = new com.jrpetty.mcassistant.entity.Villages.Village(SHOWCASE, heart, level.dimension());
         com.jrpetty.mcassistant.entity.Watch.keepAt(level, staged, heart, true);
         com.jrpetty.mcassistant.entity.Watch.bell(level, staged, true);
         // The graveyard's first graves, and the tavern of an evening.
@@ -342,13 +342,13 @@ public final class Showcase {
         }
         // Houses grown up with their village: one in stone with its garden, one in brick with a
         // second storey, a slate roof and its garden.
-        com.jrpetty.mcassistant.entity.Villages.Village home = new com.jrpetty.mcassistant.entity.Villages.Village(SHOWCASE, heart, level.dimension());
+        com.jrpetty.mcassistant.entity.Villages.Village grownVillage = new com.jrpetty.mcassistant.entity.Villages.Village(SHOWCASE, heart, level.dimension());
         int grownUp = 0;
         for (Ledger.Building b : STAGED) {
             if (!b.structure().equals("house") || b.facing() != Direction.NORTH) continue;
             com.jrpetty.mcassistant.entity.Villages.Age age = grownUp == 0
                 ? com.jrpetty.mcassistant.entity.Villages.Age.IRON : com.jrpetty.mcassistant.entity.Villages.Age.STONE;
-            com.jrpetty.mcassistant.entity.Grow.now(level, home, b, age);
+            com.jrpetty.mcassistant.entity.Grow.now(level, grownVillage, b, age);
             if (grownUp == 0) {
                 Direction front = b.facing().getOpposite(), right = b.facing().getClockWise();
                 view("t23-grown-house", b.anchor().relative(front, 12).relative(right, 5).above(5), b.anchor().above(3));
