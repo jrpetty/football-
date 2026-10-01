@@ -1084,7 +1084,7 @@ public class VillageGameTests {
         });
     }
 
-    /** A miner with copper to spare sells a bundle for an emerald, and keeps the emerald. */
+    /** A miner with ore and stone to spare sells a bundle for an emerald, and keeps the emerald. */
     @GameTest(template = EMPTY, timeoutTicks = 100, batch = "t26_trade")
     public static void t26_trade(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
@@ -1102,19 +1102,19 @@ public class VillageGameTests {
             String offer = com.jrpetty.mcassistant.entity.FolkTalk.answer(a, you,
                 com.jrpetty.mcassistant.entity.TalkTopic.TRADE, "");
             Kit.log("t26 the offer: " + offer);
-            helper.assertTrue(offer.contains("raw copper") && com.jrpetty.mcassistant.entity.Trade.canPay(a, you),
+            helper.assertTrue(offer.contains("for an emerald") && com.jrpetty.mcassistant.entity.Trade.canPay(a, you),
                 "it offers what it has to spare, for what you can pay: " + offer);
             String done = com.jrpetty.mcassistant.entity.FolkTalk.answer(a, you,
                 com.jrpetty.mcassistant.entity.TalkTopic.DELIVER, "");
-            int copper = 0, emeralds = 0;
+            int goods = 0, emeralds = 0;
             for (int i = 0; i < you.getInventory().getContainerSize(); i++) {
                 ItemStack st = you.getInventory().getItem(i);
-                if (st.is(Items.RAW_COPPER)) copper += st.getCount();
                 if (st.is(Items.EMERALD)) emeralds += st.getCount();
+                else goods += st.getCount();
             }
-            Kit.log("t26 the deal: " + done + " — you have " + copper + " raw copper, " + emeralds + " emeralds; "
+            Kit.log("t26 the deal: " + done + " — you have " + goods + " goods, " + emeralds + " emeralds; "
                 + a.displayNameCap() + " has " + a.countCarried(st -> st.is(Items.EMERALD)) + " emerald(s)");
-            helper.assertTrue(copper >= 8 && emeralds == 0 && a.countCarried(st -> st.is(Items.EMERALD)) == 1,
+            helper.assertTrue(goods >= 8 && emeralds == 0 && a.countCarried(st -> st.is(Items.EMERALD)) == 1,
                 "the goods change hands, and so does the price");
             helper.assertTrue(!com.jrpetty.mcassistant.entity.Trade.live(a, you), "and the deal is done");
             helper.succeed();

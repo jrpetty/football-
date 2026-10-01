@@ -123,7 +123,7 @@ public final class Trade {
             Deal d = new Deal(p.getUUID(), g, count, emeralds, alt, altCount, f.level().getGameTime() + LASTS);
             DEALS.put(f.getUUID(), d);
             if (DEALS.size() > 256) DEALS.clear();
-            StringBuilder said = new StringBuilder(pick(r, "I could let you have ", "How about ", "For you: "))
+            StringBuilder said = new StringBuilder(pick(r, "I could let you have ", "You can have ", "I'll part with "))
                 .append(count).append(' ').append(g.words()).append(" for ")
                 .append(emeralds == 1 ? "an emerald" : emeralds + " emeralds").append('.');
             if (!alt.isEmpty()) {

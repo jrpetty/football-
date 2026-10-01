@@ -53,7 +53,8 @@ own, and each step is there for a reason the village can see.
    makes itself iron armour or iron tools only out of what the village holds beyond
    what it is saving.
 8. **The Diamond Age:** every other miner has an iron pickaxe made from the stores
-   and takes its mine down to the diamonds near the bottom of the world; twice the
+   and takes its mine down to the diamonds near the bottom of the world, however new
+   it is to the work (the village decides how deep its mines go); twice the
    Iron Age's iron, a **lighthouse** and a **chapel**.
 9. **The Nether Age:** one miner gets the village's diamond pickaxe and a bucket of
    water, and makes the obsidian the way a player does — water poured on the lava

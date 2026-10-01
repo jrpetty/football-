@@ -1763,6 +1763,15 @@ public class VillageFolkEntity extends AssistantEntity {
      * always does. Odd and even ids did the same for a town of twenty, and left a village
      * whose two miners both drew odd with nobody looking for diamonds at all.
      */
+    /**
+     * The village decides how deep its mines go, not a ladder of levels: a novice sent
+     * down for the diamonds goes all the way. Before this, no village miner below level
+     * 20 could dig under Y16, the deep plot was never dug, and no village ever found a
+     * diamond.
+     */
+    @Override
+    public boolean minesWhereSent() { return true; }
+
     private boolean deepMiner() {
         UUID village = ownerId();
         if (village == null) return false;

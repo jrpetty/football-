@@ -620,7 +620,7 @@ public class MineGoal extends Goal {
         int floor = Math.min(zone.depth(), zone.min().getY());
         // The mine ladder: shallow ground until 10, iron country until 20,
         // then the deep — whatever the depth buttons are set to.
-        if (assistant.veteranLevel() < 20) {
+        if (assistant.veteranLevel() < 20 && !assistant.minesWhereSent()) {
             // The rung is a STRATUM — a novice has no business in diamond
             // country — but it can never clamp above the patch itself. A mine
             // staked underground (in a cave, in the deepslate, anywhere the
