@@ -152,7 +152,35 @@ export class Base {
     for (const [x, z] of [[F0 + 1, F0 + 1], [F1 - 1, F1 - 1]]) this.grid.fillRect(x - 1, z - 1, 2, 2, BLOCK)
     this.grid.fillRect(F0 + 1, F1 - 2, 3, 1, BLOCK)
     this.grid.fillRect(F1 - 3, F1 - 4, 2, 3, BLOCK)
-    // Outside the fence is off limits for walking unless during a horde.
+    // Grass and clutter in the band just inside the fence, where nothing can be built.
+    const tuft = M('#6b7442', { flat: true })
+    const tuft2 = M('#7d7c4a', { flat: true })
+    for (let i = 0; i < 160; i++) {
+      const side = i % 4
+      const along = rand(F0 + 0.8, F1 + 0.2)
+      const inset = rand(1.0, 1.9)
+      const x = side === 0 ? along : side === 1 ? F1 + 1 - inset : side === 2 ? along : F0 + inset
+      const z = side === 0 ? F0 + inset : side === 1 ? along : side === 2 ? F1 + 1 - inset : along
+      if (side === 2 && Math.abs(x - 24.5) < 3) continue
+      const c = new THREE.Group()
+      for (let k = 0; k < 3; k++) part(c, G('cone', 0.06, rand(0.25, 0.45), 4), k % 2 ? tuft : tuft2, rand(-0.12, 0.12), 0.15, rand(-0.12, 0.12), [rand(-0.3, 0.3), 0, rand(-0.3, 0.3)], null, false)
+      c.position.set(x, 0, z)
+      statics.add(c)
+    }
+    for (const [x, z, r] of [[F0 + 1.3, 20, 0.2], [F1 - 0.4, 15, 1.1], [30, F0 + 1.2, 0.5], [17, F1 - 0.3, 2.1]]) {
+      part(statics, G('cyl', 0.32, 0.38, 0.4, 9), M('#6a4c30'), x, 0.2, z)
+      part(statics, G('cyl', 0.3, 0.3, 0.02, 9), M('#c8a878'), x, 0.41, z, null, null, false)
+      part(statics, G('box', 0.55, 0.55, 0.55), M('#a78455', { map: 'crate' }), x + 0.9, 0.275, z + 0.3, [0, r, 0])
+    }
+    // worn path from the gate to the fire
+    const pathTex = tex('strip').clone()
+    pathTex.needsUpdate = true
+    pathTex.repeat.set(1, (F1 - 25) / 3)
+    const path = new THREE.Mesh(new THREE.PlaneGeometry(2.6, F1 - 25), new THREE.MeshStandardMaterial({ color: '#5e503a', map: pathTex, roughness: 1, transparent: true, opacity: 0.7, depthWrite: false }))
+    path.rotation.x = -Math.PI / 2
+    path.position.set(24.5, 0.009, (F1 + 25) / 2)
+    path.receiveShadow = true
+    scene.add(path)
     this.lampLight = new THREE.PointLight('#ff9a40', 0, 16, 1.6)
     scene.add(this.lampLight)
   }
@@ -631,8 +659,11 @@ export class Base {
       this.onRaidTap(x, y, e)
       return
     }
-    const hit = pickAt(x, y, [...[...this.stationViews.values()].map((v) => v.group), ...[...this.people.values()].map((p) => p.rig.root)])
-    if (hit?.pick.type === 'station') {
+    const hit = pickAt(x, y, [...[...this.stationViews.values()].map((v) => v.group), ...[...this.people.values()].map((p) => p.rig.root), ...(this.visitor ? [this.visitor.root] : [])])
+    if (hit?.pick.type === 'visitor') {
+      this.game.ui.showRecruit()
+      sfx('click')
+    } else if (hit?.pick.type === 'station') {
       this.game.ui.openStation(hit.pick.st.id)
       sfx('click')
     } else if (hit?.pick.type === 'person') {
@@ -646,7 +677,38 @@ export class Base {
     }
   }
   onHover(x, y) {
-    if (this.placing) this.updatePlacing(x, y)
+    if (this.placing) return this.updatePlacing(x, y)
+    const now = performance.now()
+    if (now - (this.hoverT || 0) < 70) return
+    this.hoverT = now
+    const hit = pickAt(x, y, [...this.stationViews.values()].map((v) => v.group).concat(this.visitor ? [this.visitor.root] : []))
+    const st = hit?.pick.type === 'station' ? hit.pick.st : null
+    document.body.style.cursor = hit ? 'pointer' : ''
+    this.game.ui.hoverTip(st ? `<b>${STATIONS[st.type].name}${st.level ? ` · L${st.level}` : ''}</b><span>${st.building ? 'Under construction' : st.stalled || (workersOf(st).length ? workersOf(st).map((s) => s.first).join(', ') : STATIONS[st.type].workers[Math.max(0, st.level - 1)] ? 'No one assigned' : 'Tap for details')}</span>` : hit?.pick.type === 'visitor' ? '<b>Someone at the gate</b><span>Tap to talk</span>' : null, x, y)
+  }
+  // A stranger waiting outside the gate while a recruit is pending.
+  updateVisitor(dt) {
+    const p = S.recruit.pending
+    if (p && !S.raid) {
+      if (!this.visitor || this.visitor.id !== p.s.id) {
+        this.removeVisitor()
+        const rig = makeHuman(p.s.look)
+        rig.root.position.set(24.5 + rand(-0.6, 0.6), 0, BASE.F1 + 2.6)
+        rig.root.rotation.y = Math.PI
+        rig.root.userData.pick = { type: 'visitor' }
+        this.scene.add(rig.root)
+        const el = h('div.alabel.visitor', { onclick: () => this.game.ui.showRecruit() }, h('span.nm', 'At the gate'))
+        this.visitor = { id: p.s.id, rig, root: rig.root, label: this.labels.add(el, rig.root.position, { offsetY: 2.1, scene: this.scene }) }
+      }
+      animate(this.visitor.rig, dt, 'idle')
+      this.visitor.rig.armR.rotation.x = -2.6 + Math.sin(this.t * 6) * 0.3 // waving
+    } else this.removeVisitor()
+  }
+  removeVisitor() {
+    if (!this.visitor) return
+    this.scene.remove(this.visitor.root)
+    this.visitor.label.remove()
+    this.visitor = null
   }
   onKey(e) {
     const k = e.key.toLowerCase()
@@ -1011,6 +1073,7 @@ export class Base {
     }
     if (S.raid) this.updateRaid(simDt)
     this.updatePeople(simDt)
+    this.updateVisitor(dt)
     this.fx.update(dt)
   }
 }

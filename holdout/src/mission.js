@@ -962,6 +962,11 @@ export class Mission {
     setTimeout(() => t.remove(), 4400)
   }
   tryExtract() {
+    const standing = this.squad.filter((a) => !a.downed)
+    if (standing.some((a) => Math.hypot(a.pos.x - this.evac.x, a.pos.z - this.evac.z) > this.evac.r + 0.2)) {
+      this.toast('Everyone still standing has to be inside the green circle by the van')
+      return
+    }
     const downed = this.squad.filter((a) => a.downed)
     if (downed.length) {
       this.game.ui.confirm(

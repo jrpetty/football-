@@ -86,8 +86,9 @@ export class UI {
     this.gateBadge = h('button.gatebadge', { hidden: true, onclick: () => this.showRecruit() }, h('span', { html: icon('gate') }), h('b', 'Someone is at the gate'))
     this.tracker = h('button.tracker', { onclick: () => this.toggle('goals', () => this.renderGoals()) })
     this.placeBar = h('div.placebar', { hidden: true })
+    this.tipEl = h('div.tip', { hidden: true })
     this.raidBar = h('div.raidbar', { hidden: true })
-    this.campUI = h('div.campui', this.top, this.nav, this.panel, this.feed, this.gateBadge, this.tracker, this.placeBar, this.raidBar)
+    this.campUI = h('div.campui', this.top, this.nav, this.panel, this.feed, this.gateBadge, this.tracker, this.placeBar, this.raidBar, this.tipEl)
     R.append(this.campUI, this.toasts, this.modalRoot)
     this.renderTracker()
   }
@@ -170,6 +171,13 @@ export class UI {
     if (!g) return
     this.tracker.className = 'tracker' + (done ? ' done' : '')
     this.tracker.innerHTML = `<small>${done ? 'Reward ready' : 'Next goal'}</small><b>${g.text}</b>`
+  }
+
+  hoverTip(html, x, y) {
+    this.tipEl.hidden = !html
+    if (!html) return
+    if (this.tipEl.innerHTML !== html) this.tipEl.innerHTML = html
+    this.tipEl.style.transform = `translate(${x + 16}px, ${y + 14}px)`
   }
 
   // ---------------------------------------------------------------- feed & toasts

@@ -165,6 +165,8 @@ class Game {
     }
     this.base.cancelPlacing()
     this.ui.closePanel()
+    this.ui.hoverTip(null)
+    document.body.style.cursor = ''
     this.ui.showCamp(false)
     this.map.open()
     gfx.input.handler = null

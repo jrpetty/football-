@@ -550,6 +550,23 @@ export function tex(name) {
       })
       t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping
       break
+    case 'strip':
+      // soft-edged worn ground, used for footpaths
+      t = canvasTex(128, (g, s) => {
+        g.clearRect(0, 0, s, s)
+        const gr = g.createLinearGradient(0, 0, s, 0)
+        gr.addColorStop(0, 'rgba(255,255,255,0)')
+        gr.addColorStop(0.3, 'rgba(255,255,255,0.85)')
+        gr.addColorStop(0.7, 'rgba(255,255,255,0.85)')
+        gr.addColorStop(1, 'rgba(255,255,255,0)')
+        g.fillStyle = gr
+        g.fillRect(0, 0, s, s)
+        g.globalCompositeOperation = 'destination-out'
+        speckle(g, s, 120, ['#000'], 2, 7, 0.35)
+        g.globalCompositeOperation = 'source-over'
+      })
+      t.wrapS = THREE.ClampToEdgeWrapping
+      break
     case 'shadow':
       t = canvasTex(64, (g, s) => {
         const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32)

@@ -348,8 +348,9 @@ img.big { width: 96px; height: 96px; border-radius: 10px; background: radial-gra
 .alabel.camp .nm { font-size: 11.5px; font-weight: 600; background: rgba(12, 14, 10, 0.55); }
 .alabel.camp .job { font-size: 10px; color: var(--muted); text-shadow: 0 1px 2px #000; font-family: var(--font-display); letter-spacing: 0.04em; }
 .alabel.camp.hurt .nm { color: #ffb1a3; }
-.wl:has(.alabel.camp) { pointer-events: auto; }
-.wl:has(.alabel.camp) > * { pointer-events: auto; cursor: pointer; }
+.alabel.visitor .nm { background: var(--accent); color: var(--accent-ink); animation: pulse 1.4s infinite; }
+.wl:has(.alabel.camp), .wl:has(.alabel.visitor) { pointer-events: auto; }
+.wl:has(.alabel.camp) > *, .wl:has(.alabel.visitor) > * { pointer-events: auto; cursor: pointer; }
 .hpbar.z { width: 34px; height: 3px; }
 .hpbar.z i { background: #d8453a; }
 .slabel { transform: translate(-50%, -100%); display: grid; justify-items: center; gap: 3px; white-space: nowrap; }
