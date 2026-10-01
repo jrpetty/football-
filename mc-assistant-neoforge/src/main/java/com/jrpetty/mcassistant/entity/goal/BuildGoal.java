@@ -156,7 +156,15 @@ public class BuildGoal extends Goal {
      */
     public static int stamp(net.minecraft.server.level.ServerLevel level, String structure, BlockPos anchor,
                             Direction facing, int radius, java.util.function.Function<Placement, BlockState> palette) {
-        List<Placement> cells = plan(structure, anchor, facing, radius);
+        return stampOnly(level, structure, anchor, facing, radius, palette, p -> true);
+    }
+
+    /** As stamp, but only the placements chosen (a storey at a time, the missing cells...). */
+    public static int stampOnly(net.minecraft.server.level.ServerLevel level, String structure, BlockPos anchor, Direction facing,
+                                int radius, java.util.function.Function<Placement, BlockState> palette,
+                                java.util.function.Predicate<Placement> only) {
+        List<Placement> cells = new java.util.ArrayList<>(plan(structure, anchor, facing, radius));
+        cells.removeIf(only.negate());
         cells.sort(java.util.Comparator.comparingInt((Placement p) -> finishing(p) ? 1 : 0)
             .thenComparingInt(p -> p.pos().getY()));
         int n = 0;

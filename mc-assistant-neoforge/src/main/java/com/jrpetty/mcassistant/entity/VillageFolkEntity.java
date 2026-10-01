@@ -2129,8 +2129,14 @@ public class VillageFolkEntity extends AssistantEntity {
     private void settle() {
         Villages.Village v = Villages.nearest(level(), blockPosition());
         if (v == null) {
-            v = Villages.found(level(), blockPosition());
-            say("There's good ground here. This'll do for a village.");
+            // The flattest ground about, not just where it happens to stand.
+            BlockPos at = blockPosition();
+            if (level() instanceof net.minecraft.server.level.ServerLevel server) {
+                BlockPos flat = Land.flattest(server, at, 24);
+                if (flat != null) at = flat;
+            }
+            v = Villages.found(level(), at);
+            say("There's good flat ground here. This'll do for a village.");
         }
         joinVillage(v.id(), v.centre());
     }

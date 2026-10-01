@@ -414,6 +414,7 @@ public final class Raids {
         Alarm a = id == null ? null : ALARMS.get(id);
         if (a == null) {
             if (g.post() != null) leavePost(g);
+            SENT.remove(g.getUUID());
             return false;
         }
         if (!(g.level() instanceof ServerLevel level)) return false;
@@ -471,12 +472,26 @@ public final class Raids {
         return posts.get(i % posts.size());
     }
 
+    /** When each guard was sent to its post, this alarm. */
+    private static final Map<UUID, Long> SENT = new ConcurrentHashMap<>();
+
     /** To the post: up the ladder, onto the wall, and shoot from there. */
     static boolean man(ServerLevel level, VillageFolkEntity g, Watch.Post p) {
         BlockPos stand = p.stand();
         double sx = stand.getX() + 0.5, sz = stand.getZ() + 0.5;
         double dx = g.getX() - sx, dz = g.getZ() - sz, dy = g.getY() - stand.getY();
         boolean up = dx * dx + dz * dz < 0.9 && dy > -0.4 && dy < 1.5;
+        // Twenty seconds and still not up there (a crowd in the way, a long way round): it gets
+        // there somehow — a wall with nobody on it is no use to anybody.
+        long sent = SENT.computeIfAbsent(g.getUUID(), k -> level.getGameTime());
+        if (!up && level.getGameTime() - sent > 400L) {
+            g.teleportTo(sx, stand.getY(), sz);
+            g.getNavigation().stop();
+            dx = 0;
+            dz = 0;
+            dy = 0;
+            up = true;
+        }
         // A step off the middle of the post: back onto it before it walks off the edge.
         if (!up && dx * dx + dz * dz < 4.0 && dy > -0.4 && dy < 1.5) {
             g.teleportTo(sx, stand.getY(), sz);
@@ -539,6 +554,7 @@ public final class Raids {
 
     /** Down off the wall when it is over. */
     static void leavePost(VillageFolkEntity g) {
+        SENT.remove(g.getUUID());
         BlockPos at = g.post();
         g.holdPost(null);
         CLIMB.remove(g.getUUID());

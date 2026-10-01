@@ -340,6 +340,49 @@ public final class Showcase {
             }
             break;
         }
+        // Houses grown up with their village: one in stone with its garden, one in brick with a
+        // second storey, a slate roof and its garden.
+        com.jrpetty.mcassistant.entity.Villages.Village staged = new com.jrpetty.mcassistant.entity.Villages.Village(SHOWCASE, heart, level.dimension());
+        int grownUp = 0;
+        for (Ledger.Building b : STAGED) {
+            if (!b.structure().equals("house") || b.facing() != Direction.NORTH) continue;
+            com.jrpetty.mcassistant.entity.Villages.Age age = grownUp == 0
+                ? com.jrpetty.mcassistant.entity.Villages.Age.IRON : com.jrpetty.mcassistant.entity.Villages.Age.STONE;
+            com.jrpetty.mcassistant.entity.Grow.now(level, staged, b, age);
+            if (grownUp == 0) {
+                Direction front = b.facing().getOpposite(), right = b.facing().getClockWise();
+                view("t23-grown-house", b.anchor().relative(front, 12).relative(right, 5).above(5), b.anchor().above(3));
+            }
+            if (++grownUp == 2) break;
+        }
+        // The waterfront, outside the town: a pond with a jetty and a boat, and an irrigated field.
+        int wx = heart.getX() + reach + 10, wz = heart.getZ();
+        stage(level, wx - 8, wx + 34, wz - 12, wz + 12, y);
+        for (int x = wx; x <= wx + 11; x++) {
+            for (int z = wz - 6; z <= wz + 6; z++) {
+                for (int d = 1; d <= 3; d++) level.setBlock(new BlockPos(x, y - d, z), Blocks.WATER.defaultBlockState(), 2 | 16);
+                level.setBlock(new BlockPos(x, y - 4, z), Blocks.SAND.defaultBlockState(), 2 | 16);
+            }
+        }
+        com.jrpetty.mcassistant.entity.Waterfront.Dock dock = com.jrpetty.mcassistant.entity.Waterfront.site(level,
+            new BlockPos(wx, y - 1, wz), 3);
+        if (dock != null) {
+            com.jrpetty.mcassistant.entity.Waterfront.build(level, dock);
+            com.jrpetty.mcassistant.entity.Waterfront.moor(level, dock);
+            view("t24-jetty", dock.start().relative(dock.out().getOpposite(), 6).relative(dock.out().getClockWise(), 6).above(5),
+                dock.start().relative(dock.out(), 3));
+        }
+        BlockPos fieldAt = new BlockPos(wx + 24, y - 1, wz);
+        for (int dx = -8; dx <= 8; dx++) {
+            for (int dz = -8; dz <= 8; dz++) {
+                BlockPos soil = fieldAt.offset(dx, 0, dz);
+                level.setBlock(soil, Blocks.FARMLAND.defaultBlockState(), 2 | 16);
+                level.setBlock(soil.above(), Blocks.WHEAT.defaultBlockState()
+                    .setValue(net.minecraft.world.level.block.CropBlock.AGE, 3 + Math.floorMod(dx * 7 + dz * 3, 5)), 2 | 16);
+            }
+        }
+        for (int i = 0; i < 6; i++) com.jrpetty.mcassistant.entity.Waterfront.irrigate(level, SHOWCASE, fieldAt, 8, 64);
+        view("t25-irrigation", fieldAt.offset(-12, 9, -12), fieldAt);
         // A hero's statue on the square, in the likeness of whoever is looking.
         List<net.minecraft.server.level.ServerPlayer> lookers = level.players();
         BlockPos spot = heart.offset(5, 0, -5);

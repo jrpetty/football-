@@ -58,6 +58,13 @@ public class FishGoal extends Goal {
             return;
         }
         this.water = findWater();
+        // Off the end of the village's jetty, if this fisher has one.
+        com.jrpetty.mcassistant.entity.Waterfront.Dock dock =
+            com.jrpetty.mcassistant.entity.Waterfront.dockOf(assistant.ownerId(), assistant);
+        if (dock != null) {
+            BlockPos past = dock.end().relative(dock.out(), 2);
+            if (assistant.level().getFluidState(past).is(FluidTags.WATER)) this.water = past;
+        }
         if (water == null) {
             finish("No open water within 12 blocks.");
             return;

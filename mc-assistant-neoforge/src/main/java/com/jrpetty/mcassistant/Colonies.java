@@ -145,6 +145,8 @@ public final class Colonies {
         }
         PENDING.remove(id);
         BlockPos ground = VillageSpawner.groundAt(level, at.getX(), at.getZ());
+        BlockPos flat = ground == null ? null : com.jrpetty.mcassistant.entity.Land.flattest(level, ground, 24);
+        if (flat != null) ground = flat;
         if (ground == null || !VillageSpawner.liveable(level, ground)
                 || Villages.nearest(level, ground, Villages.VILLAGE_RANGE * 2) != null) {
             LAST.put(id, now - INTERVAL + 1200L);                // somewhere else, in a minute

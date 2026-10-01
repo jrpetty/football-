@@ -1746,6 +1746,10 @@ public class VillageGameTests {
         helper.onEachTick(() -> {
             long t = helper.getTick();
             if (t % 5 == 0) com.jrpetty.mcassistant.entity.Raids.guardDuty(guard);
+            if (t % 100 == 0 && upAt[0] < 0) {
+                Kit.log("t33 at tick " + t + " the guard: " + guard.debugLine() + " post " + guard.post()
+                    + ", target " + (guard.getTarget() == null ? "none" : guard.getTarget().getType().toShortString()));
+            }
             if (upAt[0] < 0 && guard.holdingAPost()) {
                 upAt[0] = t;
                 Kit.log("t33 the guard is on the wall at tick " + t + " (" + guard.blockPosition().toShortString()
@@ -2155,6 +2159,102 @@ public class VillageGameTests {
         helper.assertTrue(breadHeld == 8, "a friend is given bread from the stores");
         helper.assertTrue(hasPick && !p.getInventory().contains(new ItemStack(Items.IRON_PICKAXE)), "a tool lent, and brought back");
         helper.assertTrue(strangerBread == 4 && com.jrpetty.mcassistant.entity.Market.coinsHeld(stranger) < 20, "a stranger buys");
+        helper.succeed();
+    }
+
+    /**
+     * The land: settlers pick the flattest ground about them; the village levels the ground of
+     * the town (a knoll cut down, a hollow filled); its houses grow up (a garden fence, walls of
+     * brick, a second storey); a fisher's water gets a jetty and a boat; and a dry field gets an
+     * irrigation channel.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t38_land")
+    public static void t38_land(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 19000, 12000, 56);
+        Kit.prepare(level, 19000, 12000, 56);
+        BlockPos heart = Kit.surface(level, 19000, 12000);
+        int ground = heart.getY() - 1;
+        // Rough ground to the south-west: pillars of earth every few blocks.
+        BlockPos rough = heart.offset(-30, 0, 30);
+        for (int dx = -12; dx <= 12; dx += 3) {
+            for (int dz = -12; dz <= 12; dz += 3) {
+                int h = Math.floorMod(dx * 7 + dz * 13, 5);
+                for (int k = 0; k < h; k++) level.setBlock(rough.offset(dx, k, dz), Blocks.DIRT.defaultBlockState(), 3);
+            }
+        }
+        int roughHere = com.jrpetty.mcassistant.entity.Land.roughness(level, rough);
+        BlockPos flat = com.jrpetty.mcassistant.entity.Land.flattest(level, rough, 32);
+        int roughThere = flat == null ? -1 : com.jrpetty.mcassistant.entity.Land.roughness(level, flat);
+        Kit.log("t38 founding: roughness " + roughHere + " where it stood, the flattest ground about " + flat + " at " + roughThere);
+        helper.assertTrue(flat != null && roughThere < roughHere && !flat.equals(rough), "settlers pick the flattest ground about them");
+        // A village, a knoll and a hollow.
+        VillageFolkEntity a = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        VillageFolkEntity b = VillageFolkSpawnerBlock.raise(level, heart.east(2), 0.0F);
+        helper.assertTrue(a != null && b != null, "a village of two");
+        java.util.UUID village = a.ownerId();
+        Villages.Village v = Villages.get(village);
+        BlockPos knoll = heart.offset(16, 0, 16), hollow = heart.offset(-16, 0, -16);
+        for (int dx = -2; dx <= 2; dx++) for (int dz = -2; dz <= 2; dz++) for (int k = 0; k < 3; k++)
+            level.setBlock(knoll.offset(dx, k, dz), Blocks.DIRT.defaultBlockState(), 3);
+        for (int dx = -2; dx <= 1; dx++) for (int dz = -2; dz <= 1; dz++) for (int k = 1; k <= 2; k++)
+            level.setBlock(hollow.offset(dx, -k, dz), Blocks.AIR.defaultBlockState(), 3);
+        int moved = 0;
+        for (int i = 0; i < 4; i++) moved += com.jrpetty.mcassistant.entity.Land.level(level, v, 8000, 2000);
+        int knollTop = Kit.surface(level, knoll.getX(), knoll.getZ()).getY() - 1;
+        int hollowTop = Kit.surface(level, hollow.getX(), hollow.getZ()).getY() - 1;
+        Kit.log("t38 levelling: " + moved + " blocks moved; the knoll's top now " + knollTop + ", the hollow's " + hollowTop + ", the square " + ground);
+        helper.assertTrue(knollTop == ground && hollowTop == ground, "the knoll cut down and the hollow filled to the square's level");
+        // A house grows up.
+        Villages.ageForTests(village, Villages.Age.IRON);
+        BlockPos chest = Kit.surface(level, heart.getX() + 3, heart.getZ() + 1);
+        level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
+        com.jrpetty.mcassistant.entity.ZoneChests.mark(level, chest);
+        ((net.minecraft.world.Container) level.getBlockEntity(chest)).setItem(0, new ItemStack(Items.OAK_PLANKS, 64));
+        BlockPos houseAt = Kit.surface(level, heart.getX(), heart.getZ() - 26);
+        BuildGoal.stamp(level, "house", houseAt, Direction.NORTH, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+        com.jrpetty.mcassistant.village.Ledger.built(village, "house", houseAt, Direction.NORTH);
+        int roomBefore = Villages.housing(village);
+        for (int i = 0; i < 80 && !com.jrpetty.mcassistant.village.Ledger.grown(village, houseAt); i++) {
+            com.jrpetty.mcassistant.entity.Grow.work(level, v, 3000);
+        }
+        int bricks = 0, upstairs = 0, beds = 0, fences = 0;
+        for (BlockPos q : BlockPos.betweenClosed(houseAt.offset(-6, -1, -6), houseAt.offset(6, 12, 6))) {
+            net.minecraft.world.level.block.state.BlockState st = level.getBlockState(q);
+            if (st.is(Blocks.BRICKS)) bricks++;
+            if (q.getY() == houseAt.getY() + 4 && !st.isAir()) upstairs++;
+            if (st.getBlock() instanceof net.minecraft.world.level.block.BedBlock) beds++;
+            if (st.is(Blocks.OAK_FENCE) || st.is(Blocks.OAK_FENCE_GATE)) fences++;
+        }
+        Kit.log("t38 the house: grown " + com.jrpetty.mcassistant.village.Ledger.grown(village, houseAt) + ", " + bricks + " bricks, "
+            + upstairs + " blocks on the new floor, " + beds + " bed blocks, " + fences + " fence posts; room " + roomBefore
+            + " -> " + Villages.housing(village));
+        helper.assertTrue(com.jrpetty.mcassistant.village.Ledger.grown(village, houseAt) && upstairs >= 10 && beds >= 10,
+            "the house gets its second storey, with more beds");
+        helper.assertTrue(bricks >= 15 && fences >= 10, "brick walls and a garden fence");
+        helper.assertTrue(Villages.housing(village) == roomBefore + 2, "more room in the village");
+        // The waterfront.
+        Kit.pond(level, heart.getX() - 26, heart.getZ(), 5);
+        var dock = com.jrpetty.mcassistant.entity.Waterfront.site(level, new BlockPos(heart.getX() - 26, ground, heart.getZ()), 8);
+        helper.assertTrue(dock != null, "somewhere to run a jetty out");
+        int laid = com.jrpetty.mcassistant.entity.Waterfront.build(level, dock);
+        boolean moored = com.jrpetty.mcassistant.entity.Waterfront.moor(level, dock);
+        boolean again = com.jrpetty.mcassistant.entity.Waterfront.moor(level, dock);
+        boolean lamp = level.getBlockState(dock.end().above(2)).is(Blocks.LANTERN);
+        Kit.log("t38 the jetty: " + dock + ", " + laid + " blocks laid, a boat moored " + moored + " (and a second " + again + "), lantern " + lamp);
+        helper.assertTrue(laid >= 3 && lamp && moored && !again, "a jetty with a lantern, and one boat tied up alongside");
+        // A dry field, irrigated.
+        BlockPos field = new BlockPos(heart.getX() + 26, ground, heart.getZ() - 26);
+        for (int dx = -4; dx <= 4; dx++) for (int dz = -4; dz <= 4; dz++) {
+            level.setBlock(field.offset(dx, 0, dz), Blocks.FARMLAND.defaultBlockState(), 3);
+            level.setBlock(field.offset(dx, 1, dz), Blocks.WHEAT.defaultBlockState(), 3);
+        }
+        int dug = com.jrpetty.mcassistant.entity.Waterfront.irrigate(level, village, field, 4, 100);
+        int more = com.jrpetty.mcassistant.entity.Waterfront.irrigate(level, village, field, 4, 100);
+        Kit.log("t38 irrigation: " + dug + " blocks of channel, then " + more + "; water at the middle " + level.getBlockState(field).is(Blocks.WATER));
+        helper.assertTrue(dug >= 5 && more == 0 && level.getBlockState(field).is(Blocks.WATER), "a channel of water through the field");
         helper.succeed();
     }
 

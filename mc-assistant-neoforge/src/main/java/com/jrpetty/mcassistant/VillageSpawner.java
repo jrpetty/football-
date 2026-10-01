@@ -157,7 +157,11 @@ public final class VillageSpawner {
         }
         BlockPos ground = groundAt(level, anchor.getX(), anchor.getZ());
         CONSIDERED.add(c.key());                    // from a tick, the answer is final
-        if (ground == null || !liveable(level, ground)) return;
+        if (ground == null) return;
+        // The flattest dry ground about here, not just wherever the grid fell.
+        BlockPos flat = com.jrpetty.mcassistant.entity.Land.flattest(level, ground, 32);
+        if (flat != null) ground = flat;
+        if (!liveable(level, ground)) return;
         found(level, ground);
     }
 

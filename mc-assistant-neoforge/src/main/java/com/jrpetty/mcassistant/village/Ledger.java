@@ -59,6 +59,8 @@ public final class Ledger extends SavedData {
     private final Map<String, Integer> relations = new HashMap<>();
     /** The players each village has raised a statue to. */
     private final Map<UUID, Map<UUID, String>> statues = new HashMap<>();
+    /** The houses each village has given a second storey (by anchor). */
+    private final Map<UUID, java.util.Set<Long>> grown = new HashMap<>();
 
     /** Without a server (a plain unit test) the register is kept here instead. */
     private static Ledger loose;
@@ -300,6 +302,23 @@ public final class Ledger extends SavedData {
         l.setDirty();
     }
 
+    /** Has the house at this anchor been given its second storey? */
+    public static boolean grown(UUID village, BlockPos anchor) {
+        Ledger l = of();
+        return l != null && l.grown.getOrDefault(village, java.util.Set.of()).contains(anchor.asLong());
+    }
+
+    public static void grow(UUID village, BlockPos anchor) {
+        Ledger l = of();
+        if (l == null) return;
+        if (l.grown.computeIfAbsent(village, k -> new java.util.HashSet<>()).add(anchor.asLong())) l.setDirty();
+    }
+
+    public static int grownCount(UUID village) {
+        Ledger l = of();
+        return l == null ? 0 : l.grown.getOrDefault(village, java.util.Set.of()).size();
+    }
+
     public static Ledger load(CompoundTag tag, HolderLookup.Provider registries) {
         Ledger l = new Ledger();
         for (Tag t : tag.getList("Villages", Tag.TAG_COMPOUND)) {
@@ -333,6 +352,12 @@ public final class Ledger extends SavedData {
                 CompoundTag c = (CompoundTag) e;
                 if (c.hasUUID("Id")) l.offences.computeIfAbsent(id, k -> new HashMap<>()).put(c.getUUID("Id"), java.util.Arrays.copyOf(c.getIntArray("R"), 3));
             }
+            long[] grownAt = v.getLongArray("Grown");
+            if (grownAt.length > 0) {
+                java.util.Set<Long> set = new java.util.HashSet<>();
+                for (long g : grownAt) set.add(g);
+                l.grown.put(id, set);
+            }
             for (Tag e : v.getList("Statues", Tag.TAG_COMPOUND)) {
                 CompoundTag c = (CompoundTag) e;
                 if (c.hasUUID("Id")) l.statues.computeIfAbsent(id, k -> new HashMap<>()).put(c.getUUID("Id"), c.getString("Name"));
@@ -354,6 +379,7 @@ public final class Ledger extends SavedData {
         ids.addAll(citizens.keySet());
         ids.addAll(offences.keySet());
         ids.addAll(statues.keySet());
+        ids.addAll(grown.keySet());
         for (UUID id : ids) {
             CompoundTag v = new CompoundTag();
             v.putUUID("Id", id);
@@ -408,6 +434,13 @@ public final class Ledger extends SavedData {
                 raised.add(one);
             }
             if (!raised.isEmpty()) v.put("Statues", raised);
+            java.util.Set<Long> up = grown.getOrDefault(id, java.util.Set.of());
+            if (!up.isEmpty()) {
+                long[] arr = new long[up.size()];
+                int i = 0;
+                for (long g : up) arr[i++] = g;
+                v.putLongArray("Grown", arr);
+            }
             villages.add(v);
         }
         tag.put("Villages", villages);

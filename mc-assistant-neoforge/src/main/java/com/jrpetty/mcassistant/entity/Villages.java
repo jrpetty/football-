@@ -234,6 +234,9 @@ public final class Villages {
         Diplomacy.resetForTests();
         Quests.resetForTests();
         Services.resetForTests();
+        Land.resetForTests();
+        Grow.resetForTests();
+        Waterfront.resetForTests();
         Cafe.resetForTests();
         Roads.reset();
         LAST_PROJECT.clear();
@@ -1131,7 +1134,7 @@ public final class Villages {
      */
     public static int housing(UUID villageId) {
         return 12 + 5 * built(villageId, "house") + 3 * built(villageId, "shelter") + 6 * built(villageId, "hall")
-            + 6 * built(villageId, "barracks");
+            + 6 * built(villageId, "barracks") + 2 * com.jrpetty.mcassistant.village.Ledger.grownCount(villageId);
     }
 
     /**

@@ -859,6 +859,36 @@ square**: your likeness (your own face) in gold armour with a golden sword, on a
 plinth, with a plaque bearing your name and the day. The square has room for three
 heroes.
 
+### The land: level ground, houses that age, the waterfront
+
+**Flat ground.** Settlers look about before they pitch camp: of the dry ground within
+thirty-odd blocks, the flattest piece wins. This applies to a natural village, a colony,
+and a lone folk founding one.
+
+**Levelling the town.** Every day the village levels a little more of its town to the
+height of the square: knolls cut down, hollows filled, so houses and streets stand true.
+Only earth, sand, gravel and plain stone are moved. Nothing anybody built, no field, no
+tree, nothing next to water, and never more than six blocks up or down, so a hill stays a
+hill and just stops at the edge of town. Rock that is cut goes into the stores as
+cobblestone. When the whole town is level, the history says so.
+
+**Houses that grow up.** So an old village looks old:
+* **Stone Age:** each house gets a fenced garden with a gate to the street and flowers by
+  the path, and its timber walls are rebuilt in stone.
+* **Iron Age:** walls in brick, and one house at a time (oldest first, once there are
+  planks in the stores) gets a second storey. The old roof comes off, a floor of
+  bedrooms goes on (two more beds, a ladder up), and a slate roof goes over it, with the
+  chimney carried up. Each one is two more beds for the village.
+* **Diamond Age:** moss creeps into the old footings.
+
+**The waterfront.**
+* **Jetties and boats.** A fisher's water gets a jetty from the bank: planks out over the
+  water on posts, a lantern at the end, and a boat moored alongside. The fisher fishes off
+  the end.
+* **Irrigation.** From the Stone Age, a field that is too dry gets channels cut through it,
+  a run of water every eight rows, so all its farmland is near water.
+* **Bridges.** Roads between villages bridge the rivers they cross.
+
 ### Work, coin and services
 
 **Earning coin.** There are three ways:
@@ -1106,6 +1136,9 @@ Every push to CI:
 * takes on and pays out quest-board postings, hires a folk who comes home with a story and
   what it carried, commissions a house from a player's makings, writes the town ledger,
   and has the storekeeper give, lend and sell (game test `t37`);
+* picks the flattest ground among rough ground, levels a knoll and a hollow in a town,
+  grows a house a second storey in brick with a garden fence, runs a jetty out with a boat,
+  and irrigates a dry field (game test `t38`);
 * lives a life (game test `t35`): a child apprenticed to a parent grows up into the
   trade with a few levels' knack; a folk past its years dies in its sleep and is
   recorded among the dead; a graveyard gets its headstone with the name on it; the
