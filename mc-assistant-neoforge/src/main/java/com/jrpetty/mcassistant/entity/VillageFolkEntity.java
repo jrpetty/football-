@@ -2212,6 +2212,22 @@ public class VillageFolkEntity extends AssistantEntity {
         return true;
     }
 
+    /**
+     * A settler spends iron on kit only out of what its village holds beyond what its
+     * age is saving: the Iron Age's own stock (the watch's armour and a smith's stock),
+     * twice that from the Diamond Age. Every hand used to make itself iron armour and
+     * iron tools out of whatever came in, and the stores never filled.
+     */
+    @Override
+    protected boolean maySpendIron() {
+        UUID village = ownerId();
+        if (village == null || villageCentre == null
+                || !(level() instanceof net.minecraft.server.level.ServerLevel server)) return false;
+        int target = com.jrpetty.mcassistant.village.VillageMath.ironWanted(Villages.headcount(village));
+        if (Villages.ageOf(village).ordinal() >= Villages.Age.DIAMOND.ordinal()) target *= 2;
+        return Villages.stock(server, villageCentre, Villages.Task.IRON, Villages.storesRadius(village)) > target + 8;
+    }
+
     private int charcoalCheckTick = -100000;
 
     /**
