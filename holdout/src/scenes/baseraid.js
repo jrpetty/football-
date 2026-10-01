@@ -346,8 +346,9 @@ export const RaidMixin = {
       a.remove()
     }
     if (!won) {
+      S.lastBreach = S.time
       for (const k of ['food', 'water', 'meds', 'fuel']) {
-        const l = Math.floor(S.res[k] * rand(0.25, 0.5))
+        const l = Math.floor(S.res[k] * rand(0.15, 0.35))
         S.res[k] -= l
         report.lost[k] = l
       }

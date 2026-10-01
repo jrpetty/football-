@@ -54,7 +54,8 @@ export function windOutput() {
 // What a steam engine would burn now: coal first (it lasts three times as
 // long), then wood; null when it has neither.
 export function boilerFuel(st) {
-  for (const k of STATIONS.boiler.fuels) if ((st.buf?.in?.[k] || 0) > 0.05 || (S.res[k] || 0) > 0.05) return st.fuelPick && st.fuelPick !== k && ((st.buf?.in?.[st.fuelPick] || 0) > 0.05 || (S.res[st.fuelPick] || 0) > 0.05) ? st.fuelPick : k
+  const has = (k) => (st.buf?.in?.[k] || 0) > 0.05 || (S.res[k] || 0) - survivalReserve(k) > 0.05
+  for (const k of STATIONS.boiler.fuels) if (has(k)) return st.fuelPick && st.fuelPick !== k && has(st.fuelPick) ? st.fuelPick : k
   return null
 }
 export function sourcePower(st) {
@@ -557,7 +558,8 @@ function tickProcessor(st, R, rate, dt) {
   let guard = 0
   while (st.progress >= 1 && guard++ < 20) {
     if (!hasInputs(st, R.in)) {
-      st.stalled = 'Missing ' + Object.keys(R.in).filter((k) => stockFor(st, k) < R.in[k]).map((k) => RES[k].name.toLowerCase()).join(', ')
+      const short = Object.keys(R.in).filter((k) => stockFor(st, k) < R.in[k])
+      st.stalled = short.every((k) => (S.res[k] || 0) >= R.in[k]) ? `Holding back: the camp needs its ${short.map((k) => RES[k].name.toLowerCase()).join(' and ')}` : 'Missing ' + short.map((k) => RES[k].name.toLowerCase()).join(', ')
       st.progress = 1
       st.active = false
       break
@@ -640,7 +642,8 @@ function tickMulti(st, D, rate, dt) {
   st.progress += (dt * rate * beltBonus(st, R)) / R.time[st.level - 1]
   if (st.progress >= 1) {
     if (!hasInputs(st, R.in)) {
-      st.stalled = 'Missing ' + Object.keys(R.in).filter((k) => stockFor(st, k) < R.in[k]).map((k) => RES[k].name.toLowerCase()).join(', ')
+      const short = Object.keys(R.in).filter((k) => stockFor(st, k) < R.in[k])
+      st.stalled = short.every((k) => (S.res[k] || 0) >= R.in[k]) ? `Holding back: the camp needs its ${short.map((k) => RES[k].name.toLowerCase()).join(' and ')}` : 'Missing ' + short.map((k) => RES[k].name.toLowerCase()).join(', ')
       st.progress = 1
       st.active = false
       return
@@ -663,8 +666,21 @@ function tickMulti(st, D, rate, dt) {
 // A station draws what it needs from its input buffer first (filled by
 // belts), then hand-hauls the rest from storage. What it makes goes to its
 // output buffer if a belt carries it away, otherwise straight into storage.
+// What a station may take from storage. Factories leave a few days of food,
+// water and (near winter) firewood for the people: a kiln or a still never
+// burns the camp's last meal or its heat.
+const KEEPERS = new Set(['farm', 'kitchen', 'filter', 'infirmary', 'collector'])
+export function survivalReserve(k) {
+  const n = S.survivors.length
+  if (k === 'food') return n * 3
+  if (k === 'water') return n * 3.6
+  if (k === 'wood') return 20 + (season().heat || seasonIdx() === 2 ? n * 2.4 : 0)
+  return 0
+}
 function stockFor(st, k) {
-  return (st.buf?.in?.[k] || 0) + (S.res[k] || 0)
+  const store = S.res[k] || 0
+  const keep = st && !KEEPERS.has(st.type) ? survivalReserve(k) : 0
+  return (st?.buf?.in?.[k] || 0) + Math.max(0, store - keep)
 }
 export function hasInputs(st, inp) {
   for (const [k, v] of Object.entries(inp)) if (stockFor(st, k) < v - 1e-6) return false
@@ -1002,7 +1018,7 @@ export function threatLevel() {
 }
 export const BLOOD_MOON_EVERY = 7
 // Days on which the night horde is a Blood Moon.
-export const isBloodMoonDay = (d) => d >= 14 && d % BLOOD_MOON_EVERY === 0
+export const isBloodMoonDay = (d) => d >= 21 && d % BLOOD_MOON_EVERY === 0
 // When the Signal's last phase is done, the broadcast draws every dead thing
 // in the city: one last Blood Moon horde before the evacuation convoy comes.
 bus.on('signalPhase', (p) => {
@@ -1024,6 +1040,8 @@ export function scheduleRaid(first = false) {
   else if (T < 15) sizeIdx = chance(0.6) ? 2 : 3
   else sizeIdx = 3
   let at = first ? 22 * 60 : S.time + rand(20, 32) * 60
+  // after a breach the dead drift off sated: a day and a half to patch up
+  if (!first && S.lastBreach != null && S.time - S.lastBreach < 6 * 60) at = Math.max(at, S.lastBreach + 36 * 60)
   // a Blood Moon night comes whatever else is on its way
   let blood = false
   if (!first) {
@@ -1062,6 +1080,11 @@ export function autoResolveRaid(R, offline = false) {
     def += dps * (st.gun ? (ammoOk ? 1.4 : 0.3) : 0.8) * (s.hp / st.maxHp)
     if (s.job && S.stations.find((x) => x.id === s.job)?.type === 'watchtower') def += dps * 0.6
   }
+  // the injured still hold a gap in the wall from their beds, at a fraction
+  for (const s of S.survivors.filter((x) => x.status === 'injured')) {
+    const st = survivorStats(s)
+    def += (st.dmg / st.rate) * (st.gun ? 0.5 : 0.3)
+  }
   const pinfo = powerInfo()
   for (const st of S.stations) if (st.type === 'turret' && pinfo.powered.has(st.id) && S.res.pammo > 5) def += STATIONS.turret.dmg[st.level - 1] / STATIONS.turret.rate[st.level - 1]
   const fence = FENCE[S.fence.level].hp * 0.08
@@ -1083,7 +1106,7 @@ export function autoResolveRaid(R, offline = false) {
   }
   if (ratio < 0.55) {
     for (const k of ['food', 'water', 'meds', 'fuel']) {
-      const l = Math.floor(S.res[k] * rand(0.2, 0.45))
+      const l = Math.floor(S.res[k] * rand(0.15, 0.35))
       S.res[k] -= l
       report.lost[k] = l
     }
@@ -1093,6 +1116,7 @@ export function autoResolveRaid(R, offline = false) {
       report.dead.push(v.first)
     }
     addMoraleEvent('The horde broke through', -18, 2)
+    S.lastBreach = S.time
   } else addMoraleEvent('Held the wall', 8, 1)
   S.stats.raids++
   S.stats.kills += Math.round(R.count * clamp(ratio, 0.3, 1))

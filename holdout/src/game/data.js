@@ -88,8 +88,8 @@ export const VEHICLE_FIX = { parts: 0.12, bolts: 0.5 }
 // spare parts. Paid a little at a time from storage.
 export const UPKEEP = {
   person: { cloth: 0.15, meds: 0.02 },
-  station: { scrap: 0.25 },
-  upgraded: { bolts: 0.6 },
+  station: { scrap: 0.15 },
+  upgraded: { bolts: 0.35 },
   machine: { parts: 0.06 },
   slow: 0.85, // work speed while the camp is in disrepair
 }
