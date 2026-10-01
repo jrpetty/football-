@@ -6,7 +6,7 @@ import {
   expansionCost, startExpansion, expansionAvailable, claimGoal, survivorLevel, perimeter, save, wipeSave, countType, workersOf, survivorStats,
   unlockedBy, msDone, fenceUnlocked, listBackups, restoreBackup, exportSave, importSave,
 } from '../game/state.js'
-import { campFlow, stationFlow, power, powerNeed, isAutomated, moraleFactors, dailyNeeds, constructSpeed, raidIntel, threatLevel, isBloodMoonDay, sellMult, buyMult, resSellPrice, acceptRecruit, declineRecruit } from '../game/economy.js'
+import { campFlow, stationFlow, power, powerNeed, isAutomated, boilerFuel, sourcePower, solarOutput, windOutput, moraleFactors, dailyNeeds, constructSpeed, raidIntel, threatLevel, isBloodMoonDay, sellMult, buyMult, resSellPrice, acceptRecruit, declineRecruit } from '../game/economy.js'
 import { QUALITY as GFXQ } from '../render/pipeline.js'
 import { sfx, setSound } from '../core/audio.js'
 import { bus, h, fmt, clamp } from '../core/util.js'
@@ -251,17 +251,28 @@ export function renderPower(ui) {
   const p = power()
   const rows = []
   for (const st of S.stations) {
-    if (st.type === 'generator' && st.level > 0) rows.push(h('div.kv', h('span', `Generator L${st.level}`), h('b.good', `+${STATIONS.generator.power[st.level - 1]}${S.res.fuel <= 0.05 ? ' (no fuel!)' : ''}`)))
-    if (st.type === 'solar' && st.level > 0) rows.push(h('div.kv', h('span', `Solar Array L${st.level}`), h('b.good', `+${(STATIONS.solar.solar[st.level - 1]).toFixed(0)} peak`)))
+    if (st.level < 1 || st.building) continue
+    const D = STATIONS[st.type]
+    const name = `${D.name}${D.levels > 1 ? ` L${st.level}` : ''}`
+    if (st.type === 'generator' || st.type === 'boiler') {
+      const lit = p.srcs.some((x) => x.st === st)
+      const k = st.type === 'generator' ? 'fuel' : boilerFuel(st)
+      rows.push(h('div.kv', h('span', name, k && lit ? h('small.dim', ` · ${RES[k].name.toLowerCase()}`) : null), lit ? h('b.good', `${fmt(st.out || 0)} of ${fmt(sourcePower(st))}`) : h('b.bad', st.powerOn === false ? 'off' : 'no fuel')))
+    }
+    if (st.type === 'solar') rows.push(h('div.kv', h('span', name), h('b.good', `${(D.solar[st.level - 1] * solarOutput()).toFixed(1)} of ${D.solar[st.level - 1]}`)))
+    if (st.type === 'wind') rows.push(h('div.kv', h('span', name), h('b.good', `${(D.wind[st.level - 1] * windOutput()).toFixed(1)} of ${D.wind[st.level - 1]}`)))
+    if (st.type === 'battery') rows.push(h('div.kv', h('span', name), h('b', `${fmt(st.charge || 0)} / ${D.store[st.level - 1]} stored${(st.flow || 0) > 0.05 ? ' · charging' : (st.flow || 0) < -0.05 ? ' · supplying' : ''}`)), bar((st.charge || 0) / D.store[st.level - 1], 'prod'))
   }
   const users = S.stations.filter((st) => powerNeed(st) > 0)
+  const mix = [['Sun and wind', p.fromRenew], ['Engines and generators', p.fromFuel], ['Batteries', p.fromBatt]].filter(([, v]) => v > 0.05)
   return ui.frame(
     'Power',
     `${fmt(p.used)} used of ${fmt(p.supply)}`,
     [
-      h('section.card', h('h3', 'Sources'), rows.length ? rows : h('p.note', 'No power. Build a Generator (fuel) or a Solar Array (daylight).')),
-      h('section.card', h('h3', 'Using power'), users.length ? users.map((st) => h('div.kv', h('span', STATIONS[st.type].name), h('b' + (p.powered.has(st.id) ? '.good' : '.bad'), `${powerNeed(st)} ${p.powered.has(st.id) ? '✓' : 'unpowered'}`))) : h('p.note', 'Nothing yet. Automated stations, turrets and floodlights use power.')),
-      h('p.note', 'Generators burn fuel only for what is switched on. When there is not enough power, stations further down the list go dark first.'),
+      h('section.card', h('h3', 'Sources'), rows.length ? rows : h('p.note', 'No power yet. A Steam Engine burns wood or coal (Steam Power milestone, tier 1). Diesel generators, solar, wind and batteries come later.')),
+      mix.length ? h('section.card', h('h3', 'Where it comes from'), mix.map(([t, v]) => h('div.kv', h('span', t), h('b', fmt(v))))) : null,
+      h('section.card', h('h3', 'Using power', h('small', `${fmt(p.demand)} wanted`)), users.length ? users.map((st) => h('div.kv', h('span', STATIONS[st.type].name), h('b' + (p.powered.has(st.id) ? '.good' : '.bad'), `${fmt(powerNeed(st))} ${p.powered.has(st.id) ? '✓' : STATIONS[st.type].machine ? 'by hand' : 'unpowered'}`))) : h('p.note', 'Nothing yet. Machines (Fabricator, Machine Shop, labs and benches), automated stations, turrets and floodlights use power.')),
+      h('p.note', 'Turrets and floodlights get power first, then machines and automated stations in the order they were built. Sun and wind are used first and charge the batteries with what is left; engines only burn for the rest. A machine without power is hand-cranked at half speed.'),
     ],
     { icon: 'bolt' },
   )

@@ -3,7 +3,7 @@
 // recruits, distress calls, hordes and the black market.
 import {
   RES, STOCK_KEYS, AMMO_KEYS, ITEMS, QUALITY, MODS, STATIONS, FENCE, RECIPES, EXPANSIONS, HORDES, OCCUPATIONS, LOCATIONS,
-  GAME_MIN_PER_SEC, DAY_MIN, SEC_PER_DAY, RARITY, ALT_RECIPES, INFECTION, OUTPOST, SIGNAL,
+  GAME_MIN_PER_SEC, DAY_MIN, SEC_PER_DAY, SEC_PER_HOUR, RARITY, ALT_RECIPES, INFECTION, OUTPOST, SIGNAL,
 } from './data.js'
 const SIGNAL_PHASES = SIGNAL.length
 import {
@@ -17,58 +17,141 @@ import { bus, pick, rint, rand, chance, clamp, weighted } from '../core/util.js'
 import { tickLinks, beltBonus, belted, pulled, outCap } from './belts.js'
 
 // ---------------------------------------------------------------- power
+// One grid for the whole camp. Sources: steam engines (wood, or coal at a
+// third of the rate), diesel generators (fuel), solar panels (daylight),
+// wind turbines (weather) and battery banks (spare power stored earlier).
+// Users: turrets and floodlights first, then machines and automated
+// stations in build order. A machine without power is hand-cranked at half
+// speed. Sun and wind are used first, then fuel; the banks cover the rest
+// and charge from whatever sun and wind is left over.
+export const HAND_RATE = 0.5
+export const FUEL_K = { coal: 3, wood: 1 }
 export function powerNeed(st) {
   if (st.building || st.level < 1) return 0
   const d = STATIONS[st.type]
-  if (d.auto && st.level >= d.auto && st.module && st.autoOn !== false) return d.autoPower * Math.pow(1 + coreBoost() * (st.cores || 0), 1.5) * (researchDone('efficiency') ? 0.75 : 1)
   if (st.type === 'turret' || st.type === 'floodlight') return st.autoOn === false ? 0 : d.power
-  return 0
+  const eff = researchDone('efficiency') ? 0.75 : 1
+  let n = 0
+  if (d.auto && st.level >= d.auto && st.module && st.autoOn !== false) n += d.autoPower * Math.pow(1 + coreBoost() * (st.cores || 0), 1.5) * eff
+  if (d.machine && st.powerOn !== false && (n > 0 || workersOf(st).some((s) => s.status === 'ok'))) n += d.machine * eff
+  return n
 }
+const powerPrio = (st) => (st.type === 'turret' || st.type === 'floodlight' ? 0 : STATIONS[st.type].machine ? 1 : 2)
 export function solarOutput() {
   const h = hour()
   if (h < 6 || h > 19.5) return 0
   const sunK = Math.sin(((h - 6) / 13.5) * Math.PI)
-  const w = { clear: 1, hazy: 0.8, overcast: 0.45, rain: 0.3, fog: 0.4 }[S.weather.type] ?? 1
+  const w = { clear: 1, hazy: 0.8, overcast: 0.45, rain: 0.3, fog: 0.4, snow: 0.35 }[S.weather.type] ?? 1
   return sunK * w
 }
+// Wind strength 0..1: weather sets the mean, slow gusts move it about.
+export function windOutput() {
+  const w = { clear: 0.5, hazy: 0.42, overcast: 0.72, rain: 0.88, snow: 1, fog: 0.18 }[S.weather.type] ?? 0.5
+  const g = 0.85 + 0.15 * Math.sin(S.time / 37) * Math.sin(S.time / 11 + 1.3)
+  return clamp(w * g, 0, 1)
+}
+// What a steam engine would burn now: coal first (it lasts three times as
+// long), then wood; null when it has neither.
+export function boilerFuel(st) {
+  for (const k of STATIONS.boiler.fuels) if ((st.buf?.in?.[k] || 0) > 0.05 || (S.res[k] || 0) > 0.05) return st.fuelPick && st.fuelPick !== k && ((st.buf?.in?.[st.fuelPick] || 0) > 0.05 || (S.res[st.fuelPick] || 0) > 0.05) ? st.fuelPick : k
+  return null
+}
+export function sourcePower(st) {
+  const d = STATIONS[st.type]
+  const op = workersOf(st).filter((s) => s.status === 'ok')[0]
+  let p = d.power[st.level - 1]
+  if (op) p *= 1 + (OCCUPATIONS[op.occ].fx.station?.[st.type] || 0) + 0.03 * op.skills.tech + (st.type === 'boiler' ? 0.15 : 0)
+  return p
+}
 export function powerInfo() {
-  let supply = 0
-  let gen = 0
+  let renew = 0
+  let fueled = 0
+  let charge = 0
+  let room = 0
+  let battRate = 0
+  const srcs = []
   for (const st of S.stations) {
     if (st.building || st.level < 1) continue
-    if (st.type === 'generator') {
-      const op = workersOf(st).filter((s) => s.status === 'ok')[0]
-      let p = STATIONS.generator.power[st.level - 1]
-      if (op) p *= 1 + (OCCUPATIONS[op.occ].fx.station?.generator || 0) + 0.03 * op.skills.tech
-      if (S.res.fuel > 0.05 || (st.buf?.in?.fuel || 0) > 0.05) {
-        supply += p
-        gen += p
-      }
+    const d = STATIONS[st.type]
+    if (st.type === 'generator' || st.type === 'boiler') {
+      if (st.powerOn === false) continue
+      const lit = st.type === 'generator' ? S.res.fuel > 0.05 || (st.buf?.in?.fuel || 0) > 0.05 : !!boilerFuel(st)
+      if (!lit) continue
+      const p = sourcePower(st)
+      fueled += p
+      srcs.push({ st, p })
+    } else if (st.type === 'solar') renew += d.solar[st.level - 1] * solarOutput()
+    else if (st.type === 'wind') renew += d.wind[st.level - 1] * windOutput()
+    else if (st.type === 'battery') {
+      const cap = d.store[st.level - 1]
+      const c = clamp(st.charge || 0, 0, cap)
+      charge += c
+      room += cap - c
+      if (c > 0.01) battRate += d.rate[st.level - 1]
     }
-    if (st.type === 'solar') supply += STATIONS.solar.solar[st.level - 1] * solarOutput()
   }
+  const supply = renew + fueled + battRate
+  const users = S.stations.filter((st) => powerNeed(st) > 0).sort((a, b) => powerPrio(a) - powerPrio(b))
   let demand = 0
   let left = supply
   const powered = new Set()
-  for (const st of S.stations) {
+  for (const st of users) {
     const need = powerNeed(st)
-    if (!need) continue
     demand += need
-    if (left >= need) {
+    if (left >= need - 1e-6) {
       left -= need
       powered.add(st.id)
     }
   }
-  return { supply: Math.round(supply * 10) / 10, gen, demand, used: supply - left, powered }
+  const used = supply - left
+  const fromRenew = Math.min(used, renew)
+  const fromFuel = Math.min(used - fromRenew, fueled)
+  const fromBatt = Math.max(0, used - fromRenew - fromFuel)
+  return { supply: Math.round(supply * 10) / 10, renew, fueled, gen: fueled, demand, used, powered, srcs, fromRenew, fromFuel, fromBatt, spare: renew - fromRenew, charge, room, battRate, load: fueled > 0 ? fromFuel / fueled : 0 }
 }
 let pinfoCache = null
 export const power = () => pinfoCache || powerInfo()
+// Burn fuel for the share of power that came from engines, and move charge
+// in and out of the battery banks (store and rate in power for an hour).
+function tickPower(pinfo, dt) {
+  for (const { st, p } of pinfo.srcs) {
+    const d = STATIONS[st.type]
+    st.out = p * pinfo.load
+    if (pinfo.load <= 0) continue
+    let burn = (dt / d.burn[st.level - 1]) * pinfo.load
+    const k = st.type === 'generator' ? 'fuel' : boilerFuel(st)
+    if (!k) continue
+    burn /= FUEL_K[k] || 1
+    st.burning = k
+    const b = st.buf?.in
+    if (b?.[k] > 0) {
+      const t = Math.min(b[k], burn)
+      b[k] -= t
+      burn -= t
+    }
+    S.res[k] = Math.max(0, (S.res[k] || 0) - burn)
+  }
+  const banks = S.stations.filter((st) => st.type === 'battery' && st.level > 0 && !st.building)
+  if (!banks.length) return
+  const hrs = dt / SEC_PER_HOUR
+  let out = pinfo.fromBatt * hrs
+  let into = Math.min(pinfo.spare, banks.reduce((a, st) => a + STATIONS.battery.rate[st.level - 1], 0)) * hrs * 0.9
+  for (const st of banks) {
+    const cap = STATIONS.battery.store[st.level - 1]
+    st.charge = clamp(st.charge || 0, 0, cap)
+    const take = pinfo.charge > 0 ? (out * st.charge) / pinfo.charge : 0
+    const give = pinfo.room > 0 ? (into * (cap - st.charge)) / pinfo.room : 0
+    st.charge = clamp(st.charge - take + give, 0, cap)
+    st.flow = (give - take) / Math.max(hrs, 1e-6)
+  }
+}
 
 export function stationRate(st, pinfo) {
   if (st.building || st.level < 1) return 0
   const d = STATIONS[st.type]
   let r = 0
   for (const s of workersOf(st)) if (s.status === 'ok') r += workEff(s, st.type)
+  if (d.machine && !pinfo.powered.has(st.id)) r *= HAND_RATE
   if (isAutomated(st, pinfo)) r += d.autoRate * (hasFlag('autoBoost') ? 1.5 : 1) * (1 + coreBoost() * (st.cores || 0))
   return r
 }
@@ -99,10 +182,10 @@ export function dailyNeeds() {
   return { food: food * (1 - kitchenSaving()) * (hasFlag('rations') ? 0.85 : 1), water: water * season().water }
 }
 
-// Winter heat: wood per survivor a day, or fuel at a third of that.
+// Winter heat: wood per survivor a day, or coal or fuel at a third of that.
 export function heatNeed() {
   const k = season().heat
-  return k ? { wood: k * S.survivors.length, fuel: (k / 3) * S.survivors.length } : null
+  return k ? { wood: k * S.survivors.length, coal: (k / 3) * S.survivors.length, fuel: (k / 3) * S.survivors.length } : null
 }
 
 // Idle survivors (no job) help build, or forage when nothing is going up.
@@ -139,7 +222,10 @@ export function stationFlow(st, pinfo = power()) {
     for (const [k, v] of Object.entries(m.in)) add(k, -v * cyc)
   }
   if (st.type === 'kitchen' && st.active) add('wood', -d.burn.wood)
-  if (st.type === 'generator' && pinfo.used > 0 && pinfo.gen > 0) add('fuel', -(SEC_PER_DAY / d.burn[st.level - 1]) * Math.min(1, pinfo.used / Math.max(pinfo.supply, 0.01)))
+  if ((st.type === 'generator' || st.type === 'boiler') && pinfo.load > 0 && pinfo.srcs.some((x) => x.st === st)) {
+    const k = st.type === 'generator' ? 'fuel' : boilerFuel(st)
+    if (k) add(k, -(SEC_PER_DAY / d.burn[st.level - 1]) * pinfo.load / (FUEL_K[k] || 1))
+  }
   return flow
 }
 export function campFlow() {
@@ -156,6 +242,7 @@ export function campFlow() {
   const heat = heatNeed()
   if (heat) {
     if (S.res.wood > 1) total.wood = (total.wood || 0) - heat.wood
+    else if (S.res.coal > 1) total.coal = (total.coal || 0) - heat.coal
     else total.fuel = (total.fuel || 0) - heat.fuel
   }
   return total
@@ -182,32 +269,21 @@ export function econTick(dt, opts = {}) {
   let cold = false
   if (heat) {
     const w = (heat.wood / SEC_PER_DAY) * dt
+    const c = (heat.coal / SEC_PER_DAY) * dt
     const f = (heat.fuel / SEC_PER_DAY) * dt
     if (S.res.wood >= w) S.res.wood -= w
+    else if (S.res.coal >= c) S.res.coal -= c
     else if (S.res.fuel >= f) S.res.fuel -= f
     else cold = S.survivors.length > 0
   }
-  if (cold && !S.cold) log('The camp is out of wood and fuel. Everyone is freezing.', 'bad')
+  if (cold && !S.cold) log('The camp is out of wood, coal and fuel. Everyone is freezing.', 'bad')
   S.cold = cold
   const hungry = S.survivors.length > 0 && (S.res.food <= 0.01 || S.res.water <= 0.01)
   if (hungry && !S.hungry) log(S.res.water <= 0.01 ? 'Out of water! Everyone is weakening.' : 'Out of food! Everyone is weakening.', 'bad')
   S.hungry = hungry
 
-  // ---- generator fuel
-  if (pinfo.gen > 0 && pinfo.used > 0) {
-    const load = Math.min(1, pinfo.used / Math.max(pinfo.supply, 0.01))
-    for (const st of S.stations) {
-      if (st.type !== 'generator' || st.level < 1 || st.building) continue
-      let burn = (dt / STATIONS.generator.burn[st.level - 1]) * load
-      const b = st.buf?.in
-      if (b?.fuel > 0) {
-        const t = Math.min(b.fuel, burn)
-        b.fuel -= t
-        burn -= t
-      }
-      S.res.fuel = Math.max(0, S.res.fuel - burn)
-    }
-  }
+  // ---- engines, generators and battery banks
+  tickPower(pinfo, dt)
 
   // ---- construction, wall upgrades, expansions
   const cs = constructSpeed()
@@ -287,10 +363,15 @@ export function econTick(dt, opts = {}) {
         }
       }
     }
-    if (st.type === 'generator') st.active = pinfo.gen > 0 && pinfo.used > 0
+    if (st.type === 'generator' || st.type === 'boiler') {
+      st.active = pinfo.load > 0 && pinfo.srcs.some((x) => x.st === st)
+      if (!pinfo.srcs.some((x) => x.st === st)) st.stalled = st.powerOn === false ? 'Switched off' : st.type === 'generator' ? 'No fuel' : 'No wood or coal'
+    }
+    if (st.type === 'wind') st.active = windOutput() > 0.1
+    if (st.type === 'battery') st.active = Math.abs(st.flow || 0) > 0.05
     if (st.type === 'radio') st.active = workersOf(st).some((s) => s.status === 'ok')
     if (st.type === 'watchtower') st.active = workersOf(st).some((s) => s.status === 'ok')
-    if (d.workers[st.level - 1] && !workersOf(st).length && !isAutomated(st, pinfo) && !['generator', 'watchtower', 'radio', 'training'].includes(st.type)) st.stalled = st.stalled || 'No workers'
+    if (d.workers[st.level - 1] && !workersOf(st).length && !isAutomated(st, pinfo) && !['generator', 'boiler', 'watchtower', 'radio', 'training'].includes(st.type)) st.stalled = st.stalled || 'No workers'
   }
   if (anyAuto) completeGoal('automate')
   tickLinks(dt)
@@ -1003,7 +1084,7 @@ export function restockMarket() {
     const base = ITEMS[e.id].value * QUALITY[q].value
     stock.push({ kind: 'item', id: e.id, q, price: Math.round(base * rand(1.05, 1.35)) })
   }
-  const bundles = [['food', 30], ['water', 30], ['wood', 40], ['scrap', 40], ['metal', 25], ['cloth', 25], ['parts', 6], ['electronics', 4], ['chemicals', 6], ['gunpowder', 10], ['fuel', 15], ['pammo', 60], ['rammo', 30], ['shells', 20], ['meds', 4], ['medkit', 1], ['molotov', 2], ['module', 1]]
+  const bundles = [['food', 30], ['water', 30], ['wood', 40], ['scrap', 40], ['metal', 25], ['coal', 20], ['plates', 12], ['bolts', 80], ['cloth', 25], ['parts', 6], ['electronics', 4], ['chemicals', 6], ['gunpowder', 10], ['fuel', 15], ['pammo', 60], ['rammo', 30], ['shells', 20], ['meds', 4], ['medkit', 1], ['molotov', 2], ['module', 1]]
   for (const [r, qty] of bundles) {
     if (r === 'module' && radio < 2) continue
     stock.push({ kind: 'res', res: r, qty, price: Math.round(RES[r].sell * qty * rand(2.2, 2.8)) })

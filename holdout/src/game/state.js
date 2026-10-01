@@ -1016,7 +1016,7 @@ export function newGame() {
     saved: Date.now(),
     settings: { sound: true, quality: 'high', tilt: true, edgePan: true },
   }
-  Object.assign(S.res, { food: 55, water: 60, meds: 4, wood: 110, scrap: 60, metal: 30, cloth: 25, parts: 8, electronics: 4, chemicals: 4, gunpowder: 0, fuel: 14, pammo: 70, rammo: 0, shells: 12, medkit: 2, molotov: 1, cash: 150 })
+  Object.assign(S.res, { food: 55, water: 60, meds: 4, wood: 110, scrap: 60, metal: 30, plates: 4, bolts: 24, cloth: 25, parts: 8, electronics: 4, chemicals: 4, gunpowder: 0, fuel: 14, pammo: 70, rammo: 0, shells: 12, medkit: 2, molotov: 1, cash: 150 })
   const founders = [pick(['soldier', 'police', 'firefighter', 'guard']), pick(['farmer', 'chef', 'plumber']), pick(['carpenter', 'builder', 'mechanic']), pick(['nurse', 'doctor', 'paramedic'])]
   for (const occ of founders) S.survivors.push(makeSurvivor({ occ }))
   const sv = S.survivors
@@ -1095,6 +1095,19 @@ function migrate() {
     s.perks = []
     s.perkChoices = []
     for (const [k, v] of Object.entries(s.skills)) PERK_LEVELS.forEach((lv, tier) => v >= lv && PERKS[k]?.[tier] && s.perkChoices.push({ skill: k, tier }))
+  }
+  if (S.milestones) {
+    // milestones added since this camp started are granted when it is already past their tier
+    for (const [id, m] of Object.entries(MILESTONES)) {
+      if (S.milestones[id]) continue
+      if (Object.entries(MILESTONES).some(([k, x]) => x.tier > m.tier && S.milestones[k])) S.milestones[id] = -1
+    }
+    // goods delivered toward something a Signal phase no longer asks for go back to storage
+    const P = SIGNAL[S.signal.phase]
+    if (P) for (const k of Object.keys(S.signal.paid || {})) if (!(k in P.cost)) {
+      S.res[k] = (S.res[k] || 0) + S.signal.paid[k]
+      delete S.signal.paid[k]
+    }
   }
   if (!S.milestones) {
     // camps from before milestones keep what they built

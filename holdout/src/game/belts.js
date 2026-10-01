@@ -31,6 +31,7 @@ function recipesOf(st) {
 const SIGNAL_INPUTS = [...new Set(SIGNAL.flatMap((p) => Object.keys(p.cost)))]
 export function inputsOf(st) {
   if (st.type === 'generator') return ['fuel']
+  if (st.type === 'boiler') return [...STATIONS.boiler.fuels]
   if (st.type === 'mast') return SIGNAL_INPUTS
   const set = new Set()
   for (const r of recipesOf(st)) for (const [k, v] of Object.entries(r.in || {})) if (v > 0) set.add(k)
@@ -49,6 +50,7 @@ export const givesOut = (st, k) => (isDepot(st) ? k !== 'cash' : outputsOf(st).i
 export function inCap(st, k) {
   if (isDepot(st)) return Infinity
   if (st.type === 'generator') return 10
+  if (st.type === 'boiler') return 16
   if (st.type === 'mast') return 40 * stackOf(k)
   let m = 0
   for (const r of recipesOf(st)) m = Math.max(m, r.in?.[k] || 0)

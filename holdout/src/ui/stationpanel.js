@@ -7,14 +7,14 @@ import {
   repairCost, repairTime, gameDur, stationSize, signalNeed, deliverSignal, signalPhase,
   researchLock, startResearch, cancelResearch, pickAlt, altsFor, researchDone, installCore, removeCore, coreBoost, hasFlag, msDone,
 } from '../game/state.js'
-import { stationFlow, power, powerNeed, isAutomated, stationRate, solarOutput, kitchenSaving, constructSpeed, raidIntel, activeRecipe, activeSingle, recipeUnlocked, recipeTarget } from '../game/economy.js'
+import { stationFlow, power, powerNeed, isAutomated, stationRate, solarOutput, windOutput, boilerFuel, sourcePower, HAND_RATE, kitchenSaving, constructSpeed, raidIntel, activeRecipe, activeSingle, recipeUnlocked, recipeTarget } from '../game/economy.js'
 import { linksOf, inputsOf, outputsOf, linkPerDay, linkState, upgradeCostOf, upgradeLink, removeLink, beltBonus, pulled } from '../game/belts.js'
 import { sfx } from '../core/audio.js'
 import { bus, h, fmt, clamp } from '../core/util.js'
 import { icon } from './icons.js'
 import { costList, resChip, resIcon, bar, qualityTag, condBar, itemCard, seg, stepper, plural } from './common.js'
 
-const CAT_ICON = { living: 'gate', production: 'production', crafting: 'hammer', defense: 'shield' }
+const CAT_ICON = { living: 'gate', production: 'production', crafting: 'hammer', defense: 'shield', power: 'bolt' }
 const tabState = {}
 
 export function renderStation(ui, id) {
@@ -30,6 +30,7 @@ export function renderStation(ui, id) {
   if (st.level > 0) {
     const ws = workerBlock(ui, st)
     if (ws) body.push(ws)
+    if (D.machine) body.push(machineBlock(ui, st, pinfo))
     body.push(...effectBlock(ui, st, pinfo))
     const logi = logisticsBlock(ui, st)
     if (logi) body.push(logi)
@@ -141,6 +142,7 @@ function stationIO(type) {
   if (D.passive) give(D.passive)
   if (D.burn && !Array.isArray(D.burn)) take(D.burn)
   if (type === 'generator') ins.add('fuel')
+  if (type === 'boiler') for (const k of STATIONS.boiler.fuels) ins.add(k)
   if (type === 'turret') ins.add('pammo')
   for (const r of RECIPES) {
     if (r.station !== type) continue
@@ -166,7 +168,7 @@ function stationNames(types, extra) {
 }
 function chainBlock(st) {
   const D = STATIONS[st.type]
-  if (!['production', 'crafting'].includes(D.cat) && !['kitchen', 'infirmary', 'generator', 'turret'].includes(st.type)) return null
+  if (!['production', 'crafting'].includes(D.cat) && !['kitchen', 'infirmary', 'generator', 'boiler', 'turret'].includes(st.type)) return null
   const io = stationIO(st.type)
   if (!io.ins.length && !io.outs.length) return null
   const types = Object.keys(STATIONS).filter((t) => t !== st.type)
@@ -262,9 +264,20 @@ function effectBlock(ui, st, pinfo) {
       )
       break
     }
-    case 'generator': {
-      const fuelDay = -(flow.fuel || 0)
-      out.push(card('Power', h('div.kv', h('span', 'Output'), h('b', `${D.power[lv - 1]} power${workersOf(st).length ? ' + operator' : ''}`)), h('div.kv', h('span', 'Camp use'), h('b', `${fmt(pinfo.used)} / ${fmt(pinfo.supply)}`)), h('div.kv', h('span', 'Fuel'), h('b', fuelDay ? `${fuelDay.toFixed(1)} a day · ${S.res.fuel > 0 ? `${(S.res.fuel / fuelDay).toFixed(1)} days left` : 'empty!'}` : 'Idle: nothing needs power')), h('p.note', 'Only burns fuel for what is switched on.')))
+    case 'generator':
+    case 'boiler':
+      out.push(engineCard(ui, st, pinfo, flow))
+      break
+    case 'wind': {
+      const w = windOutput()
+      out.push(card('Wind', h('div.kv', h('span', 'Full output'), h('b', `${D.wind[lv - 1]} power`)), h('div.kv', h('span', 'Right now'), h('b', `${(D.wind[lv - 1] * w).toFixed(1)} power`)), bar(w, 'prod', `${Math.round(w * 100)}% wind`), h('p.note', 'Storms, rain and snow turn it hardest; fog leaves it nearly still. Spare output charges the battery banks.')))
+      break
+    }
+    case 'battery': {
+      const cap = D.store[lv - 1]
+      const c = st.charge || 0
+      const f = st.flow || 0
+      out.push(card('Stored power', bar(c / cap, 'prod', `${fmt(c)} / ${cap}`), h('div.kv', h('span', 'Right now'), h('b' + (f > 0.05 ? '.good' : f < -0.05 ? '.bad' : ''), f > 0.05 ? `Charging · +${f.toFixed(1)}` : f < -0.05 ? `Supplying · ${(-f).toFixed(1)}` : 'Holding')), h('div.kv', h('span', 'Can supply'), h('b', `up to ${D.rate[lv - 1]} power`)), h('p.note', `Charges from spare sun and wind, never from fuel. Full, it runs ${D.rate[lv - 1]} power for ${Math.round(cap / D.rate[lv - 1])} hours.`)))
       break
     }
     case 'solar':
@@ -379,6 +392,38 @@ function limitControl(ui, st, outKey) {
   const steps = [50, 100, 150, 200, 300, 400, 600, 1e9]
   const i = Math.max(0, steps.findIndex((v) => v >= (st.limit ?? 1e9)))
   return h('div.kv', h('span', `Stop at ${RES[outKey].name.toLowerCase()}`), stepper(i, 0, steps.length - 1, (j) => ((st.limit = steps[j] >= 1e9 ? null : steps[j]), ui.refreshPanel()), (j) => (steps[j] >= 1e9 ? 'Never' : steps[j])))
+}
+// Steam engines and generators: output, fuel, and a switch.
+function engineCard(ui, st, pinfo, flow) {
+  const D = STATIONS[st.type]
+  const lit = pinfo.srcs.some((x) => x.st === st)
+  const k = st.type === 'generator' ? 'fuel' : boilerFuel(st)
+  const perDay = k ? -(flow[k] || 0) : 0
+  const store = k ? (S.res[k] || 0) + (st.buf?.in?.[k] || 0) : 0
+  const rows = [
+    h('div.kv', h('span', 'Capacity'), h('b', `${fmt(sourcePower(st))} power${workersOf(st).length ? ` (with ${st.type === 'boiler' ? 'stoker' : 'operator'})` : ''}`)),
+    h('div.kv', h('span', 'Running at'), h('b', lit ? `${Math.round(pinfo.load * 100)}% · ${fmt(st.out || 0)} power` : h('em.bad', st.powerOn === false ? 'Switched off' : st.type === 'boiler' ? 'No wood or coal' : 'No fuel'))),
+    h('div.kv', h('span', 'Camp grid'), h('b', `${fmt(pinfo.used)} used of ${fmt(pinfo.supply)}`)),
+    k ? h('div.kv', h('span', `Burning ${RES[k].name.toLowerCase()}`), h('b', perDay > 0.05 ? `${perDay.toFixed(1)} a day · ${store > 0 ? `${(store / perDay).toFixed(1)} days left` : 'empty!'}` : 'Idling: sun, wind or batteries cover it')) : null,
+  ]
+  if (st.type === 'boiler') {
+    rows.push(h('div.kv', h('span', 'Fuel'), seg([['', 'Coal first'], ['wood', 'Wood first']], st.fuelPick || '', (v) => ((st.fuelPick = v || null), ui.refreshPanel()))))
+    rows.push(h('p.note', 'Coal burns three times as long as wood. Belt wood or coal straight in, or it hauls from storage. It only burns as hard as the camp needs.'))
+  } else rows.push(h('p.note', 'Only burns fuel for the power the camp is drawing.'))
+  rows.push(h('div.kv', h('span', ''), h('button.mini', { onclick: () => ((st.powerOn = st.powerOn === false), ui.refreshPanel()) }, st.powerOn === false ? 'Start it up' : 'Shut it down')))
+  return h('section.card', h('h3', 'Power'), rows)
+}
+// Machines run at full speed on power and are hand-cranked at half without.
+function machineBlock(ui, st, pinfo) {
+  const D = STATIONS[st.type]
+  const working = workersOf(st).some((s) => s.status === 'ok') || isAutomated(st, pinfo)
+  const on = pinfo.powered.has(st.id)
+  const off = st.powerOn === false
+  return h(
+    'section.card.machine' + (on ? '.on' : ''),
+    h('div.kv', h('span', h('i.inl', { html: icon('bolt') }), `Draws ${D.machine} power while working`), off ? h('em', 'Switched off: by hand') : !working ? h('em', 'Idle') : on ? h('em.good', 'Powered · full speed') : h('em.bad', `No power · hand-cranked at ${Math.round(HAND_RATE * 100)}%`)),
+    h('div.kv', h('small.dim', pinfo.supply > 0 ? `Camp grid: ${fmt(pinfo.used)} used of ${fmt(pinfo.supply)}` : 'No power on the grid yet: build a Steam Engine (Power tab).'), h('button.mini', { onclick: () => ((st.powerOn = off ? undefined : false), ui.refreshPanel()) }, off ? 'Use power' : 'Run by hand')),
+  )
 }
 function powerToggle(ui, st, pinfo) {
   const on = st.autoOn !== false
@@ -755,6 +800,8 @@ function benefits(st, next) {
   if (D.xpRate) out.push(`Trains ${D.xpRate[i]}× faster`)
   if (D.power) out.push(Array.isArray(D.power) ? `${D.power[i]} power` : '')
   if (D.solar) out.push(`${D.solar[i]} peak power`)
+  if (D.wind) out.push(`${D.wind[i]} power in full wind`)
+  if (D.store) out.push(`stores ${D.store[i]}, supplies ${D.rate[i]}`)
   if (D.towerDmg) out.push(`+${Math.round(D.towerDmg[i] * 100)}% guard damage`)
   if (D.dmg) out.push(`${D.dmg[i]} damage, ${D.range[i]} m range`)
   if (D.recruit) out.push('More newcomers and better trade')
