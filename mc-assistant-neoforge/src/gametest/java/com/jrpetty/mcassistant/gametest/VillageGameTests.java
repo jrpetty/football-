@@ -563,49 +563,54 @@ public class VillageGameTests {
         VillageFolkEntity a = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
         VillageFolkEntity b = VillageFolkSpawnerBlock.raise(level, heart.east(), 0.0F);
         helper.assertTrue(a != null && b != null && a.ownerId().equals(b.ownerId()), "two folk of one village");
-        com.jrpetty.mcassistant.entity.Social.Life la = a.life(), lb = b.life();
-        la.traits().clear();
-        la.traits().add(com.jrpetty.mcassistant.entity.Social.Trait.SOCIABLE);
-        la.traits().add(com.jrpetty.mcassistant.entity.Social.Trait.GENEROUS);
-        lb.traits().clear();
-        lb.traits().add(com.jrpetty.mcassistant.entity.Social.Trait.CHEERFUL);
-        lb.traits().add(com.jrpetty.mcassistant.entity.Social.Trait.HARDWORKING);
-        for (int i = 0; i < 20; i++) {
+        // A moment for the ground they stand on to finish loading (its entities are read
+        // from it), then side by side.
+        helper.runAtTickTime(20, () -> {
+            b.moveTo(a.getX() + 1.0, a.getY(), a.getZ(), 0.0F, 0.0F);
+            com.jrpetty.mcassistant.entity.Social.Life la = a.life(), lb = b.life();
+            la.traits().clear();
+            la.traits().add(com.jrpetty.mcassistant.entity.Social.Trait.SOCIABLE);
+            la.traits().add(com.jrpetty.mcassistant.entity.Social.Trait.GENEROUS);
+            lb.traits().clear();
+            lb.traits().add(com.jrpetty.mcassistant.entity.Social.Trait.CHEERFUL);
+            lb.traits().add(com.jrpetty.mcassistant.entity.Social.Trait.HARDWORKING);
+            for (int i = 0; i < 20; i++) {
+                a.socialBeat();
+                b.socialBeat();
+            }
+            int ab = la.affinity(b.getUUID()), ba = lb.affinity(a.getUUID());
+            Kit.log("t17 after twenty beats together: a->b " + ab + ", b->a " + ba);
+            helper.assertTrue(ab >= com.jrpetty.mcassistant.entity.Social.FRIEND && ba >= com.jrpetty.mcassistant.entity.Social.FRIEND,
+                "two folk who spend their time together become friends: " + ab + " / " + ba);
+            // A generous friend does not let a friend go hungry.
+            b.removeMatching(st -> st.get(net.minecraft.core.component.DataComponents.FOOD) != null, 999);
+            a.insertItem(new ItemStack(Items.BREAD, 10));
             a.socialBeat();
-            b.socialBeat();
-        }
-        int ab = la.affinity(b.getUUID()), ba = lb.affinity(a.getUUID());
-        Kit.log("t17 after twenty beats together: a->b " + ab + ", b->a " + ba);
-        helper.assertTrue(ab >= com.jrpetty.mcassistant.entity.Social.FRIEND && ba >= com.jrpetty.mcassistant.entity.Social.FRIEND,
-            "two folk who spend their time together become friends: " + ab + " / " + ba);
-        // A generous friend does not let a friend go hungry.
-        b.removeMatching(st -> st.get(net.minecraft.core.component.DataComponents.FOOD) != null, 999);
-        a.insertItem(new ItemStack(Items.BREAD, 10));
-        a.socialBeat();
-        Kit.log("t17 b's food after a generous friend's beat: " + b.countFood());
-        helper.assertTrue(b.countFood() > 0, "a generous folk shares a ration with a hungry friend");
-        // A child: partners, a family, a trait from a parent.
-        a.insertItem(new ItemStack(Items.BREAD, 4));
-        b.insertItem(new ItemStack(Items.BREAD, 4));
-        VillageFolkEntity child = a.raiseChildWith(b);
-        helper.assertTrue(child != null, "the two could raise a child");
-        com.jrpetty.mcassistant.entity.Social.Life lc = child.life();
-        Kit.log("t17 family: " + lc.describe(child.displayNameCap(), "child") + " / " + la.describe(a.displayNameCap(), "first"));
-        helper.assertTrue(b.getUUID().equals(la.partner()) && a.getUUID().equals(lb.partner()), "parents become partners");
-        helper.assertTrue(lc.parents().contains(a.displayNameCap()) && lc.parents().contains(b.displayNameCap()),
-            "the child knows whose it is: " + lc.parents());
-        helper.assertTrue(la.children() == 1 && lb.children() == 1, "both parents count the child");
-        boolean takesAfter = false;
-        for (var t : lc.traits()) takesAfter |= la.has(t) || lb.has(t);
-        helper.assertTrue(lc.traits().size() == 2 && takesAfter, "the child takes after a parent: " + lc.traits());
-        // Kept across a save.
-        net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
-        la.save(tag);
-        com.jrpetty.mcassistant.entity.Social.Life back = new com.jrpetty.mcassistant.entity.Social.Life();
-        back.load(tag);
-        helper.assertTrue(back.describe("x", "y").equals(la.describe("x", "y")),
-            "a folk's personality and friends survive a save: " + back.describe("x", "y"));
-        helper.succeed();
+            Kit.log("t17 b's food after a generous friend's beat: " + b.countFood());
+            helper.assertTrue(b.countFood() > 0, "a generous folk shares a ration with a hungry friend");
+            // A child: partners, a family, a trait from a parent.
+            a.insertItem(new ItemStack(Items.BREAD, 4));
+            b.insertItem(new ItemStack(Items.BREAD, 4));
+            VillageFolkEntity child = a.raiseChildWith(b);
+            helper.assertTrue(child != null, "the two could raise a child");
+            com.jrpetty.mcassistant.entity.Social.Life lc = child.life();
+            Kit.log("t17 family: " + lc.describe(child.displayNameCap(), "child") + " / " + la.describe(a.displayNameCap(), "first"));
+            helper.assertTrue(b.getUUID().equals(la.partner()) && a.getUUID().equals(lb.partner()), "parents become partners");
+            helper.assertTrue(lc.parents().contains(a.displayNameCap()) && lc.parents().contains(b.displayNameCap()),
+                "the child knows whose it is: " + lc.parents());
+            helper.assertTrue(la.children() == 1 && lb.children() == 1, "both parents count the child");
+            boolean takesAfter = false;
+            for (var t : lc.traits()) takesAfter |= la.has(t) || lb.has(t);
+            helper.assertTrue(lc.traits().size() == 2 && takesAfter, "the child takes after a parent: " + lc.traits());
+            // Kept across a save.
+            net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
+            la.save(tag);
+            com.jrpetty.mcassistant.entity.Social.Life back = new com.jrpetty.mcassistant.entity.Social.Life();
+            back.load(tag);
+            helper.assertTrue(back.describe("x", "y").equals(la.describe("x", "y")),
+                "a folk's personality and friends survive a save: " + back.describe("x", "y"));
+            helper.succeed();
+        });
     }
 
     /** Night: a folk finds a bed in the village (not just one beside the heart) and

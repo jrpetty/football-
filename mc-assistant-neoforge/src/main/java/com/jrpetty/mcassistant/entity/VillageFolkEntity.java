@@ -135,6 +135,28 @@ public class VillageFolkEntity extends AssistantEntity {
     public void noteBuilt(String structure) {
         UUID village = ownerId();
         if (village != null) Villages.noteProject(village, structure, level().getGameTime());
+        drewForBuild = false;                     // what is left over is cargo again
+    }
+
+    /**
+     * A builder stocking a building keeps what it has drawn and made for it. The fences
+     * for a well were crafted, banked in the next deposit — in a farm chest seventy
+     * blocks out, beyond the builder's reach — and crafted again, every few minutes for
+     * a whole game day on a plains map, and the furnace for the house after them: the
+     * village built three things in three days.
+     */
+    @Override
+    protected int buildReserve(net.minecraft.world.item.ItemStack s) {
+        if (!drewForBuild) return 0;
+        if (BuildGoal.isBuildingBlock(s) || s.is(net.minecraft.world.item.Items.CHEST)
+                || s.is(net.minecraft.world.item.Items.FURNACE) || s.is(net.minecraft.world.item.Items.CRAFTING_TABLE)
+                || s.is(net.minecraft.world.item.Items.LADDER) || s.is(net.minecraft.world.item.Items.OBSIDIAN)
+                || s.is(net.minecraft.world.item.Items.GLASS) || s.is(net.minecraft.world.item.Items.TORCH)
+                || s.is(net.minecraft.tags.ItemTags.FENCES) || s.is(net.minecraft.tags.ItemTags.FENCE_GATES)
+                || s.is(net.minecraft.tags.ItemTags.BEDS)) {
+            return 64 * 27;
+        }
+        return 0;
     }
 
     /** The ground chosen for a building cannot be reached: the village picks another lot. */
