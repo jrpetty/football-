@@ -39,7 +39,15 @@ const MAKERS = {
   furn: (k, s) => furnModel(k, +(s || 1)),
   decor: (k, s) => decorModel(k, +(s || 1)),
   tree: (k, s) => ({ pine: pineModel, broad: broadleafModel, dead: deadTreeModel, bush: bushModel, rock: boulderModel })[k](+(s || 1)),
-  weapon: (id) => weaponModel(id),
+  weapon: (id) => {
+    // show guns side-on, raised off the floor
+    const g = new THREE.Group()
+    const w = weaponModel(id)
+    w.rotation.y = Math.PI / 2
+    w.position.y = 0.35
+    g.add(w)
+    return g
+  },
 }
 const list = (q.get('m') || 'van').split(',')
 const gap = parseFloat(q.get('gap') || '7')
