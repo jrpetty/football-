@@ -11,6 +11,7 @@ import { Coop } from './net/coop.js'
 import { newCode } from './net/transport.js'
 import { lobbyCard, joinError } from './ui/lobby.js'
 import { Pings } from './ui/pings.js'
+import { toggleFullscreen } from './ui/fullscreen.js'
 import { warmUp, compileFor, preRender } from './render/warmup.js'
 import { econTick, initSchedules, autoResolveRaid, scheduleRaid } from './game/economy.js'
 import * as belts from './game/belts.js'
@@ -132,6 +133,11 @@ class Game {
       if (this.onKey(e)) e._handled = true
     }
     view.input.onPing = (x, y) => this.ping(x, y)
+    // right-click belongs to the game everywhere, not just on the 3D view:
+    // never the browser's menu (text fields keep theirs, for paste)
+    window.addEventListener('contextmenu', (e) => {
+      if (!e.target.closest?.('input, textarea, [contenteditable="true"]')) e.preventDefault()
+    })
     const loop = (t) => {
       requestAnimationFrame(loop)
       this.frame(t)
@@ -449,6 +455,11 @@ class Game {
   }
   // ---------------------------------------------------------------- input
   onKey(e) {
+    if (e.key === 'Enter' && e.altKey) {
+      e.preventDefault()
+      toggleFullscreen(this.ui)
+      return true
+    }
     if (this.titleEl) return false
     if (this.ui?.onKey(e)) return true
     const k = e.key

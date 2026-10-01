@@ -47,6 +47,7 @@ networks don't.
 | | Scroll, `+` / `-` | Zoom |
 | | Q / E, middle-drag (right-drag in camp and on the map) | Rotate the camera |
 | | `F1` | Field manual (pauses a run) |
+| | `Alt`+`Enter`, the button above Settings | Full screen (hold `Esc` to leave) |
 | Camp | `B` `C` `I` `T` `P` `M` `G` `J` `L` | Build, Crew, Items, Trade, Camp overview, Map, Progress, Journal, Log |
 | | `O`, `Enter`, `Q` / Alt+click | Players panel, chat, ping a spot (multiplayer) |
 | | `F` / `H` | The wall / horde intel |

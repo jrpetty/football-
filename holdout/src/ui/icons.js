@@ -92,6 +92,8 @@ export const ICON = {
   belt: svg('<rect x="2.5" y="13" width="19" height="5.5" rx="2.75"/><circle cx="5.3" cy="15.75" r="1"/><circle cx="18.7" cy="15.75" r="1"/><path d="M9.5 15.75h5"/><rect x="8.5" y="5.5" width="7" height="6" rx="1"/><path d="M12 5.5v6"/>'),
   sound: svg('<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/>'),
   soundLow: svg('<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6"/>'),
+  fullscreen: svg('<path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/>'),
+  unfullscreen: svg('<path d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5"/>'),
   soundOff: svg('<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5"/>'),
 }
 export const icon = (k) => ICON[k] || ''

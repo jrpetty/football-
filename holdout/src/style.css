@@ -35,7 +35,9 @@ body {
 #c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; outline: none; }
 #labels { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 1; }
 #hud { position: fixed; inset: 0; pointer-events: none; z-index: 2; font-variant-numeric: tabular-nums; }
-#hud > * { pointer-events: auto; }
+/* zero specificity, so a full-screen layer such as the supply-run HUD can
+   say pointer-events: none and let clicks reach the 3D view */
+:where(#hud) > * { pointer-events: auto; }
 #hud .feed, #hud .toasts, #hud .tip, #hud .modals:empty { pointer-events: none; }
 button { font: inherit; color: inherit; }
 h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; letter-spacing: 0.02em; margin: 0; text-wrap: balance; }
@@ -1199,6 +1201,8 @@ body.aiming #c { cursor: crosshair !important; }
 .vol.off .vol-pct { color: var(--dim); }
 /* on runs it sits beside the ammo count */
 .mright .vol { padding-right: 8px; }
+.mfull { padding: 6px 8px; display: flex; align-items: center; }
+.mfull i, .mfull svg { width: 17px; height: 17px; display: block; }
 /* a narrower window keeps just the speaker; the bar drops down on hover */
 @media (max-width: 1500px) {
   .topbar .vol { padding-right: 2px; }

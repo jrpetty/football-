@@ -357,6 +357,7 @@ const CHAPTERS = [
         ['H', 'Horde intel'],
         ['R', 'Rotate while placing'],
         ['F1', 'This manual'],
+        ['Alt+Enter', 'Full screen (or the button above Settings)'],
         ['Esc', 'Close or menu'],
       ]),
       h('h4', 'On a run'),

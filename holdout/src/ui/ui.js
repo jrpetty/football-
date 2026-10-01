@@ -20,6 +20,7 @@ import { renderJournal } from './journal.js'
 import { storyBadge } from '../game/story.js'
 import { renderPlayers, feedChat, netChip, updateNetChip } from './netui.js'
 import { volumeControl } from './volume.js'
+import { fullscreenButton } from './fullscreen.js'
 import { victoryModal, renderMarket, renderLog, renderFence, renderExpansion, renderProduction, renderPower, renderMorale, renderSettings, recruitModal, raidReportModal, missionReportModal, gameOverModal, menuModal, hordeInfo } from './camppanels.js'
 
 const NAV = [
@@ -80,6 +81,7 @@ export class UI {
       NAV.map((n) => h('button.navbtn' + (n.primary ? '.primary' : ''), { 'data-nav': n.id, 'data-tip': `${n.label} <kbd>${n.key}</kbd>`, onclick: () => this.navClick(n.id) }, h('i', { html: icon(n.icon) }), h('span', n.label))),
       h('div.navsep'),
       h('button.navbtn.small', { 'data-tip': 'Field manual <kbd>F1</kbd>', onclick: () => this.openManual() }, h('span.qm', '?')),
+      fullscreenButton(this),
       h('button.navbtn.small', { 'data-tip': 'Settings', onclick: () => this.openSettings() }, h('i', { html: icon('settings') })),
       h('button.navbtn.small', { 'data-tip': 'Menu <kbd>Esc</kbd>', onclick: () => this.openMenu() }, h('i', { html: icon('menu') })),
     )

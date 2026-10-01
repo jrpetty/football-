@@ -10,6 +10,7 @@ import { upkeepNeeds, campFlow, stationFlow, power, powerNeed, isAutomated, boil
 import { QUALITY as GFXQ } from '../render/pipeline.js'
 import { sfx } from '../core/audio.js'
 import { volumeControl } from './volume.js'
+import { isFullscreen, toggleFullscreen } from './fullscreen.js'
 import { bus, h, fmt, clamp } from '../core/util.js'
 import { icon } from './icons.js'
 import { costList, resChip, bar, qualityTag, itemCard, skillRows, traitTags, seg, plural, resIcon } from './common.js'
@@ -350,6 +351,7 @@ export function renderSettings(ui) {
     row('Edge scrolling', seg([[true, 'On'], [false, 'Off']], st.edgePan !== false, (v) => ((st.edgePan = v), g.applySettings(), ui.closeModal(), ui.openSettings()))),
     row(h('span', { 'data-tip': 'When the frame rate drops, draw at a slightly lower resolution to stay smooth, and go back up when it recovers.' }, 'Auto resolution'), seg([[true, 'On'], [false, 'Off']], st.autoRes !== false, (v) => ((st.autoRes = v), g.applySettings(), ui.closeModal(), ui.openSettings()))),
     row('Volume', volumeControl(g, { wide: true })),
+    row('Full screen', seg([[true, 'On'], [false, 'Off']], isFullscreen(), (v) => v !== isFullscreen() && toggleFullscreen(ui).then(() => (ui.closeModal(), ui.openSettings())))),
     h('p.note', 'Controls: drag or WASD to move, scroll to zoom, right-drag or Q/E to rotate. Space pauses, 1–3 set the speed.'),
     S && !S.over && ui.game.running ? saveSection(ui) : null,
   )
