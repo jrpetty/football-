@@ -2417,6 +2417,7 @@ public class VillageGameTests {
         final long[] mark = { helper.getTick() };
         final int[] phase = { 0 };
         final VillageFolkEntity[] keeper = { null };
+        final int[] combAtStart = { 0 };
         final BlockPos meadow = Kit.surface(level, heart.getX() - 16, heart.getZ() + 12);
         java.util.function.IntSupplier hives = () -> {
             int n = 0;
@@ -2452,6 +2453,7 @@ public class VillageGameTests {
                 k.joinVillage(village, heart);
                 k.assignPlot(com.jrpetty.mcassistant.entity.WorkZone.around(meadow, 6, com.jrpetty.mcassistant.entity.WorkZone.DEFAULT_DEPTH), "the meadow");
                 k.setJob(StationTask.BEEKEEP);
+                combAtStart[0] = stock.applyAsInt(s -> s.is(Items.HONEYCOMB));
                 boolean kit = com.jrpetty.mcassistant.entity.Trades.kit(k);
                 boolean swarm = k.countCarried(com.jrpetty.mcassistant.entity.Trades::isSwarm) == 1;
                 boolean placed = com.jrpetty.mcassistant.entity.Crafts.now(k, level, v);
@@ -2466,13 +2468,14 @@ public class VillageGameTests {
                 int bees = level.getEntitiesOfClass(net.minecraft.world.entity.animal.Bee.class, new AABB(meadow).inflate(16), b -> b.isAlive()).size();
                 if (bees < 2 && now - mark[0] < 100) return;
                 phase[0] = 3;
-                int combBefore = stock.applyAsInt(s -> s.is(Items.HONEYCOMB));
-                boolean more = com.jrpetty.mcassistant.entity.Crafts.now(keeper[0], level, v);
+                // The beekeeper's own work may have made the second hive already: either way, it is
+                // made of the stores' comb.
+                boolean more = hives.getAsInt() >= 2 || com.jrpetty.mcassistant.entity.Crafts.now(keeper[0], level, v);
                 int n = hives.getAsInt();
                 Kit.log("t40 the beekeeper: swarm of " + bees + "; a second hive " + more + " (" + n + " hives), honeycomb "
-                    + combBefore + " -> " + stock.applyAsInt(s -> s.is(Items.HONEYCOMB)));
+                    + combAtStart[0] + " -> " + stock.applyAsInt(s -> s.is(Items.HONEYCOMB)));
                 helper.assertTrue(bees >= 2, "the swarm comes out of the hive it brought");
-                helper.assertTrue(more && n == 2 && stock.applyAsInt(s -> s.is(Items.HONEYCOMB)) == combBefore - 3,
+                helper.assertTrue(more && n == 2 && stock.applyAsInt(s -> s.is(Items.HONEYCOMB)) == combAtStart[0] - 3,
                     "a second hive is made of three honeycomb and six planks, not out of thin air");
                 helper.succeed();
             }

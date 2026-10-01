@@ -153,8 +153,9 @@ public final class Drover {
             f.getLookControl().setLookAt(a);
             return;
         }
+        // Home: the animal inside the pen's ground (a led animal hangs back a few blocks on its lead).
         double dx = a.getX() - (d.pen.getX() + 0.5), dz = a.getZ() - (d.pen.getZ() + 0.5);
-        if (dx * dx + dz * dz < 4.0 * 4.0) {
+        if (dx * dx + dz * dz < 6.0 * 6.0) {
             stop(f, a, d, true);
             return;
         }

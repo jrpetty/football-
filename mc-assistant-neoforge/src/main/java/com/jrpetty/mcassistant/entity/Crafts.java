@@ -283,7 +283,7 @@ public final class Crafts {
             f.insertItem(new ItemStack(Items.LOOM));
             loom = Trades.workstation(f, level, v, Blocks.LOOM, s -> s.is(Items.LOOM),
                 com.jrpetty.mcassistant.entity.goal.BuildGoal.Part.LOOM);
-            if (loom != null) return "a loom, made and set up in the workshop";
+            // ...and on with the work: setting the loom up is not the day's piece.
         }
         // A bed for every house that has a bed short, then rugs, then banners for the washing.
         if (stock(level, v, s -> s.is(ItemTags.BEDS)) < 2 && have >= 3 && planks(level, v, 3)) {
