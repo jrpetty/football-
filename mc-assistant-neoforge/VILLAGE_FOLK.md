@@ -356,8 +356,8 @@ Everything after that the village makes for itself:
 
 **Where the fields go.** A farmer puts its field on the bank of the water nearest the
 village, just outside the town's own ground, whichever way that is. If there is no
-water anywhere near, it takes the nearest good soil and cuts irrigation channels
-through it from the first day.
+water anywhere near, it takes the nearest good soil: the crops grow slower on dry
+ground, and the farmers cut irrigation channels through it from the Stone Age.
 
 **Where you come in.** What the village can never make for itself, it will buy:
 blaze rods and powder, nether wart and soul sand, slime balls and leads, flint, sand
