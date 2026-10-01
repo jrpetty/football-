@@ -263,6 +263,16 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         Leisure.tick(this);
         if (hiredBy != null && tickCount % 20 == 0 && level() instanceof net.minecraft.server.level.ServerLevel out) Hire.tick(this, out);
+        // The watch does not open the gates to go out after them: with the bell ringing a guard's
+        // way lies inside the wall (folk going indoors still use their doors).
+        if (tickCount % 20 == 7 && stationTask() == StationTask.GUARD
+                && getNavigation() instanceof net.minecraft.world.entity.ai.navigation.GroundPathNavigation nav) {
+            boolean watch = onWatch();
+            if (watchKeepsDoors != watch) {
+                nav.setCanOpenDoors(!watch);
+                watchKeepsDoors = watch;
+            }
+        }
         // The bell is ringing: a guard with a bow makes for its post on the wall and lets nothing
         // outside draw it through the gate. Only a monster at arm's length is fought on the way.
         if (tickCount % 5 == 0 && onWatch() && !holdingAPost() && Raids.headingForPost(this)) {
@@ -2833,6 +2843,8 @@ public class VillageFolkEntity extends AssistantEntity {
 
     /** Where this guard stands on the wall while the bell rings (Raids), or null. */
     @Nullable private BlockPos post;
+    /** On the watch, its pathfinding leaves doors (the gates) shut. */
+    private boolean watchKeepsDoors;
 
     @Nullable public BlockPos post() { return post; }
 
