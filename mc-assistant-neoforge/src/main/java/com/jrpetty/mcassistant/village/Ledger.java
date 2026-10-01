@@ -61,6 +61,8 @@ public final class Ledger extends SavedData {
     private final Map<UUID, Map<UUID, String>> statues = new HashMap<>();
     /** The houses each village has given a second storey (by anchor). */
     private final Map<UUID, java.util.Set<Long>> grown = new HashMap<>();
+    /** The houses whose old roof is off, their second storey going up (by anchor). */
+    private final Map<UUID, java.util.Set<Long>> raising = new HashMap<>();
 
     /** Without a server (a plain unit test) the register is kept here instead. */
     private static Ledger loose;
@@ -314,6 +316,19 @@ public final class Ledger extends SavedData {
         if (l.grown.computeIfAbsent(village, k -> new java.util.HashSet<>()).add(anchor.asLong())) l.setDirty();
     }
 
+    /** Is the old roof off the house at this anchor (its second storey going up)? */
+    public static boolean raising(UUID village, BlockPos anchor) {
+        Ledger l = of();
+        return l != null && l.raising.getOrDefault(village, java.util.Set.of()).contains(anchor.asLong());
+    }
+
+    public static void raising(UUID village, BlockPos anchor, boolean on) {
+        Ledger l = of();
+        if (l == null) return;
+        java.util.Set<Long> set = l.raising.computeIfAbsent(village, k -> new java.util.HashSet<>());
+        if (on ? set.add(anchor.asLong()) : set.remove(anchor.asLong())) l.setDirty();
+    }
+
     public static int grownCount(UUID village) {
         Ledger l = of();
         return l == null ? 0 : l.grown.getOrDefault(village, java.util.Set.of()).size();
@@ -352,6 +367,12 @@ public final class Ledger extends SavedData {
                 CompoundTag c = (CompoundTag) e;
                 if (c.hasUUID("Id")) l.offences.computeIfAbsent(id, k -> new HashMap<>()).put(c.getUUID("Id"), java.util.Arrays.copyOf(c.getIntArray("R"), 3));
             }
+            long[] raisingAt = v.getLongArray("Raising");
+            if (raisingAt.length > 0) {
+                java.util.Set<Long> set = new java.util.HashSet<>();
+                for (long g : raisingAt) set.add(g);
+                l.raising.put(id, set);
+            }
             long[] grownAt = v.getLongArray("Grown");
             if (grownAt.length > 0) {
                 java.util.Set<Long> set = new java.util.HashSet<>();
@@ -380,6 +401,7 @@ public final class Ledger extends SavedData {
         ids.addAll(offences.keySet());
         ids.addAll(statues.keySet());
         ids.addAll(grown.keySet());
+        ids.addAll(raising.keySet());
         for (UUID id : ids) {
             CompoundTag v = new CompoundTag();
             v.putUUID("Id", id);
@@ -434,6 +456,13 @@ public final class Ledger extends SavedData {
                 raised.add(one);
             }
             if (!raised.isEmpty()) v.put("Statues", raised);
+            java.util.Set<Long> going = raising.getOrDefault(id, java.util.Set.of());
+            if (!going.isEmpty()) {
+                long[] arr = new long[going.size()];
+                int i = 0;
+                for (long g : going) arr[i++] = g;
+                v.putLongArray("Raising", arr);
+            }
             java.util.Set<Long> up = grown.getOrDefault(id, java.util.Set.of());
             if (!up.isEmpty()) {
                 long[] arr = new long[up.size()];

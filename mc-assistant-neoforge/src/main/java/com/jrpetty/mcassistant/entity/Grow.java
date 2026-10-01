@@ -55,11 +55,14 @@ public final class Grow {
     private static final Map<UUID, Long> LAST = new ConcurrentHashMap<>();
     private static final Map<UUID, Set<Long>> GARDENED = new ConcurrentHashMap<>();
     private static final Map<UUID, Set<Long>> STARTED = new ConcurrentHashMap<>();
+    /** How many times each layer of a rising storey has been laid (anchor:y). */
+    private static final Map<String, Integer> TRIED = new ConcurrentHashMap<>();
 
     public static void resetForTests() {
         LAST.clear();
         GARDENED.clear();
         STARTED.clear();
+        TRIED.clear();
     }
 
     public static Showcase.Palette palette(Villages.Age age) {
@@ -188,7 +191,7 @@ public final class Grow {
     public static int storey(ServerLevel level, Villages.Village v, Ledger.Building b, int budget, Showcase.Palette pal) {
         UUID id = v.id();
         Set<Long> started = STARTED.computeIfAbsent(id, k -> ConcurrentHashMap.newKeySet());
-        if (!started.contains(b.anchor().asLong())) {
+        if (!started.contains(b.anchor().asLong()) && !Ledger.raising(id, b.anchor())) {
             // The timber for it, out of the stores, before the roof comes off.
             if (!TownWork.take(level, v, s -> s.is(ItemTags.PLANKS), 32)
                     && !TownWork.take(level, v, s -> s.is(ItemTags.LOGS), 8)) return 0;
@@ -200,9 +203,10 @@ public final class Grow {
         List<BuildGoal.Placement> will = BuildGoal.plan("house2", b.anchor(), b.facing(), 13);
         Map<BlockPos, BuildGoal.Placement> next = new HashMap<>();
         for (BuildGoal.Placement p : will) next.put(p.pos(), p);
-        // The old roof off, from the top down.
+        // The old roof off, from the top down (once: after that, what stands there is the new storey).
         List<BuildGoal.Placement> off = new ArrayList<>();
-        for (BuildGoal.Placement p : was) {
+        boolean stripped = Ledger.raising(id, b.anchor());
+        for (BuildGoal.Placement p : stripped ? List.<BuildGoal.Placement>of() : was) {
             if (p.pos().getY() < b.anchor().getY() + 3 || p.part() == BuildGoal.Part.CLEAR) continue;
             BuildGoal.Placement q = next.get(p.pos());
             if (q != null && q.part() == p.part() && q.style() == p.style()) continue;
@@ -226,6 +230,7 @@ public final class Grow {
             }
             level.setBlock(q.pos(), Blocks.AIR.defaultBlockState(), 2 | 16);
         }
+        if (off.isEmpty() && !stripped) Ledger.raising(id, b.anchor(), true);
         if (!off.isEmpty()) {
             off.sort((x, y) -> y.pos().getY() - x.pos().getY());
             int n = 0;
@@ -236,24 +241,29 @@ public final class Grow {
             }
             return n;
         }
-        // The new storey, a layer at a time from the bottom.
+        // The new storey, a layer at a time from the bottom. A layer tried three times is done with:
+        // whatever would not go in (something in the way) must not hold up the roof.
         int lowest = Integer.MAX_VALUE;
         Set<BlockPos> missing = new HashSet<>();
         for (BuildGoal.Placement p : will) {
             if (p.part() == BuildGoal.Part.CLEAR) continue;
             BlockState now = level.getBlockState(p.pos());
             if (!now.isAir() && !(now.canBeReplaced() && now.getFluidState().isEmpty())) continue;
+            if (TRIED.getOrDefault(b.anchor().asLong() + ":" + p.pos().getY(), 0) >= 3) continue;
             missing.add(p.pos());
             lowest = Math.min(lowest, p.pos().getY());
         }
         if (missing.isEmpty()) {
+            TRIED.keySet().removeIf(k -> k.startsWith(b.anchor().asLong() + ":"));
             Ledger.grow(id, b.anchor());
+            Ledger.raising(id, b.anchor(), false);
             started.remove(b.anchor().asLong());
             Villages.tell(id, level.getDayTime() / 24000L, "the house at " + b.anchor().getX() + ", " + b.anchor().getZ()
                 + " got its second storey");
             return 0;
         }
         final int layer = lowest;
+        TRIED.merge(b.anchor().asLong() + ":" + layer, 1, Integer::sum);
         Set<BlockPos> now = new HashSet<>();
         for (BlockPos p : missing) if (p.getY() == layer && now.size() < Math.max(budget, 12)) now.add(p);
         return BuildGoal.stampOnly(level, "house2", b.anchor(), b.facing(), 13, Showcase.painter(pal),
