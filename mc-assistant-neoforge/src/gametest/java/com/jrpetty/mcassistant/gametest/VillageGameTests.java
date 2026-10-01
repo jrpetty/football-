@@ -1141,14 +1141,25 @@ public class VillageGameTests {
             b.setJob(StationTask.GUARD);
             a.setShift(AssistantEntity.Shift.ALWAYS);
             b.setShift(AssistantEntity.Shift.ALWAYS);
-            level.setDayTime(15000);
-            boolean aFirst = a.onShift(), bFirst = b.onShift();
+            level.setDayTime(15000);                       // (the sky darkens on the next tick)
+        });
+        boolean[] w = new boolean[4];
+        helper.runAtTickTime(24, () -> {
+            w[0] = a.onShift();
+            w[1] = b.onShift();
             level.setDayTime(20000);
-            boolean aSecond = a.onShift(), bSecond = b.onShift();
+        });
+        helper.runAtTickTime(28, () -> {
+            w[2] = a.onShift();
+            w[3] = b.onShift();
             level.setDayTime(6000);
-            Kit.log("t27 watches: " + a.displayNameCap() + " " + aFirst + "/" + aSecond + ", "
-                + b.displayNameCap() + " " + bFirst + "/" + bSecond + "; by day " + a.onShift() + "/" + b.onShift());
-            helper.assertTrue(aFirst != bFirst && aSecond != bSecond && aFirst != aSecond,
+        });
+        helper.runAtTickTime(32, () -> {
+            java.util.UUID village = a.ownerId();
+            Kit.log("t27 watches: " + a.displayNameCap() + " " + w[0] + "/" + w[2] + ", "
+                + b.displayNameCap() + " " + w[1] + "/" + w[3] + "; by day " + a.onShift() + "/" + b.onShift()
+                + "; night? " + level.isNight());
+            helper.assertTrue(w[0] != w[1] && w[2] != w[3] && w[0] != w[2],
                 "two guards keep the night in two watches, and each sleeps half of it");
             helper.assertTrue(a.onShift() && b.onShift(), "and both are on duty by day");
             // The founders' camp.

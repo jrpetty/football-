@@ -1,0 +1,94 @@
+# The family house: a timber-framed cottage on a stone footing, a steep pitched
+# roof, glass in the windows, a lantern either side of the door, four beds.
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name house
+layer -1
+.........
+.FFFFFFF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FFFFFFF.
+....F....
+layer 0
+.........
+.LwwwwwL.
+.w.BcB.w.
+.wB...Bw.
+.w.....w.
+.w.....w.
+.wT...Uw.
+.LwwDwwL.
+.........
+layer 1
+.........
+.LWGWGWL.
+.W.....W.
+.G.....G.
+.W.....W.
+.G.....G.
+.Wt....W.
+.LGW.WGL.
+.........
+layer 2
+.........
+.LWWWWWL.
+.W.....W.
+.W.....W.
+.W.....W.
+.W.....W.
+.W.....W.
+.LWWWWWL.
+..j...j..
+layer 3
+vvvvvvvvv
+.L-----L.
+.|fffff|.
+.|ffjff|.
+.|fffff|.
+.|fffff|.
+.|fffff|.
+.L-----L.
+^^^^^^^^^
+layer 4
+.........
+vvvvvvvvv
+.W.....W.
+.W.....W.
+.W.....W.
+.W.....W.
+.W.....W.
+^^^^^^^^^
+.........
+layer 5
+.........
+.........
+vvvvvvvvv
+.W.....W.
+.G.....G.
+.W.....W.
+^^^^^^^^^
+.........
+.........
+layer 6
+.........
+.........
+.........
+vvvvvvvvv
+.W.....W.
+^^^^^^^^^
+.........
+.........
+.........
+layer 7
+.........
+.........
+.........
+.........
+_________
+.........
+.........
+.........
+.........

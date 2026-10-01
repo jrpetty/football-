@@ -978,16 +978,14 @@ public final class Villages {
         // A house for the player the village has taken to its heart.
         if (com.jrpetty.mcassistant.village.Chronicle.awaitingAHouse(villageId) != null
                 && built(villageId, "storage") > 0) out.add("guesthouse");
-        housesForBeds(villageId, folk, out);
-        if (at == Age.WOOD) return out;
+        if (at == Age.WOOD) { housesForBeds(villageId, folk, out); return out; }
 
         if (built(villageId, "fortify") < 1) out.add("fortify");        // the wall
         // A Stone Age village keeps a few homes spare, not just one.
         if (!house && folk >= housing(villageId) - 5) out.add("house");
         if (built(villageId, "smeltery") < 1) out.add("smeltery");
         if (built(villageId, "hall") < 1) out.add("hall");
-        housesForBeds(villageId, folk, out);
-        if (at == Age.STONE) return out;
+        if (at == Age.STONE) { housesForBeds(villageId, folk, out); return out; }
 
         if (built(villageId, "workshop") < 1) out.add("workshop");
         // Whatever the headcount: the Iron Age asks for it, and a village
@@ -996,16 +994,14 @@ public final class Villages {
         if (built(villageId, "market") < 1) out.add("market");
         String pen = penIfWanted(villageId, folk);
         if (pen != null) out.add(pen);
-        housesForBeds(villageId, folk, out);
-        if (at == Age.IRON) return out;
+        if (at == Age.IRON) { housesForBeds(villageId, folk, out); return out; }
 
         if (built(villageId, "lighthouse") < 1) out.add("lighthouse");
         if (built(villageId, "chapel") < 1) out.add("chapel");
-        housesForBeds(villageId, folk, out);
-        if (at == Age.DIAMOND) return out;
+        if (at == Age.DIAMOND) { housesForBeds(villageId, folk, out); return out; }
 
         if (built(villageId, "gateway") < 1) out.add("gateway");
-        housesForBeds(villageId, folk, out);
+        housesForBeds(villageId, folk, out);   // (the Nether Age: before the great works)
         // And then the great works, one after another for as long as the village stands:
         // a town that has been everywhere its ages lead goes on building.
         out.add(nextGreatWork(villageId));

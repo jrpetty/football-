@@ -115,7 +115,9 @@ public final class Errands {
         }
         UUID village = f.ownerId();
         // Nowhere to sleep comes before anything: a bed for itself.
-        if (village != null && f.bedPos() == null && !f.isBaby()) {
+        // (once it has spent a night without one: a folk that only came today has not.)
+        if (village != null && f.bedPos() == null && !f.isBaby() && me.since() >= 0 && day > me.since()
+                && me.sleptDay < day) {
             me.setErrand(WANT, p.getUUID(), "bed", 1, day);
             return pickOf(r, "Since you ask… ", "Well, there is one thing. ")
                 + "I've nowhere to sleep — there aren't beds enough to go round yet. Could you bring me a bed? Any colour will do.";
