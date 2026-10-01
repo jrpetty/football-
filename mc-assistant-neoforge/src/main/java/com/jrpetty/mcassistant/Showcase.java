@@ -268,12 +268,12 @@ public final class Showcase {
             } else if (b.structure().equals("tavern")) {
                 com.jrpetty.mcassistant.entity.Tavern.board(level, b);
                 Direction back = b.facing(), right = back.getClockWise();
-                int k = 0;
+                int guest = 0;
                 for (int[] at : new int[][]{ { 1, -2 }, { 3, -2 }, { 1, 1 }, { 3, 1 }, { -1, 0 } }) {
                     com.jrpetty.mcassistant.entity.VillageFolkEntity f = com.jrpetty.mcassistant.McAssistantMod.VILLAGE_FOLK.get().create(level);
                     if (f == null) continue;
                     BlockPos p = b.anchor().relative(right, at[0]).relative(back, at[1]);
-                    float yaw = right.getOpposite().toYRot() + (k % 2 == 0 ? 0.0F : 180.0F);
+                    float yaw = right.getOpposite().toYRot() + (guest % 2 == 0 ? 0.0F : 180.0F);
                     f.moveTo(p.getX() + 0.5, p.getY(), p.getZ() + 0.5, yaw, 0.0F);
                     f.setYHeadRot(yaw);
                     f.setYBodyRot(yaw);
@@ -281,11 +281,11 @@ public final class Showcase {
                         com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.FARM, com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.MINE,
                         com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.SMITH, com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.COOK,
                         com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.WOOD };
-                    f.makeShowcase(trades[k % trades.length]);
-                    f.rename(trades[k % trades.length].title);
+                    f.makeShowcase(trades[guest % trades.length]);
+                    f.rename(trades[guest % trades.length].title);
                     f.addTag("folk_lineup");
                     level.addFreshEntity(f);
-                    k++;
+                    guest++;
                 }
                 view("t19-tavern", b.anchor().relative(back.getOpposite(), 3).relative(right, 3).above(1),
                     b.anchor().relative(back, 3).relative(right, -1));
