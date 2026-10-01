@@ -186,9 +186,9 @@ public final class Raids {
         // a stray one or two left (the watch deals with those on its rounds, and the day's work
         // does not wait on a creeper in the shade), or when the bell has rung for five minutes
         // of daylight without a band to fight.
-        boolean day = t >= 0L && t < 12500L;
+        boolean daylight = t >= 0L && t < 12500L;
         boolean quiet = left == 0 && !bigRaid
-            && (inside == 0 || (day && inside < TOO_MANY) || (day && !a.raid && now - a.since > 6000L));
+            && (inside == 0 || (daylight && inside < TOO_MANY) || (daylight && !a.raid && now - a.since > 6000L));
         if (!quiet) { a.quietSince = -1L; return; }
         if (a.quietSince < 0) a.quietSince = now;
         else if (now - a.quietSince >= 200L) end(level, v, a);
