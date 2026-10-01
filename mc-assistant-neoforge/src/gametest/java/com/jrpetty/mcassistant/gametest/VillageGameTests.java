@@ -1747,7 +1747,15 @@ public class VillageGameTests {
             long t = helper.getTick();
             if (t % 5 == 0) com.jrpetty.mcassistant.entity.Raids.guardDuty(guard);
             if (t % 100 == 0 && upAt[0] < 0) {
-                Kit.log("t33 at tick " + t + " the guard: " + guard.debugLine() + " post " + guard.post()
+                int alive = 0;
+                for (java.util.UUID u : com.jrpetty.mcassistant.entity.Raids.band(village)) {
+                    if (level.getEntity(u) instanceof net.minecraft.world.entity.LivingEntity m && m.isAlive()) alive++;
+                }
+                Kit.log("t33 at tick " + t + " alarm " + com.jrpetty.mcassistant.entity.Raids.underAlarm(village)
+                    + " (" + com.jrpetty.mcassistant.entity.Raids.why(village) + "), band alive " + alive
+                    + ", posts " + com.jrpetty.mcassistant.entity.Watch.posts(level, village).size()
+                    + ", heading for a post " + com.jrpetty.mcassistant.entity.Raids.headingForPost(guard)
+                    + ", difficulty " + level.getDifficulty() + "; the guard: " + guard.debugLine() + " post " + guard.post()
                     + ", target " + (guard.getTarget() == null ? "none" : guard.getTarget().getType().toShortString()));
             }
             if (upAt[0] < 0 && guard.holdingAPost()) {

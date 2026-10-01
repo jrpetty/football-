@@ -102,7 +102,7 @@ public final class Land {
                 int x = around.getX() + dx, z = around.getZ() + dz;
                 if (!level.hasChunk(x >> 4, z >> 4)) continue;
                 BlockPos g = surface(level, x, z);
-                if (g == null || g.getY() < level.getSeaLevel()) continue;
+                if (g == null) continue;
                 BlockState under = level.getBlockState(g.below());
                 if (under.is(Blocks.WATER) || under.isAir() || under.is(BlockTags.LEAVES)) continue;
                 int r = roughness(level, g);
