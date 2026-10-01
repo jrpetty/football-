@@ -79,7 +79,47 @@ public final class Villages {
     /** Tests only: put a village straight into an age. */
     public static void ageForTests(UUID id, Age age) { AGE.put(id, age); }
 
+    // ------------------------------ the village's news ------------------------
+    //
+    // What everybody is talking about: who had a child, who took up with whom, what
+    // went up, what age the place has come to. Folk pass it on when you ask them.
+
+    public record News(long day, String text) {}
+
+    private static final Map<UUID, java.util.Deque<News>> NEWS = new ConcurrentHashMap<>();
+    private static final Map<UUID, Long> AGED_ON = new ConcurrentHashMap<>();
+
+    public static void tell(UUID villageId, long day, String text) {
+        java.util.Deque<News> d = NEWS.computeIfAbsent(villageId, k -> new java.util.concurrent.ConcurrentLinkedDeque<>());
+        d.addFirst(new News(day, text));
+        while (d.size() > 12) d.pollLast();
+    }
+
+    public static List<News> news(UUID villageId) {
+        java.util.Deque<News> d = NEWS.get(villageId);
+        return d == null ? List.of() : new ArrayList<>(d);
+    }
+
+    /** The game day this village last came of age, or -100. */
+    public static long agedOn(UUID villageId) {
+        return AGED_ON.getOrDefault(villageId, -100L);
+    }
+
+    /** "the meeting hall", "a new house": a building as folk would speak of it. */
+    public static String spoken(String structure) {
+        return switch (structure) {
+            case "fortify" -> "the wall";
+            case "storage" -> "the storehouse";
+            case "house" -> "a new house";
+            case "hall" -> "the meeting hall";
+            case "pen" -> "the animal pen";
+            default -> "the " + structure;
+        };
+    }
+
     public static void resetForTests() {
+        NEWS.clear();
+        AGED_ON.clear();
         ALL.clear();
         AGE.clear();
         BUILT.clear();
@@ -543,6 +583,12 @@ public final class Villages {
         Age next = from.next();
         if (next == from) return;
         AGE.put(villageId, next);
+        long day = level.getDayTime() / 24000L;
+        AGED_ON.put(villageId, day);
+        tell(villageId, day, "the village came into " + next.label);
+        for (AssistantEntity a : folkOf(villageId)) {
+            if (a instanceof VillageFolkEntity f) f.persona().remember(day, "I saw the village come into " + next.label, 7);
+        }
         Village v = get(villageId);
         String where = v == null ? "" : " (" + v.centre().getX() + ", " + v.centre().getZ() + ")";
         net.minecraft.network.chat.Component line = net.minecraft.network.chat.Component.literal(
@@ -723,6 +769,7 @@ public final class Villages {
      *  village's ages — a village that could not find the timber has not got
      *  a storehouse, however many times it tried. */
     public static void noteProject(UUID villageId, String structure, long gameTime) {
+        if (!"colony".equals(structure)) tell(villageId, gameTime / 24000L, spoken(structure) + " went up");
         LAST_PROJECT.put(villageId, gameTime);
         BUILT.computeIfAbsent(villageId, k -> new ArrayList<>()).add(structure);
         Map<String, Site> pending = SITES.get(villageId);
@@ -1268,7 +1315,7 @@ public final class Villages {
                 for (int dy = 0; dy <= 1; dy++) {
                     BlockPos c = at.offset(dx, dy, dz);
                     net.minecraft.world.level.block.state.BlockState st = level.getBlockState(c);
-                    if (st.canBeReplaced() || st.is(net.minecraft.tags.BlockTags.LEAVES)) continue;
+                    if (com.jrpetty.mcassistant.entity.goal.BuildGoal.soft(st) || st.is(net.minecraft.tags.BlockTags.LEAVES)) continue;
                     if (st.is(net.minecraft.tags.BlockTags.LOGS)
                             && com.jrpetty.mcassistant.entity.goal.BuildGoal.isTreeLog(level, c)) continue;
                     blocked++;

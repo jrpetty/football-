@@ -690,6 +690,101 @@ public class VillageGameTests {
         });
     }
 
+    /** A folk is somebody you can talk to: it answers every question in its own way,
+     *  likes a present it loves and refuses one it hates, won't wander off with a
+     *  stranger but will with a friend, remembers being hit, understands plain words,
+     *  and keeps all of it across a save. */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t20_talk")
+    public static void t20_talk(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 6800, 6800, 32);
+        BlockPos heart = Kit.surface(level, 6800, 6800);
+        VillageFolkEntity folk = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(folk != null, "a folk to talk to");
+        level.setDayTime(1000);                       // broad day: nobody is off to bed
+        helper.runAtTickTime(20, () -> {
+            folk.life().traits().clear();
+            folk.life().traits().add(com.jrpetty.mcassistant.entity.Social.Trait.SOCIABLE);
+            folk.life().traits().add(com.jrpetty.mcassistant.entity.Social.Trait.CHEERFUL);
+            folk.ensurePersona();
+            com.jrpetty.mcassistant.entity.Persona me = folk.persona();
+            helper.assertTrue(me.rolled() && me.mood() >= 0 && me.mood() <= 100, "a folk has an inner life");
+            net.minecraft.world.entity.player.Player you = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+            java.util.UUID id = you.getUUID();
+            StringBuilder heard = new StringBuilder();
+            for (com.jrpetty.mcassistant.entity.TalkTopic t : new com.jrpetty.mcassistant.entity.TalkTopic[]{
+                    com.jrpetty.mcassistant.entity.TalkTopic.OPEN, com.jrpetty.mcassistant.entity.TalkTopic.HOW,
+                    com.jrpetty.mcassistant.entity.TalkTopic.DOING, com.jrpetty.mcassistant.entity.TalkTopic.ABOUT,
+                    com.jrpetty.mcassistant.entity.TalkTopic.PEOPLE, com.jrpetty.mcassistant.entity.TalkTopic.VILLAGE,
+                    com.jrpetty.mcassistant.entity.TalkTopic.DREAMS, com.jrpetty.mcassistant.entity.TalkTopic.HOBBY,
+                    com.jrpetty.mcassistant.entity.TalkTopic.JOKE}) {
+                String said = com.jrpetty.mcassistant.entity.FolkTalk.answer(folk, you, t, "");
+                helper.assertTrue(said != null && !said.isBlank(), "an answer to " + t);
+                heard.append(t).append(": ").append(said).append(" | ");
+            }
+            Kit.log("t20 a conversation with " + folk.displayNameCap() + " (" + me.hobby().word + ", hopes "
+                + me.ambition().hope + "): " + heard);
+            // A stranger asking it to come along is turned down.
+            String no = com.jrpetty.mcassistant.entity.FolkTalk.answer(folk, you, com.jrpetty.mcassistant.entity.TalkTopic.FOLLOW, "");
+            helper.assertTrue(!folk.isFollowing(you), "a folk does not go off with a stranger: " + no);
+            // Something it loves.
+            ItemStack loved = new ItemStack(switch (me.loves()) {
+                case FLOWERS -> Items.POPPY;
+                case SWEETS -> Items.COOKIE;
+                case GEMS -> Items.EMERALD;
+                case BOOKS -> Items.BOOK;
+                case MUSIC -> Items.NOTE_BLOCK;
+                case FISH -> Items.COD;
+                case TOOLS -> Items.IRON_PICKAXE;
+                case WOOL -> Items.WHITE_WOOL;
+                case GOLD -> Items.GOLD_INGOT;
+                default -> Items.POPPY;
+            }, 2);
+            you.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, loved);
+            int before = me.affinity(id);
+            String thanks = com.jrpetty.mcassistant.entity.FolkTalk.answer(folk, you, com.jrpetty.mcassistant.entity.TalkTopic.GIFT, "");
+            int after = me.affinity(id);
+            Kit.log("t20 gift of " + me.loves() + ": " + thanks + " (" + before + " -> " + after + ")");
+            helper.assertTrue(after >= before + 15, "a present it loves warms it: " + before + " -> " + after);
+            helper.assertTrue(you.getMainHandItem().getCount() == 1, "one of the two was given");
+            // Something it hates is refused.
+            you.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(Items.ROTTEN_FLESH, 3));
+            int pre = me.affinity(id);
+            String ugh = com.jrpetty.mcassistant.entity.FolkTalk.answer(folk, you, com.jrpetty.mcassistant.entity.TalkTopic.GIFT, "");
+            helper.assertTrue(me.affinity(id) < pre && you.getMainHandItem().getCount() == 3,
+                "rotten flesh is refused and resented: " + ugh);
+            // A friend it goes with — and comes back from when asked.
+            me.feelFor(id, "friend", 60);
+            String yes = com.jrpetty.mcassistant.entity.FolkTalk.answer(folk, you, com.jrpetty.mcassistant.entity.TalkTopic.FOLLOW, "");
+            Kit.log("t20 asked along as a friend (mood " + me.mood() + "): " + yes);
+            helper.assertTrue(folk.isFollowing(you), "a folk goes along with a friend: " + yes);
+            com.jrpetty.mcassistant.entity.FolkTalk.answer(folk, you, com.jrpetty.mcassistant.entity.TalkTopic.SAY, "you can go back to work now");
+            helper.assertTrue(!folk.isFollowing(you), "and goes back to its day when told it may");
+            // Plain words.
+            helper.assertTrue(com.jrpetty.mcassistant.entity.FolkTalk.understand("How are you today?")
+                == com.jrpetty.mcassistant.entity.TalkTopic.HOW, "how are you");
+            helper.assertTrue(com.jrpetty.mcassistant.entity.FolkTalk.understand("tell me a joke")
+                == com.jrpetty.mcassistant.entity.TalkTopic.JOKE, "a joke");
+            helper.assertTrue(com.jrpetty.mcassistant.entity.FolkTalk.understand("will you come with me?")
+                == com.jrpetty.mcassistant.entity.TalkTopic.FOLLOW, "come with me");
+            // Being hit is remembered.
+            int fond = me.affinity(id);
+            folk.hurt(level.damageSources().playerAttack(you), 1.0F);
+            Kit.log("t20 hit: " + fond + " -> " + me.affinity(id));
+            helper.assertTrue(me.affinity(id) <= fond - 25, "being hit sours it: " + fond + " -> " + me.affinity(id));
+            // All of it kept across a save.
+            net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
+            me.save(tag);
+            com.jrpetty.mcassistant.entity.Persona back = new com.jrpetty.mcassistant.entity.Persona();
+            back.load(tag);
+            helper.assertTrue(back.hobby() == me.hobby() && back.ambition() == me.ambition()
+                && back.quirk().equals(me.quirk()) && back.affinity(id) == me.affinity(id)
+                && back.memories().size() == me.memories().size(), "a folk's inner life survives a save");
+            helper.succeed();
+        });
+    }
+
     // ===================================================== vanilla villagers
 
     /** A villager appears the ordinary way: the join event should catch it. */

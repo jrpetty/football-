@@ -194,6 +194,10 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
             lines.add(Component.literal("Friends: " + (f.length > 2 && !f[2].isEmpty() ? f[2] : "none yet")));
             if (f.length > 3 && !f[3].isEmpty()) lines.add(Component.literal("Does not get on with: " + f[3]));
             if (f.length > 4 && !f[4].isEmpty()) lines.add(Component.literal("Family: " + f[4]));
+            if (f.length > 5 && !f[5].isEmpty()) lines.add(Component.literal("Feeling: " + f[5]));
+            if (f.length > 6 && !f[6].isEmpty()) lines.add(Component.literal("Loves: " + f[6]));
+            if (f.length > 7 && !f[7].isEmpty()) lines.add(Component.literal("Hopes: " + f[7]));
+            lines.add(Component.literal("Right-click to talk; sneak and right-click for this screen."));
             g.renderComponentTooltip(this.font, lines, mouseX, mouseY);
         }
     }

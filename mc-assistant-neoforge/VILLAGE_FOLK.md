@@ -171,11 +171,109 @@ when everybody goes to a bed of its own anywhere in the village and sleeps until
 morning. Builders make the beds for the houses from wool and planks in the stores, and
 a rancher has shears made once the village has iron, so the wool keeps coming.
 
-**Seeing it.** Right-click a folk: its traits are on the title line, and hovering the
-title shows its partner, friends, anyone it does not get on with, and its family.
+**Seeing it.** Sneak and right-click a folk: its traits are on the title line, and
+hovering the title shows its partner, friends, anyone it does not get on with, its
+family, how it feels, what it loves doing and what it hopes for.
 `/village people` lists everybody that way, under a line saying how the village hangs
 together ("20 folk: 3 couples, 9 friendships, 1 rivalry; 4 born here"), and
 `/village status` carries that line too.
+
+## A life of its own
+
+Besides its two traits every folk has:
+
+* **A pastime** — fishing, stargazing, gardening, music, reading, long walks, cards
+  or whittling — and two evenings in three it goes and does it:
+  * A fisher sits at the water's edge with a rod and brings its catch home to the
+    stores.
+  * A gardener plants flowers by its door, and over a long game the village fills
+    with them.
+  * A musician plays at the well, and the folk who like a tune come and stand round.
+  * A stargazer climbs to open ground once it is dark and looks up.
+  * A card player finds a friend, and they like each other better for the game.
+  * A whittler carves bowls by its door.
+* **A quirk** (it hums while it works, it is afraid of the dark, it tells terrible
+  jokes…), **a favourite food**, **something it loves to be given** and something it
+  can't abide.
+* **A dream** — to be the best at its trade, to raise a family, to have friends all
+  over the village, to find a diamond, to grow the finest garden, to see a great work
+  raised, to see the village reach the Nether Age, never to go hungry again. The game
+  sees it come true. When it does, the folk says so, the village hears about it, and
+  it never forgets.
+* **A mood**, worked out from its own life:
+  * Up: a night in its own bed, food in its pack, a partner, friends, a present, an
+    evening at its pastime, the village coming of age.
+  * Down: hunger, sleeping rough, loneliness, rain (unless it likes rain), work it
+    can't do, being hit, a hungry village.
+  * A happy folk works a little quicker, and a miserable one slower.
+* **Memories** — its children born, the ages it saw the village come into, a friend
+  lost, a present from you, the day you hit it.
+* **What it thinks of you** — each player separately.
+
+The village keeps its own **news**: who is together now, who had a child, what went
+up, who died, whose dream came true. Folk pass it on.
+
+## Talking with them
+
+**Right-click a folk to talk.** The conversation screen shows:
+
+* its likeness, its trade and personality, and what it loves doing;
+* how it feels;
+* what it thinks of you, from "can't stand you" to "thinks the world of you", with
+  hearts;
+* what it just said.
+
+The buttons ask:
+
+| Ask | What you get |
+|---|---|
+| How are you? | Its mood and the reasons for it |
+| What are you up to? | Its work, its break, or its pastime |
+| Tell me about yourself | Where it came from, how long it has lived here, its personality, quirk, pastime and favourite food |
+| Friends and family? | Its partner, children, parents, closest friends, and whoever it can't stand |
+| Any news? | The village's age, what it needs most, and the latest gossip |
+| What do you hope for? | Its dream, and how far it has got |
+| What do you do for fun? | Its pastime |
+| Tell me a joke | One of its jokes (a grump won't) |
+
+You can also **type anything** into the box ("how are you?", "will you come with
+me?", "who are your friends?"…). It works out what you mean from your words.
+
+What a folk says depends on who it is and what it thinks of you:
+* A grump is short with you, a shy folk stumbles over its words, and a cheerful one
+  can't help an exclamation mark.
+* A curious folk asks you things back, and a generous one offers help.
+* A friend greets you by name. A stranger gets polite words. Somebody it can't stand
+  gets as few words as it can manage.
+
+**What you can do:**
+
+* **Give it a present** — whatever is in your hand. Something it loves, or its
+  favourite food, delights it. Food and useful things please it. Something it hates is
+  refused, and it thinks the worse of you for offering. Up to three presents a day
+  count.
+* **Ask a favour** — if it likes you well enough, once a day it gives you something
+  from its trade: bread, logs, coal, wool, fish, torches, arrows.
+* **Ask it to come with you.** It walks with you for a while, then heads home. It may
+  refuse:
+  * it won't go with somebody it hardly knows;
+  * it won't go when it is miserable, or at bedtime;
+  * a guard won't leave its watch;
+  * a hard worker won't leave its work mid-shift.
+* **Look after the village** — kill a monster near folk and everyone who saw thinks
+  better of you, and somebody says thank you.
+* **Hit one**, and it won't forget. Anyone who saw it thinks less of you too.
+
+Talking to a folk once a day makes it like you a little more. While you talk, it stops
+and faces you. Close the screen to say goodbye.
+
+**Speech bubbles.** Folk never write in the chat. Whatever a folk says out loud shows
+in a bubble over its head, readable day or night, for whoever is near:
+* a greeting as you walk past;
+* its answers to you;
+* two friends passing the time of day ("Lovely evening." — "Aye.");
+* "Got one!" at the water's edge;
+* "I did it!" when a dream comes true.
 
 ## What they do
 
@@ -246,6 +344,8 @@ only its owner (nobody, for folk) can rearrange the pack.
   been built, what the village is short of. Works from the console.
 * `/village people` — who everybody is: trade, temperament, partner, friends,
   rivals and family, under a line on the village's couples and friendships.
+* `/village talk [words]` — (operators) talk with the nearest folk, as a right-click
+  would; with words, say them to it.
 * `/village lineup` — (operators) one folk of every trade, dressed and holding
   its tool, stood in a row in front of you to be looked at.
 * `/village folk` — one line per folk: trade, ground, status, job, what is

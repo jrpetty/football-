@@ -159,6 +159,21 @@ def main():
     look("10-lamp-at-night", miner, py - 0.5, line - 2.6, miner, py + 1.4, line, wait=8)
     r.cmd("time set 6000")
     r.cmd("gamemode creative %s" % USER)
+
+    # Talking with a folk: right-click opens a conversation (here /village talk does
+    # the same for the nearest one). The farmer, second in the row, face to face.
+    farmer = px + (4.5 - 1) * 1.6
+    look("11-talk-hello", farmer, py, line - 2.2, farmer, py + 1.4, line, wait=4)
+    say("talk: " + r.cmd("execute as %s at @s run village talk" % USER))
+    time.sleep(4)
+    shot("11-talk-hello")
+    say("talk: " + r.cmd("execute as %s at @s run village talk how are you" % USER))
+    time.sleep(3)
+    shot("12-talk-how-are-you")
+    say("talk: " + r.cmd("execute as %s at @s run village talk tell me about yourself" % USER))
+    time.sleep(3)
+    shot("13-talk-about")
+    say("alive after talking: %s" % client_alive())
     say("alive after the lineup: %s" % client_alive())
     alive = client_alive()
     say("alive at the end: %s" % alive)

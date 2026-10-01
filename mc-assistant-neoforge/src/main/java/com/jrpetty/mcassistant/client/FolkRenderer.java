@@ -239,6 +239,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         super.render(folk, entityYaw, partialTick, pose, buffer, packedLight);
 
         double far = this.entityRenderDispatcher.distanceToSqr(folk);
+        if (far < 24 * 24 && bubble(folk, pose, buffer)) return;
         if (far > 48 * 48 || folk.isNoAi()) return;     // a folk stood up to be looked at says nothing
         ItemStack icon = jobIcon(folk, far);
         if (icon.isEmpty()) return;
@@ -251,6 +252,34 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         this.itemRenderer.renderStatic(icon, ItemDisplayContext.FIXED,
             packedLight, OverlayTexture.NO_OVERLAY, pose, buffer, folk.level(), folk.getId());
         pose.popPose();
+    }
+
+    /**
+     * What a folk is saying out loud, in a bubble over its head: dark words on a pale
+     * ground, lit whatever the hour, a few short lines at most. Folk never speak in
+     * the chat — this is the only place their words appear outside a conversation.
+     */
+    private boolean bubble(VillageFolkEntity folk, PoseStack pose, MultiBufferSource buffer) {
+        FolkTalkClient.Said said = FolkTalkClient.saying(folk.getId(), folk.level().getGameTime());
+        if (said == null) return false;
+        net.minecraft.client.gui.Font font = getFont();
+        java.util.List<net.minecraft.util.FormattedCharSequence> lines =
+            font.split(net.minecraft.network.chat.FormattedText.of(said.text()), 150);
+        if (lines.size() > 4) lines = lines.subList(0, 4);
+        pose.pushPose();
+        pose.translate(0.0F, folk.getBbHeight() + 0.75F + lines.size() * 0.25F, 0.0F);
+        pose.mulPose(this.entityRenderDispatcher.cameraOrientation());
+        pose.scale(0.025F, -0.025F, 0.025F);
+        org.joml.Matrix4f matrix = pose.last().pose();
+        for (int i = 0; i < lines.size(); i++) {
+            net.minecraft.util.FormattedCharSequence line = lines.get(i);
+            float x = -font.width(line) / 2.0F;
+            font.drawInBatch(line, x, i * 10.0F, 0xFF262626, false, matrix, buffer,
+                net.minecraft.client.gui.Font.DisplayMode.NORMAL, 0xE6F4EFE2,
+                net.minecraft.client.renderer.LightTexture.FULL_BRIGHT);
+        }
+        pose.popPose();
+        return true;
     }
 
     /** A barrier for a folk that is stuck, from any distance; its trade only from

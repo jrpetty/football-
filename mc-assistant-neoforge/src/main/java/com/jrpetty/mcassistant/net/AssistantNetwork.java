@@ -30,6 +30,35 @@ public final class AssistantNetwork {
         registrar.playToServer(ZonePayload.TYPE, ZonePayload.STREAM_CODEC, AssistantNetwork::handleZone);
         registrar.playToServer(PlotOrderPayload.TYPE, PlotOrderPayload.STREAM_CODEC, AssistantNetwork::handlePlotOrder);
         registrar.playToClient(PlotListPayload.TYPE, PlotListPayload.STREAM_CODEC, AssistantNetwork::handlePlotList);
+        // Talking with the folk of a village: anybody may, nobody owns them.
+        registrar.playToServer(FolkTalkPayload.TYPE, FolkTalkPayload.STREAM_CODEC, AssistantNetwork::handleFolkTalk);
+        registrar.playToClient(FolkReplyPayload.TYPE, FolkReplyPayload.STREAM_CODEC, AssistantNetwork::handleFolkReply);
+        registrar.playToClient(FolkSpeechPayload.TYPE, FolkSpeechPayload.STREAM_CODEC, AssistantNetwork::handleFolkSpeech);
+    }
+
+    /** How near a player must stand to talk with a folk. */
+    private static final double TALK_RANGE = 8.0;
+
+    private static void handleFolkTalk(FolkTalkPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            if (!(context.player() instanceof ServerPlayer player)) return;
+            Entity target = player.level().getEntity(payload.entityId());
+            if (!(target instanceof com.jrpetty.mcassistant.entity.VillageFolkEntity folk) || !folk.isAlive()) return;
+            if (folk.distanceToSqr(player) > TALK_RANGE * TALK_RANGE) return;
+            String text = payload.text().length() > FolkTalkPayload.MAX_TEXT
+                ? payload.text().substring(0, FolkTalkPayload.MAX_TEXT) : payload.text();
+            com.jrpetty.mcassistant.entity.FolkTalk.handle(folk, player,
+                com.jrpetty.mcassistant.entity.TalkTopic.of(payload.topic()), text);
+        });
+    }
+
+    /** Clientbound, like the plot book: the class behind these calls only loads on the client. */
+    private static void handleFolkReply(FolkReplyPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> com.jrpetty.mcassistant.client.FolkTalkClient.reply(payload));
+    }
+
+    private static void handleFolkSpeech(FolkSpeechPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> com.jrpetty.mcassistant.client.FolkTalkClient.speech(payload));
     }
 
     private static void handleOrder(OrderPayload payload, IPayloadContext context) {

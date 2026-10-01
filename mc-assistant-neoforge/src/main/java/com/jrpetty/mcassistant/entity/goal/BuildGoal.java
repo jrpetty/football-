@@ -244,7 +244,7 @@ public class BuildGoal extends Goal {
         // furnace/chest/table/ladder is a real item from the pack.
         Map<Part, Integer> pending = new EnumMap<>(Part.class);
         for (Placement p : plan) {
-            if (assistant.level().getBlockState(p.pos()).canBeReplaced()) {
+            if (soft(assistant.level().getBlockState(p.pos()))) {
                 pending.merge(p.part(), 1, Integer::sum);
             }
         }
@@ -328,6 +328,14 @@ public class BuildGoal extends Goal {
         plan.addAll(moved);
     }
 
+    /**
+     * Ground a building may go up over: anything the game lets you place a block into
+     * (grass, snow) and the flowers a gardener plants by its door, which are not.
+     */
+    public static boolean soft(BlockState st) {
+        return st.canBeReplaced() || st.is(net.minecraft.tags.BlockTags.SMALL_FLOWERS);
+    }
+
     /** May the wall stand on this column: open ground the world made, not a floor, a
      *  field, a path, water, or anything somebody has put up there? */
     public static boolean wallFits(net.minecraft.world.level.Level level, int x, int z, int g) {
@@ -343,7 +351,7 @@ public class BuildGoal extends Goal {
         for (int dy = 0; dy <= 4; dy++) {
             BlockState st = level.getBlockState(new BlockPos(x, g + dy, z));
             if (st.isAir() || isNaturalLeaves(st)) continue;
-            if (st.canBeReplaced() && st.getFluidState().isEmpty()) continue;   // grass, flowers, snow
+            if (soft(st) && st.getFluidState().isEmpty()) continue;   // grass, flowers, snow
             return false;                                                         // a crop, a fence, a wall
         }
         return true;
@@ -445,7 +453,7 @@ public class BuildGoal extends Goal {
             // so it is only asked whether there is still a trunk or a leaf there.)
             if (p.part() == Part.CLEAR) {
                 if (st.is(net.minecraft.tags.BlockTags.LOGS) || isNaturalLeaves(st)) { target = p; break; }
-            } else if (st.canBeReplaced()) {
+            } else if (soft(st)) {
                 if (!assistant.getBoundingBox().intersects(new net.minecraft.world.phys.AABB(p.pos()))) {
                     target = p;
                     break;

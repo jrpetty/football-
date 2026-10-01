@@ -23,6 +23,7 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  *   /village spawn 12         twelve — a full starting village
  *   /village status           who lives here, what age, what they are short of
  *   /village lineup           one folk of every trade, dressed, to look at (ops)
+ *   /village talk [words]     talk with the nearest folk, as a right-click would (ops)
  * </pre>
  */
 public final class VillageCommands {
@@ -51,10 +52,31 @@ public final class VillageCommands {
             .then(Commands.literal("anchors").requires(src -> src.hasPermission(2))
                 .executes(VillageCommands::anchors))
             .then(Commands.literal("status").executes(VillageCommands::status))
+            // Talk with the nearest folk, as a right-click would (for scripts and tests).
+            .then(Commands.literal("talk").requires(src -> src.hasPermission(2))
+                .executes(ctx -> talk(ctx, ""))
+                .then(Commands.argument("words", com.mojang.brigadier.arguments.StringArgumentType.greedyString())
+                    .executes(ctx -> talk(ctx, com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "words")))))
             // One folk of every trade, in its clothes and with its tool, stood in a
             // row to be looked at. Clear them with /kill @e[tag=folk_lineup].
             .then(Commands.literal("lineup").requires(src -> src.hasPermission(2))
                 .executes(VillageCommands::lineup)));
+    }
+
+    private static int talk(CommandContext<CommandSourceStack> ctx, String words)
+            throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        java.util.List<VillageFolkEntity> near = player.level().getEntitiesOfClass(VillageFolkEntity.class,
+            player.getBoundingBox().inflate(8.0), VillageFolkEntity::isAlive);
+        near.sort(java.util.Comparator.comparingDouble(f -> f.distanceToSqr(player)));
+        if (near.isEmpty()) {
+            ctx.getSource().sendFailure(Component.literal("Nobody within eight blocks to talk to."));
+            return 0;
+        }
+        if (words.isBlank()) com.jrpetty.mcassistant.entity.FolkTalk.open(near.get(0), player);
+        else com.jrpetty.mcassistant.entity.FolkTalk.handle(near.get(0), player,
+            com.jrpetty.mcassistant.entity.TalkTopic.SAY, words);
+        return 1;
     }
 
     private static int lineup(CommandContext<CommandSourceStack> ctx) {
@@ -184,7 +206,11 @@ public final class VillageCommands {
         final String summary = community(folk);
         ctx.getSource().sendSuccess(() -> Component.literal(summary), false);
         for (VillageFolkEntity f : folk) {
-            final String line = f.life().describe(f.displayNameCap(), f.stationTask().title);
+            f.ensurePersona();
+            final String line = f.life().describe(f.displayNameCap(), f.stationTask().title)
+                + " Feeling " + com.jrpetty.mcassistant.entity.Persona.moodWord(f.persona().mood())
+                + "; loves " + f.persona().hobby().doing + "; hopes " + f.persona().ambition().hope
+                + (f.persona().ambitionMet() ? " (and did)" : "") + ".";
             ctx.getSource().sendSuccess(() -> Component.literal(line), false);
         }
         return folk.size();
