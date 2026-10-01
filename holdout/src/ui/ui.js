@@ -16,6 +16,8 @@ import { renderSurvivor, renderCrew, renderItems } from './crewpanel.js'
 import { renderProgress } from './progresspanel.js'
 import { manualModal } from './manual.js'
 import { motorPool } from './motorpool.js'
+import { renderJournal } from './journal.js'
+import { storyBadge } from '../game/story.js'
 import { victoryModal, renderMarket, renderLog, renderFence, renderExpansion, renderProduction, renderPower, renderMorale, renderSettings, recruitModal, raidReportModal, missionReportModal, gameOverModal, menuModal, hordeInfo } from './camppanels.js'
 
 const NAV = [
@@ -26,6 +28,7 @@ const NAV = [
   { id: 'camp', label: 'Camp', key: 'P', icon: 'production' },
   { id: 'map', label: 'Map', key: 'M', icon: 'map' },
   { id: 'progress', label: 'Progress', key: 'G', icon: 'goals' },
+  { id: 'journal', label: 'Journal', key: 'J', icon: 'book' },
   { id: 'log', label: 'Log', key: 'L', icon: 'log' },
 ]
 
@@ -119,7 +122,7 @@ export class UI {
     sfx('click')
     if (id === 'build') return this.toggleBuild()
     if (id === 'map') return this.game.openMap()
-    const fns = { crew: () => this.openCrew(), items: () => this.openItems(), trade: () => this.openMarket(), camp: () => this.openProduction(), progress: () => this.openProgress(), log: () => this.openLog() }
+    const fns = { crew: () => this.openCrew(), items: () => this.openItems(), trade: () => this.openMarket(), camp: () => this.openProduction(), progress: () => this.openProgress(), journal: () => this.openJournal(), log: () => this.openLog() }
     if (this.panelKey === id) return this.closePanel()
     fns[id]?.()
   }
@@ -137,7 +140,7 @@ export class UI {
     }
     // camp hotkeys belong to the camp: runs and the city map have their own
     if (S.raid || this.game.scene !== this.game.base) return false
-    const map = { b: 'build', c: 'crew', i: 'items', t: 'trade', p: 'camp', m: 'map', g: 'progress', l: 'log' }
+    const map = { b: 'build', c: 'crew', i: 'items', t: 'trade', p: 'camp', m: 'map', g: 'progress', j: 'journal', l: 'log' }
     if (map[k] && !e.ctrlKey && !e.metaKey && !this.game.base?.placing) {
       this.navClick(map[k])
       return true
@@ -417,6 +420,9 @@ export class UI {
   openSettings() {
     this.modal(renderSettings(this), { small: true })
   }
+  openJournal() {
+    this.openPanel('journal', () => renderJournal(this), { live: true, wide: true })
+  }
   openMotorPool() {
     const wrap = h('div.motorpool')
     const draw = () => {
@@ -672,6 +678,7 @@ export class UI {
       if (this.flowT <= 0) {
         this.flowT = 1
         this.flowCache = campFlow()
+        this.nav.querySelector('[data-nav=journal]')?.classList.toggle('badge', storyBadge() > 0)
       }
       this.updateTop()
     }

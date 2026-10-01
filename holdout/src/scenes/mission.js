@@ -32,6 +32,7 @@ import { h, rand, rint, pick, chance, weighted, clamp, fmtTime, bus, fmt } from 
 import { icon } from '../ui/icons.js'
 import { resIcon } from '../ui/common.js'
 import { infectedRange } from '../ui/mappanel.js'
+import { storyAt, foundStoryItem, rollNote, storyRunEnd, NOTES } from '../game/story.js'
 import { VisionMixin } from './missionvision.js'
 import { TrapsMixin } from './missiontraps.js'
 
@@ -137,6 +138,9 @@ export class Mission {
     // agents walk in the lot's frame; the grid answers in its own tiles
     this.grid = new OffsetGrid(this.lv.grid, this.lv.x0, this.lv.z0)
     this.event = (S.events || []).find((e) => e.locId === loc.id && e.expires > S.time) || null
+    // someone the story is looking for may be holed up here
+    this.storyHere = storyAt(loc.id)
+    if (!this.event && this.storyHere.npc) this.event = { kind: 'distress', npc: this.storyHere.npc.s, story: this.storyHere.npc, locId: loc.id, expires: Infinity }
     this.buildWorld()
     // the squad climbs out of the van
     const E = this.lv.evac
@@ -155,6 +159,7 @@ export class Mission {
     this.placeTraps()
     this.setupEvent()
     this.setupCars()
+    this.placeStoryItems()
     const walkie = this.squad.some((a) => a.st.walkie)
     this.vehicle = VEHICLES[loadout.vehicle] || (loadout.van === false ? VEHICLES.foot : VEHICLES.van)
     this.stashCap = loadout.stash ?? (loadout.van === false ? 0 : Infinity)
@@ -878,6 +883,7 @@ export class Mission {
     if (kind === 'hotwire') return c.drive?.keys ? 2 : (['mechanic', 'excon'].includes(agent.data.occ) ? 7 : 10) / Math.max(0.8, agent.st.dismantle)
     if (kind === 'search') {
       if (c.stash) return 1
+      if (c.needsKey) return S.story?.keys?.[c.needsKey] ? 2.5 : null
       if (c.locked && !agent.st.picklock && !c.smash) return null
       return (c.def.time * (c.smash ? 2.2 : 1)) / agent.st.search
     }
@@ -914,6 +920,23 @@ export class Mission {
       this.toast(`${agent.data.first} got the car started. It drives home with you when you leave.`, 'good')
       gainXP(agent.data, 'tech', 6)
       return
+    }
+    if (kind === 'search' && c.storyItem && !c.storyFound) {
+      c.storyFound = true
+      const msg = foundStoryItem(c.storyItem)
+      if (msg) {
+        view.labels.float(this.scene, pos.clone().setY(pos.y + 0.8), 'Story item', 'item')
+        this.toast(msg, 'good')
+        sfx('rare')
+      }
+      c.label?.el.classList.remove('story')
+    }
+    if (kind === 'search' && !c.searched && !c.stash) {
+      const note = rollNote(this.loc.type, c.kind, this.level)
+      if (note) {
+        view.labels.float(this.scene, pos.clone().setY(pos.y + 0.6), 'A note', 'item')
+        this.toast(`${agent.data.first} found a note: "${NOTES[note].title}". It is in the journal.`, 'good')
+      }
     }
     if (kind === 'search' && c.carKeys && !c.searched) {
       c.carKeys.drive.keys = true
@@ -1497,7 +1520,10 @@ export class Mission {
     }
     if (c.stash) menu.append(btn('Take the rest', `${who} · ${c.stash.length} lot${c.stash.length === 1 ? '' : 's'}`, () => helper.command({ type: 'search', c }), !helper))
     else if (!c.searched) {
-      if (c.locked) {
+      if (c.needsKey) {
+        const have = S.story?.keys?.[c.needsKey]
+        menu.append(btn(have ? 'Open it with the keycard' : 'Locked tight', have ? `${who} · 2.5s · quiet` : 'Needs Colonel Hart\'s keycard. No amount of noise will open it.', () => helper.command({ type: 'search', c }), !have || !helper))
+      } else if (c.locked) {
         const picker = this.pickHelper(c, (a) => a.st.picklock)
         menu.append(btn('Pick the lock', picker ? `${picker.data.first} · quiet` : 'Needs lockpicks or an Ex-Con', () => ((c.smash = false), picker.command({ type: 'search', c })), !picker))
         menu.append(btn('Smash it open', helper ? `${who} · very loud` : '', () => ((c.smash = true), helper.command({ type: 'search', c })), !helper, '.loud'))
@@ -1507,7 +1533,7 @@ export class Mission {
       }
     }
     const strip = Object.keys(c.def.strip || {}).map((k) => RES[k].name.toLowerCase()).join(', ')
-    if (strip && !c.drive?.started) {
+    if (strip && !c.drive?.started && !c.needsKey && !(c.storyItem && !c.storyFound)) {
       const dt = helper ? this.workTime(helper, c, 'dismantle') : c.def.time * 2
       menu.append(btn('Break it down', `${who} · ${dt.toFixed(1)}s · loud · ${strip}`, () => helper.command({ type: 'dismantle', c }), !helper, '.loud'))
     }
@@ -1696,6 +1722,23 @@ export class Mission {
     const g = b.build()
     g.traverse((o) => o.isMesh && (o.castShadow = true))
     this.scene.add(g)
+  }
+  // Story items go in the container that best fits them (the right room,
+  // the right kind of furniture). Their marker shows once the room is seen.
+  placeStoryItems() {
+    for (const it of this.storyHere.items) {
+      const score = (c) => (it.rooms.includes(c.room) ? 2 : 0) + (it.kinds.includes(c.kind) ? 1 : 0) + (c.room ? 0.5 : 0)
+      const c = this.containers.filter((x) => !x.gone && !x.storyItem && !x.drive && (x.kind !== 'car' || it.kinds.includes('car'))).sort((a, b) => score(b) - score(a))[0]
+      if (!c) continue
+      c.storyItem = it.key
+      c.def = { ...c.def, name: it.name }
+      c.searched = false
+      if (it.needsKey) {
+        c.locked = true
+        c.needsKey = it.needsKey
+      }
+      c.label?.el.classList.add('story')
+    }
   }
   // Now and then a car here still runs: find its keys inside, or hotwire it.
   setupCars() {
@@ -1919,6 +1962,7 @@ export class Mission {
           addMoraleEvent(`Rescued ${d.first}`, 6, 1.5)
           log(`${d.name} was rescued from ${this.loc.name} and joined the camp.`, 'good')
           report.rescued = d.first
+          if (this.event?.story) report.rescuedStory = this.event.story
           continue
         }
         d.hp = Math.max(1, a.hp)
@@ -1954,6 +1998,7 @@ export class Mission {
       log(`The run to ${this.loc.name} went badly wrong.`, 'bad')
     }
     for (const a of this.squad) if (a.data.status === 'mission') a.data.status = 'ok'
+    storyRunEnd(this.loc.id, result, report)
     this.game.endMission(report)
   }
   dispose() {

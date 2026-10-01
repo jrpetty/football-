@@ -15,6 +15,7 @@ import {
 } from './state.js'
 import { bus, pick, rint, rand, chance, clamp, weighted } from '../core/util.js'
 import { tickLinks, beltBonus, belted, pulled, outCap } from './belts.js'
+import { tickStory } from './story.js'
 
 // ---------------------------------------------------------------- power
 // One grid for the whole camp. Sources: steam engines (wood, or coal at a
@@ -480,6 +481,7 @@ export function econTick(dt, opts = {}) {
   if (Math.floor(prevHour) !== Math.floor(hour())) {
     checkGoals()
     sampleHistory()
+    tickStory()
   }
 }
 

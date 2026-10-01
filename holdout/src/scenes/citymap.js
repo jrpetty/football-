@@ -3,6 +3,7 @@
 // embankments and bridges, the rail yard, the highway jammed with the
 // evacuation that never got out, burning blocks, farms and forest around it.
 // Pick a location (its pin shows the danger level), pick a squad, roll out.
+import { leadsAt } from '../game/story.js'
 import * as THREE from 'three'
 import { view, screenRay } from '../render/view.js'
 import { Atmosphere, nightFactor } from '../render/sky.js'
@@ -1041,7 +1042,8 @@ export class CityMap {
       const post = (S.outposts || []).some((o) => o.locId === L.loc.id)
       const looted = !!S.looted[L.loc.id] && !post
       const ev = evs.get(L.loc.id)
-      const col = post ? '#5ad07a' : looted ? '#6a6e6a' : m.col
+      const lead = leadsAt(L.loc.id).length > 0
+      const col = post ? '#5ad07a' : lead ? '#c08aff' : looted ? '#6a6e6a' : m.col
       m.head.material.color.set(col)
       m.head.material.emissive.set(col)
       m.beam.material.uniforms.color.value.set(col)
@@ -1049,7 +1051,8 @@ export class CityMap {
       m.el.classList.toggle('looted', looted)
       m.el.classList.toggle('event', !!ev)
       m.el.classList.toggle('outpost', post)
-      m.el.querySelector('i').textContent = ev ? (ev.kind === 'distress' ? 'SOS' : 'DROP') : post ? 'outpost' : looted ? 'looted' : ''
+      m.el.classList.toggle('lead', lead)
+      m.el.querySelector('i').textContent = ev ? (ev.kind === 'distress' ? 'SOS' : 'DROP') : lead ? 'lead' : post ? 'outpost' : looted ? 'looted' : ''
       m.el.classList.toggle('sel', this.sel === L.loc)
       m.el.classList.toggle('hov', this.hover === L.loc)
     }

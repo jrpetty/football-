@@ -73,6 +73,7 @@ export const ICON = {
   pause: svg('<path d="M8 5v14M16 5v14"/>'),
   rotate: svg('<path d="M4 12a8 8 0 0 1 14-5.3L20 9"/><path d="M20 4v5h-5"/><path d="M20 12a8 8 0 0 1-14 5.3L4 15"/><path d="M4 20v-5h5"/>'),
   check: svg('<path d="M5 12l5 5 9-10"/>'),
+  book: svg('<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/><path d="M9 7h7M9 10.5h5"/>'),
   coal: svg('<path d="M3 18l3-6 4 1 3-5 4 3 4 7z"/><path d="M8 18l2-3M14 18l1-4"/>'),
   plates: svg('<path d="M3 15l9-4 9 4-9 4z"/><path d="M3 11l9-4 9 4"/><path d="M3 15v-4M21 15v-4"/>'),
   bolts: svg('<path d="M9 3h6l1.5 3L15 9H9L7.5 6z"/><path d="M10.5 9v12M13.5 9v12M10.5 12l3 1.5M10.5 15l3 1.5M10.5 18l3 1.5"/>'),

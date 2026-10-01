@@ -4,6 +4,7 @@
 import { LOCATIONS, ROOMS, CONTAINERS, RES, ITEMS, ZOMBIES, zombieMix, LEVEL_COLORS, OCCUPATIONS, STATIONS, GAME_MIN_PER_SEC, INFECTION, OUTPOST, VEHICLES } from '../game/data.js'
 import { S, day, clockStr, gameDur, survivorStats, getS, hasFlag, outpostAt, outpostProblem, claimOutpost, outpostYield, outpostUpgradeCost, upgradeOutpost, abandonOutpost, canAfford, travelCost, vehicleOf, vehicleProblem, usableVehicles, pay } from '../game/state.js'
 import { raidIntel } from '../game/economy.js'
+import { leadsAt } from '../game/story.js'
 import { sfx } from '../core/audio.js'
 import { h, fmt, clamp, bus } from '../core/util.js'
 import { icon } from './icons.js'
@@ -155,6 +156,7 @@ export class MapPanel {
     const looted = S.looted[loc.id]
     const ev = (S.events || []).find((e) => e.locId === loc.id && e.expires > S.time)
     const hints = lootHints(loc.type)
+    const leads = leadsAt(loc.id)
     const [z0, z1] = infectedRange(loc)
     const mix = zombieMix(loc.level, L.zombieTheme)
       .filter((m) => m.w > 0.6)
@@ -238,7 +240,8 @@ export class MapPanel {
         'div.pbody',
         h('p.blurb', L.blurb),
         ev ? h('div.card.evbig.' + ev.kind, h('b', ev.kind === 'distress' ? `Distress call: ${ev.npc?.name || 'a survivor'} is trapped inside.` : 'A supply drop came down in the yard.'), h('small', ev.kind === 'distress' ? 'Reach them and get them out: they will join the camp.' : 'Military crates: ammo, meds and gear.'), h('span', `Signal fades in ${gameDur(ev.expires - S.time)}`)) : null,
-        looted ? h('div.card.warn', `Picked clean. Worth another look on day ${looted}.`) : null,
+        leads.length ? h('div.card.leadcard', h('b', h('i', { html: icon('book') }), 'Story lead'), h('span', `${leads.join(' · ')} might be here.`), h('small', 'See the journal for what you know.')) : null,
+        looted && !leads.length ? h('div.card.warn', `Picked clean. Worth another look on day ${looted}.`) : null,
         h(
           'div.mfacts',
           h('div', h('small', 'Infected'), h('b', `${z0}–${z1}`), h('em', mix.join(', '))),
@@ -272,7 +275,7 @@ export class MapPanel {
         ),
         outpostAt(loc.id)
           ? h('button.btn.big', { disabled: true }, 'Your outpost')
-          : h('button.btn.go.big', { disabled: !squad.length || !!looted || this.map.launching || !T.ok, onclick: () => this.deploy(loc, squad, T, veh) }, looted ? 'Already looted' : h('span', { html: icon(T.V.stash ? 'truck' : 'run') }), looted ? null : T.V.stash ? ' Roll out' : T.V === VEHICLES.foot ? ' Head out on foot' : ' Ride out'),
+          : h('button.btn.go.big', { disabled: !squad.length || (!!looted && !leads.length) || this.map.launching || !T.ok, onclick: () => this.deploy(loc, squad, T, veh) }, looted && !leads.length ? 'Already looted' : h('span', { html: icon(T.V.stash ? 'truck' : 'run') }), looted && !leads.length ? null : T.V.stash ? ' Roll out' : T.V === VEHICLES.foot ? ' Head out on foot' : ' Ride out'),
       ),
     )
   }

@@ -655,6 +655,7 @@ export const RESEARCH = {
   vaccine: { name: 'Vaccine', cat: 'Infection', lvl: 3, req: ['immunity'], cost: { specimen: 16, cells: 6, meds: 40 }, time: 600, desc: 'Nobody in the camp can be infected any more.' },
   efficiency: { name: 'Power Efficiency', cat: 'Engineering', lvl: 2, cost: { circuits: 10, wiring: 40 }, time: 240, desc: 'Automated stations draw 25% less power.' },
   logistics: { name: 'Logistics', cat: 'Engineering', lvl: 2, cost: { schematic: 1, motors: 4, circuits: 6 }, time: 260, desc: 'Better belt tension and spacing: every belt carries 25% more.' },
+  broadcast: { name: 'Broadcast Engineering', cat: 'Engineering', lvl: 3, cost: { schematic: 4, circuits: 40, coils: 12, cells: 6 }, time: 700, desc: 'Teach yourselves to phase the dish array by hand, so the Signal can go on without an expert. (Or find one.)' },
   coretuning: { name: 'Core Tuning', cat: 'Engineering', lvl: 3, cost: { core: 1, circuits: 20, cells: 4 }, time: 400, desc: 'Each power core overclocks a station by 75% instead of 50%.' },
 }
 // Infection: a bite (or bloater gas) can infect. It climbs toward 100 over

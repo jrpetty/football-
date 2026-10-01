@@ -1,7 +1,8 @@
 // The Progress panel: the milestone board (tiers 1-8), the Signal and its
 // five phases, and the starter tasks that used to be the goals list.
 import { RES, STATIONS, TIERS, MILESTONES, SIGNAL, GOALS, BELTS, FENCE, EXPANSIONS } from '../game/data.js'
-import { S, canAfford, completeMilestone, msDone, tierLock, tierMilestones, campTier, mastOf, signalNeed, deliverSignal, claimGoal } from '../game/state.js'
+import { S, canAfford, completeMilestone, msDone, tierLock, tierMilestones, campTier, mastOf, signalNeed, deliverSignal, claimGoal, signalCost } from '../game/state.js'
+import { signalLock } from '../game/story.js'
 import { sfx } from '../core/audio.js'
 import { h, fmt, clamp } from '../core/util.js'
 import { icon } from './icons.js'
@@ -115,7 +116,8 @@ function signal(ui) {
     const done = i < ph
     const cur = i === ph
     const need = cur ? signalNeed() : null
-    const rows = Object.entries(P.cost).map(([k, v]) => {
+    const lock = !done ? signalLock(i) : null
+    const rows = Object.entries(cur ? signalCost(P) : P.cost).map(([k, v]) => {
       const paid = done ? v : cur ? v - need[k] : 0
       return h('div.sig-row', h('span.ci', { style: { '--c': RES[k].color } }, h('i.ic', { html: resIcon(k) }), RES[k].short || RES[k].name), bar(paid / v, done ? 'hp' : 'prod'), h('small', `${fmt(paid)} / ${fmt(v)}`), cur ? h('small.dim', `${fmt(S.res[k] || 0)} in store`) : null)
     })
@@ -126,6 +128,7 @@ function signal(ui) {
         h('h3', h('span', `Phase ${i + 1}: ${P.name}`), h('small', done ? `Done${S.signal.at?.[i] ? ` · day ${S.signal.at[i]}` : ''}` : cur ? 'In progress' : 'Later')),
         h('p.note', P.desc),
         rows,
+        lock ? h('p.note.bad', h('b', `${lock.short}. `), lock.text, ' ', h('a.link', { onclick: () => ui.openJournal() }, 'Open the journal')) : null,
         opens.length ? h('p.note', `Opens tier${opens.length > 1 ? 's' : ''} ${opens.join(' and ')}.`) : i === SIGNAL.length - 1 ? h('p.note', 'The final call. Hold on until the coast answers.') : null,
         cur && mast
           ? h(

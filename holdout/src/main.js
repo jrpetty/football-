@@ -9,6 +9,7 @@ import { econTick, initSchedules, autoResolveRaid, scheduleRaid } from './game/e
 import * as belts from './game/belts.js'
 import * as stateMod from './game/state.js'
 import * as econMod from './game/economy.js'
+import * as storyMod from './game/story.js'
 import { WEATHER as WX } from './render/materials.js'
 import { STATIONS, GAME_MIN_PER_SEC, SEC_PER_DAY, RES } from './game/data.js'
 
@@ -93,7 +94,7 @@ class Game {
   // The city is the same for the whole camp: its locations seed radio events.
   makeCity() {
     this.city = genCity(S.seed)
-    S.cityLocs = this.city.locs.map((l) => ({ id: l.id, type: l.type, level: l.level, name: l.name }))
+    S.cityLocs = this.city.locs.map((l) => ({ id: l.id, type: l.type, level: l.level, name: l.name, district: l.lot?.district || 'residential' }))
   }
   // Let camp time pass in one go (travel to and from a run).
   fastForward(minutes) {
@@ -410,5 +411,6 @@ Object.defineProperty(window, '__S', { get: () => S })
 window.__belts = belts
 window.__state = stateMod
 window.__econ = econMod
+window.__story = storyMod
 window.__weather = WX
 game.boot()

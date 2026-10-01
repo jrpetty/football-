@@ -8,6 +8,7 @@ import {
 } from './data.js'
 import { bus, uid, pick, rint, rand, chance, clamp, store, weighted } from '../core/util.js'
 import { SKIN_TONES, HAIR_COLORS } from '../models/character.js'
+import { signalLock, signalDiscount } from './story.js'
 
 export const SAVE_KEY = 'holdout.save.v2'
 export let S = null
@@ -749,13 +750,16 @@ export function completeMilestone(id) {
 // ---- the Signal
 export const mastOf = () => S.stations.find((s) => s.type === 'mast' && s.level > 0) || null
 export const signalPhase = () => SIGNAL[S.signal?.phase || 0] || null
+// What the current phase still needs (Dana in camp shaves a tenth off).
+export const signalCost = (P = signalPhase()) => (P ? Object.fromEntries(Object.entries(P.cost).map(([k, v]) => [k, Math.ceil(v * signalDiscount())])) : null)
 export function signalNeed() {
   const P = signalPhase()
   if (!P) return null
   const out = {}
-  for (const [k, v] of Object.entries(P.cost)) out[k] = Math.max(0, v - (S.signal.paid[k] || 0))
+  for (const [k, v] of Object.entries(signalCost(P))) out[k] = Math.max(0, v - (S.signal.paid[k] || 0))
   return out
 }
+export const signalBlocked = () => signalLock(S.signal?.phase || 0)
 // Hand over whatever storage has toward the current phase.
 export function deliverSignal() {
   const need = signalNeed()
@@ -788,6 +792,13 @@ export function feedSignal(st) {
 function checkSignal() {
   const need = signalNeed()
   if (!need || Object.values(need).some((v) => v > 0)) return
+  const lock = signalLock(S.signal.phase)
+  if (lock) {
+    if (S.signal.waiting !== lock.short) log(`The Signal: every part is in place, but the phase can't finish. ${lock.text}`, 'story')
+    S.signal.waiting = lock.short
+    return
+  }
+  S.signal.waiting = null
   const P = signalPhase()
   S.signal.phase++
   S.signal.paid = {}
@@ -965,9 +976,15 @@ export function researchLock(id, desk) {
   if (id === 'schematic' && !Object.keys(ALT_RECIPES).some((a) => !altUnlocked(a))) return 'Every alternate is known'
   return null
 }
+// Dr. Imre's sample case halves the vaccine's cost.
+export function researchCost(id) {
+  const c = RESEARCH[id].cost
+  if (id !== 'vaccine' || !S.story?.flags?.kxcase) return c
+  return Object.fromEntries(Object.entries(c).map(([k, v]) => [k, Math.ceil(v / 2)]))
+}
 export function startResearch(desk, id) {
   const R = RESEARCH[id]
-  if (desk.project || researchLock(id, desk) || !pay(R.cost)) return false
+  if (desk.project || researchLock(id, desk) || !pay(researchCost(id))) return false
   desk.project = { id, left: R.time, total: R.time }
   bus.emit('change')
   return true
@@ -975,7 +992,7 @@ export function startResearch(desk, id) {
 export function cancelResearch(desk) {
   const p = desk.project
   if (!p) return
-  gain(RESEARCH[p.id].cost)
+  gain(researchCost(p.id))
   desk.project = null
   bus.emit('change')
 }

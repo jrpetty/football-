@@ -4,7 +4,7 @@ import { RES, STATIONS, RECIPES, MODS, ITEMS, QUALITY, OCCUPATIONS, SKILLS, SKIL
 import {
   S, workersOf, slots, assign, workEff, bestFor, upgradeCost, startUpgrade, demolish, installModule, recipesFor, modsFor, queueMax, orderRecipe,
   orderMod, orderRepair, cancelOrder, moveOrder, orderSpec, qualityOdds, itemOf, itemName, canAfford, survivorStats, capOf, bedCount, getS, ownerOf,
-  repairCost, repairTime, gameDur, stationSize, signalNeed, deliverSignal, signalPhase,
+  repairCost, repairTime, gameDur, stationSize, signalNeed, deliverSignal, signalPhase, signalCost, signalBlocked, researchCost,
   researchLock, startResearch, cancelResearch, pickAlt, altsFor, researchDone, installCore, removeCore, coreBoost, hasFlag, msDone,
 } from '../game/state.js'
 import { stationFlow, power, powerNeed, isAutomated, stationRate, solarOutput, windOutput, boilerFuel, sourcePower, HAND_RATE, kitchenSaving, constructSpeed, raidIntel, activeRecipe, activeSingle, recipeUnlocked, recipeTarget } from '../game/economy.js'
@@ -252,7 +252,9 @@ function effectBlock(ui, st, pinfo) {
         out.push(card('The Signal', h('p.good', 'All five phases are done. The mast calls the coast every night.')))
         break
       }
-      const rows = Object.entries(P.cost).map(([k, v]) => h('div.sig-row', resTag(k), bar((v - need[k]) / v, 'prod'), h('small', `${fmt(v - need[k])} / ${fmt(v)}`)))
+      const rows = Object.entries(signalCost(P)).map(([k, v]) => h('div.sig-row', resTag(k), bar((v - need[k]) / v, 'prod'), h('small', `${fmt(v - need[k])} / ${fmt(v)}`)))
+      const lock = signalBlocked()
+      if (lock) rows.push(h('p.note.bad', h('b', `${lock.short}. `), lock.text, ' ', h('a.link', { onclick: () => ui.openJournal() }, 'Journal')))
       out.push(
         card(
           `Phase ${S.signal.phase + 1} of ${SIGNAL.length}: ${P.name}`,
@@ -375,11 +377,11 @@ function researchBlock(ui, st) {
       if (R.cat !== c) continue
       const done = researchDone(id) && !R.repeat
       const lock = researchLock(id, st)
-      const ok = !lock && !p && canAfford(R.cost)
+      const ok = !lock && !p && canAfford(researchCost(id))
       rows.push(
         h(
           'div.recipe.rs' + (done ? '.done' : lock ? '.locked' : ''),
-          h('div.r-main', { 'data-tip': `<b>${R.name}</b>${R.desc}` }, h('b', R.name, done ? h('em.good', ' · done') : null), h('span.r-sub', R.desc), done ? null : h('span.r-sub', costList(R.cost, { small: true }), h('small', ` · ${R.time}s of work`))),
+          h('div.r-main', { 'data-tip': `<b>${R.name}</b>${R.desc}` }, h('b', R.name, done ? h('em.good', ' · done') : null), h('span.r-sub', R.desc), done ? null : h('span.r-sub', costList(researchCost(id), { small: true }), h('small', ` · ${R.time}s of work`))),
           done ? h('i.inl.good', { html: icon('check') }) : lock && lock !== 'Done' ? h('span.r-lock', h('i', { html: icon('lock') }), lock) : h('button.mini', { disabled: !ok, onclick: () => (startResearch(st, id) ? (sfx('click'), ui.toast(`Researching ${R.name}`)) : sfx('error'), ui.refreshPanel()) }, p ? 'Busy' : 'Start'),
         ),
       )
