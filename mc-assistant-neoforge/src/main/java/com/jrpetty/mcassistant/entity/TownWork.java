@@ -91,16 +91,17 @@ public final class TownWork {
         // A lamp post along the avenues and round the ring street.
         if (ironAge && avenue && lampSpot(dx, dz) && above.isAir() && ground.isSolid()
                 && !level.getBlockState(top.above(2)).isSolid()) {
-            if (take(level, v, s -> s.is(net.minecraft.tags.ItemTags.LOGS), 2)) {
-                boolean lantern = take(level, v, s -> s.is(Items.LANTERN), 1);
-                if (lantern || take(level, v, s -> s.is(Items.TORCH), 1)) {
-                    level.setBlockAndUpdate(top.above(), Blocks.SPRUCE_FENCE.defaultBlockState());
-                    level.setBlockAndUpdate(top.above(2), Blocks.SPRUCE_FENCE.defaultBlockState());
-                    level.setBlockAndUpdate(top.above(3), lantern ? Blocks.LANTERN.defaultBlockState() : Blocks.TORCH.defaultBlockState());
-                    return true;
-                }
+            // The light first: no light, no post (and no logs spent on one).
+            boolean lantern = take(level, v, s -> s.is(Items.LANTERN), 1);
+            if (!lantern && !take(level, v, s -> s.is(Items.TORCH), 1)) return false;
+            if (!take(level, v, s -> s.is(net.minecraft.tags.ItemTags.LOGS), 2)) {
+                give(level, v, new ItemStack(lantern ? Items.LANTERN : Items.TORCH));
+                return false;
             }
-            return false;
+            level.setBlockAndUpdate(top.above(), Blocks.SPRUCE_FENCE.defaultBlockState());
+            level.setBlockAndUpdate(top.above(2), Blocks.SPRUCE_FENCE.defaultBlockState());
+            level.setBlockAndUpdate(top.above(3), lantern ? Blocks.LANTERN.defaultBlockState() : Blocks.TORCH.defaultBlockState());
+            return true;
         }
         if (!earth(ground) && !(ground.is(Blocks.DIRT_PATH) && (square ? stoneAge : avenue && ironAge))) return false;
         if (!above.isAir() && !(above.canBeReplaced() && above.getFluidState().isEmpty())) return false;
@@ -140,6 +141,27 @@ public final class TownWork {
     private static boolean earth(BlockState st) {
         return st.is(Blocks.GRASS_BLOCK) || st.is(Blocks.DIRT) || st.is(Blocks.COARSE_DIRT) || st.is(Blocks.PODZOL)
             || st.is(Blocks.MYCELIUM) || st.is(Blocks.ROOTED_DIRT);
+    }
+
+    /** Put a thing back in the village's stores (the first chest with room). */
+    static void give(ServerLevel level, Villages.Village v, ItemStack stack) {
+        boolean before = ZoneChests.askAs(true);
+        try {
+            for (ZoneChests.Found f : ZoneChests.around(level, v.centre(), Villages.storesRadius(v.id()), 32)) {
+                if (stack.isEmpty()) return;
+                if (!f.stillThere() || !ZoneChests.isStashable(f)) continue;
+                net.minecraft.world.Container c = f.container();
+                for (int i = 0; i < c.getContainerSize() && !stack.isEmpty(); i++) {
+                    if (c.getItem(i).isEmpty()) {
+                        c.setItem(i, stack.copy());
+                        stack.setCount(0);
+                    }
+                }
+                c.setChanged();
+            }
+        } finally {
+            ZoneChests.askAs(before);
+        }
     }
 
     /** Take so many of a thing out of the village's stores; all or nothing. */
