@@ -745,12 +745,15 @@ public class VillageFolkEntity extends AssistantEntity {
         shearsFromTheStores();                         // a rancher's shears, for the wool
         stoneToolFromTheStores();                      // no more wooden tools once there is stone
         bucketFromTheStores();                         // a farmer's water, when the village is hungry
+        // The mine's depth too: the next run digs at the new one. Behind the busy check
+        // it never ran, and every mine staked in the Wood Age stayed at forty-odd for the
+        // rest of the game — copper and coal by the hundred, iron one or two a day.
+        if (seekTheSeam()) return;                     // dig where the village's metal is
+        if (turnedToTheFields()) return;               // a hungry village needs farmers (busy or not)
         if (peekJob() != null) return;                 // already busy
         if (resting()) return;                         // off the clock for a bit
         if (movedOnFromSpentGround()) return;          // this patch is finished
         if (unstuckFromGround()) return;               // a plot that cannot be set up is given up
-        if (turnedToTheFields()) return;               // a hungry village needs farmers
-        if (seekTheSeam()) return;                     // dig where the village's metal is
         if (changedTrade()) return;                    // the village lost a trade
         if (raisedAChild(12.0)) return;                // the village grew
 
@@ -1057,7 +1060,7 @@ public class VillageFolkEntity extends AssistantEntity {
      * near the bottom of the world. The plot keeps its place; only its depth changes.
      */
     private boolean seekTheSeam() {
-        if (stationTask() != StationTask.MINE || peekJob() != null) return false;
+        if (stationTask() != StationTask.MINE) return false;
         WorkZone zone = workZone();
         UUID village = ownerId();
         if (zone == null || village == null) return false;

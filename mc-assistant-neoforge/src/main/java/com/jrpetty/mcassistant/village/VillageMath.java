@@ -109,11 +109,13 @@ public final class VillageMath {
         return loadedRadiusBlocks(folk) >= plotReach(folk);
     }
 
-    /** How far out the village's own stores are counted from. Capped at the
-     *  core: sweeping every chest inside a four-hundred-block town ten times a
-     *  minute is not a thing anybody should ask a server to do. */
+    /** How far out the village's own stores are counted from: as far as its plots
+     *  reach. It was capped at the core (128), and a town of sixty-six with its mines a
+     *  hundred and fifty blocks out could not see the iron banked in them — its Iron Age
+     *  read "short of iron" with the iron sitting in its own chests. The count is one
+     *  sweep of the loaded chunks' chest lists, cached for ten seconds a village. */
     public static int storesRadius(int folk) {
-        return Math.min(CORE, plotReach(folk) + 8);
+        return Math.min(MAX_REACH + SCAN, plotReach(folk) + 8);
     }
 
     /**
