@@ -242,13 +242,13 @@ born or grown up into a big enough village.
 
 | Trade | From | Works at | What it does |
 |---|---|---|---|
-| Cook | Stone Age, 14 folk | the café | Bakes potatoes, roasts meat and fish, bakes bread, cookies and pumpkin pie, and makes drinks |
-| Tailor | Stone Age, 18 folk | the workshop | Makes beds (in the colour of the wool), rugs and banners |
-| Beekeeper | Stone Age, 20 folk | a meadow outside town | Sets up two hives, plants flowers round them, and takes the honey (or the comb, without bottles) when a hive is full |
-| Blacksmith | Iron Age, 16 folk | the smithy | Makes iron picks for the miners, swords and armour for the watch, shears, buckets, axes and hoes, and keeps a few of each in the stores |
+| Cook | Stone Age, 14 folk | the café | Bakes potatoes, roasts meat and fish, bakes bread, cookies, pumpkin pie and cakes, and makes drinks |
+| Tailor | Stone Age, 18 folk | the workshop | Makes beds (in the colour of the wool), rugs, string, and banners on its loom |
+| Beekeeper | Stone Age, 20 folk | a meadow outside town | Keeps up to four hives: comb with shears or honey with a bottle from a full hive, new hives from comb, bees bred on flowers |
+| Blacksmith | Iron Age, 16 folk | the smithy | Makes iron picks for the miners, swords and armour for the watch, shears, buckets, axes and hoes; bows, and arrows of flint, stick and feather |
 | Shopkeeper | Iron Age, 18 folk | the shop | Sets out what the crafts have made on the shop's counter |
-| Brewer | Diamond Age, 22 folk | the brewery | Brews potions three at a time: healing for the watch, then swiftness, night vision, leaping, water breathing, fire resistance and strength |
-| Enchanter | Nether Age, 24 folk | the library | Binds books from cane and leather, then enchants the village's iron and diamond tools and armour with lapis |
+| Brewer | Diamond Age, 22 folk | the brewery | Brews at a real brewing stand: healing for the watch, then swiftness, night vision, regeneration, leaping, water breathing, fire resistance and strength |
+| Enchanter | Nether Age, 24 folk | the library | Binds books from paper (the farmers' cane) and leather, then enchants the village's iron and diamond tools and armour with lapis at its table |
 
 Every craft works out of the village's stores and puts what it makes back into
 them, a piece of work every twenty seconds or so. A blacksmith always leaves a few
@@ -286,7 +286,73 @@ a library (24) in the Nether Age. These come after everything the age itself ask
 for, so they never hold a village back from its next age. The builder makes their
 furniture from the stores: a smoker, loom, grindstone, bookshelves, a lectern, a
 brewing stand (from a blaze rod) and an enchanting table (from a book, two diamonds
-and four obsidian). Anything it can't make is left out.
+and four obsidian). Anything it can't make is left out — and the craft that works
+there sets its own down on that very spot (see below).
+
+### How each trade really works
+
+Every trade works the way you would do it yourself, with real blocks and real
+items. Some things a young village could never make, so the **first of a trade
+brings them along** — once per village (if they are lost, they come again three
+days later):
+
+| Trade | Brings | Why it couldn't be made |
+|---|---|---|
+| Beekeeper | a beehive with a swarm of two bees in it | a hive is made of honeycomb, and honeycomb only comes out of a hive |
+| Brewer | a brewing stand, 8 blaze powder, 4 nether wart, 4 soul sand | blaze rods, wart and soul sand are all from the Nether |
+| Enchanter | an enchanting table and 6 lapis | the table needs diamonds, obsidian and a book |
+| Blacksmith | an old (chipped) anvil, if the stores haven't 31 iron | an anvil is thirty-one iron |
+| Tailor | a loom, if the village has no string | string comes from spiders |
+| Rancher | two leads | leads need slime |
+| First farmer | 3 sugar cane, 2 melon seeds, 2 pumpkin seeds (if nobody has any) | seeds and cuttings like these are rare finds |
+
+Everything after that the village makes for itself:
+
+* **Beekeeper.** Sets the hive it brought on its meadow and lets the swarm out.
+  A full hive gives three honeycomb to shears (the smith's) or a honey bottle to a
+  glass bottle. When the bees fill the hives, it makes another from three honeycomb
+  and six planks. While there is room, it feeds two bees a flower each so they
+  breed. It keeps flowers round the hives: from the stores, grown with bone meal
+  (the watch's bones), or dug up wild and replanted.
+* **Brewer.** Sets its stand down in the brewery and fires it with blaze powder,
+  which lasts twenty brews. It puts in three bottles of water and a nether wart and
+  waits twenty seconds for awkward potions. Then it adds the reagent the village is
+  shortest of, waits twenty seconds more, and the three potions go to the stores:
+  * healing: a glistering melon, made from a melon slice and gold;
+  * swiftness: sugar, from the farmers' cane;
+  * night vision: a golden carrot;
+  * water breathing: a fisher's pufferfish.
+
+  Its soul sand goes into the ground beside the brewery as a nether wart patch,
+  which it picks and replants.
+* **Enchanter.** Sets its table down in the library. Paper is pressed from the
+  farmers' cane, and three paper and the rancher's leather make a book. Each
+  enchantment costs three lapis and a book, and the more bookshelves round the
+  table, the stronger it is.
+* **Blacksmith.** Arrows are flint, stick and feather, four at a time. Flint is
+  knapped from the miners' gravel, and feathers come from the rancher's hens. Planks
+  are sawn from the woodcutters' logs as needed.
+
+**The links between trades.**
+
+* **Farmers.** Plant the cane along the field's water and cut it back to its
+  bottom so it grows again. The cane goes to the enchanter's paper, the brewer's
+  sugar and the café's pies and cakes. They also plant the melon and pumpkin seed.
+* **Ranchers.** Milk the cows with a bucket for the café's cakes; the café sends
+  the buckets back. When the pen has no pair to breed, the rancher takes a lead,
+  finds a wild sheep, cow, pig or hen, and walks it home. If there is nothing wild
+  for fifty blocks, the village buys a drover's pair (two sheep and two hens) once.
+  Ranchers draw the smith's shears before making their own.
+* **Smelter.** When glass runs short, digs sand off a river bed or a beach (the
+  water fills the hole) and fires it into glass. The glass makes bottles for the
+  brewer, the beekeeper and the café, and windows.
+* **Guards.** When the bell rings, each guard takes a healing potion from the
+  stores along with its bow and arrows, and drinks it if badly hurt.
+
+Ask any folk **"How does your trade work?"** to hear its own account of its work:
+its tools, what it uses, where its work goes, and what it is short of. **"What is
+the village short of?"** gives the next age's wants and every trade's empty
+shelves, with a nudge to bring them to the stalls or look at the quest board.
 
 ### The buildings
 
@@ -1173,6 +1239,19 @@ Every push to CI:
 * takes on and pays out quest-board postings, hires a folk who comes home with a story and
   what it carried, commissions a house from a player's makings, writes the town ledger,
   and has the storekeeper give, lend and sell (game test `t37`);
+* gives the trades their kits and runs them for real (game test `t40`): the first brewer
+  brings a stand, blaze powder, wart and soul sand, and the village gets one kit only;
+  in a brewery built without stands it sets its own down where the drawing has one;
+  water and wart become awkward potions twenty seconds later, a glistering melon goes
+  in (made of a melon slice and gold), and three potions of healing come out to the
+  stores; the beekeeper sets down the hive it brought, the swarm comes out, and a
+  second hive is made of three honeycomb and six planks;
+* runs the links between the trades (game test `t41`): the first farmer brings cane and
+  plants it on the water's edge, then cuts it down to its bottom; a rancher milks a cow,
+  walks a wild sheep twenty-six blocks home on a lead and keeps the lead, then — nothing
+  wild left — buys the drover's pair once; a smelter digs sand off a pond's bed for
+  glass; a hurt guard drinks a healing potion; the cook bakes a cake and sends the
+  buckets back;
 * picks the flattest ground among rough ground, levels a knoll and a hollow in a town,
   grows a house a second storey in brick with a garden fence, runs a jetty out with a boat,
   and irrigates a dry field (game test `t38`);
@@ -1191,9 +1270,10 @@ Every push to CI:
   the bell stopping when the band is beaten off, the raid in the village's history, the
   guard back down, and the gates open again in the morning;
 * runs every craft once from one village's stores (game test `t32`): the blacksmith
-  makes iron tools, the tailor a bed, the beekeeper a hive and then its honey, the
-  brewer three potions of healing, the enchanter books and then an enchanted tool,
-  the cook three apple ciders; the café's counter shows the cider with its price tag,
+  makes iron tools, the tailor a bed, the beekeeper sets down the hive it brought and
+  takes its honey, the brewer sets down its stand and loads it with water and nether
+  wart, the enchanter sets down its table, binds a book and enchants a tool, the cook
+  makes three apple ciders; the café's counter shows the cider with its price tag,
   a folk buys something there, and a player buys a cider and the enchanted thing
   from the shop's counter;
 * checks the money (game test `t30`): a new village's purse, gold minted into coin,

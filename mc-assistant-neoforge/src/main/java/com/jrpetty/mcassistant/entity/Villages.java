@@ -238,6 +238,9 @@ public final class Villages {
         Grow.resetForTests();
         Waterfront.resetForTests();
         Orders.resetForTests();
+        Trades.resetForTests();
+        Links.resetForTests();
+        Drover.resetForTests();
         Cafe.resetForTests();
         Roads.reset();
         LAST_PROJECT.clear();

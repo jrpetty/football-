@@ -1576,9 +1576,10 @@ public class VillageGameTests {
         boolean tailored = com.jrpetty.mcassistant.entity.Crafts.now(folk, level, v);
         Kit.log("t32 the tailor: " + tailored + ", beds/rugs/banners " + clothBefore + " -> " + stock.applyAsInt(cloth));
         helper.assertTrue(tailored && stock.applyAsInt(cloth) > clothBefore, "the tailor makes a bed (or rugs, or a banner) from wool");
-        // The beekeeper: a hive, then the honey once it is full.
+        // The beekeeper: the hive it brought set down, then the honey once it is full.
         folk.setJob(StationTask.BEEKEEP);
-        boolean hived = com.jrpetty.mcassistant.entity.Crafts.now(folk, level, v);
+        boolean hiveKit = com.jrpetty.mcassistant.entity.Trades.kit(folk);
+        boolean hived = hiveKit && com.jrpetty.mcassistant.entity.Crafts.now(folk, level, v);
         BlockPos hive = null;
         BlockPos c = folk.workZone().center();
         for (BlockPos q : BlockPos.betweenClosed(c.offset(-6, -3, -6), c.offset(6, 4, 6))) {
@@ -1591,16 +1592,24 @@ public class VillageGameTests {
         Kit.log("t32 the beekeeper: hive at " + hive.toShortString() + ", harvested " + harvested + ", honey " + honey
             + ", bees " + level.getEntitiesOfClass(net.minecraft.world.entity.animal.Bee.class, new AABB(hive).inflate(8)).size());
         helper.assertTrue(harvested && honey >= 1, "the beekeeper takes the honey from a full hive");
-        // The brewer.
+        // The brewer: the stand it brought set down and loaded with water and nether wart (the
+        // brew itself, twenty seconds a step, is t40's).
         folk.setJob(StationTask.BREW);
+        boolean brewKit = com.jrpetty.mcassistant.entity.Trades.kit(folk);
         boolean brewed = com.jrpetty.mcassistant.entity.Crafts.now(folk, level, v);
-        int healing = stock.applyAsInt(s -> s.is(Items.POTION)
-            && s.getOrDefault(net.minecraft.core.component.DataComponents.POTION_CONTENTS,
-                net.minecraft.world.item.alchemy.PotionContents.EMPTY).is(net.minecraft.world.item.alchemy.Potions.HEALING));
-        Kit.log("t32 the brewer: " + brewed + ", potions of healing " + healing);
-        helper.assertTrue(brewed && healing == 3, "the brewer brews three potions of healing from a melon and gold");
-        // The enchanter: two books bound, then the smith's work enchanted.
+        BlockPos standAt = null;
+        BlockPos bc = folk.workZone().center();
+        for (BlockPos q : BlockPos.betweenClosed(bc.offset(-8, -3, -8), bc.offset(8, 4, 8))) {
+            if (level.getBlockState(q).is(Blocks.BREWING_STAND)) { standAt = q.immutable(); break; }
+        }
+        String loadedWith = standAt != null && level.getBlockEntity(standAt) instanceof net.minecraft.world.level.block.entity.BrewingStandBlockEntity st
+            ? st.getItem(0).getHoverName().getString() + " + " + st.getItem(3).getHoverName().getString() : "no stand";
+        Kit.log("t32 the brewer: kit " + brewKit + ", " + brewed + ", the stand at " + standAt + " with " + loadedWith);
+        helper.assertTrue(brewKit && brewed && loadedWith.contains("Water") && loadedWith.contains("Nether Wart"),
+            "the brewer sets down the stand it brought and loads it with water and nether wart");
+        // The enchanter: the table it brought set down, a book bound, then the smith's work enchanted.
         folk.setJob(StationTask.ENCHANT);
+        com.jrpetty.mcassistant.entity.Trades.kit(folk);
         int spells = 0;
         for (int i = 0; i < 3; i++) if (com.jrpetty.mcassistant.entity.Crafts.now(folk, level, v)) spells++;
         int enchanted = stock.applyAsInt(ItemStack::isEnchanted);
@@ -2331,6 +2340,301 @@ public class VillageGameTests {
         Kit.log("t39 the board's head: " + head + "; a folk says: " + said);
         helper.assertTrue(head.startsWith("ELDER'S ORDERS / Fill the"), "the order heads the board on the hall");
         helper.assertTrue(said.contains("fill the larder"), "and folk know it");
+        helper.succeed();
+    }
+
+    /**
+     * The trades' kits, and real brewing and beekeeping. The brewer arrives with a brewing stand,
+     * blaze powder, nether wart and soul sand (once: the village does not get a second); the
+     * brewery standing without its stands (nothing in the village could make one), the brewer sets
+     * its own down where the drawing has one; it brews for real: three water bottles and a wart,
+     * twenty seconds, then a glistering melon (made of a melon slice and gold), twenty seconds, and
+     * three potions of healing come out to the stores. The beekeeper sets down the hive it brought,
+     * with its swarm, and makes a second from honeycomb and planks when the bees fill the first.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 1400, batch = "t40_kits")
+    public static void t40_kits(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(6000);
+        Kit.hold(level, 22000, 12000, 40);
+        Kit.prepare(level, 22000, 12000, 40);
+        BlockPos heart = Kit.surface(level, 22000, 12000);
+        VillageFolkEntity brewer = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(brewer != null, "a village");
+        java.util.UUID village = brewer.ownerId();
+        Villages.Village v = Villages.get(village);
+        Villages.ageForTests(village, Villages.Age.NETHER);
+        BlockPos chest = Kit.surface(level, heart.getX() + 3, heart.getZ() + 3);
+        level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
+        com.jrpetty.mcassistant.entity.ZoneChests.mark(level, chest);
+        net.minecraft.world.Container box = (net.minecraft.world.Container) level.getBlockEntity(chest);
+        box.setItem(0, new ItemStack(Items.GLASS, 12));
+        box.setItem(1, new ItemStack(Items.MELON_SLICE, 4));
+        box.setItem(2, new ItemStack(Items.GOLD_INGOT, 2));
+        box.setItem(3, new ItemStack(Items.HONEYCOMB, 3));
+        box.setItem(4, new ItemStack(Items.OAK_LOG, 4));
+        java.util.function.ToIntFunction<java.util.function.Predicate<ItemStack>> stock =
+            what -> com.jrpetty.mcassistant.entity.Market.stock(level, village, what);
+
+        // The kit, once.
+        brewer.setJob(StationTask.BREW);
+        boolean first = com.jrpetty.mcassistant.entity.Trades.kit(brewer);
+        boolean again = com.jrpetty.mcassistant.entity.Trades.kit(brewer);
+        int stands = brewer.countCarried(s -> s.is(Items.BREWING_STAND)), powder = brewer.countCarried(s -> s.is(Items.BLAZE_POWDER));
+        int wart = brewer.countCarried(s -> s.is(Items.NETHER_WART)), soul = brewer.countCarried(s -> s.is(Items.SOUL_SAND));
+        Kit.log("t40 the brewer's kit: " + first + " (again " + again + "): stand " + stands + ", blaze powder " + powder
+            + ", nether wart " + wart + ", soul sand " + soul);
+        helper.assertTrue(first && !again && stands == 1 && powder == 8 && wart == 4 && soul == 4,
+            "the first brewer brings a brewing stand, blaze powder, nether wart and soul sand; the village gets one kit");
+
+        // The brewery, put up without its stands.
+        BlockPos at = Kit.surface(level, heart.getX() + 14, heart.getZ());
+        BuildGoal.stampOnly(level, "brewery", at, Direction.NORTH, 13,
+            com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK), p -> p.part() != BuildGoal.Part.BREWING);
+        com.jrpetty.mcassistant.village.Ledger.built(village, "brewery", at, Direction.NORTH);
+        java.util.Set<BlockPos> planned = new java.util.HashSet<>();
+        for (BuildGoal.Placement p : BuildGoal.plan("brewery", at, Direction.NORTH, 13)) {
+            if (p.part() == BuildGoal.Part.BREWING) planned.add(p.pos());
+        }
+        boolean loaded = com.jrpetty.mcassistant.entity.Crafts.now(brewer, level, v);
+        BlockPos stand = null;
+        for (BlockPos q : BlockPos.betweenClosed(at.offset(-8, -2, -8), at.offset(8, 4, 8))) {
+            if (level.getBlockState(q).is(Blocks.BREWING_STAND)) { stand = q.immutable(); break; }
+        }
+        helper.assertTrue(loaded && stand != null && planned.contains(stand),
+            "the brewer sets its stand down in the brewery, where the drawing has one (" + stand + ")");
+        var bs = (net.minecraft.world.level.block.entity.BrewingStandBlockEntity) level.getBlockEntity(stand);
+        Kit.log("t40 the stand at " + stand.toShortString() + ": " + bs.getItem(0).getHoverName().getString() + " x3, "
+            + bs.getItem(3).getHoverName().getString() + ", fuel " + bs.getItem(4).getHoverName().getString());
+        helper.assertTrue(bs.getItem(3).is(Items.NETHER_WART) && bs.getItem(0).is(Items.POTION) && bs.getItem(4).is(Items.BLAZE_POWDER),
+            "three bottles of water and a wart in the stand, fired with blaze powder");
+        final BlockPos standAt = stand;
+        java.util.function.Function<net.minecraft.core.Holder<net.minecraft.world.item.alchemy.Potion>, Integer> potions = pot ->
+            stock.applyAsInt(s -> s.is(Items.POTION) && s.getOrDefault(net.minecraft.core.component.DataComponents.POTION_CONTENTS,
+                net.minecraft.world.item.alchemy.PotionContents.EMPTY).is(pot));
+        // Twenty seconds a brew, then the bees: one sequence, a step at a time.
+        final long[] mark = { helper.getTick() };
+        final int[] phase = { 0 };
+        final VillageFolkEntity[] keeper = { null };
+        final BlockPos meadow = Kit.surface(level, heart.getX() - 16, heart.getZ() + 12);
+        java.util.function.IntSupplier hives = () -> {
+            int n = 0;
+            for (BlockPos q : BlockPos.betweenClosed(meadow.offset(-7, -3, -7), meadow.offset(7, 4, 7))) {
+                if (level.getBlockState(q).is(Blocks.BEEHIVE)) n++;
+            }
+            return n;
+        };
+        helper.onEachTick(() -> {
+            long now = helper.getTick();
+            if (phase[0] == 0) {
+                if (now - mark[0] < 430) return;
+                var st = (net.minecraft.world.level.block.entity.BrewingStandBlockEntity) level.getBlockEntity(standAt);
+                String brewed = st.getItem(0).getHoverName().getString();
+                boolean reagent = com.jrpetty.mcassistant.entity.Crafts.now(brewer, level, v);
+                Kit.log("t40 twenty seconds on: " + brewed + "; then " + reagent + ", in the stand " + st.getItem(3).getHoverName().getString()
+                    + "; gold left " + stock.applyAsInt(s -> s.is(Items.GOLD_INGOT)));
+                helper.assertTrue(st.getItem(3).is(Items.GLISTERING_MELON_SLICE) || potions.apply(net.minecraft.world.item.alchemy.Potions.HEALING) > 0,
+                    "the awkward potions get a glistering melon, made of a melon slice and gold");
+                phase[0] = 1;
+                mark[0] = now;
+                return;
+            }
+            if (phase[0] == 1) {
+                if (now - mark[0] < 430) return;
+                com.jrpetty.mcassistant.entity.Crafts.now(brewer, level, v);
+                int healing = potions.apply(net.minecraft.world.item.alchemy.Potions.HEALING);
+                Kit.log("t40 the brew out: potions of healing in the stores " + healing);
+                helper.assertTrue(healing >= 3, "three potions of healing come out of the stand to the stores");
+                // The beekeeper, on its meadow, with the hive it brought.
+                VillageFolkEntity k = VillageFolkSpawnerBlock.raise(level, meadow, 0.0F);
+                helper.assertTrue(k != null, "a beekeeper");
+                k.joinVillage(village, heart);
+                k.assignPlot(com.jrpetty.mcassistant.entity.WorkZone.around(meadow, 6, com.jrpetty.mcassistant.entity.WorkZone.DEFAULT_DEPTH), "the meadow");
+                k.setJob(StationTask.BEEKEEP);
+                boolean kit = com.jrpetty.mcassistant.entity.Trades.kit(k);
+                boolean swarm = k.countCarried(com.jrpetty.mcassistant.entity.Trades::isSwarm) == 1;
+                boolean placed = com.jrpetty.mcassistant.entity.Crafts.now(k, level, v);
+                Kit.log("t40 the beekeeper's kit " + kit + " (a swarm " + swarm + "), set down " + placed + ": " + hives.getAsInt() + " hive");
+                helper.assertTrue(kit && swarm && placed && hives.getAsInt() == 1, "the beekeeper brings a hive with a swarm, and sets it on its meadow");
+                keeper[0] = k;
+                phase[0] = 2;
+                mark[0] = now;
+                return;
+            }
+            if (phase[0] == 2) {
+                int bees = level.getEntitiesOfClass(net.minecraft.world.entity.animal.Bee.class, new AABB(meadow).inflate(16), b -> b.isAlive()).size();
+                if (bees < 2 && now - mark[0] < 100) return;
+                phase[0] = 3;
+                int combBefore = stock.applyAsInt(s -> s.is(Items.HONEYCOMB));
+                boolean more = com.jrpetty.mcassistant.entity.Crafts.now(keeper[0], level, v);
+                int n = hives.getAsInt();
+                Kit.log("t40 the beekeeper: swarm of " + bees + "; a second hive " + more + " (" + n + " hives), honeycomb "
+                    + combBefore + " -> " + stock.applyAsInt(s -> s.is(Items.HONEYCOMB)));
+                helper.assertTrue(bees >= 2, "the swarm comes out of the hive it brought");
+                helper.assertTrue(more && n == 2 && stock.applyAsInt(s -> s.is(Items.HONEYCOMB)) == combBefore - 3,
+                    "a second hive is made of three honeycomb and six planks, not out of thin air");
+                helper.succeed();
+            }
+        });
+    }
+
+    /**
+     * The links between the trades: a farmer plants the cane it brought by the field's water and
+     * cuts it; a rancher milks a cow, walks a wild sheep home on a lead, and — nothing else wild
+     * near — buys a drover's pair; a smelter digs sand off a pond's bed for glass; a guard drinks a
+     * healing potion when hurt; the cook bakes a cake with the milk and sends the buckets back.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 1600, batch = "t41_supply")
+    public static void t41_supply(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(3000);
+        Kit.hold(level, 24000, 12000, 48);
+        Kit.prepare(level, 24000, 12000, 48);
+        BlockPos heart = Kit.surface(level, 24000, 12000);
+        VillageFolkEntity farmer = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(farmer != null, "a village");
+        java.util.UUID village = farmer.ownerId();
+        Villages.Village v = Villages.get(village);
+        Villages.ageForTests(village, Villages.Age.IRON);
+        java.util.function.ToIntFunction<java.util.function.Predicate<ItemStack>> stock =
+            what -> com.jrpetty.mcassistant.entity.Market.stock(level, village, what);
+
+        // Cane by the water.
+        BlockPos field = Kit.surface(level, heart.getX() - 14, heart.getZ() - 14);
+        level.setBlock(field.below(), Blocks.WATER.defaultBlockState(), 3);
+        farmer.assignPlot(com.jrpetty.mcassistant.entity.WorkZone.around(field, 5, com.jrpetty.mcassistant.entity.WorkZone.DEFAULT_DEPTH), "the field");
+        farmer.setJob(StationTask.FARM);
+        boolean cuttings = com.jrpetty.mcassistant.entity.Trades.kit(farmer);
+        int cane = farmer.countCarried(s -> s.is(Items.SUGAR_CANE));
+        String planted = com.jrpetty.mcassistant.entity.Links.cane(farmer, level);
+        BlockPos caneAt = null;
+        for (BlockPos q : BlockPos.betweenClosed(field.offset(-2, -1, -2), field.offset(2, 1, 2))) {
+            if (level.getBlockState(q).is(Blocks.SUGAR_CANE)) { caneAt = q.immutable(); break; }
+        }
+        helper.assertTrue(cuttings && cane == 3 && planted != null && caneAt != null,
+            "the first farmer brings cane cuttings and plants one on the water's edge (" + planted + ")");
+        level.setBlock(caneAt.above(), Blocks.SUGAR_CANE.defaultBlockState(), 2 | 16);
+        level.setBlock(caneAt.above(2), Blocks.SUGAR_CANE.defaultBlockState(), 2 | 16);
+        int before = farmer.countCarried(s -> s.is(Items.SUGAR_CANE));
+        String cut = com.jrpetty.mcassistant.entity.Links.cane(farmer, level);
+        int after = farmer.countCarried(s -> s.is(Items.SUGAR_CANE));
+        Kit.log("t41 the farmer: " + planted + "; then " + cut + " (" + before + " -> " + after + "), the bottom left "
+            + level.getBlockState(caneAt).is(Blocks.SUGAR_CANE));
+        helper.assertTrue(after == before + 2 && level.getBlockState(caneAt).is(Blocks.SUGAR_CANE),
+            "the cane is cut down to its bottom, which grows again");
+
+        // The rancher: a cow milked.
+        BlockPos pen = Kit.surface(level, heart.getX() + 14, heart.getZ() - 14);
+        VillageFolkEntity rancher = VillageFolkSpawnerBlock.raise(level, pen, 0.0F);
+        rancher.joinVillage(village, heart);
+        rancher.assignPlot(com.jrpetty.mcassistant.entity.WorkZone.around(pen, 6, com.jrpetty.mcassistant.entity.WorkZone.DEFAULT_DEPTH), "the pen");
+        rancher.setJob(StationTask.RANCH);
+        boolean leads = com.jrpetty.mcassistant.entity.Trades.kit(rancher);
+        rancher.insertItem(new ItemStack(Items.BUCKET));
+        net.minecraft.world.entity.animal.Cow cow = EntityType.COW.create(level);
+        cow.moveTo(pen.getX() + 2.5, pen.getY(), pen.getZ() + 0.5, 0.0F, 0.0F);
+        level.addFreshEntity(cow);
+        // A wild sheep out in the country, and nothing else wild about.
+        for (net.minecraft.world.entity.animal.Animal a : level.getEntitiesOfClass(net.minecraft.world.entity.animal.Animal.class,
+                new AABB(pen).inflate(64, 32, 64))) {
+            if (a != cow) a.discard();
+        }
+        net.minecraft.world.entity.animal.Sheep sheep = EntityType.SHEEP.create(level);
+        sheep.moveTo(pen.getX() + 0.5, pen.getY(), pen.getZ() + 26.5, 0.0F, 0.0F);
+        level.addFreshEntity(sheep);
+        final long from = helper.getTick();
+        final int[] step = { 0 };
+        final String[] milked = { null };
+        helper.onEachTick(() -> {
+            if (step[0] == 0) {
+                // The animals added this tick are seen from a later one.
+                if (level.getEntitiesOfClass(net.minecraft.world.entity.animal.Cow.class, new AABB(pen).inflate(8)).isEmpty()
+                        && helper.getTick() - from < 100) return;
+                milked[0] = com.jrpetty.mcassistant.entity.Links.milk(rancher, level);
+                helper.assertTrue(milked[0] != null && rancher.countCarried(s -> s.is(Items.MILK_BUCKET)) == 1,
+                    "the rancher milks the cow into its bucket");
+                boolean off = com.jrpetty.mcassistant.entity.Drover.consider(rancher, level);
+                Kit.log("t41 the rancher: leads " + leads + " (" + rancher.countCarried(s -> s.is(Items.LEAD)) + "), " + milked[0]
+                    + "; the pen has a cow and no pair, off for the sheep: " + off);
+                helper.assertTrue(leads && off && com.jrpetty.mcassistant.entity.Drover.busy(rancher),
+                    "with no pair in the pen the rancher takes a lead out for a wild sheep");
+                step[0] = 1;
+                return;
+            }
+            if (step[0] == 1) {
+                double dx = sheep.getX() - (pen.getX() + 0.5), dz = sheep.getZ() - (pen.getZ() + 0.5);
+                boolean home = !com.jrpetty.mcassistant.entity.Drover.busy(rancher) && dx * dx + dz * dz < 6.0 * 6.0;
+                if (!home && helper.getTick() - from < 1200) return;
+                Kit.log("t41 the sheep after " + (helper.getTick() - from) + " ticks: " + Math.round(Math.sqrt(dx * dx + dz * dz))
+                    + " blocks from the pen, leashed " + sheep.isLeashed() + ", the rancher's leads " + rancher.countCarried(s -> s.is(Items.LEAD))
+                    + ", " + rancher.debugLine());
+                helper.assertTrue(home && !sheep.isLeashed(), "the rancher walks the wild sheep home on the lead and lets it off in the pen");
+                helper.assertTrue(rancher.countCarried(s -> s.is(Items.LEAD)) == 2, "and keeps its lead");
+                // Nothing else wild near: the drover's pair.
+                for (net.minecraft.world.entity.animal.Animal a : level.getEntitiesOfClass(net.minecraft.world.entity.animal.Animal.class,
+                        new AABB(pen).inflate(64, 32, 64))) {
+                    if (a != cow && a != sheep) a.discard();
+                }
+                boolean bought = com.jrpetty.mcassistant.entity.Drover.consider(rancher, level);
+                step[0] = 2;
+                int sheepNow = level.getEntitiesOfClass(net.minecraft.world.entity.animal.Sheep.class, new AABB(pen).inflate(10)).size();
+                Kit.log("t41 nothing wild left: the drover's pair " + bought + "; sheep by the pen " + sheepNow);
+                helper.assertTrue(bought, "with nothing wild for fifty blocks the village buys a drover's pair, once");
+                helper.assertTrue(!com.jrpetty.mcassistant.entity.Drover.consider(rancher, level), "and only once");
+                rest41(helper, level, village, v, heart, stock, rancher);
+            }
+        });
+    }
+
+    /** t41 after the pen: sand for glass, a guard's potion, and a cake. */
+    private static void rest41(GameTestHelper helper, ServerLevel level, java.util.UUID village, Villages.Village v, BlockPos heart,
+                               java.util.function.ToIntFunction<java.util.function.Predicate<ItemStack>> stock, VillageFolkEntity rancher) {
+        // A pond with a sandy bed, six blocks out.
+        for (int dz = -1; dz <= 1; dz++) {
+            BlockPos top = Kit.surface(level, heart.getX() + 6, heart.getZ() + dz);
+            level.setBlock(top.below(2), Blocks.SAND.defaultBlockState(), 3);
+            level.setBlock(top.below(), Blocks.WATER.defaultBlockState(), 3);
+        }
+        VillageFolkEntity smelter = VillageFolkSpawnerBlock.raise(level, heart.offset(2, 0, -2), 0.0F);
+        smelter.joinVillage(village, heart);
+        smelter.setJob(StationTask.SMELT);
+        String dug = com.jrpetty.mcassistant.entity.Links.sand(smelter, level);
+        int sand = smelter.countCarried(s -> s.is(Items.SAND));
+        Kit.log("t41 the smelter: " + dug + ", carrying " + sand);
+        helper.assertTrue(dug != null && sand >= 1, "the smelter digs sand off the pond's bed for glass");
+
+        // A guard, hurt, with the brewer's healing.
+        VillageFolkEntity guard = VillageFolkSpawnerBlock.raise(level, heart.offset(-2, 0, 2), 0.0F);
+        guard.joinVillage(village, heart);
+        guard.setJob(StationTask.GUARD);
+        guard.insertItem(net.minecraft.world.item.alchemy.PotionContents.createItemStack(Items.POTION,
+            net.minecraft.world.item.alchemy.Potions.HEALING));
+        guard.setHealth(5.0F);
+        boolean drank = com.jrpetty.mcassistant.entity.Links.drinkIfHurt(guard);
+        Kit.log("t41 the guard: drank " + drank + ", health " + guard.getHealth() + ", bottles " + guard.countCarried(s -> s.is(Items.GLASS_BOTTLE)));
+        helper.assertTrue(drank && guard.getHealth() >= 9.0F && guard.countCarried(s -> s.is(Items.GLASS_BOTTLE)) == 1,
+            "a guard badly hurt drinks a healing potion");
+
+        // A cake from the stores, the buckets back.
+        BlockPos chest = Kit.surface(level, heart.getX() - 3, heart.getZ() - 3);
+        level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
+        com.jrpetty.mcassistant.entity.ZoneChests.mark(level, chest);
+        net.minecraft.world.Container box = (net.minecraft.world.Container) level.getBlockEntity(chest);
+        box.setItem(0, new ItemStack(Items.MILK_BUCKET));
+        box.setItem(1, new ItemStack(Items.MILK_BUCKET));
+        box.setItem(2, new ItemStack(Items.MILK_BUCKET));
+        box.setItem(3, new ItemStack(Items.SUGAR_CANE, 2));
+        box.setItem(4, new ItemStack(Items.EGG, 1));
+        box.setItem(5, new ItemStack(Items.WHEAT, 15));
+        box.setItem(6, new ItemStack(Items.BREAD, 12));
+        // Whatever the café is shortest of first (baked potatoes from the founding stores, maybe), then the cake.
+        String baked = null;
+        for (int i = 0; i < 4 && stock.applyAsInt(s -> s.is(Items.CAKE)) == 0; i++) baked = com.jrpetty.mcassistant.entity.Cafe.cook(level, v);
+        int cakes = stock.applyAsInt(s -> s.is(Items.CAKE)), buckets = stock.applyAsInt(s -> s.is(Items.BUCKET));
+        Kit.log("t41 the cook: " + baked + "; cakes " + cakes + ", empty buckets back " + buckets);
+        helper.assertTrue(cakes == 1 && buckets == 3, "the cook bakes a cake with the rancher's milk and sends the buckets back");
         helper.succeed();
     }
 

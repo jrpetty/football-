@@ -1,15 +1,30 @@
 package com.jrpetty.mcassistant.entity;
 
 import com.jrpetty.mcassistant.entity.AssistantEntity.StationTask;
+import com.jrpetty.mcassistant.entity.goal.BuildGoal;
+import com.jrpetty.mcassistant.village.Ledger;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.ItemTags;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.CustomData;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 
 /**
@@ -35,7 +50,7 @@ public final class Trades {
 
     public static Trade of(StationTask t) {
         return switch (t) {
-            case FARM -> new Trade("I till a field by the water, sow it, and bring the harvest in",
+            case FARM -> new Trade("I till a field by the water, sow it, and bring the harvest in; there's sugar cane on the ditch and a melon or two",
                 List.of(need("a hoe", s -> s.is(ItemTags.HOES), 1, "the smith")),
                 List.of(need("seed", s -> s.is(Items.WHEAT_SEEDS) || s.is(Items.CARROT) || s.is(Items.POTATO), 8, "last harvest")),
                 "wheat, carrots, potatoes, sugar cane and melons go to the stores, for the larder, the café and the brewer");
@@ -48,8 +63,10 @@ public final class Trades {
                     need("torches", s -> s.is(Items.TORCH), 8, "coal and sticks")),
                 List.of(),
                 "stone for the builders; coal, iron and gold for the smelter; lapis for the enchanter; diamonds and obsidian for the ages");
-            case RANCH -> new Trade("I keep the animals in the pen: feed them, breed them, shear the sheep and milk the cows",
-                List.of(need("shears", s -> s.is(Items.SHEARS), 1, "the smith"), need("a bucket", s -> s.is(Items.BUCKET), 1, "the smith")),
+            case RANCH -> new Trade("I keep the animals in the pen: feed them, breed them, shear the sheep and milk the cows."
+                    + " If the pen has no pair, I take a lead out and walk a wild one home",
+                List.of(need("shears", s -> s.is(Items.SHEARS), 1, "the smith"), need("a bucket", s -> s.is(Items.BUCKET), 1, "the smith"),
+                    need("a lead", s -> s.is(Items.LEAD), 0, "slime and string")),
                 List.of(need("wheat to feed them", s -> s.is(Items.WHEAT), 8, "the farmers")),
                 "wool for the tailor, leather for the enchanter's books, feathers for the arrows, eggs and milk for the café, and meat");
             case GUARD -> new Trade("I keep watch: walk the streets by day, stand on the wall when the bell rings",
@@ -60,7 +77,8 @@ public final class Trades {
             case SMELT -> new Trade("I keep the furnaces going in the smeltery",
                 List.of(),
                 List.of(need("fuel", s -> s.is(Items.COAL) || s.is(Items.CHARCOAL) || s.is(ItemTags.LOGS), 8, "the miners and the woodcutters"),
-                    need("raw iron", s -> s.is(Items.RAW_IRON), 3, "the miners"), need("sand", s -> s.is(Items.SAND), 4, "the diggers")),
+                    need("raw iron", s -> s.is(Items.RAW_IRON), 3, "the miners"),
+                    need("sand", s -> s.is(Items.SAND) || s.is(Items.RED_SAND) || s.is(Items.GLASS), 4, "the river bed — I dig it myself")),
                 "iron for the smith, gold for the coin and the brewer, glass for the windows and the brewer's bottles");
             case FISH -> new Trade("I fish off the jetty, or the bank till there's a jetty",
                 List.of(need("a fishing rod", s -> s.is(Items.FISHING_ROD), 1, "string and sticks")),
@@ -74,31 +92,39 @@ public final class Trades {
                 List.of(),
                 List.of(need("iron", s -> s.is(Items.IRON_INGOT), 8, "the smelter"),
                     need("string", s -> s.is(Items.STRING), 3, "the tailor"),
-                    need("feathers or flint", s -> s.is(Items.FEATHER) || s.is(Items.FLINT), 4, "the rancher and the diggers")),
+                    need("feathers", s -> s.is(Items.FEATHER), 4, "the rancher's hens"),
+                    need("flint, or gravel to knap it from", s -> s.is(Items.FLINT) || s.is(Items.GRAVEL), 3, "the miners")),
                 "picks, axes, hoes, shears and buckets for the trades, blades, bows, arrows and armour for the watch");
             case TAILOR -> new Trade("I weave at the loom in the workshop",
                 List.of(need("a loom", s -> s.is(Items.LOOM), 0, "string and planks")),
                 List.of(need("wool", s -> s.is(ItemTags.WOOL), 6, "the rancher")),
                 "beds for the houses, string for the smith and the fishers, rugs and banners");
-            case BEEKEEP -> new Trade("I keep hives on a meadow by the flower beds, and take the honey when they're full",
+            case BEEKEEP -> new Trade("I keep hives on a meadow among the flowers. A full hive gives three comb to the shears or"
+                    + " a bottle of honey; three comb and six planks make a new hive, and two bees fed a flower each make a third",
                 List.of(need("shears", s -> s.is(Items.SHEARS), 1, "the smith")),
-                List.of(need("glass bottles", s -> s.is(Items.GLASS_BOTTLE) || s.is(Items.GLASS), 3, "the smelter's glass")),
-                "honey for the café and the shop, and honeycomb for new hives and candles");
-            case BREW -> new Trade("I brew at the brewing stand: nether wart from my own patch, then whatever makes the potion",
+                List.of(need("glass bottles", s -> s.is(Items.GLASS_BOTTLE) || s.is(Items.GLASS), 3, "the smelter's glass"),
+                    need("flowers, or bones for bone meal", s -> s.is(ItemTags.SMALL_FLOWERS) || s.is(Items.BONE) || s.is(Items.BONE_MEAL), 1,
+                        "the meadow, the watch's bones, or you")),
+                "honey for the café and the shop, and honeycomb for new hives");
+            case BREW -> new Trade("I brew at the brewing stand, fired with blaze powder: three bottles of water and a nether wart"
+                    + " from my own patch make awkward potions, then a glistering melon makes healing, sugar swiftness, a pufferfish"
+                    + " water breathing",
                 List.of(),
-                List.of(need("blaze powder for the stand", s -> s.is(Items.BLAZE_POWDER), 1, "my own stock"),
-                    need("nether wart", s -> s.is(Items.NETHER_WART), 3, "my wart patch"),
+                List.of(need("blaze powder for the stand", s -> s.is(Items.BLAZE_POWDER), 1, "the Nether — I brought a pouch"),
+                    need("nether wart", s -> s.is(Items.NETHER_WART), 1, "my wart patch"),
                     need("glass bottles", s -> s.is(Items.GLASS_BOTTLE) || s.is(Items.GLASS), 3, "the smelter's glass"),
-                    need("melon and gold, or sugar, or a pufferfish", s -> s.is(Items.MELON_SLICE) || s.is(Items.SUGAR)
-                        || s.is(Items.SUGAR_CANE) || s.is(Items.PUFFERFISH) || s.is(Items.GOLDEN_CARROT), 1, "the farmers and the fishers")),
-                "healing for the watch, and swiftness, night vision and water breathing for the shop");
-            case ENCHANT -> new Trade("I bind books and enchant the village's best tools at the library's table",
+                    need("melon and gold, sugar cane, or a pufferfish", s -> s.is(Items.MELON_SLICE) || s.is(Items.GLISTERING_MELON_SLICE)
+                        || s.is(Items.SUGAR) || s.is(Items.SUGAR_CANE) || s.is(Items.PUFFERFISH) || s.is(Items.GOLDEN_CARROT), 1,
+                        "the farmers and the fishers")),
+                "healing for the watch (they carry one on the wall), and swiftness, night vision and water breathing for the shop");
+            case ENCHANT -> new Trade("I bind books and enchant the village's best tools at the enchanting table; the more"
+                    + " bookshelves round it, the stronger the enchantment",
                 List.of(),
                 List.of(need("lapis", s -> s.is(Items.LAPIS_LAZULI), 3, "the miners"),
-                    need("sugar cane or paper", s -> s.is(Items.SUGAR_CANE) || s.is(Items.PAPER), 3, "the farmers"),
+                    need("sugar cane or paper", s -> s.is(Items.SUGAR_CANE) || s.is(Items.PAPER), 3, "the farmers' cane"),
                     need("leather", s -> s.is(Items.LEATHER), 1, "the rancher and the fishers")),
                 "picks that dig faster, blades that cut deeper, armour that holds");
-            case COOK -> new Trade("I cook at the café: cider, honey tea, pies and bread for the counter",
+            case COOK -> new Trade("I cook at the café: cider, honey tea, pies, cakes and bread for the counter",
                 List.of(),
                 List.of(need("apples", s -> s.is(Items.APPLE), 2, "the woodcutters"),
                     need("wheat or bread", s -> s.is(Items.WHEAT) || s.is(Items.BREAD), 3, "the farmers"),
@@ -135,6 +161,17 @@ public final class Trades {
             if (building != null && !Villages.hasBuilt(village, building)) {
                 lacking.add(Villages.spoken(building) + " to work in");
             }
+            Villages.Village v = Villages.get(village);
+            if (v != null) {
+                if (t == StationTask.BREW && !has(level, v, t, Items.BREWING_STAND, Blocks.BREWING_STAND)) lacking.add(0, "a brewing stand (its blaze rod is from the Nether)");
+                if (t == StationTask.ENCHANT && !has(level, v, t, Items.ENCHANTING_TABLE, Blocks.ENCHANTING_TABLE)) lacking.add(0, "an enchanting table");
+                if (t == StationTask.BEEKEEP && !has(level, v, t, Items.BEEHIVE, Blocks.BEEHIVE)) lacking.add(0, "a hive");
+                if (t == StationTask.RANCH && f.workZone() != null) {
+                    boolean pair = false;
+                    for (int n : Drover.herd(level, f.workZone().center(), 12).values()) if (n >= 2) pair = true;
+                    if (!pair) lacking.add(0, "a pair of animals to breed (I'll fetch wild ones on a lead)");
+                }
+            }
         }
         sb.append("What I make: ").append(trade.output()).append(". ");
         if (lacking.isEmpty()) sb.append("I've everything I need, thank you.");
@@ -170,5 +207,271 @@ public final class Trades {
         if (!trades.isEmpty()) sb.append("And ").append(String.join("; ", trades)).append(". ");
         sb.append("Bring any of it to the storehouse stalls and the village will pay for it — or look at the quest board.");
         return sb.toString();
+    }
+
+    // ------------------------------------------------------------------ starter kits
+
+    /** The tag on the hive a beekeeper brings: there is a swarm in it, let out when it is set down. */
+    public static final String SWARM = "mca_swarm";
+
+    /** When each village was last given each trade's kit (game day), in memory; the ledger keeps it too. */
+    private static final Map<UUID, Map<String, Long>> GIVEN = new ConcurrentHashMap<>();
+
+    public static void resetForTests() { GIVEN.clear(); }
+
+    /**
+     * What the first of a trade brings with it, because nobody in a young village could come by
+     * it any other way. Only the things that are truly hard to get:
+     * <ul>
+     * <li>the beekeeper a hive with a swarm in it (a hive is made of honeycomb, and honeycomb
+     *     only comes out of a hive; wild nests are rare and need shears or silk touch);</li>
+     * <li>the brewer a brewing stand, blaze powder to fire it and nether wart with soul sand to
+     *     grow more (the blaze rod, the wart and the sand are all from the Nether);</li>
+     * <li>the enchanter an enchanting table (diamonds, obsidian and a book) and some lapis;</li>
+     * <li>the blacksmith an old anvil (thirty-one iron is more than a young smithy has);</li>
+     * <li>the tailor a loom, if the village has no string to make one;</li>
+     * <li>the rancher two leads, to bring wild animals home (slime is hard to come by);</li>
+     * <li>the first farmer sugar cane cuttings and melon and pumpkin seed, if nobody has any.</li>
+     * </ul>
+     * Everything else a trade needs, the village makes: see {@link #of}.
+     */
+    public static List<ItemStack> kitFor(ServerLevel level, Villages.Village v, StationTask t) {
+        List<ItemStack> kit = new ArrayList<>();
+        UUID id = v.id();
+        switch (t) {
+            case FARM -> {
+                if (!anywhere(level, id, s -> s.is(Items.SUGAR_CANE))) kit.add(new ItemStack(Items.SUGAR_CANE, 3));
+                if (!anywhere(level, id, s -> s.is(Items.MELON_SEEDS) || s.is(Items.MELON_SLICE))) kit.add(new ItemStack(Items.MELON_SEEDS, 2));
+                if (!anywhere(level, id, s -> s.is(Items.PUMPKIN_SEEDS) || s.is(Items.PUMPKIN))) kit.add(new ItemStack(Items.PUMPKIN_SEEDS, 2));
+            }
+            case RANCH -> {
+                if (!anywhere(level, id, s -> s.is(Items.LEAD))) kit.add(new ItemStack(Items.LEAD, 2));
+            }
+            case BEEKEEP -> {
+                if (!has(level, v, t, Items.BEEHIVE, Blocks.BEEHIVE)) kit.add(swarm());
+            }
+            case BREW -> {
+                if (!has(level, v, t, Items.BREWING_STAND, Blocks.BREWING_STAND)) kit.add(new ItemStack(Items.BREWING_STAND));
+                kit.add(new ItemStack(Items.BLAZE_POWDER, 8));
+                kit.add(new ItemStack(Items.NETHER_WART, 4));
+                kit.add(new ItemStack(Items.SOUL_SAND, 4));
+            }
+            case ENCHANT -> {
+                if (!has(level, v, t, Items.ENCHANTING_TABLE, Blocks.ENCHANTING_TABLE)) kit.add(new ItemStack(Items.ENCHANTING_TABLE));
+                kit.add(new ItemStack(Items.LAPIS_LAZULI, 6));
+            }
+            case SMITH -> {
+                if (!has(level, v, t, Items.ANVIL, Blocks.ANVIL) && !has(level, v, t, Items.CHIPPED_ANVIL, Blocks.CHIPPED_ANVIL)
+                        && !has(level, v, t, Items.DAMAGED_ANVIL, Blocks.DAMAGED_ANVIL)
+                        && Crafts.stock(level, v, s -> s.is(Items.IRON_INGOT)) < 31) {
+                    kit.add(new ItemStack(Items.CHIPPED_ANVIL));
+                }
+            }
+            case TAILOR -> {
+                if (!has(level, v, t, Items.LOOM, Blocks.LOOM) && Crafts.stock(level, v, s -> s.is(Items.STRING)) < 2) {
+                    kit.add(new ItemStack(Items.LOOM));
+                }
+            }
+            default -> { }
+        }
+        return kit;
+    }
+
+    /** The hive the beekeeper brings, with its swarm. */
+    public static ItemStack swarm() {
+        ItemStack hive = new ItemStack(Items.BEEHIVE);
+        CompoundTag tag = new CompoundTag();
+        tag.putInt(SWARM, 2);
+        hive.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+        return hive;
+    }
+
+    public static boolean isSwarm(ItemStack s) {
+        return s.is(Items.BEEHIVE) && s.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag().contains(SWARM);
+    }
+
+    /**
+     * Give this folk its trade's kit, if its village has not had it yet (or has lost what it
+     * was given: nobody carries it, the stores have none and it stands nowhere, three days on).
+     * Returns whether anything was given.
+     */
+    public static boolean kit(VillageFolkEntity f) {
+        UUID village = f.ownerId();
+        StationTask t = f.stationTask();
+        if (village == null || t == StationTask.NONE || !(f.level() instanceof ServerLevel level)) return false;
+        Villages.Village v = Villages.get(village);
+        if (v == null) return false;
+        long today = level.getDayTime() / 24000L;
+        Long given = given(village, t);
+        if (given != null && (today - given < 3 || !lost(level, v, t))) return false;
+        List<ItemStack> kit = kitFor(level, v, t);
+        GIVEN.computeIfAbsent(village, k -> new ConcurrentHashMap<>()).put(t.name(), today);
+        Ledger.note(village, "kit." + t.name(), Long.toString(today));
+        if (kit.isEmpty()) return false;
+        List<String> words = new ArrayList<>();
+        for (ItemStack s : kit) {
+            words.add(isSwarm(s) ? "a hive with a swarm in it" : Crafts.named(s));
+            ItemStack left = f.insertItem(s.copy());
+            if (!left.isEmpty()) Crafts.store(level, v, left);
+        }
+        String what = String.join(", ", words);
+        f.brain("brought " + what);
+        Villages.tell(village, today, f.displayNameCap() + " brought " + what + " for the " + t.title.toLowerCase(Locale.ROOT)
+            + "'s work: things the village could not have made.");
+        FolkTalk.speak(f, broughtLine(t));
+        return true;
+    }
+
+    @Nullable
+    private static Long given(UUID village, StationTask t) {
+        Long day = GIVEN.getOrDefault(village, Map.of()).get(t.name());
+        if (day != null) return day;
+        String note = Ledger.note(village, "kit." + t.name());
+        if (note == null || note.isEmpty()) return null;
+        try {
+            day = Long.parseLong(note);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+        GIVEN.computeIfAbsent(village, k -> new ConcurrentHashMap<>()).put(t.name(), day);
+        return day;
+    }
+
+    /** Has the village lost the one thing it could not make again (the hive, the stand, the table...)? */
+    private static boolean lost(ServerLevel level, Villages.Village v, StationTask t) {
+        return switch (t) {
+            case BEEKEEP -> !has(level, v, t, Items.BEEHIVE, Blocks.BEEHIVE);
+            case BREW -> !has(level, v, t, Items.BREWING_STAND, Blocks.BREWING_STAND);
+            case ENCHANT -> !has(level, v, t, Items.ENCHANTING_TABLE, Blocks.ENCHANTING_TABLE);
+            default -> false;
+        };
+    }
+
+    private static String broughtLine(StationTask t) {
+        return switch (t) {
+            case BEEKEEP -> "I've brought a hive with me, swarm and all. Mind the bees!";
+            case BREW -> "A brewing stand, a pouch of blaze powder and a few warts to plant. That's a brewer's whole fortune.";
+            case ENCHANT -> "I brought my old enchanting table. It took three of us to carry it.";
+            case SMITH -> "Grandfather's anvil. Chipped, but it rings true.";
+            case TAILOR -> "My loom came with me. I couldn't work without it.";
+            case RANCH -> "Two good leads. Now to find us some animals.";
+            case FARM -> "A few cane cuttings and melon and pumpkin seed, from the old country.";
+            default -> "I've brought what I need.";
+        };
+    }
+
+    /** Anybody in the village carrying it, or the stores holding it? */
+    static boolean anywhere(ServerLevel level, UUID village, Predicate<ItemStack> what) {
+        if (Market.stock(level, village, what) > 0) return true;
+        for (AssistantEntity a : Villages.folkOf(village)) if (a.countCarried(what) > 0) return true;
+        return false;
+    }
+
+    /** Does the village have one of these: carried, in the stores, or standing where a hand of
+     *  this trade works (by its post, or in its building)? */
+    static boolean has(ServerLevel level, Villages.Village v, StationTask t, Item item, Block block) {
+        if (anywhere(level, v.id(), s -> s.is(item))) return true;
+        String building = VillageFolkEntity.buildingFor(t);
+        if (building != null) {
+            BlockPos at = Villages.builtAt(v.id(), building);
+            if (at != null && find(level, at, 8, block) != null) return true;
+        }
+        for (AssistantEntity a : Villages.folkOf(v.id())) {
+            if (a.stationTask() != t) continue;
+            BlockPos c = a.workZone() != null ? a.workZone().center() : a.blockPosition();
+            if (find(level, c, 8, block) != null) return true;
+        }
+        return false;
+    }
+
+    /** The nearest block of a kind within r of here (and a few up and down), on loaded ground only. */
+    @Nullable
+    static BlockPos find(ServerLevel level, BlockPos c, int r, Block block) {
+        if (!Land.areaLoaded(level, c, r)) return null;
+        BlockPos best = null;
+        double bestD = Double.MAX_VALUE;
+        for (BlockPos p : BlockPos.betweenClosed(c.offset(-r, -3, -r), c.offset(r, 4, r))) {
+            net.minecraft.world.level.block.state.BlockState st = level.getBlockState(p);
+            if (!st.is(block) && !(block == Blocks.ANVIL && st.is(net.minecraft.tags.BlockTags.ANVIL))) continue;
+            double d = p.distSqr(c);
+            if (d < bestD) { bestD = d; best = p.immutable(); }
+        }
+        return best;
+    }
+
+    /** What a hand of this trade keeps in its pack and never banks: its kit, and its workstation
+     *  until it is set down. */
+    public static int keeps(StationTask t, ItemStack s) {
+        return switch (t) {
+            case BEEKEEP -> s.is(Items.BEEHIVE) ? 4 : (s.is(Items.SHEARS) ? 1 : 0);
+            case BREW -> s.is(Items.BREWING_STAND) || s.is(Items.BLAZE_POWDER) || s.is(Items.NETHER_WART)
+                || s.is(Items.SOUL_SAND) ? 64 : 0;
+            case ENCHANT -> s.is(Items.ENCHANTING_TABLE) ? 1 : (s.is(Items.LAPIS_LAZULI) ? 64 : 0);
+            case SMITH -> s.is(ItemTags.ANVIL) ? 1 : 0;
+            case TAILOR -> s.is(Items.LOOM) ? 1 : 0;
+            case RANCH -> s.is(Items.LEAD) ? 4 : (s.is(Items.BUCKET) ? 1 : 0);
+            case FARM -> s.is(Items.SUGAR_CANE) ? 6 : ((s.is(Items.MELON_SEEDS) || s.is(Items.PUMPKIN_SEEDS)) ? 4 : 0);
+            default -> 0;
+        };
+    }
+
+    // ------------------------------------------------------------------ workstations
+
+    /**
+     * Where a craft's workstation stands: in its building, on the very spot the drawing has it,
+     * or by its post while there is no building yet. If it stands nowhere, the hand sets down
+     * the one it carries (or one from the stores). Null if there is none to be had.
+     */
+    @Nullable
+    public static BlockPos workstation(VillageFolkEntity f, ServerLevel level, Villages.Village v,
+                                       Block block, Predicate<ItemStack> item, BuildGoal.Part part) {
+        String building = VillageFolkEntity.buildingFor(f.stationTask());
+        Ledger.Building b = null;
+        if (building != null) {
+            for (Ledger.Building k : Ledger.buildings(v.id())) if (k.structure().equals(building)) { b = k; break; }
+        }
+        BlockPos around = b != null ? b.anchor() : (f.workZone() != null ? f.workZone().center() : f.blockPosition());
+        if (!Land.areaLoaded(level, around, 10)) return null;
+        BlockPos found = find(level, around, 8, block);
+        if (found != null) return found;
+        ItemStack carried = ItemStack.EMPTY;
+        for (ItemStack s : f.getInventoryItems()) if (!s.isEmpty() && item.test(s)) { carried = s; break; }
+        Block placing = carried.isEmpty() ? block : Block.byItem(carried.getItem());
+        if (placing == Blocks.AIR) placing = block;
+        BlockPos at = null;
+        if (b != null) {
+            for (BuildGoal.Placement p : BuildGoal.plan(b.structure(), b.anchor(), b.facing(), 13)) {
+                if (p.part() == part && level.getBlockState(p.pos()).isAir()) { at = p.pos(); break; }
+            }
+        }
+        if (at == null) at = floorSpot(level, around, 3);
+        if (at == null) return null;
+        if (!carried.isEmpty()) carried.shrink(1);
+        else if (!Crafts.take(level, v, item, 1)) return null;
+        level.setBlock(at, placing.defaultBlockState(), 3);
+        f.swing(InteractionHand.MAIN_HAND);
+        level.playSound(null, at, SoundEvents.WOOD_PLACE, SoundSource.BLOCKS, 1.0F, 1.0F);
+        f.brain("set the " + placing.getName().getString().toLowerCase(Locale.ROOT) + " down");
+        return at;
+    }
+
+    /** A free spot on the floor near here: air with room above and something solid under it. */
+    @Nullable
+    static BlockPos floorSpot(ServerLevel level, BlockPos c, int r) {
+        for (int d = 1; d <= r; d++) {
+            for (int dy : new int[]{ 0, 1, -1, 2, -2 }) {
+                for (int dx = -d; dx <= d; dx++) {
+                    for (int dz = -d; dz <= d; dz++) {
+                        if (Math.max(Math.abs(dx), Math.abs(dz)) != d) continue;
+                        BlockPos p = c.offset(dx, dy, dz);
+                        if (level.getBlockState(p).isAir() && level.getBlockState(p.above()).isAir()
+                                && level.getBlockState(p.below()).isFaceSturdy(level, p.below(), net.minecraft.core.Direction.UP)) {
+                            return p;
+                        }
+                    }
+                }
+            }
+        }
+        return null;
     }
 }

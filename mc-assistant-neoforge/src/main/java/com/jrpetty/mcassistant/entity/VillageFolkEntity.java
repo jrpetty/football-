@@ -289,6 +289,13 @@ public class VillageFolkEntity extends AssistantEntity {
             Caravans.drive(this, road);
             return;
         }
+        // Out with a lead, fetching a wild animal home to the pen (Drover): that is the work just now.
+        if (Drover.busy(this) && !withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel herding) {
+            if (tickCount % 10 == 0) Drover.drive(this, herding);
+            return;
+        }
+        // A guard badly hurt drinks the brewer's healing, if it carries one.
+        if (tickCount % 20 == 3 && stationTask() == StationTask.GUARD) Links.drinkIfHurt(this);
         if (tickCount - agendaTick < 100) return;   // folk think slowly, on purpose
         agendaTick = tickCount;
         flyTheColours();
@@ -1809,6 +1816,13 @@ public class VillageFolkEntity extends AssistantEntity {
     }
 
     private int kitTick = -100000;
+    private int supplyTick = -100000;
+
+    /** The kit of its trade, kept in its pack (Trades.keeps). */
+    @Override
+    protected int kitReserve(net.minecraft.world.item.ItemStack s) {
+        return Trades.keeps(stationTask(), s);
+    }
 
     /**
      * The trade's own supplies, when they run low: a farmer's seed, a woodcutter's saplings,
@@ -1950,6 +1964,13 @@ public class VillageFolkEntity extends AssistantEntity {
         stoneToolFromTheStores();                      // no more wooden tools once there is stone
         bucketFromTheStores();                         // a farmer's water, when the village is hungry
         obsidianFromLava();                            // the gateway's obsidian, made where the lava is
+        // The trade's kit, if the village has not had it (the hive, the brewing stand...), and the
+        // links between the trades nothing else keeps up: cane, milk, sand, the pen's animals.
+        if (tickCount - supplyTick >= 600 && level() instanceof net.minecraft.server.level.ServerLevel supplies) {
+            supplyTick = tickCount;
+            Trades.kit(this);
+            if (Links.tend(this, supplies)) return;
+        }
         // The mine's depth too: the next run digs at the new one. Behind the busy check
         // it never ran, and every mine staked in the Wood Age stayed at forty-odd for the
         // rest of the game — copper and coal by the hundred, iron one or two a day.
@@ -3304,7 +3325,7 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected boolean onBreak() {
         // On the road with a caravan, its own work waits until it is home.
-        return trip != null || breakNow();
+        return trip != null || Drover.busy(this) || breakNow();
     }
 
     /** The caravan this folk is taking to a colony and back, or null (Caravans). */
@@ -4177,6 +4198,11 @@ public class VillageFolkEntity extends AssistantEntity {
         shearsCheckTick = tickCount;
         if (Villages.ageOf(ownerId()).ordinal() < Villages.Age.STONE.ordinal()) return;
         if (countCarried(st -> st.is(net.minecraft.world.item.Items.SHEARS)) > 0) return;
+        // The smith's shears first, if the stores have a pair; else made from the stores' iron.
+        if (drawFrom(villageCentre, st -> st.is(net.minecraft.world.item.Items.SHEARS), 1, buildStoresRadius()) > 0) {
+            brain("shears from the stores");
+            return;
+        }
         if (ironFromTheStores(2)) {
             insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.SHEARS));
             brain("shears made from the stores");

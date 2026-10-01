@@ -479,7 +479,9 @@ public class FarmGoal extends Goal {
         // village's larder is the point, and a carrot is worth six ears of wheat.
         if (seed == Items.CARROT || seed == Items.POTATO) return lvl >= 10 || assistant.isSettler();
         if (seed == Items.BEETROOT_SEEDS) return lvl >= 20;
-        return lvl >= 30;   // melon and pumpkin stems
+        // A village's farmer plants the melon and pumpkin seed it brought (Trades.kit): the café
+        // and the brewer want them, and nobody else in the village has any.
+        return lvl >= 30 || assistant.isSettler();   // melon and pumpkin stems
     }
 
     // There is deliberately no rank gate on HARVESTING. Rank gates husbandry,

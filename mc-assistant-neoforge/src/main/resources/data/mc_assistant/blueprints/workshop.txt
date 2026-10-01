@@ -1,5 +1,5 @@
-# The workshop: a long timber workroom with a wide door to the street, two
-# benches, a furnace, the stores of the trade, barrels and a hayloft above.
+# The workshop: a long timber workroom with a wide door to the street, a
+# bench and the tailor's loom, a furnace, the stores of the trade, barrels and a hayloft above.
 # Rows run from the back of the building (top) to the front (bottom, the door).
 name workshop
 layer -1
@@ -15,7 +15,7 @@ layer -1
 layer 0
 .........
 .LwwwwwL.
-.wTTUCQw.
+.wTNUCQw.
 .w....Qw.
 .w.....w.
 .w.....w.

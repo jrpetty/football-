@@ -445,6 +445,14 @@ public final class Raids {
             ItemStack left = g.insertItem(new ItemStack(Items.BOW));
             if (!left.isEmpty()) g.spawnAtLocation(left);
         }
+        // A healing potion from the brewer, drunk if the fight goes badly (Links.drinkIfHurt).
+        if (g.countCarried(Links::healing) == 0) {
+            ItemStack potion = Crafts.takeOne(level, v, Links::healing);
+            if (!potion.isEmpty()) {
+                ItemStack left = g.insertItem(potion);
+                if (!left.isEmpty()) g.spawnAtLocation(left);
+            }
+        }
         int arrows = g.countCarried(s -> s.is(Items.ARROW));
         for (int want : new int[]{ 32, 16, 8 }) {
             if (arrows >= 16) break;

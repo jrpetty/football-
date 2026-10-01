@@ -137,6 +137,10 @@ public final class Cafe {
             new Need(s -> s.is(Items.SUGAR) || s.is(Items.SUGAR_CANE), 1, 0), of(Items.EGG, 1, 0)), false,
             new ItemStack(Items.PUMPKIN_PIE)));
         m.add(new Recipe(is(Items.BREAD), 12, List.of(of(Items.WHEAT, 3, 12)), false, new ItemStack(Items.BREAD)));
+        // A cake: the rancher's milk and eggs, the farmers' wheat and cane (the buckets go back).
+        m.add(new Recipe(is(Items.CAKE), 2, List.of(of(Items.MILK_BUCKET, 3, 0),
+            new Need(s -> s.is(Items.SUGAR) || s.is(Items.SUGAR_CANE), 2, 0), of(Items.EGG, 1, 0), of(Items.WHEAT, 3, 12)), false,
+            new ItemStack(Items.CAKE)));
         return m;
     }
 
@@ -174,6 +178,7 @@ public final class Cafe {
             if (!Crafts.take(level, v, n.what(), n.n())) return null;
         }
         if (best.bottled() && !Crafts.take(level, v, is(Items.GLASS_BOTTLE), 3)) Crafts.take(level, v, is(Items.GLASS), 3);
+        if (best.out().is(Items.CAKE)) Crafts.store(level, v, new ItemStack(Items.BUCKET, 3));   // the milk's buckets, back
         ItemStack out = best.out().copy();
         if (out.getMaxStackSize() == 1) {
             for (int i = 0; i < out.getCount(); i++) Crafts.store(level, v, out.copyWithCount(1));
