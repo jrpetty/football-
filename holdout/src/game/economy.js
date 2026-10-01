@@ -95,7 +95,8 @@ export function dailyNeeds() {
   return { food: food * (1 - kitchenSaving()), water }
 }
 
-// Idle survivors (no job) help build.
+// Idle survivors (no job) help build, or forage when nothing is going up.
+export const FORAGE = { wood: 6, scrap: 4 }
 export function constructSpeed() {
   let sp = 0.35
   for (const s of S.survivors) {
@@ -134,6 +135,10 @@ export function campFlow() {
   const pinfo = power()
   const total = {}
   for (const st of S.stations) for (const [k, v] of Object.entries(stationFlow(st, pinfo))) total[k] = (total[k] || 0) + v
+  if (!S.expanding && !S.fence.building && !S.stations.some((st) => st.building)) {
+    const idle = S.survivors.filter((s) => s.status === 'ok' && !s.job).length
+    for (const [k, v] of Object.entries(FORAGE)) if (idle) total[k] = (total[k] || 0) + v * idle
+  }
   const n = dailyNeeds()
   total.food = (total.food || 0) - n.food
   total.water = (total.water || 0) - n.water
@@ -197,6 +202,12 @@ export function econTick(dt, opts = {}) {
   if (S.expanding) {
     S.expanding.left -= dt * cs
     if (S.expanding.left <= 0) finishExpansion()
+  }
+  // With nothing to build, people without a job forage the yard for
+  // deadwood and junk, so a camp can never run completely dry.
+  if (!S.expanding && !S.fence.building && !S.stations.some((st) => st.building)) {
+    const idle = S.survivors.filter((s) => s.status === 'ok' && !s.job).length
+    if (idle) gain({ wood: (FORAGE.wood * idle * dt) / SEC_PER_DAY, scrap: (FORAGE.scrap * idle * dt) / SEC_PER_DAY })
   }
 
   // ---- stations

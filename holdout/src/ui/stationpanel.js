@@ -10,7 +10,7 @@ import { stationFlow, power, isAutomated, stationRate, solarOutput, kitchenSavin
 import { sfx } from '../core/audio.js'
 import { bus, h, fmt, clamp } from '../core/util.js'
 import { icon } from './icons.js'
-import { costList, resChip, bar, qualityTag, condBar, itemCard, seg, stepper, plural } from './common.js'
+import { costList, resChip, resIcon, bar, qualityTag, condBar, itemCard, seg, stepper, plural } from './common.js'
 
 const CAT_ICON = { living: 'gate', production: 'production', crafting: 'hammer', defense: 'shield' }
 const tabState = {}
@@ -29,6 +29,8 @@ export function renderStation(ui, id) {
     const ws = workerBlock(ui, st)
     if (ws) body.push(ws)
     body.push(...effectBlock(ui, st, pinfo))
+    const chain = chainBlock(st)
+    if (chain) body.push(chain)
     if (D.queue || st.type === 'infirmary') body.push(benchBlock(ui, st))
     if (D.auto) body.push(autoBlock(ui, st, pinfo))
   }
@@ -110,6 +112,76 @@ export function pickWorker(ui, st) {
     ),
     { actions: [h('button.btn.ghost', { onclick: () => close() }, 'Close')] },
   )
+}
+
+// ---------------------------------------------------------------- supply chain
+// What a station takes in and hands on, and which stations sit on either side
+// of it, worked out from the recipe data.
+const ioCache = {}
+function stationIO(type) {
+  if (ioCache[type]) return ioCache[type]
+  const D = STATIONS[type]
+  const ins = new Set()
+  const outs = new Set()
+  const take = (o) => Object.keys(o || {}).forEach((k) => ins.add(k))
+  const give = (o) => Object.keys(o || {}).forEach((k) => outs.add(k))
+  if (D.recipe) {
+    take(D.recipe.in)
+    give(D.recipe.out)
+    give(D.recipe.bonus)
+  }
+  for (const m of Object.values(D.modes || {})) {
+    take(m.in)
+    give(m.out)
+  }
+  if (D.passive) give(D.passive)
+  if (D.burn && !Array.isArray(D.burn)) take(D.burn)
+  if (type === 'generator') ins.add('fuel')
+  if (type === 'turret') ins.add('pammo')
+  for (const r of RECIPES) {
+    if (r.station !== type) continue
+    take(r.in)
+    give(r.out)
+  }
+  take(REPAIR[type])
+  for (const M of Object.values(MODS)) if (M.bench === type) take(M.cost)
+  return (ioCache[type] = { ins: [...ins], outs: [...outs] })
+}
+const ALSO_USED = { food: 'everyone eats', water: 'everyone drinks', meds: 'healing', pammo: 'pistols, SMGs', rammo: 'rifles', shells: 'shotguns', fuel: 'the van', medkit: 'squads on runs', molotov: 'squads on runs', pipebomb: 'squads on runs', noisemaker: 'squads on runs', module: 'automating a station' }
+function resTag(k) {
+  return h('span.ci', { style: { '--c': RES[k].color } }, h('i.ic', { html: resIcon(k) }), RES[k].short || RES[k].name)
+}
+function stationNames(types, extra) {
+  const built = (t) => S.stations.some((x) => x.type === t && x.level > 0)
+  const list = types.sort((a, b) => built(b) - built(a))
+  const shown = list.slice(0, 3).map((t) => h('span' + (built(t) ? '.have' : ''), { 'data-tip': built(t) ? 'Built' : 'Not built yet' }, STATIONS[t].name))
+  const parts = [...shown]
+  if (list.length > 3) parts.push(h('span', `+${list.length - 3} more`))
+  if (extra) parts.push(h('span.use', extra))
+  return h('span.chnames', parts)
+}
+function chainBlock(st) {
+  const D = STATIONS[st.type]
+  if (!['production', 'crafting'].includes(D.cat) && !['kitchen', 'infirmary', 'generator', 'turret'].includes(st.type)) return null
+  const io = stationIO(st.type)
+  if (!io.ins.length && !io.outs.length) return null
+  const types = Object.keys(STATIONS).filter((t) => t !== st.type)
+  const rows = []
+  if (io.ins.length) {
+    rows.push(h('div.chhead', 'Takes'))
+    for (const k of io.ins) {
+      const from = types.filter((t) => stationIO(t).outs.includes(k))
+      rows.push(h('div.chrow', resTag(k), h('i.chdir', '←'), from.length ? stationNames(from, k === 'cloth' || k === 'electronics' || k === 'chemicals' ? 'runs' : null) : h('span.chnames', h('span.use', 'runs and the trader'))))
+    }
+  }
+  if (io.outs.length) {
+    rows.push(h('div.chhead', 'Supplies'))
+    for (const k of io.outs) {
+      const to = types.filter((t) => stationIO(t).ins.includes(k))
+      rows.push(h('div.chrow', resTag(k), h('i.chdir', '→'), to.length || ALSO_USED[k] ? stationNames(to, ALSO_USED[k]) : h('span.chnames', h('span.use', 'the trader'))))
+    }
+  }
+  return h('section.card.chain', h('h3', 'Supply chain', h('small', 'white: built · grey: not yet')), rows)
 }
 
 // ---------------------------------------------------------------- what it does

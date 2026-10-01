@@ -14,7 +14,7 @@ export function renderSurvivor(ui, id) {
   if (!s) return null
   const st = survivorStats(s)
   const job = s.job ? S.stations.find((x) => x.id === s.job) : null
-  const status = s.status === 'mission' ? 'On a supply run' : s.status === 'injured' ? 'Injured · recovering' : job ? STATIONS[job.type].name : 'No job · helps build'
+  const status = s.status === 'mission' ? 'On a supply run' : s.status === 'injured' ? 'Injured · recovering' : job ? STATIONS[job.type].name : 'No job · builds and forages'
   const head = h(
     'div.sheet-head',
     h('img.por.big', { src: ui.game.portrait(s) }),

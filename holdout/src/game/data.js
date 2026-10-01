@@ -21,7 +21,7 @@ export const RES = {
   cloth: { name: 'Cloth', cat: 'materials', color: '#cdb892', sell: 2, desc: 'Fabric for clothing, bandages and armor.' },
   parts: { name: 'Parts', cat: 'materials', color: '#e08a3c', sell: 8, capMul: 0.5, desc: 'Springs, gears and fittings. Made at the Workbench.' },
   electronics: { name: 'Electronics', cat: 'materials', color: '#6fd0c0', sell: 10, capMul: 0.4, desc: 'Circuit boards and wiring for radios, turrets and automation.' },
-  chemicals: { name: 'Chemicals', cat: 'materials', color: '#b4d45a', sell: 6, capMul: 0.5, desc: 'Solvents and reagents for the Chemistry Lab.' },
+  chemicals: { name: 'Chemicals', cat: 'materials', color: '#b4d45a', sell: 6, capMul: 0.5, desc: 'Solvents and reagents. Found on runs, or refined from fuel and scrap at the Chemistry Lab.' },
   gunpowder: { name: 'Gunpowder', cat: 'materials', color: '#7a7a82', sell: 5, capMul: 0.6, desc: 'Made at the Chemistry Lab. The Ammo Press needs it.' },
   fuel: { name: 'Fuel', cat: 'materials', color: '#d2553f', sell: 5, desc: 'Runs the generator and the van. Distilled at the Biofuel Still.' },
   pammo: { name: 'Pistol Ammo', short: '9mm', cat: 'ammo', color: '#d8c24a', sell: 1, capMul: 3, desc: 'For pistols, revolvers and SMGs.' },
@@ -413,9 +413,9 @@ export const RECIPES = [
   { id: 'military', station: 'tailor', lvl: 3, item: 'military', in: { cloth: 36, metal: 48, parts: 22, electronics: 2 }, time: 120, cat: 'Armor' },
 
   // Chemistry Lab
+  { id: 'chemicals', station: 'chemlab', lvl: 1, out: { chemicals: 1 }, in: { fuel: 1, scrap: 2 }, time: 40, cat: 'Materials' },
   { id: 'gunpowder', station: 'chemlab', lvl: 1, out: { gunpowder: 3 }, in: { chemicals: 2, wood: 1 }, time: 30, cat: 'Materials' },
   { id: 'molotov', station: 'chemlab', lvl: 1, out: { molotov: 1 }, in: { fuel: 2, cloth: 1 }, time: 20, cat: 'Throwables' },
-  { id: 'chemicals', station: 'chemlab', lvl: 2, out: { chemicals: 1 }, in: { fuel: 1, scrap: 2 }, time: 40, cat: 'Materials' },
   { id: 'pipebomb', station: 'chemlab', lvl: 2, out: { pipebomb: 1 }, in: { metal: 2, gunpowder: 4, electronics: 1 }, time: 45, cat: 'Throwables' },
 
   // Electronics Bench
