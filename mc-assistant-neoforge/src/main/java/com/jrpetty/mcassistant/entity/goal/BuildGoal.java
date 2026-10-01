@@ -338,10 +338,13 @@ public class BuildGoal extends Goal {
         }
         // What is in the way comes down first; then bottom-up, so nothing floats while we work;
         // and the lanterns, flowers and rugs last, when what they hang from or stand on is there.
+        // Within a layer, row by row and back along the next (a big building walked cell by
+        // cell in order of distance had the builder crossing it and back for every block).
         this.plan.sort(java.util.Comparator
             .comparingInt((Placement p) -> p.part() == Part.CLEAR ? 0 : finishing(p) ? 2 : 1)
             .thenComparingInt((Placement p) -> p.pos().getY())
-            .thenComparingDouble(p -> p.pos().distSqr(assistant.feetPos())));
+            .thenComparingInt((Placement p) -> p.pos().getZ())
+            .thenComparingInt(p -> (p.pos().getZ() & 1) == 0 ? p.pos().getX() : -p.pos().getX()));
 
         // Tally what's still needed vs what we carry — no cheating: every
         // furnace/chest/table/ladder is a real item from the pack.
@@ -625,8 +628,18 @@ public class BuildGoal extends Goal {
         double distSq = assistant.getEyePosition().distanceToSqr(
             pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
         assistant.getLookControl().setLookAt(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+        double reach2 = AssistantEntity.BLOCK_REACH * AssistantEntity.BLOCK_REACH;
+        boolean inReach = distSq <= reach2;
+        if (!inReach && assistant.isSettler()) {
+            // A village's builder works off its scaffolding: a roof or a tower top within arm's
+            // length across is within its reach, however high. Walking for every block of a roof
+            // nine up it could never stand next to, a hall took most of a day.
+            double hx = assistant.getX() - (pos.getX() + 0.5), hz = assistant.getZ() - (pos.getZ() + 0.5);
+            double up = pos.getY() - assistant.getY();
+            inReach = hx * hx + hz * hz <= reach2 && up <= 24 && up >= -6;
+        }
 
-        if (distSq > AssistantEntity.BLOCK_REACH * AssistantEntity.BLOCK_REACH) {
+        if (!inReach) {
             if (assistant.getNavigation().isDone()) {
                 assistant.getNavigation().moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 1.1D);
             }

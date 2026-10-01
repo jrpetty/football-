@@ -194,11 +194,12 @@ final class Kit {
      */
     static void generousTerrain(ServerLevel level, int cx, int cz) {
         prepare(level, cx, cz, 130);
-        // Near the heart, so an early folk finds something at once.
-        pond(level, cx + 18, cz + 4, 3);
-        forest(level, cx - 22, cz - 6, 7, 6, 11);
+        // Just outside the town (village/TownPlan keeps its first block of lots, forty-one
+        // blocks out, for streets and houses), so an early folk finds something at once.
+        pond(level, cx + 62, cz + 4, 3);
+        forest(level, cx - 64, cz - 6, 7, 6, 11);
         // The ring: farms, woods, hills, on every bearing.
-        int r = 56;
+        int r = 72;
         for (int i = 0; i < 8; i++) {
             double a = i * Math.PI / 4.0;
             int x = cx + (int) Math.round(Math.cos(a) * r);
@@ -209,7 +210,7 @@ final class Kit {
                 default -> hill(level, x, z, 14, 12, 200 + i);
             }
         }
-        cows(level, cx + 10, cz + 30, 6);
+        cows(level, cx + 10, cz + 60, 6);
     }
 
     // ---------------------------------------------------------------- reading
