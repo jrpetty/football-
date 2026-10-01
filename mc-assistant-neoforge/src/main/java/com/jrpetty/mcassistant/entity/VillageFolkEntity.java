@@ -259,6 +259,7 @@ public class VillageFolkEntity extends AssistantEntity {
         ensurePersona();
         refreshMood();
         dreamCameTrue();
+        if (ownerId() != null) Villages.chooseElder(ownerId(), level().getDayTime() / 24000L);
         if (withAPlayer) return;
         keepTrail();
         agenda();
@@ -294,6 +295,12 @@ public class VillageFolkEntity extends AssistantEntity {
     @Nullable public BlockPos villageCentre() { return villageCentre; }
 
     @Nullable public String hobbyNow() { return hobbyNow; }
+
+    /** Is this the one its village looks up to? */
+    public boolean isElder() {
+        UUID village = ownerId();
+        return village != null && getUUID().equals(Villages.elder(village));
+    }
 
     /** Who this folk is on its own, settled the first time anybody needs to know. */
     public void ensurePersona() {
@@ -392,11 +399,79 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         if (life.has(Social.Trait.SHY) && aff < 30 && getRandom().nextBoolean()) return;
         getLookControl().setLookAt(p, 30.0F, 30.0F);
+        if (aff >= 55 && !isBaby() && present(p)) return;
         FolkTalk.speak(this, FolkTalk.passing(this, p));
         if (aff <= -50 && level() instanceof net.minecraft.server.level.ServerLevel server) {
             server.sendParticles(net.minecraft.core.particles.ParticleTypes.ANGRY_VILLAGER,
                 getX(), getY() + 2.0, getZ(), 1, 0.2, 0.1, 0.2, 0.0);
         }
+    }
+
+    /**
+     * A folk that is fond of a player now and then gives them something, unasked:
+     * whatever its days have given it to give — a fish it caught, a flower from its
+     * garden, a loaf it baked, something it found down the mine, a bowl it whittled.
+     * Not more than once every few days, and not every time they pass.
+     */
+    public boolean present(net.minecraft.world.entity.player.Player p) {
+        long day = level().getDayTime() / 24000L;
+        long last = persona.lastPresent(p.getUUID());
+        if (last >= 0 && day - last < 3) return false;
+        if (getRandom().nextInt(3) != 0) return false;
+        net.minecraft.world.item.ItemStack gift = presentFor();
+        if (gift.isEmpty()) return false;
+        String what = gift.getHoverName().getString().toLowerCase(java.util.Locale.ROOT);
+        persona.gavePresent(p.getUUID(), day);
+        if (!p.getInventory().add(gift)) p.drop(gift, false);
+        swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+        persona.feelFor(p.getUUID(), p.getName().getString(), 2);
+        persona.remember(day, "I gave " + p.getName().getString() + " a present", 3);
+        String you = p.getName().getString();
+        FolkTalk.speak(this, FolkTalk.pick(getRandom(),
+            you + "! I've something for you — " + FolkTalk.article(what) + ".",
+            "Here, " + you + ". " + cap(FolkTalk.article(what)) + ", just for you.",
+            "I kept this for you, " + you + ". Go on, take it.",
+            "For you, " + you + ". Don't tell the others!"));
+        if (level() instanceof net.minecraft.server.level.ServerLevel server) {
+            server.sendParticles(net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER,
+                p.getX(), p.getY() + 1.5, p.getZ(), 6, 0.4, 0.3, 0.4, 0.0);
+        }
+        return true;
+    }
+
+    private static String cap(String s) {
+        return s.isEmpty() ? s : Character.toUpperCase(s.charAt(0)) + s.substring(1);
+    }
+
+    /** What it has to give: from its own pack where its work fills it, else a small thing of its own. */
+    private net.minecraft.world.item.ItemStack presentFor() {
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> fish =
+            st -> st.is(net.minecraft.world.item.Items.COD) || st.is(net.minecraft.world.item.Items.SALMON)
+                || st.is(net.minecraft.world.item.Items.COOKED_COD) || st.is(net.minecraft.world.item.Items.COOKED_SALMON);
+        if ((stationTask() == StationTask.FISH || persona.hobby() == Persona.Hobby.FISHING) && countCarried(fish) > 0) {
+            for (net.minecraft.world.item.ItemStack st : getInventoryItems()) {
+                if (fish.test(st)) {
+                    net.minecraft.world.item.ItemStack one = st.copyWithCount(1);
+                    st.shrink(1);
+                    return one;
+                }
+            }
+        }
+        if (stationTask() == StationTask.FARM && countFood() >= 6
+                && countCarried(st -> st.is(net.minecraft.world.item.Items.BREAD)) > 0
+                && removeMatching(st -> st.is(net.minecraft.world.item.Items.BREAD), 1) == 1) {
+            return new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BREAD);
+        }
+        if (stationTask() == StationTask.MINE) {
+            return new net.minecraft.world.item.ItemStack(getRandom().nextInt(3) == 0
+                ? net.minecraft.world.item.Items.AMETHYST_SHARD : net.minecraft.world.item.Items.COAL);
+        }
+        if (persona.hobby() == Persona.Hobby.WHITTLING) return new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BOWL);
+        if (persona.hobby() == Persona.Hobby.MUSIC) return new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.NOTE_BLOCK);
+        net.minecraft.world.item.Item[] flowers = {net.minecraft.world.item.Items.POPPY, net.minecraft.world.item.Items.DANDELION,
+            net.minecraft.world.item.Items.CORNFLOWER, net.minecraft.world.item.Items.OXEYE_DAISY,
+            net.minecraft.world.item.Items.ALLIUM, net.minecraft.world.item.Items.AZURE_BLUET};
+        return new net.minecraft.world.item.ItemStack(flowers[getRandom().nextInt(flowers.length)]);
     }
 
     /** How it feels today, and why: worked out from its own life. */
@@ -526,8 +601,60 @@ public class VillageFolkEntity extends AssistantEntity {
                 saw.persona.feelFor(p.getUUID(), who, -8);
             }
             refreshMood();
+        } else if (took && !level().isClientSide && persona.rolled() && !showcase
+                && source.getEntity() instanceof net.minecraft.world.entity.monster.Enemy
+                && source.getEntity() instanceof net.minecraft.world.entity.LivingEntity monster) {
+            // Set on by a monster with somebody near enough to help: it shouts for them.
+            beset = monster.getUUID();
+            besetUntil = tickCount + 600;
+            net.minecraft.world.entity.player.Player near = level().getNearestPlayer(this, 24.0);
+            if (near != null && !near.isSpectator() && tickCount - lastCryTick > 100) {
+                lastCryTick = tickCount;
+                String you = near.getName().getString();
+                String what = monster.getType().getDescription().getString().toLowerCase(java.util.Locale.ROOT);
+                FolkTalk.speak(this, FolkTalk.pick(getRandom(), "Help! " + you + ", help!", "A " + what + "! Help me!",
+                    you + "! Over here — a " + what + "!", "Get it off me! " + you + "!"));
+            }
         }
         return took;
+    }
+
+    /** The monster that set on it lately, while it is still in danger. */
+    @javax.annotation.Nullable private UUID beset;
+    private int besetUntil, lastCryTick = -1000;
+
+    /** Was it this monster that had it cornered, just now? */
+    public boolean besetBy(UUID monster) {
+        return beset != null && beset.equals(monster) && tickCount < besetUntil;
+    }
+
+    /**
+     * A player killed the monster that was on it: that is not a thing a folk forgets.
+     */
+    public void rescuedBy(net.minecraft.world.entity.player.Player p, String monster) {
+        beset = null;
+        if (!persona.rolled()) return;
+        long day = level().getDayTime() / 24000L;
+        String you = p.getName().getString();
+        persona.feelFor(p.getUUID(), you, 12);
+        persona.remember(day, you + " saved my life", 9);
+        UUID village = ownerId();
+        if (village != null) {
+            Villages.tell(village, day, you + " saved " + displayNameCap() + " from a " + monster);
+            Standing.stir(village, p.getUUID());
+        }
+        for (VillageFolkEntity f : level().getEntitiesOfClass(VillageFolkEntity.class, getBoundingBox().inflate(16.0),
+                f -> f != this && f.isAlive() && f.persona.rolled())) {
+            int warmth = f.life.affinity(getUUID());
+            if (warmth >= Social.FRIEND || getUUID().equals(f.life.partner())) f.persona.feelFor(p.getUUID(), you, 5);
+        }
+        getLookControl().setLookAt(p, 30.0F, 30.0F);
+        FolkTalk.speak(this, FolkTalk.pick(getRandom(), "You saved my life, " + you + "! I'll never forget it.",
+            "Thank you, " + you + "! I thought I was done for.", "Phew… I owe you one, " + you + ". A big one."));
+        if (level() instanceof net.minecraft.server.level.ServerLevel server) {
+            server.sendParticles(net.minecraft.core.particles.ParticleTypes.HEART, getX(), getY() + 2.1, getZ(),
+                4, 0.4, 0.3, 0.4, 0.0);
+        }
     }
 
     /** A death in the village is news, and the ones who loved it remember. */
@@ -587,7 +714,9 @@ public class VillageFolkEntity extends AssistantEntity {
             VillageFolkEntity.class, net.minecraft.network.syncher.EntityDataSerializers.BOOLEAN);
     /** How many days a child takes to grow up. */
     public static final int GROW_DAYS = 3;
-    private long bornDay = -1;
+    /** The day it was born; UNKNOWN for a folk that came into the world grown. */
+    public static final long UNKNOWN = Long.MIN_VALUE;
+    private long bornDay = UNKNOWN;
     private boolean tagIt;
 
     @Override
@@ -655,6 +784,10 @@ public class VillageFolkEntity extends AssistantEntity {
         if (driftDay != day) {
             if (driftDay >= 0) life.drift();
             driftDay = day;
+            // Time takes the edge off a grudge, quicker for an easygoing or generous soul.
+            int mend = life.has(Social.Trait.EASYGOING) || life.has(Social.Trait.GENEROUS) ? 2
+                : life.has(Social.Trait.GRUMPY) ? (int) (day % 2) : 1;
+            if (persona.rolled()) persona.mend(day, mend);
         }
         boolean offWork = offWorkNow();
         java.util.List<VillageFolkEntity> near = level().getEntitiesOfClass(VillageFolkEntity.class,
@@ -678,6 +811,11 @@ public class VillageFolkEntity extends AssistantEntity {
                     && getRandom().nextInt(6) == 0 && level().getNearestPlayer(this, 16.0) != null) {
                 lastChatterTick = tickCount;
                 FolkTalk.smallTalk(this, other);
+            }
+            // Word gets round: what one thinks of a player, its friends soon come to think too.
+            if (persona.rolled() && other.persona.rolled() && !isBaby() && !other.isBaby() && now > Social.RIVAL
+                    && getRandom().nextInt(3) == 0) {
+                gossip(other, now >= Social.FRIEND, offWork, village);
             }
             if (partners && getRandom().nextInt(2) == 0) {
                 server.sendParticles(net.minecraft.core.particles.ParticleTypes.HEART,
@@ -727,10 +865,26 @@ public class VillageFolkEntity extends AssistantEntity {
             6, 0.4, 0.3, 0.4, 0.0);
     }
 
+    /** Tell another folk what this one thinks of the player it has most to say about. */
+    public void gossip(VillageFolkEntity other, boolean trusted, boolean aloud, UUID village) {
+        UUID about = persona.talkedAbout();
+        if (about == null) return;
+        String name = persona.nameOf(about);
+        int mine = persona.affinity(about);
+        boolean news = !other.persona.knows(about);
+        if (!other.persona.hearsay(about, name, mine, displayNameCap(), trusted)) return;
+        Standing.stir(village, about);
+        if (!aloud || isSleeping() || other.isSleeping() || tickCount - lastChatterTick < 600
+                || level().getNearestPlayer(this, 16.0) == null || getRandom().nextInt(3) != 0) return;
+        lastChatterTick = tickCount;
+        getLookControl().setLookAt(other, 30.0F, 30.0F);
+        FolkTalk.gossip(this, other, name, mine, news);
+    }
+
     /** A child's day: play, and stay near its mother or father; bed at dark. */
     private void childhood() {
         long day = level().getDayTime() / 24000L;
-        if (bornDay < 0) bornDay = day;
+        if (bornDay == UNKNOWN) bornDay = day;
         if (day - bornDay >= GROW_DAYS) {
             setChild(false);
             persona.remember(day, "I grew up", 8);
@@ -2963,7 +3117,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (tag.contains("Social")) life.load(tag.getCompound("Social"));
         if (tag.contains("Persona")) persona.load(tag.getCompound("Persona"));
         this.showcase = tag.getBoolean("Showcase");
-        this.bornDay = tag.contains("BornDay") ? tag.getLong("BornDay") : -1;
+        this.bornDay = tag.contains("BornDay") ? tag.getLong("BornDay") : UNKNOWN;
         if (tag.getBoolean("Child")) setChild(true);
         if (tag.contains("VillageCentre")) {
             this.villageCentre = BlockPos.of(tag.getLong("VillageCentre"));

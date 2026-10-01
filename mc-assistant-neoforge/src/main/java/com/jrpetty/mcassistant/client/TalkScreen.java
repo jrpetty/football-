@@ -92,7 +92,7 @@ public class TalkScreen extends Screen {
             .bounds(x + 2 * (bw + 3), row, bw, bh).build());
         Button book = addRenderableWidget(Button.builder(Component.literal("History"), b -> ask(TalkTopic.CHRONICLE, ""))
             .bounds(x + 3 * (bw + 3), row, bw, bh).build());
-        book.setTooltip(Tooltip.create(Component.literal("Ask for a copy of the village's chronicle")));
+        book.setTooltip(Tooltip.create(Component.literal("Ask for a copy of the village's chronicle (or type \"who lives here?\" for its register)")));
         int sayY = row + bh + 6;
         say = new EditBox(font, x, sayY, W - 16 - 2 * 46 - 6, 18, Component.literal("Say something"));
         say.setMaxLength(FolkTalkPayload.MAX_TEXT);

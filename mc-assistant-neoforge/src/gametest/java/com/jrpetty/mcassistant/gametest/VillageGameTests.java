@@ -984,6 +984,106 @@ public class VillageGameTests {
         });
     }
 
+    /** The one the village looks up to becomes its elder, and the village says so. */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "t24_elder")
+    public static void t24_elder(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 8400, 8400, 32);
+        BlockPos heart = Kit.surface(level, 8400, 8400);
+        java.util.List<VillageFolkEntity> folk = new java.util.ArrayList<>();
+        for (int i = 0; i < 4; i++) folk.add(VillageFolkSpawnerBlock.raise(level, heart.east(i), 0.0F));
+        helper.runAtTickTime(20, () -> {
+            java.util.UUID village = folk.get(0).ownerId();
+            for (VillageFolkEntity f : folk) f.ensurePersona();
+            VillageFolkEntity wise = folk.get(2);
+            for (VillageFolkEntity f : folk) if (f != wise) f.life().feel(wise.getUUID(), wise.displayNameCap(), 80);
+            long day = level.getDayTime() / 24000L + 1;
+            Villages.chooseElder(village, day);
+            Kit.log("t24 elder of " + Villages.name(village) + ": " + Villages.elderName(village));
+            helper.assertTrue(wise.getUUID().equals(Villages.elder(village)) && wise.isElder(),
+                "the folk everybody looks up to is the elder: " + Villages.elderName(village));
+            helper.assertTrue(Villages.news(village).stream().anyMatch(n -> n.text().contains("village elder")),
+                "and the village says so");
+            // The register: every resident, the elder marked.
+            net.minecraft.world.item.ItemStack book = com.jrpetty.mcassistant.entity.Chronicles.register(village, day);
+            net.minecraft.world.item.component.WrittenBookContent content =
+                book.get(net.minecraft.core.component.DataComponents.WRITTEN_BOOK_CONTENT);
+            String all = content == null ? "" : content.pages().stream()
+                .map(pg -> pg.raw().getString()).collect(java.util.stream.Collectors.joining(" | "));
+            Kit.log("t24 the register: " + all.substring(0, Math.min(400, all.length())));
+            helper.assertTrue(all.contains(wise.displayNameCap() + "§r (elder)") && all.contains("Elder: " + wise.displayNameCap()),
+                "the register lists everybody and marks the elder");
+            helper.succeed();
+        });
+    }
+
+    /** Word gets round: a folk who thinks well of a player tells a friend, who greets
+     *  them as somebody they have heard of; and a grudge softens with the days. */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "t25_gossip")
+    public static void t25_gossip(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 8800, 8800, 32);
+        BlockPos heart = Kit.surface(level, 8800, 8800);
+        VillageFolkEntity a = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        VillageFolkEntity b = VillageFolkSpawnerBlock.raise(level, heart.east(), 0.0F);
+        helper.assertTrue(a != null && b != null, "two folk of one village");
+        helper.runAtTickTime(20, () -> {
+            java.util.UUID village = a.ownerId();
+            a.ensurePersona();
+            b.ensurePersona();
+            net.minecraft.world.entity.player.Player you = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+            a.persona().feelFor(you.getUUID(), you.getName().getString(), 60);
+            a.life().feel(b.getUUID(), b.displayNameCap(), 50);
+            b.life().feel(a.getUUID(), a.displayNameCap(), 50);
+            helper.assertTrue(!b.persona().knows(you.getUUID()), "the second has never met you");
+            a.gossip(b, true, false, village);
+            Kit.log("t25 " + b.displayNameCap() + " heard from " + b.persona().heardFrom(you.getUUID())
+                + ", thinks " + b.persona().affinity(you.getUUID()));
+            helper.assertTrue(a.displayNameCap().equals(b.persona().heardFrom(you.getUUID()))
+                && b.persona().affinity(you.getUUID()) > 0, "and hears about you from the first");
+            helper.assertTrue(!b.persona().knows(you.getUUID()), "which is not the same as meeting you");
+            String hello = com.jrpetty.mcassistant.entity.FolkTalk.answer(b, you,
+                com.jrpetty.mcassistant.entity.TalkTopic.OPEN, "");
+            Kit.log("t25 on meeting: " + hello);
+            helper.assertTrue(hello.contains(a.displayNameCap()), "so it greets you as somebody it has heard of: " + hello);
+            helper.assertTrue(b.persona().knows(you.getUUID()), "and now it knows you");
+            // A grudge softens.
+            long day = level.getDayTime() / 24000L;
+            b.persona().feelFor(you.getUUID(), you.getName().getString(), -60);
+            int before = b.persona().affinity(you.getUUID());
+            b.persona().mend(day + 1, 2);
+            b.persona().mend(day + 1, 2);
+            b.persona().mend(day + 2, 2);
+            Kit.log("t25 a grudge: " + before + " -> " + b.persona().affinity(you.getUUID()));
+            helper.assertTrue(b.persona().affinity(you.getUUID()) == before + 4, "a grudge softens a little each day");
+            // A friend brings you something, unasked — but not every time you pass.
+            boolean given = false;
+            for (int i = 0; i < 60 && !given; i++) given = a.present(you);
+            int carried = 0;
+            for (int i = 0; i < you.getInventory().getContainerSize(); i++) carried += you.getInventory().getItem(i).getCount();
+            Kit.log("t25 a present: " + given + ", you now carry " + carried + " item(s)");
+            helper.assertTrue(given && carried > 0, "a folk fond of you gives you a present");
+            helper.assertTrue(!a.present(you), "and not another the same day");
+            // Set on by a monster: kill it and you saved its life.
+            net.minecraft.world.entity.monster.Zombie zombie = net.minecraft.world.entity.EntityType.ZOMBIE.create(level);
+            zombie.moveTo(b.getX() + 1.0, b.getY(), b.getZ(), 0.0F, 0.0F);
+            level.addFreshEntity(zombie);
+            b.hurt(level.damageSources().mobAttack(zombie), 1.0F);
+            helper.assertTrue(b.besetBy(zombie.getUUID()), "a folk set on by a monster is in danger from it");
+            int fond = b.persona().affinity(you.getUUID());
+            b.rescuedBy(you, "zombie");
+            zombie.discard();
+            Kit.log("t25 rescued: " + fond + " -> " + b.persona().affinity(you.getUUID()) + "; news: "
+                + Villages.news(village).get(0).text());
+            helper.assertTrue(b.persona().affinity(you.getUUID()) > fond
+                && Villages.news(village).stream().anyMatch(n -> n.text().contains("saved " + b.displayNameCap())),
+                "and whoever saves it is remembered for it");
+            helper.succeed();
+        });
+    }
+
     // ===================================================== vanilla villagers
 
     /** A villager appears the ordinary way: the join event should catch it. */

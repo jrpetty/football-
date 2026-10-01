@@ -138,6 +138,51 @@ public final class Villages {
         return false;
     }
 
+    // ------------------------------ the village elder -------------------------
+    //
+    // The one the others look up to: chosen afresh each day from what everybody in
+    // the village feels for everybody else. It speaks for the village.
+
+    private record Elder(UUID id, String name, long day) {}
+
+    private static final Map<UUID, Elder> ELDERS = new ConcurrentHashMap<>();
+
+    @Nullable
+    public static UUID elder(UUID villageId) {
+        Elder e = ELDERS.get(villageId);
+        return e == null ? null : e.id();
+    }
+
+    public static String elderName(UUID villageId) {
+        Elder e = ELDERS.get(villageId);
+        return e == null ? "" : e.name();
+    }
+
+    /** Once a day: who does the village look up to? */
+    public static void chooseElder(UUID villageId, long day) {
+        Elder now = ELDERS.get(villageId);
+        if (now != null && now.day() == day) return;
+        List<VillageFolkEntity> folk = new ArrayList<>();
+        for (AssistantEntity a : folkOf(villageId)) {
+            if (a instanceof VillageFolkEntity f && f.persona().rolled()) folk.add(f);
+        }
+        VillageFolkEntity best = null;
+        int bestScore = Integer.MIN_VALUE;
+        for (VillageFolkEntity c : folk) {
+            if (c.isBaby()) continue;
+            int score = (int) Math.min(30, Math.max(0, day - c.persona().since()));     // years count
+            for (VillageFolkEntity o : folk) if (o != c) score += o.life().affinity(c.getUUID());
+            if (score > bestScore) { bestScore = score; best = c; }
+        }
+        if (best == null) return;
+        boolean changed = now == null || !now.id().equals(best.getUUID());
+        ELDERS.put(villageId, new Elder(best.getUUID(), best.displayNameCap(), day));
+        if (changed && folk.size() >= 4) {
+            tell(villageId, day, best.displayNameCap() + " was chosen as the village elder");
+            best.persona().remember(day, "the village chose me as its elder", 9);
+        }
+    }
+
     /** "the meeting hall", "a new house": a building as folk would speak of it. */
     public static String spoken(String structure) {
         return switch (structure) {
@@ -154,6 +199,7 @@ public final class Villages {
     public static void resetForTests() {
         Standing.resetForTests();
         Gatherings.resetForTests();
+        ELDERS.clear();
         NEWS.clear();
         AGED_ON.clear();
         ALL.clear();

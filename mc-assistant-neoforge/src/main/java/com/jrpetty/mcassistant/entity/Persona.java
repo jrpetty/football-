@@ -105,6 +105,10 @@ public final class Persona {
         long lastFavourDay = -1;
         long lastBookDay = -1;
         long lastSorryDay = -1;
+        /** Who told this folk about the player, while it has only heard of them. */
+        String heardFrom = "";
+        /** The last day it gave the player a present of its own accord. */
+        long lastPresentDay = -1;
 
         Opinion(String name, int affinity) {
             this.name = name;
@@ -190,8 +194,11 @@ public final class Persona {
         errandDay = -1;
     }
 
-    /** Has it ever spoken with this player? */
-    public boolean knows(UUID player) { return players.containsKey(player); }
+    /** Has it met this player for itself (not just heard about them)? */
+    public boolean knows(UUID player) {
+        Opinion o = players.get(player);
+        return o != null && o.heardFrom.isEmpty();
+    }
     public String food() { return food; }
     public Gift loves() { return loves; }
     public Gift hates() { return hates; }
@@ -280,6 +287,80 @@ public final class Persona {
         }
         return o;
     }
+
+    /** The folk who told this one about a player it has never spoken to, or "". */
+    public String heardFrom(UUID player) {
+        Opinion o = players.get(player);
+        return o == null ? "" : o.heardFrom;
+    }
+
+    /** The last day it gave this player a present of its own accord, or -1. */
+    public long lastPresent(UUID player) {
+        Opinion o = players.get(player);
+        return o == null ? -1 : o.lastPresentDay;
+    }
+
+    public void gavePresent(UUID player, long day) {
+        Opinion o = players.get(player);
+        if (o != null) o.lastPresentDay = day;
+    }
+
+    /** The name a player went by, or "". */
+    public String nameOf(UUID player) {
+        Opinion o = players.get(player);
+        return o == null ? "" : o.name;
+    }
+
+    /**
+     * Word gets round. Another folk tells this one what it thinks of a player: a
+     * stranger is heard of (a quarter as strongly as the teller feels it), and a
+     * player this folk already has an opinion of is nudged toward the teller's —
+     * further when the teller is a friend. Returns true if anything changed.
+     */
+    public boolean hearsay(UUID player, String name, int theirs, String teller, boolean trusted) {
+        Opinion o = players.get(player);
+        if (o == null) {
+            if (Math.abs(theirs) < 25) return false;
+            o = opinionOf(player, name);
+            o.affinity = theirs / 4;
+            o.heardFrom = teller;
+            return true;
+        }
+        int pull = Math.max(-4, Math.min(4, (theirs - o.affinity) / (trusted ? 6 : 12)));
+        if (pull == 0) return false;
+        o.affinity = Math.max(-100, Math.min(100, o.affinity + pull));
+        return true;
+    }
+
+    /** The player this folk has most to say about from its own dealings, or null. */
+    @Nullable
+    public UUID talkedAbout() {
+        UUID best = null;
+        int most = 24;
+        for (Map.Entry<UUID, Opinion> e : players.entrySet()) {
+            Opinion o = e.getValue();
+            if (!o.heardFrom.isEmpty() || Math.abs(o.affinity) <= most) continue;
+            most = Math.abs(o.affinity);
+            best = e.getKey();
+        }
+        return best;
+    }
+
+    /** They have met now: whatever it heard, it knows them for itself. */
+    public void met(UUID player) {
+        Opinion o = players.get(player);
+        if (o != null) o.heardFrom = "";
+    }
+
+    /** Time takes the edge off a grudge: once a day a bad opinion softens by a little. */
+    public void mend(long day, int by) {
+        if (mendDay == day) return;
+        mendDay = day;
+        if (by <= 0) return;
+        for (Opinion o : players.values()) if (o.affinity < 0) o.affinity = Math.min(0, o.affinity + by);
+    }
+
+    long mendDay = -1;
 
     public int affinity(UUID player) {
         Opinion o = players.get(player);
@@ -375,9 +456,13 @@ public final class Persona {
             one.putInt("Gifts", e.getValue().giftsToday);
             one.putLong("Favour", e.getValue().lastFavourDay);
             one.putLong("Book", e.getValue().lastBookDay);
+            one.putLong("Sorry", e.getValue().lastSorryDay);
+            one.putLong("Present", e.getValue().lastPresentDay);
+            if (!e.getValue().heardFrom.isEmpty()) one.putString("Heard", e.getValue().heardFrom);
             ops.add(one);
         }
         tag.put("Players", ops);
+        tag.putLong("MendDay", mendDay);
         if (hasErrand()) {
             CompoundTag e = new CompoundTag();
             e.putString("Kind", errandKind);
@@ -412,6 +497,7 @@ public final class Persona {
             CompoundTag one = (CompoundTag) t;
             memories.addLast(new Memory(one.getLong("Day"), one.getString("Text"), one.getInt("Weight")));
         }
+        mendDay = tag.contains("MendDay") ? tag.getLong("MendDay") : -1;
         players.clear();
         for (Tag t : tag.getList("Players", Tag.TAG_COMPOUND)) {
             CompoundTag one = (CompoundTag) t;
@@ -422,6 +508,9 @@ public final class Persona {
             o.giftsToday = one.getInt("Gifts");
             o.lastFavourDay = one.contains("Favour") ? one.getLong("Favour") : -1;
             o.lastBookDay = one.contains("Book") ? one.getLong("Book") : -1;
+            o.lastSorryDay = one.contains("Sorry") ? one.getLong("Sorry") : -1;
+            o.lastPresentDay = one.contains("Present") ? one.getLong("Present") : -1;
+            o.heardFrom = one.getString("Heard");
             players.put(one.getUUID("Id"), o);
         }
         clearErrand();

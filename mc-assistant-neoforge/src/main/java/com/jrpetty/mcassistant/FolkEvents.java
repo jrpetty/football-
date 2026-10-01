@@ -45,6 +45,15 @@ public final class FolkEvents {
         if (saw.isEmpty()) return;
         String who = player.getName().getString();
         for (VillageFolkEntity f : saw) f.persona().feelFor(player.getUUID(), who, 3);
+        // The one it had cornered owes them its life.
+        String what = event.getEntity().getType().getDescription().getString().toLowerCase(java.util.Locale.ROOT);
+        boolean saved = false;
+        for (VillageFolkEntity f : saw) {
+            if (!f.besetBy(event.getEntity().getUUID())) continue;
+            f.rescuedBy(player, what);
+            saved = true;
+        }
+        if (saved) return;
         VillageFolkEntity first = saw.get(player.getRandom().nextInt(saw.size()));
         FolkTalk.speak(first, FolkTalk.thanks(first, player));
         if (first.ownerId() != null) Standing.stir(first.ownerId(), player.getUUID());
@@ -64,12 +73,53 @@ public final class FolkEvents {
             return;
         }
         com.jrpetty.mcassistant.entity.Welcome.check((ServerLevel) player.level(), player, now);
-        if (now.equals(was)) return;
+        if (now.equals(was)) {
+            // Still here: they have not been away, so there is nothing to catch up on.
+            if (player.tickCount % 400 == 0)
+                com.jrpetty.mcassistant.village.Chronicle.visited(now, player.getUUID(), player.level().getDayTime() / 24000L);
+            return;
+        }
         IN.put(player.getUUID(), now);
         Standing.View view = Standing.of(now, player.getUUID(), player.level().getGameTime());
         Component banner = Component.literal(Villages.name(now)).withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)
             .append(Component.literal(" · " + Villages.ageOf(now).label + " · " + Villages.headcount(now) + " people · you are "
                 + view.title().words).withStyle(ChatFormatting.WHITE));
         player.displayClientMessage(banner, true);
+        welcomeBack((ServerLevel) player.level(), player, now);
+    }
+
+    /** Back after a while away: somebody who knows you catches you up on the news. */
+    private static void welcomeBack(ServerLevel level, ServerPlayer player, UUID village) {
+        long day = level.getDayTime() / 24000L;
+        long last = com.jrpetty.mcassistant.village.Chronicle.visited(village, player.getUUID(), day);
+        if (last < 0 || day - last < 1) return;
+        java.util.List<String> news = new java.util.ArrayList<>();
+        java.util.List<com.jrpetty.mcassistant.village.Chronicle.Entry> past = com.jrpetty.mcassistant.village.Chronicle.of(village);
+        for (int i = past.size() - 1; i >= 0 && news.size() < 3; i--) {
+            com.jrpetty.mcassistant.village.Chronicle.Entry e = past.get(i);
+            if (e.day() <= last) break;
+            news.add(e.text());
+        }
+        VillageFolkEntity greeter = null;
+        double nearest = 24.0 * 24.0;
+        for (VillageFolkEntity f : level.getEntitiesOfClass(VillageFolkEntity.class, player.getBoundingBox().inflate(24.0),
+                f -> f.isAlive() && !f.isSleeping() && !f.isBaby() && f.persona().rolled() && f.persona().knows(player.getUUID())
+                    && f.persona().affinity(player.getUUID()) >= 0)) {
+            double d = f.distanceToSqr(player);
+            if (d < nearest) { nearest = d; greeter = f; }
+        }
+        if (greeter == null) return;
+        String you = player.getName().getString();
+        StringBuilder said = new StringBuilder("Welcome back, " + you + "! ");
+        if (news.isEmpty()) said.append("Quiet while you were away.");
+        else {
+            said.append("While you were away, ");
+            for (int i = 0; i < news.size(); i++) {
+                if (i > 0) said.append(i == news.size() - 1 ? ", and " : ", ");
+                said.append(news.get(i));
+            }
+            said.append('.');
+        }
+        FolkTalk.speak(greeter, said.toString());
     }
 }

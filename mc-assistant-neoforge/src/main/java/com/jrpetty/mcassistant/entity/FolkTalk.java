@@ -66,6 +66,8 @@ public final class FolkTalk {
         Persona.Opinion op = me.opinionOf(p.getUUID(), p.getName().getString());
         if (topic == TalkTopic.SAY) topic = understand(text);
         boolean firstMeeting = op.lastTalkDay < 0 && op.lastGiftDay < 0;
+        String heard = op.heardFrom;
+        me.met(p.getUUID());
         // A word a day goes a long way.
         if (op.lastTalkDay != day && topic != TalkTopic.BYE) {
             op.lastTalkDay = day;
@@ -97,7 +99,7 @@ public final class FolkTalk {
         String kept = topic == TalkTopic.OPEN ? Welcome.handOver(f, p) : "";
         if (!kept.isEmpty()) return manner(f, kept.trim());
         String said = switch (topic) {
-            case OPEN -> greet(f, p, op, firstMeeting);
+            case OPEN -> greet(f, p, op, firstMeeting, heard);
             case HOW -> howAreYou(f);
             case DOING -> doing(f, p);
             case ABOUT -> aboutMe(f);
@@ -115,6 +117,7 @@ public final class FolkTalk {
             case MEMORY -> memories(f);
             case REPUTE -> repute(f, p);
             case CHRONICLE -> chronicle(f, p, op, day);
+            case CENSUS -> census(f, p);
             default -> puzzled(f);
         };
         // Somebody who can't stand you says as little as it can.
@@ -133,8 +136,8 @@ public final class FolkTalk {
     private static void send(VillageFolkEntity f, ServerPlayer p, boolean open, String said, String asked) {
         Persona me = f.persona();
         int aff = me.affinity(p.getUUID());
-        String about = f.stationTask().title + " · " + f.life().traitsLabel().toLowerCase(Locale.ROOT)
-            + " · loves " + me.hobby().doing;
+        String about = (f.isElder() ? "Elder · " : "") + (f.isBaby() ? "Child" : f.stationTask().title) + " · "
+            + f.life().traitsLabel().toLowerCase(Locale.ROOT) + " · loves " + me.hobby().doing;
         String where = "";
         if (f.ownerId() != null) {
             Standing.View v = Standing.of(f.ownerId(), p.getUUID(), f.level().getGameTime());
@@ -151,7 +154,7 @@ public final class FolkTalk {
     public static void speak(VillageFolkEntity f, String text) {
         if (text == null || text.isBlank() || !(f.level() instanceof ServerLevel)) return;
         if (f.level().getNearestPlayer(f, 24.0) == null) return;        // nobody to hear it
-        String said = text.length() > 120 ? text.substring(0, 117) + "…" : text;
+        String said = text.length() > 170 ? text.substring(0, 167) + "…" : text;
         int ticks = Math.min(200, 60 + said.length() * 2);
         PacketDistributor.sendToPlayersTrackingEntity(f, new FolkSpeechPayload(f.getId(), said, ticks));
     }
@@ -207,13 +210,23 @@ public final class FolkTalk {
 
     // ------------------------------------------------------------------ topics
 
-    static String greet(VillageFolkEntity f, net.minecraft.world.entity.player.Player p, Persona.Opinion op, boolean first) {
+    static String greet(VillageFolkEntity f, net.minecraft.world.entity.player.Player p, Persona.Opinion op, boolean first,
+                        String heard) {
         RandomSource r = f.getRandom();
         String you = p.getName().getString();
         Persona me = f.persona();
         int aff = op.affinity;
         Social.Life life = f.life();
         if (f.isSleeping()) return "Zzz… mm? Oh — it's the middle of the night. Talk in the morning.";
+        // Never spoken, but heard about you: your name has gone ahead of you.
+        if (first && !heard.isEmpty()) {
+            if (aff < 0) return pick(r, "So you're " + you + ". " + heard + " told me about you.",
+                "You're " + you + "? I've heard about you from " + heard + ". Hm.",
+                "Ah. " + you + ". " + heard + " warned me about you.");
+            return pick(r, "So you're " + you + "! " + heard + "'s told me all about you. I'm " + f.displayNameCap() + ".",
+                "You must be " + you + " — " + heard + " speaks well of you. I'm " + f.displayNameCap() + ".",
+                you + "! At last. " + heard + " never stops talking about you. I'm " + f.displayNameCap() + ".");
+        }
         if (aff <= -50) return pick(r, "Oh. You.", "What do you want?", "Stay back.");
         if (aff <= -15) return pick(r, "Hm. " + you + ".", "Oh. It's you.", "What is it?");
         if (first) {
@@ -403,6 +416,8 @@ public final class FolkTalk {
         List<Villages.News> fresh = new ArrayList<>();
         long day = f.level().getDayTime() / 24000L;
         for (Villages.News n : all) if (day - n.day() <= 6 && !n.text().startsWith(f.displayNameCap() + " ")) fresh.add(n);
+        String elder = Villages.elderName(village);
+        if (!elder.isEmpty() && !f.isElder() && r.nextInt(3) == 0) sb.append(elder).append(" is our elder. ");
         if (!fresh.isEmpty()) {
             Villages.News n = fresh.get(r.nextInt(Math.min(3, fresh.size())));
             sb.append(pick(r, "Did you hear? ", "Have you heard? ", "Big news: ")).append(cap(n.text())).append('.');
@@ -438,7 +453,7 @@ public final class FolkTalk {
     static String child(VillageFolkEntity f, net.minecraft.world.entity.player.Player p, TalkTopic topic, Persona.Opinion op) {
         RandomSource r = f.getRandom();
         long day = f.level().getDayTime() / 24000L;
-        long age = f.bornDay() < 0 ? 0 : day - f.bornDay();
+        long age = f.bornDay() == VillageFolkEntity.UNKNOWN ? 0 : Math.max(0, day - f.bornDay());
         String parents = f.life().parents();
         if (op.affinity < 5 && topic == TalkTopic.OPEN) {
             return pick(r, "Mum says I'm not to talk to strangers.", "…Who are you?", "Hello! Are you a giant?");
@@ -503,6 +518,7 @@ public final class FolkTalk {
         Standing.View v = Standing.of(village, p.getUUID(), f.level().getGameTime());
         String name = Villages.name(village);
         StringBuilder sb = new StringBuilder();
+        if (f.isElder()) sb.append("As the elder of ").append(name).append(", I can tell you how the village sees you. ");
         switch (v.title()) {
             case HERO -> sb.append("You? You're the hero of ").append(name).append("! Everybody says so.");
             case HONOURED -> sb.append("You're an honoured guest in ").append(name).append(". People speak well of you.");
@@ -532,6 +548,16 @@ public final class FolkTalk {
         op.lastBookDay = day;
         return pick(f.getRandom(), "Here — our chronicle. Everything that's happened in " + Villages.name(village) + ".",
             "Of course! Here's a copy of " + Villages.name(village) + "'s history. Mind the pages.");
+    }
+
+    /** Who lives here: the village register, as a book. */
+    static String census(VillageFolkEntity f, net.minecraft.world.entity.player.Player p) {
+        UUID village = f.ownerId();
+        if (village == null) return "Nobody lives here yet but me.";
+        ItemStack book = Chronicles.register(village, f.level().getDayTime() / 24000L);
+        if (!p.getInventory().add(book)) p.drop(book, false);
+        return pick(f.getRandom(), "Everybody in " + Villages.name(village) + "? Here — the register. Every name, and how they're doing.",
+            "Here's the register. " + Villages.headcount(village) + " of us, all written down.");
     }
 
     static String apology(VillageFolkEntity f, net.minecraft.world.entity.player.Player p, Persona.Opinion op, long day) {
@@ -811,6 +837,7 @@ public final class FolkTalk {
         if (has(t, "remember", "memory", "memories", "the old days", "a story", "tell me a story")) return TalkTopic.MEMORY;
         if (has(t, "think of me", "about me", "my reputation", "people say", "do they like me", "am i welcome")) return TalkTopic.REPUTE;
         if (has(t, "history", "chronicle", "the past", "founded")) return TalkTopic.CHRONICLE;
+        if (has(t, "who lives", "everyone here", "everybody here", "register", "census", "residents", "all the people")) return TalkTopic.CENSUS;
         if (has(t, "how are you", "how're you", "you ok", "feeling", "how do you feel", "mood", "happy", "sad")) return TalkTopic.HOW;
         if (has(t, "follow", "come with", "come along", "join me", "adventure", "walk with")) return TalkTopic.FOLLOW;
         if (has(t, " stay ", "go back", "go home", "you can go", "wait here", "back to work", "dismiss")) return TalkTopic.STAY;
@@ -898,6 +925,29 @@ public final class FolkTalk {
         b.sayLater(back, 40);
     }
 
+    /** One folk telling another what it thinks of a player, out loud — they may be listening. */
+    public static void gossip(VillageFolkEntity a, VillageFolkEntity b, String player, int mine, boolean news) {
+        RandomSource r = a.getRandom();
+        String other = b.displayNameCap();
+        String line, back;
+        if (mine >= 0) {
+            line = news ? pick(r, "Have you met " + player + ", " + other + "? Ever so kind.",
+                    "If " + player + " comes by, make them welcome.",
+                    "There's a traveller called " + player + " — one of the good ones.")
+                : pick(r, "I'd trust " + player + " with anything.", player + " was good to me, you know.",
+                    "Say what you like, " + player + "'s all right.");
+            back = pick(r, "Is that so? I'll look out for them.", "Good to know.", "So I've heard!");
+        } else {
+            line = news ? pick(r, "Keep an eye on " + player + ", " + other + ". Trouble, that one.",
+                    "If " + player + " comes by, lock your chest.", "Watch out for " + player + ".")
+                : pick(r, "Don't trust " + player + ". Just don't.", player + "? Don't get me started.",
+                    "I've not forgotten what " + player + " did.");
+            back = pick(r, "Noted. I'll keep my distance.", "Really? Well, I never.", "Hm. I'd wondered.");
+        }
+        speak(a, line);
+        b.sayLater(back, 40);
+    }
+
     // ------------------------------------------------------------------ words
 
     static String foodWords(String id) {
@@ -915,6 +965,13 @@ public final class FolkTalk {
             case "mushroom_stew" -> "mushroom stew";
             default -> "fresh bread";
         };
+    }
+
+    /** "a poppy", "an allium", "a loaf of bread". */
+    public static String article(String what) {
+        if (what.equals("bread")) return "a loaf of bread";
+        if (what.equals("coal")) return "a lump of coal";
+        return ("aeiou".indexOf(what.isEmpty() ? 'x' : what.charAt(0)) >= 0 ? "an " : "a ") + what;
     }
 
     static String cap(String s) {

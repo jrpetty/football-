@@ -21,7 +21,8 @@ public enum TalkTopic {
     DELIVER("Here's what you asked for"),
     MEMORY("What do you remember?"),
     REPUTE("What do people think of me?"),
-    CHRONICLE("Could I read the village's history?");
+    CHRONICLE("Could I read the village's history?"),
+    CENSUS("Who lives here?");
 
     public final String line;
 

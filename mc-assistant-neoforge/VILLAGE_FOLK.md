@@ -315,7 +315,19 @@ players did for it. Ask any folk for a copy ("History") and it hands you the
 village's chronicle as a written book. `/village chronicle` does the same.
 
 **Walking into a village** you are told where you are: its name, its age, how many
-live there, and what you are to it.
+live there, and what you are to it. Come back after a day or more away and the
+nearest folk who knows you catches you up ("Welcome back! While you were away, Bryn
+and Fen were wed, the chapel went up, and Old Tom died.").
+
+**The village elder.** Every day the village looks to whoever its people think most
+of, its longest-standing folk counting a little extra, and that one is its elder.
+The chronicle records each new elder. The elder speaks for the village when you ask
+what people think of you, and `/village status` names them.
+
+**The register.** Ask anyone "who lives here?" and they hand you the village register,
+a book with every resident in it: their trade (or "a child"), their nature, partner,
+children, favourite pastime, how they feel today, and whether their dream has come
+true. The elder is marked.
 
 **Your standing** in a village is what its people think of you, taken together, and
 it is earned one person at a time:
@@ -331,6 +343,27 @@ it is earned one person at a time:
 
 Ask a folk "My standing?" and it tells you, including who thinks the world of you
 and who doesn't trust you. `/village standing` lists every village that knows you.
+
+**Word gets round.** Folk talk about you to each other. One who thinks well (or
+badly) of you tells their friends, and over the evenings what they think comes round
+to it too. You may overhear it ("If Steve comes by, make them welcome." "Keep an eye
+on Steve. Trouble, that one."). Someone who has only heard of you greets you that
+way the first time you meet: "So you're Steve! Bryn's told me all about you." Only
+what folk have seen for themselves counts toward your standing. Hearsay just gives
+them a head start, good or bad.
+
+**Presents.** A folk who is fond of you will now and then come up as you pass and
+give you something, unasked. It gives whatever its days have given it: a fish it
+caught, a loaf from the farm, a flower, a bowl it whittled, something it found down
+the mine. A folk does this once every few days at most.
+
+**Cries for help.** A folk set on by a monster shouts for the nearest player ("Help!
+Steve, help!"). Kill that monster and you saved its life. It never forgets it, its
+friends and family think better of you too, and the chronicle records the rescue.
+
+**Grudges fade.** Every day, whatever a folk holds against you softens a little:
+quickly for an easygoing or generous soul, slowly for a grumpy one. An outcast who
+stays away long enough, or says sorry, can come back.
 
 **What a village does for you.**
 * **Honoured guest.** The village resolves to build you **a house of your own**

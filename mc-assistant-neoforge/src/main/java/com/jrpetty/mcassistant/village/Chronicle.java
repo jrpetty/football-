@@ -52,6 +52,18 @@ public final class Chronicle extends SavedData {
     }
 
     private final Map<UUID, List<Guest>> guests = new HashMap<>();
+    /** The last day each player was seen in each village. */
+    private final Map<UUID, Map<UUID, Long>> visits = new HashMap<>();
+
+    /** Note a player's visit; returns the day of their previous one, or -1. */
+    public static long visited(UUID village, UUID player, long day) {
+        Chronicle c = of();
+        if (c == null) return -1;
+        Map<UUID, Long> v = c.visits.computeIfAbsent(village, k -> new HashMap<>());
+        Long before = v.put(player, day);
+        if (before == null || before != day) c.setDirty();
+        return before == null ? -1 : before;
+    }
 
     /** This village's record of this player, or null. */
     @Nullable
@@ -156,6 +168,12 @@ public final class Chronicle extends SavedData {
                 gs.add(g);
             }
             if (!gs.isEmpty()) c.guests.put(id, gs);
+            Map<UUID, Long> seen = new HashMap<>();
+            for (Tag e : v.getList("Visits", Tag.TAG_COMPOUND)) {
+                CompoundTag one = (CompoundTag) e;
+                if (one.hasUUID("Player")) seen.put(one.getUUID("Player"), one.getLong("Day"));
+            }
+            if (!seen.isEmpty()) c.visits.put(id, seen);
         }
         return c;
     }
@@ -191,6 +209,14 @@ public final class Chronicle extends SavedData {
                 gs.add(one);
             }
             v.put("Guests", gs);
+            ListTag seen = new ListTag();
+            for (Map.Entry<UUID, Long> en : visits.getOrDefault(e.getKey(), Map.of()).entrySet()) {
+                CompoundTag one = new CompoundTag();
+                one.putUUID("Player", en.getKey());
+                one.putLong("Day", en.getValue());
+                seen.add(one);
+            }
+            v.put("Visits", seen);
             all.add(v);
         }
         // A village with guests but no history yet (not likely, but never lose a house).
