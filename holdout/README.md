@@ -204,8 +204,13 @@ loot table that fits it.
 - **Hearing:** zombies out of sight leave a "last seen" mark, and anyone within
   earshot sees a ripple where one moves, even through walls. Keen Hearing,
   the Police Officer, the Ex-Con and the Drifter hear further.
+- **Sound you can place:** groans, glass and screams come from where the
+  infected are. They pan left or right with the camera, fade with distance and
+  are muffled through walls, measured from your nearest survivor.
 - A **minimap** shows the explored layout, the squad, seen zombies and sound
   pings.
+- **Picked clean:** a searched place stays empty for four hours of real time.
+  The city map counts the time down on each one.
 - **Special infected:** stalkers creep up while nobody is looking, screamers
   call every infected nearby, and bloaters burst into an infectious cloud.
   Hidden traps wait in the dark; scouts spot them from much further away.
@@ -279,6 +284,9 @@ unless a teammate helps them up.
   in the night.
 - **Expansions:** each side of the fence can be pushed out twice. Each one costs
   materials and cash, takes a crew time to clear, and pays back salvage.
+- **Earned names:** survivors pick up nicknames and a short bio from what
+  they do ("Two-Shot Mara", "Greenthumb", "the Angel"). Bigger deeds replace
+  smaller ones. You can rename them in the Their story section of their sheet.
 - **Survivors:** 25 pre-outbreak jobs (the Scout is new), eight skills,
   traits with strengths and flaws, a weapon, armor and gear slot each, item
   quality and condition, mods, and permanent death recorded in the Memorial.
@@ -318,6 +326,11 @@ unless a teammate helps them up.
 - **Raids** are fought in the host's camp and streamed to everyone. Select a
   defender you lead and right-click to move or pick a target; the host's
   game carries the order out.
+- **Lockers:** each player has one. *Keep* moves an item or resources from
+  camp storage into it; only that player's survivors can wear locker items,
+  and nobody else can take or sell them. Give items to a friend, or offer a
+  trade (Players panel, *Trade*): they accept or turn it down, and nothing
+  moves until they accept. A forgotten player's locker goes back to camp.
 - Chat with `Enter`. Coloured rings show where each friend is looking; `Q` or
   Alt+click pings a spot for everyone. Coming back after a while, you get a
   summary of what happened since you were last in camp.

@@ -1,7 +1,7 @@
 // The station drawer: workers, what the station is doing and producing,
 // crafting orders (queue, recipes, mods, repairs), automation, upgrades.
 import { RES, STATIONS, RECIPES, MODS, ITEMS, QUALITY, OCCUPATIONS, SKILLS, SKILL_KEYS, REPAIR, SEC_PER_DAY, FENCE, ALT_RECIPES, BELTS, BELT_BONUS, SIGNAL, RESEARCH, CORE_SLOTS, VEHICLES } from '../game/data.js'
-import {
+import { NET,
   S, workersOf, slots, assign, workEff, bestFor, upgradeCost, startUpgrade, demolish, installModule, recipesFor, modsFor, queueMax, orderRecipe,
   orderMod, orderRepair, cancelOrder, moveOrder, orderSpec, qualityOdds, itemOf, itemName, canAfford, survivorStats, capOf, bedCount, getS, ownerOf,
   repairCost, repairTime, gameDur, stationSize, signalNeed, deliverSignal, signalPhase, signalCost, signalBlocked, researchCost,
@@ -687,7 +687,7 @@ function modsTab(ui, st) {
     h('p.note', 'One mod per item. Fitting takes the item out of use until it is done.'),
     mods.map(([id, M]) => {
       const locked = M.lvl > st.level
-      const eligible = S.items.filter((it) => (ITEMS[it.id].mods === M.type || (M.type === 'gun' && ITEMS[it.id].mods === 'gun')) && !(it.mods || []).length && !st.orders.some((o) => o.item === it.uid))
+      const eligible = S.items.filter((it) => (!it.locker || it.locker === NET.pid) && (ITEMS[it.id].mods === M.type || (M.type === 'gun' && ITEMS[it.id].mods === 'gun')) && !(it.mods || []).length && !st.orders.some((o) => o.item === it.uid))
       return h(
         'div.recipe' + (locked ? '.locked' : ''),
         h('div.r-main', h('b', M.name), h('span.r-sub', M.desc, ' ', costList(M.cost, { small: true }))),
@@ -724,7 +724,7 @@ function pickModTarget(ui, st, modId, items) {
   )
 }
 function repairsTab(ui, st) {
-  const items = S.items.filter((it) => ITEMS[it.id].repair === st.type && (it.cond ?? 100) < 100).sort((a, b) => a.cond - b.cond)
+  const items = S.items.filter((it) => (!it.locker || it.locker === NET.pid) && ITEMS[it.id].repair === st.type && (it.cond ?? 100) < 100).sort((a, b) => a.cond - b.cond)
   if (!items.length) return h('p.note', 'Everything this bench looks after is in perfect condition.')
   return h(
     'div',

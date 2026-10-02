@@ -23,6 +23,7 @@ import { volumeControl } from './volume.js'
 import { callName, fullName } from '../game/deeds.js'
 import { fullscreenButton } from './fullscreen.js'
 import { victoryModal, renderMarket, renderLog, renderFence, renderExpansion, renderProduction, renderPower, renderMorale, renderSettings, recruitModal, raidReportModal, missionReportModal, gameOverModal, menuModal, hordeInfo } from './camppanels.js'
+import { watchTrades } from './lockerui.js'
 
 const NAV = [
   { id: 'build', label: 'Build', key: 'B', icon: 'build', primary: true },
@@ -834,6 +835,7 @@ export class UI {
       }
       this.updateTop()
       if (this.netEl) updateNetChip(this.netEl, this.game.net)
+      watchTrades(this)
     }
     if (this.panelLive && this.panelFn) {
       this.panelT -= dt

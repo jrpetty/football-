@@ -13,6 +13,7 @@ import { bus, uid } from '../core/util.js'
 import { diff, applyFields, clone } from './delta.js'
 import { openCarrier, newId } from './transport.js'
 import { view } from '../render/view.js'
+import { applyLockerOp, tidyLockers } from './lockers.js'
 
 export const PROTO = 1
 export const COLORS = ['#e8b54a', '#5fb2ea', '#e3685b', '#7bc66a', '#c58be6', '#ec9347', '#4fd3c1', '#ea70aa']
@@ -289,6 +290,12 @@ export class Session {
         return
       case 'admin':
         return this.adminOp(pid, m)
+      case 'locker': {
+        const why = applyLockerOp(pid, m)
+        if (why) this.c.send({ t: 'rej', why }, from)
+        this.t.delta = 0
+        return
+      }
       case 'relay':
         return this.routeRelay(pid, m.to, m.d)
       case 'bye':
@@ -460,6 +467,23 @@ export class Session {
           }
           if (n[1] < 0 && (S.res[k] || 0) + n[1] < -0.5) return `not enough ${RES[k].name.toLowerCase()}`
         }
+    }
+    // what is in someone's locker only moves through locker ops
+    const its = f.items
+    if (its) {
+      if (its[0] !== 3) return 'bad patch'
+      const P = its[2]
+      const theirs = (u) => {
+        const it = S.items.find((x) => x.uid === u)
+        return it?.locker && it.locker !== pid
+      }
+      if (P.d) P.d = P.d.filter((u) => !theirs(u))
+      if (P.m)
+        for (const [u, n] of Object.entries(P.m)) {
+          if (theirs(u)) delete P.m[u]
+          else if (n?.[0] === 2 && n[1]) delete n[1].locker
+        }
+      for (const [, it] of P.a || []) if (it) delete it.locker
     }
     const sv = f.survivors
     if (sv) {
@@ -738,6 +762,7 @@ export class Session {
       if (t.owners <= 0) {
         t.owners = 20
         this.tidyOwners()
+        tidyLockers()
         // a silent line is dropped; through the server a closed socket says
         // so itself, so only a long silence counts there
         const quiet = this.c?.kind === 'ws' || this.c?.kind === 'server' ? 90 : 40
@@ -794,6 +819,16 @@ export class Session {
     this.captain = false
     this.captainReported = true
     this.c.send({ t: 'raidDone', report: { count: report.count, killed: report.killed, injured: report.injured, dead: report.dead, lost: report.lost, won: report.won }, finale }, this.hostPeer)
+  }
+  // A locker op: the host carries it out, for itself or for a guest.
+  locker(m) {
+    if (this.role === 'host') {
+      const why = applyLockerOp(this.pid, m)
+      this.t.delta = 0
+      return why
+    }
+    this.c.send({ t: 'locker', ...m }, this.hostPeer)
+    return null
   }
   assign(sid, pid) {
     if (this.role !== 'host') return this.isAdmin() && this.c.send({ t: 'admin', op: 'assign', sid, pid }, this.hostPeer)

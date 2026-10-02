@@ -9,6 +9,7 @@ import { sfx } from '../core/audio.js'
 import { h } from '../core/util.js'
 import { icon } from './icons.js'
 import { plural } from './common.js'
+import { tradeModal } from './lockerui.js'
 
 const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
 const nameOf = (pid) => playerOf(pid)?.name || 'Someone'
@@ -73,6 +74,7 @@ export function renderPlayers(ui) {
           h('i.swatch', { style: { background: P.color } }),
           h('div.mpp-main', h('b', P.name, pid === mp.host ? h('em.tag', 'host') : pid === mp.admin ? h('em.tag', 'admin') : null, pid === NET.pid ? h('em.tag.you', 'you') : null), h('small', doing)),
           h('span.mpp-crew', plural(mine.length, 'survivor')),
+          pid !== NET.pid ? h('button.mini', { 'data-tip': 'Offer a trade from your locker', onclick: () => tradeModal(ui, pid) }, 'Trade') : null,
           host && pid !== NET.pid
             ? here
               ? h('button.mini', { onclick: () => ui.confirm(`Send ${P.name} away?`, 'They are disconnected. Their survivors stay in camp and they can join again.', 'Disconnect', () => (net.kick(pid), ui.refreshPanel())) }, 'Kick')

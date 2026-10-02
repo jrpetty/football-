@@ -58,7 +58,10 @@ const CHAPTERS = [
       ),
       h('h4', 'Hearing'),
       P('When a zombie goes out of sight it leaves a "last seen" mark where it was. Survivors close enough to hear one move see a ripple at its rough position, even through walls. Keen Hearing, the Police Officer, the Ex-Con and the Drifter hear further. Screamers bring every infected nearby. Stalkers creep in while nobody is looking.'),
+      P('Listen too. Groans, footsteps at the glass and screams come from where the infected are: left or right of the screen, louder as they come closer, and dull and muffled when a wall stands between them and your nearest survivor. With headphones you can place a zombie by ear before anyone sees it.'),
       P('Mix your squads: put a scout up front, and do not send a nearsighted survivor in alone after dark.'),
+      h('h4', 'Picked clean'),
+      P('Once a place has been searched, it stays picked clean for four hours of real time, whatever the camp clock says. The city map shows how long is left on each one. Plan your routes around it: the next street over may still be full.'),
     ],
   },
   {
@@ -183,6 +186,8 @@ const CHAPTERS = [
       P('Occupations and traits matter: a mechanic builds faster, a nurse heals, a scout senses through walls. Read each newcomer at the gate before you give them a bed.'),
       h('h4', 'Looking after them'),
       h('ul', h('li', 'Hunger, thirst, rest and morale all affect how well they work.'), h('li', 'Injured survivors heal in their beds, and faster in the Infirmary.'), h('li', 'Training levels skills without the risk of a run.')),
+      h('h4', 'Names they earn'),
+      P('Do enough of something and the camp starts calling a survivor by it: a pistol in steady hands makes "Two-Shot", twenty days on the farm makes "Greenthumb", pulling friends up off the street makes "the Angel". Bigger deeds replace smaller ones. Each sheet has a Their story section with the name, why they got it and a short bio of what they have done; you can rename them yourself or drop the name.'),
     ],
   },
   {
@@ -310,6 +315,13 @@ const CHAPTERS = [
         h('li', 'The camp keeps one pace for everyone, set by the host, and it does not slow down while someone is on a run.'),
         h('li', 'Press Enter to chat. Coloured rings show where your friends are looking. Press Q or Alt+click to ping a spot: everyone sees a pulse in your colour.'),
         h('li', 'If someone drops out mid-run, their squad walks home with nothing. If the host leaves, the camp waits, saved, until they host again.'),
+      ),
+      h('h4', 'Lockers and trading'),
+      h(
+        'ul',
+        h('li', 'Everyone has a locker of their own. In Items, press Keep on anything in camp storage to put it in yours, or put away resources on the My locker tab. Only your own survivors can wear what is in your locker, and nobody else can take it or sell it.'),
+        h('li', 'Give a locker item to a friend straight away, or offer a trade: press Trade next to them in the Players panel (or Make an offer in your locker), pick what you give from your locker and what you want from theirs. Nothing moves until they accept.'),
+        h('li', 'Send something back To camp whenever you like. If a player is forgotten from the camp, their locker goes back to the camp stores.'),
       ),
       h('h4', 'Runs together'),
       h(

@@ -1244,3 +1244,22 @@ body.aiming #c { cursor: crosshair !important; }
 .coop-row .swatch { width: 11px; height: 11px; border-radius: 3px; flex: none; }
 .coop-row b { font-family: var(--font-display); min-width: 54px; }
 .pickrow.on { border-color: var(--accent); background: rgba(234, 165, 60, 0.1); }
+
+/* ---------------------------------------------------------------- lockers and trades */
+.mini-sel { appearance: none; background: rgba(0, 0, 0, 0.35); color: var(--fg); border: 1px solid var(--line-2); border-radius: 6px; font: 600 12px var(--font-body); padding: 3px 8px; cursor: pointer; }
+.inp.num { width: 76px; }
+.lk-res .kv { align-items: center; }
+.lk-put { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); align-items: center; flex-wrap: wrap; }
+.trades .offer { display: flex; align-items: center; gap: 12px; padding: 9px 10px; border-radius: 8px; border-left: 4px solid var(--c); background: rgba(255, 245, 220, 0.04); margin-top: 6px; flex-wrap: wrap; }
+.trades .offer.in { background: rgba(234, 165, 60, 0.08); }
+.offer .of-main { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.offer .of-items { color: var(--dim); }
+.trade { min-width: min(820px, 90vw); }
+.tr-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.tr-side { min-width: 0; }
+.tr-side h3 { margin: 4px 0 8px; }
+.igrid.small { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); max-height: 38vh; overflow-y: auto; }
+.tr-res { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.tr-row { display: grid; grid-template-columns: 20px 1fr 76px; align-items: center; gap: 8px; }
+.tr-row .ic { width: 18px; height: 18px; display: block; }
+@media (max-width: 760px) { .tr-cols { grid-template-columns: 1fr; } }

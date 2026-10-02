@@ -778,7 +778,8 @@ function tickBench(st, rate, dt) {
 }
 function maintenanceJob(st) {
   // Repair the most worn item this bench handles, below 60%.
-  const items = S.items.filter((it) => ITEMS[it.id].repair === st.type && it.cond < 60 && !st.orders.some((o) => o.item === it.uid))
+  // a player's locker is theirs to look after
+  const items = S.items.filter((it) => !it.locker && ITEMS[it.id].repair === st.type && it.cond < 60 && !st.orders.some((o) => o.item === it.uid))
   if (!items.length) return null
   items.sort((a, b) => a.cond - b.cond)
   const it = items[0]

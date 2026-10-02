@@ -1,13 +1,15 @@
 // Crew: the roster, each survivor's sheet (skills, traits, equipment, job),
 // and the armory of items with equip, sell and repair shortcuts.
 import { RES, ITEMS, QUALITY, RARITY, MODS, STATIONS, OCCUPATIONS, SKILLS, SKILL_KEYS, UTILITIES, TRAITS, INFECTION, SEC_PER_DAY, PERKS, PERK_LEVELS } from '../game/data.js'
-import { canControl, S, getS, survivorStats, survivorLevel, equip, unequip, gearLock, itemOf, itemName, itemValue, removeItem, ownerOf, workEff, assign, slots, workersOf, gain, day, killSurvivor, log, infectionStage, treatInfection, researchDone, choosePerk, perkOf } from '../game/state.js'
+import { NET, canControl, S, getS, survivorStats, survivorLevel, equip, unequip, gearLock, itemOf, itemName, itemValue, removeItem, ownerOf, workEff, assign, slots, workersOf, gain, day, killSurvivor, log, infectionStage, treatInfection, researchDone, choosePerk, perkOf } from '../game/state.js'
 import { sellMult } from '../game/economy.js'
 import { sfx } from '../core/audio.js'
 import { bus, h, fmt, clamp } from '../core/util.js'
 import { icon } from './icons.js'
 import { leaderChip, leaderBanner } from './netui.js'
 import { bio, callName, fullName, nickText, setNick, campNames } from '../game/deeds.js'
+import { lockerView, lockerOp } from './lockerui.js'
+import { lockerItems } from '../net/lockers.js'
 import { costList, resChip, bar, qualityTag, condBar, itemCard, skillRows, traitTags, hpBar, seg, plural, resIcon } from './common.js'
 
 // ---------------------------------------------------------------- one survivor
@@ -205,7 +207,9 @@ export function pickJob(ui, s) {
 }
 // Pick gear for a slot: from storage, or swapped with someone else in camp.
 export function pickItem(ui, s, slot) {
-  const all = S.items.filter((it) => ITEMS[it.id].slot === slot).sort((a, b) => itemValue(b) - itemValue(a))
+  // someone's locker is theirs: only their own survivors wear what is in it
+  const okFor = (it) => !it.locker || (it.locker === NET.pid && S.mp?.owner?.[s.id] === NET.pid)
+  const all = S.items.filter((it) => ITEMS[it.id].slot === slot && okFor(it)).sort((a, b) => itemValue(b) - itemValue(a))
   const free = all.filter((it) => !ownerOf(it.uid))
   const held = all.filter((it) => ownerOf(it.uid) && ownerOf(it.uid) !== s)
   const mine = itemOf(s.equip[slot])
@@ -283,9 +287,15 @@ export function renderCrew(ui) {
 
 // ---------------------------------------------------------------- items
 let itemFilter = 'all'
+let itemTab = 'camp'
 export function renderItems(ui) {
+  // in a multiplayer camp: camp storage, and a locker of your own
+  const mp = NET.role !== 'solo' && !!S.mp
+  const mineN = mp ? lockerItems().length : 0
+  const tabs = mp ? seg([['camp', 'Camp storage'], ['locker', `My locker${mineN ? ` · ${mineN}` : ''}`]], itemTab, (v) => ((itemTab = v), ui.refreshPanel(true))) : null
+  if (mp && itemTab === 'locker') return ui.frame('Items', 'Your locker: yours alone', [tabs, ...lockerView(ui, giveItem)], { icon: 'items' })
   const filters = [['all', 'All'], ['weapon', 'Weapons'], ['armor', 'Armor'], ['gear', 'Gear'], ['free', 'Unused'], ['worn', 'Worn']]
-  let items = [...S.items]
+  let items = S.items.filter((it) => !it.locker)
   if (itemFilter === 'free') items = items.filter((it) => !ownerOf(it.uid))
   else if (itemFilter === 'worn') items = items.filter((it) => ITEMS[it.id].dur && it.cond < 60)
   else if (itemFilter !== 'all') items = items.filter((it) => ITEMS[it.id].slot === itemFilter)
@@ -298,6 +308,7 @@ export function renderItems(ui) {
       actions: h(
         'span.ic-acts',
         h('button.mini', { onclick: () => giveItem(ui, it) }, who ? 'Swap' : 'Equip'),
+        mp && (!who || !S.mp.owner[who.id] || S.mp.owner[who.id] === NET.pid) ? h('button.mini', { 'data-tip': 'Into your locker: yours alone, and only your survivors can wear it', onclick: () => lockerOp(ui, { op: 'keepItem', item: it.uid }, `${itemName(it)} is in your locker.`) }, 'Keep') : null,
         h(
           'button.mini',
           {
@@ -314,11 +325,12 @@ export function renderItems(ui) {
       ),
     })
   })
-  return ui.frame('Items', `${plural(S.items.length, 'item')} in camp`, [seg(filters, itemFilter, (v) => ((itemFilter = v), ui.refreshPanel())), cards.length ? h('div.igrid', cards) : h('p.note', 'Nothing here.')], { icon: 'items' })
+  return ui.frame('Items', `${plural(S.items.filter((it) => !it.locker).length, 'item')} in camp`, [tabs, seg(filters, itemFilter, (v) => ((itemFilter = v), ui.refreshPanel())), cards.length ? h('div.igrid', cards) : h('p.note', 'Nothing here.')], { icon: 'items' })
 }
 function giveItem(ui, it) {
   const slot = ITEMS[it.id].slot
-  const list = S.survivors.filter((s) => s.status !== 'mission' && canControl(s))
+  // a locker item goes only to survivors this player leads
+  const list = S.survivors.filter((s) => s.status !== 'mission' && canControl(s) && (!it.locker || S.mp?.owner?.[s.id] === NET.pid))
   let close
   close = ui.modal(
     h(
