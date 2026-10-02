@@ -289,6 +289,12 @@ export function renderPower(ui) {
     if (st.type === 'battery') rows.push(h('div.kv', h('span', name), h('b', `${fmt(st.charge || 0)} / ${D.store[st.level - 1]} stored${(st.flow || 0) > 0.05 ? ' · charging' : (st.flow || 0) < -0.05 ? ' · supplying' : ''}`)), bar((st.charge || 0) / D.store[st.level - 1], 'prod'))
   }
   const users = S.stations.filter((st) => powerNeed(st) > 0)
+  // belts, as one line: how many, what they draw, how many have stopped
+  const belts = S.links || []
+  const beltsOff = belts.filter((l) => !p.powered.has(l.id)).length
+  const beltRow = belts.length
+    ? h('div.kv', { 'data-tip': 'Each belt draws a little for every metre: Mk1 0.01, Mk2 0.02, Mk3 0.03 (at least 0.1 a belt). With no power a belt stops.' }, h('span', `Belts (${belts.length})`), h('b' + (beltsOff ? '.bad' : '.good'), `${fmt(p.beltNeed || 0)} ${beltsOff ? `· ${beltsOff} stopped` : '✓'}`))
+    : null
   const mix = [['Sun and wind', p.fromRenew], ['Engines and generators', p.fromFuel], ['Batteries', p.fromBatt]].filter(([, v]) => v > 0.05)
   return ui.frame(
     'Power',
@@ -296,8 +302,8 @@ export function renderPower(ui) {
     [
       h('section.card', h('h3', 'Sources'), rows.length ? rows : h('p.note', 'No power yet. A Steam Engine burns wood or coal (Steam Power milestone, tier 1). Diesel generators, solar, wind and batteries come later.')),
       mix.length ? h('section.card', h('h3', 'Where it comes from'), mix.map(([t, v]) => h('div.kv', h('span', t), h('b', fmt(v))))) : null,
-      h('section.card', h('h3', 'Using power', h('small', `${fmt(p.demand)} wanted`)), users.length ? users.map((st) => h('div.kv', h('span', STATIONS[st.type].name), h('b' + (p.powered.has(st.id) ? '.good' : '.bad'), `${fmt(powerNeed(st))} ${p.powered.has(st.id) ? '✓' : STATIONS[st.type].machine ? 'by hand' : 'unpowered'}`))) : h('p.note', 'Nothing yet. Machines (Fabricator, Machine Shop, labs and benches), automated stations, turrets and floodlights use power.')),
-      h('p.note', 'Turrets and floodlights get power first, then machines and automated stations in the order they were built. Sun and wind are used first and charge the batteries with what is left; engines only burn for the rest. A machine without power is hand-cranked at half speed.'),
+      h('section.card', h('h3', 'Using power', h('small', `${fmt(p.demand)} wanted`)), beltRow, users.length ? users.map((st) => h('div.kv', h('span', STATIONS[st.type].name), h('b' + (p.powered.has(st.id) ? '.good' : '.bad'), `${fmt(powerNeed(st))} ${p.powered.has(st.id) ? '✓' : STATIONS[st.type].machine ? 'by hand' : STATIONS[st.type].node ? 'stopped' : 'unpowered'}`))) : beltRow ? null : h('p.note', 'Nothing yet. Machines (Fabricator, Machine Shop, labs and benches), automated stations, turrets and floodlights use power.')),
+      h('p.note', 'Turrets and floodlights get power first, then belts, splitters and mergers (a belt without power stops), then machines and automated stations in the order they were built. Sun and wind are used first and charge the batteries with what is left; engines only burn for the rest. A machine without power is hand-cranked at half speed.'),
     ],
     { icon: 'bolt' },
   )

@@ -717,7 +717,7 @@ export class Session {
     // belts between the host's snapshots: goods ride on, go in at the far
     // end, and keep coming on at the rate the host last saw
     for (const l of S.links || []) {
-      if (!BELTS[l.tier]) continue
+      if (!BELTS[l.tier] || l.off) continue
       const it = (l.items ||= [])
       const gap = BELTS[l.tier].gap
       let lim = l.len

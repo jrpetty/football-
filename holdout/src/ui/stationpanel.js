@@ -8,7 +8,7 @@ import { NET,
   researchLock, startResearch, cancelResearch, pickAlt, altsFor, researchDone, installCore, removeCore, coreBoost, hasFlag, msDone,
   canControl,
 } from '../game/state.js'
-import { stationFlow, power, powerNeed, isAutomated, stationRate, solarOutput, windOutput, boilerFuel, sourcePower, HAND_RATE, kitchenSaving, constructSpeed, raidIntel, activeRecipe, activeSingle, recipeUnlocked, recipeTarget } from '../game/economy.js'
+import { stationFlow, power, powerNeed, linkPower, isAutomated, stationRate, solarOutput, windOutput, boilerFuel, sourcePower, HAND_RATE, kitchenSaving, constructSpeed, raidIntel, activeRecipe, activeSingle, recipeUnlocked, recipeTarget } from '../game/economy.js'
 import { linksOf, inputsOf, outputsOf, linkPerDay, linkState, upgradeCostOf, upgradeLink, upgradeLocked, removeLink, beltBonus, pulled, portsOf, linkAt, isDepot, nodeKind, nodeRes, insertNode, splitProblem, beltSpeed as beltSpeedOf } from '../game/belts.js'
 import { flowsNow, limitText } from '../game/rates.js'
 import { sfx } from '../core/audio.js'
@@ -673,6 +673,7 @@ export function renderBelt(ui, sel) {
       h('div.kv', h('span', 'Moving now'), h('b', perDay(now))),
       r ? h('div.kv', h('span', { 'data-tip': 'Worked out from what the far ends make and use, once everything settles' }, 'Settles at'), h('b', perDay(r.flow))) : null,
       h('div.kv', h('span', `Most a ${T.name} carries`), h('b', perDay(cap))),
+      h('div.kv', { 'data-tip': `${T.name}s draw ${BELTS[l.tier].power} power a metre, at least 0.1 a belt. With no power the belt stops.` }, h('span', 'Power'), l.off ? h('b.bad', `${linkPower(l).toFixed(1)} · stopped, no power`) : h('b.good', `${linkPower(l).toFixed(1)} · running`)),
       bar((r?.flow ?? now) / cap, 'belt' + ((r?.flow ?? now) > cap * 0.95 ? '.max' : '')),
       r ? h('p.note' + (r.limit === 'belt' ? '.warn' : ''), limitText(l, r)) : null,
       h('p.note.dim', `${T.name}: ${beltSpeedOf(l.tier).toFixed(2)} m a second, items ${BELTS[l.tier].gap} m apart = ${(beltSpeedOf(l.tier) / BELTS[l.tier].gap).toFixed(3)} a second${(BELT_STACK[l.res] || 1) > 1 ? ` (${BELT_STACK[l.res]} ${RES[l.res].name.toLowerCase()} each)` : ''} × ${SEC_PER_DAY} seconds a day = ${perDay(cap)} a day.`),

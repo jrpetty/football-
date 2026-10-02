@@ -137,17 +137,25 @@ re-routes the belt round it.
 settles, what holds it back, upgrade, take down, and **Splitter here** /
 **Merger here** at the spot you clicked.
 
-| Belt | Carries | Unlocked by |
-| --- | --- | --- |
-| Mk1: salvaged rubber on scrap rails | 96 a day (one every 5 s) | Conveyors (tier 1) |
-| Mk2: proper rollers, cured belt | 192 a day (one every 2.5 s) | Rubber Rollers (tier 4) |
-| Mk3: motor-driven, steel-framed | 400 a day (one every 1.2 s) | Motor Belts (tier 5) |
+| Belt | Carries | Power | Unlocked by |
+| --- | --- | --- | --- |
+| Mk1: salvaged rubber on scrap rails | 96 a day (one every 5 s) | 0.01 a metre | Conveyors (tier 1) |
+| Mk2: proper rollers, cured belt | 192 a day (one every 2.5 s) | 0.02 a metre | Rubber Rollers (tier 4) |
+| Mk3: motor-driven, steel-framed | 400 a day (one every 1.2 s) | 0.03 a metre | Motor Belts (tier 5) |
 
 - **Splitter** (Conveyors): one belt in, up to three out. Each item goes to
   the next belt in turn, so two belts get exactly half each and three a third;
   when one is full its share goes to the others.
 - **Merger** (Conveyors): up to three belts of the same goods in, one out, at
   most that belt's rate.
+- **Belts run on power.** A belt draws its tier's rate per metre, at least 0.1
+  (a 20 m Mk1 belt draws 0.2, a twentieth of a level-1 Steam Engine); a
+  splitter or merger draws 0.2. Power efficiency research cuts it by a
+  quarter. Belts get power right after turrets and floodlights, before
+  machines. Without power a belt stops where it is: its lamps go dark, nothing
+  moves, and the splitter or merger on it passes nothing. The belt panel shows
+  its draw, the Power panel a "Belts" line and how many are stopped, and the
+  camp brief flags stopped belts.
 - A station runs 15% faster for each side that is fully belted (inputs fed,
   outputs carried away).
 - A station whose output is belted to a consumer works **on demand**: it makes
@@ -210,8 +218,9 @@ carry exactly those goods.
   useless in still fog) cost nothing to run.
 - **Battery Bank** stores what solar and wind make beyond the load and gives
   it back at night.
-- When power is short, defence gets it first, then staffed machines, then
-  automation. The Power panel shows every source and every user.
+- When power is short, defence gets it first, then belts, splitters and
+  mergers, then staffed machines, then automation. The Power panel shows every
+  source and every user.
 
 ### Research and power cores
 - The **Research Desk** studies **schematics** found on runs. Each study offers

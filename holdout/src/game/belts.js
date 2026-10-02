@@ -444,10 +444,14 @@ let rr = 0
 let clock = 0
 // a splitter's outgoing belts in a fixed order (by pod), refreshed each tick
 const outsOf = new Map()
-export function tickLinks(dt) {
+export function tickLinks(dt, pinfo = null) {
   const L = S.links
   if (!L?.length || dt <= 0) return
   clock += dt
+  // no power, no movement: a belt (or a splitter or merger) without it stops
+  const on = (id) => !pinfo || pinfo.powered.has(id)
+  for (const l of L) l.off = !on(l.id)
+  for (const st of S.stations) if (isNode(st)) st.off = !on(st.id)
   outsOf.clear()
   for (const l of L) {
     const src = byId(l.from)
@@ -463,6 +467,10 @@ export function tickLinks(dt) {
     const src = byId(l.from)
     const dst = byId(l.to)
     if (!src || !dst) continue
+    if (l.off) {
+      l.flow = (l.flow || 0) * Math.max(0, 1 - dt / 25)
+      continue
+    }
     const T = { gap: BELTS[l.tier].gap, speed: beltSpeed(l.tier) }
     const n = stackOf(l.res)
     const h = (T.gap * 0.8) / T.speed
@@ -471,7 +479,11 @@ export function tickLinks(dt) {
     l.flow = (l.flow || 0) + ((l.moved - before) / dt - (l.flow || 0)) * Math.min(1, dt / 25)
   }
   // splitters and mergers look busy while goods pass through
-  for (const st of S.stations) if (isNode(st)) st.active = clock - (st.passAt ?? -99) < 3
+  for (const st of S.stations) {
+    if (!isNode(st)) continue
+    st.active = !st.off && clock - (st.passAt ?? -99) < 3
+    if (st.off) st.stalled = 'No power'
+  }
 }
 function stepLink(l, T, src, dst, n, dt) {
   const it = l.items
@@ -500,6 +512,7 @@ function deliver(st, k, n) {
     return true
   }
   st.buf = st.buf || { in: {}, out: {} }
+  if (st.off) return false
   // goods pass straight through a splitter or merger
   const b = isNode(st) ? st.buf.out : st.buf.in
   if ((b[k] || 0) + n > inCap(st, k) + 1e-6) return false
@@ -518,7 +531,7 @@ function load(src, dst, l, n) {
     return true
   }
   const o = (src.buf = src.buf || { in: {}, out: {} }).out
-  if ((o[k] || 0) < n - 1e-6) return false
+  if (src.off || (o[k] || 0) < n - 1e-6) return false
   // a splitter: each item to the next belt in turn, unless that one is full
   const outs = outsOf.get(src.id)
   if (outs && outs.length > 1) {
@@ -531,6 +544,7 @@ function load(src, dst, l, n) {
 }
 // How a belt is doing, for labels and panels.
 export function linkState(l) {
+  if (l.off) return 'off'
   if ((l.jam || 0) > 1.5) return 'backed'
   if (!l.items.length) return 'idle'
   return 'moving'

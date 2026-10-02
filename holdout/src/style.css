@@ -1443,3 +1443,5 @@ h3 .fillbest { text-transform: none; letter-spacing: 0.02em; font-family: var(--
 .resname .ic svg { width: 16px; height: 16px; }
 .tip i.bad { font-style: normal; color: #ff917a; }
 .psub .warn { color: #f2c98a; }
+.logi .prow.off .podtag { opacity: 0.55; }
+.logi .prow.off .plimit { color: #ff917a; }

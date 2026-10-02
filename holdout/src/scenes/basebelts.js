@@ -13,6 +13,7 @@ import { BELTS, RES, STATIONS, SEC_PER_DAY } from '../game/data.js'
 import { S, stationSize, canAfford } from '../game/state.js'
 import { BELT_Y, BELT_DY, planLink, addLink, linkProblem, linkState, linkPerDay, isDepot, isNode, nodeKind, nodeRes, rerouteLinks, beltSpeed, ensurePorts, portsOf, portAt, linkAt, freePods, inputsOf, outputsOf, beltBlocked } from '../game/belts.js'
 import { flowsNow, limitText } from '../game/rates.js'
+import { power, linkPower } from '../game/economy.js'
 import { plateMat } from '../models/detail.js'
 import { sfx } from '../core/audio.js'
 import { fmt } from '../core/util.js'
@@ -29,7 +30,7 @@ const LOOK = [
   { frame: 'paint', frameC: '#3c4148', rail: 'paint', railC: '#d8a020', post: 'paint', postC: '#4a5058', lamp: '#ffd060' },
   { frame: 'steel', frameC: '#5f6b74', rail: 'paint', railC: '#3f7fc0', post: 'steel', postC: '#6a747c', lamp: '#7ad0ff' },
 ]
-const STATE_LAMP = { moving: '#46ff7a', idle: '#ffb020', backed: '#ff3a30' }
+const STATE_LAMP = { moving: '#46ff7a', idle: '#ffb020', backed: '#ff3a30', off: '#1c2433' }
 // Which shape a resource rides in.
 const SHAPE = { water: 'drum', fuel: 'drum', chemicals: 'drum', gunpowder: 'keg', rubber: 'roll', food: 'sack', cloth: 'sack', wood: 'log', metal: 'bar', steel: 'bar', wiring: 'spool' }
 const SHAPES = ['crate', 'drum', 'keg', 'sack', 'log', 'bar', 'spool', 'roll']
@@ -92,6 +93,16 @@ function beltMat(tier) {
     beltMats[tier] = new THREE.MeshStandardMaterial({ map: t, roughness: 0.86, metalness: 0.05 })
   }
   return beltMats[tier]
+}
+// a belt with no power: the same rubber, standing still and a shade darker
+const stillMats = []
+function beltStill(tier) {
+  if (!stillMats[tier]) {
+    const t = beltTexture().clone()
+    t.needsUpdate = true
+    stillMats[tier] = new THREE.MeshStandardMaterial({ map: t, color: '#8a8a8a', roughness: 0.9, metalness: 0.05 })
+  }
+  return stillMats[tier]
 }
 const GHOST_OK = new THREE.MeshStandardMaterial({ color: '#8af0b0', emissive: '#2a9a5a', emissiveIntensity: 0.7, transparent: true, opacity: 0.5, depthWrite: false })
 const GHOST_BAD = new THREE.MeshStandardMaterial({ color: '#ff9a8a', emissive: '#a02a20', emissiveIntensity: 0.7, transparent: true, opacity: 0.45, depthWrite: false })
@@ -657,6 +668,15 @@ export const BeltMixin = {
       const l = v.link
       const st = linkState(l)
       if (st !== v.state && v.lamp) {
+        // with no power the lamps go dark and the belt stops running
+        if ((st === 'off') !== (v.state === 'off')) {
+          const from = st === 'off' ? beltMat(l.tier) : beltStill(l.tier)
+          const to = st === 'off' ? beltStill(l.tier) : beltMat(l.tier)
+          v.group.traverse((o) => {
+            if (o.isMesh && o.material === from) o.material = to
+          })
+          v.lamp.emissiveIntensity = st === 'off' ? 0.4 : 2.2
+        }
         v.state = st
         v.lamp.emissive.set(STATE_LAMP[st])
       }
@@ -711,7 +731,7 @@ export const BeltMixin = {
     const st = linkState(l)
     const r = flowsNow().links.get(l.id)
     const cap = linkPerDay(l.tier, l.res)
-    return `<b>${BELTS[l.tier].name} · ${RES[l.res].name}</b><span>${STATIONS[from?.type]?.name || '?'} → ${STATIONS[to?.type]?.name || '?'} · ${Math.round(l.len)} m</span><span>Moving ${fmt(l.flow * SEC_PER_DAY)} a day now${r ? `, settles at ${fmt(r.flow)}` : ''} (carries up to ${fmt(cap)})${st === 'backed' ? ' · <em class="bad">backed up</em>' : ''}</span>${r ? `<small>${limitText(l, r)}</small>` : ''}<small>Click for the belt</small>`
+    return `<b>${BELTS[l.tier].name} · ${RES[l.res].name}</b><span>${STATIONS[from?.type]?.name || '?'} → ${STATIONS[to?.type]?.name || '?'} · ${Math.round(l.len)} m · ${l.off ? '<i class="bad">no power</i>' : `${linkPower(l).toFixed(1)} power`}</span><span>Moving ${fmt(l.flow * SEC_PER_DAY)} a day now${r ? `, settles at ${fmt(r.flow)}` : ''} (carries up to ${fmt(cap)})${st === 'backed' ? ' · <em class="bad">backed up</em>' : ''}</span>${r ? `<small>${limitText(l, r)}</small>` : ''}<small>Click for the belt</small>`
   },
   podTip(st, p) {
     const l = linkAt(st, p.i)
@@ -948,7 +968,10 @@ export const BeltMixin = {
           const ring = L.ringOf.get(t.st.id)
           if (ring) ring.userData.hot = true
           const cost = Object.entries(plan.cost).map(([k, v]) => `${(S.res[k] || 0) >= v ? '' : '<i class="bad">'}${v} ${RES[k].short || RES[k].name.toLowerCase()}${(S.res[k] || 0) >= v ? '' : '</i>'}`).join(' · ')
-          L.tip = `<b>${RES[plan.res].name} ${L.dir === 'out' ? 'to' : 'from'} the ${nm}</b><span>${BELTS[1].name} · ${Math.round(plan.len)} m · carries up to ${fmt(linkPerDay(1, plan.res))} a day</span><span>${cost}</span><span>${afford ? 'Click to build' : 'Not enough materials'}</span>`
+          const P = power()
+          const draw = linkPower({ len: plan.len, tier: 1 })
+          const spare = P.supply - P.demand
+          L.tip = `<b>${RES[plan.res].name} ${L.dir === 'out' ? 'to' : 'from'} the ${nm}</b><span>${BELTS[1].name} · ${Math.round(plan.len)} m · carries up to ${fmt(linkPerDay(1, plan.res))} a day</span><span>${cost}</span><span>Uses ${draw.toFixed(1)} power${spare < draw ? ' · <i class="bad">not enough spare power: it won\'t run</i>' : ` · ${spare.toFixed(1)} spare`}</span><span>${afford ? 'Click to build' : 'Not enough materials'}</span>`
         }
       }
       document.body.style.cursor = id ? (L.ok.has(t.st.id) ? 'pointer' : 'not-allowed') : 'crosshair'

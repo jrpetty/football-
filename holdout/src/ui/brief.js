@@ -58,6 +58,8 @@ export function alerts(ui) {
   const P = power()
   const dark = S.stations.filter((st) => powerNeed(st) > 0 && !P.powered.has(st.id))
   if (dark.length) out.push({ sev: 'warn', key: 'power', text: `${plural(dark.length, 'station')} without power`, sub: dark.slice(0, 2).map((st) => STATIONS[st.type].name).join(', '), act: 'Power', fn: () => ui.openPower() })
+  const stopped = (S.links || []).filter((l) => !P.powered.has(l.id))
+  if (stopped.length) out.push({ sev: 'bad', key: 'beltpower', text: `${plural(stopped.length, 'belt')} stopped: no power`, sub: `They need ${(P.beltNeed || 0).toFixed(1)} power between them`, act: 'Power', fn: () => ui.openPower() })
   if ((S.morale ?? 50) < 30) out.push({ sev: S.morale < 18 ? 'bad' : 'warn', key: 'morale', text: `Morale is low (${Math.round(S.morale)})`, sub: S.morale < 18 ? 'People will start leaving' : 'Beds, hot food and the fire help', act: 'Morale', fn: () => ui.openMorale() })
   if (S.recruit?.pending) out.push({ sev: 'info', key: 'gate', text: 'Someone is at the gate', sub: S.recruit.pending.s?.name || 'They want to join', act: 'Meet', fn: () => ui.showRecruit() })
   const done = GOALS.filter((x) => S.goals?.[x.id] === 'done')

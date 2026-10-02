@@ -3,7 +3,7 @@
 // recruits, distress calls, hordes and the black market.
 import {
   RES, STOCK_KEYS, AMMO_KEYS, ITEMS, QUALITY, MODS, STATIONS, FENCE, RECIPES, EXPANSIONS, HORDES, OCCUPATIONS, LOCATIONS,
-  GAME_MIN_PER_SEC, DAY_MIN, SEC_PER_DAY, SEC_PER_HOUR, UPKEEP, RARITY, ALT_RECIPES, INFECTION, OUTPOST, SIGNAL,
+  GAME_MIN_PER_SEC, DAY_MIN, SEC_PER_DAY, SEC_PER_HOUR, UPKEEP, RARITY, ALT_RECIPES, INFECTION, OUTPOST, SIGNAL, BELTS,
 } from './data.js'
 const SIGNAL_PHASES = SIGNAL.length
 import {
@@ -33,13 +33,18 @@ export function powerNeed(st) {
   if (st.building || st.level < 1) return 0
   const d = STATIONS[st.type]
   if (st.type === 'turret' || st.type === 'floodlight') return st.autoOn === false ? 0 : d.power
+  if (d.node) return d.draw * (researchDone('efficiency') ? 0.75 : 1)
   const eff = researchDone('efficiency') ? 0.75 : 1
   let n = 0
   if (d.auto && st.level >= d.auto && st.module && st.autoOn !== false) n += d.autoPower * Math.pow(1 + coreBoost() * (st.cores || 0), 1.5) * eff
   if (d.machine && st.powerOn !== false && (n > 0 || workersOf(st).some((s) => s.status === 'ok'))) n += d.machine * eff
   return n
 }
-const powerPrio = (st) => (st.type === 'turret' || st.type === 'floodlight' ? 0 : STATIONS[st.type].machine ? 1 : 2)
+// Belts draw a little for every metre (more on the faster tiers), at least
+// 0.1 each; with no power a belt stops. They come right after the defences:
+// nothing on the line moves without them.
+export const linkPower = (l) => Math.max(0.1, l.len * (BELTS[l.tier]?.power || 0.01)) * (researchDone('efficiency') ? 0.75 : 1)
+const powerPrio = (st) => (st.type === 'turret' || st.type === 'floodlight' ? 0 : STATIONS[st.type].node ? 0.5 : STATIONS[st.type].machine ? 1 : 2)
 export function solarOutput() {
   const h = hour()
   if (h < 6 || h > 19.5) return 0
@@ -95,23 +100,33 @@ export function powerInfo() {
     }
   }
   const supply = renew + fueled + battRate
-  const users = S.stations.filter((st) => powerNeed(st) > 0).sort((a, b) => powerPrio(a) - powerPrio(b))
+  const users = []
+  for (const st of S.stations) {
+    const need = powerNeed(st)
+    if (need > 0) users.push({ id: st.id, need, prio: powerPrio(st) })
+  }
+  let beltNeed = 0
+  for (const l of S.links || []) {
+    const need = linkPower(l)
+    beltNeed += need
+    users.push({ id: l.id, need, prio: 0.5 })
+  }
+  users.sort((a, b) => a.prio - b.prio)
   let demand = 0
   let left = supply
   const powered = new Set()
-  for (const st of users) {
-    const need = powerNeed(st)
-    demand += need
-    if (left >= need - 1e-6) {
-      left -= need
-      powered.add(st.id)
+  for (const u of users) {
+    demand += u.need
+    if (left >= u.need - 1e-6) {
+      left -= u.need
+      powered.add(u.id)
     }
   }
   const used = supply - left
   const fromRenew = Math.min(used, renew)
   const fromFuel = Math.min(used - fromRenew, fueled)
   const fromBatt = Math.max(0, used - fromRenew - fromFuel)
-  return { supply: Math.round(supply * 10) / 10, renew, fueled, gen: fueled, demand, used, powered, srcs, fromRenew, fromFuel, fromBatt, spare: renew - fromRenew, charge, room, battRate, load: fueled > 0 ? fromFuel / fueled : 0 }
+  return { supply: Math.round(supply * 10) / 10, renew, fueled, gen: fueled, demand, used, powered, beltNeed, srcs, fromRenew, fromFuel, fromBatt, spare: renew - fromRenew, charge, room, battRate, load: fueled > 0 ? fromFuel / fueled : 0 }
 }
 let pinfoCache = null
 export const power = () => pinfoCache || powerInfo()
@@ -418,7 +433,7 @@ export function econTick(dt, opts = {}) {
     if (d.workers[st.level - 1] && !workersOf(st).length && !isAutomated(st, pinfo) && !['generator', 'boiler', 'watchtower', 'radio', 'training'].includes(st.type)) st.stalled = st.stalled || 'No workers'
   }
   if (anyAuto) completeGoal('automate')
-  tickLinks(dt)
+  tickLinks(dt, pinfo)
 
   // ---- recovery
   for (const s of S.survivors) {

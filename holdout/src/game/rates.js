@@ -23,7 +23,7 @@
 // settled by repeating the two passes until nothing moves.
 import { STATIONS, SEC_PER_DAY, RECIPES, RES } from './data.js'
 import { S, capOf } from './state.js'
-import { stationRate, power, activeSingle, activeRecipe, recipeUnlocked, seasonMult, passiveMult, stationFlow } from './economy.js'
+import { stationRate, power, activeSingle, activeRecipe, recipeUnlocked, seasonMult, passiveMult, stationFlow, linkPower } from './economy.js'
 import { isDepot, isNode, nodeKind, linkPerDay, beltBonus } from './belts.js'
 import { bus } from '../core/util.js'
 
@@ -97,7 +97,7 @@ function waterFill(total, caps) {
 }
 
 // Solve the camp's belt network. Returns
-//   links: Map(id -> { flow, cap, supply, demand, limit: 'belt' | 'target' | 'source' | 'starved', short })
+//   links: Map(id -> { flow, cap, supply, demand, limit: 'power' | 'belt' | 'target' | 'source' | 'starved', short })
 //   stations: Map(id -> { maxB, B, limit: null | { kind: 'input' | 'output', res } })
 // Flows are per day in units of the resource.
 export function solveFlows() {
@@ -113,7 +113,11 @@ export function solveFlows() {
     into.get(l.to).push(l)
     outof.get(l.from).push(l)
   }
-  const cap = new Map(links.map((l) => [l.id, linkPerDay(l.tier, l.res)]))
+  // a belt with no power (or running to or from a splitter or merger with
+  // none) carries nothing
+  const live = (id) => pinfo.powered.has(id)
+  const dead = (l) => !live(l.id) || (isNode(byId(l.from)) && !live(l.from)) || (isNode(byId(l.to)) && !live(l.to))
+  const cap = new Map(links.map((l) => [l.id, dead(l) ? 0 : linkPerDay(l.tier, l.res)]))
   // start every belt full and let the constraints pull it down: starting
   // empty, a building that needs two belted inputs would never get going
   const flow = new Map(links.map((l) => [l.id, cap.get(l.id)]))
@@ -245,7 +249,8 @@ export function solveFlows() {
     const c = cap.get(l.id)
     const want = appetite(l)
     let limit = 'starved'
-    if (f >= c - 0.5) limit = 'belt'
+    if (dead(l)) limit = 'power'
+    else if (f >= c - 0.5) limit = 'belt'
     else if (f >= want - 0.5) limit = 'target'
     else if (spent(l)) limit = 'source'
     const short = limit === 'starved' ? runs.get(l.to)?.limit : null
@@ -264,6 +269,10 @@ export function limitText(l, r) {
   const res = RES[l.res].name.toLowerCase()
   const f = (v) => (v === Infinity ? 'plenty' : v < 10 ? v.toFixed(1) : Math.round(v))
   if (!r) return ''
+  if (r.limit === 'power') {
+    const node = [from, to].find((st) => isNode(st) && !power().powered.has(st.id))
+    return node ? `The ${nm(node).toLowerCase()} has no power, so nothing gets through. Build or fuel a generator.` : `No power: the belt has stopped. It needs ${linkPower(l).toFixed(1)} power; build or fuel a generator.`
+  }
   if (r.limit === 'belt') return `The belt is full: a ${['', 'Mk1', 'Mk2', 'Mk3'][l.tier]} belt carries ${f(r.cap)} ${res} a day. Upgrade it, or split the load over two belts.`
   if (r.limit === 'target') {
     if (isDepot(to)) return `Storage is full of ${res}.`

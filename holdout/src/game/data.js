@@ -551,13 +551,13 @@ export const STATIONS = {
     time: [30, 55, 85], workers: [1, 1, 2], towerDmg: [0.25, 0.45, 0.7],
   },
   splitter: {
-    name: 'Splitter', cat: 'logistics', size: [1, 1], levels: 1, skill: null, node: 'split',
-    desc: 'One belt in, up to three out: each item goes to the next belt in turn, so two belts get half each. A full belt\'s share goes to the others. Click a belt to drop one straight onto it.',
+    name: 'Splitter', cat: 'logistics', size: [1, 1], levels: 1, skill: null, node: 'split', draw: 0.2,
+    desc: 'One belt in, up to three out: each item goes to the next belt in turn, so two belts get half each. A full belt\'s share goes to the others. Click a belt to drop one straight onto it. Uses 0.2 power.',
     cost: [{ scrap: 6, wood: 2 }], time: [3], workers: [0],
   },
   merger: {
-    name: 'Merger', cat: 'logistics', size: [1, 1], levels: 1, skill: null, node: 'merge',
-    desc: 'Up to three belts of the same goods in, one out. Joins two lines into one; the belt out carries at most its tier\'s rate.',
+    name: 'Merger', cat: 'logistics', size: [1, 1], levels: 1, skill: null, node: 'merge', draw: 0.2,
+    desc: 'Up to three belts of the same goods in, one out. Joins two lines into one; the belt out carries at most its tier\'s rate. Uses 0.2 power.',
     cost: [{ scrap: 6, wood: 2 }], time: [3], workers: [0],
   },
   turret: {
@@ -588,9 +588,9 @@ export const STATION_CATS = [
 // +15% for each side.
 export const BELTS = [
   null,
-  { name: 'Belt Mk1', speed: 0.4, gap: 2.0, cost: { scrap: 2, wood: 1 }, color: '#8a7a62', desc: 'Salvaged rubber on scrap rails. Carries 96 a day.' },
-  { name: 'Belt Mk2', speed: 0.6, gap: 1.5, cost: { metal: 1, rubber: 1 }, color: '#d8a020', desc: 'Proper rollers and a cured belt. Carries 192 a day.' },
-  { name: 'Belt Mk3', speed: 1.0, gap: 1.2, cost: { steel: 1, motors: 0.25 }, color: '#4a8ac8', desc: 'Motor-driven, steel-framed. Carries 400 a day.' },
+  { name: 'Belt Mk1', speed: 0.4, gap: 2.0, power: 0.01, cost: { scrap: 2, wood: 1 }, color: '#8a7a62', desc: 'Salvaged rubber on scrap rails. Carries 96 a day; 0.01 power a metre.' },
+  { name: 'Belt Mk2', speed: 0.6, gap: 1.5, power: 0.02, cost: { metal: 1, rubber: 1 }, color: '#d8a020', desc: 'Proper rollers and a cured belt. Carries 192 a day; 0.02 power a metre.' },
+  { name: 'Belt Mk3', speed: 1.0, gap: 1.2, power: 0.03, cost: { steel: 1, motors: 0.25 }, color: '#4a8ac8', desc: 'Motor-driven, steel-framed. Carries 400 a day; 0.03 power a metre.' },
 ]
 export const BELT_BONUS = 0.15
 // How many units ride in one belt item.

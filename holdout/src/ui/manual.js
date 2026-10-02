@@ -108,6 +108,7 @@ const CHAPTERS = [
         h('li', 'A building runs at most (workers\' speed + automation) × belt bonus ÷ batch time batches a second. Each batch takes its inputs and makes its outputs.'),
         h('li', 'It actually runs as fast as its slowest limit: what its belts bring, what its belts can take away, or its own top speed. Inputs with no belt come from storage and never hold it back.'),
         h('li', 'Every belt and pod shows two rates: what is moving now, and what it settles at once everything evens out, with one line on what holds it back: the belt itself, the far end, the near end, or the far end running short of something else.'),
+        h('li', `Belts run on power: ${BELTS.filter(Boolean).map((b) => b.power).join(' / ')} a metre for Mk1 / Mk2 / Mk3, at least 0.1 a belt, and ${STATIONS.splitter.draw} for a splitter or merger. A 20 m Mk1 belt draws 0.2, a twentieth of a Steam Engine. Without power a belt stops and its lamps go dark.`),
       ),
       h('h4', 'Rules of the line'),
       h(
@@ -290,7 +291,7 @@ const CHAPTERS = [
         tip(STATIONS.battery.name, 'Stores power that solar and wind make beyond what the camp is using, and gives it back after dark.'),
       ),
       h('h4', 'Who gets power first'),
-      P('When there is not enough, defence goes first (turrets and floodlights), then machines with people working them, then automation. The rest wait in the dark. Fuel engines burn only for the load they carry, so build renewables and a battery bank to save coal and diesel.'),
+      P('When there is not enough, defence goes first (turrets and floodlights), then belts, splitters and mergers, then machines with people working them, then automation. The rest wait in the dark. Fuel engines burn only for the load they carry, so build renewables and a battery bank to save coal and diesel.'),
     ],
   },
   {
