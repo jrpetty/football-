@@ -9,6 +9,7 @@ import { sfx } from '../core/audio.js'
 import { bus, h, fmt, fmtTime, clamp } from '../core/util.js'
 import { icon } from './icons.js'
 import { costList, resIcon, bar, plural } from './common.js'
+import { view } from '../render/view.js'
 
 const resChipSigned = (k, v) => h('span.ci', { style: { '--c': RES[k].color } }, h('i.ic', { html: resIcon(k) }), `${v > 0 ? '+' : '−'}${fmt(Math.abs(v))}`)
 import { renderStation, renderBelt } from './stationpanel.js'
@@ -22,7 +23,7 @@ import { cycleProblem } from './brief.js'
 import { renderProgress } from './progresspanel.js'
 import { manualModal } from './manual.js'
 import { motorPool } from './motorpool.js'
-import { renderJournal } from './journal.js'
+import { renderJournal, setJournalTab, journalTab } from './journal.js'
 import { storyBadge } from '../game/story.js'
 import { renderBrief } from './brief.js'
 import { renderPlayers, feedChat, netChip, updateNetChip } from './netui.js'
@@ -30,7 +31,7 @@ import { volumeControl } from './volume.js'
 import { callName, fullName } from '../game/deeds.js'
 import { fullscreenButton } from './fullscreen.js'
 import { playEnding } from './ending.js'
-import { cityVictoryModal, victoryModal, renderMarket, renderLog, renderFence, renderExpansion, renderProduction, renderPower, renderMorale, renderSettings, recruitModal, raidReportModal, missionReportModal, gameOverModal, menuModal, hordeInfo } from './camppanels.js'
+import { cityVictoryModal, victoryModal, renderMarket, renderFence, renderExpansion, renderProduction, renderPower, renderMorale, renderSettings, recruitModal, raidReportModal, missionReportModal, gameOverModal, menuModal, hordeInfo } from './camppanels.js'
 import { watchTrades } from './lockerui.js'
 
 const NAV = [
@@ -42,7 +43,6 @@ const NAV = [
   { id: 'map', label: 'Map', key: 'M', icon: 'map' },
   { id: 'progress', label: 'Progress', key: 'G', icon: 'goals' },
   { id: 'journal', label: 'Journal', key: 'J', icon: 'book' },
-  { id: 'log', label: 'Log', key: 'L', icon: 'log' },
 ]
 
 export class UI {
@@ -92,7 +92,6 @@ export class UI {
       h('div.navsep'),
       h('button.navbtn.small', { 'data-tip': 'Field manual <kbd>F1</kbd>', onclick: () => this.openManual() }, h('span.qm', '?')),
       fullscreenButton(this),
-      h('button.navbtn.small', { 'data-tip': 'Settings', onclick: () => this.openSettings() }, h('i', { html: icon('settings') })),
       h('button.navbtn.small', { 'data-tip': 'Menu <kbd>Esc</kbd>', onclick: () => this.openMenu() }, h('i', { html: icon('menu') })),
     )
     this.panel = h('aside.panel', { hidden: true })
@@ -137,12 +136,13 @@ export class UI {
       this.closePanel()
       this.dock.hidden = true
     }
+    this.coverLabels()
   }
   navClick(id) {
     sfx('click')
     if (id === 'build') return this.toggleBuild()
     if (id === 'map') return this.game.openMap()
-    const fns = { players: () => this.openPlayers(), crew: () => this.openCrew(), items: () => this.openItems(), trade: () => this.openMarket(), camp: () => this.openProduction(), progress: () => this.openProgress(), journal: () => this.openJournal(), log: () => this.openLog() }
+    const fns = { players: () => this.openPlayers(), crew: () => this.openCrew(), items: () => this.openItems(), trade: () => this.openMarket(), camp: () => this.openProduction(), progress: () => this.openProgress(), journal: () => this.openJournal() }
     if (this.panelKey === id) return this.closePanel()
     fns[id]?.()
   }
@@ -176,9 +176,16 @@ export class UI {
       this.navClick('players')
       return true
     }
-    const map = { b: 'build', c: 'crew', i: 'items', t: 'trade', p: 'camp', m: 'map', g: 'progress', j: 'journal', l: 'log' }
+    const map = { b: 'build', c: 'crew', i: 'items', t: 'trade', p: 'camp', m: 'map', g: 'progress', j: 'journal' }
     if (map[k] && !e.ctrlKey && !e.metaKey && !this.game.base?.placing) {
       this.navClick(map[k])
+      return true
+    }
+    // the camp log lives in the journal
+    if (k === 'l' && !e.ctrlKey && !e.metaKey && !this.game.base?.placing) {
+      sfx('click')
+      if (this.panelKey === 'journal' && journalTab() === 'log') this.closePanel()
+      else this.openLog()
       return true
     }
     if (k === 'f' && !this.game.base?.placing) {
@@ -388,6 +395,7 @@ export class UI {
     this.panel.classList.toggle('xwide', !!xwide)
     for (const b of this.nav.querySelectorAll('[data-nav]')) b.classList.toggle('on', b.dataset.nav === key)
     this.refreshPanel(true)
+    this.coverLabels()
   }
   refreshPanel(force = false) {
     if (!this.panelFn) return
@@ -405,6 +413,7 @@ export class UI {
     this.panel.hidden = true
     this.panel.innerHTML = ''
     for (const b of this.nav.querySelectorAll('[data-nav]')) b.classList.remove('on')
+    this.coverLabels()
     if (this.game.base) {
       this.game.base.select(null)
       this.game.base.selectedPerson = null
@@ -452,7 +461,8 @@ export class UI {
     this.openPanel('progress', () => renderProgress(this), { wide: true, live: true })
   }
   openLog() {
-    this.openPanel('log', () => renderLog(this), { live: true })
+    setJournalTab('log')
+    this.openPanel('journal', () => renderJournal(this), { live: true, wide: true })
   }
   openFence() {
     this.openPanel('fence', () => renderFence(this), { live: true })
@@ -609,6 +619,7 @@ export class UI {
     })
   }
   openJournal() {
+    if (journalTab() === 'log') setJournalTab('story')
     this.openPanel('journal', () => renderJournal(this), { live: true, wide: true })
   }
   openMotorPool() {
@@ -693,6 +704,7 @@ export class UI {
     this.dock.hidden = !show
     for (const b of this.nav.querySelectorAll('[data-nav="build"]')) b.classList.toggle('on', show)
     if (show) this.renderBuild()
+    this.coverLabels()
   }
   renderBuild() {
     const D = this.dock
@@ -701,7 +713,7 @@ export class UI {
     const tabs = h(
       'div.dtabs',
       cats.map((c) => h('button' + (c.id === this.buildCat ? '.on' : ''), { onclick: () => ((this.buildCat = c.id), this.renderBuild()) }, c.name)),
-      h('span.dhint', 'Click a card, then click the ground. ', h('kbd', 'R'), ' rotates, ', h('kbd', 'Shift'), ' places several, ', h('kbd', 'Esc'), ' cancels.'),
+      h('span.dhint', 'Pick a card, then click the ground'),
       h('button.x', { onclick: () => this.toggleBuild(false), html: icon('close') }),
     )
     let cards
@@ -803,6 +815,7 @@ export class UI {
       h('b', move ? `Moving ${name}` : `Placing ${name}`),
       h('span.pb-ok'),
       h('button.btn.small', { onclick: () => this.game.base.rotatePlacing() }, h('i', { html: icon('rotate') }), 'Rotate', h('kbd', 'R')),
+      move ? null : h('span.pb-hint', h('kbd', 'Shift'), ' places several'),
       h('button.btn.small.ghost', { onclick: () => this.game.base.cancelPlacing() }, 'Cancel', h('kbd', 'Esc')),
     )
   }
@@ -902,6 +915,27 @@ export class UI {
   }
 
   // ---------------------------------------------------------------- loop
+  // World labels hide under the interface instead of showing through it.
+  coverLabels() {
+    const out = []
+    const add = (el) => {
+      if (!el || el.hidden || !el.isConnected) return
+      const r = el.getBoundingClientRect()
+      if (r.width && r.height) out.push(r)
+    }
+    for (const el of this.top.children) add(el)
+    add(this.nav)
+    add(this.panel)
+    add(this.dock)
+    add(this.briefEl)
+    add(this.watchEl)
+    add(this.placebar)
+    add(this.raidbar)
+    add(this.coopEl)
+    // the city map's own bar and side panel
+    for (const el of this.root.querySelectorAll('.maptop, .mplan')) add(el)
+    view.labels.blockers = out
+  }
   update(dt) {
     this.topT -= dt
     if (this.topT <= 0) {
@@ -913,6 +947,7 @@ export class UI {
         this.nav.querySelector('[data-nav=journal]')?.classList.toggle('badge', storyBadge() > 0)
       }
       this.updateTop()
+      this.coverLabels()
       if (!this.briefEl.hidden && !S.raid) renderBrief(this)
       renderWatch(this, this.watchEl)
       this.alertT = (this.alertT ?? 0) - 0.25

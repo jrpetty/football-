@@ -39,17 +39,19 @@ export function renderStation(ui, id) {
   const sub = h('span', h('span.lvl', st.level ? `Level ${st.level}` : 'New'), ' · ', h('span' + (warn ? '.bad' : v?.pace ? '.warn' : busy ? '.good' : ''), status))
   body.push(h('p.desc', D.desc))
   if (st.building) body.push(constructionBlock(st))
+  // what it does first (who works it, what it makes or crafts), then what
+  // feeds it (power, belts, the chain), then changing the building itself
   if (st.level > 0) {
     const ws = workerBlock(ui, st)
     if (ws) body.push(ws)
-    if (D.machine) body.push(machineBlock(ui, st, pinfo))
     body.push(...effectBlock(ui, st, pinfo))
+    if (D.queue || st.type === 'infirmary') body.push(benchBlock(ui, st))
+    if (D.auto) body.push(autoBlock(ui, st, pinfo))
+    if (D.machine) body.push(machineBlock(ui, st, pinfo))
     const logi = logisticsBlock(ui, st)
     if (logi) body.push(logi)
     const chain = chainBlock(st)
     if (chain) body.push(chain)
-    if (D.queue || st.type === 'infirmary') body.push(benchBlock(ui, st))
-    if (D.auto) body.push(autoBlock(ui, st, pinfo))
   }
   if (st.type !== 'mast' && D.levels > 1) body.push(upgradeBlock(ui, st))
   if (!D.fixed) body.push(actionsBlock(ui, st))

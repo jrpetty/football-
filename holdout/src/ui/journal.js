@@ -1,7 +1,7 @@
 // The journal: story threads with what is known so far and where it might
 // lead, requests from people in camp, and every note found in the city.
 import { SIGNAL } from '../game/data.js'
-import { S, day, vehicleOf } from '../game/state.js'
+import { S, day, vehicleOf, clockStr } from '../game/state.js'
 import { storyState, THREADS, NOTES, noteText, locName, markJournalSeen } from '../game/story.js'
 import { sfx } from '../core/audio.js'
 import { h } from '../core/util.js'
@@ -10,17 +10,28 @@ import { icon } from './icons.js'
 let tab = 'story'
 let openNote = null
 
+// Which tab the journal opens on (the Log key opens it on the camp log).
+export function setJournalTab(t) {
+  tab = t
+}
+export const journalTab = () => tab
+
 export function renderJournal(ui) {
   const st = storyState()
   markJournalSeen()
   const tabs = h(
     'div.tabs',
-    [['story', 'Story'], ['notes', `Notes${st.unread.length ? ` (${st.unread.length} new)` : ''}`]].map(([id, label]) => h('button' + (tab === id ? '.on' : ''), { onclick: () => ((tab = id), sfx('click'), ui.refreshPanel()) }, label)),
+    [['story', 'Story'], ['notes', `Notes${st.unread.length ? ` (${st.unread.length} new)` : ''}`], ['log', 'Camp log']].map(([id, label]) => h('button' + (tab === id ? '.on' : ''), { onclick: () => ((tab = id), sfx('click'), ui.refreshPanel(true)) }, label)),
   )
   const active = Object.values(st.threads).filter((t) => !t.done).length + st.personal.filter((p) => !p.done && !p.failed).length
   if (tab === 'notes' && st.unread.length) st.unread = []
-  const body = tab === 'story' ? storyTab(ui, st) : notesTab(ui, st)
-  return ui.frame('Journal', `${active} open · ${st.notes.length} note${st.notes.length === 1 ? '' : 's'} found`, body, { icon: 'book', tabs })
+  const body = tab === 'story' ? storyTab(ui, st) : tab === 'notes' ? notesTab(ui, st) : logTab()
+  return ui.frame('Journal', `Day ${day()} · ${active} open · ${st.notes.length} note${st.notes.length === 1 ? '' : 's'} found`, body, { icon: 'book', tabs })
+}
+
+// Everything that happened in camp, newest first.
+function logTab() {
+  return h('div.log', S.log.slice(0, 80).map((e) => h('div.le.' + (e.kind || 'plain'), h('span.t', `D${Math.floor(e.t / 1440) + 1} ${clockStr(e.t)}`), h('span', e.text))))
 }
 
 // A place the story points at: click to open it on the city map.

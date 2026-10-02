@@ -317,14 +317,19 @@ export class Labels {
   constructor(layer) {
     this.layer = layer
     this.items = new Set()
+    // screen rectangles the interface covers (the UI keeps them current):
+    // a label there hides instead of showing through a panel or the bar
+    this.blockers = []
   }
-  add(el, pos, { offsetY = 0, life = 0, rise = 0, scene = null, maxDist = 0 } = {}) {
+  // declutter: one of a crowd of name tags; where they overlap only the
+  // most important (selected, hurt, then nearest) shows
+  add(el, pos, { offsetY = 0, life = 0, rise = 0, scene = null, maxDist = 0, declutter = false } = {}) {
     el.classList.add('wl-inner')
     const wrap = document.createElement('div')
     wrap.className = 'wl'
     wrap.appendChild(el)
     this.layer.appendChild(wrap)
-    const item = { el, wrap, pos, offsetY, life, age: 0, rise, scene, hidden: false, maxDist, remove: () => this.remove(item) }
+    const item = { el, wrap, pos, offsetY, life, age: 0, rise, scene, hidden: false, maxDist, declutter, remove: () => this.remove(item) }
     this.items.add(item)
     return item
   }
@@ -352,6 +357,14 @@ export class Labels {
       it.shown = on
       it.wrap.style.display = on ? '' : 'none'
     }
+    const B = this.blockers
+    // a label stands centred above its point: it is under a rectangle when
+    // any of its box (about 80 by 30 px) would be
+    const covered = (x, y) => {
+      for (const r of B) if (x >= r.left - 40 && x <= r.right + 40 && y >= r.top && y <= r.bottom + 30) return true
+      return false
+    }
+    const crowd = []
     for (const it of this.items) {
       if (it.life) {
         it.age += dt
@@ -380,20 +393,44 @@ export class Labels {
         show(it, false)
         continue
       }
-      show(it, true)
       const x = (_v.x * 0.5 + 0.5) * w
       const y = (-_v.y * 0.5 + 0.5) * h
-      const tr = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0)`
-      if (tr !== it.tr) {
-        it.tr = tr
-        it.wrap.style.transform = tr
+      if (covered(x, y)) {
+        show(it, false)
+        continue
       }
-      if (it.life) {
-        const o = Math.min(1, (1 - it.age / it.life) * 2.2).toFixed(2)
-        if (o !== it.op) {
-          it.op = o
-          it.wrap.style.opacity = o
-        }
+      if (it.declutter) {
+        const c = it.el.classList
+        crowd.push({ it, x, y, k: (c.contains('sel') ? 2 : c.contains('hurt') ? 1 : 0) - _v.z })
+        continue
+      }
+      this.place(it, x, y, show)
+    }
+    // name tags that would overlap: the most important of each cluster wins
+    crowd.sort((a, b) => b.k - a.k)
+    const kept = []
+    for (const c of crowd) {
+      const clash = kept.some((o) => Math.abs(o.x - c.x) < 62 && Math.abs(o.y - c.y) < 26)
+      if (clash) {
+        show(c.it, false)
+        continue
+      }
+      kept.push(c)
+      this.place(c.it, c.x, c.y, show)
+    }
+  }
+  place(it, x, y, show) {
+    show(it, true)
+    const tr = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0)`
+    if (tr !== it.tr) {
+      it.tr = tr
+      it.wrap.style.transform = tr
+    }
+    if (it.life) {
+      const o = Math.min(1, (1 - it.age / it.life) * 2.2).toFixed(2)
+      if (o !== it.op) {
+        it.op = o
+        it.wrap.style.opacity = o
       }
     }
   }

@@ -50,7 +50,7 @@ class Worker {
     this.crate.visible = false
     this.root.add(this.crate)
     const el = h('div.alabel.camp', h('span.nm', callName(s)), h('span.job'))
-    this.label = view.labels.add(el, () => this.labelPos(), { offsetY: 0, scene: this.base.scene, maxDist: 75 })
+    this.label = view.labels.add(el, () => this.labelPos(), { offsetY: 0, scene: this.base.scene, maxDist: 75, declutter: true })
     this.jobEl = el.querySelector('.job')
     this.nmEl = el.querySelector('.nm')
     el.addEventListener('click', (e) => {

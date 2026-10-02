@@ -277,7 +277,7 @@ export function renderCrew(ui) {
     hp: (s) => s.hp / survivorStats(s).maxHp,
   }[crewSort]
   list.sort((a, b) => (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0))
-  const head = h('div.crewhead', h('span', 'Survivor'), h('span', 'Job'), ...SKILL_KEYS.map((k) => h('span.sk', { 'data-tip': SKILLS[k].name }, SKILLS[k].short)), h('span', 'Weapon'), h('span', 'Health'))
+  const head = h('div.crewhead', h('span', 'Survivor'), h('span', 'Job · weapon'), ...SKILL_KEYS.map((k) => h('span.sk', { 'data-tip': SKILLS[k].name }, SKILLS[k].short)), h('span', 'Health'))
   const rows = list.map((s) => {
     const job = s.job ? S.stations.find((x) => x.id === s.job) : null
     const st = survivorStats(s)
@@ -285,9 +285,8 @@ export function renderCrew(ui) {
       'div.crewrow' + (s.status === 'injured' ? '.hurt' : s.status === 'mission' || s.status === 'outpost' || s.status === 'scout' ? '.away' : ''),
       { onclick: () => ui.openSurvivor(s.id) },
       h('span.cr-name', h('img.por.sm', { src: ui.game.portrait(s) }), h('span', h('b', leaderChip(s, true), fullName(s), s.perkChoices?.length ? h('i.perktag', { 'data-tip': 'A perk to choose' }, '★') : null, s.infection > 0 ? h('i.inftag', { 'data-tip': `${infectionStage(s)} · ${Math.round(s.infection)}%` }, `${Math.round(s.infection)}%`) : null), h('small', OCCUPATIONS[s.occ].name))),
-      h('span.cr-job', s.status === 'mission' ? 'On a run' : s.status === 'outpost' ? 'At an outpost' : s.status === 'scout' ? 'Scouting' : job ? STATIONS[job.type].name : h('em', 'None')),
-      ...SKILL_KEYS.map((k) => h('span.sk' + (s.skills[k] >= 6 ? '.hi' : s.skills[k] <= 1 ? '.lo' : ''), s.skills[k])),
-      h('span.cr-wpn', st.weapon.name),
+      h('span.cr-job', h('span', s.status === 'mission' ? 'On a run' : s.status === 'outpost' ? 'At an outpost' : s.status === 'scout' ? 'Scouting' : job ? STATIONS[job.type].name : h('em', 'None')), h('small.cr-wpn', st.weapon.name)),
+      ...SKILL_KEYS.map((k) => h('span.sk' + (s.skills[k] >= 6 ? '.hi' : s.skills[k] <= 1 ? '.lo' : ''), { 'data-tip': `${SKILLS[k].name} ${s.skills[k]}` }, s.skills[k])),
       h('span.cr-hp', bar(s.hp / st.maxHp, s.status === 'injured' ? 'hp.low' : 'hp')),
     )
   })

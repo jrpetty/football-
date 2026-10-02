@@ -48,7 +48,7 @@ function entries(ui) {
   P('Map', 'The city: runs, scouts and the horde', 'map', () => g.openMap(), 'city run scout')
   P('Progress', 'Milestones, research and the Signal', 'goals', () => ui.openProgress(), 'milestones tiers')
   P('Journal', 'The story so far', 'book', () => ui.openJournal(), 'story')
-  P('Log', 'Everything that happened', 'book', () => ui.openLog(), 'events')
+  P('Camp log', 'Everything that happened (in the Journal)', 'book', () => ui.openLog(), 'events log')
   P('Horde intel', 'The next horde and the wall', 'horde', () => ui.openHorde(), 'raid attack')
   P('The wall', 'Repair and upgrade the fence', 'shield', () => ui.openFence(), 'fence palisade')
   P('Morale', 'How the camp feels and why', 'heart', () => ui.openMorale(), 'mood')

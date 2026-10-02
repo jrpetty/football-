@@ -106,10 +106,6 @@ function buyRes(ui, x, price) {
 }
 
 // ---------------------------------------------------------------- log
-export function renderLog(ui) {
-  return ui.frame('Camp log', `Day ${day()}`, h('div.log', S.log.slice(0, 80).map((e) => h('div.le.' + (e.kind || 'plain'), h('span.t', `D${Math.floor(e.t / 1440) + 1} ${clockStr(e.t)}`), h('span', e.text)))), { icon: 'log' })
-}
-
 // ---------------------------------------------------------------- wall & land
 export function renderFence(ui) {
   const F = FENCE[S.fence.level]

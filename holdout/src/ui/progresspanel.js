@@ -105,7 +105,7 @@ function board(ui) {
                 const ok = !lock && !have && canAfford(m.cost)
                 return h(
                   'div.ms' + (have ? '.have' : ok ? '.ready' : ''),
-                  h('div.ms-top', h('b', m.name), have ? h('span.ms-done', h('i', { html: icon('check') }), S.milestones[id] > 0 ? `Day ${S.milestones[id]}` : 'Done') : null),
+                  h('div.ms-top', h('b', m.name), have ? h('span.ms-done', h('i', { html: icon('check') }), typeof S.milestones[id] === 'number' && S.milestones[id] > 0 ? `Day ${S.milestones[id]}` : 'Done') : null),
                   h('p', m.desc),
                   h('div.ms-unl', unlockChips(m)),
                   have
