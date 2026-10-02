@@ -196,8 +196,8 @@ export function renderProduction(ui) {
           const cap = capOf(k)
           const r = flow[k] || 0
           return h(
-            'div.srow',
-            { 'data-tip': `<b>${RES[k].name}</b>${RES[k].desc}${producers[k] ? '<br><em>' + producers[k].join('<br>') + '</em>' : ''}` },
+            'div.srow.click',
+            { 'data-tip': `<b>${RES[k].name}</b>${RES[k].desc}${producers[k] ? '<br><em>' + producers[k].join('<br>') + '</em>' : ''}<br><small>Click for the full flow</small>`, onclick: () => ui.openFlow(k) },
             h('span.s-name', { style: { '--c': RES[k].color } }, h('i', { html: resIcon(k) }), RES[k].name),
             spark(S.hist?.res?.[k], cap, RES[k].color),
             h('span.s-amt', fmt(v)),
@@ -514,7 +514,7 @@ export function gameOverModal(ui) {
     h('h2', 'The camp has fallen'),
     h('p', `You held out for ${day()} days.`),
     h('div.statgrid', h('div.stat', h('span', 'Zombies killed'), h('b', S.stats.kills)), h('div.stat', h('span', 'Supply runs'), h('b', S.stats.runs)), h('div.stat', h('span', 'Hordes'), h('b', S.stats.raids)), h('div.stat', h('span', 'Recruited'), h('b', S.stats.recruited))),
-    S.stats.memorial.length ? h('section.card', h('h3', 'In memory'), S.stats.memorial.slice(0, 12).map((m) => h('div.kv', h('span', `${m.name}, ${m.occ}`), h('small', `Day ${m.day} · ${m.cause}`)))) : null,
+    S.stats.memorial.length ? h('section.card', h('h3', 'In memory'), S.stats.memorial.slice(0, 12).map((m) => h('div.memrow', h('div.kv', h('span', `${m.name}, ${m.occ}`), h('small', `Day ${m.day} · ${m.cause}`)), m.last ? h('p.lastword', `“${m.last}”`) : null))) : null,
     h('div.mactions', h('button.btn.go.big', { onclick: () => ui.game.newGame() }, 'Start a new camp')),
   )
 }

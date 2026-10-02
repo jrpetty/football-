@@ -80,5 +80,5 @@ export function seg(opts, value, onChange) {
   )
 }
 export function stepper(value, min, max, onChange, fmtFn = (v) => v) {
-  return h('div.stepper', h('button', { onclick: () => onChange(Math.max(min, value - 1)), disabled: value <= min }, '−'), h('span', fmtFn(value)), h('button', { onclick: () => onChange(Math.min(max, value + 1)), disabled: value >= max }, '+'))
+  return h('div.stepper', h('button', { onclick: () => onChange(Math.max(min, value - 1)), disabled: value <= min }, '−'), h('span', String(fmtFn(value))), h('button', { onclick: () => onChange(Math.min(max, value + 1)), disabled: value >= max }, '+'))
 }

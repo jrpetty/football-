@@ -361,7 +361,7 @@ export class CampPeople {
   // storage with no belt bringing it, or what it makes with no belt taking
   // it away. The crate is the colour of the goods.
   carryJob(s) {
-    const stor = S.stations.filter((st) => st.type === 'storage' && st.level > 0)
+    const stor = S.stations.filter((st) => isDepot(st) && st.level > 0)
     if (!stor.length) return null
     const jobs = []
     for (const st of S.stations) {

@@ -12,7 +12,13 @@ import { costList, resIcon, bar, plural } from './common.js'
 
 const resChipSigned = (k, v) => h('span.ci', { style: { '--c': RES[k].color } }, h('i.ic', { html: resIcon(k) }), `${v > 0 ? '+' : '−'}${fmt(Math.abs(v))}`)
 import { renderStation, renderBelt } from './stationpanel.js'
-import { renderSurvivor, renderCrew, renderItems } from './crewpanel.js'
+import { renderSurvivor, renderCrew, renderItems, setItemFilter } from './crewpanel.js'
+import { renderFlow } from './flowchart.js'
+import { renderWatch } from './watch.js'
+import { openPalette } from './palette.js'
+import { renderAlerts, tickAlerts } from './alerts.js'
+import { renderMulti } from './multipanel.js'
+import { cycleProblem } from './brief.js'
 import { renderProgress } from './progresspanel.js'
 import { manualModal } from './manual.js'
 import { motorPool } from './motorpool.js'
@@ -99,7 +105,8 @@ export class UI {
     this.modalRoot = h('div.modals')
     this.briefEl = h('div.brief')
     this.briefSig = null
-    R.append(this.top, this.nav, this.panel, this.briefEl, this.dock, this.feed, this.toasts, this.placebar, this.raidbar, this.tip, this.modalRoot)
+    this.watchEl = h('div.watch', { hidden: true })
+    R.append(this.top, this.nav, this.panel, this.briefEl, this.watchEl, this.dock, this.feed, this.toasts, this.placebar, this.raidbar, this.tip, this.modalRoot)
     // delegated tooltips for anything with data-tip
     R.addEventListener('mouseover', (e) => {
       const t = e.target.closest?.('[data-tip]')
@@ -124,6 +131,7 @@ export class UI {
     this.nav.hidden = !v
     this.feed.hidden = !v
     this.briefEl.hidden = !v
+    this.watchEl.classList.toggle('away', !v)
     if (this.coopEl) this.coopEl.hidden = !v || !this.coopEl.children.length
     if (!v) {
       this.closePanel()
@@ -141,6 +149,14 @@ export class UI {
   onKey(e) {
     if (e.target instanceof HTMLInputElement) return false
     const k = e.key.toLowerCase()
+    // the command palette, from the camp or the map
+    if ((k === 'k' && (e.ctrlKey || e.metaKey)) || (k === '/' && !this.modalRoot.children.length)) {
+      if (this.game.scene === this.game.base || this.game.scene === this.game.map) {
+        e.preventDefault?.()
+        openPalette(this)
+        return true
+      }
+    }
     if (k === 'f1') {
       e.preventDefault?.()
       this.openManual()
@@ -171,6 +187,11 @@ export class UI {
     }
     if (k === 'h') {
       this.openHorde()
+      return true
+    }
+    // step the camera through every problem in the brief
+    if (k === 'n' && !e.ctrlKey && !e.metaKey && !this.game.base?.placing) {
+      cycleProblem(this, e.shiftKey ? -1 : 1)
       return true
     }
     if (k === 'escape') {
@@ -204,7 +225,7 @@ export class UI {
     const chips = h(
       'div.res',
       [...TOP_BAR.filter((k) => k !== 'cash'), 'ammo', 'cash'].map((k) => {
-        const el = h('button.rchip', { onclick: () => this.openProduction(), style: { '--c': k === 'ammo' ? RES.pammo.color : RES[k].color } }, h('i.ic', { html: k === 'ammo' ? icon('ammo') : resIcon(k) }), h('b'), h('i.fill'), h('em.rate'))
+        const el = h('button.rchip', { onclick: () => this.openFlow(k === 'ammo' ? 'pammo' : k), 'data-tip': `${k === 'ammo' ? 'Ammunition' : RES[k].name}: click for where it comes from and goes`, style: { '--c': k === 'ammo' ? RES.pammo.color : RES[k].color } }, h('i.ic', { html: k === 'ammo' ? icon('ammo') : resIcon(k) }), h('b'), h('i.fill'), h('em.rate'))
         el.addEventListener('mouseenter', () => (this.hoverRes = k))
         el.addEventListener('mouseleave', () => (this.hoverRes = null))
         this.resEls[k] = el
@@ -420,7 +441,8 @@ export class UI {
   openCrew() {
     this.openPanel('crew', () => renderCrew(this), { live: true, wide: true })
   }
-  openItems() {
+  openItems(filter = null) {
+    if (filter) setItemFilter(filter)
     this.openPanel('items', () => renderItems(this), { wide: true })
   }
   openMarket() {
@@ -437,6 +459,22 @@ export class UI {
   }
   openExpansion(id) {
     this.openPanel('exp:' + id, () => renderExpansion(this, id), { live: true })
+  }
+  // One resource: where it is made and where it goes, as a diagram.
+  openFlow(k) {
+    this.openPanel('flow:' + k, () => renderFlow(this, k), { live: true, wide: true })
+  }
+  openPalette() {
+    if (this.game.scene === this.game.base || this.game.scene === this.game.map) openPalette(this)
+  }
+  openAlerts() {
+    this.openPanel('alerts', () => renderAlerts(this), { live: true })
+  }
+  openMulti() {
+    this.openPanel('multi', () => renderMulti(this), { live: true })
+  }
+  updateWatch() {
+    renderWatch(this, this.watchEl)
   }
   openProduction() {
     this.openPanel('camp', () => renderProduction(this), { live: true, wide: true, xwide: true })
@@ -792,7 +830,7 @@ export class UI {
     P.append(
       h('i.pb-ic', { html: icon('belt') }),
       h('div.pb-txt', h('b', title), h('span.pb-ok.good', hint)),
-      chips ? h('div.pb-chips', h('small', 'Carry'), chips.map((c) => h('button.lchip' + (c.on ? '.on' : ''), { style: { '--c': c.color }, onclick: () => (sfx('click'), onChip(c.k)) }, h('i.ic', { html: resIcon(c.k) }), c.name)), h('button.lchip' + (chips.some((c) => c.on) ? '' : '.on'), { onclick: () => (sfx('click'), onChip(null)), 'data-tip': 'Whatever the far end needs' }, 'Auto')) : null,
+      chips ? h('div.pb-chips', h('small', 'Carry'), chips.map((c) => h('button.lchip' + (c.on ? '.on' : ''), { style: { '--c': c.color }, onclick: () => (sfx('click'), onChip(c.k)) }, h('i.ic', { html: resIcon(c.k) }), c.name)), h('button.lchip' + (chips.some((c) => c.on) ? '' : '.on'), { onclick: () => (sfx('click'), onChip(null)), 'data-tip': 'Whatever the far end needs' }, 'Auto')) : '',
       h('button.btn.small.ghost', { onclick: onCancel }, 'Cancel', h('kbd', 'Esc')),
     )
   }
@@ -876,6 +914,12 @@ export class UI {
       }
       this.updateTop()
       if (!this.briefEl.hidden && !S.raid) renderBrief(this)
+      renderWatch(this, this.watchEl)
+      this.alertT = (this.alertT ?? 0) - 0.25
+      if (this.alertT <= 0) {
+        this.alertT = 1
+        tickAlerts(this)
+      }
       this.briefEl.classList.toggle('off', !!S.raid)
       if (this.netEl) updateNetChip(this.netEl, this.game.net)
       watchTrades(this)

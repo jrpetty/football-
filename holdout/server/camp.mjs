@@ -9,10 +9,13 @@ import * as EC from '../src/game/economy.js'
 import { RES, SEC_PER_DAY, LOCATIONS } from '../src/game/data.js'
 import { bus } from '../src/core/util.js'
 import { genCity } from '../src/world/city.js'
+import { wireDiaries } from '../src/game/diary.js'
 import { Session, COLORS, PROTO } from '../src/net/mp.js'
 import { Carrier } from '../src/net/transport.js'
 
 const { code, create, state } = workerData
+// the survivors keep their diaries here too: this worker is the camp's host
+wireDiaries()
 const OFFLINE_DIV = 15
 const OFFLINE_MAX = 3 * SEC_PER_DAY
 const post = (m) => parentPort.postMessage(m)

@@ -2,12 +2,15 @@
 // and the armory of items with equip, sell and repair shortcuts.
 import { RES, ITEMS, QUALITY, RARITY, MODS, STATIONS, OCCUPATIONS, SKILLS, SKILL_KEYS, UTILITIES, TRAITS, INFECTION, SEC_PER_DAY, PERKS, PERK_LEVELS } from '../game/data.js'
 import { NET, canControl, S, getS, survivorStats, survivorLevel, equip, unequip, gearLock, itemOf, itemName, itemValue, removeItem, ownerOf, workEff, assign, slots, workersOf, gain, day, killSurvivor, log, infectionStage, treatInfection, researchDone, choosePerk, perkOf } from '../game/state.js'
-import { sellMult } from '../game/economy.js'
+import { sellMult, salvageOf } from '../game/economy.js'
 import { sfx } from '../core/audio.js'
 import { bus, h, fmt, clamp } from '../core/util.js'
 import { icon } from './icons.js'
 import { leaderChip, leaderBanner } from './netui.js'
 import { bio, callName, fullName, nickText, setNick, campNames } from '../game/deeds.js'
+import { ensureDiary, whenText } from '../game/diary.js'
+import { scoutOf, locById } from '../game/recon.js'
+import { pinButton } from './watch.js'
 import { lockerView, lockerOp } from './lockerui.js'
 import { lockerItems } from '../net/lockers.js'
 import { costList, resChip, bar, qualityTag, condBar, itemCard, skillRows, traitTags, hpBar, seg, plural, resIcon } from './common.js'
@@ -19,7 +22,8 @@ export function renderSurvivor(ui, id) {
   const st = survivorStats(s)
   const job = s.job ? S.stations.find((x) => x.id === s.job) : null
   const post = s.status === 'outpost' ? (S.outposts || []).find((o) => o.crew.includes(s.id)) : null
-  const status = s.status === 'mission' ? 'On a supply run' : post ? `Holding the ${post.name} outpost` : s.status === 'injured' ? 'Injured · recovering' : job ? STATIONS[job.type].name : 'No job · builds and forages'
+  const sc = s.status === 'scout' ? scoutOf(s) : null
+  const status = s.status === 'mission' ? 'On a supply run' : sc ? `Out scouting ${sc.target === 'horde' ? 'for the horde' : locById(sc.target)?.name || ''} · back in ${Math.max(1, Math.round((sc.back - S.time) / 60))} h` : post ? `Holding the ${post.name} outpost` : s.status === 'injured' ? 'Injured · recovering' : job ? STATIONS[job.type].name : 'No job · builds and forages'
   const head = h(
     'div.sheet-head',
     h('img.por.big', { src: ui.game.portrait(s) }),
@@ -36,7 +40,7 @@ export function renderSurvivor(ui, id) {
     h('h3', 'Job', h('small', status)),
     h(
       'div.jobrow',
-      h('button.btn.small', { disabled: s.status === 'mission' || s.status === 'outpost', onclick: () => pickJob(ui, s) }, h('i', { html: icon('hammer') }), job ? 'Change job' : 'Give a job'),
+      h('button.btn.small', { disabled: s.status === 'mission' || s.status === 'outpost' || s.status === 'scout', onclick: () => pickJob(ui, s) }, h('i', { html: icon('hammer') }), job ? 'Change job' : 'Give a job'),
       job ? h('button.btn.small.ghost', { onclick: () => (assign(s, null), ui.refreshPanel()) }, 'Unassign') : null,
       job ? h('button.btn.small.ghost', { onclick: () => ui.openStation(job.id) }, 'Open station') : null,
     ),
@@ -77,7 +81,7 @@ export function renderSurvivor(ui, id) {
     h(
       'button.btn.small.ghost.danger',
       {
-        disabled: s.status === 'mission' || S.survivors.length <= 1,
+        disabled: s.status === 'mission' || s.status === 'scout' || S.survivors.length <= 1,
         onclick: () =>
           ui.confirm(`Send ${s.first} away?`, 'They leave the camp for good, taking nothing with them.', 'Send away', () => {
             for (const k of Object.keys(s.equip)) s.equip[k] = null
@@ -98,7 +102,27 @@ export function renderSurvivor(ui, id) {
   const inf = infectionCard(ui, s)
   if (!ctl && inf) inf.inert = true
   const story = storyCard(ui, s, ctl)
-  return ui.frame(fullName(s), h('span', OCCUPATIONS[s.occ].name, leaderChip(s)), [leaderBanner(s), head, story, inf, perks, jobRow, slotsEl, stats, skills, actions], { icon: 'people' })
+  const diary = diaryCard(ui, s)
+  return ui.frame(fullName(s), h('span', OCCUPATIONS[s.occ].name, leaderChip(s)), [leaderBanner(s), head, story, diary, inf, perks, jobRow, slotsEl, stats, skills, actions], { icon: 'people', extra: pinButton(ui, 'sv', s.id) })
+}
+// Their diary, newest first: a few pages open, the rest a click away.
+const DIARY_ICON = { run: 'map', raid: 'shield', loss: 'skull', bite: 'specimen', name: 'star', skill: 'up', camp: 'gate', craft: 'hammer', join: 'people', day: 'diary' }
+let diaryOpen = null
+function diaryCard(ui, s) {
+  ensureDiary(s)
+  const all = [...(s.diary || [])].reverse()
+  if (!all.length) return null
+  const open = diaryOpen === s.id
+  const shown = open ? all : all.slice(0, 4)
+  return h(
+    'section.card.diary',
+    h('h3', h('span', h('i.inl', { html: icon('diary') }), 'Diary'), h('small', `${all.length} ${all.length === 1 ? 'entry' : 'entries'}`)),
+    h(
+      'div.dpages',
+      shown.map((e) => h('div.dentry.' + e.kind, h('div.dhead', h('i.ic', { html: icon(DIARY_ICON[e.kind] || 'diary') }), h('b', `Day ${e.day}`), h('small', whenText(e))), h('p', e.text))),
+    ),
+    all.length > 4 ? h('button.btn.small.ghost', { onclick: () => ((diaryOpen = open ? null : s.id), ui.refreshPanel(true)) }, open ? 'Fewer pages' : `Read all ${all.length}`) : null,
+  )
 }
 // The name the camp gave them, why, and what they have done.
 function storyCard(ui, s, ctl) {
@@ -120,14 +144,9 @@ function storyCard(ui, s, ctl) {
     setTimeout(() => (input.focus(), input.select()), 0)
   }
   const after = (fn) => () => (fn(), sfx('click'), ui.refreshPanel(true))
-  tools.append(
-    h('button.btn.small.ghost', { onclick: rename }, n ? 'Rename' : 'Give a nickname'),
-    s.nickBy === 'player'
-      ? h('button.btn.small.ghost', { 'data-tip': 'Let what they do decide their name again', onclick: after(() => campNames(s)) }, 'Let the camp decide')
-      : n
-        ? h('button.btn.small.ghost', { onclick: after(() => setNick(s, '')) }, 'Drop it')
-        : null,
-  )
+  tools.append(h('button.btn.small.ghost', { onclick: rename }, n ? 'Rename' : 'Give a nickname'))
+  if (s.nickBy === 'player') tools.append(h('button.btn.small.ghost', { 'data-tip': 'Let what they do decide their name again', onclick: after(() => campNames(s)) }, 'Let the camp decide'))
+  else if (n) tools.append(h('button.btn.small.ghost', { onclick: after(() => setNick(s, '')) }, 'Drop it'))
   // another player's survivor: read, don't rename
   if (!ctl) tools.inert = true
   return h(
@@ -263,10 +282,10 @@ export function renderCrew(ui) {
     const job = s.job ? S.stations.find((x) => x.id === s.job) : null
     const st = survivorStats(s)
     return h(
-      'div.crewrow' + (s.status === 'injured' ? '.hurt' : s.status === 'mission' || s.status === 'outpost' ? '.away' : ''),
+      'div.crewrow' + (s.status === 'injured' ? '.hurt' : s.status === 'mission' || s.status === 'outpost' || s.status === 'scout' ? '.away' : ''),
       { onclick: () => ui.openSurvivor(s.id) },
       h('span.cr-name', h('img.por.sm', { src: ui.game.portrait(s) }), h('span', h('b', leaderChip(s, true), fullName(s), s.perkChoices?.length ? h('i.perktag', { 'data-tip': 'A perk to choose' }, '★') : null, s.infection > 0 ? h('i.inftag', { 'data-tip': `${infectionStage(s)} · ${Math.round(s.infection)}%` }, `${Math.round(s.infection)}%`) : null), h('small', OCCUPATIONS[s.occ].name))),
-      h('span.cr-job', s.status === 'mission' ? 'On a run' : s.status === 'outpost' ? 'At an outpost' : job ? STATIONS[job.type].name : h('em', 'None')),
+      h('span.cr-job', s.status === 'mission' ? 'On a run' : s.status === 'outpost' ? 'At an outpost' : s.status === 'scout' ? 'Scouting' : job ? STATIONS[job.type].name : h('em', 'None')),
       ...SKILL_KEYS.map((k) => h('span.sk' + (s.skills[k] >= 6 ? '.hi' : s.skills[k] <= 1 ? '.lo' : ''), s.skills[k])),
       h('span.cr-wpn', st.weapon.name),
       h('span.cr-hp', bar(s.hp / st.maxHp, s.status === 'injured' ? 'hp.low' : 'hp')),
@@ -288,6 +307,7 @@ export function renderCrew(ui) {
 // ---------------------------------------------------------------- items
 let itemFilter = 'all'
 let itemTab = 'camp'
+export const setItemFilter = (f) => (itemFilter = f || 'all')
 export function renderItems(ui) {
   // in a multiplayer camp: camp storage, and a locker of your own
   const mp = NET.role !== 'solo' && !!S.mp
@@ -301,6 +321,8 @@ export function renderItems(ui) {
   else if (itemFilter !== 'all') items = items.filter((it) => ITEMS[it.id].slot === itemFilter)
   items.sort((a, b) => (ITEMS[a.id].slot < ITEMS[b.id].slot ? -1 : ITEMS[a.id].slot > ITEMS[b.id].slot ? 1 : itemValue(b) - itemValue(a)))
   const sm = sellMult()
+  const recycler = S.stations.filter((x) => x.type === 'recycler' && x.level > 0).sort((p, q) => q.level - p.level)[0] || null
+  const queued = S.items.filter((it) => it.recycle && !it.locker).length
   const cards = items.map((it) => {
     const who = ownerOf(it.uid)
     const price = Math.round(itemValue(it) * 0.6 * sm)
@@ -309,6 +331,18 @@ export function renderItems(ui) {
         'span.ic-acts',
         h('button.mini', { onclick: () => giveItem(ui, it) }, who ? 'Swap' : 'Equip'),
         mp && (!who || !S.mp.owner[who.id] || S.mp.owner[who.id] === NET.pid) ? h('button.mini', { 'data-tip': 'Into your locker: yours alone, and only your survivors can wear it', onclick: () => lockerOp(ui, { op: 'keepItem', item: it.uid }, `${itemName(it)} is in your locker.`) }, 'Keep') : null,
+        !who && !it.locker
+          ? h(
+              'button.mini' + (it.recycle ? '.on' : ''),
+              {
+                'data-tip': recycler ? `${it.recycle ? '<b>Queued for the Recycler</b>Click to keep it instead.' : '<b>Recycle</b>The Recycler strips it for parts.'}<br>Gives about ${Object.entries(salvageOf(it, recycler.level)).map(([k, v]) => `${v} ${RES[k].name.toLowerCase()}`).join(', ')}.` : '<b>Recycle</b>Build a Recycler (Fabrication milestone) to strip unwanted gear for materials.',
+                disabled: !recycler,
+                onclick: () => ((it.recycle = !it.recycle), sfx('click'), ui.refreshPanel()),
+              },
+              h('i.inl', { html: icon('recycle') }),
+              it.recycle ? 'Queued' : 'Recycle',
+            )
+          : null,
         h(
           'button.mini',
           {
@@ -325,12 +359,13 @@ export function renderItems(ui) {
       ),
     })
   })
-  return ui.frame('Items', `${plural(S.items.filter((it) => !it.locker).length, 'item')} in camp`, [tabs, seg(filters, itemFilter, (v) => ((itemFilter = v), ui.refreshPanel())), cards.length ? h('div.igrid', cards) : h('p.note', 'Nothing here.')], { icon: 'items' })
+  const recyNote = queued ? h('p.note', h('i.inl', { html: icon('recycle') }), ` ${plural(queued, 'piece')} queued for the Recycler.`, recycler ? h('button.mini', { onclick: () => ui.openStation(recycler.id) }, 'Open it') : ' Build a Recycler to strip them.') : null
+  return ui.frame('Items', `${plural(S.items.filter((it) => !it.locker).length, 'item')} in camp`, [tabs, seg(filters, itemFilter, (v) => ((itemFilter = v), ui.refreshPanel())), recyNote, cards.length ? h('div.igrid', cards) : h('p.note', 'Nothing here.')], { icon: 'items' })
 }
 function giveItem(ui, it) {
   const slot = ITEMS[it.id].slot
   // a locker item goes only to survivors this player leads
-  const list = S.survivors.filter((s) => s.status !== 'mission' && canControl(s) && (!it.locker || S.mp?.owner?.[s.id] === NET.pid))
+  const list = S.survivors.filter((s) => s.status !== 'mission' && s.status !== 'scout' && canControl(s) && (!it.locker || S.mp?.owner?.[s.id] === NET.pid))
   let close
   close = ui.modal(
     h(

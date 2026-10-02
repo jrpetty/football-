@@ -2160,6 +2160,12 @@ export const HD = {
       for (let i = 0; i < 6; i++) b.cyl(0.04, 0.04, 0.12, { mat: 'paint', color: pick(rnd, ['#c8302a', '#d8a020', '#3a6a3a', '#8a8e92']), x: -0.6 + (i % 3) * 0.1, y: 0.06, z: 0.55 + Math.floor(i / 3) * 0.1, seg: 10 })
       signBoard(b, 'STORES', { x: 0, y: 1.25, z: 1.0, w: 0.9, h: 0.24, bg: '#2a2e26' })
       for (const x of [-0.42, 0.42]) b.box(0.05, 1.3, 0.05, { mat: 'wood', color: '#8a7050', x, y: 0.65, z: 1.02 })
+      // pallets out front that fill with the camp's stock
+      for (const x of [-1.75, 1.75]) pallet(b, { x, z: 1.45, w: 1.1, d: 0.85 })
+      I.stock = [
+        { x: -1.75, y: 0.13, z: 1.45, w: 1.06, d: 0.8 },
+        { x: 1.75, y: 0.13, z: 1.45, w: 1.06, d: 0.8 },
+      ]
       return
     }
     if (L === 2) {
@@ -2182,6 +2188,13 @@ export const HD = {
       })
       for (let i = 0; i < 4; i++) barrel(b, { x: 1.55 + (i % 2) * 0.6 - 0.3, z: -0.25 + Math.floor(i / 2) * 0.62 - 0.3, color: pick(rnd, ['#3a5878', '#7a3a2a', '#3a6a3a']) })
       hangBulb(b, I, 0.0, 2.3, -0.3)
+      // floor pallets that fill with the camp's stock
+      for (const [x, z] of [[-1.0, 0.85], [0.55, -0.5], [-1.0, -0.35]]) pallet(b, { x, z, w: 0.86, d: 0.76 })
+      I.stock = [
+        { x: -1.0, y: 0.13, z: 0.85, w: 0.82, d: 0.72 },
+        { x: 0.55, y: 0.13, z: -0.5, w: 0.82, d: 0.72 },
+        { x: -1.0, y: 0.13, z: -0.35, w: 0.82, d: 0.72 },
+      ]
       return
     }
     // L3: a converted shipping container depot with pallet racking and a forklift
@@ -2192,18 +2205,11 @@ export const HD = {
     b.at({ x: 0.0, z: 1.05 }, () => {
       for (const x of [-2.2, -0.75, 0.75, 2.2]) for (const z of [-0.45, 0.45]) b.box(0.08, 2.2, 0.08, { mat: 'paint', color: '#2a5aa8', x, y: 1.1, z })
       for (const y of [0.15, 1.15]) for (const s of [-1, 1]) b.box(4.5, 0.1, 0.06, { mat: 'paint', color: '#d86a20', y, z: s * 0.45 })
-      for (let bay = 0; bay < 3; bay++) for (let lvl = 0; lvl < 2; lvl++) {
-        const x = -1.45 + bay * 1.45
-        const y = 0.2 + lvl * 1.0
-        pallet(b, { x, y, w: 1.2, d: 0.8 })
-        if (rnd() < 0.85) {
-          const k = rnd()
-          if (k < 0.4) for (let c = 0; c < 4; c++) crate(b, { x: x - 0.28 + (c % 2) * 0.56, y: y + 0.13 + Math.floor(c / 2) * 0.38, w: 0.52, h: 0.36, d: 0.7, color: pick(rnd, ['#e8d8be', '#d0c0a4']) })
-          else if (k < 0.7) for (let c = 0; c < 4; c++) barrel(b, { x: x - 0.28 + (c % 2) * 0.56, y: y + 0.13, z: (Math.floor(c / 2) - 0.5) * 0.4, r: 0.2, h: 0.7, color: pick(rnd, ['#3a5878', '#7a3a2a']) })
-          else for (let c = 0; c < 6; c++) sack(b, { x: x - 0.25 + (c % 2) * 0.5, y: y + 0.13 + Math.floor(c / 2) * 0.22, ry: Math.PI / 2, w: 0.38, d: 0.6, h: 0.2, color: '#d8c8a0' })
-        }
-      }
+      // the racking's pallets fill with the camp's stock (see basestock.js)
+      for (let bay = 0; bay < 3; bay++) for (let lvl = 0; lvl < 2; lvl++) pallet(b, { x: -1.45 + bay * 1.45, y: 0.2 + lvl * 1.0, w: 1.2, d: 0.8 })
     })
+    I.stock = []
+    for (let bay = 0; bay < 3; bay++) for (let lvl = 0; lvl < 2; lvl++) I.stock.push({ x: -1.45 + bay * 1.45, y: 0.2 + lvl * 1.0 + 0.13, z: 1.05, w: 1.16, d: 0.76 })
     mergeModel(b, forkliftModelX(), { x: 2.0, y: 0.12, z: -0.3, ry: -Math.PI / 2 - 0.3 })
     b.plane(4.4, 0.08, { material: stripeMat(), y: 0.122, z: 0.45, rx: -Math.PI / 2, shadow: false })
     for (const x of [-1.2, 1.2]) fluoroLight(b, { x, y: 2.45, z: 1.05, len: 1.2, chain: 0.1 })

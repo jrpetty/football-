@@ -69,9 +69,9 @@ function hazardSign(b, o = {}) {
 // A splitter or merger: a squat steel box on a pad that a belt drops into on
 // each side, a diverter turning on top, and painted arrows saying which way
 // goods go (out from the middle for a splitter, in for a merger).
-function beltNode(b, I, merge) {
+export function beltNode(b, I, merge, o = {}) {
   b.box(0.98, 0.08, 0.98, { mat: 'concrete', color: '#9a968e', y: 0.04 })
-  b.box(0.74, 0.86, 0.74, { mat: 'paint', color: merge ? '#3f6f9a' : '#c8902a', y: 0.08 + 0.43 })
+  b.box(0.74, 0.86, 0.74, { mat: 'paint', color: o.color ?? (merge ? '#3f6f9a' : '#c8902a'), y: 0.08 + 0.43 })
   // hazard band and corner posts
   b.box(0.76, 0.08, 0.76, { mat: 'paint', color: '#1e1e1e', y: 0.78 })
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.box(0.08, 0.98, 0.08, { mat: 'steel', color: '#6a7178', x: sx * 0.37, y: 0.49, z: sz * 0.37 })
@@ -96,7 +96,7 @@ function beltNode(b, I, merge) {
       b.box(0.06, 0.12, 0.01, { mat: 'paint', color: '#f4f0e6', x: 0.04, y: 0.08 * tip, rz: -0.75 * tip })
     })
   }
-  I.lights.push({ x: 0, y: 1.3, z: 0, color: merge ? '#7ac0ff' : '#ffc060', intensity: 0.8, dist: 3, when: 'active' })
+  I.lights.push({ x: 0, y: 1.3, z: 0, color: o.light ?? (merge ? '#7ac0ff' : '#ffc060'), intensity: 0.8, dist: 3, when: 'active' })
 }
 
 export const STATIONS2 = {

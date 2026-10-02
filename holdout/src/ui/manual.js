@@ -1,7 +1,9 @@
 // The field manual: one modal, a chapter list on the left and the page on
 // the right. Numbers come from the game data so the manual stays true when
 // the balance moves.
-import { BELTS, BELT_BONUS, SEASONS, SEASON_DAYS, INFECTION, PERK_LEVELS, SKILL_MAX, OUTPOST, SIGNAL, TIERS, CORE_SLOTS, CORE_BOOST, SEC_PER_DAY, STATIONS, UPKEEP, VEHICLES, VAN_REPAIR, RES } from '../game/data.js'
+import { BELTS, BELT_BONUS, SEASONS, SEASON_DAYS, INFECTION, PERK_LEVELS, SKILL_MAX, OUTPOST, SIGNAL, TIERS, CORE_SLOTS, CORE_BOOST, SEC_PER_DAY, STATIONS, UPKEEP, VEHICLES, VAN_REPAIR, RES, PEN_FENCE, PEN_RAID } from '../game/data.js'
+import { HORDE, SCOUT } from '../game/recon.js'
+import { BARRICADE_HP } from '../scenes/missionbarricade.js'
 import { S, travelCost } from '../game/state.js'
 import { HAND_RATE } from '../game/economy.js'
 import { sfx } from '../core/audio.js'
@@ -73,6 +75,14 @@ const CHAPTERS = [
         h('li', 'Noise carries up and down the stairwell, fainter a floor at a time. A shot upstairs brings the floor below up the stairs, and a horde coming back from the street climbs after you.'),
         h('li', 'A backup generator on the ground floor runs the lights and the lift. Starting it is very loud. The lift is quick, and the infected cannot use it.'),
       ),
+      h('h4', 'Barricades'),
+      P('Left-click a heavy piece of furniture (a wardrobe, fridge, bookshelf, locker, desk, shelf or crate) and choose Barricade the door: a survivor pushes it across the nearest doorway of its room. The menu tells you whether that shuts the room or whether there is another way in to block as well.'),
+      h(
+        'ul',
+        h('li', `The dead that want in hammer at it. How long it holds depends on the piece (a fridge ${BARRICADE_HP.fridge}, a wardrobe ${BARRICADE_HP.wardrobe}, a desk ${BARRICADE_HP.desk}): a few minutes against one or two of them, much less against a crowd. The bar over it shows what is left. The hammering is loud and draws others, who join in.`),
+        h('li', 'While it holds and nothing is inside with you, the room is safe: anyone resting there patches themselves up to 85% health.'),
+        h('li', 'Click it again to take it down and slide it back. A broken one topples over and the door is open.'),
+      ),
       h('h4', 'Tracks in the snow'),
       P('In winter everyone outdoors leaves prints in the snow. The infected\'s prints show where they went even when you cannot see them. Your own prints are a trail: an infected that finds a fresh one follows it back the way you came, to the van.'),
       h('h4', 'Picked clean'),
@@ -100,6 +110,8 @@ const CHAPTERS = [
         BELTS.filter(Boolean).map((b) => tip(b.name, b.desc)),
         tip('Splitter', 'One belt in, up to three out. Each item goes to the next belt in turn: two belts get half each, three a third. A full belt\'s share goes to the others.'),
         tip('Merger', 'Up to three belts of the same goods in, one out. The belt out still carries only its tier\'s rate.'),
+        tip('Priority Splitter', `One belt in, up to three out, but one goes first: it gets everything it can take, and only what backs up on it spills over to the others. Feed the forge before storage. A gold 1ST pennant marks it; "Goes first" on its panel moves it. Draws ${STATIONS.priority.draw} power.`),
+        tip('Buffer Hopper', `A tank on the belt line, one belt in, one out. It fills when more arrives than leaves and empties when the line runs dry, so the machine after it rides out bursts and gaps. Holds ${STATIONS.hopper.hold.join(' / ')} loads by level; a gauge shows how full. Draws ${STATIONS.hopper.draw} power.`),
       ),
       h('h4', 'The numbers'),
       h(
@@ -245,6 +257,18 @@ const CHAPTERS = [
         h('li', 'Clear every place in a district and the people hiding there come out with supplies.'),
         h('li', '10% of the city: morale. 25%: newcomers come sooner. 50%: trips cost a quarter less food and water. 75%: outposts send a quarter more home.'),
         h('li', 'Clear the whole city and the story ends that way instead, if you want it to. The Progress panel has a The city tab with every district.'),
+      ),
+      h('h4', 'Counts change every day'),
+      P('Each place has its usual number of infected, by its size and level. Every morning it drifts a few either way, and a place left half-cleared slowly fills up again. Tall buildings hold more on every floor.'),
+      h('h4', 'The horde'),
+      P(`A great mass of the dead, ${HORDE.minSize + 10} to ${HORDE.maxSize} strong, walks the city: about ${Math.round(HORDE.speed * 60)} m an hour, lingering for hours wherever it stops. It mostly roams the bigger places downtown and sometimes wanders into the quiet streets. Anywhere within ${HORDE.radius} m of it is crawling with far more infected than usual.`),
+      h('h4', 'Recon scouts'),
+      h(
+        'ul',
+        h('li', `Nobody knows where the horde is until somebody goes and looks. Send a scout from a place's card: they go alone and on foot, watch it for ${SCOUT.watch[0] / 60} to ${SCOUT.watch[1] / 60} hours and come back with the count and kinds inside, the floor plan (the squad goes in with the rooms mapped), and the horde if it is within a kilometre.`),
+        h('li', `Or send them to hunt the horde itself: ${SCOUT.hunt[0] / 60} to ${SCOUT.hunt[1] / 60} hours, and dangerous.`),
+        h('li', 'The map then marks where the horde was last seen, how many, and which way it was heading. That mark gets old fast: it keeps walking.'),
+        h('li', 'Quiet people are safer: scouts, hunters, the Quiet trait, a ghillie poncho. Scouts can come back hurt or bitten; from the worst places, sometimes not at all.'),
       ),
       h('h4', 'If the camp falls'),
       P('When the last survivor dies, the camp is gone and the save with it. Its story plays out one last time: how it ended, how long it held, what it did and who it lost.'),
@@ -403,6 +427,53 @@ const CHAPTERS = [
     ],
   },
   {
+    id: 'stores',
+    name: 'Stores, animals, salvage',
+    icon: 'box',
+    body: () => [
+      h('h4', 'Storage in sizes'),
+      h(
+        'div.mn-grid',
+        tip('Storage Depot', `${STATIONS.storage.cap.join(' / ')} by level. Two-way belt hatches.`),
+        tip('Crate Stack', `2×2, +${STATIONS.crates.cap[0]}. Built from wood and scrap, from the start.`),
+        tip('Storage Shed', `3×3, +${STATIONS.shed.cap[0]}. Fabrication.`),
+        tip('Warehouse', `7×5, +${STATIONS.warehouse.cap[0]}, the most room per square metre and eight belt hatches. Machining.`),
+      ),
+      P('All of them add to one shared camp store, and any of them can take belts in or send them out. As the stock of each kind rises, their floors and racks fill with crates, logs, sacks, drums, bars and boxes, in five steps from bare pallets to piled high: you can read the camp\'s wealth at a glance.'),
+      h('h4', 'The Recycler'),
+      h(
+        'ul',
+        h('li', `Gear marked Recycle in Items (or standing orders: strip broken gear, strip crude spares) is broken down first, for ${STATIONS.recycler.salvage.map(pct).join(' / ')} of what it took to make by level, less for worn gear, plus half of any mods.`),
+        h('li', 'Between jobs it works through junk off a belt or from storage: tyres into rubber, dead car batteries into chemicals, scrap sorted into parts, wiring and bars. It keeps four tyres and a battery back for the van.'),
+      ),
+      h('h4', 'Chickens and goats'),
+      h(
+        'ul',
+        h('li', `A Chicken Coop keeps ${STATIONS.coop.flock.join(' / ')} hens by level, laying eggs. A Goat Pen keeps ${STATIONS.goatpen.flock.join(' / ')} goats for milk and wool; the Tailor spins 2 wool into 3 cloth.`),
+        h('li', 'Eggs and milk are eaten before the stores, and fresh food lifts morale. With a keeper and the camp fed, the flock grows every few days; a passing trader sells more.'),
+        h('li', `At night their noise draws the infected, and every pen adds to each horde. An unfenced pen has a ${pct(PEN_RAID)} chance a night of losing an animal; a ${PEN_FENCE[1].name.toLowerCase()} cuts that to ${pct(PEN_RAID * PEN_FENCE[1].guard)}, a ${PEN_FENCE[2].name.toLowerCase()} to ${pct(PEN_RAID * PEN_FENCE[2].guard)}. A fence that is hit needs mending.`),
+      ),
+      h('h4', 'Diaries'),
+      P('Every survivor writes a few lines in their own voice when something happens to them: joining, their job, the weather, runs, hordes, wounds, friends lost, a new name. Read them on their sheet. The Memorial keeps the last thing each of the dead wrote.'),
+    ],
+  },
+  {
+    id: 'tools',
+    name: 'Running a big camp',
+    icon: 'search',
+    body: () => [
+      h(
+        'div.mn-grid',
+        tip('Command palette', 'Ctrl+K or / (or Find in the camp brief). Type a few letters to find any station, survivor, resource, item, place or thing to build, and jump straight there. With nothing typed it lists what you opened last.'),
+        tip('Flow charts', 'Click a resource in the top bar: where it is made, where it goes, every band as wide as its rate per day, how long until it runs out or fills, and the belts that carry it.'),
+        tip('Watch list', 'The pin on any station, survivor or resource puts it on a strip down the left with its numbers live. Up to ten.'),
+        tip('Custom alerts', '"Tell me when metal passes 200", "when anyone is hurt", "when the forge stalls" and more. Each fires once when it comes true and can pause the game. Alerts in the camp brief.'),
+        tip('Go to problem', 'N flies the camera to the next thing in the camp brief that needs you and opens it; Shift+N goes back.'),
+        tip('Mass actions', 'Shift-click stations (or All N on a station\'s panel) to select several, then upgrade them all, pause or resume them, switch automation, fill empty jobs or set a shared target.'),
+      ),
+    ],
+  },
+  {
     id: 'keys',
     name: 'Controls',
     icon: 'settings',
@@ -430,6 +501,9 @@ const CHAPTERS = [
         ['F', 'Wall'],
         ['H', 'Horde intel'],
         ['R', 'Rotate while placing'],
+        ['Ctrl K or /', 'Command palette: find anything'],
+        ['N / Shift N', 'Next / previous problem'],
+        ['Shift+click', 'Select several stations'],
         ['F1', 'This manual'],
         ['Alt+Enter', 'Full screen (or the button above Settings)'],
         ['Esc', 'Close or menu'],

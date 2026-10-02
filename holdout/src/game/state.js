@@ -208,7 +208,7 @@ export function equipped(s, slot) {
 }
 // Gear only changes hands in camp: not for anyone out on a run or holding
 // an outpost.
-export const gearLock = (s) => (s?.status === 'mission' ? 'Out on a run' : s?.status === 'outpost' ? 'Holding an outpost' : null)
+export const gearLock = (s) => (s?.status === 'mission' ? 'Out on a run' : s?.status === 'scout' ? 'Out scouting' : s?.status === 'outpost' ? 'Holding an outpost' : null)
 // Equip an item. Taken from someone else, it is a swap: they get whatever
 // this survivor had in that slot.
 export function equip(s, u, o = {}) {
@@ -397,7 +397,7 @@ export function choosePerk(s, skill, tier, id) {
 // ---------------------------------------------------------------- resources
 export function baseCap() {
   let cap = 150
-  for (const st of S.stations) if (st.type === 'storage' && st.level > 0) cap += STATIONS.storage.cap[st.level - 1]
+  for (const st of S.stations) if (STATIONS[st.type]?.depot && st.level > 0) cap += STATIONS[st.type].cap[st.level - 1] || 0
   return cap
 }
 export const capOf = (k) => (k === 'cash' ? Infinity : Math.max(10, Math.round(baseCap() * (RES[k].capMul ?? 1))))
@@ -1388,7 +1388,7 @@ export function killSurvivor(s, cause) {
   S.stats.deaths++
   // remembered by the name the camp knew them by
   const nick = s.nick ? s.nick.pre || s.nick.post : null
-  S.stats.memorial.unshift({ name: nick ? (s.nick.pre ? `${nick} ${s.name}` : `${s.name}, ${nick}`) : s.name, occ: OCCUPATIONS[s.occ].name, day: day(), cause, kills: s.kills })
+  S.stats.memorial.unshift({ name: nick ? (s.nick.pre ? `${nick} ${s.name}` : `${s.name}, ${nick}`) : s.name, occ: OCCUPATIONS[s.occ].name, day: day(), cause, kills: s.kills, last: s.diary?.length ? s.diary[s.diary.length - 1].text : null })
   if (cause.includes('run') || cause.includes('Left behind')) for (const k of Object.keys(s.equip)) if (s.equip[k]) removeItem(s.equip[k])
   S.survivors = S.survivors.filter((x) => x !== s)
   addMoraleEvent(`${s.first} died`, -15, 2)

@@ -416,10 +416,12 @@ export const RaidMixin = {
     this.wanderers ||= []
     this.squad = []
     this.wanderT = (this.wanderT ?? rand(20, 50)) - dt
-    if (night > 0.6 && this.wanderT <= 0 && this.wanderers.length < 4) {
-      this.wanderT = rand(40, 90)
+    // hens and goats make noise: more of the dead come sniffing round
+    const pens = S.stations.filter((st) => STATIONS[st.type].livestock && st.level > 0 && (st.flock ?? 1) > 0)
+    if (night > 0.6 && this.wanderT <= 0 && this.wanderers.length < 4 + pens.length) {
+      this.wanderT = rand(40, 90) / (1 + 0.5 * pens.length)
       const n = chance(0.3) ? 2 : 1
-      for (let i = 0; i < n; i++) this.spawnWanderer()
+      for (let i = 0; i < n; i++) this.spawnWanderer(pens.length && chance(0.6) ? pick(pens) : null)
     }
     if (!this.wanderers.length) return
     for (const z of this.wanderers) {
@@ -443,9 +445,14 @@ export const RaidMixin = {
       return true
     })
   },
-  spawnWanderer() {
+  spawnWanderer(near = null) {
     const b = bounds()
-    const side = pick(['n', 'e', 'w', 's'])
+    // drawn by animals: come in on the side nearest them
+    let side = pick(['n', 'e', 'w', 's'])
+    if (near) {
+      const d = { w: near.x - b.x0, e: b.x1 - near.x, n: near.z - b.z0, s: b.z1 - near.z }
+      side = Object.keys(d).sort((p, q) => d[p] - d[q])[0]
+    }
     const out = rand(10, 16)
     let x = side === 'w' ? b.x0 - out : side === 'e' ? b.x1 + out : rand(b.x0, b.x1)
     let z = side === 'n' ? b.z0 - out : side === 's' ? b.z1 + out : rand(b.z0, b.z1)

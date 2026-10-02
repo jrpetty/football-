@@ -5,6 +5,8 @@
 // the camera around. Select survivors, right-click to move, search or tear
 // fittings apart; carry what you find back to the van; get out before the
 // horde arrives.
+import { runEnd as diaryRunEnd } from '../game/diary.js'
+import { spawnCount, hordeBonus, setPop } from '../game/recon.js'
 import * as THREE from 'three'
 import { view, screenRay, groundAt } from '../render/view.js'
 import { Atmosphere, nightFactor, isNight } from '../render/sky.js'
@@ -39,6 +41,7 @@ import { soundAt } from '../world/sound.js'
 import { Tracks } from '../world/tracks.js'
 import { CoopMixin, agentStatus, stopTap } from './missioncoop.js'
 import { TrapsMixin } from './missiontraps.js'
+import { BarricadeMixin, BARRICADE_HP } from './missionbarricade.js'
 import { volumeControl } from '../ui/volume.js'
 import { fullscreenButton } from '../ui/fullscreen.js'
 
@@ -130,6 +133,7 @@ export class Mission {
     this.atmo = new Atmosphere(this.scene, game.pipe.renderer, { shadowSize: game.pipe.Q.shadow })
     this.fx = new FX(this.scene)
     this.squad = []
+    this.barricades = []
     this.zombies = []
     this.selected = new Set()
     this.paused = false
@@ -748,6 +752,7 @@ export class Mission {
     const P = placeOf(this.loc.id)
     const alive = this.zombies.filter((z) => !z.dead).length
     P.left = alive
+    setPop(this.loc.id, alive)
     P.at = S.time
     P.visits = (P.visits || 0) + 1
     if (this.once) {
@@ -1173,14 +1178,11 @@ export class Mission {
   }
   spawnInitial() {
     const lv = this.lv
-    const [lo, hi] = infectedRange(lv.loc)
-    // every floor of a tall building has its own
-    let n = Math.round(rint(lo, hi) * (1 + 0.55 * ((lv.levels || 1) - 1)))
-    // whoever the squad left alive last time is still here, and a few more
-    // drift in each day; a place that was cleared stays clear
-    const P = this.place
-    if (P?.cleared) n = 0
-    else if (P?.left != null) n = Math.min(n, P.left + Math.floor((Math.max(0, S.time - (P.at || 0)) / 1440) * 1.5))
+    // today's count (it drifts day to day; whoever the squad left alive last
+    // time is still here), more on every floor of a tall building, and far
+    // more if the roaming horde is near; a place that was cleared stays clear
+    const n = spawnCount(lv.loc, lv.levels || 1)
+    this.hordeHere = hordeBonus(lv.loc) > 0
     const mix = zombieMix(this.level, this.def.zombieTheme)
     const used = new Set()
     for (let k = 0; k < n; k++) {
@@ -1350,6 +1352,9 @@ export class Mission {
   workTime(agent, c, kind) {
     if (c.def?.isTrap) return c.armed ? this.disarmTime(agent, c) : null
     if (kind === 'take') return 0.8
+    // shoving a wardrobe across a door: heavier takes longer, strong arms help
+    if (kind === 'barricade') return (2.5 + (BARRICADE_HP[c.kind] || 400) / 300) / Math.max(0.8, agent.st.dismantle)
+    if (kind === 'unbarricade') return 2.2
     if (kind === 'hotwire') return c.drive?.keys ? 2 : (['mechanic', 'excon'].includes(agent.data.occ) ? 7 : 10) / Math.max(0.8, agent.st.dismantle)
     if (kind === 'search' && c.def?.power) return c.searched ? null : 6 / Math.max(0.7, 0.8 + (agent.data.skills.tech || 1) * 0.08)
     if (kind === 'search') {
@@ -1366,7 +1371,7 @@ export class Mission {
     wk.sfxT = (wk.sfxT || 0) - dt
     if (wk.noiseT <= 0) {
       wk.noiseT = 1
-      const n = wk.kind === 'dismantle' ? 7 : wk.kind === 'hotwire' ? (wk.c.drive?.keys ? 3 : 6) : wk.c.smash ? 12 : 1.6
+      const n = wk.kind === 'dismantle' ? 7 : wk.kind === 'barricade' || wk.kind === 'unbarricade' ? 3.5 : wk.kind === 'hotwire' ? (wk.c.drive?.keys ? 3 : 6) : wk.c.smash ? 12 : 1.6
       this.noise(agent.pos.x, agent.pos.z, n * agent.st.noiseMult)
     }
     if (wk.sfxT <= 0) {
@@ -1380,6 +1385,18 @@ export class Mission {
   }
   finishWork(agent, c, kind) {
     if (c.def?.isTrap) return this.finishDisarm(agent, c)
+    if (kind === 'barricade') {
+      const plan = this.barricadeDoor(c)
+      if (!plan) return this.toast('No clear doorway for it now.', 'bad')
+      this.placeBarricade(c, plan)
+      gainXP(agent.data, 'build', 4)
+      view.labels.float(this.scene, new THREE.Vector3(c.x, 2.2, c.z), 'Barricaded', 'good')
+      return
+    }
+    if (kind === 'unbarricade') {
+      if (c.barricade) this.takeDownBarricade(c.barricade)
+      return
+    }
     if (kind === 'search' && c.def?.power) {
       gainXP(agent.data, 'tech', 6)
       return this.powerOn(c)
@@ -2053,6 +2070,18 @@ export class Mission {
       sfx('click')
       return
     }
+    if (c.barricade) {
+      const B = c.barricade
+      menu.append(h('div.cm-title', h('b', `${c.def.name} · barricade`), h('span', `Holding at ${Math.max(0, Math.round((B.hp / B.max) * 100))}%${B.region ? ' · the room behind it is shut' : ' · the room has another way in'}`)))
+      const t = 2.2
+      menu.append(btn('Take it down', `${who} · ${t.toFixed(1)}s · slides it back`, () => helper.command({ type: 'unbarricade', c }), !helper))
+      menu.hidden = false
+      this.menuOpen = true
+      const r = menu.getBoundingClientRect()
+      menu.style.transform = `translate(${Math.max(10, Math.min(x + 10, window.innerWidth - r.width - 10))}px, ${Math.max(10, Math.min(y + 10, window.innerHeight - r.height - 10))}px)`
+      sfx('click')
+      return
+    }
     menu.append(h('div.cm-title', h('b', c.drive?.started ? 'Your car' : c.def.name), h('span', c.drive?.started ? 'Engine running' : c.drive ? 'This one might still run' : c.stash ? 'Loot left inside' : c.searched ? 'Already searched' : c.locked ? 'Locked' : `Level ${this.level} location`)))
     if (c.drive && !c.drive.started) {
       if (c.drive.keys) menu.append(btn('Start it', `${who} · keys · 2s`, () => helper.command({ type: 'hotwire', c }), !helper))
@@ -2075,6 +2104,13 @@ export class Mission {
         const t = helper ? this.workTime(helper, c, 'search') : c.def.time
         menu.append(btn('Search', `${who} · ${t.toFixed(1)}s · quiet`, () => ((c.smash = false), helper.command({ type: 'search', c })), !helper))
       }
+    }
+    // push it across the nearest doorway to shut the room
+    const plan = this.barricadeDoor(c)
+    if (plan) {
+      const bt = helper ? this.workTime(helper, c, 'barricade') : 4
+      const shuts = this.regionBehind(plan.inside, plan.door)
+      menu.append(btn('Barricade the door', `${who} · ${bt.toFixed(1)}s · ${shuts ? 'shuts the room for a few minutes' : 'the room has another way in: block that too'}`, () => helper.command({ type: 'barricade', c }), !helper))
     }
     const strip = Object.keys(c.def.strip || {}).map((k) => RES[k].name.toLowerCase()).join(', ')
     if (strip && !c.drive?.started && !c.needsKey && !(c.storyItem && !c.storyFound)) {
@@ -2214,8 +2250,10 @@ export class Mission {
     const cam = view.camera.position
     const B = this.lv.bld
     if (B) this.cutU.dir.value.set(cam.x - B.cx, cam.z - B.cz).normalize()
-    if (this.remote) this.coopJoinerTick(dt)
-    else if (!this.paused) {
+    if (this.remote) {
+      this.coopJoinerTick(dt)
+      this.updateBarricades(dt, true)
+    } else if (!this.paused) {
       this.elapsed += dt
       this.time += dt
       for (const s of this.squad) {
@@ -2233,6 +2271,7 @@ export class Mission {
       }
       const all = [...this.squad, ...this.zombies.filter((z) => !z.dead)]
       for (const x of all) x.separate(dt, all)
+      this.updateBarricades(dt)
       this.zombies = this.zombies.filter((z) => {
         if (z.dead && z.deadT > 6) {
           z.remove()
@@ -2717,6 +2756,7 @@ export class Mission {
       report.liberation = `${L.cleared} of ${L.total} places cleared`
     }
     storyRunEnd(this.loc.id, result, report)
+    diaryRunEnd(this.squad.map((a) => a.data), report)
     if (this.coop) this.coopEnd(result, report)
     this.game.endMission(report)
   }
@@ -2745,7 +2785,7 @@ export class Mission {
     this.disposeVision()
   }
 }
-Object.assign(Mission.prototype, VisionMixin, TrapsMixin, CoopMixin)
+Object.assign(Mission.prototype, VisionMixin, TrapsMixin, CoopMixin, BarricadeMixin)
 
 // A rectangle with a hole taken out of it, as up to four rectangles.
 function rectMinus(r, h) {

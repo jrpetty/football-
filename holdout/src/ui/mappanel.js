@@ -5,6 +5,7 @@ import { LOCATIONS, ROOMS, CONTAINERS, RES, ITEMS, ZOMBIES, zombieMix, LEVEL_COL
 import { COOP_MAX } from '../net/coop.js'
 import { playerOf, S, day, clockStr, gameDur, survivorStats, getS, hasFlag, outpostAt, outpostProblem, claimOutpost, outpostYield, outpostUpgradeCost, upgradeOutpost, abandonOutpost, canAfford, travelCost, vehicleOf, vehicleProblem, usableVehicles, pay, canControl, NET, isLooted, lootedUntil, waitText, modeOf, isCleared, placeLeft, isEmptied, liberation, DISTRICTS } from '../game/state.js'
 import { raidIntel } from '../game/economy.js'
+import { reconOf, lastSeen, sendScout, canScout, scoutTime, scoutRisk, stealthOf, scoutOf, locById, HORDE, popOf, basePop } from '../game/recon.js'
 import { leadsAt } from '../game/story.js'
 import { sfx } from '../core/audio.js'
 import { h, fmt, clamp, bus } from '../core/util.js'
@@ -97,7 +98,7 @@ export class MapPanel {
       h('div.mt-clock', h('span', { html: icon(clockStr().slice(0, 2) >= 20 || clockStr().slice(0, 2) < 6 ? 'moon' : 'sun') }), `Day ${day()}`, h('b', clockStr())),
       h('div.mt-res', { 'data-tip': 'Food and water for the trip: every survivor carries provisions, more the further out, and far more on foot.' }, h('i', { html: resIcon('food') }), h('b', fmt(S.res.food || 0)), h('i', { html: resIcon('water') }), h('b', fmt(S.res.water || 0))),
       h('div.mt-res', { 'data-tip': 'Fuel for vehicles: they burn it by the kilometre, there and back.' }, h('i', { html: resIcon('fuel') }), h('b', fmt(S.res.fuel || 0)), h('small', 'fuel')),
-      intel ? h('div.mt-horde' + (intel.in < 120 ? '.soon' : ''), h('span', { html: icon('horde') }), h('small', intel.known ? intel.name : 'Horde'), h('b', gameDur(intel.in))) : null,
+      intel ? h('div.mt-horde' + (intel.in < 120 ? '.soon' : ''), h('span', { html: icon('horde') }), h('small', intel.known ? intel.name : 'Horde'), h('b', gameDur(intel.in))) : '',
     )
   }
   render() {
@@ -118,6 +119,7 @@ export class MapPanel {
         'div.pbody',
         h('p.note', 'Level 1 places are near camp and hold food, water and cloth. Level 5 holds guns, armor and radios, and far more of the dead. Every run takes survivors away from their jobs and the wall.'),
         this.sameAgain(locs),
+        this.hordeCard(),
         evs.length
           ? h(
               'div.card.evcard',
@@ -149,6 +151,81 @@ export class MapPanel {
             : null,
         ),
       ),
+    )
+  }
+  // The roaming horde: where it was last seen (only a scout can tell), and
+  // a way to send someone after it.
+  hordeCard() {
+    const seen = lastSeen()
+    const out = S.scouts?.find((x) => x.target === 'horde')
+    const ago = seen ? S.time - seen.time : null
+    return h(
+      'div.card.hordecard',
+      h('h3', h('span', h('i.inl', { html: icon('skull') }), 'The horde'), h('small', seen ? `last seen ${ago < 60 ? 'within the hour' : `${gameDur(ago)} ago`}` : 'whereabouts unknown')),
+      h('p.note', seen ? `About ${seen.size} of them, ${seen.moving ? 'on the move' : 'settled in one place'}, seen by ${seen.by}. It wanders: mostly round the bigger places downtown, sometimes the quiet streets. Anywhere near it is crawling with far more of the dead than usual.` : 'A great mass of the dead wanders the city. Anywhere near it is crawling with far more of them than usual. Nobody knows where it is until somebody goes and looks.'),
+      h(
+        'div.hordeacts',
+        seen ? h('button.btn.small.ghost', { onclick: () => (this.map.lookAtHorde?.(), sfx('click')) }, h('i', { html: icon('eye') }), ' Show on map') : null,
+        out ? h('span.dim', `${getS(out.sid)?.first || 'A scout'} is out looking · back in ${gameDur(out.back - S.time)}`) : h('button.btn.small', { onclick: () => this.pickScout('horde') }, h('i', { html: icon('binoculars') }), ' Send someone to find it'),
+      ),
+    )
+  }
+  // Scouting a place: what's known, and a button to find out.
+  scoutCard(loc) {
+    const R = reconOf(loc.id)
+    const out = (S.scouts || []).find((x) => x.target === loc.id)
+    const seen = lastSeen()
+    const near = seen && Math.hypot(seen.x - loc.x, seen.z - loc.z) < HORDE.radius + 120
+    const kinds = R?.kinds ? Object.entries(R.kinds).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${n} ${n === 1 ? ZOMBIES[k].name.toLowerCase() : ZOMBIES[k].name.toLowerCase() + 's'}`).join(', ') : ''
+    return h(
+      'div.card.scoutcard' + (R?.horde ? '.danger' : ''),
+      h('h3', h('span', h('i.inl', { html: icon('binoculars') }), 'Scouting'), h('small', R ? `${R.by} · ${R.age < 60 ? 'just now' : `${gameDur(R.age)} ago`}` : 'not scouted')),
+      R
+        ? h('div', h('p', h('b', `${R.count} infected inside`), R.fresh ? '' : h('em.dim', ' (counts shift every day: this is getting old)')), kinds ? h('p.note', kinds) : null, R.horde ? h('p.note.bad', 'The horde was close by when they looked. Expect far more than usual.') : null, h('p.note.dim', 'The scout drew the floor plan: the squad goes in knowing the rooms.'))
+        : h('p.note', 'Send one quiet survivor ahead to watch the place: they count what is inside, draw the floor plan and look out for the horde. It takes hours, and they go alone.'),
+      near && !R?.horde ? h('p.note.bad', `The horde was last seen near here ${gameDur(S.time - seen.time)} ago.`) : null,
+      out ? h('p.dim', `${getS(out.sid)?.first || 'A scout'} is out there now · back in ${gameDur(out.back - S.time)}`) : h('button.btn.small' + (R?.fresh ? '.ghost' : ''), { onclick: () => this.pickScout(loc.id) }, h('i', { html: icon('binoculars') }), R ? ' Scout it again' : ' Send a scout'),
+    )
+  }
+  // Choose who goes scouting: quiet ones are safer.
+  pickScout(target) {
+    const ui = this.game.ui
+    const list = S.survivors.filter((s) => canScout(s) && canControl(s)).sort((a, b) => stealthOf(a) - stealthOf(b))
+    const loc = target === 'horde' ? null : locById(target)
+    let close
+    close = ui.modal(
+      h(
+        'div',
+        h('h2', loc ? `Who scouts ${loc.name}?` : 'Who goes after the horde?'),
+        h('p.note', loc ? 'They go on foot and alone, watch the place for hours and come back with a count, the floor plan and anything they see of the horde. Quiet people are safer: scouts, hunters, anyone with the Quiet trait or a ghillie poncho.' : 'A long day out: they cross the city looking for the horde\'s trail and come back with where it was and which way it was heading. Dangerous.'),
+        list.length
+          ? h(
+              'div.picklist',
+              list.map((s) => {
+                const t = scoutTime(s, target)
+                const r = scoutRisk(s, target)
+                const q = stealthOf(s)
+                return h(
+                  'button.pickrow',
+                  {
+                    onclick: () => {
+                      if (!sendScout(s, target)) return sfx('error')
+                      sfx('select')
+                      close()
+                      ui.toast(`${s.first} is on the way. Back in about ${Math.round(t / 60)} hours.`, 'good')
+                      this.render()
+                      this.map.refreshMarkers?.()
+                    },
+                  },
+                  h('img.por', { src: this.game.portrait(s) }),
+                  h('div.pr-main', h('b', s.name), h('span', `${OCCUPATIONS[s.occ].name}${s.traits.includes('quiet') ? ' · Quiet' : ''}${s.job ? ` · leaves the ${STATIONS[S.stations.find((x) => x.id === s.job)?.type]?.name || 'job'}` : ''}`)),
+                  h('div.pr-job', h('span', q < 0.6 ? 'Very quiet' : q < 0.85 ? 'Quiet' : q > 1.15 ? 'Noisy' : 'Average'), h('small', `${Math.round(t / 60)} h · ${Math.round(r * 100)}% risk`)),
+                )
+              }),
+            )
+          : h('p.note.bad', 'Nobody is free and well enough to go.'),
+      ),
+      { actions: [h('button.btn.ghost', { onclick: () => close() }, 'Cancel')] },
     )
   }
   // The last run, one click to set it up again: same place, people, vehicle.
@@ -193,7 +270,7 @@ export class MapPanel {
       .filter((m) => m.w > 0.6)
       .map((m) => ZOMBIES[m.t].name + 's')
     // squad
-    const av = S.survivors.filter((s) => s.status !== 'mission' && s.status !== 'outpost' && canControl(s))
+    const av = S.survivors.filter((s) => s.status !== 'mission' && s.status !== 'outpost' && s.status !== 'scout' && canControl(s))
     const sick = (s) => s.infection >= INFECTION.sick
     for (const id of [...this.squad]) if (!av.find((s) => s.id === id && s.status === 'ok' && !sick(s))) this.squad.delete(id)
     if (!this.squad.size && !this.suggested) {
@@ -279,6 +356,7 @@ export class MapPanel {
         ev ? h('div.card.evbig.' + ev.kind, h('b', ev.kind === 'distress' ? `Distress call: ${ev.npc?.name || 'a survivor'} is trapped inside.` : 'A supply drop came down in the yard.'), h('small', ev.kind === 'distress' ? 'Reach them and get them out: they will join the camp.' : 'Military crates: ammo, meds and gear.'), h('span', `Signal fades in ${gameDur(ev.expires - S.time)}`)) : null,
         leads.length ? h('div.card.leadcard', h('b', h('i', { html: icon('book') }), 'Story lead'), h('span', `${leads.join(' · ')} might be here.`), h('small', 'See the journal for what you know.')) : null,
         placeCard(loc, looted, wait, leads.length > 0),
+        isCleared(loc.id) ? null : this.scoutCard(loc),
         h(
           'div.mfacts',
           infectedFact(loc, z0, z1, mix),
@@ -448,9 +526,13 @@ function placeCard(loc, looted, wait, lead) {
 function infectedFact(loc, z0, z1, mix) {
   const P = S.places?.[loc.id]
   if (P?.cleared) return h('div', h('small', 'Infected'), h('b.good', 'None'), h('em', 'Cleared'))
+  // a scout's count, while it's fresh
+  const R = reconOf(loc.id)
+  if (R?.fresh) return h('div', { 'data-tip': `Counted by ${R.by} ${gameDur(R.age)} ago. Numbers shift a little every day, and the horde can bring many more.` }, h('small', 'Infected'), h('b' + (R.horde ? '.bad' : ''), `${R.count}`), h('em', R.horde ? 'the horde is near' : 'scouted'))
   if (P?.left != null) {
-    const n = Math.min(z1 * 3, P.left + Math.floor((Math.max(0, S.time - (P.at || 0)) / 1440) * 1.5))
-    return h('div', { 'data-tip': 'Whoever you left alive last time is still in there, and a few more drift in each day.' }, h('small', 'Infected'), h('b', `about ${n}`), h('em', P.left ? `${P.left} left alive last time` : 'came back since'))
+    const n = popOf(loc)
+    return h('div', { 'data-tip': 'Whoever you left alive last time is still in there, and the numbers drift a little each day. Send a scout for a real count.' }, h('small', 'Infected'), h('b', `about ${Math.max(0, n - 2)}–${n + 3}`), h('em', P.left ? `${P.left} left alive last time` : 'came back since'))
   }
-  return h('div', h('small', 'Infected'), h('b', `${z0}–${z1}`), h('em', mix.join(', ')))
+  const b = basePop(loc)
+  return h('div', { 'data-tip': 'A guess: the numbers change from day to day, and the roaming horde can bring far more. Send a scout to know.' }, h('small', 'Infected'), h('b', `${Math.max(1, b - 4)}–${b + 5}?`), h('em', mix.join(', ')))
 }

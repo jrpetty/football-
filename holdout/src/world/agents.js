@@ -69,7 +69,7 @@ const LIFT = { lift: true }
 
 // ---------------------------------------------------------------- base agent
 // Orders that walk to a container and work at it for a while.
-const WORK_ORDERS = new Set(['search', 'dismantle', 'hotwire'])
+const WORK_ORDERS = new Set(['search', 'dismantle', 'hotwire', 'barricade', 'unbarricade'])
 
 export class Agent {
   constructor(world, ch, x, z) {
@@ -488,7 +488,7 @@ export class SurvivorAgent extends Agent {
     if (o?.type === 'attack' && (!o.z || o.z.dead)) this.order = null
     if (o && WORK_ORDERS.has(o.type)) {
       const c = o.c
-      if (c.gone || (o.type === 'search' && c.searched)) {
+      if (c.gone || (o.type === 'search' && c.searched) || (o.type === 'barricade' && c.barricade) || (o.type === 'unbarricade' && !c.barricade)) {
         this.order = null
         this.work = null
         this.showProg(null)
@@ -509,7 +509,7 @@ export class SurvivorAgent extends Agent {
         this.face(c.x, c.z, dt)
         wk.t += dt
         this.showProg(wk.t / wk.total)
-        mode = wk.kind === 'search' || wk.kind === 'hotwire' ? 'search' : 'hammer'
+        mode = wk.kind === 'search' || wk.kind === 'hotwire' ? 'search' : wk.kind === 'barricade' || wk.kind === 'unbarricade' ? 'push' : 'hammer'
         W.workTick?.(this, wk, dt)
         if (wk.t >= wk.total) {
           W.finishWork(this, c, wk.kind)
@@ -745,7 +745,7 @@ export class ZombieAgent extends Agent {
     this.world.onKill?.(this, from)
   }
   alertTo(x, z) {
-    if (this.dead || this.state === 'chase' || this.state === 'fence') return
+    if (this.dead || this.state === 'chase' || this.state === 'fence' || this.state === 'bash') return
     this.state = 'investigate'
     this.moveTo(x, z)
   }
@@ -865,7 +865,14 @@ export class ZombieAgent extends Agent {
           this.repath -= dt
           if (this.repath <= 0 || !this.path) {
             this.repath = 0.5 + Math.random() * 0.3
-            if (!this.moveTo(t.pos.x, t.pos.z)) {
+            // shut in behind a barricade? then break it down (a path would
+            // only lead up to the wall)
+            const bar = W.barricadeToward?.(this, t)
+            if (bar) {
+              this.state = 'bash'
+              this.bash = bar
+              this.moveTo(bar.outPos.x, bar.outPos.z)
+            } else if (!this.moveTo(t.pos.x, t.pos.z)) {
               this.state = 'idle'
               this.target = null
             }
@@ -874,6 +881,38 @@ export class ZombieAgent extends Agent {
           this.step(dt, boost)
           speed = this.speed * boost
           anim = this.def.crawl ? 'zcrawl' : this.def.speed * boost > 2 ? 'zrun' : 'zwalk'
+        }
+      }
+    } else if (this.state === 'bash' && this.bash) {
+      // at a barricade: hammer at it until it gives, then go for whoever is inside
+      const b = this.bash
+      if (b.broken || !b.c.barricade) {
+        this.bash = null
+        this.state = this.target && !this.target.dead ? 'chase' : 'idle'
+        this.repath = 0
+      } else {
+        const d = Math.hypot(b.outPos.x - this.pos.x, b.outPos.z - this.pos.z)
+        if (d > 0.75) {
+          this.repath -= dt
+          if (!this.path && this.repath <= 0) {
+            this.repath = 1
+            if (!this.moveTo(b.outPos.x, b.outPos.z)) {
+              this.state = 'idle'
+              this.bash = null
+            }
+          }
+          this.step(dt)
+          speed = this.speed
+          anim = this.def.crawl ? 'zcrawl' : 'zwalk'
+        } else {
+          this.path = null
+          this.face(b.c.x, b.c.z, dt)
+          if (this.cool <= 0) {
+            this.cool = this.def.rate
+            this.swing = 1
+            setTimeout(() => !this.dead && W.bashBarricade?.(b, this), 280)
+          }
+          anim = this.def.crawl ? 'zcrawl' : 'zattack'
         }
       }
     } else if (this.state === 'trail' && this.trail) {
@@ -894,8 +933,16 @@ export class ZombieAgent extends Agent {
       anim = this.def.crawl ? 'zcrawl' : 'zwalk'
     } else if (this.state === 'investigate') {
       if (!this.path || this.step(dt)) {
-        this.state = 'idle'
-        this.wanderT = rand(3, 7)
+        // drawn to the hammering at a barricade with someone behind it: join in
+        const bar = W.barricadeNear?.(this)
+        if (bar) {
+          this.state = 'bash'
+          this.bash = bar
+          this.moveTo(bar.outPos.x, bar.outPos.z)
+        } else {
+          this.state = 'idle'
+          this.wanderT = rand(3, 7)
+        }
       }
       speed = this.speed
       anim = this.def.crawl ? 'zcrawl' : 'zwalk'

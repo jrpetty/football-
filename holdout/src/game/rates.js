@@ -15,16 +15,18 @@
 //   What it makes, B x out[k], is shared over the belts leaving it for k:
 //   each gets an equal share, and a belt that can take less than its share
 //   (full, or its far end needs less) passes the rest to the others.
-//   A splitter shares out what comes in the same way; a merger sends on the
-//   sum of what comes in, up to its belt's cap.
+//   A splitter shares out what comes in the same way; a priority splitter
+//   fills its first belt as far as it will go and shares the rest; a merger
+//   sends on the sum of what comes in, up to its belt's cap; a hopper passes
+//   on what comes in (its tank only evens out bursts, not the daily rate).
 //
 // Constraints feed back both ways (a slow forge backs up the scrap belt
 // that feeds it, which slows the scrap yard), so the whole network is
 // settled by repeating the two passes until nothing moves.
 import { STATIONS, SEC_PER_DAY, RECIPES, RES } from './data.js'
 import { S, capOf } from './state.js'
-import { stationRate, power, activeSingle, activeRecipe, recipeUnlocked, seasonMult, passiveMult, stationFlow, linkPower } from './economy.js'
-import { isDepot, isNode, nodeKind, linkPerDay, beltBonus } from './belts.js'
+import { stationRate, power, powerInfo, activeSingle, activeRecipe, recipeUnlocked, seasonMult, passiveMult, stationFlow, linkPower } from './economy.js'
+import { isDepot, isNode, nodeKind, splits, firstOut, linkPerDay, beltBonus } from './belts.js'
 import { bus } from '../core/util.js'
 
 const EPS = 0.01
@@ -102,7 +104,8 @@ function waterFill(total, caps) {
 // Flows are per day in units of the resource.
 export function solveFlows() {
   const links = S.links || []
-  const pinfo = power()
+  // fresh, so a belt or node laid this instant already counts
+  const pinfo = powerInfo()
   const P = new Map()
   for (const st of S.stations) P.set(st.id, profile(st, pinfo))
   const into = new Map()
@@ -161,7 +164,7 @@ export function solveFlows() {
     if (!st) return 0
     if (isDepot(st)) return (S.res[k] || 0) < capOf(k) - 0.5 ? Infinity : sum((outof.get(st.id) || []).filter((x) => x.res === k))
     const others = (into.get(st.id) || []).filter((x) => x !== l && x.res === k)
-    if (nodeKind(st) === 'split') return sum(outof.get(st.id) || [], accept) - sum(others)
+    if (splits(st) || nodeKind(st) === 'hopper') return Math.max(0, sum(outof.get(st.id) || [], accept) - sum(others))
     if (nodeKind(st) === 'merge') return Math.max(0, sum(outof.get(st.id) || [], accept) - sum(others))
     if (st.type === 'mast') return Infinity
     const p = P.get(st.id)
@@ -201,7 +204,16 @@ export function solveFlows() {
             total = r.B * (p.outs[k] || 0)
           }
         }
-        const share = waterFill(total === Infinity ? 1e9 : total, ls.map((l) => accept.get(l.id)))
+        const T = total === Infinity ? 1e9 : total
+        let share
+        if (nodeKind(st) === 'prio' && ls.length > 1) {
+          // the first belt takes all it can; the others share what is left
+          const first = firstOut(st, ls)
+          const a0 = Math.min(T, accept.get(first.id))
+          const rest = ls.filter((l) => l !== first)
+          const fill = waterFill(T - a0, rest.map((l) => accept.get(l.id)))
+          share = ls.map((l) => (l === first ? a0 : fill[rest.indexOf(l)]))
+        } else share = waterFill(T, ls.map((l) => accept.get(l.id)))
         ls.forEach((l, i) => {
           supply.set(l.id, total === Infinity ? Infinity : total / ls.length)
           const f = Math.min(share[i], accept.get(l.id))
@@ -255,7 +267,8 @@ export function solveFlows() {
     else if (spent(l)) limit = 'source'
     const short = limit === 'starved' ? runs.get(l.to)?.limit : null
     const src = byId(l.from)
-    const share = isNode(src) ? { total: sum(into.get(src.id) || []), n: (outof.get(src.id) || []).length } : null
+    const outsSrc = outof.get(src?.id) || []
+    const share = isNode(src) ? { total: sum(into.get(src.id) || []), n: outsSrc.length, first: nodeKind(src) === 'prio' && outsSrc.length > 1 ? firstOut(src, outsSrc) === l : null } : null
     out.set(l.id, { flow: f, cap: c, supply: supply.get(l.id) ?? 0, demand: want, limit, short, share })
   }
   return { links: out, stations: runs }
@@ -286,6 +299,8 @@ export function limitText(l, r) {
   if (isDepot(from)) return `Storage has run out of ${res}.`
   if (isNode(from) && r.share) {
     const part = r.share.n === 2 ? 'half' : r.share.n === 3 ? 'a third' : 'all'
+    if (r.share.first === true) return `First in line: this belt takes as much of the ${f(r.share.total)} a day coming in as it can use.`
+    if (r.share.first === false) return r.flow < 0.5 ? `Overflow only: the first belt uses all ${f(r.share.total)} a day coming in, so nothing spills over yet.` : `Overflow: this belt gets what the first belt can't take, ${f(r.flow)} of the ${f(r.share.total)} a day.`
     return nodeKind(from) === 'split' && r.share.n > 1 ? `The splitter gets ${f(r.share.total)} a day and gives this belt ${part}: ${f(r.flow)}.` : `Only ${f(r.flow)} a day reaches the ${nm(from).toLowerCase()}.`
   }
   return `The ${nm(from)} makes ${f(r.supply)} ${res} a day for this belt.`

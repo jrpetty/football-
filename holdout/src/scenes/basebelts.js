@@ -11,7 +11,7 @@ import { mat } from '../render/materials.js'
 import { view, pickAt, groundAt } from '../render/view.js'
 import { BELTS, RES, STATIONS, SEC_PER_DAY } from '../game/data.js'
 import { S, stationSize, canAfford } from '../game/state.js'
-import { BELT_Y, BELT_DY, planLink, addLink, linkProblem, linkState, linkPerDay, isDepot, isNode, nodeKind, nodeRes, rerouteLinks, beltSpeed, ensurePorts, portsOf, portAt, linkAt, freePods, inputsOf, outputsOf, beltBlocked } from '../game/belts.js'
+import { BELT_Y, BELT_DY, planLink, addLink, linkProblem, linkState, linkPerDay, isDepot, isNode, nodeKind, nodeRes, NODE_RULES, firstOut, rerouteLinks, beltSpeed, ensurePorts, portsOf, portAt, linkAt, freePods, inputsOf, outputsOf, beltBlocked } from '../game/belts.js'
 import { flowsNow, limitText } from '../game/rates.js'
 import { power, linkPower } from '../game/economy.js'
 import { plateMat } from '../models/detail.js'
@@ -430,6 +430,7 @@ function buildPods(st) {
   const root = new THREE.Group()
   const B = new Builder()
   const node = isNode(st)
+  let firstFlag = false
   for (const p of ports) {
     const l = linkAt(st, p.i)
     const kind = podKind(st, p, l)
@@ -448,6 +449,17 @@ function buildPods(st) {
         if (l) B.cyl(0.12, 0.12, 0.04, { mat: 'paint', color: RES[l.res].color, y: 1.59, z: 0.05, seg: 14 })
       })
     }
+    // a priority splitter flies a gold pennant over the side it serves first
+    if (l && nodeKind(st) === 'prio' && l.from === st.id && firstOut(st) === l) {
+      B.at({ x: p.ex + ux * 0.12, z: p.ez + uz * 0.12, ry: Math.atan2(ux, uz) }, () => {
+        B.cyl(0.03, 0.035, 2.5, { mat: 'steel', color: '#8a9298', y: 1.25, seg: 8 })
+        B.box(0.03, 0.44, 0.72, { mat: 'paint', color: '#f2c230', y: 2.2, z: 0.37 })
+        // "1ST" on both faces, readable from either side of the line
+        for (const sx of [-1, 1]) B.plane(0.56, 0.3, { material: plateMat('1ST', '#f2c230', '#3a2600'), x: sx * 0.017, y: 2.2, z: 0.37, ry: (sx * Math.PI) / 2, shadow: false })
+        B.sphere(0.07, { mat: 'paint', color: '#f2c230', y: 2.52, ws: 10, hs: 8 })
+      })
+      firstFlag = true
+    }
     const m = new THREE.Mesh(DECAL_GEO, decalMat(kind))
     m.position.set(p.x + 0.5, 0.035, p.z + 0.5)
     // the arrow's tip points to -z before turning: outward for an outtake, at the wall for an intake
@@ -455,7 +467,7 @@ function buildPods(st) {
     m.renderOrder = 2
     root.add(m)
   }
-  if (!node && ports.length) {
+  if ((!node && ports.length) || firstFlag) {
     const g = B.build()
     g.traverse((o) => {
       if (o.isMesh) {
@@ -583,7 +595,7 @@ export const BeltMixin = {
       const ports = portsOf(st)
       if (!ports.length) continue
       live.add(st.id)
-      const key = `${st.x},${st.z},${st.rot ? 1 : 0}|` + ports.map((p) => `${p.kind}${p.x},${p.z}${podKind(st, p)}${linkAt(st, p.i)?.res || ''}`).join(';')
+      const key = `${st.x},${st.z},${st.rot ? 1 : 0}|${nodeKind(st) === 'prio' ? firstOut(st)?.id || '' : ''}|` + ports.map((p) => `${p.kind}${p.x},${p.z}${podKind(st, p)}${linkAt(st, p.i)?.res || ''}`).join(';')
       const v = this.podViews.get(st.id)
       if (v && v.key === key) continue
       if (v) this.disposePods(v)
@@ -744,7 +756,7 @@ export const BeltMixin = {
       const other = S.stations.find((x) => x.id === (l.from === st.id ? l.to : l.from))
       const r = flowsNow().links.get(l.id)
       body = `<span>${RES[l.res].name} ${l.from === st.id ? 'to' : 'from'} the ${STATIONS[other?.type]?.name || '?'}: ${fmt(l.flow * SEC_PER_DAY)} a day now${r ? `, settles at ${fmt(r.flow)}` : ''}</span>${r ? `<small>${limitText(l, r)}</small>` : ''}<small>Click for the belt</small>`
-    } else if (isNode(st)) body = `<span>${nodeKind(st) === 'split' ? 'Splitter' : 'Merger'} side: free</span><small>Click to lay a belt from here</small>`
+    } else if (isNode(st)) body = `<span>${nm} side: free</span><small>Click to lay a belt from here</small>`
     else if (kind === 'in') body = `<span>Takes ${list(takes(st))}</span><small>Free · click to bring goods in by belt</small>`
     else if (kind === 'out') body = `<span>Sends ${list(sends(st))}</span><small>Free · click to lay a belt from here</small>`
     else body = `<span>Any goods in or out</span><small>Free · click to lay a belt from here</small>`
@@ -792,8 +804,10 @@ export const BeltMixin = {
       return
     }
     let dir = p.kind === 'in' ? 'in' : 'out'
-    if (nodeKind(st) === 'split') dir = S.links.some((x) => x.to === st.id) ? 'out' : 'in'
-    if (nodeKind(st) === 'merge') dir = S.links.some((x) => x.from === st.id) ? 'in' : 'out'
+    // a node with one way in fills that first; a merger fills its way out first
+    const R = NODE_RULES[nodeKind(st)]
+    if (R && R.ins === 1) dir = S.links.some((x) => x.to === st.id) ? 'out' : 'in'
+    else if (R) dir = S.links.some((x) => x.from === st.id) ? 'in' : 'out'
     this.startLinking(st, null, dir, { port: p.i })
   },
 

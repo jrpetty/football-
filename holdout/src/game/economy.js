@@ -4,6 +4,7 @@
 import {
   RES, STOCK_KEYS, AMMO_KEYS, ITEMS, QUALITY, MODS, STATIONS, FENCE, RECIPES, EXPANSIONS, HORDES, OCCUPATIONS, LOCATIONS,
   GAME_MIN_PER_SEC, DAY_MIN, SEC_PER_DAY, SEC_PER_HOUR, UPKEEP, RARITY, ALT_RECIPES, INFECTION, OUTPOST, SIGNAL, BELTS,
+  PEN_FENCE, PEN_RAID, ANIMAL_COST,
 } from './data.js'
 const SIGNAL_PHASES = SIGNAL.length
 import {
@@ -11,13 +12,14 @@ import {
   survivorStats, itemOf, addItem, repairCost, orderSpec, rollQuality, rebuildFence, fenceMax, makeSurvivor, killSurvivor,
   bedCount, countType, maxLevelOf, addMoraleEvent, itemName, moraleMult, available, getS, isUnlocked, hasFlag, feedSignal,
   researchDone, finishResearch, coreBoost, treatInfection, season, seasonIdx, campTier, perkOf,
-  outpostYield, abandonOutpost, addVehicle, outpostAt,
+  outpostYield, abandonOutpost, addVehicle, outpostAt, ownerOf, removeItem, itemValue,
 } from './state.js'
 import { deed, dailyDeeds } from './deeds.js'
 import { isLooted } from './state.js'
 import { bus, pick, rint, rand, chance, clamp, weighted } from '../core/util.js'
 import { tickLinks, beltBonus, belted, pulled, outCap } from './belts.js'
 import { tickStory } from './story.js'
+import { tickRecon } from './recon.js'
 
 // ---------------------------------------------------------------- power
 // One grid for the whole camp. Sources: steam engines (wood, or coal at a
@@ -166,14 +168,109 @@ function tickPower(pinfo, dt) {
 }
 
 export function stationRate(st, pinfo) {
-  if (st.building || st.level < 1) return 0
+  if (st.building || st.level < 1 || st.halt) return 0
   const d = STATIONS[st.type]
   let r = 0
   for (const s of workersOf(st)) if (s.status === 'ok') r += workEff(s, st.type)
   if (d.machine && !pinfo.powered.has(st.id)) r *= HAND_RATE
   if (S.disrepair) r *= UPKEEP.slow
   if (isAutomated(st, pinfo)) r += d.autoRate * (hasFlag('autoBoost') ? 1.5 : 1) * (1 + coreBoost() * (st.cores || 0))
+  // animals: the more of them, the more they give
+  if (d.livestock) r *= flockFactor(st)
   return r
+}
+// ---------------------------------------------------------------- livestock
+export const flockMax = (st) => STATIONS[st.type].flock?.[Math.max(0, st.level - 1)] || 0
+export const flockOf = (st) => st.flock ?? STATIONS[st.type].start ?? 0
+export const flockFactor = (st) => (flockMax(st) ? Math.min(1, flockOf(st) / flockMax(st)) : 1)
+// Food the camp can eat: fresh eggs and milk as well as stores.
+export const foodStock = () => (S.res.food || 0) + (S.res.eggs || 0) + (S.res.milk || 0)
+// How likely the infected are to get at a pen tonight: the fence, staffed
+// watchtowers and lit floodlights all keep them off.
+export function penRisk(st, pinfo = power()) {
+  const F = PEN_FENCE[st.pen || 0]
+  let k = PEN_RAID * F.guard
+  for (const t of S.stations) {
+    if (t.level < 1 || t.building) continue
+    if (t.type === 'watchtower' && workersOf(t).some((s) => s.status === 'ok')) k *= 0.7
+    if (t.type === 'floodlight' && pinfo.powered.has(t.id)) k *= 0.85
+  }
+  return clamp(k, 0, 0.95)
+}
+const animal = (st, n) => {
+  const w = STATIONS[st.type].livestock === 'goat' ? 'goat' : 'hen'
+  return `${n} ${n === 1 ? w : w + 's'}`
+}
+// Put a fence round a pen (or a better one).
+export function buildPenFence(st) {
+  const n = (st.pen || 0) + 1
+  const F = PEN_FENCE[n]
+  if (!F || !pay(F.cost)) return false
+  st.pen = n
+  st.penHp = F.hp
+  log(`${F.name} up round the ${STATIONS[st.type].name}.`, 'good')
+  bus.emit('change')
+  return true
+}
+export const mendCost = (st) => {
+  const F = PEN_FENCE[st.pen || 0]
+  return F?.cost ? Object.fromEntries(Object.entries(F.cost).map(([k, v]) => [k, Math.ceil(v / 2)])) : null
+}
+export function mendPenFence(st) {
+  const F = PEN_FENCE[st.pen || 0]
+  const c = mendCost(st)
+  if (!c || (st.penHp ?? F.hp) >= F.hp || !pay(c)) return false
+  st.penHp = F.hp
+  bus.emit('change')
+  return true
+}
+// Buy in another animal from a passing trader.
+export const animalCost = (st) => ANIMAL_COST[STATIONS[st.type].livestock]
+export function buyAnimal(st) {
+  if (flockOf(st) >= flockMax(st) || !pay(animalCost(st))) return false
+  st.flock = flockOf(st) + 1
+  log(`A trader on the road sold the camp a ${STATIONS[st.type].livestock}: ${animal(st, st.flock)} in the ${STATIONS[st.type].name} now.`, 'good')
+  bus.emit('change')
+  return true
+}
+// The small hours: the infected come sniffing round the animals.
+function penNight(pinfo) {
+  for (const st of S.stations) {
+    if (!STATIONS[st.type].livestock || st.level < 1 || st.building || !flockOf(st)) continue
+    // a new pen gets a couple of quiet nights to put a fence up
+    if (day() < (st.grace || 0)) continue
+    if (Math.random() >= penRisk(st, pinfo)) continue
+    const nm = STATIONS[st.type].name
+    let lost = 0
+    if (st.pen) {
+      st.penHp = (st.penHp ?? PEN_FENCE[st.pen].hp) - rint(1, 2)
+      if (st.penHp <= 0) {
+        log(`The infected tore down the ${PEN_FENCE[st.pen].name.toLowerCase()} round the ${nm} in the night.`, 'bad')
+        st.pen--
+        st.penHp = st.pen ? PEN_FENCE[st.pen].hp : 0
+        lost = 1
+      } else log(`Something battered at the fence round the ${nm} in the night. It held. Mend it before it gives.`)
+    } else lost = Math.min(flockOf(st), STATIONS[st.type].livestock === 'goat' ? 1 : rint(1, 2))
+    if (lost) {
+      st.flock = Math.max(0, flockOf(st) - lost)
+      log(`The infected got into the ${nm} in the night: ${animal(st, lost)} lost.${st.pen ? '' : ' Fence it in.'}`, 'bad')
+      addMoraleEvent(`Lost ${animal(st, lost)} in the night`, -3, 1)
+    }
+    bus.emit('penRaid', st, lost)
+  }
+}
+// Each morning: a fed, cared-for flock grows.
+function breedFlocks() {
+  for (const st of S.stations) {
+    if (!STATIONS[st.type].livestock || st.level < 1 || st.building) continue
+    st.flock = flockOf(st)
+    const keeper = workersOf(st).some((s) => s.status === 'ok')
+    if (st.flock >= 2 && st.flock < flockMax(st) && keeper && foodStock() > S.survivors.length * 2 && chance(0.45)) {
+      st.flock++
+      log(`${STATIONS[st.type].livestock === 'goat' ? 'A kid was born in the Goat Pen' : 'Chicks hatched in the Chicken Coop'}: ${animal(st, st.flock)} now.`, 'good')
+      bus.emit('flock', st)
+    } else if (st.flock > flockMax(st)) st.flock = flockMax(st)
+  }
 }
 export const isAutomated = (st, pinfo) => {
   const d = STATIONS[st.type]
@@ -277,7 +374,14 @@ export function campFlow() {
     for (const [k, v] of Object.entries(FORAGE)) if (idle) total[k] = (total[k] || 0) + v * idle
   }
   const n = dailyNeeds()
-  total.food = (total.food || 0) - n.food
+  // fresh eggs and milk are eaten first
+  let need = n.food
+  for (const k of ['eggs', 'milk']) {
+    const t = Math.min(Math.max(0, total[k] || 0), need)
+    if (t > 0) total[k] -= t
+    need -= t
+  }
+  total.food = (total.food || 0) - need
   total.water = (total.water || 0) - n.water
   for (const [k, v] of Object.entries(upkeepNeeds())) total[k] = (total[k] || 0) - v
   const heat = heatNeed()
@@ -287,6 +391,60 @@ export function campFlow() {
     else total.fuel = (total.fuel || 0) - heat.fuel
   }
   return total
+}
+// Where one resource comes from and goes, per day: every station that makes
+// or uses it, the foragers, mouths to feed, upkeep, winter heat and the
+// outposts' convoys. { sources: [{ key, name, v, st? }], sinks: [...] }.
+export function resourceFlow(k) {
+  const pinfo = power()
+  const sources = []
+  const sinks = []
+  const add = (list, key, name, v, extra = {}) => {
+    if (Math.abs(v) < 0.02) return
+    const o = list.find((x) => x.key === key)
+    if (o) o.v += v
+    else list.push({ key, name, v, ...extra })
+  }
+  for (const st of S.stations) {
+    const f = stationFlow(st, pinfo)[k] || 0
+    const name = STATIONS[st.type].name
+    if (f > 0) add(sources, st.id, name, f, { st })
+    else if (f < 0) add(sinks, st.id, name, -f, { st })
+  }
+  if (!S.expanding && !S.fence.building && !S.stations.some((st) => st.building)) {
+    const idle = S.survivors.filter((s) => s.status === 'ok' && !s.job).length
+    if (idle && FORAGE[k]) add(sources, 'forage', `Foraging (${idle} without a job)`, FORAGE[k] * idle, { kind: 'people' })
+  }
+  for (const o of S.outposts || []) {
+    const y = outpostYield(o)[k]
+    if (y) add(sources, 'post' + o.locId, `${o.name} outpost`, y, { kind: 'outpost' })
+  }
+  const n = dailyNeeds()
+  if (k === 'food' || k === 'eggs' || k === 'milk') {
+    // the camp eats eggs and milk first, then the stores
+    let need = n.food
+    for (const f of ['eggs', 'milk']) {
+      let made = 0
+      for (const st of S.stations) made += Math.max(0, stationFlow(st, pinfo)[f] || 0)
+      const t = Math.min(made, need)
+      if (f === k) add(sinks, 'eat', `Eaten (${S.survivors.length} people)`, t, { kind: 'people' })
+      need -= t
+    }
+    if (k === 'food') add(sinks, 'eat', `Eaten (${S.survivors.length} people)`, need, { kind: 'people' })
+  }
+  if (k === 'water') add(sinks, 'drink', `Drunk (${S.survivors.length} people)`, n.water, { kind: 'people' })
+  const up = upkeepNeeds()[k]
+  if (up) add(sinks, 'upkeep', 'Upkeep: wear and tear', up, { kind: 'upkeep' })
+  const heat = heatNeed()
+  if (heat) {
+    const fuelK = S.res.wood > 1 ? 'wood' : S.res.coal > 1 ? 'coal' : 'fuel'
+    if (fuelK === k) add(sinks, 'heat', 'Winter heat', heat[k], { kind: 'heat' })
+  }
+  sources.sort((a, b) => b.v - a.v)
+  sinks.sort((a, b) => b.v - a.v)
+  const made = sources.reduce((a, x) => a + x.v, 0)
+  const used = sinks.reduce((a, x) => a + x.v, 0)
+  return { k, sources, sinks, made, used, net: made - used, stock: S.res[k] || 0, cap: capOf(k) }
 }
 export const passiveMult = (st) => (S.weather.type === 'rain' ? 2 : S.weather.type === 'snow' ? 0.6 : 1) * (st.type === 'collector' ? season().collector : 1)
 export const seasonMult = (st) => (st.type === 'farm' ? season().farm : 1)
@@ -304,7 +462,16 @@ export function econTick(dt, opts = {}) {
 
   // ---- food & water
   const needs = dailyNeeds()
-  S.res.food = Math.max(0, S.res.food - (needs.food / SEC_PER_DAY) * dt)
+  // fresh eggs and milk go first; then the stores
+  let eat = (needs.food / SEC_PER_DAY) * dt
+  for (const k of ['eggs', 'milk']) {
+    const t = Math.min(S.res[k] || 0, eat)
+    if (t <= 0) continue
+    S.res[k] -= t
+    eat -= t
+    S.freshAte = (S.freshAte || 0) + t
+  }
+  S.res.food = Math.max(0, S.res.food - eat)
   S.res.water = Math.max(0, S.res.water - (needs.water / SEC_PER_DAY) * dt)
   const heat = heatNeed()
   let cold = false
@@ -332,7 +499,7 @@ export function econTick(dt, opts = {}) {
   if (short && !S.disrepair) log(`Out of ${RES[short].name.toLowerCase()} for upkeep. Things are falling apart: everyone works slower until it is restocked.`, 'bad')
   if (!short && S.disrepair) log('Upkeep is covered again. The camp is back in good repair.', 'good')
   S.disrepair = short
-  const hungry = S.survivors.length > 0 && (S.res.food <= 0.01 || S.res.water <= 0.01)
+  const hungry = S.survivors.length > 0 && (foodStock() <= 0.01 || S.res.water <= 0.01)
   if (hungry && !S.hungry) log(S.res.water <= 0.01 ? 'Out of water! Everyone is weakening.' : 'Out of food! Everyone is weakening.', 'bad')
   S.hungry = hungry
 
@@ -347,6 +514,10 @@ export function econTick(dt, opts = {}) {
     if (st.building.left <= 0) {
       st.level = st.building.to
       st.building = null
+      if (STATIONS[st.type].livestock && st.flock == null) {
+        st.flock = STATIONS[st.type].start
+        st.grace = day() + 2
+      }
       bus.emit('built', st)
       S.stats.built = (S.stats.built || 0) + 1
       log(`${STATIONS[st.type].name} ${st.level > 1 ? `upgraded to level ${st.level}` : 'built'}.`, 'good')
@@ -388,6 +559,10 @@ export function econTick(dt, opts = {}) {
     st.stalled = null
     if (st.building || st.level < 1) continue
     const d = STATIONS[st.type]
+    if (st.halt) {
+      st.stalled = 'Paused'
+      continue
+    }
     const rate = stationRate(st, pinfo)
     if (isAutomated(st, pinfo)) anyAuto = true
     if (d.passive) {
@@ -402,6 +577,7 @@ export function econTick(dt, opts = {}) {
     if (st.type === 'solar') st.active = solarOutput() > 0.05
     for (const s of workersOf(st)) if (s.status === 'ok' && d.skill) gainXP(s, d.skill, 0.2 * dt)
     if (d.recipe) tickProcessor(st, activeSingle(st), rate, dt)
+    else if (st.type === 'recycler') tickRecycler(st, d, rate, dt)
     else if (d.recipes) tickMulti(st, d, rate, dt)
     else if (st.type === 'infirmary') tickInfirmary(st, rate, dt)
     else if (st.type === 'research') tickResearch(st, rate, dt)
@@ -442,6 +618,7 @@ export function econTick(dt, opts = {}) {
     // hunger and cold wear the healthy down; the injured still mend, slowly
     if ((S.hungry || S.cold) && s.status !== 'injured') s.hp = Math.max(1, s.hp - dt * (S.hungry && S.cold ? 0.15 : 0.1))
     else if (s.status === 'ok' || s.status === 'outpost') s.hp = Math.min(st.maxHp, s.hp + dt * 0.1)
+    // out scouting: no rest
     else if (s.status === 'injured') {
       s.hp = Math.min(st.maxHp, s.hp + dt * (S.hungry || S.cold ? 0.012 : 0.035))
       if (s.hp >= st.maxHp * 0.7) {
@@ -487,8 +664,17 @@ export function econTick(dt, opts = {}) {
     if (S.time >= R.at) bus.emit('raidStart', R)
   }
 
+  // ---- the small hours: the infected sniff round the animals
+  if (prevHour < 2 && hour() >= 2) penNight(pinfo)
+  // ---- the city: the horde wanders, scouts come home, counts drift
+  tickRecon(dt * GAME_MIN_PER_SEC, day() !== prevDay)
+
   // ---- day rollover
   if (day() !== prevDay) {
+    // a camp eating fresh is a happier one
+    if ((S.freshAte || 0) > S.survivors.length * 0.6) addMoraleEvent('Fresh eggs and milk', 3, 1)
+    S.freshAte = 0
+    breedFlocks()
     dailyDeeds()
     restockMarket()
     for (const k of Object.keys(S.looted)) if (!isLooted(k)) delete S.looted[k]
@@ -687,6 +873,80 @@ function tickMulti(st, D, rate, dt) {
   }
 }
 
+// ---------------------------------------------------------------- the recycler
+// Gear marked for recycling (or matching the recycler's standing orders) is
+// stripped first; then it works through junk like any multi-recipe station.
+export function recycleQueue(st = null) {
+  const auto = st || S.stations.find((x) => x.type === 'recycler' && x.level > 0)
+  return S.items.filter((it) => {
+    if (it.locker || ownerOf(it.uid)) return false
+    if (it.recycle) return true
+    if (!auto) return false
+    if (auto.autoBroken && ITEMS[it.id].dur && (it.cond ?? 100) <= 0) return true
+    if (auto.autoCrude && (it.q ?? 1) === 0) return true
+    return false
+  })
+}
+// What stripping an item gives back: a share of what it took to make (more
+// at level 2, less when worn), plus half of any mods fitted.
+const SALVAGE_FALLBACK = { melee: { metal: 8, wood: 2 }, gun: { metal: 14, parts: 6 }, armor: { cloth: 12, metal: 6 }, gear: { parts: 3, electronics: 1 } }
+export function salvageOf(it, level = 1) {
+  const I = ITEMS[it.id]
+  const r = RECIPES.find((x) => x.item === it.id)
+  const base = r ? r.in : I.slot === 'weapon' ? SALVAGE_FALLBACK[I.kind] || SALVAGE_FALLBACK.melee : SALVAGE_FALLBACK[I.slot] || SALVAGE_FALLBACK.gear
+  // gear nobody can make (a katana, say) gives back by what it's worth
+  const worth = r ? 1 : 1 + (I.value || 0) / 400
+  const share = worth * STATIONS.recycler.salvage[Math.max(0, level - 1)] * (0.5 + (0.5 * (it.cond ?? 100)) / 100)
+  const out = {}
+  const add = (k, v) => {
+    if (!RES[k] || v <= 0) return
+    out[k] = (out[k] || 0) + v
+  }
+  for (const [k, v] of Object.entries(base)) add(k, Math.floor(v * share))
+  for (const m of it.mods || []) for (const [k, v] of Object.entries(MODS[m]?.cost || {})) add(k, Math.floor(v * 0.5))
+  if (!Object.keys(out).length) out.scrap = 2
+  return out
+}
+// Work-seconds to strip an item: dearer gear takes longer.
+export const gearTime = (it, st) => (20 + itemValue(it) / 15) * (STATIONS.recycler.gearTime[Math.max(0, (st?.level || 1) - 1)] || 1)
+function tickRecycler(st, D, rate, dt) {
+  if (rate <= 0) return
+  let it = st.gear ? itemOf(st.gear.uid) : null
+  if (!it || ownerOf(it.uid)) {
+    st.gear = null
+    it = recycleQueue(st)[0] || null
+    if (it) {
+      const t = gearTime(it, st)
+      st.gear = { uid: it.uid, left: t, total: t }
+    }
+  }
+  if (it && st.gear) {
+    st.curMode = null
+    st.active = true
+    st.gear.left -= dt * rate
+    st.progress = 1 - st.gear.left / st.gear.total
+    if (st.gear.left > 0) return
+    const out = salvageOf(it, st.level)
+    const full = outputBlocked(st, out)
+    if (full) {
+      st.stalled = full
+      st.gear.left = 0
+      st.active = false
+      return
+    }
+    removeItem(it.uid)
+    giveOutputs(st, out)
+    st.recycled = (st.recycled || 0) + 1
+    log(`Recycled ${itemName(it)}: ${Object.entries(out).map(([k, v]) => `${v} ${RES[k].name.toLowerCase()}`).join(', ')}.`)
+    bus.emit('recycled', it, out)
+    st.gear = null
+    st.progress = 0
+    return
+  }
+  tickMulti(st, D, rate, dt)
+  if (!st.curMode && !st.gear && st.stalled !== 'Output belt backed up') st.stalled = 'Nothing to recycle'
+}
+
 // ---------------------------------------------------------------- station inputs and outputs
 // A station draws what it needs from its input buffer first (filled by
 // belts), then hand-hauls the rest from storage. What it makes goes to its
@@ -704,7 +964,7 @@ export function survivalReserve(k) {
 }
 function stockFor(st, k) {
   const store = S.res[k] || 0
-  const keep = st && !KEEPERS.has(st.type) ? survivalReserve(k) : 0
+  const keep = st && !KEEPERS.has(st.type) ? Math.max(survivalReserve(k), STATIONS[st.type].keep?.[k] || 0) : 0
   return (st?.buf?.in?.[k] || 0) + Math.max(0, store - keep)
 }
 export function hasInputs(st, inp) {
@@ -874,7 +1134,7 @@ function tickInfirmary(st, rate, dt) {
   let healPower = 0
   for (const m of medics) healPower += workEff(m, 'infirmary') * (OCCUPATIONS[m.occ].fx.healMult || 1) * (1 + (m.perks || []).reduce((a, p) => a + (perkOf(p)?.fx.heal || 0), 0))
   const patients = S.survivors
-    .filter((s) => s.status !== 'mission' && (s.infection > 0 || s.status === 'injured' || (s.status === 'ok' && s.hp < survivorStats(s).maxHp * 0.6)))
+    .filter((s) => s.status !== 'mission' && s.status !== 'scout' && (s.infection > 0 || s.status === 'injured' || (s.status === 'ok' && s.hp < survivorStats(s).maxHp * 0.6)))
     .sort((a, b) => (b.infection || 0) - (a.infection || 0))
     .slice(0, d.beds[st.level - 1])
   st.patients = patients.map((p) => p.id)
@@ -963,7 +1223,7 @@ function finishExpansion() {
 export function moraleFactors() {
   const f = []
   f.push({ text: 'Baseline', v: 45 })
-  if (S.res.food <= 0.01) f.push({ text: 'No food', v: -25 })
+  if (foodStock() <= 0.01) f.push({ text: 'No food', v: -25 })
   if (S.res.water <= 0.01) f.push({ text: 'No water', v: -25 })
   if (S.cold) f.push({ text: 'Freezing', v: -15 })
   if (S.disrepair) f.push({ text: 'Camp in disrepair', v: -6 })
@@ -1113,7 +1373,9 @@ export function scheduleRaid(first = false) {
     }
   }
   const H = HORDES[sizeIdx]
-  const count = Math.round((rint(H.min, H.max) + Math.floor(T * 1.2)) * (blood ? 1.5 : 1))
+  // animals draw them: each coop or pen adds a few to the horde
+  const pens = S.stations.filter((x) => STATIONS[x.type].livestock && x.level > 0 && flockOf(x) > 0).length
+  const count = Math.round((rint(H.min, H.max) + Math.floor(T * 1.2)) * (blood ? 1.5 : 1) * (1 + 0.08 * pens))
   const lvl = clamp(1 + Math.floor(T / 4) + (blood ? 1 : 0), 1, 5)
   S.nextRaid = { at, size: sizeIdx, count, warned: false, blood, lvl }
 }

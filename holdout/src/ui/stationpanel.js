@@ -1,23 +1,27 @@
 // The station drawer: workers, what the station is doing and producing,
 // crafting orders (queue, recipes, mods, repairs), automation, upgrades.
-import { RES, STATIONS, RECIPES, MODS, ITEMS, QUALITY, OCCUPATIONS, SKILLS, SKILL_KEYS, REPAIR, SEC_PER_DAY, FENCE, ALT_RECIPES, BELTS, BELT_BONUS, BELT_STACK, SIGNAL, RESEARCH, CORE_SLOTS, VEHICLES } from '../game/data.js'
+import { RES, STATIONS, RECIPES, MODS, ITEMS, QUALITY, OCCUPATIONS, SKILLS, SKILL_KEYS, REPAIR, SEC_PER_DAY, FENCE, ALT_RECIPES, BELTS, BELT_BONUS, BELT_STACK, SIGNAL, RESEARCH, CORE_SLOTS, VEHICLES, PEN_FENCE } from '../game/data.js'
 import { NET,
-  S, workersOf, slots, assign, workEff, bestFor, upgradeCost, startUpgrade, demolish, installModule, recipesFor, modsFor, queueMax, orderRecipe,
+  S, day, workersOf, slots, assign, workEff, bestFor, upgradeCost, startUpgrade, demolish, installModule, recipesFor, modsFor, queueMax, orderRecipe,
   orderMod, orderRepair, cancelOrder, moveOrder, orderSpec, qualityOdds, itemOf, itemName, canAfford, survivorStats, capOf, bedCount, getS, ownerOf,
   repairCost, repairTime, gameDur, stationSize, signalNeed, deliverSignal, signalPhase, signalCost, signalBlocked, researchCost,
   researchLock, startResearch, cancelResearch, pickAlt, altsFor, researchDone, installCore, removeCore, coreBoost, hasFlag, msDone,
   canControl,
 } from '../game/state.js'
-import { stationFlow, power, powerNeed, linkPower, isAutomated, stationRate, solarOutput, windOutput, boilerFuel, sourcePower, HAND_RATE, kitchenSaving, constructSpeed, raidIntel, activeRecipe, activeSingle, recipeUnlocked, recipeTarget } from '../game/economy.js'
-import { linksOf, inputsOf, outputsOf, linkPerDay, linkState, upgradeCostOf, upgradeLink, upgradeLocked, removeLink, beltBonus, pulled, portsOf, linkAt, isDepot, nodeKind, nodeRes, insertNode, splitProblem, beltSpeed as beltSpeedOf } from '../game/belts.js'
+import { recycleQueue, salvageOf, flockOf, flockMax, flockFactor, penRisk, buildPenFence, mendPenFence, mendCost, buyAnimal, animalCost, stationFlow, power, powerNeed, linkPower, isAutomated, stationRate, solarOutput, windOutput, boilerFuel, sourcePower, HAND_RATE, kitchenSaving, constructSpeed, raidIntel, activeRecipe, activeSingle, recipeUnlocked, recipeTarget } from '../game/economy.js'
+import { linksOf, inputsOf, outputsOf, linkPerDay, linkState, upgradeCostOf, upgradeLink, upgradeLocked, removeLink, beltBonus, pulled, portsOf, linkAt, isDepot, nodeKind, nodeRes, insertNode, splitProblem, firstOut, setFirst, hopperHold, stackOf, NODE_RULES, beltSpeed as beltSpeedOf } from '../game/belts.js'
 import { flowsNow, limitText } from '../game/rates.js'
+import { slotGroups, groupFill, STOCK_GROUPS } from '../scenes/basestock.js'
+import { pinButton } from './watch.js'
+import { isRunning, setRunning } from './multipanel.js'
 import { sfx } from '../core/audio.js'
 import { bus, h, fmt, clamp } from '../core/util.js'
 import { icon } from './icons.js'
 import { leaderChip } from './netui.js'
 import { costList, resChip, resIcon, bar, qualityTag, condBar, itemCard, seg, stepper, plural } from './common.js'
 
-const CAT_ICON = { living: 'gate', production: 'production', crafting: 'hammer', defense: 'shield', power: 'bolt', logistics: 'belt' }
+const TYPE_ICON = { hopper: 'hopper', recycler: 'recycle', coop: 'hen', goatpen: 'wool', priority: 'belt' }
+const CAT_ICON = { living: 'gate', production: 'production', crafting: 'hammer', defense: 'shield', power: 'bolt', logistics: 'belt', storage: 'box' }
 const tabState = {}
 
 export function renderStation(ui, id) {
@@ -49,7 +53,7 @@ export function renderStation(ui, id) {
   }
   if (st.type !== 'mast' && D.levels > 1) body.push(upgradeBlock(ui, st))
   if (!D.fixed) body.push(actionsBlock(ui, st))
-  return ui.frame(D.name, sub, body, { icon: CAT_ICON[D.cat] })
+  return ui.frame(D.name, sub, body, { icon: TYPE_ICON[st.type] || CAT_ICON[D.cat], extra: pinButton(ui, 'st', st.id) })
 }
 
 // ---------------------------------------------------------------- construction
@@ -110,7 +114,7 @@ function workerBlock(ui, st) {
 }
 export function pickWorker(ui, st) {
   const D = STATIONS[st.type]
-  const list = S.survivors.filter((s) => s.status !== 'mission' && s.job !== st.id && canControl(s)).map((s) => ({ s, e: workEff(s, st.type) || 0.0001 }))
+  const list = S.survivors.filter((s) => s.status !== 'mission' && s.status !== 'scout' && s.job !== st.id && canControl(s)).map((s) => ({ s, e: workEff(s, st.type) || 0.0001 }))
   list.sort((a, b) => b.e - a.e)
   let close
   close = ui.modal(
@@ -227,6 +231,7 @@ function effectBlock(ui, st, pinfo) {
   const lv = st.level
   const flow = stationFlow(st, pinfo)
   const card = (title, ...kids) => h('section.card', h('h3', title), ...kids)
+  if (D.livestock) out.push(livestockCard(ui, st, pinfo))
   switch (st.type) {
     case 'campfire':
       out.push(card('The fire', h('p', 'Free survivors gather here in the evening. Keeps morale up (+4).')))
@@ -235,8 +240,26 @@ function effectBlock(ui, st, pinfo) {
       out.push(card('Beds', h('div.kv', h('span', 'This bunkhouse'), h('b', plural(D.beds[lv - 1], 'bed'))), h('div.kv', h('span', 'Whole camp'), h('b', `${S.survivors.length} / ${bedCount()} in use`)), h('div.kv', h('span', 'Comfort'), h('b', `+${lv * 4} morale`))))
       break
     case 'storage':
-      out.push(card('Capacity', h('div.kv', h('span', 'Adds'), h('b', `+${D.cap[lv - 1]} storage`)), h('div.kv', h('span', 'Basic goods now hold'), h('b', fmt(capOf('wood')))), h('p.note', 'Valuable goods (parts, electronics, medicine) store less; ammunition stores more.')))
+    case 'crates':
+    case 'shed':
+    case 'warehouse':
+      out.push(card('Capacity', h('div.kv', h('span', 'Adds'), h('b', `+${D.cap[lv - 1]} storage`)), h('div.kv', h('span', 'Basic goods now hold'), h('b', fmt(capOf('wood')))), h('div.kv', h('span', 'Camp stores'), h('b', plural(S.stations.filter((x) => isDepot(x) && x.level > 0).length, 'store'))), h('p.note', 'Every store adds to one shared camp store: goods belted into any of them can be belted out of any other. Valuable goods (parts, electronics, medicine) store less; ammunition stores more.')))
+      if (lv > 0) {
+        // what the pallets here show, and how full each kind is across the camp
+        const mine = [...new Set(slotGroups(st))]
+        const rest = STOCK_GROUPS.filter((g) => !mine.includes(g))
+        const row = (g, here) => h('div.stockrow' + (here ? '.here' : ''), h('span', g.name), bar(groupFill(g), 'stock'), h('small', `${Math.round(groupFill(g) * 100)}%`))
+        out.push(card('Stockpiles', h('p.note', 'The piles on the pallets grow as the camp\'s stock of each kind rises. More stores show more kinds.'), mine.map((g) => row(g, true)), rest.length ? h('details.stockmore', h('summary', 'Everything else'), rest.map((g) => row(g, false))) : null))
+      }
       break
+    case 'hopper': {
+      const k = nodeRes(st)
+      const n = stackOf(k || 'scrap')
+      const held = k ? (st.buf?.out?.[k] || 0) / n : 0
+      const cap = hopperHold(st)
+      out.push(card('Tank', h('div.kv', h('span', 'Holds'), h('b', `${Math.floor(held)} / ${cap} loads${k && n > 1 ? ` (${n} ${RES[k].name.toLowerCase()} each)` : ''}`)), bar(held / cap, 'hop'), h('p.note', k ? `${RES[k].name}: fills when more comes in than goes out, and empties when the belt in runs dry.` : 'Empty. Belt goods in and out and it fills when more arrives than leaves.'), lv < D.levels ? h('p.note.dim', `Level ${lv + 1} holds ${D.hold[lv]} loads.`) : null))
+      break
+    }
     case 'kitchen': {
       const sav = kitchenSaving()
       out.push(card('Meals', h('div.kv', h('span', 'Food saved'), h('b', `${Math.round(sav * 100)}%`)), h('div.kv', h('span', 'Morale'), h('b', st.active ? `+${D.morale[lv - 1]}` : '—')), rateRow('Uses', flow), h('p.note', 'A cook stretches every ration. Chefs stretch them further and lift morale more.')))
@@ -319,6 +342,10 @@ function effectBlock(ui, st, pinfo) {
     case 'floodlight':
       out.push(card('Floodlight', h('p.note', 'Lights the ground outside the wall at night. Defenders nearby shoot at full accuracy in the dark.'), h('div.kv', h('span', 'Uses'), h('b', `${D.power} power at night`)), powerToggle(ui, st, pinfo)))
       break
+    case 'recycler':
+      out.push(recyclerCard(ui, st))
+      out.push(recipesBlock(ui, st, flow))
+      break
     default:
       if (D.recipes) {
         out.push(recipesBlock(ui, st, flow))
@@ -337,6 +364,73 @@ function effectBlock(ui, st, pinfo) {
       }
   }
   return out
+}
+// Hens or goats: how many, how they grow, and the fence that keeps the
+// night off them.
+function livestockCard(ui, st, pinfo) {
+  const D = STATIONS[st.type]
+  const goat = D.livestock === 'goat'
+  const n = flockOf(st)
+  const max = flockMax(st)
+  const word = (k) => `${k} ${goat ? (k === 1 ? 'goat' : 'goats') : k === 1 ? 'hen' : 'hens'}`
+  const F = PEN_FENCE[st.pen || 0]
+  const next = PEN_FENCE[(st.pen || 0) + 1]
+  const risk = day() < (st.grace || 0) ? 0 : penRisk(st, pinfo)
+  const keeper = workersOf(st).some((s) => s.status === 'ok')
+  const hpMax = F.hp || 0
+  const hp = st.penHp ?? hpMax
+  const mend = mendCost(st)
+  return h(
+    'section.card.flock',
+    h('h3', h('span', h('i.inl', { html: icon(goat ? 'wool' : 'hen') }), goat ? 'The herd' : 'The flock'), h('small', `${word(n)} of ${max}`)),
+    h('div.flockrow', Array.from({ length: max }, (_, i) => h('i.fa' + (i < n ? '.on' : ''), { html: icon(goat ? 'wool' : 'hen') }))),
+    h('p.note', n >= max ? `As many as the ${goat ? 'pen' : 'coop'} can hold${st.level < D.levels ? '. Upgrade it for room for more' : ''}.` : !keeper ? `Nobody is looking after them, so ${goat ? 'no kids are born' : 'no chicks hatch'}. Assign a keeper.` : `With a keeper and the camp fed, ${goat ? 'a kid is born' : 'chicks hatch'} every few days.`),
+    h('p.note', `They make ${Math.round(flockFactor(st) * 100)}% of what a full ${goat ? 'pen' : 'coop'} would.`),
+    n < max ? h('button.btn.small.ghost', { disabled: !canAfford(animalCost(st)), 'data-tip': `A trader on the road sells ${goat ? 'goats' : 'hens'}: ${costTip(animalCost(st))}`, onclick: () => (buyAnimal(st) ? (sfx('coin'), ui.toast(`Another ${goat ? 'goat' : 'hen'} in the ${goat ? 'pen' : 'coop'}`, 'good')) : sfx('error'), ui.refreshPanel()) }, `Buy a ${goat ? 'goat' : 'hen'}`) : null,
+    h('h4.subhead', 'Fence'),
+    h('div.kv', h('span', F.name), st.pen ? h('b' + (hp <= 1 ? '.bad' : ''), `${hp} / ${hpMax}`) : h('b.bad', 'none')),
+    h('div.kv', { 'data-tip': 'Watchtower guards and lit floodlights lower it too.' }, h('span', 'Chance the infected get at them tonight'), h('b' + (risk > 0.2 ? '.bad' : risk > 0.08 ? '.warn' : '.good'), `${Math.round(risk * 100)}%`)),
+    h(
+      'div.bactions',
+      next ? h('button.btn.small' + (st.pen ? '' : '.go'), { disabled: !canAfford(next.cost), 'data-tip': `<b>${next.name}</b>${costTip(next.cost)}`, onclick: () => (buildPenFence(st) ? (sfx('build'), ui.toast(`${next.name} up`, 'good')) : sfx('error'), ui.refreshPanel()) }, st.pen ? `Upgrade to ${next.name.toLowerCase()}` : `Put up a ${next.name.toLowerCase()}`) : null,
+      st.pen && hp < hpMax ? h('button.btn.small.ghost', { disabled: !canAfford(mend), 'data-tip': `Mend the fence: ${costTip(mend)}`, onclick: () => (mendPenFence(st) ? sfx('build') : sfx('error'), ui.refreshPanel()) }, 'Mend') : null,
+    ),
+    h('p.note.dim', 'Their noise draws the infected at night: every coop or pen adds a few to each horde.'),
+  )
+}
+// The recycler: what it's stripping now, what's queued, standing orders.
+function recyclerCard(ui, st) {
+  const cur = st.gear ? itemOf(st.gear.uid) : null
+  const queue = recycleQueue(st).filter((it) => it !== cur)
+  const give = (it) => costList(salvageOf(it, st.level), { small: true, have: false })
+  const toggle = (key, label, tip) => h('label.rtoggle', { 'data-tip': tip }, h('input', { type: 'checkbox', checked: !!st[key], onchange: (e) => ((st[key] = e.target.checked), sfx('click'), ui.refreshPanel()) }), h('span', label))
+  return h(
+    'section.card.recy',
+    h('h3', h('span', h('i.inl', { html: icon('recycle') }), 'Recycling'), h('small', st.recycled ? `${st.recycled} stripped so far` : 'gear first, then junk')),
+    cur
+      ? h('div.rnow', h('div.rline', h('b', itemName(cur)), h('span.rgive', '→ ', give(cur))), bar(clamp(st.progress || 0, 0, 1), 'prod'))
+      : h('p.note', queue.length ? 'Starting on the next piece.' : 'No gear waiting. Mark gear in Items with "Recycle", or set a standing order below. Meanwhile it works through junk.'),
+    queue.length
+      ? h(
+          'div.rqueue',
+          queue.slice(0, 8).map((it) =>
+            h(
+              'div.rrow',
+              h('span', itemName(it)),
+              h('span.rgive', give(it)),
+              it.recycle ? h('button.mini', { 'data-tip': 'Keep it: take it off the list', onclick: () => ((it.recycle = false), sfx('click'), ui.refreshPanel()) }, 'Keep') : h('small.dim', (it.cond ?? 100) <= 0 ? 'broken' : 'crude'),
+            ),
+          ),
+          queue.length > 8 ? h('small.dim', `and ${queue.length - 8} more`) : null,
+        )
+      : null,
+    h(
+      'div.rorders',
+      toggle('autoBroken', 'Strip broken gear', 'Anything worn down to nothing that nobody is carrying goes to the recycler without asking.'),
+      toggle('autoCrude', 'Strip crude spares', 'Crude-quality gear nobody is carrying goes to the recycler without asking.'),
+    ),
+    h('button.btn.small.ghost', { onclick: () => ui.openItems('free') }, h('i', { html: icon('items') }), ' Choose gear to recycle'),
+  )
 }
 // Choose between a recipe and the alternates researched for it.
 function altPicker(ui, st, base) {
@@ -573,13 +667,32 @@ function logisticsBlock(ui, st) {
   const list = (a) => a.map((k) => RES[k].name.toLowerCase()).join(', ')
   if (node) {
     const ins = mine.filter((l) => l.to === st.id).length
-    const outs = mine.filter((l) => l.from === st.id).length
-    if (node === 'split') {
+    const outL = mine.filter((l) => l.from === st.id)
+    const outs = outL.length
+    const R = NODE_RULES[node]
+    if (R.ins === 1) {
       if (!ins) rows.push(plug('in', free.io, 'Bring a belt in first'))
-      if (ins && outs < 3) rows.push(plug('out', free.io, `${3 - outs} more way${3 - outs > 1 ? 's' : ''} out`))
+      if (ins && outs < R.outs) rows.push(plug('out', free.io, R.outs === 1 ? 'Send a belt out' : `${R.outs - outs} more way${R.outs - outs > 1 ? 's' : ''} out`))
     } else {
       if (!outs) rows.push(plug('out', free.io, 'Send a belt out'))
-      if (ins < 3 && free.io.length) rows.push(plug('in', free.io, `${Math.min(3 - ins, free.io.length)} more way${Math.min(3 - ins, free.io.length) > 1 ? 's' : ''} in`))
+      if (ins < R.ins && free.io.length) rows.push(plug('in', free.io, `${Math.min(R.ins - ins, free.io.length)} more way${Math.min(R.ins - ins, free.io.length) > 1 ? 's' : ''} in`))
+    }
+    // which belt a priority splitter serves first
+    if (node === 'prio' && outs) {
+      const first = firstOut(st, outL)
+      rows.unshift(
+        h(
+          'div.prio',
+          h('span', 'Goes first:'),
+          h(
+            'div.seg',
+            outL.map((l) => {
+              const to = byId(l.to)
+              return h('button' + (l === first ? '.on' : ''), { 'data-tip': l === first ? 'This belt gets everything it can take' : 'Make this belt first in line', onclick: () => (setFirst(st, l), sfx('click'), ui.refreshPanel()) }, l === first ? h('i.inl', { html: icon('star') }) : null, to ? STATIONS[to.type].name : '?')
+            }),
+          ),
+        ),
+      )
     }
   } else if (depot) {
     rows.push(plug('out', free.io, 'Send goods from storage'), plug('in', free.io, 'Bring goods into storage'))
@@ -601,8 +714,14 @@ function logisticsBlock(ui, st) {
     const k = RES[run.limit.res].name.toLowerCase()
     pace = h('p.note.warn', run.limit.kind === 'input' ? `Runs at ${pct}% of full speed: its belts bring too little ${k}.` : `Runs at ${pct}% of full speed: its ${k} can't leave any faster.`)
   }
+  const NODE_HINT = {
+    split: 'Each item goes to the next belt out in turn: two belts get half each, three a third. When one is full, its share goes to the others.',
+    prio: 'The belt marked first gets everything it can take. Only when it backs up do the others get anything, shared between them in turn.',
+    merge: 'Takes from whichever belt has an item waiting. The belt out carries at most its tier\'s rate.',
+    hopper: 'Goods wait in the tank until the belt out has room, so a burst upstream or a pause downstream doesn\'t stop the line.',
+  }
   const hint = node
-    ? h('p.note', node === 'split' ? 'Each item goes to the next belt out in turn: two belts get half each, three a third. When one is full, its share goes to the others.' : 'Takes from whichever belt has an item waiting. The belt out carries at most its tier\'s rate.')
+    ? h('p.note', NODE_HINT[node])
     : depot
       ? h('p.note', 'Storage hatches work both ways: send any goods out to a station, or take goods in.')
       : bonus > 1
@@ -687,10 +806,12 @@ export function renderBelt(ui, sel) {
           ? h('button.btn.small', { disabled: !canAfford(up) || upgradeLocked(l), 'data-tip': `<b>Upgrade to ${BELTS[l.tier + 1].name}</b>${BELTS[l.tier + 1].desc}<br>${costTip(up)}${upgradeLocked(l) ? '<br><span class="bad">Needs its milestone</span>' : ''}`, onclick: () => (upgradeLink(l) ? (sfx('build'), ui.toast(`${BELTS[l.tier].name} running`, 'good')) : sfx('error'), ui.refreshPanel()) }, h('i', { html: icon('up') }), ` ${BELTS[l.tier + 1].name}`)
           : h('span.lmax', 'Fastest belt'),
         nodeBtn('splitter', 'Splitter here', 'Cut the belt and put a splitter in: then belt its free sides on to more stations.'),
+        nodeBtn('priority', 'Priority here', 'Cut the belt and put a priority splitter in: this belt keeps first call on everything, and only what backs up goes out its other sides.'),
         nodeBtn('merger', 'Merger here', 'Cut the belt and put a merger in: then bring a second line of the same goods into it.'),
+        nodeBtn('hopper', 'Hopper here', 'Cut the belt and put a buffer hopper in: a tank that soaks up bursts so the machines after it keep running.'),
         h('button.btn.small.ghost.danger', { 'data-tip': 'Take the belt down. Half its materials come back, and what was on it goes to storage.', onclick: () => (removeLink(l), sfx('dismantle'), ui.closePanel()) }, 'Take down'),
       ),
-      sel.tile ? h('p.note.dim', 'A splitter or merger goes where you clicked the belt.') : h('p.note.dim', 'Tip: click a belt where you want a splitter or merger to go.'),
+      sel.tile ? h('p.note.dim', 'Splitters, mergers and hoppers go where you clicked the belt.') : h('p.note.dim', 'Tip: click a belt where you want a splitter, merger or hopper to go.'),
     ),
   ]
   return ui.frame(`${T.name} · ${RES[l.res].name}`, h('span', `${nm(a)} → ${nm(b)}`), body, { icon: 'belt' })
@@ -949,8 +1070,13 @@ function benefits(st, next) {
 // ---------------------------------------------------------------- actions
 function actionsBlock(ui, st) {
   const D = STATIONS[st.type]
+  const same = S.stations.filter((x) => x.type === st.type)
+  const pausable = !D.node && !D.depot && (D.recipe || D.recipes || D.queue || D.passive || D.livestock || ['generator', 'boiler', 'turret', 'floodlight', 'research', 'training'].includes(st.type))
+  const on = isRunning(st)
   return h(
     'div.pactions',
+    pausable && st.level > 0 ? h('button.btn.small' + (on ? '.ghost' : '.go'), { 'data-tip': on ? 'Stop it working for now (its workers stay assigned)' : 'Start it working again', onclick: () => (setRunning(st, !on), sfx('click'), ui.refreshPanel()) }, h('i', { html: icon(on ? 'pause' : 'play') }), on ? 'Pause' : 'Resume') : null,
+    same.length > 1 ? h('button.btn.small.ghost', { 'data-tip': `Select every ${D.name} to work on them together (or Shift-click stations)`, onclick: () => ((ui.game.base.multi = new Set(same.map((x) => x.id))), ui.openMulti(), sfx('select')) }, h('i', { html: icon('select') }), `All ${same.length}`) : null,
     h('button.btn.small.ghost', { onclick: () => (ui.closePanel(), ui.game.base.startPlacing(st.type, st)) }, h('i', { html: icon('move') }), 'Move'),
     h(
       'button.btn.small.ghost.danger',

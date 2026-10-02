@@ -408,6 +408,18 @@ export class Vision {
     return n ? s / n : 1
   }
 
+  // Every room known (a scout drew the plan): seen, not visible.
+  exploreAll() {
+    for (let k = 0; k < this.N; k++) {
+      if (this.lv.roomAt[k] < 0) continue
+      this.seen[k] = 1
+      this.mem[k] = 1
+      const i = k % this.W
+      for (const n of [k - 1, k + 1, k - this.W, k + this.W]) if (n >= 0 && n < this.N && this.solid[n] && Math.abs((n % this.W) - i) <= 1) this.markSeen(n)
+    }
+    this.roomTiles.forEach((tiles, r) => (this.roomSeen[r] = 1))
+    this.changed = true
+  }
   // ---------------------------------------------------------------- memory between visits
   save() {
     const bytes = new Uint8Array(Math.ceil(this.N / 8))

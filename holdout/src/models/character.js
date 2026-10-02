@@ -418,6 +418,23 @@ export const ANIMS = {
     set('foreArmL', -0.9)
     set('head', 0.4)
   },
+  // shoulder to a wardrobe: legs braced, arms out, heaving in time
+  push(ch, t) {
+    const a = Math.sin(t * 3.2)
+    set('thighL', -0.55 - a * 0.08)
+    set('shinL', 0.45)
+    set('thighR', 0.35 + a * 0.08)
+    set('shinR', 0.15)
+    set('footL', 0.1)
+    set('spine', 0.45 + a * 0.05)
+    set('chest', 0.12)
+    set('upperArmL', -1.35 + a * 0.08, 0, 0.12)
+    set('upperArmR', -1.35 + a * 0.08, 0, -0.12)
+    set('foreArmL', -0.35)
+    set('foreArmR', -0.35)
+    set('head', -0.15)
+    ch.hipsY = -0.08
+  },
   saw(ch, t) {
     legsStraight()
     set('thighL', -0.2)

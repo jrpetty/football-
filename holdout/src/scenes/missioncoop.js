@@ -29,7 +29,7 @@ const unvec = (v) => (v && v.v ? new THREE.Vector3(v.v[0], v.v[1], v.v[2]) : v)
 // What a survivor is doing, for the squad cards.
 export function agentStatus(a) {
   const m = a.lastMode
-  return a.downed ? `DOWN · ${Math.ceil(a.bleed)}s` : a.work ? (a.work.kind === 'search' ? 'Searching' : a.work.kind === 'hotwire' ? 'Hotwiring' : 'Breaking down') : a.order?.type === 'revive' ? 'Reviving' : a.order?.type === 'throw' ? 'Throwing' : m === 'swing' || m === 'aim' ? 'Fighting' : m === 'run' || m === 'walk' ? 'Moving' : a.pack && a.pack.load >= a.st.carry - 1 ? 'Pack full' : 'Holding'
+  return a.downed ? `DOWN · ${Math.ceil(a.bleed)}s` : a.work ? (a.work.kind === 'search' ? 'Searching' : a.work.kind === 'hotwire' ? 'Hotwiring' : a.work.kind === 'barricade' ? 'Barricading' : a.work.kind === 'unbarricade' ? 'Clearing a door' : 'Breaking down') : a.patching ? 'Patching up' : a.order?.type === 'revive' ? 'Reviving' : a.order?.type === 'throw' ? 'Throwing' : m === 'swing' || m === 'aim' ? 'Fighting' : m === 'run' || m === 'walk' ? 'Moving' : a.pack && a.pack.load >= a.st.carry - 1 ? 'Pack full' : 'Holding'
 }
 
 export const CoopMixin = {
@@ -137,7 +137,9 @@ export const CoopMixin = {
     return { id: c.id, kind: c.kind, name: c.def?.name, room: c.room, tiles: c.tiles, x: c.x, z: c.z, rot: c.rot || 0, seed: c.seed, bucket: c.bucket, searched: !!c.searched, open: c.open || 0, stash: c.stash ? c.stash.length : 0 }
   },
   contSig(c) {
-    return `${c.searched ? 1 : 0}${c.gone ? 1 : 0}${c.stash ? c.stash.length : 0}|${c.openGoal >= 1 ? 1 : c.openGoal > 0 ? 2 : 0}${c.drive?.started ? 1 : 0}${c.drive?.keys ? 1 : 0}${c.storyFound ? 1 : 0}${c.locked ? 1 : 0}|${c.label?.el.className || ''}`
+    const B = c.barricade
+    const bar = B ? `${this.lv.doors.indexOf(B.door)}:${Math.max(0, Math.round(B.hp / 20))}` : ''
+    return `${c.searched ? 1 : 0}${c.gone ? 1 : 0}${c.stash ? c.stash.length : 0}|${c.openGoal >= 1 ? 1 : c.openGoal > 0 ? 2 : 0}${c.drive?.started ? 1 : 0}${c.drive?.keys ? 1 : 0}${c.storyFound ? 1 : 0}${c.locked ? 1 : 0}|${c.label?.el.className || ''}|${bar}`
   },
   coopSend(d) {
     const net = this.game.net
@@ -227,7 +229,7 @@ export const CoopMixin = {
       } else if (o.type === 'revive') {
         const b = this.squad.find((x) => x.data.id === o.a)
         if (b?.downed) a.command({ type: 'revive', a: b })
-      } else if ((o.type === 'search' || o.type === 'dismantle' || o.type === 'hotwire') && cont) a.command({ type: o.type, c: cont })
+      } else if ((o.type === 'search' || o.type === 'dismantle' || o.type === 'hotwire' || o.type === 'barricade' || o.type === 'unbarricade') && cont) a.command({ type: o.type, c: cont })
       else if (o.type === 'throw') this.throwFor(a, o.item, +o.x, +o.z)
       else if (o.type === 'medkit') this.medkitFor(a)
     } finally {
@@ -432,7 +434,23 @@ export const CoopMixin = {
     }
   },
   applyContSig(c, sig) {
-    const [a, b, cls] = sig.split('|')
+    const [a, b, cls, bar] = sig.split('|')
+    // the leader's barricades: put up, worn down, taken down or broken here too
+    if (bar && !c.barricade && !c.gone) {
+      const [di, hp] = bar.split(':').map(Number)
+      const door = this.lv.doors[di]
+      const W = this.lv.W
+      if (door) {
+        const sides = door.horiz ? [[door.i, door.j - 1], [door.i, door.j + 1]] : [[door.i - 1, door.j], [door.i + 1, door.j]]
+        const room = this.lv.roomAt[c.tiles[0][1] * W + c.tiles[0][0]]
+        const inside = sides.find(([i, j]) => this.lv.roomAt[j * W + i] === room) || sides[0]
+        this.placeBarricade(c, { door, inside, outside: sides.find((s) => s !== inside) }, { hp: hp * 20 })
+      }
+    } else if (bar && c.barricade) c.barricade.hp = +bar.split(':')[1] * 20
+    else if (!bar && c.barricade) {
+      if (a[1] === '1') this.breakBarricade(c.barricade)
+      else this.takeDownBarricade(c.barricade)
+    }
     const searched = a[0] === '1'
     const gone = a[1] === '1'
     const stash = +a.slice(2)

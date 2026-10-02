@@ -9,9 +9,23 @@
 import { STATIONS, RECIPES, ALT_RECIPES, SIGNAL } from './data.js'
 import { S, stationSize } from './state.js'
 
-export const isDepot = (st) => st?.type === 'storage'
-export const nodeKind = (st) => (st ? STATIONS[st.type]?.node || null : null) // 'split' | 'merge'
+// Anything with `depot` (the Storage Depot, crate stacks, sheds, the
+// warehouse) holds the camp's one shared store and swaps goods both ways.
+export const isDepot = (st) => !!(st && STATIONS[st.type]?.depot)
+export const nodeKind = (st) => (st ? STATIONS[st.type]?.node || null : null) // 'split' | 'prio' | 'merge' | 'hopper'
 export const isNode = (st) => !!nodeKind(st)
+// How many belts may run into and out of each kind of node.
+export const NODE_RULES = {
+  split: { ins: 1, outs: 3 },
+  prio: { ins: 1, outs: 3 },
+  merge: { ins: 3, outs: 1 },
+  hopper: { ins: 1, outs: 1 },
+}
+// Splitters of either kind hand goods out over several belts.
+export const splits = (st) => {
+  const k = nodeKind(st)
+  return k === 'split' || k === 'prio'
+}
 
 // ---------------------------------------------------------------- what goes in and out
 function recipesOf(st) {

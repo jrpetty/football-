@@ -87,7 +87,7 @@ export function renderPlayers(ui) {
   // who leads whom
   const rows = S.survivors.map((s) => {
     const pid = mp.owner[s.id] || ''
-    const where = s.status === 'mission' ? 'On a run' : s.status === 'outpost' ? 'Outpost' : s.status === 'injured' ? 'Injured' : s.job ? STATIONS[S.stations.find((x) => x.id === s.job)?.type]?.name || 'Job' : 'No job'
+    const where = s.status === 'mission' ? 'On a run' : s.status === 'scout' ? 'Scouting' : s.status === 'outpost' ? 'Outpost' : s.status === 'injured' ? 'Injured' : s.job ? STATIONS[S.stations.find((x) => x.id === s.job)?.type]?.name || 'Job' : 'No job'
     const pick = host
       ? h(
           'select.mp-sel',

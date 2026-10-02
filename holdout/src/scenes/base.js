@@ -444,6 +444,20 @@ export class BaseScene {
       this.game.ui?.showRecruit()
       sfx('click')
     } else if (pk?.type === 'station') {
+      // Shift-click: build a selection to work on all at once
+      if (e.shift || e.ctrl) {
+        this.multi ??= new Set()
+        if (this.selected && !this.multi.size) this.multi.add(this.selected)
+        if (this.multi.has(pk.st.id)) this.multi.delete(pk.st.id)
+        else this.multi.add(pk.st.id)
+        this.select(null)
+        sfx('select')
+        if (this.multi.size >= 2) this.game.ui?.openMulti()
+        else if (this.multi.size === 1) this.game.ui?.openStation([...this.multi][0])
+        else this.game.ui?.closePanel()
+        return
+      }
+      this.multi?.clear()
       this.select(pk.st.id)
       this.game.ui?.openStation(pk.st.id)
       sfx('click')
@@ -654,6 +668,7 @@ export class BaseScene {
       focus: view.rig.target,
       hovered: this.hovered,
       selected: this.selected,
+      multi: this.multi,
       night,
       nearCam: (x, z) => Math.hypot(x - view.rig.target.x, z - view.rig.target.z) < view.rig.dist * 1.1 + 10,
     }

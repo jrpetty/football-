@@ -6,16 +6,20 @@
 // belted building makes waits in its output buffer for the next free spot on
 // the belt. Buildings without belts haul from storage.
 //
-// Splitters and mergers pass goods straight through. A splitter hands each
-// item to the next of its outgoing belts in turn, so two belts get half each
-// and three get a third; when one is full its share goes to the others. A
-// merger takes from whichever incoming belt has an item waiting.
+// Splitters, mergers and hoppers pass goods straight through. A splitter
+// hands each item to the next of its outgoing belts in turn, so two belts get
+// half each and three get a third; when one is full its share goes to the
+// others. A priority splitter gives everything to the belt marked first and
+// only spills over to the rest when that belt backs up. A merger takes from
+// whichever incoming belt has an item waiting. A buffer hopper is a tank on
+// the line: it holds many items in passing, so bursts upstream and gaps
+// downstream even out.
 import { STATIONS, BELTS, BELT_STACK, BELT_BONUS, SEC_PER_DAY } from './data.js'
 import { S, bounds, gateTiles, stationSize, pay, gain, canAfford, capOf, linkCost, removeLink, isUnlocked, researchDone, newStation } from './state.js'
-import { isDepot, isNode, nodeKind, inputsOf, outputsOf, recipesOf, portsOf, portAt, freePods, linkAt, podSends, podTakes } from './ports.js'
+import { isDepot, isNode, nodeKind, splits, NODE_RULES, inputsOf, outputsOf, recipesOf, portsOf, portAt, freePods, linkAt, podSends, podTakes } from './ports.js'
 import { bus, uid } from '../core/util.js'
 
-export { isDepot, isNode, nodeKind, inputsOf, outputsOf, portsOf, portAt, freePods, linkAt, removeLink }
+export { isDepot, isNode, nodeKind, splits, NODE_RULES, inputsOf, outputsOf, portsOf, portAt, freePods, linkAt, removeLink }
 export const BELT_Y = 2.45 // deck height of the lowest belts: survivors walk underneath
 export const BELT_DY = 0.62 // each crossing layer runs this much higher
 export const stackOf = (k) => BELT_STACK[k] || 1
@@ -34,9 +38,11 @@ export function nodeRes(st, ignore = null) {
 export const takesIn = (st, k) => k !== 'cash' && (isDepot(st) || (isNode(st) ? (nodeRes(st) ?? k) === k : inputsOf(st).includes(k)))
 export const givesOut = (st, k) => k !== 'cash' && (isDepot(st) || (isNode(st) ? (nodeRes(st) ?? k) === k : outputsOf(st).includes(k)))
 // Input buffers hold about four batches; output buffers hold a few; a
-// splitter or merger holds two items in passing.
+// splitter or merger holds two items in passing, a hopper its tank.
+export const hopperHold = (st) => STATIONS[st.type].hold?.[Math.max(0, st.level - 1)] || 0
 export function inCap(st, k) {
   if (isDepot(st)) return Infinity
+  if (nodeKind(st) === 'hopper') return hopperHold(st) * stackOf(k)
   if (isNode(st)) return 2 * stackOf(k)
   if (st.type === 'generator') return 10
   if (st.type === 'boiler') return 16
@@ -277,8 +283,12 @@ export function linkProblem(a, b, k, opts = {}) {
   if (isNode(b) && (nodeRes(b, ig) ?? k) !== k) return `That ${nameOf(b).toLowerCase()} carries ${nodeRes(b, ig)}`
   if (!isNode(a) && !givesOut(a, k)) return `${nameOf(a)} doesn't make that`
   if (!isNode(b) && !takesIn(b, k)) return `${nameOf(b)} doesn't use that`
-  if (nodeKind(b) === 'split' && (S.links || []).some((l) => l !== ig && l.to === b.id)) return 'A splitter takes one belt in'
-  if (nodeKind(a) === 'merge' && (S.links || []).some((l) => l !== ig && l.from === a.id)) return 'A merger sends one belt out'
+  const Rb = NODE_RULES[nodeKind(b)]
+  const Ra = NODE_RULES[nodeKind(a)]
+  const nIn = Rb ? (S.links || []).filter((l) => l !== ig && l.to === b.id).length : 0
+  const nOut = Ra ? (S.links || []).filter((l) => l !== ig && l.from === a.id).length : 0
+  if (Rb && nIn >= Rb.ins) return Rb.ins === 1 ? `A ${nameOf(b).toLowerCase()} takes one belt in` : `A ${nameOf(b).toLowerCase()} takes ${Rb.ins} belts in at most`
+  if (Ra && nOut >= Ra.outs) return Ra.outs === 1 ? `A ${nameOf(a).toLowerCase()} sends one belt out` : `A ${nameOf(a).toLowerCase()} sends ${Ra.outs} belts out at most`
   if (opts.fromPort != null) {
     const p = portAt(a, opts.fromPort)
     if (!podSends(p)) return 'That pod takes goods in'
@@ -386,34 +396,59 @@ export function ensurePorts() {
   return changed
 }
 
-// ---------------------------------------------------------------- splitters on a belt
-// Can a splitter go on tile (x, z) of belt l? Returns null or why not.
-export function splitProblem(l, x, z, kind = 'splitter') {
-  if (!isUnlocked('station', kind)) return `${STATIONS[kind].name}s need the Conveyors milestone`
+// ---------------------------------------------------------------- nodes on a belt
+// Where a splitter, merger or hopper of this kind would stand to sit on tile
+// (x, z) of belt l: the footprint's corner, or { why } when nothing fits.
+// A 1x1 node goes on the tile; a bigger one tries each corner position that
+// still covers it.
+export function nodeSpot(l, x, z, kind = 'splitter') {
+  if (!isUnlocked('station', kind)) return { why: `${STATIONS[kind].name}s need the Conveyors milestone` }
   let on = false
   for (let i = 0; i < l.tiles.length; i += 2) if (l.tiles[i] === x && l.tiles[i + 1] === z) on = true
-  if (!on) return 'Pick a spot on the belt'
-  if (beltBlocked(x, z)) return 'Too close to the gate'
-  for (const st of S.stations) {
-    const [w, d] = stationSize(st)
-    if (x >= st.x - 1 && x <= st.x + w && z >= st.z - 1 && z <= st.z + d) return 'Too close to a building'
+  if (!on) return { why: 'Pick a spot on the belt' }
+  const [w, d] = STATIONS[kind].size
+  const near = (tx, tz) => {
+    for (const st of S.stations) {
+      const [sw, sd] = stationSize(st)
+      if (tx >= st.x - 1 && tx <= st.x + sw && tz >= st.z - 1 && tz <= st.z + sd) return true
+    }
+    return false
   }
-  for (const o of S.links || []) {
-    if (o === l) continue
-    for (let i = 0; i < o.tiles.length; i += 2) if (o.tiles[i] === x && o.tiles[i + 1] === z) return 'Another belt runs over that spot'
+  const otherBelt = (tx, tz) => {
+    for (const o of S.links || []) {
+      if (o === l) continue
+      for (let i = 0; i < o.tiles.length; i += 2) if (o.tiles[i] === tx && o.tiles[i + 1] === tz) return true
+    }
+    return false
   }
-  if (!canAfford(STATIONS[kind].cost[0])) return 'Not enough materials'
-  return null
+  let why = null
+  for (let ox = 0; ox < w; ox++)
+    for (let oz = 0; oz < d; oz++) {
+      const x0 = x - ox
+      const z0 = z - oz
+      let bad = null
+      for (let tx = x0; tx < x0 + w && !bad; tx++)
+        for (let tz = z0; tz < z0 + d && !bad; tz++) {
+          if (beltBlocked(tx, tz)) bad = 'Too close to the gate'
+          else if (near(tx, tz)) bad = 'Too close to a building'
+          else if (otherBelt(tx, tz)) bad = 'Another belt runs over that spot'
+        }
+      if (!bad) return canAfford(STATIONS[kind].cost[0]) ? { x: x0, z: z0 } : { why: 'Not enough materials' }
+      why ??= bad
+    }
+  return { why: w * d > 1 && why === 'Too close to a building' ? 'No room for it here' : why }
 }
-// Cut belt l at (x, z) and put a splitter (or merger) there: the two halves
-// keep the belt's tier, the old belt comes back in full.
+// Can a node go on tile (x, z) of belt l? Returns null or why not.
+export const splitProblem = (l, x, z, kind = 'splitter') => nodeSpot(l, x, z, kind).why || null
+// Cut belt l at (x, z) and put a splitter (merger, hopper) there: the two
+// halves keep the belt's tier, the old belt comes back in full.
 export function insertNode(l, x, z, kind = 'splitter') {
-  const why = splitProblem(l, x, z, kind)
-  if (why) return why
+  const spot = nodeSpot(l, x, z, kind)
+  if (spot.why) return spot.why
   const a = byId(l.from)
   const b = byId(l.to)
   pay(STATIONS[kind].cost[0])
-  const node = newStation(kind, x, z, 0, 1)
+  const node = newStation(kind, spot.x, spot.z, 0, 1)
   const fromPort = l.fromPort
   const toPort = l.toPort
   const res = l.res
@@ -435,8 +470,20 @@ export function insertNode(l, x, z, kind = 'splitter') {
     back()
     return two
   }
+  if (nodeKind(node) === 'prio') node.prio = two.fromPort
   bus.emit('stations')
   return node
+}
+// The belt a priority splitter serves first: the one on the pod marked
+// first, else the first one laid.
+export function firstOut(st, outs = null) {
+  const list = outs || (S.links || []).filter((l) => l.from === st.id)
+  return list.find((l) => l.fromPort === st.prio) || list[0] || null
+}
+export function setFirst(st, l) {
+  if (!l || l.from !== st.id) return
+  st.prio = l.fromPort
+  bus.emit('links')
 }
 
 // ---------------------------------------------------------------- moving items
@@ -455,7 +502,7 @@ export function tickLinks(dt, pinfo = null) {
   outsOf.clear()
   for (const l of L) {
     const src = byId(l.from)
-    if (nodeKind(src) !== 'split') continue
+    if (!splits(src)) continue
     if (!outsOf.has(src.id)) outsOf.set(src.id, [])
     outsOf.get(src.id).push(l)
   }
@@ -532,8 +579,19 @@ function load(src, dst, l, n) {
   }
   const o = (src.buf = src.buf || { in: {}, out: {} }).out
   if (src.off || (o[k] || 0) < n - 1e-6) return false
+  let outs = outsOf.get(src.id)
+  // a priority splitter: the first belt gets everything it can carry; the
+  // rest only get what backs up on it
+  if (outs && outs.length > 1 && nodeKind(src) === 'prio') {
+    const first = firstOut(src, outs)
+    if (l === first) {
+      o[k] -= n
+      return true
+    }
+    if (!backedUp(first)) return false
+    outs = outs.filter((x) => x !== first)
+  }
   // a splitter: each item to the next belt in turn, unless that one is full
-  const outs = outsOf.get(src.id)
   if (outs && outs.length > 1) {
     const turn = outs[(src.turn || 0) % outs.length]
     if (turn !== l && hasRoom(turn)) return false
@@ -542,6 +600,9 @@ function load(src, dst, l, n) {
   o[k] -= n
   return true
 }
+// A belt that can't take another item now and won't soon: it has stopped,
+// or it is packed to its start behind an item that can't be delivered.
+const backedUp = (l) => !l || l.off || (!hasRoom(l) && (l.jam || 0) > 0.05)
 // How a belt is doing, for labels and panels.
 export function linkState(l) {
   if (l.off) return 'off'

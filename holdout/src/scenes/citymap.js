@@ -20,6 +20,8 @@ import { SIDEWALK, RIVER_W, HIGHWAY_Z, HIGHWAY_W, FACE_ROT, route } from '../wor
 import { S, hour, season, leafTurn, isLooted, isCleared, isEmptied } from '../game/state.js'
 import { LEVEL_COLORS } from '../game/data.js'
 import { MapPanel } from '../ui/mappanel.js'
+import { lastSeen, reconOf, HORDE } from '../game/recon.js'
+import { gameDur } from '../game/state.js'
 import { clamp, smooth } from '../core/util.js'
 
 const TAU = Math.PI * 2
@@ -1035,7 +1037,58 @@ export class CityMap {
     el.innerHTML = '<b>★</b><span>Holdout camp</span>'
     this.campLabel = view.labels.add(el, new THREE.Vector3(this.city.camp.x, 20, this.city.camp.z), { scene: this.scene })
   }
+  // Where the horde was last seen: a red stain on the map with its size, how
+  // long ago, and an arrow the way it was going. Only a scout puts it there.
+  buildHordeMark() {
+    const g = new THREE.Group()
+    const ring = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: ringTex(), color: new THREE.Color('#ff3a20').multiplyScalar(1.6), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }))
+    ring.rotation.x = -Math.PI / 2
+    ring.position.y = 1.5
+    ring.scale.set(HORDE.radius * 2, HORDE.radius * 2, 1)
+    ring.renderOrder = 4
+    g.add(ring)
+    const core = new THREE.Mesh(new THREE.CircleGeometry(HORDE.at, 40), new THREE.MeshBasicMaterial({ color: '#a01808', transparent: true, opacity: 0.32, depthWrite: false }))
+    core.rotation.x = -Math.PI / 2
+    core.position.y = 1.2
+    core.renderOrder = 4
+    g.add(core)
+    // the way it was heading
+    const arrow = new THREE.Mesh(new THREE.ConeGeometry(18, 60, 3), new THREE.MeshBasicMaterial({ color: '#ff5a3a', transparent: true, opacity: 0.85, depthWrite: false }))
+    arrow.rotation.x = Math.PI / 2
+    arrow.position.y = 3
+    const pivot = new THREE.Group()
+    pivot.add(arrow)
+    arrow.position.z = HORDE.at + 50
+    g.add(pivot)
+    const el = document.createElement('div')
+    el.className = 'hordemark'
+    el.innerHTML = '<b>The horde</b><small></small>'
+    const label = view.labels.add(el, new THREE.Vector3(0, 40, 0), { scene: this.scene })
+    g.visible = false
+    this.scene.add(g)
+    this.hordeMark = { g, ring, core, pivot, arrow, el, label }
+  }
+  refreshHorde() {
+    if (!this.hordeMark) this.buildHordeMark()
+    const M = this.hordeMark
+    const seen = lastSeen()
+    M.g.visible = !!seen
+    // through the label system, which keeps it to the map
+    M.label.hidden = !seen
+    if (!seen) return
+    M.g.position.set(seen.x, 0, seen.z)
+    // off to the edge of the stain, clear of the place markers in it
+    M.label.pos.set(seen.x, 40, seen.z - HORDE.at * 0.75)
+    M.pivot.rotation.y = seen.heading || 0
+    M.arrow.visible = !!seen.moving
+    M.el.querySelector('small').textContent = `about ${seen.size} · seen ${S.time - seen.time < 60 ? 'just now' : gameDur(S.time - seen.time) + ' ago'}`
+  }
+  lookAtHorde() {
+    const seen = lastSeen()
+    if (seen) view.rig.focus(seen.x, seen.z, Math.min(view.rig.distGoal, 700))
+  }
   refreshMarkers() {
+    this.refreshHorde()
     const evs = new Map((S.events || []).map((e) => [e.locId, e]))
     for (const L of this.markers) {
       const m = L.marker
@@ -1054,7 +1107,11 @@ export class CityMap {
       m.el.classList.toggle('outpost', post)
       m.el.classList.toggle('lead', lead)
       m.el.classList.toggle('clear', clear)
-      m.el.querySelector('i').textContent = ev ? (ev.kind === 'distress' ? 'SOS' : 'DROP') : lead ? 'lead' : post ? 'outpost' : clear ? 'clear' : looted ? (isEmptied(L.loc.id) ? 'empty' : 'looted') : ''
+      const R = reconOf(L.loc.id)
+      const scouting = (S.scouts || []).some((x) => x.target === L.loc.id)
+      m.el.classList.toggle('scouted', !!R?.fresh && !clear)
+      m.el.classList.toggle('scouting', scouting)
+      m.el.querySelector('i').textContent = ev ? (ev.kind === 'distress' ? 'SOS' : 'DROP') : lead ? 'lead' : post ? 'outpost' : clear ? 'clear' : scouting ? 'scout out' : R?.fresh ? `${R.count} inside` : looted ? (isEmptied(L.loc.id) ? 'empty' : 'looted') : ''
       m.el.classList.toggle('sel', this.sel === L.loc)
       m.el.classList.toggle('hov', this.hover === L.loc)
     }
@@ -1365,6 +1422,16 @@ export class CityMap {
       m.ring.material.opacity = sel ? 0.9 : hov ? 0.7 : 0.35
     }
     if (this.routeMat) this.routeMat.uniforms.t.value = this.t
+    if (this.hordeMark?.g.visible) {
+      const k = 1 + Math.sin(this.t * 1.6) * 0.04
+      this.hordeMark.ring.scale.set(HORDE.radius * 2 * k, HORDE.radius * 2 * k, 1)
+      this.hordeMark.ring.material.opacity = 0.55 + Math.sin(this.t * 1.6) * 0.2
+      this.hordeMarkT = (this.hordeMarkT || 0) + dt
+      if (this.hordeMarkT > 2) {
+        this.hordeMarkT = 0
+        this.refreshHorde()
+      }
+    }
     this.updateLaunch(dt)
     this.updateConvoys(dt)
     this.fx.setViewport(window.innerHeight, view.camera.fov)

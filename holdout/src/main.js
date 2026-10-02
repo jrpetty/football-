@@ -5,7 +5,7 @@ import { Pipeline } from './render/pipeline.js'
 import { initView, view, groundAt } from './render/view.js'
 import { pregenerate } from './render/texgen.js'
 import { initAudio, sfx, setSound, setVolume } from './core/audio.js'
-import { S, newGame, hasSave, load, save, day, hour, log, gain, workersOf, removeLink, wipeSave, buildCost, newStation, pay, canAfford, completeGoal, backupSave, vehicleOf, wearVehicle, NET, MP_SAVE_KEY, playerOf, DISTRICTS, MODES, killSurvivor } from './game/state.js'
+import { S, newGame, hasSave, load, save, day, hour, log, gain, workersOf, removeLink, wipeSave, buildCost, newStation, pay, canAfford, completeGoal, backupSave, vehicleOf, wearVehicle, NET, MP_SAVE_KEY, playerOf, DISTRICTS, MODES, killSurvivor, getS } from './game/state.js'
 import { Session, readIntent, writeIntent, me, initMp } from './net/mp.js'
 import { Coop } from './net/coop.js'
 import { newCode } from './net/transport.js'
@@ -16,11 +16,14 @@ import { warmUp, compileFor, preRender } from './render/warmup.js'
 import { soundLog } from './world/sound.js'
 import { econTick, initSchedules, autoResolveRaid, scheduleRaid, raidIntel } from './game/economy.js'
 import { alerts } from './ui/brief.js'
+import { wireDiaries, runStart } from './game/diary.js'
+import { setCity } from './game/recon.js'
 import { notify } from './ui/notify.js'
 import * as belts from './game/belts.js'
 import * as stateMod from './game/state.js'
 import * as econMod from './game/economy.js'
 import * as storyMod from './game/story.js'
+import * as reconMod from './game/recon.js'
 import { WEATHER as WX } from './render/materials.js'
 import { STATIONS, GAME_MIN_PER_SEC, SEC_PER_DAY, RES, DAY_MIN } from './game/data.js'
 
@@ -60,6 +63,7 @@ class Game {
   }
   // ---------------------------------------------------------------- boot
   async boot() {
+    wireDiaries()
     const canvas = document.getElementById('c')
     this.pipe = new Pipeline(canvas)
     initView(canvas)
@@ -160,6 +164,7 @@ class Game {
   // The city is the same for the whole camp: its locations seed radio events.
   makeCity() {
     this.city = genCity(S.seed)
+    setCity(this.city)
     S.cityLocs = this.city.locs.map((l) => ({ id: l.id, type: l.type, level: l.level, name: l.name, district: l.lot?.district || 'residential' }))
   }
   // Let camp time pass in one go (travel to and from a run).
@@ -715,6 +720,7 @@ class Game {
     setTimeout(() => {
       this.starting = false
       try {
+        runStart(ids.map((id) => getS(id)))
         this.mission = new Mission(this, loc, ids, loadout)
       } catch (e) {
         this.missionFailed(card, e)
@@ -887,5 +893,6 @@ window.__belts = belts
 window.__state = stateMod
 window.__econ = econMod
 window.__story = storyMod
+window.__recon = reconMod
 window.__weather = WX
 game.boot()

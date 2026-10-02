@@ -15,6 +15,13 @@ motor pool, a story told through notes, leads and people found in the city,
 gear swapping in camp, and **browser multiplayer**: one player hosts, friends
 join with a code, and each of you leads your own survivors in the same camp.
 
+v5 adds priority splitters and buffer hoppers on belt lines, storage in
+three sizes whose piles fill up as stock rises, a Recycler, chickens and goats,
+survivor diaries, barricades on runs, recon scouts and a roaming horde, and a
+set of tools for running a big camp: a command palette (`Ctrl`+`K`), a flow
+chart for every resource, a watch list, custom alerts, a go-to-problem key and
+mass actions on several stations at once.
+
 It is built to be played over weeks and months. A camp day lasts about eight
 real minutes at normal speed, the milestone board runs to tier 8, and a careful
 player reaches the final Signal phase somewhere past day 250.
@@ -53,6 +60,10 @@ networks don't.
 | | `F` / `H` | The wall / horde intel |
 | | `Space`, `1` `2` `3`, `4` | Pause, 1×, 2×, 4× speed, skip ahead |
 | | `R`, `Shift`, `Enter`, `Esc` | While placing: rotate, place several, confirm, cancel |
+| | `Ctrl`+`K` or `/` | Command palette: find and jump to anything |
+| | `N` / `Shift`+`N` | Go to the next / previous problem in the camp brief |
+| | Shift-click or Ctrl-click stations | Select several for mass actions |
+| | Click a resource in the top bar | Its flow chart |
 | | Click a station's output, then a station | Lay a belt between them |
 | Supply run | Left-click, drag a box, `1`–`4`, `Tab` | Select survivors (double-tap a number to jump to them) |
 | | Right-click | Move, attack a zombie, or do the default action on a container |
@@ -60,6 +71,7 @@ networks don't.
 | | `Z` `X` `C` `V` | Molotov, pipe bomb, noise maker, first aid kit |
 | | `Enter`, `Space`, `F` | Extract at the van, pause, focus the selection |
 | | `Q` / Alt+click | Ping a spot for the friends on the run |
+| | Left-click a wardrobe, fridge, shelf or desk | "Barricade the door" pushes it across the nearest doorway |
 | City map | `M`, `Esc` | Back to camp |
 
 ## The long game
@@ -148,6 +160,18 @@ settles, what holds it back, upgrade, take down, and **Splitter here** /
   when one is full its share goes to the others.
 - **Merger** (Conveyors): up to three belts of the same goods in, one out, at
   most that belt's rate.
+- **Priority Splitter** (Conveyors): one belt in, up to three out, but one of
+  them goes first: it gets everything it can take, and only what backs up on
+  it spills over to the others, shared between them in turn. Feed the forge
+  before storage. A gold "1ST" pennant flies over the first belt; "Goes first"
+  on its panel moves it. Draws 0.25 power.
+- **Buffer Hopper** (Conveyors): a tank you drop on a belt line, one belt in
+  and one out. It fills when more arrives than leaves and empties when the line
+  runs dry, so the machine after it keeps going through bursts and gaps. It
+  holds 30 loads (80 at level 2), and a gauge on the tank and in its panel
+  shows how full it is. Draws 0.15 power.
+- **Splitter here**, **Priority here**, **Merger here** and **Hopper here** on
+  a belt's panel drop one into the line where you clicked.
 - **Belts run on power.** A belt draws its tier's rate per metre, at least 0.1
   (a 20 m Mk1 belt draws 0.2, a twentieth of a level-1 Steam Engine); a
   splitter or merger draws 0.2. Power efficiency research cuts it by a
@@ -210,6 +234,16 @@ carry exactly those goods.
 - Anything a machine makes can be made by hand at a bench, slower. Machines
   need power; unpowered, their crew works them by hand at half speed.
 
+### The Recycler
+- Unlocked with Fabrication. Gear you mark **Recycle** in Items (or standing
+  orders: strip broken gear, strip crude spares) is broken down first, for 45%
+  of what it took to make (60% at level 2), less for worn gear, plus half of
+  any mods. Gear that can't be crafted pays out by its value.
+- Between jobs it works through junk off a belt or from storage: tyres into
+  rubber, dead car batteries into chemicals, and scrap sorted into parts,
+  wiring and bars. It always keeps four tyres and a battery back for the van.
+- Level 2 can run by itself with an Automation Module.
+
 ### Power
 - **Steam Engine** (tier 1): burns wood, or coal for three times as long, only
   as hard as the load needs. 4 / 7 / 11 power by level.
@@ -237,6 +271,32 @@ carry exactly those goods.
 ### Camp overview
 The Camp overview (`P`) shows each resource's rate per day with a sparkline of
 the last four days, storage fill, power and a list of what is stuck and why.
+
+### Tools for a big camp
+- **Command palette** (`Ctrl`+`K` or `/`): type a few letters to find any
+  station, survivor, resource, item, place in the city, panel or thing to
+  build, and jump straight to it (the camera flies there too). Arrow keys move,
+  `Enter` opens; with nothing typed it lists what you opened last.
+- **Flow charts:** click a resource in the top bar (or a row in the Camp
+  overview) for a diagram of where it comes from and where it goes, every band
+  as wide as its rate per day, with the stock in the middle, how long until it
+  runs out or fills, the last four days, and the belts carrying it. Click a
+  station to open it.
+- **Watch list:** the pin on a station, survivor or resource panel puts it on
+  a strip down the left of the screen with its numbers live: stock and rate,
+  how hard a station works, how someone is doing. Up to ten, kept per camp.
+- **Custom alerts:** "tell me when metal passes 200", "when anyone is hurt",
+  "when the forge stalls", plus storage full, infection, idle hands, a horde
+  under N hours away, power short and buildings finished. Each fires once when
+  it comes true (a toast you can click through, a chime, a desktop notification
+  in the background) and can pause the game. Open them from the palette.
+- **Go to problem:** `N` flies the camera to the next thing in the camp brief
+  that needs you and opens it; `Shift`+`N` goes back. The brief has a "Go to
+  each" button too.
+- **Mass actions:** Shift-click (or Ctrl-click) stations to select several, or
+  "All N" on a station's panel to select every one of its kind. Then upgrade
+  them all, pause or resume them, switch their automation, fill their empty
+  jobs with the best free hands, or set a shared production target.
 
 ## Supply runs and sight
 
@@ -278,6 +338,14 @@ loot table that fits it.
   at any floor. Noise carries up and down the stairwell, so a shot upstairs
   brings the floor below after you. A backup generator lights the building and
   runs the lift, which the infected cannot use, but starting it is very loud.
+- **Barricades:** left-click a wardrobe, fridge, bookshelf, locker, desk,
+  shelf or crate and pick **Barricade the door**: a survivor pushes it across
+  the nearest doorway of its room. The menu says whether that shuts the room or
+  whether there is another way in to block too. The dead that want in hammer at
+  it (a heavy wardrobe holds a few minutes against one or two, a health bar
+  shows how long it has left), and others come to the noise and join in. While
+  it holds, anyone resting inside a shut room patches up to 85% health.
+  **Take it down** slides it back; a broken one topples and opens the door.
 - **Tracks in the snow:** in winter everyone outdoors leaves prints. The
   infected's prints show where they went; an infected that finds the squad's
   fresh trail follows it back to the van.
@@ -298,6 +366,23 @@ loot table that fits it.
   ended, how long it held, its record (days, kills, places and things
   searched, built, hordes, people, kilometres, notes) and the names of
   everyone it lost. A horde that leaves nobody standing can now wipe a camp.
+- **Infected counts change every day.** Each place has its usual number (by
+  size and level), drifting a few either way each morning; a place you left
+  half-cleared slowly fills up again. Tall buildings hold more on every floor.
+- **The horde** is a great mass of the dead (55 to 75 at first, growing a
+  little most days, up to 140) that walks the city, about 36 m an hour, lingering three
+  to twelve hours wherever it stops. It mostly roams the bigger, higher-level
+  places downtown and sometimes wanders into the quiet streets. Anywhere within
+  320 m of it holds far more infected than usual, up to 60% of the horde.
+- **Recon scouts:** only a scout can find it. Send one quiet survivor (scouts,
+  hunters, the Quiet trait, a ghillie poncho) from a place's card to watch it
+  for four to six hours, there and back on foot: they bring back the count and
+  kinds inside, the floor plan (the squad goes in with the rooms mapped), and
+  the horde if it is within a kilometre. Or send them to hunt the horde itself
+  (8 to 12 hours, dangerous). The map then marks where it was last seen, how
+  big it was and which way it was heading, and that mark ages: it keeps
+  moving. Scouts can come back hurt or bitten, and on the worst places they
+  sometimes don't come back.
 - **Special infected:** stalkers creep up while nobody is looking, screamers
   call every infected nearby, and bloaters burst into an infectious cloud.
   Hidden traps wait in the dark; scouts spot them from much further away.
@@ -371,6 +456,26 @@ unless a teammate helps them up.
   background) and the first-day guide switch.
 - You start in an old lumber yard with four survivors, a campfire, a tent
   bunkhouse, a farm plot, a rain collector, a storage depot and a workbench.
+- **Storage in sizes:** the Storage Depot (120 / 260 / 450), a **Crate
+  Stack** (2×2, +35, from the start), a **Storage Shed** (3×3, +90,
+  Fabrication) and a **Warehouse** (7×5, +380, Machining). They all add to one
+  shared camp store, and any of them can take belts in and send them out.
+- **Stockpiles you can see:** every store's floor and racks fill with crates,
+  logs, sacks, drums, bars and boxes as the camp's stock of each kind rises,
+  in five steps from bare pallets to piled high. More stores show more kinds.
+- **Livestock:** a **Chicken Coop** (from the start) keeps 6 hens (10 at level
+  2) that lay eggs; a **Goat Pen** (Palisade) keeps 3 to 5 goats for milk and
+  wool, and the Tailor spins 2 wool into 3 cloth. Eggs and milk are eaten
+  before the stores and lift morale. With a keeper and the camp fed, chicks and
+  kids come along every few days; buy more from a passing trader. At night
+  their noise draws the infected (every pen adds 8% to each horde): an
+  unfenced pen has a 30% chance a night of losing an animal, a picket fence
+  cuts that to about a tenth and a stout one to 3%, and a fence that is hit
+  needs mending.
+- **Diaries:** each survivor writes short entries in their own voice about
+  what happens to them: joining, their job, the weather, runs, hordes, wounds,
+  friends lost, a new name. They're on their sheet; the Memorial keeps the last
+  thing each of the dead wrote.
 - Every survivor eats about 2 food and drinks 2.4 water a day. If food or water
   runs out, everyone weakens and works at 60%.
 - **Upkeep:** each day the camp wears through a little: 0.15 cloth and 0.02

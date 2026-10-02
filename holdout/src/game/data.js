@@ -15,11 +15,14 @@ export const RES = {
   food: { name: 'Food', cat: 'needs', color: '#e0a54a', sell: 2, capMul: 1.6, desc: 'Canned goods and crops. Everyone eats about 2 a day.' },
   water: { name: 'Water', cat: 'needs', color: '#58a9dc', sell: 2, capMul: 1.4, desc: 'Clean drinking water. Everyone drinks about 2.4 a day.' },
   meds: { name: 'Medicine', cat: 'needs', color: '#e8606e', sell: 14, capMul: 0.5, desc: 'Treats wounds. Used for first aid kits and in the Infirmary.' },
+  eggs: { name: 'Eggs', cat: 'needs', color: '#f0deb0', sell: 3, capMul: 0.6, desc: 'Fresh from the Chicken Coop. Eaten before the tinned food, and a camp eating fresh is a happier camp. They don\'t keep long, so the stores hold fewer.' },
+  milk: { name: 'Goat Milk', short: 'Milk', cat: 'needs', color: '#f4f0e4', sell: 3, capMul: 0.6, desc: 'From the Goat Pen. Eaten before the tinned food, and it lifts morale. Doesn\'t keep long.' },
   wood: { name: 'Wood', cat: 'materials', color: '#b07a45', sell: 1, desc: 'Building and crafting. Comes from the Lumber Yard and furniture.' },
   scrap: { name: 'Scrap', cat: 'materials', color: '#9a8a76', sell: 1, desc: 'Junk metal. Smelted into metal at the Forge.' },
   metal: { name: 'Metal Bars', short: 'Bars', cat: 'materials', color: '#a3adb6', sell: 3, desc: 'Scrap smelted into bars at the Forge. Weapons, tools, and the plates and bolts everything else is built from.' },
   coal: { name: 'Coal', cat: 'materials', color: '#5a5654', sell: 2, desc: 'Charcoal from the kiln, or coal from sheds, rail cars and warehouses. Burns three times as long as wood: steam engines, steel, winter fires.' },
   cloth: { name: 'Cloth', cat: 'materials', color: '#cdb892', sell: 2, desc: 'Fabric for clothing, bandages and armor.' },
+  wool: { name: 'Wool', cat: 'materials', color: '#e6dcc4', sell: 2, capMul: 0.8, desc: 'Sheared from the goats. Spun into cloth at the Tailor Station.' },
   parts: { name: 'Parts', cat: 'materials', color: '#e08a3c', sell: 8, capMul: 0.5, desc: 'Springs, gears and fittings. Made at the Workbench.' },
   electronics: { name: 'Electronics', cat: 'materials', color: '#6fd0c0', sell: 10, capMul: 0.4, desc: 'Circuit boards and wiring for radios, turrets and automation.' },
   chemicals: { name: 'Chemicals', cat: 'materials', color: '#b4d45a', sell: 6, capMul: 0.5, desc: 'Solvents and reagents. Found on runs, or refined from fuel and scrap at the Chemistry Lab.' },
@@ -333,10 +336,27 @@ export const STATIONS = {
     time: [30, 60, 100], workers: [0, 0, 0], beds: [4, 6, 10],
   },
   storage: {
-    name: 'Storage Depot', cat: 'living', size: [5, 4], levels: 3, skill: null,
-    desc: 'Raises how much of each resource the camp can hold.',
+    name: 'Storage Depot', cat: 'storage', size: [5, 4], levels: 3, skill: null, depot: true,
+    desc: 'Raises how much of each resource the camp can hold. Hatches on every side send and take goods by belt.',
     cost: [{ wood: 40, scrap: 20 }, { wood: 60, plates: 15, bolts: 40 }, { plates: 40, beams: 6, bolts: 80 }],
     time: [25, 55, 90], workers: [0, 0, 0], cap: [120, 260, 450],
+  },
+  // smaller and bigger stores: all of them add to the one camp store, and
+  // all of them take and send goods by belt like the depot
+  crates: {
+    name: 'Crate Stack', cat: 'storage', size: [2, 2], levels: 1, skill: null, depot: true,
+    desc: 'Pallets and crates under a tarp. A little more room for everything, and a hatch on each side to belt goods in and out wherever the line needs a store.',
+    cost: [{ wood: 18, scrap: 6 }], time: [8], workers: [0], cap: [35],
+  },
+  shed: {
+    name: 'Storage Shed', cat: 'storage', size: [3, 3], levels: 1, skill: null, depot: true,
+    desc: 'A plank shed with shelving and a roller door. Holds a good deal more, and belts plug into all four sides.',
+    cost: [{ wood: 45, plates: 6, bolts: 20 }], time: [20], workers: [0], cap: [90],
+  },
+  warehouse: {
+    name: 'Warehouse', cat: 'storage', size: [7, 5], levels: 1, skill: null, depot: true,
+    desc: 'A steel-framed hall with racking to the roof. The most room per square metre, and eight belt hatches.',
+    cost: [{ beams: 8, plates: 40, bolts: 120, wood: 60 }], time: [70], workers: [0], cap: [380],
   },
   kitchen: {
     name: 'Cookhouse', cat: 'living', size: [5, 4], levels: 3, skill: 'survival',
@@ -369,6 +389,24 @@ export const STATIONS = {
     cost: [{ wood: 30 }, { wood: 45, metal: 10, bolts: 20 }, { wood: 40, plates: 15, bolts: 40, parts: 8 }],
     time: [20, 50, 80], workers: [1, 2, 3], auto: 3, autoPower: 1, autoRate: 1.5,
     recipe: { in: { water: 0.5 }, out: { food: 1 }, time: [56, 45, 36] },
+  },
+  coop: {
+    name: 'Chicken Coop', cat: 'production', size: [5, 4], levels: 2, skill: 'survival', livestock: 'hen', flock: [6, 10], start: 3,
+    desc: 'A henhouse and a run. Hens lay eggs: fresh food the camp eats first, and good for morale. They peck at a little food and water. At night their clucking draws the infected: fence the run or lose hens.',
+    cost: [{ wood: 35, scrap: 10, food: 10 }, { wood: 40, plates: 8, bolts: 20 }],
+    time: [25, 45], workers: [1, 1],
+    recipe: { in: { food: 0.25, water: 0.25 }, out: { eggs: 1 }, time: [26, 20] },
+  },
+  goatpen: {
+    name: 'Goat Pen', cat: 'production', size: [6, 5], levels: 2, skill: 'survival', livestock: 'goat', flock: [3, 5], start: 2,
+    desc: 'A shelter and a paddock. Goats give milk every day and wool to spin into cloth at the Tailor Station. They drink and graze. Their bleating carries at night: fence the paddock or lose goats.',
+    cost: [{ wood: 50, scrap: 12, food: 20 }, { wood: 50, plates: 10, bolts: 30 }],
+    time: [35, 60], workers: [1, 2],
+    recipes: {
+      milk: { lvl: 1, in: { water: 0.6 }, out: { milk: 1 }, time: [34, 26] },
+      wool: { lvl: 1, in: {}, out: { wool: 1 }, time: [60, 46] },
+    },
+    targets: { milk: 40, wool: 30 },
   },
   collector: {
     name: 'Rain Collector', cat: 'production', size: [3, 3], levels: 3, skill: null,
@@ -468,6 +506,21 @@ export const STATIONS = {
     targets: { chemicals: 20, gunpowder: 60, molotov: 4, rubber: 20, pipebomb: 2, cells: 0 },
   },
 
+  recycler: {
+    name: 'Recycler', cat: 'production', size: [5, 4], levels: 2, machine: 1, skill: 'craft',
+    desc: 'Breaks down what the camp has no use for. Gear marked for recycling in Items is stripped first, for about half the materials it took to make. Between jobs it works through junk off a belt or from storage: tyres into rubber, dead car batteries into chemicals, and scrap sorted for parts and wire. Always keeps four tyres and a battery back for the van.',
+    cost: [{ wood: 30, metal: 25, scrap: 40, parts: 6 }, { plates: 20, bolts: 60, parts: 12, motors: 1 }],
+    time: [30, 60], workers: [1, 1], auto: 2, autoPower: 1, autoRate: 1,
+    keep: { tyres: 4, carBattery: 1 },
+    recipes: {
+      rubber: { lvl: 1, in: { tyres: 1 }, out: { rubber: 2, scrap: 2 }, time: [30, 22] },
+      chemicals: { lvl: 1, in: { carBattery: 1 }, out: { chemicals: 3, metal: 1 }, time: [36, 26] },
+      parts: { lvl: 1, in: { scrap: 8 }, out: { parts: 1, wiring: 1, metal: 1 }, time: [40, 30] },
+    },
+    targets: { rubber: 30, chemicals: 25, parts: 0 },
+    salvage: [0.45, 0.6], // share of an item's materials that comes back
+    gearTime: [1, 0.7], // work-time multiplier per level for stripping gear
+  },
   workbench: {
     name: 'Workbench', cat: 'crafting', size: [4, 3], levels: 3, skill: 'craft',
     desc: 'The crafting table. Makes parts, melee weapons and tools, fits melee mods and repairs melee weapons.',
@@ -560,6 +613,16 @@ export const STATIONS = {
     desc: 'Up to three belts of the same goods in, one out. Joins two lines into one; the belt out carries at most its tier\'s rate. Uses 0.2 power.',
     cost: [{ scrap: 6, wood: 2 }], time: [3], workers: [0],
   },
+  priority: {
+    name: 'Priority Splitter', cat: 'logistics', size: [1, 1], levels: 1, skill: null, node: 'prio', draw: 0.25,
+    desc: 'One belt in, up to three out. The belt marked first gets everything it can take; only what backs up on it spills over to the others. Feed the forge before storage. Uses 0.25 power.',
+    cost: [{ scrap: 10, wood: 2, parts: 1 }], time: [4], workers: [0],
+  },
+  hopper: {
+    name: 'Buffer Hopper', cat: 'logistics', size: [2, 2], levels: 2, skill: null, node: 'hopper', draw: 0.15, hold: [30, 80],
+    desc: 'A tank on the belt line. It fills when more arrives than leaves and empties when the line runs dry, so the machines after it keep running through bursts and gaps. One belt in, one out; a gauge shows how full it is. Uses 0.15 power.',
+    cost: [{ scrap: 14, wood: 6, bolts: 10 }, { plates: 10, bolts: 30, rubber: 4 }], time: [6, 14], workers: [0, 0],
+  },
   turret: {
     name: 'Auto-Turret', cat: 'defense', size: [2, 2], levels: 3, skill: null, req: { generator: 1 },
     desc: 'Fires at anything near the fence. Uses pistol ammo from storage and generator power.',
@@ -572,12 +635,24 @@ export const STATIONS = {
     cost: [{ metal: 10, bolts: 20, parts: 4, electronics: 2 }], time: [20], workers: [0], power: 1,
   },
 }
+// Fences round a coop or goat pen. guard scales the chance the infected get
+// at the animals on a night.
+export const PEN_FENCE = [
+  { name: 'No fence', guard: 1 },
+  { name: 'Picket fence', cost: { wood: 24, scrap: 6 }, guard: 0.32, hp: 3 },
+  { name: 'Stout fence', cost: { wood: 30, plates: 6, bolts: 20 }, guard: 0.1, hp: 6 },
+]
+// The chance on any night that the infected get into an unfenced pen.
+export const PEN_RAID = 0.3
+// Buying in an animal from a passing trader.
+export const ANIMAL_COST = { hen: { cash: 15, food: 4 }, goat: { cash: 45, food: 10 } }
 export const STATION_CATS = [
   { id: 'living', name: 'Camp' },
   { id: 'production', name: 'Production' },
   { id: 'power', name: 'Power' },
   { id: 'crafting', name: 'Crafting' },
   { id: 'defense', name: 'Defense' },
+  { id: 'storage', name: 'Storage' },
   { id: 'logistics', name: 'Belts' },
 ]
 
@@ -616,16 +691,16 @@ export const TIERS = [
 export const MILESTONES = {
   smelter: { tier: 1, name: 'Smelter', desc: 'Stack a clay furnace and a charcoal kiln, and work out how hot they have to burn.', cost: { wood: 60, scrap: 80 }, unlocks: { stations: ['forge', 'kiln'] } },
   steam: { tier: 1, name: 'Steam Power', desc: 'An old boiler, a flywheel and a lot of rivets: power from fire. Machines run at full speed with power, and at half by hand without it.', cost: { wood: 90, scrap: 70, metal: 20 }, unlocks: { stations: ['boiler'] } },
-  conveyors: { tier: 1, name: 'Conveyors', desc: 'Salvaged rollers and old rubber: carry goods between stations without carrying them.', cost: { wood: 50, scrap: 60, parts: 4 }, unlocks: { belt: 1, stations: ['splitter', 'merger'] } },
-  palisade: { tier: 1, name: 'Palisade', desc: 'Plans for a proper log wall, and for pushing it out into the woods.', cost: { wood: 150, cloth: 10 }, unlocks: { fence: 1, exp: ['w1', 'n1'] } },
+  conveyors: { tier: 1, name: 'Conveyors', desc: 'Salvaged rollers and old rubber: carry goods between stations without carrying them.', cost: { wood: 50, scrap: 60, parts: 4 }, unlocks: { belt: 1, stations: ['splitter', 'merger', 'priority', 'hopper'] } },
+  palisade: { tier: 1, name: 'Palisade', desc: 'Plans for a proper log wall, and for pushing it out into the woods.', cost: { wood: 150, cloth: 10 }, unlocks: { fence: 1, exp: ['w1', 'n1'], stations: ['goatpen'] } },
   chemistry: { tier: 2, name: 'Chemistry', desc: 'A school chemistry kit and a lot of nerve.', cost: { metal: 60, chemicals: 10, parts: 10 }, unlocks: { stations: ['chemlab', 'ammo'] } },
-  fabrication: { tier: 2, name: 'Fabrication', desc: 'A real production line for plates, bolts, parts and wire, a gunsmith\'s bench and a tailor\'s.', cost: { metal: 80, plates: 20, bolts: 80, scrap: 100 }, unlocks: { stations: ['fabricator', 'weapons', 'tailor'] } },
+  fabrication: { tier: 2, name: 'Fabrication', desc: 'A real production line for plates, bolts, parts and wire, a gunsmith\'s bench and a tailor\'s.', cost: { metal: 80, plates: 20, bolts: 80, scrap: 100 }, unlocks: { stations: ['fabricator', 'weapons', 'tailor', 'shed', 'recycler'] } },
   signal: { tier: 2, name: 'The Signal', desc: 'Old maps show a broadcast mast on the hill. If it could reach the coast, someone might come.', cost: { plates: 30, bolts: 120, wood: 200, parts: 20 }, unlocks: { stations: ['mast'] } },
   power: { tier: 3, name: 'Diesel Power', desc: 'Diesel generators, perimeter floodlights and auto-turrets.', cost: { plates: 40, bolts: 120, parts: 30, electronics: 10, fuel: 30 }, unlocks: { stations: ['generator', 'floodlight', 'turret'] } },
   electronics: { tier: 3, name: 'Electronics', desc: 'A soldering bench and a radio that reaches further than the fence.', cost: { metal: 60, bolts: 60, wiring: 40, electronics: 12 }, unlocks: { stations: ['electronics', 'radio'] } },
   sheetmetal: { tier: 3, name: 'Sheet Metal', desc: 'Steel-faced walls, and panels that drink the sun.', cost: { steel: 40, plates: 120, bolts: 200 }, unlocks: { fence: 2, stations: ['solar'] } },
   rollers: { tier: 4, name: 'Rubber Rollers', desc: 'Cured rubber belts on proper rollers, and the land to use them on.', cost: { rubber: 40, plates: 40, bolts: 100 }, unlocks: { belt: 2, exp: ['e1', 's1'] } },
-  machining: { tier: 4, name: 'Machining', desc: 'Lathes, a press, a rolling mill and a winding bench.', cost: { steel: 60, beams: 10, wiring: 60, parts: 40 }, unlocks: { stations: ['assembler'] } },
+  machining: { tier: 4, name: 'Machining', desc: 'Lathes, a press, a rolling mill and a winding bench.', cost: { steel: 60, beams: 10, wiring: 60, parts: 40 }, unlocks: { stations: ['assembler', 'warehouse'] } },
   research: { tier: 4, name: 'Research', desc: 'A desk, a microscope and every manual the runs bring home.', cost: { electronics: 20, parts: 30, cloth: 30, schematic: 1 }, unlocks: { stations: ['research'] } },
   automation: { tier: 5, name: 'Automation', desc: 'Better relays: automated stations run 50% faster.', cost: { circuits: 20, motors: 6, electronics: 20 }, unlocks: { flags: ['autoBoost'] } },
   motorbelts: { tier: 5, name: 'Motor Belts', desc: 'Motor-driven belts on steel frames.', cost: { motors: 20, steel: 60, beams: 10 }, unlocks: { belt: 3 } },
@@ -748,6 +823,7 @@ export const RECIPES = [
 
   // Tailor Station
   { id: 'jacket', station: 'tailor', lvl: 1, item: 'jacket', in: { cloth: 16, scrap: 2 }, time: 30, cat: 'Armor' },
+  { id: 'spinWool', station: 'tailor', lvl: 1, out: { cloth: 3 }, in: { wool: 2 }, time: 16, cat: 'Materials', desc: 'Spin and weave goat wool into cloth.' },
   { id: 'packS', station: 'tailor', lvl: 1, item: 'packS', in: { cloth: 18, wood: 2 }, time: 35, cat: 'Packs' },
   { id: 'shoes', station: 'tailor', lvl: 1, item: 'shoes', in: { cloth: 10, parts: 2 }, time: 25, cat: 'Gear' },
   { id: 'vest', station: 'tailor', lvl: 2, item: 'vest', in: { cloth: 22, metal: 12, parts: 6 }, time: 60, cat: 'Armor' },

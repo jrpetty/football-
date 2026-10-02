@@ -4,10 +4,13 @@
 import * as THREE from 'three'
 import { cloneMat } from '../render/materials.js'
 import { stationModel, scaffold } from '../models/stations.js'
+import { slotGroups, syncPiles } from './basestock.js'
+import { AnimalPen } from './baseanimals.js'
 import { makeFlame } from '../render/fx.js'
 import { STATIONS, RES, RECIPES, MODS, ITEMS } from '../game/data.js'
 import { S, stationSize, workersOf, itemOf, itemName } from '../game/state.js'
 import { view } from '../render/view.js'
+import { nodeKind, nodeRes, inCap } from '../game/belts.js'
 import { h, clamp, rand } from '../core/util.js'
 
 const _dir = new THREE.Vector3()
@@ -48,6 +51,10 @@ export class StationView {
     this.flames = []
     this.model = this.ghost = this.scaf = null
     this.roofMats = []
+    this.tints = null
+    this.piles = null
+    this.stockT = 0
+    this.penT = 0
     const [w, d] = stationSize(st)
     const [w0, d0] = STATIONS[st.type].size
     this.rotY = st.rot ? Math.PI / 2 : 0
@@ -219,6 +226,20 @@ export class StationView {
     if (this.lWarn.textContent !== warn) this.lWarn.textContent = warn
     this.label.el.className = `slabel wl-inner ${cls}${!name && !warn && bar == null ? ' empty' : ''}${selected ? ' sel' : ''}`
   }
+  makeSelRing() {
+    const [w, d] = stationSize(this.st)
+    const mat = new THREE.MeshBasicMaterial({ color: '#f2c230', transparent: true, opacity: 0.85, depthWrite: false })
+    const g = new THREE.Group()
+    const t = 0.12
+    for (const [x, z, sx, sz] of [[0, -d / 2 - 0.3, w + 0.6, t], [0, d / 2 + 0.3, w + 0.6, t], [-w / 2 - 0.3, 0, t, d + 0.6], [w / 2 + 0.3, 0, t, d + 0.6]]) {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(sx, 0.04, sz), mat)
+      m.position.set(x, 0.05, z)
+      g.add(m)
+    }
+    g.renderOrder = 3
+    this.group.add(g)
+    this.selRing = g
+  }
   // ---- per-frame
   update(dt, ctx) {
     this.t += dt
@@ -291,6 +312,15 @@ export class StationView {
             p.position.x = base.p.x + (Math.random() - 0.5) * (A.amp || 0.01)
             p.position.z = base.p.z + (Math.random() - 0.5) * (A.amp || 0.01)
           }
+        } else if (A.kind === 'fill' || A.kind === 'fillY') {
+          // a gauge or a heap of goods following how full the station is
+          const F = this.fillNow(dt)
+          if (A.kind === 'fill') p.scale[ax] = Math.max(0.002, F.k)
+          else {
+            p.position.y = base.p.y + F.k * (A.amp || 1)
+            p.visible = F.k > 0.01
+          }
+          if (A.tint) this.tint(A.name, p, F.color)
         } else if (A.kind === 'grow') {
           // crops follow the production cycle; the plot looks bare only when idle and empty
           const D = STATIONS[st.type]
@@ -300,9 +330,71 @@ export class StationView {
         }
       }
     }
+    // hens and goats wander their run, and go in at night
+    if (I.pen && this.model) {
+      this.animals ??= new AnimalPen(this)
+      this.penT = (this.penT ?? 0) - dt
+      if (this.penT <= 0) {
+        this.penT = 1
+        this.animals.sync()
+      }
+      this.animals.update(sdt, ctx)
+    }
+    // a store's stockpiles follow the camp's stock
+    if (I.stock?.length && this.model) {
+      this.stockT = (this.stockT ?? 0) - dt
+      if (this.stockT <= 0) {
+        this.stockT = 1
+        syncPiles(this, I.stock, slotGroups(st))
+      }
+    }
     // smoke, steam, sparks
     if (ctx.nearCam(this.cx, this.cz) && !st.building) this.emit(sdt, ctx, I, run)
-    this.updateLabel(ctx.hovered === st.id, ctx.selected === st.id)
+    const picked = ctx.selected === st.id || !!ctx.multi?.has(st.id)
+    this.updateLabel(ctx.hovered === st.id, picked)
+    // a gold outline on the ground round everything in a multi-selection
+    const ring = !!ctx.multi?.has(st.id)
+    if (ring && !this.selRing) this.makeSelRing()
+    if (this.selRing) this.selRing.visible = ring
+  }
+  // How full a hopper's tank is (eased, once a frame), and the colour of
+  // what's in it.
+  fillNow(dt) {
+    if (this.fillFrame === this.t) return this.fillState
+    this.fillFrame = this.t
+    const st = this.st
+    let f = 0
+    let color = '#8a8478'
+    if (nodeKind(st) === 'hopper') {
+      const k = nodeRes(st)
+      if (k) {
+        f = clamp((st.buf?.out?.[k] || 0) / Math.max(1, inCap(st, k)), 0, 1)
+        color = RES[k].color
+      }
+    }
+    const S0 = (this.fillState ??= { k: f, color })
+    S0.k += (f - S0.k) * Math.min(1, dt * 2.5)
+    S0.color = color
+    return S0
+  }
+  // Give a pivot its own materials (once) and colour them.
+  tint(name, p, color) {
+    this.tints ??= {}
+    let T = this.tints[name]
+    if (!T) {
+      T = this.tints[name] = { mats: [], color: null }
+      p.traverse((o) => {
+        if (!o.isMesh) return
+        o.material = cloneMat(o.material)
+        T.mats.push(o.material)
+      })
+    }
+    if (T.color === color) return
+    T.color = color
+    for (const m of T.mats) {
+      m.color.set(color)
+      if (m.emissive && m.emissiveIntensity > 0) m.emissive.set(color)
+    }
   }
   emit(dt, ctx, I, run = 1) {
     const fx = this.base.fx

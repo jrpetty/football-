@@ -29,6 +29,8 @@ export const VisionMixin = {
     const V = (this.vision = new Vision(lv))
     const saved = S.explored?.[this.loc.id]
     if (saved) V.load(saved)
+    // a scout mapped it: the floor plan is known before anyone sets foot inside
+    if (S.places?.[this.loc.id]?.mapped) V.exploreAll()
     V.revealOutdoors()
     const u = (this.fowU = fowUniforms())
     u.tFow.value = V.tex

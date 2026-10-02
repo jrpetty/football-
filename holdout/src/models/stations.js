@@ -14,6 +14,7 @@ import {
   barbedCoil, generatorSmall, screenMat, shelfItems,
 } from './parts.js'
 import { STATIONS2 } from './stations2.js'
+import { STATIONS3 } from './stations3.js'
 import { HD } from './stationsHD.js'
 import { HD2 } from './stationsHD2.js'
 import { mast } from './mast.js'
@@ -1000,7 +1001,7 @@ export function stationModel(type, level) {
     const [w, d] = def.size
     const I = { w, d, lights: [], emitters: [], flames: [], spots: [], beds: [], seats: [], anims: [], blink: [], roofs: [] }
     const b = new Builder()
-    const fn = HD[type] || HD2[type] || POWER[type] || (type === 'mast' ? mast : null) || M[type] || STATIONS2[type]
+    const fn = HD[type] || HD2[type] || POWER[type] || (type === 'mast' ? mast : null) || M[type] || STATIONS2[type] || STATIONS3[type]
     if (fn) fn(b, Math.max(1, level), I)
     else b.box(w - 0.4, 1, d - 0.4, { mat: 'wood', y: 0.5 })
     const g = b.build()
@@ -1017,6 +1018,12 @@ export function stationModel(type, level) {
   })
   g.userData.pivots = pv
   return g
+}
+// The model facts (spots, lights, stock pallets) for a type and level, without cloning.
+export function stationInfo(type, level) {
+  const key = type + ':' + level
+  if (!cache.has(key)) stationModel(type, level)
+  return cache.get(key).userData.info
 }
 export function clearStationCache() {
   cache.clear()
