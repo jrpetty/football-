@@ -1919,6 +1919,12 @@ export class Mission {
     }
     const hit = this.hitTest(x, y)
     view.canvas.style.cursor = hit ? 'pointer' : ''
+    // an open menu says it all: no name tag over it
+    if (this.menuOpen) {
+      this.hoverC = null
+      this.tip.hidden = true
+      return
+    }
     const c = hit?.type === 'container' || hit?.type === 'trap' ? hit.c : null
     if (c !== this.hoverC) {
       this.hoverC = c
@@ -1928,7 +1934,14 @@ export class Mission {
       else if (c?.def?.power) this.tip.innerHTML = this.powered ? `<b>${c.def.name}</b><span>Running. The lights are on and the lift works.</span>` : `<b>${c.def.name}</b><span>Start it for the lights and the lift. Everything nearby will hear it.</span><small>Right-click: start it</small>`
       else if (c) this.tip.innerHTML = `<b>${c.def.name}</b><span>${c.stash ? 'Loot left inside' : c.searched ? 'Searched · can be broken down' : c.locked ? 'Locked' : 'Not searched'}</span><small>Right-click: ${c.stash || !c.searched ? 'search' : 'break down'}</small>`
     }
-    if (c) this.tip.style.transform = `translate(${x + 16}px, ${y + 14}px)`
+    if (c) {
+      // beside the pointer, flipped back on screen near the right and bottom edges
+      const w = this.tip.offsetWidth
+      const hh = this.tip.offsetHeight
+      const tx = x + 16 + w > window.innerWidth - 8 ? x - w - 12 : x + 16
+      const ty = y + 14 + hh > window.innerHeight - 8 ? y - hh - 12 : y + 14
+      this.tip.style.transform = `translate(${Math.max(6, tx)}px, ${Math.max(6, ty)}px)`
+    }
   }
   onKey(e) {
     if (e._handled || this.over) return
@@ -2040,6 +2053,9 @@ export class Mission {
   openMenu(c, x, y) {
     const menu = this.menu
     menu.innerHTML = ''
+    // the hover name tag steps aside for the menu
+    this.hoverC = null
+    this.tip.hidden = true
     const helper = this.pickHelper(c)
     const who = helper ? helper.data.first : 'nobody'
     const btn = (label, sub, fn, disabled = false, cls = '') => h('button.cm-btn' + cls, { disabled, onclick: (e) => (e.stopPropagation(), fn(), this.closeMenu()) }, h('span', label), h('small', sub))
