@@ -348,12 +348,13 @@ export class UI {
     setTimeout(() => el.classList.add('old'), 9000)
     setTimeout(() => el.remove(), 20000)
   }
-  toast(msg, kind = '') {
-    const el = h('div.toast' + (kind ? '.' + kind : ''), msg)
+  toast(msg, kind = '', act = null) {
+    const el = h('div.toast' + (kind ? '.' + kind : ''), msg, act ? h('button.tact', { onclick: () => (el.remove(), act.fn()) }, act.label) : null)
     this.toasts.append(el)
     while (this.toasts.children.length > 4) this.toasts.firstChild.remove()
-    setTimeout(() => el.classList.add('out'), 3200)
-    setTimeout(() => el.remove(), 3700)
+    const life = act ? 8000 : 3200
+    setTimeout(() => el.classList.add('out'), life)
+    setTimeout(() => el.remove(), life + 500)
   }
 
   // ---------------------------------------------------------------- drawer panel

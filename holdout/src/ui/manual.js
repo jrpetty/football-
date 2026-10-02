@@ -393,6 +393,7 @@ const CHAPTERS = [
         ['Space', 'Pause'],
         ['1 2 3', 'Game speed'],
         ['4', 'Skip ahead (stops for danger)'],
+        ['Ctrl Z', 'Undo the last placement (10 seconds)'],
         ['B', 'Build'],
         ['C', 'Crew'],
         ['I', 'Items'],

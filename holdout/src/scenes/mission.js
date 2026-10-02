@@ -1300,14 +1300,15 @@ export class Mission {
         if (Math.hypot(zz.pos.x - x, zz.pos.z - z) <= r) zz.alertTo(x, z)
         continue
       }
-      // through the floor itself (loud things), or along the stairwell:
-      // from the noise to the stairs, down (or up) them, out to the listener
+      // through the floor itself, close by; or up the stairwell: a noise
+      // that reaches the stairs carries along it to each floor, fainter
+      // a floor at a time, and spreads out from the stairs there
       const zx = this.mapXZ(zz.pos.x, zz.pos.z).x
-      const slab = Math.hypot(zx - lx, zz.pos.z - z) <= r * Math.pow(0.45, dk)
+      const slab = Math.hypot(zx - lx, zz.pos.z - z) <= r * Math.pow(0.5, dk)
       const sa = this.zoneAt(2, 1, k0)
       const sb = this.zoneAt(2, 1, k)
-      const via = Math.hypot(x - sa.x, z - sa.z) + Math.hypot(zz.pos.x - sb.x, zz.pos.z - sb.z) + dk * 3
-      if (slab || via <= r * Math.pow(0.85, dk)) zz.alertTo(x, z)
+      const well = Math.hypot(x - sa.x, z - sa.z) <= r && Math.hypot(zz.pos.x - sb.x, zz.pos.z - sb.z) <= r * Math.pow(0.8, dk)
+      if (slab || well) zz.alertTo(x, z)
     }
   }
   hasMedkit() {

@@ -18,7 +18,7 @@ export function endingStats() {
   return [
     { k: 'Days survived', v: days },
     { k: 'Infected put down', v: st.kills || 0 },
-    { k: 'Places searched', v: places, sub: places ? `${st.runs || 0} supply runs` : null },
+    { k: places === 1 ? 'Place searched' : 'Places searched', v: places, sub: places ? `${st.runs || 0} supply run${st.runs === 1 ? '' : 's'}` : null },
     { k: 'Cupboards, cars and crates searched', v: st.searched || 0 },
     { k: 'Things built', v: st.built || 0, sub: st.crafted ? `${fmt(st.crafted)} crafted` : null },
     { k: 'Hordes faced', v: st.raids || 0, sub: st.raidsLost ? `${st.raidsLost} broke through` : 'every one held' },
@@ -87,7 +87,9 @@ export async function playEnding(ui) {
   if (!fast()) await card(h('div.end-card.title', h('small', `Day ${day()}`), h('h1', 'The camp has fallen'), h('p', causeLine())), 4200)
   if (!fast()) await card(h('div.end-card', h('p.big', `${name === 'The camp' ? 'They' : name} held out for`), h('h1.num', `${day()} day${day() === 1 ? '' : 's'}`)), 3000)
   // the record: numbers count up one after another
-  const grid = h('div.end-stats')
+  // columns that leave no card alone on its row
+  const n = stats.length
+  const grid = h('div.end-stats', { style: { '--cols': n <= 5 ? n : [3, 4, 4, 3, 5, 4, 4][Math.min(6, n - 6)] } })
   const rec = h('div.end-card.record', h('h2', 'What they did'), grid, hon.length ? h('div.end-hon', hon.map((x) => h('div.hon', h('small', x.t), h('b', x.n), h('span', x.d)))) : null)
   stage.innerHTML = ''
   stage.append(rec)

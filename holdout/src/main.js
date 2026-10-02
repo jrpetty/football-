@@ -5,7 +5,7 @@ import { Pipeline } from './render/pipeline.js'
 import { initView, view, groundAt } from './render/view.js'
 import { pregenerate } from './render/texgen.js'
 import { initAudio, sfx, setSound, setVolume } from './core/audio.js'
-import { S, newGame, hasSave, load, save, day, hour, log, wipeSave, buildCost, newStation, pay, canAfford, completeGoal, backupSave, vehicleOf, wearVehicle, NET, MP_SAVE_KEY, playerOf, DISTRICTS, MODES, killSurvivor } from './game/state.js'
+import { S, newGame, hasSave, load, save, day, hour, log, gain, workersOf, removeLink, wipeSave, buildCost, newStation, pay, canAfford, completeGoal, backupSave, vehicleOf, wearVehicle, NET, MP_SAVE_KEY, playerOf, DISTRICTS, MODES, killSurvivor } from './game/state.js'
 import { Session, readIntent, writeIntent, me, initMp } from './net/mp.js'
 import { Coop } from './net/coop.js'
 import { newCode } from './net/transport.js'
@@ -25,6 +25,7 @@ import { WEATHER as WX } from './render/materials.js'
 import { STATIONS, GAME_MIN_PER_SEC, SEC_PER_DAY, RES, DAY_MIN } from './game/data.js'
 
 const SKIP_SPEED = 12
+const UNDO_MS = 10000
 
 const OFFLINE_DIV = 15 // real seconds away per second of camp work
 const OFFLINE_MAX_DAYS = 3
@@ -537,6 +538,11 @@ class Game {
         this.skipAhead()
         return true
       }
+      if ((k === 'z' || k === 'Z') && (e.ctrlKey || e.metaKey) && this.lastPlaced) {
+        e.preventDefault?.()
+        this.undoPlace()
+        return true
+      }
     }
     return false
   }
@@ -623,10 +629,27 @@ class Game {
       return false
     }
     pay(cost)
-    newStation(type, x, z, rot)
+    const st = newStation(type, x, z, rot)
     sfx('build')
-    this.ui.toast(`${STATIONS[type].name}: construction started`)
+    this.lastPlaced = { id: st.id, cost, at: performance.now() }
+    this.ui.toast(`${STATIONS[type].name}: construction started`, '', { label: 'Undo', fn: () => this.undoPlace() })
     return true
+  }
+  // Changed your mind: a station placed in the last few seconds comes back
+  // down with everything it cost.
+  undoPlace() {
+    const L = this.lastPlaced
+    this.lastPlaced = null
+    const st = L && S.stations.find((x) => x.id === L.id)
+    if (!st || st.level > 0 || !st.building || performance.now() - L.at > UNDO_MS) return
+    for (const s of workersOf(st)) s.job = null
+    for (const l of (S.links || []).filter((x) => x.from === st.id || x.to === st.id)) removeLink(l, 1)
+    S.stations = S.stations.filter((x) => x !== st)
+    gain(L.cost)
+    bus.emit('stations')
+    bus.emit('change')
+    sfx('click')
+    this.ui.toast(`${STATIONS[st.type].name} taken down, cost returned`)
   }
   // ---------------------------------------------------------------- scenes
   openMap(locId) {

@@ -46,14 +46,14 @@ function printTex(kind) {
 
 class PrintSet {
   constructor(scene, kind) {
-    const geo = new THREE.PlaneGeometry(kind === 's' ? 0.17 : 0.15, 0.34)
+    const geo = new THREE.PlaneGeometry(kind === 's' ? 0.19 : 0.17, 0.38)
     geo.rotateX(-Math.PI / 2)
     this.fade = new Float32Array(MAX)
     geo.setAttribute('aFade', new THREE.InstancedBufferAttribute(this.fade, 1))
-    const m = new THREE.MeshStandardMaterial({ map: printTex(kind), color: kind === 's' ? '#6c7686' : '#727a6c', transparent: true, depthWrite: false, roughness: 1, polygonOffset: true, polygonOffsetFactor: -3 })
+    const m = new THREE.MeshStandardMaterial({ map: printTex(kind), color: kind === 's' ? '#4a5466' : '#56604c', transparent: true, depthWrite: false, roughness: 1, polygonOffset: true, polygonOffsetFactor: -3 })
     m.onBeforeCompile = (sh) => {
       sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float aFade;\nvarying float vFade;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvFade = aFade;')
-      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vFade;').replace('#include <map_fragment>', '#include <map_fragment>\ndiffuseColor.a *= vFade * 0.62;')
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vFade;').replace('#include <map_fragment>', '#include <map_fragment>\ndiffuseColor.a *= vFade * 0.8;')
     }
     m.customProgramCacheKey = () => 'tracks'
     this.mesh = new THREE.InstancedMesh(geo, m, MAX)

@@ -305,7 +305,8 @@ unless a teammate helps them up.
   a call from the city or a new problem. Solo and host only.
 - **Fill with the best free** on a station puts the free survivors best at
   that job to work in one click. **Same again** on the map sets up the last
-  run (place, people, vehicle).
+  run (place, people, vehicle). Put a station in the wrong spot? **Undo** on
+  the toast (or `Ctrl`+`Z`) within 10 seconds takes it down at full refund.
 - Settings has an **interface size** (90 to 130%), **background alerts**
   (a desktop notification for the horde or a visitor while the tab is in the
   background) and the first-day guide switch.
