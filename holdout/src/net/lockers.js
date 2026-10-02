@@ -63,6 +63,8 @@ export function applyLockerOp(pid, m) {
       if (!it || it.locker) return 'that is not in camp storage'
       const s = ownerOf(it.uid)
       if (s && S.mp.owner[s.id] && S.mp.owner[s.id] !== pid) return `${s.first} carries that, and another player leads them`
+      // only your own survivors wear what is in your locker
+      if (s && S.mp.owner[s.id] !== pid) takeOff(it)
       it.locker = pid
       return null
     }
