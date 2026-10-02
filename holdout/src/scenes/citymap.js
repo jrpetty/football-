@@ -17,7 +17,7 @@ import * as CB from '../models/citybuildings.js'
 import { locationModel } from '../models/citylandmarks.js'
 import { gableRoof } from '../models/parts.js'
 import { SIDEWALK, RIVER_W, HIGHWAY_Z, HIGHWAY_W, FACE_ROT, route } from '../world/city.js'
-import { S, hour, season, leafTurn } from '../game/state.js'
+import { S, hour, season, leafTurn, isLooted } from '../game/state.js'
 import { LEVEL_COLORS } from '../game/data.js'
 import { MapPanel } from '../ui/mappanel.js'
 import { clamp, smooth } from '../core/util.js'
@@ -1040,7 +1040,7 @@ export class CityMap {
     for (const L of this.markers) {
       const m = L.marker
       const post = (S.outposts || []).some((o) => o.locId === L.loc.id)
-      const looted = !!S.looted[L.loc.id] && !post
+      const looted = isLooted(L.loc.id) && !post
       const ev = evs.get(L.loc.id)
       const lead = leadsAt(L.loc.id).length > 0
       const col = post ? '#5ad07a' : lead ? '#c08aff' : looted ? '#6a6e6a' : m.col

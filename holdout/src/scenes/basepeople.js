@@ -8,6 +8,7 @@ import { S, hour, stationSize, workersOf, survivorStats, gateTiles, bounds } fro
 import { STATIONS, OCCUPATIONS, ITEMS, EXPANSIONS } from '../game/data.js'
 import { view } from '../render/view.js'
 import { h, rand, chance, angleLerp, clamp, pick } from '../core/util.js'
+import { callName } from '../game/deeds.js'
 
 const TOOL_FOR = { hammer: 'hammer', saw: 'saw', hoe: 'hoe', chop: 'axe', shovel: 'shovel', stir: 'ladle', pump: null, type: null, search: null, lookout: null, carry: null, swing: 'melee', punch: null, aim: 'gun' }
 let crateGeo = null
@@ -45,9 +46,10 @@ class Worker {
     this.crate.castShadow = true
     this.crate.visible = false
     this.root.add(this.crate)
-    const el = h('div.alabel.camp', h('span.nm', s.first), h('span.job'))
+    const el = h('div.alabel.camp', h('span.nm', callName(s)), h('span.job'))
     this.label = view.labels.add(el, () => this.labelPos(), { offsetY: 0, scene: this.base.scene, maxDist: 75 })
     this.jobEl = el.querySelector('.job')
+    this.nmEl = el.querySelector('.nm')
     el.addEventListener('click', (e) => {
       e.stopPropagation()
       this.base.game.ui?.openSurvivor(s.id)
@@ -196,6 +198,8 @@ export class CampPeople {
     for (const s of S.survivors) {
       if (!want.has(s.id)) continue
       let w = this.list.get(s.id)
+      // a new name shows over their head
+      if (w?.nmEl && w.nmEl.textContent !== callName(s)) w.nmEl.textContent = callName(s)
       if (w && w.lookKey !== survivorLookKey(s)) {
         const old = w
         w = new Worker(this, s)

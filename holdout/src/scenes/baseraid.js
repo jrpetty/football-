@@ -8,7 +8,9 @@ import { STATIONS, zombieMix, ITEMS } from '../game/data.js'
 import { NET, S, day, bounds, workersOf, survivorStats, fenceMax, completeGoal, log, killSurvivor, getS, gateTiles, addMoraleEvent } from '../game/state.js'
 import { scheduleRaid, power, finishGame } from '../game/economy.js'
 import { sfx, setAmbience } from '../core/audio.js'
+import { deed } from '../game/deeds.js'
 import { rand, pick, chance, weighted, clamp, angleLerp } from '../core/util.js'
+import { soundAt } from '../world/sound.js'
 
 const _v = new THREE.Vector3()
 
@@ -32,6 +34,16 @@ export const RaidMixin = {
   dmgBonus(a) {
     if (!a.tower) return 1
     return 1 + STATIONS.watchtower.towerDmg[a.tower.level - 1] + (a.data.occ === 'guard' ? 0.3 : 0)
+  },
+  // a horde fight is heard from where the camera looks, left or right
+  sound(id, pos, opts = {}) {
+    soundAt(this, id, pos, opts)
+  },
+  listener() {
+    return view.rig.target
+  },
+  hearingK() {
+    return Math.max(1, (view.rig?.dist || 24) / 24)
   },
   nearCamera(p) {
     return Math.hypot(p.x - view.rig.target.x, p.z - view.rig.target.z) < view.rig.dist * 0.8 + 6
@@ -193,7 +205,7 @@ export const RaidMixin = {
       const floor = z.wanderer ? mx * 0.25 : 0
       S.fence.hp[i] = Math.max(floor, (S.fence.hp[i] ?? mx) - z.dmg)
       if (chance(0.35)) this.fx.burst(new THREE.Vector3(fx + 0.5, 1, fz + 0.5), S.fence.level >= 2 ? '#8a8e92' : '#8a6a48', 3, 1.5, 0.5, 2)
-      if (this.nearCamera(z.pos)) sfx('hit', 120)
+      this.sound('hit', z.pos, { throttle: 120 })
       if (S.fence.hp[i] <= 0) {
         this.fence.refresh()
         sfx('dismantle')
@@ -325,6 +337,7 @@ export const RaidMixin = {
     const report = { count: R.count, killed: R.killed, injured: [], dead: [], lost: {}, won }
     for (const a of this.squad) {
       const s = a.data
+      deed(s, 'raids')
       if (a.downed) {
         s.status = 'injured'
         s.hp = Math.max(1, a.maxHp * 0.1)

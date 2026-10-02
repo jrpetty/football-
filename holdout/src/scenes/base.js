@@ -84,6 +84,7 @@ export class BaseScene {
     })
     on('fence', () => this.fence.refresh())
     on('change', () => this.people.sync())
+    on('nickname', () => this.people.sync())
     on('recruitJoined', () => {
       this.fence.openGate(8)
       this.people.sync()

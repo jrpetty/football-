@@ -13,6 +13,7 @@ import { lobbyCard, joinError } from './ui/lobby.js'
 import { Pings } from './ui/pings.js'
 import { toggleFullscreen } from './ui/fullscreen.js'
 import { warmUp, compileFor, preRender } from './render/warmup.js'
+import { soundLog } from './world/sound.js'
 import { econTick, initSchedules, autoResolveRaid, scheduleRaid } from './game/economy.js'
 import * as belts from './game/belts.js'
 import * as stateMod from './game/state.js'
@@ -724,7 +725,7 @@ const game = new Game()
 window.__holdout = game
 window.__view = view
 // handles for tests and profiling
-window.__dbg = { compileFor }
+window.__dbg = { compileFor, soundLog }
 Object.defineProperty(window, '__S', { get: () => S })
 window.__belts = belts
 window.__state = stateMod

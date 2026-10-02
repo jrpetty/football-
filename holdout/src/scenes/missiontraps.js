@@ -142,7 +142,7 @@ export const TrapsMixin = {
     if (!t.spotted) this.revealTrap(t, null)
     const survivor = who.faction === 'survivor'
     if (t.kind === 'tripwire') {
-      sfx('glass')
+      this.sound('glass', p)
       sfx('alarm')
       this.noise(t.x, t.z, 28)
       this.fx.ring(p, '#ffb070', 3)
@@ -232,7 +232,7 @@ export const TrapsMixin = {
     return !!this.vision && this.vision.seesNow(z.pos.x, z.pos.z) > 0.35
   },
   onScream(z) {
-    sfx('scream')
+    this.sound('scream', z.pos, { pitch: z.voice || 1, loud: 1.3 })
     this.fx.ring(new THREE.Vector3(z.pos.x, 0.2, z.pos.z), '#ffffff', 5)
     this.noise(z.pos.x, z.pos.z, 32, z)
     // a ripple everyone can see, through any wall

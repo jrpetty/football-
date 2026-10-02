@@ -20,6 +20,7 @@ import { renderJournal } from './journal.js'
 import { storyBadge } from '../game/story.js'
 import { renderPlayers, feedChat, netChip, updateNetChip } from './netui.js'
 import { volumeControl } from './volume.js'
+import { callName, fullName } from '../game/deeds.js'
 import { fullscreenButton } from './fullscreen.js'
 import { victoryModal, renderMarket, renderLog, renderFence, renderExpansion, renderProduction, renderPower, renderMorale, renderSettings, recruitModal, raidReportModal, missionReportModal, gameOverModal, menuModal, hordeInfo } from './camppanels.js'
 
@@ -779,7 +780,7 @@ export class UI {
         h(
           'div.rb-squad',
           base.squad.map((a, i) =>
-            h('button.rb-def', { onclick: () => base.selectDefender(a), 'data-tip': `${a.data.name}<br><em>${a.st.weapon.name}</em>` }, h('img', { src: this.game.portrait(a.data) }), h('span', h('kbd', i + 1), a.data.first), h('div.bar.hp', h('i'))),
+            h('button.rb-def', { onclick: () => base.selectDefender(a), 'data-tip': `${fullName(a.data)}<br><em>${a.st.weapon.name}</em>` }, h('img', { src: this.game.portrait(a.data) }), h('span', h('kbd', i + 1), callName(a.data)), h('div.bar.hp', h('i'))),
           ),
         ),
         h('div.rb-hint', 'Select a defender, then right-click to move or attack. Click a downed friend with someone selected to revive them.'),

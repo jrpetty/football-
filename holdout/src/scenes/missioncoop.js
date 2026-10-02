@@ -12,13 +12,15 @@ import { throwableModel } from '../models/weapons.js'
 import { NET, playerOf } from '../game/state.js'
 import { ZOMBIES, CONTAINERS } from '../game/data.js'
 import { sfx, sfxTap, setAmbience } from '../core/audio.js'
-import { angleLerp, clamp, h } from '../core/util.js'
+import { angleLerp, clamp, h, rand } from '../core/util.js'
 
 const FRAME = 0.12
 const SLOW = 1
 // effects worth showing everyone (ambient smoke and embers each side makes itself)
 const FWD_FX = ['blood', 'burst', 'tracer', 'muzzle', 'flash', 'sparks', 'explosion']
-const FWD_SFX = new Set(['alarm', 'loot', 'rare', 'dismantle', 'unlock', 'truck', 'scream', 'glass', 'fire', 'boom', 'snap', 'burst', 'levelup', 'trapSpot', 'zdie', 'throw', 'shotgun'])
+const FWD_SFX = new Set(['alarm', 'loot', 'rare', 'unlock', 'truck', 'snap', 'burst', 'levelup', 'trapSpot', 'throw'])
+// sounds with a place: friends hear them from the right side, through walls
+const FWD_SND = new Set(['scream', 'glass', 'fire', 'boom', 'dismantle', 'down', 'hurt', 'hit'])
 const r2 = (v) => Math.round(v * 100) / 100
 const r1 = (v) => Math.round(v * 10) / 10
 const vec = (v) => (v && typeof v.x === 'number' && typeof v.z === 'number' ? { v: [r2(v.x), r2(v.y || 0), r2(v.z)] } : v)
@@ -87,7 +89,17 @@ export const CoopMixin = {
       toast(msg, kind)
       if (!this.quiet) push(['toast', msg, kind])
     }
-    sfxTap.fn = (name) => FWD_SFX.has(name) && push(['sfx', name])
+    sfxTap.fn = (name) => !this.inSound && FWD_SFX.has(name) && push(['sfx', name])
+    const sound = this.sound.bind(this)
+    this.sound = (id, pos, opts = {}) => {
+      this.inSound = true
+      try {
+        sound(id, pos, opts)
+      } finally {
+        this.inSound = false
+      }
+      if (FWD_SND.has(id)) push(['snd', id, r2(pos.x), r2(pos.z), opts.pitch || 1, opts.loud || 1])
+    }
     const throwItem = this.throwItem.bind(this)
     this.throwItem = (agent, item, x, z) => {
       throwItem(agent, item, x, z)
@@ -384,6 +396,7 @@ export const CoopMixin = {
         p.dead = true
         p.deadT = 0
         p.label.remove()
+        this.sound('zdie', p.pos, { throttle: 80, pitch: p.voice })
       }
     }
     for (const [nid, p] of this.zmap) {
@@ -437,7 +450,8 @@ export const CoopMixin = {
   },
   remoteShot(a) {
     a.ch.fire()
-    if (this.nearCamera(a.pos)) sfx(a.st.weaponId === 'shotgun' ? 'shotgun' : a.st.weaponId === 'rifle' ? 'rifle' : a.st.weaponId === 'smg' || a.st.weaponId === 'ar' ? 'smg' : 'pistol', 40)
+    const w = a.st.weaponId
+    this.sound(w === 'shotgun' ? 'shotgun' : w === 'rifle' ? 'rifle' : w === 'smg' || w === 'ar' ? 'smg' : w === 'crossbow' ? 'crossbow' : 'pistol', a.pos, { throttle: 40 })
   },
   remoteEvent(e) {
     const [kind, ...r] = e
@@ -447,6 +461,7 @@ export const CoopMixin = {
     } else if (kind === 'float') view.labels.float(this.scene, unvec(r[0]), r[1], r[2])
     else if (kind === 'toast') this.toast(r[0], r[1])
     else if (kind === 'sfx') sfx(r[0], 60)
+    else if (kind === 'snd') this.sound(r[0], { x: r[1], z: r[2] }, { pitch: r[3], loud: r[4] })
     else if (kind === 'throw') {
       const [item, from, to, dur] = r
       const m = throwableModel(item)
@@ -491,6 +506,14 @@ export const CoopMixin = {
     for (const z of this.zombies) {
       const t = z.tgt
       if (!t) continue
+      // the street groans here as it does for the leader
+      if (!z.dead) {
+        z.groanT = (z.groanT ?? rand(2, 10)) - dt
+        if (z.groanT <= 0) {
+          z.groanT = t.mv ? rand(3, 7) : rand(6, 16)
+          if (!z.def.stalk) this.sound('groan', z.pos, { throttle: 650, pitch: z.voice })
+        }
+      }
       if (z.dead) {
         z.deadT += dt
         z.ch.update(dt, 'dead', {})

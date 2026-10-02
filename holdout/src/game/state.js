@@ -699,6 +699,24 @@ export function startExpansion(id) {
 }
 
 // ---------------------------------------------------------------- log/goals
+// ---------------------------------------------------------------- picked clean
+// A place the squad has searched needs four real hours before it is worth
+// another look (the time passes with the game closed too). S.looted keeps,
+// per place, the moment it can be searched again.
+export const LOOT_COOLDOWN_MS = 4 * 3600 * 1000
+export const lootedUntil = (locId) => {
+  const v = S?.looted?.[locId]
+  return v > 1e11 ? v : 0
+}
+export const isLooted = (locId) => lootedUntil(locId) > Date.now()
+export function markLooted(locId) {
+  S.looted[locId] = Date.now() + LOOT_COOLDOWN_MS
+}
+// "3h 12m", "45m"
+export function waitText(ms) {
+  const m = Math.max(1, Math.ceil(ms / 60000))
+  return m >= 60 ? `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m` : `${m}m`
+}
 export function log(text, kind = '') {
   S.log.unshift({ id: uid('l'), t: S.time, text, kind })
   if (S.log.length > 80) S.log.length = 80
@@ -1178,6 +1196,8 @@ export function load(data) {
 }
 // Bring older saves up to date with newer systems.
 function migrate() {
+  // older saves counted a picked-clean place in camp days: those have passed
+  for (const k of Object.keys(S.looted || {})) if (!(S.looted[k] > 1e11)) delete S.looted[k]
   for (const st of S.stations) {
     const d = STATIONS[st.type]
     if (!d) continue
@@ -1281,7 +1301,9 @@ export function importSave(text) {
 
 export function killSurvivor(s, cause) {
   S.stats.deaths++
-  S.stats.memorial.unshift({ name: s.name, occ: OCCUPATIONS[s.occ].name, day: day(), cause, kills: s.kills })
+  // remembered by the name the camp knew them by
+  const nick = s.nick ? s.nick.pre || s.nick.post : null
+  S.stats.memorial.unshift({ name: nick ? (s.nick.pre ? `${nick} ${s.name}` : `${s.name}, ${nick}`) : s.name, occ: OCCUPATIONS[s.occ].name, day: day(), cause, kills: s.kills })
   if (cause.includes('run') || cause.includes('Left behind')) for (const k of Object.keys(s.equip)) if (s.equip[k]) removeItem(s.equip[k])
   S.survivors = S.survivors.filter((x) => x !== s)
   addMoraleEvent(`${s.first} died`, -15, 2)

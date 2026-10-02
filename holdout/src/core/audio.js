@@ -7,6 +7,9 @@ let ambience = null
 let enabled = true
 let volume = 0.8 // the player's volume, 0 to 1
 let lastPlay = {}
+// a sound placed in the world plays through its own chain (see sfxAt)
+let out = null
+let pitchMul = 1
 // loudness follows the square of the slider, which is how ears hear it;
 // 80% is the level the game always had
 const level = () => (enabled ? 0.86 * volume * volume : 0)
@@ -48,8 +51,8 @@ function noise(dur, { type = 'lowpass', freq = 1000, q = 1, gain = 0.5, attack =
   src.playbackRate.value = 0.8 + Math.random() * 0.4
   const f = ctx.createBiquadFilter()
   f.type = type
-  f.frequency.setValueAtTime(freq, t)
-  if (freqEnd) f.frequency.exponentialRampToValueAtTime(freqEnd, t + dur)
+  f.frequency.setValueAtTime(freq * pitchMul, t)
+  if (freqEnd) f.frequency.exponentialRampToValueAtTime(freqEnd * pitchMul, t + dur)
   f.Q.value = q
   const g = ctx.createGain()
   g.gain.setValueAtTime(0.0001, t)
@@ -57,10 +60,10 @@ function noise(dur, { type = 'lowpass', freq = 1000, q = 1, gain = 0.5, attack =
   g.gain.exponentialRampToValueAtTime(0.0001, t + decay)
   const p = ctx.createStereoPanner ? ctx.createStereoPanner() : null
   src.connect(f).connect(g)
-  if (p) {
+  if (p && !out) {
     p.pan.value = pan
     g.connect(p).connect(master)
-  } else g.connect(master)
+  } else g.connect(out || master)
   src.start(t, Math.random())
   src.stop(t + dur + 0.05)
 }
@@ -69,13 +72,13 @@ function tone(freq, dur, { type = 'sine', gain = 0.2, attack = 0.005, freqEnd = 
   const t = ctx.currentTime + delay
   const o = ctx.createOscillator()
   o.type = type
-  o.frequency.setValueAtTime(freq, t)
-  if (freqEnd) o.frequency.exponentialRampToValueAtTime(freqEnd, t + dur)
+  o.frequency.setValueAtTime(freq * pitchMul, t)
+  if (freqEnd) o.frequency.exponentialRampToValueAtTime(freqEnd * pitchMul, t + dur)
   const g = ctx.createGain()
   g.gain.setValueAtTime(0.0001, t)
   g.gain.exponentialRampToValueAtTime(gain, t + attack)
   g.gain.exponentialRampToValueAtTime(0.0001, t + dur)
-  o.connect(g).connect(master)
+  o.connect(g).connect(out || master)
   o.start(t)
   o.stop(t + dur + 0.05)
 }
@@ -227,6 +230,41 @@ export function sfx(id, throttleMs = 40) {
   try {
     SFX[id]()
   } catch {}
+}
+
+// A sound somewhere in the world: panned left or right, quieter with
+// distance, and muffled (a low-pass) when a wall is in the way. `pitch`
+// gives each zombie its own voice.
+export function sfxAt(id, { pan = 0, gain = 1, muffle = 0, pitch = 1 } = {}, throttleMs = 40) {
+  sfxTap.fn?.(id)
+  if (!ctx || !enabled || volume <= 0 || !SFX[id] || gain <= 0.01) return
+  if (!gate(id, throttleMs)) return
+  const g = ctx.createGain()
+  g.gain.value = gain
+  const f = ctx.createBiquadFilter()
+  f.type = 'lowpass'
+  f.frequency.value = 18000 * Math.pow(420 / 18000, Math.max(0, Math.min(1, muffle)))
+  f.Q.value = 0.6
+  g.connect(f)
+  let tail = f
+  if (ctx.createStereoPanner) {
+    const p = ctx.createStereoPanner()
+    p.pan.value = Math.max(-1, Math.min(1, pan))
+    f.connect(p)
+    tail = p
+  }
+  tail.connect(master)
+  out = g
+  pitchMul = pitch
+  try {
+    SFX[id]()
+  } catch {
+  } finally {
+    out = null
+    pitchMul = 1
+  }
+  // the longest sounds are done within a couple of seconds
+  setTimeout(() => g.disconnect(), 4000)
 }
 
 // Low wind bed that keeps the world from feeling silent.

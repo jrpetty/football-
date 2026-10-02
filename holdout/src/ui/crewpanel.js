@@ -7,6 +7,7 @@ import { sfx } from '../core/audio.js'
 import { bus, h, fmt, clamp } from '../core/util.js'
 import { icon } from './icons.js'
 import { leaderChip, leaderBanner } from './netui.js'
+import { bio, callName, fullName, nickText, setNick, campNames } from '../game/deeds.js'
 import { costList, resChip, bar, qualityTag, condBar, itemCard, skillRows, traitTags, hpBar, seg, plural, resIcon } from './common.js'
 
 // ---------------------------------------------------------------- one survivor
@@ -94,7 +95,51 @@ export function renderSurvivor(ui, id) {
   if (!ctl && perks) perks.inert = true
   const inf = infectionCard(ui, s)
   if (!ctl && inf) inf.inert = true
-  return ui.frame(s.name, h('span', OCCUPATIONS[s.occ].name, leaderChip(s)), [leaderBanner(s), head, inf, perks, jobRow, slotsEl, stats, skills, actions], { icon: 'people' })
+  const story = storyCard(ui, s, ctl)
+  return ui.frame(fullName(s), h('span', OCCUPATIONS[s.occ].name, leaderChip(s)), [leaderBanner(s), head, story, inf, perks, jobRow, slotsEl, stats, skills, actions], { icon: 'people' })
+}
+// The name the camp gave them, why, and what they have done.
+function storyCard(ui, s, ctl) {
+  const n = s.nick
+  const tools = h('div.nick-tools')
+  const rename = () => {
+    const input = h('input.inp', { value: nickText(s), maxLength: 18, placeholder: 'e.g. Two-Shot, the Butcher', spellcheck: false })
+    const save = () => {
+      setNick(s, input.value)
+      sfx('click')
+      ui.refreshPanel(true)
+    }
+    input.addEventListener('keydown', (e) => {
+      e.stopPropagation()
+      if (e.key === 'Enter') save()
+      if (e.key === 'Escape') ui.refreshPanel(true)
+    })
+    tools.replaceChildren(input, h('button.btn.small', { onclick: save }, 'Save'), h('button.btn.small.ghost', { onclick: () => ui.refreshPanel(true) }, 'Cancel'))
+    setTimeout(() => (input.focus(), input.select()), 0)
+  }
+  const after = (fn) => () => (fn(), sfx('click'), ui.refreshPanel(true))
+  tools.append(
+    h('button.btn.small.ghost', { onclick: rename }, n ? 'Rename' : 'Give a nickname'),
+    s.nickBy === 'player'
+      ? h('button.btn.small.ghost', { 'data-tip': 'Let what they do decide their name again', onclick: after(() => campNames(s)) }, 'Let the camp decide')
+      : n
+        ? h('button.btn.small.ghost', { onclick: after(() => setNick(s, '')) }, 'Drop it')
+        : null,
+  )
+  // another player's survivor: read, don't rename
+  if (!ctl) tools.inert = true
+  return h(
+    'section.card.story',
+    h('h3', 'Their story', n ? h('small', `known as ${callName(s)}`) : null),
+    h(
+      'div.nick-row',
+      n
+        ? h('div.nick', h('b', `“${nickText(s)}”`), h('small', s.nickBy === 'player' ? 'The name you gave them.' : `Since day ${n.day}, for ${n.why}.`))
+        : h('div.nick', h('small.dim', s.nickBy === 'player' ? 'No nickname: you took it away.' : 'No nickname yet. The camp names people for what they do.')),
+      tools,
+    ),
+    h('ul.bio', bio(s).map((l) => h('li', l))),
+  )
 }
 function stat(label, v, tip = null) {
   return h('div.stat', tip ? { 'data-tip': `<b>${label}</b>${tip}` } : null, h('span', label), h('b', v))
@@ -216,7 +261,7 @@ export function renderCrew(ui) {
     return h(
       'div.crewrow' + (s.status === 'injured' ? '.hurt' : s.status === 'mission' || s.status === 'outpost' ? '.away' : ''),
       { onclick: () => ui.openSurvivor(s.id) },
-      h('span.cr-name', h('img.por.sm', { src: ui.game.portrait(s) }), h('span', h('b', leaderChip(s, true), s.name, s.perkChoices?.length ? h('i.perktag', { 'data-tip': 'A perk to choose' }, '★') : null, s.infection > 0 ? h('i.inftag', { 'data-tip': `${infectionStage(s)} · ${Math.round(s.infection)}%` }, `${Math.round(s.infection)}%`) : null), h('small', OCCUPATIONS[s.occ].name))),
+      h('span.cr-name', h('img.por.sm', { src: ui.game.portrait(s) }), h('span', h('b', leaderChip(s, true), fullName(s), s.perkChoices?.length ? h('i.perktag', { 'data-tip': 'A perk to choose' }, '★') : null, s.infection > 0 ? h('i.inftag', { 'data-tip': `${infectionStage(s)} · ${Math.round(s.infection)}%` }, `${Math.round(s.infection)}%`) : null), h('small', OCCUPATIONS[s.occ].name))),
       h('span.cr-job', s.status === 'mission' ? 'On a run' : s.status === 'outpost' ? 'At an outpost' : job ? STATIONS[job.type].name : h('em', 'None')),
       ...SKILL_KEYS.map((k) => h('span.sk' + (s.skills[k] >= 6 ? '.hi' : s.skills[k] <= 1 ? '.lo' : ''), s.skills[k])),
       h('span.cr-wpn', st.weapon.name),

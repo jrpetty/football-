@@ -25,7 +25,7 @@ import { genLevel } from '../world/levelgen.js'
 import { OffsetGrid } from '../core/grid.js'
 import { FACE_ROT, SIDEWALK, lotToWorld } from '../world/city.js'
 import { LOCATIONS, CONTAINERS, ITEMS, RARITY, RES, QUALITY, zombieMix, LEVEL_COLORS, UTILITIES, VEHICLES } from '../game/data.js'
-import { NET, playerOf, S, getS, gain, addItem, gainXP, killSurvivor, hour, day, completeGoal, log, survivorStats, makeSurvivor, addMoraleEvent, researchDone, season, leafTurn, addVehicle } from '../game/state.js'
+import { NET, playerOf, S, getS, gain, addItem, gainXP, killSurvivor, hour, day, completeGoal, log, survivorStats, makeSurvivor, addMoraleEvent, researchDone, season, leafTurn, addVehicle, markLooted } from '../game/state.js'
 import { scheduleRaid } from '../game/economy.js'
 import { sfx, setAmbience } from '../core/audio.js'
 import { h, rand, rint, pick, chance, weighted, clamp, fmtTime, bus, fmt } from '../core/util.js'
@@ -34,6 +34,8 @@ import { resIcon } from '../ui/common.js'
 import { infectedRange } from '../ui/mappanel.js'
 import { storyAt, foundStoryItem, rollNote, storyRunEnd, NOTES } from '../game/story.js'
 import { VisionMixin } from './missionvision.js'
+import { deed, creditThrow, nameCheck, callName } from '../game/deeds.js'
+import { soundAt } from '../world/sound.js'
 import { CoopMixin, agentStatus, stopTap } from './missioncoop.js'
 import { TrapsMixin } from './missiontraps.js'
 import { volumeControl } from '../ui/volume.js'
@@ -198,6 +200,13 @@ export class Mission {
     view.rig.yaw = view.rig.yawGoal = 0.35
     this.buildHud()
     if (this.coop) this.coopInit()
+    // a name earned mid-run shows at once
+    this.offNick = bus.on('nickname', (s) => {
+      const a = this.squad.find((x) => x.data?.id === s.id)
+      if (!a) return
+      if (!a.downed) a.labelEl.querySelector('.nm').textContent = callName(a.data)
+      this.renderSquad()
+    })
     this.setupVision()
     this.select(this.squad.find((a) => this.canOrder(a)) || null)
     sfx('truck')
@@ -205,6 +214,33 @@ export class Mission {
   }
   get rightClickCommands() {
     return true
+  }
+  // ---------------------------------------------------------------- hearing
+  // The squad hears: a sound is as loud as it is to the nearest survivor,
+  // muffled when a wall stands between, and comes from its side of the screen.
+  sound(id, pos, opts = {}) {
+    soundAt(this, id, pos, opts)
+  }
+  listener(pos) {
+    let best = null
+    let bd = Infinity
+    for (const a of this.squad) {
+      if (a.npc || a.dead) continue
+      const d = (a.pos.x - pos.x) ** 2 + (a.pos.z - pos.z) ** 2
+      if (d < bd) {
+        bd = d
+        best = a.pos
+      }
+    }
+    return best || view.rig.target
+  }
+  wallBetween(a, b) {
+    return !this.grid.los(a.x, a.z, b.x, b.z)
+  }
+  hearingK() {
+    // keen ears in the squad hear further
+    const h = Math.max(0, ...this.squad.filter((a) => !a.npc && !a.downed).map((a) => a.st?.hearing || 0))
+    return h ? Math.max(0.8, Math.min(1.5, h / 12)) : 1
   }
   // Ground height under a point: building floors, raised sidewalks.
   floorY(x, z) {
@@ -975,6 +1011,7 @@ export class Mission {
         c.searched = true
         c.openGoal = 1
         found = rollLoot(c.def, this.level, agent.st.loot)
+        deed(agent.data, 'searched')
         gainXP(agent.data, 'scavenge', 3 + this.level)
         if (c.smash) sfx('dismantle')
         if (c.locked) sfx('unlock')
@@ -1031,6 +1068,7 @@ export class Mission {
           continue
         }
         agent.pack.items.push(f.item)
+        deed(agent.data, 'loot')
         agent.pack.load += ITEM_LOAD
         const it = ITEMS[f.item]
         setTimeout(() => view.labels.float(this.scene, pos.clone().setY(pos.y + k * 0.35), `<b style="color:${RARITY[it.rarity].color}">${it.name}</b>`, 'item'), k * 160)
@@ -1040,6 +1078,7 @@ export class Mission {
         if (fit < f.n) left.push({ r: f.r, n: f.n - fit })
         if (fit <= 0) continue
         agent.pack.res[f.r] = (agent.pack.res[f.r] || 0) + fit
+        deed(agent.data, 'loot', fit)
         agent.pack.load += fit * w
         const n = fit
         const kk = k
@@ -1069,7 +1108,7 @@ export class Mission {
       const x = a.pos.x
       const z = a.pos.z
       this.toast(`${a.data.first} has turned!`, 'bad')
-      sfx('scream')
+      this.sound('scream', a.pos, { pitch: 0.9 })
       a.dead = true
       a.remove()
       this.squad = this.squad.filter((o) => o !== a)
@@ -1117,6 +1156,7 @@ export class Mission {
     this.scene.add(m)
     const dur = clamp(from.distanceTo(to) / 12, 0.35, 0.9)
     this.flying = (this.flying || []).concat({ m, from, to, t: 0, dur, item, agent })
+    if (agent?.data && !agent.npc) creditThrow(agent.data, item)
     sfx('throw')
     this.utils[item] = Math.max(0, this.utils[item] - 1)
     this.renderUtils()
@@ -1143,12 +1183,12 @@ export class Mission {
   detonate(item, x, z, agent) {
     const p = new THREE.Vector3(x, 0.3, z)
     if (item === 'molotov') {
-      sfx('glass')
-      sfx('fire')
+      this.sound('glass', p)
+      this.sound('fire', p)
       this.addFire(x, 0.2, z, 2.6, 9, agent)
       this.noise(x, z, 9)
     } else if (item === 'pipebomb') {
-      sfx('boom')
+      this.sound('boom', p, { loud: 1.3 })
       this.fx.explosion(p, 3.2)
       view.rig.shake = 1
       for (const zz of this.zombies) {
@@ -1699,11 +1739,13 @@ export class Mission {
   updateNpc() {
     const n = this.npc
     if (!n || n.joined || n.dead) return
-    if (this.squad.some((a) => !a.npc && !a.downed && a.dist(n) < 2.6)) {
+    const by = this.squad.find((a) => !a.npc && !a.downed && a.dist(n) < 2.6)
+    if (by) {
       n.joined = true
       n.npc = false
+      deed(by.data, 'rescues')
       n.labelEl.classList.remove('npc')
-      n.labelEl.querySelector('.nm').textContent = n.data.first
+      n.labelEl.querySelector('.nm').textContent = callName(n.data)
       this.squad.push(n)
       this.toast(`${n.data.first} is with you. Get them to the van.`, 'good')
       sfx('levelup')
@@ -1915,7 +1957,7 @@ export class Mission {
           },
           h('span.key', key),
           h('img', { src: this.game.portrait(a.data), alt: '' }),
-          h('div.sc-info', h('b', a.data.first), status, h('div.hpbar', bar), h('div.loadbar', { 'data-tip': 'Pack' }, load)),
+          h('div.sc-info', h('b', callName(a.data)), status, h('div.hpbar', bar), h('div.loadbar', { 'data-tip': 'Pack' }, load)),
         )
         this.cards.set(a, { card, bar, status, load })
         this.squadEl.append(card)
@@ -2007,7 +2049,7 @@ export class Mission {
       gain(haul)
       for (const k of Object.keys(haul)) report.loot[k] = Math.round((S.res[k] || 0) - (before[k] || 0))
       for (const id of items) report.items.push(addItem(id, { q: lootQuality(L), cond: rint(35, 95) }))
-      S.looted[this.loc.id] = day() + 3
+      markLooted(this.loc.id)
       S.stats.runs++
       completeGoal('firstRun')
       if (L >= 3) completeGoal('loot3')
@@ -2028,6 +2070,7 @@ export class Mission {
         }
         d.hp = Math.max(1, a.hp)
         d.runs = (d.runs || 0) + 1
+        nameCheck(d)
         d.status = d.hp < a.maxHp * 0.3 ? 'injured' : 'ok'
         if (d.status === 'injured') report.injured.push(d.first)
       }
@@ -2064,6 +2107,7 @@ export class Mission {
     this.game.endMission(report)
   }
   dispose() {
+    this.offNick?.()
     this.restoreFloat?.()
     if (this.coop) stopTap()
     for (const a of this.squad) a.remove()

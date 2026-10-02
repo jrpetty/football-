@@ -13,6 +13,8 @@ import {
   researchDone, finishResearch, coreBoost, treatInfection, season, seasonIdx, campTier, perkOf,
   outpostYield, abandonOutpost, addVehicle,
 } from './state.js'
+import { deed, dailyDeeds } from './deeds.js'
+import { isLooted } from './state.js'
 import { bus, pick, rint, rand, chance, clamp, weighted } from '../core/util.js'
 import { tickLinks, beltBonus, belted, pulled, outCap } from './belts.js'
 import { tickStory } from './story.js'
@@ -332,7 +334,11 @@ export function econTick(dt, opts = {}) {
       st.building = null
       bus.emit('built', st)
       log(`${STATIONS[st.type].name} ${st.level > 1 ? `upgraded to level ${st.level}` : 'built'}.`, 'good')
-      for (const s of S.survivors) if (s.status === 'ok' && !s.job) gainXP(s, 'build', 5)
+      for (const s of S.survivors)
+        if (s.status === 'ok' && !s.job) {
+          gainXP(s, 'build', 5)
+          deed(s, 'built')
+        }
       if (st.type === 'generator') completeGoal('generator')
       if (st.type === 'forge') completeGoal('buildForge')
       if ((st.type === 'chemlab' || st.type === 'ammo') && countType('chemlab') && countType('ammo')) completeGoal('chemlab')
@@ -467,8 +473,9 @@ export function econTick(dt, opts = {}) {
 
   // ---- day rollover
   if (day() !== prevDay) {
+    dailyDeeds()
     restockMarket()
-    for (const k of Object.keys(S.looted)) if (S.looted[k] <= day()) delete S.looted[k]
+    for (const k of Object.keys(S.looted)) if (!isLooted(k)) delete S.looted[k]
     log(`Day ${day()} begins. ${S.survivors.length} survivors in camp.`, 'story')
     if (seasonIdx() !== seasonIdx(day() - 1)) {
       const Z = season()
@@ -801,7 +808,10 @@ function completeOrder(st, o) {
     }
     S.stats.crafted++
     completeGoal('craft')
-    for (const s of ws) gainXP(s, STATIONS[st.type].skill || 'craft', 6)
+    for (const s of ws) {
+      gainXP(s, STATIONS[st.type].skill || 'craft', 6)
+      deed(s, 'crafted')
+    }
     if (o.keep == null) {
       o.repeat = (o.repeat ?? 1) - 1
       if (o.repeat <= 0) st.orders = st.orders.filter((x) => x !== o)
@@ -997,7 +1007,7 @@ function spawnEvent() {
   const radio = maxLevelOf('radio')
   S.nextEvent = S.time + rand(20, 34) * 60 * (radio ? 0.75 - radio * 0.1 : 1)
   if (!S.cityLocs?.length) return
-  const free = S.cityLocs.filter((l) => !S.looted[l.id] && !S.events.some((e) => e.locId === l.id) && l.level <= Math.min(5, 2 + Math.floor(day() / 3)))
+  const free = S.cityLocs.filter((l) => !isLooted(l.id) && !S.events.some((e) => e.locId === l.id) && l.level <= Math.min(5, 2 + Math.floor(day() / 3)))
   if (!free.length) return
   const loc = pick(free)
   const kind = chance(0.65) ? 'distress' : 'airdrop'

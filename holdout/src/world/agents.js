@@ -8,6 +8,7 @@ import { ZOMBIES, ITEMS } from '../game/data.js'
 import { survivorStats, gainXP, equippedItem, wear, S, researchDone, exposeInfection } from '../game/state.js'
 import { INFECTION } from '../game/data.js'
 import { sfx } from '../core/audio.js'
+import { creditKill, deed, callName } from '../game/deeds.js'
 import { clamp, angleLerp, rand, chance, h } from '../core/util.js'
 import { view } from '../render/view.js'
 
@@ -134,6 +135,13 @@ export class Agent {
   face(x, z, dt = 1) {
     this.heading = angleLerp(this.heading, Math.atan2(x - this.pos.x, z - this.pos.z), dt >= 1 ? 1 : 1 - Math.exp(-dt * 14))
   }
+  // a sound from this agent: placed in the world where the world knows how
+  // (runs and the camp), plain otherwise
+  play(id, throttle = 40, opts = {}) {
+    const W = this.world
+    if (W.sound) W.sound(id, this.pos, { throttle, ...opts })
+    else sfx(id, throttle)
+  }
   dist(o) {
     return Math.hypot(o.pos.x - this.pos.x, o.pos.z - this.pos.z)
   }
@@ -203,7 +211,7 @@ export class SurvivorAgent extends Agent {
   makeLabel() {
     const bar = h('div.hpbar', h('i'))
     const prog = h('div.prog', h('i'))
-    const el = h('div.alabel.surv', h('span.nm', this.data.first), bar, prog)
+    const el = h('div.alabel.surv', h('span.nm', callName(this.data)), bar, prog)
     this.label = view.labels.add(el, () => this.pos, { offsetY: 2.2, scene: this.world.scene })
     this.labelBar = bar.firstChild
     this.labelProg = prog
@@ -260,7 +268,7 @@ export class SurvivorAgent extends Agent {
       this.world.toast?.(`${this.data.first}'s ${ITEMS[this.st.armorItem.id].name} is ruined.`, 'bad')
       this.refreshStats()
     }
-    if (chance(0.4)) sfx('hurt', 200)
+    if (chance(0.4)) this.play('hurt', 200)
     const canKit = this.world.mode === 'mission' && !this.medkitUsed && this.world.hasMedkit?.(this)
     if (this.hp <= 0) {
       if (canKit) return this.useMedkit()
@@ -282,7 +290,8 @@ export class SurvivorAgent extends Agent {
     this.work = null
     this.path = null
     this.select(false)
-    sfx('down')
+    this.play('down')
+    if (!this.npc) deed(this.data, 'downs')
     this.world.onDowned?.(this)
   }
   revive(frac = 0.35) {
@@ -381,6 +390,7 @@ export class SurvivorAgent extends Agent {
         if (o.t >= need) {
           a.revive()
           gainXP(this.data, 'medic', 8)
+          deed(this.data, 'revives')
           this.order = null
           this.showProg(null)
           view.labels.float(W.scene, a.chestPos(2), 'Back on their feet', 'good')
@@ -497,7 +507,7 @@ export class SurvivorAgent extends Agent {
     this.ch.fire()
     this.shots = (this.shots || 0) + 1
     const id = st.weaponId
-    sfx(id === 'shotgun' ? 'shotgun' : id === 'rifle' ? 'rifle' : id === 'smg' || id === 'ar' ? 'smg' : id === 'crossbow' ? 'crossbow' : 'pistol', 30)
+    this.play(id === 'shotgun' ? 'shotgun' : id === 'rifle' ? 'rifle' : id === 'smg' || id === 'ar' ? 'smg' : id === 'crossbow' ? 'crossbow' : 'pistol', 30)
     W.noise?.(this.pos.x, this.pos.z, st.noise * st.noiseMult)
     if (st.weaponItem && wear(st.weaponItem, 1)) this.weaponBroke()
     if (hit) {
@@ -515,14 +525,14 @@ export class SurvivorAgent extends Agent {
     const armed = !st.gun
     this.cool = armed ? st.rate : 0.8
     this.swing = 1
-    sfx('swing', 60)
+    this.play('swing', 60)
     const base = armed ? st.dmg : 7
     const dmg = base * rand(0.85, 1.15) * (W.dmgBonus?.(this) ?? 1)
     const knock = armed && st.knock
     setTimeout(() => {
       if (!z.dead && !this.downed && this.dist(z) <= reach + 0.6) {
         z.hurt(dmg, this, { knock })
-        sfx('hit', 40)
+        z.play('hit', 40)
         if (armed && st.weaponItem && wear(st.weaponItem, 1)) this.weaponBroke()
       }
     }, 160)
@@ -532,7 +542,7 @@ export class SurvivorAgent extends Agent {
   }
   weaponBroke() {
     this.world.toast?.(`${this.data.first}'s ${ITEMS[this.st.weaponId].name} broke!`, 'bad')
-    sfx('dismantle')
+    this.play('dismantle')
     this.refreshStats()
   }
   showProg(v) {
@@ -562,7 +572,7 @@ export class SurvivorAgent extends Agent {
     this.labelBar.parentNode.classList.toggle('low', this.hp < this.maxHp * 0.35)
     this.labelEl.classList.toggle('down', this.downed)
     if (this.downed) this.labelEl.querySelector('.nm').textContent = `${this.data.first} · ${Math.ceil(Math.min(this.bleed, 999))}s`
-    else if (this._wasDown !== this.downed) this.labelEl.querySelector('.nm').textContent = this.data.first
+    else if (this._wasDown !== this.downed) this.labelEl.querySelector('.nm').textContent = callName(this.data)
     this._wasDown = this.downed
     if (this.ring.visible) this.ring.material.opacity = 0.65 + Math.sin(performance.now() / 180) * 0.25
     this.sync()
@@ -606,6 +616,8 @@ export class ZombieAgent extends Agent {
     this.think = rand(0, 0.3)
     this.repath = 0
     this.groanT = rand(3, 12)
+    // each has a voice of its own: big ones low, screamers shrill
+    this.voice = (type === 'brute' ? 0.72 : type === 'bloater' ? 0.82 : type === 'screamer' ? 1.3 : type === 'runner' ? 1.08 : 1) * rand(0.88, 1.12)
     this.deadT = 0
     this.radius = 0.3 * def.scale
     this.wanderT = rand(2, 6)
@@ -643,12 +655,13 @@ export class ZombieAgent extends Agent {
     this.deadT = 0
     this.path = null
     this.label.remove()
-    sfx('zdie', 80)
+    this.play('zdie', 80, { pitch: this.voice })
     if (this.def.burst) this.world.onBurst?.(this)
     this.world.fx.blood(this.chestPos(0.6), true)
     if (from?.data) {
       from.data.kills++
       gainXP(from.data, from.st.gun ? 'ranged' : 'melee', this.def.xp)
+      if (!from.npc) creditKill(from.data, this, from.st.weaponId, this.world.mode !== 'mission')
     }
     this.world.onKill?.(this, from)
   }
@@ -680,8 +693,12 @@ export class ZombieAgent extends Agent {
     this.screamCool -= dt
     this.lunge = Math.max(0, this.lunge - dt)
     if (this.groanT <= 0) {
-      this.groanT = rand(6, 16)
-      if (W.nearCamera?.(this.pos) && !this.def.stalk) sfx('groan', 900)
+      // closer to their prey, they are louder and more often
+      this.groanT = this.state === 'chase' ? rand(3, 7) : rand(6, 16)
+      if (!this.def.stalk) {
+        if (W.sound) this.play('groan', 650, { pitch: this.voice })
+        else if (W.nearCamera?.(this.pos)) sfx('groan', 900)
+      }
     }
     if (this.stun > 0) {
       this.stun -= dt
@@ -719,7 +736,7 @@ export class ZombieAgent extends Agent {
       } else if (d <= 4.6) {
         this.state = 'chase'
         this.lunge = 1.3
-        sfx('groan', 300)
+        this.play('groan', 300, { pitch: this.voice, loud: 1.2 })
         W.noise?.(this.pos.x, this.pos.z, 4, this)
       } else {
         const watched = W.isWatched?.(this) && d > 6
@@ -828,7 +845,8 @@ export class ZombieAgent extends Agent {
         return
       }
       if (this.state !== 'chase') {
-        if (W.nearCamera?.(this.pos)) sfx('groan', 500)
+        if (W.sound) this.play('groan', 500, { pitch: this.voice, loud: 1.15 })
+        else if (W.nearCamera?.(this.pos)) sfx('groan', 500)
         W.noise?.(this.pos.x, this.pos.z, 3, this)
       }
       this.state = 'chase'

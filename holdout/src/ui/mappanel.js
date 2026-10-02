@@ -3,7 +3,7 @@
 // dangerous it is, the drive there, who goes and what they carry.
 import { LOCATIONS, ROOMS, CONTAINERS, RES, ITEMS, ZOMBIES, zombieMix, LEVEL_COLORS, OCCUPATIONS, STATIONS, GAME_MIN_PER_SEC, INFECTION, OUTPOST, VEHICLES } from '../game/data.js'
 import { COOP_MAX } from '../net/coop.js'
-import { playerOf, S, day, clockStr, gameDur, survivorStats, getS, hasFlag, outpostAt, outpostProblem, claimOutpost, outpostYield, outpostUpgradeCost, upgradeOutpost, abandonOutpost, canAfford, travelCost, vehicleOf, vehicleProblem, usableVehicles, pay, canControl, NET } from '../game/state.js'
+import { playerOf, S, day, clockStr, gameDur, survivorStats, getS, hasFlag, outpostAt, outpostProblem, claimOutpost, outpostYield, outpostUpgradeCost, upgradeOutpost, abandonOutpost, canAfford, travelCost, vehicleOf, vehicleProblem, usableVehicles, pay, canControl, NET, isLooted, lootedUntil, waitText } from '../game/state.js'
 import { raidIntel } from '../game/economy.js'
 import { leadsAt } from '../game/story.js'
 import { sfx } from '../core/audio.js'
@@ -137,11 +137,11 @@ export class MapPanel {
                   .sort((a, b) => a.dCamp - b.dCamp)
                   .map((l) =>
                     h(
-                      'button.locrow' + (S.looted[l.id] ? '.looted' : ''),
+                      'button.locrow' + (isLooted(l.id) ? '.looted' : ''),
                       { onclick: () => this.map.select(l), onmouseenter: () => ((this.map.hover = l), this.map.refreshMarkers()), onmouseleave: () => ((this.map.hover = null), this.map.refreshMarkers()) },
                       h('b', l.name),
                       h('small', LOCATIONS[l.type].name),
-                      S.looted[l.id] ? h('span.tag', 'looted') : (S.events || []).some((e) => e.locId === l.id) ? h('span.tag.ev', 'signal') : null,
+                      isLooted(l.id) ? h('span.tag', { 'data-tip': `Searchable again in ${waitText(lootedUntil(l.id) - Date.now())}` }, waitText(lootedUntil(l.id) - Date.now())) : (S.events || []).some((e) => e.locId === l.id) ? h('span.tag.ev', 'signal') : null,
                     ),
                   ),
               )
@@ -154,7 +154,8 @@ export class MapPanel {
   renderLoc(P, loc) {
     const L = LOCATIONS[loc.type]
     const col = LEVEL_COLORS[loc.level - 1]
-    const looted = S.looted[loc.id]
+    const looted = isLooted(loc.id)
+    const wait = looted ? waitText(lootedUntil(loc.id) - Date.now()) : ''
     const ev = (S.events || []).find((e) => e.locId === loc.id && e.expires > S.time)
     const hints = lootHints(loc.type)
     const leads = leadsAt(loc.id)
@@ -248,7 +249,7 @@ export class MapPanel {
         h('p.blurb', L.blurb),
         ev ? h('div.card.evbig.' + ev.kind, h('b', ev.kind === 'distress' ? `Distress call: ${ev.npc?.name || 'a survivor'} is trapped inside.` : 'A supply drop came down in the yard.'), h('small', ev.kind === 'distress' ? 'Reach them and get them out: they will join the camp.' : 'Military crates: ammo, meds and gear.'), h('span', `Signal fades in ${gameDur(ev.expires - S.time)}`)) : null,
         leads.length ? h('div.card.leadcard', h('b', h('i', { html: icon('book') }), 'Story lead'), h('span', `${leads.join(' · ')} might be here.`), h('small', 'See the journal for what you know.')) : null,
-        looted && !leads.length ? h('div.card.warn', `Picked clean. Worth another look on day ${looted}.`) : null,
+        looted && !leads.length ? h('div.card.warn', `Picked clean. Worth another look in ${wait} (real time).`) : null,
         h(
           'div.mfacts',
           h('div', h('small', 'Infected'), h('b', `${z0}–${z1}`), h('em', mix.join(', '))),
@@ -284,8 +285,8 @@ export class MapPanel {
         outpostAt(loc.id)
           ? h('button.btn.big', { disabled: true }, 'Your outpost')
           : run
-            ? h('button.btn.go.big', { disabled: !squad.length || this.map.launching || !T.ok, onclick: () => this.deploy(loc, squad, T, veh, run, friends) }, h('span', { html: icon('people') }), ` Set out together (${party})`)
-            : h('button.btn.go.big', { disabled: !squad.length || (!!looted && !leads.length) || this.map.launching || !T.ok, onclick: () => this.deploy(loc, squad, T, veh) }, looted && !leads.length ? 'Already looted' : h('span', { html: icon(T.V.stash ? 'truck' : 'run') }), looted && !leads.length ? null : T.V.stash ? ' Roll out' : T.V === VEHICLES.foot ? ' Head out on foot' : ' Ride out'),
+            ? h('button.btn.go.big', { disabled: !squad.length || (looted && !leads.length) || this.map.launching || !T.ok, onclick: () => this.deploy(loc, squad, T, veh, run, friends) }, looted && !leads.length ? `Searched · back in ${wait}` : [h('span', { html: icon('people') }), ` Set out together (${party})`])
+            : h('button.btn.go.big', { disabled: !squad.length || (!!looted && !leads.length) || this.map.launching || !T.ok, onclick: () => this.deploy(loc, squad, T, veh) }, looted && !leads.length ? `Searched · back in ${wait}` : h('span', { html: icon(T.V.stash ? 'truck' : 'run') }), looted && !leads.length ? null : T.V.stash ? ' Roll out' : T.V === VEHICLES.foot ? ' Head out on foot' : ' Ride out'),
       ),
     )
   }
