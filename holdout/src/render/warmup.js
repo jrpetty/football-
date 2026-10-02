@@ -11,6 +11,7 @@ import { S } from '../game/state.js'
 import { stationModel } from '../models/stations.js'
 import { GHOST_OK, GHOST_BAD } from '../scenes/base.js'
 import { BLUEPRINT } from '../scenes/basestation.js'
+import { batchedCopies } from '../scenes/basebatch.js'
 import { view } from './view.js'
 
 // Compile everything `obj` wears against `scene`'s lights, without holding up
@@ -77,6 +78,7 @@ export function warmUp(game) {
       return
     }
     let obj
+    let tmp = null
     try {
       if (job[0] === 'scene') obj = game.base.scene
       else if (job[0] === 'ghosts') {
@@ -98,11 +100,19 @@ export function warmUp(game) {
             })
             obj.add(g)
           }
-      } else obj = stationModel(job[0], job[1])
+      } else {
+        // as the camp draws it: still parts batched, moving parts on their own
+        const m = stationModel(job[0], job[1])
+        tmp = batchedCopies(m)
+        obj = new THREE.Group().add(m, tmp)
+      }
     } catch {
       return idle(step)
     }
-    compile(obj).then(() => idle(step))
+    compile(obj).then(() => {
+      if (tmp) for (const b of tmp.children) b.dispose()
+      idle(step)
+    })
   }
   idle(step)
 }

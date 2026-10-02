@@ -342,12 +342,18 @@ export class Builder {
       list.push(obj)
       Object.assign(pv, obj.userData.pivots || {})
     }
-    group.userData.pivots = pv
-    group.userData.pivotList = list
+    // kept out of JSON: Object3D.clone deep-copies userData that way, and
+    // these would drag every pivot's geometry through it on each clone
+    hide(group.userData, 'pivots', pv)
+    hide(group.userData, 'pivotList', list)
     this.pivots = []
     this.batches.clear()
     return group
   }
+}
+
+function hide(o, k, v) {
+  Object.defineProperty(o, k, { value: v, enumerable: false, writable: true, configurable: true })
 }
 
 // Convenience: build a model with a function.

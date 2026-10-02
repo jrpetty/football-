@@ -601,7 +601,13 @@ export const BeltMixin = {
       if (v) this.disposePods(v)
       const group = buildPods(st)
       this.scene.add(group)
-      this.podViews.set(st.id, { key, group, st })
+      // the pods' frames draw with the stations' batches; decals stay apart
+      const batched = []
+      if (this.batcher) {
+        group.updateMatrixWorld(true)
+        group.traverse((o) => o !== group && o.parent !== group && this.batcher.add(o) && batched.push(o))
+      }
+      this.podViews.set(st.id, { key, group, st, batched })
     }
     for (const [id, v] of this.podViews) {
       if (live.has(id)) continue
@@ -610,6 +616,7 @@ export const BeltMixin = {
     }
   },
   disposePods(v) {
+    for (const o of v.batched || []) this.batcher?.remove(o)
     this.scene.remove(v.group)
     v.group.traverse((o) => o.isMesh && o.geometry !== DECAL_GEO && o.geometry.dispose())
   },

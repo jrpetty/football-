@@ -29,6 +29,9 @@ export class StationView {
     this.ghost = null
     this.scaf = null
     this.flames = []
+    this.batched = []
+    this.moving = []
+    this.movRoots = []
     this.roofMats = []
     this.roofK = 1
     this.emitAcc = {}
@@ -46,6 +49,7 @@ export class StationView {
     const key = `${st.level}|${st.building?.to || 0}|${st.rot}|${st.x},${st.z}`
     if (key === this.key) return
     this.key = key
+    this.unbatch()
     for (const o of [this.model, this.ghost, this.scaf]) if (o) this.group.remove(o)
     for (const f of this.flames) f.mesh.parent?.remove(f.mesh)
     this.flames = []
@@ -65,6 +69,34 @@ export class StationView {
       this.model = stationModel(st.type, st.level)
       this.model.rotation.y = this.rotY
       this.group.add(this.model)
+      // its parts draw with every other station's (see basebatch.js); flames,
+      // animals and stockpiles stay meshes of their own
+      const B = this.base.batcher
+      if (B) {
+        this.group.updateMatrixWorld(true)
+        for (const o of this.model.children) if (B.add(o)) this.batched.push(o)
+        // moving parts too: their place in the batch follows them each frame
+        // (see syncBatch); roofs fade and tinted parts recolour, so those
+        // keep meshes of their own
+        const I = this.model.userData.info
+        const skip = new Set([...(I.roofs || []), ...(I.anims || []).filter((A) => A.tint).map((A) => A.name)].map((n) => this.model.userData.pivots[n]))
+        const walk = (p) => {
+          if (skip.has(p)) return
+          for (const o of p.children) {
+            if (o.isMesh && B.add(o)) {
+              this.batched.push(o)
+              this.moving.push({ o, vis: true })
+            } else if (!o.isMesh) walk(o)
+          }
+        }
+        for (const p of Object.values(this.model.userData.pivots)) {
+          if (p.parent !== this.model) continue
+          const n = this.moving.length
+          walk(p)
+          if (this.moving.length > n) this.movRoots.push(p)
+        }
+        if (!this.group.visible) for (const o of this.batched) B.setVisible(o, false)
+      }
     }
     if (st.building) {
       if (st.level === 0) {
@@ -459,7 +491,43 @@ export class StationView {
       }
     }
   }
+  unbatch() {
+    for (const o of this.batched) this.base.batcher?.remove(o)
+    this.batched = []
+    this.moving = []
+    this.movRoots = []
+  }
+  // Show or hide the whole station, batched parts included.
+  setVisible(v) {
+    this.group.visible = v
+    const B = this.base.batcher
+    if (!B) return
+    const hidden = new Set(this.moving.filter((m) => !m.vis).map((m) => m.o))
+    for (const o of this.batched) B.setVisible(o, v && !hidden.has(o))
+  }
+  // Batched moving parts follow their pivots (call once a frame, after
+  // anything that turns them: turrets, floodlights, the station itself).
+  syncBatch() {
+    if (!this.moving.length || !this.model) return
+    const B = this.base.batcher
+    for (const p of this.movRoots) p.updateMatrixWorld(true)
+    for (const m of this.moving) {
+      B.setMatrix(m.o, m.o.matrixWorld)
+      let vis = true
+      for (let p = m.o.parent; p && p !== this.model; p = p.parent) {
+        if (!p.visible) {
+          vis = false
+          break
+        }
+      }
+      if (vis !== m.vis) {
+        m.vis = vis
+        B.setVisible(m.o, vis && this.group.visible)
+      }
+    }
+  }
   dispose() {
+    this.unbatch()
     this.base.scene.remove(this.group)
     this.label.remove()
   }

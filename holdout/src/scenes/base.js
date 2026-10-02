@@ -12,6 +12,7 @@ import { Grid, BLOCK } from '../core/grid.js'
 import { BaseWorld } from './baseworld.js'
 import { FenceView } from './basefence.js'
 import { StationView } from './basestation.js'
+import { StationBatcher } from './basebatch.js'
 import { CampPeople } from './basepeople.js'
 import { RaidMixin } from './baseraid.js'
 import { RaidNetMixin } from './raidnet.js'
@@ -41,6 +42,7 @@ export class BaseScene {
     this.world = new BaseWorld(this, { seed: S.seed % 100000, grass: game.grassCount() })
     this.fence = new FenceView(this)
     this.stationViews = new Map()
+    this.batcher = new StationBatcher(this.scene)
     this.people = new CampPeople(this)
     this.squad = []
     this.zombies = []
@@ -111,6 +113,7 @@ export class BaseScene {
     this.disposeBelts()
     view.labels.clearScene(this.scene)
     this.atmo.dispose()
+    this.batcher.dispose()
     this.game.pipe.forget(this.scene)
   }
   get active() {
@@ -233,7 +236,7 @@ export class BaseScene {
     this.cursor.visible = true
     if (move) {
       const v = this.stationViews.get(move.id)
-      if (v) v.group.visible = false
+      if (v) v.setVisible(false)
     }
     const r = view.canvas.getBoundingClientRect()
     this.updatePlacing(view.input.mouse.x || r.width / 2, view.input.mouse.y || r.height / 2)
@@ -243,7 +246,7 @@ export class BaseScene {
     if (!this.placing) return
     if (this.placing.move) {
       const v = this.stationViews.get(this.placing.move.id)
-      if (v) v.group.visible = true
+      if (v) v.setVisible(true)
     }
     this.scene.remove(this.placing.ghost)
     this.placing = null
@@ -697,6 +700,8 @@ export class BaseScene {
     if (NET.role !== 'solo') netMarkers(this, dt)
     this.updateVisitor(dt)
     this.updatePlots()
+    // batched station parts catch up with everything that moved them
+    for (const v of this.stationViews.values()) v.syncBatch()
     this.fx.setViewport(window.innerHeight, view.camera.fov)
     // smoke, sparks and dust hang still while the camp is paused
     this.fx.update(simDt > 0 || S.raid ? dt : 0)

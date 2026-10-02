@@ -134,6 +134,9 @@ export const WEATHER = { tNoise: { value: null }, uWeather: { value: 1 }, uSnow:
 const WEATHER_VERT = /* glsl */ `
 {
   vec4 wwp = vec4(transformed, 1.0);
+  #ifdef USE_BATCHING
+  wwp = batchingMatrix * wwp;
+  #endif
   #ifdef USE_INSTANCING
   wwp = instanceMatrix * wwp;
   #endif

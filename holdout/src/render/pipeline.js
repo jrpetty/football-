@@ -150,6 +150,12 @@ export class Pipeline {
       ao.configuration.color = new THREE.Color('#1c140c')
       ao.configuration.halfRes = !!Q.aoHalf
       ao.configuration.gammaCorrection = false
+      // left to itself N8AO spots any transparent material (glass, smoke,
+      // roofs fading out) and draws the whole scene twice more every frame,
+      // shadow maps and all, to keep occlusion off it: a third of the frame
+      // for a difference you can't see from a camp camera
+      ao.autoDetectTransparency = false
+      ao.configuration.transparencyAware = false
       composer.addPass(ao)
     }
     // fog of war for scenes that ask for it (supply runs): its own pass on HDR

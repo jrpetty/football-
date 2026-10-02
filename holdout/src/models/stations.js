@@ -1006,18 +1006,18 @@ export function stationModel(type, level) {
     if (fn) fn(b, Math.max(1, level), I)
     else b.box(w - 0.4, 1, d - 0.4, { mat: 'wood', y: 0.5 })
     const g = b.build()
-    g.userData.info = I
+    Object.defineProperty(g.userData, 'info', { value: I, enumerable: false, writable: true, configurable: true })
     base = g
     cache.set(key, base)
   }
   const g = base.clone()
-  g.userData.info = base.userData.info
+  Object.defineProperty(g.userData, 'info', { value: base.userData.info, enumerable: false, writable: true, configurable: true })
   // re-resolve pivots on the clone
   const pv = {}
   g.traverse((o) => {
     if (o.name && base.userData.pivots[o.name]) pv[o.name] = o
   })
-  g.userData.pivots = pv
+  Object.defineProperty(g.userData, 'pivots', { value: pv, enumerable: false, writable: true, configurable: true })
   return g
 }
 // The model facts (spots, lights, stock pallets) for a type and level, without cloning.

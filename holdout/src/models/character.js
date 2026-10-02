@@ -77,7 +77,10 @@ function skinnedMesh(geometry, mats) {
   mesh.bind(new THREE.Skeleton(bones))
   mesh.castShadow = true
   mesh.receiveShadow = true
-  mesh.frustumCulled = false
+  // the bind-pose bounds don't follow the animation, so cull on a sphere
+  // roomy enough for any pose (arms out, lying down, a rifle raised): people
+  // out of view (or out of the sun's shadow box) cost nothing
+  mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 1.7)
   return { mesh, bones }
 }
 
