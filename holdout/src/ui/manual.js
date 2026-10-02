@@ -104,7 +104,7 @@ const CHAPTERS = [
       h('h4', 'The numbers'),
       h(
         'ul',
-        h('li', 'A belt carries speed ÷ gap items a second. Mk1 moves 0.5 m a second with items 2 m apart: 0.25 a second, 120 a day. Mk2 320 a day, Mk3 800; Logistics research adds 25%.'),
+        h('li', 'A belt carries speed ÷ gap items a second. Mk1 moves 0.4 m a second with items 2 m apart: 0.2 a second, 96 a day (one every 5 seconds at normal speed). Mk2 192 a day, Mk3 400; Logistics research adds 25%.'),
         h('li', 'A building runs at most (workers\' speed + automation) × belt bonus ÷ batch time batches a second. Each batch takes its inputs and makes its outputs.'),
         h('li', 'It actually runs as fast as its slowest limit: what its belts bring, what its belts can take away, or its own top speed. Inputs with no belt come from storage and never hold it back.'),
         h('li', 'Every belt and pod shows two rates: what is moving now, and what it settles at once everything evens out, with one line on what holds it back: the belt itself, the far end, the near end, or the far end running short of something else.'),

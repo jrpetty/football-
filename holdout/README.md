@@ -139,9 +139,9 @@ settles, what holds it back, upgrade, take down, and **Splitter here** /
 
 | Belt | Carries | Unlocked by |
 | --- | --- | --- |
-| Mk1: salvaged rubber on scrap rails | 120 a day | Conveyors (tier 1) |
-| Mk2: proper rollers, cured belt | 320 a day | Rubber Rollers (tier 4) |
-| Mk3: motor-driven, steel-framed | 800 a day | Motor Belts (tier 5) |
+| Mk1: salvaged rubber on scrap rails | 96 a day (one every 5 s) | Conveyors (tier 1) |
+| Mk2: proper rollers, cured belt | 192 a day (one every 2.5 s) | Rubber Rollers (tier 4) |
+| Mk3: motor-driven, steel-framed | 400 a day (one every 1.2 s) | Motor Belts (tier 5) |
 
 - **Splitter** (Conveyors): one belt in, up to three out. Each item goes to
   the next belt in turn, so two belts get exactly half each and three a third;
@@ -156,8 +156,9 @@ settles, what holds it back, upgrade, take down, and **Splitter here** /
   research makes every belt carry 25% more.
 
 **The maths.** Everything is per day.
-- A belt carries `speed ÷ gap × stack × seconds a day`: Mk1 is 0.5 m/s with
-  items 2 m apart, 0.25 items a second, 120 a day.
+- A belt carries `speed ÷ gap × stack × seconds a day`: Mk1 is 0.4 m/s with
+  items 2 m apart, 0.2 items a second, 96 a day. A camp day is 8 real
+  minutes at normal speed, so that is 12 a minute, one every 5 seconds.
 - A building runs at most `Bmax = seconds a day × rate × belt bonus × season
   ÷ batch time` batches a day, where rate is its workers' speed plus
   automation. Each batch takes `in[k]` and makes `out[k]`.
@@ -175,8 +176,8 @@ settles, what holds it back, upgrade, take down, and **Splitter here** /
   the belt itself, the far end's appetite, the near end running dry, or the
   far end being short of another input.
 - In a test chain (an automated scrap yard feeding two forges through a
-  splitter on a Mk1 belt) the predicted 120 / 60 / 60 a day matched the
-  simulated 118.5 / 58 / 57.5.
+  splitter on a Mk1 belt) the predicted 96 / 48 / 48 a day matched the
+  simulated 93 / 45.3 / 44.8.
 
 Machines spin up quickly and run down slowly, follow pause and game speed, and
 a machine paced by its belt says so ("Paced by its belt · 64%") instead of

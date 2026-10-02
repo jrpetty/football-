@@ -588,9 +588,9 @@ export const STATION_CATS = [
 // +15% for each side.
 export const BELTS = [
   null,
-  { name: 'Belt Mk1', speed: 0.5, gap: 2.0, cost: { scrap: 2, wood: 1 }, color: '#8a7a62', desc: 'Salvaged rubber on scrap rails. Carries 120 a day.' },
-  { name: 'Belt Mk2', speed: 1.0, gap: 1.5, cost: { metal: 1, rubber: 1 }, color: '#d8a020', desc: 'Proper rollers and a cured belt. Carries 320 a day.' },
-  { name: 'Belt Mk3', speed: 2.0, gap: 1.2, cost: { steel: 1, motors: 0.25 }, color: '#4a8ac8', desc: 'Motor-driven, steel-framed. Carries 800 a day.' },
+  { name: 'Belt Mk1', speed: 0.4, gap: 2.0, cost: { scrap: 2, wood: 1 }, color: '#8a7a62', desc: 'Salvaged rubber on scrap rails. Carries 96 a day.' },
+  { name: 'Belt Mk2', speed: 0.6, gap: 1.5, cost: { metal: 1, rubber: 1 }, color: '#d8a020', desc: 'Proper rollers and a cured belt. Carries 192 a day.' },
+  { name: 'Belt Mk3', speed: 1.0, gap: 1.2, cost: { steel: 1, motors: 0.25 }, color: '#4a8ac8', desc: 'Motor-driven, steel-framed. Carries 400 a day.' },
 ]
 export const BELT_BONUS = 0.15
 // How many units ride in one belt item.

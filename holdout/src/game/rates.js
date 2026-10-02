@@ -8,7 +8,7 @@
 //   where rate is its workers' speed plus automation (1.0 = one average
 //   worker). Each batch takes in[k] of every input and makes out[k].
 //   A belt of tier T carries at most
-//     cap = speed / gap x stack x SEC_PER_DAY      (Mk1 120, Mk2 320, Mk3 800)
+//     cap = speed / gap x stack x SEC_PER_DAY      (Mk1 96, Mk2 192, Mk3 400)
 //   A building then runs as fast as its slowest constraint allows:
 //     B = min(Bmax, belted inputs / in[k], room on belted outputs / out[k])
 //   Inputs without a belt come from storage, so they never hold it back.
