@@ -5,7 +5,7 @@ import {
   S, day, clockStr, gameDur, capOf, bedCount, canAfford, pay, gain, addItem, itemName, fenceMax, repairFenceCost, repairFence, fenceUpgradeCost, upgradeFence,
   expansionCost, startExpansion, expansionAvailable, claimGoal, survivorLevel, perimeter, save, wipeSave, countType, workersOf, survivorStats,
   unlockedBy, msDone, fenceUnlocked, listBackups, restoreBackup, exportSave, importSave, NET, MODES, modeOf } from '../game/state.js'
-import { upkeepNeeds, campFlow, stationFlow, power, powerNeed, isAutomated, boilerFuel, sourcePower, solarOutput, windOutput, moraleFactors, dailyNeeds, constructSpeed, raidIntel, threatLevel, isBloodMoonDay, sellMult, buyMult, resSellPrice, acceptRecruit, declineRecruit } from '../game/economy.js'
+import { upkeepNeeds, campFlow, stationFlow, power, powerNeed, isAutomated, boilerFuel, sourcePower, solarOutput, windOutput, pedalPower, digesterPower, moraleFactors, dailyNeeds, constructSpeed, raidIntel, threatLevel, isBloodMoonDay, sellMult, buyMult, resSellPrice, acceptRecruit, declineRecruit } from '../game/economy.js'
 import { QUALITY as GFXQ } from '../render/pipeline.js'
 import { sfx } from '../core/audio.js'
 import { volumeControl } from './volume.js'
@@ -284,7 +284,12 @@ export function renderPower(ui) {
       const k = st.type === 'generator' ? 'fuel' : boilerFuel(st)
       rows.push(h('div.kv', h('span', name, k && lit ? h('small.dim', ` · ${RES[k].name.toLowerCase()}`) : null), lit ? h('b.good', `${fmt(st.out || 0)} of ${fmt(sourcePower(st))}`) : h('b.bad', st.powerOn === false ? 'off' : 'no fuel')))
     }
-    if (st.type === 'solar') rows.push(h('div.kv', h('span', name), h('b.good', `${(D.solar[st.level - 1] * solarOutput()).toFixed(1)} of ${D.solar[st.level - 1]}`)))
+    if (D.solar) rows.push(h('div.kv', h('span', name), h('b.good', `${(D.solar[st.level - 1] * solarOutput(D.track?.[st.level - 1])).toFixed(1)} of ${D.solar[st.level - 1]}`)))
+    if (D.pedal) {
+      const pp = pedalPower(st)
+      rows.push(h('div.kv', h('span', name, h('small.dim', ` · ${workersOf(st).filter((s) => s.status === 'ok').length} riding`)), h('b' + (pp > 0 ? '.good' : '.bad'), pp > 0 ? `${pp.toFixed(1)}` : 'nobody riding')))
+    }
+    if (D.gas) rows.push(h('div.kv', h('span', name, h('small.dim', ` · gas ${Math.round((st.fed ?? 0) * 100)}%`)), h('b' + ((st.fed ?? 0) > 0.05 ? '.good' : '.bad'), `${digesterPower(st).toFixed(1)} of ${D.gas[st.level - 1]}`)))
     if (st.type === 'wind') rows.push(h('div.kv', h('span', name), h('b.good', `${(D.wind[st.level - 1] * windOutput()).toFixed(1)} of ${D.wind[st.level - 1]}`)))
     if (st.type === 'battery') rows.push(h('div.kv', h('span', name), h('b', `${fmt(st.charge || 0)} / ${D.store[st.level - 1]} stored${(st.flow || 0) > 0.05 ? ' · charging' : (st.flow || 0) < -0.05 ? ' · supplying' : ''}`)), bar((st.charge || 0) / D.store[st.level - 1], 'prod'))
   }
@@ -295,15 +300,15 @@ export function renderPower(ui) {
   const beltRow = belts.length
     ? h('div.kv', { 'data-tip': 'Each belt draws a little for every metre: Mk1 0.01, Mk2 0.02, Mk3 0.03 (at least 0.1 a belt). With no power a belt stops.' }, h('span', `Belts (${belts.length})`), h('b' + (beltsOff ? '.bad' : '.good'), `${fmt(p.beltNeed || 0)} ${beltsOff ? `· ${beltsOff} stopped` : '✓'}`))
     : null
-  const mix = [['Sun and wind', p.fromRenew], ['Engines and generators', p.fromFuel], ['Batteries', p.fromBatt]].filter(([, v]) => v > 0.05)
+  const mix = [['Sun, wind, pedals and gas', p.fromRenew], ['Engines and generators', p.fromFuel], ['Batteries', p.fromBatt]].filter(([, v]) => v > 0.05)
   return ui.frame(
     'Power',
     `${fmt(p.used)} used of ${fmt(p.supply)}`,
     [
-      h('section.card', h('h3', 'Sources'), rows.length ? rows : h('p.note', 'No power yet. A Steam Engine burns wood or coal (Steam Power milestone, tier 1). Diesel generators, solar, wind and batteries come later.')),
+      h('section.card', h('h3', 'Sources'), rows.length ? rows : h('p.note', 'No power yet. A Pedal Generator works from the start: someone rides, the lights come on. The Steam Power milestone (tier 1) brings steam engines, salvaged solar panels and solar lamps; biogas, diesel, bigger solar arrays, wind and batteries come later.')),
       mix.length ? h('section.card', h('h3', 'Where it comes from'), mix.map(([t, v]) => h('div.kv', h('span', t), h('b', fmt(v))))) : null,
       h('section.card', h('h3', 'Using power', h('small', `${fmt(p.demand)} wanted`)), beltRow, users.length ? users.map((st) => h('div.kv', h('span', STATIONS[st.type].name), h('b' + (p.powered.has(st.id) ? '.good' : '.bad'), `${fmt(powerNeed(st))} ${p.powered.has(st.id) ? '✓' : STATIONS[st.type].machine ? 'by hand' : STATIONS[st.type].node ? 'stopped' : 'unpowered'}`))) : beltRow ? null : h('p.note', 'Nothing yet. Machines (Fabricator, Machine Shop, labs and benches), automated stations, turrets and floodlights use power.')),
-      h('p.note', 'Turrets and floodlights get power first, then belts, splitters and mergers (a belt without power stops), then machines and automated stations in the order they were built. Sun and wind are used first and charge the batteries with what is left; engines only burn for the rest. A machine without power is hand-cranked at half speed.'),
+      h('p.note', 'Turrets and floodlights get power first, then belts, splitters and mergers (a belt without power stops), then machines and automated stations in the order they were built. Sun, wind, pedal generators and biogas are used first and charge the batteries with what is left; engines only burn for the rest. A machine without power is hand-cranked at half speed.'),
     ],
     { icon: 'bolt' },
   )

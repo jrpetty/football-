@@ -47,10 +47,12 @@ export function powerNeed(st) {
 // nothing on the line moves without them.
 export const linkPower = (l) => Math.max(0.1, l.len * (BELTS[l.tier]?.power || 0.01)) * (researchDone('efficiency') ? 0.75 : 1)
 const powerPrio = (st) => (st.type === 'turret' || st.type === 'floodlight' ? 0 : STATIONS[st.type].node ? 0.5 : STATIONS[st.type].machine ? 1 : 2)
-export function solarOutput() {
+export function solarOutput(track = 0) {
   const h = hour()
   if (h < 6 || h > 19.5) return 0
-  const sunK = Math.sin(((h - 6) / 13.5) * Math.PI)
+  const s = Math.sin(((h - 6) / 13.5) * Math.PI)
+  // a mount that turns with the sun catches the low light at either end of the day
+  const sunK = track ? Math.pow(s, 0.45) : s
   const w = { clear: 1, hazy: 0.8, overcast: 0.45, rain: 0.3, fog: 0.4, snow: 0.35 }[S.weather.type] ?? 1
   return sunK * w
 }
@@ -67,6 +69,30 @@ export function boilerFuel(st) {
   for (const k of STATIONS.boiler.fuels) if (has(k)) return st.fuelPick && st.fuelPick !== k && has(st.fuelPick) ? st.fuelPick : k
   return null
 }
+// Off-grid power. A rider on each bike makes power while they pedal.
+export function pedalPower(st) {
+  if (st.halt || st.building || st.level < 1) return 0
+  const d = STATIONS[st.type]
+  let p = 0
+  for (const s of workersOf(st)) if (s.status === 'ok') p += d.pedal * Math.min(1.3, workEff(s, st.type))
+  return p
+}
+// What the camp's animals leave behind, in loads a day (a goat four hens'
+// worth), and the scraps an active cookhouse throws out.
+export function dungPerDay() {
+  let n = 0
+  for (const st of S.stations) {
+    const D = STATIONS[st.type]
+    if (!D.livestock || st.building || st.level < 1) continue
+    n += flockOf(st) * (D.livestock === 'goat' ? 1.2 : 0.3)
+  }
+  return n
+}
+export const scrapsPerDay = () => S.stations.filter((st) => st.type === 'kitchen' && st.level > 0 && !st.building && workersOf(st).length).length * 2
+// A digester runs as hard as it is fed (eased: the gas holder fills and empties slowly).
+export const digesterPower = (st) => (st.halt || st.building || st.level < 1 ? 0 : STATIONS[st.type].gas[st.level - 1] * (st.fed ?? 0))
+// Digestate on the farm plots: a fed digester grows a tenth more.
+export const digestate = () => S.stations.some((st) => STATIONS[st.type].gas && (st.fed ?? 0) > 0.5)
 export function sourcePower(st) {
   const d = STATIONS[st.type]
   const op = workersOf(st).filter((s) => s.status === 'ok')[0]
@@ -91,8 +117,10 @@ export function powerInfo() {
       const p = sourcePower(st)
       fueled += p
       srcs.push({ st, p })
-    } else if (st.type === 'solar') renew += d.solar[st.level - 1] * solarOutput()
+    } else if (d.solar) renew += d.solar[st.level - 1] * solarOutput(d.track?.[st.level - 1])
     else if (st.type === 'wind') renew += d.wind[st.level - 1] * windOutput()
+    else if (d.pedal) renew += pedalPower(st)
+    else if (d.gas) renew += digesterPower(st)
     else if (st.type === 'battery') {
       const cap = d.store[st.level - 1]
       const c = clamp(st.charge || 0, 0, cap)
@@ -167,6 +195,46 @@ function tickPower(pinfo, dt) {
   }
 }
 
+// A digester takes its share of the dung and scraps; short of them, it can
+// be fed food (never the camp's last few days of it).
+function tickDigester(st, d, share, dt) {
+  const need = d.feed[st.level - 1]
+  let got = Math.min(need, share)
+  st.dung = got
+  st.foodFed = 0
+  if (got < need && st.useFood) {
+    const want = ((need - got) / SEC_PER_DAY) * dt
+    const take = Math.min(want, Math.max(0, (S.res.food || 0) - survivalReserve('food')))
+    if (take > 0) {
+      S.res.food -= take
+      st.foodFed = dt > 0 ? (take / dt) * SEC_PER_DAY : 0
+      got += st.foodFed
+    }
+  }
+  const f = clamp(got / need, 0, 1)
+  st.fed = (st.fed ?? 0) + (f - (st.fed ?? 0)) * Math.min(1, dt / 30)
+  st.active = st.fed > 0.05
+  if (f < 0.98) st.stalled = got < 0.05 ? 'Nothing to digest' : 'Short of dung and scraps'
+}
+// A solar lamp charges in the sun and burns through the dark.
+export const lampDark = () => {
+  const h = hour()
+  return h < 6.3 || h > 19.2
+}
+function tickLamp(st, d, dt) {
+  const L = d.lamp
+  const hrs = (dt / SEC_PER_DAY) * 24
+  const sun = solarOutput()
+  let c = st.charge ?? 0.5
+  if (sun > 0.02) c = Math.min(1, c + (sun * hrs) / L.charge)
+  const dark = lampDark()
+  if (dark && c > 0) c = Math.max(0, c - hrs / L.burn)
+  st.charge = c
+  st.lit = dark && c > 0.001
+  st.active = st.lit
+  if (dark && !st.lit) st.stalled = 'Battery flat'
+}
+
 export function stationRate(st, pinfo) {
   if (st.building || st.level < 1 || st.halt) return 0
   const d = STATIONS[st.type]
@@ -177,6 +245,7 @@ export function stationRate(st, pinfo) {
   if (isAutomated(st, pinfo)) r += d.autoRate * (hasFlag('autoBoost') ? 1.5 : 1) * (1 + coreBoost() * (st.cores || 0))
   // animals: the more of them, the more they give
   if (d.livestock) r *= flockFactor(st)
+  if (st.type === 'farm' && digestate()) r *= 1.1
   return r
 }
 // ---------------------------------------------------------------- livestock
@@ -194,6 +263,8 @@ export function penRisk(st, pinfo = power()) {
     if (t.level < 1 || t.building) continue
     if (t.type === 'watchtower' && workersOf(t).some((s) => s.status === 'ok')) k *= 0.7
     if (t.type === 'floodlight' && pinfo.powered.has(t.id)) k *= 0.85
+    // a charged solar lamp close by
+    if (STATIONS[t.type].lamp && (t.lit || (t.charge ?? 0.5) > 0.3) && Math.hypot(t.x - st.x, t.z - st.z) < 12) k *= 0.85
   }
   return clamp(k, 0, 0.95)
 }
@@ -554,6 +625,9 @@ export function econTick(dt, opts = {}) {
 
   // ---- stations
   let anyAuto = false
+  // the dung and scraps, shared between the digesters
+  const digs = S.stations.filter((st) => STATIONS[st.type].gas && !st.building && st.level > 0 && !st.halt)
+  const feedShare = digs.length ? (dungPerDay() + scrapsPerDay()) / digs.length : 0
   for (const st of S.stations) {
     st.active = false
     st.stalled = null
@@ -574,7 +648,10 @@ export function econTick(dt, opts = {}) {
       }
       st.active = true
     }
-    if (st.type === 'solar') st.active = solarOutput() > 0.05
+    if (d.solar) st.active = solarOutput(d.track?.[st.level - 1]) > 0.05
+    if (d.pedal) st.active = pedalPower(st) > 0
+    if (d.gas) tickDigester(st, d, feedShare, dt)
+    if (d.lamp) tickLamp(st, d, dt)
     for (const s of workersOf(st)) if (s.status === 'ok' && d.skill) gainXP(s, d.skill, 0.2 * dt)
     if (d.recipe) tickProcessor(st, activeSingle(st), rate, dt)
     else if (st.type === 'recycler') tickRecycler(st, d, rate, dt)

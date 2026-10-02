@@ -65,7 +65,7 @@ class Worker {
     this.base.scene.add(this.root)
   }
   labelPos() {
-    return { x: this.pos.x, y: this.pos.y + (this.lying ? 0.9 : this.anim === 'sit' || this.anim === 'sitwork' ? 1.75 : 2.15), z: this.pos.z }
+    return { x: this.pos.x, y: this.pos.y + (this.lying ? 0.9 : this.anim === 'sit' || this.anim === 'sitwork' ? 1.75 : this.anim === 'pedal' ? 1.95 : 2.15), z: this.pos.z }
   }
   setTool(kind) {
     if (this.toolKind === kind) return
@@ -134,7 +134,7 @@ class Worker {
       else if (G.lookAt) this.heading = angleLerp(this.heading, Math.atan2(G.lookAt.x - this.pos.x, G.lookAt.z - this.pos.z), 1 - Math.exp(-dt * 5))
       anim = G.anim || 'idle'
       if (G.st && G.kind === 'work' && !G.st.active) anim = G.sit ? 'sit' : G.anim === 'lookout' ? 'lookout' : 'idle'
-      if (G.sit && anim !== 'sit') anim = 'sitwork'
+      if (G.sit && anim !== 'sit') anim = G.anim === 'pedal' ? 'pedal' : 'sitwork'
     }
     if (this.shootT > 0) {
       this.shootT -= dt

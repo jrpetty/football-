@@ -17,6 +17,8 @@ join with a code, and each of you leads your own survivors in the same camp.
 
 v5 adds priority splitters and buffer hoppers on belt lines, storage in
 three sizes whose piles fill up as stock rises, a Recycler, chickens and goats,
+off-grid power (pedal generators, salvaged solar panels and solar lamps, a
+biogas digester fed by the animals),
 survivor diaries, barricades on runs, recon scouts and a roaming horde, and a
 set of tools for running a big camp: a command palette (`Ctrl`+`K`), a flow
 chart for every resource, a watch list, custom alerts, a go-to-problem key and
@@ -252,7 +254,25 @@ carry exactly those goods.
   useless in still fog) cost nothing to run.
 - **Battery Bank** stores what solar and wind make beyond the load and gives
   it back at night.
-- When power is short, defence gets it first, then belts, splitters and
+- **Off the grid**, cheap power that costs nothing to run:
+  - **Pedal Generator** (from the start): an exercise bike on an alternator,
+    about 1.4 power per rider, day or night, while someone pedals. Level 2
+    adds a second bike.
+  - **Solar Panel** (Steam Power, tier 1): two salvaged panels, 1.2 power at
+    noon; level 2 puts them on a mast that turns with the sun (2.2 at noon
+    and much more in the mornings and evenings).
+  - **Biogas Digester** (Chemistry, tier 2): dung from the coop and goat pen
+    and a staffed Cookhouse's scraps rot down into gas: 3 / 5 power day and
+    night when it gets 8 / 12 loads a day (a hen leaves 0.3, a goat 1.2, a
+    Cookhouse 2). It can be fed food when dung runs short, and while it is
+    fed the farm plots grow 10% more. Its gas holder visibly rises and falls.
+  - **Solar Lamp** (Steam Power, tier 1): a lamp post with its own panel and
+    battery that lights about 9 m round it all night with no grid power.
+    Defenders in its light see in the dark during a horde, and pens close by
+    are harder for the infected to get at. After a dull day it can go dark
+    before dawn.
+- Sun, wind, pedals and gas are used first; engines burn only for the rest.
+  When power is short, defence gets it first, then belts, splitters and
   mergers, then staffed machines, then automation. The Power panel shows every
   source and every user.
 

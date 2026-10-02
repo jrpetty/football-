@@ -8,7 +8,7 @@ import { NET,
   researchLock, startResearch, cancelResearch, pickAlt, altsFor, researchDone, installCore, removeCore, coreBoost, hasFlag, msDone,
   canControl,
 } from '../game/state.js'
-import { recycleQueue, salvageOf, flockOf, flockMax, flockFactor, penRisk, buildPenFence, mendPenFence, mendCost, buyAnimal, animalCost, stationFlow, power, powerNeed, linkPower, isAutomated, stationRate, solarOutput, windOutput, boilerFuel, sourcePower, HAND_RATE, kitchenSaving, constructSpeed, raidIntel, activeRecipe, activeSingle, recipeUnlocked, recipeTarget } from '../game/economy.js'
+import { recycleQueue, salvageOf, flockOf, flockMax, flockFactor, penRisk, buildPenFence, mendPenFence, mendCost, buyAnimal, animalCost, stationFlow, power, powerNeed, linkPower, isAutomated, stationRate, solarOutput, windOutput, boilerFuel, sourcePower, pedalPower, dungPerDay, scrapsPerDay, digesterPower, lampDark, HAND_RATE, kitchenSaving, constructSpeed, raidIntel, activeRecipe, activeSingle, recipeUnlocked, recipeTarget } from '../game/economy.js'
 import { linksOf, inputsOf, outputsOf, linkPerDay, linkState, upgradeCostOf, upgradeLink, upgradeLocked, removeLink, beltBonus, pulled, portsOf, linkAt, isDepot, nodeKind, nodeRes, insertNode, splitProblem, firstOut, setFirst, hopperHold, stackOf, NODE_RULES, beltSpeed as beltSpeedOf } from '../game/belts.js'
 import { flowsNow, limitText } from '../game/rates.js'
 import { slotGroups, groupFill, STOCK_GROUPS } from '../scenes/basestock.js'
@@ -20,7 +20,7 @@ import { icon } from './icons.js'
 import { leaderChip } from './netui.js'
 import { costList, resChip, resIcon, bar, qualityTag, condBar, itemCard, seg, stepper, plural } from './common.js'
 
-const TYPE_ICON = { hopper: 'hopper', recycler: 'recycle', coop: 'hen', goatpen: 'wool', priority: 'belt' }
+const TYPE_ICON = { hopper: 'hopper', recycler: 'recycle', coop: 'hen', goatpen: 'wool', priority: 'belt', panel: 'sun', sollamp: 'sun' }
 const CAT_ICON = { living: 'gate', production: 'production', crafting: 'hammer', defense: 'shield', power: 'bolt', logistics: 'belt', storage: 'box' }
 const tabState = {}
 
@@ -331,8 +331,69 @@ function effectBlock(ui, st, pinfo) {
       break
     }
     case 'solar':
-      out.push(card('Sunlight', h('div.kv', h('span', 'Peak output'), h('b', `${D.solar[lv - 1]} power`)), h('div.kv', h('span', 'Right now'), h('b', `${(D.solar[lv - 1] * solarOutput()).toFixed(1)} power`)), h('p.note', 'Nothing at night; clouds and rain cut it down.')))
+    case 'panel': {
+      const tr = D.track?.[lv - 1]
+      const sun = solarOutput(tr)
+      out.push(
+        card(
+          'Sunlight',
+          h('div.kv', h('span', 'Peak output'), h('b', `${D.solar[lv - 1]} power`)),
+          h('div.kv', h('span', 'Right now'), h('b' + (sun > 0.05 ? '.good' : ''), `${(D.solar[lv - 1] * sun).toFixed(1)} power`)),
+          bar(sun, 'prod', sun > 0.02 ? `${Math.round(sun * 100)}% sun` : 'Dark'),
+          h('p.note', `Nothing at night; clouds and rain cut it down. ${tr ? 'The mount turns with the sun, so mornings and evenings give more.' : st.type === 'panel' && lv < D.levels ? 'Level 2 puts it on a mount that follows the sun.' : ''} Spare output charges the battery banks.`),
+        ),
+      )
       break
+    }
+    case 'pedal': {
+      const riders = workersOf(st)
+      const p = pedalPower(st)
+      out.push(
+        card(
+          'Pedalling',
+          h('div.kv', h('span', 'Each rider'), h('b', `about ${D.pedal} power`)),
+          h('div.kv', h('span', 'Right now'), h('b' + (p > 0 ? '.good' : '.bad'), p > 0 ? `${p.toFixed(1)} power` : 'Nobody riding')),
+          riders.map((s) => h('div.kv', h('span', s.first), h('b', s.status === 'ok' ? `${(D.pedal * Math.min(1.3, workEff(s, st.type))).toFixed(1)}` : 'away'))),
+          h('p.note', `Power day or night for as long as someone rides: the camp's first power, before any engine. Fitter, happier riders make more. ${lv < D.levels ? 'Level 2 adds a second bike.' : ''}`),
+        ),
+      )
+      break
+    }
+    case 'digester': {
+      const need = D.feed[lv - 1]
+      const dung = dungPerDay()
+      const scraps = scrapsPerDay()
+      const n = Math.max(1, S.stations.filter((x) => STATIONS[x.type].gas && x.level > 0 && !x.building).length)
+      const fed = st.fed ?? 0
+      out.push(
+        card(
+          'Gas',
+          bar(fed, 'prod', `Gas holder ${Math.round(fed * 100)}%`),
+          h('div.kv', h('span', 'Making'), h('b' + (fed > 0.05 ? '.good' : '.bad'), `${digesterPower(st).toFixed(1)} of ${D.gas[lv - 1]} power`)),
+          h('div.kv', h('span', 'Feed it needs'), h('b', `${need} loads a day`)),
+          h('div.kv', h('span', 'Dung from the animals'), h('b' + (dung > 0 ? '' : '.dim'), `${(dung / n).toFixed(1)} a day`)),
+          h('div.kv', h('span', 'Cookhouse scraps'), h('b' + (scraps > 0 ? '' : '.dim'), `${(scraps / n).toFixed(1)} a day`)),
+          st.useFood ? h('div.kv', h('span', 'Food fed to it'), h('b', `${(st.foodFed || 0).toFixed(1)} a day`)) : null,
+          h('label.rtoggle', { 'data-tip': 'Make up any shortfall from the food stores (never the camp\'s last three days of food)' }, h('input', { type: 'checkbox', checked: !!st.useFood, onchange: (e) => ((st.useFood = e.target.checked), sfx('click'), ui.refreshPanel()) }), h('span', 'Feed it food when dung runs short')),
+          h('p.note', `A hen leaves 0.3 loads a day and a goat 1.2; a staffed Cookhouse throws out 2 of scraps. Steady power day and night, and while it is fed the farm plots grow 10% more on what comes out the other end.${n > 1 ? ` (${n} digesters share the feed.)` : ''}`),
+        ),
+      )
+      break
+    }
+    case 'sollamp': {
+      const c = st.charge ?? 0.5
+      const dark = lampDark()
+      out.push(
+        card(
+          'Lamp',
+          bar(c, 'prod', `Battery ${Math.round(c * 100)}%`),
+          h('div.kv', h('span', 'Now'), h('b' + (st.lit ? '.good' : dark ? '.bad' : ''), st.lit ? 'Lit' : dark ? 'Dark: the battery is flat' : c > 0.995 ? 'Full: lights up at dusk' : solarOutput() > 0.02 ? 'Charging in the sun' : 'Waiting for the sun')),
+          h('div.kv', h('span', 'A full battery lasts'), h('b', `${D.lamp.burn} hours`)),
+          h('p.note', `Needs no power from the grid. It lights the ground for about ${D.lamp.reach} m: defenders there see in the dark during a horde, and pens close by are harder for the infected to get at. A dull day may not fill it, and it can go dark before dawn.`),
+        ),
+      )
+      break
+    }
     case 'watchtower':
       out.push(card('Lookout', h('div.kv', h('span', 'Guard damage'), h('b', `+${Math.round(D.towerDmg[lv - 1] * 100)}%`)), h('div.kv', h('span', 'Horde intel'), h('b', 'Size and count')), h('p.note', 'A guard up here shoots night wanderers before they reach the wall, and fights from height during hordes.')))
       break
@@ -1054,7 +1115,9 @@ function benefits(st, next) {
   if (D.heal) out.push('Heals faster')
   if (D.xpRate) out.push(`Trains ${D.xpRate[i]}× faster`)
   if (D.power) out.push(Array.isArray(D.power) ? `${D.power[i]} power` : '')
-  if (D.solar) out.push(`${D.solar[i]} peak power`)
+  if (D.solar) out.push(`${D.solar[i]} peak power${D.track?.[i] ? ', follows the sun' : ''}`)
+  if (D.gas) out.push(`${D.gas[i]} power, eats ${D.feed[i]} loads a day`)
+  if (D.pedal && D.workers[i] > D.workers[i - 1]) out.push(`${D.workers[i]} bikes`)
   if (D.wind) out.push(`${D.wind[i]} power in full wind`)
   if (D.store) out.push(`stores ${D.store[i]}, supplies ${D.rate[i]}`)
   if (D.towerDmg) out.push(`+${Math.round(D.towerDmg[i] * 100)}% guard damage`)
@@ -1071,7 +1134,7 @@ function benefits(st, next) {
 function actionsBlock(ui, st) {
   const D = STATIONS[st.type]
   const same = S.stations.filter((x) => x.type === st.type)
-  const pausable = !D.node && !D.depot && (D.recipe || D.recipes || D.queue || D.passive || D.livestock || ['generator', 'boiler', 'turret', 'floodlight', 'research', 'training'].includes(st.type))
+  const pausable = !D.node && !D.depot && (D.recipe || D.recipes || D.queue || D.passive || D.livestock || ['generator', 'boiler', 'turret', 'floodlight', 'research', 'training', 'pedal', 'digester'].includes(st.type))
   const on = isRunning(st)
   return h(
     'div.pactions',

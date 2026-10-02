@@ -490,6 +490,30 @@ export const STATIONS = {
     cost: [{ cells: 6, plates: 20, wiring: 30, bolts: 40 }, { cells: 14, plates: 30, circuits: 6, bolts: 60 }, { cells: 30, beams: 6, circuits: 12, bolts: 100 }],
     time: [40, 70, 100], workers: [0, 0, 0], store: [60, 140, 260], rate: [6, 10, 16],
   },
+  // ---- off-grid power: small, cheap, free to run
+  panel: {
+    name: 'Solar Panel', cat: 'power', size: [2, 2], levels: 2, skill: null,
+    desc: 'Two salvaged rooftop panels on a timber frame, with a car battery to smooth the clouds over. A little free power in daylight, none at night; clouds cut it. Level 2 puts them on a mount that turns to follow the sun, so mornings and evenings give more.',
+    cost: [{ scrap: 14, wood: 8, electronics: 2, parts: 2 }, { metal: 12, bolts: 30, wiring: 6, parts: 4 }],
+    time: [15, 30], workers: [0, 0], solar: [1.2, 2.2], track: [0, 1],
+  },
+  pedal: {
+    name: 'Pedal Generator', cat: 'power', size: [3, 2], levels: 2, skill: 'survival',
+    desc: 'An exercise bike chained to a car alternator. Whoever rides it makes power, day or night, for as long as they keep pedalling: the camp\'s first power before any engine. Level 2 adds a second bike.',
+    cost: [{ scrap: 16, wood: 10, parts: 3 }, { metal: 10, bolts: 24, parts: 4, wiring: 4 }],
+    time: [12, 25], workers: [1, 2], pedal: 1.4,
+  },
+  digester: {
+    name: 'Biogas Digester', cat: 'power', size: [5, 4], levels: 2, skill: 'tech',
+    desc: 'A buried tank where dung from the coop and the goat pen, and the kitchen\'s scraps, rot down into gas that runs a small engine. Steady power day and night with nothing to burn, and what comes out the other end feeds the farm plots. Short of dung, it can be fed food.',
+    cost: [{ wood: 30, scrap: 30, metal: 15, parts: 6 }, { plates: 20, bolts: 50, parts: 8, wiring: 10 }],
+    time: [35, 60], workers: [0, 0], gas: [3, 5], feed: [8, 12],
+  },
+  sollamp: {
+    name: 'Solar Lamp', cat: 'defense', size: [1, 1], levels: 1, skill: null,
+    desc: 'A lamp post with its own little panel and battery. It charges in the sun and lights the ground round it through the night, no grid needed. Defenders near it see in the dark, and the infected keep further off the pens. A dull day means it may go dark before dawn.',
+    cost: [{ scrap: 8, metal: 4, electronics: 2, parts: 1 }], time: [8], workers: [0], lamp: { reach: 9, charge: 6, burn: 11 },
+  },
   chemlab: {
     name: 'Chemistry Lab', cat: 'crafting', size: [5, 4], levels: 3, machine: 1, skill: 'tech',
     desc: 'Refines chemicals from fuel and scrap, mixes gunpowder for the Ammo Press, cures rubber, fills molotovs and pipe bombs, and seals power cells. Keeps each product topped up to its target.',
@@ -690,10 +714,10 @@ export const TIERS = [
 ]
 export const MILESTONES = {
   smelter: { tier: 1, name: 'Smelter', desc: 'Stack a clay furnace and a charcoal kiln, and work out how hot they have to burn.', cost: { wood: 60, scrap: 80 }, unlocks: { stations: ['forge', 'kiln'] } },
-  steam: { tier: 1, name: 'Steam Power', desc: 'An old boiler, a flywheel and a lot of rivets: power from fire. Machines run at full speed with power, and at half by hand without it.', cost: { wood: 90, scrap: 70, metal: 20 }, unlocks: { stations: ['boiler'] } },
+  steam: { tier: 1, name: 'Steam Power', desc: 'An old boiler, a flywheel and a lot of rivets: power from fire. Salvaged solar panels and solar lamps too. Machines run at full speed with power, and at half by hand without it.', cost: { wood: 90, scrap: 70, metal: 20 }, unlocks: { stations: ['boiler', 'panel', 'sollamp'] } },
   conveyors: { tier: 1, name: 'Conveyors', desc: 'Salvaged rollers and old rubber: carry goods between stations without carrying them.', cost: { wood: 50, scrap: 60, parts: 4 }, unlocks: { belt: 1, stations: ['splitter', 'merger', 'priority', 'hopper'] } },
   palisade: { tier: 1, name: 'Palisade', desc: 'Plans for a proper log wall, and for pushing it out into the woods.', cost: { wood: 150, cloth: 10 }, unlocks: { fence: 1, exp: ['w1', 'n1'], stations: ['goatpen'] } },
-  chemistry: { tier: 2, name: 'Chemistry', desc: 'A school chemistry kit and a lot of nerve.', cost: { metal: 60, chemicals: 10, parts: 10 }, unlocks: { stations: ['chemlab', 'ammo'] } },
+  chemistry: { tier: 2, name: 'Chemistry', desc: 'A school chemistry kit and a lot of nerve. Biogas from dung and scraps.', cost: { metal: 60, chemicals: 10, parts: 10 }, unlocks: { stations: ['chemlab', 'ammo', 'digester'] } },
   fabrication: { tier: 2, name: 'Fabrication', desc: 'A real production line for plates, bolts, parts and wire, a gunsmith\'s bench and a tailor\'s.', cost: { metal: 80, plates: 20, bolts: 80, scrap: 100 }, unlocks: { stations: ['fabricator', 'weapons', 'tailor', 'shed', 'recycler'] } },
   signal: { tier: 2, name: 'The Signal', desc: 'Old maps show a broadcast mast on the hill. If it could reach the coast, someone might come.', cost: { plates: 30, bolts: 120, wood: 200, parts: 20 }, unlocks: { stations: ['mast'] } },
   power: { tier: 3, name: 'Diesel Power', desc: 'Diesel generators, perimeter floodlights and auto-turrets.', cost: { plates: 40, bolts: 120, parts: 30, electronics: 10, fuel: 30 }, unlocks: { stations: ['generator', 'floodlight', 'turret'] } },

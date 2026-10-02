@@ -535,6 +535,24 @@ export const ANIMS = {
     set('head', 0.15 + Math.sin(t * 0.3 + ch.seed) * 0.1, Math.sin(t * 0.21 + ch.seed) * 0.4, 0)
     ch.hipsY = -0.52
   },
+  // on a bike saddle, leaning on the bars, legs going round
+  pedal(ch, t) {
+    const a = t * 5.2
+    set('thighL', -1.05 + Math.sin(a) * 0.32, 0, 0.06)
+    set('thighR', -1.05 - Math.sin(a) * 0.32, 0, -0.06)
+    set('shinL', 1.15 - Math.cos(a) * 0.38)
+    set('shinR', 1.15 + Math.cos(a) * 0.38)
+    set('footL', -0.15 + Math.sin(a) * 0.15)
+    set('footR', -0.15 - Math.sin(a) * 0.15)
+    set('spine', 0.55 + Math.sin(a * 2) * 0.02)
+    set('chest', 0.18, Math.sin(a) * 0.06, 0)
+    set('upperArmL', -1.15, 0, 0.18)
+    set('upperArmR', -1.15, 0, -0.18)
+    set('foreArmL', -0.45)
+    set('foreArmR', -0.45)
+    set('head', -0.2 + Math.sin(a * 2) * 0.03, 0, 0)
+    ch.hipsY = -0.3 + Math.abs(Math.sin(a)) * 0.015
+  },
   // seated at a bench: sewing, soldering, operating a radio
   sitwork(ch, t) {
     ANIMS.sit(ch, t)

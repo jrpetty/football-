@@ -28,7 +28,7 @@ export const RaidMixin = {
   nightAcc(a) {
     if (a.st?.nightSight >= 1) return 1
     const pinfo = power()
-    const lit = S.stations.some((st) => st.type === 'floodlight' && pinfo.powered.has(st.id) && Math.hypot(st.x + 0.5 - a.pos.x, st.z + 0.5 - a.pos.z) < 14)
+    const lit = S.stations.some((st) => (st.type === 'floodlight' && pinfo.powered.has(st.id) && Math.hypot(st.x + 0.5 - a.pos.x, st.z + 0.5 - a.pos.z) < 14) || (st.lit && STATIONS[st.type].lamp && Math.hypot(st.x + 0.5 - a.pos.x, st.z + 0.5 - a.pos.z) < STATIONS[st.type].lamp.reach))
     return lit ? 1 : 0.72 + (a.st?.nightSight || 0) * 0.28
   },
   dmgBonus(a) {

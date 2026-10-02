@@ -8,7 +8,7 @@ import { slotGroups, syncPiles } from './basestock.js'
 import { AnimalPen } from './baseanimals.js'
 import { makeFlame } from '../render/fx.js'
 import { STATIONS, RES, RECIPES, MODS, ITEMS } from '../game/data.js'
-import { S, stationSize, workersOf, itemOf, itemName } from '../game/state.js'
+import { S, stationSize, workersOf, itemOf, itemName, hour } from '../game/state.js'
 import { view } from '../render/view.js'
 import { nodeKind, nodeRes, inCap } from '../game/belts.js'
 import { h, clamp, rand } from '../core/util.js'
@@ -175,10 +175,10 @@ export class StationView {
     const I = this.info
     if (!this.model || this.st.building) return
     for (const L of I.lights || []) {
-      const on = L.when === 'always' || (L.when === 'night' ? night > 0.25 : L.when === 'active' ? this.st.active : true)
+      const on = L.when === 'always' || (L.when === 'night' ? night > 0.25 : L.when === 'active' ? this.st.active : L.when === 'lit' ? !!this.st.lit : true)
       if (!on) continue
       const p = this.toWorld(L.x, L.z, L.y)
-      out.push({ x: p.x, y: p.y, z: p.z, color: L.color, intensity: L.intensity * (L.when === 'night' ? night : 1) * (L.when === 'always' ? 0.35 + night * 0.65 : 1), dist: L.dist, flicker: L.flicker, key: this.st.id + L.x + L.z })
+      out.push({ x: p.x, y: p.y, z: p.z, color: L.color, intensity: L.intensity * (L.when === 'night' || L.when === 'lit' ? Math.max(0.35, night) : 1) * (L.when === 'always' ? 0.35 + night * 0.65 : 1), dist: L.dist, flicker: L.flicker, key: this.st.id + L.x + L.z })
     }
   }
   // ---- labels
@@ -312,6 +312,15 @@ export class StationView {
             p.position.x = base.p.x + (Math.random() - 0.5) * (A.amp || 0.01)
             p.position.z = base.p.z + (Math.random() - 0.5) * (A.amp || 0.01)
           }
+        } else if (A.kind === 'lit') {
+          // a lamp face that glows only while it is lit
+          p.visible = !!st.lit
+        } else if (A.kind === 'sun') {
+          // a tracking mount turns east to west with the sun, back at night
+          const hr = hour()
+          const k2 = hr < 6 || hr > 19.5 ? -1 : clamp((hr - 12.75) / 6.75, -1, 1)
+          const goal = base.r[ax] + k2 * (A.amp || 1)
+          p.rotation[ax] += (goal - p.rotation[ax]) * Math.min(1, sdt * 0.02 + dt * 0.5)
         } else if (A.kind === 'fill' || A.kind === 'fillY') {
           // a gauge or a heap of goods following how full the station is
           const F = this.fillNow(dt)
@@ -365,7 +374,11 @@ export class StationView {
     const st = this.st
     let f = 0
     let color = '#8a8478'
-    if (nodeKind(st) === 'hopper') {
+    if (STATIONS[st.type].gas) {
+      // a digester's gas holder rises as it is fed
+      f = st.fed ?? 0
+      color = '#3e4a3a'
+    } else if (nodeKind(st) === 'hopper') {
       const k = nodeRes(st)
       if (k) {
         f = clamp((st.buf?.out?.[k] || 0) / Math.max(1, inCap(st, k)), 0, 1)
