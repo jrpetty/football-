@@ -15,7 +15,8 @@ import { openCarrier, newId } from './transport.js'
 import { view } from '../render/view.js'
 import { applyLockerOp, tidyLockers } from './lockers.js'
 
-export const PROTO = 1
+// bumped whenever two builds could misread each other's diffs
+export const PROTO = 2
 export const COLORS = ['#e8b54a', '#5fb2ea', '#e3685b', '#7bc66a', '#c58be6', '#ec9347', '#4fd3c1', '#ea70aa']
 
 const ADD = { add: true }

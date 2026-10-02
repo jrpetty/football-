@@ -46,7 +46,9 @@ function recKey(arr) {
   let k = null
   for (const e of arr) {
     if (!e || typeof e !== 'object' || Array.isArray(e)) return null
-    const kk = e.id != null ? 'id' : e.uid != null ? 'uid' : null
+    // a uid is unique by definition; gear also carries an id, but that is its
+    // type (two pipes share it), so the uid wins
+    const kk = e.uid != null ? 'uid' : e.id != null ? 'id' : null
     if (!kk || (k && kk !== k)) return null
     k = kk
   }
