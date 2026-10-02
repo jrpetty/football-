@@ -683,7 +683,8 @@ export class BaseScene {
     this.updateVisitor(dt)
     this.updatePlots()
     this.fx.setViewport(window.innerHeight, view.camera.fov)
-    this.fx.update(dt)
+    // smoke, sparks and dust hang still while the camp is paused
+    this.fx.update(simDt > 0 || S.raid ? dt : 0)
     setAmbience(S.raid ? 0.06 : 0.035)
   }
 }
