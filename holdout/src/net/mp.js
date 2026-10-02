@@ -8,7 +8,7 @@
 // what they bring home arrives the same way.
 import { S, setState, NET, getS, day } from '../game/state.js'
 import { RES, GAME_MIN_PER_SEC, BELTS } from '../game/data.js'
-import { beltSpeed } from '../game/belts.js'
+import { beltSpeed, stackOf } from '../game/belts.js'
 import { bus, uid } from '../core/util.js'
 import { diff, applyFields, clone } from './delta.js'
 import { openCarrier, newId } from './transport.js'
@@ -714,14 +714,22 @@ export class Session {
       if (want - S.time > 90) S.time = want
       else if (want > S.time) S.time += (want - S.time) * Math.min(1, simDt * 1.5)
     }
+    // belts between the host's snapshots: goods ride on, go in at the far
+    // end, and keep coming on at the rate the host last saw
     for (const l of S.links || []) {
-      const it = l.items
-      if (!it?.length || !BELTS[l.tier]) continue
+      if (!BELTS[l.tier]) continue
+      const it = (l.items ||= [])
       const gap = BELTS[l.tier].gap
       let lim = l.len
       for (let i = 0; i < it.length; i++) {
         it[i] = Math.min(it[i] + beltSpeed(l.tier) * simDt, lim)
         lim = it[i] - gap
+      }
+      if (it.length && it[0] >= l.len - 1e-3 && (l.jam || 0) < 1) it.shift()
+      l._spawn = Math.min(2, (l._spawn || 0) + (simDt * (l.flow || 0)) / stackOf(l.res))
+      if (l._spawn >= 1 && (!it.length || it[it.length - 1] >= gap)) {
+        it.push(0)
+        l._spawn -= 1
       }
     }
   }

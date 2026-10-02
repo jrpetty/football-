@@ -16,7 +16,7 @@ import { CampPeople } from './basepeople.js'
 import { RaidMixin } from './baseraid.js'
 import { RaidNetMixin } from './raidnet.js'
 import { netMarkers } from '../ui/netui.js'
-import { BeltMixin } from './basebelts.js'
+import { BeltMixin, nearestPod } from './basebelts.js'
 import { stationModel } from '../models/stations.js'
 import { makeSurvivorCharacter } from '../world/agents.js'
 import { STATIONS, RES, EXPANSIONS } from '../game/data.js'
@@ -71,7 +71,10 @@ export class BaseScene {
     this.plotLabels = new Map()
     this.offs = []
     const on = (ev, fn) => this.offs.push(bus.on(ev, fn))
-    on('stations', () => this.syncStations())
+    on('stations', () => {
+      this.syncStations()
+      this.syncBelts?.()
+    })
     on('built', (st) => {
       this.syncStations()
       const v = this.stationViews.get(st.id)
@@ -289,7 +292,7 @@ export class BaseScene {
     // keep a lane open from the gate
     const g = gateTiles(b)
     if (x < g[2] + 3 && x + w > g[0] - 2 && z + d > b.z1 - 5) return false
-    if (this.beltBlocks(x, z, w, d, move)) return false
+    // belts in the way are re-routed round it once it's down
     const grid = this.grid
     for (let i = x - 1; i <= x + w; i++) {
       for (let j = z - 1; j <= z + d; j++) {
@@ -308,6 +311,8 @@ export class BaseScene {
       sfx('error')
       return false
     }
+    const [pw, pd] = P.rot ? [STATIONS[P.type].size[1], STATIONS[P.type].size[0]] : STATIONS[P.type].size
+    const under = this.beltsUnder(P.tx, P.tz, pw, pd, P.move || null)
     if (P.move) {
       const st = P.move
       st.x = P.tx
@@ -316,6 +321,7 @@ export class BaseScene {
       this.cancelPlacing()
       this.syncStations()
       this.afterMove(st)
+      this.rerouteAround(under)
       this.repaint()
       sfx('build')
       bus.emit('change')
@@ -323,6 +329,7 @@ export class BaseScene {
     }
     const ok = this.game.placeStation(P.type, P.tx, P.tz, P.rot)
     if (ok) {
+      this.rerouteAround(under)
       this.repaint()
       if (!keep) this.cancelPlacing()
     }
@@ -402,6 +409,7 @@ export class BaseScene {
   pickables() {
     const list = [...this.stationViews.values()].map((v) => v.group)
     for (const v of this.beltViews.values()) list.push(v.group)
+    list.push(...this.podGroups())
     for (const w of this.people.workers) list.push(w.root)
     if (this.visitor) list.push(this.visitor.ch.root)
     if (this.world.vehGroup) list.push(...this.world.vehGroup.children)
@@ -412,6 +420,12 @@ export class BaseScene {
   }
   onTap(x, y, e) {
     if (this.linking) return this.onLinkTap(x, y, e)
+    if (this.beltTool) {
+      if (e.button === 2) return this.cancelBeltTool()
+      const ph = this.podHit(x, y)
+      if (ph) return this.startFromPod(ph.st, ph.p)
+      return
+    }
     if (this.placing) {
       this.updatePlacing(x, y)
       if (e.button === 2) return this.cancelPlacing()
@@ -440,15 +454,24 @@ export class BaseScene {
     } else if (pk?.type === 'vehicle') {
       this.game.ui?.openMotorPool()
       sfx('click')
-    } else if (pk?.type === 'belt') {
-      // a belt opens the station it serves (the depot end is the less useful one)
-      const l = pk.link
-      const end = S.stations.find((x) => x.id === l.from && x.type !== 'storage') || S.stations.find((x) => x.id === l.to)
-      if (end) {
-        this.select(end.id)
-        this.game.ui?.openStation(end.id)
-        sfx('click')
+    } else if (pk?.type === 'pods') {
+      const p = this.podHit(x, y)
+      if (p) this.startFromPod(p.st, p.p)
+      else {
+        this.select(pk.st.id)
+        this.game.ui?.openStation(pk.st.id)
       }
+      sfx('click')
+    } else if (pk?.type === 'belt') {
+      // a belt opens its own panel; where it was clicked is where a splitter would go
+      const l = pk.link
+      const tx = Math.floor(hit.point.x)
+      const tz = Math.floor(hit.point.z)
+      let on = false
+      for (let i = 0; i < l.tiles.length; i += 2) if (l.tiles[i] === tx && l.tiles[i + 1] === tz) on = true
+      this.select(null)
+      this.game.ui?.openBelt(l, on ? [tx, tz] : null)
+      sfx('click')
     } else {
       const p = groundAt(x, y)
       const b = bounds()
@@ -477,6 +500,12 @@ export class BaseScene {
   onHover(x, y) {
     if (this.placing) return this.updatePlacing(x, y)
     if (this.linking) return this.onLinkHover(x, y)
+    if (this.beltTool) {
+      const ph = this.podHit(x, y)
+      document.body.style.cursor = ph ? 'pointer' : ''
+      this.game.ui?.hoverTip(ph ? this.podTip(ph.st, ph.p) : null, x, y)
+      return
+    }
     const now = performance.now()
     if (now - (this.hoverT || 0) < 60) return
     this.hoverT = now
@@ -497,6 +526,10 @@ export class BaseScene {
       tip = `<b>${s.name}</b><span>${s.status === 'injured' ? 'Injured' : s.job ? STATIONS[S.stations.find((x) => x.id === s.job)?.type]?.name || '' : 'No job'}</span>`
     } else if (pk?.type === 'visitor') tip = '<b>Someone at the gate</b><span>Click to talk</span>'
     else if (pk?.type === 'belt') tip = this.beltTip(pk.link)
+    else if (pk?.type === 'pods') {
+      const p = nearestPod(pk.st, hit.point.x, hit.point.z)
+      tip = p ? this.podTip(pk.st, p) : null
+    }
     else if (pk?.type === 'vehicle') {
       const v = (S.vehicles || []).find((x) => x.id === pk.id)
       if (v) tip = `<b>${v.name}</b><span>${v.broken ? 'Dead: needs a battery, tyres and parts' : `Condition ${Math.round(v.cond)}%`}</span><small>Click for the motor pool</small>`
@@ -507,7 +540,12 @@ export class BaseScene {
     if (e._handled) return
     const k = e.key.toLowerCase()
     if (this.linking) {
-      if (k === 'escape') this.cancelLinking(true)
+      if (k === 'escape') this.cancelLinking(this.linking.fromPanel)
+      if (k === 'backspace' && this.linking?.via.length) this.popBend()
+      return
+    }
+    if (this.beltTool) {
+      if (k === 'escape') this.cancelBeltTool()
       return
     }
     if (this.placing) {
@@ -611,6 +649,7 @@ export class BaseScene {
     }
     this.fence.update(dt)
     const ctx = {
+      simDt,
       camDist: view.rig.dist,
       focus: view.rig.target,
       hovered: this.hovered,

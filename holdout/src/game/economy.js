@@ -205,7 +205,7 @@ export function upkeepNeeds() {
   add(UPKEEP.person, S.survivors.filter((s) => s.status !== 'outpost').length)
   for (const st of S.stations) {
     const d = STATIONS[st.type]
-    if (st.level < 1 || d.fixed || st.type === 'mast') continue
+    if (st.level < 1 || d.fixed || d.node || st.type === 'mast') continue
     add(UPKEEP.station, st.level)
     if (st.level >= 2) add(UPKEEP.upgraded, st.level - 1)
     if (d.machine || d.power) add(UPKEEP.machine, st.level)
@@ -273,8 +273,8 @@ export function campFlow() {
   }
   return total
 }
-const passiveMult = (st) => (S.weather.type === 'rain' ? 2 : S.weather.type === 'snow' ? 0.6 : 1) * (st.type === 'collector' ? season().collector : 1)
-const seasonMult = (st) => (st.type === 'farm' ? season().farm : 1)
+export const passiveMult = (st) => (S.weather.type === 'rain' ? 2 : S.weather.type === 'snow' ? 0.6 : 1) * (st.type === 'collector' ? season().collector : 1)
+export const seasonMult = (st) => (st.type === 'farm' ? season().farm : 1)
 
 // ---------------------------------------------------------------- econ tick
 export function econTick(dt, opts = {}) {
@@ -749,7 +749,8 @@ function nextOrder(st) {
     }
     if (o.kind !== 'recipe' && !itemOf(o.item)) continue
     const spec = orderSpec(o)
-    if (spec && canAfford(spec.cost)) return o
+    // what's on the intake plus storage (benches don't hold back reserves)
+    if (spec && Object.entries(spec.cost).every(([k, v]) => (st.buf?.in?.[k] || 0) + (S.res[k] || 0) >= v - 1e-6)) return o
   }
   st.stockedAll = stocked > 0 && stocked === st.orders.length
   return null
@@ -769,7 +770,8 @@ function tickBench(st, rate, dt) {
   }
   if (!o.paid) {
     const spec = orderSpec(o)
-    pay(spec.cost)
+    // belted materials come out of the intake first, the rest from storage
+    takeInputs(st, spec.cost)
     o.paid = { ...spec.cost }
     o.left = o.total = spec.time
   }
@@ -807,7 +809,15 @@ function completeOrder(st, o) {
       if (q === 3) completeGoal('master')
       bus.emit('crafted', st, r, it)
     } else {
-      gain(r.out)
+      // onto the outtake belt if there's room, else into storage
+      const rest = {}
+      for (const [k, v] of Object.entries(r.out)) {
+        if (belted(st, k) && (st.buf?.out?.[k] || 0) + v <= outCap(k, v) + 1e-6) {
+          st.buf = st.buf || { in: {}, out: {} }
+          st.buf.out[k] = (st.buf.out[k] || 0) + v
+        } else rest[k] = v
+      }
+      gain(rest)
       bus.emit('crafted', st, r)
     }
     S.stats.crafted++

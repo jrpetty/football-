@@ -1,7 +1,7 @@
 // The interface: top bar (time, horde timer, resources, power, morale, crew,
 // speed), the left nav, a right-hand detail drawer, the bottom build dock,
 // toasts, tooltips, modals, the raid HUD and reports.
-import { RES, TOP_BAR, STATIONS, STATION_CATS, AMMO_KEYS, FENCE, EXPANSIONS, HORDES, OCCUPATIONS, SEC_PER_HOUR, GAME_MIN_PER_SEC, MILESTONES, SEASON_DAYS } from '../game/data.js'
+import { RES, TOP_BAR, STATIONS, STATION_CATS, AMMO_KEYS, FENCE, EXPANSIONS, HORDES, OCCUPATIONS, SEC_PER_HOUR, GAME_MIN_PER_SEC, MILESTONES, SEASON_DAYS, BELTS } from '../game/data.js'
 import { NET, S, day, hour, clockStr, gameDur, capOf, bedCount, buildCost, reqMet, canAfford, countType, maxLevelOf, expansionAvailable, expansionCost, fenceUpgradeCost, getS, survivorStats, unlockedBy, msDone, season, seasonDay, year } from '../game/state.js'
 import { raidIntel, campFlow, power, moraleFactors } from '../game/economy.js'
 import { WEATHER } from '../render/sky.js'
@@ -11,7 +11,7 @@ import { icon } from './icons.js'
 import { costList, resIcon, bar, plural } from './common.js'
 
 const resChipSigned = (k, v) => h('span.ci', { style: { '--c': RES[k].color } }, h('i.ic', { html: resIcon(k) }), `${v > 0 ? '+' : '−'}${fmt(Math.abs(v))}`)
-import { renderStation } from './stationpanel.js'
+import { renderStation, renderBelt } from './stationpanel.js'
 import { renderSurvivor, renderCrew, renderItems } from './crewpanel.js'
 import { renderProgress } from './progresspanel.js'
 import { manualModal } from './manual.js'
@@ -406,6 +406,13 @@ export class UI {
     this.game.base?.select(id)
     this.openPanel('station:' + id, () => renderStation(this, id), { live: true })
   }
+  // A belt's own panel: what it carries, how fast, what holds it back.
+  openBelt(l, tile = null) {
+    if (!l) return
+    this.game.base?.select(null)
+    this.beltSel = { id: l.id, tile }
+    this.openPanel('belt', () => renderBelt(this, this.beltSel), { live: true })
+  }
   openSurvivor(id) {
     if (this.game.base) this.game.base.selectedPerson = id
     this.openPanel('survivor:' + id, () => renderSurvivor(this, id), { live: true })
@@ -662,7 +669,7 @@ export class UI {
     let cards
     if (this.buildCat === 'walls') cards = this.landCards()
     else
-      cards = Object.entries(STATIONS)
+      cards = (this.buildCat === 'logistics' ? [this.beltCard()] : []).concat(Object.entries(STATIONS)
         .filter(([, d]) => d.cat === this.buildCat && !d.fixed)
         .map(([type, d]) => {
           const cost = buildCost(type)
@@ -689,8 +696,27 @@ export class UI {
             h('div.bc-size', type === 'mast' ? `${d.size[0]}×${d.size[1]} · 5 phases` : `${d.size[0]}×${d.size[1]} · ${d.levels} level${d.levels > 1 ? 's' : ''}`),
             req ? costList(cost, { small: true }) : h('div.bc-lock', h('i', { html: icon('lock') }), reqTxt),
           )
-        })
+        }))
     D.append(tabs, h('div.dcards', cards))
+  }
+  // The belt tool: pick any free pod to start a belt from.
+  beltCard() {
+    const ms = unlockedBy('belt', 1)
+    const open = !ms || msDone(ms)
+    return h(
+      'button.bcard.beltcard' + (open ? '' : '.locked'),
+      {
+        onclick: () => {
+          if (!open) return this.toast(`Milestone: ${MILESTONES[ms].name}`, 'bad'), sfx('error')
+          this.toggleBuild(false)
+          this.game.base.startBeltTool()
+        },
+        'data-tip': '<b>Conveyor belt</b>Click an orange outtake pod to send goods, or a teal intake to bring them in, then click where it goes. Click the ground on the way to pin bends.',
+      },
+      h('div.bc-name', 'Conveyor belt'),
+      h('div.bc-size', 'pod to pod · 1 m a tile'),
+      open ? costList(BELTS[1].cost, { small: true }) : h('div.bc-lock', h('i', { html: icon('lock') }), `Milestone: ${MILESTONES[ms].name}`),
+    )
   }
   landCards() {
     const out = []
@@ -755,7 +781,9 @@ export class UI {
     if (!this.dock.hidden) this.renderBuild()
   }
   // Laying a belt: what is being connected and how to finish.
-  showLinkBar(title, hint) {
+  // The bar while laying a belt: what it is, how to finish, and (when the
+  // building deals in several goods) chips to choose what the belt carries.
+  showLinkBar(title, hint, onCancel = () => this.game.base.cancelLinking(true), chips = null, onChip = null) {
     const P = this.placebar
     this.closePanel()
     P.hidden = false
@@ -763,9 +791,9 @@ export class UI {
     P.classList.add('linkbar')
     P.append(
       h('i.pb-ic', { html: icon('belt') }),
-      h('b', title),
-      h('span.pb-ok.good', hint),
-      h('button.btn.small.ghost', { onclick: () => this.game.base.cancelLinking(true) }, 'Cancel', h('kbd', 'Esc')),
+      h('div.pb-txt', h('b', title), h('span.pb-ok.good', hint)),
+      chips ? h('div.pb-chips', h('small', 'Carry'), chips.map((c) => h('button.lchip' + (c.on ? '.on' : ''), { style: { '--c': c.color }, onclick: () => (sfx('click'), onChip(c.k)) }, h('i.ic', { html: resIcon(c.k) }), c.name)), h('button.lchip' + (chips.some((c) => c.on) ? '' : '.on'), { onclick: () => (sfx('click'), onChip(null)), 'data-tip': 'Whatever the far end needs' }, 'Auto')) : null,
+      h('button.btn.small.ghost', { onclick: onCancel }, 'Cancel', h('kbd', 'Esc')),
     )
   }
   hideLinkBar() {

@@ -1,6 +1,6 @@
 // The station drawer: workers, what the station is doing and producing,
 // crafting orders (queue, recipes, mods, repairs), automation, upgrades.
-import { RES, STATIONS, RECIPES, MODS, ITEMS, QUALITY, OCCUPATIONS, SKILLS, SKILL_KEYS, REPAIR, SEC_PER_DAY, FENCE, ALT_RECIPES, BELTS, BELT_BONUS, SIGNAL, RESEARCH, CORE_SLOTS, VEHICLES } from '../game/data.js'
+import { RES, STATIONS, RECIPES, MODS, ITEMS, QUALITY, OCCUPATIONS, SKILLS, SKILL_KEYS, REPAIR, SEC_PER_DAY, FENCE, ALT_RECIPES, BELTS, BELT_BONUS, BELT_STACK, SIGNAL, RESEARCH, CORE_SLOTS, VEHICLES } from '../game/data.js'
 import { NET,
   S, workersOf, slots, assign, workEff, bestFor, upgradeCost, startUpgrade, demolish, installModule, recipesFor, modsFor, queueMax, orderRecipe,
   orderMod, orderRepair, cancelOrder, moveOrder, orderSpec, qualityOdds, itemOf, itemName, canAfford, survivorStats, capOf, bedCount, getS, ownerOf,
@@ -9,14 +9,15 @@ import { NET,
   canControl,
 } from '../game/state.js'
 import { stationFlow, power, powerNeed, isAutomated, stationRate, solarOutput, windOutput, boilerFuel, sourcePower, HAND_RATE, kitchenSaving, constructSpeed, raidIntel, activeRecipe, activeSingle, recipeUnlocked, recipeTarget } from '../game/economy.js'
-import { linksOf, inputsOf, outputsOf, linkPerDay, linkState, upgradeCostOf, upgradeLink, removeLink, beltBonus, pulled } from '../game/belts.js'
+import { linksOf, inputsOf, outputsOf, linkPerDay, linkState, upgradeCostOf, upgradeLink, upgradeLocked, removeLink, beltBonus, pulled, portsOf, linkAt, isDepot, nodeKind, nodeRes, insertNode, splitProblem, beltSpeed as beltSpeedOf } from '../game/belts.js'
+import { flowsNow, limitText } from '../game/rates.js'
 import { sfx } from '../core/audio.js'
 import { bus, h, fmt, clamp } from '../core/util.js'
 import { icon } from './icons.js'
 import { leaderChip } from './netui.js'
 import { costList, resChip, resIcon, bar, qualityTag, condBar, itemCard, seg, stepper, plural } from './common.js'
 
-const CAT_ICON = { living: 'gate', production: 'production', crafting: 'hammer', defense: 'shield', power: 'bolt' }
+const CAT_ICON = { living: 'gate', production: 'production', crafting: 'hammer', defense: 'shield', power: 'bolt', logistics: 'belt' }
 const tabState = {}
 
 export function renderStation(ui, id) {
@@ -500,89 +501,190 @@ function currentRecipe(st) {
   if (D.recipes && st.curMode && D.recipes[st.curMode]) return activeRecipe(st, st.curMode)
   return null
 }
+const POD_COL = { in: '#2fc49e', out: '#f0962c', io: '#5a9ae0' }
+const byId = (id) => S.stations.find((x) => x.id === id)
+const perDay = (v) => (v === Infinity ? 'plenty' : v < 10 ? v.toFixed(1) : fmt(Math.round(v)))
+// a pod's name tag: IN 1, OUT 2, HATCH 3
+function podTag(st, p) {
+  const l = linkAt(st, p.i)
+  const kind = p.kind === 'io' ? (l ? (l.from === st.id ? 'out' : 'in') : 'io') : p.kind
+  const same = portsOf(st).filter((q) => q.kind === p.kind)
+  const n = same.indexOf(p) + 1
+  return h('span.podtag', { style: { '--c': POD_COL[kind] } }, `${kind === 'in' ? 'IN' : kind === 'out' ? 'OUT' : 'HATCH'}${same.length > 1 ? ' ' + n : ''}`)
+}
+// One belt, seen from one of its ends.
+function beltRow(ui, st, l, p) {
+  const out = l.from === st.id
+  const other = byId(out ? l.to : l.from)
+  const r = flowsNow().links.get(l.id)
+  const cap = linkPerDay(l.tier, l.res)
+  const now = (l.flow || 0) * SEC_PER_DAY
+  const state = linkState(l)
+  const T = BELTS[l.tier]
+  return h(
+    'div.prow.' + state,
+    p ? podTag(st, p) : h('span.podtag', '—'),
+    h(
+      'div.pmain',
+      h('div.pline', h('i.ic', { html: resIcon(l.res), style: { color: RES[l.res].color } }), h('b', RES[l.res].name), h('span.pdir', out ? 'to' : 'from'), h('button.plink', { onclick: () => other && ui.openStation(other.id) }, other ? STATIONS[other.type].name : '?'), h('span.ltier', { style: { '--c': T.color } }, `Mk${l.tier}`)),
+      h('div.pline', h('span.lbar', { 'data-tip': `${perDay(now)} a day moving now; settles at ${perDay(r?.flow ?? now)}; the belt carries up to ${perDay(cap)}` }, bar((r?.flow ?? now) / cap, 'belt' + ((r?.flow ?? now) > cap * 0.95 ? '.max' : ''))), h('small.prate', `${perDay(r?.flow ?? now)}/${perDay(cap)} a day`)),
+      r ? h('small.plimit' + (r.limit === 'belt' ? '.warn' : ''), limitText(l, r)) : null,
+    ),
+    h('button.mini', { 'data-tip': 'This belt: rates, upgrade, splitters', onclick: () => ui.openBelt(l), html: icon('belt') }),
+  )
+}
+// Every pod on a building: what's plugged in and how it runs, or a button to
+// plug a belt into a free one. Anything not belted goes by hand.
 function logisticsBlock(ui, st) {
+  const ports = portsOf(st)
+  if (!ports.length) return null
   const D = STATIONS[st.type]
-  const depot = st.type === 'storage'
+  const depot = isDepot(st)
+  const node = nodeKind(st)
   const mine = linksOf(st)
-  const usable = (r) => !r.lvl || r.lvl <= st.level
-  let outs = []
-  let ins = []
-  if (!depot) {
-    const live = []
-    if (D.recipe) live.push(activeSingle(st))
-    if (D.recipes) for (const id of Object.keys(D.recipes)) if (usable(D.recipes[id])) live.push(activeRecipe(st, id))
-    const has = (k, dir) => mine.some((l) => (dir === 'out' ? l.from : l.to) === st.id && l.res === k)
-    outs = outputsOf(st).filter((k) => has(k, 'out') || D.passive?.[k] || live.some((r) => r.out?.[k]))
-    const need = st.type === 'mast' ? signalNeed() || {} : {}
-    ins = inputsOf(st).filter((k) => has(k, 'in') || st.type === 'generator' || need[k] > 0 || live.some((r) => r.in?.[k] > 0))
-    if (!ins.length && !outs.length) return null
-  } else if (!mine.length) {
-    return h('section.card.logi', h('h3', h('span', h('i.inl', { html: icon('belt') }), 'Belts')), h('p.note', 'A depot can feed any station by belt: open that station and choose a belt in. Belts from producers can end here too.'))
-  }
-  const flow = stationFlow(st, power())
   const R = currentRecipe(st)
-  const bonus = beltBonus(st, R)
-  const linkRow = (l) => {
-    const out = l.from === st.id
-    const other = S.stations.find((x) => x.id === (out ? l.to : l.from))
-    const cap = linkPerDay(l.tier, l.res)
-    const now = (l.flow || 0) * SEC_PER_DAY
-    const state = linkState(l)
-    const up = upgradeCostOf(l)
-    const T = BELTS[l.tier]
+  const bonus = depot || node ? 1 : beltBonus(st, R)
+  const rows = []
+  const add = (p) => {
+    const l = linkAt(st, p.i)
+    if (l) return rows.push(beltRow(ui, st, l, p))
+  }
+  const free = { in: [], out: [], io: [] }
+  for (const p of ports) {
+    if (linkAt(st, p.i)) add(p)
+    else free[p.kind].push(p)
+  }
+  // belts from before pods existed, still on their old route
+  for (const l of mine.filter((x) => x.legacy)) rows.push(beltRow(ui, st, l, null))
+  const plug = (dir, list, label) =>
+    list.length
+      ? h('div.prow.free', h('span.podtag', { style: { '--c': POD_COL[list[0].kind === 'io' ? 'io' : dir] } }, `${list.length} free`), h('span.pfree', label), h('button.mini.ladd', { 'data-tip': dir === 'out' ? 'Lay a belt from here to a station that uses it, a depot or a splitter' : 'Lay a belt bringing goods here', onclick: () => ui.game.base.startLinking(st, null, dir, { port: list[0].i, fromPanel: true }) }, h('i', { html: icon('plus') }), dir === 'out' ? 'Belt out' : 'Belt in'))
+      : null
+  const list = (a) => a.map((k) => RES[k].name.toLowerCase()).join(', ')
+  if (node) {
+    const ins = mine.filter((l) => l.to === st.id).length
+    const outs = mine.filter((l) => l.from === st.id).length
+    if (node === 'split') {
+      if (!ins) rows.push(plug('in', free.io, 'Bring a belt in first'))
+      if (ins && outs < 3) rows.push(plug('out', free.io, `${3 - outs} more way${3 - outs > 1 ? 's' : ''} out`))
+    } else {
+      if (!outs) rows.push(plug('out', free.io, 'Send a belt out'))
+      if (ins < 3 && free.io.length) rows.push(plug('in', free.io, `${Math.min(3 - ins, free.io.length)} more way${Math.min(3 - ins, free.io.length) > 1 ? 's' : ''} in`))
+    }
+  } else if (depot) {
+    rows.push(plug('out', free.io, 'Send goods from storage'), plug('in', free.io, 'Bring goods into storage'))
+  } else {
+    rows.push(plug('in', free.in, `Takes ${list(inputsOf(st).slice(0, 5))}${inputsOf(st).length > 5 ? '…' : ''}`), plug('out', free.out, `Sends ${list(outputsOf(st))}`))
+  }
+  // what still goes by hand
+  if (!depot && !node && R) {
+    const hand = []
+    for (const k of Object.keys(R.in || {})) if (R.in[k] > 0 && !mine.some((l) => l.to === st.id && l.res === k)) hand.push([k, 'in'])
+    for (const k of Object.keys(R.out || {})) if (!mine.some((l) => l.from === st.id && l.res === k)) hand.push([k, 'out'])
+    if (hand.length) rows.push(h('div.lhaul', h('span', 'By hand:'), hand.map(([k, dir]) => h('button.lchip', { style: { '--c': RES[k].color }, 'data-tip': `${RES[k].name} is ${dir === 'in' ? 'fetched from' : 'carried to'} storage by hand. Click to belt it ${dir === 'in' ? 'in' : 'away'}.`, onclick: () => ui.game.base.startLinking(st, k, dir, { fromPanel: true }) }, h('i.ic', { html: resIcon(k) }), RES[k].short || RES[k].name, h('b', dir === 'in' ? '→' : '←')))))
+  }
+  // the building's pace, when its belts hold it back
+  const run = flowsNow().stations.get(st.id)
+  let pace = null
+  if (run && run.maxB > 0.01 && run.B < run.maxB * 0.97 && run.limit) {
+    const pct = Math.round((run.B / run.maxB) * 100)
+    const k = RES[run.limit.res].name.toLowerCase()
+    pace = h('p.note.warn', run.limit.kind === 'input' ? `Runs at ${pct}% of full speed: its belts bring too little ${k}.` : `Runs at ${pct}% of full speed: its ${k} can't leave any faster.`)
+  }
+  const hint = node
+    ? h('p.note', node === 'split' ? 'Each item goes to the next belt out in turn: two belts get half each, three a third. When one is full, its share goes to the others.' : 'Takes from whichever belt has an item waiting. The belt out carries at most its tier\'s rate.')
+    : depot
+      ? h('p.note', 'Storage hatches work both ways: send any goods out to a station, or take goods in.')
+      : bonus > 1
+        ? h('p.note.good', `Belts save the hauling: working ${Math.round((bonus - 1) * 100)}% faster.`)
+        : h('p.note', `Belt every input and every output to save the hauling: +${Math.round(BELT_BONUS * 100)}% speed for each side.`)
+  const carried = node && nodeRes(st) ? h('small', `carries ${RES[nodeRes(st)].name.toLowerCase()}`) : h('small', bonus > 1 ? `+${Math.round((bonus - 1) * 100)}% speed` : mine.length ? `${mine.length} connected` : `${ports.length} pod${ports.length > 1 ? 's' : ''}`)
+  return h('section.card.logi', h('h3', h('span', h('i.inl', { html: icon('belt') }), node ? 'Belts' : 'Pods and belts'), carried), hint, pace, rows.filter(Boolean))
+}
+
+// ---------------------------------------------------------------- one belt
+export function renderBelt(ui, sel) {
+  const l = (S.links || []).find((x) => x.id === sel?.id)
+  if (!l) return null
+  const a = byId(l.from)
+  const b = byId(l.to)
+  const r = flowsNow().links.get(l.id)
+  const T = BELTS[l.tier]
+  const cap = linkPerDay(l.tier, l.res)
+  const now = (l.flow || 0) * SEC_PER_DAY
+  const up = upgradeCostOf(l)
+  const nm = (st) => (st ? STATIONS[st.type].name : '?')
+  // where a splitter or merger would go: the tile clicked, else the first
+  // good spot from the middle of the belt outward
+  const spotFor = (kind) => {
+    const tiles = []
+    for (let i = 0; i < l.tiles.length; i += 2) tiles.push([l.tiles[i], l.tiles[i + 1]])
+    if (sel.tile) tiles.unshift(sel.tile)
+    const mid = tiles.length >> 1
+    const order = sel.tile ? tiles : tiles.map((_, i) => tiles[mid + (i % 2 ? -1 : 1) * Math.ceil(i / 2)]).filter(Boolean)
+    let why = null
+    for (const [x, z] of order) {
+      const w = splitProblem(l, x, z, kind)
+      if (!w) return { x, z }
+      why ??= w
+      if (sel.tile) break
+    }
+    return { why: why || 'No room on this belt' }
+  }
+  const nodeBtn = (kind, label, tip) => {
+    const sp = spotFor(kind)
     return h(
-      'div.lrow.' + state,
-      h('span.ldir', out ? '→' : '←'),
-      h('span.lname', { onclick: () => other && ui.openStation(other.id), 'data-tip': state === 'backed' ? (out ? 'The far end is full, so goods are queueing.' : 'This station is full, so the belt is queueing.') : '' }, other ? STATIONS[other.type].name : '?', state === 'backed' ? h('em.bad', ' · full') : null),
-      h('span.ltier', { style: { '--c': T.color }, 'data-tip': `<b>${T.name}</b>${T.desc}<br>${Math.round(l.len)} m long, ${l.items.length} on it now.` }, `Mk${l.tier}`),
-      h('span.lbar', { 'data-tip': `Moving ${fmt(now)} of a possible ${fmt(cap)} a day` }, bar(now / cap, 'belt' + (now > cap * 0.9 ? '.max' : ''))),
-      up
-        ? h('button.mini', { disabled: !canAfford(up), 'data-tip': `<b>Upgrade to ${BELTS[l.tier + 1].name}</b>${BELTS[l.tier + 1].desc}<br>${Object.entries(up).map(([k, v]) => `${v} ${RES[k].name.toLowerCase()}`).join(', ')}`, onclick: () => (upgradeLink(l) ? (sfx('build'), ui.toast(`${BELTS[l.tier].name} running`, 'good')) : sfx('error'), ui.refreshPanel()), html: icon('up') })
-        : h('span.lmax', 'max'),
-      h('button.mini', { 'data-tip': 'Take the belt down. Half its materials come back.', onclick: () => (removeLink(l), sfx('dismantle'), ui.refreshPanel()), html: icon('close') }),
+      'button.btn.small' + (sp.why ? '.ghost' : ''),
+      {
+        disabled: !!sp.why,
+        'data-tip': `<b>${label}</b>${tip}<br>${costTip(STATIONS[kind].cost[0])}${sp.why ? `<br><span class="bad">${sp.why}</span>` : ''}`,
+        onclick: () => {
+          const res = insertNode(l, sp.x, sp.z, kind)
+          if (typeof res === 'string') return ui.toast(res, 'bad'), sfx('error')
+          sfx('build')
+          ui.toast(`${STATIONS[kind].name} in. Click its free side to send a belt on.`, 'good')
+          ui.openStation(res.id)
+        },
+      },
+      label,
     )
   }
-  const addBtn = (k, dir) =>
-    h('button.mini.ladd', { 'data-tip': dir === 'out' ? `Lay a belt carrying ${RES[k].name.toLowerCase()} to another station or a depot` : `Lay a belt bringing ${RES[k].name.toLowerCase()} here from a station that makes it, or a depot`, onclick: () => ui.game.base.startLinking(st, k, dir) }, h('i', { html: icon('plus') }), 'Belt')
-  const rate = (k, sign) => {
-    const v = Math.abs(flow[k] || 0)
-    return v >= 0.05 && Math.sign(flow[k] || 0) === sign ? h('small.lrate', `${sign > 0 ? '+' : '−'}${v < 10 ? v.toFixed(1) : Math.round(v)} a day`) : null
-  }
-  const section = (keys, dir) => {
-    const rows = []
-    const hauled = []
-    for (const k of keys) {
-      const ls = mine.filter((l) => (dir === 'out' ? l.from : l.to) === st.id && l.res === k)
-      if (!ls.length) {
-        hauled.push(k)
-        continue
-      }
-      const cap = ls.reduce((a, l) => a + linkPerDay(l.tier, l.res), 0)
-      const need = Math.abs(flow[k] || 0)
-      rows.push(h('div.lres', resTag(k), rate(k, dir === 'out' ? 1 : -1), need > cap * 1.02 ? h('em.bad.lwarn', { 'data-tip': `Needs ${fmt(need)} a day but the belts carry ${fmt(cap)}. Upgrade them or add another.` }, 'belts too slow') : null, addBtn(k, dir)))
-      for (const l of ls) rows.push(linkRow(l))
-    }
-    if (hauled.length) rows.push(h('div.lhaul', h('span', dir === 'out' ? 'Carried to storage:' : 'Fetched from storage:'), hauled.map((k) => h('button.lchip', { style: { '--c': RES[k].color }, 'data-tip': `${RES[k].name} goes by hand. Click to belt it ${dir === 'out' ? 'away' : 'in'}.`, onclick: () => ui.game.base.startLinking(st, k, dir) }, h('i.ic', { html: resIcon(k) }), RES[k].short || RES[k].name, h('b', '+')))))
-    return rows
-  }
-  const body = []
-  if (depot) {
-    const ks = [...new Set(mine.map((l) => l.res))]
-    for (const k of ks) {
-      body.push(h('div.lres', resTag(k)))
-      for (const l of mine.filter((x) => x.res === k)) body.push(linkRow(l))
-    }
-  } else {
-    if (outs.length) body.push(h('div.lhead', 'Out'), ...section(outs, 'out'))
-    if (ins.length) body.push(h('div.lhead', 'In'), ...section(ins, 'in'))
-  }
-  const hint = depot
-    ? null
-    : bonus > 1
-      ? h('p.note.good', `Belts save the hauling: working ${Math.round((bonus - 1) * 100)}% faster.`)
-      : h('p.note', `Belt every input and every output to save the hauling: +${Math.round(BELT_BONUS * 100)}% speed for each side.`)
-  return h('section.card.logi', h('h3', h('span', h('i.inl', { html: icon('belt') }), 'Belts'), h('small', bonus > 1 ? `+${Math.round((bonus - 1) * 100)}% speed` : mine.length ? `${mine.length} connected` : 'none yet')), hint, body)
+  const body = [
+    h(
+      'section.card',
+      h('h3', 'Carrying', h('small', `${Math.round(l.len)} m · ${l.items.length} on it`)),
+      h('div.kv', h('span', 'Goods'), h('b', h('i.ic', { html: resIcon(l.res), style: { color: RES[l.res].color } }), ' ', RES[l.res].name)),
+      h('div.kv', h('span', 'From'), h('button.plink', { onclick: () => a && ui.openStation(a.id) }, nm(a))),
+      h('div.kv', h('span', 'To'), h('button.plink', { onclick: () => b && ui.openStation(b.id) }, nm(b))),
+    ),
+    h(
+      'section.card',
+      h('h3', 'Rate', h('small', 'per day')),
+      h('div.kv', h('span', 'Moving now'), h('b', perDay(now))),
+      r ? h('div.kv', h('span', { 'data-tip': 'Worked out from what the far ends make and use, once everything settles' }, 'Settles at'), h('b', perDay(r.flow))) : null,
+      h('div.kv', h('span', `Most a ${T.name} carries`), h('b', perDay(cap))),
+      bar((r?.flow ?? now) / cap, 'belt' + ((r?.flow ?? now) > cap * 0.95 ? '.max' : '')),
+      r ? h('p.note' + (r.limit === 'belt' ? '.warn' : ''), limitText(l, r)) : null,
+      h('p.note.dim', `${T.name}: ${beltSpeedOf(l.tier).toFixed(2)} m a second, items ${BELTS[l.tier].gap} m apart = ${(beltSpeedOf(l.tier) / BELTS[l.tier].gap).toFixed(3)} a second${(BELT_STACK[l.res] || 1) > 1 ? ` (${BELT_STACK[l.res]} ${RES[l.res].name.toLowerCase()} each)` : ''} × ${SEC_PER_DAY} seconds a day = ${perDay(cap)} a day.`),
+    ),
+    h(
+      'section.card',
+      h('h3', 'Change it'),
+      h(
+        'div.bactions',
+        up
+          ? h('button.btn.small', { disabled: !canAfford(up) || upgradeLocked(l), 'data-tip': `<b>Upgrade to ${BELTS[l.tier + 1].name}</b>${BELTS[l.tier + 1].desc}<br>${costTip(up)}${upgradeLocked(l) ? '<br><span class="bad">Needs its milestone</span>' : ''}`, onclick: () => (upgradeLink(l) ? (sfx('build'), ui.toast(`${BELTS[l.tier].name} running`, 'good')) : sfx('error'), ui.refreshPanel()) }, h('i', { html: icon('up') }), ` ${BELTS[l.tier + 1].name}`)
+          : h('span.lmax', 'Fastest belt'),
+        nodeBtn('splitter', 'Splitter here', 'Cut the belt and put a splitter in: then belt its free sides on to more stations.'),
+        nodeBtn('merger', 'Merger here', 'Cut the belt and put a merger in: then bring a second line of the same goods into it.'),
+        h('button.btn.small.ghost.danger', { 'data-tip': 'Take the belt down. Half its materials come back, and what was on it goes to storage.', onclick: () => (removeLink(l), sfx('dismantle'), ui.closePanel()) }, 'Take down'),
+      ),
+      sel.tile ? h('p.note.dim', 'A splitter or merger goes where you clicked the belt.') : h('p.note.dim', 'Tip: click a belt where you want a splitter or merger to go.'),
+    ),
+  ]
+  return ui.frame(`${T.name} · ${RES[l.res].name}`, h('span', `${nm(a)} → ${nm(b)}`), body, { icon: 'belt' })
 }
+const costTip = (c) => Object.entries(c).map(([k, v]) => `${v} ${RES[k].name.toLowerCase()}`).join(', ')
 
 // ---------------------------------------------------------------- crafting benches
 function benchBlock(ui, st) {

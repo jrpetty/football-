@@ -550,6 +550,16 @@ export const STATIONS = {
     cost: [{ wood: 50 }, { wood: 60, metal: 20, bolts: 40 }, { beams: 8, plates: 30, bolts: 100, parts: 8 }],
     time: [30, 55, 85], workers: [1, 1, 2], towerDmg: [0.25, 0.45, 0.7],
   },
+  splitter: {
+    name: 'Splitter', cat: 'logistics', size: [1, 1], levels: 1, skill: null, node: 'split',
+    desc: 'One belt in, up to three out: each item goes to the next belt in turn, so two belts get half each. A full belt\'s share goes to the others. Click a belt to drop one straight onto it.',
+    cost: [{ scrap: 6, wood: 2 }], time: [3], workers: [0],
+  },
+  merger: {
+    name: 'Merger', cat: 'logistics', size: [1, 1], levels: 1, skill: null, node: 'merge',
+    desc: 'Up to three belts of the same goods in, one out. Joins two lines into one; the belt out carries at most its tier\'s rate.',
+    cost: [{ scrap: 6, wood: 2 }], time: [3], workers: [0],
+  },
   turret: {
     name: 'Auto-Turret', cat: 'defense', size: [2, 2], levels: 3, skill: null, req: { generator: 1 },
     desc: 'Fires at anything near the fence. Uses pistol ammo from storage and generator power.',
@@ -568,6 +578,7 @@ export const STATION_CATS = [
   { id: 'power', name: 'Power' },
   { id: 'crafting', name: 'Crafting' },
   { id: 'defense', name: 'Defense' },
+  { id: 'logistics', name: 'Belts' },
 ]
 
 // Conveyor belts between stations (and to and from storage). Items ride
@@ -605,7 +616,7 @@ export const TIERS = [
 export const MILESTONES = {
   smelter: { tier: 1, name: 'Smelter', desc: 'Stack a clay furnace and a charcoal kiln, and work out how hot they have to burn.', cost: { wood: 60, scrap: 80 }, unlocks: { stations: ['forge', 'kiln'] } },
   steam: { tier: 1, name: 'Steam Power', desc: 'An old boiler, a flywheel and a lot of rivets: power from fire. Machines run at full speed with power, and at half by hand without it.', cost: { wood: 90, scrap: 70, metal: 20 }, unlocks: { stations: ['boiler'] } },
-  conveyors: { tier: 1, name: 'Conveyors', desc: 'Salvaged rollers and old rubber: carry goods between stations without carrying them.', cost: { wood: 50, scrap: 60, parts: 4 }, unlocks: { belt: 1 } },
+  conveyors: { tier: 1, name: 'Conveyors', desc: 'Salvaged rollers and old rubber: carry goods between stations without carrying them.', cost: { wood: 50, scrap: 60, parts: 4 }, unlocks: { belt: 1, stations: ['splitter', 'merger'] } },
   palisade: { tier: 1, name: 'Palisade', desc: 'Plans for a proper log wall, and for pushing it out into the woods.', cost: { wood: 150, cloth: 10 }, unlocks: { fence: 1, exp: ['w1', 'n1'] } },
   chemistry: { tier: 2, name: 'Chemistry', desc: 'A school chemistry kit and a lot of nerve.', cost: { metal: 60, chemicals: 10, parts: 10 }, unlocks: { stations: ['chemlab', 'ammo'] } },
   fabrication: { tier: 2, name: 'Fabrication', desc: 'A real production line for plates, bolts, parts and wire, a gunsmith\'s bench and a tailor\'s.', cost: { metal: 80, plates: 20, bolts: 80, scrap: 100 }, unlocks: { stations: ['fabricator', 'weapons', 'tailor'] } },

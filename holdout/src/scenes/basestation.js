@@ -29,6 +29,7 @@ export class StationView {
     this.roofMats = []
     this.roofK = 1
     this.emitAcc = {}
+    this.phase = {}
     this.t = rand(0, 10)
     this.makeLabel()
     this.refresh()
@@ -204,7 +205,13 @@ export class StationView {
       bar = clamp(st.progress, 0, 1)
       name = D.name
     }
-    if (st.stalled && !st.building && st.stalled !== 'No workers') warn = st.stalled
+    // a problem shows once it has lasted a few seconds; a machine that is
+    // only paced by its belts says how fast it runs instead of blinking
+    if (!st.building && this.warnShow && this.warnShow !== 'No workers') warn = this.warnShow
+    else if (!st.building && this.pace) {
+      warn = this.pace
+      cls = cls || 'paced'
+    }
     if ((hovered || selected) && !name) name = `${D.name}${st.level ? ` · L${st.level}` : ''}`
     if (this.lName.textContent !== name) this.lName.textContent = name
     this.lBar.style.display = bar == null ? 'none' : ''
@@ -217,7 +224,30 @@ export class StationView {
     this.t += dt
     const st = this.st
     const I = this.info
-    const active = !!st.active
+    // Machines follow camp time: they stop when the game is paused and speed
+    // up with it (to a point, so nothing strobes). They spin up quickly and
+    // run down slowly, so a machine paced by a belt keeps a steady look
+    // instead of flicking on and off with every item.
+    const sdt = Math.min(ctx.simDt ?? dt, dt * 6)
+    const on1 = st.active ? 1 : 0
+    this.runK = this.runK ?? on1
+    this.runK += (on1 - this.runK) * Math.min(1, sdt * (on1 > this.runK ? 2.5 : 0.45))
+    this.duty = this.duty ?? on1
+    this.duty += (on1 - this.duty) * Math.min(1, sdt / 20)
+    // the warning: shown once the same problem has lasted 4 seconds
+    const w = st.stalled || null
+    if (w !== this.warnNow) {
+      this.warnNow = w
+      this.warnT = 0
+    } else this.warnT = (this.warnT || 0) + sdt
+    const pacedBy = w && (w === 'Output belt backed up' || w.startsWith('Missing '))
+    if (pacedBy) this.paceWhy = w
+    const busy = this.duty > 0.12
+    this.warnShow = w && this.warnT > 4 && !(pacedBy && busy) ? w : null
+    this.pace = !st.building && busy && this.duty < 0.92 && this.paceWhy ? `${this.paceWhy === 'Output belt backed up' ? 'Paced by its belt' : this.paceWhy.replace('Missing ', 'Waiting on ')} · ${Math.round(this.duty * 100)}%` : null
+    if (!busy || this.duty >= 0.92) this.paceWhy = null
+    const active = this.runK > 0.05
+    const run = this.runK
     const t = this.t
     // roofs fade when you look closely, hover or select
     const near = ctx.camDist < 26 && Math.hypot(ctx.focus.x - this.cx, ctx.focus.z - this.cz) < 9
@@ -230,31 +260,34 @@ export class StationView {
       r.mesh.visible = this.roofK > 0.03
     }
     // flames
-    for (const f of this.flames) f.mesh.visible = f.when === 'always' || active
+    for (const f of this.flames) f.mesh.visible = f.when === 'always' || run > 0.3
     // animated parts
     if (this.model) {
       for (const A of I.anims || []) {
         const p = this.pivots[A.name]
         if (!p) continue
         const base = this.baseRot[A.name]
-        const on = A.when === 'always' || (A.when === 'night' ? ctx.night > 0.3 : active)
+        // how hard this part works: 'active' parts follow the eased run
+        // level; the rest are on or off, in camp time all the same
+        const k = A.when === 'always' ? 1 : A.when === 'night' ? (ctx.night > 0.3 ? 1 : 0) : run
+        const on = k > 0.02
         const ax = A.axis || 'y'
+        const ph = (this.phase[A.name] = (this.phase[A.name] || 0) + sdt * k)
         if (A.kind === 'spin') {
-          if (on) p.rotation[ax] += dt * (A.speed || 1)
+          if (on) p.rotation[ax] += sdt * (A.speed || 1) * k
         } else if (A.kind === 'yaw') {
-          if (on) p.rotation.y = base.r.y + Math.sin(t * (A.speed || 0.3)) * (A.swing || 1)
+          if (on) p.rotation.y = base.r.y + Math.sin(ph * (A.speed || 0.3)) * (A.swing || 1)
         } else if (A.kind === 'press') {
-          p.position[ax] = base.p[ax] - (on ? Math.pow(Math.abs(Math.sin(t * (A.speed || 1) * Math.PI)), 3) * (A.amp || 0.3) : 0)
+          p.position[ax] = base.p[ax] - Math.pow(Math.abs(Math.sin(ph * (A.speed || 1) * Math.PI)), 3) * (A.amp || 0.3) * k
         } else if (A.kind === 'pump') {
-          const target = on ? Math.sin(t * (A.speed || 3)) * (A.amp || 0.3) : 0
-          p.rotation[ax] = base.r[ax] + target
+          p.rotation[ax] = base.r[ax] + Math.sin(ph * (A.speed || 3)) * (A.amp || 0.3) * k
         } else if (A.kind === 'conveyor') {
           // items ride along the belt's own x axis, wrapping every gap
-          if (on) p.position.copy(base.p).addScaledVector(_dir.set(1, 0, 0).applyQuaternion(p.quaternion), (t * (A.speed || 0.3)) % (A.amp || 0.5))
+          if (on) p.position.copy(base.p).addScaledVector(_dir.set(1, 0, 0).applyQuaternion(p.quaternion), (ph * (A.speed || 0.3)) % (A.amp || 0.5))
         } else if (A.kind === 'slide') {
-          if (on) p.position[ax] = base.p[ax] + Math.sin(t * (A.speed || 1) * Math.PI * 2) * (A.amp || 0.1)
+          p.position[ax] = base.p[ax] + Math.sin(ph * (A.speed || 1) * Math.PI * 2) * (A.amp || 0.1) * k
         } else if (A.kind === 'shake') {
-          if (on) {
+          if (on && sdt > 0) {
             p.position.x = base.p.x + (Math.random() - 0.5) * (A.amp || 0.01)
             p.position.z = base.p.z + (Math.random() - 0.5) * (A.amp || 0.01)
           }
@@ -268,18 +301,17 @@ export class StationView {
       }
     }
     // smoke, steam, sparks
-    if (ctx.nearCam(this.cx, this.cz) && !st.building) this.emit(dt, ctx, I)
+    if (ctx.nearCam(this.cx, this.cz) && !st.building) this.emit(sdt, ctx, I, run)
     this.updateLabel(ctx.hovered === st.id, ctx.selected === st.id)
   }
-  emit(dt, ctx, I) {
+  emit(dt, ctx, I, run = 1) {
     const fx = this.base.fx
-    const active = !!this.st.active
     for (let i = 0; i < (I.emitters || []).length; i++) {
       const E = I.emitters[i]
-      const on = E.when === 'always' || (E.when === 'night' ? ctx.night > 0.2 : active)
-      if (!on) continue
+      const k = E.when === 'always' ? 1 : E.when === 'night' ? (ctx.night > 0.2 ? 1 : 0) : run
+      if (k < 0.05) continue
       const rate = { campfire: 9, smoke: 2.4, chimney: 2, steam: 2.2, exhaust: 4, sparks: 3, embers: 4, mist: 6, sawdust: 6, dust: 3, weld: 5, solder: 1.2 }[E.kind] || 2
-      this.emitAcc[i] = (this.emitAcc[i] || 0) + dt * rate
+      this.emitAcc[i] = (this.emitAcc[i] || 0) + dt * rate * k
       while (this.emitAcc[i] >= 1) {
         this.emitAcc[i] -= 1
         const p = this.toWorld(E.x, E.z, E.y)

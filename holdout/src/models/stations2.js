@@ -66,7 +66,46 @@ function hazardSign(b, o = {}) {
   })
 }
 
+// A splitter or merger: a squat steel box on a pad that a belt drops into on
+// each side, a diverter turning on top, and painted arrows saying which way
+// goods go (out from the middle for a splitter, in for a merger).
+function beltNode(b, I, merge) {
+  b.box(0.98, 0.08, 0.98, { mat: 'concrete', color: '#9a968e', y: 0.04 })
+  b.box(0.74, 0.86, 0.74, { mat: 'paint', color: merge ? '#3f6f9a' : '#c8902a', y: 0.08 + 0.43 })
+  // hazard band and corner posts
+  b.box(0.76, 0.08, 0.76, { mat: 'paint', color: '#1e1e1e', y: 0.78 })
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.box(0.08, 0.98, 0.08, { mat: 'steel', color: '#6a7178', x: sx * 0.37, y: 0.49, z: sz * 0.37 })
+  // a hatch on every side where the belt trays meet it
+  for (let k = 0; k < 4; k++) {
+    const a = (k * Math.PI) / 2
+    b.box(0.34, 0.2, 0.03, { mat: 'plain', color: '#141414', x: Math.sin(a) * 0.375, y: 0.98, z: Math.cos(a) * 0.375, ry: a })
+  }
+  b.box(0.8, 0.05, 0.8, { mat: 'steel', color: '#7c858c', y: 1.1 })
+  b.pivot('rotor', { y: 1.14 }, (p) => {
+    p.cyl(0.3, 0.3, 0.05, { mat: 'rubber', color: '#26272a', seg: 16 })
+    for (let k = 0; k < 3; k++) p.box(0.06, 0.07, 0.3, { mat: 'paint', color: '#e8c020', y: 0.05, z: 0.13, ry: (k * Math.PI * 2) / 3 })
+  })
+  I.anims.push({ name: 'rotor', kind: 'spin', speed: merge ? -2.4 : 2.4, when: 'active' })
+  // arrows on the sides
+  for (let k = 0; k < 4; k++) {
+    const a = (k * Math.PI) / 2
+    b.at({ x: Math.sin(a) * 0.376, y: 0.5, z: Math.cos(a) * 0.376, ry: a }, () => {
+      const tip = merge ? -1 : 1
+      b.box(0.06, 0.16, 0.01, { mat: 'paint', color: '#f4f0e6', y: -0.04 * tip })
+      b.box(0.06, 0.12, 0.01, { mat: 'paint', color: '#f4f0e6', x: -0.04, y: 0.08 * tip, rz: 0.75 * tip })
+      b.box(0.06, 0.12, 0.01, { mat: 'paint', color: '#f4f0e6', x: 0.04, y: 0.08 * tip, rz: -0.75 * tip })
+    })
+  }
+  I.lights.push({ x: 0, y: 1.3, z: 0, color: merge ? '#7ac0ff' : '#ffc060', intensity: 0.8, dist: 3, when: 'active' })
+}
+
 export const STATIONS2 = {
+  splitter(b, L, I) {
+    beltNode(b, I, false)
+  },
+  merger(b, L, I) {
+    beltNode(b, I, true)
+  },
   forge(b, L, I) {
     const rnd = seeded(401)
     if (L === 1) {

@@ -5,7 +5,10 @@ import * as THREE from 'three'
 import { makeSurvivorCharacter, survivorLookKey } from '../world/agents.js'
 import { toolModel, weaponModel, holdStyle } from '../models/weapons.js'
 import { S, hour, stationSize, workersOf, survivorStats, gateTiles, bounds } from '../game/state.js'
-import { STATIONS, OCCUPATIONS, ITEMS, EXPANSIONS } from '../game/data.js'
+import { STATIONS, OCCUPATIONS, ITEMS, EXPANSIONS, RES } from '../game/data.js'
+import { isDepot, isNode, feeds, belted } from '../game/belts.js'
+import { plannedRecipe } from '../game/rates.js'
+const _wood = new THREE.Color('#b08a5a')
 import { view } from '../render/view.js'
 import { h, rand, chance, angleLerp, clamp, pick } from '../core/util.js'
 import { callName } from '../game/deeds.js'
@@ -147,6 +150,10 @@ class Worker {
     const tk = toolAnim ? TOOL_FOR[toolAnim] ?? null : null
     this.setTool(this.shootT > 0 ? 'gun' : this.goal?.tool ?? tk)
     this.crate.visible = anim === 'carry'
+    if (this.crate.visible && this.goal?.res !== this.crateRes) {
+      this.crateRes = this.goal?.res
+      this.crate.material.color.set(this.crateRes ? RES[this.crateRes].color : '#b08a5a').lerp(_wood, 0.35)
+    }
     this.ch.update(dt, anim === 'run' || anim === 'walk' || anim === 'carry' ? anim : anim, { speed: this.path ? speed : 0 })
     if (this.lying) this.ch.update(0, 'lie', {})
     this.root.position.set(this.pos.x, this.pos.y, this.pos.z)
@@ -350,18 +357,30 @@ export class CampPeople {
     const g = this.wanderNearFire('')
     return { ...g, kind: 'chat-wait', until: rand(10, 16) }
   }
+  // Something that really goes by hand: an input a station draws from
+  // storage with no belt bringing it, or what it makes with no belt taking
+  // it away. The crate is the colour of the goods.
   carryJob(s) {
     const stor = S.stations.filter((st) => st.type === 'storage' && st.level > 0)
-    const dests = S.stations.filter((st) => st.level > 0 && !['campfire', 'storage', 'collector', 'floodlight', 'turret'].includes(st.type))
-    if (!stor.length || !dests.length) return null
-    const a = pick(stor)
-    const b = pick(dests)
-    const va = this.base.stationViews.get(a.id)
-    const vb = this.base.stationViews.get(b.id)
-    if (!va || !vb) return null
-    const pa = va.frontWorld()
-    const pb = vb.frontWorld()
-    return { x: pa.x, z: pa.z, anim: 'search', label: 'Hauling supplies', kind: 'carry1', next: { x: pb.x, z: pb.z, anim: 'idle', carry: true, label: 'Hauling supplies', until: 3 }, until: 2.5 }
+    if (!stor.length) return null
+    const jobs = []
+    for (const st of S.stations) {
+      if (st.level < 1 || st.building || isDepot(st) || isNode(st)) continue
+      const R = plannedRecipe(st)
+      if (!R) continue
+      for (const k of Object.keys(R.in || {})) if (R.in[k] > 0 && !feeds(st, k)) jobs.push({ st, k, dir: 'in' })
+      for (const k of Object.keys(R.out || {})) if (!belted(st, k)) jobs.push({ st, k, dir: 'out' })
+    }
+    if (!jobs.length) return null
+    const j = pick(jobs)
+    const near = stor.sort((p, q) => Math.hypot(p.x - j.st.x, p.z - j.st.z) - Math.hypot(q.x - j.st.x, q.z - j.st.z))[0]
+    const vs = this.base.stationViews.get(near.id)
+    const vt = this.base.stationViews.get(j.st.id)
+    if (!vs || !vt) return null
+    const [pa, pb] = j.dir === 'in' ? [vs.frontWorld(), vt.frontWorld()] : [vt.frontWorld(), vs.frontWorld()]
+    const what = RES[j.k].name.toLowerCase()
+    const label = j.dir === 'in' ? `Carrying ${what} to the ${STATIONS[j.st.type].name}` : `Carrying ${what} to storage`
+    return { x: pa.x, z: pa.z, anim: 'search', label, kind: 'carry1', res: j.k, next: { x: pb.x, z: pb.z, anim: 'idle', carry: true, res: j.k, label, until: 3 }, until: 2.5 }
   }
   buildSite(s) {
     const B = this.base

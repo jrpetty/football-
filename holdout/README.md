@@ -114,12 +114,28 @@ the camp. Survive it and the convoy comes.
 ## Production
 
 ### Belts
-Every station has an input buffer and an output buffer. Workers carry goods by
-hand. Belts carry them automatically: click a station's output, then the
-station that should receive it. Belts run on posts above head height, so
-people walk underneath, and the route is found around buildings with a
-turn-aware path search. Where two belts cross, one runs a layer higher. Cargo rides visibly as crates, drums, logs, spools and sacks,
-and a lamp on each belt shows whether it is flowing, waiting or backed up.
+Every building that makes or uses goods has **pods**: teal intakes down its
+left side, orange outtakes down its right (its front stays clear for the
+workers), and a Storage Depot has blue two-way hatches. An arrow painted on
+the ground in front of each pod shows which way goods go. One belt plugs into
+one pod. Crafting benches take belts too: orders draw their materials from the
+intake first, and resource recipes (plates, bolts, parts, wiring, beams) leave
+by belt.
+
+**Laying a belt:** click a pod (or "Belt in" / "Belt out" on a station, or the
+Conveyor belt card under Build → Belts). Everything it could connect to lights
+up with a ring on each free pod; click the building or pod where it goes. The
+route and cost preview on hover. Click the ground on the way to pin bends
+(right-click or Backspace removes the last); Shift-click the end to lay
+another from the same building. Chips on the bar choose what the belt carries
+when a building deals in several goods. Belts run on posts above head height,
+route around buildings with a turn-aware search, keep off other pods, and run
+a layer higher where they cross. Putting a building down across a belt
+re-routes the belt round it.
+
+**Click any belt** for its panel: what it carries, the rate now and once it
+settles, what holds it back, upgrade, take down, and **Splitter here** /
+**Merger here** at the spot you clicked.
 
 | Belt | Carries | Unlocked by |
 | --- | --- | --- |
@@ -127,14 +143,47 @@ and a lamp on each belt shows whether it is flowing, waiting or backed up.
 | Mk2: proper rollers, cured belt | 320 a day | Rubber Rollers (tier 4) |
 | Mk3: motor-driven, steel-framed | 800 a day | Motor Belts (tier 5) |
 
+- **Splitter** (Conveyors): one belt in, up to three out. Each item goes to
+  the next belt in turn, so two belts get exactly half each and three a third;
+  when one is full its share goes to the others.
+- **Merger** (Conveyors): up to three belts of the same goods in, one out, at
+  most that belt's rate.
 - A station runs 15% faster for each side that is fully belted (inputs fed,
   outputs carried away).
 - A station whose output is belted to a consumer works **on demand**: it makes
   what the next station needs instead of whatever it has the materials for.
-- A full output belt stops the station. The Camp overview names every
-  bottleneck.
 - Belts upgrade in place. Moving a station reroutes its belts. Logistics
   research makes every belt carry 25% more.
+
+**The maths.** Everything is per day.
+- A belt carries `speed ÷ gap × stack × seconds a day`: Mk1 is 0.5 m/s with
+  items 2 m apart, 0.25 items a second, 120 a day.
+- A building runs at most `Bmax = seconds a day × rate × belt bonus × season
+  ÷ batch time` batches a day, where rate is its workers' speed plus
+  automation. Each batch takes `in[k]` and makes `out[k]`.
+- It actually runs `B = min(Bmax, belted input k ÷ in[k], room on belted
+  output k ÷ out[k])`. Inputs without a belt come from storage and never
+  hold it back.
+- What it makes is shared over its belts for that good: equal shares, and a
+  belt that can take less (full, or its far end needs less) passes the rest
+  on. A splitter shares what it gets the same way; a merger sums its inputs up
+  to its belt's cap.
+- These limits feed back both ways (a slow forge backs up the scrap belt that
+  feeds it, which slows the scrap yard), so the game settles the whole network
+  by repeating both passes until nothing changes, starting from every belt
+  full. Each belt then reports the rate it settles at and what holds it back:
+  the belt itself, the far end's appetite, the near end running dry, or the
+  far end being short of another input.
+- In a test chain (an automated scrap yard feeding two forges through a
+  splitter on a Mk1 belt) the predicted 120 / 60 / 60 a day matched the
+  simulated 118.5 / 58 / 57.5.
+
+Machines spin up quickly and run down slowly, follow pause and game speed, and
+a machine paced by its belt says so ("Paced by its belt · 64%") instead of
+flashing a warning; real stoppages show once they have lasted a few seconds.
+Goods slide out of outtake hatches and into intakes and turn smoothly at
+corners. Whatever has no belt still goes by hand, and the haulers you see
+carry exactly those goods.
 
 ### The materials ladder
 - **Raw:** scrap, wood, water, food, fuel.
