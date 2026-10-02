@@ -653,7 +653,7 @@ export function renderBelt(ui, sel) {
     h(
       'section.card',
       h('h3', 'Carrying', h('small', `${Math.round(l.len)} m · ${l.items.length} on it`)),
-      h('div.kv', h('span', 'Goods'), h('b', h('i.ic', { html: resIcon(l.res), style: { color: RES[l.res].color } }), ' ', RES[l.res].name)),
+      h('div.kv', h('span', 'Goods'), h('b.resname', h('i.ic', { html: resIcon(l.res), style: { color: RES[l.res].color } }), RES[l.res].name)),
       h('div.kv', h('span', 'From'), h('button.plink', { onclick: () => a && ui.openStation(a.id) }, nm(a))),
       h('div.kv', h('span', 'To'), h('button.plink', { onclick: () => b && ui.openStation(b.id) }, nm(b))),
     ),

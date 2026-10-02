@@ -1439,3 +1439,5 @@ h3 .fillbest { text-transform: none; letter-spacing: 0.02em; font-family: var(--
 .placebar .pb-chips { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; max-width: 46vw; }
 .placebar .pb-chips small { color: var(--muted); font: 600 11px var(--font-display); letter-spacing: 0.12em; text-transform: uppercase; margin-right: 2px; }
 .bcard.beltcard { border-color: rgba(240,150,44,0.5); background: linear-gradient(160deg, rgba(240,150,44,0.14), rgba(240,150,44,0.03)); }
+.resname { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.resname .ic svg { width: 16px; height: 16px; }
