@@ -438,7 +438,8 @@ unless a teammate helps them up.
 
 ## Survival
 
-- **Infection:** a bite has a 6% chance to infect (a bloater's gas 4%). It
+- **Infection:** a bite can only infect someone below 30% health, and then it
+  has a 6% chance (a bloater's gas 4%, at any health). It
   climbs about 40 points a day: fever at 30 (slower work, less health), turning
   at 70 (half speed, no runs), and at 100 the survivor is lost. An antiviral
   cures it below 60. A staffed Infirmary slows it and gives antivirals by

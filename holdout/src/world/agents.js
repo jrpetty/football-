@@ -325,7 +325,7 @@ export class SurvivorAgent extends Agent {
     const real = dmg * (1 - this.st.dr)
     this.hp -= real
     if (!this.npc && (from?.faction === 'zombie' || o.gas)) {
-      if (exposeInfection(this.data, o.gas ? INFECTION.gas : INFECTION.bite, o.gas ? 0 : this.st.dr)) {
+      if (exposeInfection(this.data, o.gas ? INFECTION.gas : INFECTION.bite, o.gas ? 0 : this.st.dr, o.gas ? null : Math.max(0, this.hp) / this.maxHp)) {
         this.world.toast?.(`${this.data.first} was ${o.gas ? 'poisoned by the gas' : 'bitten'}. Infected!`, 'bad')
         view.labels.float(this.world.scene, this.chestPos(2.1), 'Infected', 'bad')
       }

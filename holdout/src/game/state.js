@@ -933,9 +933,11 @@ export function infectChance(s, base, dr = 0) {
   if (researchDone('vaccine')) return 0
   return base * (1 - dr) * (researchDone('immunity') ? 0.5 : 1) * (1 - fxSum(s, 'resist'))
 }
-// Returns true if this exposure infected someone who wasn't already.
-export function exposeInfection(s, base, dr = 0) {
-  if (!s || Math.random() >= infectChance(s, base, dr)) return false
+// Returns true if this exposure infected someone who wasn't already. A bite
+// passes hpFrac (health left, 0 to 1 after the hit): it only infects below
+// INFECTION.below. Gas and anything else leaves it out.
+export function exposeInfection(s, base, dr = 0, hpFrac = null) {
+  if (!s || (hpFrac != null && hpFrac >= INFECTION.below) || Math.random() >= infectChance(s, base, dr)) return false
   const fresh = !(s.infection > 0)
   s.infection = Math.max(s.infection || 0, 1)
   if (fresh) {

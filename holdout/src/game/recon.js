@@ -253,12 +253,14 @@ export function tickScouts() {
         s.hp = Math.max(5, s.hp - survivorStats(s).maxHp * rand(0.3, 0.5))
         s.status = s.hp < survivorStats(s).maxHp * 0.3 ? 'injured' : 'ok'
       }
+      let infected = false
       if (fate === 'bitten') {
         s.hp = Math.max(5, s.hp - survivorStats(s).maxHp * 0.25)
-        exposeInfection(s, 1)
+        // as on a run, a bite only infects someone already below 30% health
+        infected = exposeInfection(s, 1, 0, s.hp / survivorStats(s).maxHp)
       }
       const what = sc.target === 'horde' ? (rep.seen ? `found the horde: about ${rep.seen.size} of them` : 'lost the horde\'s trail') : `counted ${rep.count} infected inside${rep.horde ? ', and the horde is close by' : ''}`
-      rep.text = `${s.first} is back from ${where} and ${what}.${fate === 'hurt' ? ' They got spotted and took a beating getting away.' : fate === 'bitten' ? ' They were bitten.' : ''}`
+      rep.text = `${s.first} is back from ${where} and ${what}.${fate === 'hurt' ? ' They got spotted and took a beating getting away.' : fate === 'bitten' ? (infected ? ' They were bitten.' : ' They were bitten, but it did not break the skin.') : ''}`
       log(rep.text, fate === 'fine' ? 'good' : 'bad')
       if (fate !== 'fine') addMoraleEvent(`${s.first} hurt scouting`, -2, 1)
     }

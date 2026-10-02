@@ -771,7 +771,8 @@ export const RESEARCH = {
 // Infection: a bite (or bloater gas) can infect. It climbs toward 100 over
 // a few days; at 100 the survivor turns. The Infirmary slows it, and an
 // antiviral cures it while it is still below `cureBelow`.
-export const INFECTION = { bite: 0.06, gas: 0.04, perDay: 40, fever: 30, sick: 70, cureBelow: 60, infirmary: 0.35, knock: 35 }
+// below: a bite only gets through to someone already worn down (under this share of their health)
+export const INFECTION = { bite: 0.06, gas: 0.04, below: 0.3, perDay: 40, fever: 30, sick: 70, cureBelow: 60, infirmary: 0.35, knock: 35 }
 
 // Outposts (milestone: Convoys): a place you have run can be held by a
 // garrison of one to three. A convoy brings its goods home each morning;

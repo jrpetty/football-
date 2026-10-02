@@ -201,7 +201,7 @@ const CHAPTERS = [
     name: 'Infection',
     icon: 'specimen',
     body: () => [
-      P(`Each bite has a ${pct(INFECTION.bite)} chance to infect, and a bloater's gas has ${pct(INFECTION.gas)} per hit. The infection grows about ${INFECTION.perDay} points a day.`),
+      P(`A bite can only infect someone who is already below ${Math.round(INFECTION.below * 100)}% health, and then each bite has a ${pct(INFECTION.bite)} chance to. A bloater's gas has ${pct(INFECTION.gas)} per hit at any health. Keep people healed and the bites stay harmless. The infection grows about ${INFECTION.perDay} points a day.`),
       h(
         'div.mn-stages',
         h('div', h('b', `0 to ${INFECTION.fever}`), h('small', 'Incubating. No symptoms yet.')),
