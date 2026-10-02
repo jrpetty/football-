@@ -9,6 +9,7 @@ import { upkeepNeeds, campFlow, stationFlow, power, powerNeed, isAutomated, boil
 import { QUALITY as GFXQ } from '../render/pipeline.js'
 import { sfx } from '../core/audio.js'
 import { volumeControl } from './volume.js'
+import { fpsOn, setFps } from './fps.js'
 import { isFullscreen, toggleFullscreen } from './fullscreen.js'
 import { canNotify, askNotify } from './notify.js'
 import { bus, h, fmt, clamp } from '../core/util.js'
@@ -357,6 +358,7 @@ export function renderSettings(ui) {
     row('Tilt-shift focus', seg([[true, 'On'], [false, 'Off']], st.tilt !== false, (v) => ((st.tilt = v), g.applySettings(), ui.closeModal(), ui.openSettings()))),
     row('Edge scrolling', seg([[true, 'On'], [false, 'Off']], st.edgePan !== false, (v) => ((st.edgePan = v), g.applySettings(), ui.closeModal(), ui.openSettings()))),
     row(h('span', { 'data-tip': 'When the frame rate drops, draw at a slightly lower resolution to stay smooth, and go back up when it recovers.' }, 'Auto resolution'), seg([[true, 'On'], [false, 'Off']], st.autoRes !== false, (v) => ((st.autoRes = v), g.applySettings(), ui.closeModal(), ui.openSettings()))),
+    row(h('span', { 'data-tip': 'Frames a second, how long a frame takes and the worst recent one, bottom right. F3 turns it on and off.' }, 'FPS counter'), seg([[true, 'On'], [false, 'Off']], fpsOn(), (v) => (setFps(v), ui.closeModal(), ui.openSettings()))),
     row('Volume', volumeControl(g, { wide: true })),
     row('Full screen', seg([[true, 'On'], [false, 'Off']], isFullscreen(), (v) => v !== isFullscreen() && toggleFullscreen(ui).then(() => (ui.closeModal(), ui.openSettings())))),
     row(h('span', { 'data-tip': 'Make the menus, panels and buttons bigger or smaller.' }, 'Interface size'), seg([[0.9, '90%'], [1, '100%'], [1.15, '115%'], [1.3, '130%']], st.uiScale || 1, (v) => ((st.uiScale = v), g.applySettings(), ui.closeModal(), ui.openSettings()))),

@@ -38,6 +38,7 @@ import { Mission } from './scenes/mission.js'
 import { UI } from './ui/ui.js'
 import { genCity } from './world/city.js'
 import { portrait } from './ui/portrait.js'
+import { initFps, fpsFrame } from './ui/fps.js'
 import { bus, h } from './core/util.js'
 
 const GRASS = { low: 0, medium: 18000, high: 40000, ultra: 75000 }
@@ -149,6 +150,7 @@ class Game {
     window.addEventListener('contextmenu', (e) => {
       if (!e.target.closest?.('input, textarea, [contenteditable="true"]')) e.preventDefault()
     })
+    initFps()
     const loop = (t) => {
       requestAnimationFrame(loop)
       this.frame(t)
@@ -831,6 +833,7 @@ class Game {
   }
   frame(t, hidden = false) {
     const dt = Math.max(0, Math.min(hidden ? 1 : 0.1, (t - this.last) / 1000))
+    if (!hidden) fpsFrame(t - this.last)
     this.last = t
     const inBase = this.scene === this.base
     // On a run the camp clock slows so a run costs hours, not half a day.

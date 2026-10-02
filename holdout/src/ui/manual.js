@@ -515,6 +515,7 @@ const CHAPTERS = [
         ['Shift+click', 'Select several stations'],
         ['F1', 'This manual'],
         ['Alt+Enter', 'Full screen (or the button above the menu)'],
+        ['F3', 'FPS counter on or off'],
         ['Esc', 'Close or menu'],
       ]),
       h('h4', 'On a run'),

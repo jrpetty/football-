@@ -1641,3 +1641,11 @@ h3 .fillbest { text-transform: none; letter-spacing: 0.02em; font-family: var(--
 .mrow small.bad { color: var(--bad); }
 .mup { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); flex-wrap: wrap; }
 .mup > div { display: grid; gap: 4px; }
+
+/* ---- frame-rate counter: a tab along the bottom edge, bottom right */
+.fps { position: fixed; right: 10px; bottom: 0; z-index: 100; pointer-events: none; display: flex; align-items: baseline; gap: 5px; padding: 1px 8px 2px; border-radius: 7px 7px 0 0; background: rgba(8, 10, 7, 0.66); border: 1px solid var(--line); border-bottom: 0; font: 600 12px/1.25 var(--font-display); letter-spacing: 0.04em; color: var(--muted); text-shadow: 0 1px 2px #000; font-variant-numeric: tabular-nums; }
+.fps b { font-size: 14px; min-width: 2ch; text-align: right; color: var(--fg); }
+.fps i { font-style: normal; color: var(--dim); }
+.fps.good b { color: var(--good); }
+.fps.mid b { color: var(--accent-2); }
+.fps.bad b { color: var(--bad); }
