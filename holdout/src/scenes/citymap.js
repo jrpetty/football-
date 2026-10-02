@@ -17,7 +17,7 @@ import * as CB from '../models/citybuildings.js'
 import { locationModel } from '../models/citylandmarks.js'
 import { gableRoof } from '../models/parts.js'
 import { SIDEWALK, RIVER_W, HIGHWAY_Z, HIGHWAY_W, FACE_ROT, route } from '../world/city.js'
-import { S, hour, season, leafTurn, isLooted } from '../game/state.js'
+import { S, hour, season, leafTurn, isLooted, isCleared, isEmptied } from '../game/state.js'
 import { LEVEL_COLORS } from '../game/data.js'
 import { MapPanel } from '../ui/mappanel.js'
 import { clamp, smooth } from '../core/util.js'
@@ -1040,10 +1040,11 @@ export class CityMap {
     for (const L of this.markers) {
       const m = L.marker
       const post = (S.outposts || []).some((o) => o.locId === L.loc.id)
-      const looted = isLooted(L.loc.id) && !post
+      const looted = (isLooted(L.loc.id) || isEmptied(L.loc.id)) && !post
+      const clear = isCleared(L.loc.id)
       const ev = evs.get(L.loc.id)
       const lead = leadsAt(L.loc.id).length > 0
-      const col = post ? '#5ad07a' : lead ? '#c08aff' : looted ? '#6a6e6a' : m.col
+      const col = post ? '#5ad07a' : lead ? '#c08aff' : clear ? '#8ae0c0' : looted ? '#6a6e6a' : m.col
       m.head.material.color.set(col)
       m.head.material.emissive.set(col)
       m.beam.material.uniforms.color.value.set(col)
@@ -1052,7 +1053,8 @@ export class CityMap {
       m.el.classList.toggle('event', !!ev)
       m.el.classList.toggle('outpost', post)
       m.el.classList.toggle('lead', lead)
-      m.el.querySelector('i').textContent = ev ? (ev.kind === 'distress' ? 'SOS' : 'DROP') : lead ? 'lead' : post ? 'outpost' : looted ? 'looted' : ''
+      m.el.classList.toggle('clear', clear)
+      m.el.querySelector('i').textContent = ev ? (ev.kind === 'distress' ? 'SOS' : 'DROP') : lead ? 'lead' : post ? 'outpost' : clear ? 'clear' : looted ? (isEmptied(L.loc.id) ? 'empty' : 'looted') : ''
       m.el.classList.toggle('sel', this.sel === L.loc)
       m.el.classList.toggle('hov', this.hover === L.loc)
     }

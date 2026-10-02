@@ -51,7 +51,7 @@ networks don't.
 | Camp | `B` `C` `I` `T` `P` `M` `G` `J` `L` | Build, Crew, Items, Trade, Camp overview, Map, Progress, Journal, Log |
 | | `O`, `Enter`, `Q` / Alt+click | Players panel, chat, ping a spot (multiplayer) |
 | | `F` / `H` | The wall / horde intel |
-| | `Space`, `1` `2` `3` | Pause, 1×, 2×, 4× speed |
+| | `Space`, `1` `2` `3`, `4` | Pause, 1×, 2×, 4× speed, skip ahead |
 | | `R`, `Shift`, `Enter`, `Esc` | While placing: rotate, place several, confirm, cancel |
 | | Click a station's output, then a station | Lay a belt between them |
 | Supply run | Left-click, drag a box, `1`–`4`, `Tab` | Select survivors (double-tap a number to jump to them) |
@@ -209,8 +209,36 @@ loot table that fits it.
   are muffled through walls, measured from your nearest survivor.
 - A **minimap** shows the explored layout, the squad, seen zombies and sound
   pings.
-- **Picked clean:** a searched place stays empty for four hours of real time.
-  The city map counts the time down on each one.
+- **Picked clean:** in the Scavenger mode a searched place stays empty for
+  four hours of real time, then restocks. The city map counts the time down.
+- **Tall buildings:** apartment blocks, offices, police stations, schools and
+  hospitals have two to four floors, and the tallest have a roof (hospitals
+  with a helipad and sometimes the helicopter). A stairwell in the entrance
+  hall links them; right-click the stairs to climb, or anywhere on another
+  floor. The view follows the selected survivor; `[` `]` or the Floors bar look
+  at any floor. Noise carries up and down the stairwell, so a shot upstairs
+  brings the floor below after you. A backup generator lights the building and
+  runs the lift, which the infected cannot use, but starting it is very loud.
+- **Tracks in the snow:** in winter everyone outdoors leaves prints. The
+  infected's prints show where they went; an infected that finds the squad's
+  fresh trail follows it back to the van.
+
+## The city
+
+- **Two modes**, chosen when a camp starts (and when a multiplayer camp
+  starts). **Scavenger:** places restock four real hours after a search.
+  **Last Pickings:** everything can be looted once; what was taken stays
+  taken, and the map shows how much of each place is left. Both have the whole
+  campaign.
+- **Liberation:** every place remembers how many infected were left alive.
+  Get out with nothing alive inside and it is clear; an outpost keeps it
+  clear, otherwise they can drift back. Clearing districts brings out people
+  with supplies; 10/25/50/75% of the city cleared gives morale, faster
+  newcomers, cheaper trips and better outposts; 100% is a second ending.
+- **When a camp falls**, a closing sequence plays over the ruins: how it
+  ended, how long it held, its record (days, kills, places and things
+  searched, built, hordes, people, kilometres, notes) and the names of
+  everyone it lost. A horde that leaves nobody standing can now wipe a camp.
 - **Special infected:** stalkers creep up while nobody is looking, screamers
   call every infected nearby, and bloaters burst into an infectious cloud.
   Hidden traps wait in the dark; scouts spot them from much further away.
@@ -266,6 +294,21 @@ unless a teammate helps them up.
 
 ## The camp
 
+- **The camp brief**, top right, gathers everything that needs you (food or
+  water running out, a horde getting close, a worn wall,
+  unpowered stations, infection, morale, rewards to claim, someone at the
+  gate), each a click from its fix, and names what is next: a starter task,
+  the milestone you are closest to, a place worth clearing. A new camp opens
+  on a four-step guided first day (water, a first run, a weapon, the wall).
+- **Skip ahead** (the last speed button, or `4`) runs the camp at 12× until a
+  build is done or to dawn (dusk by day), stopping for the horde, a visitor,
+  a call from the city or a new problem. Solo and host only.
+- **Fill with the best free** on a station puts the free survivors best at
+  that job to work in one click. **Same again** on the map sets up the last
+  run (place, people, vehicle).
+- Settings has an **interface size** (90 to 130%), **background alerts**
+  (a desktop notification for the horde or a visitor while the tab is in the
+  background) and the first-day guide switch.
 - You start in an old lumber yard with four survivors, a campfire, a tent
   bunkhouse, a farm plot, a rain collector, a storage depot and a workbench.
 - Every survivor eats about 2 food and drinks 2.4 water a day. If food or water

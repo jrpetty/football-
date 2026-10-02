@@ -281,7 +281,7 @@ async function handle(c, m) {
       let code
       do code = newCode()
       while (rooms.has(code) || index[code])
-      const create = { pid, pname: clean(m.pname, 20) || 'Survivor', name: clean(m.name, 40) || 'The Holdout', public: m.public !== false }
+      const create = { pid, pname: clean(m.pname, 20) || 'Survivor', name: clean(m.name, 40) || 'The Holdout', public: m.public !== false, mode: m.mode === 'once' ? 'once' : 'restock' }
       const room = startCamp(code, { create })
       if (!room) return send(c, { op: 'err', why: 'busy' })
       try {

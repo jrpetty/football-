@@ -6,6 +6,13 @@
 // where the van waits; and the neighbouring lots behind their fences.
 // Everything lives on a 1 m tile grid in the lot's own frame: x along the
 // frontage, z toward the street.
+//
+// Tall buildings: the floors above the street are laid out in strips of the
+// same grid off to the side (x past the street's end), one strip per floor,
+// each a copy of the ground floor's walls with rooms of its own. A stairwell
+// sits in the same spot on every floor and grid links join its steps, so
+// paths, sight and noise all work floor by floor. The run draws each strip
+// stacked over the real building.
 import { Grid, BLOCK } from '../core/grid.js'
 import { LOCATIONS, ROOMS, CONTAINERS } from '../game/data.js'
 import { seeded } from '../models/kit.js'
@@ -42,8 +49,15 @@ export function genLevel(city, loc, opts = {}) {
   const zFar = zRoad1 + SIDEWALK
   const z0 = Math.floor(-fd / 2 - 7)
   const z1 = Math.ceil(zFar + 9)
-  const W = x1 - x0
+  const W0 = x1 - x0
   const H = z1 - z0
+  // tall buildings: how many floors (the same every visit), plus the roof
+  const TALL = L.tall && L.layout !== 'compound' ? L.tall : null
+  const nFloors = TALL ? TALL.floors[0] + (lot.seed % (TALL.floors[1] - TALL.floors[0] + 1)) : 1
+  const hasRoof = !!TALL?.roof && nFloors > 1
+  let nLevels = nFloors + (hasRoof ? 1 : 0)
+  const regionW = L.size[0] + 6
+  const W = W0 + (nLevels - 1) * regionW
   const grid = new Grid(W, H)
   const T = (x, z) => [Math.floor(x - x0), Math.floor(z - z0)] // lot-local -> tile
   const C = (i, j) => ({ x: x0 + i + 0.5, z: z0 + j + 0.5 }) // tile centre -> lot-local
@@ -53,6 +67,7 @@ export function genLevel(city, loc, opts = {}) {
     def: L,
     level: loc.level,
     W,
+    W0,
     H,
     x0,
     z0,
@@ -82,6 +97,13 @@ export function genLevel(city, loc, opts = {}) {
     buildings: [],
     neighbours: [],
     spawns: { inside: [], outside: [] },
+    // floors: levels[0] is the street; off[k] is level k's tile offset in x
+    levels: 1,
+    off: [0],
+    levelBlds: [],
+    links: [],
+    regionW,
+    FH: 3.3,
   }
   const isWall = (i, j) => i >= 0 && j >= 0 && i < W && j < H && lv.walls[j * W + i] === 1
   const setWall = (i, j, kind = 1) => {
@@ -93,6 +115,8 @@ export function genLevel(city, loc, opts = {}) {
     lv.walls[j * W + i] = 0
     grid.set(i, j, 0, 0, null)
   }
+  const nearDoor = (i, j, d = 1) => lv.doors.some((o) => Math.abs(o.i - i) <= d && Math.abs(o.j - j) <= d)
+  const free = (i, j) => grid.open(i, j) && !grid.owner[grid.i(i, j)] && !lv.walls[j * W + i]
   // world edges of the play area
   for (let i = 0; i < W; i++) {
     grid.set(i, 0, BLOCK, 1, 'edge')
@@ -102,6 +126,8 @@ export function genLevel(city, loc, opts = {}) {
     grid.set(0, j, BLOCK, 1, 'edge')
     grid.set(W - 1, j, BLOCK, 1, 'edge')
   }
+  // the floors' strips start as empty air
+  if (W > W0) for (let j = 0; j < H; j++) for (let i = W0 - 1; i < W; i++) grid.set(i, j, BLOCK, 1, i === W0 - 1 ? 'edge' : 'void')
 
   // ---------------------------------------------------------------- the building(s)
   if (L.layout === 'compound') buildCompound()
@@ -115,7 +141,9 @@ export function genLevel(city, loc, opts = {}) {
     outline(B)
     const rooms = planRooms(B, L.layout, [...L.rooms])
     connectRooms(B, rooms)
+    if (nLevels > 1) buildFloors(B)
   }
+  lv.levelBlds[0] = lv.bld
 
   function outline(B) {
     for (let i = B.i0; i <= B.i1; i++) {
@@ -400,6 +428,219 @@ export function genLevel(city, loc, opts = {}) {
     }
   }
 
+  // ---------------------------------------------------------------- floors
+  // The stairwell: a 5 x 4 block in a corner of a room, the same on every
+  // floor. Two flights run side by side and take turns floor to floor (a
+  // switchback): lane 0 carries the flight up from even floors, lane 2 from
+  // odd ones, and the floor above has the opening where it arrives. Lane 1
+  // is the way between them; row 3 holds the lift.
+  //   tile (a, b) = (ci + sx * a, cj + sz * b)
+  //   a: 0 is the top of a flight (against the wall), 4 its foot
+  function placeStairs(B) {
+    const rooms = lv.rooms.filter((r) => r.B === B && !r.corridor && !r.garage)
+    rooms.sort((a, b) => (b === B.front) - (a === B.front) || (b.i1 - b.i0) * (b.j1 - b.j0) - (a.i1 - a.i0) * (a.j1 - a.j0))
+    const fd = B.door ? C(B.door.i, B.door.j) : null
+    let best = null
+    for (const r of rooms) {
+      for (const sx of [1, -1])
+        for (const sz of [1, -1]) {
+          const ci = sx > 0 ? r.i0 : r.i1
+          const cj = sz > 0 ? r.j0 : r.j1
+          const at = (a, b) => [ci + sx * a, cj + sz * b]
+          let ok = true
+          for (let a = 0; a <= 5 && ok; a++)
+            for (let b = 0; b <= 3 && ok; b++) {
+              const [i, j] = at(a, b)
+              if (lv.roomAt[j * W + i] !== r.id || !free(i, j) || nearDoor(i, j, a === 5 ? 0 : 1)) ok = false
+            }
+          if (!ok) continue
+          // the far end of the room from the front door, if there is a choice
+          const c = C(...at(2, 2))
+          const score = (fd ? Math.hypot(c.x - fd.x, c.z - fd.z) : 0) + (r === B.front ? 100 : 0)
+          if (!best || score > best.score) best = { r, ci, cj, sx, sz, score }
+        }
+      if (best) break
+    }
+    return best
+  }
+  function zoneTile(Z, a, b, off = 0) {
+    return [Z.ci + Z.sx * a + off, Z.cj + Z.sz * b]
+  }
+  // what each stairwell tile is on level k of n
+  function zoneRoles(k, n) {
+    const up = k < n - 1 ? (k % 2 ? 2 : 0) : -1
+    const hole = k >= 1 ? ((k - 1) % 2 ? 2 : 0) : -1
+    const out = []
+    for (let a = 0; a <= 4; a++)
+      for (let b = 0; b <= 3; b++) {
+        let role = 'walk'
+        if (b === up && a >= 1 && a <= 3) role = 'flight'
+        else if (b === hole && a >= 1 && a <= 3) role = 'hole'
+        else if (b === 3 && a === 0) role = 'shaft'
+        else if (b === 3 && a === 1) role = 'lift'
+        out.push({ a, b, role })
+      }
+    return { up, hole, tiles: out }
+  }
+  function applyZone(Z, k, n) {
+    const off = lv.off[k]
+    const R = zoneRoles(k, n)
+    for (const t of R.tiles) {
+      const [i, j] = zoneTile(Z, t.a, t.b, off)
+      if (t.role === 'flight') grid.set(i, j, BLOCK, 0, 'stairs')
+      else if (t.role === 'hole') grid.set(i, j, BLOCK, 0, 'stairhole')
+      else if (t.role === 'shaft') grid.set(i, j, BLOCK, 1, 'shaft')
+      else grid.set(i, j, 0, 0, t.role === 'lift' ? 'lift' : 'stairzone')
+    }
+    return R
+  }
+  // Upstairs, a room the ground floor reached from the street (a back door, a
+  // garage bay) would be sealed off: knock a door through to the rest.
+  function connectFloor(Z, k) {
+    const Bk = lv.levelBlds[k]
+    const [si, sj] = zoneTile(Z, 2, 1, lv.off[k])
+    for (let guard = 0; guard < 24; guard++) {
+      const seen = new Uint8Array(W * H)
+      const q = [[si, sj]]
+      seen[sj * W + si] = 1
+      while (q.length) {
+        const [i, j] = q.pop()
+        for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const ni = i + di
+          const nj = j + dj
+          if (ni <= Bk.i0 || ni >= Bk.i1 || nj <= Bk.j0 || nj >= Bk.j1 || seen[nj * W + ni] || !grid.open(ni, nj)) continue
+          seen[nj * W + ni] = 1
+          q.push([ni, nj])
+        }
+      }
+      const lost = new Set()
+      for (const r of lv.rooms) {
+        if (r.B !== Bk) continue
+        let any = false
+        for (let j = r.j0; j <= r.j1 && !any; j++) for (let i = r.i0; i <= r.i1 && !any; i++) if (seen[j * W + i]) any = true
+        if (!any) lost.add(r.id)
+      }
+      if (!lost.size) return
+      // a wall tile with the reached side on one face and a lost room on the other
+      let made = false
+      for (let j = Bk.j0 + 1; j < Bk.j1 && !made; j++)
+        for (let i = Bk.i0 + 1; i < Bk.i1 && !made; i++) {
+          if (!isWall(i, j)) continue
+          for (const [ai, aj, bi, bj] of [[i - 1, j, i + 1, j], [i + 1, j, i - 1, j], [i, j - 1, i, j + 1], [i, j + 1, i, j - 1]]) {
+            if (!seen[aj * W + ai] || !lost.has(lv.roomAt[bj * W + bi]) || !grid.open(bi, bj)) continue
+            if (ai === bi ? !(isWall(i - 1, j) && isWall(i + 1, j)) : !(isWall(i, j - 1) && isWall(i, j + 1))) continue
+            openTile(i, j)
+            lv.doors.push({ i, j, horiz: ai === bi, ext: false, wide: 1, part: 0, B: Bk })
+            made = true
+            break
+          }
+        }
+      if (!made) return
+    }
+  }
+  function buildFloors(B) {
+    const Z = placeStairs(B)
+    if (!Z) {
+      // nowhere for a stairwell: a single storey after all
+      nLevels = 1
+      return
+    }
+    lv.stairs = Z
+    lv.levels = nLevels
+    lv.floors = nFloors
+    lv.roof = hasRoof
+    for (let k = 1; k < nLevels; k++) lv.off[k] = W0 + (k - 1) * regionW + 3 - B.i0
+    const ground = lv.rooms.filter((r) => r.B === B)
+    const groundDoors = lv.doors.filter((d) => d.B === B)
+    const onRing = (i, j) => ((i === B.i0 || i === B.i1) && j >= B.j0 && j <= B.j1) || ((j === B.j0 || j === B.j1) && i >= B.i0 && i <= B.i1)
+    const groundWins = lv.windows.filter((w) => onRing(w.i, w.j))
+    for (let k = 1; k < nLevels; k++) {
+      const off = lv.off[k]
+      const roof = hasRoof && k === nLevels - 1
+      const Bk = { i0: B.i0 + off, j0: B.j0, i1: B.i1 + off, j1: B.j1, level: k, roof, base: B, upper: true }
+      lv.levelBlds[k] = Bk
+      for (let j = B.j0; j <= B.j1; j++)
+        for (let i = B.i0; i <= B.i1; i++) {
+          grid.set(i + off, j, 0, 0, null)
+          lv.walls[j * W + i + off] = 0
+        }
+      outline(Bk)
+      if (roof) {
+        const r = addRoom('roof', Bk.i0 + 1, Bk.j0 + 1, Bk.i1 - 1, Bk.j1 - 1, Bk)
+        Bk.front = r
+        // the stairwell's hut, open on its far side
+        const st = addRoom('stairs', 0, 0, -1, -1, Bk)
+        let i0 = 1e9, j0 = 1e9, i1 = -1e9, j1 = -1e9
+        for (let a = -1; a <= 5; a++)
+          for (let b = -1; b <= 4; b++) {
+            const [i, j] = zoneTile(Z, a, b, off)
+            const ring = a === -1 || a === 5 || b === -1 || b === 4
+            if (ring) {
+              if (a === 5 && b >= 1 && b <= 3) {
+                lv.doors.push({ i, j, horiz: false, ext: false, wide: 1, part: 0, B: Bk })
+                continue
+              }
+              if (i > Bk.i0 && i < Bk.i1 && j > Bk.j0 && j < Bk.j1) setWall(i, j)
+            } else {
+              lv.roomAt[j * W + i] = st.id
+              i0 = Math.min(i0, i)
+              j0 = Math.min(j0, j)
+              i1 = Math.max(i1, i)
+              j1 = Math.max(j1, j)
+            }
+          }
+        Object.assign(st, { i0, j0, i1, j1 })
+      } else {
+        // the same walls as the ground floor, with rooms of its own
+        const list = (TALL.up[(k - 1) % TALL.up.length] || TALL.up[0]).slice()
+        let n = 0
+        const idMap = new Map()
+        for (const g of ground) {
+          const type = g.corridor ? 'corridor' : g === B.front ? (g.type === 'lobby' ? 'landing' : g.type) : list[n++ % list.length]
+          const r = { id: lv.rooms.length, type, i0: g.i0 + off, j0: g.j0, i1: g.i1 + off, j1: g.j1, B: Bk, def: ROOMS[type] || ROOMS.storeroom, level: k }
+          if (g.corridor) r.corridor = true
+          lv.rooms.push(r)
+          idMap.set(g.id, r.id)
+          if (g === B.front) Bk.front = r
+        }
+        for (let j = B.j0 + 1; j < B.j1; j++)
+          for (let i = B.i0 + 1; i < B.i1; i++) {
+            if (lv.walls[j * W + i] === 1) setWall(i + off, j)
+            const g = lv.roomAt[j * W + i]
+            if (g >= 0 && idMap.has(g)) lv.roomAt[j * W + i + off] = idMap.get(g)
+          }
+        for (const d of groundDoors) {
+          if (d.ext) {
+            // the street doors are windows up here
+            if (d.wide <= 2) lv.windows.push({ i: d.i + off, j: d.j, horiz: d.horiz })
+            continue
+          }
+          openTile(d.i + off, d.j)
+          lv.doors.push({ ...d, i: d.i + off, B: Bk })
+        }
+      }
+      for (const w of groundWins) if (!roof) lv.windows.push({ i: w.i + off, j: w.j, horiz: w.horiz })
+    }
+    // the stairwell on every level, and the links between its steps
+    for (let k = 0; k < nLevels; k++) {
+      const R = applyZone(Z, k, nLevels)
+      if (k) connectFloor(Z, k)
+      if (R.up >= 0) {
+        const [ai, aj] = zoneTile(Z, 4, R.up, lv.off[k])
+        const [bi, bj] = zoneTile(Z, 0, R.up, lv.off[k + 1])
+        lv.links.push({ a: [ai, aj], b: [bi, bj], kind: 'stairs', cost: 7, la: k, lb: k + 1 })
+      }
+    }
+    // the lift stops on every floor (it needs power to run)
+    for (let k = 0; k < nLevels; k++)
+      for (let q = k + 1; q < nLevels; q++) {
+        const [ai, aj] = zoneTile(Z, 1, 3, lv.off[k])
+        const [bi, bj] = zoneTile(Z, 1, 3, lv.off[q])
+        lv.links.push({ a: [ai, aj], b: [bi, bj], kind: 'lift', cost: 3 + (q - k) * 1.2, la: k, lb: q, off: true })
+      }
+    grid.setFloors(W0, regionW, lv.off, lv.links)
+  }
+
   // The military compound: prefab buildings inside a blast-wall ring.
   function buildCompound() {
     const lw = fw
@@ -448,8 +689,6 @@ export function genLevel(city, loc, opts = {}) {
   }
 
   // ---------------------------------------------------------------- furniture and loot
-  const nearDoor = (i, j, d = 1) => lv.doors.some((o) => Math.abs(o.i - i) <= d && Math.abs(o.j - j) <= d)
-  const free = (i, j) => grid.open(i, j) && !grid.owner[grid.i(i, j)] && !lv.walls[j * W + i]
   // tiles against a wall inside a room, with the direction they face
   function wallSlots(r) {
     const out = []
@@ -475,10 +714,46 @@ export function genLevel(city, loc, opts = {}) {
     for (let a = 0; a < w; a++) for (let b = 0; b < d; b++) tiles.push([s.i + along[0] * a + out[0] * b, s.j + along[1] * a + out[1] * b])
     return tiles
   }
+  // Would blocking these tiles cut part of the room off from the rest?
+  function wouldSplit(r, tiles) {
+    const blocked = new Set(tiles.map(([i, j]) => j * W + i))
+    const open = (i, j) => lv.roomAt[j * W + i] === r.id && grid.open(i, j) && !blocked.has(j * W + i)
+    let start = null
+    let total = 0
+    for (let j = r.j0; j <= r.j1; j++)
+      for (let i = r.i0; i <= r.i1; i++)
+        if (open(i, j)) {
+          total++
+          if (!start) start = [i, j]
+        }
+    if (!start) return true
+    const seen = new Set([start[1] * W + start[0]])
+    const q = [start]
+    while (q.length) {
+      const [i, j] = q.pop()
+      for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const ni = i + di
+        const nj = j + dj
+        const k = nj * W + ni
+        if (seen.has(k) || !open(ni, nj)) continue
+        seen.add(k)
+        q.push([ni, nj])
+      }
+    }
+    if (seen.size < total) return true
+    // and every fitting already in the room can still be reached
+    for (const c of lv.containers) {
+      if (!c.tiles.some(([i, j]) => lv.roomAt[j * W + i] === r.id)) continue
+      const ok = c.tiles.some(([i, j]) => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([di, dj]) => seen.has((j + dj) * W + i + di)))
+      if (!ok) return true
+    }
+    return false
+  }
   function placeAgainstWall(r, kind, w, d, depth, onPlace) {
     for (const s of wallSlots(r)) {
       const tiles = footprint(s, w, d)
       if (!tiles.every(([i, j]) => free(i, j) && lv.roomAt[j * W + i] === r.id && !nearDoor(i, j))) continue
+      if (wouldSplit(r, tiles)) continue
       // the tile in front must stay walkable
       const out = s.rot === 0 ? [0, 1] : s.rot === Math.PI ? [0, -1] : s.rot === Math.PI / 2 ? [1, 0] : [-1, 0]
       const fronts = footprint(s, w, d + 1).filter((t) => !tiles.some((u) => u[0] === t[0] && u[1] === t[1]))
@@ -559,6 +834,7 @@ export function genLevel(city, loc, opts = {}) {
       const tiles = []
       for (let a = 0; a < cw; a++) for (let b = 0; b < cd; b++) tiles.push([ci + a, cj + b])
       if (f && !tiles.every(([a, b]) => free(a, b) && lv.roomAt[b * W + a] === r.id && !nearDoor(a, b))) return
+      if (f && wouldSplit(r, tiles)) return
       const c = C(ci + (cw - 1) / 2, cj + (cd - 1) / 2)
       lv.decor.push({ kind, x: c.x, z: c.z, rot: (cw < cd ? Math.PI / 2 : 0) + (chance(0.5) ? Math.PI : 0), block: !!f })
       if (f) for (const [a, b] of tiles) grid.set(a, b, BLOCK, 0, 'decor')
@@ -569,6 +845,71 @@ export function genLevel(city, loc, opts = {}) {
       for (const [a, b] of at.tiles) grid.set(a, b, BLOCK, 0, 'decor')
       return true
     })
+  }
+
+  // ---------------------------------------------------------------- tall buildings: generator and roof
+  if (lv.levels > 1) {
+    // a backup generator on the ground floor, somewhere in the back
+    const B = lv.bld
+    const back = lv.rooms.filter((r) => r.B === B && !r.corridor && ['storeroom', 'lockers', 'office', 'lab', 'garage', 'pharmacy', 'cells'].includes(r.type))
+    back.sort((a, b) => a.j0 - b.j0)
+    for (const r of [...back, B.front]) {
+      if (placeAgainstWall(r, 'generator', 2, 1, 0.8, (at) => addContainer('generator', r, at))) break
+    }
+    if (lv.roof) {
+      const Bk = lv.levelBlds[lv.levels - 1]
+      const RR = Bk.front
+      const roofFree = (i, j) => free(i, j) && lv.roomAt[j * W + i] === RR.id
+      // a helipad, and sometimes the helicopter that never took off again
+      const pad = TALL.helipad && nFloors >= TALL.helipad
+      const ci = Math.round((RR.i0 + RR.i1) / 2)
+      const cj = Math.round((RR.j0 + RR.j1) / 2)
+      const Zc = zoneTile(lv.stairs, 2, 1.5, lv.off[lv.levels - 1])
+      // the pad goes in the half of the roof away from the stair hut
+      const side = Zc[0] < ci ? 1 : -1
+      const pi = Math.round(ci + side * (RR.i1 - RR.i0) * 0.2)
+      if (pad) {
+        const pc = C(pi, cj)
+        lv.helipad = { x: pc.x, z: pc.z, r: Math.min(5.5, (RR.j1 - RR.j0) / 2 - 1) }
+        if (chance(0.6)) {
+          // the tail points back across the roof
+          const tiles = []
+          for (let a = -6; a <= 2; a++) for (let b = -1; b <= 1; b++) tiles.push([pi + a * side, cj + b])
+          if (tiles.every(([i, j]) => roofFree(i, j))) addContainer('heli', RR, { tiles, x: pc.x, z: pc.z, rot: (side > 0 ? Math.PI / 2 : -Math.PI / 2) + (R() - 0.5) * 0.12 })
+        }
+        // supplies dropped for the people who never came
+        for (let k = 0; k < 2; k++) {
+          const i = pi + (k ? 4 : -4)
+          const j = cj + (R() < 0.5 ? -3 : 3)
+          if (roofFree(i, j)) {
+            const c = C(i, j)
+            addContainer('milcrate', RR, { tiles: [[i, j]], x: c.x, z: c.z, rot: R() * 6 })
+          }
+        }
+      }
+      // air conditioning units and vents along the roof
+      for (let k = 0, placed = 0; k < 40 && placed < 3 + (pad ? 0 : 2); k++) {
+        const i = ri(RR.i0 + 1, RR.i1 - 2)
+        const j = ri(RR.j0 + 1, RR.j1 - 2)
+        const tiles = [[i, j], [i + 1, j], [i, j + 1], [i + 1, j + 1]]
+        if (pad && Math.hypot(C(i, j).x - lv.helipad.x, C(i, j).z - lv.helipad.z) < lv.helipad.r + 2) continue
+        if (!tiles.every(([a, b]) => roofFree(a, b) && !nearDoor(a, b, 1))) continue
+        const c = C(i + 0.5, j + 0.5)
+        addContainer('aircon', RR, { tiles, x: c.x, z: c.z, rot: chance(0.5) ? 0 : Math.PI / 2 })
+        placed++
+      }
+      for (let k = 0, placed = 0; k < 30 && placed < 2; k++) {
+        const i = ri(RR.i0 + 1, RR.i1 - 2)
+        const j = ri(RR.j0 + 1, RR.j1 - 2)
+        const tiles = [[i, j], [i + 1, j], [i, j + 1], [i + 1, j + 1]]
+        if (pad && Math.hypot(C(i, j).x - lv.helipad.x, C(i, j).z - lv.helipad.z) < lv.helipad.r + 2) continue
+        if (!tiles.every(([a, b]) => roofFree(a, b) && !nearDoor(a, b, 1))) continue
+        const c = C(i + 0.5, j + 0.5)
+        lv.decor.push({ kind: 'watertank', x: c.x, z: c.z, rot: 0, block: true })
+        for (const [a, b] of tiles) grid.set(a, b, BLOCK, 0, 'decor')
+        placed++
+      }
+    }
   }
 
   // ---------------------------------------------------------------- street, yard, neighbours
@@ -730,7 +1071,8 @@ export function genLevel(city, loc, opts = {}) {
     const [ci, cj] = vertical ? T(x - 1, z - 2) : T(x - 2, z - 1)
     const tiles = []
     for (let a = 0; a < (vertical ? 2 : 4); a++) for (let b = 0; b < (vertical ? 4 : 2); b++) tiles.push([ci + a, cj + b])
-    if (!tiles.every(([a, b]) => free(a, b))) return null
+    // parked outside, never in the lobby
+    if (!tiles.every(([a, b]) => free(a, b) && lv.roomAt[b * W + a] < 0 && !lv.buildings.some((B) => a >= B.i0 && a <= B.i1 && b >= B.j0 && b <= B.j1))) return null
     const c = vertical ? C(ci + 0.5, cj + 1.5) : C(ci + 1.5, cj + 0.5)
     const car = addContainer('car', null, { tiles, x: c.x, z: c.z, rot })
     if (car && kind) car.model = kind
@@ -794,6 +1136,12 @@ function flood(grid, si, sj) {
       if (!grid.open(ni, nj) || seen[grid.i(ni, nj)]) continue
       seen[grid.i(ni, nj)] = 1
       q.push([ni, nj])
+    }
+    // up and down the stairs
+    for (const e of grid.links?.get(grid.i(i, j)) || []) {
+      if (e.kind !== 'stairs' || seen[e.to]) continue
+      seen[e.to] = 1
+      q.push([e.to % grid.w, (e.to / grid.w) | 0])
     }
   }
   return seen

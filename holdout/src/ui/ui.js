@@ -18,11 +18,13 @@ import { manualModal } from './manual.js'
 import { motorPool } from './motorpool.js'
 import { renderJournal } from './journal.js'
 import { storyBadge } from '../game/story.js'
+import { renderBrief } from './brief.js'
 import { renderPlayers, feedChat, netChip, updateNetChip } from './netui.js'
 import { volumeControl } from './volume.js'
 import { callName, fullName } from '../game/deeds.js'
 import { fullscreenButton } from './fullscreen.js'
-import { victoryModal, renderMarket, renderLog, renderFence, renderExpansion, renderProduction, renderPower, renderMorale, renderSettings, recruitModal, raidReportModal, missionReportModal, gameOverModal, menuModal, hordeInfo } from './camppanels.js'
+import { playEnding } from './ending.js'
+import { cityVictoryModal, victoryModal, renderMarket, renderLog, renderFence, renderExpansion, renderProduction, renderPower, renderMorale, renderSettings, recruitModal, raidReportModal, missionReportModal, gameOverModal, menuModal, hordeInfo } from './camppanels.js'
 import { watchTrades } from './lockerui.js'
 
 const NAV = [
@@ -95,7 +97,9 @@ export class UI {
     this.placebar = h('div.placebar', { hidden: true })
     this.raidbar = h('div.raidbar', { hidden: true })
     this.modalRoot = h('div.modals')
-    R.append(this.top, this.nav, this.panel, this.dock, this.feed, this.toasts, this.placebar, this.raidbar, this.tip, this.modalRoot)
+    this.briefEl = h('div.brief')
+    this.briefSig = null
+    R.append(this.top, this.nav, this.panel, this.briefEl, this.dock, this.feed, this.toasts, this.placebar, this.raidbar, this.tip, this.modalRoot)
     // delegated tooltips for anything with data-tip
     R.addEventListener('mouseover', (e) => {
       const t = e.target.closest?.('[data-tip]')
@@ -119,6 +123,7 @@ export class UI {
     this.top.hidden = !v
     this.nav.hidden = !v
     this.feed.hidden = !v
+    this.briefEl.hidden = !v
     if (this.coopEl) this.coopEl.hidden = !v || !this.coopEl.children.length
     if (!v) {
       this.closePanel()
@@ -218,6 +223,7 @@ export class UI {
     this.speedEl = h(
       'div.speed' + (NET.role === 'client' && !this.game.net?.isAdmin() ? '.locked' : ''),
       speeds.map(([v, label, tip]) => h('button', { 'data-v': v, 'data-tip': tip, html: label, onclick: () => this.game.setSpeed(v) })),
+      NET.role !== 'client' ? h('button.skip', { 'data-v': 'skip', 'data-tip': '<b>Skip ahead</b> <kbd>4</kbd>Runs the camp fast until the build is done, or to dawn (or dusk). Stops early for anything that needs you.', html: icon('speed') + icon('speed'), onclick: () => this.game.skipAhead() }) : null,
     )
     T.append(
       h('div.brand', h('div.logo', 'HOLDOUT'), h('div.clock', h('i.ic', { html: icon(wIcon), 'data-tip': WEATHER[w]?.name || w }), this.dayEl, this.seasonEl, this.clockEl)),
@@ -280,7 +286,7 @@ export class UI {
     const beds = bedCount()
     this.popEl.querySelector('b').textContent = `${S.survivors.length}/${beds}`
     this.popEl.setAttribute('data-tip', `<b>${plural(S.survivors.length, 'survivor')}</b>${beds} beds. Build or upgrade Bunkhouses to take in more.`)
-    for (const b of this.speedEl.children) b.classList.toggle('on', +b.dataset.v === (S.speed ?? 1))
+    for (const b of this.speedEl.children) b.classList.toggle('on', b.dataset.v === 'skip' ? !!this.game.skip : !this.game.skip && +b.dataset.v === (S.speed ?? 1))
     this.updateHorde()
   }
   resTip(k, v, cap, rate) {
@@ -625,8 +631,14 @@ export class UI {
     let close
     close = this.modal(victoryModal(this, held, () => close()), { locked: true })
   }
+  cityVictory() {
+    let close
+    close = this.modal(cityVictoryModal(this, () => close()), { locked: true })
+  }
   gameOver() {
-    this.modal(gameOverModal(this), { small: true, locked: true })
+    // the closing sequence; the plain card if anything goes wrong with it
+    this.closeModal()
+    playEnding(this).catch(() => this.modal(gameOverModal(this), { small: true, locked: true }))
   }
 
   // ---------------------------------------------------------------- build dock
@@ -834,6 +846,8 @@ export class UI {
         this.nav.querySelector('[data-nav=journal]')?.classList.toggle('badge', storyBadge() > 0)
       }
       this.updateTop()
+      if (!this.briefEl.hidden && !S.raid) renderBrief(this)
+      this.briefEl.classList.toggle('off', !!S.raid)
       if (this.netEl) updateNetChip(this.netEl, this.game.net)
       watchTrades(this)
     }

@@ -17,7 +17,8 @@ const RANGE = { groan: 22, zdie: 26, hit: 30, swing: 18, hurt: 30, down: 40, scr
 export function soundAt(world, id, pos, { throttle = 40, pitch = 1, loud = 1, range = null } = {}) {
   const L = world.listener?.(pos) || view.rig.target
   const R = (range ?? RANGE[id] ?? 30) * (world.hearingK?.() ?? 1)
-  const d = Math.hypot(pos.x - L.x, pos.z - L.z)
+  // storeys count too: a sound two floors up is further off than it looks
+  const d = Math.hypot(pos.x - L.x, pos.z - L.z, ((pos.y || 0) - (L.y || 0)) * 1.6)
   if (d > R) return
   // left or right of the middle of the screen
   _right.setFromMatrixColumn(view.camera.matrixWorld, 0)

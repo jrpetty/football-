@@ -11,7 +11,7 @@ import {
   survivorStats, itemOf, addItem, repairCost, orderSpec, rollQuality, rebuildFence, fenceMax, makeSurvivor, killSurvivor,
   bedCount, countType, maxLevelOf, addMoraleEvent, itemName, moraleMult, available, getS, isUnlocked, hasFlag, feedSignal,
   researchDone, finishResearch, coreBoost, treatInfection, season, seasonIdx, campTier, perkOf,
-  outpostYield, abandonOutpost, addVehicle,
+  outpostYield, abandonOutpost, addVehicle, outpostAt,
 } from './state.js'
 import { deed, dailyDeeds } from './deeds.js'
 import { isLooted } from './state.js'
@@ -333,6 +333,7 @@ export function econTick(dt, opts = {}) {
       st.level = st.building.to
       st.building = null
       bus.emit('built', st)
+      S.stats.built = (S.stats.built || 0) + 1
       log(`${STATIONS[st.type].name} ${st.level > 1 ? `upgraded to level ${st.level}` : 'built'}.`, 'good')
       for (const s of S.survivors)
         if (s.status === 'ok' && !s.job) {
@@ -484,6 +485,8 @@ export function econTick(dt, opts = {}) {
     }
     if (S.morale < 18) desertion()
     tickOutposts()
+    S.stats.peak = Math.max(S.stats.peak || 0, S.survivors.length)
+    reinfest()
     bus.emit('newDay', day())
   }
   if (Math.floor(prevHour) !== Math.floor(hour())) {
@@ -990,6 +993,21 @@ function rollWeather() {
   bus.emit('weather', r)
 }
 
+// ---------------------------------------------------------------- the city
+// A cleared place stays clear while an outpost holds it. Left alone, now and
+// then the infected drift back in.
+function reinfest() {
+  if (!S.places) return
+  for (const [id, P] of Object.entries(S.places)) {
+    if (!P.cleared || outpostAt(+id) || !chance(0.012)) continue
+    const loc = S.cityLocs.find((l) => l.id === +id)
+    P.cleared = false
+    P.left = 2 + (loc?.level || 1) * 2
+    P.at = S.time
+    log(`The infected have drifted back into ${loc?.name || 'a place you cleared'}.`, 'bad')
+  }
+}
+
 // ---------------------------------------------------------------- recruits & events
 export function scheduleRecruit() {
   let mult = 1
@@ -998,6 +1016,8 @@ export function scheduleRecruit() {
   const op = radio.flatMap((st) => workersOf(st)).find((s) => s.status === 'ok')
   if (op) mult *= 1 / (1 + 0.25 * workEff(op, 'radio'))
   if (hasFlag('beacon')) mult *= 0.75
+  // a quarter of the city cleared: word gets around
+  if (S.libDone?.includes(0.25)) mult *= 0.75
   S.recruit.next = S.time + rand(9, 15) * 60 * mult
 }
 function recruitQuality() {
@@ -1128,6 +1148,7 @@ export function autoResolveRaid(R, offline = false) {
     }
     addMoraleEvent('The horde broke through', -18, 2)
     S.lastBreach = S.time
+    S.stats.raidsLost = (S.stats.raidsLost || 0) + 1
   } else addMoraleEvent('Held the wall', 8, 1)
   S.stats.raids++
   S.stats.kills += Math.round(R.count * clamp(ratio, 0.3, 1))

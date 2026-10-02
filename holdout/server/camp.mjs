@@ -40,6 +40,7 @@ let away = null
 if (create) {
   ST.newGame()
   EC.initSchedules()
+  ST.S.mode = create.mode === 'once' ? 'once' : 'restock'
   ST.S.mp = { code, host: 'server', admin: create.pid, server: true, name: create.name, public: create.public !== false, players: { [create.pid]: { name: create.pname, color: COLORS[0], since: 1 } }, owner: {} }
   ST.log(`${create.name}: ${create.pname} and three others made it to the old lumber yard.`, 'story')
 } else {

@@ -1,7 +1,7 @@
 // The Progress panel: the milestone board (tiers 1-8), the Signal and its
 // five phases, and the starter tasks that used to be the goals list.
 import { RES, STATIONS, TIERS, MILESTONES, SIGNAL, GOALS, BELTS, FENCE, EXPANSIONS } from '../game/data.js'
-import { S, canAfford, completeMilestone, msDone, tierLock, tierMilestones, campTier, mastOf, signalNeed, deliverSignal, claimGoal, signalCost } from '../game/state.js'
+import { S, canAfford, completeMilestone, msDone, tierLock, tierMilestones, campTier, mastOf, signalNeed, deliverSignal, claimGoal, signalCost, liberation, LIBERATION, DISTRICTS, isCleared, modeOf, MODES, placeLeft } from '../game/state.js'
 import { signalLock } from '../game/story.js'
 import { sfx } from '../core/audio.js'
 import { h, fmt, clamp } from '../core/util.js'
@@ -9,6 +9,7 @@ import { icon } from './icons.js'
 import { costList, bar, resIcon } from './common.js'
 
 let tab = 'board'
+export const showProgressTab = (t) => (tab = t)
 const FLAG_TEXT = {
   autoBoost: 'Automated stations +50% speed',
   rations: 'The camp eats 15% less',
@@ -37,11 +38,49 @@ export function renderProgress(ui) {
   const tier = campTier()
   const tabs = h(
     'div.tabs',
-    [['board', 'Milestones'], ['signal', 'The Signal'], ['tasks', 'Starter tasks']].map(([id, label]) => h('button' + (tab === id ? '.on' : ''), { onclick: () => ((tab = id), sfx('click'), ui.refreshPanel()) }, label)),
+    [['board', 'Milestones'], ['signal', 'The Signal'], ['city', 'The city'], ['tasks', 'Starter tasks']].map(([id, label]) => h('button' + (tab === id ? '.on' : ''), { onclick: () => ((tab = id), sfx('click'), ui.refreshPanel()) }, label)),
   )
-  const body = tab === 'board' ? board(ui) : tab === 'signal' ? signal(ui) : tasks(ui)
+  const body = tab === 'board' ? board(ui) : tab === 'signal' ? signal(ui) : tab === 'city' ? city(ui) : tasks(ui)
   const ph = S.signal.phase
   return ui.frame('Progress', h('span', `Tier ${tier} of ${TIERS.length - 1} · Signal phase ${ph} of ${SIGNAL.length}`), body, { icon: 'goals', tabs })
+}
+
+// Liberating the city: every place cleared of the infected, district by district.
+function city(ui) {
+  const L = liberation()
+  const pct = (f) => `${Math.round(f * 100)}%`
+  const next = LIBERATION.find((m) => !(S.libDone || []).includes(m.at))
+  const M = MODES[modeOf()]
+  const locs = (S.cityLocs || []).filter((l) => l.type !== 'military')
+  return [
+    h(
+      'section.card.libhead',
+      h('div.lib-top', h('div', h('b', 'Liberate the city'), h('small', 'Clear a place by leaving nothing alive inside when the squad gets out. An outpost keeps it clear; left alone, the infected may drift back.')), h('div.lib-pct', pct(L.pct))),
+      h('div.libbar', h('i', { style: { width: pct(L.pct) } })),
+      h('small.dim', `${L.cleared} of ${L.total} places clear${next ? ` · next: ${next.name} at ${pct(next.at)}` : ' · the city is yours'}`),
+    ),
+    h(
+      'section.card',
+      h('h3', 'Districts'),
+      h(
+        'div.libdist',
+        Object.entries(L.by).map(([d, v]) =>
+          h(
+            'div.ld' + (v.cleared === v.total && v.total ? '.done' : ''),
+            h('div.ld-top', h('b', DISTRICTS[d] || d), h('span', `${v.cleared} / ${v.total}`)),
+            h('div.libbar.small', h('i', { style: { width: pct(v.total ? v.cleared / v.total : 0) } })),
+            h('small', locs.filter((l) => l.district === d && !isCleared(l.id)).slice(0, 4).map((l) => l.name).join(', ') || 'All clear. The people hiding here came out with supplies.'),
+          ),
+        ),
+      ),
+    ),
+    h(
+      'section.card',
+      h('h3', 'Rewards'),
+      LIBERATION.map((m) => h('div.libm' + ((S.libDone || []).includes(m.at) ? '.have' : ''), h('span.lm-at', pct(m.at)), h('div', h('b', m.name), h('small', m.desc)))),
+    ),
+    h('section.card.modecard', h('h3', 'Game mode', h('small', M.name)), h('p.note', M.desc), modeOf() === 'once' ? h('small.dim', `${locs.filter((l) => placeLeft(l.id) != null && placeLeft(l.id) < 0.03).length} places emptied so far`) : null),
+  ]
 }
 
 function board(ui) {

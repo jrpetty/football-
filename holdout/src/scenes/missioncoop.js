@@ -323,7 +323,7 @@ export const CoopMixin = {
     const def = { ...(CONTAINERS[d.kind] || CONTAINERS.crate), name: d.name || CONTAINERS[d.kind]?.name }
     const c = { id: d.id, kind: d.kind, def, room: d.room, tiles: d.tiles, x: d.x, z: d.z, rot: d.rot, searched: d.searched, gone: false, open: d.open, openGoal: d.open, seed: d.seed, bucket: d.bucket || 'drop', stash: d.stash ? new Array(d.stash) : null }
     const top = d.kind === 'milcrate' ? 1.1 : 0.8
-    c.box = new THREE.Box3(new THREE.Vector3(d.x - 0.5, 0, d.z - 0.5), new THREE.Vector3(d.x + 0.5, top, d.z + 0.5))
+    c.box = this.pickBox(d.x - 0.5, d.z - 0.5, d.x + 0.5, d.z + 0.5, top)
     c.label = view.labels.add(h('div.lootmark' + (d.kind === 'milcrate' ? '.drop' : '.stash')), new THREE.Vector3(d.x, top + 0.4, d.z), { scene: this.scene, maxDist: 40 })
     for (const [i, j] of d.tiles) this.lv.grid.set(i, j, 255, 0, c)
     this.containers.push(c)
@@ -446,6 +446,8 @@ export const CoopMixin = {
     c.storyFound = b[3] === '1'
     c.locked = b[4] === '1'
     if (c.label && cls) c.label.el.className = cls
+    // the leader got the generator going: the lights come on here too
+    if (c.kind === 'generator' && searched && !this.powered) this.powerOn(c, true)
     if (gone && !c.gone) this.removeContainer(c)
   },
   remoteShot(a) {
@@ -468,7 +470,7 @@ export const CoopMixin = {
       const f = unvec(from)
       m.position.copy(f)
       this.scene.add(m)
-      this.flying = (this.flying || []).concat({ m, from: f, to: new THREE.Vector3(to[0], 0.2, to[1]), t: 0, dur, item, remote: true })
+      this.flying = (this.flying || []).concat({ m, from: f, to: this.rmap(new THREE.Vector3(to[0], 0.2 + this.floorY(to[0], to[1]), to[1])), t: 0, dur, item, remote: true })
     } else if (kind === 'fire') {
       const [x, y, z, rr, life] = r
       this.addFire(x, y, z, rr, life)
@@ -486,8 +488,10 @@ export const CoopMixin = {
       const dx = t.x - a.pos.x
       const dz = t.z - a.pos.z
       a.curSpeed = Math.min(6, Math.hypot(dx, dz) * 5)
-      a.pos.x += dx * k
-      a.pos.z += dz * k
+      // up or down a floor of a tall building: no sliding across the strips
+      const jump = Math.abs(dx) > 8 ? 1 : k
+      a.pos.x += dx * jump
+      a.pos.z += dz * jump
       a.pos.y = this.floorY(a.pos.x, a.pos.z)
       a.heading = angleLerp(a.heading, t.hd, k)
       if (a.downed) {
@@ -521,8 +525,9 @@ export const CoopMixin = {
         z.sync()
         continue
       }
-      z.pos.x += (t.x - z.pos.x) * k
-      z.pos.z += (t.z - z.pos.z) * k
+      const zj = Math.abs(t.x - z.pos.x) > 8 ? 1 : k
+      z.pos.x += (t.x - z.pos.x) * zj
+      z.pos.z += (t.z - z.pos.z) * zj
       z.pos.y = this.floorY(z.pos.x, z.pos.z)
       z.heading = angleLerp(z.heading, t.hd, k)
       z.path = t.mv ? true : null

@@ -291,6 +291,7 @@ export function addNote(id) {
   if (st.notes.includes(id)) return null
   st.notes.push(id)
   st.unread.push(id)
+  if (S.stats) S.stats.notes = (S.stats.notes || 0) + 1
   const n = NOTES[id]
   log(`Found a note: ${n.title}.`, 'story')
   if (n.clue === 'danaKitchen') danaKitchen('Dana\'s own notebook: "Somewhere with a walk-in fridge and a back door." A diner, a school kitchen or a supermarket.')

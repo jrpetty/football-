@@ -60,18 +60,20 @@ export const TrapsMixin = {
     const p = this.center(i, j)
     const horiz = this.lv.walls[j * this.lv.W + i - 1] === 1 || this.lv.walls[j * this.lv.W + i + 1] === 1
     const t = { id: this.traps.length, kind, def: { name: def.name, time: def.disarm, strip: def.yield, isTrap: true }, trap: def, i, j, x: p.x, z: p.z, tiles: [[i, j]], armed: true, spotted: false, gone: false, searched: true, door, horiz }
-    t.box = new THREE.Box3(new THREE.Vector3(p.x - 0.55, 0, p.z - 0.55), new THREE.Vector3(p.x + 0.55, 0.7, p.z + 0.55))
+    t.box = this.pickBox(p.x - 0.55, p.z - 0.55, p.x + 0.55, p.z + 0.55, 0.7)
     const g = trapModel(kind, horiz)
     g.position.set(p.x, this.floorY(p.x, p.z), p.z)
     g.visible = false
-    this.scene.add(g)
+    // on its own floor of a tall building
+    const root = this.levelRoot?.[this.levelOf?.(p.x) || 0] || this.scene
+    root.add(g)
     t.group = g
     const ring = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.62, 28), RING_MAT)
     ring.rotation.x = -Math.PI / 2
     ring.position.set(p.x, 0.09, p.z)
     ring.visible = false
     ring.renderOrder = 3
-    this.scene.add(ring)
+    root.add(ring)
     t.ring = ring
     this.traps.push(t)
     return t
@@ -189,7 +191,7 @@ export const TrapsMixin = {
     const g = this.lv.grid
     g.cost[g.i(t.i, t.j)] = 0
     if (!keepModel) {
-      this.scene.remove(t.group)
+      t.group.parent?.remove(t.group)
       t.gone = true
     } else t.group.traverse((o) => o.name === 'jawL' && (o.rotation.z = 0.0))
   },
@@ -200,7 +202,7 @@ export const TrapsMixin = {
     let best = null
     let bd = 1e9
     for (const t of this.traps) {
-      if (!t.armed || !t.spotted) continue
+      if (!t.armed || !t.spotted || (this.onView && !this.onView(t.x, t.z))) continue
       if (ray.ray.intersectBox(t.box, hit)) {
         const d = hit.distanceTo(ray.ray.origin)
         if (d < bd) {

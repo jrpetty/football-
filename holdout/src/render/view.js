@@ -20,6 +20,8 @@ export class CamRig {
     this.camera = camera
     this.target = new THREE.Vector3(48, 0, 48)
     this.goal = this.target.clone()
+    // the height the camera looks at: the floor in view in a tall building
+    this.levelY = 0
     this.yaw = Math.PI / 4
     this.yawGoal = this.yaw
     this.pitch = 0.9
@@ -47,6 +49,7 @@ export class CamRig {
     this.bounds = st.b
     this.camera.far = st.far
     this.camera.updateProjectionMatrix()
+    this.levelY = 0
     this.goal.set(st.x, 0, st.z)
     this.target.copy(this.goal)
     this.dist = this.distGoal = st.dist
@@ -67,14 +70,14 @@ export class CamRig {
     return a < 1 ? d * Math.min(1.8, 1 / a) : d
   }
   jump(x, z, dist) {
-    this.goal.set(x, 0, z)
+    this.goal.set(x, this.levelY, z)
     this.clampGoal()
     this.target.copy(this.goal)
     if (dist) this.dist = this.distGoal = this.fitDist(dist)
     this.apply()
   }
   focus(x, z, dist) {
-    this.goal.set(x, 0, z)
+    this.goal.set(x, this.levelY, z)
     this.clampGoal()
     if (dist) this.distGoal = this.fitDist(dist)
   }
@@ -90,6 +93,7 @@ export class CamRig {
         this.clampGoal()
       }
     }
+    this.goal.y = this.levelY
     const k = 1 - Math.exp(-dt * 9)
     this.target.lerp(this.goal, k)
     this.yaw = lerp(this.yaw, this.yawGoal, k)
@@ -203,7 +207,7 @@ export class Input {
       }
       const rotate = e.button === 1 || (e.button === 2 && !this.handler?.rightClickCommands)
       const right = e.button === 2
-      this.drag = { rotate, right, p0: groundAt(e.clientX, e.clientY), moved: false, x: e.clientX, y: e.clientY, button: e.button, custom: false }
+      this.drag = { rotate, right, p0: groundAt(e.clientX, e.clientY, this.rig.target.y), moved: false, x: e.clientX, y: e.clientY, button: e.button, custom: false }
       if (!rotate && !right && this.handler?.onPress?.(e.clientX, e.clientY, e)) this.drag.custom = true
     }
   }
@@ -242,7 +246,7 @@ export class Input {
       this.rig.apply()
       dr.rotated = true
     } else if (dr.p0) {
-      const cur = groundAt(e.clientX, e.clientY)
+      const cur = groundAt(e.clientX, e.clientY, this.rig.target.y)
       if (cur) {
         this.rig.follow = null
         this.rig.goal.x += dr.p0.x - cur.x
@@ -357,8 +361,12 @@ export class Labels {
         }
       }
       const visible = !it.scene || it.scene === activeScene
-      const p = typeof it.pos === 'function' ? it.pos() : it.pos?.isObject3D ? it.pos.getWorldPosition(_v) : it.pos
-      if (!visible || !p || it.hidden) {
+      let p = typeof it.pos === 'function' ? it.pos() : it.pos?.isObject3D ? it.pos.getWorldPosition(_v) : it.pos
+      // a scene can draw things somewhere other than where they are (a tall
+      // building's floors) and hide what is off the floor in view
+      const sd = it.scene?.userData
+      if (p && sd?.mapPos) p = sd.mapPos(p)
+      if (!visible || !p || it.hidden || (sd?.labelGate && !it.anyFloor && !sd.labelGate(p))) {
         show(it, false)
         continue
       }

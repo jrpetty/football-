@@ -12,7 +12,7 @@ const TAU = Math.PI * 2
 const pick = (r, a) => a[Math.floor(r() * a.length)]
 
 // Footprints in tiles along the wall (w) and out from it (d).
-export const FOOT = { counter: [2, 1], wardrobe: [2, 1], desk: [2, 1], bookshelf: [2, 1], shelf: [2, 1], toolrack: [2, 1], gunlocker: [2, 1], chemshelf: [2, 1], pallet: [3, 1], car: [4, 2], dumpster: [2, 1], shed: [3, 3], server: [1, 1] }
+export const FOOT = { generator: [2, 1], aircon: [2, 2], counter: [2, 1], wardrobe: [2, 1], desk: [2, 1], bookshelf: [2, 1], shelf: [2, 1], toolrack: [2, 1], gunlocker: [2, 1], chemshelf: [2, 1], pallet: [3, 1], car: [4, 2], dumpster: [2, 1], shed: [3, 3], server: [1, 1] }
 export const footOf = (k) => FOOT[k] || [1, 1]
 
 const WOOD = ['#e0ccb0', '#c8a880', '#a88460', '#d8c0a0', '#8a6a4a']
@@ -611,6 +611,40 @@ D.bench = (b, r) => {
 }
 D.table2 = D.table
 
+// A backup generator: a skid-mounted diesel set with a control panel.
+C.generator = (b, r) => {
+  const col = pick(r, ['#c8a030', '#3a6a3a', '#b8b4a8'])
+  b.box(1.9, 0.12, 0.85, { mat: 'steel', color: '#3a3c3a', y: 0.06 })
+  b.box(1.7, 0.95, 0.75, { mat: 'paint', color: col, y: 0.62, r: 0.03 })
+  // louvres and the panel
+  for (let k = 0; k < 7; k++) b.box(0.6, 0.03, 0.02, { mat: 'steel', color: '#2a2c2a', x: -0.45, y: 0.4 + k * 0.08, z: 0.38 })
+  b.box(0.42, 0.36, 0.04, { mat: 'paint', color: '#2a2c2e', x: 0.45, y: 0.72, z: 0.38 })
+  for (const [x, c] of [[0.36, '#d8302a'], [0.5, '#30a050']]) b.cyl(0.03, 0.03, 0.02, { mat: 'plastic', color: c, x, y: 0.8, z: 0.4, rx: Math.PI / 2, seg: 8 })
+  b.box(0.2, 0.08, 0.02, { mat: 'glass', color: '#a8c8a0', x: 0.45, y: 0.64, z: 0.405 })
+  // exhaust and fuel cap
+  b.cyl(0.06, 0.06, 0.5, { mat: 'rust', color: '#6a4a3a', x: -0.7, y: 1.3, z: -0.2, seg: 8 })
+  b.cyl(0.08, 0.08, 0.06, { mat: 'steel', color: '#2a2c2a', x: 0.6, y: 1.12, z: -0.15, seg: 10 })
+  b.box(0.12, 0.6, 0.04, { mat: 'plain', color: '#e8e4c8', x: -0.2, y: 0.95, z: 0.385 })
+  b.pivot('door', { x: -0.85, y: 0, z: 0.38 }, (d) => d.box(0.02, 0.01, 0.02, { mat: 'steel', color: '#2a2c2a', y: 0.2 }))
+}
+// A rooftop air-conditioning unit: a box with a big fan on top.
+C.aircon = (b, r) => {
+  b.box(1.8, 1.0, 1.7, { mat: 'paint', color: pick(r, ['#c8ccc8', '#b8bcb8', '#d0d0c8']), y: 0.55, r: 0.03 })
+  b.box(1.9, 0.08, 1.8, { mat: 'steel', color: '#7a7e80', y: 0.04 })
+  b.cyl(0.62, 0.62, 0.05, { mat: 'steel', color: '#3a3c3e', y: 1.07, seg: 20 })
+  for (let k = 0; k < 4; k++) b.box(1.1, 0.02, 0.16, { mat: 'steel', color: '#5a5e60', y: 1.1, ry: (k * Math.PI) / 4 + r() })
+  for (let k = 0; k < 9; k++) b.box(0.03, 0.7, 0.1, { mat: 'steel', color: '#8a8e90', x: -0.91, y: 0.5, z: (k - 4) * 0.17 })
+  b.cyl(0.07, 0.07, 1.2, { mat: 'steel', color: '#9a9ea0', x: 0.95, y: 0.6, z: -0.5, rz: Math.PI / 2, seg: 8 })
+  b.pivot('door', { x: 0.9, y: 0, z: 0.86 }, (d) => d.box(0.02, 0.01, 0.02, { mat: 'steel', color: '#2a2c2a', y: 0.2 }))
+}
+// A water tank on legs, up on the roof.
+D.watertank = (b, r) => {
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.box(0.1, 1.2, 0.1, { mat: 'steel', color: '#5a5e60', x: sx * 0.6, y: 0.6, z: sz * 0.6 })
+  b.cyl(0.85, 0.85, 1.6, { mat: 'planks', color: '#8a6a4a', y: 2.0, seg: 16 })
+  for (const y of [1.4, 2.0, 2.6]) b.torus(0.86, 0.03, { mat: 'steel', color: '#4a4c4a', y, rx: Math.PI / 2, rs: 6, ts2: 24 })
+  b.cyl(0.95, 0.1, 0.5, { mat: 'roofmetal', color: '#5a5e5a', y: 3.05, seg: 16 })
+}
+
 // the high-detail builds replace the originals
 Object.assign(C, HC)
 Object.assign(D, HDD)
@@ -642,7 +676,7 @@ export function addDecor(b, kind, o, seed = 1) {
   return true
 }
 // Depth of a container's model, for pushing it back against its wall.
-export const DEPTH = { fridge: 0.7, cabinet: 0.6, counter: 0.64, wardrobe: 0.66, dresser: 0.54, desk: 0.75, filing: 0.62, bookshelf: 0.36, trash: 0.52, shelf: 0.62, register: 0.64, toolrack: 0.7, medcab: 0.52, locker: 0.5, gunlocker: 0.6, safe: 0.65, crate: 0.65, pallet: 1.0, milcrate: 0.62, server: 0.92, tv: 0.45, chemshelf: 0.45, toolchest: 0.52, firelocker: 0.5, dumpster: 1.15, pump: 1.2, shed: 2.2 }
+export const DEPTH = { generator: 0.85, aircon: 1.7, fridge: 0.7, cabinet: 0.6, counter: 0.64, wardrobe: 0.66, dresser: 0.54, desk: 0.75, filing: 0.62, bookshelf: 0.36, trash: 0.52, shelf: 0.62, register: 0.64, toolrack: 0.7, medcab: 0.52, locker: 0.5, gunlocker: 0.6, safe: 0.65, crate: 0.65, pallet: 1.0, milcrate: 0.62, server: 0.92, tv: 0.45, chemshelf: 0.45, toolchest: 0.52, firelocker: 0.5, dumpster: 1.15, pump: 1.2, shed: 2.2 }
 // Open whatever opens: doors swing, drawers slide (t from 0 to 1).
 export function openPivots(g, t) {
   const pv = g.userData.pivots || {}

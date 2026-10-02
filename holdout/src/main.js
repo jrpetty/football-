@@ -5,7 +5,7 @@ import { Pipeline } from './render/pipeline.js'
 import { initView, view, groundAt } from './render/view.js'
 import { pregenerate } from './render/texgen.js'
 import { initAudio, sfx, setSound, setVolume } from './core/audio.js'
-import { S, newGame, hasSave, load, save, day, log, wipeSave, buildCost, newStation, pay, canAfford, completeGoal, backupSave, vehicleOf, wearVehicle, NET, MP_SAVE_KEY, playerOf } from './game/state.js'
+import { S, newGame, hasSave, load, save, day, hour, log, wipeSave, buildCost, newStation, pay, canAfford, completeGoal, backupSave, vehicleOf, wearVehicle, NET, MP_SAVE_KEY, playerOf, DISTRICTS, MODES, killSurvivor } from './game/state.js'
 import { Session, readIntent, writeIntent, me, initMp } from './net/mp.js'
 import { Coop } from './net/coop.js'
 import { newCode } from './net/transport.js'
@@ -14,13 +14,17 @@ import { Pings } from './ui/pings.js'
 import { toggleFullscreen } from './ui/fullscreen.js'
 import { warmUp, compileFor, preRender } from './render/warmup.js'
 import { soundLog } from './world/sound.js'
-import { econTick, initSchedules, autoResolveRaid, scheduleRaid } from './game/economy.js'
+import { econTick, initSchedules, autoResolveRaid, scheduleRaid, raidIntel } from './game/economy.js'
+import { alerts } from './ui/brief.js'
+import { notify } from './ui/notify.js'
 import * as belts from './game/belts.js'
 import * as stateMod from './game/state.js'
 import * as econMod from './game/economy.js'
 import * as storyMod from './game/story.js'
 import { WEATHER as WX } from './render/materials.js'
-import { STATIONS, GAME_MIN_PER_SEC, SEC_PER_DAY, RES } from './game/data.js'
+import { STATIONS, GAME_MIN_PER_SEC, SEC_PER_DAY, RES, DAY_MIN } from './game/data.js'
+
+const SKIP_SPEED = 12
 
 const OFFLINE_DIV = 15 // real seconds away per second of camp work
 const OFFLINE_MAX_DAYS = 3
@@ -102,6 +106,7 @@ class Game {
       } else {
         newGame()
         initSchedules()
+        S.mode = intent.gameMode === 'once' ? 'once' : 'restock'
         // keep the graphics settings from single player
         const solo = hasSave()
         if (solo?.settings) S.settings = { ...S.settings, ...solo.settings }
@@ -171,6 +176,12 @@ class Game {
     this.pipe.resize(w, hh)
     view.camera.aspect = w / hh
     view.camera.updateProjectionMatrix()
+    // the interface size, held down so the side bar still fits the window
+    const want = S?.settings?.uiScale || 1
+    const ui = Math.min(want, Math.max(0.9, (hh - 20) / 740))
+    document.documentElement.style.setProperty('--ui', ui.toFixed(3))
+    // the side bar is tall: it grows only while it stays clear of the top bar
+    document.documentElement.style.setProperty('--navui', Math.min(ui, Math.max(1, (hh - 150) / 730)).toFixed(3))
   }
   applySettings(first = false) {
     const st = S.settings
@@ -213,7 +224,7 @@ class Game {
         ),
         h(
           'div.tbtns',
-          saved ? h('button.btn.go.big', { onclick: () => this.start(false) }, `Continue · Day ${day()}`) : h('button.btn.go.big', { onclick: () => this.start(false) }, 'Start'),
+          saved ? h('button.btn.go.big', { onclick: () => this.start(false) }, `Continue · Day ${day()}`) : h('button.btn.go.big', { onclick: () => this.chooseMode() }, 'Start'),
           saved ? h('button.btn.big.ghost', { onclick: () => this.confirmNew() }, 'New camp') : null,
           h('button.btn.big.ghost', { onclick: () => this.showLobby() }, 'Multiplayer'),
           h('button.btn.big.ghost', { onclick: () => this.ui?.openSettings() ?? this.quickSettings() }, 'Settings'),
@@ -226,6 +237,41 @@ class Game {
     view.rig.jump(56, 58, 54)
     if (this.joinFailed) this.showLobby(this.joinFailed)
     else if (/^#join[A-Za-z0-9]{5}$/.test(location.hash)) this.showLobby(null, location.hash.slice(5).toUpperCase())
+  }
+  // A new camp: which kind of city is it?
+  chooseMode() {
+    sfx('click')
+    const card = this.titleEl.querySelector('.tcard')
+    card.hidden = true
+    let pick = 'restock'
+    const opts = Object.entries(MODES).map(([k, m]) =>
+      h(
+        'button.modeopt' + (k === pick ? '.on' : ''),
+        {
+          onclick: (e) => {
+            pick = k
+            sfx('select')
+            for (const b of box.querySelectorAll('.modeopt')) b.classList.toggle('on', b === e.currentTarget)
+          },
+        },
+        h('b', m.name),
+        h('small', m.short),
+        h('p', m.desc),
+      ),
+    )
+    const box = h(
+      'div.tcard.modecard',
+      h('div.logo.big', 'HOLDOUT'),
+      h('h2', 'What is left of the city?'),
+      h('p.tag', 'Both play the whole story: the Signal, the hordes, the city to take back. The difference is what the city still holds.'),
+      h('div.modeopts', opts),
+      h(
+        'div.tbtns',
+        h('button.btn.go.big', { onclick: () => ((S.mode = pick), box.remove(), this.start(false)) }, 'Start'),
+        h('button.btn.big.ghost', { onclick: () => (box.remove(), (card.hidden = false)) }, 'Back'),
+      ),
+    )
+    this.titleEl.append(box)
   }
   // The multiplayer card, in place of the title card.
   showLobby(error = null, code = '') {
@@ -410,12 +456,15 @@ class Game {
     bus.on('recruit', () => {
       sfx('radio')
       if (this.scene === this.base && !S.raid) this.ui.toast('Someone is waiting at the gate.', 'story')
+      notify('Someone is at the gate', 'A survivor wants to join the camp.')
     })
     bus.on('raidWarn', (intel) => {
       sfx('alarm')
       this.ui.toast(`${intel.name} within the hour! Get your defenders home.`, 'bad')
+      notify('The horde is coming', `${intel.name} within the hour. Get your defenders home.`)
     })
     bus.on('raidStart', (R) => {
+      notify('The horde is here', `${R.count} infected at the wall.`)
       if (this.scene === this.base && !this.map?.isOpen) {
         this.ui.closePanel()
         this.ui.closeModal()
@@ -433,6 +482,15 @@ class Game {
         this.mission?.toast?.(`A horde of ${r.count} hit the camp while you were out!`, 'bad')
         this.pendingRaidReport = rep
       } else this.ui.raidReport(rep)
+    })
+    // liberating the city: districts and milestones, and the end of it all
+    bus.on('district', (d) => this.ui.toast(`${DISTRICTS[d] || 'A district'} is clear. People came out of hiding with supplies.`, 'good'))
+    bus.on('liberation', (m) => {
+      if (m.at < 1) return this.ui.toast(`Liberation: ${m.name}. ${m.desc}`, 'good')
+      sfx('complete')
+      save()
+      backupSave()
+      setTimeout(() => this.ui.cityVictory(), 900)
     })
     bus.on('victory', ({ held }) => {
       sfx('complete')
@@ -475,10 +533,15 @@ class Game {
         this.setSpeed({ 1: 1, 2: 2, 3: 4 }[k])
         return true
       }
+      if (k === '4') {
+        this.skipAhead()
+        return true
+      }
     }
     return false
   }
   setSpeed(v) {
+    this.skip = null
     if (NET.role === 'client') {
       if (!this.net?.isAdmin()) return this.ui?.toast('The camp’s admin sets the pace.', '')
       this.net.setSpeed(v)
@@ -490,6 +553,66 @@ class Game {
     S.speed = v
     sfx('click')
     this.ui?.updateTop()
+  }
+  // Skip ahead: the camp runs fast until the build is done, or to dawn (or
+  // dusk); a horde getting close, someone at the gate, a call from the city
+  // or a new problem stops it early.
+  skipAhead() {
+    if (NET.role === 'client') return this.ui?.toast('Only the host can skip ahead.', '')
+    if (this.skip) return this.stopSkip('')
+    if (!S || S.raid || this.scene !== this.base || S.over) return
+    const I = raidIntel()
+    if (I && I.in < 90) return this.ui?.toast('The horde is too close to skip ahead.', 'bad')
+    const hr = hour()
+    const building = this.isBuilding()
+    const night = hr >= 18 || hr < 6
+    const d0 = Math.floor(S.time / DAY_MIN) * DAY_MIN
+    this.skip = {
+      building,
+      until: building ? null : d0 + (hr < 6 ? 6 * 60 : hr >= 18 ? DAY_MIN + 6 * 60 : 18 * 60),
+      why: night ? 'dawn' : 'dusk',
+      prev: S.speed || 1,
+      bad: alerts(this.ui).filter((a) => a.sev === 'bad').map((a) => a.key),
+      evs: this.liveEvents(),
+      gate: !!S.recruit?.pending,
+      cap: S.time + DAY_MIN,
+      t: 0,
+    }
+    S.speed = SKIP_SPEED
+    sfx('click')
+    this.ui?.toast(building ? 'Skipping ahead until the build is done' : `Skipping ahead to ${this.skip.why}`, '')
+    this.ui?.updateTop()
+  }
+  isBuilding() {
+    return S.stations.some((st) => st.building) || !!S.fence.building || !!S.expanding
+  }
+  liveEvents() {
+    return (S.events || []).filter((e) => e.expires > S.time).map((e) => e.locId + ':' + e.kind)
+  }
+  stopSkip(msg, kind = '') {
+    if (!this.skip) return
+    if (S.speed === SKIP_SPEED) S.speed = this.skip.prev
+    this.skip = null
+    if (msg) this.ui?.toast(msg, kind)
+    if (msg && document.hidden) notify('Holdout', msg)
+    this.ui?.updateTop()
+  }
+  checkSkip(dt) {
+    const k = this.skip
+    if (!k || (k.t -= dt) > 0) return
+    k.t = 0.2
+    if (S.speed !== SKIP_SPEED) return (this.skip = null)
+    if (S.raid || S.over || this.scene !== this.base) return this.stopSkip('')
+    if (this.ui.modalRoot.children.length) return this.stopSkip('')
+    const I = raidIntel()
+    if (I && I.in < 60) return this.stopSkip(`Stopped: ${I.known ? I.name : 'the horde'} is an hour out.`, 'bad')
+    if (S.recruit?.pending && !k.gate) return this.stopSkip('Stopped: someone is at the gate.', 'good')
+    if (this.liveEvents().some((e) => !k.evs.includes(e))) return this.stopSkip('Stopped: a call came in from the city.', '')
+    const fresh = alerts(this.ui).find((a) => a.sev === 'bad' && !k.bad.includes(a.key))
+    if (fresh) return this.stopSkip(`Stopped: ${fresh.text}.`, 'bad')
+    if (k.building && !this.isBuilding()) return this.stopSkip('Skipped ahead: the build is done.', 'good')
+    if (k.until != null && S.time >= k.until) return this.stopSkip(`Skipped ahead to ${k.why}.`, 'good')
+    if (S.time >= k.cap) return this.stopSkip('Skipped a whole day.', '')
   }
   // ---------------------------------------------------------------- camp actions
   placeStation(type, x, z, rot) {
@@ -506,7 +629,7 @@ class Game {
     return true
   }
   // ---------------------------------------------------------------- scenes
-  openMap() {
+  openMap(locId) {
     if (S.raid) return this.ui.toast('Not while the camp is under attack!', 'bad')
     if (this.mapLoading) return
     this.base.cancelPlacing()
@@ -518,6 +641,8 @@ class Game {
       this.map.open()
       this.scene = this.map
       view.input.handler = this.map
+      const loc = locId && this.city.locs.find((l) => l.id === locId)
+      if (loc) this.map.select(loc)
     }
     if (this.map) return go()
     // first visit: build the city behind a short loading card
@@ -631,6 +756,8 @@ class Game {
   }
   endMission(report) {
     const m = this.mission
+    // there and back again
+    if (S.stats && m.loadout?.km) S.stats.km = (S.stats.km || 0) + m.loadout.km * 2
     // the vehicle comes home a little more worn
     const v = vehicleOf(m.loadout?.vehId)
     if (v) {
@@ -698,6 +825,7 @@ class Game {
       }
     }
     this.net?.update(dt)
+    if (this.skip) this.checkSkip(dt)
     if (hidden) {
       // a horde fight still plays out (and streams to friends) unseen, and
       // so does a run this player leads for friends
@@ -705,7 +833,12 @@ class Game {
       else if (this.mission?.coop && !this.mission.remote && this.scene === this.mission) this.mission.update(Math.min(dt, 0.1))
       return
     }
-    if (!this.titleEl) view.input.update(dt)
+    if (this.ending) {
+      // the camera drifts slowly round what is left
+      view.rig.follow = null
+      view.rig.yawGoal += dt * 0.05
+      view.rig.distGoal = Math.min(view.rig.fitDist(view.rig.maxDist) * 0.8, view.rig.distGoal + dt * 1.5)
+    } else if (!this.titleEl) view.input.update(dt)
     else view.rig.yawGoal += dt * 0.04
     view.rig.update(dt)
     const scene = this.scene
@@ -725,7 +858,7 @@ const game = new Game()
 window.__holdout = game
 window.__view = view
 // handles for tests and profiling
-window.__dbg = { compileFor, soundLog }
+window.__dbg = { compileFor, soundLog, killSurvivor }
 Object.defineProperty(window, '__S', { get: () => S })
 window.__belts = belts
 window.__state = stateMod

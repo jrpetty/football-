@@ -366,12 +366,21 @@ export const RaidMixin = {
         report.lost[k] = l
       }
       const victims = this.squad.filter((a) => a.downed)
-      if (victims.length && chance(0.6)) {
+      if (victims.length && victims.length === this.squad.length) {
+        // overrun: nobody was left standing, and the horde was in among them
+        const dead = victims.filter(() => chance(0.45))
+        if (!dead.length) dead.push(pick(victims))
+        for (const v of dead) {
+          killSurvivor(v.data, 'Killed when the horde overran the camp')
+          report.dead.push(v.data.first)
+        }
+      } else if (victims.length && chance(0.6)) {
         const v = pick(victims)
         killSurvivor(v.data, 'Killed when the horde overran the camp')
         report.dead.push(v.data.first)
       }
       addMoraleEvent('The horde broke through', -18, 2)
+      S.stats.raidsLost = (S.stats.raidsLost || 0) + 1
     } else addMoraleEvent('Held the wall', 8, 1)
     for (const z of this.zombies) z.remove()
     this.zombies = []
@@ -393,6 +402,8 @@ export const RaidMixin = {
     log(won ? `The horde is dead. ${report.killed} zombies put down.` : 'The horde broke through and ransacked the camp.', won ? 'good' : 'bad')
     if (net?.captain) net.captainDone(report, R.finale)
     if (R.finale && NET.role !== 'client') return finishGame(won)
+    // the camp fell with them: the ending has the floor
+    if (S.over) return
     this.game.ui?.raidReport(report)
   },
 

@@ -21,6 +21,12 @@ uniform float uTime;
 uniform vec3 uFog;
 uniform float uMem;
 uniform float uNight;
+// tall buildings: inside the footprint, each storey reads its own strip
+uniform vec4 uFlRect;
+uniform float uFlH;
+uniform float uFlN;
+uniform float uFlView;
+uniform float uFlDX[8];
 
 float fowHash(vec2 p) {
   p = fract(p * vec2(123.34, 456.21));
@@ -56,7 +62,12 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, const in float depth,
   vec4 vp = uProjInv * clip;
   vp /= vp.w;
   vec3 wp = (uViewInv * vp).xyz;
-  vec2 fuv = (wp.xz - uOrigin) / uSize;
+  vec2 fxz = wp.xz;
+  if (uFlN > 1.5 && wp.x > uFlRect.x && wp.x < uFlRect.z && wp.z > uFlRect.y && wp.z < uFlRect.w) {
+    float fl = clamp(floor((wp.y + 0.3) / uFlH), 0.0, min(uFlView, uFlN - 1.0));
+    for (int k = 1; k < 8; k++) if (float(k) == fl) fxz.x += uFlDX[k];
+  }
+  vec2 fuv = (fxz - uOrigin) / uSize;
   vec4 f = vec4(0.0, 1.0, 0.0, 0.0);
   float inside = step(0.0, fuv.x) * step(0.0, fuv.y) * step(fuv.x, 1.0) * step(fuv.y, 1.0);
   if (inside > 0.5) f = texture2D(tFow, fuv);
@@ -101,6 +112,11 @@ export class FowEffect extends Effect {
         ['uFog', u.uFog],
         ['uMem', u.uMem],
         ['uNight', u.uNight],
+        ['uFlRect', u.uFlRect],
+        ['uFlH', u.uFlH],
+        ['uFlN', u.uFlN],
+        ['uFlView', u.uFlView],
+        ['uFlDX', u.uFlDX],
       ]),
     })
     this.u = u
@@ -133,5 +149,10 @@ export function fowUniforms() {
     uFog: new THREE.Uniform(new THREE.Vector3(0.016, 0.019, 0.025)),
     uMem: new THREE.Uniform(0.48),
     uNight: new THREE.Uniform(0),
+    uFlRect: new THREE.Uniform(new THREE.Vector4()),
+    uFlH: new THREE.Uniform(3.3),
+    uFlN: new THREE.Uniform(1),
+    uFlView: new THREE.Uniform(0),
+    uFlDX: new THREE.Uniform(new Array(8).fill(0)),
   }
 }

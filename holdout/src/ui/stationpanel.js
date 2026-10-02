@@ -83,7 +83,24 @@ function workerBlock(ui, st) {
     } else rows.push(h('button.wslot.empty', { onclick: () => pickWorker(ui, st) }, h('i', { html: icon('plus') }), 'Assign a survivor'))
   }
   const best = bestFor(st.type)
-  return h('section.card', h('h3', 'Workers', h('small', `${ws.length}/${n}${D.skill ? ` · ${SKILLS[D.skill].name}` : ''}`)), rows, best.length ? h('p.note', 'Best: ', best.join(', ')) : null)
+  // one click: the free survivors best at this job fill the empty places
+  const free = S.survivors.filter((s) => !s.job && s.status === 'ok' && canControl(s)).sort((a, b) => workEff(b, st.type) - workEff(a, st.type))
+  const fill =
+    ws.length < n && free.length
+      ? h(
+          'button.mini.fillbest',
+          {
+            'data-tip': `Assign ${free.slice(0, n - ws.length).map((s) => s.first).join(' and ')}: the free survivors best at this job`,
+            onclick: () => {
+              for (const s of free.slice(0, n - ws.length)) assign(s, st)
+              sfx('select')
+              ui.refreshPanel()
+            },
+          },
+          'Fill with the best free',
+        )
+      : null
+  return h('section.card', h('h3', 'Workers', h('small', `${ws.length}/${n}${D.skill ? ` · ${SKILLS[D.skill].name}` : ''}`), fill), rows, best.length ? h('p.note', 'Best: ', best.join(', ')) : null)
 }
 export function pickWorker(ui, st) {
   const D = STATIONS[st.type]

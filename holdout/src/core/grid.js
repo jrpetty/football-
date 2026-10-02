@@ -1,5 +1,9 @@
 // Tile grid with A* pathfinding and line-of-sight. Tile (x, z) covers world
 // [x, x+1) × [z, z+1); its centre is (x + 0.5, z + 0.5).
+//
+// Tall buildings keep each floor in its own strip of columns; links (stairs,
+// a lift) join tiles on different floors, and the search measures distance
+// in each floor's own frame so it heads for the stairs.
 
 export const BLOCK = 255
 
@@ -10,6 +14,33 @@ export class Grid {
     this.cost = new Uint8Array(w * h) // 0 = open, BLOCK = solid, 1..254 = extra cost
     this.opaque = new Uint8Array(w * h)
     this.owner = new Array(w * h).fill(null) // entity occupying the tile
+    this.links = null // tile index -> [{ to, cost, kind, ref }]
+    this.fl = null // floors: { w0, rw, off }
+  }
+  // Floors past column w0, each rw wide; off[k] shifts floor k back onto the
+  // ground floor's columns. links: [{ a: [i, j], b: [i, j], kind, cost, off }]
+  setFloors(w0, rw, off, links) {
+    this.fl = { w0, rw, off }
+    this.links = new Map()
+    for (const L of links) {
+      const a = this.i(L.a[0], L.a[1])
+      const b = this.i(L.b[0], L.b[1])
+      const add = (from, to) => {
+        if (!this.links.has(from)) this.links.set(from, [])
+        this.links.get(from).push({ to, cost: L.cost, kind: L.kind, ref: L })
+      }
+      add(a, b)
+      add(b, a)
+    }
+  }
+  floorOf(x) {
+    const f = this.fl
+    return !f || x < f.w0 ? 0 : 1 + Math.floor((x - f.w0) / f.rw)
+  }
+  // a column in its floor's own frame (the ground floor's columns)
+  localX(x) {
+    const f = this.fl
+    return !f || x < f.w0 ? x : x - f.off[this.floorOf(x)]
   }
   inb(x, z) {
     return x >= 0 && z >= 0 && x < this.w && z < this.h
@@ -63,7 +94,9 @@ export class Grid {
 
   // A* over 8-connected tiles without cutting blocked corners.
   // Returns world-space waypoints (tile centres), excluding the start tile.
-  path(sx, sz, tx, tz, maxIter = 6000) {
+  // Waypoints reached through a link carry { link: kind, from: {x, z} }.
+  // opts.lift lets the search ride a running lift (people do, the dead don't).
+  path(sx, sz, tx, tz, maxIter = 6000, opts = null) {
     sx = Math.floor(sx)
     sz = Math.floor(sz)
     tx = Math.floor(tx)
@@ -101,11 +134,24 @@ export class Grid {
     g[start] = 0
     stamp[start] = run
     from[start] = -1
-    const hfn = (x, z) => {
-      const dx = Math.abs(x - tx)
-      const dz = Math.abs(z - tz)
-      return dx + dz + (Math.SQRT2 - 2) * Math.min(dx, dz)
-    }
+    const fl = this.fl
+    const tf = fl ? this.floorOf(tx) : 0
+    const tlx = fl ? this.localX(tx) : tx
+    const hfn = fl
+      ? (x, z) => {
+          const f = this.floorOf(x)
+          const dx = Math.abs((f ? x - fl.off[f] : x) - tlx)
+          const dz = Math.abs(z - tz)
+          return dx + dz + (Math.SQRT2 - 2) * Math.min(dx, dz) + Math.abs(f - tf) * 1.2
+        }
+      : (x, z) => {
+          const dx = Math.abs(x - tx)
+          const dz = Math.abs(z - tz)
+          return dx + dz + (Math.SQRT2 - 2) * Math.min(dx, dz)
+        }
+    if (fl && maxIter === 6000) maxIter = 14000
+    const links = this.links
+    const lift = !!opts?.lift
     heap.push(start, hfn(sx, sz))
     let iter = 0
     let bestNode = start
@@ -141,6 +187,25 @@ export class Grid {
           }
         }
       }
+      const L = links && links.get(cur)
+      if (L)
+        for (const e of L) {
+          if (e.ref.off || (e.kind === 'lift' && !lift)) continue
+          const ni = e.to
+          if (closed[ni] === run || this.cost[ni] === BLOCK) continue
+          const ng = g[cur] + e.cost
+          if (stamp[ni] !== run || ng < g[ni]) {
+            stamp[ni] = run
+            g[ni] = ng
+            from[ni] = cur
+            const hh = hfn(ni % W, (ni / W) | 0)
+            if (hh < bestH) {
+              bestH = hh
+              bestNode = ni
+            }
+            heap.push(ni, ng + hh)
+          }
+        }
     }
     // Unreachable: walk as close as possible.
     return bestNode !== start ? this._build(from, bestNode) : null
@@ -149,11 +214,33 @@ export class Grid {
     const W = this.w
     const out = []
     while (node !== -1 && from[node] !== -1) {
-      out.push({ x: (node % W) + 0.5, z: ((node / W) | 0) + 0.5 })
-      node = from[node]
+      const p = { x: (node % W) + 0.5, z: ((node / W) | 0) + 0.5 }
+      const prev = from[node]
+      const px = prev % W
+      const pz = (prev / W) | 0
+      if (Math.abs(px + 0.5 - p.x) > 1.5 || Math.abs(pz + 0.5 - p.z) > 1.5) {
+        // a jump between floors
+        const e = this.links?.get(prev)?.find((q) => q.to === node)
+        p.link = e?.kind || 'stairs'
+        p.from = { x: px + 0.5, z: pz + 0.5 }
+      }
+      out.push(p)
+      node = prev
     }
     out.reverse()
-    return this.smooth(out)
+    if (!out.some((p) => p.link)) return this.smooth(out)
+    // smooth each floor's stretch on its own; keep both ends of every jump
+    const res = []
+    let seg = []
+    for (const p of out) {
+      if (p.link) {
+        res.push(...this.smooth(seg))
+        seg = []
+        res.push(p)
+      } else seg.push(p)
+    }
+    res.push(...this.smooth(seg))
+    return res
   }
   // Drop waypoints that have a clear straight walk between them.
   smooth(pts) {
@@ -263,9 +350,9 @@ export class OffsetGrid {
   inb(x, z) {
     return this.g.inb(x - this.ox, z - this.oz)
   }
-  path(sx, sz, tx, tz, maxIter) {
-    const p = this.g.path(sx - this.ox, sz - this.oz, tx - this.ox, tz - this.oz, maxIter)
-    return p ? p.map((w) => ({ x: w.x + this.ox, z: w.z + this.oz })) : null
+  path(sx, sz, tx, tz, maxIter, opts) {
+    const p = this.g.path(sx - this.ox, sz - this.oz, tx - this.ox, tz - this.oz, maxIter, opts)
+    return p ? p.map((w) => (w.link ? { x: w.x + this.ox, z: w.z + this.oz, link: w.link, from: { x: w.from.x + this.ox, z: w.from.z + this.oz } } : { x: w.x + this.ox, z: w.z + this.oz })) : null
   }
   los(ax, az, bx, bz) {
     return this.g.los(ax - this.ox, az - this.oz, bx - this.ox, bz - this.oz)

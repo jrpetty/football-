@@ -712,6 +712,79 @@ export const isLooted = (locId) => lootedUntil(locId) > Date.now()
 export function markLooted(locId) {
   S.looted[locId] = Date.now() + LOOT_COOLDOWN_MS
 }
+// ---------------------------------------------------------------- game modes
+// Both modes play the whole campaign; they differ in what the city holds.
+export const MODES = {
+  restock: { name: 'Scavenger', short: 'Places restock', desc: 'A searched place fills up again after four hours of real time. There is always more out there, if you can get to it.' },
+  once: { name: 'Last Pickings', short: 'Loot once', desc: 'Every cupboard, car and crate in the city can be emptied once, and nothing comes back. Go back for what you left; after that, the camp lives on what it makes, trades and holds.' },
+}
+export const modeOf = () => (S?.mode === 'once' ? 'once' : 'restock')
+
+// ---------------------------------------------------------------- the city, place by place
+// What the squad left behind at each place: which fittings were searched or
+// torn out (loot-once), and how many infected were still alive inside. A
+// place with nobody left alive is clear; clear every place and the city is
+// yours.
+export function placeOf(locId) {
+  S.places ||= {}
+  return (S.places[locId] ||= {})
+}
+export const isCleared = (locId) => !!S?.places?.[locId]?.cleared
+// loot-once: how much of a place is still unsearched (null: never been)
+export function placeLeft(locId) {
+  const P = S?.places?.[locId]
+  if (!P || !P.n) return null
+  return Math.max(0, 1 - (P.done || 0) / P.n)
+}
+export const isEmptied = (locId) => modeOf() === 'once' && placeLeft(locId) != null && placeLeft(locId) < 0.03
+// how far along liberating the city is, overall and district by district
+export function liberation() {
+  const locs = (S?.cityLocs || []).filter((l) => l.type !== 'military')
+  const by = {}
+  let cleared = 0
+  for (const l of locs) {
+    const d = (by[l.district] ||= { cleared: 0, total: 0 })
+    d.total++
+    if (isCleared(l.id)) {
+      d.cleared++
+      cleared++
+    }
+  }
+  return { cleared, total: locs.length, pct: locs.length ? cleared / locs.length : 0, by }
+}
+export const DISTRICTS = { residential: 'The residential streets', commercial: 'The shopping district', downtown: 'Downtown', industrial: 'The industrial zone', park: 'The parkland' }
+// A place was just cleared (or lost again): districts and milestones.
+export function checkLiberation() {
+  const L = liberation()
+  S.libDistricts ||= []
+  for (const [d, v] of Object.entries(L.by)) {
+    if (!v.total || v.cleared < v.total || S.libDistricts.includes(d)) continue
+    S.libDistricts.push(d)
+    // the people who were holed up there bring what they kept
+    const cache = { food: 20 + v.total * 4, water: 20 + v.total * 4, meds: 4 + v.total, scrap: 30 + v.total * 6 }
+    gain(cache)
+    addMoraleEvent(`${DISTRICTS[d] || 'A district'} cleared`, 12, 4)
+    log(`${DISTRICTS[d] || 'A district'} is clear. A few people who were hiding there came out with supplies for the camp.`, 'good')
+    bus.emit('district', d, cache)
+  }
+  for (const m of LIBERATION) {
+    if (L.pct + 1e-9 < m.at || S.libDone.includes(m.at)) continue
+    S.libDone.push(m.at)
+    if (m.at === 0.1) addMoraleEvent('Quieter streets', 10, 4)
+    if (m.at === 0.25 && S.recruit) S.recruit.next = Math.min(S.recruit.next || Infinity, S.time + 60)
+    log(`Liberation: ${m.name}. ${m.desc}`, 'good')
+    bus.emit('liberation', m)
+  }
+  return L
+}
+export const LIBERATION = [
+  { at: 0.1, name: 'Quieter streets', desc: 'Morale rises: people can see it working.' },
+  { at: 0.25, name: 'Word gets around', desc: 'Newcomers come looking for you, and sooner.' },
+  { at: 0.5, name: 'Safe roads', desc: 'Trips cost a quarter less food and water.' },
+  { at: 0.75, name: 'Held ground', desc: 'Outposts send a quarter more home.' },
+  { at: 1, name: 'The city is yours', desc: 'Every place cleared. The story ends here, if you want it to.' },
+]
+
 // "3h 12m", "45m"
 export function waitText(ms) {
   const m = Math.max(1, Math.ceil(ms / 60000))
@@ -915,7 +988,7 @@ export function claimOutpost(loc, crew) {
 }
 export function outpostYield(o) {
   const n = o.n ?? o.crew.map(getS).filter(Boolean).length
-  const k = OUTPOST.mult[o.level - 1] * (OUTPOST.crew[Math.min(3, n) - 1] || 0) * (o.hp > 30 ? 1 : 0.4)
+  const k = OUTPOST.mult[o.level - 1] * (OUTPOST.crew[Math.min(3, n) - 1] || 0) * (o.hp > 30 ? 1 : 0.4) * (S?.libDone?.includes(0.75) ? 1.25 : 1)
   const out = {}
   for (const [r, v] of Object.entries(OUTPOST.yield[o.type] || {})) out[r] = v * k
   return out
@@ -967,7 +1040,8 @@ export const usableVehicles = () => (S.vehicles || []).filter((v) => !vehiclePro
 // Provisions and fuel for a round trip of `km` (one way, along the roads).
 export function travelCost(km, kind, n) {
   const V = VEHICLES[kind] || VEHICLES.foot
-  const per = (TRAVEL.a + TRAVEL.b * km + TRAVEL.c * km * km) * V.prov
+  // half the city cleared: the roads are safer and the trips shorter
+  const per = (TRAVEL.a + TRAVEL.b * km + TRAVEL.c * km * km) * V.prov * (S?.libDone?.includes(0.5) ? 0.75 : 1)
   return {
     food: Math.max(n ? 1 : 0, Math.ceil(per * n)),
     water: Math.max(n ? 1 : 0, Math.ceil(per * TRAVEL.water * n)),
@@ -1130,7 +1204,10 @@ export function newGame() {
     vehicles: [{ id: 'van', kind: 'van', name: 'The Van', cond: 0, broken: true, since: 1 }],
     events: [],
     goals: {},
-    stats: { kills: 0, runs: 0, deaths: 0, recruited: 0, raids: 0, crafted: 0, memorial: [] },
+    stats: { kills: 0, runs: 0, deaths: 0, recruited: 0, raids: 0, crafted: 0, memorial: [], searched: 0, places: [], built: 0, rescued: 0, raidsLost: 0, peak: 0, km: 0, notes: 0, startedAt: Date.now() },
+    mode: 'restock',
+    places: {},
+    libDone: [],
     morale: 60,
     moraleEvents: [],
     weather: { type: 'clear', until: 0 },
@@ -1213,6 +1290,14 @@ function migrate() {
   }
   S.links = S.links || []
   S.explored = S.explored || {}
+  // the ending's numbers, counted from now on in older camps
+  const st = S.stats
+  for (const k of ['searched', 'built', 'rescued', 'raidsLost', 'peak', 'km', 'notes']) st[k] = st[k] || 0
+  st.places = st.places || []
+  st.startedAt = st.startedAt || S.created || Date.now()
+  S.mode = S.mode === 'once' ? 'once' : 'restock'
+  S.places = S.places || {}
+  S.libDone = S.libDone || []
   S.signal = S.signal || { phase: 0, paid: {} }
   S.research = S.research || { done: {}, alts: [], pick: null }
   S.outposts = S.outposts || []
@@ -1311,6 +1396,8 @@ export function killSurvivor(s, cause) {
   bus.emit('death', s)
   if (!S.survivors.length) {
     S.over = true
+    // how it ended, for the last word
+    S.fall = { day: day(), cause, raid: !!S.raid, at: Date.now() }
     wipeSave()
     bus.emit('gameover')
   }

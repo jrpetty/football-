@@ -19,6 +19,7 @@ const GHOST_MAT = new THREE.MeshBasicMaterial({ color: new THREE.Color('#6fdcff'
 const ROOM_NAMES = {
   kitchen: 'Kitchen', living: 'Living room', bedroom: 'Bedroom', bathroom: 'Bathroom', garage: 'Garage', office: 'Office', storeroom: 'Storeroom', sales: 'Sales floor', hardware: 'Shop floor', pharmacy: 'Pharmacy', diner: 'Dining room',
   ward: 'Ward', corridor: 'Hallway', lobby: 'Lobby', cells: 'Holding cells', armory: 'Armory', lockers: 'Locker room', warehouse: 'Warehouse floor', classroom: 'Classroom', lab: 'Laboratory', barracks: 'Barracks',
+  landing: 'Landing', surgery: 'Operating theatre', roof: 'Rooftop', stairs: 'Stairwell',
 }
 const MM = 236 // minimap size in CSS px
 
@@ -34,6 +35,14 @@ export const VisionMixin = {
     u.uOrigin.value.set(lv.x0, lv.z0)
     u.uSize.value.set(lv.W, lv.H)
     u.uOn.value = 1
+    if (this.F) {
+      const f = this.foot
+      u.uFlRect.value.set(f.x0 - 0.7, f.z0 - 0.7, f.x1 + 0.7, f.z1 + 0.7)
+      u.uFlH.value = lv.FH
+      u.uFlN.value = lv.levels
+      u.uFlView.value = this.view
+      for (let k = 1; k < Math.min(8, lv.levels); k++) u.uFlDX.value[k] = lv.off[k]
+    }
     this.scene.userData.fowUniforms = u
     this.visT = 0
     this.lastSeen = []
@@ -63,7 +72,9 @@ export const VisionMixin = {
         continue
       }
       const ns = clamp(st.nightSight || 0, -0.4, 1)
-      const nightMul = 1 - night * 0.55 * (1 - ns)
+      // with the generator running, the building's lights are on
+      const lit = this.powered && this.F && this.levelOf(a.pos.x) > 0 ? 1 : this.powered && this.inFoot?.(a.pos.x, a.pos.z, 0) ? 1 : 0
+      const nightMul = 1 - night * 0.55 * (1 - ns) * (1 - lit * 0.85)
       const sight = Math.max(3, st.sight * nightMul * wx)
       const torch = night > 0.25 ? { r: (st.torch ? 15 : 10) * (w === 'fog' ? 0.7 : 1), half: st.torch ? 0.46 : 0.36 } : null
       out.push({ x: a.pos.x, z: a.pos.z, heading: a.heading, sight, back: 0.62, cone: 1.22, pierce: st.wallSense || 0, torch })
@@ -111,7 +122,7 @@ export const VisionMixin = {
       }
       z.fogHidden = !shown
       this.setGhost(z, ghost)
-      z.root.visible = shown || ghost
+      z.root.visible = (shown || ghost) && (!this.F || this.onView(z.pos.x, z.pos.z) || (z.climb && (this.onView(z.climb.from.x, z.climb.from.z) || this.onView(z.climb.to.x, z.climb.to.z))))
       if (!shown && !ghost && !z.dead) this.listen(z, dt)
     }
     // the rescue caller stays hidden until found, but their label shows the way
@@ -212,9 +223,9 @@ export const VisionMixin = {
     this.mmCanvas = cv
     this.mmDpr = dpr
     this.mmImg = document.createElement('canvas')
-    this.mmImg.width = lv.W
+    this.mmImg.width = lv.W0
     this.mmImg.height = lv.H
-    this.mmData = this.mmImg.getContext('2d').createImageData(lv.W, lv.H)
+    this.mmData = this.mmImg.getContext('2d').createImageData(lv.W0, lv.H)
     this.mmPct = h('b', '0%')
     this.mmEl = h('div.minimap', h('div.mm-head', h('span', 'Map'), h('small', 'Explored ', this.mmPct)), cv)
     const pick = (e) => {
@@ -241,9 +252,9 @@ export const VisionMixin = {
     const fz = -Math.cos(y)
     const rx = Math.cos(y)
     const rz = -Math.sin(y)
-    const cx = lv.x0 + lv.W / 2
+    const cx = lv.x0 + lv.W0 / 2
     const cz = lv.z0 + lv.H / 2
-    const s = (MM - 12) / Math.hypot(lv.W, lv.H)
+    const s = (MM - 12) / Math.hypot(lv.W0, lv.H)
     return { fx, fz, rx, rz, cx, cz, s }
   },
   mmToScreen(x, z, B = this.mmBasis()) {
@@ -267,10 +278,16 @@ export const VisionMixin = {
     const lv = this.lv
     const V = this.vision
     const D = this.mmData.data
-    const W = lv.W
-    // the tile layer: unexplored dark, explored muted, visible bright, sensed cyan
-    for (let k = 0; k < V.N; k++) {
-      const b = k * 4
+    const W0 = lv.W0
+    // the tile layer: unexplored dark, explored muted, visible bright, sensed
+    // cyan; inside a tall building, the floor in view
+    const B = lv.bld
+    const off = this.F && this.view ? lv.off[this.view] : 0
+    for (let q = 0; q < W0 * lv.H; q++) {
+      const i = q % W0
+      const j = (q - i) / W0
+      const k = j * lv.W + (off && i >= B.i0 && i <= B.i1 && j >= B.j0 && j <= B.j1 ? i + off : i)
+      const b = q * 4
       const seen = V.seen[k]
       const v = V.vis[k]
       const sen = V.sense[k]
@@ -319,12 +336,12 @@ export const VisionMixin = {
     ictx.putImageData(this.mmData, 0, 0)
     const ctx = this.mmCanvas.getContext('2d')
     const dpr = this.mmDpr
-    const B = this.mmBasis()
+    const Bas = this.mmBasis()
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     ctx.clearRect(0, 0, this.mmCanvas.width, this.mmCanvas.height)
     // tile image placed with the camera's rotation
-    const o = this.mmToScreen(lv.x0, lv.z0, B)
-    ctx.setTransform(B.rx * B.s * dpr, -B.fx * B.s * dpr, B.rz * B.s * dpr, -B.fz * B.s * dpr, o.x * dpr, o.y * dpr)
+    const o = this.mmToScreen(lv.x0, lv.z0, Bas)
+    ctx.setTransform(Bas.rx * Bas.s * dpr, -Bas.fx * Bas.s * dpr, Bas.rz * Bas.s * dpr, -Bas.fz * Bas.s * dpr, o.x * dpr, o.y * dpr)
     ctx.imageSmoothingEnabled = false
     ctx.drawImage(this.mmImg, 0, 0)
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
@@ -333,7 +350,7 @@ export const VisionMixin = {
     if (corners.every(Boolean)) {
       ctx.beginPath()
       corners.forEach((p, i) => {
-        const q = this.mmToScreen(p.x, p.z, B)
+        const q = this.mmToScreen(p.x, p.z, Bas)
         if (i) ctx.lineTo(q.x, q.y)
         else ctx.moveTo(q.x, q.y)
       })
@@ -342,25 +359,29 @@ export const VisionMixin = {
       ctx.lineWidth = 1
       ctx.stroke()
     }
+    const M = (x, z) => this.mapXZ(x, z)
+    const here = (x, z) => this.onView(x, z)
     // containers in explored rooms
     for (const c of this.containers) {
-      if (c.gone || !V.exploredAt(c.x, c.z)) continue
-      const q = this.mmToScreen(c.x, c.z, B)
+      if (c.gone || !V.exploredAt(c.x, c.z) || !here(c.x, c.z)) continue
+      const m = M(c.x, c.z)
+      const q = this.mmToScreen(m.x, m.z, Bas)
       ctx.fillStyle = c.stash ? '#7ad07a' : c.searched ? 'rgba(160,150,130,0.45)' : c.locked ? '#d8a04a' : '#e8c070'
       ctx.fillRect(q.x - 1.5, q.y - 1.5, 3, 3)
     }
     // the van and the exit
     const E = lv.evac
-    const e = this.mmToScreen(E.x, E.z, B)
+    const e = this.mmToScreen(E.x, E.z, Bas)
     ctx.strokeStyle = '#6fd08a'
     ctx.lineWidth = 1.5
     ctx.beginPath()
-    ctx.arc(e.x, e.y, E.r * B.s, 0, Math.PI * 2)
+    ctx.arc(e.x, e.y, E.r * Bas.s, 0, Math.PI * 2)
     ctx.stroke()
     // sounds
     for (const p of this.pings || []) {
-      if (p.t <= 0) continue
-      const q = this.mmToScreen(p.x, p.z, B)
+      if (p.t <= 0 || !here(p.x, p.z)) continue
+      const pm = M(p.x, p.z)
+      const q = this.mmToScreen(pm.x, pm.z, Bas)
       const k = 1 - p.t / 1.6
       ctx.strokeStyle = `rgba(255, 190, 90, ${(1 - k) * 0.9})`
       ctx.beginPath()
@@ -369,7 +390,9 @@ export const VisionMixin = {
     }
     // last seen
     for (const m of this.lastSeen) {
-      const q = this.mmToScreen(m.label.pos.x, m.label.pos.z, B)
+      if (!here(m.label.pos.x, m.label.pos.z)) continue
+      const lm = M(m.label.pos.x, m.label.pos.z)
+      const q = this.mmToScreen(lm.x, lm.z, Bas)
       ctx.strokeStyle = `rgba(255, 110, 90, ${Math.min(1, m.t / 2) * 0.8})`
       ctx.strokeRect(q.x - 2.5, q.y - 2.5, 5, 5)
     }
@@ -378,8 +401,9 @@ export const VisionMixin = {
       if (z.dead) continue
       const shown = !z.fogHidden
       const sensed = z.ghost?.visible
-      if (!shown && !sensed) continue
-      const q = this.mmToScreen(z.pos.x, z.pos.z, B)
+      if ((!shown && !sensed) || !here(z.pos.x, z.pos.z)) continue
+      const zm = M(z.pos.x, z.pos.z)
+      const q = this.mmToScreen(zm.x, zm.z, Bas)
       ctx.fillStyle = sensed && !shown ? '#6fdcff' : z.type === 'brute' ? '#ff5a3a' : '#e8483a'
       ctx.beginPath()
       ctx.arc(q.x, q.y, z.type === 'brute' ? 3.2 : 2.3, 0, Math.PI * 2)
@@ -388,10 +412,12 @@ export const VisionMixin = {
     // the squad, with their facing
     for (const a of this.squad) {
       if (a.dead) continue
-      const q = this.mmToScreen(a.pos.x, a.pos.z, B)
+      const away = !here(a.pos.x, a.pos.z)
+      const q = this.mmToScreen(a.rpos.x, a.rpos.z, Bas)
       const hx = Math.sin(a.heading)
       const hz = Math.cos(a.heading)
-      const t = this.mmToScreen(a.pos.x + hx * 2.2, a.pos.z + hz * 2.2, B)
+      const t = this.mmToScreen(a.rpos.x + hx * 2.2, a.rpos.z + hz * 2.2, Bas)
+      ctx.globalAlpha = away ? 0.5 : 1
       ctx.strokeStyle = a.npc ? '#ff9a86' : a.selected ? '#ffd27a' : '#f0e8d0'
       ctx.lineWidth = 1.4
       ctx.beginPath()
@@ -402,6 +428,12 @@ export const VisionMixin = {
       ctx.beginPath()
       ctx.arc(q.x, q.y, 3, 0, Math.PI * 2)
       ctx.fill()
+      if (away && this.F) {
+        // on another floor: say which
+        ctx.font = '600 9px system-ui, sans-serif'
+        ctx.fillText(this.levelOf(a.pos.x) === this.lv.levels - 1 && this.lv.roof ? 'R' : String(this.levelOf(a.pos.x) + 1), q.x + 4, q.y - 3)
+      }
+      ctx.globalAlpha = 1
     }
     const pct = Math.round(V.exploredFrac() * 100) + '%'
     if (this.mmPct.textContent !== pct) this.mmPct.textContent = pct

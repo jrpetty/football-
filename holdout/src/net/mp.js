@@ -23,7 +23,7 @@ const set = (...k) => new Set(k)
 // What the host shares. Belt items and history travel on their own.
 const HOST_POL = { skip: set('settings', 'saved', 'hist'), kids: { links: { each: { skip: set('items', 'moved') } } } }
 // Keys only the host's simulation changes.
-const HOST_ONLY = set('settings', 'saved', 'hist', 'time', 'weather', 'raid', 'nextRaid', 'speed', 'mp', 'over', 'seed', 'version', 'created', 'cityLocs')
+const HOST_ONLY = set('settings', 'saved', 'hist', 'time', 'weather', 'raid', 'nextRaid', 'speed', 'mp', 'over', 'seed', 'version', 'created', 'cityLocs', 'mode')
 const GUEST_POL = { skip: HOST_ONLY, kids: { res: { all: ADD }, stats: { all: ADD }, signal: { kids: { paid: { all: ADD } } }, links: { each: { skip: set('items', 'moved', 'flow', 'jam') } } } }
 // Bringing a guest's copy in line with the host's (exact, no sums).
 const FIX_POL = { skip: set('settings', 'saved', 'hist', 'time'), kids: { links: { each: { skip: set('items') } } } }

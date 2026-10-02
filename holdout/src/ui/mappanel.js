@@ -3,7 +3,7 @@
 // dangerous it is, the drive there, who goes and what they carry.
 import { LOCATIONS, ROOMS, CONTAINERS, RES, ITEMS, ZOMBIES, zombieMix, LEVEL_COLORS, OCCUPATIONS, STATIONS, GAME_MIN_PER_SEC, INFECTION, OUTPOST, VEHICLES } from '../game/data.js'
 import { COOP_MAX } from '../net/coop.js'
-import { playerOf, S, day, clockStr, gameDur, survivorStats, getS, hasFlag, outpostAt, outpostProblem, claimOutpost, outpostYield, outpostUpgradeCost, upgradeOutpost, abandonOutpost, canAfford, travelCost, vehicleOf, vehicleProblem, usableVehicles, pay, canControl, NET, isLooted, lootedUntil, waitText } from '../game/state.js'
+import { playerOf, S, day, clockStr, gameDur, survivorStats, getS, hasFlag, outpostAt, outpostProblem, claimOutpost, outpostYield, outpostUpgradeCost, upgradeOutpost, abandonOutpost, canAfford, travelCost, vehicleOf, vehicleProblem, usableVehicles, pay, canControl, NET, isLooted, lootedUntil, waitText, modeOf, isCleared, placeLeft, isEmptied, liberation, DISTRICTS } from '../game/state.js'
 import { raidIntel } from '../game/economy.js'
 import { leadsAt } from '../game/story.js'
 import { sfx } from '../core/audio.js'
@@ -117,6 +117,7 @@ export class MapPanel {
       h(
         'div.pbody',
         h('p.note', 'Level 1 places are near camp and hold food, water and cloth. Level 5 holds guns, armor and radios, and far more of the dead. Every run takes survivors away from their jobs and the wall.'),
+        this.sameAgain(locs),
         evs.length
           ? h(
               'div.card.evcard',
@@ -137,17 +138,45 @@ export class MapPanel {
                   .sort((a, b) => a.dCamp - b.dCamp)
                   .map((l) =>
                     h(
-                      'button.locrow' + (isLooted(l.id) ? '.looted' : ''),
+                      'button.locrow' + (isLooted(l.id) || isEmptied(l.id) ? '.looted' : '') + (isCleared(l.id) ? '.clear' : ''),
                       { onclick: () => this.map.select(l), onmouseenter: () => ((this.map.hover = l), this.map.refreshMarkers()), onmouseleave: () => ((this.map.hover = null), this.map.refreshMarkers()) },
                       h('b', l.name),
                       h('small', LOCATIONS[l.type].name),
-                      isLooted(l.id) ? h('span.tag', { 'data-tip': `Searchable again in ${waitText(lootedUntil(l.id) - Date.now())}` }, waitText(lootedUntil(l.id) - Date.now())) : (S.events || []).some((e) => e.locId === l.id) ? h('span.tag.ev', 'signal') : null,
+                      placeTag(l),
                     ),
                   ),
               )
             : null,
         ),
       ),
+    )
+  }
+  // The last run, one click to set it up again: same place, people, vehicle.
+  sameAgain(locs) {
+    const R = S.lastRun?.[NET.pid || 'solo']
+    const loc = R && locs.find((l) => l.id === R.locId)
+    if (!loc) return null
+    const ids = R.ids.filter((id) => {
+      const s = getS(id)
+      return s && s.status === 'ok' && canControl(s) && !(s.infection >= INFECTION.sick)
+    })
+    if (!ids.length) return null
+    const names = ids.map((id) => getS(id).first)
+    return h(
+      'button.card.sameagain',
+      {
+        'data-tip': 'Pick the same place, the same people and the same vehicle. You still check it over before setting out.',
+        onclick: () => {
+          sfx('click')
+          this.squad.clear()
+          for (const id of ids) this.squad.add(id)
+          this.suggested = true
+          if (R.vehId) this.vehId = R.vehId
+          this.map.select(loc)
+        },
+      },
+      h('span.sa-ic', { html: icon('repeat') }),
+      h('div', h('small', 'Same again'), h('b', loc.name), h('span', names.join(', '))),
     )
   }
   // ---------------------------------------------------------------- one location
@@ -249,10 +278,10 @@ export class MapPanel {
         h('p.blurb', L.blurb),
         ev ? h('div.card.evbig.' + ev.kind, h('b', ev.kind === 'distress' ? `Distress call: ${ev.npc?.name || 'a survivor'} is trapped inside.` : 'A supply drop came down in the yard.'), h('small', ev.kind === 'distress' ? 'Reach them and get them out: they will join the camp.' : 'Military crates: ammo, meds and gear.'), h('span', `Signal fades in ${gameDur(ev.expires - S.time)}`)) : null,
         leads.length ? h('div.card.leadcard', h('b', h('i', { html: icon('book') }), 'Story lead'), h('span', `${leads.join(' · ')} might be here.`), h('small', 'See the journal for what you know.')) : null,
-        looted && !leads.length ? h('div.card.warn', `Picked clean. Worth another look in ${wait} (real time).`) : null,
+        placeCard(loc, looted, wait, leads.length > 0),
         h(
           'div.mfacts',
-          h('div', h('small', 'Infected'), h('b', `${z0}–${z1}`), h('em', mix.join(', '))),
+          infectedFact(loc, z0, z1, mix),
           h('div', h('small', 'Distance'), h('b', `${T.km.toFixed(1)} km`), h('em', `${gameDur(T.min)} each way · ${T.V === VEHICLES.foot ? 'walking' : T.V.name.toLowerCase()}`)),
           h('div', { 'data-tip': `Food and water the squad carries for the trip there and back: about ${T.perFood.toFixed(1)} food each. ${T.V.prov < 1 ? `Riding cuts it to ${Math.round(T.V.prov * 100)}% of walking.` : 'Further places cost far more on foot.'}` }, h('small', 'Provisions'), h('b' + (T.canFood ? '' : '.bad'), `${T.food} food · ${T.water} water`), h('em', `for ${squad.length || 1} · ${fmt(S.res.food)} / ${fmt(S.res.water)} in store`)),
           T.fuel ? h('div', h('small', 'Fuel'), h('b' + (T.canFuel ? '' : '.bad'), `${T.fuel}`), h('em', `${fmt(S.res.fuel)} in store`)) : null,
@@ -285,8 +314,8 @@ export class MapPanel {
         outpostAt(loc.id)
           ? h('button.btn.big', { disabled: true }, 'Your outpost')
           : run
-            ? h('button.btn.go.big', { disabled: !squad.length || (looted && !leads.length) || this.map.launching || !T.ok, onclick: () => this.deploy(loc, squad, T, veh, run, friends) }, looted && !leads.length ? `Searched · back in ${wait}` : [h('span', { html: icon('people') }), ` Set out together (${party})`])
-            : h('button.btn.go.big', { disabled: !squad.length || (!!looted && !leads.length) || this.map.launching || !T.ok, onclick: () => this.deploy(loc, squad, T, veh) }, looted && !leads.length ? `Searched · back in ${wait}` : h('span', { html: icon(T.V.stash ? 'truck' : 'run') }), looted && !leads.length ? null : T.V.stash ? ' Roll out' : T.V === VEHICLES.foot ? ' Head out on foot' : ' Ride out'),
+            ? h('button.btn.go.big', { disabled: !squad.length || this.map.launching || !T.ok, onclick: () => this.deploy(loc, squad, T, veh, run, friends) }, [h('span', { html: icon('people') }), ` Set out together (${party})`])
+            : h('button.btn.go.big', { disabled: !squad.length || this.map.launching || !T.ok, onclick: () => this.deploy(loc, squad, T, veh) }, h('span', { html: icon(T.V.stash ? 'truck' : 'run') }), (looted || isEmptied(loc.id)) && !leads.length ? ' Go anyway: clear it out' : T.V.stash ? ' Roll out' : T.V === VEHICLES.foot ? ' Head out on foot' : ' Ride out'),
       ),
     )
   }
@@ -371,6 +400,7 @@ export class MapPanel {
     if (!pay({ food: T.food, water: T.water, fuel: T.fuel })) return sfx('error')
     sfx(T.V.stash ? 'truck' : 'click')
     const ids = squad.map((s) => s.id).concat(friends.map((s) => s.id))
+    S.lastRun = { ...(S.lastRun || {}), [NET.pid || 'solo']: { locId: loc.id, ids: squad.map((s) => s.id), vehId: veh?.id || 'foot' } }
     if (veh) {
       veh.out = NET.role === 'solo' ? true : NET.pid
       bus.emit('vehicles')
@@ -387,3 +417,40 @@ export class MapPanel {
   }
 }
 export const minutesToSec = (m) => m / GAME_MIN_PER_SEC
+
+// ---------------------------------------------------------------- what is left at a place
+const pct = (f) => `${Math.round(f * 100)}%`
+function placeTag(l) {
+  if (isCleared(l.id)) return h('span.tag.clear', { 'data-tip': 'Clear: nothing alive inside' }, 'clear')
+  if (modeOf() === 'once') {
+    const left = placeLeft(l.id)
+    if (left == null) return (S.events || []).some((e) => e.locId === l.id) ? h('span.tag.ev', 'signal') : null
+    return left < 0.03 ? h('span.tag', { 'data-tip': 'Emptied: nothing left to find' }, 'empty') : h('span.tag', { 'data-tip': `About ${pct(left)} still unsearched` }, `${pct(left)} left`)
+  }
+  if (isLooted(l.id)) return h('span.tag', { 'data-tip': `Searchable again in ${waitText(lootedUntil(l.id) - Date.now())}` }, waitText(lootedUntil(l.id) - Date.now()))
+  return (S.events || []).some((e) => e.locId === l.id) ? h('span.tag.ev', 'signal') : null
+}
+function placeCard(loc, looted, wait, lead) {
+  const P = S.places?.[loc.id]
+  const out = []
+  if (modeOf() === 'once') {
+    const left = placeLeft(loc.id)
+    if (left == null) out.push(h('div.card.info', h('b', 'Untouched'), h('span', 'Nobody has searched here yet. Whatever you take is gone for good.')))
+    else if (left < 0.03) out.push(h('div.card.warn', h('b', 'Emptied'), h('span', 'Every cupboard here has been searched. Nothing comes back, but the infected might.')))
+    else out.push(h('div.card.info', h('b', `About ${pct(left)} still unsearched`), h('span', 'The squad left things behind last time. They are still there.')))
+  } else if (looted && !lead) out.push(h('div.card.warn', h('b', 'Picked clean'), h('span', `Worth another look in ${wait} (real time). You can still go to clear out the infected.`)))
+  if (isCleared(loc.id)) out.push(h('div.card.good', h('b', 'Clear'), h('span', `Nothing alive inside since day ${P.clearedDay}. ${(S.outposts || []).some((o) => o.locId === loc.id) ? 'The outpost keeps it that way.' : 'Hold it with an outpost, or the infected may drift back in.'}`)))
+  const L = liberation()
+  const d = L.by[loc.lot?.district]
+  if (d) out.push(h('div.libline', h('span', `${DISTRICTS[loc.lot.district] || 'District'}: ${d.cleared} of ${d.total} places clear`), h('i', h('b', { style: { width: pct(d.cleared / d.total) } }))))
+  return out
+}
+function infectedFact(loc, z0, z1, mix) {
+  const P = S.places?.[loc.id]
+  if (P?.cleared) return h('div', h('small', 'Infected'), h('b.good', 'None'), h('em', 'Cleared'))
+  if (P?.left != null) {
+    const n = Math.min(z1 * 3, P.left + Math.floor((Math.max(0, S.time - (P.at || 0)) / 1440) * 1.5))
+    return h('div', { 'data-tip': 'Whoever you left alive last time is still in there, and a few more drift in each day.' }, h('small', 'Infected'), h('b', `about ${n}`), h('em', P.left ? `${P.left} left alive last time` : 'came back since'))
+  }
+  return h('div', h('small', 'Infected'), h('b', `${z0}–${z1}`), h('em', mix.join(', ')))
+}

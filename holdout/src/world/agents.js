@@ -64,6 +64,9 @@ function makeRing(color = '#f0c060') {
   return m
 }
 
+// path options for people: they ride a running lift
+const LIFT = { lift: true }
+
 // ---------------------------------------------------------------- base agent
 // Orders that walk to a container and work at it for a while.
 const WORK_ORDERS = new Set(['search', 'dismantle', 'hotwire'])
@@ -74,6 +77,10 @@ export class Agent {
     this.ch = ch
     this.root = ch.root
     this.pos = new THREE.Vector3(x, 0, z)
+    // where it is drawn: the same as pos, except on a tall building's upper
+    // floors (and mid-climb between them)
+    this.rpos = new THREE.Vector3(x, 0, z)
+    this.climb = null
     this.heading = Math.random() * 6
     this.path = null
     this.pi = 0
@@ -93,13 +100,52 @@ export class Agent {
     this.sync()
   }
   moveTo(x, z) {
-    const p = this.world.grid.path(this.pos.x, this.pos.z, x, z)
+    // mid-climb, finish the flight first: the new path starts where it ends
+    const from = this.climb ? this.climb.to : this.pos
+    const p = this.world.grid.path(from.x, from.z, x, z, undefined, this.faction === 'survivor' ? LIFT : null)
+    if (this.climb) {
+      // keep the jump in progress at the head of the new path
+      this.path = [this.climb.wp, ...(p || [])]
+      this.pi = 0
+      return true
+    }
     this.path = p && p.length ? p : null
     this.pi = 0
     return !!this.path
   }
   stop() {
-    this.path = null
+    if (this.climb) this.path = [this.climb.wp]
+    else this.path = null
+    this.pi = 0
+  }
+  // The body stays where it was in the sim until it arrives; the drawing
+  // follows the flight (or the lift's car) in between.
+  startClimb(wp, speedMult = 1) {
+    const W = this.world
+    const stairs = wp.link === 'stairs'
+    const df = W.levelOf ? Math.abs(W.levelOf(wp.x) - W.levelOf(wp.from.x)) : 1
+    const pace = Math.max(0.5, Math.min(1.6, (this.speed * speedMult) / 3))
+    this.climb = { t: 0, dur: stairs ? 2.6 / pace : 2.2 + df * 1.1, from: { x: wp.from.x, z: wp.from.z }, to: { x: wp.x, z: wp.z }, wp, kind: wp.link }
+    if (!stairs) W.onLift?.(this, wp)
+  }
+  advanceClimb(dt) {
+    const c = this.climb
+    c.t += dt
+    this.curSpeed = c.kind === 'stairs' ? Math.min(this.speed, 2.2) : 0
+    if (c.kind === 'stairs' && this.world.stairHeading) this.heading = angleLerp(this.heading, this.world.stairHeading(c), 1 - Math.exp(-dt * 10))
+    if (c.t >= c.dur) this.endClimb()
+  }
+  endClimb() {
+    const c = this.climb
+    if (!c) return
+    this.climb = null
+    this.pos.x = c.to.x
+    this.pos.z = c.to.z
+    if (this.path && this.path[this.pi] === c.wp) {
+      this.pi++
+      if (this.pi >= this.path.length) this.path = null
+    }
+    this.world.onClimbed?.(this, c)
   }
   get moving() {
     return !!this.path
@@ -111,6 +157,12 @@ export class Agent {
       return false
     }
     const wp = this.path[this.pi]
+    if (wp.link) {
+      // up or down the stairs, or a ride in the lift: the agent's update
+      // carries the climb through from here (see advanceClimb)
+      if (!this.climb) this.startClimb(wp, speedMult)
+      return false
+    }
     const dx = wp.x - this.pos.x
     const dz = wp.z - this.pos.z
     const d = Math.hypot(dx, dz)
@@ -143,10 +195,25 @@ export class Agent {
     else sfx(id, throttle)
   }
   dist(o) {
+    if (this.world.fdist) return this.world.fdist(this, o)
     return Math.hypot(o.pos.x - this.pos.x, o.pos.z - this.pos.z)
   }
   sync() {
-    this.root.position.set(this.pos.x, this.pos.y, this.pos.z)
+    const W = this.world
+    const r = this.rpos
+    if (this.climb && W.mapXZ) {
+      // along the flight: from the foot to the top (or the lift's car, up or down)
+      const c = this.climb
+      const k = Math.min(1, c.t / c.dur)
+      const a = W.mapXZ(c.from.x, c.from.z)
+      const b = W.mapXZ(c.to.x, c.to.z)
+      const e = c.kind === 'stairs' ? k : k * k * (3 - 2 * k)
+      r.set(a.x + (b.x - a.x) * e, a.y + (b.y - a.y) * e + (this.pos.y || 0), a.z + (b.z - a.z) * e)
+    } else if (W.mapXZ) {
+      const a = W.mapXZ(this.pos.x, this.pos.z)
+      r.set(a.x, a.y + (this.pos.y || 0), a.z)
+    } else r.copy(this.pos)
+    this.root.position.copy(r)
     this.root.rotation.y = this.heading
   }
   separate(dt, others) {
@@ -169,7 +236,7 @@ export class Agent {
     }
   }
   chestPos(y = 1.3) {
-    return new THREE.Vector3(this.pos.x, this.pos.y + y, this.pos.z)
+    return new THREE.Vector3(this.rpos.x, this.rpos.y + y, this.rpos.z)
   }
   remove() {
     this.world.scene.remove(this.root)
@@ -212,7 +279,9 @@ export class SurvivorAgent extends Agent {
     const bar = h('div.hpbar', h('i'))
     const prog = h('div.prog', h('i'))
     const el = h('div.alabel.surv', h('span.nm', callName(this.data)), bar, prog)
-    this.label = view.labels.add(el, () => this.pos, { offsetY: 2.2, scene: this.world.scene })
+    this.label = view.labels.add(el, () => this.rpos, { offsetY: 2.2, scene: this.world.scene })
+    // a survivor's name shows on every floor (dimmed off the floor in view)
+    this.label.anyFloor = true
     this.labelBar = bar.firstChild
     this.labelProg = prog
     this.labelEl = el
@@ -283,6 +352,7 @@ export class SurvivorAgent extends Agent {
     sfx('levelup')
   }
   goDown() {
+    this.endClimb()
     this.hp = 0
     this.downed = true
     this.bleed = this.world.mode === 'mission' ? 40 : 1e9
@@ -342,6 +412,14 @@ export class SurvivorAgent extends Agent {
     this.hurtT -= dt
     this.swing = Math.max(0, this.swing - dt * 2.2)
     let mode = 'idle'
+    if (this.climb) {
+      if (this.downed) this.endClimb()
+      else {
+        this.advanceClimb(dt)
+        this.finish(dt, this.climb?.kind === 'lift' ? 'idle' : 'walk')
+        return
+      }
+    }
     if (this.downed) {
       if (W.mode === 'mission' && !W.paused) {
         this.bleed -= dt
@@ -627,7 +705,7 @@ export class ZombieAgent extends Agent {
     this.screamCool = 0
     this.lunge = 0
     const bar = h('div.hpbar.z', h('i'))
-    this.label = view.labels.add(h('div.alabel.zl', bar), () => this.pos, { offsetY: 1.95 * def.scale, scene: world.scene })
+    this.label = view.labels.add(h('div.alabel.zl', bar), () => this.rpos, { offsetY: 1.95 * def.scale, scene: world.scene })
     this.labelBar = bar.firstChild
     this.label.hidden = true
   }
@@ -651,6 +729,7 @@ export class ZombieAgent extends Agent {
     this.burn = Math.max(this.burn, sec)
   }
   die(from) {
+    this.endClimb()
     this.dead = true
     this.deadT = 0
     this.path = null
@@ -699,6 +778,12 @@ export class ZombieAgent extends Agent {
         if (W.sound) this.play('groan', 650, { pitch: this.voice })
         else if (W.nearCamera?.(this.pos)) sfx('groan', 900)
       }
+    }
+    if (this.climb) {
+      this.advanceClimb(dt)
+      this.ch.update(dt, this.climb ? (this.def.crawl ? 'zcrawl' : 'zwalk') : 'zidle', { speed: this.curSpeed })
+      this.sync()
+      return false
     }
     if (this.stun > 0) {
       this.stun -= dt
@@ -791,6 +876,22 @@ export class ZombieAgent extends Agent {
           anim = this.def.crawl ? 'zcrawl' : this.def.speed * boost > 2 ? 'zrun' : 'zwalk'
         }
       }
+    } else if (this.state === 'trail' && this.trail) {
+      // following the squad's prints in the snow back the way they came
+      if (!this.path) {
+        const next = W.tracks?.trailBack(this.trail)
+        if (!next) {
+          this.state = 'idle'
+          this.trail = null
+          this.wanderT = rand(8, 16)
+        } else {
+          this.trail = next
+          this.moveTo(next.x, next.z)
+        }
+      }
+      if (this.path) this.step(dt, 0.7)
+      speed = this.speed * 0.7
+      anim = this.def.crawl ? 'zcrawl' : 'zwalk'
     } else if (this.state === 'investigate') {
       if (!this.path || this.step(dt)) {
         this.state = 'idle'
@@ -853,6 +954,13 @@ export class ZombieAgent extends Agent {
       this.target = best
     } else if (this.state === 'stalk') {
       // keeps hunting its last target even out of sight
+    } else if (this.state === 'idle' && W.trackNear) {
+      const p = W.trackNear(this)
+      if (p) {
+        this.state = 'trail'
+        this.trail = p
+        this.path = null
+      }
     } else if (this.state === 'chase' && (!this.target || this.target.downed || this.dist(this.target) > sight * 1.5)) {
       this.state = 'idle'
       this.target = null

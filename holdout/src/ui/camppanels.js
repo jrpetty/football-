@@ -4,13 +4,13 @@ import { RES, STOCK_KEYS, ITEMS, QUALITY, RARITY, STATIONS, FENCE, EXPANSIONS, G
 import {
   S, day, clockStr, gameDur, capOf, bedCount, canAfford, pay, gain, addItem, itemName, fenceMax, repairFenceCost, repairFence, fenceUpgradeCost, upgradeFence,
   expansionCost, startExpansion, expansionAvailable, claimGoal, survivorLevel, perimeter, save, wipeSave, countType, workersOf, survivorStats,
-  unlockedBy, msDone, fenceUnlocked, listBackups, restoreBackup, exportSave, importSave, NET,
-} from '../game/state.js'
+  unlockedBy, msDone, fenceUnlocked, listBackups, restoreBackup, exportSave, importSave, NET, MODES, modeOf } from '../game/state.js'
 import { upkeepNeeds, campFlow, stationFlow, power, powerNeed, isAutomated, boilerFuel, sourcePower, solarOutput, windOutput, moraleFactors, dailyNeeds, constructSpeed, raidIntel, threatLevel, isBloodMoonDay, sellMult, buyMult, resSellPrice, acceptRecruit, declineRecruit } from '../game/economy.js'
 import { QUALITY as GFXQ } from '../render/pipeline.js'
 import { sfx } from '../core/audio.js'
 import { volumeControl } from './volume.js'
 import { isFullscreen, toggleFullscreen } from './fullscreen.js'
+import { canNotify, askNotify } from './notify.js'
 import { bus, h, fmt, clamp } from '../core/util.js'
 import { icon } from './icons.js'
 import { costList, resChip, bar, qualityTag, itemCard, skillRows, traitTags, seg, plural, resIcon } from './common.js'
@@ -352,7 +352,11 @@ export function renderSettings(ui) {
     row(h('span', { 'data-tip': 'When the frame rate drops, draw at a slightly lower resolution to stay smooth, and go back up when it recovers.' }, 'Auto resolution'), seg([[true, 'On'], [false, 'Off']], st.autoRes !== false, (v) => ((st.autoRes = v), g.applySettings(), ui.closeModal(), ui.openSettings()))),
     row('Volume', volumeControl(g, { wide: true })),
     row('Full screen', seg([[true, 'On'], [false, 'Off']], isFullscreen(), (v) => v !== isFullscreen() && toggleFullscreen(ui).then(() => (ui.closeModal(), ui.openSettings())))),
-    h('p.note', 'Controls: drag or WASD to move, scroll to zoom, right-drag or Q/E to rotate. Space pauses, 1–3 set the speed.'),
+    row(h('span', { 'data-tip': 'Make the menus, panels and buttons bigger or smaller.' }, 'Interface size'), seg([[0.9, '90%'], [1, '100%'], [1.15, '115%'], [1.3, '130%']], st.uiScale || 1, (v) => ((st.uiScale = v), g.applySettings(), ui.closeModal(), ui.openSettings()))),
+    canNotify() ? row(h('span', { 'data-tip': 'A desktop notification when the horde is coming, the horde is here or someone is at the gate, while the game is in a background tab.' }, 'Background alerts'), seg([[true, 'On'], [false, 'Off']], !!st.notify && Notification.permission === 'granted', async (v) => ((st.notify = v && (await askNotify())), v && !st.notify && ui.toast('The browser blocked notifications for this page.', 'bad'), ui.closeModal(), ui.openSettings()))) : null,
+    S && ui.game.running && !S.mp ? row(h('span', { 'data-tip': 'The five-step first day in the camp brief, top right.' }, 'First-day guide'), seg([[true, 'On'], [false, 'Off']], !S.guideOff, (v) => ((S.guideOff = !v), (ui.briefSig = null), ui.closeModal(), ui.openSettings()))) : null,
+    h('p.note', 'Controls: drag or WASD to move, scroll to zoom, right-drag or Q/E to rotate. Space pauses, 1–3 set the speed, 4 skips ahead.'),
+    S && ui.game.running ? row(h('span', { 'data-tip': MODES[modeOf()].desc }, 'Game mode'), h('b', `${MODES[modeOf()].name} · ${MODES[modeOf()].short.toLowerCase()}`)) : null,
     S && !S.over && ui.game.running ? saveSection(ui) : null,
   )
 }
@@ -464,6 +468,7 @@ export function missionReportModal(ui, r) {
     'div',
     h('h2', r.title || (r.result === 'extracted' ? 'Back home' : 'The run went wrong')),
     r.text ? h('p', r.text) : null,
+    r.cleared ? h('div.card.good', h('b', `${r.loc?.name || 'The place'} is clear`), h('span', `Nothing is left alive inside. ${r.liberation}. Hold it with an outpost and it stays that way.`)) : null,
     r.loot && Object.keys(r.loot).length ? h('section.card', h('h3', 'Brought back'), costList(r.loot, { have: false })) : null,
     r.items?.length ? h('section.card', h('h3', 'Items'), h('div.igrid', r.items.map((it) => itemCard(it, { owner: false })))) : null,
     r.lost?.length ? h('p.bad', `Left behind: ${r.lost.join(', ')}`) : null,
@@ -481,6 +486,19 @@ export function victoryModal(ui, held, close) {
     h('div.statgrid', h('div.stat', h('span', 'Days'), h('b', day())), h('div.stat', h('span', 'Survivors'), h('b', alive)), h('div.stat', h('span', 'Zombies killed'), h('b', S.stats.kills)), h('div.stat', h('span', 'Supply runs'), h('b', S.stats.runs)), h('div.stat', h('span', 'Hordes held'), h('b', S.stats.raids)), h('div.stat', h('span', 'Recruited'), h('b', S.stats.recruited))),
     S.stats.memorial.length ? h('section.card', h('h3', 'They did not see it'), S.stats.memorial.slice(0, 10).map((m) => h('div.kv', h('span', `${m.name}, ${m.occ}`), h('small', `Day ${m.day} · ${m.cause}`)))) : null,
     h('p.note', 'You can stay: the camp keeps going, the dead keep coming, and there is always more to build.'),
+    h('div.mactions', h('button.btn.go.big', { onclick: () => close() }, 'Stay with the camp'), h('button.btn.big.ghost', { onclick: () => ui.game.confirmNew() }, 'Start a new camp')),
+  )
+}
+// Every place in the city cleared: the other way the story can end.
+export function cityVictoryModal(ui, close) {
+  const alive = S.survivors.length
+  return h(
+    'div.gameover.victory',
+    h('div.logo.big', 'THE CITY IS YOURS'),
+    h('p', `Day ${day()}. There is nothing left alive in the city that you have not put down. The streets are quiet. People come out of cellars and attics and walk in the open for the first time since it began.`),
+    h('div.statgrid', h('div.stat', h('span', 'Days'), h('b', day())), h('div.stat', h('span', 'Survivors'), h('b', alive)), h('div.stat', h('span', 'Zombies killed'), h('b', S.stats.kills)), h('div.stat', h('span', 'Places searched'), h('b', (S.stats.places || []).length)), h('div.stat', h('span', 'Hordes held'), h('b', S.stats.raids)), h('div.stat', h('span', 'Recruited'), h('b', S.stats.recruited))),
+    S.stats.memorial.length ? h('section.card', h('h3', 'They did not see it'), S.stats.memorial.slice(0, 10).map((m) => h('div.kv', h('span', `${m.name}, ${m.occ}`), h('small', `Day ${m.day} · ${m.cause}`)))) : null,
+    h('p.note', 'You can stay: the camp keeps going, and the dead still drift in from beyond the city.'),
     h('div.mactions', h('button.btn.go.big', { onclick: () => close() }, 'Stay with the camp'), h('button.btn.big.ghost', { onclick: () => ui.game.confirmNew() }, 'Start a new camp')),
   )
 }

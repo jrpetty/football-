@@ -25,7 +25,7 @@ import { genLevel } from '../world/levelgen.js'
 import { OffsetGrid } from '../core/grid.js'
 import { FACE_ROT, SIDEWALK, lotToWorld } from '../world/city.js'
 import { LOCATIONS, CONTAINERS, ITEMS, RARITY, RES, QUALITY, zombieMix, LEVEL_COLORS, UTILITIES, VEHICLES } from '../game/data.js'
-import { NET, playerOf, S, getS, gain, addItem, gainXP, killSurvivor, hour, day, completeGoal, log, survivorStats, makeSurvivor, addMoraleEvent, researchDone, season, leafTurn, addVehicle, markLooted } from '../game/state.js'
+import { NET, playerOf, S, getS, gain, addItem, gainXP, killSurvivor, hour, day, completeGoal, log, survivorStats, makeSurvivor, addMoraleEvent, researchDone, season, leafTurn, addVehicle, markLooted, modeOf, placeOf, isLooted, checkLiberation } from '../game/state.js'
 import { scheduleRaid } from '../game/economy.js'
 import { sfx, setAmbience } from '../core/audio.js'
 import { h, rand, rint, pick, chance, weighted, clamp, fmtTime, bus, fmt } from '../core/util.js'
@@ -36,6 +36,7 @@ import { storyAt, foundStoryItem, rollNote, storyRunEnd, NOTES } from '../game/s
 import { VisionMixin } from './missionvision.js'
 import { deed, creditThrow, nameCheck, callName } from '../game/deeds.js'
 import { soundAt } from '../world/sound.js'
+import { Tracks } from '../world/tracks.js'
 import { CoopMixin, agentStatus, stopTap } from './missioncoop.js'
 import { TrapsMixin } from './missiontraps.js'
 import { volumeControl } from '../ui/volume.js'
@@ -51,7 +52,7 @@ const KEY_SPOTS = new Set(['cabinet', 'counter', 'desk', 'dresser', 'locker', 'f
 // Who can start a car without keys: mechanics, ex-cons, engineers, or
 // anyone with a toolkit or real engineering skill.
 const canHotwire = (a) => ['mechanic', 'excon', 'engineer'].includes(a.data.occ) || (a.st.dismantle >= 1.35 && a.data.skills.tech >= 3) || a.data.skills.tech >= 7
-const CH = { fridge: 1.9, cabinet: 2.1, counter: 1.2, wardrobe: 2.1, dresser: 1.3, desk: 1.2, filing: 1.4, bookshelf: 1.95, trash: 1.0, shelf: 1.8, register: 1.4, toolrack: 1.9, medcab: 1.8, locker: 1.95, gunlocker: 1.8, safe: 0.9, crate: 1.1, pallet: 2.6, milcrate: 1.0, server: 2.0, tv: 1.5, chemshelf: 2.0, toolchest: 1.15, firelocker: 1.95, dumpster: 1.3, pump: 1.9, shed: 2.3, car: 1.5 }
+const CH = { generator: 1.3, aircon: 1.2, heli: 3.2, fridge: 1.9, cabinet: 2.1, counter: 1.2, wardrobe: 2.1, dresser: 1.3, desk: 1.2, filing: 1.4, bookshelf: 1.95, trash: 1.0, shelf: 1.8, register: 1.4, toolrack: 1.9, medcab: 1.8, locker: 1.95, gunlocker: 1.8, safe: 0.9, crate: 1.1, pallet: 2.6, milcrate: 1.0, server: 2.0, tv: 1.5, chemshelf: 2.0, toolchest: 1.15, firelocker: 1.95, dumpster: 1.3, pump: 1.9, shed: 2.3, car: 1.5 }
 const WALL_EXT = 3.1
 const WALL_INT = 2.35
 const CUT_Y = 1.05
@@ -151,14 +152,21 @@ export class Mission {
     // a co-op run: everyone builds the same street from the run's seed
     this.coop = loadout.coop || null
     this.remote = this.coop?.role === 'joiner'
-    this.lv = genLevel(game.city, loc, this.coop ? { rnd: seeded(this.coop.seed) } : {})
+    // loot-once: the street is laid out the same every visit, so what was
+    // taken stays taken
+    this.once = modeOf() === 'once'
+    this.lv = genLevel(game.city, loc, this.once ? { rnd: seeded((loc.lot.seed ^ 0x5bd1e995) >>> 0) } : this.coop ? { rnd: seeded(this.coop.seed) } : {})
     // agents walk in the lot's frame; the grid answers in its own tiles
     this.grid = new OffsetGrid(this.lv.grid, this.lv.x0, this.lv.z0)
+    this.setupFloors()
     this.event = (S.events || []).find((e) => e.locId === loc.id && e.expires > S.time) || null
     // someone the story is looking for may be holed up here
     this.storyHere = storyAt(loc.id)
     if (!this.event && this.storyHere.npc) this.event = { kind: 'distress', npc: this.storyHere.npc.s, story: this.storyHere.npc, locId: loc.id, expires: Infinity }
     this.buildWorld()
+    this.applyPlace()
+    // winter: everyone outdoors leaves tracks in the snow
+    this.tracks = season().heat ? new Tracks(this.scene) : null
     // the squad climbs out of the van
     const E = this.lv.evac
     ids.forEach((id, k) => {
@@ -192,7 +200,7 @@ export class Mission {
     view.rig.minDist = 9
     view.rig.maxDist = 52
     view.rig.pitchCfg = [0.62, 0.92, 34]
-    view.rig.setBounds(this.lv.x0 + 4, this.lv.z0 + 4, this.lv.x0 + this.lv.W - 4, this.lv.z0 + this.lv.H - 4)
+    view.rig.setBounds(this.lv.x0 + 4, this.lv.z0 + 4, this.lv.x0 + this.lv.W0 - 4, this.lv.z0 + this.lv.H - 4)
     view.camera.far = 600
     view.camera.near = 0.5
     view.camera.updateProjectionMatrix()
@@ -208,6 +216,7 @@ export class Mission {
       this.renderSquad()
     })
     this.setupVision()
+    if (this.F) this.setView(0, true)
     this.select(this.squad.find((a) => this.canOrder(a)) || null)
     sfx('truck')
     if (!this.remote) log(`The squad reached ${loc.name}.`, 'story')
@@ -219,22 +228,33 @@ export class Mission {
   // The squad hears: a sound is as loud as it is to the nearest survivor,
   // muffled when a wall stands between, and comes from its side of the screen.
   sound(id, pos, opts = {}) {
-    soundAt(this, id, pos, opts)
+    // heard where it is drawn: a sound two floors up is above you, muffled
+    soundAt(this, id, this.F ? this.rmap(pos.isVector3 ? pos : new THREE.Vector3(pos.x, pos.y || 0, pos.z)) : pos, opts)
   }
   listener(pos) {
     let best = null
     let bd = Infinity
     for (const a of this.squad) {
       if (a.npc || a.dead) continue
-      const d = (a.pos.x - pos.x) ** 2 + (a.pos.z - pos.z) ** 2
+      const p = this.F ? a.rpos : a.pos
+      const d = (p.x - pos.x) ** 2 + (p.z - pos.z) ** 2 + ((p.y || 0) - (pos.y || 0)) ** 2
       if (d < bd) {
         bd = d
-        best = a.pos
+        best = p
       }
     }
     return best || view.rig.target
   }
   wallBetween(a, b) {
+    if (this.F) {
+      // drawn positions: different storeys are always behind a floor
+      const ka = this.inFoot(a.x, a.z) ? Math.floor(((a.y || 0) + 0.3) / this.lv.FH) : 0
+      const kb = this.inFoot(b.x, b.z) ? Math.floor(((b.y || 0) + 0.3) / this.lv.FH) : 0
+      if (ka !== kb) return true
+      const sa = this.toSim(a.x, a.z, ka)
+      const sb = this.toSim(b.x, b.z, kb)
+      return !this.grid.los(sa.x, sa.z, sb.x, sb.z)
+    }
     return !this.grid.los(a.x, a.z, b.x, b.z)
   }
   hearingK() {
@@ -242,11 +262,125 @@ export class Mission {
     const h = Math.max(0, ...this.squad.filter((a) => !a.npc && !a.downed).map((a) => a.st?.hearing || 0))
     return h ? Math.max(0.8, Math.min(1.5, h / 12)) : 1
   }
+  // ---------------------------------------------------------------- floors
+  // A tall building's upper floors live in strips of the grid past the
+  // street (see levelgen). Everything is simulated there, in "sim" x; only
+  // drawing moves it: a floor's things are drawn shifted back over the
+  // building and lifted to their storey. Things that sit still go in that
+  // floor's group (levelRoot); moving things map their position each frame.
+  setupFloors() {
+    const lv = this.lv
+    this.view = 0
+    this.levelRoot = [this.scene]
+    if (lv.levels <= 1) {
+      this.F = null
+      return
+    }
+    this.F = lv
+    for (let k = 1; k < lv.levels; k++) {
+      const g = new THREE.Group()
+      g.position.set(-lv.off[k], k * lv.FH, 0)
+      g.visible = false
+      this.scene.add(g)
+      this.levelRoot.push(g)
+    }
+    // the building's footprint where it stands, for drawing and picking
+    const B = lv.bld
+    this.foot = { x0: lv.x0 + B.i0, z0: lv.z0 + B.j0, x1: lv.x0 + B.i1 + 1, z1: lv.z0 + B.j1 + 1 }
+    // effects and labels placed in sim space are drawn where they belong
+    for (const name of ['burst', 'blood', 'decal', 'flash', 'muzzle', 'smoke', 'ember', 'sparks', 'dust', 'explosion', 'ring']) {
+      const orig = this.fx[name].bind(this.fx)
+      this.fx[name] = (pos, ...rest) => {
+        const p = this.rmap(pos)
+        if (!this.seenAt(p)) return
+        return orig(p, ...rest)
+      }
+    }
+    const tracer = this.fx.tracer.bind(this.fx)
+    this.fx.tracer = (a, b, ...rest) => {
+      const p = this.rmap(a)
+      if (!this.seenAt(p)) return
+      return tracer(p, this.rmap(b), ...rest)
+    }
+    this.scene.userData.mapPos = (p) => this.rmap(p)
+    this.scene.userData.labelGate = (p) => this.seenAt(p)
+  }
+  // which level a sim x is on
+  levelOf(x) {
+    return this.F ? this.lv.grid.floorOf(Math.floor(x - this.lv.x0)) : 0
+  }
+  // sim -> drawn position
+  mapXZ(x, z) {
+    const k = this.levelOf(x)
+    return k ? { x: x - this.lv.off[k], y: k * this.lv.FH, z } : { x, y: 0, z }
+  }
+  rmap(v) {
+    if (!this.F || !v) return v
+    const k = this.levelOf(v.x)
+    if (!k) return v
+    return new THREE.Vector3(v.x - this.lv.off[k], (v.y || 0) + k * this.lv.FH, v.z)
+  }
+  inFoot(x, z, m = 0.6) {
+    const f = this.foot
+    return !!f && x > f.x0 - m && x < f.x1 + m && z > f.z0 - m && z < f.z1 + m
+  }
+  // is a sim position on the floor being looked at (or out in the street)?
+  onView(x, z) {
+    if (!this.F) return true
+    const k = this.levelOf(x)
+    return k === this.view || (k === 0 && !this.inFoot(x, z, 0))
+  }
+  // is a drawn position on show? (inside the building only the viewed floor is)
+  seenAt(p) {
+    if (!this.F || !p) return true
+    if (!this.inFoot(p.x, p.z)) return true
+    const k = clamp(Math.floor(((p.y || 0) + 0.3) / this.lv.FH), 0, this.lv.levels - 1)
+    return k === this.view
+  }
+  // drawn position -> sim, on a given level (inside the footprint)
+  toSim(x, z, k) {
+    return k && this.inFoot(x, z, 0) ? { x: x + this.lv.off[k], z } : { x, z }
+  }
+  // distance between agents, counting the stairs between floors
+  fdist(a, b) {
+    if (!this.F) return Math.hypot(a.pos.x - b.pos.x, a.pos.z - b.pos.z)
+    const ka = this.levelOf(a.pos.x)
+    const kb = this.levelOf(b.pos.x)
+    if (ka === kb) return Math.hypot(a.pos.x - b.pos.x, a.pos.z - b.pos.z)
+    const pa = this.mapXZ(a.pos.x, a.pos.z)
+    const pb = this.mapXZ(b.pos.x, b.pos.z)
+    return Math.hypot(pa.x - pb.x, pa.z - pb.z) + Math.abs(ka - kb) * 6
+  }
+  // Look at a floor: the floors above it disappear, its walls facing the
+  // camera drop to waist height, and the camera rises to it.
+  setView(k, snap = false) {
+    if (!this.F) return
+    k = clamp(k, 0, this.lv.levels - 1)
+    if (k === this.view && !snap) return
+    this.view = k
+    for (let q = 1; q < this.levelRoot.length; q++) this.levelRoot[q].visible = q <= k
+    for (let q = 0; q < this.cutUs.length; q++) this.cutUs[q].n.value = q === k ? this.cutN : 0
+    view.rig.levelY = k * this.lv.FH
+    if (snap) {
+      view.rig.goal.y = view.rig.levelY
+      view.rig.target.y = view.rig.levelY
+    }
+    this.fowU && (this.fowU.uFlView.value = k)
+    this.renderFloorBar?.()
+    this.drawMinimap?.()
+  }
+  floorName(k) {
+    if (!this.F) return ''
+    if (k === 0) return 'Ground floor'
+    if (this.lv.roof && k === this.lv.levels - 1) return 'Roof'
+    return `Floor ${k + 1}`
+  }
   // Ground height under a point: building floors, raised sidewalks.
   floorY(x, z) {
     const lv = this.lv
     const [i, j] = this.tile(x, z)
     for (const B of lv.buildings) if (i >= B.i0 && i <= B.i1 && j >= B.j0 && j <= B.j1) return 0.07
+    for (const B of lv.levelBlds) if (B && i >= B.i0 && i <= B.i1 && j >= B.j0 && j <= B.j1) return 0.07
     if ((z >= lv.zFront && z < lv.zRoad0) || (z >= lv.zRoad1 && z < lv.zFar)) return 0.15
     return 0
   }
@@ -275,7 +409,11 @@ export class Mission {
       rects.push(new THREE.Vector4(cx, cz, B.hx, B.hz))
     }
     while (rects.length < 8) rects.push(new THREE.Vector4(1e5, 1e5, 0, 0))
-    this.cutU = { rects: { value: rects }, n: { value: Math.min(8, lv.buildings.length) }, dir: { value: new THREE.Vector2(0, 1) }, y: { value: CUT_Y } }
+    this.cutN = Math.min(8, lv.buildings.length)
+    this.cutU = { rects: { value: rects }, n: { value: this.cutN }, dir: { value: new THREE.Vector2(0, 1) }, y: { value: CUT_Y } }
+    // each floor cuts its own walls, and only the floor being looked at does
+    this.cutUs = [this.cutU]
+    for (let k = 1; k < (this.F ? lv.levels : 1); k++) this.cutUs.push({ rects: this.cutU.rects, n: { value: 0 }, dir: this.cutU.dir, y: this.cutU.y })
     this.cutMats = new Map()
     this.buildGround()
     this.buildStreet()
@@ -284,26 +422,28 @@ export class Mission {
     this.buildNeighbours()
     this.buildContainers()
     this.buildVan()
+    this.buildPowerLights()
   }
-  cutMat(key) {
-    if (!this.cutMats.has(key)) this.cutMats.set(key, cutaway(mat(key), this.cutU))
-    return this.cutMats.get(key)
+  cutMat(key, k = 0) {
+    const id = key + '|' + k
+    if (!this.cutMats.has(id)) this.cutMats.set(id, cutaway(mat(key), this.cutUs[k] || this.cutU))
+    return this.cutMats.get(id)
   }
   buildGround() {
     const lv = this.lv
-    const size = Math.max(lv.W, lv.H) + 120
-    const cx = lv.x0 + lv.W / 2
+    const size = Math.max(lv.W0, lv.H) + 120
+    const cx = lv.x0 + lv.W0 / 2
     const cz = lv.z0 + lv.H / 2
     const sp = new Splat(cx - size / 2, cz - size / 2, size, 0.5)
     this.splat = sp
     // worn yards and dirt by the fences
-    for (let k = 0; k < 60; k++) sp.circle(lv.x0 + Math.random() * lv.W, lv.z0 + Math.random() * lv.H, 1 + Math.random() * 3, Math.random() < 0.6 ? 2 : 0, 0.5 + Math.random() * 0.3, 2, 1)
+    for (let k = 0; k < 60; k++) sp.circle(lv.x0 + Math.random() * lv.W0, lv.z0 + Math.random() * lv.H, 1 + Math.random() * 3, Math.random() < 0.6 ? 2 : 0, 0.5 + Math.random() * 0.3, 2, 1)
     sp.rect(-lv.fw / 2 - 0.5, -lv.fd / 2 - 0.5, -lv.fw / 2 + 1.2, lv.zFront, 0, 0.6, 1.5, 0.8)
     sp.rect(lv.fw / 2 - 1.2, -lv.fd / 2 - 0.5, lv.fw / 2 + 0.5, lv.zFront, 0, 0.6, 1.5, 0.8)
     for (const p of lv.pave) if (p.mat === 'gravel') sp.rect(p.x0, p.z0, p.x1, p.z1, 1, 1, 1, 0.5)
     sp.upload()
     this.terrain = new Terrain(this.scene, { cx, cz, size, segs: 160, splat: sp, height: (x, z) => {
-      const dx = Math.max(lv.x0 - x, 0, x - (lv.x0 + lv.W))
+      const dx = Math.max(lv.x0 - x, 0, x - (lv.x0 + lv.W0))
       const dz = Math.max(lv.z0 - z, 0, z - (lv.z0 + lv.H))
       const d = Math.hypot(dx, dz)
       return d > 0 ? Math.min(1, d / 30) * (Math.sin(x * 0.11) * Math.cos(z * 0.09) * 1.2 + 1.4) : 0
@@ -314,7 +454,7 @@ export class Mission {
     const lv = this.lv
     const b = new Builder()
     const X0 = lv.x0 - 40
-    const X1 = lv.x0 + lv.W + 40
+    const X1 = lv.x0 + lv.W0 + 40
     const len = X1 - X0
     const xm = (X0 + X1) / 2
     b.box(len, 0.1, lv.roadW, { mat: 'road', color: '#8e8c88', x: xm, y: -0.03, z: (lv.zRoad0 + lv.zRoad1) / 2, ao: 0, shadow: false })
@@ -366,44 +506,65 @@ export class Mission {
     }
     this.addStatic(pb)
   }
-  addStatic(b) {
+  addStatic(b, root = this.scene) {
     const g = b.build({ index: false })
     g.traverse((o) => {
       if (o.isMesh) o.matrixAutoUpdate = false
     })
-    this.scene.add(g)
+    root.add(g)
     return g
   }
 
   // ---------------------------------------------------------------- the building
   buildBuilding() {
+    const levels = this.F ? this.lv.levels : 1
+    for (let k = 0; k < levels; k++) this.buildLevel(k)
+  }
+  // One storey: the ground floor with the street, or one floor's strip (built
+  // where it is in the grid; its group lifts it over the building).
+  buildLevel(k) {
     const lv = this.lv
     const L = this.def
     const W = lv.W
+    const c0 = k === 0 ? 0 : lv.W0 + (k - 1) * lv.regionW
+    const c1 = k === 0 ? lv.W0 : c0 + lv.regionW
+    const inLvl = (i) => i >= c0 && i < c1
+    const xIn = (x) => inLvl(Math.floor(x - lv.x0))
+    const Bk = k ? lv.levelBlds[k] : null
+    const roof = !!Bk?.roof
+    const cm = (key) => this.cutMat(key, k)
     const r = seeded(lv.loc.lot.seed + 5)
     const b = new Builder()
     const ext = EXT_MAT[L.ext] || 'plaster'
     const extColor = L.extColor ? L.extColor[Math.floor(r() * L.extColor.length)] : ext === 'brick' ? '#ffffff' : L.wall
     const isW = (i, j) => i >= 0 && j >= 0 && i < W && j < lv.H && lv.walls[j * W + i] === 1
-    const isExt = (i, j) => lv.buildings.some((B) => (i === B.i0 || i === B.i1) && j >= B.j0 && j <= B.j1) || lv.buildings.some((B) => (j === B.j0 || j === B.j1) && i >= B.i0 && i <= B.i1)
+    const blds = k ? [Bk] : lv.buildings
+    const isExt = (i, j) => blds.some((B) => (i === B.i0 || i === B.i1) && j >= B.j0 && j <= B.j1) || blds.some((B) => (j === B.j0 || j === B.j1) && i >= B.i0 && i <= B.i1)
     const roomCol = (i, j) => {
       const k = i >= 0 && j >= 0 && i < W && j < lv.H ? lv.roomAt[j * W + i] : -1
       return k >= 0 ? lv.rooms[k].def.wall : null
     }
     const winAt = new Map(lv.windows.map((w) => [w.i + ',' + w.j, w]))
     const doorAt = new Map(lv.doors.map((d) => [d.i + ',' + d.j, d]))
-    // foundations and floors
-    for (const B of lv.buildings) {
+    // foundations, or the floor slab with the stairwell's opening in it
+    const hole = this.F ? this.stairHole(k) : null
+    for (const B of blds) {
       const c0 = this.center(B.i0, B.j0)
       const c1 = this.center(B.i1, B.j1)
-      b.box(c1.x - c0.x + 1.3, 0.1, c1.z - c0.z + 1.3, { mat: 'concrete', color: '#8e8a82', x: (c0.x + c1.x) / 2, y: 0, z: (c0.z + c1.z) / 2, ao: 0 })
+      if (!k) b.box(c1.x - c0.x + 1.3, 0.1, c1.z - c0.z + 1.3, { mat: 'concrete', color: '#8e8a82', x: (c0.x + c1.x) / 2, y: 0, z: (c0.z + c1.z) / 2, ao: 0 })
+      else
+        for (const q of rectMinus({ x0: c0.x - 0.65, z0: c0.z - 0.65, x1: c1.x + 0.65, z1: c1.z + 0.65 }, hole))
+          b.box(q.x1 - q.x0, 0.26, q.z1 - q.z0, { mat: 'concrete', color: '#8e8a82', x: (q.x0 + q.x1) / 2, y: -0.08, z: (q.z0 + q.z1) / 2, ao: 0 })
     }
     for (const room of lv.rooms) {
+      if (!inLvl(room.i0)) continue
       const c0 = this.center(room.i0, room.j0)
       const c1 = this.center(room.i1, room.j1)
       const fl = room.corridor ? 'linoleum' : room.def.floor
-      const tint = { tiles: '#e8e4dc', planks: '#ffffff', carpet: pick(['#8a6a5a', '#6a7a8a', '#7a8a6a', '#a89070']), checker: '#ffffff', linoleum: '#d8d4c8', concrete: '#b8b4ac' }[fl] || '#ffffff'
-      b.box(c1.x - c0.x + 1.05, 0.02, c1.z - c0.z + 1.05, { mat: fl, color: tint, x: (c0.x + c1.x) / 2, y: 0.06, z: (c0.z + c1.z) / 2, ao: 0, shadow: false })
+      const tint = { tiles: '#e8e4dc', planks: '#ffffff', carpet: pick(['#8a6a5a', '#6a7a8a', '#7a8a6a', '#a89070']), checker: '#ffffff', linoleum: '#d8d4c8', concrete: '#b8b4ac', gravel: '#9a968c' }[fl] || '#ffffff'
+      for (const q of rectMinus({ x0: c0.x - 0.525, z0: c0.z - 0.525, x1: c1.x + 0.525, z1: c1.z + 0.525 }, hole))
+        b.box(q.x1 - q.x0, 0.02, q.z1 - q.z0, { mat: fl, color: tint, x: (q.x0 + q.x1) / 2, y: 0.06, z: (q.z0 + q.z1) / 2, ao: 0, shadow: false })
+      if (room.type === 'roof' || room.type === 'stairs') continue
       // dirt, blood and debris on the floor
       for (let k = 0; k < Math.floor(((room.i1 - room.i0 + 1) * (room.j1 - room.j0 + 1)) / 14); k++) {
         const x = c0.x - 0.4 + r() * (c1.x - c0.x + 0.8)
@@ -415,15 +576,15 @@ export class Mission {
         else if (q < 0.8) b.cyl(0.035, 0.035, 0.11, { mat: 'metal', color: '#c8ccd0', x, y: 0.105, z, rz: Math.PI / 2, ry: r() * 3, seg: 8 })
       }
     }
-    // walls
-    const h = (i, j) => (isExt(i, j) ? WALL_EXT : WALL_INT)
+    // walls (a roof has a parapet, and the stairwell's hut)
+    const h = (i, j) => (isExt(i, j) ? (roof ? 1.1 : WALL_EXT) : roof ? 2.6 : WALL_INT)
     for (let j = 0; j < lv.H; j++) {
-      for (let i = 0; i < W; i++) {
+      for (let i = c0; i < c1; i++) {
         if (!isW(i, j)) continue
         const c = this.center(i, j)
         const ex = isExt(i, j)
         const H = h(i, j)
-        const core = ex ? { material: this.cutMat(ext), color: extColor } : { mat: 'plaster', color: '#c8c0b0' }
+        const core = ex ? { material: cm(ext), color: extColor } : { mat: 'plaster', color: roof ? '#a8a49a' : '#c8c0b0' }
         const win = winAt.get(i + ',' + j)
         // post at the tile centre
         b.box(T_WALL, H, T_WALL, { ...core, x: c.x, y: 0.05 + H / 2, z: c.z })
@@ -446,9 +607,9 @@ export class Mission {
             b.box(w, H - 2.15, d, { ...core, x: ax, y: 0.05 + 2.15 + (H - 2.15) / 2, z: az })
             const broken = (i * 7 + j * 3) % 5 === 0
             const boarded = (i * 5 + j) % 7 === 0
-            if (boarded) b.box(alongX ? 0.52 : 0.06, 0.14, alongX ? 0.06 : 0.52, { material: this.cutMat('planks'), color: '#a8906c', x: ax + (alongX ? 0 : (dj ? 0 : 0)), y: 0.05 + 1.3 + (di + dj) * 0.15, z: az })
-            if (!broken) b.box(alongX ? 0.5 : 0.04, 1.25, alongX ? 0.04 : 0.5, { material: this.cutMat('glass'), color: '#b8c8cc', x: ax, y: 0.05 + 1.53, z: az })
-            b.box(alongX ? 0.5 : T_WALL + 0.08, 0.06, alongX ? T_WALL + 0.08 : 0.5, { material: this.cutMat('paint'), color: '#e8e4dc', x: ax, y: 0.05 + 0.92, z: az })
+            if (boarded) b.box(alongX ? 0.52 : 0.06, 0.14, alongX ? 0.06 : 0.52, { material: cm('planks'), color: '#a8906c', x: ax + (alongX ? 0 : (dj ? 0 : 0)), y: 0.05 + 1.3 + (di + dj) * 0.15, z: az })
+            if (!broken) b.box(alongX ? 0.5 : 0.04, 1.25, alongX ? 0.04 : 0.5, { material: cm('glass'), color: '#b8c8cc', x: ax, y: 0.05 + 1.53, z: az })
+            b.box(alongX ? 0.5 : T_WALL + 0.08, 0.06, alongX ? T_WALL + 0.08 : 0.5, { material: cm('paint'), color: '#e8e4dc', x: ax, y: 0.05 + 0.92, z: az })
             continue
           }
           b.box(w, H, d, { ...core, x: ax, y: 0.05 + H / 2, z: az })
@@ -461,9 +622,9 @@ export class Mission {
             const fx = alongX ? ax : c.x + s * (T_WALL / 2 + 0.006)
             const fz = alongX ? c.z + s * (T_WALL / 2 + 0.006) : az
             const fh = ex ? H : WALL_INT
-            const faceMat = ex ? { material: this.cutMat('plaster') } : { mat: 'plaster' }
+            const faceMat = ex ? { material: cm('plaster') } : { mat: 'plaster' }
             b.box(alongX ? 0.5 : 0.012, fh - 0.02, alongX ? 0.012 : 0.5, { ...faceMat, color: col, x: fx, y: 0.05 + fh / 2, z: fz, ao: 0.1 })
-            b.box(alongX ? 0.5 : 0.03, 0.12, alongX ? 0.03 : 0.5, { ...(ex ? { material: this.cutMat('paint') } : { mat: 'paint' }), color: '#5a4a3e', x: alongX ? ax : c.x + s * (T_WALL / 2 + 0.015), y: 0.12, z: alongX ? c.z + s * (T_WALL / 2 + 0.015) : az })
+            b.box(alongX ? 0.5 : 0.03, 0.12, alongX ? 0.03 : 0.5, { ...(ex ? { material: cm('paint') } : { mat: 'paint' }), color: '#5a4a3e', x: alongX ? ax : c.x + s * (T_WALL / 2 + 0.015), y: 0.12, z: alongX ? c.z + s * (T_WALL / 2 + 0.015) : az })
           }
         }
         if (!ex) b.box(T_WALL + 0.03, 0.04, T_WALL + 0.03, { mat: 'plain', color: '#3a3632', x: c.x, y: 0.05 + H + 0.02, z: c.z, shadow: false })
@@ -473,16 +634,16 @@ export class Mission {
     }
     // door frames, open doors, lintels
     for (const d of lv.doors) {
-      if (d.passage) continue
+      if (d.passage || !inLvl(d.i)) continue
       const c = this.center(d.i, d.j)
       const ex = d.ext
-      const H = ex ? WALL_EXT : WALL_INT
+      const H = ex ? WALL_EXT : roof ? 2.6 : WALL_INT
       const alongX = d.horiz
-      const m = ex ? (k) => ({ material: this.cutMat(k) }) : (k) => ({ mat: k })
+      const m = ex ? (k) => ({ material: cm(k) }) : (k) => ({ mat: k })
       const garage = ex && d.wide >= 3
       const top = garage ? 2.6 : 2.15
       // head wall over the opening
-      b.box(alongX ? 1.0 : T_WALL, H - top, alongX ? T_WALL : 1.0, { ...(ex ? { material: this.cutMat(EXT_MAT[L.ext] || 'plaster'), color: extColor } : { mat: 'plaster', color: '#c8c0b0' }), x: c.x, y: 0.05 + top + (H - top) / 2, z: c.z })
+      b.box(alongX ? 1.0 : T_WALL, H - top, alongX ? T_WALL : 1.0, { ...(ex ? { material: cm(EXT_MAT[L.ext] || 'plaster'), color: extColor } : { mat: 'plaster', color: '#c8c0b0' }), x: c.x, y: 0.05 + top + (H - top) / 2, z: c.z })
       if (d.part === 0 || d.wide === 1) {
         const jx = alongX ? c.x - 0.47 : c.x
         const jz = alongX ? c.z : c.z - 0.47
@@ -512,30 +673,240 @@ export class Mission {
     // a name board over the front door of shops and public buildings, kept
     // within the front wall (homes don't get one)
     const B = lv.bld
-    if (B && !B.prefab && this.loc.type !== 'house') {
+    if (!k && B && !B.prefab && this.loc.type !== 'house') {
       const dc = this.center(B.door.i, B.door.j)
       const left = this.center(B.i0, B.j1).x
       const right = this.center(B.i1, B.j1).x
       const w = Math.min(7, (right - left) * 0.5, 2 * Math.min(dc.x - left, right - dc.x) - 0.4)
       if (w > 1.5) {
         const name = (this.loc.name || '').split(' ').slice(-2).join(' ').toUpperCase()
-        b.box(w + 0.16, 0.86, 0.16, { material: this.cutMat('paint'), color: '#2a2e2a', x: dc.x, y: WALL_EXT + 0.5, z: dc.z + 0.2 })
+        b.box(w + 0.16, 0.86, 0.16, { material: cm('paint'), color: '#2a2e2a', x: dc.x, y: WALL_EXT + 0.5, z: dc.z + 0.2 })
         b.plane(w, 0.7, { material: cutaway(plateMat(name, '#e8e0c8', '#2a2420'), this.cutU), x: dc.x, y: WALL_EXT + 0.5, z: dc.z + 0.285, shadow: false })
       }
     }
-    this.addStatic(b)
+    if (this.F) this.buildStairs(b, k)
+    if (roof && lv.helipad) helipadMarks(b, lv.helipad)
+    this.addStatic(b, this.levelRoot[k])
     // furniture
     const fb = new Builder()
-    for (const d of lv.decor) addDecor(fb, d.kind, { x: d.x, y: 0.07, z: d.z, ry: d.rot }, Math.floor(d.x * 13 + d.z * 7) & 0xffff)
-    this.addStatic(fb)
+    for (const d of lv.decor) if (xIn(d.x)) addDecor(fb, d.kind, { x: d.x, y: 0.07, z: d.z, ry: d.rot }, Math.floor(d.x * 13 + d.z * 7) & 0xffff)
+    this.addStatic(fb, this.levelRoot[k])
     // ceiling lights as dark fittings (and a few flickering emergency lights at night)
-    this.emergency = []
+    this.emergency ||= []
     for (const room of lv.rooms) {
-      if (room.corridor || chance(0.6)) continue
+      if (room.corridor || !inLvl(room.i0) || chance(0.6)) continue
       const c0 = this.center(room.i0, room.j0)
       const c1 = this.center(room.i1, room.j1)
       this.emergency.push({ x: (c0.x + c1.x) / 2, z: (c0.z + c1.z) / 2 })
     }
+  }
+
+  // ---------------------------------------------------------------- the place remembered
+  applyPlace() {
+    const P = (this.place = placeOf(this.loc.id))
+    const base = this.lv.containers.length
+    const list = this.containers.slice(0, base)
+    const done = (c) => {
+      c.searched = true
+      c.open = c.openGoal = 1
+      c.label?.el.classList.add('done')
+    }
+    if (this.once && (P.s || P.g)) {
+      const gone = new Set(P.g || [])
+      const searched = new Set(P.s || [])
+      const rebuild = new Set()
+      for (const c of list) {
+        if (gone.has(c.id)) {
+          c.gone = true
+          for (const [i, j] of c.tiles) this.lv.grid.set(i, j, 0, 0, null)
+          c.label?.remove()
+          rebuild.add(c.bucket)
+          continue
+        }
+        if (searched.has(c.id)) {
+          done(c)
+          rebuild.add(c.bucket)
+        }
+        const st = P.st?.[c.id]
+        if (st?.length) {
+          c.stash = st
+          c.label?.el.classList.add('stash')
+        }
+      }
+      for (const k of rebuild) this.buildBucket(k)
+    } else if (!this.once && isLooted(this.loc.id)) {
+      // back before it filled up again: only the infected are new
+      for (const c of list) done(c)
+      for (const k of this.buckets.keys()) this.buildBucket(k)
+      this.emptyRun = true
+    }
+  }
+  // What the squad leaves behind: the fittings it emptied (loot-once) and the
+  // infected still alive. Nobody left alive and the squad got out: clear.
+  recordPlace(result) {
+    if (this.remote) return false
+    const P = placeOf(this.loc.id)
+    const alive = this.zombies.filter((z) => !z.dead).length
+    P.left = alive
+    P.at = S.time
+    P.visits = (P.visits || 0) + 1
+    if (this.once) {
+      const base = this.lv.containers.length
+      const s = []
+      const g = []
+      const st = {}
+      let n = 0
+      let fin = 0
+      for (const c of this.containers.slice(0, base)) {
+        n++
+        if (c.gone) {
+          g.push(c.id)
+          fin++
+          continue
+        }
+        if (c.searched) s.push(c.id)
+        if (c.stash?.length) st[c.id] = c.stash
+        else if (c.searched) fin++
+      }
+      Object.assign(P, { s, g, st, n, done: fin })
+    }
+    if (result === 'extracted' && alive === 0 && !P.cleared) {
+      P.cleared = true
+      P.clearedDay = day()
+      return true
+    }
+    return false
+  }
+
+  // ---------------------------------------------------------------- power
+  // The backup generator: loud to start, and it hums while it runs. It lights
+  // the building (better sight after dark inside) and runs the lift, which the
+  // infected cannot use.
+  powerOn(c, remote = false) {
+    if (this.powered) return
+    this.powered = true
+    c.searched = true
+    c.openGoal = 1
+    c.label?.el.classList.add('done', 'power')
+    this.genAt = { x: c.x, z: c.z }
+    for (const L of this.lv.links) if (L.kind === 'lift') L.off = false
+    for (const g of this.powerGroups || []) g.visible = true
+    view.labels.float(this.scene, new THREE.Vector3(c.x, 1.7, c.z), 'Power on', 'good')
+    this.sound('dismantle', c, { loud: 1.2 })
+    sfx('truck')
+    if (remote) return
+    this.noise(c.x, c.z, 24)
+    this.toast('The generator coughs into life. The lights come on and the lift runs, but everything nearby heard it.', 'warn')
+  }
+  powerOff() {
+    this.powered = false
+    for (const L of this.lv.links) if (L.kind === 'lift') L.off = true
+    for (const g of this.powerGroups || []) g.visible = false
+    this.toast('The power is off. The lift stops.')
+  }
+  // a light on the back wall of every room, dark until the power is on
+  buildPowerLights() {
+    if (!this.F) return
+    const lv = this.lv
+    this.powerGroups = []
+    for (let k = 0; k < lv.levels; k++) {
+      const b = new Builder()
+      const c0 = k === 0 ? 0 : lv.W0 + (k - 1) * lv.regionW
+      const c1 = k === 0 ? lv.W0 : c0 + lv.regionW
+      for (const r of lv.rooms) {
+        if (r.i0 < c0 || r.i0 >= c1 || r.type === 'roof') continue
+        if (k === 0 && r.B !== lv.bld) continue
+        const ci = Math.round((r.i0 + r.i1) / 2)
+        if (lv.walls[(r.j0 - 1) * lv.W + ci] !== 1) continue
+        const p = this.center(ci, r.j0)
+        b.box(0.42, 0.16, 0.1, { mat: 'paint', color: '#d8d4c8', x: p.x, y: 2.25, z: p.z - 0.4 })
+        b.box(0.36, 0.1, 0.03, { mat: 'glowWhite', color: '#ffffff', x: p.x, y: 2.24, z: p.z - 0.34, shadow: false })
+      }
+      // the lift's call buttons light up
+      const pan = this.zoneAt(1.5, 2.55, k)
+      b.box(0.05, 0.05, 0.06, { mat: 'glowAmber', color: '#ffffff', x: pan.x + lv.stairs.sx * 0.1, y: 1.3, z: pan.z, shadow: false })
+      const g = this.addStatic(b, this.levelRoot[k])
+      g.visible = false
+      this.powerGroups.push(g)
+    }
+  }
+
+  // ---------------------------------------------------------------- stairwell
+  // the centre of stairwell tile (a, b) on level k, in sim space
+  zoneAt(a, b, k) {
+    const Z = this.lv.stairs
+    return { x: this.lv.x0 + Z.ci + Z.sx * a + this.lv.off[k] + 0.5, z: this.lv.z0 + Z.cj + Z.sz * b + 0.5 }
+  }
+  laneUp(k) {
+    return k < this.lv.levels - 1 ? (k % 2 ? 2 : 0) : -1
+  }
+  laneHole(k) {
+    return k >= 1 ? ((k - 1) % 2 ? 2 : 0) : -1
+  }
+  // the opening in level k's floor where the flight from below comes up
+  stairHole(k) {
+    const H = this.laneHole(k)
+    if (H < 0) return null
+    const a = this.zoneAt(0.5, H - 0.5, k)
+    const c = this.zoneAt(3.5, H + 0.5, k)
+    return { x0: Math.min(a.x, c.x), z0: Math.min(a.z, c.z), x1: Math.max(a.x, c.x), z1: Math.max(a.z, c.z) }
+  }
+  buildStairs(b, k) {
+    const FH = this.lv.FH
+    const Z = this.lv.stairs
+    const P = (a, bb) => this.zoneAt(a, bb, k)
+    const rail = (pa, pb, ya, yb) => {
+      b.beam([pa.x, ya + 0.95, pa.z], [pb.x, yb + 0.95, pb.z], 0.05, 0.05, { mat: 'steel', color: '#5a5e60', round: true })
+      b.beam([pa.x, ya + 0.5, pa.z], [pb.x, yb + 0.5, pb.z], 0.03, 0.03, { mat: 'steel', color: '#5a5e60', round: true })
+      const n = Math.max(2, Math.round(Math.hypot(pb.x - pa.x, pb.z - pa.z) / 1.1) + 1)
+      for (let q = 0; q < n; q++) {
+        const t = q / (n - 1)
+        const y = ya + (yb - ya) * t
+        b.box(0.05, 0.95, 0.05, { mat: 'steel', color: '#5a5e60', x: pa.x + (pb.x - pa.x) * t, y: y + 0.475, z: pa.z + (pb.z - pa.z) * t })
+      }
+    }
+    // the flight up: twelve steps from the foot (a = 3.5) to the top (a = 0.5)
+    const U = this.laneUp(k)
+    if (U >= 0) {
+      const steps = 12
+      const rise = FH / steps
+      for (let q = 0; q < steps; q++) {
+        const a = 3.5 - (q + 0.5) * (3 / steps)
+        const c = P(a, U)
+        const hh = (q + 1) * rise
+        b.box(3 / steps + 0.01, hh, 0.96, { mat: 'concrete', color: q % 2 ? '#a8a49a' : '#b2aea4', x: c.x, y: 0.05 + hh / 2, z: c.z })
+        b.box(3 / steps + 0.02, 0.025, 0.98, { mat: 'rubber', color: '#3a3a38', x: c.x - Z.sx * 0.03, y: 0.05 + hh + 0.01, z: c.z, shadow: false })
+      }
+      // a handrail on the open sides
+      for (const side of U === 0 ? [0.5] : [-0.5, 0.5]) rail(P(3.5, U + side), P(0.5, U + side), 0.05, 0.05 + FH)
+    }
+    // the opening where the flight from below arrives
+    const H = this.laneHole(k)
+    if (H >= 0) {
+      for (const side of H === 0 ? [0.5] : [-0.5, 0.5]) rail(P(3.5, H + side), P(0.5, H + side), 0.05, 0.05)
+      rail(P(3.5, H - 0.5), P(3.5, H + 0.5), 0.05, 0.05)
+      // the edge of the slab
+      const e = P(2, H)
+      b.box(3.05, 0.26, 0.04, { mat: 'concrete', color: '#7a766e', x: e.x, y: -0.08, z: e.z + Z.sz * 0.5 })
+    }
+    // the lift: a car at (1, 3), the shaft's machinery at (0, 3)
+    const shaft = P(0, 3)
+    b.box(0.96, k === this.lv.levels - 1 ? 1.4 : FH - 0.1, 0.96, { mat: 'steel', color: '#6a6e70', x: shaft.x, y: 0.05 + (k === this.lv.levels - 1 ? 0.7 : (FH - 0.1) / 2), z: shaft.z })
+    const car = P(1, 3)
+    const back = P(1, 3.47)
+    const side = P(1, 2.53)
+    b.box(1.0, 2.5, 0.06, { mat: 'steel', color: '#8a8e90', x: back.x, y: 0.05 + 1.25, z: back.z })
+    b.box(1.0, 2.5, 0.06, { mat: 'steel', color: '#8a8e90', x: side.x, y: 0.05 + 1.25, z: side.z })
+    b.box(1.0, 0.06, 1.0, { mat: 'steel', color: '#7a7e80', x: car.x, y: 0.05 + 2.5, z: car.z })
+    b.box(0.96, 0.03, 0.96, { mat: 'steel', color: '#5a5e60', x: car.x, y: 0.07, z: car.z, shadow: false })
+    const front = P(1.47, 3)
+    for (const sb of [-0.45, 0.45]) b.box(0.08, 2.5, 0.1, { mat: 'chrome', color: '#b0b4b8', x: front.x, y: 0.05 + 1.25, z: front.z + Z.sz * sb })
+    b.box(0.08, 0.3, 1.0, { mat: 'chrome', color: '#b0b4b8', x: front.x, y: 0.05 + 2.4, z: front.z })
+    // the doors, slid open, and a call panel
+    for (const sb of [-0.38, 0.38]) b.box(0.04, 2.2, 0.2, { mat: 'chrome', color: '#c8ccd0', x: front.x - Z.sx * 0.06, y: 0.05 + 1.1, z: front.z + Z.sz * sb })
+    const pan = P(1.5, 2.55)
+    b.box(0.06, 0.24, 0.12, { mat: 'paint', color: '#2a2c2e', x: pan.x + Z.sx * 0.06, y: 1.25, z: pan.z })
+    b.box(0.07, 0.05, 0.05, { mat: 'glass', color: '#d8a040', x: pan.x + Z.sx * 0.06, y: 1.3, z: pan.z })
   }
 
   // ---------------------------------------------------------------- yard and fences
@@ -610,7 +981,7 @@ export class Mission {
     }
     const P = new PropList()
     const b = new Builder()
-    const reach = Math.max(lv.W, lv.H) * 0.75 + 20
+    const reach = Math.max(lv.W0, lv.H) * 0.75 + 20
     for (const lot of city.lots) {
       if (lot === me || lot.taken) continue
       const p = toLocal(lot.cx, lot.cz)
@@ -670,15 +1041,22 @@ export class Mission {
         x1 = Math.max(x1, p.x + 0.5)
         z1 = Math.max(z1, p.z + 0.5)
       }
-      c.box = new THREE.Box3(new THREE.Vector3(x0, 0, z0), new THREE.Vector3(x1, CH[c.kind] || 1.2, z1))
+      c.box = this.pickBox(x0, z0, x1, z1, CH[c.kind] || 1.2)
       c.label = view.labels.add(h('div.lootmark' + (c.locked ? '.locked' : ''), { html: c.locked ? icon('lock') : '' }), new THREE.Vector3(c.x, (CH[c.kind] || 1.2) + 0.35, c.z), { scene: this.scene, maxDist: 40 })
     }
     for (const key of this.buckets.keys()) this.buildBucket(key)
   }
+  // a picking box for something standing on the ground in sim space, where it is drawn
+  pickBox(x0, z0, x1, z1, h) {
+    const k = this.levelOf((x0 + x1) / 2)
+    const dx = k ? this.lv.off[k] : 0
+    const y = k ? k * this.lv.FH : 0
+    return new THREE.Box3(new THREE.Vector3(x0 - dx, y, z0), new THREE.Vector3(x1 - dx, y + h, z1))
+  }
   buildBucket(key) {
     const bk = this.buckets.get(key)
     if (bk.group) {
-      this.scene.remove(bk.group)
+      bk.group.parent?.remove(bk.group)
       bk.group.traverse((o) => o.isMesh && o.geometry.dispose())
     }
     const b = new Builder()
@@ -690,6 +1068,10 @@ export class Mission {
       if (c.kind === 'car') {
         const g = c.model === 'humvee' ? mapVehicleModel('humvee') : carModel({ seed: c.seed, wreck: c.seed % 3 === 0 ? 0.5 + (c.seed % 50) / 100 : 0.1 })
         mergeGroup(b, g, { x: c.x, y: 0, z: c.z, ry: c.rot })
+      } else if (c.kind === 'heli') {
+        const g = mapVehicleModel('heli')
+        g.scale.setScalar(0.7)
+        mergeGroup(b, g, { x: c.x, y: 0.08, z: c.z, ry: c.rot })
       } else {
         const fn = CONTAINER_MODELS[c.kind] || CONTAINER_MODELS.crate
         b.at({ x: c.x, y, z: c.z, ry: c.rot }, () => fn(b, seeded(c.seed)))
@@ -703,7 +1085,8 @@ export class Mission {
       for (const p of c.pivots) p.userData.base = { x: p.position.x, y: p.position.y, z: p.position.z, ry: p.rotation.y, rx: p.rotation.x }
       this.applyOpen(c)
     }
-    this.scene.add(g)
+    const first = bk.list.find((c) => !c.gone)
+    ;(first ? this.levelRoot[this.levelOf(first.x)] || this.scene : this.scene).add(g)
     bk.group = g
   }
   applyOpen(c) {
@@ -791,7 +1174,13 @@ export class Mission {
   spawnInitial() {
     const lv = this.lv
     const [lo, hi] = infectedRange(lv.loc)
-    const n = rint(lo, hi)
+    // every floor of a tall building has its own
+    let n = Math.round(rint(lo, hi) * (1 + 0.55 * ((lv.levels || 1) - 1)))
+    // whoever the squad left alive last time is still here, and a few more
+    // drift in each day; a place that was cleared stays clear
+    const P = this.place
+    if (P?.cleared) n = 0
+    else if (P?.left != null) n = Math.min(n, P.left + Math.floor((Math.max(0, S.time - (P.at || 0)) / 1440) * 1.5))
     const mix = zombieMix(this.level, this.def.zombieTheme)
     const used = new Set()
     for (let k = 0; k < n; k++) {
@@ -895,9 +1284,30 @@ export class Mission {
     return Math.hypot(p.x - view.rig.target.x, p.z - view.rig.target.z) < view.rig.dist * 0.8 + 6
   }
   noise(x, z, r, src = null) {
+    // in a tall building, noise carries up and down the stairwell, fainter a
+    // floor at a time: a gunshot upstairs brings the floor below up the stairs
+    const k0 = this.F ? this.levelOf(x) : 0
+    const lx = this.F ? this.mapXZ(x, z).x : x
     for (const zz of this.zombies) {
       if (zz.dead || zz === src) continue
-      if (Math.hypot(zz.pos.x - x, zz.pos.z - z) <= r) zz.alertTo(x, z)
+      if (!this.F) {
+        if (Math.hypot(zz.pos.x - x, zz.pos.z - z) <= r) zz.alertTo(x, z)
+        continue
+      }
+      const k = this.levelOf(zz.pos.x)
+      const dk = Math.abs(k - k0)
+      if (!dk) {
+        if (Math.hypot(zz.pos.x - x, zz.pos.z - z) <= r) zz.alertTo(x, z)
+        continue
+      }
+      // through the floor itself (loud things), or along the stairwell:
+      // from the noise to the stairs, down (or up) them, out to the listener
+      const zx = this.mapXZ(zz.pos.x, zz.pos.z).x
+      const slab = Math.hypot(zx - lx, zz.pos.z - z) <= r * Math.pow(0.45, dk)
+      const sa = this.zoneAt(2, 1, k0)
+      const sb = this.zoneAt(2, 1, k)
+      const via = Math.hypot(x - sa.x, z - sa.z) + Math.hypot(zz.pos.x - sb.x, zz.pos.z - sb.z) + dk * 3
+      if (slab || via <= r * Math.pow(0.85, dk)) zz.alertTo(x, z)
     }
   }
   hasMedkit() {
@@ -940,6 +1350,7 @@ export class Mission {
     if (c.def?.isTrap) return c.armed ? this.disarmTime(agent, c) : null
     if (kind === 'take') return 0.8
     if (kind === 'hotwire') return c.drive?.keys ? 2 : (['mechanic', 'excon'].includes(agent.data.occ) ? 7 : 10) / Math.max(0.8, agent.st.dismantle)
+    if (kind === 'search' && c.def?.power) return c.searched ? null : 6 / Math.max(0.7, 0.8 + (agent.data.skills.tech || 1) * 0.08)
     if (kind === 'search') {
       if (c.stash) return 1
       if (c.needsKey) return S.story?.keys?.[c.needsKey] ? 2.5 : null
@@ -968,6 +1379,10 @@ export class Mission {
   }
   finishWork(agent, c, kind) {
     if (c.def?.isTrap) return this.finishDisarm(agent, c)
+    if (kind === 'search' && c.def?.power) {
+      gainXP(agent.data, 'tech', 6)
+      return this.powerOn(c)
+    }
     const pos = new THREE.Vector3(c.x, (CH[c.kind] || 1.2) + 0.4, c.z)
     if (kind === 'hotwire') {
       if (!c.drive || c.drive.started) return
@@ -1012,6 +1427,7 @@ export class Mission {
         c.openGoal = 1
         found = rollLoot(c.def, this.level, agent.st.loot)
         deed(agent.data, 'searched')
+        S.stats.searched = (S.stats.searched || 0) + 1
         gainXP(agent.data, 'scavenge', 3 + this.level)
         if (c.smash) sfx('dismantle')
         if (c.locked) sfx('unlock')
@@ -1028,6 +1444,7 @@ export class Mission {
       }
       sfx(found.some((f) => f.item && RARITY[ITEMS[f.item].rarity].rank >= 1) ? 'rare' : 'loot')
     } else {
+      if (c.def?.power && this.powered) this.powerOff()
       const yieldRes = []
       for (const [k, [a, b]] of Object.entries(c.def.strip)) {
         const n = Math.round(rint(a, b) * (0.8 + agent.st.dismantle * 0.25))
@@ -1046,7 +1463,7 @@ export class Mission {
         // what doesn't fit lands in a pile on the floor
         const p = { id: this.containers.length, kind: 'crate', def: { ...CONTAINERS.crate, name: 'Pile of salvage', strip: {} }, room: c.room, tiles: [c.tiles[0]], x: c.x, z: c.z, rot: 0, searched: true, gone: false, open: 1, openGoal: 1, seed: 7, stash: left, bucket: c.bucket }
         this.removeContainer(c)
-        p.box = new THREE.Box3(new THREE.Vector3(c.x - 0.5, 0, c.z - 0.5), new THREE.Vector3(c.x + 0.5, 0.8, c.z + 0.5))
+        p.box = this.pickBox(c.x - 0.5, c.z - 0.5, c.x + 0.5, c.z + 0.5, 0.8)
         p.label = view.labels.add(h('div.lootmark.stash'), new THREE.Vector3(c.x, 1.1, c.z), { scene: this.scene, maxDist: 40 })
         this.lv.grid.set(c.tiles[0][0], c.tiles[0][1], 255, 0, p)
         this.containers.push(p)
@@ -1150,12 +1567,12 @@ export class Mission {
   // ---------------------------------------------------------------- throwables
   throwItem(agent, item, x, z) {
     const from = agent.chestPos(1.5)
-    const to = new THREE.Vector3(x, 0.2, z)
+    const to = this.rmap(new THREE.Vector3(x, 0.2 + this.floorY(x, z), z))
     const m = throwableModel(item)
     m.position.copy(from)
     this.scene.add(m)
     const dur = clamp(from.distanceTo(to) / 12, 0.35, 0.9)
-    this.flying = (this.flying || []).concat({ m, from, to, t: 0, dur, item, agent })
+    this.flying = (this.flying || []).concat({ m, from, to, t: 0, dur, item, agent, sx: x, sz: z })
     if (agent?.data && !agent.npc) creditThrow(agent.data, item)
     sfx('throw')
     this.utils[item] = Math.max(0, this.utils[item] - 1)
@@ -1176,12 +1593,12 @@ export class Mission {
           if (f.item === 'pipebomb') view.rig.shake = 1
           continue
         }
-        this.detonate(f.item, f.to.x, f.to.z, f.agent)
+        this.detonate(f.item, f.sx ?? f.to.x, f.sz ?? f.to.z, f.agent)
       }
     }
   }
   detonate(item, x, z, agent) {
-    const p = new THREE.Vector3(x, 0.3, z)
+    const p = new THREE.Vector3(x, 0.3 + this.floorY(x, z), z)
     if (item === 'molotov') {
       this.sound('glass', p)
       this.sound('fire', p)
@@ -1196,6 +1613,8 @@ export class Mission {
         const d = Math.hypot(zz.pos.x - x, zz.pos.z - z)
         if (d < 4.5) zz.hurt(160 * (1 - d / 5), agent, { knock: true })
       }
+      // a blast inside a building brings plaster down on the floors around it
+      if (this.F && this.levelOf(x) + 1 < this.lv.levels) this.noise(x + this.lv.off[this.levelOf(x) + 1] - this.lv.off[this.levelOf(x)], z, 14)
       for (const a of this.squad) {
         const d = Math.hypot(a.pos.x - x, a.pos.z - z)
         if (d < 3) a.hurt(40 * (1 - d / 3.2), null)
@@ -1203,8 +1622,8 @@ export class Mission {
       this.noise(x, z, 30)
     } else if (item === 'noisemaker') {
       const lure = { x, z, until: this.time + 15, mesh: throwableModel('noisemaker'), beepT: 0 }
-      lure.mesh.position.set(x, 0.05, z)
-      this.scene.add(lure.mesh)
+      lure.mesh.position.set(x, 0.05 + this.floorY(x, z), z)
+      ;(this.levelRoot[this.levelOf(x)] || this.scene).add(lure.mesh)
       this.lures.push(lure)
       for (const zz of this.zombies) {
         if (zz.dead || zz.state === 'chase') continue
@@ -1219,6 +1638,7 @@ export class Mission {
   addFire(x, y, z, r, life, agent = null) {
     const grp = new THREE.Group()
     grp.position.set(x, y, z)
+    const root = this.levelRoot[this.levelOf(x)] || this.scene
     const n = Math.max(3, Math.round(r * 2.4))
     for (let k = 0; k < n; k++) {
       const fl = makeFlame(0.9 + Math.random() * 0.6, 1.4 + Math.random() * 1.2, 2.8)
@@ -1227,7 +1647,7 @@ export class Mission {
       fl.position.set(Math.cos(a) * rr, 0, Math.sin(a) * rr)
       grp.add(fl)
     }
-    this.scene.add(grp)
+    root.add(grp)
     // the oldest fire gives up its light when the pool runs out
     let light = this.fireLights.find((l) => !this.fires.some((f) => f.light === l))
     if (!light) {
@@ -1236,7 +1656,7 @@ export class Mission {
       old.light = null
     }
     light.distance = r * 6
-    light.position.set(x, y + 1.2, z)
+    light.position.copy(this.rmap(new THREE.Vector3(x, y + 1.2, z)))
     this.fires.push({ x, y, z, r, life, t: 0, grp, light, agent })
   }
   updateFires(dt) {
@@ -1252,7 +1672,7 @@ export class Mission {
         for (const a of this.squad) if (!a.downed && !a.st.fireproof && Math.hypot(a.pos.x - f.x, a.pos.z - f.z) < f.r * 0.8) a.hurt(dt * 18, null)
       }
       if (f.t >= f.life) {
-        this.scene.remove(f.grp)
+        f.grp.parent?.remove(f.grp)
         if (f.light) {
           f.light.intensity = 0
           f.light.position.set(0, -50, 0)
@@ -1268,7 +1688,7 @@ export class Mission {
         this.fx.ring(new THREE.Vector3(L.x, 0.1, L.z), '#58d0ff', 1.6)
       }
       if (this.time >= L.until) {
-        this.scene.remove(L.mesh)
+        L.mesh.parent?.remove(L.mesh)
         this.lures = this.lures.filter((x) => x !== L)
       }
     }
@@ -1302,10 +1722,11 @@ export class Mission {
     const box = new THREE.Box3()
     const hit = new THREE.Vector3()
     for (const a of list) {
-      if (a.dead) continue
+      if (a.dead || (this.F && !a.root.visible)) continue
       const r = a.def?.crawl ? 0.6 : 0.45
-      box.min.set(a.pos.x - r, 0, a.pos.z - r)
-      box.max.set(a.pos.x + r, a.def?.crawl ? 0.8 : 1.9, a.pos.z + r)
+      const p = a.rpos
+      box.min.set(p.x - r, p.y - 0.05, p.z - r)
+      box.max.set(p.x + r, p.y + (a.def?.crawl ? 0.8 : 1.9), p.z + r)
       if (ray.ray.intersectBox(box, hit)) {
         const d = hit.distanceTo(ray.ray.origin)
         if (d < bd) {
@@ -1322,7 +1743,7 @@ export class Mission {
     let bd = 1e9
     const hit = new THREE.Vector3()
     for (const c of this.containers) {
-      if (c.gone) continue
+      if (c.gone || !this.onView(c.x, c.z)) continue
       if (ray.ray.intersectBox(c.box, hit)) {
         const d = hit.distanceTo(ray.ray.origin)
         if (d < bd) {
@@ -1370,8 +1791,8 @@ export class Mission {
     const add = false
     this.select(null)
     for (const a of this.squad) {
-      if (a.downed || a.npc) continue
-      const p = new THREE.Vector3(a.pos.x, 1, a.pos.z).project(view.camera)
+      if (a.downed || a.npc || (this.F && !this.onView(a.pos.x, a.pos.z))) continue
+      const p = new THREE.Vector3(a.rpos.x, a.rpos.y + 1, a.rpos.z).project(view.camera)
       const sx = (p.x * 0.5 + 0.5) * window.innerWidth
       const sy = (-p.y * 0.5 + 0.5) * window.innerHeight
       if (sx >= x0 && sx <= x1 && sy >= y0 && sy <= y1) this.select(a, true)
@@ -1391,7 +1812,7 @@ export class Mission {
     if (this.over) return
     if (this.throwing) {
       if (e.button === 2) return this.cancelThrow()
-      const p = groundAt(x, y)
+      const p = this.pickGround(x, y)
       if (p) this.doThrow(p.x, p.z)
       return
     }
@@ -1436,11 +1857,14 @@ export class Mission {
       if (!e.shift) this.select(null)
       return
     }
-    const p = groundAt(x, y)
+    let p = this.pickGround(x, y)
     if (!p) return
     const who = [...this.selected].filter((a) => !a.downed)
     if (!who.length) return this.toast('Select a survivor first: click them, their card, or drag a box.')
-    this.fx.ring(p)
+    // a click on the stairs takes them up (or down) a floor
+    const up = this.stairTarget(p.x, p.z)
+    if (up) p = up
+    this.fx.ring(new THREE.Vector3(p.x, 0.05, p.z))
     sfx('move')
     const used = new Set()
     const g = this.lv.grid
@@ -1456,6 +1880,10 @@ export class Mission {
   defaultAction(c) {
     const helper = this.pickHelper(c)
     if (!helper) return
+    if (c.def?.power) {
+      if (!this.powered) helper.command({ type: 'search', c })
+      return sfx('move')
+    }
     if (c.stash || (!c.searched && (!c.locked || helper.st.picklock))) {
       c.smash = false
       helper.command({ type: 'search', c })
@@ -1467,8 +1895,8 @@ export class Mission {
   }
   onHover(x, y) {
     if (this.throwing) {
-      const p = groundAt(x, y)
-      if (p) this.aimRing.position.set(p.x, 0.25, p.z)
+      const p = this.pickGround(x, y)
+      if (p) this.aimRing.position.set(p.rx, p.ry + 0.25, p.rz)
       return
     }
     const hit = this.hitTest(x, y)
@@ -1479,6 +1907,7 @@ export class Mission {
       this.tip.hidden = !c
       if (c?.def?.isTrap) this.tip.innerHTML = `<b>${c.def.name}</b><span>${c.trap.desc}</span><small>Right-click: disarm for parts</small>`
       else if (c?.drive) this.tip.innerHTML = c.drive.started ? `<b>Your car</b><span>Engine running: it drives home with you.</span>` : `<b>${c.def.name}</b><span>This one might still run. ${c.drive.keys ? 'You have its keys.' : 'Find the keys inside, or hotwire it.'}</span><small>Click for options</small>`
+      else if (c?.def?.power) this.tip.innerHTML = this.powered ? `<b>${c.def.name}</b><span>Running. The lights are on and the lift works.</span>` : `<b>${c.def.name}</b><span>Start it for the lights and the lift. Everything nearby will hear it.</span><small>Right-click: start it</small>`
       else if (c) this.tip.innerHTML = `<b>${c.def.name}</b><span>${c.stash ? 'Loot left inside' : c.searched ? 'Searched · can be broken down' : c.locked ? 'Locked' : 'Not searched'}</span><small>Right-click: ${c.stash || !c.searched ? 'search' : 'break down'}</small>`
     }
     if (c) this.tip.style.transform = `translate(${x + 16}px, ${y + 14}px)`
@@ -1504,7 +1933,7 @@ export class Mission {
     if (n >= 1 && n <= team.length) {
       const a = team[n - 1]
       const now = performance.now()
-      if (this.lastKey === n && now - this.lastKeyT < 350) view.rig.focus(a.pos.x, a.pos.z)
+      if (this.lastKey === n && now - this.lastKeyT < 350) this.focusOn(a)
       this.lastKey = n
       this.lastKeyT = now
       this.select(a, e.shiftKey)
@@ -1521,9 +1950,17 @@ export class Mission {
     const U = { z: 'molotov', x: 'pipebomb', c: 'noisemaker', v: 'medkit' }
     if (U[k]) return this.useUtil(U[k])
     if (k === 'enter') return this.tryExtract()
-    if (k === 'f' && this.selected.size) {
-      const a = [...this.selected][0]
-      view.rig.focus(a.pos.x, a.pos.z)
+    if (k === 'f' && this.selected.size) this.focusOn([...this.selected][0])
+    // floors: look up and down a tall building
+    if (this.F && (k === 'pageup' || k === ']')) {
+      e.preventDefault?.()
+      this.manualView = true
+      return this.setView(this.view + 1)
+    }
+    if (this.F && (k === 'pagedown' || k === '[')) {
+      e.preventDefault?.()
+      this.manualView = true
+      return this.setView(this.view - 1)
     }
   }
   // Survivor to send for a job: a selected one, else the nearest free one.
@@ -1600,6 +2037,21 @@ export class Mission {
       sfx('click')
       return
     }
+    if (c.def?.power) {
+      menu.append(h('div.cm-title', h('b', c.def.name), h('span', this.powered ? 'Running: the lights are on and the lift works' : 'There is still a little diesel in the tank')))
+      if (!this.powered) {
+        const t = helper ? this.workTime(helper, c, 'search') : 6
+        menu.append(btn('Start it', `${who} · ${(t || 6).toFixed(0)}s · very loud · lights and the lift`, () => helper.command({ type: 'search', c }), !helper, '.loud'))
+      }
+      const strip = Object.keys(c.def.strip || {}).map((k) => RES[k].name.toLowerCase()).join(', ')
+      menu.append(btn('Break it down', `${who} · loud · ${strip}${this.powered ? ' · the power goes off' : ''}`, () => helper.command({ type: 'dismantle', c }), !helper, '.loud'))
+      menu.hidden = false
+      this.menuOpen = true
+      const r = menu.getBoundingClientRect()
+      menu.style.transform = `translate(${Math.max(10, Math.min(x + 10, window.innerWidth - r.width - 10))}px, ${Math.max(10, Math.min(y + 10, window.innerHeight - r.height - 10))}px)`
+      sfx('click')
+      return
+    }
     menu.append(h('div.cm-title', h('b', c.drive?.started ? 'Your car' : c.def.name), h('span', c.drive?.started ? 'Engine running' : c.drive ? 'This one might still run' : c.stash ? 'Loot left inside' : c.searched ? 'Already searched' : c.locked ? 'Locked' : `Level ${this.level} location`)))
     if (c.drive && !c.drive.started) {
       if (c.drive.keys) menu.append(btn('Start it', `${who} · keys · 2s`, () => helper.command({ type: 'hotwire', c }), !helper))
@@ -1637,6 +2089,97 @@ export class Mission {
   closeMenu() {
     if (this.menu) this.menu.hidden = true
     this.menuOpen = false
+  }
+  // The ground under the cursor, in sim space ({x, z}) and where it is drawn
+  // ({rx, ry, rz}): the floor in view inside a tall building, else the street.
+  pickGround(sx, sy) {
+    if (this.F && this.view) {
+      const y = this.view * this.lv.FH + 0.07
+      const p = groundAt(sx, sy, y)
+      if (p && this.inFoot(p.x, p.z, -0.2)) {
+        const q = this.toSim(p.x, p.z, this.view)
+        return { x: q.x, z: q.z, rx: p.x, ry: y, rz: p.z }
+      }
+    }
+    const p = groundAt(sx, sy)
+    return p ? { x: p.x, z: p.z, rx: p.x, ry: 0, rz: p.z } : null
+  }
+  // A click on a flight of stairs means "go up" (or on the opening, "go down")
+  stairTarget(x, z) {
+    if (!this.F) return null
+    const g = this.lv.grid
+    const [i, j] = this.tile(x, z)
+    const own = g.owner[g.i(i, j)]
+    if (own !== 'stairs' && own !== 'stairhole') return null
+    const k = this.levelOf(x)
+    if (own === 'stairs') return this.zoneAt(0, this.laneUp(k), k + 1)
+    return this.zoneAt(4, this.laneHole(k), k - 1)
+  }
+  focusOn(a) {
+    if (!a) return
+    if (this.F && !a.climb) {
+      this.manualView = false
+      this.setView(this.levelOf(a.pos.x))
+    }
+    view.rig.focus(a.rpos.x, a.rpos.z)
+  }
+  // which way someone faces on a flight: up it or down it
+  stairHeading(c) {
+    const a = this.mapXZ(c.from.x, c.from.z)
+    const b = this.mapXZ(c.to.x, c.to.z)
+    return Math.atan2(b.x - a.x, b.z - a.z)
+  }
+  onLift(a, wp) {
+    if (this.nearCamera(a.rpos)) sfx('beep', 300)
+    // the car hums and clanks: anyone near either end hears it
+    this.noise(wp.from.x, wp.from.z, 6)
+    this.noise(wp.x, wp.z, 6)
+  }
+  onClimbed(a) {
+    // the floor in view follows whoever you are watching
+    if (!this.F || this.manualView) return
+    if (a.selected && [...this.selected][0] === a) this.setView(this.levelOf(a.pos.x))
+  }
+  // Floors: a small bar to look up and down the building.
+  buildFloorBar() {
+    if (!this.F) return
+    this.floorEl = h('div.floorbar')
+    this.root.append(this.floorEl)
+    this.renderFloorBar()
+  }
+  renderFloorBar() {
+    const el = this.floorEl
+    if (!el) return
+    const n = this.lv.levels
+    const who = new Map()
+    for (const a of this.squad) {
+      if (a.dead || a.npc) continue
+      const k = this.levelOf(a.pos.x)
+      who.set(k, (who.get(k) || 0) + 1)
+    }
+    const key = this.view + '|' + [...who].join(';')
+    if (key === this.floorKey) return
+    this.floorKey = key
+    el.innerHTML = ''
+    el.append(h('div.fb-head', h('small', 'Floors'), h('kbd', '[ ]')))
+    for (let k = n - 1; k >= 0; k--) {
+      const c = who.get(k) || 0
+      el.append(
+        h(
+          'button.fb-btn' + (k === this.view ? '.on' : ''),
+          {
+            onclick: () => {
+              this.manualView = true
+              this.setView(k)
+              sfx('click')
+            },
+            'data-tip': this.floorName(k),
+          },
+          h('b', this.lv.roof && k === n - 1 ? 'R' : k === 0 ? 'G' : String(k + 1)),
+          c ? h('span.fb-n', c) : null,
+        ),
+      )
+    }
   }
 
   // ---------------------------------------------------------------- loop
@@ -1728,12 +2271,69 @@ export class Mission {
       if (team.length && team.every((x) => x.downed)) this.end('wiped')
       if (this.coop) this.coopLeaderTick(dt)
     } else for (const s of this.squad) s.sync()
+    if (this.F) this.updateFloors(dt)
+    if (this.tracks && !this.paused) this.updateTracks(dt)
     this.updateLights(night)
     this.updateVision(this.paused ? 0 : dt)
     this.fx.setViewport(window.innerHeight, view.camera.fov)
     this.fx.update(this.paused ? 0 : dt)
     this.evacRing.material.opacity = 0.45 + Math.sin(performance.now() / 330) * 0.25
     this.updateHud(dt)
+  }
+  // Prints in the snow from everyone walking outdoors.
+  updateTracks(dt) {
+    const T = this.tracks
+    T.update(dt, S.weather?.type === 'snow')
+    const out = (a) => this.levelOf(a.pos.x) === 0 && this.floorY(a.pos.x, a.pos.z) !== 0.07
+    for (const a of this.squad) if (!a.downed && !a.dead && !a.climb && out(a)) T.step(a, a.pos.x, a.pos.z, a.rpos, 's')
+    for (const z of this.zombies) if (!z.dead && !z.climb && out(z)) T.step(z, z.pos.x, z.pos.z, z.rpos, 'z')
+    if (!this.tracksTold && this.elapsed > 4) {
+      this.tracksTold = true
+      this.toast('Snow on the ground: everyone leaves tracks. The infected that find yours will follow them back to the van.', 'warn')
+    }
+  }
+  // an infected wandering outside finds a fresh trail of the squad's prints
+  trackNear(z) {
+    if (!this.tracks || this.remote || this.levelOf(z.pos.x) !== 0) return null
+    const p = this.tracks.trailNear(z.pos.x, z.pos.z)
+    if (p && !this.trailTold) {
+      this.trailTold = true
+      this.toast('Something has picked up your tracks in the snow. Watch the way back to the van.', 'bad')
+    }
+    return p
+  }
+  // Who is drawn on which floor, and the floor in view following the squad.
+  updateFloors(dt) {
+    const lead = [...this.selected][0]
+    if (lead && !this.manualView && !lead.climb) {
+      const k = this.levelOf(lead.pos.x)
+      if (k !== this.view) this.setView(k)
+    }
+    for (const a of this.squad) {
+      const on = a.climb ? this.onView(a.climb.from.x, a.climb.from.z) || this.onView(a.climb.to.x, a.climb.to.z) : this.onView(a.pos.x, a.pos.z)
+      a.root.visible = on
+      if (a.labelEl) {
+        a.labelEl.classList.toggle('away', !on)
+        const tag = on ? '' : this.floorName(this.levelOf((a.climb?.to || a.pos).x))
+        if (a._floorTag !== tag) {
+          a._floorTag = tag
+          a.labelEl.dataset.floor = tag
+        }
+      }
+    }
+    this.floorT = (this.floorT || 0) - dt
+    if (this.floorT <= 0) {
+      this.floorT = 0.3
+      this.renderFloorBar()
+    }
+    // the generator hums while it runs
+    if (this.powered && this.genAt && !this.paused) {
+      this.humT = (this.humT || 0) - dt
+      if (this.humT <= 0) {
+        this.humT = 3
+        this.noise(this.genAt.x, this.genAt.z, 7)
+      }
+    }
   }
   // Rescue: reach the caller and they follow you out.
   updateNpc() {
@@ -1865,8 +2465,9 @@ export class Mission {
         return
       }
       const fwd = new THREE.Vector3(Math.sin(a.heading), 0, Math.cos(a.heading))
-      l.position.set(a.pos.x + fwd.x * 0.3, 1.45, a.pos.z + fwd.z * 0.3)
-      l.target.position.set(a.pos.x + fwd.x * 8, 0, a.pos.z + fwd.z * 8)
+      const p = a.rpos
+      l.position.set(p.x + fwd.x * 0.3, p.y + 1.45, p.z + fwd.z * 0.3)
+      l.target.position.set(p.x + fwd.x * 8, p.y, p.z + fwd.z * 8)
       l.intensity = 160 * night * (a.st.nightSight ? 1.3 : 1)
     })
     for (const l of this.vanLights) l.intensity = 220 * night
@@ -1892,7 +2493,7 @@ export class Mission {
     this.root.append(
       h(
         'div.mtop',
-        h('div.mlocard', h('span.lvlbadge', { style: { '--c': col } }, this.level), h('div', h('b', this.loc.name), h('small', `${L.name}${ev ? (ev.kind === 'distress' ? ' · rescue the survivor inside' : ' · supply drop in the yard') : ''}`))),
+        h('div.mlocard', h('span.lvlbadge', { style: { '--c': col } }, this.level), h('div', h('b', this.loc.name), h('small', `${L.name}${this.F ? ` · ${this.lv.floors} floors${this.lv.roof ? ' and a roof' : ''}` : ''}${ev ? (ev.kind === 'distress' ? ' · rescue the survivor inside' : ' · supply drop in the yard') : ''}`))),
         this.timerEl,
         h('div.mright', this.ammoEl, volumeControl(this.game), fullscreenButton(this.game.ui, 'button.btn.ghost.small.mfull'), this.pauseBtn),
       ),
@@ -1915,6 +2516,7 @@ export class Mission {
     this.renderSquad()
     this.renderUtils()
     this.updateHaul()
+    this.buildFloorBar()
   }
   renderPause() {
     this.pauseEl.hidden = !this.paused
@@ -1953,7 +2555,7 @@ export class Mission {
               this.select(a, e.shiftKey)
               sfx('select')
             },
-            ondblclick: () => view.rig.focus(a.pos.x, a.pos.z),
+            ondblclick: () => this.focusOn(a),
           },
           h('span.key', key),
           h('img', { src: this.game.portrait(a.data), alt: '' }),
@@ -2049,8 +2651,10 @@ export class Mission {
       gain(haul)
       for (const k of Object.keys(haul)) report.loot[k] = Math.round((S.res[k] || 0) - (before[k] || 0))
       for (const id of items) report.items.push(addItem(id, { q: lootQuality(L), cond: rint(35, 95) }))
-      markLooted(this.loc.id)
+      if (!this.once && !this.emptyRun) markLooted(this.loc.id)
       S.stats.runs++
+      S.stats.places ||= []
+      if (!S.stats.places.includes(this.loc.id)) S.stats.places.push(this.loc.id)
       completeGoal('firstRun')
       if (L >= 3) completeGoal('loot3')
       for (const a of this.squad) {
@@ -2062,6 +2666,7 @@ export class Mission {
           d.joined = day()
           if (!S.survivors.includes(d)) S.survivors.push(d)
           S.stats.recruited++
+          S.stats.rescued = (S.stats.rescued || 0) + 1
           addMoraleEvent(`Rescued ${d.first}`, 6, 1.5)
           log(`${d.name} was rescued from ${this.loc.name} and joined the camp.`, 'good')
           report.rescued = d.first
@@ -2102,6 +2707,14 @@ export class Mission {
       log(`The run to ${this.loc.name} went badly wrong.`, 'bad')
     }
     for (const a of this.squad) if (a.data.status === 'mission') a.data.status = 'ok'
+    // the place remembers: what is left inside and who is left alive
+    if (this.recordPlace(result)) {
+      report.cleared = true
+      report.text = (report.text || '') + ' Nothing is left alive in there: the place is clear.'
+      log(`${this.loc.name} is clear. Nothing is left alive inside.`, 'good')
+      const L = checkLiberation()
+      report.liberation = `${L.cleared} of ${L.total} places cleared`
+    }
     storyRunEnd(this.loc.id, result, report)
     if (this.coop) this.coopEnd(result, report)
     this.game.endMission(report)
@@ -2127,10 +2740,39 @@ export class Mission {
     this.terrain?.mesh.geometry.dispose()
     this.atmo.dispose()
     this.fx.dispose()
+    this.tracks?.dispose()
     this.disposeVision()
   }
 }
 Object.assign(Mission.prototype, VisionMixin, TrapsMixin, CoopMixin)
+
+// A rectangle with a hole taken out of it, as up to four rectangles.
+function rectMinus(r, h) {
+  if (!h || h.x1 <= r.x0 || h.x0 >= r.x1 || h.z1 <= r.z0 || h.z0 >= r.z1) return [r]
+  const hx0 = Math.max(r.x0, h.x0)
+  const hx1 = Math.min(r.x1, h.x1)
+  const hz0 = Math.max(r.z0, h.z0)
+  const hz1 = Math.min(r.z1, h.z1)
+  const out = []
+  if (hz0 > r.z0) out.push({ x0: r.x0, z0: r.z0, x1: r.x1, z1: hz0 })
+  if (hz1 < r.z1) out.push({ x0: r.x0, z0: hz1, x1: r.x1, z1: r.z1 })
+  if (hx0 > r.x0) out.push({ x0: r.x0, z0: hz0, x1: hx0, z1: hz1 })
+  if (hx1 < r.x1) out.push({ x0: hx1, z0: hz0, x1: r.x1, z1: hz1 })
+  return out
+}
+// A painted helipad: a yellow ring and a white H on a dark square.
+function helipadMarks(b, p) {
+  const r = p.r
+  b.box(r * 2 + 0.6, 0.012, r * 2 + 0.6, { mat: 'concrete', color: '#4a4c4a', x: p.x, y: 0.082, z: p.z, shadow: false, ao: 0 })
+  const n = 40
+  for (let q = 0; q < n; q++) {
+    const a = (q / n) * Math.PI * 2
+    b.box(0.3, 0.012, (Math.PI * 2 * (r - 0.4)) / n + 0.04, { mat: 'paint', color: '#e8c03a', x: p.x + Math.cos(a) * (r - 0.4), y: 0.09, z: p.z + Math.sin(a) * (r - 0.4), ry: -a, shadow: false, ao: 0 })
+  }
+  const s = r * 0.42
+  for (const sx of [-1, 1]) b.box(0.5, 0.012, s * 2, { mat: 'paint', color: '#f0ece0', x: p.x + sx * s * 0.6, y: 0.091, z: p.z, shadow: false, ao: 0 })
+  b.box(s * 1.2, 0.012, 0.5, { mat: 'paint', color: '#f0ece0', x: p.x, y: 0.092, z: p.z, shadow: false, ao: 0 })
+}
 
 // Merge a built model group into a builder, keeping its vertex colours.
 function mergeGroup(b, g, o = {}) {
