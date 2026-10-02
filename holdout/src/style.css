@@ -1442,3 +1442,4 @@ h3 .fillbest { text-transform: none; letter-spacing: 0.02em; font-family: var(--
 .resname { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .resname .ic svg { width: 16px; height: 16px; }
 .tip i.bad { font-style: normal; color: #ff917a; }
+.psub .warn { color: #f2c98a; }

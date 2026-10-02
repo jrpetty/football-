@@ -26,8 +26,13 @@ export function renderStation(ui, id) {
   const D = STATIONS[st.type]
   const pinfo = power()
   const body = []
-  const status = st.building ? `Under construction` : st.stalled ? st.stalled : st.active ? 'Working' : D.workers[Math.max(0, st.level - 1)] && !workersOf(st).length && !isAutomated(st, pinfo) ? 'Idle: no workers' : 'Ready'
-  const sub = h('span', h('span.lvl', st.level ? `Level ${st.level}` : 'New'), ' · ', h('span' + (st.stalled ? '.bad' : st.active ? '.good' : ''), status))
+  // the same calm reading as the label over the building: a problem once it
+  // has lasted a few seconds, a pace when it's only held back by its belts
+  const v = ui.game.base?.stationViews?.get(st.id)
+  const warn = v ? v.warnShow : st.stalled
+  const busy = v ? v.runK > 0.3 : st.active
+  const status = st.building ? `Under construction` : warn ? warn : v?.pace ? v.pace : busy ? 'Working' : D.workers[Math.max(0, st.level - 1)] && !workersOf(st).length && !isAutomated(st, pinfo) ? 'Idle: no workers' : 'Ready'
+  const sub = h('span', h('span.lvl', st.level ? `Level ${st.level}` : 'New'), ' · ', h('span' + (warn ? '.bad' : v?.pace ? '.warn' : busy ? '.good' : ''), status))
   body.push(h('p.desc', D.desc))
   if (st.building) body.push(constructionBlock(st))
   if (st.level > 0) {
@@ -42,7 +47,7 @@ export function renderStation(ui, id) {
     if (D.queue || st.type === 'infirmary') body.push(benchBlock(ui, st))
     if (D.auto) body.push(autoBlock(ui, st, pinfo))
   }
-  if (st.type !== 'mast') body.push(upgradeBlock(ui, st))
+  if (st.type !== 'mast' && D.levels > 1) body.push(upgradeBlock(ui, st))
   if (!D.fixed) body.push(actionsBlock(ui, st))
   return ui.frame(D.name, sub, body, { icon: CAT_ICON[D.cat] })
 }
@@ -505,10 +510,15 @@ const POD_COL = { in: '#2fc49e', out: '#f0962c', io: '#5a9ae0' }
 const byId = (id) => S.stations.find((x) => x.id === id)
 const perDay = (v) => (v === Infinity ? 'plenty' : v < 10 ? v.toFixed(1) : fmt(Math.round(v)))
 // a pod's name tag: IN 1, OUT 2, HATCH 3
-function podTag(st, p) {
+const podDir = (st, p) => {
+  if (p.kind !== 'io') return p.kind
   const l = linkAt(st, p.i)
-  const kind = p.kind === 'io' ? (l ? (l.from === st.id ? 'out' : 'in') : 'io') : p.kind
-  const same = portsOf(st).filter((q) => q.kind === p.kind)
+  return l ? (l.from === st.id ? 'out' : 'in') : 'io'
+}
+function podTag(st, p) {
+  const kind = podDir(st, p)
+  // numbered among the pods working the same way: OUT 1, OUT 2, IN
+  const same = portsOf(st).filter((q) => podDir(st, q) === kind)
   const n = same.indexOf(p) + 1
   return h('span.podtag', { style: { '--c': POD_COL[kind] } }, `${kind === 'in' ? 'IN' : kind === 'out' ? 'OUT' : 'HATCH'}${same.length > 1 ? ' ' + n : ''}`)
 }
