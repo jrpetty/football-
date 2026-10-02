@@ -380,12 +380,16 @@ function decalTexture(two) {
     g.fill()
     g.restore()
   }
+  // a painted bay: a filled square, a bold border, the arrow on top
+  g.globalAlpha = 0.32
+  g.fillRect(4, 4, 120, 120)
+  g.globalAlpha = 0.9
+  g.lineWidth = 7
+  g.strokeStyle = '#ffffff'
+  g.strokeRect(6, 6, 116, 116)
+  g.globalAlpha = 1
   arrow(false)
   if (two) arrow(true)
-  g.globalAlpha = 0.4
-  g.lineWidth = 6
-  g.strokeStyle = '#ffffff'
-  g.strokeRect(5, 5, 118, 118)
   const t = new THREE.CanvasTexture(c)
   t.colorSpace = THREE.SRGBColorSpace
   return t
@@ -396,11 +400,14 @@ function decalMat(kind) {
   if (!decalMats[kind]) {
     const tk = kind === 'io' ? 'two' : 'one'
     decalTex[tk] ??= decalTexture(tk === 'two')
-    decalMats[kind] = new THREE.MeshBasicMaterial({ map: decalTex[tk], color: POD_COL[kind], transparent: true, opacity: 0.62, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 })
+    decalMats[kind] = new THREE.MeshBasicMaterial({ map: decalTex[tk], color: POD_COL[kind], transparent: true, opacity: 0.88, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 })
   }
   return decalMats[kind]
 }
-const DECAL_GEO = new THREE.PlaneGeometry(0.84, 0.84)
+const DECAL_GEO = new THREE.PlaneGeometry(0.92, 0.92)
+// a strip of light along the top of each pod, in its colour, so it reads in shade
+const stripMats = {}
+const stripMat = (kind, lit) => (stripMats[kind + lit] ??= new THREE.MeshStandardMaterial({ color: '#202020', emissive: lit ? POD_COL[kind] : POD_DIM[kind], emissiveIntensity: lit ? 1.6 : 0.8, roughness: 0.5 }))
 DECAL_GEO.rotateX(-Math.PI / 2)
 // Which way a pod works right now: a two-way hatch takes the direction of its belt.
 function podKind(st, p, l = linkAt(st, p.i)) {
@@ -420,13 +427,14 @@ function buildPods(st) {
     if (!node) {
       const c = l ? POD_COL[kind] : POD_DIM[kind]
       B.at({ x: p.ex, z: p.ez, ry: Math.atan2(ux, uz) }, () => {
-        B.box(0.74, 1.28, 0.05, { mat: 'steel', color: '#565d64', y: 0.64, z: 0.025 })
-        for (const sx of [-1, 1]) B.box(0.07, 1.32, 0.09, { mat: 'paint', color: c, x: sx * 0.355, y: 0.66, z: 0.045 })
-        B.box(0.78, 0.1, 0.1, { mat: 'paint', color: c, y: 1.34, z: 0.05 })
+        B.box(0.82, 1.5, 0.05, { mat: 'steel', color: '#565d64', y: 0.75, z: 0.025 })
+        for (const sx of [-1, 1]) B.box(0.09, 1.54, 0.1, { mat: 'paint', color: c, x: sx * 0.39, y: 0.77, z: 0.05 })
+        B.box(0.88, 0.14, 0.11, { mat: 'paint', color: c, y: 1.5, z: 0.055 })
+        B.box(0.7, 0.06, 0.04, { material: stripMat(kind, !!l), y: 1.6, z: 0.09 })
         B.box(0.52, 0.3, 0.02, { mat: 'plain', color: '#0e0e0e', y: 1.0, z: 0.06 })
         B.box(0.58, 0.04, 0.1, { mat: 'steel', color: '#8a9298', y: 0.84, z: 0.07 })
         B.plane(0.4, 0.2, { material: plateMat(kind === 'in' ? 'IN' : kind === 'out' ? 'OUT' : 'IN / OUT', c, '#101010'), y: 0.56, z: 0.056, shadow: false })
-        if (l) B.cyl(0.1, 0.1, 0.03, { mat: 'paint', color: RES[l.res].color, y: 1.405, z: 0.05, seg: 14 })
+        if (l) B.cyl(0.12, 0.12, 0.04, { mat: 'paint', color: RES[l.res].color, y: 1.59, z: 0.05, seg: 14 })
       })
     }
     const m = new THREE.Mesh(DECAL_GEO, decalMat(kind))
@@ -792,16 +800,18 @@ export const BeltMixin = {
     let list = (A || ALL_RES).filter((k) => !B2 || B2.includes(k))
     if (L.res) return list.includes(L.res) ? L.res : null
     if (!list.length) return null
-    const near = L.dir === 'out' ? b : a
-    const want = (s) => {
+    // what each end is working with right now
+    const now = (s, side) => {
       const D = STATIONS[s.type]
-      const R = D.recipe || (D.recipes && s.curMode && D.recipes[s.curMode]) || null
-      return R ? Object.keys(L.dir === 'out' ? R.in || {} : R.out || {}) : []
+      const R = D.recipe || (D.recipes && (D.recipes[s.curMode] || D.recipes[s.mode])) || null
+      return R ? Object.keys(R[side] || {}) : []
     }
-    const pref = want(near)
-    const fed = (k) => (S.links || []).some((l) => (L.dir === 'out' ? l.to === b.id : l.from === a.id) && l.res === k)
-    list = list.filter((k) => !isDepot(a) || (S.res[k] || 0) > 0 || !isDepot(b))
-    list.sort((p, q) => (fed(p) - fed(q)) || (pref.includes(q) - pref.includes(p)) || ((S.res[q] || 0) > 0) - ((S.res[p] || 0) > 0))
+    const makes = now(a, 'out')
+    const needs = now(b, 'in')
+    // already carried between this pair: least wanted
+    const dup = (k) => (S.links || []).some((l) => l.from === a.id && l.to === b.id && l.res === k)
+    const score = (k) => (needs.includes(k) ? 4 : 0) + (makes.includes(k) ? 2 : 0) + ((S.res[k] || 0) > 0 ? 1 : 0) - (dup(k) ? 8 : 0)
+    list.sort((p, q) => score(q) - score(p))
     return list[0] || null
   },
   linkEnds(other) {
@@ -937,7 +947,7 @@ export const BeltMixin = {
           this.scene.add(L.ghost)
           const ring = L.ringOf.get(t.st.id)
           if (ring) ring.userData.hot = true
-          const cost = Object.entries(plan.cost).map(([k, v]) => `<span class="${(S.res[k] || 0) >= v ? '' : 'bad'}">${v} ${RES[k].short || RES[k].name.toLowerCase()}</span>`).join(' · ')
+          const cost = Object.entries(plan.cost).map(([k, v]) => `${(S.res[k] || 0) >= v ? '' : '<i class="bad">'}${v} ${RES[k].short || RES[k].name.toLowerCase()}${(S.res[k] || 0) >= v ? '' : '</i>'}`).join(' · ')
           L.tip = `<b>${RES[plan.res].name} ${L.dir === 'out' ? 'to' : 'from'} the ${nm}</b><span>${BELTS[1].name} · ${Math.round(plan.len)} m · carries up to ${fmt(linkPerDay(1, plan.res))} a day</span><span>${cost}</span><span>${afford ? 'Click to build' : 'Not enough materials'}</span>`
         }
       }

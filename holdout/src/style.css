@@ -1441,3 +1441,4 @@ h3 .fillbest { text-transform: none; letter-spacing: 0.02em; font-family: var(--
 .bcard.beltcard { border-color: rgba(240,150,44,0.5); background: linear-gradient(160deg, rgba(240,150,44,0.14), rgba(240,150,44,0.03)); }
 .resname { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .resname .ic svg { width: 16px; height: 16px; }
+.tip i.bad { font-style: normal; color: #ff917a; }
