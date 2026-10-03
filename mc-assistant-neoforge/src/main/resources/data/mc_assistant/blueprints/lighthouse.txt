@@ -1,0 +1,196 @@
+# The lighthouse: a tall banded stone tower, a ladder all the way up, a glass
+# lamp room at the top with its fire burning, and a pointed roof over it.
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name lighthouse
+layer -1
+FFFFFFF
+FFFFFFF
+FFFFFFF
+FFFFFFF
+FFFFFFF
+FFFFFFF
+FFFFFFF
+layer 0
+.......
+..SSS..
+.S.H.S.
+.S...S.
+.S...S.
+..SDS..
+.......
+layer 1
+.......
+..SSS..
+.S.H.S.
+.S...S.
+.S...S.
+..S.S..
+.......
+layer 2
+.......
+..SSS..
+.S.H.S.
+.S...S.
+.S...S.
+..SSS..
+.......
+layer 3
+.......
+..ZZZ..
+.Z.H.Z.
+.Z...Z.
+.Z...Z.
+..ZZZ..
+.......
+layer 4
+.......
+..ZZZ..
+.Z.H.Z.
+.G...G.
+.Z...Z.
+..ZGZ..
+.......
+layer 5
+.......
+..ZZZ..
+.Z.H.Z.
+.Z...Z.
+.Z...Z.
+..ZZZ..
+.......
+layer 6
+.......
+..SSS..
+.S.H.S.
+.S...S.
+.S...S.
+..SSS..
+.......
+layer 7
+.......
+..SSS..
+.S.H.S.
+.S...S.
+.S...S.
+..SSS..
+.......
+layer 8
+.......
+..SSS..
+.S.H.S.
+.G...G.
+.S...S.
+..SGS..
+.......
+layer 9
+.......
+..ZZZ..
+.Z.H.Z.
+.Z...Z.
+.Z...Z.
+..ZZZ..
+.......
+layer 10
+.......
+..ZZZ..
+.Z.H.Z.
+.Z...Z.
+.Z...Z.
+..ZZZ..
+.......
+layer 11
+.......
+..ZZZ..
+.Z.H.Z.
+.Z...Z.
+.Z...Z.
+..ZZZ..
+.......
+layer 12
+.......
+..SSS..
+.S.H.S.
+.G...G.
+.S...S.
+..SGS..
+.......
+layer 13
+.......
+..SSS..
+.S.H.S.
+.S...S.
+.S...S.
+..SSS..
+.......
+layer 14
+.......
+..SSS..
+.S.H.S.
+.S...S.
+.S...S.
+..SSS..
+.......
+layer 15
+.SSSSS.
+S.....S
+S.fHf.S
+S.fff.S
+S.fff.S
+S.....S
+.SSSSS.
+layer 16
+.......
+.PPPPP.
+.PLOLP.
+.PO&OP.
+.PLOLP.
+.PPPPP.
+.......
+layer 17
+.......
+.......
+..LOL..
+..OjO..
+..LOL..
+.......
+.......
+layer 18
+.......
+.......
+..LOL..
+..O.O..
+..LOL..
+.......
+.......
+layer 19
+.......
+.SSSSS.
+.SSSSS.
+.SSSSS.
+.SSSSS.
+.SSSSS.
+.......
+layer 20
+.......
+.vvvvv.
+.>...<.
+.>...<.
+.>...<.
+.^^^^^.
+.......
+layer 21
+.......
+.......
+..vvv..
+..>.<..
+..^^^..
+.......
+.......
+layer 22
+.......
+.......
+.......
+...P...
+.......
+.......
+.......

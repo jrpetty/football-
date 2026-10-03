@@ -1,0 +1,94 @@
+# The workshop: a long timber workroom with a wide door to the street, a
+# bench and the tailor's loom, a furnace, the stores of the trade, barrels and a hayloft above.
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name workshop
+layer -1
+.........
+.FFFFFFF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FFFFFFF.
+.........
+layer 0
+.........
+.LwwwwwL.
+.wTNUCQw.
+.w....Qw.
+.w.....w.
+.w.....w.
+.wy...&w.
+.Lw...wL.
+.........
+layer 1
+.........
+.LWGWGWL.
+.W.....W.
+.G.....G.
+.W.....W.
+.G.....G.
+.W.....W.
+.LW...WL.
+.........
+layer 2
+.........
+.LWWWWWL.
+.W.....W.
+.W.....W.
+.W..j..W.
+.W.....W.
+.W.....W.
+.LW---WL.
+..j...j..
+layer 3
+vvvvvvvvv
+.L-----L.
+.|fffff|.
+.|fffff|.
+.|fffff|.
+.|fffff|.
+.|fffff|.
+.L-----L.
+^^^^^^^^^
+layer 4
+.........
+vvvvvvvvv
+.Wyy..yW.
+.W.....W.
+.W.....W.
+.W.....W.
+.W.....W.
+^^^^^^^^^
+.........
+layer 5
+.........
+.........
+vvvvvvvvv
+.W.....W.
+.W.....W.
+.W.....W.
+^^^^^^^^^
+.........
+.........
+layer 6
+.........
+.........
+.........
+vvvvvvvvv
+.W.....W.
+^^^^^^^^^
+.........
+.........
+.........
+layer 7
+.........
+.........
+.........
+.........
+_________
+.........
+.........
+.........
+.........

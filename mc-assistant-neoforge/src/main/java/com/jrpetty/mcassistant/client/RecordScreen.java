@@ -1,0 +1,227 @@
+package com.jrpetty.mcassistant.client;
+
+import com.jrpetty.mcassistant.entity.AssistantEntity;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
+
+/**
+ * One specialist's career: how long it has served, what it chose to specialise
+ * in, and everything it has done — blocks mined, animals bred, fish caught —
+ * counted for its whole life and across every revival.
+ */
+public class RecordScreen extends Screen {
+
+    private static final int W = 384, H = 216;
+    private static final int PAD = 10;
+
+    private final AssistantEntity bot;
+    private int left, top;
+    private boolean perkRow;   // choosing the level-30 edge shortens the career list
+
+    public RecordScreen(AssistantEntity bot) {
+        super(Component.literal("Work record"));
+        this.bot = bot;
+    }
+
+    @Override
+    protected void init() {
+        this.left = (this.width - W) / 2;
+        this.top = (this.height - H) / 2;
+        int gap = 4;
+        int w3 = (W - PAD * 2 - gap * 2) / 3;
+        int y = top + H - PAD - 18;
+
+        // At level 30 the veteran picks its edge — once, permanently. The row
+        // only exists while the choice is open; made, the perk reads on the
+        // trait line and the career gets its space back.
+        BotInfo info = BotInfo.of(bot);
+        perkRow = bot.clientLevel() >= 30 && info.perk() == 0;
+        if (perkRow) {
+            int py = y - 18 - gap;
+            perk(py, left + PAD, w3, "Swift", com.jrpetty.mcassistant.AssistantActions.PERK_SWIFT,
+                "+20% move speed, for good");
+            perk(py, left + PAD + w3 + gap, w3, "Tough", com.jrpetty.mcassistant.AssistantActions.PERK_TOUGH,
+                "+4 armor, for good");
+            perk(py, left + PAD + 2 * (w3 + gap), w3, "Porter", com.jrpetty.mcassistant.AssistantActions.PERK_PORTER,
+                "Carries half a pack more per trip, for good");
+        }
+        this.addRenderableWidget(Button.builder(Component.literal("Specialise"), b ->
+                OrdersScreen.sendOrder(bot, com.jrpetty.mcassistant.AssistantActions.CYCLE_BRANCH))
+            .bounds(left + PAD, y, w3, 18)
+            .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(
+                "At level 20 a specialist can pick a branch to deepen its trade")))
+            .build());
+        this.addRenderableWidget(Button.builder(Component.literal("Orders"),
+                b -> this.minecraft.setScreen(new OrdersScreen(bot)))
+            .bounds(left + PAD + w3 + gap, y, w3, 18).build());
+        this.addRenderableWidget(Button.builder(Component.literal("Close"), b -> this.onClose())
+            .bounds(left + PAD + 2 * (w3 + gap), y, w3, 18).build());
+    }
+
+    private void perk(int y, int x, int w, String label, int action, String tip) {
+        this.addRenderableWidget(Button.builder(Component.literal("✦ " + label), b -> {
+                OrdersScreen.sendOrder(bot, action);
+                this.onClose();
+            })
+            .bounds(x, y, w, 18)
+            .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(tip)))
+            .build());
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        if (!bot.isAlive()) this.onClose();
+    }
+
+    /**
+     * ALL of this screen's own painting happens here, layered between the
+     * background and the widgets, because since 1.21 the vanilla render loop
+     * runs the menu BLUR SHADER inside renderBackground — and super.render()
+     * calls renderBackground itself. The old pattern (paint the panel, then
+     * call super.render) ran the blur a SECOND time over everything already
+     * drawn: every panel and every line of text got gaussian-smeared, and the
+     * vanilla buttons were drawn crisp on top afterwards. That is the blur
+     * that survived four palette overhauls — it was never contrast.
+     */
+    @Override
+    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        super.renderBackground(g, mouseX, mouseY, partialTick);
+        Ui.panel(g, left, top, W, H, 30);
+
+        int x = left + PAD;
+        int inner = W - PAD * 2;
+        BotInfo info = BotInfo.of(bot);
+        int lvl = bot.clientLevel();
+
+        // Who, and how far along.
+        String name = bot.clientName();
+        Ui.chip(g, x, top + 7, Ui.job(bot.clientJobOrdinal()));
+        g.drawString(this.font, name, x + 10, top + 7, Ui.INK, false);
+        if (lvl >= 1) {
+            g.drawString(this.font, "✦" + lvl, x + 10 + this.font.width(name) + 6, top + 7, Ui.ACCENT, false);
+        }
+        Ui.right(g, this.font,
+            AssistantEntity.StationTask.byOrdinal(bot.clientJobOrdinal()).title,
+            left + W - PAD, top + 7, Ui.MUTED);
+        g.drawString(this.font,
+            info.daysServed() + " days served"
+            + (info.hasBranch() ? "  ·  " + info.branch() : "")
+            + "  ·  works " + bot.clientShift().label,
+            x, top + 18, Ui.FAINT, false);
+
+        // What it has cost you. Wages are spent, not carried — this is the only
+        // place the metal you handed over is ever accounted for.
+        String wages = info.hasWages()
+            ? info.ironPaid() + " iron, " + info.goldPaid() + " gold, "
+              + info.diamondPaid() + " diamond  ·  " + info.wageStatus()
+            : "no wages drawn yet  ·  " + info.wageStatus();
+        g.drawString(this.font, Ui.clip(this.font, wages, inner), x, top + 28,
+            info.wageDueTicks() <= 0 ? Ui.BAD : Ui.MUTED, false);
+
+        // Who it is, as opposed to what it does: the quirk it arrived with, and
+        // how long it has worked alongside the rest of the crew.
+        if (!info.trait().isEmpty()) {
+            g.drawString(this.font, Ui.clip(this.font,
+                info.trait() + " — " + info.traitBlurb()
+                + (info.perkLabel().isEmpty() ? "" : "  ·  " + info.perkLabel())
+                + (info.teamwork() > 0 ? "  ·  +" + info.teamwork() + "% crew rhythm" : ""),
+                inner), x, top + 38, Ui.GOOD, false);
+        }
+        if (perkRow) {
+            g.drawString(this.font, "Level 30 — pick this one's edge:",
+                x, top + H - PAD - 18 * 2 - 4 - 11, Ui.ACCENT, false);
+        }
+
+        // The career itself, biggest tally first, each with a bar for scale.
+        int colW = 180;   // career left, the ladder right
+        Ui.section(g, this.font, "Career", x, top + 54, colW);
+        int y = top + 66;
+        int rowH = 12;
+        int busiest = Math.max(1, info.busiest());
+
+        if (!info.hasRecord()) {
+            g.drawString(this.font, "Nothing on the books yet — give it a job.",
+                x, y + 2, Ui.MUTED, false);
+        } else {
+            java.util.List<AssistantEntity.Deed> done = new java.util.ArrayList<>();
+            for (AssistantEntity.Deed d : AssistantEntity.Deed.values()) {
+                if (info.deed(d) > 0) done.add(d);
+            }
+            done.sort((a, b) -> Integer.compare(info.deed(b), info.deed(a)));
+
+            int maxRows = (top + H - PAD - (perkRow ? 57 : 24) - y) / rowH;
+            for (int i = 0; i < done.size() && i < maxRows; i++) {
+                AssistantEntity.Deed d = done.get(i);
+                int count = info.deed(d);
+                if (i % 2 == 0) g.fill(x - 2, y - 1, x + colW + 2, y + rowH - 2, Ui.ROW);
+                // The bar sits behind the label, so the biggest jobs of a life
+                // stand out without having to compare numbers.
+                int barW = Math.max(1, (colW - 4) * count / busiest);
+                // A soft full-width track under an accent fill, so the scale of
+                // each tally is readable and the biggest one owns its row.
+                g.fill(x - 2, y + rowH - 4, x + colW + 2, y + rowH - 3, Ui.EDGE_SOFT);
+                g.fill(x - 2, y + rowH - 4, x - 2 + barW, y + rowH - 3, Ui.ACCENT);
+                g.drawString(this.font, d.label, x, y, Ui.INK, false);
+                Ui.right(g, this.font, String.valueOf(count), x + colW, y, Ui.ACCENT);
+                y += rowH;
+            }
+            if (done.size() > maxRows) {
+                g.drawString(this.font, "+" + (done.size() - maxRows) + " more",
+                    x, y, Ui.FAINT, false);
+            }
+        }
+
+        // ---- the ladder: where this one stands in its trade, and what every
+        // level it has not yet reached will open. The rung it is climbing
+        // toward is lit, and the bar is the climb itself.
+        int lx = x + 192;
+        int lw = inner - 192;
+        AssistantEntity.StationTask trade =
+            AssistantEntity.StationTask.byOrdinal(bot.clientJobOrdinal());
+        java.util.List<Ladder.Rung> rungs = Ladder.forTrade(trade);
+        String rank = Ladder.rank(trade, lvl);
+        Ui.section(g, this.font, rank.isEmpty() ? "Ladder" : "Ladder · " + rank,
+            lx, top + 54, lw);
+        int ly = top + 66;
+        if (rungs.isEmpty()) {
+            g.drawString(this.font, "Pick a trade to", lx, ly + 2, Ui.MUTED, false);
+            g.drawString(this.font, "start climbing.", lx, ly + 13, Ui.MUTED, false);
+        } else {
+            Ladder.Rung next = null;
+            for (Ladder.Rung r : rungs) {
+                if (lvl < r.level()) { next = r; break; }
+            }
+            if (next != null) {
+                int f = Math.max(1, com.jrpetty.mcassistant.AssistantConfig.levelCurveFactor());
+                float frac = bot.clientLifetimeXp() / (float) (f * next.level() * next.level());
+                Ui.bar(g, lx, ly, lw, 5, Math.min(1F, frac), Ui.ACCENT);
+                ly += 10;
+            }
+            int floor = top + H - PAD - (perkRow ? 57 : 24);
+            for (int i = 0; i < rungs.size(); i++) {
+                Ladder.Rung r = rungs.get(i);
+                if (ly + 11 > floor) {
+                    g.drawString(this.font, "+" + (rungs.size() - i) + " rungs above",
+                        lx, ly, Ui.FAINT, false);
+                    break;
+                }
+                boolean climbed = lvl >= r.level();
+                boolean isNext = next != null && r.level() == next.level();
+                String line = (climbed ? "\u2726 " : isNext ? "\u203a " : "\u00b7 ") + r.level() + "  "
+                    + (r.title().isEmpty() ? r.gives() : r.title() + " \u2014 " + r.gives());
+                g.drawString(this.font, Ui.clip(this.font, line, lw),
+                    lx, ly, climbed ? Ui.GOOD : isNext ? Ui.INK : Ui.FAINT, false);
+                ly += 13;
+            }
+        }
+
+    }
+
+    @Override
+    public boolean isPauseScreen() {
+        return false;
+    }
+}

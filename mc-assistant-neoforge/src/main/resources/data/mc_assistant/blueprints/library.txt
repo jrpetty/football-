@@ -1,0 +1,125 @@
+# The library: a stone hall with tall windows, its walls lined with bookshelves,
+# an enchanting table in the middle of a carpet, lecterns either side of it,
+# and lanterns hung from the beams. The enchanter works here.
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name library
+layer -1
+.........
+.FFFFFFF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FFFFFFF.
+.........
+layer 0
+.........
+.LSSSSSL.
+.SKK.KKS.
+.S.....S.
+.SKXXXKS.
+.S.XEX.S.
+.SKXXXKS.
+.S.r.r.S.
+.S.....S.
+.LSSDSSL.
+.........
+layer 1
+.........
+.LWWWWWL.
+.WKK.KKW.
+.G.....G.
+.WK...KW.
+.G.....G.
+.W.....W.
+.G.....G.
+.W.....W.
+.LWW.WWL.
+.........
+layer 2
+.........
+.LWWWWWL.
+.W.....W.
+.G.....G.
+.W.....W.
+.G.....G.
+.W.....W.
+.G.....G.
+.W.....W.
+.LWWWWWL.
+..j...j..
+layer 3
+.........
+.LWWWWWL.
+.W.....W.
+.W..j..W.
+.W.....W.
+.W.....W.
+.W.....W.
+.W..j..W.
+.W.....W.
+.LWWWWWL.
+.........
+layer 4
+>.......<
+>L-----L<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>L-----L<
+>.......<
+layer 5
+.>.....<.
+.>WWWWW<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>WWWWW<.
+.>.....<.
+layer 6
+..>...<..
+..>WWW<..
+..>...<..
+..>...<..
+..>...<..
+..>...<..
+..>...<..
+..>...<..
+..>...<..
+..>WWW<..
+..>...<..
+layer 7
+...>.<...
+...>W<...
+...>.<...
+...>.<...
+...>.<...
+...>.<...
+...>.<...
+...>.<...
+...>.<...
+...>W<...
+...>.<...
+layer 8
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....

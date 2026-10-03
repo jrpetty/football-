@@ -1,0 +1,95 @@
+# The shop: a timber shopfront with a wide window either side of the door, a
+# counter of casks across the room with the day's goods laid out on it, shelves
+# of barrels and chests behind it, and a lantern over the door.
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name shop
+layer -1
+.........
+.FFFFFFF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FFFFFFF.
+.........
+layer 0
+.........
+.LwwwwwL.
+.wCQCQCw.
+.w.....w.
+.wQQ.QQw.
+.w.....w.
+.w.....w.
+.LwwDwwL.
+.........
+layer 1
+.........
+.LWWWWWL.
+.WQQQQQW.
+.G.....G.
+.W..l..W.
+.G.....G.
+.W.....W.
+.LGG.GGL.
+.........
+layer 2
+.........
+.LWWWWWL.
+.W.....W.
+.Wj...jW.
+.W.....W.
+.W.....W.
+.W.....W.
+.LWWWWWL.
+....j....
+layer 3
+vvvvvvvvv
+.L-----L.
+.|fffff|.
+.|fffff|.
+.|fffff|.
+.|fffff|.
+.|fffff|.
+.L-----L.
+^^^^^^^^^
+layer 4
+.........
+vvvvvvvvv
+.W.....W.
+.W.....W.
+.W.....W.
+.W.....W.
+.W.....W.
+^^^^^^^^^
+.........
+layer 5
+.........
+.........
+vvvvvvvvv
+.W.....W.
+.W.....W.
+.W.....W.
+^^^^^^^^^
+.........
+.........
+layer 6
+.........
+.........
+.........
+vvvvvvvvv
+.W.....W.
+^^^^^^^^^
+.........
+.........
+.........
+layer 7
+.........
+.........
+.........
+.........
+_________
+.........
+.........
+.........
+.........

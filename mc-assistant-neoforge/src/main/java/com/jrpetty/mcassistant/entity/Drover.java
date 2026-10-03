@@ -1,0 +1,233 @@
+package com.jrpetty.mcassistant.entity;
+
+import com.jrpetty.mcassistant.entity.AssistantEntity.StationTask;
+import com.jrpetty.mcassistant.village.Ledger;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.animal.Animal;
+import net.minecraft.world.entity.animal.Chicken;
+import net.minecraft.world.entity.animal.Cow;
+import net.minecraft.world.entity.animal.Pig;
+import net.minecraft.world.entity.animal.Sheep;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.phys.AABB;
+
+import javax.annotation.Nullable;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * Animals for the pen. A rancher whose pen has no pair to breed goes out with one of the leads it
+ * brought, finds a wild sheep, cow, pig or chicken, puts the lead on it and walks it home, as a
+ * player would; then another of the same kind, until there is a pair. Only if there is nothing
+ * wild for fifty blocks round does the village buy a drover's pair (two sheep and two hens) —
+ * once, and in the chronicle.
+ */
+public final class Drover {
+
+    private Drover() {}
+
+    /** One animal being fetched. */
+    static final class Drive {
+        final UUID animal;
+        final BlockPos pen;
+        final int started;
+        boolean leading;
+        int walked = -1000;
+
+        Drive(UUID animal, BlockPos pen, int started) {
+            this.animal = animal;
+            this.pen = pen;
+            this.started = started;
+        }
+    }
+
+    private static final Map<UUID, Drive> DRIVES = new ConcurrentHashMap<>();
+    /** The day each rancher last went looking and found nothing to fetch. */
+    private static final Map<UUID, Long> LOOKED = new ConcurrentHashMap<>();
+
+    public static void resetForTests() {
+        DRIVES.clear();
+        LOOKED.clear();
+    }
+
+    /** Out fetching an animal: the day's work waits. */
+    public static boolean busy(VillageFolkEntity f) {
+        return DRIVES.containsKey(f.getUUID());
+    }
+
+    /** How far the rancher looks for wild animals. */
+    static final int RANGE = 48;
+
+    /**
+     * The rancher's look round: if the pen has no breeding pair, go and fetch an animal (with a
+     * lead), or — nothing wild anywhere near — have the drover's pair brought in. Returns whether
+     * it set off (or the pair came).
+     */
+    public static boolean consider(VillageFolkEntity f, ServerLevel level) {
+        if (f.stationTask() != StationTask.RANCH || busy(f) || f.workZone() == null) return false;
+        UUID village = f.ownerId();
+        if (village == null || !level.isDay() || Raids.underAlarm(village)) return false;
+        BlockPos pen = f.workZone().center();
+        Map<EntityType<?>, Integer> herd = herd(level, pen, Math.max(8, Math.min(16, f.workZone().radius())));
+        for (int n : herd.values()) if (n >= 2) return false;           // a pair to breed: nothing to fetch
+        long today = level.getDayTime() / 24000L;
+        Animal wild = wild(level, pen, herd);
+        if (wild != null && f.countCarried(s -> s.is(Items.LEAD)) > 0) {
+            DRIVES.put(f.getUUID(), new Drive(wild.getUUID(), pen, f.tickCount));
+            f.clearQueue();
+            f.brain("off to fetch a wild " + kind(wild) + " home");
+            FolkTalk.speak(f, "There's a " + kind(wild) + " out there with no home. I'll fetch it in.");
+            return true;
+        }
+        if (wild != null) return false;                                  // animals, but no lead: the stores may send one
+        if (LOOKED.getOrDefault(f.getUUID(), -1L) == today) return false;
+        LOOKED.put(f.getUUID(), today);
+        // Nothing wild for fifty blocks: the drover's pair, once.
+        if (Ledger.note(village, "kit.drove") != null) return false;
+        Ledger.note(village, "kit.drove", Long.toString(today));
+        int put = 0;
+        for (EntityType<? extends Animal> type : List.<EntityType<? extends Animal>>of(EntityType.SHEEP, EntityType.SHEEP,
+                EntityType.CHICKEN, EntityType.CHICKEN)) {
+            Animal a = type.create(level);
+            if (a == null) continue;
+            int x = pen.getX() + level.getRandom().nextInt(5) - 2, z = pen.getZ() + level.getRandom().nextInt(5) - 2;
+            int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+            a.moveTo(x + 0.5, y, z + 0.5, level.getRandom().nextFloat() * 360.0F, 0.0F);
+            a.setPersistenceRequired();
+            if (level.addFreshEntity(a)) put++;
+        }
+        if (put == 0) return false;
+        Villages.tell(village, today, "A drover came by and sold " + Villages.name(village)
+            + " a pair of sheep and a pair of hens: there was nothing wild to be had for miles.");
+        FolkTalk.speak(f, "No wild animals for miles, so I bought a drover's pair. Sheep and hens!");
+        f.brain("bought the drover's pair");
+        return true;
+    }
+
+    /** Walk the fetch a step: to the animal, the lead on, and home with it. Called every half-second. */
+    public static void drive(VillageFolkEntity f, ServerLevel level) {
+        Drive d = DRIVES.get(f.getUUID());
+        if (d == null) return;
+        Entity e = level.getEntity(d.animal);
+        Animal a = e instanceof Animal an && an.isAlive() ? an : null;
+        boolean tooLong = f.tickCount - d.started > 3600;
+        if (a == null || tooLong || !level.isDay() || Raids.underAlarm(f.ownerId())) {
+            stop(f, a, d, false);
+            return;
+        }
+        if (!d.leading) {
+            if (f.distanceToSqr(a) < 3.0 * 3.0) {
+                if (f.removeMatching(s -> s.is(Items.LEAD), 1) != 1) { stop(f, a, d, false); return; }
+                a.setLeashedTo(f, true);
+                d.leading = true;
+                f.brain("the lead on a " + kind(a) + ", walking it home");
+                return;
+            }
+            if (f.getNavigation().isDone() || f.tickCount - d.walked > 60) {
+                f.walkTo(a.blockPosition(), 0.8D);
+                d.walked = f.tickCount;
+            }
+            return;
+        }
+        if (!a.isLeashed()) {                                            // it slipped the lead: pick it up, after it again
+            for (net.minecraft.world.entity.item.ItemEntity lead : level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+                    a.getBoundingBox().inflate(12), i -> i.isAlive() && i.getItem().is(Items.LEAD))) {
+                ItemStack left = f.insertItem(lead.getItem().copy());
+                if (left.isEmpty()) lead.discard();
+                else lead.setItem(left);
+            }
+            d.leading = false;
+            return;
+        }
+        // Not too far ahead: a lead pulled taut snaps. Wait for it to come up.
+        if (f.distanceToSqr(a) > 5.0 * 5.0) {
+            f.getNavigation().stop();
+            f.getLookControl().setLookAt(a);
+            return;
+        }
+        // Home: the animal inside the pen's ground (a led animal hangs back a few blocks on its lead).
+        double dx = a.getX() - (d.pen.getX() + 0.5), dz = a.getZ() - (d.pen.getZ() + 0.5);
+        if (dx * dx + dz * dz < 6.0 * 6.0) {
+            stop(f, a, d, true);
+            return;
+        }
+        if (f.getNavigation().isDone() || f.tickCount - d.walked > 60) {
+            f.walkTo(d.pen, 0.6D);
+            d.walked = f.tickCount;
+        }
+    }
+
+    /** The fetch is over: the lead off (and back in the pack), home or not. */
+    private static void stop(VillageFolkEntity f, @Nullable Animal a, Drive d, boolean home) {
+        DRIVES.remove(f.getUUID());
+        if (a != null && a.isLeashed() && a.getLeashHolder() == f) {
+            a.dropLeash(true, false);
+            ItemStack left = f.insertItem(new ItemStack(Items.LEAD));
+            if (!left.isEmpty()) f.spawnAtLocation(left);
+        }
+        if (home && a != null) {
+            a.setPersistenceRequired();
+            f.brain("brought a wild " + kind(a) + " home to the pen");
+            UUID village = f.ownerId();
+            if (village != null) {
+                Villages.tell(village, f.level().getDayTime() / 24000L,
+                    f.displayNameCap() + " brought a wild " + kind(a) + " home to the pen on a lead.");
+            }
+        }
+    }
+
+    /** The adult animals in the pen, by kind. */
+    static Map<EntityType<?>, Integer> herd(ServerLevel level, BlockPos pen, int r) {
+        Map<EntityType<?>, Integer> out = new HashMap<>();
+        for (Animal a : level.getEntitiesOfClass(Animal.class, new AABB(pen).inflate(r, 6, r),
+                a -> a.isAlive() && !a.isBaby() && farmed(a))) {
+            out.merge(a.getType(), 1, Integer::sum);
+        }
+        return out;
+    }
+
+    private static boolean farmed(Animal a) {
+        return a instanceof Sheep || a instanceof Cow || a instanceof Pig || a instanceof Chicken;
+    }
+
+    /** The wild animal to fetch: one to make a pair with what the pen has, else the kind most about. */
+    @Nullable
+    static Animal wild(ServerLevel level, BlockPos pen, Map<EntityType<?>, Integer> herd) {
+        List<Animal> about = level.getEntitiesOfClass(Animal.class, new AABB(pen).inflate(RANGE, 16, RANGE),
+            a -> a.isAlive() && !a.isBaby() && farmed(a) && !a.isLeashed()
+                && a.distanceToSqr(pen.getX() + 0.5, a.getY(), pen.getZ() + 0.5) > 12.0 * 12.0);
+        if (about.isEmpty()) return null;
+        Map<EntityType<?>, Integer> counts = new HashMap<>();
+        for (Animal a : about) counts.merge(a.getType(), 1, Integer::sum);
+        EntityType<?> best = null;
+        int bestScore = -1;
+        for (Map.Entry<EntityType<?>, Integer> c : counts.entrySet()) {
+            int score = c.getValue() + (herd.containsKey(c.getKey()) ? 100 : 0);
+            if (score > bestScore) { bestScore = score; best = c.getKey(); }
+        }
+        Animal nearest = null;
+        double nd = Double.MAX_VALUE;
+        for (Animal a : about) {
+            if (a.getType() != best) continue;
+            double dd = a.distanceToSqr(pen.getX() + 0.5, a.getY(), pen.getZ() + 0.5);
+            if (dd < nd) { nd = dd; nearest = a; }
+        }
+        return nearest;
+    }
+
+    static String kind(Animal a) {
+        if (a instanceof Sheep) return "sheep";
+        if (a instanceof Cow) return "cow";
+        if (a instanceof Pig) return "pig";
+        if (a instanceof Chicken) return "hen";
+        return a.getType().getDescription().getString().toLowerCase();
+    }
+}
