@@ -639,7 +639,15 @@ ghosts and a survivor portrait are compiled in the background after loading;
 a run or the city map compiles and uploads behind its loading card; portraits
 are drawn one at a time between frames; fire light comes from a fixed pool
 (adding a light recompiles every material); and *Auto resolution* in Settings
-lowers the render resolution a little when the frame rate drops. `node dev-build.mjs src/dev/<viewer>.js out.html` builds the model,
+lowers the render resolution a little when the frame rate drops.
+
+Things that keep the graphics card's load down: trees, rocks and grass are
+kept in grid cells and only the cells the camera or the sun's shadow box can
+reach go into the instance buffers (`render/instcull.js`); trees past 44
+metres swap to a cheaper model; foliage cards draw a depth-only pass first so
+their shading runs once per pixel; and *Frame rate* in Settings (Smart, the
+default) draws every 2nd or 3rd refresh on a 120 Hz-plus screen, keeping 60
+or more frames a second evenly paced (`render/pacer.js`). `node dev-build.mjs src/dev/<viewer>.js out.html` builds the model,
 character, station and lighting viewers used while modelling.
 
 ```
@@ -678,7 +686,8 @@ src/
   models/            procedural models: skinned characters, stations, the
                      mast, furniture, weapons, vehicles, city
   render/            pipeline (SSAO, bloom, SMAA, tilt-shift), fog of war,
-                     sky, terrain, snow and seasons, materials, effects
+                     sky, terrain, snow and seasons, materials, effects,
+                     scenery culling, frame pacing
   ui/                HUD, panels, progress board, field manual, journal,
                      motor pool, lobby, Players panel and pings
 server/

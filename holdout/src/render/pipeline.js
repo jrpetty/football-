@@ -62,8 +62,8 @@ export class GradeEffect extends Effect {
 
 export const QUALITY = {
   low: { label: 'Low', dpr: 1, shadow: 1024, ao: null, bloom: false, smaa: SMAAPreset.LOW, tilt: false, grain: false },
-  medium: { label: 'Medium', dpr: 1, shadow: 2048, ao: 'Low', aoHalf: true, bloom: true, smaa: SMAAPreset.MEDIUM, tilt: false, grain: true },
-  high: { label: 'High', dpr: 1.5, shadow: 2048, ao: 'Medium', aoHalf: true, bloom: true, smaa: SMAAPreset.HIGH, tilt: true, grain: true },
+  medium: { label: 'Medium', dpr: 1, shadow: 1024, ao: 'Low', aoHalf: true, bloom: true, smaa: SMAAPreset.MEDIUM, tilt: false, grain: true },
+  high: { label: 'High', dpr: 1.5, shadow: 1536, ao: 'Medium', aoHalf: true, bloom: true, smaa: SMAAPreset.HIGH, tilt: true, grain: true },
   ultra: { label: 'Ultra', dpr: 2, shadow: 4096, ao: 'High', aoHalf: false, bloom: true, smaa: SMAAPreset.ULTRA, tilt: true, grain: true },
 }
 

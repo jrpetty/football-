@@ -2,6 +2,7 @@
 // dirt, gravel, mud and forest floor with anti-tiling, wind-swept instanced
 // grass, and instanced scatter (trees, bushes, rocks) with swaying foliage.
 import * as THREE from 'three'
+import { CulledSet } from './instcull.js'
 import { texSet } from './texgen.js'
 import { mat, cloneMat, FOLIAGE_KEYS, WEATHER } from './materials.js'
 import { grassTuftGeometry } from '../models/nature.js'
@@ -136,30 +137,41 @@ varying vec3 vTN;
 vec4 tw4;
 float twG;
 vec2 trot(vec2 p, float a) { float s = sin(a), c = cos(a); return vec2(c * p.x - s * p.y, s * p.x + c * p.y); }
-vec3 antiTile(sampler2D t, vec2 uv, float k) {
-  vec3 a = texture2D(t, uv).rgb;
-  vec3 b = texture2D(t, trot(uv, 1.17) * 0.43 + vec2(0.31, 0.77)).rgb;
-  return mix(a, b, k);
+// Each ground layer is read once, or twice where the anti-tiling blend is
+// partway: k of 0 or 1 needs only one of the two reads. The derivatives come
+// in from outside the branches (textureGrad), so a layer that is skipped in
+// part of the picture cannot upset the mip level of its neighbours.
+vec3 antiTile(sampler2D t, vec2 wp, float sc, vec2 dwx, vec2 dwy, float k) {
+  vec2 uv = wp / sc;
+  vec2 dx = dwx / sc;
+  vec2 dy = dwy / sc;
+  vec3 c = vec3(0.0);
+  if (k < 0.999) c += (1.0 - k) * textureGrad(t, uv, dx, dy).rgb;
+  if (k > 0.001) c += k * textureGrad(t, trot(uv, 1.17) * 0.43 + vec2(0.31, 0.77), trot(dx, 1.17) * 0.43, trot(dy, 1.17) * 0.43).rgb;
+  return c;
 }
-vec3 antiTileN(sampler2D t, vec2 uv, float k) {
-  vec3 a = texture2D(t, uv).xyz * 2.0 - 1.0;
-  vec3 b = texture2D(t, trot(uv, 1.17) * 0.43 + vec2(0.31, 0.77)).xyz * 2.0 - 1.0;
-  b.xy = trot(b.xy, 1.17);
-  return normalize(mix(a, b, k));
+vec3 antiTileN(sampler2D t, vec2 wp, float sc, vec2 dwx, vec2 dwy, float k) {
+  vec2 uv = wp / sc;
+  vec2 dx = dwx / sc;
+  vec2 dy = dwy / sc;
+  vec3 n = vec3(0.0);
+  if (k < 0.999) n += (1.0 - k) * (textureGrad(t, uv, dx, dy).xyz * 2.0 - 1.0);
+  if (k > 0.001) {
+    vec3 b = textureGrad(t, trot(uv, 1.17) * 0.43 + vec2(0.31, 0.77), trot(dx, 1.17) * 0.43, trot(dy, 1.17) * 0.43).xyz * 2.0 - 1.0;
+    b.xy = trot(b.xy, 1.17);
+    n += k * b;
+  }
+  return normalize(n);
 }
 `
 const TERRAIN_MAP = /* glsl */ `
 vec2 wp = vTW.xz;
+vec2 dwx = dFdx(wp);
+vec2 dwy = dFdy(wp);
 vec4 sp = texture2D(tSplat, (wp - uSplatRect.xy) * uSplatRect.zw);
 vec3 nz = texture2D(tNoise, wp * 0.0085).rgb;
 vec3 nz2 = texture2D(tNoise, wp * 0.041 + 0.37).rgb;
 float kTile = smoothstep(0.32, 0.68, nz.g);
-vec3 cGrass = antiTile(tGrass, wp / 5.5, kTile) * mix(uLush, uDry, smoothstep(0.38, 0.78, nz.r * 0.75 + nz2.b * 0.4));
-vec3 cDirtT = antiTile(tDirt, wp / 6.0, kTile);
-vec3 cDirt = cDirtT * uDirtTint * (0.9 + nz2.g * 0.2);
-vec3 cMud = cDirtT * uMudTint;
-vec3 cGravel = antiTile(tGravel, wp / 1.3, kTile) * vec3(0.64, 0.6, 0.54);
-vec3 cForest = antiTile(tForest, wp / 4.0, kTile);
 tw4 = sp;
 twG = max(0.0, 1.0 - dot(sp, vec4(1.0)));
 // ragged, noise-driven transitions
@@ -171,7 +183,16 @@ twG = pow(twG, 1.5);
 float tsum = dot(tw4, vec4(1.0)) + twG + 1e-4;
 tw4 /= tsum;
 twG /= tsum;
-vec3 tcol = cGrass * twG + cDirt * tw4.x + cGravel * tw4.y + cMud * tw4.z + cForest * tw4.w;
+// only the layers that are actually here are read: most of the ground is one
+// or two of the five
+vec3 tcol = vec3(0.0);
+if (twG > 0.004) tcol += twG * antiTile(tGrass, wp, 5.5, dwx, dwy, kTile) * mix(uLush, uDry, smoothstep(0.38, 0.78, nz.r * 0.75 + nz2.b * 0.4));
+if (tw4.x + tw4.z > 0.004) {
+  vec3 cDirtT = antiTile(tDirt, wp, 6.0, dwx, dwy, kTile);
+  tcol += cDirtT * (tw4.x * uDirtTint * (0.9 + nz2.g * 0.2) + tw4.z * uMudTint);
+}
+if (tw4.y > 0.004) tcol += tw4.y * antiTile(tGravel, wp, 1.3, dwx, dwy, kTile) * vec3(0.64, 0.6, 0.54);
+if (tw4.w > 0.004) tcol += tw4.w * antiTile(tForest, wp, 4.0, dwx, dwy, kTile);
 if (uSnow > 0.0) {
   // drifts lie thicker on grass and forest floor than on trodden dirt
   float sn = nz.g * 0.5 + nz2.r * 0.35 + (twG + tw4.w) * 0.25 - tw4.z * 0.2;
@@ -186,11 +207,11 @@ float roughnessFactor = roughness * (0.96 * twG + 0.93 * tw4.x + 0.86 * tw4.y + 
 `
 const TERRAIN_NORMAL = /* glsl */ `
 {
-  vec3 nG = antiTileN(tGrassN, wp / 5.5, kTile);
-  vec3 nD = antiTileN(tDirtN, wp / 6.0, kTile);
-  vec3 nV = antiTileN(tGravelN, wp / 2.6, kTile);
-  vec3 nF = antiTileN(tForestN, wp / 4.0, kTile);
-  vec3 tn = nG * twG + nD * (tw4.x + tw4.z) + nV * tw4.y + nF * tw4.w;
+  vec3 tn = vec3(0.0);
+  if (twG > 0.004) tn += twG * antiTileN(tGrassN, wp, 5.5, dwx, dwy, kTile);
+  if (tw4.x + tw4.z > 0.004) tn += (tw4.x + tw4.z) * antiTileN(tDirtN, wp, 6.0, dwx, dwy, kTile);
+  if (tw4.y > 0.004) tn += tw4.y * antiTileN(tGravelN, wp, 2.6, dwx, dwy, kTile);
+  if (tw4.w > 0.004) tn += tw4.w * antiTileN(tForestN, wp, 4.0, dwx, dwy, kTile);
   tn.xy *= 0.9;
   tn = normalize(tn + vec3(0.0, 0.0, 0.001));
   vec3 N = normalize(vTN);
@@ -234,7 +255,7 @@ export function terrainMaterial(splat) {
       .replace('#include <roughnessmap_fragment>', TERRAIN_ROUGH)
       .replace('#include <normal_fragment_maps>', TERRAIN_NORMAL)
   }
-  m.customProgramCacheKey = () => 'terrain-v1'
+  m.customProgramCacheKey = () => 'terrain-v2'
   return m
 }
 
@@ -337,11 +358,22 @@ export function foliageMaterial(key = 'leaf') {
   }`,
         )
     }
-    sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\n' + WIND_PARS)
-      .replace(
-        '#include <begin_vertex>',
-        `#include <begin_vertex>
+    foliageWind(sh)
+  }, broadleaf ? '-fol-s' : '-fol')
+  foliageMats[key] = m
+  return m
+}
+// The canopy's sway, as vertex code: the same for the leaf cards' colour pass
+// and their depth pass, so the two agree on where every card is.
+function foliageWind(sh) {
+  sh.uniforms.uWindTime = wind.time
+  sh.uniforms.uWindStrength = wind.strength
+  // invariant: both programs must place a card on exactly the same depth
+  sh.vertexShader = ('invariant gl_Position;\n' + sh.vertexShader)
+    .replace('#include <common>', '#include <common>\n' + WIND_PARS)
+    .replace(
+      '#include <begin_vertex>',
+      `#include <begin_vertex>
 #ifdef USE_INSTANCING
   vec3 ip = instanceMatrix[3].xyz;
   float hk = max(0.0, transformed.y - 1.0) * 0.012;
@@ -349,9 +381,37 @@ export function foliageMaterial(key = 'leaf') {
   transformed.x += sin(ph) * hk * transformed.y * uWindStrength;
   transformed.z += cos(ph * 0.7) * hk * 0.6 * transformed.y * uWindStrength;
 #endif`,
-      )
-  }, broadleaf ? '-fol-s' : '-fol')
-  foliageMats[key] = m
+    )
+}
+// Leaf and needle cards overlap a dozen deep in a forest, and each overlapping
+// card used to be shaded in full before the card in front of it covered it.
+// So they are drawn twice: first only their alpha-cut shape into the depth
+// buffer (cheap), then in colour only where they are the nearest thing.
+const prepassMats = new Map()
+function foliagePrepass(material, windy) {
+  let m = prepassMats.get(material.uuid)
+  if (m) return m
+  m = new THREE.MeshBasicMaterial({ map: material.map, alphaTest: material.alphaTest, side: material.side, colorWrite: false })
+  if (windy) m.onBeforeCompile = foliageWind
+  m.customProgramCacheKey = () => 'fol-pre' + (windy ? '-w' : '')
+  prepassMats.set(material.uuid, m)
+  return m
+}
+const mainMats = new Map()
+function foliageMain(material) {
+  let m = mainMats.get(material.uuid)
+  if (m) return m
+  m = material.clone()
+  m.onBeforeCompile = material.onBeforeCompile
+  m.customProgramCacheKey = material.customProgramCacheKey
+  // the depth pass has already written the front cards; the colour pass only
+  // has to land on them (a little forward, since the two programs round alike
+  // but not always identically)
+  m.depthWrite = false
+  m.polygonOffset = true
+  m.polygonOffsetFactor = -1
+  m.polygonOffsetUnits = -2
+  mainMats.set(material.uuid, m)
   return m
 }
 
@@ -376,6 +436,9 @@ export class GrassField {
       scene.add(im)
       return im
     })
+    // each shape keeps its tufts in a grid and draws the ones in view (see
+    // instcull.js); far cells are thinned, where tufts are a few pixels
+    this.sets = this.meshes.map((m) => new CulledSet([m], { colors: true, thin: { near: 55, span: 110, min: 0.35 } }))
     if (count > 0) this.rebuild()
   }
   rebuild() {
@@ -395,6 +458,9 @@ export class GrassField {
     const dry = new THREE.Color('#9a9450')
     const per = this.meshes[0].instanceMatrix.count
     const counts = this.meshes.map(() => 0)
+    const mats = this.meshes.map(() => new Float32Array(per * 16))
+    const cols = this.meshes.map(() => new Float32Array(per * 3))
+    const rad = this.meshes.map(() => new Float32Array(per))
     const tries = this.max * 3
     for (let t = 0; t < tries; t++) {
       const x = A.x0 + rnd() * (A.x1 - A.x0)
@@ -409,17 +475,18 @@ export class GrassField {
       const s0 = 0.7 + rnd() * 0.7
       sc.set(s0, s0 * (0.75 + w * 0.45), s0)
       m.compose(p.set(x, y, z), q, sc)
-      this.meshes[k].setMatrixAt(counts[k], m)
+      m.toArray(mats[k], counts[k] * 16)
       const n = Math.sin(x * 0.07) * Math.cos(z * 0.05) * 0.5 + 0.5
       c.copy(lush).lerp(dry, Math.min(1, n * 0.9 + rnd() * 0.25)).multiplyScalar(0.85 + rnd() * 0.3)
-      this.meshes[k].setColorAt(counts[k], c)
+      c.toArray(cols[k], counts[k] * 3)
+      rad[k][counts[k]] = 1.1 * s0
       counts[k]++
     }
-    this.meshes.forEach((im, k) => {
-      im.count = counts[k]
-      im.instanceMatrix.needsUpdate = true
-      if (im.instanceColor) im.instanceColor.needsUpdate = true
-    })
+    this.sets.forEach((cs, k) => cs.set(mats[k].subarray(0, counts[k] * 16), cols[k].subarray(0, counts[k] * 3), rad[k].subarray(0, counts[k])))
+  }
+  // Draw only the tufts in view (camera, shadow box).
+  cull(view, focus) {
+    for (const cs of this.sets) cs.pack(view, focus)
   }
   setVisible(v) {
     for (const m of this.meshes) m.visible = v
@@ -435,25 +502,55 @@ export class GrassField {
 // ---------------------------------------------------------------- scatter
 // Instanced copies of a kit model (one InstancedMesh per material batch).
 export class Scatter {
-  constructor(scene, model, max, { wind: windy = false, shadow = true } = {}) {
+  // lod: a cheaper model of the same thing, drawn past lodDist metres
+  constructor(scene, model, max, { wind: windy = false, shadow = true, lod = null, lodDist = 44 } = {}) {
     this.scene = scene
     this.max = max
-    this.parts = []
-    model.updateMatrixWorld(true)
-    model.traverse((o) => {
-      if (!o.isMesh) return
-      let material = o.material
-      if (windy && FOLIAGE_KEYS.has(material.userData?.key)) material = foliageMaterial(material.userData.key)
-      const g = o.geometry.clone()
-      g.applyMatrix4(o.matrixWorld)
-      const im = new THREE.InstancedMesh(g, material, max)
-      im.count = 0
-      im.castShadow = shadow && o.castShadow
-      im.receiveShadow = true
-      im.frustumCulled = false
-      scene.add(im)
-      this.parts.push(im)
-    })
+    // for each card material a depth-only twin shares the same instances
+    const build = (mdl) => {
+      const parts = []
+      const pres = []
+      mdl.updateMatrixWorld(true)
+      mdl.traverse((o) => {
+        if (!o.isMesh) return
+        let material = o.material
+        if (windy && FOLIAGE_KEYS.has(material.userData?.key)) material = foliageMaterial(material.userData.key)
+        const g = o.geometry.clone()
+        g.applyMatrix4(o.matrixWorld)
+        const cards = material.alphaTest > 0 && !!material.map
+        const im = new THREE.InstancedMesh(g, cards ? foliageMain(material) : material, max)
+        im.count = 0
+        im.castShadow = shadow && o.castShadow
+        im.receiveShadow = true
+        im.frustumCulled = false
+        scene.add(im)
+        parts.push(im)
+        if (cards) {
+          const pre = new THREE.InstancedMesh(g, foliagePrepass(material, windy), max)
+          pre.count = 0
+          pre.castShadow = false
+          pre.receiveShadow = false
+          pre.frustumCulled = false
+          pre.renderOrder = -1
+          scene.add(pre)
+          pres.push(pre)
+        }
+      })
+      return { parts, pres }
+    }
+    const near = build(model)
+    const far = lod ? build(lod) : { parts: [], pres: [] }
+    this.parts = near.parts
+    this.lodParts = far.parts
+    this.pres = [...near.pres, ...far.pres]
+    // how far from its own origin any part of the model reaches
+    this.reach = 0
+    for (const im of [...this.parts, ...this.lodParts]) {
+      im.geometry.computeBoundingSphere()
+      const b = im.geometry.boundingSphere
+      this.reach = Math.max(this.reach, b.center.length() + b.radius)
+    }
+    this.cs = new CulledSet([...this.parts, ...near.pres], { casts: this.parts.some((p) => p.castShadow), max, lod: this.lodParts.length ? { meshes: [...this.lodParts, ...far.pres], dist: lodDist } : null })
     this.items = []
   }
   set(list) {
@@ -464,23 +561,26 @@ export class Scatter {
     const p = new THREE.Vector3()
     const e = new THREE.Euler()
     const n = Math.min(this.max, list.length)
+    const mats = new Float32Array(n * 16)
+    const rad = new Float32Array(n)
     for (let i = 0; i < n; i++) {
       const it = list[i]
       e.set(it.rx || 0, it.ry || 0, it.rz || 0)
       q.setFromEuler(e)
       sc.set(it.s ?? 1, (it.s ?? 1) * (it.sy ?? 1), it.s ?? 1)
       m.compose(p.set(it.x, it.y || 0, it.z), q, sc)
-      for (const im of this.parts) im.setMatrixAt(i, m)
+      m.toArray(mats, i * 16)
+      rad[i] = this.reach * (it.s ?? 1) * Math.max(1, it.sy ?? 1)
     }
-    for (const im of this.parts) {
-      im.count = n
-      im.instanceMatrix.needsUpdate = true
-      im.computeBoundingSphere?.()
-    }
+    this.cs.set(mats, null, rad)
     this.items = list.slice(0, n)
   }
+  // Draw only the instances in view (camera, shadow box).
+  cull(view, focus) {
+    this.cs.pack(view, focus)
+  }
   dispose() {
-    for (const im of this.parts) {
+    for (const im of [...this.parts, ...this.lodParts, ...this.pres]) {
       this.scene.remove(im)
       im.geometry.dispose()
     }

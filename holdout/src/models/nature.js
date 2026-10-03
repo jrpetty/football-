@@ -6,11 +6,29 @@ import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js'
 
 const TAU = Math.PI * 2
 const pick = (r, a) => a[Math.floor(r() * a.length)]
+// A generator of its own for one part, seeded from the model's: the part may
+// draw as many numbers as it likes (fewer in a far-off copy) without moving
+// what the rest of the model draws, so near and far copies match in shape.
+const branch = (rnd) => seeded(Math.floor(rnd() * 4294967296))
+
+// Far-off trees are built again with a fraction of the geometry: flat cards,
+// fewer of them, coarser trunks and cones. The camp draws these past a
+// distance (see Scatter in terrain.js), where the difference is a few pixels.
+let LOW = false
+export function lowDetail(fn) {
+  LOW = true
+  try {
+    return fn()
+  } finally {
+    LOW = false
+  }
+}
 
 // A cone with its vertices jittered so foliage layers look ragged.
-function raggedCone(b, r, h, o, rnd) {
-  const seg = o.seg ?? 12
-  const g = new THREE.CylinderGeometry(0.02, r, h, seg, 3, true)
+function raggedCone(b, r, h, o, outer) {
+  const rnd = branch(outer)
+  const seg = LOW ? Math.min(o.seg ?? 12, 8) : o.seg ?? 12
+  const g = new THREE.CylinderGeometry(0.02, r, h, seg, LOW ? 1 : 3, true)
   const p = g.attributes.position
   for (let i = 0; i < p.count; i++) {
     const x = p.getX(i)
@@ -75,8 +93,8 @@ function blob(b, r, o, rnd) {
 // A tapered limb along a smooth curve through pts, radius r0 -> r1.
 export function limb(b, pts, r0, r1, o = {}) {
   const curve = new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(...p)), false, 'catmullrom', 0.4)
-  const segs = o.segs ?? Math.max(3, pts.length * 3)
-  const rad = o.radial ?? 7
+  const segs = LOW ? Math.max(2, Math.ceil((o.segs ?? Math.max(3, pts.length * 3)) / 2)) : o.segs ?? Math.max(3, pts.length * 3)
+  const rad = LOW ? Math.min(o.radial ?? 7, 5) : o.radial ?? 7
   const frames = curve.computeFrenetFrames(segs, false)
   const pos = []
   const nrm = []
@@ -117,7 +135,7 @@ export function limb(b, pts, r0, r1, o = {}) {
 // A foliage card: a quad with 0..1 UVs, centred at the origin, facing +z,
 // bent slightly so it doesn't read as a flat sheet.
 export function card(b, w, h, o) {
-  const g = new THREE.PlaneGeometry(w, h, 2, 2)
+  const g = new THREE.PlaneGeometry(w, h, LOW ? 1 : 2, LOW ? 1 : 2)
   const p = g.attributes.position
   for (let i = 0; i < p.count; i++) {
     const x = p.getX(i) / (w / 2)
@@ -129,11 +147,14 @@ export function card(b, w, h, o) {
 }
 // A clump of leaf cards round a point, plus a dark inner core that fills the
 // gaps so the crown reads as solid from a distance.
-export function leafClump(b, x, y, z, r, rnd, o = {}) {
+export function leafClump(b, x, y, z, r, outer, o = {}) {
+  const rnd = branch(outer)
+  const coreRnd = branch(rnd)
   const key = o.mat ?? 'leafCard'
-  const n = o.n ?? 9
+  // fewer, larger cards from afar (the first of the same cards)
+  const n = LOW ? Math.ceil((o.n ?? 9) * 0.6) : o.n ?? 9
   const greens = o.colors ?? ['#ffffff', '#f0f4e8', '#e0e8d0', '#f8fff0']
-  b.add(smoothBlob(r * 0.5, 1, 0.35, 0.8, rnd), { mat: o.coreMat ?? 'leaf', color: o.core ?? '#4a6a30', x, y, z })
+  b.add(smoothBlob(r * (LOW ? 0.58 : 0.5), LOW ? 0 : 1, 0.35, 0.8, coreRnd), { mat: o.coreMat ?? 'leaf', color: o.core ?? '#4a6a30', x, y, z })
   for (let i = 0; i < n; i++) {
     // spread cards over the sphere, facing outwards, tilted up a little
     const u = rnd() * 2 - 1
@@ -142,7 +163,7 @@ export function leafClump(b, x, y, z, r, rnd, o = {}) {
     const sz = Math.sqrt(1 - u * u) * Math.sin(a)
     const sy = u * 0.7 + 0.2
     const d = r * (0.35 + rnd() * 0.35)
-    const size = r * (1.25 + rnd() * 0.5)
+    const size = r * (1.25 + rnd() * 0.5) * (LOW ? 1.3 : 1)
     card(b, size, size, { mat: key, color: pick(rnd, greens), x: x + sx * d, y: y + sy * d, z: z + sz * d, ry: Math.atan2(sx, sz), rx: -Math.asin(Math.max(-0.9, Math.min(0.9, sy))) * 0.8 + (rnd() - 0.5) * 0.4, rz: rnd() * TAU, order: 'YXZ', jitter: 0.12 })
   }
 }
@@ -158,7 +179,8 @@ export function pineModel(seed = 1, o = {}) {
   limb(b, [[0, -0.1, 0], [0, h * 0.4, 0], [(rnd() - 0.5) * 0.15, h * 0.98, (rnd() - 0.5) * 0.15]], tr, 0.03, { color: '#d8ccc0', radial: 8 })
   for (let i = 0; i < 4; i++) {
     const a = (i / 4) * TAU + rnd()
-    limb(b, [[0, 0.35, 0], [Math.cos(a) * 0.3, 0.06, Math.sin(a) * 0.3], [Math.cos(a) * 0.55, -0.05, Math.sin(a) * 0.55]], tr * 0.55, 0.04, { color: '#c8bcb0', radial: 5 })
+    // too small to see from afar
+    if (!LOW) limb(b, [[0, 0.35, 0], [Math.cos(a) * 0.3, 0.06, Math.sin(a) * 0.3], [Math.cos(a) * 0.55, -0.05, Math.sin(a) * 0.55]], tr * 0.55, 0.04, { color: '#c8bcb0', radial: 5 })
   }
   const dead = !!o.dead
   const core = dead ? '#5a4a32' : pick(rnd, ['#1a2a16', '#1e3018', '#182614'])
@@ -181,8 +203,9 @@ export function pineModel(seed = 1, o = {}) {
       const len = reach * (0.85 + rnd() * 0.3)
       // a spray card running outward from the trunk, drooping
       b.at({ x: Math.cos(a) * len * 0.5, y: y - len * 0.12, z: Math.sin(a) * len * 0.5, ry: -a, order: 'YXZ', rz: -0.28 - rnd() * 0.15 }, () => {
-        card(b, len * 1.3, len * 0.95, { mat: 'needleCard', color: pick(rnd, tints), rx: -Math.PI / 2 + 0.3, bend: 0.18, jitter: 0.1 })
-        card(b, len * 1.1, len * 0.7, { mat: 'needleCard', color: pick(rnd, tints), rx: -0.9, y: -0.08, bend: 0.12, jitter: 0.1 })
+        // from afar the cards are flat (two triangles each) and a little bigger
+        card(b, len * 1.3 * (LOW ? 1.15 : 1), len * 0.95 * (LOW ? 1.1 : 1), { mat: 'needleCard', color: pick(rnd, tints), rx: -Math.PI / 2 + 0.3, bend: 0.18, jitter: 0.1 })
+        card(b, len * 1.1 * (LOW ? 1.15 : 1), len * 0.7 * (LOW ? 1.1 : 1), { mat: 'needleCard', color: pick(rnd, tints), rx: -0.9, y: -0.08, bend: 0.12, jitter: 0.1 })
       })
     }
   }

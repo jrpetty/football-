@@ -179,8 +179,30 @@ if (uWeather > 0.0 || uSnow > 0.0) {
   }
 }
 `
+// Foliage gets a lighter weathering: leaves and needles have no grime line or
+// rain streaks, so one read of the noise gives the broad tone and drift, and
+// snow adds one more.
+const WEATHER_FRAG_LITE = /* glsl */ `
+if (uWeather > 0.0 || uSnow > 0.0) {
+  vec3 fn = texture2D(tWNoise, vWW.xz * 0.22).rgb;
+  diffuseColor.rgb *= (1.0 + (fn.r - 0.5) * 0.2 * uWeather) * mix(vec3(1.0), vec3(1.05, 1.0, 0.92), clamp((fn.b - 0.5) * 1.8, -1.0, 1.0) * uWeather);
+  if (uSnow > 0.0) {
+    float inside = step(uSnowHole.x, vWW.x) * step(vWW.x, uSnowHole.z) * step(uSnowHole.y, vWW.z) * step(vWW.z, uSnowHole.w) * step(vWW.y, 3.4);
+    if (inside < 0.5) {
+      float sUp = smoothstep(0.3, 0.8, vWN.y);
+      float nB = texture2D(tWNoise, vWW.xz * 1.3 + 0.31).g;
+      float cover = smoothstep(0.78 - uSnow * 0.36, 1.0 - uSnow * 0.3, fn.g * 0.55 + nB * 0.25 + sUp * 0.42);
+      diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.56, 0.59, 0.64), sUp * cover * min(1.0, uSnow * 1.2));
+      diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.46, 0.5, 0.55), (1.0 - sUp) * 0.08 * uSnow);
+    }
+  }
+}
+`
 // Patch a shader object (from onBeforeCompile) with the weathering layer.
-export function weatherShader(sh) {
+// late: for alpha-tested materials (leaf and needle cards) the weathering runs
+// after the alpha test, so the half of a card that is cut away is thrown out
+// before its seven noise reads, not after.
+export function weatherShader(sh, late = false, lite = false) {
   if (!WEATHER.tNoise.value) WEATHER.tNoise.value = texSet('noise').map
   sh.uniforms.tWNoise = WEATHER.tNoise
   sh.uniforms.uWeather = WEATHER.uWeather
@@ -189,15 +211,15 @@ export function weatherShader(sh) {
   sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWW;\nvarying vec3 vWN;').replace('#include <project_vertex>', WEATHER_VERT + '#include <project_vertex>')
   sh.fragmentShader = sh.fragmentShader
     .replace('#include <common>', '#include <common>\nvarying vec3 vWW;\nvarying vec3 vWN;\nuniform sampler2D tWNoise;\nuniform float uWeather;\nuniform float uSnow;\nuniform vec4 uSnowHole;')
-    .replace('#include <color_fragment>', '#include <color_fragment>\n' + WEATHER_FRAG)
+    .replace(late ? '#include <alphatest_fragment>' : '#include <color_fragment>', (late ? '#include <alphatest_fragment>\n' : '#include <color_fragment>\n') + (lite ? WEATHER_FRAG_LITE : WEATHER_FRAG))
 }
 // Give a material the weathering layer; extra patches run after it.
 export function withWeather(m, key, extra = null, cacheKey = '') {
   m.onBeforeCompile = (sh, r) => {
-    weatherShader(sh)
+    weatherShader(sh, m.alphaTest > 0, FOLIAGE_KEYS.has(key))
     extra?.(sh, r)
   }
-  m.customProgramCacheKey = () => 'wx1-' + key + cacheKey
+  m.customProgramCacheKey = () => 'wx2-' + key + cacheKey
   m.userData.weather = true
   return m
 }

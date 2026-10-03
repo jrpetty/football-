@@ -39,6 +39,7 @@ import { UI } from './ui/ui.js'
 import { genCity } from './world/city.js'
 import { portrait } from './ui/portrait.js'
 import { initFps, fpsFrame } from './ui/fps.js'
+import { paceFrame } from './render/pacer.js'
 import { bus, h } from './core/util.js'
 
 const GRASS = { low: 0, medium: 18000, high: 40000, ultra: 75000 }
@@ -153,7 +154,7 @@ class Game {
     initFps()
     const loop = (t) => {
       requestAnimationFrame(loop)
-      this.frame(t)
+      if (paceFrame(t)) this.frame(t)
     }
     requestAnimationFrame(loop)
     this.startTicker()

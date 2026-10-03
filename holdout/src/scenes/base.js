@@ -657,6 +657,7 @@ export class BaseScene {
     this.leafInit = true
     this.world.terrain.material.userData.uniforms.uWet.value += ((rain ? 0.85 : 0) - this.world.terrain.material.userData.uniforms.uWet.value) * Math.min(1, dt * 0.05)
     if (this.world.refresh()) this.repaintT = 0
+    this.world.cull(view.camera, this.atmo.sun, view.rig.target)
     if (S.expanding) {
       this.repaintT = (this.repaintT ?? 0) - dt
       if (this.repaintT <= 0) {

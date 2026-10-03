@@ -4,7 +4,8 @@
 // Features inside the fence disappear as the camp grows.
 import * as THREE from 'three'
 import { Splat, Terrain, GrassField, Scatter } from '../render/terrain.js'
-import { pineModel, broadleafModel, deadTreeModel, bushModel, boulderModel, stumpModel, fallenLogModel, flowersModel, reedsModel } from '../models/nature.js'
+import { CullView } from '../render/instcull.js'
+import { pineModel, broadleafModel, deadTreeModel, bushModel, boulderModel, stumpModel, fallenLogModel, flowersModel, reedsModel, lowDetail } from '../models/nature.js'
 import { carModel, busModel, containerModel, forkliftModel, pickupModel, vanModel, CAR_COLORS } from '../models/vehicles.js'
 import { Builder, seeded } from '../models/kit.js'
 import { fruitTree, pallet, crate, tireStack, scrapPile, hayBale, barrel, logPile, cableReel, sign, shadeHex, cinderBlocks, plankStack, sack, lampPost, sandbags, tarp, jerrycan, firewood, wheelbarrow } from '../models/parts.js'
@@ -35,12 +36,12 @@ function zoneAt(x, z) {
 
 // Feature kinds: model factory, instance budget, footprint radius (tiles blocked), wind.
 const KINDS = {
-  pine0: { make: () => pineModel(11), max: 700, block: 0.6, wind: true },
-  pine1: { make: () => pineModel(23, { h: 9.5 }), max: 700, block: 0.6, wind: true },
-  pine2: { make: () => pineModel(37, { h: 6.5 }), max: 700, block: 0.6, wind: true },
-  broad0: { make: () => broadleafModel(5), max: 260, block: 0.6, wind: true },
-  broad1: { make: () => broadleafModel(17), max: 260, block: 0.6, wind: true },
-  broad2: { make: () => broadleafModel(29, { autumn: true }), max: 120, block: 0.6, wind: true },
+  pine0: { make: () => pineModel(11), lod: () => lowDetail(() => pineModel(11)), max: 700, block: 0.6, wind: true },
+  pine1: { make: () => pineModel(23, { h: 9.5 }), lod: () => lowDetail(() => pineModel(23, { h: 9.5 })), max: 700, block: 0.6, wind: true },
+  pine2: { make: () => pineModel(37, { h: 6.5 }), lod: () => lowDetail(() => pineModel(37, { h: 6.5 })), max: 700, block: 0.6, wind: true },
+  broad0: { make: () => broadleafModel(5), lod: () => lowDetail(() => broadleafModel(5)), max: 260, block: 0.6, wind: true },
+  broad1: { make: () => broadleafModel(17), lod: () => lowDetail(() => broadleafModel(17)), max: 260, block: 0.6, wind: true },
+  broad2: { make: () => broadleafModel(29, { autumn: true }), lod: () => lowDetail(() => broadleafModel(29, { autumn: true })), max: 120, block: 0.6, wind: true },
   dead: { make: () => deadTreeModel(3), max: 120, block: 0.5 },
   bush0: { make: () => bushModel(3), max: 500, wind: true },
   bush1: { make: () => bushModel(9, { berries: '#a82a3a' }), max: 300, wind: true },
@@ -309,7 +310,7 @@ export class BaseWorld {
     this.scatters = {}
     for (const [k, K] of Object.entries(KINDS)) {
       if (!this.features.some((f) => f.kind === k)) continue
-      this.scatters[k] = new Scatter(scene, K.make(), K.max, { wind: K.wind, shadow: K.shadow !== false })
+      this.scatters[k] = new Scatter(scene, K.make(), K.max, { wind: K.wind, shadow: K.shadow !== false, lod: K.lod ? K.lod() : null })
     }
     this.statics = new THREE.Group()
     this.statics.add(roadModel(), ruinsModel(77))
@@ -324,6 +325,20 @@ export class BaseWorld {
     this.grassCount = opts.grass ?? 40000
     this.grass = null
     this.lastKey = ''
+    // only what the camera (and the sun's shadow box) can reach is drawn
+    this.cullView = new CullView()
+    this.culled = false
+  }
+  // Pack the scenery in view into the instance buffers (a few times a
+  // second at most: when the camera or sun has moved enough, or the scenery
+  // itself changed).
+  cull(camera, sun, focus) {
+    const V = this.cullView
+    if (this.culled && !V.moved(camera, sun, focus)) return
+    this.culled = true
+    V.capture(camera, sun, focus)
+    for (const sc of Object.values(this.scatters)) sc.cull(V, focus)
+    this.grass?.cull(V, focus)
   }
   // Which features are visible: outside the fence, and not yet cleared by an expansion in progress.
   visibleFeatures() {
@@ -358,6 +373,7 @@ export class BaseWorld {
     const key = `${b.x0},${b.x1},${b.z0},${b.z1}|${S.expanding?.id || ''}|${prog}`
     if (!force && key === this.lastKey) return false
     this.lastKey = key
+    this.culled = false
     const vis = this.visibleFeatures()
     const by = {}
     for (const f of vis) (by[f.kind] ||= []).push(f)
@@ -554,6 +570,7 @@ export class BaseWorld {
   rebuildGrass(count = this.grassCount) {
     if (this.grass) this.grass.dispose()
     this.grass = null
+    this.culled = false
     if (count <= 0) return
     const b = bounds()
     this.grass = new GrassField(this.scene, this.splat, {
