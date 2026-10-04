@@ -1,7 +1,6 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import type { ComponentType, ReactNode } from 'react';
 import { useRoute, Link } from './router.tsx';
-import { useFirstRunRedirect } from './keys/firstRun.ts';
 import { CaptionProvider, MetaProvider, PrefsProvider, ToastProvider, useCurrentCaption, useMeta, usePrefs } from './context.tsx';
 import { BrandMark, Wordmark } from './components/Brand.tsx';
 import { Icon } from './components/icons.tsx';
@@ -11,7 +10,16 @@ import { MOCK, api } from './api.ts';
 import { ArenaIcon } from './arena/ArenaIcon.tsx';
 import { VersusIcon } from './versus/VersusIcon.tsx';
 import { BudgetIcon } from './budget/BudgetParts.tsx';
+// Simple mode, Home, page guides and the Help panel (ui/src/simple/, ui/src/help/)
+import { SidebarNav } from './simple/SidebarNav.tsx';
+import { PageChrome } from './simple/PageChrome.tsx';
+import { HelpButton } from './help/HelpPanel.tsx';
+import { SimpleIcon } from './simple/icons.tsx';
+import { pageKeyFor } from './simple/nav.ts';
+import { isSimpleMode, useSimplePrefs } from './simple/prefs.ts';
+import { useProgressTracking } from './simple/progress.ts';
 
+const HomePage = lazy(() => import('./simple/HomePage.tsx'));
 const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage.tsx'));
 const NewRunPage = lazy(() => import('./pages/NewRunPage.tsx'));
 const LiveArenaPage = lazy(() => import('./pages/LiveArenaPage.tsx'));
@@ -69,8 +77,9 @@ interface NavItem {
 }
 
 const NAV: NavItem[] = [
+  { to: '/', label: 'Home', icon: SimpleIcon.Home, match: (p) => p === '/' },
   { to: '/run/new', label: 'New Run', icon: Icon.Rocket, cta: true, match: (p) => p === '/run/new' },
-  { to: '/', label: 'Leaderboard', icon: Icon.Trophy, match: (p) => p === '/' || p === '/leaderboard' },
+  { to: '/leaderboard', label: 'Leaderboard', icon: Icon.Trophy, match: (p) => p === '/leaderboard' },
   { to: '/runs', label: 'Runs', icon: Icon.History, match: (p) => p.startsWith('/runs') },
   { to: '/arena', label: 'Arena', icon: ArenaIcon, match: (p) => p.startsWith('/arena') },
   { to: '/versus', label: 'Head to Head', icon: VersusIcon, match: (p) => p.startsWith('/versus') },
@@ -128,10 +137,12 @@ interface Resolved {
   bare?: boolean;
 }
 
-function resolve(parts: string[]): Resolved {
+function resolve(parts: string[], query?: URLSearchParams): Resolved {
   const [a, b, c] = parts;
+  // Old leaderboard links (#/?suite=…&run=…) still open the leaderboard; plain #/ is Home.
+  if (!a && !query?.has('suite') && !query?.has('run')) return { el: <HomePage />, crumb: 'Home' };
   if (!a || a === 'leaderboard') return { el: <LeaderboardPage />, crumb: 'Leaderboard' };
-  if (a === 'run' && b === 'new') return { el: <NewRunPage />, crumb: 'New Run' };
+  if (a === 'run' && b === 'new') return { el: <NewRunPage />, crumb: 'Run a test' };
   if (a === 'runs') {
     if (!b) return { el: <RunsPage />, crumb: 'Runs' };
     if (c === 'live') return { el: <LiveArenaPage key={b} runId={b} />, crumb: 'Live Arena' };
@@ -193,7 +204,7 @@ function resolve(parts: string[]): Resolved {
             <p>There is nothing at this address.</p>
             <div className="actions">
               <Link to="/" className="btn primary">
-                Go to the leaderboard
+                Go to Home
               </Link>
             </div>
           </div>
@@ -206,7 +217,6 @@ function resolve(parts: string[]): Resolved {
 
 function Shell() {
   const route = useRoute();
-  useFirstRunRedirect();
   const { meta, error, reload, loading } = useMeta();
   const { theme, setTheme, broadcast, setBroadcast, captions, setCaptions } = usePrefs();
   const [navOpen, setNavOpen] = useState(false);
@@ -214,8 +224,11 @@ function Shell() {
   const hideTimer = useRef<number | undefined>(undefined);
   const now = useNow(broadcast ? 1000 : null);
   const manualCount = useManualCount();
+  const simple = useSimplePrefs(isSimpleMode);
 
-  const { el, crumb, bare } = resolve(route.parts);
+  const { el, crumb, bare } = resolve(route.parts, route.query);
+  const pageKey = pageKeyFor(route.path);
+  useProgressTracking(route.parts);
 
   useEffect(() => {
     setNavOpen(false);
@@ -277,24 +290,10 @@ function Shell() {
           <BrandMark className="brand-mark" />
           <Wordmark />
         </Link>
-        <nav className="nav">
-          {NAV.map((n) => {
-            const I = n.icon;
-            const active = n.match(route.path);
-            const count = n.badge === 'manual' ? manualCount : 0;
-            return (
-              <div key={n.to} style={{ display: 'contents' }}>
-                {n.section && <div className="nav-section eyebrow">{n.section}</div>}
-                <Link to={n.to} className={cx(n.cta && 'nav-cta')} aria-current={active ? 'page' : undefined} aria-label={count ? `${n.label}, ${count} waiting` : undefined}>
-                  <I />
-                  {n.label}
-                  {count > 0 && <span className="nav-count">{count > 99 ? '99+' : count}</span>}
-                </Link>
-              </div>
-            );
-          })}
-        </nav>
+        <SidebarNav items={NAV} path={route.path} manualCount={manualCount} />
         <div className="sidebar-foot">
+          {!simple && (
+            <>
           <div className="row">
             <span>Harness</span>
             <span className="mono">{meta?.harnessVersion ?? '—'}</span>
@@ -303,6 +302,8 @@ function Shell() {
             <span>Protocol</span>
             <span className="mono">{meta?.protocolVersion ?? '—'}</span>
           </div>
+            </>
+          )}
           <div className="row">
             <span>Broadcast</span>
             <span>
@@ -387,8 +388,10 @@ function Shell() {
             </Callout>
           </div>
         )}
+        <PageChrome key={pageKey} pageKey={pageKey} />
         <Suspense fallback={<LoadingPage />}>{el}</Suspense>
       </main>
+      <HelpButton pageKey={pageKey} />
 
       {broadcast && (
         <div className={cx('broadcast-exit', exitVisible && 'visible')}>

@@ -5,7 +5,7 @@
 import { useMemo, useState } from 'react';
 import { MOCK } from '../api.ts';
 import { useAsync } from '../hooks.ts';
-import { setQuery, useRoute } from '../router.tsx';
+import { Link, setQuery, useRoute } from '../router.tsx';
 import { useViewerCaption } from '../context.tsx';
 import { Callout, CategoryChip, Empty, ErrorState, PageHead, Seg, SkeletonRows, Tabs, cx } from '../components/ui.tsx';
 import { Icon } from '../components/icons.tsx';
@@ -335,7 +335,17 @@ export default function BestPerTestPage() {
         </div>
       ) : shown.length === 0 ? (
         <div className="card">
-          <Empty icon={<Icon.Trophy />} title={data.tests.length ? 'Nothing matches these filters' : 'No results yet'}>
+          <Empty
+            icon={<Icon.Trophy />}
+            title={data.tests.length ? 'Nothing matches these filters' : 'No results yet'}
+            actions={
+              !data.tests.length && (
+                <Link to="/run/new" className="btn primary">
+                  <Icon.Rocket /> Run a test
+                </Link>
+              )
+            }
+          >
             {data.tests.length ? 'Try clearing a filter.' : 'Run some tests (API models, or copy & paste from New Run) and every test’s leader will appear here.'}
           </Empty>
         </div>

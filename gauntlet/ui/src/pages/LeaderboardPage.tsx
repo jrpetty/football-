@@ -119,8 +119,8 @@ export default function LeaderboardPage() {
                   <Icon.Rocket /> Start your first run
                 </Link>
                 {noKeys && (
-                  <Link to="/models" className="btn">
-                    <Icon.Key /> Add API keys
+                  <Link to="/keys" className="btn">
+                    <Icon.Key /> Add an API key
                   </Link>
                 )}
               </>

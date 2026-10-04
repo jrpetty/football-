@@ -50,14 +50,14 @@ export default function PresentPickerPage() {
             ) : list.length === 0 ? (
               <Empty
                 icon={<Icon.Present />}
-                title="Nothing to present yet"
+                title="Run a test first"
                 actions={
-                  <Link to="/run/new" className="btn primary">
-                    <Icon.Rocket /> Start a run
+                  <Link to="/run/new?suite=quick-check&models=cheap" className="btn primary">
+                    <Icon.Rocket /> Run a test
                   </Link>
                 }
               >
-                Finish a run first — the presenter builds its slides from the results.
+                The Presenter builds its slides from a test’s results. Run one (the Quick Check takes a minute and costs about 2p), then come back here.
               </Empty>
             ) : (
               <ul className="pick-list">

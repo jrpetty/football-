@@ -136,17 +136,19 @@ function StudioPicker() {
   return (
     <div className="page">
       <PageHead eyebrow="Studio" title="Make the video" />
-      <Empty
-        icon={<Icon.Clapper />}
-        title="Nothing to edit yet"
-        actions={
-          <Link to="/run/new" className="btn primary">
-            <Icon.Rocket /> Start a run
-          </Link>
-        }
-      >
-        The Studio turns a finished run into highlights, a narration script, thumbnails and live overlays. Run something first.
-      </Empty>
+      <div className="card">
+        <Empty
+          icon={<Icon.Clapper />}
+          title="Run a test first"
+          actions={
+            <Link to="/run/new?suite=quick-check&models=cheap" className="btn primary">
+              <Icon.Rocket /> Run a test
+            </Link>
+          }
+        >
+          The Studio turns a finished run into highlights, a narration script, thumbnails and live overlays. Run a test, then come back here.
+        </Empty>
+      </div>
     </div>
   );
 }

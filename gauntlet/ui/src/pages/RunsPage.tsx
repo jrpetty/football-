@@ -133,12 +133,12 @@ export default function RunsPage() {
             icon={<Icon.History />}
             title="No runs yet"
             actions={
-              <Link to="/run/new" className="btn primary">
-                <Icon.Rocket /> Start your first run
+              <Link to="/run/new?suite=quick-check&models=cheap" className="btn primary">
+                <Icon.Rocket /> Run your first test
               </Link>
             }
           >
-            Pick a suite and a few models, check the cost estimate, and press start. Results stream in live.
+            Pick a set of tests and a few models, check the price, and press Start. The Quick Check costs about 2p.
           </Empty>
         ) : list.length === 0 ? (
           <Empty icon={<Icon.Filter />} title="No runs match">
