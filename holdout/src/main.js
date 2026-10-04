@@ -297,17 +297,21 @@ class Game {
         h('ul.cons', x.cons.map((t) => h('li', t))),
       ),
     )
+    // the choices scroll inside the card; Start stays on screen below them
     const box = h(
       'div.tcard.modecard',
-      h('div.logo.big', 'HOLDOUT'),
-      h('h2', 'What is left of the city?'),
-      h('p.tag', 'Both play the whole story: the Signal, the hordes, the city to take back. The difference is what the city still holds.'),
-      h('div.modeopts', opts),
-      // where the camp stands: each site plays a little differently
-      h('h3.sitehd', 'Where do you make camp?'),
-      h('div.siteopts', sites),
       h(
-        'div.tbtns',
+        'div.mc-body',
+        h('div.logo.big', 'HOLDOUT'),
+        h('h2', 'What is left of the city?'),
+        h('p.tag', 'Both play the whole story: the Signal, the hordes, the city to take back. The difference is what the city still holds.'),
+        h('div.modeopts', opts),
+        // where the camp stands: each site plays a little differently
+        h('h3.sitehd', 'Where do you make camp?'),
+        h('div.siteopts', sites),
+      ),
+      h(
+        'div.tbtns.mc-foot',
         h('button.btn.go.big', { onclick: () => ((S.mode = pick), this.pickSite(site), box.remove(), this.start(false)) }, 'Start'),
         h('button.btn.big.ghost', { onclick: () => (box.remove(), (card.hidden = false)) }, 'Back'),
       ),

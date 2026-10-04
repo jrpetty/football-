@@ -587,7 +587,7 @@ section .bar { margin: 8px 0 2px; }
 .ld-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #c88a2a, var(--accent-2)); transition: width 0.2s; }
 .ld-card > span { color: var(--muted); font-size: 13px; }
 .ld-tip { color: var(--dim); font-size: 12.5px; margin-top: 12px; }
-.title { position: fixed; inset: 0; display: flex; align-items: center; padding: 0 7vw; background: linear-gradient(90deg, rgba(6, 7, 5, 0.86), rgba(6, 7, 5, 0.5) 50%, rgba(6, 7, 5, 0.05)); z-index: 10; }
+.title { position: fixed; inset: 0; display: flex; align-items: center; padding: 16px 7vw; background: linear-gradient(90deg, rgba(6, 7, 5, 0.86), rgba(6, 7, 5, 0.5) 50%, rgba(6, 7, 5, 0.05)); z-index: 10; }
 .tcard { max-width: 560px; display: flex; flex-direction: column; gap: 16px; animation: fade 0.6s ease-out; }
 .tag { font-size: 18px; color: #e8e2d0; line-height: 1.5; margin: 0; }
 .tfeat { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 9px; }
@@ -1373,7 +1373,7 @@ b.good { color: #8ae0c0; }
 .lm-at { min-width: 44px; text-align: center; padding: 3px 6px; border-radius: 6px; background: rgba(255, 255, 255, 0.07); font: 700 12px var(--font-display); }
 .libm small { display: block; color: var(--muted); }
 .mk.clear i, .marker.clear i { color: #8ae0c0; }
-.modecard .modeopts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0; }
+.modecard .modeopts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 4px 0; }
 .modeopt { text-align: left; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--line-2); background: rgba(0, 0, 0, 0.3); color: var(--fg); cursor: pointer; display: flex; flex-direction: column; gap: 4px; }
 .modeopt b { font: 700 18px var(--font-display); letter-spacing: 0.04em; }
 .modeopt small { color: var(--accent); font-weight: 600; }
@@ -1785,8 +1785,20 @@ body.fprun .mhud .haul { transform: scale(0.85); transform-origin: top left; }
 .vote .kv small { max-width: 70%; text-align: right; }
 .mloc.minor { opacity: 0.82; font-size: 0.86em; }
 /* where the camp stands: four sites with their pros and cons */
+.tcard.modecard { max-width: min(1080px, 100%); max-height: calc(100vh - 32px); gap: 0; padding: 18px 20px; border-radius: 14px; border: 1px solid var(--line-2); background: rgba(10, 12, 9, 0.9); box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5); }
+/* the front card fits a short window too: the feature list goes first */
+.title > .tcard:not(.modecard):not(.lobby) { max-height: calc(100vh - 32px); overflow-y: auto; }
+@media (max-height: 760px) { .title .tfeat { display: none; } .title .logo.huge { font-size: 64px; } }
+.modecard .mc-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-right: 8px; display: flex; flex-direction: column; gap: 10px; }
+.modecard .mc-body h2 { margin: 0; }
+.modecard .logo.big { font-size: 48px; }
+.modecard .tag { font-size: 15px; }
+.modecard .mc-foot { flex: none; margin: 0; padding-top: 14px; border-top: 1px solid var(--line-2); }
+.modecard .mc-foot .btn.go { font-size: 20px; padding: 14px 44px; }
+@media (max-height: 860px) { .modecard .logo.big { font-size: 36px; } .modecard .tag { display: none; } .modeopt p { font-size: 12px; } }
+@media (max-height: 720px) { .modecard .logo.big, .siteopt p { display: none; } .modeopt { padding: 10px 12px; } }
 .modecard .sitehd { margin: 4px 0 8px; font: 700 15px var(--font-display); letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
-.modecard .siteopts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+.modecard .siteopts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 4px; }
 .siteopt { text-align: left; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line-2); background: rgba(0, 0, 0, 0.3); color: var(--fg); cursor: pointer; display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
 .siteopt b { display: flex; align-items: center; gap: 6px; font: 700 14px var(--font-display); letter-spacing: 0.03em; }
 .siteopt b i { width: 16px; height: 16px; display: inline-flex; color: var(--accent); }

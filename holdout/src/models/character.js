@@ -293,7 +293,7 @@ function gait(ph, amp, Z, drag = 0) {
 const TAU = Math.PI * 2
 // Locomotion for the living: walk and run are one gait blended by speed, so
 // speeding up never pops. ch.gaitAmp eases towards the speed's amplitude.
-function locomote(ch, t, o, minAmp) {
+function locomote(ch, t, o = {}, minAmp) {
   const v = o.speed ?? 0
   const want = Math.max(minAmp, clamp((v - 1.7) / 2.2, 0, 1))
   ch.gaitAmp += (want - ch.gaitAmp) * Math.min(1, (o.dt || 0.016) * 4)
@@ -611,8 +611,8 @@ export const ANIMS = {
     set('head', 0.05, Math.sin(t * 0.25) * 0.7, 0)
     set('chest', 0, Math.sin(t * 0.25) * 0.3, 0)
   },
-  carry(ch, t) {
-    ANIMS.walk(ch, t)
+  carry(ch, t, o) {
+    ANIMS.walk(ch, t, o)
     set('upperArmR', -0.8, 0, -0.1)
     set('upperArmL', -0.8, 0, 0.1)
     set('foreArmR', -1.1)
