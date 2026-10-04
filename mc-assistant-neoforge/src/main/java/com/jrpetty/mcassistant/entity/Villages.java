@@ -219,6 +219,7 @@ public final class Villages {
     public static void resetForTests() {
         MADE_UP.clear();
         Storehouses.resetForTests();
+        VillageBoards.resetForTests();
         Retiring.resetForTests();
         HAS_STORES.clear();
         REQUESTED.clear();
@@ -319,6 +320,11 @@ public final class Villages {
         FOUNDED.put(v.id(), level.getGameTime());
         com.jrpetty.mcassistant.village.Chronicle.record(v.id(), level.getDayTime() / 24000L,
             name(v.id()) + " was founded");
+        // The founders' notice board, on the square: what the village is doing, how it is
+        // getting on, and what it is working towards (VillageBoards).
+        if (level instanceof net.minecraft.server.level.ServerLevel server) {
+            com.jrpetty.mcassistant.Guard.run("village board", () -> VillageBoards.raiseFor(server, v));
+        }
         return v;
     }
 

@@ -129,6 +129,26 @@ public final class McAssistantMod {
                 com.jrpetty.mcassistant.menu.StorehouseMenu::new,
             net.minecraft.world.flag.FeatureFlags.DEFAULT_FLAGS));
 
+    // The Village Board: ten panels wide and five high, set up on every village's square, saying
+    // what the village is doing, how it is getting on and what it is working towards.
+    public static final DeferredBlock<com.jrpetty.mcassistant.block.VillageBoardBlock> VILLAGE_BOARD =
+        BLOCKS.registerBlock("village_board",
+            com.jrpetty.mcassistant.block.VillageBoardBlock::new,
+            BlockBehaviour.Properties.of()
+                .mapColor(MapColor.WOOD)
+                .strength(2.0F, 600.0F)
+                .sound(SoundType.WOOD)
+                .noOcclusion());
+
+    public static final DeferredItem<com.jrpetty.mcassistant.item.VillageBoardItem> VILLAGE_BOARD_ITEM =
+        ITEMS.registerItem("village_board", com.jrpetty.mcassistant.item.VillageBoardItem::new,
+            new net.minecraft.world.item.Item.Properties().stacksTo(1));
+
+    public static final DeferredHolder<net.minecraft.world.level.block.entity.BlockEntityType<?>,
+        net.minecraft.world.level.block.entity.BlockEntityType<com.jrpetty.mcassistant.block.VillageBoardBlockEntity>> VILLAGE_BOARD_BE =
+        BLOCK_ENTITIES.register("village_board", () -> net.minecraft.world.level.block.entity.BlockEntityType.Builder
+            .of(com.jrpetty.mcassistant.block.VillageBoardBlockEntity::new, VILLAGE_BOARD.get()).build(null));
+
     // The Place Marker item: rename it in an anvil to a place name, then
     // right-click a spot to save it as that named waypoint for your assistant.
     public static final DeferredItem<PlaceMarkerItem> PLACE_MARKER =
@@ -165,6 +185,7 @@ public final class McAssistantMod {
                 out.accept(VILLAGE_CHARTER.get());
                 out.accept(VILLAGE_COIN.get());
                 out.accept(STOREHOUSE_ITEM.get());
+                out.accept(VILLAGE_BOARD_ITEM.get());
                 out.accept(ASSISTANT_SPAWNER_ITEM.get());
                 out.accept(JOB_BOARD_ITEM.get());
                 out.accept(ZONE_MARKER.get());
@@ -231,6 +252,7 @@ public final class McAssistantMod {
             event.accept(VILLAGE_CHARTER);
             event.accept(JOB_BOARD_ITEM);
             event.accept(STOREHOUSE_ITEM);
+            event.accept(VILLAGE_BOARD_ITEM);
         }
         if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
             event.accept(VILLAGE_COIN);

@@ -1,0 +1,109 @@
+package com.jrpetty.mcassistant.entity;
+
+import com.jrpetty.mcassistant.entity.AssistantEntity.StationTask;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * How a folk's nature suits its work. The same two hands go further at a trade that fits
+ * who they are: a hardworking folk is quicker at anything, a curious one loves the mine
+ * and the library, a sociable one is made for the shop and the café and finds a long day
+ * alone at the river a drag, a shy one is happiest at the hives, the loom and the water,
+ * a grumpy one keeps a stern watch but sours a counter, a generous one tends fields and
+ * flocks and kitchens with care, a cheerful one lightens any job, and an easygoing one
+ * takes its time. Up to a fifth quicker, or slower, than most — on top of its level,
+ * its tools, its mood and how the village is doing (AssistantEntity.workTicksFor).
+ */
+public final class Skill {
+
+    private Skill() {}
+
+    /** The most a nature adds to, or takes off, the pace of work. */
+    public static final int MOST = 20;
+
+    /** What one trait does for one trade, in percent of pace, and why. */
+    record Fit(int percent, String why) {}
+
+    static Fit fit(Social.Trait trait, StationTask trade) {
+        return switch (trait) {
+            case HARDWORKING -> new Fit(12, "puts its back into everything");
+            case EASYGOING -> switch (trade) {
+                case FISH, BEEKEEP -> new Fit(0, "unhurried, which suits the water and the hives");
+                default -> new Fit(-8, "takes its time");
+            };
+            case SOCIABLE -> switch (trade) {
+                case SHOP, COOK, STORE, HAUL -> new Fit(12, "good with people, made for this");
+                case MINE, FISH -> new Fit(-5, "misses company down there");
+                default -> new Fit(0, "");
+            };
+            case SHY -> switch (trade) {
+                case FISH, BEEKEEP, ENCHANT, TAILOR -> new Fit(10, "quiet, careful work suits it");
+                case SHOP, COOK -> new Fit(-8, "finds serving folk hard going");
+                default -> new Fit(0, "");
+            };
+            case CHEERFUL -> switch (trade) {
+                case COOK, SHOP -> new Fit(10, "brightens the counter and the kitchen");
+                default -> new Fit(5, "whistles while it works");
+            };
+            case GRUMPY -> switch (trade) {
+                case GUARD -> new Fit(8, "nothing gets past a scowl like that");
+                case MINE, SMITH -> new Fit(4, "takes it out on the stone");
+                case SHOP, COOK, STORE -> new Fit(-6, "puts the customers off");
+                default -> new Fit(0, "");
+            };
+            case GENEROUS -> switch (trade) {
+                case FARM, RANCH, COOK -> new Fit(8, "tends things with care");
+                default -> new Fit(0, "");
+            };
+            case CURIOUS -> switch (trade) {
+                case MINE, ENCHANT, BREW, SMITH -> new Fit(10, "loves finding out how things work");
+                case HAUL, STORE -> new Fit(-4, "wanders off to look at things");
+                default -> new Fit(3, "always learning something");
+            };
+        };
+    }
+
+    /** How much quicker (or, below nought, slower) than most this folk is at its trade. */
+    public static int percent(VillageFolkEntity f) {
+        if (f.isBaby() || f.stationTask() == StationTask.NONE || !f.life().rolled()) return 0;
+        int sum = 0;
+        for (Social.Trait t : Social.Trait.values()) {
+            if (f.life().has(t)) sum += fit(t, f.stationTask()).percent();
+        }
+        return Math.max(-MOST, Math.min(MOST, sum));
+    }
+
+    /** Why, trait by trait: "hardworking: puts its back into everything (+12%)". */
+    public static List<String> reasons(VillageFolkEntity f) {
+        List<String> out = new ArrayList<>();
+        if (f.stationTask() == StationTask.NONE || !f.life().rolled()) return out;
+        for (Social.Trait t : Social.Trait.values()) {
+            if (!f.life().has(t)) continue;
+            Fit fit = fit(t, f.stationTask());
+            if (fit.percent() == 0 && fit.why().isEmpty()) continue;
+            out.add(t.label + ": " + fit.why() + (fit.percent() == 0 ? "" : " (" + (fit.percent() > 0 ? "+" : "") + fit.percent() + "%)"));
+        }
+        return out;
+    }
+
+    /** In a word or two, for its card: "a natural (+22%)", "steady", "a slow hand (−8%)". */
+    public static String word(int percent) {
+        return percent >= 15 ? "a natural" : percent >= 8 ? "very good at it" : percent >= 3 ? "good at it"
+            : percent > -3 ? "steady" : percent > -8 ? "a little slow" : "not cut out for it";
+    }
+
+    /** One line for a player: what its nature makes of its trade. */
+    public static String line(VillageFolkEntity f) {
+        if (f.isBaby()) return "Too young for a trade.";
+        if (f.stationTask() == StationTask.NONE) return "No trade yet.";
+        int p = percent(f);
+        List<String> why = reasons(f);
+        return capital(word(p)) + (p == 0 ? "" : " — works " + Math.abs(p) + "% " + (p > 0 ? "faster" : "slower") + " than most")
+            + (why.isEmpty() ? "." : ": " + String.join("; ", why) + ".");
+    }
+
+    private static String capital(String s) {
+        return s.isEmpty() ? s : Character.toUpperCase(s.charAt(0)) + s.substring(1);
+    }
+}

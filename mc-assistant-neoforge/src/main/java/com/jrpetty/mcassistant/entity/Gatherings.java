@@ -102,6 +102,20 @@ public final class Gatherings {
         return null;
     }
 
+    /** What the gathering is, in a few words, for the board and the news. */
+    public static String describe(Kind kind, UUID village) {
+        return switch (kind) {
+            case WEDDING -> {
+                Wedding w = wedding(village);
+                yield w == null ? "a wedding" : "the wedding of " + w.names();
+            }
+            case HONOUR -> "a celebration for " + HONOURED.getOrDefault(village, "our hero");
+            case CELEBRATION -> "fireworks for coming into " + Villages.ageOf(village).label;
+            case VIGIL -> "a vigil for " + DIED_NAME.getOrDefault(village, "a friend");
+            case FEAST -> "the village feast";
+        };
+    }
+
     @Nullable
     static Wedding wedding(UUID village) {
         Deque<Wedding> w = WEDDINGS.get(village);

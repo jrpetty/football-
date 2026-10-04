@@ -1,6 +1,7 @@
 {
   "replace": false,
   "values": [
-    "mc_assistant:storehouse_unit"
+    "mc_assistant:storehouse_unit",
+    "mc_assistant:village_board"
   ]
 }

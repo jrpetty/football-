@@ -312,6 +312,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (tickCount - agendaTick < 100) return;   // folk think slowly, on purpose
         agendaTick = tickCount;
         flyTheColours();
+        showTheWealth();
         if (!life.rolled()) life.roll(getRandom(), null, null);
         ensurePersona();
         refreshMood();
@@ -372,6 +373,25 @@ public class VillageFolkEntity extends AssistantEntity {
 
     public void earn(int coins) { if (coins > 0) purse += coins; }
 
+    /** How much of its work had been paid for at its last wage (Wealth.bonus). */
+    private int paidDeeds;
+    /** The comforts it has bought and set up in its home: a rug, a lantern, flowers, books. */
+    private int comforts;
+    /** The day it last bought a comfort for its home, and the one it is carrying home now. */
+    private long comfortDay = -10;
+    private net.minecraft.world.item.ItemStack comfortCarried = net.minecraft.world.item.ItemStack.EMPTY;
+    private int comfortSetOff = -1;
+
+    public int paidDeeds() { return paidDeeds; }
+
+    public int comforts() { return comforts; }
+
+    /** Paid: what it had done so far is paid for. */
+    public void paid(int coins) {
+        earn(coins);
+        paidDeeds = deedsTotal();
+    }
+
     public boolean spend(int coins) {
         if (coins <= 0 || purse < coins) return false;
         purse -= coins;
@@ -407,6 +427,143 @@ public class VillageFolkEntity extends AssistantEntity {
             brain("bought " + bought + " at the market");
         }
         return true;
+    }
+
+    /** A comfort for a home: what it is, what it costs, and whether it stands against a wall. */
+    private record Comfort(java.util.function.Predicate<net.minecraft.world.item.ItemStack> what, int price,
+                           boolean wall, Wealth.Tier from, String words) {}
+
+    private static final java.util.List<Comfort> COMFORTS = java.util.List.of(
+        new Comfort(st -> st.is(net.minecraft.tags.ItemTags.WOOL_CARPETS), 1, false, Wealth.Tier.COMFORTABLE, "a rug for my floor"),
+        new Comfort(st -> st.is(net.minecraft.world.item.Items.FLOWER_POT), 1, false, Wealth.Tier.COMFORTABLE, "a pot for my windowsill"),
+        new Comfort(st -> st.is(net.minecraft.tags.ItemTags.CANDLES), 1, false, Wealth.Tier.COMFORTABLE, "a candle for the evenings"),
+        new Comfort(st -> st.is(net.minecraft.world.item.Items.LANTERN), 2, false, Wealth.Tier.COMFORTABLE, "a lantern for my table"),
+        new Comfort(st -> st.is(net.minecraft.world.item.Items.BOOKSHELF), 4, true, Wealth.Tier.WELL_OFF, "a bookshelf, like the elder's"));
+
+    /**
+     * Its savings, spent on its home: a folk that is comfortable or better, with the coin for
+     * it, walks to the stores, buys a rug, a pot, a candle, a lantern or (once it is well off)
+     * a bookshelf — paying the treasury for it — carries it home and sets it up by its bed.
+     * A home fills up as its owner does well: two comforts for a comfortable folk, four for a
+     * well-off one, seven for the wealthy. Every second day at most; never on the way to work.
+     */
+    private boolean homeComfort(net.minecraft.server.level.ServerLevel server) {
+        UUID village = ownerId();
+        BlockPos bed = bedPos();
+        if (village == null || bed == null || isBaby() || !level().isLoaded(bed)) return false;
+        long day = level().getDayTime() / 24000L;
+        // Carrying one home: home, and set it up.
+        if (!comfortCarried.isEmpty()) {
+            if (comfortSetOff < 0) comfortSetOff = tickCount;
+            if (tickCount - comfortSetOff > 2400) {                    // could not get it home: back to the stores
+                Villages.Village back = Villages.get(village);
+                if (back != null) Crafts.store(server, back, comfortCarried);
+                comfortCarried = net.minecraft.world.item.ItemStack.EMPTY;
+                comfortSetOff = -1;
+                return false;
+            }
+            if (blockPosition().distSqr(bed) > 3.5 * 3.5) {
+                if (getNavigation().isDone() || tickCount - socialWalkTick >= 100) {
+                    walkTo(bed, 0.9D);
+                    socialWalkTick = tickCount;
+                }
+                brain("carrying " + comfortCarried.getHoverName().getString().toLowerCase(java.util.Locale.ROOT) + " home");
+                return true;
+            }
+            Comfort kind = null;
+            for (Comfort c : COMFORTS) if (c.what().test(comfortCarried)) { kind = c; break; }
+            BlockPos spot = kind == null ? null : comfortSpot(bed, kind.wall());
+            net.minecraft.world.level.block.Block block = net.minecraft.world.level.block.Block.byItem(comfortCarried.getItem());
+            if (spot != null && block != net.minecraft.world.level.block.Blocks.AIR) {
+                level().setBlock(spot, block.defaultBlockState(), 3);
+                swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+                getLookControl().setLookAt(spot.getX() + 0.5, spot.getY() + 0.5, spot.getZ() + 0.5);
+                level().playSound(null, spot, block.defaultBlockState().getSoundType().getPlaceSound(),
+                    net.minecraft.sounds.SoundSource.BLOCKS, 1.0F, 1.0F);
+                comforts++;
+                persona.remember(day, "I bought " + kind.words() + " with my own savings", 3);
+                FolkTalk.speak(this, pick("There. That's more like home.", "Lovely. Worth every coin.",
+                    "Now that's a home to be proud of."));
+            } else {
+                Villages.Village back = Villages.get(village);              // no room for it: back it goes
+                if (back != null) Crafts.store(server, back, comfortCarried);
+            }
+            comfortCarried = net.minecraft.world.item.ItemStack.EMPTY;
+            comfortSetOff = -1;
+            return true;
+        }
+        if (day - comfortDay < 2) return false;
+        Wealth.Tier tier = Wealth.tier(this);
+        if (comforts >= tier.comforts) return false;
+        Villages.Village v = Villages.get(village);
+        if (v == null) return false;
+        // What it can afford and the stores have, the grander first once it can.
+        Comfort want = null;
+        int start = Math.floorMod(getUUID().hashCode() + (int) day, COMFORTS.size());
+        for (int i = 0; i < COMFORTS.size(); i++) {
+            Comfort c = COMFORTS.get((start + i) % COMFORTS.size());
+            if (tier.ordinal() < c.from().ordinal() || purse < c.price() + 3) continue;
+            if (Market.stock(server, village, c.what()) <= 0) continue;
+            if (want == null || c.price() > want.price()) want = c;
+        }
+        if (want == null) { comfortDay = day; return false; }
+        BlockPos stores = storesSpot(server, village);
+        if (stores == null) return false;
+        if (blockPosition().distSqr(stores) > 3.5 * 3.5) {
+            if (comfortSetOff < 0) comfortSetOff = tickCount;
+            if (tickCount - comfortSetOff > 1800) { comfortDay = day; comfortSetOff = -1; return false; }
+            if (getNavigation().isDone() || tickCount - socialWalkTick >= 100) {
+                walkTo(stores, 0.9D);
+                socialWalkTick = tickCount;
+            }
+            brain("off to the stores to buy " + want.words());
+            return true;
+        }
+        comfortSetOff = -1;
+        comfortDay = day;
+        net.minecraft.world.item.ItemStack got = Crafts.takeOne(server, v, want.what());
+        if (got.isEmpty() || !spend(want.price())) {
+            if (!got.isEmpty()) Crafts.store(server, v, got);
+            return false;
+        }
+        com.jrpetty.mcassistant.village.Ledger.addCoins(village, want.price());
+        comfortCarried = got;
+        swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+        FolkTalk.speak(this, pick("I've been saving for " + want.words() + ".", "Treating myself: " + want.words() + "!",
+            want.price() + (want.price() == 1 ? " coin" : " coins") + " for " + want.words() + ". Money well spent."));
+        return true;
+    }
+
+    /** Where in its home a comfort goes: indoors, near its bed, on a sound floor, out of the way. */
+    @Nullable
+    private BlockPos comfortSpot(BlockPos bed, boolean wall) {
+        BlockPos best = null;
+        double bestScore = Double.MAX_VALUE;
+        for (int dy = -1; dy <= 1; dy++) {
+            for (int dx = -3; dx <= 3; dx++) {
+                for (int dz = -3; dz <= 3; dz++) {
+                    BlockPos p = bed.offset(dx, dy, dz);
+                    if (!level().getBlockState(p).isAir() || !level().getBlockState(p.above()).isAir()) continue;
+                    if (!level().getBlockState(p.below()).isFaceSturdy(level(), p.below(), net.minecraft.core.Direction.UP)) continue;
+                    if (level().canSeeSky(p)) continue;                                   // indoors only
+                    boolean byDoor = false, byWall = false;
+                    for (net.minecraft.core.Direction d : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+                        net.minecraft.world.level.block.state.BlockState n = level().getBlockState(p.relative(d));
+                        if (n.getBlock() instanceof net.minecraft.world.level.block.DoorBlock) byDoor = true;
+                        if (n.isFaceSturdy(level(), p.relative(d), d.getOpposite())) byWall = true;
+                    }
+                    if (byDoor || (wall && !byWall)) continue;
+                    // Against a wall is tidier; nearer the bed is homelier.
+                    double score = p.distSqr(bed) + (byWall ? 0 : 4);
+                    if (score < bestScore) { bestScore = score; best = p; }
+                }
+            }
+        }
+        return best;
+    }
+
+    private String pick(String... lines) {
+        return lines[getRandom().nextInt(lines.length)];
     }
 
     /** The day it last dropped in to the café, and when it set off there. */
@@ -750,6 +907,57 @@ public class VillageFolkEntity extends AssistantEntity {
         return Contentment.workPercent(ownerId()) + (isOld() ? -10 : 0);
     }
 
+    // ------------------------------ a level in every trade ------------------------
+
+    /** What it has learned at each trade it has worked: a good farmer is not a good smith. */
+    private final java.util.EnumMap<StationTask, Integer> tradeXp = new java.util.EnumMap<>(StationTask.class);
+
+    @Override
+    protected int levelXp() {
+        StationTask t = stationTask();
+        return t == StationTask.NONE ? 0 : tradeXp.getOrDefault(t, 0);
+    }
+
+    @Override
+    protected void creditTrade(int amount) {
+        StationTask t = stationTask();
+        if (t != StationTask.NONE && amount > 0) tradeXp.merge(t, amount, (a, b) -> Math.min(1_000_000, a + b));
+    }
+
+    /** Its level at a trade (nought for one it has never worked). */
+    public int tradeLevel(StationTask t) {
+        return t == StationTask.NONE ? 0 : levelFor(tradeXp.getOrDefault(t, 0));
+    }
+
+    /** Every trade it has worked, best first: "farmer 12, miner 3". */
+    public String tradeLevels() {
+        java.util.List<java.util.Map.Entry<StationTask, Integer>> all = new java.util.ArrayList<>(tradeXp.entrySet());
+        all.sort((a, b) -> Integer.compare(b.getValue(), a.getValue()));
+        StringBuilder sb = new StringBuilder();
+        for (java.util.Map.Entry<StationTask, Integer> e : all) {
+            if (e.getValue() <= 0) continue;
+            if (sb.length() > 0) sb.append(", ");
+            sb.append(e.getKey().title.toLowerCase(java.util.Locale.ROOT)).append(' ').append(levelFor(e.getValue()));
+        }
+        return sb.toString();
+    }
+
+    @Override
+    protected void tradeTakenUp(StationTask from, StationTask to) {
+        if (tickCount < 40 || to == StationTask.NONE || !persona.rolled()) return;    // loading, or not settled yet
+        long day = level().getDayTime() / 24000L;
+        int lv = tradeLevel(to);
+        persona.remember(day, from == StationTask.NONE
+            ? "I took up " + to.label + (lv > 0 ? ", where I'd worked before" : " for the first time")
+            : "I went from " + from.label + " to " + to.label + (lv > 0 ? " — back to an old trade (level " + lv + ")" : ", new to it"), 3);
+    }
+
+    /** A trade that suits its nature goes quicker; one that does not, slower (Skill). */
+    @Override
+    protected int personalityWorkPercent() {
+        return Skill.percent(this);
+    }
+
     /** A good mood makes for quick hands, a black one for slow ones. */
     @Override
     protected int moodWorkPercent() {
@@ -942,6 +1150,18 @@ public class VillageFolkEntity extends AssistantEntity {
         net.minecraft.network.syncher.SynchedEntityData.defineId(
             VillageFolkEntity.class, net.minecraft.network.syncher.EntityDataSerializers.STRING);
 
+    /** How well off it is (Wealth.Tier), for its clothes. */
+    private static final net.minecraft.network.syncher.EntityDataAccessor<Integer> DATA_WEALTH =
+        net.minecraft.network.syncher.SynchedEntityData.defineId(
+            VillageFolkEntity.class, net.minecraft.network.syncher.EntityDataSerializers.INT);
+
+    public int clientWealth() { return this.entityData.get(DATA_WEALTH); }
+
+    private void showTheWealth() {
+        int tier = Wealth.tier(this).ordinal();
+        if (this.entityData.get(DATA_WEALTH) != tier) this.entityData.set(DATA_WEALTH, tier);
+    }
+
     /** Which of the village colours its watch wears; -1 for a folk of no village. */
     private static final net.minecraft.network.syncher.EntityDataAccessor<Integer> DATA_BANNER =
         net.minecraft.network.syncher.SynchedEntityData.defineId(
@@ -952,6 +1172,7 @@ public class VillageFolkEntity extends AssistantEntity {
         super.defineSynchedData(builder);
         builder.define(DATA_SOCIAL, "");
         builder.define(DATA_BANNER, -1);
+        builder.define(DATA_WEALTH, 1);
         builder.define(DATA_CHILD, false);
     }
 
@@ -1432,6 +1653,7 @@ public class VillageFolkEntity extends AssistantEntity {
             if (away != null) { walkTo(away, 0.9D); socialWalkTick = tickCount; }
             return;
         }
+        if (homeComfort(server)) return;              // its savings, spent on its home
         if (shopping(server)) return;                 // market day: a treat from the stalls
         if (cafeVisit(server)) return;                // a drink at the café
         if (Leisure.listen(this, server)) return;
@@ -3923,6 +4145,29 @@ public class VillageFolkEntity extends AssistantEntity {
         return true;
     }
 
+    /** How many times it has stood aside for somebody better at the trade wanted. */
+    private int tradeWaits;
+
+    /**
+     * Somebody who could be spared from their own trade and knows the wanted one better than
+     * this folk does, or null if this folk is the best hand to send.
+     */
+    @Nullable
+    private VillageFolkEntity betterHandFor(UUID village, StationTask wanted) {
+        int mine = tradeLevel(wanted);
+        VillageFolkEntity best = null;
+        int bestLevel = mine;
+        for (AssistantEntity a : Villages.folkOf(village)) {
+            if (!(a instanceof VillageFolkEntity f) || f == this || f.isBaby() || !f.isAlive()) continue;
+            StationTask theirs = f.stationTask();
+            if (theirs == wanted || theirs == StationTask.NONE && !f.isAutonomous()) continue;
+            if (theirs != StationTask.NONE && !Villages.overStaffed(village, theirs)) continue;
+            int lv = f.tradeLevel(wanted);
+            if (lv > bestLevel) { bestLevel = lv; best = f; }
+        }
+        return best;
+    }
+
     private boolean changedTrade() {
         UUID village = ownerId();
         if (village == null) return false;
@@ -3948,6 +4193,16 @@ public class VillageFolkEntity extends AssistantEntity {
             ordered = true;
         }
 
+        // Who goes: whoever has worked that trade before goes first. A hand that has never
+        // smelted waits while one that has — and could be spared — takes the place; after
+        // two waits it goes all the same, so the work never goes undone for want of one.
+        VillageFolkEntity better = betterHandFor(village, vacancy);
+        if (better != null && tradeWaits < 2) {
+            tradeWaits++;
+            brain("leaving the " + vacancy.label + " to " + better.displayNameCap() + ", who knows it better");
+            return false;
+        }
+        tradeWaits = 0;
         avoidHere = workZone();          // do not simply re-stake my own field
         BlockPos site = findSite(vacancy, radiusFor(vacancy));
         avoidHere = null;
@@ -5006,6 +5261,12 @@ public class VillageFolkEntity extends AssistantEntity {
             tag.putString("HiredName", hiredName);
         }
         tag.putInt("Purse", purse);
+        tag.putInt("PaidDeeds", paidDeeds);
+        CompoundTag trades = new CompoundTag();
+        for (java.util.Map.Entry<StationTask, Integer> e : tradeXp.entrySet()) trades.putInt(e.getKey().name(), e.getValue());
+        tag.put("TradeXp", trades);
+        tag.putInt("Comforts", comforts);
+        tag.putLong("ComfortDay", comfortDay);
         if (isBaby()) tag.putBoolean("Child", true);
         if (villageCentre != null) tag.putLong("VillageCentre", villageCentre.asLong());
         UUID village = ownerId();
@@ -5061,6 +5322,19 @@ public class VillageFolkEntity extends AssistantEntity {
             this.companionUntil = Integer.MAX_VALUE;
         }
         this.purse = tag.getInt("Purse");
+        this.paidDeeds = tag.getInt("PaidDeeds");
+        tradeXp.clear();
+        if (tag.contains("TradeXp")) {
+            CompoundTag trades = tag.getCompound("TradeXp");
+            for (String k : trades.getAllKeys()) {
+                try { tradeXp.put(StationTask.valueOf(k), trades.getInt(k)); } catch (IllegalArgumentException ignored) { }
+            }
+        } else if (lifetimeXp() > 0 && stationTask() != StationTask.NONE) {
+            tradeXp.put(stationTask(), lifetimeXp());       // from before trades had levels of their own
+        }
+        refreshLevelPerks();
+        this.comforts = tag.getInt("Comforts");
+        this.comfortDay = tag.contains("ComfortDay") ? tag.getLong("ComfortDay") : -10;
         if (tag.getBoolean("Child")) setChild(true);
         if (tag.contains("VillageCentre")) {
             this.villageCentre = BlockPos.of(tag.getLong("VillageCentre"));

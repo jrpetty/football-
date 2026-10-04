@@ -21,5 +21,7 @@
   "key.mc_assistant.time_slower": "Time: slower",
   "key.mc_assistant.time_normal": "Time: normal pace",
   "block.mc_assistant.storehouse_unit": "Storehouse Unit",
-  "container.mc_assistant.storehouse": "Village Storehouse"
+  "container.mc_assistant.storehouse": "Village Storehouse",
+  "block.mc_assistant.village_board": "Village Board",
+  "item.mc_assistant.village_board": "Village Board"
 }

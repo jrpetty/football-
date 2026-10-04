@@ -370,6 +370,7 @@ public final class Market {
 
     /** A folk's wage for a day's work: a coin, and one more at each of levels ten and twenty-five. */
     public static int wage(AssistantEntity a) {
+        if (a instanceof VillageFolkEntity f) return Wealth.wage(f);       // by trade, level, office and the day's work
         int lv = a.veteranLevel();
         return 1 + (lv >= 10 ? 1 : 0) + (lv >= 25 ? 1 : 0);
     }
@@ -382,7 +383,7 @@ public final class Market {
             if (!(a instanceof VillageFolkEntity f) || f.isBaby() || f.stationTask() == AssistantEntity.StationTask.NONE) continue;
             int got = Ledger.takeCoins(id, wage(f));
             if (got <= 0) break;
-            f.earn(got);
+            f.paid(got);
             paid += got;
         }
         return paid;

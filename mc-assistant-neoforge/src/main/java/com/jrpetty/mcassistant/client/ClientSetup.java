@@ -38,6 +38,8 @@ public final class ClientSetup {
         event.registerEntityRenderer(McAssistantMod.ASSISTANT.get(), AssistantRenderer::new);
         // Folk wear the clothes of their trade — see FolkRenderer and FolkModel.
         event.registerEntityRenderer(McAssistantMod.VILLAGE_FOLK.get(), FolkRenderer::new);
+        // The writing on a Village Board, across the whole of it.
+        event.registerBlockEntityRenderer(McAssistantMod.VILLAGE_BOARD_BE.get(), VillageBoardRenderer::new);
     }
 
     @SubscribeEvent

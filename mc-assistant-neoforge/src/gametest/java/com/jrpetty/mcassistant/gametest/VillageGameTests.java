@@ -3281,4 +3281,97 @@ public class VillageGameTests {
             if (logs >= 12 && chests >= 1) helper.succeed();
         });
     }
+
+    /**
+     * The Village Board: a new village puts its board up on its square — fifty panels, ten
+     * wide and five high, facing the heart — and it says what the village is doing, how it is
+     * getting on and what it is working towards.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 300, batch = "t47_board")
+    public static void t47_board(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(6000);
+        Kit.hold(level, 29000, 12000, 40);
+        Kit.prepare(level, 29000, 12000, 40);
+        BlockPos heart = Kit.surface(level, 29000, 12000);
+        VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(f != null, "a village");
+        java.util.UUID village = f.ownerId();
+        BlockPos anchor = com.jrpetty.mcassistant.entity.VillageBoards.boardOf(village);
+        helper.assertTrue(anchor != null, "the founders put up their board");
+        Direction facing = level.getBlockState(anchor).getValue(com.jrpetty.mcassistant.block.VillageBoardBlock.FACING);
+        int panels = 0;
+        for (int c = 0; c < com.jrpetty.mcassistant.block.VillageBoardBlock.WIDE; c++) {
+            for (int r = 0; r < com.jrpetty.mcassistant.block.VillageBoardBlock.HIGH; r++) {
+                if (level.getBlockState(com.jrpetty.mcassistant.block.VillageBoardBlock.cell(anchor, facing, c, r)).getBlock()
+                        instanceof com.jrpetty.mcassistant.block.VillageBoardBlock) panels++;
+            }
+        }
+        BlockPos middle = com.jrpetty.mcassistant.block.VillageBoardBlock.cell(anchor, facing, 5, 0);
+        boolean facesIn = middle.relative(facing, 4).distSqr(heart) < middle.relative(facing.getOpposite(), 4).distSqr(heart);
+        Kit.log("t47 the board at " + anchor.toShortString() + " facing " + facing + ", " + panels + " panels, faces the heart " + facesIn);
+        helper.assertTrue(panels == 50, "fifty panels, ten by five: " + panels);
+        helper.assertTrue(facesIn, "it faces into the square");
+        helper.runAfterDelay(120, () -> {
+            if (!(level.getBlockEntity(anchor) instanceof com.jrpetty.mcassistant.block.VillageBoardBlockEntity board)) {
+                helper.fail("the writing lives at the bottom-left panel");
+                return;
+            }
+            java.util.List<String> lines = board.lines();
+            Kit.log("t47 the board says: " + String.join(" / ", lines));
+            String name = Villages.name(village);
+            helper.assertTrue(lines.contains("TH|" + name), "its name at the top: " + name);
+            helper.assertTrue(lines.contains("LH|What we're doing") && lines.contains("RH|How we're doing")
+                && lines.contains("FH|What we're working towards"), "what it is doing, how it is doing, what it is working towards");
+            helper.assertTrue(lines.stream().anyMatch(l -> l.contains("Next to build") || l.contains("Building ")), "what it is building");
+            helper.succeed();
+        });
+    }
+
+    /**
+     * A level in every trade, and pay by trade: a farmer's experience stays with farming when it
+     * is moved to the furnaces, where it starts again; a smith is paid more than a farmer, and a
+     * good day's work earns a little more; and its nature makes it quicker or slower at its work.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "t48_levels_and_pay")
+    public static void t48_levels_and_pay(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(6000);
+        Kit.hold(level, 30000, 12000, 24);
+        Kit.prepare(level, 30000, 12000, 24);
+        BlockPos heart = Kit.surface(level, 30000, 12000);
+        VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(f != null, "a village");
+        f.setJob(StationTask.FARM);
+        f.awardXp(1500);
+        int farming = f.veteranLevel();
+        f.setJob(StationTask.SMELT);
+        int smelting = f.veteranLevel();
+        f.awardXp(200);
+        Kit.log("t48 levels: farming " + farming + ", smelting on starting " + smelting + ", now " + f.tradeLevels());
+        helper.assertTrue(farming >= 10, "a farmer's level from its farming: " + farming);
+        helper.assertTrue(smelting == 0, "new to the furnaces: level nought there, not " + smelting);
+        helper.assertTrue(f.tradeLevel(StationTask.FARM) == farming, "and it is still a farmer of level " + farming);
+        f.setJob(StationTask.FARM);
+        helper.assertTrue(f.veteranLevel() == farming, "back at farming, its old level");
+        // Pay by trade.
+        f.setJob(StationTask.FARM);
+        int farmerWage = com.jrpetty.mcassistant.entity.Wealth.wage(f);
+        f.setJob(StationTask.SMITH);
+        int smithWage = com.jrpetty.mcassistant.entity.Wealth.wage(f);
+        f.note(AssistantEntity.Deed.THINGS_MADE, 50);
+        int goodDay = com.jrpetty.mcassistant.entity.Wealth.wage(f);
+        Kit.log("t48 wages: farmer " + farmerWage + ", smith " + smithWage + ", smith after a good day " + goodDay
+            + "; worth: " + com.jrpetty.mcassistant.entity.Wealth.line(f) + "; skill: " + com.jrpetty.mcassistant.entity.Skill.line(f));
+        helper.assertTrue(smithWage > com.jrpetty.mcassistant.entity.Wealth.baseWage(StationTask.FARM), "a smith earns more than a farmer");
+        helper.assertTrue(goodDay == smithWage + 2, "a hard day's work earns two more: " + goodDay);
+        int paid = com.jrpetty.mcassistant.entity.Market.payWages(level, Villages.get(f.ownerId()));
+        helper.assertTrue(paid >= goodDay && f.purse() >= goodDay, "paid from the treasury: " + paid + ", purse " + f.purse());
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Wealth.wage(f) == smithWage, "and that work is paid for now");
+        int skill = com.jrpetty.mcassistant.entity.Skill.percent(f);
+        helper.assertTrue(Math.abs(skill) <= com.jrpetty.mcassistant.entity.Skill.MOST, "its nature counts for at most a fifth: " + skill);
+        helper.succeed();
+    }
 }

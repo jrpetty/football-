@@ -201,6 +201,18 @@ public final class Council {
         return "I'll put " + article(what) + " to the council. " + (member ? mine : "I'm not on it myself, mind.");
     }
 
+    /** What the council last decided, in words ("we voted for a tavern"), or null. */
+    @javax.annotation.Nullable
+    public static String lastDecision(UUID village) {
+        return LAST.get(village);
+    }
+
+    /** The extra the council chose to build next, or null. */
+    @javax.annotation.Nullable
+    public static String chosen(UUID village) {
+        return CHOSEN.get(village);
+    }
+
     /** "What's the council deciding?" */
     public static String news(VillageFolkEntity f) {
         UUID village = f.ownerId();

@@ -50,6 +50,9 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
     private static final ResourceLocation[] OUTFIT = new ResourceLocation[FolkModel.TRADES.length];
     private static final ResourceLocation[] DYE = new ResourceLocation[FolkModel.TRADES.length];
     private static final ResourceLocation MINER_GLOW = texture("miner_glow");
+    /** What its wealth adds to its clothes, by standing (Wealth.Tier): patches, a belt, a collar, gold. */
+    private static final ResourceLocation[] FINERY = {
+        texture("wealth_0"), null, texture("wealth_2"), texture("wealth_3"), texture("wealth_4") };
 
     /** The trades whose outfit has a part dyed in its wearer's (or its village's) colour. */
     private static final java.util.Set<String> DYED = java.util.Set.of(
@@ -93,6 +96,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         this.itemRenderer = context.getItemRenderer();
         this.addLayer(new Outfit(this));
         this.addLayer(new Colours(this));
+        this.addLayer(new Finery(this));
         this.addLayer(new Glow(this));
         this.addLayer(new Armour(this,
             new HumanoidModel<>(context.bakeLayer(ModelLayers.PLAYER_INNER_ARMOR)),
@@ -150,6 +154,21 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
                 rgb = DYES[(int) Math.floorMod(bits ^ (bits >>> 29) ^ t * 7L, (long) DYES.length)];
             }
             renderColoredCutoutModel(getParentModel(), DYE[t], pose, buffer, light, folk, 0xFF000000 | rgb);
+        }
+    }
+
+    /** How well off it is, worn: a poor folk's patches, a belt, a collar and buttons, a gold chain. */
+    private static class Finery extends RenderLayer<VillageFolkEntity, FolkModel> {
+        Finery(FolkRenderer parent) { super(parent); }
+
+        @Override
+        public void render(PoseStack pose, MultiBufferSource buffer, int light, VillageFolkEntity folk,
+                           float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks,
+                           float netHeadYaw, float headPitch) {
+            if (folk.isInvisible() || folk.isBaby()) return;
+            int tier = folk.clientWealth();
+            if (tier < 0 || tier >= FINERY.length || FINERY[tier] == null) return;
+            renderColoredCutoutModel(getParentModel(), FINERY[tier], pose, buffer, light, folk, -1);
         }
     }
 
