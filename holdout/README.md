@@ -702,6 +702,20 @@ are drawn one at a time between frames; fire light comes from a fixed pool
 (adding a light recompiles every material); and *Auto resolution* in Settings
 lowers the render resolution a little when the frame rate drops.
 
+Characters are animated procedurally (`models/character.js`): each animation
+sets target angles for the twenty bones, and every bone follows its target as
+a damped spring tuned per bone (stiff legs so feet don't slide, a firm
+trunk, softer arms and head), so motion carries through the body and a shot
+or a hit is a kick that rings out and settles. Walking and running are one
+gait blended by speed, with heel-to-toe feet, a knee that gives on landing,
+a pelvis that turns, dips and bobs, and arms that trail the swing. Idles
+breathe, shift weight and glance about; bodies lean into turns with the
+head leading and step round when they turn on the spot; aiming on the move
+keeps the gun up over walking legs. The dead each shamble their own way
+(dragged legs, arm heights, a lolling head) and, killed, buckle at the knee
+and fall flat; the downed sit propped on a hand. `?mode=strip` in the
+character viewer lays an animation out as a filmstrip.
+
 Things that keep the graphics card's load down: trees, rocks and grass are
 kept in grid cells and only the cells the camera or the sun's shadow box can
 reach go into the instance buffers (`render/instcull.js`); trees past 44
