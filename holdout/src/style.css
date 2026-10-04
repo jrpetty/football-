@@ -1757,6 +1757,6 @@ body.fpmode .fps { bottom: auto; top: 0; border-radius: 0 0 7px 7px; border-top:
 body.fpmode .brief, body.fpmode .watch, body.fpmode .feed { display: none; }
 body.fpmode .nav { opacity: 0.55; }
 body.fpmode .nav:hover { opacity: 1; }
-body.fpmode .wl .lootmark { display: none; }
+body.fpmode .wl .lootmark, body.fpmode .wl .roomtag, body.fpmode .wl .evac-tag { display: none; }
 body.fprun .mhud .minimap { transform: scale(0.72); transform-origin: top right; opacity: 0.9; }
 body.fprun .mhud .haul { transform: scale(0.85); transform-origin: top left; }

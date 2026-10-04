@@ -5,20 +5,27 @@
 // every building and interior walls that reach them, darker indoors.
 import * as THREE from 'three'
 import { view } from '../render/view.js'
-import { Builder } from '../models/kit.js'
+import { Builder, seeded } from '../models/kit.js'
+import { gableRoof } from '../models/parts.js'
+import { HOUSE_ROOFS } from '../models/citykit.js'
 import { OUTFITS } from '../models/character.js'
 import { fpLook } from '../models/viewmodel.js'
 import { slideMove, fpShoot, fpMelee } from '../world/fpcombat.js'
 import { ITEMS, RES } from '../game/data.js'
 import { FACE_ROT } from '../world/city.js'
 import { INDOOR } from '../render/materials.js'
+import { GrassField } from '../render/terrain.js'
+import { CullView } from '../render/instcull.js'
 import { sfx } from '../core/audio.js'
 import { clamp } from '../core/util.js'
 
 const SHADOW_ONLY = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false })
 const CEIL = 3.0
 const WALL_INT = 2.35
+const WALL_EXT = 3.1
 const T_WALL = 0.22
+const EXT_MAT = { siding: 'siding', brick: 'brick', concrete: 'concrete', corrugated: 'corrugated' }
+const TRIM = '#ece6da'
 
 // The player's own body in first person: still casts its shadow, draws
 // nothing (the camera is inside its head), and its weapon goes too. Third
@@ -65,6 +72,7 @@ export const MissionFPMixin = {
     this.fpBuild()
     for (const g of this.fpGroups) g.visible = true
     this.fpSurroundings(true)
+    this.fpGrass(true)
     this.fpIndoor(true)
     this.atmo.fp = true
     // a run's street is short: the haze closes in sooner than in the open
@@ -108,6 +116,7 @@ export const MissionFPMixin = {
     if (this.fowU) this.fowU.uOn.value = 1
     for (const g of this.fpGroups || []) g.visible = false
     this.fpSurroundings(false)
+    this.fpGrass(false)
     this.fpIndoor(false)
     this.atmo.fp = false
     document.body.classList.remove('fprun')
@@ -477,6 +486,13 @@ export const MissionFPMixin = {
   fpBuild() {
     if (this.fpGroups) return
     const lv = this.lv
+    const L = this.def
+    // the facade as the street build has it (same seed, same first draw)
+    const r = seeded(lv.loc.lot.seed + 5)
+    const ext = EXT_MAT[L.ext] || 'plaster'
+    const extColor = L.extColor ? L.extColor[Math.floor(r() * L.extColor.length)] : ext === 'brick' ? '#ffffff' : L.wall
+    const house = this.loc.type === 'house' && !this.F
+    const rr = seeded(lv.loc.lot.seed + 11)
     this.fpGroups = []
     this.fpRoofs = []
     this.fpIn = []
@@ -511,11 +527,14 @@ export const MissionFPMixin = {
         const dx0 = k ? lv.off[k] : 0
         this.fpIn.push([p0.x - dx0, p0.z, p1.x - dx0, p1.z, k * FH + top(B) + 0.2])
         if (covered(B)) continue
-        // a plaster ceiling inside, a flat tarred roof over the walls
-        b.box(p1.x - p0.x, 0.04, p1.z - p0.z, { mat: 'plaster', color: '#d8d2c6', x: (p0.x + p1.x) / 2, y: CEIL + 0.02, z: (p0.z + p1.z) / 2, ao: 0 })
-        b.box(p1.x - p0.x + 0.5, 0.16, p1.z - p0.z + 0.5, { mat: 'roofTar', color: '#7a7670', x: (p0.x + p1.x) / 2, y: 3.15 + 0.08, z: (p0.z + p1.z) / 2, ao: 0 })
-        b.box(p1.x - p0.x + 0.56, 0.1, p1.z - p0.z + 0.56, { mat: 'concrete', color: '#8e8a82', x: (p0.x + p1.x) / 2, y: 3.15 + 0.2, z: (p0.z + p1.z) / 2, ao: 0 })
-        this.fpRoofs.push({ x0: p0.x - dx0 - 0.3, z0: p0.z - 0.3, x1: p1.x - dx0 + 0.3, z1: p1.z + 0.3, y0: k * FH + CEIL, y1: k * FH + 3.4 })
+        const cx = (p0.x + p1.x) / 2
+        const cz = (p0.z + p1.z) / 2
+        // a plaster ceiling inside
+        b.box(p1.x - p0.x, 0.04, p1.z - p0.z, { mat: 'plaster', color: '#d8d2c6', x: cx, y: CEIL + 0.02, z: cz, ao: 0 })
+        let roofTop = 3.4
+        if (house && !k) roofTop = this.fpHouseRoof(b, cx, cz, p1.x - p0.x + T_WALL, p1.z - p0.z + T_WALL, extColor, rr)
+        else this.fpFlatRoof(b, p0, p1, ext, extColor)
+        this.fpRoofs.push({ x0: p0.x - dx0 - 0.3, z0: p0.z - 0.3, x1: p1.x - dx0 + 0.3, z1: p1.z + 0.3, y0: k * FH + CEIL, y1: k * FH + roofTop })
         // a light fitting in the middle of each room
         for (const room of lv.rooms) {
           if (!inLvl(room.i0) || room.type === 'roof' || room.type === 'stairs') continue
@@ -565,7 +584,128 @@ export const MissionFPMixin = {
         if (hgt <= 0.02) continue
         b.box(d.horiz ? 1.0 : T_WALL, hgt, d.horiz ? T_WALL : 1.0, { mat: 'plaster', color: '#c8c0b0', x: c.x, y: 0.05 + WALL_INT + hgt / 2, z: c.z, ao: 0 })
       }
+      this.fpTrim(b, k, { c0i, c1i, isW, isExt, doorAt, roomCol, wallTop, blds, ext, extColor, house: house && !k })
       this.fpGroups.push(this.fpAdd(b, k))
+    }
+  },
+  // A house's pitched roof: shingles over gable ends in the house's own
+  // siding, fascia and soffits, gutters with downpipes, a chimney. The ridge
+  // runs the long way. Returns the height of the ridge.
+  fpHouseRoof(b, cx, cz, w, d, extColor, r) {
+    const along = w >= d
+    const len = along ? w : d
+    const span = along ? d : w
+    const rise = Math.min(3.2, span * 0.24)
+    const over = 0.45
+    const y0 = WALL_EXT + 0.05
+    const col = HOUSE_ROOFS[Math.floor(r() * HOUSE_ROOFS.length)]
+    const ry = along ? 0 : Math.PI / 2
+    gableRoof(b, { w: len, d: span, y: y0, rise, mat: 'shingles', color: col, gableMat: 'siding', gableColor: extColor, fascia: TRIM, over, x: cx, z: cz, ry })
+    const run = span / 2 + over
+    const eave = y0 + rise - rise * (run / (span / 2))
+    b.at({ x: cx, z: cz, ry }, () => {
+      for (const s of [-1, 1]) {
+        // soffit from the wall out to the fascia
+        b.box(len + over * 2, 0.03, over, { mat: 'paint', color: TRIM, y: eave + 0.05, z: s * (span / 2 + over / 2), ao: 0 })
+        // the gutter along the eave
+        b.box(len + over * 2, 0.11, 0.12, { mat: 'paint', color: '#d8d6ce', y: eave - 0.02, z: s * (run + 0.07) })
+        // a downpipe at each end of it
+        for (const e of [-1, 1]) {
+          const x = e * (len / 2 - 0.12)
+          b.cyl(0.035, 0.035, eave - 0.1, { mat: 'paint', color: '#d8d6ce', x, y: (eave - 0.1) / 2 + 0.05, z: s * (span / 2 + 0.09), seg: 8 })
+          b.box(0.07, 0.07, over + 0.1, { mat: 'paint', color: '#d8d6ce', x, y: eave - 0.06, z: s * (span / 2 + over / 2 + 0.06) })
+          b.box(0.09, 0.06, 0.2, { mat: 'paint', color: '#d8d6ce', x, y: 0.12, z: s * (span / 2 + 0.16), rx: s * 0.4 })
+        }
+        // corner boards on the walls below
+        for (const e of [-1, 1]) b.box(0.13, WALL_EXT, 0.13, { mat: 'paint', color: TRIM, x: e * (len / 2 - 0.02), y: 0.05 + WALL_EXT / 2, z: s * (span / 2 - 0.02) })
+      }
+      // a brick chimney through the back slope, near one end
+      const chx = (r() < 0.5 ? -1 : 1) * len * 0.28
+      const chz = -span * 0.18
+      const top = y0 + rise + 0.95
+      const base = y0 + rise * 0.25
+      b.box(0.72, top - base, 0.62, { mat: 'brick', color: '#c8a090', x: chx, y: (top + base) / 2, z: chz })
+      b.box(0.84, 0.1, 0.74, { mat: 'concrete', color: '#9a968e', x: chx, y: top + 0.05, z: chz })
+      b.cyl(0.09, 0.09, 0.3, { mat: 'rust', color: '#8a6a50', x: chx + 0.12, y: top + 0.25, z: chz, seg: 10 })
+    })
+    return y0 + rise + 0.4
+  },
+  // A flat roof behind a parapet in the building's own facade, capped with
+  // concrete coping.
+  fpFlatRoof(b, p0, p1, ext, extColor) {
+    const cx = (p0.x + p1.x) / 2
+    const cz = (p0.z + p1.z) / 2
+    const w = p1.x - p0.x
+    const d = p1.z - p0.z
+    const y0 = WALL_EXT + 0.05
+    const ph = 0.72
+    b.box(w, 0.14, d, { mat: 'roofTar', color: '#6e6a64', x: cx, y: y0 + 0.07, z: cz, ao: 0 })
+    for (const s of [-1, 1]) {
+      b.box(w + T_WALL, ph, T_WALL, { mat: ext, color: extColor, x: cx, y: y0 + ph / 2, z: cz + (s * d) / 2 })
+      b.box(T_WALL, ph, d, { mat: ext, color: extColor, x: cx + (s * w) / 2, y: y0 + ph / 2, z: cz })
+      b.box(w + T_WALL + 0.1, 0.08, T_WALL + 0.1, { mat: 'concrete', color: '#b0aca2', x: cx, y: y0 + ph + 0.04, z: cz + (s * d) / 2 })
+      b.box(T_WALL + 0.1, 0.08, d + T_WALL + 0.1, { mat: 'concrete', color: '#b0aca2', x: cx + (s * w) / 2, y: y0 + ph + 0.04, z: cz })
+    }
+  },
+  // Trim that the view from above never needed: a picture rail where the
+  // interior walls meet their extension (over the dark cap that marks wall
+  // tops from above), crown moulding at the ceiling, a foundation band and
+  // window casings outside.
+  fpTrim(b, k, o) {
+    const { c0i, c1i, isW, isExt, doorAt, roomCol, wallTop } = o
+    const lv = this.lv
+    const winAt = new Map(lv.windows.map((w) => [w.i + ',' + w.j, w]))
+    const rail = (alongX, x, z, y, h, depth) => b.box(alongX ? 0.5 : depth, h, alongX ? depth : 0.5, { mat: 'paint', color: TRIM, x, y, z, ao: 0 })
+    for (let j = 0; j < lv.H; j++) {
+      for (let i = c0i; i < c1i; i++) {
+        const wall = isW(i, j)
+        const door = doorAt.get(i + ',' + j)
+        if (!wall && !(door && !door.passage)) continue
+        const c = this.center(i, j)
+        const ex = isExt(i, j) || !!door?.ext
+        const T = ex ? CEIL : wallTop(i, j)
+        const arms = door ? (door.horiz ? [[1, 0], [-1, 0]] : [[0, 1], [0, -1]]) : [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([di, dj]) => isW(i + di, j + dj) || doorAt.has(i + di + ',' + (j + dj)))
+        for (const [di, dj] of arms) {
+          const alongX = di !== 0
+          const ax = c.x + di * 0.25
+          const az = c.z + dj * 0.25
+          for (const s of [-1, 1]) {
+            const col = roomCol(alongX ? i : i + s, alongX ? j + s : j)
+            const off = T_WALL / 2 + 0.016
+            const fx = alongX ? ax : c.x + s * off
+            const fz = alongX ? c.z + s * off : az
+            if (col) {
+              // picture rail and crown moulding, room side
+              rail(alongX, fx, fz, 0.05 + WALL_INT + 0.025, 0.075, 0.034)
+              rail(alongX, fx, fz, T - 0.045, 0.09, 0.05)
+            } else if (ex && !k && !door) {
+              // outside: a concrete foundation band, proud of the wall
+              const bo = T_WALL / 2 + 0.03
+              b.box(alongX ? 0.5 : 0.06, 0.36, alongX ? 0.06 : 0.5, { mat: 'concrete', color: '#8e8a82', x: alongX ? ax : c.x + s * bo, y: 0.05 + 0.18, z: alongX ? c.z + s * bo : az, ao: 0 })
+              if (winAt.has(i + ',' + j)) {
+                // window casing: a head over the glass, the sill is the street build's
+                const wo = T_WALL / 2 + 0.025
+                b.box(alongX ? 0.5 : 0.05, 0.1, alongX ? 0.05 : 0.5, { mat: 'paint', color: TRIM, x: alongX ? ax : c.x + s * wo, y: 0.05 + 2.2, z: alongX ? c.z + s * wo : az, ao: 0 })
+              }
+            }
+          }
+        }
+        // window casings' sides, where a run of windows starts and ends
+        if (winAt.has(i + ',' + j) && ex && !k) {
+          for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+            const alongX = isW(i + 1, j) || isW(i - 1, j) || winAt.has(i + 1 + ',' + j) || winAt.has(i - 1 + ',' + j)
+            if (alongX !== (di !== 0)) continue
+            if (winAt.has(i + di + ',' + (j + dj))) continue
+            for (const s of [-1, 1]) {
+              if (roomCol(alongX ? i : i + s, alongX ? j + s : j)) continue
+              const wo = T_WALL / 2 + 0.025
+              const px = alongX ? c.x + di * 0.47 : c.x + s * wo
+              const pz = alongX ? c.z + s * wo : c.z + dj * 0.47
+              b.box(alongX ? 0.07 : 0.05, 1.32, alongX ? 0.05 : 0.07, { mat: 'paint', color: TRIM, x: px, y: 0.05 + 1.56, z: pz, ao: 0 })
+            }
+          }
+        }
+      }
     }
   },
   // From the street you can see past the lot: the ground runs on flat (the
@@ -586,6 +726,38 @@ export const MissionFPMixin = {
     T.mesh.geometry.computeVertexNormals()
     if (on && !this.fpFar) this.fpBuildFar()
     if (this.fpFar) this.fpFar.visible = on
+  },
+  // Grass on the lots' lawns in first person (from above, the painted
+  // ground reads as grass; up close it wants blades): tufts where the ground
+  // is grassy, off the paving, the street, the buildings and anything solid.
+  fpGrass(on) {
+    if (!on) {
+      this.fpGrassF?.setVisible(false)
+      return
+    }
+    if (!this.fpGrassF) {
+      const lv = this.lv
+      const g = this.grid
+      const blds = lv.buildings.map((B) => {
+        const a = this.center(B.i0, B.j0)
+        const c = this.center(B.i1, B.j1)
+        return [a.x - 0.6, a.z - 0.6, c.x + 0.6, c.z + 0.6]
+      })
+      const avoid = (x, z) => {
+        if (z > lv.zFront - 0.2) return true
+        if (!g.open(Math.floor(x), Math.floor(z))) return true
+        for (const p of lv.pave) if (x > p.x0 - 0.15 && x < p.x1 + 0.15 && z > p.z0 - 0.15 && z < p.z1 + 0.15) return true
+        for (const b of blds) if (x > b[0] && x < b[2] && z > b[1] && z < b[3]) return true
+        return false
+      }
+      this.fpGrassF = new GrassField(this.scene, this.splat, { count: 0, seed: 53 + (lv.loc.lot.seed % 997), heightFn: () => 0, avoid, cap: 12000 })
+      this.fpGrassF.area = { x0: lv.x0 + 1, z0: lv.z0 + 1, x1: lv.x0 + lv.W0 - 1, z1: lv.zFront }
+      this.fpGrassF.rebuild()
+      this.fpCull = new CullView()
+      this.fpCull.wide = 26
+    }
+    this.fpCull.cam.set(1e9, 0, 0)
+    this.fpGrassF.setVisible(true)
   },
   fpBuildFar() {
     const lv = this.lv
@@ -636,6 +808,16 @@ export const MissionFPMixin = {
   // the squad (when told to) keeps up
   fpTick(dt) {
     if (this.fpSkyMat) this.fpSkyMat.color.copy(this.scene.fog.color)
+    // the lawns draw only the tufts in view
+    const G = this.fpGrassF
+    if (G && this.fpA) {
+      const cv = this.fpCull
+      const f = this.fpA.rpos
+      if (cv.moved(view.camera, null, f)) {
+        cv.capture(view.camera, null, f)
+        G.cull(cv, f)
+      }
+    }
     if (!this.fpFollow || this.paused) return
     this.fpFollowT = (this.fpFollowT || 0) - dt
     if (this.fpFollowT > 0) return
