@@ -215,6 +215,9 @@ public final class BlockLore {
         if (stack.isEmpty()) return false;
         Block b = Block.byItem(stack.getItem());
         if (b == Blocks.AIR) return false;
+        // A storehouse unit is a full wooden cube, and builders laid them as wall: the storage's
+        // own cube came up six units short. It is the store, not the stone.
+        if (b instanceof com.jrpetty.mcassistant.block.StorehouseBlock) return false;
         Use use = of(b);
         if (use == Use.STRUCTURE) return true;
         // Dirt is filed as soil, because that is what it is FOR — but a full
