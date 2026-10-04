@@ -446,18 +446,18 @@ html[data-broadcast='on'] .help-fab {
   display: grid;
   gap: 20px;
 }
-.hs-head {
+.homestart-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
 }
-.hs-head h2 {
+.homestart-head h2 {
   font-size: 1.3rem;
   margin-bottom: 4px;
 }
-.hs-progress {
+.homestart-progress {
   display: grid;
   gap: 6px;
   min-width: 180px;
@@ -466,7 +466,7 @@ html[data-broadcast='on'] .help-fab {
   font-size: 0.9rem;
   text-align: right;
 }
-.hs-next {
+.homestart-next {
   display: flex;
   align-items: center;
   gap: 20px;
@@ -475,7 +475,7 @@ html[data-broadcast='on'] .help-fab {
   border: 1px solid var(--accent-line);
   background: var(--accent-soft);
 }
-.hs-num {
+.homestart-num {
   width: 52px;
   height: 52px;
   flex: none;
@@ -487,27 +487,27 @@ html[data-broadcast='on'] .help-fab {
   font-weight: 800;
   font-size: 1.4rem;
 }
-.hs-next-text {
+.homestart-next-text {
   flex: 1;
   min-width: 0;
   display: grid;
   gap: 4px;
 }
-.hs-next-text .eyebrow {
+.homestart-next-text .eyebrow {
   color: var(--accent);
 }
-.hs-next-text h3 {
+.homestart-next-text h3 {
   font-size: 1.35rem;
 }
-.hs-next-text p {
+.homestart-next-text p {
   color: var(--text-2);
   font-size: 1rem;
   max-width: 62ch;
 }
-.hs-cta {
+.homestart-cta {
   flex: none;
 }
-.hs-steps {
+.homestart-steps {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -515,7 +515,7 @@ html[data-broadcast='on'] .help-fab {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
-.hs-steps li {
+.homestart-steps li {
   display: grid;
   grid-template-columns: 30px minmax(0, 1fr);
   grid-template-rows: auto auto;
@@ -527,7 +527,7 @@ html[data-broadcast='on'] .help-fab {
   border: 1px solid var(--border);
   background: var(--surface-2);
 }
-.hs-mark {
+.homestart-mark {
   grid-row: span 2;
   width: 28px;
   height: 28px;
@@ -539,45 +539,45 @@ html[data-broadcast='on'] .help-fab {
   font-weight: 750;
   font-size: 0.88rem;
 }
-.hs-mark svg {
+.homestart-mark svg {
   width: 16px;
   height: 16px;
 }
-.hs-steps li.done .hs-mark {
+.homestart-steps li.done .homestart-mark {
   background: var(--good);
   border-color: var(--good);
   color: #fff;
 }
-.hs-steps li.current {
+.homestart-steps li.current {
   border-color: var(--accent-line);
 }
-.hs-steps li.current .hs-mark {
+.homestart-steps li.current .homestart-mark {
   border-color: var(--accent);
   color: var(--accent);
 }
-.hs-title {
+.homestart-title {
   font-weight: 650;
   color: var(--text-1);
   font-size: 0.95rem;
 }
-.hs-steps li.done .hs-title {
+.homestart-steps li.done .homestart-title {
   color: var(--text-2);
 }
-.hs-state,
-.hs-link {
+.homestart-state,
+.homestart-link {
   font-size: 0.85rem;
 }
-.hs-state {
+.homestart-state {
   color: var(--good-text);
   font-weight: 600;
 }
-.hs-state.now {
+.homestart-state.now {
   color: var(--accent);
 }
-.hs-link {
+.homestart-link {
   color: var(--text-3);
 }
-.hs-foot {
+.homestart-foot {
   display: flex;
   justify-content: flex-end;
 }
@@ -726,33 +726,33 @@ html[data-broadcast='on'] .help-fab {
   .home-cards {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .hs-steps {
+  .homestart-steps {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 @media (max-width: 760px) {
   .home-cards,
   .home-glance,
-  .hs-steps {
+  .homestart-steps {
     grid-template-columns: minmax(0, 1fr);
   }
   .home-hero h1 {
     font-size: 1.8rem;
   }
-  .hs-next {
+  .homestart-next {
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
     padding: 18px;
   }
-  .hs-cta {
+  .homestart-cta {
     width: 100%;
     justify-content: center;
   }
   .home-checklist {
     padding: 18px;
   }
-  .hs-progress {
+  .homestart-progress {
     text-align: left;
     width: 100%;
   }

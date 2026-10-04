@@ -98,7 +98,10 @@ export function HelpButton({ pageKey }: { pageKey: PageKey }) {
               </ul>
               {help.doc && (
                 <p className="help-doc">
-                  <Icon.Book /> The full guide is in your Gauntlet folder: <code>{help.doc.file}</code>, section “{help.doc.section}”.
+                  <Icon.Book />
+                  <span>
+                    The full guide is in your Gauntlet folder: <code>{help.doc.file}</code>, section “{help.doc.section}”.
+                  </span>
                 </p>
               )}
             </section>
