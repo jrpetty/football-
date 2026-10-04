@@ -824,7 +824,11 @@ grows up.
 * how it feels;
 * what it thinks of you, from "can't stand you" to "thinks the world of you", with
   hearts;
-* what it just said.
+* what it just said;
+* a **Pack** button under its likeness. It opens what the folk is carrying: its pack, the
+  tools in its hands and the clothes it wears. You can look but not take. Sneak and
+  right-click a folk to go straight to its pack; the pack screen's **Talk** button goes
+  back to the conversation.
 
 The buttons ask:
 
@@ -1309,6 +1313,24 @@ Every alliance, feud, truce and tribute goes into both villages' history.
 Right-click a folk to see what it carries and what it is doing. You can look;
 only its owner (nobody, for folk) can rearrange the pack.
 
+## Watching it grow: fast time
+
+The whole world can run faster, so you can sit back and watch a village grow: fields
+ripen, days pass, folk work and houses go up at that pace.
+
+* **Keys:** `]` a step faster (2×, 4×, 8×, 16×, 32×, 64×, 128×, 256×, then *max*),
+  `[` a step slower, `\` back to normal. Rebind them under Controls.
+* **The village journal (J):** a row of buttons — 1×, 2×, 4×, 8×, 16×, 32×, 64×, max.
+* **`/village speed 16`**, `/village speed max`, `/village speed normal`; `/village speed`
+  on its own says how fast time is running.
+* The top right corner of the screen says the speed asked for and the speed the server
+  is really managing. *Max* is as fast as the machine can go. A big village on a slow
+  machine may manage less than the speed asked for; the corner shows when that happens.
+* This uses the game's own tick rate (what vanilla's `/tick rate` sets), so it speeds
+  up everything, you included. Watch from somewhere safe, or in creative or spectator.
+* Operators can change the speed, and so can the owner of a single-player world, with
+  or without cheats.
+
 ## Commands
 
 * `/village list` — every village the game knows of: where, how many live
@@ -1331,6 +1353,8 @@ only its owner (nobody, for folk) can rearrange the pack.
   would; with words, say them to it.
 * `/village lineup` — (operators) one folk of every trade, dressed and holding
   its tool, stood in a row in front of you to be looked at.
+* `/village speed [times|max|normal]` — run time faster to watch a village grow (see
+  *Watching it grow*). Operators, or the owner of a single-player world.
 * `/village folk` — one line per folk: trade, ground, status, job, what is
   missing, what it carries (`pack=`), what it last tried at the essentials
   gate (`gate=`), and a trail of the jobs it has run.

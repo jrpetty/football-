@@ -26,6 +26,7 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  *   /village talk [words]     talk with the nearest folk, as a right-click would (ops)
  *   /village chronicle        the nearest village's history, as a book
  *   /village standing         what every village you have met thinks of you
+ *   /village speed 16|max|normal   time runs faster, to watch a village grow (ops / world owner)
  * </pre>
  */
 public final class VillageCommands {
@@ -58,6 +59,13 @@ public final class VillageCommands {
             .then(Commands.literal("news")
                 .then(Commands.literal("on").executes(ctx -> news(ctx, true)))
                 .then(Commands.literal("off").executes(ctx -> news(ctx, false))))
+            // Fast time, to watch a village grow: /village speed 16 | max | normal, or no word to ask.
+            .then(Commands.literal("speed")
+                .executes(VillageCommands::speedNow)
+                .then(Commands.literal("normal").executes(ctx -> speed(ctx, 1)))
+                .then(Commands.literal("max").executes(ctx -> speed(ctx, TimeSpeed.MAX)))
+                .then(Commands.argument("times", IntegerArgumentType.integer(1, TimeSpeed.MAX))
+                    .executes(ctx -> speed(ctx, IntegerArgumentType.getInteger(ctx, "times")))))
             // The nearest village's history, as a book.
             .then(Commands.literal("chronicle").executes(VillageCommands::chronicle))
             // What every village you have met thinks of you.
@@ -446,6 +454,34 @@ public final class VillageCommands {
         String text = statusText(level, v);
         ctx.getSource().sendSuccess(() -> Component.literal(text), false);
         return 1;
+    }
+
+    private static int speedNow(CommandContext<CommandSourceStack> ctx) {
+        net.minecraft.server.MinecraftServer server = ctx.getSource().getServer();
+        int f = TimeSpeed.factor(server);
+        int a = TimeSpeed.actualX10();
+        ctx.getSource().sendSuccess(() -> Component.literal(f == 1
+            ? "Time runs at its normal pace. /village speed 16 (or max) makes it run faster; so do the ] and [ keys."
+            : "Time is set to run " + TimeSpeed.label(f) + "; the server is managing " + (a / 10) + "." + (a % 10)
+                + "\u00d7. /village speed normal puts it back."), false);
+        return f;
+    }
+
+    private static int speed(CommandContext<CommandSourceStack> ctx, int times) {
+        CommandSourceStack src = ctx.getSource();
+        ServerPlayer p = src.getPlayer();
+        if (p != null && !TimeSpeed.mayChange(p)) {
+            src.sendFailure(Component.literal("Only an operator (or the owner of this world) can change how fast time runs."));
+            return 0;
+        }
+        if (p == null && !src.hasPermission(2)) {
+            src.sendFailure(Component.literal("Only an operator can change how fast time runs."));
+            return 0;
+        }
+        TimeSpeed.set(src.getServer(), times, p == null ? null : p.getName().getString());
+        src.sendSuccess(() -> Component.literal(times == 1 ? "Time runs at its normal pace."
+            : "Time now runs " + TimeSpeed.label(times) + ". Watch the corner of the screen for how fast the server really manages."), true);
+        return times;
     }
 
     private static int news(CommandContext<CommandSourceStack> ctx, boolean on) {

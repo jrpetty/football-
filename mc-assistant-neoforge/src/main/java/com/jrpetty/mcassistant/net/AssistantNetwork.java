@@ -37,6 +37,22 @@ public final class AssistantNetwork {
         // The village journal (J): the status of the village the player stands in, on a page.
         registrar.playToServer(VillageAskPayload.TYPE, VillageAskPayload.STREAM_CODEC, AssistantNetwork::handleVillageAsk);
         registrar.playToClient(VillagePagePayload.TYPE, VillagePagePayload.STREAM_CODEC, AssistantNetwork::handleVillagePage);
+        // Fast time: the keys and the journal's buttons ask, the server answers once a second.
+        registrar.playToServer(TimeSpeedAskPayload.TYPE, TimeSpeedAskPayload.STREAM_CODEC, AssistantNetwork::handleTimeSpeedAsk);
+        registrar.playToClient(TimeSpeedPayload.TYPE, TimeSpeedPayload.STREAM_CODEC, AssistantNetwork::handleTimeSpeed);
+    }
+
+    private static void handleTimeSpeedAsk(TimeSpeedAskPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            if (context.player() instanceof ServerPlayer player) {
+                com.jrpetty.mcassistant.TimeSpeed.ask(player, payload.mode(), payload.factor());
+            }
+        });
+    }
+
+    /** Clientbound: the class behind this call only loads on the client. */
+    private static void handleTimeSpeed(TimeSpeedPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> com.jrpetty.mcassistant.client.TimeSpeedClient.heard(payload.factor(), payload.actualX10()));
     }
 
     private static void handleVillageAsk(VillageAskPayload payload, IPayloadContext context) {
@@ -69,6 +85,12 @@ public final class AssistantNetwork {
             Entity target = player.level().getEntity(payload.entityId());
             if (!(target instanceof com.jrpetty.mcassistant.entity.VillageFolkEntity folk) || !folk.isAlive()) return;
             if (folk.distanceToSqr(player) > TALK_RANGE * TALK_RANGE) return;
+            // "Let me see what you're carrying": the pack screen, not an answer. Anyone may
+            // look; only an owner may handle (AssistantMenu.mayHandle), and folk have none.
+            if (payload.topic() == com.jrpetty.mcassistant.entity.TalkTopic.PACK.ordinal()) {
+                folk.openManagementScreen(player);
+                return;
+            }
             String text = payload.text().length() > FolkTalkPayload.MAX_TEXT
                 ? payload.text().substring(0, FolkTalkPayload.MAX_TEXT) : payload.text();
             com.jrpetty.mcassistant.entity.FolkTalk.handle(folk, player,

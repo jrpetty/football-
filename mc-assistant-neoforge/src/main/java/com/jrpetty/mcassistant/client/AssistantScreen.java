@@ -44,6 +44,19 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
         int bh = 18;
         AssistantEntity a = this.menu.getAssistant();
         this.shownJob = a == null ? -1 : a.clientJobOrdinal();
+        // A village's folk take no orders and stash nothing for you: their pack is to
+        // look at, and the way back is to the conversation it was opened from.
+        if (a instanceof com.jrpetty.mcassistant.entity.VillageFolkEntity) {
+            this.addRenderableWidget(Button.builder(Component.literal("\u2039 Talk"), b -> {
+                    if (this.minecraft != null && this.minecraft.player != null) {
+                        this.minecraft.player.closeContainer();
+                        net.neoforged.neoforge.network.PacketDistributor.sendToServer(
+                            new com.jrpetty.mcassistant.net.FolkTalkPayload(a.getId(),
+                                com.jrpetty.mcassistant.entity.TalkTopic.OPEN.ordinal(), ""));
+                    }
+                }).bounds(x + 8, y + 114, 160, bh).build());
+            return;
+        }
         this.addRenderableWidget(Button.builder(Component.literal("Orders \u203a"), b -> {
                 if (this.minecraft != null && this.minecraft.player != null && a != null) {
                     this.minecraft.player.closeContainer();
@@ -197,7 +210,7 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
             if (f.length > 5 && !f[5].isEmpty()) lines.add(Component.literal("Feeling: " + f[5]));
             if (f.length > 6 && !f[6].isEmpty()) lines.add(Component.literal("Loves: " + f[6]));
             if (f.length > 7 && !f[7].isEmpty()) lines.add(Component.literal("Hopes: " + f[7]));
-            lines.add(Component.literal("Right-click to talk; sneak and right-click for this screen."));
+            lines.add(Component.literal("Right-click to talk (its Pack button opens this); sneak and right-click comes straight here."));
             g.renderComponentTooltip(this.font, lines, mouseX, mouseY);
         }
     }

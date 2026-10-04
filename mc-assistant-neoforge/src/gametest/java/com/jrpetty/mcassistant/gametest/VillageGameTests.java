@@ -3066,4 +3066,30 @@ public class VillageGameTests {
             }
         });
     }
+
+    /**
+     * Fast time: the speed asked for is the game's tick rate, steps walk 1, 2, 4 … max and back,
+     * and normal is normal again. All within one tick, so nothing else in the batch notices.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 20, batch = "t44_time")
+    public static void t44_time(GameTestHelper helper) {
+        net.minecraft.server.MinecraftServer server = helper.getLevel().getServer();
+        try {
+            com.jrpetty.mcassistant.TimeSpeed.set(server, 16, null);
+            helper.assertTrue(Math.abs(server.tickRateManager().tickrate() - 320.0F) < 0.5F,
+                "16x is 320 ticks a second (" + server.tickRateManager().tickrate() + ")");
+            com.jrpetty.mcassistant.TimeSpeed.step(server, 1, null);
+            helper.assertTrue(com.jrpetty.mcassistant.TimeSpeed.factor(server) == 32, "a step faster is 32x");
+            com.jrpetty.mcassistant.TimeSpeed.set(server, 12, null);
+            com.jrpetty.mcassistant.TimeSpeed.step(server, -1, null);
+            helper.assertTrue(com.jrpetty.mcassistant.TimeSpeed.factor(server) == 8, "a step slower from 12x is 8x");
+            com.jrpetty.mcassistant.TimeSpeed.set(server, com.jrpetty.mcassistant.TimeSpeed.MAX, null);
+            helper.assertTrue(server.tickRateManager().tickrate() >= 9999.0F, "max is vanilla's ceiling");
+            com.jrpetty.mcassistant.TimeSpeed.step(server, 0, null);
+            helper.assertTrue(com.jrpetty.mcassistant.TimeSpeed.factor(server) == 1, "normal is normal");
+        } finally {
+            com.jrpetty.mcassistant.TimeSpeed.set(server, 1, null);
+        }
+        helper.succeed();
+    }
 }

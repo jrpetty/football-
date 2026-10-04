@@ -58,6 +58,9 @@ public final class ClientSetup {
         event.register(AssistantTargeting.CREW);
         event.register(AssistantTargeting.PLOTS);
         event.register(AssistantTargeting.VILLAGE);
+        event.register(TimeSpeedClient.FASTER);
+        event.register(TimeSpeedClient.SLOWER);
+        event.register(TimeSpeedClient.NORMAL);
     }
 
     public static class AssistantRenderer<T extends AssistantEntity>

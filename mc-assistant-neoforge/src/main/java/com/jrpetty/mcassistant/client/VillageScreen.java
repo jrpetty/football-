@@ -62,10 +62,24 @@ public class VillageScreen extends Screen {
             .bounds(left + W - PAD - 60, top + H - PAD - 18, 60, 18).build());
         this.addRenderableWidget(Button.builder(Component.literal("Refresh"), b -> request())
             .bounds(left + W - PAD - 126, top + H - PAD - 18, 60, 18).build());
+        // Fast time, to watch the village grow: the same as the [ ] \ keys.
+        int[] speeds = {1, 2, 4, 8, 16, 32, 64, com.jrpetty.mcassistant.TimeSpeed.MAX};
+        int bw = (W - PAD * 2 - 34 - (speeds.length - 1) * 2) / speeds.length;
+        for (int i = 0; i < speeds.length; i++) {
+            int f = speeds[i];
+            Button b = Button.builder(Component.literal(com.jrpetty.mcassistant.TimeSpeed.label(f)),
+                    btn -> TimeSpeedClient.ask(0, f))
+                .bounds(left + PAD + 34 + i * (bw + 2), top + H - PAD - 40, bw, 16).build();
+            b.setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(f == 1
+                ? "Time at its normal pace"
+                : f >= com.jrpetty.mcassistant.TimeSpeed.MAX ? "Time as fast as this machine can run it"
+                : "Time runs " + f + " times faster, to watch the village grow")));
+            this.addRenderableWidget(b);
+        }
     }
 
     private int visible() {
-        return (H - PAD * 2 - 18 - 22) / (this.font.lineHeight + 1);
+        return (H - PAD * 2 - 18 - 22 - 22) / (this.font.lineHeight + 1);
     }
 
     @Override
@@ -85,6 +99,8 @@ public class VillageScreen extends Screen {
             g.drawString(this.font, lines.get(i), left + PAD, y, Ui.INK, false);
             y += this.font.lineHeight + 1;
         }
+        g.drawString(this.font, "Time", left + PAD, top + H - PAD - 36,
+            TimeSpeedClient.factor() > 1 ? 0xFFFFD866 : Ui.MUTED, false);
         if (lines.size() > shown) {
             g.drawString(this.font, (scroll + 1) + "–" + Math.min(lines.size(), scroll + shown) + " of " + lines.size()
                 + " (scroll)", left + PAD, top + H - PAD - 13, Ui.MUTED, false);

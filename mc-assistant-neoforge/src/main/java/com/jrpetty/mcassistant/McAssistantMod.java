@@ -185,6 +185,7 @@ public final class McAssistantMod {
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Quests.class);
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Hire.class);
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Land.class);
+        NeoForge.EVENT_BUS.register(TimeSpeed.class);
     }
 
     private void onEntityAttributes(EntityAttributeCreationEvent event) {

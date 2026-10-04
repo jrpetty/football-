@@ -117,6 +117,12 @@ public class TalkScreen extends Screen {
         Button book = addRenderableWidget(Button.builder(Component.literal("History"), b -> ask(TalkTopic.CHRONICLE, ""))
             .bounds(x + 3 * (bw + 3), row, bw, bh).build());
         book.setTooltip(Tooltip.create(Component.literal("Ask for a copy of the village's chronicle")));
+        // What it is carrying: its pack and its gear, under its likeness.
+        Button pack = addRenderableWidget(Button.builder(Component.literal("Pack"), b -> {
+                saidBye = true;                       // not a goodbye: the pack screen takes over
+                PacketDistributor.sendToServer(new FolkTalkPayload(last.entityId(), TalkTopic.PACK.ordinal(), ""));
+            }).bounds(left() + 8, top() + 84, 52, 14).build());
+        pack.setTooltip(Tooltip.create(Component.literal("See what it is carrying: its pack, its tools and its clothes")));
         int sayY = row + bh + 6;
         say = new EditBox(font, x, sayY, W - 16 - 2 * 46 - 6, 18, Component.literal("Say something"));
         say.setMaxLength(FolkTalkPayload.MAX_TEXT);
@@ -225,7 +231,7 @@ public class TalkScreen extends Screen {
         // Its likeness.
         if (minecraft != null && minecraft.level != null
                 && minecraft.level.getEntity(last.entityId()) instanceof LivingEntity folk) {
-            InventoryScreen.renderEntityInInventoryFollowsMouse(g, x + 8, y + 6, x + 60, y + 90, 30, 0.0625F,
+            InventoryScreen.renderEntityInInventoryFollowsMouse(g, x + 8, y + 6, x + 60, y + 82, 28, 0.0625F,
                 mouseX, mouseY, folk);
         }
     }

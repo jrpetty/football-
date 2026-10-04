@@ -41,7 +41,8 @@ public enum TalkTopic {
     WORKINGS("How does your trade work?"),
     SHORT("What is the village short of?"),
     RETRADE(""),
-    BUILD("");
+    BUILD(""),
+    PACK("");
 
     public final String line;
 
