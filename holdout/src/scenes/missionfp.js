@@ -16,6 +16,7 @@ import { FACE_ROT } from '../world/city.js'
 import { INDOOR } from '../render/materials.js'
 import { GrassField } from '../render/terrain.js'
 import { CullView } from '../render/instcull.js'
+import { wallFace } from '../world/finishes.js'
 import { sfx } from '../core/audio.js'
 import { clamp } from '../core/util.js'
 
@@ -27,6 +28,7 @@ const T_WALL = 0.22
 const EXT_MAT = { siding: 'siding', brick: 'brick', concrete: 'concrete', corrugated: 'corrugated' }
 // painted trim: an off-white, as real paint is (pure white glares in the sun)
 const TRIM = '#d9d3c6'
+const MK = (key) => ({ mat: key })
 
 // The player's own body in first person: still casts its shadow, draws
 // nothing (the camera is inside its head), and its weapon goes too. Third
@@ -519,6 +521,10 @@ export const MissionFPMixin = {
         const q = i >= 0 && j >= 0 && i < W && j < lv.H ? lv.roomAt[j * W + i] : -1
         return q >= 0 ? lv.rooms[q].def.wall : null
       }
+      const roomDef = (i, j) => {
+        const q = i >= 0 && j >= 0 && i < W && j < lv.H ? lv.roomAt[j * W + i] : -1
+        return q >= 0 ? lv.rooms[q].def : null
+      }
       // the main tall building's lower floors have the next slab overhead
       const covered = (B) => this.F && k < levels - 1 && (k > 0 || (B.i0 === lv.bld?.i0 && B.j0 === lv.bld?.j0))
       const top = (B) => (covered(B) ? FH - 0.22 : CEIL)
@@ -571,7 +577,7 @@ export const MissionFPMixin = {
             for (const s of [-1, 1]) {
               const col = roomCol(alongX ? i : i + s, alongX ? j + s : j)
               if (!col) continue
-              b.box(alongX ? 0.5 : 0.012, hgt, alongX ? 0.012 : 0.5, { mat: 'plaster', color: col, x: alongX ? ax : c.x + s * (T_WALL / 2 + 0.006), y, z: alongX ? c.z + s * (T_WALL / 2 + 0.006) : az, ao: 0 })
+              wallFace(b, MK, roomDef(alongX ? i : i + s, alongX ? j + s : j), col, alongX, s, 0.5, alongX ? ax : c.x + s * (T_WALL / 2 + 0.006), alongX ? c.z + s * (T_WALL / 2 + 0.006) : az, y - hgt / 2, y + hgt / 2, 0)
             }
           }
         }
@@ -585,7 +591,7 @@ export const MissionFPMixin = {
         if (hgt <= 0.02) continue
         b.box(d.horiz ? 1.0 : T_WALL, hgt, d.horiz ? T_WALL : 1.0, { mat: 'plaster', color: '#c8c0b0', x: c.x, y: 0.05 + WALL_INT + hgt / 2, z: c.z, ao: 0 })
       }
-      this.fpTrim(b, k, { c0i, c1i, isW, isExt, doorAt, roomCol, wallTop, blds, ext, extColor, house: house && !k })
+      this.fpTrim(b, k, { c0i, c1i, isW, isExt, doorAt, roomCol, roomDef, wallTop, blds, ext, extColor, house: house && !k })
       this.fpGroups.push(this.fpAdd(b, k))
     }
   },
@@ -653,7 +659,7 @@ export const MissionFPMixin = {
   // tops from above), crown moulding at the ceiling, a foundation band and
   // window casings outside.
   fpTrim(b, k, o) {
-    const { c0i, c1i, isW, isExt, doorAt, roomCol, wallTop } = o
+    const { c0i, c1i, isW, isExt, doorAt, roomCol, roomDef, wallTop } = o
     const lv = this.lv
     const winAt = new Map(lv.windows.map((w) => [w.i + ',' + w.j, w]))
     const rail = (alongX, x, z, y, h, depth) => b.box(alongX ? 0.5 : depth, h, alongX ? depth : 0.5, { mat: 'paint', color: TRIM, x, y, z, ao: 0 })
@@ -678,10 +684,12 @@ export const MissionFPMixin = {
             if (!col && !door && !winHere && isW(si, sj)) {
               // a corner: the room is round it, diagonally. The street build
               // looked only beside the wall and left this half unpainted
-              col = roomCol(alongX ? i + di : i + s, alongX ? j + s : j + dj)
+              const di2 = alongX ? i + di : i + s
+              const dj2 = alongX ? j + s : j + dj
+              col = roomCol(di2, dj2)
               if (col) {
                 const po = T_WALL / 2 + 0.006
-                b.box(alongX ? 0.5 : 0.012, T - 0.05, alongX ? 0.012 : 0.5, { mat: 'plaster', color: col, x: alongX ? ax : c.x + s * po, y: 0.05 + (T - 0.05) / 2, z: alongX ? c.z + s * po : az, ao: 0 })
+                wallFace(b, MK, roomDef(di2, dj2), col, alongX, s, 0.5, alongX ? ax : c.x + s * po, alongX ? c.z + s * po : az, 0.05, T, 0)
                 const ko = T_WALL / 2 + 0.015
                 b.box(alongX ? 0.5 : 0.03, 0.12, alongX ? 0.03 : 0.5, { mat: 'paint', color: '#5a4a3e', x: alongX ? ax : c.x + s * ko, y: 0.12, z: alongX ? c.z + s * ko : az, ao: 0 })
               }
@@ -713,10 +721,11 @@ export const MissionFPMixin = {
           for (const s of [-1, 1]) {
             const col = roomCol(alongX ? i : i + s, alongX ? j + s : j)
             if (!col) continue
+            const def = roomDef(alongX ? i : i + s, alongX ? j + s : j)
             const off = T_WALL / 2 + 0.007
             const fx = alongX ? c.x : c.x + s * off
             const fz = alongX ? c.z + s * off : c.z
-            const face = (y0, y1, w = 1.0) => b.box(alongX ? w : 0.012, y1 - y0, alongX ? 0.012 : w, { mat: 'plaster', color: col, x: fx, y: (y0 + y1) / 2, z: fz, ao: 0 })
+            const face = (y0, y1, w = 1.0) => wallFace(b, MK, def, col, alongX, s, w, fx, fz, y0, y1, 0)
             if (door) face(0.05 + (door.wide >= 3 ? 2.6 : 2.15), T)
             else {
               face(0.05, 0.05 + 0.9)

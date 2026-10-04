@@ -733,6 +733,63 @@ const GEN = {
     }
     return finish(t, { normalStrength: 1.5 })
   },
+  // Wallpaper, pale so the room's colour tints it: broad stripes with a
+  // fine pinstripe at each edge, a little uneven and stained.
+  paperStripe(n) {
+    const t = new Tex(n)
+    const S = 6
+    for (let y = 0; y < n; y++) {
+      for (let x = 0; x < n; x++) {
+        const u = x / n
+        const v = y / n
+        const i = y * n + x
+        const p = (u * S) % 1
+        let c = p < 0.5 ? 238 : 214
+        if (Math.abs(p - 0.5) < 0.014 || p < 0.014) c = 186
+        else if (Math.abs(p - 0.25) < 0.006) c = 226
+        const f = fbm(u, v, 5, 3, 301)
+        const st = fbm(u, v, 2, 3, 302)
+        c += (f - 0.5) * 10 - Math.max(0, st - 0.6) * 70
+        C[0] = c
+        C[1] = c * 0.985
+        C[2] = c * 0.95
+        t.set(i, C, 0.2 + f * 0.1, 0.88)
+      }
+    }
+    return finish(t, { normalStrength: 0.8 })
+  },
+  // Wallpaper with a small repeating flower on a half-drop lattice.
+  paperFloral(n) {
+    const t = new Tex(n)
+    const S = 6
+    for (let y = 0; y < n; y++) {
+      for (let x = 0; x < n; x++) {
+        const u = x / n
+        const v = y / n
+        const i = y * n + x
+        const row = Math.floor(v * S)
+        let lx = ((u * S + (row % 2) * 0.5) % 1) - 0.5
+        let ly = ((v * S) % 1) - 0.5
+        const d = Math.hypot(lx, ly)
+        const a = Math.atan2(ly, lx)
+        const petal = 0.17 * (0.55 + 0.45 * Math.abs(Math.cos(2 * a)))
+        let c = 236
+        if (d < 0.045) c = 168
+        else if (d < petal) c = 200
+        // a stem-and-leaf flourish between the flowers
+        const q = Math.abs(lx + ly * 0.3 - 0.34)
+        if (q < 0.012 && ly > -0.2 && ly < 0.2) c = 214
+        const f = fbm(u, v, 5, 3, 311)
+        const st = fbm(u, v, 2, 3, 312)
+        c += (f - 0.5) * 8 - Math.max(0, st - 0.62) * 70
+        C[0] = c
+        C[1] = c * 0.98
+        C[2] = c * 0.94
+        t.set(i, C, 0.2 + f * 0.1, 0.9)
+      }
+    }
+    return finish(t, { normalStrength: 0.6 })
+  },
   tiles(n) {
     const t = new Tex(n)
     const cell = n / 8

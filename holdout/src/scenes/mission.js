@@ -14,6 +14,7 @@ import { FX, makeFlame, tickFlames, ringTex } from '../render/fx.js'
 import { Splat, Terrain, wind } from '../render/terrain.js'
 import { mat, setNightGlow, cloneMat, WEATHER } from '../render/materials.js'
 import { fpPrefs } from '../render/firstperson.js'
+import { wallFace } from '../world/finishes.js'
 import { Builder, seeded } from '../models/kit.js'
 import { CONTAINER_MODELS, DECOR_MODELS, addDecor } from '../models/furniture.js'
 import { carModel, vanModel, pickupModel } from '../models/vehicles.js'
@@ -551,6 +552,10 @@ export class Mission {
       const k = i >= 0 && j >= 0 && i < W && j < lv.H ? lv.roomAt[j * W + i] : -1
       return k >= 0 ? lv.rooms[k].def.wall : null
     }
+    const roomDef = (i, j) => {
+      const k = i >= 0 && j >= 0 && i < W && j < lv.H ? lv.roomAt[j * W + i] : -1
+      return k >= 0 ? lv.rooms[k].def : null
+    }
     const winAt = new Map(lv.windows.map((w) => [w.i + ',' + w.j, w]))
     const doorAt = new Map(lv.doors.map((d) => [d.i + ',' + d.j, d]))
     // foundations, or the floor slab with the stairwell's opening in it
@@ -629,8 +634,8 @@ export class Mission {
             const fx = alongX ? ax : c.x + s * (T_WALL / 2 + 0.006)
             const fz = alongX ? c.z + s * (T_WALL / 2 + 0.006) : az
             const fh = ex ? H : WALL_INT
-            const faceMat = ex ? { material: cm('plaster') } : { mat: 'plaster' }
-            b.box(alongX ? 0.5 : 0.012, fh - 0.02, alongX ? 0.012 : 0.5, { ...faceMat, color: col, x: fx, y: 0.05 + fh / 2, z: fz, ao: 0.1 })
+            // paint, wallpaper, or tiles or boards below (see world/finishes.js)
+            wallFace(b, ex ? (key) => ({ material: cm(key) }) : (key) => ({ mat: key }), roomDef(fi, fj), col, alongX, s, 0.5, fx, fz, 0.06, 0.04 + fh)
             b.box(alongX ? 0.5 : 0.03, 0.12, alongX ? 0.03 : 0.5, { ...(ex ? { material: cm('paint') } : { mat: 'paint' }), color: '#5a4a3e', x: alongX ? ax : c.x + s * (T_WALL / 2 + 0.015), y: 0.12, z: alongX ? c.z + s * (T_WALL / 2 + 0.015) : az })
           }
         }
