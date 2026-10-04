@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-For the modpack scenario: put the newest release of each named mod that will actually load on
+For the modpack scenario: put the newest build of each named mod that will actually load on
 the NeoForge this project runs (gradle.properties neo_version) into run/mods. The newest JEI
 asks for a newer NeoForge than the dev server's, and refused to start; so each candidate jar's
 own neoforge.mods.toml is read, and the first whose NeoForge range admits ours is kept.
@@ -60,7 +60,8 @@ def main():
     for mod in sys.argv[1:]:
         api = ("https://api.modrinth.com/v2/project/%s/version?loaders=%%5B%%22neoforge%%22%%5D"
                "&game_versions=%%5B%%221.21.1%%22%%5D" % mod)
-        versions = [v for v in json.loads(get(api)) if v.get("version_type") == "release" and v.get("files")]
+        # Every published build, not only "release": JEI posts all of its as beta on Modrinth.
+        versions = [v for v in json.loads(get(api)) if v.get("files")]
         # Newest first; a newer release never needs an older NeoForge than the one before it,
         # so the newest that loads is found by halving: a handful of downloads, not a hundred.
         cache = {}
