@@ -25,7 +25,8 @@ const WALL_INT = 2.35
 const WALL_EXT = 3.1
 const T_WALL = 0.22
 const EXT_MAT = { siding: 'siding', brick: 'brick', concrete: 'concrete', corrugated: 'corrugated' }
-const TRIM = '#ece6da'
+// painted trim: an off-white, as real paint is (pure white glares in the sun)
+const TRIM = '#d9d3c6'
 
 // The player's own body in first person: still casts its shadow, draws
 // nothing (the camera is inside its head), and its weapon goes too. Third

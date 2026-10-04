@@ -228,6 +228,12 @@ export class Pipeline {
   render(scene, camera, dt) {
     const c = this.composerFor(scene, camera)
     if (c.tiltPass) c.tiltPass.enabled = !this.firstPerson
+    // up close a sunlit white wall fills the view: only lights should glow
+    if (c.bloom) {
+      const lm = c.bloom.luminanceMaterial
+      const t = this.firstPerson ? 2.6 : 1.6
+      if (lm.threshold !== t) lm.threshold = t
+    }
     c.exposure.uniforms.get('exposure').value = this.exposure * (this.exposureMul ?? 1)
     c.composer.render(dt)
   }
