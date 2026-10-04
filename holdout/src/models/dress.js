@@ -858,22 +858,26 @@ function face(c) {
     const ex = s.p[0]
     const ey = s.p[1]
     const ez = s.p[2] - re + 0.0062
-    b.sphere(re, { mat: 'gloss', color: Z ? '#a8a070' : '#d6cec2', x: ex, y: ey, z: ez, ws: 14, hs: 10 })
+    b.sphere(re, { mat: 'gloss', color: Z ? '#a8a070' : '#e2dbd0', x: ex, y: ey, z: ez, ws: 14, hs: 10 })
     if (Z) {
       b.sphere(0.0058, { mat: 'glowRed', color: '#ffffff', x: ex, y: ey, z: ez + re - 0.001, sz: 0.4, ws: 8, hs: 6 })
     } else {
-      b.sphere(0.0068, { mat: 'gloss', color: iris, x: ex, y: ey, z: ez + re - 0.0019, sz: 0.4, ws: 10, hs: 7 })
-      b.sphere(0.003, { mat: 'gloss', color: '#0a0a0a', x: ex, y: ey, z: ez + re - 0.0001, sz: 0.4, ws: 8, hs: 6 })
+      // iris, a darker ring round it, the pupil, and a catchlight: what
+      // makes eyes read as looking at something at a few metres
+      b.sphere(0.0076, { mat: 'gloss', color: tint(iris, 0.55), x: ex, y: ey, z: ez + re - 0.0024, sz: 0.4, ws: 12, hs: 8 })
+      b.sphere(0.0071, { mat: 'gloss', color: iris, x: ex, y: ey, z: ez + re - 0.0019, sz: 0.4, ws: 12, hs: 8 })
+      b.sphere(0.0032, { mat: 'gloss', color: '#080808', x: ex, y: ey, z: ez + re - 0.0001, sz: 0.4, ws: 8, hs: 6 })
+      b.sphere(0.0011, { mat: 'plain', color: '#ffffff', x: ex + 0.0022, y: ey + 0.0024, z: ez + re + 0.0003, sz: 0.5, ws: 6, hs: 4, ao: 0 })
     }
     // lids: an upper lid shell, a dark lash line along its edge, a lower lid
     const lid = tint(skin, Z ? 0.7 : 0.9)
-    const tl = PI * (Z ? 0.36 : 0.3)
+    const tl = PI * (Z ? 0.36 : 0.25)
     b.sphere(re + 0.0011, { mat: 'skin', color: lid, x: ex, y: ey, z: ez, ts: 0, tl, rx: 0.5, ws: 14, hs: 6 })
     b.sphere(re + 0.0014, { mat: 'plain', color: spec.female ? '#140e0c' : '#2a1e18', x: ex, y: ey, z: ez, ts: tl - (spec.female ? 0.13 : 0.08), tl: spec.female ? 0.13 : 0.08, rx: 0.5, ws: 14, hs: 2 })
-    b.sphere(re + 0.0008, { mat: 'skin', color: lid, x: ex, y: ey, z: ez, ts: 0, tl: PI * 0.17, rx: PI - 0.3, ws: 14, hs: 4 })
+    b.sphere(re + 0.0008, { mat: 'skin', color: lid, x: ex, y: ey, z: ez, ts: 0, tl: PI * (Z ? 0.17 : 0.14), rx: PI - 0.3, ws: 14, hs: 4 })
     // brows
     const bc = spec.hair?.style === 'bald' && !spec.hair?.color ? '#2a2018' : spec.hair?.color || '#2a2018'
-    const bw = spec.female ? 0.0022 : 0.0032
+    const bw = spec.female ? 0.0025 : 0.0037
     const pts = [[0.013, 1.6895], [0.03, 1.6965 + (spec.female ? 0.002 : 0)], [0.05, 1.6955], [0.06, 1.69]].map(([x, y]) => {
       const q = H.surf(Y(y), sx * X(x), 1, 0.0012).p
       return q
@@ -881,7 +885,7 @@ function face(c) {
     b.tube(pts, bw, { mat: 'hair', color: tint(bc, 0.85), seg: 5, tseg: 8 })
   }
   // lips and mouth
-  const lipC = mixHex(skin, spec.female ? '#a8464a' : '#8a4442', spec.female ? 0.38 : 0.22)
+  const lipC = mixHex(skin, spec.female ? '#a8464a' : '#8a4442', spec.female ? 0.48 : 0.3)
   const yu = Y(1.6165)
   const yl = Y(1.6062)
   const zu = H.surf(yu, 0, 1).p[2]
@@ -894,8 +898,8 @@ function face(c) {
     b.capsule(0.0038, 0.03, { mat: 'skin', color: tint(lipC, 0.7), x: 0, y: yu + 0.003, z: zu - 0.0012, rz: PI / 2, seg: 8, cs: 2 })
     b.capsule(0.0045, 0.026, { mat: 'skin', color: tint(lipC, 0.7), x: 0, y: yl - 0.006, z: zl - 0.002, rz: PI / 2, seg: 8, cs: 2 })
   } else {
-    b.capsule(0.0034, 0.024, { mat: 'skin', color: lipC, x: 0, y: yu, z: zu - 0.0019, rz: PI / 2, sz: 0.8, seg: 8, cs: 2 })
-    b.capsule(0.0041, 0.019, { mat: 'skin', color: tint(lipC, 1.05), x: 0, y: yl, z: zl - 0.0024, rz: PI / 2, sz: 0.8, seg: 8, cs: 2 })
+    b.capsule(0.0038, 0.025, { mat: 'skin', color: lipC, x: 0, y: yu, z: zu - 0.0019, rz: PI / 2, sz: 0.8, seg: 8, cs: 2 })
+    b.capsule(0.0047, 0.02, { mat: 'skin', color: tint(lipC, 1.05), x: 0, y: yl, z: zl - 0.0024, rz: PI / 2, sz: 0.8, seg: 8, cs: 2 })
     b.box(0.031, 0.0014, 0.004, { mat: 'plain', color: tint(lipC, 0.45), x: 0, y: (yu + yl) / 2 + 0.0004, z: Math.max(zu, zl) - 0.0005 })
   }
   // ears (hidden by long hair)

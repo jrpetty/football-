@@ -181,9 +181,20 @@ export class Part {
     return d
   }
   // outermost clothing offset recorded at y (for placing accessories)
+  // A layer may measure what is under it with shellAt; while its own offset
+  // is being worked out it is skipped, so it never counts itself (a vest
+  // recorded over a shirt recursed forever on some bodies).
   shellAt(y, lz = 1) {
     let o = 0
-    for (const s of this.shells) if (y >= s.y0 - 1e-3 && y <= s.y1 + 1e-3 && (s.side == null || s.side * lz > 0)) o = Math.max(o, s.off(y))
+    for (const s of this.shells) {
+      if (s.busy || !(y >= s.y0 - 1e-3 && y <= s.y1 + 1e-3 && (s.side == null || s.side * lz > 0))) continue
+      s.busy = true
+      try {
+        o = Math.max(o, s.off(y))
+      } finally {
+        s.busy = false
+      }
+    }
     return o
   }
   // A point on the outer surface at height y, lateral offset lx (mirrored

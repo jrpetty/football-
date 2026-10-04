@@ -26,6 +26,10 @@ export function canvasMat(key, size, draw, opts = {}) {
   t.anisotropy = 8
   t.wrapS = t.wrapT = THREE.RepeatWrapping
   const m = new THREE.MeshStandardMaterial({ map: t, roughness: opts.rough ?? 0.8, metalness: opts.metal ?? 0, transparent: !!opts.alpha && !opts.cutout, alphaTest: opts.alpha ? (opts.cutout ? 0.5 : 0.3) : 0, polygonOffset: !!opts.decal, polygonOffsetFactor: opts.decal ? -2 : 0, side: opts.side ?? THREE.FrontSide })
+  // painted boards and labels skip the shared weathering shader, and with it
+  // the damping of the sky's reflection on rough paint: take less of it, or
+  // a sunlit sign glares white up close
+  if (!opts.emissive) m.envMapIntensity = 0.45
   if (opts.emissive) {
     m.emissiveMap = t
     m.emissive = new THREE.Color('#ffffff')
