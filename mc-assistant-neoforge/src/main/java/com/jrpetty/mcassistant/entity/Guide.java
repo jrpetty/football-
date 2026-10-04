@@ -47,7 +47,7 @@ public final class Guide {
         if (f.bedPos() != null) out.add(new Place("home", "my home", f.bedPos()));
         if (p != null) {
             com.jrpetty.mcassistant.village.Chronicle.Guest g = com.jrpetty.mcassistant.village.Chronicle.guest(village, p.getUUID());
-            if (g != null && g.built) out.add(new Place("yours", "your house", new BlockPos(g.x, g.y, g.z)));
+            if (g != null && g.built) out.add(new Place("yours", "your house", new BlockPos((int) g.x, (int) g.y, (int) g.z)));
         }
         java.util.Set<String> seen = new java.util.HashSet<>();
         List<Ledger.Building> buildings = new ArrayList<>(Ledger.buildings(village));
