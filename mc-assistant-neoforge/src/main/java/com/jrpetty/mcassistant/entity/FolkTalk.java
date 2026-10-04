@@ -948,8 +948,11 @@ public final class FolkTalk {
         if (has(t, "make peace", "peace with", "olive branch", "patch things up", "end the feud", "settle the feud")) return TalkTopic.PEACE;
         if (has(t, "stir trouble", "stir up", "rumours about", "rumors about", "they say about you", "saying about you")) return TalkTopic.STIR;
         if (has(t, "pay my fine", "pay the fine", "my fine", "what i owe", "my debt", "pay what")) return TalkTopic.FINE;
-        if (has(t, "orders", "elder want", "elder say", "you should order", "order the village", "tell everyone to", "should put our backs")) return TalkTopic.ORDERS;
-        if (has(t, "how does your", "your trade work", "how do you work", "what do you need for", "your tools", "your workshop")) return TalkTopic.WORKINGS;
+        if (has(t, " orders ", " order ", "elder want", "elder say", "you should order", "order the village", "tell everyone to", "should put our backs")
+                || (has(t, " should ", " ought ", " needs to ", " need to ") && has(t, " village ", " we ", " everyone ", " everybody ")
+                    && Orders.named(t) != null && has(t, " more ", " order", " focus", " put ", " get ", " dig ", " fill "))) return TalkTopic.ORDERS;
+        if (has(t, "how does your trade", "how does your work", "how does your job", "your trade work", "how do you work",
+                "what do you need for", "your tools", "your workshop")) return TalkTopic.WORKINGS;
         if (has(t, "short of", "running low", "what's short", "whats short", "what do you lack", "what does the village need")) return TalkTopic.SHORT;
         if (has(t, "quest", "notice board", "the board", "bount", "postings", "work going")) return TalkTopic.QUESTS;
         if (has(t, "hire", "adventur", "sell your sword", "bodyguard", "escort", "come exploring")) return TalkTopic.HIRE;

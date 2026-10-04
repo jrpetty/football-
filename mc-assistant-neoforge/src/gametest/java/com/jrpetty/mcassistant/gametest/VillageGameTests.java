@@ -1596,20 +1596,26 @@ public class VillageGameTests {
         // brew itself, twenty seconds a step, is t40's).
         folk.setJob(StationTask.BREW);
         boolean brewKit = com.jrpetty.mcassistant.entity.Trades.kit(folk);
+        // Without its brewery the brewer keeps the stand in its pack; with one, it goes down inside.
+        boolean waited = !com.jrpetty.mcassistant.entity.Crafts.now(folk, level, v)
+            || folk.countCarried(s -> s.is(Items.BREWING_STAND)) == 1;
+        BlockPos bc = Kit.surface(level, heart.getX() - 14, heart.getZ() + 14);
+        com.jrpetty.mcassistant.village.Ledger.built(village, "brewery", bc, Direction.NORTH);
         boolean brewed = com.jrpetty.mcassistant.entity.Crafts.now(folk, level, v);
         BlockPos standAt = null;
-        BlockPos bc = folk.workZone().center();
         for (BlockPos q : BlockPos.betweenClosed(bc.offset(-8, -3, -8), bc.offset(8, 4, 8))) {
             if (level.getBlockState(q).is(Blocks.BREWING_STAND)) { standAt = q.immutable(); break; }
         }
         String loadedWith = standAt != null && level.getBlockEntity(standAt) instanceof net.minecraft.world.level.block.entity.BrewingStandBlockEntity st
             ? st.getItem(0).getHoverName().getString() + " + " + st.getItem(3).getHoverName().getString() : "no stand";
-        Kit.log("t32 the brewer: kit " + brewKit + ", " + brewed + ", the stand at " + standAt + " with " + loadedWith);
-        helper.assertTrue(brewKit && brewed && loadedWith.contains("Water") && loadedWith.contains("Nether Wart"),
-            "the brewer sets down the stand it brought and loads it with water and nether wart");
+        Kit.log("t32 the brewer: kit " + brewKit + ", kept it till the brewery stood " + waited + ", " + brewed
+            + ", the stand at " + standAt + " with " + loadedWith);
+        helper.assertTrue(brewKit && waited && brewed && loadedWith.contains("Water") && loadedWith.contains("Nether Wart"),
+            "the brewer keeps the stand it brought till the brewery stands, then sets it down there and loads it");
         // The enchanter: the table it brought set down, a book bound, then the smith's work enchanted.
         folk.setJob(StationTask.ENCHANT);
         com.jrpetty.mcassistant.entity.Trades.kit(folk);
+        com.jrpetty.mcassistant.village.Ledger.built(village, "library", Kit.surface(level, heart.getX() + 14, heart.getZ() + 14), Direction.NORTH);
         int spells = 0;
         for (int i = 0; i < 3; i++) if (com.jrpetty.mcassistant.entity.Crafts.now(folk, level, v)) spells++;
         int enchanted = stock.applyAsInt(ItemStack::isEnchanted);
@@ -2493,8 +2499,9 @@ public class VillageGameTests {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
         level.setDayTime(3000);
-        Kit.hold(level, 24000, 12000, 48);
-        Kit.prepare(level, 24000, 12000, 48);
+        // Wide: the rancher looks for wild animals 48 blocks round its pen, and only on loaded ground.
+        Kit.hold(level, 24000, 12000, 80);
+        Kit.prepare(level, 24000, 12000, 80);
         BlockPos heart = Kit.surface(level, 24000, 12000);
         VillageFolkEntity farmer = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
         helper.assertTrue(farmer != null, "a village");

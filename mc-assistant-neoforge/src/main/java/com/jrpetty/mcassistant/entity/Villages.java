@@ -87,7 +87,7 @@ public final class Villages {
         new Slot(AssistantEntity.StationTask.SMITH, 1, 16, Age.IRON, 1),
         new Slot(AssistantEntity.StationTask.TAILOR, 1, 18, Age.STONE, 1),
         new Slot(AssistantEntity.StationTask.SHOP, 1, 18, Age.IRON, 1),
-        new Slot(AssistantEntity.StationTask.BEEKEEP, 1, 20, Age.STONE, 2),
+        new Slot(AssistantEntity.StationTask.BEEKEEP, 1, 20, Age.STONE, 1),
         new Slot(AssistantEntity.StationTask.BREW, 1, 22, Age.DIAMOND, 1),
         new Slot(AssistantEntity.StationTask.ENCHANT, 1, 24, Age.NETHER, 1));
 
@@ -471,6 +471,10 @@ public final class Villages {
             if (!slot.wanted(total, at)) continue;      // too small (or too young) to want one yet
             double target = target(villageId, slot, total);
             double deficit = target - have.getOrDefault(slot.trade(), 0);
+            // The first hand of a craft the village has grown into comes before one more of a trade
+            // it already has plenty of: a craft is one or two hands however big the town, and its
+            // share never outweighed the farms' and the mines', which grow with every newcomer.
+            if (slot.trade().isCraft() && have.getOrDefault(slot.trade(), 0) == 0) deficit += 2.0;
             // Ties break toward the trade the village wants most of, which
             // keeps a young settlement growing food before it grows anything
             // else.
@@ -504,10 +508,36 @@ public final class Villages {
         Age at = villageId == null ? Age.WOOD : ageOf(villageId);
         for (Slot slot : SLOTS) {
             if (!slot.wanted(total, at)) continue;   // too small (or too young) to want one yet
-            if (slot.age() != Age.WOOD) continue;    // a craft is never worth taking a farmer off the fields for
+            if (slot.age() != Age.WOOD) continue;    // crafts below, once the trades have their hands
             if (have.getOrDefault(slot.trade(), 0) == 0) return slot.trade();
         }
+        // The watch down to a handful: in the long game the guards fell one by one (old age, the
+        // night's fights) from fourteen to one in a village of eighty, and nobody new took it up.
+        for (Slot slot : SLOTS) {
+            if (slot.trade() != AssistantEntity.StationTask.GUARD || !slot.wanted(total, at)) continue;
+            double want = target(villageId, slot, total);
+            if (want >= 2.0 && have.getOrDefault(slot.trade(), 0) < want / 2.0) return slot.trade();
+        }
+        // A craft the village has grown into and has the building for, with nobody at it: a hand
+        // from a trade with more than its share takes it up. Crafts were only ever taken by
+        // newcomers, and newcomers always found the fields or the mines shorter — a village of
+        // eighty had no beekeeper and no brewer in fifty days, and its first cook came at day 35.
+        for (Slot slot : SLOTS) {
+            if (slot.age() == Age.WOOD || !slot.wanted(total, at)) continue;
+            if (have.getOrDefault(slot.trade(), 0) > 0) continue;
+            String building = VillageFolkEntity.buildingFor(slot.trade());
+            if (building == null || hasBuilt(villageId, building)) return slot.trade();
+        }
         return null;
+    }
+
+    /** Is this village big enough (and far enough on) to want this trade at all? */
+    public static boolean wants(@Nullable UUID villageId, AssistantEntity.StationTask trade) {
+        List<AssistantEntity> folk = folkOf(villageId);
+        int total = Math.max(1, Math.max(folk.size(), headcount(villageId)));
+        Age at = villageId == null ? Age.WOOD : ageOf(villageId);
+        for (Slot slot : SLOTS) if (slot.trade() == trade) return slot.wanted(total, at);
+        return false;
     }
 
     /** A trade's share of a village this size, as the elder's order shapes it (Orders): the order's

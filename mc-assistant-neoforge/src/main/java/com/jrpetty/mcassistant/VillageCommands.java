@@ -447,14 +447,16 @@ public final class VillageCommands {
           .append(Villages.ageOf(v.id()).label).append('.');
         java.util.Map<AssistantEntity.StationTask, Integer> trades =
             new java.util.EnumMap<>(AssistantEntity.StationTask.class);
-        int idle = 0;
+        int idle = 0, children = 0;
         for (AssistantEntity a : Villages.folkOf(v.id())) {
-            if (a.stationTask() == AssistantEntity.StationTask.NONE) idle++;
+            if (a.isBaby()) children++;
+            else if (a.stationTask() == AssistantEntity.StationTask.NONE) idle++;
             else trades.merge(a.stationTask(), 1, Integer::sum);
         }
         sb.append(" Trades:");
         trades.forEach((t, n) -> sb.append(' ').append(n).append(' ').append(t.title.toLowerCase()));
         if (idle > 0) sb.append(", ").append(idle).append(" still choosing");
+        if (children > 0) sb.append(", ").append(children).append(children == 1 ? " child" : " children");
         sb.append(". Stores:");
         for (Villages.Task t : Villages.Task.values()) {
             if (t == Villages.Task.BUILD || t == Villages.Task.HANDS || t == Villages.Task.NONE) continue;
@@ -510,6 +512,9 @@ public final class VillageCommands {
             sb.append(". Watch: ").append(alarm != null ? "THE BELL IS RINGING (" + alarm + ")" : "quiet")
               .append(", ").append(gates).append(" gates ").append(com.jrpetty.mcassistant.entity.Watch.isShut(v.id()) ? "shut" : "open")
               .append(", ").append(posts).append(" posts on the wall");
+            if ((gates == 0 || posts == 0) && com.jrpetty.mcassistant.entity.Villages.hasBuilt(v.id(), "fortify")) {
+                sb.append(" [").append(com.jrpetty.mcassistant.entity.Watch.trouble(level, v.id())).append(']');
+            }
         }
         {
             java.util.UUID id = v.id();

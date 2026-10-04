@@ -203,7 +203,8 @@ when a raid comes to the village, or when a raiding party is sighted. A village 
 no wall yet has no bell to ring: its folk are indoors at night anyway. Monsters in
 caves under the town don't count. By day the bell stops once there are only one or
 two monsters left (the watch deals with those on its rounds), so a creeper in the
-shade can't keep the whole village indoors.
+shade can't keep the whole village indoors. Once the day has stopped the bell, it
+doesn't ring again for monsters until dusk (a raid still rings it).
 
 * The gates are shut and every guard turns out, whichever watch it keeps.
 * A guard with a bow (its own, or one from the stores with arrows) walks to its post,
@@ -236,7 +237,9 @@ folk and a watch is raided.
   work.
 
 `/village status` shows the watch: whether the bell is ringing and why, how many gates
-there are and whether they are shut, and how many posts are on the wall.
+there are and whether they are shut, and how many posts are on the wall. If the wall is
+built but has no gates or posts, it says why, side by side (no gap in the wall, the gap
+blocked, no wall-top to stand on).
 
 ### The crafts, the café and the shop
 
@@ -311,6 +314,15 @@ days later):
 | Rancher | two leads | leads need slime |
 | First farmer | 3 sugar cane, 2 melon seeds, 2 pumpkin seeds (if nobody has any) | seeds and cuttings like these are rare finds |
 
+A workstation that belongs in a building (the brewer's stand in the brewery, the
+enchanter's table in the library) stays in its owner's pack until that building
+stands, and is then set down on the spot the drawing has for it.
+
+**Who takes up a craft.** A village gets one of each craft before it gets more of the
+common trades: when a post falls empty and the watch is full, a brewer, beekeeper,
+enchanter, smith or tailor the village has none of comes before a fourth farmer. There
+is only ever one beekeeper.
+
 Everything after that the village makes for itself:
 
 * **Beekeeper.** Sets the hive it brought on its meadow and lets the swarm out.
@@ -347,12 +359,17 @@ Everything after that the village makes for itself:
   the buckets back. When the pen has no pair to breed, the rancher takes a lead,
   finds a wild sheep, cow, pig or hen, and walks it home. If there is nothing wild
   for fifty blocks, the village buys a drover's pair (two sheep and two hens) once.
-  Ranchers draw the smith's shears before making their own.
-* **Smelter.** When glass runs short, digs sand off a river bed or a beach (the
-  water fills the hole) and fires it into glass. The glass makes bottles for the
-  brewer, the beekeeper and the café, and windows.
+  Ranchers draw the smith's shears before making their own. A rancher never takes an
+  animal with a name, one kept on purpose, or one in somebody's pen (another ranch, or
+  inside fences): a player's animals stay a player's. With no lead of its own it takes
+  one from the stores. One it can't get home in three minutes is left until tomorrow.
+* **Smelter.** When glass runs short, it first takes any sand in the stores to its
+  furnace. Failing that it digs sand off a river or pond bed (the water fills the
+  hole), or shaves the top layer off open sand beyond the town, never digging the same
+  spot twice. The glass makes bottles for the brewer, the beekeeper and the café, and
+  windows.
 * **Guards.** When the bell rings, each guard takes a healing potion from the
-  stores along with its bow and arrows, and drinks it if badly hurt.
+  stores along with its bow and arrows, keeps one, and drinks it if badly hurt.
 
 **Where the fields go.** A farmer puts its field on the bank of the water nearest the
 village, just outside the town's own ground, whichever way that is. If there is no
@@ -1059,16 +1076,21 @@ The elder's own nature and trade weigh in too: a hardworking elder digs, a gener
 fills the larder, a grumpy one mans the walls, a sociable one fills the stalls. An
 order stands until something else is clearly wanted more.
 
+* **The elder is sensible about it.** A hungry village is always told to fill the
+  larder first, and nobody is moved off the farms while food is short. The elder never
+  gives an order its folk can't carry out (no "To the water" without a fisher).
 * **Folk follow it** one at a time, at most one a day. The one who moves comes from a
-  trade with a hand to spare, and never from a craft or from a trade the order wants. It
-  says so ("The elder wants more hands at the farming — off I go!") and the history
-  records it.
+  trade with a hand to spare, and never from a craft, from the watch, or from a trade the
+  order wants. It says so ("The elder wants more hands at the farming — off I go!") and
+  the history records it.
 * **The order heads the quest board** on the meeting hall ("ELDER'S ORDERS / Fill the
   larder / - Bram"). Right-click it to read the order in full.
 * **Ask anyone** "Elder's orders" and they tell you what it is, and what the village is
   building next.
 * **Have your say.** Tell the elder what you think it should order ("you should order the
-  village to dig for iron"). If it thinks well of you, or you are a citizen, it agrees.
+  village to dig for iron", or "we need more miners"). If it thinks well of you, or you
+  are a citizen in good standing, it agrees, as long as the order is one the village can
+  carry out. One petition per village a day. An outcast is not listened to.
   `/village status` and the town ledger show the order too.
 
 ### Neighbours: rivals, allies and feuds

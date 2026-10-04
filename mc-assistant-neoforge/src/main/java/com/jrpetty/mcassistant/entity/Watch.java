@@ -198,6 +198,71 @@ public final class Watch {
         return out.size();
     }
 
+    /**
+     * Why the wall has no gates or posts, side by side, for the village's status (the real-world
+     * runs): a wall the builders put up had none in a fifty-day game, and a stamped one always had.
+     */
+    public static String trouble(ServerLevel level, UUID village) {
+        BlockPos a = wall(village);
+        if (a == null) return "no wall";
+        StringBuilder sb = new StringBuilder("wall at ").append(a.toShortString()).append(':');
+        for (Direction side : SIDES) {
+            sb.append(' ').append(side.getName()).append('=');
+            String why = null;
+            for (int along = -2; along <= 2 && why == null; along++) {
+                if (!level.isLoaded(cell(a, side, along))) why = "unloaded";
+            }
+            if (why == null) {
+                boolean hung = false;
+                for (int along = -1; along <= 1; along++) if (doorIn(level, cell(a, side, along), a.getY()) != null) hung = true;
+                if (hung) why = "hung";
+            }
+            if (why == null) {
+                StringBuilder tops = new StringBuilder();
+                for (int along : new int[]{ -3, 3 }) {
+                    BlockPos c = cell(a, side, along);
+                    BlockPos t = wallTop(level, c.getX(), c.getZ(), a.getY());
+                    if (t == null) {
+                        int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, c.getX(), c.getZ()) - 1;
+                        tops.append(" no-wall@").append(along).append('(')
+                            .append(net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(level.getBlockState(new BlockPos(c.getX(), y, c.getZ())).getBlock()).getPath())
+                            .append(" y").append(y - a.getY()).append(')');
+                    }
+                }
+                if (tops.length() > 0 && tops.toString().split("no-wall").length > 2) why = "no wall either side" + tops;
+            }
+            if (why == null) {
+                for (int along = -2; along <= 2 && why == null; along++) {
+                    BlockPos c = cell(a, side, along);
+                    BlockPos f = floorAt(level, c.getX(), c.getZ(), a.getY());
+                    if (f == null) why = "no floor at " + along;
+                    else for (int h = 0; h <= 2 && why == null; h++) {
+                        BlockState st = level.getBlockState(f.above(h));
+                        if (!st.isAir() && !st.canBeReplaced()) {
+                            why = "blocked at " + along + " by " + net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(st.getBlock()).getPath();
+                        }
+                    }
+                }
+            }
+            sb.append(why == null ? "ok" : why);
+        }
+        int noTop = 0, blocked = 0, noFoot = 0;
+        for (Direction side : SIDES) {
+            for (int along : POSTS) {
+                BlockPos c = cell(a, side, along);
+                if (!level.isLoaded(c)) continue;
+                BlockPos top = wallTop(level, c.getX(), c.getZ(), a.getY());
+                if (top == null) { noTop++; continue; }
+                if (!level.getBlockState(top.above()).isAir() || !level.getBlockState(top.above(2)).isAir()) { blocked++; continue; }
+                BlockPos in = c.relative(side.getOpposite());
+                BlockPos foot = floorAt(level, in.getX(), in.getZ(), a.getY());
+                if (foot == null || foot.getY() > top.getY()) noFoot++;
+            }
+        }
+        sb.append("; posts: ").append(noTop).append(" no wall top, ").append(blocked).append(" blocked, ").append(noFoot).append(" no foot");
+        return sb.toString();
+    }
+
     /** The lower half of a door in this column near this height, or null. */
     @Nullable
     private static BlockPos doorIn(ServerLevel level, BlockPos c, int aroundY) {

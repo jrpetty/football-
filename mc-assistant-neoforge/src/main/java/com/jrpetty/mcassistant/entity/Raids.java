@@ -94,6 +94,8 @@ public final class Raids {
     private static final Map<UUID, Alarm> ALARMS = new ConcurrentHashMap<>();
     private static final Map<UUID, Long> RAIDED = new ConcurrentHashMap<>();
     private static final Map<UUID, Long> KEPT = new ConcurrentHashMap<>();
+    /** The day a monster alarm last ended by daylight: no more ringing for monsters until dusk. */
+    private static final Map<UUID, Long> QUIETED = new ConcurrentHashMap<>();
     /** When each guard started up its ladder. */
     private static final Map<UUID, Long> CLIMB = new ConcurrentHashMap<>();
 
@@ -101,6 +103,7 @@ public final class Raids {
         ALARMS.clear();
         RAIDED.clear();
         KEPT.clear();
+        QUIETED.clear();
         CLIMB.clear();
         Watch.resetForTests();
     }
@@ -164,7 +167,10 @@ public final class Raids {
         boolean walled = Watch.wall(id) != null;
         Raid vanilla = level.getRaidAt(v.centre());
         boolean bigRaid = vanilla != null && vanilla.isActive();
-        if (a == null && ((walled && inside >= TOO_MANY) || bigRaid)) {
+        boolean daylight = t >= 0L && t < 12500L;
+        // Once the day has called off a monster alarm, monsters in the shade don't start it again before dusk.
+        boolean quieted = daylight && QUIETED.getOrDefault(id, -1L) == day;
+        if (a == null && ((walled && inside >= TOO_MANY && !quieted) || bigRaid)) {
             a = raise(level, v, bigRaid ? "a raid" : "monsters inside the wall", null);
         }
         if (a == null && raidTonight(level, v, day, t)) a = band(level, v, day);
@@ -186,12 +192,15 @@ public final class Raids {
         // a stray one or two left (the watch deals with those on its rounds, and the day's work
         // does not wait on a creeper in the shade), or when the bell has rung for five minutes
         // of daylight without a band to fight.
-        boolean daylight = t >= 0L && t < 12500L;
+        // (A raid's band gone, the monsters it leaves behind are the same as any others.)
         boolean quiet = left == 0 && !bigRaid
-            && (inside == 0 || (daylight && inside < TOO_MANY) || (daylight && !a.raid && now - a.since > 6000L));
+            && (inside == 0 || (daylight && inside < TOO_MANY) || (daylight && now - a.since > 6000L));
         if (!quiet) { a.quietSince = -1L; return; }
         if (a.quietSince < 0) a.quietSince = now;
-        else if (now - a.quietSince >= 200L) end(level, v, a);
+        else if (now - a.quietSince >= 200L) {
+            if (daylight && inside > 0) QUIETED.put(id, day);
+            end(level, v, a);
+        }
     }
 
     /** Hostile things inside the wall (or near the heart of a village without one), up where the

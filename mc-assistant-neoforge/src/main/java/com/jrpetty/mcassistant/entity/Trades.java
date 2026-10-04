@@ -312,9 +312,10 @@ public final class Trades {
         if (village == null || t == StationTask.NONE || !(f.level() instanceof ServerLevel level)) return false;
         Villages.Village v = Villages.get(village);
         if (v == null) return false;
-        long today = level.getDayTime() / 24000L;
+        // Game time, not the clock: /time set turns the clock back and would stall a lost kit.
+        long today = level.getGameTime() / 24000L;
         Long given = given(village, t);
-        if (given != null && (today - given < 3 || !lost(level, v, t))) return false;
+        if (given != null && (Math.abs(today - given) < 3 || !lost(level, v, t))) return false;
         List<ItemStack> kit = kitFor(level, v, t);
         GIVEN.computeIfAbsent(village, k -> new ConcurrentHashMap<>()).put(t.name(), today);
         Ledger.note(village, "kit." + t.name(), Long.toString(today));
@@ -348,8 +349,17 @@ public final class Trades {
         return day;
     }
 
-    /** Has the village lost the one thing it could not make again (the hive, the stand, the table...)? */
+    /** Has the village lost the one thing it could not make again (the hive, the stand, the table...)?
+     *  Only if every place it could stand is in sight: ground out of view is not ground without it. */
     private static boolean lost(ServerLevel level, Villages.Village v, StationTask t) {
+        String building = VillageFolkEntity.buildingFor(t);
+        BlockPos at = building == null ? null : Villages.builtAt(v.id(), building);
+        if (at != null && !Land.areaLoaded(level, at, 9)) return false;
+        for (AssistantEntity a : Villages.folkOf(v.id())) {
+            if (a.stationTask() != t) continue;
+            BlockPos c = a.workZone() != null ? a.workZone().center() : a.blockPosition();
+            if (!Land.areaLoaded(level, c, 9)) return false;
+        }
         return switch (t) {
             case BEEKEEP -> !has(level, v, t, Items.BEEHIVE, Blocks.BEEHIVE);
             case BREW -> !has(level, v, t, Items.BREWING_STAND, Blocks.BREWING_STAND);
@@ -422,6 +432,7 @@ public final class Trades {
             case TAILOR -> s.is(Items.LOOM) ? 1 : 0;
             case RANCH -> s.is(Items.LEAD) ? 4 : (s.is(Items.BUCKET) ? 1 : 0);
             case FARM -> s.is(Items.SUGAR_CANE) ? 6 : ((s.is(Items.MELON_SEEDS) || s.is(Items.PUMPKIN_SEEDS)) ? 4 : 0);
+            case GUARD -> Links.healing(s) ? 1 : 0;
             default -> 0;
         };
     }
@@ -445,6 +456,10 @@ public final class Trades {
         if (!Land.areaLoaded(level, around, 10)) return null;
         BlockPos found = find(level, around, 8, block);
         if (found != null) return found;
+        // A craft with a building of its own keeps its workstation in its pack till the building
+        // stands: set down by its post in the square, it was left there when the building went up,
+        // the craft stood idle, and the village was given another.
+        if (building != null && b == null) return null;
         ItemStack carried = ItemStack.EMPTY;
         for (ItemStack s : f.getInventoryItems()) if (!s.isEmpty() && item.test(s)) { carried = s; break; }
         Block placing = carried.isEmpty() ? block : Block.byItem(carried.getItem());
@@ -469,8 +484,8 @@ public final class Trades {
     /** A free spot on the floor near here: air with room above and something solid under it. */
     @Nullable
     static BlockPos floorSpot(ServerLevel level, BlockPos c, int r) {
-        for (int d = 1; d <= r; d++) {
-            for (int dy : new int[]{ 0, 1, -1, 2, -2 }) {
+        for (int dy : new int[]{ 0, -1, 1 }) {
+            for (int d = 1; d <= r; d++) {
                 for (int dx = -d; dx <= d; dx++) {
                     for (int dz = -d; dz <= d; dz++) {
                         if (Math.max(Math.abs(dx), Math.abs(dz)) != d) continue;

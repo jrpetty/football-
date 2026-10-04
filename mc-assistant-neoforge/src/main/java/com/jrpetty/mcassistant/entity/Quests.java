@@ -135,7 +135,9 @@ public final class Quests {
         Services.overdue(level, id, day);
         List<Posting> board = postings(id);
         boolean changed = board.removeIf(p -> p.takenBy == null ? day - p.posted > LASTS_DAYS : day - p.takenDay > LASTS_DAYS);
-        if (board.size() < MOST && LAST_NEW.getOrDefault(id, -1L) < day && Villages.headcount(id) >= 4) {
+        // The elder's orders take the board's first spot: one posting fewer, or the last was never seen.
+        int room = MOST - (Orders.sign(id) != null ? 1 : 0);
+        if (board.size() < room && LAST_NEW.getOrDefault(id, -1L) < day && Villages.headcount(id) >= 4) {
             Posting fresh = post(level, v, day);
             if (fresh != null) {
                 board.add(fresh);
@@ -413,11 +415,15 @@ public final class Quests {
         if (v == null) return;
         Ledger.Building b = hall(v.id());
         if (b == null) return;
-        int i = spots(level, b).indexOf(e.getPos());
+        List<BlockPos> spots = spots(level, b);
+        int i = spots.indexOf(e.getPos());
         List<Posting> board = postings(v.id());
         e.setCanceled(true);
-        // The head of the board: the elder's orders.
-        if (Orders.sign(v.id()) != null) {
+        // The head of the board: the elder's orders — as the board actually shows it, so a board
+        // not yet repainted since the first order came (the hall out of sight) still reads true.
+        boolean head = !spots.isEmpty() && level.getBlockEntity(spots.get(0)) instanceof SignBlockEntity first
+            && first.getFrontText().getMessage(0, false).getString().startsWith("ELDER'S ORDERS");
+        if (head) {
             if (i == 0) {
                 Orders.Given g = Orders.given(v.id());
                 if (g != null) e.getEntity().sendSystemMessage(Component.literal("Elder " + g.by() + "'s orders: "

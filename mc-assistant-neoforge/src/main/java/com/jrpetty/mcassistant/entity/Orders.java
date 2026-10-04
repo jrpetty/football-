@@ -37,7 +37,7 @@ public final class Orders {
         STEADY("Steady as we go", "We've a good balance. Everybody carry on as you are.", "steady", "carry on", "as we are"),
         LARDER("Fill the larder", "Food first: more hands to the fields and the river.", "food", "larder", "farm", "harvest", "hungry"),
         TIMBER("Timber for the builders", "The builders are waiting on wood: more axes in the woods.", "timber", "wood", "logs", "trees"),
-        DIG("Dig deep", "We need stone and iron: more picks in the mine, and the furnaces kept hot.", "dig", "mine", "iron", "stone", "ore"),
+        DIG("Dig deep", "We need stone and iron: more picks in the mine, and the furnaces kept hot.", "dig", "mine", "miner", "iron", "stone", "ores"),
         WATCH("Man the walls", "These are dangerous nights: more of us on the watch.", "watch", "guard", "walls", "defend", "safe"),
         HERDS("Grow the herds", "Wool, leather, milk and eggs: more hands at the pens.", "herds", "animals", "sheep", "cows", "pens", "wool"),
         MARKET("Fill the stalls", "Let's make a name at market: more for the shop, the café and the crafts.", "market", "trade", "shop", "crafts", "sell"),
@@ -77,12 +77,15 @@ public final class Orders {
     record Given(Order order, long day, String by) {}
 
     private static final Map<UUID, Given> GIVEN = new ConcurrentHashMap<>();
+    /** The day a player last had the orders changed, by village: once a day at most. */
+    private static final Map<UUID, Long> PETITIONED = new ConcurrentHashMap<>();
     /** The day a folk last moved trade to follow the order, by village. */
     private static final Map<UUID, Long> MOVED = new ConcurrentHashMap<>();
 
     public static void resetForTests() {
         GIVEN.clear();
         MOVED.clear();
+        PETITIONED.clear();
     }
 
     @Nullable
@@ -121,10 +124,28 @@ public final class Orders {
         return o == null ? 0 : o.boost(t);
     }
 
-    /** What every trade's share is scaled by, so the order's extra hands come out of the others. */
+    /** What every trade's share is scaled by, so the order's extra hands come out of the others —
+     *  only the extra hands it can actually have: a trade the village is too small or too young for
+     *  is no part of it. */
     public static double scale(@Nullable UUID village) {
         Order o = current(village);
-        return o == null ? 1.0 : 10.0 / (10.0 + o.total());
+        if (o == null) return 1.0;
+        int extra = 0;
+        for (StationTask t : StationTask.values()) if (o.boost(t) > 0 && Villages.wants(village, t)) extra += o.boost(t);
+        return 10.0 / (10.0 + extra);
+    }
+
+    /** Does this order ask for any trade the village could have now? */
+    static boolean possible(@Nullable UUID village, Order o) {
+        if (o == Order.STEADY) return true;
+        for (StationTask t : StationTask.values()) if (o.boost(t) > 0 && Villages.wants(village, t)) return true;
+        return false;
+    }
+
+    /** Is the village short of food today? */
+    static boolean hungry(ServerLevel level, UUID village) {
+        for (Villages.Need n : Villages.needs(level, village)) if (n.task() == Villages.Task.FOOD) return true;
+        return false;
     }
 
     // ------------------------------------------------------------------ the elder decides
@@ -132,7 +153,8 @@ public final class Orders {
     /** Once a day, from the elder's daily look round: every third day, the orders. */
     public static void consider(ServerLevel level, UUID village, long day) {
         Given g = given(village);
-        if (g != null && day - g.day() < 3) return;
+        // (A clock set back — /time set — makes the day go backwards: that counts as due.)
+        if (g != null && day >= g.day() && day - g.day() < 3) return;
         if (Villages.headcount(village) < 8 || day - Math.max(0, com.jrpetty.mcassistant.village.Chronicle.foundedOn(village)) < 2) return;
         VillageFolkEntity elder = elderOf(village);
         if (elder == null) return;
@@ -206,14 +228,18 @@ public final class Orders {
             case COOK, SHOP, SMITH, TAILOR, BREW, ENCHANT, BEEKEEP -> score.merge(Order.MARKET, 1, Integer::sum);
             default -> { }
         }
-        // An order that wants a trade the village has no use for yet is no order at all.
-        if (Villages.ageOf(village).ordinal() < Villages.Age.STONE.ordinal()) score.put(Order.MARKET, -100);
+        // An order that wants a trade the village has no use for yet is no order at all: a watch
+        // for a village too small for guards, a market for one with no shop or café to man.
+        for (Order o : Order.values()) if (!possible(village, o)) score.put(o, -100);
         if (!fisher) score.put(Order.RIVER, -100);
+        boolean hungry = hungry(level, village);
+        if (hungry && possible(village, Order.LARDER)) score.merge(Order.LARDER, 3, Integer::sum);
         Order best = Order.STEADY;
         int top = Integer.MIN_VALUE;
         for (Map.Entry<Order, Integer> e : score.entrySet()) if (e.getValue() > top) { top = e.getValue(); best = e.getKey(); }
-        // A standing order stays unless something else is clearly wanted more.
-        if (now != null && score.get(now) >= top - 2) return now;
+        // A standing order stays unless something else is clearly wanted more — but not while the
+        // village goes hungry on an order that is not for food.
+        if (now != null && possible(village, now) && score.get(now) >= top - 2 && !(hungry && now != Order.LARDER)) return now;
         return best;
     }
 
@@ -223,9 +249,14 @@ public final class Orders {
     @Nullable
     public static StationTask move(UUID village, VillageFolkEntity f, long day) {
         Order o = current(village);
-        if (o == null || o == Order.STEADY || MOVED.getOrDefault(village, -1L) >= day) return null;
+        Long moved = MOVED.get(village);
+        if (o == null || o == Order.STEADY || (moved != null && moved == day)) return null;
         StationTask mine = f.stationTask();
-        if (mine == StationTask.NONE || o.boost(mine) > 0 || mine.isCraft()) return null;
+        // Never off the watch: an order shifts who farms and who digs, it does not strip the walls
+        // (under "fill the stalls" the long game's guards went to the shop counters one a day).
+        if (mine == StationTask.NONE || mine == StationTask.GUARD || o.boost(mine) > 0 || mine.isCraft()) return null;
+        // And never off the fields while the village is short of food.
+        if (mine == StationTask.FARM && f.level() instanceof ServerLevel level && hungry(level, village)) return null;
         double spare = Villages.share(village, mine);
         if (spare < 0.6) return null;                                   // not a hand to spare
         StationTask want = null;
@@ -235,9 +266,12 @@ public final class Orders {
             double short_ = -Villages.share(village, t);
             if (short_ >= most) { most = short_; want = t; }
         }
-        if (want == null) return null;
-        MOVED.put(village, day);
         return want;
+    }
+
+    /** A folk did move to follow the order (once it had found its ground): that is the day's move. */
+    public static void moved(UUID village, long day) {
+        MOVED.put(village, day);
     }
 
     // ------------------------------------------------------------------ talk
@@ -264,11 +298,24 @@ public final class Orders {
             + (elder == f ? " If you think we should be doing something else, tell me." : "");
     }
 
-    /** Which order a player's words ask for. */
+    /**
+     * Which order a player's words ask for: whole words only ("ore" was found in "more" and
+     * "store", so asking for more guards ordered the village down the mine), a word may run on
+     * ("guards", "fishing"), and the order the words name most often wins.
+     */
     @Nullable
-    static Order named(String text) {
-        for (Order o : Order.values()) for (String k : o.keys) if (text.contains(k)) return o;
-        return null;
+    public static Order named(String text) {
+        String t = " " + text.toLowerCase(Locale.ROOT).replaceAll("[^a-z ]", " ").replaceAll("\\s+", " ") + " ";
+        Order best = null;
+        int bestHits = 0;
+        for (Order o : Order.values()) {
+            int hits = 0;
+            for (String k : o.keys) {
+                if (k.contains(" ") ? t.contains(" " + k + " ") : t.contains(" " + k)) hits++;
+            }
+            if (hits > bestHits) { bestHits = hits; best = o; }
+        }
+        return best;
     }
 
     /** A player asks the elder for an order. It agrees if it thinks well of the player. */
@@ -278,7 +325,12 @@ public final class Orders {
         boolean citizen = Citizens.is(village, p.getUUID());
         Order now = current(village);
         if (asked == now) return "That's what I've ordered already: " + asked.title.toLowerCase(Locale.ROOT) + ".";
-        if (warmth < 40 && !citizen) return "I'll think on it. But I know this village, and you don't — not yet.";
+        if (Laws.banished(village, p.getUUID(), day) || warmth <= -50) return "You? Tell me how to run this village? Leave me be.";
+        if (!possible(village, asked)) return "We've nobody for that yet — we're too small a place. Ask me again when we've grown.";
+        if (warmth < 40 && !(citizen && warmth >= 0)) return "I'll think on it. But I know this village, and you don't — not yet.";
+        Long last = PETITIONED.get(village);
+        if (last != null && last == day) return "I've changed the orders once today already. Let them settle.";
+        PETITIONED.put(village, day);
         give(village, asked, day, elder.displayNameCap());
         Villages.tell(village, day, "Elder " + elder.displayNameCap() + " ordered: " + asked.title.toLowerCase(Locale.ROOT)
             + ", as " + p.getName().getString() + " asked");

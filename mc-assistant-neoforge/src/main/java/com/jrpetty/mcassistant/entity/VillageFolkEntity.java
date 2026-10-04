@@ -2737,7 +2737,10 @@ public class VillageFolkEntity extends AssistantEntity {
         if (!boxReady(pos, 6)) return false;
         int soil = 0;
         for (BlockPos p : BlockPos.betweenClosed(pos.offset(-5, -1, -5), pos.offset(5, 0, 5))) {
-            if (level().getBlockState(p).is(BlockTags.DIRT) && level().getBlockState(p.above()).canBeReplaced() && ++soil >= 40) return true;
+            // Open ground: a pond's bed is dirt with water over it, and no field.
+            BlockState over = level().getBlockState(p.above());
+            if (level().getBlockState(p).is(BlockTags.DIRT) && over.canBeReplaced() && over.getFluidState().isEmpty()
+                    && ++soil >= 40) return true;
         }
         return false;
     }
@@ -3355,6 +3358,7 @@ public class VillageFolkEntity extends AssistantEntity {
         setAutonomous(true);
         if (ordered) {
             long day = level().getDayTime() / 24000L;
+            Orders.moved(village, day);                // the day's move, now that it has its ground
             Orders.Order o = Orders.current(village);
             FolkTalk.speak(this, FolkTalk.pick(getRandom(), "The elder wants more hands at the " + vacancy.label + " — off I go!",
                 "Orders are orders. " + FolkTalk.cap(vacancy.label) + " it is."));

@@ -52,7 +52,11 @@ public final class Links {
         LAST.put(f.getUUID(), f.tickCount);
         return switch (f.stationTask()) {
             case FARM -> cane(f, level) != null;
-            case RANCH -> milk(f, level) != null || Drover.consider(f, level);
+            case RANCH -> {
+                // Both: a milking doesn't keep it from going for an animal the pen is short of.
+                boolean milked = milk(f, level) != null;
+                yield Drover.consider(f, level) || milked;
+            }
             case SMELT -> sand(f, level) != null;
             default -> false;
         };
@@ -137,7 +141,8 @@ public final class Links {
         if (cows.isEmpty()) return null;
         if (f.countCarried(s -> s.is(Items.BUCKET)) < 1) {
             if (!Crafts.take(level, v, s -> s.is(Items.BUCKET), 1)) return null;
-            f.insertItem(new ItemStack(Items.BUCKET));
+            ItemStack back = f.insertItem(new ItemStack(Items.BUCKET));
+            if (!back.isEmpty()) { Crafts.store(level, v, back); return null; }   // a full pack: back it goes
         }
         if (f.removeMatching(s -> s.is(Items.BUCKET), 1) != 1) return null;
         ItemStack left = f.insertItem(new ItemStack(Items.MILK_BUCKET));
@@ -153,9 +158,10 @@ public final class Links {
     // ------------------------------------------------------------------ sand
 
     /**
-     * The smelter's sand, for glass: when the stores are short of glass and there is no sand to
-     * fire, it digs some, off the river bed or the shore (the water closes over the hole) or out
-     * of open sand away from the town. Returns what it did, or null.
+     * The smelter's sand, for glass: when the stores are short of glass and it has no sand to
+     * fire, it takes what sand the stores hold to its furnace; failing that, it digs some, off a
+     * river or pond bed or the shore (the water closes over the hole), or shaves the top off open
+     * sand beyond the town — one layer, never a pit. Returns what it did, or null.
      */
     @Nullable
     public static String sand(VillageFolkEntity f, ServerLevel level) {
@@ -164,11 +170,26 @@ public final class Links {
         if (v == null) return null;
         java.util.function.Predicate<ItemStack> sand = s -> s.is(Items.SAND) || s.is(Items.RED_SAND);
         if (Market.stock(level, village, s -> s.is(Items.GLASS) || s.is(Items.GLASS_BOTTLE)) >= 16) return null;
-        if (f.countCarried(sand) + Market.stock(level, village, sand) >= 4) return null;
+        if (f.countCarried(sand) >= 4) return null;
+        // Sand someone brought to the stores goes to the furnace before any is dug.
+        int took = 0;
+        for (net.minecraft.world.item.Item kind : java.util.List.of(Items.SAND, Items.RED_SAND)) {
+            int n = Math.min(16 - took, Market.stock(level, village, s -> s.is(kind)));
+            if (n <= 0 || !Crafts.take(level, v, s -> s.is(kind), n)) continue;
+            ItemStack left = f.insertItem(new ItemStack(kind, n));
+            if (!left.isEmpty()) Crafts.store(level, v, left);
+            took += n - left.getCount();
+        }
+        if (took > 0) {
+            f.brain("took " + took + " sand from the stores for glass");
+            return "took " + took + " sand from the stores";
+        }
         BlockPos heart = v.centre();
+        int reach = Villages.townReach(village);
         int dug = 0;
-        for (int ring = 4; ring <= 40 && dug < 8; ring += 2) {
+        for (int ring = 4; ring <= reach + 48 && dug < 8; ring += 2) {
             if (!Land.areaLoaded(level, heart, ring)) break;
+            boolean beyond = ring > reach + 1;
             for (int dx = -ring; dx <= ring && dug < 8; dx += 2) {
                 for (int dz = -ring; dz <= ring && dug < 8; dz += 2) {
                     if (Math.max(Math.abs(dx), Math.abs(dz)) != ring) continue;
@@ -176,11 +197,23 @@ public final class Links {
                     BlockPos p = new BlockPos(x, level.getHeight(Heightmap.Types.OCEAN_FLOOR, x, z) - 1, z);
                     BlockState st = level.getBlockState(p);
                     if (!st.is(Blocks.SAND) && !st.is(Blocks.RED_SAND)) continue;
-                    boolean wet = level.getFluidState(p.above()).is(net.minecraft.tags.FluidTags.WATER);
-                    if (!wet) {
-                        // Dry sand only well away from the houses, and never from under a building.
-                        if (ring < 16 || Land.inABuilding(village, p)) continue;
-                        if (!level.getBlockState(p.below()).isSolid()) continue;
+                    if (Land.inABuilding(village, p) || !level.getBlockState(p.below()).isSolid()) continue;
+                    boolean wet = level.getBlockState(p.above()).is(Blocks.WATER);
+                    if (wet) {
+                        // A bed with water over it and nothing open beside it: the water only fills the hole.
+                        boolean open = false;
+                        for (Direction d : Direction.Plane.HORIZONTAL) open |= level.getBlockState(p.relative(d)).isAir();
+                        if (open) continue;
+                    } else {
+                        // Dry sand only beyond the town, open to the sky, and only the top layer: a
+                        // column already lower than its neighbours has been dug.
+                        if (!beyond || !level.getBlockState(p.above()).isAir()) continue;
+                        boolean lower = false;
+                        for (Direction d : Direction.Plane.HORIZONTAL) {
+                            BlockPos n = p.relative(d);
+                            lower |= level.getHeight(Heightmap.Types.OCEAN_FLOOR, n.getX(), n.getZ()) - 1 < p.getY();
+                        }
+                        if (lower) continue;
                     }
                     level.setBlock(p, wet ? Blocks.WATER.defaultBlockState() : Blocks.AIR.defaultBlockState(), 3);
                     ItemStack got = new ItemStack(st.getBlock().asItem());
@@ -212,6 +245,8 @@ public final class Links {
         for (ItemStack s : f.getInventoryItems()) {
             if (!healing(s)) continue;
             PotionContents pc = s.getOrDefault(DataComponents.POTION_CONTENTS, PotionContents.EMPTY);
+            boolean healingNow = pc.is(Potions.HEALING) || pc.is(Potions.STRONG_HEALING);
+            if (!healingNow && f.hasEffect(MobEffects.REGENERATION)) continue;   // one already working
             if (pc.is(Potions.HEALING)) f.heal(4.0F);
             else if (pc.is(Potions.STRONG_HEALING)) f.heal(8.0F);
             else f.addEffect(new MobEffectInstance(MobEffects.REGENERATION, pc.is(Potions.STRONG_REGENERATION) ? 440 : 900,

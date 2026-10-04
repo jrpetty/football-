@@ -278,9 +278,11 @@ public final class Crafts {
         // The loom: the one it brought, or one made of two string and two planks, in the workshop.
         BlockPos loom = Trades.workstation(f, level, v, Blocks.LOOM, s -> s.is(Items.LOOM),
             com.jrpetty.mcassistant.entity.goal.BuildGoal.Part.LOOM);
-        if (loom == null && stock(level, v, s -> s.is(Items.STRING)) >= 2 && planks(level, v, 2)
+        if (loom == null && f.countCarried(s -> s.is(Items.LOOM)) == 0 && Villages.hasBuilt(v.id(), "workshop")
+                && stock(level, v, s -> s.is(Items.STRING)) >= 2 && planks(level, v, 2)
                 && take(level, v, s -> s.is(Items.STRING), 2) && take(level, v, s -> s.is(ItemTags.PLANKS), 2)) {
-            f.insertItem(new ItemStack(Items.LOOM));
+            ItemStack spare = f.insertItem(new ItemStack(Items.LOOM));
+            if (!spare.isEmpty()) store(level, v, spare);
             loom = Trades.workstation(f, level, v, Blocks.LOOM, s -> s.is(Items.LOOM),
                 com.jrpetty.mcassistant.entity.goal.BuildGoal.Part.LOOM);
             // ...and on with the work: setting the loom up is not the day's piece.
@@ -344,7 +346,7 @@ public final class Crafts {
 
     /** The most hives one beekeeper keeps on its meadow. */
     static final int MAX_HIVES = 4;
-    private static final Map<UUID, Integer> BRED = new ConcurrentHashMap<>();
+    private static final Map<UUID, Long> BRED = new ConcurrentHashMap<>();
 
     /**
      * The beekeeper's work, as a player would do it. The first hive is the one it brought, swarm
@@ -391,23 +393,28 @@ public final class Crafts {
         int bees = beesAt(level, c, r, hives);
         // The hives are filling up: another, out of comb and planks.
         if (hives.size() < MAX_HIVES && bees >= 2 * hives.size()) {
-            if (f.countCarried(s -> s.is(Items.BEEHIVE)) > 0) return setHive(level, f, c, r, hives.size());
-            if (stock(level, v, s -> s.is(Items.HONEYCOMB)) >= 3 && planks(level, v, 6)
-                    && take(level, v, s -> s.is(Items.HONEYCOMB), 3) && take(level, v, s -> s.is(ItemTags.PLANKS), 6)) {
-                f.insertItem(new ItemStack(Items.BEEHIVE));
+            if (f.countCarried(s -> s.is(Items.BEEHIVE)) > 0) {
                 String set = setHive(level, f, c, r, hives.size());
-                return set == null ? null : "a new hive, made of honeycomb and planks";
+                if (set != null) return set;                    // no room for it: on with the rest
+            }
+            if (hiveSpot(level, c, r, hives.size()) != null
+                    && stock(level, v, s -> s.is(Items.HONEYCOMB)) >= 3 && planks(level, v, 6)
+                    && take(level, v, s -> s.is(Items.HONEYCOMB), 3) && take(level, v, s -> s.is(ItemTags.PLANKS), 6)) {
+                ItemStack left = f.insertItem(new ItemStack(Items.BEEHIVE));
+                if (!left.isEmpty()) store(level, v, left);
+                String set = setHive(level, f, c, r, hives.size());
+                if (set != null) return "a new hive, made of honeycomb and planks";
             }
         }
         // Room in the hives: two bees fed a flower each, and there will be a third.
         if (bees < 3 * hives.size() && level.isDay()
-                && f.tickCount - BRED.getOrDefault(f.getUUID(), -100000) > 6000) {
+                && Math.abs(level.getGameTime() - BRED.getOrDefault(f.getUUID(), -100000L)) > 6000L) {
             List<Bee> pair = level.getEntitiesOfClass(Bee.class, new net.minecraft.world.phys.AABB(c).inflate(r + 6),
                 b -> b.isAlive() && !b.isBaby() && b.canFallInLove() && !b.isInLove());
             if (pair.size() >= 2 && flowers(level, v, c, r, 2)) {
                 pair.get(0).setInLove(null);
                 pair.get(1).setInLove(null);
-                BRED.put(f.getUUID(), f.tickCount);
+                BRED.put(f.getUUID(), level.getGameTime());
                 return "two bees fed a flower each; there'll be a new bee soon";
             }
         }
@@ -446,6 +453,7 @@ public final class Crafts {
         if (at == null) return null;
         boolean swarm = Trades.isSwarm(hive);
         hive.shrink(1);
+        if (!level.getBlockState(at.above()).isAir()) level.removeBlock(at.above(), false);
         level.setBlock(at, Blocks.BEEHIVE.defaultBlockState()
             .setValue(BeehiveBlock.FACING, net.minecraft.core.Direction.SOUTH), 3);
         if (!swarm) return "a hive set up for the bees to move into";
@@ -504,12 +512,17 @@ public final class Crafts {
             int x = c.getX() + t[0], zz = c.getZ() + t[1];
             int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, zz);
             BlockPos p = new BlockPos(x, y, zz);
-            if (Math.abs(y - c.getY()) > 4) continue;
-            if (!level.getBlockState(p.below()).isSolid() || !level.getBlockState(p).isAir()
-                    || !level.getBlockState(p.above()).isAir()) continue;
+            if (Math.abs(y - c.getY()) > 3) continue;
+            if (!level.getBlockState(p.below()).isSolid() || !free(level, p) || !free(level, p.above())) continue;
             return p;
         }
         return null;
+    }
+
+    /** Room for a hive or a flower: air, or grass and the like that a beekeeper pulls up (not water). */
+    private static boolean free(ServerLevel level, BlockPos p) {
+        BlockState st = level.getBlockState(p);
+        return st.isAir() || (st.canBeReplaced() && st.getFluidState().isEmpty() && !isFlower(st));
     }
 
     private static boolean isFlower(BlockState st) {
@@ -549,7 +562,7 @@ public final class Crafts {
                 Block b = Block.byItem(one.getItem());
                 BlockPos at = grassSpot(level, near);
                 if (at == null || b == Blocks.AIR) { store(level, v, one); break; }
-                level.setBlock(at, b.defaultBlockState(), 3);
+                level.setBlock(at, b.defaultBlockState(), 3);           // over any grass there
                 put++;
             }
             if (put > 0) return "flowers from the stores planted for the bees";
@@ -568,13 +581,25 @@ public final class Crafts {
             }
         }
         // A wild one, dug up and brought to the meadow.
-        BlockPos wild = wildFlower(level, near, 24);
+        BlockPos wild = wildFlower(level, near, 24, v == null ? null : v.id());
         BlockPos at = grassSpot(level, near);
         if (wild == null || at == null) return null;
         BlockState flower = level.getBlockState(wild);
         level.removeBlock(wild, false);
         level.setBlock(at, flower.getBlock().defaultBlockState(), 3);
         return "a wild flower dug up and planted by the hives";
+    }
+
+    /** Is this spot on another beekeeper's meadow (not the one at {@code near})? */
+    private static boolean meadowOfAnother(BlockPos near, BlockPos p, @Nullable UUID village) {
+        if (village == null) return false;
+        for (AssistantEntity a : Villages.folkOf(village)) {
+            if (a.stationTask() != AssistantEntity.StationTask.BEEKEEP || a.workZone() == null) continue;
+            BlockPos c = a.workZone().center();
+            if (c.distManhattan(near) <= 12) continue;                  // our own
+            if (Math.max(Math.abs(c.getX() - p.getX()), Math.abs(c.getZ() - p.getZ())) <= 8) return true;
+        }
+        return false;
     }
 
     /** One of what matches out of the stores. */
@@ -599,14 +624,14 @@ public final class Crafts {
             int x = near.getX() + level.getRandom().nextInt(9) - 4, z = near.getZ() + level.getRandom().nextInt(9) - 4;
             int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
             BlockPos p = new BlockPos(x, y, z);
-            if (level.getBlockState(p).isAir() && level.getBlockState(p.below()).is(Blocks.GRASS_BLOCK)) return p;
+            if (free(level, p) && level.getBlockState(p.below()).is(Blocks.GRASS_BLOCK)) return p;
         }
         return null;
     }
 
     /** A wild flower out in the country round here, not on the meadow itself. */
     @Nullable
-    private static BlockPos wildFlower(ServerLevel level, BlockPos near, int r) {
+    private static BlockPos wildFlower(ServerLevel level, BlockPos near, int r, @Nullable UUID village) {
         if (!Land.areaLoaded(level, near, r)) return null;
         for (int ring = 6; ring <= r; ring += 2) {
             for (int dx = -ring; dx <= ring; dx += 2) {
@@ -615,7 +640,10 @@ public final class Crafts {
                     int x = near.getX() + dx, z = near.getZ() + dz;
                     int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
                     BlockPos p = new BlockPos(x, y, z);
-                    if (isFlower(level.getBlockState(p))) return p;
+                    if (!isFlower(level.getBlockState(p))) continue;
+                    if (village != null && Land.inABuilding(village, p)) continue;    // a garden's, a grave's
+                    if (meadowOfAnother(near, p, village)) continue;
+                    return p;
                 }
             }
         }
@@ -680,6 +708,15 @@ public final class Crafts {
                 stand.setChanged();
                 return "three " + one.getHoverName().getString().toLowerCase().replace("potion of ", "potions of ");
             }
+            if (water && isPotion(a, Potions.WATER) && isPotion(b, Potions.WATER) && isPotion(c, Potions.WATER)) {
+                // Water waiting for its wart (the wart ran out, or a player took it): put one in.
+                if (use(level, v, f, s -> s.is(Items.NETHER_WART), 1)) {
+                    stand.setItem(3, new ItemStack(Items.NETHER_WART));
+                    stand.setChanged();
+                    return "a nether wart into the waiting water";
+                }
+                return patch;
+            }
             if (awkward) {
                 Brew want = wanted(level, v, f);
                 if (want == null) return patch;
@@ -689,6 +726,21 @@ public final class Crafts {
                 return "in goes " + new ItemStack(want.reagent()).getHoverName().getString().toLowerCase()
                     + ", for " + PotionContents.createItemStack(Items.POTION, want.potion()).getHoverName().getString().toLowerCase();
             }
+            // A mixed set (some water, some awkward, or a player's potions): out to the stores, start clean.
+            for (int i = 0; i < 3; i++) {
+                store(level, v, stand.getItem(i).copy());
+                stand.setItem(i, ItemStack.EMPTY);
+            }
+            stand.setChanged();
+            return patch;
+        }
+        if (idle && !(a.isEmpty() && b.isEmpty() && c.isEmpty()) && !full) {
+            // One or two bottles in it (a player's doing): out to the stores, start clean.
+            for (int i = 0; i < 3; i++) {
+                if (!stand.getItem(i).isEmpty()) store(level, v, stand.getItem(i).copy());
+                stand.setItem(i, ItemStack.EMPTY);
+            }
+            stand.setChanged();
             return patch;
         }
         if (a.isEmpty() && b.isEmpty() && c.isEmpty() && idle) {
@@ -831,10 +883,20 @@ public final class Crafts {
         }
         if (table == null) return null;
         if (have(level, v, f, s -> s.is(Items.LAPIS_LAZULI)) < 3 || stock(level, v, s -> s.is(Items.BOOK)) < 1) return null;
+        // Bookshelves as the game counts them: two blocks out from the table, level with it or one
+        // up, with nothing but air between (fifteen is as strong as it gets).
         int shelves = 0;
-        for (BlockPos p : BlockPos.betweenClosed(table.offset(-4, 0, -4), table.offset(4, 2, 4))) {
-            if (level.getBlockState(p).is(Blocks.BOOKSHELF)) shelves++;
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                if (Math.max(Math.abs(dx), Math.abs(dz)) != 2) continue;
+                for (int dy = 0; dy <= 1; dy++) {
+                    BlockPos p = table.offset(dx, dy, dz);
+                    BlockPos between = table.offset(dx / 2, dy, dz / 2);
+                    if (level.getBlockState(p).is(Blocks.BOOKSHELF) && level.getBlockState(between).isAir()) shelves++;
+                }
+            }
         }
+        shelves = Math.min(15, shelves);
         int tier = shelves >= 15 ? 3 : shelves >= 6 ? 2 : 1;
         var reg = level.registryAccess().registryOrThrow(Registries.ENCHANTMENT);
         for (BlockPos p : Villages.storeChests(level, v.id())) {
