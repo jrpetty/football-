@@ -679,7 +679,18 @@ public class BuildGoal extends Goal {
                     int oz = side == 1 ? 3 : side == 3 ? -3 : 0;
                     assistant.getNavigation().moveTo(at.getX() + 0.5 + ox, at.getY() + 1, at.getZ() + 0.5 + oz, 1.1D);
                 }
-                if (++standTicks > 100) { cursor++; standTicks = 0; }     // not for ever
+                if (++standTicks > 100) {
+                    // A village's builder that can't walk out of the cell (on a dais between a
+                    // frame's posts) is set down beside it, and the cell is laid after all: one
+                    // skipped for good left the gateway a block short of its ten obsidian.
+                    if (assistant.isSettler() && assistant.putBeside(at)
+                            && !assistant.getBoundingBox().intersects(new net.minecraft.world.phys.AABB(at))) {
+                        standTicks = 0;
+                        return;
+                    }
+                    cursor++;                                                  // not for ever
+                    standTicks = 0;
+                }
                 return;
             }
             cursor++;

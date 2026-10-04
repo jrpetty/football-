@@ -2824,8 +2824,19 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      *  gateway took a block out of the frame. */
     private boolean underground() {
         BlockPos p = blockPosition();
-        return p.getY() < level().getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
-            p.getX(), p.getZ()) - 2;
+        int top = level().getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, p.getX(), p.getZ());
+        if (p.getY() >= top - 2) return false;
+        // And what is over its head is the world's own rock or earth, not something built: a
+        // builder standing in the gateway, under its frame, is no miner down a shaft.
+        for (int y = p.getY() + 2; y < Math.min(top, p.getY() + 12); y++) {
+            BlockState st = level().getBlockState(new BlockPos(p.getX(), y, p.getZ()));
+            if (st.isAir() || !st.getFluidState().isEmpty()) continue;
+            return st.is(net.minecraft.tags.BlockTags.BASE_STONE_OVERWORLD) || st.is(net.minecraft.tags.BlockTags.DIRT)
+                || st.is(net.minecraft.tags.BlockTags.SAND) || st.is(Blocks.GRAVEL) || st.is(Blocks.CLAY)
+                || st.is(net.minecraft.tags.BlockTags.COAL_ORES) || st.is(net.minecraft.tags.BlockTags.IRON_ORES)
+                || st.is(net.minecraft.tags.BlockTags.COPPER_ORES);
+        }
+        return false;
     }
 
     private int firstSlot(java.util.function.Predicate<ItemStack> p) {
