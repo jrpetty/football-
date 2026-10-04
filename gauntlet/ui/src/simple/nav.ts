@@ -208,7 +208,7 @@ export const SECTIONS: NavSection[] = [
     blurb: 'Test a chatbot that has no API key: copy each question in, paste the reply back.',
     keys: ['inbox', 'grading', 'review', 'grade'],
     tabs: [
-      { label: 'Inbox', to: '/inbox', keys: ['inbox'], hint: 'Questions waiting for you to paste a reply' },
+      { label: 'Manual Inbox', to: '/inbox', keys: ['inbox'], hint: 'Questions waiting for you to paste a reply' },
       { label: 'Grading Station', to: '/grading', keys: ['grading'], hint: 'Mark answers that need a human' },
       { label: 'Blind review', to: '/review', keys: ['review'], hint: 'Score answers without knowing which model wrote them' },
       { label: 'Grade one answer', to: '/grade', keys: ['grade'], hint: 'Paste any reply and see its score' },

@@ -44,7 +44,7 @@ export function PageGuide({ pageKey }: { pageKey: PageKey }) {
       </div>
       <div className="pg-actions">
         {next && (
-          <Link to={next.to} className="btn sm primary" onClick={() => dismissGuide(pageKey)}>
+          <Link to={next.to} className="btn sm" onClick={() => dismissGuide(pageKey)}>
             {next.label} <Icon.ChevronRight />
           </Link>
         )}

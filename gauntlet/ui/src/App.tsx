@@ -142,7 +142,7 @@ function resolve(parts: string[], query?: URLSearchParams): Resolved {
   // Old leaderboard links (#/?suite=…&run=…) still open the leaderboard; plain #/ is Home.
   if (!a && !query?.has('suite') && !query?.has('run')) return { el: <HomePage />, crumb: 'Home' };
   if (!a || a === 'leaderboard') return { el: <LeaderboardPage />, crumb: 'Leaderboard' };
-  if (a === 'run' && b === 'new') return { el: <NewRunPage />, crumb: 'New Run' };
+  if (a === 'run' && b === 'new') return { el: <NewRunPage />, crumb: 'Run a test' };
   if (a === 'runs') {
     if (!b) return { el: <RunsPage />, crumb: 'Runs' };
     if (c === 'live') return { el: <LiveArenaPage key={b} runId={b} />, crumb: 'Live Arena' };

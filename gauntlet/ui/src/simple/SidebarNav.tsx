@@ -104,7 +104,6 @@ export function SidebarNav({ items, path, manualCount }: { items: MenuItem[]; pa
         {simple && (
           <div className="nav-about">
             <Link to="/methodology">How scoring works</Link>
-            <span aria-hidden="true">·</span>
             <Link to="/guide">Viewer guide</Link>
           </div>
         )}

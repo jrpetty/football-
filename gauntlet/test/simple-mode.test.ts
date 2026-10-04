@@ -104,7 +104,7 @@ test('tabs: Results groups the leaderboard, best on each test, past runs and his
   );
   assert.equal(tabsFor('run-detail')?.current.label, 'Past runs');
   assert.equal(tabsFor('keys')?.section.label, 'Settings');
-  assert.equal(tabsFor('inbox')?.current.label, 'Inbox');
+  assert.equal(tabsFor('inbox')?.current.label, 'Manual Inbox');
   assert.equal(tabsFor('home'), null);
   assert.equal(tabsFor('run-live'), null, 'a live run has no tab bar');
 });
