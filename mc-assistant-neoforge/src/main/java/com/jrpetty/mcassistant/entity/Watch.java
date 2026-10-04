@@ -88,24 +88,41 @@ public final class Watch {
         return anchor.relative(side, R).relative(side.getClockWise(), along);
     }
 
-    /** The floor of a column near this height: the lowest place with solid ground under it and
-     *  room (air, or a door) for two above. */
+    /** The floor of a column near this height: the lowest place with solid ground under it, room
+     *  (air, or a door) for two above, and nothing over it but sky — not a cave under the street.
+     *  (The long game's south gate was looked for in a cave under the avenue, "blocked by stone",
+     *  and its east one was more than six blocks below a heart on a hilltop.) */
     @Nullable
     static BlockPos floorAt(ServerLevel level, int x, int z, int aroundY) {
-        for (int y = aroundY - 6; y <= aroundY + 6; y++) {
+        for (int y = aroundY - 10; y <= aroundY + 10; y++) {
             BlockPos p = new BlockPos(x, y, z);
             BlockState under = level.getBlockState(p.below());
             if (!under.isSolid() || under.getBlock() instanceof DoorBlock) continue;
             if (!roomy(level.getBlockState(p)) || !roomy(level.getBlockState(p.above()))) continue;
+            if (!open(level, p, aroundY + 14)) continue;
             return p;
         }
         return null;
     }
 
+    /** Nothing over this spot but what a gate or a post puts there (a door, a ladder) and a tree's
+     *  leaves: it is out on the ground, not under it. */
+    private static boolean open(ServerLevel level, BlockPos p, int upTo) {
+        for (int y = p.getY() + 2; y <= upTo; y++) {
+            BlockState s = level.getBlockState(new BlockPos(p.getX(), y, p.getZ()));
+            if (s.isAir() || !s.isSolid() || s.getBlock() instanceof DoorBlock || s.is(Blocks.LADDER)
+                || s.is(net.minecraft.tags.BlockTags.LEAVES)) continue;
+            return false;
+        }
+        return true;
+    }
+
     /** Room to stand: air, a door, a plant — or the post's own ladder (once it is up, the foot of
-     *  the post is a ladder; that must not make the post vanish when the posts are looked over). */
+     *  the post is a ladder; that must not make the post vanish when the posts are looked over).
+     *  Not water: no gate hangs in a river. */
     private static boolean roomy(BlockState s) {
-        return s.isAir() || s.getBlock() instanceof DoorBlock || s.canBeReplaced() || s.is(Blocks.LADDER);
+        return s.isAir() || s.getBlock() instanceof DoorBlock || (s.canBeReplaced() && s.getFluidState().isEmpty())
+            || s.is(Blocks.LADDER);
     }
 
     /** The top of the wall in a column: the highest block of masonry with masonry under it (the
@@ -115,7 +132,12 @@ public final class Watch {
     static BlockPos wallTop(ServerLevel level, int x, int z, int aroundY) {
         for (int y = aroundY + 12; y >= aroundY - 12; y--) {
             BlockPos p = new BlockPos(x, y, z);
-            if (masonry(level.getBlockState(p)) && masonry(level.getBlockState(p.below()))) return p;
+            BlockState s = level.getBlockState(p);
+            if (s.isAir() || !s.isSolid() || s.getBlock() instanceof net.minecraft.world.level.block.SlabBlock
+                || s.is(net.minecraft.tags.BlockTags.LEAVES)) continue;
+            // The first real block from the top is the wall's, or the ground's: no looking on
+            // down through the earth to the bedrock stone under it (which is no wall to stand on).
+            return masonry(s) && masonry(level.getBlockState(p.below())) ? p : null;
         }
         return null;
     }
