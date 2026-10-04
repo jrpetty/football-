@@ -4,7 +4,7 @@ import {
   RES, RES_KEYS, STOCK_KEYS, SKILLS, SKILL_KEYS, SKILL_MAX, xpForLevel, OCCUPATIONS, OCC_KEYS, TRAITS, TRAIT_KEYS,
   FIRST_NAMES, FEMALE_NAMES, LAST_NAMES, ITEMS, QUALITY, MODS, STATIONS, FENCE, RECIPES, REPAIR, EXPANSIONS, EXPANSION_DEPTH,
   GOALS, DAY_MIN, UTILITIES, BELTS, BELT_STACK, TIERS, MILESTONES, SIGNAL, RESEARCH, ALT_RECIPES, CORE_SLOTS, CORE_BOOST, INFECTION,
-  SEASONS, SEASON_DAYS, PERKS, PERK_LEVELS, OUTPOST, LOCATIONS, VEHICLES, TRAVEL, VAN_REPAIR, VEHICLE_FIX,
+  SEASONS, SEASON_DAYS, PERKS, PERK_LEVELS, OUTPOST, LOCATIONS, VEHICLES, TRAVEL, VAN_REPAIR, VEHICLE_FIX, modFits, SITES,
 } from './data.js'
 import { bus, uid, pick, rint, rand, chance, clamp, store, weighted } from '../core/util.js'
 import { SKIN_TONES, HAIR_COLORS } from '../models/character.js'
@@ -141,6 +141,19 @@ export function makeSurvivor(opts = {}) {
   else if (chance(0.3)) traits.push(pick(goods.filter(ok)))
   const first = opts.first || pick(FIRST_NAMES)
   const female = FEMALE_NAMES.has(first)
+  const age = opts.age ?? rint(19, 58)
+  const look = randomLook(female)
+  if (age < 16) {
+    // a child: small, slight, no beard, still learning everything
+    look.height = 0.66 + (age - 7) * 0.035
+    look.build = rand(0.84, 0.92)
+    look.beard = null
+    for (const k of SKILL_KEYS) skills[k] = Math.max(1, Math.min(skills[k], 2))
+  } else if (age >= 65) {
+    look.hair.color = pick(['#d8d4cc', '#bdb8ae', '#9a958c', '#ece8e0'])
+    if (look.hair.style === 'mohawk') look.hair.style = 'short'
+    look.height *= 0.97
+  }
   const s = {
     id: uid('s'),
     name: `${first} ${opts.last || pick(LAST_NAMES)}`,
@@ -149,7 +162,7 @@ export function makeSurvivor(opts = {}) {
     traits,
     skills,
     xp,
-    look: randomLook(female),
+    look,
     hp: 100,
     status: 'ok',
     job: null,
@@ -158,7 +171,7 @@ export function makeSurvivor(opts = {}) {
     kills: 0,
     runs: 0,
     joined: S ? day() : 1,
-    age: rint(19, 58),
+    age,
     perks: [],
     perkChoices: [],
   }
@@ -173,8 +186,39 @@ export const survivorLevel = (s) => Math.max(1, Math.round(SKILL_KEYS.reduce((a,
 const PERK_BY_ID = {}
 for (const [skill, tiers] of Object.entries(PERKS)) tiers.forEach((pair, tier) => pair.forEach((p) => (PERK_BY_ID[p.id] = { ...p, skill, tier })))
 export const perkOf = (id) => PERK_BY_ID[id]
+// ---------------------------------------------------------------- the site
+// Where the camp stands (data.js SITES): an old camp is the lumber yard.
+export const siteOf = () => SITES[S?.site] || SITES.lumber
+export const siteFx = (k) => siteOf().fx?.[k] ?? 1
+export const siteStation = (type) => siteOf().fx?.station?.[type] ?? 1
+export const siteForage = (k) => siteOf().fx?.forage?.[k]
+// A new camp's site: its stores adjusted.
+export function setSite(id) {
+  if (!SITES[id]) return
+  S.site = id
+  for (const [k, v] of Object.entries(SITES[id].start || {})) S.res[k] = Math.max(0, (S.res[k] || 0) + v)
+}
+// ---------------------------------------------------------------- ages
+// Children (under 16) and the old (65 and up) can't fight: no runs, no
+// raids, no scouting, no watchtower. Children help with the light work and
+// eat less; the old are slower, but whoever works beside them learns faster
+// (their stories at the fire lift the camp, see game/economy.js).
+export const ageGroup = (s) => (s.age < 16 ? 'child' : s.age >= 65 ? 'elder' : 'adult')
+export const canFight = (s) => ageGroup(s) === 'adult'
+const AGE_FX = { child: { work: -0.45, hp: -35, speed: -0.05 }, elder: { work: -0.2, hp: -25, speed: -0.25 } }
+export const AGE_EAT = { child: 0.55, elder: 0.8, adult: 1 }
+export const CHILD_JOBS = new Set(['farm', 'coop', 'goatpen', 'collector', 'filter', 'kitchen', 'tailor', 'infirmary', 'radio', 'research', 'pedal'])
+const NO_ELDER = new Set(['watchtower', 'lumber', 'scrapyard', 'forge', 'pedal'])
+export function canWorkAt(s, type) {
+  const g = ageGroup(s)
+  if (g === 'child') return CHILD_JOBS.has(type)
+  if (g === 'elder') return !NO_ELDER.has(type)
+  return true
+}
+// Experience bonus for working beside one of the old.
+export const taughtAt = (st) => (st ? S.survivors.some((x) => x.job === st.id && ageGroup(x) === 'elder' && x.status === 'ok') : false)
 function fxSum(s, key) {
-  let v = OCCUPATIONS[s.occ].fx[key] || 0
+  let v = (OCCUPATIONS[s.occ].fx[key] || 0) + (AGE_FX[ageGroup(s)]?.[key] || 0)
   for (const t of s.traits) v += TRAITS[t].fx[key] || 0
   for (const p of s.perks || []) {
     const f = PERK_BY_ID[p]?.fx[key]
@@ -312,7 +356,11 @@ export function survivorStats(s) {
     armorItem: aIt,
     gun,
     ammoType: gun ? W.ammo : null,
-    maxHp: Math.round(100 + fxSum(s, 'hp') + armorHp + (sk.melee + sk.build) * 1.5 - ((s.infection || 0) >= INFECTION.fever ? 15 : 0)),
+    // the magazine: rounds it holds, seconds to reload it empty, or per round
+    magCap: gun ? Math.max(1, Math.round((W.mag || 1) * mf(wm, 'mag'))) : 0,
+    reload: gun ? (W.reload || 1.5) * mf(wm, 'reload') : 0,
+    perShell: gun ? W.perShell || 0 : 0,
+    maxHp: Math.round(100 + fxSum(s, 'hp') + armorHp + (Gd?.hp || 0) + (sk.melee + sk.build) * 1.5 - ((s.infection || 0) >= INFECTION.fever ? 15 : 0)),
     speed,
     dmg: W.dmg * dmg * wq.mult * mf(wm, 'dmg'),
     range: W.range * (gun ? 1 + 0.025 * (sk.ranged - 1) : 1) * mf(wm, 'range'),
@@ -329,7 +377,9 @@ export function survivorStats(s) {
     dismantle: 1 + 0.06 * (sk.build - 1) + fxSum(s, 'dismantle') + (Gd?.dismantle || 0),
     picklock: !!(Gd?.picklock || fxSum(s, 'picklock')),
     pry: !!W.pry,
-    knock: !!W.knock,
+    knock: Math.max(W.knock || 0, mf(wm, 'knock', 0, 'add')),
+    recoil: gun ? mf(wm, 'recoil') : 1,
+    gasProof: !!Gd?.gasProof,
     walkie: !!Gd?.walkie,
     nightSight: clamp((Gd?.nightSight || 0) + fxSum(s, 'nightSight'), -0.4, 1),
     // perception on runs (metres)
@@ -349,7 +399,9 @@ export function survivorStats(s) {
 
 export function gainXP(s, skill, amt) {
   if (!s || !skill || s.skills[skill] >= SKILL_MAX) return
-  s.xp[skill] += amt * (1 + fxSum(s, 'xp'))
+  // working beside one of the old: they show you how it's done
+  const st = s.job && ageGroup(s) !== 'elder' ? S.stations.find((x) => x.id === s.job) : null
+  s.xp[skill] += amt * (1 + fxSum(s, 'xp') + (st && taughtAt(st) ? 0.3 : 0))
   const need = xpForLevel(s.skills[skill])
   if (s.xp[skill] >= need) {
     s.xp[skill] -= need
@@ -448,6 +500,7 @@ export const slots = (st) => (st.level > 0 ? STATIONS[st.type].workers[st.level 
 export const workersOf = (st) => S.survivors.filter((s) => s.job === st.id)
 export function assign(s, st) {
   if (st && workersOf(st).length >= slots(st)) return false
+  if (st && !canWorkAt(s, st.type)) return false
   s.job = st ? st.id : null
   bus.emit('change')
   if (st?.type === 'farm') completeGoal('assignFarm')
@@ -577,7 +630,8 @@ export function orderMod(st, modId, itemUid) {
   const it = itemOf(itemUid)
   if (!it || !M) return 'Nothing to fit'
   if (M.lvl > st.level) return `Needs level ${M.lvl}`
-  if (it.mods?.length) return 'That item already has a mod'
+  const why = modFits(modId, it)
+  if (why) return why
   if (st.orders.some((o) => o.item === itemUid)) return 'Already queued'
   return addOrder(st, { kind: 'mod', mod: modId, item: itemUid, repeat: 1 })
 }
@@ -739,7 +793,8 @@ export function placeLeft(locId) {
 export const isEmptied = (locId) => modeOf() === 'once' && placeLeft(locId) != null && placeLeft(locId) < 0.03
 // how far along liberating the city is, overall and district by district
 export function liberation() {
-  const locs = (S?.cityLocs || []).filter((l) => l.type !== 'military')
+  // the side-street places don't count toward taking the city back
+  const locs = (S?.cityLocs || []).filter((l) => l.type !== 'military' && !l.minor)
   const by = {}
   let cleared = 0
   for (const l of locs) {
@@ -1043,6 +1098,8 @@ export const usableVehicles = () => (S.vehicles || []).filter((v) => !vehiclePro
 export function travelCost(km, kind, n) {
   const V = VEHICLES[kind] || VEHICLES.foot
   // half the city cleared: the roads are safer and the trips shorter
+  // the camp's site: a farm far out, a depot on the city's doorstep
+  km *= siteFx('travel')
   const per = (TRAVEL.a + TRAVEL.b * km + TRAVEL.c * km * km) * V.prov * (S?.libDone?.includes(0.5) ? 0.75 : 1)
   return {
     food: Math.max(n ? 1 : 0, Math.ceil(per * n)),
@@ -1176,6 +1233,23 @@ export function moraleMult() {
 }
 export function addMoraleEvent(text, amount, days = 1.5) {
   S.moraleEvents.push({ id: uid('m'), text, amount, until: S.time + days * DAY_MIN, start: S.time, days })
+}
+// Someone stood at the memorial wall: the camp's grief eases a little.
+// Once a day each; the lift builds up to a ceiling and fades over a day
+// and a half.
+export function visitMemorial(s) {
+  if (!S.stats.memorial?.length || !S.stations.some((x) => x.type === 'memorial' && x.level > 0)) return false
+  S.memVisit ||= {}
+  const d = day()
+  if (S.memVisit[s.id] === d) return false
+  S.memVisit[s.id] = d
+  const ev = S.moraleEvents.find((e) => e.text === 'Remembering the dead')
+  if (ev) {
+    ev.amount = Math.min(6, ev.amount + 1)
+    ev.start = S.time
+    ev.until = S.time + ev.days * DAY_MIN
+  } else addMoraleEvent('Remembering the dead', 2, 1.5)
+  return true
 }
 
 // ---------------------------------------------------------------- new game

@@ -5,7 +5,7 @@ import { SurvivorAgent, ZombieAgent } from '../world/agents.js'
 import { view, pickAt, groundAt } from '../render/view.js'
 import { isNight } from '../render/sky.js'
 import { STATIONS, zombieMix, ITEMS } from '../game/data.js'
-import { NET, S, day, bounds, workersOf, survivorStats, fenceMax, completeGoal, log, killSurvivor, getS, gateTiles, addMoraleEvent } from '../game/state.js'
+import { NET, S, day, bounds, workersOf, survivorStats, fenceMax, completeGoal, log, killSurvivor, getS, gateTiles, addMoraleEvent, canFight, siteFx } from '../game/state.js'
 import { scheduleRaid, power, finishGame } from '../game/economy.js'
 import { sfx, setAmbience } from '../core/audio.js'
 import { deed } from '../game/deeds.js'
@@ -79,7 +79,8 @@ export const RaidMixin = {
     this.people.setVisible(false)
     for (const w of this.people.workers) {
       const s = w.s
-      if (s.status !== 'ok') continue
+      // the children and the old shelter in the bunks while the others hold the wall
+      if (s.status !== 'ok' || !canFight(s)) continue
       const a = new SurvivorAgent(this, s, w.pos.x, w.pos.z)
       a.leash = 2.4
       a.root.traverse((o) => o.isMesh && (o.userData.pick = { type: 'defender', a }))
@@ -203,7 +204,9 @@ export const RaidMixin = {
       z.swing = 1
       const mx = fenceMax()
       const floor = z.wanderer ? mx * 0.25 : 0
-      S.fence.hp[i] = Math.max(floor, (S.fence.hp[i] ?? mx) - z.dmg)
+      // a river at the camp's back takes some of the weight off the wall
+      const hit = z.dmg * siteFx('wall')
+      S.fence.hp[i] = Math.max(floor, (S.fence.hp[i] ?? mx) - hit)
       if (chance(0.35)) this.fx.burst(new THREE.Vector3(fx + 0.5, 1, fz + 0.5), S.fence.level >= 2 ? '#8a8e92' : '#8a6a48', 3, 1.5, 0.5, 2)
       this.sound('hit', z.pos, { throttle: 120 })
       if (S.fence.hp[i] <= 0) {
@@ -213,7 +216,7 @@ export const RaidMixin = {
         this.fx.dust(new THREE.Vector3(fx + 0.5, 0.3, fz + 0.5), 8)
         view.rig.shake = 0.6
         this.game.ui?.toast('The wall is breached!', 'bad')
-      } else if (S.fence.hp[i] < mx * 0.5 && (S.fence.hp[i] + z.dmg) >= mx * 0.5) this.fence.refresh()
+      } else if (S.fence.hp[i] < mx * 0.5 && (S.fence.hp[i] + hit) >= mx * 0.5) this.fence.refresh()
     }
     return 'attack'
   },
@@ -382,7 +385,10 @@ export const RaidMixin = {
       }
       addMoraleEvent('The horde broke through', -18, 2)
       S.stats.raidsLost = (S.stats.raidsLost || 0) + 1
-    } else addMoraleEvent('Held the wall', 8, 1)
+    } else {
+      addMoraleEvent('Held the wall', 8, 1)
+      if (R.blood) S.stats.bloodMoons = (S.stats.bloodMoons || 0) + 1
+    }
     for (const z of this.zombies) z.remove()
     this.zombies = []
     this.squad = []

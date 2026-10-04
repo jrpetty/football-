@@ -3,7 +3,7 @@
 // dangerous it is, the drive there, who goes and what they carry.
 import { LOCATIONS, ROOMS, CONTAINERS, RES, ITEMS, ZOMBIES, zombieMix, LEVEL_COLORS, OCCUPATIONS, STATIONS, GAME_MIN_PER_SEC, INFECTION, OUTPOST, VEHICLES } from '../game/data.js'
 import { COOP_MAX } from '../net/coop.js'
-import { playerOf, S, day, clockStr, gameDur, survivorStats, getS, hasFlag, outpostAt, outpostProblem, claimOutpost, outpostYield, outpostUpgradeCost, upgradeOutpost, abandonOutpost, canAfford, travelCost, vehicleOf, vehicleProblem, usableVehicles, pay, canControl, NET, isLooted, lootedUntil, waitText, modeOf, isCleared, placeLeft, isEmptied, liberation, DISTRICTS } from '../game/state.js'
+import { playerOf, S, day, clockStr, gameDur, survivorStats, getS, hasFlag, outpostAt, outpostProblem, claimOutpost, outpostYield, outpostUpgradeCost, upgradeOutpost, abandonOutpost, canAfford, travelCost, vehicleOf, vehicleProblem, usableVehicles, pay, canControl, NET, isLooted, lootedUntil, waitText, modeOf, isCleared, placeLeft, isEmptied, liberation, DISTRICTS, canFight } from '../game/state.js'
 import { raidIntel } from '../game/economy.js'
 import { reconOf, lastSeen, sendScout, canScout, scoutTime, scoutRisk, stealthOf, scoutOf, locById, HORDE, popOf, basePop } from '../game/recon.js'
 import { leadsAt } from '../game/story.js'
@@ -235,7 +235,7 @@ export class MapPanel {
     if (!loc) return null
     const ids = R.ids.filter((id) => {
       const s = getS(id)
-      return s && s.status === 'ok' && canControl(s) && !(s.infection >= INFECTION.sick)
+      return s && s.status === 'ok' && canControl(s) && canFight(s) && !(s.infection >= INFECTION.sick)
     })
     if (!ids.length) return null
     const names = ids.map((id) => getS(id).first)
@@ -272,10 +272,10 @@ export class MapPanel {
     // squad
     const av = S.survivors.filter((s) => s.status !== 'mission' && s.status !== 'outpost' && s.status !== 'scout' && canControl(s))
     const sick = (s) => s.infection >= INFECTION.sick
-    for (const id of [...this.squad]) if (!av.find((s) => s.id === id && s.status === 'ok' && !sick(s))) this.squad.delete(id)
+    for (const id of [...this.squad]) if (!av.find((s) => s.id === id && s.status === 'ok' && !sick(s) && canFight(s))) this.squad.delete(id)
     if (!this.squad.size && !this.suggested) {
       this.suggested = true
-      const pickable = av.filter((s) => s.status === 'ok' && !sick(s)).sort((a, b) => !!a.job - !!b.job || squadPower(b) - squadPower(a))
+      const pickable = av.filter((s) => s.status === 'ok' && !sick(s) && canFight(s)).sort((a, b) => !!a.job - !!b.job || squadPower(b) - squadPower(a))
       for (const s of pickable.slice(0, Math.min(3, Math.max(1, pickable.length - 1)))) this.squad.add(s.id)
     }
     const squad = [...this.squad].map((id) => getS(id)).filter(Boolean)
@@ -317,7 +317,7 @@ export class MapPanel {
     const rows = av.map((s) => {
       const st = survivorStats(s)
       const on = this.squad.has(s.id)
-      const hurt = s.status === 'injured' || sick(s)
+      const hurt = s.status === 'injured' || sick(s) || !canFight(s)
       const job = s.job ? S.stations.find((x) => x.id === s.job) : null
       const util = s.util && st.utilSlots ? Math.min(st.utilSlots, S.res[s.util] || 0) : 0
       return h(
@@ -340,7 +340,7 @@ export class MapPanel {
           h('div.sq-sk', h('span', `MEL ${s.skills.melee}`), h('span', `RNG ${s.skills.ranged}`), h('span', `SCV ${s.skills.scavenge}`), h('span.eye', { 'data-tip': `Sight ${Math.round(st.sight)} m · hearing ${Math.round(st.hearing)} m${st.wallSense ? ` · sees through a wall (${st.wallSense} m)` : ''}` }, h('i', { html: icon('eye') }), `${Math.round(st.sight)} m${st.wallSense ? ' +wall' : ''}`), job ? h('span.job', `leaves ${STATIONS[job.type]?.name || job.type}`) : null),
           hpBar(s),
         ),
-        h('span.sq-tick', sick(s) ? 'Too sick' : hurt ? 'Injured' : on ? h('i', { html: icon('check') }) : ''),
+        h('span.sq-tick', !canFight(s) ? (s.age < 16 ? 'Too young' : 'Too old') : sick(s) ? 'Too sick' : hurt ? 'Injured' : on ? h('i', { html: icon('check') }) : ''),
       )
     })
     P.append(

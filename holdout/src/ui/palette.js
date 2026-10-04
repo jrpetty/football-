@@ -52,6 +52,8 @@ function entries(ui) {
   P('Horde intel', 'The next horde and the wall', 'horde', () => ui.openHorde(), 'raid attack')
   P('The wall', 'Repair and upgrade the fence', 'shield', () => ui.openFence(), 'fence palisade')
   P('Morale', 'How the camp feels and why', 'heart', () => ui.openMorale(), 'mood')
+  P('Records', 'Stats, kills by weapon, all-time bests and achievements', 'star', () => ui.openRecords(), 'stats achievements kills')
+  P('Rival camps', 'Trade with, ally with or raid the other always-on camps', 'people', () => ui.openRivals(), 'pvp raid trade alliance')
   P('Motor pool', 'Vehicles and repairs', 'truck', () => ui.openMotorPool(), 'van car')
   P('Custom alerts', 'Tell me when something happens', 'bell', () => ui.openAlerts(), 'notify rules alert')
   P('Field manual', 'How everything works', 'book', () => ui.openManual(), 'help guide')

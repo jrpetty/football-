@@ -181,6 +181,12 @@ export const CoopMixin = {
       ts.push([t.id, t.armed ? 1 : 0, t.spotted ? 1 : 0, t.gone ? 1 : 0])
     }
     if (ts.length) f.tr = ts
+    // doors: open, shut or broken, one letter each
+    const ds = (this.doorList || []).map((D) => (D.broken ? 'b' : D.shut ? 's' : 'o')).join('')
+    if (ds && ds !== this.sentDoors) {
+      this.sentDoors = ds
+      f.dr = ds
+    }
     if (this.coopEv.length) {
       f.ev = this.coopEv
       this.coopEv = []
@@ -192,6 +198,7 @@ export const CoopMixin = {
       if ((this.coopFull = (this.coopFull || 0) + 1) % 5 === 0) {
         this.sentC.clear()
         this.sentT.clear()
+        this.sentDoors = null
       }
       f.van = this.van.res
       f.vi = this.van.items
@@ -230,7 +237,10 @@ export const CoopMixin = {
         const b = this.squad.find((x) => x.data.id === o.a)
         if (b?.downed) a.command({ type: 'revive', a: b })
       } else if ((o.type === 'search' || o.type === 'dismantle' || o.type === 'hotwire' || o.type === 'barricade' || o.type === 'unbarricade') && cont) a.command({ type: o.type, c: cont })
-      else if (o.type === 'throw') this.throwFor(a, o.item, +o.x, +o.z)
+      else if (o.type === 'door') {
+        const D = this.doorList?.[o.door]
+        if (D) a.command({ type: 'door', D })
+      } else if (o.type === 'throw') this.throwFor(a, o.item, +o.x, +o.z)
       else if (o.type === 'medkit') this.medkitFor(a)
     } finally {
       this.quiet = false
@@ -284,6 +294,7 @@ export const CoopMixin = {
       }
       if (o.z?.nid != null) out.z = o.z.nid
       if (o.a?.data) out.a = o.a.data.id
+      if (o.D) out.door = (this.doorList || []).indexOf(o.D)
       if (o.item) ((out.item = o.item), (out.x = r2(o.x)), (out.z = r2(o.z)))
       this.coopSend({ k: 'rc', sid: a.data.id, o: out })
       return true
@@ -420,6 +431,7 @@ export const CoopMixin = {
       if (spotted && !t.spotted) this.revealTrap(t, null)
       if (!armed && t.armed) this.clearTrap(t, t.kind === 'beartrap' && !gone)
     }
+    if (f.dr) this.applyDoorSig(f.dr)
     for (const e of f.ev || []) this.remoteEvent(e)
     if (f.van) {
       this.van.res = f.van

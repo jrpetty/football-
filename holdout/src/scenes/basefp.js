@@ -8,12 +8,17 @@ import * as THREE from 'three'
 import { view } from '../render/view.js'
 import { OUTFITS } from '../models/character.js'
 import { fpLook } from '../models/viewmodel.js'
-import { slideMove, fpShoot, fpMelee } from '../world/fpcombat.js'
+import { slideMove, fpShoot, fpMelee, takedownTarget, takedown } from '../world/fpcombat.js'
 import { hideBody } from './missionfp.js'
-import { S, NET, survivorStats, bounds, gateTiles, getS, stationSize } from '../game/state.js'
+import { magOf, reserveOf, loadRounds } from '../world/mag.js'
+import { S, NET, survivorStats, bounds, gateTiles, getS, stationSize, hour, visitMemorial } from '../game/state.js'
+import { nightFactor } from '../render/sky.js'
 import { ITEMS, RES, STATIONS } from '../game/data.js'
 import { sfx } from '../core/audio.js'
 import { clamp } from '../core/util.js'
+
+const _tf = new THREE.Vector3()
+const _tr = new THREE.Vector3()
 
 const FENCE_H = [1.9, 2.5, 2.6, 2.6]
 const _ray = new THREE.Raycaster()
@@ -77,8 +82,40 @@ export const BaseFPMixin = {
     }
     const p = this.fpPos()
     if (p) this.world.setNearGrass(true, p.x, p.z)
+    this.fpTorchTick()
+  },
+  // A torch in hand after dark (F lights it by day too, for the sheds):
+  // the camp's lamps don't reach the corners, nor past the wall.
+  fpTorchOn() {
+    return !!this.fpTorch || nightFactor(hour()) > 0.35
+  },
+  fpTorchTick() {
+    const on = this.fpTorchOn()
+    if (!this.fpTorchL) {
+      if (!on) return
+      const l = (this.fpTorchL = new THREE.SpotLight('#fff2dc', 0, 22, 0.55, 0.55, 1.3))
+      l.castShadow = false
+      this.scene.add(l, l.target)
+    }
+    const l = this.fpTorchL
+    const B = this.fpBody()
+    if (!on || !B) {
+      l.intensity = 0
+      return
+    }
+    // in the hand, pointing where they look (over the shoulder: from the chest)
+    const cam = view.camera
+    const f = _tf.set(0, 0, -1).applyQuaternion(cam.quaternion)
+    const r = _tr.set(1, 0, 0).applyQuaternion(cam.quaternion)
+    if (this.game.fp?.isThird()) {
+      const p = this.fpPos()
+      l.position.set(p.x, (this.fpTower ? this.fpTowerY() : p.y) + 1.35 * (B.s.look?.height || 1), p.z).addScaledVector(f, 0.35).addScaledVector(r, 0.12)
+    } else l.position.copy(cam.position).addScaledVector(r, 0.18).addScaledVector(f, 0.2).y -= 0.15
+    l.target.position.copy(l.position).addScaledVector(f, 8)
+    l.intensity = 120 * Math.max(nightFactor(hour()), this.fpTorch ? 0.85 : 0)
   },
   fpExit() {
+    if (this.fpTorchL) this.fpTorchL.intensity = 0
     this.world.setNearGrass(false)
     this.world.cullView.wide = 0
     this.world.culled = false
@@ -142,6 +179,7 @@ export const BaseFPMixin = {
     if (!o) return
     hideBody(o.ch, false)
     if (o.label) o.label.hidden = false
+    o.fpReload = false
     if ('manual' in o || o.s) {
       o.manual = false
       o.goal = null
@@ -152,6 +190,8 @@ export const BaseFPMixin = {
     }
     if (o.faction === 'survivor' && o.fp) {
       o.fp = false
+      o.fpCrouch = false
+      o.fpReload = false
       o.anchor = { x: o.pos.x, z: o.pos.z }
       o.ring.visible = !!o.selected
     }
@@ -224,7 +264,7 @@ export const BaseFPMixin = {
     const sh = this.fpStub
     const st = sh?.st
     let anim = speed > 3.1 ? 'run' : speed > 0.3 ? 'walk' : st?.gun && aim ? 'aim' : 'idle'
-    const o = { speed, aim: !!(aim && st?.gun) }
+    const o = { speed, aim: !!(aim && st?.gun), reload: !!w.fpReload, crouch: !!this.fpCrouchOn }
     if (sh && sh.swing > 0) {
       anim = st?.gun || st?.weaponId === 'fists' ? 'punch' : 'swing'
       o.swing = 1 - sh.swing
@@ -308,7 +348,7 @@ export const BaseFPMixin = {
     const a = this.fpShooter()
     const W = this.fpWorld()
     const st = a.st
-    if (st.gun && (!st.ammoType || W.ammoLeft(st.ammoType) > 0)) return fpShoot(a, W, origin, dir, o)
+    if (st.gun && (magOf(a).n > 0 || reserveOf(a, W) > 0)) return fpShoot(a, W, origin, dir, o)
     if (st.gun) {
       this.fpTipT = performance.now() + 2500
       this.fpTipText = `Out of ${RES[st.ammoType]?.name.toLowerCase() || 'ammo'}: you swing it instead.`
@@ -341,7 +381,9 @@ export const BaseFPMixin = {
     const st = B.a ? B.a.st : this.fpShooter().st
     const it = st.weaponItem
     let ammo = ''
-    if (st.gun) ammo = st.ammoType ? `<b>${Math.floor(S.res[st.ammoType] || 0)}</b> ${RES[st.ammoType]?.name.toLowerCase() || ''}` : '<b>∞</b> bolts'
+    const m = magOf(B.a || this.fpShooter())
+    const res = st.ammoType ? Math.floor(S.res[st.ammoType] || 0) : null
+    if (st.gun) ammo = `<b>${m.n}</b><i>/${m.cap}</i> ${res == null ? '∞ bolts' : `${res} ${RES[st.ammoType]?.name.toLowerCase() || ''}`}`
     if (it && ITEMS[st.weaponId]?.dur) ammo += `<small>${Math.round((it.cond / ITEMS[st.weaponId].dur) * 100)}% condition</small>`
     if (!this.fpLookCache || this.fpLookCache.id !== s.id) this.fpLookCache = { id: s.id, look: fpLook(s, OUTFITS[s.occ] || OUTFITS.drifter) }
     const hp = B.a ? B.a.hp : s.hp ?? 100
@@ -357,9 +399,41 @@ export const BaseFPMixin = {
       look: this.fpLookCache.look,
       lookKey: s.id,
       prog: null,
-      tip: (this.fpTipT || 0) > performance.now() ? this.fpTipText : this.fpTower ? 'On the watchtower: E to climb down' : '',
-      torch: false,
+      tip: (this.fpTipT || 0) > performance.now() ? this.fpTipText : st.gun && m.n <= 0 ? (res === 0 ? `Out of ${RES[st.ammoType]?.name.toLowerCase() || 'ammo'}` : 'Empty: R to reload') : this.fpTower ? 'On the watchtower: E to climb down' : '',
+      torch: this.fpTorchOn?.() || false,
+      mag: st.gun ? m.n : null,
+      magCap: m.cap,
     }
+  },
+  // the gun in hand's magazine, for reloading in first person
+  fpMag() {
+    const a = this.fpShooter()
+    if (!a?.st.gun || !a.st.magCap) return null
+    const m = magOf(a)
+    return { n: m.n, cap: m.cap, reserve: reserveOf(a, this.fpWorld()), perShell: a.st.perShell, reload: a.st.reload, id: a.st.weaponId }
+  },
+  fpLoad(n) {
+    return loadRounds(this.fpShooter(), this.fpWorld(), n)
+  },
+  fpReloading(on) {
+    const B = this.fpBody()
+    if (B?.a) B.a.fpReload = on
+    else if (B?.w) B.w.fpReload = on
+  },
+  fpCrouch(on) {
+    this.fpCrouchOn = on
+    const B = this.fpBody()
+    if (B?.a) B.a.fpCrouch = on
+    if (B?.w) this.fpShooter().fpCrouch = on
+  },
+  // a quiet kill on a straggler outside the wall, or a raider at the fence
+  fpTakedown(z) {
+    const a = this.fpShooter()
+    if (!a || z.dead) return null
+    takedown(a, this.fpWorld(), z, () => {
+      S.stats.takedowns = (S.stats.takedowns || 0) + 1
+    })
+    return { takedown: true }
   },
   fpShade() {
     return 1
@@ -367,6 +441,12 @@ export const BaseFPMixin = {
   // what is under the crosshair: a station to run, a tower to climb, the
   // gate, someone to talk to
   fpLook(eye, dir) {
+    if (!this.fpTower) {
+      const a = this.fpShooter()
+      if (a) a.fpCrouch = !!this.fpCrouchOn
+      const tz = a && takedownTarget(a, this.fpWorld(), dir)
+      if (tz) return { text: `Silent takedown <small>${tz.def.name.toLowerCase()}</small>`, act: () => this.fpTakedown(tz) }
+    }
     if (this.fpTower) {
       const T = this.fpTower
       return { text: `Climb down from the ${STATIONS[T.st.type]?.name.toLowerCase() || 'tower'}`, act: () => this.fpClimbDown() }
@@ -397,6 +477,7 @@ export const BaseFPMixin = {
       const st = pk.st
       const name = STATIONS[st.type]?.name || st.type
       if (st.type === 'watchtower' && st.level > 0 && !st.building) return { text: `Climb the ${name.toLowerCase()} <small>Shift+E to open it</small>`, act: () => (view.input.keys.has('shift') ? this.fpOpen(() => this.fpStation(st)) : this.fpClimb(st)) }
+      if (st.type === 'memorial' && st.level > 0 && !st.building) return this.fpMemorial(st)
       return { text: `${st.building ? 'Check on' : 'Use'} the ${name.toLowerCase()}`, act: () => this.fpOpen(() => this.fpStation(st)) }
     }
     // nothing under the crosshair: a station close by and roughly ahead
@@ -425,6 +506,7 @@ export const BaseFPMixin = {
       if (best) {
         const name = STATIONS[best.type]?.name || best.type
         if (best.type === 'watchtower' && best.level > 0 && !best.building) return { text: `Climb the ${name.toLowerCase()} <small>Shift+E to open it</small>`, act: () => (view.input.keys.has('shift') ? this.fpOpen(() => this.fpStation(best)) : this.fpClimb(best)) }
+        if (best.type === 'memorial' && best.level > 0 && !best.building) return this.fpMemorial(best)
         return { text: `${best.building ? 'Check on' : 'Use'} the ${name.toLowerCase()}`, act: () => this.fpOpen(() => this.fpStation(best)) }
       }
     }
@@ -482,7 +564,29 @@ export const BaseFPMixin = {
     this.fpTower = null
     sfx('build')
   },
-  fpKey() {
+  // the memorial wall: read the names (and it counts as a visit)
+  fpMemorial(st) {
+    const n = S.stats.memorial?.length || 0
+    return {
+      text: n ? `Read the names <small>${n} on the wall</small>` : 'The memorial wall <small>no names yet</small>',
+      act: () => {
+        const B = this.fpBody()
+        if (B?.s && visitMemorial(B.s)) this.game.ui?.toast(`${B.s.first} stands a while at the wall.`, 'good')
+        this.fpOpen(() => this.fpStation(st))
+      },
+    }
+  },
+  fpKey(e) {
+    const k = e.key.toLowerCase()
+    if (k === 'f' && !e.ctrlKey && !e.metaKey) {
+      this.fpTorch = !this.fpTorch
+      sfx('click')
+      return true
+    }
     return false
+  },
+  // the buttons a touch screen shows for those keys
+  fpTouchKeys() {
+    return [{ key: 'f', icon: 'sun', label: 'Torch', on: this.fpTorchOn() }]
   },
 }

@@ -990,7 +990,63 @@ const M = {
     I.lights.push({ x: 0, y: 2.8, z: 0.4, color: '#fff0d0', intensity: 3, dist: 9, when: 'night' })
     I.spots.push({ x: -1.2, z: 0.3, face: FACE_BACK, anim: 'type' }, { x: 0.6, z: 1.5, face: Math.PI / 2, anim: 'carry' }, { x: 2.2, z: -0.7, face: FACE_BACK, anim: 'lookout' })
   },
+  // the memorial: boards on two posts with the names of the dead, photos and
+  // notes pinned among them, candles in jars and flowers at the foot
+  memorial(b, L, I) {
+    const rnd = seeded(733)
+    b.box(3.9, 0.04, 1.8, { mat: 'dirt', color: '#7d6e5e', y: 0.02, shadow: false })
+    for (let k = 0; k < 26; k++) rock(b, { x: -1.85 + rnd() * 3.7, z: -0.85 + rnd() * 0.25, s: 0.05 + rnd() * 0.04, seed: k + 40, color: shadeHex('#9a958c', -rnd() * 0.3) })
+    for (const x of [-1.78, 1.78]) b.box(0.14, 2.15, 0.14, { mat: 'wood', color: '#4e3c2e', x, y: 1.07, z: -0.5 })
+    // planks, not quite level, a lighter one here and there
+    for (let r = 0; r < 8; r++) b.box(3.48 + rnd() * 0.06, 0.2, 0.05, { mat: 'wood', color: shadeHex('#86694e', (rnd() - 0.5) * 0.3), x: (rnd() - 0.5) * 0.04, y: 0.32 + r * 0.215, z: -0.47, rz: (rnd() - 0.5) * 0.016 })
+    // a board over the top to keep the rain off, and the camp's own words
+    b.box(3.95, 0.05, 0.42, { mat: 'wood', color: '#3e3026', y: 2.1, z: -0.4, rx: 0.22 })
+    b.box(1.5, 0.16, 0.02, { mat: 'paint', color: '#ece4d0', y: 1.9, z: -0.435 })
+    b.box(1.3, 0.035, 0.01, { mat: 'paint', color: '#2a2420', y: 1.9, z: -0.423 })
+    // the names: cards, painted boards, photographs, a scarf, dog tags
+    for (let k = 0; k < 30; k++) {
+      const x = -1.55 + (k % 10) * 0.34 + (rnd() - 0.5) * 0.06
+      const y = 0.48 + Math.floor(k / 10) * 0.44 + (rnd() - 0.5) * 0.08
+      const f = rnd()
+      if (f < 0.45) {
+        b.box(0.26, 0.085, 0.01, { mat: 'paint', color: shadeHex('#ebe2cc', -rnd() * 0.12), x, y, z: -0.44, rz: (rnd() - 0.5) * 0.1 })
+        b.box(0.18, 0.018, 0.01, { mat: 'paint', color: '#2e2a26', x, y: y + 0.005, z: -0.433, rz: (rnd() - 0.5) * 0.06 })
+      } else if (f < 0.78) {
+        b.box(0.12, 0.16, 0.008, { mat: 'paint', color: '#f2eee4', x, y, z: -0.44, rz: (rnd() - 0.5) * 0.2 })
+        b.box(0.1, 0.11, 0.008, { mat: 'paint', color: shadeHex('#8a7a6a', (rnd() - 0.5) * 0.5), x, y: y + 0.015, z: -0.434, rz: (rnd() - 0.5) * 0.2 })
+      } else if (f < 0.9) b.box(0.3, 0.06, 0.012, { mat: 'paint', color: pickCol(rnd, ['#e8e0cc', '#c8d0d8', '#e0c8b8']), x, y, z: -0.44 })
+      else {
+        b.rope([[x - 0.05, y + 0.1, -0.43], [x, y - 0.06, -0.43], [x + 0.05, y + 0.1, -0.43]], 0.004, { mat: 'steel', color: '#9a9a96', sag: 0, steps: 3 })
+        b.box(0.04, 0.06, 0.006, { mat: 'chrome', color: '#c8c8c4', x, y: y - 0.08, z: -0.43 })
+      }
+    }
+    // a scarf tied round a post
+    b.box(0.2, 0.08, 0.2, { mat: 'cloth', color: '#8a2a2a', x: -1.78, y: 1.6, z: -0.5 })
+    b.box(0.07, 0.4, 0.02, { mat: 'cloth', color: '#8a2a2a', x: -1.7, y: 1.38, z: -0.39, rz: 0.12 })
+    // candles in jars, flowers in tins and bottles along the foot
+    for (let k = 0; k < 8; k++) {
+      const x = -1.6 + k * 0.45 + (rnd() - 0.5) * 0.12
+      const z = -0.25 + rnd() * 0.22
+      b.cyl(0.05, 0.045, 0.12, { mat: 'glass', color: '#dfe6dc', x, y: 0.1, z, seg: 10 })
+      b.cyl(0.03, 0.03, 0.06, { mat: 'plain', color: '#f2ead6', x, y: 0.08, z, seg: 8 })
+      I.flames.push({ x, y: 0.115, z, w: 0.045, h: 0.08, when: 'always' })
+    }
+    for (let k = 0; k < 6; k++) {
+      const x = -1.4 + k * 0.58 + (rnd() - 0.5) * 0.1
+      const z = -0.05 + rnd() * 0.2
+      b.cyl(0.06, 0.055, 0.14, { mat: k % 2 ? 'metal' : 'glass', color: k % 2 ? '#8a8a84' : '#6a8a6a', x, y: 0.11, z, seg: 10 })
+      for (let f = 0; f < 3; f++) {
+        const a = rnd() * Math.PI * 2
+        const tx = x + Math.cos(a) * 0.06
+        const tz = z + Math.sin(a) * 0.06
+        b.beam([x, 0.16, z], [tx, 0.42 + rnd() * 0.1, tz], 0.008, 0.008, { mat: 'leaf', color: '#4a6a3a', round: true })
+        b.sphere(0.035, { mat: 'cloth', color: pickCol(rnd, ['#e8d8a0', '#d86a5a', '#f0f0e8', '#c89ad8']), x: tx, y: 0.45 + rnd() * 0.08, z: tz })
+      }
+    }
+    I.lights.push({ x: 0, y: 0.45, z: 0.25, color: '#ffb46a', intensity: 2.2, dist: 6, flicker: true, when: 'night' })
+  },
 }
+const pickCol = (rnd, list) => list[Math.floor(rnd() * list.length)]
 
 // ---------------------------------------------------------------- build entry
 const cache = new Map()

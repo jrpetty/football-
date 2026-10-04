@@ -65,6 +65,9 @@ export function traitTags(s) {
   return h(
     'div.traits',
     h('span.trait.occ', { title: OCCUPATIONS[s.occ].perk }, OCCUPATIONS[s.occ].name),
+    // too young or too old to fight: their own jobs and needs
+    s.age < 16 ? h('span.trait.age', { title: 'A child: no runs, no raids, no fighting. Helps at the farm, the animals, the kitchen, the water, the tailor and the radio, at half pace, and eats less. Grows up.' }, `Child, ${s.age}`) : null,
+    s.age >= 65 ? h('span.trait.age', { title: 'Too old to fight or scout. Works slower, eats less, and whoever works beside them learns 30% faster. Tells stories at the fire.' }, `Elder, ${s.age}`) : null,
     s.traits.map((t) => h('span.trait' + (TRAITS[t].good ? '.good' : '.bad'), { title: TRAITS[t].desc }, TRAITS[t].name)),
   )
 }

@@ -358,6 +358,7 @@ section .bar { margin: 8px 0 2px; }
 .traits { display: flex; flex-wrap: wrap; gap: 5px; }
 .trait { font: 600 11.5px var(--font-display); text-transform: uppercase; letter-spacing: 0.06em; padding: 1px 8px; border-radius: 5px; border: 1px solid var(--line-2); color: #d8d3c2; }
 .trait.occ { background: rgba(234,165,60,0.14); border-color: rgba(234,165,60,0.45); color: var(--accent-2); }
+.trait.age { background: rgba(140,170,210,0.14); border-color: rgba(140,170,210,0.45); color: #b8cce4; }
 .trait.good { color: var(--good); border-color: rgba(140, 207, 114, 0.35); }
 .trait.bad { color: #ff917a; border-color: rgba(239, 106, 82, 0.35); }
 .jobrow { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -1698,7 +1699,10 @@ h3 .fillbest { text-transform: none; letter-spacing: 0.02em; font-family: var(--
 .fp-gun { position: absolute; right: 22px; bottom: 22px; text-align: right; text-shadow: 0 1px 3px #000; }
 .fp-weapon { font: 700 15px/1.2 var(--font-display); letter-spacing: 0.05em; text-transform: uppercase; color: var(--fg); }
 .fp-ammo { font: 500 13px/1.3 var(--font-display); color: var(--muted); }
-.fp-ammo b { font-size: 22px; color: var(--fg); margin-right: 4px; }
+.fp-ammo b { font-size: 22px; color: var(--fg); margin-right: 1px; }
+.fp-ammo i { font-style: normal; font-size: 14px; color: var(--muted); margin-right: 7px; }
+.fp-ammo.low b { color: var(--bad); }
+.fp-ammo.reloading b { opacity: 0.4; }
 .fp-ammo small { display: block; font-size: 11px; color: var(--dim); }
 .fp-tip { position: absolute; left: 50%; bottom: 26%; transform: translateX(-50%); padding: 6px 12px; border-radius: 8px; background: rgba(10, 12, 9, 0.72); color: var(--accent-2); font: 600 13px/1.3 var(--font-display); opacity: 0; transition: opacity 0.2s; }
 .fp-tip.on { opacity: 1; }
@@ -1725,6 +1729,8 @@ h3 .fillbest { text-transform: none; letter-spacing: 0.02em; font-family: var(--
 .fp-tb.fire.down { background: rgba(206, 60, 38, 0.66); transform: scale(0.95); }
 .fp-tb.aim { right: calc(134px + env(safe-area-inset-right, 0px)); bottom: calc(26px + env(safe-area-inset-bottom, 0px)); }
 .fp-tb.use { right: calc(106px + env(safe-area-inset-right, 0px)); bottom: calc(112px + env(safe-area-inset-bottom, 0px)); opacity: 0.4; }
+.fp-tb.reload { right: calc(39px + env(safe-area-inset-right, 0px)); bottom: calc(128px + env(safe-area-inset-bottom, 0px)); }
+.fp-tb.crouch { right: calc(200px + env(safe-area-inset-right, 0px)); bottom: calc(30px + env(safe-area-inset-bottom, 0px)); }
 .fp-tb.use.ready { opacity: 1; background: rgba(214, 150, 60, 0.36); border-color: var(--accent); animation: fpready 1.3s ease-in-out infinite; }
 @keyframes fpready { 50% { box-shadow: 0 0 0 6px rgba(214, 150, 60, 0.18); } }
 .fp-tcol { position: absolute; right: calc(12px + env(safe-area-inset-right, 0px)); top: calc(54px + env(safe-area-inset-top, 0px)); display: grid; grid-template-rows: repeat(3, 46px); grid-auto-flow: column; grid-auto-columns: 46px; gap: 8px; direction: rtl; }
@@ -1764,3 +1770,36 @@ body.fptouch .nav { display: none; }
 body.fpmode .wl .lootmark, body.fpmode .wl .roomtag, body.fpmode .wl .evac-tag { display: none; }
 body.fprun .mhud .minimap { transform: scale(0.72); transform-origin: top right; opacity: 0.9; }
 body.fprun .mhud .haul { transform: scale(0.85); transform-origin: top left; }
+/* the records: kills by weapon, achievements */
+.statgrid.records { grid-template-columns: repeat(5, 1fr); margin-bottom: 8px; }
+.recrow { display: grid; grid-template-columns: 9em 1fr 3em; gap: 8px; align-items: center; padding: 2px 0; }
+.recrow b { text-align: right; font-variant-numeric: tabular-nums; }
+.achgrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+.ach { display: flex; flex-direction: column; gap: 2px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px; background: rgba(0,0,0,0.18); opacity: 0.7; }
+.ach b { font-size: 12.5px; }
+.ach span { font-size: 11.5px; color: var(--muted); }
+.ach.got { opacity: 1; border-color: rgba(234,165,60,0.55); background: rgba(234,165,60,0.1); }
+.ach.ever { opacity: 0.88; border-style: dashed; }
+.achbar { display: grid; grid-template-columns: 1fr auto; gap: 6px; align-items: center; }
+.achbar small { font-size: 10.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.vote .kv small { max-width: 70%; text-align: right; }
+.mloc.minor { opacity: 0.82; font-size: 0.86em; }
+/* where the camp stands: four sites with their pros and cons */
+.modecard .sitehd { margin: 4px 0 8px; font: 700 15px var(--font-display); letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.modecard .siteopts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+.siteopt { text-align: left; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line-2); background: rgba(0, 0, 0, 0.3); color: var(--fg); cursor: pointer; display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+.siteopt b { display: flex; align-items: center; gap: 6px; font: 700 14px var(--font-display); letter-spacing: 0.03em; }
+.siteopt b i { width: 16px; height: 16px; display: inline-flex; color: var(--accent); }
+.siteopt p { margin: 0; color: var(--muted); line-height: 1.35; }
+.siteopt ul { margin: 0; padding-left: 14px; line-height: 1.35; }
+.siteopt ul.pros { color: var(--good); }
+.siteopt ul.cons { color: var(--bad); }
+.siteopt.on { border-color: var(--accent); background: rgba(234, 165, 60, 0.12); box-shadow: 0 0 0 1px var(--accent) inset; }
+@media (max-width: 900px) { .modecard .siteopts { grid-template-columns: 1fr 1fr; } }
+/* rival camps */
+.rv-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.rv-row .trait { margin-left: 6px; }
+.rv-btns { display: flex; gap: 4px; flex-wrap: wrap; }
+.rv-pick { display: flex; gap: 6px; align-items: center; }
+.rv-pick .num { width: 70px; }
+.pickrow.on { border-color: var(--accent); background: rgba(234, 165, 60, 0.12); }

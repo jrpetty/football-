@@ -14,6 +14,7 @@ import { vanModel, carModel, pickupModel, busModel, containerModel, forkliftMode
 import { containerModel as furnModel, decorModel, openPivots } from '../models/furniture.js'
 import { pineModel, broadleafModel, deadTreeModel, bushModel, boulderModel } from '../models/nature.js'
 import { weaponModel } from '../models/weapons.js'
+import { Character, OUTFITS } from '../models/character.js'
 
 const canvas = document.getElementById('c')
 const pipe = new Pipeline(canvas)
@@ -39,10 +40,20 @@ const MAKERS = {
   furn: (k, s) => furnModel(k, +(s || 1)),
   decor: (k, s) => decorModel(k, +(s || 1)),
   tree: (k, s) => ({ pine: pineModel, broad: broadleafModel, dead: deadTreeModel, bush: bushModel, rock: boulderModel })[k](+(s || 1)),
-  weapon: (id) => {
+  // char:armor:gear+mods (armour mods and the age in the third part, e.g.
+  // char:padded:gasmask, char:vest:helmet+plates+camo, char:none:none+kid)
+  char: (armor, rest = '') => {
+    const [gear, ...more] = rest.split('+')
+    const age = more.includes('kid') ? 10 : more.includes('old') ? 72 : 30
+    const ch = new Character({ skin: '#c89a78', hair: { style: 'short', color: age > 60 ? '#d8d4cc' : '#3a2a1e' }, face: { beard: null }, build: age < 16 ? 0.88 : 1, height: age < 16 ? 0.76 : 1, female: more.includes('f'), outfit: OUTFITS[more.find((m) => OUTFITS[m]) || 'drifter'], armor: armor === 'none' ? null : armor, armorMods: more.filter((m) => ['plates', 'padding', 'camo'].includes(m)), gear: gear === 'none' ? null : gear, seed: 5, age })
+    ch.update(0.2, more.includes('crouch') ? 'walk' : 'idle', { crouch: more.includes('crouch') })
+    for (let i = 0; i < 30; i++) ch.update(0.05, more.includes('crouch') ? 'walk' : 'idle', { speed: 1, crouch: more.includes('crouch'), snap: i === 0 })
+    return ch.root
+  },
+  weapon: (id, mods) => {
     // show guns side-on, raised off the floor
     const g = new THREE.Group()
-    const w = weaponModel(id)
+    const w = weaponModel(id, (mods || '').split('+').filter(Boolean))
     w.rotation.y = Math.PI / 2
     w.position.y = 0.35
     g.add(w)

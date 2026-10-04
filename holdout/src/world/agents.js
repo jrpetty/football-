@@ -11,6 +11,7 @@ import { sfx } from '../core/audio.js'
 import { creditKill, deed, callName } from '../game/deeds.js'
 import { clamp, angleLerp, rand, chance, h } from '../core/util.js'
 import { view } from '../render/view.js'
+import { magOf, setMag, reserveOf, loadRounds, reloadTime } from './mag.js'
 
 const _v = new THREE.Vector3()
 const ZVARIANTS = 10
@@ -20,6 +21,7 @@ const ZSKIN = ['#8f9a80', '#7d8a74', '#9a9e8a', '#76826e', '#a0a08e', '#8a9488']
 export function survivorSpec(s, stats = null) {
   const st = stats || survivorStats(s)
   const a = equippedItem(s, 'armor')
+  const g = equippedItem(s, 'gear')
   const look = s.look
   return {
     skin: look.skin,
@@ -30,13 +32,18 @@ export function survivorSpec(s, stats = null) {
     female: look.female,
     outfit: OUTFITS[s.occ] || OUTFITS.drifter,
     armor: a && a.cond > 0 ? ITEMS[a.id].look : null,
+    // what's fitted to the armour and what's worn as gear show too
+    armorMods: a && a.cond > 0 ? a.mods || [] : [],
+    gear: g ? ITEMS[g.id].look || null : null,
     pack: st.pack,
     seed: look.seed,
+    age: s.age,
   }
 }
 export function survivorLookKey(s) {
   const st = survivorStats(s)
-  return [s.occ, equippedItem(s, 'armor')?.id || '', st.pack || '', s.look.seed].join('|')
+  const a = equippedItem(s, 'armor')
+  return [s.occ, a?.id || '', (a?.mods || []).join('+'), ITEMS[equippedItem(s, 'gear')?.id]?.look || '', st.pack || '', s.look.seed, s.age >= 65 ? 'o' : s.age < 16 ? 'c' : ''].join('|')
 }
 export function makeSurvivorCharacter(s) {
   return new Character(survivorSpec(s))
@@ -102,7 +109,9 @@ export class Agent {
   moveTo(x, z) {
     // mid-climb, finish the flight first: the new path starts where it ends
     const from = this.climb ? this.climb.to : this.pos
-    const p = this.world.grid.path(from.x, from.z, x, z, undefined, this.faction === 'survivor' ? LIFT : null)
+    let p = this.world.grid.path(from.x, from.z, x, z, undefined, this.faction === 'survivor' ? LIFT : null)
+    // people go through shut doors, opening them on the way (see step)
+    if (!p && this.faction === 'survivor' && this.world.pathThroughDoors) p = this.world.pathThroughDoors(from.x, from.z, x, z, LIFT)
     if (this.climb) {
       // keep the jump in progress at the head of the new path
       this.path = [this.climb.wp, ...(p || [])]
@@ -162,6 +171,17 @@ export class Agent {
       // carries the climb through from here (see advanceClimb)
       if (!this.climb) this.startClimb(wp, speedMult)
       return false
+    }
+    // a shut door ahead: people open it, the dead stop and think again
+    if (this.world.doorMap?.size) {
+      const D = this.world.doorAtPos(wp.x, wp.z)
+      // (not one the dead are pounding on from the other side)
+      const pounded = this.world.time - (D?.hitT ?? -99) < 4
+      if (D?.shut && !(this.faction === 'survivor' && !D.brace && !pounded && this.world.toggleDoor(D, this))) {
+        this.path = null
+        this.curSpeed = 0
+        return false
+      }
     }
     const dx = wp.x - this.pos.x
     const dz = wp.z - this.pos.z
@@ -301,6 +321,14 @@ export class SurvivorAgent extends Agent {
     if (order.type === 'move') {
       this.moveTo(order.x, order.z)
       this.anchor = { x: order.x, z: order.z }
+    } else if (order.type === 'door') {
+      const spot = this.world.doorSpot?.(order.D, this)
+      if (!spot) {
+        this.order = null
+        return false
+      }
+      order.spot = spot
+      this.moveTo(spot.x, spot.z)
     } else if (WORK_ORDERS.has(order.type)) {
       const spot = this.world.accessTile(order.c, this)
       if (!spot) {
@@ -322,9 +350,11 @@ export class SurvivorAgent extends Agent {
   }
   hurt(dmg, from, o = {}) {
     if (this.downed || this.dead) return
-    const real = dmg * (1 - this.st.dr)
+    // a gas mask: the gas stings, but it can't get in
+    const masked = o.gas && this.st.gasProof
+    const real = dmg * (1 - this.st.dr) * (masked ? 0.3 : 1)
     this.hp -= real
-    if (!this.npc && (from?.faction === 'zombie' || o.gas)) {
+    if (!this.npc && !masked && (from?.faction === 'zombie' || o.gas)) {
       if (exposeInfection(this.data, o.gas ? INFECTION.gas : INFECTION.bite, o.gas ? 0 : this.st.dr, o.gas ? null : Math.max(0, this.hp) / this.maxHp)) {
         this.world.toast?.(`${this.data.first} was ${o.gas ? 'poisoned by the gas' : 'bitten'}. Infected!`, 'bad')
         view.labels.float(this.world.scene, this.chestPos(2.1), 'Infected', 'bad')
@@ -373,10 +403,30 @@ export class SurvivorAgent extends Agent {
   ammoType() {
     return this.st.gun ? this.st.ammoType : null
   }
+  // a gun is worth raising while there is a round in it or more to load
   hasAmmo() {
     if (!this.st.gun) return false
-    const t = this.st.ammoType
-    return !t || this.world.ammoLeft(t) > 0
+    return magOf(this).n > 0 || reserveOf(this, this.world) > 0
+  }
+  // Start reloading: false if the magazine is full or there is nothing to load.
+  startReload() {
+    if (this.reloadT > 0 || !this.st.magCap) return false
+    const m = magOf(this)
+    const res = reserveOf(this, this.world)
+    if (m.n >= m.cap || res <= 0) return false
+    this.reloadTac = m.n > 0
+    this.reloadT = reloadTime(this.st, m.n, Math.min(m.cap - m.n, res))
+    this.cool = Math.max(this.cool, this.reloadT)
+    this.play('magOut', 80)
+    return true
+  }
+  tickReload(dt) {
+    if (!(this.reloadT > 0)) return
+    this.reloadT -= dt
+    if (this.reloadT > 0) return
+    const m = magOf(this)
+    loadRounds(this, this.world, m.cap + (this.reloadTac && !this.st.perShell ? 1 : 0) - m.n)
+    this.play(this.st.perShell ? 'rack' : 'magIn', 80)
   }
   findThreat() {
     const W = this.world
@@ -411,6 +461,7 @@ export class SurvivorAgent extends Agent {
     this.cool -= dt
     this.hurtT -= dt
     this.swing = Math.max(0, this.swing - dt * 2.2)
+    this.tickReload(dt)
     let mode = 'idle'
     if (this.climb) {
       if (this.downed) this.endClimb()
@@ -436,6 +487,23 @@ export class SurvivorAgent extends Agent {
       if (this.step(dt)) this.order = null
       mode = this.path ? 'run' : 'idle'
       if (!this.path) this.order = null
+      this.finish(dt, mode)
+      return
+    }
+    if (o?.type === 'door') {
+      // walk up to a door and shut it, or open it
+      const sp = o.spot
+      if (this.path) {
+        this.step(dt)
+        mode = 'run'
+      } else if (Math.hypot(sp.x - this.pos.x, sp.z - this.pos.z) > 0.35) {
+        this.moveTo(sp.x, sp.z)
+        if (!this.path) this.order = null
+      } else {
+        this.face(o.D.x, o.D.z, 1)
+        if (!W.toggleDoor(o.D, this)) view.labels.float(W.scene, this.chestPos(2), o.D.broken ? 'It’s off its hinges' : 'Something’s in the way', 'bad')
+        this.order = null
+      }
       this.finish(dt, mode)
       return
     }
@@ -527,6 +595,8 @@ export class SurvivorAgent extends Agent {
     } else if (Math.hypot(this.anchor.x - this.pos.x, this.anchor.z - this.pos.z) > 0.8 && !this.tower) {
       this.moveTo(this.anchor.x, this.anchor.z)
     } else if (W.mode === 'raid' && this.st.gun) mode = 'aimIdle'
+    // a lull: top the magazine up
+    if (!this.target && this.st.magCap && !(this.reloadT > 0) && magOf(this).n < magOf(this).cap * 0.5) this.startReload()
     this.finish(dt, mode)
   }
   // First person (render/firstperson.js): the player walks and aims this
@@ -538,6 +608,8 @@ export class SurvivorAgent extends Agent {
     this.cool -= dt
     this.hurtT -= dt
     this.swing = Math.max(0, this.swing - dt * 2.2)
+    // the player reloads by hand (R); a swap the AI had started is dropped
+    this.reloadT = 0
     if (this.climb) {
       if (this.downed) this.endClimb()
       else {
@@ -607,8 +679,15 @@ export class SurvivorAgent extends Agent {
   shoot(z, d) {
     const W = this.world
     const st = this.st
+    // the magazine: empty, reload (the shot waits); the last round, reload after
+    const m = magOf(this)
+    if (m.n <= 0) {
+      this.startReload()
+      return 'aim'
+    }
+    setMag(this, m.n - 1)
     this.cool = st.rate
-    if (st.ammoType) W.useAmmo(st.ammoType, 1)
+    if (m.n - 1 <= 0) this.reloadNext = true
     const fwd = new THREE.Vector3(Math.sin(this.heading), 0, Math.cos(this.heading))
     const muzzle = this.chestPos(1.38).addScaledVector(fwd, st.weapon.pistol ? 0.55 : 0.85)
     const night = W.isNight?.() ? W.nightAcc?.(this) ?? 0.8 : 1
@@ -631,6 +710,10 @@ export class SurvivorAgent extends Agent {
       z.hurt(dmg, this)
     }
     gainXP(this.data, 'ranged', 0.8)
+    if (this.reloadNext) {
+      this.reloadNext = false
+      this.startReload()
+    }
     return 'aim'
   }
   melee(z, reach) {
@@ -671,7 +754,7 @@ export class SurvivorAgent extends Agent {
     this.lastMode = mode
     let anim = mode
     // a player aiming over the shoulder keeps the gun up while walking
-    const o = { speed: this.curSpeed, aim: !!(this.fp && this.fpAim && this.st.gun) }
+    const o = { speed: this.curSpeed, aim: !!(this.fp && this.fpAim && this.st.gun), reload: this.reloadT > 0 || !!(this.fp && this.fpReload), crouch: !!(this.fp && this.fpCrouch) }
     if (mode === 'swing') {
       anim = this.st.gun ? 'punch' : this.st.weaponId === 'fists' ? 'punch' : 'swing'
       o.swing = 1 - this.swing
@@ -755,7 +838,8 @@ export class ZombieAgent extends Agent {
     this.world.fx.blood(this.chestPos(this.def.crawl ? 0.3 : 1.2))
     this.ch.flinch()
     this.label.hidden = false
-    if (o.knock && !this.def.crawl && this.type !== 'brute') this.stun = 1.3
+    // a knock-down blow (a sledge always; a pan's ring now and then)
+    if (o.knock && (o.knock >= 1 || Math.random() < o.knock) && !this.def.crawl && this.type !== 'brute') this.stun = 1.3
     if (from && from.faction === 'survivor' && ['idle', 'wander', 'investigate', 'lured'].includes(this.state)) {
       this.state = 'chase'
       this.target = from
@@ -771,7 +855,8 @@ export class ZombieAgent extends Agent {
     this.deadT = 0
     this.path = null
     this.label.remove()
-    this.play('zdie', 80, { pitch: this.voice })
+    // a takedown leaves nothing to hear
+    if (!this.quiet) this.play('zdie', 80, { pitch: this.voice })
     if (this.def.burst) this.world.onBurst?.(this)
     this.world.fx.blood(this.chestPos(0.6), true)
     if (from?.data) {
@@ -824,7 +909,8 @@ export class ZombieAgent extends Agent {
     }
     if (this.stun > 0) {
       this.stun -= dt
-      this.ch.update(dt, 'downed', {})
+      // held from behind it stays on its feet until it drops
+      this.ch.update(dt, this.takenDown ? 'zidle' : 'downed', {})
       this.sync()
       return false
     }
@@ -910,8 +996,15 @@ export class ZombieAgent extends Agent {
               this.bash = bar
               this.moveTo(bar.outPos.x, bar.outPos.z)
             } else if (!this.moveTo(t.pos.x, t.pos.z)) {
-              this.state = 'idle'
-              this.target = null
+              // a shut door in the way: break it down
+              const door = W.doorToward?.(this, t)
+              if (door) {
+                this.state = 'bash'
+                this.bash = door
+              } else {
+                this.state = 'idle'
+                this.target = null
+              }
             }
           }
           const boost = this.lunge > 0 ? 1.75 : 1
@@ -1011,7 +1104,12 @@ export class ZombieAgent extends Agent {
     for (const s of W.squad) {
       if (s.downed || s.dead) continue
       const d = this.dist(s)
-      const eff = sight * (1 - (s.st?.stealth || 0))
+      let eff = sight * (1 - (s.st?.stealth || 0))
+      // crouched: seen late ahead, hardly at all from behind
+      if (s.fpCrouch && this.state !== 'chase') {
+        const ahead = d > 0.01 ? ((s.pos.x - this.pos.x) * Math.sin(this.heading) + (s.pos.z - this.pos.z) * Math.cos(this.heading)) / d : 1
+        eff *= ahead > 0.2 ? 0.55 : ahead > -0.2 ? 0.3 : 0.11
+      }
       if (d > eff) continue
       if (!W.grid.los(this.pos.x, this.pos.z, s.pos.x, s.pos.z)) continue
       if (d < bd) {

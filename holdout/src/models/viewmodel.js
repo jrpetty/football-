@@ -34,6 +34,7 @@ Object.assign(POSES, {
   bat: MELEE({ support: { p: [0, -0.07, 0], axis: [0, 1, 0], r: 0.017 } }),
   nailbat: MELEE({ support: { p: [0, -0.07, 0], axis: [0, 1, 0], r: 0.017 } }),
   pipe: MELEE({ support: { p: [0, -0.06, 0], axis: [0, 1, 0], r: 0.018 } }),
+  pan: MELEE({ rot: [-0.55, 0.3, 0.3], grip: { p: [0, 0.02, 0], axis: [0, 1, 0], r: 0.016 } }),
   crowbar: MELEE({ pos: [0.24, -0.17, -0.46], rot: [-0.75, 0.25, 0.28], grip: { p: [0, -0.03, 0], axis: [0, 1, 0], r: 0.013 } }),
   machete: MELEE({ rot: [-0.7, 0.35, 0.28], grip: { p: [0, 0.0, 0], axis: [0, 1, 0], r: 0.014 } }),
   // the handle rises right of the crosshair, the head in view near the top

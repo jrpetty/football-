@@ -1003,17 +1003,19 @@ export class CityMap {
     for (const [, L] of this.locs) {
       const loc = L.loc
       const col = LEVEL_COLORS[loc.level - 1]
-      const h = (HEIGHT[loc.type] || 10) + 12
+      // the side-street places get a smaller marker, named only up close
+      const mk = loc.minor ? 0.55 : 1
+      const h = ((HEIGHT[loc.type] || 10) + 12) * (loc.minor ? 0.6 : 1)
       const g = new THREE.Group()
       g.position.set(loc.x, 0, loc.z)
-      const beamGeo = new THREE.CylinderGeometry(0.7, 0.7, h, 8, 1, true)
+      const beamGeo = new THREE.CylinderGeometry(0.7 * mk, 0.7 * mk, h, 8, 1, true)
       beamGeo.translate(0, h / 2, 0)
       const beam = new THREE.Mesh(beamGeo, beamMat(col))
       beam.renderOrder = 5
       g.add(beam)
       const head = new THREE.Mesh(new THREE.OctahedronGeometry(2.6, 0), new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 1.6, roughness: 0.3, metalness: 0.2 }))
-      head.position.y = h + 3
-      head.scale.set(1, 1.5, 1)
+      head.position.y = h + 3 * mk
+      head.scale.set(mk, 1.5 * mk, mk)
       g.add(head)
       const ring = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: ringTex(), color: new THREE.Color(col).multiplyScalar(1.4), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }))
       ring.rotation.x = -Math.PI / 2
@@ -1025,9 +1027,9 @@ export class CityMap {
       this.scene.add(g)
       // label
       const el = document.createElement('div')
-      el.className = 'mloc'
+      el.className = 'mloc' + (loc.minor ? ' minor' : '')
       el.innerHTML = `<b style="--c:${col}">${loc.level}</b><span>${loc.name}</span><i></i>`
-      const label = view.labels.add(el, new THREE.Vector3(loc.x, h + 7, loc.z), { scene: this.scene })
+      const label = view.labels.add(el, new THREE.Vector3(loc.x, h + 7, loc.z), { scene: this.scene, ...(loc.minor ? { maxDist: 520, declutter: true } : {}) })
       L.marker = { g, beam, head, ring, label, el, h, col }
       this.markers.push(L)
     }

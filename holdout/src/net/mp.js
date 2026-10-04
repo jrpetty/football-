@@ -6,6 +6,7 @@
 // host, which checks it (whose survivors, enough resources?), applies it and
 // says so in its next diff. A guest's own runs play out on their machine and
 // what they bring home arrives the same way.
+import { rivalSend } from '../game/rivals.js'
 import { S, setState, NET, getS, day } from '../game/state.js'
 import { RES, GAME_MIN_PER_SEC, BELTS } from '../game/data.js'
 import { beltSpeed, stackOf } from '../game/belts.js'
@@ -24,7 +25,7 @@ const set = (...k) => new Set(k)
 // What the host shares. Belt items and history travel on their own.
 const HOST_POL = { skip: set('settings', 'saved', 'hist'), kids: { links: { each: { skip: set('items', 'moved') } } } }
 // Keys only the host's simulation changes.
-const HOST_ONLY = set('settings', 'saved', 'hist', 'time', 'weather', 'raid', 'nextRaid', 'speed', 'mp', 'over', 'seed', 'version', 'created', 'cityLocs', 'mode')
+const HOST_ONLY = set('settings', 'saved', 'hist', 'time', 'weather', 'raid', 'nextRaid', 'speed', 'mp', 'over', 'seed', 'version', 'created', 'cityLocs', 'mode', 'site', 'rivals')
 const GUEST_POL = { skip: HOST_ONLY, kids: { res: { all: ADD }, stats: { all: ADD }, signal: { kids: { paid: { all: ADD } } }, links: { each: { skip: set('items', 'moved', 'flow', 'jam') } } } }
 // Bringing a guest's copy in line with the host's (exact, no sums).
 const FIX_POL = { skip: set('settings', 'saved', 'hist', 'time'), kids: { links: { each: { skip: set('items') } } } }
@@ -294,6 +295,14 @@ export class Session {
       case 'locker': {
         const why = applyLockerOp(pid, m)
         if (why) this.c.send({ t: 'rej', why }, from)
+        this.t.delta = 0
+        return
+      }
+      case 'rival': {
+        // a rival camp: our game on the server checks it and sends it on
+        const r = rivalSend(pid, m)
+        if (r.err) this.c.send({ t: 'rej', why: r.err }, from)
+        else this.game.c2c?.(r.c2c)
         this.t.delta = 0
         return
       }
@@ -830,6 +839,17 @@ export class Session {
     this.c.send({ t: 'raidDone', report: { count: report.count, killed: report.killed, injured: report.injured, dead: report.dead, lost: report.lost, won: report.won }, finale }, this.hostPeer)
   }
   // A locker op: the host carries it out, for itself or for a guest.
+  // rival camps (game/rivals.js): only an always-on camp's game sends them
+  rival(m) {
+    if (this.role === 'host') {
+      const r = rivalSend(this.pid, m)
+      if (!r.err) this.game.c2c?.(r.c2c)
+      this.t.delta = 0
+      return r.err || null
+    }
+    this.c.send({ t: 'rival', ...m }, this.hostPeer)
+    return null
+  }
   locker(m) {
     if (this.role === 'host') {
       const why = applyLockerOp(this.pid, m)

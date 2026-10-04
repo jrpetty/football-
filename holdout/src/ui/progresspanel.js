@@ -51,7 +51,7 @@ function city(ui) {
   const pct = (f) => `${Math.round(f * 100)}%`
   const next = LIBERATION.find((m) => !(S.libDone || []).includes(m.at))
   const M = MODES[modeOf()]
-  const locs = (S.cityLocs || []).filter((l) => l.type !== 'military')
+  const locs = (S.cityLocs || []).filter((l) => l.type !== 'military' && !l.minor)
   return [
     h(
       'section.card.libhead',

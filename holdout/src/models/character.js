@@ -374,6 +374,42 @@ export const ANIMS = {
     set('upperArmR', -0.35, 0, -0.18)
     set('foreArmR', -1.1, 0, 0)
   },
+  // crouched (k: 0..1): knees bent deep, hips dropped, back rounded over
+  // them, head up to see; the gait still swings the legs beneath
+  crouchOver(ch, k) {
+    add('thighL', -0.95 * k)
+    add('thighR', -0.95 * k)
+    add('shinL', 1.5 * k)
+    add('shinR', 1.5 * k)
+    add('footL', -0.55 * k)
+    add('footR', -0.55 * k)
+    add('spine', 0.32 * k)
+    add('chest', 0.08 * k)
+    add('neck', -0.18 * k)
+    add('head', -0.14 * k)
+    ch.hipsY -= 0.34 * k
+  },
+  // swapping a magazine or thumbing in shells: weapon tipped in towards the
+  // chest, off hand working at the receiver
+  reloadOver(ch, t) {
+    const jig = Math.sin(t * 9) * 0.05
+    if (ch.hold === 'rifle') {
+      set('upperArmR', -0.6, 0.25, -0.18)
+      set('foreArmR', -1.35, 0, 0)
+      set('handR', 0.5, 0, 0.35)
+      set('upperArmL', -0.75 + jig, -0.2, 0.32)
+      set('foreArmL', -1.75 - jig, 0, 0)
+    } else {
+      set('upperArmR', -0.55, 0.15, -0.05)
+      set('foreArmR', -1.35, 0, 0)
+      set('handR', 0.3, 0, 0.3)
+      set('upperArmL', -0.7 + jig, -0.25, 0.28)
+      set('foreArmL', -1.7 - jig, 0, 0)
+    }
+    set('chest', get('chest', 0) + 0.06, get('chest', 1) * 0.5, 0)
+    set('neck', 0.2)
+    set('head', 0.35, 0.05, 0)
+  },
   aim(ch, t, o) {
     legsStraight()
     set('thighL', -0.12)
@@ -845,6 +881,9 @@ export class Character {
     this.root.add(mesh)
     const h = spec.height || 1
     this.mesh.scale.setScalar(h)
+    // a child's head is big for the body; the old stoop a little
+    if (spec.age != null && spec.age < 16) this.bones[BONE.head].scale.setScalar(1.12 + (16 - spec.age) * 0.012)
+    this.stoop = spec.age >= 65 ? 1 : 0
     this.anim = spec.zombie ? 'zidle' : 'idle'
     this.t = Math.random() * 100
     this.phase = 0
@@ -936,6 +975,15 @@ export class Character {
       else if (this.hold === 'pistol') ANIMS.pistolReady(this)
       else if (this.hold === 'melee' && this.anim !== 'run') ANIMS.meleeReady(this)
     }
+    if (o.reload && !this.zombie && this.weapon?.visible !== false && this.hold !== 'melee' && this.hold !== 'none') ANIMS.reloadOver(this, this.t)
+    if (this.stoop && !['dead', 'downed', 'lie', 'sit', 'sitwork', 'pedal'].includes(this.anim)) {
+      add('spine', 0.16)
+      add('chest', 0.06)
+      add('neck', 0.1)
+      add('head', -0.12)
+    }
+    this.crouchW = (this.crouchW || 0) + ((o.crouch ? 1 : 0) - (this.crouchW || 0)) * Math.min(1, dt * 9)
+    if (this.crouchW > 0.01 && ['idle', 'walk', 'run', 'aim', 'aimIdle', 'punch', 'swing'].includes(this.anim)) ANIMS.crouchOver(this, this.crouchW)
     // turning on the spot: the feet step round instead of sliding
     const yr = clamp(this.yawRate, -6, 6)
     if (speed < 0.1 && Math.abs(yr) > 0.5 && (this.anim === 'idle' || this.anim === 'zidle' || this.anim === 'aim')) {

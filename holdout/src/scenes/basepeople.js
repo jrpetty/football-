@@ -4,7 +4,7 @@
 import * as THREE from 'three'
 import { makeSurvivorCharacter, survivorLookKey } from '../world/agents.js'
 import { toolModel, weaponModel, holdStyle } from '../models/weapons.js'
-import { S, hour, stationSize, workersOf, survivorStats, gateTiles, bounds } from '../game/state.js'
+import { S, hour, day, stationSize, workersOf, survivorStats, gateTiles, bounds, visitMemorial } from '../game/state.js'
 import { STATIONS, OCCUPATIONS, ITEMS, EXPANSIONS, RES } from '../game/data.js'
 import { isDepot, isNode, feeds, belted } from '../game/belts.js'
 import { plannedRecipe } from '../game/rates.js'
@@ -285,7 +285,16 @@ export class CampPeople {
       if (bed) return { ...bed, lie: true, sleep: true, label: 'Asleep', inside: true }
     }
     if (evening || night) return this.fireSeat(s.id, evening ? '' : 'Keeping watch') || this.wanderNearFire('')
-    // daytime idling: chat, carry supplies, sit, wander
+    // daytime idling: a while at the memorial wall now and then, chat,
+    // carry supplies, sit, wander
+    const mem = S.stats.memorial?.length && S.memVisit?.[s.id] !== day() && Math.random() < 0.12 ? S.stations.find((st) => st.type === 'memorial' && st.level > 0 && !st.building) : null
+    const mv = mem && B.stationViews.get(mem.id)
+    if (mv && visitMemorial(s)) {
+      const f = mv.frontWorld()
+      const who = pick(S.stats.memorial)
+      const n = this.base.grid.nearestOpen(f.x + rand(-1.3, 1.3), f.z + rand(-0.1, 0.4), 3) || { x: f.x - 0.5, z: f.z - 0.5 }
+      return { x: n.x + 0.5, z: n.z + 0.5, anim: 'idle', lookAt: { x: mv.cx, z: mv.cz }, label: `Remembering ${who.name.split(',')[0]}`, until: rand(10, 18) }
+    }
     const r = Math.random()
     if (r < 0.25) {
       const c = this.carryJob(s)

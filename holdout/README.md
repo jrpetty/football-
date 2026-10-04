@@ -80,8 +80,9 @@ networks don't.
 | Third person | `T` while walking in someone's boots | Swap between behind the eyes and over the shoulder |
 | | Mouse, WASD, `Shift` | Look (click the view to capture the mouse, `Esc` frees it), walk, run |
 | | Left click, right click | Shoot or swing (hold for automatic fire), aim down the sights |
-| | `E` | Use what you look at: search, open, climb a watchtower, a station's panel |
-| | `1`–`4`, `Tab`, `G`, `F` (runs) | Become another survivor, squad follows you, flashlight |
+| | `E` | Use what you look at: search, open, shut or brace a door, a silent takedown, climb a watchtower, a station's panel |
+| | `R`, `Ctrl` | Reload, crouch |
+| | `1`–`4`, `Tab`, `G`, `F` | Become another survivor, squad follows you (runs), torch |
 
 ## First person
 
@@ -114,10 +115,30 @@ nothing behind them gets in the way.
   `G` has them follow you, and if you go down you carry on as someone
   still standing. Past the lot the real neighbourhood carries on, then the
   city's skyline in the haze.
+- **Magazines.** A gun holds so many rounds (12 in a pistol, 6 in a
+  revolver or shotgun, 30 in an SMG or assault rifle, 5 in the rifle),
+  loaded from the camp's stock. `R` reloads, and an empty gun reloads
+  itself. A tactical reload (a round still chambered) is about a quarter
+  quicker and keeps that round: one more than the magazine holds. Shells
+  and the revolver's and rifle's rounds go in one at a time; fire to stop
+  loading. The HUD shows rounds in the gun, what it holds, and the stock.
+  Your people top up in a lull and reload when they run dry, and the bodies
+  show it (the gun tipped in, the off hand working the magazine).
+- **Crouch and silent takedowns.** `Ctrl` (or the touch button) crouches:
+  lower, slower, quieter, and the dead see you far later ahead and hardly
+  at all from behind. Creep up behind one that hasn't noticed you and `E`
+  kills it without a sound (not brutes or bloaters). Running stands you up.
+- **Doors.** Every single door on a run hangs on a hinge. `E` shuts or
+  opens it; shut, it stops movement, sight and bullets. Your people open
+  doors on their way through; the dead bash at them until they split (an
+  outside door holds longer). While they push, `E` braces it and each blow
+  counts for under a third (you feel every one). From above, click a door
+  and someone goes to shut or open it.
 - **In camp** `E` on a station opens its panel, on a watchtower climbs it
   (the wall is solid: fight a horde from the towers, a breach or the
   gate), on the gate opens it, on a person talks to them. Whoever you walk
   as leaves their job while you have them, and fights the horde as you.
+  After dark they carry a torch (`F` lights it by day too).
 
 It is drawn to the same standard as the view from above: a real sky (sun,
 clouds, moon and stars, meeting the fog at the horizon), shadows placed
@@ -434,6 +455,25 @@ loot table that fits it.
 
 ## The city
 
+- **Where you make camp**, chosen when a camp starts (and for a multiplayer or
+  always-on camp), with the land drawn round it:
+  - **The Lumber Yard**: the woods at your back. Half as much foraged wood
+    again, the Lumber Yard 15% faster, a middling drive to town.
+  - **Hollis Farm**: a barn, a silo and fields past the city limits. Farms,
+    coops and pens give 25% more, collectors and filters 20%, hordes come
+    15% smaller and the stores start fuller; but trips take 30% longer and
+    there's little scrap.
+  - **Rail Depot**: rails, a boxcar, containers under a gantry crane, on the
+    city's doorstep. Twice the foraged scrap and some metal, the Scrap Yard
+    and Forge 20% faster, trips 25% shorter, metal and parts to start; but
+    hordes come 20% bigger and the soil is poor.
+  - **Riverside Marina**: the river at your back, a jetty and boats. Collectors
+    and filters give 50% more, idle hands fish, and the wall takes 15% less
+    damage; but winter heating costs 30% more and timber is scarce.
+- **Side streets:** about two dozen of the city's ordinary buildings can be
+  searched too (a house on Willow St., an office on Fifth, a warehouse on Mill
+  Rd.), with smaller markers that name themselves up close. They don't count
+  toward taking the city back or carry the story.
 - **Two modes**, chosen when a camp starts (and when a multiplayer camp
   starts). **Scavenger:** places restock four real hours after a search.
   **Last Pickings:** everything can be looted once; what was taken stays
@@ -521,6 +561,26 @@ unless a teammate helps them up.
 
 ## The camp
 
+- **Children and the old.** Now and then a child turns up at the gate, or
+  someone past fighting age. Neither goes on runs, scouts or fights a horde
+  (they shelter while the others hold the wall). Children help with light
+  work at half pace (farm, animals, water, kitchen, tailor, radio,
+  research), eat about half as much and lift morale; at sixteen they can
+  fight. The old work most jobs a little slower, tell stories at the fire,
+  and whoever works beside them learns 30% faster. Children are drawn
+  small with bigger heads; the old are grey and stoop.
+- **Camp life.** Birthdays (a cake if the cook can spare it), a feast after
+  a big haul, a funeral for the dead (it halves the blow to morale), and a
+  vote on every stranger at the gate: go with the camp and morale rises,
+  overrule it and it drops. They wait in the brief.
+- **The Memorial Wall** keeps the names of the dead, how and when they died
+  and their last diary line. People stop by to remember (a little morale
+  each, once a day), deaths hurt morale less while it stands, and in first
+  person you can read every name.
+- **Records** (in the Journal, or `Ctrl+K`): this camp's numbers, the dead
+  put down by each weapon, who did the most, the bests of every camp you've
+  run, and 27 achievements with progress (Kitchen Justice: ten with a
+  frying pan).
 - **The camp brief**, top right, gathers everything that needs you (food or
   water running out, a horde getting close, a worn wall,
   unpowered stations, infection, morale, rewards to claim, someone at the
@@ -568,6 +628,18 @@ unless a teammate helps them up.
 - **Gear swapping:** in camp, click any equipment slot to take from storage or
   from another survivor (they swap). Gear stays put while someone is on a run
   or at an outpost.
+- **Mods by slot, shown on the model:** a gun takes a muzzle (suppressor or
+  long barrel), a sight (red dot or scope), a stock (less kick), a magazine
+  (extended, or a flared magwell for 30% quicker reloads) and a reinforced
+  frame, all at once; a club takes a head (spikes, barbed wire or a weighted
+  head that can knock them flat), a balanced grip and a frame; armour a
+  lining, steel plates and a camouflage cover. Each one is drawn on the
+  weapon or the body.
+- **Armour and gear you can see:** leather or padded jacket, Kevlar vest,
+  riot gear, combat armour, ghillie poncho; a gas mask (a bloater's gas
+  can't infect the wearer), a motorcycle helmet (+12 health), night-vision
+  goggles, field glasses, a torch or a radio clipped to the straps. And a
+  frying pan, from any kitchen: it rings like a bell and never breaks.
 - Survivors without a job build whatever is under construction. When nothing
   is going up, they forage the yard for a little wood and scrap.
 - Morale comes from beds, hot meals, the fire, the wall and recent events. High
@@ -646,6 +718,17 @@ whoever made it is its admin (hands out survivors, sets the pace, can kick).
   admin first), whose game fights it live and streams it to everyone. If they
   drop out mid-fight, or nobody is in camp, the fight is worked out by the
   numbers.
+- **Rival camps.** Every other always-on camp on the server is a neighbour
+  (the Players panel, or `Ctrl+K` → Rival camps). Offer a trade (what you
+  give is held back until they answer, and comes home if they say no), send a
+  gift, propose or end an alliance, or send a raiding party of up to six. A
+  raid is settled by the two camps' games on the server: your party's
+  weapons, health and skill against their wall level, towers, turrets and
+  whoever is home to fight. Win and you carry off a share of their stores (30
+  a head at most) and they take a morale hit; lose and most of the party
+  comes home hurt. Allies can't be raided, a camp under day 5 is left alone,
+  and the same rival can be raided only every two days. Camps that are put
+  away are woken to answer.
 
 ### The server and fly.io
 

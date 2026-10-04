@@ -249,6 +249,7 @@ export const ITEMS = {
   fists: { name: 'Fists', slot: 'weapon', kind: 'melee', rarity: 'common', dmg: 7, range: 1.3, rate: 0.75, noise: 1, dur: 0, value: 0 },
   crowbar: { name: 'Crowbar', slot: 'weapon', kind: 'melee', rarity: 'common', dmg: 13, range: 1.5, rate: 0.85, noise: 2, dur: 400, value: 40, repair: 'workbench', mods: 'melee', pry: 1, desc: 'Pries locked containers open faster when smashing.' },
   bat: { name: 'Baseball Bat', slot: 'weapon', kind: 'melee', rarity: 'common', dmg: 14, range: 1.6, rate: 0.9, noise: 2, dur: 260, value: 35, repair: 'workbench', mods: 'melee' },
+  pan: { name: 'Frying Pan', slot: 'weapon', kind: 'melee', rarity: 'common', dmg: 12, range: 1.35, rate: 0.8, noise: 4, dur: 600, value: 20, repair: 'workbench', mods: 'melee', knock: 0.35, desc: 'Cast iron off a kitchen stove. It rings like a church bell and it never breaks.' },
   pipe: { name: 'Lead Pipe', slot: 'weapon', kind: 'melee', rarity: 'common', dmg: 15, range: 1.5, rate: 0.95, noise: 2, dur: 420, value: 35, repair: 'workbench', mods: 'melee' },
   nailbat: { name: 'Nail Bat', slot: 'weapon', kind: 'melee', rarity: 'uncommon', dmg: 19, range: 1.6, rate: 0.9, noise: 2, dur: 220, value: 70, repair: 'workbench', mods: 'melee' },
   spear: { name: 'Spear', slot: 'weapon', kind: 'melee', rarity: 'uncommon', dmg: 21, range: 2.3, rate: 1.0, noise: 1, dur: 220, value: 80, repair: 'workbench', mods: 'melee', desc: 'Long reach: hits before they can.' },
@@ -256,15 +257,16 @@ export const ITEMS = {
   axe: { name: 'Fire Axe', slot: 'weapon', kind: 'melee', rarity: 'rare', dmg: 36, range: 1.7, rate: 1.15, noise: 2, dur: 360, value: 250, repair: 'workbench', mods: 'melee', axe: true },
   sledge: { name: 'Sledgehammer', slot: 'weapon', kind: 'melee', rarity: 'rare', dmg: 50, range: 1.7, rate: 1.55, noise: 3, dur: 500, value: 280, repair: 'workbench', mods: 'melee', knock: 1, desc: 'Knocks zombies off their feet.' },
   katana: { name: 'Katana', slot: 'weapon', kind: 'melee', rarity: 'epic', dmg: 40, range: 1.8, rate: 0.68, noise: 1, dur: 320, value: 700, repair: 'workbench', mods: 'melee' },
-  pistol: { name: '9mm Pistol', slot: 'weapon', kind: 'gun', rarity: 'common', dmg: 17, range: 9, rate: 0.5, noise: 11, ammo: 'pammo', dur: 600, value: 100, repair: 'weapons', mods: 'gun', pistol: true },
-  revolver: { name: 'Revolver', slot: 'weapon', kind: 'gun', rarity: 'uncommon', dmg: 32, range: 10, rate: 0.9, noise: 13, ammo: 'pammo', dur: 800, value: 200, repair: 'weapons', mods: 'gun', pistol: true },
-  smg: { name: 'SMG', slot: 'weapon', kind: 'gun', rarity: 'rare', dmg: 11, range: 8, rate: 0.12, noise: 12, ammo: 'pammo', dur: 500, value: 480, repair: 'weapons', mods: 'gun' },
-  shotgun: { name: 'Pump Shotgun', slot: 'weapon', kind: 'gun', rarity: 'uncommon', dmg: 50, range: 6, rate: 1.15, noise: 16, ammo: 'shells', dur: 500, value: 290, repair: 'weapons', mods: 'gun', falloff: true, pellets: true },
-  crossbow: { name: 'Crossbow', slot: 'weapon', kind: 'gun', rarity: 'rare', dmg: 55, range: 11, rate: 1.7, noise: 1, ammo: null, dur: 300, value: 380, repair: 'weapons', mods: 'gun', rifle: true, desc: 'Silent. Bolts are recovered, so it needs no ammo.' },
-  rifle: { name: 'Hunting Rifle', slot: 'weapon', kind: 'gun', rarity: 'rare', dmg: 64, range: 15, rate: 1.5, noise: 16, ammo: 'rammo', dur: 700, value: 460, repair: 'weapons', mods: 'gun', rifle: true },
-  ar: { name: 'Assault Rifle', slot: 'weapon', kind: 'gun', rarity: 'epic', dmg: 22, range: 12, rate: 0.15, noise: 15, ammo: 'rammo', dur: 600, value: 950, repair: 'weapons', mods: 'gun' },
+  pistol: { name: '9mm Pistol', slot: 'weapon', kind: 'gun', mag: 12, reload: 1.6, rarity: 'common', dmg: 17, range: 9, rate: 0.5, noise: 11, ammo: 'pammo', dur: 600, value: 100, repair: 'weapons', mods: 'gun', pistol: true },
+  revolver: { name: 'Revolver', slot: 'weapon', kind: 'gun', mag: 6, perShell: 0.42, rarity: 'uncommon', dmg: 32, range: 10, rate: 0.9, noise: 13, ammo: 'pammo', dur: 800, value: 200, repair: 'weapons', mods: 'gun', pistol: true },
+  smg: { name: 'SMG', slot: 'weapon', kind: 'gun', mag: 30, reload: 2.1, rarity: 'rare', dmg: 11, range: 8, rate: 0.12, noise: 12, ammo: 'pammo', dur: 500, value: 480, repair: 'weapons', mods: 'gun' },
+  shotgun: { name: 'Pump Shotgun', slot: 'weapon', kind: 'gun', mag: 6, perShell: 0.5, rarity: 'uncommon', dmg: 50, range: 6, rate: 1.15, noise: 16, ammo: 'shells', dur: 500, value: 290, repair: 'weapons', mods: 'gun', falloff: true, pellets: true },
+  crossbow: { name: 'Crossbow', slot: 'weapon', kind: 'gun', mag: 1, reload: 1.5, rarity: 'rare', dmg: 55, range: 11, rate: 1.7, noise: 1, ammo: null, dur: 300, value: 380, repair: 'weapons', mods: 'gun', rifle: true, desc: 'Silent. Bolts are recovered, so it needs no ammo.' },
+  rifle: { name: 'Hunting Rifle', slot: 'weapon', kind: 'gun', mag: 5, perShell: 0.55, rarity: 'rare', dmg: 64, range: 15, rate: 1.5, noise: 16, ammo: 'rammo', dur: 700, value: 460, repair: 'weapons', mods: 'gun', rifle: true },
+  ar: { name: 'Assault Rifle', slot: 'weapon', kind: 'gun', mag: 30, reload: 2.4, rarity: 'epic', dmg: 22, range: 12, rate: 0.15, noise: 15, ammo: 'rammo', dur: 600, value: 950, repair: 'weapons', mods: 'gun' },
 
   jacket: { name: 'Leather Jacket', slot: 'armor', rarity: 'common', hp: 15, dr: 0.08, dur: 120, value: 60, repair: 'tailor', mods: 'armor', look: 'jacket' },
+  padded: { name: 'Padded Jacket', slot: 'armor', rarity: 'common', hp: 22, dr: 0.06, speed: -0.02, dur: 140, value: 90, repair: 'tailor', mods: 'armor', look: 'padded', desc: 'Quilted and thick: a bite has a lot of stuffing to get through. Warm in winter.' },
   vest: { name: 'Kevlar Vest', slot: 'armor', rarity: 'uncommon', hp: 30, dr: 0.18, dur: 160, value: 240, repair: 'tailor', mods: 'armor', look: 'vest' },
   ghillie: { name: 'Ghillie Poncho', slot: 'armor', rarity: 'rare', hp: 10, dr: 0.04, stealth: 0.4, dur: 100, value: 320, repair: 'tailor', mods: 'armor', look: 'ghillie', desc: 'Zombies spot the wearer 40% later.' },
   riot: { name: 'Riot Armor', slot: 'armor', rarity: 'rare', hp: 50, dr: 0.28, speed: -0.08, dur: 220, value: 520, repair: 'tailor', mods: 'armor', look: 'riot' },
@@ -272,14 +274,16 @@ export const ITEMS = {
 
   packS: { name: 'Small Backpack', slot: 'gear', rarity: 'common', carry: 15, util: 1, value: 60, desc: 'Carries 15 more and holds 1 more utility item.', pack: 'small' },
   packL: { name: 'Hiking Pack', slot: 'gear', rarity: 'uncommon', carry: 35, util: 2, value: 180, desc: 'Carries 35 more and holds 2 more utility items.', pack: 'large' },
-  flashlight: { name: 'Flashlight', slot: 'gear', rarity: 'common', search: 0.3, nightSight: 0.5, torch: 1, value: 50, desc: 'Searches 30% faster and throws a long beam after dark.' },
-  binoculars: { name: 'Binoculars', slot: 'gear', rarity: 'uncommon', sight: 5, trapSpot: 2, value: 130, desc: 'Sees 5 m further and spots traps sooner.' },
-  thermal: { name: 'Thermal Goggles', slot: 'gear', rarity: 'epic', wallSense: 8, nightSight: 0.7, value: 820, desc: 'Body heat shows through one wall within 8 m. Good in the dark.' },
+  flashlight: { name: 'Flashlight', slot: 'gear', rarity: 'common', search: 0.3, nightSight: 0.5, torch: 1, look: 'torch', value: 50, desc: 'Searches 30% faster and throws a long beam after dark.' },
+  binoculars: { name: 'Binoculars', slot: 'gear', rarity: 'uncommon', sight: 5, trapSpot: 2, value: 130, look: 'binoculars', desc: 'Sees 5 m further and spots traps sooner.' },
+  gasmask: { name: 'Gas Mask', slot: 'gear', rarity: 'uncommon', gasProof: 1, value: 160, look: 'gasmask', desc: 'A bloater’s gas can’t infect the wearer, and hurts them far less.' },
+  helmet: { name: 'Motorcycle Helmet', slot: 'gear', rarity: 'common', hp: 12, value: 80, look: 'helmet', desc: '+12 health: a bite at the head meets fibreglass.' },
+  thermal: { name: 'Thermal Goggles', slot: 'gear', rarity: 'epic', wallSense: 8, nightSight: 0.7, look: 'nvg', value: 820, desc: 'Body heat shows through one wall within 8 m. Good in the dark.' },
   lockpicks: { name: 'Lockpicks', slot: 'gear', rarity: 'uncommon', picklock: 1, value: 120, desc: 'Opens locked safes, lockers and doors quietly.' },
   toolkit: { name: 'Toolkit', slot: 'gear', rarity: 'uncommon', dismantle: 0.4, value: 140, desc: 'Dismantles 40% faster and salvages more.' },
-  walkie: { name: 'Walkie-Talkie', slot: 'gear', rarity: 'rare', walkie: 1, value: 300, desc: 'The squad hears the horde coming: on runs it arrives 45 s later.' },
+  walkie: { name: 'Walkie-Talkie', slot: 'gear', rarity: 'rare', walkie: 1, look: 'walkie', value: 300, desc: 'The squad hears the horde coming: on runs it arrives 45 s later.' },
   shoes: { name: 'Running Shoes', slot: 'gear', rarity: 'common', speed: 0.15, value: 60, desc: 'Moves 15% faster.' },
-  nvg: { name: 'Night Vision Goggles', slot: 'gear', rarity: 'epic', nightSight: 1, acc: 0.06, value: 650, desc: 'No accuracy or sight penalty at night.' },
+  nvg: { name: 'Night Vision Goggles', slot: 'gear', rarity: 'epic', nightSight: 1, acc: 0.06, look: 'nvg', value: 650, desc: 'No accuracy or sight penalty at night.' },
 }
 export function itemStatLine(id, q = 1, mods = []) {
   const it = ITEMS[id]
@@ -311,16 +315,37 @@ export function itemStatLine(id, q = 1, mods = []) {
 
 // Mods fitted at a bench; one per item.
 export const MODS = {
-  extmag: { name: 'Extended Magazine', type: 'gun', bench: 'weapons', lvl: 1, cost: { metal: 6, parts: 4 }, time: 40, fx: { rate: 0.85 }, desc: 'Fires 15% faster.' },
-  reinforcedGun: { name: 'Reinforced Frame', type: 'gun', bench: 'weapons', lvl: 1, cost: { metal: 10, parts: 2 }, time: 35, fx: { dur: 2 }, desc: 'Wears out half as fast.' },
-  suppressor: { name: 'Suppressor', type: 'gun', bench: 'weapons', lvl: 2, cost: { metal: 8, parts: 6 }, time: 55, fx: { noise: 0.3, dmg: 0.93 }, desc: 'Gunshots make 70% less noise. 7% less damage.', model: 'suppressor' },
-  scope: { name: 'Scope', type: 'gun', bench: 'weapons', lvl: 2, cost: { metal: 4, parts: 4, electronics: 2 }, time: 50, fx: { range: 1.25, acc: 0.1 }, desc: '+25% range and +10% accuracy.', model: 'scope' },
-  spiked: { name: 'Spikes', type: 'melee', bench: 'workbench', lvl: 1, cost: { metal: 3, scrap: 6 }, time: 25, fx: { dmg: 1.2 }, desc: '+20% damage.' },
-  balanced: { name: 'Balanced Grip', type: 'melee', bench: 'workbench', lvl: 2, cost: { cloth: 4, parts: 2 }, time: 25, fx: { rate: 0.87 }, desc: 'Swings 13% faster.' },
-  reinforcedMelee: { name: 'Reinforced', type: 'melee', bench: 'workbench', lvl: 1, cost: { metal: 6 }, time: 25, fx: { dur: 2 }, desc: 'Wears out half as fast.' },
-  padding: { name: 'Padding', type: 'armor', bench: 'tailor', lvl: 1, cost: { cloth: 10 }, time: 30, fx: { hp: 15 }, desc: '+15 health.' },
-  plates: { name: 'Steel Plates', type: 'armor', bench: 'tailor', lvl: 2, cost: { metal: 12, cloth: 4 }, time: 45, fx: { dr: 0.08, speed: -0.04 }, desc: '+8% damage reduction, 4% slower.' },
-  camo: { name: 'Camouflage', type: 'armor', bench: 'tailor', lvl: 2, cost: { cloth: 8, chemicals: 2 }, time: 35, fx: { stealth: 0.3 }, desc: 'Zombies notice the wearer 30% later.' },
+  // slot: one mod per slot, so a gun can carry a muzzle, a sight, a stock,
+  // a magazine and a frame all at once; only: the weapons it fits
+  extmag: { name: 'Extended Magazine', type: 'gun', slot: 'mag', bench: 'weapons', lvl: 1, cost: { metal: 6, parts: 4 }, time: 40, fx: { mag: 1.5 }, desc: 'Holds half as many rounds again.', not: ['crossbow'] },
+  magwell: { name: 'Flared Magwell', type: 'gun', slot: 'mag', bench: 'weapons', lvl: 1, cost: { metal: 4, parts: 2 }, time: 30, fx: { reload: 0.7 }, desc: 'Reloads 30% faster.', not: ['crossbow'] },
+  reinforcedGun: { name: 'Reinforced Frame', type: 'gun', slot: 'frame', bench: 'weapons', lvl: 1, cost: { metal: 10, parts: 2 }, time: 35, fx: { dur: 2 }, desc: 'Wears out half as fast.' },
+  suppressor: { name: 'Suppressor', type: 'gun', slot: 'muzzle', bench: 'weapons', lvl: 2, cost: { metal: 8, parts: 6 }, time: 55, fx: { noise: 0.3, dmg: 0.93 }, desc: 'Gunshots make 70% less noise. 7% less damage.', model: 'suppressor', not: ['crossbow'] },
+  longBarrel: { name: 'Long Barrel', type: 'gun', slot: 'muzzle', bench: 'weapons', lvl: 2, cost: { metal: 8, parts: 3 }, time: 45, fx: { range: 1.2, dmg: 1.08, noise: 1.15 }, desc: '+20% range and +8% damage, a little louder.', not: ['crossbow'] },
+  redDot: { name: 'Red Dot Sight', type: 'gun', slot: 'sight', bench: 'weapons', lvl: 1, cost: { metal: 2, parts: 3, electronics: 1 }, time: 35, fx: { acc: 0.06 }, desc: '+6% accuracy, and quick to the eye.', not: ['rifle'] },
+  scope: { name: 'Scope', type: 'gun', slot: 'sight', bench: 'weapons', lvl: 2, cost: { metal: 4, parts: 4, electronics: 2 }, time: 50, fx: { range: 1.25, acc: 0.1 }, desc: '+25% range and +10% accuracy.', model: 'scope' },
+  stock: { name: 'Stock', type: 'gun', slot: 'stock', bench: 'weapons', lvl: 1, cost: { wood: 6, metal: 3, parts: 1 }, time: 30, fx: { acc: 0.04, recoil: 0.7 }, desc: '+4% accuracy and 30% less kick.' },
+  spiked: { name: 'Spikes', type: 'melee', slot: 'head', bench: 'workbench', lvl: 1, cost: { metal: 3, scrap: 6 }, time: 25, fx: { dmg: 1.2 }, desc: '+20% damage.' },
+  barbed: { name: 'Barbed Wire', type: 'melee', slot: 'head', bench: 'workbench', lvl: 1, cost: { scrap: 5, metal: 2 }, time: 20, fx: { dmg: 1.15, dur: 0.85 }, desc: '+15% damage; it wears a little faster.', only: ['bat', 'pipe', 'crowbar', 'pan', 'sledge'] },
+  heavyHead: { name: 'Weighted Head', type: 'melee', slot: 'head', bench: 'workbench', lvl: 2, cost: { metal: 8, scrap: 4 }, time: 30, fx: { dmg: 1.3, rate: 1.1, knock: 0.3 }, desc: '+30% damage and a chance to knock them flat; swings a little slower.', only: ['bat', 'pipe', 'crowbar', 'pan', 'sledge'] },
+  balanced: { name: 'Balanced Grip', type: 'melee', slot: 'grip', bench: 'workbench', lvl: 2, cost: { cloth: 4, parts: 2 }, time: 25, fx: { rate: 0.87 }, desc: 'Swings 13% faster.' },
+  reinforcedMelee: { name: 'Reinforced', type: 'melee', slot: 'frame', bench: 'workbench', lvl: 1, cost: { metal: 6 }, time: 25, fx: { dur: 2 }, desc: 'Wears out half as fast.' },
+  padding: { name: 'Padding', type: 'armor', slot: 'lining', bench: 'tailor', lvl: 1, cost: { cloth: 10 }, time: 30, fx: { hp: 15 }, desc: '+15 health.' },
+  plates: { name: 'Steel Plates', type: 'armor', slot: 'plates', bench: 'tailor', lvl: 2, cost: { metal: 12, cloth: 4 }, time: 45, fx: { dr: 0.08, speed: -0.04 }, desc: '+8% damage reduction, 4% slower.' },
+  camo: { name: 'Camouflage', type: 'armor', slot: 'cover', bench: 'tailor', lvl: 2, cost: { cloth: 8, chemicals: 2 }, time: 35, fx: { stealth: 0.3 }, desc: 'Zombies notice the wearer 30% later.' },
+}
+// Can this mod go on this item now? (null, or why not)
+export function modFits(modId, it) {
+  const M = MODS[modId]
+  const I = ITEMS[it.id]
+  if (!M || !I) return 'Nothing to fit'
+  if (!(I.mods === M.type || (M.type === 'gun' && I.mods === 'gun'))) return 'Doesn’t fit that'
+  if (M.only && !M.only.includes(it.id)) return `Only on ${M.only.map((x) => ITEMS[x]?.name.toLowerCase()).join(', ')}`
+  if (M.not?.includes(it.id)) return `Not on a ${I.name.toLowerCase()}`
+  if ((it.mods || []).includes(modId)) return 'Already fitted'
+  const clash = (it.mods || []).find((m) => MODS[m]?.slot === M.slot)
+  if (clash) return `Already has a ${MODS[clash].name.toLowerCase()} there`
+  return null
 }
 
 // ---------------------------------------------------------------- stations
@@ -375,6 +400,11 @@ export const STATIONS = {
     desc: 'Trainees drill a combat skill. Teachers make everyone here learn faster.',
     cost: [{ wood: 40, cloth: 10 }, { wood: 60, metal: 10, bolts: 30, cloth: 15 }, { wood: 60, plates: 20, bolts: 50, parts: 8 }],
     time: [25, 50, 90], workers: [2, 3, 4], xpRate: [0.9, 1.3, 1.8],
+  },
+  memorial: {
+    name: 'Memorial Wall', cat: 'living', size: [4, 2], levels: 1, skill: null, unique: true,
+    desc: 'Boards nailed up with the names of the dead and how they went, candles in jars at the foot. People stop by to remember them, and the camp carries its losses better for it. Up close, in first person, you can read every name.',
+    cost: [{ wood: 30, scrap: 8, cloth: 4 }], time: [20], workers: [0],
   },
   radio: {
     name: 'Radio Tower', cat: 'living', size: [3, 3], levels: 3, machine: 1, skill: 'tech',
@@ -919,16 +949,16 @@ export const EXPANSION_DEPTH = 10
 // ---------------------------------------------------------------- city
 // Loot pools: { r: resource, n: [min,max], w } or { i: itemId, w }
 const P = {
-  kitchen: [{ r: 'food', n: [2, 6], w: 6 }, { r: 'water', n: [2, 5], w: 5 }, { r: 'cloth', n: [1, 3], w: 1 }, { r: 'chemicals', n: [1, 2], w: 0.6 }],
+  kitchen: [{ r: 'food', n: [2, 6], w: 6 }, { r: 'water', n: [2, 5], w: 5 }, { r: 'cloth', n: [1, 3], w: 1 }, { r: 'chemicals', n: [1, 2], w: 0.6 }, { i: 'pan', w: 0.35 }],
   fridge: [{ r: 'food', n: [3, 7], w: 6 }, { r: 'water', n: [2, 6], w: 5 }],
-  closet: [{ r: 'cloth', n: [3, 7], w: 6 }, { i: 'jacket', w: 0.5 }, { i: 'packS', w: 0.3 }, { i: 'shoes', w: 0.4 }, { r: 'cash', n: [5, 20], w: 1 }],
+  closet: [{ r: 'cloth', n: [3, 7], w: 6 }, { i: 'jacket', w: 0.5 }, { i: 'padded', w: 0.45 }, { i: 'packS', w: 0.3 }, { i: 'shoes', w: 0.4 }, { i: 'helmet', w: 0.12 }, { r: 'cash', n: [5, 20], w: 1 }],
   desk: [{ r: 'cash', n: [5, 25], w: 4 }, { r: 'parts', n: [1, 2], w: 2 }, { r: 'electronics', n: [1, 2], w: 1.5 }, { r: 'cloth', n: [1, 3], w: 1 }, { r: 'schematic', n: [1, 1], w: 0.35 }, { i: 'flashlight', w: 0.4 }, { i: 'pistol', w: 0.12 }],
   books: [{ r: 'cloth', n: [1, 3], w: 2 }, { r: 'cash', n: [3, 12], w: 2 }, { r: 'wood', n: [2, 4], w: 2 }, { r: 'schematic', n: [1, 1], w: 0.6 }],
   trash: [{ r: 'cloth', n: [1, 3], w: 3 }, { r: 'scrap', n: [2, 5], w: 4 }, { r: 'parts', n: [1, 1], w: 1 }, { r: 'food', n: [1, 2], w: 2 }],
   shelf: [{ r: 'food', n: [3, 8], w: 6 }, { r: 'water', n: [3, 7], w: 5 }, { r: 'meds', n: [1, 2], w: 0.6 }, { r: 'cloth', n: [1, 4], w: 1 }, { r: 'chemicals', n: [1, 3], w: 0.8 }],
   register: [{ r: 'cash', n: [20, 60], w: 1 }],
   tools: [{ r: 'carBattery', n: [1, 1], w: 0.35 }, { r: 'scrap', n: [3, 8], w: 4 }, { r: 'metal', n: [2, 5], w: 3 }, { r: 'parts', n: [1, 4], w: 3 }, { r: 'bolts', n: [6, 20], w: 3 }, { r: 'wood', n: [3, 8], w: 3 }, { r: 'chemicals', n: [1, 3], w: 1 }, { i: 'pipe', w: 0.5 }, { i: 'crowbar', w: 0.4 }, { i: 'bat', w: 0.3 }, { i: 'toolkit', w: 0.2 }, { i: 'lockpicks', w: 0.15 }, { i: 'machete', w: 0.12 }],
-  medcab: [{ r: 'meds', n: [1, 4], w: 6 }, { r: 'cloth', n: [2, 4], w: 2 }, { r: 'chemicals', n: [1, 2], w: 1 }, { r: 'medkit', n: [1, 1], w: 0.8 }],
+  medcab: [{ r: 'meds', n: [1, 4], w: 6 }, { r: 'cloth', n: [2, 4], w: 2 }, { r: 'chemicals', n: [1, 2], w: 1 }, { r: 'medkit', n: [1, 1], w: 0.8 }, { i: 'gasmask', w: 0.15 }],
   locker: [{ r: 'cloth', n: [2, 5], w: 3 }, { r: 'pammo', n: [8, 24], w: 3 }, { r: 'cash', n: [10, 30], w: 2 }, { i: 'jacket', w: 0.4 }, { i: 'vest', w: 0.25 }, { i: 'flashlight', w: 0.4 }, { i: 'pistol', w: 0.25 }, { i: 'walkie', w: 0.08 }, { i: 'binoculars', w: 0.12 }],
   gunlocker: [{ r: 'pammo', n: [20, 50], w: 4 }, { r: 'rammo', n: [10, 30], w: 2 }, { r: 'shells', n: [8, 20], w: 2 }, { i: 'pistol', w: 1 }, { i: 'revolver', w: 0.6 }, { i: 'shotgun', w: 0.5 }, { i: 'rifle', w: 0.3 }, { i: 'smg', w: 0.2 }, { i: 'ar', w: 0.07 }, { i: 'vest', w: 0.3 }],
   safe: [{ r: 'cash', n: [80, 220], w: 5 }, { r: 'meds', n: [2, 5], w: 1 }, { r: 'electronics', n: [2, 4], w: 1 }, { r: 'schematic', n: [1, 1], w: 0.6 }, { r: 'core', n: [1, 1], w: 0.2 }, { i: 'revolver', w: 0.4 }, { i: 'walkie', w: 0.2 }, { i: 'katana', w: 0.04 }],
@@ -942,7 +972,7 @@ const P = {
   dumpster: [{ r: 'food', n: [1, 3], w: 2 }, { r: 'cloth', n: [2, 5], w: 3 }, { r: 'scrap', n: [3, 7], w: 4 }, { r: 'bolts', n: [3, 10], w: 1 }, { r: 'wood', n: [2, 5], w: 2 }, { r: 'parts', n: [1, 2], w: 1 }],
   electronic: [{ r: 'electronics', n: [2, 5], w: 5 }, { r: 'parts', n: [1, 3], w: 2 }, { r: 'scrap', n: [2, 4], w: 2 }, { r: 'schematic', n: [1, 1], w: 0.35 }, { r: 'core', n: [1, 1], w: 0.05 }],
   chem: [{ r: 'chemicals', n: [2, 6], w: 6 }, { r: 'fuel', n: [1, 3], w: 1 }, { r: 'meds', n: [1, 2], w: 0.5 }, { r: 'specimen', n: [1, 1], w: 0.25 }],
-  fireLocker: [{ r: 'meds', n: [1, 3], w: 2 }, { r: 'cloth', n: [3, 6], w: 2 }, { r: 'medkit', n: [1, 1], w: 1 }, { i: 'axe', w: 0.6 }, { i: 'jacket', w: 0.5 }, { i: 'flashlight', w: 0.5 }, { i: 'crowbar', w: 0.5 }, { i: 'thermal', w: 0.03 }],
+  fireLocker: [{ r: 'meds', n: [1, 3], w: 2 }, { r: 'cloth', n: [3, 6], w: 2 }, { r: 'medkit', n: [1, 1], w: 1 }, { i: 'axe', w: 0.6 }, { i: 'jacket', w: 0.5 }, { i: 'flashlight', w: 0.5 }, { i: 'crowbar', w: 0.5 }, { i: 'gasmask', w: 0.35 }, { i: 'helmet', w: 0.2 }, { i: 'thermal', w: 0.03 }],
   shed: [{ r: 'wood', n: [4, 9], w: 3 }, { r: 'scrap', n: [3, 8], w: 3 }, { r: 'coal', n: [2, 6], w: 1.5 }, { r: 'fuel', n: [1, 4], w: 2 }, { r: 'chemicals', n: [1, 3], w: 1 }, { i: 'crowbar', w: 0.3 }, { i: 'bat', w: 0.2 }],
 }
 
@@ -1012,6 +1042,43 @@ export const ROOMS = {
 }
 
 // Location types. size = building footprint (m). layout drives room generation.
+// Where the camp is, chosen when it starts. Each site changes what the yard
+// gives, how far the city is, how hard the dead come, and the land round it.
+// fx: station rate multipliers, forage multipliers (and fish), trips, horde
+// size, winter heat, damage to the wall; start: changes to the first stores.
+export const SITES = {
+  lumber: {
+    name: 'The Lumber Yard', short: 'Lumber yard', icon: 'wood',
+    desc: 'An old timber yard where the woods meet the north road. Stacks of logs, a saw shed, the forest at your back.',
+    pros: ['The yard forages half as much wood again', 'The Lumber Yard works 15% faster', 'A middling drive to the city'],
+    cons: ['Nothing special for food or water'],
+    fx: { forage: { wood: 1.5 }, station: { lumber: 1.15 } },
+  },
+  farm: {
+    name: 'Hollis Farm', short: 'Farmstead', icon: 'food',
+    desc: 'A farmhouse, barns and a well out past the city limits. Good soil, few of the dead, a long way from anything.',
+    pros: ['Farms, coops and goat pens give 25% more', 'Rain collectors and filters give 20% more', 'Hordes come 15% smaller', 'Starts with more food and water'],
+    cons: ['Trips to the city take 30% longer, and cost more to make', 'Little scrap: the yard forages 40% less'],
+    fx: { station: { farm: 1.25, coop: 1.25, goatpen: 1.25, collector: 1.2, filter: 1.2 }, forage: { scrap: 0.6 }, travel: 1.3, horde: 0.85 },
+    start: { food: 30, water: 20, scrap: -25 },
+  },
+  depot: {
+    name: 'Rail Depot', short: 'Industrial', icon: 'metal',
+    desc: 'A freight depot on the rail spur by the industrial district: containers, cranes and cracked concrete. Close to everything, including the dead.',
+    pros: ['The yard forages twice the scrap, and metal too', 'The Scrap Yard and the Forge work 20% faster', 'Trips to the city are 25% shorter', 'Starts with metal and parts'],
+    cons: ['Hordes come 20% bigger', 'Poor soil: farms give 20% less'],
+    fx: { station: { scrapyard: 1.2, forge: 1.2, farm: 0.8 }, forage: { scrap: 2, metal: 1.5 }, travel: 0.75, horde: 1.2 },
+    start: { metal: 25, parts: 6, food: -15 },
+  },
+  marina: {
+    name: 'Riverside Marina', short: 'Riverside', icon: 'water',
+    desc: 'A boatyard on the river bank, the water at your back and the wind off it. Boats on blocks, a jetty, the far shore.',
+    pros: ['Collectors and filters give 50% more', 'Fish: people without a job bring in food from the river', 'The river guards one side: the wall takes 15% less damage'],
+    cons: ['Cold off the water: winter heating costs 30% more', 'Little timber: the yard forages half the wood'],
+    fx: { station: { collector: 1.5, filter: 1.5 }, forage: { wood: 0.5, food: 1 }, heat: 1.3, wall: 0.85 },
+    start: { water: 30 },
+  },
+}
 export const LOCATIONS = {
   house: { name: 'House', level: 1, names: ['Maple St. House', 'Birch Lane House', 'Harlow House', 'Duplex on 3rd', 'Corner House', 'Pine Ave. House', 'Elm Row House'], size: [18, 14], wall: '#b9a58a', ext: 'siding', extColor: ['#c8b89a', '#a8b4b8', '#c8a888', '#9aa88a', '#d0c8b0'], layout: 'house', rooms: ['kitchen', 'living', 'bedroom', 'bedroom', 'bathroom', 'garage'], yard: 'house', blurb: 'Kitchens and closets. Food, water and cloth, maybe a garage.' },
   apartment: { name: 'Apartments', level: 1, names: ['Rosewood Apartments', 'Kestrel Flats', 'Elm Court', 'The Carlyle'], size: [26, 18], wall: '#a99c8c', ext: 'brick', layout: 'corridor', rooms: ['lobby', 'kitchen', 'living', 'bedroom', 'bathroom', 'kitchen', 'bedroom', 'living', 'bedroom', 'bathroom'], yard: 'street', tall: { floors: [2, 4], up: [['kitchen', 'living', 'bedroom', 'bathroom', 'bedroom', 'kitchen', 'living', 'bedroom']], roof: 'roof', helipad: 4 }, blurb: 'A block of small flats, two to four floors high. Food, cloth, a little cash.' },

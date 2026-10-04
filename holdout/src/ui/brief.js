@@ -9,6 +9,7 @@ import { view } from '../render/view.js'
 import * as THREE from 'three'
 import { sfx } from '../core/audio.js'
 import { plural } from './common.js'
+import { pendingHappenings, happeningLabel } from '../game/events.js'
 import { showProgressTab } from './progresspanel.js'
 import { alertRules } from './alerts.js'
 import { icon } from './icons.js'
@@ -74,6 +75,11 @@ export function alerts(ui) {
   const stopped = (S.links || []).filter((l) => !P.powered.has(l.id))
   if (stopped.length) out.push({ sev: 'bad', key: 'beltpower', link: stopped[0], text: `${plural(stopped.length, 'belt')} stopped: no power`, sub: `They need ${(P.beltNeed || 0).toFixed(1)} power between them`, act: 'Power', fn: () => ui.openPower() })
   if ((S.morale ?? 50) < 30) out.push({ sev: S.morale < 18 ? 'bad' : 'warn', key: 'morale', text: `Morale is low (${Math.round(S.morale)})`, sub: S.morale < 18 ? 'People will start leaving' : 'Beds, hot food and the fire help', act: 'Morale', fn: () => ui.openMorale() })
+  // camp life waiting on a word: a feast, a funeral
+  for (const e of pendingHappenings()) {
+    const L = happeningLabel(e)
+    out.push({ sev: 'info', key: 'hp' + e.id, text: L.text, sub: L.sub, act: e.kind === 'feast' ? 'Feast' : 'Decide', fn: () => ui.showHappening(e) })
+  }
   if (S.recruit?.pending) out.push({ sev: 'info', key: 'gate', text: 'Someone is at the gate', sub: S.recruit.pending.s?.name || 'They want to join', act: 'Meet', fn: () => ui.showRecruit() })
   const done = GOALS.filter((x) => S.goals?.[x.id] === 'done')
   if (done.length) out.push({ sev: 'good', key: 'claim', text: `${plural(done.length, 'task')} done`, sub: 'Rewards waiting', act: 'Claim', fn: () => (done.forEach((x) => claimGoal(x.id)), sfx('coin'), ui.toast(`Claimed ${plural(done.length, 'reward')}`, 'good')) })
@@ -188,7 +194,7 @@ export function nextUp(ui) {
   // a place to clear, nearest first, at a level the camp can handle
   const L = liberation()
   if (L.total && S.stats?.runs) {
-    const cand = (S.cityLocs || []).filter((l) => l.type !== 'military' && !isCleared(l.id) && l.level <= Math.min(5, 1 + campTier()))
+    const cand = (S.cityLocs || []).filter((l) => l.type !== 'military' && !l.minor && !isCleared(l.id) && l.level <= Math.min(5, 1 + campTier()))
     const known = cand.filter((l) => S.places?.[l.id]?.left != null).sort((a, b) => S.places[a.id].left - S.places[b.id].left)
     const pick = known[0] || cand.sort((a, b) => a.level - b.level)[0]
     if (pick) out.push({ kind: `Liberation · ${Math.round(L.pct * 100)}%`, text: `Clear ${pick.name}`, sub: S.places?.[pick.id]?.left != null ? `${S.places[pick.id].left} infected left inside` : `${LOCATIONS[pick.type].name}, level ${pick.level}`, fn: () => g.openMap?.(pick.id) })

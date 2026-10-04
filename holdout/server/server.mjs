@@ -103,6 +103,7 @@ function startCamp(code, { create = null } = {}) {
       if (to) send(room.guests.get(to), { op: 'f', from: 'server', f: m.f })
       else for (const g of room.guests.values()) send(g, { op: 'f', from: 'server', f: m.f })
     } else if (m.save) saveCamp(code, m.save, m.meta)
+    else if (m.c2c) routeC2C(code, m.c2c)
     else if (m.info) room.info = { ...m.info, kind: 'server' }
     else if (m.debugReply != null) send(clients.get(room.debugWho), { op: 'debug', id: m.debugReply, result: m.result, error: m.error })
     else if (m.ready) {
@@ -119,6 +120,26 @@ function startCamp(code, { create = null } = {}) {
   rooms.set(code, room)
   log(`camp ${code} ${create ? 'created' : 'loaded'}`)
   return room
+}
+// A message from one always-on camp to another (game/rivals.js): into the
+// target's worker, loading it from disk if it is put away. One that can't
+// be delivered goes back to its sender, which returns what it held.
+async function routeC2C(fromCode, m) {
+  const to = String(m?.to || '')
+  let room = rooms.get(to)
+  if (!room || room.kind !== 'server') room = index[to] && !index[to].over ? startCamp(to) : null
+  if (!room) return bounce(fromCode, m)
+  try {
+    await room.ready
+    room.worker.postMessage({ c2c: { from: { code: fromCode, name: String(m.from?.name || fromCode).slice(0, 40) }, msg: m.msg } })
+    emptyCheck(room)
+  } catch {
+    bounce(fromCode, m)
+  }
+}
+function bounce(code, m) {
+  const r = rooms.get(code)
+  if (r?.kind === 'server') r.worker.postMessage({ c2cBounce: m.msg })
 }
 function stopCamp(room) {
   if (room.stopping) return
@@ -281,7 +302,7 @@ async function handle(c, m) {
       let code
       do code = newCode()
       while (rooms.has(code) || index[code])
-      const create = { pid, pname: clean(m.pname, 20) || 'Survivor', name: clean(m.name, 40) || 'The Holdout', public: m.public !== false, mode: m.mode === 'once' ? 'once' : 'restock' }
+      const create = { pid, pname: clean(m.pname, 20) || 'Survivor', name: clean(m.name, 40) || 'The Holdout', public: m.public !== false, mode: m.mode === 'once' ? 'once' : 'restock', site: ['lumber', 'farm', 'depot', 'marina'].includes(m.site) ? m.site : 'lumber' }
       const room = startCamp(code, { create })
       if (!room) return send(c, { op: 'err', why: 'busy' })
       try {

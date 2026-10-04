@@ -22,6 +22,8 @@ export function renderJournal(ui) {
   const tabs = h(
     'div.tabs',
     [['story', 'Story'], ['notes', `Notes${st.unread.length ? ` (${st.unread.length} new)` : ''}`], ['log', 'Camp log']].map(([id, label]) => h('button' + (tab === id ? '.on' : ''), { onclick: () => ((tab = id), sfx('click'), ui.refreshPanel(true)) }, label)),
+    // the records (kills by weapon, bests, achievements) have their own panel
+    h('button', { onclick: () => (sfx('click'), ui.openRecords()) }, 'Records'),
   )
   const active = Object.values(st.threads).filter((t) => !t.done).length + st.personal.filter((p) => !p.done && !p.failed).length
   if (tab === 'notes' && st.unread.length) st.unread = []

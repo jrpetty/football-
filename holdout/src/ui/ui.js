@@ -31,7 +31,9 @@ import { volumeControl } from './volume.js'
 import { callName, fullName } from '../game/deeds.js'
 import { fullscreenButton } from './fullscreen.js'
 import { playEnding } from './ending.js'
-import { cityVictoryModal, victoryModal, renderMarket, renderFence, renderExpansion, renderProduction, renderPower, renderMorale, renderSettings, recruitModal, raidReportModal, missionReportModal, gameOverModal, menuModal, hordeInfo } from './camppanels.js'
+import { renderRecords } from './records.js'
+import { renderRivals } from './rivalpanel.js'
+import { cityVictoryModal, victoryModal, renderMarket, renderFence, renderExpansion, renderProduction, renderPower, renderMorale, renderSettings, recruitModal, happeningModal, raidReportModal, missionReportModal, gameOverModal, menuModal, hordeInfo } from './camppanels.js'
 import { watchTrades } from './lockerui.js'
 
 const NAV = [
@@ -496,6 +498,10 @@ export class UI {
   openMorale() {
     this.openPanel('morale', () => renderMorale(this), { live: true })
   }
+  // this camp's numbers, every camp's bests, achievements (ui/records.js)
+  openRecords() {
+    this.openPanel('records', () => renderRecords(this), { live: true })
+  }
   openSettings() {
     this.modal(renderSettings(this), { small: true })
   }
@@ -603,6 +609,10 @@ export class UI {
   openPlayers() {
     this.openPanel('players', () => renderPlayers(this), { live: true, wide: true })
   }
+  // the other always-on camps on the server (ui/rivalpanel.js)
+  openRivals() {
+    this.openPanel('rivals', () => renderRivals(this), { live: true, wide: true })
+  }
   netProblem(code) {
     const why = { not_permitted: 'Hosting here needs permission to send to the artifact’s live room: edit access, or contributor access if the owner opened it up. You can still join a friend’s camp, or host from the standalone file.', 'code-taken': 'Another camp is already using this code (or the last session has not timed out yet).', offline: 'The connection service could not be reached. Check your internet connection.', timeout: 'The connection service did not answer in time.' }[code] || `Something went wrong (${code}).`
     let close
@@ -643,6 +653,10 @@ export class UI {
   showRecruit() {
     if (!S.recruit.pending) return
     this.modal(recruitModal(this), { small: false })
+  }
+  // a feast or a funeral waiting on a word (game/events.js)
+  showHappening(e) {
+    this.modal(happeningModal(this, e), { small: true })
   }
   raidReport(r) {
     this.modal(raidReportModal(this, r), { small: true })

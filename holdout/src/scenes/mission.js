@@ -45,6 +45,8 @@ import { CoopMixin, agentStatus, stopTap } from './missioncoop.js'
 import { TrapsMixin } from './missiontraps.js'
 import { BarricadeMixin, BARRICADE_HP } from './missionbarricade.js'
 import { MissionFPMixin } from './missionfp.js'
+import { DoorsMixin } from './missiondoors.js'
+import { offerFeast } from '../game/events.js'
 import { volumeControl } from '../ui/volume.js'
 import { fullscreenButton } from '../ui/fullscreen.js'
 
@@ -670,11 +672,8 @@ export class Mission {
         // roll-up door, rolled up
         b.box(alongX ? 1.0 : 0.3, 0.4, alongX ? 0.3 : 1.0, { ...m('roofmetal'), color: '#c8c8c0', x: c.x, y: 0.05 + 2.4, z: c.z })
       } else if (d.wide === 1) {
-        // the door itself, swung open against the wall
-        const s = (d.i + d.j) % 2 ? 1 : -1
-        const hx = alongX ? c.x - 0.45 : c.x + s * 0.45
-        const hz = alongX ? c.z + s * 0.45 : c.z - 0.45
-        b.box(alongX ? 0.05 : 0.86, 2.05, alongX ? 0.86 : 0.05, { ...m(ex ? 'paint' : 'wood'), color: ex ? pick(['#5a3a2a', '#2a3a4a', '#6a2a2a', '#e8e4dc']) : '#c8a880', x: hx, y: 0.05 + 1.03, z: hz })
+        // the door itself, on a hinge (scenes/missiondoors.js): open to start
+        this.makeDoorLeaf(d, k, c, alongX, m(ex ? 'paint' : 'wood'), ex ? pick(['#5a3a2a', '#2a3a4a', '#6a2a2a', '#e8e4dc']) : '#c8a880')
       } else if (d.part === 0) {
         // shop doors: glass, both pushed open
         const s = alongX ? 1 : -1
@@ -1789,7 +1788,8 @@ export class Mission {
     const z = this.agentAt(x, y, this.zombies.filter((z) => !z.dead))
     const c = this.containerAt(x, y)
     const t = this.trapAt(x, y)
-    const opts = [s && { type: 'survivor', a: s.a, d: s.d - 0.6 }, z && !z.a.fogHidden && { type: 'zombie', z: z.a, d: z.d - 0.4 }, c && { type: 'container', c: c.c, d: c.d }, t && { type: 'trap', c: t.t, d: t.d - 0.5 }].filter(Boolean)
+    const dr = this.doorList?.length ? this.doorAtScreen(screenRay(x, y).ray) : null
+    const opts = [s && { type: 'survivor', a: s.a, d: s.d - 0.6 }, z && !z.a.fogHidden && { type: 'zombie', z: z.a, d: z.d - 0.4 }, c && { type: 'container', c: c.c, d: c.d }, t && { type: 'trap', c: t.t, d: t.d - 0.5 }, dr && { type: 'door', D: dr.D, d: dr.d + 0.3 }].filter(Boolean)
     opts.sort((a, b) => a.d - b.d)
     return opts[0] || null
   }
@@ -1883,6 +1883,13 @@ export class Mission {
       if (command && this.selected.size) return this.defaultAction(hit.c)
       return this.openMenu(hit.c, x, y)
     }
+    if (hit?.type === 'door') {
+      // someone goes and shuts it (or opens it)
+      const helper = this.pickHelper({ x: hit.D.x, z: hit.D.z })
+      if (!helper) return this.toast('Select a survivor first: click them, their card, or drag a box.')
+      if (helper.command({ type: 'door', D: hit.D }) !== false) sfx('move')
+      return
+    }
     if (!command) {
       if (!e.shift) this.select(null)
       return
@@ -1937,11 +1944,12 @@ export class Mission {
       this.tip.hidden = true
       return
     }
-    const c = hit?.type === 'container' || hit?.type === 'trap' ? hit.c : null
+    const c = hit?.type === 'container' || hit?.type === 'trap' ? hit.c : hit?.type === 'door' ? hit.D : null
     if (c !== this.hoverC) {
       this.hoverC = c
       this.tip.hidden = !c
-      if (c?.def?.isTrap) this.tip.innerHTML = `<b>${c.def.name}</b><span>${c.trap.desc}</span><small>Right-click: disarm for parts</small>`
+      if (hit?.type === 'door') this.tip.innerHTML = `<b>${c.ext ? 'Outside door' : 'Door'}</b><span>${c.shut ? `Shut: it stops the dead, and their eyes, until they break it (${Math.round((c.hp / c.max) * 100)}%)` : 'Open'}</span><small>Click: ${c.shut ? 'open it' : 'shut it'}</small>`
+      else if (c?.def?.isTrap) this.tip.innerHTML = `<b>${c.def.name}</b><span>${c.trap.desc}</span><small>Right-click: disarm for parts</small>`
       else if (c?.drive) this.tip.innerHTML = c.drive.started ? `<b>Your car</b><span>Engine running: it drives home with you.</span>` : `<b>${c.def.name}</b><span>This one might still run. ${c.drive.keys ? 'You have its keys.' : 'Find the keys inside, or hotwire it.'}</span><small>Click for options</small>`
       else if (c?.def?.power) this.tip.innerHTML = this.powered ? `<b>${c.def.name}</b><span>Running. The lights are on and the lift works.</span>` : `<b>${c.def.name}</b><span>Start it for the lights and the lift. Everything nearby will hear it.</span><small>Right-click: start it</small>`
       else if (c) this.tip.innerHTML = `<b>${c.def.name}</b><span>${c.stash ? 'Loot left inside' : c.searched ? 'Searched · can be broken down' : c.locked ? 'Locked' : 'Not searched'}</span><small>Right-click: ${c.stash || !c.searched ? 'search' : 'break down'}</small>`
@@ -2281,6 +2289,7 @@ export class Mission {
     if (this.remote) {
       this.coopJoinerTick(dt)
       this.updateBarricades(dt, true)
+      this.updateDoors(dt)
     } else if (!this.paused) {
       this.elapsed += dt
       this.time += dt
@@ -2302,6 +2311,7 @@ export class Mission {
       const all = [...this.squad, ...this.zombies.filter((z) => !z.dead)]
       for (const x of all) x.separate(dt, all)
       this.updateBarricades(dt)
+      this.updateDoors(dt)
       this.zombies = this.zombies.filter((z) => {
         if (z.dead && z.deadT > 6) {
           z.remove()
@@ -2802,6 +2812,8 @@ export class Mission {
     }
     storyRunEnd(this.loc.id, result, report)
     diaryRunEnd(this.squad.map((a) => a.data), report)
+    // a heavy haul: the camp may want to celebrate (game/events.js)
+    if (result === 'extracted' && report.loot) offerFeast(report.loot)
     if (this.coop) this.coopEnd(result, report)
     this.game.endMission(report)
   }
@@ -2830,7 +2842,7 @@ export class Mission {
     this.disposeVision()
   }
 }
-Object.assign(Mission.prototype, VisionMixin, TrapsMixin, CoopMixin, BarricadeMixin, MissionFPMixin)
+Object.assign(Mission.prototype, VisionMixin, TrapsMixin, CoopMixin, BarricadeMixin, MissionFPMixin, DoorsMixin)
 
 // A rectangle with a hole taken out of it, as up to four rectangles.
 function rectMinus(r, h) {

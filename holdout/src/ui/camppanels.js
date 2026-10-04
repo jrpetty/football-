@@ -17,6 +17,7 @@ import { canNotify, askNotify } from './notify.js'
 import { bus, h, fmt, clamp } from '../core/util.js'
 import { icon } from './icons.js'
 import { costList, resChip, bar, qualityTag, itemCard, skillRows, traitTags, seg, plural, resIcon } from './common.js'
+import { campVote, FEAST, FUNERAL, holdFeast, holdFuneral } from '../game/events.js'
 
 // ---------------------------------------------------------------- trade
 let tradeTab = 'buy'
@@ -464,10 +465,40 @@ export function recruitModal(ui) {
     ),
     skillRows(s),
     full ? h('p.note.bad', `No free bed (${S.survivors.length}/${beds}). Build or upgrade a Bunkhouse to take them in.`) : h('p.note', 'Another mouth to feed, another pair of hands.'),
+    // the camp's say: everyone votes, and going against them stings
+    p.vote
+      ? h(
+          'section.card.vote',
+          h('h3', 'The camp voted', h('small', `${p.vote.yes} let them in · ${p.vote.no} keep the gate shut`)),
+          ...p.vote.lines.slice(0, 6).map((l) => h('div.kv', h('span', l.name), h('small' + (l.yes ? '.good' : '.bad'), `${l.yes ? 'Yes' : 'No'}: “${l.text}”`))),
+          p.vote.yes !== p.vote.no ? h('p.note', `Go with them and morale rises a little; overrule them and it drops.`) : h('p.note', 'Split down the middle: it’s your call.'),
+        )
+      : h('button.btn.ghost.small', { onclick: () => (campVote(p), ui.closeModal(), ui.showRecruit()) }, 'Put it to a vote'),
     h(
       'div.mactions',
       h('button.btn.ghost', { onclick: () => (declineRecruit(), ui.closeModal()) }, 'Turn away'),
       h('button.btn.go', { disabled: full, onclick: () => (acceptRecruit() ? (sfx('levelup'), ui.toast(`${s.first} joined the camp`, 'good')) : null, ui.closeModal()) }, 'Let them in'),
+    ),
+  )
+}
+// A feast after a big haul, a funeral for someone lost.
+export function happeningModal(ui, e) {
+  const feast = e.kind === 'feast'
+  const cost = feast ? FEAST : FUNERAL
+  const ok = canAfford(cost)
+  const close = () => ui.closeModal()
+  return h(
+    'div.happen',
+    h('h2', feast ? 'A big haul came home' : `${e.name} is gone`),
+    feast
+      ? h('p', 'The runners came back heavy. Eat well tonight, a proper meal round the fire, and the camp will remember it for days.')
+      : h('p', `${e.full}. ${e.cause ? e.cause + '.' : ''} A pyre at sundown and a few words: the grief doesn't go, but it's carried together.`),
+    h('div.kv', h('span', 'It takes'), costList(cost)),
+    h('p.note', feast ? 'Morale +9 for two days.' : 'Halves the blow to morale from their death, and +3 for a day and a half.'),
+    h(
+      'div.mactions',
+      h('button.btn.ghost', { onclick: () => ((e.done = 'declined'), close()) }, feast ? 'Save it' : 'Not now'),
+      h('button.btn.go', { disabled: !ok, onclick: () => ((feast ? holdFeast(e) : holdFuneral(e)) ? (sfx('levelup'), ui.toast(feast ? 'A feast tonight' : `The camp said goodbye to ${e.name}`, 'good')) : null, close()) }, feast ? 'Hold the feast' : 'Hold the funeral'),
     ),
   )
 }

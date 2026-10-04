@@ -53,6 +53,7 @@ export function renderPlayers(ui) {
       'section.card.mp-code',
       h('div.mpc-main', h('small', 'Camp code'), h('b.code', mp.code), h('button.btn.small', { onclick: copy }, h('i', { html: icon('log') }), 'Copy')),
       h('div.mpc-side', h('span.netdot.' + st[1]), h('span', st[0]), h('small.dim', net.c?.kind === 'room' ? 'via Claude' : net.c?.kind === 'peer' ? 'browser to browser' : net.c?.kind === 'tabs' ? 'between tabs' : '')),
+      mp.server ? h('button.btn.small', { onclick: () => ui.openRivals() }, h('i', { html: icon('people') }), 'Rival camps') : null,
       mp.server
         ? h('p.note', 'An always-on camp: it lives on the server, so anyone with the code can come and go. While nobody is here the crew keeps working at a slow pace and the clock waits, as in single player. When a horde comes, a player in camp fights it live for everyone.')
         : host

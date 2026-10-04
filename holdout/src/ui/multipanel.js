@@ -4,7 +4,7 @@
 // free hands, and set production targets for every one that makes the same
 // thing.
 import { STATIONS, RES } from '../game/data.js'
-import { S, upgradeCost, startUpgrade, canAfford, workersOf, slots, assign, workEff, canControl } from '../game/state.js'
+import { S, upgradeCost, startUpgrade, canAfford, workersOf, slots, assign, workEff, canControl, canWorkAt } from '../game/state.js'
 import { isAutomated, power } from '../game/economy.js'
 import { sfx } from '../core/audio.js'
 import { h } from '../core/util.js'
@@ -52,7 +52,7 @@ export function renderMulti(ui) {
     let n = 0
     for (const st of needHands) {
       while (workersOf(st).length < slots(st)) {
-        const free = S.survivors.filter((s) => !s.job && s.status === 'ok' && canControl(s)).sort((a, b) => workEff(b, st.type) - workEff(a, st.type))
+        const free = S.survivors.filter((s) => !s.job && s.status === 'ok' && canControl(s) && canWorkAt(s, st.type)).sort((a, b) => workEff(b, st.type) - workEff(a, st.type))
         if (!free.length || !assign(free[0], st)) break
         n++
       }

@@ -7,7 +7,7 @@
 // comes home hours later with the numbers (and, if it was near, where the
 // horde was last seen and which way it was heading). Scouting is slow and
 // not without risk.
-import { S, day, log, placeOf, survivorStats, killSurvivor, exposeInfection, addMoraleEvent, getS } from './state.js'
+import { S, day, log, placeOf, survivorStats, killSurvivor, exposeInfection, addMoraleEvent, getS, canFight } from './state.js'
 import { LOCATIONS, DAY_MIN, zombieMix, INFECTION } from './data.js'
 import { genCity } from '../world/city.js'
 import { bus, clamp, chance, rint, rand, weighted } from '../core/util.js'
@@ -150,7 +150,7 @@ export function spawnCount(loc, floors = 1) {
 // ---------------------------------------------------------------- scouts
 export const SCOUT = { watch: [240, 360], hunt: [480, 720], footSpeed: 1 / 3 }
 // Who is fit to go: on their feet and in camp.
-export const canScout = (s) => !!s && s.status === 'ok' && !(s.infection >= INFECTION.sick)
+export const canScout = (s) => !!s && s.status === 'ok' && canFight(s) && !(s.infection >= INFECTION.sick)
 // How quiet they are: 1 is anyone, less is better.
 export function stealthOf(s) {
   const st = survivorStats(s)

@@ -15,7 +15,8 @@ the three below that take their places are new.
    with a board of who held and what it cost them.
 3. **Rival camps.** Other survivor groups on the city map, run by the game or
    by other players: they trade, steal from outposts, race you to story items
-   and sometimes attack.
+   and sometimes attack. *Partly built:* always-on camps on one server
+   can now trade, ally and raid each other (see the README's Rival camps).
 4. **Act two: the coast.** After the evacuation, the story continues at Port
    Halden: a new map, boats instead of vans, a quarantine zone with its own
    politics, and harder infected.

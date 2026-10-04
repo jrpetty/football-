@@ -423,7 +423,7 @@ export function genCity(seed) {
     locs.push(loc)
   }
   // sites: where the building stands inside its lot, and the door on the street
-  for (const loc of locs) {
+  const siteFor = (loc) => {
     const L = LOCATIONS[loc.type]
     const lot = loc.lot
     const S = SITE[L.yard] || SITE.lot
@@ -440,6 +440,7 @@ export function genCity(seed) {
     loc.z = lotToWorld(lot, bx, bz).z
     loc.door = p
   }
+  for (const loc of locs) siteFor(loc)
   // levels and danger by distance (a location's type fixes its level)
   for (const loc of locs) loc.dCamp = Math.hypot(loc.x - camp.x, loc.z - camp.z) / maxD
 
@@ -499,6 +500,42 @@ export function genCity(seed) {
     l.bld.fire = true
     l.bld.state = 'burnt'
     fires.push({ x: l.cx, z: l.cz, s: l.fw > 40 ? 1.6 : 1 })
+  }
+
+  // ---------------------------------------------------------------- side streets
+  // Most of the city's ordinary buildings can be searched too: smaller, quieter
+  // places (a house on Willow St., a shop on Fifth) that don't count toward
+  // clearing the city or carry the story. Their own dice, after everything
+  // else, so the main places and their ids stay as they were.
+  {
+    const RX = seeded(((seed >>> 0) ^ 0x27d4eb2f) + 91)
+    const AS = { house: 'house', shop: 'store', mixed: 'apartment', apartment: 'apartment', office: 'office', warehouse: 'warehouse', factory: 'warehouse', gas: 'gas', tower: 'office' }
+    const streets = ['Willow St.', 'Oak Ave.', 'Fifth', 'Mill Rd.', 'Cedar Ln.', 'Station Rd.', 'Hill St.', 'Market St.', 'Union Ave.', 'Bridge St.', 'Park Rd.', 'Church St.', 'Water St.', 'King St.', 'Ash Grove', 'Linden Ave.']
+    const seen = {}
+    const count = {}
+    let n = 0
+    for (const lot of lots) {
+      const b = lot.bld
+      const t = b && AS[b.kind]
+      if (!t || lot.loc || lot.taken || lot.special || b.state === 'burnt' || b.fire) continue
+      const L = LOCATIONS[t]
+      const S = SITE[L.yard] || SITE.lot
+      if (lot.fw < L.size[0] + S.fx || lot.fd < L.size[1] + S.front + S.back) continue
+      // not crowding the main places, and not every last one
+      if (locs.some((o) => !o.minor && Math.hypot(o.x - lot.cx, o.z - lot.cz) < 40)) continue
+      if (RX() > (t === 'warehouse' ? 0.35 : t === 'house' ? 0.5 : 0.7) || (count[t] || 0) >= 8) continue
+      count[t] = (count[t] || 0) + 1
+      const st = streets[Math.floor(RX() * streets.length)]
+      const key = t + st
+      seen[key] = (seen[key] || 0) + 1
+      const name = `${t === 'store' ? 'Shop' : L.name.replace(/s$/, '')} on ${st}${seen[key] > 1 ? ` (${seen[key]})` : ''}`
+      const loc = { id: 'm' + n++, type: t, level: L.level, name, lot, minor: true }
+      lot.loc = loc
+      lot.bld = null
+      siteFor(loc)
+      loc.dCamp = Math.hypot(loc.x - camp.x, loc.z - camp.z) / maxD
+      locs.push(loc)
+    }
   }
 
   // ---------------------------------------------------------------- road graph

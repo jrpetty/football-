@@ -8,7 +8,7 @@ import { CullView } from '../render/instcull.js'
 import { pineModel, broadleafModel, deadTreeModel, bushModel, boulderModel, stumpModel, fallenLogModel, flowersModel, reedsModel, lowDetail } from '../models/nature.js'
 import { carModel, busModel, containerModel, forkliftModel, pickupModel, vanModel, CAR_COLORS } from '../models/vehicles.js'
 import { Builder, seeded } from '../models/kit.js'
-import { fruitTree, pallet, crate, tireStack, scrapPile, hayBale, barrel, logPile, cableReel, sign, shadeHex, cinderBlocks, plankStack, sack, lampPost, sandbags, tarp, jerrycan, firewood, wheelbarrow } from '../models/parts.js'
+import { fruitTree, pallet, crate, tireStack, scrapPile, hayBale, barrel, logPile, cableReel, sign, shadeHex, cinderBlocks, plankStack, sack, lampPost, sandbags, tarp, jerrycan, firewood, wheelbarrow, gableRoof, cropRow } from '../models/parts.js'
 import { windowPane } from '../models/stationkit.js'
 import { S, BASE, bounds, stationSize, gateTiles } from '../game/state.js'
 import { EXPANSIONS, STATIONS } from '../game/data.js'
@@ -299,14 +299,95 @@ function bikeRack() {
   return b.build()
 }
 
+// The land round the camp, by its site (game/data.js SITES): a farmstead's
+// barn, silo and fields; a depot's rails, containers and a boxcar; a
+// marina's river, jetty and boats. The lumber yard is the land as it was.
+const SITE_LAND = {
+  farm: { lush: '#dcefb0', dry: '#f0dca0', clear: (f) => f.x < 12 && f.z > 34 && f.z < 80 },
+  depot: { lush: '#cfccb4', dry: '#ddd0b2', clear: (f) => (f.z > 4 && f.z < 19) || (f.x > 96 && f.z > 30 && f.z < 80) },
+  marina: { lush: '#d6ecc4', dry: '#e8dcb0', clear: (f) => f.z < 17, flat: { x0: -190, z0: -120, x1: 300, z1: 112 } },
+}
+function siteModel(site) {
+  const b = new Builder()
+  const rnd = seeded(907)
+  if (site === 'farm') {
+    // the barn and its silo out west, the fields beside them
+    b.at({ x: 2, z: 50, ry: Math.PI / 2 }, () => {
+      b.box(14, 6, 10, { mat: 'planks', color: '#8a2e22', y: 3 })
+      gableRoof(b, { w: 14.6, d: 10.6, y: 6, rise: 3.4, mat: 'roofmetal', color: '#5e605c' })
+      b.box(4.2, 4.6, 0.2, { mat: 'planks', color: '#6a2018', y: 2.3, z: 5.08 })
+      for (const sx of [-2.1, 0, 2.1]) b.box(0.16, 4.7, 0.26, { mat: 'paint', color: '#ece4d4', x: sx, y: 2.35, z: 5.14 })
+      b.box(4.2, 0.16, 0.26, { mat: 'paint', color: '#ece4d4', y: 4.66, z: 5.14 })
+      b.box(1.6, 1.4, 0.2, { mat: 'planks', color: '#6a2018', y: 7.4, z: 5.05 })
+    })
+    b.cyl(2.3, 2.3, 11, { mat: 'metal', color: '#b0b4b0', x: 3, y: 5.5, z: 63, seg: 22 })
+    b.sphere(2.3, { mat: 'metal', color: '#8e928e', x: 3, y: 11, z: 63, tl: Math.PI / 2, ws: 22, hs: 8 })
+    for (let r = 0; r < 12; r++) cropRow(b, { x: -14, z: 22 + r * 1.5, len: 22, kind: r % 4 === 3 ? 'cabbage' : 'corn', seed: 40 + r })
+    for (let i = 0; i < 9; i++) hayBale(b, { x: -2 + rnd() * 10, z: 70 + rnd() * 8, ry: rnd() * 3 })
+    // a fence round the fields
+    for (let z = 20; z <= 40; z += 2.5) b.box(0.12, 1.1, 0.12, { mat: 'wood', color: '#7a6248', x: -26, y: 0.55, z })
+    b.box(0.06, 0.08, 20, { mat: 'wood', color: '#8a7058', x: -26, y: 0.9, z: 30 })
+  } else if (site === 'depot') {
+    // a rail spur along the north, a boxcar left on it
+    for (const z of [10.6, 12.1]) b.box(400, 0.16, 0.12, { mat: 'steel', color: '#6a625a', y: 0.2, z })
+    for (let x = -140; x < 260; x += 0.9) b.box(0.24, 0.12, 2.6, { mat: 'wood', color: '#4a3e34', x, y: 0.08, z: 11.35, shadow: false })
+    b.box(400, 0.06, 4.2, { mat: 'gravel', color: '#8a8478', y: 0.03, z: 11.35, shadow: false })
+    b.at({ x: 30, z: 11.35 }, () => {
+      b.box(14, 3.4, 3, { mat: 'paint', color: '#7a3a2a', y: 2.5 })
+      b.box(3, 2.8, 0.1, { mat: 'paint', color: '#6a3022', y: 2.3, z: 1.55 })
+      for (const x of [-5, 5]) for (const z of [-0.7, 0.7]) b.cyl(0.42, 0.42, 0.2, { mat: 'steel', color: '#2a2826', x, y: 0.5, z, rx: Math.PI / 2 })
+    })
+    // a gantry crane over the container stacks
+    for (const x of [100, 118]) for (const z of [34, 70]) b.box(0.6, 12, 0.6, { mat: 'paint', color: '#c89a2a', x, y: 6, z })
+    for (const z of [34, 70]) b.box(19, 0.8, 0.8, { mat: 'paint', color: '#c89a2a', x: 109, y: 12, z })
+    b.box(1, 0.8, 37, { mat: 'paint', color: '#c89a2a', x: 109, y: 12.4, z: 52 })
+  } else if (site === 'marina') {
+    // the river: the far bank, the water, a jetty and boats
+    b.box(520, 0.04, 140, { mat: 'water', color: '#3e5a62', y: 0.1, x: 56, z: -55, shadow: false })
+    b.box(520, 0.3, 4, { mat: 'dirt', color: '#6a5a48', y: 0.05, x: 56, z: 15.4, shadow: false })
+    for (let i = 0; i < 40; i++) b.box(0.8 + rnd(), 0.5, 0.7, { mat: 'concrete', color: shadeHex('#8a8680', -rnd() * 0.2), x: -60 + i * 6 + rnd() * 3, y: 0.15, z: 14.2 + rnd(), ry: rnd() * 3 })
+    b.at({ x: 56, z: 8 }, () => {
+      b.box(2.4, 0.18, 16, { mat: 'planks', color: '#8a7458', y: 0.55 })
+      for (let z = -7.5; z <= 7.5; z += 2.5) for (const x of [-1.1, 1.1]) b.cyl(0.12, 0.12, 1.6, { mat: 'wood', color: '#5a4a38', x, y: 0, z })
+    })
+    const boat = (x, z, ry, len, col, ashore) =>
+      b.at({ x, z, ry, y: ashore ? 0.7 : 0.1 }, () => {
+        // the hull side-on, its bottom sweeping up to the bow, as wide as a boat
+        b.extrude([[-len / 2, 0.15], [len / 2 - 1.3, 0], [len / 2, 0.95], [-len / 2, 0.95]], 1.8, { mat: 'paint', color: col, z: -0.9 })
+        b.box(len, 0.08, 1.9, { mat: 'paint', color: '#e8e4dc', y: 0.97 })
+        b.box(len * 0.3, 0.8, 1.3, { mat: 'paint', color: '#e8e4dc', x: -len * 0.1, y: 1.4 })
+        b.box(len * 0.3 + 0.1, 0.06, 1.4, { mat: 'paint', color: '#3a3a3a', x: -len * 0.1, y: 1.82 })
+        if (ashore) for (const sx of [-len / 3, len / 3]) b.box(0.4, 0.7, 1.6, { mat: 'wood', color: '#5a4a38', x: sx, y: -0.35 })
+      })
+    boat(52.5, 4, 0.05, 6, '#2a4a6a', false)
+    boat(60, 1, -0.1, 5, '#e8e4dc', false)
+    boat(34, 18.4, 0.3, 7, '#8a2e22', true)
+    boat(80, 18.6, -0.2, 6, '#2e5a48', true)
+  }
+  const g = b.build()
+  g.traverse((o) => {
+    if (o.isMesh) {
+      o.castShadow = true
+      o.receiveShadow = true
+    }
+  })
+  return g
+}
+
 export class BaseWorld {
   constructor(base, opts = {}) {
     this.base = base
     const scene = base.scene
     this.scene = scene
     this.splat = new Splat(-44, -44, 200, 0.5)
-    this.terrain = new Terrain(scene, { cx: 56, cz: 56, size: 470, segs: 235, flat: { x0: 4, z0: 4, x1: 108, z1: 112 }, splat: this.splat })
-    this.features = generate(opts.seed ?? 1234)
+    const land = SITE_LAND[S?.site] || null
+    this.terrain = new Terrain(scene, { cx: 56, cz: 56, size: 470, segs: 235, flat: land?.flat || { x0: 4, z0: 4, x1: 108, z1: 112 }, splat: this.splat })
+    if (land) {
+      const tu = this.terrain.material.userData.uniforms
+      tu.uLush.value.set(land.lush)
+      tu.uDry.value.set(land.dry)
+    }
+    this.features = generate(opts.seed ?? 1234).filter((f) => !land?.clear(f))
     this.scatters = {}
     for (const [k, K] of Object.entries(KINDS)) {
       if (!this.features.some((f) => f.kind === k)) continue
@@ -314,6 +395,15 @@ export class BaseWorld {
     }
     this.statics = new THREE.Group()
     this.statics.add(roadModel(), ruinsModel(77))
+    if (land) this.statics.add(siteModel(S.site))
+    // the depot's containers, stacked under the crane
+    if (S?.site === 'depot')
+      for (let i = 0; i < 12; i++) {
+        const c = containerModel({ seed: 300 + i })
+        c.position.set(103 + (i % 3) * 3.1 - 0.5, (Math.floor(i / 6) % 2) * 2.6, 40 + (Math.floor(i / 3) % 2) * 7 + (i >= 6 ? 14 : 0))
+        c.rotation.y = Math.PI / 2
+        this.statics.add(c)
+      }
     this.statics.traverse((o) => {
       if (o.isMesh) {
         o.castShadow = true

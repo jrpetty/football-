@@ -120,6 +120,39 @@ const SFX = {
   step: () => noise(0.07, { type: 'lowpass', freq: 520, freqEnd: 180, gain: 0.07, attack: 0.004 }),
   stepRun: () => noise(0.09, { type: 'lowpass', freq: 700, freqEnd: 200, gain: 0.11, attack: 0.003 }),
   dry: () => tone(2200, 0.03, { type: 'square', gain: 0.05, freqEnd: 1600 }),
+  // reloading: a magazine out and in, a slide or bolt worked, a round thumbed in
+  magOut: () => {
+    noise(0.05, { type: 'bandpass', freq: 2400, q: 3, gain: 0.12 })
+    tone(900, 0.04, { type: 'square', gain: 0.03, freqEnd: 600 })
+  },
+  magIn: () => {
+    noise(0.06, { type: 'bandpass', freq: 1500, q: 2, gain: 0.18 })
+    tone(420, 0.05, { type: 'square', gain: 0.04, freqEnd: 300, delay: 0.02 })
+  },
+  rack: () => {
+    noise(0.07, { type: 'bandpass', freq: 3200, q: 2, gain: 0.14 })
+    noise(0.06, { type: 'bandpass', freq: 1800, q: 2, gain: 0.16 })
+    tone(700, 0.04, { type: 'square', gain: 0.03, delay: 0.06 })
+  },
+  shellIn: () => {
+    noise(0.04, { type: 'bandpass', freq: 2000, q: 3, gain: 0.12 })
+    tone(1100, 0.03, { type: 'triangle', gain: 0.03 })
+  },
+  // a quiet kill from behind
+  takedown: () => {
+    noise(0.14, { type: 'lowpass', freq: 600, freqEnd: 150, gain: 0.22 })
+    tone(90, 0.12, { type: 'sine', gain: 0.18, freqEnd: 50 })
+  },
+  // doors: shut, opened, battered
+  doorShut: () => {
+    noise(0.16, { type: 'lowpass', freq: 500, freqEnd: 120, gain: 0.35 })
+    tone(70, 0.14, { type: 'sine', gain: 0.25, freqEnd: 45 })
+  },
+  doorOpen: () => noise(0.35, { type: 'bandpass', freq: 700, freqEnd: 1100, q: 6, gain: 0.08, attack: 0.08 }),
+  doorBash: () => {
+    noise(0.12, { type: 'lowpass', freq: 800, freqEnd: 150, gain: 0.3 })
+    tone(85, 0.1, { type: 'sine', gain: 0.2, freqEnd: 55 })
+  },
   hitmark: () => tone(1900, 0.035, { type: 'triangle', gain: 0.045, freqEnd: 2400 }),
   killmark: () => {
     tone(1500, 0.05, { type: 'triangle', gain: 0.05, freqEnd: 900 })

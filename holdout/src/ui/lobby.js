@@ -1,6 +1,7 @@
 // The multiplayer card on the title screen: your name, hosting your
 // multiplayer camp (a save of its own, apart from your single-player camp)
 // and joining a friend's, by code or from the list of camps open here.
+import { SITES } from '../game/data.js'
 import { hasSave, MP_SAVE_KEY, MODES } from '../game/state.js'
 import { me, saveMe, writeIntent, PROTO } from '../net/mp.js'
 import { roomLobby, carrierKind, LOBBY_KEY, serverCall } from '../net/transport.js'
@@ -44,11 +45,15 @@ export function lobbyCard(game, { error, code = '', back }) {
   const modeSelect = () => h('select.mini-sel.lb-mode', { 'data-tip': Object.values(MODES).map((m) => `<b>${m.name}</b>${m.desc}`).join('<br><br>') }, Object.entries(MODES).map(([k, m]) => h('option', { value: k }, `${m.name}: ${m.short.toLowerCase()}`)))
   const modeSel = modeSelect()
   const alwaysSel = modeSelect()
+  // where the camp stands (game/data.js SITES)
+  const siteSelect = () => h('select.mini-sel.lb-mode', { 'data-tip': Object.values(SITES).map((x) => `<b>${x.name}</b>${x.desc}<br>+ ${x.pros.join('<br>+ ')}<br>− ${x.cons.join('<br>− ')}`).join('<br><br>') }, Object.entries(SITES).map(([k, x]) => h('option', { value: k }, `${x.name}: ${x.short.toLowerCase()}`)))
+  const siteSel = siteSelect()
+  const alwaysSite = siteSelect()
   const host = (fresh) => {
     const n = keep()
     if (!n) return
     sfx('click')
-    writeIntent({ mode: 'host', fresh, name: n, gameMode: fresh ? modeSel.value : undefined })
+    writeIntent({ mode: 'host', fresh, name: n, gameMode: fresh ? modeSel.value : undefined, site: fresh ? siteSel.value : undefined })
     location.hash = ''
     location.reload()
   }
@@ -78,10 +83,10 @@ export function lobbyCard(game, { error, code = '', back }) {
         h('div', h('b', 'Your multiplayer camp'), h('small', `Day ${Math.floor(mine.time / 1440) + 1} · ${mine.survivors.length} survivors · ${Object.keys(mine.mp?.players || {}).length} players · code ${mine.mp?.code || '?'}`)),
         h('div.lb-row', h('button.btn.go', { onclick: () => host(false) }, 'Host it'), h('button.btn.ghost', { onclick: () => confirmFresh() }, 'New camp')),
       )
-    : h('div.lb-camp', h('div', h('b', 'No multiplayer camp yet'), h('small', 'Start one and invite friends. Your single-player camp is not touched.')), h('div.lb-row', modeSel, h('button.btn.go', { onclick: () => host(true) }, 'Start a camp')))
+    : h('div.lb-camp', h('div', h('b', 'No multiplayer camp yet'), h('small', 'Start one and invite friends. Your single-player camp is not touched.')), h('div.lb-row', modeSel, siteSel, h('button.btn.go', { onclick: () => host(true) }, 'Start a camp')))
   const confirmFresh = () => {
     const row = hostBox.querySelector('.lb-row')
-    row.replaceChildren(h('span.lb-warn', 'Start over? The old multiplayer camp is lost.'), modeSel, h('button.btn.danger', { onclick: () => host(true) }, 'Start over'), h('button.btn.ghost', { onclick: () => (row.replaceChildren(h('button.btn.go', { onclick: () => host(false) }, 'Host it'), h('button.btn.ghost', { onclick: () => confirmFresh() }, 'New camp'))) }, 'Keep it'))
+    row.replaceChildren(h('span.lb-warn', 'Start over? The old multiplayer camp is lost.'), modeSel, siteSel, h('button.btn.danger', { onclick: () => host(true) }, 'Start over'), h('button.btn.ghost', { onclick: () => (row.replaceChildren(h('button.btn.go', { onclick: () => host(false) }, 'Host it'), h('button.btn.ghost', { onclick: () => confirmFresh() }, 'New camp'))) }, 'Keep it'))
   }
 
   const open = h('div.lb-open', h('small.dim', 'Looking for camps…'))
@@ -103,7 +108,7 @@ export function lobbyCard(game, { error, code = '', back }) {
     btn.disabled = true
     sfx('click')
     try {
-      const r = await serverCall({ op: 'create', name: campName.value.trim() || `${n}'s camp`, pid: p.pid, pname: n, public: pub.checked, mode: modeSel.value })
+      const r = await serverCall({ op: 'create', name: campName.value.trim() || `${n}'s camp`, pid: p.pid, pname: n, public: pub.checked, mode: alwaysSel.value, site: alwaysSite.value })
       if (r.op !== 'created') throw new Error(r.why || 'busy')
       writeIntent({ mode: 'join', code: r.code, name: n })
       location.hash = ''
@@ -120,7 +125,7 @@ export function lobbyCard(game, { error, code = '', back }) {
     { hidden: true },
     h('h3', 'Always-on camp'),
     h('p.note', 'A camp that lives on the server: nobody has to host. You are its admin: you hand out survivors and set the pace. While nobody is on, the crew keeps working slowly and the clock waits.'),
-    h('div.lb-row', campName, h('label.lb-check', pub, h('span', 'List it for everyone')), alwaysSel, h('button.btn.go', { onclick: (e) => makeAlways(e.currentTarget) }, 'Start it')),
+    h('div.lb-row', campName, h('label.lb-check', pub, h('span', 'List it for everyone')), alwaysSel, alwaysSite, h('button.btn.go', { onclick: (e) => makeAlways(e.currentTarget) }, 'Start it')),
   )
   const card = h(
     'div.tcard.lobby',

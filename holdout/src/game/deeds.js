@@ -131,6 +131,12 @@ export function creditKill(s, z, weaponId, atWall) {
   const w = weaponId || 'fists'
   const gun = ITEMS[w]?.kind === 'gun'
   d[gun ? 'ranged' : 'melee'] = (d[gun ? 'ranged' : 'melee'] || 0) + 1
+  // the camp's tally by weapon, for the records (ui/records.js)
+  if (S?.stats) {
+    const wk = (S.stats.weaponKills ||= {})
+    wk[w] = (wk[w] || 0) + 1
+    if (z?.type === 'brute') S.stats.brutes = (S.stats.brutes || 0) + 1
+  }
   deedIn(s, 'weapons', w)
   if (z?.type === 'brute') d.brutes = (d.brutes || 0) + 1
   else if (z?.def?.stalk || z?.def?.scream || z?.def?.burst) d.specials = (d.specials || 0) + 1

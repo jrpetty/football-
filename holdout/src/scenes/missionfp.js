@@ -10,13 +10,15 @@ import { gableRoof } from '../models/parts.js'
 import { HOUSE_ROOFS } from '../models/citykit.js'
 import { OUTFITS } from '../models/character.js'
 import { fpLook } from '../models/viewmodel.js'
-import { slideMove, fpShoot, fpMelee } from '../world/fpcombat.js'
+import { slideMove, fpShoot, fpMelee, takedownTarget, takedown } from '../world/fpcombat.js'
+import { S } from '../game/state.js'
 import { ITEMS, RES } from '../game/data.js'
 import { FACE_ROT } from '../world/city.js'
 import { INDOOR } from '../render/materials.js'
 import { GrassField } from '../render/terrain.js'
 import { CullView } from '../render/instcull.js'
 import { wallFace } from '../world/finishes.js'
+import { magOf, reserveOf, loadRounds } from '../world/mag.js'
 import { sfx } from '../core/audio.js'
 import { clamp } from '../core/util.js'
 
@@ -87,6 +89,7 @@ export const MissionFPMixin = {
     if (this.fpA && this.fpA !== a) this.fpRelease(this.fpA)
     this.fpA = a
     a.fp = true
+    a.fpCrouch = !!this.game.fp?.crouch
     a.order = null
     a.path = null
     a.work = null
@@ -103,6 +106,9 @@ export const MissionFPMixin = {
   },
   fpRelease(a) {
     a.fp = false
+    this.unbrace(a)
+    a.fpCrouch = false
+    a.fpReload = false
     a.anchor = { x: a.pos.x, z: a.pos.z }
     a.path = null
     a.work = null
@@ -241,6 +247,7 @@ export const MissionFPMixin = {
     if (own === 'neighbour' || own === 'truck') return ly < 5
     if (own === 'van') return ly < 1.7
     if (own === 'hesco') return ly < 1.4
+    if (own === 'door') return ly < 2.12
     if (own && typeof own === 'object') return own.box ? ly < own.box.max.y - k * (lv.FH || 0) : ly < 1
     return ly < 1
   },
@@ -253,14 +260,18 @@ export const MissionFPMixin = {
     const st = a.st
     const it = st.weaponItem
     const name = ITEMS[st.weaponId]?.name || 'Fists'
+    // rounds in the gun / what it holds, then the camp's stock to load from
     let ammo = ''
-    if (st.gun) ammo = st.ammoType ? `<b>${this.ammoLeft(st.ammoType)}</b> ${RES[st.ammoType]?.name.toLowerCase() || ''}` : '<b>∞</b> bolts'
+    const m = magOf(a)
+    const res = st.ammoType ? Math.floor(this.ammoLeft(st.ammoType)) : null
+    if (st.gun) ammo = `<b>${m.n}</b><i>/${m.cap}</i> ${res == null ? '∞ bolts' : `${res} ${RES[st.ammoType]?.name.toLowerCase() || ''}`}`
     if (it && ITEMS[st.weaponId]?.dur) ammo += `<small>${Math.round((it.cond / ITEMS[st.weaponId].dur) * 100)}% condition</small>`
     if (!this.fpLookCache || this.fpLookCache.id !== a.data.id) this.fpLookCache = { id: a.data.id, look: fpLook(a.data, OUTFITS[a.data.occ] || OUTFITS.drifter) }
     const W = this.fpWork
     this.fpTipT = (this.fpTipT || 0) - 0.016
     let tip = this.fpTipT > 0 ? this.fpTipText : ''
     if (!tip && a.climb) tip = a.climb.kind === 'lift' ? 'Riding the lift…' : ''
+    if (!tip && st.gun && m.n <= 0) tip = res === 0 ? `Out of ${RES[st.ammoType]?.name.toLowerCase() || 'ammo'}` : 'Empty: R to reload'
     return {
       name: `${a.data.first} · ${Math.ceil(Math.max(0, a.hp))} hp${this.fpFollow ? ' · squad following' : ''}`,
       hp: a.hp,
@@ -275,7 +286,36 @@ export const MissionFPMixin = {
       progLabel: W ? W.label : '',
       tip,
       torch: this.fpTorchOn(),
+      mag: st.gun ? m.n : null,
+      magCap: m.cap,
     }
+  },
+  // the gun in hand's magazine, for reloading in first person
+  fpMag() {
+    const a = this.fpA
+    if (!a?.st.gun || !a.st.magCap) return null
+    const m = magOf(a)
+    return { n: m.n, cap: m.cap, reserve: reserveOf(a, this), perShell: a.st.perShell, reload: a.st.reload, id: a.st.weaponId }
+  },
+  fpLoad(n) {
+    return this.fpA ? loadRounds(this.fpA, this, n) : 0
+  },
+  fpReloading(on) {
+    if (this.fpA) this.fpA.fpReload = on
+  },
+  fpCrouch(on) {
+    if (this.fpA) this.fpA.fpCrouch = on
+  },
+  // a silent kill from behind (world/fpcombat.js says who can be taken)
+  fpTakedown(z) {
+    const a = this.fpA
+    if (!a || z.dead) return null
+    this.fpWork = null
+    a.work = null
+    takedown(a, this, z, () => {
+      S.stats.takedowns = (S.stats.takedowns || 0) + 1
+    })
+    return { takedown: true }
   },
   fpTorchOn() {
     return this.fpTorch || this.isNight()
@@ -293,6 +333,9 @@ export const MissionFPMixin = {
     const a = this.fpA
     if (!a || a.climb) return null
     if (this.fpWork) return { text: `${this.fpWork.label}… <small>move to stop</small>`, key: '' }
+    // a zombie with its back to you, close enough to take quietly
+    const tz = takedownTarget(a, this, dir)
+    if (tz) return { text: `Silent takedown <small>${tz.def.name.toLowerCase()}</small>`, act: () => this.fpTakedown(tz) }
     const ray = new THREE.Ray(eye, dir)
     const hitP = new THREE.Vector3()
     // a downed friend first
@@ -320,6 +363,35 @@ export const MissionFPMixin = {
           }
         }
       }
+    }
+    // a door: shut it, open it, or lean on it while they push
+    if (a.bracing) {
+      const D = a.bracing
+      return { text: `Bracing the door <small>${Math.round((D.hp / D.max) * 100)}% · E or move to let go</small>`, act: () => this.unbrace(a) }
+    }
+    let door = null
+    let dd = 2.2
+    for (const D of this.doorList || []) {
+      if (D.broken || (this.F && !this.onView(D.x, D.z))) continue
+      // standing in the doorway, it's not the door you're looking at
+      if (Math.abs(a.pos.x - D.x) < 0.5 && Math.abs(a.pos.z - D.z) < 0.5) continue
+      if (!ray.intersectBox(D.box, hitP)) continue
+      const d = hitP.distanceTo(eye)
+      if (d < dd) {
+        dd = d
+        door = D
+      }
+    }
+    if (door && this.containers.some((c) => !c.gone && c.box && (!this.F || this.onView(c.x, c.z)) && ray.intersectBox(c.box, hitP) && hitP.distanceTo(eye) < dd)) door = null
+    if (door) {
+      const D = door
+      const tip = (t) => {
+        this.fpTipT = 2.5
+        this.fpTipText = t
+      }
+      if (D.shut && this.time - (D.hitT ?? -99) < 4) return { text: `Brace the door <small>${Math.round((D.hp / D.max) * 100)}% · they’re pushing</small>`, act: () => this.braceDoor(D, a) }
+      if (D.shut) return { text: 'Open the door', act: () => this.toggleDoor(D, a) || tip('It won’t budge') }
+      return { text: 'Shut the door', act: () => this.toggleDoor(D, a) || tip('Something’s in the doorway') }
     }
     let best = null
     let bd = 2.4

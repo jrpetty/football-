@@ -3,6 +3,7 @@
 // that land where the player aims. The world supplies who can be hit and
 // what stops a bullet; damage, kills, noise, wear and experience go through
 // the same calls the AI uses (zombie.hurt, world.noise, wear, gainXP).
+import { magOf, setMag, reserveOf } from './mag.js'
 import * as THREE from 'three'
 import { wear, gainXP } from '../game/state.js'
 import { rand, clamp } from '../core/util.js'
@@ -120,9 +121,11 @@ const RECOIL = { pistol: 0.6, revolver: 1.1, smg: 0.32, ar: 0.42, shotgun: 1.6, 
 export function fpShoot(a, W, origin, dir, o = {}) {
   const st = a.st
   const id = st.weaponId
-  if (st.ammoType && W.ammoLeft(st.ammoType) <= 0) return { empty: true }
+  // a round from the magazine; empty, it says whether there is more to load
+  const m = magOf(a)
+  if (m.n <= 0) return { empty: true, reload: reserveOf(a, W) > 0 }
+  setMag(a, m.n - 1)
   a.cool = st.rate
-  if (st.ammoType) W.useAmmo(st.ammoType, 1)
   const pellets = st.weapon.falloff ? 8 : 1
   const maxD = pellets > 1 ? 30 : 80
   // aimed fire carries further than the AI's careful range, losing punch
@@ -164,7 +167,7 @@ export function fpShoot(a, W, origin, dir, o = {}) {
   if (st.weaponItem && wear(st.weaponItem, 1)) a.weaponBroke()
   gainXP(a.data, 'ranged', 0.8)
   if (hitAny) o.onHit?.(kill, head)
-  return { kind: 'gun', rate: st.rate, auto: id === 'smg' || id === 'ar', recoil: RECOIL[id] ?? 0.6, cycle: id === 'shotgun' || id === 'rifle' || id === 'crossbow' }
+  return { kind: 'gun', rate: st.rate, auto: id === 'smg' || id === 'ar', recoil: (RECOIL[id] ?? 0.6) * (st.recoil ?? 1), cycle: (id === 'shotgun' || id === 'rifle' || id === 'crossbow') && m.n > 1, last: m.n <= 1 }
 }
 
 // A swing (or a punch, or a gun used as a club) at whatever is in front.
@@ -211,4 +214,52 @@ export function fpMelee(a, W, origin, dir, o = {}) {
   W.noise?.(a.pos.x, a.pos.z, 2 * st.noiseMult)
   gainXP(a.data, 'melee', 0.8)
   return { kind: 'melee', rate: a.cool }
+}
+
+// A silent takedown: crouched, close behind a zombie that hasn't noticed
+// you, and looking at it. Brutes are too big to get an arm round and a
+// bloater would burst over you.
+const NO_TAKEDOWN = new Set(['brute', 'bloater'])
+const AWARE = new Set(['chase', 'stalk', 'bash', 'fence'])
+export function takedownTarget(a, W, dir) {
+  if (!a?.fpCrouch || a.downed || a.dead) return null
+  const fl = Math.hypot(dir.x, dir.z) || 1
+  let best = null
+  let bd = 1.75
+  for (const z of W.zombies) {
+    if (z.dead || NO_TAKEDOWN.has(z.type) || z.takenDown) continue
+    if (AWARE.has(z.state)) continue
+    const dx = z.rpos.x - a.rpos.x
+    const dz = z.rpos.z - a.rpos.z
+    const d = Math.hypot(dx, dz)
+    if (d > bd || d < 0.05 || Math.abs(z.rpos.y - a.rpos.y) > 1) continue
+    // in front of you...
+    if ((dx * dir.x + dz * dir.z) / (d * fl) < 0.6) continue
+    // ...and it faces away: its back is to you
+    if ((dx * Math.sin(z.heading) + dz * Math.cos(z.heading)) / d < 0.3) continue
+    best = z
+    bd = d
+  }
+  return best
+}
+// Do it: the zombie is held still, then dropped without a sound to carry.
+export function takedown(a, W, z, onDone) {
+  z.takenDown = true
+  z.stun = Math.max(z.stun || 0, 1.2)
+  z.path = null
+  z.state = 'idle'
+  a.cool = Math.max(a.cool || 0, 0.9)
+  a.play('takedown', 18)
+  setTimeout(() => {
+    if (z.dead || a.downed || a.dead) {
+      z.takenDown = false
+      return
+    }
+    z.quiet = true
+    W.fx?.blood?.(z.chestPos ? z.chestPos(1.35) : z.rpos.clone().setY(z.rpos.y + 1.4))
+    z.hp = 0
+    z.die(a)
+    gainXP(a.data, 'melee', 1.6)
+    onDone?.(z)
+  }, 330)
 }

@@ -455,6 +455,8 @@ export function dress(b, spec, rnd) {
   // ---- kit
   for (const e of extras) extra(ctx, e)
   if (spec.armor || O.armor) armor(ctx, spec.armor || O.armor)
+  if (spec.armorMods?.length) armorMods(ctx, spec.armorMods)
+  if (spec.gear) gearLook(ctx, spec.gear)
   if (spec.pack) backpack(ctx, spec.pack === 'large')
   if (Z) gore(ctx)
   flushSink(sink, b)
@@ -1567,6 +1569,23 @@ function backpack(c, large) {
 function armor(c, kind) {
   const { b, A, sink, res } = c
   const T = A.torso
+  if (kind === 'padded') {
+    // a quilted jacket: thick, the stuffing pressed into channels
+    const fab = fabric('#3e4a5a', { dirt: 0.12, seed: c.sd + 23 })
+    const quilt = (x) => {
+      fab(x)
+      const q = (((x.y - 0.9) / 0.052) % 1 + 1) % 1
+      if (q > 0.86) x.c.multiplyScalar(0.62)
+      else x.c.multiplyScalar(0.92 + 0.12 * Math.sin(q * Math.PI))
+    }
+    lay(sink, T, { mat: 'cloth', col: quilt, y0: 0.93, y1: (th) => NECK + 0.01 - 0.04 * Math.max(0, 1 - af(th) / 0.4), off: (y) => T.shellAt(y) + 0.024, hemLo: { t: 0.006, h: 0.03 }, hemHi: { t: 0.008, h: 0.02 }, cols: 38, dy: 0.0135, shell: false }, res)
+    for (const p of [A.armL, A.armR]) lay(sink, p, { mat: 'cloth', col: quilt, y0: 0.94, y1: p.y1, off: (y) => p.shellAt(y) + 0.02, hemLo: { t: 0.005, h: 0.03 }, capHi: true, cols: 16, dy: 0.015, shell: false }, res)
+    T.shells.push({ y0: 0.93, y1: 1.46, side: null, off: (y) => T.shellAt(y) + 0.026 })
+    // a zip up the front and a collar turned up
+    b.rigid('spine')
+    strap(b, [0.98, 1.08, 1.18, 1.28, 1.38, 1.45].map((y) => sp(T, y, 0, 1, 0.026)), 0.008, 0.003, { mat: 'steel', color: '#9a9a96' })
+    return
+  }
   if (kind === 'jacket') {
     const lc = '#3a2a1e'
     lay(sink, T, { mat: 'leather', col: fabric(lc, { dirt: 0.15 }), y0: 0.95, y1: (th) => NECK + 0.004 - 0.05 * Math.max(0, 1 - af(th) / 0.4), off: (y) => T.shellAt(y) + 0.01, hemLo: { t: 0.004, h: 0.03 }, hemHi: { t: 0.003, h: 0.012 }, cols: 38, dy: 0.0135, shell: false }, res)
@@ -1634,6 +1653,96 @@ function armor(c, kind) {
         onSurf(b, p, y, (rr() - 0.5) * q.w * 1.6, rr() < 0.5 ? 1 : -1, 0.01, () => b.box(0.02, 0.13, 0.008, { mat: 'cloth', color: cols[i % 4], y: -0.04, rz: (rr() - 0.5) * 0.8, rx: (rr() - 0.5) * 0.5 }))
       }
     }
+  }
+}
+// What's been fitted to the armour: steel plates on the chest and back,
+// quilted padding at the shoulders, scraps of camouflage.
+function armorMods(c, mods) {
+  const { b, A, rnd } = c
+  const T = A.torso
+  if (mods.includes('plates')) {
+    b.rigid('chest')
+    for (const side of [1, -1]) onSurf(b, T, 1.3, 0, side, 0.05, () => {
+      b.box(0.2, 0.16, 0.012, { mat: 'steel', color: '#6e7276', r: 0.012 })
+      for (const sx of [-0.085, 0.085]) for (const sy of [-0.065, 0.065]) b.cyl(0.006, 0.006, 0.006, { mat: 'steel', color: '#9a9ea2', x: sx, y: sy, z: 0.007, rx: Math.PI / 2 })
+    })
+    b.rigid('spine')
+    onSurf(b, T, 1.1, 0, 1, 0.045, () => b.box(0.18, 0.1, 0.01, { mat: 'steel', color: '#62666a', r: 0.01 }))
+  }
+  if (mods.includes('padding')) {
+    for (const [p, bn] of [[A.armL, 'upperArmL'], [A.armR, 'upperArmR']]) {
+      b.rigid(bn)
+      onSurf(b, p, 1.38, 0, 1, 0.022, () => {
+        b.box(0.075, 0.09, 0.026, { mat: 'cloth', color: '#5a5a48', r: 0.012 })
+        for (const y of [-0.02, 0.02]) b.box(0.078, 0.004, 0.028, { mat: 'cloth', color: '#3e3e30', y })
+      })
+    }
+  }
+  if (mods.includes('camo')) {
+    const cols = ['#4a5a30', '#5a5a38', '#3e4a28', '#6a6440']
+    for (const [p, bn, y0, y1] of [[T, 'chest', 1.3, 1.46], [A.armL, 'upperArmL', 1.3, 1.45], [A.armR, 'upperArmR', 1.3, 1.45]]) {
+      b.rigid(bn)
+      for (let i = 0; i < 6; i++) {
+        const y = y0 + rnd() * (y1 - y0)
+        const q = p.at(y, {})
+        onSurf(b, p, y, (rnd() - 0.5) * q.w * 1.5, rnd() < 0.5 ? 1 : -1, 0.03, () => b.box(0.018, 0.1, 0.006, { mat: 'cloth', color: cols[i % 4], y: -0.03, rz: (rnd() - 0.5) * 0.8 }))
+      }
+    }
+  }
+}
+// Gear worn where it shows: a gas mask, a helmet, goggles pushed up, field
+// glasses on the chest, a torch and a radio clipped to the straps.
+function gearLook(c, kind) {
+  const { b, A, sink, res } = c
+  const H = A.head
+  const T = A.torso
+  const Y = H.Y
+  const ht = (H.hairTop || 0) * 0.6
+  if (kind === 'gasmask') {
+    lay(sink, H, { mat: 'rubber', col: '#26282a', y0: Y(1.588), y1: Y(1.702), th0: Math.PI / 2 - 1.3, th1: Math.PI / 2 + 1.3, off: 0.011, hemLo: { t: 0.004, h: 0.008 }, hemHi: { t: 0.004, h: 0.008 }, cols: 22, dy: 0.008, shell: false }, res)
+    lay(sink, H, { mat: 'rubber', col: '#1c1d1e', y0: Y(1.684), y1: Y(1.702), off: ht + 0.007, cols: 30, dy: 0.008, shell: false }, res)
+    b.rigid('head')
+    for (const sx of [1, -1]) onSurf(b, H, Y(1.668), sx * 0.034, 1, 0.016, () => {
+      b.cyl(0.021, 0.021, 0.012, { mat: 'glass', color: '#5a7080', rx: Math.PI / 2, seg: 14 })
+      b.torus(0.021, 0.004, { mat: 'rubber', color: '#141516', rs: 5, ts2: 16 })
+    })
+    onSurf(b, H, Y(1.604), 0, 1, 0.018, () => {
+      b.cyl(0.026, 0.029, 0.05, { mat: 'metal', color: '#4a4e44', rx: Math.PI / 2, z: 0.026, seg: 14 })
+      b.cyl(0.03, 0.03, 0.008, { mat: 'metal', color: '#3a3e36', rx: Math.PI / 2, z: 0.052, seg: 14 })
+    })
+    return
+  }
+  if (kind === 'helmet') {
+    if (!c.spec.outfit?.hat) hat(c, { kind: 'helmet', color: '#2e3236' })
+    return
+  }
+  if (kind === 'nvg') {
+    b.rigid('head')
+    onSurf(b, H, Y(1.735), 0, 1, ht + 0.02, () => {
+      b.box(0.05, 0.026, 0.03, { mat: 'paint', color: '#1e2220', r: 0.006 })
+      for (const sx of [-0.022, 0.022]) b.cyl(0.013, 0.015, 0.05, { mat: 'paint', color: '#262a28', x: sx, y: 0.012, z: 0.03, rx: Math.PI / 2 - 0.6, seg: 10 })
+    })
+    lay(sink, H, { mat: 'cloth', col: '#1e2220', y0: Y(1.715), y1: Y(1.73), off: ht + 0.008, cols: 30, dy: 0.008, shell: false }, res)
+    return
+  }
+  b.rigid('chest')
+  if (kind === 'binoculars') {
+    onSurf(b, T, 1.28, 0, 1, 0.045, () => {
+      for (const sx of [-0.03, 0.03]) b.cyl(0.022, 0.024, 0.1, { mat: 'rubber', color: '#1e1f20', x: sx, seg: 12 })
+      b.box(0.04, 0.03, 0.02, { mat: 'paint', color: '#2a2b2c', y: 0.03 })
+    })
+    for (const sx of [1, -1]) strap(b, [sp(T, 1.32, sx * 0.05, 1, 0.03), topPt(T, 1.47, sx * 0.05, 0.01), sp(T, 1.42, sx * 0.05, -1, 0.004)], 0.008, 0.002, { mat: 'cloth', color: '#1a1a1a' })
+  } else if (kind === 'torch') {
+    onSurf(b, T, 1.37, -0.09, 1, 0.022, () => {
+      b.cyl(0.013, 0.017, 0.11, { mat: 'metal', color: '#2a2a2c', rx: -0.3, seg: 10 })
+      b.cyl(0.018, 0.018, 0.006, { mat: 'glass', color: '#f0ead0', y: 0.056, z: -0.017, rx: -0.3 })
+    })
+  } else if (kind === 'walkie') {
+    onSurf(b, T, 1.36, 0.09, 1, 0.02, () => {
+      b.box(0.045, 0.085, 0.026, { mat: 'paint', color: '#1e2022', r: 0.006 })
+      b.cyl(0.004, 0.004, 0.08, { mat: 'rubber', color: '#141414', x: 0.013, y: 0.08 })
+      b.box(0.03, 0.02, 0.004, { mat: 'glass', color: '#6a8a6a', y: 0.018, z: 0.014 })
+    })
   }
 }
 function gore(c) {

@@ -1,7 +1,7 @@
 // Crew: the roster, each survivor's sheet (skills, traits, equipment, job),
 // and the armory of items with equip, sell and repair shortcuts.
 import { RES, ITEMS, QUALITY, RARITY, MODS, STATIONS, OCCUPATIONS, SKILLS, SKILL_KEYS, UTILITIES, TRAITS, INFECTION, SEC_PER_DAY, PERKS, PERK_LEVELS } from '../game/data.js'
-import { NET, canControl, S, getS, survivorStats, survivorLevel, equip, unequip, gearLock, itemOf, itemName, itemValue, removeItem, ownerOf, workEff, assign, slots, workersOf, gain, day, killSurvivor, log, infectionStage, treatInfection, researchDone, choosePerk, perkOf } from '../game/state.js'
+import { NET, canControl, S, getS, survivorStats, survivorLevel, equip, unequip, gearLock, itemOf, itemName, itemValue, removeItem, ownerOf, workEff, assign, slots, workersOf, gain, day, killSurvivor, log, infectionStage, treatInfection, researchDone, choosePerk, perkOf, canWorkAt, ageGroup } from '../game/state.js'
 import { sellMult, salvageOf } from '../game/economy.js'
 import { sfx } from '../core/audio.js'
 import { bus, h, fmt, clamp } from '../core/util.js'
@@ -174,7 +174,7 @@ function equipSlot(ui, s, slot) {
     'div.eslot' + (lock ? '.locked' : ''),
     h('span.es-label', label),
     it
-      ? h('div.es-item', { onclick: open, 'data-tip': lock ? `Locked: ${lock.toLowerCase()}` : 'Click to change or swap with someone' }, h('b', itemName(it)), qualityTag(it.q), h('span.es-stat', ITEMS[it.id].slot === 'gear' ? ITEMS[it.id].desc : ''), it.mods?.length ? h('span.mod', MODS[it.mods[0]].name) : null, condBar(it))
+      ? h('div.es-item', { onclick: open, 'data-tip': lock ? `Locked: ${lock.toLowerCase()}` : 'Click to change or swap with someone' }, h('b', itemName(it)), qualityTag(it.q), h('span.es-stat', ITEMS[it.id].slot === 'gear' ? ITEMS[it.id].desc : ''), ...(it.mods || []).map((m) => h('span.mod', MODS[m]?.name || m)), condBar(it))
       : h('div.es-item.empty', { onclick: open }, slot === 'weapon' ? 'Fists' : 'Nothing'),
     it && !lock ? h('button.mini', { onclick: () => (unequip(s, slot), ui.refreshPanel()) }, 'Remove') : null,
   )
@@ -192,7 +192,7 @@ function utilSlot(ui, s) {
 }
 export function pickJob(ui, s) {
   const opts = S.stations
-    .filter((st) => st.level > 0 && slots(st) > 0)
+    .filter((st) => st.level > 0 && slots(st) > 0 && canWorkAt(s, st.type))
     .map((st) => ({ st, e: workEff(s, st.type), free: slots(st) - workersOf(st).filter((w) => w !== s).length }))
     .sort((a, b) => b.e - a.e)
   let close

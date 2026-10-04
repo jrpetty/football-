@@ -14,7 +14,7 @@ export function storyState() {
   if (!S.story) S.story = { threads: {}, notes: [], unread: [], keys: {}, flags: {}, personal: [], nextPersonal: 9 }
   return S.story
 }
-const locs = () => S.cityLocs || []
+const locs = () => (S.cityLocs || []).filter((l) => !l.minor)
 const locOf = (id) => locs().find((l) => l.id === id) || null
 export const locName = (id) => locOf(id)?.name || 'somewhere in the city'
 const districtOf = (id) => locOf(id)?.district || 'residential'

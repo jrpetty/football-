@@ -5,7 +5,7 @@ import { Pipeline } from './render/pipeline.js'
 import { initView, view, groundAt } from './render/view.js'
 import { pregenerate } from './render/texgen.js'
 import { initAudio, sfx, setSound, setVolume } from './core/audio.js'
-import { S, newGame, hasSave, load, save, day, hour, log, gain, workersOf, removeLink, wipeSave, buildCost, newStation, pay, canAfford, completeGoal, backupSave, vehicleOf, wearVehicle, NET, MP_SAVE_KEY, playerOf, DISTRICTS, MODES, killSurvivor, getS } from './game/state.js'
+import { S, newGame, hasSave, load, save, day, hour, log, gain, workersOf, removeLink, wipeSave, buildCost, newStation, pay, canAfford, completeGoal, backupSave, vehicleOf, wearVehicle, NET, MP_SAVE_KEY, playerOf, DISTRICTS, MODES, killSurvivor, getS, setSite } from './game/state.js'
 import { Session, readIntent, writeIntent, me, initMp } from './net/mp.js'
 import { Coop } from './net/coop.js'
 import { newCode } from './net/transport.js'
@@ -17,6 +17,8 @@ import { soundLog } from './world/sound.js'
 import { econTick, initSchedules, autoResolveRaid, scheduleRaid, raidIntel } from './game/economy.js'
 import { alerts } from './ui/brief.js'
 import { wireDiaries, runStart } from './game/diary.js'
+import { wireCampEvents } from './game/events.js'
+import { checkAchievements } from './game/achievements.js'
 import { setCity } from './game/recon.js'
 import { notify } from './ui/notify.js'
 import * as belts from './game/belts.js'
@@ -25,7 +27,8 @@ import * as econMod from './game/economy.js'
 import * as storyMod from './game/story.js'
 import * as reconMod from './game/recon.js'
 import { WEATHER as WX } from './render/materials.js'
-import { STATIONS, GAME_MIN_PER_SEC, SEC_PER_DAY, RES, DAY_MIN } from './game/data.js'
+import { STATIONS, GAME_MIN_PER_SEC, SEC_PER_DAY, RES, DAY_MIN, SITES } from './game/data.js'
+import { icon } from './ui/icons.js'
 
 const SKIP_SPEED = 12
 const UNDO_MS = 10000
@@ -69,6 +72,7 @@ class Game {
   // ---------------------------------------------------------------- boot
   async boot() {
     wireDiaries()
+    wireCampEvents()
     const canvas = document.getElementById('c')
     this.pipe = new Pipeline(canvas)
     initView(canvas)
@@ -117,6 +121,7 @@ class Game {
         newGame()
         initSchedules()
         S.mode = intent.gameMode === 'once' ? 'once' : 'restock'
+        setSite(intent.site || 'lumber')
         // keep the graphics settings from single player
         const solo = hasSave()
         if (solo?.settings) S.settings = { ...S.settings, ...solo.settings }
@@ -164,14 +169,18 @@ class Game {
     const unlock = () => initAudio()
     window.addEventListener('pointerdown', unlock)
     window.addEventListener('keydown', unlock)
-    window.addEventListener('beforeunload', () => this.running && save())
+    window.addEventListener('beforeunload', (e) => {
+      if (this.running) save()
+      // Ctrl crouches in first person: a stray Ctrl+W asks before it closes
+      if (this.fp?.active && this.fp.crouch) e.preventDefault()
+    })
     document.addEventListener('visibilitychange', () => document.hidden && this.running && save())
   }
   // The city is the same for the whole camp: its locations seed radio events.
   makeCity() {
     this.city = genCity(S.seed)
     setCity(this.city)
-    S.cityLocs = this.city.locs.map((l) => ({ id: l.id, type: l.type, level: l.level, name: l.name, district: l.lot?.district || 'residential' }))
+    S.cityLocs = this.city.locs.map((l) => ({ id: l.id, type: l.type, level: l.level, name: l.name, district: l.lot?.district || 'residential', ...(l.minor ? { minor: true } : {}) }))
   }
   // Let camp time pass in one go (travel to and from a run).
   fastForward(minutes) {
@@ -271,15 +280,35 @@ class Game {
         h('p', m.desc),
       ),
     )
+    let site = 'lumber'
+    const sites = Object.entries(SITES).map(([k, x]) =>
+      h(
+        'button.siteopt' + (k === site ? '.on' : ''),
+        {
+          onclick: (e) => {
+            site = k
+            sfx('select')
+            for (const b of box.querySelectorAll('.siteopt')) b.classList.toggle('on', b === e.currentTarget)
+          },
+        },
+        h('b', h('i', { html: icon(x.icon) }), x.name),
+        h('p', x.desc),
+        h('ul.pros', x.pros.map((t) => h('li', t))),
+        h('ul.cons', x.cons.map((t) => h('li', t))),
+      ),
+    )
     const box = h(
       'div.tcard.modecard',
       h('div.logo.big', 'HOLDOUT'),
       h('h2', 'What is left of the city?'),
       h('p.tag', 'Both play the whole story: the Signal, the hordes, the city to take back. The difference is what the city still holds.'),
       h('div.modeopts', opts),
+      // where the camp stands: each site plays a little differently
+      h('h3.sitehd', 'Where do you make camp?'),
+      h('div.siteopts', sites),
       h(
         'div.tbtns',
-        h('button.btn.go.big', { onclick: () => ((S.mode = pick), box.remove(), this.start(false)) }, 'Start'),
+        h('button.btn.go.big', { onclick: () => ((S.mode = pick), this.pickSite(site), box.remove(), this.start(false)) }, 'Start'),
         h('button.btn.big.ghost', { onclick: () => (box.remove(), (card.hidden = false)) }, 'Back'),
       ),
     )
@@ -422,6 +451,15 @@ class Game {
   confirmNew() {
     if (confirm('Start a new camp? Your current camp will be lost.')) this.newGame()
   }
+  // A new camp's site: its stores, and the land drawn round it.
+  pickSite(id) {
+    setSite(id)
+    if (id === 'lumber') return
+    this.base.dispose()
+    this.base = new BaseScene(this)
+    this.scene = this.base
+    this.base.enter()
+  }
   start() {
     initAudio()
     sfx('click')
@@ -519,6 +557,12 @@ class Game {
       this.ui.gameOver()
     })
     bus.on('death', (s) => this.ui.toast(`${s.first} is dead.`, 'bad'))
+    bus.on('achievement', (a) => {
+      sfx('levelup')
+      this.ui.toast(`Achievement: ${a.name}. ${a.desc}`, 'good')
+    })
+    bus.on('birthday', (s) => this.ui.toast(`It's ${s.first}'s birthday: ${s.age} today.`, 'good'))
+    bus.on('happening', (e) => this.ui.toast(e.kind === 'feast' ? 'A big haul came home: throw a feast? (see the brief)' : `${e.name} is gone. Hold a funeral? (see the brief)`, e.kind === 'feast' ? 'good' : ''))
     bus.on('newDay', () => {
       save()
       backupSave()
@@ -881,6 +925,12 @@ class Game {
       if (this.saveT <= 0) {
         this.saveT = 20
         save()
+      }
+      // achievements: a look every few seconds
+      this.achT = (this.achT ?? 3) - dt
+      if (this.achT <= 0) {
+        this.achT = 3
+        checkAchievements()
       }
     }
     this.net?.update(dt)

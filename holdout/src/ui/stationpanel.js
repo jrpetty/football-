@@ -1,12 +1,12 @@
 // The station drawer: workers, what the station is doing and producing,
 // crafting orders (queue, recipes, mods, repairs), automation, upgrades.
-import { RES, STATIONS, RECIPES, MODS, ITEMS, QUALITY, OCCUPATIONS, SKILLS, SKILL_KEYS, REPAIR, SEC_PER_DAY, FENCE, ALT_RECIPES, BELTS, BELT_BONUS, BELT_STACK, SIGNAL, RESEARCH, CORE_SLOTS, VEHICLES, PEN_FENCE } from '../game/data.js'
+import { RES, STATIONS, RECIPES, MODS, ITEMS, QUALITY, OCCUPATIONS, SKILLS, SKILL_KEYS, REPAIR, SEC_PER_DAY, FENCE, ALT_RECIPES, BELTS, BELT_BONUS, BELT_STACK, SIGNAL, RESEARCH, CORE_SLOTS, VEHICLES, PEN_FENCE, modFits } from '../game/data.js'
 import { NET,
   S, day, workersOf, slots, assign, workEff, bestFor, upgradeCost, startUpgrade, demolish, installModule, recipesFor, modsFor, queueMax, orderRecipe,
   orderMod, orderRepair, cancelOrder, moveOrder, orderSpec, qualityOdds, itemOf, itemName, canAfford, survivorStats, capOf, bedCount, getS, ownerOf,
   repairCost, repairTime, gameDur, stationSize, signalNeed, deliverSignal, signalPhase, signalCost, signalBlocked, researchCost,
   researchLock, startResearch, cancelResearch, pickAlt, altsFor, researchDone, installCore, removeCore, coreBoost, hasFlag, msDone,
-  canControl,
+  canControl, canWorkAt,
 } from '../game/state.js'
 import { recycleQueue, salvageOf, flockOf, flockMax, flockFactor, penRisk, buildPenFence, mendPenFence, mendCost, buyAnimal, animalCost, stationFlow, power, powerNeed, linkPower, isAutomated, stationRate, solarOutput, windOutput, boilerFuel, sourcePower, pedalPower, dungPerDay, scrapsPerDay, digesterPower, lampDark, HAND_RATE, kitchenSaving, constructSpeed, raidIntel, activeRecipe, activeSingle, recipeUnlocked, recipeTarget } from '../game/economy.js'
 import { linksOf, inputsOf, outputsOf, linkPerDay, linkState, upgradeCostOf, upgradeLink, upgradeLocked, removeLink, beltBonus, pulled, portsOf, linkAt, isDepot, nodeKind, nodeRes, insertNode, splitProblem, firstOut, setFirst, hopperHold, stackOf, NODE_RULES, beltSpeed as beltSpeedOf } from '../game/belts.js'
@@ -20,7 +20,7 @@ import { icon } from './icons.js'
 import { leaderChip } from './netui.js'
 import { costList, resChip, resIcon, bar, qualityTag, condBar, itemCard, seg, stepper, plural } from './common.js'
 
-const TYPE_ICON = { hopper: 'hopper', recycler: 'recycle', coop: 'hen', goatpen: 'wool', priority: 'belt', panel: 'sun', sollamp: 'sun' }
+const TYPE_ICON = { memorial: 'heart', hopper: 'hopper', recycler: 'recycle', coop: 'hen', goatpen: 'wool', priority: 'belt', panel: 'sun', sollamp: 'sun' }
 const CAT_ICON = { living: 'gate', production: 'production', crafting: 'hammer', defense: 'shield', power: 'bolt', logistics: 'belt', storage: 'box' }
 const tabState = {}
 
@@ -46,6 +46,7 @@ export function renderStation(ui, id) {
     if (ws) body.push(ws)
     body.push(...effectBlock(ui, st, pinfo))
     if (D.queue || st.type === 'infirmary') body.push(benchBlock(ui, st))
+    if (st.type === 'memorial') body.push(memorialBlock())
     if (D.auto) body.push(autoBlock(ui, st, pinfo))
     if (D.machine) body.push(machineBlock(ui, st, pinfo))
     const logi = logisticsBlock(ui, st)
@@ -56,6 +57,20 @@ export function renderStation(ui, id) {
   if (st.type !== 'mast' && D.levels > 1) body.push(upgradeBlock(ui, st))
   if (!D.fixed) body.push(actionsBlock(ui, st))
   return ui.frame(D.name, sub, body, { icon: TYPE_ICON[st.type] || CAT_ICON[D.cat], extra: pinButton(ui, 'st', st.id) })
+}
+
+// ---------------------------------------------------------------- the memorial
+// Every name on the wall, the day they died, how, and the last thing they
+// wrote; newest first.
+export function memorialBlock() {
+  const mem = S.stats.memorial || []
+  if (!mem.length) return h('section.card', h('h3', 'The names'), h('p.note', 'No names yet. Keep it that way.'))
+  return h(
+    'section.card.memwall',
+    h('h3', 'The names', h('small', `${mem.length} remembered`)),
+    ...mem.map((m) => h('div.memrow', h('div.kv', h('span', `${m.name}, ${m.occ}`), h('small', `Day ${m.day} · ${m.cause}`)), m.kills ? h('small.note', `${m.kills} of the dead put down`) : null, m.last ? h('p.lastword', `“${m.last}”`) : null)),
+    h('p.note', 'Survivors with time on their hands stop here. Each visit eases the camp’s grief for a day or so, and while the wall stands a death hurts morale less.'),
+  )
 }
 
 // ---------------------------------------------------------------- construction
@@ -96,7 +111,7 @@ function workerBlock(ui, st) {
   }
   const best = bestFor(st.type)
   // one click: the free survivors best at this job fill the empty places
-  const free = S.survivors.filter((s) => !s.job && s.status === 'ok' && canControl(s)).sort((a, b) => workEff(b, st.type) - workEff(a, st.type))
+  const free = S.survivors.filter((s) => !s.job && s.status === 'ok' && canControl(s) && canWorkAt(s, st.type)).sort((a, b) => workEff(b, st.type) - workEff(a, st.type))
   const fill =
     ws.length < n && free.length
       ? h(
@@ -116,7 +131,7 @@ function workerBlock(ui, st) {
 }
 export function pickWorker(ui, st) {
   const D = STATIONS[st.type]
-  const list = S.survivors.filter((s) => s.status !== 'mission' && s.status !== 'scout' && s.job !== st.id && canControl(s)).map((s) => ({ s, e: workEff(s, st.type) || 0.0001 }))
+  const list = S.survivors.filter((s) => s.status !== 'mission' && s.status !== 'scout' && s.job !== st.id && canControl(s) && canWorkAt(s, st.type)).map((s) => ({ s, e: workEff(s, st.type) || 0.0001 }))
   list.sort((a, b) => b.e - a.e)
   let close
   close = ui.modal(
@@ -998,13 +1013,13 @@ function modsTab(ui, st) {
   const mods = modsFor(st.type)
   return h(
     'div',
-    h('p.note', 'One mod per item. Fitting takes the item out of use until it is done.'),
+    h('p.note', 'One mod per slot (a gun takes a muzzle, a sight, a stock, a magazine and a frame; a club a head, a grip and a frame), each shown on the weapon. Fitting takes the item out of use until it is done.'),
     mods.map(([id, M]) => {
       const locked = M.lvl > st.level
-      const eligible = S.items.filter((it) => (!it.locker || it.locker === NET.pid) && (ITEMS[it.id].mods === M.type || (M.type === 'gun' && ITEMS[it.id].mods === 'gun')) && !(it.mods || []).length && !st.orders.some((o) => o.item === it.uid))
+      const eligible = S.items.filter((it) => (!it.locker || it.locker === NET.pid) && !modFits(id, it) && !st.orders.some((o) => o.item === it.uid))
       return h(
         'div.recipe' + (locked ? '.locked' : ''),
-        h('div.r-main', h('b', M.name), h('span.r-sub', M.desc, ' ', costList(M.cost, { small: true }))),
+        h('div.r-main', h('b', M.name, h('small.dim', ` · ${M.slot}`)), h('span.r-sub', M.desc, ' ', costList(M.cost, { small: true }))),
         locked ? h('span.r-lock', h('i', { html: icon('lock') }), `Level ${M.lvl}`) : h('button.mini', { disabled: !eligible.length, onclick: () => pickModTarget(ui, st, id, eligible) }, eligible.length ? 'Fit to…' : 'No items'),
       )
     }),

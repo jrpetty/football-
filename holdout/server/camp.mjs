@@ -9,6 +9,7 @@ import * as EC from '../src/game/economy.js'
 import { RES, SEC_PER_DAY, LOCATIONS } from '../src/game/data.js'
 import { bus } from '../src/core/util.js'
 import { genCity } from '../src/world/city.js'
+import * as RV from '../src/game/rivals.js'
 import { wireDiaries } from '../src/game/diary.js'
 import { Session, COLORS, PROTO } from '../src/net/mp.js'
 import { Carrier } from '../src/net/transport.js'
@@ -44,6 +45,7 @@ if (create) {
   ST.newGame()
   EC.initSchedules()
   ST.S.mode = create.mode === 'once' ? 'once' : 'restock'
+  ST.setSite(create.site || 'lumber')
   ST.S.mp = { code, host: 'server', admin: create.pid, server: true, name: create.name, public: create.public !== false, players: { [create.pid]: { name: create.pname, color: COLORS[0], since: 1 } }, owner: {} }
   ST.log(`${create.name}: ${create.pname} and three others made it to the old lumber yard.`, 'story')
 } else {
@@ -51,7 +53,7 @@ if (create) {
   away = catchUp()
 }
 const city = genCity(S().seed)
-S().cityLocs = city.locs.map((l) => ({ id: l.id, type: l.type, level: l.level, name: l.name, district: l.lot?.district || 'residential' }))
+S().cityLocs = city.locs.map((l) => ({ id: l.id, type: l.type, level: l.level, name: l.name, district: l.lot?.district || 'residential', ...(l.minor ? { minor: true } : {}) }))
 
 // While a camp sat on disk its crew kept working, slowly, as in single player.
 function catchUp() {
@@ -73,6 +75,10 @@ function catchUp() {
 const game = {
   ui: null, base: null, map: null, mission: null, scene: 'server', baseCam: { x: 56, z: 56 },
   netGone() {},
+  // a message for a rival camp (game/rivals.js): the main thread routes it
+  c2c(m) {
+    post({ c2c: m })
+  },
   // a captain finished the fight
   raidOver(report, finale) {
     EC.scheduleRaid()
@@ -95,6 +101,20 @@ bus.on('gameover', () => log('the camp fell'))
 // ---- frames from players, commands from the main thread
 parentPort.on('message', (m) => {
   if (m.f) net.c.take(m.f, m.from)
+  else if (m.c2c) {
+    // a rival camp's message, or its answer to ours
+    try {
+      const reply = RV.rivalReceive(m.c2c.from, m.c2c.msg)
+      if (reply) post({ c2c: { to: m.c2c.from.code, from: { code, name: S().mp.name || 'A camp' }, msg: reply } })
+      net.t.delta = 0
+      save()
+    } catch (e) {
+      log('rival error ' + (e.stack || e))
+    }
+  } else if (m.c2cBounce) {
+    RV.rivalBounce(m.c2cBounce)
+    net.t.delta = 0
+  }
   else if (m.left) net.dropPeer(m.left, 'left')
   else if (m.cmd === 'stop') {
     save()

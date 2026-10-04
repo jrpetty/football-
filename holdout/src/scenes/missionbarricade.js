@@ -153,6 +153,8 @@ export const BarricadeMixin = {
     this.sealCheck()
   },
   bashBarricade(b, z) {
+    // a shut door stands in for a barricade (scenes/missiondoors.js)
+    if (b.isDoor) return this.bashDoor(b.D, z)
     if (b.broken) return
     b.hp -= z.dmg * BASH_K * rand(0.8, 1.2)
     b.shake = 0.3

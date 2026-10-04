@@ -129,6 +129,14 @@ export class FirstPerson {
     this.padKey = ''
     // third person: how far the camera has gone over the shoulder (0..1),
     // how far back it sits, whether the body is drawn, the body's heading
+    // a reload under way: { t, dur, tactical, shell, next, from }
+    this.rl = null
+    this.autoRl = -1
+    // crouched (Ctrl): lower, slower, quieter, and seen late; how far down
+    // the eye has gone (0..1); a takedown's stab under way (0..1, or -1)
+    this.crouch = false
+    this.crouchK = 0
+    this.tdT = -1
     this.thirdK = 0
     this.camDist = 2.3
     this.bodyOn = null
@@ -190,7 +198,7 @@ export class FirstPerson {
     D.tip = h('div.fp-tip')
     D.pause = h(
       'div.fp-pause',
-      h('div.fp-pause-card', h('h3', 'In their boots'), h('p', 'Click to look around and play.'), h('div.fp-keys', ...[['WASD', 'walk'], ['Shift', 'run'], ['Mouse', 'look'], ['Left click', 'shoot or swing'], ['Right click', 'aim'], ['E', 'use what you look at'], ['T', 'first or third person'], ['` / F5 / Esc', 'top-down view']].map(([k, v]) => h('span', h('kbd', k), ' ', v))), h('div.fp-pause-btns', h('button.btn.go', { onclick: (e) => (e.stopPropagation(), this.lock()) }, 'Play'), (D.camBtn = h('button.btn', { onclick: (e) => (e.stopPropagation(), this.setThird(!fpPrefs.third)) }, fpPrefs.third ? 'First person' : 'Third person')), h('button.btn', { onclick: (e) => (e.stopPropagation(), this.game.toggleFirstPerson?.(false)) }, 'Top-down view'))),
+      h('div.fp-pause-card', h('h3', 'In their boots'), h('p', 'Click to look around and play.'), h('div.fp-keys', ...[['WASD', 'walk'], ['Shift', 'run'], ['Mouse', 'look'], ['Left click', 'shoot or swing'], ['Right click', 'aim'], ['E', 'use what you look at'], ['R', 'reload'], ['Ctrl', 'crouch'], ['T', 'first or third person'], ['` / F5 / Esc', 'top-down view']].map(([k, v]) => h('span', h('kbd', k), ' ', v))), h('div.fp-pause-btns', h('button.btn.go', { onclick: (e) => (e.stopPropagation(), this.lock()) }, 'Play'), (D.camBtn = h('button.btn', { onclick: (e) => (e.stopPropagation(), this.setThird(!fpPrefs.third)) }, fpPrefs.third ? 'First person' : 'Third person')), h('button.btn', { onclick: (e) => (e.stopPropagation(), this.game.toggleFirstPerson?.(false)) }, 'Top-down view'))),
     )
     D.note = h('div.fp-note')
     // touch: a stick that appears under the left thumb, buttons on the right
@@ -199,9 +207,11 @@ export class FirstPerson {
     D.fire = tb('fire', 'fire', 'crosshair', '')
     D.aim = tb('aim', 'aim', 'binoculars', 'Aim')
     D.use = tb('use', 'use', 'search', 'Use')
+    D.rel = tb('reload', 'reload', 'repeat', 'Reload')
+    D.crouch = tb('crouch', 'crouch', 'down', 'Crouch')
     D.keys = h('div.fp-tkeys')
     D.cam = tb('cam', 'cam', 'rotate', fpPrefs.third ? '1st' : '3rd')
-    D.pad = h('div.fp-pad', D.stick, h('div.fp-stickhint'), D.fire, D.aim, D.use, h('div.fp-tcol', tb('exit', 'exit', 'eye', 'View'), D.cam, D.keys))
+    D.pad = h('div.fp-pad', D.stick, h('div.fp-stickhint'), D.fire, D.aim, D.use, D.rel, D.crouch, h('div.fp-tcol', tb('exit', 'exit', 'eye', 'View'), D.cam, D.keys))
     D.root.append(D.hurt, D.low, D.scope, D.cross, D.hit, D.prompt, D.prog, h('div.fp-status', D.name, D.hpbar), h('div.fp-gun', D.weapon, D.ammo), D.tip, D.note, D.pad, D.pause)
     document.body.appendChild(D.root)
     view.canvas.addEventListener('pointerdown', (e) => this.onPDown(e))
@@ -354,6 +364,12 @@ export class FirstPerson {
       return
     } else if (b === 'cam') {
       this.setThird(!fpPrefs.third)
+      return
+    } else if (b === 'reload') {
+      this.reload()
+      return
+    } else if (b === 'crouch') {
+      this.setCrouch(!this.crouch)
       return
     } else if (b) {
       this.host?.fpKey?.({ key: b, shiftKey: false, ctrlKey: false, preventDefault() {} }, this)
@@ -533,6 +549,9 @@ export class FirstPerson {
     if (!this.active) return
     const H = this.host
     const feet = away ? null : H?.fpFeet?.()
+    this.setCrouch(false)
+    this.crouchK = 0
+    this.tdT = -1
     H?.fpExit?.()
     this.active = false
     this.host = null
@@ -545,6 +564,8 @@ export class FirstPerson {
     }
     this.unlock()
     this.setFree(false)
+    if (this.rl) this.endReload(false)
+    this.autoRl = -1
     this.game.pipe.overlay = null
     this.game.pipe.firstPerson = false
     INDOOR.uFpSpec.value = 0
@@ -588,6 +609,15 @@ export class FirstPerson {
       if (!e.repeat) this.setThird(!fpPrefs.third)
       return true
     }
+    if (k === 'r' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (!e.repeat) this.reload()
+      return true
+    }
+    // Ctrl on its own (a tap, not held for a shortcut) crouches or stands
+    if (k === 'control') {
+      if (!e.repeat) this.setCrouch(!this.crouch)
+      return true
+    }
     if (this.host?.fpKey?.(e, this)) return true
     // keys that walk or turn the top-down camera do nothing here
     if (['w', 'a', 's', 'd', 'q', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift', '=', '+', '-'].includes(k)) return k === 'q' && e.repeat
@@ -596,8 +626,27 @@ export class FirstPerson {
   use() {
     const L = this.look
     if (!L?.act) return
-    L.act()
+    const r = L.act()
+    if (r?.takedown) this.takedownAnim()
     this.lookT = 0
+  }
+  setCrouch(on) {
+    on = !!on
+    if (on === this.crouch) return
+    this.crouch = on
+    this.host?.fpCrouch?.(on)
+    this.dom?.crouch?.classList.toggle('down', on)
+    if (on && !this.crouchTold) {
+      this.crouchTold = true
+      this.noteShow('Crouched: slower and quieter, and the dead see you late. Creep up behind one and press E.', 6)
+    }
+  }
+  // a silent kill: an arm round the neck and the blade (or the butt) in
+  takedownAnim() {
+    this.tdT = 0
+    this.swingT = -1
+    this.shake = Math.max(this.shake, 0.35)
+    if (this.rl) this.endReload(false)
   }
 
   // ---------------------------------------------------------------- frame
@@ -640,6 +689,9 @@ export class FirstPerson {
     mx /= len
     mz /= len
     const wantRun = (keys.has('shift') || (this.trun && live)) && mz > 0.3 && this.ads < 0.3 && this.swingT < 0
+    // running stands you up
+    if (wantRun && this.crouch) this.setCrouch(false)
+    this.crouchK = lerp(this.crouchK, this.crouch ? 1 : 0, 1 - Math.exp(-dt * 9))
     // no lock, a mouse: a click held still fires on (a drag looks instead)
     if (this.free && this.drags.size) {
       const now = performance.now()
@@ -655,7 +707,7 @@ export class FirstPerson {
     D.note.classList.toggle('on', this.noteT > 0)
     this.sprint = lerp(this.sprint, wantRun && (mx || mz) ? 1 : 0, 1 - Math.exp(-dt * 8))
     const base = H.fpSpeed()
-    const speed = base * (wantRun ? 1.3 : 0.78) * (1 - this.ads * 0.4)
+    const speed = base * (wantRun ? 1.3 : 0.78) * (1 - this.ads * 0.4) * (1 - this.crouchK * 0.45) * (this.tdT >= 0 ? 0.2 : 1)
     const sy = Math.sin(this.yaw)
     const cy = Math.cos(this.yaw)
     // forward is (-sin yaw, -cos yaw); right is (cos yaw, -sin yaw)
@@ -686,8 +738,9 @@ export class FirstPerson {
     this.bobPh += sp * dt * (wantRun ? 1.55 : 1.85)
     this.stepT -= sp * dt
     if (this.stepT <= 0 && sp > 0.6) {
-      this.stepT = wantRun ? 1.15 : 0.95
-      sfx(wantRun ? 'stepRun' : 'step', 120)
+      this.stepT = wantRun ? 1.15 : this.crouch ? 0.8 : 0.95
+      // crouched feet are barely heard
+      sfx(wantRun ? 'stepRun' : 'step', this.crouch ? 40 : 120)
       H.fpStep?.(wantRun)
     }
     // ---- camera
@@ -698,7 +751,7 @@ export class FirstPerson {
     const tk = ease(this.thirdK) * (1 - scopeK)
     const bobK = (fpPrefs.bob ? 1 : 0.35) * (1 - tk * 0.75)
     const b = this.bobAmt * bobK
-    eye.y += Math.sin(this.bobPh * 2) * 0.028 * b - b * 0.01
+    eye.y += Math.sin(this.bobPh * 2) * 0.028 * b - b * 0.01 - ease(this.crouchK) * 0.62
     eye.x += Math.cos(this.yaw) * Math.sin(this.bobPh) * 0.018 * b
     eye.z += -Math.sin(this.yaw) * Math.sin(this.bobPh) * 0.018 * b
     this.shake = Math.max(0, this.shake - dt * 3)
@@ -710,10 +763,12 @@ export class FirstPerson {
     if (tk > 0.001) cam.position.lerpVectors(eye, this.shoulder(eye, dt), tk)
     else cam.position.copy(eye)
     this.recoil = Math.max(0, this.recoil - dt * (2.2 + this.recoil * 6))
-    _e.set(this.pitch + this.recoil * 0.06, this.yaw, (Math.sin(this.bobPh) * 0.004 * b - this.swayX * 0.4) * (1 - tk), 'YXZ')
+    // a takedown pulls the view down with the body
+    const tdDip = this.tdT >= 0 ? Math.sin(clamp(this.tdT, 0, 1) * Math.PI) * 0.14 : 0
+    _e.set(this.pitch + this.recoil * 0.06 - tdDip, this.yaw, (Math.sin(this.bobPh) * 0.004 * b - this.swayX * 0.4) * (1 - tk), 'YXZ')
     cam.quaternion.setFromEuler(_e)
     // aiming down the sights narrows the view; a scope much more
-    this.ads = lerp(this.ads, this.aimHeld && this.vm?.pose.kind === 'gun' && this.swingT < 0 ? 1 : 0, 1 - Math.exp(-dt * 12))
+    this.ads = lerp(this.ads, this.aimHeld && !this.rl && this.vm?.pose.kind === 'gun' && this.swingT < 0 ? 1 : 0, 1 - Math.exp(-dt * 12))
     const zoom = this.vm?.pose.scope ? lerp(1, 0.36, ease(this.ads)) : lerp(1, 0.82 - tk * 0.06, ease(this.ads))
     const fov = fpPrefs.fov * zoom * (1 + this.sprint * 0.06)
     if (Math.abs(cam.fov - fov) > 0.01) {
@@ -727,7 +782,8 @@ export class FirstPerson {
     view.rig.goal.copy(view.rig.target)
     view.rig.follow = null
     H.fpTick?.(dt)
-    // ---- attack
+    // ---- attack (and reloading)
+    this.tickReload(dt)
     this.cool -= dt
     if (this.trigger && (this.locked || this.free)) this.tryAttack()
     // ---- what is under the crosshair
@@ -761,6 +817,9 @@ export class FirstPerson {
     D.hpbar.classList.toggle('low', st.hp < st.maxHp * 0.35)
     if (D.weapon._t !== st.weapon) D.weapon.textContent = D.weapon._t = st.weapon
     if (D.ammo._t !== st.ammo) D.ammo.innerHTML = D.ammo._t = st.ammo
+    D.ammo.classList.toggle('low', st.mag != null && st.mag <= Math.max(1, Math.floor((st.magCap || 1) * 0.25)))
+    D.ammo.classList.toggle('reloading', !!this.rl)
+    D.rel.hidden = st.mag == null
     D.prog.classList.toggle('on', st.prog != null)
     if (st.prog != null) {
       D.prog.firstChild.style.width = `${clamp(st.prog, 0, 1) * 100}%`
@@ -813,13 +872,24 @@ export class FirstPerson {
       }
     }
     _p.set(eye.x + (_p.x - eye.x) * s, eye.y + (_p.y - eye.y) * s, eye.z + (_p.z - eye.z) * s)
-    let free = back
-    for (let t = 0.12; t <= back + 0.2; t += 0.12) {
-      if (this.solidNear(H, _p.x - f.x * t, _p.y - f.y * t, _p.z - f.z * t)) {
-        free = Math.max(0, t - 0.3)
-        break
+    const room = (lift) => {
+      for (let t = 0.12; t <= back + 0.2; t += 0.12) if (this.solidNear(H, _p.x - f.x * t, _p.y + lift - f.y * t, _p.z - f.z * t)) return Math.max(0, t - 0.3)
+      return back
+    }
+    let free = room(0)
+    // low cover behind (a car, the van, a crouch behind a wall): rise over it
+    // rather than crowd in on the body (eased, so it doesn't jump)
+    let want = 0
+    if (free < back * 0.6) {
+      const lift = 0.35 + this.crouchK * 0.35
+      const up = room(lift)
+      if (up > free + 0.4) {
+        want = lift
+        free = up
       }
     }
+    this.camLift = lerp(this.camLift || 0, want, 1 - Math.exp(-dt * 6))
+    _p.y += this.camLift
     this.camDist = free < this.camDist ? free : lerp(this.camDist, free, 1 - Math.exp(-dt * 4))
     const out = _q.set(_p.x - f.x * this.camDist, _p.y - f.y * this.camDist, _p.z - f.z * this.camDist)
     // never under the ground looking up
@@ -852,8 +922,14 @@ export class FirstPerson {
   }
   tryAttack() {
     const H = this.host
-    if (!H || this.cool > 0 || this.equip < 0.85 || this.sprint > 0.5) return
+    if (!H || this.cool > 0 || this.equip < 0.85 || this.sprint > 0.5 || this.tdT >= 0) return
     if (this.swingT >= 0 && this.swingT < this.swingDur * 0.75) return
+    // mid-reload: a magazine swap can't be shot through; loading shells can
+    // be stopped to fire what is in the tube
+    if (this.rl) {
+      if (!this.rl.shell || (H.fpMag?.()?.n ?? 0) <= 0) return
+      this.endReload(false)
+    }
     const dir = this.forward(new THREE.Vector3())
     const r = H.fpAttack(this.aimFrom(dir), dir, { spread: this.spread(), ads: this.ads > 0.6, onHit: (kill, head) => this.hitMark(kill, head), muzzle: this.muzzleWorld() })
     if (!r) return
@@ -862,9 +938,12 @@ export class FirstPerson {
       this.cool = 0.35
       this.trigger = false
       sfx('dry', 200)
+      if (r.reload) this.reload()
       return
     }
     this.cool = r.rate
+    // the last round gone: reload once the gun has settled
+    if (r.last) this.autoRl = Math.max(0.25, r.rate * 0.8)
     if (r.kind === 'gun') {
       this.kick = 1
       this.recoil += r.recoil ?? 0.5
@@ -878,6 +957,72 @@ export class FirstPerson {
       this.swingDur = clamp(r.rate * 0.85, 0.32, 0.9)
       this.swingSide = -this.swingSide
     }
+  }
+  // R: reload. A magazine is swapped whole (quicker with a round still
+  // chambered, and that round stays: one more than the magazine holds);
+  // shotgun shells, the revolver's and the rifle's rounds go in one at a time.
+  reload() {
+    const H = this.host
+    if (!H || this.rl || this.swingT >= 0 || this.equip < 0.85) return false
+    const m = H.fpMag?.()
+    if (!m || m.reserve <= 0) return false
+    const full = m.cap + (m.perShell ? 0 : 1)
+    if (m.n >= (m.n > 0 ? full : m.cap)) return false
+    this.autoRl = -1
+    this.trigger = false
+    this.aimHeld = false
+    if (m.perShell) {
+      this.rl = { t: 0, shell: true, per: m.perShell, next: 0.3, n0: m.n, tactical: m.n > 0, id: m.id }
+      sfx('magOut', 60)
+    } else {
+      const tactical = m.n > 0
+      this.rl = { t: 0, shell: false, dur: m.reload * (tactical ? 0.72 : 1), tactical, inAt: 0.48, rackAt: tactical ? 2 : 0.8, done: {}, id: m.id }
+      sfx('magOut', 60)
+    }
+    H.fpReloading?.(true)
+    return true
+  }
+  endReload(finished) {
+    const H = this.host
+    const R = this.rl
+    if (!R) return
+    if (R.shell && R.loaded) sfx(R.id === 'revolver' ? 'magIn' : 'rack', 60)
+    if (R.shell && R.loaded) this.cycleT = 0
+    this.rl = null
+    H?.fpReloading?.(false)
+  }
+  tickReload(dt) {
+    const H = this.host
+    if (this.autoRl >= 0) {
+      this.autoRl -= dt
+      if (this.autoRl < 0 && !this.rl) this.reload()
+    }
+    const R = this.rl
+    if (!R || !H) return
+    R.t += dt
+    if (R.shell) {
+      if (R.t < R.next) return
+      const m = H.fpMag?.()
+      if (!m || m.n >= m.cap || m.reserve <= 0) return this.endReload(true)
+      H.fpLoad(1)
+      R.loaded = (R.loaded || 0) + 1
+      R.bump = 0
+      sfx('shellIn', 40)
+      R.next = R.t + R.per
+      return
+    }
+    const u = R.t / R.dur
+    if (u >= R.inAt && !R.done.in) {
+      R.done.in = true
+      const m = H.fpMag?.()
+      if (m) H.fpLoad(m.cap + (R.tactical ? 1 : 0) - m.n)
+      sfx('magIn', 60)
+    }
+    if (u >= R.rackAt && !R.done.rack) {
+      R.done.rack = true
+      sfx('rack', 60)
+    }
+    if (u >= 1) this.endReload(true)
   }
   // where the muzzle is in the world, for the flash and the tracer
   muzzleWorld() {
@@ -926,6 +1071,8 @@ export class FirstPerson {
       this.vmKey = key
       this.equip = 0
       this.swingT = -1
+      if (this.rl) this.endReload(false)
+      this.autoRl = -1
     }
     const V = this.vm
     const pose = V.pose
@@ -995,6 +1142,47 @@ export class FirstPerson {
           py += jab * 0.03
         }
       }
+    }
+    // reloading: the gun tips in to the off hand, the magazine drops out
+    // and goes home with a shove, the slide or bolt is worked; a shell at a
+    // time: tipped over, a nudge as each one goes in
+    const R = this.rl
+    if (R && pose.kind === 'gun') {
+      if (R.shell) {
+        const inT = Math.min(1, R.t / 0.25)
+        R.bump = Math.min(1, (R.bump ?? 1) + dt * 6)
+        const nudge = Math.sin(R.bump * Math.PI) * (1 - R.bump)
+        px -= 0.03 * inT
+        py -= 0.05 * inT - nudge * 0.012
+        rz += 0.55 * inT
+        rx += 0.12 * inT - nudge * 0.06
+      } else {
+        const u = clamp(R.t / R.dur, 0, 1)
+        const tip = ease(clamp(u / 0.18, 0, 1)) * (1 - ease(clamp((u - 0.82) / 0.18, 0, 1)))
+        const drop = Math.max(0, 1 - Math.abs(u - 0.3) / 0.12)
+        const shove = Math.max(0, 1 - Math.abs(u - R.inAt) / 0.06)
+        const rack = R.tactical ? 0 : Math.max(0, 1 - Math.abs(u - R.rackAt) / 0.08)
+        px -= 0.05 * tip
+        py -= 0.07 * tip + drop * 0.015 - shove * 0.02
+        pz += rack * 0.035
+        rz += 0.6 * tip + shove * 0.08
+        rx += 0.22 * tip - rack * 0.12
+        ry -= 0.18 * tip
+      }
+    }
+    // a takedown: the weapon (or the fist) drives in and down at the neck,
+    // held a beat, then back
+    if (this.tdT >= 0) {
+      this.tdT += dt / 0.85
+      const u = clamp(this.tdT, 0, 1)
+      const drive = u < 0.3 ? ease(u / 0.3) : u < 0.55 ? 1 : 1 - ease((u - 0.55) / 0.45)
+      const twist = Math.sin(clamp((u - 0.3) / 0.3, 0, 1) * Math.PI)
+      px -= drive * 0.07
+      py -= drive * 0.05
+      pz -= drive * 0.18
+      rx -= drive * 0.75
+      rz += drive * 0.3 + twist * 0.12
+      if (this.tdT >= 1) this.tdT = -1
     }
     if (this.throwT >= 0) {
       this.throwT += dt / 0.6
