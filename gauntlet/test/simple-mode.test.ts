@@ -32,7 +32,7 @@ test('pageKeyFor: every example route maps back to its own key', () => {
 
 test('pageKeyFor: queries, encoded ids, bare full-screen routes and old leaderboard links', () => {
   assert.equal(pageKeyFor('/'), 'home');
-  assert.equal(pageKeyFor('/run/new?suite=quick-check'), 'run-new');
+  assert.equal(pageKeyFor('/run/new?suite=quick-check&models=cheap'), 'run-new');
   assert.equal(pageKeyFor('/runs/run%2012'), 'run-detail');
   assert.equal(pageKeyFor('/present/run-1'), 'present');
   assert.equal(pageKeyFor('/present/versus'), 'versus');
@@ -156,7 +156,7 @@ test('checklist: brand-new install → step 1, add a key', () => {
 test('checklist: key saved, no runs → run the 2p Quick Check', () => {
   const c = deriveChecklist({ anyKey: true, runs: [], seenResults: false, seenPresenter: false });
   assert.equal(c.next?.id, 'run');
-  assert.equal(c.next?.cta.to, '/run/new?suite=quick-check');
+  assert.equal(c.next?.cta.to, '/run/new?suite=quick-check&models=cheap');
   assert.match(c.next!.cta.label, /2p/);
   assert.equal(c.doneCount, 1);
 });

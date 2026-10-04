@@ -141,7 +141,7 @@ function StudioPicker() {
           icon={<Icon.Clapper />}
           title="Run a test first"
           actions={
-            <Link to="/run/new?suite=quick-check" className="btn primary">
+            <Link to="/run/new?suite=quick-check&models=cheap" className="btn primary">
               <Icon.Rocket /> Run a test
             </Link>
           }

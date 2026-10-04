@@ -133,7 +133,7 @@ export default function RunsPage() {
             icon={<Icon.History />}
             title="No runs yet"
             actions={
-              <Link to="/run/new?suite=quick-check" className="btn primary">
+              <Link to="/run/new?suite=quick-check&models=cheap" className="btn primary">
                 <Icon.Rocket /> Run your first test
               </Link>
             }

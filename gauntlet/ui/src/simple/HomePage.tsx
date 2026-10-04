@@ -219,7 +219,7 @@ function LatestRun({ runs, loading }: { runs: RunListItem[] | undefined; loading
   const latest = runs && runs.length ? [...runs].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]! : null;
   if (!latest) {
     return (
-      <Glance icon={<Icon.History />} label="Latest run" value={loading ? <Skeleton h={30} w={140} /> : 'No runs yet'} link={{ to: '/run/new?suite=quick-check', label: 'Run the 2p Quick Check' }}>
+      <Glance icon={<Icon.History />} label="Latest run" value={loading ? <Skeleton h={30} w={140} /> : 'No runs yet'} link={{ to: '/run/new?suite=quick-check&models=cheap', label: 'Run the 2p Quick Check' }}>
         <span>Your most recent test will show here.</span>
       </Glance>
     );

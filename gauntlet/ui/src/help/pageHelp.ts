@@ -119,7 +119,7 @@ export const PAGE_HELP: Record<PageKey, PageHelp> = {
       { label: 'Copy & paste Inbox', to: '/inbox' },
     ],
     doc: { file: PLAYBOOK, section: '3. Run for real' },
-    guide: { text: 'Pick a set of tests, tick the models, check the price on the right, then press Start run. First time? The Quick Check costs about 2p.', next: { label: 'Use the Quick Check', to: '/run/new?suite=quick-check' } },
+    guide: { text: 'Pick a set of tests, tick the models, check the price on the right, then press Start run. First time? The Quick Check costs about 2p.', next: { label: 'Use the Quick Check', to: '/run/new?suite=quick-check&models=cheap' } },
   },
   runs: {
     title: 'Past runs',
@@ -219,11 +219,11 @@ export const PAGE_HELP: Record<PageKey, PageHelp> = {
       { q: 'Do I need a key for every company?', a: 'No. One OpenRouter key reaches nearly every model.' },
     ],
     links: [
-      { label: 'Run your first test', to: '/run/new?suite=quick-check' },
+      { label: 'Run your first test', to: '/run/new?suite=quick-check&models=cheap' },
       { label: 'Set a monthly budget', to: '/budget' },
     ],
     doc: { file: 'SETUP-WINDOWS.md', section: 'Adding more keys' },
-    guide: { text: 'Paste a key into the big box and you’re done: Gauntlet checks it for free and saves it on this computer.', next: { label: 'Then run a test', to: '/run/new?suite=quick-check' } },
+    guide: { text: 'Paste a key into the big box and you’re done: Gauntlet checks it for free and saves it on this computer.', next: { label: 'Then run a test', to: '/run/new?suite=quick-check&models=cheap' } },
   },
   review: {
     title: 'Blind review',

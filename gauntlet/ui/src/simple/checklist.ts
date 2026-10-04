@@ -63,8 +63,8 @@ export function deriveChecklist(i: ChecklistInput): Checklist {
       id: 'run',
       n: 2,
       title: 'Run your first test',
-      why: 'Start with the Quick Check: five short questions that cost about 2p, just to see it all working.',
-      cta: { label: 'Run the 2p Quick Check', to: '/run/new?suite=quick-check' },
+      why: 'Start with the Quick Check: five short questions on the two cheapest models, about 2p, just to see it all working.',
+      cta: { label: 'Run the 2p Quick Check', to: '/run/new?suite=quick-check&models=cheap' },
       done: hasRun,
     },
     {
