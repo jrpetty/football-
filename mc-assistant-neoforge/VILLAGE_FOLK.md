@@ -190,6 +190,13 @@ added a little at a time round those buildings:
 
 Once a village has its wall, it sees to its own safety.
 
+* **Lights from the first days.** A torch on a fence post goes up every few blocks along
+  the streets, made from the stores' coal and wood; from the Iron Age, lamp posts.
+* **An iron golem.** An Iron Age village keeps one, as a vanilla village does. If it is
+  lost, another is made a few days later.
+* **The wall over water.** Where the ring of the wall crosses a pond or a river (up to six
+  deep), the builders raise a stone footing from the bed and the wall stands on it.
+
 * **Gates.** Each of the wall's four gaps gets a gate: stone posts, a lintel and
   three spruce doors. Ten stone and six planks (or two logs) come from the stores. The doors stand open by
   day and are shut at dusk. Folk let themselves through, as you would; a zombie can't.
@@ -258,8 +265,8 @@ born or grown up into a big enough village.
 | Beekeeper | Stone Age, 20 folk | a meadow outside town | Keeps up to four hives: comb with shears or honey with a bottle from a full hive, new hives from comb, bees bred on flowers |
 | Blacksmith | Iron Age, 16 folk | the smithy | Makes iron picks for the miners, swords and armour for the watch, shears, buckets, axes and hoes; bows, and arrows of flint, stick and feather |
 | Shopkeeper | Iron Age, 18 folk | the shop | Sets out what the crafts have made on the shop's counter |
-| Brewer | Diamond Age, 22 folk | the brewery | Brews at a real brewing stand: healing for the watch, then swiftness, night vision, regeneration, leaping, water breathing, fire resistance and strength |
-| Enchanter | Nether Age, 24 folk | the library | Binds books from paper (the farmers' cane) and leather, then enchants the village's iron and diamond tools and armour with lapis at its table |
+| Brewer | Iron Age, 22 folk | the brewery | Brews at a real brewing stand: healing for the watch, then swiftness, night vision, regeneration, leaping, water breathing, fire resistance and strength |
+| Enchanter | Diamond Age, 24 folk | the library | Binds books from paper (the farmers' cane) and leather, then enchants the village's iron and diamond tools and armour with lapis at its table |
 
 Every craft works out of the village's stores and puts what it makes back into
 them, a piece of work every twenty seconds or so. A blacksmith always leaves a few
@@ -292,9 +299,11 @@ while the village has a cook (for the café) or a shopkeeper (for the shop).
   to the treasury.
 
 **Buildings.** A village builds a café from the Stone Age once it has 14 folk, a
-smithy (16) and a shop (18) in the Iron Age, a brewery (22) in the Diamond Age and
-a library (24) in the Nether Age. These come after everything the age itself asks
-for, so they never hold a village back from its next age. The builder makes their
+smithy (16), a shop (18) and a brewery (22) in the Iron Age, and a library (24) in the
+Diamond Age. These come after everything the age itself asks for, so they never hold a
+village back from its next age. Houses for beds and these amenities go up turn about (a
+house, then an amenity, then a house), so a town that grows faster than it builds still
+gets its café, smithy and the rest. The builder makes their
 furniture from the stores: a smoker, loom, grindstone, bookshelves, a lectern, a
 brewing stand (from a blaze rod) and an enchanting table (from a book, two diamonds
 and four obsidian). Anything it can't make is left out — and the craft that works
@@ -388,6 +397,38 @@ the stores can make that day (three wool and three planks each), and any it stil
 are brought in later, one at a time, as wool comes in: a bed from the stores, or one made
 there and then. While folk sleep on the ground the tailor makes beds before rugs and
 banners, the quest board asks for wool, and the elder may order the herds grown.
+
+**How the village keeps its balance.**
+
+* **Gluts.** A trade whose stores are piled far past any use gets a smaller share of the
+  village. With food over four larders the farms are halved (over two, cut by a quarter),
+  and logs and stone likewise. The mines are never cut while the age is short of iron or
+  diamonds. Hands a trade can spare go to whichever trade is a hand and a half short.
+* **Iron first.** An iron vein never uses up a miner's vein budget, and is dug before
+  any other ore it finds. The smelter fires ore before sand, and fetches the raw iron
+  the carriers have brought to the stores.
+* **Idle hands help the builder.** A folk whose trade has nothing to do, and that can
+  fetch nothing the village is short of, goes and helps whoever is raising the village's
+  building. Each helper (up to three) makes the blocks go down a tick faster.
+* **Market day sells the surplus.** Travelling traders buy logs, cobblestone and food
+  far over a reserve (up to three stacks each) for coin into the treasury.
+* **The stores grow.** When every store chest is full, another is set down beside them,
+  made of the stores' own planks.
+
+**Tools, potions and clothes.**
+
+* **The best tool of the trade.** Every few minutes a miner, woodcutter, farmer or guard
+  takes the best tool of its kind the stores hold, if it beats its own: the smith's iron
+  and the enchanter's work. Its old tool goes back.
+* **The watch's iron.** Guards put on the smith's iron armour and take its swords.
+* **Potions at work.** A miner deep down takes fire resistance (or night vision), a
+  carrier swiftness for its rounds, a fisher in the water water breathing. Anybody badly
+  hurt sends for the brewer's healing.
+* **Boots.** The tailor makes leather boots in the village's colour, and anybody without
+  boots takes a pair.
+* **Bone meal and beetroot.** Village farmers grow beetroot as well as wheat, carrots and
+  potatoes. They use bone meal on the fields, made from seed the stores can't use and
+  from the watch's bones.
 
 **Where the fields go.** A farmer puts its field on the bank of the water nearest the
 village, just outside the town's own ground, whichever way that is. If there is no
@@ -536,6 +577,11 @@ a rancher has shears made once the village has iron, so the wool keeps coming.
   beds are still at the camp.
 * **Families sleep under one roof.** A folk takes the free bed nearest its partner's,
   and a child the one nearest its mother's or father's.
+* **The night round.** A guard on watch walks the ring street round the square, stop to
+  stop past each gate, rather than the corners of its own plot.
+* **Children share.** Two children count as one bed's worth when the village works out
+  how many houses it needs. While any grown-up has no bed, a child sleeps by its
+  family's bed instead of taking one.
 * **The watch sleeps too.** The guards keep the night in two watches. Half stand the
   first, from dusk to midnight, then go to bed. The other half sleep first and take
   the second, from midnight to dawn. A village with one guard has it watch until

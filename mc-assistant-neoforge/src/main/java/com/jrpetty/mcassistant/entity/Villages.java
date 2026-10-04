@@ -88,8 +88,10 @@ public final class Villages {
         new Slot(AssistantEntity.StationTask.TAILOR, 1, 18, Age.STONE, 1),
         new Slot(AssistantEntity.StationTask.SHOP, 1, 18, Age.IRON, 1),
         new Slot(AssistantEntity.StationTask.BEEKEEP, 1, 20, Age.STONE, 1),
-        new Slot(AssistantEntity.StationTask.BREW, 1, 22, Age.DIAMOND, 1),
-        new Slot(AssistantEntity.StationTask.ENCHANT, 1, 24, Age.NETHER, 1));
+        // The brewer and the enchanter an age sooner than they were: a town of seventy-four in
+        // the Iron Age had neither, and few villages ever saw the Nether Age at all.
+        new Slot(AssistantEntity.StationTask.BREW, 1, 22, Age.IRON, 1),
+        new Slot(AssistantEntity.StationTask.ENCHANT, 1, 24, Age.DIAMOND, 1));
 
     /** Forget every settlement. For tests, which share one JVM and would
      *  otherwise inherit each other's villages. */
@@ -215,6 +217,8 @@ public final class Villages {
 
     public static void resetForTests() {
         MADE_UP.clear();
+        GLUT.clear();
+        GLUT_AT.clear();
         GREW.clear();
         Standing.resetForTests();
         Gatherings.resetForTests();
@@ -532,7 +536,18 @@ public final class Villages {
             if (have.getOrDefault(slot.trade(), 0) > 0) continue;
             if (craftReady(villageId, slot.trade())) return slot.trade();
         }
-        return null;
+        // A trade well short while others have hands to spare — the farms cut back over a full
+        // larder (weighGluts), the mines short of hands for the iron. Only a hand and a half
+        // short, and only ever from a trade over its own share (changedTrade asks overStaffed),
+        // so nobody is shuffled back and forth.
+        AssistantEntity.StationTask most = null;
+        double worst = 1.5;
+        for (Slot slot : SLOTS) {
+            if (!slot.wanted(total, at) || slot.trade().isCraft() || slot.trade() == AssistantEntity.StationTask.GUARD) continue;
+            double short_ = target(villageId, slot, total) * fit - have.getOrDefault(slot.trade(), 0);
+            if (short_ > worst) { worst = short_; most = slot.trade(); }
+        }
+        return most;
     }
 
     /**
@@ -578,7 +593,8 @@ public final class Villages {
      *  trades a little more, every other a little less. */
     static double target(@Nullable UUID villageId, Slot slot, int total) {
         int boost = Orders.boost(villageId, slot.trade());
-        double t = (slot.weight() + boost) * total / (double) VILLAGE_SIZE * Orders.scale(villageId);
+        double t = (slot.weight() + boost) * total / (double) VILLAGE_SIZE * Orders.scale(villageId)
+            * glut(villageId, slot.trade());
         int max = slot.max() == Integer.MAX_VALUE ? Integer.MAX_VALUE : slot.max() + Math.max(0, boost);
         return Math.max(0.0, Math.min(max, t));
     }
@@ -695,7 +711,48 @@ public final class Villages {
     public static List<Need> needs(net.minecraft.server.level.ServerLevel level, UUID villageId) {
         List<Need> all = wantsFor(level, villageId);
         if (all.isEmpty()) advance(level, villageId, age(villageId));
+        weighGluts(level, villageId, all);
         return all;
+    }
+
+    /** How much each trade's share is cut for what its stores are drowning in (1: not at all). */
+    private static final Map<UUID, Map<AssistantEntity.StationTask, Double>> GLUT = new ConcurrentHashMap<>();
+    private static final Map<UUID, Long> GLUT_AT = new ConcurrentHashMap<>();
+
+    /**
+     * A trade whose stores are piled far past anything the village can use gets a smaller share,
+     * and the hands go where they are wanted: the long game's village had twenty-three farmers on
+     * 1,115 food and six miners on fourteen iron. Food over four larders halves the farms (over
+     * two, three quarters); logs and stone likewise past their marks — but the mines are never cut
+     * while the age is short of iron or diamonds, which come out of the same holes.
+     */
+    private static void weighGluts(net.minecraft.server.level.ServerLevel level, UUID villageId, List<Need> wants) {
+        long now = level.getGameTime();
+        if (now - GLUT_AT.getOrDefault(villageId, -100000L) < 1200L) return;
+        GLUT_AT.put(villageId, now);
+        Village v = get(villageId);
+        if (v == null) return;
+        int folk = Math.max(1, headcount(villageId));
+        int radius = storesRadius(villageId);
+        Map<AssistantEntity.StationTask, Double> cut = new java.util.EnumMap<>(AssistantEntity.StationTask.class);
+        int food = stock(level, v.centre(), Task.FOOD, radius);
+        int larder = Math.max(64, larderForBirth(villageId));
+        cut.put(AssistantEntity.StationTask.FARM, food > 4 * larder ? 0.5 : food > 2 * larder ? 0.75 : 1.0);
+        int logs = stock(level, v.centre(), Task.LOGS, radius);
+        int timber = Math.max(256, com.jrpetty.mcassistant.village.VillageMath.timberWanted(folk));
+        cut.put(AssistantEntity.StationTask.WOOD, logs > 4 * timber ? 0.5 : logs > 2 * timber ? 0.75 : 1.0);
+        boolean deepShort = false;
+        for (Need n : wants) if (n.task() == Task.IRON || n.task() == Task.DIAMOND || n.task() == Task.OBSIDIAN) deepShort = true;
+        int stone = stock(level, v.centre(), Task.STONE, radius);
+        int stoneMark = Math.max(384, com.jrpetty.mcassistant.village.VillageMath.stoneWanted(folk));
+        cut.put(AssistantEntity.StationTask.MINE, deepShort ? 1.0 : stone > 4 * stoneMark ? 0.6 : 1.0);
+        GLUT.put(villageId, cut);
+    }
+
+    /** The cut a trade's share takes for a glut (Villages.weighGluts). */
+    static double glut(@Nullable UUID villageId, AssistantEntity.StationTask trade) {
+        Map<AssistantEntity.StationTask, Double> cut = villageId == null ? null : GLUT.get(villageId);
+        return cut == null ? 1.0 : cut.getOrDefault(trade, 1.0);
     }
 
     @Nullable
@@ -1167,15 +1224,15 @@ public final class Villages {
         // shop are what a big Iron Age town has, not what makes it one.
         if (folk >= 16 && built(villageId, "smithy") < 1) extras.add("smithy");
         if (folk >= 18 && built(villageId, "shop") < 1) extras.add("shop");
+        if (folk >= 22 && built(villageId, "brewery") < 1) extras.add("brewery");
         if (at == Age.IRON) { homesAndAmenities(villageId, folk, out, extras); return out; }
 
         if (built(villageId, "lighthouse") < 1) out.add("lighthouse");
         if (built(villageId, "chapel") < 1) out.add("chapel");
-        if (folk >= 22 && built(villageId, "brewery") < 1) extras.add("brewery");
+        if (folk >= 24 && built(villageId, "library") < 1) extras.add("library");
         if (at == Age.DIAMOND) { homesAndAmenities(villageId, folk, out, extras); return out; }
 
         if (built(villageId, "gateway") < 1) out.add("gateway");
-        if (folk >= 24 && built(villageId, "library") < 1) extras.add("library");
         homesAndAmenities(villageId, folk, out, extras);   // (the Nether Age: before the great works)
         // And then the great works, one after another for as long as the village stands:
         // a town that has been everywhere its ages lead goes on building.
@@ -1430,6 +1487,14 @@ public final class Villages {
         return cur.equals(me);
     }
 
+    /** Who is raising the village's building now, or null. */
+    @Nullable
+    public static UUID currentLead(UUID villageId, long now) {
+        UUID cur = LEAD.get(villageId);
+        Long since = LEAD_AT.get(villageId);
+        return cur != null && since != null && now - since < LEAD_TERM ? cur : null;
+    }
+
     /** Is this hand the lead right now (without taking the post if it is free)? */
     public static boolean holdsTheLead(UUID villageId, UUID me, long now) {
         UUID cur = LEAD.get(villageId);
@@ -1547,6 +1612,13 @@ public final class Villages {
             for (int i = 0; i < c.getContainerSize(); i++) if (c.getItem(i).isEmpty()) return p;
         }
         return growStores(level, villageId);
+    }
+
+    /** The village's colour (its guards' tabards, the tailor's boots): the client's banner colours. */
+    private static final int[] COLOURS = { 0x324C9C, 0x9C2A2E, 0x2E7044, 0x5E3A86, 0x2A2A32, 0x22777E, 0xA65A22 };
+
+    public static int colour(UUID villageId) {
+        return COLOURS[Math.floorMod(Math.floorMod(villageId.hashCode(), 64), COLOURS.length)];
     }
 
     private static final Map<UUID, Long> GREW = new ConcurrentHashMap<>();

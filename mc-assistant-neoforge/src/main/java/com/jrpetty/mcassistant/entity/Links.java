@@ -42,8 +42,10 @@ public final class Links {
     private Links() {}
 
     private static final Map<UUID, Integer> LAST = new ConcurrentHashMap<>();
+    /** When each folk last took a potion from the stores. */
+    private static final Map<UUID, Integer> DOSED = new ConcurrentHashMap<>();
 
-    public static void resetForTests() { LAST.clear(); }
+    public static void resetForTests() { LAST.clear(); DOSED.clear(); }
 
     /** The links a hand of each trade keeps up, every couple of minutes. Returns whether it is busy with one now. */
     public static boolean tend(VillageFolkEntity f, ServerLevel level) {
@@ -51,13 +53,15 @@ public final class Links {
         if (f.tickCount - last < 2400 && f.tickCount >= last) return false;
         LAST.put(f.getUUID(), f.tickCount);
         return switch (f.stationTask()) {
-            case FARM -> cane(f, level) != null;
+            case FARM -> cane(f, level) != null | compost(f, level) != null;
+            case MINE -> workPotion(f, level) != null;
+            case HAUL, FISH -> workPotion(f, level) != null;
             case RANCH -> {
                 // Both: a milking doesn't keep it from going for an animal the pen is short of.
                 boolean milked = milk(f, level) != null;
                 yield Drover.consider(f, level) || milked;
             }
-            case SMELT -> sand(f, level) != null;
+            case SMELT -> ore(f, level) != null || sand(f, level) != null;
             default -> false;
         };
     }
@@ -155,6 +159,32 @@ public final class Links {
         return "milked a cow";
     }
 
+    // ------------------------------------------------------------------ ore
+
+    /**
+     * The smelter's ore out of the stores: the carriers bring the miners' raw iron to the
+     * storehouse, and the smelter only ever looked in the chests round its own smeltery, so the
+     * long game's stores held raw iron the furnaces never saw. Iron first, then gold and copper.
+     */
+    @Nullable
+    public static String ore(VillageFolkEntity f, ServerLevel level) {
+        UUID village = f.ownerId();
+        Villages.Village v = village == null ? null : Villages.get(village);
+        if (v == null || f.countCarried(AssistantEntity.SMELTABLE_ORE) >= 8) return null;
+        int took = 0;
+        for (net.minecraft.world.item.Item raw : java.util.List.of(Items.RAW_IRON, Items.RAW_GOLD, Items.RAW_COPPER)) {
+            int n = Math.min(32 - took, Market.stock(level, village, s -> s.is(raw)));
+            if (n <= 0 || !Crafts.take(level, v, s -> s.is(raw), n)) continue;
+            ItemStack left = f.insertItem(new ItemStack(raw, n));
+            if (!left.isEmpty()) Crafts.store(level, v, left);
+            took += n - left.getCount();
+            if (took >= 32) break;
+        }
+        if (took == 0) return null;
+        f.brain("took " + took + " raw ore from the stores to the furnaces");
+        return "took " + took + " raw ore";
+    }
+
     // ------------------------------------------------------------------ sand
 
     /**
@@ -227,6 +257,111 @@ public final class Links {
         f.swing(InteractionHand.MAIN_HAND);
         f.brain("dug " + dug + " sand for glass");
         return "dug " + dug + " sand for glass";
+    }
+
+    // ------------------------------------------------------------------ compost
+
+    /**
+     * A farmer's compost: the seeds the stores hold far more of than anybody can sow, and the
+     * watch's bones, made into bone meal for the fields (a settler farmer uses it, FarmGoal and
+     * AssistantEntity.boneMealOne). Returns what it did, or null.
+     */
+    @Nullable
+    public static String compost(VillageFolkEntity f, ServerLevel level) {
+        UUID village = f.ownerId();
+        Villages.Village v = village == null ? null : Villages.get(village);
+        if (v == null || f.countCarried(s -> s.is(Items.BONE_MEAL)) >= 8) return null;
+        java.util.function.Predicate<ItemStack> seeds = s -> s.is(Items.WHEAT_SEEDS) || s.is(Items.BEETROOT_SEEDS);
+        int meal = 0;
+        if (Market.stock(level, village, seeds) > 128 && Crafts.take(level, v, seeds, 16)) meal += 2;   // a composter's worth
+        if (Market.stock(level, village, s -> s.is(Items.BONE)) > 4 && Crafts.take(level, v, s -> s.is(Items.BONE), 2)) meal += 6;
+        if (meal == 0) return null;
+        ItemStack left = f.insertItem(new ItemStack(Items.BONE_MEAL, meal));
+        if (!left.isEmpty()) Crafts.store(level, v, left);
+        f.brain("made " + meal + " bone meal for the fields");
+        return "made " + meal + " bone meal";
+    }
+
+    // ------------------------------------------------------------------ potions for the work
+
+    /**
+     * The brewer's potions put to work, not only to the shop counter: a miner deep in the rock
+     * takes fire resistance (or night vision), a carrier swiftness for its rounds, a fisher water
+     * breathing. One from the stores when it has none working, at most every few minutes.
+     */
+    @Nullable
+    public static String workPotion(VillageFolkEntity f, ServerLevel level) {
+        UUID village = f.ownerId();
+        Villages.Village v = village == null ? null : Villages.get(village);
+        if (v == null) return null;
+        int last = DOSED.getOrDefault(f.getUUID(), -100000);
+        if (f.tickCount - last < 3600 && f.tickCount >= last) return null;
+        java.util.List<net.minecraft.core.Holder<net.minecraft.world.item.alchemy.Potion>> wanted = new java.util.ArrayList<>();
+        net.minecraft.core.Holder<net.minecraft.world.effect.MobEffect> effect;
+        switch (f.stationTask()) {
+            case MINE -> {
+                if (f.getY() > 40) return null;                                    // only down in the deep rock
+                if (Market.stock(level, village, s -> isPotion(s, Potions.FIRE_RESISTANCE, Potions.LONG_FIRE_RESISTANCE)) > 0) {
+                    wanted.add(Potions.FIRE_RESISTANCE); wanted.add(Potions.LONG_FIRE_RESISTANCE);
+                    effect = MobEffects.FIRE_RESISTANCE;
+                } else {
+                    wanted.add(Potions.NIGHT_VISION); wanted.add(Potions.LONG_NIGHT_VISION);
+                    effect = MobEffects.NIGHT_VISION;
+                }
+            }
+            case HAUL -> {
+                wanted.add(Potions.SWIFTNESS); wanted.add(Potions.LONG_SWIFTNESS); wanted.add(Potions.STRONG_SWIFTNESS);
+                effect = MobEffects.MOVEMENT_SPEED;
+            }
+            case FISH -> {
+                if (!f.isInWater() && !level.getFluidState(f.blockPosition().below()).is(net.minecraft.tags.FluidTags.WATER)) return null;
+                wanted.add(Potions.WATER_BREATHING); wanted.add(Potions.LONG_WATER_BREATHING);
+                effect = MobEffects.WATER_BREATHING;
+            }
+            default -> { return null; }
+        }
+        if (f.hasEffect(effect)) return null;
+        ItemStack potion = Crafts.takeOne(level, v, s -> isPotion(s, wanted.toArray(new net.minecraft.core.Holder[0])));
+        if (potion.isEmpty()) return null;
+        DOSED.put(f.getUUID(), f.tickCount);
+        drink(f, potion);
+        return "drank a potion for the work";
+    }
+
+    @SafeVarargs
+    private static boolean isPotion(ItemStack s, net.minecraft.core.Holder<net.minecraft.world.item.alchemy.Potion>... kinds) {
+        if (!s.is(Items.POTION)) return false;
+        PotionContents pc = s.getOrDefault(DataComponents.POTION_CONTENTS, PotionContents.EMPTY);
+        for (var k : kinds) if (pc.is(k)) return true;
+        return false;
+    }
+
+    /** Drink one: its effects, and the bottle back. */
+    private static void drink(VillageFolkEntity f, ItemStack potion) {
+        PotionContents pc = potion.getOrDefault(DataComponents.POTION_CONTENTS, PotionContents.EMPTY);
+        for (MobEffectInstance e : pc.getAllEffects()) {
+            if (e.getEffect().value().isInstantenous()) e.getEffect().value().applyInstantenousEffect(null, null, f, e.getAmplifier(), 1.0D);
+            else f.addEffect(new MobEffectInstance(e));
+        }
+        ItemStack left = f.insertItem(new ItemStack(Items.GLASS_BOTTLE));
+        if (!left.isEmpty()) f.spawnAtLocation(left);
+        f.level().playSound(null, f.blockPosition(), SoundEvents.GENERIC_DRINK, SoundSource.NEUTRAL, 1.0F, 1.0F);
+        f.brain("drank " + potion.getHoverName().getString().toLowerCase());
+    }
+
+    /** Anybody badly hurt with no potion of its own sends for the brewer's healing from the stores. */
+    public static boolean healFromTheStores(VillageFolkEntity f, ServerLevel level) {
+        if (f.getHealth() > f.getMaxHealth() * 0.4F || f.hasEffect(MobEffects.REGENERATION)) return false;
+        UUID village = f.ownerId();
+        Villages.Village v = village == null ? null : Villages.get(village);
+        if (v == null) return false;
+        int last = DOSED.getOrDefault(f.getUUID(), -100000);
+        if (f.tickCount - last < 1200 && f.tickCount >= last) return false;
+        ItemStack potion = Crafts.takeOne(level, v, Links::healing);
+        if (potion.isEmpty()) return false;
+        DOSED.put(f.getUUID(), f.tickCount);
+        drink(f, potion);
+        return true;
     }
 
     // ------------------------------------------------------------------ the watch's potions

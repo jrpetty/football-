@@ -314,6 +314,19 @@ public final class Crafts {
             return "four lengths of string, spun from wool";
         }
         if (bedsFirst) return null;
+        // Boots in the village's colour, of the rancher's leather: everybody's, a pair each.
+        int barefoot = 0;
+        for (AssistantEntity a : Villages.folkOf(v.id())) {
+            if (!a.isBaby() && a.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.FEET).isEmpty()) barefoot++;
+        }
+        if (barefoot > stock(level, v, s -> s.is(Items.LEATHER_BOOTS)) && stock(level, v, s -> s.is(Items.LEATHER)) >= 4
+                && take(level, v, s -> s.is(Items.LEATHER), 4)) {
+            ItemStack boots = new ItemStack(Items.LEATHER_BOOTS);
+            boots.set(net.minecraft.core.component.DataComponents.DYED_COLOR,
+                new net.minecraft.world.item.component.DyedItemColor(Villages.colour(v.id()), false));
+            store(level, v, boots);
+            return "a pair of boots in the village's colour";
+        }
         if (stock(level, v, s -> s.is(ItemTags.WOOL_CARPETS)) < 8 && have >= 2) {
             Item colour = woolColour(level, v);
             if (!take(level, v, s -> s.is(colour), 2) && !take(level, v, wool, 2)) return null;

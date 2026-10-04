@@ -766,7 +766,9 @@ public class MineGoal extends Goal {
             assistant.note(AssistantEntity.Deed.ORE_FOUND, 1);
                 assistant.noteRichSpot(pos);   // a vein rarely comes alone
 
-                veinMined++;
+                // Iron is what a village's mines are for: an iron vein never uses up the run's
+                // vein budget, so coal and copper met first can't leave the iron in the wall.
+                if (!state.is(BlockTags.IRON_ORES)) veinMined++;
                     }
             if (pendingLadder != null && pos.equals(pendingLadder)) {
                 placeLadder(pos);       // rung in before the bot steps down
@@ -792,16 +794,16 @@ public class MineGoal extends Goal {
                 digQueue.addFirst(above);
                 above = above.above();
             }
-            // Scan the fresh walls for exposed ore.
-            if (veinMined < MAX_VEIN_BLOCKS) {
-                for (Direction d : Direction.values()) {
-                    BlockPos n = pos.relative(d);
-                    // Vein-chasing is the one thing that leaves the plan, so it
-                    // is the one that walked a miner through a wall into a base.
-                    if (isOre(assistant.level().getBlockState(n)) && mayDig(n)
-                            && !veinQueue.contains(n)) {
-                        veinQueue.addLast(n);
-                    }
+            // Scan the fresh walls for exposed ore: iron first, and iron whatever the budget.
+            for (Direction d : Direction.values()) {
+                BlockPos n = pos.relative(d);
+                BlockState ns = assistant.level().getBlockState(n);
+                boolean iron = ns.is(BlockTags.IRON_ORES);
+                // Vein-chasing is the one thing that leaves the plan, so it
+                // is the one that walked a miner through a wall into a base.
+                if ((veinMined < MAX_VEIN_BLOCKS || iron) && isOre(ns) && mayDig(n)
+                        && !veinQueue.contains(n)) {
+                    if (iron) veinQueue.addFirst(n); else veinQueue.addLast(n);
                 }
             }
         }
@@ -827,13 +829,15 @@ public class MineGoal extends Goal {
             // A step can pass through open cave: those walls were never dug,
             // so the after-dig scan never saw them. Check around the two cells
             // now occupied, so ore in a cavity wall is chased like any other.
-            if (phase != Phase.RETURN && veinMined < MAX_VEIN_BLOCKS) {
+            if (phase != Phase.RETURN) {
                 for (BlockPos cell : new BlockPos[] { cursor, cursor.above() }) {
                     for (Direction d : Direction.values()) {
                         BlockPos ore = cell.relative(d);
-                        if (isOre(assistant.level().getBlockState(ore)) && mayDig(ore)
+                        BlockState os = assistant.level().getBlockState(ore);
+                        boolean iron = os.is(BlockTags.IRON_ORES);
+                        if ((veinMined < MAX_VEIN_BLOCKS || iron) && isOre(os) && mayDig(ore)
                                 && !veinQueue.contains(ore)) {
-                            veinQueue.addLast(ore);
+                            if (iron) veinQueue.addFirst(ore); else veinQueue.addLast(ore);
                         }
                     }
                 }

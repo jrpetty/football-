@@ -463,6 +463,8 @@ public class BuildGoal extends Goal {
         List<Placement> moved = new ArrayList<>(plan.size());
         Map<Long, Integer> ground = new java.util.HashMap<>();
         Map<Long, Boolean> fits = new java.util.HashMap<>();
+        Map<Long, Integer> beds = new java.util.HashMap<>();
+        java.util.Set<Long> footed = new java.util.HashSet<>();
         for (Placement p : plan) {
             int x = p.pos().getX();
             int z = p.pos().getZ();
@@ -472,11 +474,42 @@ public class BuildGoal extends Goal {
             // The ring is laid out before anybody looks at what stands on it. Thirteen
             // blocks out from the heart it crosses houses, fields and ponds: a wall through
             // a house fills its rooms, across a field it buries the crop. It goes round them.
-            if (!fits.computeIfAbsent(key, k -> wallFits(assistant.level(), x, z, g))) continue;
+            if (!fits.computeIfAbsent(key, k -> wallFits(assistant.level(), x, z, g))) {
+                // Except water: a pond or a river on the line gets a footing of stone up from
+                // its bed, and the wall stands on it. The long game's wall had two whole sides
+                // missing where the ring ran into a lake, and no gate or post on either.
+                int bed = beds.computeIfAbsent(key, k -> wetBed(assistant.level(), x, z, g));
+                if (bed == Integer.MIN_VALUE) continue;
+                if (footed.add(key)) {
+                    for (int y = bed; y < g; y++) {
+                        moved.add(new Placement(new BlockPos(x, y, z), Part.BLOCK, Blueprints.Style.FOUNDATION, Blueprints.Way.UP));
+                    }
+                }
+            }
             moved.add(p.at(new BlockPos(x, g + (p.pos().getY() - base.getY()), z)));
         }
         plan.clear();
         plan.addAll(moved);
+    }
+
+    /**
+     * Where a wall column over water would stand its footing: the lowest water cell above a firm
+     * bed, if the water is no more than six deep (the builder's reach) and nothing stands over it.
+     * Integer.MIN_VALUE where it is not water, too deep, or lava.
+     */
+    static int wetBed(net.minecraft.world.level.Level level, int x, int z, int g) {
+        if (!level.hasChunk(x >> 4, z >> 4)) return Integer.MIN_VALUE;
+        BlockPos top = new BlockPos(x, g - 1, z);
+        if (!level.getFluidState(top).is(net.minecraft.tags.FluidTags.WATER)) return Integer.MIN_VALUE;
+        for (int dy = 0; dy <= 4; dy++) {
+            BlockState st = level.getBlockState(new BlockPos(x, g + dy, z));
+            if (!st.isAir() && !(soft(st) && st.getFluidState().isEmpty())) return Integer.MIN_VALUE;
+        }
+        int y = g - 1;
+        while (y > g - 7 && level.getFluidState(new BlockPos(x, y - 1, z)).is(net.minecraft.tags.FluidTags.WATER)) y--;
+        BlockState under = level.getBlockState(new BlockPos(x, y - 1, z));
+        if (!under.getFluidState().isEmpty() || !under.isSolid()) return Integer.MIN_VALUE;   // deeper than six, or no bed
+        return y;
     }
 
     /**

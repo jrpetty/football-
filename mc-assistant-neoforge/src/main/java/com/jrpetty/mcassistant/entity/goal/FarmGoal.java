@@ -478,7 +478,7 @@ public class FarmGoal extends Goal {
         // A settlement's farmers are not working their way up a ladder: the
         // village's larder is the point, and a carrot is worth six ears of wheat.
         if (seed == Items.CARROT || seed == Items.POTATO) return lvl >= 10 || assistant.isSettler();
-        if (seed == Items.BEETROOT_SEEDS) return lvl >= 20;
+        if (seed == Items.BEETROOT_SEEDS) return lvl >= 20 || assistant.isSettler();
         // A village's farmer plants the melon and pumpkin seed it brought (Trades.kit): the café
         // and the brewer want them, and nobody else in the village has any.
         return lvl >= 30 || assistant.isSettler();   // melon and pumpkin stems

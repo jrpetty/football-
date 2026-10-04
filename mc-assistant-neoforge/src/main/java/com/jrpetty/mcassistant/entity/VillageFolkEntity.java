@@ -295,8 +295,10 @@ public class VillageFolkEntity extends AssistantEntity {
             if (tickCount % 10 == 0) Drover.drive(this, herding);
             return;
         }
-        // A guard badly hurt drinks the brewer's healing, if it carries one.
-        if (tickCount % 20 == 3 && stationTask() == StationTask.GUARD) Links.drinkIfHurt(this);
+        // Badly hurt: the brewer's healing, its own or (any trade) one from the stores.
+        if (tickCount % 20 == 3 && level() instanceof net.minecraft.server.level.ServerLevel hurtIn) {
+            if (!Links.drinkIfHurt(this) && stationTask() != StationTask.GUARD) Links.healFromTheStores(this, hurtIn);
+        }
         if (tickCount - agendaTick < 100) return;   // folk think slowly, on purpose
         agendaTick = tickCount;
         flyTheColours();
@@ -1870,7 +1872,7 @@ public class VillageFolkEntity extends AssistantEntity {
         return switch (stationTask()) {
             case FARM -> countCarried(st -> st.is(net.minecraft.world.item.Items.WHEAT_SEEDS) || st.is(net.minecraft.world.item.Items.CARROT)
                     || st.is(net.minecraft.world.item.Items.POTATO) || st.is(net.minecraft.world.item.Items.BEETROOT_SEEDS)) < 8
-                ? new String[]{ "wheat seeds", "carrot", "potato" } : null;
+                ? new String[]{ "wheat seeds", "carrot", "potato", "beetroot seeds" } : null;
             case WOOD -> countCarried(st -> st.is(net.minecraft.tags.ItemTags.SAPLINGS)) < 4 ? new String[]{ "sapling" } : null;
             case MINE -> countCarried(st -> st.is(net.minecraft.world.item.Items.TORCH)) < 8 ? new String[]{ "torch" } : null;
             case RANCH -> countCarried(st -> st.is(net.minecraft.world.item.Items.WHEAT)) < 8 ? new String[]{ "wheat" } : null;
@@ -1976,6 +1978,9 @@ public class VillageFolkEntity extends AssistantEntity {
         pickaxeFromTheStores();                        // the iron, and then the diamond, pickaxe
         shearsFromTheStores();                         // a rancher's shears, for the wool
         stoneToolFromTheStores();                      // no more wooden tools once there is stone
+        guardKitFromTheStores();                       // the smith's iron armour and sword, on the watch
+        betterToolFromTheStores();                     // the smith's iron and the enchanter's work, in use
+        clothesFromTheStores();                        // the tailor's boots
         bucketFromTheStores();                         // a farmer's water, when the village is hungry
         obsidianFromLava();                            // the gateway's obsidian, made where the lava is
         // The trade's kit, if the village has not had it (the hive, the brewing stand...), and the
@@ -2072,11 +2077,59 @@ public class VillageFolkEntity extends AssistantEntity {
             return true;
         }
 
+        if (helping != null && helpTheBuilder(server, village)) return true;
         if (tickCount - lastHelpTick < 1200) return false;   // one attempt a minute, at most
         for (Villages.Need need : Villages.needs(server, village)) {
             if (takeOn(server, need)) { lastHelpTick = tickCount; return true; }
         }
+        // Nothing the village is short of that this hand can fetch: it goes and helps whoever is
+        // raising the village's building (and the building goes up faster for it).
+        if (helpTheBuilder(server, village)) { lastHelpTick = tickCount; return true; }
         return false;
+    }
+
+    /** The builder this idle hand is helping, and until when. */
+    @Nullable private UUID helping;
+    private int helpingUntil;
+    /** Who is helping this builder, and when each last checked in. */
+    private final java.util.Map<UUID, Integer> helpers = new java.util.HashMap<>();
+
+    /**
+     * An idle hand helps the village's builder: it goes to the building going up and fetches and
+     * carries for the one laying the blocks, which lays them faster for it (buildPaceTicks).
+     * Idle folk used to stand at their plots — "46 of 61 not worked in five minutes" — while one
+     * builder raised every house in the town alone.
+     */
+    private boolean helpTheBuilder(net.minecraft.server.level.ServerLevel server, UUID village) {
+        UUID lead = Villages.currentLead(village, server.getGameTime());
+        if (lead == null || lead.equals(getUUID()) || !(server.getEntity(lead) instanceof VillageFolkEntity builder)) {
+            helping = null;
+            return false;
+        }
+        Job j = builder.peekJob();
+        if (j == null || j.type() != Job.Type.BUILD) { helping = null; return false; }
+        if (helping == null || !helping.equals(lead)) {
+            helping = lead;
+            helpingUntil = tickCount + 2400;
+            brain("helping " + builder.displayNameCap() + " with the building");
+        }
+        if (tickCount > helpingUntil) { helping = null; return false; }
+        if (distanceToSqr(builder) > 6.0 * 6.0) {
+            getNavigation().moveTo(builder, 1.0D);
+        } else {
+            getNavigation().stop();
+            getLookControl().setLookAt(builder);
+            swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+            builder.helpers.put(getUUID(), (int) server.getGameTime());
+        }
+        return true;
+    }
+
+    @Override
+    protected int buildHelpers() {
+        int now = (int) level().getGameTime();
+        helpers.values().removeIf(t -> now - t > 240 || now < t);
+        return helpers.size();
     }
 
     private int lastHelpTick = -100000;
@@ -2481,6 +2534,189 @@ public class VillageFolkEntity extends AssistantEntity {
      * A folk whose trade tool is wood, or missing, has a stone one made from the stores:
      * three cobblestone and a plank.
      */
+    private int guardKitTick = -100000;
+
+    /**
+     * The smith's iron for the watch: a guard with an empty armour slot puts on the piece the
+     * stores hold, and one with no iron sword takes one. The smithy kept a rack of helmets,
+     * chestplates and swords for the watch, and none ever left the stores: the guards wore what
+     * they had made themselves out of the iron the smith also wanted.
+     */
+    private void guardKitFromTheStores() {
+        if (stationTask() != StationTask.GUARD || tickCount - guardKitTick < 1200) return;
+        guardKitTick = tickCount;
+        UUID village = ownerId();
+        Villages.Village v = village == null ? null : Villages.get(village);
+        if (v == null || !(level() instanceof net.minecraft.server.level.ServerLevel server)) return;
+        net.minecraft.world.entity.EquipmentSlot[] slots = { net.minecraft.world.entity.EquipmentSlot.HEAD,
+            net.minecraft.world.entity.EquipmentSlot.CHEST, net.minecraft.world.entity.EquipmentSlot.LEGS,
+            net.minecraft.world.entity.EquipmentSlot.FEET };
+        net.minecraft.world.item.Item[] iron = { net.minecraft.world.item.Items.IRON_HELMET,
+            net.minecraft.world.item.Items.IRON_CHESTPLATE, net.minecraft.world.item.Items.IRON_LEGGINGS,
+            net.minecraft.world.item.Items.IRON_BOOTS };
+        int put = 0;
+        for (int i = 0; i < slots.length; i++) {
+            net.minecraft.world.item.ItemStack worn = getItemBySlot(slots[i]);
+            String wornPath = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(worn.getItem()).getPath();
+            // An empty slot, or one with only leather, chainmail or gold in it.
+            if (!worn.isEmpty() && !wornPath.startsWith("leather_") && !wornPath.startsWith("chainmail_")
+                    && !wornPath.startsWith("golden_")) continue;
+            final net.minecraft.world.item.Item piece = iron[i];
+            net.minecraft.world.item.ItemStack got = Crafts.takeOne(server, v, st -> st.is(piece));
+            if (got.isEmpty()) continue;
+            if (!worn.isEmpty()) {
+                net.minecraft.world.item.ItemStack off = worn.copy();
+                net.minecraft.world.item.ItemStack left = insertItem(off);
+                if (!left.isEmpty()) Crafts.store(server, v, left);
+            }
+            setItemSlot(slots[i], got);
+            put++;
+        }
+        if (countCarried(st -> st.getItem() instanceof net.minecraft.world.item.SwordItem
+                && !net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(st.getItem()).getPath().startsWith("wooden_")
+                && !net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(st.getItem()).getPath().startsWith("stone_")
+                && !net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(st.getItem()).getPath().startsWith("golden_")) == 0) {
+            net.minecraft.world.item.ItemStack sword = Crafts.takeOne(server, v, st -> st.is(net.minecraft.world.item.Items.IRON_SWORD));
+            if (!sword.isEmpty()) {
+                net.minecraft.world.item.ItemStack left = insertItem(sword);
+                if (!left.isEmpty()) Crafts.store(server, v, left);
+                else put++;
+            }
+        }
+        if (put > 0) brain("took " + put + " piece" + (put == 1 ? "" : "s") + " of the smith's iron from the stores");
+    }
+
+    /** What its trade works with, by the end of its name: a miner's pickaxe, a woodcutter's axe. */
+    @Nullable
+    private String tradeTool() {
+        return switch (stationTask()) {
+            case MINE -> "_pickaxe";
+            case WOOD -> "_axe";
+            case FARM -> "_hoe";
+            case GUARD -> "_sword";
+            default -> null;
+        };
+    }
+
+    /** The village gave it its tools: it works with the smith's iron (and the village's one
+     *  diamond pickaxe) whatever its rank, and a guard wears and wields the smith's iron. */
+    @Override
+    public boolean mayUseTier(net.minecraft.world.item.ItemStack s) {
+        String path = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(s.getItem()).getPath();
+        String tool = tradeTool();
+        if (tool != null && path.endsWith(tool) && (path.startsWith("iron_") || path.startsWith("diamond_"))) return true;
+        if (stationTask() == StationTask.GUARD && path.startsWith("iron_")) return true;
+        return super.mayUseTier(s);
+    }
+
+    private int toolSwapTick = -100000;
+
+    /** How good a tool is: its metal, then its enchantments (Efficiency, Sharpness, Unbreaking...). */
+    private static int toolScore(net.minecraft.world.item.ItemStack s) {
+        String path = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(s.getItem()).getPath();
+        int metal = path.startsWith("netherite_") ? 5 : path.startsWith("diamond_") ? 4 : path.startsWith("iron_") ? 3
+            : path.startsWith("stone_") ? 2 : path.startsWith("golden_") ? 1 : 0;
+        int magic = 0;
+        net.minecraft.world.item.enchantment.ItemEnchantments e = s.getOrDefault(
+            net.minecraft.core.component.DataComponents.ENCHANTMENTS, net.minecraft.world.item.enchantment.ItemEnchantments.EMPTY);
+        for (var entry : e.entrySet()) magic += entry.getIntValue();
+        return metal * 10 + magic;
+    }
+
+    /**
+     * The best tool of its trade the stores hold, if it beats its own: the smith's iron and the
+     * enchanter's work. The enchanter put Efficiency on the smith's picks and axes in the stores,
+     * and they went to the shop counter: no miner ever used one. Its old tool goes back.
+     */
+    private void betterToolFromTheStores() {
+        String kind = tradeTool();
+        if (kind == null || tickCount - toolSwapTick < 2400) return;
+        toolSwapTick = tickCount;
+        UUID village = ownerId();
+        Villages.Village v = village == null ? null : Villages.get(village);
+        if (v == null || !(level() instanceof net.minecraft.server.level.ServerLevel server)) return;
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> isTool = st -> !st.isEmpty()
+            && net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(st.getItem()).getPath().endsWith(kind);
+        int mine = -1;
+        for (net.minecraft.world.item.ItemStack st : getInventoryItems()) if (isTool.test(st)) mine = Math.max(mine, toolScore(st));
+        if (isTool.test(getMainHandItem())) mine = Math.max(mine, toolScore(getMainHandItem()));
+        BlockPos bestAt = null;
+        int bestSlot = -1, best = mine;
+        for (BlockPos p : Villages.storeChests(server, village)) {
+            if (!(server.getBlockEntity(p) instanceof net.minecraft.world.Container c)) continue;
+            for (int i = 0; i < c.getContainerSize(); i++) {
+                net.minecraft.world.item.ItemStack st = c.getItem(i);
+                if (!isTool.test(st) || !mayUseTier(st)) continue;
+                int score = toolScore(st);
+                if (score > best) { best = score; bestAt = p; bestSlot = i; }
+            }
+        }
+        if (bestAt == null || !(server.getBlockEntity(bestAt) instanceof net.minecraft.world.Container c)) return;
+        net.minecraft.world.item.ItemStack got = c.getItem(bestSlot).split(1);
+        c.setChanged();
+        // The old one back to the stores (only the one it replaces: a spare stays in the pack).
+        net.minecraft.world.item.ItemStack old = net.minecraft.world.item.ItemStack.EMPTY;
+        for (net.minecraft.world.item.ItemStack st : getInventoryItems()) {
+            if (isTool.test(st)) { old = st.split(1); break; }
+        }
+        if (!old.isEmpty()) Crafts.store(server, v, old);
+        net.minecraft.world.item.ItemStack left = insertItem(got);
+        if (!left.isEmpty()) Crafts.store(server, v, left);
+        else brain("took a better " + kind.substring(1) + " from the stores" + (got.isEnchanted() ? ", enchanted" : ""));
+    }
+
+    private int clothesTick = -100000;
+
+    /** The tailor's boots in the village's colour: anybody without boots takes a pair from the stores. */
+    private void clothesFromTheStores() {
+        if (isBaby() || tickCount - clothesTick < 2400) return;
+        clothesTick = tickCount;
+        if (!getItemBySlot(net.minecraft.world.entity.EquipmentSlot.FEET).isEmpty()) return;
+        UUID village = ownerId();
+        Villages.Village v = village == null ? null : Villages.get(village);
+        if (v == null || !(level() instanceof net.minecraft.server.level.ServerLevel server)) return;
+        net.minecraft.world.item.ItemStack boots = Crafts.takeOne(server, v, st -> st.is(net.minecraft.world.item.Items.LEATHER_BOOTS));
+        if (boots.isEmpty()) return;
+        setItemSlot(net.minecraft.world.entity.EquipmentSlot.FEET, boots);
+        brain("put on a pair of the tailor's boots");
+    }
+
+    private int roundIndex = -1;
+    private int roundTick = -100000;
+    private int roundLegStart = -100000;
+
+    /**
+     * The night round: a guard on watch walks the ring street round the square, corner to corner
+     * and past each gate, instead of only the corners of its own plot. A watch that keeps to its
+     * plot meets only what comes to the plot; the streets are where the folk are coming home.
+     */
+    @Override
+    protected boolean nightRound() {
+        if (villageCentre == null || movementBlocked() || Raids.underAlarm(ownerId())) return false;
+        if (!getNavigation().isDone()) {
+            if (tickCount - roundLegStart < 200) return true;
+            getNavigation().stop();
+        } else if (tickCount - roundTick < 40) {
+            return true;                                                  // a look round at each stop
+        }
+        int r = com.jrpetty.mcassistant.village.TownPlan.RING + 1;
+        int[][] stops = { { -r, -r }, { 0, -r }, { r, -r }, { r, 0 }, { r, r }, { 0, r }, { -r, r }, { -r, 0 } };
+        if (roundIndex < 0) roundIndex = Math.floorMod(getUUID().hashCode(), stops.length);   // the watch spread round the ring
+        for (int i = 0; i < stops.length; i++) {
+            int[] s = stops[Math.floorMod(roundIndex + i, stops.length)];
+            int x = villageCentre.getX() + s[0], z = villageCentre.getZ() + s[1];
+            int y = level().getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+            if (getNavigation().moveTo(x + 0.5, y, z + 0.5, 0.9D)) {
+                roundIndex = Math.floorMod(roundIndex + i + 1, stops.length);
+                roundTick = tickCount;
+                roundLegStart = tickCount;
+                return true;
+            }
+        }
+        roundTick = tickCount;
+        return false;
+    }
+
     private void stoneToolFromTheStores() {
         if (villageCentre == null || ownerId() == null) return;
         net.minecraft.world.item.Item tool;
@@ -3035,6 +3271,8 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     public boolean can(Ability a) {
         if (a == Ability.STORE_SORT && stationTask() == StationTask.STORE) return true;
+        // A village's farmers feed its fields with bone meal (the watch's bones, the compost).
+        if (a == Ability.FARM_BONEMEAL && stationTask() == StationTask.FARM) return true;
         return super.can(a);
     }
 

@@ -45,6 +45,7 @@ public final class TownWork {
         UUID id = v.id();
         if (now - LAST.getOrDefault(id, -100000L) < EVERY) return;
         LAST.put(id, now);
+        golem(level, v);
         int reach = Villages.townReach(id);
         List<int[]> cells = cellsWithin(reach);
         if (cells.isEmpty()) return;
@@ -106,6 +107,30 @@ public final class TownWork {
             level.setBlockAndUpdate(top.above(3), lantern ? Blocks.LANTERN.defaultBlockState() : Blocks.TORCH.defaultBlockState());
             return true;
         }
+        // Before the Iron Age's lamp posts: a torch on a fence post at the same spots, from the
+        // first days, so the streets are not dark enough for monsters to come up in the middle
+        // of the town ("clear 3 zombies from the fields" was on every board). A torch is made
+        // here from the stores' coal and a stick's worth of wood if there is none put by.
+        if (!ironAge && avenue && lampSpot(dx, dz) && above.isAir() && ground.isSolid()
+                && !level.getBlockState(top.above(2)).isSolid()) {
+            if (!take(level, v, s -> s.is(Items.TORCH), 1)) {
+                if (!take(level, v, s -> s.is(Items.COAL) || s.is(Items.CHARCOAL), 1)) return false;
+                if (!take(level, v, s -> s.is(net.minecraft.tags.ItemTags.PLANKS), 1)
+                        && !take(level, v, s -> s.is(net.minecraft.tags.ItemTags.LOGS), 1)) {
+                    give(level, v, new ItemStack(Items.COAL));
+                    return false;
+                }
+                give(level, v, new ItemStack(Items.TORCH, 3));               // four made, one used
+            }
+            if (!take(level, v, s -> s.is(net.minecraft.tags.ItemTags.PLANKS), 1)
+                    && !take(level, v, s -> s.is(net.minecraft.tags.ItemTags.LOGS), 1)) {
+                give(level, v, new ItemStack(Items.TORCH));
+                return false;
+            }
+            level.setBlockAndUpdate(top.above(), Blocks.OAK_FENCE.defaultBlockState());
+            level.setBlockAndUpdate(top.above(2), Blocks.TORCH.defaultBlockState());
+            return true;
+        }
         if (!earth(ground) && !(ground.is(Blocks.DIRT_PATH) && (square ? stoneAge : avenue && ironAge))) return false;
         if (!above.isAir() && !(above.canBeReplaced() && above.getFluidState().isEmpty())) return false;
         BlockState paving = null;
@@ -122,6 +147,38 @@ public final class TownWork {
         }
         if (!above.isAir()) level.removeBlock(top.above(), false);   // the grass and flowers in the way
         level.setBlockAndUpdate(top, paving);
+        return true;
+    }
+
+    /**
+     * From the Iron Age a village keeps an iron golem, as a vanilla village does: one made the day
+     * the age comes, and another a few days after one is lost. It walks the town and fights what
+     * comes into it; the folk are no monsters to it.
+     */
+    static boolean golem(ServerLevel level, Villages.Village v) {
+        UUID id = v.id();
+        if (Villages.ageOf(id).ordinal() < Villages.Age.IRON.ordinal()) return false;
+        BlockPos c = v.centre();
+        if (!level.isLoaded(c)) return false;
+        net.minecraft.world.phys.AABB town = new net.minecraft.world.phys.AABB(c).inflate(64, 24, 64);
+        if (!level.getEntitiesOfClass(net.minecraft.world.entity.animal.IronGolem.class, town,
+                net.minecraft.world.entity.LivingEntity::isAlive).isEmpty()) return false;
+        long day = level.getDayTime() / 24000L;
+        String last = com.jrpetty.mcassistant.village.Ledger.note(id, "golem");
+        if (last != null) {
+            try {
+                if (day - Long.parseLong(last) < 3) return false;              // a new one takes a few days
+            } catch (NumberFormatException ignored) { }
+        }
+        net.minecraft.world.entity.animal.IronGolem g = net.minecraft.world.entity.EntityType.IRON_GOLEM.create(level);
+        if (g == null) return false;
+        BlockPos at = Trades.floorSpot(level, c, 8);
+        if (at == null) return false;
+        g.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, level.getRandom().nextFloat() * 360.0F, 0.0F);
+        g.setPersistenceRequired();
+        if (!level.addFreshEntity(g)) return false;
+        com.jrpetty.mcassistant.village.Ledger.note(id, "golem", Long.toString(day));
+        Villages.tell(id, day, last == null ? "an iron golem was raised to keep the town" : "a new iron golem was raised in place of the one lost");
         return true;
     }
 
