@@ -157,6 +157,7 @@ public final class Land {
                     if (com.jrpetty.mcassistant.AssistantConfig.villageReshapeLand()) level(level, v, LOOK, CHANGES);
                     Grow.tick(level, v);
                     Waterfront.tick(level, v);
+                    Nether.tick(level, v);
                     long took = (System.nanoTime() - began) / 1_000_000L;
                     // Anything that took a village's land work over 25 ms is worth knowing about.
                     if (took > 25) com.mojang.logging.LogUtils.getLogger().info("[MCA-SLOW] {}: the land's work took {} ms",

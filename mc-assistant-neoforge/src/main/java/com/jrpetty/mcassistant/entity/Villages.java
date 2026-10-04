@@ -248,6 +248,7 @@ public final class Villages {
         Trades.resetForTests();
         Links.resetForTests();
         Asks.resetForTests();
+        Nether.resetForTests();
         Drover.resetForTests();
         Cafe.resetForTests();
         Roads.reset();
@@ -1354,6 +1355,64 @@ public final class Villages {
         int n = 0;
         for (String g : GREAT_WORKS) n += built(villageId, g);
         return n;
+    }
+
+    /**
+     * What a place has made of itself, beyond its age: a hamlet, a village, a town, a city, a
+     * capital. The ages end at the Nether; the ranks go on asking for more — people, great works,
+     * colonies of its own — so a village always has somewhere further to get to.
+     */
+    public enum Rank {
+        HAMLET("a hamlet"), VILLAGE("a village"), TOWN("a town"), CITY("a city"), CAPITAL("a capital");
+        public final String label;
+        Rank(String label) { this.label = label; }
+    }
+
+    public static Rank rank(UUID villageId) {
+        int folk = headcount(villageId);
+        int renown = renown(villageId);
+        int colonies = 0;
+        for (String s : BUILT.getOrDefault(villageId, List.of())) if ("colony".equals(s)) colonies++;
+        Age age = ageOf(villageId);
+        if (age == Age.NETHER && renown >= 6 && folk >= 80 && colonies >= 2) return Rank.CAPITAL;
+        if (age.ordinal() >= Age.DIAMOND.ordinal() && renown >= 2 && folk >= 50) return Rank.CITY;
+        if (age.ordinal() >= Age.IRON.ordinal() && folk >= 30) return Rank.TOWN;
+        if (age.ordinal() >= Age.STONE.ordinal() && folk >= 12) return Rank.VILLAGE;
+        return Rank.HAMLET;
+    }
+
+    /** What the next rank asks for, in words (for the status and the journal). */
+    public static String nextRankNote(UUID villageId) {
+        return switch (rank(villageId)) {
+            case HAMLET -> "a village: the Stone Age and twelve folk";
+            case VILLAGE -> "a town: the Iron Age and thirty folk";
+            case TOWN -> "a city: the Diamond Age, two great works and fifty folk";
+            case CITY -> "a capital: the Nether Age, six great works, eighty folk and two colonies";
+            case CAPITAL -> "nothing higher — every great work adds to its renown";
+        };
+    }
+
+    /**
+     * Once a morning: has the place risen in rank? A rise is told everywhere, the treasury is
+     * given a purse for it by the traders who now come further to its market, and the folk
+     * remember the day. Kept in the ledger, so it is told once.
+     */
+    public static void checkRank(net.minecraft.server.level.ServerLevel level, Village v, long day) {
+        Rank now = rank(v.id());
+        String was = com.jrpetty.mcassistant.village.Ledger.note(v.id(), "rank");
+        Rank before = Rank.HAMLET;
+        try { if (was != null) before = Rank.valueOf(was); } catch (IllegalArgumentException ignored) { }
+        if (now.ordinal() <= before.ordinal()) return;
+        com.jrpetty.mcassistant.village.Ledger.note(v.id(), "rank", now.name());
+        if (was == null && now.ordinal() <= Rank.VILLAGE.ordinal()) return;   // a new or restored place: nothing to tell
+        tell(v.id(), day, name(v.id()) + " has grown into " + now.label);
+        com.jrpetty.mcassistant.village.Ledger.addCoins(v.id(), 25 * now.ordinal());
+        for (AssistantEntity a : folkOf(v.id())) {
+            if (a instanceof VillageFolkEntity f) f.persona().remember(day, "I saw " + name(v.id()) + " become " + now.label, 6);
+        }
+        net.minecraft.network.chat.Component line = net.minecraft.network.chat.Component.literal(
+            name(v.id()) + " has grown into " + now.label + "!").withStyle(net.minecraft.ChatFormatting.GOLD);
+        for (net.minecraft.server.level.ServerPlayer p : level.players()) p.sendSystemMessage(line);
     }
 
     /** The great work this village raises next. */

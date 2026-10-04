@@ -290,6 +290,8 @@ public class VillageFolkEntity extends AssistantEntity {
             Caravans.drive(this, road);
             return;
         }
+        // Through the gateway with a Nether party: it waits by the gateway till they come back.
+        if (Nether.away(this) && !withAPlayer) return;
         // Out with a lead, fetching a wild animal home to the pen (Drover): that is the work just now.
         if (Drover.busy(this) && !withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel herding) {
             if (tickCount % 10 == 0) Drover.drive(this, herding);
@@ -3662,7 +3664,7 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected boolean onBreak() {
         // On the road with a caravan, its own work waits until it is home.
-        return trip != null || Drover.busy(this) || breakNow();
+        return trip != null || Drover.busy(this) || Nether.away(this) || breakNow();
     }
 
     /** The caravan this folk is taking to a colony and back, or null (Caravans). */

@@ -60,11 +60,35 @@ own, and each step is there for a reason the village can see.
 9. **The Nether Age:** one miner gets the village's diamond pickaxe and a bucket of
    water, and makes the obsidian the way a player does — water poured on the lava
    down at the bottom of the world, the obsidian broken out, the hole stopped — and
-   the village raises an obsidian **gateway** (never lit).
+   the village raises an obsidian **gateway**.
+   * **The gateway is lit** with flint and steel (a flint and an iron from the stores),
+     and the Nether lies open.
+   * **Nether parties.** Every other day, by daylight, a guard and two miners go
+     through. They wait by the gateway while they are away; the Nether itself is told,
+     not walked (folk on the far side of a portal would be out of reach of everything
+     that keeps them working).
+   * **What they bring back**, half a day later: blaze rods, nether wart, soul sand,
+     quartz, glowstone and gold, sometimes magma cream or a ghast tear. The brewer
+     grinds the rods into blaze powder, so its first kit is the last the village is
+     given.
+   * **The risk.** Now and then somebody comes back hurt, and very rarely somebody
+     doesn't come back.
 10. **And then it never stops.** A village that has come through every age raises
     **great works** — a granary, barracks, a monument, round and round, each on new
     ground — and every one asks the stores for a quarter more food, stone and iron
     than the last. `/village status` shows its **renown** (great works raised).
+    **Rank** goes on past the ages:
+
+    | Rank | Needs |
+    |---|---|
+    | Village | the Stone Age and 12 folk |
+    | Town | the Iron Age and 30 folk |
+    | City | the Diamond Age, two great works and 50 folk |
+    | Capital | the Nether Age, six great works, 80 folk and two colonies of its own |
+
+    A rise in rank is told to everyone, the treasury gets a purse for it, and the folk
+    remember the day. `/village status` and the journal show the rank and what the
+    next one asks for.
 11. **Colonies.** From the Stone Age on, a village of forty sends a founding party of
     eight a couple of hundred blocks out, fed from its own larder, and they found a
     village of their own that climbs the ages from the start — at most one every two

@@ -712,6 +712,10 @@ public final class Crafts {
         if (at == null || !(level.getBlockEntity(at) instanceof net.minecraft.world.level.block.entity.BrewingStandBlockEntity stand)) {
             return patch;
         }
+        // Blaze powder ground from the rods the Nether parties bring (Nether): two to a rod.
+        if (have(level, v, f, s -> s.is(Items.BLAZE_POWDER)) < 6 && take(level, v, s -> s.is(Items.BLAZE_ROD), 1)) {
+            store(level, v, new ItemStack(Items.BLAZE_POWDER, 2));
+        }
         // Fire: a blaze powder in the fuel slot (it burns for twenty brews).
         if (stand.getItem(4).isEmpty() && use(level, v, f, s -> s.is(Items.BLAZE_POWDER), 1)) {
             stand.setItem(4, new ItemStack(Items.BLAZE_POWDER));

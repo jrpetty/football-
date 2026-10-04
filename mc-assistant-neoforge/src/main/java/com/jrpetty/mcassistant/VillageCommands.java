@@ -488,6 +488,7 @@ public final class VillageCommands {
                 Villages.stock(level, v.centre(), t, Villages.storesRadius(v.id())));
         }
         sb.append(". Built: ").append(Villages.builtList(v.id()));
+        sb.append(". Rank: ").append(Villages.rank(v.id()).label).append(" (next, ").append(Villages.nextRankNote(v.id())).append(")");
         sb.append(". Room for ").append(Villages.housing(v.id()));
         // Who has a bed, and (at night) who is in it.
         int folkNow = 0, bedded = 0, asleep = 0;

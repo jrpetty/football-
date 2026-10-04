@@ -336,6 +336,7 @@ def epic(r, days, minutes, biome="plains"):
         coins = re.search(r"Treasury: (\d+) coins", status)
         content = re.search(r"Contentment: (\d+)", status)
         made = re.search(r"homes for (\d+)(?: made up of (\d+))?", status)
+        rank = re.search(r"Rank: a (\w+)", status)
         metrics = {
             "day": day, "folk": int(folk) if folk.isdigit() else None, "age": age,
             "buildings": len(names) - colonies, "renown": int(renown.group(1)) if renown else 0,
@@ -347,6 +348,7 @@ def epic(r, days, minutes, biome="plains"):
             "coins": int(coins.group(1)) if coins else None, "contentment": int(content.group(1)) if content else None,
             "minutes": round((time.time() - began) / 60.0, 1),
             "ms_per_tick": LAST_MSPT[0],
+            "rank": rank.group(1) if rank else None,
         }
         if stores:
             for i, k in enumerate(["food", "logs", "stone", "coal", "iron", "diamond", "obsidian"]):

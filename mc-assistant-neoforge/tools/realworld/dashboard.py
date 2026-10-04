@@ -11,6 +11,7 @@ import html
 import json
 import sys
 
+RANKS = {"hamlet": 0, "village": 1, "town": 2, "city": 3, "capital": 4}
 AGES = {"the Wood Age": 0, "the Stone Age": 1, "the Iron Age": 2, "the Diamond Age": 3, "the Nether Age": 4}
 
 # (title, how to read one day's number, unit)
@@ -18,6 +19,7 @@ CHARTS = [
     ("Folk", lambda d: d.get("folk"), ""),
     ("Age (0 Wood … 4 Nether)", lambda d: AGES.get(d.get("age")), ""),
     ("Buildings", lambda d: d.get("buildings"), ""),
+    ("Rank (0 hamlet … 4 capital)", lambda d: RANKS.get(d.get("rank")), ""),
     ("Share of folk with a bed", lambda d: (d["bedded"] / d["folk"]) if d.get("bedded") is not None and d.get("folk") else None, "%"),
     ("Guards", lambda d: d.get("guards"), ""),
     ("Iron in the stores", lambda d: d.get("iron"), ""),

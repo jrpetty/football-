@@ -293,6 +293,7 @@ public final class Market {
         mint(level, v);
         trade(v);
         payWages(level, v);
+        Villages.checkRank(level, v, day);
         News.morning(level, v, day);
         if (marketDay(id, day)) {
             sellSurplus(level, v, day);
