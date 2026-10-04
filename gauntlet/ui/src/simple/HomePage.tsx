@@ -139,13 +139,13 @@ function GettingStarted({ list }: { list: Checklist }) {
   }
   const next = list.next;
   return (
-    <section className="card home-checklist no-broadcast" aria-labelledby="gs-title">
-      <div className="gs-head">
+    <section className="card home-checklist no-broadcast" aria-labelledby="hs-title">
+      <div className="hs-head">
         <div>
-          <h2 id="gs-title">{list.allDone ? 'You’re all set' : 'Getting started'}</h2>
+          <h2 id="hs-title">{list.allDone ? 'You’re all set' : 'Getting started'}</h2>
           <p className="muted">{list.allDone ? 'You’ve done every step. Gauntlet is ready for your next video.' : 'Four quick steps. Your next one is below.'}</p>
         </div>
-        <div className="gs-progress">
+        <div className="hs-progress">
           <span className="tnum">
             {list.doneCount} of {list.steps.length} done
           </span>
@@ -155,21 +155,21 @@ function GettingStarted({ list }: { list: Checklist }) {
 
       {next && <NextStep step={next} />}
 
-      <ol className="gs-steps">
+      <ol className="hs-steps">
         {list.steps.map((s) => (
           <li key={s.id} className={cx(s.done && 'done', next?.id === s.id && 'current')}>
-            <span className="gs-mark" aria-hidden="true">
+            <span className="hs-mark" aria-hidden="true">
               {s.done ? <Icon.Check /> : s.n}
             </span>
-            <span className="gs-title">{s.title}</span>
+            <span className="hs-title">{s.title}</span>
             <span className="sr-only">{s.done ? '(done)' : next?.id === s.id ? '(next)' : '(to do)'}</span>
-            {s.done ? <span className="gs-state">Done</span> : next?.id !== s.id ? <Link to={s.cta.to} className="gs-link">{s.cta.label}</Link> : <span className="gs-state now">Next</span>}
+            {s.done ? <span className="hs-state">Done</span> : next?.id !== s.id ? <Link to={s.cta.to} className="hs-link">{s.cta.label}</Link> : <span className="hs-state now">Next</span>}
           </li>
         ))}
       </ol>
 
       {list.allDone && (
-        <div className="gs-foot">
+        <div className="hs-foot">
           <button type="button" className="btn sm ghost" onClick={() => setChecklistHidden(true)}>
             Hide this list
           </button>
@@ -181,16 +181,16 @@ function GettingStarted({ list }: { list: Checklist }) {
 
 function NextStep({ step }: { step: ChecklistStep }) {
   return (
-    <div className="gs-next">
-      <span className="gs-num" aria-hidden="true">
+    <div className="hs-next">
+      <span className="hs-num" aria-hidden="true">
         {step.n}
       </span>
-      <div className="gs-next-text">
+      <div className="hs-next-text">
         <span className="eyebrow">Next step</span>
         <h3>{step.title}</h3>
         <p>{step.why}</p>
       </div>
-      <Link to={step.cta.to} className="btn primary lg gs-cta">
+      <Link to={step.cta.to} className="btn primary lg hs-cta">
         {step.cta.label} <Icon.ChevronRight />
       </Link>
     </div>

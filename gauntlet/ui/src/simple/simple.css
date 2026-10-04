@@ -446,18 +446,18 @@ html[data-broadcast='on'] .help-fab {
   display: grid;
   gap: 20px;
 }
-.gs-head {
+.hs-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
 }
-.gs-head h2 {
+.hs-head h2 {
   font-size: 1.3rem;
   margin-bottom: 4px;
 }
-.gs-progress {
+.hs-progress {
   display: grid;
   gap: 6px;
   min-width: 180px;
@@ -466,7 +466,7 @@ html[data-broadcast='on'] .help-fab {
   font-size: 0.9rem;
   text-align: right;
 }
-.gs-next {
+.hs-next {
   display: flex;
   align-items: center;
   gap: 20px;
@@ -475,7 +475,7 @@ html[data-broadcast='on'] .help-fab {
   border: 1px solid var(--accent-line);
   background: var(--accent-soft);
 }
-.gs-num {
+.hs-num {
   width: 52px;
   height: 52px;
   flex: none;
@@ -487,27 +487,27 @@ html[data-broadcast='on'] .help-fab {
   font-weight: 800;
   font-size: 1.4rem;
 }
-.gs-next-text {
+.hs-next-text {
   flex: 1;
   min-width: 0;
   display: grid;
   gap: 4px;
 }
-.gs-next-text .eyebrow {
+.hs-next-text .eyebrow {
   color: var(--accent);
 }
-.gs-next-text h3 {
+.hs-next-text h3 {
   font-size: 1.35rem;
 }
-.gs-next-text p {
+.hs-next-text p {
   color: var(--text-2);
   font-size: 1rem;
   max-width: 62ch;
 }
-.gs-cta {
+.hs-cta {
   flex: none;
 }
-.gs-steps {
+.hs-steps {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -515,7 +515,7 @@ html[data-broadcast='on'] .help-fab {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
-.gs-steps li {
+.hs-steps li {
   display: grid;
   grid-template-columns: 30px minmax(0, 1fr);
   grid-template-rows: auto auto;
@@ -527,7 +527,7 @@ html[data-broadcast='on'] .help-fab {
   border: 1px solid var(--border);
   background: var(--surface-2);
 }
-.gs-mark {
+.hs-mark {
   grid-row: span 2;
   width: 28px;
   height: 28px;
@@ -539,45 +539,45 @@ html[data-broadcast='on'] .help-fab {
   font-weight: 750;
   font-size: 0.88rem;
 }
-.gs-mark svg {
+.hs-mark svg {
   width: 16px;
   height: 16px;
 }
-.gs-steps li.done .gs-mark {
+.hs-steps li.done .hs-mark {
   background: var(--good);
   border-color: var(--good);
   color: #fff;
 }
-.gs-steps li.current {
+.hs-steps li.current {
   border-color: var(--accent-line);
 }
-.gs-steps li.current .gs-mark {
+.hs-steps li.current .hs-mark {
   border-color: var(--accent);
   color: var(--accent);
 }
-.gs-title {
+.hs-title {
   font-weight: 650;
   color: var(--text-1);
   font-size: 0.95rem;
 }
-.gs-steps li.done .gs-title {
+.hs-steps li.done .hs-title {
   color: var(--text-2);
 }
-.gs-state,
-.gs-link {
+.hs-state,
+.hs-link {
   font-size: 0.85rem;
 }
-.gs-state {
+.hs-state {
   color: var(--good-text);
   font-weight: 600;
 }
-.gs-state.now {
+.hs-state.now {
   color: var(--accent);
 }
-.gs-link {
+.hs-link {
   color: var(--text-3);
 }
-.gs-foot {
+.hs-foot {
   display: flex;
   justify-content: flex-end;
 }
@@ -726,33 +726,33 @@ html[data-broadcast='on'] .help-fab {
   .home-cards {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .gs-steps {
+  .hs-steps {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 @media (max-width: 760px) {
   .home-cards,
   .home-glance,
-  .gs-steps {
+  .hs-steps {
     grid-template-columns: minmax(0, 1fr);
   }
   .home-hero h1 {
     font-size: 1.8rem;
   }
-  .gs-next {
+  .hs-next {
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
     padding: 18px;
   }
-  .gs-cta {
+  .hs-cta {
     width: 100%;
     justify-content: center;
   }
   .home-checklist {
     padding: 18px;
   }
-  .gs-progress {
+  .hs-progress {
     text-align: left;
     width: 100%;
   }
