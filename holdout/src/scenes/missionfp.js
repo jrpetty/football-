@@ -690,6 +690,29 @@ export const MissionFPMixin = {
             }
           }
         }
+        // the room side of window walls and over outside doors is the
+        // facade's material in the street build: paint it like the room
+        const win = wall && winAt.has(i + ',' + j)
+        if (win || door?.ext) {
+          const alongX = door ? door.horiz : isW(i + 1, j) || isW(i - 1, j) || doorAt.has(i + 1 + ',' + j) || doorAt.has(i - 1 + ',' + j)
+          for (const s of [-1, 1]) {
+            const col = roomCol(alongX ? i : i + s, alongX ? j + s : j)
+            if (!col) continue
+            const off = T_WALL / 2 + 0.007
+            const fx = alongX ? c.x : c.x + s * off
+            const fz = alongX ? c.z + s * off : c.z
+            const face = (y0, y1, w = 1.0) => b.box(alongX ? w : 0.012, y1 - y0, alongX ? 0.012 : w, { mat: 'plaster', color: col, x: fx, y: (y0 + y1) / 2, z: fz, ao: 0 })
+            if (door) face(0.05 + (door.wide >= 3 ? 2.6 : 2.15), T)
+            else {
+              face(0.05, 0.05 + 0.9)
+              face(0.05 + 2.15, T)
+              // the post between the panes, and a sill board inside
+              face(0.05 + 0.9, 0.05 + 2.15, T_WALL)
+              const so = T_WALL / 2 + 0.035
+              b.box(alongX ? 1.0 : 0.09, 0.035, alongX ? 0.09 : 1.0, { mat: 'paint', color: TRIM, x: alongX ? c.x : c.x + s * so, y: 0.05 + 0.93, z: alongX ? c.z + s * so : c.z, ao: 0 })
+            }
+          }
+        }
         // window casings' sides, where a run of windows starts and ends
         if (winAt.has(i + ',' + j) && ex && !k) {
           for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {

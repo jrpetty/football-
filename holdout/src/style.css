@@ -1755,8 +1755,12 @@ body.fprun .mhud .mhelp, body.fprun .mhud .mact button.ghost, body.fprun .mhud .
 body.fprun .mhud .mbottom { bottom: 8px; transform: translateX(-50%) scale(0.86); transform-origin: bottom center; opacity: 0.85; }
 body.fpmode .fps { bottom: auto; top: 0; border-radius: 0 0 7px 7px; border-top: 0; border-bottom: 1px solid var(--line); }
 body.fpmode .brief, body.fpmode .watch, body.fpmode .feed { display: none; }
-body.fpmode .nav { opacity: 0.55; }
-body.fpmode .nav:hover { opacity: 1; }
+/* in someone's boots the camp's menu keeps out of the view until pointed at,
+   and the top bar is slimmer */
+body.fpmode .nav { opacity: 0; transition: opacity 0.2s; }
+body.fpmode .nav:hover, body.fpmode .nav:focus-within { opacity: 1; }
+body.fpmode .topbar { transform: scale(0.84); transform-origin: top center; opacity: 0.86; background: linear-gradient(to bottom, rgba(8, 10, 7, 0.55), transparent); }
+body.fptouch .nav { display: none; }
 body.fpmode .wl .lootmark, body.fpmode .wl .roomtag, body.fpmode .wl .evac-tag { display: none; }
 body.fprun .mhud .minimap { transform: scale(0.72); transform-origin: top right; opacity: 0.9; }
 body.fprun .mhud .haul { transform: scale(0.85); transform-origin: top left; }
