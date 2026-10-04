@@ -122,7 +122,12 @@ nothing behind them gets in the way.
 It is drawn to the same standard as the view from above: a real sky (sun,
 clouds, moon and stars, meeting the fog at the horizon), shadows placed
 ahead of you, dense grass round your feet in camp, and the arms and weapon
-drawn in their own pass over the world, lit by its sun and sky. Settings
+drawn in their own pass over the world, lit by its sun and sky. On a run the
+place is finished for being seen up close: houses get pitched shingle roofs
+with gutters, downpipes and a chimney, shops a parapet; walls stand on a
+foundation band with cased windows; rooms have picture rails, crown
+moulding and sills; the lawns grow grass; and the map's room names stay on
+the map. Settings
 has mouse sensitivity, field of view, invert mouse and head bob. Co-op
 guests on a run watch from above (the leader's game runs the street).
 

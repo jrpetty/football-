@@ -664,13 +664,27 @@ export const MissionFPMixin = {
         const c = this.center(i, j)
         const ex = isExt(i, j) || !!door?.ext
         const T = ex ? CEIL : wallTop(i, j)
+        const winHere = wall && winAt.has(i + ',' + j)
         const arms = door ? (door.horiz ? [[1, 0], [-1, 0]] : [[0, 1], [0, -1]]) : [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([di, dj]) => isW(i + di, j + dj) || doorAt.has(i + di + ',' + (j + dj)))
         for (const [di, dj] of arms) {
           const alongX = di !== 0
           const ax = c.x + di * 0.25
           const az = c.z + dj * 0.25
           for (const s of [-1, 1]) {
-            const col = roomCol(alongX ? i : i + s, alongX ? j + s : j)
+            const si = alongX ? i : i + s
+            const sj = alongX ? j + s : j
+            let col = roomCol(si, sj)
+            if (!col && !door && !winHere && isW(si, sj)) {
+              // a corner: the room is round it, diagonally. The street build
+              // looked only beside the wall and left this half unpainted
+              col = roomCol(alongX ? i + di : i + s, alongX ? j + s : j + dj)
+              if (col) {
+                const po = T_WALL / 2 + 0.006
+                b.box(alongX ? 0.5 : 0.012, T - 0.05, alongX ? 0.012 : 0.5, { mat: 'plaster', color: col, x: alongX ? ax : c.x + s * po, y: 0.05 + (T - 0.05) / 2, z: alongX ? c.z + s * po : az, ao: 0 })
+                const ko = T_WALL / 2 + 0.015
+                b.box(alongX ? 0.5 : 0.03, 0.12, alongX ? 0.03 : 0.5, { mat: 'paint', color: '#5a4a3e', x: alongX ? ax : c.x + s * ko, y: 0.12, z: alongX ? c.z + s * ko : az, ao: 0 })
+              }
+            }
             const off = T_WALL / 2 + 0.016
             const fx = alongX ? ax : c.x + s * off
             const fz = alongX ? c.z + s * off : az
@@ -773,7 +787,7 @@ export const MissionFPMixin = {
         for (const b of blds) if (x > b[0] && x < b[2] && z > b[1] && z < b[3]) return true
         return false
       }
-      this.fpGrassF = new GrassField(this.scene, this.splat, { count: 0, seed: 53 + (lv.loc.lot.seed % 997), heightFn: () => 0, avoid, cap: 12000 })
+      this.fpGrassF = new GrassField(this.scene, this.splat, { count: 0, seed: 53 + (lv.loc.lot.seed % 997), heightFn: () => 0, avoid, cap: 12000, hScale: 0.58 })
       this.fpGrassF.area = { x0: lv.x0 + 1, z0: lv.z0 + 1, x1: lv.x0 + lv.W0 - 1, z1: lv.zFront }
       this.fpGrassF.rebuild()
       this.fpCull = new CullView()

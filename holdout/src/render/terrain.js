@@ -419,7 +419,9 @@ function foliageMain(material) {
 export class GrassField {
   // cap: room for that many tufts when count starts at zero (a patch laid
   // later, see BaseWorld.setNearGrass)
-  constructor(scene, splat, { count = 40000, area, seed = 7, heightFn = null, avoid = null, cap = 0 }) {
+  // hScale: tuft height (a mown-ish lawn is lower than a field)
+  constructor(scene, splat, { count = 40000, area, seed = 7, heightFn = null, avoid = null, cap = 0, hScale = 1 }) {
+    this.hScale = hScale
     this.scene = scene
     this.splat = splat
     this.max = count || cap
@@ -475,7 +477,7 @@ export class GrassField {
       const y = this.heightFn ? this.heightFn(x, z) : 0
       q.setFromAxisAngle(up, rnd() * Math.PI * 2)
       const s0 = 0.7 + rnd() * 0.7
-      sc.set(s0, s0 * (0.75 + w * 0.45), s0)
+      sc.set(s0, s0 * (0.75 + w * 0.45) * this.hScale, s0)
       m.compose(p.set(x, y, z), q, sc)
       m.toArray(mats[k], counts[k] * 16)
       const n = Math.sin(x * 0.07) * Math.cos(z * 0.05) * 0.5 + 0.5
