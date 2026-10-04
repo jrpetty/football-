@@ -464,12 +464,14 @@ public final class Villages {
         // hundred with thirty loaded must not size its village at thirty.
         int total = Math.max(1, Math.max(folk.size(), headcount(villageId)));
         Age at = villageId == null ? Age.WOOD : ageOf(villageId);
+        double fit = fit(villageId, total, hands(folk, total), at);
         AssistantEntity.StationTask best = AssistantEntity.StationTask.FARM;
         double bestDeficit = -Double.MAX_VALUE;
         int bestWeight = 0;
         for (Slot slot : SLOTS) {
             if (!slot.wanted(total, at)) continue;      // too small (or too young) to want one yet
-            double target = target(villageId, slot, total);
+            if (!craftReady(villageId, slot.trade())) continue;   // a smith with no smithy has nothing to work at
+            double target = target(villageId, slot, total) * fit;
             double deficit = target - have.getOrDefault(slot.trade(), 0);
             // The first hand of a craft the village has grown into comes before one more of a trade
             // it already has plenty of: a craft is one or two hands however big the town, and its
@@ -513,10 +515,11 @@ public final class Villages {
         }
         // The watch down to a handful: in the long game the guards fell one by one (old age, the
         // night's fights) from fourteen to one in a village of eighty, and nobody new took it up.
+        double fit = fit(villageId, total, hands(folk, total), at);
         for (Slot slot : SLOTS) {
             if (slot.trade() != AssistantEntity.StationTask.GUARD || !slot.wanted(total, at)) continue;
             double want = target(villageId, slot, total);
-            if (want >= 2.0 && have.getOrDefault(slot.trade(), 0) < want / 2.0) return slot.trade();
+            if (want >= 2.0 && have.getOrDefault(slot.trade(), 0) < Math.max(2.0, want * fit)) return slot.trade();
         }
         // A craft the village has grown into and has the building for, with nobody at it: a hand
         // from a trade with more than its share takes it up. Crafts were only ever taken by
@@ -525,10 +528,39 @@ public final class Villages {
         for (Slot slot : SLOTS) {
             if (slot.age() == Age.WOOD || !slot.wanted(total, at)) continue;
             if (have.getOrDefault(slot.trade(), 0) > 0) continue;
-            String building = VillageFolkEntity.buildingFor(slot.trade());
-            if (building == null || hasBuilt(villageId, building)) return slot.trade();
+            if (craftReady(villageId, slot.trade())) return slot.trade();
         }
         return null;
+    }
+
+    /**
+     * What every trade's share is scaled by so that the shares add up to the hands the village
+     * has. Each trade's weight is reckoned against a village of ten, and once a village has grown
+     * into the later trades they add up to more than it has — half as many again at thirty — and
+     * its children count toward its size but work at nothing. Then every trade read as short and
+     * none as over: nobody could ever move to the watch or a craft, every child that grew up
+     * went to its parent's fields or mine, and a village of thirty had one guard and no tailor.
+     */
+    static double fit(@Nullable UUID villageId, int total, int hands, Age at) {
+        double sum = 0;
+        for (Slot slot : SLOTS) {
+            if (slot.wanted(total, at) && craftReady(villageId, slot.trade())) sum += target(villageId, slot, total);
+        }
+        return sum <= hands || sum <= 0 ? 1.0 : hands / sum;
+    }
+
+    /** The hands a village of this size has to work: everybody but the children. */
+    static int hands(List<AssistantEntity> folk, int total) {
+        int children = 0;
+        for (AssistantEntity a : folk) if (a.isBaby()) children++;
+        return Math.max(1, total - children);
+    }
+
+    /** Has a craft somewhere to work: its building up (the cook and the beekeeper need none)? */
+    static boolean craftReady(@Nullable UUID villageId, AssistantEntity.StationTask trade) {
+        if (!trade.isCraft() || trade == AssistantEntity.StationTask.COOK) return true;
+        String building = VillageFolkEntity.buildingFor(trade);
+        return building == null || (villageId != null && hasBuilt(villageId, building));
     }
 
     /** Is this village big enough (and far enough on) to want this trade at all? */
@@ -559,8 +591,8 @@ public final class Villages {
         for (AssistantEntity a : folk) if (a.stationTask() == trade) have++;
         for (Slot slot : SLOTS) {
             if (slot.trade() != trade) continue;
-            if (!slot.wanted(total, at)) return 0.0;
-            return have - target(villageId, slot, total);
+            if (!slot.wanted(total, at) || !craftReady(villageId, trade)) return 0.0;
+            return have - target(villageId, slot, total) * fit(villageId, total, hands(folk, total), at);
         }
         return 0.0;
     }
@@ -577,9 +609,10 @@ public final class Villages {
         if (total <= 0) return false;
         int have = 0;
         for (AssistantEntity a : folk) if (a.stationTask() == trade) have++;
+        Age at = villageId == null ? Age.WOOD : ageOf(villageId);
         for (Slot slot : SLOTS) {
             if (slot.trade() != trade) continue;
-            double target = target(villageId, slot, total);
+            double target = target(villageId, slot, total) * fit(villageId, total, hands(folk, total), at);
             // One over the share, and never below one: the last farmer in a
             // village is not spare however the arithmetic reads.
             return have > Math.max(1, (int) Math.ceil(target));

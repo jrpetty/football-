@@ -323,8 +323,15 @@ stands, and is then set down on the spot the drawing has for it.
 
 **Who takes up a craft.** A village gets one of each craft before it gets more of the
 common trades: when a post falls empty and the watch is full, a brewer, beekeeper,
-enchanter, smith or tailor the village has none of comes before a fourth farmer. There
-is only ever one beekeeper.
+enchanter, smith or tailor the village has none of comes before a fourth farmer. A craft
+is taken up once its building stands (the smith's smithy, the tailor's workshop, the
+brewer's brewery, the enchanter's library). There is only ever one beekeeper.
+
+**The village's shape.** Each trade has its share of the village, and the shares are
+fitted to the hands the village actually has: children count toward its size but work at
+nothing. So a town of thirty keeps a proper watch and its crafts, and a child who grows up
+in a village with more farmers than it needs takes up the trade the village is short of
+rather than its parent's.
 
 Everything after that the village makes for itself:
 
