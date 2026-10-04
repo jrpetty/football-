@@ -591,7 +591,8 @@ public final class Villages {
      */
     static boolean craftReady(@Nullable UUID villageId, AssistantEntity.StationTask trade) {
         if (trade == AssistantEntity.StationTask.STORE || trade == AssistantEntity.StationTask.HAUL) {
-            return villageId != null && (Storehouses.stands(villageId) || hasBuilt(villageId, "storage"));
+            return villageId != null && (Storehouses.stands(villageId) || hasBuilt(villageId, "storage")
+                || builtAt(villageId, "storage") != null);
         }
         if (!trade.isCraft() || trade == AssistantEntity.StationTask.BEEKEEP) return true;
         String building = VillageFolkEntity.buildingFor(trade);

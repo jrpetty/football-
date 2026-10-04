@@ -5537,10 +5537,14 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             if (d < plotBest - 1.5) {
                 plotBest = d;
                 leashFails = 0;
-            } else {
+                leashLookTick = tickCount;
+            } else if (tickCount - leashLookTick >= 100) {
+                // A look counts once in five seconds at most: a walk that ends at once,
+                // over and over, is one bad stretch of ground, not four.
                 leashFails++;
+                leashLookTick = tickCount;
             }
-            if (!getNavigation().moveTo(back.getX() + 0.5, back.getY(), back.getZ() + 0.5, 1.1D)) leashFails++;
+            getNavigation().moveTo(back.getX() + 0.5, back.getY(), back.getZ() + 0.5, 1.1D);
             if (leashFails >= 4 && isSettler() && rescueToPlot()) {
                 leashFails = 0;
                 plotBest = Double.MAX_VALUE;
@@ -5548,6 +5552,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         }
         return leashFails > 0 ? " (no headway x" + leashFails + ")" : "";
     }
+
+    private int leashLookTick;
 
     /**
      * Stand this hand on the surface at the middle of its plot. For the hand that

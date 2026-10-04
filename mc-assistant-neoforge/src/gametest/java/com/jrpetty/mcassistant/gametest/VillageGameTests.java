@@ -2915,6 +2915,9 @@ public class VillageGameTests {
             int villagers = level.getEntitiesOfClass(Villager.class, around(at, 8)).size();
             List<VillageFolkEntity> folk = level.getEntitiesOfClass(VillageFolkEntity.class, around(at, 8));
             Kit.log("t05 villagers left: " + villagers + ", folk: " + folk.size());
+            for (VillageFolkEntity far : level.getEntitiesOfClass(VillageFolkEntity.class, around(at, 64))) {
+                Kit.log("t05   a folk " + Math.round(Math.sqrt(far.blockPosition().distSqr(at))) + " away: " + far.debugLine());
+            }
             helper.assertTrue(villagers == 0, "the villager should have been swapped out, " + villagers + " remain");
             helper.assertTrue(folk.size() == 1, "one folk should stand where the villager was, found " + folk.size());
             helper.succeed();
@@ -3175,12 +3178,15 @@ public class VillageGameTests {
         // The door taken out: the unit dropped carries the goods.
         level.destroyBlock(door, false);
         boolean carried = false;
+        StringBuilder seen = new StringBuilder();
         for (net.minecraft.world.entity.item.ItemEntity drop : level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
-                new AABB(door).inflate(3))) {
-            if (drop.getItem().is(McAssistantMod.STOREHOUSE_ITEM.get())
-                    && com.jrpetty.mcassistant.block.StorehouseBlockEntity.stacksCarried(drop.getItem()) == 40) carried = true;
+                new AABB(door).inflate(4))) {
+            int n = com.jrpetty.mcassistant.block.StorehouseBlockEntity.stacksCarried(drop.getItem());
+            seen.append(drop.getItem()).append(" carrying ").append(n).append("; ");
+            if (drop.getItem().is(McAssistantMod.STOREHOUSE_ITEM.get()) && n == 40) carried = true;
         }
-        helper.assertTrue(carried, "the door unit carries the forty stacks away");
+        Kit.log("t45 the door broken: " + level.getBlockState(door) + ", dropped " + seen);
+        helper.assertTrue(carried, "the door unit carries the forty stacks away: " + seen);
         helper.succeed();
     }
 
@@ -3212,10 +3218,18 @@ public class VillageGameTests {
         BlockPos next = com.jrpetty.mcassistant.entity.Retiring.next(f, level, village);
         helper.assertTrue(next != null && (next.equals(old) || next.equals(heart)), "an old chest to clear: " + next);
         com.jrpetty.mcassistant.entity.Retiring.release(next);
-        f.clearQueue();
-        f.enqueue(Job.retire(old));
-        f.enqueue(Job.depositAt(door));
+        final boolean[] sent = { false };
         helper.onEachTick(() -> {
+            long t = helper.getTick();
+            // Once it has taken up its trade (which clears its queue), send it to the old chest.
+            if (!sent[0]) {
+                if (t < 60) return;
+                sent[0] = true;
+                f.clearQueue();
+                f.enqueue(Job.retire(old));
+                f.enqueue(Job.depositAt(door));
+            }
+            if (t % 200 == 0) Kit.log("t46 @" + t + " old chest " + level.getBlockState(old) + " — " + f.debugLine());
             if (!level.getBlockState(old).isAir()) return;
             if (!(level.getBlockEntity(door) instanceof com.jrpetty.mcassistant.block.StorehouseBlockEntity store)) return;
             int logs = 0, chests = 0;

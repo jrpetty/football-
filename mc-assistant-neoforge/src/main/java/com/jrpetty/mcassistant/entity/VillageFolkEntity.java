@@ -2256,6 +2256,11 @@ public class VillageFolkEntity extends AssistantEntity {
             enqueue(storesDeposit());
             return true;
         }
+        // Off to the woods or the quarry — but not the crafts, the storekeeper or the watch:
+        // their work comes in bursts at their own bench, stand or post (a brew is twenty
+        // seconds of waiting), and a brewer sent for timber between brews never brewed.
+        StationTask trade = stationTask();
+        if (trade.isCraft() || trade == StationTask.STORE || trade == StationTask.GUARD) return false;
         // Timber one time, stone the next, whichever has ground to get it from.
         com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind first = (tickCount / 2400) % 2 == 0
             ? com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.LOGS : com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.STONE;
