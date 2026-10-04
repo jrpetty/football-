@@ -117,6 +117,12 @@ drawn in their own pass over the world, lit by its sun and sky. Settings
 has mouse sensitivity, field of view, invert mouse and head bob. Co-op
 guests on a run watch from above (the leader's game runs the street).
 
+On a **touch screen** a stick appears under the left thumb (push past its
+ring to run), a drag on the right looks, and buttons fire (hold and drag to
+look while shooting), aim, use, and on a run switch survivor, light the
+flashlight, call the squad and throw. Where a page can't hold the mouse,
+first person falls back to drag to look and click to shoot.
+
 ## The long game
 
 ### Milestones and tiers

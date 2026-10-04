@@ -421,6 +421,19 @@ export const MissionFPMixin = {
     if (k === 'pageup' || k === 'pagedown' || k === '[' || k === ']') return true
     return false
   },
+  // the buttons a touch screen shows for those keys
+  fpTouchKeys() {
+    const team = this.squad.filter((x) => !x.npc && this.canOrder(x) && !x.downed)
+    const out = []
+    if (team.length > 1) out.push({ key: 'Tab', icon: 'next', label: 'Next' })
+    out.push({ key: 'f', icon: 'sun', label: 'Torch', on: !!this.fpTorch })
+    if (team.length > 1) out.push({ key: 'g', icon: 'people', label: 'Follow', on: !!this.fpFollow })
+    for (const [key, kind, label] of [['z', 'molotov', 'Molotov'], ['x', 'pipebomb', 'Bomb'], ['c', 'noisemaker', 'Noise'], ['v', 'medkit', 'Medkit']]) {
+      const n = this.utils[kind] || 0
+      if (n > 0) out.push({ key, icon: kind, label, n })
+    }
+    return out
+  },
   fpUtil(kind, fp) {
     const a = this.fpA
     if (this.utils[kind] <= 0) {

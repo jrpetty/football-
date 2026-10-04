@@ -1711,6 +1711,44 @@ h3 .fillbest { text-transform: none; letter-spacing: 0.02em; font-family: var(--
 .fp-keys { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; text-align: left; font-size: 13px; color: var(--fg); margin-bottom: 14px; }
 .fp-keys kbd { margin-right: 4px; }
 .fp-pause-btns { display: flex; gap: 8px; justify-content: center; }
+.fp-note { position: absolute; left: 50%; top: 17%; transform: translateX(-50%); width: max-content; max-width: min(560px, calc(100vw - 32px)); padding: 7px 14px; border-radius: 9px; background: rgba(10, 12, 9, 0.76); border: 1px solid var(--line); color: var(--fg); font: 600 13px/1.35 var(--font-display); text-align: center; text-wrap: balance; opacity: 0; transition: opacity 0.4s; text-shadow: 0 1px 2px #000; }
+.fp-note.on { opacity: 1; }
+/* touch screens: a stick under the left thumb, buttons under the right */
+.fp-pad { display: none; position: absolute; inset: 0; }
+.fp.touch .fp-pad { display: block; }
+.fp-tb { position: absolute; pointer-events: auto; touch-action: none; display: grid; place-items: center; align-content: center; gap: 2px; width: 58px; height: 58px; padding: 0; border-radius: 50%; background: rgba(12, 14, 11, 0.42); border: 1.5px solid rgba(255, 250, 235, 0.3); color: rgba(255, 250, 235, 0.92); font: 700 9px/1 var(--font-display); letter-spacing: 0.06em; text-transform: uppercase; text-shadow: 0 1px 2px #000; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; cursor: pointer; }
+.fp-tb i { display: block; width: 22px; height: 22px; }
+.fp-tb i svg { display: block; width: 100%; height: 100%; }
+.fp-tb.down { background: rgba(214, 150, 60, 0.5); border-color: var(--accent); }
+.fp-tb.fire { right: calc(24px + env(safe-area-inset-right, 0px)); bottom: calc(28px + env(safe-area-inset-bottom, 0px)); width: 88px; height: 88px; background: rgba(150, 38, 26, 0.42); border: 2px solid rgba(255, 196, 170, 0.5); }
+.fp-tb.fire i { width: 36px; height: 36px; }
+.fp-tb.fire.down { background: rgba(206, 60, 38, 0.66); transform: scale(0.95); }
+.fp-tb.aim { right: calc(134px + env(safe-area-inset-right, 0px)); bottom: calc(26px + env(safe-area-inset-bottom, 0px)); }
+.fp-tb.use { right: calc(106px + env(safe-area-inset-right, 0px)); bottom: calc(112px + env(safe-area-inset-bottom, 0px)); opacity: 0.4; }
+.fp-tb.use.ready { opacity: 1; background: rgba(214, 150, 60, 0.36); border-color: var(--accent); animation: fpready 1.3s ease-in-out infinite; }
+@keyframes fpready { 50% { box-shadow: 0 0 0 6px rgba(214, 150, 60, 0.18); } }
+.fp-tcol { position: absolute; right: calc(12px + env(safe-area-inset-right, 0px)); top: calc(54px + env(safe-area-inset-top, 0px)); display: grid; grid-template-rows: repeat(3, 46px); grid-auto-flow: column; grid-auto-columns: 46px; gap: 8px; direction: rtl; }
+.fp-tkeys { display: contents; }
+.fp-tcol .fp-tb { position: relative; width: 46px; height: 46px; direction: ltr; }
+.fp-tcol .fp-tb i { width: 19px; height: 19px; }
+.fp-tcol .fp-tb span { font-size: 8px; }
+.fp-stick { position: absolute; left: -56px; top: -56px; width: 112px; height: 112px; border-radius: 50%; border: 2px solid rgba(255, 250, 235, 0.32); background: rgba(12, 14, 11, 0.24); opacity: 0; pointer-events: none; transition: opacity 0.1s; }
+.fp-stick.on { opacity: 1; }
+.fp-stick i { position: absolute; left: 29px; top: 29px; width: 50px; height: 50px; border-radius: 50%; background: rgba(255, 250, 235, 0.55); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5); }
+.fp-stick.run { border-color: var(--accent); }
+.fp-stick.run i { background: var(--accent); }
+.fp-stickhint { position: absolute; left: calc(46px + env(safe-area-inset-left, 0px)); bottom: calc(46px + env(safe-area-inset-bottom, 0px)); width: 100px; height: 100px; border-radius: 50%; border: 2px dashed rgba(255, 250, 235, 0.2); pointer-events: none; transition: opacity 0.2s; }
+.fp-stick.on + .fp-stickhint { opacity: 0; }
+.fp.touch .fp-status { bottom: auto; top: 40%; left: calc(18px + env(safe-area-inset-left, 0px)); min-width: 150px; }
+.fp.touch .fp-name { font-size: 13px; }
+.fp.touch .fp-gun { right: auto; bottom: auto; left: calc(18px + env(safe-area-inset-left, 0px)); top: calc(40% + 40px); text-align: left; }
+.fp.touch .fp-weapon { font-size: 13px; }
+.fp.touch .fp-ammo b { font-size: 17px; }
+body.fprun.fptouch .mhud .mbottom { bottom: 2px; transform: translateX(-50%) scale(0.6); }
+/* a phone has no room for the map beside the buttons: it is in the view from above */
+body.fprun.fptouch .mhud .minimap { display: none; }
+body.fprun.fptouch .mhud .haul { transform: scale(0.72); }
+body.fpmode.fpfree #c { cursor: grab; }
 /* the rest of the interface steps back in first person */
 body.fpmode #labels .wl .lootmark { opacity: 0.75; }
 body.fprun .mhud .mhelp, body.fprun .mhud .mact button.ghost, body.fprun .mhud .floorbar { display: none; }

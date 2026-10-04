@@ -569,6 +569,8 @@ const CHAPTERS = [
       P('Your aim is your own: shots go where the crosshair is, a little wider when you move or run and tighter when you aim. Headshots do double damage. Guns reach further than your people would risk on their own, losing punch with distance; a shotgun throws a spread. Out of ammo, you club with the gun. Walk into a flight of stairs to climb it. The rest of the squad keep their orders, and if you go down you carry on as someone still standing.'),
       h('h4', 'In camp'),
       P('Look at a station and press E for its panel. Climb a watchtower with E to see over the wall and shoot from it; the wall is solid, so when a horde comes, fight from the towers, a breach or the gate (E opens it). Talk to people by looking at them. Whoever you walk as leaves their job while you have them.'),
+      h('h4', 'On a touch screen'),
+      P('A stick appears under your left thumb: push it to walk, and past its ring to run. Drag anywhere on the right to look. The big red button fires (hold it and drag to look while you shoot), Aim toggles the sights, Use lights up when there is something to use, and the small buttons on the right switch survivor, the flashlight, the squad following and throwables. The eye button goes back to the view from above. Where a page can’t hold the mouse, drag to look and click to shoot instead.'),
       P('Settings has mouse sensitivity, field of view, invert mouse and head bob.'),
     ],
   },

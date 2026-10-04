@@ -13,6 +13,7 @@ import { viewModel } from '../models/viewmodel.js'
 import { clamp, lerp, h } from '../core/util.js'
 import { sfx } from '../core/audio.js'
 import { INDOOR } from './materials.js'
+import { icon } from '../ui/icons.js'
 
 const KEY = 'holdout.fp'
 export const fpPrefs = { sens: 1, fov: 74, invert: false, bob: true }
@@ -102,6 +103,20 @@ export class FirstPerson {
     this.hitT = 0
     this.dom = null
     this.saved = null
+    // no pointer lock (a touch screen, or a page that may not take the
+    // mouse): drag to look; on a touch screen a thumb stick walks and
+    // buttons fire, aim and use
+    this.free = false
+    this.touchUI = false
+    this.drags = new Map()
+    this.stick = null
+    this.tmx = 0
+    this.tmz = 0
+    this.trun = false
+    this.aimToggle = false
+    this.lockPromise = false
+    this.noteT = 0
+    this.padKey = ''
     // muzzle flash: a cross of two glowing cards at the muzzle
     const fm = new THREE.MeshBasicMaterial({ map: flashTexture(), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, color: new THREE.Color(3, 2.6, 2) })
     this.flashMesh = new THREE.Group()
@@ -127,10 +142,15 @@ export class FirstPerson {
       this.casings.push(m)
     }
     document.addEventListener('pointerlockchange', () => this.onLockChange())
+    // browsers whose request hands back no promise say no with this event
+    document.addEventListener('pointerlockerror', () => !this.lockPromise && this.lockError())
     document.addEventListener('mousemove', (e) => this.onMouse(e))
     document.addEventListener('mousedown', (e) => this.onDown(e), true)
     document.addEventListener('mouseup', (e) => this.onUp(e), true)
-    document.addEventListener('contextmenu', (e) => this.active && this.locked && e.preventDefault())
+    document.addEventListener('contextmenu', (e) => this.active && (this.locked || this.free) && e.preventDefault())
+    window.addEventListener('pointermove', (e) => this.onPMove(e))
+    window.addEventListener('pointerup', (e) => this.onPUp(e))
+    window.addEventListener('pointercancel', (e) => this.onPUp(e, true))
   }
 
   // ---------------------------------------------------------------- dom
@@ -154,10 +174,27 @@ export class FirstPerson {
       'div.fp-pause',
       h('div.fp-pause-card', h('h3', 'First person'), h('p', 'Click to look around and play.'), h('div.fp-keys', ...[['WASD', 'walk'], ['Shift', 'run'], ['Mouse', 'look'], ['Left click', 'shoot or swing'], ['Right click', 'aim'], ['E', 'use what you look at'], ['` / F5 / Esc', 'top-down view']].map(([k, v]) => h('span', h('kbd', k), ' ', v))), h('div.fp-pause-btns', h('button.btn.go', { onclick: (e) => (e.stopPropagation(), this.lock()) }, 'Play'), h('button.btn', { onclick: (e) => (e.stopPropagation(), this.game.toggleFirstPerson?.(false)) }, 'Top-down view'))),
     )
-    D.root.append(D.hurt, D.low, D.scope, D.cross, D.hit, D.prompt, D.prog, h('div.fp-status', D.name, D.hpbar), h('div.fp-gun', D.weapon, D.ammo), D.tip, D.pause)
+    D.note = h('div.fp-note')
+    // touch: a stick that appears under the left thumb, buttons on the right
+    D.stick = h('div.fp-stick', (D.knob = h('i')))
+    const tb = (cls, b, ic, label) => h(`button.fp-tb.${cls}`, { 'data-fp': b, 'aria-label': label }, h('i', { html: icon(ic) }), label && h('span', label))
+    D.fire = tb('fire', 'fire', 'crosshair', '')
+    D.aim = tb('aim', 'aim', 'binoculars', 'Aim')
+    D.use = tb('use', 'use', 'search', 'Use')
+    D.keys = h('div.fp-tkeys')
+    D.pad = h('div.fp-pad', D.stick, h('div.fp-stickhint'), D.fire, D.aim, D.use, h('div.fp-tcol', tb('exit', 'exit', 'eye', 'View'), D.keys))
+    D.root.append(D.hurt, D.low, D.scope, D.cross, D.hit, D.prompt, D.prog, h('div.fp-status', D.name, D.hpbar), h('div.fp-gun', D.weapon, D.ammo), D.tip, D.note, D.pad, D.pause)
     document.body.appendChild(D.root)
+    view.canvas.addEventListener('pointerdown', (e) => this.onPDown(e))
+    D.pad.addEventListener('pointerdown', (e) => this.onPDown(e))
     this.dom = D
     return D
+  }
+  // a line of help that fades by itself
+  noteShow(text, secs = 5) {
+    if (!this.dom) return
+    this.dom.note.textContent = text
+    this.noteT = secs
   }
   setPrompt(text) {
     if (this.dom.prompt._t === text) return
@@ -178,15 +215,52 @@ export class FirstPerson {
 
   // ---------------------------------------------------------------- lock
   lock() {
-    if (!this.active) return
+    if (!this.active || this.free) return
+    const cv = view.canvas
+    if (!cv.requestPointerLock) return this.lockError()
+    let p = null
     try {
-      const p = view.canvas.requestPointerLock?.({ unadjustedMovement: true })
-      p?.catch?.(() => view.canvas.requestPointerLock?.())
-    } catch {
+      p = cv.requestPointerLock({ unadjustedMovement: true })
+    } catch {}
+    this.lockPromise = !!p?.then
+    // raw mouse input is not on offer everywhere: then the plain lock
+    p?.catch?.(() => {
+      let q = null
       try {
-        view.canvas.requestPointerLock?.()
-      } catch {}
-    }
+        q = cv.requestPointerLock()
+      } catch {
+        return this.lockError()
+      }
+      q?.catch?.(() => this.lockError())
+    })
+  }
+  // The page may not take the mouse (some app views, a sandboxed frame):
+  // look by dragging instead. Straight after Esc the browser refuses for a
+  // moment, which is no reason to give up on it.
+  lockError() {
+    if (!this.active || this.locked || this.free) return
+    if (performance.now() - (this.unlockedAt || -1e4) < 1500) return
+    this.setFree(true)
+    if (!this.touchUI) this.noteShow('This page can’t hold the mouse: drag to look, click to shoot, right-drag to aim.', 7)
+  }
+  setFree(on) {
+    this.free = on
+    this.drags.clear()
+    this.stick = null
+    this.tmx = this.tmz = 0
+    this.trun = false
+    this.trigger = false
+    this.aimHeld = this.aimToggle = false
+    const D = this.dom
+    if (!D) return
+    D.root.classList.toggle('free', on)
+    D.root.classList.toggle('touch', on && this.touchUI)
+    document.body.classList.toggle('fptouch', on && this.touchUI)
+    document.body.classList.toggle('fpfree', on && !this.touchUI)
+    D.pause.classList.remove('on')
+    D.stick.classList.remove('on')
+    D.fire.classList.remove('down')
+    D.aim.classList.remove('down')
   }
   unlock() {
     if (document.pointerLockElement) document.exitPointerLock?.()
@@ -195,22 +269,147 @@ export class FirstPerson {
     const was = this.locked
     this.locked = !!document.pointerLockElement && document.pointerLockElement === view.canvas
     if (was && !this.locked) this.unlockedAt = performance.now()
+    if (this.locked && this.free) this.setFree(false)
     this.trigger = false
     this.aimHeld = false
-    if (this.dom) this.dom.pause.classList.toggle('on', this.active && !this.locked && !this.uiOpen())
+    if (this.dom) this.dom.pause.classList.toggle('on', this.active && !this.locked && !this.free && !this.uiOpen())
   }
-  onMouse(e) {
-    if (!this.active || !this.locked) return
-    const k = 0.0021 * fpPrefs.sens * (1 - this.ads * 0.45) * (this.scoped() ? 0.4 : 1)
-    const dx = clamp(e.movementX || 0, -300, 300)
-    const dy = clamp(e.movementY || 0, -300, 300)
+  // turn the head by a drag or a mouse movement (pixels; k radians a pixel)
+  turn(dx, dy, k) {
+    k *= fpPrefs.sens * (1 - this.ads * 0.45) * (this.scoped() ? 0.4 : 1)
+    dx = clamp(dx, -300, 300)
+    dy = clamp(dy, -300, 300)
     this.yaw -= dx * k
     this.pitch = clamp(this.pitch - dy * k * (fpPrefs.invert ? -1 : 1), -1.45, 1.45)
     this.swayX = clamp(this.swayX + dx * 0.00012, -0.03, 0.03)
     this.swayY = clamp(this.swayY + dy * 0.00012, -0.03, 0.03)
   }
-  onDown(e) {
+  onMouse(e) {
+    if (!this.active || !this.locked) return
+    this.turn(e.movementX || 0, e.movementY || 0, 0.0021)
+  }
+  // ---------------------------------------------------------------- touch / no lock
+  onPDown(e) {
     if (!this.active) return
+    const touch = e.pointerType === 'touch' || e.pointerType === 'pen'
+    if (touch && !this.touchUI) {
+      // a finger: the touch layout from now on
+      this.touchUI = true
+      this.unlock()
+      this.setFree(true)
+    }
+    if (!this.free || this.uiOpen()) return
+    e.preventDefault()
+    e.stopPropagation()
+    const btn = e.target.closest?.('[data-fp]')
+    const b = btn?.dataset.fp
+    const d = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, moved: 0, mouse: !touch, button: e.button, b, t: performance.now() }
+    if (b === 'fire') {
+      this.trigger = true
+      this.tryAttack()
+      btn.classList.add('down')
+    } else if (b === 'aim') {
+      this.aimToggle = !this.aimToggle
+      this.aimHeld = this.aimToggle
+      btn.classList.toggle('down', this.aimToggle)
+      return
+    } else if (b === 'use') {
+      this.use()
+      return
+    } else if (b === 'exit') {
+      this.game.toggleFirstPerson?.(false)
+      return
+    } else if (b) {
+      this.host?.fpKey?.({ key: b, shiftKey: false, ctrlKey: false, preventDefault() {} }, this)
+      this.padKey = ''
+      return
+    } else if (touch && e.clientX < innerWidth * 0.45 && !this.stick) {
+      d.stick = true
+      this.stick = d
+      this.dom.stick.classList.add('on')
+      this.setStick(d)
+    } else if (!touch && e.button === 2) {
+      this.aimHeld = true
+      d.aim = true
+    }
+    try {
+      ;(btn || view.canvas).setPointerCapture?.(e.pointerId)
+    } catch {}
+    this.drags.set(e.pointerId, d)
+  }
+  onPMove(e) {
+    const d = this.drags.get(e.pointerId)
+    if (!d || !this.active) return
+    const dx = e.clientX - d.x
+    const dy = e.clientY - d.y
+    d.x = e.clientX
+    d.y = e.clientY
+    d.moved += Math.abs(dx) + Math.abs(dy)
+    if (d.stick) return this.setStick(d)
+    // a click is not a drag until it has moved a little
+    if (d.mouse && d.button === 0 && d.moved < 6 && !d.hold) return
+    this.turn(dx, dy, d.mouse ? 0.0036 : 0.0042)
+  }
+  onPUp(e, cancel) {
+    const d = this.drags.get(e.pointerId)
+    if (!d) return
+    this.drags.delete(e.pointerId)
+    if (d.stick) {
+      this.stick = null
+      this.tmx = this.tmz = 0
+      this.trun = false
+      this.dom?.stick.classList.remove('on')
+      return
+    }
+    if (d.b === 'fire') {
+      this.trigger = false
+      this.dom?.fire.classList.remove('down')
+      return
+    }
+    if (d.aim) {
+      this.aimHeld = false
+      return
+    }
+    if (d.mouse && d.button === 0) {
+      if (d.hold) this.trigger = false
+      else if (d.moved < 6 && !cancel) this.tryAttack()
+    }
+  }
+  // the stick: the knob follows the thumb up to the ring; the ring follows a
+  // thumb that slides well past it; pushed hard forwards, they run
+  setStick(d) {
+    const R = 50
+    let ox = d.x - d.sx
+    let oy = d.y - d.sy
+    let L = Math.hypot(ox, oy)
+    if (L > R * 1.6) {
+      const k = 1 - (R * 1.6) / L
+      d.sx += ox * k
+      d.sy += oy * k
+      ox = d.x - d.sx
+      oy = d.y - d.sy
+      L = Math.hypot(ox, oy)
+    }
+    const m = clamp((L - 5) / (R - 5), 0, 1)
+    this.tmx = L > 0 ? (ox / L) * m : 0
+    this.tmz = L > 0 ? (-oy / L) * m : 0
+    this.trun = L > R * 1.2 && -oy > Math.abs(ox)
+    const S = this.dom.stick
+    S.style.transform = `translate(${d.sx}px, ${d.sy}px)`
+    const kl = Math.min(L, R)
+    this.dom.knob.style.transform = `translate(${L ? (ox / L) * kl : 0}px, ${L ? (oy / L) * kl : 0}px)`
+    S.classList.toggle('run', this.trun)
+  }
+  // the host's own buttons (the torch, the squad...), refreshed when they change
+  padKeys() {
+    const list = this.host?.fpTouchKeys?.() || []
+    const key = list.map((k) => k.key + (k.n ?? '') + (k.on ? '*' : '')).join('|')
+    if (key === this.padKey) return
+    this.padKey = key
+    this.dom.keys.replaceChildren(...list.map((k) => h(`button.fp-tb.small${k.on ? '.down' : ''}`, { 'data-fp': k.key, 'aria-label': k.label }, h('i', { html: icon(k.icon) }), h('span', k.n != null ? `${k.label} ${k.n}` : k.label))))
+  }
+  onDown(e) {
+    if (!this.active || this.free) return
     if (!this.locked) {
       if (e.target === view.canvas) {
         e.preventDefault()
@@ -270,8 +469,20 @@ export class FirstPerson {
     this.game.pipe.firstPerson = true
     INDOOR.uFpSpec.value = 1
     this.layer.visible = true
+    // a touch screen gets the stick and buttons; a mouse gets pointer lock
+    const mq = (q) => {
+      try {
+        return matchMedia(q).matches
+      } catch {
+        return false
+      }
+    }
+    if (mq('(pointer: coarse)') && !mq('(any-pointer: fine)')) this.touchUI = true
+    this.free = false
+    this.setFree(this.touchUI || !view.canvas.requestPointerLock)
     this.lock()
     this.onLockChange()
+    if (this.touchUI) this.noteShow('Left thumb walks (push to the edge to run). Drag anywhere else to look.', 6)
     sfx('select')
     return true
   }
@@ -291,8 +502,7 @@ export class FirstPerson {
       cam.updateProjectionMatrix()
     }
     this.unlock()
-    this.trigger = false
-    this.aimHeld = false
+    this.setFree(false)
     this.game.pipe.overlay = null
     this.game.pipe.firstPerson = false
     INDOOR.uFpSpec.value = 0
@@ -305,6 +515,8 @@ export class FirstPerson {
       this.dom.root.classList.remove('on')
       this.dom.pause.classList.remove('on')
       this.setPrompt(null)
+      this.noteT = 0
+      this.dom.note.classList.remove('on')
     }
     document.body.classList.remove('fpmode')
     // the top-down camera picks up where the eyes were, looking the same way
@@ -363,7 +575,7 @@ export class FirstPerson {
     const D = this.dom
     const ui = this.uiOpen()
     if (ui && this.locked) this.unlock()
-    D.pause.classList.toggle('on', !this.locked && !ui)
+    D.pause.classList.toggle('on', !this.locked && !this.free && !ui)
     const keys = view.input.keys
     const live = this.locked || !ui
     // ---- move
@@ -374,11 +586,27 @@ export class FirstPerson {
       if (keys.has('s') || keys.has('arrowdown')) mz -= 1
       if (keys.has('d') || keys.has('arrowright')) mx += 1
       if (keys.has('a') || keys.has('arrowleft')) mx -= 1
+      // the thumb stick keeps how far it is pushed
+      mx += this.tmx
+      mz += this.tmz
     }
-    const len = Math.hypot(mx, mz) || 1
+    const len = Math.max(1, Math.hypot(mx, mz))
     mx /= len
     mz /= len
-    const wantRun = keys.has('shift') && mz > 0.3 && this.ads < 0.3 && this.swingT < 0
+    const wantRun = (keys.has('shift') || (this.trun && live)) && mz > 0.3 && this.ads < 0.3 && this.swingT < 0
+    // no lock, a mouse: a click held still fires on (a drag looks instead)
+    if (this.free && this.drags.size) {
+      const now = performance.now()
+      for (const d of this.drags.values()) {
+        if (d.mouse && d.button === 0 && !d.hold && d.moved < 6 && now - d.t > 220) {
+          d.hold = true
+          this.trigger = true
+          this.tryAttack()
+        }
+      }
+    }
+    this.noteT -= dt
+    D.note.classList.toggle('on', this.noteT > 0)
     this.sprint = lerp(this.sprint, wantRun && (mx || mz) ? 1 : 0, 1 - Math.exp(-dt * 8))
     const base = H.fpSpeed()
     const speed = base * (wantRun ? 1.3 : 0.78) * (1 - this.ads * 0.4)
@@ -440,13 +668,19 @@ export class FirstPerson {
     H.fpTick?.(dt)
     // ---- attack
     this.cool -= dt
-    if (this.trigger && this.locked) this.tryAttack()
+    if (this.trigger && (this.locked || this.free)) this.tryAttack()
     // ---- what is under the crosshair
     this.lookT -= dt
     if (this.lookT <= 0) {
       this.lookT = 0.1
-      this.look = live ? H.fpLook(cam.position, this.forward(new THREE.Vector3())) : null
-      this.setPrompt(this.look ? `<kbd>${this.look.key || 'E'}</kbd> ${this.look.text}` : null)
+      const L = (this.look = live ? H.fpLook(cam.position, this.forward(new THREE.Vector3())) : null)
+      // a key only for what can be done; on a touch screen the Use button lights
+      const k = L ? (L.key ?? (L.act ? 'E' : '')) : ''
+      this.setPrompt(L ? (k && !this.touchUI ? `<kbd>${k}</kbd> ` : '') + L.text : null)
+      if (this.touchUI && this.free) {
+        D.use.classList.toggle('ready', !!L?.act)
+        this.padKeys()
+      }
     }
     // ---- hurt
     const st = H.fpStatus()
