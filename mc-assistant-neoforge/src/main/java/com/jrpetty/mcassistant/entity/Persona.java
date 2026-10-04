@@ -109,6 +109,8 @@ public final class Persona {
         String heardFrom = "";
         /** The last day it gave the player a present of its own accord. */
         long lastPresentDay = -1;
+        /** The last day the player told it it was doing a fine job. */
+        long lastPraiseDay = -1;
 
         Opinion(String name, int affinity) {
             this.name = name;

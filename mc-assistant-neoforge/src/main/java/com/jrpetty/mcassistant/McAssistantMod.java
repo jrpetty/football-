@@ -138,7 +138,8 @@ public final class McAssistantMod {
                 .mapColor(MapColor.WOOD)
                 .strength(2.0F, 600.0F)
                 .sound(SoundType.WOOD)
-                .noOcclusion());
+                .noOcclusion()
+                .pushReaction(net.minecraft.world.level.material.PushReaction.BLOCK));
 
     public static final DeferredItem<com.jrpetty.mcassistant.item.VillageBoardItem> VILLAGE_BOARD_ITEM =
         ITEMS.registerItem("village_board", com.jrpetty.mcassistant.item.VillageBoardItem::new,

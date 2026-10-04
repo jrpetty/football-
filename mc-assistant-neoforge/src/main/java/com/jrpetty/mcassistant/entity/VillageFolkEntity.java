@@ -292,7 +292,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (tickCount % 40 == 0) greetPassersBy();
         // Somebody is talking to it, or it is out walking with somebody: its own day
         // waits until they are done.
-        boolean withAPlayer = talkPartner() != null || companionPlayer() != null;
+        boolean withAPlayer = talkPartner() != null || companionPlayer() != null || guidePlayer() != null;
         // On the road with a caravan: walked step by step, not thought about once in five seconds.
         if (trip != null && !withAPlayer && tickCount % 10 == 0 && level() instanceof net.minecraft.server.level.ServerLevel road) {
             Caravans.drive(this, road);
@@ -663,6 +663,40 @@ public class VillageFolkEntity extends AssistantEntity {
     }
 
     public void stopFollowing() { companion = null; }
+
+    // ------------------------------ showing somebody the way (Guide) -------------
+
+    @Nullable private UUID guiding;
+    @Nullable private BlockPos guideTo;
+    private String guideWhat = "";
+    private int guideUntil;
+
+    public void startGuiding(net.minecraft.world.entity.player.Player player, BlockPos to, String what) {
+        guiding = player.getUUID();
+        guideTo = to.immutable();
+        guideWhat = what;
+        guideUntil = tickCount + 3600;                 // three minutes of its day at most
+        stopTalking();
+        stopFollowing();
+    }
+
+    public void stopGuiding() { guiding = null; guideTo = null; }
+
+    /** The player it is showing the way, while it is. */
+    @Nullable
+    public net.minecraft.world.entity.player.Player guidePlayer() {
+        if (guiding == null || guideTo == null) return null;
+        net.minecraft.world.entity.player.Player p = level().getPlayerByUUID(guiding);
+        if (p == null || tickCount > guideUntil || p.distanceToSqr(this) > 48.0 * 48.0) {
+            guiding = null;
+            return null;
+        }
+        return p;
+    }
+
+    @Nullable public BlockPos guideTo() { return guideTo; }
+
+    public String guideWhat() { return guideWhat; }
 
     // ------------------------------ hired for an adventure (Hire) ----------------
 
@@ -1127,6 +1161,7 @@ public class VillageFolkEntity extends AssistantEntity {
         super.registerGoals();
         this.goalSelector.addGoal(1, new com.jrpetty.mcassistant.entity.goal.TalkGoal(this));
         this.goalSelector.addGoal(1, new com.jrpetty.mcassistant.entity.goal.CompanionGoal(this));
+        this.goalSelector.addGoal(1, new com.jrpetty.mcassistant.entity.goal.GuideGoal(this));
         // The watch turns a banished player out of the village on sight (Laws).
         this.targetSelector.addGoal(2, new net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal<>(
             this, net.minecraft.world.entity.player.Player.class, 10, true, false,

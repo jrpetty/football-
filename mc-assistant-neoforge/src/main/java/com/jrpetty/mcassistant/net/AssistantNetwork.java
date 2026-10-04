@@ -66,6 +66,13 @@ public final class AssistantNetwork {
                     new VillagePagePayload("No village", "There is no village near enough to tell you about. Walk into one and press the key again."));
                 return;
             }
+            if (payload.what() == 1) {
+                // The village board, read from wherever you are talking.
+                String[] page = com.jrpetty.mcassistant.entity.VillageBoards.page(
+                    com.jrpetty.mcassistant.entity.VillageBoards.compose(level, v.id()));
+                net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, new VillagePagePayload(page[0], page[1]));
+                return;
+            }
             String title = com.jrpetty.mcassistant.entity.Villages.name(v.id());
             net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
                 new VillagePagePayload(title, com.jrpetty.mcassistant.VillageCommands.statusText(level, v)));

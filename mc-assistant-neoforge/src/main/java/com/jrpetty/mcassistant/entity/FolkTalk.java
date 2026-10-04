@@ -142,6 +142,10 @@ public final class FolkTalk {
             case SHORT -> Trades.shortages(f);
             case RETRADE -> Asks.retrade(f, p, text);
             case BUILD -> Asks.build(f, p, text);
+            case GUIDE -> Guide.ask(f, p, text);
+            case PRAISE -> praise(f, p, op, day);
+            case WORTH -> Wealth.talk(f);
+            case KNACK -> knack(f);
             default -> puzzled(f);
         };
         // Somebody who can't stand you says as little as it can.
@@ -150,10 +154,45 @@ public final class FolkTalk {
                 "Go away. I haven't forgotten.", "Hmph.");
         }
         boolean answering = switch (topic) {
-            case HOW, DOING, ABOUT, PEOPLE, VILLAGE, DREAMS, HOBBY, MEMORY, REPUTE, GOSSIP, COUNCIL, RIVALS, QUESTS, ORDERS, WORKINGS, SHORT -> true;
+            case HOW, DOING, ABOUT, PEOPLE, VILLAGE, DREAMS, HOBBY, MEMORY, REPUTE, GOSSIP, COUNCIL, RIVALS, QUESTS, ORDERS, WORKINGS, SHORT,
+                 WORTH, KNACK -> true;
             default -> false;
         };
         return manner(f, said, answering);
+    }
+
+    /** "Well done": a word of thanks for its work. It warms to you for it, once a day. */
+    static String praise(VillageFolkEntity f, net.minecraft.world.entity.player.Player p, Persona.Opinion op, long day) {
+        Social.Life life = f.life();
+        RandomSource r = f.getRandom();
+        boolean first = op.lastPraiseDay != day;
+        if (first) {
+            op.lastPraiseDay = day;
+            f.persona().feelFor(p.getUUID(), p.getName().getString(), life.has(Social.Trait.GRUMPY) ? 1 : 3);
+            f.persona().remember(day, p.getName().getString() + " told me I was doing a fine job", 2);
+        }
+        String said;
+        if (life.has(Social.Trait.SHY)) said = pick(r, "Oh! Thank you… I do try.", "That's — thank you. Really.");
+        else if (life.has(Social.Trait.GRUMPY)) said = pick(r, "Hmph. About time somebody noticed.", "Well. Somebody has to do it properly.");
+        else if (life.has(Social.Trait.CHEERFUL)) said = pick(r, "That's made my day!", "Aw, thank you! Best trade in the village, this.");
+        else if (life.has(Social.Trait.HARDWORKING)) said = pick(r, "Thank you — there's always more to do, mind.", "Kind of you. Back to it!");
+        else said = pick(r, "Thank you, that's kind of you to say.", "That means a lot, it does.");
+        if (!first) said = pick(r, "You said so already — but I'll take it!", "Twice in a day? You'll make me blush.");
+        int lv = f.veteranLevel();
+        if (first && lv >= 10) said += " " + lv + " levels at it now, you know.";
+        return said;
+    }
+
+    /** "What are you good at?" — its trades and its nature, in its own words. */
+    static String knack(VillageFolkEntity f) {
+        if (f.isBaby()) return "Hide and seek! I'm the best at hide and seek.";
+        AssistantEntity.StationTask job = f.stationTask();
+        String levels = f.tradeLevels();
+        String now = job == AssistantEntity.StationTask.NONE ? "I've no trade just now."
+            : "I'm a " + job.title.toLowerCase(Locale.ROOT) + ", level " + f.veteranLevel() + ".";
+        String others = levels.isEmpty() ? "" : " All told: " + levels + ".";
+        String nature = Skill.line(f);
+        return now + others + " " + nature;
     }
 
     /** Right-click: open the talk screen with a greeting. */
@@ -176,7 +215,78 @@ public final class FolkTalk {
             : Trade.live(f, p) ? "Offers you " + Trade.describe(f) : "";
         PacketDistributor.sendToPlayer(p, new FolkReplyPayload(f.getId(), open, f.displayNameCap(), about, said,
             me.mood(), Persona.moodWord(me.mood()), aff, Persona.standing(aff), f.isFollowing(p), asked,
-            where, errand, Errands.canDeliver(f, p) || Trade.canPay(f, p)));
+            where, errand, Errands.canDeliver(f, p) || Trade.canPay(f, p),
+            clip(nowDoing(f), 200), clip(card(f), 1800), clip(Guide.encode(Guide.places(f, p)), 900)));
+    }
+
+    private static String clip(String s, int most) {
+        return s == null ? "" : s.length() <= most ? s : s.substring(0, most - 1) + "…";
+    }
+
+    /** What it is doing this minute, in a line for the top of the talk screen. */
+    public static String nowDoing(VillageFolkEntity f) {
+        if (f.isSleeping()) return "Asleep";
+        if (f.isBaby()) return "Playing";
+        Job j = f.peekJob();
+        if (j != null) return capFirst(j.label());
+        if (f.guidePlayer() != null) return "Showing somebody the way to " + f.guideWhat();
+        String status = f.clientStatus();
+        if (f.stationTask() == AssistantEntity.StationTask.NONE) return "Looking for a trade";
+        if (f.offWorkNow()) return "Off work";
+        return status.startsWith("Needs") ? status : "At work: " + f.stationTask().label;
+    }
+
+    private static String capFirst(String s) {
+        return s == null || s.isEmpty() ? "" : Character.toUpperCase(s.charAt(0)) + s.substring(1);
+    }
+
+    /**
+     * Who it is, at a glance, for the talk screen's "About" page: one fact a line, as
+     * "Label|what". Its trade and level and its other trades, how its nature suits its work,
+     * what it is worth and earns, its home, its family and friends, what it loves and hopes
+     * for, and what it needs.
+     */
+    public static String card(VillageFolkEntity f) {
+        StringBuilder sb = new StringBuilder();
+        Persona me = f.persona();
+        Social.Life life = f.life();
+        AssistantEntity.StationTask job = f.stationTask();
+        line(sb, "Trade", f.isBaby() ? "A child — no trade yet" : job == AssistantEntity.StationTask.NONE ? "Looking for one"
+            : job.title + ", level " + f.veteranLevel() + (f.isElder() ? " · the elder" : ""));
+        String levels = f.tradeLevels();
+        if (!levels.isEmpty() && levels.contains(",")) line(sb, "Has worked", levels);
+        if (!f.isBaby()) line(sb, "At its work", Skill.line(f));
+        line(sb, "Worth", Wealth.line(f));
+        net.minecraft.core.BlockPos bed = f.bedPos();
+        line(sb, "Home", bed == null ? "No bed of its own yet"
+            : "A bed of its own" + (f.comforts() > 0 ? ", and " + f.comforts() + (f.comforts() == 1 ? " comfort" : " comforts") + " it bought" : ""));
+        line(sb, "Nature", life.traitsLabel());
+        String family = life.partnerName().isEmpty() ? "" : "partner " + life.partnerName();
+        if (life.children() > 0) family += (family.isEmpty() ? "" : "; ") + life.children() + (life.children() == 1 ? " child" : " children");
+        if (!life.parents().isEmpty()) family += (family.isEmpty() ? "" : "; ") + "child of " + life.parents();
+        if (!family.isEmpty()) line(sb, "Family", family);
+        java.util.List<String> friends = new java.util.ArrayList<>();
+        for (Social.Bond b : life.friends()) {
+            if (b.name != null && !b.name.isEmpty()) friends.add(b.name);
+            if (friends.size() >= 4) break;
+        }
+        if (!friends.isEmpty()) line(sb, "Friends", String.join(", ", friends));
+        if (me.rolled()) {
+            line(sb, "Loves", me.hobby().doing);
+            line(sb, "Hopes", me.ambitionMet() ? "done — " + me.ambition().done : me.ambition().hope);
+            line(sb, "Feeling", Persona.moodWord(me.mood()));
+        }
+        java.util.List<String> needs = f.missingEssentials();
+        if (!needs.isEmpty()) line(sb, "Needs", String.join(", ", needs));
+        java.util.List<Persona.Memory> mem = me.memories();
+        if (!mem.isEmpty()) line(sb, "Remembers", mem.get(mem.size() - 1).text());
+        return sb.toString();
+    }
+
+    private static void line(StringBuilder sb, String label, String what) {
+        if (what == null || what.isEmpty()) return;
+        if (sb.length() > 0) sb.append('\n');
+        sb.append(label).append('|').append(what.replace('\n', ' ').replace('|', '/'));
     }
 
     /** Words said out loud: a bubble over the folk's head for whoever is near. */
@@ -195,7 +305,7 @@ public final class FolkTalk {
 
     // ------------------------------------------------------------------ manner
 
-    static String pick(RandomSource r, String... options) {
+    public static String pick(RandomSource r, String... options) {
         return options[r.nextInt(options.length)];
     }
 
@@ -950,6 +1060,13 @@ public final class FolkTalk {
         if (has(t, "make peace", "peace with", "olive branch", "patch things up", "end the feud", "settle the feud")) return TalkTopic.PEACE;
         if (has(t, "stir trouble", "stir up", "rumours about", "rumors about", "they say about you", "saying about you")) return TalkTopic.STIR;
         if (has(t, "pay my fine", "pay the fine", "my fine", "what i owe", "my debt", "pay what")) return TalkTopic.FINE;
+        if (has(t, "show me", "take me to", "where is", "where's", "wheres", "how do i get to", "lead me", "guide me",
+                "way to the", "which way", "show me around", "give me a tour")) return TalkTopic.GUIDE;
+        if (has(t, "well done", "good job", "great job", "nice work", "good work", "fine job", "proud of you",
+                "thank you", "thanks", "you're great", "youre great", "amazing work", "keep it up")) return TalkTopic.PRAISE;
+        if (has(t, "money", "wage", "wages", "salary", " earn", "savings", "how rich", "are you rich", "are you poor",
+                "your worth", "you worth", "how much are you", "get paid", "your pay")) return TalkTopic.WORTH;
+        if (has(t, "good at", "your skill", "talent", "best at", "your level", "what level", "how skilled", "your knack")) return TalkTopic.KNACK;
         if (has(t, "become a ", "be a ", "work as a ", "change your trade", "change your job", "change jobs", "switch to ",
                 "take up ", "try being a ", "retrain") && Asks.tradeNamed(t) != null) return TalkTopic.RETRADE;
         if (has(t, " orders ", " order ", "elder want", "elder say", "you should order", "order the village", "tell everyone to", "should put our backs")

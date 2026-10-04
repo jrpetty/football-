@@ -3374,4 +3374,64 @@ public class VillageGameTests {
         helper.assertTrue(Math.abs(skill) <= com.jrpetty.mcassistant.entity.Skill.MOST, "its nature counts for at most a fifth: " + skill);
         helper.succeed();
     }
+
+    /**
+     * Everything a player can say to a folk gets a sensible answer: every topic on the talk
+     * screen, plain words for the new ones (the way somewhere, a kind word, money, what it is
+     * good at), a walk to the village board, and its card — who it is, at a glance.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t49_every_word")
+    public static void t49_every_word(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 31000, 12000, 32);
+        Kit.prepare(level, 31000, 12000, 32);
+        level.setDayTime(1000);
+        BlockPos heart = Kit.surface(level, 31000, 12000);
+        VillageFolkEntity folk = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(folk != null, "a folk to talk to");
+        helper.runAtTickTime(20, () -> {
+            folk.ensurePersona();
+            folk.setJob(StationTask.FARM);
+            net.minecraft.world.entity.player.Player you = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+            StringBuilder heard = new StringBuilder();
+            java.util.Set<com.jrpetty.mcassistant.entity.TalkTopic> needWords = java.util.EnumSet.of(
+                com.jrpetty.mcassistant.entity.TalkTopic.SAY, com.jrpetty.mcassistant.entity.TalkTopic.PROPOSE,
+                com.jrpetty.mcassistant.entity.TalkTopic.PEACE, com.jrpetty.mcassistant.entity.TalkTopic.STIR,
+                com.jrpetty.mcassistant.entity.TalkTopic.RETRADE, com.jrpetty.mcassistant.entity.TalkTopic.BUILD,
+                com.jrpetty.mcassistant.entity.TalkTopic.STORES, com.jrpetty.mcassistant.entity.TalkTopic.PACK,
+                com.jrpetty.mcassistant.entity.TalkTopic.GUIDE, com.jrpetty.mcassistant.entity.TalkTopic.FOLLOW,
+                com.jrpetty.mcassistant.entity.TalkTopic.HIRE, com.jrpetty.mcassistant.entity.TalkTopic.BYE);
+            for (com.jrpetty.mcassistant.entity.TalkTopic t : com.jrpetty.mcassistant.entity.TalkTopic.values()) {
+                if (needWords.contains(t)) continue;
+                String said = com.jrpetty.mcassistant.entity.FolkTalk.answer(folk, you, t, "");
+                helper.assertTrue(said != null, "an answer to " + t);
+                boolean core = t == com.jrpetty.mcassistant.entity.TalkTopic.HOW || t == com.jrpetty.mcassistant.entity.TalkTopic.DOING
+                    || t == com.jrpetty.mcassistant.entity.TalkTopic.PRAISE || t == com.jrpetty.mcassistant.entity.TalkTopic.WORTH
+                    || t == com.jrpetty.mcassistant.entity.TalkTopic.KNACK || t == com.jrpetty.mcassistant.entity.TalkTopic.ABOUT;
+                helper.assertTrue(!core || !said.isBlank(), "a real answer to " + t);
+                heard.append(t).append(": ").append(said.length() > 90 ? said.substring(0, 90) + "…" : said).append(" | ");
+            }
+            Kit.log("t49 every topic: " + heard);
+            // Plain words for the new topics.
+            String[][] words = {
+                { "Could you show me the way to the board?", "GUIDE" }, { "well done, great job", "PRAISE" },
+                { "how much do you earn?", "WORTH" }, { "what are you good at?", "KNACK" } };
+            for (String[] w : words) {
+                com.jrpetty.mcassistant.entity.TalkTopic got = com.jrpetty.mcassistant.entity.FolkTalk.understand(w[0]);
+                helper.assertTrue(got.name().equals(w[1]), "\"" + w[0] + "\" means " + w[1] + ", not " + got);
+            }
+            // The way to the board.
+            BlockPos lectern = com.jrpetty.mcassistant.entity.VillageBoards.lectern(folk.ownerId());
+            String way = com.jrpetty.mcassistant.entity.FolkTalk.answer(folk, you, com.jrpetty.mcassistant.entity.TalkTopic.GUIDE, "board");
+            Kit.log("t49 the way to the board: " + way + " (to " + folk.guideTo() + ", board at " + lectern + ")");
+            helper.assertTrue(lectern != null && lectern.equals(folk.guideTo()), "it sets off for the board: " + way);
+            String card = com.jrpetty.mcassistant.entity.FolkTalk.card(folk);
+            String now = com.jrpetty.mcassistant.entity.FolkTalk.nowDoing(folk);
+            Kit.log("t49 its card: " + card.replace('\n', ' ') + " — now: " + now);
+            helper.assertTrue(card.contains("Trade|") && card.contains("Worth|") && card.contains("At its work|"), "its card says who it is");
+            helper.assertTrue(!now.isBlank(), "and what it is doing");
+            helper.succeed();
+        });
+    }
 }

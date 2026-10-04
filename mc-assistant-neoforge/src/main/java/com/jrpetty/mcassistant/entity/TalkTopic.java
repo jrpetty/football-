@@ -42,7 +42,11 @@ public enum TalkTopic {
     SHORT("What is the village short of?"),
     RETRADE(""),
     BUILD(""),
-    PACK("");
+    PACK(""),
+    GUIDE("Could you show me the way?"),
+    PRAISE("Well done — you're doing a fine job"),
+    WORTH("How are you doing for money?"),
+    KNACK("What are you good at?");
 
     public final String line;
 

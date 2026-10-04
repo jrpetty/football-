@@ -300,6 +300,22 @@ public final class VillageBoards {
         return out;
     }
 
+    /** The board as a page of the village journal: its title, and the rest in sections. */
+    public static String[] page(List<String> lines) {
+        StringBuilder page = new StringBuilder();
+        String title = "Village Board";
+        for (String l : lines) {
+            int bar = l.indexOf('|');
+            if (bar < 2) continue;
+            char where = l.charAt(0), how = l.charAt(1);
+            String words = l.substring(bar + 1);
+            if (where == 'T') { title = words; continue; }
+            if (how == 'H') page.append(page.length() == 0 ? "" : "\n\n").append(words.toUpperCase(Locale.ROOT)).append('\n');
+            else page.append(words).append('\n');
+        }
+        return new String[]{ title, page.toString().trim() };
+    }
+
     private static Villages.Age nextAge(Villages.Age a) {
         Villages.Age[] all = Villages.Age.values();
         return all[Math.min(all.length - 1, a.ordinal() + 1)];

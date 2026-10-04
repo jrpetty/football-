@@ -9,13 +9,14 @@ import net.minecraft.resources.ResourceLocation;
 /**
  * A folk's answer, for the one player it is talking to: what it said, and how
  * things stand between them — its mood and why, what it thinks of you, what the
- * village thinks of you, what it has asked of you, whether it is walking with you.
- * {@code open} asks the client to open the talk screen.
+ * village thinks of you, what it has asked of you, whether it is walking with you; what it
+ * is doing this minute, its card (one "Label|what" fact a line) and the places it can show
+ * you the way to ("key=Label;..."). {@code open} asks the client to open the talk screen.
  */
 public record FolkReplyPayload(int entityId, boolean open, String name, String about, String said,
                                int mood, String moodWord, int affinity, String standing,
                                boolean following, String asked, String village, String errand,
-                               boolean canDeliver) implements CustomPacketPayload {
+                               boolean canDeliver, String doing, String card, String places) implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<FolkReplyPayload> TYPE =
         new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(McAssistantMod.MODID, "folk_reply"));
@@ -36,10 +37,14 @@ public record FolkReplyPayload(int entityId, boolean open, String name, String a
             buf.writeUtf(p.village(), 256);
             buf.writeUtf(p.errand(), 256);
             buf.writeBoolean(p.canDeliver());
+            buf.writeUtf(p.doing(), 256);
+            buf.writeUtf(p.card(), 2048);
+            buf.writeUtf(p.places(), 1024);
         },
         buf -> new FolkReplyPayload(buf.readVarInt(), buf.readBoolean(), buf.readUtf(64), buf.readUtf(256),
             buf.readUtf(2048), buf.readVarInt(), buf.readUtf(64), buf.readVarInt(), buf.readUtf(64),
-            buf.readBoolean(), buf.readUtf(256), buf.readUtf(256), buf.readUtf(256), buf.readBoolean()));
+            buf.readBoolean(), buf.readUtf(256), buf.readUtf(256), buf.readUtf(256), buf.readBoolean(),
+            buf.readUtf(256), buf.readUtf(2048), buf.readUtf(1024)));
 
     @Override
     public CustomPacketPayload.Type<? extends CustomPacketPayload> type() {

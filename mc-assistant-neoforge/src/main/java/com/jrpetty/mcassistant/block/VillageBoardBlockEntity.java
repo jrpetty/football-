@@ -80,19 +80,9 @@ public class VillageBoardBlockEntity extends BlockEntity {
     /** Close up: the whole of it in the village journal. */
     public void showTo(ServerPlayer player) {
         if (level instanceof ServerLevel server) refresh(server);
-        StringBuilder page = new StringBuilder();
-        String title = "Village Board";
-        for (String l : lines) {
-            int bar = l.indexOf('|');
-            if (bar < 2) continue;
-            char where = l.charAt(0), how = l.charAt(1);
-            String words = l.substring(bar + 1);
-            if (where == 'T') { title = words; continue; }
-            if (how == 'H') page.append(page.length() == 0 ? "" : "\n\n").append(words.toUpperCase(java.util.Locale.ROOT)).append('\n');
-            else page.append(words).append('\n');
-        }
+        String[] page = com.jrpetty.mcassistant.entity.VillageBoards.page(lines);
         net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
-            new com.jrpetty.mcassistant.net.VillagePagePayload(title, page.toString().trim()));
+            new com.jrpetty.mcassistant.net.VillagePagePayload(page[0], page[1]));
     }
 
     // ------------------------------------------------------------------ saving and sending

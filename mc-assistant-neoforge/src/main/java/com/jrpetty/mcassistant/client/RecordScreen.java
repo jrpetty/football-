@@ -41,15 +41,20 @@ public class RecordScreen extends Screen {
         // wages and picks no edge — the village is who it works for.
         if (bot instanceof com.jrpetty.mcassistant.entity.VillageFolkEntity) {
             perkRow = false;
-            int w2 = (W - PAD * 2 - gap) / 2;
-            this.addRenderableWidget(Button.builder(Component.literal("\u2039 Pack"), b -> {
+            this.addRenderableWidget(Button.builder(Component.literal("\u2039 Talk"), b -> {
+                    this.onClose();
+                    net.neoforged.neoforge.network.PacketDistributor.sendToServer(
+                        new com.jrpetty.mcassistant.net.FolkTalkPayload(bot.getId(),
+                            com.jrpetty.mcassistant.entity.TalkTopic.OPEN.ordinal(), ""));
+                }).bounds(left + PAD, y, w3, 18).build());
+            this.addRenderableWidget(Button.builder(Component.literal("Pack"), b -> {
                     this.onClose();
                     net.neoforged.neoforge.network.PacketDistributor.sendToServer(
                         new com.jrpetty.mcassistant.net.FolkTalkPayload(bot.getId(),
                             com.jrpetty.mcassistant.entity.TalkTopic.PACK.ordinal(), ""));
-                }).bounds(left + PAD, y, w2, 18).build());
+                }).bounds(left + PAD + w3 + gap, y, w3, 18).build());
             this.addRenderableWidget(Button.builder(Component.literal("Close"), b -> this.onClose())
-                .bounds(left + PAD + w2 + gap, y, w2, 18).build());
+                .bounds(left + PAD + 2 * (w3 + gap), y, w3, 18).build());
             return;
         }
         perkRow = bot.clientLevel() >= 30 && info.perk() == 0;
@@ -130,7 +135,7 @@ public class RecordScreen extends Screen {
         // What it has cost you. Wages are spent, not carried — this is the only
         // place the metal you handed over is ever accounted for.
         boolean folk = bot instanceof com.jrpetty.mcassistant.entity.VillageFolkEntity;
-        String wages = folk ? "works for its village — no wages, no orders"
+        String wages = folk ? "paid by its village by trade and work done — its worth is on its card (Talk › About)"
             : info.hasWages()
             ? info.ironPaid() + " iron, " + info.goldPaid() + " gold, "
               + info.diamondPaid() + " diamond  ·  " + info.wageStatus()
