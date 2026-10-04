@@ -7,7 +7,7 @@ import { initView, view } from '../render/view.js'
 import { Builder } from '../models/kit.js'
 import { pregenerate } from '../render/texgen.js'
 import { setNightGlow, INDOOR } from '../render/materials.js'
-import { viewModel } from '../models/viewmodel.js'
+import { viewModel, POSES } from '../models/viewmodel.js'
 import { VMLayer } from '../render/vmlayer.js'
 import { OUTFITS } from '../models/character.js'
 import { pineModel } from '../models/nature.js'
@@ -77,6 +77,7 @@ function frame(now) {
 }
 window.__frame = () => frame(performance.now())
 window.__dbgLayer = layer
+window.__POSES = POSES
 window.__indoor = (on) => {
   INDOOR.uIndoorK.value = on ? 1 : 0
   INDOOR.uIndoorN.value = 1

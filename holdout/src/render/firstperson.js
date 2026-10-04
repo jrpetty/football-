@@ -980,12 +980,13 @@ export class FirstPerson {
         const wind = u < 0.3 ? ease(u / 0.3) : u < 0.55 ? 1 - ease((u - 0.3) / 0.25) : 0
         const cut = u < 0.3 ? 0 : u < 0.55 ? ease((u - 0.3) / 0.25) : 1 - ease((u - 0.55) / 0.45)
         if (side) {
-          px += wind * 0.05 - cut * 0.22
-          py += wind * 0.06 - cut * 0.05
-          pz += wind * 0.04 - cut * 0.08
-          rx += wind * 0.35 - cut * 0.55
-          ry += -wind * 0.25 + cut * 0.6
-          rz += wind * 0.35 - cut * 1.1
+          // the wind-up keeps the hands on screen; the cut sweeps across
+          px += wind * 0.02 - cut * 0.22
+          py += wind * 0.03 - cut * 0.05
+          pz += wind * 0.05 - cut * 0.08
+          rx += wind * 0.22 - cut * 0.55
+          ry += -wind * 0.08 + cut * 0.6
+          rz += wind * 0.22 - cut * 1.1
         } else {
           // a jab with one fist, then the other
           const jab = Math.sin(clamp(u / 0.55, 0, 1) * Math.PI)

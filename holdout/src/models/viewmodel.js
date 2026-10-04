@@ -18,7 +18,7 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z)
 // other hand. sight: the height of the sights over the barrel line, for
 // aiming down them. muzzle: the barrel's end (weapon space).
 const GUN = (o) => ({ kind: 'gun', rot: [0.02, Math.PI, 0], ...o })
-const POSES = {
+export const POSES = {
   pistol: GUN({ pos: [0.15, -0.135, -0.56], rot: [0.03, Math.PI - 0.1, -0.07], grip: { p: [0, -0.046, -0.02], axis: [0, 1, 0.12], r: 0.017 }, support: { p: [0.004, -0.06, -0.016], axis: [0, 1, 0.12], r: 0.03, cup: true }, sight: 0.061, muzzle: [0, 0.034, 0.16], ads: [0, -0.061, -0.3] }),
   revolver: GUN({ pos: [0.15, -0.137, -0.58], rot: [0.03, Math.PI - 0.1, -0.07], grip: { p: [0, -0.05, -0.024], axis: [0, 1, 0.3], r: 0.017 }, support: { p: [0.004, -0.064, -0.02], axis: [0, 1, 0.3], r: 0.03, cup: true }, sight: 0.072, muzzle: [0, 0.044, 0.23], ads: [0, -0.072, -0.32] }),
   smg: GUN({ pos: [0.095, -0.1, -0.34], grip: { p: [-0.0, -0.045, -0.006], axis: [0, 1, 0.22], r: 0.017 }, support: { p: [0, -0.07, 0.118], axis: [0, 1, -0.1], r: 0.016, under: true }, sight: 0.084, muzzle: [0, 0.04, 0.33], ads: [0, -0.084, -0.2] }),
@@ -36,7 +36,8 @@ Object.assign(POSES, {
   pipe: MELEE({ support: { p: [0, -0.06, 0], axis: [0, 1, 0], r: 0.018 } }),
   crowbar: MELEE({ grip: { p: [0, -0.03, 0], axis: [0, 1, 0], r: 0.013 } }),
   machete: MELEE({ rot: [-0.7, 0.35, 0.28], grip: { p: [0, 0.0, 0], axis: [0, 1, 0], r: 0.014 } }),
-  axe: MELEE({ rot: [-0.62, 1.2, 0.3], support: { p: [0, -0.06, 0], axis: [0, 1, 0], r: 0.016 } }),
+  // the handle rises right of the crosshair, the head in view near the top
+  axe: MELEE({ pos: [0.22, -0.24, -0.46], rot: [-0.36, 1.2, -0.64], support: { p: [0, -0.06, 0], axis: [0, 1, 0], r: 0.016 } }),
   sledge: MELEE({ pos: [0.2, -0.3, -0.44], rot: [-0.55, 1.4, 0.3], grip: { p: [0, 0.06, 0], axis: [0, 1, 0], r: 0.019 }, support: { p: [0, -0.04, 0], axis: [0, 1, 0], r: 0.018 } }),
   katana: MELEE({ rot: [-0.66, 0.3, 0.3], grip: { p: [0, 0.07, 0], axis: [0, 1, 0], r: 0.015 }, support: { p: [0, -0.04, 0], axis: [0, 1, 0], r: 0.015 } }),
   spear: MELEE({ pos: [0.16, -0.24, -0.3], rot: [-1.38, 0.06, 0.05], grip: { p: [0, 0.3, 0], axis: [0, 1, 0], r: 0.016 }, support: { p: [0, 0.62, 0], axis: [0, 1, 0], r: 0.016, under: true } }),
