@@ -247,7 +247,7 @@ public final class Villages {
         Orders.resetForTests();
         Trades.resetForTests();
         Links.resetForTests();
-        Requests.resetForTests();
+        Asks.resetForTests();
         Drover.resetForTests();
         Cafe.resetForTests();
         Roads.reset();
@@ -1247,7 +1247,7 @@ public final class Villages {
         return out;
     }
 
-    /** What a player asked the elder to build next (Requests.build), until it goes up. */
+    /** What a player asked the elder to build next (Asks.build), until it goes up. */
     private static final Map<UUID, String> REQUESTED = new ConcurrentHashMap<>();
 
     public static void request(UUID villageId, String structure) {

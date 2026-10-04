@@ -3580,7 +3580,7 @@ public class VillageFolkEntity extends AssistantEntity {
      * end up between trades with nowhere to stand.
      */
     /**
-     * Take up another trade now, on new ground for it (a player asked, Requests.retrade). The
+     * Take up another trade now, on new ground for it (a player asked, Asks.retrade). The
      * ground is found before the old plot is given up. Returns whether it changed.
      */
     public boolean takeUpTrade(StationTask want) {
