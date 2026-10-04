@@ -264,7 +264,7 @@ public class StorehouseBlock extends Block implements EntityBlock {
             try {
                 ItemStack drop = new ItemStack(McAssistantMod.STOREHOUSE_ITEM.get());
                 if (level.getBlockEntity(pos) instanceof StorehouseBlockEntity held && held.hasGoods()) {
-                    if (!held.saveToItem(drop, level.registryAccess())) {
+                    if (!held.packInto(drop, level.registryAccess())) {
                         net.minecraft.world.Containers.dropContents(level, pos, held);   // too much for one unit to carry
                     }
                     held.clearContent();
@@ -334,7 +334,7 @@ public class StorehouseBlock extends Block implements EntityBlock {
                 level.setBlockEntity(into);
             }
         }
-        if (into != null) into.loadFromItem(stack, level.registryAccess());
+        if (into != null) into.unpackFrom(stack, level.registryAccess());
     }
 
     @Override

@@ -300,7 +300,7 @@ public class StorehouseBlockEntity extends BlockEntity implements Container, Men
     }
 
     /** Put the goods into the unit item that is carrying them away. False if there is too much. */
-    public boolean saveToItem(ItemStack stack, HolderLookup.Provider registries) {
+    public boolean packInto(ItemStack stack, HolderLookup.Provider registries) {
         ListTag list = writeGoods(registries);
         if (list.sizeInBytes() > MOST_IN_AN_ITEM) return false;
         CompoundTag tag = new CompoundTag();
@@ -311,7 +311,7 @@ public class StorehouseBlockEntity extends BlockEntity implements Container, Men
     }
 
     /** Take in the goods a unit item carried (onto what is already here). */
-    public void loadFromItem(ItemStack stack, HolderLookup.Provider registries) {
+    public void unpackFrom(ItemStack stack, HolderLookup.Provider registries) {
         CustomData data = stack.get(DataComponents.CUSTOM_DATA);
         if (data == null || !data.contains(GOODS)) return;
         ListTag list = data.copyTag().getList(GOODS, Tag.TAG_COMPOUND);
