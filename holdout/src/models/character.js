@@ -385,6 +385,8 @@ export const ANIMS = {
       set('foreArmR', -0.95, 0, 0)
       set('upperArmL', -1.45, -0.55, -0.1)
       set('foreArmL', -0.35, 0, 0)
+      // the wrist turned so the barrel lies level from the shoulder
+      set('handR', 0.6, 0, 0)
       set('head', 0.08, -0.3, 0)
     } else {
       set('chest', 0, 0.08, 0)
@@ -656,7 +658,7 @@ export const ANIMS = {
     ch.hipsY = 0
   },
   // Down and bleeding: sat on the ground propped on one hand, the other
-  // pressed to the wound, breathing hard, the head heavy.
+  // reaching out weakly for help, breathing hard, the head heavy.
   downed(ch, t) {
     const br = Math.sin(t * 2.7)
     set('thighL', -1.42, 0, 0.14)
@@ -670,8 +672,9 @@ export const ANIMS = {
     set('upperArmL', 0.75, 0, 0.32)
     set('foreArmL', -0.12)
     set('handL', -0.5)
-    set('upperArmR', -0.55, 0, 0.2)
-    set('foreArmR', -1.75)
+    set('upperArmR', -0.3 + Math.sin(t * 1.3 + ch.seed) * 0.08, 0, 0.32)
+    set('foreArmR', -1.3 + Math.sin(t * 1.3 + ch.seed) * 0.18)
+    set('handR', 0.3)
     set('neck', 0.25)
     set('head', 0.3 + Math.sin(t * 0.6) * 0.08, Math.sin(t * 0.45 + ch.seed) * 0.35, 0.1)
     ch.hipsY = -0.8
