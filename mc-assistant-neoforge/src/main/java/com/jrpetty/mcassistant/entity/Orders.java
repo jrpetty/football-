@@ -209,6 +209,10 @@ public final class Orders {
         }
         if (fisher && c != null && c.food() < 18) score.merge(Order.RIVER, 2, Integer::sum);
         if (tailor) score.merge(Order.HERDS, 2, Integer::sum);
+        // Folk sleeping on the ground for want of wool for beds (three to a bed): more sheep.
+        if (c != null && c.homes() < 12 && Market.stock(level, village, s -> s.is(net.minecraft.tags.ItemTags.WOOL)) < 9) {
+            score.merge(Order.HERDS, 2, Integer::sum);
+        }
         // The elder's own nature, and its own trade.
         Social.Life life = elder.life();
         if (life.has(Social.Trait.HARDWORKING)) { score.merge(Order.DIG, 2, Integer::sum); score.merge(Order.TIMBER, 1, Integer::sum); }

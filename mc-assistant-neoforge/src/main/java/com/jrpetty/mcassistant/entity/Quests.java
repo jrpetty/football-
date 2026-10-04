@@ -194,6 +194,16 @@ public final class Quests {
             for (AssistantEntity a : Villages.folkOf(id)) have += a.countCarried(what);
             if (have < Integer.parseInt(t[4])) options.add(bring(t[1], Integer.parseInt(t[2]), t[3], day));
         }
+        // Wool for beds (three to a bed): a village sleeping on the ground wants it more than most.
+        boolean woolAsked = already.contains("bring:white_wool");
+        for (Posting o : options) woolAsked |= "white_wool".equals(o.item);
+        if (!woolAsked && Villages.housing(id) > 0) {
+            int unbedded = 0;
+            for (AssistantEntity a : Villages.folkOf(id)) if (!a.isBaby() && a.bedPos() == null) unbedded++;
+            if (unbedded >= 3 && Market.stock(level, id, x -> x.is(net.minecraft.tags.ItemTags.WOOL)) < 9) {
+                options.add(bring("white_wool", 24, "beds for the houses", day));
+            }
+        }
         // Monsters near where the village works.
         Posting hunt = hunt(level, v, day, already);
         if (hunt != null) options.add(0, hunt);

@@ -391,7 +391,7 @@ blaze rods and powder, nether wart and soul sand, slime balls and leads, flint, 
 and bones are all on the stalls' buying list. The quest board asks for what a trade is
 actually running short of: blaze powder for the brewing stand's fire, lapis or cane for
 the enchanter, feathers for the watch's arrows, a lead for the rancher, cocoa for the
-café, and so on. Or give it straight to the folk whose trade needs it (a gift from the
+café, wool for beds when folk are sleeping on the ground, and so on. Or give it straight to the folk whose trade needs it (a gift from the
 talk screen): a brewer handed blaze powder, a rancher a lead or an enchanter lapis
 thanks you for it warmly and puts it to work that day.
 
@@ -1077,7 +1077,7 @@ few more hands in one trade, a few fewer in the others.
 | Timber for the builders | woodcutters | the builders are short of wood |
 | Dig deep | miners, a smelter | stone, iron or coal is short |
 | Man the walls | guards | lives were lost, the bell rang, or there is a feud |
-| Grow the herds | ranchers | a tailor needs wool |
+| Grow the herds | ranchers | a tailor needs wool, or folk have no beds for want of it |
 | Fill the stalls | the shop, the café, the smith, the tailor | a thriving Iron Age town |
 | To the water | fishers | food is short and there is a fisher |
 | Steady as we go | nobody | all is well |
