@@ -75,9 +75,12 @@ const W = {
   },
   axe(b, mods) {
     b.lathe([[0.016, 0], [0.017, 0.2], [0.015, 0.7], [0.017, 0.82], [0.012, 0.84]], { ...WOOD, color: '#9a6a3a', y: -0.1 })
-    b.extrude([[0, -0.05], [0.13, -0.08], [0.16, 0.0], [0.13, 0.08], [0, 0.05]], 0.022, { mat: 'paint', color: '#b0281e', y: 0.62, ry: Math.PI / 2 })
+    // the head (its outline turned so the blade is on -z): a blade flaring
+    // to a long straight edge, a spike behind
+    b.extrude([[0, -0.045], [0.1, -0.06], [0.145, -0.088], [0.152, -0.084], [0.152, 0.084], [0.145, 0.088], [0.1, 0.06], [0, 0.045]], 0.022, { mat: 'paint', color: '#b0281e', y: 0.62, ry: Math.PI / 2 })
     b.extrude([[0, -0.03], [-0.1, -0.005], [-0.1, 0.005], [0, 0.03]], 0.02, { mat: 'paint', color: '#b0281e', y: 0.62, ry: Math.PI / 2 })
-    b.box(0.006, 0.12, 0.03, { ...STEEL, color: '#c8ccce', y: 0.62, z: 0.158 })
+    // the ground steel of the edge
+    b.box(0.024, 0.172, 0.016, { ...STEEL, color: '#c8ccce', y: 0.62, z: -0.156 })
   },
   sledge(b, mods) {
     b.cyl(0.018, 0.02, 0.86, { ...WOOD, color: '#a07040', y: 0.33 })

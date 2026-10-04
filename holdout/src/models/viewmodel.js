@@ -34,11 +34,11 @@ Object.assign(POSES, {
   bat: MELEE({ support: { p: [0, -0.07, 0], axis: [0, 1, 0], r: 0.017 } }),
   nailbat: MELEE({ support: { p: [0, -0.07, 0], axis: [0, 1, 0], r: 0.017 } }),
   pipe: MELEE({ support: { p: [0, -0.06, 0], axis: [0, 1, 0], r: 0.018 } }),
-  crowbar: MELEE({ grip: { p: [0, -0.03, 0], axis: [0, 1, 0], r: 0.013 } }),
+  crowbar: MELEE({ pos: [0.24, -0.17, -0.46], rot: [-0.75, 0.25, 0.28], grip: { p: [0, -0.03, 0], axis: [0, 1, 0], r: 0.013 } }),
   machete: MELEE({ rot: [-0.7, 0.35, 0.28], grip: { p: [0, 0.0, 0], axis: [0, 1, 0], r: 0.014 } }),
   // the handle rises right of the crosshair, the head in view near the top
   axe: MELEE({ pos: [0.22, -0.24, -0.46], rot: [-0.36, 1.2, -0.64], support: { p: [0, -0.06, 0], axis: [0, 1, 0], r: 0.016 } }),
-  sledge: MELEE({ pos: [0.2, -0.3, -0.44], rot: [-0.55, 1.4, 0.3], grip: { p: [0, 0.06, 0], axis: [0, 1, 0], r: 0.019 }, support: { p: [0, -0.04, 0], axis: [0, 1, 0], r: 0.018 } }),
+  sledge: MELEE({ pos: [0.22, -0.27, -0.46], rot: [-0.21, 1.4, -0.7], grip: { p: [0, 0.06, 0], axis: [0, 1, 0], r: 0.019 }, support: { p: [0, -0.04, 0], axis: [0, 1, 0], r: 0.018 } }),
   katana: MELEE({ rot: [-0.66, 0.3, 0.3], grip: { p: [0, 0.07, 0], axis: [0, 1, 0], r: 0.015 }, support: { p: [0, -0.04, 0], axis: [0, 1, 0], r: 0.015 } }),
   spear: MELEE({ pos: [0.16, -0.24, -0.3], rot: [-1.38, 0.06, 0.05], grip: { p: [0, 0.3, 0], axis: [0, 1, 0], r: 0.016 }, support: { p: [0, 0.62, 0], axis: [0, 1, 0], r: 0.016, under: true } }),
   fists: { kind: 'fists', pos: [0, 0, 0], rot: [0, 0, 0] },
