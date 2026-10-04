@@ -379,7 +379,7 @@ export default function NewModelPage() {
               </div>
             ))}
             <div className="row" style={{ gap: 10 }}>
-              <Link to="/" className="btn">
+              <Link to="/leaderboard" className="btn">
                 <Icon.Trophy /> Leaderboard
               </Link>
               {runs[0] && (

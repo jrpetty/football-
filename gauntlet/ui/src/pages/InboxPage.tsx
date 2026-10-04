@@ -454,27 +454,22 @@ export default function InboxPage() {
         <div className="card">
           <Empty
             icon={<Icon.Inbox />}
-            title={list.length ? 'Nothing matches these filters' : justDone ? 'Inbox zero — nice work' : 'No replies waiting'}
+            title={list.length ? 'Nothing matches these filters' : justDone ? 'Inbox zero — nice work' : 'Nothing to paste yet'}
             actions={
               list.length ? (
                 <button className="btn" onClick={() => setQuery({ run: null, model: null })}>
                   Clear filters
                 </button>
               ) : (
-                <>
-                  <Link to="/run/new?copy=1" className="btn">
-                    <Icon.Copy /> Test models by copy &amp; paste
-                  </Link>
-                  <Link to="/run/new" className="btn primary">
-                    <Icon.Rocket /> Start a run
-                  </Link>
-                </>
+                <Link to="/run/new?copy=1" className="btn primary">
+                  <Icon.Copy /> Start a copy &amp; paste test
+                </Link>
               )
             }
           >
             {list.length
               ? 'Other requests are waiting in other runs or models.'
-              : 'Prompts appear here while a run includes a model whose provider is “Manual (copy & paste)”. This page checks for new ones every 2 seconds.'}
+              : 'Start a copy & paste test and its questions appear here, one card each. Copy a question into the chatbot, paste its reply back, and it is marked straight away.'}
           </Empty>
         </div>
       ) : (

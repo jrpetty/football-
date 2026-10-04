@@ -1,0 +1,776 @@
+/*
+ * Simple mode: the calm sidebar, section tabs, first-visit page guides, the Help button and panel, setup
+ * prompts and the Home page. Colours come from styles/tokens.css only (dark and light).
+ * None of this shows in Broadcast mode (.no-broadcast) or on bare full-screen routes.
+ */
+
+/* ───────── Calmer chrome everywhere ───────── */
+.nav a[aria-current='page']::before {
+  box-shadow: none;
+}
+.nav-count {
+  animation: none;
+}
+
+/* ───────── Sidebar: simple menu ───────── */
+.nav-simple {
+  gap: 4px;
+  margin-top: 4px;
+}
+.nav-simple a {
+  padding: 11px 12px;
+  font-size: 1rem;
+  gap: 12px;
+  color: var(--text-2);
+}
+.nav-simple svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* ───────── Sidebar: all tools ───────── */
+.nav-all .nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.nav-all .nav-group + .nav-group {
+  margin-top: 4px;
+}
+.nav-all .nav-section {
+  cursor: help;
+}
+.nav-all .nav-group:first-child .nav-section {
+  padding-top: 4px;
+}
+
+/* The "Show all tools" switch at the bottom of the sidebar. */
+.nav-mode {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.nav-mode-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: var(--r-md);
+  border: 1px dashed var(--border-strong);
+  background: transparent;
+  color: var(--text-2);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: left;
+  transition:
+    background var(--t-fast),
+    color var(--t-fast);
+}
+.nav-mode-btn:hover {
+  background: var(--surface-3);
+  color: var(--text-1);
+}
+.nav-mode-btn svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+.nav-about {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 12px 0;
+  font-size: 0.8rem;
+  color: var(--text-3);
+}
+.nav-about a {
+  color: var(--text-3);
+}
+.nav-about a:hover {
+  color: var(--text-1);
+}
+
+/* ───────── Above-the-page chrome: tabs + first-visit guide ───────── */
+.page-chrome {
+  max-width: 1720px;
+  margin: 0 auto 22px;
+  display: grid;
+  gap: 14px;
+}
+.page-chrome:empty {
+  display: none;
+}
+
+.section-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.section-tabs::-webkit-scrollbar {
+  display: none;
+}
+.section-tabs a {
+  position: relative;
+  flex: none;
+  padding: 10px 14px 12px;
+  color: var(--text-2);
+  font-weight: 600;
+  font-size: 0.98rem;
+  white-space: nowrap;
+  border-radius: var(--r-sm) var(--r-sm) 0 0;
+}
+.section-tabs a:hover {
+  text-decoration: none;
+  color: var(--text-1);
+  background: var(--surface-2);
+}
+.section-tabs a[aria-current='page'] {
+  color: var(--text-1);
+}
+.section-tabs a[aria-current='page']::after {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: -1px;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--accent);
+}
+
+.page-guide {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--accent-line);
+  background: var(--accent-soft);
+  animation: fade-in 260ms ease-out;
+}
+.page-guide .pg-icon {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--surface-1);
+  color: var(--accent);
+}
+.page-guide .pg-icon svg {
+  width: 20px;
+  height: 20px;
+}
+.page-guide .pg-text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  font-size: 1rem;
+  color: var(--text-1);
+  line-height: 1.45;
+}
+.page-guide .pg-text strong {
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.page-guide .pg-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+}
+
+/* ───────── Help button + panel ───────── */
+.help-fab {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 70;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 18px 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-2);
+  color: var(--text-1);
+  font-weight: 650;
+  font-size: 0.95rem;
+  box-shadow: var(--shadow-2);
+  transition:
+    background var(--t-fast),
+    transform var(--t-fast);
+}
+.help-fab:hover {
+  background: var(--surface-3);
+  transform: translateY(-1px);
+}
+.help-fab svg {
+  width: 20px;
+  height: 20px;
+  color: var(--accent);
+}
+/* Keep toasts clear of the Help button. */
+body:has(.help-fab) .toasts {
+  bottom: 80px;
+}
+html[data-broadcast='on'] .help-fab {
+  display: none !important;
+}
+
+.help-panel {
+  display: grid;
+  gap: 24px;
+  font-size: 1rem;
+  line-height: 1.55;
+}
+.help-panel h3 {
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 10px;
+}
+.help-purpose {
+  font-size: 1.08rem;
+  color: var(--text-1);
+}
+.help-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+  display: grid;
+  gap: 10px;
+}
+.help-steps li {
+  counter-increment: step;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  color: var(--text-1);
+}
+.help-steps li::before {
+  content: counter(step);
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 750;
+  font-size: 0.85rem;
+}
+.help-faqs {
+  display: grid;
+  gap: 8px;
+}
+.help-faqs details {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  padding: 0 14px;
+}
+.help-faqs summary {
+  cursor: pointer;
+  padding: 11px 0;
+  font-weight: 600;
+  color: var(--text-1);
+}
+.help-faqs details p {
+  padding: 0 0 12px;
+  color: var(--text-2);
+}
+.help-links {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+.help-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+.help-links svg {
+  width: 16px;
+  height: 16px;
+}
+.help-doc {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  color: var(--text-2);
+  font-size: 0.92rem;
+}
+.help-doc svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  margin-top: 2px;
+  color: var(--text-3);
+}
+.help-tip {
+  color: var(--text-3);
+  font-size: 0.88rem;
+}
+.help-foot {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+/* ───────── Setup prompts ───────── */
+.setup-prompt {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  gap: 14px;
+  padding: 40px 24px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+}
+.setup-prompt .sp-icon {
+  width: 60px;
+  height: 60px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.setup-prompt .sp-icon svg {
+  width: 28px;
+  height: 28px;
+}
+.setup-prompt h3 {
+  font-size: 1.2rem;
+  color: var(--text-1);
+}
+.setup-prompt p {
+  margin-top: 6px;
+  max-width: 56ch;
+  color: var(--text-2);
+  font-size: 1rem;
+}
+.setup-prompt .sp-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.setup-prompt.compact {
+  display: flex;
+  text-align: left;
+  justify-items: start;
+  align-items: center;
+  padding: 16px 18px;
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+.setup-prompt.compact .sp-icon {
+  width: 42px;
+  height: 42px;
+  flex: none;
+  background: var(--surface-1);
+}
+.setup-prompt.compact .sp-icon svg {
+  width: 22px;
+  height: 22px;
+}
+.setup-prompt.compact .sp-text {
+  flex: 1;
+  min-width: 0;
+}
+.setup-prompt.compact h3 {
+  font-size: 1.05rem;
+}
+.setup-prompt.compact p {
+  margin-top: 2px;
+}
+.setup-prompt.compact .sp-actions {
+  flex: none;
+}
+
+/* ───────── Home ───────── */
+.home-page {
+  max-width: 1280px;
+  gap: 34px;
+}
+.home-hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  padding-top: 6px;
+}
+.home-hero .hh-text {
+  display: grid;
+  gap: 8px;
+}
+.home-hero h1 {
+  font-size: 2.3rem;
+  letter-spacing: -0.03em;
+}
+.home-hero .sub {
+  color: var(--text-2);
+  font-size: 1.1rem;
+  max-width: 64ch;
+}
+.home-h2 {
+  font-size: 1.15rem;
+  margin-bottom: 14px;
+}
+
+/* Getting started */
+.home-checklist {
+  padding: 24px 26px;
+  display: grid;
+  gap: 20px;
+}
+.gs-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.gs-head h2 {
+  font-size: 1.3rem;
+  margin-bottom: 4px;
+}
+.gs-progress {
+  display: grid;
+  gap: 6px;
+  min-width: 180px;
+  font-weight: 650;
+  color: var(--text-2);
+  font-size: 0.9rem;
+  text-align: right;
+}
+.gs-next {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 22px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--accent-line);
+  background: var(--accent-soft);
+}
+.gs-num {
+  width: 52px;
+  height: 52px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 800;
+  font-size: 1.4rem;
+}
+.gs-next-text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+.gs-next-text .eyebrow {
+  color: var(--accent);
+}
+.gs-next-text h3 {
+  font-size: 1.35rem;
+}
+.gs-next-text p {
+  color: var(--text-2);
+  font-size: 1rem;
+  max-width: 62ch;
+}
+.gs-cta {
+  flex: none;
+}
+.gs-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+.gs-steps li {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  row-gap: 2px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.gs-mark {
+  grid-row: span 2;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-strong);
+  color: var(--text-2);
+  font-weight: 750;
+  font-size: 0.88rem;
+}
+.gs-mark svg {
+  width: 16px;
+  height: 16px;
+}
+.gs-steps li.done .gs-mark {
+  background: var(--good);
+  border-color: var(--good);
+  color: #fff;
+}
+.gs-steps li.current {
+  border-color: var(--accent-line);
+}
+.gs-steps li.current .gs-mark {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.gs-title {
+  font-weight: 650;
+  color: var(--text-1);
+  font-size: 0.95rem;
+}
+.gs-steps li.done .gs-title {
+  color: var(--text-2);
+}
+.gs-state,
+.gs-link {
+  font-size: 0.85rem;
+}
+.gs-state {
+  color: var(--good-text);
+  font-weight: 600;
+}
+.gs-state.now {
+  color: var(--accent);
+}
+.gs-link {
+  color: var(--text-3);
+}
+.gs-foot {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* What do you want to do? */
+.home-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.home-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+  box-shadow: var(--shadow-1);
+  color: var(--text-1);
+  transition:
+    border-color var(--t-fast),
+    transform var(--t-fast),
+    background var(--t-fast);
+}
+.home-card:hover {
+  text-decoration: none;
+  border-color: var(--accent-line);
+  background: var(--surface-2);
+  transform: translateY(-1px);
+}
+.home-card .hc-art {
+  --tint: var(--accent);
+  width: 56px;
+  height: 56px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--tint) 14%, transparent);
+  color: var(--tint);
+}
+.home-card .hc-art svg {
+  width: 28px;
+  height: 28px;
+}
+/* A few gentle tints so the cards are easy to tell apart, all from the token palette. */
+.home-card.c2 .hc-art {
+  --tint: var(--accent-2);
+}
+.home-card.c3 .hc-art {
+  --tint: var(--seq-6);
+}
+.home-card.c4 .hc-art {
+  --tint: var(--gold-deep);
+}
+.home-card.c5 .hc-art {
+  --tint: var(--serious);
+}
+.home-card.c6 .hc-art {
+  --tint: var(--good);
+}
+.home-card .hc-text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+.home-card .hc-text strong {
+  font-size: 1.08rem;
+}
+.home-card .hc-text span {
+  color: var(--text-2);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+.home-card .hc-go {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  color: var(--text-3);
+}
+
+/* At a glance */
+.home-glance {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.glance {
+  padding: 18px 20px;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+.gl-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-3);
+  font-size: 0.85rem;
+  font-weight: 650;
+}
+.gl-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.gl-value {
+  font-size: 1.6rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  min-width: 0;
+}
+.gl-name {
+  display: block;
+  font-size: 1.15rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gl-body {
+  display: grid;
+  gap: 8px;
+  color: var(--text-2);
+  font-size: 0.92rem;
+}
+.gl-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 650;
+  font-size: 0.92rem;
+  justify-self: start;
+}
+.gl-link svg {
+  width: 15px;
+  height: 15px;
+}
+.glance.live {
+  border-color: color-mix(in srgb, var(--live) 40%, transparent);
+}
+
+/* ───────── Narrow screens ───────── */
+@media (max-width: 1200px) {
+  .home-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .gs-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 760px) {
+  .home-cards,
+  .home-glance,
+  .gs-steps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .home-hero h1 {
+    font-size: 1.8rem;
+  }
+  .gs-next {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 18px;
+  }
+  .gs-cta {
+    width: 100%;
+    justify-content: center;
+  }
+  .home-checklist {
+    padding: 18px;
+  }
+  .gs-progress {
+    text-align: left;
+    width: 100%;
+  }
+  .page-guide {
+    flex-wrap: wrap;
+  }
+  .page-guide .pg-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .setup-prompt.compact {
+    flex-wrap: wrap;
+  }
+  .help-fab span {
+    display: none;
+  }
+  .help-fab {
+    width: 48px;
+    padding: 0;
+    justify-content: center;
+  }
+}

@@ -14,6 +14,7 @@ import { BudgetRunLine, budgetBlocker } from '../budget/BudgetParts.tsx';
 import { displayCurrency } from '../money.ts';
 import { CopyPasteRunPanel } from '../manual-models/CopyPasteRunPanel.tsx';
 import { copiedByHandText } from '../../../src/manual-models/identity.ts';
+import { SetupPrompt } from '../simple/SetupPrompt.tsx';
 
 const ALLOW_WORDS: Record<string, string> = {
   'model-max': 'its own maximum',
@@ -402,7 +403,8 @@ export default function NewRunPage() {
   const budgetStop = budgetBlocker(budget);
   if (budgetStop) blockers.push(budgetStop);
   const canStart = blockers.length === 0 && !!request;
-  const noKeys = enabled.length > 0 && enabled.every((c) => !c.hasKey && !isManual(c) && !isBaseline({ contestantId: c.id, vendor: c.vendor, label: c.label }));
+  // No real model can run yet (only the Random Baseline and copy & paste models): ask, kindly, for a key.
+  const noApiKey = enabled.length > 0 && !enabled.some((c) => c.hasKey && !isManual(c) && !isBaseline({ contestantId: c.id, vendor: c.vendor, label: c.label }));
 
   const start = async () => {
     if (!request) return;
@@ -438,7 +440,7 @@ export default function NewRunPage() {
 
   return (
     <div className="page">
-      <PageHead eyebrow="Plan" title="New run" sub="Every model receives byte-identical prompts. Results are hashed against the exact test versions and model configs you pick here." />
+      <PageHead eyebrow="Plan" title="Run a test" sub="Pick a set of tests and the models to compare, check the price, then press Start. Every model gets exactly the same questions." />
 
       {enabled.length === 0 ? (
         <div className="card">
@@ -457,10 +459,10 @@ export default function NewRunPage() {
       ) : (
         <div className="grid split-8-4 newrun">
           <div className="stack loose">
-            {noKeys && (
-              <Callout tone="warn" icon={<Icon.Key />}>
-                <strong>No API keys detected.</strong> Set the provider environment variables and restart the server — see <Link to="/models">Models</Link>. Manual (copy &amp; paste) models still work.
-              </Callout>
+            {noApiKey && (
+              <SetupPrompt compact icon={<Icon.Key />} title="Add a key first" action={{ label: 'Add a key', to: '/keys' }}>
+                A key lets Gauntlet ask real AI models. Until then you can still try it for free with the Random Baseline, or test a chatbot by copy &amp; paste.
+              </SetupPrompt>
             )}
 
             {/* Tests */}
