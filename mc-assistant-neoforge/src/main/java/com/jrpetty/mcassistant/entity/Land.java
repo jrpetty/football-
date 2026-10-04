@@ -153,15 +153,21 @@ public final class Land {
                 for (Villages.Village v : Villages.every()) {
                     if (Math.floorMod(v.id().hashCode(), 5) != phase) continue;
                     if (!v.dim().equals(level.dimension()) || !level.isLoaded(v.centre())) continue;
-                    long began = System.nanoTime();
+                    long t0 = System.nanoTime();
                     if (com.jrpetty.mcassistant.AssistantConfig.villageReshapeLand()) level(level, v, LOOK, CHANGES);
+                    long t1 = System.nanoTime();
                     Grow.tick(level, v);
+                    long t2 = System.nanoTime();
                     Waterfront.tick(level, v);
+                    long t3 = System.nanoTime();
                     Nether.tick(level, v);
-                    long took = (System.nanoTime() - began) / 1_000_000L;
-                    // Anything that took a village's land work over 25 ms is worth knowing about.
-                    if (took > 25) com.mojang.logging.LogUtils.getLogger().info("[MCA-SLOW] {}: the land's work took {} ms",
-                        Villages.name(v.id()), took);
+                    long t4 = System.nanoTime();
+                    long took = (t4 - t0) / 1_000_000L;
+                    // Anything that took a village's land work over 25 ms is worth knowing about, and which part.
+                    if (took > 25) com.mojang.logging.LogUtils.getLogger().info(
+                        "[MCA-SLOW] {}: the land's work took {} ms (levelling {}, houses {}, waterfront {}, gateway {})",
+                        Villages.name(v.id()), took, (t1 - t0) / 1_000_000L, (t2 - t1) / 1_000_000L,
+                        (t3 - t2) / 1_000_000L, (t4 - t3) / 1_000_000L);
                 }
             }
         });

@@ -176,12 +176,8 @@ jobs:
           # the newest NeoForge 1.21.1 build of each from Modrinth.
           if [ "${{ matrix.scenario }}" = "modpack" ]; then
             mkdir -p run/mods
-            for m in jei jade; do
-              url=$(curl -sS "https://api.modrinth.com/v2/project/$m/version?loaders=%5B%22neoforge%22%5D&game_versions=%5B%221.21.1%22%5D" \
-                | jq -r '[.[] | select(.version_type=="release")][0].files[0].url // .[0].files[0].url')
-              echo "$m: $url"
-              [ -n "$url" ] && [ "$url" != "null" ] && curl -sSL -o "run/mods/$m.jar" "$url"
-            done
+            # The newest release of each that loads on this project's NeoForge.
+            python3 tools/realworld/fetch_mods.py jei jade | tee modpack-choice.txt
             ls -la run/mods
           fi
 
@@ -231,6 +227,7 @@ jobs:
           echo "[REAL] ---- stalls (the server thread's stack when a tick took over 1.5 s) ----" >> real-${{ matrix.scenario }}.txt
           cat first-run.log run/logs/latest.log 2>/dev/null | grep -a -A 42 "MCA-STALL" | head -700 >> real-${{ matrix.scenario }}.txt || true
           echo "[REAL] ---- mods loaded, and slow villages ----" >> real-${{ matrix.scenario }}.txt
+          cat modpack-choice.txt >> real-${{ matrix.scenario }}.txt 2>/dev/null || true
           cat first-run.log run/logs/latest.log 2>/dev/null | grep -aiE "Found mod file|Loading [0-9]+ mods|mod.*jei|mod.*jade" | head -20 >> real-${{ matrix.scenario }}.txt || true
           cat first-run.log run/logs/latest.log 2>/dev/null | grep -a "MCA-SLOW" | tail -40 >> real-${{ matrix.scenario }}.txt || true
           echo "[REAL] ---- why the village was or was not building ----" >> real-${{ matrix.scenario }}.txt

@@ -253,7 +253,17 @@ def twin(r, days=3):
     if a is None:
         say("SKIP no plains or forest within reach of this seed")
         return
-    b = (a[0] + 1000, a[1] + 200)
+    # The second village on dry plains (or forest) found from a thousand blocks out: placed
+    # blindly at an offset, the first run's village B stood in a lake and every lot was wet.
+    b = None
+    for biome in ("plains", "forest", "savanna"):
+        out = r.cmd("execute positioned %d 64 %d run locate biome minecraft:%s" % (a[0] + 1000, a[1] + 200, biome))
+        m = re.search(r"\[(-?\d+), (~|-?\d+), (-?\d+)\]", out)
+        if m and abs(int(m.group(1)) - a[0]) + abs(int(m.group(3)) - a[1]) > 400:
+            b = (int(m.group(1)), int(m.group(3)))
+            break
+    if b is None:
+        b = (a[0] + 1000, a[1] + 200)
     say("TWIN village A at %d, %d; village B at %d, %d" % (a[0], a[1], b[0], b[1]))
     for x, z in (a, b):
         say("forceload %d,%d: %s" % (x, z, r.cmd("forceload add %d %d %d %d" % (x - 48, z - 48, x + 48, z + 48))))

@@ -1327,7 +1327,7 @@ public final class Villages {
                     net.minecraft.world.level.block.state.BlockState st = level.getBlockState(p);
                     if (!st.hasProperty(net.minecraft.world.level.block.BedBlock.PART)
                         || st.getValue(net.minecraft.world.level.block.BedBlock.PART) != net.minecraft.world.level.block.state.properties.BedPart.HEAD) continue;
-                    if (Math.max(Math.abs(p.getX() - v.centre().getX()), Math.abs(p.getZ() - v.centre().getZ())) <= 5) continue;   // the camp
+                    if (Math.max(Math.abs(p.getX() - v.centre().getX()), Math.abs(p.getZ() - v.centre().getZ())) <= 6) continue;   // the camp
                     if (guest != null && p.distSqr(guest) <= 100) continue;
                     n++;
                 }
