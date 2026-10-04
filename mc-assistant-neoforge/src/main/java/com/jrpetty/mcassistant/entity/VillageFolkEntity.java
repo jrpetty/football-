@@ -1986,6 +1986,9 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         // Lent out to the woods or the quarry: see it through before anything else.
         if (lentTo != null && peekJob() == null && carryOnLending()) return;
+        // A village with no stores at all: the first chest goes to the heart.
+        if (peekJob() == null && level() instanceof net.minecraft.server.level.ServerLevel firstStores
+                && foundTheStores(firstStores, ownerId())) return;
         // A carrier's first work once the storehouse stands: the old chests, into it.
         if (stationTask() == StationTask.HAUL && peekJob() == null
                 && level() instanceof net.minecraft.server.level.ServerLevel clearing
@@ -2236,10 +2239,65 @@ public class VillageFolkEntity extends AssistantEntity {
     private int lentStalls;
     private int retireTick = -100000;
 
+    /** Lent to the heart, to set the village's first stores down there. */
+    private boolean lentToFound;
+
     @Override
     @Nullable
     protected WorkZone lentZone() {
         return lentTo != null && tickCount < lentUntil ? lentTo : null;
+    }
+
+    @Override
+    protected boolean chestBelongsAtTheHeart() {
+        return villageCentre != null && level() instanceof net.minecraft.server.level.ServerLevel server
+            && ownerId() != null && !Villages.hasStores(server, ownerId());
+    }
+
+    /**
+     * A village with no stores at all — a lone settler's, one that took over a few villagers
+     * — keeps its goods nowhere. The first hand carrying a chest takes it to the heart and
+     * sets it down there: the village's stores, until the storehouse stands. It used to go
+     * down on that hand's own plot, and every hand after it put down one of its own.
+     */
+    private boolean foundTheStores(net.minecraft.server.level.ServerLevel server, UUID village) {
+        if (lentTo != null || villageCentre == null || !onShift() || isBaby()) return false;
+        if (countMatching(st -> st.is(net.minecraft.world.item.Items.CHEST)) == 0) return false;
+        if (Villages.hasStores(server, village)) return false;
+        lentTo = WorkZone.around(villageCentre, 2, 4);
+        lentFor = null;
+        lentToFound = true;
+        lentUntil = tickCount + 2400;
+        lentSetTo = false;
+        lentBest = Double.MAX_VALUE;
+        lentStalls = 0;
+        brain("taking a chest to the heart: the village's first stores");
+        return true;
+    }
+
+    /** Set the chest down here, at the heart, as the village's stores. */
+    private void setDownTheFirstChest() {
+        BlockPos feet = blockPosition();
+        for (int r = 1; r <= 2; r++) {
+            for (int dx = -r; dx <= r; dx++) {
+                for (int dz = -r; dz <= r; dz++) {
+                    for (int dy = -1; dy <= 1; dy++) {
+                        BlockPos p = feet.offset(dx, dy, dz);
+                        if (!level().getBlockState(p).canBeReplaced() || !level().getFluidState(p).isEmpty()) continue;
+                        if (!level().getBlockState(p.below()).isFaceSturdy(level(), p.below(), net.minecraft.core.Direction.UP)) continue;
+                        if (getBoundingBox().intersects(new net.minecraft.world.phys.AABB(p))) continue;
+                        if (removeMatching(st -> st.is(net.minecraft.world.item.Items.CHEST), 1) < 1) return;
+                        level().setBlockAndUpdate(p, net.minecraft.world.level.block.Blocks.CHEST.defaultBlockState());
+                        ZoneChests.mark(level(), p);
+                        if (ownerId() != null) Villages.forgetStores(ownerId());
+                        forgetChestIndex();
+                        swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+                        FolkTalk.speak(this, "There — the village's stores, here at the heart.");
+                        return;
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -2275,6 +2333,7 @@ public class VillageFolkEntity extends AssistantEntity {
             lentSetTo = false;
             lentBest = Double.MAX_VALUE;
             lentStalls = 0;
+            lentToFound = false;
             String what = kind == com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.LOGS ? "timber" : "stone";
             brain("nothing in my own line — off to fetch " + what + " for the stores");
             sayRoutine("Nothing doing in my own line. I'll fetch " + what + " for the village.");
@@ -2325,6 +2384,11 @@ public class VillageFolkEntity extends AssistantEntity {
             brain("on the way to lend a hand");
             return true;
         }
+        if (lentToFound) {
+            setDownTheFirstChest();
+            endLending();
+            return true;
+        }
         lentSetTo = true;
         enqueue(Job.gather(lentFor, 32));
         enqueue(storesDeposit());
@@ -2336,6 +2400,7 @@ public class VillageFolkEntity extends AssistantEntity {
         lentTo = null;
         lentFor = null;
         lentSetTo = false;
+        lentToFound = false;
     }
 
     /** Clear an old chest into the Village Storehouse, if there are any left to clear. */

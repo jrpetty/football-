@@ -596,7 +596,7 @@ public final class Villages {
         }
         if (!trade.isCraft() || trade == AssistantEntity.StationTask.BEEKEEP) return true;
         String building = VillageFolkEntity.buildingFor(trade);
-        return building == null || (villageId != null && hasBuilt(villageId, building));
+        return building == null || (villageId != null && (hasBuilt(villageId, building) || builtAt(villageId, building) != null));
     }
 
     /** Is this village big enough (and far enough on) to want this trade at all? */
@@ -1719,6 +1719,11 @@ public final class Villages {
     }
 
     private static final Map<UUID, long[]> HAS_STORES = new ConcurrentHashMap<>();
+
+    /** The stores have just changed (a first chest set down): ask again next time. */
+    public static void forgetStores(UUID villageId) {
+        HAS_STORES.remove(villageId);
+    }
 
     /**
      * Has the village any stores at all — its Village Storehouse, or chests at its heart?

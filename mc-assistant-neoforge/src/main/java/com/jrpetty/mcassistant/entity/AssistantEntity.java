@@ -3522,6 +3522,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Where a load for the village's stores goes (a village folk's: the storehouse). */
     protected Job storesDeposit() { return Job.deposit(); }
 
+    /** Does a chest this hand carries belong at its village's heart, as the village's first
+     *  stores, rather than on its own plot? (VillageFolkEntity.foundTheStores carries it there.) */
+    protected boolean chestBelongsAtTheHeart() { return false; }
+
     /** A deposit at the village's stores, for a hand that keeps its goods there; else null. */
     @Nullable
     public Job villageDepositJob() { return usesVillageStores() ? storesDeposit() : null; }
@@ -7498,6 +7502,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             if (gap.contains("chest")) wantsChest = true;
             if (gap.contains("furnace")) wantsFurnace = true;
         }
+        // A village with no stores at all: its first chest goes to the heart, not to a plot.
+        if (wantsChest && chestBelongsAtTheHeart()) wantsChest = false;
         if (!wantsChest && !wantsFurnace) return false;
         // No ground yet means no place to put it. A hand handed a trade before
         // it has staked a plot used to set its only chest down wherever it

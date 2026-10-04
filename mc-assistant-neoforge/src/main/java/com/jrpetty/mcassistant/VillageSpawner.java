@@ -365,9 +365,11 @@ public final class VillageSpawner {
         // farmer on a plot with no trees has nothing to make a bench FROM, so
         // wheat piled up in the chest and nobody ever ate any of it.
         folk.insertItem(new ItemStack(Items.CRAFTING_TABLE));
-        // No chest of its own: what it makes goes to the village's stores — the
-        // founding chest at the heart, then the Village Storehouse. A chest a hand
-        // on every plot was a village of a hundred chests.
+        // A chest — not for its own plot: what it makes goes to the village's stores (the
+        // founding chest at the heart, then the Village Storehouse). A village founded with
+        // no stores at all has its first chest carried to its heart as its stores; anywhere
+        // else it goes into the stores with everything else.
+        folk.insertItem(new ItemStack(Items.CHEST));
         folk.insertItem(new ItemStack(Items.WHEAT_SEEDS, 6));
         // Roots are what a field is FOR: a wheat plant gives one ear and a few
         // seeds, a carrot or a potato plant gives three or so to eat, and each of

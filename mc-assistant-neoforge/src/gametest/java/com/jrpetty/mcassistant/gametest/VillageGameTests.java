@@ -2913,7 +2913,8 @@ public class VillageGameTests {
         level.addFreshEntity(v);
         helper.runAtTickTime(40, () -> {
             int villagers = level.getEntitiesOfClass(Villager.class, around(at, 8)).size();
-            List<VillageFolkEntity> folk = level.getEntitiesOfClass(VillageFolkEntity.class, around(at, 8));
+            // (Sixteen: two seconds is long enough for it to be on its way to its ground.)
+            List<VillageFolkEntity> folk = level.getEntitiesOfClass(VillageFolkEntity.class, around(at, 16));
             Kit.log("t05 villagers left: " + villagers + ", folk: " + folk.size());
             for (VillageFolkEntity far : level.getEntitiesOfClass(VillageFolkEntity.class, around(at, 64))) {
                 Kit.log("t05   a folk " + Math.round(Math.sqrt(far.blockPosition().distSqr(at))) + " away: " + far.debugLine());
@@ -3117,6 +3118,8 @@ public class VillageGameTests {
     public static void t45_storehouse(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
+        Kit.log("t45 block drops: " + level.getGameRules().getBoolean(GameRules.RULE_DOBLOCKDROPS));
+        level.getGameRules().getRule(GameRules.RULE_DOBLOCKDROPS).set(true, level.getServer());
         level.setDayTime(6000);
         Kit.hold(level, 27000, 12000, 40);
         Kit.prepare(level, 27000, 12000, 40);
@@ -3229,7 +3232,11 @@ public class VillageGameTests {
                 f.enqueue(Job.retire(old));
                 f.enqueue(Job.depositAt(door));
             }
-            if (t % 200 == 0) Kit.log("t46 @" + t + " old chest " + level.getBlockState(old) + " — " + f.debugLine());
+            if (t % 200 == 0) {
+                String inStore = level.getBlockEntity(door) instanceof com.jrpetty.mcassistant.block.StorehouseBlockEntity s0
+                    ? s0.used() + " stacks" : "no store: " + level.getBlockState(door);
+                Kit.log("t46 @" + t + " old chest " + level.getBlockState(old) + ", storehouse " + inStore + " — " + f.debugLine());
+            }
             if (!level.getBlockState(old).isAir()) return;
             if (!(level.getBlockEntity(door) instanceof com.jrpetty.mcassistant.block.StorehouseBlockEntity store)) return;
             int logs = 0, chests = 0;
