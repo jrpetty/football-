@@ -446,6 +446,13 @@ banners, the quest board asks for wool, and the elder may order the herds grown.
   nothing the village is short of or help the builder, finds something anyway, whatever
   its trade. It clears out an old chest into the storehouse, takes what it carries to the
   stores, or goes to a woodcutter's or a miner's ground and brings timber or stone home.
+* **Nothing out of nothing.** Every block the village puts down is paid for: by the
+  builder out of its pack, or by the town out of the stores. That goes for the chimney
+  fires, washing lines, signs and lamps, the roads and bridges to its colonies, the jetty
+  and its boat, garden fences and flowers, the earth that levels a lot, the gravestones,
+  and a house's second storey and the beds in it. When the stores are short of what it
+  takes, the work waits until they have it. What is taken down to make way (a stripped
+  roof, the earth cut off a knoll) goes back into the stores.
 * **A trade needs somewhere to work.** No shopkeeper before there is a shop, no cook
   before the café, no smith, brewer, tailor or enchanter before their building. No
   storekeeper or carrier before there is a storehouse. A folk in a trade with nowhere to
@@ -576,7 +583,8 @@ that holds **729 stacks** — as much as twenty-seven chests, **46,656 blocks** 
     building is left where it is as furniture and is no longer one of the stores. Your
     guest house and any chest with a sign on it are never touched.
   * The storekeeper tidies the storehouse every so often.
-  * You can place one yourself near a village's heart and the village will use it.
+  * You can place one yourself within about 38 blocks of a village's heart and the
+    village will use it.
 
 ## How they look
 
