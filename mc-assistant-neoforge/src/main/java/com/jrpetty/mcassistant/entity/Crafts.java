@@ -181,6 +181,57 @@ public final class Crafts {
         return n <= 0 || (planks(level, v, (n + 1) / 2) && take(level, v, s -> s.is(ItemTags.PLANKS), (n + 1) / 2));
     }
 
+    // What the town's small works are made of (the posts and signs, the stalls, the road, the
+    // jetty, the garden fence): never out of nothing, but out of the stores, the thing itself if
+    // one is put by, else what it is made of. Each says whether it was paid; nothing is taken
+    // when it can't be.
+
+    /** So many planks used up out of the stores, sawn from the logs if need be. All or nothing. */
+    static boolean usePlanks(ServerLevel level, Villages.Village v, int n) {
+        return n <= 0 || (planks(level, v, n) && take(level, v, s -> s.is(ItemTags.PLANKS), n));
+    }
+
+    /** One wooden thing out of the stores, else the planks it is made of. */
+    static boolean wooden(ServerLevel level, Villages.Village v, Predicate<ItemStack> thing, int planks) {
+        return take(level, v, thing, 1) || usePlanks(level, v, planks);
+    }
+
+    /** A sign: one put by, or two planks. */
+    static boolean sign(ServerLevel level, Villages.Village v) {
+        return wooden(level, v, s -> s.is(ItemTags.SIGNS), 2);
+    }
+
+    /** A length of fence: one put by, or two planks. */
+    static boolean fence(ServerLevel level, Villages.Village v) {
+        return wooden(level, v, s -> s.is(ItemTags.WOODEN_FENCES), 2);
+    }
+
+    /** A lantern: one put by, or a torch and a log for its making. */
+    static boolean lantern(ServerLevel level, Villages.Village v) {
+        if (take(level, v, s -> s.is(Items.LANTERN), 1)) return true;
+        if (!take(level, v, s -> s.is(Items.TORCH), 1)) return false;
+        if (take(level, v, s -> s.is(ItemTags.LOGS), 1)) return true;
+        store(level, v, new ItemStack(Items.TORCH));
+        return false;
+    }
+
+    /** A block of dressed stone (a headstone, a plinth): stone bricks put by, else cobblestone. */
+    static boolean masonry(ServerLevel level, Villages.Village v) {
+        return take(level, v, s -> s.is(Items.STONE_BRICKS), 1) || take(level, v, s -> s.is(Items.COBBLESTONE), 1);
+    }
+
+    /** So many of a thing taken down to make way (a roof stripped, a wall refaced, earth cut) back
+     *  into the stores, in whole stacks, rather than thrown away. */
+    static void giveBack(ServerLevel level, Villages.Village v, Item item, int n) {
+        if (item == null || item == Items.AIR || n <= 0) return;
+        int most = Math.max(1, new ItemStack(item).getMaxStackSize());
+        while (n > 0) {
+            int k = Math.min(n, most);
+            store(level, v, new ItemStack(item, k));
+            n -= k;
+        }
+    }
+
     private static int guards(Villages.Village v) {
         int n = 0;
         for (AssistantEntity a : Villages.folkOf(v.id())) if (a.stationTask() == AssistantEntity.StationTask.GUARD) n++;

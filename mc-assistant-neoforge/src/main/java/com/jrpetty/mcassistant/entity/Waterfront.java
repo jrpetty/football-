@@ -62,7 +62,7 @@ public final class Waterfront {
             if (!Land.areaLoaded(level, c, 20)) continue;
             if (f.stationTask() == AssistantEntity.StationTask.FISH) {
                 Dock d = dockFor(level, id, f);
-                if (d != null) moor(level, d);
+                if (d != null) moor(level, v, d, false);
             } else if (f.stationTask() == AssistantEntity.StationTask.FARM
                     && Villages.ageOf(id).ordinal() >= Villages.Age.STONE.ordinal()
                     && com.jrpetty.mcassistant.AssistantConfig.villageReshapeLand()) {
@@ -75,19 +75,23 @@ public final class Waterfront {
 
     // ------------------------------------------------------------------ docks
 
-    /** This fisher's jetty, built if it has none and there is a bank to build it from. */
+    /** This fisher's jetty, built if it has none and there is a bank to build it from. Built out of
+     *  the village's stores now, a plank at a time, as far as they pay: not begun till there is
+     *  wood for its first plank. */
     @Nullable
     public static Dock dockFor(ServerLevel level, UUID village, VillageFolkEntity f) {
+        Villages.Village v = Villages.get(village);
+        if (v == null) return null;
         Map<UUID, Dock> mine = DOCKS.computeIfAbsent(village, k -> new ConcurrentHashMap<>());
         Dock d = mine.get(f.getUUID());
         if (d != null) {
-            build(level, d);                                             // put back anything knocked off
+            build(level, v, d, false);                                   // put back anything knocked off
             return d;
         }
         if (f.workZone() == null) return null;
         d = site(level, f.workZone().center(), 16);
         if (d == null) return null;
-        build(level, d);
+        if (build(level, v, d, false) == 0) return null;                 // no wood for it yet
         mine.put(f.getUUID(), d);
         Villages.tell(village, level.getDayTime() / 24000L, f.displayNameCap() + " built a jetty out over the water");
         return d;
@@ -130,14 +134,26 @@ public final class Waterfront {
         return level.getBlockState(p).is(Blocks.WATER) && level.getFluidState(p).isSource() && level.getBlockState(p.above()).isAir();
     }
 
-    /** Lay the jetty: planks over the water, posts down to the bed at its end, a lantern. Returns blocks placed. */
+    /** Lay the jetty for nothing (the showcase and the tests). Returns blocks placed. */
     public static int build(ServerLevel level, Dock d) {
+        return build(level, null, d, true);
+    }
+
+    /**
+     * Lay the jetty: planks over the water, posts down to the bed at its end, a lantern. Returns
+     * blocks placed. Each block is paid out of the village's stores (a plank, a length of fence, a
+     * lantern), unless {@code free}; when they run short the jetty stops there, and is gone on with
+     * when it is next looked over (every half a minute).
+     */
+    static int build(ServerLevel level, @Nullable Villages.Village v, Dock d, boolean free) {
+        if (!free && v == null) return 0;
         int n = 0;
         Direction side = d.out().getClockWise();
         for (int k = 0; k < d.length(); k++) {
             BlockPos at = d.start().relative(d.out(), k);
             BlockState here = level.getBlockState(at);
             if (here.is(Blocks.WATER)) {
+                if (!free && !Crafts.usePlanks(level, v, 1)) return n;
                 level.setBlock(at, Blocks.SPRUCE_PLANKS.defaultBlockState(), 3);
                 n++;
             } else if (!here.is(BlockTags.PLANKS)) {
@@ -150,16 +166,24 @@ public final class Waterfront {
                     for (int dy = 0; dy < 5; dy++) {
                         BlockPos q = post.below(dy);
                         if (!level.getBlockState(q).is(Blocks.WATER)) break;
+                        if (!free && !Crafts.fence(level, v)) return n;
                         level.setBlock(q, Blocks.SPRUCE_FENCE.defaultBlockState().setValue(BlockStateProperties.WATERLOGGED, true), 3);
                         n++;
                     }
                 }
             }
         }
-        // A post and a lantern at the end of the jetty.
+        // A post and a lantern at the end of the jetty: the lantern first (no light, no post).
         BlockPos lamp = d.end().above();
         if (level.getBlockState(d.end()).is(BlockTags.PLANKS) && level.getBlockState(lamp).isAir()
                 && level.getBlockState(lamp.above()).isAir()) {
+            if (!free) {
+                if (!Crafts.lantern(level, v)) return n;
+                if (!Crafts.fence(level, v)) {
+                    Crafts.store(level, v, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.LANTERN));
+                    return n;
+                }
+            }
             level.setBlock(lamp, Blocks.SPRUCE_FENCE.defaultBlockState(), 3);
             level.setBlock(lamp.above(), Blocks.LANTERN.defaultBlockState(), 3);
             n += 2;
@@ -167,8 +191,15 @@ public final class Waterfront {
         return n;
     }
 
-    /** A boat tied up alongside the jetty, if there isn't one. */
+    /** A boat tied up alongside the jetty for nothing (the showcase and the tests). */
     public static boolean moor(ServerLevel level, Dock d) {
+        return moor(level, null, d, true);
+    }
+
+    /** A boat tied up alongside the jetty, if there isn't one: a boat out of the village's stores,
+     *  or five of their planks made into one (unless {@code free}). None if they have neither. */
+    static boolean moor(ServerLevel level, @Nullable Villages.Village v, Dock d, boolean free) {
+        if (!free && v == null) return false;
         BlockPos mid = d.start().relative(d.out(), Math.max(1, d.length() / 2));
         Direction side = d.out().getClockWise();
         AABB near = new AABB(mid).inflate(6, 3, 6);
@@ -182,6 +213,8 @@ public final class Waterfront {
             if (spot != null) break;
         }
         if (spot == null) return false;
+        if (!free && !Crafts.take(level, v, st -> st.is(net.minecraft.tags.ItemTags.BOATS), 1)
+                && !Crafts.usePlanks(level, v, 5)) return false;
         Boat boat = EntityType.BOAT.create(level);
         if (boat == null) return false;
         boat.setVariant(Boat.Type.SPRUCE);

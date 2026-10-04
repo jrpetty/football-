@@ -90,20 +90,21 @@ public final class TownLife {
         if (!all.isEmpty()) {
             Ledger.Building b = all.get(Math.floorMod(turn, all.size()));
             if (level.isLoaded(b.anchor())) {
-                chimney(level, b);
-                addressSign(level, id, v.centre(), b);
-                if (b.structure().equals("house")) washingLine(level, b);
-                if (b.structure().equals("tavern")) Tavern.board(level, b);
+                // Out of the village's stores, all of it (and none of it when they can't pay).
+                chimney(level, b, v, false);
+                addressSign(level, id, v.centre(), b, v, false);
+                if (b.structure().equals("house")) washingLine(level, b, v, false);
+                if (b.structure().equals("tavern")) Tavern.board(level, v, b, false);
             }
         }
         // A street corner.
         if (all.size() >= 2) {
             List<int[]> corners = corners(Villages.townReach(id));
-            if (!corners.isEmpty()) streetSign(level, id, v.centre(), corners.get(Math.floorMod(turn, corners.size())));
+            if (!corners.isEmpty()) streetSign(level, id, v.centre(), corners.get(Math.floorMod(turn, corners.size())), v, false);
         }
         // The stalls on the square, and what is on them.
         if (Villages.ageOf(id).ordinal() >= Villages.Age.STONE.ordinal() && turn % 6 == 0) {
-            stalls(level, id, v.centre(), storeGoods(level, id));
+            stalls(level, id, v.centre(), storeGoods(level, id), v, false);
         }
         // The graves the village owes its dead, and the chapel's memorial.
         if (turn % 10 == 5) Graves.tend(level, id);
@@ -119,17 +120,17 @@ public final class TownLife {
         }
         if (!farmers.isEmpty()) {
             WorkZone z = farmers.get(Math.floorMod(turn, farmers.size())).workZone();
-            if (z != null) scarecrow(level, z.center(), Math.min(8, z.radius()));
+            if (z != null) scarecrow(level, v, z.center(), Math.min(8, z.radius()), false);
         }
     }
 
-    /** Everything at once, for every building: the tests and the showcase. */
+    /** Everything at once, for every building, for nothing: the tests and the showcase. */
     public static void dressNow(ServerLevel level, UUID village, BlockPos heart, List<Ledger.Building> all,
                                 List<Item> goods) {
         for (Ledger.Building b : all) {
-            chimney(level, b);
-            addressSign(level, village, heart, b);
-            if (b.structure().equals("house")) washingLine(level, b);
+            chimney(level, b, null, true);
+            addressSign(level, village, heart, b, null, true);
+            if (b.structure().equals("house")) washingLine(level, b, null, true);
             if (b.structure().equals("cafe")) Cafe.setOut(level, village, b, Cafe.menuGoods(level, village));
             if (b.structure().equals("tavern")) Tavern.board(level, b);
             if (b.structure().equals("shop")) Cafe.setOut(level, village, b, Cafe.shopGoods(level, village));
@@ -138,8 +139,8 @@ public final class TownLife {
         for (Ledger.Building b : all) {
             reach = Math.max(reach, Math.max(Math.abs(b.anchor().getX() - heart.getX()), Math.abs(b.anchor().getZ() - heart.getZ())) + 6);
         }
-        for (int[] c : corners(reach)) streetSign(level, village, heart, c);
-        for (int i = 0; i < STALLS.length; i++) stalls(level, village, heart, goods);
+        for (int[] c : corners(reach)) streetSign(level, village, heart, c, null, true);
+        for (int i = 0; i < STALLS.length; i++) stalls(level, village, heart, goods, null, true);
     }
 
     /** Every window of these buildings lit (or put out), now. */
@@ -259,13 +260,30 @@ public final class TownLife {
 
     // ------------------------------------------------------------------ the hearth
 
-    /** A fire in the hearth: a campfire on the chimney's top, and its smoke. */
-    static void chimney(ServerLevel level, Ledger.Building b) {
+    /** A fire in the hearth: a campfire on the chimney's top, and its smoke. Each fire laid (and
+     *  laid again, if it has gone) is out of the stores now unless {@code free}: a campfire put
+     *  by, or three logs and a lump of coal or charcoal. No makings, no fire. */
+    static void chimney(ServerLevel level, Ledger.Building b, @Nullable Villages.Village v, boolean free) {
+        if (!free && v == null) return;
         for (BlockPos top : fittings(b).chimneys()) {
             if (!level.getBlockState(top).isSolid()) continue;       // the chimney is not up (or is down)
             BlockPos fire = top.above();
-            if (level.getBlockState(fire).isAir()) level.setBlock(fire, Blocks.CAMPFIRE.defaultBlockState(), 3);
+            if (!level.getBlockState(fire).isAir()) continue;
+            if (!free && !campfire(level, v)) return;
+            level.setBlock(fire, Blocks.CAMPFIRE.defaultBlockState(), 3);
         }
+    }
+
+    /** A campfire's makings out of the stores: one put by, or three logs and a coal (or charcoal). */
+    private static boolean campfire(ServerLevel level, Villages.Village v) {
+        if (Crafts.take(level, v, s -> s.is(Items.CAMPFIRE), 1)) return true;
+        java.util.function.Predicate<ItemStack> coal = s -> s.is(Items.COAL) || s.is(Items.CHARCOAL);
+        java.util.function.Predicate<ItemStack> logs = s -> s.is(net.minecraft.tags.ItemTags.LOGS);
+        if (Crafts.stock(level, v, coal) < 1 || Crafts.stock(level, v, logs) < 3) return false;
+        if (!Crafts.take(level, v, logs, 3)) return false;
+        if (Crafts.take(level, v, coal, 1)) return true;
+        Crafts.giveBack(level, v, Items.OAK_LOG, 3);
+        return false;
     }
 
     // ------------------------------------------------------------------ washing
@@ -276,9 +294,13 @@ public final class TownLife {
     /**
      * A washing line behind a house: two posts and a line between them, the washing pegged
      * out on it. Houses stand back to back, so only the house whose back is to the north or
-     * the west puts one up, in the yard the two share.
+     * the west puts one up, in the yard the two share. Out of the stores unless {@code free}:
+     * the posts and the line (eleven lengths of fence, or two planks each) or no line at all;
+     * then each piece of washing a banner put by, or six wool and a stick, hung as the stores
+     * can spare them (the rest on a later visit).
      */
-    static boolean washingLine(ServerLevel level, Ledger.Building b) {
+    static boolean washingLine(ServerLevel level, Ledger.Building b, @Nullable Villages.Village v, boolean free) {
+        if (!free && v == null) return false;
         Direction back = b.facing();
         if (back != Direction.NORTH && back != Direction.WEST) return false;
         Fittings f = fittings(b);
@@ -286,7 +308,11 @@ public final class TownLife {
         Direction right = back.getClockWise();
         BlockPos base = b.anchor().relative(back, deep);
         BlockPos middle = base.above(2);
-        if (level.getBlockState(middle).getBlock() instanceof net.minecraft.world.level.block.FenceBlock) return false;  // up already
+        int first = Math.floorMod(b.anchor().hashCode(), WASH.length);
+        if (level.getBlockState(middle).getBlock() instanceof net.minecraft.world.level.block.FenceBlock) {
+            // Up already: only any washing the stores could not spare before.
+            return !free && hang(level, v, base, right, back, first);
+        }
         List<BlockPos> fences = new ArrayList<>();
         for (int a = -3; a <= 3; a++) {
             BlockPos col = base.relative(right, a);
@@ -301,23 +327,64 @@ public final class TownLife {
         for (int a : new int[]{ -2, -1, 1, 2 }) wash.add(base.relative(right, a).relative(back).above(2));
         for (BlockPos p : fences) if (!level.getBlockState(p).isAir()) return false;
         for (BlockPos p : wash) if (!level.getBlockState(p).isAir() || !level.getBlockState(p.below()).isAir()) return false;
+        int n = fences.size();
+        if (!free && !Crafts.take(level, v, s -> s.is(net.minecraft.tags.ItemTags.WOODEN_FENCES), n)
+                && !Crafts.usePlanks(level, v, 2 * n)) return false;
         BlockState post = Blocks.SPRUCE_FENCE.defaultBlockState();
         for (BlockPos p : fences) level.setBlock(p, post, 2 | 16);
         for (BlockPos p : fences) {
             BlockState joined = Block.updateFromNeighbourShapes(post, level, p);
             level.setBlock(p, joined, 2 | 16);
         }
-        int k = Math.floorMod(b.anchor().hashCode(), WASH.length);
+        if (!free) {
+            hang(level, v, base, right, back, first);
+            return true;
+        }
+        int k = first;
         for (BlockPos p : wash) {
             level.setBlock(p, WASH[k++ % WASH.length].defaultBlockState().setValue(WallBannerBlock.FACING, back), 3);
         }
         return true;
     }
 
+    /** The washing on a line that is up, a piece at a time out of the stores: a banner put by, or
+     *  six wool and a stick (a plank) made into one. Stops when they can't spare any more. */
+    private static boolean hang(ServerLevel level, Villages.Village v, BlockPos base, Direction right, Direction back, int first) {
+        boolean hung = false;
+        int[] along = { -2, -1, 1, 2 };
+        for (int i = 0; i < along.length; i++) {
+            BlockPos p = base.relative(right, along[i]).relative(back).above(2);
+            if (!level.getBlockState(p).isAir() || !level.getBlockState(p.below()).isAir()) continue;
+            if (!(level.getBlockState(p.relative(back.getOpposite())).getBlock() instanceof net.minecraft.world.level.block.FenceBlock)) continue;
+            if (!Crafts.take(level, v, s -> s.is(net.minecraft.tags.ItemTags.BANNERS), 1)) {
+                java.util.function.Predicate<ItemStack> wool = s -> s.is(net.minecraft.tags.ItemTags.WOOL);
+                if (Crafts.stock(level, v, wool) < 6 || !Crafts.take(level, v, wool, 6)) break;
+                if (!Crafts.usePlanks(level, v, 1)) {
+                    Crafts.giveBack(level, v, Items.WHITE_WOOL, 6);
+                    break;
+                }
+            }
+            level.setBlock(p, WASH[(first + i) % WASH.length].defaultBlockState().setValue(WallBannerBlock.FACING, back), 3);
+            hung = true;
+        }
+        return hung;
+    }
+
     // ------------------------------------------------------------------ scarecrows
 
-    /** A scarecrow at a corner of a field: a post, a body of straw with its arms out, a pumpkin for a head. */
+    /** A scarecrow at a corner of a field, for nothing (the showcase and the tests). */
     public static boolean scarecrow(ServerLevel level, BlockPos centre, int r) {
+        return scarecrow(level, null, centre, r, true);
+    }
+
+    /**
+     * A scarecrow at a corner of a field: a post, a body of straw with its arms out, a pumpkin for
+     * a head. Out of the stores unless {@code free}: a carved pumpkin (or a pumpkin to carve), a
+     * bale of hay (or nine wheat) and a length of fence for the post (or two planks), or no
+     * scarecrow yet; its arms as the stores can spare the fence.
+     */
+    static boolean scarecrow(ServerLevel level, @Nullable Villages.Village v, BlockPos centre, int r, boolean free) {
+        if (!free && v == null) return false;
         long key = centre.asLong();
         if (GUARDED.contains(key)) return false;
         for (BlockPos p : BlockPos.betweenClosed(centre.offset(-r - 1, -3, -r - 1), centre.offset(r + 1, 5, r + 1))) {
@@ -340,12 +407,13 @@ public final class TownLife {
             if (!clear) continue;
             Direction look = Direction.getNearest((double) (centre.getX() - x), 0.0, (double) (centre.getZ() - z));
             if (look.getAxis() == Direction.Axis.Y) look = Direction.NORTH;
+            if (!free && !payScarecrow(level, v)) return false;
             level.setBlock(foot, Blocks.OAK_FENCE.defaultBlockState(), 3);
             level.setBlock(foot.above(), Blocks.HAY_BLOCK.defaultBlockState(), 3);
             level.setBlock(foot.above(2), Blocks.CARVED_PUMPKIN.defaultBlockState().setValue(CarvedPumpkinBlock.FACING, look), 3);
             for (Direction arm : new Direction[]{ look.getClockWise(), look.getCounterClockWise() }) {
                 BlockPos a = foot.above().relative(arm);
-                if (level.getBlockState(a).isAir()) {
+                if (level.getBlockState(a).isAir() && (free || Crafts.fence(level, v))) {
                     level.setBlock(a, Block.updateFromNeighbourShapes(Blocks.OAK_FENCE.defaultBlockState(), level, a), 3);
                 }
             }
@@ -356,6 +424,23 @@ public final class TownLife {
         return false;
     }
 
+    /** A scarecrow's head, body and post out of the stores, all or none: what was taken goes back
+     *  if the rest can't be had. */
+    private static boolean payScarecrow(ServerLevel level, Villages.Village v) {
+        if (!Crafts.take(level, v, s -> s.is(Items.CARVED_PUMPKIN), 1) && !Crafts.take(level, v, s -> s.is(Items.PUMPKIN), 1)) return false;
+        if (!Crafts.take(level, v, s -> s.is(Items.HAY_BLOCK), 1)
+                && !(Crafts.stock(level, v, s -> s.is(Items.WHEAT)) >= 9 && Crafts.take(level, v, s -> s.is(Items.WHEAT), 9))) {
+            Crafts.store(level, v, new ItemStack(Items.CARVED_PUMPKIN));
+            return false;
+        }
+        if (!Crafts.fence(level, v)) {
+            Crafts.store(level, v, new ItemStack(Items.CARVED_PUMPKIN));
+            Crafts.store(level, v, new ItemStack(Items.HAY_BLOCK));
+            return false;
+        }
+        return true;
+    }
+
     // ------------------------------------------------------------------ the stalls on the square
 
     /** Where the stalls stand on the square, and which way their counters face. */
@@ -364,8 +449,10 @@ public final class TownLife {
         { Blocks.RED_WOOL, Blocks.WHITE_WOOL }, { Blocks.BLUE_WOOL, Blocks.WHITE_WOOL },
         { Blocks.GREEN_WOOL, Blocks.WHITE_WOOL }, { Blocks.YELLOW_WOOL, Blocks.WHITE_WOOL } };
 
-    /** Put up any stall that is missing (one a call), and set out the goods on all of them. */
-    static void stalls(ServerLevel level, UUID village, BlockPos heart, List<Item> goods) {
+    /** Put up any stall that is missing (one a call), and set out the goods on all of them. The
+     *  stalls and their signs are out of the stores unless {@code free}. */
+    static void stalls(ServerLevel level, UUID village, BlockPos heart, List<Item> goods, @Nullable Villages.Village v, boolean free) {
+        if (!free && v == null) return;
         boolean built = false;
         for (int i = 0; i < STALLS.length; i++) {
             BlockPos at = heart.offset(STALLS[i][0], 0, STALLS[i][1]);
@@ -375,7 +462,7 @@ public final class TownLife {
             if (ground == null) continue;
             if (!stallStands(level, ground, front)) {
                 if (built) continue;
-                if (!putUpStall(level, ground, front, AWNINGS[i])) continue;
+                if (!putUpStall(level, ground, front, AWNINGS[i], v, free)) continue;
                 built = true;
             }
             List<Item> mine = new ArrayList<>();
@@ -384,24 +471,28 @@ public final class TownLife {
                 mine.add(idx < goods.size() ? goods.get(idx) : null);
             }
             setOut(level, ground, front, mine);
-            priceSigns(level, village, ground, front, mine);
+            priceSigns(level, village, ground, front, mine, v, free);
         }
     }
 
     /** On a stall's front posts: what its goods cost, and what the village is buying. */
-    private static void priceSigns(ServerLevel level, UUID village, BlockPos ground, Direction front, List<Item> goods) {
+    private static void priceSigns(ServerLevel level, UUID village, BlockPos ground, Direction front, List<Item> goods,
+                                   @Nullable Villages.Village v, boolean free) {
         Direction across = front.getClockWise();
         BlockPos row = ground.relative(front);
-        signOn(level, row.relative(across, -2).above(), front, Market.sellLines(level, village, goods));
-        signOn(level, row.relative(across, 2).above(), front, Market.buyLines(level, village));
+        signOn(level, row.relative(across, -2).above(), front, Market.sellLines(level, village, goods), v, free);
+        signOn(level, row.relative(across, 2).above(), front, Market.buyLines(level, village), v, free);
     }
 
-    private static void signOn(ServerLevel level, BlockPos post, Direction front, String[] lines) {
+    /** A sign on a post, written; a new one is a sign out of the stores (or two planks) unless {@code free}. */
+    private static void signOn(ServerLevel level, BlockPos post, Direction front, String[] lines,
+                               @Nullable Villages.Village v, boolean free) {
         if (!(level.getBlockState(post).getBlock() instanceof net.minecraft.world.level.block.FenceBlock)) return;
         BlockPos at = post.relative(front);
         BlockState there = level.getBlockState(at);
         if (!(there.getBlock() instanceof WallSignBlock)) {
             if (!there.isAir()) return;
+            if (!free && (v == null || !Crafts.sign(level, v))) return;
             level.setBlock(at, Blocks.SPRUCE_WALL_SIGN.defaultBlockState().setValue(WallSignBlock.FACING, front), 3);
         }
         if (level.getBlockEntity(at) instanceof SignBlockEntity sign) write(sign, lines);
@@ -433,7 +524,8 @@ public final class TownLife {
         return true;
     }
 
-    private static boolean putUpStall(ServerLevel level, BlockPos ground, Direction front, Block[] awning) {
+    private static boolean putUpStall(ServerLevel level, BlockPos ground, Direction front, Block[] awning,
+                                      @Nullable Villages.Village v, boolean free) {
         Direction across = front.getClockWise();
         List<BlockPos> foot = new ArrayList<>();
         for (int d = -1; d <= 1; d++) {
@@ -443,6 +535,7 @@ public final class TownLife {
             if (level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, p.getX(), p.getZ()) != ground.getY()) return false;
             for (int h = 0; h <= 3; h++) if (!level.getBlockState(p.above(h)).isAir()) return false;
         }
+        if (!free && (v == null || !payForStall(level, v))) return false;
         BlockState post = Blocks.SPRUCE_FENCE.defaultBlockState();
         for (int d : new int[]{ -1, 1 }) {
             for (int a : new int[]{ -2, 2 }) {
@@ -462,6 +555,40 @@ public final class TownLife {
             }
         }
         return true;
+    }
+
+    /**
+     * A stall's makings out of the stores, all or none: twelve lengths of fence for its posts, four
+     * barrels for the counter and the back, a bale of hay and fifteen wool for the awning. Fences
+     * and barrels put by are used first, and planks (sawn from logs if need be) make up the rest,
+     * two to a length of fence and seven to a barrel; nine wheat make a bale. What was taken goes
+     * back if the rest can't be had.
+     */
+    private static boolean payForStall(ServerLevel level, Villages.Village v) {
+        java.util.function.Predicate<ItemStack> fence = s -> s.is(net.minecraft.tags.ItemTags.WOODEN_FENCES);
+        java.util.function.Predicate<ItemStack> barrel = s -> s.is(Items.BARREL);
+        java.util.function.Predicate<ItemStack> wool = s -> s.is(net.minecraft.tags.ItemTags.WOOL);
+        int fences = Math.min(12, Crafts.stock(level, v, fence));
+        int barrels = Math.min(4, Crafts.stock(level, v, barrel));
+        int planks = (12 - fences) * 2 + (4 - barrels) * 7;
+        boolean hay = Crafts.stock(level, v, s -> s.is(Items.HAY_BLOCK)) >= 1;
+        if (!hay && Crafts.stock(level, v, s -> s.is(Items.WHEAT)) < 9) return false;
+        if (Crafts.stock(level, v, wool) < 15) return false;
+        if (Crafts.stock(level, v, s -> s.is(net.minecraft.tags.ItemTags.PLANKS))
+                + 4 * Crafts.stock(level, v, s -> s.is(net.minecraft.tags.ItemTags.LOGS)) < planks) return false;
+        if (!Crafts.take(level, v, wool, 15)) return false;
+        List<ItemStack> spent = new ArrayList<>();
+        spent.add(new ItemStack(Items.WHITE_WOOL, 15));
+        boolean ok = Crafts.take(level, v, fence, fences);
+        if (ok && fences > 0) spent.add(new ItemStack(Items.SPRUCE_FENCE, fences));
+        ok = ok && Crafts.take(level, v, barrel, barrels);
+        if (ok && barrels > 0) spent.add(new ItemStack(Items.BARREL, barrels));
+        ok = ok && Crafts.usePlanks(level, v, planks);
+        if (ok && planks > 0) spent.add(new ItemStack(Items.OAK_PLANKS, planks));
+        ok = ok && (hay ? Crafts.take(level, v, s -> s.is(Items.HAY_BLOCK), 1) : Crafts.take(level, v, s -> s.is(Items.WHEAT), 9));
+        if (ok) return true;
+        for (ItemStack st : spent) Crafts.giveBack(level, v, st.getItem(), st.getCount());
+        return false;
     }
 
     /** The goods on a stall's counter: one of each, in a frame laid flat on a barrel. Fixed, so a
@@ -639,8 +766,11 @@ public final class TownLife {
 
     // ------------------------------------------------------------------ signs
 
-    /** The sign by a building's door: its number and street, and who lives there (or what it is). */
-    static boolean addressSign(ServerLevel level, UUID village, BlockPos heart, Ledger.Building b) {
+    /** The sign by a building's door: its number and street, and who lives there (or what it is).
+     *  A new one is a sign out of the stores (or two planks) unless {@code free}; none till then. */
+    static boolean addressSign(ServerLevel level, UUID village, BlockPos heart, Ledger.Building b,
+                               @Nullable Villages.Village v, boolean free) {
+        if (!free && v == null) return false;
         Fittings f = fittings(b);
         if (f.door() == null) return false;
         Direction front = b.facing().getOpposite();
@@ -666,6 +796,7 @@ public final class TownLife {
             boolean ours = there.getBlock() instanceof WallSignBlock;
             if (!ours && (!there.isAir() || !level.getBlockState(wall).isSolid())) continue;
             if (!ours) {
+                if (!free && !Crafts.sign(level, v)) return false;
                 level.setBlock(spot, Blocks.SPRUCE_WALL_SIGN.defaultBlockState().setValue(WallSignBlock.FACING, front), 3);
             }
             if (level.getBlockEntity(spot) instanceof SignBlockEntity sign) write(sign, lines);
@@ -738,9 +869,12 @@ public final class TownLife {
 
     /**
      * A street sign at a crossing: a post on the corner away from the heart, a lantern on top,
-     * and the names of the two streets on it, each facing its own street.
+     * and the names of the two streets on it, each facing its own street. Out of the stores
+     * unless {@code free}: the lantern, two lengths of fence and two signs, or no post yet.
      */
-    static boolean streetSign(ServerLevel level, UUID village, BlockPos heart, int[] crossing) {
+    static boolean streetSign(ServerLevel level, UUID village, BlockPos heart, int[] crossing,
+                              @Nullable Villages.Village v, boolean free) {
+        if (!free && v == null) return false;
         int x = crossing[0], z = crossing[1];
         int sx = x == 0 ? 1 : Integer.signum(x), sz = z == 0 ? 1 : Integer.signum(z);
         int cx = x + sx * ((x == 0 ? TownPlan.AVENUE : 1) + 1);
@@ -762,6 +896,7 @@ public final class TownLife {
         for (BlockPos p : List.of(post, post.above(), post.above(2), signNS, signEW)) {
             if (!level.getBlockState(p).isAir()) return false;
         }
+        if (!free && !payForPost(level, v)) return false;
         BlockState fence = Blocks.SPRUCE_FENCE.defaultBlockState();
         level.setBlock(post, fence, 3);
         level.setBlock(post.above(), fence, 3);
@@ -772,6 +907,22 @@ public final class TownLife {
         level.setBlock(signEW, Blocks.SPRUCE_WALL_SIGN.defaultBlockState().setValue(WallSignBlock.FACING, toEW), 3);
         if (level.getBlockEntity(signNS) instanceof SignBlockEntity a) write(a, new String[]{ "", ns, "", "" });
         if (level.getBlockEntity(signEW) instanceof SignBlockEntity b) write(b, new String[]{ "", ew, "", "" });
+        return true;
+    }
+
+    /** A street post's makings out of the stores, all or none: its lantern, two lengths of fence
+     *  (or four planks) and two signs (or four planks). */
+    private static boolean payForPost(ServerLevel level, Villages.Village v) {
+        if (!Crafts.lantern(level, v)) return false;
+        if (!Crafts.take(level, v, s -> s.is(net.minecraft.tags.ItemTags.WOODEN_FENCES), 2) && !Crafts.usePlanks(level, v, 4)) {
+            Crafts.store(level, v, new ItemStack(Items.LANTERN));
+            return false;
+        }
+        if (!Crafts.take(level, v, s -> s.is(net.minecraft.tags.ItemTags.SIGNS), 2) && !Crafts.usePlanks(level, v, 4)) {
+            Crafts.store(level, v, new ItemStack(Items.LANTERN));
+            Crafts.store(level, v, new ItemStack(Items.SPRUCE_FENCE, 2));
+            return false;
+        }
         return true;
     }
 }

@@ -199,8 +199,10 @@ public final class Watch {
         return new Post(stand, foot, side);
     }
 
-    /** A ladder up the inside of the wall at a post, where there is room for one. */
-    static void ladder(ServerLevel level, Post p) {
+    /** A ladder up the inside of the wall at a post, where there is room for one. Paid from the
+     *  stores now, a rung at a time: a ladder put by, else a plank sawn into one (for nothing only
+     *  in the showcase). It goes up as far as the stores pay, and the rest another day. */
+    static void ladder(ServerLevel level, Villages.Village v, Post p, boolean free) {
         BlockState ladder = Blocks.LADDER.defaultBlockState().setValue(LadderBlock.FACING, p.out().getOpposite());
         for (int y = p.foot().getY(); y < p.stand().getY(); y++) {
             BlockPos at = new BlockPos(p.foot().getX(), y, p.foot().getZ());
@@ -208,6 +210,8 @@ public final class Watch {
             if (s.is(Blocks.LADDER)) continue;
             if (!s.isAir() && !s.canBeReplaced()) return;
             if (!ladder.canSurvive(level, at)) return;
+            if (!free && !TownWork.take(level, v, st -> st.is(Items.LADDER), 1)
+                    && !TownWork.take(level, v, st -> st.is(ItemTags.PLANKS), 1)) return;
             level.setBlock(at, ladder, 3);
         }
     }
@@ -239,7 +243,7 @@ public final class Watch {
         }
         GATES_OF.put(v.id(), List.copyOf(out));
         POSTS_OF.remove(v.id());
-        for (Post p : postsAt(level, v.id(), a)) ladder(level, p);
+        for (Post p : postsAt(level, v.id(), a)) ladder(level, v, p, free);
         return out.size();
     }
 
@@ -437,7 +441,15 @@ public final class Watch {
         }
         BlockPos floor = floorAt(level, at.getX(), at.getZ(), v.centre().getY());
         if (floor == null) return null;
-        if (!free && !TownWork.take(level, v, st -> st.is(Items.COBBLESTONE) || st.is(Items.STONE_BRICKS), 2)) return null;
+        // The bell itself out of the stores too, now, and not cast from nothing: no bell put by,
+        // no bell on the square (and no plinth for it) until one is.
+        if (!free) {
+            if (!TownWork.take(level, v, st -> st.is(Items.BELL), 1)) return null;
+            if (!TownWork.take(level, v, st -> st.is(Items.COBBLESTONE) || st.is(Items.STONE_BRICKS), 2)) {
+                TownWork.give(level, v, new net.minecraft.world.item.ItemStack(Items.BELL));
+                return null;
+            }
+        }
         level.setBlock(floor, Blocks.STONE_BRICKS.defaultBlockState(), 3);
         BlockPos b = floor.above();
         level.setBlock(b, Blocks.BELL.defaultBlockState()

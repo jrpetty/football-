@@ -139,13 +139,18 @@ public final class Roads {
                 keepAwake(level, id, head);
                 break;
             }
-            lastY = step(level, mother, colony, p[0], p[1], lastY, alongX, next);
+            // Paid for out of the mother's stores, a block at a time: when they run short the road
+            // stops where it is, and goes on from there another visit, once there is more put by.
+            int y = step(level, mother, colony, p[0], p[1], lastY, alongX, next);
+            if (y == UNPAID) break;
+            lastY = y;
             next++;
             laid++;
         }
         boolean done = next >= line.size();
         Ledger.road(id, next, lastY, done);
         if (done) {
+            signpost(level, mother, colony, true);      // if the stores couldn't run to it at the start
             signpost(level, mother, colony, false);
             release(level, id);
             long day = level.getDayTime() / 24000L;
@@ -192,7 +197,14 @@ public final class Roads {
         return false;
     }
 
-    /** One step of the road: its three-wide surface (or a bridge), cleared above. Returns its height. */
+    /** What step returns when the mother's stores could not pay for the step: the road waits there. */
+    static final int UNPAID = Integer.MIN_VALUE;
+
+    /**
+     * One step of the road: its three-wide surface (or a bridge), cleared above. Returns its height,
+     * or UNPAID if the mother's stores ran short partway (what was paid for stays laid, and the
+     * step is gone over again next time, finishing what is missing).
+     */
     static int step(ServerLevel level, Villages.Village mother, Villages.Village colony, int x, int z, int lastY,
                     boolean alongX, int index) {
         if (inATown(level, x, z)) return lastY;
@@ -204,12 +216,18 @@ public final class Roads {
                 int bx = alongX ? x : x + side, bz = alongX ? z + side : z;
                 BlockPos d = new BlockPos(bx, deck, bz);
                 if (level.getBlockState(d).isAir() || level.getBlockState(d).canBeReplaced()) {
+                    // A plank of the deck out of the stores (sawn from their logs if need be).
+                    if (!Crafts.usePlanks(level, mother, 1)) return UNPAID;
                     level.setBlock(d, Blocks.SPRUCE_PLANKS.defaultBlockState(), 2);
                 }
-                clearAbove(level, d, 3);
+                clearAbove(level, mother, d, 3);
                 if (Math.abs(side) == 2 && level.getBlockState(d.above()).isAir()) {
+                    if (!Crafts.fence(level, mother)) return UNPAID;
                     level.setBlock(d.above(), Blocks.SPRUCE_FENCE.defaultBlockState(), 3);
-                    if (index % 8 == 0 && level.getBlockState(d.above(2)).isAir()) level.setBlock(d.above(2), Blocks.LANTERN.defaultBlockState(), 3);
+                    // A lantern on the rail if the stores can spare one; the bridge doesn't wait on it.
+                    if (index % 8 == 0 && level.getBlockState(d.above(2)).isAir() && Crafts.lantern(level, mother)) {
+                        level.setBlock(d.above(2), Blocks.LANTERN.defaultBlockState(), 3);
+                    }
                 }
             }
             return deck;
@@ -217,25 +235,50 @@ public final class Roads {
         // Keep to the land, a block up or down a step at most: banked up over a dip, cut through a bump.
         int want = Math.max(lastY - 1, Math.min(lastY + 1, g.y));
         if (Math.abs(g.y - want) > 4) want = g.y;
-        for (int[] c : brush(x, z)) {
-            Ground here = c[0] == x && c[1] == z ? g : ground(level, c[0], c[1]);
-            if (here == null || here.water) continue;
-            BlockPos top = new BlockPos(c[0], want, c[1]);
-            if (here.y < want) {
-                for (int y = here.y + 1; y < want; y++) level.setBlock(new BlockPos(c[0], y, c[1]), Blocks.COBBLESTONE.defaultBlockState(), 2);
-            } else if (here.y > want) {
-                for (int y = want + 1; y <= here.y; y++) level.setBlock(new BlockPos(c[0], y, c[1]), Blocks.AIR.defaultBlockState(), 2);
+        int dirt = 0, cobble = 0;
+        try {
+            for (int[] c : brush(x, z)) {
+                Ground here = c[0] == x && c[1] == z ? g : ground(level, c[0], c[1]);
+                if (here == null || here.water) continue;
+                BlockPos top = new BlockPos(c[0], want, c[1]);
+                if (here.y < want) {
+                    // Banked up with the stores' cobblestone, and a spadeful of their earth on top
+                    // to wear into the path: the ground that was there is free, made ground is not.
+                    int fill = want - 1 - here.y;
+                    if (fill > 0 && !TownWork.take(level, mother, s -> s.is(net.minecraft.world.item.Items.COBBLESTONE), fill)) return UNPAID;
+                    for (int y = here.y + 1; y < want; y++) {
+                        BlockPos f = new BlockPos(c[0], y, c[1]);
+                        salvage(level, mother, level.getBlockState(f));
+                        level.setBlock(f, Blocks.COBBLESTONE.defaultBlockState(), 2);
+                    }
+                    if (!TownWork.take(level, mother, Roads::earth, 1)) return UNPAID;
+                    salvage(level, mother, level.getBlockState(top));
+                } else if (here.y > want) {
+                    // Cut through: the earth and stone dug out go home to the stores.
+                    for (int y = want + 1; y <= here.y; y++) {
+                        BlockPos f = new BlockPos(c[0], y, c[1]);
+                        BlockState cut = level.getBlockState(f);
+                        if (dug(cut)) dirt++;
+                        else if (cut.is(Blocks.STONE) || cut.is(Blocks.COBBLESTONE)) cobble++;
+                        level.setBlock(f, Blocks.AIR.defaultBlockState(), 2);
+                    }
+                }
+                level.setBlock(top, Blocks.DIRT_PATH.defaultBlockState(), 2);
+                clearAbove(level, mother, top, 3);
             }
-            level.setBlock(top, Blocks.DIRT_PATH.defaultBlockState(), 2);
-            clearAbove(level, top, 3);
+        } finally {
+            Crafts.giveBack(level, mother, net.minecraft.world.item.Items.DIRT, dirt);
+            Crafts.giveBack(level, mother, net.minecraft.world.item.Items.COBBLESTONE, cobble);
         }
-        // A lamp now and then, beside the road, out in the wilds.
+        // A lamp now and then, beside the road, out in the wilds: two lengths of fence and a
+        // lantern out of the mother's stores, or no lamp there (the road doesn't wait on it).
         if (index % LAMP_EVERY == LAMP_EVERY / 2) {
             int lx = alongX ? x : x + 2, lz = alongX ? z + 2 : z;
             Ground lg = ground(level, lx, lz);
             if (lg != null && !lg.water && Math.abs(lg.y - want) <= 1) {
                 BlockPos post = new BlockPos(lx, lg.y + 1, lz);
-                if (level.getBlockState(post).isAir() && level.getBlockState(post.above()).isAir() && level.getBlockState(post.above(2)).isAir()) {
+                if (level.getBlockState(post).isAir() && level.getBlockState(post.above()).isAir() && level.getBlockState(post.above(2)).isAir()
+                        && lampPost(level, mother)) {
                     level.setBlock(post, Blocks.SPRUCE_FENCE.defaultBlockState(), 3);
                     level.setBlock(post.above(), Blocks.SPRUCE_FENCE.defaultBlockState(), 3);
                     level.setBlock(post.above(2), Blocks.LANTERN.defaultBlockState(), 3);
@@ -243,6 +286,32 @@ public final class Roads {
             }
         }
         return want;
+    }
+
+    /** A lamp post's makings out of the stores: the lantern first (no light, no post), then its two
+     *  lengths of fence; the lantern goes back if the fence can't be had. */
+    private static boolean lampPost(ServerLevel level, Villages.Village v) {
+        if (!Crafts.lantern(level, v)) return false;
+        if (Crafts.take(level, v, s -> s.is(net.minecraft.tags.ItemTags.WOODEN_FENCES), 2) || Crafts.usePlanks(level, v, 4)) return true;
+        Crafts.store(level, v, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.LANTERN));
+        return false;
+    }
+
+    /** Earth from the stores, for made ground. */
+    private static boolean earth(net.minecraft.world.item.ItemStack s) {
+        return s.is(net.minecraft.world.item.Items.DIRT) || s.is(net.minecraft.world.item.Items.COARSE_DIRT)
+            || s.is(net.minecraft.world.item.Items.GRASS_BLOCK) || s.is(net.minecraft.world.item.Items.ROOTED_DIRT);
+    }
+
+    /** Ground that digs out as earth. */
+    private static boolean dug(BlockState st) {
+        return st.is(Blocks.DIRT) || st.is(Blocks.GRASS_BLOCK) || st.is(Blocks.COARSE_DIRT) || st.is(Blocks.PODZOL)
+            || st.is(Blocks.MYCELIUM) || st.is(Blocks.ROOTED_DIRT) || st.is(Blocks.DIRT_PATH);
+    }
+
+    /** A log in the road's way is the stores' timber, not rubbish: home it goes. */
+    private static void salvage(ServerLevel level, Villages.Village v, BlockState st) {
+        if (st.is(BlockTags.LOGS)) Crafts.giveBack(level, v, st.getBlock().asItem(), 1);
     }
 
     /** The road's width: the step and the four round it. */
@@ -273,14 +342,16 @@ public final class Roads {
         return null;
     }
 
-    /** Trees, plants and snow off the road, up to a man's height and a bit. */
-    private static void clearAbove(ServerLevel level, BlockPos top, int high) {
+    /** Trees, plants and snow off the road, up to a man's height and a bit. The logs go into the
+     *  mother's stores. */
+    private static void clearAbove(ServerLevel level, Villages.Village v, BlockPos top, int high) {
         for (int h = 1; h <= high; h++) {
             BlockPos p = top.above(h);
             BlockState st = level.getBlockState(p);
             if (st.isAir()) continue;
             if (st.is(BlockTags.LOGS) || st.is(BlockTags.LEAVES) || (st.canBeReplaced() && st.getFluidState().isEmpty())
                     || st.is(Blocks.SNOW) || st.is(Blocks.BAMBOO) || st.is(BlockTags.FLOWERS)) {
+                salvage(level, v, st);
                 level.setBlock(p, Blocks.AIR.defaultBlockState(), 2);
             }
         }
@@ -298,6 +369,12 @@ public final class Roads {
         if (g == null || g.water) return;
         BlockPos post = new BlockPos(px, g.y + 1, pz);
         if (!level.getBlockState(post).isAir() || !level.getBlockState(post.above()).isAir()) return;
+        // The post and its sign out of the mother's stores (the road is her people's work), or none.
+        if (!Crafts.sign(level, mother)) return;
+        if (!Crafts.fence(level, mother)) {
+            Crafts.store(level, mother, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_SIGN));
+            return;
+        }
         level.setBlock(post, Blocks.SPRUCE_FENCE.defaultBlockState(), 3);
         Direction out = Direction.getNearest((double) dx, 0.0, (double) dz);
         if (out.getAxis() == Direction.Axis.Y) out = Direction.NORTH;

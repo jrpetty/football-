@@ -43,6 +43,8 @@ public final class Land {
     public static final int MOST = 6;
     /** Cells looked at, and changes made, per village per pass. */
     static final int LOOK = 220, CHANGES = 10;
+    /** How much of the earth cut from the town's knolls is kept in the stores for its hollows. */
+    private static final int KEEP_EARTH = 256;
 
     // ------------------------------------------------------------------ where to found
 
@@ -201,6 +203,7 @@ public final class Land {
                 default -> { }
             }
         }
+        boolean noEarth = false;                                  // the stores ran out of earth this pass
         for (int i = 0; i < look && done < changes; i++) {
             int c = (cursor + i) % cells;
             int x = v.centre().getX() - r + c % side, z = v.centre().getZ() - r + c / side;
@@ -208,7 +211,9 @@ public final class Land {
             boolean worked = false;
             for (int[] zn : zones) if (Math.abs(x - zn[0]) <= zn[2] && Math.abs(z - zn[1]) <= zn[2]) { worked = true; break; }
             if (worked) continue;
-            done += cell(level, v, x, z, target);
+            int got = cell(level, v, x, z, target, noEarth);
+            if (got < 0) noEarth = true;
+            else done += got;
         }
         int next = (cursor + look) % cells;
         // A full sweep with nothing left to do: say so once.
@@ -226,8 +231,9 @@ public final class Land {
         return done;
     }
 
-    /** One column: a block cut off the top, or a block of earth laid on it. Returns blocks changed. */
-    static int cell(ServerLevel level, Villages.Village v, int x, int z, int target) {
+    /** One column: a block cut off the top, or a block of earth laid on it. Returns blocks changed,
+     *  or -1 if it wanted filling and the stores had no earth to fill it with. */
+    static int cell(ServerLevel level, Villages.Village v, int x, int z, int target, boolean noEarth) {
         BlockPos top = surface(level, x, z);
         if (top == null) return 0;
         BlockPos ground = top.below();
@@ -251,11 +257,23 @@ public final class Land {
             if (g.is(BlockTags.BASE_STONE_OVERWORLD) || g.is(Blocks.COBBLESTONE)) {
                 ItemStack spoil = Market.intoStores(level, v.id(), new ItemStack(Items.COBBLESTONE));
                 if (!spoil.isEmpty()) { /* the stores are full: the rubble is carted off */ }
+            } else if (dirt(g) || g.is(Blocks.SAND) || g.is(Blocks.RED_SAND) || g.is(Blocks.GRAVEL)) {
+                // The earth cut off a knoll goes into the stores too: it is what fills the hollows.
+                // A few stacks of it are kept; past that it is carted off, not given chests of its own.
+                net.minecraft.world.item.Item dug = dirt(g) ? Items.DIRT : g.getBlock().asItem();
+                if (Market.stock(level, v.id(), s -> s.is(dug)) < KEEP_EARTH) {
+                    ItemStack spoil = Market.intoStores(level, v.id(), new ItemStack(dug));
+                    if (!spoil.isEmpty()) { /* the stores are full: the earth is carted off */ }
+                }
             }
             dust(level, ground, g);
             return 1;
         }
-        // Fill: earth on top, the old top buried.
+        // Fill: earth on top, the old top buried. The earth comes out of the stores now (the
+        // cuts' earth, mostly), a block a fill, and no earth, no fill.
+        if (noEarth) return 0;
+        if (!TownWork.take(level, v, s -> s.is(Items.DIRT) || s.is(Items.COARSE_DIRT) || s.is(Items.GRASS_BLOCK)
+                || s.is(Items.ROOTED_DIRT), 1)) return -1;
         if (!above.isAir()) level.setBlock(top, Blocks.AIR.defaultBlockState(), 3);
         if (g.is(Blocks.GRASS_BLOCK)) level.setBlock(ground, Blocks.DIRT.defaultBlockState(), 3);
         level.setBlock(top, Blocks.GRASS_BLOCK.defaultBlockState(), 3);
@@ -269,6 +287,12 @@ public final class Land {
         if (level.getRandom().nextInt(4) == 0) {
             level.playSound(null, at, SoundEvents.GRAVEL_BREAK, SoundSource.BLOCKS, 0.4F, 0.9F + level.getRandom().nextFloat() * 0.2F);
         }
+    }
+
+    /** Earth that digs out as dirt. */
+    private static boolean dirt(BlockState s) {
+        return s.is(Blocks.GRASS_BLOCK) || s.is(Blocks.DIRT) || s.is(Blocks.COARSE_DIRT) || s.is(Blocks.PODZOL)
+            || s.is(Blocks.ROOTED_DIRT) || s.is(Blocks.MYCELIUM);
     }
 
     /** What may be dug or built up: plain earth, sand, gravel and stone. */

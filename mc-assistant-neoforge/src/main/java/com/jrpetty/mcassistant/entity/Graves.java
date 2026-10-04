@@ -48,6 +48,8 @@ public final class Graves {
     public static int tend(ServerLevel level, UUID village) {
         List<Ledger.Grave> dead = Ledger.graves(village);
         if (dead.isEmpty()) return 0;
+        Villages.Village v = Villages.get(village);
+        if (v == null) return 0;                                         // nobody's stores to make them of
         int put = 0, i = 0;
         for (Ledger.Building b : Ledger.buildings(village)) {
             if (!b.structure().equals("graveyard") || !level.isLoaded(b.anchor())) {
@@ -60,19 +62,29 @@ public final class Graves {
                 Ledger.Grave g = dead.get(i++);
                 BlockPos mound = b.anchor().relative(right, plot[0]).relative(back, plot[1]);
                 BlockPos stone = mound.relative(back);
-                if (headstone(level, stone, mound, front, g)) put++;
+                if (headstone(level, v, stone, mound, front, g, false)) put++;
             }
         }
-        memorial(level, village, dead);
+        memorial(level, v, dead);
         return put;
     }
 
-    /** One grave: the stone, the mound, the words on the stone. */
+    /** One grave, for nothing (the showcase): the stone, the mound, the words on the stone. */
     public static boolean headstone(ServerLevel level, BlockPos stone, BlockPos mound, Direction front, Ledger.Grave g) {
+        return headstone(level, null, stone, mound, front, g, true);
+    }
+
+    /** One grave: the stone, the mound, the words on the stone. The stone (a block of stone bricks or
+     *  cobble) and the sign (a sign, or two planks) come out of the village's stores now, unless
+     *  {@code free}; what they can't pay for waits till they can. */
+    static boolean headstone(ServerLevel level, @javax.annotation.Nullable Villages.Village v, BlockPos stone, BlockPos mound,
+                             Direction front, Ledger.Grave g, boolean free) {
+        if (!free && v == null) return false;
         boolean fresh = false;
         BlockState at = level.getBlockState(stone);
         if (!at.is(Blocks.CHISELED_STONE_BRICKS)) {
             if (!at.isAir() && !at.canBeReplaced()) return false;
+            if (!free && !Crafts.masonry(level, v)) return false;
             level.setBlock(stone, Blocks.CHISELED_STONE_BRICKS.defaultBlockState(), 3);
             BlockState earth = level.getBlockState(mound.below());
             if (earth.is(Blocks.GRASS_BLOCK) || earth.is(Blocks.DIRT)) level.setBlock(mound.below(), Blocks.COARSE_DIRT.defaultBlockState(), 3);
@@ -81,6 +93,7 @@ public final class Graves {
         BlockState sign = level.getBlockState(mound);
         if (!(sign.getBlock() instanceof WallSignBlock)) {
             if (!sign.isAir() && !sign.canBeReplaced()) return fresh;
+            if (!free && !Crafts.sign(level, v)) return fresh;
             level.setBlock(mound, Blocks.SPRUCE_WALL_SIGN.defaultBlockState().setValue(WallSignBlock.FACING, front), 3);
         }
         if (level.getBlockEntity(mound) instanceof SignBlockEntity s) {
@@ -94,8 +107,10 @@ public final class Graves {
     /** A place for a memorial board: where it hangs and which way it faces. */
     record Board(BlockPos at, Direction facing) {}
 
-    /** "In loving memory": boards along the inside of the chapel's nave, three names to a board. */
-    static void memorial(ServerLevel level, UUID village, List<Ledger.Grave> dead) {
+    /** "In loving memory": boards along the inside of the chapel's nave, three names to a board.
+     *  Each board is a sign out of the stores (or two planks); none till they have one. */
+    static void memorial(ServerLevel level, Villages.Village v, List<Ledger.Grave> dead) {
+        UUID village = v.id();
         Ledger.Building chapel = null;
         for (Ledger.Building b : Ledger.buildings(village)) if (b.structure().equals("chapel")) { chapel = b; break; }
         if (chapel == null || !level.isLoaded(chapel.anchor())) return;
@@ -107,6 +122,7 @@ public final class Graves {
                 if (!s.isAir()) continue;
                 BlockState board = Blocks.DARK_OAK_WALL_SIGN.defaultBlockState().setValue(WallSignBlock.FACING, spot.facing());
                 if (!board.canSurvive(level, spot.at())) continue;
+                if (!Crafts.sign(level, v)) return;
                 level.setBlock(spot.at(), board, 3);
             }
             String[] lines = { "In loving memory", "", "", "" };

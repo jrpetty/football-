@@ -302,21 +302,47 @@ public class NetherGoal extends Goal {
         cross(Level.OVERWORLD, back);
     }
 
-    /** Place a small platform + clear headroom so we don't spawn in lava/rock. */
+    /** Place a small platform + clear headroom so we don't spawn in lava/rock. The platform is
+     *  laid out of the assistant's own pack (cobblestone, netherrack, any plain building block),
+     *  not conjured: a cell it has nothing for is left as it is. */
     private void ensureFooting() {
         BlockPos feet = assistant.blockPosition();
-        BlockState solid = Blocks.OBSIDIAN.defaultBlockState();
-        for (int dx = -1; dx <= 1; dx++) {
-            for (int dz = -1; dz <= 1; dz++) {
-                BlockPos below = feet.offset(dx, -1, dz);
-                if (assistant.level().getBlockState(below).isAir()
-                    || !assistant.level().getFluidState(below).isEmpty()) {
-                    assistant.level().setBlockAndUpdate(below, solid);
-                }
+        for (int[] c : PAD) {
+            BlockPos below = feet.offset(c[0], -1, c[1]);
+            if (assistant.level().getBlockState(below).isAir()
+                || !assistant.level().getFluidState(below).isEmpty()) {
+                BlockState solid = footingFromPack();
+                if (solid == null) break;
+                assistant.level().setBlockAndUpdate(below, solid);
             }
         }
         assistant.level().setBlockAndUpdate(feet, Blocks.AIR.defaultBlockState());
         assistant.level().setBlockAndUpdate(feet.above(), Blocks.AIR.defaultBlockState());
+    }
+
+    /** The cells of a three-by-three pad, the middle first (the one stood on matters most). */
+    private static final int[][] PAD = { { 0, 0 }, { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 }, { 1, 1 }, { 1, -1 }, { -1, 1 }, { -1, -1 } };
+
+    /** One plain building block out of the assistant's pack, the commonest sorts first, or null if
+     *  it carries none. Never obsidian (that is the portal's), nothing with a use of its own. */
+    @Nullable
+    private BlockState footingFromPack() {
+        for (int pass = 0; pass < 2; pass++) {
+            for (ItemStack s : assistant.getInventoryItems()) {
+                if (s.isEmpty() || !(s.getItem() instanceof net.minecraft.world.item.BlockItem bi)) continue;
+                BlockState st = bi.getBlock().defaultBlockState();
+                boolean rough = st.is(Blocks.COBBLESTONE) || st.is(Blocks.NETHERRACK) || st.is(Blocks.COBBLED_DEEPSLATE)
+                    || st.is(Blocks.DIRT);
+                boolean plain = rough || st.is(net.minecraft.tags.BlockTags.BASE_STONE_OVERWORLD)
+                    || st.is(net.minecraft.tags.BlockTags.BASE_STONE_NETHER) || st.is(net.minecraft.tags.BlockTags.PLANKS)
+                    || st.is(Blocks.STONE_BRICKS) || st.is(Blocks.BRICKS) || st.is(Blocks.MOSSY_COBBLESTONE)
+                    || st.is(Blocks.SANDSTONE) || st.is(Blocks.END_STONE);
+                if (pass == 0 ? !rough : !plain) continue;
+                net.minecraft.world.item.Item item = s.getItem();
+                if (assistant.removeMatching(x -> x.is(item), 1) == 1) return st;
+            }
+        }
+        return null;
     }
 
     // -------------------------------- shared ----------------------------------
@@ -351,13 +377,17 @@ public class NetherGoal extends Goal {
                 return p;
             }
         }
-        // Nothing safe — lay a pad.
+        // Nothing safe — lay a pad, out of the assistant's own pack: where there is ground already
+        // it stands on that, and a cell it has nothing for is left.
         int y = dest.dimension() == Level.NETHER ? 64 : Math.max(bottom, Math.min(top, hint.getY()));
         BlockPos pad = new BlockPos(x, y, z);
-        for (int dx = -1; dx <= 1; dx++) {
-            for (int dz = -1; dz <= 1; dz++) {
-                dest.setBlockAndUpdate(pad.offset(dx, -1, dz), Blocks.OBSIDIAN.defaultBlockState());
-            }
+        for (int[] c : PAD) {
+            BlockPos cell = pad.offset(c[0], -1, c[1]);
+            BlockState there = dest.getBlockState(cell);
+            if (!there.isAir() && dest.getFluidState(cell).isEmpty() && !there.canBeReplaced()) continue;
+            BlockState solid = footingFromPack();
+            if (solid == null) break;
+            dest.setBlockAndUpdate(cell, solid);
         }
         dest.setBlockAndUpdate(pad, Blocks.AIR.defaultBlockState());
         dest.setBlockAndUpdate(pad.above(), Blocks.AIR.defaultBlockState());

@@ -32,10 +32,11 @@ import java.util.concurrent.ConcurrentHashMap;
  *     footings.</li>
  * <li><b>A second storey</b> (from the Iron Age), one house at a time, oldest first: the old
  *     roof comes off, a floor of bedrooms goes on (two more beds, a ladder up), and a new
- *     slate roof over it, with the chimney carried up. It wants planks out of the stores
- *     before it starts.</li>
+ *     slate roof over it, with the chimney carried up. It wants all its makings out of the
+ *     stores before it starts.</li>
  * </ul>
- * The village's builders do it a few blocks at a time, as town work.
+ * The village's builders do it a few blocks at a time, as town work, and out of the village's
+ * stores: nothing goes in that the stores did not pay for, and what comes out goes back in.
  */
 public final class Grow {
 
@@ -153,12 +154,12 @@ public final class Grow {
         int done = 0;
         for (Ledger.Building b : Ledger.buildings(id)) {
             if (!b.structure().equals("house") || !Land.areaLoaded(level, b.anchor(), 7)) continue;
-            done += garden(level, id, b);
+            done += garden(level, v, b, false);
             if (done >= budget) break;
-            done += reface(level, b, age, budget - done, Ledger.grown(id, b.anchor()));
+            done += reface(level, v, b, age, budget - done, Ledger.grown(id, b.anchor()), false);
             if (done >= budget) break;
             if (age.ordinal() >= Villages.Age.IRON.ordinal() && !Ledger.grown(id, b.anchor())) {
-                done += storey(level, v, b, budget - done, palette(age));
+                done += storey(level, v, b, budget - done, palette(age), false);
                 break;                                                   // one house at a time
             }
         }
@@ -167,23 +168,34 @@ public final class Grow {
 
     // ------------------------------------------------------------------ the garden
 
-    /** A fence round the plot with a gate to the street, and flowers by the path. Once a house. */
-    public static int garden(ServerLevel level, UUID village, Ledger.Building b) {
-        if (!GARDENED.computeIfAbsent(village, k -> ConcurrentHashMap.newKeySet()).add(b.anchor().asLong())) return 0;
+    /**
+     * A fence round the plot with a gate to the street, and flowers by the path. Once a house. Out
+     * of the village's stores now (for nothing only in the showcase): a length of fence or two
+     * planks a post, a gate or four planks, and only flowers the stores hold. It goes up as far
+     * as they pay, and the house is looked at again another visit for the rest.
+     */
+    public static int garden(ServerLevel level, Villages.Village v, Ledger.Building b, boolean free) {
+        UUID village = v.id();
+        Set<Long> gardened = GARDENED.computeIfAbsent(village, k -> ConcurrentHashMap.newKeySet());
+        if (!gardened.add(b.anchor().asLong())) return 0;
         Direction back = b.facing(), right = back.getClockWise(), front = back.getOpposite();
         int y = b.anchor().getY();
         int n = 0;
+        boolean unpaid = false;
         List<BlockPos> fences = new ArrayList<>();
+        ring:
         for (int a = -5; a <= 5; a++) {
             for (int c = -5; c <= 5; c++) {
                 if (Math.max(Math.abs(a), Math.abs(c)) != 5) continue;
                 BlockPos at = b.anchor().relative(right, a).relative(back, c).atY(y);
                 if (!plot(level, village, b, at)) continue;
                 if (c == -5 && a == 0) {
+                    if (!free && !Crafts.wooden(level, v, Grow::isGate, 4)) { unpaid = true; break ring; }
                     level.setBlock(at, Blocks.OAK_FENCE_GATE.defaultBlockState().setValue(FenceGateBlock.FACING, front), 3);
                 } else if (c == -5 && Math.abs(a) == 1) {
                     continue;                                               // the path to the gate
                 } else {
+                    if (!free && !Crafts.fence(level, v)) { unpaid = true; break ring; }
                     level.setBlock(at, Blocks.OAK_FENCE.defaultBlockState(), 3);
                     fences.add(at);
                 }
@@ -197,13 +209,38 @@ public final class Grow {
         }
         int[][] beds = { { -3, -4 }, { -2, -4 }, { 2, -4 }, { 3, -4 }, { -4, -4 }, { 4, -4 } };
         for (int[] p : beds) {
+            if (unpaid) break;
             BlockPos at = b.anchor().relative(right, p[0]).relative(back, p[1]).atY(y);
             if (!plot(level, village, b, at)) continue;
-            Block flower = FLOWERS[Math.floorMod((int) (at.asLong() * 31), FLOWERS.length)];
-            level.setBlock(at, Math.abs(p[0]) == 4 ? Blocks.FLOWERING_AZALEA.defaultBlockState() : flower.defaultBlockState(), 3);
+            boolean azalea = Math.abs(p[0]) == 4;
+            BlockState plant;
+            if (free) {
+                Block flower = FLOWERS[Math.floorMod((int) (at.asLong() * 31), FLOWERS.length)];
+                plant = azalea ? Blocks.FLOWERING_AZALEA.defaultBlockState() : flower.defaultBlockState();
+            } else {
+                // Planted out of the stores (an azalea at the corners if they have one), or not at all.
+                net.minecraft.world.item.ItemStack one = azalea
+                    ? Crafts.takeOne(level, v, s -> s.is(net.minecraft.world.item.Items.FLOWERING_AZALEA) || s.is(net.minecraft.world.item.Items.AZALEA))
+                    : net.minecraft.world.item.ItemStack.EMPTY;
+                if (one.isEmpty()) one = Crafts.takeOne(level, v, s -> s.is(ItemTags.SMALL_FLOWERS));
+                if (one.isEmpty()) { unpaid = true; break; }
+                Block grows = Block.byItem(one.getItem());
+                if (grows == Blocks.AIR || !grows.defaultBlockState().canSurvive(level, at)) {
+                    Crafts.store(level, v, one);
+                    continue;
+                }
+                plant = grows.defaultBlockState();
+            }
+            level.setBlock(at, plant, 3);
             n++;
         }
+        if (unpaid) gardened.remove(b.anchor().asLong());              // the rest when the stores have it
         return n;
+    }
+
+    /** A fence gate, of any wood. */
+    private static boolean isGate(net.minecraft.world.item.ItemStack s) {
+        return s.getItem() instanceof net.minecraft.world.item.BlockItem bi && bi.getBlock() instanceof FenceGateBlock;
     }
 
     /** Somewhere in a house's plot to plant or fence: open air on plain ground, nobody else's building. */
@@ -228,13 +265,21 @@ public final class Grow {
 
     // ------------------------------------------------------------------ wood, stone, brick
 
-    /** The house's timber walls rebuilt in stone (Stone Age) or brick (Iron Age on). Returns blocks changed. */
-    public static int reface(ServerLevel level, Ledger.Building b, Villages.Age age, int budget, boolean grown) {
+    /**
+     * The house's timber walls rebuilt in stone (Stone Age) or brick (Iron Age on). Returns blocks
+     * changed. Each block of the new wall is paid out of the stores now (a block of stone bricks
+     * or cobblestone for stone; a block of bricks, or four bricks, for brick), unless {@code free},
+     * and what comes out of the wall goes back into them. It stops when they run short.
+     */
+    public static int reface(ServerLevel level, Villages.Village v, Ledger.Building b, Villages.Age age, int budget,
+                             boolean grown, boolean free) {
         Block want = palette(age).walls();
         boolean old = age.ordinal() >= Villages.Age.DIAMOND.ordinal();
         int n = 0;
+        boolean stop = false;
+        Map<net.minecraft.world.item.Item, Integer> back = new HashMap<>();
         for (BuildGoal.Placement p : BuildGoal.plan(grown ? "house2" : "house", b.anchor(), b.facing(), 13)) {
-            if (n >= budget) break;
+            if (n >= budget || stop) break;
             if (p.part() != BuildGoal.Part.BLOCK) continue;
             BlockState now = level.getBlockState(p.pos());
             switch (p.style()) {
@@ -242,8 +287,13 @@ public final class Grow {
                     boolean timber = now.is(BlockTags.PLANKS);
                     boolean stone = now.is(Blocks.STONE_BRICKS) && want == Blocks.BRICKS;
                     if (timber || stone) {
-                        level.setBlock(p.pos(), want.defaultBlockState(), 3);
-                        n++;
+                        if (!free && !wallBlock(level, v, want)) {
+                            stop = true;
+                        } else {
+                            if (!free) back.merge(now.getBlock().asItem(), 1, Integer::sum);
+                            level.setBlock(p.pos(), want.defaultBlockState(), 3);
+                            n++;
+                        }
                     }
                 }
                 case FOUNDATION, WALL_LOW -> {
@@ -255,27 +305,45 @@ public final class Grow {
                 default -> { }
             }
         }
+        for (Map.Entry<net.minecraft.world.item.Item, Integer> e : back.entrySet()) Crafts.giveBack(level, v, e.getKey(), e.getValue());
         return n;
+    }
+
+    /** A block of the new wall out of the stores: brick for brick, else dressed stone or cobble. */
+    private static boolean wallBlock(ServerLevel level, Villages.Village v, Block want) {
+        if (want == Blocks.BRICKS) {
+            return Crafts.take(level, v, s -> s.is(net.minecraft.world.item.Items.BRICKS), 1)
+                || Crafts.take(level, v, s -> s.is(net.minecraft.world.item.Items.BRICK), 4);
+        }
+        return Crafts.masonry(level, v);
     }
 
     // ------------------------------------------------------------------ the second storey
 
-    /** Raise the house a storey: the old roof off, then the new rooms and roof a layer at a time. */
-    public static int storey(ServerLevel level, Villages.Village v, Ledger.Building b, int budget, Showcase.Palette pal) {
+    /**
+     * Raise the house a storey: the old roof off, then the new rooms and roof a layer at a time.
+     * Paid for out of the stores before the roof comes off (unless {@code free}): every block the
+     * new storey will put in, counted, a plank for each wooden one and a block of stone for each of
+     * the rest; no storey till the stores can pay for all of it. The old roof goes into the stores,
+     * and the new bedrooms' beds are left to be furnished out of the stores like any other (furnish).
+     */
+    public static int storey(ServerLevel level, Villages.Village v, Ledger.Building b, int budget, Showcase.Palette pal,
+                             boolean free) {
         UUID id = v.id();
         Set<Long> started = STARTED.computeIfAbsent(id, k -> ConcurrentHashMap.newKeySet());
+        List<BuildGoal.Placement> was = BuildGoal.plan("house", b.anchor(), b.facing(), 13);
+        List<BuildGoal.Placement> will = BuildGoal.plan("house2", b.anchor(), b.facing(), 13);
         if (!started.contains(b.anchor().asLong()) && !Ledger.raising(id, b.anchor())) {
-            // The timber for it, out of the stores, before the roof comes off.
-            if (!TownWork.take(level, v, s -> s.is(ItemTags.PLANKS), 32)
-                    && !TownWork.take(level, v, s -> s.is(ItemTags.LOGS), 8)) return 0;
+            // The makings for all of it, out of the stores, before the roof comes off.
+            if (!free && !payForStorey(level, v, b, was, will, Showcase.painter(pal))) return 0;
             started.add(b.anchor().asLong());
             Villages.tell(id, level.getDayTime() / 24000L, "the builders began a second storey on the house at "
                 + b.anchor().getX() + ", " + b.anchor().getZ());
         }
-        List<BuildGoal.Placement> was = BuildGoal.plan("house", b.anchor(), b.facing(), 13);
-        List<BuildGoal.Placement> will = BuildGoal.plan("house2", b.anchor(), b.facing(), 13);
         Map<BlockPos, BuildGoal.Placement> next = new HashMap<>();
         for (BuildGoal.Placement p : will) next.put(p.pos(), p);
+        // What comes down to make way, for the stores.
+        Map<net.minecraft.world.item.Item, Integer> back = new HashMap<>();
         // The old roof off, from the top down (once: after that, what stands there is the new storey).
         List<BuildGoal.Placement> off = new ArrayList<>();
         boolean stripped = Ledger.raising(id, b.anchor());
@@ -301,6 +369,7 @@ public final class Grow {
                     }
                 }
             }
+            if (!free) back.merge(there.getBlock().asItem(), 1, Integer::sum);
             level.setBlock(q.pos(), Blocks.AIR.defaultBlockState(), 2 | 16);
         }
         if (off.isEmpty() && !stripped) Ledger.raising(id, b.anchor(), true);
@@ -309,17 +378,21 @@ public final class Grow {
             int n = 0;
             for (BuildGoal.Placement p : off) {
                 if (n >= budget) break;
+                if (!free) back.merge(level.getBlockState(p.pos()).getBlock().asItem(), 1, Integer::sum);
                 level.setBlock(p.pos(), Blocks.AIR.defaultBlockState(), 2 | 16);
                 n++;
             }
+            for (Map.Entry<net.minecraft.world.item.Item, Integer> e : back.entrySet()) Crafts.giveBack(level, v, e.getKey(), e.getValue());
             return n;
         }
+        for (Map.Entry<net.minecraft.world.item.Item, Integer> e : back.entrySet()) Crafts.giveBack(level, v, e.getKey(), e.getValue());
         // The new storey, a layer at a time from the bottom. A layer tried three times is done with:
         // whatever would not go in (something in the way) must not hold up the roof.
         int lowest = Integer.MAX_VALUE;
         Set<BlockPos> missing = new HashSet<>();
         for (BuildGoal.Placement p : will) {
             if (p.part() == BuildGoal.Part.CLEAR) continue;
+            if (!free && p.part() == BuildGoal.Part.BED) continue;               // furnished out of the stores later
             BlockState now = level.getBlockState(p.pos());
             if (!now.isAir() && !(now.canBeReplaced() && now.getFluidState().isEmpty())) continue;
             if (TRIED.getOrDefault(b.anchor().asLong() + ":" + p.pos().getY(), 0) >= 3) continue;
@@ -343,13 +416,58 @@ public final class Grow {
             p -> now.contains(p.pos()));
     }
 
-    /** Grow a house all at once (the showcase, tests): garden, walls and storey for this age. */
+    /**
+     * What a second storey will put in, counted against the stores and paid for all at once: a
+     * plank for each wooden block (the floor, the beams, the ladder; the stores' logs are sawn if
+     * they are short of planks) and a block of stone (cobble, stone bricks or bricks) for each of
+     * the rest (the walls, the roof, the chimney, the glass). The beds are not counted: they come
+     * out of the stores as any house's do. Nothing is taken unless all of it can be.
+     */
+    private static boolean payForStorey(ServerLevel level, Villages.Village v, Ledger.Building b,
+                                        List<BuildGoal.Placement> was, List<BuildGoal.Placement> will,
+                                        java.util.function.Function<BuildGoal.Placement, BlockState> paint) {
+        Map<BlockPos, BuildGoal.Placement> before = new HashMap<>();
+        for (BuildGoal.Placement p : was) before.put(p.pos(), p);
+        int top = b.anchor().getY() + 3;
+        int wood = 0, stone = 0;
+        for (BuildGoal.Placement p : will) {
+            if (p.part() == BuildGoal.Part.CLEAR || p.part() == BuildGoal.Part.BED) continue;
+            BlockState now = level.getBlockState(p.pos());
+            boolean open = now.isAir() || (now.canBeReplaced() && now.getFluidState().isEmpty());
+            if (!open) {
+                // Standing now, but coming off with the old roof (or, the ladder's foot, out of the
+                // way below): it goes back in new.
+                BuildGoal.Placement q = before.get(p.pos());
+                boolean comesOff = p.pos().getY() >= top && q != null && q.part() != BuildGoal.Part.CLEAR
+                    && !(q.part() == p.part() && q.style() == p.style());
+                boolean ladderFoot = p.part() == BuildGoal.Part.LADDER && p.pos().getY() < top && !now.is(Blocks.LADDER);
+                if (!comesOff && !ladderFoot) continue;
+            }
+            BlockState st = paint.apply(p);
+            if (st == null) continue;
+            if (st.is(BlockTags.MINEABLE_WITH_AXE)) wood++;
+            else stone++;
+        }
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> stoneWork = s -> s.is(net.minecraft.world.item.Items.COBBLESTONE)
+            || s.is(net.minecraft.world.item.Items.STONE_BRICKS) || s.is(net.minecraft.world.item.Items.BRICKS)
+            || s.is(net.minecraft.world.item.Items.COBBLED_DEEPSLATE);
+        if (Crafts.stock(level, v, stoneWork) < stone) return false;
+        if (Crafts.stock(level, v, s -> s.is(ItemTags.PLANKS)) + 4 * Crafts.stock(level, v, s -> s.is(ItemTags.LOGS)) < wood) return false;
+        if (!Crafts.take(level, v, stoneWork, stone)) return false;
+        if (!Crafts.usePlanks(level, v, wood)) {
+            Crafts.giveBack(level, v, net.minecraft.world.item.Items.COBBLESTONE, stone);
+            return false;
+        }
+        return true;
+    }
+
+    /** Grow a house all at once (the showcase, tests): garden, walls and storey for this age, for nothing. */
     public static void now(ServerLevel level, Villages.Village v, Ledger.Building b, Villages.Age age) {
-        garden(level, v.id(), b);
+        garden(level, v, b, true);
         if (age.ordinal() >= Villages.Age.IRON.ordinal()) {
             STARTED.computeIfAbsent(v.id(), k -> ConcurrentHashMap.newKeySet()).add(b.anchor().asLong());
-            for (int i = 0; i < 40 && !Ledger.grown(v.id(), b.anchor()); i++) storey(level, v, b, 400, palette(age));
+            for (int i = 0; i < 40 && !Ledger.grown(v.id(), b.anchor()); i++) storey(level, v, b, 400, palette(age), true);
         }
-        reface(level, b, age, 1000, Ledger.grown(v.id(), b.anchor()));
+        reface(level, v, b, age, 1000, Ledger.grown(v.id(), b.anchor()), true);
     }
 }

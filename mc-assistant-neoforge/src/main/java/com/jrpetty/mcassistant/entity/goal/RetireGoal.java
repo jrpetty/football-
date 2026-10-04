@@ -23,6 +23,8 @@ import java.util.EnumSet;
  */
 public class RetireGoal extends Goal {
 
+    private static final org.slf4j.Logger LOG = com.mojang.logging.LogUtils.getLogger();
+
     private final AssistantEntity assistant;
     @Nullable private Job job;
     @Nullable private BlockPos chest;
@@ -97,6 +99,8 @@ public class RetireGoal extends Goal {
         }
         BlockEntity be = assistant.level().getBlockEntity(chest);
         if (!(be instanceof Container c) || !com.jrpetty.mcassistant.entity.Retiring.retirable(assistant.level(), chest, be)) {
+            LOG.info("[MCA-RETIRE] {} found no old chest of the village's at {} ({})", assistant.getName().getString(),
+                chest.toShortString(), assistant.level().getBlockState(chest));
             finish(null);
             return;
         }
@@ -115,6 +119,8 @@ public class RetireGoal extends Goal {
         }
         c.setChanged();
         assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+        LOG.info("[MCA-RETIRE] {} emptied the old chest at {}{}", assistant.getName().getString(), chest.toShortString(),
+            c.isEmpty() ? "" : " (pack full, some left)");
         if (!c.isEmpty()) {
             finish("My pack's full — I'll be back for the rest of that old chest.");
             return;

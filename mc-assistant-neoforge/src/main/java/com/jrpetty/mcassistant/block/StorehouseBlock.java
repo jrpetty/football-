@@ -52,6 +52,8 @@ public class StorehouseBlock extends Block implements EntityBlock {
     public static final IntegerProperty PY = IntegerProperty.create("py", 0, 2);
     public static final IntegerProperty PZ = IntegerProperty.create("pz", 0, 2);
 
+    private static final org.slf4j.Logger LOG = com.mojang.logging.LogUtils.getLogger();
+
     /** Which way a builder wants the store it is finishing to face (BuildGoal sets it). */
     private static final ThreadLocal<Direction> FRONT_HINT = new ThreadLocal<>();
     /** The cube's own joining and parting: not a unit placed or taken out. */
@@ -263,13 +265,25 @@ public class StorehouseBlock extends Block implements EntityBlock {
         if (!level.isClientSide && !state.is(newState.getBlock()) && !CHANGING.get()) {
             try {
                 ItemStack drop = new ItemStack(McAssistantMod.STOREHOUSE_ITEM.get());
+                boolean goods = false;
                 if (level.getBlockEntity(pos) instanceof StorehouseBlockEntity held && held.hasGoods()) {
+                    goods = true;
                     if (!held.packInto(drop, level.registryAccess())) {
                         net.minecraft.world.Containers.dropContents(level, pos, held);   // too much for one unit to carry
                     }
                     held.clearContent();
                 }
-                if (!NO_DROP.get()) popResource(level, pos, drop);
+                // Dropped straight into the world: a unit carrying a store's goods is never lost to
+                // a rule about block drops, and a plain one follows the rule as any block does.
+                if (!NO_DROP.get() && (goods || level.getGameRules().getBoolean(net.minecraft.world.level.GameRules.RULE_DOBLOCKDROPS))) {
+                    net.minecraft.world.entity.item.ItemEntity item = new net.minecraft.world.entity.item.ItemEntity(level,
+                        pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, drop);
+                    item.setDefaultPickUpDelay();
+                    level.addFreshEntity(item);
+                }
+                LOG.info("[MCA-STORE] a unit at {} came out ({}{})", pos.toShortString(),
+                    goods ? StorehouseBlockEntity.stacksCarried(drop) + " stacks carried" : "no goods",
+                    NO_DROP.get() ? ", nothing dropped" : "");
             } finally {
                 NO_DROP.set(Boolean.FALSE);
             }

@@ -6,13 +6,19 @@ import com.jrpetty.mcassistant.entity.ZoneChests;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.TicketType;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 
 /**
  * A village that has grown sends people out to found another.
@@ -163,9 +169,13 @@ public final class Colonies {
             LAST.put(id, now - INTERVAL + 6000L);
             return false;
         }
+        boolean founding = Villages.nearest(level, ground, Villages.VILLAGE_RANGE * 2) == null;
         int stood = VillageFolkSpawnerBlock.raiseParty(level, ground, 0.0F, party());
         LAST.put(id, now);
         if (stood == 0) return false;
+        // The new village's founding stores and the beds of its camp are the mother's to give, not
+        // something from nothing: what she could spare goes, and only that.
+        if (founding) outfit(level, mother, ground);
         Villages.noteColony(id);
         long day = level.getDayTime() / 24000L;
         Villages.Village colony = Villages.nearest(level, ground, 40);
@@ -185,6 +195,134 @@ public final class Colonies {
         com.mojang.logging.LogUtils.getLogger().info("[MCA-COLONY] {} folk from {} founded a village at {}",
             stood, mother.centre(), ground);
         return true;
+    }
+
+    /**
+     * Square a new colony's start with its mother's stores. Its founding chest (left where the
+     * first settler stood) is emptied, and each thing that was in it is taken out of the mother's
+     * stores instead, as much of it as she has (any planks for planks, any sapling for saplings),
+     * and those go in. Then its camp: a bed for each that the mother can give (a bed put by, or
+     * three wool and three planks), and the rest of the camp's beds are struck.
+     */
+    private static void outfit(ServerLevel level, Villages.Village mother, BlockPos at) {
+        if (level.getBlockEntity(at) instanceof net.minecraft.world.Container chest) {
+            List<ItemStack> sent = new ArrayList<>();
+            for (int i = 0; i < chest.getContainerSize(); i++) {
+                ItemStack want = chest.getItem(i);
+                if (want.isEmpty()) continue;
+                chest.setItem(i, ItemStack.EMPTY);
+                for (ItemStack got : take(level, mother, like(want), want.getCount(), false)) merge(sent, got);
+            }
+            int slot = 0;
+            for (ItemStack st : sent) {
+                while (slot < chest.getContainerSize() && !chest.getItem(slot).isEmpty()) slot++;
+                if (slot < chest.getContainerSize()) chest.setItem(slot++, st);
+                else net.minecraft.world.level.block.Block.popResource(level, at.above(), st);
+            }
+            chest.setChanged();
+        }
+        // The camp's beds round the stores.
+        List<BlockPos> feet = new ArrayList<>();
+        for (BlockPos p : BlockPos.betweenClosed(at.offset(-4, -2, -4), at.offset(4, 2, 4))) {
+            BlockState st = level.getBlockState(p);
+            if (st.getBlock() instanceof net.minecraft.world.level.block.BedBlock
+                    && st.getValue(net.minecraft.world.level.block.BedBlock.PART) == net.minecraft.world.level.block.state.properties.BedPart.FOOT) {
+                feet.add(p.immutable());
+            }
+        }
+        feet.sort(java.util.Comparator.comparingDouble((BlockPos p) -> p.distSqr(at)).thenComparingLong(BlockPos::asLong));
+        int paid = beds(level, mother, feet.size());
+        for (int i = paid; i < feet.size(); i++) {
+            BlockPos foot = feet.get(i);
+            BlockState st = level.getBlockState(foot);
+            if (!(st.getBlock() instanceof net.minecraft.world.level.block.BedBlock)) continue;
+            BlockPos head = foot.relative(st.getValue(net.minecraft.world.level.block.BedBlock.FACING));
+            level.removeBlock(head, false);
+            level.removeBlock(foot, false);
+        }
+    }
+
+    /** What will do in place of this in a founding kit: any planks for planks, any sapling for a
+     *  sapling, anything else itself. */
+    private static Predicate<ItemStack> like(ItemStack want) {
+        if (want.is(ItemTags.PLANKS)) return s -> s.is(ItemTags.PLANKS);
+        if (want.is(ItemTags.SAPLINGS)) return s -> s.is(ItemTags.SAPLINGS);
+        net.minecraft.world.item.Item item = want.getItem();
+        return s -> s.is(item);
+    }
+
+    private static void merge(List<ItemStack> into, ItemStack st) {
+        for (ItemStack there : into) {
+            if (st.isEmpty()) return;
+            if (!ItemStack.isSameItemSameComponents(there, st) || there.getCount() >= there.getMaxStackSize()) continue;
+            int move = Math.min(st.getCount(), there.getMaxStackSize() - there.getCount());
+            there.grow(move);
+            st.shrink(move);
+        }
+        if (!st.isEmpty()) into.add(st);
+    }
+
+    /** So many beds out of the village's stores, as many as it can give: a bed put by, or three
+     *  wool and three planks (or a log) to make one. Returns how many. */
+    private static int beds(ServerLevel level, Villages.Village v, int n) {
+        int paid = 0;
+        for (int i = 0; i < n; i++) {
+            if (!take(level, v, s -> s.is(ItemTags.BEDS), 1, true).isEmpty()) { paid++; continue; }
+            boolean planks = count(level, v, s -> s.is(ItemTags.PLANKS)) >= 3;
+            if (count(level, v, s -> s.is(ItemTags.WOOL)) < 3 || (!planks && count(level, v, s -> s.is(ItemTags.LOGS)) < 1)) break;
+            if (take(level, v, s -> s.is(ItemTags.WOOL), 3, true).isEmpty()) break;
+            if (planks) take(level, v, s -> s.is(ItemTags.PLANKS), 3, true);
+            else take(level, v, s -> s.is(ItemTags.LOGS), 1, true);
+            paid++;
+        }
+        return paid;
+    }
+
+    /** How many of what matches the village's stores hold. */
+    private static int count(ServerLevel level, Villages.Village v, Predicate<ItemStack> what) {
+        int have = 0;
+        boolean before = ZoneChests.askAs(true);
+        try {
+            for (ZoneChests.Found f : ZoneChests.around(level, v.centre(), Villages.storesRadius(v.id()), 64)) {
+                if (!f.stillThere() || !ZoneChests.isStashable(f)) continue;
+                net.minecraft.world.Container c = f.container();
+                for (int i = 0; i < c.getContainerSize(); i++) {
+                    ItemStack st = c.getItem(i);
+                    if (!st.isEmpty() && what.test(st)) have += st.getCount();
+                }
+            }
+        } finally {
+            ZoneChests.askAs(before);
+        }
+        return have;
+    }
+
+    /** Take up to so many of what matches out of the village's stores (all or none, if {@code all}).
+     *  Returns what was taken. */
+    private static List<ItemStack> take(ServerLevel level, Villages.Village v, Predicate<ItemStack> what, int want, boolean all) {
+        List<ItemStack> got = new ArrayList<>();
+        if (want <= 0 || (all && count(level, v, what) < want)) return got;
+        int left = want;
+        boolean before = ZoneChests.askAs(true);
+        try {
+            for (ZoneChests.Found f : ZoneChests.around(level, v.centre(), Villages.storesRadius(v.id()), 64)) {
+                if (left <= 0) break;
+                if (!f.stillThere() || !ZoneChests.isStashable(f)) continue;
+                net.minecraft.world.Container c = f.container();
+                for (int i = 0; i < c.getContainerSize() && left > 0; i++) {
+                    ItemStack st = c.getItem(i);
+                    if (st.isEmpty() || !what.test(st)) continue;
+                    int k = Math.min(left, st.getCount());
+                    got.add(st.split(k));
+                    if (st.isEmpty()) c.setItem(i, ItemStack.EMPTY);
+                    left -= k;
+                }
+                c.setChanged();
+            }
+        } finally {
+            ZoneChests.askAs(before);
+        }
+        return got;
     }
 
     /** Take this much food out of the village's stores. Returns how much was taken. */

@@ -347,7 +347,7 @@ public final class Quests {
     public static void paint(ServerLevel level, Villages.Village v) {
         Ledger.Building b = hall(v.id());
         if (b == null || !Land.areaLoaded(level, b.anchor(), 12)) return;
-        paintOn(level, b, postings(v.id()), Orders.sign(v.id()));
+        paintOn(level, v, b, postings(v.id()), Orders.sign(v.id()), false);
     }
 
     /** Hang these postings on this building's board. Returns the signs written. */
@@ -355,11 +355,19 @@ public final class Quests {
         return paintOn(level, b, board, null);
     }
 
+    /** As paintOn, the board hung for nothing (the showcase and the tests). */
+    public static List<BlockPos> paintOn(ServerLevel level, Ledger.Building b, List<Posting> board, @Nullable String[] orders) {
+        return paintOn(level, null, b, board, orders, true);
+    }
+
     /**
      * Hang the board: the elder's orders at its head (if there are any), then the postings.
-     * Returns the signs written.
+     * Returns the signs written. A new sign on the board is a sign out of the village's stores
+     * (or two planks), unless {@code free}; with none to be had, the board has what it has.
      */
-    public static List<BlockPos> paintOn(ServerLevel level, Ledger.Building b, List<Posting> board, @Nullable String[] orders) {
+    private static List<BlockPos> paintOn(ServerLevel level, @Nullable Villages.Village v, Ledger.Building b,
+                                          List<Posting> board, @Nullable String[] orders, boolean free) {
+        if (!free && v == null) return new ArrayList<>();
         List<BlockPos> spots = spots(level, b);
         List<BlockPos> written = new ArrayList<>();
         Direction front = b.facing().getOpposite();
@@ -373,6 +381,7 @@ public final class Quests {
                 if (!s.isAir() || (p == null && !order)) continue;
                 BlockState sign = Blocks.BIRCH_WALL_SIGN.defaultBlockState().setValue(WallSignBlock.FACING, front);
                 if (!sign.canSurvive(level, at)) continue;
+                if (!free && !Crafts.sign(level, v)) continue;
                 level.setBlock(at, sign, 3);
             }
             if (!(level.getBlockEntity(at) instanceof SignBlockEntity sign)) continue;

@@ -187,8 +187,15 @@ public final class Tavern {
 
     // ------------------------------------------------------------------ a round
 
-    /** The board on the bar that says a round may be bought, put up if it is missing. */
+    /** The board on the bar that says a round may be bought, put up if it is missing, for nothing
+     *  (the showcase and the tests). */
     public static void board(ServerLevel level, Ledger.Building tav) {
+        board(level, null, tav, true);
+    }
+
+    /** The board on the bar, put up if it is missing: a sign out of the village's stores (or two
+     *  planks), unless {@code free}; no board till there is one. */
+    static void board(ServerLevel level, @javax.annotation.Nullable Villages.Village v, Ledger.Building tav, boolean free) {
         Direction back = tav.facing(), right = back.getClockWise();
         // The bar runs down the left of the room; the board hangs on its front, facing the tables.
         BlockPos barrel = tav.anchor().relative(right, -2);
@@ -197,6 +204,7 @@ public final class Tavern {
         BlockState s = level.getBlockState(at);
         if (!(s.getBlock() instanceof WallSignBlock)) {
             if (!s.isAir()) return;
+            if (!free && (v == null || !Crafts.sign(level, v))) return;
             level.setBlock(at, Blocks.SPRUCE_WALL_SIGN.defaultBlockState().setValue(WallSignBlock.FACING, right), 3);
         }
         if (level.getBlockEntity(at) instanceof SignBlockEntity sign) {

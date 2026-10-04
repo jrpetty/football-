@@ -147,7 +147,7 @@ public final class Citizens {
         if (n >= STATUES.length) return false;
         BlockPos spot = v.centre().offset(STATUES[n][0], 0, STATUES[n][1]);
         com.mojang.authlib.GameProfile face = hero instanceof ServerPlayer sp ? sp.getGameProfile() : null;
-        if (raise(level, spot, v.centre(), hero.getName().getString(), face, Villages.name(v.id())) == null) return false;
+        if (raise(level, v, spot, v.centre(), hero.getName().getString(), face, Villages.name(v.id()), false) == null) return false;
         Ledger.raisedStatue(v.id(), hero.getUUID(), hero.getName().getString());
         Villages.tell(v.id(), level.getDayTime() / 24000L, "a statue of " + hero.getName().getString() + " was raised on the square");
         Raids.tellNear(level, v.centre(), 160, Component.literal(Villages.name(v.id()) + " has raised a statue to "
@@ -156,44 +156,85 @@ public final class Citizens {
     }
 
     /**
-     * The statue itself: a carved plinth, the hero's likeness in gold upon it facing the heart of
-     * the village, and a plaque. Returns the plinth, or null if the spot is not clear.
+     * The statue itself, for nothing (the showcase): a carved plinth, the hero's likeness in gold
+     * upon it facing the heart of the village, and a plaque. Returns the plinth, or null if the
+     * spot is not clear.
      */
     @Nullable
     public static BlockPos raise(ServerLevel level, BlockPos spot, BlockPos heart, String name,
                                  @Nullable com.mojang.authlib.GameProfile face, String village) {
+        return raise(level, null, spot, heart, name, face, village, true);
+    }
+
+    /**
+     * The statue, out of the village's stores unless {@code free}: the stand (an armour stand put
+     * by, or three planks for its sticks and a cobblestone for its foot) and the plinth (a block
+     * of stone bricks or cobble) or no statue; the likeness carved out of another block of stone,
+     * or the statue goes bareheaded; the gold it wears only what gold armour and blade the stores
+     * hold, piece by piece; the plaque a sign (or two planks), or none. Its gear is fixed to it: a
+     * passer-by can't help themselves to it.
+     */
+    @Nullable
+    static BlockPos raise(ServerLevel level, @Nullable Villages.Village v, BlockPos spot, BlockPos heart, String name,
+                          @Nullable com.mojang.authlib.GameProfile face, String village, boolean free) {
+        if (!free && v == null) return null;
         if (!level.isLoaded(spot)) return null;
         int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, spot.getX(), spot.getZ());
         BlockPos plinth = new BlockPos(spot.getX(), y, spot.getZ());
         if (!level.getBlockState(plinth).isAir() || !level.getBlockState(plinth.above()).isAir()
                 || !level.getBlockState(plinth.above(2)).isAir()) return null;
+        ArmorStand st = EntityType.ARMOR_STAND.create(level);
+        if (st == null) return null;
+        if (!free) {
+            boolean stand = Crafts.take(level, v, s -> s.is(Items.ARMOR_STAND), 1);
+            if (!stand) {
+                if (Crafts.stock(level, v, s -> s.is(Items.COBBLESTONE)) < 1 || !Crafts.usePlanks(level, v, 3)
+                        || !Crafts.take(level, v, s -> s.is(Items.COBBLESTONE), 1)) return null;
+            }
+            if (!Crafts.masonry(level, v)) {
+                Crafts.store(level, v, new ItemStack(Items.ARMOR_STAND));          // made, and kept for another day
+                return null;
+            }
+        }
         level.setBlock(plinth, Blocks.CHISELED_STONE_BRICKS.defaultBlockState(), 3);
         // Facing the heart of the village.
         Direction toHeart = Direction.getNearest(heart.getX() - spot.getX(), 0, heart.getZ() - spot.getZ());
-        ArmorStand st = EntityType.ARMOR_STAND.create(level);
-        if (st == null) return null;
         st.moveTo(plinth.getX() + 0.5, plinth.getY() + 1, plinth.getZ() + 0.5, toHeart.toYRot(), 0.0F);
         st.setNoGravity(true);
         st.setInvulnerable(true);
         st.setShowArms(true);
         st.setNoBasePlate(true);
-        ItemStack head = new ItemStack(Items.PLAYER_HEAD);
-        if (face != null) head.set(DataComponents.PROFILE, new ResolvableProfile(face));
-        st.setItemSlot(EquipmentSlot.HEAD, head);
-        st.setItemSlot(EquipmentSlot.CHEST, new ItemStack(Items.GOLDEN_CHESTPLATE));
-        st.setItemSlot(EquipmentSlot.LEGS, new ItemStack(Items.GOLDEN_LEGGINGS));
-        st.setItemSlot(EquipmentSlot.FEET, new ItemStack(Items.GOLDEN_BOOTS));
-        st.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.GOLDEN_SWORD));
+        if (free || Crafts.masonry(level, v)) {
+            ItemStack head = new ItemStack(Items.PLAYER_HEAD);
+            if (face != null) head.set(DataComponents.PROFILE, new ResolvableProfile(face));
+            st.setItemSlot(EquipmentSlot.HEAD, head);
+        }
+        st.setItemSlot(EquipmentSlot.CHEST, gold(level, v, Items.GOLDEN_CHESTPLATE, free));
+        st.setItemSlot(EquipmentSlot.LEGS, gold(level, v, Items.GOLDEN_LEGGINGS, free));
+        st.setItemSlot(EquipmentSlot.FEET, gold(level, v, Items.GOLDEN_BOOTS, free));
+        st.setItemSlot(EquipmentSlot.MAINHAND, gold(level, v, Items.GOLDEN_SWORD, free));
+        // Fixed: nothing put on it or taken off it by hand (every slot of the stand shut).
+        net.minecraft.nbt.CompoundTag t = st.saveWithoutId(new net.minecraft.nbt.CompoundTag());
+        t.putInt("DisabledSlots", 4144959);
+        st.load(t);
         st.addTag("mca_statue");
         level.addFreshEntity(st);
         // The plaque, on the plinth's face toward the heart.
         BlockPos plaque = plinth.relative(toHeart);
-        if (level.getBlockState(plaque).isAir()) {
+        if (level.getBlockState(plaque).isAir() && (free || Crafts.sign(level, v))) {
             level.setBlock(plaque, Blocks.DARK_OAK_WALL_SIGN.defaultBlockState().setValue(WallSignBlock.FACING, toHeart), 3);
             if (level.getBlockEntity(plaque) instanceof SignBlockEntity sign) {
                 TownLife.write(sign, new String[]{ name, "Hero of", village, "day " + level.getDayTime() / 24000L });
             }
         }
         return plinth;
+    }
+
+    /** A piece of the statue's gold: out of the stores if they hold one (for nothing in the
+     *  showcase), else the statue goes without it. */
+    private static ItemStack gold(ServerLevel level, @Nullable Villages.Village v, net.minecraft.world.item.Item piece, boolean free) {
+        if (free) return new ItemStack(piece);
+        if (v == null) return ItemStack.EMPTY;
+        return Crafts.takeOne(level, v, s -> s.is(piece));
     }
 }

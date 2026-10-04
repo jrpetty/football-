@@ -246,16 +246,26 @@ public final class Cafe {
             if (!b.structure().equals(structure) || !level.isLoaded(b.anchor())) continue;
             List<ItemStack> goods = open(v.id(), structure)
                 ? (structure.equals("cafe") ? menuGoods(level, v.id()) : shopGoods(level, v.id())) : List.of();
-            changed += setOut(level, v.id(), b, goods);
+            changed += setOut(level, v, b, goods, false);
         }
         return changed;
     }
 
     /**
      * These goods on this building's counters, one to a counter, with a price tag in front
-     * of each. Returns how many counters changed.
+     * of each, the tags for nothing (the showcase and the tests). Returns how many counters changed.
      */
     public static int setOut(ServerLevel level, UUID village, Ledger.Building b, List<ItemStack> goods) {
+        return setOut(level, village, null, b, goods, true);
+    }
+
+    /** As setOut, a new price tag paid out of the village's stores (a sign, or two planks). */
+    static int setOut(ServerLevel level, Villages.Village v, Ledger.Building b, List<ItemStack> goods, boolean free) {
+        return setOut(level, v.id(), v, b, goods, free);
+    }
+
+    private static int setOut(ServerLevel level, UUID village, @Nullable Villages.Village v, Ledger.Building b,
+                              List<ItemStack> goods, boolean free) {
         List<BlockPos> tops = counters(b);
         TownLife.Fittings f = TownLife.fittings(b);
         int changed = 0;
@@ -264,13 +274,15 @@ public final class Cafe {
             if (!level.getBlockState(at).is(Blocks.BARREL)) continue;          // not built yet
             ItemStack want = k < goods.size() ? goods.get(k) : ItemStack.EMPTY;
             if (TownLife.frameOn(level, at.above(), want, true)) changed++;
-            priceTag(level, village, at, f.door(), want);
+            priceTag(level, village, v, at, f.door(), want, free);
         }
         return changed;
     }
 
-    /** A price tag on the front of a counter, the side that faces the door. */
-    private static void priceTag(ServerLevel level, UUID village, BlockPos counter, @Nullable BlockPos door, ItemStack shown) {
+    /** A price tag on the front of a counter, the side that faces the door: a sign out of the
+     *  stores (or two planks), unless {@code free}; no tag till there is one. */
+    private static void priceTag(ServerLevel level, UUID village, @Nullable Villages.Village v, BlockPos counter,
+                                 @Nullable BlockPos door, ItemStack shown, boolean free) {
         if (door == null) return;
         int dx = door.getX() - counter.getX(), dz = door.getZ() - counter.getZ();
         Direction front = Math.abs(dz) >= Math.abs(dx)
@@ -280,6 +292,7 @@ public final class Cafe {
         BlockState there = level.getBlockState(at);
         if (!(there.getBlock() instanceof WallSignBlock)) {
             if (shown.isEmpty() || !there.isAir()) return;
+            if (!free && (v == null || !Crafts.sign(level, v))) return;
             level.setBlock(at, Blocks.SPRUCE_WALL_SIGN.defaultBlockState().setValue(WallSignBlock.FACING, front), 3);
         }
         if (level.getBlockEntity(at) instanceof SignBlockEntity sign) TownLife.write(sign, Market.tagLines(level, village, shown));

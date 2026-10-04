@@ -2242,7 +2242,15 @@ public class VillageGameTests {
         BlockPos chest = Kit.surface(level, heart.getX() + 3, heart.getZ() + 1);
         level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
         com.jrpetty.mcassistant.entity.ZoneChests.mark(level, chest);
-        ((net.minecraft.world.Container) level.getBlockEntity(chest)).setItem(0, new ItemStack(Items.OAK_PLANKS, 64));
+        // What a house growing up is made of, paid for out of the stores: timber, stone, brick and wool.
+        net.minecraft.world.Container growing = (net.minecraft.world.Container) level.getBlockEntity(chest);
+        ItemStack[] makings = {
+            new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.OAK_PLANKS, 64),
+            new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.OAK_LOG, 64), new ItemStack(Items.COBBLESTONE, 64),
+            new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.STONE_BRICKS, 64),
+            new ItemStack(Items.BRICKS, 64), new ItemStack(Items.BRICKS, 64), new ItemStack(Items.WHITE_WOOL, 32),
+            new ItemStack(Items.GLASS_PANE, 32), new ItemStack(Items.TORCH, 16) };
+        for (int i = 0; i < makings.length; i++) growing.setItem(i, makings[i]);
         BlockPos houseAt = Kit.surface(level, heart.getX(), heart.getZ() - 26);
         BuildGoal.stamp(level, "house", houseAt, Direction.NORTH, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
         com.jrpetty.mcassistant.village.Ledger.built(village, "house", houseAt, Direction.NORTH);
@@ -2844,6 +2852,18 @@ public class VillageGameTests {
         Villages.Village mother = Villages.get(m1.ownerId()), colony = Villages.get(c1.ownerId());
         helper.assertTrue(mother != null && colony != null && !mother.id().equals(colony.id()), "two villages");
         com.jrpetty.mcassistant.village.Ledger.link(mother.id(), colony.id());
+        // The road is paid for out of the mother village's stores: planks for the bridge, fences
+        // for its rails and posts, lanterns, signs, and stone and earth to bank it up.
+        BlockPos roadStores = Kit.surface(level, ax + 3, az + 3);
+        level.setBlock(roadStores, Blocks.CHEST.defaultBlockState(), 3);
+        com.jrpetty.mcassistant.entity.ZoneChests.mark(level, roadStores);
+        net.minecraft.world.Container roadBox = (net.minecraft.world.Container) level.getBlockEntity(roadStores);
+        ItemStack[] roadMakings = {
+            new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.OAK_PLANKS, 64),
+            new ItemStack(Items.OAK_LOG, 64), new ItemStack(Items.OAK_FENCE, 64), new ItemStack(Items.LANTERN, 16),
+            new ItemStack(Items.OAK_SIGN, 16), new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.COBBLESTONE, 64),
+            new ItemStack(Items.DIRT, 64), new ItemStack(Items.DIRT, 64), new ItemStack(Items.TORCH, 16) };
+        for (int i = 0; i < roadMakings.length; i++) roadBox.setItem(i, roadMakings[i]);
         // A pond across the road's way.
         int px = ax + 100;
         for (int dx = -3; dx <= 3; dx++) for (int dz = -4; dz <= 4; dz++) {
@@ -3233,8 +3253,12 @@ public class VillageGameTests {
                 f.enqueue(Job.depositAt(door));
             }
             if (t % 200 == 0) {
-                String inStore = level.getBlockEntity(door) instanceof com.jrpetty.mcassistant.block.StorehouseBlockEntity s0
-                    ? s0.used() + " stacks" : "no store: " + level.getBlockState(door);
+                StringBuilder inStore = new StringBuilder();
+                if (level.getBlockEntity(door) instanceof com.jrpetty.mcassistant.block.StorehouseBlockEntity s0) {
+                    for (int i = 0; i < s0.getContainerSize(); i++) if (!s0.getItem(i).isEmpty()) inStore.append(s0.getItem(i)).append(' ');
+                } else {
+                    inStore.append("no store: ").append(level.getBlockState(door));
+                }
                 Kit.log("t46 @" + t + " old chest " + level.getBlockState(old) + ", storehouse " + inStore + " — " + f.debugLine());
             }
             if (!level.getBlockState(old).isAir()) return;

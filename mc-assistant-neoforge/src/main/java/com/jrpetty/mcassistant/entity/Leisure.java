@@ -299,12 +299,8 @@ final class Leisure {
         return null;
     }
 
-    private static final Block[] FLOWERS = {
-        Blocks.POPPY, Blocks.DANDELION, Blocks.CORNFLOWER, Blocks.OXEYE_DAISY, Blocks.ALLIUM,
-        Blocks.AZURE_BLUET, Blocks.RED_TULIP, Blocks.ORANGE_TULIP, Blocks.PINK_TULIP, Blocks.LILY_OF_THE_VALLEY,
-    };
-
-    /** A flower by its door, on grass and nowhere else. */
+    /** A flower by its door, on grass and nowhere else: one it has, out of its own pack or the
+     *  village's stores. No flower to hand, none planted (not one out of nowhere). */
     private static void plant(VillageFolkEntity f, ServerLevel server, Persona me, long day) {
         var r = f.getRandom();
         BlockPos at = f.blockPosition();
@@ -312,7 +308,8 @@ final class Leisure {
             BlockPos ground = at.offset(r.nextInt(5) - 2, -1, r.nextInt(5) - 2);
             BlockPos above = ground.above();
             if (!server.getBlockState(ground).is(Blocks.GRASS_BLOCK) || !server.getBlockState(above).isAir()) continue;
-            Block flower = FLOWERS[Math.floorMod(f.getUUID().hashCode() + me.flowersPlanted(), FLOWERS.length)];
+            Block flower = flowerToHand(f, server, above);
+            if (flower == null) return;
             server.setBlockAndUpdate(above, flower.defaultBlockState());
             server.playSound(null, above, SoundEvents.GRASS_PLACE, SoundSource.BLOCKS, 0.8F, 1.0F);
             server.sendParticles(ParticleTypes.HAPPY_VILLAGER, above.getX() + 0.5, above.getY() + 0.5, above.getZ() + 0.5,
@@ -325,5 +322,28 @@ final class Leisure {
                 "That's brightened the place up."));
             return;
         }
+    }
+
+    /** A flower to plant here, taken out of the folk's own pack, else out of its village's stores;
+     *  null if it has none. The one it takes is the one that goes in the ground. */
+    @Nullable
+    private static Block flowerToHand(VillageFolkEntity f, ServerLevel server, BlockPos at) {
+        for (ItemStack s : f.getInventoryItems()) {
+            if (s.isEmpty() || !s.is(net.minecraft.tags.ItemTags.SMALL_FLOWERS)) continue;
+            Item mine = s.getItem();
+            Block b = Block.byItem(mine);
+            if (b == Blocks.AIR || !b.defaultBlockState().canSurvive(server, at)) continue;
+            if (f.removeMatching(st -> st.is(mine), 1) == 1) return b;
+        }
+        Villages.Village v = Villages.get(f.ownerId());
+        if (v == null) return null;
+        ItemStack one = Crafts.takeOne(server, v, st -> st.is(net.minecraft.tags.ItemTags.SMALL_FLOWERS));
+        if (one.isEmpty()) return null;
+        Block b = Block.byItem(one.getItem());
+        if (b == Blocks.AIR || !b.defaultBlockState().canSurvive(server, at)) {
+            Crafts.store(server, v, one);
+            return null;
+        }
+        return b;
     }
 }
