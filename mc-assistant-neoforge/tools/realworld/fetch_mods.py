@@ -60,18 +60,32 @@ def main():
     for mod in sys.argv[1:]:
         api = ("https://api.modrinth.com/v2/project/%s/version?loaders=%%5B%%22neoforge%%22%%5D"
                "&game_versions=%%5B%%221.21.1%%22%%5D" % mod)
-        versions = json.loads(get(api))
+        versions = [v for v in json.loads(get(api)) if v.get("version_type") == "release" and v.get("files")]
+        # Newest first; a newer release never needs an older NeoForge than the one before it,
+        # so the newest that loads is found by halving: a handful of downloads, not a hundred.
+        cache = {}
+
+        def fits(i):
+            if i not in cache:
+                jar = get(versions[i]["files"][0]["url"])
+                rng = neoforge_range(jar)
+                cache[i] = (admits(rng, mine), jar, rng)
+            return cache[i][0]
+
         chosen = None
-        for v in versions[:40]:
-            if v.get("version_type") != "release" or not v.get("files"):
-                continue
-            jar = get(v["files"][0]["url"])
-            rng = neoforge_range(jar)
-            if admits(rng, mine):
-                with open("run/mods/%s.jar" % mod, "wb") as out:
-                    out.write(jar)
-                chosen = "%s %s (needs neoforge %s)" % (mod, v.get("version_number"), rng or "any")
-                break
+        lo, hi = 0, len(versions) - 1
+        if versions and fits(hi):
+            while lo < hi:
+                mid = (lo + hi) // 2
+                if fits(mid):
+                    hi = mid
+                else:
+                    lo = mid + 1
+            fits(lo)
+            ok, jar, rng = cache[lo]
+            with open("run/mods/%s.jar" % mod, "wb") as out:
+                out.write(jar)
+            chosen = "%s %s (needs neoforge %s)" % (mod, versions[lo].get("version_number"), rng or "any")
         print("modpack: " + (chosen or "%s: no release loads on neoforge %s" % (mod, ".".join(map(str, mine)))))
 
 
