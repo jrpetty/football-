@@ -144,6 +144,21 @@ public final class ZoneChests {
                 }
             }
         }
+        // The village's storehouse is one of its stores wherever on its square it went up: a cube
+        // raised a few blocks past the edge of a look round the heart was a store nobody found —
+        // goods cleared into it were gone, and the village counted no food in a full larder.
+        if (settlerAsking()) {
+            for (BlockPos door : Storehouses.doorsNear(level, origin)) {
+                if (inBox(door, min, max)) continue;                       // seen already
+                LevelChunk chunk = level.getChunkSource().getChunkNow(door.getX() >> 4, door.getZ() >> 4);
+                if (chunk == null) continue;
+                BlockEntity be = chunk.getBlockEntity(door);
+                if (be instanceof com.jrpetty.mcassistant.block.StorehouseBlockEntity store && store.isStore()
+                        && !isPrivate(level, door)) {
+                    out.add(new Found(door.immutable(), be));
+                }
+            }
+        }
         out.sort((a, b) -> Long.compare(a.pos().asLong(), b.pos().asLong()));
         return out;
     }

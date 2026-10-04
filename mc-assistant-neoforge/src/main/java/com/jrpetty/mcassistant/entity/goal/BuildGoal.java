@@ -381,6 +381,12 @@ public class BuildGoal extends Goal {
             : ("fortify".equals(structure) && assistant.getHome() != null
                 ? assistant.getHome() : assistant.feetPos());
         layout(structure, base, facing, centered, perimeterRadius, plan);
+        // A village with its storehouse standing (raised on an earlier run of this building, or
+        // anywhere on its square) lays no second one: the cube's cells are left be.
+        if (assistant.isSettler() && assistant.ownerId() != null
+                && com.jrpetty.mcassistant.entity.Storehouses.stands(assistant.ownerId())) {
+            plan.removeIf(p -> p.part() == Part.STOREHOUSE);
+        }
         // A settlement's builders level and clear the ground they build on; a hired
         // assistant building beside a player's own trees and terraces does not.
         if (centered && assistant.isSettler()) {

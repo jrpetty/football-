@@ -70,6 +70,15 @@ public final class Storehouses {
         return level.getBlockEntity(d) instanceof StorehouseBlockEntity s && s.isStore() ? s : null;
     }
 
+    /** The doors of the storehouses that would serve a village whose heart is here. */
+    public static java.util.List<BlockPos> doorsNear(Level level, BlockPos heart) {
+        java.util.List<BlockPos> out = new java.util.ArrayList<>(1);
+        for (Door d : DOORS) {
+            if (d.dim().equals(level.dimension()) && near(heart, d.pos())) out.add(d.pos());
+        }
+        return out;
+    }
+
     /** Does the village have a storehouse standing, as far as anybody knows? */
     public static boolean stands(@Nullable UUID villageId) {
         Villages.Village v = Villages.get(villageId);

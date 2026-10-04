@@ -4226,6 +4226,20 @@ public class VillageFolkEntity extends AssistantEntity {
         long now = level().getGameTime();
         java.util.Map<BuildGoal.Part, Integer> need =
             BuildGoal.partCounts(project, site.radius());
+        // A building taken up again (the last run ran out of blocks) needs only the fixtures
+        // its empty cells want: counted from the drawing alone, the storage's second run made
+        // twenty-seven more storehouse units out of the village's planks for a cube already
+        // standing, and carried them about for ever. And a village with its storehouse lays
+        // no second one (BuildGoal drops those cells).
+        java.util.Map<BuildGoal.Part, Integer> still = null;
+        if (level() instanceof net.minecraft.server.level.ServerLevel server
+                && Land.areaLoaded(server, site.anchor(), Math.max(8, site.radius()))) {
+            still = new java.util.EnumMap<>(BuildGoal.Part.class);
+            for (BuildGoal.Placement p : BuildGoal.plan(project, site.anchor(), site.facing(), site.radius())) {
+                if (BuildGoal.soft(server.getBlockState(p.pos()))) still.merge(p.part(), 1, Integer::sum);
+            }
+        }
+        if (Storehouses.stands(village)) need.remove(BuildGoal.Part.STOREHOUSE);
         int blocks = need.getOrDefault(BuildGoal.Part.BLOCK, 0);
         blocks += blocks / 10 + 2;                              // a margin for the cells that are lost
         if (!project.equals("fortify")) {                       // and the ground to build up
@@ -4258,6 +4272,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // stores if they are there, made if they are not. One craft a visit.
         for (Fixture fx : FIXTURES) {
             int want = need.getOrDefault(fx.part(), 0);
+            if (still != null) want = Math.min(want, still.getOrDefault(fx.part(), 0));
             if (want == 0) continue;
             var item = BuildGoal.itemForPart(fx.part());
             int have = countCarried(item);
