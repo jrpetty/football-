@@ -183,11 +183,12 @@ export const MissionFPMixin = {
     }
     return moved
   },
-  fpFace(heading, speed, run) {
+  fpFace(heading, speed, run, aim) {
     const a = this.fpA
     if (!a.climb && !a.path) a.heading = heading
     a.fpSpeed = speed
     a.fpRun = run
+    a.fpAim = !!aim
   },
   fpStep(run) {
     const a = this.fpA

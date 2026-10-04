@@ -209,12 +209,13 @@ export const BaseFPMixin = {
     if (B.a?.snared > 0) return { x: 0, z: 0 }
     return slideMove((i, j) => this.grid.open(i, j), p, dx, dz, 0.22)
   },
-  fpFace(heading, speed, run) {
+  fpFace(heading, speed, run, aim) {
     const B = this.fpBody()
     if (B.a) {
       B.a.heading = heading
       B.a.fpSpeed = speed
       B.a.fpRun = run
+      B.a.fpAim = !!aim
       return
     }
     const w = B.w
@@ -222,8 +223,8 @@ export const BaseFPMixin = {
     // a swing (seen over the shoulder), a gun held ready, walking, running
     const sh = this.fpStub
     const st = sh?.st
-    let anim = speed > 3.1 ? 'run' : speed > 0.3 ? 'walk' : st?.gun ? 'aim' : 'idle'
-    const o = { speed }
+    let anim = speed > 3.1 ? 'run' : speed > 0.3 ? 'walk' : st?.gun && aim ? 'aim' : 'idle'
+    const o = { speed, aim: !!(aim && st?.gun) }
     if (sh && sh.swing > 0) {
       anim = st?.gun || st?.weaponId === 'fists' ? 'punch' : 'swing'
       o.swing = 1 - sh.swing

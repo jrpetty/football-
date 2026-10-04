@@ -563,7 +563,7 @@ export class SurvivorAgent extends Agent {
       return
     }
     this.curSpeed = this.fpSpeed || 0
-    this.finish(dt, this.swing > 0 ? 'swing' : this.work ? 'search' : this.curSpeed > 0.3 ? 'walk' : this.st.gun ? 'aimIdle' : 'idle')
+    this.finish(dt, this.swing > 0 ? 'swing' : this.work ? 'search' : this.curSpeed > 0.3 ? 'walk' : this.st.gun && this.fpAim ? 'aimIdle' : 'idle')
   }
   fight(z, dt) {
     const W = this.world
@@ -670,7 +670,8 @@ export class SurvivorAgent extends Agent {
   finish(dt, mode) {
     this.lastMode = mode
     let anim = mode
-    const o = { speed: this.curSpeed }
+    // a player aiming over the shoulder keeps the gun up while walking
+    const o = { speed: this.curSpeed, aim: !!(this.fp && this.fpAim && this.st.gun) }
     if (mode === 'swing') {
       anim = this.st.gun ? 'punch' : this.st.weaponId === 'fists' ? 'punch' : 'swing'
       o.swing = 1 - this.swing

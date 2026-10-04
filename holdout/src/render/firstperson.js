@@ -681,7 +681,7 @@ export class FirstPerson {
       this.bodyH = turnTo(this.bodyH ?? heading, heading, dt * (aiming ? 20 : 10))
       heading = this.bodyH
     } else this.bodyH = heading
-    H.fpFace(heading, sp, wantRun && sp > 0.5)
+    H.fpFace(heading, sp, wantRun && sp > 0.5, this.ads > 0.15 || this.trigger || performance.now() - this.lastAtk < 1400)
     this.bobAmt = lerp(this.bobAmt, clamp(sp / 4, 0, 1), 1 - Math.exp(-dt * 8))
     this.bobPh += sp * dt * (wantRun ? 1.55 : 1.85)
     this.stepT -= sp * dt

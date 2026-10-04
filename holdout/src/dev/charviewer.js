@@ -53,7 +53,7 @@ if (mode === 'outfits') {
     ch.anim = a
     chars.push(ch)
   })
-} else {
+} else if (mode !== 'strip') {
   const kinds = ['walker', 'walker', 'runner', 'brute', 'crawler', 'walker', 'walker', 'walker']
   const themes = [null, 'hospital', null, null, null, 'police', 'riot', 'military', 'worker', 'hospital', null, 'chef']
   themes.forEach((th, i) => {
@@ -66,6 +66,39 @@ if (mode === 'outfits') {
     if (kind === 'crawler') ch.mesh.rotation.x = Math.PI / 2 * 0.95, ch.mesh.position.y = 0.25
     chars.push(ch)
   })
+}
+// A filmstrip: one character per frame, each run that much further into
+// the animation (after a lead-in), frozen side by side.
+//   ?mode=strip&anim=walk&speed=1.5&n=8&step=0.1&z=1&pre=idle&w=rifle&aim=1
+if (mode === 'strip') {
+  const an = q.get('anim') || 'walk'
+  const sp = parseFloat(q.get('speed') || '0')
+  const n = parseInt(q.get('n') || '8', 10)
+  const step = parseFloat(q.get('step') || '0.1')
+  const zm = !!q.get('z')
+  const pre = q.get('pre') || (zm ? 'zidle' : 'idle')
+  const wid = q.get('w')
+  for (let i = 0; i < n; i++) {
+    const spec = zm
+      ? { skin: '#8f9a80', hair: { style: 'short', color: '#3a3028' }, build: 1, outfit: zombieOutfit(q.get('theme') || null, rngFrom(5)), seed: 21, zombie: { kind: 'walker' } }
+      : { skin: SKIN_TONES[2], hair: { style: 'short', color: HAIR_COLORS[2] }, build: 1, female: !!q.get('female'), outfit: OUTFITS[q.get('occ') || occs[3]], seed: 4 }
+    const ch = new Character(spec)
+    ch.seed = 3.3
+    if (zm) ch.zt = { armL: 0.2, armR: -0.2, tilt: 0.3, drag: parseFloat(q.get('drag') || '0.7'), hunch: 0.5, droop: 0.2 }
+    if (wid) {
+      const kind = ['pistol', 'rifle', 'ar', 'shotgun', 'smg', 'revolver', 'crossbow'].includes(wid) ? 'gun' : 'melee'
+      ch.setWeapon(weaponModel(wid, []), holdStyle(wid, kind))
+    }
+    ch.root.position.set(i * 1.25 - ((n - 1) * 1.25) / 2, 0, 0)
+    ch.root.rotation.y = parseFloat(q.get('face') || String(Math.PI / 2))
+    for (let k = 0; k < 40; k++) ch.update(1 / 40, pre, { speed: 0 })
+    const steps = Math.round((i * step) / (1 / 60))
+    const dur = Math.max(1e-3, (n - 1) * step)
+    for (let k = 0; k <= steps; k++) ch.update(1 / 60, an, { speed: sp, swing: Math.min(1, (k / 60) / dur), aim: !!q.get('aim') })
+    ch.frozen = true
+    scene.add(ch.root)
+    chars.push(ch)
+  }
 }
 if (mode === 'portraits') {
   // head-and-shoulders renders like the UI portraits, in a grid
@@ -133,7 +166,7 @@ function frame(t) {
     const px = new Float32Array(4)
     console.log('sun', atmo.sun.intensity.toFixed(2), atmo.sun.position.toArray().map((v) => v.toFixed(1)).join(','), 'hemi', atmo.hemi.intensity.toFixed(2), 'env', scene.environmentIntensity, 'exp', a.exposure)
   }
-  for (const ch of chars) ch.update(dt, null, { speed: ch.anim === 'walk' || ch.anim === 'zwalk' ? 1.4 : ch.anim === 'run' || ch.anim === 'zrun' ? 3.6 : ch.anim === 'zcrawl' ? 0.6 : 0, swing: (t / 1000) % 1 })
+  for (const ch of chars) if (!ch.frozen) ch.update(dt, null, { speed: ch.anim === 'walk' || ch.anim === 'zwalk' ? 1.4 : ch.anim === 'run' || ch.anim === 'zrun' ? 3.6 : ch.anim === 'zcrawl' ? 0.6 : 0, swing: (t / 1000) % 1 })
   pipe.render(scene, view.camera, dt)
   requestAnimationFrame(frame)
 }

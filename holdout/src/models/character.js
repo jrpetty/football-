@@ -254,58 +254,109 @@ function legsStraight() {
     set('foot' + s)
   }
 }
-// walking gait driven by phase; amp 0..1 (1 = run)
-function gait(ph, amp, Z) {
+const smoothstep = (a, b, x) => {
+  const t = clamp((x - a) / (b - a), 0, 1)
+  return t * t * (3 - 2 * t)
+}
+// a repeatable random number in 0..1 for slot n of a character
+const hash1 = (n, seed) => {
+  const x = Math.sin(n * 127.1 + seed * 311.7) * 43758.5453
+  return x - Math.floor(x)
+}
+// Walking gait driven by phase; amp 0..1 (1 = run). The knee gives a
+// little as the heel lands, folds to clear the ground in the swing, and the
+// foot rolls heel to toe: toes up at the strike, pushing off behind.
+// drag: how much one leg (the right) is dragged, for the dead.
+function gait(ph, amp, Z, drag = 0) {
   const s = Math.sin(ph)
   const c = Math.cos(ph)
-  const th = lerp(0.48, 0.85, amp)
-  const kn = lerp(0.8, 1.35, amp)
+  const th = lerp(0.46, 0.88, amp)
+  const kn = lerp(0.85, 1.45, amp)
   const thL = Z ? th * 0.75 : th
-  const thR = Z ? th * 0.45 : th
-  set('thighL', -s * thL, 0, 0.01)
-  set('thighR', s * thR, 0, -0.01)
-  const kL = 0.06 + Math.pow(Math.max(0, c), 1.5) * kn
-  const kR = 0.06 + Math.pow(Math.max(0, -c), 1.5) * kn * (Z ? 0.5 : 1)
+  const thR = Z ? th * lerp(0.75, 0.4, drag) : th
+  set('thighL', -s * thL - amp * 0.08, 0, 0.012)
+  set('thighR', s * thR - amp * 0.08, 0, -0.012)
+  // swing-phase fold, and a give on landing (just after the leg is forward)
+  const landL = Math.exp(-(((ph % TAU) - 1.75) ** 2) * 3) * 0.18
+  const landR = Math.exp(-((((ph + Math.PI) % TAU) - 1.75) ** 2) * 3) * 0.18
+  const kL = 0.06 + Math.pow(Math.max(0, c), 1.5) * kn + landL * (1 - amp * 0.5)
+  const kR = 0.06 + Math.pow(Math.max(0, -c), 1.5) * kn * (Z ? lerp(1, 0.35, drag) : 1) + landR * (1 - amp * 0.5)
   set('shinL', kL)
   set('shinR', kR)
-  set('footL', -(get('thighL', 0) + kL) * 0.65)
-  set('footR', -(get('thighR', 0) + kR) * 0.65)
+  // heel to toe: flat under the body, toes up ahead, pointed as it lifts off
+  const rollL = -Math.max(0, -get('thighL', 0)) * 0.35 + Math.max(0, s) * Math.max(0, -c) * 0.55
+  const rollR = -Math.max(0, -get('thighR', 0)) * 0.35 + Math.max(0, -s) * Math.max(0, c) * 0.55 * (1 - drag * 0.6)
+  set('footL', -(get('thighL', 0) + kL) * 0.72 + rollL)
+  set('footR', -(get('thighR', 0) + kR) * 0.72 + rollR)
   return { s, c }
+}
+const TAU = Math.PI * 2
+// Locomotion for the living: walk and run are one gait blended by speed, so
+// speeding up never pops. ch.gaitAmp eases towards the speed's amplitude.
+function locomote(ch, t, o, minAmp) {
+  const v = o.speed ?? 0
+  const want = Math.max(minAmp, clamp((v - 1.7) / 2.2, 0, 1))
+  ch.gaitAmp += (want - ch.gaitAmp) * Math.min(1, (o.dt || 0.016) * 4)
+  const a = ch.gaitAmp
+  const { s, c } = gait(ch.phase, a, false)
+  const lag = Math.sin(ch.phase - 0.55)
+  // pelvis: turns with the legs, dips towards the swing leg, bobs twice a stride
+  set('hips', 0, s * lerp(0.07, 0.13, a), c * lerp(0.035, 0.05, a))
+  set('spine', lerp(0.05, 0.24, a), 0, -c * 0.02)
+  set('chest', lerp(0.02, 0.08, a), -s * lerp(0.1, 0.2, a), 0)
+  // shoulders roll with the arms
+  set('shoulderL', 0, s * 0.06, 0)
+  set('shoulderR', 0, s * 0.06, 0)
+  // arms swing against the legs, forearms trailing a little behind
+  const sw = lerp(0.42, 0.9, a)
+  set('upperArmL', s * sw, 0, lerp(0.08, 0.14, a))
+  set('upperArmR', -s * sw, 0, -lerp(0.08, 0.14, a))
+  set('foreArmL', lerp(-0.22, -1.35, a) - Math.max(0, -lag) * lerp(0.35, 0.25, a))
+  set('foreArmR', lerp(-0.22, -1.35, a) - Math.max(0, lag) * lerp(0.35, 0.25, a))
+  set('handL', 0.1, 0, 0)
+  set('handR', 0.1, 0, 0)
+  // the head stays level: it counters the lean and the shoulders' turn
+  set('neck', -lerp(0.02, 0.12, a), s * 0.04, 0)
+  set('head', -lerp(0.02, 0.1, a) + Math.abs(c) * 0.02, s * 0.05, 0)
+  ch.hipsY = -0.015 - a * 0.03 + Math.abs(c) * lerp(0.03, 0.075, a)
 }
 
 export const ANIMS = {
+  // Standing: breathing, the weight on one leg then the other every few
+  // seconds, and the head glancing about in looks that hold, not a sway.
   idle(ch, t) {
-    armsDown(0.07 + Math.sin(t * 1.1 + ch.seed) * 0.01)
+    const br = Math.sin(t * 1.55 + ch.seed)
+    armsDown(0.075 + br * 0.008)
     legsStraight()
-    set('chest', Math.sin(t * 1.7) * 0.02)
-    set('spine', 0.02)
-    set('head', Math.sin(t * 0.37 + ch.seed) * 0.08, Math.sin(t * 0.23 + ch.seed * 3) * 0.35, 0)
-    set('hips', 0, 0, Math.sin(t * 0.5 + ch.seed) * 0.02)
-    ch.hipsY = 0
+    // weight shift: which leg carries it, changed every 4-8 s
+    const slot = Math.floor((t + ch.seed * 3) / (4 + (ch.seed % 1) * 4))
+    const side = hash1(slot, ch.seed) < 0.5 ? 1 : -1
+    ch.idleW += (side - ch.idleW) * 0.02
+    const w = ch.idleW
+    set('hips', 0, w * 0.04, w * 0.045)
+    set('thighL', -0.02 - Math.max(0, -w) * 0.06, 0, 0.02 + w * 0.02)
+    set('thighR', -0.02 - Math.max(0, w) * 0.06, 0, -0.02 + w * 0.02)
+    set('shinL', 0.03 + Math.max(0, -w) * 0.16)
+    set('shinR', 0.03 + Math.max(0, w) * 0.16)
+    set('footL', -Math.max(0, -w) * 0.08)
+    set('footR', -Math.max(0, w) * 0.08)
+    set('spine', 0.02, 0, -w * 0.03)
+    set('chest', br * 0.022, 0, -w * 0.02)
+    set('shoulderL', 0, 0, br * 0.012)
+    set('shoulderR', 0, 0, -br * 0.012)
+    // glances: a new look every 2-5 s, held
+    const gs = Math.floor((t + ch.seed * 7) / (2 + hash1(Math.floor((t + ch.seed * 7) / 9), ch.seed) * 3))
+    const gy = (hash1(gs, ch.seed + 1) - 0.5) * 1.0
+    const gx = (hash1(gs, ch.seed + 2) - 0.5) * 0.22
+    set('neck', gx * 0.4, gy * 0.35, 0)
+    set('head', gx * 0.6 + br * 0.01, gy * 0.65, w * 0.03)
+    ch.hipsY = -Math.abs(w) * 0.012
   },
   walk(ch, t, o) {
-    const { s, c } = gait(ch.phase, 0, false)
-    set('hips', 0, s * 0.07, 0)
-    set('spine', 0.05, 0, 0)
-    set('chest', 0.02, -s * 0.1, 0)
-    set('upperArmL', s * 0.42, 0, 0.08)
-    set('upperArmR', -s * 0.42, 0, -0.08)
-    set('foreArmL', -0.22 - Math.max(0, -s) * 0.4)
-    set('foreArmR', -0.22 - Math.max(0, s) * 0.4)
-    set('head', -0.02, s * 0.05, 0)
-    ch.hipsY = -0.015 + Math.abs(c) * 0.03
+    locomote(ch, t, o, 0)
   },
-  run(ch, t) {
-    const { s, c } = gait(ch.phase, 1, false)
-    set('hips', 0, s * 0.12, 0)
-    set('spine', 0.22)
-    set('chest', 0.08, -s * 0.18, 0)
-    set('upperArmL', s * 0.85, 0, 0.12)
-    set('upperArmR', -s * 0.85, 0, -0.12)
-    set('foreArmL', -1.3)
-    set('foreArmR', -1.3)
-    set('head', -0.12)
-    ch.hipsY = -0.05 + Math.abs(c) * 0.07
+  run(ch, t, o) {
+    locomote(ch, t, o, 0.65)
   },
   // holding a long gun in the low ready
   rifleReady(ch) {
@@ -378,9 +429,16 @@ export const ANIMS = {
     set('foreArmR', fa)
     set('upperArmL', ua * 0.85, -0.2, 0.2)
     set('foreArmL', fa)
-    set('spine', 0.08, sp * 0.4, 0)
+    // the hips lead the blow and the weight goes onto the front foot
+    const strike = s < 0.38 ? 0 : s < 0.58 ? (s - 0.38) / 0.2 : 1 - (s - 0.58) / 0.42
+    set('hips', 0, sp * 0.35, 0)
+    set('thighL', -0.3 - strike * 0.22)
+    set('shinL', 0.12 + strike * 0.18)
+    set('thighR', 0.25 + strike * 0.12)
+    set('spine', 0.08 + strike * 0.12, sp * 0.4, 0)
     set('chest', cx, sp * 0.6, 0)
-    ch.hipsY = -0.05
+    set('head', 0.08 + strike * 0.1, -sp * 0.35, 0)
+    ch.hipsY = -0.05 - strike * 0.05
   },
   throw(ch, t, o) {
     const s = o.swing ?? 0
@@ -597,20 +655,47 @@ export const ANIMS = {
     set('head', -0.1, 0.4, 0)
     ch.hipsY = 0
   },
+  // Down and bleeding: sat on the ground propped on one hand, the other
+  // pressed to the wound, breathing hard, the head heavy.
   downed(ch, t) {
-    armsDown(0.35)
-    legsStraight()
-    set('thighL', -0.2)
-    set('shinL', 0.5)
-    set('upperArmR', -1.4 + Math.sin(t * 1.5) * 0.25, 0, -0.2)
-    set('foreArmR', -0.4)
-    set('head', 0.3, Math.sin(t * 0.8) * 0.3, 0)
+    const br = Math.sin(t * 2.7)
+    set('thighL', -1.42, 0, 0.14)
+    set('thighR', -1.25, 0, -0.1)
+    set('shinL', 0.18)
+    set('shinR', 0.75)
+    set('footL', -0.1)
+    set('footR', -0.25)
+    set('spine', -0.32 + br * 0.03)
+    set('chest', -0.06 + br * 0.04)
+    set('upperArmL', 0.75, 0, 0.32)
+    set('foreArmL', -0.12)
+    set('handL', -0.5)
+    set('upperArmR', -0.55, 0, 0.2)
+    set('foreArmR', -1.75)
+    set('neck', 0.25)
+    set('head', 0.3 + Math.sin(t * 0.6) * 0.08, Math.sin(t * 0.45 + ch.seed) * 0.35, 0.1)
+    ch.hipsY = -0.8
   },
-  dead(ch) {
-    armsDown(0.6)
-    legsStraight()
-    set('thighL', -0.15)
-    set('head', 0, 0.6, 0)
+  // Dying: the knees go, then the body (see Character.fall) tips over and
+  // lands limp, arms thrown out, head rolled to one side.
+  dead(ch, t) {
+    const k = clamp(ch.animT / 0.35, 0, 1)
+    const lay = smoothstep(0.25, 0.9, ch.animT)
+    const d = ch.fallDir
+    set('thighL', lerp(-0.45, -0.25, lay), 0, 0.1)
+    set('thighR', lerp(-0.2, 0.05, lay), 0, -0.12)
+    set('shinL', lerp(0.9 * k, 0.45, lay))
+    set('shinR', lerp(0.6 * k, 0.1, lay))
+    set('spine', lerp(0.3 * k, d > 0 ? 0.08 : -0.1, lay))
+    set('chest', lerp(0.15 * k, 0, lay))
+    const fling = lerp(0.3, d > 0 ? 1.2 : 0.95, lay)
+    set('upperArmL', d > 0 ? -0.6 * lay : 0.2 * lay, 0, fling)
+    set('upperArmR', d > 0 ? -0.6 * lay : 0.2 * lay, 0, -fling * 0.8)
+    set('foreArmL', -0.35)
+    set('foreArmR', -0.6)
+    set('neck', 0.2 * k)
+    set('head', lerp(0.3 * k, 0.1, lay), lay * (ch.seed % 2 < 1 ? 0.7 : -0.7), 0)
+    ch.hipsY = -0.25 * k * (1 - lay)
   },
   wave(ch, t) {
     ANIMS.idle(ch, t)
@@ -631,60 +716,87 @@ export const ANIMS = {
     set('spine', 0.1)
   },
   // ---------------- zombies
+  // The dead each move their own way (ch.zt: arm heights, the head's lean,
+  // how badly a leg drags), sway on their feet and twitch.
   zidle(ch, t) {
+    const Z = ch.zt
     legsStraight()
     const sw = Math.sin(t * 0.9 + ch.seed)
-    set('hips', 0, 0, sw * 0.05)
-    set('spine', 0.25)
-    set('chest', 0.18, 0, -sw * 0.06)
+    const tw = Math.pow(Math.max(0, Math.sin(t * 3.1 + ch.seed * 5)), 24)
+    set('thighR', 0.05, 0, -0.04)
+    set('shinR', 0.12 * Z.drag)
+    set('hips', 0, sw * 0.06, sw * 0.06)
+    set('spine', 0.25 + Z.hunch * 0.15)
+    set('chest', 0.18, sw * 0.05, -sw * 0.06)
+    set('shoulderL', 0, 0, Z.droop * 0.1)
     set('neck', 0.35)
-    set('head', 0.1 + Math.sin(t * 2.7 + ch.seed) * 0.05, Math.sin(t * 0.6) * 0.3, 0.3 + Math.sin(t * 1.3) * 0.1)
-    set('upperArmL', -0.7 + Math.sin(t * 1.2) * 0.1, 0, 0.2)
-    set('upperArmR', -0.4 + Math.sin(t * 1.0 + 1) * 0.1, 0, -0.15)
+    set('head', 0.1 + Math.sin(t * 2.7 + ch.seed) * 0.05 + tw * 0.25, Math.sin(t * 0.6) * 0.3, Z.tilt * 0.4 + Math.sin(t * 1.3) * 0.1)
+    set('upperArmL', -0.7 + Z.armL * 0.5 + Math.sin(t * 1.2) * 0.1, 0, 0.2)
+    set('upperArmR', -0.4 + Z.armR * 0.5 + Math.sin(t * 1.0 + 1) * 0.1 - tw * 0.3, 0, -0.15)
     set('foreArmL', -0.3)
-    set('foreArmR', -0.5)
+    set('foreArmR', -0.5 + tw * 0.4)
+    set('handL', 0.3, 0, 0)
+    set('handR', 0.25, 0, 0)
     ch.hipsY = -0.03
   },
+  // The shamble: a dragged leg, the body lurching over the good one, arms
+  // reaching and bobbing with each step, the head lolling.
   zwalk(ch, t) {
-    const { s, c } = gait(ch.phase, 0, true)
-    set('hips', 0, s * 0.08, s * 0.06)
-    set('spine', 0.3)
-    set('chest', 0.18, -s * 0.08, -s * 0.05)
+    const Z = ch.zt
+    const { s, c } = gait(ch.phase, 0, true, Z.drag)
+    const lurch = Math.sin(ch.phase) * (0.06 + Z.drag * 0.05)
+    set('hips', 0, s * 0.09, lurch)
+    set('spine', 0.3 + Z.hunch * 0.15, 0, -lurch * 0.8)
+    set('chest', 0.18, -s * 0.08, -lurch * 0.6)
+    set('shoulderL', 0, 0, Z.droop * 0.1 + Math.abs(c) * 0.04)
+    set('shoulderR', 0, 0, -Math.abs(c) * 0.04)
     set('neck', 0.3)
-    set('head', 0.1, s * 0.15, 0.35)
-    set('upperArmL', -1.25 + s * 0.15, 0, 0.12)
-    set('upperArmR', -1.15 - s * 0.15, 0, -0.12)
-    set('foreArmL', -0.2)
-    set('foreArmR', -0.35)
+    set('head', 0.1 + Math.abs(s) * 0.06, s * 0.15, Z.tilt * 0.4 + lurch * 1.5)
+    const bob = Math.abs(c) * 0.12
+    set('upperArmL', -1.25 + Z.armL * 0.45 + s * 0.15 + bob, 0, 0.12)
+    set('upperArmR', -1.15 + Z.armR * 0.45 - s * 0.15 + bob, 0, -0.12)
+    set('foreArmL', -0.2 - bob * 0.5)
+    set('foreArmR', -0.35 - bob * 0.5)
+    set('handL', 0.35, 0, 0)
+    set('handR', 0.3, 0, 0)
     ch.hipsY = -0.04 + Math.abs(c) * 0.03
   },
+  // Running dead: head down, arms thrown about out of time with the legs.
   zrun(ch, t) {
+    const Z = ch.zt
     const { s, c } = gait(ch.phase, 1, false)
-    set('hips', 0, s * 0.15, s * 0.05)
-    set('spine', 0.45)
-    set('chest', 0.25, -s * 0.2, 0)
+    const fl = Math.sin(ch.phase * 1.3 + ch.seed)
+    set('hips', 0, s * 0.15, s * 0.06)
+    set('spine', 0.45 + Z.hunch * 0.1)
+    set('chest', 0.25, -s * 0.22, fl * 0.06)
     set('neck', 0.1)
-    set('head', -0.2, 0, 0.2)
-    set('upperArmL', -0.9 + s * 0.9, 0, 0.3)
-    set('upperArmR', -0.9 - s * 0.9, 0, -0.3)
-    set('foreArmL', -0.3)
-    set('foreArmR', -0.3)
-    ch.hipsY = -0.08 + Math.abs(c) * 0.06
+    set('head', -0.2 + Math.abs(c) * 0.08, fl * 0.1, Z.tilt * 0.3)
+    set('upperArmL', -0.9 + s * 0.9 + fl * 0.3, 0, 0.3 + Math.max(0, fl) * 0.3)
+    set('upperArmR', -0.9 - s * 0.9 - fl * 0.25, 0, -0.3 - Math.max(0, -fl) * 0.3)
+    set('foreArmL', -0.3 - Math.max(0, fl) * 0.4)
+    set('foreArmR', -0.3 - Math.max(0, -fl) * 0.4)
+    ch.hipsY = -0.08 + Math.abs(c) * 0.07
   },
+  // The lunge: both arms snatch forward and close, the head darts in to bite.
   zattack(ch, t, o) {
     const s = o.swing ?? 0
-    const k = Math.sin(Math.min(1, s) * Math.PI)
+    const reach = smoothstep(0, 0.4, s) * (1 - smoothstep(0.75, 1, s))
+    const bite = Math.exp(-(((s - 0.55) / 0.12) ** 2))
     legsStraight()
-    set('thighL', -0.4)
-    set('thighR', 0.3)
-    set('spine', 0.3 + k * 0.25)
-    set('chest', 0.15 + k * 0.2)
-    set('head', 0.1 - k * 0.2, 0, 0.1)
-    set('upperArmL', -1.5 - k * 0.6, 0, 0.25 - k * 0.2)
-    set('upperArmR', -1.5 - k * 0.6, 0, -0.25 + k * 0.2)
-    set('foreArmL', -0.4 + k * 0.3)
-    set('foreArmR', -0.4 + k * 0.3)
-    ch.hipsY = -0.06
+    set('thighL', -0.4 - reach * 0.25)
+    set('shinL', 0.15 + reach * 0.2)
+    set('thighR', 0.3 + reach * 0.1)
+    set('spine', 0.3 + reach * 0.3)
+    set('chest', 0.15 + reach * 0.2, Math.sin(s * 6) * 0.08, 0)
+    set('neck', 0.1 + bite * 0.35)
+    set('head', 0.1 - reach * 0.2 + bite * 0.15, 0, 0.1)
+    set('upperArmL', -1.5 - reach * 0.6, 0, 0.35 - reach * 0.35)
+    set('upperArmR', -1.5 - reach * 0.6, 0, -0.35 + reach * 0.35)
+    set('foreArmL', -0.5 + reach * 0.35 - bite * 0.4)
+    set('foreArmR', -0.5 + reach * 0.35 - bite * 0.4)
+    set('handL', 0.5 * bite, 0, 0)
+    set('handR', 0.5 * bite, 0, 0)
+    ch.hipsY = -0.06 - reach * 0.05
   },
   zcrawl(ch, t) {
     const s = Math.sin(ch.phase)
@@ -703,6 +815,23 @@ export const ANIMS = {
 }
 
 // ---------------------------------------------------------------- Character
+// Each bone eases to its target as a damped spring: the legs stiff (feet
+// must not slide), the trunk firm, arms and head softer, so a turn carries
+// through the body and a kick (a shot, a hit) rings out and settles.
+const STIFF = new Float32Array(NB)
+const DAMP = new Float32Array(NB)
+for (const [name, k, z] of [
+  ['hips', 260, 1], ['spine', 200, 1], ['chest', 170, 0.9], ['neck', 130, 0.85], ['head', 110, 0.8],
+  ['shoulderL', 150, 0.9], ['shoulderR', 150, 0.9], ['upperArmL', 120, 0.78], ['upperArmR', 120, 0.78],
+  ['foreArmL', 105, 0.75], ['foreArmR', 105, 0.75], ['handL', 120, 0.8], ['handR', 120, 0.8],
+  ['thighL', 420, 1], ['thighR', 420, 1], ['shinL', 420, 1], ['shinR', 420, 1], ['footL', 380, 1], ['footR', 380, 1],
+]) {
+  STIFF[BONE[name]] = k
+  DAMP[BONE[name]] = 2 * z * Math.sqrt(k)
+}
+const BI = (n) => BONE[n] * 3
+const wrapA = (a) => Math.atan2(Math.sin(a), Math.cos(a))
+
 export class Character {
   constructor(spec) {
     this.spec = spec
@@ -724,8 +853,20 @@ export class Character {
     this.recoil = 0
     this.flinchT = 0
     this.cur = new Float32Array(NB * 3)
+    this.vel = new Float32Array(NB * 3)
     this.root.userData.character = this
     this.zombie = !!spec.zombie
+    this.gaitAmp = 0
+    this.idleW = 0
+    this.animT = 0
+    this.lastYaw = null
+    this.yawRate = 0
+    this.fall = null
+    this.fallDir = 1
+    this.primed = false
+    // the dead's own way of moving
+    const r = rngFrom(Math.floor(this.seed * 1000) + 7)
+    this.zt = { armL: r() - 0.5, armR: r() - 0.5, tilt: r() - 0.5, drag: r() < 0.55 ? 0.3 + r() * 0.7 : 0, hunch: r(), droop: r() - 0.3 }
   }
   setWeapon(obj, hold) {
     if (this.weapon) this.bones[BONE.handR].remove(this.weapon)
@@ -742,52 +883,158 @@ export class Character {
   }
   fire() {
     this.recoil = 1
+    // a kick through the arms and shoulders that the springs ring out
+    const v = this.vel
+    const big = this.hold === 'rifle' ? 1.3 : 1
+    v[BI('upperArmR')] += 5 * big
+    v[BI('upperArmL')] += 4 * big
+    v[BI('chest')] -= 1.6 * big
+    v[BI('head')] -= 1.2 * big
   }
-  flinch() {
+  // hit: thrown back (or to one side) and recovering
+  flinch(side = 0) {
     this.flinchT = 1
+    const v = this.vel
+    v[BI('chest')] -= 7
+    v[BI('spine')] -= 4
+    v[BI('head')] -= 9
+    v[BI('chest') + 2] += side * 6
+    v[BI('upperArmL') + 2] += 4
+    v[BI('upperArmR') + 2] -= 4
   }
   // speed in m/s drives the gait phase so feet don't slide
   update(dt, anim, o = {}) {
     if (!(dt >= 0)) dt = 0
     if (dt > 0.25) dt = 0.25
     this.t += dt
-    if (anim) this.anim = anim
+    if (anim && anim !== this.anim) {
+      this.anim = anim
+      this.animT = 0
+    }
+    this.animT += dt
+    o.dt = dt
     const speed = o.speed ?? 0
-    if (speed > 0.05) this.phase += (speed * dt * Math.PI * 2) / (this.anim === 'run' || this.anim === 'zrun' ? 2.4 : this.anim === 'zcrawl' ? 0.9 : 1.45)
+    const L = this.anim === 'walk' || this.anim === 'run' || this.anim === 'carry'
+    const stride = L ? lerp(1.45, 2.45, this.gaitAmp) : this.anim === 'run' || this.anim === 'zrun' ? 2.4 : this.anim === 'zcrawl' ? 0.9 : this.anim === 'zwalk' ? 1.25 : 1.45
+    if (speed > 0.05) this.phase += (speed * dt * Math.PI * 2) / stride
+    // how fast the body is turning (the root's heading, set by the owner)
+    const yaw = this.root.rotation.y
+    if (this.lastYaw != null && dt > 0) this.yawRate += (wrapA(yaw - this.lastYaw) / dt - this.yawRate) * Math.min(1, dt * 10)
+    this.lastYaw = yaw
     P.set(ZERO)
     this.hipsY = 0
     const fn = ANIMS[this.anim] || ANIMS.idle
     fn(this, this.t, o)
-    // weapon-holding overlays on locomotion
+    // weapon-holding overlays on locomotion; aiming on the move keeps the
+    // upper body on target over walking legs
     if (!this.zombie && this.weapon?.visible !== false && ['idle', 'walk', 'run'].includes(this.anim)) {
-      if (this.hold === 'rifle') ANIMS.rifleReady(this)
+      if (o.aim && this.hold !== 'melee' && this.anim !== 'run') this.aimOver()
+      else if (this.hold === 'rifle') ANIMS.rifleReady(this)
       else if (this.hold === 'pistol') ANIMS.pistolReady(this)
       else if (this.hold === 'melee' && this.anim !== 'run') ANIMS.meleeReady(this)
     }
-    // recoil and flinch are additive kicks
+    // turning on the spot: the feet step round instead of sliding
+    const yr = clamp(this.yawRate, -6, 6)
+    if (speed < 0.1 && Math.abs(yr) > 0.5 && (this.anim === 'idle' || this.anim === 'zidle' || this.anim === 'aim')) {
+      const k = clamp((Math.abs(yr) - 0.5) / 2, 0, 0.6)
+      this.phase += Math.abs(yr) * dt * 2.2
+      const legs = ['thighL', 'thighR', 'shinL', 'shinR', 'footL', 'footR']
+      const keep = legs.map((b) => [get(b, 0), get(b, 1), get(b, 2)])
+      gait(this.phase, 0, this.zombie)
+      legs.forEach((b, n) => set(b, lerp(keep[n][0], get(b, 0) * 0.55, k), keep[n][1], keep[n][2]))
+    }
+    // leaning into a turn, the head leading it
+    if (!this.fall && Math.abs(yr) > 0.05) {
+      const mv = clamp(speed / 3, 0.25, 1)
+      add('spine', 0, 0, -yr * 0.035 * mv)
+      add('hips', 0, 0, yr * 0.015 * mv)
+      add('head', 0, clamp(yr * 0.09, -0.45, 0.45), 0)
+      add('neck', 0, clamp(yr * 0.04, -0.2, 0.2), 0)
+    }
+    // recoil and flinch: held offsets on top of the springs' kick
     if (this.recoil > 0) {
-      add('upperArmR', this.recoil * 0.22)
-      add('upperArmL', this.recoil * 0.18)
-      add('chest', -this.recoil * 0.06)
+      add('upperArmR', this.recoil * 0.12)
+      add('upperArmL', this.recoil * 0.1)
       this.recoil = Math.max(0, this.recoil - dt * 9)
     }
     if (this.flinchT > 0) {
-      add('chest', -this.flinchT * 0.3)
-      add('head', -this.flinchT * 0.4)
+      add('chest', -this.flinchT * 0.15)
+      add('head', -this.flinchT * 0.2)
       this.flinchT = Math.max(0, this.flinchT - dt * 4)
     }
-    const k = 1 - Math.exp(-dt * (o.snap ? 40 : 14))
+    // the springs (sub-stepped so a long frame stays stable)
     const cur = this.cur
-    for (let i = 0; i < NB; i++) {
+    const vel = this.vel
+    if (o.snap || !this.primed) {
+      cur.set(P)
+      vel.fill(0)
+      this.curHipsY = this.hipsY
+      this.primed = true
+    } else {
+      const n = Math.max(1, Math.ceil(dt / 0.012))
+      const h = dt / n
+      for (let q = 0; q < n; q++) {
+        for (let i = 1; i < NB; i++) {
+          const K = STIFF[i] || 150
+          const D = DAMP[i] || 24
+          for (let a = 0; a < 3; a++) {
+            const j = i * 3 + a
+            vel[j] += (K * (P[j] - cur[j]) - D * vel[j]) * h
+            cur[j] += vel[j] * h
+          }
+        }
+      }
+      this.curHipsY += (this.hipsY - this.curHipsY) * (1 - Math.exp(-dt * 12))
+    }
+    for (let i = 1; i < NB; i++) {
       const j = i * 3
-      cur[j] += (P[j] - cur[j]) * k
-      cur[j + 1] += (P[j + 1] - cur[j + 1]) * k
-      cur[j + 2] += (P[j + 2] - cur[j + 2]) * k
-      if (i === 0) continue
       this.bones[i].rotation.set(cur[j], cur[j + 1], cur[j + 2])
     }
-    this.curHipsY += (this.hipsY - this.curHipsY) * k
     this.bones[BONE.hips].position.y = 0.98 + this.curHipsY
+    this.updateFall(dt)
+  }
+  // The upper body of the aim pose over whatever the legs are doing.
+  aimOver() {
+    const keep = {}
+    for (const b of ['hips', 'thighL', 'thighR', 'shinL', 'shinR', 'footL', 'footR']) keep[b] = [get(b, 0), get(b, 1), get(b, 2)]
+    const hy = this.hipsY
+    ANIMS.aim(this, this.t, {})
+    for (const b in keep) set(b, ...keep[b])
+    this.hipsY = hy
+  }
+  // Death throws the body down: it tips from the feet once the knees have
+  // gone, lands with a small bounce and lies; a body that gets up (revived)
+  // is raised again. Crawlers are already down.
+  updateFall(dt) {
+    const down = this.anim === 'dead'
+    const m = this.mesh
+    if (down && !this.fall) {
+      if (Math.abs(m.rotation.x) > 0.3) return
+      this.fall = { t: 0, rx: m.rotation.x, py: m.position.y, pz: m.position.z, up: false }
+      this.fallDir = hash1(Math.floor(this.seed * 97), 3.3) < 0.5 ? 1 : -1
+    }
+    const F = this.fall
+    if (!F) return
+    if (down) F.t += dt
+    else {
+      F.up = true
+      F.t = Math.min(F.t, 1.2) - dt * 1.5
+    }
+    // after the knees go (0.2 s): an accelerating topple, landing at 0.75 s,
+    // a rebound that dies away
+    const u = clamp((F.t - 0.2) / 0.55, 0, 1)
+    let f = u * u
+    if (F.t > 0.75 && !F.up) f = 1 - Math.abs(Math.sin((F.t - 0.75) * 9)) * Math.exp(-(F.t - 0.75) * 7) * 0.06
+    const d = this.fallDir
+    m.rotation.x = F.rx + d * f * Math.PI * 0.5
+    m.position.y = F.py + f * 0.11
+    m.position.z = F.pz - d * f * 0.55
+    if (F.up && F.t <= 0) {
+      m.rotation.x = F.rx
+      m.position.y = F.py
+      m.position.z = F.pz
+      this.fall = null
+    }
   }
   dispose() {
     if (this.spec.cacheKey) releaseShared(this.spec.cacheKey)
