@@ -155,10 +155,12 @@ export class Pipeline {
   resize(w, h) {
     this.size = { w, h }
     this.renderer.setSize(w, h, false)
-    for (const c of this.composers.values()) {
-      c.composer.setSize(w, h)
-      c.ao?.setSize?.(w, h)
-    }
+    // the composer sizes every pass, ambient occlusion included, to the
+    // drawing buffer (CSS size times pixel ratio and the automatic scale).
+    // Sizing the AO again here to the CSS size left it on a different grid
+    // to the depth it reads: its darkening landed beside things, as dark
+    // copies of people, posts and crates all over the ground.
+    for (const c of this.composers.values()) c.composer.setSize(w, h)
   }
   composerFor(scene, camera) {
     let c = this.composers.get(scene)
