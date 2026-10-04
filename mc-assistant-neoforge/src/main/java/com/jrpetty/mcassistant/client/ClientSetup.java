@@ -152,6 +152,7 @@ public final class ClientSetup {
                 case ENCHANT -> Items.ENCHANTED_BOOK;
                 case COOK -> Items.CAKE;
                 case SHOP -> Items.EMERALD;
+                case SCOUT -> Items.COMPASS;
                 case NONE -> Items.AIR;
             });
         }

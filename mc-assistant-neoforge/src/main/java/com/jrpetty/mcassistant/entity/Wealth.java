@@ -44,7 +44,7 @@ public final class Wealth {
         return switch (t) {
             case NONE -> 0;
             case FARM, WOOD, FISH, HAUL, STORE -> 1;
-            case MINE, RANCH, GUARD, SMELT, COOK, SHOP, BEEKEEP -> 2;
+            case MINE, RANCH, GUARD, SMELT, COOK, SHOP, BEEKEEP, SCOUT -> 2;
             case SMITH, TAILOR, BREW, ENCHANT -> 3;
         };
     }

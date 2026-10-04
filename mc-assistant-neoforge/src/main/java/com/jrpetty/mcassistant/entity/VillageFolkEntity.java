@@ -299,6 +299,11 @@ public class VillageFolkEntity extends AssistantEntity {
             Caravans.drive(this, road);
             return;
         }
+        // Out scouting (Scouts): a stage at a time, looking about as it goes.
+        if (expedition != null && !withAPlayer) {
+            if (tickCount % 5 == 0 && level() instanceof net.minecraft.server.level.ServerLevel land) Scouts.drive(this, land);
+            return;
+        }
         // Through the gateway with a Nether party: it waits by the gateway till they come back.
         if (Nether.away(this) && !withAPlayer) return;
         // Out with a lead, fetching a wild animal home to the pen (Drover): that is the work just now.
@@ -1138,6 +1143,11 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     public void die(net.minecraft.world.damagesource.DamageSource cause) {
         if (trip != null && level() instanceof net.minecraft.server.level.ServerLevel road) Caravans.abandon(road, this);
+        if (expedition != null && level() instanceof net.minecraft.server.level.ServerLevel land) {
+            UUID home = ownerId();
+            if (home != null) Villages.tell(home, level().getDayTime() / 24000L, displayNameCap() + " was lost while scouting the " + expedition.heading());
+            Scouts.abandon(land, this);
+        }
         UUID village = ownerId();
         if (!level().isClientSide && village != null && !showcase) {
             long day = level().getDayTime() / 24000L;
@@ -2271,6 +2281,7 @@ public class VillageFolkEntity extends AssistantEntity {
             Caravans.drive(this, road);
             return;
         }
+        if (expedition != null) return;                 // out scouting: the land is the day's work
         // The bell is ringing: everybody but the watch drops what it is doing and gets indoors
         // (the watch's orders are in its station brain: Raids.guardDuty).
         if (Raids.underAlarm(ownerId()) && stationTask() != StationTask.GUARD) {
@@ -3922,6 +3933,12 @@ public class VillageFolkEntity extends AssistantEntity {
         return level() instanceof net.minecraft.server.level.ServerLevel server && Crafts.work(this, server);
     }
 
+    /** A scout's day (Scouts): out at first light, home by dusk, the atlas in between. */
+    @Override
+    protected boolean scoutWork() {
+        return level() instanceof net.minecraft.server.level.ServerLevel server && Scouts.work(this, server);
+    }
+
     /** A village's storekeeper keeps its stores in order from the first day, not from its
      *  tenth level: nothing else a storekeeper does earns it the experience to get there. */
     @Override
@@ -4354,7 +4371,7 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected boolean onBreak() {
         // On the road with a caravan, its own work waits until it is home.
-        return trip != null || Drover.busy(this) || Nether.away(this) || breakNow();
+        return trip != null || expedition != null || Drover.busy(this) || Nether.away(this) || breakNow();
     }
 
     /** The caravan this folk is taking to a colony and back, or null (Caravans). */
@@ -4363,6 +4380,13 @@ public class VillageFolkEntity extends AssistantEntity {
     @Nullable public Caravans.Trip trip() { return trip; }
 
     public void trip(@Nullable Caravans.Trip t) { this.trip = t; }
+
+    /** The scout's day out on the land, or null (Scouts). */
+    @Nullable private Scouts.Expedition expedition;
+
+    @Nullable public Scouts.Expedition expedition() { return expedition; }
+
+    public void expedition(@Nullable Scouts.Expedition e) { this.expedition = e; }
 
     /**
      * One break a working day, at an hour that is each folk's own. The first

@@ -1908,7 +1908,7 @@ public class VillageGameTests {
     public static void t35_life(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
-        level.setDayTime(1000);
+        level.setDayTime(1500);                 // after the morning assembly: a child at it learns nothing
         Kit.hold(level, 16000, 12000, 40);
         Kit.prepare(level, 16000, 12000, 40);
         BlockPos heart = Kit.surface(level, 16000, 12000);
@@ -2909,8 +2909,8 @@ public class VillageGameTests {
             l -> l.getTags().contains("mca_caravan")).size();
         Kit.log("t31 the caravan set out: " + out + ", " + carrier.displayNameCap() + " carrying "
             + carrier.countCarried(st -> st.is(Items.BREAD)) + " bread, " + llamas + " llama");
-        helper.assertTrue(out && carrier.trip() != null && carrier.countCarried(st -> st.is(Items.BREAD)) >= 32 && llamas == 1,
-            "a caravan sets out with the mother's spare bread and a pack llama");
+        helper.assertTrue(out && carrier.trip() != null && carrier.countCarried(st -> st.is(Items.BREAD)) >= 32 && llamas == 0,
+            "a caravan sets out with the mother's spare bread on its own back (no llama out of nowhere)");
         Kit.log("t31 before unloading: carrier " + carrier.stationTask() + " keeps " + carrier.depositReserve(new ItemStack(Items.BREAD, 64))
             + " of a stack of bread; the colony's stores " + Villages.storeChests(level, colony.id()) + "; " + carrier.debugLine());
         com.jrpetty.mcassistant.entity.Caravans.arriveForTests(level, carrier);
@@ -3369,6 +3369,7 @@ public class VillageGameTests {
             + "; worth: " + com.jrpetty.mcassistant.entity.Wealth.line(f) + "; skill: " + com.jrpetty.mcassistant.entity.Skill.line(f));
         helper.assertTrue(smithWage > com.jrpetty.mcassistant.entity.Wealth.baseWage(StationTask.FARM), "a smith earns more than a farmer");
         helper.assertTrue(goodDay == smithWage + 2, "a hard day's work earns two more: " + goodDay);
+        com.jrpetty.mcassistant.village.Ledger.addCoins(f.ownerId(), 100);      // the village has sold its surplus
         int paid = com.jrpetty.mcassistant.entity.Market.payWages(level, Villages.get(f.ownerId()));
         helper.assertTrue(paid >= goodDay && f.purse() >= goodDay, "paid from the treasury: " + paid + ", purse " + f.purse());
         helper.assertTrue(com.jrpetty.mcassistant.entity.Wealth.wage(f) == smithWage, "and that work is paid for now");
@@ -3518,6 +3519,126 @@ public class VillageGameTests {
             helper.assertTrue(Villages.electedOn(v.id()) == day, "the village chose its elder today");
             helper.assertTrue(elder != null, "and has one");
             helper.succeed();
+        });
+    }
+
+    /**
+     * An envoy: one village's elder sends a folk to its neighbour to offer trade; it walks there,
+     * the neighbour gathers before its board to hear it, its elder answers in its own way, and
+     * the envoy turns for home with the answer.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 2400, batch = "t52_envoy")
+    public static void t52_envoy(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 34000, 12000, 40);
+        Kit.prepare(level, 34000, 12000, 40);
+        Kit.hold(level, 34300, 12000, 40);
+        Kit.prepare(level, 34300, 12000, 40);
+        level.setDayTime(2000);
+        BlockPos homeHeart = Kit.surface(level, 34000, 12000), hostHeart = Kit.surface(level, 34300, 12000);
+        VillageFolkSpawnerBlock.raiseParty(level, homeHeart, 0.0F, 5);
+        VillageFolkSpawnerBlock.raiseParty(level, hostHeart, 0.0F, 5);
+        Villages.Village home = Villages.nearest(level, homeHeart, Villages.VILLAGE_RANGE);
+        Villages.Village host = Villages.nearest(level, hostHeart, Villages.VILLAGE_RANGE);
+        helper.assertTrue(home != null && host != null && !home.id().equals(host.id()), "two villages");
+        com.jrpetty.mcassistant.village.Ledger.relate(home.id(), host.id(), 35);
+        final VillageFolkEntity[] envoy = { null };
+        helper.runAtTickTime(20, () -> {
+            for (AssistantEntity a : Villages.folkOf(home.id())) if (a instanceof VillageFolkEntity f) f.ensurePersona();
+            for (AssistantEntity a : Villages.folkOf(host.id())) if (a instanceof VillageFolkEntity f) f.ensurePersona();
+            long day = level.getDayTime() / 24000L;
+            Villages.chooseElder(home.id(), day);
+            Villages.chooseElder(host.id(), day);
+            boolean sent = com.jrpetty.mcassistant.entity.Envoys.send(level, home, host, com.jrpetty.mcassistant.entity.Envoys.Errand.TRADE, day);
+            for (AssistantEntity a : Villages.folkOf(home.id())) {
+                if (a instanceof VillageFolkEntity f && f.trip() != null && f.trip().errand() != null) envoy[0] = f;
+            }
+            Kit.log("t52 the envoy: sent " + sent + ", " + (envoy[0] == null ? "nobody" : envoy[0].displayNameCap())
+                + "; home " + com.jrpetty.mcassistant.entity.Envoys.debug(home.id()) + "; host " + com.jrpetty.mcassistant.entity.Envoys.debug(host.id()));
+            helper.assertTrue(sent && envoy[0] != null, "an envoy sets out");
+            // The walk is the caravans' (t31): here it arrives, by the host's board.
+            com.jrpetty.mcassistant.entity.Caravans.arriveForTests(level, envoy[0]);
+            BlockPos at = hostHeart.east(3);
+            envoy[0].moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0.0F, 0.0F);
+        });
+        for (int t = 60; t <= 2000; t += 20) {
+            helper.runAtTickTime(t, () -> com.jrpetty.mcassistant.entity.Assemblies.tick(level, host));
+        }
+        java.util.List<String> trail = new java.util.ArrayList<>();
+        for (int t = 100; t <= 2200; t += 150) {
+            final int at = t;
+            helper.runAtTickTime(t, () -> trail.add(at + ": " + com.jrpetty.mcassistant.entity.Assemblies.debug(host.id())));
+        }
+        helper.runAtTickTime(2250, () -> {
+            VillageFolkEntity e = envoy[0];
+            Kit.log("t52 the audience: " + String.join(" | ", trail));
+            Kit.log("t52 after: trip " + (e.trip() == null ? "none" : (e.trip().homeward() ? "homeward" : "still there"))
+                + "; pact " + com.jrpetty.mcassistant.entity.Envoys.pact(home.id(), host.id())
+                + "; relation " + com.jrpetty.mcassistant.village.Ledger.relation(home.id(), host.id())
+                + "; host " + com.jrpetty.mcassistant.entity.Envoys.debug(host.id()) + "; latest " + com.jrpetty.mcassistant.entity.Envoys.latest(host.id()));
+            helper.assertTrue(trail.stream().anyMatch(x -> x.contains("ENVOY")), "the host village gathers to hear the envoy");
+            helper.assertTrue(e.trip() != null && e.trip().homeward(), "and the envoy turns for home with the answer");
+            helper.succeed();
+        });
+    }
+
+    /**
+     * A scout: sent out across the land toward a town it has never seen, it walks there in
+     * stages, finds it (and swaps news of the land with it), turns, comes home along its own
+     * trail, and the town goes into the atlas.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 6000, batch = "t53_scout")
+    public static void t53_scout(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 36000, 12000, 40);
+        Kit.prepare(level, 36000, 12000, 40);
+        Kit.hold(level, 36260, 12000, 40);
+        Kit.prepare(level, 36260, 12000, 40);
+        level.setDayTime(1500);
+        BlockPos homeHeart = Kit.surface(level, 36000, 12000), farHeart = Kit.surface(level, 36260, 12000);
+        VillageFolkSpawnerBlock.raiseParty(level, homeHeart, 0.0F, 4);
+        VillageFolkSpawnerBlock.raiseParty(level, farHeart, 0.0F, 3);
+        Villages.Village home = Villages.nearest(level, homeHeart, Villages.VILLAGE_RANGE);
+        Villages.Village far = Villages.nearest(level, farHeart, Villages.VILLAGE_RANGE);
+        helper.assertTrue(home != null && far != null && !home.id().equals(far.id()), "two villages");
+        final VillageFolkEntity[] scout = { null };
+        helper.runAtTickTime(20, () -> {
+            for (AssistantEntity a : Villages.folkOf(home.id())) {
+                if (a instanceof VillageFolkEntity f && !f.isBaby()) { scout[0] = f; break; }
+            }
+            scout[0].setJob(StationTask.SCOUT);
+            com.jrpetty.mcassistant.entity.Scouts.sendForTests(scout[0], level, far.centre());
+            helper.assertTrue(scout[0].expedition() != null, "the scout sets out");
+        });
+        java.util.List<String> trail = new java.util.ArrayList<>();
+        final boolean[] wasOut = { false };
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            VillageFolkEntity s = scout[0];
+            if (s == null || t < 40) return;
+            if (t % 300 == 0) {
+                trail.add(t + ": " + (s.expedition() == null ? "home" : (s.expedition().returning() ? "returning" : "out"))
+                    + " at " + s.blockPosition().getX() + "," + s.blockPosition().getZ() + " finds " + (s.expedition() == null ? "-" : s.expedition().finds()));
+            }
+            if (s.expedition() != null) { wasOut[0] = true; return; }
+            if (!wasOut[0]) return;
+            Kit.log("t53 the scout's day: " + String.join(" | ", trail));
+            Kit.log("t53 the atlas: " + com.jrpetty.mcassistant.entity.Scouts.debug(home.id()) + "; the far town's: "
+                + com.jrpetty.mcassistant.entity.Scouts.debug(far.id()) + "; the board says: " + com.jrpetty.mcassistant.entity.Scouts.boardLine(home.id()));
+            String told = com.jrpetty.mcassistant.entity.Scouts.tell(s);
+            Kit.log("t53 ask the scout: " + told);
+            helper.assertTrue(com.jrpetty.mcassistant.entity.Scouts.atlas(home.id()).stream().anyMatch(x ->
+                x.kind() == com.jrpetty.mcassistant.entity.Scouts.Kind.TOWN && x.label().equals(Villages.name(far.id()))), "the far town is in the atlas");
+            helper.assertTrue(com.jrpetty.mcassistant.entity.Scouts.met(home.id(), far.id()), "and the two towns know each other now");
+            helper.assertTrue(s.blockPosition().distSqr(home.centre()) < 24 * 24, "and the scout came home");
+            helper.assertTrue(told.contains(Villages.name(far.id())), "and can tell you about it");
+            helper.succeed();
+        });
+        helper.runAtTickTime(5900, () -> {
+            Kit.log("t53 the scout's day (not home): " + String.join(" | ", trail) + "; " + (scout[0] == null ? "" : scout[0].debugLine()));
+            helper.fail("the scout never came home");
         });
     }
 }

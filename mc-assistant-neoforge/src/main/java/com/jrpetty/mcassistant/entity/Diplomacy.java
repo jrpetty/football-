@@ -108,7 +108,9 @@ public final class Diplomacy {
     }
 
     public static boolean neighbours(Villages.Village a, Villages.Village b) {
-        return a.dim().equals(b.dim()) && !a.id().equals(b.id()) && apart(a, b) <= NEAR;
+        if (!a.dim().equals(b.dim()) || a.id().equals(b.id())) return false;
+        int d = apart(a, b);
+        return d <= NEAR || d <= NEAR * 2 && Scouts.met(a.id(), b.id());   // a town the scouts found is a neighbour further off
     }
 
     static int apart(Villages.Village a, Villages.Village b) {
@@ -182,7 +184,7 @@ public final class Diplomacy {
             SORE.put(x, day);
             SORE.put(y, day);
             delta -= 3;
-        } else if (roll == 4 && now == Terms.FEUD && rng.nextInt(3) == 0) {
+        } else if (roll == 4 && now == Terms.FEUD && rng.nextInt(truceOdds(x, y)) == 0) {
             // Even a feud wears itself out in the end.
             delta += 30;
             String line = "the elders of " + an + " and " + bn + " met at the boundary stone and agreed a truce";
@@ -190,14 +192,30 @@ public final class Diplomacy {
             Villages.tell(y, day, line);
         }
         // Allies look after each other: the stronger feeds the hungrier.
-        if (now == Terms.ALLIES) helpAlly(level, a, b, day);
-        // Tribute, once a week.
+        if (now == Terms.ALLIES || Envoys.allied(x, y)) helpAlly(level, a, b, day);
+        // Tribute, once a week — if the bigger village's elder is the sort to ask for it.
         delta += tribute(level, a, b, day, rng);
+        // Who leads them: a warm-hearted elder makes friends, a prickly one enemies; two elders
+        // alike get on, two opposites do not.
+        delta += Envoys.temper(x).warmth + Envoys.temper(y).warmth + Envoys.chemistry(x, y);
         // With nothing to keep it hot or cold, a relation drifts back toward nothing.
-        if (delta == 0 && r != 0 && !kin(x, y)) delta = r > 0 ? -1 : 1;
+        if (delta == 0 && r != 0 && !kin(x, y) && !Envoys.pact(x, y)) delta = r > 0 ? -1 : 1;
         int after = Ledger.relate(x, y, delta);
         announce(x, y, after, day);
+        // And the elders send their envoys: greetings, trade, alliances, peace, tribute, complaints.
+        Envoys.consider(level, a, b, day, rng);
         return delta;
+    }
+
+    /** How hard a feud is to end: easy between forgiving elders, hard between prickly ones. */
+    private static int truceOdds(UUID x, UUID y) {
+        int odds = 3;
+        for (UUID v : new UUID[]{ x, y }) {
+            Envoys.Temper t = Envoys.temper(v);
+            if (t == Envoys.Temper.PRICKLY) odds += 3;
+            else if (t == Envoys.Temper.EASY || t == Envoys.Temper.WARM || t == Envoys.Temper.GENEROUS) odds -= 1;
+        }
+        return Math.max(1, odds);
     }
 
     /** News when two neighbours' terms change: an alliance sworn, a feud begun, a feud ended. */
@@ -205,6 +223,7 @@ public final class Diplomacy {
         String key = Ledger.pair(x, y);
         Terms t = terms(r), was = WAS.put(key, t);
         if (was == null || was == t) return;
+        Envoys.onTerms(x, y, t, day);
         String an = Villages.name(x), bn = Villages.name(y);
         String line = null;
         if (t == Terms.ALLIES) line = an + " and " + bn + " swore an alliance";
@@ -272,7 +291,27 @@ public final class Diplomacy {
         return s;
     }
 
-    /** A much bigger neighbour that thinks little of a smaller one wants tribute, once a week. */
+    /** Is a tribute due from this village (a week since it last paid or refused)? */
+    static boolean tributeDue(UUID small, long day) {
+        return day - TRIBUTE.getOrDefault(small, -100L) >= 7;
+    }
+
+    /** What a village asks in tribute: more, the bigger it is. */
+    static int tributeAsked(UUID big) {
+        return 4 + Villages.folkOf(big).size() / 4;
+    }
+
+    /** It paid (or refused): no more asking for a week, and it is sore about it. */
+    static void paidTribute(UUID small, long day) {
+        TRIBUTE.put(small, day);
+        SORE.put(small, day);
+    }
+
+    /**
+     * A much bigger neighbour that thinks little of a smaller one wants tribute, once a week —
+     * if its elder is shrewd or prickly; a kindly one never asks. It sends an envoy to ask in
+     * person (Envoys) when it can; if nobody can go, the demand comes by word of mouth.
+     */
     static int tribute(ServerLevel level, Villages.Village a, Villages.Village b, long day, java.util.Random rng) {
         int r = Ledger.relation(a.id(), b.id());
         if (r > 0) return 0;
@@ -281,9 +320,12 @@ public final class Diplomacy {
         if (na >= nb * 3 / 2 + 2 && Villages.ageOf(a.id()).ordinal() >= Villages.ageOf(b.id()).ordinal()) { big = a; small = b; }
         else if (nb >= na * 3 / 2 + 2 && Villages.ageOf(b.id()).ordinal() >= Villages.ageOf(a.id()).ordinal()) { big = b; small = a; }
         else return 0;
-        if (day - TRIBUTE.getOrDefault(small.id(), -100L) < 7) return 0;
+        Envoys.Temper bt = Envoys.temper(big.id());
+        if (bt != Envoys.Temper.SHREWD && bt != Envoys.Temper.PRICKLY) return 0;
+        if (!tributeDue(small.id(), day)) return 0;
         TRIBUTE.put(small.id(), day);
-        int want = 4 + Villages.folkOf(big.id()).size() / 4;
+        if (!Caravans.between(big.id(), small.id()) && Envoys.send(level, big, small, Envoys.Errand.TRIBUTE, day)) return 0;
+        int want = tributeAsked(big.id());
         String bn = Villages.name(big.id()), sn = Villages.name(small.id());
         if (Ledger.coins(small.id()) >= want && rng.nextInt(4) != 0) {
             Ledger.takeCoins(small.id(), want);
@@ -372,6 +414,12 @@ public final class Diplomacy {
                 if (apart(v, o) < CROWDED && r < FRIENDLY) sb.append("They're too close — that's half the trouble. ");
             }
             told++;
+        }
+        String lead = Envoys.leaderNote(village);
+        if (!lead.isEmpty()) sb.append(lead).append(' ');
+        for (Villages.Village o : ns) {
+            if (Envoys.allied(village, o.id())) sb.append("We're sworn allies with ").append(Villages.name(o.id())).append(". ");
+            else if (Envoys.pact(village, o.id())) sb.append("Our caravans trade with ").append(Villages.name(o.id())).append(". ");
         }
         return sb.toString().trim();
     }

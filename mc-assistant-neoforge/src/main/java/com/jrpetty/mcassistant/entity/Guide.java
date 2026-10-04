@@ -49,6 +49,7 @@ public final class Guide {
             com.jrpetty.mcassistant.village.Chronicle.Guest g = com.jrpetty.mcassistant.village.Chronicle.guest(village, p.getUUID());
             if (g != null && g.built) out.add(new Place("yours", "your house", new BlockPos((int) g.x, (int) g.y, (int) g.z)));
         }
+        out.addAll(Scouts.places(f, 4));                 // a scout knows the way to what it has found
         java.util.Set<String> seen = new java.util.HashSet<>();
         List<Ledger.Building> buildings = new ArrayList<>(Ledger.buildings(village));
         buildings.sort(java.util.Comparator.comparingDouble(b -> b.anchor().distSqr(f.blockPosition())));

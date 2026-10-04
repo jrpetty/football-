@@ -120,6 +120,25 @@ public final class Smalltalk {
             options.add(new Talk("I hear you've done your place up.", "A few nice things. I've earned them!",
                 pick(r, "That you have.", "I'll have to come and see.")));
         }
+        // Comings and goings between the towns.
+        String abroad = Envoys.latest(village);
+        if (abroad != null) {
+            options.add(new Talk("Did you hear? " + capital(abroad) + ".",
+                pick(r, "I did! What do you make of it?", "Never! Well I never.", "The elder knows what it's doing. I hope."),
+                pick(r, "We'll see what comes of it.", "Time will tell.", "")));
+        }
+        // What the scouts have found.
+        List<Scouts.Find> atlas = Scouts.atlas(village);
+        if (!atlas.isEmpty()) {
+            Scouts.Find x = atlas.get(atlas.size() - 1 - r.nextInt(Math.min(4, atlas.size())));
+            if (x.kind() != Scouts.Kind.BLOCKED && x.kind() != Scouts.Kind.LAND) {
+                String where = Guide.direction(a.blockPosition(), x.at());
+                options.add(new Talk("The scouts found " + x.label() + ", off to the " + where + ".",
+                    x.kind() == Scouts.Kind.DANGER ? "I'll not be going that way, then." : x.kind() == Scouts.Kind.ORE
+                        ? "The miners will be after that." : pick(r, "I'd love to see it one day.", "What a world it is out there."),
+                    pick(r, "Me too.", "Brave souls, those scouts.", "")));
+            }
+        }
         if (options.isEmpty()) return null;
         return options.get(r.nextInt(options.size()));
     }

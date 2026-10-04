@@ -30,6 +30,8 @@ import java.util.UUID;
  */
 public final class Caravans {
 
+    private static final org.slf4j.Logger LOG = com.mojang.logging.LogUtils.getLogger();
+
     private Caravans() {}
 
     /** Two game days between caravans on any one road. */
@@ -47,6 +49,17 @@ public final class Caravans {
         double best = Double.MAX_VALUE;
         @Nullable BlockPos window;
         int spokeTick = -100000;
+        /** An envoy's trip: what it has come about (Envoys); null for a caravan. */
+        @Nullable Envoys.Errand errand;
+        /** A trade caravan between villages with a pact: the goods are paid for. */
+        boolean trade;
+        /** An envoy there, waiting to be heard. */
+        boolean waiting;
+        long waitSince;
+        /** Coin it carries: a peace offering, a tribute, or what goods were sold for. */
+        int purse;
+        /** What it came back with, for the envoy's report. */
+        @Nullable String outcome;
 
         Trip(UUID from, UUID to, List<BlockPos> way) {
             this.from = from;
@@ -56,6 +69,8 @@ public final class Caravans {
 
         public UUID destination() { return back ? from : to; }
         public boolean homeward() { return back; }
+        @Nullable public Envoys.Errand errand() { return errand; }
+        public boolean trading() { return trade; }
     }
 
     @SubscribeEvent
@@ -79,6 +94,62 @@ public final class Caravans {
             if (onTheRoad(colony.id())) continue;
             if (setOut(level, mother, colony)) Ledger.caravanAt(colony.id(), now);
         }
+        // Trade caravans between villages with a pact (Envoys): every three days, each way in turn.
+        List<Villages.Village> here = new ArrayList<>();
+        for (Villages.Village v : Villages.every()) if (v.dim().equals(level.dimension())) here.add(v);
+        for (int i = 0; i < here.size(); i++) {
+            for (int j = i + 1; j < here.size(); j++) {
+                Villages.Village a = here.get(i), b = here.get(j);
+                if (!Envoys.pact(a.id(), b.id()) || !Diplomacy.neighbours(a, b)) continue;
+                String key = "trade/" + b.id();
+                long last = parse(Ledger.note(a.id(), key));
+                if (last >= 0 && now - last < INTERVAL * 3 / 2 && now >= last) continue;
+                if (between(a.id(), b.id())) continue;
+                boolean aFirst = last < 0 || (last / 1000) % 2 == 0;
+                if (aFirst ? setOutTrade(level, a, b) || setOutTrade(level, b, a) : setOutTrade(level, b, a) || setOutTrade(level, a, b)) {
+                    Ledger.note(a.id(), key, Long.toString(now - now % 1000 + (aFirst ? 1000 : 0)));
+                }
+            }
+        }
+    }
+
+    private static long parse(@Nullable String s) {
+        if (s == null || s.isEmpty()) return -1;
+        try { return Long.parseLong(s); } catch (NumberFormatException e) { return -1; }
+    }
+
+    /** Is a caravan (or an envoy) already on the road between these two? */
+    static boolean between(UUID a, UUID b) {
+        for (UUID v : new UUID[]{ a, b }) {
+            for (AssistantEntity x : Villages.folkOf(v)) {
+                if (x instanceof VillageFolkEntity f && f.trip() != null
+                        && (f.trip().to.equals(a) && f.trip().from.equals(b) || f.trip().to.equals(b) && f.trip().from.equals(a))) return true;
+            }
+        }
+        return false;
+    }
+
+    /** A trade caravan: what one village has to spare and the other is short of, to be paid for there. */
+    static boolean setOutTrade(ServerLevel level, Villages.Village from, Villages.Village to) {
+        VillageFolkEntity carrier = choose(from);
+        if (carrier == null) return false;
+        List<ItemStack> cargo = load(level, from, to.id(), true);
+        if (cargo.isEmpty()) return false;
+        carrier.clearQueue();
+        for (ItemStack s : cargo) {
+            ItemStack left = carrier.insertItem(s);
+            if (!left.isEmpty()) Market.intoStores(level, from.id(), left);
+        }
+        Trip t = new Trip(from.id(), to.id(), way(from, to));
+        t.trade = true;
+        t.gainedTick = carrier.tickCount;
+        carrier.trip(t);
+        long day = level.getDayTime() / 24000L;
+        Villages.tell(from.id(), day, "a trade caravan set out for " + Villages.name(to.id()));
+        FolkTalk.speak(carrier, "Off to " + Villages.name(to.id()) + " to trade!");
+        LOG.info("[MCA-ENVOY] trade caravan {} -> {} ({} lots)",
+            Villages.name(from.id()), Villages.name(to.id()), cargo.size());
+        return true;
     }
 
     /** Is a caravan already on this colony's road? */
@@ -109,19 +180,8 @@ public final class Caravans {
         Trip t = new Trip(mother.id(), colony.id(), way(mother, colony));
         t.gainedTick = carrier.tickCount;
         carrier.trip(t);
-        // The pack llama, in the village's colours.
-        Llama llama = EntityType.LLAMA.create(level);
-        if (llama != null) {
-            llama.moveTo(carrier.getX() + 1.5, carrier.getY(), carrier.getZ(), carrier.getYRot(), 0.0F);
-            llama.setTamed(true);
-            llama.setChest(true);
-            llama.setPersistenceRequired();
-            llama.addTag("mca_caravan");
-            llama.setBodyArmorItem(new ItemStack(CARPETS[Math.floorMod(mother.id().hashCode(), CARPETS.length)]));
-            level.addFreshEntity(llama);
-            llama.setLeashedTo(carrier, true);
-            t.llama = llama.getUUID();
-        }
+        // No pack llama: the village keeps none, and one out of nowhere for every caravan was a
+        // llama, a chest and a carpet from nothing. The carrier takes the load on its own back.
         long day = level.getDayTime() / 24000L;
         Villages.tell(mother.id(), day, "a caravan set out for " + Villages.name(colony.id()));
         for (ServerPlayer p : level.players()) {
@@ -161,6 +221,11 @@ public final class Caravans {
      * stack of each and four kinds.
      */
     static List<ItemStack> load(ServerLevel level, Villages.Village from, UUID to, boolean neededOnly) {
+        return load(level, from, to, neededOnly, true);
+    }
+
+    /** As above; {@code take} false only says what it would be, and takes nothing. */
+    static List<ItemStack> load(ServerLevel level, Villages.Village from, UUID to, boolean neededOnly, boolean take) {
         java.util.Set<Villages.Task> wanted = java.util.EnumSet.noneOf(Villages.Task.class);
         for (Villages.Need n : Villages.needs(level, to)) wanted.add(n.task());
         List<Market.Good> order = new ArrayList<>();
@@ -175,6 +240,10 @@ public final class Caravans {
             int plenty = g.bundle() * 4;
             int spare = Math.min(64, have - plenty);
             if (spare < g.bundle()) continue;
+            if (!take) {
+                out.add(ItemStack.EMPTY);
+                continue;
+            }
             out.addAll(takeOut(level, from, g.what(), spare));
         }
         return out;
@@ -227,6 +296,10 @@ public final class Caravans {
         Trip t = f.trip();
         if (t == null) return false;
         keepAwake(level, f, t);
+        if (t.waiting) {
+            Envoys.waitThere(level, f, t);
+            return f.trip() != null;
+        }
         Llama llama = llama(level, t);
         if (llama != null) {
             if (!llama.isLeashed() || llama.distanceToSqr(f) > 12.0 * 12.0) {
@@ -261,7 +334,8 @@ public final class Caravans {
         }
         if (f.tickCount - t.spokeTick > 2400) {
             t.spokeTick = f.tickCount;
-            f.say("On the road to " + Villages.name(t.destination()) + ".");
+            f.say(t.errand != null && !t.back ? "On my way to " + Villages.name(t.destination()) + " for the elder."
+                : "On the road to " + Villages.name(t.destination()) + ".");
         }
         return true;
     }
@@ -279,16 +353,20 @@ public final class Caravans {
 
     /** At the end of a leg: unload into the stores there; going out, load up for home; home, done. */
     static void arrive(ServerLevel level, VillageFolkEntity f, Trip t) {
+        if (t.errand != null && !t.back) {
+            Envoys.arrived(level, f, t);
+            return;
+        }
         Villages.Village here = Villages.get(t.destination());
         Villages.Village other = Villages.get(t.back ? t.to : t.from);
         int unloaded = 0;
+        double worth = 0;
         StringBuilder what = new StringBuilder();
         if (here != null) {
             for (int i = 0; i < f.getInventoryItems().size(); i++) {
                 ItemStack s = f.getInventoryItems().get(i);
                 if (s.isEmpty() || Market.goodFor(s) == null) continue;
-                int keep = f.depositReserve(s);
-                int move = s.getCount() - Math.max(0, keep);
+                int move = s.getCount() - carrierKeeps(f, s);
                 if (move <= 0) continue;
                 ItemStack lot = s.copyWithCount(move);
                 ItemStack left = Market.intoStores(level, here.id(), lot);
@@ -296,6 +374,7 @@ public final class Caravans {
                 if (moved <= 0) continue;
                 s.shrink(moved);
                 unloaded += moved;
+                worth += Market.goodFor(lot).value() * moved;
                 if (what.length() < 60) what.append(what.length() == 0 ? "" : ", ").append(moved).append(' ')
                     .append(Market.goodFor(lot).name().toLowerCase());
             }
@@ -307,9 +386,26 @@ public final class Caravans {
         }
         if (!t.back && here != null && other != null) {
             // Load what the colony has plenty of and the mother is short of, for the way home.
+            double back = 0;
             for (ItemStack s : load(level, here, other.id(), true)) {
+                Market.Good g = Market.goodFor(s);
                 ItemStack left = f.insertItem(s);
+                if (g != null) back += g.value() * (s.getCount() - left.getCount());
                 if (!left.isEmpty()) Market.intoStores(level, here.id(), left);
+            }
+            if (t.trade) {
+                // Between trading partners, the difference is paid in coin, there and then.
+                int owed = (int) Math.round(worth - back);
+                if (owed > 0) {
+                    int paid = Ledger.takeCoins(here.id(), owed);
+                    t.purse += paid;
+                    Villages.tell(here.id(), day, "we paid " + Villages.name(other.id()) + "'s traders " + paid + " coins for their goods");
+                } else if (owed < 0) {
+                    int paid = Ledger.takeCoins(other.id(), -owed);
+                    Ledger.addCoins(here.id(), paid);
+                    Villages.tell(here.id(), day, Villages.name(other.id()) + " paid us " + paid + " coins for our goods");
+                }
+                Ledger.relate(here.id(), other.id(), 3);
             }
             t.back = true;
             List<BlockPos> home = new ArrayList<>(way(here, other));
@@ -326,7 +422,25 @@ public final class Caravans {
         if (llama != null) llama.discard();
         release(level, f, t);
         f.trip(null);
+        if (t.errand != null) {
+            Envoys.home(level, f, t);
+            return;
+        }
+        if (t.purse > 0) {
+            Ledger.addCoins(t.from, t.purse);
+            Villages.tell(t.from, day, "our trade caravan came home from " + Villages.name(t.to) + " with " + t.purse + " coins");
+        }
         f.say("Back from " + Villages.name(t.to) + "!");
+    }
+
+    /**
+     * What a carrier keeps back when it unloads: a bite for the road and a few blocks, not
+     * its whole everyday reserve — the cargo was the village's, and a carrier that kept its
+     * usual sixty-odd loaves delivered sixteen of the eighty it set out with.
+     */
+    static int carrierKeeps(VillageFolkEntity f, ItemStack s) {
+        int reserve = Math.max(0, f.depositReserve(s));
+        return Math.min(reserve, s.get(net.minecraft.core.component.DataComponents.FOOD) != null ? 4 : 8);
     }
 
     @Nullable

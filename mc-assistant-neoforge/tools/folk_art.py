@@ -51,7 +51,7 @@ SIZE = 128
 
 TRADES = ["none", "farmer", "lumberjack", "miner", "rancher", "guard",
           "smelter", "fisher", "storekeeper", "hauler",
-          "blacksmith", "tailor", "beekeeper", "brewer", "enchanter", "cook", "shopkeeper"]
+          "blacksmith", "tailor", "beekeeper", "brewer", "enchanter", "cook", "shopkeeper", "scout"]
 
 PARTS = [
     # The body every folk has: a villager's head and nose, a coat over a body,
@@ -171,6 +171,14 @@ PARTS = [
     ("shopkeeper_visor", "head", (0, 0, 0), (0, 0, 0), [(96, 0, -3.5, -8.5, -7, 7, 1, 3, 0)], "shopkeeper"),
     ("shopkeeper_apron", "body", (0, 0, 0), (0, 0, 0), [(64, 12, -4, 3, -4.5, 8, 12, 1, 0)], "shopkeeper"),
     ("shopkeeper_pouch", "body", (0, 0, 0), (0, 0, 0), [(100, 12, 1, 9, -5, 3, 3, 1, 0)], "shopkeeper"),
+
+    # Scout: a ranger's hood and a cape to the knee, a map case at its hip, a brass
+    # spyglass at its belt and a red feather in its hood.
+    ("scout_hood", "head", (0, 0, 0), (0, 0, 0), [(64, 0, -4, -10, -4, 8, 10, 8, 0.75)], "scout"),
+    ("scout_feather", "head", (4.2, -9, 1), (0, 0, 0.45), [(100, 12, -0.5, -4, -0.5, 1, 4, 1, 0)], "scout"),
+    ("scout_cape", "body", (0, 0, 0), (0, 0, 0), [(64, 20, -4.5, 0, 3.3, 9, 16, 1, 0)], "scout"),
+    ("scout_satchel", "body", (0, 0, 0), (0, 0, 0), [(100, 0, 3.8, 7, -2, 2, 5, 4, 0)], "scout"),
+    ("scout_spyglass", "body", (0, 0, 0), (0, 0, 0), [(114, 0, -5, 7, -1, 1, 4, 1, 0)], "scout"),
 ]
 
 
@@ -1496,6 +1504,48 @@ def outfit_shopkeeper():
     return cv
 
 
+def outfit_scout():
+    """A ranger: a laced leather jerkin, green sleeves, breeches and long boots; a
+    hooded green cape to the knee; a map case at its hip, a brass spyglass at its
+    belt, and a red feather stuck in its hood."""
+    cv = Canvas()
+    jerkin = (112, 84, 54)
+    jf = leather(jerkin)
+    coat = coat_to(cv, jf, 13)
+    for y in range(0, 12):
+        coat.put("front", 3, y, lit(jerkin, 0.72))                       # the jerkin's laced front
+        if y % 2 == 1:
+            coat.put("front", 4, y, (204, 184, 140))                     # its lacing
+    belt(coat, 10, strap=(58, 40, 26), buckle=(196, 164, 84))
+    green = (60, 94, 54)
+    gf = cloth(green, 7, 240)
+    sleeves(cv, gf, 9, cuff=lit(jerkin, 0.85))
+    legs(cv, cloth((96, 86, 66), 5, 241), leather((70, 48, 30)), boot_from=5, sole=(28, 22, 18))
+    for name in ("right_leg", "left_leg"):
+        Box(cv, name).row(5, (52, 36, 22))                               # the boot tops, turned down
+
+    def hood_f(face, x, y, w, h):
+        if face == "bottom":
+            return False
+        if face == "front":
+            if 1 <= x <= w - 2 and 2 <= y <= h - 1:
+                return False                                             # the face shows through
+            return lit(green, 0.66)                                      # the rim, in shadow
+        return lit(gf(x, y), 0.92) if (x + y) % 5 == 0 else gf(x, y)
+    Box(cv, "scout_hood").all(hood_f)
+    cape = Box(cv, "scout_cape")
+    cape.all(lambda face, x, y, w, h: lit(green, 0.74) if y >= h - 1 else (lit(gf(x, y), 0.88) if x % 3 == 0 else gf(x, y)))
+    sat = Box(cv, "scout_satchel")
+    sat.all(lambda face, x, y, w, h: grain((132, 94, 58), x, y, 5, 242))
+    sat.fill("top", lambda x, y, w, h: (92, 64, 40))
+    sat.fill("left", lambda x, y, w, h: (196, 164, 84) if (x, y) == (1, 1) else None)   # its buckle
+    spy = Box(cv, "scout_spyglass")
+    spy.all(lambda face, x, y, w, h: (214, 170, 82) if y in (0, h - 1) else (168, 120, 54))
+    fe = Box(cv, "scout_feather")
+    fe.all(lambda face, x, y, w, h: (206, 58, 44) if y < 3 else (236, 226, 210))
+    return cv
+
+
 OUTFITS = {
     "none": outfit_none,
     "farmer": outfit_farmer,
@@ -1514,6 +1564,7 @@ OUTFITS = {
     "enchanter": outfit_enchanter,
     "cook": outfit_cook,
     "shopkeeper": outfit_shopkeeper,
+    "scout": outfit_scout,
 }
 GLOWS = {"miner": miner_glow}
 DYED = ("none", "farmer", "lumberjack", "rancher", "guard", "storekeeper", "hauler",

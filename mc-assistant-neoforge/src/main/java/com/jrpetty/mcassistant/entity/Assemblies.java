@@ -49,7 +49,7 @@ public final class Assemblies {
     public enum Kind {
         MORNING("the morning assembly"), OPENING("an opening"), FEAST("the village feast"), WEDDING("a wedding"),
         VIGIL("a vigil"), CELEBRATION("a celebration"), HONOUR("an honouring"), COUNCIL("the council's meeting"),
-        ELECTION("an election"), COMING_OF_AGE("a coming of age");
+        ELECTION("an election"), COMING_OF_AGE("a coming of age"), ENVOY("an envoy's audience");
 
         public final String label;
         Kind(String label) { this.label = label; }
@@ -168,6 +168,9 @@ public final class Assemblies {
         Assembly next = null;
         if (t >= 150 && t < 1400 && !level.isRaining() && !held(id, Kind.MORNING, day)) {
             next = morning(level, v, day);
+        } else if (t >= 1400 && t < 11500) {
+            VillageFolkEntity guest = Envoys.waitingAt(level, v);
+            if (guest != null && guest.trip() != null && guest.trip().errand() != null) next = envoy(level, v, guest);
         } else if (t >= 12100 && t < 13200) {
             Gatherings.Kind tonight = Gatherings.tonight(id, day);
             if (tonight != null) next = evening(level, v, tonight, day);
@@ -180,8 +183,11 @@ public final class Assemblies {
             }
             if (next != null && level.isRaining() && next.kind != Kind.VIGIL && next.kind != Kind.COUNCIL) next = null;   // put off
         }
-        if (next == null || held(id, next.kind, day) && next.kind != Kind.OPENING) return;
-        HELD.put(id + "/" + next.kind + "/" + day + (next.kind == Kind.OPENING ? "/" + next.subject : ""), day);
+        boolean several = next != null && (next.kind == Kind.OPENING || next.kind == Kind.ENVOY);
+        if (next == null || held(id, next.kind, day) && !several) return;
+        String key = id + "/" + next.kind + "/" + day + (several ? "/" + next.subject : "");
+        if (HELD.containsKey(key)) return;                  // this envoy has been heard (or could not be) today
+        HELD.put(key, day);
         if (HELD.size() > 4096) HELD.entrySet().removeIf(e -> day - e.getValue() > 3);
         next.phaseAt = now;
         NOW.put(id, next);
@@ -366,7 +372,7 @@ public final class Assemblies {
 
     /** Is this folk wanted at what is under way now (so its own day waits)? */
     public static boolean attending(VillageFolkEntity f) {
-        UUID village = f.ownerId();
+        UUID village = Envoys.visiting(f) != null ? Envoys.visiting(f) : f.ownerId();
         if (village == null) return false;
         Assembly a = NOW.get(village);
         if (a == null) return false;
@@ -380,6 +386,7 @@ public final class Assemblies {
     static boolean invited(Assembly a, VillageFolkEntity f) {
         if (!f.isAlive() || f.isSleeping() || f.isHired() || Nether.away(f) || Drover.busy(f)) return false;
         if (f.getTarget() != null) return false;
+        if (Scouts.out(f) || f.trip() != null && Envoys.visiting(f) == null) return false;    // away on the land or the road
         if (f.stationTask() == AssistantEntity.StationTask.GUARD && (f.level().isNight() || Raids.underAlarm(a.village))) return false;
         if (f.isBaby() && (a.kind == Kind.COUNCIL || a.kind == Kind.ELECTION || a.kind == Kind.VIGIL)) return false;
         if (a.host != null && a.host.equals(f.getUUID())) return true;
@@ -393,7 +400,7 @@ public final class Assemblies {
      * there, finds a place, and takes part. True while it is busy with it.
      */
     public static boolean attend(VillageFolkEntity f, ServerLevel level) {
-        UUID village = f.ownerId();
+        UUID village = Envoys.visiting(f) != null ? Envoys.visiting(f) : f.ownerId();
         if (village == null) return false;
         Assembly a = NOW.get(village);
         if (a == null) return false;
@@ -738,6 +745,20 @@ public final class Assemblies {
         return a;
     }
 
+    /** An envoy from a neighbour is heard before the board: the village gathers to listen. */
+    private static Assembly envoy(ServerLevel level, Villages.Village v, VillageFolkEntity guest) {
+        UUID id = v.id();
+        BlockPos lectern = VillageBoards.lectern(id);
+        Direction facing = VillageBoards.facingOf(id);
+        long day = level.getDayTime() / 24000L;
+        Caravans.Trip trip = guest.trip();
+        String from = trip == null ? "" : Villages.name(trip.from);
+        Assembly a = new Assembly(id, Kind.ENVOY, from + "|" + guest.getUUID(), day, lectern != null ? lectern : v.centre(),
+            facing != null ? facing : Direction.SOUTH, Layout.ARC);
+        a.principals.add(guest.getUUID());
+        return a;
+    }
+
     private static Assembly election(ServerLevel level, Villages.Village v, long day) {
         UUID id = v.id();
         BlockPos lectern = VillageBoards.lectern(id);
@@ -772,6 +793,12 @@ public final class Assemblies {
                 if (!shorts.isEmpty()) s.add(new Line(null, "We're short of " + String.join(" and ", shorts) + " — put your backs into it!", '?', null));
                 Orders.Order o = Orders.current(id);
                 if (o != null) s.add(new Line(null, "The orders stand: " + o.title.toLowerCase(java.util.Locale.ROOT) + ".", ' ', null));
+                for (String[] rep : Envoys.reports(id)) {
+                    UUID by = null;
+                    try { by = UUID.fromString(rep[0]); } catch (IllegalArgumentException ignored) { }
+                    s.add(new Line(by, rep.length > 1 ? rep[1] : rep[0], '?', null));
+                }
+                for (String found : Scouts.reports(id)) s.add(new Line(null, found, '?', null));
                 long dayNow = level.getDayTime() / 24000L;
                 Gatherings.Kind tonight = Gatherings.tonight(id, dayNow);
                 if (tonight != null) s.add(new Line(null, "Tonight: " + Gatherings.describe(tonight, id) + ". Everyone welcome!", '!', null));
@@ -815,6 +842,18 @@ public final class Assemblies {
                 s.add(new Line(null, "Three cheers! Hip hip —", '!', null));
             }
             case COUNCIL -> { }                                  // written below
+            case ENVOY -> {
+                if (a.principals.isEmpty() || !(level.getEntity(a.principals.get(0)) instanceof VillageFolkEntity e)) return;
+                Caravans.Trip t = e.trip();
+                if (t == null || t.errand == null) return;
+                UUID guest = e.getUUID();
+                s.add(new Line(null, "We have a visitor: " + e.displayNameCap() + ", from " + Villages.name(t.from) + ".", '*', null));
+                s.add(new Line(guest, Envoys.asks(t.from, id, t.errand, e, t), '?', null));
+                Envoys.Answer ans = Envoys.answer(level, id, t.from, t.errand, e, t);
+                s.add(new Line(null, ans.said(), ans.yes() ? '!' : '?', ans.effect()));
+                s.add(new Line(guest, ans.yes() ? FolkTalk.pick(r, "Thank you! They'll be glad to hear it.", "I'll tell them at once!")
+                    : FolkTalk.pick(r, "I'll take your answer home, then.", "So be it. I'll tell them."), ' ', () -> Envoys.heard(guest)));
+            }
             case ELECTION -> {
                 long dayNow = level.getDayTime() / 24000L;
                 LinkedHashMap<VillageFolkEntity, Integer> votes = Villages.election(id, dayNow);
@@ -871,6 +910,7 @@ public final class Assemblies {
             case WEDDING -> "the wedding of " + a.subject;
             case VIGIL -> a.subject;
             case COMING_OF_AGE -> a.subject.split("\\|", 2)[0] + "'s coming of age";
+            case ENVOY -> "the envoy from " + a.subject.split("\\|", 2)[0];
             case CELEBRATION -> "the celebration of " + a.subject;
             case HONOUR -> a.subject;
             default -> a.kind.label;

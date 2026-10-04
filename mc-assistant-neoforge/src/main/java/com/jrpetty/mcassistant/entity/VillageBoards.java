@@ -300,6 +300,12 @@ public final class VillageBoards {
         }
         out.add("FN|To be " + Villages.nextRankNote(id) + ".");
         out.add("FM|Growing: " + Villages.growthNote(level, id) + ".");
+        String neighbours = Envoys.boardLine(id);
+        if (neighbours != null) out.add("FN|Neighbours: " + neighbours + ". Elder " + (Villages.elderName(id).isEmpty() ? "none yet" : "is " + Envoys.temper(id).words) + ".");
+        String abroad = Envoys.latest(id);
+        if (abroad != null) out.add("FM|Abroad: " + abroad + ".");
+        String scouts = Scouts.boardLine(id);
+        if (scouts != null) out.add("FN|" + scouts);
         List<Villages.News> news = Villages.news(id);
         if (!news.isEmpty()) out.add("FM|Latest: " + news.get(news.size() - 1).text() + ".");
         return out;

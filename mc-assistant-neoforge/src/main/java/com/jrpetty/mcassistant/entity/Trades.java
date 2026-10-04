@@ -133,6 +133,12 @@ public final class Trades {
                 "the café's counter, and the folk's breaks");
             case SHOP -> new Trade("I keep the shop: the crafts' best work on the counter for anybody with coin",
                 List.of(), List.of(), "coin for the treasury, and the crafts' work into players' hands");
+            case SCOUT -> new Trade("I scout the land round the town: other towns, old ruins, peaks and lakes, iron in the rock,"
+                    + " good ground for a new village — and I come home along my own trail and put it all in the atlas",
+                List.of(),
+                List.of(need("food for the road", s -> s.get(net.minecraft.core.component.DataComponents.FOOD) != null, 4, "the stores"),
+                    need("torches to mark the way", s -> s.is(Items.TORCH), 2, "the stores")),
+                "what lies beyond the fields: neighbours for the envoys, ore for the miners, a place for the next village");
             case NONE -> new Trade("I'm between trades just now", List.of(), List.of(), "whatever the village needs a hand with");
         };
     }

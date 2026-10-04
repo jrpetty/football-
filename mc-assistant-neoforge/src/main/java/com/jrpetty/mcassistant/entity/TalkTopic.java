@@ -46,7 +46,8 @@ public enum TalkTopic {
     GUIDE("Could you show me the way?"),
     PRAISE("Well done — you're doing a fine job"),
     WORTH("How are you doing for money?"),
-    KNACK("What are you good at?");
+    KNACK("What are you good at?"),
+    ATLAS("What have the scouts found out there?");
 
     public final String line;
 

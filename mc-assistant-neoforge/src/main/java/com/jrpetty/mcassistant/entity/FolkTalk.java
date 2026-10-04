@@ -146,6 +146,7 @@ public final class FolkTalk {
             case PRAISE -> praise(f, p, op, day);
             case WORTH -> Wealth.talk(f);
             case KNACK -> knack(f);
+            case ATLAS -> Scouts.tell(f);
             default -> puzzled(f);
         };
         // Somebody who can't stand you says as little as it can.
@@ -542,6 +543,10 @@ public final class FolkTalk {
                 "In the café" + place + " — the cider's fresh today.");
             case SHOP -> pick(r, "Minding the shop" + place + ". Have a look round!",
                 "Behind the counter" + place + ". Tools, potions, beds — what are you after?");
+            case SCOUT -> f.expedition() != null
+                ? (f.expedition().returning() ? "On my way home from the " + f.expedition().heading() + ", with news." : "Scouting " + f.expedition().heading() + ". Who knows what's out here?")
+                : pick(r, "Going over the atlas. There's a lot of land out there we've not seen.",
+                    "Resting my feet. Out again in the morning — the atlas won't fill itself.");
         };
         if (!f.missingEssentials().isEmpty()) work += " Or I would be, if I had " + f.missingEssentials().get(0) + ".";
         if (f.life().has(Social.Trait.HARDWORKING) && r.nextBoolean()) work += " Can't stop long.";
@@ -1067,6 +1072,8 @@ public final class FolkTalk {
         if (has(t, "money", "wage", "wages", "salary", " earn", "savings", "how rich", "are you rich", "are you poor",
                 "your worth", "you worth", "how much are you", "get paid", "your pay")) return TalkTopic.WORTH;
         if (has(t, "good at", "your skill", "talent", "best at", "your level", "what level", "how skilled", "your knack")) return TalkTopic.KNACK;
+        if (has(t, "scout", "atlas", "out there", "explore", "explored", "landmark", "beyond the", "what's around", "whats around",
+                "found anything", "discover")) return TalkTopic.ATLAS;
         if (has(t, "become a ", "be a ", "work as a ", "change your trade", "change your job", "change jobs", "switch to ",
                 "take up ", "try being a ", "retrain") && Asks.tradeNamed(t) != null) return TalkTopic.RETRADE;
         if (has(t, " orders ", " order ", "elder want", "elder say", "you should order", "order the village", "tell everyone to", "should put our backs")

@@ -252,6 +252,7 @@ public final class VillageCommands {
                     case ENCHANT -> net.minecraft.world.item.Items.ENCHANTED_BOOK;
                     case COOK -> net.minecraft.world.item.Items.BREAD;
                     case SHOP -> McAssistantMod.VILLAGE_COIN.get();
+                    case SCOUT -> net.minecraft.world.item.Items.COMPASS;
                     case NONE -> net.minecraft.world.item.Items.AIR;
                 }));
             folk.rename(switch (trades[i]) {

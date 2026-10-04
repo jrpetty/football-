@@ -50,7 +50,7 @@ public final class JobSpec {
             case HAUL -> List.of("a pickup chest (wand-click it)", "a delivery chest (wand-click it second)");
             case FISH -> List.of("a fishing rod", "water in the zone", "a chest");
             case STORE -> List.of("two chests in the zone");
-            case NONE, SMITH, TAILOR, BEEKEEP, BREW, ENCHANT, COOK, SHOP -> List.of();
+            case NONE, SMITH, TAILOR, BEEKEEP, BREW, ENCHANT, COOK, SHOP, SCOUT -> List.of();
         };
     }
 

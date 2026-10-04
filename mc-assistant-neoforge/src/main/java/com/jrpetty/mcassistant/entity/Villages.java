@@ -91,7 +91,9 @@ public final class Villages {
         // The brewer and the enchanter an age sooner than they were: a town of seventy-four in
         // the Iron Age had neither, and few villages ever saw the Nether Age at all.
         new Slot(AssistantEntity.StationTask.BREW, 1, 22, Age.IRON, 1),
-        new Slot(AssistantEntity.StationTask.ENCHANT, 1, 24, Age.DIAMOND, 1));
+        new Slot(AssistantEntity.StationTask.ENCHANT, 1, 24, Age.DIAMOND, 1),
+        // Scouts once the village is a town of forty: one or two, out every morning (Scouts).
+        new Slot(AssistantEntity.StationTask.SCOUT, 1, Scouts.FROM, Age.WOOD, 2));
 
     /** Forget every settlement. For tests, which share one JVM and would
      *  otherwise inherit each other's villages. */
@@ -311,6 +313,8 @@ public final class Villages {
         Council.resetForTests();
         Laws.resetForTests();
         Diplomacy.resetForTests();
+        Envoys.resetForTests();
+        Scouts.resetForTests();
         Quests.resetForTests();
         Services.resetForTests();
         Land.resetForTests();
