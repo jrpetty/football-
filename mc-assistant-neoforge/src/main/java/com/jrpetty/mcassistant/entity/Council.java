@@ -201,6 +201,14 @@ public final class Council {
         return "I'll put " + article(what) + " to the council. " + (member ? mine : "I'm not on it myself, mind.");
     }
 
+    /** The council sits and votes afresh on what to build next of the extras (Assemblies). */
+    @Nullable
+    public static String revote(UUID village) {
+        CHOSEN.remove(village);
+        Villages.projectsWanted(village);                 // the vote is taken as the list is made
+        return CHOSEN.get(village);
+    }
+
     /** What the council last decided, in words ("we voted for a tavern"), or null. */
     @javax.annotation.Nullable
     public static String lastDecision(UUID village) {

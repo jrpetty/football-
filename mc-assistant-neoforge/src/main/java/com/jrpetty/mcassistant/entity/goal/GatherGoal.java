@@ -97,7 +97,9 @@ public class GatherGoal extends Goal {
     private int collected;
     private int workTicks;
     private int workNeeded = 30; // recomputed per block from the equipped tool
-    private int stuckTicks;
+    private int stuckTicks;                // ticks without getting any nearer the block
+    private double bestDist;               // the nearest it has got to the current block
+    private int targetTicks;               // ticks spent going after the current block, all told
     private int myGen;
     @Nullable private BlockPos pillarBase; // feet spot we jumped from, to fill while pillaring up
     private int builtBlocks;               // blocks spent building a way to the target (capped)
@@ -152,6 +154,8 @@ public class GatherGoal extends Goal {
         this.targetPos = null;
         this.workTicks = 0;
         this.stuckTicks = 0;
+        this.bestDist = Double.MAX_VALUE;
+        this.targetTicks = 0;
         this.pillarBase = null;
         this.builtBlocks = 0;
         this.buildTicks = 0;
@@ -282,6 +286,8 @@ public class GatherGoal extends Goal {
             assistant.claimTarget(targetPos);   // tell the crew where I'm headed
             workTicks = 0;
             stuckTicks = 0;
+            bestDist = Double.MAX_VALUE;
+            targetTicks = 0;
             builtBlocks = 0;
             buildTicks = 0;
             pillarBase = null;
@@ -316,15 +322,27 @@ public class GatherGoal extends Goal {
             targetPos.getX() + 0.5, targetPos.getY() + 0.5, targetPos.getZ() + 0.5);
 
         if (distSq > AssistantEntity.BLOCK_REACH * AssistantEntity.BLOCK_REACH) {
-            // Can't just WALK there after a couple of seconds? Make a way to it:
-            // dig through the blocks in the way (e.g. the dirt over the stone),
-            // pillar up to a higher block, or bridge a gap — instead of standing
-            // there looking at it. Digging needs no blocks; pillar/bridge use
-            // carried ones. Capped by time and block-count so it can't run away.
-            if (stuckTicks > 30 && buildTicks < 300 && builtBlocks < 32
+            // Stuck is measured by PROGRESS, not by time: a long walk round a pond is
+            // not being stuck, and a folk only starts digging or bridging once it has
+            // stopped getting any nearer — and stopped moving — for a second and a half.
+            double dist = Math.sqrt(distSq);
+            boolean moving = !assistant.getNavigation().isDone()
+                && assistant.getDeltaMovement().horizontalDistanceSqr() > 0.003;
+            targetTicks++;
+            if (dist < bestDist - 1.0) {
+                bestDist = dist;
+                stuckTicks = 0;
+            } else if (!moving || targetTicks % 4 == 0) {
+                stuckTicks++;
+            }
+            // Can't just WALK there? Make a way to it: dig through the ground in the
+            // way (e.g. the dirt over the stone), pillar up to a higher block, or bridge
+            // a gap — instead of standing there looking at it. Digging needs no blocks;
+            // pillar/bridge use carried ones. Capped by time and block-count.
+            if (stuckTicks > 30 && !moving && buildTicks < 300 && builtBlocks < 32
                 && buildToward(targetPos)) {
                 buildTicks++;
-                return; // actively making a path — don't count this as stuck time
+                return;
             }
             if (assistant.getNavigation().isDone()) {
                 // Path's gone idle and we're still short. Look for a walkable cell
@@ -343,9 +361,9 @@ public class GatherGoal extends Goal {
                         targetPos.getX() + 0.5, targetPos.getY(), targetPos.getZ() + 0.5, 1.1D);
                 }
             }
-            // Hard backstop: even building couldn't get us there in time -> blacklist
-            // it so findNearest picks something else (no infinite crawl).
-            if (++stuckTicks > 200) {
+            // Hard backstop: ten seconds without getting any nearer, or a minute and a
+            // quarter on the one block -> blacklist it so findNearest picks another.
+            if (stuckTicks > 200 || targetTicks > 1500) {
                 abandonTarget();
             }
             return;
@@ -420,14 +438,20 @@ public class GatherGoal extends Goal {
             return true;
         }
         // Target below and the floor ahead is in the way -> dig down a step.
-        if (dy <= -1 && solid(ahead.below()) && digThrough(ahead.below())) return true;
+        if (dy <= -1 && solid(ahead.below()) && digThrough(ahead.below())) {
+            assistant.getNavigation().moveTo(ahead.getX() + 0.5, ahead.getY() - 1, ahead.getZ() + 0.5, 1.0D);
+            return true;
+        }
 
         // 2) Higher than us and the way ahead is now clear: pillar up to gain height.
         if (dy >= 2) return pillarUp(feet);
 
-        // 3) A gap ahead at our level: bridge one block across toward it.
+        // 3) A gap ahead at our level: bridge one block across toward it. Going down,
+        //    only over a real drop — a step or two down is walked, and a hole it has
+        //    just dug to get lower is not filled straight back in.
         BlockPos floorAhead = ahead.below();
-        if (dy <= 1 && dy >= -2 && !solid(ahead)
+        boolean deepDrop = !solid(ahead.below(2)) && !solid(ahead.below(3));
+        if (dy <= 1 && dy >= -2 && (dy >= 0 || deepDrop) && !solid(ahead)
             && assistant.countMatching(NightShelterGoal.SHELTER_BLOCK) > 0
             && assistant.level().getBlockState(floorAhead).canBeReplaced()) {
             assistant.getLookControl().setLookAt(
@@ -469,6 +493,7 @@ public class GatherGoal extends Goal {
         BlockState st = assistant.level().getBlockState(p);
         if (!st.isSolid()) return false;
         if (assistant.level().getBlockEntity(p) != null) return false; // don't smash chests/etc.
+        if (!diggable(st)) return false;  // only the ground: never a wall, a floor or a house
         assistant.getLookControl().setLookAt(p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5);
         assistant.equipBestTool(st);
         if (assistant.level().destroyBlock(p, true, assistant)) {
@@ -477,6 +502,17 @@ public class GatherGoal extends Goal {
             return true;
         }
         return false;
+    }
+
+    /** Ground it may dig through to get somewhere: earth, stone, sand, gravel, ore, clay. */
+    private static boolean diggable(BlockState st) {
+        if (st.is(net.minecraft.world.level.block.Blocks.FARMLAND)) return false;
+        return com.jrpetty.mcassistant.entity.Laws.natural(st)
+            || st.is(net.neoforged.neoforge.common.Tags.Blocks.ORES)
+            || st.is(BlockTags.TERRACOTTA)
+            || st.is(net.minecraft.world.level.block.Blocks.CLAY)
+            || st.is(net.minecraft.world.level.block.Blocks.SANDSTONE)
+            || st.is(net.minecraft.world.level.block.Blocks.RED_SANDSTONE);
     }
 
     private boolean nearLiquid(BlockPos p) {

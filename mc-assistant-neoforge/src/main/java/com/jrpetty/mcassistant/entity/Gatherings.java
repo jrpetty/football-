@@ -116,6 +116,12 @@ public final class Gatherings {
         };
     }
 
+    /** The wedding has been held (Assemblies): the next couple, if any, is next. */
+    static void wed(UUID village) {
+        Deque<Wedding> w = WEDDINGS.get(village);
+        if (w != null) w.pollFirst();
+    }
+
     @Nullable
     static Wedding wedding(UUID village) {
         Deque<Wedding> w = WEDDINGS.get(village);
@@ -269,7 +275,7 @@ public final class Gatherings {
     }
 
     /** A rocket over the heart of the village, in village colours. */
-    private static void launch(ServerLevel server, BlockPos heart, RandomSource r) {
+    static void launch(ServerLevel server, BlockPos heart, RandomSource r) {
         int[] palette = {0xE8C547, 0xD94F3D, 0x4F86D9, 0x5BC26B, 0xC45BD9, 0xF2F2F2, 0xF28C38};
         int c1 = palette[r.nextInt(palette.length)], c2 = palette[r.nextInt(palette.length)];
         FireworkExplosion.Shape[] shapes = FireworkExplosion.Shape.values();

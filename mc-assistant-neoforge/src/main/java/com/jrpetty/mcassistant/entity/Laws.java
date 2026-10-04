@@ -182,7 +182,7 @@ public final class Laws {
     }
 
     /** Ground, plants and trees: anybody's to dig, cut and pick. */
-    static boolean natural(BlockState s) {
+    public static boolean natural(BlockState s) {
         return s.is(BlockTags.DIRT) || s.is(BlockTags.LOGS) || s.is(BlockTags.LEAVES) || s.is(BlockTags.SAND)
             || s.is(BlockTags.CROPS) || s.is(BlockTags.FLOWERS) || s.is(BlockTags.SAPLINGS) || s.is(BlockTags.BASE_STONE_OVERWORLD)
             || s.is(BlockTags.SNOW) || s.canBeReplaced() || s.is(net.minecraft.world.level.block.Blocks.GRAVEL)

@@ -2605,11 +2605,34 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         }
         if (bed.distSqr(blockPosition()) > 4.0) {
             if (isSleeping()) stopSleeping();
+            // A watch on the walk home: no nearer in twenty seconds, and a villager is set down
+            // by its bed; one that still cannot get there gives the bed up for a nearer one.
+            // (A whole village spent two nights "on the way" to beds a hundred blocks off.)
+            double far = bed.distSqr(blockPosition());
+            if (far < bedWalkBest - 2.0) {
+                bedWalkBest = far;
+                bedWalkSince = tickCount;
+            } else if (tickCount - bedWalkSince > 400) {
+                bedWalkSince = tickCount;
+                bedWalkBest = Double.MAX_VALUE;
+                if (isSettler() && putBeside(bed)) {
+                    brain("could not walk to my bed — put beside it");
+                } else if (isSettler() && ++bedWalkFails >= 2) {
+                    bedWalkFails = 0;
+                    bedPos = null;                        // a bed it can get to, next look
+                    bedClaimTick = tickCount - 6000;
+                    brain("gave up a bed it could not reach");
+                    return true;
+                }
+            }
             if (getNavigation().isDone() && staggerBeat()) {
                 getNavigation().moveTo(bed.getX() + 0.5, bed.getY(), bed.getZ() + 0.5, 1.0D);
             }
             return true;
         }
+        bedWalkBest = Double.MAX_VALUE;
+        bedWalkSince = tickCount;
+        bedWalkFails = 0;
         if (!isSleeping()) {
             getNavigation().stop();
             startSleeping(bed);
@@ -2617,6 +2640,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         return true;
     }
     private boolean wentHomeTonight;  // one trip per night
+    private double bedWalkBest = Double.MAX_VALUE;   // the nearest it has got to its bed on the way
+    private int bedWalkSince;
+    private int bedWalkFails;
     private int bedClaimTick = -99999; // one bed hunt per night, not per tick
     private boolean parkedForNight;   // the night routine parked it (un-park at dawn)
     private int baseStage;            // how far it has built up its home base (0=just home+chest)
@@ -2657,14 +2683,23 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             // path budget (follow range feeds the pathfinder's node limit), and
             // a bit more reach for the follow/travel goals.
             .add(Attributes.STEP_HEIGHT, 1.0D)
-            .add(Attributes.FOLLOW_RANGE, 64.0D);
+            .add(Attributes.FOLLOW_RANGE, 64.0D)
+            // Down a five-block drop without a scratch: a village heart on a little plateau
+            // trapped folk above it and below it when three was the most they would drop.
+            .add(Attributes.SAFE_FALL_DISTANCE, 5.0D);
+    }
+
+    /** The drop the pathfinder will plan down: five blocks (see SAFE_FALL_DISTANCE); in a fight, the game's own. */
+    @Override
+    public int getMaxFallDistance() {
+        return getTarget() == null ? 5 : super.getMaxFallDistance();
     }
 
     /** A ground navigator that floats over water, opens/passes doors, and
      *  searches a bigger area — so it stops giving up on real terrain. */
     @Override
     protected net.minecraft.world.entity.ai.navigation.PathNavigation createNavigation(Level level) {
-        GroundPathNavigation nav = new GroundPathNavigation(this, level);
+        GroundPathNavigation nav = new FolkNavigation(this, level);       // searches 112 blocks, not 64
         nav.setCanOpenDoors(true);
         nav.setCanPassDoors(true);
         nav.setCanFloat(true); // don't treat water as a wall — float across it
@@ -2707,7 +2742,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // About to walk off something that will hurt: stop and re-route.
         if (!onGround() || getNavigation().isDone()) return;
         BlockPos ahead = blockPosition().relative(getDirection());
-        if (dropBelow(ahead) > 4 || level().getBlockState(ahead.below()).is(Blocks.LAVA)) {
+        if (dropBelow(ahead) > 5 || level().getBlockState(ahead.below()).is(Blocks.LAVA)) {
             getNavigation().stop();
             setDeltaMovement(getDeltaMovement().multiply(0.2, 1.0, 0.2));
         }
@@ -5577,27 +5612,35 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      */
     private String headForPlot() {
         BlockPos back = workZone.center();
+        // A new walk back (the last was a while ago): start the reckoning afresh.
+        if (tickCount - leashLookTick > 400) {
+            plotBest = Double.MAX_VALUE;
+            plotBestTick = tickCount;
+        }
+        leashLookTick = tickCount;
+        double dx = getX() - (back.getX() + 0.5), dz = getZ() - (back.getZ() + 0.5);
+        double d = Math.sqrt(dx * dx + dz * dz);
+        if (d < plotBest - 1.5) {
+            plotBest = d;
+            plotBestTick = tickCount;
+        }
+        // Reckoned in time, not in looks: half a minute without coming a block and a half
+        // nearer, and a settler is put on its plot. (Counted in looks it took four of them,
+        // each as much as six seconds apart, and the count started again at every step.)
+        leashFails = (int) Math.min(9, (tickCount - plotBestTick) / 150);
+        if (tickCount - plotBestTick > 600 && isSettler() && !movementBlocked() && rescueToPlot()) {
+            plotBest = Double.MAX_VALUE;
+            plotBestTick = tickCount;
+            leashFails = 0;
+            return "";
+        }
         if (getNavigation().isDone()) {
-            double dx = getX() - (back.getX() + 0.5), dz = getZ() - (back.getZ() + 0.5);
-            double d = Math.sqrt(dx * dx + dz * dz);
-            if (d < plotBest - 1.5) {
-                plotBest = d;
-                leashFails = 0;
-                leashLookTick = tickCount;
-            } else if (tickCount - leashLookTick >= 100) {
-                // A look counts once in five seconds at most: a walk that ends at once,
-                // over and over, is one bad stretch of ground, not four.
-                leashFails++;
-                leashLookTick = tickCount;
-            }
             getNavigation().moveTo(back.getX() + 0.5, back.getY(), back.getZ() + 0.5, 1.1D);
-            if (leashFails >= 4 && isSettler() && rescueToPlot()) {
-                leashFails = 0;
-                plotBest = Double.MAX_VALUE;
-            }
         }
         return leashFails > 0 ? " (no headway x" + leashFails + ")" : "";
     }
+
+    private int plotBestTick;
 
     private int leashLookTick;
 

@@ -141,6 +141,7 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     public void noteBuilt(String structure) {
         UUID village = ownerId();
+        if (village != null) Assemblies.builder(village, structure, displayNameCap());
         if (village != null) Villages.noteProject(village, structure, level().getGameTime());
         drewForBuild = false;                     // what is left over is cargo again
         // ...and goes back to the storehouse, not to the builder's own field seventy blocks out.
@@ -309,6 +310,16 @@ public class VillageFolkEntity extends AssistantEntity {
         if (tickCount % 20 == 3 && level() instanceof net.minecraft.server.level.ServerLevel hurtIn) {
             if (!Links.drinkIfHurt(this) && stationTask() != StationTask.GUARD) Links.healFromTheStores(this, hurtIn);
         }
+        // The village coming together (Assemblies): the bell rung, it goes, finds a place and takes part.
+        if (!withAPlayer && tickCount % 4 == 1 && level() instanceof net.minecraft.server.level.ServerLevel gathering
+                && Assemblies.attend(this, gathering)) {
+            if (tickCount - agendaTick >= 100 && ownerId() != null) {
+                agendaTick = tickCount;
+                Villages.Village home = Villages.get(ownerId());
+                if (home != null) Assemblies.tick(gathering, home);
+            }
+            return;
+        }
         if (tickCount - agendaTick < 100) return;   // folk think slowly, on purpose
         agendaTick = tickCount;
         flyTheColours();
@@ -327,6 +338,7 @@ public class VillageFolkEntity extends AssistantEntity {
             if (home != null) {
                 TownWork.tick(townLevel, home);
                 TownLife.tick(townLevel, home);         // lit windows, chimney smoke, washing, stalls, signs
+                Assemblies.tick(townLevel, home);       // the morning assembly, openings, feasts, the council, elections
                 Contentment.daily(townLevel, home);     // how it is doing; at its worst, folk leave
             }
         }
@@ -1467,6 +1479,7 @@ public class VillageFolkEntity extends AssistantEntity {
                     m.life.feel(getUUID(), displayNameCap(), 10);
                 }
             }
+            if (village != null) Assemblies.cameOfAge(village, this, learned);
             if (village != null) Villages.tell(village, day, displayNameCap() + " grew up"
                 + (learned == null ? "" : " and became a " + learned + ", as " + mentorName() + " taught them"));
             FolkTalk.speak(this, learned != null
@@ -1692,6 +1705,19 @@ public class VillageFolkEntity extends AssistantEntity {
         if (shopping(server)) return;                 // market day: a treat from the stalls
         if (cafeVisit(server)) return;                // a drink at the café
         if (Leisure.listen(this, server)) return;
+        // Rain: indoors, under its own roof if it has one.
+        if (level().isRaining() && bedPos() != null && !level().canSeeSky(blockPosition())) {
+            getNavigation().stop();
+            return;
+        }
+        if (level().isRaining() && bedPos() != null && blockPosition().distSqr(bedPos()) > 4.0) {
+            if (getNavigation().isDone() || tickCount - socialWalkTick >= 100) {
+                if (tickCount - socialWalkTick >= 600) FolkTalk.speak(this, FolkTalk.pick(getRandom(), "Running for cover!", "Brr — indoors for me.", "Look at this rain!"));
+                walkTo(bedPos(), 1.0D);
+                socialWalkTick = tickCount;
+            }
+            return;
+        }
         VillageFolkEntity mate = company(server);
         if (mate != null) {
             if (distanceToSqr(mate) > 9.0) {
@@ -1702,6 +1728,11 @@ public class VillageFolkEntity extends AssistantEntity {
             } else {
                 getNavigation().stop();
                 getLookControl().setLookAt(mate, 30.0F, 30.0F);
+                // A word or two about what is going on (Smalltalk).
+                if (tickCount - lastSmalltalk > 1200 && getRandom().nextInt(3) == 0 && Smalltalk.chat(this, mate, server)) {
+                    lastSmalltalk = tickCount;
+                    mate.lastSmalltalk = mate.tickCount;
+                }
             }
             return;
         }
@@ -1748,15 +1779,54 @@ public class VillageFolkEntity extends AssistantEntity {
      */
     @Override
     protected boolean eveningSocial() {
+        if (Assemblies.attending(this)) return true;          // at the village's gathering (Assemblies)
         if (Raids.underAlarm(ownerId())) return false;       // the bell is ringing: no evening out
         long t = level().getDayTime() % 24000L;
         long bedtime = bedtimeTick();
         if (t < 12000L || t >= bedtime) return false;
         if (isBaby()) return false;
-        if (Gatherings.attend(this, t)) return true;
+        if (familySupper(t)) return true;
         if (Tavern.evening(this, t)) return true;
         if (Leisure.evening(this, t)) return true;
         socialise();
+        return true;
+    }
+
+    /** When it last passed the time of day with somebody (Smalltalk). */
+    int lastSmalltalk = -100000;
+    /** The day it last sat down to supper with its family. */
+    private long supperDay = -1;
+
+    /**
+     * Supper: a folk with a family goes home at dusk for an hour with them — its partner,
+     * its children — before the evening out. One sits down first and calls the rest in.
+     */
+    private boolean familySupper(long t) {
+        if (t >= 13000L || bedPos() == null || isBaby()) return false;
+        long day = level().getDayTime() / 24000L;
+        if (supperDay == day && t >= 12900L) return false;
+        if (life.partner() == null && life.children() == 0) return false;
+        BlockPos home = bedPos();
+        if (!level().isLoaded(home)) return false;
+        if (blockPosition().distSqr(home) > 3.0 * 3.0) {
+            if (getNavigation().isDone() || tickCount - socialWalkTick >= 100) {
+                walkTo(home, 0.9D);
+                socialWalkTick = tickCount;
+            }
+            hobbyNow = "home for supper";
+            return true;
+        }
+        getNavigation().stop();
+        hobbyNow = "at supper with the family";
+        if (supperDay != day) {
+            supperDay = day;
+            persona.remember(day, "supper at home with the family", 1);
+            if (getRandom().nextInt(3) == 0) FolkTalk.speak(this, FolkTalk.pick(getRandom(), "Supper's on!", "Come and eat, everyone!", "Smells good tonight."));
+        }
+        if (life.partner() != null && level() instanceof net.minecraft.server.level.ServerLevel sl
+                && sl.getEntity(life.partner()) instanceof VillageFolkEntity p && p.distanceToSqr(this) < 16.0) {
+            getLookControl().setLookAt(p, 30.0F, 30.0F);
+        }
         return true;
     }
 
@@ -1869,6 +1939,8 @@ public class VillageFolkEntity extends AssistantEntity {
      */
     @Override
     public boolean onShift() {
+        // Called to the village's gathering: its work waits (the watch is never called away).
+        if (Assemblies.attending(this)) return false;
         // The bell: every guard turns out, whichever watch it keeps; nobody else works.
         UUID alarmed = ownerId();
         if (alarmed != null && Raids.underAlarm(alarmed)) return stationTask() == StationTask.GUARD;

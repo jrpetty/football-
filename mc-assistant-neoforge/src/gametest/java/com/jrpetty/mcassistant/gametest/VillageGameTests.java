@@ -2911,6 +2911,8 @@ public class VillageGameTests {
             + carrier.countCarried(st -> st.is(Items.BREAD)) + " bread, " + llamas + " llama");
         helper.assertTrue(out && carrier.trip() != null && carrier.countCarried(st -> st.is(Items.BREAD)) >= 32 && llamas == 1,
             "a caravan sets out with the mother's spare bread and a pack llama");
+        Kit.log("t31 before unloading: carrier " + carrier.stationTask() + " keeps " + carrier.depositReserve(new ItemStack(Items.BREAD, 64))
+            + " of a stack of bread; the colony's stores " + Villages.storeChests(level, colony.id()) + "; " + carrier.debugLine());
         com.jrpetty.mcassistant.entity.Caravans.arriveForTests(level, carrier);
         int after = com.jrpetty.mcassistant.entity.Market.stock(level, colony.id(), st -> st.is(Items.BREAD));
         Kit.log("t31 at the colony: its bread " + before + " -> " + after + "; homeward " + (carrier.trip() != null && carrier.trip().homeward()));
@@ -3345,7 +3347,7 @@ public class VillageGameTests {
         VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
         helper.assertTrue(f != null, "a village");
         f.setJob(StationTask.FARM);
-        f.awardXp(1500);
+        f.awardXp(6000);
         int farming = f.veteranLevel();
         f.setJob(StationTask.SMELT);
         int smelting = f.veteranLevel();
@@ -3431,6 +3433,90 @@ public class VillageGameTests {
             Kit.log("t49 its card: " + card.replace('\n', ' ') + " — now: " + now);
             helper.assertTrue(card.contains("Trade|") && card.contains("Worth|") && card.contains("At its work|"), "its card says who it is");
             helper.assertTrue(!now.isBlank(), "and what it is doing");
+            helper.succeed();
+        });
+    }
+
+    /**
+     * The morning assembly: the bell, everybody walks to the board and takes a place in the
+     * rows before it — not in a heap — the elder says what the day holds, and they go to work.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 1600, batch = "t50_assembly")
+    public static void t50_assembly(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 32000, 12000, 40);
+        Kit.prepare(level, 32000, 12000, 40);
+        level.setDayTime(5000);
+        BlockPos heart = Kit.surface(level, 32000, 12000);
+        int stood = VillageFolkSpawnerBlock.raiseParty(level, heart, 0.0F, 6);
+        Villages.Village v = Villages.nearest(level, heart, Villages.VILLAGE_RANGE);
+        helper.assertTrue(v != null && stood >= 4, "a village of a few: " + stood);
+        int[] best = { 0, 0, 0 };   // most in their places, furthest line, furthest phase
+        java.util.List<String> trail = new java.util.ArrayList<>();
+        helper.runAtTickTime(20, () -> helper.assertTrue(com.jrpetty.mcassistant.entity.Assemblies.startNow(level, v,
+            com.jrpetty.mcassistant.entity.Assemblies.Kind.MORNING), "the bell is rung"));
+        for (int t = 40; t <= 1500; t += 20) {
+            final int at = t;
+            helper.runAtTickTime(t, () -> {
+                int[] p = com.jrpetty.mcassistant.entity.Assemblies.progress(v.id());
+                if (p == null) {
+                    if (best[2] < 9) {
+                        best[2] = 9;
+                        trail.add(at + ": over");
+                    }
+                    return;
+                }
+                best[0] = Math.max(best[0], p[1]);
+                best[1] = Math.max(best[1], p[3]);
+                best[2] = Math.max(best[2], p[0]);
+                if (at % 100 == 0) trail.add(at + ": " + com.jrpetty.mcassistant.entity.Assemblies.debug(v.id()));
+            });
+        }
+        helper.runAtTickTime(1520, () -> {
+            Kit.log("t50 the morning assembly: " + String.join(" | ", trail) + " — most in place " + best[0] + ", lines " + best[1]);
+            helper.assertTrue(best[0] >= 3, "they came and took their places: " + best[0]);
+            helper.assertTrue(best[1] >= 3, "the elder spoke: " + best[1] + " lines");
+            helper.assertTrue(best[2] >= 4, "and it closed and they went to work: " + best[2]);
+            helper.succeed();
+        });
+    }
+
+    /**
+     * An election: the three the village thinks most of stand, every grown folk votes, the
+     * count is read out before the board, and the one with the most is the elder.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 1800, batch = "t51_election")
+    public static void t51_election(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 33000, 12000, 40);
+        Kit.prepare(level, 33000, 12000, 40);
+        level.setDayTime(24000L * 5 + 5000);
+        BlockPos heart = Kit.surface(level, 33000, 12000);
+        int stood = VillageFolkSpawnerBlock.raiseParty(level, heart, 0.0F, 6);
+        Villages.Village v = Villages.nearest(level, heart, Villages.VILLAGE_RANGE);
+        helper.assertTrue(v != null && stood >= 4, "a village of a few: " + stood);
+        helper.runAtTickTime(20, () -> {
+            for (AssistantEntity a : Villages.folkOf(v.id())) if (a instanceof VillageFolkEntity f) f.ensurePersona();
+            long day = level.getDayTime() / 24000L;
+            java.util.LinkedHashMap<VillageFolkEntity, Integer> votes = Villages.election(v.id(), day);
+            StringBuilder sb = new StringBuilder();
+            votes.forEach((f, n) -> sb.append(f.displayNameCap()).append('=').append(n).append(' '));
+            Kit.log("t51 standing and the count: " + sb);
+            helper.assertTrue(!votes.isEmpty() && votes.size() <= 3, "up to three stand: " + votes.size());
+            int total = votes.values().stream().mapToInt(Integer::intValue).sum();
+            helper.assertTrue(total >= 4, "every grown folk votes: " + total);
+            helper.assertTrue(com.jrpetty.mcassistant.entity.Assemblies.startNow(level, v,
+                com.jrpetty.mcassistant.entity.Assemblies.Kind.ELECTION), "the election is called");
+        });
+        helper.runAtTickTime(1700, () -> {
+            long day = level.getDayTime() / 24000L;
+            java.util.UUID elder = Villages.elder(v.id());
+            Kit.log("t51 after the count: elder " + elder + ", elected on day " + Villages.electedOn(v.id())
+                + " (today " + day + "), " + com.jrpetty.mcassistant.entity.Assemblies.debug(v.id()));
+            helper.assertTrue(Villages.electedOn(v.id()) == day, "the village chose its elder today");
+            helper.assertTrue(elder != null, "and has one");
             helper.succeed();
         });
     }

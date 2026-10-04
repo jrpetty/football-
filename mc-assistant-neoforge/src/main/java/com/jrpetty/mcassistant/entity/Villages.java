@@ -178,9 +178,74 @@ public final class Villages {
     }
 
     /** Once a day: who does the village look up to? */
+    /** The day each village last held an election (Assemblies). */
+    private static final Map<UUID, Long> ELECTED_ON = new ConcurrentHashMap<>();
+
+    /** Elected: the elder until the next election, or until it is gone. */
+    public static void electElder(UUID villageId, VillageFolkEntity f, long day) {
+        Elder was = ELDERS.get(villageId);
+        ELDERS.put(villageId, new Elder(f.getUUID(), f.displayNameCap(), day));
+        ELECTED_ON.put(villageId, day);
+        if (was == null || !was.id().equals(f.getUUID())) {
+            tell(villageId, day, f.displayNameCap() + " was elected elder");
+            f.persona().remember(day, "the village elected me its elder", 9);
+        }
+    }
+
+    public static long electedOn(UUID villageId) {
+        return ELECTED_ON.getOrDefault(villageId, -100L);
+    }
+
+    /**
+     * An election: the three the village thinks most of stand, and every grown folk votes for
+     * the one it likes best (itself, if it stands). Returns the votes, most first.
+     */
+    public static java.util.LinkedHashMap<VillageFolkEntity, Integer> election(UUID villageId, long day) {
+        List<VillageFolkEntity> folk = new ArrayList<>();
+        for (AssistantEntity a : folkOf(villageId)) {
+            if (a instanceof VillageFolkEntity f && !f.isBaby() && f.persona().rolled()) folk.add(f);
+        }
+        Map<VillageFolkEntity, Integer> esteem = new java.util.HashMap<>();
+        for (VillageFolkEntity c : folk) {
+            int score = (int) Math.min(30, Math.max(0, day - c.persona().since()));
+            for (VillageFolkEntity o : folk) if (o != c) score += o.life().affinity(c.getUUID());
+            esteem.put(c, score);
+        }
+        List<VillageFolkEntity> standing = new ArrayList<>(folk);
+        standing.sort((a, b) -> Integer.compare(esteem.get(b), esteem.get(a)));
+        if (standing.size() > 3) standing = new ArrayList<>(standing.subList(0, 3));
+        Map<VillageFolkEntity, Integer> votes = new java.util.HashMap<>();
+        for (VillageFolkEntity c : standing) votes.put(c, 0);
+        for (VillageFolkEntity voter : folk) {
+            VillageFolkEntity pick = null;
+            int best = Integer.MIN_VALUE;
+            for (VillageFolkEntity c : standing) {
+                int like = c == voter ? 60 : voter.life().affinity(c.getUUID());
+                if (like > best) { best = like; pick = c; }
+            }
+            if (pick != null) votes.merge(pick, 1, Integer::sum);
+        }
+        List<VillageFolkEntity> order = new ArrayList<>(votes.keySet());
+        order.sort((a, b) -> votes.get(b).equals(votes.get(a))
+            ? Integer.compare(esteem.get(b), esteem.get(a)) : Integer.compare(votes.get(b), votes.get(a)));
+        java.util.LinkedHashMap<VillageFolkEntity, Integer> out = new java.util.LinkedHashMap<>();
+        for (VillageFolkEntity c : order) out.put(c, votes.get(c));
+        return out;
+    }
+
     public static void chooseElder(UUID villageId, long day) {
         Elder now = ELDERS.get(villageId);
         if (now != null && now.day() == day) return;
+        // An elected elder serves until the next election, while it is with us.
+        Long elected = ELECTED_ON.get(villageId);
+        if (now != null && elected != null && day - elected < 8) {
+            for (AssistantEntity a : folkOf(villageId)) {
+                if (a.getUUID().equals(now.id()) && a.isAlive()) {
+                    ELDERS.put(villageId, new Elder(now.id(), now.name(), day));
+                    return;
+                }
+            }
+        }
         List<VillageFolkEntity> folk = new ArrayList<>();
         for (AssistantEntity a : folkOf(villageId)) {
             if (a instanceof VillageFolkEntity f && f.persona().rolled()) folk.add(f);
@@ -223,6 +288,8 @@ public final class Villages {
         Retiring.resetForTests();
         HAS_STORES.clear();
         REQUESTED.clear();
+        ELECTED_ON.clear();
+        Assemblies.resetForTests();
         GLUT.clear();
         GLUT_AT.clear();
         GREW.clear();
@@ -1091,6 +1158,8 @@ public final class Villages {
             BUILT_AT.computeIfAbsent(villageId, k -> new ConcurrentHashMap<>()).putIfAbsent(structure, raised.anchor());
             // And into the register of the town's buildings, kept with the world (TownLife hangs on it).
             com.jrpetty.mcassistant.village.Ledger.built(villageId, structure, raised.anchor(), raised.facing());
+            // And opened: the village gathers in front of it this evening (Assemblies).
+            Assemblies.opening(villageId, structure, raised.anchor(), raised.facing(), gameTime);
         }
         if ("guesthouse".equals(structure)) {
             com.jrpetty.mcassistant.village.Chronicle.Guest g = com.jrpetty.mcassistant.village.Chronicle.awaitingAHouse(villageId);

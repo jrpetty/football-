@@ -278,8 +278,13 @@ public final class VillageBoards {
         out.add((content >= 60 ? "RG" : content >= 35 ? "RN" : "RW") + "|Contentment: " + Contentment.line(level, id) + ".");
         String alarm = Raids.why(id);
         out.add(alarm != null ? "RB|THE BELL IS RINGING: " + alarm + "!" : "RM|The watch: all quiet.");
+        String gathering = Assemblies.now(id);
+        if (gathering != null) out.add("RG|Now: " + gathering + " — come along!");
         Gatherings.Kind tonight = Gatherings.tonight(id, day);
         if (tonight != null) out.add("RG|Tonight: " + Gatherings.describe(tonight, id) + " — everybody welcome.");
+        for (String p : Assemblies.planned(id)) out.add("RG|This evening: " + p + ".");
+        if (day % 7 == 3) out.add("RM|The council sits this evening.");
+        if (day % 7 == 5 && day > 0) out.add("RM|This evening: the election of the elder.");
 
         // ---- what we're working towards
         out.add("FH|What we're working towards");
