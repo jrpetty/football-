@@ -3458,3 +3458,17 @@ html[data-broadcast='on'] .ticker .score-pill .ico {
     display: none;
   }
 }
+
+/* Suite cards: three lines of description (full text on hover and on the selected card), so the choice isn't a wall of text. */
+.suite-card p {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+.suite-card.on p {
+  display: block;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+}

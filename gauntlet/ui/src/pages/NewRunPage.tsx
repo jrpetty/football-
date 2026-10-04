@@ -268,6 +268,12 @@ export default function NewRunPage() {
   const presetTests = query.get('tests');
   const [mode, setMode] = useState<Mode>(presetTests ? 'pick' : 'suite');
   const [suiteId, setSuiteId] = useState(query.get('suite') ?? 'core');
+  // First time here (no runs yet, no suite in the link): start on the 2p Quick Check rather than the big Core suite.
+  const pastRuns = useAsync(() => (query.get('suite') ? Promise.resolve(null) : api.runs().catch(() => null)), []);
+  useEffect(() => {
+    if (!query.get('suite') && pastRuns.data && pastRuns.data.length === 0) setSuiteId('quick-check');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pastRuns.data]);
   // Fall back to the first suite if the requested/default one doesn't exist on this server.
   useEffect(() => {
     if (suites.length && !suites.some((s) => s.id === suiteId)) setSuiteId(suites.some((s) => s.id === 'core') ? 'core' : suites[0].id);
@@ -487,17 +493,17 @@ export default function NewRunPage() {
               <div className="card-body">
                 {mode === 'suite' ? (
                   <div className="suite-grid" role="radiogroup" aria-label="Suite">
-                    {suites.map((s) => (
+                    {[...suites].sort((a, b) => suiteOrder(a.id) - suiteOrder(b.id)).map((s) => (
                       <button key={s.id} type="button" role="radio" aria-checked={s.id === suiteId} className={cx('suite-card', s.id === suiteId && 'on')} onClick={() => setSuiteId(s.id)}>
                         <div className="row between">
                           <strong>{s.name}</strong>
                           <span className="badge outline">v{s.version}</span>
                         </div>
-                        <p>{s.description}</p>
+                        <p title={s.description}>{s.description}</p>
                         <div className="row wrap" style={{ gap: 6 }}>
                           <span className="badge">{s.testCount} tests</span>
                           {s.repeats ? <span className="badge">{s.repeats}× repeats</span> : null}
-                          <span className="hash">{s.fingerprint.slice(0, 8)}</span>
+                          <span className="hash" data-dev>{s.fingerprint.slice(0, 8)}</span>
                         </div>
                       </button>
                     ))}
@@ -769,4 +775,11 @@ export default function NewRunPage() {
       )}
     </div>
   );
+}
+
+/** Beginner-friendly order: the cheap first runs, then the main benchmarks, then everything else (alphabetical). */
+function suiteOrder(id: string): number {
+  const first = ['quick-check', 'quick', 'core', 'frontier'];
+  const i = first.indexOf(id);
+  return i === -1 ? first.length : i;
 }
