@@ -2816,7 +2816,16 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // The streak itself never got past three (giving up resets it), so this never came true
         // and EscapeGoal only ever fired for a folk suffocating: one that gives up twice on the
         // same spot is wedged, and may pillar or carve its way out.
-        return stuckStreak >= 4 || tickCount < wedgedUntil;
+        return stuckStreak >= 4 || (tickCount < wedgedUntil && underground());
+    }
+
+    /** Below the ground (a shaft, a cave, a pit), where digging out harms nothing anybody built.
+     *  On the surface a wedged folk only gives the path up: a builder that dug itself free at the
+     *  gateway took a block out of the frame. */
+    private boolean underground() {
+        BlockPos p = blockPosition();
+        return p.getY() < level().getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+            p.getX(), p.getZ()) - 2;
     }
 
     private int firstSlot(java.util.function.Predicate<ItemStack> p) {
