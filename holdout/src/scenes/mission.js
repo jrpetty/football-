@@ -42,6 +42,7 @@ import { Tracks } from '../world/tracks.js'
 import { CoopMixin, agentStatus, stopTap } from './missioncoop.js'
 import { TrapsMixin } from './missiontraps.js'
 import { BarricadeMixin, BARRICADE_HP } from './missionbarricade.js'
+import { MissionFPMixin } from './missionfp.js'
 import { volumeControl } from '../ui/volume.js'
 import { fullscreenButton } from '../ui/fullscreen.js'
 
@@ -362,8 +363,9 @@ export class Mission {
     k = clamp(k, 0, this.lv.levels - 1)
     if (k === this.view && !snap) return
     this.view = k
-    for (let q = 1; q < this.levelRoot.length; q++) this.levelRoot[q].visible = q <= k
-    for (let q = 0; q < this.cutUs.length; q++) this.cutUs[q].n.value = q === k ? this.cutN : 0
+    // in first person every floor stands and no wall is cut away
+    for (let q = 1; q < this.levelRoot.length; q++) this.levelRoot[q].visible = q <= k || !!this.fpOn
+    for (let q = 0; q < this.cutUs.length; q++) this.cutUs[q].n.value = q === k && !this.fpOn ? this.cutN : 0
     view.rig.levelY = k * this.lv.FH
     if (snap) {
       view.rig.goal.y = view.rig.levelY
@@ -423,7 +425,7 @@ export class Mission {
     this.buildStreet()
     this.buildBuilding()
     this.buildYard()
-    this.buildNeighbours()
+    this.nReach = this.buildNeighbours()
     this.buildContainers()
     this.buildVan()
     this.buildPowerLights()
@@ -972,7 +974,9 @@ export class Mission {
     this.addStatic(b)
   }
   // Neighbouring lots from the city, built exactly as they stand on the map.
-  buildNeighbours() {
+  // First person adds a second ring further out (rMin..rMax, into its own
+  // group, without the fires).
+  buildNeighbours(rMin = -1, rMax = null, root = this.scene, far = false) {
     const lv = this.lv
     const city = this.game.city
     const me = lv.loc.lot
@@ -986,26 +990,27 @@ export class Mission {
     }
     const P = new PropList()
     const b = new Builder()
-    const reach = Math.max(lv.W0, lv.H) * 0.75 + 20
+    const reach = rMax ?? Math.max(lv.W0, lv.H) * 0.75 + 20
     for (const lot of city.lots) {
       if (lot === me || lot.taken) continue
       const p = toLocal(lot.cx, lot.cz)
       if (Math.abs(p.x) > reach || Math.abs(p.z) > reach) continue
+      if (Math.abs(p.x) <= rMin && Math.abs(p.z) <= rMin) continue
       const r = seeded(lot.seed)
       b.at({ x: p.x, z: p.z, ry: FACE_ROT[lot.face] - r0 }, () => {
         if (lot.loc) locationModel(b, lot.loc, r, P)
         else if (lot.bld) CB.fillerLot(b, lot, r, P)
       })
     }
-    this.addStatic(b)
+    this.addStatic(b, root)
     // their small props, instanced
-    this.inst = []
+    const inst = far ? (this.fpInst = []) : (this.inst = [])
     const make = (key, template, opts) => {
       const list = P.by[key]
       if (!list?.length) return
-      const set = new InstSet(this.scene, template, list.length, opts)
+      const set = new InstSet(root, template, list.length, opts)
       set.set(list)
-      this.inst.push(set)
+      inst.push(set)
     }
     for (const k of ['oak', 'maple', 'poplar', 'pine', 'spruce', 'dead']) make('tree-' + k, mapTreeModel(k), { tint: ['leaf', 'needle'], wind: true })
     make('bush', mapTreeModel('bush'), { tint: ['leaf'], shadow: false })
@@ -1016,7 +1021,8 @@ export class Mission {
     make('bus-school', mapVehicleModel('schoolbus'), { tint: ['paint'] })
     for (const k of ['lamp', 'hydrant', 'bench', 'trash', 'mailbox', 'dumpster', 'pallets', 'tires', 'rubble', 'tent', 'tomb', 'cross', 'swing', 'container', 'barrier', 'sandbags', 'hesco', 'policeline', 'car-pile', 'crane', 'busstop', 'pole', 'poleT', 'signal']) make(k, mapPropModel(k), { tint: k === 'container' ? ['corrugated'] : k === 'dumpster' || k === 'mailbox' ? ['paint'] : k === 'tent' ? ['canvas'] : [] })
     // fires in the neighbourhood
-    for (const f of P.by.fire || []) this.addFire(f.x, f.y || 3, f.z, 2.5 * (f.s || 1), 1e9)
+    if (!far) for (const f of P.by.fire || []) this.addFire(f.x, f.y || 3, f.z, 2.5 * (f.s || 1), 1e9)
+    return reach
   }
 
   // ---------------------------------------------------------------- containers
@@ -2279,8 +2285,10 @@ export class Mission {
           s.command({ type: 'throw', item: t.item, x: t.x, z: t.z })
         }
         if (!s.downed) s.pos.y = this.floorY(s.pos.x, s.pos.z)
-        s.update(dt)
+        if (s.fp) s.fpUpdate(dt)
+        else s.update(dt)
       }
+      if (this.fpOn) this.fpTickWork(dt)
       for (const z of this.zombies) {
         if (!z.dead) z.pos.y = this.floorY(z.pos.x, z.pos.z)
         z.update(dt)
@@ -2516,8 +2524,18 @@ export class Mission {
     // flashlights after dark
     this.torches.forEach((l, k) => {
       const a = this.squad[k]
-      if (!a || a.downed || night < 0.15) {
+      if (!a || a.downed || (night < 0.15 && !(a.fp && this.fpTorch))) {
         l.intensity = 0
+        return
+      }
+      if (a.fp) {
+        // the player's torch is in their hand, pointing where they look
+        const cam = view.camera
+        const f = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion)
+        const r = new THREE.Vector3(1, 0, 0).applyQuaternion(cam.quaternion)
+        l.position.copy(cam.position).addScaledVector(r, 0.18).addScaledVector(f, 0.2).y -= 0.15
+        l.target.position.copy(cam.position).addScaledVector(f, 8)
+        l.intensity = this.fpTorchOn() ? 120 * Math.max(night, this.fpTorch ? 0.85 : 0) * (a.st.nightSight ? 1.3 : 1) : 0
         return
       }
       const fwd = new THREE.Vector3(Math.sin(a.heading), 0, Math.cos(a.heading))
@@ -2551,7 +2569,7 @@ export class Mission {
         'div.mtop',
         h('div.mlocard', h('span.lvlbadge', { style: { '--c': col } }, this.level), h('div', h('b', this.loc.name), h('small', `${L.name}${this.F ? ` · ${this.lv.floors} floors${this.lv.roof ? ' and a roof' : ''}` : ''}${ev ? (ev.kind === 'distress' ? ' · rescue the survivor inside' : ' · supply drop in the yard') : ''}`))),
         this.timerEl,
-        h('div.mright', this.ammoEl, volumeControl(this.game), fullscreenButton(this.game.ui, 'button.btn.ghost.small.mfull'), this.pauseBtn),
+        h('div.mright', this.ammoEl, h('button.btn.ghost.small.fpbtn', { hidden: !!this.remote, onclick: () => this.game.toggleFirstPerson?.(), 'data-tip': 'Walk in your survivor’s boots <kbd>`</kbd> or <kbd>F5</kbd>' }, 'First person'), volumeControl(this.game), fullscreenButton(this.game.ui, 'button.btn.ghost.small.mfull'), this.pauseBtn),
       ),
       this.haulEl,
       h('div.mbottom', (this.squadEl = h('div.squad')), this.utilEl, h('div.mact', h('button.btn.ghost', { onclick: () => this.selectAll(), 'data-tip': 'Select everyone <kbd>Tab</kbd>' }, 'All'), this.extractBtn)),
@@ -2689,6 +2707,7 @@ export class Mission {
   // ---------------------------------------------------------------- the end
   end(result) {
     if (this.over) return
+    if (this.fpOn) this.game.toggleFirstPerson?.(false)
     this.over = true
     this.saveVision()
     const report = { result, loc: this.loc, loot: {}, items: [], lost: [...(this.lost || [])], injured: [] }
@@ -2801,7 +2820,7 @@ export class Mission {
     this.disposeVision()
   }
 }
-Object.assign(Mission.prototype, VisionMixin, TrapsMixin, CoopMixin, BarricadeMixin)
+Object.assign(Mission.prototype, VisionMixin, TrapsMixin, CoopMixin, BarricadeMixin, MissionFPMixin)
 
 // A rectangle with a hole taken out of it, as up to four rectangles.
 function rectMinus(r, h) {

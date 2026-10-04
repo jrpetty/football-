@@ -529,6 +529,42 @@ export class SurvivorAgent extends Agent {
     } else if (W.mode === 'raid' && this.st.gun) mode = 'aimIdle'
     this.finish(dt, mode)
   }
+  // First person (render/firstperson.js): the player walks and aims this
+  // body, so none of the AI runs; only its own upkeep does: cooldowns,
+  // bleeding out, the stairs and the lift (taken on a path), a medic's aura,
+  // and the animation the others (and its shadow) show.
+  fpUpdate(dt) {
+    const W = this.world
+    this.cool -= dt
+    this.hurtT -= dt
+    this.swing = Math.max(0, this.swing - dt * 2.2)
+    if (this.climb) {
+      if (this.downed) this.endClimb()
+      else {
+        this.advanceClimb(dt)
+        this.finish(dt, this.climb?.kind === 'lift' ? 'idle' : 'walk')
+        return
+      }
+    }
+    if (this.downed) {
+      if (W.mode === 'mission' && !W.paused) {
+        this.bleed -= dt
+        if (this.bleed <= 0) W.onBledOut?.(this)
+      }
+      this.finish(dt, 'downed')
+      return
+    }
+    if (this.st.aura && W.mode === 'mission') {
+      for (const a of W.squad) if (!a.downed && a !== this && a.dist(this) < 4) a.hp = Math.min(a.maxHp, a.hp + this.st.aura * dt)
+    }
+    if (this.path) {
+      this.step(dt)
+      this.finish(dt, 'walk')
+      return
+    }
+    this.curSpeed = this.fpSpeed || 0
+    this.finish(dt, this.swing > 0 ? 'swing' : this.work ? 'search' : this.curSpeed > 0.3 ? 'walk' : this.st.gun ? 'aimIdle' : 'idle')
+  }
   fight(z, dt) {
     const W = this.world
     const d = this.dist(z)
@@ -644,7 +680,7 @@ export class SurvivorAgent extends Agent {
     } else if (mode === 'run' || mode === 'walk') {
       anim = this.curSpeed > 3.1 ? 'run' : 'walk'
     }
-    if (!this.path) o.speed = 0
+    if (!this.path && !this.fp) o.speed = 0
     this.ch.update(dt, anim, o)
     this.labelBar.style.width = `${clamp(this.hp / this.maxHp, 0, 1) * 100}%`
     this.labelBar.parentNode.classList.toggle('low', this.hp < this.maxHp * 0.35)

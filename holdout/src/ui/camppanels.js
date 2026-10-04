@@ -11,6 +11,7 @@ import { sfx } from '../core/audio.js'
 import { volumeControl } from './volume.js'
 import { fpsOn, setFps } from './fps.js'
 import { paceMode, setPace } from '../render/pacer.js'
+import { fpPrefs, saveFpPrefs } from '../render/firstperson.js'
 import { isFullscreen, toggleFullscreen } from './fullscreen.js'
 import { canNotify, askNotify } from './notify.js'
 import { bus, h, fmt, clamp } from '../core/util.js'
@@ -360,6 +361,12 @@ export function renderSettings(ui) {
     row('Edge scrolling', seg([[true, 'On'], [false, 'Off']], st.edgePan !== false, (v) => ((st.edgePan = v), g.applySettings(), ui.closeModal(), ui.openSettings()))),
     row(h('span', { 'data-tip': 'When the frame rate drops, draw at a slightly lower resolution to stay smooth, and go back up when it recovers.' }, 'Auto resolution'), seg([[true, 'On'], [false, 'Off']], st.autoRes !== false, (v) => ((st.autoRes = v), g.applySettings(), ui.closeModal(), ui.openSettings()))),
     row(h('span', { 'data-tip': 'Smart: on a fast screen (120 Hz and up) draw every 2nd or 3rd refresh, keeping 60 or more frames a second evenly paced, so the graphics card is not pushed flat out for frames you can hardly tell apart. Every refresh: draw them all.' }, 'Frame rate'), seg([['smart', 'Smart'], ['full', 'Every refresh']], paceMode(), (v) => (setPace(v), ui.closeModal(), ui.openSettings()))),
+    h('h4', 'First person'),
+    row(h('span', { 'data-tip': 'How far the view turns for a move of the mouse.' }, 'Mouse sensitivity'), seg([[0.5, 'Low'], [0.75, '¾'], [1, 'Normal'], [1.4, '1.4×'], [2, 'High']], fpPrefs.sens, (v) => ((fpPrefs.sens = v), saveFpPrefs(), ui.closeModal(), ui.openSettings()))),
+    row(h('span', { 'data-tip': 'How much of the world fits on screen (vertical degrees). Wider sees more at the edges; narrower looks closer.' }, 'Field of view'), seg([[64, 'Narrow'], [74, 'Normal'], [84, 'Wide'], [94, 'Widest']], fpPrefs.fov, (v) => ((fpPrefs.fov = v), saveFpPrefs(), ui.closeModal(), ui.openSettings()))),
+    row('Invert mouse', seg([[false, 'Off'], [true, 'On']], !!fpPrefs.invert, (v) => ((fpPrefs.invert = v), saveFpPrefs(), ui.closeModal(), ui.openSettings()))),
+    row(h('span', { 'data-tip': 'The sway of walking: full, or a little (easier on the stomach).' }, 'Head bob'), seg([[true, 'Full'], [false, 'Low']], fpPrefs.bob !== false, (v) => ((fpPrefs.bob = v), saveFpPrefs(), ui.closeModal(), ui.openSettings()))),
+    h('h4', 'Display'),
     row(h('span', { 'data-tip': 'Frames a second, how long a frame takes and the worst recent one, bottom right. F3 turns it on and off.' }, 'FPS counter'), seg([[true, 'On'], [false, 'Off']], fpsOn(), (v) => (setFps(v), ui.closeModal(), ui.openSettings()))),
     row('Volume', volumeControl(g, { wide: true })),
     row('Full screen', seg([[true, 'On'], [false, 'Off']], isFullscreen(), (v) => v !== isFullscreen() && toggleFullscreen(ui).then(() => (ui.closeModal(), ui.openSettings())))),

@@ -123,6 +123,14 @@ export const VisionMixin = {
         z.fogShown = shown
       }
       z.fogHidden = !shown
+      // in first person you see what is in front of your eyes (walls hide
+      // the rest), not the squad's shared picture
+      if (this.fpOn) {
+        this.setGhost(z, false)
+        z.root.visible = true
+        if (!shown && !z.dead) this.listen(z, dt)
+        continue
+      }
       this.setGhost(z, ghost)
       z.root.visible = (shown || ghost) && (!this.F || this.onView(z.pos.x, z.pos.z) || (z.climb && (this.onView(z.climb.from.x, z.climb.from.z) || this.onView(z.climb.to.x, z.climb.to.z))))
       if (!shown && !ghost && !z.dead) this.listen(z, dt)

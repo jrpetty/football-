@@ -274,7 +274,8 @@ export const RaidMixin = {
         const v = this.stationViews.get(a.tower.id)
         a.pos.y = v?.info.platformY || 3
       }
-      a.update(dt)
+      if (a.fp) a.fpUpdate(dt)
+      else a.update(dt)
     }
     for (const z of this.zombies) z.update(dt)
     const ground = [...this.squad.filter((a) => !a.tower), ...this.zombies.filter((z) => !z.dead)]
@@ -472,7 +473,7 @@ export const RaidMixin = {
       for (const s of workersOf(st)) {
         if (s.status !== 'ok') continue
         const w = this.people.list.get(s.id)
-        if (!w || w.path) continue
+        if (!w || w.path || w.manual) continue
         w.guardCool = (w.guardCool ?? rand(0.5, 1.5)) - dt
         const stt = survivorStats(s)
         const range = stt.gun ? Math.max(14, stt.range * 1.5) : 9

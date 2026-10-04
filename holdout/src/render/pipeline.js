@@ -3,7 +3,7 @@
 // and SMAA, with quality presets tuned for desktop GPUs.
 import * as THREE from 'three'
 import {
-  EffectComposer, RenderPass, EffectPass, BloomEffect, SMAAEffect, SMAAPreset, ToneMappingEffect, ToneMappingMode,
+  EffectComposer, RenderPass, EffectPass, Pass, BloomEffect, SMAAEffect, SMAAPreset, ToneMappingEffect, ToneMappingMode,
   VignetteEffect, NoiseEffect, TiltShiftEffect, BlendFunction, Effect, KernelSize,
 } from 'postprocessing'
 import { N8AOPostPass } from 'n8ao'
@@ -60,6 +60,28 @@ export class GradeEffect extends Effect {
   }
 }
 
+// Draws the first-person arms and weapon (a VMLayer) over the world, with
+// the depth cleared so they never sink into a wall. It sits before the
+// effect pass, so bloom, tone mapping and the grade treat them like
+// everything else.
+class OverlayPass extends Pass {
+  constructor(pipe) {
+    super('OverlayPass')
+    this.pipe = pipe
+    this.needsSwap = false
+  }
+  render(renderer, inputBuffer) {
+    const o = this.pipe.overlay
+    if (!o || !o.visible) return
+    renderer.setRenderTarget(this.renderToScreen ? null : inputBuffer)
+    renderer.clearDepth()
+    const auto = renderer.shadowMap.autoUpdate
+    renderer.shadowMap.autoUpdate = false
+    renderer.render(o.scene, o.camera)
+    renderer.shadowMap.autoUpdate = auto
+  }
+}
+
 export const QUALITY = {
   low: { label: 'Low', dpr: 1, shadow: 1024, ao: null, bloom: false, smaa: SMAAPreset.LOW, tilt: false, grain: false },
   medium: { label: 'Medium', dpr: 1, shadow: 1024, ao: 'Low', aoHalf: true, bloom: true, smaa: SMAAPreset.MEDIUM, tilt: false, grain: true },
@@ -81,6 +103,10 @@ export class Pipeline {
     this.quality = 'high'
     this.tiltShift = true
     this.composers = new Map()
+    // the first-person arms and weapon, when shown (see vmlayer.js)
+    this.overlay = null
+    // first person: no tilt-shift (it blurs what is right in front of you)
+    this.firstPerson = false
     this.exposure = 1
     this.size = { w: 1, h: 1 }
     // automatic resolution: a slow machine trades a little sharpness for a
@@ -166,6 +192,7 @@ export class Pipeline {
       fow.mainCamera = camera
       composer.addPass(new EffectPass(camera, fow))
     }
+    composer.addPass(new OverlayPass(this))
     const exposure = new ExposureEffect(this.exposure)
     const effects = [exposure]
     let bloom = null
@@ -184,18 +211,23 @@ export class Pipeline {
     }
     composer.addPass(new EffectPass(camera, ...effects))
     let tilt = null
+    let tiltPass = null
     if (Q.tilt && this.tiltShift) {
       tilt = new TiltShiftEffect({ offset: 0.0, rotation: 0, focusArea: 0.9, feather: 0.42, kernelSize: KernelSize.SMALL, resolutionScale: 0.5 })
-      composer.addPass(new EffectPass(camera, tilt))
+      // kept here, not on the effect: a pass held by its own effect would
+      // make dispose() chase itself round in circles
+      tiltPass = new EffectPass(camera, tilt)
+      composer.addPass(tiltPass)
     }
     composer.addPass(new EffectPass(camera, new SMAAEffect({ preset: Q.smaa })))
     composer.setSize(this.size.w, this.size.h)
-    c = { composer, ao, bloom, grade, exposure, tilt, tone, fow }
+    c = { composer, ao, bloom, grade, exposure, tilt, tiltPass, tone, fow }
     this.composers.set(scene, c)
     return c
   }
   render(scene, camera, dt) {
     const c = this.composerFor(scene, camera)
+    if (c.tiltPass) c.tiltPass.enabled = !this.firstPerson
     c.exposure.uniforms.get('exposure').value = this.exposure * (this.exposureMul ?? 1)
     c.composer.render(dt)
   }

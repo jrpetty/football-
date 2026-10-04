@@ -40,6 +40,7 @@ import { genCity } from './world/city.js'
 import { portrait } from './ui/portrait.js'
 import { initFps, fpsFrame } from './ui/fps.js'
 import { paceFrame } from './render/pacer.js'
+import { FirstPerson } from './render/firstperson.js'
 import { bus, h } from './core/util.js'
 
 const GRASS = { low: 0, medium: 18000, high: 40000, ultra: 75000 }
@@ -48,6 +49,8 @@ class Game {
   constructor() {
     this.pipe = null
     this.pings = new Pings()
+    // first person: walking in one survivor's boots (see render/firstperson.js)
+    this.fp = new FirstPerson(this)
     this.scene = null
     this.base = null
     this.map = null
@@ -521,6 +524,23 @@ class Game {
       backupSave()
     })
   }
+  // First person on or off, in the scene in play (a run, the camp).
+  toggleFirstPerson(on = !this.fp.active) {
+    if (!on) {
+      if (this.fp.active) this.fp.exit(false, this.fp.host !== this.scene)
+      return false
+    }
+    const sc = this.scene
+    if (this.titleEl || this.ending || !sc?.fpCan) return false
+    if (!sc.fpCan()) {
+      const msg = sc.fpWhyNot?.() || 'Nobody here can be played in first person right now.'
+      if (sc.toast) sc.toast(msg)
+      else this.ui?.toast(msg, '')
+      return false
+    }
+    this.ui?.closePanel?.()
+    return this.fp.enter(sc)
+  }
   // ---------------------------------------------------------------- input
   onKey(e) {
     if (e.key === 'Enter' && e.altKey) {
@@ -529,6 +549,12 @@ class Game {
       return true
     }
     if (this.titleEl) return false
+    // ` or F5: first person and back
+    if ((e.code === 'Backquote' || e.key === '`' || e.key === 'F5') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault?.()
+      if (!e.repeat) this.toggleFirstPerson()
+      return true
+    }
     if (this.ui?.onKey(e)) return true
     const k = e.key
     if (k.toLowerCase() === 'q' && !e.ctrlKey && !e.metaKey && this.ping()) return true
@@ -871,9 +897,13 @@ class Game {
       view.rig.follow = null
       view.rig.yawGoal += dt * 0.05
       view.rig.distGoal = Math.min(view.rig.fitDist(view.rig.maxDist) * 0.8, view.rig.distGoal + dt * 1.5)
-    } else if (!this.titleEl) view.input.update(dt)
-    else view.rig.yawGoal += dt * 0.04
-    view.rig.update(dt)
+    } else if (!this.titleEl && !this.fp.active) view.input.update(dt)
+    else if (this.titleEl) view.rig.yawGoal += dt * 0.04
+    // first person drives the camera itself (and leaves if the scene changed
+    // under it: off to the map, home from a run)
+    if (this.fp.active && this.fp.host !== this.scene) this.fp.exit(true, true)
+    if (this.fp.active) this.fp.update(dt)
+    else view.rig.update(dt)
     const scene = this.scene
     if (scene) {
       scene.update(dt, this.titleEl ? dt : simDt)

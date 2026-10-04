@@ -541,6 +541,37 @@ const CHAPTERS = [
       ]),
     ],
   },
+  {
+    id: 'firstperson',
+    name: 'First person',
+    icon: 'eye',
+    body: () => [
+      P('Press ` (the key under Esc) or F5, or the eye button, to walk in one survivor’s boots: in camp, or on a run. The world is the same one: the same walls, the same zombies, the same loot. Press it again for the view from above. Clicking the view captures the mouse; Esc lets it go.'),
+      keys([
+        ['W A S D', 'Walk'],
+        ['Shift', 'Run (louder on a run)'],
+        ['Mouse', 'Look'],
+        ['Left click', 'Shoot, or swing what you hold (hold for automatic fire)'],
+        ['Right click', 'Aim down the sights (a scope zooms)'],
+        ['E', 'Use what is in front of you'],
+        ['` or F5', 'Back to the view from above'],
+      ]),
+      h('h4', 'On a run'),
+      keys([
+        ['E', 'Search, pick a lock, smash, break down, help someone up, take the lift'],
+        ['1 2 3 / Tab', 'Become another of the squad'],
+        ['F', 'Flashlight (on by itself after dark)'],
+        ['G', 'The squad follows you, or holds where they are'],
+        ['Z X C', 'Throw a molotov, pipe bomb or noise maker where you look'],
+        ['V', 'First aid kit, on yourself'],
+        ['Enter', 'Leave once everyone is by the van'],
+      ]),
+      P('Your aim is your own: shots go where the crosshair is, a little wider when you move or run and tighter when you aim. Headshots do double damage. Guns reach further than your people would risk on their own, losing punch with distance; a shotgun throws a spread. Out of ammo, you club with the gun. Walk into a flight of stairs to climb it. The rest of the squad keep their orders, and if you go down you carry on as someone still standing.'),
+      h('h4', 'In camp'),
+      P('Look at a station and press E for its panel. Climb a watchtower with E to see over the wall and shoot from it; the wall is solid, so when a horde comes, fight from the towers, a breach or the gate (E opens it). Talk to people by looking at them. Whoever you walk as leaves their job while you have them.'),
+      P('Settings has mouse sensitivity, field of view, invert mouse and head bob.'),
+    ],
+  },
 ]
 
 export function manualModal(ui, start) {

@@ -1,0 +1,696 @@
+// First person: walk in one survivor's boots. The camera sits at their eyes,
+// the mouse turns their head (pointer lock), WASD walks them through the
+// same grid the AI walks, and their own arms hold the weapon they carry:
+// guns fire where the crosshair is, melee weapons swing at what is in front.
+// The scene in play (a run, the camp) is the "host": it moves the body with
+// collision, resolves shots and swings, and says what is under the
+// crosshair (E to search, open, climb...). Everything here is presentation
+// and input; the host owns the rules.
+import * as THREE from 'three'
+import { view } from './view.js'
+import { VMLayer } from './vmlayer.js'
+import { viewModel } from '../models/viewmodel.js'
+import { clamp, lerp, h } from '../core/util.js'
+import { sfx } from '../core/audio.js'
+import { INDOOR } from './materials.js'
+
+const KEY = 'holdout.fp'
+export const fpPrefs = { sens: 1, fov: 74, invert: false, bob: true }
+try {
+  Object.assign(fpPrefs, JSON.parse(localStorage.getItem(KEY) || '{}'))
+} catch {}
+export function saveFpPrefs() {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(fpPrefs))
+  } catch {}
+}
+
+const UP = new THREE.Vector3(0, 1, 0)
+const _e = new THREE.Euler(0, 0, 0, 'YXZ')
+const _v = new THREE.Vector3()
+const _d = new THREE.Vector3()
+const ease = (t) => t * t * (3 - 2 * t)
+
+// a soft star for the muzzle flash, drawn once
+let flashTex = null
+function flashTexture() {
+  if (flashTex) return flashTex
+  const c = document.createElement('canvas')
+  c.width = c.height = 128
+  const g = c.getContext('2d')
+  const r = g.createRadialGradient(64, 64, 0, 64, 64, 64)
+  r.addColorStop(0, 'rgba(255,250,220,1)')
+  r.addColorStop(0.18, 'rgba(255,214,120,0.95)')
+  r.addColorStop(0.5, 'rgba(255,140,40,0.35)')
+  r.addColorStop(1, 'rgba(255,90,10,0)')
+  g.fillStyle = r
+  g.fillRect(0, 0, 128, 128)
+  g.globalCompositeOperation = 'lighter'
+  g.fillStyle = 'rgba(255,220,150,0.8)'
+  for (let i = 0; i < 6; i++) {
+    g.save()
+    g.translate(64, 64)
+    g.rotate((i / 6) * Math.PI * 2 + 0.3)
+    g.beginPath()
+    g.moveTo(0, -5)
+    g.lineTo(62, 0)
+    g.lineTo(0, 5)
+    g.fill()
+    g.restore()
+  }
+  flashTex = new THREE.CanvasTexture(c)
+  flashTex.colorSpace = THREE.SRGBColorSpace
+  return flashTex
+}
+
+export class FirstPerson {
+  constructor(game) {
+    this.game = game
+    this.active = false
+    this.host = null
+    this.yaw = 0
+    this.pitch = 0
+    this.vx = 0
+    this.vz = 0
+    this.bobPh = 0
+    this.bobAmt = 0
+    this.stepT = 0
+    this.layer = new VMLayer()
+    this.vm = null
+    this.vmKey = ''
+    this.locked = false
+    this.trigger = false
+    this.aimHeld = false
+    this.ads = 0
+    this.kick = 0
+    this.recoil = 0
+    this.swingT = -1
+    this.swingDur = 0.5
+    this.swingSide = 1
+    this.throwT = -1
+    this.equip = 0
+    this.swayX = 0
+    this.swayY = 0
+    this.hurtV = 0
+    this.lastHp = null
+    this.sprint = 0
+    this.cool = 0
+    this.flashT = 0
+    this.shake = 0
+    this.lookT = 0
+    this.look = null
+    this.hitT = 0
+    this.dom = null
+    this.saved = null
+    // muzzle flash: a cross of two glowing cards at the muzzle
+    const fm = new THREE.MeshBasicMaterial({ map: flashTexture(), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, color: new THREE.Color(3, 2.6, 2) })
+    this.flashMesh = new THREE.Group()
+    for (let i = 0; i < 2; i++) {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.16), fm)
+      m.rotation.y = i * Math.PI * 0.5
+      this.flashMesh.add(m)
+    }
+    const face = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 0.12), fm)
+    face.rotation.x = 0
+    this.flashMesh.add(face)
+    this.flashMesh.visible = false
+    this.layer.root.add(this.flashMesh)
+    // spent brass (and red shotgun shells) flicking out of the gun
+    const brass = new THREE.MeshStandardMaterial({ color: '#c9a24a', metalness: 0.85, roughness: 0.32 })
+    const shell = new THREE.MeshStandardMaterial({ color: '#a8261e', metalness: 0.1, roughness: 0.5 })
+    this.casings = []
+    for (let i = 0; i < 8; i++) {
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(0.0045, 0.0045, 0.019, 8), brass)
+      m.visible = false
+      m.userData = { v: new THREE.Vector3(), spin: new THREE.Vector3(), t: 0, brass, shell }
+      this.layer.root.add(m)
+      this.casings.push(m)
+    }
+    document.addEventListener('pointerlockchange', () => this.onLockChange())
+    document.addEventListener('mousemove', (e) => this.onMouse(e))
+    document.addEventListener('mousedown', (e) => this.onDown(e), true)
+    document.addEventListener('mouseup', (e) => this.onUp(e), true)
+    document.addEventListener('contextmenu', (e) => this.active && this.locked && e.preventDefault())
+  }
+
+  // ---------------------------------------------------------------- dom
+  buildDom() {
+    if (this.dom) return this.dom
+    const D = {}
+    D.root = h('div.fp')
+    D.cross = h('div.fp-cross', h('i.t'), h('i.b'), h('i.l'), h('i.r'), h('b'))
+    D.hit = h('div.fp-hit', h('i'), h('i'), h('i'), h('i'))
+    D.prompt = h('div.fp-prompt')
+    D.prog = h('div.fp-prog', h('i'))
+    D.hurt = h('div.fp-hurt')
+    D.low = h('div.fp-low')
+    D.scope = h('div.fp-scope')
+    D.name = h('div.fp-name')
+    D.hpbar = h('div.fp-hp', h('i'))
+    D.weapon = h('div.fp-weapon')
+    D.ammo = h('div.fp-ammo')
+    D.tip = h('div.fp-tip')
+    D.pause = h(
+      'div.fp-pause',
+      h('div.fp-pause-card', h('h3', 'First person'), h('p', 'Click to look around and play.'), h('div.fp-keys', ...[['WASD', 'walk'], ['Shift', 'run'], ['Mouse', 'look'], ['Left click', 'shoot or swing'], ['Right click', 'aim'], ['E', 'use what you look at'], ['` / F5 / Esc', 'top-down view']].map(([k, v]) => h('span', h('kbd', k), ' ', v))), h('div.fp-pause-btns', h('button.btn.go', { onclick: (e) => (e.stopPropagation(), this.lock()) }, 'Play'), h('button.btn', { onclick: (e) => (e.stopPropagation(), this.game.toggleFirstPerson?.(false)) }, 'Top-down view'))),
+    )
+    D.root.append(D.hurt, D.low, D.scope, D.cross, D.hit, D.prompt, D.prog, h('div.fp-status', D.name, D.hpbar), h('div.fp-gun', D.weapon, D.ammo), D.tip, D.pause)
+    document.body.appendChild(D.root)
+    this.dom = D
+    return D
+  }
+  setPrompt(text) {
+    if (this.dom.prompt._t === text) return
+    this.dom.prompt._t = text
+    this.dom.prompt.innerHTML = text || ''
+    this.dom.prompt.classList.toggle('on', !!text)
+  }
+  hitMark(kill, head) {
+    sfx(kill ? 'killmark' : 'hitmark', 30)
+    const el = this.dom.hit
+    el.classList.remove('on', 'kill', 'head')
+    void el.offsetWidth
+    el.classList.add('on')
+    if (kill) el.classList.add('kill')
+    if (head) el.classList.add('head')
+    this.hitT = 0.2
+  }
+
+  // ---------------------------------------------------------------- lock
+  lock() {
+    if (!this.active) return
+    try {
+      const p = view.canvas.requestPointerLock?.({ unadjustedMovement: true })
+      p?.catch?.(() => view.canvas.requestPointerLock?.())
+    } catch {
+      try {
+        view.canvas.requestPointerLock?.()
+      } catch {}
+    }
+  }
+  unlock() {
+    if (document.pointerLockElement) document.exitPointerLock?.()
+  }
+  onLockChange() {
+    const was = this.locked
+    this.locked = !!document.pointerLockElement && document.pointerLockElement === view.canvas
+    if (was && !this.locked) this.unlockedAt = performance.now()
+    this.trigger = false
+    this.aimHeld = false
+    if (this.dom) this.dom.pause.classList.toggle('on', this.active && !this.locked && !this.uiOpen())
+  }
+  onMouse(e) {
+    if (!this.active || !this.locked) return
+    const k = 0.0021 * fpPrefs.sens * (1 - this.ads * 0.45) * (this.scoped() ? 0.4 : 1)
+    const dx = clamp(e.movementX || 0, -300, 300)
+    const dy = clamp(e.movementY || 0, -300, 300)
+    this.yaw -= dx * k
+    this.pitch = clamp(this.pitch - dy * k * (fpPrefs.invert ? -1 : 1), -1.45, 1.45)
+    this.swayX = clamp(this.swayX + dx * 0.00012, -0.03, 0.03)
+    this.swayY = clamp(this.swayY + dy * 0.00012, -0.03, 0.03)
+  }
+  onDown(e) {
+    if (!this.active) return
+    if (!this.locked) {
+      if (e.target === view.canvas) {
+        e.preventDefault()
+        e.stopPropagation()
+        this.lock()
+      }
+      return
+    }
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.button === 0) {
+      this.trigger = true
+      this.tryAttack()
+    } else if (e.button === 2) this.aimHeld = true
+  }
+  onUp(e) {
+    if (!this.active) return
+    if (e.button === 0) this.trigger = false
+    else if (e.button === 2) this.aimHeld = false
+  }
+  uiOpen() {
+    const ui = this.game.ui
+    if (!ui) return false
+    if (ui.modalRoot?.children.length) return true
+    // the camp's panels only count in the camp
+    if (this.game.scene !== this.game.base) return false
+    return !!(ui.panelKey || (ui.dock && !ui.dock.hidden))
+  }
+
+  // ---------------------------------------------------------------- enter/exit
+  enter(host) {
+    if (this.active) this.exit(true)
+    if (!host?.fpEnter?.()) return false
+    this.host = host
+    this.active = true
+    view.fp = this
+    const cam = view.camera
+    this.saved = { fov: cam.fov, near: cam.near }
+    // the body keeps the eye a hand's breadth or more from any wall, and the
+    // arms draw in their own pass: a near plane this far out keeps the depth
+    // precise enough that road markings don't shimmer a hundred metres off
+    cam.near = 0.1
+    cam.fov = fpPrefs.fov
+    cam.updateProjectionMatrix()
+    // face the way the top-down camera faced
+    this.yaw = view.rig.yaw
+    this.pitch = -0.05
+    this.vx = this.vz = 0
+    this.ads = 0
+    this.equip = 0
+    this.vmKey = ''
+    this.lastHp = null
+    this.buildDom()
+    this.dom.root.classList.add('on')
+    document.body.classList.add('fpmode')
+    this.game.pipe.overlay = this.layer
+    this.game.pipe.firstPerson = true
+    INDOOR.uFpSpec.value = 1
+    this.layer.visible = true
+    this.lock()
+    this.onLockChange()
+    sfx('select')
+    return true
+  }
+  // away: the scene in play changed under us, so the camera is not ours
+  exit(quiet = false, away = false) {
+    if (!this.active) return
+    const H = this.host
+    const feet = away ? null : H?.fpFeet?.()
+    H?.fpExit?.()
+    this.active = false
+    this.host = null
+    view.fp = null
+    const cam = view.camera
+    if (this.saved) {
+      cam.fov = this.saved.fov
+      cam.near = this.saved.near
+      cam.updateProjectionMatrix()
+    }
+    this.unlock()
+    this.trigger = false
+    this.aimHeld = false
+    this.game.pipe.overlay = null
+    this.game.pipe.firstPerson = false
+    INDOOR.uFpSpec.value = 0
+    this.layer.visible = false
+    if (this.vm) {
+      this.layer.root.remove(this.vm.rig)
+      this.vm = null
+    }
+    if (this.dom) {
+      this.dom.root.classList.remove('on')
+      this.dom.pause.classList.remove('on')
+      this.setPrompt(null)
+    }
+    document.body.classList.remove('fpmode')
+    // the top-down camera picks up where the eyes were, looking the same way
+    const rig = view.rig
+    rig.follow = null
+    rig.yaw = rig.yawGoal = this.yaw
+    if (feet) rig.jump(feet.x, feet.z, Math.max(rig.minDist + 6, 22))
+    if (!quiet) sfx('select')
+  }
+
+  // ---------------------------------------------------------------- keys
+  onKey(e) {
+    if (!this.active) return false
+    const k = e.key.toLowerCase()
+    if (k === 'escape') {
+      // the first Esc frees the mouse (the browser does that itself, and may
+      // still hand us its key); another one goes back to the view from above
+      if (this.locked) this.unlock()
+      else if (performance.now() - (this.unlockedAt || 0) > 400) this.game.toggleFirstPerson?.(false)
+      return true
+    }
+    if (k === 'e' && !e.ctrlKey && !e.metaKey) {
+      this.use()
+      return true
+    }
+    if (this.host?.fpKey?.(e, this)) return true
+    // keys that walk or turn the top-down camera do nothing here
+    if (['w', 'a', 's', 'd', 'q', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift', '=', '+', '-'].includes(k)) return k === 'q' && e.repeat
+    return false
+  }
+  use() {
+    const L = this.look
+    if (!L?.act) return
+    L.act()
+    this.lookT = 0
+  }
+
+  // ---------------------------------------------------------------- frame
+  forward(out = _d) {
+    _e.set(this.pitch, this.yaw, 0, 'YXZ')
+    return out.set(0, 0, -1).applyEuler(_e)
+  }
+  scoped() {
+    return this.ads > 0.85 && !!this.vm?.pose.scope
+  }
+  update(dt) {
+    const H = this.host
+    if (!H) return
+    if (!H.fpAlive()) {
+      const next = H.fpNext?.()
+      if (!next) {
+        this.game.toggleFirstPerson?.(false)
+        return
+      }
+    }
+    const D = this.dom
+    const ui = this.uiOpen()
+    if (ui && this.locked) this.unlock()
+    D.pause.classList.toggle('on', !this.locked && !ui)
+    const keys = view.input.keys
+    const live = this.locked || !ui
+    // ---- move
+    let mx = 0
+    let mz = 0
+    if (live) {
+      if (keys.has('w') || keys.has('arrowup')) mz += 1
+      if (keys.has('s') || keys.has('arrowdown')) mz -= 1
+      if (keys.has('d') || keys.has('arrowright')) mx += 1
+      if (keys.has('a') || keys.has('arrowleft')) mx -= 1
+    }
+    const len = Math.hypot(mx, mz) || 1
+    mx /= len
+    mz /= len
+    const wantRun = keys.has('shift') && mz > 0.3 && this.ads < 0.3 && this.swingT < 0
+    this.sprint = lerp(this.sprint, wantRun && (mx || mz) ? 1 : 0, 1 - Math.exp(-dt * 8))
+    const base = H.fpSpeed()
+    const speed = base * (wantRun ? 1.3 : 0.78) * (1 - this.ads * 0.4)
+    const sy = Math.sin(this.yaw)
+    const cy = Math.cos(this.yaw)
+    // forward is (-sin yaw, -cos yaw); right is (cos yaw, -sin yaw)
+    const wx = (cy * mx - sy * mz) * speed
+    const wz = (-sy * mx - cy * mz) * speed
+    const acc = 1 - Math.exp(-dt * (mx || mz ? 11 : 14))
+    this.vx += (wx - this.vx) * acc
+    this.vz += (wz - this.vz) * acc
+    const moved = H.fpMove(this.vx * dt, this.vz * dt)
+    const sp = dt > 0 ? Math.hypot(moved.x, moved.z) / dt : 0
+    if (sp < Math.hypot(this.vx, this.vz) * 0.5) {
+      // into a wall: lose the speed that went nowhere
+      this.vx = moved.x / Math.max(dt, 1e-3)
+      this.vz = moved.z / Math.max(dt, 1e-3)
+    }
+    H.fpFace(this.yaw + Math.PI, sp, wantRun && sp > 0.5)
+    this.bobAmt = lerp(this.bobAmt, clamp(sp / 4, 0, 1), 1 - Math.exp(-dt * 8))
+    this.bobPh += sp * dt * (wantRun ? 1.55 : 1.85)
+    this.stepT -= sp * dt
+    if (this.stepT <= 0 && sp > 0.6) {
+      this.stepT = wantRun ? 1.15 : 0.95
+      sfx(wantRun ? 'stepRun' : 'step', 120)
+      H.fpStep?.(wantRun)
+    }
+    // ---- camera
+    const cam = view.camera
+    const eye = H.fpEye(_v)
+    const bobK = fpPrefs.bob ? 1 : 0.35
+    const b = this.bobAmt * bobK
+    eye.y += Math.sin(this.bobPh * 2) * 0.028 * b - b * 0.01
+    eye.x += Math.cos(this.yaw) * Math.sin(this.bobPh) * 0.018 * b
+    eye.z += -Math.sin(this.yaw) * Math.sin(this.bobPh) * 0.018 * b
+    this.shake = Math.max(0, this.shake - dt * 3)
+    if (this.shake > 0) {
+      eye.x += (Math.random() - 0.5) * this.shake * 0.06
+      eye.y += (Math.random() - 0.5) * this.shake * 0.06
+    }
+    cam.position.copy(eye)
+    this.recoil = Math.max(0, this.recoil - dt * (2.2 + this.recoil * 6))
+    _e.set(this.pitch + this.recoil * 0.06, this.yaw, Math.sin(this.bobPh) * 0.004 * b - this.swayX * 0.4, 'YXZ')
+    cam.quaternion.setFromEuler(_e)
+    // aiming down the sights narrows the view; a scope much more
+    this.ads = lerp(this.ads, this.aimHeld && this.vm?.pose.kind === 'gun' && this.swingT < 0 ? 1 : 0, 1 - Math.exp(-dt * 12))
+    const zoom = this.vm?.pose.scope ? lerp(1, 0.36, ease(this.ads)) : lerp(1, 0.82, ease(this.ads))
+    const fov = fpPrefs.fov * zoom * (1 + this.sprint * 0.06)
+    if (Math.abs(cam.fov - fov) > 0.01) {
+      cam.fov = fov
+      cam.updateProjectionMatrix()
+    }
+    cam.updateMatrixWorld()
+    // systems that follow the top-down camera's focus follow the feet
+    const feet = H.fpFeet()
+    view.rig.target.set(feet.x, view.rig.levelY, feet.z)
+    view.rig.goal.copy(view.rig.target)
+    view.rig.follow = null
+    H.fpTick?.(dt)
+    // ---- attack
+    this.cool -= dt
+    if (this.trigger && this.locked) this.tryAttack()
+    // ---- what is under the crosshair
+    this.lookT -= dt
+    if (this.lookT <= 0) {
+      this.lookT = 0.1
+      this.look = live ? H.fpLook(cam.position, this.forward(new THREE.Vector3())) : null
+      this.setPrompt(this.look ? `<kbd>${this.look.key || 'E'}</kbd> ${this.look.text}` : null)
+    }
+    // ---- hurt
+    const st = H.fpStatus()
+    if (this.lastHp != null && st.hp < this.lastHp - 0.5) {
+      const dmg = this.lastHp - st.hp
+      this.hurtV = Math.min(1, this.hurtV + 0.35 + dmg / st.maxHp)
+      this.shake = Math.min(1, this.shake + 0.5)
+    }
+    this.lastHp = st.hp
+    this.hurtV = Math.max(0, this.hurtV - dt * 1.6)
+    D.hurt.style.opacity = this.hurtV.toFixed(2)
+    D.low.style.opacity = clamp(1 - st.hp / st.maxHp / 0.35, 0, 1).toFixed(2)
+    // ---- hud
+    if (D.name._t !== st.name) D.name.textContent = D.name._t = st.name
+    D.hpbar.firstChild.style.width = `${clamp(st.hp / st.maxHp, 0, 1) * 100}%`
+    D.hpbar.classList.toggle('low', st.hp < st.maxHp * 0.35)
+    if (D.weapon._t !== st.weapon) D.weapon.textContent = D.weapon._t = st.weapon
+    if (D.ammo._t !== st.ammo) D.ammo.innerHTML = D.ammo._t = st.ammo
+    D.prog.classList.toggle('on', st.prog != null)
+    if (st.prog != null) {
+      D.prog.firstChild.style.width = `${clamp(st.prog, 0, 1) * 100}%`
+      D.prog.dataset.label = st.progLabel || ''
+    }
+    if (D.tip._t !== (st.tip || '')) {
+      D.tip._t = st.tip || ''
+      D.tip.textContent = D.tip._t
+      D.tip.classList.toggle('on', !!D.tip._t)
+    }
+    const spread = this.spread()
+    const px = 6 + spread * 900
+    D.cross.style.setProperty('--gap', `${px.toFixed(1)}px`)
+    D.cross.classList.toggle('melee', this.vm?.pose.kind !== 'gun')
+    D.cross.classList.toggle('hide', this.scoped() || this.sprint > 0.6)
+    D.scope.classList.toggle('on', this.scoped())
+    this.hitT -= dt
+    // ---- the arms
+    this.updateVM(dt, st, sp)
+    this.layer.setAspect(cam.aspect)
+    this.layer.sync(H.scene, H.atmo, cam, H.fpShade?.() ?? 1)
+  }
+  // how far shots stray (radians): steadier aimed, worse running or jumping
+  spread() {
+    const pose = this.vm?.pose
+    if (!pose || pose.kind !== 'gun') return 0.01
+    const base = this.host?.fpAccuracy?.() ?? 0.02
+    const move = clamp(Math.hypot(this.vx, this.vz) / 4, 0, 1)
+    return base * (1 - this.ads * 0.75) * (1 + move * 1.3 + this.sprint) + this.kick * 0.01
+  }
+  tryAttack() {
+    const H = this.host
+    if (!H || this.cool > 0 || this.equip < 0.85 || this.sprint > 0.5) return
+    if (this.swingT >= 0 && this.swingT < this.swingDur * 0.75) return
+    const cam = view.camera
+    const dir = this.forward(new THREE.Vector3())
+    const r = H.fpAttack(cam.position.clone(), dir, { spread: this.spread(), ads: this.ads > 0.6, onHit: (kill, head) => this.hitMark(kill, head), muzzle: this.muzzleWorld() })
+    if (!r) return
+    if (r.empty) {
+      this.cool = 0.35
+      this.trigger = false
+      sfx('dry', 200)
+      return
+    }
+    this.cool = r.rate
+    if (r.kind === 'gun') {
+      this.kick = 1
+      this.recoil += r.recoil ?? 0.5
+      this.flashT = 0.055
+      this.layer.flash.intensity = 6
+      if (!r.auto) this.trigger = false
+      if (r.cycle) this.cycleT = 0
+      if (this.vm?.pose.eject && this.vm.weaponId !== 'crossbow') this.eject(this.vm.weaponId === 'shotgun')
+    } else {
+      this.swingT = 0
+      this.swingDur = clamp(r.rate * 0.85, 0.32, 0.9)
+      this.swingSide = -this.swingSide
+    }
+  }
+  // where the muzzle is in the world, for the flash and the tracer
+  muzzleWorld() {
+    const cam = view.camera
+    const m = this.vm?.muzzle
+    if (!m) return cam.position.clone().addScaledVector(this.forward(new THREE.Vector3()), 0.6)
+    // the overlay draws with its own field of view; near enough, map the
+    // muzzle's view-space spot onto the world camera
+    const p = m.clone().applyMatrix4(this.vm.rig.matrix)
+    return p.applyQuaternion(cam.quaternion).add(cam.position)
+  }
+  throwAnim() {
+    this.throwT = 0
+  }
+  eject(shotgun) {
+    const c = this.casings.find((m) => !m.visible) || this.casings[0]
+    const U = c.userData
+    const V = this.vm
+    c.material = shotgun ? U.shell : U.brass
+    c.scale.set(shotgun ? 4.2 : 1, shotgun ? 3.2 : 1, shotgun ? 4.2 : 1)
+    c.position.copy(V.pose.eject).applyMatrix4(V.rig.matrix)
+    // out to the right and up, tumbling
+    U.v.set(0.9 + Math.random() * 0.5, 0.9 + Math.random() * 0.4, 0.15 - Math.random() * 0.3)
+    U.spin.set(Math.random() * 20, Math.random() * 20, 10 + Math.random() * 20)
+    U.t = 0
+    c.visible = true
+  }
+
+  // ---------------------------------------------------------------- arms
+  updateVM(dt, st, sp) {
+    const key = `${st.weaponId}|${(st.mods || []).join(',')}|${st.lookKey}`
+    if (key !== this.vmKey) {
+      if (this.vm) this.layer.root.remove(this.vm.rig)
+      this.vm = viewModel(st.weaponId, st.mods || [], st.look)
+      this.layer.root.add(this.vm.rig)
+      this.vm.base = { p: this.vm.rig.position.clone(), q: this.vm.rig.quaternion.clone() }
+      this.vm.adsPose = adsPose(this.vm)
+      this.vmKey = key
+      this.equip = 0
+      this.swingT = -1
+    }
+    const V = this.vm
+    const pose = V.pose
+    const rig = V.rig
+    this.equip = Math.min(1, this.equip + dt * 2.8)
+    this.kick = Math.max(0, this.kick - dt * 9)
+    this.swayX *= Math.exp(-dt * 9)
+    this.swayY *= Math.exp(-dt * 9)
+    const t = performance.now() / 1000
+    const b = this.bobAmt * (fpPrefs.bob ? 1 : 0.5)
+    const ads = ease(this.ads)
+    // idle breathing, walk bob (a figure of eight), mouse sway
+    let px = Math.cos(this.bobPh) * 0.011 * b + Math.sin(t * 1.3) * 0.0012 - this.swayX * 0.6
+    let py = -Math.abs(Math.sin(this.bobPh)) * 0.012 * b + Math.sin(t * 2.1) * 0.0014 + this.swayY * 0.6
+    let pz = 0
+    let rx = this.swayY * 1.6
+    let ry = this.swayX * 2
+    let rz = -this.swayX * 1.5 + Math.cos(this.bobPh) * 0.012 * b
+    // running: the weapon drops and tilts away
+    const s = ease(this.sprint)
+    px += s * 0.03
+    py -= s * 0.05
+    rx -= s * 0.32
+    ry += s * (pose.kind === 'gun' ? 0.55 : 0.2)
+    rz += s * 0.25
+    // equipping: it comes up from below
+    const eq = 1 - ease(this.equip)
+    py -= eq * 0.28
+    rx -= eq * 0.6
+    // the shot: back into the shoulder, muzzle up
+    if (pose.kind === 'gun') {
+      const k = this.kick * this.kick
+      pz += k * (pose.ads ? 0.045 : 0.03)
+      rx += k * 0.09
+      py += k * 0.006
+      // a pump or a bolt worked between shots
+      if (this.cycleT != null && this.cycleT < 1) {
+        this.cycleT += dt / Math.max(0.3, (this.cool > 0 ? this.cool : 0.6))
+        const c = Math.sin(clamp(this.cycleT, 0, 1) * Math.PI)
+        py -= c * 0.022
+        rz += c * 0.12
+        rx -= c * 0.05
+      }
+    }
+    // a melee swing: wind up, cut across, recover
+    if (this.swingT >= 0) {
+      this.swingT += dt
+      const u = this.swingT / this.swingDur
+      if (u >= 1) this.swingT = -1
+      else {
+        const side = pose.kind === 'fists' ? 0 : 1
+        const wind = u < 0.3 ? ease(u / 0.3) : u < 0.55 ? 1 - ease((u - 0.3) / 0.25) : 0
+        const cut = u < 0.3 ? 0 : u < 0.55 ? ease((u - 0.3) / 0.25) : 1 - ease((u - 0.55) / 0.45)
+        if (side) {
+          px += wind * 0.05 - cut * 0.22
+          py += wind * 0.06 - cut * 0.05
+          pz += wind * 0.04 - cut * 0.08
+          rx += wind * 0.35 - cut * 0.55
+          ry += -wind * 0.25 + cut * 0.6
+          rz += wind * 0.35 - cut * 1.1
+        } else {
+          // a jab with one fist, then the other
+          const jab = Math.sin(clamp(u / 0.55, 0, 1) * Math.PI)
+          px += this.swingSide * jab * -0.07
+          pz -= jab * 0.16
+          py += jab * 0.03
+        }
+      }
+    }
+    if (this.throwT >= 0) {
+      this.throwT += dt / 0.6
+      const c = Math.sin(clamp(this.throwT, 0, 1) * Math.PI)
+      py -= c * 0.2
+      rx -= c * 0.4
+      if (this.throwT >= 1) this.throwT = -1
+    }
+    // aiming: the sights come to the middle of the view
+    const A = V.adsPose
+    const P = V.base.p
+    rig.position.set(lerp(P.x, A.p.x, ads) + px * (1 - ads * 0.8), lerp(P.y, A.p.y, ads) + py * (1 - ads * 0.7), lerp(P.z, A.p.z, ads) + pz)
+    rig.quaternion.copy(V.base.q).slerp(A.q, ads)
+    _e.set(rx * (1 - ads * 0.7), ry * (1 - ads * 0.8), rz * (1 - ads * 0.8), 'YXZ')
+    rig.quaternion.multiply(new THREE.Quaternion().setFromEuler(_e))
+    rig.visible = !this.scoped()
+    rig.updateMatrix()
+    // muzzle flash
+    this.flashT -= dt
+    const fl = this.flashT > 0 && V.muzzle
+    this.flashMesh.visible = !!fl && !this.scoped()
+    if (fl) {
+      this.flashMesh.position.copy(V.muzzle).applyMatrix4(rig.matrix)
+      this.flashMesh.quaternion.copy(rig.quaternion)
+      this.flashMesh.rotateZ(Math.random() * Math.PI)
+      const s2 = 0.8 + Math.random() * 0.6
+      this.flashMesh.scale.setScalar(s2 * (pose.ads && V.weapon && st.weaponId !== 'pistol' && st.weaponId !== 'revolver' ? 1.3 : 1))
+    }
+    this.layer.flash.intensity = Math.max(0, this.layer.flash.intensity - dt * 120)
+    if (V.muzzle) this.layer.flash.position.copy(V.muzzle).applyMatrix4(rig.matrix)
+    for (const c of this.casings) {
+      if (!c.visible) continue
+      const U = c.userData
+      U.t += dt
+      U.v.y -= 9.8 * dt
+      c.position.addScaledVector(U.v, dt)
+      c.rotation.x += U.spin.x * dt
+      c.rotation.y += U.spin.y * dt
+      c.rotation.z += U.spin.z * dt
+      if (U.t > 0.7) c.visible = false
+    }
+    // the torch, when the host says it is on
+    this.layer.torch.intensity = st.torch ? 14 : 0
+  }
+}
+
+// The rig pose that puts the sights on the middle of the view: the weapon
+// turned straight down the view axis, its sight line at the centre.
+function adsPose(V) {
+  const pose = V.pose
+  if (pose.kind !== 'gun' || !V.weapon) return { p: V.rig.position.clone(), q: V.rig.quaternion.clone() }
+  // the weapon's own rotation, undone so it points straight ahead
+  const wq = V.weapon.quaternion.clone()
+  const straight = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI, 0))
+  const q = straight.clone().multiply(wq.clone().invert())
+  // the sight point (over the grip, at sight height), turned with the rig
+  const sp = new THREE.Vector3(0, pose.sight, 0).applyQuaternion(wq).add(V.weapon.position).applyQuaternion(q)
+  // the eye a hand's breadth behind a rifle's sights, an arm's length from
+  // a pistol's, close to a scope
+  const dist = pose.scope ? 0.16 : pose.support?.cup ? 0.42 : 0.27
+  const p = new THREE.Vector3(-sp.x, -sp.y, -dist - sp.z + (pose.ads ? 0 : 0))
+  return { p, q }
+}

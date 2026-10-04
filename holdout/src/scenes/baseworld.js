@@ -339,6 +339,7 @@ export class BaseWorld {
     V.capture(camera, sun, focus)
     for (const sc of Object.values(this.scatters)) sc.cull(V, focus)
     this.grass?.cull(V, focus)
+    if (this.nearOn) this.nearGrass.cull(V, focus)
   }
   // Which features are visible: outside the fence, and not yet cleared by an expansion in progress.
   visibleFeatures() {
@@ -566,6 +567,43 @@ export class BaseWorld {
     }
     this.vehGroup = g
     this.scene.add(g)
+  }
+  // First person: a denser patch of grass round the player's feet (the
+  // field is sized for a camera forty metres up, and reads as bare at eye
+  // level). It is laid again when they have walked a dozen metres on.
+  setNearGrass(on, x = 0, z = 0) {
+    if (!on || !this.grassCount) {
+      if (this.nearGrass && this.nearOn) this.nearGrass.setVisible(false)
+      this.nearOn = false
+      return
+    }
+    const R = 26
+    if (!this.nearGrass) {
+      const b = bounds()
+      this.nearGrass = new GrassField(this.scene, this.splat, {
+        count: 0,
+        seed: 91,
+        heightFn: (gx, gz) => this.terrain.heightAt(gx, gz),
+        avoid: (gx, gz) => (gx > b.x0 - 0.5 && gx < b.x1 + 1.5 && gz > b.z0 - 0.5 && gz < b.z1 + 1.5) || Math.abs(gz - ROAD_Z) < 3.9,
+        cap: 16000,
+      })
+      this.nearAt = null
+    }
+    const N = this.nearGrass
+    if (!this.nearAt || Math.hypot(x - this.nearAt.x, z - this.nearAt.z) > 11) {
+      this.nearAt = { x, z }
+      const b = bounds()
+      N.avoid = (gx, gz) => (gx > b.x0 - 0.5 && gx < b.x1 + 1.5 && gz > b.z0 - 0.5 && gz < b.z1 + 1.5) || Math.abs(gz - ROAD_Z) < 3.9
+      N.area = { x0: x - R, z0: z - R, x1: x + R, z1: z + R }
+      N.seed = 91 + Math.floor(x) * 7 + Math.floor(z) * 13
+      N.rebuild()
+      this.culled = false
+    }
+    if (!this.nearOn) {
+      N.setVisible(true)
+      this.nearOn = true
+      this.culled = false
+    }
   }
   rebuildGrass(count = this.grassCount) {
     if (this.grass) this.grass.dispose()

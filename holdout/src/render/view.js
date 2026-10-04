@@ -3,7 +3,7 @@
 import * as THREE from 'three'
 import { clamp, lerp } from '../core/util.js'
 
-export const view = { camera: null, rig: null, input: null, labels: null, canvas: null }
+export const view = { camera: null, rig: null, input: null, labels: null, canvas: null, fp: null }
 
 export function initView(canvas) {
   view.canvas = canvas
@@ -176,6 +176,7 @@ export class Input {
       'wheel',
       (e) => {
         e.preventDefault()
+        if (view.fp?.active) return
         rig.zoom(Math.pow(1.0013, e.deltaY))
       },
       { passive: false },
@@ -183,6 +184,12 @@ export class Input {
     window.addEventListener('keydown', (e) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement || e.target instanceof HTMLTextAreaElement) return
       this.keys.add(e.key.toLowerCase())
+      // first person takes its keys first (E, the squad, throwables...)
+      if (view.fp?.active && view.fp.onKey(e)) {
+        e._handled = true
+        // the toggle itself still reaches the game
+        if (e.code !== 'Backquote' && e.key !== 'F5') return
+      }
       this.onKey?.(e)
       this.handler?.onKey?.(e)
     })
@@ -190,6 +197,8 @@ export class Input {
     window.addEventListener('blur', () => this.keys.clear())
   }
   down(e) {
+    // first person reads the mouse itself (pointer lock)
+    if (view.fp?.active) return
     this.canvas.setPointerCapture?.(e.pointerId)
     this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, button: e.button })
     if (this.pointers.size === 2) {
@@ -212,6 +221,7 @@ export class Input {
     }
   }
   move(e) {
+    if (view.fp?.active) return
     this.mouse.x = e.clientX
     this.mouse.y = e.clientY
     this.mouse.inside = e.target === this.canvas

@@ -27,21 +27,36 @@ export class CullView {
     this.fov = 0
     this._m = new THREE.Matrix4()
     this._v = new THREE.Vector3()
+    // first person turns all the time: the cone packed is this many degrees
+    // wider than the view, and only a bigger turn packs again
+    this.wide = 0
+    this._cam = new THREE.PerspectiveCamera()
   }
   // Has the view moved far enough since the last capture to matter?
   moved(camera, sun, focus) {
     camera.getWorldPosition(this._v)
     if (this._v.distanceToSquared(this.cam) > 9) return true
     if (focus.distanceToSquared(this.focus) > 9) return true
-    // about 1.2 degrees of turn
-    if (1 - Math.abs(camera.quaternion.dot(this.quat)) > 7e-5) return true
+    // about 1.2 degrees of turn (about 6 when packing a wider cone)
+    if (1 - Math.abs(camera.quaternion.dot(this.quat)) > (this.wide ? 1.4e-3 : 7e-5)) return true
     if (camera.aspect !== this.aspect || camera.fov !== this.fov) return true
     if (sun && sun.position.distanceToSquared(this.sun) > 4) return true
     return false
   }
   capture(camera, sun, focus) {
     camera.updateMatrixWorld()
-    this.frustum.setFromProjectionMatrix(this._m.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse))
+    let proj = camera.projectionMatrix
+    if (this.wide && camera.isPerspectiveCamera) {
+      const c = this._cam
+      c.fov = Math.min(170, camera.fov + this.wide)
+      c.aspect = camera.aspect
+      c.near = camera.near
+      c.far = camera.far
+      c.updateProjectionMatrix()
+      // wider sideways as well: the aspect grows with the extra degrees
+      proj = c.projectionMatrix
+    }
+    this.frustum.setFromProjectionMatrix(this._m.multiplyMatrices(proj, camera.matrixWorldInverse))
     camera.getWorldPosition(this.cam)
     this.quat.copy(camera.quaternion)
     this.aspect = camera.aspect

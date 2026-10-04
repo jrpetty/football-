@@ -417,10 +417,12 @@ function foliageMain(material) {
 
 // ---------------------------------------------------------------- grass field
 export class GrassField {
-  constructor(scene, splat, { count = 40000, area, seed = 7, heightFn = null, avoid = null }) {
+  // cap: room for that many tufts when count starts at zero (a patch laid
+  // later, see BaseWorld.setNearGrass)
+  constructor(scene, splat, { count = 40000, area, seed = 7, heightFn = null, avoid = null, cap = 0 }) {
     this.scene = scene
     this.splat = splat
-    this.max = count
+    this.max = count || cap
     this.area = area
     this.seed = seed
     this.heightFn = heightFn
@@ -428,7 +430,7 @@ export class GrassField {
     const geos = [grassTuftGeometry(11, { blades: 9, h: 0.5 }), grassTuftGeometry(23, { blades: 12, h: 0.38 }), grassTuftGeometry(37, { blades: 7, h: 0.65 })]
     this.material = grassMaterial()
     this.meshes = geos.map((g) => {
-      const im = new THREE.InstancedMesh(g, this.material, Math.ceil(count / geos.length))
+      const im = new THREE.InstancedMesh(g, this.material, Math.ceil(this.max / geos.length))
       im.count = 0
       im.castShadow = false
       im.receiveShadow = true

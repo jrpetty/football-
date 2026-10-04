@@ -423,6 +423,8 @@ export class CampPeople {
     const hr = hour()
     const nightNow = hr >= 21.5 || hr < 5.5
     for (const w of this.list.values()) {
+      // the one being played in first person walks where the player goes
+      if (w.manual) continue
       const G = w.goal
       const s = w.s
       let need = !G || w.think <= 0

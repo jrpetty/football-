@@ -6,6 +6,8 @@
 // way the camp view will draw them, plus the ghosts, blueprints and a
 // portrait.
 import * as THREE from 'three'
+import { viewModel, fpLook } from '../models/viewmodel.js'
+import { OUTFITS } from '../models/character.js'
 import { STATIONS } from '../game/data.js'
 import { S } from '../game/state.js'
 import { stationModel } from '../models/stations.js'
@@ -66,6 +68,8 @@ export function warmUp(game) {
   const jobs = Object.keys(STATIONS).map((t) => [t, 1])
   for (const st of S.stations) if (st.level >= 1 && st.level < (STATIONS[st.type]?.levels || 1)) jobs.push([st.type, st.level + 1])
   jobs.push(['ghosts', 0])
+  // first person: the arms and a weapon, and the sky
+  jobs.push(['fp', 0])
   // whatever in camp is hidden for now (the placement cursor, raid gear)
   jobs.unshift(['scene', 0])
   const compile = (obj) => compileFor(r, obj, view.camera, game.base.scene)
@@ -81,7 +85,25 @@ export function warmUp(game) {
     let tmp = null
     try {
       if (job[0] === 'scene') obj = game.base.scene
-      else if (job[0] === 'ghosts') {
+      else if (job[0] === 'fp') {
+        const fp = game.fp
+        const s = S.survivors[0]
+        if (!fp || !s) return idle(step)
+        const vm = viewModel('pistol', [], fpLook(s, OUTFITS[s.occ] || OUTFITS.drifter))
+        const melee = viewModel('bat', [], fpLook(s, OUTFITS[s.occ] || OUTFITS.drifter))
+        fp.layer.root.add(vm.rig, melee.rig)
+        compileFor(r, fp.layer.scene, fp.layer.camera, fp.layer.scene).then(() => {
+          fp.layer.root.remove(vm.rig, melee.rig)
+          const dome = game.base.atmo.dome.mesh
+          const was = dome.visible
+          dome.visible = true
+          compile(dome).then(() => {
+            dome.visible = was
+            idle(step)
+          })
+        })
+        return
+      } else if (job[0] === 'ghosts') {
         // a placing ghost or a blueprint wears one material over a station's
         // own meshes (instanced or not): dress every station that way
         obj = new THREE.Group()

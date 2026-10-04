@@ -18,6 +18,7 @@ import { RaidMixin } from './baseraid.js'
 import { RaidNetMixin } from './raidnet.js'
 import { netMarkers } from '../ui/netui.js'
 import { BeltMixin, nearestPod } from './basebelts.js'
+import { BaseFPMixin } from './basefp.js'
 import { stationModel } from '../models/stations.js'
 import { makeSurvivorCharacter } from '../world/agents.js'
 import { STATIONS, RES, EXPANSIONS } from '../game/data.js'
@@ -668,7 +669,8 @@ export class BaseScene {
     this.fence.update(dt)
     const ctx = {
       simDt,
-      camDist: view.rig.dist,
+      // first person: no roof lifts off for a camera that is not up there
+      camDist: this.fpOn ? 80 : view.rig.dist,
       focus: view.rig.target,
       hovered: this.hovered,
       selected: this.selected,
@@ -709,4 +711,4 @@ export class BaseScene {
     setAmbience(S.raid ? 0.06 : 0.035)
   }
 }
-Object.assign(BaseScene.prototype, RaidMixin, RaidNetMixin, BeltMixin)
+Object.assign(BaseScene.prototype, RaidMixin, RaidNetMixin, BeltMixin, BaseFPMixin)

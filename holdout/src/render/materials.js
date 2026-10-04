@@ -131,6 +131,35 @@ export function allMaterials() {
 // below 3.4 m, so building interiors on runs stay dry.
 // uAutumn: 0 green, 1 full autumn colour, up to 2 for winter brown.
 export const WEATHER = { tNoise: { value: null }, uWeather: { value: 1 }, uSnow: { value: 0 }, uSnowHole: { value: new THREE.Vector4(0, 0, 0, 0) }, uAutumn: { value: 0 } }
+// First person on a run: inside these boxes (x0, z0, x1, z1, up to a
+// height) the sky's light comes in through the windows, not down through
+// the roof, so the ambient and reflected sky light are dimmed. Off (K = 0)
+// for the top-down view, which has no ceilings.
+export const INDOOR = {
+  uIndoorK: { value: 0 },
+  uIndoorN: { value: 0 },
+  uIndoorR: { value: Array.from({ length: 8 }, () => new THREE.Vector4()) },
+  uIndoorTop: { value: new Array(8).fill(0) },
+  // first person sees the ground and walls edge-on, where a rough surface
+  // would mirror the bright horizon of the sky's light: rough things keep
+  // only a little of that reflection (glossy cars and glass keep theirs)
+  uFpSpec: { value: 0 },
+}
+const INDOOR_FRAG = /* glsl */ `
+if (uFpSpec > 0.0) reflectedLight.indirectSpecular *= 1.0 - uFpSpec * 0.8 * smoothstep(0.3, 0.72, max(roughness, roughnessFactor));
+if (uIndoorK > 0.0) {
+  float ins = 0.0;
+  for (int k = 0; k < 8; k++) {
+    if (k >= uIndoorN) break;
+    vec4 R = uIndoorR[k];
+    if (vWW.x > R.x && vWW.x < R.z && vWW.z > R.y && vWW.z < R.w && vWW.y < uIndoorTop[k]) ins = 1.0;
+  }
+  float kk = ins * uIndoorK;
+  // what light there is has bounced off floors and walls: dimmer, warmer
+  reflectedLight.indirectDiffuse *= mix(vec3(1.0), vec3(0.34, 0.3, 0.26), kk);
+  reflectedLight.indirectSpecular *= 1.0 - 0.8 * kk;
+}
+`
 const WEATHER_VERT = /* glsl */ `
 {
   vec4 wwp = vec4(transformed, 1.0);
@@ -208,10 +237,12 @@ export function weatherShader(sh, late = false, lite = false) {
   sh.uniforms.uWeather = WEATHER.uWeather
   sh.uniforms.uSnow = WEATHER.uSnow
   sh.uniforms.uSnowHole = WEATHER.uSnowHole
+  Object.assign(sh.uniforms, INDOOR)
   sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWW;\nvarying vec3 vWN;').replace('#include <project_vertex>', WEATHER_VERT + '#include <project_vertex>')
   sh.fragmentShader = sh.fragmentShader
-    .replace('#include <common>', '#include <common>\nvarying vec3 vWW;\nvarying vec3 vWN;\nuniform sampler2D tWNoise;\nuniform float uWeather;\nuniform float uSnow;\nuniform vec4 uSnowHole;')
+    .replace('#include <common>', '#include <common>\nvarying vec3 vWW;\nvarying vec3 vWN;\nuniform sampler2D tWNoise;\nuniform float uWeather;\nuniform float uSnow;\nuniform vec4 uSnowHole;\nuniform float uIndoorK;\nuniform float uFpSpec;\nuniform int uIndoorN;\nuniform vec4 uIndoorR[8];\nuniform float uIndoorTop[8];')
     .replace(late ? '#include <alphatest_fragment>' : '#include <color_fragment>', (late ? '#include <alphatest_fragment>\n' : '#include <color_fragment>\n') + (lite ? WEATHER_FRAG_LITE : WEATHER_FRAG))
+    .replace('#include <aomap_fragment>', '#include <aomap_fragment>\n' + INDOOR_FRAG)
 }
 // Give a material the weathering layer; extra patches run after it.
 export function withWeather(m, key, extra = null, cacheKey = '') {
@@ -219,7 +250,7 @@ export function withWeather(m, key, extra = null, cacheKey = '') {
     weatherShader(sh, m.alphaTest > 0, FOLIAGE_KEYS.has(key))
     extra?.(sh, r)
   }
-  m.customProgramCacheKey = () => 'wx2-' + key + cacheKey
+  m.customProgramCacheKey = () => 'wx3-' + key + cacheKey
   m.userData.weather = true
   return m
 }

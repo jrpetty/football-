@@ -76,6 +76,46 @@ networks don't.
 | | `Q` / Alt+click | Ping a spot for the friends on the run |
 | | Left-click a wardrobe, fridge, shelf or desk | "Barricade the door" pushes it across the nearest doorway |
 | City map | `M`, `Esc` | Back to camp |
+| First person | `` ` `` or `F5`, the eye button | Walk in one survivor's boots, and back to the view from above |
+| | Mouse, WASD, `Shift` | Look (click the view to capture the mouse, `Esc` frees it), walk, run |
+| | Left click, right click | Shoot or swing (hold for automatic fire), aim down the sights |
+| | `E` | Use what you look at: search, open, climb a watchtower, a station's panel |
+| | `1`–`4`, `Tab`, `G`, `F` (runs) | Become another survivor, squad follows you, flashlight |
+
+## First person
+
+Any time in camp or on a run, `` ` `` (the key under `Esc`) or `F5` puts you
+behind one survivor's eyes in the same world: the same walls, zombies and
+loot, the same rules underneath. Their own arms hold the weapon they carry,
+in their skin and sleeves and work gloves.
+
+- **Fighting** is aimed by you. Shots go where the crosshair is, spreading
+  when you move or run and tightening when you aim down the sights (the
+  hunting rifle's scope zooms). Headshots do double damage. Guns carry
+  further than the AI's careful range but lose punch with distance, and a
+  shotgun fires a spread. Melee weapons swing at what is in front of you;
+  out of ammo you club with the gun. Kills, experience, wear, noise and
+  ammo count exactly as they do from above.
+- **On a run** you see what your eyes see: no fog-of-war veil, every
+  floor of a tall building in place, ceilings and roofs on, interior walls
+  up to the ceiling, darker indoors (the sky comes in through the windows)
+  with a flashlight after dark (`F` any time). `E` searches, picks or
+  smashes a lock, breaks things down, helps a friend up or calls the lift;
+  walk into a flight of stairs to climb it. The others keep their orders,
+  `G` has them follow you, and if you go down you carry on as someone
+  still standing. Past the lot the real neighbourhood carries on, then the
+  city's skyline in the haze.
+- **In camp** `E` on a station opens its panel, on a watchtower climbs it
+  (the wall is solid: fight a horde from the towers, a breach or the
+  gate), on the gate opens it, on a person talks to them. Whoever you walk
+  as leaves their job while you have them, and fights the horde as you.
+
+It is drawn to the same standard as the view from above: a real sky (sun,
+clouds, moon and stars, meeting the fog at the horizon), shadows placed
+ahead of you, dense grass round your feet in camp, and the arms and weapon
+drawn in their own pass over the world, lit by its sun and sky. Settings
+has mouse sensitivity, field of view, invert mouse and head bob. Co-op
+guests on a run watch from above (the leader's game runs the street).
 
 ## The long game
 
@@ -687,7 +727,8 @@ src/
                      mast, furniture, weapons, vehicles, city
   render/            pipeline (SSAO, bloom, SMAA, tilt-shift), fog of war,
                      sky, terrain, snow and seasons, materials, effects,
-                     scenery culling, frame pacing
+                     scenery culling, frame pacing, first person (the
+                     controller, the arms-and-weapon overlay, the sky)
   ui/                HUD, panels, progress board, field manual, journal,
                      motor pool, lobby, Players panel and pings
 server/

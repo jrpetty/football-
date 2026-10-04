@@ -116,6 +116,15 @@ const SFX = {
     noise(0.08, { type: 'highpass', freq: 2500, gain: 0.2 })
     tone(220, 0.1, { type: 'triangle', gain: 0.1, freqEnd: 120 })
   },
+  // first person: footfalls and an empty chamber
+  step: () => noise(0.07, { type: 'lowpass', freq: 520, freqEnd: 180, gain: 0.07, attack: 0.004 }),
+  stepRun: () => noise(0.09, { type: 'lowpass', freq: 700, freqEnd: 200, gain: 0.11, attack: 0.003 }),
+  dry: () => tone(2200, 0.03, { type: 'square', gain: 0.05, freqEnd: 1600 }),
+  hitmark: () => tone(1900, 0.035, { type: 'triangle', gain: 0.045, freqEnd: 2400 }),
+  killmark: () => {
+    tone(1500, 0.05, { type: 'triangle', gain: 0.05, freqEnd: 900 })
+    tone(2600, 0.04, { type: 'triangle', gain: 0.03, delay: 0.03 })
+  },
   swing: () => noise(0.18, { type: 'bandpass', freq: 900, freqEnd: 2400, q: 2, gain: 0.18, attack: 0.05 }),
   hit: () => {
     noise(0.1, { freq: 500, gain: 0.35 })
