@@ -288,7 +288,17 @@ public final class Crafts {
             // ...and on with the work: setting the loom up is not the day's piece.
         }
         // A bed for every house that has a bed short, then rugs, then banners for the washing.
-        if (stock(level, v, s -> s.is(ItemTags.BEDS)) < 2 && have >= 3 && planks(level, v, 3)) {
+        // While folk sleep on the ground and the houses have room for their beds, the wool is
+        // for beds (Grow.furnish carries them in) and not for rugs and banners.
+        int adults = 0, bedded = 0;
+        for (AssistantEntity a : Villages.folkOf(v.id())) {
+            if (a.isBaby()) continue;
+            adults++;
+            if (a.bedPos() != null) bedded++;
+        }
+        boolean bedsFirst = bedded < adults && bedded < Villages.bedsPlanned(v.id());
+        int beds = stock(level, v, s -> s.is(ItemTags.BEDS));
+        if ((beds < 2 || (bedsFirst && beds < 4)) && have >= 3 && planks(level, v, 3)) {
             Item colour = woolColour(level, v);
             if (!take(level, v, s -> s.is(colour), 3) && !take(level, v, wool, 3)) return null;
             take(level, v, s -> s.is(ItemTags.PLANKS), 3);
@@ -303,6 +313,7 @@ public final class Crafts {
             store(level, v, string.copy());
             return "four lengths of string, spun from wool";
         }
+        if (bedsFirst) return null;
         if (stock(level, v, s -> s.is(ItemTags.WOOL_CARPETS)) < 8 && have >= 2) {
             Item colour = woolColour(level, v);
             if (!take(level, v, s -> s.is(colour), 2) && !take(level, v, wool, 2)) return null;

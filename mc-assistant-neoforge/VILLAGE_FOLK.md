@@ -314,7 +314,7 @@ days later):
 | Enchanter | an enchanting table and 6 lapis | the table needs diamonds, obsidian and a book |
 | Blacksmith | an old (chipped) anvil, if the stores haven't 31 iron | an anvil is thirty-one iron |
 | Tailor | a loom, if the village has no string | string comes from spiders |
-| Rancher | two leads | leads need slime |
+| Rancher | two leads, and shears if the village has no iron for them | leads need slime; shears need iron a young village spends on picks |
 | First farmer | 3 sugar cane, 2 melon seeds, 2 pumpkin seeds (if nobody has any) | seeds and cuttings like these are rare finds |
 
 A workstation that belongs in a building (the brewer's stand in the brewery, the
@@ -365,7 +365,9 @@ Everything after that the village makes for itself:
 * **Farmers.** Plant the cane along the field's water and cut it back to its
   bottom so it grows again. The cane goes to the enchanter's paper, the brewer's
   sugar and the café's pies and cakes. They also plant the melon and pumpkin seed.
-* **Ranchers.** Milk the cows with a bucket for the café's cakes; the café sends
+* **Ranchers.** Shear the sheep: the wool is the village's beds. They breed sheep
+  before cows, and a pen with no sheep fetches a wild one even when it has a pair of cows.
+  Milk the cows with a bucket for the café's cakes; the café sends
   the buckets back. When the pen has no pair to breed, the rancher takes a lead,
   finds a wild sheep, cow, pig or hen, and walks it home. If there is nothing wild
   for fifty blocks, the village buys a drover's pair (two sheep and two hens) once.
@@ -380,6 +382,12 @@ Everything after that the village makes for itself:
   windows.
 * **Guards.** When the bell rings, each guard takes a healing potion from the
   stores along with its bow and arrows, keeps one, and drinks it if badly hurt.
+
+**Beds.** Every house has four beds in its drawing. A house goes up with whatever beds
+the stores can make that day (three wool and three planks each), and any it still lacks
+are brought in later, one at a time, as wool comes in: a bed from the stores, or one made
+there and then. While folk sleep on the ground the tailor makes beds before rugs and
+banners, the quest board asks for wool, and the elder may order the herds grown.
 
 **Where the fields go.** A farmer puts its field on the bank of the water nearest the
 village, just outside the town's own ground, whichever way that is. If there is no
@@ -1299,6 +1307,8 @@ Every push to CI:
   second hive is made of three honeycomb and six planks;
 * puts a farmer's field by the nearest of two ponds, and checks that monsters about a
   village with no wall don't ring the bell (game test `t42`);
+* puts beds into a house that went up without them, from the stores' wool and planks,
+  one at a time and no more than the wool allows (game test `t43`);
 * runs the links between the trades (game test `t41`): the first farmer brings cane and
   plants it on the water's edge, then cuts it down to its bottom; a rancher milks a cow,
   walks a wild sheep twenty-six blocks home on a lead and keeps the lead, then — nothing

@@ -201,6 +201,7 @@ public class VillageFolkEntity extends AssistantEntity {
         back += returnTo(villageCentre, st -> st.is(net.minecraft.world.item.Items.FURNACE), 1, r);
         back += returnTo(villageCentre, st -> st.is(net.minecraft.world.item.Items.LADDER)
             || st.is(net.minecraft.tags.ItemTags.FENCES) || st.is(net.minecraft.tags.ItemTags.FENCE_GATES), 0, r);
+        back += returnTo(villageCentre, st -> st.is(net.minecraft.tags.ItemTags.BEDS), 0, r);   // the next house's beds
         if (back > 0) buildNote("build: handed " + back + " back to the stores");
     }
 

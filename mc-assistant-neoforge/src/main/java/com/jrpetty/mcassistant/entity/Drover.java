@@ -84,9 +84,12 @@ public final class Drover {
         BlockPos pen = f.workZone().center();
         if (!Land.areaLoaded(level, pen, RANGE)) return false;
         Map<EntityType<?>, Integer> herd = herd(level, pen, Math.max(8, Math.min(16, f.workZone().radius())));
-        for (int n : herd.values()) if (n >= 2) return false;           // a pair to breed: nothing to fetch
+        boolean pair = false;
+        for (int n : herd.values()) if (n >= 2) pair = true;
+        // A pair to breed is enough — unless none of it is sheep: the wool is the village's beds.
+        if (pair && herd.getOrDefault(EntityType.SHEEP, 0) >= 2) return false;
         long today = level.getDayTime() / 24000L;
-        Animal wild = wild(level, pen, herd, today);
+        Animal wild = wild(level, pen, herd, today, pair ? EntityType.SHEEP : null);
         if (wild != null && f.countCarried(s -> s.is(Items.LEAD)) < 1) {
             // A lead from the stores (the market sells them, and players bring them).
             Villages.Village v = Villages.get(village);
@@ -103,6 +106,7 @@ public final class Drover {
             return true;
         }
         if (wild != null) return false;                                  // animals, but no lead: the stores may send one
+        if (pair) return false;                                          // the drover's pair is for an empty pen
         if (LOOKED.getOrDefault(f.getUUID(), -1L) == today) return false;
         LOOKED.put(f.getUUID(), today);
         // Nothing wild for fifty blocks: the drover's pair, once.
@@ -227,9 +231,10 @@ public final class Drover {
      * inside fences): a player's animals stay a player's.
      */
     @Nullable
-    static Animal wild(ServerLevel level, BlockPos pen, Map<EntityType<?>, Integer> herd, long today) {
+    static Animal wild(ServerLevel level, BlockPos pen, Map<EntityType<?>, Integer> herd, long today,
+                       @Nullable EntityType<?> only) {
         List<Animal> about = level.getEntitiesOfClass(Animal.class, new AABB(pen).inflate(RANGE, 16, RANGE),
-            a -> a.isAlive() && !a.isBaby() && farmed(a) && !a.isLeashed()
+            a -> a.isAlive() && !a.isBaby() && farmed(a) && !a.isLeashed() && (only == null || a.getType() == only)
                 && !a.hasCustomName() && !a.isPersistenceRequired()
                 && GAVE_UP.getOrDefault(a.getUUID(), -1L) != today
                 && a.distanceToSqr(pen.getX() + 0.5, a.getY(), pen.getZ() + 0.5) > 12.0 * 12.0

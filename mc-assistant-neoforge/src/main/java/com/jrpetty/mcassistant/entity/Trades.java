@@ -257,6 +257,11 @@ public final class Trades {
             }
             case RANCH -> {
                 if (!anywhere(level, id, s -> s.is(Items.LEAD))) kit.add(new ItemStack(Items.LEAD, 2));
+                // Shears are two iron, and a young village's first iron goes to picks: without them
+                // there is no wool, and without wool no beds (the long game: four beds for 48 folk).
+                if (!anywhere(level, id, s -> s.is(Items.SHEARS)) && Crafts.stock(level, v, s -> s.is(Items.IRON_INGOT)) < 2) {
+                    kit.add(new ItemStack(Items.SHEARS));
+                }
             }
             case BEEKEEP -> {
                 if (!has(level, v, t, Items.BEEHIVE, Blocks.BEEHIVE)) kit.add(swarm());
@@ -375,7 +380,7 @@ public final class Trades {
             case ENCHANT -> "I brought my old enchanting table. It took three of us to carry it.";
             case SMITH -> "Grandfather's anvil. Chipped, but it rings true.";
             case TAILOR -> "My loom came with me. I couldn't work without it.";
-            case RANCH -> "Two good leads. Now to find us some animals.";
+            case RANCH -> "Two good leads, and shears for the wool. Now to find us some animals.";
             case FARM -> "A few cane cuttings and melon and pumpkin seed, from the old country.";
             default -> "I've brought what I need.";
         };
@@ -430,7 +435,7 @@ public final class Trades {
             case ENCHANT -> s.is(Items.ENCHANTING_TABLE) ? 1 : (s.is(Items.LAPIS_LAZULI) ? 64 : 0);
             case SMITH -> s.is(ItemTags.ANVIL) ? 1 : 0;
             case TAILOR -> s.is(Items.LOOM) ? 1 : 0;
-            case RANCH -> s.is(Items.LEAD) ? 4 : (s.is(Items.BUCKET) ? 1 : 0);
+            case RANCH -> s.is(Items.LEAD) ? 4 : ((s.is(Items.BUCKET) || s.is(Items.SHEARS)) ? 1 : 0);
             case FARM -> s.is(Items.SUGAR_CANE) ? 6 : ((s.is(Items.MELON_SEEDS) || s.is(Items.PUMPKIN_SEEDS)) ? 4 : 0);
             case GUARD -> Links.healing(s) ? 1 : 0;
             default -> 0;

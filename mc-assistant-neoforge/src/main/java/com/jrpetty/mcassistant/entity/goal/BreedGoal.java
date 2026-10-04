@@ -28,8 +28,10 @@ public class BreedGoal extends Goal {
     private record Species(Class<? extends Animal> type, Predicate<ItemStack> food, String label) {}
 
     private static final List<Species> SPECIES = List.of(
-        new Species(Cow.class, s -> s.is(Items.WHEAT), "cows"),
+        // Sheep first: their wool is the village's beds, and a pen that bred its cows first
+        // never had the wheat left over for the sheep.
         new Species(Sheep.class, s -> s.is(Items.WHEAT), "sheep"),
+        new Species(Cow.class, s -> s.is(Items.WHEAT), "cows"),
         new Species(Pig.class, s -> s.is(Items.CARROT) || s.is(Items.POTATO) || s.is(Items.BEETROOT), "pigs"),
         new Species(Chicken.class, s -> s.is(Items.WHEAT_SEEDS) || s.is(Items.BEETROOT_SEEDS)
             || s.is(Items.MELON_SEEDS) || s.is(Items.PUMPKIN_SEEDS), "chickens"),

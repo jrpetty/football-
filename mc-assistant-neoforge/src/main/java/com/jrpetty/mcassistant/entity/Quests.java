@@ -197,7 +197,7 @@ public final class Quests {
         // Wool for beds (three to a bed): a village sleeping on the ground wants it more than most.
         boolean woolAsked = already.contains("bring:white_wool");
         for (Posting o : options) woolAsked |= "white_wool".equals(o.item);
-        if (!woolAsked && Villages.housing(id) > 0) {
+        if (!woolAsked && Villages.bedsPlanned(id) > 0) {
             int unbedded = 0;
             for (AssistantEntity a : Villages.folkOf(id)) if (!a.isBaby() && a.bedPos() == null) unbedded++;
             if (unbedded >= 3 && Market.stock(level, id, x -> x.is(net.minecraft.tags.ItemTags.WOOL)) < 9) {

@@ -771,6 +771,21 @@ public class BuildGoal extends Goal {
                 return;
             }
             state = orient(state, target, pos);
+        } else if (part == Part.BED) {
+            // Only spent once it will fit: a bed taken out of the pack for a head cell that was
+            // blocked used to vanish. And the bed it carries, in its own colour (not always red).
+            BlockPos head = pos.relative(bedHead(target));
+            if (!assistant.level().getBlockState(head).canBeReplaced()
+                    || !assistant.level().getBlockState(head.below()).isSolid()) { cursor++; return; }
+            ItemStack bedItem = ItemStack.EMPTY;
+            for (ItemStack st : assistant.getInventoryItems()) {
+                if (st.is(ItemTags.BEDS)) { bedItem = st; break; }
+            }
+            if (bedItem.isEmpty()) { cursor++; return; }                  // none: Grow.furnish brings one later
+            net.minecraft.world.item.Item kind = bedItem.getItem();
+            if (assistant.removeMatching(st -> st.is(kind), 1) < 1) { cursor++; return; }
+            state = net.minecraft.world.level.block.Block.byItem(kind) instanceof net.minecraft.world.level.block.BedBlock bb
+                ? bb.defaultBlockState() : Blocks.RED_BED.defaultBlockState();
         } else {
             if (assistant.removeMatching(itemFor(part), 1) < 1) {
                 if (isDecorative(part)) { cursor++; return; } // no torches: skip, keep building

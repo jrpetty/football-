@@ -53,6 +53,8 @@ public final class Grow {
         Blocks.AZURE_BLUET, Blocks.OXEYE_DAISY, Blocks.PINK_TULIP };
 
     private static final Map<UUID, Long> LAST = new ConcurrentHashMap<>();
+    /** When each house was last found with all its beds in (by its anchor). */
+    private static final Map<Long, Long> FURNISHED = new ConcurrentHashMap<>();
     private static final Map<UUID, Set<Long>> GARDENED = new ConcurrentHashMap<>();
     private static final Map<UUID, Set<Long>> STARTED = new ConcurrentHashMap<>();
     /** How many times each layer of a rising storey has been laid (anchor:y). */
@@ -60,6 +62,7 @@ public final class Grow {
 
     public static void resetForTests() {
         LAST.clear();
+        FURNISHED.clear();
         GARDENED.clear();
         STARTED.clear();
         TRIED.clear();
@@ -75,7 +78,71 @@ public final class Grow {
         long now = level.getGameTime();
         if (now - LAST.getOrDefault(id, -100000L) < 300L) return;
         LAST.put(id, now);
+        furnish(level, v);
         work(level, v, 24);
+    }
+
+    // ------------------------------------------------------------------ beds
+
+    /**
+     * A bed into a house that stands without one: from the stores, or made there and then of
+     * three wool and three planks out of them. A house got its beds only on the day it went up,
+     * out of whatever wool the stores held that morning, and none ever came after — the long
+     * game's village of forty-eight had homes for thirty-six and four beds. One bed a turn.
+     * Returns whether one was put in.
+     */
+    public static boolean furnish(ServerLevel level, Villages.Village v) {
+        UUID id = v.id();
+        for (Ledger.Building b : Ledger.buildings(id)) {
+            String plan = switch (b.structure()) {
+                case "house" -> Ledger.grown(id, b.anchor()) ? "house2" : "house";
+                case "barracks" -> "barracks";
+                default -> null;
+            };
+            if (plan == null || !Land.areaLoaded(level, b.anchor(), 9)) continue;
+            if (level.getGameTime() - FURNISHED.getOrDefault(b.anchor().asLong(), -100000L) < 6000L) continue;
+            for (BuildGoal.Placement p : BuildGoal.plan(plan, b.anchor(), b.facing(), 13)) {
+                if (p.part() != BuildGoal.Part.BED) continue;
+                BlockPos foot = p.pos();
+                Direction lie = p.way() == com.jrpetty.mcassistant.entity.goal.Blueprints.Way.UP ? b.facing()
+                    : com.jrpetty.mcassistant.entity.goal.Blueprints.world(p.way(), b.facing());
+                BlockPos head = foot.relative(lie);
+                if (level.getBlockState(foot).is(BlockTags.BEDS)) continue;          // made up already
+                if (!level.getBlockState(foot).canBeReplaced() || !level.getBlockState(head).canBeReplaced()) continue;
+                if (!level.getBlockState(foot.below()).isSolid() || !level.getBlockState(head.below()).isSolid()) continue;
+                BlockState bed = bedFromTheStores(level, v);
+                if (bed == null) return false;                                        // nothing to make one of
+                final BlockState laid = bed;
+                BuildGoal.stampOnly(level, plan, b.anchor(), b.facing(), 13, x -> laid, x -> x.pos().equals(foot));
+                return true;
+            }
+            FURNISHED.put(b.anchor().asLong(), level.getGameTime());                // every bed in: not looked at again for a while
+        }
+        return false;
+    }
+
+    /** A bed out of the stores, or one made of their wool and planks (a log is four planks). */
+    @javax.annotation.Nullable
+    private static BlockState bedFromTheStores(ServerLevel level, Villages.Village v) {
+        net.minecraft.world.item.ItemStack bed = Crafts.takeOne(level, v, s -> s.is(ItemTags.BEDS));
+        if (!bed.isEmpty() && Block.byItem(bed.getItem()) instanceof net.minecraft.world.level.block.BedBlock b) {
+            return b.defaultBlockState();
+        }
+        if (Market.stock(level, v.id(), s -> s.is(ItemTags.WOOL)) < 3) return null;
+        boolean planks = Market.stock(level, v.id(), s -> s.is(ItemTags.PLANKS)) >= 3;
+        if (!planks && Market.stock(level, v.id(), s -> s.is(ItemTags.LOGS)) < 1) return null;
+        net.minecraft.world.item.ItemStack wool = Crafts.takeOne(level, v, s -> s.is(ItemTags.WOOL));
+        if (wool.isEmpty()) return null;
+        if (!Crafts.take(level, v, s -> s.is(wool.getItem()), 2) && !Crafts.take(level, v, s -> s.is(ItemTags.WOOL), 2)) {
+            Crafts.store(level, v, wool);
+            return null;
+        }
+        if (planks) Crafts.take(level, v, s -> s.is(ItemTags.PLANKS), 3);
+        else Crafts.take(level, v, s -> s.is(ItemTags.LOGS), 1);
+        String colour = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(wool.getItem()).getPath().replace("_wool", "");
+        Block made = net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(
+            net.minecraft.resources.ResourceLocation.withDefaultNamespace(colour + "_bed"));
+        return made instanceof net.minecraft.world.level.block.BedBlock ? made.defaultBlockState() : Blocks.WHITE_BED.defaultBlockState();
     }
 
     /** Up to so many blocks of work on the houses. Returns the blocks changed. */

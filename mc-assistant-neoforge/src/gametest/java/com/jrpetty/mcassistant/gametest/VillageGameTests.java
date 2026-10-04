@@ -2652,6 +2652,64 @@ public class VillageGameTests {
     }
 
     /**
+     * Beds into a house that went up without them. A house got beds only on the day it was built,
+     * from whatever wool the stores held that day, and never after: the long game's village of
+     * forty-eight had four. Now one is made of the stores' wool and planks and carried in, one a
+     * turn, and a house that has all its beds is left alone.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "t43_beds")
+    public static void t43_beds(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(6000);
+        Kit.hold(level, 26000, 12000, 40);
+        Kit.prepare(level, 26000, 12000, 40);
+        BlockPos heart = Kit.surface(level, 26000, 12000);
+        VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(f != null, "a village");
+        java.util.UUID village = f.ownerId();
+        Villages.Village v = Villages.get(village);
+        BlockPos at = Kit.surface(level, heart.getX() + 20, heart.getZ());
+        BuildGoal.stamp(level, "house", at, Direction.NORTH, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+        com.jrpetty.mcassistant.village.Ledger.built(village, "house", at, Direction.NORTH);
+        java.util.function.IntSupplier beds = () -> {
+            int n = 0;
+            for (BlockPos q : BlockPos.betweenClosed(at.offset(-9, -3, -9), at.offset(9, 8, 9))) {
+                if (level.getBlockState(q).is(net.minecraft.tags.BlockTags.BEDS)) n++;
+            }
+            return n;
+        };
+        int drawn = beds.getAsInt();
+        // Built with no wool to hand: no beds.
+        for (BlockPos q : BlockPos.betweenClosed(at.offset(-9, -3, -9), at.offset(9, 8, 9))) {
+            if (level.getBlockState(q).is(net.minecraft.tags.BlockTags.BEDS)) level.setBlock(q, Blocks.AIR.defaultBlockState(), 2 | 16);
+        }
+        boolean none = com.jrpetty.mcassistant.entity.Grow.furnish(level, v);
+        // Wool for one bed in the stores.
+        BlockPos chest = Kit.surface(level, heart.getX() + 3, heart.getZ() - 3);
+        level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
+        com.jrpetty.mcassistant.entity.ZoneChests.mark(level, chest);
+        net.minecraft.world.Container box = (net.minecraft.world.Container) level.getBlockEntity(chest);
+        box.setItem(0, new ItemStack(Items.BLUE_WOOL, 3));
+        box.setItem(1, new ItemStack(Items.OAK_PLANKS, 3));
+        boolean put = com.jrpetty.mcassistant.entity.Grow.furnish(level, v);
+        int after = beds.getAsInt();
+        boolean blue = false;
+        for (BlockPos q : BlockPos.betweenClosed(at.offset(-9, -3, -9), at.offset(9, 8, 9))) {
+            if (level.getBlockState(q).is(Blocks.BLUE_BED)) blue = true;
+        }
+        boolean more = com.jrpetty.mcassistant.entity.Grow.furnish(level, v);
+        Kit.log("t43 the house's drawing has " + drawn / 2 + " beds; with no wool a bed put in: " + none
+            + "; with three wool: " + put + " (" + after / 2 + " in, blue " + blue + ", wool left "
+            + box.getItem(0).getCount() + "); and with none left: " + more);
+        helper.assertTrue(drawn >= 2 && !none, "a house's beds wait for the wool");
+        helper.assertTrue(put && after == 2 && blue && box.getItem(0).isEmpty(),
+            "three wool and three planks from the stores make a bed, carried into the house that had none");
+        helper.assertTrue(!more, "and no more than the stores can make");
+        helper.succeed();
+    }
+
+    /**
      * A farmer puts its field by the water nearest the village: a pond just past the town's
      * edge one way, another twice as far the other, and the field goes on the near one's bank.
      * And monsters about a village with no wall don't ring the bell (it rang the first night
