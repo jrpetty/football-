@@ -8,7 +8,7 @@
  */
 import { useEffect, useMemo } from 'react';
 import { useAsync } from '../hooks.ts';
-import { href, setQuery, useRoute } from '../router.tsx';
+import { Link, href, setQuery, useRoute } from '../router.tsx';
 import { useViewerCaption } from '../context.tsx';
 import { Card, Empty, ErrorState, LoadingPage, PageHead, cx } from '../components/ui.tsx';
 import { Icon } from '../components/icons.tsx';
@@ -165,9 +165,19 @@ export default function VersusPage() {
         sub="Pick any two models and compare them test by test on the results you have already recorded. Nothing new is run and nothing costs money."
       />
       {o.fighters.length < 2 ? (
-        <Empty icon={<Icon.Target />} title="Not enough results yet">
-          A head to head needs at least two models with recorded results. Start a run with two or more models first.
-        </Empty>
+        <div className="card">
+          <Empty
+            icon={<Icon.Target />}
+            title="Run a test with two models first"
+            actions={
+              <Link to="/run/new?suite=quick-check&models=cheap" className="btn primary">
+                <Icon.Rocket /> Run a test
+              </Link>
+            }
+          >
+            A head to head compares two models on questions they have both answered. The 2p Quick Check runs the two cheapest models, which is enough to try it.
+          </Empty>
+        </div>
       ) : (
         <>
           <Picker opts={o} a={a} b={b} run={run} />
