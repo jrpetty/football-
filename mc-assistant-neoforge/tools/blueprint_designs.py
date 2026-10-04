@@ -213,7 +213,9 @@ and one bed: theirs. Nobody in the village will sleep in it.""")
 
 def storage():
     b = B("storage", 3, 4, """The storehouse: the village's stores under one roof. A small log-framed
-store on a stone footing, four chests round the walls, barrels by the door.""")
+shed on a stone footing round a Village Storehouse — twenty-seven storehouse
+units ($) stacked three by three by three, which join into one store the size
+of twenty-seven chests, its door facing the shed's door. Barrels by the door.""")
     b.ring(-2, 2, -1, -3, 3, "F")
     b.fill(-1, 1, -1, -2, 2, "f")
     for h in (0, 1, 2):
@@ -225,10 +227,12 @@ store on a stone footing, four chests round the walls, barrels by the door.""")
     b.set(-2, 1, -1, "G")
     b.set(2, 1, -1, "G")
     b.set(0, 1, 3, "G")
-    b.set(-1, 0, 2, "C")
-    b.set(1, 0, 2, "C")
-    b.set(-1, 0, 1, ")")
-    b.set(1, 0, 1, "(")
+    b.set(-1, 0, 2, "Q")
+    b.set(1, 0, 2, "Q")
+    for h in (0, 1, 2):                                   # the Village Storehouse
+        for x in (-1, 0, 1):
+            for z in (-1, 0, 1):
+                b.set(x, h, z, "$")
     b.set(-1, 0, -2, "Q")
     b.set(1, 0, -2, "Q")
     b.set(0, 0, 2, "t")

@@ -48,6 +48,7 @@ public final class ClientSetup {
     @SubscribeEvent
     public static void onRegisterScreens(RegisterMenuScreensEvent event) {
         event.register(McAssistantMod.ASSISTANT_MENU.get(), AssistantScreen::new);
+        event.register(McAssistantMod.STOREHOUSE_MENU.get(), StorehouseScreen::new);
     }
 
     @SubscribeEvent

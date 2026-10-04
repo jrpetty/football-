@@ -193,8 +193,11 @@ public class VillageGameTests {
             Kit.log("t08 " + st + " needs " + BuildGoal.partCounts(st, 13));
         }
         var storage = BuildGoal.partCounts("storage", 13);
-        helper.assertTrue(storage.getOrDefault(BuildGoal.Part.CHEST, 0) == 4,
-            "the storehouse should take four chests, wants " + storage);
+        helper.assertTrue(storage.getOrDefault(BuildGoal.Part.STOREHOUSE, 0) == 27
+                && storage.getOrDefault(BuildGoal.Part.CHEST, 0) == 0,
+            "the storehouse shed is built round the Village Storehouse's 27 units, and holds no chests, wants " + storage);
+        helper.assertTrue(BuildGoal.partCounts("storehouse", 0).getOrDefault(BuildGoal.Part.STOREHOUSE, 0) == 27,
+            "the storehouse put into an old shed is its 27 units");
         var house = BuildGoal.partCounts("house", 13);
         helper.assertTrue(house.getOrDefault(BuildGoal.Part.FURNACE, 0) >= 1
                 && house.getOrDefault(BuildGoal.Part.CRAFTING_TABLE, 0) >= 1
@@ -290,8 +293,9 @@ public class VillageGameTests {
         Kit.log("t09 handed back: chests " + chestsBefore + " -> " + chestsAfter + " (kept " + keptChests
             + " of " + (ownChests + 4) + "), stone " + stoneBefore + " -> " + stoneAfter);
         helper.assertTrue(stoneAfter - stoneBefore == 20, "the stone drawn for a given-up building goes back to the stores");
-        helper.assertTrue(keptChests == 1 && chestsAfter - chestsBefore == ownChests + 3,
-            "the chests drawn for a given-up building go back to the stores (one is kept for its own ground)");
+        // (None kept for its own ground: a village's folk keep no chest of their own any more.)
+        helper.assertTrue(keptChests == 0 && chestsAfter - chestsBefore == ownChests + 4,
+            "the chests drawn for a given-up building go back to the stores, all of them");
         helper.succeed();
     }
 
@@ -331,7 +335,8 @@ public class VillageGameTests {
         int fill = BuildGoal.fillCells(level, site.anchor()).size();
         Kit.log("t11 the lot needs " + fill + " blocks to build up to its floor");
         for (int i = 0; i < 6; i++) builder.insertItem(new ItemStack(Items.COBBLESTONE, 64));
-        builder.insertItem(new ItemStack(Items.CHEST, 4));
+        // The storehouse shed is built round the Village Storehouse: twenty-seven units.
+        builder.insertItem(new ItemStack(McAssistantMod.STOREHOUSE_ITEM.get(), 27));
         builder.insertItem(new ItemStack(Items.TORCH, 4));
         builder.enqueue(Job.buildAt("storage", site.anchor(), site.facing(), site.radius()));
         helper.onEachTick(() -> {
@@ -377,7 +382,8 @@ public class VillageGameTests {
         helper.assertTrue(site != null, "a lot with a tree on it should still be a lot: " + Villages.lotReport(v.id()));
         helper.assertTrue(site.anchor().distSqr(heart) < 30 * 30, "with trees all round, the lot is still beside the heart: " + site);
         for (int i = 0; i < 5; i++) builder.insertItem(new ItemStack(Items.COBBLESTONE, 64));
-        builder.insertItem(new ItemStack(Items.CHEST, 4));
+        // The storehouse shed is built round the Village Storehouse: twenty-seven units.
+        builder.insertItem(new ItemStack(McAssistantMod.STOREHOUSE_ITEM.get(), 27));
         builder.insertItem(new ItemStack(Items.TORCH, 4));
         builder.enqueue(Job.buildAt("storage", site.anchor(), site.facing(), site.radius()));
         helper.onEachTick(() -> {
@@ -510,7 +516,7 @@ public class VillageGameTests {
         long now = level.getGameTime();
         java.util.UUID stone = java.util.UUID.randomUUID();
         Villages.restore(level, stone, new BlockPos(4200, 64, 4200), Villages.Age.STONE,
-            List.of("storage", "shelter", "house", "house", "well"), 15);
+            List.of("storage", "storehouse", "shelter", "house", "house", "well"), 15);
         Villages.projectDue(stone, now);
         String first = Villages.nextProject(stone);
         helper.assertTrue("fortify".equals(first), "a Stone Age village wants its wall first, got " + first);
@@ -523,7 +529,7 @@ public class VillageGameTests {
         java.util.UUID late = java.util.UUID.randomUUID();
         // Homes enough for its twenty and two to spare (a village short of beds, or about to be,
         // builds houses first).
-        List<String> raised = new java.util.ArrayList<>(List.of("storage", "shelter", "well", "fortify", "smeltery",
+        List<String> raised = new java.util.ArrayList<>(List.of("storage", "storehouse", "shelter", "well", "fortify", "smeltery",
             "hall", "workshop", "watchtower", "market", "pen", "lighthouse", "chapel"));
         int homes = (20 + 2 + com.jrpetty.mcassistant.village.VillageMath.BEDS_PER_HOUSE)
             / com.jrpetty.mcassistant.village.VillageMath.BEDS_PER_HOUSE;
@@ -3038,7 +3044,11 @@ public class VillageGameTests {
                 ex.that(crew.size() >= 11, "at most one lost in a day (" + crew.size() + " of 12+)");
                 var chests = Kit.chestContents(level, cx, cz, 110);
                 var world = Kit.census(level, cx, cz, 90);
-                ex.that(world.get("chests") >= 8, "folk have put chests down (" + world.get("chests") + ")");
+                // The village keeps its goods in its stores at the heart, not in a chest a hand:
+                // nobody sets a chest of its own down any more.
+                int stored = 0;
+                for (int n : chests.values()) stored += n;
+                ex.that(stored > 0, "the stores at the heart are in use (" + world.get("chests") + " chests, " + stored + " items)");
                 ex.that(world.get("farmland") >= 20, "the fields are tilled (" + world.get("farmland") + ")");
                 Kit.log("  " + ex.summary());
             }
@@ -3091,5 +3101,130 @@ public class VillageGameTests {
             com.jrpetty.mcassistant.TimeSpeed.set(server, 1, null);
         }
         helper.succeed();
+    }
+
+    /**
+     * The Village Storehouse: twenty-seven units laid in a cube join into one store of 729
+     * slots, its goods kept at the door; a unit taken out parts it and the goods wait in the
+     * door; put back, it joins again with them; the door taken out carries them away. And a
+     * village with one keeps its goods there: the stores are the storehouse first, and its
+     * folk need no chest of their own.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "t45_storehouse")
+    public static void t45_storehouse(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(6000);
+        Kit.hold(level, 27000, 12000, 40);
+        Kit.prepare(level, 27000, 12000, 40);
+        BlockPos heart = Kit.surface(level, 27000, 12000);
+        VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(f != null, "a village");
+        java.util.UUID village = f.ownerId();
+        BlockPos origin = Kit.surface(level, heart.getX() + 9, heart.getZ() + 9);
+        for (BlockPos p : BlockPos.betweenClosed(origin.offset(-1, 0, -1), origin.offset(3, 4, 3))) {
+            level.setBlock(p, Blocks.AIR.defaultBlockState(), 2 | 16);
+        }
+        net.minecraft.world.level.block.state.BlockState unit = com.jrpetty.mcassistant.block.StorehouseBlock.loose();
+        com.jrpetty.mcassistant.block.StorehouseBlock.hintFront(Direction.SOUTH);
+        try {
+            int n = 0;
+            for (int y = 0; y < 3; y++) for (int x = 0; x < 3; x++) for (int z = 0; z < 3; z++) {
+                if (++n == 27) continue;
+                level.setBlock(origin.offset(x, y, z), unit, 3);
+            }
+            helper.assertFalse(com.jrpetty.mcassistant.block.StorehouseBlock.isFormed(level.getBlockState(origin)),
+                "twenty-six units are only units");
+            level.setBlock(origin.offset(2, 2, 2), unit, 3);
+        } finally {
+            com.jrpetty.mcassistant.block.StorehouseBlock.hintFront(null);
+        }
+        BlockPos door = origin.offset(com.jrpetty.mcassistant.block.StorehouseBlock.doorOffset(Direction.SOUTH));
+        helper.assertTrue(com.jrpetty.mcassistant.block.StorehouseBlock.isDoor(level.getBlockState(door)),
+            "the twenty-seventh joins them, the door at the front: " + level.getBlockState(door));
+        helper.assertTrue(level.getBlockEntity(door) instanceof com.jrpetty.mcassistant.block.StorehouseBlockEntity s0 && s0.isStore(),
+            "the goods live at the door");
+        com.jrpetty.mcassistant.block.StorehouseBlockEntity store = (com.jrpetty.mcassistant.block.StorehouseBlockEntity) level.getBlockEntity(door);
+        helper.assertTrue(store.getContainerSize() == 729, "as much as twenty-seven chests");
+        ItemStack left = store.insert(new ItemStack(Items.COBBLESTONE, 64 * 40));
+        helper.assertTrue(left.isEmpty() && store.used() == 40, "forty stacks of stone go in (" + store.used() + ")");
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Storehouses.stands(village), "the village knows its storehouse");
+        helper.assertTrue(!Villages.storeChests(level, village).isEmpty() && Villages.storeChests(level, village).get(0).equals(door),
+            "the stores are the storehouse first: " + Villages.storeChests(level, village));
+        helper.assertTrue(f.usesVillageStores(), "its folk keep their goods in the village's stores");
+        helper.assertTrue(com.jrpetty.mcassistant.entity.JobSpec.missing(f).stream().noneMatch(g -> g.contains("chest")),
+            "and want no chest of their own: " + com.jrpetty.mcassistant.entity.JobSpec.missing(f));
+
+        // A unit taken out: the store parts, the goods wait in the door unit.
+        BlockPos corner = origin.offset(2, 2, 2);
+        level.setBlock(corner, Blocks.AIR.defaultBlockState(), 3);
+        helper.assertFalse(com.jrpetty.mcassistant.block.StorehouseBlock.isFormed(level.getBlockState(door)), "one gone, it comes apart");
+        helper.assertTrue(level.getBlockEntity(door) instanceof com.jrpetty.mcassistant.block.StorehouseBlockEntity w && w.used() == 40,
+            "the goods wait in the door unit");
+        helper.assertFalse(com.jrpetty.mcassistant.entity.Storehouses.stands(village), "no storehouse while it is apart");
+        // Put back: joined again, the goods with it.
+        com.jrpetty.mcassistant.block.StorehouseBlock.hintFront(Direction.SOUTH);
+        try {
+            level.setBlock(corner, unit, 3);
+        } finally {
+            com.jrpetty.mcassistant.block.StorehouseBlock.hintFront(null);
+        }
+        helper.assertTrue(level.getBlockEntity(door) instanceof com.jrpetty.mcassistant.block.StorehouseBlockEntity again
+            && again.isStore() && again.used() == 40, "whole again, with its goods");
+
+        // The door taken out: the unit dropped carries the goods.
+        level.destroyBlock(door, false);
+        boolean carried = false;
+        for (net.minecraft.world.entity.item.ItemEntity drop : level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+                new AABB(door).inflate(3))) {
+            if (drop.getItem().is(McAssistantMod.STOREHOUSE_ITEM.get())
+                    && com.jrpetty.mcassistant.block.StorehouseBlockEntity.stacksCarried(drop.getItem()) == 40) carried = true;
+        }
+        helper.assertTrue(carried, "the door unit carries the forty stacks away");
+        helper.succeed();
+    }
+
+    /**
+     * Clearing out an old chest: with the storehouse standing, a hand walks to an old village
+     * chest, empties it, takes the chest up, and carries the lot into the storehouse.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 1200, batch = "t46_retire")
+    public static void t46_retire(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(6000);
+        Kit.hold(level, 28000, 12000, 40);
+        Kit.prepare(level, 28000, 12000, 40);
+        BlockPos heart = Kit.surface(level, 28000, 12000);
+        VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(f != null, "a village");
+        java.util.UUID village = f.ownerId();
+        BlockPos origin = Kit.surface(level, heart.getX() - 10, heart.getZ() + 6);
+        for (BlockPos p : BlockPos.betweenClosed(origin.offset(-1, 0, -1), origin.offset(3, 4, 3))) {
+            level.setBlock(p, Blocks.AIR.defaultBlockState(), 2 | 16);
+        }
+        BlockPos door = com.jrpetty.mcassistant.block.StorehouseBlock.form(level, origin, Direction.EAST);
+        BlockPos old = Kit.surface(level, heart.getX() + 7, heart.getZ() - 5);
+        level.setBlock(old, Blocks.CHEST.defaultBlockState(), 3);
+        com.jrpetty.mcassistant.entity.ZoneChests.mark(level, old);
+        if (level.getBlockEntity(old) instanceof net.minecraft.world.Container c) c.setItem(0, new ItemStack(Items.OAK_LOG, 12));
+        // (The founding chest at the heart is an old chest too, once there is a storehouse.)
+        BlockPos next = com.jrpetty.mcassistant.entity.Retiring.next(f, level, village);
+        helper.assertTrue(next != null && (next.equals(old) || next.equals(heart)), "an old chest to clear: " + next);
+        com.jrpetty.mcassistant.entity.Retiring.release(next);
+        f.clearQueue();
+        f.enqueue(Job.retire(old));
+        f.enqueue(Job.depositAt(door));
+        helper.onEachTick(() -> {
+            if (!level.getBlockState(old).isAir()) return;
+            if (!(level.getBlockEntity(door) instanceof com.jrpetty.mcassistant.block.StorehouseBlockEntity store)) return;
+            int logs = 0, chests = 0;
+            for (int i = 0; i < store.getContainerSize(); i++) {
+                ItemStack s = store.getItem(i);
+                if (s.is(Items.OAK_LOG)) logs += s.getCount();
+                if (s.is(Items.CHEST)) chests += s.getCount();
+            }
+            if (logs >= 12 && chests >= 1) helper.succeed();
+        });
     }
 }

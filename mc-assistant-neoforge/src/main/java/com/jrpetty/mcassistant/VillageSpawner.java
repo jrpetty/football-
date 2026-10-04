@@ -343,7 +343,6 @@ public final class VillageSpawner {
         folk.insertItem(new ItemStack(Items.WOODEN_AXE));
         folk.insertItem(new ItemStack(Items.WOODEN_SWORD));
         folk.insertItem(new ItemStack(Items.BREAD, 2));
-        folk.insertItem(new ItemStack(Items.CHEST));
         folk.insertItem(new ItemStack(Items.CRAFTING_TABLE));
         folk.insertItem(new ItemStack(Items.WHEAT_SEEDS, 4));
     }
@@ -366,11 +365,9 @@ public final class VillageSpawner {
         // farmer on a plot with no trees has nothing to make a bench FROM, so
         // wheat piled up in the chest and nobody ever ate any of it.
         folk.insertItem(new ItemStack(Items.CRAFTING_TABLE));
-        // A chest of its own. The station brain plants this the first time it
-        // has something to put away, which is what turns a claimed field into
-        // a working one — without it the harvest has nowhere to go and the
-        // whole trade jams on a full pack.
-        folk.insertItem(new ItemStack(Items.CHEST));
+        // No chest of its own: what it makes goes to the village's stores — the
+        // founding chest at the heart, then the Village Storehouse. A chest a hand
+        // on every plot was a village of a hundred chests.
         folk.insertItem(new ItemStack(Items.WHEAT_SEEDS, 6));
         // Roots are what a field is FOR: a wheat plant gives one ear and a few
         // seeds, a carrot or a potato plant gives three or so to eat, and each of
@@ -410,7 +407,10 @@ public final class VillageSpawner {
             new ItemStack(Items.OAK_SAPLING, 16),
             new ItemStack(Items.TORCH, 32),
             new ItemStack(Items.CRAFTING_TABLE, 1),
-            new ItemStack(Items.CHEST, 4),
+            // The Village Storehouse, carried in pieces: its twenty-seven units, which the
+            // builders lay one by one in the storehouse shed — the first building — and
+            // which join into the one store the whole village keeps its goods in.
+            new ItemStack(McAssistantMod.STOREHOUSE_ITEM.get(), 27),
             new ItemStack(Items.OAK_PLANKS, 48),
             // A storehouse is seventy-odd blocks. With planks alone the first
             // building waited on the woodcutters — a day or more on a map with few

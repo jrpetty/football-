@@ -150,8 +150,9 @@ public class WithdrawGoal extends Goal {
 
         if (distSq > AssistantEntity.BLOCK_REACH * AssistantEntity.BLOCK_REACH) {
             if (assistant.getNavigation().isDone()) {
+                BlockPos walkTo = com.jrpetty.mcassistant.block.StorehouseBlock.approach(assistant.level(), chestPos);
                 assistant.getNavigation().moveTo(
-                    chestPos.getX() + 0.5, chestPos.getY(), chestPos.getZ() + 0.5, 1.1D);
+                    walkTo.getX() + 0.5, walkTo.getY(), walkTo.getZ() + 0.5, 1.1D);
             }
             // Progress-based, not a fixed number of ticks: the village stores
             // can be a long walk from the plot, and a fixed budget gave up on

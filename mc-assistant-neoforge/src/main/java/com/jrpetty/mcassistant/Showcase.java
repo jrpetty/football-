@@ -102,6 +102,7 @@ public final class Showcase {
                 case GRINDSTONE -> Blocks.GRINDSTONE;
                 case CAMPFIRE -> Blocks.CAMPFIRE;
                 case NOTE_BLOCK -> Blocks.NOTE_BLOCK;
+                case STOREHOUSE -> McAssistantMod.STOREHOUSE.get();
                 case CLEAR -> null;
             };
             return b == null ? null : b.defaultBlockState();

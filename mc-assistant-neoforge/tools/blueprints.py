@@ -82,7 +82,7 @@ LEGEND = {
     "X": ("carpet", "carpet", None),
     "!": ("banner", "banner", "F"),
     "&": ("cauldron", "cube", None),
-    "$": ("gold", "cube", None),
+    "$": ("storehouse", "cube", None),    # a storehouse unit
 }
 
 COLOURS = {
@@ -98,6 +98,7 @@ COLOURS = {
     "table": (150, 100, 60),
     "furnace": (100, 100, 100),
     "chest": (170, 120, 50),
+    "storehouse": (150, 109, 60),
     "bed": (180, 40, 40),
     "pillow": (235, 235, 235),
     "torch": (255, 200, 60),

@@ -43,6 +43,8 @@ public final class McAssistantMod {
     private static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(MODID);
     private static final DeferredRegister<net.minecraft.world.item.CreativeModeTab> TABS =
         DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
+    private static final DeferredRegister<net.minecraft.world.level.block.entity.BlockEntityType<?>> BLOCK_ENTITIES =
+        DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, MODID);
 
     public static final DeferredHolder<EntityType<?>, EntityType<AssistantEntity>> ASSISTANT =
         ENTITY_TYPES.register("assistant", () -> EntityType.Builder
@@ -102,6 +104,31 @@ public final class McAssistantMod {
     public static final DeferredItem<BlockItem> JOB_BOARD_ITEM =
         ITEMS.registerSimpleBlockItem(JOB_BOARD);
 
+    // The Village Storehouse: storehouse units, twenty-seven of which stacked in a cube join
+    // into one store the size of twenty-seven chests — where a whole village keeps its goods.
+    public static final DeferredBlock<com.jrpetty.mcassistant.block.StorehouseBlock> STOREHOUSE =
+        BLOCKS.registerBlock("storehouse_unit",
+            com.jrpetty.mcassistant.block.StorehouseBlock::new,
+            BlockBehaviour.Properties.of()
+                .mapColor(MapColor.WOOD)
+                .strength(2.5F, 600.0F)
+                .sound(SoundType.WOOD));
+
+    public static final DeferredItem<com.jrpetty.mcassistant.item.StorehouseItem> STOREHOUSE_ITEM =
+        ITEMS.registerItem("storehouse_unit",
+            props -> new com.jrpetty.mcassistant.item.StorehouseItem(STOREHOUSE.get(), props));
+
+    public static final DeferredHolder<net.minecraft.world.level.block.entity.BlockEntityType<?>,
+        net.minecraft.world.level.block.entity.BlockEntityType<com.jrpetty.mcassistant.block.StorehouseBlockEntity>> STOREHOUSE_BE =
+        BLOCK_ENTITIES.register("storehouse", () -> net.minecraft.world.level.block.entity.BlockEntityType.Builder
+            .of(com.jrpetty.mcassistant.block.StorehouseBlockEntity::new, STOREHOUSE.get()).build(null));
+
+    public static final DeferredHolder<MenuType<?>, MenuType<com.jrpetty.mcassistant.menu.StorehouseMenu>> STOREHOUSE_MENU =
+        MENU_TYPES.register("storehouse", () -> new MenuType<>(
+            (net.minecraft.world.inventory.MenuType.MenuSupplier<com.jrpetty.mcassistant.menu.StorehouseMenu>)
+                com.jrpetty.mcassistant.menu.StorehouseMenu::new,
+            net.minecraft.world.flag.FeatureFlags.DEFAULT_FLAGS));
+
     // The Place Marker item: rename it in an anvil to a place name, then
     // right-click a spot to save it as that named waypoint for your assistant.
     public static final DeferredItem<PlaceMarkerItem> PLACE_MARKER =
@@ -137,6 +164,7 @@ public final class McAssistantMod {
                 out.accept(FOLK_SPAWNER_ITEM.get());
                 out.accept(VILLAGE_CHARTER.get());
                 out.accept(VILLAGE_COIN.get());
+                out.accept(STOREHOUSE_ITEM.get());
                 out.accept(ASSISTANT_SPAWNER_ITEM.get());
                 out.accept(JOB_BOARD_ITEM.get());
                 out.accept(ZONE_MARKER.get());
@@ -158,6 +186,7 @@ public final class McAssistantMod {
         BLOCKS.register(modBus);
         ITEMS.register(modBus);
         TABS.register(modBus);
+        BLOCK_ENTITIES.register(modBus);
         modBus.addListener(this::onEntityAttributes);
         modBus.addListener(this::onBuildCreativeTabs);
         modBus.addListener(ChunkLoad::onRegisterControllers);
@@ -201,6 +230,7 @@ public final class McAssistantMod {
             event.accept(FOLK_SPAWNER_ITEM);
             event.accept(VILLAGE_CHARTER);
             event.accept(JOB_BOARD_ITEM);
+            event.accept(STOREHOUSE_ITEM);
         }
         if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
             event.accept(VILLAGE_COIN);

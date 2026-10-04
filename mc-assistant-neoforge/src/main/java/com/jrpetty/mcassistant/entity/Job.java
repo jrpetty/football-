@@ -20,7 +20,7 @@ public record Job(Type type, @Nullable GatherGoal.Kind kind, int amount,
     public enum Type { GATHER, DEPOSIT, MODE, GO_HOME, CRAFT, WITHDRAW, FARM, BUILD, SMELT,
                        MINE, HUNT, SHEAR, GIVE, GOTO,
                        PATROL, CLEAR, TORCH_AREA, BRIDGE, BREED, HERD, FISH, CLEANUP, RECOVER,
-                       SORT, ENCHANT, NETHER, BOAT, DIAGNOSTIC, EXPLORE }
+                       SORT, ENCHANT, NETHER, BOAT, DIAGNOSTIC, EXPLORE, RETIRE }
 
     /** Biggest single gather order (well past a full backpack of one item). */
     public static final int MAX_AMOUNT = 1024;
@@ -67,6 +67,12 @@ public record Job(Type type, @Nullable GatherGoal.Kind kind, int amount,
         return new Job(Type.WITHDRAW, null, Math.max(1, Math.min(MAX_AMOUNT, amount)), null,
             itemWord + "@" + anchor.getX() + " " + anchor.getY() + " " + anchor.getZ()
                 + " " + Math.max(8, Math.min(160, radius)));
+    }
+
+    /** Empty an old village chest into the pack and take the chest up (arg "x y z"): the village
+     *  keeps its goods in the Village Storehouse now. A deposit at the stores follows it. */
+    public static Job retire(net.minecraft.core.BlockPos chest) {
+        return new Job(Type.RETIRE, null, 0, null, chest.getX() + " " + chest.getY() + " " + chest.getZ());
     }
 
     public static Job farm() {
@@ -223,6 +229,7 @@ public record Job(Type type, @Nullable GatherGoal.Kind kind, int amount,
             case BOAT -> "boat to " + arg;
             case DIAGNOSTIC -> "run a self-test";
             case EXPLORE -> "scout for resources";
+            case RETIRE -> "clear out an old chest into the storehouse";
         };
     }
 }

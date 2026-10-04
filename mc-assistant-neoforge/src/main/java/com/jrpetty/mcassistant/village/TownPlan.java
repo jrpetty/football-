@@ -192,7 +192,7 @@ public final class TownPlan {
             case "well" -> "well";
             case "monument" -> "monument";
             case "hall", "chapel", "barracks" -> "great";
-            case "storage", "market", "workshop", "smeltery", "granary", "cafe", "shop", "smithy", "brewery", "library",
+            case "storage", "storehouse", "market", "workshop", "smeltery", "granary", "cafe", "shop", "smithy", "brewery", "library",
                  "tavern" -> "civic";
             case "watchtower" -> "corner";
             case "lighthouse", "pen", "gateway", "graveyard" -> "edge";

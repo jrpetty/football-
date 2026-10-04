@@ -63,6 +63,8 @@ public final class ZoneChests {
 
     /** Does this container belong to a village? */
     public static boolean isVillageStore(BlockEntity be) {
+        // The Village Storehouse is a village's whatever it is called.
+        if (be instanceof com.jrpetty.mcassistant.block.StorehouseBlockEntity store) return store.isStore();
         if (!(be instanceof net.minecraft.world.Nameable named)) return false;
         net.minecraft.network.chat.Component name = named.getCustomName();
         return name != null && name.getString().toLowerCase().startsWith("village store");
@@ -132,6 +134,8 @@ public final class ZoneChests {
                 for (var entry : chunk.getBlockEntities().entrySet()) {
                     BlockPos pos = entry.getKey();
                     BlockEntity be = entry.getValue();
+                    // A storehouse unit holding goods for a cube not yet whole again is not a store.
+                    if (be instanceof com.jrpetty.mcassistant.block.StorehouseBlockEntity unit && !unit.isStore()) continue;
                     if (be instanceof Container && inBox(pos, min, max)
                         && (!settlerAsking() || isVillageStore(be))
                         && !isPrivate(level, pos)) {

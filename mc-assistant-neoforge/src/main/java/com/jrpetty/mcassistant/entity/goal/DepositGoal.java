@@ -91,7 +91,13 @@ public class DepositGoal extends Goal {
         // improved on. Only a nearest-chest guess may be re-aimed en route.
         this.fixedTarget = targeted != null;
         this.chestPos = targeted != null ? targeted : findChest();
-        if (chestPos == null) {
+        if (chestPos == null && assistant.usesVillageStores()) {
+            // A village's hand with nowhere near to bank: the village's stores, not any
+            // chest it happens to remember (which may be a player's).
+            com.jrpetty.mcassistant.entity.Job depot = assistant.villageDepositJob();
+            if (depot != null) this.chestPos = targetedChestOf(depot);
+        }
+        if (chestPos == null && !assistant.isSettler()) {
             // No chest here — but maybe we remember one (home base, the depot).
             this.chestPos = assistant.nearestRememberedChest(160);
             if (chestPos != null) {
@@ -159,8 +165,9 @@ public class DepositGoal extends Goal {
 
         if (distSq > AssistantEntity.BLOCK_REACH * AssistantEntity.BLOCK_REACH) {
             if (assistant.getNavigation().isDone()) {
+                BlockPos walkTo = com.jrpetty.mcassistant.block.StorehouseBlock.approach(assistant.level(), chestPos);
                 assistant.getNavigation().moveTo(
-                    chestPos.getX() + 0.5, chestPos.getY(), chestPos.getZ() + 0.5, 1.1D);
+                    walkTo.getX() + 0.5, walkTo.getY(), walkTo.getZ() + 0.5, 1.1D);
             }
             // Passing a nearer chest with room? Use that one. A load carried
             // across the base to a remembered chest, past an empty one on the
@@ -301,7 +308,11 @@ public class DepositGoal extends Goal {
     /** The specific depot named by a town-work deposit job ("x y z"), or null. */
     @Nullable
     private BlockPos targetedChest() {
-        com.jrpetty.mcassistant.entity.Job j = assistant.peekJob();
+        return targetedChestOf(assistant.peekJob());
+    }
+
+    @Nullable
+    private static BlockPos targetedChestOf(@Nullable com.jrpetty.mcassistant.entity.Job j) {
         if (j == null || j.arg() == null) return null;
         String[] p = j.arg().split(" ");
         if (p.length != 3) return null;

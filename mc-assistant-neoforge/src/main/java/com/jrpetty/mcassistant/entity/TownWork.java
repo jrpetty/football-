@@ -203,8 +203,14 @@ public final class TownWork {
             || st.is(Blocks.MYCELIUM) || st.is(Blocks.ROOTED_DIRT);
     }
 
-    /** Put a thing back in the village's stores (the first chest with room). */
+    /** Put a thing back in the village's stores: the Village Storehouse, else the first chest with room. */
     static void give(ServerLevel level, Villages.Village v, ItemStack stack) {
+        com.jrpetty.mcassistant.block.StorehouseBlockEntity store = Storehouses.storeFor(level, v.id());
+        if (store != null && !stack.isEmpty()) {
+            ItemStack left = store.insert(stack);
+            stack.setCount(left.getCount());
+            if (stack.isEmpty()) return;
+        }
         boolean before = ZoneChests.askAs(true);
         try {
             for (ZoneChests.Found f : ZoneChests.around(level, v.centre(), Villages.storesRadius(v.id()), 32)) {

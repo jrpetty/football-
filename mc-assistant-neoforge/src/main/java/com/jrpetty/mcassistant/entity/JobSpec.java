@@ -178,6 +178,11 @@ public final class JobSpec {
 
     private static void needChest(AssistantEntity a, List<ZoneChests.Found> stores,
                                   List<String> gaps, int count) {
+        // A village keeps its goods in one place — the Village Storehouse, or the chests at
+        // its heart until that stands — and its folk bank there and draw from there. They
+        // set no chest of their own down: one a hand, on every plot, was a village of a
+        // hundred chests.
+        if (a.usesVillageStores()) return;
         int found = 0;
         for (ZoneChests.Found f : stores) {
             if (isStorage(f) && ++found >= count) return;

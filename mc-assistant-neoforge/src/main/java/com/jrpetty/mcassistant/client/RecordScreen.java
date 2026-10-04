@@ -37,6 +37,21 @@ public class RecordScreen extends Screen {
         // only exists while the choice is open; made, the perk reads on the
         // trait line and the career gets its space back.
         BotInfo info = BotInfo.of(bot);
+        // A village's folk: what it has done, and the way back. It takes no orders, draws no
+        // wages and picks no edge — the village is who it works for.
+        if (bot instanceof com.jrpetty.mcassistant.entity.VillageFolkEntity) {
+            perkRow = false;
+            int w2 = (W - PAD * 2 - gap) / 2;
+            this.addRenderableWidget(Button.builder(Component.literal("\u2039 Pack"), b -> {
+                    this.onClose();
+                    net.neoforged.neoforge.network.PacketDistributor.sendToServer(
+                        new com.jrpetty.mcassistant.net.FolkTalkPayload(bot.getId(),
+                            com.jrpetty.mcassistant.entity.TalkTopic.PACK.ordinal(), ""));
+                }).bounds(left + PAD, y, w2, 18).build());
+            this.addRenderableWidget(Button.builder(Component.literal("Close"), b -> this.onClose())
+                .bounds(left + PAD + w2 + gap, y, w2, 18).build());
+            return;
+        }
         perkRow = bot.clientLevel() >= 30 && info.perk() == 0;
         if (perkRow) {
             int py = y - 18 - gap;
@@ -114,12 +129,14 @@ public class RecordScreen extends Screen {
 
         // What it has cost you. Wages are spent, not carried — this is the only
         // place the metal you handed over is ever accounted for.
-        String wages = info.hasWages()
+        boolean folk = bot instanceof com.jrpetty.mcassistant.entity.VillageFolkEntity;
+        String wages = folk ? "works for its village — no wages, no orders"
+            : info.hasWages()
             ? info.ironPaid() + " iron, " + info.goldPaid() + " gold, "
               + info.diamondPaid() + " diamond  ·  " + info.wageStatus()
             : "no wages drawn yet  ·  " + info.wageStatus();
         g.drawString(this.font, Ui.clip(this.font, wages, inner), x, top + 28,
-            info.wageDueTicks() <= 0 ? Ui.BAD : Ui.MUTED, false);
+            !folk && info.wageDueTicks() <= 0 ? Ui.BAD : Ui.MUTED, false);
 
         // Who it is, as opposed to what it does: the quirk it arrived with, and
         // how long it has worked alongside the rest of the crew.
@@ -143,7 +160,7 @@ public class RecordScreen extends Screen {
         int busiest = Math.max(1, info.busiest());
 
         if (!info.hasRecord()) {
-            g.drawString(this.font, "Nothing on the books yet — give it a job.",
+            g.drawString(this.font, folk ? "Nothing done yet — it has only just started." : "Nothing on the books yet — give it a job.",
                 x, y + 2, Ui.MUTED, false);
         } else {
             java.util.List<AssistantEntity.Deed> done = new java.util.ArrayList<>();

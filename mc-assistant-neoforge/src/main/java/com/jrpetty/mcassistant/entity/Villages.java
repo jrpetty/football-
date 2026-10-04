@@ -207,6 +207,7 @@ public final class Villages {
         return switch (structure) {
             case "fortify" -> "the wall";
             case "storage" -> "the storehouse";
+            case "storehouse" -> "the Village Storehouse";
             case "house" -> "a new house";
             case "hall" -> "the meeting hall";
             case "pen" -> "the animal pen";
@@ -217,6 +218,9 @@ public final class Villages {
 
     public static void resetForTests() {
         MADE_UP.clear();
+        Storehouses.resetForTests();
+        Retiring.resetForTests();
+        HAS_STORES.clear();
         REQUESTED.clear();
         GLUT.clear();
         GLUT_AT.clear();
@@ -520,6 +524,7 @@ public final class Villages {
         for (Slot slot : SLOTS) {
             if (!slot.wanted(total, at)) continue;   // too small (or too young) to want one yet
             if (slot.age() != Age.WOOD) continue;    // crafts below, once the trades have their hands
+            if (!craftReady(villageId, slot.trade())) continue;   // nowhere to work at it yet
             if (have.getOrDefault(slot.trade(), 0) == 0) return slot.trade();
         }
         // The watch down to a handful: in the long game the guards fell one by one (old age, the
@@ -547,6 +552,7 @@ public final class Villages {
         double worst = 1.5;
         for (Slot slot : SLOTS) {
             if (!slot.wanted(total, at) || slot.trade().isCraft() || slot.trade() == AssistantEntity.StationTask.GUARD) continue;
+            if (!craftReady(villageId, slot.trade())) continue;
             double short_ = target(villageId, slot, total) * fit - have.getOrDefault(slot.trade(), 0);
             if (short_ > worst) { worst = short_; most = slot.trade(); }
         }
@@ -576,9 +582,18 @@ public final class Villages {
         return Math.max(1, total - children);
     }
 
-    /** Has a craft somewhere to work: its building up (the cook and the beekeeper need none)? */
+    /**
+     * Has the trade somewhere to work yet? No shopkeeper before there is a shop, no cook
+     * before the café, no brewer before the brewery, no smith before the smithy; no
+     * storekeeper and no carrier before there is a storehouse to keep and carry to. (The
+     * fields, the woods, the mines, the forge, the pasture, the pond and the hives a hand
+     * makes for itself, so those want nothing built first.)
+     */
     static boolean craftReady(@Nullable UUID villageId, AssistantEntity.StationTask trade) {
-        if (!trade.isCraft() || trade == AssistantEntity.StationTask.COOK) return true;
+        if (trade == AssistantEntity.StationTask.STORE || trade == AssistantEntity.StationTask.HAUL) {
+            return villageId != null && (Storehouses.stands(villageId) || hasBuilt(villageId, "storage"));
+        }
+        if (!trade.isCraft() || trade == AssistantEntity.StationTask.BEEKEEP) return true;
         String building = VillageFolkEntity.buildingFor(trade);
         return building == null || (villageId != null && hasBuilt(villageId, building));
     }
@@ -625,6 +640,8 @@ public final class Villages {
      */
     public static boolean overStaffed(@Nullable UUID villageId, AssistantEntity.StationTask trade) {
         if (trade == AssistantEntity.StationTask.NONE) return true;
+        // A trade with nowhere to work at it (a shopkeeper with no shop) has nobody it needs.
+        if (!craftReady(villageId, trade)) return true;
         List<AssistantEntity> folk = folkOf(villageId);
         int total = folk.size();
         if (total <= 0) return false;
@@ -1196,6 +1213,11 @@ public final class Villages {
         Age at = age(villageId);
 
         if (built(villageId, "storage") < 1) out.add("storage");
+        // A storehouse shed built before there were storehouse units has none in it: the
+        // builders lay the twenty-seven units in it, one by one.
+        // (A village that took over a vanilla one counts the vanilla stores as its shed: its
+        // storehouse goes up on a lot of its own on the square.)
+        else if (built(villageId, "storehouse") < 1 && !Storehouses.stands(villageId)) out.add("storehouse");
         if (built(villageId, "shelter") < 1) out.add("shelter");
         // Room before anything else: a village with every home full stops growing, and
         // growing is the whole of how it gets the hands for everything after this.
@@ -1488,6 +1510,7 @@ public final class Villages {
                 yield "a house for " + (g == null ? "an honoured guest" : g.name) + ", the village's honoured guest";
             }
             case "storage" -> "a storehouse, so what is gathered has somewhere to go";
+            case "storehouse" -> "the Village Storehouse in the storehouse shed, so the whole village keeps its goods in one place";
             case "shelter" -> "a shelter, somewhere to wait out the first nights";
             case "house" -> "a house: " + folk + " live here and there is room for " + housing(villageId)
                 + ", and nobody is born without room";
@@ -1636,6 +1659,15 @@ public final class Villages {
         return null;
     }
 
+    /** Where a building of this kind stands and which way round, from the ledger, or null. */
+    @Nullable
+    public static com.jrpetty.mcassistant.village.Ledger.Building builtStructure(UUID villageId, String structure) {
+        for (com.jrpetty.mcassistant.village.Ledger.Building b : com.jrpetty.mcassistant.village.Ledger.buildings(villageId)) {
+            if (b.structure().equals(structure)) return b;
+        }
+        return null;
+    }
+
     /** Put back where a building stands, from what a folk remembers (the first to load wins). */
     public static void rememberBuiltAt(UUID villageId, String structure, BlockPos at) {
         BUILT_AT.computeIfAbsent(villageId, k -> new ConcurrentHashMap<>()).putIfAbsent(structure, at.immutable());
@@ -1679,9 +1711,27 @@ public final class Villages {
             ZoneChests.askAs(before);
         }
         BlockPos heart = v.centre();
-        out.sort(java.util.Comparator.<BlockPos>comparingInt(p -> house != null && p.distSqr(house) <= 36 ? 0 : 1)
+        BlockPos store = Storehouses.doorFor(level, villageId);
+        out.sort(java.util.Comparator.<BlockPos>comparingInt(p -> p.equals(store) ? -1 : house != null && p.distSqr(house) <= 36 ? 0 : 1)
             .thenComparingDouble(p -> p.distSqr(heart)));
         return out;
+    }
+
+    private static final Map<UUID, long[]> HAS_STORES = new ConcurrentHashMap<>();
+
+    /**
+     * Has the village any stores at all — its Village Storehouse, or chests at its heart?
+     * Once it has, its folk keep everything there and set no chest of their own on their
+     * plots (JobSpec). Looked at once in ten seconds.
+     */
+    public static boolean hasStores(net.minecraft.server.level.ServerLevel level, UUID villageId) {
+        if (Storehouses.stands(villageId)) return true;
+        long now = level.getGameTime();
+        long[] seen = HAS_STORES.get(villageId);
+        if (seen != null && now - seen[0] < 200L && now >= seen[0]) return seen[1] != 0L;
+        boolean has = !storeChests(level, villageId).isEmpty();
+        HAS_STORES.put(villageId, new long[]{ now, has ? 1L : 0L });
+        return has;
     }
 
     /** Where a load for the stores goes: the first store with an empty slot, or null if every one is full. */
@@ -1788,6 +1838,12 @@ public final class Villages {
     public static Site siteFor(net.minecraft.server.level.ServerLevel level, UUID villageId, String project) {
         Village v = get(villageId);
         if (v == null) return null;
+        // The Village Storehouse goes into the storehouse shed that already stands: the same
+        // ground, the same way round, so its units fill the middle of the shed.
+        if (project.equals("storehouse")) {
+            com.jrpetty.mcassistant.village.Ledger.Building shed = builtStructure(villageId, "storage");
+            if (shed != null) return new Site(shed.anchor(), shed.facing(), 0);
+        }
         Map<String, Site> pending = SITES.computeIfAbsent(villageId, k -> new ConcurrentHashMap<>());
         Site have = pending.get(project);
         if (have != null) return have;

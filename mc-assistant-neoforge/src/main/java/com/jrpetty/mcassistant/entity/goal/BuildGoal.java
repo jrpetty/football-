@@ -46,7 +46,9 @@ public class BuildGoal extends Goal {
         "market", "chapel", "gateway", "granary", "barracks", "monument", "guesthouse",
         // the crafts' buildings and the amenities: missing here, a village's builder was told
         // "I can build: ..." and the café, the shop and the smithy never went up
-        "cafe", "shop", "smithy", "brewery", "library", "tavern", "graveyard", "house2");
+        "cafe", "shop", "smithy", "brewery", "library", "tavern", "graveyard", "house2",
+        // the Village Storehouse laid into a storehouse shed built before there were units
+        "storehouse");
 
     /** Half the width of a structure's footprint: the meeting hall, the market, the
      *  barracks, the chapel's length and the gateway's step are seven across, the rest
@@ -72,7 +74,9 @@ public class BuildGoal extends Goal {
         /** The furniture of the crafts' buildings: put in if the village has it (or can make it). */
         BOOKSHELF, LECTERN, ENCHANTING, BREWING, SMOKER, LOOM, GRINDSTONE,
         /** A tavern's hearth fire and its note blocks. */
-        CAMPFIRE, NOTE_BLOCK }
+        CAMPFIRE, NOTE_BLOCK,
+        /** A storehouse unit: twenty-seven laid in a cube join into the Village Storehouse. */
+        STOREHOUSE }
 
     /** One block of a building: where, what part, what it is for (Blueprints.Style), and which way it faces. */
     public record Placement(BlockPos pos, Part part, Blueprints.Style style, Blueprints.Way way) {
@@ -276,6 +280,7 @@ public class BuildGoal extends Goal {
             case GRINDSTONE -> s -> s.is(Items.GRINDSTONE);
             case CAMPFIRE -> s -> s.is(Items.CAMPFIRE);
             case NOTE_BLOCK -> s -> s.is(Items.NOTE_BLOCK);
+            case STOREHOUSE -> s -> s.is(com.jrpetty.mcassistant.McAssistantMod.STOREHOUSE_ITEM.get());
         };
     }
 
@@ -312,6 +317,7 @@ public class BuildGoal extends Goal {
             case GRINDSTONE -> "a grindstone";
             case CAMPFIRE -> "a fire for the hearth";
             case NOTE_BLOCK -> "note blocks";
+            case STOREHOUSE -> "storehouse units (six planks and four sticks each)";
         };
     }
 
@@ -846,17 +852,28 @@ public class BuildGoal extends Goal {
             if (!layBed(pos, state, bedHead(target))) { cursor++; return; }
         } else if (part == Part.DOOR) {
             if (!hangDoor(assistant.level(), pos, state)) { cursor++; return; }
+        } else if (part == Part.STOREHOUSE) {
+            // One unit of the storehouse laid; the last of the twenty-seven joins them, its door
+            // toward the building's own door.
+            com.jrpetty.mcassistant.block.StorehouseBlock.hintFront(
+                Blueprints.world(Blueprints.Way.FRONT, facing));
+            try {
+                assistant.level().setBlockAndUpdate(pos, state);
+            } finally {
+                com.jrpetty.mcassistant.block.StorehouseBlock.hintFront(null);
+            }
         } else {
             assistant.level().setBlockAndUpdate(pos, state);
-            // What a settlement builds is the settlement's: the chests and
-            // furnaces of its storehouse carry its name.
-            if (assistant.isSettler() && (part == Part.CHEST || part == Part.FURNACE || part == Part.BARREL)
-                    && !"guesthouse".equals(building)) {
+            // What a settlement builds is the settlement's: the furnaces of its smeltery carry
+            // its name. Its stores are the Village Storehouse alone: a chest or a barrel in a
+            // building is furniture, not one more place for the village's goods to scatter to.
+            if (assistant.isSettler() && part == Part.FURNACE && !"guesthouse".equals(building)) {
                 com.jrpetty.mcassistant.entity.ZoneChests.mark(assistant.level(), pos);
             }
         }
         assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
         placed++;
+        assistant.note(AssistantEntity.Deed.BLOCKS_BUILT, 1);
         skipped = 0;
         nearest = Double.MAX_VALUE;
         assistant.noteBuildProgress();
@@ -921,6 +938,7 @@ public class BuildGoal extends Goal {
             case GRINDSTONE -> Blocks.GRINDSTONE.defaultBlockState();
             case CAMPFIRE -> Blocks.CAMPFIRE.defaultBlockState();
             case NOTE_BLOCK -> Blocks.NOTE_BLOCK.defaultBlockState();
+            case STOREHOUSE -> com.jrpetty.mcassistant.block.StorehouseBlock.loose();
         };
     }
 

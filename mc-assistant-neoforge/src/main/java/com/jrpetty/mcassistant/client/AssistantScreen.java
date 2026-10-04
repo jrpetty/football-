@@ -54,7 +54,17 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
                             new com.jrpetty.mcassistant.net.FolkTalkPayload(a.getId(),
                                 com.jrpetty.mcassistant.entity.TalkTopic.OPEN.ordinal(), ""));
                     }
-                }).bounds(x + 8, y + 114, 160, bh).build());
+                }).bounds(x + 8, y + 114, 78, bh).build());
+            // Everything it has done in its life: blocks mined, trees felled, crops in, fish caught.
+            this.addRenderableWidget(Button.builder(Component.literal("Work done"), b -> {
+                    if (this.minecraft != null && this.minecraft.player != null) {
+                        this.minecraft.player.closeContainer();
+                        this.minecraft.setScreen(new RecordScreen(a));
+                    }
+                }).bounds(x + 90, y + 114, 78, bh)
+                .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(
+                    "What it has done: blocks mined, trees felled, crops harvested, things made")))
+                .build());
             return;
         }
         this.addRenderableWidget(Button.builder(Component.literal("Orders \u203a"), b -> {

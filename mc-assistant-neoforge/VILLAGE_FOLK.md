@@ -27,14 +27,18 @@ own, and each step is there for a reason the village can see.
 
 1. **Founding.** Eight folk stand up where the spawner stood and found the village,
    with a chest of founding stores: bread, seed, carrots and potatoes, saplings, torches,
-   planks, cobblestone, four chests, string. Every folk carries rations, stone tools,
-   a bench and a chest of its own.
+   planks, cobblestone, string, and the **twenty-seven units of the Village Storehouse**.
+   Every folk carries rations, stone tools and a bench. Nobody carries a chest of their
+   own: the village keeps its goods in one place (see *The Village Storehouse*).
 2. **Trades and ground.** Each takes the trade the village is shortest of (farmers
    first, then miners, woodcutters, a smelter; a watch, a carrier, a storekeeper, a
-   rancher and a fisher as it grows), stakes ground that suits it, sets its chest down
-   and works.
-3. **The storehouse, first.** For its first half hour the founding planks, stone and
-   chests are kept for it. It goes up within minutes: four chests under one roof.
+   rancher and a fisher as it grows), stakes ground that suits it and works. What it
+   makes it carries to the village's stores.
+3. **The storehouse, first.** For its first half hour the founding planks and stone
+   are kept for it. A builder walks to the stores, loads up, and raises the storehouse
+   shed round the **Village Storehouse**, laying its twenty-seven units one by one. When
+   the last one goes in they join into one store, and from then on the whole village
+   keeps everything there.
 4. **A shelter, then houses.** *Why:* a village has room for twelve, and every house
    is room for five more (a shelter three, the meeting hall six). Two fed folk in
    work raise a child only while there is room **and** the stores hold a day's
@@ -436,8 +440,22 @@ banners, the quest board asks for wool, and the elder may order the herds grown.
   building. Each helper (up to three) makes the blocks go down a tick faster.
 * **Market day sells the surplus.** Travelling traders buy logs, cobblestone and food
   far over a reserve (up to three stacks each) for coin into the treasury.
-* **The stores grow.** When every store chest is full, another is set down beside them,
-  made of the stores' own planks.
+* **The stores grow.** When every store is full (the storehouse holds 729 stacks, so this
+  is rare), another chest is set down beside them, made of the stores' own planks.
+* **Nobody stands about.** A folk whose trade has nothing for it, and that can fetch
+  nothing the village is short of or help the builder, finds something anyway, whatever
+  its trade. It clears out an old chest into the storehouse, takes what it carries to the
+  stores, or goes to a woodcutter's or a miner's ground and brings timber or stone home.
+* **A trade needs somewhere to work.** No shopkeeper before there is a shop, no cook
+  before the café, no smith, brewer, tailor or enchanter before their building. No
+  storekeeper or carrier before there is a storehouse. A folk in a trade with nowhere to
+  work at it takes up whatever the village is shortest of.
+* **The forge.** A smelter has at least one furnace, and while there is ore enough to keep
+  more busy it adds more, **up to four, side by side in a neat row facing the same way**.
+  Each is made of eight of the village's stone. A smelter short of a furnace fetches the
+  stone straight away, even in the village's first half hour.
+* **Lost on the way back.** A folk walking back to its plot that gets no nearer four times
+  running is put on its plot.
 
 **Tools, potions and clothes.**
 
@@ -489,7 +507,7 @@ with plain blocks, so a building is never held up.
 |---|---|---|
 | House | 9×9 | Timber-framed cottage on a stone footing, steep roof with a chimney, glass windows, lanterns by the door. Inside: bench, furnace, chest and **four beds** |
 | Guest house | 9×11 | The house made finer for an honoured player: porch on posts, flower boxes, a rug, one bed |
-| Storehouse | 7×9 | Log-framed store with a gabled front, four chests and barrels |
+| Storehouse | 7×9 | Log-framed shed with a gabled front round the Village Storehouse (27 units, 3×3×3), barrels by the door |
 | Shelter | 7×7 | Four log posts, a low stone wall and a pitched roof |
 | Well | 5×5 | Stone curb round water, four posts, a little roof with a hanging lantern |
 | Smeltery | 9×9 | Stone forge open to the street, three furnaces under a brick chimney, anvil, bench and chests |
@@ -522,6 +540,43 @@ actually carry.
 `/village showcase buildings` (an operator command) sets every building out on a
 stage to be looked at. `/village showcase town` lays out a whole grown town to the
 plan.
+
+## The Village Storehouse
+
+One store for the whole village: a cube **three blocks wide, three deep and three high**
+that holds **729 stacks** — as much as twenty-seven chests, **46,656 blocks** of stone.
+
+* **Made of storehouse units.** A unit is a crate: four planks and four sticks
+  (plank, stick, plank / stick, empty, stick / plank, stick, plank). Stack 27 of them in
+  a 3×3×3 cube and they join into a Village Storehouse, with a door in the middle of the
+  bottom row of the front (the side facing you as you lay the last one). Right-click any
+  face to open it.
+* **Its screen** shows six rows at a time. Scroll with the wheel (shift scrolls a page)
+  or drag the bar; **Sort** puts like with like, tops stacks up, and puts them in order.
+  It shows how many of its 729 slots are used. Shift-click from your pack puts things
+  anywhere in the store, not just the rows on screen.
+* **Taking it apart.** Break a unit and it drops; the rest go back to loose units, and
+  the goods wait safely in the door unit until the cube is whole again. Break the door
+  unit itself and the unit you pick up **carries the goods** with it (its tooltip says
+  how many stacks): set it down in a cube again and they are back. It does not burn,
+  pistons cannot move it, and explosions barely mark it.
+* **How the village uses it.**
+  * A new village carries its 27 units in its founding stores, and its first building,
+    the storehouse shed, is built round them: the builder fetches them from the stores
+    and lays them **one by one**.
+  * A village whose shed was built before there were units has the units laid into its
+    shed (made from the stores' planks, six a unit). A village with no shed puts its
+    storehouse up on a lot of its own on the square.
+  * Folk **set no chests of their own down**. Everything they make goes to the village's
+    stores: the storehouse once it stands, the chests at the heart before that. Their
+    tools, seed and supplies are fetched from there.
+  * **The old chests are cleared out.** Once the storehouse stands, carriers, and anybody
+    with nothing else to do, walk to the chests folk set down over the years, empty them,
+    take the chest up and carry the lot into the storehouse. A chest that is part of a
+    building is left where it is as furniture and is no longer one of the stores. Your
+    guest house and any chest with a sign on it are never touched.
+  * The storekeeper tidies the storehouse every so often.
+  * You can place one yourself near a village's heart and the village will use it.
 
 ## How they look
 
@@ -828,7 +883,10 @@ grows up.
 * a **Pack** button under its likeness. It opens what the folk is carrying: its pack, the
   tools in its hands and the clothes it wears. You can look but not take. Sneak and
   right-click a folk to go straight to its pack; the pack screen's **Talk** button goes
-  back to the conversation.
+  back to the conversation, and its **Work done** button shows everything the folk has
+  done in its life: blocks mined, ore veins dug, trees felled, crops planted and
+  harvested, animals bred, fish caught, things smelted and made, blocks built, loads
+  carried.
 
 The buttons ask:
 
@@ -1229,8 +1287,9 @@ Every alliance, feud, truce and tribute goes into both villages' history.
   storekeeper, a rancher, a fisher.
 * **Ground** — each trade claims its own plot (farms by water, woods, hillsides
   to dig) and works it. Plots are never shared.
-* **Stores** — every chest and furnace a folk puts down is named **Village
-  Store**. Folk use *only* containers with that name, so a village founded next
+* **Stores** — the village's goods are kept in the **Village Storehouse** (see
+  above), and before it stands in the chests at the heart. Every chest and furnace a
+  folk puts down is named **Village Store**. Folk use *only* containers with that name, so a village founded next
   to your base leaves your chests alone. To let them use a chest of yours,
   rename it *Village Store* in an anvil. A sign on a chest still hides it from
   everybody. The chests and barrels of a vanilla village a spawner takes over
