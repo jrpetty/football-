@@ -96,6 +96,8 @@ public class BuildGoal extends Goal {
     private int stuckTicks;
     /** Ticks spent waiting for the builder's own feet to move off a cell. */
     private int standTicks;
+    /** Cells put off to the end of the plan because the builder stood in them, and how often. */
+    private final java.util.Map<Long, Integer> putOff = new java.util.HashMap<>();
     /** The nearest the builder has got to the cell it is walking to. */
     private double nearest = Double.MAX_VALUE;
     /** Cells given up on since the last block went down. */
@@ -341,6 +343,7 @@ public class BuildGoal extends Goal {
         this.workTicks = 0;
         this.stuckTicks = 0;
         this.standTicks = 0;
+        this.putOff.clear();
         this.nearest = Double.MAX_VALUE;
         this.skipped = 0;
         this.perimeterRadius = 5;
@@ -694,6 +697,10 @@ public class BuildGoal extends Goal {
                         standTicks = 0;
                         return;
                     }
+                    // Put off to the end, when the rest is down and there is somewhere else to
+                    // stand — not skipped: skipped, the gateway's tenth obsidian went back to the
+                    // stores and the frame stood a block short.
+                    if (putOff.merge(at.asLong(), 1, Integer::sum) <= 3) plan.add(p);
                     cursor++;                                                  // not for ever
                     standTicks = 0;
                 }

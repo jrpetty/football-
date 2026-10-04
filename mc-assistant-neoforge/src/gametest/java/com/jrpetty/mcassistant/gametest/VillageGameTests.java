@@ -2258,6 +2258,8 @@ public class VillageGameTests {
         for (int i = 0; i < 80 && !com.jrpetty.mcassistant.village.Ledger.grown(village, houseAt); i++) {
             com.jrpetty.mcassistant.entity.Grow.work(level, v, 3000);
         }
+        // The new bedrooms' beds are made and put in out of the stores, one a turn.
+        for (int i = 0; i < 12 && com.jrpetty.mcassistant.entity.Grow.furnish(level, v); i++) { }
         int bricks = 0, upstairs = 0, beds = 0, fences = 0;
         for (BlockPos q : BlockPos.betweenClosed(houseAt.offset(-6, -1, -6), houseAt.offset(6, 12, 6))) {
             net.minecraft.world.level.block.state.BlockState st = level.getBlockState(q);
@@ -3198,19 +3200,25 @@ public class VillageGameTests {
         helper.assertTrue(level.getBlockEntity(door) instanceof com.jrpetty.mcassistant.block.StorehouseBlockEntity again
             && again.isStore() && again.used() == 40, "whole again, with its goods");
 
-        // The door taken out: the unit dropped carries the goods.
-        level.destroyBlock(door, false);
-        boolean carried = false;
-        StringBuilder seen = new StringBuilder();
-        for (net.minecraft.world.entity.item.ItemEntity drop : level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
-                new AABB(door).inflate(4))) {
-            int n = com.jrpetty.mcassistant.block.StorehouseBlockEntity.stacksCarried(drop.getItem());
-            seen.append(drop.getItem()).append(" carrying ").append(n).append("; ");
-            if (drop.getItem().is(McAssistantMod.STOREHOUSE_ITEM.get()) && n == 40) carried = true;
-        }
-        Kit.log("t45 the door broken: " + level.getBlockState(door) + ", dropped " + seen);
-        helper.assertTrue(carried, "the door unit carries the forty stacks away: " + seen);
-        helper.succeed();
+        // The door taken out: the unit dropped carries the goods. (Once the ground's entities are
+        // live: a drop made in the tick the chunks were first held is there, but not yet seen.)
+        final boolean[] broken = { false };
+        helper.onEachTick(() -> {
+            if (broken[0] || !level.isPositionEntityTicking(door)) return;
+            broken[0] = true;
+            level.destroyBlock(door, false);
+            boolean carried = false;
+            StringBuilder seen = new StringBuilder();
+            for (net.minecraft.world.entity.item.ItemEntity drop : level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+                    new AABB(door).inflate(4))) {
+                int n = com.jrpetty.mcassistant.block.StorehouseBlockEntity.stacksCarried(drop.getItem());
+                seen.append(drop.getItem()).append(" carrying ").append(n).append("; ");
+                if (drop.getItem().is(McAssistantMod.STOREHOUSE_ITEM.get()) && n >= 40) carried = true;
+            }
+            Kit.log("t45 the door broken at tick " + helper.getTick() + ": " + level.getBlockState(door) + ", dropped " + seen);
+            helper.assertTrue(carried, "the door unit carries the forty stacks away: " + seen);
+            helper.succeed();
+        });
     }
 
     /**
@@ -3236,7 +3244,8 @@ public class VillageGameTests {
         BlockPos old = Kit.surface(level, heart.getX() + 7, heart.getZ() - 5);
         level.setBlock(old, Blocks.CHEST.defaultBlockState(), 3);
         com.jrpetty.mcassistant.entity.ZoneChests.mark(level, old);
-        if (level.getBlockEntity(old) instanceof net.minecraft.world.Container c) c.setItem(0, new ItemStack(Items.OAK_LOG, 12));
+        // (Something no trade uses: logs were sawn for a sign on the way and came up one short.)
+        if (level.getBlockEntity(old) instanceof net.minecraft.world.Container c) c.setItem(0, new ItemStack(Items.AMETHYST_SHARD, 12));
         // (The founding chest at the heart is an old chest too, once there is a storehouse.)
         BlockPos next = com.jrpetty.mcassistant.entity.Retiring.next(f, level, village);
         helper.assertTrue(next != null && (next.equals(old) || next.equals(heart)), "an old chest to clear: " + next);
@@ -3266,7 +3275,7 @@ public class VillageGameTests {
             int logs = 0, chests = 0;
             for (int i = 0; i < store.getContainerSize(); i++) {
                 ItemStack s = store.getItem(i);
-                if (s.is(Items.OAK_LOG)) logs += s.getCount();
+                if (s.is(Items.AMETHYST_SHARD)) logs += s.getCount();
                 if (s.is(Items.CHEST)) chests += s.getCount();
             }
             if (logs >= 12 && chests >= 1) helper.succeed();

@@ -5214,7 +5214,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             // trade with nowhere to put its output.
             else if (gap.contains("furnace")) {
                 if (countMatching(s -> s.is(Items.FURNACE)) == 0) want = "furnace";
-            } else if (gap.contains("chest")) {
+            } else if (JobSpec.wantsAChest(gap) && !usesVillageStores()) {
                 if (countMatching(s -> s.is(Items.CHEST)) == 0) want = "chest";
             } else if (gap.startsWith("food") && countStocked(s -> s.is(Items.WHEAT)) >= 3) {
                 // Out of rations with a pack full of wheat: bake, do not wait
@@ -7499,11 +7499,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private boolean setUpMissingFixture() {
         boolean wantsChest = false, wantsFurnace = false;
         for (String gap : missingEssentials) {
-            if (gap.contains("chest")) wantsChest = true;
+            if (JobSpec.wantsAChest(gap)) wantsChest = true;
             if (gap.contains("furnace")) wantsFurnace = true;
         }
         // A village with no stores at all: its first chest goes to the heart, not to a plot.
         if (wantsChest && chestBelongsAtTheHeart()) wantsChest = false;
+        if (wantsChest && usesVillageStores()) wantsChest = false;          // the storehouse is its chest
         if (!wantsChest && !wantsFurnace) return false;
         // No ground yet means no place to put it. A hand handed a trade before
         // it has staked a plot used to set its only chest down wherever it

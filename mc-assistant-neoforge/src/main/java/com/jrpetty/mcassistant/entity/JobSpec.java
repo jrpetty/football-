@@ -130,7 +130,7 @@ public final class JobSpec {
                 boolean fuel = held(a, stores, AssistantEntity.SMELT_FUEL);
                 if (!fuel) gaps.add("fuel (coal or logs)");
                 if (!held(a, stores, AssistantEntity.SMELTABLE_ORE)) {
-                    gaps.add("raw ore in the input chest");
+                    gaps.add(a.usesVillageStores() ? "raw ore in the stores" : "raw ore in the input chest");
                 }
                 needChest(a, stores, gaps, 1);
             }
@@ -174,6 +174,15 @@ public final class JobSpec {
             if (isStorage(f)) return true;
         }
         return false;
+    }
+
+    /**
+     * Is this gap the want of a chest to keep things in — not a gap that only names one
+     * ("raw ore in the input chest")? A smelter read that one as wanting a chest, set one
+     * down on its plot, saw it cleared into the storehouse, and set down another, all day.
+     */
+    public static boolean wantsAChest(String gap) {
+        return gap.equals("a chest") || gap.endsWith("chest in the zone") || gap.endsWith("chests in the zone");
     }
 
     private static void needChest(AssistantEntity a, List<ZoneChests.Found> stores,
