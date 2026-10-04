@@ -2294,8 +2294,9 @@ public class VillageGameTests {
         Kit.hold(level, 20000, 12000, 40);
         Kit.prepare(level, 20000, 12000, 40);
         BlockPos heart = Kit.surface(level, 20000, 12000);
+        // Four miners: a hand to spare even once the order counts only the trades the village can have.
         StationTask[] trades = { StationTask.FARM, StationTask.FARM, StationTask.FARM, StationTask.FARM, StationTask.MINE,
-            StationTask.MINE, StationTask.MINE, StationTask.WOOD, StationTask.WOOD, StationTask.SMELT };
+            StationTask.MINE, StationTask.MINE, StationTask.MINE, StationTask.WOOD, StationTask.SMELT };
         List<VillageFolkEntity> folk = new java.util.ArrayList<>();
         for (int i = 0; i < trades.length; i++) {
             VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart.offset(i % 5 * 2, 0, i / 5 * 2), 0.0F);
@@ -2328,6 +2329,8 @@ public class VillageGameTests {
         helper.assertTrue(farms < 0 && mines > 0, "the order wants more farmers and can spare a miner");
         VillageFolkEntity miner = folk.get(4);
         StationTask moved = com.jrpetty.mcassistant.entity.Orders.move(village, miner, day);
+        // The move counts once the folk has really changed trade (VillageFolkEntity.changedTrade).
+        if (moved != null) com.jrpetty.mcassistant.entity.Orders.moved(village, day);
         StationTask again = com.jrpetty.mcassistant.entity.Orders.move(village, folk.get(5), day);
         StationTask farmer = com.jrpetty.mcassistant.entity.Orders.move(village, folk.get(0), day + 1);
         Kit.log("t39 a miner moves to " + moved + "; a second the same day " + again + "; a farmer " + farmer);

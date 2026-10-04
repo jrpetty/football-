@@ -191,10 +191,13 @@ added a little at a time round those buildings:
 Once a village has its wall, it sees to its own safety.
 
 * **Gates.** Each of the wall's four gaps gets a gate: stone posts, a lintel and
-  three spruce doors. Stone and planks come from the stores. The doors stand open by
+  three spruce doors. Ten stone and six planks (or two logs) come from the stores. The doors stand open by
   day and are shut at dusk. Folk let themselves through, as you would; a zombie can't.
 * **The watch's posts.** Two places on each side of the wall where a guard stands
-  between the battlements, with a ladder up the inside of the wall to each.
+  between the battlements, with a ladder up the inside of the wall to each. If a post's
+  usual place won't do (the wall went round a house there), it goes a little further
+  along. A wall the builders had to finish in planks or logs, because the stone ran out,
+  still gets its gates and posts.
 * **The alarm bell.** A bell on a stone plinth on the square, rung when trouble comes.
   Once there is a chapel, its bell rings too.
 

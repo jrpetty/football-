@@ -44,6 +44,9 @@ public final class Watch {
     static final int R = TownPlan.PLAZA;
     /** Where the watch stands on each side of the wall, either side of the gate. */
     static final int[] POSTS = { -7, 7 };
+    /** Where else along the wall a post may go, if the first place won't do (odd: between the
+     *  battlements), nearest first. */
+    static final int[] POST_TRIES = { 7, 9, 5, 11 };
     /** The alarm bell's place on the square. */
     static final int[] BELL_AT = { -5, 5 };
 
@@ -72,7 +75,12 @@ public final class Watch {
     @Nullable
     static BlockPos wall(UUID village) {
         if (!Villages.hasBuilt(village, "fortify")) return null;
-        return Villages.builtAt(village, "fortify");
+        BlockPos at = Villages.builtAt(village, "fortify");
+        if (at != null) return at;
+        // Built, but where was never written down (its site gone before it was finished): the
+        // wall always rings the heart, so the heart is its anchor.
+        Villages.Village v = Villages.get(village);
+        return v == null ? null : v.centre();
     }
 
     /** A cell of the wall: on this side, this far along it (along runs clockwise). */
@@ -115,10 +123,15 @@ public final class Watch {
     static boolean masonry(BlockState s) {
         if (s.isAir() || !s.isSolid()) return false;
         String path = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(s.getBlock()).getPath();
-        if (path.contains("ore") || path.contains("grass") || path.contains("dirt")) return false;
+        if (path.contains("ore") || path.contains("grass") || path.contains("dirt") || path.contains("leaves")) return false;
         return path.contains("stone") || path.contains("cobble") || path.contains("brick")
             || path.contains("andesite") || path.contains("diorite") || path.contains("granite") || path.contains("deepslate")
-            || path.contains("tuff") || path.contains("blackstone");
+            || path.contains("tuff") || path.contains("blackstone")
+            // A wall the builders put up out of whatever they had when the stone ran short
+            // (BuildGoal.takeStyled): planks, logs, clay. It is no less a wall, and a wall of
+            // planks with no gates or posts left the long game's village with no watch at all.
+            || path.endsWith("planks") || path.endsWith("_log") || path.endsWith("_wood")
+            || path.contains("terracotta") || path.contains("concrete") || path.contains("quartz");
     }
 
     // ------------------------------------------------------------------ the posts
@@ -136,22 +149,32 @@ public final class Watch {
         if (known != null) return known;
         List<Post> out = new ArrayList<>();
         for (Direction side : SIDES) {
-            for (int along : POSTS) {
-                BlockPos c = cell(a, side, along);
-                if (!level.isLoaded(c)) continue;
-                BlockPos top = wallTop(level, c.getX(), c.getZ(), a.getY());
-                if (top == null) continue;
-                BlockPos stand = top.above();
-                if (!level.getBlockState(stand).isAir() || !level.getBlockState(stand.above()).isAir()) continue;
-                BlockPos in = c.relative(side.getOpposite());
-                BlockPos foot = floorAt(level, in.getX(), in.getZ(), a.getY());
-                if (foot == null || foot.getY() > top.getY()) continue;
-                out.add(new Post(stand, foot, side));
+            for (int sign = -1; sign <= 1; sign += 2) {
+                // Either side of the gate: the usual place, or the next that will do (the wall
+                // went round a house there, or a tree stands against it inside).
+                for (int along : POST_TRIES) {
+                    Post post = postAt(level, a, side, sign * along);
+                    if (post != null) { out.add(post); break; }
+                }
             }
         }
         List<Post> done = List.copyOf(out);
         if (!done.isEmpty()) POSTS_OF.put(village, done);
         return done;
+    }
+
+    @Nullable
+    private static Post postAt(ServerLevel level, BlockPos a, Direction side, int along) {
+        BlockPos c = cell(a, side, along);
+        if (!level.isLoaded(c)) return null;
+        BlockPos top = wallTop(level, c.getX(), c.getZ(), a.getY());
+        if (top == null) return null;
+        BlockPos stand = top.above();
+        if (!level.getBlockState(stand).isAir() || !level.getBlockState(stand.above()).isAir()) return null;
+        BlockPos in = c.relative(side.getOpposite());
+        BlockPos foot = floorAt(level, in.getX(), in.getZ(), a.getY());
+        if (foot == null || foot.getY() > top.getY()) return null;
+        return new Post(stand, foot, side);
     }
 
     /** A ladder up the inside of the wall at a post, where there is room for one. */
@@ -288,7 +311,7 @@ public final class Watch {
         }
         // Only where there is wall either side: a gate in a gap with no wall round it is a door in a field.
         boolean walled = false;
-        for (int along : new int[]{ -3, 3 }) {
+        for (int along : new int[]{ -3, 3, -4, 4 }) {
             BlockPos c = cell(a, side, along);
             if (wallTop(level, c.getX(), c.getZ(), a.getY()) != null) walled = true;
         }
@@ -307,8 +330,15 @@ public final class Watch {
                 if (!s.isAir() && !s.canBeReplaced()) return null;
             }
         }
-        if (!free && !(TownWork.take(level, v, st -> st.is(ItemTags.PLANKS), 6)
-                && TownWork.take(level, v, st -> st.is(Items.COBBLESTONE) || st.is(Items.STONE_BRICKS), 10))) return null;
+        // Six planks for the doors (or two logs: the stores keep the woodcutters' logs, and seldom
+        // planks) and ten stone for the posts and the lintel.
+        if (!free) {
+            java.util.function.Predicate<net.minecraft.world.item.ItemStack> stone = st -> st.is(Items.COBBLESTONE) || st.is(Items.STONE_BRICKS);
+            if (Market.stock(level, v.id(), stone) < 10) return null;
+            boolean wood = TownWork.take(level, v, st -> st.is(ItemTags.PLANKS), 6)
+                || TownWork.take(level, v, st -> st.is(ItemTags.LOGS), 2);
+            if (!wood || !TownWork.take(level, v, stone, 10)) return null;
+        }
         BlockState stone = Blocks.STONE_BRICKS.defaultBlockState();
         for (int i : new int[]{ 0, 4 }) {
             for (int h = 0; h <= 2; h++) level.setBlock(floors.get(i).above(h), stone, 3);
