@@ -130,12 +130,26 @@ public final class TimeSpeed {
     /** Whoever joins while time is fast is told so at once. */
     @SubscribeEvent
     public static void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
-        if (event.getEntity() instanceof ServerPlayer p) {
-            PacketDistributor.sendToPlayer(p, new TimeSpeedPayload(factor(p.server), lastActualX10));
-        }
+        if (event.getEntity() instanceof ServerPlayer p) tell(p, new TimeSpeedPayload(factor(p.server), lastActualX10));
     }
 
     private static void broadcast(MinecraftServer server) {
-        PacketDistributor.sendToAllPlayers(new TimeSpeedPayload(factor(server), lastActualX10));
+        TimeSpeedPayload says = new TimeSpeedPayload(factor(server), lastActualX10);
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) tell(p, says);
+    }
+
+    /**
+     * Only to a client that has this mod: a vanilla client (or a test's stand-in player)
+     * has no way to hear it, and sending it anyway throws — inside the login event, where
+     * it stopped every other mod's and this mod's own handlers for that player from running.
+     */
+    private static void tell(ServerPlayer p, TimeSpeedPayload says) {
+        try {
+            if (p.connection != null && p.connection.hasChannel(TimeSpeedPayload.TYPE)) {
+                PacketDistributor.sendToPlayer(p, says);
+            }
+        } catch (RuntimeException ignored) {
+            // A connection going away mid-send: nothing to tell.
+        }
     }
 }
