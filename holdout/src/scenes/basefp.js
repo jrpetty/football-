@@ -367,7 +367,7 @@ export const BaseFPMixin = {
     const own = g.owner[idx]
     if (own === 'fence' || own === 'gate') {
       if (g.cost[idx] !== 255) return false
-      return y < FENCE_H[S.fence?.level ?? 0] ?? 2
+      return y < (FENCE_H[S.fence?.level ?? 0] ?? 2.6)
     }
     if (g.cost[idx] !== 255) return false
     if (own === 'world') return y < 6
