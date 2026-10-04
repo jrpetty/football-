@@ -547,6 +547,7 @@ const CHAPTERS = [
     icon: 'eye',
     body: () => [
       P('Press ` (the key under Esc) or F5, or the eye button, to walk in one survivor’s boots: in camp, or on a run. The world is the same one: the same walls, the same zombies, the same loot. Press it again for the view from above. Clicking the view captures the mouse; Esc lets it go.'),
+      P('Play it in first person (behind their eyes, their arms and weapon in front of you) or third person (over their shoulder, the whole of them in view: they turn to where they walk and back to the crosshair to aim, shoot or swing). T swaps between the two as you play, and Settings keeps your choice. Over the shoulder the camera comes in closer when you aim, slides in front of walls and ceilings, and a scope is still looked through.'),
       keys([
         ['W A S D', 'Walk'],
         ['Shift', 'Run (louder on a run)'],
@@ -554,6 +555,7 @@ const CHAPTERS = [
         ['Left click', 'Shoot, or swing what you hold (hold for automatic fire)'],
         ['Right click', 'Aim down the sights (a scope zooms)'],
         ['E', 'Use what is in front of you'],
+        ['T', 'First or third person'],
         ['` or F5', 'Back to the view from above'],
       ]),
       h('h4', 'On a run'),
@@ -570,7 +572,7 @@ const CHAPTERS = [
       h('h4', 'In camp'),
       P('Look at a station and press E for its panel. Climb a watchtower with E to see over the wall and shoot from it; the wall is solid, so when a horde comes, fight from the towers, a breach or the gate (E opens it). Talk to people by looking at them. Whoever you walk as leaves their job while you have them.'),
       h('h4', 'On a touch screen'),
-      P('A stick appears under your left thumb: push it to walk, and past its ring to run. Drag anywhere on the right to look. The big red button fires (hold it and drag to look while you shoot), Aim toggles the sights, Use lights up when there is something to use, and the small buttons on the right switch survivor, the flashlight, the squad following and throwables. The eye button goes back to the view from above. Where a page can’t hold the mouse, drag to look and click to shoot instead.'),
+      P('A stick appears under your left thumb: push it to walk, and past its ring to run. Drag anywhere on the right to look. The big red button fires (hold it and drag to look while you shoot), Aim toggles the sights, Use lights up when there is something to use, and the small buttons on the right swap first and third person, switch survivor, the flashlight, the squad following and throwables. The eye button goes back to the view from above. Where a page can’t hold the mouse, drag to look and click to shoot instead.'),
       P('Settings has mouse sensitivity, field of view, invert mouse and head bob.'),
     ],
   },

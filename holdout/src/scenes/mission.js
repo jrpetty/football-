@@ -13,6 +13,7 @@ import { Atmosphere, nightFactor, isNight } from '../render/sky.js'
 import { FX, makeFlame, tickFlames, ringTex } from '../render/fx.js'
 import { Splat, Terrain, wind } from '../render/terrain.js'
 import { mat, setNightGlow, cloneMat, WEATHER } from '../render/materials.js'
+import { fpPrefs } from '../render/firstperson.js'
 import { Builder, seeded } from '../models/kit.js'
 import { CONTAINER_MODELS, DECOR_MODELS, addDecor } from '../models/furniture.js'
 import { carModel, vanModel, pickupModel } from '../models/vehicles.js'
@@ -2530,11 +2531,15 @@ export class Mission {
       }
       if (a.fp) {
         // the player's torch is in their hand, pointing where they look
+        // (over the shoulder: from their chest)
         const cam = view.camera
         const f = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion)
         const r = new THREE.Vector3(1, 0, 0).applyQuaternion(cam.quaternion)
-        l.position.copy(cam.position).addScaledVector(r, 0.18).addScaledVector(f, 0.2).y -= 0.15
-        l.target.position.copy(cam.position).addScaledVector(f, 8)
+        if (this.game.fp?.isThird()) {
+          const p = a.rpos
+          l.position.set(p.x, p.y + 1.35 * (a.data.look?.height || 1), p.z).addScaledVector(f, 0.35).addScaledVector(r, 0.12)
+        } else l.position.copy(cam.position).addScaledVector(r, 0.18).addScaledVector(f, 0.2).y -= 0.15
+        l.target.position.copy(l.position).addScaledVector(f, 8)
         l.intensity = this.fpTorchOn() ? 120 * Math.max(night, this.fpTorch ? 0.85 : 0) * (a.st.nightSight ? 1.3 : 1) : 0
         return
       }
@@ -2569,7 +2574,7 @@ export class Mission {
         'div.mtop',
         h('div.mlocard', h('span.lvlbadge', { style: { '--c': col } }, this.level), h('div', h('b', this.loc.name), h('small', `${L.name}${this.F ? ` · ${this.lv.floors} floors${this.lv.roof ? ' and a roof' : ''}` : ''}${ev ? (ev.kind === 'distress' ? ' · rescue the survivor inside' : ' · supply drop in the yard') : ''}`))),
         this.timerEl,
-        h('div.mright', this.ammoEl, h('button.btn.ghost.small.fpbtn', { hidden: !!this.remote, onclick: () => this.game.toggleFirstPerson?.(), 'data-tip': 'Walk in your survivor’s boots <kbd>`</kbd> or <kbd>F5</kbd>' }, 'First person'), volumeControl(this.game), fullscreenButton(this.game.ui, 'button.btn.ghost.small.mfull'), this.pauseBtn),
+        h('div.mright', this.ammoEl, h('button.btn.ghost.small.fpbtn', { hidden: !!this.remote, onclick: () => this.game.toggleFirstPerson?.(), 'data-tip': 'Walk in your survivor’s boots <kbd>`</kbd> or <kbd>F5</kbd>; <kbd>T</kbd> swaps first and third person (and Settings keeps your choice)' }, fpPrefs.third ? 'Third person' : 'First person'), volumeControl(this.game), fullscreenButton(this.game.ui, 'button.btn.ghost.small.mfull'), this.pauseBtn),
       ),
       this.haulEl,
       h('div.mbottom', (this.squadEl = h('div.squad')), this.utilEl, h('div.mact', h('button.btn.ghost', { onclick: () => this.selectAll(), 'data-tip': 'Select everyone <kbd>Tab</kbd>' }, 'All'), this.extractBtn)),

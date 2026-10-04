@@ -21,8 +21,8 @@ export class VMLayer {
     // a flashlight (off by day) and the muzzle flash light; both always in
     // the scene, so switching them never recompiles a shader
     this.torch = new THREE.SpotLight('#fff1d8', 0, 6, 0.6, 0.5, 1.2)
-    this.torch.position.set(0.1, -0.05, 0.1)
-    this.torch.target.position.set(0.05, -0.15, -2)
+    this.torch.position.set(0.12, -0.14, 0.16)
+    this.torch.target.position.set(0, -0.1, -2)
     this.flash = new THREE.PointLight('#ffb060', 0, 2.5, 1.5)
     this.flash.position.set(0.1, -0.08, -0.6)
     this.scene.add(this.hemi, this.sun, this.sun.target, this.torch, this.torch.target, this.flash)

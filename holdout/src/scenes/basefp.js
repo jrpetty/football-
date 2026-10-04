@@ -47,6 +47,7 @@ export const BaseFPMixin = {
     this.hovered = null
     this.game.ui?.hoverTip?.(null)
     this.fpOn = true
+    this.fpBodyOn = false
     this.fpSid = id
     this.fpTower = null
     this.fpStub = null
@@ -128,8 +129,13 @@ export const BaseFPMixin = {
       const st = survivorStats(B.s)
       if (st.weaponId !== 'fists') B.w.setTool?.(st.gun ? 'gun' : 'melee')
     }
-    hideBody(obj.ch, true)
+    hideBody(obj.ch, !this.fpBodyOn)
     return B
+  },
+  // third person: the body is drawn (behind the eyes, only its shadow)
+  fpSetBody(on) {
+    this.fpBodyOn = on
+    if (this.fpBodyRef) hideBody(this.fpBodyRef.ch, !on)
   },
   fpRestore() {
     const o = this.fpBodyRef
@@ -213,8 +219,17 @@ export const BaseFPMixin = {
     }
     const w = B.w
     w.heading = heading
-    const anim = speed > 3.1 ? 'run' : speed > 0.3 ? 'walk' : 'idle'
-    w.ch.update(1 / 60, anim, { speed })
+    // a swing (seen over the shoulder), a gun held ready, walking, running
+    const sh = this.fpStub
+    const st = sh?.st
+    let anim = speed > 3.1 ? 'run' : speed > 0.3 ? 'walk' : st?.gun ? 'aim' : 'idle'
+    const o = { speed }
+    if (sh && sh.swing > 0) {
+      anim = st?.gun || st?.weaponId === 'fists' ? 'punch' : 'swing'
+      o.swing = 1 - sh.swing
+      sh.swing = Math.max(0, sh.swing - (1 / 60) * 2.2)
+    }
+    w.ch.update(1 / 60, anim, o)
     w.root.position.set(w.pos.x, this.fpTower ? this.fpTowerY() : 0, w.pos.z)
     w.root.rotation.y = heading
   },

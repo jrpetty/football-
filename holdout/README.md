@@ -77,6 +77,7 @@ networks don't.
 | | Left-click a wardrobe, fridge, shelf or desk | "Barricade the door" pushes it across the nearest doorway |
 | City map | `M`, `Esc` | Back to camp |
 | First person | `` ` `` or `F5`, the eye button | Walk in one survivor's boots, and back to the view from above |
+| Third person | `T` while walking in someone's boots | Swap between behind the eyes and over the shoulder |
 | | Mouse, WASD, `Shift` | Look (click the view to capture the mouse, `Esc` frees it), walk, run |
 | | Left click, right click | Shoot or swing (hold for automatic fire), aim down the sights |
 | | `E` | Use what you look at: search, open, climb a watchtower, a station's panel |
@@ -88,6 +89,14 @@ Any time in camp or on a run, `` ` `` (the key under `Esc`) or `F5` puts you
 behind one survivor's eyes in the same world: the same walls, zombies and
 loot, the same rules underneath. Their own arms hold the weapon they carry,
 in their skin and sleeves and work gloves.
+
+Or play it in **third person**: `T` (or Settings, which keeps the choice)
+puts the camera over their right shoulder with the whole of them in view.
+They turn to where they walk and back to the crosshair to aim, shoot or
+swing; the camera comes in closer to aim, slides in front of any wall or
+ceiling between it and their head, and a scope is still looked through.
+Shots go where the crosshair is, traced from level with the body so
+nothing behind them gets in the way.
 
 - **Fighting** is aimed by you. Shots go where the crosshair is, spreading
   when you move or run and tightening when you aim down the sights (the
@@ -119,7 +128,8 @@ guests on a run watch from above (the leader's game runs the street).
 
 On a **touch screen** a stick appears under the left thumb (push past its
 ring to run), a drag on the right looks, and buttons fire (hold and drag to
-look while shooting), aim, use, and on a run switch survivor, light the
+look while shooting), aim, use, swap first and third person, and on a run
+switch survivor, light the
 flashlight, call the squad and throw. Where a page can't hold the mouse,
 first person falls back to drag to look and click to shoot.
 

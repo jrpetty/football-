@@ -20,8 +20,9 @@ const CEIL = 3.0
 const WALL_INT = 2.35
 const T_WALL = 0.22
 
-// The player's own body: still casts its shadow, draws nothing (the camera
-// is inside its head). Its weapon, label and ring go too.
+// The player's own body in first person: still casts its shadow, draws
+// nothing (the camera is inside its head), and its weapon goes too. Third
+// person draws it as it is.
 export function hideBody(ch, on) {
   const m = ch.mesh
   if (!m) return
@@ -55,6 +56,7 @@ export const MissionFPMixin = {
     if (this.throwing) this.cancelThrow()
     this.closeMenu?.()
     this.fpOn = true
+    this.fpBodyOn = false
     this.fpTake(a)
     this.fpTorch = false
     if (this.fowU) this.fowU.uOn.value = 0
@@ -83,7 +85,7 @@ export const MissionFPMixin = {
     this.selected = new Set([a])
     a.select(true)
     a.ring.visible = false
-    hideBody(a.ch, true)
+    hideBody(a.ch, !this.fpBodyOn)
     if (a.label) a.label.hidden = true
     this.fpWork = null
     this.renderSquad()
@@ -112,6 +114,11 @@ export const MissionFPMixin = {
     // back to one floor at a time, walls cut away
     if (this.F) this.setView(this.view, true)
     else this.cutU.n.value = this.cutN
+  },
+  // third person: the body is drawn (behind the eyes, only its shadow)
+  fpSetBody(on) {
+    this.fpBodyOn = on
+    if (this.fpA) hideBody(this.fpA.ch, !on)
   },
   fpAlive() {
     const a = this.fpA

@@ -90,7 +90,7 @@ export class UI {
       'div.nav',
       NAV.map((n) => h('button.navbtn' + (n.primary ? '.primary' : ''), { 'data-nav': n.id, 'data-tip': `${n.label} <kbd>${n.key}</kbd>`, onclick: () => this.navClick(n.id) }, h('i', { html: icon(n.icon) }), h('span', n.label))),
       h('div.navsep'),
-      h('button.navbtn.small.fpnav', { 'data-tip': 'First person: walk the camp as one of your people <kbd>`</kbd> or <kbd>F5</kbd>', onclick: () => this.game.toggleFirstPerson() }, h('i', { html: icon('eye') })),
+      h('button.navbtn.small.fpnav', { 'data-tip': 'Walk the camp as one of your people, in first or third person <kbd>`</kbd> or <kbd>F5</kbd>; <kbd>T</kbd> swaps the camera', onclick: () => this.game.toggleFirstPerson() }, h('i', { html: icon('eye') })),
       h('button.navbtn.small', { 'data-tip': 'Field manual <kbd>F1</kbd>', onclick: () => this.openManual() }, h('span.qm', '?')),
       fullscreenButton(this),
       h('button.navbtn.small', { 'data-tip': 'Menu <kbd>Esc</kbd>', onclick: () => this.openMenu() }, h('i', { html: icon('menu') })),

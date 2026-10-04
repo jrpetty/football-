@@ -16,7 +16,8 @@ import { INDOOR } from './materials.js'
 import { icon } from '../ui/icons.js'
 
 const KEY = 'holdout.fp'
-export const fpPrefs = { sens: 1, fov: 74, invert: false, bob: true }
+// third: over the shoulder instead of behind the eyes
+export const fpPrefs = { sens: 1, fov: 74, invert: false, bob: true, third: false }
 try {
   Object.assign(fpPrefs, JSON.parse(localStorage.getItem(KEY) || '{}'))
 } catch {}
@@ -30,7 +31,16 @@ const UP = new THREE.Vector3(0, 1, 0)
 const _e = new THREE.Euler(0, 0, 0, 'YXZ')
 const _v = new THREE.Vector3()
 const _d = new THREE.Vector3()
+const _f = new THREE.Vector3()
+const _p = new THREE.Vector3()
+const _q = new THREE.Vector3()
+const _eye = new THREE.Vector3()
 const ease = (t) => t * t * (3 - 2 * t)
+// turn angle a toward b by at most step radians, the short way round
+const turnTo = (a, b, step) => {
+  const d = Math.atan2(Math.sin(b - a), Math.cos(b - a))
+  return a + clamp(d, -step, step)
+}
 
 // a soft star for the muzzle flash, drawn once
 let flashTex = null
@@ -117,6 +127,14 @@ export class FirstPerson {
     this.lockPromise = false
     this.noteT = 0
     this.padKey = ''
+    // third person: how far the camera has gone over the shoulder (0..1),
+    // how far back it sits, whether the body is drawn, the body's heading
+    this.thirdK = 0
+    this.camDist = 2.3
+    this.bodyOn = null
+    this.bodyFor = null
+    this.bodyH = null
+    this.lastAtk = 0
     // muzzle flash: a cross of two glowing cards at the muzzle
     const fm = new THREE.MeshBasicMaterial({ map: flashTexture(), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, color: new THREE.Color(3, 2.6, 2) })
     this.flashMesh = new THREE.Group()
@@ -172,7 +190,7 @@ export class FirstPerson {
     D.tip = h('div.fp-tip')
     D.pause = h(
       'div.fp-pause',
-      h('div.fp-pause-card', h('h3', 'First person'), h('p', 'Click to look around and play.'), h('div.fp-keys', ...[['WASD', 'walk'], ['Shift', 'run'], ['Mouse', 'look'], ['Left click', 'shoot or swing'], ['Right click', 'aim'], ['E', 'use what you look at'], ['` / F5 / Esc', 'top-down view']].map(([k, v]) => h('span', h('kbd', k), ' ', v))), h('div.fp-pause-btns', h('button.btn.go', { onclick: (e) => (e.stopPropagation(), this.lock()) }, 'Play'), h('button.btn', { onclick: (e) => (e.stopPropagation(), this.game.toggleFirstPerson?.(false)) }, 'Top-down view'))),
+      h('div.fp-pause-card', h('h3', 'In their boots'), h('p', 'Click to look around and play.'), h('div.fp-keys', ...[['WASD', 'walk'], ['Shift', 'run'], ['Mouse', 'look'], ['Left click', 'shoot or swing'], ['Right click', 'aim'], ['E', 'use what you look at'], ['T', 'first or third person'], ['` / F5 / Esc', 'top-down view']].map(([k, v]) => h('span', h('kbd', k), ' ', v))), h('div.fp-pause-btns', h('button.btn.go', { onclick: (e) => (e.stopPropagation(), this.lock()) }, 'Play'), (D.camBtn = h('button.btn', { onclick: (e) => (e.stopPropagation(), this.setThird(!fpPrefs.third)) }, fpPrefs.third ? 'First person' : 'Third person')), h('button.btn', { onclick: (e) => (e.stopPropagation(), this.game.toggleFirstPerson?.(false)) }, 'Top-down view'))),
     )
     D.note = h('div.fp-note')
     // touch: a stick that appears under the left thumb, buttons on the right
@@ -182,7 +200,8 @@ export class FirstPerson {
     D.aim = tb('aim', 'aim', 'binoculars', 'Aim')
     D.use = tb('use', 'use', 'search', 'Use')
     D.keys = h('div.fp-tkeys')
-    D.pad = h('div.fp-pad', D.stick, h('div.fp-stickhint'), D.fire, D.aim, D.use, h('div.fp-tcol', tb('exit', 'exit', 'eye', 'View'), D.keys))
+    D.cam = tb('cam', 'cam', 'rotate', fpPrefs.third ? '1st' : '3rd')
+    D.pad = h('div.fp-pad', D.stick, h('div.fp-stickhint'), D.fire, D.aim, D.use, h('div.fp-tcol', tb('exit', 'exit', 'eye', 'View'), D.cam, D.keys))
     D.root.append(D.hurt, D.low, D.scope, D.cross, D.hit, D.prompt, D.prog, h('div.fp-status', D.name, D.hpbar), h('div.fp-gun', D.weapon, D.ammo), D.tip, D.note, D.pad, D.pause)
     document.body.appendChild(D.root)
     view.canvas.addEventListener('pointerdown', (e) => this.onPDown(e))
@@ -195,6 +214,20 @@ export class FirstPerson {
     if (!this.dom) return
     this.dom.note.textContent = text
     this.noteT = secs
+  }
+  // behind the eyes or over the shoulder (kept between visits)
+  setThird(on) {
+    fpPrefs.third = !!on
+    saveFpPrefs()
+    if (this.dom) {
+      this.dom.camBtn.textContent = on ? 'First person' : 'Third person'
+      this.dom.cam.querySelector('span').textContent = on ? '1st' : '3rd'
+    }
+    for (const b of document.querySelectorAll('.fpbtn')) b.textContent = on ? 'Third person' : 'First person'
+    if (this.active) sfx('click')
+  }
+  isThird() {
+    return this.thirdK > 0.5
   }
   setPrompt(text) {
     if (this.dom.prompt._t === text) return
@@ -318,6 +351,9 @@ export class FirstPerson {
       return
     } else if (b === 'exit') {
       this.game.toggleFirstPerson?.(false)
+      return
+    } else if (b === 'cam') {
+      this.setThird(!fpPrefs.third)
       return
     } else if (b) {
       this.host?.fpKey?.({ key: b, shiftKey: false, ctrlKey: false, preventDefault() {} }, this)
@@ -462,6 +498,12 @@ export class FirstPerson {
     this.equip = 0
     this.vmKey = ''
     this.lastHp = null
+    // straight into the chosen camera, no swing over from the eyes
+    this.thirdK = fpPrefs.third ? 1 : 0
+    this.camDist = 2.3
+    this.bodyOn = null
+    this.bodyFor = null
+    this.bodyH = null
     this.buildDom()
     this.dom.root.classList.add('on')
     document.body.classList.add('fpmode')
@@ -540,6 +582,10 @@ export class FirstPerson {
     }
     if (k === 'e' && !e.ctrlKey && !e.metaKey) {
       this.use()
+      return true
+    }
+    if (k === 't' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (!e.repeat) this.setThird(!fpPrefs.third)
       return true
     }
     if (this.host?.fpKey?.(e, this)) return true
@@ -625,7 +671,17 @@ export class FirstPerson {
       this.vx = moved.x / Math.max(dt, 1e-3)
       this.vz = moved.z / Math.max(dt, 1e-3)
     }
-    H.fpFace(this.yaw + Math.PI, sp, wantRun && sp > 0.5)
+    // over the shoulder the body turns to where it walks, and back to the
+    // crosshair to aim, shoot or swing; behind the eyes it is the view
+    this.thirdK = clamp(this.thirdK + (fpPrefs.third ? dt : -dt) * 3.5, 0, 1)
+    let heading = this.yaw + Math.PI
+    if (this.thirdK > 0.5) {
+      const aiming = this.ads > 0.15 || this.trigger || performance.now() - this.lastAtk < 1400 || this.swingT >= 0
+      if (!aiming && Math.hypot(this.vx, this.vz) > 0.5) heading = Math.atan2(this.vx, this.vz)
+      this.bodyH = turnTo(this.bodyH ?? heading, heading, dt * (aiming ? 20 : 10))
+      heading = this.bodyH
+    } else this.bodyH = heading
+    H.fpFace(heading, sp, wantRun && sp > 0.5)
     this.bobAmt = lerp(this.bobAmt, clamp(sp / 4, 0, 1), 1 - Math.exp(-dt * 8))
     this.bobPh += sp * dt * (wantRun ? 1.55 : 1.85)
     this.stepT -= sp * dt
@@ -637,7 +693,10 @@ export class FirstPerson {
     // ---- camera
     const cam = view.camera
     const eye = H.fpEye(_v)
-    const bobK = fpPrefs.bob ? 1 : 0.35
+    // a scope is looked through: aiming one takes the camera to the eye
+    const scopeK = this.vm?.pose.scope ? ease(this.ads) : 0
+    const tk = ease(this.thirdK) * (1 - scopeK)
+    const bobK = (fpPrefs.bob ? 1 : 0.35) * (1 - tk * 0.75)
     const b = this.bobAmt * bobK
     eye.y += Math.sin(this.bobPh * 2) * 0.028 * b - b * 0.01
     eye.x += Math.cos(this.yaw) * Math.sin(this.bobPh) * 0.018 * b
@@ -647,13 +706,15 @@ export class FirstPerson {
       eye.x += (Math.random() - 0.5) * this.shake * 0.06
       eye.y += (Math.random() - 0.5) * this.shake * 0.06
     }
-    cam.position.copy(eye)
+    _eye.copy(eye)
+    if (tk > 0.001) cam.position.lerpVectors(eye, this.shoulder(eye, dt), tk)
+    else cam.position.copy(eye)
     this.recoil = Math.max(0, this.recoil - dt * (2.2 + this.recoil * 6))
-    _e.set(this.pitch + this.recoil * 0.06, this.yaw, Math.sin(this.bobPh) * 0.004 * b - this.swayX * 0.4, 'YXZ')
+    _e.set(this.pitch + this.recoil * 0.06, this.yaw, (Math.sin(this.bobPh) * 0.004 * b - this.swayX * 0.4) * (1 - tk), 'YXZ')
     cam.quaternion.setFromEuler(_e)
     // aiming down the sights narrows the view; a scope much more
     this.ads = lerp(this.ads, this.aimHeld && this.vm?.pose.kind === 'gun' && this.swingT < 0 ? 1 : 0, 1 - Math.exp(-dt * 12))
-    const zoom = this.vm?.pose.scope ? lerp(1, 0.36, ease(this.ads)) : lerp(1, 0.82, ease(this.ads))
+    const zoom = this.vm?.pose.scope ? lerp(1, 0.36, ease(this.ads)) : lerp(1, 0.82 - tk * 0.06, ease(this.ads))
     const fov = fpPrefs.fov * zoom * (1 + this.sprint * 0.06)
     if (Math.abs(cam.fov - fov) > 0.01) {
       cam.fov = fov
@@ -673,7 +734,8 @@ export class FirstPerson {
     this.lookT -= dt
     if (this.lookT <= 0) {
       this.lookT = 0.1
-      const L = (this.look = live ? H.fpLook(cam.position, this.forward(new THREE.Vector3())) : null)
+      const fw = this.forward(new THREE.Vector3())
+      const L = (this.look = live ? H.fpLook(this.aimFrom(fw), fw) : null)
       // a key only for what can be done; on a touch screen the Use button lights
       const k = L ? (L.key ?? (L.act ? 'E' : '')) : ''
       this.setPrompt(L ? (k && !this.touchUI ? `<kbd>${k}</kbd> ` : '') + L.text : null)
@@ -716,10 +778,69 @@ export class FirstPerson {
     D.cross.classList.toggle('hide', this.scoped() || this.sprint > 0.6)
     D.scope.classList.toggle('on', this.scoped())
     this.hitT -= dt
-    // ---- the arms
+    // ---- the body: drawn once the camera is clear of the head
+    const showBody = cam.position.distanceTo(_eye) > 0.5
+    if (showBody !== this.bodyOn || st.lookKey !== this.bodyFor) {
+      this.bodyOn = showBody
+      this.bodyFor = st.lookKey
+      H.fpSetBody?.(showBody)
+    }
+    // ---- the arms (behind the eyes, or coming up to a scope)
+    this.layer.visible = tk < 0.5
     this.updateVM(dt, st, sp)
     this.layer.setAspect(cam.aspect)
     this.layer.sync(H.scene, H.atmo, cam, H.fpShade?.() ?? 1)
+  }
+  // Where the camera sits over the shoulder: behind and to the right of the
+  // head, closer when aiming, pulled in front of any wall or ceiling between
+  // it and the head (straight away; it eases back out once clear).
+  shoulder(eye, dt) {
+    const H = this.host
+    const f = this.forward(_f)
+    const ax = ease(this.ads)
+    const rx = Math.cos(this.yaw)
+    const rz = -Math.sin(this.yaw)
+    const side = lerp(0.42, 0.58, ax)
+    const back = lerp(2.3, 1.05, ax)
+    _p.set(eye.x + rx * side, eye.y + lerp(0.2, 0.08, ax), eye.z + rz * side)
+    // the shoulder point itself may be in a wall (a doorway, a corridor)
+    let s = 1
+    for (let k = 1; k <= 4; k++) {
+      const t = k / 4
+      if (this.solidNear(H, eye.x + (_p.x - eye.x) * t, eye.y + (_p.y - eye.y) * t, eye.z + (_p.z - eye.z) * t)) {
+        s = ((k - 1) / 4) * 0.8
+        break
+      }
+    }
+    _p.set(eye.x + (_p.x - eye.x) * s, eye.y + (_p.y - eye.y) * s, eye.z + (_p.z - eye.z) * s)
+    let free = back
+    for (let t = 0.12; t <= back + 0.2; t += 0.12) {
+      if (this.solidNear(H, _p.x - f.x * t, _p.y - f.y * t, _p.z - f.z * t)) {
+        free = Math.max(0, t - 0.3)
+        break
+      }
+    }
+    this.camDist = free < this.camDist ? free : lerp(this.camDist, free, 1 - Math.exp(-dt * 4))
+    const out = _q.set(_p.x - f.x * this.camDist, _p.y - f.y * this.camDist, _p.z - f.z * this.camDist)
+    // never under the ground looking up
+    const feet = H.fpFeet()
+    out.y = Math.max(out.y, feet.y + 0.3)
+    return out
+  }
+  // is there anything solid within a camera's breadth of this point?
+  solidNear(H, x, y, z) {
+    const r = 0.16
+    return H.fpSolid(x, y, z) || H.fpSolid(x + r, y, z) || H.fpSolid(x - r, y, z) || H.fpSolid(x, y, z + r) || H.fpSolid(x, y, z - r) || H.fpSolid(x, y + r, z)
+  }
+  // Where a shot (or a look) starts: the eye; over the shoulder, the point on
+  // the camera's ray level with the body, so the crosshair is what is hit
+  // and nothing between the camera and the body gets in the way.
+  aimFrom(dir) {
+    const cam = view.camera
+    if (this.thirdK < 0.01 || !this.host) return cam.position.clone()
+    const eye = this.host.fpEye(new THREE.Vector3())
+    const t = Math.max(0, eye.sub(cam.position).dot(dir))
+    return cam.position.clone().addScaledVector(dir, t)
   }
   // how far shots stray (radians): steadier aimed, worse running or jumping
   spread() {
@@ -733,10 +854,10 @@ export class FirstPerson {
     const H = this.host
     if (!H || this.cool > 0 || this.equip < 0.85 || this.sprint > 0.5) return
     if (this.swingT >= 0 && this.swingT < this.swingDur * 0.75) return
-    const cam = view.camera
     const dir = this.forward(new THREE.Vector3())
-    const r = H.fpAttack(cam.position.clone(), dir, { spread: this.spread(), ads: this.ads > 0.6, onHit: (kill, head) => this.hitMark(kill, head), muzzle: this.muzzleWorld() })
+    const r = H.fpAttack(this.aimFrom(dir), dir, { spread: this.spread(), ads: this.ads > 0.6, onHit: (kill, head) => this.hitMark(kill, head), muzzle: this.muzzleWorld() })
     if (!r) return
+    this.lastAtk = performance.now()
     if (r.empty) {
       this.cool = 0.35
       this.trigger = false
@@ -761,6 +882,14 @@ export class FirstPerson {
   // where the muzzle is in the world, for the flash and the tracer
   muzzleWorld() {
     const cam = view.camera
+    if (this.thirdK > 0.5 && this.host) {
+      // over the shoulder: out of the gun in the body's hands, chest high
+      const f = this.host.fpFeet()
+      const e = this.host.fpEye(_q)
+      const sy = Math.sin(this.yaw)
+      const cy = Math.cos(this.yaw)
+      return new THREE.Vector3(f.x - sy * 0.8 + cy * 0.14, f.y + (e.y - f.y) * 0.84, f.z - cy * 0.8 - sy * 0.14)
+    }
     const m = this.vm?.muzzle
     if (!m) return cam.position.clone().addScaledVector(this.forward(new THREE.Vector3()), 0.6)
     // the overlay draws with its own field of view; near enough, map the
@@ -906,8 +1035,10 @@ export class FirstPerson {
       c.rotation.z += U.spin.z * dt
       if (U.t > 0.7) c.visible = false
     }
-    // the torch, when the host says it is on
-    this.layer.torch.intensity = st.torch ? 14 : 0
+    // the torch, when the host says it is on: in the hand, a hand's breadth
+    // from the gun, so it only warms the near side of it (the beam itself is
+    // the world's light)
+    this.layer.torch.intensity = st.torch ? 0.9 : 0
   }
 }
 
