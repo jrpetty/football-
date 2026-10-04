@@ -521,10 +521,11 @@ public class VillageGameTests {
             "with the wall set aside the smeltery should go up meanwhile, got " + meanwhile);
 
         java.util.UUID late = java.util.UUID.randomUUID();
-        // Homes enough for its twenty (a village short of beds builds houses first).
+        // Homes enough for its twenty and two to spare (a village short of beds, or about to be,
+        // builds houses first).
         List<String> raised = new java.util.ArrayList<>(List.of("storage", "shelter", "well", "fortify", "smeltery",
             "hall", "workshop", "watchtower", "market", "pen", "lighthouse", "chapel"));
-        int homes = (20 + com.jrpetty.mcassistant.village.VillageMath.BEDS_PER_HOUSE - 1)
+        int homes = (20 + 2 + com.jrpetty.mcassistant.village.VillageMath.BEDS_PER_HOUSE)
             / com.jrpetty.mcassistant.village.VillageMath.BEDS_PER_HOUSE;
         for (int i = 0; i < homes; i++) raised.add("house");
         Villages.restore(level, late, new BlockPos(4600, 64, 4600), Villages.Age.NETHER, raised, 20);

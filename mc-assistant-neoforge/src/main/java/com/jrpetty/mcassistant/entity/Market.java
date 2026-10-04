@@ -294,6 +294,7 @@ public final class Market {
         trade(v);
         payWages(level, v);
         if (marketDay(id, day)) {
+            sellSurplus(level, v, day);
             level.playSound(null, v.centre(), SoundEvents.BELL_BLOCK, SoundSource.BLOCKS, 3.0F, 1.0F);
             for (ServerPlayer p : level.players()) {
                 if (p.blockPosition().closerThan(v.centre(), 96)) {
@@ -301,6 +302,43 @@ public final class Market {
                 }
             }
         }
+    }
+
+    /**
+     * Market day: the travelling traders buy what the village has far more of than it can use —
+     * timber, stone and food over a good reserve — for coin into the treasury, which pays the
+     * wages. The long game's village sat on 1,081 logs, 1,225 stone and 1,115 food with an empty
+     * treasury and full chests. At most three stacks of each a market day. Returns the coin.
+     */
+    public static int sellSurplus(ServerLevel level, Villages.Village v, long day) {
+        UUID id = v.id();
+        int head = Math.max(1, Villages.headcount(id));
+        int foodStock = Villages.stock(level, v.centre(), Villages.Task.FOOD, Villages.storesRadius(id));
+        int foodKeep = Math.max(256, 3 * Villages.larderForBirth(id));
+        List<String> sold = new ArrayList<>();
+        int coins = 0;
+        for (Good g : GOODS) {
+            int keep = switch (g.need()) {
+                case LOGS -> g.name().equals("Logs") ? Math.max(256, 8 * head) : -1;
+                case STONE -> g.name().equals("Cobblestone") ? Math.max(384, 12 * head) : -1;
+                case FOOD -> foodStock > foodKeep ? 128 : -1;
+                default -> -1;
+            };
+            if (keep < 0) continue;
+            int have = stock(level, id, g.what());
+            int n = Math.min(192, have - keep);
+            if (g.need() == Villages.Task.FOOD) n = Math.min(n, foodStock - foodKeep);
+            if (n < 32) continue;
+            int paid = (int) Math.floor(n * each(g, have) * 0.5);
+            if (paid < 1 || !TownWork.take(level, v, g.what(), n)) continue;
+            if (g.need() == Villages.Task.FOOD) foodStock -= n;
+            coins += paid;
+            sold.add(n + " " + g.name().toLowerCase());
+        }
+        if (coins <= 0) return 0;
+        Ledger.addCoins(id, coins);
+        Villages.tell(id, day, "Traders came for market day and bought " + String.join(", ", sold) + " for " + coins + " coin");
+        return coins;
     }
 
     /** From the Iron Age: gold from the stores into coin, while the treasury is low. Returns the coin minted. */
@@ -522,7 +560,8 @@ public final class Market {
     /** Put a lot into the village's stores, the storehouse first. Returns what would not fit. */
     static ItemStack intoStores(ServerLevel level, UUID village, ItemStack stack) {
         ItemStack left = stack.copy();
-        for (BlockPos p : Villages.storeChests(level, village)) {
+        List<BlockPos> stores = new ArrayList<>(Villages.storeChests(level, village));
+        for (BlockPos p : stores) {
             if (left.isEmpty()) break;
             if (!(level.getBlockEntity(p) instanceof net.minecraft.world.Container c)) continue;
             for (int i = 0; i < c.getContainerSize() && !left.isEmpty(); i++) {
@@ -537,6 +576,15 @@ public final class Market {
                 }
             }
             c.setChanged();
+        }
+        // Every store full: another chest for it (Villages.growStores), rather than the ground.
+        if (!left.isEmpty()) {
+            BlockPos more = Villages.growStores(level, village);
+            if (more != null && level.getBlockEntity(more) instanceof net.minecraft.world.Container c) {
+                c.setItem(0, left.copy());
+                c.setChanged();
+                left = ItemStack.EMPTY;
+            }
         }
         return left;
     }

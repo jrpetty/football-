@@ -486,7 +486,8 @@ public final class VillageCommands {
             }
         }
         sb.append(". Beds: ").append(bedded).append(" of ").append(folkNow).append(" have one, ")
-          .append(asleep).append(" asleep, homes for ").append(Villages.bedsPlanned(v.id()))
+          .append(asleep).append(" asleep, homes for ").append(Villages.bedsMadeUp(level, v.id()))
+          .append(" made up of ").append(Villages.bedsPlanned(v.id()))
           .append(", camp ").append(com.jrpetty.mcassistant.VillageSpawner.campBeds(level, v.centre()).size());
         if (!late.isEmpty()) sb.append("; up: ").append(String.join(", ", late));
         sb.append(". Growing: ").append(Villages.growthNote(level, v.id()));

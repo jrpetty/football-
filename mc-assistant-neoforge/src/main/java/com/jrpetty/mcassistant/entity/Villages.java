@@ -214,6 +214,8 @@ public final class Villages {
     }
 
     public static void resetForTests() {
+        MADE_UP.clear();
+        GREW.clear();
         Standing.resetForTests();
         Gatherings.resetForTests();
         ELDERS.clear();
@@ -1152,7 +1154,7 @@ public final class Villages {
         if (folk >= 12 && built(villageId, "tavern") < 1) extras.add("tavern");
         // Somewhere to lay the dead, once there are any; another when it is full.
         if (com.jrpetty.mcassistant.village.Ledger.graves(villageId).size() > Graves.room(villageId)) extras.add(0, "graveyard");
-        if (at == Age.STONE) { housesForBeds(villageId, folk, out); out.addAll(voted(villageId, extras)); return out; }
+        if (at == Age.STONE) { homesAndAmenities(villageId, folk, out, extras); return out; }
 
         if (built(villageId, "workshop") < 1) out.add("workshop");
         // Whatever the headcount: the Iron Age asks for it, and a village
@@ -1165,17 +1167,16 @@ public final class Villages {
         // shop are what a big Iron Age town has, not what makes it one.
         if (folk >= 16 && built(villageId, "smithy") < 1) extras.add("smithy");
         if (folk >= 18 && built(villageId, "shop") < 1) extras.add("shop");
-        if (at == Age.IRON) { housesForBeds(villageId, folk, out); out.addAll(voted(villageId, extras)); return out; }
+        if (at == Age.IRON) { homesAndAmenities(villageId, folk, out, extras); return out; }
 
         if (built(villageId, "lighthouse") < 1) out.add("lighthouse");
         if (built(villageId, "chapel") < 1) out.add("chapel");
         if (folk >= 22 && built(villageId, "brewery") < 1) extras.add("brewery");
-        if (at == Age.DIAMOND) { housesForBeds(villageId, folk, out); out.addAll(voted(villageId, extras)); return out; }
+        if (at == Age.DIAMOND) { homesAndAmenities(villageId, folk, out, extras); return out; }
 
         if (built(villageId, "gateway") < 1) out.add("gateway");
         if (folk >= 24 && built(villageId, "library") < 1) extras.add("library");
-        housesForBeds(villageId, folk, out);   // (the Nether Age: before the great works)
-        out.addAll(voted(villageId, extras));
+        homesAndAmenities(villageId, folk, out, extras);   // (the Nether Age: before the great works)
         // And then the great works, one after another for as long as the village stands:
         // a town that has been everywhere its ages lead goes on building.
         out.add(nextGreatWork(villageId));
@@ -1188,8 +1189,73 @@ public final class Villages {
      * comes after the age's own buildings, so it never holds the village back, and it
      * means a village always has a home in hand for whoever has none.
      */
+    /**
+     * The homes it is short of and the amenities it has grown into (the café, the tavern, the
+     * crafts' buildings), turn about: a house, then an amenity, then a house. Houses for beds
+     * used to come first every time, and a village that grew faster than it built — the long
+     * game's, at seventy-four — never got past them to its smithy, café or tavern at all.
+     */
+    private static void homesAndAmenities(UUID villageId, int folk, List<String> out, List<String> extras) {
+        List<String> amenities = voted(villageId, extras);
+        String last = "";
+        List<String> built = BUILT.getOrDefault(villageId, List.of());
+        for (int i = built.size() - 1; i >= 0; i--) {
+            if (!"colony".equals(built.get(i))) { last = built.get(i); break; }
+        }
+        if (!amenities.isEmpty() && "house".equals(last)) {
+            out.addAll(amenities);
+            housesForBeds(villageId, folk, out);
+        } else {
+            housesForBeds(villageId, folk, out);
+            out.addAll(amenities);
+        }
+    }
+
     private static void housesForBeds(UUID villageId, int folk, List<String> out) {
-        if (folk > bedsPlanned(villageId) && !out.contains("house")) out.add("house");
+        // Two children to a bed's worth (they sleep by their family's), and a house started two
+        // beds before the last one is taken, not after: a house takes days to go up, and in the
+        // long game the village was always a house behind its births.
+        int children = 0;
+        for (AssistantEntity a : folkOf(villageId)) if (a.isBaby()) children++;
+        int need = Math.max(0, folk - children) + (children + 1) / 2;
+        if (need + 2 > bedsPlanned(villageId) && !out.contains("house")) out.add("house");
+    }
+
+    private static final Map<UUID, long[]> MADE_UP = new ConcurrentHashMap<>();
+
+    /**
+     * The beds actually made up in the village's houses and barracks, counted from the world (the
+     * camp's round the heart and the guest house's left out): "homes for" used to be four a house
+     * on paper, whether the house had a bed in it or not. Counted at most once a minute.
+     */
+    public static int bedsMadeUp(net.minecraft.server.level.ServerLevel level, UUID villageId) {
+        long now = level.getGameTime();
+        long[] seen = MADE_UP.get(villageId);
+        if (seen != null && now - seen[0] < 1200L) return (int) seen[1];
+        Village v = get(villageId);
+        if (v == null) return 0;
+        BlockPos guest = builtAt(villageId, "guesthouse");
+        int reach = Math.min(6, Math.max(3, storesRadius(villageId) / 16));
+        int cx = v.centre().getX() >> 4, cz = v.centre().getZ() >> 4;
+        int n = 0;
+        for (int x = cx - reach; x <= cx + reach; x++) {
+            for (int z = cz - reach; z <= cz + reach; z++) {
+                net.minecraft.world.level.chunk.LevelChunk chunk = level.getChunkSource().getChunkNow(x, z);
+                if (chunk == null) continue;
+                for (net.minecraft.world.level.block.entity.BlockEntity be : chunk.getBlockEntities().values()) {
+                    if (!(be instanceof net.minecraft.world.level.block.entity.BedBlockEntity)) continue;
+                    BlockPos p = be.getBlockPos();
+                    net.minecraft.world.level.block.state.BlockState st = level.getBlockState(p);
+                    if (!st.hasProperty(net.minecraft.world.level.block.BedBlock.PART)
+                        || st.getValue(net.minecraft.world.level.block.BedBlock.PART) != net.minecraft.world.level.block.state.properties.BedPart.HEAD) continue;
+                    if (Math.max(Math.abs(p.getX() - v.centre().getX()), Math.abs(p.getZ() - v.centre().getZ())) <= 5) continue;   // the camp
+                    if (guest != null && p.distSqr(guest) <= 100) continue;
+                    n++;
+                }
+            }
+        }
+        MADE_UP.put(villageId, new long[]{ now, n });
+        return n;
     }
 
     /** Beds the village's homes hold: four a house, six a barracks (the guest house is the player's). */
@@ -1480,7 +1546,48 @@ public final class Villages {
             if (!(level.getBlockEntity(p) instanceof net.minecraft.world.Container c)) continue;
             for (int i = 0; i < c.getContainerSize(); i++) if (c.getItem(i).isEmpty()) return p;
         }
-        return null;
+        return growStores(level, villageId);
+    }
+
+    private static final Map<UUID, Long> GREW = new ConcurrentHashMap<>();
+
+    /**
+     * Every store full: another chest, set down beside the others in the storehouse (or by the
+     * heart while there is none), of eight planks or two logs out of the stores themselves. The
+     * carriers used to stand by a full storehouse saying it needed another chest, and the stores
+     * dropped what would not fit on the ground at the heart. Returns the new chest, or null.
+     */
+    @Nullable
+    public static BlockPos growStores(net.minecraft.server.level.ServerLevel level, UUID villageId) {
+        long now = level.getGameTime();
+        if (now - GREW.getOrDefault(villageId, -100000L) < 200L) return null;
+        GREW.put(villageId, now);
+        Village v = get(villageId);
+        if (v == null) return null;
+        List<BlockPos> chests = storeChests(level, villageId);
+        if (chests.size() >= 64) return null;
+        BlockPos spot = null;
+        for (BlockPos c : chests) {
+            for (net.minecraft.core.Direction d : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+                BlockPos p = c.relative(d);
+                if (level.getBlockState(p).isAir() && level.getBlockState(p.above()).isAir()
+                        && level.getBlockState(p.below()).isFaceSturdy(level, p.below(), net.minecraft.core.Direction.UP)) {
+                    spot = p;
+                    break;
+                }
+            }
+            if (spot != null) break;
+        }
+        if (spot == null) {
+            BlockPos house = builtAt(villageId, "storage");
+            spot = Trades.floorSpot(level, house != null ? house : v.centre(), 6);
+        }
+        if (spot == null || !inStoreArea(villageId, spot)) return null;
+        if (!TownWork.take(level, v, s -> s.is(net.minecraft.tags.ItemTags.PLANKS), 8)
+                && !TownWork.take(level, v, s -> s.is(net.minecraft.tags.ItemTags.LOGS), 2)) return null;
+        level.setBlock(spot, net.minecraft.world.level.block.Blocks.CHEST.defaultBlockState(), 3);
+        ZoneChests.mark(level, spot);
+        return spot;
     }
 
     /** The wall rings the square (village/TownPlan). */

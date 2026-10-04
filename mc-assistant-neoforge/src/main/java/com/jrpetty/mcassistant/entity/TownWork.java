@@ -51,7 +51,10 @@ public final class TownWork {
         Villages.Age age = Villages.ageOf(id);
         int cursor = CURSOR.getOrDefault(id, 0);
         int done = 0;
-        for (int looked = 0; looked < 160 && done < 24; looked++) {
+        // A town sitting on a mountain of cobblestone paves its streets faster.
+        int budget = age.ordinal() >= Villages.Age.STONE.ordinal()
+            && Market.stock(level, id, s -> s.is(net.minecraft.world.item.Items.COBBLESTONE)) > 512 ? 64 : 24;
+        for (int looked = 0; looked < 400 && done < budget; looked++) {
             int[] c = cells.get(Math.floorMod(cursor++, cells.size()));
             if (work(level, v, c[0], c[1], age)) done++;
         }

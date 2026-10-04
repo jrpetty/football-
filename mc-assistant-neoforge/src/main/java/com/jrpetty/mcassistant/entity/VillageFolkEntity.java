@@ -1526,6 +1526,19 @@ public class VillageFolkEntity extends AssistantEntity {
         // A family sleeps under one roof: the bed nearest its partner's, else its
         // mother's or father's, wins over the bed nearest where it happens to stand.
         BlockPos near = familyBed(server);
+        // A child sleeps in its family's house, by their bed, while any grown-up in the village
+        // still has no bed of its own: the beds go to those who work. (Two children are counted
+        // as one bed's worth when the village works out how many houses it needs.)
+        if (isBaby()) {
+            boolean adultWithout = false;
+            for (AssistantEntity a : Villages.folkOf(village)) {
+                if (!a.isBaby() && a.bedPos() == null) { adultWithout = true; break; }
+            }
+            if (adultWithout) {
+                if (near != null) setHome(near);
+                return false;
+            }
+        }
         BlockPos from = near != null ? near : blockPosition();
         for (int x = cx - reach; x <= cx + reach; x++) {
             for (int z = cz - reach; z <= cz + reach; z++) {

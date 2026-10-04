@@ -19,6 +19,7 @@ can deadlock it).
 Every line of output starts [REAL]. Only a dead or hung server is a hard
 failure; everything else is measurement, read from the published report.
 """
+import json
 import re
 import socket
 import struct
@@ -183,7 +184,7 @@ def night(r, x, z, label):
     """Midnight: who has a bed, and who is in it. Every folk should be asleep but the
     guards keeping the watch."""
     status = r.cmd("execute positioned %d 64 %d run village status" % (x, z)).replace("\n", " ")
-    m = re.search(r"Beds: (\d+) of (\d+) have one, (\d+) asleep, homes for (\d+), camp (\d+)", status)
+    m = re.search(r"Beds: (\d+) of (\d+) have one, (\d+) asleep, homes for (\d+)(?: made up of \d+)?, camp (\d+)", status)
     if m:
         up = re.search(r"; up: (.*?)\. Room for|; up: (.*?)\. Growing", status)
         say("NIGHT %s: %s of %s folk have a bed, %s asleep (homes hold %s, %s still at the camp)%s"
@@ -284,6 +285,38 @@ def epic(r, days, minutes, biome="plains"):
         if age != last_age:
             say("AGE on day %d: %s" % (day, age))
             last_age = age
+        # The day in numbers, one JSON line a day (epic-metrics.jsonl, and the history across
+        # builds the workflow keeps): what a regression looks like is a curve that bends.
+        stores = re.search(r"Stores: food (\d+) logs (\d+) stone (\d+) coal (\d+) iron (\d+) diamond (\d+) obsidian (\d+)", status)
+        trades = re.search(r"Trades: ([^.]*)\.", status)
+        tally = {}
+        if trades:
+            for n, t in re.findall(r"(\d+) ([a-z]+)", trades.group(1)):
+                tally[t] = int(n)
+        watch = re.search(r"(\d+) gates (?:open|shut), (\d+) posts", status)
+        coins = re.search(r"Treasury: (\d+) coins", status)
+        content = re.search(r"Contentment: (\d+)", status)
+        made = re.search(r"homes for (\d+)(?: made up of (\d+))?", status)
+        metrics = {
+            "day": day, "folk": int(folk) if folk.isdigit() else None, "age": age,
+            "buildings": len(names) - colonies, "renown": int(renown.group(1)) if renown else 0,
+            "villages": len(villages), "colonies": colonies, "world": world,
+            "bedded": int(beds.group(1)) if beds else None, "beds_made": int(made.group(1)) if made else None,
+            "beds_planned": int(made.group(2)) if made and made.group(2) else None,
+            "trades": tally, "guards": tally.get("guard", 0),
+            "gates": int(watch.group(1)) if watch else None, "posts": int(watch.group(2)) if watch else None,
+            "coins": int(coins.group(1)) if coins else None, "contentment": int(content.group(1)) if content else None,
+            "minutes": round((time.time() - began) / 60.0, 1),
+        }
+        if stores:
+            for i, k in enumerate(["food", "logs", "stone", "coal", "iron", "diamond", "obsidian"]):
+                metrics[k] = int(stores.group(i + 1))
+        say("METRICS " + json.dumps(metrics, separators=(",", ":")))
+        try:
+            with open("epic-metrics.jsonl", "a") as out:
+                out.write(json.dumps(metrics, separators=(",", ":")) + "\n")
+        except OSError:
+            pass
         say("STATUS " + status)
         if day % 5 == 0 or day == 1:
             report(r, x, z, "the long game, day %d" % day, compact=True)

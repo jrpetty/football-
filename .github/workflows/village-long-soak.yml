@@ -109,11 +109,27 @@ jobs:
               grep -a "MCA-BUILD\|MCA-COLONY\|MCA-GUARD" run/logs/latest.log 2>/dev/null | tail -60 > epic-tail.txt
               cat real-epic.txt epic-tail.txt > real-epic-live.txt
               publish real-epic-live.txt
+              publish epic-metrics.jsonl
             done ) &
           LOOP=$!
           python3 tools/realworld/soak.py epic "$DAYS" "$MINUTES" | tee -a real-epic.txt
           echo "soak exit: ${PIPESTATUS[0]}"
           kill $LOOP 2>/dev/null
+          # The day-by-day numbers of every build's long game, kept side by side (the last
+          # twenty builds), and a page of charts drawn from them: a regression is a curve
+          # that bends the wrong way against the build before.
+          publish epic-metrics.jsonl
+          curl -sSLf -o epic-history.json "https://github.com/$REPO/releases/download/village-test-latest/epic-history.json" \
+            || echo '{}' > epic-history.json
+          jq -e . epic-history.json > /dev/null 2>&1 || echo '{}' > epic-history.json
+          if [ -s epic-metrics.jsonl ]; then
+            jq -s . epic-metrics.jsonl > epic-days.json
+            jq --arg sha "$(git rev-parse --short HEAD)" --arg when "$(date -u +%Y-%m-%dT%H:%MZ)" --slurpfile d epic-days.json \
+              '.[$sha] = {when: $when, days: $d[0]} | to_entries | sort_by(.value.when) | .[-20:] | from_entries' \
+              epic-history.json > epic-history.new && mv epic-history.new epic-history.json
+            publish epic-history.json
+            python3 tools/realworld/dashboard.py epic-history.json epic-dashboard.html && publish epic-dashboard.html
+          fi
           set -e
           sleep 5
 
