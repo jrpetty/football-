@@ -49,6 +49,11 @@ public final class AssistantTargeting {
         "key.mc_assistant.crew", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_SEMICOLON,
         "key.categories.mc_assistant");
 
+    /** The village journal: the village you stand in, on a page. */
+    public static final KeyMapping VILLAGE = new KeyMapping(
+        "key.mc_assistant.village", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_J,
+        "key.categories.mc_assistant");
+
     /** The plot book: every piece of staked ground, crewed by clicking. */
     public static final KeyMapping PLOTS = new KeyMapping(
         "key.mc_assistant.plots", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_B,
@@ -70,6 +75,9 @@ public final class AssistantTargeting {
         }
         while (CREW.consumeClick()) {
             mc.setScreen(new CrewScreen());
+        }
+        while (VILLAGE.consumeClick()) {
+            VillageScreen.request();
         }
         while (PLOTS.consumeClick()) {
             // The screen opens when the server answers with the book — one

@@ -132,7 +132,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        scenario: [plains, forest, taiga, savanna, takeover, crowd, natural, restart, pair]
+        scenario: [plains, forest, taiga, savanna, takeover, crowd, natural, restart, pair, twin, modpack]
     steps:
       - uses: actions/checkout@v4
 
@@ -172,6 +172,18 @@ jobs:
           [villages]
           naturalVillages = ${NATURAL}
           EOF
+          # The modpack scenario: the mod among two of the most common others (JEI and Jade),
+          # the newest NeoForge 1.21.1 build of each from Modrinth.
+          if [ "${{ matrix.scenario }}" = "modpack" ]; then
+            mkdir -p run/mods
+            for m in jei jade; do
+              url=$(curl -sS "https://api.modrinth.com/v2/project/$m/version?loaders=%5B%22neoforge%22%5D&game_versions=%5B%221.21.1%22%5D" \
+                | jq -r '[.[] | select(.version_type=="release")][0].files[0].url // .[0].files[0].url')
+              echo "$m: $url"
+              [ -n "$url" ] && [ "$url" != "null" ] && curl -sSL -o "run/mods/$m.jar" "$url"
+            done
+            ls -la run/mods
+          fi
 
       - name: Start the server
         working-directory: mc-assistant-neoforge
@@ -218,6 +230,9 @@ jobs:
           # what it was doing (the stack), plus how the chunk queue was getting on.
           echo "[REAL] ---- stalls (the server thread's stack when a tick took over 1.5 s) ----" >> real-${{ matrix.scenario }}.txt
           cat first-run.log run/logs/latest.log 2>/dev/null | grep -a -A 42 "MCA-STALL" | head -700 >> real-${{ matrix.scenario }}.txt || true
+          echo "[REAL] ---- mods loaded, and slow villages ----" >> real-${{ matrix.scenario }}.txt
+          cat first-run.log run/logs/latest.log 2>/dev/null | grep -aiE "Found mod file|Loading [0-9]+ mods|mod.*jei|mod.*jade" | head -20 >> real-${{ matrix.scenario }}.txt || true
+          cat first-run.log run/logs/latest.log 2>/dev/null | grep -a "MCA-SLOW" | tail -40 >> real-${{ matrix.scenario }}.txt || true
           echo "[REAL] ---- why the village was or was not building ----" >> real-${{ matrix.scenario }}.txt
           cat first-run.log run/logs/latest.log 2>/dev/null | grep -a "MCA-BUILD" | head -150 >> real-${{ matrix.scenario }}.txt || true
           echo "[REAL] ---- chunk queue ----" >> real-${{ matrix.scenario }}.txt

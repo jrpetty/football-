@@ -157,7 +157,7 @@ public final class Raids {
         // The gates: shut at dusk and whenever the bell rings, open again in the morning. Only on
         // the change, so a folk who opens a door to go through isn't fought by the watch.
         boolean shut = (t >= 13000L && t < 23000L) || a != null;
-        if (Watch.isShut(id) != shut) Watch.shut(level, id, shut);
+        if (!Watch.knows(id) || Watch.isShut(id) != shut) Watch.shut(level, id, shut);
         // Trouble? Monsters only ring the bell inside a wall: a village without one has no
         // bell to ring and nowhere to shut itself in, and its folk are indoors at night anyway.
         // Rung for monsters about an open village, the bell rang the first night in every

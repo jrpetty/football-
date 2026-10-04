@@ -217,6 +217,7 @@ public final class Villages {
 
     public static void resetForTests() {
         MADE_UP.clear();
+        REQUESTED.clear();
         GLUT.clear();
         GLUT_AT.clear();
         GREW.clear();
@@ -246,6 +247,7 @@ public final class Villages {
         Orders.resetForTests();
         Trades.resetForTests();
         Links.resetForTests();
+        Requests.resetForTests();
         Drover.resetForTests();
         Cafe.resetForTests();
         Roads.reset();
@@ -1053,6 +1055,7 @@ public final class Villages {
      *  village's ages — a village that could not find the timber has not got
      *  a storehouse, however many times it tried. */
     public static void noteProject(UUID villageId, String structure, long gameTime) {
+        REQUESTED.remove(villageId, structure);                       // what was asked for is up
         if (!"colony".equals(structure) && !"guesthouse".equals(structure)) tell(villageId, gameTime / 24000L, spoken(structure) + " went up");
         LAST_PROJECT.put(villageId, gameTime);
         BUILT.computeIfAbsent(villageId, k -> new ArrayList<>()).add(structure);
@@ -1182,6 +1185,10 @@ public final class Villages {
      * set aside is the next project (see {@link #defer}); the rest wait their turn.
      */
     public static List<String> projectsWanted(UUID villageId) {
+        return requestedFirst(villageId, projectsWantedInOrder(villageId));
+    }
+
+    private static List<String> projectsWantedInOrder(UUID villageId) {
         List<String> out = new ArrayList<>();
         int folk = headcount(villageId);
         if (folk == 0) return out;
@@ -1237,6 +1244,20 @@ public final class Villages {
         // And then the great works, one after another for as long as the village stands:
         // a town that has been everywhere its ages lead goes on building.
         out.add(nextGreatWork(villageId));
+        return out;
+    }
+
+    /** What a player asked the elder to build next (Requests.build), until it goes up. */
+    private static final Map<UUID, String> REQUESTED = new ConcurrentHashMap<>();
+
+    public static void request(UUID villageId, String structure) {
+        REQUESTED.put(villageId, structure);
+    }
+
+    /** The building asked for, to the front of the list, if the village would build it at all. */
+    private static List<String> requestedFirst(UUID villageId, List<String> out) {
+        String asked = REQUESTED.get(villageId);
+        if (asked != null && out.remove(asked)) out.add(0, asked);
         return out;
     }
 

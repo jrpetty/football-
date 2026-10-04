@@ -15,5 +15,6 @@
   "item.mc_assistant.village_charter": "Village Charter",
   "block.mc_assistant.village_folk_spawner": "Village Folk Spawner",
   "itemGroup.mc_assistant": "Village Folk",
-  "item.mc_assistant.village_coin": "Village Coin"
+  "item.mc_assistant.village_coin": "Village Coin",
+  "key.mc_assistant.village": "Village journal"
 }

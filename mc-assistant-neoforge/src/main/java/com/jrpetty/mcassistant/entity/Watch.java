@@ -400,6 +400,11 @@ public final class Watch {
         return moved;
     }
 
+    /** Has the watch set the gates since the server started? (After a restart they may stand shut by day.) */
+    public static boolean knows(UUID village) {
+        return SHUT.containsKey(village);
+    }
+
     /** Are the gates shut now (as far as the watch last left them)? */
     public static boolean isShut(UUID village) {
         return SHUT.getOrDefault(village, false);

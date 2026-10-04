@@ -871,6 +871,10 @@ public class MineGoal extends Goal {
                 moveStuck = 0;
                 return;
             }
+            // Stuck below ground: walk back up its own workings rather than stop where it stands
+            // (a miner left at the bottom of its shaft stood there "stuck" until somebody came).
+            moveStuck = 0;
+            if (climbOut("Got stuck down there — came back up with " + oresMined + " ore.")) return;
             finish("Got stuck in the shaft — stopping here (" + oresMined + " ore so far).");
             if (assistant.isPackFull()) assistant.enqueueFront(Job.deposit());
         }

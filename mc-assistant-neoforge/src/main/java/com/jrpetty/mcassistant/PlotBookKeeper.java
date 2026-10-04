@@ -24,5 +24,9 @@ public final class PlotBookKeeper {
         if (old.contains(BP_KEY)) {
             event.getEntity().getPersistentData().put(BP_KEY, old.get(BP_KEY).copy());
         }
+        // The morning news (entity/News): the choice outlives a death.
+        if (old.contains("mc_assistant_morning_news")) {
+            event.getEntity().getPersistentData().putBoolean("mc_assistant_morning_news", old.getBoolean("mc_assistant_morning_news"));
+        }
     }
 }

@@ -140,6 +140,8 @@ public final class FolkTalk {
             case ORDERS -> Orders.talk(f, p, text);
             case WORKINGS -> Trades.explain(f);
             case SHORT -> Trades.shortages(f);
+            case RETRADE -> Requests.retrade(f, p, text);
+            case BUILD -> Requests.build(f, p, text);
             default -> puzzled(f);
         };
         // Somebody who can't stand you says as little as it can.
@@ -948,6 +950,8 @@ public final class FolkTalk {
         if (has(t, "make peace", "peace with", "olive branch", "patch things up", "end the feud", "settle the feud")) return TalkTopic.PEACE;
         if (has(t, "stir trouble", "stir up", "rumours about", "rumors about", "they say about you", "saying about you")) return TalkTopic.STIR;
         if (has(t, "pay my fine", "pay the fine", "my fine", "what i owe", "my debt", "pay what")) return TalkTopic.FINE;
+        if (has(t, "become a ", "be a ", "work as a ", "change your trade", "change your job", "change jobs", "switch to ",
+                "take up ", "try being a ", "retrain") && Requests.tradeNamed(t) != null) return TalkTopic.RETRADE;
         if (has(t, " orders ", " order ", "elder want", "elder say", "you should order", "order the village", "tell everyone to", "should put our backs")
                 || (has(t, " should ", " ought ", " needs to ", " need to ") && has(t, " village ", " we ", " everyone ", " everybody ")
                     && Orders.named(t) != null && has(t, " more ", " order", " focus", " put ", " get ", " dig ", " fill "))) return TalkTopic.ORDERS;
@@ -962,6 +966,8 @@ public final class FolkTalk {
                 "from the storehouse", "do you have any", "got any") && Services.itemNamed(t) != null) return TalkTopic.STORES;
         if (has(t, "live here", "citizen", "settle here", "move here", "join the village", "join your village")) return TalkTopic.CITIZEN;
         if (Council.named(t) != null && has(t, "build a", "build an", "should build", "you need a", "propose", "how about a", "vote for")) return TalkTopic.PROPOSE;
+        if (Requests.buildingNamed(t) != null && has(t, "build a", "build an", "build the", "build us", "put up a", "should build",
+                "can you build", "could you build", "next build", "build next")) return TalkTopic.BUILD;
         if (has(t, "council", "the vote", "voting", "who decides")) return TalkTopic.COUNCIL;
         if (has(t, "other village", "neighbour", "neighbor", "rival", "allies", "alliance", "feud", "tribute")) return TalkTopic.RIVALS;
         if (has(t, "joke", "funny", "make me laugh")) return TalkTopic.JOKE;

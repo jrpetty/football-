@@ -47,6 +47,8 @@ public final class AssistantConfig {
     public static final ModConfigSpec.BooleanValue VILLAGE_COLONIES;
     public static final ModConfigSpec.IntValue VILLAGE_COLONY_AT;
     public static final ModConfigSpec.IntValue VILLAGE_WORLD_CAP;
+    public static final ModConfigSpec.IntValue VILLAGE_BUILD_SPEED;
+    public static final ModConfigSpec.BooleanValue VILLAGE_RESHAPE_LAND;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -174,6 +176,17 @@ public final class AssistantConfig {
                 "a child or sends out a founding party. Every one of them is a ticking",
                 "entity: three hundred cost a server about twenty milliseconds a tick.")
             .defineInRange("villageWorldCap", 200, 20, 5000);
+        VILLAGE_BUILD_SPEED = b.comment(
+                "How fast village builders lay their blocks, as a percentage: 100 is the",
+                "usual pace, 200 twice as fast, 50 half. (The materials still have to be",
+                "gathered; this is only the laying of them.)")
+            .defineInRange("villageBuildSpeed", 100, 25, 400);
+        VILLAGE_RESHAPE_LAND = b.comment(
+                "Let villages reshape the land round them: level the town's ground (cutting",
+                "and filling up to six blocks), dig sand for glass, and cut irrigation",
+                "channels to their fields. Turn it off to keep your terrain as it is;",
+                "buildings still get the footings they need to stand.")
+            .define("villageReshapeLand", true);
         b.pop();
 
         SPEC = b.build();
@@ -207,6 +220,8 @@ public final class AssistantConfig {
     public static boolean villageColonies() { return read(VILLAGE_COLONIES, true); }
     public static int villageColonyAt() { return read(VILLAGE_COLONY_AT, 40); }
     public static int villageWorldCap() { return read(VILLAGE_WORLD_CAP, 200); }
+    public static int villageBuildSpeed() { return read(VILLAGE_BUILD_SPEED, 100); }
+    public static boolean villageReshapeLand() { return read(VILLAGE_RESHAPE_LAND, true); }
 
     /** Config values throw if read before the file is loaded (early world gen,
      *  datagen, a dedicated server still booting) — fall back rather than crash. */

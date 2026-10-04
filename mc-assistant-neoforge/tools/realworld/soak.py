@@ -103,6 +103,9 @@ def gametime(r):
     return int(m.group(1)) if m else -1
 
 
+LAST_MSPT = [None]
+
+
 def sprint(r, ticks):
     """Run this many ticks as fast as the machine will go, and wait for them.
     Says how fast that was: a village that is fine at twelve folk and grinds at
@@ -119,6 +122,7 @@ def sprint(r, ticks):
             took = max(0.001, time.time() - began)
             say("sprint: %d ticks in %.0f s = %.1f ms a tick (%.0f tps)"
                 % (ticks, took, 1000.0 * took / ticks, ticks / took))
+            LAST_MSPT[0] = round(1000.0 * took / ticks, 2)
             return now
         if now == last:
             stalled += 1
@@ -239,6 +243,41 @@ def village(r, biome, count=12, compact=False, days=3, label=None, raided=True):
     say("PASS the server ran %d game days on %s" % (days, label or biome))
 
 
+def twin(r, days=3):
+    """Two players, two villages: two settlements a thousand blocks apart run side by side,
+    and the ground round each is loaded and dropped again in turn, as players coming and
+    going would do it. Both should go on growing, and the server should neither choke nor
+    lose either village's work."""
+    setup(r)
+    a = where(r, "biome minecraft:plains") or where(r, "biome minecraft:forest")
+    if a is None:
+        say("SKIP no plains or forest within reach of this seed")
+        return
+    b = (a[0] + 1000, a[1] + 200)
+    say("TWIN village A at %d, %d; village B at %d, %d" % (a[0], a[1], b[0], b[1]))
+    for x, z in (a, b):
+        say("forceload %d,%d: %s" % (x, z, r.cmd("forceload add %d %d %d %d" % (x - 48, z - 48, x + 48, z + 48))))
+        say("spawn: " + r.cmd("village spawnat %d %d 10" % (x, z)))
+    for day in range(1, days + 1):
+        for half in range(2):
+            # A player near one village, then the other: the wide ground round one loaded,
+            # the other's dropped.
+            here, there = (a, b) if half == 0 else (b, a)
+            r.cmd("forceload add %d %d %d %d" % (here[0] - 160, here[1] - 160, here[0] + 160, here[1] + 160))
+            r.cmd("forceload remove %d %d %d %d" % (there[0] - 160, there[1] - 160, there[0] + 160, there[1] + 160))
+            r.cmd("forceload add %d %d %d %d" % (there[0] - 48, there[1] - 48, there[0] + 48, there[1] + 48))
+            sprint(r, 12000)
+        r.cmd("save-all")
+        for name, (x, z) in (("A", a), ("B", b)):
+            status = r.cmd("execute positioned %d 64 %d run village status" % (x, z)).replace("\n", " ")
+            m = re.search(r"— (\d+) folk.*?, (the \w+ Age)\.", status)
+            built = re.search(r"Built: \[([^\]]*)\]", status)
+            say("TWIN day %d village %s: %s folk, %s, built [%s]" % (day, name, m.group(1) if m else "?",
+                m.group(2) if m else "?", built.group(1) if built else ""))
+    say("village list: " + r.cmd("village list").replace("\n", " | "))
+    say("PASS two villages ran %d days side by side" % days)
+
+
 def epic(r, days, minutes, biome="plains"):
     """The long game. One village, founded the way a spawner founds one, left alone
     for as many game days as the machine will run in the time it has: does it keep
@@ -307,6 +346,7 @@ def epic(r, days, minutes, biome="plains"):
             "gates": int(watch.group(1)) if watch else None, "posts": int(watch.group(2)) if watch else None,
             "coins": int(coins.group(1)) if coins else None, "contentment": int(content.group(1)) if content else None,
             "minutes": round((time.time() - began) / 60.0, 1),
+            "ms_per_tick": LAST_MSPT[0],
         }
         if stores:
             for i, k in enumerate(["food", "logs", "stone", "coal", "iron", "diamond", "obsidian"]):
@@ -450,6 +490,11 @@ def main():
             # What a survival player actually starts with: one or two spawner items, not
             # twelve folk. Can two settlers found a village that grows?
             village(r, "forest", count=2, days=5, label="pair forest", raided=False)
+        elif scenario == "twin":
+            twin(r)
+        elif scenario == "modpack":
+            # The mod among others (the workflow puts JEI and Jade in the mods folder).
+            village(r, "plains", days=2, label="plains with JEI and Jade")
         elif scenario == "epic":
             days = int(sys.argv[2]) if len(sys.argv) > 2 else 60
             minutes = int(sys.argv[3]) if len(sys.argv) > 3 else 300

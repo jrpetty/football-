@@ -293,6 +293,7 @@ public final class Market {
         mint(level, v);
         trade(v);
         payWages(level, v);
+        News.morning(level, v, day);
         if (marketDay(id, day)) {
             sellSurplus(level, v, day);
             level.playSound(null, v.centre(), SoundEvents.BELL_BLOCK, SoundSource.BLOCKS, 3.0F, 1.0F);

@@ -34,6 +34,30 @@ public final class AssistantNetwork {
         registrar.playToServer(FolkTalkPayload.TYPE, FolkTalkPayload.STREAM_CODEC, AssistantNetwork::handleFolkTalk);
         registrar.playToClient(FolkReplyPayload.TYPE, FolkReplyPayload.STREAM_CODEC, AssistantNetwork::handleFolkReply);
         registrar.playToClient(FolkSpeechPayload.TYPE, FolkSpeechPayload.STREAM_CODEC, AssistantNetwork::handleFolkSpeech);
+        // The village journal (J): the status of the village the player stands in, on a page.
+        registrar.playToServer(VillageAskPayload.TYPE, VillageAskPayload.STREAM_CODEC, AssistantNetwork::handleVillageAsk);
+        registrar.playToClient(VillagePagePayload.TYPE, VillagePagePayload.STREAM_CODEC, AssistantNetwork::handleVillagePage);
+    }
+
+    private static void handleVillageAsk(VillageAskPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            if (!(context.player() instanceof ServerPlayer player)
+                    || !(player.level() instanceof net.minecraft.server.level.ServerLevel level)) return;
+            com.jrpetty.mcassistant.entity.Villages.Village v = com.jrpetty.mcassistant.entity.Villages.nearest(level,
+                player.blockPosition(), com.jrpetty.mcassistant.entity.Villages.VILLAGE_RANGE * 4);
+            if (v == null) {
+                net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
+                    new VillagePagePayload("No village", "There is no village near enough to tell you about. Walk into one and press the key again."));
+                return;
+            }
+            String title = com.jrpetty.mcassistant.entity.Villages.name(v.id());
+            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
+                new VillagePagePayload(title, com.jrpetty.mcassistant.VillageCommands.statusText(level, v)));
+        });
+    }
+
+    private static void handleVillagePage(VillagePagePayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> com.jrpetty.mcassistant.client.VillageScreen.show(payload.title(), payload.text()));
     }
 
     /** How near a player must stand to talk with a folk. */

@@ -1987,6 +1987,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // links between the trades nothing else keeps up: cane, milk, sand, the pen's animals.
         if (tickCount - supplyTick >= 600 && level() instanceof net.minecraft.server.level.ServerLevel supplies) {
             supplyTick = tickCount;
+            Drover.tidy(this, supplies);
             Trades.kit(this);
             if (Links.tend(this, supplies)) return;
         }
@@ -3578,6 +3579,23 @@ public class VillageFolkEntity extends AssistantEntity {
      * finds the ground before it gives up the old plot, so a folk can never
      * end up between trades with nowhere to stand.
      */
+    /**
+     * Take up another trade now, on new ground for it (a player asked, Requests.retrade). The
+     * ground is found before the old plot is given up. Returns whether it changed.
+     */
+    public boolean takeUpTrade(StationTask want) {
+        if (ownerId() == null || villageCentre == null) return false;
+        avoidHere = workZone();
+        BlockPos site = findSite(want, radiusFor(want));
+        avoidHere = null;
+        if (site == null) return false;
+        setStation(site, want);
+        assignPlot(WorkZone.around(site, radiusFor(want), depthFor(want, site)), patchNameFor(want));
+        setAutonomous(true);
+        tradeCheckTick = tickCount;                       // and not straight back by the village's own sums
+        return true;
+    }
+
     private boolean changedTrade() {
         UUID village = ownerId();
         if (village == null) return false;
@@ -3663,6 +3681,9 @@ public class VillageFolkEntity extends AssistantEntity {
      * different from its neighbour's.
      */
     private boolean breakNow() {
+        // A carrier with a load in hand takes it to the stores first: the break waits. (One went
+        // on its break holding the furnace's sixteen ingots and held them for the whole of it.)
+        if (stationTask() == StationTask.HAUL && stashable() > 0) return false;
         long day = level().getDayTime() % 24000L;
         long bits = getUUID().getLeastSignificantBits();
         // Partners take their break together: both work it out from the same one of

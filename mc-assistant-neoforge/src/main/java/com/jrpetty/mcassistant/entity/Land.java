@@ -142,14 +142,25 @@ public final class Land {
 
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
-        if (event.getServer().getTickCount() % 100 != 41) return;
+        // Every village once in a hundred ticks, as before, but not all on the same tick: a world
+        // of a dozen villages and their colonies did all their levelling, growing and dock-keeping
+        // in one tick, a spike every five seconds. Now a fifth of them every twenty ticks.
+        int tick = event.getServer().getTickCount();
+        if (tick % 20 != 1) return;
+        int phase = (tick / 20) % 5;
         com.jrpetty.mcassistant.Guard.run("land", () -> {
             for (ServerLevel level : event.getServer().getAllLevels()) {
                 for (Villages.Village v : Villages.every()) {
+                    if (Math.floorMod(v.id().hashCode(), 5) != phase) continue;
                     if (!v.dim().equals(level.dimension()) || !level.isLoaded(v.centre())) continue;
-                    level(level, v, LOOK, CHANGES);
+                    long began = System.nanoTime();
+                    if (com.jrpetty.mcassistant.AssistantConfig.villageReshapeLand()) level(level, v, LOOK, CHANGES);
                     Grow.tick(level, v);
                     Waterfront.tick(level, v);
+                    long took = (System.nanoTime() - began) / 1_000_000L;
+                    // Anything that took a village's land work over 25 ms is worth knowing about.
+                    if (took > 25) com.mojang.logging.LogUtils.getLogger().info("[MCA-SLOW] {}: the land's work took {} ms",
+                        Villages.name(v.id()), took);
                 }
             }
         });

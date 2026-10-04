@@ -82,6 +82,16 @@ public final class Orders {
     /** The day a folk last moved trade to follow the order, by village. */
     private static final Map<UUID, Long> MOVED = new ConcurrentHashMap<>();
 
+    /** A day kept in the village's ledger (so a restart doesn't give a second move or petition), or -1. */
+    private static Long savedDay(UUID village, String key) {
+        String s = com.jrpetty.mcassistant.village.Ledger.note(village, key);
+        try {
+            return s == null ? -1L : Long.parseLong(s);
+        } catch (NumberFormatException e) {
+            return -1L;
+        }
+    }
+
     public static void resetForTests() {
         GIVEN.clear();
         MOVED.clear();
@@ -253,7 +263,7 @@ public final class Orders {
     @Nullable
     public static StationTask move(UUID village, VillageFolkEntity f, long day) {
         Order o = current(village);
-        Long moved = MOVED.get(village);
+        Long moved = MOVED.computeIfAbsent(village, k -> savedDay(k, "orders.moved"));
         if (o == null || o == Order.STEADY || (moved != null && moved == day)) return null;
         StationTask mine = f.stationTask();
         // Never off the watch: an order shifts who farms and who digs, it does not strip the walls
@@ -276,6 +286,7 @@ public final class Orders {
     /** A folk did move to follow the order (once it had found its ground): that is the day's move. */
     public static void moved(UUID village, long day) {
         MOVED.put(village, day);
+        com.jrpetty.mcassistant.village.Ledger.note(village, "orders.moved", Long.toString(day));
     }
 
     // ------------------------------------------------------------------ talk
@@ -332,9 +343,10 @@ public final class Orders {
         if (Laws.banished(village, p.getUUID(), day) || warmth <= -50) return "You? Tell me how to run this village? Leave me be.";
         if (!possible(village, asked)) return "We've nobody for that yet — we're too small a place. Ask me again when we've grown.";
         if (warmth < 40 && !(citizen && warmth >= 0)) return "I'll think on it. But I know this village, and you don't — not yet.";
-        Long last = PETITIONED.get(village);
+        Long last = PETITIONED.computeIfAbsent(village, k -> savedDay(k, "orders.petitioned"));
         if (last != null && last == day) return "I've changed the orders once today already. Let them settle.";
         PETITIONED.put(village, day);
+        com.jrpetty.mcassistant.village.Ledger.note(village, "orders.petitioned", Long.toString(day));
         give(village, asked, day, elder.displayNameCap());
         Villages.tell(village, day, "Elder " + elder.displayNameCap() + " ordered: " + asked.title.toLowerCase(Locale.ROOT)
             + ", as " + p.getName().getString() + " asked");

@@ -57,6 +57,7 @@ public final class ClientSetup {
         event.register(AssistantTargeting.ROSTER);
         event.register(AssistantTargeting.CREW);
         event.register(AssistantTargeting.PLOTS);
+        event.register(AssistantTargeting.VILLAGE);
     }
 
     public static class AssistantRenderer<T extends AssistantEntity>

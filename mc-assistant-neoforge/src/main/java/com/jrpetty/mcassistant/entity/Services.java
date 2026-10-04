@@ -253,6 +253,44 @@ public final class Services {
     public static void resetForTests() {
         LOANS.clear();
         GIVEN.clear();
+        LOANS_READ.clear();
+    }
+
+    /** The villages whose loans have been read back from the ledger since the server started. */
+    private static final java.util.Set<UUID> LOANS_READ = ConcurrentHashMap.newKeySet();
+
+    /**
+     * A village's loans, kept with the world (Ledger note "loans"): a restart used to forget them,
+     * and the pickaxe a player had borrowed became theirs to keep with nobody any the wiser.
+     */
+    private static Map<UUID, List<Loan>> loansOf(UUID village) {
+        Map<UUID, List<Loan>> all = LOANS.computeIfAbsent(village, k -> new ConcurrentHashMap<>());
+        if (LOANS_READ.add(village)) {
+            String saved = com.jrpetty.mcassistant.village.Ledger.note(village, "loans");
+            if (saved != null && !saved.isEmpty()) {
+                for (String one : saved.split(";")) {
+                    String[] f = one.split("\\|");
+                    if (f.length != 4) continue;
+                    try {
+                        Item it = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(f[1]));
+                        all.computeIfAbsent(UUID.fromString(f[0]), k -> new ArrayList<>()).add(new Loan(it, f[2], Long.parseLong(f[3])));
+                    } catch (RuntimeException ignored) { }
+                }
+            }
+        }
+        return all;
+    }
+
+    private static void saveLoans(UUID village) {
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<UUID, List<Loan>> e : LOANS.getOrDefault(village, Map.of()).entrySet()) {
+            for (Loan l : e.getValue()) {
+                if (sb.length() > 0) sb.append(';');
+                sb.append(e.getKey()).append('|').append(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(l.item()))
+                  .append('|').append(l.name().replace("|", " ").replace(";", " ")).append('|').append(l.day());
+            }
+        }
+        com.jrpetty.mcassistant.village.Ledger.note(village, "loans", sb.toString());
     }
 
     private static List<Item> names;
@@ -335,12 +373,13 @@ public final class Services {
         String name = p.getName().getString();
         // A tool, a weapon, armour: lent to a friend, to be brought back.
         if (friend && sample.getMaxStackSize() == 1) {
-            List<Loan> mine = LOANS.computeIfAbsent(village, k -> new ConcurrentHashMap<>()).computeIfAbsent(p.getUUID(), k -> new ArrayList<>());
+            List<Loan> mine = loansOf(village).computeIfAbsent(p.getUUID(), k -> new ArrayList<>());
             if (mine.size() >= 3) return "You've three of our things already. Bring something back first.";
             List<ItemStack> got = take(level, village, what, 1);
             if (got.isEmpty()) return "Somebody's just taken the last one.";
             for (ItemStack s : got) give(p, s);
             mine.add(new Loan(it, word, day));
+            saveLoans(village);
             f.persona().remember(day, "I lent " + name + " a " + word, 2);
             return "Here — take the " + word + ". Bring it back when you're done with it, within five days, mind.";
         }
@@ -400,7 +439,7 @@ public final class Services {
     public static String returnLoan(VillageFolkEntity f, Player p) {
         UUID village = f.ownerId();
         if (village == null || !(f.level() instanceof ServerLevel level)) return "";
-        List<Loan> mine = LOANS.getOrDefault(village, Map.of()).get(p.getUUID());
+        List<Loan> mine = loansOf(village).get(p.getUUID());
         if (mine == null || mine.isEmpty()) return "";
         List<String> back = new ArrayList<>();
         for (java.util.Iterator<Loan> i = mine.iterator(); i.hasNext(); ) {
@@ -415,19 +454,21 @@ public final class Services {
             i.remove();
         }
         if (back.isEmpty()) return "";
+        saveLoans(village);
         f.persona().feelFor(p.getUUID(), p.getName().getString(), 3);
         return "The " + String.join(" and the ", back) + " — back safe and sound. Thank you! Ask whenever you need it again.";
     }
 
     /** Loans five days overdue are given up on, and remembered against the borrower. */
     public static void overdue(ServerLevel level, UUID village, long day) {
-        Map<UUID, List<Loan>> all = LOANS.get(village);
-        if (all == null) return;
+        Map<UUID, List<Loan>> all = loansOf(village);
+        boolean changed = false;
         for (Map.Entry<UUID, List<Loan>> e : all.entrySet()) {
             for (java.util.Iterator<Loan> i = e.getValue().iterator(); i.hasNext(); ) {
                 Loan l = i.next();
                 if (day - l.day() <= 5) continue;
                 i.remove();
+                changed = true;
                 Player p = level.getPlayerByUUID(e.getKey());
                 String who = p == null ? "a borrower" : p.getName().getString();
                 Villages.tell(village, day, who + " never brought back the " + l.name() + " they borrowed from the stores");
@@ -437,12 +478,13 @@ public final class Services {
                 Standing.stir(village, e.getKey());
             }
         }
+        if (changed) saveLoans(village);
     }
 
     /** For the status: what is out on loan. */
     public static Map<String, Integer> onLoan(UUID village) {
         Map<String, Integer> out = new LinkedHashMap<>();
-        for (List<Loan> l : LOANS.getOrDefault(village, Map.of()).values()) for (Loan x : l) out.merge(x.name(), 1, Integer::sum);
+        for (List<Loan> l : loansOf(village).values()) for (Loan x : l) out.merge(x.name(), 1, Integer::sum);
         return out;
     }
 }

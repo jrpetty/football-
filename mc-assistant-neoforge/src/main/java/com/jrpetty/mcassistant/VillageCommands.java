@@ -54,6 +54,10 @@ public final class VillageCommands {
             .then(Commands.literal("anchors").requires(src -> src.hasPermission(2))
                 .executes(VillageCommands::anchors))
             .then(Commands.literal("status").executes(VillageCommands::status))
+            // The morning news of the villages near you, in chat, once a morning: on or off.
+            .then(Commands.literal("news")
+                .then(Commands.literal("on").executes(ctx -> news(ctx, true)))
+                .then(Commands.literal("off").executes(ctx -> news(ctx, false))))
             // The nearest village's history, as a book.
             .then(Commands.literal("chronicle").executes(VillageCommands::chronicle))
             // What every village you have met thinks of you.
@@ -439,6 +443,26 @@ public final class VillageCommands {
             ctx.getSource().sendSuccess(() -> Component.literal("No village within reach."), false);
             return 0;
         }
+        String text = statusText(level, v);
+        ctx.getSource().sendSuccess(() -> Component.literal(text), false);
+        return 1;
+    }
+
+    private static int news(CommandContext<CommandSourceStack> ctx, boolean on) {
+        net.minecraft.server.level.ServerPlayer p = ctx.getSource().getPlayer();
+        if (p == null) {
+            ctx.getSource().sendFailure(Component.literal("Only a player can take the morning news."));
+            return 0;
+        }
+        com.jrpetty.mcassistant.entity.News.choose(p, on);
+        ctx.getSource().sendSuccess(() -> Component.literal(on
+            ? "You'll hear the morning news of any village within 256 blocks, once a morning."
+            : "No more morning news."), false);
+        return 1;
+    }
+
+    /** Everything /village status says about a village, as one line (the village screen shows it too). */
+    public static String statusText(net.minecraft.server.level.ServerLevel level, Villages.Village v) {
         StringBuilder sb = new StringBuilder();
         sb.append("Village at ").append(v.centre().getX()).append(", ").append(v.centre().getZ())
           .append(" (").append(Villages.name(v.id()))
@@ -553,7 +577,6 @@ public final class VillageCommands {
         java.util.List<Villages.Need> needs = Villages.needs(level, v.id());
         if (needs.isEmpty()) sb.append(" nothing — about to come of age.");
         for (Villages.Need n : needs) sb.append(' ').append(n.what()).append(';');
-        ctx.getSource().sendSuccess(() -> Component.literal(sb.toString()), false);
-        return 1;
+        return sb.toString();
     }
 }

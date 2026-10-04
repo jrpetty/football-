@@ -1151,6 +1151,11 @@ order stands until something else is clearly wanted more.
   larder / - Bram"). Right-click it to read the order in full.
 * **Ask anyone** "Elder's orders" and they tell you what it is, and what the village is
   building next.
+* **Ask a folk to change trade** ("could you be a miner?", "take up farming"). A folk that
+  thinks well of you, or a citizen's neighbour, does it, if the village has a use for the
+  trade (and the craft's building stands) and can spare it from its own. Once a day each.
+* **Ask the elder for a building** ("build a market next", "could you build a well?"). If
+  it is something the village would build, it goes to the front of the list.
 * **Have your say.** Tell the elder what you think it should order ("you should order the
   village to dig for iron", or "we need more miners"). If it thinks well of you, or you
   are a citizen in good standing, it agrees, as long as the order is one the village can
@@ -1286,6 +1291,11 @@ only its owner (nobody, for folk) can rearrange the pack.
   there, what age, what has been built. Works from the console.
 * `/village status` — age, headcount, trades, what the stores hold, what has
   been built, what the village is short of. Works from the console.
+* **The village journal (J key)** — the same, for the village you stand in, on a page
+  you can scroll, a line to each part. Rebind it under Controls ("Village journal").
+* `/village news on` / `off` — the morning news of the villages within 256 blocks of
+  you, in chat, once a morning: what happened yesterday and what each is short of.
+  Off unless you turn it on; the choice is kept with you.
 * `/village people` — who everybody is: trade, temperament, partner, friends,
   rivals and family, under a line on the village's couples and friendships.
 * `/village chronicle` — the nearest village's history, as a written book.
@@ -1307,6 +1317,26 @@ only its owner (nobody, for folk) can rearrange the pack.
 `villageBreeding`, `villageGrowthCap`, `villageLoadedChunks`, `replaceVillagers`,
 `protectTradedVillagers`, `villageColonies` (on), `villageColonyAt` (40),
 `villageWorldCap` (200).
+
+* `villageGrowthCap` (100) is the largest a village grows by raising children.
+* `villageBuildSpeed` (100) is how fast village builders lay blocks, as a percentage:
+  200 is twice as fast, 50 half.
+* `villageReshapeLand` (on): off keeps your terrain as it is. The town's ground isn't
+  levelled, no sand is dug and no irrigation channels are cut. Buildings still get the
+  footings they need.
+
+## Keeping it steady
+
+* **Across a restart.** Things a player borrowed, the day's move under the elder's
+  orders and the day's petition are kept with the world. After a restart the gates are
+  set right for the hour, and an animal left on a lead mid-fetch is let go.
+* **Stuck folk.** A folk that gives up twice on the same spot is wedged. It digs or
+  climbs its way out (village folk only; a hired assistant never digs through your
+  walls). A miner stuck below ground walks back up its own workings.
+* **Carriers** deliver what they hold before they take their break.
+* **The server's time.** Each village's land work (levelling, houses, docks) runs on its
+  own tick, a fifth of the villages at a time. Any village whose work takes over 25 ms
+  is written to the log as `[MCA-SLOW]`.
 
 ## How this is tested
 
@@ -1353,6 +1383,12 @@ Every push to CI:
   second hive is made of three honeycomb and six planks;
 * puts a farmer's field by the nearest of two ponds, and checks that monsters about a
   village with no wall don't ring the bell (game test `t42`);
+* runs two villages a thousand blocks apart side by side, with the ground round each
+  loaded and dropped in turn as two players coming and going would (scenario `twin`),
+  and a village alongside JEI and Jade (scenario `modpack`);
+* keeps the long game's numbers day by day (`epic-metrics.jsonl`), the last twenty
+  builds' side by side (`epic-history.json`), and a page of charts drawn from them
+  (`epic-dashboard.html`) on the `village-test-latest` release;
 * puts beds into a house that went up without them, from the stores' wool and planks,
   one at a time and no more than the wool allows (game test `t43`);
 * runs the links between the trades (game test `t41`): the first farmer brings cane and

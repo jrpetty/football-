@@ -106,7 +106,7 @@ jobs:
           }
           echo "[REAL] the long game on $(git rev-parse --short HEAD): up to $DAYS days, $MINUTES minutes" > real-epic.txt
           ( while sleep 600; do
-              grep -a "MCA-BUILD\|MCA-COLONY\|MCA-GUARD" run/logs/latest.log 2>/dev/null | tail -60 > epic-tail.txt
+              grep -a "MCA-BUILD\|MCA-COLONY\|MCA-GUARD\|MCA-SLOW" run/logs/latest.log 2>/dev/null | tail -60 > epic-tail.txt
               cat real-epic.txt epic-tail.txt > real-epic-live.txt
               publish real-epic-live.txt
               publish epic-metrics.jsonl

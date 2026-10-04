@@ -214,6 +214,7 @@ public final class Links {
             f.brain("took " + took + " sand from the stores for glass");
             return "took " + took + " sand from the stores";
         }
+        if (!com.jrpetty.mcassistant.AssistantConfig.villageReshapeLand()) return null;   // the land is the player's
         BlockPos heart = v.centre();
         int reach = Villages.townReach(village);
         int dug = 0;

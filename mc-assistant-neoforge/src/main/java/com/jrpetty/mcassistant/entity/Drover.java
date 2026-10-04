@@ -182,6 +182,20 @@ public final class Drover {
         }
     }
 
+    /**
+     * An animal still on this folk's lead with no fetch under way — the server restarted mid-fetch
+     * (the fetch is not saved, the lead is): let it off where it stands and put the lead away.
+     */
+    public static void tidy(VillageFolkEntity f, ServerLevel level) {
+        if (busy(f)) return;
+        for (Animal a : level.getEntitiesOfClass(Animal.class, f.getBoundingBox().inflate(12),
+                x -> x.isLeashed() && x.getLeashHolder() == f)) {
+            a.dropLeash(true, false);
+            ItemStack left = f.insertItem(new ItemStack(Items.LEAD));
+            if (!left.isEmpty()) f.spawnAtLocation(left);
+        }
+    }
+
     /** The leads lying about a spot, back into the pack. */
     private static void pickUpLeads(VillageFolkEntity f, ServerLevel level, BlockPos at) {
         for (net.minecraft.world.entity.item.ItemEntity lead : level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
