@@ -12,12 +12,18 @@ No typing needed. Just clicks.
    If it asks to install Node.js, press Y, then double-click start-gauntlet.bat again when it's done.
    Keep the black window open while you use Gauntlet.
 
-3. Your browser opens. Paste your API key into the big box (click in it and press Ctrl+V).
+3. Your browser opens on Home ("Let's get you set up"). Press the big "Add a key" button,
+   then paste your API key into the big box (click in it and press Ctrl+V).
    No key yet? Press "Get an OpenRouter key": one key works for every AI.
 
-4. Next time: double-click "Gauntlet" on your desktop.
+4. Click "Home" in the menu on the left and follow the next big button:
+   "Run the 2p Quick Check", then "See the results", then "Open the Presenter".
+   Lost? Press the round "Help" button at the bottom right of any page.
+   Want every tool? Press "Show all tools" at the bottom of the menu.
 
-5. To update: unblock the new zip (step 1), extract it anywhere and double-click its start-gauntlet.bat.
+5. Next time: double-click "Gauntlet" on your desktop.
+
+6. To update: unblock the new zip (step 1), extract it anywhere and double-click its start-gauntlet.bat.
    Your keys, runs and settings are kept (they live in C:\Users\<you>\AppData\Roaming\Gauntlet).
 
 Blocked even after Unblock? Open the extracted folder, click the address bar, type powershell,

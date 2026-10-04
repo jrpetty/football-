@@ -17,7 +17,8 @@ No typing, no commands. You need a Windows computer and about ten minutes.
      `start-gauntlet.bat` again.
    * The first start takes a minute or two (it downloads Gauntlet's building blocks). Later starts take seconds.
    * Keep the black window open while you use Gauntlet. Closing it stops Gauntlet.
-4. **Paste your key.** Your browser opens on the **Welcome** page:
+4. **Paste your key.** Your browser opens on **Home**, which says **Let's get you set up** and shows four steps. Press
+   the big **Add a key** button. That opens the **Welcome** page:
    1. **Get one key.** We recommend **OpenRouter**: one key for every AI (Claude, GPT, Gemini, Grok, DeepSeek) and one
       bill. Press **Get an OpenRouter key**, sign up, add about £5 of credit, press **Create Key** and copy it.
       (Prefer a company's own key? Open **Step-by-step help** for Anthropic, OpenAI, Google and others.)
@@ -26,7 +27,19 @@ No typing, no commands. You need a Windows computer and about ten minutes.
       **"✓ OpenRouter key works — 18 models ready"**.
    3. **Try it.** Press **Free demo** to look around with sample results, or **2p test run** for a real test on the two
       cheapest models (the exact cost is shown before you press Start).
-5. **Next time:** double-click **Gauntlet** on your desktop.
+5. **Follow Home's steps.** Click **Home** at the top of the sidebar. The next step is always the big button:
+   **Run the 2p Quick Check**, then **See the results**, then **Open the Presenter** (your first video slides).
+6. **Next time:** double-click **Gauntlet** on your desktop.
+
+## Finding your way around
+
+The sidebar shows six things: **Home**, **Run a test**, **Results**, **Make a video**, **Copy & paste tests** and
+**Settings**. Related pages sit in tabs at the top (for example Results → Leaderboard | Best on each test | Past runs |
+History). Want every tool? Press **Show all tools** at the bottom of the sidebar (press **Simple menu** to go back).
+
+Stuck on a page? Press the round **Help** button at the bottom right: it says what the page is for, how to use it step
+by step, and answers common questions. The first time you open a page, a short tip appears at the top; press **×** to
+hide it, or **Show tips again** in the Help panel to bring them all back. None of this shows in Broadcast mode (**B**).
 
 ![The welcome page](docs/screenshots/easy-setup/01-welcome-first-run.png)
 
@@ -49,7 +62,7 @@ old copies are left where they were; `migration-log.txt` in that folder lists wh
 
 ## Adding more keys
 
-Open **API Keys** in the sidebar and paste any key into **Paste any API key**. Several keys at once (one per line) work
+Click **Settings** in the sidebar (it opens on **API keys**) and paste any key into **Paste any API key**. Several keys at once (one per line) work
 too, and so do lines copied from a `.env` file such as `ANTHROPIC_API_KEY=sk-ant-…`. If Gauntlet can't tell which company
 a key is from, it asks with big buttons.
 

@@ -67,20 +67,40 @@ A first run that needs no API keys, useful for checking the install:
 node src/cli.ts run --models random-baseline --suite quick --repeats 1 --yes
 ```
 
-Then open the dashboard: **New Run** → pick models and a suite → check the cost estimate → **Start**.
-The **Live Arena** streams every model's output side by side while it works.
+Then open the dashboard: **Home** shows a four-step "Getting started" list (add a key → run the 2p Quick Check →
+see the results → make video slides). Or click **Run a test** → pick models and a suite → check the cost estimate →
+**Start**. The **Live Arena** streams every model's output side by side while it works.
 
 ## Dashboard
+
+The sidebar starts in **simple mode**: six task-named items.
+
+| Sidebar item | What's inside (tabs at the top of the page) |
+|---|---|
+| **Home** | What to do next, your latest run, money spent this month (in £) and what's waiting to be pasted. |
+| **Run a test** | Start a test · Tournaments (Arena) · Test library · Cost planner |
+| **Results** | Leaderboard · Best on each test · Past runs · History |
+| **Make a video** | Presenter · Head to Head · Studio · The Gallery |
+| **Copy & paste tests** | Manual Inbox · Grading Station · Blind review · Grade one answer |
+| **Settings** | API keys · Budget · Models |
+
+**Show all tools** at the bottom of the sidebar reveals every page, grouped under the same headings (hover a heading
+for what it's for). Nothing is ever removed: every page keeps its address, so old links and bookmarks still work. The
+first time you open a page, a short tip says what it's for; the **Help** button (bottom right) explains any page step
+by step, and **Show tips again** in it brings the tips back. Broadcast mode (**B**) hides the tips, the Help button
+and the checklist, so recordings stay clean.
+
+Every page, as named in **Show all tools**:
 
 | Screen | What it's for |
 |---|---|
 | **Leaderboard** | Gauntlet Index with 95% CIs, category heatmap, Olympic medal table, score-vs-cost scatter with Pareto frontier, speed charts. Combined across all runs or per run. |
-| **New Run** | Pick a suite or hand-pick tests, choose models, repeats, concurrency and judges. Shows a live cost estimate and warnings (missing keys, unverified prices). |
+| **New Run** (Run a test) | Pick a suite or hand-pick tests, choose models, repeats, concurrency and judges. Shows a live cost estimate and warnings (missing keys, unverified prices). |
 | **Live Arena** | One lane per model: live streaming output, progress, spend, tokens, score ticker. Made for recording. |
 | **Runs / Run detail** | History with resume/export/delete. Results matrix (tests × models). The inspector shows every case's transcript, timing, tokens, cost, score breakdown, judge rationales, artifacts (playable games, SVGs, screenshots) and the **Replay player** for simulations. |
 | **Tests / Test Builder** | Browse the library with the exact prompts. Create, duplicate, validate and save new tests without writing code. |
 | **Models** | Add or edit models, pricing and effort. API key status per provider, ping a model, discover the model ids your key can access. |
-| **Manual Inbox** | Prompts waiting for copy & paste models: copy, paste the reply, submit. |
+| **Manual Inbox** (Copy & paste tests) | Prompts waiting for copy & paste models: copy, paste the reply, submit. |
 | **Grader** | Paste any model's reply to one case and get it graded instantly (doesn't touch the leaderboard). |
 | **Cost Planner** | Estimated cost of every test for every model, before you spend anything. |
 | **Blind Review** | Rate open-ended outputs (games, illustrations) side by side with identities hidden, and arbitrate cases where the judges disagreed. |

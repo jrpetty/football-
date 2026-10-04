@@ -2,6 +2,28 @@
 
 A practical checklist for running a benchmark you can put on video and defend in the comments.
 
+## Finding your way around
+
+The sidebar starts simple, with six items named after what you want to do:
+
+* **Home**: the "Getting started" steps (add a key → run the 2p Quick Check → see the results → make video slides,
+  each ticked off as you do it), big "What do you want to do?" cards, your latest run, this month's spending and what
+  is waiting in the copy & paste inbox.
+* **Run a test** (tabs: Start a test · Tournaments · Test library · Cost planner). "New Run" in this playbook means
+  this page.
+* **Results** (Leaderboard · Best on each test · Past runs · History).
+* **Make a video** (Presenter · Head to Head · Studio · The Gallery).
+* **Copy & paste tests** (Manual Inbox · Grading Station · Blind review · Grade one answer).
+* **Settings** (API keys · Budget · Models).
+
+**Show all tools** at the bottom of the sidebar reveals every page (New Model Day, Viewer Challenge, Publish, the
+Grader and the rest), grouped under the same headings; **Simple menu** goes back. The choice is remembered. Every
+page keeps its address, so links in this playbook (`#/versus`, `#/inbox` …) work in both modes.
+
+Each page shows a one-line tip the first time you open it, and the round **Help** button (bottom right) explains the
+page step by step. **Help → Show tips again** brings the tips back. Press **B** for Broadcast mode before recording:
+tips, the Help button and the Home checklist all disappear.
+
 ## 1. Plan (5 minutes, $0)
 
 1. **Pick the question** the episode answers: "Which model is the best agent?", "Is the new model worth 5× the
@@ -18,7 +40,7 @@ A practical checklist for running a benchmark you can put on video and defend in
 3. **Check the price** in **Cost Planner** or with `node src/cli.ts costs --suite core --models a,b,c`. The
    table shows every test × model and a conservative upper bound.
 4. **Verify pricing** for every model you'll show costs for (Models → edit → set *verified* date).
-5. **Connect and test your keys** on the dashboard's **API Keys** page: paste any key into **Paste any API key**
+5. **Connect and test your keys** on the dashboard's **Settings → API keys** page: paste any key into **Paste any API key**
    (Gauntlet detects the company and checks it for free), and optionally *Send a test message* on a company's card (a
    fraction of a cent). One **OpenRouter** key runs every model whose own key is missing, labelled *via OpenRouter*; for a
    published leaderboard, use each company's own key where you can (see *One key for everything* below). First install or
@@ -34,12 +56,12 @@ This checks the install, the dashboard, the Live Arena and the replays without s
 
 ## 3. Run for real
 
-* In the dashboard: **New Run** → suite, models, **3 repeats**, and a **spending cap** (about 1.25× the
+* In the dashboard: **Run a test** → suite, models, **3 repeats**, and a **spending cap** (about 1.25× the
   estimate) → Start.
 * Or from the terminal: `node src/cli.ts run --models a,b,c --suite core --repeats 3 --max-cost 25 --name "Episode 12"`.
 * If you hit the cap, or a provider has an outage: **Runs → Resume**. Finished cases are kept; only missing or
   errored ones re-run.
-* To test a model that has no API (a chat app, an old model, a model that isn't out yet): in New Run press
+* To test a model that has no API (a chat app, an old model, a model that isn't out yet): in **Run a test** press
   **Test models by copy & paste**, tick the models, and answer their prompts in the **Manual Inbox**. See
   [Testing old or chat-only models by copy & paste](#testing-old-or-chat-only-models-by-copy--paste).
 
@@ -98,7 +120,7 @@ for score-detail keys live in `ui/src/components/clarity/plain.ts`.
 
 ## 4b. Making the video (Studio)
 
-Open **Studio** in the sidebar (or the **Studio** button on a run's page). It reads the run you just finished and
+Open **Make a video → Studio** in the sidebar (or the **Studio** button on a run's page). It reads the run you just finished and
 builds the raw material for the video. Nothing here calls a model or costs money unless you press *Polish with AI*.
 
 1. **Highlights** — the moments worth showing, ranked most dramatic first: upsets (a cheap model beating an
@@ -192,7 +214,7 @@ from the run's recorded results; it plays like a game show, so a viewer can foll
 
 1. **Run the same tests on both models** (any suite, any number of runs). Only tests *both* models finished
    count, and inside a test only the questions both answered, so a half-finished run can't tilt it.
-2. **Open Head to Head** in the sidebar (`#/versus`). It starts with the two best models that share the most
+2. **Open Make a video → Head to Head** in the sidebar (`#/versus`). It starts with the two best models that share the most
    tests; change the **Left corner** / **Right corner**, swap sides with the arrows button, or pick one run under
    **Results from** (default: every valid result, the same pool as the Leaderboard).
 3. **What's on the page**, top to bottom:
@@ -252,7 +274,7 @@ simply get the plain score view, as before. Add `?plain=1` to the address to see
 
 ## Grading: you, the AI, or both
 
-Open **Grading Station** in the sidebar. It lists every answer in a run that a person can look at, with the ones
+Open **Copy & paste tests → Grading Station** in the sidebar. It lists every answer in a run that a person can look at, with the ones
 that still need a grade first. Pick a run at the top, then work through the list on the left.
 
 **What you see for each answer**
@@ -509,7 +531,7 @@ per judge-pair. Set `imageOptions.quality` to `"medium"` on GPT Image 1 to paint
 drop the file on the card, click to choose it, or copy the picture in the app and press **Ctrl+V**. Any format
 works (WebP and others are converted); a thumbnail or the wrong shape gets a warning. Enter the cost if you know it.
 
-**5. Watch it.** Open the run and press **The Gallery** (or the sidebar's *The Gallery*). Each commission is a
+**5. Watch it.** Open the run and press **The Gallery** (or the sidebar's *Make a video → The Gallery*). Each commission is a
 room: every painting in a frame under a spotlight, with a museum placard (title, *Artist: model*, medium, **Brief
 followed 8/9**, **Artistry 7.5/10**, cost per image). The rosette marks the best painting of the room. Press
 **T** to show or hide the ticks on each painting (green = there, amber = partly, red = missing or broken),
@@ -864,7 +886,7 @@ From the command line: `--max-cost 40` (US dollars), `--per-answer 2.5` (US doll
 
 ### Your own budget
 
-Tired of picking a limit every time? Set your own budget once, on the **Budget** page (left menu, under Lab; New Run
+Tired of picking a limit every time? Set your own budget once, on the **Budget** page (sidebar: **Settings → Budget**; New Run
 links to it as well). Everything is typed in pounds, with the same **£5 / £10 / … / Custom** buttons, so any amount
 works.
 
