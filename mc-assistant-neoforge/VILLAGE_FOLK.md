@@ -1881,7 +1881,9 @@ every chart reads out the day under the mouse.
   wages and buying-in for the range.
 * **Jobs:** every trade: its hands, their average level, their pay, what it made yesterday
   and this week, what it makes per hand a day, and its share of everything the village
-  made, biggest earner first. Click a trade for its own history (what it made, and how many
+  made, biggest earner first; under it, what every trade made each day, stacked, so you can
+  see at a glance which trades bring in the most and how that has changed (the mouse reads out
+  each trade's share of the day). Click a trade for its own history (what it made, and how many
   worked at it, day by day).
 * **Folk:** everybody, with trade, level, age (in years), purse, pay, what each made
   yesterday, mood, nature and wealth; click any heading to sort by it. The leader is starred.

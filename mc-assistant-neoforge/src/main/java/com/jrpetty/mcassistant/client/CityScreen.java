@@ -416,11 +416,30 @@ public class CityScreen extends Screen {
             chart(g, x + half + 6, cy, half, chartH, title + ": hands", mx, my,
                 new Series("Hands", data.getCompound("trade_hands").getIntArray(selectedTrade), BLUE));
         } else {
-            chart(g, x, cy, half, chartH, "Made a day, the five biggest earners (click a trade)", mx, my,
-                tradeSeries("trade_out", 5).toArray(new Series[0]));
+            stacked(g, x, cy, half, chartH, "What each trade made, a day (click a trade for its own)", mx, my, tradesStacked("trade_out", 7));
             chart(g, x + half + 6, cy, half, chartH, "Hands, the five biggest trades", mx, my,
                 tradeSeries("trade_hands", 5).toArray(new Series[0]));
         }
+    }
+
+    /** Every trade's series, the biggest few by name and the rest together as "Others". */
+    private List<Series> tradesStacked(String key, int most) {
+        List<Series> top = tradeSeries(key, most);
+        CompoundTag t = data.getCompound(key);
+        int[] others = new int[days().length];
+        java.util.Set<String> shown = new java.util.HashSet<>();
+        for (Series s : top) shown.add(s.name());
+        boolean any = false;
+        for (String id : t.getAllKeys()) {
+            String name = id.charAt(0) + id.substring(1).toLowerCase(Locale.ROOT);
+            for (CompoundTag j : compounds("jobs")) if (j.getString("id").equals(id)) { name = j.getString("title"); break; }
+            if (shown.contains(name)) continue;
+            int[] v = t.getIntArray(id);
+            for (int i = 0; i < Math.min(v.length, others.length); i++) { others[i] += v[i]; any |= v[i] != 0; }
+        }
+        List<Series> out = new ArrayList<>(top);
+        if (any) out.add(new Series("Others", others, GREY));
+        return out;
     }
 
     /** The biggest trades' series (by their total in the range), coloured as their uniforms. */
@@ -1223,6 +1242,76 @@ public class CityScreen extends Screen {
             for (Series s : all) {
                 int idx = s.values().length - n + i;
                 if (idx >= 0) tip.add(Component.literal(s.name() + ": " + s.values()[idx]).withColor(s.colour() & 0xFFFFFF));
+            }
+            hover = tip;
+            hoverX = mx;
+            hoverY = my;
+        }
+    }
+
+    /** Bars stacked a day at a time: what each part was, and the whole, with the day under the mouse read out. */
+    private void stacked(GuiGraphics g, int x, int y, int cw, int ch, String title, int mx, int my, List<Series> all) {
+        int[] days = days();
+        int n = span();
+        small(g, Ui.clip(font, title, (int) ((cw - 4) / 0.75)), x, y, Ui.FAINT);
+        int px = x + 24, py = y + 9, pw = cw - 26, ph = ch - 20;
+        g.fill(px, py, px + pw, py + ph, 0xFFD4D4D4);
+        g.renderOutline(px - 1, py - 1, pw + 2, ph + 2, Ui.EDGE_SOFT);
+        if (n <= 0 || pw < 10 || ph < 10 || all.isEmpty()) return;
+        int[] totals = new int[n];
+        for (Series s : all) {
+            int[] v = s.values();
+            for (int i = 0; i < n; i++) {
+                int idx = v.length - n + i;
+                if (idx >= 0) totals[i] += Math.max(0, v[idx]);
+            }
+        }
+        int max = 1;
+        for (int t : totals) max = Math.max(max, t);
+        max = niceUp(max);
+        for (int k = 0; k <= 2; k++) {
+            int gy = py + ph - (int) ((ph - 1) * k / 2.0);
+            g.fill(px, gy, px + pw, gy + 1, k == 0 ? Ui.EDGE_SOFT : 0xFFC0C0C0);
+            String lbl = shortNum(max * k / 2);
+            small(g, lbl, px - 2 - (int) (font.width(lbl) * 0.75), gy - 3, Ui.FAINT);
+        }
+        double slot = pw / (double) n;
+        int bw = Math.max(1, (int) slot - (slot > 4 ? 1 : 0));
+        for (int i = 0; i < n; i++) {
+            int sx = px + (int) (i * slot);
+            int base = 0;
+            for (Series s : all) {
+                int[] v = s.values();
+                int idx = v.length - n + i;
+                if (idx < 0 || v[idx] <= 0) continue;
+                int y0 = py + ph - (int) Math.round(base * (ph - 1) / (double) max);
+                base += v[idx];
+                int y1 = py + ph - (int) Math.round(base * (ph - 1) / (double) max);
+                if (y0 > y1) g.fill(sx, y1, sx + bw, y0, s.colour());
+            }
+        }
+        small(g, "day " + days[days.length - n], px, py + ph + 2, Ui.FAINT);
+        String lastDay = "day " + days[days.length - 1];
+        small(g, lastDay, px + pw - (int) (font.width(lastDay) * 0.75), py + ph + 2, Ui.FAINT);
+        int kx = px + 3, ky = py + 1;
+        for (Series s : all) {
+            int kw = (int) (font.width(s.name()) * 0.75) + 12;
+            if (kx + kw > px + pw) { kx = px + 3; ky += 8; }
+            if (ky > py + ph - 8) break;
+            g.fill(kx, ky + 2, kx + 6, ky + 4, s.colour());
+            small(g, s.name(), kx + 8, ky, Ui.MUTED);
+            kx += kw + 2;
+        }
+        if (mx >= px && mx < px + pw && my >= py && my < py + ph) {
+            int i = Math.max(0, Math.min(n - 1, (int) ((mx - px) / slot)));
+            List<Component> tip = new ArrayList<>();
+            tip.add(Component.literal("Day " + days[days.length - n + i] + ": " + totals[i] + " in all"));
+            for (Series s : all) {
+                int idx = s.values().length - n + i;
+                if (idx >= 0 && s.values()[idx] > 0) {
+                    int pct = totals[i] == 0 ? 0 : Math.round(s.values()[idx] * 100f / totals[i]);
+                    tip.add(Component.literal(s.name() + ": " + s.values()[idx] + " (" + pct + "%)").withColor(s.colour() & 0xFFFFFF));
+                }
             }
             hover = tip;
             hoverX = mx;
