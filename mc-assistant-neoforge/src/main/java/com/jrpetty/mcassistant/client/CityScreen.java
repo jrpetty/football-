@@ -488,7 +488,8 @@ public class CityScreen extends Screen {
             Ui.chip(g, x, ry, Ui.job(p.getInt("ordinal")));
             String[] cells = { p.getString("name") + (p.getBoolean("leader") ? " ★" : ""), p.getString("trade"), Integer.toString(p.getInt("level")),
                 p.getInt("years") + "y", p.getInt("purse") + "c", p.getInt("wage") + "c", p.getInt("made") + "c",
-                Integer.toString(p.getInt("mood")), p.getString("type"), p.getString("wealth") };
+                Integer.toString(p.getInt("mood")), p.getString("type"),
+                p.getString("wealth").isEmpty() ? "" : p.getString("wealth") + " (" + p.getInt("worth") + "c)" };
             for (int c = 0; c < cells.length; c++) {
                 if (FOLK_COLS[c] >= cw - 20) break;
                 int colW = (c + 1 < FOLK_COLS.length ? FOLK_COLS[c + 1] : cw) - FOLK_COLS[c] - 3;
@@ -519,7 +520,7 @@ public class CityScreen extends Screen {
             case 5 -> Comparator.comparingInt(p -> p.getInt("wage"));
             case 7 -> Comparator.comparingInt(p -> p.getInt("mood"));
             case 8 -> Comparator.comparing(p -> p.getString("type"));
-            case 9 -> Comparator.comparing(p -> p.getString("wealth"));
+            case 9 -> Comparator.comparingInt(p -> p.getInt("worth"));
             default -> Comparator.comparingInt(p -> p.getInt("made"));
         };
         return sortDown ? c.reversed() : c;
@@ -544,7 +545,7 @@ public class CityScreen extends Screen {
         rows.add("Mandate: " + (l.getString("mandate").isEmpty() ? "none — chosen, not elected" : l.getString("mandate")));
         rows.add("Orders: " + (l.getString("orders").isEmpty() ? "none yet" : l.getString("orders")));
         rows.add("Council: " + (l.getString("council").isEmpty() ? "none" : l.getString("council")));
-        if (l.contains("pace")) rows.add("Sets the pace at " + l.getInt("pace") + "% and pay at " + l.getInt("pay") + "%");
+        if (l.contains("pace")) rows.add("Sets the work " + (l.getInt("pace") >= 0 ? "+" : "") + l.getInt("pace") + "% and pay at " + l.getInt("pay") + "%");
         for (String r : rows) {
             for (FormattedCharSequence line : font.split(Component.literal(r), half)) {
                 g.drawString(font, line, x, ly, Ui.INK, false);
@@ -662,12 +663,15 @@ public class CityScreen extends Screen {
         int rx = x + half + 8, rw = cw - half - 8, ry = y;
         Ui.section(g, font, "Contentment " + now.getInt("content") + "/100", rx, ry, rw);
         ry += 12;
-        String[] parts = { "Food", "Homes", "Mood", "Safety", "Amenities", "Wages" };
-        int[] vals = now.getIntArray("content_parts");
+        // Each part out of what it can come to (food and mood a quarter each, beds a fifth, and so on).
+        String[] parts = { "Food", "Homes", "Mood", "Safety", "Amenities", "Wages", "Rest day" };
+        int[] vals = now.getIntArray("content_parts"), most = now.getIntArray("content_max");
         for (int i = 0; i < parts.length && i < vals.length; i++) {
+            int max = i < most.length ? Math.max(1, most[i]) : 100;
+            float frac = vals[i] / (float) max;
             g.drawString(font, parts[i], rx, ry, Ui.INK, false);
-            Ui.bar(g, rx + 56, ry, rw - 56 - 22, 8, vals[i] / 100f, vals[i] >= 60 ? GREEN : vals[i] >= 35 ? AMBER : RED);
-            Ui.right(g, font, Integer.toString(vals[i]), rx + rw, ry, Ui.MUTED);
+            Ui.bar(g, rx + 56, ry, rw - 56 - 34, 8, frac, frac >= 0.6f ? GREEN : frac >= 0.35f ? AMBER : RED);
+            Ui.right(g, font, vals[i] + "/" + max, rx + rw, ry, Ui.MUTED);
             ry += 11;
         }
         ry += 4;
@@ -1436,7 +1440,7 @@ public class CityScreen extends Screen {
             for (int i = FOLK_COLS.length - 1; i >= 0; i--) {
                 if (mx >= x + FOLK_COLS[i]) {
                     if (sortColumn == i) sortDown = !sortDown;
-                    else { sortColumn = i; sortDown = i != 0 && i != 1 && i != 8 && i != 9; }
+                    else { sortColumn = i; sortDown = i != 0 && i != 1 && i != 8; }
                     return true;
                 }
             }

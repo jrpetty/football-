@@ -376,6 +376,7 @@ public final class Annals {
             c.putInt("mood", f.persona().mood());
             c.putString("type", f.isBaby() ? "" : Values.type(f));
             c.putString("wealth", f.isBaby() ? "" : Wealth.tier(f).name().toLowerCase(Locale.ROOT).replace('_', ' '));
+            c.putInt("worth", f.isBaby() ? 0 : Wealth.worth(f));
             c.putString("partner", f.life().partnerName());
             c.putBoolean("leader", f.getUUID().equals(Villages.elder(id)));
             c.putBoolean("bed", f.bedPos() != null);
@@ -487,8 +488,10 @@ public final class Annals {
         Contentment.View view = Contentment.of(level, id);
         c.putInt("content", view.score());
         c.putString("content_word", view.word());
-        int[] parts = { view.food(), view.homes(), view.mood(), view.safety(), view.amenities(), view.wages() };
+        int rest = Math.max(0, view.score() - view.food() - view.homes() - view.mood() - view.safety() - view.amenities() - view.wages());
+        int[] parts = { view.food(), view.homes(), view.mood(), view.safety(), view.amenities(), view.wages(), rest };
         c.putIntArray("content_parts", parts);
+        c.putIntArray("content_max", new int[]{ 25, 20, 25, 10, 14, 5, 5 });           // what each part can come to (Contentment)
         c.put("content_good", strings(view.good()));
         c.put("content_bad", strings(view.bad()));
         c.putString("economy", Economy.line(id));
@@ -781,7 +784,7 @@ public final class Annals {
             if (per > bestPer) { bestPer = per; best = e.getKey(); }
             if (per < worstPer && week.getOrDefault(e.getKey(), 0) > 0) { worstPer = per; worst = e.getKey(); }
         }
-        if (best != null) out.add("+Most made per hand: " + title(best) + ", " + Math.round(bestPer) + " coins' worth a day each ("
+        if (best != null) out.add("+Most made per hand: " + title(best) + ", " + Math.round(bestPer) + (Math.round(bestPer) == 1 ? " coin's" : " coins'") + " worth a day each ("
             + hands.get(best) + " at it).");
         String topTrade = null;
         int topWeek = 0, total = 0;
