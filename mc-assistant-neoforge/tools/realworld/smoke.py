@@ -555,6 +555,63 @@ def museum_stage(r, look, cx, cz):
     say("alive after the museum: %s" % client_alive())
 
 
+def jobs_stage(r, look, cx, cz):
+    """The job market between towns (entity/JobMarket, JobSeekers): a second town a little way off,
+    the two agreeing to trade, a Wanted notice put up on the second town's board, a folk of the first
+    town sent to read its own board (the notice it heard of read out over its head), the Wanted
+    notice on the second town's board, and the city books open at the job market."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    tx, tz = cx + 230, cz + 20
+    r.cmd("tp %s %d 140 %d" % (USER, tx, tz))
+    time.sleep(15)                                     # the ground arrives
+    say("second town: " + r.cmd("village spawnat %d %d 8" % (tx, tz))[:200])
+    time.sleep(20)                                     # its board goes up, its folk take up their trades
+    hy = ground_height(r, cx, cz)
+    ty = ground_height(r, tx, tz)
+    say("pact: " + r.cmd("execute positioned %d %d %d run village jobs pact" % (cx, hy + 1, cz)))
+    say("want: " + r.cmd("execute positioned %d %d %d run village jobs want farmer" % (tx, ty + 1, tz)))
+    step = {"north": (0, -1), "south": (0, 1), "east": (1, 0), "west": (-1, 0)}
+
+    def board_view(x, y, z, far):
+        """Where to stand to see a town's board whole, and where to look: (eye, target), or None."""
+        out = r.cmd("execute positioned %d %d %d run village jobs" % (x, y, z))
+        say("jobs: " + out[:600])
+        m = re.search(r"Board: (-?\d+) (-?\d+) (-?\d+) facing (\w+)", out)
+        if not m:
+            return None
+        bx, by, bz, facing = int(m.group(1)), int(m.group(2)), int(m.group(3)), m.group(4)
+        right = {"north": "west", "west": "south", "south": "east", "east": "north"}[facing]
+        mid_x = bx + 0.5 + step[right][0] * 4.5
+        mid_z = bz + 0.5 + step[right][1] * 4.5
+        eye = (mid_x + step[facing][0] * far, by + 1.0, mid_z + step[facing][1] * far)
+        return eye, (mid_x, by + 2.5, mid_z)
+
+    # A folk of the first town sent to read its own board: the notice it has heard of, over its head.
+    first = board_view(cx, hy + 1, cz, 7)
+    say("look: " + r.cmd("execute positioned %d %d %d run village jobs look" % (cx, hy + 1, cz))[:300])
+    time.sleep(10)                                     # it walks there and starts reading
+    if first:
+        (ex, ey, ez), (mx, my, mz) = first
+        look("19-jobs-1-reading", ex, ey, ez, mx, my - 1.0, mz, wait=4)
+    # The Wanted notice on the second town's board.
+    second = board_view(tx, ty + 1, tz, 9)
+    if second:
+        (ex, ey, ez), (mx, my, mz) = second
+        look("19-jobs-2-wanted", ex, ey, ez, mx, my, mz, wait=6)
+    # The city books at the job market: the notice, and anybody who has applied to it.
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, tx, ty + 1, tz))
+    time.sleep(3)
+    say("books: " + r.cmd("execute as %s at @s run village jobs books" % USER))
+    time.sleep(4)
+    shot("19-jobs-3-books")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the job market: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")
@@ -750,6 +807,10 @@ def main():
         horses_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("horses stage failed: %s" % e)
+    try:
+        jobs_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("jobs stage failed: %s" % e)
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the founding: %s" % client_alive())
     try:

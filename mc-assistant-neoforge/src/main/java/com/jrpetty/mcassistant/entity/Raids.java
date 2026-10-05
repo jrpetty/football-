@@ -403,6 +403,8 @@ public final class Raids {
         for (AssistantEntity f : Villages.folkOf(v.id())) {
             if (f instanceof VillageFolkEntity folk && folk.post() != null) leavePost(folk);
         }
+        // A bad raid: homes lost, or the place too few to keep: its homeless go to a neighbour (JobMarket).
+        if (a.raid) JobMarket.raided(level, v, a.lost);
     }
 
     /** A folk of this village fell (Raids counts the night's losses). */

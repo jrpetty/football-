@@ -263,6 +263,8 @@ public final class FolkTalk {
         Job j = f.peekJob();
         if (j != null) return capFirst(j.label());
         if (f.guidePlayer() != null) return "Showing somebody the way to " + f.guideWhat();
+        String market = JobSeekers.doing(f);                    // at the board, saying goodbye, on the road (JobSeekers)
+        if (market != null) return market;
         String status = f.clientStatus();
         if (f.stationTask() == AssistantEntity.StationTask.NONE) return "Looking for a trade";
         // On horseback, or about the horses (Stables, Riding): "Riding Bay to the north mine".
@@ -308,6 +310,7 @@ public final class FolkTalk {
         line(sb, f.isBaby() ? "School" : "Teaches", School.cardLine(f));
         String levels = f.tradeLevels();
         if (!f.isBaby() && !levels.isEmpty() && levels.contains(",")) line(sb, "Has worked", levels);
+        if (!f.isBaby()) line(sb, "Job market", JobMarket.cardLine(f));       // applied elsewhere, or came from elsewhere (JobMarket)
         if (!f.isBaby()) line(sb, "At its work", Skill.line(f));
         // Its horses: the rancher's gentling and the stable, a rider's horse and rides (Stables).
         String horses = f.isBaby() ? null : Stables.card(f);

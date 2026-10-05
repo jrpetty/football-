@@ -40,6 +40,7 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  *   /village founding         the next Founding Day; founding now (ops) keeps it this minute
  *   /village birthdays        the week's birthdays; birthdays now &lt;name&gt; (ops) keeps one now
  *   /village speed 16|max|normal   time runs faster, to watch a village grow (ops / world owner)
+ *   /village jobs [why|books|post|decide|look|want|pact]   the job market between towns (JobMarketCommands)
  * </pre>
  */
 public final class VillageCommands {
@@ -183,6 +184,8 @@ public final class VillageCommands {
             .then(Commands.literal("flats")
                 .executes(VillageCommands::flats)
                 .then(Commands.literal("stage").requires(src -> src.hasPermission(2)).executes(VillageCommands::flatsStage)))
+            // The job market between towns: the notices, the applications, who came and went (JobMarketCommands).
+            .then(JobMarketCommands.node())
             .then(Commands.literal("wages").executes(ctx -> page(ctx, 2)))
             .then(Commands.literal("economy").executes(ctx -> page(ctx, 3)))
             // The sellers' books: what the shop, the café, the tavern and the stores have, sell and make.

@@ -285,6 +285,8 @@ public final class VillageBoards {
             for (String w : after) words.add(Villages.spoken(w));
             out.add("LN|After that: " + String.join(", then ", words) + ".");
         }
+        // The job market (JobMarket): our Wanted notices, who is on the road here, who came and went, word from other towns.
+        out.addAll(JobMarket.board(level, id));
         Orders.Order order = Orders.current(id);
         out.add(order == null ? "LM|Elder's orders: none yet — the elder is watching how things go."
             : "LN|Elder's orders: " + order.title + ". " + order.words);

@@ -328,6 +328,9 @@ public class VillageFolkEntity extends AssistantEntity {
             if (tickCount % 10 == 0) Drover.drive(this, herding);
             return;
         }
+        // The job market between towns (JobSeekers): reading the notices at the board, saying its
+        // goodbyes, or on the road to a new place; the rest of its day waits.
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel market && JobSeekers.step(this, market)) return;
         // A friend passing by, hailed by name (Dealings).
         if (!withAPlayer) Dealings.greet(this);
         // Badly hurt: the brewer's healing, its own or (any trade) one from the stores.
@@ -4752,6 +4755,16 @@ public class VillageFolkEntity extends AssistantEntity {
         FolkTalk.speak(this, FolkTalk.pick(getRandom(), "A fresh start.", "Hello! I've come to live here.", "I hope it's better here."));
     }
 
+    /**
+     * Off to another town for good (JobSeekers): its production chest stays behind on the old plot,
+     * the old town's for its couriers to clear (Retiring), and is never looked for from the new one.
+     */
+    public void leftItsPlot() {
+        productionChest = null;
+        oldProductionChest = null;
+        oldChestTries = 0;
+    }
+
     /** Leave for good, with nowhere to go (Contentment): out of the world. */
     public void walkOut() {
         FolkTalk.speak(this, FolkTalk.pick(getRandom(), "I can't stay here any longer. Goodbye.", "I'm off to find a better life."));
@@ -5908,7 +5921,7 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected boolean onBreak() {
         // On the road with a caravan, its own work waits until it is home.
-        return trip != null || expedition != null || Drover.busy(this) || Stables.busy(this) || Nether.away(this) || breakNow();
+        return trip != null || expedition != null || Drover.busy(this) || Stables.busy(this) || Nether.away(this) || JobSeekers.busy(this) || breakNow();
     }
 
     /** The caravan this folk is taking to a colony and back, or null (Caravans). */
