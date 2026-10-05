@@ -368,7 +368,7 @@ public final class Links {
         if (v == null) return null;
         int want = Masonry.shortOf(level, v, Items.TORCH);
         if (want <= 0) return null;
-        boolean saving = f.savingCoal();
+        boolean saving = f.savingCoal() || f.coalLow();   // [economy] or under the floor it keeps (Fuel)
         if (saving && Market.stock(level, village, s -> s.is(Items.TORCH)) >= 8) return null;
         java.util.function.Predicate<ItemStack> fuel = saving ? s -> s.is(Items.CHARCOAL)
             : s -> s.is(Items.COAL) || s.is(Items.CHARCOAL);

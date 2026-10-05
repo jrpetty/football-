@@ -212,6 +212,7 @@ public class VillageFolkEntity extends AssistantEntity {
         back += returnTo(villageCentre, st -> st.is(net.minecraft.world.item.Items.LADDER)
             || st.is(net.minecraft.tags.ItemTags.FENCES) || st.is(net.minecraft.tags.ItemTags.FENCE_GATES), 0, r);
         back += returnTo(villageCentre, st -> st.is(net.minecraft.tags.ItemTags.BEDS), 0, r);   // the next house's beds
+        back += returnTo(villageCentre, Strays::finishing, 0, r);   // [economy] its stairs, slabs, doors and glass too
         if (back > 0) buildNote("build: handed " + back + " back to the stores");
     }
 
@@ -1333,12 +1334,13 @@ public class VillageFolkEntity extends AssistantEntity {
             Raids.fell(village);
             Contentment.loss(village, day);
             int age = ageYears();
-            String how = passing ? "of old age" : Raids.underAlarm(village) ? "when the raiders came" : "by misfortune";
+            // [economy] What took it, in words (Mishap): "by misfortune" said nothing about what kills folk.
+            String how = passing ? "of old age" : Raids.underAlarm(village) ? "when the raiders came" : Mishap.how(cause);
             com.jrpetty.mcassistant.village.Ledger.buried(village, new com.jrpetty.mcassistant.village.Ledger.Grave(
                 displayNameCap(), bornDay, day, how, life.parents(), life.partnerName(), stationTask().title));
             Villages.tell(village, day, passing
                 ? displayNameCap() + " died peacefully in their sleep, aged " + age
-                : displayNameCap() + " died, aged " + age);
+                : displayNameCap() + " died, aged " + age + ", " + how);
             Gatherings.mourn(village, displayNameCap(), day);
             Homes.left(village, getUUID());
             Bank.left(village, this, true);              // its savings at the bank to its partner, a child, or the village
@@ -2763,6 +2765,7 @@ public class VillageFolkEntity extends AssistantEntity {
         growTheField();                                // a full field breaks new ground
         if (turnedToTheFields()) return;               // a hungry village needs farmers (busy or not)
         if (peekJob() != null) return;                 // already busy
+        if (onShift() && Strays.tend(this)) return;    // [economy] the builders' stock it carries, back to the stores
         if (kitFromTheStores()) return;                // seed, saplings, torches, feed, arrows
         if (resting()) return;                         // off the clock for a bit
         if (movedOnFromSpentGround()) return;          // this patch is finished
@@ -5076,7 +5079,7 @@ public class VillageFolkEntity extends AssistantEntity {
             if (got <= 0) break;
             // Fuel with it — but not the coal the age is putting by: the smelter burns wood then
             // (SmeltGoal), and what goes out to it is logs the builders can spare.
-            if (!savingCoal()) {
+            if (!savingCoal() && !coalLow()) {        // [economy] nor the last of it, under the floor (Fuel)
                 drawFrom(villageCentre, s -> s.is(net.minecraft.world.item.Items.COAL) || s.is(net.minecraft.world.item.Items.CHARCOAL), 8, buildStoresRadius());
             } else {
                 int wood = Math.min(8, logsToSpare(server, village));
@@ -7032,7 +7035,9 @@ public class VillageFolkEntity extends AssistantEntity {
         int folk = Villages.headcount(village);
         int r = Villages.storesRadius(village);
         int food = Villages.stock(server, villageCentre, Villages.Task.FOOD, r);
-        if (food * 2 >= Villages.larderForBirth(village)) return false;
+        // [economy] ...or the forecast has turned: short commons, with more eaten than grown by a quarter
+        // (Larder.fieldsWanted). New fields take days to come in, so the hands go before the larder is low.
+        if (food * 2 >= Villages.larderForBirth(village) && !Larder.fieldsWanted(village)) return false;
         // Next to nothing put by is famine: hands go to the fields whatever the stone or timber
         // wants (a town raising its walls had never any to spare, and starved with three farmers).
         boolean famine = food < Math.max(8, 2 * folk);
@@ -7101,6 +7106,21 @@ public class VillageFolkEntity extends AssistantEntity {
         return coalShort;
     }
 
+    private int coalLowTick = -100000;
+    private boolean coalLow;
+
+    /** [economy] Are the stores under the floor of coal a village keeps whatever its age (Fuel)? Looked at once a minute. */
+    @Override
+    public boolean coalLow() {
+        UUID village = ownerId();
+        if (village == null || !(level() instanceof net.minecraft.server.level.ServerLevel server)) return false;
+        if (tickCount - coalLowTick >= 1200) {
+            coalLowTick = tickCount;
+            coalLow = Fuel.low(server, village);
+        }
+        return coalLow;
+    }
+
     /** Next to no glass at all (no bottles for the brewer, the beekeeper or the café): glass before iron.
      *  Short of glass for the windows only, the sand waits for a gap in the ore (Masonry.glassShort is
      *  what the smelter fetches and digs sand for: enough for the windows, not sixteen blocks). */
@@ -7132,17 +7152,15 @@ public class VillageFolkEntity extends AssistantEntity {
     }
 
     @Override
-    protected boolean burnCharcoal() {
+    public boolean burnCharcoal() {
         UUID village = ownerId();
         if (village == null || villageCentre == null
                 || !(level() instanceof net.minecraft.server.level.ServerLevel server)) return false;
         if (tickCount - charcoalCheckTick < 1200) return false;
         charcoalCheckTick = tickCount;
-        boolean wanted = false;
-        for (Villages.Need n : Villages.needs(server, village)) {
-            if (n.task() == Villages.Task.COAL) { wanted = true; break; }
-        }
-        if (!wanted) return false;
+        // [economy] Wanted when the age asks for coal, as it always was, and now too when the stores are
+        // under the floor in any age (save the Wood Age while it still wants timber): Fuel.charcoalWanted.
+        if (!Fuel.charcoalWanted(server, village)) return false;
         java.util.function.Predicate<net.minecraft.world.item.ItemStack> logs =
             st -> st.is(net.minecraft.tags.ItemTags.LOGS);
         int spare = Math.min(16, logsToSpare(server, village));

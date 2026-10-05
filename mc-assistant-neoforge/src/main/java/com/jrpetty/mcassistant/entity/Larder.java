@@ -112,6 +112,12 @@ public final class Larder {
         return forecast(village, b.useAvg()) > b.inAvg() * 1.25;
     }
 
+    /** "yes — ..." or "no — ...": the larder's word on one more mouth, for the books (Annals). */
+    public static String word(@Nullable UUID village, int stock) {
+        Verdict v = oneMore(village, stock);
+        return (v.yes() ? "yes" : "no") + " — " + v.why();
+    }
+
     /** For the books and the elder: the forecast in words. */
     public static String line(@Nullable UUID village) {
         Leader.Books b = village == null ? null : Leader.books(village);

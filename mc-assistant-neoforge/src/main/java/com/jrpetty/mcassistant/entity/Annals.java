@@ -887,7 +887,8 @@ public final class Annals {
         c.putInt("renown", Villages.renown(id));
         Leader.Books b = Leader.books(id);
         c.putString("food_books", b == null ? "" : "stock " + b.stock() + ", in " + Math.round(b.inAvg()) + " a day, eaten "
-            + Math.round(b.useAvg()) + " a day, " + String.format(Locale.ROOT, "%.1f", b.days()) + " days put by");
+            + Math.round(b.useAvg()) + " a day, " + String.format(Locale.ROOT, "%.1f", b.days()) + " days put by"
+            + "; a child: " + Larder.word(id, b.stock()));   // [economy] whether the larder can take one more mouth
         c.putString("wealth", Wealth.bestPaid(id, 5));
         c.putString("open", String.valueOf(Cafe.openLine(level, id)));
         c.putString("first_day", String.valueOf(Ledger.note(id, "annals.first")));
@@ -1136,6 +1137,9 @@ public final class Annals {
                 + Math.round(b.stock() / net) + " at this rate. More hands to the fields and the water.");
             else out.add("+The larder is full enough: " + String.format(Locale.ROOT, "%.1f", b.days()) + " days put by, "
                 + Math.round(b.inAvg()) + " meals in a day against " + Math.round(b.useAvg()) + " eaten.");
+            // [economy] The fields against the mouths (Larder): births wait on what is grown, not only what is put by.
+            Larder.Verdict child = Larder.oneMore(id, b.stock());
+            if (!child.yes()) out.add("-No child is raised now: " + child.why() + ".");
         }
         // Meals: did everybody eat, the children and the old as well as the hands at their work (Meals).
         String meals = Meals.townLine(id);

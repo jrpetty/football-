@@ -223,6 +223,8 @@ public final class VillageCommands {
             .then(Commands.literal("chronicle").executes(VillageCommands::chronicle))
             // The museum and its archive: what is on show, who found it, the volumes (MuseumCommands).
             .then(MuseumCommands.build())
+            // [economy] The larder against the mouths, the coal floor and charcoal, the builders' stock carried about.
+            .then(EconomyCommands.build())
             // What every village you have met thinks of you.
             .then(Commands.literal("standing").executes(VillageCommands::standing))
             // How the villages stand with each other: allies, feuds, tribute.

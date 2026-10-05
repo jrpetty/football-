@@ -612,6 +612,36 @@ def jobs_stage(r, look, cx, cz):
     say("alive after the job market: %s" % client_alive())
 
 
+def economy_stage(r, look, cx, cz):
+    """The larder, the fuel and the builders' stock (entity/Larder, Fuel, Strays): what the village says of
+    them in chat; its smelter set to burn logs into charcoal for the stores (if the village wants it), seen
+    at its furnace; then the Stores page of the town's books, the food and coal charts with the larder's
+    word on a child under them."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    say("economy: " + r.cmd("execute positioned %d 100 %d run village economy" % (cx, cz))[:900])
+    out = r.cmd("execute positioned %d 100 %d run village economy charcoal" % (cx, cz))
+    say("charcoal: " + out[:300])
+    m = re.search(r"SMELTER (.+?) (-?\d+) (-?\d+) (-?\d+)", out)
+    if m:
+        sx, sy, sz = int(m.group(2)), int(m.group(3)), int(m.group(4))
+        r.cmd("tp %s %d %d %d" % (USER, sx + 6, sy + 4, sz + 6))
+        time.sleep(12)                                 # it fills the furnace with logs
+        look("20-economy-1-charcoal", sx + 4.5, sy + 2.5, sz + 4.5, sx, sy + 1, sz, wait=4)
+    else:
+        say("no smelter to photograph at its furnace")
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, cx, ground_height(r, cx, cz) + 1, cz))
+    time.sleep(3)
+    say("stats stores: " + r.cmd("execute as %s at @s run village stats 11" % USER))
+    time.sleep(4)
+    shot("20-economy-2-stores")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the economy: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

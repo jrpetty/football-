@@ -113,9 +113,15 @@ public class SmeltGoal extends Goal {
         s -> s.is(Items.DRIED_KELP_BLOCK), s -> s.is(Items.BLAZE_ROD), s -> s.is(ItemTags.LOGS), s -> s.is(ItemTags.PLANKS),
         s -> s.is(Items.STICK));
 
+    /** [economy] What a village under the floor of coal it keeps (Fuel) burns: wood first, and coal only with no wood. */
+    private static final java.util.List<Predicate<ItemStack>> WOOD_FIRST = java.util.List.of(
+        s -> s.is(Items.DRIED_KELP_BLOCK), s -> s.is(Items.BLAZE_ROD), s -> s.is(ItemTags.LOGS), s -> s.is(ItemTags.PLANKS),
+        s -> s.is(Items.STICK), s -> s.is(Items.COAL), s -> s.is(Items.CHARCOAL), s -> s.is(Items.COAL_BLOCK));
+
     /** The fuels this smelter burns just now, best first. */
     private java.util.List<Predicate<ItemStack>> fuels() {
-        return assistant.savingCoal() ? NO_COAL : FUEL_PRIORITY;
+        if (assistant.savingCoal()) return NO_COAL;
+        return assistant.coalLow() ? WOOD_FIRST : FUEL_PRIORITY;
     }
 
     /** Would a smelter put this on the fire — with the village putting coal by for its age, or not?
