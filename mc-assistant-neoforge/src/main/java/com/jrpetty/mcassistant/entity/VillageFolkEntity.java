@@ -5593,6 +5593,9 @@ public class VillageFolkEntity extends AssistantEntity {
         boolean plenty = food * 5 >= want * (content >= 70 ? 3 : content >= 50 ? 4 : 5);
         boolean lean = !plenty && food * 5 >= Math.max(20, want * 2);
         if (!plenty && !lean) return false;
+        // [economy] A full larder is not a fed village: the fields must grow what the town eats, the
+        // child's mouth counted, and never while the leader has it on short commons (Larder).
+        if (!Larder.oneMore(village, food).yes()) return false;
         if (!Villages.mayBirth(village, level().getGameTime(), lean ? 3 : 1)) return false;
         // Somebody to raise it with, near enough to count as living together,
         // in the same trade-less sense: fed, in work, and not this one. Its

@@ -375,6 +375,8 @@ public final class Villages {
         Waterfront.resetForTests();
         Orders.resetForTests();
         Leader.resetForTests();
+        Larder.resetForTests();             // [economy] the mouths the books were made up for
+        Strays.resetForTests();             // [economy] stock carried about that is the village's
         Ages.resetForTests();
         Interiors.resetForTests();
         Decor.resetForTests();
@@ -1831,6 +1833,9 @@ public final class Villages {
         int want = larderForBirth(villageId);
         int content = Contentment.score(villageId);
         int plenty = want * (content >= 70 ? 3 : content >= 50 ? 4 : 5) / 5;
+        // [economy] The fields against the mouths (Larder): a full larder is not enough if less is grown than eaten.
+        Larder.Verdict fed = Larder.oneMore(villageId, food);
+        if (!fed.yes() && food >= Math.max(4, want * 2 / 5)) return "no — " + fed.why();
         if (food >= plenty) return "yes, the village being " + Contentment.word(content);
         int lean = Math.max(4, want * 2 / 5);
         if (food >= lean) return "slowly — lean times: " + food + " food put by, " + plenty + " would be plenty";

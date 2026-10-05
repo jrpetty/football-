@@ -372,6 +372,11 @@ public final class Leader {
         return Plan.STEADY;
     }
 
+    /** [economy] Tests: these books, as though the leader had made them up this morning. */
+    public static void booksForTests(UUID village, Books b) {
+        BOOKS.put(village, b);
+    }
+
     /** Tests: the plan for these books. */
     public static Plan decideForTests(int stock, int heads, double inAvg, double useAvg, double reserve, Plan was) {
         return decide(stock, heads, inAvg, useAvg, reserve, was, true);
@@ -416,15 +421,19 @@ public final class Leader {
         // full the larder still looks (the four-hundred-day run ate 1,200 meals down to 300 in a week,
         // with eight miners and two farmers, before the leader noticed). Once short, it stays short
         // till nearly as much is grown as eaten, so the hands are not sent back to the mine too soon.
-        double net = useAvg - inAvg;
+        // [economy] The forecast counts every mouth here now, the ones born since the books were last
+        // made up among them (Larder): the three-day average lags a run of births by days.
+        double eat = Larder.forecast(id, useAvg);
+        double net = eat - inAvg;
         double emptyIn = net > 0 ? stock / net : Double.MAX_VALUE;
         // The trend only once there are a few days of it: a village just founded has grown nothing yet,
         // and its settlers' bread would read as a larder draining away (and every hand sent to sow).
         boolean settled = kept >= 4;
-        boolean draining = settled && draining(stock, inAvg, useAvg, reserve, was);
-        Plan plan = decide(stock, heads, inAvg, useAvg, reserve, was, settled);
+        boolean draining = settled && draining(stock, inAvg, eat, reserve, was);
+        Plan plan = decide(stock, heads, inAvg, eat, reserve, was, settled);
         Books b = new Books(stock, in, use, inAvg, useAvg, days, plan, day);
         BOOKS.put(id, b);
+        Larder.booked(id, heads);                                    // [economy] the mouths these books are for
         Ledger.note(id, "leader.books", stock + "|" + round(inAvg) + "|" + round(useAvg) + "|" + round(days) + "|" + plan.name() + "|" + day);
 
         List<String> calls = new ArrayList<>();
@@ -454,9 +463,9 @@ public final class Leader {
             String line = switch (plan) {
                 case FAMINE -> who + " called a famine: " + daysWords + " food left";
                 case SHORT -> who + " put the village on short commons: " + daysWords + " food put by, "
-                    + (draining && days >= reserve * 2 ? "but " + Math.round(inAvg) + " grown a day against " + Math.round(useAvg)
+                    + (draining && days >= reserve * 2 ? "but " + Math.round(inAvg) + " grown a day against " + Math.round(eat)
                         + " eaten: empty in " + Math.round(emptyIn) + " days at this rate"
-                        : inAvg < useAvg ? "and more eaten than grown" : "less than " + String.format(Locale.ROOT, "%.1f", reserve) + " days'");
+                        : inAvg < eat ? "and more eaten than grown" : "less than " + String.format(Locale.ROOT, "%.1f", reserve) + " days'");
                 case PLENTY -> who + " said the larder is full: " + daysWords + " food, and more grown than eaten";
                 case STEADY -> who + " said the village is fed again: " + daysWords + " food put by";
             };
@@ -504,7 +513,7 @@ public final class Leader {
             Market.assemblyNews(id, "We've " + daysWords + " food put by. " + capital(String.join(", ", calls)) + ".");
         }
         DECIDED.put(id, plan.word + ": " + daysWords + " food (" + (int) Math.round(inAvg) + " in, "
-            + (int) Math.round(useAvg) + " eaten a day)" + (calls.isEmpty() ? "" : "; " + String.join(", ", calls))
+            + (int) Math.round(eat) + " eaten a day)" + (calls.isEmpty() ? "" : "; " + String.join(", ", calls))
             + (pay != 100 ? "; wages at " + pay + "%" : ""));
     }
 
