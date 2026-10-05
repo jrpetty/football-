@@ -43,13 +43,23 @@ import java.util.concurrent.ConcurrentHashMap;
  * goes into the new one's, and its keepsakes (presents, things it bought for itself) are never
  * banked in the village stores.
  *
- * <p>While the village is young its houses are given: the village builds them and hands them to
- * the households that need them most, families first. Once it is getting rich (the Stone Age past,
- * a treasury of its own, sixteen folk) a new house is sold: a household with the coin buys it
- * outright, one without rents it from the village at a coin or two a day out of its wages, and buys
- * it when it can; the builders put up houses for sale as the town grows, and a manor for a
- * household rich enough to want one. A household that grows rich moves up, selling its old house
- * back to the village.
+ * <p>The village gives no houses away: it lets them. A household moves in as the village's tenant,
+ * families first, rich or poor, and pays its rent on payday out of its wages, into the treasury: half
+ * a field hand's day for a house, a field hand's day for a two-storey one, two for a manor (so the
+ * rents rise with the place's wages). Nobody is put out for want of it: rent it
+ * cannot pay goes on the slate and is paid back when it can, and the village writes off more than a
+ * week's of it; a house where nobody earns pays none, and a generous leader lets off whatever a
+ * tenant is short. The leader's hall is the one free roof: it goes with the office.
+ *
+ * <p>Some want a house of their own and some never do. A Homemaker does, and a Traditionalist and a
+ * Provider like to own the roof over their heads; a Free Spirit would rather rent and keep its coin
+ * and its freedom; a Merchant buys when the price is a good deal (no more than forty days' rent). A
+ * couple settling down, children, and the middle years pull toward buying; youth, and old age, away.
+ * A household that wants to own puts its pay by on payday (a third of it, or all its purses hold
+ * over a dozen coins a head, whichever is more), and when what it has put by covers the house's
+ * price it buys it from the village: no more rent. One that changes its mind has its savings back.
+ * An owner sells its house back at half what it paid when it leaves it (to marry into the other
+ * house, for the leader's hall, or up to a manor once it has grown rich).
  *
  * <p>A player can buy a house too (`/village house buy`), live in it, and let it out
  * (`/village house let`): a household with nowhere to live moves in and pays the player's rent,
@@ -59,6 +69,11 @@ public final class Homes {
 
     private Homes() {}
 
+    /**
+     * On what terms a household lives where it does. GIVEN is the leader's hall (it goes with the
+     * office), and houses given before the village let them, which it lets to their households on
+     * the next payday.
+     */
     public enum Tenure {
         GIVEN("given by the village"), OWNED("owned"), RENTED("rented from the village"), PLAYER("a player's");
 
@@ -73,7 +88,8 @@ public final class Homes {
     static final class Home {
         final BlockPos anchor;
         final String structure;
-        Tenure tenure = Tenure.GIVEN;
+        /** An empty house is the village's, to let. */
+        Tenure tenure = Tenure.RENTED;
         final List<UUID> members = new ArrayList<>();
         @Nullable UUID landlord;
         String landlordName = "";
@@ -82,6 +98,8 @@ public final class Homes {
         long since = -1;
         int owed;
         boolean toLet;
+        /** What the household has put by out of its wages toward buying it (tenants that want to own). */
+        int saved;
 
         Home(BlockPos anchor, String structure) {
             this.anchor = anchor;
@@ -95,7 +113,6 @@ public final class Homes {
 
     private static final Map<UUID, Map<Long, Home>> HOMES = new ConcurrentHashMap<>();
     private static final Map<UUID, Long> TICKED = new ConcurrentHashMap<>();
-    private static final Map<UUID, Long> MORNING = new ConcurrentHashMap<>();
     /** Folk carrying their things from one house to another. */
     private static final Map<UUID, Move> MOVES = new ConcurrentHashMap<>();
 
@@ -114,7 +131,6 @@ public final class Homes {
         SALE_FOR_TESTS = null;
         HOMES.clear();
         TICKED.clear();
-        MORNING.clear();
         MOVES.clear();
         BED_ERRANDS.clear();
     }
@@ -162,6 +178,7 @@ public final class Homes {
             h.since = Long.parseLong(p[6]);
             h.owed = Integer.parseInt(p[7]);
             h.toLet = "1".equals(p[8]);
+            h.saved = p.length > 9 ? Integer.parseInt(p[9]) : 0;        // put by toward buying it (none in older books)
             return h;
         } catch (RuntimeException e) {
             return null;
@@ -175,7 +192,8 @@ public final class Homes {
             m.append(u);
         }
         Ledger.note(village, "home/" + h.anchor.asLong(), h.tenure.name() + "|" + m + "|" + (h.landlord == null ? "" : h.landlord)
-            + "|" + h.landlordName.replace("|", "") + "|" + h.price + "|" + h.rent + "|" + h.since + "|" + h.owed + "|" + (h.toLet ? "1" : "0"));
+            + "|" + h.landlordName.replace("|", "") + "|" + h.price + "|" + h.rent + "|" + h.since + "|" + h.owed + "|" + (h.toLet ? "1" : "0")
+            + "|" + h.saved);
     }
 
     /** Every house built for living in is on the books, empty until somebody moves in. */
@@ -393,8 +411,7 @@ public final class Homes {
             else BED_ERRANDS.values().remove(e);
         }
         for (Home h : homes.values()) childBeds(level, v, h, day);
-        // Keepsakes into the household's chest, for those at home.
-        morning(level, v, day);
+        // The rent, the saving and the buying are payday's (Market.tick, after the wages: payday).
     }
 
     /**
@@ -431,18 +448,15 @@ public final class Homes {
             if (c.isBaby() && (childOf(c, f) || p != null && childOf(c, p))) household.add(c);
         }
         Home old = homeOf(id, leader);
-        hall.tenure = Tenure.GIVEN;
+        hall.tenure = Tenure.GIVEN;                    // the one free roof: it goes with the office
         hall.price = 0;
         hall.rent = 0;
+        hall.owed = 0;
         hall.since = day;
         moveIn(level, v, hall, household, day, true);
         if (old != null && old != hall && old.members.isEmpty() && old.tenure != Tenure.PLAYER) {
             if (old.tenure == Tenure.OWNED && old.price > 0) f.earn(Ledger.takeCoins(id, old.price / 2));
-            old.tenure = Tenure.GIVEN;
-            old.price = 0;
-            old.rent = 0;
-            old.owed = 0;
-            save(id, old);
+            vacate(id, old, f);                        // and what they had put by toward buying it, back to them
         }
         Villages.tell(id, day, names(household) + " moved into the leader's hall");
         f.persona().remember(day, "we moved into the leader's hall", 7);
@@ -536,14 +550,20 @@ public final class Homes {
             if (!h.vacant() || seat(h) || Ledger.raising(village, h.anchor)) continue;
             int beds = bedsIn(level, village, h).size();
             if (beds < Math.max(1, adults)) continue;
-            // A manor is kept for a household that buys it.
+            // A manor is kept for a household that could buy it (it rents it first, like any, and buys
+            // it on payday if it wants to own).
             if (h.structure.equals("manor") && !canBuy(level, village, h, household)) continue;
             if (beds < bestBeds) { best = h; bestBeds = beds; }
         }
         return best;
     }
 
-    /** Is the village selling its houses now (rather than giving them)? Once it is getting rich. */
+    /**
+     * Is the town rich enough to sell outright (the Stone Age past, 120 coins in the treasury,
+     * sixteen folk)? Then it keeps an empty manor for a household that could buy it, and builds one
+     * for an owner grown rich enough to move up. Its houses it lets, young or rich, and sells to the
+     * tenants who save for them.
+     */
     public static boolean forSale(UUID village) {
         if (SALE_FOR_TESTS != null) return SALE_FOR_TESTS;
         return Villages.ageOf(village).ordinal() >= Villages.Age.STONE.ordinal()
@@ -556,9 +576,20 @@ public final class Homes {
         return (int) Math.round(base * (1.0 + 0.25 * Villages.ageOf(village).ordinal()));
     }
 
-    /** A day's rent: a coin for a small house, more for a big one. Less under a leader elected for homes. */
+    /** How big a house is, for its rent: a house 1, a two-storey house 2, a manor 4. */
+    static int size(UUID village, Home h) {
+        return h.structure.equals("manor") ? 4 : Ledger.grown(village, h.anchor) ? 2 : 1;
+    }
+
+    /**
+     * A day's rent, scaled to the wages: half a field hand's day for a house, a field hand's day for
+     * a two-storey house, two for a manor (rounded up). A field hand gets a coin in a hamlet, two in
+     * a village or a town, three in a city, so a house is a coin a day until the place is a city. Half
+     * that under a leader elected for homes.
+     */
     static int rent(UUID village, Home h) {
-        int r = Math.max(1, price(village, h) / 30);
+        int hand = Wealth.tradeWage(AssistantEntity.StationTask.FARM, village);
+        int r = Math.max(1, (size(village, h) * hand + 1) / 2);
         if (Elections.mandate(village) == Values.Value.HOMES) r = Math.max(1, r / 2);
         return r;
     }
@@ -566,6 +597,19 @@ public final class Homes {
     static int purses(List<VillageFolkEntity> household) {
         int n = 0;
         for (VillageFolkEntity f : household) if (!f.isBaby()) n += f.purse();
+        return n;
+    }
+
+    static List<VillageFolkEntity> grown(List<VillageFolkEntity> household) {
+        List<VillageFolkEntity> out = new ArrayList<>();
+        for (VillageFolkEntity f : household) if (!f.isBaby()) out.add(f);
+        return out;
+    }
+
+    /** How many of the household earn a wage (have a trade). */
+    static int earners(List<VillageFolkEntity> household) {
+        int n = 0;
+        for (VillageFolkEntity f : household) if (!f.isBaby() && f.stationTask() != AssistantEntity.StationTask.NONE) n++;
         return n;
     }
 
@@ -588,7 +632,10 @@ public final class Homes {
         return left <= 0;
     }
 
-    /** A household takes a house: given, bought, rented from the village, or let from a player. */
+    /**
+     * A household takes a house: the village's, as its tenant (rich or poor: it never gives them, and
+     * one that wants a house of its own saves up and buys it), or a player's, let to it.
+     */
     static void settle(ServerLevel level, Villages.Village v, Home h, List<VillageFolkEntity> household, long day) {
         UUID id = v.id();
         String names = names(household);
@@ -597,20 +644,13 @@ public final class Homes {
         if (h.tenure == Tenure.PLAYER) {
             h.rent = Math.max(1, h.rent);
             how = "rented " + where + " from " + h.landlordName + " at " + h.rent + coins(h.rent) + " a day";
-        } else if (!forSale(id) || generous(id) && purses(household) < price(id, h)) {
-            h.tenure = Tenure.GIVEN;
-            h.price = 0;
-            how = "were given " + where + " by the village";
-        } else if (canBuy(level, id, h, household) && pay(household, price(id, h))) {
-            h.tenure = Tenure.OWNED;
-            h.price = price(id, h);
-            Ledger.addCoins(id, h.price);
-            Economy.spent(id, 0);
-            how = "bought " + where + " for " + h.price + coins(h.price);
         } else {
             h.tenure = Tenure.RENTED;
             h.price = price(id, h);
             h.rent = rent(id, h);
+            h.owed = 0;
+            if (h.saved > 0) Ledger.addCoins(id, h.saved);   // savings left behind in an empty house: nobody's now
+            h.saved = 0;
             how = "rented " + where + " from the village at " + h.rent + coins(h.rent) + " a day";
         }
         // Anyone it is leaving behind (a grown child moving out) goes off their old house's books.
@@ -624,13 +664,18 @@ public final class Homes {
         Villages.tell(id, day, names + " " + how);
         for (VillageFolkEntity f : household) {
             if (f.isBaby()) continue;
-            f.persona().remember(day, (left.isEmpty() ? "we " : "I moved out and ") + how.replaceFirst("^were ", "were ") + " on day " + day, 6);
+            f.persona().remember(day, (left.isEmpty() ? "we " : "I moved out and ") + how + " on day " + day, 6);
         }
         VillageFolkEntity first = household.get(0);
+        boolean saving = h.tenure == Tenure.RENTED && wish(id, h, household).yes();
         if (!left.isEmpty()) {
-            FolkTalk.speak(first, FolkTalk.pick(level.getRandom(), "A place of my own at last!", "My own front door!", "Off I go — I'll visit, I promise."));
+            FolkTalk.speak(first, saving
+                ? FolkTalk.pick(level.getRandom(), "A place of my own at last! Rented for now — I'll save up and buy it.", "My own front door! Well, the village's. For now.")
+                : FolkTalk.pick(level.getRandom(), "A place of my own at last!", "My own front door!", "Off I go — I'll visit, I promise."));
         } else {
-            FolkTalk.speak(first, FolkTalk.pick(level.getRandom(), "Home!", "A roof of our own!", "This one's ours."));
+            FolkTalk.speak(first, saving
+                ? FolkTalk.pick(level.getRandom(), "Home! We'll save up and make it ours.", "Rented for now — ours one day.")
+                : FolkTalk.pick(level.getRandom(), "Home!", "A roof over our heads!", "This'll do us nicely."));
         }
     }
 
@@ -683,8 +728,7 @@ public final class Homes {
                 mover.earn(back);
                 Villages.tell(id, day, mover.displayNameCap() + " sold " + address(id, v, leave) + " back to the village for " + back + coins(back));
             }
-            if (leave.tenure != Tenure.PLAYER) { leave.tenure = Tenure.GIVEN; leave.price = 0; leave.rent = 0; leave.owed = 0; }
-            save(id, leave);
+            vacate(id, leave, mover);                  // what it had put by toward buying it goes with it
         }
         if (emptied || leave == null) {
             Villages.tell(id, day, mover.displayNameCap() + " moved in with " + (mover == a ? b : a).displayNameCap() + " at " + address(id, v, keep));
@@ -1008,32 +1052,32 @@ public final class Homes {
         return d != null && f.getStringUUID().equals(d.copyTag().getString(KEEP));
     }
 
-    // ------------------------------------------------------------------ mornings: rent, buying, moving up
+    // ------------------------------------------------------------------ payday: rent, saving up, buying, moving up
 
-    /** Once a day: rent paid, renters with the coin buy, the rich move up. */
-    static void morning(ServerLevel level, Villages.Village v, long day) {
+    /** A Merchant counts a house a good deal when its price is no more than this many days' rent. */
+    static final int GOOD_DEAL_DAYS = 40;
+    /** What a saving household keeps in each grown folk's purse to live on; the rest it puts by. */
+    static final int LIVE_ON = 12;
+    /** Rent owed past this many days' worth, the village writes off. */
+    static final int WRITE_OFF_DAYS = 7;
+
+    /**
+     * Once a day, on payday, after the wages (Market.tick): the village's tenants pay their rent
+     * into the treasury (and what they owe, when they can), those that want a house of their own put
+     * part of their pay by toward its price and buy it once they have it, a player's tenants pay the
+     * player, and owners grown rich move up to a manor. A house given before the village let its
+     * houses is let to its household from now on.
+     */
+    static void payday(ServerLevel level, Villages.Village v, long day) {
         UUID id = v.id();
-        Long done = MORNING.get(id);
-        long t = level.getDayTime() % 24000L;
-        if (done != null && done == day || t < 1000L || t > 8000L) return;
-        MORNING.put(id, day);
+        enrol(id);
         for (Home h : homes(id).values()) {
-            if (h.members.isEmpty()) continue;
+            if (h.members.isEmpty() || seat(h)) continue;
             List<VillageFolkEntity> household = loadedMembers(id, h);
             if (household.isEmpty()) continue;
             switch (h.tenure) {
-                case RENTED -> {
-                    if (pay(household, h.rent)) Ledger.addCoins(id, h.rent);
-                    else h.owed += h.rent;
-                    // Saved enough: they buy it.
-                    if (forSale(id) && purses(household) >= h.price + 10 && pay(household, h.price)) {
-                        Ledger.addCoins(id, h.price);
-                        h.tenure = Tenure.OWNED;
-                        h.owed = 0;
-                        Villages.tell(id, day, names(household) + " bought " + address(id, v, h) + ", the house they rented, for " + h.price + coins(h.price));
-                    }
-                    save(id, h);
-                }
+                case GIVEN -> letInstead(v, h, household, day);
+                case RENTED -> tenants(level, v, h, household, day);
                 case PLAYER -> {
                     if (pay(household, h.rent)) {
                         String key = "rentdue/" + h.landlord;
@@ -1045,9 +1089,122 @@ public final class Homes {
                     }
                 }
                 case OWNED -> moveUp(level, v, h, household, day);
-                default -> { }
             }
         }
+    }
+
+    /** A house the village gave, before it let them: its household rents it now, from the next payday. */
+    static void letInstead(Villages.Village v, Home h, List<VillageFolkEntity> household, long day) {
+        UUID id = v.id();
+        h.tenure = Tenure.RENTED;
+        h.price = price(id, h);
+        h.rent = rent(id, h);
+        h.owed = 0;
+        save(id, h);
+        Villages.tell(id, day, "the village gives no houses now: " + names(household) + " rent " + address(id, v, h) + " from it at "
+            + h.rent + coins(h.rent) + " a day");
+    }
+
+    /**
+     * A tenant's payday. The rent, and anything owed, out of the household's purses (then out of
+     * what it has put by); what it can't pay goes on the slate. Hardship: a house where nobody earns
+     * pays no rent, a generous leader lets off whatever a tenant is short, and the village writes off
+     * more than a week's rent owed: nobody is put out of a house for want of it. Then, if it wants a
+     * house of its own, it puts by toward the price, and buys the house once it has it.
+     */
+    static void tenants(ServerLevel level, Villages.Village v, Home h, List<VillageFolkEntity> household, long day) {
+        UUID id = v.id();
+        h.rent = rent(id, h);                              // the going rent, as the place's wages go
+        h.price = price(id, h);
+        boolean hard = earners(household) == 0;
+        int due = (hard ? 0 : h.rent) + h.owed;
+        int paid = take(household, h, due);
+        if (paid > 0) {
+            Ledger.addCoins(id, paid);
+            Economy.rent(id, paid);
+        }
+        h.owed = due - paid;
+        if (h.owed > 0 && (hard || generous(id))) {
+            h.owed = 0;                                    // let off
+        } else if (h.owed > WRITE_OFF_DAYS * Math.max(1, h.rent)) {
+            Villages.tell(id, day, "the village wrote off the " + h.owed + coins(h.owed) + " of rent " + names(household) + " owed on "
+                + address(id, v, h));
+            h.owed = 0;
+        }
+        Wish w = wish(id, h, household);
+        if (!w.yes() && h.saved > 0 && w.score() <= 0) giveBack(household, h);     // changed its mind: its savings back
+        if (w.yes() && h.owed == 0) putBy(h, household, day);
+        if (w.yes() && h.price > 0 && h.saved >= h.price) {
+            buy(level, v, h, household, day);
+            return;
+        }
+        save(id, h);
+    }
+
+    /** Take a sum from a household: out of its grown folk's purses, the fullest first, then out of what it has put by. Returns what it could. */
+    static int take(List<VillageFolkEntity> household, Home h, int sum) {
+        if (sum <= 0) return 0;
+        int got = 0;
+        List<VillageFolkEntity> payers = grown(household);
+        payers.sort((a, b) -> Integer.compare(b.purse(), a.purse()));
+        for (VillageFolkEntity f : payers) {
+            int k = Math.min(sum - got, f.purse());
+            if (k > 0 && f.spend(k)) got += k;
+            if (got >= sum) return got;
+        }
+        int k = Math.min(sum - got, h.saved);
+        if (k > 0) {
+            h.saved -= k;
+            got += k;
+        }
+        return got;
+    }
+
+    /**
+     * Saving for the house: each grown folk puts by a third of what it was paid this morning, or all
+     * its purse holds over a dozen coins, whichever is more, until the price is put by.
+     */
+    static void putBy(Home h, List<VillageFolkEntity> household, long day) {
+        int need = h.price - h.saved;
+        for (VillageFolkEntity f : grown(household)) {
+            if (need <= 0) return;
+            int third = Market.paidOn(f.getUUID(), day) / 3;
+            int put = Math.min(need, Math.min(f.purse(), Math.max(third, f.purse() - LIVE_ON)));
+            if (put > 0 && f.spend(put)) {
+                h.saved += put;
+                need -= put;
+            }
+        }
+    }
+
+    /** What a household had put by, back into its grown folk's purses, shared out. */
+    static void giveBack(List<VillageFolkEntity> household, Home h) {
+        List<VillageFolkEntity> grown = grown(household);
+        if (h.saved <= 0 || grown.isEmpty()) return;
+        int each = h.saved / grown.size(), odd = h.saved % grown.size();
+        for (int i = 0; i < grown.size(); i++) grown.get(i).earn(each + (i < odd ? 1 : 0));
+        h.saved = 0;
+    }
+
+    /** Saved up: the household buys the house it rents from the village, for its price, into the treasury. No more rent. */
+    static void buy(ServerLevel level, Villages.Village v, Home h, List<VillageFolkEntity> household, long day) {
+        UUID id = v.id();
+        int price = h.price;
+        h.saved -= price;
+        Ledger.addCoins(id, price);
+        Economy.houseSold(id, price);
+        giveBack(household, h);                            // the change
+        h.tenure = Tenure.OWNED;
+        h.rent = 0;
+        h.owed = 0;
+        save(id, h);
+        String where = address(id, v, h);
+        Villages.tell(id, day, names(household) + " bought " + where + ", the house they rented, for " + price + coins(price)
+            + " put by out of their wages");
+        List<VillageFolkEntity> grown = grown(household);
+        for (VillageFolkEntity f : grown) f.persona().remember(day, "we bought " + where + " for " + price + " coins, saved up out of our wages", 7);
+        if (!grown.isEmpty()) FolkTalk.speak(grown.get(0), FolkTalk.pick(level.getRandom(), "It's ours now — every brick of it!",
+            "Paid for! No more rent for us.", "Our own house at last. Saved for every coin of it."));
     }
 
     /** A household that owns its house and has grown rich buys a manor that stands empty, and sells its house back. */
@@ -1058,20 +1215,150 @@ public final class Homes {
             if (!m.structure.equals("manor") || !m.vacant() || m.tenure == Tenure.PLAYER) continue;
             int price = price(id, m), back = h.price / 2;
             if (purses(household) + back < price + 20) return;
-            for (VillageFolkEntity f : household) if (!f.isBaby()) { f.earn(Ledger.takeCoins(id, back)); break; }
+            VillageFolkEntity seller = null;
+            for (VillageFolkEntity f : household) if (!f.isBaby()) { seller = f; f.earn(Ledger.takeCoins(id, back)); break; }
             if (!pay(household, price)) return;
             Ledger.addCoins(id, price);
+            Economy.houseSold(id, price);
+            if (m.saved > 0) Ledger.addCoins(id, m.saved);   // savings left behind in an empty house: nobody's now
             m.tenure = Tenure.OWNED;
             m.price = price;
+            m.rent = 0;
+            m.owed = 0;
+            m.saved = 0;
             m.since = day;
             moveIn(level, v, m, household, day, true);
             h.members.clear();
-            h.tenure = Tenure.GIVEN;
-            h.price = 0;
-            save(id, h);
+            vacate(id, h, seller);
             Villages.tell(id, day, names(household) + " moved up to the manor at " + address(id, v, m) + ", bought for " + price + coins(price));
             return;
         }
+    }
+
+    /**
+     * A house its household has left, back on the village's books, to let: what they had put by toward
+     * buying it goes back to them (or, with nobody to take it, into the treasury).
+     */
+    static void vacate(UUID village, Home h, @Nullable VillageFolkEntity heir) {
+        if (h.saved > 0) {
+            if (heir != null) heir.earn(h.saved);
+            else Ledger.addCoins(village, h.saved);
+            h.saved = 0;
+        }
+        if (h.tenure != Tenure.PLAYER) {
+            h.tenure = Tenure.RENTED;
+            h.price = 0;
+            h.rent = 0;
+            h.owed = 0;
+        }
+        save(village, h);
+    }
+
+    // ------------------------------------------------------------------ who wants a house of its own
+
+    /**
+     * Whether a household wants a house of its own, how strongly (2 or more: it saves for one), why
+     * (for the books: "a Free Spirit would rather rent and stay free") and the same in its own words
+     * (for the talk card: "we'd rather keep our coin and our freedom").
+     */
+    public record Wish(boolean yes, double score, String why, String mine) {}
+
+    /**
+     * Does this household want to own the house it lives in? By what its grown folk care about most: a
+     * Homemaker does (+3), a Traditionalist and a Provider like to (+2), a Guardian a little (+1), a
+     * Visionary isn't fussed (0), a Free Spirit would rather rent (-3), and a Merchant buys when it is
+     * a good deal (+2: the price no more than forty days' rent; else -1), averaged over the grown folk.
+     * A couple settling down adds one, each child one (two at most); the middle years (thirty to
+     * sixty) add one, youth (under twenty-four) and old age (sixty on) take one away. Two or more and
+     * it saves; once it has started, it keeps on while it still leans that way at all.
+     */
+    static Wish wish(UUID village, Home h, List<VillageFolkEntity> household) {
+        List<VillageFolkEntity> grown = grown(household);
+        if (grown.isEmpty()) return new Wish(false, 0, "nobody grown in the house to buy it", "there's nobody grown here to buy it");
+        int kids = household.size() - grown.size();
+        int rent = Math.max(1, rent(village, h)), price = price(village, h);
+        int days = (price + rent - 1) / rent;
+        boolean deal = days <= GOOD_DEAL_DAYS;
+        String we = household.size() > 1 ? "we" : "I", us = household.size() > 1 ? "us" : "me", our = household.size() > 1 ? "our" : "my";
+        List<String> pro = new ArrayList<>(), con = new ArrayList<>(), proMine = new ArrayList<>(), conMine = new ArrayList<>();
+        java.util.Set<Values.Value> seen = java.util.EnumSet.noneOf(Values.Value.class);
+        int nature = 0, years = 0;
+        for (VillageFolkEntity f : grown) {
+            Values.Value top = Values.top(f);
+            years += f.ageYears();
+            nature += switch (top) {
+                case HOMES -> 3;
+                case TRADITION, FOOD -> 2;
+                case SAFETY -> 1;
+                case PROGRESS -> 0;
+                case WEALTH -> deal ? 2 : -1;
+                case LEISURE -> -3;
+            };
+            if (!seen.add(top)) continue;
+            switch (top) {
+                case HOMES -> { pro.add("a Homemaker wants a house of its own"); proMine.add(we + " want a place of " + our + " own"); }
+                case TRADITION -> { pro.add("a Traditionalist likes to own the roof over its head"); proMine.add("owning your house is the proper way"); }
+                case FOOD -> { pro.add("a Provider likes to own what keeps its family"); proMine.add("a family wants a roof of its own"); }
+                case SAFETY -> { pro.add("a Guardian likes a roof nobody can take away"); proMine.add("nobody can put " + us + " out of " + our + " own house"); }
+                case PROGRESS -> { con.add("a Visionary minds the next age more than bricks"); conMine.add("there's more to think about than bricks"); }
+                case WEALTH -> {
+                    (deal ? pro : con).add("a Merchant: at " + price + coins(price) + " it is " + days + " days' rent, "
+                        + (deal ? "a good deal" : "not a good deal yet"));
+                    (deal ? proMine : conMine).add("at " + price + coins(price) + " it's " + days + " days' rent — "
+                        + (deal ? "a good deal" : "not worth it yet"));
+                }
+                case LEISURE -> { con.add("a Free Spirit would rather rent and stay free"); conMine.add(we + "'d rather keep " + our + " coin and " + our + " freedom"); }
+            }
+        }
+        double score = nature / (double) grown.size();
+        if (grown.size() >= 2) { score += 1; pro.add("a couple settling down"); proMine.add("we're settling down"); }
+        if (kids > 0) {
+            score += Math.min(2, kids);
+            pro.add(kids == 1 ? "a child to raise" : kids + " children to raise");
+            proMine.add(kids == 1 ? "there's the little one to think of" : "there are the children to think of");
+        }
+        int age = years / grown.size();
+        if (age < 24) { score -= 1; con.add("young yet (" + age + ")"); conMine.add(we + "'re young yet"); }
+        else if (age >= VillageFolkEntity.OLD_AT) { score -= 1; con.add("late in life to start saving (" + age + ")"); conMine.add("it's late in life to start saving"); }
+        else if (age >= 30) { score += 1; pro.add("settled, at " + age); proMine.add(we + "'re settled here"); }
+        boolean yes = score >= 2 || h.saved > 0 && score > 0;
+        List<String> why = yes ? pro : con, mine = yes ? proMine : conMine;
+        String said = why.isEmpty() ? (yes ? "it wants a place of its own" : "nothing draws it to buying")
+            : String.join("; ", why.subList(0, Math.min(3, why.size())));
+        String own = mine.isEmpty() ? (yes ? we + " want a place of " + our + " own" : "it suits " + us) : mine.get(0);
+        return new Wish(yes, score, said, own);
+    }
+
+    /** Is this folk's household saving to buy its house? {put by, price}, or null. (Wealth.talk) */
+    @Nullable
+    public static int[] savingFor(VillageFolkEntity f) {
+        UUID village = f.ownerId();
+        if (village == null || f.isBaby()) return null;
+        Home h = homeOf(village, f.getUUID());
+        if (h == null || h.tenure != Tenure.RENTED || seat(h)) return null;
+        if (h.saved <= 0 && !wish(village, h, loadedMembers(village, h)).yes()) return null;
+        return new int[]{ h.saved, price(village, h) };
+    }
+
+    /** This folk's share of what its household has put by toward its house (Wealth.worth). */
+    public static int savedShare(VillageFolkEntity f) {
+        UUID village = f.ownerId();
+        if (village == null || f.isBaby()) return 0;
+        Home h = homeOf(village, f.getUUID());
+        if (h == null || h.saved <= 0) return 0;
+        int grown = 0;
+        for (UUID m : h.members) {
+            VillageFolkEntity o = loaded(village, m);
+            if (o != null && !o.isBaby()) grown++;
+        }
+        return h.saved / Math.max(1, grown);
+    }
+
+    /** What all the village's households have put by toward their houses (Economy: the village's worth). */
+    public static int savedTotal(UUID village) {
+        int n = 0;
+        for (Home h : homes(village).values()) n += Math.max(0, h.saved);
+        return n;
     }
 
     // ------------------------------------------------------------------ builders, the leader, talk
@@ -1104,67 +1391,147 @@ public final class Homes {
         return false;
     }
 
-    /** Does the village give houses to those who can't pay (a generous leader, or one elected for homes)? */
+    /** Does the village let off what a household can't pay, the rent or a child's bed (a generous leader, or one elected for homes)? */
     public static boolean generous(UUID village) {
         if (Elections.mandate(village) == Values.Value.HOMES) return true;
         VillageFolkEntity elder = Orders.elderOf(village);
         return elder != null && elder.life().has(Social.Trait.GENEROUS);
     }
 
-    /** For the status: "14 households: 11 housed (6 given, 3 owned, 2 rented), 3 waiting; 1 empty (house 50c)". */
+    /**
+     * For the status: "11 households housed (2 owned, 9 rented, 3 of them saving to buy), 1 waiting;
+     * 1 empty (to let: house 1c a day); rent 9 coins yesterday; houses are let, and sold to the
+     * tenants who save for them".
+     */
     public static String line(ServerLevel level, UUID village) {
-        enrol(village);
-        int given = 0, owned = 0, rented = 0, let = 0, empty = 0;
-        StringBuilder sale = new StringBuilder();
+        int[] c = counts(level, village);
+        StringBuilder let = new StringBuilder();
         for (Home h : homes(village).values()) {
-            if (seat(h)) continue;
-            if (h.members.isEmpty()) {
-                if (h.tenure == Tenure.PLAYER && !h.toLet) { let++; continue; }
-                empty++;
-                if (sale.length() < 60) sale.append(sale.length() == 0 ? "" : ", ").append(h.structure).append(' ').append(price(village, h)).append('c');
-                continue;
-            }
-            switch (h.tenure) {
-                case GIVEN -> given++;
-                case OWNED -> owned++;
-                case RENTED -> rented++;
-                case PLAYER -> let++;
-            }
+            if (seat(h) || !h.members.isEmpty() || h.tenure == Tenure.PLAYER || let.length() >= 60) continue;
+            int r = rent(village, h);
+            let.append(let.length() == 0 ? "" : ", ").append(h.structure).append(' ').append(r).append("c a day");
         }
-        List<VillageFolkEntity> folk = new ArrayList<>();
-        for (AssistantEntity a : Villages.folkOf(village)) if (a instanceof VillageFolkEntity f && !f.isShowcase()) folk.add(f);
-        int waiting = waiting(village, folk, level.getDayTime() / 24000L).size();
-        return (given + owned + rented) + " households housed (" + given + " given, " + owned + " owned, " + rented + " rented)"
-            + (let > 0 ? ", " + let + " players'" : "") + ", " + waiting + " waiting; " + empty + " empty"
-            + (sale.length() > 0 ? " (" + (forSale(village) ? "for sale: " : "") + sale + ")" : "")
-            + "; houses are " + (forSale(village) ? "sold" : "given");
+        return c[0] + " households housed (" + (c[2] > 0 ? c[2] + " given, " : "") + c[3] + " owned, " + c[4] + " rented"
+            + (c[8] > 0 ? ", " + c[8] + " of them saving to buy" : "") + ")"
+            + (c[5] > 0 ? ", " + c[5] + " players'" : "") + ", " + c[1] + " waiting; " + c[6] + " empty"
+            + (let.length() > 0 ? " (to let: " + let + ")" : "")
+            + "; rent " + c[9] + coins(c[9]) + " yesterday" + (c[11] > 0 ? ", " + c[11] + " owed" : "")
+            + "; houses are let, and sold to the tenants who save for them";
     }
 
-    /** For the town's books (Annals): {housed, waiting, given, owned, rented, players', empty, for sale (1/0)}. */
+    /** For the board: "9 rented, 2 owned, 3 saving to buy; rent 9 yesterday", or "" with nobody housed. */
+    public static String brief(ServerLevel level, UUID village) {
+        int[] c = counts(level, village);
+        if (c[0] == 0) return "";
+        return c[4] + " rented, " + c[3] + " owned" + (c[8] > 0 ? ", " + c[8] + " saving to buy" : "") + "; rent " + c[9] + " yesterday";
+    }
+
+    /**
+     * For the town's books (Annals): {housed, waiting, given, owned, rented, players', empty, for sale (1/0),
+     * saving (tenant households putting by to buy), rent collected yesterday, coin put by toward houses,
+     * rent owed, coin from houses sold yesterday}. The first eight are as they always were.
+     */
     public static int[] counts(ServerLevel level, UUID village) {
         enrol(village);
-        int given = 0, owned = 0, rented = 0, let = 0, empty = 0;
+        int given = 0, owned = 0, rented = 0, let = 0, empty = 0, saving = 0, saved = 0, owed = 0;
         for (Home h : homes(village).values()) {
+            saved += Math.max(0, h.saved);
             if (seat(h)) continue;
             if (h.members.isEmpty()) {
                 if (h.tenure == Tenure.PLAYER && !h.toLet) let++;
                 else empty++;
                 continue;
             }
+            owed += Math.max(0, h.owed);
             switch (h.tenure) {
                 case GIVEN -> given++;
                 case OWNED -> owned++;
-                case RENTED -> rented++;
+                case RENTED -> {
+                    rented++;
+                    if (h.saved > 0 || wish(village, h, loadedMembers(village, h)).yes()) saving++;
+                }
                 case PLAYER -> let++;
             }
         }
         List<VillageFolkEntity> folk = new ArrayList<>();
         for (AssistantEntity a : Villages.folkOf(village)) if (a instanceof VillageFolkEntity f && !f.isShowcase()) folk.add(f);
         int waiting = waiting(village, folk, level.getDayTime() / 24000L).size();
-        return new int[]{ given + owned + rented, waiting, given, owned, rented, let, empty, forSale(village) ? 1 : 0 };
+        return new int[]{ given + owned + rented, waiting, given, owned, rented, let, empty, forSale(village) ? 1 : 0,
+            saving, Economy.rentYesterday(village), saved, owed, Economy.housesSoldYesterday(village) };
     }
 
-    /** "I live at No. 4, Elm Street, with Tansy and the children — the village gave it us." */
+    /**
+     * The town's books' Homes page (Annals): the figures (as counts, by name), and a row for every
+     * household: where it lives (address, kind), who (household, folk, grown), on what terms (tenure,
+     * terms, rent a day, owed, a note on the rent), what it has put by toward the price and the price,
+     * whether it wants a house of its own and why, its standing (renting, saving, owns, the leader's,
+     * a player's tenant) and the day it moved in.
+     */
+    public static CompoundTag report(ServerLevel level, UUID village) {
+        CompoundTag out = new CompoundTag();
+        int[] c = counts(level, village);
+        String[] names = { "housed", "waiting", "given", "owned", "rented", "players", "empty", "for_sale",
+            "saving", "rent_yesterday", "saved", "owed", "sales_yesterday" };
+        for (int i = 0; i < names.length; i++) out.putInt(names[i], c[i]);
+        out.putInt("hand_wage", Wealth.tradeWage(AssistantEntity.StationTask.FARM, village));
+        out.putString("line", line(level, village));
+        Villages.Village v = Villages.get(village);
+        net.minecraft.nbt.ListTag rows = new net.minecraft.nbt.ListTag();
+        for (Home h : homes(village).values()) {
+            if (h.members.isEmpty()) continue;
+            List<VillageFolkEntity> household = loadedMembers(village, h);
+            List<VillageFolkEntity> grown = grown(household);
+            CompoundTag r = new CompoundTag();
+            r.putLong("anchor", h.anchor.asLong());                // the building's, as on the Buildings page
+            r.putString("address", v == null ? "" : address(village, v, h));
+            r.putString("kind", seat(h) ? "the leader's hall" : h.structure.equals("manor") ? "manor"
+                : Ledger.grown(village, h.anchor) ? "two-storey house" : "house");
+            r.putString("household", household.isEmpty() ? h.members.size() + " folk" : names(household));
+            r.putInt("folk", h.members.size());
+            r.putInt("grown", grown.size());
+            r.putString("tenure", seat(h) ? "the leader's" : h.tenure.name().toLowerCase(java.util.Locale.ROOT));
+            r.putString("terms", seat(h) ? "goes with leading the village" : h.tenure == Tenure.PLAYER ? "rented from " + h.landlordName : h.tenure.word);
+            boolean paysRent = !seat(h) && (h.tenure == Tenure.RENTED || h.tenure == Tenure.PLAYER);
+            r.putInt("rent", paysRent ? h.rent : 0);
+            r.putInt("owed", h.owed);
+            r.putInt("saved", h.saved);
+            r.putInt("price", seat(h) || h.tenure == Tenure.PLAYER ? 0 : h.tenure == Tenure.OWNED ? h.price : price(village, h));
+            boolean wants;
+            String why, status, rentNote = "";
+            if (seat(h)) {
+                wants = false;
+                why = "the leader's hall goes with the office: never sold";
+                status = "the leader's";
+            } else if (h.tenure == Tenure.OWNED) {
+                wants = true;
+                why = h.price > 0 ? "bought it for " + h.price + coins(h.price) : "owns it";
+                status = "owns";
+            } else if (h.tenure == Tenure.PLAYER) {
+                Wish w = wish(village, h, household);
+                wants = w.yes();
+                why = "a player's house, not the village's to sell; " + w.why();
+                status = "a player's tenant";
+            } else {
+                Wish w = wish(village, h, household);
+                wants = w.yes();
+                why = w.why();
+                status = wants ? "saving" : "renting";
+                if (h.tenure == Tenure.RENTED && !household.isEmpty() && earners(household) == 0) rentNote = "waived: nobody in the house earns";
+                else if (h.owed > 0) rentNote = "owes " + h.owed + coins(h.owed);
+                else if (h.tenure == Tenure.RENTED && generous(village)) rentNote = "a generous leader lets off what a tenant is short";
+            }
+            r.putBoolean("wants", wants);
+            r.putString("why", why);
+            r.putString("status", status);
+            r.putString("rent_note", rentNote);
+            r.putLong("since", h.since);
+            rows.add(r);
+        }
+        out.put("rows", rows);
+        return out;
+    }
+
+    /** "I live at No. 4, Elm Street, with Tansy and the children — we rent it from the village at a coin a day, and we're saving to buy it." */
     public static String talk(VillageFolkEntity f) {
         UUID village = f.ownerId();
         if (village == null) return "";
@@ -1184,11 +1551,27 @@ public final class Homes {
             + (kids == 0 ? "" : (others.isEmpty() ? "" : " and ") + (kids == 1 ? "our child" : "the children"));
         String terms = seat(h) ? "it goes with leading the village" : switch (h.tenure) {
             case GIVEN -> "the village gave it us";
-            case OWNED -> "it's ours: we paid " + h.price + coins(h.price) + " for it";
-            case RENTED -> "we rent it from the village at " + h.rent + coins(h.rent) + " a day";
-            case PLAYER -> "we rent it from " + h.landlordName;
+            case OWNED -> h.price > 0 ? "it's ours: we paid " + h.price + coins(h.price) + " for it, saved up" : "it's ours";
+            case RENTED -> tenancy(village, h);
+            case PLAYER -> "we rent it from " + h.landlordName + " at " + h.rent + coins(h.rent) + " a day";
         };
         return "I live at " + address(village, v, h) + with + " — " + terms + ".";
+    }
+
+    /** "we rent it from the village at 1 coin a day; we're saving to buy it: 34 of 44 coins put by". */
+    static String tenancy(UUID village, Home h) {
+        List<VillageFolkEntity> household = loadedMembers(village, h);
+        boolean many = household.size() > 1;
+        String we = many ? "we" : "I", us = many ? "us" : "me";
+        StringBuilder sb = new StringBuilder(we + " rent it from the village at " + h.rent + coins(h.rent) + " a day");
+        if (!household.isEmpty() && earners(household) == 0) sb.append(", though the village lets ").append(us).append(" off while nobody here earns");
+        else if (h.owed > 0) sb.append(", and ").append(we).append(" owe ").append(h.owed).append(coins(h.owed)).append(" of it — ").append(we).append("'ll make it up");
+        Wish w = wish(village, h, household);
+        int price = price(village, h);
+        if (w.yes()) sb.append("; ").append(many ? "we're" : "I'm").append(" saving to buy it: ").append(h.saved).append(" of ")
+            .append(price).append(coins(price)).append(" put by (").append(w.mine()).append(")");
+        else sb.append("; renting suits ").append(us).append(" (").append(w.mine()).append(")");
+        return sb.toString();
     }
 
     // ------------------------------------------------------------------ players' houses
@@ -1209,12 +1592,12 @@ public final class Homes {
         List<String> sale = new ArrayList<>();
         Villages.Village v = Villages.get(village);
         for (Home h : homes(village).values()) {
-            if (!h.members.isEmpty() || h.tenure == Tenure.PLAYER || v == null) continue;
+            if (!h.members.isEmpty() || h.tenure == Tenure.PLAYER || seat(h) || v == null) continue;
             sale.add(address(village, v, h) + " at " + price(village, h) + coins(price(village, h)));
             if (sale.size() == 3) break;
         }
-        if (sale.isEmpty()) return "Every house is taken. The builders put up another when the village can spare the stone"
-            + (forSale(village) ? "; it sells them, so have coin ready." : ".");
+        if (sale.isEmpty()) return "Every house is taken. The builders put up another when the village can spare the stone; "
+            + "it lets them to us, and sells them to whoever saves up the price.";
         return "Empty just now: " + String.join("; ", sale) + ". Stand in the one you like and say \"buy this house\". "
             + "You can live in it, or let it to a household for coin.";
     }
@@ -1310,11 +1693,17 @@ public final class Homes {
                 .append(", ").append(bedsIn(level, id, h).size()).append(" beds): ");
             if (h.members.isEmpty()) {
                 sb.append(h.tenure == Tenure.PLAYER ? h.landlordName + "'s" + (h.toLet ? ", to let at " + h.rent + coins(h.rent) + " a day" : "")
-                    : "empty, " + (forSale(id) ? "for sale at " + price(id, h) + coins(price(id, h)) : "to be given to the next household"));
+                    : seat(h) ? "empty, kept for the leader" : "empty, to let at " + rent(id, h) + coins(rent(id, h)) + " a day (yours for "
+                        + price(id, h) + coins(price(id, h)) + ")");
             } else {
                 List<VillageFolkEntity> m = loadedMembers(id, h);
-                sb.append(m.isEmpty() ? h.members.size() + " folk" : names(m)).append(", ").append(h.tenure.word)
-                    .append(h.tenure == Tenure.RENTED || h.tenure == Tenure.PLAYER ? " at " + h.rent + coins(h.rent) + " a day" : "");
+                sb.append(m.isEmpty() ? h.members.size() + " folk" : names(m)).append(", ").append(seat(h) ? "with the office" : h.tenure.word)
+                    .append(h.tenure == Tenure.RENTED || h.tenure == Tenure.PLAYER ? " at " + h.rent + coins(h.rent) + " a day" : "")
+                    .append(h.tenure == Tenure.OWNED && h.price > 0 ? ", bought for " + h.price + coins(h.price) : "");
+                if (h.tenure == Tenure.RENTED && !seat(h)) {
+                    if (h.owed > 0) sb.append(", owes ").append(h.owed);
+                    if (h.saved > 0 || wish(id, h, m).yes()) sb.append(", saving to buy it: ").append(h.saved).append(" of ").append(price(id, h)).append(" put by");
+                }
             }
             out.add(sb.toString());
         }
@@ -1333,13 +1722,18 @@ public final class Homes {
 
     // ------------------------------------------------------------------ departures
 
-    /** A folk gone for good (dead, or moved away): off its house's books. */
+    /**
+     * A folk gone for good (dead, or moved away): off its house's books. The last one out takes what
+     * the household had put by toward buying it, if it is moving away; if it died, that goes to the
+     * village.
+     */
     public static void left(UUID village, UUID folk) {
         Home h = homeOf(village, folk);
         if (h == null) return;
+        VillageFolkEntity f = loaded(village, folk);
         h.members.remove(folk);
-        if (h.members.isEmpty() && h.tenure != Tenure.PLAYER) { h.tenure = Tenure.GIVEN; h.price = 0; h.rent = 0; h.owed = 0; }
-        save(village, h);
+        if (h.members.isEmpty()) vacate(village, h, f != null && f.isAlive() ? f : null);
+        else save(village, h);
         MOVES.remove(folk);
     }
 
@@ -1413,15 +1807,26 @@ public final class Homes {
         tick(level, v);
     }
 
-    /** Tests: the houses for sale (true), given (false), or as the village's wealth has it (null). */
+    /** Tests: the town selling outright (manors) (true), not (false), or as the village's wealth has it (null). */
     public static void saleForTests(@Nullable Boolean on) {
         SALE_FOR_TESTS = on;
     }
 
-    /** Tests: this morning's rent and buying, now. */
+    /** Tests: the homes' payday (rent, saving up, buying, moving up), now. */
+    public static void paydayForTests(ServerLevel level, Villages.Village v) {
+        payday(level, v, level.getDayTime() / 24000L);
+    }
+
+    /** Tests: the same, by its old name (the morning's rent). */
     public static void morningForTests(ServerLevel level, Villages.Village v) {
-        MORNING.remove(v.id());
-        morning(level, v, level.getDayTime() / 24000L);
+        paydayForTests(level, v);
+    }
+
+    /** Tests: {rent a day, owed, put by, price} of the house at this anchor, or null. */
+    @Nullable
+    public static int[] termsForTests(UUID village, BlockPos anchor) {
+        Home h = homes(village).get(anchor.asLong());
+        return h == null ? null : new int[]{ h.rent, h.owed, h.saved, h.tenure == Tenure.OWNED ? h.price : price(village, h) };
     }
 
     /** Tests: something into the village's stores. */

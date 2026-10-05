@@ -5199,11 +5199,12 @@ public class VillageGameTests {
     }
 
     /**
-     * Homes: a couple and their children share a house, the children's beds across the room from
-     * theirs; a child born into a full house gets a bed bought at the shop; a grown child moves out
-     * into a place of its own; a player buys a house and lets it, and collects the rent; and once
-     * the village sells its houses, a household with coin buys one and one without rents. Twins
-     * come now and then, triplets rarely, quadruplets hardly ever.
+     * Homes: a couple and their children share a house, rented from the village (it gives none), the
+     * children's beds across the room from theirs; a child born into a full house gets a bed bought
+     * at the shop; a grown child moves out into a place of its own; a player buys a house and lets
+     * it, and collects the rent; and every household starts as the village's tenant, rich or poor
+     * (t77_rent_then_buy has the saving up and the buying). Twins come now and then, triplets
+     * rarely, quadruplets hardly ever.
      */
     @GameTest(template = EMPTY, timeoutTicks = 400, batch = "t77_homes")
     public static void t77_homes(GameTestHelper helper) {
@@ -5267,7 +5268,8 @@ public class VillageGameTests {
             + Villages.storeChests(level, id));
         helper.assertTrue(in.contains(a.getUUID()) && in.contains(b.getUUID()), "the couple share a house");
         for (VillageFolkEntity c : kids) helper.assertTrue(in.contains(c.getUUID()), "and their children live with them");
-        helper.assertTrue("GIVEN".equals(com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, one)), "a young village gives its houses");
+        helper.assertTrue("RENTED".equals(com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, one)), "the village lets its houses, never gives them: "
+            + com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, one));
         helper.assertTrue(beds.size() >= 2 + kids.size(), "a bed bought for the child the house had no bed for: " + beds.size() + " beds for " + in.size());
         BlockPos ma = com.jrpetty.mcassistant.entity.Homes.bedFor(level, a), mb = com.jrpetty.mcassistant.entity.Homes.bedFor(level, b);
         helper.assertTrue(ma != null && mb != null && ma.distSqr(mb) <= 2.0, "the parents sleep side by side: " + ma + ", " + mb);
@@ -5308,13 +5310,14 @@ public class VillageGameTests {
         String let = com.jrpetty.mcassistant.entity.Homes.playerLets(level, you, 2);
         d.earn(10);
         com.jrpetty.mcassistant.entity.Homes.tickForTests(level, v);
-        com.jrpetty.mcassistant.entity.Homes.morningForTests(level, v);
+        com.jrpetty.mcassistant.entity.Homes.paydayForTests(level, v);
         String rent = com.jrpetty.mcassistant.entity.Homes.playerCollects(level, you);
         Kit.log("t77 let: " + let + " | tenant " + d.displayNameCap() + " in " + com.jrpetty.mcassistant.entity.Homes.homeOf(d) + " | " + rent
             + " | " + d.displayNameCap() + " says: " + com.jrpetty.mcassistant.entity.Homes.talk(d));
         helper.assertTrue(com.jrpetty.mcassistant.entity.Homes.membersForTests(id, three).contains(d.getUUID()), "a household takes the house the player lets");
         helper.assertTrue(com.jrpetty.mcassistant.entity.Market.coinsHeld(you) == left + 2, "and the player collects the rent: " + rent);
-        // A rich village sells its houses: one with coin buys, one without rents.
+        // Rich or poor, a household starts as the village's tenant, even in a town that sells outright:
+        // the one with coin buys on payday if it wants to (t77_rent_then_buy), the one without is housed all the same.
         com.jrpetty.mcassistant.entity.Homes.saleForTests(true);
         BlockPos four = house.apply(3), five = house.apply(4);
         VillageFolkEntity rich = VillageFolkSpawnerBlock.raise(level, heart.north(2), 0.0F);
@@ -5325,13 +5328,115 @@ public class VillageGameTests {
         com.jrpetty.mcassistant.entity.Homes.tickForTests(level, v);
         BlockPos rh = com.jrpetty.mcassistant.entity.Homes.homeOf(rich), ph = com.jrpetty.mcassistant.entity.Homes.homeOf(poor);
         String rt = rh == null ? null : com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, rh), pt = ph == null ? null : com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, ph);
-        Kit.log("t77 for sale: " + rich.displayNameCap() + " " + rt + " (purse " + rich.purse() + "), " + poor.displayNameCap() + " " + pt
+        Kit.log("t77 moving in: " + rich.displayNameCap() + " " + rt + " (purse " + rich.purse() + "), " + poor.displayNameCap() + " " + pt
             + "; " + com.jrpetty.mcassistant.entity.Homes.line(level, id));
-        helper.assertTrue("OWNED".equals(rt), "a folk with the coin buys its house: " + rt);
-        // (A generous leader, or one elected for homes, gives a house to a folk who can't pay.)
-        boolean generous = com.jrpetty.mcassistant.entity.Homes.generous(id);
-        helper.assertTrue("RENTED".equals(pt) || generous && "GIVEN".equals(pt), "one without rents it from the village: " + pt + (generous ? " (a generous leader)" : ""));
+        helper.assertTrue("RENTED".equals(rt), "a folk with the coin moves in as a tenant too: " + rt);
+        helper.assertTrue("RENTED".equals(pt), "and one without a coin is housed all the same, as a tenant: " + pt);
         com.jrpetty.mcassistant.entity.Homes.saleForTests(null);
+        helper.succeed();
+    }
+
+    /**
+     * Rent first, then buy: every household moves in as the village's tenant; on payday the rent goes
+     * from its purses into the treasury (and into the books); a Homemaker with savings puts them by,
+     * buys its house and pays no more rent, while a Free Spirit with the same savings goes on renting;
+     * a Homemaker with only a little puts by what it can spare over a dozen coins and keeps renting;
+     * and one with nothing is housed all the same, its rent on the slate (or let off by a generous leader).
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t77_rent")
+    public static void t77_rent_then_buy(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(24000L * 8 + 7000);                        // past the morning's payday: only ours runs
+        Kit.hold(level, 82000, 16000, 48);
+        Kit.prepare(level, 82000, 16000, 48);
+        BlockPos heart = Kit.surface(level, 82000, 16000);
+        VillageFolkEntity homemaker = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(homemaker != null, "a village");
+        java.util.UUID id = homemaker.ownerId();
+        Villages.Village v = Villages.get(id);
+        VillageFolkEntity free = VillageFolkSpawnerBlock.raise(level, heart.east(2), 0.0F);
+        VillageFolkEntity saver = VillageFolkSpawnerBlock.raise(level, heart.west(2), 0.0F);
+        VillageFolkEntity broke = VillageFolkSpawnerBlock.raise(level, heart.north(2), 0.0F);
+        helper.assertTrue(free != null && saver != null && broke != null, "four households of one");
+        for (int n = 0; n < 4; n++) {
+            BlockPos at = Kit.surface(level, heart.getX() - 30 + 14 * n, heart.getZ() + 22);
+            BuildGoal.stamp(level, "house", at, Direction.NORTH, 13,
+                com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+            com.jrpetty.mcassistant.village.Ledger.built(id, "house", at, Direction.NORTH);
+        }
+        // Who they are: a Homemaker, a Free Spirit, another Homemaker; all four at work, so all four pay rent.
+        com.jrpetty.mcassistant.entity.Values.setForTests(homemaker, com.jrpetty.mcassistant.entity.Values.Value.HOMES, 100);
+        com.jrpetty.mcassistant.entity.Values.setForTests(free, com.jrpetty.mcassistant.entity.Values.Value.LEISURE, 100);
+        com.jrpetty.mcassistant.entity.Values.setForTests(saver, com.jrpetty.mcassistant.entity.Values.Value.HOMES, 100);
+        for (VillageFolkEntity f : java.util.List.of(homemaker, free, saver, broke)) {
+            f.setJob(StationTask.FARM);
+            f.spend(f.purse());
+        }
+        homemaker.earn(200);
+        free.earn(200);
+        saver.earn(20);
+        com.jrpetty.mcassistant.entity.Homes.tickForTests(level, v);
+        java.util.Map<VillageFolkEntity, BlockPos> at = new java.util.LinkedHashMap<>();
+        for (VillageFolkEntity f : java.util.List.of(homemaker, free, saver, broke)) {
+            BlockPos h = com.jrpetty.mcassistant.entity.Homes.homeOf(f);
+            helper.assertTrue(h != null, f.displayNameCap() + " has a house");
+            helper.assertTrue("RENTED".equals(com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, h)),
+                "every household starts as the village's tenant: " + f.displayNameCap() + " " + com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, h));
+            at.put(f, h);
+        }
+        java.util.function.Function<VillageFolkEntity, int[]> terms = f -> com.jrpetty.mcassistant.entity.Homes.termsForTests(id, at.get(f));
+        int rentH = terms.apply(homemaker)[0], rentF = terms.apply(free)[0], rentS = terms.apply(saver)[0], rentB = terms.apply(broke)[0];
+        int price = terms.apply(homemaker)[3];
+        helper.assertTrue(rentH >= 1 && rentF >= 1 && rentS >= 1 && rentB >= 1, "a house has a rent: " + rentH + ", " + rentF + ", " + rentS + ", " + rentB);
+        helper.assertTrue(price > rentH * 10, "and a price well beyond it: " + price + " against " + rentH + " a day");
+        helper.assertTrue(200 - rentH >= price + 12, "the Homemaker has the price and more: " + price);
+        helper.assertTrue(20 - rentS > 12 && 20 - rentS - 12 < terms.apply(saver)[3], "the other Homemaker has something to put by, not the price");
+        // Payday.
+        int treasury = com.jrpetty.mcassistant.village.Ledger.coins(id);
+        com.jrpetty.mcassistant.entity.Homes.paydayForTests(level, v);
+        int[] tb = terms.apply(broke), ts = terms.apply(saver);
+        boolean generous = com.jrpetty.mcassistant.entity.Homes.generous(id);
+        Kit.log("t77 payday: treasury " + treasury + " -> " + com.jrpetty.mcassistant.village.Ledger.coins(id) + " (rent " + rentH + "/" + rentF + "/"
+            + rentS + "/" + rentB + ", price " + price + ", rent on the books " + com.jrpetty.mcassistant.entity.Economy.rentToday(id) + ")"
+            + " | " + homemaker.displayNameCap() + ": " + com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, at.get(homemaker)) + ", purse " + homemaker.purse()
+            + " | " + free.displayNameCap() + ": " + com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, at.get(free)) + ", purse " + free.purse()
+            + " | " + saver.displayNameCap() + ": put by " + ts[2] + ", purse " + saver.purse()
+            + " | " + broke.displayNameCap() + ": owes " + tb[1] + (generous ? " (a generous leader)" : "")
+            + " | " + com.jrpetty.mcassistant.entity.Homes.line(level, id));
+        Kit.log("t77 they say: " + com.jrpetty.mcassistant.entity.Homes.talk(homemaker) + " | " + com.jrpetty.mcassistant.entity.Homes.talk(free)
+            + " | " + com.jrpetty.mcassistant.entity.Homes.talk(saver) + " | " + com.jrpetty.mcassistant.entity.Homes.talk(broke));
+        helper.assertTrue("OWNED".equals(com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, at.get(homemaker))),
+            "the Homemaker with savings buys its house: " + com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, at.get(homemaker)));
+        helper.assertTrue(homemaker.purse() == 200 - rentH - price, "out of its purse, after the day's rent: " + homemaker.purse());
+        helper.assertTrue("RENTED".equals(com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, at.get(free))), "the Free Spirit with the same savings goes on renting");
+        helper.assertTrue(free.purse() == 200 - rentF && terms.apply(free)[2] == 0, "paying its rent, and putting nothing by: " + free.purse());
+        helper.assertTrue("RENTED".equals(com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, at.get(saver))) && ts[2] == 20 - rentS - 12
+            && saver.purse() == 12, "the Homemaker without the price puts by all it has over a dozen, and goes on renting: " + ts[2] + " put by, purse " + saver.purse());
+        helper.assertTrue(at.get(broke).equals(com.jrpetty.mcassistant.entity.Homes.homeOf(broke)), "the one with nothing is housed all the same");
+        helper.assertTrue(tb[1] == rentB || generous && tb[1] == 0, "its rent on the slate (or let off by a generous leader): " + tb[1]);
+        int rentIn = rentH + rentF + rentS;
+        helper.assertTrue(com.jrpetty.mcassistant.village.Ledger.coins(id) == treasury + rentIn + price,
+            "the rent and the price go into the treasury: " + treasury + " -> " + com.jrpetty.mcassistant.village.Ledger.coins(id));
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Economy.rentToday(id) == rentIn, "and the rent into the books: " + com.jrpetty.mcassistant.entity.Economy.rentToday(id));
+        // The books' Homes page: a row a household, with what it wants and why.
+        net.minecraft.nbt.CompoundTag report = com.jrpetty.mcassistant.entity.Homes.report(level, id);
+        net.minecraft.nbt.ListTag rows = report.getList("rows", net.minecraft.nbt.Tag.TAG_COMPOUND);
+        String freeWhy = "", ownerStatus = "";
+        for (int i = 0; i < rows.size(); i++) {
+            net.minecraft.nbt.CompoundTag r = rows.getCompound(i);
+            if (r.getLong("anchor") == at.get(free).asLong()) freeWhy = (r.getBoolean("wants") ? "wants: " : "") + r.getString("why");
+            if (r.getLong("anchor") == at.get(homemaker).asLong()) ownerStatus = r.getString("status");
+        }
+        Kit.log("t77 the books: " + report);
+        helper.assertTrue(rows.size() == 4 && report.getInt("saving") >= 1 && report.getInt("owned") == 1, "a row for each household, one owned and one saving: " + report);
+        helper.assertTrue(freeWhy.contains("Free Spirit"), "the Free Spirit rents by choice: " + freeWhy);
+        helper.assertTrue("owns".equals(ownerStatus), "the Homemaker owns: " + ownerStatus);
+        // The next payday: the owner pays no rent, the tenant does.
+        int ownerPurse = homemaker.purse(), freePurse = free.purse();
+        com.jrpetty.mcassistant.entity.Homes.paydayForTests(level, v);
+        helper.assertTrue(homemaker.purse() == ownerPurse, "an owner pays no rent: " + ownerPurse + " -> " + homemaker.purse());
+        helper.assertTrue(free.purse() == freePurse - rentF, "a tenant goes on paying: " + freePurse + " -> " + free.purse());
         helper.succeed();
     }
 
@@ -5411,6 +5516,8 @@ public class VillageGameTests {
         Kit.log("t78 " + first.displayNameCap() + " leads: lives at " + home + ", sleeps at " + bed + "; the hall's beds " + beds
             + " | " + com.jrpetty.mcassistant.entity.Homes.talk(first));
         helper.assertTrue(site.anchor().equals(home), "the leader lives in the leader's hall");
+        helper.assertTrue("GIVEN".equals(com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, site.anchor())),
+            "rent-free, the one roof the village gives: it goes with the office");
         helper.assertTrue(bed != null && beds.contains(bed), "and sleeps in its own bed there");
         helper.assertTrue(beds.size() >= 4, "a bed for two and the children's: " + beds.size());
         // Another is elected: the households change over.

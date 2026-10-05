@@ -32,10 +32,11 @@ import java.util.concurrent.ConcurrentHashMap;
  * <li><b>Revenue.</b> What it sells: the passing traders buy what the town makes (never more,
  *     in a day, than yesterday's output was worth: a busy town meets its wages, an idle one
  *     cannot), market day takes the surplus, players buy at the stalls, the café and the shop,
- *     and the tithe brings some back from the purses. And what it spends: the wages, a trade's
- *     kit, the drover, the wool for the beds.</li>
+ *     the tithe brings some back from the purses, the tenants pay their rent, and a household
+ *     that has saved up buys its house. And what it spends: the wages, a trade's kit, the
+ *     drover, the wool for the beds.</li>
  * <li><b>Worth.</b> The treasury, everything in the stores at the market's worth, and what the
- *     folk have saved.</li>
+ *     folk have saved (in their purses, and put by toward their houses).</li>
  * </ul>
  * Each morning (Market.tick) the day before is closed: its output is kept for a week, so the
  * village can tell whether it is making more or less than it was.
@@ -60,6 +61,8 @@ public final class Economy {
         final Map<UUID, Double> folk = new HashMap<>();
         final Map<UUID, String> names = new HashMap<>();
         int sold, spent, tithe, wages, takings;
+        /** Money in from the homes (Homes.payday): the tenants' rent, and the houses sold to the households that saved for them. */
+        int rent, houses;
 
         double total() {
             double t = 0;
@@ -182,6 +185,33 @@ public final class Economy {
         if (coins > 0) TODAY.computeIfAbsent(village, x -> new Day()).wages += coins;
     }
 
+    /** Rent the village's tenants paid into the treasury (Homes.payday). */
+    static void rent(UUID village, int coins) {
+        if (coins > 0) TODAY.computeIfAbsent(village, x -> new Day()).rent += coins;
+    }
+
+    /** A house the village sold to a household that saved for it, or a manor to one moving up (Homes). */
+    static void houseSold(UUID village, int coins) {
+        if (coins > 0) TODAY.computeIfAbsent(village, x -> new Day()).houses += coins;
+    }
+
+    /** The rent taken today so far, and yesterday's (the books' Homes and Money pages). */
+    public static int rentToday(UUID village) {
+        Day d = TODAY.get(village);
+        return d == null ? 0 : d.rent;
+    }
+
+    public static int rentYesterday(UUID village) {
+        Day d = YESTERDAY.get(village);
+        return d == null ? 0 : d.rent;
+    }
+
+    /** What the houses the village sold yesterday fetched. */
+    public static int housesSoldYesterday(UUID village) {
+        Day d = YESTERDAY.get(village);
+        return d == null ? 0 : d.houses;
+    }
+
     // ------------------------------------------------------------------ the day's close
 
     /**
@@ -244,7 +274,7 @@ public final class Economy {
         return (int) Math.round((recent - before) * 100.0 / before);
     }
 
-    /** The treasury, the stores at the market's worth, and the folk's savings. */
+    /** The treasury, the stores at the market's worth, and the folk's savings (their purses, and what is put by for houses). */
     static int countWorth(ServerLevel level, UUID village) {
         double stores = 0;
         for (BlockPos p : Villages.storeChests(level, village)) {
@@ -254,7 +284,7 @@ public final class Economy {
                 if (!s.isEmpty()) stores += worthOf(s);
             }
         }
-        int purses = 0;
+        int purses = Homes.savedTotal(village);
         for (AssistantEntity a : Villages.folkOf(village)) if (a instanceof VillageFolkEntity f) purses += f.purse();
         Ledger.note(village, "worth.stores", Integer.toString((int) Math.round(stores)));
         return (int) Math.round(stores) + Ledger.coins(village) + purses;
@@ -288,6 +318,8 @@ public final class Economy {
         if (d != null) {
             sb.append("; takings ").append(d.takings).append(", sold ").append(d.sold).append(", wages ").append(d.wages);
             if (d.tithe > 0) sb.append(", tithe ").append(d.tithe);
+            if (d.rent > 0) sb.append(", rent ").append(d.rent);
+            if (d.houses > 0) sb.append(", houses sold ").append(d.houses);
             if (d.spent > 0) sb.append(", bought in ").append(d.spent);
         }
         int w = worth(village);
@@ -332,18 +364,19 @@ public final class Economy {
                 }
                 sb.append("Best producers: ").append(String.join(", ", parts)).append(".\n");
             }
-            sb.append("\nMoney in: ").append(d.takings).append(" from the day's work, ").append(d.sold).append(" from sales").append(d.tithe > 0 ? ", " + d.tithe + " from the tithe" : "").append(".\n");
+            sb.append("\nMoney in: ").append(d.takings).append(" from the day's work, ").append(d.sold).append(" from sales").append(d.tithe > 0 ? ", " + d.tithe + " from the tithe" : "")
+                .append(d.rent > 0 ? ", " + d.rent + " in rent" : "").append(d.houses > 0 ? ", " + d.houses + " for houses sold" : "").append(".\n");
             sb.append("Money out: ").append(d.wages).append(" in wages").append(d.spent > 0 ? ", " + d.spent + " buying in" : "").append(".\n");
         } else {
             sb.append("The books close each morning: come back tomorrow for yesterday's figures.\n");
         }
         int w = worth(id);
         String stores = Ledger.note(id, "worth.stores");
-        int purses = 0;
+        int put = Homes.savedTotal(id), purses = put;
         for (AssistantEntity a : Villages.folkOf(id)) if (a instanceof VillageFolkEntity f) purses += f.purse();
         sb.append("\nWorth: ").append(w >= 0 ? Integer.toString(w) : "not yet counted").append(" — the stores ")
             .append(stores == null || stores.isEmpty() ? "?" : stores).append(", the treasury ").append(Ledger.coins(id))
-            .append(", the folk's savings ").append(purses).append(".");
+            .append(", the folk's savings ").append(purses).append(put > 0 ? " (" + put + " of it put by toward their houses)" : "").append(".");
         return sb.toString();
     }
 

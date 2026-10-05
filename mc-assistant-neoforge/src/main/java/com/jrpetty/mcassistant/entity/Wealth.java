@@ -17,7 +17,8 @@ import net.minecraft.world.item.Tiers;
  * was last paid. The coin comes from the village's own trade (market days, traders, gold
  * minted into coin, the tithe): none of it out of thin air.
  *
- * <p>What it is worth is what it has saved, what it carries (valued at the market's
+ * <p>What it is worth is what it has saved (with its share of what its household has put by
+ * toward buying its house: Homes), what it carries (valued at the market's
  * prices), and the comforts it has bought for its home. That makes it poor, getting by,
  * comfortable, well off or wealthy — and it shows: the patched coat, the belt, the collar
  * and buttons, the gold chain (client/FolkRenderer), and a home with a rug, a lantern,
@@ -233,9 +234,9 @@ public final class Wealth {
         return Prices.of(s);
     }
 
-    /** Savings, belongings and the comforts of home, in coin. */
+    /** Savings (its purse, and its share of what its household has put by toward its house), belongings and the comforts of home, in coin. */
     public static int worth(VillageFolkEntity f) {
-        return f.purse() + belongings(f) + f.comforts() * 3;
+        return f.purse() + Homes.savedShare(f) + belongings(f) + f.comforts() * 3;
     }
 
     public static Tier tier(int worth) {
@@ -253,7 +254,9 @@ public final class Wealth {
         int w = worth(f);
         Tier t = tier(w);
         int wage = wage(f);
-        return capital(t.label) + " — worth " + w + " coins: " + f.purse() + " saved, things worth " + belongings(f)
+        int house = Homes.savedShare(f);
+        return capital(t.label) + " — worth " + w + " coins: " + f.purse() + " saved" + (house > 0 ? ", " + house + " put by toward the house" : "")
+            + ", things worth " + belongings(f)
             + (f.comforts() > 0 ? ", " + f.comforts() + (f.comforts() == 1 ? " comfort" : " comforts") + " at home" : "")
             + ". " + (wage > 0 ? "Paid " + wage + (wage == 1 ? " coin" : " coins") + " a day (" + breakdown(f) + "); "
                 + f.earnedInAll() + " earned in all." : "No wage yet: no trade.");
@@ -307,7 +310,9 @@ public final class Wealth {
             case WELL_OFF -> "I've done well for myself: " + f.purse() + " coins saved and a home I'm proud of.";
             case WEALTHY -> "I'm one of the wealthiest in the village — " + w + " coins, all told. Hard work, mostly.";
         };
-        String next = t == Tier.WEALTHY ? "" : " Next I'm saving for " + (f.comforts() < t.comforts ? "something nice for my home." : "a rainy day.");
+        int[] house = Homes.savingFor(f);
+        String next = house != null ? " Every coin I can spare goes toward buying the house: " + house[0] + " of " + house[1] + " put by."
+            : t == Tier.WEALTHY ? "" : " Next I'm saving for " + (f.comforts() < t.comforts ? "something nice for my home." : "a rainy day.");
         return pay + " " + how + next;
     }
 
