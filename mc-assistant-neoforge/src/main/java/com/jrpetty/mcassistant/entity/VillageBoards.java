@@ -73,6 +73,7 @@ public final class VillageBoards {
     public static void resetForTests() {
         BOARDS.clear();
         FACING.clear();
+        PREFER.clear();
     }
 
     // ------------------------------------------------------------------ putting it up
@@ -87,11 +88,63 @@ public final class VillageBoards {
      */
     @Nullable
     public static BlockPos raiseFor(ServerLevel level, Villages.Village v) {
-        BlockPos heart = v.centre();
+        // A village founded where its founding board stood (entity/Founding) puts its own up on
+        // the same side, where the player who chose its founders last saw it.
+        Direction prefer = PREFER.remove(column(v.centre()));
+        Spot spot = findSpot(level, v.centre(), prefer, 2.0, false);
+        if (spot == null) {
+            LOG.info("[MCA-BOARD] {}: nowhere on the square for a board", Villages.name(v.id()));
+            return null;
+        }
+        put(level, spot);
+        VillageBoardBlock.raise(level, spot.anchor(), spot.facing(), v.id());
+        if (level.getBlockEntity(spot.anchor()) instanceof com.jrpetty.mcassistant.block.VillageBoardBlockEntity be) be.markRaised();
+        known(level, spot.anchor(), v.id());
+        LOG.info("[MCA-BOARD] {}: the board is up at {}, facing {}", Villages.name(v.id()), spot.anchor().toShortString(), spot.facing());
+        return spot.anchor();
+    }
+
+    /**
+     * A board for a village that is not founded yet (a Village Folk Spawner set down, entity/Founding):
+     * where the founders' board would go round a heart here, on the {@code side} of it the one who set
+     * the spawner down was facing, so it faces them across the heart. On rough ground where no side
+     * will do as the founders would want it, anywhere on the square's edge it can stand, on longer
+     * posts. Returns its bottom-left panel, or null if it could not go up at all.
+     */
+    @Nullable
+    public static BlockPos raisePending(ServerLevel level, BlockPos heart, Direction side) {
+        Spot spot = findSpot(level, heart, side, 12.0, false);
+        if (spot == null) spot = findSpot(level, heart, side, 12.0, true);
+        if (spot == null) return null;
+        put(level, spot);
+        VillageBoardBlock.raise(level, spot.anchor(), spot.facing(), null);
+        LOG.info("[MCA-BOARD] a founding board is up at {}, facing {}", spot.anchor().toShortString(), spot.facing());
+        return spot.anchor();
+    }
+
+    /** The side the board of the village about to be founded here is to go on (entity/Founding). */
+    public static void preferSide(BlockPos heart, Direction side) {
+        PREFER.put(column(heart), side);
+    }
+
+    private static final Map<Long, Direction> PREFER = new ConcurrentHashMap<>();
+
+    private static long column(BlockPos p) {
+        return BlockPos.asLong(p.getX(), 0, p.getZ());
+    }
+
+    /** Where a board will go: its bottom-left panel, which way it faces, and the height of its foot. */
+    private record Spot(BlockPos anchor, Direction facing, int base) {}
+
+    /**
+     * The best place on the square's edge round this heart for a board. {@code prefer}, if any, is the
+     * side it would rather be on, by so much of the score; {@code rough} lets it stand over ground
+     * up to twenty blocks out of true, on long posts.
+     */
+    @Nullable
+    private static Spot findSpot(ServerLevel level, BlockPos heart, @Nullable Direction prefer, double bonus, boolean rough) {
         int line = com.jrpetty.mcassistant.village.TownPlan.PLAZA;
-        BlockPos best = null;
-        Direction bestFacing = null;
-        int bestBase = 0;
+        Spot best = null;
         double bestScore = Double.MAX_VALUE;
         Direction[] sides = { Direction.WEST, Direction.SOUTH, Direction.EAST, Direction.NORTH };
         int[] lines = { line, line - 2, line + 2, line - 4, line + 4 };
@@ -110,7 +163,7 @@ public final class VillageBoards {
                     if (!level.getFluidState(new BlockPos(col.getX(), g - 1, col.getZ())).isEmpty()
                             || !level.getFluidState(new BlockPos(col.getX(), g, col.getZ())).isEmpty()) wet = true;
                 }
-                if (wet || hi - lo > 6) continue;
+                if ((wet && !rough) || hi - lo > (rough ? 20 : 6)) continue;
                 int base = hi + 1;
                 boolean blocked = false;
                 int clearing = 0;
@@ -124,40 +177,33 @@ public final class VillageBoards {
                 }
                 if (blocked) continue;
                 double score = (hi - lo) * 4.0 + clearing * 0.5 + Math.abs(base - 1 - heart.getY()) * 2.0
-                    + Math.abs(d - line) * 3.0;
+                    + Math.abs(d - line) * 3.0 - (side == prefer ? bonus : 0.0) + (wet ? 40.0 : 0.0);
                 if (score < bestScore) {
                     bestScore = score;
-                    best = mid.relative(right, -12).atY(base);
-                    bestFacing = facing;
-                    bestBase = base;
+                    best = new Spot(mid.relative(right, -12).atY(base), facing, base);
                 }
             }
             if (best != null) break;                       // the nearest line that has room
         }
-        if (best == null) {
-            LOG.info("[MCA-BOARD] {}: nowhere on the square for a board", Villages.name(v.id()));
-            return null;
-        }
-        Direction right = VillageBoardBlock.right(bestFacing);
-        // Clear what grows where it goes, and set it on four posts.
+        return best;
+    }
+
+    /** Clear what grows where the board goes, and set it on four posts. */
+    private static void put(ServerLevel level, Spot spot) {
+        Direction right = VillageBoardBlock.right(spot.facing());
         for (int c = 0; c < VillageBoardBlock.WIDE; c++) {
             for (int r = -1; r < VillageBoardBlock.HIGH; r++) {
-                BlockPos p = VillageBoardBlock.cell(best, bestFacing, c, r);
+                BlockPos p = VillageBoardBlock.cell(spot.anchor(), spot.facing(), c, r);
                 if (!level.getBlockState(p).isAir()) level.setBlock(p, Blocks.AIR.defaultBlockState(), 2 | 16);
             }
             if (c == 0 || c == 3 || c == 6 || c == VillageBoardBlock.WIDE - 1) {
-                BlockPos foot = best.relative(right, c);
+                BlockPos foot = spot.anchor().relative(right, c);
                 int g = groundY(level, foot.getX(), foot.getZ());
-                for (int y = g; y < bestBase; y++) {
+                for (int y = g; y < spot.base(); y++) {
                     level.setBlock(new BlockPos(foot.getX(), y, foot.getZ()), Blocks.DARK_OAK_LOG.defaultBlockState(), 3);
                 }
             }
         }
-        VillageBoardBlock.raise(level, best, bestFacing, v.id());
-        if (level.getBlockEntity(best) instanceof com.jrpetty.mcassistant.block.VillageBoardBlockEntity be) be.markRaised();
-        known(level, best, v.id());
-        LOG.info("[MCA-BOARD] {}: the board is up at {}, facing {}", Villages.name(v.id()), best.toShortString(), bestFacing);
-        return best;
     }
 
     private static final org.slf4j.Logger LOG = com.mojang.logging.LogUtils.getLogger();
@@ -201,6 +247,8 @@ public final class VillageBoards {
 
         // ---- what we're doing
         out.add("LH|What we're doing");
+        String founding = Founding.boardLine(level.getServer(), id);
+        if (founding != null) out.add("LG|" + founding);
         Map<String, List<String>> building = new LinkedHashMap<>();
         Map<AssistantEntity.StationTask, Integer> trades = new java.util.EnumMap<>(AssistantEntity.StationTask.class);
         int children = 0, idle = 0, working = 0;

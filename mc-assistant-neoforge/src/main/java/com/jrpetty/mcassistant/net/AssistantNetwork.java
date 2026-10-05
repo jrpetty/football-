@@ -39,6 +39,9 @@ public final class AssistantNetwork {
         registrar.playToClient(VillagePagePayload.TYPE, VillagePagePayload.STREAM_CODEC, AssistantNetwork::handleVillagePage);
         // The town's books, for the analytics screen (the board, the journal's Analytics button, /village stats).
         registrar.playToClient(CityStatsPayload.TYPE, CityStatsPayload.STREAM_CODEC, AssistantNetwork::handleCityStats);
+        // Founding a village: the board asks how many (the founding screen), the screen answers.
+        registrar.playToClient(FoundingScreenPayload.TYPE, FoundingScreenPayload.STREAM_CODEC, AssistantNetwork::handleFoundingScreen);
+        registrar.playToServer(FoundingChoicePayload.TYPE, FoundingChoicePayload.STREAM_CODEC, AssistantNetwork::handleFoundingChoice);
         // Fast time: the keys and the journal's buttons ask, the server answers once a second.
         registrar.playToServer(TimeSpeedAskPayload.TYPE, TimeSpeedAskPayload.STREAM_CODEC, AssistantNetwork::handleTimeSpeedAsk);
         registrar.playToClient(TimeSpeedPayload.TYPE, TimeSpeedPayload.STREAM_CODEC, AssistantNetwork::handleTimeSpeed);
@@ -100,6 +103,27 @@ public final class AssistantNetwork {
                                      com.jrpetty.mcassistant.entity.Villages.Village v) {
         net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
             new CityStatsPayload(com.jrpetty.mcassistant.entity.Annals.snapshot(level, v)));
+    }
+
+    /** Clientbound: the class behind this call only loads on the client. */
+    private static void handleFoundingScreen(FoundingScreenPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> com.jrpetty.mcassistant.client.FoundingScreen.show(payload));
+    }
+
+    /**
+     * Confirm and spawn. Never trusted as sent: the board must still be waiting, the player standing
+     * by it, and the count two to five hundred (Founding.confirm checks all of it, and brings a count
+     * over the server's growth cap down to the cap).
+     */
+    private static void handleFoundingChoice(FoundingChoicePayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            if (!(context.player() instanceof ServerPlayer player)
+                    || !(player.level() instanceof net.minecraft.server.level.ServerLevel level)) return;
+            if (!level.isLoaded(payload.board())) return;
+            com.jrpetty.mcassistant.entity.Founding.Outcome said =
+                com.jrpetty.mcassistant.entity.Founding.confirm(level, payload.board(), payload.count(), player);
+            player.sendSystemMessage(net.minecraft.network.chat.Component.literal("<Village> " + said.message()));
+        });
     }
 
     /** Clientbound: the class behind this call only loads on the client. */

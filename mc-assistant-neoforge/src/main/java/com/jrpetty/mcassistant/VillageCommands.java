@@ -21,6 +21,7 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  * <pre>
  *   /village spawn            one settler where you stand
  *   /village spawn 12         twelve — a full starting village
+ *   /village found 40 [x z]   a village of forty, founded as the board's founding screen does (ops)
  *   /village status           who lives here, what age, what they are short of
  *   /village lineup           one folk of every trade, dressed, to look at (ops)
  *   /village talk [words]     talk with the nearest folk, as a right-click would (ops)
@@ -51,6 +52,31 @@ public final class VillageCommands {
                         .then(Commands.argument("count", IntegerArgumentType.integer(1, 100))
                             .executes(ctx -> spawnAt(ctx,
                                 IntegerArgumentType.getInteger(ctx, "count")))))))
+            // Found a village of a chosen size, as the board's founding screen does: the board put
+            // up (if no board waits there already) and Confirm and spawn, the ground made level and
+            // the folk brought in over the next few seconds. /village found <count> [x z]. And the
+            // parts of it, for scripts: the board alone, as setting a spawner down puts it up
+            // (found board [x z]); the founding screen of the nearest waiting board at a count, as
+            // right-clicking it opens it (found screen [count]); how the foundings are getting on
+            // (found status).
+            .then(Commands.literal("found").requires(src -> src.hasPermission(2))
+                .then(Commands.literal("status").executes(VillageCommands::foundStatus))
+                .then(Commands.literal("board")
+                    .executes(ctx -> foundBoard(ctx, false))
+                    .then(Commands.argument("x", IntegerArgumentType.integer())
+                        .then(Commands.argument("z", IntegerArgumentType.integer())
+                            .executes(ctx -> foundBoard(ctx, true)))))
+                .then(Commands.literal("screen")
+                    .executes(ctx -> foundScreen(ctx, 0))
+                    .then(Commands.argument("count", IntegerArgumentType.integer(
+                            com.jrpetty.mcassistant.village.FoundingPlan.MIN_FOLK, com.jrpetty.mcassistant.village.FoundingPlan.MAX_FOLK))
+                        .executes(ctx -> foundScreen(ctx, IntegerArgumentType.getInteger(ctx, "count")))))
+                .then(Commands.argument("count", IntegerArgumentType.integer(
+                        com.jrpetty.mcassistant.village.FoundingPlan.MIN_FOLK, com.jrpetty.mcassistant.village.FoundingPlan.MAX_FOLK))
+                    .executes(ctx -> found(ctx, false))
+                    .then(Commands.argument("x", IntegerArgumentType.integer())
+                        .then(Commands.argument("z", IntegerArgumentType.integer())
+                            .executes(ctx -> found(ctx, true))))))
             .then(Commands.literal("folk").executes(VillageCommands::folk))
             .then(Commands.literal("people").executes(VillageCommands::people))
             .then(Commands.literal("list").executes(VillageCommands::list))
@@ -322,6 +348,123 @@ public final class VillageCommands {
             for (int cz = -3; cz <= 3; cz++) level.getChunk((x >> 4) + cx, (z >> 4) + cz);
         }
         return raiseMany(ctx, level, groundAt(level, x, z), 0.0F, count);
+    }
+
+    // ------------------------------------------------------------------ founding a village of a chosen size
+
+    /** Where a founding goes: the coordinates given, or where the command was run; the ground there loaded. */
+    private static net.minecraft.core.BlockPos foundingSpot(CommandContext<CommandSourceStack> ctx, boolean given) {
+        net.minecraft.server.level.ServerLevel level = ctx.getSource().getLevel();
+        int x, z;
+        if (given) {
+            x = IntegerArgumentType.getInteger(ctx, "x");
+            z = IntegerArgumentType.getInteger(ctx, "z");
+        } else {
+            net.minecraft.core.BlockPos here = net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition());
+            x = here.getX();
+            z = here.getZ();
+        }
+        for (int cx = -2; cx <= 2; cx++) {
+            for (int cz = -2; cz <= 2; cz++) level.getChunk((x >> 4) + cx, (z >> 4) + cz);
+        }
+        return groundAt(level, x, z);
+    }
+
+    private static float yawOf(CommandContext<CommandSourceStack> ctx) {
+        return ctx.getSource().getEntity() == null ? 0.0F : ctx.getSource().getEntity().getYRot();
+    }
+
+    /** /village found board [x z]: the board of a village to be founded, as setting a spawner down puts it up. */
+    private static int foundBoard(CommandContext<CommandSourceStack> ctx, boolean given) {
+        net.minecraft.server.level.ServerLevel level = ctx.getSource().getLevel();
+        net.minecraft.core.BlockPos spot = foundingSpot(ctx, given);
+        if (Villages.nearest(level, spot, Villages.VILLAGE_RANGE * 2) != null) {
+            ctx.getSource().sendFailure(Component.literal("There is a village near there already."));
+            return 0;
+        }
+        com.jrpetty.mcassistant.entity.Founding.Outcome o =
+            com.jrpetty.mcassistant.entity.Founding.propose(level, spot, ctx.getSource().getPlayer(), yawOf(ctx));
+        if (!o.ok() || o.board() == null) {
+            ctx.getSource().sendFailure(Component.literal(o.message()));
+            return 0;
+        }
+        net.minecraft.core.BlockPos b = o.board();
+        net.minecraft.world.level.block.state.BlockState st = level.getBlockState(b);
+        String facing = st.hasProperty(com.jrpetty.mcassistant.block.VillageBoardBlock.FACING)
+            ? st.getValue(com.jrpetty.mcassistant.block.VillageBoardBlock.FACING).getName() : "south";
+        ctx.getSource().sendSuccess(() -> Component.literal("FOUND-BOARD " + b.getX() + " " + b.getY() + " " + b.getZ()
+            + " facing " + facing + " for a village at " + spot.getX() + " " + spot.getY() + " " + spot.getZ() + ". "
+            + o.message()), false);
+        return 1;
+    }
+
+    /** /village found screen [count]: the founding screen of the waiting board nearest you, as right-clicking it opens it. */
+    private static int foundScreen(CommandContext<CommandSourceStack> ctx, int count) {
+        ServerPlayer player = ctx.getSource().getPlayer();
+        if (player == null) {
+            ctx.getSource().sendFailure(Component.literal("Only a player can be shown the founding screen."));
+            return 0;
+        }
+        net.minecraft.core.BlockPos b = com.jrpetty.mcassistant.entity.Founding.boardNear(player.serverLevel(),
+            player.blockPosition(), Villages.VILLAGE_RANGE);
+        if (b == null || !(player.serverLevel().getBlockEntity(b) instanceof com.jrpetty.mcassistant.block.VillageBoardBlockEntity be)
+                || be.founding() != com.jrpetty.mcassistant.entity.Founding.PENDING) {
+            ctx.getSource().sendFailure(Component.literal("No board near you is waiting for a village to be founded."));
+            return 0;
+        }
+        com.jrpetty.mcassistant.entity.Founding.offer(player, be, count);
+        ctx.getSource().sendSuccess(() -> Component.literal("The founding screen of the board at "
+            + b.getX() + " " + b.getY() + " " + b.getZ() + "."), false);
+        return 1;
+    }
+
+    /**
+     * /village found <count> [x z]: exactly what the founding screen's Confirm and spawn does — on the
+     * board waiting there, or on one put up for it now — so scripts and tests found a village the way
+     * a player does.
+     */
+    private static int found(CommandContext<CommandSourceStack> ctx, boolean given) {
+        net.minecraft.server.level.ServerLevel level = ctx.getSource().getLevel();
+        int count = IntegerArgumentType.getInteger(ctx, "count");
+        net.minecraft.core.BlockPos spot = foundingSpot(ctx, given);
+        if (Villages.nearest(level, spot, Villages.VILLAGE_RANGE * 2) != null) {
+            ctx.getSource().sendFailure(Component.literal("There is a village near there already."));
+            return 0;
+        }
+        net.minecraft.core.BlockPos board = com.jrpetty.mcassistant.entity.Founding.boardNear(level, spot, Villages.VILLAGE_RANGE * 2);
+        if (board == null) {
+            com.jrpetty.mcassistant.entity.Founding.Outcome o =
+                com.jrpetty.mcassistant.entity.Founding.propose(level, spot, ctx.getSource().getPlayer(), yawOf(ctx));
+            if (!o.ok()) {
+                ctx.getSource().sendFailure(Component.literal(o.message()));
+                return 0;
+            }
+            board = o.board();
+        }
+        com.jrpetty.mcassistant.entity.Founding.Outcome c =
+            com.jrpetty.mcassistant.entity.Founding.confirm(level, board, count, null);
+        if (!c.ok()) {
+            ctx.getSource().sendFailure(Component.literal(c.message()));
+            return 0;
+        }
+        int folk = com.jrpetty.mcassistant.entity.Founding.allowed(count);
+        int across = 2 * com.jrpetty.mcassistant.village.FoundingPlan.coreRadius(folk) + 1;
+        net.minecraft.core.BlockPos b = board;
+        ctx.getSource().sendSuccess(() -> Component.literal("FOUNDING " + spot.getX() + " " + spot.getY() + " " + spot.getZ()
+            + ": " + folk + " folk, about " + across + " by " + across + " blocks made level; the board at "
+            + b.getX() + " " + b.getY() + " " + b.getZ() + ". " + c.message()), false);
+        return folk;
+    }
+
+    /** /village found status: every founding waiting or under way, one line each. */
+    private static int foundStatus(CommandContext<CommandSourceStack> ctx) {
+        java.util.List<String> lines = com.jrpetty.mcassistant.entity.Founding.status(ctx.getSource().getServer());
+        if (lines.isEmpty()) {
+            ctx.getSource().sendSuccess(() -> Component.literal("No village is waiting to be founded, or being founded."), false);
+            return 0;
+        }
+        ctx.getSource().sendSuccess(() -> Component.literal(String.join(" | ", lines)), false);
+        return lines.size();
     }
 
     private static int raiseMany(CommandContext<CommandSourceStack> ctx,

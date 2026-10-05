@@ -11,21 +11,113 @@ Everything is obtainable in **survival**.
 
 | How | What you do |
 |---|---|
-| **Village Folk Spawner** (recommended) | Craft it — 8 bread round a gold ingot — and *place* it. The first one founds a village of eight on the spot (the same start a village the world grows gets) and leaves the founding stores in a chest where it stood; each one placed after that, within reach, adds one settler. That is the last thing a village needs from you. |
-| **Village Charter** | Right-click the ground. Same result as the spawner; craftable with paper, bread, a gold ingot, seeds and a chest. |
+| **Village Folk Spawner** (recommended) | Craft it — 8 bread round a gold ingot — and *place* it. The first one puts the village board up on the spot; go to the board and choose how many folk start the village, from two to five hundred (see *Founding a village: choose how many*). The ground round about is made level for them, and they come, with the founding stores in a chest where the spawner stood. Each one placed after that, within reach of the village, adds one settler. That is the last thing a village needs from you. |
+| **Village Charter** | Right-click the ground. Founds a village of eight on the spot at once (the same start a village the world grows gets), without levelling anything; craftable with paper, bread, a gold ingot, seeds and a chest. |
 | **Where to find them** | In creative, everything the mod adds is in its own **Village Folk** tab (the spawner is also under Functional Blocks). In survival, every recipe is in the recipe book from the moment you join; the spawner is a gold ingot in the middle of the crafting grid with bread in all eight squares round it. |
 | **/village spawn [1-100]** | Stands folk up two blocks ahead of you. `spawnat <x> <z> [n]` for the console. |
 | **The world** | Villages generate as you explore (config `naturalVillages`), in groups of three to five. |
 | **Vanilla villagers** | Turned into folk as you meet them (config `replaceVillagers`). Trading with them stops working; wandering traders are untouched. |
 
+## Founding a village: choose how many
+
+**Place the spawner, then go to the board.** A Village Folk Spawner set down where there is no
+village puts the **village board** up on the spot, on the edge of what will be the square and on
+the far side of it from you, so it faces you. Nobody comes yet. The board says what is about to
+happen, and chat says: *Go to the village board to choose how many folk start the village.*
+
+**Right-click the board** and the *Found a village* screen opens:
+
+* **How many**: a slider from 2 to 500 (it moves by ratio, so two to twelve is not squeezed into
+  the first pixel), a − and a + beside it (with Shift, ten at a time), and the usual sizes to pick
+  at a click: 2, 8, 12, 25, 50, 100, 250, 500. It starts at eight. A server lets a village be no
+  bigger than its growth cap (`villageGrowthCap`, 100 unless it has been raised to 500), and when
+  the cap is lower than five hundred the screen says so and goes no higher.
+* **What that means**, worked out from the count as you move it: how much ground is made level,
+  the trades that many settle into (the biggest first), the houses they will want before they
+  raise children and how many beds the camp has, and what so many folk cost a server every tick,
+  amber from about a hundred and red from three hundred (*hundreds of folk are heavy for a
+  server: every one is a ticking creature*). If the world would hold more folk than it may
+  (`villageWorldCap`), it says that too: past it no village raises a child.
+* **Confirm and spawn** starts the founding. **Cancel** only closes the screen; the board goes on
+  waiting. The server checks the choice again: you must be standing by the board (24 blocks), the
+  board must still be waiting, and the count must be 2 to 500; a count over the growth cap is
+  brought down to it, and you are told.
+
+To call it off, take the board down: you get your spawner back. A board left waiting is still
+waiting after a restart.
+
+**The ground is made level first.** A square with rounded corners round the spot, as big as the
+town those folk will build needs (the homes they will want, and how far out the town's plan
+has to run to hold them):
+
+| Folk | Ground made level | Level before anybody comes |
+|---|---|---|
+| 2 to 8 | about 61 by 61 blocks | 16 blocks round the heart |
+| 12 | 65 by 65 | 16 |
+| 25 | 71 by 71 | 16 |
+| 50 | 83 by 83 | 16 |
+| 100 | 99 by 99 | 17 |
+| 250 | 135 by 135 | 23 |
+| 500 | 179 by 179: the whole of the town's plan, all three rings | 31 |
+
+* **Inside**, everything is brought to one level: the middle height of the dry land there, and
+  never below the sea (a town in a pit behind its banks would flood). Hills and knolls are cut
+  down, hollows filled, trees, plants and snow cleared, and the ground is dressed in the land's
+  own soil: grass on the plains, sand in the desert, podzol in the pine woods (grass where it was
+  all rock: the folk are going to farm it), with earth under a cut and sandstone under deep sand.
+  Ponds are filled. Rivers, lakes and the sea are left exactly as they are, the land beside them
+  is never cut below the water, and the fill slopes down to them as a bank, not a wall.
+* **At the edge** the level ground meets the land as it was, and nothing is cut or built more
+  steeply than a slope: rounding off from the flat over the first six blocks, a block up for every
+  block across after that, a block and a half from twenty-four out. So a hill a few blocks high is
+  met over eight to ten blocks, one of fifteen over about twenty, and a mountain the square cuts
+  into stands back from the town on a long face rather than a cliff (up to fifty-nine blocks of
+  it, forty-eight out). Wherever the land is already within that slope it is not touched at all,
+  and a little noise moves the line in and out so it does not run like a ruled edge. Worked
+  through on made-up ground of every kind, no step on the edge is more than two blocks, unless
+  the land had one already.
+* **Nothing anybody built is touched**, inside or out: a column with so much as a plank or a torch
+  in it is left as it is, with two columns round it, and the ground round that held to it by the
+  same slope. Nothing outside the ground being worked is touched at all.
+
+**Then they come.** The heart is levelled first and the rest outwards; as soon as the camp ground
+is level the board comes down and the first of them stands up at the heart and founds the village
+there, with its founding stores, its board put up again on the same side of the square, and the
+camp. The rest come a few a tick (eight), on a spiral round the heart, each on dry ground of its
+own, while the outer ground is still being shaped. A bigger party brings more: a second chest of
+bread, seed, saplings, torches, planks and stone for every sixteen past the first dozen (up to
+six), and the bedding of those the camp has no room for (it lays two dozen beds) in chests of its
+own, up to two, for the first houses.
+
+**It goes on without you.** The work is done a little every tick: at most 4,096 blocks or eight
+milliseconds, 8,192 columns read while the ground is walked, eight folk. It keeps the ground it is
+working loaded (six chunks asked for at a time, the rest held while it works), so you can walk
+away, and it is kept with the world: after a restart it walks the ground again and carries on from
+where it had got to. Anybody within 160 blocks sees how it is going on the action bar, the board
+says it while it waits, and the village's own board says it once the village is founded. When it
+is done, the first of them says so, and the village's history remembers it.
+
+A spawner placed within reach of a village adds one settler, as it always has. `/village
+spawnat` still stands a party up at once with no levelling (the soak tests use it), and so does
+the Village Charter.
+
+Tested in `FoundingGameTests`: on rough ground (a stone hill across the edge, a knoll and a hollow
+inside, a pond, trees and somebody's hut), a spawner brings nobody until the founders are chosen,
+the board keeps its waiting across a save, counts outside 2 to 500 are refused and one over the
+cap brought down to it; twenty chosen, the square ends flat to a block, no step on the edge is
+over two, the hut stands, and twenty folk live there. A spawner in a village adds one; the
+command founds twelve. The client smoke test photographs the board, the screen and the levelled
+ground from above (`smoke-17-found-*.png`).
+
 ## From the first spawner to the Nether Age
 
-Place a spawner and walk away. Nothing below needs you: no commands, no orders, no
-chests to fill, no player nearby (a village keeps its own ground loaded, and the
+Place a spawner, say at its board how many, and walk away. Nothing below needs you:
+no commands, no orders, no chests to fill, no player nearby (a village keeps its own ground loaded, and the
 real-terrain tests run on a server with nobody on it). Everything happens on its
 own, and each step is there for a reason the village can see.
 
-1. **Founding.** Eight folk stand up where the spawner stood and found the village,
+1. **Founding.** The folk you chose at the board (eight is what it offers first) stand up
+   where the spawner stood, on ground levelled for them, and found the village,
    with a chest of founding stores: bread, seed, carrots and potatoes, saplings, torches,
    planks, cobblestone, string, and the **twenty-seven units of the Village Storehouse**.
    Every folk carries rations, stone tools and a bench. Nobody carries a chest of their
@@ -2529,6 +2621,11 @@ ripen, days pass, folk work and houses go up at that pace.
 
 * `/village list` — every village the game knows of: where, how many live
   there, what age, what has been built. Works from the console.
+* `/village found <count> [x z]` — (operators) found a village of that many (2 to 500)
+  where you stand or at x z, exactly as the founding screen's **Confirm and spawn** does: on
+  the board waiting there, or on one put up for it. `found board [x z]` puts the board up
+  alone, as placing a spawner does; `found screen [count]` opens the founding screen of the
+  waiting board nearest you; `found status` says how every founding is getting on.
 * `/village status` — age, headcount, trades, what the stores hold, what has
   been built, what the village is short of. Works from the console.
 * **The village journal (J key)** — the same, for the village you stand in, on a page
@@ -2596,7 +2693,8 @@ Every push to CI:
 
 * boots a real headless server and runs the game tests in
   `src/gametest/java` — recipes load, the spawner block, the charter and the
-  commands work, a vanilla villager is swapped for a folk, and twelve folk are
+  commands work, a village founded at a chosen size on rough ground ends on level
+  ground with sloped edges, a vanilla villager is swapped for a folk, and twelve folk are
   left alone for **three game days** on ground of the test's own making;
 * starts a real dedicated server with vanilla world generation, settles a
   village in a chosen biome over RCON (`tools/realworld/soak.py`), lets three

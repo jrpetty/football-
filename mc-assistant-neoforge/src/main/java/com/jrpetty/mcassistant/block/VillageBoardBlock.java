@@ -137,7 +137,8 @@ public class VillageBoardBlock extends Block implements EntityBlock {
         return (lvl, pos, st, be) -> VillageBoardBlockEntity.serverTick(lvl, pos, st, (VillageBoardBlockEntity) be);
     }
 
-    /** Reading it close up: the whole of it in the village journal. */
+    /** Reading it close up: the whole of it in the village journal (or, on a board a spawner put up
+     *  for a village not founded yet, the screen that asks how many folk are to start it). */
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (level.isClientSide) return InteractionResult.SUCCESS;
@@ -162,6 +163,19 @@ public class VillageBoardBlock extends Block implements EntityBlock {
     private static void takeDown(Level level, BlockPos pos, BlockState state, boolean drop) {
         BlockPos anchor = anchor(pos, state);
         Direction facing = state.getValue(FACING);
+        // A board waiting for its founders to be chosen calls the founding off when it comes down,
+        // and gives back the spawner that put it up.
+        boolean waiting = level.getBlockEntity(anchor) instanceof VillageBoardBlockEntity w
+            && w.founding() == com.jrpetty.mcassistant.entity.Founding.PENDING;
+        if (waiting && level instanceof net.minecraft.server.level.ServerLevel server) {
+            com.jrpetty.mcassistant.entity.Founding.calledOff(server, anchor);
+            if (drop) {
+                ItemEntity back = new ItemEntity(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
+                    new ItemStack(McAssistantMod.FOLK_SPAWNER_ITEM.get()));
+                back.setDefaultPickUpDelay();
+                level.addFreshEntity(back);
+            }
+        }
         // The board a village put up at its founding is the village's: taking it down gives nothing.
         if (level.getBlockEntity(anchor) instanceof VillageBoardBlockEntity be && be.raised()) drop = false;
         TAKING_DOWN.set(Boolean.TRUE);

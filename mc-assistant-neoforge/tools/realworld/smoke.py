@@ -128,6 +128,96 @@ def showcase(r, cx, cz, look):
     say("alive after the town: %s" % client_alive())
 
 
+def found_village(r, cx, cz, look):
+    """A village founded the way a player founds one, photographed: the board a spawner puts up,
+    on ground made rough on purpose whatever the seed gave (a hill across the edge, a knoll, a pit,
+    a pond, trees); the founding screen with a count chosen; then, after Confirm and spawn, the
+    ground levelled with its edges sloped into the land, and the folk come, from high up."""
+    count = 40
+    fx, fz = cx + 280, cz + 40
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("time set 6000")
+    r.cmd("tp %s %d 140 %d" % (USER, fx - 10, fz - 30))
+    time.sleep(15)                                     # the ground arrives at the client
+    out = r.cmd("village found board %d %d" % (fx, fz))
+    say("found board: " + out[:300])
+    m = re.search(r"FOUND-BOARD (-?\d+) (-?\d+) (-?\d+) facing (\w+) for a village at (-?\d+) (-?\d+) (-?\d+)", out)
+    if not m:
+        say("no founding board went up; nothing to photograph")
+        return
+    bx, by, bz = int(m.group(1)), int(m.group(2)), int(m.group(3))
+    facing = m.group(4)
+    hx, hy, hz = int(m.group(5)), int(m.group(6)), int(m.group(7))
+    # The board runs to its reader's right from its first panel; it faces the heart, from the side it stands on.
+    step = {"north": (0, -1), "south": (0, 1), "east": (1, 0), "west": (-1, 0)}
+    right = {"north": "west", "west": "south", "south": "east", "east": "north"}[facing]
+    mid_x = bx + 0.5 + step[right][0] * 4.5
+    mid_z = bz + 0.5 + step[right][1] * 4.5
+    away = step[facing]                                # from the board towards the heart, and on past it
+    side = step[right]
+
+    def at(f, l):
+        # So far on past the heart from the board, and so far to the board's right: the rough
+        # ground goes on the far side of the heart, where it cannot fall on the board.
+        return hx + away[0] * f + side[0] * l, hz + away[1] * f + side[1] * l
+
+    # Rough ground: a grassy hill across the edge, a stone knoll and a pit inside, a pond, trees.
+    radius = 39                                        # FoundingPlan.coreRadius(40)
+    hill_x, hill_z = at(radius - 2, 10)
+    for k in range(10):
+        h = 14 - k
+        r.cmd("fill %d %d %d %d %d %d minecraft:grass_block" % (hill_x - h, hy + k - 1, hill_z - h, hill_x + h, hy + k - 1, hill_z + h))
+    kx, kz = at(12, -12)
+    for k in range(4):
+        h = 5 - k
+        r.cmd("fill %d %d %d %d %d %d minecraft:stone" % (kx - h, hy + k - 1, kz - h, kx + h, hy + k - 1, kz + h))
+    px, pz = at(6, 10)
+    r.cmd("fill %d %d %d %d %d %d minecraft:air" % (px - 2, hy - 3, pz - 2, px + 2, hy - 1, pz + 2))
+    wx, wz = at(-2, -18)
+    r.cmd("fill %d %d %d %d %d %d minecraft:water" % (wx - 2, hy - 1, wz - 2, wx + 1, hy - 1, wz + 1))
+    for f, l in ((18, 4), (22, -20), (-2, 16), (6, -4)):
+        tx, tz = at(f, l)
+        say("tree: " + r.cmd("place feature minecraft:oak %d %d %d" % (tx, hy, tz))[:120])
+    time.sleep(4)
+    # The waiting board, from across the heart.
+    look("17-found-1-board", hx + 0.5 + away[0] * 6, hy + 2, hz + 0.5 + away[1] * 6, mid_x, by + 2.5, mid_z, wait=8)
+    vx, vz = at(radius + 30, 40)
+    cx2, cz2 = at(14, 4)
+    look("17-found-1b-rough-ground", vx, hy + 30, vz, cx2, hy, cz2, wait=6)
+    # The founding screen, as right-clicking the board opens it, with forty chosen.
+    r.cmd("tp %s %.1f %d %.1f" % (USER, mid_x + away[0] * 4, hy + 1, mid_z + away[1] * 4))
+    time.sleep(3)
+    say("found screen: " + r.cmd("execute as %s at @s run village found screen %d" % (USER, count)))
+    time.sleep(5)
+    shot("17-found-2-screen")
+    say("alive after the founding screen: %s" % client_alive())
+    # Confirm and spawn (the command does exactly what the screen's button does; it closes the screen).
+    say("found: " + r.cmd("village found %d %d %d" % (count, fx, fz))[:300])
+    level_y = hy - 1
+    started = time.time()
+    shot_mid = False
+    while time.time() - started < 240:
+        status = r.cmd("village found status")
+        mm = re.search(r"FOUNDING -?\d+ (-?\d+) -?\d+ (\w+) folk (\d+)/(\d+) ground (\d+)%", status)
+        if not mm:
+            say("founding done after %d s" % (time.time() - started))
+            break
+        level_y = int(mm.group(1)) - 1
+        say("founding: %s, folk %s/%s, ground %s%%" % (mm.group(2), mm.group(3), mm.group(4), mm.group(5)))
+        if not shot_mid and int(mm.group(5)) >= 30:
+            look("17-found-3-levelling", fx + 70, level_y + 55, fz + 70, fx, level_y, fz, wait=4)
+            shot_mid = True
+        time.sleep(4)
+    say("village: " + r.cmd("execute positioned %d %d %d run village status" % (fx, level_y + 1, fz))[:300])
+    # The levelled ground and its sloped edges from high up, the hill's cut face, and the folk at their camp.
+    look("17-found-4-done-air", fx + 75, level_y + 65, fz + 75, fx, level_y, fz, wait=12)
+    look("17-found-5-done-overhead", fx + 4, level_y + 95, fz + 10, fx, level_y, fz, wait=8)
+    ex, ez = at(radius + 34, 46)
+    look("17-found-6-edge", ex, level_y + 22, ez, hill_x, level_y + 4, hill_z, wait=8)
+    look("17-found-7-folk", fx + 10, level_y + 6, fz + 10, fx, level_y + 1, fz, wait=8)
+    say("folk founded: " + r.cmd("execute positioned %d %d %d run village list" % (fx, level_y + 1, fz))[:400])
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")
@@ -285,6 +375,12 @@ def main():
     except Exception as e:  # noqa: BLE001
         say("stats failed: %s" % e)
     say("alive after the lineup: %s" % client_alive())
+    try:
+        found_village(r, cx, cz, look)
+    except Exception as e:  # noqa: BLE001
+        say("founding failed: %s" % e)
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the founding: %s" % client_alive())
     try:
         showcase(r, cx, cz, look)
     except Exception as e:  # noqa: BLE001

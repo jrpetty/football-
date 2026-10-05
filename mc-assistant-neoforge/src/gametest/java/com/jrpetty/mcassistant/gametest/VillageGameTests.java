@@ -94,20 +94,37 @@ public class VillageGameTests {
         });
     }
 
-    /** Placing the spawner block, exactly as a player does. */
-    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "t02_spawner_block")
+    /**
+     * Placing the spawner block, exactly as a player does: the village board goes up and waits, and
+     * nobody comes until the founders are chosen at it (here the usual party, as Confirm and spawn
+     * on the founding screen would); then the ground is made level and they come. A second spawner
+     * within reach adds one settler.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 2400, batch = "t02_spawner_block")
     public static void t02_spawner_block(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
+        com.jrpetty.mcassistant.entity.Founding.resetForTests(level.getServer());
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
-        Kit.hold(level, 2600, 2600, 48);
+        Kit.hold(level, 2600, 2600, 96);
         BlockPos ground = Kit.surface(level, 2600, 2600);
         ItemStack stack = new ItemStack(McAssistantMod.FOLK_SPAWNER_ITEM.get());
         player.setItemInHand(InteractionHand.MAIN_HAND, stack);
         BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(ground.below()), Direction.UP, ground.below(), false);
         InteractionResult r = stack.useOn(new UseOnContext(player, InteractionHand.MAIN_HAND, hit));
         Kit.log("t02 useOn result: " + r);
-        helper.runAtTickTime(40, () -> {
+        BlockPos board = com.jrpetty.mcassistant.entity.Founding.boardNear(level, ground, 64);
+        int before = level.getEntitiesOfClass(VillageFolkEntity.class, around(ground, 24)).size();
+        Kit.log("t02 the board waits at " + board + "; folk before the founders are chosen: " + before);
+        helper.assertTrue(board != null && before == 0, "the spawner puts up a waiting board and brings nobody yet");
+        com.jrpetty.mcassistant.entity.Founding.Outcome chosen = com.jrpetty.mcassistant.entity.Founding.confirm(
+            level, board, VillageFolkSpawnerBlock.foundingParty(), null);
+        Kit.log("t02 confirmed: " + chosen.message());
+        helper.assertTrue(chosen.ok(), "the founders can be chosen at the board: " + chosen.message());
+        final boolean[] done = { false };
+        helper.onEachTick(() -> {
+            if (done[0] || com.jrpetty.mcassistant.entity.Founding.near(level, ground, 8)) return;   // still being founded
+            done[0] = true;
             List<VillageFolkEntity> folk = level.getEntitiesOfClass(VillageFolkEntity.class, around(ground, 12));
             Kit.log("t02 folk near the block: " + folk.size()
                 + (folk.isEmpty() ? "" : " — " + folk.get(0).debugLine()));
