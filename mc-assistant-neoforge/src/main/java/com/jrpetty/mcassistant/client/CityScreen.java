@@ -17,22 +17,29 @@ import java.util.Locale;
 /**
  * The town's books, opened at the village board: how the village has grown and why.
  *
- * <p>Eleven pages, picked along the top: the <b>Overview</b> (the figures that matter, with how they
+ * <p>Fifteen pages, picked along the top: the <b>Overview</b> (the figures that matter, with how they
  * have moved over the week, and the first of what is driving it); <b>Growth</b> (its people over
  * time, births against deaths, comings and goings, what they died of); <b>Money</b> (what it makes,
  * takes in and pays out each day, the treasury and its worth, and its output by kind); <b>Jobs</b>
  * (every trade: hands, level, pay, what it made yesterday and this week, per hand, and its share
  * of the whole, with any trade's own history a click away); <b>Folk</b> (everybody, sortable by any
- * column); <b>Leader</b> (who leads, what it cares about, how long, what it promised, what the
- * village thinks of it, the elections); <b>Homes</b> (beds, households, tenure); <b>Stores</b>
- * (food, timber, stone, coal, iron over time); <b>Why</b> (what is driving its growth and what is
- * holding it back); <b>News</b> (the chronicle); and the <b>Board</b> itself. The charts follow the
- * mouse: the day under it, and every line's value that day. The range (a week, a month, a hundred
- * days, all of it) is picked at the top right.
+ * column); <b>Society</b> (the age pyramid, moods, how evenly the money is spread, natures, skill,
+ * families, friendships, the best liked and the best hand at each trade); <b>Leader</b> (who leads,
+ * what it cares about, how long, what it promised, what the village thinks of it, the elections);
+ * <b>Homes</b> (beds, households, tenure); <b>Buildings</b> (every building, where, its storeys,
+ * how furnished, who lives there, and what is to be built next); <b>Stores</b> (food, timber,
+ * stone, coal, iron over time); <b>Why</b> (what is driving its growth and what is holding it
+ * back); <b>Trends</b> (per hand, per head); <b>Records</b> (its bests, its totals, its averages and
+ * where it is heading); <b>News</b> (the chronicle); and the <b>Board</b> itself. The charts follow
+ * the mouse: the day under it, and every line's value that day. The range (a week, a month, a
+ * hundred days, all of it) is picked at the top right.
  */
 public class CityScreen extends Screen {
 
-    private static final String[] TABS = { "Overview", "Growth", "Money", "Jobs", "Folk", "Leader", "Homes", "Stores", "Why", "Trends", "News", "Board" };
+    private static final String[] TABS = { "Overview", "Growth", "Money", "Jobs", "Folk", "Society", "Leader", "Homes", "Buildings",
+        "Stores", "Why", "Trends", "Records", "News", "Board" };
+    /** The pages that read today's figures, not the books (so they show from the first day). */
+    private static final java.util.Set<String> TODAY_PAGES = java.util.Set.of("Folk", "Society", "Leader", "Buildings", "Why", "News", "Board");
     private static final int[] RANGES = { 7, 30, 100, 0 };
     private static final String[] RANGE_NAMES = { "7d", "30d", "100d", "All" };
 
@@ -77,7 +84,7 @@ public class CityScreen extends Screen {
     @Override
     protected void init() {
         this.w = Math.min(this.width - 12, 500);
-        this.h = Math.min(this.height - 12, 310);
+        this.h = Math.min(this.height - 12, 330);
         this.left = (this.width - w) / 2;
         this.top = (this.height - h) / 2;
     }
@@ -91,11 +98,40 @@ public class CityScreen extends Screen {
         return narrow ? (int) (font.width(TABS[i]) * 0.75) + 6 : font.width(TABS[i]) + 8;
     }
 
-    /** Do the tabs need the small hand to fit across the window? */
-    private boolean narrowTabs() {
+    /** Where each tab sits: {x, y, width}; in one row if they fit, in the small hand if that makes them fit, else in two rows. */
+    private int[][] tabBoxes() {
+        int[][] out = new int[TABS.length][];
+        int room = w - 8;
+        int total = 0, small = 0;
+        for (int i = 0; i < TABS.length; i++) { total += tabWidth(i, false) + 1; small += tabWidth(i, true) + 1; }
+        boolean narrow = total > room && small <= room;
+        boolean two = total > room && small > room;
+        int perRow = two ? (TABS.length + 1) / 2 : TABS.length;
+        int tx = left + 4, ty = top + 36;
+        for (int i = 0; i < TABS.length; i++) {
+            if (i == perRow) { tx = left + 4; ty += 14; }
+            boolean sm = narrow || (two && rowWidth(i < perRow ? 0 : perRow, i < perRow ? perRow : TABS.length) > room);
+            int tw = tabWidth(i, sm);
+            out[i] = new int[]{ tx, ty, tw, sm ? 1 : 0 };
+            tx += tw + 1;
+        }
+        return out;
+    }
+
+    private int rowWidth(int from, int to) {
         int total = 0;
-        for (int i = 0; i < TABS.length; i++) total += tabWidth(i, false) + 1;
-        return total > w - 8;
+        for (int i = from; i < to; i++) total += tabWidth(i, false) + 1;
+        return total;
+    }
+
+    /** Where the page itself begins, under the tabs. */
+    private int pageTop() {
+        int[][] boxes = tabBoxes();
+        return boxes[boxes.length - 1][1] + 18;
+    }
+
+    private String page() {
+        return TABS[Math.max(0, Math.min(TABS.length - 1, tab))];
     }
 
     // ------------------------------------------------------------------ the data
@@ -180,36 +216,37 @@ public class CityScreen extends Screen {
             g.drawString(font, RANGE_NAMES[i], rx + 3, top + 8, on ? Ui.GOOD : Ui.MUTED, false);
         }
         g.drawString(font, "Close ×", left + w - 8 - font.width("Close ×"), top + 21, Ui.FAINT, false);
-        // The tabs (in the small hand when the window is narrow).
-        int tx = left + 4, ty = top + 36;
-        boolean narrow = narrowTabs();
+        // The tabs (in the small hand, or in two rows, when the window is narrow).
+        int[][] boxes = tabBoxes();
         for (int i = 0; i < TABS.length; i++) {
-            int tw = tabWidth(i, narrow);
+            int tx = boxes[i][0], ty = boxes[i][1], tw = boxes[i][2];
             boolean on = i == tab;
             g.fill(tx, ty, tx + tw, ty + 13, on ? Ui.PANEL : Ui.HEADER);
             g.renderOutline(tx, ty, tw, 13, on ? Ui.EDGE : Ui.EDGE_SOFT);
             if (on) g.fill(tx + 1, ty + 12, tx + tw - 1, ty + 13, Ui.PANEL);
-            if (narrow) small(g, TABS[i], tx + 3, ty + 4, on ? Ui.INK : Ui.MUTED);
+            if (boxes[i][3] == 1) small(g, TABS[i], tx + 3, ty + 4, on ? Ui.INK : Ui.MUTED);
             else g.drawString(font, TABS[i], tx + 4, ty + 3, on ? Ui.INK : Ui.MUTED, false);
-            tx += tw + 1;
         }
-        int x = left + 8, y = top + 54, cw = w - 16, ch = h - 62;
-        if (days().length == 0 && tab != 4 && tab != 5 && tab != 10 && tab != 11 && tab != 8) {
+        int x = left + 8, y = pageTop(), cw = w - 16, ch = top + h - 8 - y;
+        if (days().length == 0 && !TODAY_PAGES.contains(page())) {
             g.drawString(font, "The town's books are written each morning. Come back tomorrow for the first of them;", x, y, Ui.MUTED, false);
-            g.drawString(font, "the Folk, Leader, Why, News and Board pages have today's figures already.", x, y + 11, Ui.MUTED, false);
+            g.drawString(font, "the Folk, Society, Leader, Buildings, Why, News and Board pages have today's figures.", x, y + 11, Ui.MUTED, false);
         } else {
-            switch (tab) {
-                case 0 -> overview(g, x, y, cw, ch, mouseX, mouseY);
-                case 1 -> growth(g, x, y, cw, ch, mouseX, mouseY);
-                case 2 -> money(g, x, y, cw, ch, mouseX, mouseY);
-                case 3 -> jobs(g, x, y, cw, ch, mouseX, mouseY);
-                case 4 -> folk(g, x, y, cw, ch, mouseX, mouseY);
-                case 5 -> leader(g, x, y, cw, ch);
-                case 6 -> homes(g, x, y, cw, ch, mouseX, mouseY);
-                case 7 -> stores(g, x, y, cw, ch, mouseX, mouseY);
-                case 8 -> why(g, x, y, cw, ch);
-                case 9 -> trends(g, x, y, cw, ch, mouseX, mouseY);
-                case 10 -> news(g, x, y, cw, ch);
+            switch (page()) {
+                case "Overview" -> overview(g, x, y, cw, ch, mouseX, mouseY);
+                case "Growth" -> growth(g, x, y, cw, ch, mouseX, mouseY);
+                case "Money" -> money(g, x, y, cw, ch, mouseX, mouseY);
+                case "Jobs" -> jobs(g, x, y, cw, ch, mouseX, mouseY);
+                case "Folk" -> folk(g, x, y, cw, ch, mouseX, mouseY);
+                case "Society" -> society(g, x, y, cw, ch);
+                case "Leader" -> leader(g, x, y, cw, ch);
+                case "Homes" -> homes(g, x, y, cw, ch, mouseX, mouseY);
+                case "Buildings" -> buildings(g, x, y, cw, ch, mouseX, mouseY);
+                case "Stores" -> stores(g, x, y, cw, ch, mouseX, mouseY);
+                case "Why" -> why(g, x, y, cw, ch);
+                case "Trends" -> trends(g, x, y, cw, ch, mouseX, mouseY);
+                case "Records" -> records(g, x, y, cw, ch);
+                case "News" -> news(g, x, y, cw, ch);
                 default -> board(g, x, y, cw, ch);
             }
         }
@@ -424,7 +461,7 @@ public class CityScreen extends Screen {
             g.fill(x - 2, ry - 1, x + cw, ry + 9, p.getBoolean("leader") ? Ui.ROW_PICK : i % 2 == 0 ? Ui.ROW : Ui.ROW_ALT);
             Ui.chip(g, x, ry, Ui.job(p.getInt("ordinal")));
             String[] cells = { p.getString("name") + (p.getBoolean("leader") ? " ★" : ""), p.getString("trade"), Integer.toString(p.getInt("level")),
-                p.getInt("age") < 0 ? "—" : p.getInt("age") + "d", p.getInt("purse") + "c", p.getInt("wage") + "c", p.getInt("made") + "c",
+                p.getInt("years") + "y", p.getInt("purse") + "c", p.getInt("wage") + "c", p.getInt("made") + "c",
                 Integer.toString(p.getInt("mood")), p.getString("type"), p.getString("wealth") };
             for (int c = 0; c < cells.length; c++) {
                 if (FOLK_COLS[c] >= cw - 20) break;
@@ -451,7 +488,7 @@ public class CityScreen extends Screen {
             case 0 -> Comparator.comparing(p -> p.getString("name"));
             case 1 -> Comparator.comparing(p -> p.getString("trade"));
             case 2 -> Comparator.comparingInt(p -> p.getInt("level"));
-            case 3 -> Comparator.comparingInt(p -> p.getInt("age"));
+            case 3 -> Comparator.comparingInt(p -> p.getInt("years"));
             case 4 -> Comparator.comparingInt(p -> p.getInt("purse"));
             case 5 -> Comparator.comparingInt(p -> p.getInt("wage"));
             case 7 -> Comparator.comparingInt(p -> p.getInt("mood"));
@@ -647,6 +684,348 @@ public class CityScreen extends Screen {
             new Series("Idle", series("idle"), RED), new Series("Guards", series("guards"), GREY));
         chart(g, x + half + 6, y2, half, chartH, "Buildings and renown", mx, my, new Series("Buildings", series("buildings"), BROWN),
             new Series("Renown", series("renown"), TEAL), new Series("Age", series("age"), BLUE));
+    }
+
+    /** The village as a society: its ages, its moods, how its money is spread, its natures, skills, families and friendships. */
+    private void society(GuiGraphics g, int x, int y, int cw, int ch) {
+        CompoundTag so = data.getCompound("society");
+        int col = (cw - 16) / 3;
+        int bottom = y + ch - 2;
+        // The first column: the age pyramid and how they feel.
+        int cx = x, cy = y;
+        Ui.section(g, font, "Ages (in years)", cx, cy, col);
+        cy += 12;
+        int[] ages = so.getIntArray("ages");
+        int most = 1;
+        for (int a : ages) most = Math.max(most, a);
+        for (int i = ages.length - 1; i >= 0; i--) {
+            String band = i == 9 ? "90+" : (i * 10) + "-" + (i * 10 + 9);
+            small(g, band, cx, cy + 1, Ui.MUTED);
+            int bw = col - 50;
+            int len = Math.round(bw * ages[i] / (float) most);
+            int colour = i < 2 ? PINK : i >= 7 ? GREY : BLUE;
+            g.fill(cx + 28, cy, cx + 28 + Math.max(ages[i] > 0 ? 1 : 0, len), cy + 7, colour);
+            Ui.right(g, font, Integer.toString(ages[i]), cx + col, cy, Ui.MUTED);
+            cy += 9;
+        }
+        small(g, so.getInt("children") + " children, " + so.getInt("grown") + " grown, " + so.getInt("old") + " old", cx, cy + 1, Ui.MUTED);
+        cy += 14;
+        Ui.section(g, font, "How they feel", cx, cy, col);
+        cy += 12;
+        String[] moodNames = { "Miserable", "Low", "So-so", "Good", "Joyful" };
+        int[] moodCol = { RED, AMBER, GREY, GREEN, TEAL };
+        int[] moods = so.getIntArray("moods");
+        int folk = 0;
+        for (int m : moods) folk += m;
+        for (int i = moods.length - 1; i >= 0 && cy < bottom - 8; i--) {
+            small(g, moodNames[i], cx, cy + 1, Ui.MUTED);
+            Ui.bar(g, cx + 44, cy, col - 44 - 22, 7, folk == 0 ? 0 : moods[i] / (float) folk, moodCol[i]);
+            Ui.right(g, font, Integer.toString(moods[i]), cx + col, cy, Ui.MUTED);
+            cy += 9;
+        }
+        // The second column: the money and the families.
+        cx = x + col + 8;
+        cy = y;
+        int gini = so.getInt("gini");
+        Ui.section(g, font, "How the money is spread", cx, cy, col);
+        cy += 12;
+        String word = gini < 25 ? "evenly" : gini < 40 ? "fairly" : gini < 55 ? "unevenly" : "very unevenly";
+        small(g, "Spread " + word + " (Gini " + gini + " of 100)", cx, cy, Ui.INK);
+        cy += 9;
+        Ui.bar(g, cx, cy, col - 4, 6, gini / 100f, gini < 40 ? GREEN : gini < 55 ? AMBER : RED);
+        cy += 9;
+        small(g, "Middle purse " + so.getInt("median") + "c", cx, cy, Ui.MUTED);
+        cy += 9;
+        small(g, "The richest tenth hold " + so.getInt("top_tenth") + "%;", cx, cy, Ui.MUTED);
+        cy += 9;
+        small(g, "the poorer half hold " + so.getInt("bottom_half") + "%", cx, cy, Ui.MUTED);
+        cy += 11;
+        small(g, "The richest:", cx, cy, Ui.FAINT);
+        cy += 9;
+        ListTag rich = so.getList("richest", Tag.TAG_STRING);
+        for (int i = 0; i < rich.size(); i++) {
+            String[] p = rich.getString(i).split("\\|");
+            if (p.length < 3) continue;
+            small(g, Ui.clip(font, p[0] + ", " + p[1].toLowerCase(Locale.ROOT), (int) ((col - 30) / 0.75)), cx, cy, Ui.INK);
+            Ui.right(g, font, p[2] + "c", cx + col, cy - 1, Ui.MUTED);
+            cy += 9;
+        }
+        cy += 5;
+        Ui.section(g, font, "Families and friends", cx, cy, col);
+        cy += 12;
+        String[] fam = {
+            so.getInt("couples") + " couples, " + so.getInt("single") + " single",
+            so.getInt("households") + " households, " + String.format(Locale.ROOT, "%.1f", so.getInt("household_avg10") / 10.0)
+                + " to a house (at most " + so.getInt("household_max") + ")",
+            so.getInt("friendships") + " friendships, " + so.getInt("rivalries") + " rivalries" };
+        for (String f : fam) {
+            if (cy > bottom - 8) break;
+            small(g, Ui.clip(font, f, (int) (col / 0.75)), cx, cy, Ui.INK);
+            cy += 9;
+        }
+        ListTag liked = so.getList("liked", Tag.TAG_STRING);
+        if (liked.size() > 0 && cy < bottom - 18) {
+            cy += 3;
+            small(g, "Best liked:", cx, cy, Ui.FAINT);
+            cy += 9;
+            for (int i = 0; i < liked.size() && cy < bottom - 8; i++) {
+                String[] p = liked.getString(i).split("\\|");
+                if (p.length < 2) continue;
+                small(g, Ui.clip(font, p[0], (int) ((col - 30) / 0.75)), cx, cy, Ui.INK);
+                Ui.right(g, font, (p[1].startsWith("-") ? "" : "+") + p[1], cx + col, cy - 1, Ui.MUTED);
+                cy += 9;
+            }
+        }
+        // The third column: natures, skill, the best hand at each trade.
+        cx = x + 2 * (col + 8);
+        cy = y;
+        Ui.section(g, font, "Their natures", cx, cy, col);
+        cy += 12;
+        CompoundTag nat = so.getCompound("natures");
+        List<String> types = new ArrayList<>(nat.getAllKeys());
+        types.sort(Comparator.comparingInt(nat::getInt).reversed());
+        int grown = Math.max(1, so.getInt("grown"));
+        for (int i = 0; i < types.size() && i < 6; i++) {
+            small(g, types.get(i), cx, cy + 1, Ui.MUTED);
+            Ui.bar(g, cx + 50, cy, col - 50 - 22, 7, nat.getInt(types.get(i)) / (float) grown, PALETTE[i % PALETTE.length]);
+            Ui.right(g, font, Integer.toString(nat.getInt(types.get(i))), cx + col, cy, Ui.MUTED);
+            cy += 9;
+        }
+        CompoundTag tr = so.getCompound("traits");
+        List<String> traits = new ArrayList<>(tr.getAllKeys());
+        traits.sort(Comparator.comparingInt(tr::getInt).reversed());
+        StringBuilder ts = new StringBuilder();
+        for (int i = 0; i < Math.min(4, traits.size()); i++) ts.append(i == 0 ? "Mostly " : ", ").append(traits.get(i).toLowerCase(Locale.ROOT));
+        if (ts.length() > 0) {
+            small(g, Ui.clip(font, ts.toString(), (int) (col / 0.75)), cx, cy + 1, Ui.FAINT);
+            cy += 10;
+        }
+        cy += 4;
+        Ui.section(g, font, "How skilled", cx, cy, col);
+        cy += 12;
+        String[] lv = { "Novice", "Apprentice", "Journeyman", "Skilled", "Expert", "Master" };
+        String[] lvRange = { "0-4", "5-9", "10-14", "15-19", "20-29", "30+" };
+        int[] levels = so.getIntArray("levels");
+        for (int i = levels.length - 1; i >= 0 && cy < bottom - 8; i--) {
+            small(g, lv[i] + " " + lvRange[i], cx, cy + 1, Ui.MUTED);
+            Ui.bar(g, cx + 62, cy, col - 62 - 22, 7, levels[i] / (float) grown, PALETTE[(i + 2) % PALETTE.length]);
+            Ui.right(g, font, Integer.toString(levels[i]), cx + col, cy, Ui.MUTED);
+            cy += 9;
+        }
+        ListTag masters = so.getList("masters", Tag.TAG_STRING);
+        if (masters.size() > 0 && cy < bottom - 18) {
+            cy += 3;
+            small(g, "The best hand at each trade:", cx, cy, Ui.FAINT);
+            cy += 9;
+            for (int i = 0; i < masters.size() && cy < bottom - 8; i++) {
+                String[] p = masters.getString(i).split("\\|");
+                if (p.length < 3) continue;
+                small(g, Ui.clip(font, p[0] + ": " + p[1], (int) ((col - 22) / 0.75)), cx, cy, Ui.INK);
+                Ui.right(g, font, "L" + p[2], cx + col, cy - 1, Ui.MUTED);
+                cy += 9;
+            }
+        }
+    }
+
+    private static final String[] BUILDING_HEADS = { "Building", "Where", "Storeys", "Furnished", "Home" };
+    private static final int[] BUILDING_COLS = { 0, 92, 168, 206, 262 };
+
+    /** Every building in the village, what it is, where, how far it has come; and what it will build next. */
+    private void buildings(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my) {
+        List<CompoundTag> all = compounds("buildings");
+        all.sort(Comparator.comparing((CompoundTag c) -> c.getString("title")).thenComparingInt(c -> c.getInt("dist")));
+        int side = Math.min(170, cw / 3);
+        int tw = cw - side - 8;
+        for (int i = 0; i < BUILDING_HEADS.length; i++) {
+            if (BUILDING_COLS[i] >= tw - 20) break;
+            small(g, BUILDING_HEADS[i], x + BUILDING_COLS[i], y, Ui.FAINT);
+        }
+        int ry = y + 10;
+        int rows = (ch - 22) / 10;
+        int start = Math.max(0, Math.min(scroll, Math.max(0, all.size() - rows)));
+        int furnished = 0, furnishOf = 0, tall = 0, going = 0;
+        for (CompoundTag b : all) {
+            furnished += b.getInt("furnished");
+            furnishOf += b.getInt("furnish_of");
+            if (b.getInt("storeys") > 1) tall++;
+            if (b.getBoolean("raising")) going++;
+        }
+        for (int i = start; i < Math.min(all.size(), start + rows); i++) {
+            CompoundTag b = all.get(i);
+            g.fill(x - 2, ry - 1, x + tw, ry + 9, i % 2 == 0 ? Ui.ROW : Ui.ROW_ALT);
+            String where = b.getString("dir").equals("at the heart") ? "at the heart" : b.getInt("dist") + " " + b.getString("dir");
+            String storeys = b.getBoolean("raising") ? "going up" : Integer.toString(b.getInt("storeys"));
+            String fur = b.getInt("furnish_of") == 0 ? "—" : Math.round(b.getInt("furnished") * 100f / b.getInt("furnish_of")) + "%";
+            String home = b.contains("living") ? b.getInt("living") + " · " + b.getString("tenure") : "";
+            String[] cells = { b.getString("title"), where, storeys, fur, home };
+            for (int c = 0; c < cells.length; c++) {
+                if (BUILDING_COLS[c] >= tw - 20) break;
+                int colW = (c + 1 < BUILDING_COLS.length ? BUILDING_COLS[c + 1] : tw) - BUILDING_COLS[c] - 3;
+                small(g, Ui.clip(font, cells[c], (int) (colW / 0.75)), x + BUILDING_COLS[c], ry + 1,
+                    c == 2 && b.getBoolean("raising") ? Ui.WARN : Ui.INK);
+            }
+            ry += 10;
+        }
+        small(g, Ui.clip(font, all.size() + " buildings, " + tall + " of two storeys" + (going > 0 ? ", " + going + " going up" : "")
+            + (furnishOf > 0 ? "; insides " + Math.round(furnished * 100f / furnishOf) + "% furnished for the age" : "")
+            + (all.size() > rows ? " · scroll for more" : ""), (int) (tw / 0.75)), x, y + ch - 10, Ui.FAINT);
+        // The side: how many of each, and what comes next.
+        int sx = x + tw + 8, sy = y;
+        Ui.section(g, font, "By kind", sx, sy, side);
+        sy += 12;
+        java.util.Map<String, Integer> kinds = new java.util.TreeMap<>();
+        for (CompoundTag b : all) kinds.merge(b.getString("title"), 1, Integer::sum);
+        List<java.util.Map.Entry<String, Integer>> sorted = new ArrayList<>(kinds.entrySet());
+        sorted.sort((a, b) -> b.getValue() - a.getValue());
+        int shown = 0;
+        int half = (side - 4) / 2;
+        for (java.util.Map.Entry<String, Integer> e : sorted) {
+            if (sy > y + ch / 2 + 10) break;
+            int kx = sx + (shown % 2) * (half + 4);
+            small(g, Ui.clip(font, e.getKey(), (int) ((half - 14) / 0.75)), kx, sy, Ui.INK);
+            Ui.right(g, font, Integer.toString(e.getValue()), kx + half, sy - 1, Ui.MUTED);
+            if (shown % 2 == 1) sy += 9;
+            shown++;
+        }
+        if (shown % 2 == 1) sy += 9;
+        sy += 6;
+        Ui.section(g, font, "To build, in order", sx, sy, side);
+        sy += 12;
+        List<String> queue = strings("queue");
+        if (queue.isEmpty()) { small(g, "Nothing wanted now.", sx, sy, Ui.MUTED); sy += 9; }
+        for (int i = 0; i < queue.size() && sy < y + ch - 30; i++) {
+            small(g, Ui.clip(font, (i + 1) + ". " + capital(queue.get(i)), (int) (side / 0.75)), sx, sy, i == 0 ? Ui.GOOD : Ui.INK);
+            sy += 9;
+        }
+        String next = now().getString("next");
+        if (!next.isEmpty()) {
+            sy += 3;
+            for (FormattedCharSequence line : font.split(Component.literal(next), (int) (side / 0.75))) {
+                if (sy > y + ch - 9) break;
+                small(g, line, sx, sy, Ui.MUTED);
+                sy += 9;
+            }
+        }
+    }
+
+    /** The town's records and totals from all its books, the averages over the range, and where it is heading. */
+    private void records(GuiGraphics g, int x, int y, int cw, int ch) {
+        int[] days = days();
+        int half = (cw - 10) / 2;
+        int ly = y;
+        Ui.section(g, font, "Records, in all the books", x, ly, half);
+        ly += 12;
+        String[][] recs = {
+            { "Most folk", "pop" }, { "Most made in a day", "output" }, { "Fullest treasury", "coins" }, { "Greatest worth", "worth" },
+            { "Most born in a day", "born" }, { "Most content", "content" }, { "Most buildings", "buildings" }, { "Most renown", "renown" } };
+        for (String[] r : recs) {
+            int[] s = series(r[1]);
+            int best = -1, at = -1;
+            for (int i = 0; i < s.length; i++) if (s[i] > best) { best = s[i]; at = i; }
+            if (at < 0) continue;
+            g.drawString(font, r[0], x, ly, Ui.INK, false);
+            Ui.right(g, font, best + (r[1].equals("output") || r[1].equals("coins") || r[1].equals("worth") ? "c" : "")
+                + "  on day " + days[Math.min(at, days.length - 1)], x + half, ly, Ui.MUTED);
+            ly += 10;
+        }
+        int[] content = series("content");
+        int low = Integer.MAX_VALUE, lowAt = -1;
+        for (int i = 0; i < content.length; i++) if (content[i] < low) { low = content[i]; lowAt = i; }
+        if (lowAt >= 0) {
+            g.drawString(font, "Least content", x, ly, Ui.INK, false);
+            Ui.right(g, font, low + "  on day " + days[lowAt], x + half, ly, Ui.MUTED);
+            ly += 10;
+        }
+        // The longest run of days the village grew or held its numbers.
+        int[] pop = series("pop");
+        int run = 0, bestRun = 0;
+        for (int i = 1; i < pop.length; i++) {
+            run = pop[i] >= pop[i - 1] ? run + 1 : 0;
+            bestRun = Math.max(bestRun, run);
+        }
+        g.drawString(font, "Longest run without a loss", x, ly, Ui.INK, false);
+        Ui.right(g, font, bestRun + " days", x + half, ly, Ui.MUTED);
+        ly += 14;
+        Ui.section(g, font, "All told (" + days.length + " days in the books)", x, ly, half);
+        ly += 12;
+        int[] wagesAll = series("wages"), inAll = plus(series("takings"), series("sold"), series("tithe"));
+        String[][] totals = {
+            { "Born", Integer.toString(sumLast(series("born"), days.length)) }, { "Died", Integer.toString(sumLast(series("died"), days.length)) },
+            { "Came to live here", Integer.toString(sumLast(series("moved_in"), days.length)) },
+            { "Left", Integer.toString(sumLast(series("moved_out"), days.length)) },
+            { "Made, all told", shortNum(sumLast(series("output"), days.length)) + "c" },
+            { "Money in", shortNum(sumLast(inAll, days.length)) + "c" }, { "Wages paid", shortNum(sumLast(wagesAll, days.length)) + "c" } };
+        for (String[] t : totals) {
+            if (ly > y + ch - 10) break;
+            g.drawString(font, t[0], x, ly, Ui.INK, false);
+            Ui.right(g, font, t[1], x + half, ly, Ui.MUTED);
+            ly += 10;
+        }
+        // The right-hand column: the averages over the range, and the forecast.
+        int rx = x + half + 10, ry = y;
+        int n = span();
+        Ui.section(g, font, "A day, on average (" + RANGE_NAMES[range] + ")", rx, ry, half);
+        ry += 12;
+        String[][] avgs = {
+            { "Born", per(series("born"), n) }, { "Died", per(series("died"), n) }, { "Made", per(series("output"), n) + "c" },
+            { "Money in", per(inAll, n) + "c" }, { "Wages", per(wagesAll, n) + "c" },
+            { "Made per grown folk", ratio(series("output"), series("adults"), n) + "c" } };
+        for (String[] a : avgs) {
+            g.drawString(font, a[0], rx, ry, Ui.INK, false);
+            Ui.right(g, font, a[1], rx + half, ry, Ui.MUTED);
+            ry += 10;
+        }
+        ry += 4;
+        Ui.section(g, font, "Where it is heading (in 30 days, at this pace)", rx, ry, half);
+        ry += 12;
+        String[][] heads = { { "Folk", "pop", "" }, { "Made a day", "output", "c" }, { "Treasury", "coins", "c" }, { "Worth", "worth", "c" },
+            { "Buildings", "buildings", "" } };
+        for (String[] hd : heads) {
+            int[] s = series(hd[1]);
+            if (s.length < 3) continue;
+            double slope = slope(s, Math.min(14, s.length));
+            int then = (int) Math.max(0, Math.round(last(s) + slope * 30));
+            g.drawString(font, hd[0], rx, ry, Ui.INK, false);
+            String arrow = slope > 0.05 ? "▲ " : slope < -0.05 ? "▼ " : "= ";
+            Ui.right(g, font, arrow + last(s) + hd[2] + " → " + then + hd[2], rx + half, ry, slope > 0.05 ? Ui.GOOD : slope < -0.05 ? Ui.BAD : Ui.MUTED);
+            ry += 10;
+        }
+        int[] food = series("food");
+        if (food.length >= 3) {
+            double fs = slope(food, Math.min(7, food.length));
+            String line = fs < -0.5 ? "the larder empties in about " + Math.round(last(food) / -fs) + " days" : fs > 0.5 ? "the larder is filling" : "the larder holds steady";
+            g.drawString(font, "Food", rx, ry, Ui.INK, false);
+            Ui.right(g, font, line, rx + half, ry, fs < -0.5 ? Ui.BAD : Ui.MUTED);
+            ry += 10;
+        }
+        ry += 4;
+        small(g, Ui.clip(font, "Ages: " + ages(), (int) (half / 0.75)), rx, Math.min(ry, y + ch - 9), Ui.FAINT);
+    }
+
+    private String per(int[] s, int n) {
+        int k = Math.min(n, s.length);
+        if (k == 0) return "0";
+        double v = sumLast(s, k) / (double) k;
+        return v >= 10 ? Long.toString(Math.round(v)) : String.format(Locale.ROOT, "%.1f", v);
+    }
+
+    private String ratio(int[] top, int[] bottom, int n) {
+        int k = Math.min(n, Math.min(top.length, bottom.length));
+        int t = sumLast(top, k), b = sumLast(bottom, k);
+        return b == 0 ? "0" : Long.toString(Math.round(t / (double) b));
+    }
+
+    /** The least-squares slope of the last n values: how much it moves a day. */
+    private static double slope(int[] s, int n) {
+        int k = Math.min(n, s.length);
+        if (k < 2) return 0;
+        double sx = 0, sy = 0, sxx = 0, sxy = 0;
+        for (int i = 0; i < k; i++) {
+            double xv = i, yv = s[s.length - k + i];
+            sx += xv; sy += yv; sxx += xv * xv; sxy += xv * yv;
+        }
+        double d = k * sxx - sx * sx;
+        return d == 0 ? 0 : (k * sxy - sx * sy) / d;
     }
 
     private void news(GuiGraphics g, int x, int y, int cw, int ch) {
@@ -909,19 +1288,17 @@ public class CityScreen extends Screen {
         }
         if (mx >= left + w - 8 - font.width("Close ×") && mx < left + w - 8 && my >= top + 20 && my < top + 30) { onClose(); return true; }
         // The tabs.
-        int tx = left + 4, ty = top + 36;
-        boolean narrow = narrowTabs();
+        int[][] boxes = tabBoxes();
         for (int i = 0; i < TABS.length; i++) {
-            int tw = tabWidth(i, narrow);
+            int tx = boxes[i][0], ty = boxes[i][1], tw = boxes[i][2];
             if (mx >= tx && mx < tx + tw && my >= ty && my < ty + 13) { tab = i; scroll = 0; return true; }
-            tx += tw + 1;
         }
-        int x = left + 8, y = top + 54, cw = w - 16;
-        if (tab == 3) {
+        int x = left + 8, y = pageTop(), cw = w - 16;
+        if (page().equals("Jobs")) {
             // A trade picked from the table: its own history below.
             List<CompoundTag> jobs = compounds("jobs");
             jobs.sort(Comparator.comparingInt((CompoundTag c) -> c.getInt("week")).reversed().thenComparing(c -> -c.getInt("hands")));
-            int ch = h - 62;
+            int ch = top + h - 8 - y;
             int tableH = Math.min(ch / 2 + 20, 14 + jobs.size() * 11);
             int maxRows = (tableH - 9) / 11;
             int start = Math.max(0, Math.min(scroll, Math.max(0, jobs.size() - maxRows)));
@@ -932,7 +1309,7 @@ public class CityScreen extends Screen {
                 return true;
             }
         }
-        if (tab == 4 && my >= y && my < y + 9) {
+        if (page().equals("Folk") && my >= y && my < y + 9) {
             for (int i = FOLK_COLS.length - 1; i >= 0; i--) {
                 if (mx >= x + FOLK_COLS[i]) {
                     if (sortColumn == i) sortDown = !sortDown;

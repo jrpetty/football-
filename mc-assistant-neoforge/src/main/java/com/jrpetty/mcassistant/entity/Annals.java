@@ -287,6 +287,11 @@ public final class Annals {
         out.put("news", strings(news(id)));
         out.put("needs", strings(needs(level, id)));
         out.put("neighbours", strings(neighbours(id)));
+        out.put("society", society(id, folk));
+        out.put("buildings", buildings(level, v));
+        List<String> queue = new ArrayList<>();
+        for (String p : Villages.projectsWanted(id)) queue.add(Villages.spoken(p));
+        out.put("queue", strings(queue));
         Map<String, Integer> causes = causes(id);
         CompoundTag c = new CompoundTag();
         for (Map.Entry<String, Integer> e : causes.entrySet()) c.putInt(e.getKey(), e.getValue());
@@ -363,6 +368,7 @@ public final class Annals {
             c.putInt("ordinal", f.stationTask().ordinal());
             c.putInt("level", f.veteranLevel());
             c.putInt("age", f.bornDay() == VillageFolkEntity.UNKNOWN ? -1 : (int) Math.max(0, today - f.bornDay()));
+            c.putInt("years", f.ageYears());
             c.putInt("purse", f.purse());
             c.putInt("wage", f.isBaby() ? 0 : Wealth.wage(f));
             c.putInt("made", Economy.madeYesterday(f));
@@ -493,6 +499,156 @@ public final class Annals {
         c.putString("open", String.valueOf(Cafe.openLine(level, id)));
         c.putString("first_day", String.valueOf(Ledger.note(id, "annals.first")));
         return c;
+    }
+
+    /**
+     * The village as a society: how old its folk are (in years, as folk count them), how its money is
+     * spread among them (the Gini of the purses, the median, the richest tenth's share, the richest),
+     * their natures and traits, how they feel, how skilled they are and the best hand at each trade,
+     * its couples, households and friendships, and who is best liked.
+     */
+    private static CompoundTag society(UUID id, List<VillageFolkEntity> folk) {
+        CompoundTag c = new CompoundTag();
+        int[] ages = new int[10], moods = new int[5], levels = new int[6];
+        Map<String, Integer> natures = new TreeMap<>(), traits = new TreeMap<>();
+        List<VillageFolkEntity> grown = new ArrayList<>();
+        int old = 0, partnered = 0, children = 0, friends = 0, rivals = 0;
+        for (VillageFolkEntity f : folk) {
+            ages[Math.max(0, Math.min(9, f.ageYears() / 10))]++;
+            moods[Math.max(0, Math.min(4, f.persona().mood() / 20))]++;
+            friends += f.life().friends().size();
+            rivals += f.life().rivals().size();
+            if (f.isBaby()) { children++; continue; }
+            grown.add(f);
+            if (f.isOld()) old++;
+            if (f.life().partner() != null) partnered++;
+            int lv = f.veteranLevel();
+            levels[lv < 5 ? 0 : lv < 10 ? 1 : lv < 15 ? 2 : lv < 20 ? 3 : lv < 30 ? 4 : 5]++;
+            natures.merge(Values.type(f), 1, Integer::sum);
+            for (Social.Trait t : f.life().traits()) traits.merge(t.title(), 1, Integer::sum);
+        }
+        c.putIntArray("ages", ages);
+        c.putIntArray("moods", moods);
+        c.putIntArray("levels", levels);
+        c.put("natures", counts(natures));
+        c.put("traits", counts(traits));
+        c.putInt("old", old);
+        c.putInt("children", children);
+        c.putInt("grown", grown.size());
+        c.putInt("couples", partnered / 2);
+        c.putInt("single", grown.size() - partnered);
+        c.putInt("friendships", friends / 2);
+        c.putInt("rivalries", rivals / 2);
+        // How the money is spread: the purses of the grown, poorest first.
+        List<VillageFolkEntity> byPurse = new ArrayList<>(grown);
+        byPurse.sort((a, b) -> Integer.compare(Math.max(0, a.purse()), Math.max(0, b.purse())));
+        int n = byPurse.size();
+        long total = 0, weighted = 0;
+        for (int i = 0; i < n; i++) {
+            int x = Math.max(0, byPurse.get(i).purse());
+            total += x;
+            weighted += (long) (2 * (i + 1) - n - 1) * x;
+        }
+        c.putInt("gini", n == 0 || total == 0 ? 0 : (int) Math.round(weighted * 100.0 / ((double) n * total)));
+        c.putInt("median", n == 0 ? 0 : Math.max(0, byPurse.get(n / 2).purse()));
+        long top = 0, bottom = 0;
+        int tenth = Math.max(1, (int) Math.ceil(n / 10.0));
+        for (int i = 0; i < n; i++) {
+            int x = Math.max(0, byPurse.get(i).purse());
+            if (i >= n - tenth) top += x;
+            if (i < n / 2) bottom += x;
+        }
+        c.putInt("top_tenth", total == 0 ? 0 : (int) Math.round(top * 100.0 / total));
+        c.putInt("bottom_half", total == 0 ? 0 : (int) Math.round(bottom * 100.0 / total));
+        List<String> richest = new ArrayList<>();
+        for (int i = n - 1; i >= Math.max(0, n - 5); i--) {
+            VillageFolkEntity f = byPurse.get(i);
+            richest.add(f.displayNameCap() + "|" + f.stationTask().title + "|" + f.purse());
+        }
+        c.put("richest", strings(richest));
+        // The best hand at each trade.
+        Map<StationTask, VillageFolkEntity> best = new EnumMap<>(StationTask.class);
+        for (VillageFolkEntity f : grown) {
+            if (f.stationTask() == StationTask.NONE) continue;
+            VillageFolkEntity b = best.get(f.stationTask());
+            if (b == null || f.veteranLevel() > b.veteranLevel()) best.put(f.stationTask(), f);
+        }
+        List<String> masters = new ArrayList<>();
+        for (Map.Entry<StationTask, VillageFolkEntity> e : best.entrySet()) {
+            masters.add(e.getKey().title + "|" + e.getValue().displayNameCap() + "|" + e.getValue().veteranLevel());
+        }
+        c.put("masters", strings(masters));
+        // Who is best liked: the warmth the others feel for each, on average.
+        List<String> liked = new ArrayList<>();
+        if (grown.size() >= 3) {
+            List<Object[]> warmth = new ArrayList<>();
+            for (VillageFolkEntity f : grown) {
+                int sum = 0, counted = 0;
+                for (VillageFolkEntity o : grown) {
+                    if (o == f) continue;
+                    sum += o.life().affinity(f.getUUID());
+                    counted++;
+                }
+                warmth.add(new Object[]{ f.displayNameCap(), counted == 0 ? 0 : Math.round(sum / (float) counted) });
+            }
+            warmth.sort((a, b) -> Integer.compare((Integer) b[1], (Integer) a[1]));
+            for (int i = 0; i < Math.min(5, warmth.size()); i++) liked.add(warmth.get(i)[0] + "|" + warmth.get(i)[1]);
+        }
+        c.put("liked", strings(liked));
+        // Households: how many, how big.
+        int households = 0, members = 0, largest = 0;
+        for (Homes.Home h : Homes.homes(id).values()) {
+            if (h.members.isEmpty()) continue;
+            households++;
+            members += h.members.size();
+            largest = Math.max(largest, h.members.size());
+        }
+        c.putInt("households", households);
+        c.putInt("household_avg10", households == 0 ? 0 : Math.round(members * 10f / households));
+        c.putInt("household_max", largest);
+        return c;
+    }
+
+    private static CompoundTag counts(Map<String, Integer> m) {
+        CompoundTag c = new CompoundTag();
+        for (Map.Entry<String, Integer> e : m.entrySet()) c.putInt(e.getKey(), e.getValue());
+        return c;
+    }
+
+    /** Every building: what, where from the heart, its storeys, whether it is going up, how furnished, who lives there. */
+    private static ListTag buildings(ServerLevel level, Villages.Village v) {
+        UUID id = v.id();
+        Map<Long, Homes.Home> homes = Homes.homes(id);
+        ListTag out = new ListTag();
+        for (Ledger.Building b : Ledger.buildings(id)) {
+            if (out.size() >= 300) break;
+            CompoundTag c = new CompoundTag();
+            c.putString("kind", b.structure());
+            c.putString("title", TownLife.title(b.structure()).replaceFirst("^The ", ""));
+            int dx = b.anchor().getX() - v.centre().getX(), dz = b.anchor().getZ() - v.centre().getZ();
+            c.putInt("dist", (int) Math.round(Math.sqrt(dx * (double) dx + dz * (double) dz)));
+            c.putString("dir", compass(dx, dz));
+            c.putInt("storeys", Ledger.grown(id, b.anchor()) || Grow.tall(id, b.anchor()) ? 2 : 1);
+            c.putBoolean("raising", Grow.raisingNow(id, b.anchor()));
+            int[] fur = Interiors.progress(level, id, b);
+            c.putInt("furnished", fur[0]);
+            c.putInt("furnish_of", fur[1]);
+            Homes.Home h = homes.get(b.anchor().asLong());
+            if (h != null) {
+                c.putInt("living", h.members.size());
+                c.putString("tenure", Homes.seat(h) ? "the leader's" : h.members.isEmpty() && h.tenure != Homes.Tenure.PLAYER ? "empty" : h.tenure.word);
+                if (h.price > 0) c.putInt("price", h.price);
+            }
+            out.add(c);
+        }
+        return out;
+    }
+
+    private static String compass(int dx, int dz) {
+        if (Math.abs(dx) < 4 && Math.abs(dz) < 4) return "at the heart";
+        double a = Math.toDegrees(Math.atan2(dx, -dz));
+        String[] names = { "north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west" };
+        return names[(int) Math.floorMod(Math.round(a / 45.0), 8)];
     }
 
     private static List<String> news(UUID id) {

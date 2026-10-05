@@ -1864,8 +1864,8 @@ its own. The council sits in the hall's council chamber.
 Right-click the village board (or press **Analytics** in the village journal, or type
 `/village stats`) and the town's books open: everything the village is and has been, with
 charts, so you can see exactly what is driving its growth. Every morning the village is
-written down (kept for four hundred days), and the books have eleven pages, picked along the
-top; the range (a week, a month, a hundred days, or all of it) is picked at the top right, and
+written down (kept for four hundred days), and the books have fifteen pages, picked along the
+top (in two rows on a small window; the arrow keys turn the pages); the range (a week, a month, a hundred days, or all of it) is picked at the top right, and
 every chart reads out the day under the mouse.
 
 * **Overview:** population, what it makes a day, the treasury and its worth, each with how
@@ -1883,14 +1883,23 @@ every chart reads out the day under the mouse.
   and this week, what it makes per hand a day, and its share of everything the village
   made, biggest earner first. Click a trade for its own history (what it made, and how many
   worked at it, day by day).
-* **Folk:** everybody, with trade, level, age, purse, pay, what each made yesterday, mood,
-  nature and wealth; click any heading to sort by it. The leader is starred.
+* **Folk:** everybody, with trade, level, age (in years), purse, pay, what each made
+  yesterday, mood, nature and wealth; click any heading to sort by it. The leader is starred.
+* **Society:** the age pyramid (by ten years), how they feel (miserable to joyful), how evenly
+  the money is spread (the Gini of the purses, the middle purse, what the richest tenth and the
+  poorer half hold, and the five richest), couples, households and how big they are,
+  friendships and rivalries, the best liked, their natures and most common traits, how skilled
+  they are (novice to master), and the best hand at each trade.
 * **Leader:** who leads and how: its nature and what it cares about (seven bars), its trade
   and level, family, home and escort, how long in office, its mandate and orders, the
   council, the pace and pay it sets, its approval and regard, the elections (the one coming
   and the ones before), and what it has been doing lately.
 * **Homes:** folk against beds and room over time, households housed and waiting, and the
   houses by tenure (given, owned, rented, players', empty).
+* **Buildings:** every building: what it is, how far and which way from the heart, its
+  storeys (or a storey going up), how far its insides are furnished for the age, and for a
+  house how many live there and on what terms; how many of each kind; and what the village
+  will build next, in order, with why.
 * **Stores:** food, the days of food put by, timber and stone, coal and iron over time, what
   is in the stores now and the larder's books.
 * **Why:** what is driving its growth and what is holding it back, read from its books:
@@ -1898,7 +1907,15 @@ every chart reads out the day under the mouse.
   enough for children, output up or down and which trades moved it, the most productive trade
   per hand, the biggest earner, idle hands, money in against out, worth, contentment and its
   six parts, what it is short of for the next age, and what would help most now.
-* **News:** the latest of its chronicle.
+* **Trends:** what each grown folk makes a day, the worth per head, contentment against idle
+  hands and the watch, and buildings, renown and the ages over time.
+* **Records:** its bests (most folk, most made in a day, fullest treasury, greatest worth,
+  most born in a day, most and least content, most buildings and renown, each with its day,
+  and its longest run without a loss); everything all told (born, died, came, left, made,
+  money in, wages paid); a day on average over the range; and where it is heading: folk,
+  output, treasury, worth and buildings in thirty days at the pace of the last fortnight, and
+  when the larder would run dry if it is emptying.
+* **News:** its neighbours, and the latest of its chronicle.
 * **Board:** the board's own page.
 
 ### The watch between the bells
@@ -2364,8 +2381,9 @@ ripen, days pass, folk work and houses go up at that pace.
 * `/village house` — the nearest village's houses: who lives in each, on what terms, and
   what is for sale. `house buy` buys the empty house you stand in; `house let <coins>` lets
   yours out at that rent a day (0 to take it back); `house rent` collects the rent.
-* `/village stats` — the town's books on the analytics screen (as clicking the village board
-  does); from the console, the reading of what drives the village's growth.
+* `/village stats [page]` — the town's books on the analytics screen (as clicking the village
+  board does), opened at a page if one is given (0 the Overview to 14 the Board); from the
+  console, the reading of what drives the village's growth.
 * `/village chronicle` — the nearest village's history, as a written book.
 * `/village standing` — what every village you have met thinks of you.
 * `/village ledger` — the nearest village's town ledger, as a book.

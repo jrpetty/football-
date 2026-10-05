@@ -328,6 +328,22 @@ public final class Interiors {
         return fixed;
     }
 
+    /**
+     * How far a building's insides are along for the village's age, for the town's books: {pieces in,
+     * pieces planned}; {0, 0} for a building that is not furnished or not yet looked at (it reads a plan
+     * already worked out, and never works one out itself).
+     */
+    public static synchronized int[] progress(ServerLevel level, UUID village, Ledger.Building b) {
+        int tier = tier(Villages.ageOf(village));
+        if (tier == 0 || !FURNISHED.contains(b.structure())) return new int[2];
+        List<Piece> plan = PLANS.get(b.anchor().asLong() + ":" + tier + ":" + Ages.drawing(village, b));
+        if (plan == null) return new int[2];
+        if (DONE.getOrDefault(b.anchor().asLong(), 0) >= tier) return new int[]{ plan.size(), plan.size() };
+        int in = 0;
+        for (Piece p : plan) if (level.isLoaded(p.pos()) && ours(level.getBlockState(p.pos()))) in++;
+        return new int[]{ in, plan.size() };
+    }
+
     /** The furnishing's own kinds of block: a rug, a barrel, a shelf, a lamp, a candle, a pot. */
     private static boolean ours(BlockState s) {
         return s.is(BlockTags.WOOL_CARPETS) || s.is(Blocks.BARREL) || s.is(Blocks.BOOKSHELF) || s.is(Blocks.LANTERN)

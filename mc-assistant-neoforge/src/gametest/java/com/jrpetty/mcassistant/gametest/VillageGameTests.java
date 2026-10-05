@@ -5611,6 +5611,14 @@ public class VillageGameTests {
         helper.assertTrue(drivers.size() >= 4, "a reading of what drives it: " + drivers);
         helper.assertTrue(!snap.getCompound("leader").getString("name").isEmpty(), "and who leads it");
         helper.assertTrue(!snap.getString("board").isEmpty(), "and the board's own page");
+        net.minecraft.nbt.CompoundTag society = snap.getCompound("society");
+        int counted = 0;
+        for (int a : society.getIntArray("ages")) counted += a;
+        helper.assertTrue(counted == people.size(), "everybody in the age pyramid: " + counted + " of " + people.size());
+        helper.assertTrue(society.getInt("gini") >= 0 && society.getInt("gini") <= 100 && society.getList("richest", 8).size() >= 1,
+            "how the money is spread: " + society);
+        helper.assertTrue(!snap.getList("buildings", 10).isEmpty() || com.jrpetty.mcassistant.village.Ledger.buildings(id).isEmpty(),
+            "every building in it");
         java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
         try {
             net.minecraft.nbt.NbtIo.write(snap, new java.io.DataOutputStream(bytes));
