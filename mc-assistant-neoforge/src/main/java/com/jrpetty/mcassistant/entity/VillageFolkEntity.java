@@ -273,6 +273,7 @@ public class VillageFolkEntity extends AssistantEntity {
             laterLine = null;
         }
         Leisure.tick(this);
+        if (tickCount % 100 == 53) Meals.tick(this);           // breakfast, the midday meal, supper
         if (hiredBy != null && tickCount % 20 == 0 && level() instanceof net.minecraft.server.level.ServerLevel out) Hire.tick(this, out);
         if (tickCount % 160 == 80) CityTree.tend(this);          // the town's research on it: roads, drills, healers
         // The watch does not open the gates to go out after them: with the bell ringing a guard's
@@ -583,6 +584,7 @@ public class VillageFolkEntity extends AssistantEntity {
             return true;
         }
         if (day - comfortDay < 2) return false;
+        if (Homes.lodging(this)) return false;          // a spare bed in another's house is no home to furnish
         Wealth.Tier tier = Wealth.tier(this);
         if (comforts >= tier.comforts) return false;
         Villages.Village v = Villages.get(village);
@@ -619,6 +621,7 @@ public class VillageFolkEntity extends AssistantEntity {
             return false;
         }
         com.jrpetty.mcassistant.village.Ledger.addCoins(village, want.price());
+        Economy.spentInTown(village, want.price());
         Stockroom.sold(server, village, Stockroom.Seller.SHOP, got, 1, want.price());     // the shop's books (Stockroom)
         comfortCarried = got;
         swing(net.minecraft.world.InteractionHand.MAIN_HAND);
@@ -1070,9 +1073,17 @@ public class VillageFolkEntity extends AssistantEntity {
         if (life.has(Social.Trait.GRUMPY)) m -= 10;
         if (persona.sleptDay >= day - 1) { m += 6; why.add(new Object[]{"slept", 6}); }
         else if (persona.since() >= 0 && day > persona.since() + 1) { m -= 6; why.add(new Object[]{"rough", 6}); }
-        int food = countFood();
-        if (food == 0) { m -= 14; why.add(new Object[]{"hungry", 14}); }
-        else if (food >= 4) { m += 3; why.add(new Object[]{"fed", 2}); }
+        // Hungry is a meal missed (Meals), more with every one; fed is its meals had. (It once read the
+        // pack: a folk carrying bread it never ate was "fed", and a child fed at home "hungry".)
+        int missed = meals.missedInRow();
+        if (missed > 0) {
+            int h = Math.min(24, 8 + 4 * missed);
+            m -= h;
+            why.add(new Object[]{"hungry", h});
+        } else if (meals.eatenToday() > 0 || countFood() >= 4) {
+            m += 3;
+            why.add(new Object[]{"fed", 2});
+        }
         int friends = life.friends().size();
         if (life.partner() != null) { m += 6; why.add(new Object[]{"partner", 7}); }
         if (friends >= 3) { m += 6; why.add(new Object[]{"friends", 6}); }
@@ -1528,6 +1539,25 @@ public class VillageFolkEntity extends AssistantEntity {
      */
     private boolean showcase;
 
+    /** Its three meals a day (Meals). */
+    private final Meals.Book meals = new Meals.Book();
+
+    public Meals.Book meals() { return meals; }
+
+    /** A folk of the showcase lineup: it stands for its picture and lives no life. */
+    public boolean showcaseFolk() { return showcase; }
+
+    @Override
+    protected void ateFood(net.minecraft.world.item.ItemStack meal) {
+        meals.ate(level().getGameTime(), meal.getHoverName().getString());
+    }
+
+    /** One meal's worth out of the village's stores and into the pack (Meals), booked; how many came. */
+    public int mealFromTheStores() {
+        if (!(level() instanceof net.minecraft.server.level.ServerLevel server)) return 0;
+        return drawFromTheStores(server, Meals.FOOD, 1);
+    }
+
     public void makeShowcase(StationTask trade) {
         this.showcase = true;
         setNoAi(true);
@@ -1954,8 +1984,12 @@ public class VillageFolkEntity extends AssistantEntity {
     protected boolean bedOnOffer(BlockPos pos) {
         if (!super.bedOnOffer(pos)) return false;
         UUID village = ownerId();
-        // Not a player's guest house, and not another household's home (Homes).
-        return village == null || !Villages.inAGuestHouse(village, pos) && !Homes.someoneElses(village, pos, this);
+        // Not a player's guest house, and not another household's home (Homes) — unless it is a bed that
+        // household has no need of, which a folk with none of its own may lodge in.
+        if (village == null) return true;
+        if (Villages.inAGuestHouse(village, pos)) return false;
+        return level() instanceof net.minecraft.server.level.ServerLevel server
+            ? !Homes.someoneElses(server, village, pos, this) : !Homes.someoneElses(village, pos, this);
     }
 
     /** Hand two rations to a friend: whatever food is in the pack, as it is. */
@@ -2203,7 +2237,9 @@ public class VillageFolkEntity extends AssistantEntity {
             return super.findABed(base);
         }
         // Its own house first (Homes): the grown-ups' pair side by side, the children's beds across the room.
+        // A lodger in it (a folk with no bed of its own, put up in a bed the house could spare) gives it back.
         BlockPos own = Homes.bedFor(server, this);
+        if (own != null && !bedOnOffer(own)) own = Homes.bedBack(server, this, own);
         if (own != null && bedOnOffer(own)) {
             bedLook = "its own house";
             takeBed(own);
@@ -2220,9 +2256,11 @@ public class VillageFolkEntity extends AssistantEntity {
         // still has no bed of its own: the beds go to those who work. (Two children are counted
         // as one bed's worth when the village works out how many houses it needs.)
         if (isBaby()) {
+            // (Not the watch: a guard is up all night and never goes looking for a bed, and one without
+            // kept every child in the village off the spare beds.)
             boolean adultWithout = false;
             for (AssistantEntity a : Villages.folkOf(village)) {
-                if (!a.isBaby() && a.bedPos() == null) { adultWithout = true; break; }
+                if (!a.isBaby() && a.bedPos() == null && a.shift() != Shift.ALWAYS) { adultWithout = true; break; }
             }
             if (adultWithout) {
                 if (near != null) setHome(near);
@@ -2467,22 +2505,28 @@ public class VillageFolkEntity extends AssistantEntity {
         UUID village = ownerId();
         if (heart == null || village == null || peekJob() != null) return false;
         if (tickCount - rationTick < 6000) return false;                     // once a night
-        if (heart.distSqr(blockPosition()) > 48.0 * 48.0) return false;     // only those who are home
+        // Only those who are home: anywhere in the town. (Forty-eight blocks round the heart was the
+        // town of a young village; the hundred's houses ran out to sixty and more, and those who
+        // lived in them never took on a ration of an evening.)
+        int home = Math.max(48, Villages.townReach(village) + 8);
+        if (Math.max(Math.abs(heart.getX() - getBlockX()), Math.abs(heart.getZ() - getBlockZ())) > home) return false;
         // Rations, not seed: a farmer's carrots and potatoes are for the ground.
         int have = countMatching(st -> st.get(net.minecraft.core.component.DataComponents.FOOD) != null
             && !(stationTask() == StationTask.FARM
                 && (st.is(net.minecraft.world.item.Items.CARROT) || st.is(net.minecraft.world.item.Items.POTATO))));
-        // A day's meals, not two: what is in a pack is not in the stores, and the village
-        // reads its larder (and decides to raise children) from the stores.
-        if (have >= 6) return false;
+        // A couple of days' meals, not a week's: what is in a pack is not in the stores, and the
+        // village reads its larder (and decides to raise children) from the stores. A hand whose plot
+        // is a long walk from them takes a few days' (rationsWanted), the less to walk in for.
+        int want = eatsRations() ? rationsWanted() : 8;
+        if (have >= want - 2) return false;
         int radius = Math.min(112, Math.max(32, Villages.storesRadius(village)));
         if (findChestWithNear(heart,
-                com.jrpetty.mcassistant.entity.goal.WithdrawGoal.matcherFor("food"), radius) == null) {
+                com.jrpetty.mcassistant.entity.goal.WithdrawGoal.matcherFor("ration"), radius) == null) {
             return false;
         }
         rationTick = tickCount;
-        enqueue(Job.withdrawAt("food", 8 - have, heart, radius));
-        noteGate("evening: taking on " + (8 - have) + " rations");
+        enqueue(Job.withdrawAt("ration", want - have, heart, radius));
+        noteGate("evening: taking on " + (want - have) + " rations");
         return true;
     }
 
@@ -2702,7 +2746,18 @@ public class VillageFolkEntity extends AssistantEntity {
             // exactly when the wheat gets baked. Indoors, next to the stores,
             // one errand at a time for the whole village.
             if (peekJob() == null && getNavigation().isDone()) {
+                // A tool that broke at dusk is replaced tonight, not after the morning's first dry run;
+                // and whoever is at the stores sees to the rack of spares (Toolrack).
+                toolFromTheRack();
+                if (level() instanceof net.minecraft.server.level.ServerLevel evening) Toolrack.tend(this, evening);
                 if (!restockRations()) bakeErrand();
+                // What it is short of, looked at again now it has been to the stores: the checklist is
+                // otherwise only read at work, and said "food" or "a pickaxe" all night and through the
+                // morning's assembly with the rations and the new pick in the pack.
+                if (!missingEssentials().isEmpty() && tickCount - kitRecheckTick > 600) {
+                    kitRecheckTick = tickCount;
+                    recheckKit();
+                }
             }
             // Work stops at bedtime. Whatever is left of the day's job waits for the morning
             // (the village's builder takes its building up again then, the miner its mine):
@@ -2729,6 +2784,8 @@ public class VillageFolkEntity extends AssistantEntity {
         // almost always has a mine job queued — so behind the busy check below, a miner
         // whose pickaxe had worn out stood "needing a pickaxe" for days.
         pickaxeFromTheStores();                        // the iron, and then the diamond, pickaxe
+        toolFromTheRack();                             // a spare off the storehouse's rack, before the last one breaks
+        rationsAhead();                                // rations before they run out: at the counter, or sent out
         shearsFromTheStores();                         // a rancher's shears, for the wool
         rodFromTheStores();                            // a fisher's rod, of the stores' string and wood
         stoneToolFromTheStores();                      // no more wooden tools once there is stone
@@ -2766,6 +2823,9 @@ public class VillageFolkEntity extends AssistantEntity {
         if (fieldOutOfReach()) return;                 // a field nobody can walk to is given up
         if (changedTrade()) return;                    // the village lost a trade
         if (raisedAChild(12.0)) return;                // the village grew
+        // The rack of spare tools, seen to by whoever is at the stores with a moment: the storekeeper
+        // at its counter, or a hand at the heart with nothing of its own to do (Toolrack).
+        if (level() instanceof net.minecraft.server.level.ServerLevel rack) Toolrack.tend(this, rack);
 
         // A storekeeper works the chests directly and has nothing to haul: its
         // days were spent standing at the heart (two runs, two storekeepers, not
@@ -3989,6 +4049,10 @@ public class VillageFolkEntity extends AssistantEntity {
         boolean stoneInHand = countCarried(stone) >= 3, noWood = countCarried(plank) < 1;
         returnTo(villageCentre, stone, stoneBefore, r);
         returnTo(villageCentre, plank, plankBefore, r);
+        // No wood came because there was no room for it, not because the stores have none: the pack
+        // is banked first (the station brain does it, AssistantEntity.decideStation), and the next look
+        // finds room. Off to the woods for a handle with a full pack, it came back with nothing.
+        if (noWood && (isPackFull() || storesHold(villageCentre, r, plank) > 0)) return;
         // The stone is there but not a stick of wood in the stores: it cuts its own handle. (Three
         // miners whose picks had worn through stood at the heart for half a day: the stores held
         // no timber, and nobody thought to fetch any.)
@@ -4001,6 +4065,142 @@ public class VillageFolkEntity extends AssistantEntity {
     }
 
     private int handleTick = -100000;
+
+    private int rackTick = -100000;
+    private int kitRecheckTick = -100000;
+
+    /**
+     * The trade's tool off the storehouse's rack of spares (Toolrack). A hand whose tool is gone takes
+     * a spare there and then, booked out in the storehouse's books; one whose tool is nearly worn
+     * through has the spare before it breaks — brought out by a courier if its plot is far out (and it
+     * works on meanwhile), else taken on its way past the counter. Looked at every ten seconds, busy or
+     * not, and of an evening too: the hundred's miners whose picks broke stood "needing a pickaxe" while
+     * a new one waited on a handle the full pack had no room for, or on the next morning's dry run.
+     */
+    private void toolFromTheRack() {
+        Toolrack.Tool tool = Toolrack.of(stationTask());
+        UUID village = ownerId();
+        if (tool == null || village == null || villageCentre == null || isBaby()) return;
+        if (tickCount - rackTick < 200 && tickCount >= rackTick) return;
+        rackTick = tickCount;
+        if (!(level() instanceof net.minecraft.server.level.ServerLevel server)) return;
+        Villages.Village v = Villages.get(village);
+        if (v == null) return;
+        // A good one in hand (or a spare in the pack): nothing wanted.
+        if (countCarried(st -> Toolrack.is(tool, st) && !Toolrack.worn(st)) > 0) return;
+        boolean worn = countCarried(st -> Toolrack.is(tool, st)) > 0;
+        if (worn && onShift() && Couriers.sendOut(this, tool.word, 1)) {
+            brain("asked the storehouse to send a " + tool.word + " out: mine is nearly worn through");
+            return;
+        }
+        net.minecraft.world.item.ItemStack got = Toolrack.issue(server, v, this, tool);
+        if (got.isEmpty()) return;
+        brain((worn ? "a spare " : "a new ") + got.getHoverName().getString().toLowerCase(java.util.Locale.ROOT)
+            + " off the storehouse's rack");
+        recheckKit();
+    }
+
+    /** Tests: the look at the rack, now. True if it came away with a tool. */
+    public boolean toolFromTheRackForTests() {
+        Toolrack.Tool tool = Toolrack.of(stationTask());
+        int before = tool == null ? 0 : countCarried(st -> Toolrack.is(tool, st));
+        rackTick = -100000;
+        toolFromTheRack();
+        return tool != null && countCarried(st -> Toolrack.is(tool, st)) > before;
+    }
+
+    /** What a hand at its work eats: food, but not what would poison it (WithdrawGoal's "ration"). */
+    private static final java.util.function.Predicate<net.minecraft.world.item.ItemStack> RATION =
+        com.jrpetty.mcassistant.entity.goal.WithdrawGoal.matcherFor("ration");
+    /** Fewer rations than this in the pack and more are sent for. */
+    static final int RATIONS_LOW = 4;
+
+    private int rationAheadTick = -100000;
+
+    /** Does this hand's trade eat rations at its work (JobSpec)? Not the trades whose work is the food. */
+    private boolean eatsRations() {
+        StationTask t = stationTask();
+        return com.jrpetty.mcassistant.AssistantConfig.upkeepEnabled() && t != StationTask.NONE
+            && t != StationTask.FARM && t != StationTask.FISH && t != StationTask.HUNT;
+    }
+
+    /** How many rations to carry: a few days' for a hand whose plot is a long walk from the stores, a
+     *  couple of days' for one near them, and no more than a day's while the village is hungry. */
+    private int rationsWanted() {
+        UUID village = ownerId();
+        if (village != null && Market.hungry(village)) return RATIONS_LOW + 2;
+        return tripToStores() >= 48 ? 12 : 8;
+    }
+
+    /**
+     * Rations before they run out. A hand at the stores takes a few days' at the counter; one far out
+     * on its plot has the storehouse send them out with a courier while it still has a meal or two
+     * left, and works on. The only time a hand went for rations used to be when it had none — a long
+     * walk from the stores, its work stopped by the checklist till it had been there and back — and
+     * the evening's restock reached only those who lived near the heart: the hundred had a tenth of
+     * its workers "short of food" with five thousand in the stores.
+     */
+    private void rationsAhead() {
+        UUID village = ownerId();
+        if (village == null || villageCentre == null || isBaby() || !eatsRations()) return;
+        if (tickCount - rationAheadTick < 600 && tickCount >= rationAheadTick) return;
+        rationAheadTick = tickCount;
+        if (!(level() instanceof net.minecraft.server.level.ServerLevel server)) return;
+        int have = countCarried(RATION);
+        if (have >= RATIONS_LOW) return;
+        int want = rationsWanted();
+        Villages.Village v = Villages.get(village);
+        if (v != null && Toolrack.atTheStores(server, v, this)) {
+            int got = drawFromTheStores(server, RATION, want - have);
+            if (got > 0) {
+                brain("took " + got + " rations at the stores");
+                recheckKit();
+            }
+            return;
+        }
+        if (onShift() && Couriers.sendOut(this, "ration", want - have)) brain("asked the storehouse to send rations out");
+    }
+
+    /**
+     * Up to {@code n} of what matches, out of the village's own stores (the storehouse and the chests
+     * round the heart: never a household's chest, a guest house's or a worker's production chest) and
+     * into the pack, as a hand at the counter would be handed them; booked in the storehouse's books.
+     * Returns how many.
+     */
+    private int drawFromTheStores(net.minecraft.server.level.ServerLevel server,
+                                  java.util.function.Predicate<net.minecraft.world.item.ItemStack> what, int n) {
+        UUID village = ownerId();
+        if (village == null || n <= 0) return 0;
+        int moved = 0;
+        boolean full = false;
+        java.util.List<net.minecraft.world.item.ItemStack> fromStore = new java.util.ArrayList<>();
+        for (BlockPos p : Villages.storeChests(server, village)) {
+            if (moved >= n || full) break;
+            if (!(server.getBlockEntity(p) instanceof net.minecraft.world.Container c)) continue;
+            boolean store = c instanceof com.jrpetty.mcassistant.block.StorehouseBlockEntity;
+            for (int i = 0; i < c.getContainerSize() && moved < n; i++) {
+                net.minecraft.world.item.ItemStack st = c.getItem(i);
+                if (st.isEmpty() || !what.test(st)) continue;
+                int take = Math.min(st.getCount(), n - moved);
+                net.minecraft.world.item.ItemStack left = insertGiven(st.copyWithCount(take));
+                int taken = take - left.getCount();
+                if (taken <= 0) { full = true; break; }               // the pack is full
+                if (store) fromStore.add(st.copyWithCount(taken));
+                st.shrink(taken);
+                if (st.isEmpty()) c.setItem(i, net.minecraft.world.item.ItemStack.EMPTY);
+                moved += taken;
+            }
+            c.setChanged();
+        }
+        if (!fromStore.isEmpty()) drewFromStorehouse(fromStore);
+        return moved;
+    }
+
+    /** Tests: the look at its rations, now. */
+    public void rationsAheadForTests() {
+        rationAheadTick = -100000;
+        rationsAhead();
+    }
 
     private String patchNameFor(StationTask trade) {
         String base = switch (trade) {
@@ -5710,6 +5910,20 @@ public class VillageFolkEntity extends AssistantEntity {
         tradeWaits = 0;
         avoidHere = workZone();          // do not simply re-stake my own field
         BlockPos site = findSite(vacancy, radiusFor(vacancy));
+        // No ground for the trade shortest of hands (no water within reach for a fisher, no grass for
+        // a pen): the next trade well short of hands that has some — the couriers as often as not,
+        // whose ground is the storehouse and always to be had. A hand from a trade over its share
+        // otherwise stayed where it was, however short the rest were.
+        if (site == null && !ordered && Villages.overStaffed(village, mine)) {
+            for (StationTask other : Villages.shortOfHands(village)) {
+                if (other == vacancy || other == mine) continue;
+                BlockPos there = findSite(other, radiusFor(other));
+                if (there == null) continue;
+                vacancy = other;
+                site = there;
+                break;
+            }
+        }
         avoidHere = null;
         if (site == null) return false;
         setStation(site, vacancy);
@@ -7103,6 +7317,7 @@ public class VillageFolkEntity extends AssistantEntity {
             tag.put("Persona", inner);
         }
         if (showcase) tag.putBoolean("Showcase", true);
+        tag.put("Meals", meals.save());
         if (productionChest != null) tag.putLong("ProductionChest", productionChest.asLong());
         if (oldProductionChest != null) tag.putLong("OldProductionChest", oldProductionChest.asLong());
         tag.putLong("BornDay", bornDay);
@@ -7171,6 +7386,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (tag.contains("Social")) life.load(tag.getCompound("Social"));
         if (tag.contains("Persona")) persona.load(tag.getCompound("Persona"));
         this.showcase = tag.getBoolean("Showcase");
+        if (tag.contains("Meals")) meals.load(tag.getCompound("Meals"));
         this.productionChest = tag.contains("ProductionChest") ? BlockPos.of(tag.getLong("ProductionChest")) : null;
         this.oldProductionChest = tag.contains("OldProductionChest") ? BlockPos.of(tag.getLong("OldProductionChest")) : null;
         this.bornDay = tag.contains("BornDay") ? tag.getLong("BornDay") : UNKNOWN;

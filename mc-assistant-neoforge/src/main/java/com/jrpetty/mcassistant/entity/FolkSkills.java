@@ -700,6 +700,7 @@ public final class FolkSkills {
         if (!friendly || buyer.getRandom().nextInt(100) >= Math.min(100, price * 5)) return 0;
         if (!buyer.spend(1)) return 0;
         Ledger.addCoins(village, 1);
+        Economy.spentInTown(village, 1);
         return 1;
     }
 

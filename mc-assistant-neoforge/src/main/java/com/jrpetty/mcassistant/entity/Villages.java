@@ -328,6 +328,8 @@ public final class Villages {
         Storehouses.resetForTests();
         Storekeeping.resetForTests();
         Couriers.resetForTests();
+        Toolrack.resetForTests();
+        Meals.resetForTests();
         VillageBoards.resetForTests();
         Retiring.resetForTests();
         HAS_STORES.clear();
@@ -709,6 +711,35 @@ public final class Villages {
             if (short_ > worst) { worst = short_; most = slot.trade(); }
         }
         return most;
+    }
+
+    /**
+     * Every trade well short of hands (a hand and a half under its share, as vacancy's last look
+     * reckons it), the shortest first: where a hand from a trade over its share goes when the
+     * shortest has no ground to be had. Vacancy names only the one, and a village of a hundred whose
+     * shortest was the fishers, with no water within reach of the town, moved nobody anywhere — not
+     * to the couriers four hands short, nor the pen — while its woodcutters stood idle by the score.
+     */
+    public static List<AssistantEntity.StationTask> shortOfHands(@Nullable UUID villageId) {
+        List<AssistantEntity> folk = folkOf(villageId);
+        int total = folk.size();
+        List<AssistantEntity.StationTask> out = new ArrayList<>();
+        if (total <= 1) return out;
+        Map<AssistantEntity.StationTask, Integer> have = new EnumMap<>(AssistantEntity.StationTask.class);
+        for (AssistantEntity a : folk) {
+            if (a.stationTask() != AssistantEntity.StationTask.NONE) have.merge(a.stationTask(), 1, Integer::sum);
+        }
+        Age at = villageId == null ? Age.WOOD : ageOf(villageId);
+        double fit = fit(villageId, total, hands(folk, total), at);
+        Map<AssistantEntity.StationTask, Double> by = new EnumMap<>(AssistantEntity.StationTask.class);
+        for (Slot slot : SLOTS) {
+            if (!wantedHere(slot, villageId, total, at) || slot.trade().isCraft() || slot.trade() == AssistantEntity.StationTask.GUARD) continue;
+            if (!craftReady(villageId, slot.trade())) continue;
+            double short_ = target(villageId, slot, total) * fit - have.getOrDefault(slot.trade(), 0);
+            if (short_ > 1.5) { by.put(slot.trade(), short_); out.add(slot.trade()); }
+        }
+        out.sort((a, b) -> Double.compare(by.get(b), by.get(a)));
+        return out;
     }
 
     /**

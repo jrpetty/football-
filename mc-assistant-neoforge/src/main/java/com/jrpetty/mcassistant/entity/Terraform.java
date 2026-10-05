@@ -244,12 +244,13 @@ public final class Terraform {
      * hollow (air, water, something growing, sand that would fall) within five of its top, its top
      * not the town's soil where the town's soil goes, or something growing on it.
      */
-    static boolean wantsWork(ServerLevel level, LevelChunk chunk, int x, int z, int ground, int target, Block surface) {
+    static boolean wantsWork(ServerLevel level, LevelChunk chunk, int x, int z, int ground, int target, Block surface,
+                             boolean square) {
         if (ground != target) return true;
         BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
         BlockState top = chunk.getBlockState(m.set(x, target, z));
         if (natural(top) && !top.is(Blocks.BEDROCK) && !top.is(surface)
-                && (top.isAir() || wet(top) || growth(top) || (soil(surface) && topOf(top) != 0))) return true;
+                && (top.isAir() || wet(top) || growth(top) || (square && soil(surface) && topOf(top) != 0))) return true;
         for (int d = 1; d < SOLID_DEPTH; d++) {
             if (target - d < level.getMinBuildHeight()) break;
             BlockState b = chunk.getBlockState(m.set(x, target - d, z));
@@ -323,16 +324,18 @@ public final class Terraform {
                 }
             }
         }
-        // The town's own ground is solid five deep: its top and four of earth under it, whatever the
-        // land had there. A cave, a spring, a pocket of sand over a hollow, a buried root or a stump
-        // under the new top is filled in the land's own earth (dirt under grass, sandstone under
-        // sand), so nothing a builder sets on it sinks, nobody steps through it into a cave, and
-        // nothing falls. Stone, ore and earth already there are kept; the world's floor and
-        // anything somebody buried are left be.
-        if (levelled) {
+        // The town's ground is solid five deep, the square and every column of its sloped edge that
+        // was worked: its top and four of earth under it, whatever the land had there. A cave, a
+        // spring, a pocket of sand over a hollow, a buried root or a stump under the new top is
+        // filled in the land's own earth (dirt under grass, sandstone under sand), so nothing a
+        // builder sets on it sinks, nobody steps through it into a cave, and nothing falls. Stone,
+        // ore and earth already there are kept; the world's floor and anything somebody buried are
+        // left be. (In the square the top is dressed in the town's soil too; the edge keeps its own.)
+        if (levelled || changed > 0) {
             BlockState topNow = chunk.getBlockState(m.set(x, target, z));
+            boolean hollowTop = topNow.isAir() || wet(topNow) || growth(topNow);
             if (natural(topNow) && !topNow.is(Blocks.BEDROCK) && !topNow.is(surface)
-                    && (topNow.isAir() || wet(topNow) || growth(topNow) || (soil(surface) && topOf(topNow) != 0))) {
+                    && (hollowTop || (levelled && soil(surface) && topOf(topNow) != 0))) {
                 level.setBlock(m, surface.defaultBlockState(), QUIET);
                 changed++;
             }

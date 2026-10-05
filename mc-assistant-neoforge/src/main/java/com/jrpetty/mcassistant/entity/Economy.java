@@ -32,9 +32,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * <li><b>Revenue.</b> What it sells: the passing traders buy what the town makes (never more,
  *     in a day, than yesterday's output was worth: a busy town meets its wages, an idle one
  *     cannot), market day takes the surplus, players buy at the stalls, the café and the shop,
- *     the tithe brings some back from the purses, the tenants pay their rent, and a household
- *     that has saved up buys its house. And what it spends: the wages, a trade's kit, the
- *     drover, the wool for the beds.</li>
+ *     a tenth of every wage stays in the treasury as the village's tax, the tithe brings some
+ *     back from the purses, the tenants pay their rent, a household that has saved up buys its
+ *     house, and the folk spend their own coin in town. And what it spends: the wages, a trade's
+ *     kit, the drover, the wool for the beds.</li>
  * <li><b>Worth.</b> The treasury, everything in the stores at the market's worth, and what the
  *     folk have saved (in their purses, and put by toward their houses).</li>
  * </ul>
@@ -67,6 +68,10 @@ public final class Economy {
         int sold, spent, tithe, wages, takings;
         /** Money in from the homes (Homes.payday): the tenants' rent, and the houses sold to the households that saved for them. */
         int rent, houses;
+        /** Money back from the purses: the tenth of the wages kept as the village's tax (Market.payWages), and
+         *  what the folk spent in town out of their own purses (the market's treats, the café, the shop, the
+         *  tavern, the comforts of home, a child's bed). */
+        int tax, town;
 
         double total() {
             double t = 0;
@@ -316,6 +321,12 @@ public final class Economy {
         return d == null ? Map.of() : d.by;
     }
 
+    /** Tests: today's money so far, {wages, tax, rent, tithe, spent in town, bought in}. */
+    public static int[] moneyTodayForTests(UUID village) {
+        Day d = TODAY.get(village);
+        return d == null ? new int[6] : new int[]{ d.wages, d.tax, d.rent, d.tithe, d.town, d.spent };
+    }
+
     /** Tests: today's tally of an item so far, {made, used}. */
     public static int[] todayForTests(UUID village, String id) {
         Day d = TODAY.get(village);
@@ -374,6 +385,27 @@ public final class Economy {
     /** A house the village sold to a household that saved for it, or a manor to one moving up (Homes). */
     static void houseSold(UUID village, int coins) {
         if (coins > 0) TODAY.computeIfAbsent(village, x -> new Day()).houses += coins;
+    }
+
+    /** The tenth of the morning's wages kept back in the treasury as the village's tax (Market.payWages). */
+    static void tax(UUID village, int coins) {
+        if (coins > 0) TODAY.computeIfAbsent(village, x -> new Day()).tax += coins;
+    }
+
+    /** A folk spent this out of its own purse in town, into the treasury: a treat, a drink, a tool, a comfort. */
+    public static void spentInTown(@Nullable UUID village, int coins) {
+        if (village != null && coins > 0) TODAY.computeIfAbsent(village, x -> new Day()).town += coins;
+    }
+
+    /** The tax kept yesterday, and what the folk spent in town yesterday (the books' Money page). */
+    public static int taxYesterday(UUID village) {
+        Day d = YESTERDAY.get(village);
+        return d == null ? 0 : d.tax;
+    }
+
+    public static int townYesterday(UUID village) {
+        Day d = YESTERDAY.get(village);
+        return d == null ? 0 : d.town;
     }
 
     /** The rent taken today so far, and yesterday's (the books' Homes and Money pages). */
@@ -499,9 +531,11 @@ public final class Economy {
         if (t != null) sb.append(t >= 3 ? ", up " + t + "%" : t <= -3 ? ", down " + (-t) + "%" : ", steady");
         if (d != null) {
             sb.append("; takings ").append(d.takings).append(", sold ").append(d.sold).append(", wages ").append(d.wages);
+            if (d.tax > 0) sb.append(", tax ").append(d.tax);
             if (d.tithe > 0) sb.append(", tithe ").append(d.tithe);
             if (d.rent > 0) sb.append(", rent ").append(d.rent);
             if (d.houses > 0) sb.append(", houses sold ").append(d.houses);
+            if (d.town > 0) sb.append(", spent in town ").append(d.town);
             if (d.spent > 0) sb.append(", bought in ").append(d.spent);
         }
         int w = worth(village);
@@ -546,9 +580,12 @@ public final class Economy {
                 }
                 sb.append("Best producers: ").append(String.join(", ", parts)).append(".\n");
             }
-            sb.append("\nMoney in: ").append(d.takings).append(" from the day's work, ").append(d.sold).append(" from sales").append(d.tithe > 0 ? ", " + d.tithe + " from the tithe" : "")
-                .append(d.rent > 0 ? ", " + d.rent + " in rent" : "").append(d.houses > 0 ? ", " + d.houses + " for houses sold" : "").append(".\n");
-            sb.append("Money out: ").append(d.wages).append(" in wages").append(d.spent > 0 ? ", " + d.spent + " buying in" : "").append(".\n");
+            sb.append("\nMoney in: ").append(d.takings).append(" from the day's work, ").append(d.sold).append(" from sales")
+                .append(d.tax > 0 ? ", " + d.tax + " in tax (a tenth of the wages)" : "").append(d.tithe > 0 ? ", " + d.tithe + " from the tithe" : "")
+                .append(d.rent > 0 ? ", " + d.rent + " in rent" : "").append(d.houses > 0 ? ", " + d.houses + " for houses sold" : "")
+                .append(d.town > 0 ? ", " + d.town + " the folk spent in town" : "").append(".\n");
+            sb.append("Money out: ").append(d.wages).append(" in wages").append(d.tax > 0 ? " (" + (d.wages - d.tax) + " paid, " + d.tax + " kept in tax)" : "")
+                .append(d.spent > 0 ? ", " + d.spent + " buying in" : "").append(".\n");
         } else {
             sb.append("The books close each morning: come back tomorrow for yesterday's figures.\n");
         }

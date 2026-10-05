@@ -65,6 +65,11 @@ public class WithdrawGoal extends Goal {
                 BuiltInRegistries.ITEM.getKey(s.getItem()).getPath().contains("cobble")
                     || BuiltInRegistries.ITEM.getKey(s.getItem()).getPath().equals("stone");
             case "food" -> s -> s.get(DataComponents.FOOD) != null;
+            // A hand's rations: food, but nothing that would poison it, and not the raw chicken.
+            case "ration", "meal" -> s -> s.get(DataComponents.FOOD) != null
+                && !s.is(net.minecraft.world.item.Items.ROTTEN_FLESH) && !s.is(net.minecraft.world.item.Items.SPIDER_EYE)
+                && !s.is(net.minecraft.world.item.Items.POISONOUS_POTATO) && !s.is(net.minecraft.world.item.Items.PUFFERFISH)
+                && !s.is(net.minecraft.world.item.Items.CHICKEN) && !s.is(net.minecraft.world.item.Items.SUSPICIOUS_STEW);
             case "tool" -> ItemStack::isDamageableItem;
             default -> {
                 // Multi-word tokens like "iron ingot"/"raw iron" -> "iron_ingot"/"raw_iron".
