@@ -122,6 +122,77 @@ class FoundingPlanTest {
     }
 
     @Test
+    @DisplayName("the square is flat whatever water stands about it: a stream up the hillside, a lake below")
+    void flatBesideWater() {
+        int folk = 40, radius = FoundingPlan.coreRadius(folk);
+        // A stream high on the hillside out past the north-west edge, and a lake down past the south-east.
+        FoundingPlan.Ground g = ground(folk, (dx, dz) -> 79 + (int) Math.round(4 * Math.sin(dx / 11.0) * Math.cos(dz / 9.0)));
+        for (int i = 0; i < g.side * g.side; i++) {
+            int dx = g.dx(i), dz = g.dz(i);
+            if (g.kind[i] == FoundingPlan.OUTSIDE) continue;
+            if (Math.abs(dx + dz + 70) <= 1 && dx < -20) {
+                g.kind[i] = FoundingPlan.WATER;
+                g.fluid[i] = 95;
+                g.ground[i] = 94;
+            } else if (dx + dz > 70) {
+                g.kind[i] = FoundingPlan.WATER;
+                g.fluid[i] = 63;
+                g.ground[i] = 58;
+            }
+        }
+        int level = plan(g, folk, 5L);
+        int off = 0;
+        for (int i = 0; i < g.side * g.side; i++) {
+            if (g.kind[i] == FoundingPlan.LAND && FoundingPlan.levelled(g.dx(i), g.dz(i), radius, 5L) && g.target[i] != level) off++;
+        }
+        assertEquals(0, off, "every column of the square at the level, the stream's and the lake's sides too");
+        // The stream is still held in by its banks out past the square.
+        for (int i = 0; i < g.side * g.side; i++) {
+            if (g.kind[i] != FoundingPlan.KEEP || g.fluid[i] != 95) continue;
+            int x = i % g.side;
+            for (int j : new int[]{ x > 0 ? i - 1 : -1, x < g.side - 1 ? i + 1 : -1 }) {
+                // (Never cut below the water, nor below what it was where it was lower already.)
+                if (j >= 0 && g.kind[j] == FoundingPlan.LAND) {
+                    assertTrue(g.target[j] >= Math.min(95, g.ground[j]), "the stream's bank holds at " + g.dx(j) + "," + g.dz(j));
+                }
+            }
+        }
+    }
+
+    @Test
+    @DisplayName("a stream above the level running through the square is let out there, and dammed where it comes in")
+    void streamThroughTheSquare() {
+        int folk = 40, radius = FoundingPlan.coreRadius(folk);
+        FoundingPlan.Ground g = ground(folk, (dx, dz) -> dx < 0 ? 84 : 76);
+        for (int i = 0; i < g.side * g.side; i++) {
+            int dx = g.dx(i), dz = g.dz(i);
+            if (g.kind[i] == FoundingPlan.OUTSIDE) continue;
+            if (Math.abs(dz) <= 1 && dx < 0) {                     // runs in from the west, on the high ground
+                g.kind[i] = FoundingPlan.WATER;
+                g.fluid[i] = 85;
+                g.ground[i] = 83;
+            }
+        }
+        int level = plan(g, folk, 9L);
+        assertTrue(level < 85, "the level is under the stream: " + level);
+        assertTrue(g.drained > 0, "the stream is let out of the square");
+        assertEquals(FoundingPlan.LAND, g.kind[g.index(-5, 0)], "inside it is land now");
+        assertEquals(level, g.target[g.index(-5, 0)], "and cut to the level");
+        int off = 0;
+        for (int i = 0; i < g.side * g.side; i++) {
+            if (g.kind[i] != FoundingPlan.LAND || !FoundingPlan.levelled(g.dx(i), g.dz(i), radius, 9L) || g.target[i] == level) continue;
+            // Only the bank right beside the stream left outside may stand up, to hold it back.
+            int x = i % g.side;
+            boolean beside = false;
+            for (int j : new int[]{ x > 0 ? i - 1 : -1, x < g.side - 1 ? i + 1 : -1, i - g.side, i + g.side }) {
+                if (j >= 0 && j < g.kind.length && g.kind[j] == FoundingPlan.KEEP) beside = true;
+            }
+            if (!beside) off++;
+        }
+        assertEquals(0, off, "the rest of the square is flat");
+    }
+
+    @Test
     @DisplayName("nothing built is moved, nor the ground about it, and the ground round that slopes to it")
     void buildingsAreLeftAlone() {
         int folk = 20;

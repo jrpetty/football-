@@ -598,9 +598,9 @@ public final class Founding extends SavedData {
         s.surface = Terraform.byName(s.soil, Blocks.GRASS_BLOCK);
         long t0 = System.nanoTime();
         FoundingPlan.make(g, s.radius, s.level, FoundingPlan.campRadius(s.count), s.seed);
-        LOG.info("[MCA-FOUND] planned {} columns in {} ms: {} ponds filled, {} columns of water kept, {} left round buildings;"
-                + " {} columns to the camp, from column {}",
-            g.order.length, (System.nanoTime() - t0) / 1_000_000L, g.filledPonds, g.keptWater, g.protectedColumns,
+        LOG.info("[MCA-FOUND] planned {} columns in {} ms: {} ponds filled, {} columns of water kept ({} above the level"
+                + " let out of the square), {} left round buildings; {} columns to the camp, from column {}",
+            g.order.length, (System.nanoTime() - t0) / 1_000_000L, g.filledPonds, g.keptWater, g.drained, g.protectedColumns,
             g.campIndex, s.cursor);
         s.phase = SHAPE;
     }
@@ -830,8 +830,8 @@ public final class Founding extends SavedData {
         }
         return "the square measured: " + worked + " columns, " + at + " at y=" + s.level + ", " + up + " above and "
             + down + " below" + (most > 0 ? " (the farthest off " + first + ")" : "")
-            + "; held off by the plan " + (g.heldBank + g.heldShore + g.heldBuilt)
-            + " (" + g.heldBank + " for a bank of water, " + g.heldShore + " for a shore, " + g.heldBuilt + " beside something built"
+            + "; held off by the plan " + (g.heldBank + g.heldBuilt)
+            + " (" + g.heldBank + " for the bank of water, " + g.heldBuilt + " beside something built"
             + (g.heldFirst.isEmpty() ? "" : "; first, " + g.heldFirst) + ")"
             + "; left for something in the way " + s.blocked + (s.blocked > 0 ? " (first " + s.blockedFirst + ")" : "");
     }

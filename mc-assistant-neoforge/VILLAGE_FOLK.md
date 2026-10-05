@@ -66,8 +66,16 @@ has to run to hold them):
   down, hollows filled, trees, plants and snow cleared, and the ground is dressed in the land's
   own soil: grass on the plains, sand in the desert, podzol in the pine woods (grass where it was
   all rock: the folk are going to farm it), with earth under a cut and sandstone under deep sand.
-  Ponds are filled. Rivers, lakes and the sea are left exactly as they are, the land beside them
-  is never cut below the water, and the fill slopes down to them as a bank, not a wall.
+  Ponds are filled. Rivers, lakes and the sea are left exactly as they are, and the land beside
+  them is never cut below the water. **The square itself is flat to its edge whatever water stands
+  about it**: beside a lake or river lower down it ends in a quay, the slope down to the water
+  lying out past the square; a stream or tarn higher up is held in by its own bank, a block wide,
+  the square cut flat up to it (out past the square the bank slopes back into the hillside); and
+  water above the level inside the square (a stream down the hillside the town is cut into) is let
+  out there and dammed by its bank where it comes in. (Once the ground was held up a block for every
+  block from a stream on the hill, and let down to a lake's shore, which left terraces in the square.)
+  When the levelling is done the server log says how flat it came out (every column measured),
+  and `/village found ground <x> <z> <radius>` measures any ground.
   The level ground is **solid five deep**: its top (the town's grass, or sand or podzol) and four
   blocks of earth under it, whatever the land had there. Caves, springs, pockets of water or lava,
   buried roots and stumps, and sand over a hollow are filled in the land's own earth (dirt under

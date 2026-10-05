@@ -206,12 +206,13 @@ public final class FoundingPlan {
         public int keptWater, filledPonds, protectedColumns;
         /**
          * How many columns of the levelled square itself the plan holds off the level, and by what:
-         * the bank of water left as it is (never cut below the water, or it runs into the town),
-         * its shore (never filled above it but a block a block), or something built beside it. With
-         * the first of them, for the log.
+         * the bank right beside water left as it is (never cut below the water, or it runs into the
+         * town), or something built beside it. With the first of them, for the log.
          */
-        public int heldBank, heldShore, heldBuilt;
+        public int heldBank, heldBuilt;
         public String heldFirst = "";
+        /** Columns of water standing above the level inside the square, let out so it is cut flat. */
+        public int drained;
 
         public Ground(int outer) {
             this.outer = outer;
@@ -325,10 +326,25 @@ public final class FoundingPlan {
                 }
             }
         }
+        // ---- the square itself is flat, whatever water stands about it. Water above the level
+        // inside the square (a stream down the hillside the town is cut into, a tarn on it) is let
+        // out there, the square cut flat through it; what is left of it outside is held back by its
+        // bank (below). Water at or under the level is left as it is, the square ending in a quay
+        // at its edge.
+        for (int i = 0; i < n; i++) {
+            if (g.kind[i] != KEEP || g.fluid[i] <= level) continue;
+            int dx = g.dx(i), dz = g.dz(i);
+            if (reach(dx, dz) - radius + WOBBLE * noise(seed, dx, dz) > 0) continue;
+            g.kind[i] = LAND;
+            g.drained++;
+        }
         // ---- what holds the rest: never more than a block a block from what is left alone, and
         // the banks of water that is kept never lower than the water (it would run into the town).
-        int[] low = new int[n], high = new int[n], shore = new int[n];
+        // Out past the square the hold is spread, a slope; in the square only the bank itself
+        // holds, the block beside the water, so it is flat to a wall there and not terraced up to it.
+        int[] low = new int[n], wet = new int[n], high = new int[n], shore = new int[n];
         Arrays.fill(low, NONE_LOW);
+        Arrays.fill(wet, NONE_LOW);
         Arrays.fill(high, NONE_HIGH);
         Arrays.fill(shore, NONE_HIGH);
         for (int i = 0; i < n; i++) {
@@ -337,18 +353,20 @@ public final class FoundingPlan {
                 low[i] = Math.max(low[i], g.ground[i] * 10);
                 high[i] = Math.min(high[i], g.ground[i] * 10);
             } else if (k == KEEP) {
-                // The fill beside water slopes down to it, a beach rather than a wall.
+                // The fill beside water slopes down to it, a beach rather than a wall (out past the square).
                 shore[i] = (g.fluid[i] - 1) * 10;
                 int x = i % side, z = i / side;
                 int[] nb = { x > 0 ? i - 1 : -1, x < side - 1 ? i + 1 : -1, z > 0 ? i - side : -1, z < side - 1 ? i + side : -1 };
                 for (int j : nb) {
                     if (j < 0) continue;
                     byte kj = g.kind[j];
-                    if (kj == LAND || kj == FILL || kj == BOARD) low[j] = Math.max(low[j], g.fluid[i] * 10);
+                    if (kj == LAND || kj == FILL || kj == BOARD) wet[j] = Math.max(wet[j], g.fluid[i] * 10);
                 }
             }
         }
+        int[] bank = wet.clone();
         spreadLow(low, side);
+        spreadLow(wet, side);
         spreadHigh(high, side);
         spreadHigh(shore, side);
         // ---- and the height of every column to be worked.
@@ -365,17 +383,21 @@ public final class FoundingPlan {
             // left as it is, the pond is filled to the brim and no lower.
             double was = k == FILL ? g.fluid[i] : g.ground[i];
             double u = r - radius + WOBBLE * noise(seed, dx, dz);
+            boolean square = u <= 0;
             double want = target(was, level, u);
             // What holds it only ever holds it back: a cut no deeper than it allows and a fill no
-            // higher, and never a change where the plan made none.
-            double lower = Math.min(was, low[i] / 10.0);
-            double upper = Math.max(was, Math.min(high[i], shore[i]) / 10.0);
+            // higher, and never a change where the plan made none. In the square, only something
+            // built and the bank right beside water hold it; out past it, the slopes to them too,
+            // and the beach down to water.
+            int holdLow = Math.max(low[i], square ? bank[i] : wet[i]);
+            int holdHigh = square ? high[i] : Math.min(high[i], shore[i]);
+            double lower = Math.min(was, holdLow / 10.0);
+            double upper = Math.max(was, holdHigh / 10.0);
             want = Math.max(lower, Math.min(upper, want));
             g.target[i] = (int) Math.round(want);
-            if (u <= 0 && g.target[i] != level) {
+            if (square && g.target[i] != level) {
                 String why;
-                if (g.target[i] > level && low[i] > level * 10) { g.heldBank++; why = "the bank of water"; }
-                else if (g.target[i] < level && shore[i] < high[i]) { g.heldShore++; why = "the shore of water"; }
+                if (g.target[i] > level && bank[i] > level * 10 && bank[i] >= low[i]) { g.heldBank++; why = "the bank of water"; }
                 else { g.heldBuilt++; why = "something built"; }
                 if (g.heldFirst.isEmpty()) g.heldFirst = why + " at " + dx + "," + dz + " (y=" + (int) Math.round(was) + " kept at " + g.target[i] + ")";
             }
