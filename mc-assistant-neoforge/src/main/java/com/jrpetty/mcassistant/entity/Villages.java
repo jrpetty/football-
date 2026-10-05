@@ -334,6 +334,7 @@ public final class Villages {
         Storekeeping.resetForTests();
         Couriers.resetForTests();
         Toolrack.resetForTests();
+        Workshop.resetForTests();
         Sweepers.resetForTests();
         Meals.resetForTests();
         Stables.resetForTests();
@@ -842,7 +843,9 @@ public final class Villages {
         if (slot.trade() == AssistantEntity.StationTask.RANCH && villageId != null && Market.bedsShort(villageId) >= 6) t *= 2.0;
         int max = slot.max() == Integer.MAX_VALUE ? Integer.MAX_VALUE
             : slot.max() + Math.max(0, boost) + Homeland.extraMost(villageId, slot.trade());
-        return Math.max(0.0, Math.min(max, t));
+        // And the shop's hands at its bench (Workshop): the shop's share is its keeper and the hands it wants.
+        double hands = slot.trade() == AssistantEntity.StationTask.SHOP && villageId != null ? Workshop.handsWanted(villageId) : 0;
+        return Math.max(0.0, Math.min(max + hands, t + hands));
     }
 
     /** How many hands a trade has over (positive) or under (negative) its share, as the order has

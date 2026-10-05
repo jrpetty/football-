@@ -273,6 +273,8 @@ public final class FolkTalk {
         if (f.offWorkNow()) return park != null ? "Off work: " + park.substring(0, 1).toLowerCase(Locale.ROOT) + park.substring(1) : "Off work";
         String run = Couriers.doing(f);
         if (run != null) return "For the storehouse: " + run;
+        String making = Workshop.doing(f);                      // at the shop's bench: "Making a stone sword for the shop"
+        if (making != null) return making;
         return status.startsWith("Needs") ? status : "At work: " + f.stationTask().label;
     }
 
@@ -292,7 +294,8 @@ public final class FolkTalk {
         Social.Life life = f.life();
         AssistantEntity.StationTask job = f.stationTask();
         line(sb, "Trade", f.isBaby() ? "A child — no trade yet" : job == AssistantEntity.StationTask.NONE ? "Looking for one"
-            : (Sweepers.appointed(f) ? "Street sweeper (a hauler of the storehouse)" : job.title) + ", level " + f.veteranLevel()
+            : (Sweepers.appointed(f) ? "Street sweeper (a hauler of the storehouse)"
+                : Workshop.isHand(f) ? "Shop hand (at the shop's bench)" : job.title) + ", level " + f.veteranLevel()
                 + (f.isElder() ? " · the elder" : ""));
         // The storehouse's staff: the couriers work for it, under its storekeeper (Couriers).
         if (job == AssistantEntity.StationTask.HAUL && !f.isBaby() && f.ownerId() != null) {
@@ -300,6 +303,11 @@ public final class FolkTalk {
             line(sb, "Works for", "the storehouse, " + (keeper != null ? "under " + keeper.displayNameCap() + ", the storekeeper"
                 : "with no storekeeper yet: its run list sends the couriers out") + "; paid as its staff");
             line(sb, "Sweeps", Sweepers.cardLine(f));            // the street sweeper (or a courier that swept between runs)
+        } else if (job == AssistantEntity.StationTask.SHOP && !f.isBaby() && f.ownerId() != null) {
+            // The shop's workshop (Workshop): its keeper and the hands at its bench, and what each is making.
+            line(sb, Workshop.isHand(f) ? "Works for" : "Keeps", Workshop.staffLine(f));
+            String making = Workshop.making(f);
+            if (making != null) line(sb, "Making", making);
         } else if (job == AssistantEntity.StationTask.STORE && !f.isBaby() && f.ownerId() != null) {
             int couriers = 0;
             for (AssistantEntity a : Villages.folkOf(f.ownerId())) if (a.stationTask() == AssistantEntity.StationTask.HAUL) couriers++;
@@ -624,8 +632,11 @@ public final class FolkTalk {
                 "Reading, mostly. And enchanting" + place + " — a blade that never dulls.");
             case COOK -> pick(r, "Cooking at the café" + place + ". Pull up a seat!",
                 "In the café" + place + " — the cider's fresh today.");
-            case SHOP -> pick(r, "Minding the shop" + place + ". Have a look round!",
-                "Behind the counter" + place + ". Tools, potions, beds — what are you after?");
+            case SHOP -> Workshop.isHand(f)
+                ? pick(r, "At the shop's bench" + place + ". Whatever the shop's short of, I make it — there's a recipe for everything.",
+                    "Making for the shop" + place + ". Blades for the watch, picks for the mine, pots for the windowsills.")
+                : pick(r, "Minding the shop" + place + ". Have a look round!",
+                    "Behind the counter" + place + ". Tools, potions, beds — what are you after?");
             case SCOUT -> f.expedition() != null
                 ? (f.expedition().returning() ? "On my way home from the " + f.expedition().heading() + ", with news." : "Scouting " + f.expedition().heading() + ". Who knows what's out here?")
                 : pick(r, "Going over the atlas. There's a lot of land out there we've not seen.",

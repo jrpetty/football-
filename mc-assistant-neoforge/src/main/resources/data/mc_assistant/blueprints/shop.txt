@@ -1,6 +1,7 @@
 # The shop: a timber shopfront with a wide window either side of the door, a
 # counter of casks across the room with the day's goods laid out on it, shelves
-# of barrels and chests behind it, and a lantern over the door.
+# of barrels and chests behind it, a crafting table in the back room behind the counter
+# for the shop's hands (Workshop), and a lantern over the door.
 # Rows run from the back of the building (top) to the front (bottom, the door).
 name shop
 layer -1
@@ -17,7 +18,7 @@ layer 0
 .........
 .LwwwwwL.
 .wCQCQCw.
-.w.....w.
+.wT....w.
 .wQQ.QQw.
 .w.....w.
 .w.....w.

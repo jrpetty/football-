@@ -92,8 +92,9 @@ public final class RecipeBook {
 
     // ---- every way the game makes a thing (the village's benches: Bench) ----
 
-    /** Where a way is worked: at the bench (or in the hand), or over a fire of which kind. */
-    public enum Fire { NONE, FURNACE, SMOKER, CAMPFIRE }
+    /** Where a way is worked: at the bench (or in the hand), over a fire of which kind, or at the smithing
+     *  table (a diamond piece, an ingot of netherite and the template: the shop's workshop, Workshop). */
+    public enum Fire { NONE, FURNACE, SMOKER, CAMPFIRE, SMITHING }
 
     /**
      * One way the game makes a thing: a crafting recipe, or a firing in a furnace, a smoker or over
@@ -143,6 +144,7 @@ public final class RecipeBook {
         fires(map, registries, mgr.getAllRecipesFor(RecipeType.SMELTING), Fire.FURNACE);
         fires(map, registries, mgr.getAllRecipesFor(RecipeType.SMOKING), Fire.SMOKER);
         fires(map, registries, mgr.getAllRecipesFor(RecipeType.CAMPFIRE_COOKING), Fire.CAMPFIRE);
+        smithing(map, registries, mgr);
         // The usual way first, then the bench before the fire, then the fewest different parts.
         for (List<Way> ways : map.values()) {
             ways.sort(java.util.Comparator.<Way>comparingInt(w -> w.canonical() ? 0 : 1)
@@ -169,6 +171,45 @@ public final class RecipeBook {
                 // As above: a firing the village cannot read is left out.
             }
         }
+    }
+
+    /**
+     * The smithing table's ways (Workshop): the game's own upgrades, a piece and an ingot and the template
+     * into the better piece (a diamond sword and an ingot of netherite into a netherite sword), read off
+     * the game's recipes and a modpack's alike. Not the trims: a trim is a pattern on a thing, not a thing.
+     * The recipe keeps what it takes to itself, so what it takes is found by asking it of every item there is.
+     */
+    private static void smithing(Map<Item, List<Way>> map, net.minecraft.core.HolderLookup.Provider registries, RecipeManager mgr) {
+        for (RecipeHolder<net.minecraft.world.item.crafting.SmithingRecipe> holder : mgr.getAllRecipesFor(RecipeType.SMITHING)) {
+            try {
+                if (!(holder.value() instanceof net.minecraft.world.item.crafting.SmithingTransformRecipe recipe)) continue;
+                ItemStack result = recipe.getResultItem(registries);
+                if (result.isEmpty() || !result.getComponentsPatch().isEmpty()) continue;
+                Ingredient template = taken(recipe::isTemplateIngredient), base = taken(recipe::isBaseIngredient),
+                    addition = taken(recipe::isAdditionIngredient);
+                if (base.isEmpty() || addition.isEmpty()) continue;
+                List<Part> parts = parts(template.isEmpty() ? List.of(base, addition) : List.of(template, base, addition));
+                if (parts.isEmpty()) continue;
+                map.computeIfAbsent(result.getItem(), k -> new ArrayList<>()).add(new Way(holder.id(), result.getItem(),
+                    Math.max(1, result.getCount()), parts, Fire.SMITHING, false));
+            } catch (RuntimeException e) {
+                // A smithing recipe the village cannot read: left out, as above.
+            }
+        }
+    }
+
+    /** Every item a smithing recipe takes in one of its places, as an ingredient. */
+    private static Ingredient taken(java.util.function.Predicate<ItemStack> takes) {
+        List<Item> items = new ArrayList<>();
+        for (Item it : BuiltInRegistries.ITEM) {
+            if (it == net.minecraft.world.item.Items.AIR) continue;
+            try {
+                if (takes.test(new ItemStack(it))) items.add(it);
+            } catch (RuntimeException e) {
+                // an item that will not be asked about: not taken
+            }
+        }
+        return items.isEmpty() ? Ingredient.EMPTY : Ingredient.of(items.toArray(new net.minecraft.world.level.ItemLike[0]));
     }
 
     /** A grid's (or a fire's) ingredients grouped into (ingredient, how many). */

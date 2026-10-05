@@ -192,6 +192,8 @@ public final class VillageCommands {
             .then(Commands.literal("shop").executes(ctx -> page(ctx, 4)))
             // A player's market stall: the stalls here; rent, screen, till, books, price; market day now, a lapse (ops).
             .then(com.jrpetty.mcassistant.entity.PlayerStalls.command())
+            // The shop's workshop (Workshop): its makers, its order book, the blueprints and the age's say; orders.
+            .then(WorkshopCommands.node())
             // The storehouse: its books for the day, its storekeeper and couriers, and its run list.
             .then(Commands.literal("stores").executes(ctx -> page(ctx, 5)))
             // The street sweeper (Sweepers): what it swept in today and what lies about the town; and, for ops

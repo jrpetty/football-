@@ -392,6 +392,9 @@ public final class Toolrack {
         UUID id = v.id();
         // The founding stores are the storehouse's until it stands (Villages.storehouseFirst).
         if (!Storehouses.stands(id) && Villages.storehouseFirst(id, level.getGameTime())) return null;
+        // Once there is a shop with somebody at its bench, the rack is its workshop's to keep (Workshop), of the
+        // age's best the stores can run to: the spares are on its order book, first after the watch's.
+        if (Workshop.keepsTheRack(level, v)) return null;
         // A bench to hand: its own (every folk carries one), the stores', or a neighbour's.
         if (!Bench.handOf(level, v, maker, null).table()) return null;
         List<String> made = new ArrayList<>();

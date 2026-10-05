@@ -528,6 +528,7 @@ public final class Annals {
         out.put("production", production(level, v));
         out.put("shops", Stockroom.inventoryReport(level, id));
         out.getCompound("shops").put("stalls", PlayerStalls.report(level, id));   // the players' stalls on the square
+        out.put("workshop", Workshop.report(level, id));        // the shop's workshop: its makers, its order book, the age's say
         out.put("stock", stock(level, v));
         // The storehouse's books, its staff (the storekeeper, the couriers) and its run list: the Stores page.
         out.put("storehouse", Storekeeping.report(level, v));

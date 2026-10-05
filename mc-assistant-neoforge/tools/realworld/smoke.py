@@ -614,6 +614,46 @@ def jobs_stage(r, look, cx, cz):
     say("alive after the job market: %s" % client_alive())
 
 
+def workshop_stage(r, look, cx, cz):
+    """The shop's workshop (entity/Workshop): a shop put up beside the town if it has none, its keeper and a
+    hand taken on, the hand at the crafting table in the shop's back room making off the order book; the
+    shopfront, the bench through the door, and the Shops page's workshop (its makers, what they made today
+    and of what, the order book against the stock, and what the next age will let it make)."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("time set 6000")
+    r.cmd("gamemode spectator %s" % USER)
+    # Out past the first houses, so a shop put up for the picture stands on open ground.
+    out = r.cmd("execute positioned %d 100 %d run village workshop stage" % (cx + 44, cz + 10))
+    say("workshop: " + out[:700])
+    w = re.search(r"WORKSHOP (-?\d+) (-?\d+) (-?\d+)", out)
+    if not w:
+        say("no shop to photograph")
+        return
+    wx, wy, wz = int(w.group(1)), int(w.group(2)), int(w.group(3))
+    d = re.search(r"DOOR (-?\d+) (-?\d+) (-?\d+)", out)
+    b = re.search(r"BENCH (-?\d+) (-?\d+) (-?\d+)", out)
+    r.cmd("tp %s %d %d %d" % (USER, wx + 14, wy + 8, wz + 14))
+    time.sleep(8)
+    if d:
+        dx, dy, dz = int(d.group(1)), int(d.group(2)), int(d.group(3))
+        ox, oz = dx - wx, dz - wz                      # from the middle out through the door
+        n = max(1.0, math.hypot(ox, oz))
+        look("19-workshop-1-shopfront", dx + 9 * ox / n + 3, dy + 4, dz + 9 * oz / n + 3, wx, wy + 2, wz, wait=6)
+        if b:
+            bx, by, bz = int(b.group(1)), int(b.group(2)), int(b.group(3))
+            # In the doorway, looking in at the hand at its bench in the back room.
+            look("19-workshop-2-bench", dx + 0.5, dy + 1.6, dz + 0.5, bx + 0.5, by + 0.6, bz + 0.5, wait=6)
+    else:
+        look("19-workshop-1-shopfront", wx + 12, wy + 6, wz + 12, wx, wy + 2, wz, wait=6)
+    say("work: " + r.cmd("execute positioned %d %d %d run village workshop work" % (wx, wy, wz))[:500])
+    say("workshop now: " + r.cmd("execute positioned %d %d %d run village workshop" % (wx, wy, wz))[:900])
+    say("books: " + r.cmd("execute as %s at @s run village workshop books" % USER))
+    time.sleep(4)
+    shot("19-workshop-3-books")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    say("alive after the workshop: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")
@@ -781,6 +821,10 @@ def main():
         sweeper_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("sweeper stage failed: %s" % e)
+    try:
+        workshop_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("workshop stage failed: %s" % e)
     try:
         market_stall_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
