@@ -65,6 +65,19 @@ public class MealsGameTests {
         f.removeMatching(s -> s.get(DataComponents.FOOD) != null, 9999);
     }
 
+    /** Nothing to eat in the village's stores but what is in {@code keep} (the test's larder), nor in this pack:
+     *  a folk's kit and the founding stores come in over its first ticks. */
+    private static void onlyTheLarder(ServerLevel level, VillageFolkEntity f, Container keep) {
+        noFood(f);
+        for (BlockPos p : Villages.storeChests(level, f.ownerId())) {
+            if (level.getBlockEntity(p) instanceof Container c && c != keep) {
+                for (int i = 0; i < c.getContainerSize(); i++) {
+                    if (c.getItem(i).get(DataComponents.FOOD) != null) c.setItem(i, ItemStack.EMPTY);
+                }
+            }
+        }
+    }
+
     /** A chest of the stores beside the heart with so many loaves in it. */
     private static Container larder(ServerLevel level, BlockPos heart, int loaves) {
         BlockPos at = Kit.surface(level, heart.getX() + 3, heart.getZ() + 3);
@@ -94,31 +107,32 @@ public class MealsGameTests {
         // The first folk eats out of its own pack, so the stores' loaves are the child's alone.
         first.insertGiven(new ItemStack(Items.BREAD, 16));
         Container c = larder(level, heart, 8);
-        int[] seen = new int[3];
-        helper.runAtTickTime(10, () -> {
-            level.setDayTime(DAY + 300);
-            Meals.tick(child);
-            seen[0] = bread(c);
-            Kit.log("me01 breakfast: " + Meals.line(child) + "; bread in the stores " + seen[0]);
-        });
-        helper.runAtTickTime(700, () -> {
-            level.setDayTime(DAY + 6000);
-            Meals.tick(child);
-            seen[1] = bread(c);
-            Kit.log("me01 the midday meal: " + Meals.line(child) + "; bread in the stores " + seen[1]);
-        });
-        helper.runAtTickTime(1400, () -> {
-            level.setDayTime(DAY + 11500);
-            Meals.tick(child);
-            seen[2] = bread(c);
-            String line = Meals.line(child);
-            Kit.log("me01 supper: " + line + "; bread in the stores " + seen[2]);
-            helper.assertTrue(seen[0] == 7, "breakfast is a loaf out of the stores: " + seen[0]);
-            helper.assertTrue(seen[1] == 6, "the midday meal another: " + seen[1]);
-            helper.assertTrue(seen[2] == 5, "supper a third: " + seen[2]);
-            helper.assertTrue(child.meals().eatenToday() == 3 && child.meals().missedInRow() == 0,
-                "three meals had, none missed: " + child.meals().eatenToday());
-            helper.assertTrue(line.contains("3 meals today") && line.contains("bread"), "its card says so: " + line);
+        int[] ate = new int[3];
+        String[] said = new String[1];
+        // Each meal on a day of its own that the child has not eaten in yet (left to itself over its
+        // first ticks it may have had its own breakfast on the day the test began).
+        long[] at = { DAY + 240000 + 300, DAY + 264000 + 6000, DAY + 288000 + 11500 };
+        int[] when = { 10, 700, 1400 };
+        String[] meal = { "breakfast", "the midday meal", "supper" };
+        for (int k = 0; k < 3; k++) {
+            final int m = k;
+            helper.runAtTickTime(when[m], () -> {
+                onlyTheLarder(level, child, c);
+                level.setDayTime(at[m]);
+                int before = bread(c);
+                Meals.tick(child);
+                ate[m] = before - bread(c);
+                said[0] = Meals.line(child);
+                Kit.log("me01 " + meal[m] + ": " + said[0] + "; a loaf out of the stores? " + ate[m] + " (" + bread(c) + " left)");
+            });
+        }
+        helper.runAtTickTime(1401, () -> {
+            String line = said[0];
+            helper.assertTrue(ate[0] == 1, "breakfast is a loaf out of the stores: " + ate[0]);
+            helper.assertTrue(ate[1] == 1, "the midday meal another: " + ate[1]);
+            helper.assertTrue(ate[2] == 1, "supper a third: " + ate[2]);
+            helper.assertTrue(child.meals().missedInRow() == 0, "none missed: " + child.meals().missedInRow());
+            helper.assertTrue(line.contains("1 meal today") && line.contains("bread") && line.contains("supper"), "its card says so: " + line);
             helper.succeed();
         });
     }
@@ -141,6 +155,7 @@ public class MealsGameTests {
         });
         helper.runAtTickTime(700, () -> {
             Container c = larder(level, heart, 4);
+            onlyTheLarder(level, f, c);
             level.setDayTime(DAY + 6000);
             Meals.tick(f);
             String line = Meals.line(f);

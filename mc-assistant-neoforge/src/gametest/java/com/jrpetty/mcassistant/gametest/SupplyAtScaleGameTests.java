@@ -329,11 +329,14 @@ public class SupplyAtScaleGameTests {
                     || taken != null && taken.startsWith("KIT"),
                 "the rations are on the storehouse's run list (or already in the courier's hands): " + runs + ", " + taken);
         });
+        final int[] most = { 0 };
         helper.onEachTick(() -> {
             long t = helper.getTick();
             Villages.noteAttempt(village, level.getGameTime());
             if (t < 10 || t % 20 != 0) return;
-            int has = cutter.countCarried(ration);
+            // (It eats its meals as the day goes on: what came out is the most it has held.)
+            int has = Math.max(most[0], cutter.countCarried(ration));
+            most[0] = has;
             int bread = count(store, s -> s.is(Items.BREAD));
             String run = Couriers.runOfForTests(courier);
             if (t % 400 == 0) Kit.log("sa03 @" + t + " the woodcutter has " + has + " rations, the storehouse " + bread + " bread; run " + run

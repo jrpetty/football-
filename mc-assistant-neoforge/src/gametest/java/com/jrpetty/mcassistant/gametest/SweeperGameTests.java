@@ -297,10 +297,10 @@ public class SweeperGameTests {
         ItemEntity sapling = lay(level, heart, 16, 1, new ItemStack(Items.OAK_SAPLING, 2), null);
         ItemEntity cobble = lay(level, heart, -10, -6, new ItemStack(Items.COBBLESTONE, 4), null);
         ItemEntity thrown = lay(level, heart, -6, 9, new ItemStack(Items.EMERALD, 2), helper.makeMockPlayer(GameType.SURVIVAL));
-        // A roof over one: indoors.
+        // A roof over one: indoors. (Laid on the ground first: laid after, it went on top of the roof.)
         BlockPos under = Kit.surface(level, x - 12, z + 9);
-        for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) level.setBlock(under.offset(dx, 3, dz), Blocks.STONE.defaultBlockState(), 3);
         ItemEntity indoors = lay(level, heart, -12, 9, new ItemStack(Items.BREAD, 3), null);
+        for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) level.setBlock(under.offset(dx, 3, dz), Blocks.STONE.defaultBlockState(), 3);
         for (ItemEntity e : List.of(sapling, cobble, thrown, indoors)) age(e, 200);
         ItemEntity fresh = lay(level, heart, 6, -6, new ItemStack(Items.STRING, 2), null);
         boolean saplingYoung = Sweepers.mayTakeForTests(level, village, sapling);
