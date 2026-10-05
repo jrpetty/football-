@@ -37,6 +37,8 @@ public final class AssistantNetwork {
         // The village journal (J): the status of the village the player stands in, on a page.
         registrar.playToServer(VillageAskPayload.TYPE, VillageAskPayload.STREAM_CODEC, AssistantNetwork::handleVillageAsk);
         registrar.playToClient(VillagePagePayload.TYPE, VillagePagePayload.STREAM_CODEC, AssistantNetwork::handleVillagePage);
+        // The town's books, for the analytics screen (the board, the journal's Analytics button, /village stats).
+        registrar.playToClient(CityStatsPayload.TYPE, CityStatsPayload.STREAM_CODEC, AssistantNetwork::handleCityStats);
         // Fast time: the keys and the journal's buttons ask, the server answers once a second.
         registrar.playToServer(TimeSpeedAskPayload.TYPE, TimeSpeedAskPayload.STREAM_CODEC, AssistantNetwork::handleTimeSpeedAsk);
         registrar.playToClient(TimeSpeedPayload.TYPE, TimeSpeedPayload.STREAM_CODEC, AssistantNetwork::handleTimeSpeed);
@@ -79,6 +81,10 @@ public final class AssistantNetwork {
                     new VillagePagePayload(title + " — wages", com.jrpetty.mcassistant.entity.Wealth.wagesPage(level, v)));
                 return;
             }
+            if (payload.what() == 4) {
+                sendCityStats(player, level, v);
+                return;
+            }
             if (payload.what() == 3) {
                 net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
                     new VillagePagePayload(title + " — economy", com.jrpetty.mcassistant.entity.Economy.page(level, v)));
@@ -87,6 +93,18 @@ public final class AssistantNetwork {
             net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
                 new VillagePagePayload(title, com.jrpetty.mcassistant.VillageCommands.statusText(level, v)));
         });
+    }
+
+    /** The town's books, sent to a player for the analytics screen. */
+    public static void sendCityStats(ServerPlayer player, net.minecraft.server.level.ServerLevel level,
+                                     com.jrpetty.mcassistant.entity.Villages.Village v) {
+        net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
+            new CityStatsPayload(com.jrpetty.mcassistant.entity.Annals.snapshot(level, v)));
+    }
+
+    /** Clientbound: the class behind this call only loads on the client. */
+    private static void handleCityStats(CityStatsPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> com.jrpetty.mcassistant.client.CityScreen.show(payload.data()));
     }
 
     private static void handleVillagePage(VillagePagePayload payload, IPayloadContext context) {

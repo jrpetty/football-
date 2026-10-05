@@ -299,6 +299,7 @@ public final class Market {
         HUNGRY.put(id, Villages.stock(level, v.centre(), Villages.Task.FOOD, Villages.storesRadius(id)) * 2
             < Villages.larderForBirth(id));
         Economy.closeTheDay(level, v, day);              // yesterday's output, and what the village is worth
+        Annals.record(level, v, day);                    // and the morning written into the town's books
         Leader.morning(level, v, day);                   // the leader's books, the plan and the day's pay
         mint(level, v);
         int sold = trade(level, v);

@@ -1329,6 +1329,7 @@ public class VillageFolkEntity extends AssistantEntity {
                 : displayNameCap() + " died, aged " + age);
             Gatherings.mourn(village, displayNameCap(), day);
             Homes.left(village, getUUID());
+            Annals.died(village, how);
             // The leader gone: an election to choose another (Elections).
             if (getUUID().equals(Villages.elder(village)) && level() instanceof net.minecraft.server.level.ServerLevel lost) {
                 Elections.vacancy(lost, village, displayNameCap(), day);
@@ -4493,6 +4494,7 @@ public class VillageFolkEntity extends AssistantEntity {
             Villages.recordDeath(from);
             Homes.left(from, getUUID());
         }
+        Annals.moved(from, to.id());
         joinVillage(to.id(), to.centre());
         Villages.recordBirth(to.id());
         BlockPos at = Contentment.arrival(level, to, getRandom());
@@ -5290,6 +5292,7 @@ public class VillageFolkEntity extends AssistantEntity {
             getX(), getY() + 2.0, getZ(), 6, 0.6, 0.3, 0.6, 0.0);
         server.addFreshEntity(child);
         Villages.recordBirth(village);
+        Annals.born(village);
         child.bornDay = bornOn;
         child.setChild(true);
         persona.remember(bornOn, "my child " + child.displayNameCap() + " was born", 9);

@@ -65,6 +65,7 @@ public final class Interiors {
     public static synchronized void resetForTests() {
         PLANS.clear();
         DONE.clear();
+        STATS.clear();
     }
 
     /** The age's furnishing: how far along a building's insides are (0 none, 1 Stone Age, 2 Iron, 3 Diamond and after). */
@@ -223,12 +224,20 @@ public final class Interiors {
         Map<BlockPos, BuildGoal.Placement> at = new HashMap<>();
         for (BuildGoal.Placement p : placements) if (p.part() != BuildGoal.Part.CLEAR) at.put(p.pos(), p);
         Set<BlockPos> keepClear = new HashSet<>();
+        Set<BlockPos> heads = new HashSet<>();
         BlockPos door = null;
         for (BuildGoal.Placement p : placements) {
             switch (p.part()) {
                 case DOOR -> {
                     if (door == null || p.pos().getY() < door.getY()) door = p.pos();
                     for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) keepClear.add(p.pos().offset(dx, 0, dz));
+                }
+                // A bed's head lies a cell beyond its foot (the drawing has the foot): that cell is the bed's.
+                case BED -> {
+                    Direction lie = p.way() == com.jrpetty.mcassistant.entity.goal.Blueprints.Way.UP ? b.facing()
+                        : com.jrpetty.mcassistant.entity.goal.Blueprints.world(p.way(), b.facing());
+                    keepClear.add(p.pos().relative(lie));
+                    heads.add(p.pos().relative(lie));
                 }
                 // Room to get at a ladder, a chest, a stand or a table of the crafts (a bed is got into from
                 // anywhere, a bench or an oven from the side).
@@ -257,6 +266,10 @@ public final class Interiors {
                 default -> { continue; }
             }
             if (!enclosed(at, cell, r + 2)) continue;                         // a room: walls round it, a roof over it (not the attic)
+            // Not where something stands already (a bed bought since, a folk's own chest), unless it is
+            // one of the furnishing's own pieces: a building looked at again after a restart keeps its plan.
+            BlockState there = level.getBlockState(cell);
+            if (!there.isAir() && !ours(there)) continue;
             floor.add(cell);
         }
         floor.sort(Comparator.<BlockPos>comparingInt(BlockPos::getY).thenComparingInt(BlockPos::getX).thenComparingInt(BlockPos::getZ));
@@ -268,6 +281,7 @@ public final class Interiors {
                 BuildGoal.Placement n = at.get(c.relative(d));
                 if (n != null && (n.part() == BuildGoal.Part.BLOCK || n.part() == BuildGoal.Part.WINDOW)) { byWall = true; break; }
             }
+            STATS.merge(b.anchor().asLong() + (byWall ? ":walls" : ":open"), 1, Integer::sum);
             (byWall ? walls : open).computeIfAbsent(c.getY(), k -> new ArrayList<>()).add(c);
         }
         boolean great = !b.structure().equals("house") && !b.structure().equals("barracks");
@@ -312,6 +326,19 @@ public final class Interiors {
         List<Piece> fixed = List.copyOf(out);
         PLANS.put(key, fixed);
         return fixed;
+    }
+
+    /** The furnishing's own kinds of block: a rug, a barrel, a shelf, a lamp, a candle, a pot. */
+    private static boolean ours(BlockState s) {
+        return s.is(BlockTags.WOOL_CARPETS) || s.is(Blocks.BARREL) || s.is(Blocks.BOOKSHELF) || s.is(Blocks.LANTERN)
+            || s.is(BlockTags.CANDLES) || s.is(BlockTags.FLOWER_POTS);
+    }
+
+    /** Tests: how many floor cells of each sort a building's plan found. */
+    private static final Map<String, Integer> STATS = new HashMap<>();
+
+    public static synchronized String statsForTests(Ledger.Building b) {
+        return "walls " + STATS.getOrDefault(b.anchor().asLong() + ":walls", 0) + ", open " + STATS.getOrDefault(b.anchor().asLong() + ":open", 0);
     }
 
     /** How cornered a cell is: how many of its sides the drawing has walled. */

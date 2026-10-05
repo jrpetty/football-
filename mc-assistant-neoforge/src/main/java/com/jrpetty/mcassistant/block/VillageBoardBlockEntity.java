@@ -91,6 +91,14 @@ public class VillageBoardBlockEntity extends BlockEntity {
     /** Close up: the whole of it in the village journal. */
     public void showTo(ServerPlayer player) {
         if (level instanceof ServerLevel server) refresh(server);
+        // The town's books, in full (the analytics screen, its Board page the board's own words).
+        if (level instanceof ServerLevel server && village != null) {
+            com.jrpetty.mcassistant.entity.Villages.Village v = com.jrpetty.mcassistant.entity.Villages.get(village);
+            if (v != null) {
+                com.jrpetty.mcassistant.net.AssistantNetwork.sendCityStats(player, server, v);
+                return;
+            }
+        }
         String[] page = com.jrpetty.mcassistant.entity.VillageBoards.page(lines);
         net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
             new com.jrpetty.mcassistant.net.VillagePagePayload(page[0], page[1]));

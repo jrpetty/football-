@@ -370,6 +370,7 @@ public final class Villages {
         Interiors.resetForTests();
         Palettes.resetForTests();
         Court.resetForTests();
+        Annals.resetForTests();
         Trades.resetForTests();
         Links.resetForTests();
         Asks.resetForTests();

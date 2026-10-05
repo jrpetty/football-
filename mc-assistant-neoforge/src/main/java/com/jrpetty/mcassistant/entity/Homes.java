@@ -1140,6 +1140,30 @@ public final class Homes {
             + "; houses are " + (forSale(village) ? "sold" : "given");
     }
 
+    /** For the town's books (Annals): {housed, waiting, given, owned, rented, players', empty, for sale (1/0)}. */
+    public static int[] counts(ServerLevel level, UUID village) {
+        enrol(village);
+        int given = 0, owned = 0, rented = 0, let = 0, empty = 0;
+        for (Home h : homes(village).values()) {
+            if (seat(h)) continue;
+            if (h.members.isEmpty()) {
+                if (h.tenure == Tenure.PLAYER && !h.toLet) let++;
+                else empty++;
+                continue;
+            }
+            switch (h.tenure) {
+                case GIVEN -> given++;
+                case OWNED -> owned++;
+                case RENTED -> rented++;
+                case PLAYER -> let++;
+            }
+        }
+        List<VillageFolkEntity> folk = new ArrayList<>();
+        for (AssistantEntity a : Villages.folkOf(village)) if (a instanceof VillageFolkEntity f && !f.isShowcase()) folk.add(f);
+        int waiting = waiting(village, folk, level.getDayTime() / 24000L).size();
+        return new int[]{ given + owned + rented, waiting, given, owned, rented, let, empty, forSale(village) ? 1 : 0 };
+    }
+
     /** "I live at No. 4, Elm Street, with Tansy and the children — the village gave it us." */
     public static String talk(VillageFolkEntity f) {
         UUID village = f.ownerId();

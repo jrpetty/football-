@@ -215,6 +215,7 @@ public final class Bonds {
         mover.getNavigation().stop();
         Villages.recordDeath(from.id());
         Villages.recordBirth(to.id());
+        Annals.moved(from.id(), to.id());
         Gatherings.pledged(to.id(), mover, stays, day);
         tie(a.id(), b.id());
         String line = mover.displayNameCap() + " of " + Villages.name(from.id()) + " married " + stays.displayNameCap()

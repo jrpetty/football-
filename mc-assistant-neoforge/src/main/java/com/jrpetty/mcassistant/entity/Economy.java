@@ -347,6 +347,12 @@ public final class Economy {
         return sb.toString();
     }
 
+    /** Yesterday's books (the town's annals read them each morning), or null before the first close. */
+    @Nullable
+    static Day yesterdayBooks(UUID village) {
+        return YESTERDAY.get(village);
+    }
+
     /** What this folk made yesterday, in coin (0 if nothing, or no books yet). */
     public static int madeYesterday(VillageFolkEntity f) {
         UUID id = f.ownerId();

@@ -27,6 +27,7 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  *   /village chronicle        the nearest village's history, as a book
  *   /village standing         what every village you have met thinks of you
  *   /village house            the village's houses; house buy | house let N | house rent
+ *   /village stats            the town's books in full: the analytics screen (as the village board)
  *   /village speed 16|max|normal   time runs faster, to watch a village grow (ops / world owner)
  * </pre>
  */
@@ -56,6 +57,10 @@ public final class VillageCommands {
             .then(Commands.literal("anchors").requires(src -> src.hasPermission(2))
                 .executes(VillageCommands::anchors))
             .then(Commands.literal("status").executes(VillageCommands::status))
+            // The town's books in full, on the analytics screen (as clicking the village board does).
+            .then(Commands.literal("stats").executes(ctx -> stats(ctx, -1))
+                .then(Commands.argument("page", IntegerArgumentType.integer(0, 10))
+                    .executes(ctx -> stats(ctx, IntegerArgumentType.getInteger(ctx, "page")))))
             // The village's houses: who lives where, what is for sale; buy one, let it out, take the rent.
             .then(Commands.literal("house")
                 .executes(VillageCommands::houses)
@@ -360,6 +365,31 @@ public final class VillageCommands {
      * temperament, its partner, its friends and anyone it does not get on with, and
      * its family — and above them, how the village hangs together.
      */
+    private static int stats(CommandContext<CommandSourceStack> ctx, int page) {
+        net.minecraft.server.level.ServerLevel level = ctx.getSource().getLevel();
+        net.minecraft.core.BlockPos here = net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition());
+        Villages.Village v = Villages.nearest(level, here, Villages.VILLAGE_RANGE * 4);
+        if (v == null && !Villages.every().isEmpty()) v = Villages.every().get(0);
+        if (v == null) {
+            ctx.getSource().sendFailure(Component.literal("No village yet."));
+            return 0;
+        }
+        if (ctx.getSource().getEntity() instanceof ServerPlayer p) {
+            net.minecraft.nbt.CompoundTag books = com.jrpetty.mcassistant.entity.Annals.snapshot(level, v);
+            if (page >= 0) books.putInt("tab", page);
+            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p, new com.jrpetty.mcassistant.net.CityStatsPayload(books));
+            return 1;
+        }
+        // From the console: the reading of what drives it, in words.
+        net.minecraft.nbt.CompoundTag t = com.jrpetty.mcassistant.entity.Annals.snapshot(level, v);
+        net.minecraft.nbt.ListTag d = t.getList("drivers", net.minecraft.nbt.Tag.TAG_STRING);
+        StringBuilder sb = new StringBuilder("STATS " + Villages.name(v.id()) + " (" + t.getIntArray("days").length + " days in the books)");
+        for (int i = 0; i < d.size(); i++) sb.append(" | ").append(d.getString(i));
+        String line = sb.toString();
+        ctx.getSource().sendSuccess(() -> Component.literal(line), false);
+        return d.size();
+    }
+
     private static int houses(CommandContext<CommandSourceStack> ctx) {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer p)) {
             ctx.getSource().sendFailure(Component.literal("Only a player can ask after houses."));
@@ -660,6 +690,8 @@ public final class VillageCommands {
             com.jrpetty.mcassistant.entity.Orders.Order order = com.jrpetty.mcassistant.entity.Orders.current(id);
             sb.append(". Elder's orders: ").append(order == null ? "none yet" : order.title);
             sb.append(". Leader: ").append(com.jrpetty.mcassistant.entity.Leader.line(id));
+            String escort = com.jrpetty.mcassistant.entity.Patrols.escortLine(id);
+            if (!escort.isEmpty()) sb.append(", ").append(escort);
             sb.append(". Election: ").append(com.jrpetty.mcassistant.entity.Elections.line(id, level.getDayTime() / 24000L));
             sb.append(". Homes: ").append(com.jrpetty.mcassistant.entity.Homes.line(level, id));
             sb.append(". Look: ").append(com.jrpetty.mcassistant.entity.Palettes.line(id));

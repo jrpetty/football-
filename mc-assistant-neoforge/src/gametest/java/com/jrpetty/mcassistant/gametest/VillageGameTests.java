@@ -5225,7 +5225,9 @@ public class VillageGameTests {
         BlockPos stores = Kit.surface(level, heart.getX() + 4, heart.getZ() - 4);
         level.setBlock(stores, Blocks.CHEST.defaultBlockState(), 3);
         Villages.forgetStores(id);
-        com.jrpetty.mcassistant.entity.Homes.storeForTests(level, v, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.WHITE_BED, 3));
+        for (int i = 0; i < 3; i++) {
+            com.jrpetty.mcassistant.entity.Homes.storeForTests(level, v, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.WHITE_BED));
+        }
         com.jrpetty.mcassistant.entity.Homes.tickForTests(level, v);
         java.util.List<java.util.UUID> in = com.jrpetty.mcassistant.entity.Homes.membersForTests(id, one);
         java.util.List<BlockPos> beds = com.jrpetty.mcassistant.entity.Homes.bedsForTests(level, id, one);
@@ -5501,7 +5503,9 @@ public class VillageGameTests {
         }
         com.jrpetty.mcassistant.entity.TownJobs.instantForTests(false);
         Kit.log("t80 the house before " + before + "; then " + after + "; the manor's plan for the Diamond Age "
-            + com.jrpetty.mcassistant.entity.Interiors.planForTests(level, id, new com.jrpetty.mcassistant.village.Ledger.Building("manor", manor, Direction.NORTH), 3));
+            + com.jrpetty.mcassistant.entity.Interiors.planForTests(level, id, new com.jrpetty.mcassistant.village.Ledger.Building("manor", manor, Direction.NORTH), 3)
+            + " (" + com.jrpetty.mcassistant.entity.Interiors.statsForTests(new com.jrpetty.mcassistant.village.Ledger.Building("manor", manor, Direction.NORTH))
+            + "; the house " + com.jrpetty.mcassistant.entity.Interiors.statsForTests(new com.jrpetty.mcassistant.village.Ledger.Building("house", home, Direction.NORTH)) + ")");
         java.util.Map<String, Integer> stone = after.get("STONE"), iron = after.get("IRON"), diamond = after.get("DIAMOND manor");
         helper.assertTrue(stone.getOrDefault("carpet", 0) > before.getOrDefault("carpet", 0), "a rug down the middle in the Stone Age: " + stone);
         helper.assertTrue(stone.getOrDefault("barrel", 0) >= 1, "and a barrel by the wall: " + stone);
@@ -5548,6 +5552,76 @@ public class VillageGameTests {
         Kit.log("t81 the looks: " + log);
         helper.assertTrue(com.jrpetty.mcassistant.entity.Palettes.precious(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_BLOCK)),
             "an iron block is never a roof");
+        helper.succeed();
+    }
+
+    /**
+     * The town's books (Annals): each morning the village is written down (its people, births and
+     * deaths, comings and goings, beds, money, output by kind and by trade, stores, contentment), kept
+     * day after day; the analytics screen's snapshot carries every series, every trade, every folk and
+     * the leader's profile, and a reading of what drives its growth; and it fits in one packet.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t82_annals")
+    public static void t82_annals(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(24000L * 3 + 2000);
+        Kit.hold(level, 90000, 12000, 40);
+        Kit.prepare(level, 90000, 12000, 40);
+        BlockPos heart = Kit.surface(level, 90000, 12000);
+        int stood = VillageFolkSpawnerBlock.raiseParty(level, heart, 0.0F, 6);
+        Villages.Village v = Villages.nearest(level, heart, Villages.VILLAGE_RANGE);
+        helper.assertTrue(v != null && stood >= 4, "a village");
+        java.util.UUID id = v.id();
+        long day = level.getDayTime() / 24000L;
+        // Five mornings: a birth on the second, a death on the third, a folk come from away on the fourth.
+        for (int d = 0; d < 5; d++) {
+            if (d == 1) com.jrpetty.mcassistant.entity.Annals.born(id);
+            if (d == 2) com.jrpetty.mcassistant.entity.Annals.died(id, "of old age");
+            if (d == 3) com.jrpetty.mcassistant.entity.Annals.moved(null, id);
+            com.jrpetty.mcassistant.entity.Annals.record(level, v, day + d);
+        }
+        int kept = com.jrpetty.mcassistant.entity.Annals.daysForTests(id);
+        helper.assertTrue(kept == 5, "five mornings in the books: " + kept);
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Annals.lastForTests(id, "pop") >= 4, "the people counted");
+        net.minecraft.nbt.CompoundTag snap = com.jrpetty.mcassistant.entity.Annals.snapshot(level, v);
+        int[] born = snap.getCompound("series").getIntArray("born");
+        int[] died = snap.getCompound("series").getIntArray("died");
+        int[] came = snap.getCompound("series").getIntArray("moved_in");
+        helper.assertTrue(born.length == 5 && born[1] == 1 && died[2] == 1 && came[3] == 1, "the day's births, deaths and comings, each on its day: "
+            + java.util.Arrays.toString(born) + java.util.Arrays.toString(died) + java.util.Arrays.toString(came));
+        helper.assertTrue(snap.getCompound("causes").getInt("of old age") == 1, "and what they died of");
+        net.minecraft.nbt.ListTag people = snap.getList("people", net.minecraft.nbt.Tag.TAG_COMPOUND);
+        net.minecraft.nbt.ListTag jobs = snap.getList("jobs", net.minecraft.nbt.Tag.TAG_COMPOUND);
+        net.minecraft.nbt.ListTag drivers = snap.getList("drivers", net.minecraft.nbt.Tag.TAG_STRING);
+        helper.assertTrue(people.size() >= 4, "every folk in it: " + people.size());
+        helper.assertTrue(jobs.size() >= 1, "every trade in it: " + jobs.size());
+        helper.assertTrue(drivers.size() >= 4, "a reading of what drives it: " + drivers);
+        helper.assertTrue(!snap.getCompound("leader").getString("name").isEmpty(), "and who leads it");
+        helper.assertTrue(!snap.getString("board").isEmpty(), "and the board's own page");
+        java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+        try {
+            net.minecraft.nbt.NbtIo.write(snap, new java.io.DataOutputStream(bytes));
+        } catch (java.io.IOException e) {
+            helper.fail("the snapshot would not write: " + e);
+        }
+        StringBuilder why = new StringBuilder();
+        for (int i = 0; i < drivers.size(); i++) why.append(drivers.getString(i)).append(" | ");
+        Kit.log("t82 the books: " + kept + " days, " + people.size() + " folk, " + jobs.size() + " trades, " + bytes.size() + " bytes; why: " + why);
+        helper.assertTrue(bytes.size() < 200000, "it fits in a packet: " + bytes.size() + " bytes");
+        // A year and more: the oldest let go.
+        for (int d = 5; d < com.jrpetty.mcassistant.entity.Annals.KEEP + 10; d++) com.jrpetty.mcassistant.entity.Annals.record(level, v, day + d);
+        int long_ = com.jrpetty.mcassistant.entity.Annals.daysForTests(id);
+        net.minecraft.nbt.CompoundTag big = com.jrpetty.mcassistant.entity.Annals.snapshot(level, v);
+        java.io.ByteArrayOutputStream bigBytes = new java.io.ByteArrayOutputStream();
+        try {
+            net.minecraft.nbt.NbtIo.write(big, new java.io.DataOutputStream(bigBytes));
+        } catch (java.io.IOException e) {
+            helper.fail("the long books would not write: " + e);
+        }
+        Kit.log("t82 four hundred days and more: " + long_ + " kept, " + bigBytes.size() + " bytes");
+        helper.assertTrue(long_ == com.jrpetty.mcassistant.entity.Annals.KEEP, "four hundred days kept, the oldest let go: " + long_);
+        helper.assertTrue(bigBytes.size() < 1000000, "and still one packet: " + bigBytes.size());
         helper.succeed();
     }
 }

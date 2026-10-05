@@ -265,6 +265,21 @@ def main():
     time.sleep(3)
     shot("15-talk-trade")
     say("alive after talking: %s" % client_alive())
+    # The town's books (the analytics screen the village board opens): eight mornings
+    # first, so there are days in them, then a picture of each page.
+    try:
+        for d in range(8):
+            r.cmd("time add 24000")
+            time.sleep(4)
+        say("stats: " + r.cmd("village stats"))
+        for page, name in ((0, "overview"), (1, "growth"), (2, "money"), (3, "jobs"), (4, "folk"), (5, "leader"),
+                           (6, "homes"), (7, "stores"), (8, "why")):
+            say("stats %s: %s" % (name, r.cmd("execute as %s at @s run village stats %d" % (USER, page))))
+            time.sleep(3)
+            shot("16-stats-%d-%s" % (page, name))
+        r.cmd("time set 6000")
+    except Exception as e:  # noqa: BLE001
+        say("stats failed: %s" % e)
     say("alive after the lineup: %s" % client_alive())
     try:
         showcase(r, cx, cz, look)

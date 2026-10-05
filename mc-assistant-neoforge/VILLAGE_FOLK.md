@@ -1780,6 +1780,138 @@ back to the village (bought back at half what they paid, if it was theirs). When
 elected the households change over, and the last leader's family goes on the list for a house of
 its own. The council sits in the hall's council chamber.
 
+### The town's books: click the village board
+
+Right-click the village board (or press **Analytics** in the village journal, or type
+`/village stats`) and the town's books open: everything the village is and has been, with
+charts, so you can see exactly what is driving its growth. Every morning the village is
+written down (kept for four hundred days), and the books have eleven pages, picked along the
+top; the range (a week, a month, a hundred days, or all of it) is picked at the top right, and
+every chart reads out the day under the mouse.
+
+* **Overview:** population, what it makes a day, the treasury and its worth, each with how
+  far it has moved in the week; contentment, beds, days of food put by, and the leader with
+  the share of the village that approves of it; population and output over time; and the
+  first of what is driving it.
+* **Growth:** its people over time (grown and children), births against deaths each day,
+  comings and goings, the hands at each of its biggest trades over time, the growth rate in
+  the range, and what its dead died of.
+* **Money:** what it made, took in and paid out each day; the treasury, the folk's purses and
+  its worth over time; money in against money out; and what it made by kind (food, timber,
+  stone, ore and metal, wool and hides, crafts, plants), with the takings, sales, tithe,
+  wages and buying-in for the range.
+* **Jobs:** every trade: its hands, their average level, their pay, what it made yesterday
+  and this week, what it makes per hand a day, and its share of everything the village
+  made, biggest earner first. Click a trade for its own history (what it made, and how many
+  worked at it, day by day).
+* **Folk:** everybody, with trade, level, age, purse, pay, what each made yesterday, mood,
+  nature and wealth; click any heading to sort by it. The leader is starred.
+* **Leader:** who leads and how: its nature and what it cares about (seven bars), its trade
+  and level, family, home and escort, how long in office, its mandate and orders, the
+  council, the pace and pay it sets, its approval and regard, the elections (the one coming
+  and the ones before), and what it has been doing lately.
+* **Homes:** folk against beds and room over time, households housed and waiting, and the
+  houses by tenure (given, owned, rented, players', empty).
+* **Stores:** food, the days of food put by, timber and stone, coal and iron over time, what
+  is in the stores now and the larder's books.
+* **Why:** what is driving its growth and what is holding it back, read from its books:
+  population and where it came from, whether every bed is taken, whether the larder is full
+  enough for children, output up or down and which trades moved it, the most productive trade
+  per hand, the biggest earner, idle hands, money in against out, worth, contentment and its
+  six parts, what it is short of for the next age, and what would help most now.
+* **News:** the latest of its chronicle.
+* **Board:** the board's own page.
+
+### The watch between the bells
+
+When the bell is not ringing, the watch keeps the town's people safe on its own rounds.
+
+* **The beat.** A guard walks the town's streets by day and by night, not the few yards of
+  its own plot. The stops are the corners of the square inside the wall, the corners of the
+  ring street and of each street out (and where each crosses an avenue) as far as the town
+  reaches, and the street at the door of every building the village has put up. They are cut
+  into one beat per guard, a slice of the town each, so four guards watch four parts of the
+  town instead of standing together at the stores. A guard stands a moment at each stop and
+  looks about before walking on. Ask a guard about its trade and it tells you its beat:
+  *My beat's the north-east streets, round Mill Lane.*
+* **A word as it passes.** Now and then, at a stop, a guard has a word for a folk going by:
+  *All quiet on my beat* by day, *Sleep easy, I'm about* after dark, and *Off home with
+  you* to a child out late. Sometimes the folk thanks it.
+* **Help.** A monster within sixteen blocks of one of the village's people (a folk, or a
+  player who is a citizen or a friend of the village) anywhere in the town draws the
+  nearest guard who is free, at a run, and it fights it. A creeper is only taken on by a
+  guard with a bow. Monsters in caves under the town, endermen, zombified piglins and
+  phantoms are left be.
+* **Guard! Help!** A folk a monster hurts shouts for the watch, and the nearest guard
+  answers and comes running. With no guard to shout for, it shouts for a player nearby, as
+  before.
+* **Not past the village.** A guard lets a monster go once it (or the chase) is thirty-two
+  blocks past the town's edge, and its round brings it home.
+* When the bell rings none of this applies: the walls and the gates are the watch's
+  orders then, as before.
+
+**The leader's escort.** Once the village has two guards, or a barracks and one, the best of
+its guards (by its level as a guard; the one already at it keeps the post on a tie) walks
+with the leader whenever the leader is out and about: on its way somewhere, at the morning
+assembly or any other, at the board, at the poll, at a wedding, talking to a player.
+
+* It keeps two to four blocks off, a little behind and to one side, and while the leader
+  speaks it stands by with its eyes on the street.
+* A monster within ten blocks of the leader, and the escort goes for it.
+* When the leader is at its own work, at home or asleep (and after a few seconds of that,
+  not at every door it stops at), the escort goes back to its beat. It also slips off to
+  cast its own vote at its hour on election day, and comes straight back.
+* By day only: the night is the watch's, and the leader is in bed.
+* The status line can say who it is: *escorted by Bram*.
+
+### The makers' hands: what they can make, and how well
+
+A smith, a tailor or an enchanter gets better at its trade with the years (its level at
+that trade), in what it can make and in how well it makes it.
+
+| Level | The smith can forge | The tailor can make | The enchanter can lay |
+|---|---|---|---|
+| 0 | iron tools and blades, shears, buckets, bows and arrows | beds, rugs, string; boots and caps of plain leather | the first rank, on iron things and bows |
+| 5 | iron helmets and boots | leather jerkins and leggings | |
+| 10 | iron chestplates and leggings | clothes in the village's colour; banners on the loom | the second rank; diamond things |
+| 15 | shields for the watch (up to three in the stores; a guard of level 10 takes one), and crossbows to order | | |
+| 25 | diamond tools, with the diamonds to hand (a pick for the miners and a blade for the watch, unless the age is saving its diamonds) | banners with a border woven in | the third rank; netherite things |
+| 30 | diamond armour (to order) | | its work bound to last (Unbreaking one better) |
+| 40 | netherite has its rung here, though no recipe the folk use makes it yet | banners with a stripe as well | |
+
+The bookshelves round the enchanting table still have their say, as they do for a player:
+the rank laid is the lower of the shelves' and the enchanter's own. The enchanter now also
+improves a thing already enchanted when its work is stronger than what is on it.
+
+**How well.** Everything that is one to a stack (tools, armour, shields, beds, boots) comes
+out as good as the hand that made it, with the maker's mark on it (*Fine work, by Bram*):
+
+| Level | Grade | How long it lasts | What it fetches |
+|---|---|---|---|
+| under 5 | an apprentice's work | about a seventh fewer uses | 0.85 of the usual |
+| 5 | sound work | as usual | as usual |
+| 15 | good work | a sixth longer | 1.15 |
+| 25 | fine work | a third longer | 1.35 |
+| 40 | a master's work | half as long again, tempered: Unbreaking I and an edge (Efficiency, Sharpness or Protection I) | 1.6 |
+
+The village's counters ask that much more (or less) for a maker's goods, and the village
+values them so in its books.
+
+**Asked about its work** (*How does your trade work?*), a maker says what its hand can do:
+*I can forge diamond tools now, given the diamonds, and iron of every kind; my picks last a
+third longer than most. Diamond armour comes at 30.*
+
+**Made to order.** A player's order is made as well as the hand that took it (and priced
+for that hand's work), and the maker turns down what is above it: *A diamond chestplate?
+That's beyond me yet: it's level 30 work, and I'm level 7. Ask me again when I've more years
+at the anvil.*
+
+Tested in `GuardGameTests`: g01 (a guard runs to a zombie by a folk and strikes it; a folk
+hurt by a monster shouts for the watch and the guard answers), g02 (three guards, three
+beats over different parts of the town), g03 (the leader's escort: chosen by level, follows,
+fights, stands down at work), g04 (a beginner's, a veteran's and a master's iron pick), g05
+(an order turned down by a beginner and made by a veteran).
+
 ### Homes: households, houses for sale, and yours to buy
 
 Every folk belongs to a household: itself, its partner and their children. Each household has a
@@ -2153,6 +2285,8 @@ ripen, days pass, folk work and houses go up at that pace.
 * `/village house` — the nearest village's houses: who lives in each, on what terms, and
   what is for sale. `house buy` buys the empty house you stand in; `house let <coins>` lets
   yours out at that rent a day (0 to take it back); `house rent` collects the rent.
+* `/village stats` — the town's books on the analytics screen (as clicking the village board
+  does); from the console, the reading of what drives the village's growth.
 * `/village chronicle` — the nearest village's history, as a written book.
 * `/village standing` — what every village you have met thinks of you.
 * `/village ledger` — the nearest village's town ledger, as a book.

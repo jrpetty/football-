@@ -80,9 +80,9 @@ public class VillageScreen extends Screen {
         }
         this.addRenderableWidget(Button.builder(Component.literal("Close"), b -> this.onClose())
             .bounds(left + W - PAD - 50, top + H - PAD - 18, 50, 18).build());
-        // The pages: the village, who is paid what, and what it makes and is worth.
-        String[] pages = {"Village", "Wages", "Economy"};
-        int[] codes = {0, 2, 3};
+        // The pages: the village, who is paid what, what it makes and is worth, and the town's books in full.
+        String[] pages = {"Village", "Wages", "Economy", "Analytics"};
+        int[] codes = {0, 2, 3, 4};
         for (int i = 0; i < pages.length; i++) {
             int code = codes[i];
             Button b = Button.builder(Component.literal(pages[i]), btn -> request(code))
@@ -90,6 +90,7 @@ public class VillageScreen extends Screen {
             b.setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(switch (code) {
                 case 2 -> "Who is paid what, best paid first, and the town's pay scale";
                 case 3 -> "What the village makes, sells and is worth";
+                case 4 -> "The town's books: growth, money, jobs, folk, the leader, homes, stores and what drives it, with charts";
                 default -> "The village: its trades, stores, homes and plans";
             })));
             this.addRenderableWidget(b);
