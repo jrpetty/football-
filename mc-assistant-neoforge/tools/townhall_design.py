@@ -118,7 +118,7 @@ for h in range(5, 8):
         put(h, r, c, ch)
     for r, c in outline(TOWER):
         ch = 'S'
-        if r == 16 and c in (5, 6, 7) and h in (5, 6): ch = '.'     # through to the council chamber
+        if r == 16 and c == 6 and h in (5, 6): ch = '.'            # through to the council chamber
         if (r == 20 and c in (5, 6, 7) or c in (4, 8) and r == 18) and h in (5, 6): ch = 'G'
         put(h, r, c, ch)
 # the leader's rooms at the back: a bed for two, the children's beds across the room
@@ -131,9 +131,9 @@ put(5, 8, 2, 'b'); put(5, 8, 3, 'b')             # the children's beds, the othe
 for r in (6, 7):
     for c in (4, 5, 6, 7): put(5, r, c, 'X')
 put(5, 8, 10, 'Q'); put(5, 9, 10, 'T')
-for c in range(2, 11):                           # a partition, with a door in it
-    for h in (5, 6, 7):
-        put(h, 10, c, 'W' if c != 6 else ('D' if h == 5 else '.' if h == 6 else 'W'))
+for c in range(2, 11):                           # a partition, with a door in it (to one side of the
+    for h in (5, 6, 7):                          # leader's chair at the head of the table, not behind it)
+        put(h, 10, c, 'W' if c != 8 else ('D' if h == 5 else '.' if h == 6 else 'W'))
 # the council chamber: a long table, the leader at its head
 for r in (12, 13, 14):
     put(5, r, 6, 'P'); put(6, r, 6, 'X')
@@ -142,7 +142,7 @@ put(5, 11, 6, '^')
 put(6, 12, 6, 'l'); put(6, 14, 6, 'l')
 put(5, 15, 2, 'K'); put(5, 15, 10, 'K'); put(5, 11, 2, 'C'); put(5, 11, 10, 'K')
 # the study in the tower: the leader's desk
-put(5, 19, 6, 'r'); put(5, 17, 5, 'K'); put(5, 17, 7, 'K'); put(5, 19, 5, 'l')
+put(5, 19, 6, 'r'); put(5, 17, 7, 'K'); put(5, 19, 5, 'l')
 
 # ---- the main roof (layers 8..14): steep, the length of the hall
 for r in range(1, 18):
@@ -176,6 +176,8 @@ for h in range(8, 20):
     for r, c in inside(TOWER):
         put(h, r, c, 'f' if h in (8, 12, 16) else 'S' if h == 19 else '.')
 put(18, 18, 6, 'j')                              # the great lantern, seen from all round
+for h in range(5, 17):                           # a ladder from the study up the tower's back wall, through
+    put(h, 17, 5, 'H')                           # each floor, to the lantern-room
 for (r, c) in ((16, 4), (16, 8), (20, 4), (20, 8)):
     put(17, r, c, 'S'); put(18, r, c, 'S')
 # the tower's spire
@@ -197,7 +199,7 @@ out = ["# The leader's hall: the seat of whoever the village chose to lead it, a
        "# piers, benches down either side of a red runner to the dais, the leader's seat under a great window",
        "# and walls of books behind it; a timber storey above, the leader's family's rooms at the back and the",
        "# council chamber at the front with its long table; and over the door a stone tower four storeys high,",
-       "# the leader's study in it and a lantern-room at the top that can be seen from the fields.",
+       "# the leader's study in it, a ladder up from there, and a lantern-room at the top that can be seen from the fields.",
        "# Rows run from the back of the building (top) to the front (bottom, the door).",
        "name townhall"]
 for h in LAYERS:

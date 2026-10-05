@@ -184,6 +184,36 @@ def flats_stage(r, look, cx, cz):
     say("alive after the flats: %s" % client_alive())
 
 
+def blueprints_stage(r, look, cx, cz):
+    """The drawings put right (tools/blueprint_designs.py, BlueprintSoundnessTest), by night, when the
+    lanterns tell: the meeting hall from just inside its doors (the tie beams across under its open roof,
+    a lantern hung from each over the long table), the market from among its stalls (its lanterns hung
+    from the new cross beams), and the lighthouse's railed gallery from the back, where the ladder comes
+    up beside the lamp room and the lamp hangs from the cap over its brazier."""
+    bx, by, bz = cx - 300, 150, cz + 200              # where the showcase sets its buildings out
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("time set 6000")
+    r.cmd("tp %s %d %d %d" % (USER, bx + 20, by + 20, bz + 30))
+    time.sleep(10)                                    # the stage's chunks arrive
+    out = r.cmd("execute positioned %d %d %d run village showcase buildings" % (bx, by, bz))
+    at = {name: (int(x), int(y), int(z))
+          for name, x, y, z in re.findall(r"(\w+) (-?\d+) (-?\d+) (-?\d+)", out.replace("SHOWCASE", ""))}
+    say("blueprints stage: " + ", ".join(n for n in ("hall", "market", "lighthouse") if n in at))
+    r.cmd("time set 18000")
+    # Each building's back is to the north: a block (dx, h, dz) of its drawing is at x + dx, y + h, z - dz.
+    if "hall" in at:
+        x, y, z = at["hall"]
+        look("bp-1-hall-beams", x + 2.5, y, z + 5.5, x + 0.5, y + 3.5, z - 3.5, wait=8)
+    if "market" in at:
+        x, y, z = at["market"]
+        look("bp-2-market-beams", x + 0.5, y, z + 3.5, x + 0.5, y + 3.5, z - 1.5, wait=6)
+    if "lighthouse" in at:
+        x, y, z = at["lighthouse"]
+        look("bp-3-lighthouse-gallery", x + 2.5, y + 16, z - 1.5, x + 0.5, y + 18.5, z + 0.5, wait=6)
+    r.cmd("time set 6000")
+    say("alive after the drawings: %s" % client_alive())
+
+
 def horses_stage(r, look, cx, cz):
     """The stable (Stables, Riding): a stable stood up on its own ground, from the front with its
     gates and the courier on horseback at its door, and from the doorway in along the stalls where
@@ -966,6 +996,10 @@ def main():
         showcase(r, cx, cz, look)
     except Exception as e:  # noqa: BLE001
         say("showcase failed: %s" % e)
+    try:
+        blueprints_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("blueprints stage failed: %s" % e)
     try:
         school_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001

@@ -147,9 +147,9 @@ door, and four beds: a family sleeps under one roof.""")
     gable_x(b, -4, 4, -4, 4, 3, gable_x0=-3, gable_x1=3)
     b.set(-3, 5, 0, "G")
     b.set(3, 5, 0, "G")
-    b.set(0, 2, 0, "j")
+    b.set(2, 2, 2, "j")                                     # over a bed head by the back wall, off the walkway
     for x in (-2, 2):
-        b.set(x, 2, -4, "j")
+        b.set(x, 2, -4, "j")                                # hung from the eaves
     # the chimney, up the right-hand gable from the furnace's side
     for h in range(0, 9):
         b.set(4, h, -1, "S")
@@ -170,8 +170,7 @@ and one bed: theirs. Nobody in the village will sleep in it.""")
     b.set(0, 1, -3, ".")
     for x in (-2, 2):
         b.set(x, 1, -3, "G")
-    for x in (-1, 1):
-        b.set(x, 1, 3, "G")
+        b.set(x, 1, 3, "G")                                 # over the chests: the wall behind the bed whole
     for z in (-1, 1):
         b.set(-3, 1, z, "G")
         b.set(3, 1, z, "G")
@@ -191,7 +190,7 @@ and one bed: theirs. Nobody in the village will sleep in it.""")
     gable_x(b, -4, 4, -4, 4, 3, gable_x0=-3, gable_x1=3)
     b.set(-3, 5, 0, "G")
     b.set(3, 5, 0, "G")
-    b.set(0, 2, 0, "j")
+    b.set(0, 2, 2, "j")                                     # the lamp over the bed's head, not the rug
     # the porch: posts at the front corners, a lean-to roof, flowers in boxes
     for x in (-3, 3):
         for h in (0, 1, 2):
@@ -243,7 +242,8 @@ of twenty-seven chests, its door facing the shed's door. Barrels by the door."""
     b.fill(-1, 1, 3, -2, 2, "f")
     gable_z(b, -3, 3, -4, 4, 3, gable_z0=-3, gable_z1=3)
     b.set(0, 4, -3, "G")
-    b.set(0, 2, -4, "j")
+    b.set(0, 3, -4, "P")                                    # a bracket out of the wall plate over the door
+    b.set(0, 2, -4, "j")                                    # and the lantern hung from it
     b.write()
 
 
@@ -270,7 +270,9 @@ stone wall on three sides, a pitched roof, and a fire-pit's worth of room.""")
     gable_x(b, -3, 3, -3, 3, 3, gable_x0=-2, gable_x1=2)
     b.set(0, 0, 1, "T")
     b.set(1, 0, 1, "C")
-    b.set(0, 2, 0, "j")
+    for z in (-1, 0, 1):
+        b.set(0, 3, z, "|")                                 # a tie beam from the front plate to the back
+    b.set(0, 2, 1, "j")                                     # the lantern hung from it, over the table
     b.write()
 
 
@@ -351,8 +353,8 @@ smelter's bench and chests.""")
 
 
 def workshop():
-    b = B("workshop", 4, 4, """The workshop: a long timber workroom with a wide door to the street, two
-benches, a furnace, the stores of the trade, barrels and a hayloft above.""")
+    b = B("workshop", 4, 4, """The workshop: a long timber workroom with a wide door to the street, a
+bench and the tailor's loom, a furnace, the stores of the trade, barrels and a hayloft above.""")
     b.ring(-3, 3, -1, -3, 3, "F")
     b.fill(-2, 2, -1, -2, 2, "f")
     for h in (0, 1, 2):
@@ -369,11 +371,13 @@ benches, a furnace, the stores of the trade, barrels and a hayloft above.""")
     b.set(-1, 1, 3, "G")
     b.set(1, 1, 3, "G")
     b.set(-2, 0, 2, "T")
-    b.set(-1, 0, 2, "T")
+    b.set(-1, 0, 2, "N")                                    # the tailor's loom
     b.set(0, 0, 2, "U")
     b.set(1, 0, 2, "C")
-    b.set(2, 0, 2, "Q")
-    b.set(2, 0, 1, "Q")
+    # The back right-hand corner kept clear, and the way to it: where the ladder goes up when the
+    # workshop is given a second storey (Blueprints.raised), against a wall with no window in it.
+    b.set(2, 0, 0, "Q")
+    b.set(2, 0, -1, "Q")
     b.set(-2, 0, -2, "y")
     b.set(2, 0, -2, "&")
     b.ring(-3, 3, 3, -3, 3, "-", corner="L")
@@ -385,7 +389,7 @@ benches, a furnace, the stores of the trade, barrels and a hayloft above.""")
     b.set(-1, 4, 2, "y")
     b.set(2, 4, 2, "y")
     gable_x(b, -4, 4, -4, 4, 3, gable_x0=-3, gable_x1=3)
-    b.set(0, 2, 0, "j")
+    b.set(0, 2, 2, "j")                                     # over the furnace and the work, not the floor
     b.set(-2, 2, -4, "j")
     b.set(2, 2, -4, "j")
     b.write()
@@ -423,7 +427,8 @@ chests and a bench, lanterns overhead, and steps up to a double door.""")
         b.set(x, 1, -D_, ".")
     b.set(-1, 0, -D_, "D")
     b.set(1, 0, -D_, "D")
-    b.set(0, 0, -D_, ".")
+    b.set(0, 0, -D_, "L")                                   # a post between the two doors: no gap for the
+    b.set(0, 1, -D_, "L")                                   # wind and the night's things to come in by
     b.set(-3, 1, -D_, "G")
     b.set(3, 1, -D_, "G")
     b.set(-3, 2, -D_, "G")
@@ -439,18 +444,22 @@ chests and a bench, lanterns overhead, and steps up to a double door.""")
     b.set(-3, 0, 6, "C")
     b.set(3, 0, 6, "C")
     b.set(-3, 0, 5, "T")
-    for z in (-4, 0, 4):
-        b.set(0, 3, z, "j")
     b.ring(-W_, W_, 4, -D_, D_, "|", corner="L")
     for x in range(-W_ + 1, W_):
         b.set(x, 4, -D_, "-")
         b.set(x, 4, D_, "-")
+    for z in (-4, 0, 4):
+        for x in range(-W_ + 1, W_):
+            b.set(x, 4, z, "-")                             # tie beams across the hall under the open roof
+        b.set(0, 3, z, "j")                                 # and the lanterns hung from them
     gable_z(b, -W_ - 1, W_ + 1, -D_ - 1, D_ + 1, 4, gable_z0=-D_, gable_z1=D_)
     b.set(0, 6, -D_, "G")
     b.set(0, 7, -D_, "G")
     b.set(0, 6, D_, "G")
-    b.set(-3, 3, -D_ - 1, "j")
-    b.set(3, 3, -D_ - 1, "j")
+    for x in (-3, 3):                                       # lamp posts either side of the steps
+        b.set(x, 0, -D_ - 1, "P")
+        b.set(x, 1, -D_ - 1, "P")
+        b.set(x, 2, -D_ - 1, "l")
     b.write()
 
 
@@ -484,6 +493,9 @@ from the beams.""")
         b.set(-4, 4, z, "|")
         b.set(4, 4, z, "|")
         b.set(0, 4, z, "|")
+    for z in (-2, 2):                                       # cross beams over the stalls, to hang the lanterns from
+        for x in (-3, -2, -1, 1, 2, 3):
+            b.set(x, 4, z, "-")
     hip(b, -5, 5, -5, 5, 4)
     for (x, z) in ((-2, -2), (2, -2), (-2, 2), (2, 2)):
         b.set(x, 3, z, "j")
@@ -524,7 +536,8 @@ battlemented deck with a pitched lookout roof, and lanterns for the watch.""")
             for h in (9, 10):
                 b.set(x, h, z, "P")
     hip(b, -3, 3, -3, 3, 11)
-    b.set(0, 10, 0, "j")
+    b.fill(-2, 2, 11, -2, 2, "f")                           # a boarded ceiling on the posts, under the roof
+    b.set(0, 10, 0, "j")                                    # and the watch's lantern hung from it
     b.write()
 
 
@@ -547,23 +560,22 @@ lamp room at the top with its fire burning, and a pointed roof over it.""")
         b.set(2, h, 0, "G")
     for h in range(0, 15):
         b.set(0, h, 1, "H")
-    b.fill(-1, 1, 15, -1, 1, "f")
+    # the gallery: a stone deck right round the top, railed, the ladder coming up through it
+    b.fill(-3, 3, 15, -3, 3, "S")
     b.set(0, 15, 1, "H")
-    b.ring(-3, 3, 15, -3, 3, "S")
-    for (x, z) in ((-3, -3), (-3, 3), (3, -3), (3, 3)):
-        b.set(x, 15, z, ".")
-    b.ring(-2, 2, 16, -2, 2, "P")
-    # the lamp room
+    b.ring(-3, 3, 16, -3, 3, "P")
+    # the lamp room: glass between four posts, open at the back where the ladder comes up
     for h in (16, 17, 18):
         for (x, z) in ((-1, -1), (-1, 1), (1, -1), (1, 1)):
             b.set(x, h, z, "L")
-        for (x, z) in ((0, -1), (0, 1), (-1, 0), (1, 0)):
+        for (x, z) in ((0, -1), (-1, 0), (1, 0)):
             b.set(x, h, z, "O")
+    b.set(0, 18, 1, "O")
     b.set(0, 16, 0, "&")
-    b.set(0, 17, 0, "j")
-    b.ring(-2, 2, 19, -2, 2, "S")
-    b.fill(-1, 1, 19, -1, 1, "S")
+    b.set(0, 18, 0, "j")                                    # the lamp, hung from the cap over the brazier
+    b.fill(-2, 2, 19, -2, 2, "S")
     hip(b, -2, 2, -2, 2, 20)
+    b.set(0, 21, 0, "R")
     b.set(0, 22, 0, "P")
     b.write()
 
@@ -587,18 +599,22 @@ steep roof, pews in rows facing the altar, and candles of light either side.""")
     # the tower over the door
     for h in range(0, 12):
         b.ring(-2, 2, h, -D_ - 2, -D_ + 2, "S")
-    for h in range(0, 12):
-        b.set(0, h, -D_ + 2, "S" if h > 4 else ".")
-        b.set(-1, h, -D_ + 2, "S" if h > 4 else ".")
-        b.set(1, h, -D_ + 2, "S" if h > 4 else ".")
+    b.fill(-2, 2, -1, -D_ - 2, -D_ - 1, "F")                # the tower's footing, under the porch
+    for h in range(0, 5):
+        for x in (-1, 0, 1):
+            b.set(x, h, -D_, ".")                           # the porch clear through: no end wall of the nave in it
+    for h in range(0, 3):
+        b.set(0, h, -D_ + 2, ".")                           # an arch from the porch into the nave
     b.set(0, 0, -D_ - 2, "D")
     b.set(0, 1, -D_ - 2, ".")
-    b.set(0, 2, -D_ - 2, ".")
+    b.set(0, 2, -D_ - 2, "G")                               # a fanlight over the door
     b.set(0, -1, -D_ - 3, "k")
     for h in (9, 10):
         for (x, z) in ((0, -D_ - 2), (0, -D_ + 2), (-2, -D_), (2, -D_)):
             b.set(x, h, z, ".")
     b.fill(-1, 1, 8, -D_ - 1, -D_ + 1, "f")
+    for h in range(0, 9):
+        b.set(1, h, -D_ + 1, "H")                           # a ladder up the back of the porch to the belfry
     b.set(0, 9, -D_, "e")
     b.set(0, 5, -D_ - 2, "G")
     b.set(0, 6, -D_ - 2, "G")
@@ -616,9 +632,10 @@ steep roof, pews in rows facing the altar, and candles of light either side.""")
     b.set(0, 0, 6, "T")
     b.set(-2, 0, 6, "l")
     b.set(2, 0, 6, "l")
-    b.set(0, 4, 0, "j")
-    b.set(0, 4, 4, "j")
-    b.set(0, 4, -3, "j")
+    for z in (4, 0, -3):
+        for x in range(-W_ + 1, W_):
+            b.set(x, 5, z, "-")                             # tie beams across the nave, wall top to wall top
+        b.set(0, 4, z, "j")                                 # the lights hung from them
     b.ring(-W_, W_, 5, -D_ + 3, D_, "S")
     gable_z(b, -W_ - 1, W_ + 1, -D_ + 3, D_ + 1, 5, gable_z1=D_)
     b.write()
@@ -701,8 +718,8 @@ battlemented roof walk at the front.""")
     b.set(2, 0, 5, "C")
     b.set(0, 0, 5, "T")
     b.set(-2, 0, -5, "a")
-    b.set(0, 2, -3, "j")
-    b.set(0, 2, 3, "j")
+    b.set(-2, 2, 0, "j")                                    # by the walls over the middle bunks, off the aisle
+    b.set(2, 2, 0, "j")
     b.ring(-W_, W_, 3, -D_, D_, "|", corner="L")
     for x in range(-W_ + 1, W_):
         b.set(x, 3, -D_, "-")
@@ -710,8 +727,9 @@ battlemented roof walk at the front.""")
     b.fill(-W_ + 1, W_ - 1, 3, -D_ + 1, D_ - 1, "f")
     gable_z(b, -W_ - 1, W_ + 1, -D_ - 1, D_ + 1, 3, gable_z0=-D_, gable_z1=D_)
     b.set(0, 5, -D_, "G")
-    b.set(-2, 2, -D_ - 1, "j")
-    b.set(2, 2, -D_ - 1, "j")
+    for x in (-2, 2):
+        b.set(x, 3, -D_ - 1, "P")                           # brackets out of the wall plate either side of the door
+        b.set(x, 2, -D_ - 1, "j")                           # and the lanterns hung from them
     b.write()
 
 
@@ -760,9 +778,12 @@ tub, the smith's bench and its chests of finished tools.""")
     b.set(0, 0, 0, "a")
     b.set(2, 0, -1, "V")
     b.set(2, 0, 1, "&")
-    b.set(-2, 0, 1, "C")
+    # The bench and its chest along the left wall, the back corner and the way to it kept clear (where
+    # the ladder goes up when the smithy is given a second storey: Blueprints.raised); the bench's
+    # candle on the bench, a torch not standing on a chest's lid.
+    b.set(-2, 0, 0, "C")
     b.set(-2, 0, -1, "T")
-    b.set(-2, 1, 1, "t")
+    b.set(-2, 1, -1, "t")
     b.ring(-3, 3, 3, -3, 3, "-", corner="L")
     for z in range(-2, 3):
         b.set(-3, 3, z, "|")
@@ -814,7 +835,7 @@ brews, a glass window to the street, lanterns hung low over the work.""")
         b.set(3, 3, z, "|")
     b.fill(-2, 2, 3, -2, 2, "f")
     gable_x(b, -4, 4, -4, 4, 3, gable_x0=-3, gable_x1=3)
-    b.set(0, 2, 0, "j")
+    b.set(0, 2, 2, "j")                                     # low over the work, between the stands
     b.set(-2, 2, -4, "j")
     b.set(2, 2, -4, "j")
     for h in range(0, 8):                                   # a chimney for the stills
@@ -862,8 +883,10 @@ and lanterns hung from the beams. The enchanter works here.""")
     gable_z(b, -4, 4, -5, 5, 4, gable_z0=-4, gable_z1=4)
     for z in (-2, 2):
         b.set(0, 3, z, "j")
-    b.set(-2, 2, -5, "j")
-    b.set(2, 2, -5, "j")
+    for x in (-2, 2):                                       # lamp posts either side of the door
+        b.set(x, 0, -5, "P")
+        b.set(x, 1, -5, "P")
+        b.set(x, 2, -5, "l")
     b.write()
 
 
@@ -900,8 +923,9 @@ with cloths and chairs round them, flowers by the door, lanterns overhead.""")
         b.set(3, 3, z, "|")
     b.fill(-2, 2, 3, -2, 2, "f")
     gable_x(b, -4, 4, -4, 4, 3, gable_x0=-3, gable_x1=3)
-    b.set(0, 2, -1, "j")
-    b.set(0, 2, 1, "j")
+    b.set(-2, 2, -1, "j")                                   # a lamp over each table, the floor between clear
+    b.set(2, 2, -1, "j")
+    b.set(0, 2, 1, "j")                                     # and one over the counter
     b.set(-2, 2, -4, "j")
     b.set(2, 2, -4, "j")
     b.set(-2, -1, -4, "d")                                  # flowers either side of the door
@@ -917,7 +941,8 @@ with cloths and chairs round them, flowers by the door, lanterns overhead.""")
 def shop():
     b = B("shop", 4, 4, """The shop: a timber shopfront with a wide window either side of the door, a
 counter of casks across the room with the day's goods laid out on it, shelves
-of barrels and chests behind it, and a lantern over the door.""")
+of barrels and chests behind it, a crafting table in the back room behind the counter
+for the shop's hands (Workshop), and a lantern over the door.""")
     b.ring(-3, 3, -1, -3, 3, "F")
     b.fill(-2, 2, -1, -2, 2, "f")
     for h in (0, 1, 2):
@@ -931,10 +956,12 @@ of barrels and chests behind it, and a lantern over the door.""")
         b.set(3, 1, z, "G")
     for x in (-2, -1, 1, 2):
         b.set(x, 0, 0, "Q")                                 # the counter, a gap to get behind
-    for x in (-2, -1, 0, 1, 2):
+    for x in (-2, -1, 0, 1):
         b.set(x, 0, 2, "Q" if x % 2 else "C")               # shelves of barrels and chests
         b.set(x, 1, 2, "Q")
-    b.set(0, 1, 0, "l")
+    # (The back right-hand corner kept clear behind the counter: where the ladder goes up when the shop
+    # is given a second storey, Blueprints.raised.)
+    b.set(-2, 0, 1, "T")                                    # the hands' bench, behind the counter (Workshop)
     b.ring(-3, 3, 3, -3, 3, "-", corner="L")
     for z in range(-2, 3):
         b.set(-3, 3, z, "|")
@@ -942,8 +969,8 @@ of barrels and chests behind it, and a lantern over the door.""")
     b.fill(-2, 2, 3, -2, 2, "f")
     gable_x(b, -4, 4, -4, 4, 3, gable_x0=-3, gable_x1=3)
     b.set(0, 2, -4, "j")
-    b.set(-2, 2, 1, "j")
-    b.set(2, 2, 1, "j")
+    b.set(-2, 2, 1, "j")                                    # over the bench
+    b.set(2, 2, 0, "j")                                     # over the counter's end, not the way behind it
     b.write()
 
 
@@ -1072,8 +1099,13 @@ windows all round both floors, and the chimney carried up past the new roof.""")
     b.set(2, 4, 1, "B")
     b.set(-1, 4, -2, "C")
     b.set(1, 4, -2, "X")
-    b.set(0, 6, 0, "j")
-    b.set(0, 2, 0, "j")
+    b.set(2, 6, 2, "j")                                     # over a bed head by the back wall, off the walkway
+    b.set(2, 2, 2, "j")
+    # The cottage's old eaves left on front and back, a skirt of roof between the storeys (as a
+    # building raised in the Iron Age keeps them: Blueprints.raised), the door's lanterns hung from it.
+    for x in range(-4, 5):
+        b.set(x, 3, -4, "^")
+        b.set(x, 3, 4, "v")
     for x in (-2, 2):
         b.set(x, 2, -4, "j")
     b.ring(-3, 3, 7, -3, 3, "-", corner="L")

@@ -39,7 +39,7 @@ layer 2
 .W.....WS
 .W..j..W.
 .W.....W.
-.W..j..W.
+.Wj...jW.
 .W.....W.
 .LWWWWWL.
 ..j...j..

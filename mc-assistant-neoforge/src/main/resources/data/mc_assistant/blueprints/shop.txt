@@ -17,7 +17,7 @@ layer -1
 layer 0
 .........
 .LwwwwwL.
-.wCQCQCw.
+.wCQCQ.w.
 .wT....w.
 .wQQ.QQw.
 .w.....w.
@@ -27,9 +27,9 @@ layer 0
 layer 1
 .........
 .LWWWWWL.
-.WQQQQQW.
+.WQQQQ.W.
 .G.....G.
-.W..l..W.
+.W.....W.
 .G.....G.
 .W.....W.
 .LGG.GGL.
@@ -38,8 +38,8 @@ layer 2
 .........
 .LWWWWWL.
 .W.....W.
-.Wj...jW.
-.W.....W.
+.Wj....W.
+.W....jW.
 .W.....W.
 .W.....W.
 .LWWWWWL.
