@@ -345,7 +345,7 @@ public final class Leader {
      * Is the larder going down fast enough to call short commons now, however full it looks: empty
      * within twelve days at a rate of more than two eaten for every one grown, within eight (or five
      * of the leader's reserves) at three for two. Once short, it stays short till nearly as much is
-     * grown as eaten, or there is three weeks' food at the rate it is going down.
+     * grown as eaten, or there is a fortnight's food at the rate it is going down.
      */
     static boolean draining(int stock, double inAvg, double useAvg, double reserve, Plan was) {
         double net = useAvg - inAvg;
@@ -353,7 +353,7 @@ public final class Leader {
         double emptyIn = stock / net;
         boolean wasShort = was == Plan.SHORT || was == Plan.FAMINE;
         if (inAvg < useAvg * 0.5 && emptyIn < Math.max(12.0, reserve * 6)) return true;
-        if (wasShort) return inAvg < useAvg * 0.9 && emptyIn < Math.max(20.0, reserve * 10);
+        if (wasShort) return inAvg < useAvg * 0.9 && emptyIn < Math.max(14.0, reserve * 6);
         return inAvg < useAvg * 0.7 && emptyIn < Math.max(8.0, reserve * 5);
     }
 
