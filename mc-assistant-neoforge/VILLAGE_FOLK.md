@@ -2256,7 +2256,7 @@ few more hands in one trade, a few fewer in the others.
 
 | Order | Wants more | Given when |
 |---|---|---|
-| Fill the larder | farmers, fishers | the larder is low |
+| Fill the larder | farmers, fishers, hunters | the larder is low |
 | Timber for the builders | woodcutters | the builders are short of wood |
 | Dig deep | miners, a smelter | stone, iron or coal is short |
 | Man the walls | guards | lives were lost, the bell rang, or there is a feud |

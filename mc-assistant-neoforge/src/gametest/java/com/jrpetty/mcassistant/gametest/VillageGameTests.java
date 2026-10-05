@@ -2396,7 +2396,7 @@ public class VillageGameTests {
     /**
      * The elder's orders: the elder looks the village over and gives an order; a player it
      * thinks well of can put another to it; the order shifts the village's make-up (one miner
-     * a day goes to the fields under "fill the larder"); it heads the quest board on the hall,
+     * a day goes to the fields, the river or the hunt under "fill the larder"); it heads the quest board on the hall,
      * and every folk can say what it is.
      */
     @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t39_orders")
@@ -2436,9 +2436,16 @@ public class VillageGameTests {
         String asked = com.jrpetty.mcassistant.entity.Orders.talk(elder, p, "you should order the village to fill the larder");
         var now = com.jrpetty.mcassistant.entity.Orders.current(village);
         double farms = Villages.share(village, StationTask.FARM), mines = Villages.share(village, StationTask.MINE);
-        Kit.log("t39 petition: " + asked + " -> " + now + "; farms " + farms + ", mines " + mines);
+        double fish = Villages.share(village, StationTask.FISH), hunt = Villages.share(village, StationTask.HUNT);
+        Kit.log("t39 petition: " + asked + " -> " + now + "; farms " + farms + ", fish " + fish + ", hunt " + hunt + ", mines " + mines);
         helper.assertTrue(now == com.jrpetty.mcassistant.entity.Orders.Order.LARDER, "a friend of the elder can put an order to it");
-        helper.assertTrue(farms < 0 && mines > 0, "the order wants more farmers and can spare a miner");
+        // A town of ten has a fisher and a hunter in its shape, and none yet: those are the food trades short
+        // (its four farmers are about the order's share of the fields).
+        helper.assertTrue(fish < 0 && hunt < 0 && farms < 0.5 && mines > 0, "the order wants more food hands and can spare a miner");
+        var food = com.jrpetty.mcassistant.entity.Orders.moves(village, folk.get(4), day);
+        Kit.log("t39 the miner's choices, shortest first: " + food);
+        helper.assertTrue(food.size() >= 2 && food.stream().allMatch(t -> now.boost(t) > 0),
+            "the food trades in turn, so a fisher with no water near goes to the next: " + food);
         VillageFolkEntity miner = folk.get(4);
         StationTask moved = com.jrpetty.mcassistant.entity.Orders.move(village, miner, day);
         // The move counts once the folk has really changed trade (VillageFolkEntity.changedTrade).
@@ -2446,7 +2453,7 @@ public class VillageGameTests {
         StationTask again = com.jrpetty.mcassistant.entity.Orders.move(village, folk.get(5), day);
         StationTask farmer = com.jrpetty.mcassistant.entity.Orders.move(village, folk.get(0), day + 1);
         Kit.log("t39 a miner moves to " + moved + "; a second the same day " + again + "; a farmer " + farmer);
-        helper.assertTrue(moved == StationTask.FARM && again == null && farmer == null,
+        helper.assertTrue(moved != null && now.boost(moved) > 0 && again == null && farmer == null,
             "one spare hand a day goes where the order wants it, and nobody leaves the ordered trade");
         // The board, and what folk say.
         BlockPos hallAt = Kit.surface(level, heart.getX(), heart.getZ() - 22);

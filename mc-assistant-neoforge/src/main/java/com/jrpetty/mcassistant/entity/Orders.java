@@ -6,6 +6,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Locale;
@@ -35,7 +36,7 @@ public final class Orders {
 
     public enum Order {
         STEADY("Steady as we go", "We've a good balance. Everybody carry on as you are.", "steady", "carry on", "as we are"),
-        LARDER("Fill the larder", "Food first: more hands to the fields and the river.", "food", "larder", "farm", "harvest", "hungry"),
+        LARDER("Fill the larder", "Food first: more hands to the fields, the river and the hunt.", "food", "larder", "farm", "harvest", "hungry"),
         TIMBER("Timber for the builders", "The builders are waiting on wood: more axes in the woods.", "timber", "wood", "logs", "trees"),
         DIG("Dig deep", "We need stone and iron: more picks in the mine, and the furnaces kept hot.", "dig", "mine", "miner", "iron", "stone", "ores"),
         WATCH("Man the walls", "These are dangerous nights: more of us on the watch.", "watch", "guard", "walls", "defend", "safe"),
@@ -55,7 +56,7 @@ public final class Orders {
         /** How many more (or fewer) hands this order wants in a trade, in tenths of the village. */
         public int boost(StationTask t) {
             return switch (this) {
-                case LARDER -> t == StationTask.FARM ? 2 : t == StationTask.FISH ? 1 : 0;
+                case LARDER -> t == StationTask.FARM ? 2 : t == StationTask.FISH || t == StationTask.HUNT ? 1 : 0;
                 case TIMBER -> t == StationTask.WOOD ? 2 : 0;
                 case DIG -> t == StationTask.MINE ? 2 : t == StationTask.SMELT ? 1 : 0;
                 case WATCH -> t == StationTask.GUARD ? 2 : 0;
@@ -297,25 +298,37 @@ public final class Orders {
     /** A folk with hands to spare, by the order, moves to the trade it wants — one a day, a village. */
     @Nullable
     public static StationTask move(UUID village, VillageFolkEntity f, long day) {
+        List<StationTask> all = moves(village, f, day);
+        return all.isEmpty() ? null : all.get(0);
+    }
+
+    /**
+     * Every trade the order wants a spare hand at, the shortest first: the folk takes the first it
+     * has ground for. A town of ten with no water near, under "fill the larder", had its fishers
+     * shortest; the miner sent to fish found nowhere to cast a line, stayed a miner, and was sent to
+     * fish again the next morning while the fields it could have worked went short.
+     */
+    public static List<StationTask> moves(UUID village, VillageFolkEntity f, long day) {
         Order o = current(village);
         Long moved = MOVED.computeIfAbsent(village, k -> savedDay(k, "orders.moved"));
-        if (o == null || o == Order.STEADY || (moved != null && moved == day)) return null;
+        if (o == null || o == Order.STEADY || (moved != null && moved == day)) return List.of();
         StationTask mine = f.stationTask();
         // Never off the watch: an order shifts who farms and who digs, it does not strip the walls
         // (under "fill the stalls" the long game's guards went to the shop counters one a day).
-        if (mine == StationTask.NONE || mine == StationTask.GUARD || o.boost(mine) > 0 || mine.isCraft()) return null;
+        if (mine == StationTask.NONE || mine == StationTask.GUARD || o.boost(mine) > 0 || mine.isCraft()) return List.of();
         // And never off the fields while the village is short of food.
-        if (mine == StationTask.FARM && f.level() instanceof ServerLevel level && hungry(level, village)) return null;
+        if (mine == StationTask.FARM && f.level() instanceof ServerLevel level && hungry(level, village)) return List.of();
         double spare = Villages.share(village, mine);
-        if (spare < 0.6) return null;                                   // not a hand to spare
-        StationTask want = null;
-        double most = 0.5;
+        if (spare < 0.6) return List.of();                              // not a hand to spare
+        Map<StationTask, Double> by = new EnumMap<>(StationTask.class);
         for (StationTask t : StationTask.values()) {
             if (o.boost(t) <= 0) continue;
             double short_ = -Villages.share(village, t);
-            if (short_ >= most) { most = short_; want = t; }
+            if (short_ >= 0.5) by.put(t, short_);
         }
-        return want;
+        List<StationTask> out = new ArrayList<>(by.keySet());
+        out.sort((a, b) -> Double.compare(by.get(b), by.get(a)));
+        return out;
     }
 
     /** A folk did move to follow the order (once it had found its ground): that is the day's move. */

@@ -5950,6 +5950,18 @@ public class VillageFolkEntity extends AssistantEntity {
         // a pen): the next trade well short of hands that has some — the couriers as often as not,
         // whose ground is the storehouse and always to be had. A hand from a trade over its share
         // otherwise stayed where it was, however short the rest were.
+        // Under an order, the next trade it wants that has ground: no water near for the fishers,
+        // the fields; no game for the hunters, the river.
+        if (site == null && ordered) {
+            for (StationTask other : Orders.moves(village, this, level().getDayTime() / 24000L)) {
+                if (other == vacancy || other == mine) continue;
+                BlockPos there = findSite(other, radiusFor(other));
+                if (there == null) continue;
+                vacancy = other;
+                site = there;
+                break;
+            }
+        }
         if (site == null && !ordered && Villages.overStaffed(village, mine)) {
             for (StationTask other : Villages.shortOfHands(village)) {
                 if (other == vacancy || other == mine) continue;
