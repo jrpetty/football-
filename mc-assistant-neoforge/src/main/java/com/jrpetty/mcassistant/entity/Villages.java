@@ -39,18 +39,19 @@ public final class Villages {
     /** How far apart two settlements have to be to be two settlements. */
     public static final int VILLAGE_RANGE = 96;
 
-    /** A full village, and the trades it wants in it. Four farmers feed the
-     *  rest, three miners keep the stone and metal coming, two woodcutters
-     *  supply every build, and one smelter turns the ore into tools. */
+    /** A full village, and the trades it wants in it, the weights reckoned
+     *  against ten: the farmers first and most (seven in ten before the later
+     *  trades take their shares), three miners for stone and metal, two
+     *  woodcutters for every build, one smelter to turn the ore into tools. */
     public static final int VILLAGE_SIZE = 10;
 
     /**
      * What a settlement wants, and when it starts wanting it. The first ten
-     * are the village proper — four farmers to feed it, three miners for stone
-     * and metal, two woodcutters to supply every build, one smelter to turn
-     * ore into tools. Past ten a settlement can afford specialists: someone to
-     * carry things between the trades, someone to keep the stores, then a pen,
-     * a watch, and a boat.
+     * are the village proper — farmers most of all to feed it, miners for stone
+     * and metal, woodcutters to supply every build, a smelter to turn ore into
+     * tools, a fisher and a hunter. Past ten a settlement can afford specialists:
+     * someone to carry things between the trades, someone to keep the stores,
+     * then a pen and a watch.
      *
      * <p>{@code from} is the headcount at which the trade becomes worth having
      * at all — a village of four has no business keeping a guard.
@@ -66,7 +67,11 @@ public final class Villages {
     }
 
     private static final List<Slot> SLOTS = List.of(
-        new Slot(AssistantEntity.StationTask.FARM, 4, 1),
+        // [farms] Seven in ten, up from four: once the fishers, hunters, couriers, the watch and the crafts
+        // took their shares, four in ten came out as three farmers in a town of ten and five in a town of
+        // thirty, and the long game's larder emptied every few weeks. Now nearly two in five of a working
+        // town farm (four or five at ten, eight at thirty), and the food trades together about half.
+        new Slot(AssistantEntity.StationTask.FARM, 7, 1),
         new Slot(AssistantEntity.StationTask.MINE, 3, 2),
         new Slot(AssistantEntity.StationTask.WOOD, 2, 3),
         new Slot(AssistantEntity.StationTask.SMELT, 1, 6),
@@ -74,9 +79,7 @@ public final class Villages {
         // are founded at eight to twelve and there is no way for one to grow,
         // so a guard at sixteen was a guard no village was ever going to have
         // — which made the armour, the priority and the whole watch a thing
-        // that only existed on paper. The ten-folk shape is untouched by this:
-        // four farmers, three miners, two woodcutters and a smelter is exactly
-        // what ten still comes out as.
+        // that only existed on paper. A village of ten has no watch at all.
         new Slot(AssistantEntity.StationTask.GUARD, 1, 11),
         // The couriers: every worker's output waits in its production chest at its plot for one of
         // them to bring it in to the storehouse, so the first comes early, and more with the plots.
@@ -632,9 +635,10 @@ public final class Villages {
     /**
      * The trade this settlement most needs the next pair of hands to take up.
      * Whichever trade is furthest below its share of the village gets the
-     * newcomer — so ten folk settle into four farmers, three miners, two
-     * woodcutters and a smelter without anyone being told, and a village that
-     * loses its smelter replaces it with the next one to look for work.
+     * newcomer — so ten folk settle into farmers first and most, then miners,
+     * woodcutters, a smelter, a fisher and a hunter without anyone being told,
+     * and a village that loses its smelter replaces it with the next one to
+     * look for work.
      */
     public static AssistantEntity.StationTask needed(@Nullable UUID villageId) {
         List<AssistantEntity> folk = folkOf(villageId);

@@ -2440,7 +2440,7 @@ public class VillageGameTests {
         Kit.log("t39 petition: " + asked + " -> " + now + "; farms " + farms + ", fish " + fish + ", hunt " + hunt + ", mines " + mines);
         helper.assertTrue(now == com.jrpetty.mcassistant.entity.Orders.Order.LARDER, "a friend of the elder can put an order to it");
         // A town of ten has a fisher and a hunter in its shape, and none yet: those are the food trades short
-        // (its four farmers are about the order's share of the fields).
+        // (and the fields want more again under the order).
         helper.assertTrue(fish < 0 && hunt < 0 && farms < 0.5 && mines > 0, "the order wants more food hands and can spare a miner");
         var food = com.jrpetty.mcassistant.entity.Orders.moves(village, folk.get(4), day);
         Kit.log("t39 the miner's choices, shortest first: " + food);

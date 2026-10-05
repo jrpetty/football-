@@ -3919,9 +3919,12 @@ And nothing comes from nothing:
 
 ## What they do
 
-* **Trades** — at ten folk: four farmers, three miners, two woodcutters, one
-  smelter. More trades open as the village grows: a watch, a carrier, a
-  storekeeper, a rancher, a fisher.
+* **Trades** — farmers first and most: at ten folk about four or five farmers,
+  two miners, a woodcutter or two, a smelter, a fisher and a hunter. More trades
+  open as the village grows: a watch, a carrier, a storekeeper, a rancher, the
+  crafts. In a working town nearly two folk in five farm, and the food trades
+  (farmers, fishers, hunters) are about half the hands; more again when the
+  larder runs low.
 * **Ground** — each trade claims its own plot (farms by water, woods, hillsides
   to dig) and works it. Plots are never shared.
 * **Stores** — the village's goods are kept in the **Village Storehouse** (see

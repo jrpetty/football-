@@ -55,25 +55,26 @@ class VillageMathTest {
         // ground that suits nobody. Three times the bare footprint.
         for (int folk = 8; folk <= MAX_FOLK; folk++) {
             double disc = Math.PI * Math.pow(VillageMath.plotReach(folk), 2);
-            double needed = 3.0 * folk * averagePlotFootprint();
+            double needed = 3.0 * folk * averagePlotFootprint(folk);
             assertTrue(disc >= needed,
                 "at " + folk + " folk the search disc is " + (long) disc
                 + " but the plots want " + (long) needed);
         }
     }
 
-    /** Mean plot footprint with elbow room, weighted by the trade shares. */
-    private static double averagePlotFootprint() {
-        int totalWeight = 0;
-        for (VillageMath.Slot s : VillageMath.SLOTS) totalWeight += s.weight();
-        // farm 8, mine 8, wood 14, the rest 6 — plus two blocks of elbow.
-        int[] radii = { 8, 8, 14, 6, 6, 6, 6, 6, 6 };
+    /** Mean plot footprint with elbow room, weighted by the hands in each trade at this size. */
+    private static double averagePlotFootprint(int folk) {
+        int[] shape = VillageMath.shapeOf(folk);
+        // farm 8, mine 8, wood 14, the hunting grounds 20 (walked wide), the rest 6 — plus two blocks of elbow.
+        int[] radii = { 8, 8, 14, 6, 6, 6, 6, 6, 6, 20 };
         double sum = 0;
+        int hands = 0;
         for (int i = 0; i < VillageMath.SLOTS.length; i++) {
             double side = 2 * (radii[i] + 2) + 1;
-            sum += VillageMath.SLOTS[i].weight() * side * side;
+            sum += shape[i] * side * side;
+            hands += shape[i];
         }
-        return sum / totalWeight;
+        return sum / Math.max(1, hands);
     }
 
     @Test
@@ -102,16 +103,33 @@ class VillageMathTest {
     }
 
     @Test
-    @DisplayName("ten folk come out four farmers, three miners, two woodcutters, one smelter")
+    @DisplayName("ten folk come out farmers first: four, two miners, a woodcutter, a smelter, a fisher, a hunter")
     void theStatedShapeHolds() {
-        // The one number in this file that IS a promise: it is what was asked
-        // for, in those words, and nothing since is allowed to have moved it.
+        // A promise, asked for in so many words: more farmers. Four of ten, and
+        // six of ten at the food (the fisher and the hunter with them).
         int[] shape = VillageMath.shapeOf(10);
         assertEquals(4, shape[0], "farmers");
-        assertEquals(3, shape[1], "miners");
-        assertEquals(2, shape[2], "woodcutters");
+        assertEquals(2, shape[1], "miners");
+        assertEquals(1, shape[2], "woodcutters");
         assertEquals(1, shape[3], "smelter");
         assertEquals(0, shape[4], "no watch in a village of ten");
+        assertEquals(1, shape[8], "a fisher");
+        assertEquals(1, shape[9], "a hunter");
+    }
+
+    @Test
+    @DisplayName("the farmers are the biggest trade at every size, and about two in five of a town")
+    void farmersLead() {
+        for (int folk = 1; folk <= MAX_FOLK; folk++) {
+            int[] shape = VillageMath.shapeOf(folk);
+            for (int i = 1; i < shape.length; i++) {
+                assertTrue(shape[0] >= shape[i], "at " + folk + " folk slot " + i + " has more hands than the farms");
+            }
+            if (folk >= 20) {
+                double share = shape[0] / (double) folk;
+                assertTrue(share >= 0.33 && share <= 0.45, "at " + folk + " folk the farmers are " + share + " of the town");
+            }
+        }
     }
 
     @Test
@@ -154,17 +172,17 @@ class VillageMathTest {
     @Test
     @DisplayName("a town of a hundred keeps the shape a village of ten had")
     void theShapeSurvivesScale() {
-        // Four farmers to three miners to two woodcutters is the ratio that
-        // was asked for. It has to still read that way at a hundred, or the
-        // ratio was only ever a special case of ten.
+        // Seven farmers to three miners to two woodcutters is the ratio of the
+        // weights. It has to still read that way at a hundred, or the ratio was
+        // only ever a special case of ten.
         int[] shape = VillageMath.shapeOf(100);
         assertTrue(shape[0] > shape[1] && shape[1] > shape[2],
             "farmers/miners/woodcutters out of order at a hundred: "
             + shape[0] + "/" + shape[1] + "/" + shape[2]);
         double farmToMine = shape[0] / (double) shape[1];
         double mineToWood = shape[1] / (double) shape[2];
-        assertTrue(Math.abs(farmToMine - 4.0 / 3.0) < 0.25,
-            "farmers to miners is " + farmToMine + ", wanted about 1.33");
+        assertTrue(Math.abs(farmToMine - 7.0 / 3.0) < 0.35,
+            "farmers to miners is " + farmToMine + ", wanted about 2.33");
         assertTrue(Math.abs(mineToWood - 1.5) < 0.25,
             "miners to woodcutters is " + mineToWood + ", wanted about 1.5");
         for (int i = 0; i < shape.length; i++) {

@@ -139,13 +139,15 @@ public final class VillageMath {
     // ------------------------------------------------------------ trade shares
 
     /** One trade's share of a full village, and the headcount it opens at. */
-    public record Slot(int weight, int from) {}
+    public record Slot(int weight, int from, int max) {
+        Slot(int weight, int from) { this(weight, from, Integer.MAX_VALUE); }
+    }
 
-    /** In the same order as the live table, so an index means the same trade
-     *  in both. Farmers, miners, woodcutters, smelter, watch, carrier,
-     *  storekeeper, pen, boat. */
+    /** The live table's trades that every town has (the crafts wait on their
+     *  buildings, so they are left out). Farmers, miners, woodcutters, smelter,
+     *  watch, carrier, storekeeper, pen, boat, hunt. */
     public static final Slot[] SLOTS = {
-        new Slot(4, 1),    // FARM
+        new Slot(7, 1),    // FARM
         new Slot(3, 2),    // MINE
         new Slot(2, 3),    // WOOD
         new Slot(1, 6),    // SMELT
@@ -153,7 +155,8 @@ public final class VillageMath {
         new Slot(1, 12),   // HAUL
         new Slot(1, 13),   // STORE
         new Slot(1, 14),   // RANCH
-        new Slot(1, 16),   // FISH
+        new Slot(1, 8),    // FISH
+        new Slot(1, 10, 4),   // HUNT: up to four, however big the town (the game would not last)
     };
 
     /** Index of the carrier in {@link #SLOTS} — the trade a town past its own
@@ -171,9 +174,15 @@ public final class VillageMath {
         int best = -1;
         double bestDeficit = -Double.MAX_VALUE;
         int bestWeight = 0;
+        // The shares scaled to fit the hands there are, as the live table's are (Villages.fit): the
+        // weights of the trades a town this size has add up to more than ten once it has its fishers
+        // and hunters, and unscaled the farmers' share would take every hand.
+        int weights = 0;
+        for (Slot s : SLOTS) if (total >= s.from()) weights += s.weight();
+        double fit = weights <= VILLAGE_SIZE ? 1.0 : VILLAGE_SIZE / (double) weights;
         for (int i = 0; i < SLOTS.length; i++) {
-            if (total < SLOTS[i].from()) continue;
-            double target = SLOTS[i].weight() * total / (double) VILLAGE_SIZE;
+            if (total < SLOTS[i].from() || (i < have.length && have[i] >= SLOTS[i].max())) continue;
+            double target = Math.min(SLOTS[i].max(), SLOTS[i].weight() * total / (double) VILLAGE_SIZE * fit);
             double deficit = target - (i < have.length ? have[i] : 0);
             if (deficit > bestDeficit
                 || (deficit == bestDeficit && SLOTS[i].weight() > bestWeight)) {
@@ -192,7 +201,7 @@ public final class VillageMath {
      */
     public static boolean overStaffed(int folk, int slot, int have) {
         if (slot < 0 || slot >= SLOTS.length) return have > 0;
-        double target = SLOTS[slot].weight() * Math.max(1, folk) / (double) VILLAGE_SIZE;
+        double target = Math.min(SLOTS[slot].max(), SLOTS[slot].weight() * Math.max(1, folk) / (double) VILLAGE_SIZE);
         return have > Math.max(1, (int) Math.ceil(target));
     }
 

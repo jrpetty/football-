@@ -487,7 +487,7 @@ public final class FoundingPlan {
         String[][] names = {
             { "farmer", "farmers" }, { "miner", "miners" }, { "woodcutter", "woodcutters" }, { "smelter", "smelters" },
             { "of the watch", "of the watch" }, { "carrier", "carriers" }, { "storekeeper", "storekeepers" },
-            { "rancher", "ranchers" }, { "fisher", "fishers" } };
+            { "rancher", "ranchers" }, { "fisher", "fishers" }, { "hunter", "hunters" } };
         Integer[] idx = new Integer[shape.length];
         for (int i = 0; i < idx.length; i++) idx[i] = i;
         Arrays.sort(idx, (a, b) -> shape[b] != shape[a] ? Integer.compare(shape[b], shape[a]) : Integer.compare(a, b));
