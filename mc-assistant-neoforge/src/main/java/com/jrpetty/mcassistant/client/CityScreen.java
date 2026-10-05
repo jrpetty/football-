@@ -396,10 +396,12 @@ public class CityScreen extends Screen {
             g.drawString(font, j.getInt("wage") + "c", x + cols[3], ry + 1, Ui.INK, false);
             g.drawString(font, j.getInt("yesterday") + "c", x + cols[4], ry + 1, Ui.INK, false);
             g.drawString(font, j.getInt("week") + "c", x + cols[5], ry + 1, Ui.INK, false);
-            g.drawString(font, j.getInt("per_head") + "c", x + cols[6], ry + 1, Ui.INK, false);
+            float perHand = j.getInt("hands") == 0 ? 0 : j.getInt("week") / (7f * j.getInt("hands"));
+            g.drawString(font, (perHand >= 10 || perHand == 0 ? Integer.toString(Math.round(perHand)) : String.format(Locale.ROOT, "%.1f", perHand)) + "c",
+                x + cols[6], ry + 1, Ui.INK, false);
             // What a hand makes a day for each coin of its pay: above 1, the trade earns its keep.
             if (j.getInt("hands") > 0 && j.getInt("wage") > 0) {
-                float ret = j.getInt("per_head") / (float) j.getInt("wage");
+                float ret = j.getInt("week") / (7f * j.getInt("hands") * j.getInt("wage"));
                 g.drawString(font, String.format(Locale.ROOT, "%.1f×", ret), x + cols[7], ry + 1, ret >= 1 ? Ui.GOOD : Ui.BAD, false);
             } else {
                 g.drawString(font, "—", x + cols[7], ry + 1, Ui.FAINT, false);
@@ -760,7 +762,8 @@ public class CityScreen extends Screen {
         Ui.section(g, font, "How the money is spread", cx, cy, col);
         cy += 12;
         String word = gini < 25 ? "evenly" : gini < 40 ? "fairly" : gini < 55 ? "unevenly" : "very unevenly";
-        small(g, "Spread " + word + " (Gini " + gini + " of 100)", cx, cy, Ui.INK);
+        boolean savings = so.getInt("median") > 0 || so.getInt("top_tenth") > 0;
+        small(g, savings ? "Spread " + word + " (Gini " + gini + " of 100)" : "No savings yet: every purse is empty", cx, cy, Ui.INK);
         cy += 9;
         Ui.bar(g, cx, cy, col - 4, 6, gini / 100f, gini < 40 ? GREEN : gini < 55 ? AMBER : RED);
         cy += 9;
@@ -787,7 +790,7 @@ public class CityScreen extends Screen {
             so.getInt("couples") + " couples, " + so.getInt("single") + " single",
             so.getInt("households") + " households, " + String.format(Locale.ROOT, "%.1f", so.getInt("household_avg10") / 10.0)
                 + " to a house (at most " + so.getInt("household_max") + ")",
-            so.getInt("friendships") + " friendships, " + so.getInt("rivalries") + " rivalries" };
+            plural(so.getInt("friendships"), "friendship") + ", " + plural(so.getInt("rivalries"), "rivalry", "rivalries") };
         for (String f : fam) {
             if (cy > bottom - 8) break;
             small(g, Ui.clip(font, f, (int) (col / 0.75)), cx, cy, Ui.INK);
@@ -838,7 +841,7 @@ public class CityScreen extends Screen {
         int[] levels = so.getIntArray("levels");
         for (int i = levels.length - 1; i >= 0 && cy < bottom - 8; i--) {
             small(g, lv[i] + " " + lvRange[i], cx, cy + 1, Ui.MUTED);
-            Ui.bar(g, cx + 62, cy, col - 62 - 22, 7, levels[i] / (float) grown, PALETTE[(i + 2) % PALETTE.length]);
+            Ui.bar(g, cx + 72, cy, col - 72 - 22, 7, levels[i] / (float) grown, PALETTE[(i + 2) % PALETTE.length]);
             Ui.right(g, font, Integer.toString(levels[i]), cx + col, cy, Ui.MUTED);
             cy += 9;
         }
@@ -952,7 +955,7 @@ public class CityScreen extends Screen {
             int[] s = series(r[1]);
             int best = -1, at = -1;
             for (int i = 0; i < s.length; i++) if (s[i] > best) { best = s[i]; at = i; }
-            if (at < 0) continue;
+            if (at < 0 || best <= 0) continue;                                // no record of nothing
             g.drawString(font, r[0], x, ly, Ui.INK, false);
             Ui.right(g, font, best + (r[1].equals("output") || r[1].equals("coins") || r[1].equals("worth") ? "c" : "")
                 + "  on day " + days[Math.min(at, days.length - 1)], x + half, ly, Ui.MUTED);
@@ -1006,7 +1009,7 @@ public class CityScreen extends Screen {
             ry += 10;
         }
         ry += 4;
-        Ui.section(g, font, "Where it is heading (in 30 days, at this pace)", rx, ry, half);
+        Ui.section(g, font, "In 30 days, at this pace", rx, ry, half);
         ry += 12;
         String[][] heads = { { "Folk", "pop", "" }, { "Made a day", "output", "c" }, { "Treasury", "coins", "c" }, { "Worth", "worth", "c" },
             { "Buildings", "buildings", "" } };
@@ -1396,6 +1399,14 @@ public class CityScreen extends Screen {
         g.pose().scale(0.75F, 0.75F, 1F);
         g.drawString(font, s, 0, 0, colour, false);
         g.pose().popPose();
+    }
+
+    private static String plural(int n, String one) {
+        return plural(n, one, one + "s");
+    }
+
+    private static String plural(int n, String one, String many) {
+        return n + " " + (n == 1 ? one : many);
     }
 
     private static String capital(String s) {
