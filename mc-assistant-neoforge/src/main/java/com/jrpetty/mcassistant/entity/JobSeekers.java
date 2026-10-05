@@ -246,6 +246,19 @@ public final class JobSeekers {
         return null;
     }
 
+    /** What it is about just now, for the top of the talk screen: "Reading the notices on the board", or null. */
+    @Nullable
+    public static String doing(VillageFolkEntity f) {
+        UUID me = f.getUUID();
+        Journey j = JOURNEYS.get(me);
+        if (j != null) return "On the road to " + Villages.name(j.to) + (j.refugee ? ", to be taken in" : ", to a new place");
+        Leaving l = LEAVING.get(me);
+        if (l != null) return "Saying its goodbyes: off to " + Villages.name(l.town);
+        Visit v = VISITS.get(me);
+        if (v != null) return v.readFrom >= 0 ? "Reading the notices on the board" : "Off to read the notices on the board";
+        return null;
+    }
+
     /** The answer to an application, for the folk to say when next it is about. */
     static void told(UUID folk, String line) {
         TOLD.put(folk, line);
@@ -1006,13 +1019,20 @@ public final class JobSeekers {
         long now = level.getGameTime();
         for (Map.Entry<UUID, Journey> e : JOURNEYS.entrySet()) {
             Journey j = e.getValue();
+            if (!inLevel(level, j.to)) continue;                        // another world's road: its own sweep
             if (now - j.lastStep < 1200L && now >= j.lastStep) continue;
             if (live(level, e.getKey()) != null) continue;
             JOURNEYS.remove(e.getKey());
             if (j.window != null) ChunkLoad.setLoaded(level, owner(e.getKey()), j.window, 1, false);
         }
         VISITS.entrySet().removeIf(e -> now - e.getValue().started > VISIT_MOST * 2L);
-        LEAVING.entrySet().removeIf(e -> live(level, e.getKey()) == null);
+        LEAVING.entrySet().removeIf(e -> inLevel(level, e.getValue().home) && live(level, e.getKey()) == null);
+    }
+
+    /** Is this town in this world (a town gone from the books counts as the overworld's)? */
+    private static boolean inLevel(ServerLevel level, UUID village) {
+        Villages.Village v = Villages.get(village);
+        return v != null ? v.dim().equals(level.dimension()) : level.dimension() == net.minecraft.world.level.Level.OVERWORLD;
     }
 
     private static BlockPos surface(ServerLevel level, BlockPos p) {
