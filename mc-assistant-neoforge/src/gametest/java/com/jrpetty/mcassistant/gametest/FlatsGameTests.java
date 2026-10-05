@@ -179,9 +179,9 @@ public class FlatsGameTests {
      * Raised for real, out of the stores: the builder loads up from the store chests and lays the block
      * bottom-up, a load at a time, each storey's floor and walls in before the next storey's begin; when
      * it stands, its six flats are on the homes' books with their beds, and the town's hands hang the
-     * ground floor's doors, nail up the flat numbers and put the iron railings up in front.
+     * ground floor's doors, nail up the flat numbers and put the iron railings up round the balconies.
      */
-    @GameTest(template = EMPTY, timeoutTicks = 30000, batch = "fl02_build")
+    @GameTest(template = EMPTY, timeoutTicks = 40000, batch = "fl02_build")
     public static void fl02_build(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         VillageFolkEntity builder = founder(helper, 301600, 50000, 1000L);
@@ -198,12 +198,15 @@ public class FlatsGameTests {
             new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.COBBLESTONE, 64),
             new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.COBBLESTONE, 64),
             new ItemStack(Items.STONE_BRICKS, 64), new ItemStack(Items.STONE_BRICKS, 64), new ItemStack(Items.STONE_BRICKS, 64),
-            new ItemStack(Items.STONE_BRICKS, 64), new ItemStack(Items.BRICKS, 64), new ItemStack(Items.BRICKS, 32),
+            new ItemStack(Items.STONE_BRICKS, 64), new ItemStack(Items.BRICKS, 64), new ItemStack(Items.BRICKS, 64),
             new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.OAK_PLANKS, 64),
-            new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.OAK_LOG, 32), new ItemStack(Items.GLASS_PANE, 48),
+            new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.OAK_PLANKS, 64),
+            new ItemStack(Items.OAK_LOG, 32), new ItemStack(Items.GLASS_PANE, 64), new ItemStack(Items.GLASS_PANE, 16),
             new ItemStack(Items.LANTERN, 12), new ItemStack(Items.OAK_DOOR, 8),
             new ItemStack(Items.CHEST, 6), new ItemStack(Items.OAK_FENCE, 12), new ItemStack(Items.RED_CARPET, 8),
-            new ItemStack(Items.OAK_STAIRS, 12), new ItemStack(Items.IRON_BARS, 16), new ItemStack(Items.OAK_SIGN, 8) };
+            new ItemStack(Items.OAK_STAIRS, 64), new ItemStack(Items.OAK_STAIRS, 64), new ItemStack(Items.OAK_STAIRS, 24),
+            new ItemStack(Items.OAK_SLAB, 32), new ItemStack(Items.DIRT, 8), new ItemStack(Items.POPPY, 6),
+            new ItemStack(Items.IRON_BARS, 16), new ItemStack(Items.OAK_SIGN, 8) };
         for (ItemStack s : makings) Homes.storeForTests(level, v, s);
         for (int i = 0; i < 9; i++) Homes.storeForTests(level, v, new ItemStack(Items.WHITE_BED));     // a bed doesn't stack
         Villages.Site site = Villages.siteFor(level, id, Flats.BLOCK);
@@ -255,7 +258,7 @@ public class FlatsGameTests {
                 }
             }
             if (!up) {
-                if (t >= 29000) helper.fail("the flats not up in 29000 ticks: " + Math.round(done[0] * 100) + "/" + Math.round(done[1] * 100)
+                if (t >= 39000) helper.fail("the flats not up in 39000 ticks: " + Math.round(done[0] * 100) + "/" + Math.round(done[1] * 100)
                     + "/" + Math.round(done[2] * 100) + "% — " + builder.debugLine());
                 return;
             }
@@ -276,7 +279,7 @@ public class FlatsGameTests {
             }
             helper.assertTrue(steps == 8, "the stair winds up to both floors above: " + steps + " of 8 steps");
             // On the books: six flats. The town's hands see to it: the beds the builder could not carry
-            // (a bed is a pack's slot each), the ground floor's doors, the numbers, the railings.
+            // (a bed is a pack's slot each), the ground floor's doors, the numbers, the balconies' railings.
             Homes.tickForTests(level, v);
             List<BlockPos> flats = Flats.flatsForTests(id);
             int laid = 0;
@@ -295,13 +298,15 @@ public class FlatsGameTests {
                 for (int dz : new int[]{ -3, 0 }) if (level.getBlockState(cell(block, 3, 4 * s + 1, dz)).getBlock() instanceof WallSignBlock) signs++;
             }
             int bars = 0;
-            for (int dx = -5; dx <= 0; dx++) if (level.getBlockState(cell(block, dx, 0, -5)).is(Blocks.IRON_BARS)) bars++;
+            for (int s = 1; s < 3; s++) {
+                for (int dx = -4; dx <= 1; dx++) if (level.getBlockState(cell(block, dx, 4 * s, -5)).is(Blocks.IRON_BARS)) bars++;
+            }
             CompoundTag page = Flats.annalsForTests(id, site.anchor());
             Kit.log("fl02 fitted: " + doors + " ground-floor doors, " + signs + " flat numbers, " + bars + " lengths of railing; the Buildings page: " + page
                 + "; news " + Villages.news(id));
             helper.assertTrue(doors == 2, "the ground floor's doors hung: " + doors);
             helper.assertTrue(signs == 6, "every flat's number up on its landing: " + signs);
-            helper.assertTrue(bars >= 3, "iron railings in front: " + bars);
+            helper.assertTrue(bars >= 6, "iron railings round the balconies: " + bars);
             helper.assertTrue(page.getInt("storeys") == 3 && page.getString("tenure").matches("\\d of 6 flats let, \\d free"),
                 "the Buildings page shows the block and its flats let and free: " + page);
             // Its builder had nowhere of its own: it lives in one now.

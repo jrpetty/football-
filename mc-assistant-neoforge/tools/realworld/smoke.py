@@ -163,10 +163,12 @@ def decor_stage(r, look, cx, cz):
 
 
 def flats_stage(r, look, cx, cz):
-    """A block of flats, furnished, on a stage of its own (/village flats stage): from across the street
-    (three storeys, the brick bands, the parapet, the railings and the step), the stair hall from just
-    inside the front door (the flats' doors and numbers, the stair winding up the back), and a couple's
-    flat on the first floor from its door (two beds, the chest, the table, the lantern)."""
+    """A block of flats, furnished, on a stage of its own (/village flats stage): from across the street,
+    the whole town house (three storeys of stone with brick quoins, the balconies and their railings, the
+    slate roof with its dormer and the two chimneys smoking), the stair hall from just inside the front
+    door (the flats' doors and numbers, the stair winding up the back), a couple's flat on the first floor
+    from its door (two beds, the chest, the table, the lantern), and the front door close to (the pediment
+    and its lanterns, the fanlight, the name by the door, the window boxes, the lamp posts)."""
     bx, by, bz = cx + 140, 150, cz - 60
     r.cmd("time set 6000")
     r.cmd("gamemode spectator %s" % USER)
@@ -177,10 +179,12 @@ def flats_stage(r, look, cx, cz):
     m = re.search(r"FLATSTAGE (-?\d+) (-?\d+) (-?\d+)", out)
     if m:
         bx, by, bz = int(m.group(1)), int(m.group(2)), int(m.group(3))
-    # Its back is to the north: the front door at x+3, z+4, the street to the south.
-    look("flats-1-front", bx - 8.5, by + 3, bz + 17.5, bx + 0.5, by + 6, bz + 0.5, wait=8)
+    # Its back is to the north: the front door at x+3, z+4, the street to the south. A block (dx, h, dz)
+    # of its drawing is at x + dx, y + h, z - dz; it stands nineteen high to its chimney tops.
+    look("flats-1-front", bx - 13.5, by + 5, bz + 24.5, bx + 0.5, by + 8, bz + 0.5, wait=8)
     look("flats-2-hall", bx + 3.5, by, bz + 3.5, bx + 3.5, by + 2.5, bz - 2.5, wait=6)
     look("flats-3-flat", bx + 1.5, by + 4, bz - 1.5, bx - 3.5, by + 4.2, bz - 2.5, wait=6)
+    look("flats-4-door", bx - 1.5, by + 2, bz + 12.5, bx + 2.5, by + 3, bz + 5, wait=6)
     say("alive after the flats: %s" % client_alive())
 
 

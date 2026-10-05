@@ -34,8 +34,11 @@ import java.util.concurrent.ConcurrentHashMap;
  * hard-up households waiting for a roof and little ground left near its square, builds up instead
  * of out: three storeys of small flats on one house's lot, two to a landing, off a stair that winds
  * up the back of the hall (village blueprint {@code flats}). The builders raise it like anything
- * else, out of the stores, a load and a storey at a time: stone walls with a brick band at every
- * floor, glass in the windows, a lantern in every room, a flat roof behind a parapet.
+ * else, out of the stores, a load and a storey at a time, and it is built to look like a town house:
+ * a slate plinth, stone walls with brick quoins at the corners, windows in three bays with window
+ * boxes under the ground floor's, a balcony on brackets across each upper flat's front, the front
+ * door under a fanlight and a little pediment with a lantern hung at either end of it, a bracketed
+ * cornice, a pitched slate roof with a dormer, and a brick chimney stack out of each stone gable.
  *
  * <p>Every flat is a home on the village's books (Homes), its own: a room with a bed (two in a
  * couple's flat), a chest, a table and a lantern, and its number on the landing ("Flat 2B"). The
@@ -55,10 +58,11 @@ import java.util.concurrent.ConcurrentHashMap;
  * as a house's does.
  *
  * <p>Once a block stands, the town's hands see to it a piece at a time out of the stores (TownJobs):
- * the beds it went up without, the ground floor's doors, the flat numbers on the landings, and in
- * front of it a run of iron railings, the smith's work. In the Diamond Age a block whose flats are
+ * the beds it went up without, the ground floor's doors, the flat numbers on the landings, and
+ * iron railings round its balconies, the smith's work. In the Diamond Age a block whose flats are
  * all let, while folk still wait, gets a fourth storey (blueprint {@code flats4}): two more flats.
- * Its walls are dressed, its footing faced and its stair slated with the rest of the town (Ages).
+ * Its roof, its plinth and its trimmings are slated with the rest of the town's (Ages): built in
+ * whatever wood the stores have, they are slate once the Iron Age's make-over comes round to it.
  */
 public final class Flats {
 
@@ -77,6 +81,8 @@ public final class Flats {
     private static final int ROOM_LEFT = -4, ROOM_RIGHT = 1;
     /** Each flat's door, in the wall between it and the stair hall (dx 2). */
     private static final int HALL_WALL = 2, FRONT_DOOR = -2, BACK_DOOR = 1;
+    /** The row in front of the front wall, where the balconies stand out from it. */
+    private static final int BALCONY = -5;
     /** How far out from the heart "near the square" is: TownPlan's first ring of homes, sixteen lots. */
     static final int NEAR = TownPlan.RING + TownPlan.PERIOD;
     /** Home lots free near the square at or under which the ground counts as running short. */
@@ -848,8 +854,8 @@ public final class Flats {
 
     /**
      * A piece of work on the village's blocks, by a hand there (TownJobs) and out of the stores: a bed
-     * where one is missing, the ground floor's doors, the flat numbers on the landings, the railings
-     * in front; and in the Diamond Age, a fourth storey on a block whose flats are all let while folk
+     * where one is missing, the ground floor's doors, the flat numbers on the landings, the balconies'
+     * railings; and in the Diamond Age, a fourth storey on a block whose flats are all let while folk
      * still wait.
      */
     static void fit(ServerLevel level, Villages.Village v, boolean folkWait) {
@@ -1006,26 +1012,28 @@ public final class Flats {
     }
 
     /**
-     * Iron railings along the front of the block, either side of nothing but its own front flats'
-     * windows: the smith's work, out of the stores (iron bars put by, or six bars of iron beaten into
-     * sixteen, never while the village is putting iron by for its age). From the Iron Age.
+     * Iron railings round the balconies across the upper flats' fronts (the drawing's slabs on their
+     * brackets, a storey up and more): the smith's work, out of the stores (iron bars put by, or six
+     * bars of iron beaten into sixteen, never while the village is putting iron by for its age). From
+     * the Iron Age.
      */
     static int railings(ServerLevel level, @Nullable Villages.Village v, Ledger.Building b, boolean free) {
         if (v != null && Villages.ageOf(v.id()).ordinal() < Villages.Age.IRON.ordinal() && !free) return 0;
         int n = 0;
         List<BlockPos> run = new ArrayList<>();
-        for (int dx = -5; dx <= 0; dx++) {
-            BlockPos at = cell(b, dx, 0, -5);
-            if (!level.getBlockState(at).isAir() || !level.getBlockState(at.below()).isFaceSturdy(level, at.below(), Direction.UP)) continue;
-            if (v != null) {
-                int ox = at.getX() - v.centre().getX(), oz = at.getZ() - v.centre().getZ();
-                if (TownPlan.isStreet(ox, oz) || TownPlan.isSquare(ox, oz)) continue;
+        int storeys = v == null ? 3 : storeys(v.id(), b);
+        for (int s = 1; s < storeys; s++) {
+            for (int dx = ROOM_LEFT; dx <= ROOM_RIGHT; dx++) {
+                BlockPos at = cell(b, dx, STOREY * s, BALCONY);
+                if (!level.getBlockState(at).isAir() || !level.getBlockState(at.below()).isFaceSturdy(level, at.below(), Direction.UP)) continue;
+                run.add(at);
             }
-            run.add(at);
         }
         if (run.isEmpty()) return 0;
         if (!free) {
-            if (v == null || !TownJobs.atWork(level, v, "flats", run.get(0), "putting up the railings at " + name(v.id(), b))) return 0;
+            // Worked from the street below the first floor's balcony (the hand's reach goes no higher).
+            BlockPos under = cell(b, ROOM_LEFT, STOREY, BALCONY);
+            if (v == null || !TownJobs.atWork(level, v, "flats", under, "putting up the balconies' railings at " + name(v.id(), b))) return 0;
         }
         for (BlockPos at : run) {
             if (!free && !bars(level, v)) break;
@@ -1054,10 +1062,10 @@ public final class Flats {
 
     /**
      * A fourth storey on a block: two more flats. Paid for all at once out of the stores before the
-     * roof comes off (Masonry.buildIn: what the stores can pay for, kept with the block); the roof and
-     * parapet then come off where the new floor and walls go, top down, and back into the stores; and
-     * the storey goes up a layer at a time. Its beds come out of the stores later, as any flat's do.
-     * Returns the blocks changed.
+     * roof comes off (Masonry.buildIn: what the stores can pay for, kept with the block); the roof, its
+     * gables and chimneys and the cornice under it then come off where the new storey differs, top
+     * down, and back into the stores; and the storey goes up a layer at a time, the roof back on top.
+     * Its beds come out of the stores later, as any flat's do. Returns the blocks changed.
      */
     static int storey(ServerLevel level, Villages.Village v, Ledger.Building b, int budget, boolean free) {
         UUID id = v.id();
@@ -1073,17 +1081,25 @@ public final class Flats {
         if (!free && !TownJobs.atWork(level, v, "storeys", b.anchor(), "putting a fourth storey on " + name)) return 0;
         Map<BlockPos, BuildGoal.Placement> next = new HashMap<>();
         for (BuildGoal.Placement p : will) next.put(p.pos(), p);
-        // The roof off, top down, where the new storey differs from it (once: after that, what stands there is the new storey).
+        // The roof off, top down, where the new storey differs from it (once: after that, what stands there is the new storey):
+        // the roof and its gables and chimneys, the garret's floor, the cornice's brackets under the eaves, the old top's rail.
         int roofAt = b.anchor().getY() + STOREY * 2 + 3;
         boolean stripped = "1".equals(Ledger.note(id, STRIPPED + key));
+        if (!stripped) {
+            // The fires on the old chimneys' tops (the town's: TownLife) put out first, being no part of the drawing.
+            for (BlockPos top : TownLife.fittings(b).chimneys()) {
+                if (!level.getBlockState(top.above()).is(Blocks.CAMPFIRE)) continue;
+                level.setBlock(top.above(), Blocks.AIR.defaultBlockState(), 3);
+                if (!free) Crafts.giveBack(level, v, Items.CAMPFIRE, 1);
+            }
+        }
         List<BuildGoal.Placement> off = new ArrayList<>();
         for (BuildGoal.Placement p : stripped ? List.<BuildGoal.Placement>of() : was) {
             if (p.pos().getY() < roofAt - 3 || p.part() == BuildGoal.Part.CLEAR) continue;
             BuildGoal.Placement q = next.get(p.pos());
-            if (q != null && q.part() == p.part() && q.style() == p.style()) continue;
+            if (q != null && q.part() == p.part() && q.style() == p.style() && q.way() == p.way()) continue;
             BlockState now = level.getBlockState(p.pos());
             if (now.isAir() || now.is(BlockTags.BEDS) || now.getBlock() instanceof net.minecraft.world.level.block.DoorBlock) continue;
-            if (p.pos().getY() < roofAt && p.part() != BuildGoal.Part.FENCE) continue;     // below the roof: only the old top's rail
             off.add(p);
         }
         if (!off.isEmpty()) {
@@ -1111,7 +1127,8 @@ public final class Flats {
             if (!free && p.part() == BuildGoal.Part.BED) continue;             // furnished out of the stores later
             if (paint.apply(p) == null) continue;
             BlockState now = level.getBlockState(p.pos());
-            if (!now.isAir() && !(now.canBeReplaced() && now.getFluidState().isEmpty())) continue;
+            // (A fire the town lit on an old chimney top while the new storey went up is built over.)
+            if (!now.isAir() && !now.is(Blocks.CAMPFIRE) && !(now.canBeReplaced() && now.getFluidState().isEmpty())) continue;
             if (TRIED.getOrDefault(key + ":" + p.pos().getY(), 0) >= 3) continue;
             missing.add(p.pos());
             lowest = Math.min(lowest, p.pos().getY());
@@ -1149,7 +1166,7 @@ public final class Flats {
         for (BuildGoal.Placement p : will) {
             if (p.part() == BuildGoal.Part.CLEAR || p.part() == BuildGoal.Part.BED || p.pos().getY() < roofAt - 3) continue;
             BuildGoal.Placement q = before.get(p.pos());
-            if (q != null && q.part() == p.part() && q.style() == p.style()) continue;      // stays as it is
+            if (q != null && q.part() == p.part() && q.style() == p.style() && q.way() == p.way()) continue;      // stays as it is
             cells.add(p);
         }
         Masonry.Look look = Masonry.buildIn(level, v, Ages.CIVIC, cells, true);
@@ -1161,9 +1178,11 @@ public final class Flats {
     // ------------------------------------------------------------------ the stage, for the pictures
 
     /**
-     * A block of flats set out on a stage of its own, furnished, its doors hung, its numbers up and its
-     * railings in front, from a palette rather than anybody's stores (/village flats stage): for the
-     * pictures. Returns "x y z", the middle of its ground floor; its door is to the south.
+     * A block of flats set out on a stage of its own, as the town would have it in the Iron Age, from a
+     * palette rather than anybody's stores (/village flats stage): furnished, its doors hung, its numbers
+     * up, its balconies railed, its name by the door, the lamp posts the town puts by a front door, and
+     * its chimneys smoking. For the pictures. Returns "x y z", the middle of its ground floor; its door
+     * is to the south.
      */
     public static String stage(ServerLevel level, BlockPos at) {
         com.jrpetty.mcassistant.Showcase.stage(level, at.getX() - 9, at.getX() + 9, at.getZ() - 9, at.getZ() + 9, at.getY());
@@ -1172,7 +1191,18 @@ public final class Flats {
         doors(level, null, b, true);
         numbers(level, null, b, true);
         railings(level, null, b, true);
+        nameplate(level, b, new String[]{ "Elm Row Flats", "No. 3", "Elm Row", "" });
+        Ages.lamps(level, null, b, BLOCK, true);
+        TownLife.chimney(level, b, null, true);
         return at.getX() + " " + at.getY() + " " + at.getZ();
+    }
+
+    /** The sign by the front door, as the town's (TownLife.addressSign) would read: on the wall to the right of it. */
+    private static void nameplate(ServerLevel level, Ledger.Building b, String[] lines) {
+        BlockPos spot = cell(b, 4, 1, BALCONY);
+        if (!level.getBlockState(spot).isAir()) return;
+        level.setBlock(spot, Blocks.SPRUCE_WALL_SIGN.defaultBlockState().setValue(WallSignBlock.FACING, b.facing().getOpposite()), 3);
+        if (level.getBlockEntity(spot) instanceof SignBlockEntity sign) TownLife.write(sign, lines);
     }
 
     // ------------------------------------------------------------------ tests
