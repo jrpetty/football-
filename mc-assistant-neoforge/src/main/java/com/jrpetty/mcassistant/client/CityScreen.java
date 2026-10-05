@@ -390,7 +390,7 @@ public class CityScreen extends Screen {
 
     private static final String[] KINDS = { "all", "food", "timber", "stone", "ore", "animal", "craft", "plant", "other" };
     private static final String[] KIND_WORDS = { "All", "Food", "Timber", "Stone", "Ore & metal", "Wool, hides", "Crafts", "Plants", "Other" };
-    private static final String[] PROD_HEADS = { "Item", "Yest.", "A day", "30 days", "All time", "Used/wk", "In store", "Worth/day", "Trend" };
+    private static final String[] PROD_HEADS = { "Item", "Yest.", "A day", "30 d", "In all", "Used", "Stock", "c a day", "" };
 
     private static net.minecraft.world.item.ItemStack stackOf(String id) {
         net.minecraft.resources.ResourceLocation rl = net.minecraft.resources.ResourceLocation.tryParse(id.contains(":") ? id : "minecraft:" + id);
@@ -464,9 +464,12 @@ public class CityScreen extends Screen {
         }
         // The table.
         int ty = ky + 14;
-        int side = Math.max(150, cw * 36 / 100);
+        int side = Math.max(136, cw * 30 / 100);
         int tw = cw - side - 8;
-        int[] cols = { 0, tw * 30 / 100, tw * 39 / 100, tw * 48 / 100, tw * 58 / 100, tw * 69 / 100, tw * 79 / 100, tw * 89 / 100 };
+        // The name a third of the row, the seven figures evenly after it, the trend at the end.
+        int nameW = tw * 33 / 100, figW = (tw - 18 - nameW) / 7;
+        int[] cols = new int[8];
+        for (int i = 1; i < 8; i++) cols[i] = nameW + (i - 1) * figW;
         List<CompoundTag> shown = new ArrayList<>();
         for (CompoundTag r : rows) if (prodKind == null || prodKind.equals(r.getString("kind"))) shown.add(r);
         Comparator<CompoundTag> order = switch (prodSort) {
@@ -482,10 +485,10 @@ public class CityScreen extends Screen {
         };
         shown.sort(prodDown ? order.reversed() : order);
         for (int i = 0; i < PROD_HEADS.length; i++) {
-            int cx0 = i < cols.length ? cols[i] : tw - 22;
-            String hd = PROD_HEADS[i] + (i == prodSort ? (prodDown ? " ▼" : " ▲") : "");
-            small(g, hd, x + cx0, ty, i == prodSort ? Ui.GOOD : Ui.FAINT);
-            int cx1 = i + 1 < cols.length ? cols[i + 1] : i + 1 == cols.length ? tw - 22 : tw;
+            int cx0 = i < cols.length ? cols[i] : tw - 18;
+            int cx1 = i + 1 < cols.length ? cols[i + 1] : i + 1 == cols.length ? tw - 18 : tw;
+            String hd = (i == 8 ? "±" : PROD_HEADS[i]) + (i == prodSort ? (prodDown ? "▼" : "▲") : "");
+            small(g, Ui.clip(font, hd, (int) ((cx1 - cx0 - 2) / 0.75)), x + cx0, ty, i == prodSort ? Ui.GOOD : Ui.FAINT);
             final int col = i;
             zones.add(new Zone(x + cx0, ty, x + cx1, ty + 9, () -> {
                 if (prodSort == col) prodDown = !prodDown; else { prodSort = col; prodDown = col != 0; }
@@ -505,11 +508,11 @@ public class CityScreen extends Screen {
             String[] cells = { itemName(id), num(r.getInt("d1")), num(r.getInt("w7") / 7.0), num(r.getInt("m30")), num(r.getLong("total")),
                 num(r.getInt("used7")), num(r.getInt("on_hand")), num(worthADay(r)) + "c" };
             for (int c = 0; c < cells.length; c++) {
-                int colW = (c + 1 < cols.length ? cols[c + 1] : tw - 22) - cols[c] - 3 - (c == 0 ? 11 : 0);
+                int colW = (c + 1 < cols.length ? cols[c + 1] : tw - 18) - cols[c] - 2 - (c == 0 ? 11 : 0);
                 small(g, Ui.clip(font, cells[c], (int) (colW / 0.75)), x + cols[c] + (c == 0 ? 11 : 0), ry + 1, c == 0 ? Ui.INK : Ui.INK);
             }
             String arrow = r.getInt("prev7") == 0 && r.getInt("w7") > 0 ? "new" : trend > 0 ? "▲" : trend < 0 ? "▼" : "=";
-            small(g, arrow, x + tw - 18, ry + 1, trend > 0 ? Ui.GOOD : trend < 0 ? Ui.BAD : Ui.FAINT);
+            small(g, arrow, x + tw - 16, ry + 1, trend > 0 ? Ui.GOOD : trend < 0 ? Ui.BAD : Ui.FAINT);
             zones.add(new Zone(x, ry - 1, x + tw, ry + 9, () -> prodItem = id.equals(prodItem) ? null : id));
             ry += 10;
         }

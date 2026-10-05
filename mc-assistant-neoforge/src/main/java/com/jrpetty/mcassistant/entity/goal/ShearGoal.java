@@ -152,7 +152,9 @@ public class ShearGoal extends Goal {
     private void sweepWool(Sheep around) {
         for (ItemEntity drop : assistant.level().getEntitiesOfClass(
                 ItemEntity.class, new AABB(around.blockPosition()).inflate(2.5))) {
+            ItemStack picked = drop.getItem().copy();
             ItemStack leftover = assistant.insertItem(drop.getItem());
+            com.jrpetty.mcassistant.entity.Economy.gathered(assistant, picked, picked.getCount() - leftover.getCount());
             if (leftover.isEmpty()) {
                 drop.discard();
             } else {

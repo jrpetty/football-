@@ -82,6 +82,7 @@ public final class Economy {
         WORTH.clear();
         CRAFT_VILLAGE = null;
         CRAFT_NET.clear();
+        GATHERED.clear();
     }
 
     // ------------------------------------------------------------------ output
@@ -136,7 +137,9 @@ public final class Economy {
         Kind k = kindOf(s);
         if (k == null || !makes(trade, k, s)) return;
         if (k == Kind.FOOD || s.is(Items.WHEAT)) Leader.foodIn(village, s);     // the leader's food books
-        tally(village, trade, s, s.getCount(), true);                           // the books, item by item
+        // The books, item by item: what it gathered with its own hands was counted when it picked it up
+        // (Economy.gathered); only what is new to the books goes in now (a smelter's ingots, a mason's bricks).
+        tally(village, trade, s, s.getCount() - credit(f, s), true);
         double v = worthOf(s);
         if (v <= 0) return;
         Day d = TODAY.computeIfAbsent(village, x -> new Day());
@@ -212,6 +215,37 @@ public final class Economy {
         CRAFT_NET.merge(key, -n, Integer::sum);
         CRAFT_KIND.putIfAbsent(key, s.copyWithCount(1));
     }
+
+    /**
+     * Picked up off the ground by a working hand: a log from the tree it felled, the cobble from the
+     * rock it broke, the wheat from its field, the fish it caught. That is the making, counted there and
+     * then — a woodcutter that builds with the logs it felled never brings them to the stores, and its
+     * timber was counted as nothing at all. What it later brings home of it is not counted twice.
+     */
+    public static void gathered(AssistantEntity a, ItemStack s, int n) {
+        if (!(a instanceof VillageFolkEntity f) || n <= 0 || s.isEmpty()) return;
+        UUID village = f.ownerId();
+        StationTask trade = f.stationTask();
+        if (village == null || trade == StationTask.NONE || trade == StationTask.HAUL || trade == StationTask.STORE) return;
+        Kind k = kindOf(s);
+        if (k == null || !makes(trade, k, s)) return;
+        tally(village, trade, s, n, true);
+        GATHERED.computeIfAbsent(f.getUUID(), x -> new HashMap<>()).merge(id(s), n, (x, y) -> Math.min(256, x + y));
+    }
+
+    /** How many of these the hand already had counted when it picked them up (and the credit spent). */
+    private static int credit(VillageFolkEntity f, ItemStack s) {
+        Map<String, Integer> m = GATHERED.get(f.getUUID());
+        if (m == null) return 0;
+        String key = id(s);
+        int have = m.getOrDefault(key, 0);
+        int used = Math.min(have, s.getCount());
+        if (have - used <= 0) m.remove(key); else m.put(key, have - used);
+        return used;
+    }
+
+    /** What each hand picked up and has had counted, not yet brought home (by the hand). */
+    private static final Map<UUID, Map<String, Integer>> GATHERED = new ConcurrentHashMap<>();
 
     /** Yesterday, item by item: {made, used}. */
     static Map<String, int[]> yesterdayItems(UUID village) {

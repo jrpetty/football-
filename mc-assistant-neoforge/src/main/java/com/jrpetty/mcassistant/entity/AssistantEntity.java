@@ -8537,7 +8537,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                     : level().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
                         getBoundingBox().inflate(1.4))) {
                 if (!drop.isAlive() || drop.hasPickUpDelay()) continue;
+                ItemStack picked = drop.getItem().copy();
                 ItemStack left = insertItem(drop.getItem());
+                Economy.gathered(this, picked, picked.getCount() - left.getCount());
                 if (left.isEmpty()) drop.discard(); else drop.setItem(left);
             }
         }

@@ -223,7 +223,9 @@ public class FishGoal extends Goal {
             }
         }
         bobber = null;   // the next tick casts again
+        ItemStack picked = loot.copy();
         ItemStack leftover = assistant.insertItem(loot);
+        com.jrpetty.mcassistant.entity.Economy.gathered(assistant, picked, picked.getCount() - leftover.getCount());
         if (!leftover.isEmpty()) {
             finish("Pack's full — caught " + caught + ".");
             return;
