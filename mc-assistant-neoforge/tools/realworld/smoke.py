@@ -358,6 +358,11 @@ def main():
     say("talk: " + r.cmd("execute as %s at @s run village talk got anything to trade" % USER))
     time.sleep(3)
     shot("15-talk-trade")
+    # Its skills: the levels, the knack points, the knacks it chose and why (the Skills page,
+    # which asking about them opens).
+    say("talk: " + r.cmd("execute as %s at @s run village talk what are your skills" % USER))
+    time.sleep(3)
+    shot("16-talk-skills")
     say("alive after talking: %s" % client_alive())
     # The town's books (the analytics screen the village board opens): eight mornings
     # first, so there are days in them, with an hour or so of the village's work in each

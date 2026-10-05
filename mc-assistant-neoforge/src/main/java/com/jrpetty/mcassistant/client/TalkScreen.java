@@ -79,6 +79,13 @@ public class TalkScreen extends Screen {
         super(Component.literal(first.name()));
         this.last = first;
         remember(first);
+        toSkillsIfAsked(first);
+    }
+
+    /** Asked about its skills or its knacks: the Skills page, where they are laid out. */
+    private void toSkillsIfAsked(FolkReplyPayload reply) {
+        String asked = reply.asked() == null ? "" : reply.asked().toLowerCase(java.util.Locale.ROOT);
+        if (asked.contains("skill") || asked.contains("knack")) tab = lastTab = Tab.SKILLS;
     }
 
     public int entityId() { return last.entityId(); }
@@ -86,6 +93,7 @@ public class TalkScreen extends Screen {
     public void update(FolkReplyPayload reply) {
         this.last = reply;
         remember(reply);
+        toSkillsIfAsked(reply);
         this.scroll = 0;
         if (say != null) draft = say.getValue();
         rebuildWidgets();
