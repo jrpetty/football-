@@ -2088,10 +2088,14 @@ public class VillageGameTests {
         Kit.log("t36 peace: " + peace + " (" + sour + " -> " + mended + ", coins " + coins + " -> " + com.jrpetty.mcassistant.entity.Market.coinsHeld(p) + ")");
         helper.assertTrue(mended == Math.min(100, sour + 25) && com.jrpetty.mcassistant.entity.Market.coinsHeld(p) == coins - com.jrpetty.mcassistant.entity.Diplomacy.PEACE_COST,
             "a player carries gifts between them and mends it");
-        com.jrpetty.mcassistant.village.Ledger.relate(village, otherId, -200);
-        com.jrpetty.mcassistant.entity.Diplomacy.daily(level, v, other, day + 9);
         java.util.List<String> lines = new java.util.ArrayList<>();
-        for (var e : com.jrpetty.mcassistant.village.Chronicle.of(village)) lines.add(e.text());
+        // Soured past mending; a day's roll may bring the elders to a truce instead, so a few days of it.
+        for (int k = 9; k < 16 && lines.stream().noneMatch(x -> x.contains("fell into a feud")); k++) {
+            com.jrpetty.mcassistant.village.Ledger.relate(village, otherId, -200);
+            com.jrpetty.mcassistant.entity.Diplomacy.daily(level, v, other, day + k);
+            lines.clear();
+            for (var e : com.jrpetty.mcassistant.village.Chronicle.of(village)) lines.add(e.text());
+        }
         com.jrpetty.mcassistant.entity.Contentment.resetForTests();
         var mood = com.jrpetty.mcassistant.entity.Contentment.of(level, village);
         Kit.log("t36 a feud: " + lines.get(lines.size() - 1) + "; contentment " + mood.bad());
@@ -5103,6 +5107,7 @@ public class VillageGameTests {
         helper.assertTrue(v != null && stood >= 6, "a village of eight: " + stood);
         java.util.UUID id = v.id();
         long[] day = new long[1];
+        String[] winner = { "" };
         helper.runAtTickTime(40, () -> {
             day[0] = level.getDayTime() / 24000L;
             java.util.List<VillageFolkEntity> folk = new java.util.ArrayList<>();
@@ -5144,6 +5149,7 @@ public class VillageGameTests {
                 + ", " + r.voted() + " of " + r.voters() + " voted; elder now " + Villages.elderName(id)
                 + "; mandate " + com.jrpetty.mcassistant.entity.Elections.mandate(id) + "; " + com.jrpetty.mcassistant.entity.Elections.line(id, day[0]));
             helper.assertTrue(r.winner() != null && r.winner().id().equals(elder), "the winner leads");
+            winner[0] = r.winner().name();
             helper.assertTrue(r.voted() == r.voters(), "every grown folk's vote is counted: " + r.voted() + " of " + r.voters());
             helper.assertTrue(com.jrpetty.mcassistant.entity.Elections.mandate(id) == r.winner().platform(), "with what it stood for as its mandate");
             // The leader dies: an election two days on.
@@ -5152,7 +5158,8 @@ public class VillageGameTests {
         helper.runAtTickTime(920, () -> {
             String line = com.jrpetty.mcassistant.entity.Elections.line(id, day[0]);
             Kit.log("t76 after the leader's death: " + line);
-            helper.assertTrue(line.contains("next on day " + (day[0] + 2)), "an election is called two days on: " + line);
+            helper.assertTrue(line.contains("on day " + (day[0] + 2)), "an election is called two days on: " + line);
+            helper.assertTrue(!line.contains(winner[0] + " leads"), "and the dead leader leads no more: " + line);
             helper.succeed();
         });
     }
@@ -5209,6 +5216,10 @@ public class VillageGameTests {
         }
         a.earn(30);
         b.earn(30);
+        // The stores: a chest at the heart (a house's own chest is never the stores').
+        BlockPos stores = Kit.surface(level, heart.getX() + 4, heart.getZ() - 4);
+        level.setBlock(stores, Blocks.CHEST.defaultBlockState(), 3);
+        Villages.forgetStores(id);
         com.jrpetty.mcassistant.entity.Homes.storeForTests(level, v, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.WHITE_BED, 3));
         com.jrpetty.mcassistant.entity.Homes.tickForTests(level, v);
         java.util.List<java.util.UUID> in = com.jrpetty.mcassistant.entity.Homes.membersForTests(id, one);
@@ -5282,6 +5293,94 @@ public class VillageGameTests {
         boolean generous = com.jrpetty.mcassistant.entity.Homes.generous(id);
         helper.assertTrue("RENTED".equals(pt) || generous && "GIVEN".equals(pt), "one without rents it from the village: " + pt + (generous ? " (a generous leader)" : ""));
         com.jrpetty.mcassistant.entity.Homes.saleForTests(null);
+        helper.succeed();
+    }
+
+    /**
+     * The leader's hall: the best and biggest building in the town, on the great lot behind the
+     * board, kept for it; the courtyard before the board; and whoever leads the village lives in
+     * the hall with its family, until another is elected and the household changes over.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "t78_leaders_hall")
+    public static void t78_leaders_hall(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(24000L * 4 + 2000);
+        Kit.hold(level, 84000, 12000, 64);
+        Kit.prepare(level, 84000, 12000, 64);
+        BlockPos heart = Kit.surface(level, 84000, 12000);
+        // The biggest and the tallest of everything a village builds.
+        java.util.List<String> all = new java.util.ArrayList<>(com.jrpetty.mcassistant.Showcase.ORDER);
+        int hallCells = com.jrpetty.mcassistant.entity.goal.Blueprints.cells("townhall").size(), hallTop = 0;
+        for (var c : com.jrpetty.mcassistant.entity.goal.Blueprints.cells("townhall")) hallTop = Math.max(hallTop, c.h());
+        StringBuilder sizes = new StringBuilder();
+        for (String name : all) {
+            int n = com.jrpetty.mcassistant.entity.goal.Blueprints.cells(name).size(), top = 0;
+            for (var c : com.jrpetty.mcassistant.entity.goal.Blueprints.cells(name)) top = Math.max(top, c.h());
+            sizes.append(name).append(' ').append(n).append('/').append(top).append("; ");
+            helper.assertTrue(n < hallCells, "the leader's hall is bigger than the " + name + ": " + hallCells + " against " + n);
+            helper.assertTrue(top < hallTop, "and taller: " + hallTop + " against " + top + " for the " + name);
+        }
+        Kit.log("t78 the leader's hall: " + hallCells + " blocks, " + hallTop + " high; the rest: " + sizes);
+        int stood = VillageFolkSpawnerBlock.raiseParty(level, heart, 0.0F, 6);
+        Villages.Village v = Villages.nearest(level, heart, Villages.VILLAGE_RANGE);
+        helper.assertTrue(v != null && stood >= 4, "a village");
+        java.util.UUID id = v.id();
+        BlockPos board = com.jrpetty.mcassistant.entity.VillageBoards.boardOf(id);
+        Direction facing = com.jrpetty.mcassistant.entity.VillageBoards.facingOf(id);
+        helper.assertTrue(board != null && facing != null, "the village has its board");
+        BlockPos mid = board.relative(com.jrpetty.mcassistant.block.VillageBoardBlock.right(facing), com.jrpetty.mcassistant.block.VillageBoardBlock.WIDE / 2);
+        // Its lot: the great lot behind the board, offered it first and nobody else.
+        int[] seat = Villages.seatLotForTests(id);
+        helper.assertTrue(seat != null, "a lot kept for the leader's hall");
+        int sx = v.centre().getX() + seat[0], sz = v.centre().getZ() + seat[1];
+        double fromBoard = Math.sqrt(Math.pow(sx - mid.getX(), 2) + Math.pow(sz - mid.getZ(), 2));
+        Villages.Site hall = Villages.siteFor(level, id, "hall");
+        Villages.Site site = Villages.siteFor(level, id, "townhall");
+        Kit.log("t78 the board at " + mid + " facing " + facing + "; the hall's lot at " + sx + "," + sz + " (" + Math.round(fromBoard)
+            + " from the board); the leader's hall sited at " + (site == null ? "nowhere" : site.anchor() + " facing " + site.facing())
+            + "; the meeting hall at " + (hall == null ? "nowhere" : hall.anchor()));
+        helper.assertTrue(fromBoard <= 16, "the lot is just behind the board: " + Math.round(fromBoard));
+        helper.assertTrue(site != null && site.anchor().getX() == sx && site.anchor().getZ() == sz, "the leader's hall goes on it");
+        helper.assertTrue(hall == null || hall.anchor().getX() != sx || hall.anchor().getZ() != sz, "and the meeting hall does not");
+        // The courtyard: before the board, clear of it.
+        int[] court = Villages.courtRectForTests(id);
+        Villages.Site cs = Villages.siteFor(level, id, "court");
+        helper.assertTrue(court != null && cs != null, "a courtyard before the board");
+        BlockPos front = mid.relative(facing, 4);
+        helper.assertTrue(front.getX() >= court[0] && front.getX() <= court[1] && front.getZ() >= court[2] && front.getZ() <= court[3],
+            "the courtyard lies in front of the board: " + java.util.Arrays.toString(court));
+        helper.assertTrue(!(mid.getX() >= court[0] && mid.getX() <= court[1] && mid.getZ() >= court[2] && mid.getZ() <= court[3]),
+            "and not on it");
+        int laid = BuildGoal.stamp(level, "court", cs.anchor(), cs.facing(), 13,
+            com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+        helper.assertTrue(laid > 40, "the courtyard is laid: " + laid);
+        // Built: the leader moves in.
+        int put = BuildGoal.stamp(level, "townhall", site.anchor(), site.facing(), 13,
+            com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+        com.jrpetty.mcassistant.village.Ledger.built(id, "townhall", site.anchor(), site.facing());
+        helper.assertTrue(put > 1000, "the leader's hall stands: " + put + " blocks");
+        java.util.List<VillageFolkEntity> folk = new java.util.ArrayList<>();
+        for (AssistantEntity a : Villages.folkOf(id)) if (a instanceof VillageFolkEntity f && !f.isBaby()) folk.add(f);
+        VillageFolkEntity first = folk.get(0), second = folk.get(1);
+        long day = level.getDayTime() / 24000L;
+        Villages.electElder(id, first, day);
+        com.jrpetty.mcassistant.entity.Homes.tickForTests(level, v);
+        BlockPos home = com.jrpetty.mcassistant.entity.Homes.homeOf(first);
+        BlockPos bed = com.jrpetty.mcassistant.entity.Homes.bedFor(level, first);
+        java.util.List<BlockPos> beds = com.jrpetty.mcassistant.entity.Homes.bedsForTests(level, id, site.anchor());
+        Kit.log("t78 " + first.displayNameCap() + " leads: lives at " + home + ", sleeps at " + bed + "; the hall's beds " + beds
+            + " | " + com.jrpetty.mcassistant.entity.Homes.talk(first));
+        helper.assertTrue(site.anchor().equals(home), "the leader lives in the leader's hall");
+        helper.assertTrue(bed != null && beds.contains(bed), "and sleeps in its own bed there");
+        helper.assertTrue(beds.size() >= 4, "a bed for two and the children's: " + beds.size());
+        // Another is elected: the households change over.
+        Villages.electElder(id, second, day + 10);
+        com.jrpetty.mcassistant.entity.Homes.tickForTests(level, v);
+        Kit.log("t78 " + second.displayNameCap() + " elected: lives at " + com.jrpetty.mcassistant.entity.Homes.homeOf(second)
+            + "; " + first.displayNameCap() + " now at " + com.jrpetty.mcassistant.entity.Homes.homeOf(first));
+        helper.assertTrue(site.anchor().equals(com.jrpetty.mcassistant.entity.Homes.homeOf(second)), "the new leader moves in");
+        helper.assertTrue(!site.anchor().equals(com.jrpetty.mcassistant.entity.Homes.homeOf(first)), "and the old one moves out");
         helper.succeed();
     }
 }

@@ -50,7 +50,9 @@ public class BuildGoal extends Goal {
         // the Village Storehouse laid into a storehouse shed built before there were units
         "storehouse",
         // what the later ages add: a fountain on the square, a manor house, a bell tower
-        "fountain", "manor", "belltower");
+        "fountain", "manor", "belltower",
+        // the leader's hall, the best and biggest in the town, and the courtyard before the board
+        "townhall", "court");
 
     /** Half the width of a structure's footprint: the meeting hall, the market, the
      *  barracks, the chapel's length and the gateway's step are seven across, the rest

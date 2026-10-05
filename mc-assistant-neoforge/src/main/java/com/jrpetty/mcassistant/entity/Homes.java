@@ -112,7 +112,12 @@ public final class Homes {
 
     /** What the village builds for living in. */
     public static boolean isHome(String structure) {
-        return structure.equals("house") || structure.equals("manor");
+        return structure.equals("house") || structure.equals("manor") || structure.equals("townhall");
+    }
+
+    /** The leader's hall: the home that goes with leading the village, never given, sold or let. */
+    static boolean seat(Home h) {
+        return h.structure.equals("townhall");
     }
 
     // ------------------------------------------------------------------ the books
@@ -208,10 +213,13 @@ public final class Homes {
         return null;
     }
 
-    /** Is this spot inside one of the village's homes (its chest is the household's, not the stores')? */
+    /**
+     * Is this spot inside one of the village's homes? Its chest is the household's, not the stores',
+     * empty or not: an empty house's chest taken for the stores was lost to them the day a family
+     * moved in, and whatever the village had put in it with it.
+     */
     public static boolean inAHome(UUID village, BlockPos p) {
-        Home h = homeAt(village, p);
-        return h != null && (!h.members.isEmpty() || h.tenure == Tenure.PLAYER);
+        return homeAt(village, p) != null;
     }
 
     /** The plan of the house as it stands: grown houses have their second storey. */
@@ -356,6 +364,8 @@ public final class Homes {
             Home parents = parentsHome(id, f, folk);
             if (parents != null) moveIn(level, v, parents, List.of(f), day, false);
         }
+        // The leader's household in the leader's hall.
+        leaderMovesIn(level, v, folk, day);
         // Those with nowhere of their own: couples and families first, then those who have waited longest.
         List<List<VillageFolkEntity>> waiting = waiting(id, folk, day);
         for (List<VillageFolkEntity> household : waiting) {
@@ -369,6 +379,59 @@ public final class Homes {
         for (Home h : homes.values()) childBeds(level, v, h, day);
         // Keepsakes into the household's chest, for those at home.
         morning(level, v, day);
+    }
+
+    /**
+     * Whoever leads the village lives in the leader's hall, with its partner and their children: the
+     * household before it moves out (back on the list for a house of its own), and the new one moves
+     * in, its old house going back to the village (bought back at half what they paid, if it was theirs).
+     */
+    static void leaderMovesIn(ServerLevel level, Villages.Village v, List<VillageFolkEntity> folk, long day) {
+        UUID id = v.id();
+        Home hall = null;
+        for (Home h : homes(id).values()) if (seat(h)) { hall = h; break; }
+        if (hall == null || Ledger.raising(id, hall.anchor) || !level.isLoaded(hall.anchor)) return;
+        UUID leader = Villages.elder(id);
+        VillageFolkEntity f = leader == null ? null : loaded(id, leader);
+        if (f == null || f.isBaby() || f.isHired() || hall.members.contains(leader)) return;
+        if (!hall.members.isEmpty()) {
+            List<UUID> out = new ArrayList<>(hall.members);
+            hall.members.clear();
+            save(id, hall);
+            List<String> names = new ArrayList<>();
+            for (UUID m : out) {
+                VillageFolkEntity o = loaded(id, m);
+                if (o == null) continue;
+                o.forgetBed();
+                if (!o.isBaby()) names.add(o.displayNameCap());
+            }
+            if (!names.isEmpty()) Villages.tell(id, day, String.join(" and ", names) + " moved out of the leader's hall");
+        }
+        List<VillageFolkEntity> household = new ArrayList<>();
+        household.add(f);
+        VillageFolkEntity p = partner(f, folk);
+        if (p != null) household.add(p);
+        for (VillageFolkEntity c : folk) {
+            if (c.isBaby() && (childOf(c, f) || p != null && childOf(c, p))) household.add(c);
+        }
+        Home old = homeOf(id, leader);
+        hall.tenure = Tenure.GIVEN;
+        hall.price = 0;
+        hall.rent = 0;
+        hall.since = day;
+        moveIn(level, v, hall, household, day, true);
+        if (old != null && old != hall && old.members.isEmpty() && old.tenure != Tenure.PLAYER) {
+            if (old.tenure == Tenure.OWNED && old.price > 0) f.earn(Ledger.takeCoins(id, old.price / 2));
+            old.tenure = Tenure.GIVEN;
+            old.price = 0;
+            old.rent = 0;
+            old.owed = 0;
+            save(id, old);
+        }
+        Villages.tell(id, day, names(household) + " moved into the leader's hall");
+        f.persona().remember(day, "we moved into the leader's hall", 7);
+        FolkTalk.speak(f, FolkTalk.pick(level.getRandom(), "The leader's hall! I'll try to deserve it.",
+            "A roof the whole village built. We'll keep it well.", "Our new home — and the village's business under it."));
     }
 
     @Nullable
@@ -454,7 +517,7 @@ public final class Homes {
         Home best = null;
         int bestBeds = Integer.MAX_VALUE;
         for (Home h : homes(village).values()) {
-            if (!h.vacant() || Ledger.raising(village, h.anchor)) continue;
+            if (!h.vacant() || seat(h) || Ledger.raising(village, h.anchor)) continue;
             int beds = bedsIn(level, village, h).size();
             if (beds < Math.max(1, adults)) continue;
             // A manor is kept for a household that buys it.
@@ -579,7 +642,9 @@ public final class Homes {
         if (ha == null) { keep = hb; leave = null; }
         else if (hb == null) { keep = ha; leave = null; }
         else {
-            int sa = (ha.tenure == Tenure.OWNED ? 100 : 0) + bedsIn(level, id, ha).size(), sb = (hb.tenure == Tenure.OWNED ? 100 : 0) + bedsIn(level, id, hb).size();
+            // The leader's hall over anything: it goes with the office.
+            int sa = (seat(ha) ? 1000 : 0) + (ha.tenure == Tenure.OWNED ? 100 : 0) + bedsIn(level, id, ha).size();
+            int sb = (seat(hb) ? 1000 : 0) + (hb.tenure == Tenure.OWNED ? 100 : 0) + bedsIn(level, id, hb).size();
             keep = sa >= sb ? ha : hb;
             leave = keep == ha ? hb : ha;
         }
@@ -899,7 +964,7 @@ public final class Homes {
         for (AssistantEntity a : Villages.folkOf(village)) if (a instanceof VillageFolkEntity f && !f.isShowcase()) folk.add(f);
         List<List<VillageFolkEntity>> waiting = waiting(village, folk, level.getDayTime() / 24000L);
         if (waiting.isEmpty()) return false;
-        for (Home h : homes(village).values()) if (h.vacant() && !h.structure.equals("manor")) return false;
+        for (Home h : homes(village).values()) if (h.vacant() && !h.structure.equals("manor") && !seat(h)) return false;
         return true;
     }
 
@@ -910,7 +975,7 @@ public final class Homes {
         Home probe = new Home(BlockPos.ZERO, "manor");
         int price = price(village, probe);
         for (Home h : homes(village).values()) {
-            if (h.tenure != Tenure.OWNED || h.structure.equals("manor")) continue;
+            if (h.tenure != Tenure.OWNED || h.structure.equals("manor") || seat(h)) continue;
             int purse = 0;
             for (UUID m : h.members) {
                 VillageFolkEntity f = loaded(village, m);
@@ -934,6 +999,7 @@ public final class Homes {
         int given = 0, owned = 0, rented = 0, let = 0, empty = 0;
         StringBuilder sale = new StringBuilder();
         for (Home h : homes(village).values()) {
+            if (seat(h)) continue;
             if (h.members.isEmpty()) {
                 if (h.tenure == Tenure.PLAYER && !h.toLet) { let++; continue; }
                 empty++;
@@ -974,7 +1040,7 @@ public final class Homes {
         }
         String with = others.isEmpty() && kids == 0 ? "" : " with " + String.join(" and ", others)
             + (kids == 0 ? "" : (others.isEmpty() ? "" : " and ") + (kids == 1 ? "our child" : "the children"));
-        String terms = switch (h.tenure) {
+        String terms = seat(h) ? "it goes with leading the village" : switch (h.tenure) {
             case GIVEN -> "the village gave it us";
             case OWNED -> "it's ours: we paid " + h.price + coins(h.price) + " for it";
             case RENTED -> "we rent it from the village at " + h.rent + coins(h.rent) + " a day";
@@ -1018,11 +1084,11 @@ public final class Homes {
         UUID id = v.id();
         enrol(id);
         Home h = homeAt(id, p.blockPosition());
-        if (h == null || !h.members.isEmpty() || h.tenure == Tenure.PLAYER) {
+        if (h == null || !h.members.isEmpty() || h.tenure == Tenure.PLAYER || seat(h)) {
             h = null;
             double best = Double.MAX_VALUE;
             for (Home o : homes(id).values()) {
-                if (!o.members.isEmpty() || o.tenure == Tenure.PLAYER) continue;
+                if (!o.members.isEmpty() || o.tenure == Tenure.PLAYER || seat(o)) continue;
                 double d = o.anchor.distSqr(p.blockPosition());
                 if (d < best && d < 24 * 24) { best = d; h = o; }
             }
@@ -1097,7 +1163,8 @@ public final class Homes {
         enrol(id);
         out.add(Villages.name(id) + ": " + line(level, id));
         for (Home h : homes(id).values()) {
-            StringBuilder sb = new StringBuilder(address(id, v, h)).append(" (").append(h.structure.equals("manor") ? "manor" : Ledger.grown(id, h.anchor) ? "two-storey house" : "house")
+            StringBuilder sb = new StringBuilder(address(id, v, h)).append(" (").append(seat(h) ? "the leader's hall" : h.structure.equals("manor") ? "manor"
+                : Ledger.grown(id, h.anchor) ? "two-storey house" : "house")
                 .append(", ").append(bedsIn(level, id, h).size()).append(" beds): ");
             if (h.members.isEmpty()) {
                 sb.append(h.tenure == Tenure.PLAYER ? h.landlordName + "'s" + (h.toLet ? ", to let at " + h.rent + coins(h.rent) + " a day" : "")

@@ -184,6 +184,12 @@ public final class Villages {
         return e == null ? null : e.id();
     }
 
+    /** The leader is dead: nobody leads until the village looks for someone to stand in (chooseElder). */
+    public static void elderGone(UUID villageId, UUID who) {
+        Elder e = ELDERS.get(villageId);
+        if (e != null && e.id().equals(who)) ELDERS.remove(villageId);
+    }
+
     public static String elderName(UUID villageId) {
         Elder e = ELDERS.get(villageId);
         return e == null ? "" : e.name();
@@ -306,6 +312,8 @@ public final class Villages {
             case "storehouse" -> "the Village Storehouse";
             case "house" -> "a new house";
             case "hall" -> "the meeting hall";
+            case "townhall" -> "the leader's hall";
+            case "court" -> "the courtyard before the board";
             case "pen" -> "the animal pen";
             case "guesthouse" -> "a house for the village's honoured guest";
             case "fountain" -> "the fountain on the square";
@@ -1437,6 +1445,10 @@ public final class Villages {
         if (folk >= 12 && built(villageId, "tavern") < 1) extras.add("tavern");
         // A Stone Age village's square gets a fountain.
         if (folk >= 10 && built(villageId, "fountain") < 1) extras.add("fountain");
+        // The courtyard before the board, where the village gathers; and, once the town is big enough
+        // to want governing, a hall for whoever leads it, on the great lot behind the board.
+        if (VillageBoards.boardOf(villageId) != null && built(villageId, "hall") > 0 && built(villageId, "court") < 1) extras.add("court");
+        if (folk >= 16 && built(villageId, "hall") > 0 && built(villageId, "townhall") < 1) extras.add("townhall");
         // Somewhere to lay the dead, once there are any; another when it is full.
         if (com.jrpetty.mcassistant.village.Ledger.graves(villageId).size() > Graves.room(villageId)) extras.add(0, "graveyard");
         if (at == Age.STONE) { homesAndAmenities(villageId, folk, out, extras); return out; }
@@ -1762,6 +1774,8 @@ public final class Villages {
             case "fortify" -> "a wall round the village, against the things that come out at night";
             case "smeltery" -> "a smeltery, three furnaces for the ore the mines bring up";
             case "hall" -> "a meeting hall, which a village must have before the Iron Age";
+            case "townhall" -> "a hall for whoever leads us: the best and biggest building in the town, where the leader lives and the council sits";
+            case "court" -> "a paved courtyard before the board, where the village gathers: the morning assembly, weddings, elections";
             case "workshop" -> "a workshop, where iron becomes tools";
             case "watchtower" -> "a watchtower, to see trouble coming";
             case "lighthouse" -> "a lighthouse, so anyone out after dark can find the way home";
@@ -2326,6 +2340,9 @@ public final class Villages {
                 if (y != Integer.MIN_VALUE) ground = new BlockPos(v.centre().getX(), y, v.centre().getZ());
             }
             if (ground != null) site = new Site(ground, net.minecraft.core.Direction.NORTH, WALL_RADIUS);
+        } else if (project.equals("court")) {
+            // The courtyard lies before the board, its back along the board's foot: no lot of its own.
+            site = courtSite(level, villageId);
         } else {
             java.util.Set<Long> bad = BAD_LOTS.computeIfAbsent(villageId, k -> ConcurrentHashMap.newKeySet());
             java.util.Set<Long> taken = LOT_TAKEN.computeIfAbsent(villageId, k -> ConcurrentHashMap.newKeySet());
@@ -2342,12 +2359,23 @@ public final class Villages {
             int free = 0;
             int index = 0;
             boolean waiting = false;
-            for (com.jrpetty.mcassistant.village.TownPlan.Lot lot : com.jrpetty.mcassistant.village.TownPlan.candidates(project)) {
+            // The great lot behind the board is the leader's hall's: kept for it, and offered it first.
+            com.jrpetty.mcassistant.village.TownPlan.Lot seat = built(villageId, "townhall") < 1 ? seatLot(villageId) : null;
+            List<com.jrpetty.mcassistant.village.TownPlan.Lot> places = new ArrayList<>(com.jrpetty.mcassistant.village.TownPlan.candidates(project));
+            if (seat != null) {
+                places.remove(seat);
+                if (project.equals("townhall")) places.add(0, seat);
+            }
+            int[] court = courtRect(villageId);
+            for (com.jrpetty.mcassistant.village.TownPlan.Lot lot : places) {
                 if (valid >= 6) break;
                 index++;
                 boolean spoken = false;
                 for (long cell : lot.cells()) if (taken.contains(cell)) { spoken = true; break; }
                 if (spoken) continue;
+                // Nothing on the square where the courtyard goes.
+                if (court != null && lot.kind() == com.jrpetty.mcassistant.village.TownPlan.Kind.SQUARE
+                        && overlaps(court, v.centre().getX() + lot.x(), v.centre().getZ() + lot.z(), lot.halfAcross(), lot.halfDeep())) continue;
                 // The farmland and the pastures are kept off: the town grows round them.
                 if (lotKeptOff(villageId, v.centre(), lot)) continue;
                 int x = v.centre().getX() + lot.x();
@@ -2387,6 +2415,73 @@ public final class Villages {
         }
         if (site != null) pending.put(project, site);
         return site;
+    }
+
+    /**
+     * The great lot behind the board (the nearest to it of the long lots by the square): the leader's
+     * hall's, so that it stands at the back of the courtyard where the village gathers. Null if the
+     * village has no board.
+     */
+    @Nullable
+    static com.jrpetty.mcassistant.village.TownPlan.Lot seatLot(UUID villageId) {
+        Village v = get(villageId);
+        BlockPos board = VillageBoards.boardOf(villageId);
+        net.minecraft.core.Direction f = VillageBoards.facingOf(villageId);
+        if (v == null || board == null || f == null) return null;
+        BlockPos mid = board.relative(com.jrpetty.mcassistant.block.VillageBoardBlock.right(f), com.jrpetty.mcassistant.block.VillageBoardBlock.WIDE / 2);
+        int bx = mid.getX() - v.centre().getX(), bz = mid.getZ() - v.centre().getZ();
+        com.jrpetty.mcassistant.village.TownPlan.Lot best = null;
+        long bestD = Long.MAX_VALUE;
+        for (com.jrpetty.mcassistant.village.TownPlan.Lot l : com.jrpetty.mcassistant.village.TownPlan.lots()) {
+            if (!l.use().equals("great")) continue;
+            long d = (long) (l.x() - bx) * (l.x() - bx) + (long) (l.z() - bz) * (l.z() - bz);
+            if (d < bestD) { bestD = d; best = l; }
+        }
+        return best;
+    }
+
+    /** Where the courtyard goes: before the board, its back along the board's foot, its middle four blocks out. */
+    @Nullable
+    static Site courtSite(net.minecraft.server.level.ServerLevel level, UUID villageId) {
+        BlockPos board = VillageBoards.boardOf(villageId);
+        net.minecraft.core.Direction f = VillageBoards.facingOf(villageId);
+        if (board == null || f == null) return null;
+        BlockPos c = board.relative(com.jrpetty.mcassistant.block.VillageBoardBlock.right(f), com.jrpetty.mcassistant.block.VillageBoardBlock.WIDE / 2)
+            .relative(f, 4);
+        if (!level.hasChunk(c.getX() >> 4, c.getZ() >> 4)) return null;
+        int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, c.getX(), c.getZ());
+        return new Site(new BlockPos(c.getX(), Math.min(y, board.getY()), c.getZ()), f.getOpposite(), 0);
+    }
+
+    /** The courtyard's ground, as {minX, maxX, minZ, maxZ}, or null if there is no board. */
+    @Nullable
+    static int[] courtRect(UUID villageId) {
+        BlockPos board = VillageBoards.boardOf(villageId);
+        net.minecraft.core.Direction f = VillageBoards.facingOf(villageId);
+        if (board == null || f == null) return null;
+        BlockPos c = board.relative(com.jrpetty.mcassistant.block.VillageBoardBlock.right(f), com.jrpetty.mcassistant.block.VillageBoardBlock.WIDE / 2)
+            .relative(f, 4);
+        int across = 5, deep = 3;
+        boolean alongX = f.getAxis() == net.minecraft.core.Direction.Axis.X;
+        int hx = alongX ? deep : across, hz = alongX ? across : deep;
+        return new int[]{ c.getX() - hx, c.getX() + hx, c.getZ() - hz, c.getZ() + hz };
+    }
+
+    /** Tests: the centre of the lot kept for the leader's hall, as an offset from the heart, or null. */
+    @Nullable
+    public static int[] seatLotForTests(UUID villageId) {
+        com.jrpetty.mcassistant.village.TownPlan.Lot l = seatLot(villageId);
+        return l == null ? null : new int[]{ l.x(), l.z() };
+    }
+
+    /** Tests: the courtyard's ground {minX, maxX, minZ, maxZ}, or null. */
+    @Nullable
+    public static int[] courtRectForTests(UUID villageId) {
+        return courtRect(villageId);
+    }
+
+    private static boolean overlaps(int[] r, int x, int z, int hx, int hz) {
+        return x + hx >= r[0] && x - hx <= r[1] && z + hz >= r[2] && z - hz <= r[3];
     }
 
     /** The builders could not get to this lot: give it up, never pick it again,

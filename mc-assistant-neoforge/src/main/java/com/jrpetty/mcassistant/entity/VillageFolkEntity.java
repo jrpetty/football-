@@ -1315,6 +1315,7 @@ public class VillageFolkEntity extends AssistantEntity {
             // The leader gone: an election to choose another (Elections).
             if (getUUID().equals(Villages.elder(village)) && level() instanceof net.minecraft.server.level.ServerLevel lost) {
                 Elections.vacancy(lost, village, displayNameCap(), day);
+                Villages.elderGone(village, getUUID());
             }
             for (AssistantEntity a : Villages.folkOf(village)) {
                 if (!(a instanceof VillageFolkEntity f) || f == this) continue;

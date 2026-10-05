@@ -51,6 +51,10 @@ public final class Asks {
         BUILDINGS.put("wall", "fortify");
         BUILDINGS.put("smeltery", "smeltery");
         BUILDINGS.put("meeting hall", "hall");
+        BUILDINGS.put("town hall", "townhall");
+        BUILDINGS.put("leader's hall", "townhall");
+        BUILDINGS.put("elder's hall", "townhall");
+        BUILDINGS.put("courtyard", "court");
         BUILDINGS.put("hall", "hall");
         BUILDINGS.put("workshop", "workshop");
         BUILDINGS.put("watchtower", "watchtower");

@@ -624,7 +624,7 @@ public final class Raids {
         double bd = Double.MAX_VALUE;
         for (com.jrpetty.mcassistant.village.Ledger.Building b : com.jrpetty.mcassistant.village.Ledger.buildings(id)) {
             switch (b.structure()) {
-                case "house", "house2", "hall", "tavern", "storage", "barracks", "granary", "chapel", "cafe", "shop" -> { }
+                case "house", "house2", "hall", "townhall", "tavern", "storage", "barracks", "granary", "chapel", "cafe", "shop" -> { }
                 default -> { continue; }
             }
             double d = b.anchor().distSqr(f.blockPosition());

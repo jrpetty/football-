@@ -821,6 +821,7 @@ public final class TownLife {
         return switch (structure) {
             case "storage" -> "The Storehouse";
             case "hall" -> "The Meeting Hall";
+            case "townhall" -> "The Leader's Hall";
             case "guesthouse" -> "The Guest House";
             case "watchtower" -> "The Watchtower";
             case "lighthouse" -> "The Lighthouse";

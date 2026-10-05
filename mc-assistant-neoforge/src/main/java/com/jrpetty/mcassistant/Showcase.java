@@ -242,6 +242,67 @@ public final class Showcase {
         STAGED.clear();
         VIEWS.clear();
         java.util.Set<Long> taken = new java.util.HashSet<>();
+        // The board on the west wall, facing the square; the courtyard before it; and behind it, on the
+        // great lot, the leader's hall.
+        Direction boardFacing = Direction.EAST;
+        Direction along = com.jrpetty.mcassistant.block.VillageBoardBlock.right(boardFacing);
+        BlockPos boardAt = heart.offset(-TownPlan.PLAZA, 0, 0).relative(along, -12);
+        for (int c = 0; c < com.jrpetty.mcassistant.block.VillageBoardBlock.WIDE; c++) {
+            for (int r = 0; r < com.jrpetty.mcassistant.block.VillageBoardBlock.HIGH; r++) {
+                level.setBlock(com.jrpetty.mcassistant.block.VillageBoardBlock.cell(boardAt, boardFacing, c, r), Blocks.AIR.defaultBlockState(), 2 | 16);
+            }
+        }
+        com.jrpetty.mcassistant.block.VillageBoardBlock.raise(level, boardAt, boardFacing, null);
+        BlockPos boardMid = boardAt.relative(along, com.jrpetty.mcassistant.block.VillageBoardBlock.WIDE / 2);
+        BlockPos courtAt = boardMid.relative(boardFacing, 4);
+        BuildGoal.stamp(level, "court", courtAt, boardFacing.getOpposite(), 13, painter(OAK));
+        n++;
+        TownPlan.Lot seat = null;
+        for (TownPlan.Lot l : TownPlan.lots()) {
+            if (!l.use().equals("great")) continue;
+            int dx = l.x() - (boardMid.getX() - heart.getX()), dz = l.z() - (boardMid.getZ() - heart.getZ());
+            if (seat == null || dx * dx + dz * dz < (seat.x() - (boardMid.getX() - heart.getX())) * (seat.x() - (boardMid.getX() - heart.getX()))
+                + (seat.z() - (boardMid.getZ() - heart.getZ())) * (seat.z() - (boardMid.getZ() - heart.getZ()))) seat = l;
+        }
+        BlockPos hallAt = null;
+        if (seat != null) {
+            for (long c : seat.cells()) taken.add(c);
+            Direction back = com.jrpetty.mcassistant.entity.Villages.direction(seat.back());
+            hallAt = heart.offset(seat.x(), 0, seat.z());
+            BuildGoal.stamp(level, "townhall", hallAt, back, 13, painter(PALETTES[1 % PALETTES.length]));
+            STAGED.add(new Ledger.Building("townhall", hallAt, back));
+            n++;
+            Direction front = back.getOpposite(), right = back.getClockWise();
+            // The square: the board, the courtyard and the hall's tower over the wall behind them.
+            view("t30-leaders-hall", courtAt.relative(boardFacing, 14).relative(along, -6).above(7), hallAt.above(10));
+            // From the street round the square: the hall's front and its tower.
+            view("t31-leaders-hall-front", hallAt.relative(front, 13).relative(right, 12).above(4), hallAt.relative(front, 6).above(9));
+            // Inside: down the aisle between the benches to the leader's seat under the great window.
+            view("t32-great-hall", hallAt.relative(front, 8).above(2), hallAt.relative(back, 8).above(1));
+            // Upstairs: the council chamber's long table.
+            view("t33-council-chamber", hallAt.relative(front, 4).relative(right, 3).above(7), hallAt.relative(back, 0).above(6));
+            // A gathering in the courtyard: the leader at the board, the village before it.
+            String[] who = { "Leader", "Farmer", "Miner", "Smith", "Cook", "Woodcutter", "Guard" };
+            com.jrpetty.mcassistant.entity.AssistantEntity.StationTask[] trades = {
+                com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.FARM, com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.FARM,
+                com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.MINE, com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.SMITH,
+                com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.COOK, com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.WOOD,
+                com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.GUARD };
+            for (int i = 0; i < who.length; i++) {
+                com.jrpetty.mcassistant.entity.VillageFolkEntity f = com.jrpetty.mcassistant.McAssistantMod.VILLAGE_FOLK.get().create(level);
+                if (f == null) continue;
+                BlockPos p = i == 0 ? boardMid.relative(boardFacing, 1)
+                    : boardMid.relative(boardFacing, 4 + (i % 2)).relative(along, -3 + i);
+                float yaw = (i == 0 ? boardFacing : boardFacing.getOpposite()).toYRot();
+                f.moveTo(p.getX() + 0.5, p.getY(), p.getZ() + 0.5, yaw, 0.0F);
+                f.setYHeadRot(yaw);
+                f.setYBodyRot(yaw);
+                f.makeShowcase(trades[i]);
+                f.rename(who[i]);
+                f.addTag("folk_lineup");
+                level.addFreshEntity(f);
+            }
+        }
         List<String> wanted = new ArrayList<>(List.of("storage", "market", "cafe", "shop", "tavern", "workshop", "smeltery",
             "smithy", "brewery", "library", "hall", "chapel", "graveyard",
             "barracks", "watchtower", "watchtower", "watchtower", "watchtower", "granary", "guesthouse", "lighthouse",

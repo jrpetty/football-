@@ -1700,6 +1700,30 @@ word).
 `/village status` shows the election (who stands and the count so far, or the last result and the
 next day), and the board shows it too.
 
+### The leader's hall and the courtyard
+
+Once the village has a meeting hall and a board, its builders lay **the courtyard** before the
+board: paved in dressed stone with a cross of it through the middle, benches down both sides,
+flowers at either end of the board and a lamp post at each front corner, the middle kept clear for
+the crowd. It is where the village gathers: the morning assembly, the count at an election,
+celebrations, and weddings (the couple at the board, the village down the aisle between the
+benches).
+
+Once the town is sixteen strong it builds **the leader's hall**, the best and biggest building in
+it (1,557 blocks, 24 high), on the great lot behind the board, which is kept for it:
+* below, a great hall of dressed stone: tall windows between stone piers, benches either side of
+  a red runner up to a dais, the leader's seat under a great window with lamps either side, the
+  clerks' lecterns, and walls of books;
+* above, a timber storey: the leader's family's rooms at the back (a bed for two, the children's
+  beds at the other end of the room) and the council chamber at the front, with its long table;
+* over the door, a stone tower four storeys high with the leader's study in it and an open
+  lantern-room at the top, seen from the fields.
+
+Whoever leads the village lives there, with its partner and their children; its old house goes
+back to the village (bought back at half what they paid, if it was theirs). When another is
+elected the households change over, and the last leader's family goes on the list for a house of
+its own. The council sits in the hall's council chamber.
+
 ### Homes: households, houses for sale, and yours to buy
 
 Every folk belongs to a household: itself, its partner and their children. Each household has a

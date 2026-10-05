@@ -45,11 +45,11 @@ public final class Ages {
 
     /** No walls or roof of their own to make over: they keep the look they were built with. */
     static final Set<String> AS_BUILT = Set.of("well", "gateway", "monument", "graveyard", "fortify", "pen", "platform",
-        "wall", "column", "room", "fountain");
+        "wall", "column", "room", "fountain", "court");
 
     /** The village's great buildings: copper roofs in the Diamond Age. */
     static final Set<String> GREAT = Set.of("hall", "chapel", "library", "granary", "tavern", "guesthouse", "market",
-        "watchtower", "lighthouse", "barracks", "belltower", "manor");
+        "watchtower", "lighthouse", "barracks", "belltower", "manor", "townhall");
 
     /** The buildings that go up a storey in the Iron Age: the meeting hall becomes a town hall, the tavern
      *  an inn with rooms over the bar, the library and the shops a floor of their own above. */

@@ -729,7 +729,14 @@ public final class Assemblies {
                 BlockPos chapel = Villages.builtAt(id, "chapel");
                 Direction face = Direction.SOUTH;
                 BlockPos at = v.centre().relative(Direction.NORTH, 3);
-                if (chapel != null) {
+                // In the courtyard before the board, once it is laid: the couple at the board, the
+                // village down the aisle between the benches. Else at the chapel, else on the square.
+                BlockPos lectern = VillageBoards.lectern(id);
+                Direction boardFacing = VillageBoards.facingOf(id);
+                if (Villages.builtAt(id, "court") != null && lectern != null && boardFacing != null) {
+                    at = lectern;
+                    face = boardFacing;
+                } else if (chapel != null) {
                     for (com.jrpetty.mcassistant.village.Ledger.Building b : com.jrpetty.mcassistant.village.Ledger.buildings(id)) {
                         if (b.structure().equals("chapel")) { face = b.facing(); at = b.anchor().relative(face, 6); break; }
                     }
@@ -745,8 +752,11 @@ public final class Assemblies {
                 yield new Assembly(id, Kind.VIGIL, Gatherings.describe(tonight, id), day,
                     yard != null ? yard : v.centre(), Direction.SOUTH, yard != null ? Layout.ARC : Layout.RING);
             }
-            case CELEBRATION -> held(id, Kind.CELEBRATION, day) ? null
-                : new Assembly(id, Kind.CELEBRATION, Villages.ageOf(id).label, day, v.centre(), Direction.SOUTH, Layout.RING);
+            case CELEBRATION -> {
+                if (held(id, Kind.CELEBRATION, day)) yield null;
+                BlockPos court = Villages.builtAt(id, "court");
+                yield new Assembly(id, Kind.CELEBRATION, Villages.ageOf(id).label, day, court != null ? court : v.centre(), Direction.SOUTH, Layout.RING);
+            }
             case HONOUR -> {
                 if (held(id, Kind.HONOUR, day)) yield null;
                 BlockPos lectern = VillageBoards.lectern(id);
@@ -763,7 +773,9 @@ public final class Assemblies {
 
     private static Assembly council(ServerLevel level, Villages.Village v, long day) {
         UUID id = v.id();
-        BlockPos hall = Villages.builtAt(id, "hall");
+        // In the council chamber of the leader's hall, once there is one; else the meeting hall.
+        BlockPos seat = Villages.builtAt(id, "townhall");
+        BlockPos hall = seat != null ? seat : Villages.builtAt(id, "hall");
         BlockPos lectern = VillageBoards.lectern(id);
         Direction facing = VillageBoards.facingOf(id);
         BlockPos at = hall != null ? hall : lectern != null ? lectern : v.centre();

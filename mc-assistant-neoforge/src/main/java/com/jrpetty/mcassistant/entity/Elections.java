@@ -146,6 +146,7 @@ public final class Elections {
     /** A leader lost: someone speaks for the village, and an election follows in two days. */
     public static void vacancy(ServerLevel level, UUID village, String who, long day) {
         Ledger.note(village, "elder", "");
+        Ledger.note(village, "mandate", "");                       // what it was elected for goes with it
         Villages.Village v = Villages.get(village);
         Campaign c = campaign(village);
         if (v != null && (c == null || c.counted)) {
@@ -674,7 +675,10 @@ public final class Elections {
     public static String line(UUID village, long day) {
         Campaign c = campaign(village);
         Values.Value m = mandate(village);
-        String mandate = m == null ? "" : "; " + Villages.elderName(village) + " leads for " + m.cares;
+        String chosen = Ledger.note(village, "elder");
+        String mandate = m != null ? "; " + Villages.elderName(village) + " leads for " + m.cares
+            : (chosen == null || chosen.isEmpty()) && c != null && !c.counted && !Villages.elderName(village).isEmpty()
+                ? "; " + Villages.elderName(village) + " stands in until the count" : "";
         if (c != null && !c.counted && !c.candidates.isEmpty()) {
             StringBuilder sb = new StringBuilder(c.voteDay == day ? "voting today, " + c.ballots.size() + " of " + voters(village).size()
                 + " voted (" + c.atTheBoard.size() + " at the board)" : "on day " + c.voteDay);
