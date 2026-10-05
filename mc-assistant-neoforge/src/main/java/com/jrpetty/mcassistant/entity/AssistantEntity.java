@@ -2047,6 +2047,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         return perk30 == Perk.PORTER && veteranLevel() >= 30 ? 24 : 0;
     }
 
+    /** So many more a courier takes on each load of its round (a village folk's Strong Back: FolkSkills). */
+    protected int haulLoadBonus() { return 0; }
+
     public Trait trait() { return trait; }
 
     /** Settle this one's quirk. Derived from its id so it is stable across a
@@ -6471,7 +6474,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                     }
                     return true;
                 }
-                int loaded = loadFrom(from, can(Ability.HAUL_FULL_PACK) ? 512 : 256,
+                int loaded = loadFrom(from, (can(Ability.HAUL_FULL_PACK) ? 512 : 256) + haulLoadBonus(),
                     stack -> haulWeight(stack) > 0);
                 if (loaded == 0 && transferReady()) routeSpent();     // nothing left there: find the next
                 return loaded > 0;

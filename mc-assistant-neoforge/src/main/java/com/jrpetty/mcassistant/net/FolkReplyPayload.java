@@ -12,11 +12,20 @@ import net.minecraft.resources.ResourceLocation;
  * village thinks of you, what it has asked of you, whether it is walking with you; what it
  * is doing this minute, its card (one "Label|what" fact a line) and the places it can show
  * you the way to ("key=Label;..."). {@code open} asks the client to open the talk screen.
+ *
+ * <p>{@code skills} is its Skills page: the knack points it has earned, spent and has to
+ * spend, its trades' levels, the knacks it chose (with why and when) and the ones still open
+ * to it, one fact a line, made by FolkSkills.encode. It rides last, so every field before it
+ * is where it always was.
  */
 public record FolkReplyPayload(int entityId, boolean open, String name, String about, String said,
                                int mood, String moodWord, int affinity, String standing,
                                boolean following, String asked, String village, String errand,
-                               boolean canDeliver, String doing, String card, String places) implements CustomPacketPayload {
+                               boolean canDeliver, String doing, String card, String places,
+                               String skills) implements CustomPacketPayload {
+
+    /** The longest Skills page the codec carries, in characters (the folk's side clips to fit). */
+    public static final int MAX_SKILLS = 8192;
 
     public static final CustomPacketPayload.Type<FolkReplyPayload> TYPE =
         new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(McAssistantMod.MODID, "folk_reply"));
@@ -40,11 +49,12 @@ public record FolkReplyPayload(int entityId, boolean open, String name, String a
             buf.writeUtf(p.doing(), 256);
             buf.writeUtf(p.card(), 2048);
             buf.writeUtf(p.places(), 1024);
+            buf.writeUtf(p.skills() == null ? "" : p.skills(), MAX_SKILLS);
         },
         buf -> new FolkReplyPayload(buf.readVarInt(), buf.readBoolean(), buf.readUtf(64), buf.readUtf(256),
             buf.readUtf(2048), buf.readVarInt(), buf.readUtf(64), buf.readVarInt(), buf.readUtf(64),
             buf.readBoolean(), buf.readUtf(256), buf.readUtf(256), buf.readUtf(256), buf.readBoolean(),
-            buf.readUtf(256), buf.readUtf(2048), buf.readUtf(1024)));
+            buf.readUtf(256), buf.readUtf(2048), buf.readUtf(1024), buf.readUtf(MAX_SKILLS)));
 
     @Override
     public CustomPacketPayload.Type<? extends CustomPacketPayload> type() {

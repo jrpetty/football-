@@ -338,7 +338,10 @@ public class SmeltGoal extends Goal {
                     if (s.isEmpty() || !fuelType.test(s)) continue;
                     int mv = Math.min(4, s.getCount());
                     furnace.setItem(1, s.copyWithCount(mv));
-                    s.shrink(mv);
+                    // A smelter's Fire Tender (FolkSkills): the fire well kept, a piece of the load goes further.
+                    int saved = assistant instanceof com.jrpetty.mcassistant.entity.VillageFolkEntity folk
+                        ? com.jrpetty.mcassistant.entity.FolkSkills.fuelSaved(folk, mv) : 0;
+                    s.shrink(mv - saved);
                     if (s.isEmpty()) inv.set(i, ItemStack.EMPTY);
                     furnace.setChanged();
                     lastProgressTick = assistant.tickCount;

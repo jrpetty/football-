@@ -100,9 +100,15 @@ public final class Wealth {
         return made <= 0 ? 0 : Math.min(2 * tradeWage(f.stationTask(), f.ownerId()), made / 4);
     }
 
-    /** Today's wage. */
+    /** Today's wage: what its work earns, and a Haggler's twentieth more on top (FolkSkills). */
     public static int wage(VillageFolkEntity f) {
         if (f.isBaby() || f.stationTask() == StationTask.NONE) return 0;
+        int w = earned(f);
+        return w + FolkSkills.haggled(f, w);
+    }
+
+    /** Today's wage before any haggling: its trade's rate, its level, its office, a good day and what it made. */
+    static int earned(VillageFolkEntity f) {
         int lv = f.veteranLevel();
         return tradeWage(f.stationTask(), f.ownerId()) + (lv >= 10 ? 1 : 0) + (lv >= 25 ? 1 : 0) + (f.isElder() ? 1 : 0) + bonus(f)
             + madeShare(f);
@@ -122,6 +128,8 @@ public final class Wealth {
         if (b > 0) sb.append(", +").append(b).append(b == 2 ? " for a hard day's work" : " for a fair day's work");
         int made = madeShare(f);
         if (made > 0) sb.append(", +").append(made).append(" for what it made yesterday");
+        int haggled = FolkSkills.haggled(f, earned(f));
+        if (haggled > 0) sb.append(", +").append(haggled).append(" haggled (its knack)");
         return sb.toString();
     }
 

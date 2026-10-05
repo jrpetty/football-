@@ -470,10 +470,12 @@ public final class Cafe {
         int price = g == null ? 3 : Market.sellPrice(g, Market.stock(level, v.id(), s -> ItemStack.isSameItemSameComponents(s, pick)), false);
         price = Math.max(1, pick.isEnchanted() ? price * 3 : price);
         price = Stockroom.asked(level, v.id(), pick, price, 1);              // slow stock marked down, never under cost
+        price = FolkSkills.thrifty(f, price);                                 // a Thrifty folk pays a tenth less
         if (f.purse() < price) return null;
         if (!TownWork.take(level, v, s -> ItemStack.isSameItemSameComponents(s, pick), 1)) return null;
         f.spend(price);
         Ledger.addCoins(v.id(), price);
+        price += FolkSkills.tip(v.id(), AssistantEntity.StationTask.SHOP, f, price);   // a Friendly Face at the counter
         Stockroom.sold(level, v.id(), Stockroom.Seller.SHOP, pick, 1, price);
         ItemStack bought = pick.copyWithCount(1);
         // A treat is its own: kept off the stores, and carried along when it moves house (Homes).
@@ -499,10 +501,12 @@ public final class Cafe {
         int price = g == null ? 1 : Market.sellPrice(g, Market.stock(level, v.id(), s -> ItemStack.isSameItemSameComponents(s, pick)), false);
         price = Math.max(1, price / Math.max(1, g == null ? 1 : g.bundle()));
         price = Stockroom.asked(level, v.id(), pick, price, 1);              // slow stock marked down, never under cost
+        price = FolkSkills.thrifty(f, price);                                 // a Thrifty folk pays a tenth less
         if (f.purse() < price) return null;
         if (!TownWork.take(level, v, s -> ItemStack.isSameItemSameComponents(s, pick), 1)) return null;
         f.spend(price);
         Ledger.addCoins(v.id(), price);
+        price += FolkSkills.tip(v.id(), AssistantEntity.StationTask.COOK, f, price);   // a Friendly Face at the counter
         Stockroom.sold(level, v.id(), Stockroom.Seller.CAFE, pick, 1, price);
         // Had there and then: a drink does its little good, a bite fills it up.
         String drink = drinkOf(pick);

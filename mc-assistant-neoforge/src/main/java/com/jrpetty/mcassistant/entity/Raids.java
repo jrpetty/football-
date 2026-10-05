@@ -542,7 +542,7 @@ public final class Raids {
             g.holdPost(stand);
             CLIMB.remove(g.getUUID());
             g.getNavigation().stop();
-            Mob m = targetFrom(level, g, 28.0);
+            Mob m = targetFrom(level, g, 28.0 + FolkSkills.sightBonus(g));     // Sharp Eyes: a longer look
             if (m != null) {
                 g.setTarget(m);
             } else {

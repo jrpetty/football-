@@ -28,6 +28,7 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  *   /village chronicle        the nearest village's history, as a book
  *   /village standing         what every village you have met thinks of you
  *   /village house            the village's houses; house buy | house let N | house rent
+ *   /village knacks [name]    the knacks each folk chose for itself; knacks grant <name> <key> (ops)
  *   /village stats            the town's books in full: the analytics screen (as the village board)
  *   /village speed 16|max|normal   time runs faster, to watch a village grow (ops / world owner)
  * </pre>
@@ -79,6 +80,18 @@ public final class VillageCommands {
                             .executes(ctx -> found(ctx, true))))))
             .then(Commands.literal("folk").executes(VillageCommands::folk))
             .then(Commands.literal("people").executes(VillageCommands::people))
+            // The knacks each folk chose for itself (FolkSkills): every folk of the nearest village, or one
+            // by name; and, for operators and tests, a knack given to a folk as though it chose it.
+            .then(Commands.literal("knacks")
+                .executes(ctx -> knacks(ctx, ""))
+                .then(Commands.literal("grant").requires(src -> src.hasPermission(2))
+                    .then(Commands.argument("name", com.mojang.brigadier.arguments.StringArgumentType.string())
+                        .then(Commands.argument("key", com.mojang.brigadier.arguments.StringArgumentType.word())
+                            .executes(ctx -> grantKnack(ctx,
+                                com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "name"),
+                                com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "key"))))))
+                .then(Commands.argument("name", com.mojang.brigadier.arguments.StringArgumentType.greedyString())
+                    .executes(ctx -> knacks(ctx, com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "name")))))
             .then(Commands.literal("list").executes(VillageCommands::list))
             .then(Commands.literal("anchors").requires(src -> src.hasPermission(2))
                 .executes(VillageCommands::anchors))
@@ -574,6 +587,100 @@ public final class VillageCommands {
         };
         ctx.getSource().sendSuccess(() -> Component.literal(said), false);
         return 1;
+    }
+
+    // ------------------------------------------------------------------ knacks (FolkSkills)
+
+    /**
+     * /village knacks: every folk of the nearest village, a line each (its points, what it chose, on
+     * what day and why); /village knacks Tansy: that folk, and the knacks still open to it, the one it
+     * wants most first.
+     */
+    private static int knacks(CommandContext<CommandSourceStack> ctx, String name) {
+        if (!name.isBlank()) {
+            VillageFolkEntity f = folkNamed(ctx, name);
+            if (f == null) {
+                ctx.getSource().sendFailure(Component.literal("No folk called " + name.trim() + " is about."));
+                return 0;
+            }
+            final String line = com.jrpetty.mcassistant.entity.FolkSkills.describe(f);
+            ctx.getSource().sendSuccess(() -> Component.literal(line), false);
+            StringBuilder open = new StringBuilder("Open to it: ");
+            int n = 0;
+            for (com.jrpetty.mcassistant.entity.FolkSkills.Pick p : com.jrpetty.mcassistant.entity.FolkSkills.ranked(f)) {
+                if (n++ >= 8) break;
+                if (n > 1) open.append("; ");
+                open.append(p.knack().title).append(" (").append(p.knack().key).append(", ")
+                    .append(String.format(java.util.Locale.ROOT, "%.1f", p.score())).append(": ").append(p.why()).append(')');
+            }
+            final String opens = n == 0 ? "Nothing more open to it." : open.toString();
+            ctx.getSource().sendSuccess(() -> Component.literal(opens), false);
+            return 1;
+        }
+        net.minecraft.server.level.ServerLevel level = ctx.getSource().getLevel();
+        net.minecraft.core.BlockPos here = net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition());
+        Villages.Village v = Villages.nearest(level, here, Villages.VILLAGE_RANGE * 4);
+        if (v == null && !Villages.every().isEmpty()) v = Villages.every().get(0);
+        if (v == null) {
+            ctx.getSource().sendFailure(Component.literal("No village yet."));
+            return 0;
+        }
+        java.util.List<VillageFolkEntity> folk = new java.util.ArrayList<>();
+        for (AssistantEntity a : Villages.folkOf(v.id())) if (a instanceof VillageFolkEntity f && !f.isShowcase()) folk.add(f);
+        int chosen = 0;
+        for (VillageFolkEntity f : folk) chosen += com.jrpetty.mcassistant.entity.FolkSkills.spent(f);
+        final String head = "Knacks in " + Villages.name(v.id()) + ": " + folk.size() + " folk, " + chosen + " knacks chosen";
+        ctx.getSource().sendSuccess(() -> Component.literal(head), false);
+        for (VillageFolkEntity f : folk) {
+            final String line = com.jrpetty.mcassistant.entity.FolkSkills.describe(f);
+            ctx.getSource().sendSuccess(() -> Component.literal(line), false);
+        }
+        return folk.size();
+    }
+
+    /** /village knacks grant Tansy nest_egg (operators): the knack given, as though it chose it, with what comes of it. */
+    private static int grantKnack(CommandContext<CommandSourceStack> ctx, String name, String key) {
+        VillageFolkEntity f = folkNamed(ctx, name);
+        if (f == null || !(f.level() instanceof net.minecraft.server.level.ServerLevel level)) {
+            ctx.getSource().sendFailure(Component.literal("No folk called " + name.trim() + " is about."));
+            return 0;
+        }
+        com.jrpetty.mcassistant.entity.FolkSkills.Knack k = com.jrpetty.mcassistant.entity.FolkSkills.Knack.byKey(key);
+        if (k == null) {
+            StringBuilder keys = new StringBuilder();
+            for (com.jrpetty.mcassistant.entity.FolkSkills.Knack n : com.jrpetty.mcassistant.entity.FolkSkills.Knack.values()) {
+                if (keys.length() > 0) keys.append(", ");
+                keys.append(n.key);
+            }
+            ctx.getSource().sendFailure(Component.literal("No knack called " + key + ". The knacks: " + keys));
+            return 0;
+        }
+        if (!com.jrpetty.mcassistant.entity.FolkSkills.grant(level, f, k)) {
+            ctx.getSource().sendFailure(Component.literal(f.displayNameCap() + " has " + k.title + " already."));
+            return 0;
+        }
+        final String line = "Granted " + k.title + ". " + com.jrpetty.mcassistant.entity.FolkSkills.describe(f);
+        ctx.getSource().sendSuccess(() -> Component.literal(line), true);
+        return 1;
+    }
+
+    /** The folk of that name (the nearest, if more than one), in any village the game knows; or null. */
+    @javax.annotation.Nullable
+    private static VillageFolkEntity folkNamed(CommandContext<CommandSourceStack> ctx, String name) {
+        String want = name.trim().toLowerCase(java.util.Locale.ROOT);
+        net.minecraft.world.phys.Vec3 here = ctx.getSource().getPosition();
+        VillageFolkEntity best = null;
+        double bestD = Double.MAX_VALUE;
+        for (Villages.Village v : Villages.every()) {
+            for (AssistantEntity a : Villages.folkOf(v.id())) {
+                if (!(a instanceof VillageFolkEntity f) || !f.isAlive()) continue;
+                String n = f.displayNameCap().toLowerCase(java.util.Locale.ROOT);
+                if (!n.equals(want) && !n.replace('_', ' ').equals(want)) continue;
+                double d = f.position().distanceToSqr(here);
+                if (d < bestD) { bestD = d; best = f; }
+            }
+        }
+        return best;
     }
 
     private static int people(CommandContext<CommandSourceStack> ctx) {
