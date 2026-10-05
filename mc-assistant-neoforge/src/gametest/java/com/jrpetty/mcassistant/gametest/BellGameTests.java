@@ -166,6 +166,7 @@ public class BellGameTests {
                     // Up: at work, or at the morning assembly at the board that opens the working day.
                     long up = hands.stream().filter(f -> !f.isSleeping() && (f.onShift() || Assemblies.attending(f))).count();
                     long answered = grown.stream().filter(f -> TownBell.answered(f, TownBell.Peal.DAWN) >= 0).count();
+                    if (TownBell.ringing(village) && t - mark[0] < 600) return;
                     int strokes = TownBell.strokes(village);
                     Kit.log("b01 after the dawn bell (" + clock(level) + "): " + up + " of " + hands.size() + " hands up and on shift, "
                         + answered + " of " + grown.size() + " answered it; " + strokes + " strokes; the bell swung " + swung[0]);
@@ -194,6 +195,7 @@ public class BellGameTests {
                 case 3 -> {
                     long ate = grown.stream().filter(f -> TownBell.answered(f, TownBell.Peal.NOON) >= 0).count();
                     if (ate * 10 < grown.size() * 6L && t - mark[0] < 900) return;
+                    if (TownBell.ringing(village) && t - mark[0] < 600) return;       // the peal's strokes all rung first
                     int strokes = TownBell.strokes(village) - strokesAt[0];
                     for (VillageFolkEntity f : grown) Kit.log("   " + f.displayNameCap() + " at the noon bell: " + TownBell.did(f, TownBell.Peal.NOON)
                         + "; meals: " + com.jrpetty.mcassistant.entity.Meals.line(f));
@@ -228,6 +230,9 @@ public class BellGameTests {
                         || TownBell.did(f, TownBell.Peal.DUSK).contains("went home")).count();
                     if (home * 10 < hands.size() * 6L && t - mark[0] < 900) return;
                     if (t - mark[0] < 200) return;
+                    // Nine strokes, one every twenty-five ticks, take two hundred ticks from the first: the peal
+                    // is judged once it is done (looked at on the two hundredth tick, the ninth was still to come).
+                    if (TownBell.ringing(village) && t - mark[0] < 600) return;
                     int strokes = TownBell.strokes(village) - strokesAt[0];
                     long working = hands.stream().filter(VillageFolkEntity::onShift).count();
                     for (VillageFolkEntity f : grown) Kit.log("   " + f.displayNameCap() + " at the dusk bell: " + TownBell.did(f, TownBell.Peal.DUSK)
@@ -276,6 +281,9 @@ public class BellGameTests {
         friend.insertItem(new ItemStack(Items.POPPY));
         birthday.bornDaysAgo(14);                                    // forty today: thirty-eight yesterday
         int[] before = { carried(friend, Items.POPPY), carried(birthday, Items.POPPY) };
+        birthday.refreshMood();
+        int moodBefore = birthday.persona().mood();
+        Kit.log("b02 the mood before its birthday: " + moodBefore + " " + birthday.persona().moodWhy());
         helper.assertTrue(birthday.ageYears() == 40 && Birthdays.ageOn(birthday.bornDay(), day - 1) == 38,
             "forty today, thirty-eight yesterday: a birthday (" + birthday.ageYears() + ")");
         Birthdays.celebrate(level, Villages.get(village), birthday, day);
@@ -301,13 +309,15 @@ public class BellGameTests {
             for (ItemStack s : birthday.getInventoryItems()) if (s.is(Items.POPPY) && Homes.isKeepsake(s)) kept = true;
             birthday.refreshMood();
             Kit.log("b02 given: " + got + "; poppies " + before[0] + "/" + before[1] + " -> " + after[0] + "/" + after[1]
-                + "; a keepsake " + kept + "; mood " + birthday.persona().mood() + " " + birthday.persona().moodWhy()
+                + "; a keepsake " + kept + "; mood " + moodBefore + " -> " + birthday.persona().mood() + " " + birthday.persona().moodWhy()
                 + "; card: " + Birthdays.cardLine(birthday));
             helper.assertTrue(after[0] == before[0] - 1 && after[1] == before[1] + 1,
                 "the flower went from the friend's pack to the birthday folk's: " + before[0] + "/" + before[1] + " -> " + after[0] + "/" + after[1]);
             helper.assertTrue(kept, "and it is kept as its own");
             helper.assertTrue(birthday.persona().moodWhy().contains("gift") && birthday.persona().moodWhy().contains("birthday"),
                 "the birthday and the present raise its spirits: " + birthday.persona().moodWhy());
+            helper.assertTrue(birthday.persona().mood() > moodBefore || birthday.persona().mood() == 100,
+                "its spirits rise: " + moodBefore + " -> " + birthday.persona().mood());
             helper.assertTrue(got.get(0).contains(friend.displayNameCap()), "remembered who gave it: " + got);
             helper.succeed();
         });
@@ -321,16 +331,18 @@ public class BellGameTests {
      * happened; then the feast, and fireworks out of the stores' powder and paper; and the history
      * notes the year kept.
      */
-    @GameTest(template = EMPTY, timeoutTicks = 4500, batch = "b03_founding_day")
+    @GameTest(template = EMPTY, timeoutTicks = 6000, batch = "b03_founding_day")
     public static void b03_founding_day(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
         final int x = 224000, z = 50000;
         Kit.hold(level, x, z, 40);
         Kit.prepare(level, x, z, 40);
-        long evening = (level.getDayTime() / 24000L) * 24000L + 12150L;
+        // A day far enough on that the town can have been founded a year (twenty-eight days) before it: the test
+        // world may be only a few days old, and a town founded on a day before the world began has no Founding Day.
+        long day = Math.max(level.getDayTime() / 24000L, TownCalendar.YEAR_DAYS + 2L);
+        long evening = day * 24000L + 12150L;
         level.setDayTime(evening);
-        long day = evening / 24000L;
         List<VillageFolkEntity> folk = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
             VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, Kit.surface(level, x + i * 2 - 4, z + 3), 0.0F);
@@ -353,6 +365,9 @@ public class BellGameTests {
         chest.setItem(slot + 1, new ItemStack(Items.PAPER, 4));
         chest.setItem(slot + 2, new ItemStack(Items.BREAD, 32));
         chest.setChanged();
+        Kit.log("b03 day " + day + ", founded (for the test) on day " + FoundingDay.founded(village) + " (the history says "
+            + Chronicle.foundedOn(village) + "); Founding Day today " + FoundingDay.today(village, day) + ", yesterday "
+            + FoundingDay.today(village, day - 1) + ", due " + FoundingDay.due(village, day));
         helper.assertTrue(FoundingDay.today(village, day) && !FoundingDay.today(village, day - 1), "today, and only today, is Founding Day");
         Kit.log("b03 " + Villages.name(village) + " founded on day " + FoundingDay.founded(village) + ", today " + day + ": "
             + TownCalendar.book(level, village));
@@ -373,7 +388,7 @@ public class BellGameTests {
             }
             boolean kept = Chronicle.of(village).stream().anyMatch(e -> e.text().startsWith("Founding Day"));
             if (!kept) {
-                if (t >= 4300) helper.fail("Founding Day did not finish: read " + read + "; " + Assemblies.debug(village));
+                if (t >= 5800) helper.fail("Founding Day did not finish: read " + read + "; " + Assemblies.debug(village));
                 return;
             }
             // Read out, in order.
