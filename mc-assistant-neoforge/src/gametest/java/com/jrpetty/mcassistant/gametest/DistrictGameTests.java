@@ -428,8 +428,8 @@ public class DistrictGameTests {
             e.that(seats >= l.seats().size() - 2, "the benches are down: " + seats);
             e.that(stone >= l.stone().size() - 2, "the fountain's stone is laid: " + stone);
             // The builder carries the lamps' torches to the lot and puts them up (it used to drop them on the grass on
-            // its way, to light the ground it walked over); one may wait for its keepers, where it stood on the post.
-            e.that(lights >= l.lights().size() - 1, "the lamps are lit: " + lights);
+            // its way, to light the ground it walked over); one or two may wait for its keepers (every one is lit below).
+            e.that(lights >= l.lights().size() - 2, "the lamps are lit: " + lights);
             e.that(!Park.parks(village).isEmpty(), "the park is in the village's register");
             // Its keepers: saplings, a bucket and flowers in the stores; the water, the trees and the
             // paths a visit at a time (the builder's water, if it had none, from the pond).

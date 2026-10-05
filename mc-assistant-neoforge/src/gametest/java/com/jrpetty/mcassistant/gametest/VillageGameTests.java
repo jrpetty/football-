@@ -165,7 +165,8 @@ public class VillageGameTests {
         InteractionResult r = stack.useOn(new UseOnContext(player, InteractionHand.MAIN_HAND, hit));
         Kit.log("t03 useOn result: " + r);
         helper.runAtTickTime(40, () -> {
-            List<VillageFolkEntity> folk = level.getEntitiesOfClass(VillageFolkEntity.class, around(ground, 12));
+            // Thirty-two blocks: two seconds in, a founder or two is already setting off for its plot.
+            List<VillageFolkEntity> folk = level.getEntitiesOfClass(VillageFolkEntity.class, around(ground, 32));
             Kit.log("t03 folk near the click: " + folk.size()
                 + (folk.isEmpty() ? "" : " — " + folk.get(0).debugLine()));
             helper.assertTrue(folk.size() == VillageFolkSpawnerBlock.foundingParty(),

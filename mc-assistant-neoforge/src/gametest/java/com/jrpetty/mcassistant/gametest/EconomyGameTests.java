@@ -326,7 +326,7 @@ public class EconomyGameTests {
     public static void ec03_strays_home(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
-        level.setDayTime(1000);
+        level.setDayTime(2000);                                         // past the morning assembly, which clears every queue
         final int x = 363500;
         Kit.hold(level, x, Z, 40);
         Kit.prepare(level, x, Z, 40);
@@ -400,7 +400,7 @@ public class EconomyGameTests {
         helper.assertTrue(off, "a load of sixteen and more goes back at once");
         helper.onEachTick(() -> {
             long t = helper.getTick();
-            if (level.getDayTime() % 24000 > 11000) level.setDayTime(1000);
+            if (level.getDayTime() % 24000 > 11000) level.setDayTime(2000);
             if (t % 5 != 0) return;
             int left = guard.countCarried(stock);
             int stored = inChests(level, x, Z, 40, stock);
