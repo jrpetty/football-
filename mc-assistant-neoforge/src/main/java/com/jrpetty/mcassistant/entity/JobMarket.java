@@ -914,7 +914,8 @@ public final class JobMarket {
         int grown = grownOf(home);
         if (grown - Math.max(1, going) < FLOOR) return name + " has too few hands to spare one";
         if (leftThisWeek(home, level.getDayTime() / 24000L) >= weeklyCap(grown)) return "enough have left " + name + " this week";
-        StationTask t = f.stationTask();
+        // (Its trade only keeps it if it can work at it: a farmer with no field to be had is no farmer to keep.)
+        StationTask t = JobSeekers.outOfWork(f) ? StationTask.NONE : f.stationTask();
         if (t == StationTask.FARM && at(home, StationTask.FARM) <= 1 && at(home, StationTask.FISH) == 0) return "it is " + name + "'s last farmer";
         if (t == StationTask.GUARD && at(home, StationTask.GUARD) <= 1 && Villages.hasBuilt(home, "fortify")) return "it is the last of " + name + "'s watch";
         return null;
@@ -925,6 +926,7 @@ public final class JobMarket {
         UUID home = f.ownerId();
         StationTask t = f.stationTask();
         if (home == null || t == StationTask.NONE) return false;
+        if (JobSeekers.outOfWork(f)) return false;               // a trade with no ground to work it at is no use to anybody
         return shortOf(home, t) >= 1.0 || at(home, t) == 1 && Villages.wants(home, t);
     }
 

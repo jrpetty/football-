@@ -455,6 +455,9 @@ public final class Watch {
     /** The alarm bell on the square, put up if it is missing. Returns where it hangs, or null. */
     @Nullable
     public static BlockPos bell(ServerLevel level, Villages.Village v, boolean free) {
+        // The town bell's own frame on the square (BellFrame): the alarm is rung on the town's bell, and no
+        // second bell is hung for it.
+        if (!free && BellFrame.of(v.id()) != null) return TownBell.bellAt(level, v);
         BlockPos at = v.centre().offset(BELL_AT[0], 0, BELL_AT[1]);
         if (!level.isLoaded(at)) return null;
         for (int y = v.centre().getY() - 6; y <= v.centre().getY() + 7; y++) {

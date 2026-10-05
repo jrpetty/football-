@@ -120,6 +120,9 @@ public class MealsGameTests {
             final int m = k;
             helper.runAtTickTime(when[m], () -> {
                 onlyTheLarder(level, child, c);
+                // Topped up for each meal: the larder is a chest of the stores, and the rest of the village eats out of it too.
+                c.setItem(0, new ItemStack(Items.BREAD, 8));
+                c.setChanged();
                 level.setDayTime(at[m]);
                 int before = bread(c);
                 Meals.tick(child);

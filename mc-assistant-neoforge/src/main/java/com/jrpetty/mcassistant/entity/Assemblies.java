@@ -91,6 +91,8 @@ public final class Assemblies {
         int rockets;
         /** Rockets actually sent up (rockets stands at 99 once the powder or the paper runs out). */
         int fired;
+        /** Its close has been held (what it means to the village and to all who came: once). */
+        boolean closed;
 
         Assembly(UUID village, Kind kind, String subject, long day, BlockPos focus, Direction audience, Layout layout) {
             this.village = village;
@@ -319,7 +321,14 @@ public final class Assemblies {
                 }
             }
             case CLOSE -> {
-                if (now == a.phaseAt || a.phaseAt + 1 == now) close(level, a);
+                // Once, whenever the next step comes. (It was held only if a step fell on the tick the
+                // close began or the one after: a gathering whose folk all stepped on one tick in four —
+                // folk who came into the world together — went straight on to disperse, and nothing it
+                // meant was written down.)
+                if (!a.closed) {
+                    a.closed = true;
+                    close(level, a);
+                }
                 if (now - a.phaseAt > 60) {
                     a.phase = Phase.DISPERSE;
                     a.phaseAt = now;

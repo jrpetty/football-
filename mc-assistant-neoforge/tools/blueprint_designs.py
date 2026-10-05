@@ -1096,7 +1096,9 @@ runs from the gable over the door to the back, tall windows down both sides. At 
 the room a cupboard of barrels with a bookshelf either side, and over it the blackboard
 (put up by the teacher, of black wool or slate out of the stores: School); the teacher's
 lectern before it; and two rows of desks either side of the aisle, a top slab for a desk
-with a stair for a bench behind it, eight places in all. Lanterns hang from the beams.""")
+with a stair for a bench behind it, eight places in all. Its lamps: one hung flush under the
+ceiling over the desks by each wall (clear of the aisle and of the view of the board), and one
+standing on each bookshelf either side of the blackboard.""")
     b.ring(-3, 3, -1, -4, 4, "F")
     b.fill(-2, 2, -1, -3, 3, "f")
     b.set(0, -1, -5, "k")                                  # a step up to the door
@@ -1126,8 +1128,9 @@ with a stair for a bench behind it, eight places in all. Lanterns hang from the 
         b.set(3, 4, z, "|")
     b.fill(-2, 2, 4, -3, 3, "f")
     gable_z(b, -4, 4, -5, 5, 4, gable_z0=-4, gable_z1=4)
-    for z in (1, -2):
-        b.set(0, 3, z, "j")
+    for x in (-2, 2):
+        b.set(x, 3, -1, "j")                               # hung flush under the ceiling, over the desks by the wall
+        b.set(x, 1, 3, "l")                                # standing on the bookshelf beside the blackboard
     b.write()
 
 

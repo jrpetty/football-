@@ -1248,7 +1248,7 @@ with plain blocks, so a building is never held up.
 | Smithy | 9×9 | Stone forge open to the street between log pillars: two furnaces under a brick hood, the anvil, a grindstone, a quenching tub, a bench and chests |
 | Brewery | 9×9 | Timber still-house on a stone footing: two brewing stands on a stone bench, cauldrons, casks, a window to the street |
 | Library | 9×9 | Stone hall with tall windows, walls lined with bookshelves, an enchanting table on a carpet between lecterns |
-| School | 9×11 | Timber schoolroom under a steep roof, tall windows down both sides: two rows of desks (a top slab, a stair for a bench) either side of the aisle, the teacher's lectern, and at the back a blackboard over a cupboard of barrels, a bookshelf either side |
+| School | 9×11 | Timber schoolroom under a steep roof, tall windows down both sides: two rows of desks (a top slab, a stair for a bench) either side of the aisle, the teacher's lectern, and at the back a blackboard over a cupboard of barrels, a bookshelf either side with a lamp on it; a lamp hung under the ceiling over the desks by each wall, none in the aisle |
 | Bank | 9×11 | Stone house of business: a counter across the room with a lantern on its far end, the ledger on a lectern before it, and a vault at the back, its strongboxes behind a gate and grille of iron bars the banker sets; its two lanterns hang flush under the ceiling, over the counter and over the strongboxes |
 | Park | 11×11 | A green: a stone fountain with a spring spilling from its pillar, sixteen wooden benches round it, lamp posts at the four ways in, flowers along its edges; then a tree in each corner, paths and lanterns (see *The town's quarters, and the park*) |
 
@@ -1774,14 +1774,24 @@ it, as you would — the bell swings and is heard all round:
 | Noon | 12:00 | 6 | Everybody's break at once, and the midday meal with it: to the café or the tavern's bar with a few coins (a dish bought out of the stores, the coin into the treasury), else home to its household's table, else to the stores, and it sits down to the meal there (the meals come out of its pack, its home's chest or the stores, as every meal does; nobody eats twice) |
 | Dusk | 18:00 | 9 | The day's work stops and folk walk home to their beds; the guards go on watch; on Founding Day the town goes to the board instead |
 
-* **The bell** is the town's own: a bell it already has — the bell tower's, one by the leader's
-  hall or the board, the alarm bell on the square, the chapel's, the bell of a village its folk
-  moved into — the nearest to where a town bell belongs (before the leader's hall, else the board,
-  else the heart). Nobody in a village can make a bell: **put one in the stores** (found in a
-  village, bought from a villager or brought) and the town's works hang it on a plinth of stone
-  out of the stores, before the leader's hall once it stands, else on the square where the watch
-  hangs its alarm bell. Till there is one, the ringer **calls the hours at the board**, as a town
-  crier would.
+* **The bell's own frame.** From its second day, once its stores have the timber, the town's
+  works build its bell a frame on the square, a few blocks from the board with its front to the
+  square: two posts with a beam across, the bell hung between them, a little roof of stairs and
+  slabs over it and a lantern under each eave. It stands on level ground of its own, clear of the
+  board and its courtyard, the gates' ways in, the market stalls, the well and the monuments, and
+  off the worn paths. It is built a piece at a time out of the stores, like everything else: posts
+  of logs and a roof of the village's own wood, cut from its planks (six planks make four stairs,
+  three make six slabs, the rest of each batch back into the stores); in a town in the Stone Age
+  whose masons have the bricks, of stone bricks a post higher, a short belfry; lanterns if the smith
+  has made them, else a torch on each post. `/village bell` says where it stands and how far on it is.
+* **The bell** is the town's own: a bell it already has — one by the board, the alarm bell on the
+  square, the bell of a village its folk moved into — keeps being rung where it hangs, even under
+  the board, until the frame stands; then it is taken down (its plinth's stone back into the
+  stores) and hung in the frame. Nobody in a village can make a bell: **put one in the stores**
+  (found in a village, bought from a villager or brought) and it is hung in the frame. A bell in
+  a bell tower or a chapel's tower is rung where it hangs: the town has its belfry. The alarm is
+  rung on the town bell too. Till there is a bell, the ringer **calls the hours** before the
+  frame (or at the board), as a town crier would.
 * **The ringer** is somebody sensible and awake: at dawn a guard of the second watch (up all night
   anyway), at noon the storekeeper, at dusk a guard going on watch — else the next of them, a
   courier, or whoever is grown and nearest (woken a little early for the dawn bell). It sets off a
@@ -2310,6 +2320,53 @@ Everything the leader decides goes into the village's history and the morning as
 hears it. `/village status` shows the leader, its nature, how much food it reckons is put
 by and the plan; the board shows it too; and the elder will tell you itself when you ask
 about its orders.
+
+### Mouths, fuel and the builders' stock
+
+A village of eight on the plains, left to itself for a hundred days, showed three ways a town
+goes wrong: it had sixteen children in a week on a full larder and then ate the larder down; it
+went most days with no coal in its stores; and its guard walked the streets with a builder's
+load in its pack. So:
+
+* **A child is a mouth for good.** A full larder is no longer enough. A child is raised only
+  when the fields, the waters and the hunt grow at least what the town eats in a day, counting
+  every mouth it has now and the child's besides (a folk eats what the leader's books say a head
+  eats, and never less than its three meals). A small gap (a fifth of what is eaten) is allowed
+  when the larder could carry it for a fortnight while new fields come in. On short commons, no
+  child is raised at all. The board's **Growing:** line and the town's books say why not:
+  "no — 70 meals grown a day against 90 eaten with one more mouth: the fields first".
+* **The leader counts the new mouths.** Its forecast of what is eaten a day is never less than
+  what every folk here now eats by its books, so a run of births turns the plan to short commons
+  (more farmers and fishers, the fields widened) at once, not three days later; and once the
+  forecast has turned, a miner or woodcutter whose stone or logs are piled past twice what the
+  age wants goes to the fields before the larder runs low.
+* **Coal in the stores, whatever the age.** A village keeps a floor of coal or charcoal in its
+  stores: sixteen, or one a head, up to forty-eight. Under it, the smelter burns logs the
+  builders can spare into charcoal for the stores before anything else (half of them to burn,
+  half as fuel), as a player would, and banks it rather than keeping it as fuel; its furnaces
+  burn wood first; the couriers take it logs, not the last coal; and the stores' torches are
+  made of charcoal only. In the Wood Age it waits while the age still wants timber: the houses
+  come first.
+* **Torches out of coal in hand.** A miner or a guard makes torches only out of the coal it
+  has, as many as it makes (four a lump), and the watch makes none while the stores are short of
+  coal or under the floor; a miner may still light its shaft with what it dug. A miner hands in
+  every lump past that.
+* **The builders' stock goes back.** Once a minute a hand with nothing to do looks in its pack.
+  Anything the builders use (logs, planks, stone and brick, stairs, slabs, doors, glass, sand,
+  ingots, fences, ladders, beds) that is not its own trade's work (a woodcutter's logs, a
+  miner's stone) and not held back (its kit, or the building it is leading) goes back to the
+  stores: a load of sixteen or more at once, anything less after three minutes. A builder who
+  gives up the lead hands back its stairs, slabs, doors and glass with its timber and stone.
+  The smelter, the crafts, the couriers and the storekeeper work with that stock and are let be.
+* **What took them.** A death is written down with its cause: by drowning, in a fall, in lava,
+  fighting a zombie, and so on, not just "by misfortune", in the history, the graves and the
+  books. (Hunger never kills: a folk that misses its meals grows weak, but never below three
+  hearts.)
+
+`/village economy` says it all in chat: food grown against eaten and whether a child may be
+raised, the coal in the stores against the floor, who carries the builders' stock about, and
+what the village's dead died of. The Stores page of the town's books shows the larder's word on
+a child under the food chart.
 
 ### What each folk cares about
 
@@ -3428,8 +3485,9 @@ Neighbours who know each other hear of them a day later. Rivals hear too, but it
 to make a folk go over to them, and an elder who mistrusts a rival will not take its folk
 on. A town that has never met another hears nothing of it.
 
-**Who goes looking.** Only a folk with a reason: out of work, or idle at a trade its town
-has more hands at than it needs; paid less than a notice elsewhere offers (by what that
+**Who goes looking.** Only a folk with a reason: out of work (no trade, or a trade it has had
+no ground to work at for a couple of minutes: a woodcutter with no wood about, a miner with no
+hill), or idle at a trade its town has more hands at than it needs; paid less than a notice elsewhere offers (by what that
 town's paydays really pay, against its own); unhappy at home; family living in the other
 town; or young, with no trade much learned yet, wanting a start. It takes enough of them
 to go (more to go over to a rival, and more again if its own town is short of its trade).
@@ -3901,8 +3959,9 @@ ripen, days pass, folk work and houses go up at that pace.
   level so far and its mornings, and who has left school. Works from the console. `school page`
   opens the town's books at the School page; `school lesson` (operators) calls a lesson now,
   whatever the hour, for two minutes; `school say` (operators) has the nearest teacher say a
-  line of the lesson; `school stage` (operators) sets a schoolhouse out on a stage mid-lesson for
-  the pictures (`/kill @e[tag=folk_lineup]` clears its folk).
+  line of the lesson; `school stage` (operators) sets a schoolhouse out mid-lesson where you stand,
+  for the pictures, on the land itself (its lot levelled to the ground's height there, the edges
+  sloped back into the land; `/kill @e[tag=folk_lineup]` clears its folk).
   board does), opened at a page if one is given (0 the Overview to 18 the Board and 19 the Museum;
   12 is the Stock, 13 Research); from the console, the reading of what drives the village's growth.
 * `/village research` — the city's research: points in hand and a day, what is being studied,
@@ -3936,8 +3995,9 @@ ripen, days pass, folk work and houses go up at that pace.
   for. `decor now` (operators) furnishes the homes as far as the stores run to and sees to the
   candles; `decor showcase` (operators) sets a furnished home out where you stand, for the pictures.
 * `/village bell` — the town bell: where it hangs (or that there is none yet), today's bells, who
-  rang them and how many answered. `bell ring dawn|noon|dusk` (operators) has it rung now, by
-  whoever would ring it, and the town answers it.
+  rang them and how many answered, and its frame (`FRAME-AT x y z ALONG .. FACING ..` and how far on
+  it is). `bell ring dawn|noon|dusk` (operators) has it rung now, by whoever would ring it, and the
+  town answers it; `bell call dawn|noon|dusk` sends its ringer to it to ring it there.
 * `/village founding` — when the town was founded and its next Founding Day; `founding now`
   (operators) keeps it this minute, before the board.
 * `/village birthdays` — whose birthday falls this week; `birthdays now <name>` (operators) has
@@ -3957,6 +4017,10 @@ ripen, days pass, folk work and houses go up at that pace.
   short of. `museum work` (operators) has the curator do its next piece of work now, out of the
   stores; `museum stage` (operators) sets a museum out where you stand for the pictures, its places
   filled with one of everything and the chronicle so far bound into its archive.
+* `/village economy` — the nearest village's larder against its mouths (grown a day, eaten a
+  day, whether a child may be raised and why), its coal and charcoal against the floor it keeps,
+  who carries the builders' stock about, and what its dead died of. `economy charcoal`
+  (operators) has its smelter burn logs into charcoal now, if the village wants it.
 * `/village standing` — what every village you have met thinks of you.
 * `/village ledger` — the nearest village's town ledger, as a book.
 * `/village relations` — every pair of neighbouring villages: allies, friends, uneasy,
@@ -4169,14 +4233,18 @@ Every push to CI:
   the treasury as tax over eight paydays on less coming in than goes out, the treasury never below
   nothing, no coin from nowhere, the tax in the books, none from the poor and none while the
   treasury holds a week's wages;
-* keeps the town's calendar (`BellGameTests`, b01 to b03): a town of six with a bell lies in before
+* keeps the town's calendar (`BellGameTests`, b01 to b04): a town of six with a bell lies in before
   the dawn bell, is rung up by a ringer who walks to the bell (three strokes, the bell swinging) and
   goes to work; at the noon bell (six) most of it goes to its midday meal and eats; at the dusk bell
   (nine) the day's work stops, the hands go home to their beds and the guard goes on watch; on a
   folk's fortieth birthday its friend walks round with the flower from its own pack, which goes from
   the one pack to the other as a keepsake, and the birthday and the present raise its spirits; and
   twenty-eight days after the founding the town gathers for Founding Day, hears the year's chronicle
-  read out in the order it happened, feasts, and the history notes its first year kept;
+  read out in the order it happened, beginning with the founding, feasts, and the history notes its
+  first year kept; and a town whose bell stands under its board builds the bell its own frame on the
+  square, clear of the board and its courtyard: log posts, a roof cut from ten planks with the rest
+  of the batches put by, two lanterns out of the stores; the old bell is taken down and hung in it,
+  and rung there;
 * runs the museum and its archive (`MuseumGameTests`, mu01 to mu03): the miner's first diamond in
   the stores is chosen, taken out with a frame and a sign (no more), hung in a frame on the
   museum's wall with a label saying who found it, at what trade and on what day, and the town's

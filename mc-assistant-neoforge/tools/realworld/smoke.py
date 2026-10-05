@@ -288,8 +288,10 @@ def found_village(r, cx, cz, look):
     # Measured: the square inside its wobbling edge (radius less four) should all stand at one height.
     say("ground check: " + r.cmd("village found ground %d %d %d" % (fx, fz, radius - 4))[:900])
     # The levelled ground and its sloped edges from high up, the hill's cut face, and the folk at their camp.
-    look("17-found-4-done-air", fx + 100, level_y + 85, fz + 100, fx, level_y, fz, wait=12)
-    look("17-found-5-done-overhead", fx + 4, level_y + 130, fz + 10, fx, level_y, fz, wait=8)
+    # (Inside the client's sight: ten chunks, its fog closing in from about a hundred and forty blocks.
+    # From higher up the square was lost in the fog and the overhead saw nothing but sky.)
+    look("17-found-4-done-air", fx + 78, level_y + 58, fz + 78, fx, level_y, fz, wait=14)
+    look("17-found-5-done-overhead", fx + 2, level_y + 82, fz + 6, fx, level_y, fz, wait=10)
     ex, ez = at(radius + 34, 46)
     look("17-found-6-edge", ex, level_y + 22, ez, hill_x, level_y + 4, hill_z, wait=8)
     look("17-found-7-folk", fx + 10, level_y + 6, fz + 10, fx, level_y + 1, fz, wait=8)
@@ -337,11 +339,12 @@ def sweeper_stage(r, look, cx, cz):
     say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
     say("alive after the sweeper: %s" % client_alive())
 def school_stage(r, look, cx, cz):
-    """The village school mid-lesson: a schoolhouse set out on a stage in clear air (/village school
-    stage), the blackboard up, the teacher at the lectern and six children at their desks; from the
-    street, then from the back of the schoolroom over the children's heads while the teacher says a
-    line of the lesson; and the School page of the nearest village's books."""
-    sx, sy, sz = cx - 120, 150, cz + 120
+    """The village school mid-lesson: a schoolhouse set out on the land out past the village (/village
+    school stage levels a lot to the ground's own height there and slopes its edges back into the land),
+    the blackboard up, the teacher at the lectern and six children at their desks; from the street, then
+    from the back of the aisle over the children's heads to the teacher and the blackboard while the
+    teacher says a line of the lesson; and the School page of the nearest village's books."""
+    sx, sy, sz = cx - 90, 150, cz + 90                 # (the height is only a fallback: the stage finds the ground)
     r.cmd("gamemode spectator %s" % USER)
     r.cmd("time set 2500")
     r.cmd("tp %s %d %d %d" % (USER, sx + 7, sy + 6, sz + 16))
@@ -364,6 +367,8 @@ def school_stage(r, look, cx, cz):
     r.cmd("execute as %s run village stats close" % USER)
     say("school: " + r.cmd("execute as %s at @s run village school" % USER)[:400])
     say("alive after the school: %s" % client_alive())
+
+
 def market_stall_stage(r, look, cx, cz):
     """A market stall of the player's own (entity/PlayerStalls), photographed: rented on the square of the
     village at cx, cz (the booth out of the stores, or the player's own barrel, sign, fences and wool),
@@ -414,46 +419,81 @@ def market_stall_stage(r, look, cx, cz):
     say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
     say("alive after the stall: %s" % client_alive())
 def bell_stage(r, look, cx, cz):
-    """The town's calendar (TownBell, Birthdays, FoundingDay), photographed in the village spawned at cx, cz:
-    the town bell rung at dawn by its ringer (a bell set by the board for the picture if the town has none
-    yet, as a player brings one), the town gathered before the board for Founding Day hearing its year's
-    chronicle read out, and the town's calendar (today's bells, the next Founding Day, the week's
-    birthdays) on the News page of its books."""
+    """The town's calendar (TownBell, BellFrame, Birthdays, FoundingDay), photographed in the village spawned at
+    cx, cz: the town bell in its own frame on the square, a few blocks from the board, from the front, its
+    ringer at it ringing the dawn bell while the town gathers before the board; the town gathered for Founding
+    Day hearing its year's chronicle read out, the frame beside it; and the town's calendar (today's bells,
+    the next Founding Day, the week's birthdays) on the News page of its books. If the frame is not up yet
+    its makings go into the stores (logs, planks, two lanterns, and a bell if the town has none), as a player
+    would bring them, and the town's works build it."""
     say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
     r.cmd("gamemode spectator %s" % USER)
-    out = r.cmd("execute positioned %d 100 %d run village bell" % (cx, cz))
-    say("bell: " + out[:700])
+    where = "execute positioned %d 100 %d run " % (cx, cz)
+    out = r.cmd(where + "village bell")
+    say("bell: " + out[:900])
     board = re.search(r"BOARD (-?\d+) (-?\d+) (-?\d+)", out)
-    m = re.search(r"BELL-AT (-?\d+) (-?\d+) (-?\d+)", out)
-    if not m:
-        spot = re.search(r"SPOT (-?\d+) (-?\d+) (-?\d+)", out) or board
-        if not spot:
-            say("no bell and nowhere to set one; no bell pictures")
-            return
-        sx, sy, sz = (int(v) for v in spot.groups())
-        say("a bell for the town: " + r.cmd("setblock %d %d %d minecraft:bell[attachment=floor,facing=north]" % (sx + 3, sy, sz)))
-        out = r.cmd("execute positioned %d 100 %d run village bell" % (cx, cz))
+    if re.search(r"FRAME-AT", out) and " DONE" not in out:
+        st = re.search(r"STORES (-?\d+) (-?\d+) (-?\d+)", out)
+        if st:
+            sx, sy, sz = (int(v) for v in st.groups())
+            goods = [(26, "minecraft:oak_log 16"), (25, "minecraft:oak_planks 16"), (24, "minecraft:lantern 2")]
+            if "BELL-AT" not in out:
+                goods.append((23, "minecraft:bell 1"))
+            for slot, item in goods:
+                say("stores: " + r.cmd("item replace block %d %d %d container.%d with %s" % (sx, sy, sz, slot, item)))
+        started = time.time()
+        while time.time() - started < 180:
+            time.sleep(6)
+            out = r.cmd(where + "village bell")
+            fm = re.search(r"FRAME-AT [^.]*\.", out)
+            say("frame: " + (fm.group(0) if fm else out[:200]))
+            if " DONE" in out:
+                break
+    frame = re.search(r"FRAME-AT (-?\d+) (-?\d+) (-?\d+) ALONG (\w+) FACING (\w+) DONE \(\d+/\d+ pieces, (\w+)", out)
+    step = {"north": (0, -1), "south": (0, 1), "east": (1, 0), "west": (-1, 0)}
+    if frame:
+        fx, fy, fz = int(frame.group(1)), int(frame.group(2)), int(frame.group(3))
+        front = step.get(frame.group(5), (0, 1))
+        bell_y = fy + (3 if frame.group(6) == "stone" else 2)
+        # The dawn bell called for: its ringer walks to the frame and rings it, as the town gathers before the
+        # board for Founding Day, a few blocks off.
+        say("call: " + r.cmd(where + "village bell call dawn"))
+        say("founding: " + r.cmd(where + "village founding now"))
+        started = time.time()
+        while time.time() - started < 40:
+            time.sleep(2)
+            if "Dawn bell rang at" in r.cmd(where + "village bell"):
+                break
+        # From the square, before the frame: its posts, roof and lanterns, the bell swinging, its ringer.
+        look("18-bell-1-dawn", fx + 0.5 + front[0] * 8, fy + 2.2, fz + 0.5 + front[1] * 8, fx + 0.5, bell_y, fz + 0.5, wait=1)
+    else:
+        say("no bell frame done; the bell where it hangs")
         m = re.search(r"BELL-AT (-?\d+) (-?\d+) (-?\d+)", out)
-    if m:
-        bx, by, bz = (int(v) for v in m.groups())
-        # The dawn bell: the ringer at it, the bell swinging, the call over its head.
-        say("ring: " + r.cmd("execute positioned %d 100 %d run village bell ring dawn" % (cx, cz)))
-        look("18-bell-1-dawn", bx + 4.5, by + 1, bz + 4.5, bx + 0.5, by + 0.5, bz + 0.5, wait=2)
-    # Founding Day before the board: the crowd, and the year's chronicle read out over the leader's head.
-    say("founding: " + r.cmd("execute positioned %d 100 %d run village founding now" % (cx, cz)))
-    time.sleep(35)                                     # they gather; the first lines are read
+        say("founding: " + r.cmd(where + "village founding now"))
+        if m:
+            bx, by, bz = (int(v) for v in m.groups())
+            say("ring: " + r.cmd(where + "village bell ring dawn"))
+            look("18-bell-1-dawn", bx + 4.5, by + 1, bz + 4.5, bx + 0.5, by + 0.5, bz + 0.5, wait=2)
+    time.sleep(25)                                     # they gather; the first lines of the year are read
+    # Founding Day before the board: the crowd, the year's chronicle read out over the leader's head, the frame by it.
     if board:
         lx, ly, lz = (int(v) for v in board.groups())
-        look("18-bell-2-founding", lx + 9.5, ly + 6, lz + 9.5, lx + 0.5, ly + 1.5, lz + 0.5, wait=3)
+        if frame:
+            mx, mz = (lx + fx) / 2.0, (lz + fz) / 2.0
+            look("18-bell-2-founding", mx + 0.5 + front[0] * 14, ly + 7, mz + 0.5 + front[1] * 14, mx + 0.5, ly + 1.5, mz + 0.5, wait=3)
+        else:
+            look("18-bell-2-founding", lx + 9.5, ly + 6, lz + 9.5, lx + 0.5, ly + 1.5, lz + 0.5, wait=3)
     else:
         look("18-bell-2-founding", cx + 9.5, 100, cz + 9.5, cx + 0.5, 95, cz + 0.5, wait=3)
-    say("founding: " + r.cmd("execute positioned %d 100 %d run village founding" % (cx, cz))[:500])
+    say("founding: " + r.cmd(where + "village founding")[:500])
     # The town's books, the News page: the town's calendar above the chronicle.
     say("stats news: " + r.cmd("execute as %s at @s run village stats 17" % USER))
     time.sleep(3)
     shot("18-bell-3-news")
     say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
     say("alive after the bell: %s" % client_alive())
+
+
 def bank_stage(r, look, cx, cz):
     """The bank (entity/Bank): put up beside the village on ground cleared for it and opened
     (/village bank showcase), its banker held at the counter facing the door; from the street; then
@@ -683,6 +723,36 @@ def workshop_stage(r, look, cx, cz):
     say("alive after the workshop: %s" % client_alive())
 
 
+def economy_stage(r, look, cx, cz):
+    """The larder, the fuel and the builders' stock (entity/Larder, Fuel, Strays): what the village says of
+    them in chat; its smelter set to burn logs into charcoal for the stores (if the village wants it), seen
+    at its furnace; then the Stores page of the town's books, the food and coal charts with the larder's
+    word on a child under them."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    say("economy: " + r.cmd("execute positioned %d 100 %d run village economy" % (cx, cz))[:900])
+    out = r.cmd("execute positioned %d 100 %d run village economy charcoal" % (cx, cz))
+    say("charcoal: " + out[:300])
+    m = re.search(r"SMELTER (.+?) (-?\d+) (-?\d+) (-?\d+)", out)
+    if m:
+        sx, sy, sz = int(m.group(2)), int(m.group(3)), int(m.group(4))
+        r.cmd("tp %s %d %d %d" % (USER, sx + 6, sy + 4, sz + 6))
+        time.sleep(12)                                 # it fills the furnace with logs
+        look("20-economy-1-charcoal", sx + 4.5, sy + 2.5, sz + 4.5, sx, sy + 1, sz, wait=4)
+    else:
+        say("no smelter to photograph at its furnace")
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, cx, ground_height(r, cx, cz) + 1, cz))
+    time.sleep(3)
+    say("stats stores: " + r.cmd("execute as %s at @s run village stats 11" % USER))
+    time.sleep(4)
+    shot("20-economy-2-stores")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the economy: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")
@@ -851,6 +921,10 @@ def main():
     except Exception as e:  # noqa: BLE001
         say("sweeper stage failed: %s" % e)
     try:
+        workshop_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("workshop stage failed: %s" % e)
+    try:
         market_stall_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("stall stage failed: %s" % e)
@@ -882,6 +956,10 @@ def main():
         jobs_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("jobs stage failed: %s" % e)
+    try:
+        economy_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("economy stage failed: %s" % e)
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the founding: %s" % client_alive())
     try:
