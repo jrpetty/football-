@@ -46,19 +46,19 @@ happen, and chat says: *Go to the village board to choose how many folk start th
 To call it off, take the board down: you get your spawner back. A board left waiting is still
 waiting after a restart.
 
-**The ground is made level first.** A square with rounded corners round the spot, as big as the
-town those folk will build needs (the homes they will want, and how far out the town's plan
-has to run to hold them):
+**The ground is made level first.** A square with rounded corners round the spot, forty percent
+wider than the town those folk will build strictly needs (the homes they will want, and how far
+out the town's plan has to run to hold them), so it has level room to grow into:
 
 | Folk | Ground made level | Level before anybody comes |
 |---|---|---|
-| 2 to 8 | about 61 by 61 blocks | 16 blocks round the heart |
-| 12 | 65 by 65 | 16 |
-| 25 | 71 by 71 | 16 |
-| 50 | 83 by 83 | 16 |
-| 100 | 99 by 99 | 17 |
-| 250 | 135 by 135 | 23 |
-| 500 | 179 by 179: the whole of the town's plan, all three rings | 31 |
+| 2 to 8 | about 85 by 85 blocks | 16 blocks round the heart |
+| 12 | 91 by 91 | 16 |
+| 25 | 99 by 99 | 16 |
+| 50 | 115 by 115 | 16 |
+| 100 | 139 by 139 | 17 |
+| 250 | 189 by 189 | 23 |
+| 500 | 251 by 251: the whole of the town's plan, all three rings, and more | 31 |
 
 * **Inside**, everything is brought to one level: the middle height of the dry land there (by
   water a little under the sea's height, lifted just out of it, so a town by the shore does not
@@ -1474,10 +1474,9 @@ tool. This holds for every trade.
 
   Altogether a folk is never more than 55% quicker, nor more than 30% slower. A hungry folk
   works slower than all of that.
-* **Old age.** From sixty a folk walks more slowly. It also works 10% slower than it did
-  when young, but 1% less slow for every three levels at its trade, down to 5% from level
-  15. So an old master is still much quicker than a young beginner: at level 30 it is 25%
-  quicker than a new hand.
+* **Old age costs nothing.** From sixty a folk is old, and works on at its trade all its days
+  as quick as it ever was, walks and runs as briskly as anybody: that is just how it is in the
+  village. (It once worked five to ten percent slower and walked slower too.)
 
 What gets quicker, trade by trade:
 
@@ -1507,8 +1506,8 @@ level and how often it lays a block.
 * **Age.**
   * A child is grown at eighteen, three days after it is born.
   * Grown folk age two years a day. The founders were grown when the village began.
-  * From sixty folk are old: they walk a little slower and work a little slower (less
-    so the longer they have worked their trade: see *Getting quicker*).
+  * From sixty folk are old, and go on working their trade all their days, as quick as ever
+    (see *Getting quicker*); age is no mark against them at an election either.
   * Each folk lives to between seventy and a hundred.
   * A few years before the end, the village hears that they are very frail. At the
     end of their years they die peacefully in their sleep.
@@ -3311,7 +3310,7 @@ Every push to CI:
   than at nought and quicker again at 30, with every other piece of work, the bench and the
   fisher's wait following; better picks, axes and hoes are quicker at the same level (a farmer
   with no hoe slowest); a builder lays quicker at 10 and 30, and for blocks laid; an old master
-  is a little slower than it was young but quicker than a young beginner; the About card has
+  and an old beginner work exactly as quick as they did young; the About card has
   the pace line; and a carrier of level 20 walks 5% quicker;
 * runs the folk's own knacks (`KnackGameTests`, kn01 to kn05): points at every fifth level, six at
   most, none for a child; a Homemaker renting its house chooses Nest Egg and has 30% of the price put

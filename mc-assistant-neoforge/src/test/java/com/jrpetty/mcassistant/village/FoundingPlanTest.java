@@ -60,7 +60,9 @@ class FoundingPlanTest {
         }
         assertTrue(FoundingPlan.coreRadius(FoundingPlan.MAX_FOLK) >= TownPlan.reach(),
             "five hundred level the plan's three rings: " + FoundingPlan.coreRadius(FoundingPlan.MAX_FOLK));
-        assertTrue(FoundingPlan.coreRadius(8) <= 32, "a party of eight levels its square and little more");
+        // Forty percent wider than the plan's first rings strictly need (FoundingPlan.WIDER).
+        assertTrue(FoundingPlan.coreRadius(8) <= 45, "a party of eight levels its square and little more: " + FoundingPlan.coreRadius(8));
+        assertTrue(FoundingPlan.coreRadius(40) >= 54, "forty level a hundred and nine blocks across or more: " + FoundingPlan.coreRadius(40));
     }
 
     @Test
@@ -143,7 +145,14 @@ class FoundingPlanTest {
         int level = plan(g, folk, 5L);
         int off = 0;
         for (int i = 0; i < g.side * g.side; i++) {
-            if (g.kind[i] == FoundingPlan.LAND && FoundingPlan.levelled(g.dx(i), g.dz(i), radius, 5L) && g.target[i] != level) off++;
+            if (g.kind[i] != FoundingPlan.LAND || !FoundingPlan.levelled(g.dx(i), g.dz(i), radius, 5L) || g.target[i] == level) continue;
+            // Only the bank right beside the stream where it comes into the square may stand up, to dam it.
+            int x = i % g.side;
+            boolean beside = false;
+            for (int j : new int[]{ x > 0 ? i - 1 : -1, x < g.side - 1 ? i + 1 : -1, i - g.side, i + g.side }) {
+                if (j >= 0 && j < g.kind.length && g.kind[j] == FoundingPlan.KEEP && g.fluid[j] > level) beside = true;
+            }
+            if (!beside) off++;
         }
         assertEquals(0, off, "every column of the square at the level, the stream's and the lake's sides too");
         // The stream is still held in by its banks out past the square.

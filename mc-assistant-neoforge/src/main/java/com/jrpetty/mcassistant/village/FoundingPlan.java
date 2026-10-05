@@ -79,7 +79,21 @@ public final class FoundingPlan {
      * and fifty, sixty-seven; five hundred, eighty-nine, the whole of the plan's three rings. The
      * area, not the width, goes up with the homes, so it grows as the square root of the folk.
      */
+    /**
+     * The levelled square's radius for so many founders: the town plan's rings it needs for their
+     * homes ({@link #planRadius}), forty percent wider, so a founding has room round its first rings
+     * to grow on level ground (a party of forty levels a hundred and eleven blocks across, not
+     * seventy-nine).
+     */
     public static int coreRadius(int folk) {
+        return (int) Math.round(planRadius(folk) * WIDER);
+    }
+
+    /** How much wider the levelled ground is than the plan's rings strictly need. */
+    public static final double WIDER = 1.4;
+
+    /** The rings of the town plan a party this size needs for its homes. */
+    private static int planRadius(int folk) {
         rings();
         int homes = VillageMath.housesWanted(Math.max(MIN_FOLK, folk), true);
         for (int k = 1; k < ringReach.length; k++) {

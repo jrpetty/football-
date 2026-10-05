@@ -203,7 +203,6 @@ public final class Elections {
             if (l.has(Social.Trait.SHY)) s -= 25;
             if (l.has(Social.Trait.EASYGOING)) s -= 6;
             if (incumbent) s += 25;
-            if (c.isOld()) s -= 8;
             score.put(c, s);
         }
         List<VillageFolkEntity> ranked = new ArrayList<>(score.keySet());

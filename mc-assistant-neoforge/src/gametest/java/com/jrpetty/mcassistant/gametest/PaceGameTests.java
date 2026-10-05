@@ -203,19 +203,13 @@ public class PaceGameTests {
     // ============================================================ old age
 
     /**
-     * The old are a little slower at their work than their young selves, and less so the more of
-     * it they have done; but a lifetime at it shows: an old master is quicker than a young beginner
-     * with the same tool.
+     * The old work on at their trade as quick as they ever were: their years cost them nothing at
+     * their work, their walk or their run. (They were a little slower once, five to ten percent.)
      */
     @GameTest(template = EMPTY, timeoutTicks = 100, batch = "pc04_old_hands")
     public static void pc04_old_hands(GameTestHelper helper) {
         for (int lv = 0; lv <= 50; lv++) {
-            int age = VillageFolkEntity.oldAgePercentAt(lv);
-            helper.assertTrue(age >= -10 && age <= -5, "old age takes five to ten percent, never more nor less: " + age + " at level " + lv);
-            if (lv >= 10) {
-                helper.assertTrue(AssistantEntity.experiencePercentAt(lv) + age > 0,
-                    "an old hand of level " + lv + " is still quicker than a young beginner");
-            }
+            helper.assertTrue(VillageFolkEntity.oldAgePercentAt(lv) == 0, "old age takes nothing off the pace at level " + lv);
         }
         VillageFolkEntity master = folk(helper, 124500, 40000, StationTask.MINE);
         level(helper, master, 30);
@@ -238,10 +232,9 @@ public class PaceGameTests {
         Kit.log("pc04 an action with a stone pick: the master (level 30) young " + masterYoung + ", old " + masterOld
             + " (" + master.ageYears() + ", old " + old + "); the beginner young " + noviceYoung + ", old " + noviceOld + "; " + card);
         helper.assertTrue(old, "sixty-two is old");
-        helper.assertTrue(masterOld > masterYoung, "the old master is a little slower than it was young: " + masterOld + " against " + masterYoung);
-        helper.assertTrue(masterOld < noviceYoung, "and still quicker than a young beginner: " + masterOld + " against " + noviceYoung);
-        helper.assertTrue(noviceOld > noviceYoung, "an old beginner is slower than a young one: " + noviceOld + " against " + noviceYoung);
-        helper.assertTrue(card.contains("its years (−5%)"), "its card says what its years cost it: " + card);
+        helper.assertTrue(masterOld == masterYoung, "the old master works as quick as it did young: " + masterOld + " against " + masterYoung);
+        helper.assertTrue(noviceOld == noviceYoung, "and an old beginner as quick as a young one: " + noviceOld + " against " + noviceYoung);
+        helper.assertTrue(!card.contains("its years"), "its card says nothing of its years costing it: " + card);
         helper.succeed();
     }
 

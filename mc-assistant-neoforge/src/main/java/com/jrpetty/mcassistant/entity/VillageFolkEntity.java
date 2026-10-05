@@ -1139,10 +1139,10 @@ public class VillageFolkEntity extends AssistantEntity {
         persona.setMood(m, keys);
     }
 
-    /** The old walk; everybody else runs when there is a long way to go. */
+    /** Everybody runs when there is a long way to go, the old as well. */
     @Override
     protected boolean fitToRun() {
-        return super.fitToRun() && !isOld();
+        return super.fitToRun();
     }
 
     /** A happy village works faster, a miserable one slower (Contentment). */
@@ -1164,7 +1164,7 @@ public class VillageFolkEntity extends AssistantEntity {
     /** The old are a little slower at their work, less so the more of it they have done (oldAgePercentAt). */
     @Override
     protected int ageWorkPercent() {
-        return isOld() ? oldAgePercentAt(veteranLevel()) : 0;
+        return 0;                                                // the old work as they always have (oldAgePercentAt)
     }
 
     /**
@@ -1177,7 +1177,9 @@ public class VillageFolkEntity extends AssistantEntity {
      * folk below level ten was slower at its trade than the greenest beginner.
      */
     public static int oldAgePercentAt(int level) {
-        return -10 + Math.min(5, Math.max(0, level) / 3);
+        // No more: an old folk works on at its trade, as quick as it ever was, all its days. That is
+        // just how it is in the village; its years cost it nothing at its work, its walk or its run.
+        return 0;
     }
 
     /** Its mood on the pace line of its card, in its own word: "content", "fed up". */
@@ -4805,16 +4807,10 @@ public class VillageFolkEntity extends AssistantEntity {
     private static final net.minecraft.resources.ResourceLocation OLD_GAIT =
         net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mc_assistant", "old_age");
 
-    /** The old walk a little slower. */
+    /** The old walk as briskly as anybody now: the slower gait they once had is taken off. */
     private void refreshOldAgeGait() {
         var speed = getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
-        if (speed == null) return;
-        if (isOld()) {
-            speed.addOrUpdateTransientModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(OLD_GAIT, -0.15D,
-                net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
-        } else {
-            speed.removeModifier(OLD_GAIT);
-        }
+        if (speed != null) speed.removeModifier(OLD_GAIT);
     }
 
     /** The crafts' work (Crafts, Cafe): a piece at a time, out of the stores and back. */

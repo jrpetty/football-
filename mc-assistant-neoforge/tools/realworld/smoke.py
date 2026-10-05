@@ -166,7 +166,7 @@ def found_village(r, cx, cz, look):
         return hx + away[0] * f + side[0] * l, hz + away[1] * f + side[1] * l
 
     # Rough ground: a grassy hill across the edge, a stone knoll and a pit inside, a pond, trees.
-    radius = 39                                        # FoundingPlan.coreRadius(40)
+    radius = 55                                        # FoundingPlan.coreRadius(40): forty percent wider than the rings need
     hill_x, hill_z = at(radius - 2, 10)
     for k in range(10):
         h = 14 - k
@@ -216,8 +216,8 @@ def found_village(r, cx, cz, look):
     # Measured: the square inside its wobbling edge (radius less four) should all stand at one height.
     say("ground check: " + r.cmd("village found ground %d %d %d" % (fx, fz, radius - 4))[:900])
     # The levelled ground and its sloped edges from high up, the hill's cut face, and the folk at their camp.
-    look("17-found-4-done-air", fx + 75, level_y + 65, fz + 75, fx, level_y, fz, wait=12)
-    look("17-found-5-done-overhead", fx + 4, level_y + 95, fz + 10, fx, level_y, fz, wait=8)
+    look("17-found-4-done-air", fx + 100, level_y + 85, fz + 100, fx, level_y, fz, wait=12)
+    look("17-found-5-done-overhead", fx + 4, level_y + 130, fz + 10, fx, level_y, fz, wait=8)
     ex, ez = at(radius + 34, 46)
     look("17-found-6-edge", ex, level_y + 22, ez, hill_x, level_y + 4, hill_z, wait=8)
     look("17-found-7-folk", fx + 10, level_y + 6, fz + 10, fx, level_y + 1, fz, wait=8)
