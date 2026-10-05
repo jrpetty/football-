@@ -194,6 +194,14 @@ public final class Quests {
             for (AssistantEntity a : Villages.folkOf(id)) have += a.countCarried(what);
             if (have < Integer.parseInt(t[4])) options.add(bring(t[1], Integer.parseInt(t[2]), t[3], day));
         }
+        // The makings the sellers are short of for what sells (Stockroom): the shop's string for its
+        // fishing rods, the café's cocoa for its cookies.
+        for (Stockroom.Ask a : Stockroom.asks(level, v)) {
+            if (already.contains("bring:" + a.item())) continue;
+            boolean asked = false;
+            for (Posting o : options) asked |= a.item().equals(o.item);
+            if (!asked) options.add(bring(a.item(), a.count(), a.purpose(), day));
+        }
         // Wool for beds (three to a bed): a village sleeping on the ground wants it more than most.
         boolean woolAsked = already.contains("bring:white_wool");
         for (Posting o : options) woolAsked |= "white_wool".equals(o.item);

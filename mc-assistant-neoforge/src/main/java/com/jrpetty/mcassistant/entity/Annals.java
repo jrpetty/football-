@@ -518,6 +518,7 @@ public final class Annals {
         out.put("society", society(id, folk));
         out.put("league", league(level, v));
         out.put("production", production(level, v));
+        out.put("shops", Stockroom.inventoryReport(level, id));
         out.put("buildings", buildings(level, v));
         List<String> queue = new ArrayList<>();
         for (String p : Villages.projectsWanted(id)) queue.add(Villages.spoken(p));

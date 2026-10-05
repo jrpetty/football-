@@ -38,10 +38,11 @@ import java.util.Locale;
  */
 public class CityScreen extends Screen {
 
-    private static final String[] TABS = { "Overview", "Growth", "Money", "Production", "Jobs", "Folk", "Society", "Leader", "Homes",
+    private static final String[] TABS = { "Overview", "Growth", "Money", "Production", "Shops", "Jobs", "Folk", "Society", "Leader", "Homes",
         "Buildings", "Stores", "Why", "Trends", "Records", "News", "Board" };
     /** The pages that read today's figures, not the books (so they show from the first day). */
-    private static final java.util.Set<String> TODAY_PAGES = java.util.Set.of("Folk", "Society", "Leader", "Buildings", "Why", "News", "Board");
+    private static final java.util.Set<String> TODAY_PAGES = java.util.Set.of("Folk", "Society", "Leader", "Buildings", "Why", "News", "Board",
+        "Shops", "Homes");
     private static final int[] RANGES = { 7, 30, 100, 0 };
     private static final String[] RANGE_NAMES = { "7d", "30d", "100d", "All" };
 
@@ -55,6 +56,8 @@ public class CityScreen extends Screen {
     private String selectedTrade;
     /** The production page: the kind shown (null: all), the column sorted by and which way, the item picked. */
     private String prodKind, prodItem;
+    /** The shops page: the seller shown (by id; null: the first that stands). */
+    private String shopSeller;
     private int prodSort = 7;
     private boolean prodDown = true;
     /** What can be clicked on the page just drawn: its box and what a click does. */
@@ -248,6 +251,7 @@ public class CityScreen extends Screen {
                 case "Growth" -> growth(g, x, y, cw, ch, mouseX, mouseY);
                 case "Money" -> money(g, x, y, cw, ch, mouseX, mouseY);
                 case "Production" -> production(g, x, y, cw, ch, mouseX, mouseY);
+                case "Shops" -> shops(g, x, y, cw, ch, mouseX, mouseY);
                 case "Jobs" -> jobs(g, x, y, cw, ch, mouseX, mouseY);
                 case "Folk" -> folk(g, x, y, cw, ch, mouseX, mouseY);
                 case "Society" -> society(g, x, y, cw, ch);
@@ -562,6 +566,110 @@ public class CityScreen extends Screen {
                 sy += 9;
             }
         }
+    }
+
+    // ------------------------------------------------------------------ the shops
+
+    private static final String[] SHOP_HEADS = { "Ware", "Stock / target", "Sold 7d", "Missed", "Made 7d", "Price", "Cost", "Note" };
+
+    /**
+     * The village's sellers and their books: the shop, the café, the tavern, the market and the
+     * stores' counter. For each, who keeps it, whether it is open, what it sold and took this week and
+     * what it made; and every ware: what it has against what it means to keep (the target follows
+     * what sells), sold, asked for and missed, made, its price (and any markdown on slow stock), what
+     * one costs to make, and what it is short of to make more.
+     */
+    private void shops(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my) {
+        CompoundTag rep = data.getCompound("shops");
+        List<CompoundTag> sellers = new ArrayList<>();
+        ListTag sl = rep.getList("sellers", Tag.TAG_COMPOUND);
+        for (int i = 0; i < sl.size(); i++) sellers.add(sl.getCompound(i));
+        if (sellers.isEmpty()) {
+            g.drawString(font, "No shop, café, tavern or market stands yet.", x, y, Ui.MUTED, false);
+            return;
+        }
+        CompoundTag pick = null;
+        for (CompoundTag t : sellers) if (t.getString("id").equals(shopSeller)) pick = t;
+        if (pick == null) for (CompoundTag t : sellers) if (t.getBoolean("built")) { pick = t; break; }
+        if (pick == null) pick = sellers.get(0);
+        // The sellers, along the top.
+        int kx = x;
+        for (CompoundTag t : sellers) {
+            String label = capital(t.getString("name")) + (t.getBoolean("built") ? "" : " (none yet)");
+            int kw = (int) (font.width(label) * 0.75) + 10;
+            boolean on = t == pick;
+            g.fill(kx, y, kx + kw, y + 11, on ? Ui.ROW_PICK : Ui.ROW);
+            g.renderOutline(kx, y, kw, 11, Ui.EDGE_SOFT);
+            small(g, label, kx + 5, y + 2, on ? Ui.GOOD : t.getBoolean("built") ? Ui.INK : Ui.FAINT);
+            final String id = t.getString("id");
+            zones.add(new Zone(kx, y, kx + kw, y + 11, () -> { shopSeller = id; scroll = 0; }));
+            kx += kw + 3;
+        }
+        if (rep.getBoolean("marketDay")) small(g, "Market day today", x + cw - (int) (font.width("Market day today") * 0.75), y + 2, Ui.GOOD);
+        // The seller's week.
+        int sy = y + 15;
+        int cardW = (cw - 3 * 4) / 4, cardH = 28;
+        card(g, x, sy, cardW, cardH, "Kept by", pick.getString("keeper").isEmpty() ? "nobody" : pick.getString("keeper"),
+            pick.getBoolean("open") ? "open" : pick.getBoolean("built") ? "shut: nobody to keep it" : "not built yet", pick.getBoolean("open") ? GREEN : RED);
+        card(g, x + cardW + 4, sy, cardW, cardH, "Sold this week", num(pick.getInt("sold7")), pick.getInt("soldToday") + " today", BLUE);
+        card(g, x + 2 * (cardW + 4), sy, cardW, cardH, "Taken this week", pick.getInt("coin7") + "c", "at the counter", AMBER);
+        card(g, x + 3 * (cardW + 4), sy, cardW, cardH, "Made this week", pick.getBoolean("makes") ? num(pick.getInt("made7")) : "—",
+            pick.getBoolean("makes") ? pick.getInt("madeToday") + " today" : "sells what others make", PURPLE);
+        int ty = sy + cardH + 6;
+        ListTag shorts = pick.getList("short", Tag.TAG_STRING);
+        if (shorts.size() > 0) {
+            StringBuilder sb = new StringBuilder("Short of: ");
+            for (int i = 0; i < shorts.size(); i++) sb.append(i == 0 ? "" : "; ").append(shorts.getString(i));
+            small(g, Ui.clip(font, sb.toString(), (int) (cw / 0.75)), x, ty, Ui.WARN);
+            ty += 10;
+        }
+        // The wares.
+        int[] cols = { 0, cw * 24 / 100, cw * 44 / 100, cw * 52 / 100, cw * 60 / 100, cw * 68 / 100, cw * 77 / 100, cw * 84 / 100 };
+        for (int i = 0; i < SHOP_HEADS.length; i++) small(g, SHOP_HEADS[i], x + cols[i], ty, Ui.FAINT);
+        ty += 10;
+        List<CompoundTag> wares = new ArrayList<>();
+        ListTag wl = pick.getList("wares", Tag.TAG_COMPOUND);
+        for (int i = 0; i < wl.size(); i++) wares.add(wl.getCompound(i));
+        wares.sort(Comparator.comparingInt((CompoundTag r) -> -r.getInt("sold7")).thenComparing(r -> r.getString("name")));
+        int rowsFit = Math.max(1, (y + ch - 10 - ty) / 10);
+        int start = Math.max(0, Math.min(scroll, Math.max(0, wares.size() - rowsFit)));
+        for (int i = start; i < Math.min(wares.size(), start + rowsFit); i++) {
+            CompoundTag r = wares.get(i);
+            boolean over = mx >= x && mx < x + cw && my >= ty - 1 && my < ty + 9;
+            g.fill(x - 2, ty - 1, x + cw, ty + 9, over ? Ui.HI : i % 2 == 0 ? Ui.ROW : Ui.ROW_ALT);
+            icon(g, r.getString("item"), x, ty - 1, 0.6F);
+            small(g, Ui.clip(font, r.getString("name"), (int) ((cols[1] - 14) / 0.75)), x + 11, ty + 1, Ui.INK);
+            int have = r.getInt("onHand"), target = Math.max(1, r.getInt("target"));
+            int bw = cols[2] - cols[1] - 44;
+            float frac = Math.min(1f, have / (float) target);
+            Ui.bar(g, x + cols[1], ty + 1, bw, 6, frac, frac >= 1f ? GREEN : frac >= 0.5f ? AMBER : RED);
+            small(g, have + " / " + r.getInt("target"), x + cols[1] + bw + 3, ty + 1, Ui.MUTED);
+            small(g, num(r.getInt("sold7")), x + cols[2], ty + 1, Ui.INK);
+            small(g, num(r.getInt("missed7")), x + cols[3], ty + 1, r.getInt("missed7") > 0 ? Ui.BAD : Ui.FAINT);
+            small(g, num(r.getInt("made7")), x + cols[4], ty + 1, Ui.INK);
+            String price = r.getInt("price") + "c" + (r.getInt("markdown") > 0 ? " -" + r.getInt("markdown") + "%" : "");
+            small(g, price, x + cols[5], ty + 1, r.getInt("markdown") > 0 ? Ui.WARN : Ui.INK);
+            small(g, num(r.getDouble("cost")) + "c", x + cols[6], ty + 1, Ui.MUTED);
+            String note = !r.getString("short").isEmpty() ? "short: " + r.getString("short") : r.getString("status");
+            small(g, Ui.clip(font, note, (int) ((cw - cols[7]) / 0.75)), x + cols[7], ty + 1, !r.getString("short").isEmpty() ? Ui.WARN : Ui.MUTED);
+            if (over) {
+                List<Component> tip = new ArrayList<>();
+                tip.add(Component.literal(r.getString("name")));
+                tip.add(Component.literal("On hand " + have + ", keeps " + r.getInt("target") + " (usually " + r.getInt("usual") + ", between "
+                    + r.getInt("fewest") + " and " + r.getInt("most") + ")"));
+                tip.add(Component.literal("Sold " + r.getInt("soldToday") + " today, " + r.getInt("soldYesterday") + " yesterday, " + r.getInt("sold7")
+                    + " this week; missed " + r.getInt("missed7")));
+                if (!r.getString("how").isEmpty()) tip.add(Component.literal("Made by " + r.getString("maker") + ": " + r.getString("how")));
+                if (!r.getString("short").isEmpty()) tip.add(Component.literal("Short of " + r.getString("short")));
+                hover = tip;
+                hoverX = mx;
+                hoverY = my;
+            }
+            ty += 10;
+        }
+        if (wares.isEmpty()) small(g, "Nothing on its books yet.", x, ty, Ui.MUTED);
+        small(g, Ui.clip(font, wares.size() + " wares · the stock it keeps follows what sells · the mouse over a ware for its books"
+            + (wares.size() > rowsFit ? " · scroll for more" : ""), (int) (cw / 0.75)), x, y + ch - 9, Ui.FAINT);
     }
 
     private void jobs(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my) {

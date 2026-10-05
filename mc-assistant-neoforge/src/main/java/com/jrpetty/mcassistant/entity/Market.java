@@ -261,7 +261,7 @@ public final class Market {
             ItemStack one = new ItemStack(it);
             Good g = goodFor(one);
             if (g == null) continue;
-            int p = sellPrice(g, stock(level, village, s -> s.is(it)), md);
+            int p = Stockroom.asked(level, village, one, sellPrice(g, stock(level, village, s -> s.is(it)), md), g.bundle());
             lines[k++] = g.bundle() + " " + g.name() + " " + p + "c";
         }
         return lines;
@@ -760,11 +760,16 @@ public final class Market {
         for (Item t : TREATS) if (!wants.contains(t)) wants.add(t);
         for (Item it : wants) {
             Good g = goodFor(new ItemStack(it));
-            int price = g == null ? 1 : Math.max(1, (int) Math.round(each(g, stock(level, v.id(), s -> s.is(it)))));
+            int have = stock(level, v.id(), s -> s.is(it));
+            int price = g == null ? 1 : Math.max(1, (int) Math.round(each(g, have)));
+            price = Stockroom.asked(level, v.id(), new ItemStack(it), price, 1);
             if (f.purse() < price) continue;
+            // Its favourite not to be had: the market's books count the sale it had not got (Stockroom).
+            if (have <= 0 && it == fav) Stockroom.missed(level, v.id(), Stockroom.Seller.MARKET, new ItemStack(it));
             if (!TownWork.take(level, v, s -> s.is(it), 1)) continue;
             f.spend(price);
             Ledger.addCoins(v.id(), price);
+            Stockroom.sold(level, v.id(), Stockroom.Seller.MARKET, new ItemStack(it), 1, price);
             ItemStack bought = new ItemStack(it);
             ItemStack left = f.insertItem(bought);
             if (!left.isEmpty()) net.minecraft.world.level.block.Block.popResource(level, f.blockPosition(), left);
@@ -819,11 +824,16 @@ public final class Market {
             if (g == null) return "The village doesn't buy " + hand.getHoverName().getString() + ".";
             return sell(level, v, p, hand, g, md);
         }
-        return buy(level, v, p, shown);
+        return buy(level, v, p, shown, Stockroom.Seller.MARKET);
     }
 
     /** A player buys a lot of what is on a counter, with coin from their pack. Returns what to tell them. */
     public static String buy(ServerLevel level, Villages.Village v, Player p, ItemStack shown) {
+        return buy(level, v, p, shown, Stockroom.sellerFor(shown));
+    }
+
+    /** As buy, at this seller's counter (for its books: Stockroom). */
+    public static String buy(ServerLevel level, Villages.Village v, Player p, ItemStack shown, Stockroom.Seller seller) {
         UUID id = v.id();
         Standing.Title title = Standing.of(id, p.getUUID(), level.getGameTime()).title();
         if (title == Standing.Title.OUTCAST) return "Nobody here will trade with you.";
@@ -836,10 +846,13 @@ public final class Market {
         Predicate<ItemStack> same = s -> ItemStack.isSameItemSameComponents(s, shown);
         String lot = lotName(g, shown);
         int stock = stock(level, id, same);
-        if (stock < g.bundle()) return "They've not got " + lot + " to spare just now.";
+        if (stock < g.bundle()) {
+            if (!p.isShiftKeyDown()) Stockroom.missed(level, id, seller, shown);       // a sale the shelf had not got
+            return "They've not got " + lot + " to spare just now.";
+        }
         // Its own needs first: the guards' swords and the larder's bread are not for sale (Budget).
         if (Budget.spare(level, id, shown) < g.bundle()) return "They can't spare " + lot + " — the village needs it itself just now.";
-        int price = price(g, shown, stock, md);
+        int price = price(level, id, g, shown, stock, md);
         if (title == Standing.Title.UNWELCOME) price *= 2;
         else if (title.atLeast(Standing.Title.FRIEND)) price = Math.max(1, price - price / 10);
         if (Citizens.is(id, p.getUUID())) price = Math.max(1, price - Math.max(1, price / 10));   // a citizen's ten off
@@ -854,6 +867,7 @@ public final class Market {
         Ledger.addCoins(id, price);
         Economy.sold(id, price);
         Budget.forget(id);
+        Stockroom.sold(level, id, seller, shown, g.bundle(), price);
         ItemStack bought = shown.copyWithCount(g.bundle());
         if (!p.getInventory().add(bought)) p.drop(bought, false);
         thanks(level, v, p);
@@ -873,13 +887,19 @@ public final class Market {
         return (int) Math.max(1, Math.round(p * Craftsmanship.worth(shown)));
     }
 
+    /** As price, at this village's counters: what its sellers make is marked down when it is slow, and
+     *  never sold for less than it cost (Stockroom). */
+    public static int price(ServerLevel level, UUID village, Good g, ItemStack shown, int stock, boolean marketDay) {
+        return Stockroom.asked(level, village, shown, price(g, shown, stock, marketDay), g.bundle());
+    }
+
     /** A counter's price tag: what is on it and what a lot costs. */
     public static String[] tagLines(ServerLevel level, UUID village, ItemStack shown) {
         if (shown.isEmpty()) return new String[]{ "", "Sold out", "", "" };
         Good g = Budget.goodFor(shown);
         if (g == null) return new String[]{ "", "", "", "" };
         boolean md = marketDay(village, level.getDayTime() / 24000L);
-        int p = price(g, shown, stock(level, village, s -> ItemStack.isSameItemSameComponents(s, shown)), md);
+        int p = price(level, village, g, shown, stock(level, village, s -> ItemStack.isSameItemSameComponents(s, shown)), md);
         String name = g.bundle() > 1 ? g.bundle() + " " + g.name() : shown.getHoverName().getString();
         String one = name, two = "";
         if (name.length() > 15) {

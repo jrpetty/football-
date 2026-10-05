@@ -367,7 +367,20 @@ public final class Services {
         Predicate<ItemStack> what = s -> s.is(it);
         int have = Market.stock(level, village, what);
         String word = sample.getHoverName().getString().toLowerCase(Locale.ROOT);
-        if (have <= 0) return "We've no " + word + " in the stores, I'm afraid.";
+        // Not in the stores, or not enough: the storekeeper makes it up to order at the bench, the whole
+        // way from what the stores can spare (Bench), if it has the hand for it.
+        int madeNow = 0;
+        String cannot = "";
+        if (have < want && f.stationTask() == AssistantEntity.StationTask.STORE || have <= 0 && f.isElder()) {
+            Stockroom.Order o = Stockroom.makeToOrder(level, v, f, it, want - have);
+            madeNow = o.made();
+            cannot = o.cannot();
+            if (madeNow > 0) have = Market.stock(level, village, what);
+        }
+        if (have <= 0) {
+            if (!cannot.isEmpty()) return "We've no " + word + " in the stores, and I can't make any: " + cannot + ".";
+            return "We've no " + word + " in the stores, I'm afraid.";
+        }
         int n = Math.min(want, have);
         boolean friend = Citizens.is(village, p.getUUID()) || f.persona().affinity(p.getUUID()) >= 30;
         String name = p.getName().getString();
@@ -383,8 +396,9 @@ public final class Services {
             f.persona().remember(day, "I lent " + name + " a " + word, 2);
             return "Here — take the " + word + ". Bring it back when you're done with it, within five days, mind.";
         }
-        // Anything given or sold for good: the village's own needs first (Budget) — only what it can spare.
-        int spare = Budget.spare(level, village, sample);
+        // Anything given or sold for good: the village's own needs first (Budget) — only what it can spare,
+        // and whatever was made to order just now (it was made for this).
+        int spare = Math.max(Budget.spare(level, village, sample), madeNow);
         if (spare <= 0) {
             java.util.List<String> wants = Budget.wants(level, village);
             return "We can't spare any " + word + " — " + (wants.isEmpty()
@@ -399,6 +413,7 @@ public final class Services {
             List<ItemStack> got = take(level, village, what, n);
             int count = 0;
             for (ItemStack s : got) { count += s.getCount(); give(p, s); }
+            Stockroom.sold(level, village, Stockroom.Seller.STORES, sample, count, 0);
             GIVEN.put(key, givenToday + count);
             if (GIVEN.size() > 256) GIVEN.clear();
             return "Take " + count + " " + word + ", friend — there's no charge between us." + (count < want ? " That's all we have." : "");
@@ -420,7 +435,9 @@ public final class Services {
         Ledger.addCoins(village, price);
         Economy.sold(village, price);
         Budget.forget(village);
-        return "That's " + count + " " + word + " for " + price + (price == 1 ? " coin" : " coins") + ". "
+        Stockroom.sold(level, village, Stockroom.Seller.STORES, sample, count, price);
+        return (madeNow > 0 ? "Made up at the bench just now, out of what the stores could spare. " : "")
+            + "That's " + count + " " + word + " for " + price + (price == 1 ? " coin" : " coins") + ". "
             + (friend ? "" : "Get to know us, and you'll not pay for bread.");
     }
 

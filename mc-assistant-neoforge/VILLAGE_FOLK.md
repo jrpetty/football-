@@ -313,6 +313,8 @@ The village keeps its books, and **sees to itself before it sells anything**:
 * **The shop and the café.** The shop's counters show spare armour, arms and tools of every
   kind, as well as what the crafts make. The café sells no bread off a low larder. What the
   crafts make to sell (drinks, potions, enchanted things, banners, rugs, books) is always for sale.
+  What the shop and the café make themselves is marked down when it is slow, and never sold for
+  less than it cost (see *What sells, and what to make next*).
 * **Its coin.** Two days' wages are kept back first, then what it is saving for (wool for beds, a
   hive, the drover's pair). The rest is free. The board and the village status show **the purse**:
   the coin, what is kept back, what is put by, what is free, and what is for sale.
@@ -479,11 +481,11 @@ born or grown up into a big enough village.
 
 | Trade | From | Works at | What it does |
 |---|---|---|---|
-| Cook | Stone Age, 14 folk | the café | Bakes potatoes, roasts meat and fish, bakes bread, cookies, pumpkin pie and cakes, and makes drinks |
+| Cook | Stone Age, 14 folk | the café | Bakes potatoes, roasts meat and fish, bakes bread, cookies, pumpkin pie and cakes, and makes drinks for the café and the tavern, more of what sells |
 | Tailor | Stone Age, 18 folk | the workshop | Makes beds (in the colour of the wool), rugs, string, and banners on its loom |
 | Beekeeper | Stone Age, 20 folk | a meadow outside town | Keeps up to four hives: comb with shears or honey with a bottle from a full hive, new hives from comb, bees bred on flowers |
 | Blacksmith | Iron Age, 16 folk | the smithy | Makes iron picks for the miners, swords and armour for the watch, shears, buckets, axes and hoes; bows, and arrows of flint, stick and feather |
-| Shopkeeper | Iron Age, 18 folk | the shop | Sets out what the crafts have made on the shop's counter |
+| Shopkeeper | Iron Age, 18 folk | the shop | Makes what a house wants at its bench, the whole way from the stores (logs to planks to sticks to a pick), more of what sells, and sets it out on the counter with what the crafts have made |
 | Brewer | Iron Age, 22 folk | the brewery | Brews at a real brewing stand: healing for the watch, then swiftness, night vision, regeneration, leaping, water breathing, fire resistance and strength |
 | Enchanter | Diamond Age, 24 folk | the library | Binds books from paper (the farmers' cane) and leather, then enchants the village's iron and diamond tools and armour with lapis at its table |
 
@@ -516,6 +518,61 @@ while the village has a cook (for the café) or a shopkeeper (for the shop).
 * Folk drop in to the café about one break in three, if they have a couple of coins
   saved. They buy a drink or a bite, have it there and then, and the coin goes back
   to the treasury.
+
+**Made the whole way, from what the stores hold.** Whoever sells something knows how it is
+made, by the game's own recipes (`entity/Bench.java`), and makes every step of it out of the
+stores: the shopkeeper saws logs into planks, cuts planks into sticks and slabs, beats an ingot
+into nuggets and burns a log to charcoal for torches when there is no coal; the cook presses cane
+into sugar for a pie, blows the smelter's glass into bottles for its drinks, and bakes bread of the
+farmers' wheat. A modpack's things are made the same way, from their own recipes.
+
+* **What is left over goes back.** The rest of a log's four planks, a slab's other five, a
+  cake's three milk buckets: back into the stores.
+* **The bench and the fire.** A three-by-three recipe wants a crafting table (the one a folk
+  carries or borrows, one in the stores, or one standing in its building); a firing wants a furnace (the
+  smeltery's will do), the café's smoker, or for food the tavern's hearth, and its fuel by the
+  game's burn times (a coal fires eight, a plank one and a half; the hearth burns for nothing).
+  With no table or furnace to hand, it makes one first and keeps it.
+* **Never the village's own.** It never takes what the village is short of for its age (timber in
+  the Wood Age, stone and coal in the Stone Age, iron in the Iron Age), the builders' working
+  timber (16 logs, 48 planks) and stone (64, or what the age holds back), the smith's last 16 bars
+  (24 while there is a smith), the coal's last 8, the mint's gold, the beds' wool while beds wait,
+  the last 12 of each seed crop, nor anybody's tools, arms, armour or marked work.
+* **Its hand.** Nothing above its level at the trade (*The makers' hands*), and a tool comes off
+  its bench as good as its hand, with its mark on it.
+* **Short of something,** it moves on to the next ware, writes down what it is short of and why
+  (*"3 iron ingots (put by for the age)"*), says so once a day, and puts the makings of the ware
+  that sells best on the quest board (*"bring 8 string for the shop's fishing rods"*).
+
+**What sells, and what to make next** (`entity/Stockroom.java`). The shop, the café, the
+tavern, the market's stalls and the stores each keep books: for every ware, a week of what was
+sold (to folk and to players), what was asked for and not there (a miner after a pick the shelf
+had not got, a favourite missing on market day, a round poured in water), what was made, the coin
+it took, and what one cost to make. They are kept with the village and turned over day by day.
+
+* **How many to keep.** For its first two days a seller keeps the usual (the shop four candles,
+  two chests, a pick of each kind; the café a dozen loaves, three of each drink). After that it
+  keeps **two and a half days' sales** (a day's sales: the week's average, or today's if busier),
+  never fewer than the ware's fewest (one, for most) nor more than its shelf holds. A ware nothing
+  has sold of all week is cut to its fewest, and at its fewest no more is made; the iron tools,
+  dear things, are not kept at all once they stop selling. What the village lives on (bread,
+  baked potatoes, the roasts, torches) never goes under the usual: the larder eats it.
+* **What first.** The ware whose shelf is emptiest against what it means to keep, that the stores
+  can run to; one piece of work at a time.
+* **Prices.** A ware over what its seller keeps that has not sold for three days is marked down a
+  tenth, another tenth every two days after, to four tenths off; a sale ends it. Nothing a seller
+  makes is sold for less than it cost.
+* **On hand** is what the stores physically hold of it; the counters show what the village can spare.
+* **Asked about its trade,** a shopkeeper or a cook says what sells best this week, what is low,
+  what is marked down and what it is short of; asked what the village is short of, any folk names
+  what the sellers cannot make for want of something.
+* **Made to order.** Ask the storekeeper for a thing the stores have not got (*"could I have a
+  chest?"*) and it makes it up at the bench out of what they can spare, if it has the hand for it;
+  if it cannot, it says why.
+* **The town's books** read it all from `Stockroom.inventoryReport`: per seller, per ware, what is
+  on hand and spare, what it means to keep, sold today, yesterday and this week, asked for and not
+  there, made today and this week, the price, the cost, any markdown, what it is short of, and the
+  way it was last made.
 
 **Buildings.** A village builds a café from the Stone Age once it has 14 folk, a
 smithy (16), a shop (18) and a brewery (22) in the Iron Age, and a library (24) in the
@@ -1146,6 +1203,10 @@ the corner, and lanterns hung low.
 * **Buy a round.** Right-click the board on the bar ("Buy a round, a coin a head").
   Everybody in the tavern raises a glass to you and thinks better of you (once an
   evening), and the village remembers it.
+* **What is drunk** is the café's: the cook's cider, juices, honey tea and cocoa, out of the
+  stores, a bottle a head (the bottles go back), each doing its little good. A folk in for the
+  evening with a few coins put by buys itself one. With none in the stores the round is drunk in
+  water, and the tavern's books count the drinks it had not got, so the cook makes more.
 
 ### The day of rest
 
@@ -1834,13 +1895,27 @@ rolls a rug back into the stores rather than going without.
 
 ### The shop's shelves
 
-The shopkeeper keeps what a house wants on the shelves, made up at the shop's bench out of what the
-stores can spare when anything runs low: chests and barrels, torches and candles, a fishing rod, a
-flower pot (from bricks), a painting and an item frame, a lantern (when there are iron nuggets), a
-bucket (when there is iron to spare), and the plain stone pick, axe, hoe and shovel a folk whose own
-wore out comes in for. Never out of the builders' timber and stone, nor the smith's iron while it
-is short. Folk buy their comforts there once there is a shop open (a rug, a pot, a candle, a
-lantern, a chest of their own, a barrel, a bookshelf), and their children's beds.
+The shopkeeper keeps what a house wants on the shelves, made up at the shop's bench by the game's
+own recipes, the whole way from what the stores can spare, when anything runs low against what the
+shop means to keep (*What sells, and what to make next*):
+
+| Ware | Usual / fewest / most | Made of (the whole way) |
+|---|---|---|
+| Torches | 24 / 8 / 64, the village's lights | a coal or charcoal (a log burnt in the furnace) and a stick |
+| Chest, barrel | 2 / 1 / 6 | planks (sawn from logs); a barrel's slabs cut from planks |
+| Candles | 4 / 1 / 12 | string and honeycomb |
+| Fishing rod | 1 / 1 / 4 | sticks and string |
+| Flower pot | 2 / 1 / 8 | bricks |
+| Painting, item frame | 1 / 1 / 4 | sticks, and wool or leather |
+| Lantern | 2 / 1 / 8 | iron nuggets (an ingot beaten into nine) and a torch |
+| Bucket, shears | 1 / 1 / 4 (shears 3) | iron |
+| Stone pick, axe, hoe, shovel, sword | 1 / 1 / 4 | cobblestone and sticks |
+| Iron pick, axe, shovel, hoe | 1 / 0 / 3 | iron and sticks, of iron the village can spare |
+
+Never out of the builders' timber and stone, nor the smith's iron, nor anything the age is putting
+by. Folk buy their comforts there once there is a shop open (a rug, a pot, a candle, a lantern, a
+chest of their own, a barrel, a bookshelf), and their children's beds; a folk come for the tool of
+its trade and finding none is a sale the shop had not got, and it keeps more of that tool.
 
 ### The leader's hall and the courtyard
 
@@ -1875,7 +1950,7 @@ its own. The council sits in the hall's council chamber.
 Right-click the village board (or press **Analytics** in the village journal, or type
 `/village stats`) and the town's books open: everything the village is and has been, with
 charts, so you can see exactly what is driving its growth. Every morning the village is
-written down (kept for four hundred days), and the books have sixteen pages, picked along the
+written down (kept for four hundred days), and the books have seventeen pages, picked along the
 top (in two rows on a small window; the arrow keys turn the pages); the range (a week, a month, a hundred days, or all of it) is picked at the top right, and
 every chart reads out the day under the mouse.
 
@@ -1911,6 +1986,13 @@ every chart reads out the day under the mouse.
   reckoned up item by item, so a lantern beaten out of an ingot counts the lantern (and the
   spare nugget) made and the ingot and the torch used. Each morning the day is written down
   (kept a hundred days, item by item, and the totals since the village began for ever).
+* **Shops:** the village's sellers (the shop, the café, the tavern, the market, the stores'
+  counter), picked along the top: who keeps each and whether it is open, what it sold and took
+  this week and what it made; what it is short of to make more; and every ware with its icon:
+  what it has against the stock it means to keep (a bar; the target follows what sells), sold
+  this week, asked for and missed, made, its price (and any markdown on slow stock), what one
+  costs to make, and a note (short of what, or how it is going). The mouse over a ware gives its
+  books: today, yesterday and the week, the usual stock and its bounds, and how it was last made.
 * **Jobs:** every trade: its hands, their average level, their pay, what it made yesterday
   and this week, what it makes per hand a day, its return (what a hand makes for each coin of
   its pay: green when the trade earns its keep, red when it does not, as the watch never does),
@@ -2460,8 +2542,11 @@ ripen, days pass, folk work and houses go up at that pace.
   what is for sale. `house buy` buys the empty house you stand in; `house let <coins>` lets
   yours out at that rent a day (0 to take it back); `house rent` collects the rent.
 * `/village stats [page]` — the town's books on the analytics screen (as clicking the village
-  board does), opened at a page if one is given (0 the Overview to 15 the Board); from the
+  board does), opened at a page if one is given (0 the Overview to 16 the Board); from the
   console, the reading of what drives the village's growth.
+* `/village shop` — the sellers' books: for the shop, the café, the tavern, the market and the
+  stores, what each ware has on hand against what is kept, what sold today and this week, what
+  was wanted and not there, what was made, its price and markdown, and what it is short of.
 * `/village chronicle` — the nearest village's history, as a written book.
 * `/village standing` — what every village you have met thinks of you.
 * `/village ledger` — the nearest village's town ledger, as a book.
@@ -2609,6 +2694,14 @@ Every push to CI:
   makes three apple ciders; the café's counter shows the cider with its price tag,
   a folk buys something there, and a player buys a cider and the enchanted thing
   from the shop's counter;
+* runs the sellers' benches and books (`ShopGameTests`, sh01 to sh05): a shopkeeper with nothing
+  but logs and iron in the stores saws planks, cuts sticks and makes a tool for its shelves, with
+  its mark, never into the builders' sixteen logs or the smith's sixteen bars; a cook with wheat
+  bakes bread for its counter and stops at the farmers' seed; candles that sell out every day are
+  kept more of and flower pots that never sell are cut to one, the slow pots marked down and
+  nothing sold under cost; an Iron Age village saving its iron gets chests but not a bar beaten
+  into a bucket; and the storekeeper makes a chest to order and says why it cannot make a diamond
+  pickaxe;
 * checks the money (game test `t30`): a new village's purse, gold minted into coin,
   a day's wages, prices that move with the stores, a folk's market-day treat, a
   player buying bread at a stall and selling iron, and the stalls' price signs;

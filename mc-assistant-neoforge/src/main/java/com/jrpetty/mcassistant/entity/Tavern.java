@@ -15,7 +15,6 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.NoteBlock;
@@ -46,6 +45,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * <li>A player can <b>buy a round</b>: right-click the board on the bar ("Buy a round, a
  *     coin a head"). Everybody in the tavern raises a glass to you and thinks the better of
  *     you, and the village remembers it.</li>
+ * <li>What is drunk is the café's: the cook's cider, juices, honey tea and cocoa, out of the
+ *     stores, a bottle a head (the bottles go back). A folk in for the evening with a few coins
+ *     put by buys itself one. With none in the stores, the round is drunk in water, and the
+ *     tavern's books (Stockroom) count the drink it had not got, so the cook makes more.</li>
  * </ul>
  */
 public final class Tavern {
@@ -55,11 +58,14 @@ public final class Tavern {
     private static final Map<BlockPos, Integer> BEAT = new ConcurrentHashMap<>();
     private static final Map<UUID, Long> STORY = new ConcurrentHashMap<>();
     private static final Set<String> TOASTED = ConcurrentHashMap.newKeySet();
+    /** The evening each folk last bought itself a drink at the bar. */
+    private static final Map<UUID, Long> DRANK = new ConcurrentHashMap<>();
 
     public static void resetForTests() {
         BEAT.clear();
         STORY.clear();
         TOASTED.clear();
+        DRANK.clear();
     }
 
     /** The village's tavern, or null. */
@@ -91,7 +97,55 @@ public final class Tavern {
         BlockPos hearth = tav.anchor().relative(back, 4);
         f.getLookControl().setLookAt(hearth.getX() + 0.5, hearth.getY() + 1.0, hearth.getZ() + 0.5);
         tell(f, level, village);
+        Villages.Village v = Villages.get(village);
+        if (v != null) drink(f, level, v, day);
         return true;
+    }
+
+    // ------------------------------------------------------------------ the bar
+
+    /**
+     * A drink at the bar, once an evening, for a folk with a few coins put by: one of the café's drinks
+     * out of the stores, paid into the treasury and drunk there and then. With none in the stores, the
+     * tavern's books count the drink it had not got (Stockroom), and the cook makes more.
+     */
+    static void drink(VillageFolkEntity f, ServerLevel level, Villages.Village v, long day) {
+        if (f.purse() < 3 || DRANK.getOrDefault(f.getUUID(), -1L) == day) return;
+        DRANK.put(f.getUUID(), day);
+        if (DRANK.size() > 4096) DRANK.clear();
+        net.minecraft.world.item.ItemStack d = pour(level, v, f.getRandom());
+        if (d.isEmpty()) {
+            Cafe.Drink usual = Cafe.DRINKS.get(Math.floorMod(f.getUUID().hashCode(), Cafe.DRINKS.size()));
+            Stockroom.missed(level, v.id(), Stockroom.Seller.TAVERN, Cafe.drink(usual));
+            return;
+        }
+        int price = Stockroom.asked(level, v.id(), d, 1, 1);
+        if (!f.spend(price)) {
+            Crafts.store(level, v, d);
+            return;
+        }
+        Ledger.addCoins(v.id(), price);
+        Stockroom.sold(level, v.id(), Stockroom.Seller.TAVERN, d, 1, price);
+        drunk(level, v, f, d);
+    }
+
+    /** One of the café's drinks out of the stores, any of them, or nothing if there are none. */
+    static net.minecraft.world.item.ItemStack pour(ServerLevel level, Villages.Village v, RandomSource r) {
+        List<net.minecraft.world.item.ItemStack> drinks = Cafe.drinksInStores(level, v.id());
+        if (drinks.isEmpty()) return net.minecraft.world.item.ItemStack.EMPTY;
+        net.minecraft.world.item.ItemStack pick = drinks.get(r.nextInt(drinks.size()));
+        if (!TownWork.take(level, v, s -> net.minecraft.world.item.ItemStack.isSameItemSameComponents(s, pick), 1)) {
+            return net.minecraft.world.item.ItemStack.EMPTY;
+        }
+        return pick.copyWithCount(1);
+    }
+
+    /** Drunk there and then: it does its little good, and the bottle goes back to the stores. */
+    private static void drunk(ServerLevel level, Villages.Village v, VillageFolkEntity f, net.minecraft.world.item.ItemStack d) {
+        Cafe.Drink kind = Cafe.drinkFor(Cafe.drinkOf(d) == null ? "" : Cafe.drinkOf(d));
+        if (kind != null) f.addEffect(new MobEffectInstance(kind.effect(), kind.ticks(), 0));
+        Crafts.store(level, v, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GLASS_BOTTLE));
+        f.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
     }
 
     /** Somebody tells a story, every so often: a thing out of the village's history. */
@@ -242,13 +296,23 @@ public final class Tavern {
         Economy.sold(v.id(), price);
         long day = level.getDayTime() / 24000L;
         String name = p.getName().getString();
+        int poured = 0;
         for (VillageFolkEntity f : in) {
             boolean first = TOASTED.add(f.getUUID() + "/" + p.getUUID() + "/" + day);
             if (first) {
                 f.persona().feelFor(p.getUUID(), name, 4);
                 f.persona().remember(day, name + " bought a round at the tavern", 3);
             }
-            f.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 1200, 0));
+            // A bottle of the café's out of the stores, a head; with none, the toast is drunk in water.
+            net.minecraft.world.item.ItemStack d = pour(level, v, f.getRandom());
+            if (!d.isEmpty()) {
+                drunk(level, v, f, d);
+                Stockroom.sold(level, v.id(), Stockroom.Seller.TAVERN, d, 1, 1);
+                poured++;
+            } else {
+                Stockroom.missed(level, v.id(), Stockroom.Seller.TAVERN,
+                    Cafe.drink(Cafe.DRINKS.get(Math.floorMod(f.getUUID().hashCode(), Cafe.DRINKS.size()))));
+            }
             f.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
             f.sayLater(FolkTalk.pick(f.getRandom(), "To " + name + "!", "Cheers, " + name + "!", "Good health!",
                 "A gentleman and a scholar!", "Well, I never — thank you!"), 10 + f.getRandom().nextInt(40));
@@ -258,7 +322,9 @@ public final class Tavern {
         level.playSound(null, tav.anchor(), SoundEvents.GENERIC_DRINK, SoundSource.NEUTRAL, 1.0F, 1.0F);
         Villages.tell(v.id(), day, name + " bought a round at the tavern");
         Standing.stir(v.id(), p.getUUID());
-        return "You bought a round for " + in.size() + " (" + price + (price == 1 ? " coin" : " coins") + "). Cheers!";
+        return "You bought a round for " + in.size() + " (" + price + (price == 1 ? " coin" : " coins") + "). Cheers!"
+            + (poured == 0 ? " (Water all round: there's nothing from the café in the stores.)"
+                : poured < in.size() ? " (" + poured + " of the café's drinks, and water for the rest.)" : "");
     }
 
     /** For the status line. */
