@@ -60,6 +60,13 @@ public final class Reach {
         return r.count < TOO_FEW ? null : r;
     }
 
+    /** The village's last survey, if it has one, without making a new one (the report line). */
+    @Nullable
+    public static Reach last(UUID village) {
+        Reach r = SURVEYS.get(village);
+        return r == null || r.count < TOO_FEW ? null : r;
+    }
+
     /** Forget every survey (a world closing or opening, a test). */
     public static void reset() {
         SURVEYS.clear();
@@ -101,7 +108,11 @@ public final class Reach {
                     for (int lz = 0; lz < 16; lz++) {
                         int iz = (cz << 4) + lz - z0;
                         if (iz < 0 || iz >= SIZE) continue;
-                        h[ix * SIZE + iz] = chunk.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, lx, lz);
+                        int top = chunk.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, lx, lz);
+                        int floor = chunk.getHeight(Heightmap.Types.OCEAN_FLOOR, lx, lz);
+                        // Water deeper than a wade is not walked: the pathfinder swims a folk across a
+                        // pond and it cannot climb out up the far bank (the mountain map's farmers).
+                        h[ix * SIZE + iz] = top - floor >= 2 ? Integer.MIN_VALUE : top;
                     }
                 }
             }

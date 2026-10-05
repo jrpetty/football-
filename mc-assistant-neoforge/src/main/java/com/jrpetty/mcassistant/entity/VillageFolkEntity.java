@@ -2064,7 +2064,13 @@ public class VillageFolkEntity extends AssistantEntity {
         String social = " traits=" + life.traitsLabel().replace(' ', '-')
             + (life.partner() != null ? " partner=" + life.partnerName() : "")
             + " friends=" + life.friends().size();
-        return social + (trail.length() == 0 ? "" : " trail=" + trail.toString().trim());
+        String walk = "";
+        WorkZone zone = workZone();
+        if (stationTask() == StationTask.FARM && zone != null && ownerId() != null) {
+            Reach r = Reach.last(ownerId());
+            walk = r == null ? " reach=none" : " reach=" + r.count() + (r.reaches(zone.center(), Math.min(zone.radius(), FIELD_MOST)) ? "/ok" : "/NO");
+        }
+        return social + walk + (trail.length() == 0 ? "" : " trail=" + trail.toString().trim());
     }
 
     // ------------------------------ getting started --------------------------
@@ -6175,7 +6181,7 @@ public class VillageFolkEntity extends AssistantEntity {
      * — it was a field its farmer was carried to and stranded on, or never reached at all.
      */
     private boolean fieldOutOfReach() {
-        if (stationTask() != StationTask.FARM || tickCount - reachCheckTick < 6000) return false;
+        if (stationTask() != StationTask.FARM || tickCount - reachCheckTick < 2400) return false;
         reachCheckTick = tickCount;
         WorkZone zone = workZone();
         UUID village = ownerId();

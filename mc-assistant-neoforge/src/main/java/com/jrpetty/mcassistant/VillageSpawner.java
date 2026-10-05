@@ -427,9 +427,12 @@ public final class VillageSpawner {
         chest.setChanged();
     }
 
-    /** Where the camp's beds go round the heart: (dx, dz) of the foot; the head points away from the middle. */
+    /** Where the camp's beds go round the heart: (dx, dz) of the foot; the head points away from the middle.
+     *  A second ring further out for broken ground: on a mountainside the first ring had nowhere
+     *  level enough for one bed, and a village of twelve spent every night on its feet. */
     private static final int[][] CAMP = {
-        {0, -3}, {3, 0}, {0, 3}, {-3, 0}, {-2, -3}, {3, -2}, {2, 3}, {-3, 2}, {2, -3}, {3, 2}, {-2, 3}, {-3, -2}};
+        {0, -3}, {3, 0}, {0, 3}, {-3, 0}, {-2, -3}, {3, -2}, {2, 3}, {-3, 2}, {2, -3}, {3, 2}, {-2, 3}, {-3, -2},
+        {0, -5}, {5, 0}, {0, 5}, {-5, 0}, {-2, -5}, {5, -2}, {2, 5}, {-5, 2}, {2, -5}, {5, 2}, {-2, 5}, {-5, -2}};
     private static final net.minecraft.world.level.block.Block[] BEDDING = {
         Blocks.RED_BED, Blocks.BLUE_BED, Blocks.YELLOW_BED, Blocks.GREEN_BED, Blocks.WHITE_BED, Blocks.BROWN_BED,
         Blocks.ORANGE_BED, Blocks.LIGHT_BLUE_BED, Blocks.PURPLE_BED, Blocks.CYAN_BED, Blocks.LIME_BED, Blocks.PINK_BED};
@@ -461,7 +464,7 @@ public final class VillageSpawner {
             ? (dz < 0 ? net.minecraft.core.Direction.NORTH : net.minecraft.core.Direction.SOUTH)
             : (dx < 0 ? net.minecraft.core.Direction.WEST : net.minecraft.core.Direction.EAST);
         BlockPos foot = groundAt(level, heart.getX() + dx, heart.getZ() + dz);
-        if (foot == null || Math.abs(foot.getY() - heart.getY()) > 1) return false;
+        if (foot == null || Math.abs(foot.getY() - heart.getY()) > 2) return false;
         BlockPos head = foot.relative(out);
         if (!level.getBlockState(foot).canBeReplaced() || !level.getBlockState(head).canBeReplaced()) return false;
         if (!level.getBlockState(foot.below()).isFaceSturdy(level, foot.below(), net.minecraft.core.Direction.UP)
@@ -481,7 +484,7 @@ public final class VillageSpawner {
     /** The heads of the beds still standing at a village's camp, nearest the heart first. */
     public static List<BlockPos> campBeds(Level level, BlockPos heart) {
         List<BlockPos> out = new java.util.ArrayList<>();
-        for (BlockPos p : BlockPos.betweenClosed(heart.offset(-4, -2, -4), heart.offset(4, 2, 4))) {
+        for (BlockPos p : BlockPos.betweenClosed(heart.offset(-6, -3, -6), heart.offset(6, 3, 6))) {
             net.minecraft.world.level.block.state.BlockState st = level.getBlockState(p);
             if (st.getBlock() instanceof net.minecraft.world.level.block.BedBlock
                     && st.getValue(net.minecraft.world.level.block.BedBlock.PART)
