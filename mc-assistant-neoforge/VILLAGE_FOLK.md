@@ -352,12 +352,22 @@ output, the worth and the three best paid, and any folk will tell you who earns 
     the farmers, fishers and hunters: their work is the food.
   * **Contentment knows the difference.** Wages paid in full are a good thing; paid
     short, or hardly at all, folk say so.
+  * **The tax.** A tenth of every wage is the village's tax: it never leaves the treasury, and
+    the folk is paid the rest (the odd part of a coin is carried to its next payday, so a hand on
+    three a day pays a coin every third or fourth morning). The poor pay none, and while the
+    treasury holds a week's wages it takes none. The wages are reckoned before the tax out of what
+    the treasury holds, so a payday never empties it: it keeps a tenth of whatever it pays out.
+    (It used to pay out every coin it held each morning, and a town of a hundred kept a few coins
+    in its treasury while three thousand sat in its purses.) The Wages page says so, and the
+    Economy page and the town's books count the tax as money in.
   * **The tithe.** On the day of rest every folk with savings gives one coin in ten of
     what it holds over a dozen back to the treasury.
   * **Rent.** Straight after the wages, every household that rents from the village pays its
     day's rent into the treasury (a coin for a house in most places: see Homes), and those
     saving for a house of their own put some of their pay by; a household that has saved the
-    price buys its house. The Economy page counts both as money in.
+    price buys its house. The Economy page counts both as money in, and what the folk spend in
+    town out of their own purses (the market's treats, the café, the shop, the tavern, the
+    comforts of home, a child's bed) too: "spent in town".
 * **Wool for the beds.** Every morning, before the wages, a village whose houses wait
   for beds and that has no wool to make them buys a lot or two from the traders, out of
   half the treasury at most. Short of the coin, it puts a lot's price by for tomorrow. While the beds wait, the village keeps
@@ -860,7 +870,8 @@ Bedding lying in the stores is laid out at the camp each morning by the leader f
 without a bed. A bed under one of the village's own roofs is a home however high the roof
 over it; only a bed down in the ground, in nothing the village built, is passed over. While
 folk sleep on the ground the tailor makes beds before rugs and banners, the quest board asks
-for wool, and the elder may order the herds grown.
+for wool, and the elder may order the herds grown. A folk with no bed of its own lodges in a bed
+another household can spare (see Homes).
 
 **When a building waits.** A project the village cannot start (no lot will take it, the
 stores cannot pay for it yet, or a part nobody can make) is set aside for a while and the
@@ -2201,8 +2212,8 @@ every chart reads out the day under the mouse.
   the range, and what its dead died of.
 * **Money:** what it made, took in and paid out each day; the treasury, the folk's purses and
   its worth over time; money in against money out; and what it made by kind (food, timber,
-  stone, ore and metal, wool and hides, crafts, plants), with the takings, sales, tithe,
-  rent, houses sold, wages and buying-in for the range.
+  stone, ore and metal, wool and hides, crafts, plants), with the takings, sales, tax, tithe,
+  rent, houses sold, what the folk spent in town, wages and buying-in for the range.
 * **Production:** everything the village makes, item by item: every log, cobblestone, loaf,
   ingot, stone brick, lantern and bed its folk bring home or make in the stores (never what
   they were only given or fetched: a founder's kit, or the stores' own goods put back). Five cards
@@ -2261,7 +2272,7 @@ every chart reads out the day under the mouse.
 * **Homes:** folk against beds and room over time; households renting, owning, saving to buy
   and waiting over time; the rent and the houses sold each day; the figures (housed, waiting,
   renting, owned, saving, coin put by, rent yesterday, owed, players' houses, empty, founders
-  rent-free); and every household: who, which house and where, rent-free or renting or saving or
+  rent-free, folk lodging in a spare bed); and every household: who, which house and where, rent-free or renting or saving or
   owning, its rent (and anything it
   owes), a bar of what it has put by toward the price, and whether it wants a house of its own
   and why (the mouse over a row tells the whole of it).
@@ -2503,8 +2514,21 @@ house of its own (a house or a manor the village built) and sleeps there.
   time mostly; twins about one birth in seventeen, triplets once in two hundred, quadruplets once in
   four thousand.
 * **Grown children move out.** A child who comes of age stays at home until there is a house for it,
-  then moves into a place of its own. While anyone waits for a house and none stands empty, the
-  builders put one up.
+  then moves into a place of its own — wed or not: a grown child who married and lives at its
+  parents' (or its partner's) with its partner and their children waits for a house with them, and
+  they move out together. While anyone waits for a house and none stands empty, the builders put
+  one up.
+* **A spare bed meanwhile.** A house has four beds (a two-storey one or a manor six), and a couple
+  or a widower does not need them all. A folk with no bed of its own (no house yet, or a house with
+  more folk than beds) lodges in a bed another household can spare: one more than that household
+  and its lodgers fill. The household always comes first: one of its own who wants a bed (a child
+  born, a partner moved in) has it back, and the lodger finds another. The leader's hall puts one up
+  too; a player's house never does. Anybody lodging out takes its own bed at home as soon as one
+  stands free there, and a guard, up all night on the watch, has its bed at home kept for it. Ask a
+  lodger where it lives: "I've no house of my own yet: I sleep in a spare bed at No. 3, Mill Lane
+  till there's one for me." The homes line and the Homes page count the lodgers. (Every bed in a
+  house used to be its household's, needed or not: a town of eighty-seven had eighty-nine beds made
+  up and sixty-six folk in them.)
 * **Moving house.** A household that moves carries its belongings: it walks to the old house's
   chest, takes its things, and puts them in the new one's. Its keepsakes (presents it loved, treats it
   bought at the shop for itself) are its own: never banked in the village stores.
@@ -3195,6 +3219,14 @@ Every push to CI:
   by toward it (never the whole), or set aside and paid later when the treasury is empty; a Merchant
   chooses a money knack, a miner a miner's, a cheerful Free Spirit Bright Spirit; a trade's knack
   quickens only its trade; and the knacks survive a save and reach the talk screen's Skills page;
+* checks the beds and the treasury (`BedsAndTreasuryGameTests`, bt01 to bt03): one house and six
+  folk with nowhere to live, the household in its own bed and three lodging in the beds it can
+  spare, no more; one marrying in has a bed at home at once, a lodger giving one back; a second
+  house and everybody has a bed, no two the same; a grown child wed and living at its parents' waits
+  with its partner and baby for a house and moves out with them; and a tenth of every wage kept in
+  the treasury as tax over eight paydays on less coming in than goes out, the treasury never below
+  nothing, no coin from nowhere, the tax in the books, none from the poor and none while the
+  treasury holds a week's wages;
 * checks the money (game test `t30`): a new village's purse, gold minted into coin,
   a day's wages, prices that move with the stores, a folk's market-day treat, a
   player buying bread at a stall and selling iron, and the stalls' price signs;

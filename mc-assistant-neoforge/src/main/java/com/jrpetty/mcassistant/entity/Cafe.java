@@ -475,6 +475,7 @@ public final class Cafe {
         if (!TownWork.take(level, v, s -> ItemStack.isSameItemSameComponents(s, pick), 1)) return null;
         f.spend(price);
         Ledger.addCoins(v.id(), price);
+        Economy.spentInTown(v.id(), price);
         price += FolkSkills.tip(v.id(), AssistantEntity.StationTask.SHOP, f, price);   // a Friendly Face at the counter
         Stockroom.sold(level, v.id(), Stockroom.Seller.SHOP, pick, 1, price);
         ItemStack bought = pick.copyWithCount(1);
@@ -506,6 +507,7 @@ public final class Cafe {
         if (!TownWork.take(level, v, s -> ItemStack.isSameItemSameComponents(s, pick), 1)) return null;
         f.spend(price);
         Ledger.addCoins(v.id(), price);
+        Economy.spentInTown(v.id(), price);
         price += FolkSkills.tip(v.id(), AssistantEntity.StationTask.COOK, f, price);   // a Friendly Face at the counter
         Stockroom.sold(level, v.id(), Stockroom.Seller.CAFE, pick, 1, price);
         // Had there and then: a drink does its little good, a bite fills it up.

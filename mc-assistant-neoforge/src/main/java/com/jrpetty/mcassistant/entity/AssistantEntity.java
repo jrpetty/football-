@@ -2395,8 +2395,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         return dietPercent >= 60 && getHealth() > getMaxHealth() * 0.5F;
     }
 
-    /** Give up the bed it sleeps in (moving away). */
-    public void forgetBed() { bedPos = null; }
+    /** Give up the bed it sleeps in (moving away, moving house, a lodger's bed wanted back): it looks for
+     *  another at its next bedtime, not after the hunt's usual wait of a quarter of a day. */
+    public void forgetBed() {
+        bedPos = null;
+        bedClaimTick = -99999;
+    }
 
     /** How much longer this one goes between meals and charges. */
     public int traitUpkeepPercent() {

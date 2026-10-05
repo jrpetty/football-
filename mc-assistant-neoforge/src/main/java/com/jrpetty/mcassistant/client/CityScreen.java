@@ -369,7 +369,8 @@ public class CityScreen extends Screen {
 
     private void money(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my) {
         int half = (cw - 6) / 2, chartH = (ch - 30) / 2;
-        int[] in = plus(series("takings"), series("sold"), series("tithe"), series("rent"), series("house_sales"));
+        int[] in = plus(series("takings"), series("sold"), series("tithe"), series("rent"), series("house_sales"), series("tax"),
+            series("town_spent"));
         int[] outs = plus(series("wages"), series("spent"));
         chart(g, x, y, half, chartH, "Made, earned and paid out, a day", mx, my, new Series("Made", series("output"), GREEN),
             new Series("Money in", in, BLUE), new Series("Paid out", outs, RED));
@@ -396,11 +397,12 @@ public class CityScreen extends Screen {
         }
         int takings = sumLast(series("takings"), n), sold = sumLast(series("sold"), n), tithe = sumLast(series("tithe"), n),
             wages = sumLast(series("wages"), n), spent = sumLast(series("spent"), n), rent = sumLast(series("rent"), n),
-            houses = sumLast(series("house_sales"), n);
+            houses = sumLast(series("house_sales"), n), tax = sumLast(series("tax"), n), town = sumLast(series("town_spent"), n);
         by += 2;
-        small(g, Ui.clip(font, "In: " + takings + " from the work, " + sold + " sold, " + tithe + " tithe, " + rent + " rent, " + houses + " houses sold.",
-            (int) (half / 0.75)), bx, by, Ui.MUTED);
-        small(g, "Out: " + wages + " in wages, " + spent + " bought in. Net " + (takings + sold + tithe + rent + houses - wages - spent) + ".", bx, by + 9, Ui.MUTED);
+        small(g, Ui.clip(font, "In: " + takings + " from the work, " + sold + " sold, " + tax + " tax, " + tithe + " tithe, " + rent + " rent, "
+            + houses + " houses sold, " + town + " spent in town.", (int) (half / 0.75)), bx, by, Ui.MUTED);
+        small(g, Ui.clip(font, "Out: " + wages + " in wages" + (tax > 0 ? " (" + tax + " of it kept back in tax)" : "") + ", " + spent + " bought in. Net "
+            + (takings + sold + tax + tithe + rent + houses + town - wages - spent) + ".", (int) (half / 0.75)), bx, by + 9, Ui.MUTED);
     }
 
     // ------------------------------------------------------------------ production
@@ -1009,7 +1011,7 @@ public class CityScreen extends Screen {
             { "Saving to buy", Integer.toString(hm.getInt("saving")) }, { "Put by", hm.getInt("saved") + "c" },
             { "Rent yesterday", hm.getInt("rent_yesterday") + "c" }, { "Owed", hm.getInt("owed") + "c" },
             { "Players'", Integer.toString(hm.getInt("players")) }, { "Empty", Integer.toString(hm.getInt("empty")) },
-            { "Founders rent-free", Integer.toString(hm.getInt("rent_free")) } };
+            { "Founders rent-free", Integer.toString(hm.getInt("rent_free")) }, { "Lodging", Integer.toString(hm.getInt("lodging")) } };
         int colW = cw / 5;
         for (int i = 0; i < figures.length; i++) {
             int cx = x + (i % 5) * colW, cy = ty + (i / 5) * 10;
@@ -1020,7 +1022,8 @@ public class CityScreen extends Screen {
         small(g, "Beds", x, by, Ui.FAINT);
         Ui.bar(g, x + 22, by, cw / 4, 6, hm.getInt("folk") == 0 ? 0 : hm.getInt("bedded") / (float) Math.max(1, hm.getInt("folk")), GREEN);
         small(g, Ui.clip(font, hm.getInt("bedded") + " of " + hm.getInt("folk") + " folk have a bed, " + hm.getInt("beds_made") + " made up, room for "
-            + hm.getInt("room") + "; founders live rent-free till they can afford it, the rest rent, and buy when they have saved the price",
+            + hm.getInt("room") + (hm.getInt("lodging") > 0 ? ", " + hm.getInt("lodging") + " lodging in a spare bed till they have a house" : "")
+            + "; founders live rent-free till they can afford it, the rest rent, and buy when they have saved the price",
             (int) ((cw * 3 / 4 - 30) / 0.75)),
             x + 28 + cw / 4, by, Ui.MUTED);
         // Every household.
@@ -1654,7 +1657,8 @@ public class CityScreen extends Screen {
         ly += 14;
         Ui.section(g, font, "All told (" + days.length + " days in the books)", x, ly, half);
         ly += 12;
-        int[] wagesAll = series("wages"), inAll = plus(series("takings"), series("sold"), series("tithe"), series("rent"), series("house_sales"));
+        int[] wagesAll = series("wages"), inAll = plus(series("takings"), series("sold"), series("tithe"), series("rent"), series("house_sales"),
+            series("tax"), series("town_spent"));
         String[][] totals = {
             { "Born", Integer.toString(sumLast(series("born"), days.length)) }, { "Died", Integer.toString(sumLast(series("died"), days.length)) },
             { "Came to live here", Integer.toString(sumLast(series("moved_in"), days.length)) },

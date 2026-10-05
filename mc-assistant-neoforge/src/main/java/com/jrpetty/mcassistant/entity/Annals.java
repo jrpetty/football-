@@ -48,7 +48,7 @@ public final class Annals {
         "housed", "waiting", "coins", "purses", "worth", "stores_worth", "output", "takings", "sold", "tithe", "wages",
         "spent", "food", "logs", "stone", "coal", "iron", "content", "idle", "guards", "renown", "food_days10",
         "out_food", "out_timber", "out_stone", "out_ore", "out_animal", "out_craft", "out_plant",
-        "rent", "house_sales", "saving", "owned", "rented", "rent_free");
+        "rent", "house_sales", "saving", "owned", "rented", "rent_free", "tax", "town_spent", "lodging");
 
     /** Today's comings and goings, before the morning writes them down. */
     private static final Map<UUID, int[]> TODAY = new ConcurrentHashMap<>();
@@ -141,6 +141,9 @@ public final class Annals {
         n.put("tithe", d == null ? 0 : d.tithe);
         n.put("rent", d == null ? 0 : d.rent);
         n.put("house_sales", d == null ? 0 : d.houses);
+        n.put("tax", d == null ? 0 : d.tax);
+        n.put("town_spent", d == null ? 0 : d.town);
+        n.put("lodging", homes.length > 14 ? homes[14] : 0);
         n.put("saving", homes.length > 8 ? homes[8] : 0);
         n.put("owned", homes[3]);
         n.put("rented", homes[4]);
@@ -823,7 +826,7 @@ public final class Annals {
         int[] h = Homes.counts(level, id);
         CompoundTag c = new CompoundTag();
         String[] names = { "housed", "waiting", "given", "owned", "rented", "players", "empty", "for_sale",
-            "saving", "rent_yesterday", "saved", "owed", "sales_yesterday", "rent_free" };
+            "saving", "rent_yesterday", "saved", "owed", "sales_yesterday", "rent_free", "lodging" };
         for (int i = 0; i < names.length && i < h.length; i++) c.putInt(names[i], h[i]);
         CompoundTag report = Homes.report(level, id);
         c.put("rows", report.getList("rows", net.minecraft.nbt.Tag.TAG_COMPOUND));
@@ -1202,7 +1205,8 @@ public final class Annals {
         // Money: wages against what comes in.
         int takings = sum(days, key("takings"), days.size() - window, days.size()) + sum(days, key("sold"), days.size() - window, days.size())
             + sum(days, key("tithe"), days.size() - window, days.size()) + sum(days, key("rent"), days.size() - window, days.size())
-            + sum(days, key("house_sales"), days.size() - window, days.size());
+            + sum(days, key("house_sales"), days.size() - window, days.size()) + sum(days, key("tax"), days.size() - window, days.size())
+            + sum(days, key("town_spent"), days.size() - window, days.size());
         int wages = sum(days, key("wages"), days.size() - window, days.size()) + sum(days, key("spent"), days.size() - window, days.size());
         int coinsNow = last.values()[key("coins")], coinsThen = then.values()[key("coins")];
         out.add((takings >= wages ? "+" : "-") + "Money " + span + ": " + takings + " in, " + wages + " out (wages and buying in); the treasury "

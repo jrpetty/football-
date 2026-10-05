@@ -14,8 +14,9 @@ import net.minecraft.world.item.Tiers;
  * a hamlet pays the rate, a village half as much again, a town twice, a city two and a half
  * times and a capital three. On top: a coin at level ten and another at twenty-five, one for
  * the elder, and up to two for a good day's work, counted from what it actually did since it
- * was last paid. The coin comes from the village's own trade (market days, traders, gold
- * minted into coin, the tithe): none of it out of thin air.
+ * was last paid. A tenth of it is the village's tax, and stays in the treasury (the poor pay
+ * none). The coin comes from the village's own trade (market days, traders, gold minted into
+ * coin, the tax, the tithe, the rent): none of it out of thin air.
  *
  * <p>What it is worth is what it has saved (with its share of what its household has put by
  * toward buying its house: Homes), what it carries (valued at the market's
@@ -184,6 +185,9 @@ public final class Wealth {
         sb.append("Pay in ").append(Villages.rank(id).label).append(": ").append(standingWords(st)).append(".\n");
         for (String line : payScale(id)) sb.append(line).append(".\n");
         sb.append("On top: a coin at level ten and another at twenty-five, one for the elder, and up to two for a hard day's work.\n");
+        sb.append("A tenth of every wage stays in the treasury as the village's tax (the odd part of a coin carried to the next payday), "
+            + "while the treasury holds less than a week's wages; the poor pay none"
+            + (Market.taxing(id) ? "" : ". The treasury holds a week's wages now: no tax is taken") + ".\n");
         int bill = Market.wageBill(id), coins = com.jrpetty.mcassistant.village.Ledger.coins(id);
         int purses = 0;
         for (AssistantEntity a : Villages.folkOf(id)) if (a instanceof VillageFolkEntity f) purses += f.purse();
@@ -315,6 +319,7 @@ public final class Wealth {
         String pay = job == StationTask.NONE ? "I've no trade yet, so no wage."
             : "As a " + job.title.toLowerCase(java.util.Locale.ROOT) + " " + place + " I get " + base + (base == 1 ? " coin" : " coins")
               + " a day from the treasury" + (wage(f) > base ? ", " + wage(f) + " with what I've earned on top" : "")
+              + (!Market.taxing(f.ownerId()) ? "" : t == Tier.POOR ? ", and no tax while I've next to nothing" : ", less a tenth for the village's tax")
               + (f.earnedInAll() > 0 ? " — " + f.earnedInAll() + " all told since I started" : "") + ".";
         String how = switch (t) {
             case POOR -> "Truth is, I'm poor. " + f.purse() + (f.purse() == 1 ? " coin" : " coins") + " to my name.";
