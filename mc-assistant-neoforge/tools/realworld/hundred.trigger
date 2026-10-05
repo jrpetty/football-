@@ -1,1 +1,1 @@
-the hundred days, on b206 part 2 (farmland district with dug water holes, production chests and couriers, unlimited storehouse, chunks wherever the work is, the price list, the village's purse, bonds between villages, player dealings): 2026-10-05T07:40:34Z
+the hundred days, on b207 part 4 (fields the farmers can walk to, walk-map routing, a camp on good ground, out of the water, a wider founders' camp): 2026-10-05T08:34:29Z
