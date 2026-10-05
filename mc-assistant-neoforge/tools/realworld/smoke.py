@@ -142,22 +142,26 @@ def decor_stage(r, look, cx, cz):
     time.sleep(12)                                     # the ground arrives at the server and the client
     out = r.cmd("execute positioned %d 100 %d run village decor showcase" % (x, z))
     say("decor: " + out[:900])
-    views = re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out)
+    # Each view: where the camera's feet stand and what it looks at, already in the middle of their blocks.
+    num = r"(-?\d+(?:\.\d+)?)"
+    views = re.findall(r"VIEW (\S+) " + " ".join([num] * 6), out)
     if not views:
         say("no furnished home was set out; nothing to photograph")
         return
     for name, ex, ey, ez, ax, ay, az in views:
         if "dusk" in name:
             continue
-        look(name, int(ex) + 0.5, int(ey), int(ez) + 0.5, int(ax) + 0.5, int(ay) + 0.5, int(az) + 0.5, wait=8)
-    # Dusk: the household's candles lit (and every window yellow with lamplight).
+        look(name, float(ex), float(ey), float(ez), float(ax), float(ay), float(az), wait=8)
+    # Dusk: the household's candles lit, seen from outside through the window they stand in.
     r.cmd("time set 12700")
     say("decor at dusk: " + r.cmd("execute positioned %d 100 %d run village decor now" % (x, z))[:600])
     for name, ex, ey, ez, ax, ay, az in views:
         if "dusk" in name:
-            look(name, int(ex) + 0.5, int(ey), int(ez) + 0.5, int(ax) + 0.5, int(ay) + 0.5, int(az) + 0.5, wait=8)
+            look(name, float(ex), float(ey), float(ez), float(ax), float(ay), float(az), wait=8)
     r.cmd("time set 6000")
     say("alive after the furnished home: %s" % client_alive())
+
+
 def flats_stage(r, look, cx, cz):
     """A block of flats, furnished, on a stage of its own (/village flats stage): from across the street
     (three storeys, the brick bands, the parapet, the railings and the step), the stair hall from just
