@@ -944,6 +944,8 @@ public class CityScreen extends Screen {
             : "A stall on the square is " + rent + "c a week: ask anybody. ")
             + (list.size() > 1 ? "Scroll for the other stalls. " : "") + "The folk weigh each price against the going price.";
         small(g, Ui.clip(font, foot, (int) (cw / 0.75)), x, y + ch - 9, Ui.FAINT);
+    }
+
     private static final String[] WORKSHOP_HEADS = { "On the book", "Stock / target", "For", "Note" };
 
     /**
