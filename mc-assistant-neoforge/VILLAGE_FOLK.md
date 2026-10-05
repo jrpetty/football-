@@ -2093,8 +2093,16 @@ every chart reads out the day under the mouse.
   see at a glance which trades bring in the most and how that has changed (the mouse reads out
   each trade's share of the day). Click a trade for its own history (what it made, and how many
   worked at it, day by day).
-* **Folk:** everybody, with trade, level, age (in years), purse, pay, what each made
-  yesterday, mood, nature and wealth; click any heading to sort by it. The leader is starred.
+* **Folk:** everybody, with trade, level, age (in years), loose money (what is in its purse),
+  pay, what each made yesterday, mood, nature and net worth; click any heading to sort by it (sort
+  by "Loose" or "Net worth" for the richest). The mouse over a folk lays its money out: loose money,
+  what it has put by toward a house, its share of a house it owns (at what the house was bought
+  for), what it carries (tools, gear and keepsakes at the market's prices), the comforts of home,
+  its net worth and wealth band, its pay and all it has earned. Along the top, the town's money in
+  sum (loose and net worth, each and in all, put by toward houses, in houses owned, the richest);
+  along the foot, the players with a stake in the village (its citizens and anyone who owns a house
+  in it): the coin each carries (when on), the houses each owns and what they are worth, the rent
+  their tenants owe them, and their net worth. The leader is starred.
 * **Society:** the age pyramid (by ten years), how they feel (miserable to joyful), how evenly
   the money is spread (the Gini of the purses, the middle purse, what the richest tenth and the
   poorer half hold, and the five richest), couples, households and how big they are,

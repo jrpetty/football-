@@ -768,12 +768,43 @@ public class CityScreen extends Screen {
         return out;
     }
 
-    private static final String[] FOLK_HEADS = { "Name", "Trade", "Lvl", "Age", "Purse", "Pay", "Made", "Mood", "Nature", "Wealth" };
+    private static final String[] FOLK_HEADS = { "Name", "Trade", "Lvl", "Age", "Loose", "Pay", "Made", "Mood", "Nature", "Net worth" };
     private static final int[] FOLK_COLS = { 0, 82, 160, 182, 210, 246, 274, 306, 336, 410 };
 
+    /**
+     * Folk: every one of them, sortable by any heading, its loose money (what is in its purse) and its
+     * net worth (that, its share of what its household has put by toward a house, its share of a house
+     * it owns, what it carries and the comforts of home) side by side, the mouse over a row for the
+     * whole of it laid out; the town's money in sum along the top, and the players with a stake in the
+     * village along the foot.
+     */
     private void folk(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my) {
         List<CompoundTag> people = compounds("people");
         people.sort(folkOrder());
+        List<CompoundTag> players = compounds("players");
+        // The town's money, in sum.
+        int loose = 0, worth = 0, fund = 0, owned = 0, grown = 0;
+        CompoundTag richest = null;
+        for (CompoundTag p : people) {
+            if (p.getString("wealth").isEmpty()) continue;                 // a child: its family keeps it
+            grown++;
+            loose += p.getInt("purse");
+            worth += p.getInt("worth");
+            fund += p.getInt("house_fund");
+            owned += p.getInt("house_owned");
+            if (richest == null || p.getInt("worth") > richest.getInt("worth")) richest = p;
+        }
+        String sums = "Loose money " + num(loose) + "c (" + (grown == 0 ? 0 : loose / grown) + " each) · net worth " + num(worth) + "c ("
+            + (grown == 0 ? 0 : worth / grown) + " each)" + (fund > 0 ? " · put by toward houses " + num(fund) + "c" : "")
+            + (owned > 0 ? " · in houses they own " + num(owned) + "c" : "")
+            + (richest == null ? "" : " · richest " + richest.getString("name") + " (" + num(richest.getInt("worth")) + "c)");
+        small(g, Ui.clip(font, sums, (int) (cw / 0.75)), x, y, Ui.MUTED);
+        y += 11;
+        ch -= 11;
+        // The players with a stake in it, along the foot (a line each, up to four).
+        int playerRows = Math.min(4, players.size());
+        int foot = playerRows == 0 ? 0 : 12 + 10 * playerRows;
+        ch -= foot;
         for (int i = 0; i < FOLK_HEADS.length; i++) {
             if (FOLK_COLS[i] >= cw - 20) break;
             String hd = FOLK_HEADS[i] + (i == sortColumn ? (sortDown ? " ▼" : " ▲") : "");
@@ -787,9 +818,24 @@ public class CityScreen extends Screen {
             g.fill(x - 2, ry - 1, x + cw, ry + 9, p.getBoolean("leader") ? Ui.ROW_PICK : i % 2 == 0 ? Ui.ROW : Ui.ROW_ALT);
             Ui.chip(g, x, ry, Ui.job(p.getInt("ordinal")));
             String[] cells = { p.getString("name") + (p.getBoolean("leader") ? " ★" : ""), p.getString("trade"), Integer.toString(p.getInt("level")),
-                p.getInt("years") + "y", p.getInt("purse") + "c", p.getInt("wage") + "c", p.getInt("made") + "c",
+                p.getInt("years") + "y", p.getString("wealth").isEmpty() ? "—" : p.getInt("purse") + "c", p.getInt("wage") + "c", p.getInt("made") + "c",
                 Integer.toString(p.getInt("mood")), p.getString("type"),
-                p.getString("wealth").isEmpty() ? "" : p.getString("wealth") + " (" + p.getInt("worth") + "c)" };
+                p.getString("wealth").isEmpty() ? "a child" : p.getInt("worth") + "c · " + p.getString("wealth") };
+            boolean over = mx >= x && mx < x + cw && my >= ry - 1 && my < ry + 9;
+            if (over && !p.getString("wealth").isEmpty()) {
+                List<Component> tip = new ArrayList<>();
+                tip.add(Component.literal(p.getString("name") + ", " + p.getString("trade").toLowerCase(Locale.ROOT)));
+                tip.add(Component.literal("Loose money: " + p.getInt("purse") + "c in its purse").withColor(0xE8C46A));
+                if (p.getInt("house_fund") > 0) tip.add(Component.literal("Put by toward a house: " + p.getInt("house_fund") + "c"));
+                if (p.getInt("house_owned") > 0) tip.add(Component.literal("Its share of the house it owns: " + p.getInt("house_owned") + "c"));
+                tip.add(Component.literal("What it carries (tools, gear, keepsakes): " + p.getInt("goods") + "c"));
+                if (p.getInt("comforts") > 0) tip.add(Component.literal("The comforts of home: " + p.getInt("comforts") + "c"));
+                tip.add(Component.literal("Net worth: " + p.getInt("worth") + "c — " + p.getString("wealth")).withColor(0x9EE07A));
+                tip.add(Component.literal("Paid " + p.getInt("wage") + "c a day; " + p.getInt("earned") + "c earned in all").withColor(0x9AA3B2));
+                hover = tip;
+                hoverX = mx;
+                hoverY = my;
+            }
             for (int c = 0; c < cells.length; c++) {
                 if (FOLK_COLS[c] >= cw - 20) break;
                 int colW = (c + 1 < FOLK_COLS.length ? FOLK_COLS[c + 1] : cw) - FOLK_COLS[c] - 3;
@@ -806,8 +852,26 @@ public class CityScreen extends Screen {
         }
         StringBuilder bs = new StringBuilder();
         for (var e : bands.entrySet()) bs.append(bs.length() == 0 ? "" : ", ").append(e.getValue()).append(' ').append(e.getKey());
-        small(g, Ui.clip(font, people.size() + " folk (" + bs + "); " + purses + " coins in purses, "
-            + (people.isEmpty() ? 0 : purses / people.size()) + " each · click a heading to sort · ★ the leader", (int) (cw / 0.75)), x, y + ch - 10, Ui.FAINT);
+        small(g, Ui.clip(font, people.size() + " folk (" + bs + "); " + purses + " coins loose in purses · the mouse over a row for its money laid out"
+            + " · click a heading to sort · ★ the leader", (int) (cw / 0.75)), x, y + ch - 10, Ui.FAINT);
+        if (playerRows > 0) {
+            int py = y + ch + 2;
+            small(g, "Players", x, py, Ui.FAINT);
+            String[] heads = { "Loose money", "Houses owned", "Rent owed them", "Net worth" };
+            int[] at = { cw * 30 / 100, cw * 48 / 100, cw * 66 / 100, cw * 82 / 100 };
+            for (int i = 0; i < heads.length; i++) small(g, heads[i], x + at[i], py, Ui.FAINT);
+            py += 10;
+            for (int i = 0; i < playerRows; i++) {
+                CompoundTag p = players.get(i);
+                g.fill(x - 2, py - 1, x + cw, py + 9, i % 2 == 0 ? Ui.ROW : Ui.ROW_ALT);
+                small(g, Ui.clip(font, p.getString("name") + (p.getBoolean("citizen") ? " (citizen)" : ""), (int) (at[0] / 0.75) - 4), x + 2, py + 1, Ui.INK);
+                small(g, p.getInt("loose") < 0 ? "away" : p.getInt("loose") + "c", x + at[0], py + 1, p.getInt("loose") < 0 ? Ui.FAINT : Ui.INK);
+                small(g, p.getInt("houses") == 0 ? "none" : p.getInt("houses") + " (" + p.getInt("house_worth") + "c)", x + at[1], py + 1, Ui.INK);
+                small(g, p.getInt("rent_due") + "c", x + at[2], py + 1, Ui.INK);
+                small(g, p.getInt("worth") + "c" + (p.getInt("loose") < 0 ? " + purse" : ""), x + at[3], py + 1, GREEN);
+                py += 10;
+            }
+        }
     }
 
     private Comparator<CompoundTag> folkOrder() {
@@ -820,7 +884,7 @@ public class CityScreen extends Screen {
             case 5 -> Comparator.comparingInt(p -> p.getInt("wage"));
             case 7 -> Comparator.comparingInt(p -> p.getInt("mood"));
             case 8 -> Comparator.comparing(p -> p.getString("type"));
-            case 9 -> Comparator.comparingInt(p -> p.getInt("worth"));
+            case 9 -> Comparator.comparingInt(p -> p.getString("wealth").isEmpty() ? -1 : p.getInt("worth"));
             default -> Comparator.comparingInt(p -> p.getInt("made"));
         };
         return sortDown ? c.reversed() : c;

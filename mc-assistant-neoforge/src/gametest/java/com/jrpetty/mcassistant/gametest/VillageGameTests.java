@@ -4605,6 +4605,7 @@ public class VillageGameTests {
         helper.assertTrue(farmer != null, "a village");
         farmer.setJob(StationTask.FARM);
         Villages.Village v = Villages.get(farmer.ownerId());
+        com.jrpetty.mcassistant.entity.Economy.produced(farmer, new ItemStack(Items.BREAD, 16));       // its kit, put back: not made
         com.jrpetty.mcassistant.entity.Economy.produced(farmer, new ItemStack(Items.BREAD, 40));
         com.jrpetty.mcassistant.entity.Economy.produced(farmer, new ItemStack(Items.COBBLESTONE, 64));   // not a farmer's work
         com.jrpetty.mcassistant.entity.Economy.closeTheDay(level, v, 1);
@@ -5433,6 +5434,10 @@ public class VillageGameTests {
         helper.assertTrue("OWNED".equals(com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, at.get(homemaker))),
             "the Homemaker with savings buys its house: " + com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, at.get(homemaker)));
         helper.assertTrue(homemaker.purse() == 200 - rentH - price, "out of its purse, after the day's rent: " + homemaker.purse());
+        // Its net worth counts the house it owns, beside its loose money (the Folk page lays it out).
+        int worthNow = com.jrpetty.mcassistant.entity.Wealth.worth(homemaker);
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Homes.ownedShare(homemaker) == price && worthNow >= homemaker.purse() + price,
+            "its net worth counts the house it owns: worth " + worthNow + ", loose " + homemaker.purse() + ", the house " + price);
         helper.assertTrue("RENTED".equals(com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, at.get(free))), "the Free Spirit with the same savings goes on renting");
         helper.assertTrue(free.purse() == 200 - rentF && terms.apply(free)[2] == 0, "paying its rent, and putting nothing by: " + free.purse());
         helper.assertTrue("RENTED".equals(com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, at.get(saver))) && ts[2] == 20 - rentS - 12

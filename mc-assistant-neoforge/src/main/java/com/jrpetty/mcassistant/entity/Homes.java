@@ -1387,6 +1387,33 @@ public final class Homes {
     }
 
     /** This folk's share of what its household has put by toward its house (Wealth.worth). */
+    /** Its share of the house its household owns, at what the house was bought for (its price when
+     *  bought before prices were kept): nothing for a tenant, the leader's hall or a player's house. */
+    public static int ownedShare(VillageFolkEntity f) {
+        UUID village = f.ownerId();
+        if (village == null || f.isBaby()) return 0;
+        Home h = homeOf(village, f.getUUID());
+        if (h == null || h.tenure != Tenure.OWNED || seat(h)) return 0;
+        int value = h.price > 0 ? h.price : price(village, h);
+        int grown = 0;
+        for (UUID m : h.members) {
+            VillageFolkEntity o = loaded(village, m);
+            if (o != null && !o.isBaby()) grown++;
+        }
+        return value / Math.max(1, grown);
+    }
+
+    /** The houses a player owns in a village: {how many, what they are worth at their price}. */
+    public static int[] playerHouses(UUID village, UUID player) {
+        int n = 0, worth = 0;
+        for (Home h : homes(village).values()) {
+            if (h.tenure != Tenure.PLAYER || !player.equals(h.landlord)) continue;
+            n++;
+            worth += h.price > 0 ? h.price : price(village, h);
+        }
+        return new int[]{ n, worth };
+    }
+
     public static int savedShare(VillageFolkEntity f) {
         UUID village = f.ownerId();
         if (village == null || f.isBaby()) return 0;

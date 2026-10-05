@@ -234,9 +234,10 @@ public final class Wealth {
         return Prices.of(s);
     }
 
-    /** Savings (its purse, and its share of what its household has put by toward its house), belongings and the comforts of home, in coin. */
+    /** Its net worth, in coin: its loose money (its purse), its share of what its household has put by
+     *  toward its house, its share of a house it owns, its belongings and the comforts of home. */
     public static int worth(VillageFolkEntity f) {
-        return f.purse() + Homes.savedShare(f) + belongings(f) + f.comforts() * 3;
+        return f.purse() + Homes.savedShare(f) + Homes.ownedShare(f) + belongings(f) + f.comforts() * 3;
     }
 
     public static Tier tier(int worth) {
@@ -255,7 +256,9 @@ public final class Wealth {
         Tier t = tier(w);
         int wage = wage(f);
         int house = Homes.savedShare(f);
-        return capital(t.label) + " — worth " + w + " coins: " + f.purse() + " saved" + (house > 0 ? ", " + house + " put by toward the house" : "")
+        int owned = Homes.ownedShare(f);
+        return capital(t.label) + " — worth " + w + " coins: " + f.purse() + " loose" + (house > 0 ? ", " + house + " put by toward the house" : "")
+            + (owned > 0 ? ", " + owned + " in the house it owns" : "")
             + ", things worth " + belongings(f)
             + (f.comforts() > 0 ? ", " + f.comforts() + (f.comforts() == 1 ? " comfort" : " comforts") + " at home" : "")
             + ". " + (wage > 0 ? "Paid " + wage + (wage == 1 ? " coin" : " coins") + " a day (" + breakdown(f) + "); "

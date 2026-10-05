@@ -509,6 +509,7 @@ public final class Annals {
         for (AssistantEntity a : Villages.folkOf(id)) if (a instanceof VillageFolkEntity f && !f.isShowcase()) folk.add(f);
         out.put("jobs", jobs(id, folk, days));
         out.put("people", people(level, id, folk, today));
+        out.put("players", players(level, id));
         out.put("leader", leader(level, id, folk, today));
         out.put("homes", homes(level, id, folk));
         out.put("now", now(level, v, folk));
@@ -608,9 +609,52 @@ public final class Annals {
             c.putString("type", f.isBaby() ? "" : Values.type(f));
             c.putString("wealth", f.isBaby() ? "" : Wealth.tier(f).name().toLowerCase(Locale.ROOT).replace('_', ' '));
             c.putInt("worth", f.isBaby() ? 0 : Wealth.worth(f));
+            if (!f.isBaby()) {
+                // Its net worth, laid out: loose money, put by toward a house, a house of its own, what it
+                // carries, the comforts of home; and all it has earned.
+                c.putInt("house_fund", Homes.savedShare(f));
+                c.putInt("house_owned", Homes.ownedShare(f));
+                c.putInt("goods", Wealth.belongings(f));
+                c.putInt("comforts", f.comforts() * 3);
+                c.putInt("earned", f.earnedInAll());
+            }
             c.putString("partner", f.life().partnerName());
             c.putBoolean("leader", f.getUUID().equals(Villages.elder(id)));
             c.putBoolean("bed", f.bedPos() != null);
+            out.add(c);
+        }
+        return out;
+    }
+
+    /**
+     * The players with a stake in the village (its citizens, and anyone who owns a house in it): their
+     * loose money (the village coin they carry, when they are on), the houses they own and what those
+     * are worth, the rent their tenants owe them, and all of it together.
+     */
+    private static ListTag players(ServerLevel level, UUID id) {
+        java.util.Map<UUID, String> who = new java.util.LinkedHashMap<>(Ledger.citizens(id));
+        for (net.minecraft.server.level.ServerPlayer p : level.getServer().getPlayerList().getPlayers()) {
+            if (Homes.playerHouses(id, p.getUUID())[0] > 0) who.putIfAbsent(p.getUUID(), p.getName().getString());
+        }
+        ListTag out = new ListTag();
+        for (java.util.Map.Entry<UUID, String> e : who.entrySet()) {
+            CompoundTag c = new CompoundTag();
+            c.putString("name", e.getValue());
+            net.minecraft.server.level.ServerPlayer on = level.getServer().getPlayerList().getPlayer(e.getKey());
+            int loose = on == null ? -1 : Market.coinsHeld(on);
+            int[] houses = Homes.playerHouses(id, e.getKey());
+            int due = 0;
+            try {
+                String n = Ledger.note(id, "rentdue/" + e.getKey());
+                due = n == null || n.isEmpty() ? 0 : Integer.parseInt(n.trim());
+            } catch (NumberFormatException ignored) { }
+            c.putInt("loose", loose);
+            c.putInt("houses", houses[0]);
+            c.putInt("house_worth", houses[1]);
+            c.putInt("rent_due", due);
+            c.putInt("worth", Math.max(0, loose) + houses[1] + due);
+            c.putBoolean("online", on != null);
+            c.putBoolean("citizen", Ledger.citizen(id, e.getKey()));
             out.add(c);
         }
         return out;

@@ -147,11 +147,17 @@ class FoundingPlanTest {
     }
 
     @Test
-    @DisplayName("never levelled below the sea, and the heart is worked first")
+    @DisplayName("by the water, never levelled below the sea; a dry basin keeps its own height; the heart is worked first")
     void neverBelowTheSea() {
         int folk = 12;
         FoundingPlan.Ground g = ground(folk, (dx, dz) -> 55);
+        // Dry ground far under the sea's height (a flat world, a deep valley) is not built up into a mound.
+        assertEquals(55, FoundingPlan.level(g, FoundingPlan.coreRadius(folk), 63));
+        assertEquals(-60, FoundingPlan.level(ground(folk, (dx, dz) -> -60), FoundingPlan.coreRadius(folk), 63));
+        // Beside water, a little under the sea's height, it is lifted out of the wet.
+        g.kind[g.index(g.outer, 0)] = FoundingPlan.WATER;
         assertEquals(62, FoundingPlan.level(g, FoundingPlan.coreRadius(folk), 63));
+        g.kind[g.index(g.outer, 0)] = FoundingPlan.LAND;
         plan(g, folk, 5L);
         assertEquals(g.index(0, 0), g.order[0], "the heart first");
         double before = 0;

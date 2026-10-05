@@ -228,18 +228,31 @@ public final class FoundingPlan {
         }
     }
 
-    /** The level the ground is brought to: the middle height of the dry land inside, and never below the sea. */
+    /** Lifted to the sea's height by no more than this: a beach town is raised out of the wet, a dry
+     *  basin far under the sea's height is not built up into a mound. */
+    public static final int MOST_LIFT = 8;
+
+    /**
+     * The level the ground is brought to: the middle height of the dry land inside; and beside water a
+     * little under the sea's height, it is lifted to just under the top of the sea, so the town does not
+     * stand in a pit behind its banks. Dry ground well under the sea's height (a deep valley, a flat
+     * world whose ground is far below its sea level) stays at its own height: lifting it meant building
+     * a mound a hundred blocks high.
+     */
     public static int level(Ground g, int radius, int seaLevel) {
         int[] heights = new int[g.side * g.side];
         int n = 0;
+        boolean water = false;
         for (int i = 0; i < heights.length; i++) {
+            if (g.kind[i] == WATER) water = true;
             if (g.kind[i] != LAND || reach(g.dx(i), g.dz(i)) > radius) continue;
             heights[n++] = g.ground[i];
         }
         if (n == 0) return seaLevel;
         Arrays.sort(heights, 0, n);
-        // Never under the top of the sea: the town would stand in a pit behind its banks.
-        return Math.max(heights[n / 2], seaLevel - 1);
+        int middle = heights[n / 2];
+        if (water && middle < seaLevel - 1 && seaLevel - 1 - middle <= MOST_LIFT) return seaLevel - 1;
+        return middle;
     }
 
     /**
