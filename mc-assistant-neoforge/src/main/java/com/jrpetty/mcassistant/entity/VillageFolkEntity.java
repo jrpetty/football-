@@ -6346,6 +6346,17 @@ public class VillageFolkEntity extends AssistantEntity {
         return stockedFor(project, site);
     }
 
+    /** Tests: the village's work looked at now (considerVillageWork), as this hand would standing idle where it
+     *  is: the next project, its lot, whether the stores can pay for it, stocking up, and setting off. True if
+     *  it set off to build. (What it had in hand of its own trade is put down first, as an idle hand has none.) */
+    public boolean villageWorkForTests() {
+        clearQueue();
+        getNavigation().stop();
+        considerVillageWork();
+        Job j = peekJob();
+        return j != null && j.type() == Job.Type.BUILD;
+    }
+
     /** Tests: the blocks this building still wants laid on this ground (blocksToLay). */
     public int blocksToLayForTests(String project, Villages.Site site) {
         return blocksToLay(project, site, stillToLay(project, site));
