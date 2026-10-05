@@ -3896,6 +3896,46 @@ public class VillageGameTests {
     }
 
     /**
+     * A field that is full grows: a new farmer's plot is nine across; most of it under crops, it
+     * breaks new ground a ring further out; half-empty, it stays as it is.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t63_field")
+    public static void t63_field(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 56000, 12000, 96);
+        Kit.prepare(level, 56000, 12000, 96);
+        BlockPos heart = Kit.surface(level, 56000, 12000);
+        VillageFolkEntity farmer = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(farmer != null, "a village");
+        BlockPos site = Kit.surface(level, heart.getX() + 64, heart.getZ());
+        farmer.setJob(StationTask.FARM);
+        farmer.assignPlot(com.jrpetty.mcassistant.entity.WorkZone.around(site, 4, com.jrpetty.mcassistant.entity.WorkZone.DEFAULT_DEPTH), "Farm");
+        farmer.moveTo(site.getX() + 0.5, site.getY(), site.getZ() + 0.5, 0.0F, 0.0F);
+        // Ten squares of farmland: not full, and it stays nine across.
+        int n = 0;
+        for (int dx = -4; dx <= 4 && n < 10; dx++) {
+            for (int dz = -4; dz <= 4 && n < 10; dz++, n++) level.setBlockAndUpdate(site.offset(dx, -1, dz), Blocks.FARMLAND.defaultBlockState());
+        }
+        farmer.growTheFieldForTests();
+        int before = farmer.workZone().radius();
+        // Most of it under crops: it grows a ring.
+        for (int dx = -4; dx <= 4; dx++) {
+            for (int dz = -4; dz <= 4; dz++) {
+                if (Math.abs(dx) + Math.abs(dz) > 6) continue;
+                level.setBlockAndUpdate(site.offset(dx, -1, dz), Blocks.FARMLAND.defaultBlockState());
+            }
+        }
+        farmer.growTheFieldForTests();
+        int after = farmer.workZone().radius();
+        Kit.log("t63 the field: " + (2 * before + 1) + " across half-empty, " + (2 * after + 1) + " across once full; " + farmer.debugLine());
+        helper.assertTrue(before == 4, "a half-empty field stays as it is: " + before);
+        helper.assertTrue(after == 5, "a full field breaks new ground a ring further out: " + after);
+        helper.succeed();
+    }
+
+    /**
      * The hunter: out on its grounds it takes a grown wild cow, never the last pair of pigs, and
      * brings the meat and the hide home.
      */

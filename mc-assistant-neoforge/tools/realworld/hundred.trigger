@@ -1,1 +1,1 @@
-the hundred days, on b202 part 5 (the day's work is the revenue): 2026-10-05T05:17:26Z
+the hundred days, on b202 part 6 (money from production, fields that grow): 2026-10-05T06:12:08Z

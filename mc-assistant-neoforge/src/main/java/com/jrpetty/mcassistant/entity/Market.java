@@ -438,7 +438,10 @@ public final class Market {
      */
     public static int takings(ServerLevel level, Villages.Village v, int sold) {
         UUID id = v.id();
-        int in = Math.max(0, Economy.yesterday(id) - Math.max(0, sold));
+        // At the place's standing, as its wages are: a town's work fetches more than a hamlet's
+        // (bigger markets for it), so what comes in and what is paid out grow together.
+        int worth = (int) Math.round(Economy.yesterday(id) * Wealth.standing(id) / 10.0);
+        int in = Math.max(0, worth - Math.max(0, sold));
         if (in <= 0) return 0;
         Ledger.addCoins(id, in);
         Economy.takings(id, in);

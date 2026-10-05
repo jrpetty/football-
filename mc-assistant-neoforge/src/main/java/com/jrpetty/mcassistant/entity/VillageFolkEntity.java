@@ -2500,6 +2500,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // it never ran, and every mine staked in the Wood Age stayed at forty-odd for the
         // rest of the game — copper and coal by the hundred, iron one or two a day.
         if (seekTheSeam()) return;                     // dig where the village's metal is
+        growTheField();                                // a full field breaks new ground
         if (turnedToTheFields()) return;               // a hungry village needs farmers (busy or not)
         if (peekJob() != null) return;                 // already busy
         if (kitFromTheStores()) return;                // seed, saplings, torches, feed, arrows
@@ -3137,9 +3138,68 @@ public class VillageFolkEntity extends AssistantEntity {
         };
     }
 
+    /** A new field's reach (nine blocks across), and the most it grows to (twenty-five across). */
+    static final int FIELD_FIRST = 4, FIELD_MOST = 12;
+    private int fieldCheckTick = -100000;
+
+    /**
+     * A field that is full grows. Once most of a farmer's plot is under crops it breaks new
+     * ground a ring further out, from nine blocks across to twenty-five, as long as the new ground
+     * is clear of the town, of the village's buildings and of the other fields. (The plots were
+     * a fixed size from the first day, and the first season's few rows were all most of them ever
+     * planted.) The seed for the new ring is kept back from the stores (jobDepositReserve).
+     */
+    private void growTheField() {
+        if (stationTask() != StationTask.FARM || tickCount - fieldCheckTick < 2400) return;
+        fieldCheckTick = tickCount;
+        WorkZone z = workZone();
+        UUID id = ownerId();
+        if (z == null || id == null || villageCentre == null || z.radius() >= FIELD_MOST) return;
+        int r = z.radius();
+        BlockPos c = z.center();
+        int ground = 0, field = 0;
+        BlockPos.MutableBlockPos at = new BlockPos.MutableBlockPos();
+        for (int dx = -r; dx <= r; dx++) {
+            for (int dz = -r; dz <= r; dz++) {
+                for (int dy = 3; dy >= -3; dy--) {
+                    at.set(c.getX() + dx, c.getY() + dy, c.getZ() + dz);
+                    net.minecraft.world.level.block.state.BlockState st = level().getBlockState(at);
+                    if (st.is(net.minecraft.world.level.block.Blocks.FARMLAND)) { ground++; field++; break; }
+                    if ((st.is(net.minecraft.world.level.block.Blocks.GRASS_BLOCK) || st.is(net.minecraft.world.level.block.Blocks.DIRT))
+                        && level().getBlockState(at.above()).canBeReplaced()) { ground++; break; }
+                }
+            }
+        }
+        if (field < 16 || field * 10 < ground * 6) return;           // not full yet: six in ten under crops
+        int grown = r + 1;
+        if (!Villages.outsideTown(id, villageCentre, c, grown)) return;
+        for (com.jrpetty.mcassistant.village.Ledger.Building b : com.jrpetty.mcassistant.village.Ledger.buildings(id)) {
+            BlockPos a = b.anchor();
+            if (Math.max(Math.abs(a.getX() - c.getX()), Math.abs(a.getZ() - c.getZ())) <= grown + 8) return;
+        }
+        for (AssistantEntity mate : Villages.folkOf(id)) {
+            WorkZone o = mate == this ? null : mate.workZone();
+            if (o == null) continue;
+            int gap = Math.max(Math.abs(o.center().getX() - c.getX()), Math.abs(o.center().getZ() - c.getZ()));
+            if (gap <= grown + o.radius()) return;                     // up against another plot
+        }
+        assignPlot(WorkZone.around(c, grown, z.depth()), patchName() != null ? patchName() : patchNameFor(StationTask.FARM));
+        brain("the field is full: breaking new ground, " + (2 * grown + 1) + " across now");
+        if (getRandom().nextInt(2) == 0) {
+            FolkTalk.speak(this, FolkTalk.pick(getRandom(), "The field's full. I'm breaking new ground round the edge.",
+                "Another ring of furrows this year — the field's growing."));
+        }
+    }
+
+    /** Tests: the farmer's look at its field now, whatever the clock says. */
+    public void growTheFieldForTests() {
+        fieldCheckTick = -100000;
+        growTheField();
+    }
+
     private static int radiusFor(StationTask trade) {
         return switch (trade) {
-            case FARM -> 8;      // a field you can actually keep watered
+            case FARM -> FIELD_FIRST;   // a first field; it grows as it fills (growTheField)
             case WOOD -> 14;     // woodland is worked wide
             case MINE -> 8;
             case HUNT -> 20;     // hunting grounds are walked wide

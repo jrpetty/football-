@@ -89,11 +89,22 @@ public final class Wealth {
         return b == 0 ? 0 : Math.max(1, (b * standing(village) + 5) / 10);
     }
 
+    /**
+     * Its share of what it made yesterday: a quarter of its output's worth, up to twice its trade's
+     * rate. The hardest workers are the best paid, in every trade: a farmer whose field has grown
+     * to twenty-five across earns more than one with a few rows.
+     */
+    public static int madeShare(VillageFolkEntity f) {
+        int made = Economy.madeYesterday(f);
+        return made <= 0 ? 0 : Math.min(2 * tradeWage(f.stationTask(), f.ownerId()), made / 4);
+    }
+
     /** Today's wage. */
     public static int wage(VillageFolkEntity f) {
         if (f.isBaby() || f.stationTask() == StationTask.NONE) return 0;
         int lv = f.veteranLevel();
-        return tradeWage(f.stationTask(), f.ownerId()) + (lv >= 10 ? 1 : 0) + (lv >= 25 ? 1 : 0) + (f.isElder() ? 1 : 0) + bonus(f);
+        return tradeWage(f.stationTask(), f.ownerId()) + (lv >= 10 ? 1 : 0) + (lv >= 25 ? 1 : 0) + (f.isElder() ? 1 : 0) + bonus(f)
+            + madeShare(f);
     }
 
     /** How today's wage is made up: "6 as a smith in a town, +1 at level ten, +2 for a hard day". */
@@ -108,6 +119,8 @@ public final class Wealth {
         if (lv >= 25) sb.append(", +1 at twenty-five");
         if (f.isElder()) sb.append(", +1 as the elder");
         if (b > 0) sb.append(", +").append(b).append(b == 2 ? " for a hard day's work" : " for a fair day's work");
+        int made = madeShare(f);
+        if (made > 0) sb.append(", +").append(made).append(" for what it made yesterday");
         return sb.toString();
     }
 

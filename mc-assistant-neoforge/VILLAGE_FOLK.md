@@ -223,9 +223,14 @@ output, the worth and the three best paid, and any folk will tell you who earns 
   * **Saving up.** When the village can't yet afford something it must buy (a trade's
     kit, the drover's pair), the wages leave that much in the treasury for three days.
   * **The day's work is the revenue.** What the village made yesterday — its fields, woods,
-    mines, pens and crafts, valued at the market's prices — comes into the treasury every
-    morning (less whatever the traders paid for that morning). A busy village pays its
-    wages; an idle one pays short. The journal's Economy page shows the takings.
+    mines, pens and crafts, valued at the market's prices, and at the place's standing like
+    its wages (a hamlet's work at the trades' rates, a town's at twice) — comes into the
+    treasury every morning (less whatever the traders paid for that morning). A busy
+    village pays its wages; an idle one pays short. The journal's Economy page shows the
+    takings.
+  * **Pay for what you make.** On top of its trade's rate, every folk is paid a quarter of
+    what it made yesterday (up to twice its rate): the hardest workers are the best paid,
+    and the Wages page says so ("+3 for what it made yesterday").
   * **Passing traders** come every morning and buy enough of what the village has to
     spare (anything over four lots of it) to meet the day's wages and what it is saving
     for, at a fair price. They never take what the village is short of itself — the
@@ -499,6 +504,10 @@ water.
 * **Farmers.** Plant the cane along the field's water and cut it back to its
   bottom so it grows again. The cane goes to the enchanter's paper, the brewer's
   sugar and the café's pies and cakes. They also plant the melon and pumpkin seed.
+* **Fields that grow.** A new farmer's field is nine blocks across. Once six squares in ten
+  are under crops it breaks new ground a ring further out — eleven, thirteen, up to
+  twenty-five across — as long as the new ground is clear of the town, its buildings and
+  the other fields. The farmer keeps back enough seed for the ring it is growing into.
 * **Ranchers.** Shear the sheep: the wool is the village's beds. They breed sheep
   before cows, and a pen with no sheep fetches a wild one even when it has a pair of cows.
   **Breeding is done the way you'd do it:** the rancher holds the right feed out in its
