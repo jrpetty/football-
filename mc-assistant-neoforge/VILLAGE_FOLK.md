@@ -1502,9 +1502,44 @@ You can take a hand:
   One time in three somebody finds out who started it, and then both villages think
   worse of you.
 
-Every alliance, feud, truce and tribute goes into both villages' history.
-`/village relations` lists every pair of neighbours and how they stand, and
-`/village status` gives the council, the citizens and the neighbours.
+**What they are to each other.** Beyond the number, every pair of neighbours has:
+* **A memory.** Each village remembers its last eight dealings with each neighbour: the
+  traders who came, the bread sent in a hungry week, the brawl at the boundary stone, the
+  tribute paid and resented, the letter you carried. A fresh kindness or a fresh grudge
+  (the last month's) holds a relation where it is instead of letting it drift back to
+  nothing. A folk tells you the latest when you ask about the neighbours.
+* **A border.** No village ever stakes a field, a wood or a mine nearer a neighbour's
+  heart than its own. Crowded neighbours not at each other's throats walk the line and
+  agree a border, stones and all, and the quarrel over the ground ends there.
+* **Truces.** A feud that cools (the elders at the boundary stone, a go-between, or your
+  olive branch) gets ten days of truce. There are no brawls or insults, and the relation
+  cannot fall back into a feud while it lasts.
+* **A go-between.** Two villages at odds that both get on with a third: its elder brings
+  them together and talks them round, and both think the better of it.
+* **Marriages.** Neighbours on good terms marry across the boundary. One of the pair (from
+  the bigger village) moves to the other's village, and the wedding is held there. Every
+  marriage binds the two villages a little closer, every day, for good.
+* **The feast.** On the weekly feast, friends send a guest with a gift.
+* **A hand when short.** Friends send what they can spare (only what their own needs leave
+  over) of what the other is short of.
+* **The harvest contest.** Once a week neighbours compare what they made. The winner
+  crows; a good loser takes it well, and a prickly elder does not.
+* **Word of you spreads.** Honoured in one village, you are welcomed by its allies and
+  looked at sideways by its enemies. An outcast of one village is welcome among its
+  enemies.
+
+And you can take a hand:
+* **"Carry a letter"** (the village tab): the elder writes to the nearest neighbour's (or
+  the one you name). Hand the letter to anybody there: the two villages warm by 8, both
+  think the better of you, and the one you deliver to pays you a coin or three for the
+  walk. One letter at a time, and nobody writes to a village it is feuding with.
+* **"Make a trade pact with Ravenmere"**: honoured in both villages, with the two on good
+  terms, you broker a trade pact on your word, and their caravans take to the road.
+
+Every alliance, feud, truce, border, marriage and tribute goes into both villages' history.
+`/village relations` lists every pair of neighbours, how they stand and what binds them
+(border, truce, pact, alliance, marriages, warm memories or a grudge). `/village status`
+gives the council, the citizens and the neighbours.
 
 ### Every town its own: the land
 

@@ -148,6 +148,8 @@ public final class FolkTalk {
             case KNACK -> knack(f);
             case ATLAS -> Scouts.tell(f);
             case FOR_SALE -> Budget.answer(f, p);
+            case LETTER -> Bonds.letter(f, p, text);
+            case BROKER -> Bonds.broker(f, p, text);
             default -> puzzled(f);
         };
         // Somebody who can't stand you says as little as it can.
@@ -902,6 +904,9 @@ public final class FolkTalk {
         ItemStack held = p.getMainHandItem();
         String you = p.getName().getString();
         if (held.isEmpty()) return pick(r, "There's nothing in your hand!", "A gift of… air? How thoughtful.");
+        // A letter from a neighbour's elder: delivered, not kept (Bonds).
+        String letter = Bonds.deliver(f, p, held);
+        if (letter != null) return letter;
         long day = f.level().getDayTime() / 24000L;
         Persona.Opinion op = me.opinionOf(p.getUUID(), you);
         if (op.lastGiftDay != day) { op.lastGiftDay = day; op.giftsToday = 0; }
@@ -1107,6 +1112,8 @@ public final class FolkTalk {
         if (Asks.buildingNamed(t) != null && has(t, "build a", "build an", "build the", "build us", "put up a", "should build",
                 "can you build", "could you build", "next build", "build next")) return TalkTopic.BUILD;
         if (has(t, "council", "the vote", "voting", "who decides")) return TalkTopic.COUNCIL;
+        if (has(t, "a letter", "carry a letter", "take a letter", "deliver a letter", "write to", "send word")) return TalkTopic.LETTER;
+        if (has(t, "trade pact", "make a pact", "broker", "a pact with", "trade with them", "should trade with")) return TalkTopic.BROKER;
         if (has(t, "other village", "neighbour", "neighbor", "rival", "allies", "alliance", "feud", "tribute")) return TalkTopic.RIVALS;
         if (has(t, "joke", "funny", "make me laugh")) return TalkTopic.JOKE;
         if (has(t, "trade", "buy", "sell", "emerald", "barter", "a deal", "for sale", "wares")) return TalkTopic.TRADE;

@@ -48,7 +48,9 @@ public enum TalkTopic {
     WORTH("How are you doing for money?"),
     KNACK("What are you good at?"),
     ATLAS("What have the scouts found out there?"),
-    FOR_SALE("What can the village spare?");
+    FOR_SALE("What can the village spare?"),
+    LETTER("Could I carry a letter for you?"),
+    BROKER("");
 
     public final String line;
 

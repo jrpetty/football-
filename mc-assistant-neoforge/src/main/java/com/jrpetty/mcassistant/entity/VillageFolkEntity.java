@@ -3708,6 +3708,7 @@ public class VillageFolkEntity extends AssistantEntity {
                 // Not up a mountain or down a ravine from the town: a farmer walks there and back
                 // every day, and a field it cannot get to is no field (the mountains' hundred days).
                 if (p == null || Math.abs(p.getY() - heart.getY()) > FIELD_CLIMB || taken(p, FIELD_MOST)) continue;
+                if (Bonds.overBorder(town, heart, p, FIELD_MOST)) continue;           // that side of the border is theirs
                 if (Villages.builtOver(town, f[0], f[1], FIELD_MOST, FIELD_MOST) || buildingNear(town, p, FIELD_MOST + 4)) continue;
                 if (soilField(p) || farmable(p)) return p;
             }
@@ -3849,7 +3850,8 @@ public class VillageFolkEntity extends AssistantEntity {
         if (outdoor && town != null) reach = Math.max(reach, Villages.townReach(town) + keep + 8);
         java.util.function.Predicate<BlockPos> clear = p -> !outdoor || town == null
             || Villages.outsideTown(town, heart, p, keep)
-               && (trade == StationTask.FARM || trade == StationTask.FISH || !Villages.onFarmland(town, heart, p, radius));
+               && (trade == StationTask.FARM || trade == StationTask.FISH || !Villages.onFarmland(town, heart, p, radius))
+               && !Bonds.overBorder(town, heart, p, keep);                 // never over the line toward a neighbour
         BlockPos from = heart.offset(
             (int) Math.round(Math.cos(angle) * reach), 0,
             (int) Math.round(Math.sin(angle) * reach));

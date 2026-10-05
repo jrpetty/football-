@@ -1522,7 +1522,9 @@ public class VillageGameTests {
         helper.assertTrue(treat != null && folk.purse() < before
             && com.jrpetty.mcassistant.village.Ledger.coins(village) == treasury + before - folk.purse(),
             "a folk spends its savings on a treat, and the coin goes back to the treasury");
-        // A player at a stall.
+        // A player at a stall — once the larder is full: the village sells no bread it needs (Budget).
+        for (int i = 4; i < 18; i++) box.setItem(i, new ItemStack(Items.BREAD, 64));
+        com.jrpetty.mcassistant.entity.Budget.forget(village);
         net.minecraft.world.entity.player.Player p = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
         p.getInventory().setItem(20, new ItemStack(McAssistantMod.VILLAGE_COIN.get(), 20));   // in the pack, not the hand
         treasury = com.jrpetty.mcassistant.village.Ledger.coins(village);
@@ -2202,7 +2204,9 @@ public class VillageGameTests {
         Kit.log("t37 the ledger: " + text);
         helper.assertTrue(text.indexOf("Town Ledger") >= 0 && text.indexOf("In the stores") >= 0 && text.indexOf("Who lives where") >= 0
             && text.indexOf(a.displayNameCap()) >= 0 && text.indexOf("Building") >= 0, "the ledger: stores, residents, building, needs");
-        // The storekeeper.
+        // The storekeeper — with a full larder: the village gives and sells no bread it needs (Budget).
+        for (int i = 2; i < 16; i++) box.setItem(i, new ItemStack(Items.BREAD, 64));
+        com.jrpetty.mcassistant.entity.Budget.forget(village);
         String bread = com.jrpetty.mcassistant.entity.Services.stores(a, p, "could I have 8 bread?");
         String wrong = com.jrpetty.mcassistant.entity.Services.stores(b, p, "could I have 8 bread?");
         String lent = com.jrpetty.mcassistant.entity.Services.stores(a, p, "could I borrow the iron pickaxe?");
@@ -4199,6 +4203,93 @@ public class VillageGameTests {
         Kit.log("t68 the storekeeper: " + sold + " (treasury " + coinsBefore + " -> " + coinsAfter + ", " + got + " sword)");
         helper.assertTrue(got == 1 && coinsAfter == coinsBefore + 5, "a stranger buys a spare sword for 5 coins (4, and a quarter over)");
         helper.succeed();
+    }
+
+    /**
+     * What two neighbours are to each other beyond the number (Bonds): they remember their
+     * dealings; no village stakes a plot nearer a neighbour's heart than its own, and crowded
+     * neighbours agree a border; a truce keeps a cooled feud from flaring; a village friendly with
+     * both brings two at odds to terms; neighbours on good terms marry across the boundary (one
+     * moves); a player carries a letter between elders, and one honoured in both brokers a pact.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "t69_bonds")
+    public static void t69_bonds(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        for (int x : new int[]{ 66000, 66200, 66100 }) {
+            int z = x == 66100 ? 12300 : 12000;
+            Kit.hold(level, x, z, 40);
+            Kit.prepare(level, x, z, 40);
+        }
+        level.setDayTime(2000);
+        BlockPos ha = Kit.surface(level, 66000, 12000), hb = Kit.surface(level, 66200, 12000), hc = Kit.surface(level, 66100, 12300);
+        VillageFolkSpawnerBlock.raiseParty(level, ha, 0.0F, 5);
+        VillageFolkSpawnerBlock.raiseParty(level, hb, 0.0F, 5);
+        VillageFolkSpawnerBlock.raiseParty(level, hc, 0.0F, 3);
+        Villages.Village a = Villages.nearest(level, ha, Villages.VILLAGE_RANGE);
+        Villages.Village b = Villages.nearest(level, hb, Villages.VILLAGE_RANGE);
+        Villages.Village c = Villages.nearest(level, hc, Villages.VILLAGE_RANGE);
+        helper.assertTrue(a != null && b != null && c != null && !a.id().equals(b.id()) && !c.id().equals(a.id()) && !c.id().equals(b.id()),
+            "three villages");
+        helper.runAtTickTime(20, () -> {
+            for (Villages.Village v : List.of(a, b, c)) {
+                for (AssistantEntity x : Villages.folkOf(v.id())) if (x instanceof VillageFolkEntity f) f.ensurePersona();
+            }
+            long day = level.getDayTime() / 24000L;
+            java.util.UUID ia = a.id(), ib = b.id(), ic = c.id();
+            // Memory.
+            com.jrpetty.mcassistant.entity.Bonds.remember(ia, ib, day, 4, "traders did good business");
+            helper.assertTrue(com.jrpetty.mcassistant.entity.Bonds.memories(ib, ia).size() == 1
+                && com.jrpetty.mcassistant.entity.Bonds.feeling(ia, ib, day) == 4, "both villages remember it");
+            // The border: not a plot nearer the neighbour's heart than its own.
+            boolean over = com.jrpetty.mcassistant.entity.Bonds.overBorder(ia, ha, hb.offset(-20, 0, 0), 4);
+            boolean home = com.jrpetty.mcassistant.entity.Bonds.overBorder(ia, ha, ha.offset(40, 0, 0), 4);
+            com.jrpetty.mcassistant.entity.Bonds.agreeBorder(ia, ib, day);
+            Kit.log("t69 the border: by their heart over " + over + ", by ours over " + home + "; agreed "
+                + com.jrpetty.mcassistant.entity.Bonds.border(ia, ib));
+            helper.assertTrue(over && !home && com.jrpetty.mcassistant.entity.Bonds.border(ib, ia), "the border between them");
+            // A go-between, and the truce it brings.
+            com.jrpetty.mcassistant.village.Ledger.relate(ia, ib, -60 - com.jrpetty.mcassistant.village.Ledger.relation(ia, ib));
+            com.jrpetty.mcassistant.village.Ledger.relate(ia, ic, 30);
+            com.jrpetty.mcassistant.village.Ledger.relate(ib, ic, 30);
+            int made = com.jrpetty.mcassistant.entity.Bonds.mediateForTests(a, b, day);
+            boolean truce = com.jrpetty.mcassistant.entity.Bonds.truce(ia, ib, day);
+            int held = com.jrpetty.mcassistant.entity.Bonds.underTruceForTests(ia, ib, day, -45, -20);
+            Kit.log("t69 the go-between: +" + made + ", truce " + truce + "; a -20 day under the truce comes to " + held);
+            helper.assertTrue(made > 0 && truce, "a village friendly with both brings them to terms, and a truce");
+            helper.assertTrue(-45 + held > com.jrpetty.mcassistant.entity.Diplomacy.FEUD, "and no falling back into a feud while it lasts");
+            // A marriage across the boundary.
+            com.jrpetty.mcassistant.village.Ledger.relate(ia, ib, 30 - com.jrpetty.mcassistant.village.Ledger.relation(ia, ib));
+            VillageFolkEntity[] wed = com.jrpetty.mcassistant.entity.Bonds.marry(level, a, b, day, new java.util.Random(7));
+            Kit.log("t69 the wedding: " + (wed == null ? "none" : wed[0].displayNameCap() + " moved to " + Villages.name(wed[0].ownerId())
+                + ", married to " + wed[1].displayNameCap()) + "; ties " + com.jrpetty.mcassistant.entity.Bonds.ties(ia, ib));
+            helper.assertTrue(wed != null && wed[0].ownerId().equals(wed[1].ownerId()) && wed[1].getUUID().equals(wed[0].life().partner())
+                && com.jrpetty.mcassistant.entity.Bonds.ties(ia, ib) == 1, "a wedding across the boundary: one moves, both married");
+            // A letter from one elder to the other.
+            net.minecraft.world.entity.player.Player p = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+            VillageFolkEntity writer = null, reader = null;
+            for (AssistantEntity x : Villages.folkOf(ia)) if (x instanceof VillageFolkEntity f && !f.isBaby()) writer = f;
+            for (AssistantEntity x : Villages.folkOf(ib)) if (x instanceof VillageFolkEntity f && !f.isBaby()) reader = f;
+            String asked = com.jrpetty.mcassistant.entity.Bonds.letter(writer, p, Villages.name(ib));
+            ItemStack letter = ItemStack.EMPTY;
+            for (int i = 0; i < p.getInventory().getContainerSize(); i++) if (p.getInventory().getItem(i).is(Items.WRITTEN_BOOK)) letter = p.getInventory().getItem(i);
+            int before = com.jrpetty.mcassistant.village.Ledger.relation(ia, ib);
+            String delivered = letter.isEmpty() ? "no letter" : com.jrpetty.mcassistant.entity.Bonds.deliver(reader, p, letter);
+            int after = com.jrpetty.mcassistant.village.Ledger.relation(ia, ib);
+            Kit.log("t69 the letter: " + asked + " / " + delivered + " (" + before + " -> " + after + ")");
+            helper.assertTrue(!letter.isEmpty() && after == before + 8, "a letter carried from one elder to the other warms them");
+            // A pact brokered by a player honoured in both.
+            for (java.util.UUID v : List.of(ia, ib)) {
+                for (AssistantEntity x : Villages.folkOf(v)) {
+                    if (x instanceof VillageFolkEntity f) f.persona().feelFor(p.getUUID(), p.getName().getString(), 60);
+                }
+                com.jrpetty.mcassistant.entity.Standing.stir(v, p.getUUID());
+            }
+            String pact = com.jrpetty.mcassistant.entity.Bonds.broker(writer, p, Villages.name(ib));
+            Kit.log("t69 the pact: " + pact + "; bonds " + com.jrpetty.mcassistant.entity.Diplomacy.report());
+            helper.assertTrue(com.jrpetty.mcassistant.entity.Envoys.pact(ia, ib), "an honoured friend of both brokers a trade pact");
+            helper.succeed();
+        });
     }
 
     /** A farmer's ten buckets of water, bought for it out of the treasury once. */

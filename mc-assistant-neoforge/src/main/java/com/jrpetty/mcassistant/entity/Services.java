@@ -368,15 +368,7 @@ public final class Services {
         int have = Market.stock(level, village, what);
         String word = sample.getHoverName().getString().toLowerCase(Locale.ROOT);
         if (have <= 0) return "We've no " + word + " in the stores, I'm afraid.";
-        // The village's own needs first (Budget): only what it can spare goes, to friend or stranger.
-        int spare = Budget.spare(level, village, sample);
-        if (spare <= 0) {
-            java.util.List<String> wants = Budget.wants(level, village);
-            return "We can't spare any " + word + " — " + (wants.isEmpty()
-                ? "we need all we have of it ourselves."
-                : "we see to ourselves first, and we're still short: we want " + String.join(", ", wants) + ".");
-        }
-        int n = Math.min(Math.min(want, have), spare);
+        int n = Math.min(want, have);
         boolean friend = Citizens.is(village, p.getUUID()) || f.persona().affinity(p.getUUID()) >= 30;
         String name = p.getName().getString();
         // A tool, a weapon, armour: lent to a friend, to be brought back.
@@ -391,6 +383,15 @@ public final class Services {
             f.persona().remember(day, "I lent " + name + " a " + word, 2);
             return "Here — take the " + word + ". Bring it back when you're done with it, within five days, mind.";
         }
+        // Anything given or sold for good: the village's own needs first (Budget) — only what it can spare.
+        int spare = Budget.spare(level, village, sample);
+        if (spare <= 0) {
+            java.util.List<String> wants = Budget.wants(level, village);
+            return "We can't spare any " + word + " — " + (wants.isEmpty()
+                ? "we need all we have of it ourselves."
+                : "we see to ourselves first, and we're still short: we want " + String.join(", ", wants) + ".");
+        }
+        n = Math.min(n, spare);
         // A friend's share, free, up to a stack a day.
         String key = village + "/" + p.getUUID() + "/" + day;
         int givenToday = GIVEN.getOrDefault(key, 0);

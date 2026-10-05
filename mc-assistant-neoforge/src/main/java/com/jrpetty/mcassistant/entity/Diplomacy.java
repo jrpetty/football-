@@ -146,7 +146,9 @@ public final class Diplomacy {
         if (kin(x, y)) delta += 2;
         // The ground between them.
         boolean crowded = apart(a, b) < CROWDED;
-        if (crowded) {
+        boolean truce = Bonds.truce(x, y, day);
+        // A border agreed (Bonds) ends the quarrel over the ground.
+        if (crowded && !Bonds.border(x, y)) {
             delta -= 4;
             if (rng.nextInt(5) == 0) {
                 String line = pick(rng, "folk from " + an + " and " + bn + " argued over where the one's land ends and the other's begins",
@@ -154,6 +156,7 @@ public final class Diplomacy {
                     bn + "'s woodcutters were caught felling trees " + an + " calls its own");
                 Villages.tell(x, day, line);
                 Villages.tell(y, day, line);
+                Bonds.remember(x, y, day, -2, "we quarrelled over the boundary");
                 delta -= 2;
             }
         }
@@ -164,25 +167,29 @@ public final class Diplomacy {
             delta += 6;
             Villages.tell(x, day, "traders from " + bn + " came to market, and went home pleased");
             Villages.tell(y, day, "our traders did good business in " + an);
+            Bonds.remember(x, y, day, 3, "traders from " + bn + " did good business in " + an);
         } else if (roll == 1 && now.ordinal() <= Terms.NEUTRAL.ordinal()) {
             delta += 4;
             String line = "a lad from " + an + " came courting a girl from " + bn;
             Villages.tell(x, day, line);
             Villages.tell(y, day, line);
-        } else if (roll == 2 && now.ordinal() >= Terms.NEUTRAL.ordinal()) {
+            Bonds.remember(x, y, day, 2, "there was courting between us");
+        } else if (roll == 2 && now.ordinal() >= Terms.NEUTRAL.ordinal() && !truce) {
             delta -= 6;
             String line = pick(rng, "a sheep went missing, and " + an + " blames " + bn,
                 "somebody from " + bn + " said something unforgivable about " + an + "'s cooking",
                 "there was a scuffle between young folk from " + an + " and " + bn + " at the boundary");
             Villages.tell(x, day, line);
             Villages.tell(y, day, line);
-        } else if (roll == 3 && now == Terms.FEUD) {
+            Bonds.remember(x, y, day, -4, line);
+        } else if (roll == 3 && now == Terms.FEUD && !truce) {
             // A feud flares: a scrap at the boundary, and both villages' folk feel it.
             String line = "folk from " + an + " and " + bn + " came to blows at the boundary — the feud goes on";
             Villages.tell(x, day, line);
             Villages.tell(y, day, line);
             SORE.put(x, day);
             SORE.put(y, day);
+            Bonds.remember(x, y, day, -5, "we came to blows at the boundary");
             delta -= 3;
         } else if (roll == 4 && now == Terms.FEUD && rng.nextInt(truceOdds(x, y)) == 0) {
             // Even a feud wears itself out in the end.
@@ -190,6 +197,8 @@ public final class Diplomacy {
             String line = "the elders of " + an + " and " + bn + " met at the boundary stone and agreed a truce";
             Villages.tell(x, day, line);
             Villages.tell(y, day, line);
+            Bonds.callTruce(x, y, day);
+            Bonds.remember(x, y, day, 5, "our elders agreed a truce");
         }
         // Allies look after each other: the stronger feeds the hungrier.
         if (now == Terms.ALLIES || Envoys.allied(x, y)) helpAlly(level, a, b, day);
@@ -198,8 +207,12 @@ public final class Diplomacy {
         // Who leads them: a warm-hearted elder makes friends, a prickly one enemies; two elders
         // alike get on, two opposites do not.
         delta += Envoys.temper(x).warmth + Envoys.temper(y).warmth + Envoys.chemistry(x, y);
-        // With nothing to keep it hot or cold, a relation drifts back toward nothing.
-        if (delta == 0 && r != 0 && !kin(x, y) && !Envoys.pact(x, y)) delta = r > 0 ? -1 : 1;
+        // Memories, borders, truces, marriages, feasts, contests, a hand when short (Bonds).
+        delta += Bonds.daily(level, a, b, day, r, crowded, rng);
+        // With nothing to keep it hot or cold, a relation drifts back toward nothing — unless the
+        // memory is warm: a fresh kindness or a fresh grudge holds it where it is.
+        if (delta == 0 && r != 0 && !kin(x, y) && !Envoys.pact(x, y) && Math.abs(Bonds.feeling(x, y, day)) < 10) delta = r > 0 ? -1 : 1;
+        delta = Bonds.underTruce(x, y, day, r, delta);
         int after = Ledger.relate(x, y, delta);
         announce(x, y, after, day);
         // And the elders send their envoys: greetings, trade, alliances, peace, tribute, complaints.
@@ -248,6 +261,7 @@ public final class Diplomacy {
         if (sent <= 0) return;
         Villages.tell(taker.id(), day, "our allies in " + Villages.name(giver.id()) + " sent " + sent + " food when we were hungry");
         Villages.tell(giver.id(), day, "we sent " + sent + " food to our hungry allies in " + Villages.name(taker.id()));
+        Bonds.remember(a.id(), b.id(), day, 6, Villages.name(giver.id()) + " fed us when we were hungry");
         Ledger.relate(a.id(), b.id(), 3);
     }
 
@@ -331,11 +345,13 @@ public final class Diplomacy {
             Ledger.takeCoins(small.id(), want);
             Ledger.addCoins(big.id(), want);
             Villages.tell(small.id(), day, "we paid " + bn + " " + want + " coins in tribute, and resent every one");
+            Bonds.remember(big.id(), small.id(), day, -3, sn + " paid " + bn + " tribute");
             Villages.tell(big.id(), day, sn + " paid us " + want + " coins in tribute");
             SORE.put(small.id(), day);
             return 3;                                                    // an uneasy peace
         }
         Villages.tell(small.id(), day, bn + " demanded " + want + " coins in tribute, and we would not pay");
+        Bonds.remember(big.id(), small.id(), day, -6, bn + " demanded tribute and " + sn + " refused");
         Villages.tell(big.id(), day, sn + " refused us our tribute");
         return -12;
     }
@@ -411,7 +427,8 @@ public final class Diplomacy {
                     case UNEASY -> "Don't talk to me about " + where + ". There's bad blood. ";
                     case FEUD -> "We're in a feud with " + where + ", and I won't forgive them. ";
                 });
-                if (apart(v, o) < CROWDED && r < FRIENDLY) sb.append("They're too close — that's half the trouble. ");
+                if (apart(v, o) < CROWDED && r < FRIENDLY && !Bonds.border(village, o.id())) sb.append("They're too close — that's half the trouble. ");
+                sb.append(Bonds.about(village, o, f.level().getDayTime() / 24000L));
             }
             told++;
         }
@@ -443,6 +460,8 @@ public final class Diplomacy {
         String line = name + " carried gifts between " + Villages.name(village) + " and " + on + " and made peace";
         Villages.tell(village, day, line);
         Villages.tell(o.id(), day, line);
+        if (terms(r) == Terms.FEUD) Bonds.callTruce(village, o.id(), day);
+        Bonds.remember(village, o.id(), day, 5, name + " made peace between us");
         announce(village, o.id(), after, day);
         for (UUID v : new UUID[]{ village, o.id() }) {
             for (AssistantEntity a : Villages.folkOf(v)) {
@@ -466,6 +485,7 @@ public final class Diplomacy {
         String name = p.getName().getString();
         int after = Ledger.relate(village, o.id(), -20);
         announce(village, o.id(), after, day);
+        Bonds.remember(village, o.id(), day, -5, "word went round of what " + on + " says about " + Villages.name(village));
         f.persona().remember(day, name + " told me what " + on + " says about us", 3);
         if (f.getRandom().nextInt(3) == 0) {
             // Found out: both villages think less of the player.
@@ -495,8 +515,9 @@ public final class Diplomacy {
                 Villages.Village a = all.get(i), b = all.get(j);
                 if (!neighbours(a, b) || !Ledger.knowEachOther(a.id(), b.id())) continue;
                 int r = Ledger.relation(a.id(), b.id());
+                String bonds = Bonds.words(a.id(), b.id(), Bonds.today());
                 out.add(Villages.name(a.id()) + " & " + Villages.name(b.id()) + ": " + terms(r).words + " (" + r + ", "
-                    + apart(a, b) + " blocks apart" + (kin(a.id(), b.id()) ? ", kin" : "") + ")");
+                    + apart(a, b) + " blocks apart" + (kin(a.id(), b.id()) ? ", kin" : "") + (bonds.isEmpty() ? "" : "; " + bonds) + ")");
             }
         }
         return out;
@@ -508,8 +529,9 @@ public final class Diplomacy {
         List<String> parts = new ArrayList<>();
         for (Villages.Village o : neighboursOf(village)) {
             if (!Ledger.knowEachOther(village, o.id())) continue;
+            String bonds = Bonds.words(village, o.id(), Bonds.today());
             parts.add(Villages.name(o.id()) + " " + terms(village, o.id()).name().toLowerCase(Locale.ROOT)
-                + " (" + Ledger.relation(village, o.id()) + ")");
+                + " (" + Ledger.relation(village, o.id()) + (bonds.isEmpty() ? "" : "; " + bonds) + ")");
         }
         return parts.isEmpty() ? null : String.join(", ", parts);
     }

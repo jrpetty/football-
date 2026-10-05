@@ -144,7 +144,7 @@ public final class Budget {
             }
         }
         // What it wants before it sells: the village is making enough for itself.
-        if (Market.hungry(village) || b.food < b.larder) b.wants.add("a full larder");
+        if (b.food < b.larder) b.wants.add("a full larder");                // counted now, not this morning
         if (Market.bedsShort(village) > 1) b.wants.add("beds for everyone");
         if (toolsShort > 0) b.wants.add("tools for every hand");
         int share = Market.lastShare(village);
@@ -248,6 +248,8 @@ public final class Budget {
         int keep = keep(b, sample);
         if (keep == Integer.MAX_VALUE || held <= keep) return 0;
         if (b.wants.isEmpty()) return held - keep;
+        // Short of something itself: no arms, armour or tools leave the village, however many it has.
+        if (kitOf(sample) != null) return 0;
         long glut = (long) keep * GLUT;
         return keep > 0 && held > glut ? (int) (held - glut) : 0;
     }
