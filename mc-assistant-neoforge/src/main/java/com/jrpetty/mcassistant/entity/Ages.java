@@ -49,7 +49,7 @@ public final class Ages {
 
     /** No walls or roof of their own to make over: they keep the look they were built with. */
     static final Set<String> AS_BUILT = Set.of("well", "gateway", "monument", "graveyard", "fortify", "pen", "platform",
-        "wall", "column", "room", "fountain", "court");
+        "wall", "column", "room", "fountain", "court", "park");
 
     /** The village's great buildings: copper roofs in the Diamond Age. */
     static final Set<String> GREAT = Set.of("hall", "chapel", "library", "granary", "tavern", "guesthouse", "market",

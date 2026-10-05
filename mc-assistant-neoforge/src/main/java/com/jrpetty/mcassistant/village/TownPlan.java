@@ -28,6 +28,12 @@ import java.util.List;
  * <p>This is only arithmetic: offsets from the heart, and which way each door
  * faces. Villages fits the plan to the ground (a lot on a cliff or in a lake is
  * passed over), and the builders do the rest.
+ *
+ * <p>Over the plan lie the town's quarters (Districts): the market round the square,
+ * the crafts on a side of their own, the farmland on another, the homes on the two
+ * left. A building is offered its own quarter's lots first (entity/Quarters), so the
+ * smeltery and the workshops that once took the lots facing the square go out to the
+ * craft quarter now, and those lots are the market's.
  */
 public final class TownPlan {
 

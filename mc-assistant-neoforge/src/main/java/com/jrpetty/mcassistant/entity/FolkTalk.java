@@ -258,13 +258,14 @@ public final class FolkTalk {
         if (f.isSleeping()) return "Asleep";
         String school = School.doing(f);                     // at a desk, or at the lectern (School)
         if (school != null) return school;
-        if (f.isBaby()) return "Playing";
+        String park = Park.doing(f);                          // in the park, or on its way there
+        if (f.isBaby()) return park != null ? park : "Playing";
         Job j = f.peekJob();
         if (j != null) return capFirst(j.label());
         if (f.guidePlayer() != null) return "Showing somebody the way to " + f.guideWhat();
         String status = f.clientStatus();
         if (f.stationTask() == AssistantEntity.StationTask.NONE) return "Looking for a trade";
-        if (f.offWorkNow()) return "Off work";
+        if (f.offWorkNow()) return park != null ? "Off work: " + park.substring(0, 1).toLowerCase(Locale.ROOT) + park.substring(1) : "Off work";
         String run = Couriers.doing(f);
         if (run != null) return "For the storehouse: " + run;
         return status.startsWith("Needs") ? status : "At work: " + f.stationTask().label;
@@ -316,6 +317,7 @@ public final class FolkTalk {
         line(sb, "Home", (house != null && !house.isEmpty() ? house + " " : "") + (bed == null ? "No bed of its own yet."
             : "A bed of its own" + (f.comforts() > 0 ? ", and " + f.comforts() + (f.comforts() == 1 ? " comfort" : " comforts") + " it bought" : "") + "."));
         line(sb, "Comforts", Decor.cardLine(f));            // its home's things, its trade's and its colour (Decor)
+        line(sb, "Quarter", Quarters.cardLine(f));          // its quarter of the town, the smoke, the park (Quarters)
         line(sb, "Nature", life.traitsLabel());
         line(sb, "Knacks", FolkSkills.cardLine(f));         // what it chose for itself: the Skills page has the rest
         String family = life.partnerName().isEmpty() ? "" : "partner " + life.partnerName();
@@ -550,6 +552,7 @@ public final class FolkTalk {
             case "civic" -> CityTree.moodWords(f);
             case "homely" -> Decor.moodWords(f);
             case "birthday" -> Birthdays.moodWords(f);
+            case "smoke", "noise", "parkside", "park" -> Quarters.words(f, why);      // where it lives (Quarters, Park)
             default -> "";
         };
     }

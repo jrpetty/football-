@@ -238,7 +238,7 @@ A village is laid out as a town, to one plan, wherever it is founded:
 
   | Where | What goes there | Which way it faces |
   |---|---|---|
-  | North and south of the square | The storehouse, the market, the workshop and the smeltery | Onto the square |
+  | North and south of the square | The storehouse, the market, the shops, the café and the tavern | Onto the square |
   | East and west of the square, two lots deep | The meeting hall, the chapel and the barracks | Onto the square |
   | The four corners by the square | The watchtowers | — |
   | Everywhere else | Homes, in rows back to back | Each row onto its own street |
@@ -247,6 +247,71 @@ A village is laid out as a town, to one plan, wherever it is founded:
 The streets are worn into paths where people live. From the Iron Age the avenues
 are cobbled and lit by lamp posts every few blocks. Fields, woods and mines are
 staked outside the town, so it always has ground to grow into.
+
+### The town's quarters, and the park
+
+The plan has **quarters**, and each grows outward on its own side as the town does:
+
+| Quarter | Where | What goes there |
+|---|---|---|
+| **The square** | The heart, inside the wall | The well, the fountain, the monuments, the bell tower |
+| **The market quarter** | Round the square, and out toward the fields as far as the first field | The storehouse, the market, the shop, the café, the tavern, the granary, the library, the bank; the great halls and the watchtowers keep their own lots by the square |
+| **The craft quarter** | One side of the town, away from the homes | The smeltery, the smithy, the workshop, the brewery, and any new trade's works (a forge, a kiln, a mill, a tannery) |
+| **The farmland** | Another side, past the town's first block | The fields, as before |
+| **The homes quarter** | The two sides that are left | The houses, the manor houses, the park |
+| **The outskirts** | Past the last street | The lighthouse, the pen, the gateway, the graveyard |
+
+The village chooses its craft side once and keeps it: where its smeltery already stands (so a
+town founded before there were quarters carries on as it was), else toward its mines, else the
+side with the fewest homes on it, next round from the fields. If the fields are later laid out
+that way, the crafts move round to the next side; nothing that stands is moved or pulled down.
+A building is offered a lot in its own quarter first; only when every one is taken, or no good
+(a cliff, a lake), does it go on the next best: the market's trades into the homes' streets, the
+crafts by the market, a home by the market. A new house is kept out of the smoke too, while there
+is room elsewhere.
+
+**Smoke and noise.** A home within sixteen blocks of a smeltery, a smithy, a workshop or a
+brewery that has been at work in the last two days (its furnace lit, or its hands at it), or
+within twenty of a mine's head while the miner works it, is a worse place to live. Its folk are a
+little less content for it, and say why when asked how they are ("The smithy's hammering keeps me
+up.", "The smeltery's smoke gets into the washing."); a grump minds it more, an easygoing folk
+less, and a smith does not mind its own forge. The house sells and lets for less (85% of the
+going price; a rent of three coins or more is cut to match).
+
+**The park.** Once the town has twenty folk and builds in stone, a park goes on the builders'
+list with the other amenities, on a lot in the homes quarter, the nearest the square. The builders
+put it up out of the stores like anything else: a fountain of dressed stone in the middle, its
+basin and the spring on its pillar filled a bucket at a time (the bucket is the stores', the
+water comes from a pond or a river that never runs dry), sixteen wooden benches round it facing
+the water, a lamp post at each of the four ways in, and flowers along its edges. Then its keepers
+finish it, a little at a time and out of the stores: a tree in each corner from the woodcutters'
+saplings (with a little bone meal now and then, if the stores can spare it), paths of trodden
+earth round the fountain and out to the four ways in, whatever flowers and water the builder had
+none of, and lanterns for the torches once the smith makes them. From the Iron Age the paths are
+paved and the fountain's rough stone dressed, in stone bricks.
+
+**Folk spend their free time there.** Some evenings (more often the ones who live by it, the
+walkers and the readers, the sociable and the easygoing; less often the shy) and some breaks, a
+folk walks over, sits on a bench looking at the fountain (partners and best friends side by side),
+chats with whoever sits by it and likes them the better for it, then gets up and strolls the
+paths, greeting whoever it passes. Couples walking out on the day of rest go round its paths.
+Children run about it of an afternoon, playing tag round the fountain. A folk that spent an hour
+in the park today is a little happier for it, and a home within twenty-four blocks of the park is
+the happier (its folk say "I can hear the fountain from my window") and sells and lets for more
+(115%). In the smoke and by the park both, it comes out about even.
+
+**Where to see it.** A folk's card (the About tab) has a **Quarter** line: which quarter it lives
+in, whether it is beside the smithy or the smeltery, whether it is by the park, and what that does
+to its house's price. The line at the top of its card says when it is in the park ("Off work:
+sitting on a bench in the park with Bess"). In the town's books, the **Buildings** page gives
+every building's quarter (a coloured edge and a Quarter column, *smoky* or *by park* for a
+house), and **Map of the quarters** at the foot of the page turns the list into a map of the town: every lot
+tinted by its quarter, every building on it in its quarter's colour, the homes in the smoke ringed
+in soot and the homes by the park in green, the works at work marked by their fire, the mines'
+heads, and a key with how many buildings each quarter has, the plan in a line and how the park is
+coming on. The **Why** page lists the homes in the smoke and din (by address, who lives there and
+what troubles them) and the homes by the park; the **Society** page counts the folk in each and
+how many are in the park now. `/village districts` says all of it in chat.
 
 ### Life in town
 
@@ -1170,6 +1235,7 @@ with plain blocks, so a building is never held up.
 | Library | 9×9 | Stone hall with tall windows, walls lined with bookshelves, an enchanting table on a carpet between lecterns |
 | School | 9×11 | Timber schoolroom under a steep roof, tall windows down both sides: two rows of desks (a top slab, a stair for a bench) either side of the aisle, the teacher's lectern, and at the back a blackboard over a cupboard of barrels, a bookshelf either side |
 | Bank | 9×11 | Stone house of business: a counter across the room with a lantern on it, the ledger on a lectern by the door, and a vault at the back, its strongboxes behind a gate and grille of iron bars the banker sets |
+| Park | 11×11 | A green: a stone fountain with a spring spilling from its pillar, sixteen wooden benches round it, lamp posts at the four ways in, flowers along its edges; then a tree in each corner, paths and lanterns (see *The town's quarters, and the park*) |
 
 Builders take the place the town plan has for the building. Of the first few good
 lots they pick the one that costs least to build on. They level it (filling the low
@@ -2616,7 +2682,8 @@ every chart reads out the day under the mouse.
   along the foot, the players with a stake in the village (its citizens and anyone who owns a house
   in it): the coin each carries (when on), the houses each owns and what they are worth, the rent
   their tenants owe them, and their net worth. The leader is starred.
-* **Society:** the age pyramid (by ten years), how they feel (miserable to joyful), how evenly
+* **Society:** the age pyramid (by ten years), how they feel (miserable to joyful) and how many
+  live in the crafts' smoke or by the park (and are in it now), how evenly
   the money is spread (the Gini of the purses, the middle purse, what the richest tenth and the
   poorer half hold, and the five richest), couples, households and how big they are,
   friendships and rivalries, the best liked, their natures and most common traits, how skilled
@@ -2632,10 +2699,12 @@ every chart reads out the day under the mouse.
   owning, its rent (and anything it
   owes), a bar of what it has put by toward the price, and whether it wants a house of its own
   and why (the mouse over a row tells the whole of it).
-* **Buildings:** every building: what it is, how far and which way from the heart, its
-  storeys (or a storey going up), how far its insides are furnished for the age, and for a
-  house how many live there and on what terms; how many of each kind; and what the village
-  will build next, in order, with why.
+* **Buildings:** every building: what it is, how far and which way from the heart, its quarter
+  (and for a house whether it is in the smoke or by the park), its storeys (or a storey going
+  up), how far its insides are furnished for the age, and for a house how many live there and on
+  what terms; how many of each kind; and what the village will build next, in order, with why.
+  **Map of the quarters**, at the foot of the page, shows the town as a map of its quarters instead (see
+  *The town's quarters, and the park*).
 * **Stores:** food, the days of food put by, timber and stone, coal and iron over time, what
   is in the stores now and the larder's books; and beside them **the storehouse**: its slots
   used and free, its storekeeper and whether it is at the counter, the day's goods in and out
@@ -2662,7 +2731,8 @@ every chart reads out the day under the mouse.
   population and where it came from, whether every bed is taken, whether the larder is full
   enough for children, output up or down and which trades moved it, the most productive trade
   per hand, the biggest earner, idle hands, money in against out, worth, contentment and its
-  six parts, what it is short of for the next age, and what would help most now.
+  six parts, what it is short of for the next age, and what would help most now; and at the
+  foot, where they live: the homes in the crafts' smoke and din, and the homes by the park.
 * **Trends:** what each grown folk makes a day, the worth per head, contentment against idle
   hands and the watch, and buildings, renown and the ages over time.
 * **Records:** its bests (most folk, most made in a day, fullest treasury, greatest worth,
@@ -3521,6 +3591,12 @@ ripen, days pass, folk work and houses go up at that pace.
   (operators) keeps it this minute, before the board.
 * `/village birthdays` — whose birthday falls this week; `birthdays now <name>` (operators) has
   that folk keep one today, and its friends go round with presents.
+* `/village districts` — the nearest town's quarters: the plan in a line, how many buildings
+  each quarter has, which works are at work, the homes in the smoke and din and the homes by the
+  park, and how the park is coming on. Works from the console. `districts map` opens the books at
+  the Buildings page's map; `districts park now` (operators) puts the park up at once on its lot,
+  as the showcase does, with its trees grown and its paths laid, and sends everybody off work to
+  it (it prints `PARK x y z facing dir`); `districts park visit` (operators) sends them again.
 * `/village chronicle` — the nearest village's history, as a written book.
 * `/village standing` — what every village you have met thinks of you.
 * `/village ledger` — the nearest village's town ledger, as a book.

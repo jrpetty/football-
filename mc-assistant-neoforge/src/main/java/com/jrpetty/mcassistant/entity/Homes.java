@@ -737,7 +737,8 @@ public final class Homes {
     static int price(UUID village, Home h) {
         int base = h.structure.equals("manor") ? 120 : Ledger.grown(village, h.anchor) ? 55 : 35;
         return (int) Math.round(base * (1.0 + 0.25 * Villages.ageOf(village).ordinal()) * CityTree.pricePercent(village) / 100.0
-            * Decor.pricePercent(village, h.anchor) / 100.0);                // a furnished house is worth more (Decor)
+            * Decor.pricePercent(village, h.anchor) / 100.0                 // a furnished house is worth more (Decor)
+            * Quarters.homePercent(village, h.anchor) / 100.0);      // less in the crafts' smoke, more by the park (Quarters)
     }
 
     /** How big a house is, for its rent: a house 1, a two-storey house 2, a manor 4. */
@@ -754,7 +755,7 @@ public final class Homes {
      * is too small to cut, and is let off one payday in five instead (tenants).
      */
     static int rent(UUID village, Home h) {
-        return CityTree.rent(village, baseRent(village, h));
+        return Quarters.rent(village, h.anchor, CityTree.rent(village, baseRent(village, h)));   // the smoke, the park (Quarters)
     }
 
     /** The rent before the town's Cheap Homes. */

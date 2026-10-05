@@ -257,7 +257,14 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
     @Override
     public void render(VillageFolkEntity folk, float entityYaw, float partialTick,
                        PoseStack pose, MultiBufferSource buffer, int packedLight) {
+        // Sat on a bench (entity/Park): the whole of it lowered onto the seat, its legs out in front.
+        boolean sat = folk.getPose() == net.minecraft.world.entity.Pose.SITTING;
+        if (sat) {
+            pose.pushPose();
+            pose.translate(0.0F, folk.isBaby() ? -0.32F : -0.6F, 0.0F);
+        }
         super.render(folk, entityYaw, partialTick, pose, buffer, packedLight);
+        if (sat) pose.popPose();
 
         double far = this.entityRenderDispatcher.distanceToSqr(folk);
         if (far < 24 * 24 && bubble(folk, pose, buffer)) return;

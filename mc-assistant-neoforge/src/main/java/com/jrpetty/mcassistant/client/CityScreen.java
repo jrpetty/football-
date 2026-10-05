@@ -68,6 +68,8 @@ public class CityScreen extends Screen {
     private String shopSeller;
     private int prodSort = 7;
     private boolean prodDown = true;
+    /** The Buildings page shows the map of the town's quarters, not the list (DistrictMap). */
+    private static boolean buildingsMap;
     /** What can be clicked on the page just drawn: its box and what a click does. */
     private final List<Zone> zones = new ArrayList<>();
 
@@ -103,6 +105,7 @@ public class CityScreen extends Screen {
         // A page asked for by its name (/village school page), whatever its number.
         if (data.contains("page")) for (int i = 0; i < TABS.length; i++) if (TABS[i].equals(data.getString("page"))) next.tab = i;
         if (data.contains("shopSeller")) next.shopSeller = data.getString("shopSeller");                   // a seller asked for (/village stall books)
+        if (data.getBoolean("map")) buildingsMap = true;                 // the Buildings page's map asked for (/village districts map)
         mc.setScreen(next);
     }
 
@@ -1619,11 +1622,14 @@ public class CityScreen extends Screen {
         int half = cw * 3 / 5;
         Ui.section(g, font, "What is driving growth, and what is holding it back", x, y, half);
         int dy = y + 12;
+        int keep = 16 + 9 * DistrictMap.whyLines(data);                  // room kept for where they live, below
         for (String d : strings("drivers")) {
-            if (dy > y + ch - 10) break;
+            if (dy > y + ch - 10 - keep) break;
             dy = driverLine(g, d, x, dy, half, 3);
             dy += 2;
         }
+        // Where they live: the homes in the crafts' smoke and din, and the homes by the park (Quarters).
+        DistrictMap.why(g, font, data, x, Math.max(dy + 4, y + ch - keep), half, y + ch);
         int rx = x + half + 8, rw = cw - half - 8, ry = y;
         Ui.section(g, font, "Contentment " + now.getInt("content") + "/100", rx, ry, rw);
         ry += 12;
@@ -1716,6 +1722,16 @@ public class CityScreen extends Screen {
             Ui.bar(g, cx + 44, cy, col - 44 - 22, 7, folk == 0 ? 0 : moods[i] / (float) folk, moodCol[i]);
             Ui.right(g, font, Integer.toString(moods[i]), cx + col, cy, Ui.MUTED);
             cy += 9;
+        }
+        // Where they live has a say in it (Quarters): the crafts' smoke and din, the park.
+        if (cy < bottom - 16) {
+            String where = so.getInt("smoky") + " live in the smoke or din; " + so.getInt("parkside") + " by the park"
+                + (so.getInt("at_park") > 0 ? " (" + so.getInt("at_park") + " there now)" : "");
+            for (FormattedCharSequence line : font.split(Component.literal(where), (int) (col / 0.75))) {
+                if (cy > bottom - 8) break;
+                small(g, line, cx, cy + 2, so.getInt("smoky") > 0 ? Ui.WARN : Ui.MUTED);
+                cy += 9;
+            }
         }
         // The second column: the money and the families.
         cx = x + col + 8;
@@ -1954,8 +1970,8 @@ public class CityScreen extends Screen {
         return y;
     }
 
-    private static final String[] BUILDING_HEADS = { "Building", "Where", "Storeys", "Furnished", "Home" };
-    private static final int[] BUILDING_COLS = { 0, 92, 168, 206, 262 };
+    private static final String[] BUILDING_HEADS = { "Building", "Where", "Quarter", "Storeys", "Furnished", "Home" };
+    private static final int[] BUILDING_COLS = { 0, 84, 148, 194, 230, 272 };
 
     /** Every building in the village, what it is, where, how far it has come; and what it will build next. */
     private void buildings(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my) {
@@ -1963,7 +1979,18 @@ public class CityScreen extends Screen {
         all.sort(Comparator.comparing((CompoundTag c) -> c.getString("title")).thenComparingInt(c -> c.getInt("dist")));
         int side = Math.min(170, cw / 3);
         int tw = cw - side - 8;
-        for (int i = 0; i < BUILDING_HEADS.length; i++) {
+        // The list, or the map of the town's quarters (DistrictMap): a click on the corner, at the foot, changes it.
+        String toggle = buildingsMap ? "The list ›" : "Map of the quarters ›";
+        int toggleW = (int) (font.width(toggle) * 0.75F) + 6, toggleY = y + ch - 11;
+        g.fill(x + tw - toggleW, toggleY - 1, x + tw, toggleY + 9, buildingsMap ? Ui.ROW_PICK : Ui.HEADER);
+        g.renderOutline(x + tw - toggleW, toggleY - 1, toggleW, 10, Ui.EDGE_SOFT);
+        small(g, toggle, x + tw - toggleW + 3, toggleY + 1, Ui.INK);
+        zones.add(new Zone(x + tw - toggleW, toggleY - 1, x + tw, toggleY + 9, () -> buildingsMap = !buildingsMap));
+        if (buildingsMap) {
+            List<net.minecraft.network.chat.Component> tip = DistrictMap.draw(g, font, data, all, x, y, tw, ch - 14, mx, my);
+            if (tip != null) { hover = tip; hoverX = mx; hoverY = my; }
+        }
+        for (int i = 0; i < BUILDING_HEADS.length && !buildingsMap; i++) {
             if (BUILDING_COLS[i] >= tw - 20) break;
             small(g, BUILDING_HEADS[i], x + BUILDING_COLS[i], y, Ui.FAINT);
         }
@@ -1977,25 +2004,27 @@ public class CityScreen extends Screen {
             if (b.getInt("storeys") > 1) tall++;
             if (b.getBoolean("raising")) going++;
         }
-        for (int i = start; i < Math.min(all.size(), start + rows); i++) {
+        for (int i = start; i < Math.min(all.size(), start + rows) && !buildingsMap; i++) {
             CompoundTag b = all.get(i);
             g.fill(x - 2, ry - 1, x + tw, ry + 9, i % 2 == 0 ? Ui.ROW : Ui.ROW_ALT);
+            g.fill(x - 2, ry - 1, x, ry + 9, DistrictMap.colour(b.getString("district")));   // its quarter's colour
             String where = b.getString("dir").equals("at the heart") ? "at the heart" : b.getInt("dist") + " " + b.getString("dir");
             String storeys = b.getBoolean("raising") ? "going up" : Integer.toString(b.getInt("storeys"));
             String fur = b.getInt("furnish_of") == 0 ? "—" : Math.round(b.getInt("furnished") * 100f / b.getInt("furnish_of")) + "%";
             String home = b.contains("living") ? b.getInt("living") + " · " + b.getString("tenure") : "";
-            String[] cells = { b.getString("title"), where, storeys, fur, home };
+            String quarter = b.getString("district") + (b.contains("smoke") ? " · smoky" : b.getBoolean("parkside") ? " · by park" : "");
+            String[] cells = { b.getString("title"), where, quarter, storeys, fur, home };
             for (int c = 0; c < cells.length; c++) {
                 if (BUILDING_COLS[c] >= tw - 20) break;
                 int colW = (c + 1 < BUILDING_COLS.length ? BUILDING_COLS[c + 1] : tw) - BUILDING_COLS[c] - 3;
                 small(g, Ui.clip(font, cells[c], (int) (colW / 0.75)), x + BUILDING_COLS[c], ry + 1,
-                    c == 2 && b.getBoolean("raising") ? Ui.WARN : Ui.INK);
+                    c == 3 && b.getBoolean("raising") ? Ui.WARN : c == 2 && b.contains("smoke") ? Ui.BAD : Ui.INK);
             }
             ry += 10;
         }
-        small(g, Ui.clip(font, all.size() + " buildings, " + tall + " of two storeys" + (going > 0 ? ", " + going + " going up" : "")
+        if (!buildingsMap) small(g, Ui.clip(font, all.size() + " buildings, " + tall + " of two storeys" + (going > 0 ? ", " + going + " going up" : "")
             + (furnishOf > 0 ? "; insides " + Math.round(furnished * 100f / furnishOf) + "% furnished for the age" : "")
-            + (all.size() > rows ? " · scroll for more" : ""), (int) (tw / 0.75)), x, y + ch - 10, Ui.FAINT);
+            + (all.size() > rows ? " · scroll for more" : ""), (int) ((tw - toggleW - 4) / 0.75)), x, y + ch - 10, Ui.FAINT);
         // The side: how many of each, and what comes next.
         int sx = x + tw + 8, sy = y;
         Ui.section(g, font, "By kind", sx, sy, side);

@@ -56,7 +56,9 @@ public class BuildGoal extends Goal {
         // the schoolhouse, once there are children to fill it (School)
         "school",
         // the bank: a counter, a vault behind bars, the ledger on a lectern (entity/Bank)
-        "bank");
+        "bank",
+        // the park among the homes, with its fountain and benches (entity/Park)
+        "park");
 
     /** Half the width of a structure's footprint: the meeting hall, the market, the
      *  barracks, the chapel's length and the gateway's step are seven across, the rest

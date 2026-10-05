@@ -1,0 +1,516 @@
+package com.jrpetty.mcassistant.gametest;
+
+import com.jrpetty.mcassistant.Showcase;
+import com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock;
+import com.jrpetty.mcassistant.entity.AssistantEntity.StationTask;
+import com.jrpetty.mcassistant.entity.Job;
+import com.jrpetty.mcassistant.entity.Park;
+import com.jrpetty.mcassistant.entity.Quarters;
+import com.jrpetty.mcassistant.entity.VillageFolkEntity;
+import com.jrpetty.mcassistant.entity.Villages;
+import com.jrpetty.mcassistant.entity.ZoneChests;
+import com.jrpetty.mcassistant.entity.goal.BuildGoal;
+import com.jrpetty.mcassistant.village.Districts;
+import com.jrpetty.mcassistant.village.Districts.District;
+import com.jrpetty.mcassistant.village.Ledger;
+import com.jrpetty.mcassistant.village.TownPlan;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.gametest.framework.GameTest;
+import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.FluidTags;
+import net.minecraft.world.Container;
+import net.minecraft.world.entity.Pose;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.SaplingBlock;
+import net.minecraft.world.level.block.StairBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BedPart;
+import net.neoforged.neoforge.gametest.GameTestHolder;
+import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.UUID;
+
+/**
+ * The town's quarters and its park (Districts, Quarters, Park): the plan puts the crafts and the homes
+ * in quarters of their own, an old town's smeltery decides where its crafts go, a home beside a
+ * working smeltery is the gloomier and the cheaper while one by the park is the happier and the
+ * dearer, the builders put the park up out of what they carry and its keepers plant it and lay its
+ * paths, and folk off work of an evening go and sit in it.
+ *
+ * <p>All between x 280000 and 287000, z 50000, each on its own ground in a batch of its own.
+ */
+@GameTestHolder("mc_assistant")
+@PrefixGameTestTemplate(false)
+public class DistrictGameTests {
+
+    private static final String EMPTY = "empty";
+
+    /** Level grass this far round the heart, open sky over it, whatever the world put there. */
+    private static void flatten(ServerLevel level, BlockPos heart, int r) {
+        BlockState grass = Blocks.GRASS_BLOCK.defaultBlockState(), dirt = Blocks.DIRT.defaultBlockState(), air = Blocks.AIR.defaultBlockState();
+        int y = heart.getY();
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        for (int dx = -r; dx <= r; dx++) {
+            for (int dz = -r; dz <= r; dz++) {
+                int x = heart.getX() + dx, z = heart.getZ() + dz;
+                for (int dy = -3; dy <= 20; dy++) {
+                    BlockState want = dy == -1 ? grass : dy < -1 ? dirt : air;
+                    p.set(x, y + dy, z);
+                    if (level.getBlockState(p) != want) level.setBlock(p, want, 2);
+                }
+            }
+        }
+    }
+
+    /** A bed whose head is here, lying north. */
+    private static void bed(ServerLevel level, BlockPos head) {
+        BlockState b = Blocks.RED_BED.defaultBlockState().setValue(BedBlock.FACING, Direction.NORTH);
+        level.setBlock(head.south(), b.setValue(BedBlock.PART, BedPart.FOOT), 3);
+        level.setBlock(head, b.setValue(BedBlock.PART, BedPart.HEAD), 3);
+    }
+
+    /** A marked store chest here, holding these. */
+    private static void stores(ServerLevel level, BlockPos at, ItemStack... goods) {
+        level.setBlock(at, Blocks.CHEST.defaultBlockState(), 3);
+        ZoneChests.mark(level, at);
+        Container box = (Container) level.getBlockEntity(at);
+        for (int i = 0; i < goods.length && box != null; i++) box.setItem(i, goods[i]);
+    }
+
+    /** The lots of a list by where they are and what they are (a lot's cells are an array: not its identity). */
+    private static java.util.Set<String> places(List<TownPlan.Lot> lots) {
+        java.util.Set<String> out = new HashSet<>();
+        for (TownPlan.Lot l : lots) out.add(l.x() + "," + l.z() + "," + l.kind() + "," + l.use());
+        return out;
+    }
+
+    private static District at(UUID village, BlockPos heart, BlockPos p) {
+        return Quarters.districtOf(village, heart, p);
+    }
+
+    private static void clean(ServerLevel level) {
+        Kit.reset(level);
+        Quarters.resetForTests();
+        Park.resetForTests();
+    }
+
+    // ============================================================ the plan's quarters
+
+    /**
+     * A village whose fields lie to the east: its crafts go on a side of their own (not the fields'),
+     * the plan offers a smeltery a lot in the craft quarter first and a house one in the homes quarter,
+     * every kind of building is still offered every lot it was (only the order changes), and on the
+     * ground the builders' own choice puts the smeltery and the first house in different quarters, a
+     * street or more apart. An old town whose smeltery already stands north of the square has its
+     * craft quarter there, and its next smithy goes beside it.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "dt01_quarters")
+    public static void dt01_quarters(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        clean(level);
+        level.setDayTime(6000);
+        int x = 280000, z = 50000;
+        Kit.hold(level, x, z, 64);
+        Kit.prepare(level, x, z, 64);
+        BlockPos heart = Kit.surface(level, x, z);
+        flatten(level, heart, 56);
+        VillageFolkEntity first = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(first != null, "a village");
+        UUID village = first.ownerId();
+        helper.runAtTickTime(20, () -> {
+            Kit.Expect e = new Kit.Expect();
+            Villages.setFieldsSide(village, TownPlan.EAST);
+            int craft = Quarters.craftSide(village);
+            Kit.log("dt01 fields to the east; the crafts to the " + Districts.sideWord(craft) + ": " + Quarters.planLine(village));
+            e.that(craft >= 0 && craft != TownPlan.EAST, "the crafts have a side of their own, not the fields': " + craft);
+            e.that(Quarters.craftSide(village) == craft, "and keep it");
+
+            // The plan's offer, before any ground is looked at.
+            List<TownPlan.Lot> forSmeltery = Quarters.candidates(village, "smeltery");
+            List<TownPlan.Lot> forHouse = Quarters.candidates(village, "house");
+            List<TownPlan.Lot> forMarket = Quarters.candidates(village, "market");
+            District s0 = Districts.of(forSmeltery.get(0), TownPlan.EAST, craft);
+            District h0 = Districts.of(forHouse.get(0), TownPlan.EAST, craft);
+            District m0 = Districts.of(forMarket.get(0), TownPlan.EAST, craft);
+            Kit.log("dt01 first lots offered: smeltery " + forSmeltery.get(0) + " (" + s0 + "), house " + forHouse.get(0) + " (" + h0
+                + "), market " + forMarket.get(0) + " (" + m0 + ")");
+            e.that(s0 == District.CRAFTS, "a smeltery is offered the craft quarter first: " + s0);
+            e.that(h0 == District.HOMES, "a house is offered the homes quarter first: " + h0);
+            e.that(m0 == District.MARKET && "civic".equals(forMarket.get(0).use()), "the market a lot facing the square: " + forMarket.get(0));
+            e.that(!"civic".equals(forSmeltery.get(0).use()), "the crafts no longer take the market's lots by the square");
+            for (String kind : new String[]{ "smeltery", "smithy", "house", "market", "cafe", "park", "hall", "watchtower", "lighthouse", "well" }) {
+                List<TownPlan.Lot> plan = TownPlan.candidates(kind), ours = Quarters.candidates(village, kind);
+                e.that(plan.size() == ours.size() && places(plan).equals(places(ours)),
+                    "every lot the plan offers a " + kind + " is still offered (" + ours.size() + " of " + plan.size() + ")");
+            }
+
+            // The builders' own choice, on the ground.
+            Villages.Site smeltery = Villages.siteFor(level, village, "smeltery");
+            Villages.Site house = Villages.siteFor(level, village, "house");
+            Kit.log("dt01 the builders chose: smeltery " + (smeltery == null ? "nothing" : smeltery.anchor().toShortString() + " "
+                + at(village, heart, smeltery.anchor())) + "; house " + (house == null ? "nothing" : house.anchor().toShortString() + " "
+                + at(village, heart, house.anchor())) + "; " + Villages.lotReport(village));
+            e.that(smeltery != null && house != null, "a lot for each");
+            if (smeltery != null && house != null) {
+                District sd = at(village, heart, smeltery.anchor()), hd = at(village, heart, house.anchor());
+                e.that(sd == District.CRAFTS, "the smeltery goes up in the craft quarter: " + sd);
+                e.that(hd == District.HOMES, "the house in the homes quarter: " + hd);
+                e.that(sd != hd, "in different quarters");
+                double apart = Math.sqrt(smeltery.anchor().distSqr(house.anchor()));
+                e.that(apart > Quarters.SMOKE_REACH, "the house out of the smeltery's smoke: " + Math.round(apart) + " blocks apart");
+            }
+
+            // An old town: its smeltery stands on the lot north of the square, from before there were quarters.
+            UUID old = UUID.randomUUID();
+            BlockPos oldHeart = new BlockPos(x + 900, heart.getY(), z);
+            Villages.restore(level, old, oldHeart, Villages.Age.STONE, List.of("storage", "smeltery", "house"), 14);
+            Ledger.built(old, "smeltery", oldHeart.offset(-8, 0, -22), Direction.NORTH);
+            int oldCraft = Quarters.craftSide(old);
+            TownPlan.Lot smithy = Quarters.candidates(old, "smithy").get(0);
+            Kit.log("dt01 an old town with its smeltery north of the square: crafts to the " + Districts.sideWord(oldCraft)
+                + ", its smithy offered " + smithy);
+            e.that(oldCraft == TownPlan.NORTH, "an old town's crafts go where its smeltery already stands: " + oldCraft);
+            e.that(Districts.of(smithy, -1, oldCraft) == District.CRAFTS && smithy.z() < 0, "and its smithy beside it, north: " + smithy);
+            e.that(Districts.isIndustry("tannery") && Districts.forBuilding("bank") != District.CRAFTS,
+                "a new trade's works fall into the craft quarter by name, a bank does not");
+            helper.assertTrue(e.clean(), e.summary());
+            helper.succeed();
+        });
+    }
+
+    // ============================================================ smoke, noise and the park
+
+    /**
+     * Three folk: one sleeps beside a smeltery whose furnace is lit, one beside the park, one well away
+     * from both. The first is the gloomier for the smoke (and says so), the second the cheerier for the
+     * park, the third neither; a house in the smoke sells and lets for less, one by the park for more.
+     * The smelter itself does not mind its own furnace.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "dt02_smoke_and_park")
+    public static void dt02_smoke_and_park(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        clean(level);
+        level.setDayTime(6000);
+        int x = 281500, z = 50000;
+        Kit.hold(level, x, z, 72);
+        Kit.prepare(level, x, z, 72);
+        BlockPos heart = Kit.surface(level, x, z);
+        flatten(level, heart, 64);
+        VillageFolkEntity smoky = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(smoky != null, "a village");
+        UUID village = smoky.ownerId();
+        VillageFolkEntity parkside = VillageFolkSpawnerBlock.raise(level, heart.east(2), 0.0F);
+        VillageFolkEntity away = VillageFolkSpawnerBlock.raise(level, heart.west(2), 0.0F);
+        VillageFolkEntity smelter = VillageFolkSpawnerBlock.raise(level, heart.south(2), 0.0F);
+        helper.assertTrue(parkside != null && away != null && smelter != null, "four folk");
+        helper.runAtTickTime(20, () -> {
+            Kit.Expect e = new Kit.Expect();
+            Villages.Village v = Villages.get(village);
+            // A smeltery forty out to the south, its furnace lit: coal and ore in it.
+            BlockPos s = heart.offset(0, 0, 40);
+            Ledger.built(village, "smeltery", s, Direction.SOUTH);
+            BlockPos furnace = null;
+            for (BuildGoal.Placement p : BuildGoal.plan("smeltery", s, Direction.SOUTH, 13)) {
+                if (p.part() == BuildGoal.Part.FURNACE) { furnace = p.pos(); break; }
+            }
+            helper.assertTrue(furnace != null, "a smeltery's drawing has its furnaces");
+            level.setBlock(furnace, Blocks.FURNACE.defaultBlockState(), 3);
+            if (level.getBlockEntity(furnace) instanceof Container c) {
+                c.setItem(0, new ItemStack(Items.RAW_IRON, 16));
+                c.setItem(1, new ItemStack(Items.COAL, 8));
+            }
+            // A park forty out to the north.
+            BlockPos park = heart.offset(0, 0, -40);
+            Ledger.built(village, Park.STRUCTURE, park, Direction.NORTH);
+            // Their beds: beside the smeltery, beside the park, out west away from both.
+            BlockPos bedSmoke = s.offset(8, 0, 0), bedPark = park.offset(8, 0, 0), bedAway = heart.offset(-40, 0, 0);
+            BlockPos bedSmelter = s.offset(-8, 0, 0);
+            for (BlockPos b : new BlockPos[]{ bedSmoke, bedPark, bedAway, bedSmelter }) bed(level, b);
+            smoky.claimBedNear(bedSmoke);
+            parkside.claimBedNear(bedPark);
+            away.claimBedNear(bedAway);
+            smelter.claimBedNear(bedSmelter);
+            smoky.setJob(StationTask.FARM);
+            parkside.setJob(StationTask.FARM);
+            away.setJob(StationTask.FARM);
+            smelter.setJob(StationTask.SMELT);
+            BlockPos furnaceAt = furnace;
+            helper.runAfterDelay(40, () -> {
+                boolean lit = level.getBlockState(furnaceAt).getValue(net.minecraft.world.level.block.AbstractFurnaceBlock.LIT);
+                Quarters.scan(level, v);
+                Kit.log("dt02 the furnace lit " + lit + "; at work: " + Quarters.sources(village));
+                e.that(lit, "the smeltery's furnace is lit");
+                e.that(!Quarters.sources(village).isEmpty(), "the smeltery counts as at work");
+                List<Object[]> whySmoke = new ArrayList<>(), whyPark = new ArrayList<>(), whyAway = new ArrayList<>(), whySmelter = new ArrayList<>();
+                int mSmoke = Quarters.mood(smoky, 60, whySmoke), mPark = Quarters.mood(parkside, 60, whyPark);
+                int mAway = Quarters.mood(away, 60, whyAway), mSmelter = Quarters.mood(smelter, 60, whySmelter);
+                Kit.log("dt02 spirits from 60: by the smeltery " + mSmoke + " " + keys(whySmoke) + ", by the park " + mPark + " "
+                    + keys(whyPark) + ", away " + mAway + " " + keys(whyAway) + ", the smelter " + mSmelter + " " + keys(whySmelter));
+                e.that(mSmoke < mAway && keys(whySmoke).contains("smoke"), "the smoke lowers the spirits of who sleeps by it: " + mSmoke);
+                e.that(mPark > mAway && keys(whyPark).contains("parkside"), "the park lifts those of who lives by it: " + mPark);
+                e.that(mAway == 60 && whyAway.isEmpty(), "and neither touches the one away from both: " + mAway);
+                e.that(!keys(whySmelter).contains("smoke"), "the smelter does not mind its own furnace");
+                String says = Quarters.words(smoky, "smoke"), card = Quarters.cardLine(smoky), parkCard = Quarters.cardLine(parkside);
+                Kit.log("dt02 it says: \"" + says + "\"; its card: " + card + " | the other's: " + parkCard);
+                e.that(!says.isEmpty() && says.toLowerCase().contains("smoke"), "it gives the smoke as its reason: " + says);
+                e.that(card.contains("smeltery"), "its card says it lives by the smeltery: " + card);
+                e.that(parkCard.contains("park"), "the other's card says it lives by the park: " + parkCard);
+                // The folk's own spirits, as the village works them out.
+                smoky.refreshMood();
+                Kit.log("dt02 by the smeltery, refreshed: " + smoky.persona().mood() + " " + smoky.persona().moodWhy());
+                if (smoky.persona().rolled()) e.that(smoky.persona().moodWhy().contains("smoke") || smoky.persona().moodWhy().size() >= 3,
+                    "the smoke is among its reasons: " + smoky.persona().moodWhy());
+                // The houses' prices and rents.
+                int pSmoke = Quarters.homePercent(village, bedSmoke), pPark = Quarters.homePercent(village, bedPark),
+                    pAway = Quarters.homePercent(village, bedAway);
+                int[] tSmoke = Quarters.termsForTests(village, bedSmoke), tPark = Quarters.termsForTests(village, bedPark),
+                    tAway = Quarters.termsForTests(village, bedAway);
+                Kit.log("dt02 a house in the smoke " + pSmoke + "% (" + tSmoke[0] + "c, " + tSmoke[1] + "c a day), by the park " + pPark
+                    + "% (" + tPark[0] + "c, " + tPark[1] + "c), away " + pAway + "% (" + tAway[0] + "c, " + tAway[1] + "c)");
+                e.that(pSmoke < 100 && pPark > 100 && pAway == 100, "a house is worth less in the smoke and more by the park");
+                e.that(tSmoke[0] < tAway[0] && tAway[0] < tPark[0], "and its price says so: " + tSmoke[0] + " < " + tAway[0] + " < " + tPark[0]);
+                helper.assertTrue(e.clean(), e.summary());
+                helper.succeed();
+            });
+        });
+    }
+
+    private static List<String> keys(List<Object[]> why) {
+        List<String> out = new ArrayList<>();
+        for (Object[] w : why) out.add((String) w[0]);
+        return out;
+    }
+
+    // ============================================================ the park goes up
+
+    /**
+     * A Stone Age town of twenty-two wants a park and the plan gives it a lot in the homes quarter; a
+     * builder with the makings in its pack (stone, logs, wooden stairs, torches, flowers, buckets of
+     * water) puts it up there: the fountain's basin, its pillar and its water, the benches, the lamps.
+     * Then its keepers, out of the stores, plant a tree in its corners and lay its paths.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 7000, batch = "dt03_park_goes_up")
+    public static void dt03_park_goes_up(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        clean(level);
+        level.setDayTime(1000);
+        int x = 283000, z = 50000;
+        Kit.hold(level, x, z, 64);
+        Kit.prepare(level, x, z, 64);
+        BlockPos heart = Kit.surface(level, x, z);
+        flatten(level, heart, 56);
+        VillageFolkEntity builder = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(builder != null, "a village");
+        UUID village = builder.ownerId();
+        Villages.Village v = Villages.get(village);
+        Villages.ageForTests(village, Villages.Age.STONE);
+        Villages.restore(level, village, heart, Villages.Age.STONE, List.of(), 22);
+        Villages.setFieldsSide(village, TownPlan.EAST);
+        Kit.Expect e = new Kit.Expect();
+        boolean wanted = Park.wanted(village, Villages.headcount(village));
+        List<String> list = Villages.projectsWanted(village);
+        Kit.log("dt03 a town of " + Villages.headcount(village) + " wants: " + list);
+        e.that(wanted && list.contains(Park.STRUCTURE), "a Stone Age town of twenty-two wants a park");
+        e.that(!Park.wanted(village, Park.FOLK - 1), "a town of nineteen does not yet");
+        Villages.Site site = Villages.siteFor(level, village, Park.STRUCTURE);
+        helper.assertTrue(site != null, "a lot for the park: " + Villages.lotReport(village));
+        District d = at(village, heart, site.anchor());
+        Kit.log("dt03 the park's lot: " + site.anchor().toShortString() + " facing " + site.facing() + ", " + d);
+        e.that(d == District.HOMES, "the park goes among the homes: " + d);
+        for (int i = 0; i < 2; i++) builder.insertItem(new ItemStack(Items.COBBLESTONE, 64));
+        builder.insertItem(new ItemStack(Items.STONE_BRICKS, 40));
+        builder.insertItem(new ItemStack(Items.OAK_LOG, 16));
+        builder.insertItem(new ItemStack(Items.OAK_STAIRS, 20));
+        builder.insertItem(new ItemStack(Items.TORCH, 10));
+        builder.insertItem(new ItemStack(Items.POPPY, 12));
+        for (int i = 0; i < 10; i++) builder.insertItem(new ItemStack(Items.WATER_BUCKET));
+        builder.enqueue(Job.buildAt(Park.STRUCTURE, site.anchor(), site.facing(), 0));
+        Park.Layout l = Park.layout(site.anchor(), site.facing());
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (level.getDayTime() % 24000 > 11000) level.setDayTime(1000);          // building is day work
+            if (t % 600 == 0) Kit.log("dt03 @" + t + " built=" + Villages.builtList(village) + " — " + builder.debugLine());
+            if (!Villages.builtList(village).contains(Park.STRUCTURE)) {
+                if (t >= 6600) helper.fail("the park was not built: " + Villages.builtList(village) + " — " + builder.debugLine());
+                return;
+            }
+            int seats = 0, water = 0, stone = 0, lights = 0;
+            for (Park.Seat s : l.seats()) if (level.getBlockState(s.at()).getBlock() instanceof StairBlock) seats++;
+            for (BlockPos p : l.water()) if (level.getFluidState(p).is(FluidTags.WATER) && level.getFluidState(p).isSource()) water++;
+            for (BlockPos p : l.stone()) if (!level.getBlockState(p).isAir()) stone++;
+            for (BlockPos p : l.lights()) if (!level.getBlockState(p).isAir()) lights++;
+            Kit.log("dt03 the park stands at " + t + ": " + seats + "/" + l.seats().size() + " bench seats, water " + water + "/"
+                + l.water().size() + ", stone " + stone + "/" + l.stone().size() + ", lights " + lights + "/" + l.lights().size()
+                + "; in the ledger: " + Park.parks(village).size());
+            e.that(seats >= l.seats().size() - 2, "the benches are down: " + seats);
+            e.that(water >= l.water().size() - 1, "the fountain holds water: " + water);
+            e.that(stone >= l.stone().size() - 2, "the fountain's stone is laid: " + stone);
+            e.that(lights >= 4, "the lamps are lit: " + lights);
+            e.that(!Park.parks(village).isEmpty(), "the park is in the village's register");
+            // Its keepers: saplings and a bucket in the stores; trees and paths a visit at a time.
+            stores(level, heart.offset(3, 0, 3), new ItemStack(Items.OAK_SAPLING, 6), new ItemStack(Items.BIRCH_SAPLING, 2),
+                new ItemStack(Items.BUCKET, 1), new ItemStack(Items.DANDELION, 8));
+            Villages.forgetStores(village);
+            Villages.forgetStock();
+            List<String> done = new ArrayList<>();
+            Ledger.Building b = Park.parks(village).get(0);
+            for (int i = 0; i < 24; i++) {
+                String what = Park.tendOne(level, v, b, 8);
+                if (what == null) break;
+                done.add(what);
+            }
+            int trees = 0, paths = 0;
+            for (BlockPos p : l.trees()) {
+                BlockState st = level.getBlockState(p);
+                if (st.getBlock() instanceof SaplingBlock || st.is(BlockTags.LOGS)) trees++;
+            }
+            for (BlockPos p : l.paths()) if (level.getBlockState(p).is(Blocks.DIRT_PATH)) paths++;
+            Kit.log("dt03 the keepers: " + done + "; trees " + trees + "/" + l.trees().size() + ", path " + paths + "/" + l.paths().size()
+                + "; " + Park.status(level, v));
+            e.that(trees >= 2, "trees planted in its corners: " + trees);
+            e.that(paths >= l.paths().size() / 2, "its paths laid: " + paths);
+            helper.assertTrue(e.clean(), e.summary());
+            helper.succeed();
+        });
+    }
+
+    // ============================================================ an evening in the park
+
+    /**
+     * Six folk who live by a park, of an evening off work: on an evening when some of them fancy the park
+     * (their natures, their homes, the day), they walk over, sit on its benches and stroll its paths, and
+     * their cards say so. A child goes there of an afternoon to play.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 6800, batch = "dt04_evening_in_the_park")
+    public static void dt04_evening_in_the_park(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        clean(level);
+        level.setDayTime(6000);
+        int x = 284500, z = 50000;
+        Kit.hold(level, x, z, 64);
+        Kit.prepare(level, x, z, 64);
+        BlockPos heart = Kit.surface(level, x, z);
+        flatten(level, heart, 56);
+        List<VillageFolkEntity> folk = new ArrayList<>();
+        for (int i = 0; i < 6; i++) {
+            VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart.offset(i - 3, 0, 1), 0.0F);
+            if (f != null) folk.add(f);
+        }
+        helper.assertTrue(folk.size() == 6, "six folk: " + folk.size());
+        UUID village = folk.get(0).ownerId();
+        Villages.Village v = Villages.get(village);
+        // The park, put up at once on a lot of the homes quarter (the photographs' way), its paths laid.
+        Villages.Site site = Villages.siteFor(level, village, Park.STRUCTURE);
+        helper.assertTrue(site != null, "a lot for the park: " + Villages.lotReport(village));
+        BuildGoal.stamp(level, Park.STRUCTURE, site.anchor(), site.facing(), 0, Showcase.painter(Showcase.OAK));
+        Ledger.built(village, Park.STRUCTURE, site.anchor(), site.facing());
+        Ledger.Building park = Park.parks(village).get(0);
+        Park.grow(level, park);
+        Park.Layout l = Park.layout(park);
+        // Their beds, along the street beside it.
+        Direction right = site.facing().getClockWise();
+        for (int i = 0; i < folk.size(); i++) {
+            BlockPos head = site.anchor().relative(right, 8).relative(site.facing(), 4 - 2 * i);
+            bed(level, head);
+            folk.get(i).claimBedNear(head);
+        }
+        int[] best = { 0, 0 };
+        String[] card = { "" };
+        // -1: the afternoon, while they settle in (their natures are rolled); 0: the evening; 1: the
+        // afternoon after, a child's (from tick start[0]).
+        int[] phase = { -1 };
+        long[] start = { 0L };
+        long[] evenings = { 0L };
+        VillageFolkEntity[] kid = { null };
+        long[] kidDay = { 0L };
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (phase[0] == -1) {
+                if (t < 200) return;
+                // An evening when at least two of them fancy the park.
+                long day = level.getDayTime() / 24000L;
+                int going = 0;
+                for (long d = day + 1; d < day + 60; d++) {
+                    int n = 0;
+                    for (VillageFolkEntity f : folk) if (Park.eveningForTests(f, d)) n++;
+                    if (n >= 2) { day = d; going = n; break; }
+                }
+                Kit.log("dt04 the park at " + site.anchor().toShortString() + "; day " + day + ", when " + going + " of six fancy it");
+                helper.assertTrue(going >= 2, "an evening when some of them fancy the park");
+                evenings[0] = day * 24000L + 12700L;
+                level.setDayTime(evenings[0]);
+                start[0] = t;
+                phase[0] = 0;
+                return;
+            }
+            if (phase[0] == 1) {
+                afternoon(helper, level, kid[0], kidDay[0], t - start[0]);
+                return;
+            }
+            long evening = evenings[0];
+            // (Not past the hardest worker's bedtime: an evening out, not a night.)
+            if (level.getDayTime() % 24000L > 13100L || level.getDayTime() % 24000L < 12600L) level.setDayTime(evening);
+            if (t % 20 != 0) return;
+            int there = 0, sat = 0;
+            for (VillageFolkEntity f : folk) {
+                if (Park.there(f) && Math.abs(f.getX() - site.anchor().getX()) <= 6 && Math.abs(f.getZ() - site.anchor().getZ()) <= 6) there++;
+                if (f.getPose() == Pose.SITTING) sat++;
+                String d = Park.doing(f);
+                if (d != null && Park.there(f) && card[0].isEmpty()) card[0] = f.displayNameCap() + ": " + d;
+            }
+            best[0] = Math.max(best[0], there);
+            best[1] = Math.max(best[1], sat);
+            if (t % 200 == 0) {
+                StringBuilder sb = new StringBuilder("dt04 @" + t + ": " + there + " in the park, " + sat + " sitting");
+                for (VillageFolkEntity f : folk) sb.append(" | ").append(f.displayNameCap()).append(" ")
+                    .append(java.util.Arrays.toString(Park.visitForTests(f))).append(" ").append(f.blockPosition().toShortString());
+                Kit.log(sb.toString());
+            }
+            if (best[0] >= 1 && (best[1] >= 1 || t - start[0] > 2400)) {
+                Kit.log("dt04 folk in the park: at most " + best[0] + " at once, " + best[1] + " sitting; a card: " + card[0]);
+                helper.assertTrue(!card[0].isEmpty(), "a folk's card says it is in the park");
+                // The afternoon after: a child goes there to play.
+                VillageFolkEntity child = VillageFolkSpawnerBlock.raise(level, v.centre().east(4), 0.0F);
+                if (child == null) {
+                    Kit.log("dt04 no room for a child in the village: the afternoon is not looked at");
+                    helper.succeed();
+                    return;
+                }
+                long d = level.getDayTime() / 24000L + 1;
+                while (!Park.playsForTests(child, d)) d++;
+                level.setDayTime(d * 24000L + 8000L);
+                child.setChild(true);
+                child.bornDaysAgo(0);
+                Kit.log("dt04 a child, " + child.displayNameCap() + ", the afternoon of day " + d);
+                kid[0] = child;
+                kidDay[0] = d;
+                start[0] = t;
+                phase[0] = 1;
+            } else if (t - start[0] >= 3000) {
+                helper.fail("nobody went to the park of an evening: at most " + best[0] + " there");
+            }
+        });
+    }
+
+    /** The afternoon after the evening: the child goes to the park to play (or the test fails, in time). */
+    private static void afternoon(GameTestHelper helper, ServerLevel level, VillageFolkEntity kid, long day, long t) {
+        if (level.getDayTime() % 24000L > 10500L || level.getDayTime() % 24000L < 7500L) level.setDayTime(day * 24000L + 8000L);
+        if (Park.there(kid)) {
+            Kit.log("dt04 the child is in the park after " + t + " ticks: " + Park.doing(kid));
+            helper.succeed();
+        } else if (t > 0 && t % 200 == 0) {
+            Kit.log("dt04 the child is not at the park yet: " + java.util.Arrays.toString(Park.visitForTests(kid)) + " at "
+                + kid.blockPosition().toShortString() + ", a child " + kid.isBaby());
+            if (t >= 3000) helper.fail("the child never went to the park of an afternoon");
+        }
+    }
+}

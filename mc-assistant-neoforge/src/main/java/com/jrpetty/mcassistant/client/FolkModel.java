@@ -321,6 +321,17 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         leftLeg.xRot = Mth.cos(step + Mth.PI) * 1.4F * limbSwingAmount;
         rightArm.xRot = Mth.cos(step + Mth.PI) * limbSwingAmount;
         leftArm.xRot = Mth.cos(step) * limbSwingAmount;
+        // Sat down (on a park bench: entity/Park): legs out in front, hands in the lap.
+        if (folk.getPose() == net.minecraft.world.entity.Pose.SITTING) {
+            rightLeg.xRot = -1.4137167F;
+            rightLeg.yRot = Mth.PI / 10.0F;
+            rightLeg.zRot = 0.07853982F;
+            leftLeg.xRot = -1.4137167F;
+            leftLeg.yRot = -Mth.PI / 10.0F;
+            leftLeg.zRot = -0.07853982F;
+            rightArm.xRot = -Mth.PI / 5.0F;
+            leftArm.xRot = -Mth.PI / 5.0F;
+        }
 
         // A hand with something in it is carried a little forward.
         boolean rightMain = folk.getMainArm() == HumanoidArm.RIGHT;
