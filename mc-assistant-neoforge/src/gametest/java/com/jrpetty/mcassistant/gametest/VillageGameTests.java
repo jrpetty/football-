@@ -5395,6 +5395,7 @@ public class VillageGameTests {
         for (VillageFolkEntity f : java.util.List.of(homemaker, free, saver, broke)) {
             f.setJob(StationTask.FARM);
             f.spend(f.purse());
+            f.rentFree(false);                                       // come since the founding: the founders' houses are t84's
         }
         homemaker.earn(200);
         free.earn(200);
@@ -5460,6 +5461,72 @@ public class VillageGameTests {
         com.jrpetty.mcassistant.entity.Homes.paydayForTests(level, v);
         helper.assertTrue(homemaker.purse() == ownerPurse, "an owner pays no rent: " + ownerPurse + " -> " + homemaker.purse());
         helper.assertTrue(free.purse() == freePurse - rentF, "a tenant goes on paying: " + freePurse + " -> " + free.purse());
+        helper.succeed();
+    }
+
+    /**
+     * The founders' houses: the folk who start a village live rent-free in the houses it builds them, and
+     * pay rent from the first payday they can afford it (a week of it in hand over the dozen coins a head
+     * they live on), and never go back to free, even when their purses run low again.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t84_founders_rent")
+    public static void t84_founders_rent_free(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(24000L * 8 + 7000);                        // past the morning's payday: only ours runs
+        Kit.hold(level, 84000, 16000, 48);
+        Kit.prepare(level, 84000, 16000, 48);
+        BlockPos heart = Kit.surface(level, 84000, 16000);
+        VillageFolkEntity poor = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(poor != null, "a village");
+        java.util.UUID id = poor.ownerId();
+        Villages.Village v = Villages.get(id);
+        VillageFolkEntity rich = VillageFolkSpawnerBlock.raise(level, heart.east(2), 0.0F);
+        helper.assertTrue(rich != null, "two founders");
+        helper.assertTrue(poor.rentFree() && rich.rentFree(), "the founding party lives rent-free");
+        for (int n = 0; n < 2; n++) {
+            BlockPos at = Kit.surface(level, heart.getX() - 16 + 16 * n, heart.getZ() + 22);
+            BuildGoal.stamp(level, "house", at, Direction.NORTH, 13,
+                com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+            com.jrpetty.mcassistant.village.Ledger.built(id, "house", at, Direction.NORTH);
+        }
+        for (VillageFolkEntity f : java.util.List.of(poor, rich)) {
+            f.setJob(StationTask.FARM);
+            f.spend(f.purse());
+            com.jrpetty.mcassistant.entity.Values.setForTests(f, com.jrpetty.mcassistant.entity.Values.Value.LEISURE, 100);   // content to rent
+        }
+        poor.earn(5);
+        rich.earn(100);
+        com.jrpetty.mcassistant.entity.Homes.tickForTests(level, v);
+        BlockPos ph = com.jrpetty.mcassistant.entity.Homes.homeOf(poor), rh = com.jrpetty.mcassistant.entity.Homes.homeOf(rich);
+        helper.assertTrue(ph != null && rh != null && !ph.equals(rh), "a house each");
+        int rent = com.jrpetty.mcassistant.entity.Homes.termsForTests(id, ph)[0];
+        helper.assertTrue(rent >= 1 && 100 >= 7 * rent + 12 && 5 < 7 * rent + 12, "the rent, and what affording it takes: " + rent);
+        // Payday: the one that can afford it starts paying; the other lives on rent-free, owing nothing.
+        int treasury = com.jrpetty.mcassistant.village.Ledger.coins(id);
+        com.jrpetty.mcassistant.entity.Homes.paydayForTests(level, v);
+        Kit.log("t84 payday one: " + poor.displayNameCap() + " purse " + poor.purse() + " free " + poor.rentFree() + "; "
+            + rich.displayNameCap() + " purse " + rich.purse() + " free " + rich.rentFree() + "; treasury " + treasury + " -> "
+            + com.jrpetty.mcassistant.village.Ledger.coins(id) + " | " + com.jrpetty.mcassistant.entity.Homes.talk(poor)
+            + " | " + com.jrpetty.mcassistant.entity.Homes.line(level, id));
+        helper.assertTrue(poor.purse() == 5 && poor.rentFree(), "a founder who cannot afford it pays nothing: " + poor.purse());
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Homes.termsForTests(id, ph)[1] == 0, "and owes nothing");
+        helper.assertTrue(!rich.rentFree() && rich.purse() == 100 - rent, "a founder who can afford it pays from today: " + rich.purse());
+        helper.assertTrue(com.jrpetty.mcassistant.village.Ledger.coins(id) == treasury + rent, "into the treasury");
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Homes.talk(poor).contains("rent-free"), "and says so: " + com.jrpetty.mcassistant.entity.Homes.talk(poor));
+        net.minecraft.nbt.CompoundTag report = com.jrpetty.mcassistant.entity.Homes.report(level, id);
+        helper.assertTrue(report.getInt("rent_free") == 1, "the books count one household rent-free: " + report.getInt("rent_free"));
+        // The poor one saves up enough: it pays from that payday on.
+        poor.earn(7 * rent + 12);
+        int before = poor.purse();
+        com.jrpetty.mcassistant.entity.Homes.paydayForTests(level, v);
+        helper.assertTrue(!poor.rentFree() && poor.purse() == before - rent, "once it can afford it, it pays: " + before + " -> " + poor.purse());
+        // Never free again: purses empty, the rent goes on the slate (or a generous leader lets it off) like anybody's.
+        rich.spend(rich.purse());
+        com.jrpetty.mcassistant.entity.Homes.paydayForTests(level, v);
+        int owes = com.jrpetty.mcassistant.entity.Homes.termsForTests(id, rh)[1];
+        boolean generous = com.jrpetty.mcassistant.entity.Homes.generous(id);
+        helper.assertTrue(!rich.rentFree() && (owes == rent || generous && owes == 0), "and never goes back to free: owes " + owes);
         helper.succeed();
     }
 
@@ -5751,6 +5818,9 @@ public class VillageGameTests {
         java.util.UUID id = f.ownerId();
         Villages.Village v = Villages.get(id);
         f.setJob(StationTask.FARM);
+        // The sixteen loaves of its kit, put in the stores, were baked by nobody; the five after them were.
+        com.jrpetty.mcassistant.entity.Economy.produced(f, new ItemStack(Items.BREAD, 16));
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Economy.todayForTests(id, "bread")[0] == 0, "a kit put back is not made");
         com.jrpetty.mcassistant.entity.Economy.produced(f, new ItemStack(Items.BREAD, 5));
         java.util.function.Consumer<ItemStack> put = st -> com.jrpetty.mcassistant.entity.Homes.storeForTests(level, v, st);
         put.accept(new ItemStack(Items.IRON_INGOT, 20));

@@ -109,7 +109,7 @@ public class RetireGoal extends Goal {
         for (int i = 0; i < c.getContainerSize() && !full; i++) {
             ItemStack s = c.getItem(i);
             if (s.isEmpty()) continue;
-            ItemStack left = assistant.insertItem(s.copy());
+            ItemStack left = assistant.insertGiven(s.copy());
             int took = s.getCount() - left.getCount();
             if (took > 0) {
                 s.shrink(took);
@@ -135,7 +135,7 @@ public class RetireGoal extends Goal {
         ItemStack item = new ItemStack(state.getBlock().asItem());
         assistant.level().removeBlock(chest, false);
         if (!item.isEmpty()) {
-            ItemStack left = assistant.insertItem(item);
+            ItemStack left = assistant.insertGiven(item);
             if (!left.isEmpty()) net.minecraft.world.level.block.Block.popResource(assistant.level(), chest, left);
         }
         assistant.note(AssistantEntity.Deed.LOADS_HAULED, 1);

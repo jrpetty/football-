@@ -734,6 +734,7 @@ public final class Founding extends SavedData {
                 s.count = s.spawned;                           // the village is full: that is all who come
                 return;
             }
+            folk.rentFree(true);                               // one of the founders, however long the levelling took
             s.spawned++;
             stood++;
         }

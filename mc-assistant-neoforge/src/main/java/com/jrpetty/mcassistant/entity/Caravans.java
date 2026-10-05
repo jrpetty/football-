@@ -139,7 +139,7 @@ public final class Caravans {
         if (cargo.isEmpty()) return false;
         carrier.clearQueue();
         for (ItemStack s : cargo) {
-            ItemStack left = carrier.insertItem(s);
+            ItemStack left = carrier.insertGiven(s);
             if (!left.isEmpty()) Market.intoStores(level, from.id(), left);
         }
         Trip t = new Trip(from.id(), to.id(), way(from, to));
@@ -170,7 +170,7 @@ public final class Caravans {
         int loaves = Math.max(2, Math.min(8, far / 100 + 1));
         java.util.function.Predicate<ItemStack> food = s -> s.get(net.minecraft.core.component.DataComponents.FOOD) != null;
         for (ItemStack s : takeOut(level, from, food, loaves)) {
-            ItemStack left = carrier.insertItem(s);
+            ItemStack left = carrier.insertGiven(s);
             if (!left.isEmpty()) Market.intoStores(level, from.id(), left);
         }
         return coins;
@@ -198,7 +198,7 @@ public final class Caravans {
         if (cargo.isEmpty()) return false;
         carrier.clearQueue();
         for (ItemStack s : cargo) {
-            ItemStack left = carrier.insertItem(s);
+            ItemStack left = carrier.insertGiven(s);
             if (!left.isEmpty()) Market.intoStores(level, mother.id(), left);
         }
         Trip t = new Trip(mother.id(), colony.id(), way(mother, colony));
@@ -456,7 +456,7 @@ public final class Caravans {
             double back = 0;
             for (ItemStack s : load(level, here, other.id(), true, true, brought)) {
                 Market.Good g = Market.goodFor(s);
-                ItemStack left = f.insertItem(s);
+                ItemStack left = f.insertGiven(s);
                 if (g != null) back += g.value() * (s.getCount() - left.getCount());
                 if (!left.isEmpty()) Market.intoStores(level, here.id(), left);
             }

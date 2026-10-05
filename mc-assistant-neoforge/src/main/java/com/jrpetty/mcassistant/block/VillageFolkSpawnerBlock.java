@@ -160,6 +160,10 @@ public class VillageFolkSpawnerBlock extends Block {
         folk.rename(Names.freeFor(village.id()));
         VillageSpawner.starterKit(folk);
         folk.joinVillage(village.id(), village.centre());
+        // The founding party, and whoever comes on the day the village was founded: the houses the village
+        // builds them are theirs rent-free until they can afford the rent (Homes).
+        long founded = com.jrpetty.mcassistant.village.Chronicle.foundedOn(village.id());
+        if (founding || founded >= 0 && server.getDayTime() / 24000L - founded <= 1) folk.rentFree(true);
         server.addFreshEntity(folk);
         Villages.recordBirth(village.id());
         if (founding) {

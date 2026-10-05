@@ -922,7 +922,8 @@ public class CityScreen extends Screen {
         chart(g, x, y, third, chartH, "Folk against beds", mx, my, new Series("Folk", series("pop"), BLUE),
             new Series("Room", series("room"), GREEN), new Series("With a bed", series("bedded"), AMBER));
         chart(g, x + third + 6, y, third, chartH, "Rented, owned, saving to buy", mx, my, new Series("Rented", series("rented"), TEAL),
-            new Series("Owned", series("owned"), PURPLE), new Series("Saving", series("saving"), AMBER), new Series("Waiting", series("waiting"), RED));
+            new Series("Owned", series("owned"), PURPLE), new Series("Saving", series("saving"), AMBER), new Series("Waiting", series("waiting"), RED),
+            new Series("Rent-free", series("rent_free"), BLUE));
         bars(g, x + 2 * (third + 6), y, third, chartH, "Rent and houses sold, a day (coins)", mx, my,
             new Series("Rent", series("rent"), GREEN), new Series("Sold", series("house_sales"), BROWN));
         // The figures.
@@ -932,18 +933,20 @@ public class CityScreen extends Screen {
             { "Renting", Integer.toString(hm.getInt("rented")) }, { "Owned", Integer.toString(hm.getInt("owned")) },
             { "Saving to buy", Integer.toString(hm.getInt("saving")) }, { "Put by", hm.getInt("saved") + "c" },
             { "Rent yesterday", hm.getInt("rent_yesterday") + "c" }, { "Owed", hm.getInt("owed") + "c" },
-            { "Players'", Integer.toString(hm.getInt("players")) }, { "Empty", Integer.toString(hm.getInt("empty")) } };
+            { "Players'", Integer.toString(hm.getInt("players")) }, { "Empty", Integer.toString(hm.getInt("empty")) },
+            { "Founders rent-free", Integer.toString(hm.getInt("rent_free")) } };
         int colW = cw / 5;
         for (int i = 0; i < figures.length; i++) {
             int cx = x + (i % 5) * colW, cy = ty + (i / 5) * 10;
             small(g, figures[i][0] + ":", cx, cy, Ui.FAINT);
             small(g, figures[i][1], cx + (int) (font.width(figures[i][0] + ": ") * 0.75), cy, Ui.INK);
         }
-        int by = ty + 22;
+        int by = ty + 10 * ((figures.length + 4) / 5) + 2;
         small(g, "Beds", x, by, Ui.FAINT);
         Ui.bar(g, x + 22, by, cw / 4, 6, hm.getInt("folk") == 0 ? 0 : hm.getInt("bedded") / (float) Math.max(1, hm.getInt("folk")), GREEN);
         small(g, Ui.clip(font, hm.getInt("bedded") + " of " + hm.getInt("folk") + " folk have a bed, " + hm.getInt("beds_made") + " made up, room for "
-            + hm.getInt("room") + "; houses are let to their households, who buy them when they have saved the price", (int) ((cw * 3 / 4 - 30) / 0.75)),
+            + hm.getInt("room") + "; founders live rent-free till they can afford it, the rest rent, and buy when they have saved the price",
+            (int) ((cw * 3 / 4 - 30) / 0.75)),
             x + 28 + cw / 4, by, Ui.MUTED);
         // Every household.
         int hy = by + 12;
@@ -961,9 +964,11 @@ public class CityScreen extends Screen {
             boolean over = mx >= x && mx < x + cw && my >= hy - 1 && my < hy + 9;
             g.fill(x - 2, hy - 1, x + cw, hy + 9, over ? Ui.HI : i % 2 == 0 ? Ui.ROW : Ui.ROW_ALT);
             String status = r.getString("status");
-            int sc = status.equals("owns") ? GREEN : status.equals("saving") ? AMBER : status.equals("the leader's") ? PURPLE : TEAL;
+            int sc = status.equals("owns") ? GREEN : status.equals("saving") ? AMBER : status.equals("the leader's") ? PURPLE
+                : status.equals("rent-free") ? BLUE : TEAL;
             g.fill(x - 2, hy - 1, x, hy + 9, sc);
-            String rent = r.getInt("rent") == 0 ? "—" : r.getInt("rent") + "c" + (r.getInt("owed") > 0 ? " (owes " + r.getInt("owed") + ")" : "");
+            String rent = r.getBoolean("rent_free") ? "free (" + r.getInt("rent_due") + "c later)"
+                : r.getInt("rent") == 0 ? "—" : r.getInt("rent") + "c" + (r.getInt("owed") > 0 ? " (owes " + r.getInt("owed") + ")" : "");
             String[] cells = { r.getString("household"), r.getString("kind") + ", " + r.getString("address"), status, rent };
             for (int c = 0; c < cells.length; c++) {
                 int w = cols[c + 1] - cols[c] - 3;
@@ -987,6 +992,7 @@ public class CityScreen extends Screen {
                 tip.add(Component.literal(r.getString("household")));
                 tip.add(Component.literal(r.getString("kind") + ", " + r.getString("address") + " — " + r.getString("terms")));
                 if (r.getInt("rent") > 0) tip.add(Component.literal("Rent " + r.getInt("rent") + "c a day" + (r.getString("rent_note").isEmpty() ? "" : "; " + r.getString("rent_note"))));
+                else if (r.getBoolean("rent_free")) tip.add(Component.literal("Rent-free: " + r.getString("rent_note")));
                 if (price > 0) tip.add(Component.literal("Put by " + saved + " of " + price + "c"));
                 tip.add(Component.literal((r.getBoolean("wants") ? "Wants a house of its own: " : "Content to rent: ") + r.getString("why")));
                 hover = tip;
@@ -1573,13 +1579,17 @@ public class CityScreen extends Screen {
                 prevY = sy;
             }
         }
-        // The key.
-        int kx = px + 3;
+        // The key, wrapping to a second row rather than leaving a line unnamed.
+        int kx = px + 3, ky = py + 1;
         for (Series s : all) {
             int kw = (int) (font.width(s.name()) * 0.75) + 10;
-            if (kx + kw > px + pw) break;
-            g.fill(kx, py + 3, kx + 6, py + 5, s.colour());
-            small(g, s.name(), kx + 8, py + 1, Ui.MUTED);
+            if (kx + kw > px + pw && kx > px + 3) {
+                kx = px + 3;
+                ky += 8;
+                if (ky > py + ph - 8) break;
+            }
+            g.fill(kx, ky + 2, kx + 6, ky + 4, s.colour());
+            small(g, s.name(), kx + 8, ky, Ui.MUTED);
             kx += kw + 4;
         }
         // The day under the mouse.

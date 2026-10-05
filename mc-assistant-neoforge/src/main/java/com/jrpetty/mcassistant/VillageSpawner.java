@@ -352,28 +352,28 @@ public final class VillageSpawner {
      * what do I put in the ground.
      */
     public static void starterKit(VillageFolkEntity folk) {
-        folk.insertItem(new ItemStack(Items.BREAD, 16));
-        folk.insertItem(new ItemStack(Items.STONE_AXE));
-        folk.insertItem(new ItemStack(Items.STONE_PICKAXE));
-        folk.insertItem(new ItemStack(Items.STONE_SWORD));
+        folk.insertGiven(new ItemStack(Items.BREAD, 16));
+        folk.insertGiven(new ItemStack(Items.STONE_AXE));
+        folk.insertGiven(new ItemStack(Items.STONE_PICKAXE));
+        folk.insertGiven(new ItemStack(Items.STONE_SWORD));
         // A bench to carry. Half of what a village lives on is a three-by-three
         // recipe — bread off the wheat, a chest, a furnace, ladders — and a
         // farmer on a plot with no trees has nothing to make a bench FROM, so
         // wheat piled up in the chest and nobody ever ate any of it.
-        folk.insertItem(new ItemStack(Items.CRAFTING_TABLE));
+        folk.insertGiven(new ItemStack(Items.CRAFTING_TABLE));
         // A chest — not for its own plot: what it makes goes to the village's stores (the
         // founding chest at the heart, then the Village Storehouse). A village founded with
         // no stores at all has its first chest carried to its heart as its stores; anywhere
         // else it goes into the stores with everything else.
-        folk.insertItem(new ItemStack(Items.CHEST));
-        folk.insertItem(new ItemStack(Items.WHEAT_SEEDS, 6));
+        folk.insertGiven(new ItemStack(Items.CHEST));
+        folk.insertGiven(new ItemStack(Items.WHEAT_SEEDS, 6));
         // Roots are what a field is FOR: a wheat plant gives one ear and a few
         // seeds, a carrot or a potato plant gives three or so to eat, and each of
         // those is a plant again. A village that started with wheat alone was
         // out of bread on its third day, waiting on the first harvest.
-        folk.insertItem(new ItemStack(Items.CARROT, 3));
-        folk.insertItem(new ItemStack(Items.POTATO, 3));
-        folk.insertItem(new ItemStack(Items.OAK_SAPLING, 4));
+        folk.insertGiven(new ItemStack(Items.CARROT, 3));
+        folk.insertGiven(new ItemStack(Items.POTATO, 3));
+        folk.insertGiven(new ItemStack(Items.OAK_SAPLING, 4));
     }
 
     /**

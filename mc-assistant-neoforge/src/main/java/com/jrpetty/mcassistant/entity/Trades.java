@@ -433,7 +433,7 @@ public final class Trades {
         List<String> words = new ArrayList<>();
         for (ItemStack s : kit) {
             words.add(isSwarm(s) ? "a hive with a swarm in it" : Crafts.named(s));
-            ItemStack left = f.insertItem(s.copy());
+            ItemStack left = f.insertGiven(s.copy());
             if (!left.isEmpty()) Crafts.store(level, v, left);
         }
         String what = String.join(", ", words);

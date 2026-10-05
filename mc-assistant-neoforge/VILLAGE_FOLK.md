@@ -2058,7 +2058,8 @@ every chart reads out the day under the mouse.
   stone, ore and metal, wool and hides, crafts, plants), with the takings, sales, tithe,
   rent, houses sold, wages and buying-in for the range.
 * **Production:** everything the village makes, item by item: every log, cobblestone, loaf,
-  ingot, stone brick, lantern and bed its folk bring home or make in the stores. Five cards
+  ingot, stone brick, lantern and bed its folk bring home or make in the stores (never what
+  they were only given or fetched: a founder's kit, or the stores' own goods put back). Five cards
   give the whole of it: what it made yesterday, a day this week, how many kinds of thing,
   what that is worth a day at the market's prices, and how much each grown folk makes a day.
   Below, a table of every item (with its icon): yesterday, a day this week, the last thirty
@@ -2105,8 +2106,9 @@ every chart reads out the day under the mouse.
   and the ones before), and what it has been doing lately.
 * **Homes:** folk against beds and room over time; households renting, owning, saving to buy
   and waiting over time; the rent and the houses sold each day; the figures (housed, waiting,
-  renting, owned, saving, coin put by, rent yesterday, owed, players' houses, empty); and every
-  household: who, which house and where, renting or saving or owning, its rent (and anything it
+  renting, owned, saving, coin put by, rent yesterday, owed, players' houses, empty, founders
+  rent-free); and every household: who, which house and where, rent-free or renting or saving or
+  owning, its rent (and anything it
   owes), a bar of what it has put by toward the price, and whether it wants a house of its own
   and why (the mouse over a row tells the whole of it).
 * **Buildings:** every building: what it is, how far and which way from the heart, its
@@ -2250,8 +2252,15 @@ house of its own (a house or a manor the village built) and sleeps there.
   field hand's day for a two-storey house, two for a manor, rounded up — so a house is a coin a day
   in a hamlet, a village or a town and two in a city; a two-storey house one in a hamlet, two in a
   village or a town, three in a city; a manor two, four and six. Half that (never under a coin)
-  under a leader elected for homes. The only free roof is the leader's hall: it goes with
-  the office.
+  under a leader elected for homes. The leader's hall is free: it goes with the office.
+* **The founders live free till they can pay.** The folk who started the village (the founding
+  party, and anyone who came the day it was founded) move into the houses it builds them
+  rent-free. From the first payday a household of founders has a week's rent in hand over the dozen
+  coins a head it lives on, it pays like everybody else ("We can pay our way now. Rent from today —
+  fair's fair."), the chronicle says so, and it never goes back to free, even if its purses run
+  low again (then its rent goes on the slate like anybody's). The Homes page counts the founders'
+  households still rent-free, shows each as "rent-free" with the rent it will pay later, and the
+  mouse over it tells how close it is to affording it.
 * **Nobody is put out.** A tenant that can't pay has its rent put on the slate and pays it back
   out of later wages (before it saves a coin); the village writes off more than a week's rent owed,
   and says so in the chronicle. A house where nobody earns (no grown folk with a trade) pays no

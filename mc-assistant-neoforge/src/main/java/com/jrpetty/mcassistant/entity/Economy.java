@@ -86,6 +86,7 @@ public final class Economy {
         CRAFT_VILLAGE = null;
         CRAFT_NET.clear();
         GATHERED.clear();
+        GIVEN.clear();
     }
 
     // ------------------------------------------------------------------ output
@@ -139,6 +140,11 @@ public final class Economy {
         if (village == null || s.isEmpty() || trade == StationTask.NONE || trade == StationTask.HAUL || trade == StationTask.STORE) return;
         Kind k = kindOf(s);
         if (k == null || !makes(trade, k, s)) return;
+        // What it was given (its kit) or fetched out of the stores, put back, was not made by anybody:
+        // a founding party's sixteen loaves each went down as forty-eight loaves baked on day nought.
+        int fresh = s.getCount() - spendGiven(f, s);
+        if (fresh <= 0) return;
+        if (fresh < s.getCount()) s = s.copyWithCount(fresh);
         if (k == Kind.FOOD || s.is(Items.WHEAT)) Leader.foodIn(village, s);     // the leader's food books
         // The books, item by item: what it gathered with its own hands was counted when it picked it up
         // (Economy.gathered); only what is new to the books goes in now (a smelter's ingots, a mason's bricks).
@@ -247,6 +253,54 @@ public final class Economy {
         return used;
     }
 
+    /**
+     * Into a hand's pack as something given or fetched, not made: its kit, the stores' goods it drew,
+     * a caravan's load, a present. When it goes into the stores again it is not counted as made. Kept
+     * two mornings (Economy.closeTheDay), so a loaf drawn and eaten does not stand against one baked
+     * next week.
+     */
+    public static void given(AssistantEntity a, ItemStack s, int n) {
+        if (!(a instanceof VillageFolkEntity) || n <= 0 || s.isEmpty()) return;
+        GIVEN.computeIfAbsent(a.getUUID(), x -> new ConcurrentHashMap<>())
+            .merge(id(s), new int[]{ n, 0 }, (x, y) -> new int[]{ Math.min(4096, x[0] + y[0]), 0 });
+    }
+
+    /** How many of these were given to the hand rather than made (and the credit spent). */
+    private static int spendGiven(VillageFolkEntity f, ItemStack s) {
+        Map<String, int[]> m = GIVEN.get(f.getUUID());
+        if (m == null) return 0;
+        String key = id(s);
+        int[] have = m.get(key);
+        if (have == null) return 0;
+        int used = Math.min(have[0], s.getCount());
+        if (have[0] - used <= 0) m.remove(key); else m.put(key, new int[]{ have[0] - used, have[1] });
+        return used;
+    }
+
+    /** So many of what a hand was given used up (eaten): they will not be put back. */
+    public static void usedGiven(AssistantEntity a, ItemStack s, int n) {
+        Map<String, int[]> m = GIVEN.get(a.getUUID());
+        if (m == null || n <= 0 || s.isEmpty()) return;
+        String key = id(s);
+        int[] have = m.get(key);
+        if (have == null) return;
+        if (have[0] - n <= 0) m.remove(key); else m.put(key, new int[]{ have[0] - n, have[1] });
+    }
+
+    /** The morning: what the village's hands were given two mornings ago and never put back is forgotten. */
+    private static void ageGiven(UUID village) {
+        for (AssistantEntity a : Villages.folkOf(village)) {
+            Map<String, int[]> m = GIVEN.get(a.getUUID());
+            if (m == null) continue;
+            m.replaceAll((k, v) -> new int[]{ v[0], v[1] + 1 });
+            m.values().removeIf(v -> v[1] > 1);
+            if (m.isEmpty()) GIVEN.remove(a.getUUID());
+        }
+    }
+
+    /** What each hand was given and has not put back, by the hand: {how many, mornings since}. */
+    private static final Map<UUID, Map<String, int[]>> GIVEN = new ConcurrentHashMap<>();
+
     /** What each hand picked up and has had counted, not yet brought home (by the hand). */
     private static final Map<UUID, Map<String, Integer>> GATHERED = new ConcurrentHashMap<>();
 
@@ -350,6 +404,7 @@ public final class Economy {
         Day d = TODAY.remove(id);
         if (d == null) d = new Day();
         YESTERDAY.put(id, d);
+        ageGiven(id);
         List<Integer> week = history(id);
         week.add(0, (int) Math.round(d.total()));
         while (week.size() > 7) week.remove(week.size() - 1);

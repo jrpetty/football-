@@ -185,7 +185,7 @@ public class WithdrawGoal extends Goal {
             if (slot.isEmpty() || !match.test(slot)) continue;
             int take = Math.min(wanted - moved, slot.getCount());
             ItemStack taking = slot.copyWithCount(take);
-            ItemStack leftover = assistant.insertItem(taking);
+            ItemStack leftover = assistant.insertGiven(taking);
             int actuallyTaken = take - leftover.getCount();
             slot.shrink(actuallyTaken);
             if (slot.isEmpty()) container.setItem(i, ItemStack.EMPTY);

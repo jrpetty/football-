@@ -48,7 +48,7 @@ public final class Annals {
         "housed", "waiting", "coins", "purses", "worth", "stores_worth", "output", "takings", "sold", "tithe", "wages",
         "spent", "food", "logs", "stone", "coal", "iron", "content", "idle", "guards", "renown", "food_days10",
         "out_food", "out_timber", "out_stone", "out_ore", "out_animal", "out_craft", "out_plant",
-        "rent", "house_sales", "saving", "owned", "rented");
+        "rent", "house_sales", "saving", "owned", "rented", "rent_free");
 
     /** Today's comings and goings, before the morning writes them down. */
     private static final Map<UUID, int[]> TODAY = new ConcurrentHashMap<>();
@@ -144,6 +144,7 @@ public final class Annals {
         n.put("saving", homes.length > 8 ? homes[8] : 0);
         n.put("owned", homes[3]);
         n.put("rented", homes[4]);
+        n.put("rent_free", homes.length > 13 ? homes[13] : 0);
         n.put("wages", d == null ? 0 : d.wages);
         n.put("spent", d == null ? 0 : d.spent);
         int r = Villages.storesRadius(id);
@@ -686,7 +687,7 @@ public final class Annals {
         int[] h = Homes.counts(level, id);
         CompoundTag c = new CompoundTag();
         String[] names = { "housed", "waiting", "given", "owned", "rented", "players", "empty", "for_sale",
-            "saving", "rent_yesterday", "saved", "owed", "sales_yesterday" };
+            "saving", "rent_yesterday", "saved", "owed", "sales_yesterday", "rent_free" };
         for (int i = 0; i < names.length && i < h.length; i++) c.putInt(names[i], h[i]);
         CompoundTag report = Homes.report(level, id);
         c.put("rows", report.getList("rows", net.minecraft.nbt.Tag.TAG_COMPOUND));

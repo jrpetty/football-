@@ -51,6 +51,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * week's of it; a house where nobody earns pays none, and a generous leader lets off whatever a
  * tenant is short. The leader's hall is the one free roof: it goes with the office.
  *
+ * <p>The founders are the exception. The folk who started the village live rent-free in the houses it
+ * builds them, until they can afford the rent: from the first payday a household of founders has a
+ * week's rent in hand over what it lives on, it pays like everybody else, and never goes back to free.
+ *
  * <p>Some want a house of their own and some never do. A Homemaker does, and a Traditionalist and a
  * Provider like to own the roof over their heads; a Free Spirit would rather rent and keep its coin
  * and its freedom; a Merchant buys when the price is a good deal (no more than forty days' rent). A
@@ -651,7 +655,9 @@ public final class Homes {
             h.owed = 0;
             if (h.saved > 0) Ledger.addCoins(id, h.saved);   // savings left behind in an empty house: nobody's now
             h.saved = 0;
-            how = "rented " + where + " from the village at " + h.rent + coins(h.rent) + " a day";
+            how = rentFree(household)
+                ? "moved into " + where + ", rent-free: founders of the village, until they can afford the " + h.rent + coins(h.rent) + " a day"
+                : "rented " + where + " from the village at " + h.rent + coins(h.rent) + " a day";
         }
         // Anyone it is leaving behind (a grown child moving out) goes off their old house's books.
         List<Home> left = new ArrayList<>();
@@ -668,6 +674,11 @@ public final class Homes {
         }
         VillageFolkEntity first = household.get(0);
         boolean saving = h.tenure == Tenure.RENTED && wish(id, h, household).yes();
+        if (h.tenure == Tenure.RENTED && rentFree(household)) {
+            FolkTalk.speak(first, FolkTalk.pick(level.getRandom(), "Our own roof, and not a coin to pay till we can. That's founders' luck.",
+                "Free till we can pay our way, they say. We'll not be long.", "A house for nothing, for now. We built this place, after all."));
+            return;
+        }
         if (!left.isEmpty()) {
             FolkTalk.speak(first, saving
                 ? FolkTalk.pick(level.getRandom(), "A place of my own at last! Rented for now — I'll save up and buy it.", "My own front door! Well, the village's. For now.")
@@ -1117,7 +1128,12 @@ public final class Homes {
         h.rent = rent(id, h);                              // the going rent, as the place's wages go
         h.price = price(id, h);
         boolean hard = earners(household) == 0;
-        int due = (hard ? 0 : h.rent) + h.owed;
+        boolean free = rentFree(household);
+        if (free && affords(household, h)) {
+            startPaying(level, v, h, household, day);
+            free = false;
+        }
+        int due = (hard || free ? 0 : h.rent) + h.owed;
         int paid = take(household, h, due);
         if (paid > 0) {
             Ledger.addCoins(id, paid);
@@ -1139,6 +1155,35 @@ public final class Homes {
             return;
         }
         save(id, h);
+    }
+
+    /** Rent a founder's house is free of, until it is afforded: a week of it in hand over what each grown folk lives on. */
+    static final int AFFORD_DAYS = 7;
+
+    /** Is this a household of founders still living rent-free (any of its grown folk)? */
+    static boolean rentFree(List<VillageFolkEntity> household) {
+        for (VillageFolkEntity f : household) if (!f.isBaby() && f.rentFree()) return true;
+        return false;
+    }
+
+    /** Can a household afford its rent: somebody in it earning, and a week's rent in hand (its purses and
+     *  what it has put by) over the dozen coins a head it lives on? */
+    static boolean affords(List<VillageFolkEntity> household, Home h) {
+        if (earners(household) == 0) return false;
+        return purses(household) + h.saved >= AFFORD_DAYS * Math.max(1, h.rent) + LIVE_ON * grown(household).size();
+    }
+
+    /** A household of founders can afford its rent now: it pays from today, like everybody else, for good. */
+    static void startPaying(ServerLevel level, Villages.Village v, Home h, List<VillageFolkEntity> household, long day) {
+        UUID id = v.id();
+        for (VillageFolkEntity f : household) f.rentFree(false);
+        Villages.tell(id, day, names(household) + " can afford their rent now: from today they pay " + h.rent + coins(h.rent)
+            + " a day for " + address(id, v, h));
+        for (VillageFolkEntity f : grown(household)) {
+            f.persona().remember(day, "we started paying rent on day " + day + ": we can afford it now", 4);
+        }
+        FolkTalk.speak(household.get(0), FolkTalk.pick(level.getRandom(), "We can pay our way now. Rent from today — fair's fair.",
+            "No more living on the village's kindness: we pay rent now.", "Rent day, our first. Feels like we've made it."));
     }
 
     /** Take a sum from a household: out of its grown folk's purses, the fullest first, then out of what it has put by. Returns what it could. */
@@ -1412,7 +1457,7 @@ public final class Homes {
             let.append(let.length() == 0 ? "" : ", ").append(h.structure).append(' ').append(r).append("c a day");
         }
         return c[0] + " households housed (" + (c[2] > 0 ? c[2] + " given, " : "") + c[3] + " owned, " + c[4] + " rented"
-            + (c[8] > 0 ? ", " + c[8] + " of them saving to buy" : "") + ")"
+            + (c[8] > 0 ? ", " + c[8] + " of them saving to buy" : "") + (c[13] > 0 ? ", " + c[13] + " founders' rent-free" : "") + ")"
             + (c[5] > 0 ? ", " + c[5] + " players'" : "") + ", " + c[1] + " waiting; " + c[6] + " empty"
             + (let.length() > 0 ? " (to let: " + let + ")" : "")
             + "; rent " + c[9] + coins(c[9]) + " yesterday" + (c[11] > 0 ? ", " + c[11] + " owed" : "")
@@ -1423,17 +1468,19 @@ public final class Homes {
     public static String brief(ServerLevel level, UUID village) {
         int[] c = counts(level, village);
         if (c[0] == 0) return "";
-        return c[4] + " rented, " + c[3] + " owned" + (c[8] > 0 ? ", " + c[8] + " saving to buy" : "") + "; rent " + c[9] + " yesterday";
+        return c[4] + " rented" + (c[13] > 0 ? " (" + c[13] + " rent-free)" : "") + ", " + c[3] + " owned"
+            + (c[8] > 0 ? ", " + c[8] + " saving to buy" : "") + "; rent " + c[9] + " yesterday";
     }
 
     /**
      * For the town's books (Annals): {housed, waiting, given, owned, rented, players', empty, for sale (1/0),
      * saving (tenant households putting by to buy), rent collected yesterday, coin put by toward houses,
-     * rent owed, coin from houses sold yesterday}. The first eight are as they always were.
+     * rent owed, coin from houses sold yesterday, founders' households still rent-free}. The first eight are as
+     * they always were.
      */
     public static int[] counts(ServerLevel level, UUID village) {
         enrol(village);
-        int given = 0, owned = 0, rented = 0, let = 0, empty = 0, saving = 0, saved = 0, owed = 0;
+        int given = 0, owned = 0, rented = 0, let = 0, empty = 0, saving = 0, saved = 0, owed = 0, free = 0;
         for (Home h : homes(village).values()) {
             saved += Math.max(0, h.saved);
             if (seat(h)) continue;
@@ -1448,7 +1495,9 @@ public final class Homes {
                 case OWNED -> owned++;
                 case RENTED -> {
                     rented++;
-                    if (h.saved > 0 || wish(village, h, loadedMembers(village, h)).yes()) saving++;
+                    List<VillageFolkEntity> household = loadedMembers(village, h);
+                    if (rentFree(household)) free++;
+                    if (h.saved > 0 || wish(village, h, household).yes()) saving++;
                 }
                 case PLAYER -> let++;
             }
@@ -1457,7 +1506,7 @@ public final class Homes {
         for (AssistantEntity a : Villages.folkOf(village)) if (a instanceof VillageFolkEntity f && !f.isShowcase()) folk.add(f);
         int waiting = waiting(village, folk, level.getDayTime() / 24000L).size();
         return new int[]{ given + owned + rented, waiting, given, owned, rented, let, empty, forSale(village) ? 1 : 0,
-            saving, Economy.rentYesterday(village), saved, owed, Economy.housesSoldYesterday(village) };
+            saving, Economy.rentYesterday(village), saved, owed, Economy.housesSoldYesterday(village), free };
     }
 
     /**
@@ -1471,7 +1520,7 @@ public final class Homes {
         CompoundTag out = new CompoundTag();
         int[] c = counts(level, village);
         String[] names = { "housed", "waiting", "given", "owned", "rented", "players", "empty", "for_sale",
-            "saving", "rent_yesterday", "saved", "owed", "sales_yesterday" };
+            "saving", "rent_yesterday", "saved", "owed", "sales_yesterday", "rent_free" };
         for (int i = 0; i < names.length; i++) out.putInt(names[i], c[i]);
         out.putInt("hand_wage", Wealth.tradeWage(AssistantEntity.StationTask.FARM, village));
         out.putString("line", line(level, village));
@@ -1491,8 +1540,11 @@ public final class Homes {
             r.putInt("grown", grown.size());
             r.putString("tenure", seat(h) ? "the leader's" : h.tenure.name().toLowerCase(java.util.Locale.ROOT));
             r.putString("terms", seat(h) ? "goes with leading the village" : h.tenure == Tenure.PLAYER ? "rented from " + h.landlordName : h.tenure.word);
-            boolean paysRent = !seat(h) && (h.tenure == Tenure.RENTED || h.tenure == Tenure.PLAYER);
+            boolean founders = h.tenure == Tenure.RENTED && rentFree(household);
+            boolean paysRent = !seat(h) && !founders && (h.tenure == Tenure.RENTED || h.tenure == Tenure.PLAYER);
             r.putInt("rent", paysRent ? h.rent : 0);
+            r.putInt("rent_due", h.tenure == Tenure.RENTED && !seat(h) ? h.rent : 0);
+            r.putBoolean("rent_free", founders);
             r.putInt("owed", h.owed);
             r.putInt("saved", h.saved);
             r.putInt("price", seat(h) || h.tenure == Tenure.PLAYER ? 0 : h.tenure == Tenure.OWNED ? h.price : price(village, h));
@@ -1515,8 +1567,12 @@ public final class Homes {
                 Wish w = wish(village, h, household);
                 wants = w.yes();
                 why = w.why();
-                status = wants ? "saving" : "renting";
-                if (h.tenure == Tenure.RENTED && !household.isEmpty() && earners(household) == 0) rentNote = "waived: nobody in the house earns";
+                status = founders ? "rent-free" : wants ? "saving" : "renting";
+                if (founders) {
+                    int need = AFFORD_DAYS * Math.max(1, h.rent) + LIVE_ON * grown.size();
+                    rentNote = "founders: free until they can afford " + h.rent + coins(h.rent) + " a day (" + (purses(household) + h.saved)
+                        + " of " + need + coins(need) + " in hand)";
+                } else if (h.tenure == Tenure.RENTED && !household.isEmpty() && earners(household) == 0) rentNote = "waived: nobody in the house earns";
                 else if (h.owed > 0) rentNote = "owes " + h.owed + coins(h.owed);
                 else if (h.tenure == Tenure.RENTED && generous(village)) rentNote = "a generous leader lets off what a tenant is short";
             }
@@ -1564,7 +1620,10 @@ public final class Homes {
         boolean many = household.size() > 1;
         String we = many ? "we" : "I", us = many ? "us" : "me";
         StringBuilder sb = new StringBuilder(we + " rent it from the village at " + h.rent + coins(h.rent) + " a day");
-        if (!household.isEmpty() && earners(household) == 0) sb.append(", though the village lets ").append(us).append(" off while nobody here earns");
+        if (rentFree(household)) {
+            sb = new StringBuilder(we + " live in it rent-free — " + (many ? "we're" : "I'm") + " one of the founders — till "
+                + we + " can afford the " + h.rent + coins(h.rent) + " a day");
+        } else if (!household.isEmpty() && earners(household) == 0) sb.append(", though the village lets ").append(us).append(" off while nobody here earns");
         else if (h.owed > 0) sb.append(", and ").append(we).append(" owe ").append(h.owed).append(coins(h.owed)).append(" of it — ").append(we).append("'ll make it up");
         Wish w = wish(village, h, household);
         int price = price(village, h);

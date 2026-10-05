@@ -286,7 +286,7 @@ public final class Colonies {
                 for (ItemStack want : wanted.get(k)) {
                     if (isTool(want) != tools) continue;
                     for (ItemStack got : supply(level, mother, want)) {
-                        ItemStack left = a.insertItem(got);
+                        ItemStack left = a.insertGiven(got);
                         if (!left.isEmpty()) net.minecraft.world.level.block.Block.popResource(level, a.blockPosition(), left);
                     }
                 }
@@ -389,7 +389,7 @@ public final class Colonies {
                     if (colony != null) intoStores(level, colony, part);
                     continue;
                 }
-                ItemStack left = folk.get(k++ % folk.size()).insertItem(part);
+                ItemStack left = folk.get(k++ % folk.size()).insertGiven(part);
                 if (!left.isEmpty() && colony != null) intoStores(level, colony, left);
             }
         }

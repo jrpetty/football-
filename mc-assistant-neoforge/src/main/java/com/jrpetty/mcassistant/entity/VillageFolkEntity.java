@@ -1739,6 +1739,14 @@ public class VillageFolkEntity extends AssistantEntity {
 
     public long bornDay() { return bornDay; }
 
+    /** One of the village's founders, still living rent-free in the house the village built it: it
+     *  pays rent from the first payday it can afford it, and never goes back to free (Homes). */
+    private boolean rentFree;
+
+    public boolean rentFree() { return rentFree; }
+
+    public void rentFree(boolean free) { this.rentFree = free; }
+
     // ------------------------------ growing old --------------------------------
 
     /** Years a child grows a day (it is grown at eighteen, three days old). */
@@ -1878,7 +1886,7 @@ public class VillageFolkEntity extends AssistantEntity {
             net.minecraft.world.item.ItemStack st = pack.get(i);
             if (st.isEmpty() || st.get(net.minecraft.core.component.DataComponents.FOOD) == null) continue;
             int give = Math.min(2, st.getCount());
-            net.minecraft.world.item.ItemStack left = friend.insertItem(st.copyWithCount(give));
+            net.minecraft.world.item.ItemStack left = friend.insertGiven(st.copyWithCount(give));
             int given = give - left.getCount();
             if (given <= 0) return false;
             st.shrink(given);
@@ -4856,7 +4864,7 @@ public class VillageFolkEntity extends AssistantEntity {
         for (int i = 0; i < inv.size(); i++) {
             net.minecraft.world.item.ItemStack s = inv.get(i);
             if (s.isEmpty() || !what.test(s)) continue;
-            net.minecraft.world.item.ItemStack left = to.insertItem(s.copy());
+            net.minecraft.world.item.ItemStack left = to.insertGiven(s.copy());
             int taken = s.getCount() - left.getCount();
             s.shrink(taken);
             moved += taken;
@@ -6774,6 +6782,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (showcase) tag.putBoolean("Showcase", true);
         if (productionChest != null) tag.putLong("ProductionChest", productionChest.asLong());
         tag.putLong("BornDay", bornDay);
+        if (rentFree) tag.putBoolean("RentFree", true);
         if (mentor != null) tag.putUUID("Mentor", mentor);
         if (apprenticeTo != StationTask.NONE) tag.putString("Apprentice", apprenticeTo.name());
         tag.putBoolean("FrailTold", frailTold);
@@ -6839,6 +6848,7 @@ public class VillageFolkEntity extends AssistantEntity {
         this.showcase = tag.getBoolean("Showcase");
         this.productionChest = tag.contains("ProductionChest") ? BlockPos.of(tag.getLong("ProductionChest")) : null;
         this.bornDay = tag.contains("BornDay") ? tag.getLong("BornDay") : UNKNOWN;
+        this.rentFree = tag.getBoolean("RentFree");
         this.mentor = tag.hasUUID("Mentor") ? tag.getUUID("Mentor") : null;
         try {
             this.apprenticeTo = tag.contains("Apprentice") ? StationTask.valueOf(tag.getString("Apprentice")) : StationTask.NONE;
