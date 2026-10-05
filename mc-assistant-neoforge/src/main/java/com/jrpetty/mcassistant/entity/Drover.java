@@ -73,6 +73,115 @@ public final class Drover {
         DRIVES.clear();
         LOOKED.clear();
         GAVE_UP.clear();
+        PENS.clear();
+        OPENED.clear();
+    }
+
+    // ------------------------------------------------------------------ the pen
+
+    /**
+     * The village's pen, once it is built (a fenced square with a gate): its middle and its gate.
+     * The rancher's ground is the pen from then on, every animal brought home goes in through the
+     * gate, and strays from the herd are fetched back.
+     */
+    public record Pen(BlockPos centre, BlockPos gate) {
+        public boolean inside(BlockPos p) {
+            return Math.abs(p.getX() - centre.getX()) <= 2 && Math.abs(p.getZ() - centre.getZ()) <= 2;
+        }
+    }
+
+    private static final Map<UUID, Pen> PENS = new ConcurrentHashMap<>();
+    /** Gates the folk opened, and when: they shut them behind them. */
+    private static final Map<Long, Long> OPENED = new ConcurrentHashMap<>();
+
+    /** The village's pen, or null before it has one. */
+    @Nullable
+    public static Pen pen(UUID village) {
+        Pen cached = PENS.get(village);
+        for (Ledger.Building b : Ledger.buildings(village)) {
+            if (!"pen".equals(b.structure())) continue;
+            if (cached != null && cached.centre().equals(b.anchor())) return cached;
+            BlockPos gate = null;
+            for (com.jrpetty.mcassistant.entity.goal.BuildGoal.Placement p
+                    : com.jrpetty.mcassistant.entity.goal.BuildGoal.plan("pen", b.anchor(), b.facing(), 13)) {
+                if (p.part() == com.jrpetty.mcassistant.entity.goal.BuildGoal.Part.GATE) gate = p.pos();
+            }
+            if (gate == null) continue;
+            Pen pen = new Pen(b.anchor().immutable(), gate.immutable());
+            PENS.put(village, pen);
+            return pen;
+        }
+        return null;
+    }
+
+    /**
+     * From a folk's tick: the pen's gate opens for a folk of the village passing through it (or
+     * bringing an animal in), and is shut behind them — so the herd stays in. A gate a player
+     * opened is the player's to shut.
+     */
+    public static void gate(VillageFolkEntity f, ServerLevel level) {
+        UUID village = f.ownerId();
+        if (village == null) return;
+        Pen p = pen(village);
+        if (p == null || !level.isLoaded(p.gate())) return;
+        BlockPos g = p.gate();
+        net.minecraft.world.level.block.state.BlockState st = level.getBlockState(g);
+        if (!(st.getBlock() instanceof net.minecraft.world.level.block.FenceGateBlock)) return;
+        boolean open = st.getValue(net.minecraft.world.level.block.FenceGateBlock.OPEN);
+        long now = level.getGameTime();
+        if (!open && passing(f, p, g)) {
+            level.setBlock(g, st.setValue(net.minecraft.world.level.block.FenceGateBlock.OPEN, true), 10);
+            level.playSound(null, g, net.minecraft.sounds.SoundEvents.FENCE_GATE_OPEN, net.minecraft.sounds.SoundSource.BLOCKS, 0.8F, 1.0F);
+            OPENED.put(g.asLong(), now);
+            return;
+        }
+        Long since = OPENED.get(g.asLong());
+        if (open && since != null && now - since > 30) {
+            for (VillageFolkEntity x : level.getEntitiesOfClass(VillageFolkEntity.class, new AABB(g).inflate(7),
+                    x -> village.equals(x.ownerId()))) {
+                if (passing(x, p, g)) return;                                  // somebody still on the way through
+            }
+            level.setBlock(g, st.setValue(net.minecraft.world.level.block.FenceGateBlock.OPEN, false), 10);
+            level.playSound(null, g, net.minecraft.sounds.SoundEvents.FENCE_GATE_CLOSE, net.minecraft.sounds.SoundSource.BLOCKS, 0.8F, 1.0F);
+            OPENED.remove(g.asLong());
+        }
+    }
+
+    /** On its way through this pen's gate: going in or out, or bringing an animal home to it. */
+    private static boolean passing(VillageFolkEntity f, Pen p, BlockPos g) {
+        if (f.distanceToSqr(g.getX() + 0.5, g.getY(), g.getZ() + 0.5) > 6.0 * 6.0) return false;
+        Drive d = DRIVES.get(f.getUUID());
+        if (d != null && d.pen.equals(p.centre())) return true;
+        BlockPos to = f.getNavigation().getTargetPos();
+        return to != null && !f.getNavigation().isDone() && p.inside(to) != p.inside(f.blockPosition());
+    }
+
+    /** One of the village's own animals got out: back into the pen with it. Returns whether it set off. */
+    static boolean fetchStray(VillageFolkEntity f, ServerLevel level, Pen p) {
+        UUID village = f.ownerId();
+        if (village == null || busy(f)) return false;
+        Animal stray = null;
+        double best = Double.MAX_VALUE;
+        for (Animal a : level.getEntitiesOfClass(Animal.class, new AABB(p.centre()).inflate(32, 8, 32),
+                a -> a.isAlive() && a.getTags().contains(HERD) && !a.isLeashed() && !p.inside(a.blockPosition()))) {
+            double dd = a.distanceToSqr(f);
+            if (dd < best) { best = dd; stray = a; }
+        }
+        if (stray == null) return false;
+        java.util.function.Predicate<ItemStack> feed = feedFor(stray);
+        if (feed != null && f.countCarried(feed) < 1 && f.villageCentre() != null) {
+            f.drawFrom(f.villageCentre(), feed, 2, Villages.storesRadius(village));
+        }
+        Drive d = new Drive(stray.getUUID(), p.centre(), level.getGameTime());
+        if (feed != null && f.countCarried(feed) > 0) {
+            for (ItemStack s : f.getInventoryItems()) if (!s.isEmpty() && feed.test(s)) { d.lure = s.copyWithCount(1); break; }
+        } else if (f.countCarried(s -> s.is(Items.LEAD)) < 1) {
+            return false;
+        }
+        DRIVES.put(f.getUUID(), d);
+        f.clearQueue();
+        f.brain("one of the herd got out: bringing it back to the pen");
+        return true;
     }
 
     /** Out fetching an animal: the day's work waits. */
@@ -94,6 +203,8 @@ public final class Drover {
         if (village == null || !level.isDay() || Raids.underAlarm(village)) return false;
         BlockPos pen = f.workZone().center();
         if (!Land.areaLoaded(level, pen, RANGE)) return false;
+        Pen built = pen(village);
+        if (built != null && built.centre().equals(pen) && fetchStray(f, level, built)) return true;
         Map<EntityType<?>, Integer> herd = herd(level, pen, Math.max(8, Math.min(16, f.workZone().radius())));
         boolean pair = false;
         for (int n : herd.values()) if (n >= 2) pair = true;
@@ -211,8 +322,7 @@ public final class Drover {
             return;
         }
         // Home: the animal inside the pen's ground (a led animal hangs back a few blocks on its lead).
-        double dx = a.getX() - (d.pen.getX() + 0.5), dz = a.getZ() - (d.pen.getZ() + 0.5);
-        if (dx * dx + dz * dz < 6.0 * 6.0) {
+        if (home(f, a, d)) {
             stop(f, a, d, true);
             return;
         }
@@ -258,8 +368,7 @@ public final class Drover {
             f.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, d.lure.copy());
         }
         double gap = f.distanceToSqr(a);
-        double dx = a.getX() - (d.pen.getX() + 0.5), dz = a.getZ() - (d.pen.getZ() + 0.5);
-        if (dx * dx + dz * dz < 5.0 * 5.0) {
+        if (home(f, a, d)) {
             // Home: it gets what it followed.
             f.removeMatching(s -> s.is(d.lure.getItem()), 1);
             if (a.getAge() == 0 && !a.isBaby()) a.setInLove(null);
@@ -287,6 +396,52 @@ public final class Drover {
             f.walkTo(d.pen, 0.5D);
             d.walked = f.tickCount;
         }
+    }
+
+    /**
+     * A hunter (or anybody) who has come on an animal the village's pens are short of brings it
+     * home alive instead: with its feed held out, or on a lead. Returns whether it set off.
+     */
+    public static boolean fetchHome(VillageFolkEntity f, ServerLevel level, Animal a) {
+        if (busy(f) || f.ownerId() == null) return false;
+        BlockPos pen = penShortOf(level, f.ownerId(), a.getType());
+        if (pen == null) return false;
+        java.util.function.Predicate<ItemStack> feed = feedFor(a);
+        Drive d = new Drive(a.getUUID(), pen, level.getGameTime());
+        if (feed != null && f.countCarried(feed) > 0) {
+            for (ItemStack s : f.getInventoryItems()) if (!s.isEmpty() && feed.test(s)) { d.lure = s.copyWithCount(1); break; }
+        } else if (f.countCarried(s -> s.is(Items.LEAD)) < 1) {
+            return false;
+        }
+        DRIVES.put(f.getUUID(), d);
+        f.clearQueue();
+        f.brain("bringing a wild " + kind(a) + " home alive for the pens");
+        FolkTalk.speak(f, "The pens are short of " + kind(a) + "s. This one's coming home with me, alive.");
+        return true;
+    }
+
+    /** A rancher's pen in the village with fewer than a breeding pair of this kind, or null. */
+    @Nullable
+    static BlockPos penShortOf(ServerLevel level, UUID village, EntityType<?> type) {
+        for (AssistantEntity x : Villages.folkOf(village)) {
+            if (x.stationTask() != StationTask.RANCH || x.workZone() == null) continue;
+            BlockPos pen = x.workZone().center();
+            if (!Land.areaLoaded(level, pen, 8)) continue;
+            Map<EntityType<?>, Integer> herd = herd(level, pen, Math.max(8, Math.min(16, x.workZone().radius())));
+            if (herd.getOrDefault(type, 0) < 2) return pen;
+        }
+        return null;
+    }
+
+    /**
+     * Is it home? Inside the fence, when the village has built its pen and this is where it is
+     * going; otherwise on the pen's ground (a led animal hangs back a few blocks on its lead).
+     */
+    private static boolean home(VillageFolkEntity f, Animal a, Drive d) {
+        Pen p = f.ownerId() == null ? null : pen(f.ownerId());
+        if (p != null && p.centre().equals(d.pen)) return p.inside(a.blockPosition());
+        double dx = a.getX() - (d.pen.getX() + 0.5), dz = a.getZ() - (d.pen.getZ() + 0.5);
+        return dx * dx + dz * dz < (d.lure != null ? 5.0 * 5.0 : 6.0 * 6.0);
     }
 
     /** What an animal will follow, or null if it follows nothing a village grows. */

@@ -2921,6 +2921,10 @@ public class VillageGameTests {
         Kit.log("t31 before unloading: carrier " + carrier.stationTask() + " keeps " + carrier.depositReserve(new ItemStack(Items.BREAD, 64))
             + " of a stack of bread; the colony's stores " + Villages.storeChests(level, colony.id()) + "; " + carrier.debugLine());
         int carried = carrier.countCarried(st -> st.is(Items.BREAD));
+        // The colony buys what it sent for, at the family price: it has the coin.
+        com.jrpetty.mcassistant.village.Ledger.addCoins(colony.id(), 60);
+        int colonyCoins = com.jrpetty.mcassistant.village.Ledger.coins(colony.id());
+        int motherCoins = com.jrpetty.mcassistant.village.Ledger.coins(mother.id());
         com.jrpetty.mcassistant.entity.Caravans.arriveForTests(level, carrier);
         int after = com.jrpetty.mcassistant.entity.Market.stock(level, colony.id(), st -> st.is(Items.BREAD));
         int left = carrier.countCarried(st -> st.is(Items.BREAD));
@@ -2941,8 +2945,12 @@ public class VillageGameTests {
             + "; stores " + chests + "; homeward " + (carrier.trip() != null && carrier.trip().homeward()));
         helper.assertTrue(left <= carried - 32 && carrier.trip() != null && carrier.trip().homeward(),
             "the caravan unloads in the colony's stores and turns for home");
+        int colonyPaid = colonyCoins - com.jrpetty.mcassistant.village.Ledger.coins(colony.id());
         com.jrpetty.mcassistant.entity.Caravans.arriveForTests(level, carrier);
+        int motherGot = com.jrpetty.mcassistant.village.Ledger.coins(mother.id()) - motherCoins;
+        Kit.log("t31 the goods were bought: the colony paid " + colonyPaid + ", the mother's treasury took " + motherGot);
         helper.assertTrue(carrier.trip() == null, "and is home again");
+        helper.assertTrue(colonyPaid > 0 && motherGot >= colonyPaid, "the colony paid for the goods it sent for, and the coin came home");
         helper.succeed();
     }
 
@@ -3776,5 +3784,138 @@ public class VillageGameTests {
         helper.assertTrue(tithe >= 4 && rich.purse() == 48 && com.jrpetty.mcassistant.village.Ledger.coins(id) == before + tithe && again == 0,
             "the tithe: one in ten of what a folk holds over a dozen, once a week");
         helper.succeed();
+    }
+
+    /**
+     * The hunter: out on its grounds it takes a grown wild cow, never the last pair of pigs, and
+     * brings the meat and the hide home.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 3000, batch = "t56_hunter")
+    public static void t56_hunter(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 42000, 12000, 64);
+        Kit.prepare(level, 42000, 12000, 64);
+        BlockPos heart = Kit.surface(level, 42000, 12000);
+        VillageFolkEntity hunter = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(hunter != null, "a village");
+        BlockPos grounds = Kit.surface(level, heart.getX() + 30, heart.getZ());
+        for (net.minecraft.world.entity.animal.Animal a : level.getEntitiesOfClass(net.minecraft.world.entity.animal.Animal.class,
+                new AABB(grounds).inflate(64, 32, 64))) a.discard();
+        hunter.assignPlot(com.jrpetty.mcassistant.entity.WorkZone.around(grounds, 20, com.jrpetty.mcassistant.entity.WorkZone.DEFAULT_DEPTH), "Hunting Grounds");
+        hunter.setJob(StationTask.HUNT);
+        hunter.insertItem(new ItemStack(Items.IRON_SWORD));
+        for (int i = 0; i < 4; i++) {
+            net.minecraft.world.entity.animal.Cow cow = EntityType.COW.create(level);
+            cow.moveTo(grounds.getX() + 0.5 + i, grounds.getY(), grounds.getZ() + 3.5, 0.0F, 0.0F);
+            level.addFreshEntity(cow);
+        }
+        for (int i = 0; i < 2; i++) {
+            net.minecraft.world.entity.animal.Pig pig = EntityType.PIG.create(level);
+            pig.moveTo(grounds.getX() + 0.5 + i, grounds.getY(), grounds.getZ() - 3.5, 0.0F, 0.0F);
+            level.addFreshEntity(pig);
+        }
+        hunter.moveTo(grounds.getX() + 0.5, grounds.getY(), grounds.getZ() + 0.5, 0.0F, 0.0F);
+        final java.util.List<String> trail = new java.util.ArrayList<>();
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (t % 20 == 0 && hunter.peekJob() == null) hunter.huntForTests();
+            int cows = level.getEntitiesOfClass(net.minecraft.world.entity.animal.Cow.class, new AABB(grounds).inflate(40, 16, 40),
+                net.minecraft.world.entity.LivingEntity::isAlive).size();
+            int pigs = level.getEntitiesOfClass(net.minecraft.world.entity.animal.Pig.class, new AABB(grounds).inflate(40, 16, 40),
+                net.minecraft.world.entity.LivingEntity::isAlive).size();
+            int game = hunter.countCarried(com.jrpetty.mcassistant.entity.AssistantEntity.GAME);
+            if (t % 200 == 0) trail.add(t + ": cows " + cows + ", pigs " + pigs + ", game " + game + " — " + hunter.debugLine());
+            if (t > 40 && cows <= 3 && game > 0) {
+                Kit.log("t56 the hunt: " + String.join(" | ", trail) + " | at " + t + ": cows " + cows + ", pigs " + pigs + ", game " + game);
+                helper.assertTrue(pigs == 2, "the last pair of pigs is left to breed: " + pigs);
+                helper.succeed();
+            }
+        });
+        helper.runAtTickTime(2900, () -> {
+            Kit.log("t56 the hunt (no kill): " + String.join(" | ", trail));
+            helper.fail("the hunter never took a cow");
+        });
+    }
+
+    /**
+     * The village's books: what a working folk banks is its output, valued at the market's worth;
+     * the morning closes the day and keeps it; and the traders buy no more than the town made.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t57_economy")
+    public static void t57_economy(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(6000);
+        Kit.hold(level, 44000, 12000, 24);
+        Kit.prepare(level, 44000, 12000, 24);
+        BlockPos heart = Kit.surface(level, 44000, 12000);
+        VillageFolkEntity farmer = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(farmer != null, "a village");
+        farmer.setJob(StationTask.FARM);
+        Villages.Village v = Villages.get(farmer.ownerId());
+        com.jrpetty.mcassistant.entity.Economy.produced(farmer, new ItemStack(Items.BREAD, 40));
+        com.jrpetty.mcassistant.entity.Economy.produced(farmer, new ItemStack(Items.COBBLESTONE, 64));   // not a farmer's work
+        com.jrpetty.mcassistant.entity.Economy.closeTheDay(level, v, 1);
+        int made = com.jrpetty.mcassistant.entity.Economy.yesterday(v.id());
+        String line = com.jrpetty.mcassistant.entity.Economy.line(v.id());
+        String page = com.jrpetty.mcassistant.entity.Economy.page(level, v);
+        Kit.log("t57 the books: made " + made + "; " + line + " | page: " + page.replace("\n", " / "));
+        helper.assertTrue(made == 12, "forty loaves at 0.3 are twelve coins' worth, and the stone is no farmer's: " + made);
+        helper.assertTrue(page.contains("Best producers") && page.contains(farmer.displayNameCap()), "the page names the best producers");
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Economy.worth(v.id()) >= 0, "the village's worth is counted");
+        helper.succeed();
+    }
+
+    /**
+     * Fetching an animal home as a player does: the feed held out, the animal following the hand
+     * home to the pen, and fed there.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 2400, batch = "t58_lure")
+    public static void t58_lure(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 46000, 12000, 64);
+        Kit.prepare(level, 46000, 12000, 64);
+        BlockPos heart = Kit.surface(level, 46000, 12000);
+        VillageFolkEntity rancher = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(rancher != null, "a village");
+        BlockPos pen = Kit.surface(level, heart.getX() + 14, heart.getZ());
+        for (net.minecraft.world.entity.animal.Animal a : level.getEntitiesOfClass(net.minecraft.world.entity.animal.Animal.class,
+                new AABB(pen).inflate(64, 32, 64))) a.discard();
+        rancher.assignPlot(com.jrpetty.mcassistant.entity.WorkZone.around(pen, 6, com.jrpetty.mcassistant.entity.WorkZone.DEFAULT_DEPTH), "the pen");
+        rancher.setJob(StationTask.RANCH);
+        rancher.insertItem(new ItemStack(Items.WHEAT, 8));
+        rancher.moveTo(pen.getX() + 0.5, pen.getY(), pen.getZ() + 0.5, 0.0F, 0.0F);
+        net.minecraft.world.entity.animal.Sheep sheep = EntityType.SHEEP.create(level);
+        sheep.moveTo(pen.getX() + 0.5, pen.getY(), pen.getZ() + 22.5, 0.0F, 0.0F);
+        level.addFreshEntity(sheep);
+        final boolean[] set = { false };
+        final String[] held = { "" };
+        final java.util.List<String> trail = new java.util.ArrayList<>();
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (!set[0] && t > 5) set[0] = com.jrpetty.mcassistant.entity.Drover.consider(rancher, level);
+            if (com.jrpetty.mcassistant.entity.Drover.busy(rancher)) {
+                if (t % 10 == 0) com.jrpetty.mcassistant.entity.Drover.drive(rancher, level);
+                if (rancher.getMainHandItem().is(Items.WHEAT)) held[0] = "wheat";
+            }
+            if (t % 200 == 0) trail.add(t + ": sheep " + sheep.blockPosition().toShortString() + " leashed " + sheep.isLeashed()
+                + ", rancher " + rancher.blockPosition().toShortString() + " holding " + rancher.getMainHandItem().getItem());
+            if (set[0] && !com.jrpetty.mcassistant.entity.Drover.busy(rancher)) {
+                double d = Math.sqrt(sheep.distanceToSqr(pen.getX() + 0.5, sheep.getY(), pen.getZ() + 0.5));
+                Kit.log("t58 the lure: " + String.join(" | ", trail) + " | home at " + t + ", " + Math.round(d) + " from the pen; held " + held[0]
+                    + "; leashed " + sheep.isLeashed() + "; herd " + sheep.getTags());
+                helper.assertTrue(d < 8 && "wheat".equals(held[0]) && !sheep.isLeashed() && sheep.getTags().contains("mca_herd"),
+                    "the sheep followed the wheat home to the pen, no lead");
+                helper.succeed();
+            }
+        });
+        helper.runAtTickTime(2300, () -> {
+            Kit.log("t58 the lure (not home): " + String.join(" | ", trail));
+            helper.fail("the sheep never came home");
+        });
     }
 }

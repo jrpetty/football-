@@ -300,11 +300,19 @@ public final class Trades {
                     kit.add(new ItemStack(Items.LOOM));
                 }
             }
+            // The first fisher's rod: a rod is string, and a young village has none.
+            case FISH -> {
+                if (!anywhere(level, id, s -> s.is(Items.FISHING_ROD)) && Crafts.stock(level, v, s -> s.is(Items.STRING)) < 2) {
+                    kit.add(new ItemStack(Items.FISHING_ROD));
+                }
+            }
             // The first hunter's bow and a quiver of arrows: string is spiders' or wool's, and a
             // young village has neither to spare.
             case HUNT -> {
                 if (!anywhere(level, id, s -> s.is(Items.BOW)) && Crafts.stock(level, v, s -> s.is(Items.STRING)) < 3) kit.add(new ItemStack(Items.BOW));
                 if (Crafts.stock(level, v, s -> s.is(Items.ARROW)) < 16) kit.add(new ItemStack(Items.ARROW, 16));
+                // Two leads: game the pens are short of comes home alive, for the rancher.
+                if (Crafts.stock(level, v, s -> s.is(Items.LEAD)) < 2) kit.add(new ItemStack(Items.LEAD, 2));
             }
             default -> { }
         }
@@ -321,6 +329,7 @@ public final class Trades {
         else if (s.is(Items.LOOM)) each = 3;
         else if (s.is(Items.SHEARS)) each = 3;
         else if (s.is(Items.BOW)) each = 4;
+        else if (s.is(Items.FISHING_ROD)) each = 2;
         else if (s.is(Items.ARROW)) return Math.max(1, s.getCount() / 4);
         else if (s.is(Items.LEAD)) return 2 * s.getCount();
         else if (s.is(Items.BLAZE_POWDER)) return s.getCount();
@@ -429,7 +438,8 @@ public final class Trades {
             case TAILOR -> "My loom came with me. I couldn't work without it.";
             case RANCH -> "Two good leads, and shears for the wool. Now to find us some animals.";
             case FARM -> "A few cane cuttings and melon and pumpkin seed, from the old country.";
-            case HUNT -> "A bow and a quiver of arrows, from a pedlar on the road. Now for the game.";
+            case HUNT -> "A bow, a quiver of arrows and a couple of leads, from a pedlar on the road. Now for the game.";
+            case FISH -> "A good rod, bought off a pedlar. Now, where's the water?";
             default -> "I've brought what I need.";
         };
     }

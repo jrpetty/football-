@@ -295,6 +295,7 @@ public final class Market {
         if (t < 500 || t > 6000) return;
         if (Ledger.paidOn(id) >= day) return;
         Ledger.paid(id, day);
+        Homeland.survey(level, v);                       // a village from before: its land, looked over now
         Economy.closeTheDay(level, v, day);              // yesterday's output, and what the village is worth
         mint(level, v);
         trade(level, v);

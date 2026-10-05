@@ -626,6 +626,11 @@ public final class FolkTalk {
         int folk = Villages.headcount(village);
         StringBuilder sb = new StringBuilder(Villages.name(village)).append("'s in ").append(Villages.ageOf(village).label)
             .append(", ").append(folk <= 1 ? "and it's just me so far. " : folk + " of us. ");
+        Homeland.Land land = Homeland.known(village);
+        if (land != null && land != Homeland.Land.PLAINS) {
+            sb.append("We're ").append(land.kind).append(", ").append(land.where).append(" — ")
+                .append(Villages.elderName(village).isEmpty() ? "" : Villages.elderName(village) + " is our " + land.leader + ". ");
+        }
         if (f.level() instanceof ServerLevel server) {
             List<Villages.Need> needs = Villages.needs(server, village);
             if (!needs.isEmpty()) sb.append("What we need now is ").append(needs.get(0).what()).append(". ");

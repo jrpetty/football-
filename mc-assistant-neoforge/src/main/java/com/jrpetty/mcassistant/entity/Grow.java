@@ -281,6 +281,10 @@ public final class Grow {
     public static int reface(ServerLevel level, Villages.Village v, Ledger.Building b, Villages.Age age, int budget,
                              boolean grown, boolean free) {
         Block want = palette(age).walls();
+        // The land's own stone, while the stores have it (Homeland): sandstone in the desert,
+        // terracotta in the badlands, andesite in the hills, mossy stone in the jungle.
+        Homeland.Stone local = Homeland.walls(v.id());
+        if (local != null && Crafts.stock(level, v, local.pay()) >= 16) want = local.block();
         boolean old = age.ordinal() >= Villages.Age.DIAMOND.ordinal();
         if (!free) {
             // Only if there is wall to change, and a hand there to change it (TownJobs).
@@ -288,7 +292,7 @@ public final class Grow {
             for (BuildGoal.Placement p : BuildGoal.plan(grown ? "house2" : "house", b.anchor(), b.facing(), 13)) {
                 if (p.part() != BuildGoal.Part.BLOCK || p.style() != com.jrpetty.mcassistant.entity.goal.Blueprints.Style.WALL) continue;
                 BlockState now = level.getBlockState(p.pos());
-                if (now.is(BlockTags.PLANKS) || now.is(Blocks.STONE_BRICKS) && want == Blocks.BRICKS) { any = true; break; }
+                if (now.is(BlockTags.PLANKS) || now.is(Blocks.STONE_BRICKS) && want != Blocks.STONE_BRICKS) { any = true; break; }
             }
             if (!any || !TownJobs.atWork(level, v, "walls", b.anchor(), want == Blocks.BRICKS ? "rebuilding a house in brick" : "rebuilding a house in stone")) return 0;
         }
@@ -302,7 +306,7 @@ public final class Grow {
             switch (p.style()) {
                 case WALL -> {
                     boolean timber = now.is(BlockTags.PLANKS);
-                    boolean stone = now.is(Blocks.STONE_BRICKS) && want == Blocks.BRICKS;
+                    boolean stone = now.is(Blocks.STONE_BRICKS) && want != Blocks.STONE_BRICKS;
                     if (timber || stone) {
                         if (!free && !wallBlock(level, v, want)) {
                             stop = true;
@@ -328,6 +332,8 @@ public final class Grow {
 
     /** A block of the new wall out of the stores: brick for brick, else dressed stone or cobble. */
     private static boolean wallBlock(ServerLevel level, Villages.Village v, Block want) {
+        Homeland.Stone local = Homeland.walls(v.id());
+        if (local != null && want == local.block()) return Crafts.take(level, v, local.pay(), local.each());
         if (want == Blocks.BRICKS) {
             return Crafts.take(level, v, s -> s.is(net.minecraft.world.item.Items.BRICKS), 1)
                 || Crafts.take(level, v, s -> s.is(net.minecraft.world.item.Items.BRICK), 4);

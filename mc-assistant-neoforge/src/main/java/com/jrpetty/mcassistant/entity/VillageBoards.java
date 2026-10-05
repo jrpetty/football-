@@ -289,6 +289,7 @@ public final class VillageBoards {
         int room = Villages.housing(id);
         out.add((room < folk ? "RW" : "RN") + "|Homes: room for " + room + ", beds made up for " + Villages.bedsMadeUp(level, id) + ".");
         int toMarket = Market.daysToMarket(id, day);
+        if (Homeland.known(id) != null) out.add("RN|Land: " + Homeland.line(id) + ".");
         out.add("RN|Treasury: " + com.jrpetty.mcassistant.village.Ledger.coins(id) + " coins. Market "
             + (toMarket == 0 ? "today!" : toMarket == 1 ? "tomorrow." : "in " + toMarket + " days."));
         {

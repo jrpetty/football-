@@ -22,6 +22,8 @@ public class FishGoal extends Goal {
     private final AssistantEntity assistant;
     @Nullable private Job job;
     @Nullable private BlockPos water;
+    /** Where it stands to fish: dry ground on the bank by the water, not the water itself. */
+    @Nullable private BlockPos shore;
     @Nullable private BlockPos bobber;   // where the cast landed — the visible wait
     private int reelTicks;               // the bite is on; a beat before the yank
     private int caught;
@@ -69,6 +71,7 @@ public class FishGoal extends Goal {
             finish("No open water within 12 blocks.");
             return;
         }
+        this.shore = bankBy(water);
         assistant.sayRoutine("Dropping a line.");
     }
 
@@ -120,12 +123,20 @@ public class FishGoal extends Goal {
         assistant.getLookControl().setLookAt(
             water.getX() + 0.5, water.getY() + 0.5, water.getZ() + 0.5);
         double distSq = assistant.distanceToSqr(water.getX() + 0.5, water.getY() + 0.5, water.getZ() + 0.5);
-        if (distSq > 20.0) {
+        // A line casts six blocks: near enough is the bank, not the water's edge.
+        if (distSq > 36.0) {
             if (assistant.getNavigation().isDone()) {
-                assistant.getNavigation().moveTo(
-                    water.getX() + 0.5, water.getY() + 1, water.getZ() + 0.5, 1.1D);
+                BlockPos to = shore != null ? shore : water.above();
+                assistant.getNavigation().moveTo(to.getX() + 0.5, to.getY(), to.getZ() + 0.5, 1.1D);
             }
             if (++stuckTicks > 160) {
+                // Another bit of the bank, nearer to hand, before giving up on the water.
+                BlockPos other = findWater();
+                if (other != null && !other.equals(water) && stuckTicks < 400) {
+                    water = other;
+                    shore = bankBy(other);
+                    return;
+                }
                 finish("Couldn't reach the water.");
             }
             return;
@@ -223,6 +234,23 @@ public class FishGoal extends Goal {
         if (rod.is(Items.FISHING_ROD)) {
             rod.hurtAndBreak(1, assistant, EquipmentSlot.MAINHAND);
         }
+    }
+
+    /** Dry ground on the bank by this water, two blocks of air over it, to stand and fish from. */
+    @Nullable
+    private BlockPos bankBy(BlockPos w) {
+        BlockPos best = null;
+        double bestDist = Double.MAX_VALUE;
+        for (BlockPos p : BlockPos.betweenClosed(w.offset(-3, -1, -3), w.offset(3, 2, 3))) {
+            var level = assistant.level();
+            if (!level.getFluidState(p).isEmpty() || !level.getFluidState(p.below()).isEmpty()) continue;
+            if (!level.getBlockState(p.below()).isFaceSturdy(level, p.below(), net.minecraft.core.Direction.UP)) continue;
+            if (!level.getBlockState(p).getCollisionShape(level, p).isEmpty()) continue;
+            if (!level.getBlockState(p.above()).getCollisionShape(level, p.above()).isEmpty()) continue;
+            double d = p.distSqr(w) * 4 + p.distSqr(assistant.blockPosition()) * 0.05;
+            if (d < bestDist) { bestDist = d; best = p.immutable(); }
+        }
+        return best;
     }
 
     @Nullable

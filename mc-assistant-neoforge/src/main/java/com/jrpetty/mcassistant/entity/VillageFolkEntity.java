@@ -307,6 +307,8 @@ public class VillageFolkEntity extends AssistantEntity {
         // Through the gateway with a Nether party: it waits by the gateway till they come back.
         if (Nether.away(this) && !withAPlayer) return;
         // Out with a lead, fetching a wild animal home to the pen (Drover): that is the work just now.
+        // The pen's gate: opened to go through it, and shut behind (Drover).
+        if (tickCount % 10 == 7 && level() instanceof net.minecraft.server.level.ServerLevel penLevel) Drover.gate(this, penLevel);
         if (Drover.busy(this) && !withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel herding) {
             if (tickCount % 10 == 0) Drover.drive(this, herding);
             return;
@@ -2489,6 +2491,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (tickCount - supplyTick >= 600 && level() instanceof net.minecraft.server.level.ServerLevel supplies) {
             supplyTick = tickCount;
             Drover.tidy(this, supplies);
+            moveIntoThePen();
             Trades.kit(this);
             if (Links.tend(this, supplies)) return;
         }
@@ -4157,6 +4160,8 @@ public class VillageFolkEntity extends AssistantEntity {
         if (quarry != null) {
             gameSeenTick = tickCount;
             String word = gameWord(quarry);
+            // The pens short of this kind: it comes home alive, for the rancher.
+            if (Drover.fetchHome(this, server, quarry)) return true;
             if (quarry.distanceToSqr(this) > 20 * 20) {
                 // Out of the hunt's reach yet: closer first, quietly.
                 if (getNavigation().isDone()) getNavigation().moveTo(quarry, 0.9D);
@@ -4181,6 +4186,25 @@ public class VillageFolkEntity extends AssistantEntity {
             newGrounds();
         }
         return true;
+    }
+
+    /** Once the village has built its pen, the rancher's ground is the pen: the herd lives inside the fence. */
+    private void moveIntoThePen() {
+        if (stationTask() != StationTask.RANCH || ownerId() == null) return;
+        Drover.Pen p = Drover.pen(ownerId());
+        if (p == null) return;
+        WorkZone z = workZone();
+        if (z != null && z.center().equals(p.centre())) return;
+        setStation(p.centre(), StationTask.RANCH);
+        assignPlot(WorkZone.around(p.centre(), 3, WorkZone.DEFAULT_DEPTH), "The Pen");
+        setAutonomous(true);
+        brain("the herd's ground is the pen now");
+        FolkTalk.speak(this, "The pen's built! I'll bring the herd in.");
+    }
+
+    /** Tests: a beat of the hunter's day, as the station brain would run it. */
+    public boolean huntForTests() {
+        return huntWork();
     }
 
     /** New hunting grounds, somewhere else round the village: the game has gone from the old. */

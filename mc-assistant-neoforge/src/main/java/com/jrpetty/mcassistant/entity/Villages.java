@@ -135,6 +135,8 @@ public final class Villages {
 
     /** A village's name: its own, the same for ever, worked out from who it is. */
     public static String name(UUID villageId) {
+        String given = com.jrpetty.mcassistant.village.Ledger.note(villageId, "name");
+        if (given != null && !given.isEmpty()) return given;
         long a = villageId.getMostSignificantBits(), b = villageId.getLeastSignificantBits();
         String head = NAME_HEADS[(int) Math.floorMod(a ^ (a >>> 29), (long) NAME_HEADS.length)];
         String tail = NAME_TAILS[(int) Math.floorMod(b ^ (b >>> 31), (long) NAME_TAILS.length)];
@@ -260,6 +262,7 @@ public final class Villages {
             if (c.isBaby()) continue;
             int score = (int) Math.min(30, Math.max(0, day - c.persona().since()));     // years count
             for (VillageFolkEntity o : folk) if (o != c) score += o.life().affinity(c.getUUID());
+            score += Homeland.leaderFit(villageId, c);                                // the nature the land asks for
             if (score > bestScore) { bestScore = score; best = c; }
         }
         if (best == null) return;
@@ -318,6 +321,7 @@ public final class Villages {
         Envoys.resetForTests();
         TownJobs.resetForTests();
         Market.resetForTests();
+        Homeland.resetForTests();
         Economy.resetForTests();
         Scouts.resetForTests();
         Quests.resetForTests();
@@ -394,6 +398,16 @@ public final class Villages {
         Village v = new Village(UUID.randomUUID(), centre.immutable(), level.dimension());
         ALL.put(v.id(), v);
         FOUNDED.put(v.id(), level.getGameTime());
+        // The land it stands in, looked over now, and a name that fits it (Homeland).
+        if (level instanceof net.minecraft.server.level.ServerLevel land) {
+            Homeland.Land l = Homeland.survey(land, v);
+            if (Homeland.known(v.id()) != null) {
+                long a = v.id().getMostSignificantBits();
+                String head = NAME_HEADS[(int) Math.floorMod(a ^ (a >>> 29), (long) NAME_HEADS.length)];
+                String named = Homeland.nameFor(v.id(), head, l);
+                if (named != null) com.jrpetty.mcassistant.village.Ledger.note(v.id(), "name", named);
+            }
+        }
         com.jrpetty.mcassistant.village.Chronicle.record(v.id(), level.getDayTime() / 24000L,
             name(v.id()) + " was founded");
         // The founders' notice board, on the square: what the village is doing, how it is
@@ -564,7 +578,7 @@ public final class Villages {
         double bestDeficit = -Double.MAX_VALUE;
         int bestWeight = 0;
         for (Slot slot : SLOTS) {
-            if (!slot.wanted(total, at)) continue;      // too small (or too young) to want one yet
+            if (!wantedHere(slot, villageId, total, at)) continue;      // too small (or too young) to want one yet
             if (!craftReady(villageId, slot.trade())) continue;   // a smith with no smithy has nothing to work at
             double target = target(villageId, slot, total) * fit;
             double deficit = target - have.getOrDefault(slot.trade(), 0);
@@ -604,7 +618,7 @@ public final class Villages {
         }
         Age at = villageId == null ? Age.WOOD : ageOf(villageId);
         for (Slot slot : SLOTS) {
-            if (!slot.wanted(total, at)) continue;   // too small (or too young) to want one yet
+            if (!wantedHere(slot, villageId, total, at)) continue;   // too small (or too young) to want one yet
             if (slot.age() != Age.WOOD) continue;    // crafts below, once the trades have their hands
             if (!craftReady(villageId, slot.trade())) continue;   // nowhere to work at it yet
             if (have.getOrDefault(slot.trade(), 0) == 0) return slot.trade();
@@ -613,7 +627,7 @@ public final class Villages {
         // night's fights) from fourteen to one in a village of eighty, and nobody new took it up.
         double fit = fit(villageId, total, hands(folk, total), at);
         for (Slot slot : SLOTS) {
-            if (slot.trade() != AssistantEntity.StationTask.GUARD || !slot.wanted(total, at)) continue;
+            if (slot.trade() != AssistantEntity.StationTask.GUARD || !wantedHere(slot, villageId, total, at)) continue;
             double want = target(villageId, slot, total);
             if (want >= 2.0 && have.getOrDefault(slot.trade(), 0) < Math.max(2.0, want * fit)) return slot.trade();
         }
@@ -622,7 +636,7 @@ public final class Villages {
         // newcomers, and newcomers always found the fields or the mines shorter — a village of
         // eighty had no beekeeper and no brewer in fifty days, and its first cook came at day 35.
         for (Slot slot : SLOTS) {
-            if (slot.age() == Age.WOOD || !slot.wanted(total, at)) continue;
+            if (slot.age() == Age.WOOD || !wantedHere(slot, villageId, total, at)) continue;
             if (have.getOrDefault(slot.trade(), 0) > 0) continue;
             if (craftReady(villageId, slot.trade())) return slot.trade();
         }
@@ -633,7 +647,7 @@ public final class Villages {
         AssistantEntity.StationTask most = null;
         double worst = 1.5;
         for (Slot slot : SLOTS) {
-            if (!slot.wanted(total, at) || slot.trade().isCraft() || slot.trade() == AssistantEntity.StationTask.GUARD) continue;
+            if (!wantedHere(slot, villageId, total, at) || slot.trade().isCraft() || slot.trade() == AssistantEntity.StationTask.GUARD) continue;
             if (!craftReady(villageId, slot.trade())) continue;
             double short_ = target(villageId, slot, total) * fit - have.getOrDefault(slot.trade(), 0);
             if (short_ > worst) { worst = short_; most = slot.trade(); }
@@ -652,7 +666,7 @@ public final class Villages {
     static double fit(@Nullable UUID villageId, int total, int hands, Age at) {
         double sum = 0;
         for (Slot slot : SLOTS) {
-            if (slot.wanted(total, at) && craftReady(villageId, slot.trade())) sum += target(villageId, slot, total);
+            if (wantedHere(slot, villageId, total, at) && craftReady(villageId, slot.trade())) sum += target(villageId, slot, total);
         }
         return sum <= hands || sum <= 0 ? 1.0 : hands / sum;
     }
@@ -686,17 +700,30 @@ public final class Villages {
         List<AssistantEntity> folk = folkOf(villageId);
         int total = Math.max(1, Math.max(folk.size(), headcount(villageId)));
         Age at = villageId == null ? Age.WOOD : ageOf(villageId);
-        for (Slot slot : SLOTS) if (slot.trade() == trade) return slot.wanted(total, at);
+        for (Slot slot : SLOTS) if (slot.trade() == trade) return wantedHere(slot, villageId, total, at);
         return false;
     }
 
     /** A trade's share of a village this size, as the elder's order shapes it (Orders): the order's
      *  trades a little more, every other a little less. */
+    /**
+     * Does a village this size, in this age, want the trade? Sooner than anywhere else if its land
+     * lives by it (Homeland): a coast town fishes from its first days.
+     */
+    static boolean wantedHere(Slot slot, @Nullable UUID villageId, int total, Age at) {
+        if (slot.wanted(total, at)) return true;
+        int sooner = Homeland.sooner(villageId, slot.trade());
+        return sooner > 0 && total >= sooner && at.ordinal() >= slot.age().ordinal();
+    }
+
     static double target(@Nullable UUID villageId, Slot slot, int total) {
         int boost = Orders.boost(villageId, slot.trade());
+        // The land leans the village to the trades it lives by (Homeland): more fishers on the
+        // coast, more woodcutters and hunters in the forest, more miners in the hills.
         double t = (slot.weight() + boost) * total / (double) VILLAGE_SIZE * Orders.scale(villageId)
-            * glut(villageId, slot.trade());
-        int max = slot.max() == Integer.MAX_VALUE ? Integer.MAX_VALUE : slot.max() + Math.max(0, boost);
+            * glut(villageId, slot.trade()) * Homeland.lean(villageId, slot.trade());
+        int max = slot.max() == Integer.MAX_VALUE ? Integer.MAX_VALUE
+            : slot.max() + Math.max(0, boost) + Homeland.extraMost(villageId, slot.trade());
         return Math.max(0.0, Math.min(max, t));
     }
 
@@ -710,7 +737,7 @@ public final class Villages {
         for (AssistantEntity a : folk) if (a.stationTask() == trade) have++;
         for (Slot slot : SLOTS) {
             if (slot.trade() != trade) continue;
-            if (!slot.wanted(total, at) || !craftReady(villageId, trade)) return 0.0;
+            if (!wantedHere(slot, villageId, total, at) || !craftReady(villageId, trade)) return 0.0;
             return have - target(villageId, slot, total) * fit(villageId, total, hands(folk, total), at);
         }
         return 0.0;

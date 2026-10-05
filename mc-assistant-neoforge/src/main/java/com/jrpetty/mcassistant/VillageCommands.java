@@ -546,6 +546,7 @@ public final class VillageCommands {
         }
         sb.append(". Built: ").append(Villages.builtList(v.id()));
         sb.append(". Rank: ").append(Villages.rank(v.id()).label).append(" (next, ").append(Villages.nextRankNote(v.id())).append(")");
+        sb.append(". Land: ").append(com.jrpetty.mcassistant.entity.Homeland.line(v.id()));
         sb.append(". Room for ").append(Villages.housing(v.id()));
         // Who has a bed, and (at night) who is in it.
         int folkNow = 0, bedded = 0, asleep = 0;
