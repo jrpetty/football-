@@ -1655,17 +1655,17 @@ level and how often it lays a block.
   morning; a schooled child takes up the trade it leaned to at school instead (see *The school*).
 * **Age.**
   * A child grows six years a day, and is grown at eighteen, three days after it is born.
-  * Grown folk age **a year every three game days**. Round birthdays (thirty, forty…) come
-    every thirty days.
+  * Grown folk age **a year every five game days**. Round birthdays (thirty, forty…) come
+    every fifty days.
   * The founders were grown when the village began. Each comes aged between eighteen and
     forty-five, so they don't all grow old together.
   * From sixty folk are old, and go on working their trade all their days, as quick as ever
     (see *Getting quicker*); age is no mark against them at an election either.
   * Each folk lives to between seventy and a hundred (a tenth more once the town has
     Healers). How long that is in play:
-    * a founder: about seventy-five to two hundred and fifty days, typically around a
-      hundred and sixty;
-    * a child born in the village: a hundred and fifty to two hundred and fifty days.
+    * a founder: about a hundred and twenty-five to four hundred and ten days, typically
+      around two hundred and seventy;
+    * a child born in the village: two hundred and sixty to four hundred and fifteen days.
   * A few years before the end (about twelve days), the village hears that they are very
     frail. At the end of their years they die peacefully in their sleep.
   * Ask a folk about itself and it tells you its age. The register gives everyone's, and the
@@ -1826,10 +1826,10 @@ it, as you would — the bell swings and is heard all round:
   calendar (where the bell hangs, each bell: when, rung by whom, how many answered it); a folk's
   card (**The bell**) says when it got up, ate and went home, and any bell it rang.
 
-**Birthdays.** Grown folk age a year every three days (children six years a day), so a birthday by
-their count would come every third day. What they keep are the **round ones**: the day a folk's years
+**Birthdays.** Grown folk age a year every five days (children six years a day), so a birthday by
+their count would come every fifth day. What they keep are the **round ones**: the day a folk's years
 pass into a new ten — a child's when it comes into double figures (its second day), then twenty,
-thirty, forty and on, every thirty days. The day comes from when it was born, or for one who came to the village grown,
+thirty, forty and on, every fifty days. The day comes from when it was born, or for one who came to the village grown,
 from the years it came with; it is saved with the folk, and the last birthday kept with the world.
 
 * It says so ("Forty today!"), remembers it, and is the happier for the day.
@@ -4119,7 +4119,7 @@ ripen, days pass, folk work and houses go up at that pace.
   that folk keep one today, and its friends go round with presents.
 * `/village lifespans` — the nearest town's folk, eldest first: each one's age, the day it was
   born, the age it will live to and the day that falls on, and how many of them are old. Grown folk
-  age a year every three days. Works from the console.
+  age a year every five days. Works from the console.
 * `/village districts` — the nearest town's quarters: the plan in a line, how many buildings
   each quarter has, which works are at work, the homes in the smoke and din and the homes by the
   park, and how the park is coming on. Works from the console. `districts map` opens the books at
@@ -4295,8 +4295,8 @@ Every push to CI:
   register remembers the dead and the families; and a player buys a round in the
   tavern for the two in there, a coin a head;
 * ages its folk slowly (game tests `ag01` to `ag03`): founders raised today are eighteen
-  to forty-five and thirty days later ten years older, not sixty; a world saved before keeps
-  everyone's age; round birthdays come thirty days apart; and a folk dies in its sleep at the
+  to forty-five and fifty days later ten years older, not a hundred; a world saved before keeps
+  everyone's age; round birthdays come fifty days apart; and a folk dies in its sleep at the
   end of its years, told frail first;
 * checks how a village is doing (game test `t34`): contentment rising when the larder
   fills, bare hands slower than a wooden pick and wood slower than iron (ore slower

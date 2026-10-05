@@ -9,11 +9,11 @@ import java.util.UUID;
  * How long the town's folk have (/village lifespans, for ops and the smoke): each one's years, the
  * day it was born by them, the age it will live to and the day that falls on.
  *
- * <p>Grown folk age a year every third day (VillageFolkEntity.DAYS_A_YEAR), children six years to
+ * <p>Grown folk age a year every fifth day (VillageFolkEntity.DAYS_A_YEAR), children six years to
  * the day as ever. The founders come to the village eighteen to forty-five, so they do not all grow
  * old together, and each lives to between seventy and a hundred (a tenth more with Healers): a
- * founder seventy-five days to two hundred and forty-odd, a child born in the village a hundred and
- * fifty to two hundred and fifty. Nothing here changes anything; it only reads them out.
+ * founder a hundred and twenty-five days to four hundred-odd, a child born in the village two hundred
+ * and sixty to four hundred and fifteen. Nothing here changes anything; it only reads them out.
  */
 public final class Lifespans {
 

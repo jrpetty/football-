@@ -21,7 +21,7 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * Growing old slowly (VillageFolkEntity.ageYears, DAYS_A_YEAR): grown folk age a year every third
+ * Growing old slowly (VillageFolkEntity.ageYears, DAYS_A_YEAR): grown folk age a year every fifth
  * day, not two years a day, so a town's founders are not all dead inside a few weeks of play; the
  * founders come to the village eighteen to forty-five, spread out, so they do not grow old together;
  * children grow up in three days as ever. Each runs at once, in the tick it starts (the clock is
@@ -34,10 +34,10 @@ public class AgeingGameTests {
     private static final String EMPTY = "empty";
 
     /**
-     * Founders raised today are eighteen to forty-five, and thirty days on each is ten years older —
+     * Founders raised today are eighteen to forty-five, and fifty days on each is ten years older —
      * not sixty. Each has a season of play in it (seventy-five days to two hundred and fifty), and
      * a hundred and fifty folk come into the world grown have years spread over the whole span, on
-     * all three days of the year.
+     * all five days of the year.
      */
     @GameTest(template = EMPTY, timeoutTicks = 200, batch = "ag01_founders_age_slowly")
     public static void ag01_founders_age_slowly(GameTestHelper helper) {
@@ -72,7 +72,7 @@ public class AgeingGameTests {
         Kit.log("ag01 the founders on day " + (day + 1) + ": " + seen);
         for (String l : Lifespans.lines(founders.get(0).ownerId(), day)) Kit.log("ag01 " + l);
 
-        // Many come into the world grown: their years spread over eighteen to forty-five, and over all three days of a year.
+        // Many come into the world grown: their years spread over eighteen to forty-five, and over all five days of a year.
         int lo = Integer.MAX_VALUE, hi = Integer.MIN_VALUE;
         Set<Integer> ages = new HashSet<>(), phases = new HashSet<>();
         for (int i = 0; i < 150; i++) {
@@ -91,18 +91,18 @@ public class AgeingGameTests {
             + ", " + ages.size() + " different");
         helper.assertTrue(phases.size() == VillageFolkEntity.DAYS_A_YEAR, "their birthdays fall on every day of the year: " + phases);
 
-        // Thirty days on.
-        level.setDayTime(start + 30 * 24000L);
+        // Fifty days on.
+        level.setDayTime(start + 50 * 24000L);
         StringBuilder later = new StringBuilder();
         for (int i = 0; i < founders.size(); i++) {
             VillageFolkEntity f = founders.get(i);
             int now = f.ageYears();
             later.append(f.displayNameCap()).append(' ').append(was[i]).append(" -> ").append(now).append("; ");
-            helper.assertTrue(now == was[i] + 10, "thirty days on, ten years older (not sixty): " + f.displayNameCap()
+            helper.assertTrue(now == was[i] + 10, "fifty days on, ten years older (not a hundred): " + f.displayNameCap()
                 + " " + was[i] + " -> " + now);
-            helper.assertTrue(Birthdays.ageOn(f.bornDay(), day + 30) == now, "and its birthdays agree");
+            helper.assertTrue(Birthdays.ageOn(f.bornDay(), day + 50) == now, "and its birthdays agree");
         }
-        Kit.log("ag01 thirty days on: " + later);
+        Kit.log("ag01 fifty days on: " + later);
         level.setDayTime(start);
         helper.succeed();
     }
@@ -154,18 +154,18 @@ public class AgeingGameTests {
         helper.assertTrue(kid.isBaby() && kid.bornDay() == day - 2 && kid.ageYears() == 12,
             "a child saved then is the same child: " + kid.isBaby() + ", born " + kid.bornDay() + ", " + kid.ageYears());
         // And from here the old one ages at the new pace.
-        level.setDayTime(start + 30 * 24000L);
+        level.setDayTime(start + 50 * 24000L);
         int on = old.ageYears();
         level.setDayTime(start);
-        Kit.log("ag02 thirty days on the older save's sixty-year-old is " + on);
-        helper.assertTrue(on == 70, "thirty days on it is seventy, not a hundred and twenty: " + on);
+        Kit.log("ag02 fifty days on the older save's sixty-year-old is " + on);
+        helper.assertTrue(on == 70, "fifty days on it is seventy, not a hundred and sixty: " + on);
         helper.succeed();
     }
 
     /**
-     * The years by the day: eighteen the day it is grown and a year more every third day; a child
-     * six to the day. The round birthdays thirty days apart. A child born today lives a hundred and
-     * fifty to two hundred and fifty days. setAgeForTests makes a folk just so old; and a folk dies
+     * The years by the day: eighteen the day it is grown and a year more every fifth day; a child
+     * six to the day. The round birthdays fifty days apart. A child born today lives two hundred and
+     * sixty to four hundred and twenty days. setAgeForTests makes a folk just so old; and a folk dies
      * in its sleep at the end of its years, not a year before (the frailty told first).
      */
     @GameTest(template = EMPTY, timeoutTicks = 200, batch = "ag03_the_years_by_the_day")
@@ -175,21 +175,21 @@ public class AgeingGameTests {
         final int x = 372000, z = 50000;
         Kit.hold(level, x, z, 24);
         Kit.prepare(level, x, z, 24);
-        helper.assertTrue(VillageFolkEntity.DAYS_A_YEAR == 3, "a year every third day");
+        helper.assertTrue(VillageFolkEntity.DAYS_A_YEAR == 5, "a year every fifth day");
         helper.assertTrue(VillageFolkEntity.daysOldAt(18) == VillageFolkEntity.GROW_DAYS, "grown at eighteen, three days old");
         for (int y = 18; y <= 130; y++) {
             long d = VillageFolkEntity.daysOldAt(y);
             helper.assertTrue(VillageFolkEntity.grownYears(d) == y, y + " on the day it comes to it, not " + VillageFolkEntity.grownYears(d));
             if (y > 18) helper.assertTrue(VillageFolkEntity.grownYears(d - 1) == y - 1, "and " + (y - 1) + " the day before");
-            if (y > 18) helper.assertTrue(d - VillageFolkEntity.daysOldAt(y - 1) == VillageFolkEntity.DAYS_A_YEAR, "three days to a year");
+            if (y > 18) helper.assertTrue(d - VillageFolkEntity.daysOldAt(y - 1) == VillageFolkEntity.DAYS_A_YEAR, "five days to a year");
         }
         helper.assertTrue(VillageFolkEntity.childYears(0) == 0 && VillageFolkEntity.childYears(1) == 6
             && VillageFolkEntity.childYears(2) == 12 && VillageFolkEntity.childYears(5) == 17, "a child, six to the day, seventeen at most");
-        helper.assertTrue(Birthdays.ageOn(0, 2) == 12 && Birthdays.ageOn(0, 3) == 18 && Birthdays.ageOn(0, 3 + 66) == 40
-            && Birthdays.ageOn(0, 3 + 65) == 39, "the birthdays count the same years");
+        helper.assertTrue(Birthdays.ageOn(0, 2) == 12 && Birthdays.ageOn(0, 3) == 18 && Birthdays.ageOn(0, 3 + 110) == 40
+            && Birthdays.ageOn(0, 3 + 109) == 39, "the birthdays count the same years");
         long shortest = VillageFolkEntity.daysOldAt(70), longest = VillageFolkEntity.daysOldAt(100);
         Kit.log("ag03 one born in the village lives " + shortest + " to " + longest + " days");
-        helper.assertTrue(shortest >= 150 && longest <= 250, "a child born today lives a hundred and fifty to two hundred and fifty days: "
+        helper.assertTrue(shortest >= 260 && longest <= 420, "a child born today lives two hundred and sixty to four hundred and twenty days: "
             + shortest + " to " + longest);
 
         long start = (level.getDayTime() / 24000L) * 24000L + 600L;            // first light: the old pass in their sleep then
@@ -201,7 +201,7 @@ public class AgeingGameTests {
         f.setAgeForTests(40);
         long[] next = Birthdays.next(f, day + 1);
         helper.assertTrue(f.ageYears() == 40 && Birthdays.ageOn(f.bornDay(), day - 1) == 39, "forty today, thirty-nine yesterday: " + f.ageYears());
-        helper.assertTrue(next[0] == day + 30 && next[1] == 50, "fifty in thirty days: " + next[1] + " on day " + next[0] + " (today " + day + ")");
+        helper.assertTrue(next[0] == day + 50 && next[1] == 50, "fifty in fifty days: " + next[1] + " on day " + next[0] + " (today " + day + ")");
         f.setAgeForTests(62);
         helper.assertTrue(f.ageYears() == 62 && f.isOld(), "sixty-two, and old: " + f.ageYears());
         // The end of its years.

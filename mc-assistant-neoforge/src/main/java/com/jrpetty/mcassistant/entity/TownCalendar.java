@@ -26,7 +26,7 @@ import java.util.UUID;
  * common, and what of them is kept with the world.
  *
  * <p><b>The town's year.</b> Nothing in a folk's life measures a year: folk count their ages a
- * year to every three days once grown (six to the day, as children), so a year by their count is
+ * year to every five days once grown (six to the day, as children), so a year by their count is
  * three days — a feast every third evening. The town counts its own years by the weeks it already
  * keeps (the rest day, market day, the council's sitting, the feast): four of them, twenty-eight days.
  * Long enough that its Founding Day is an occasion, short enough that a town sees one every few

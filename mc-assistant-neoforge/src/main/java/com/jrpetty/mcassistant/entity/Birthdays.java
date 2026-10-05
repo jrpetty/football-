@@ -21,11 +21,11 @@ import java.util.function.Predicate;
 /**
  * Birthdays.
  *
- * <p>Folk count their years a year to every three days once they are grown (six to the day as
- * children: VillageFolkEntity.ageYears), so a birthday by their count comes round every third day —
+ * <p>Folk count their years a year to every five days once they are grown (six to the day as
+ * children: VillageFolkEntity.ageYears), so a birthday by their count comes round every fifth day —
  * too often to keep each one. What they keep are the round ones: the day a folk's years pass into a
  * new ten. A child born in the village keeps one in its childhood, the day it comes into double
- * figures (its second day); after that a grown folk keeps one every thirty days, at twenty, thirty,
+ * figures (its second day); after that a grown folk keeps one every fifty days, at twenty, thirty,
  * forty and on, as long as it lives. The day comes
  * from when it was born — or, for one who came to the village grown, from the years it came with —
  * and that is saved with it (its BornDay); the last birthday it kept is saved with the world, so
@@ -96,7 +96,7 @@ public final class Birthdays {
     /** The next day its years pass into a new ten (today, if today is the day), and the age it will be. */
     public static long[] next(VillageFolkEntity f, long day) {
         long born = born(f);
-        // [ageing] Ten years ahead at the most (thirty days, at a year in three), and a few days over.
+        // [ageing] Ten years ahead at the most (fifty days, at a year in five), and a few days over.
         for (long d = Math.max(day, born + 1); d <= day + 10L * VillageFolkEntity.DAYS_A_YEAR + 10; d++) {
             if (ageOn(born, d) / 10 > ageOn(born, d - 1) / 10) return new long[]{ d, ageOn(born, d) };
         }
