@@ -2526,9 +2526,12 @@ public final class Villages {
                 BlockPos ground = groundFor(level, x, z, hx, hz, true, heartGround, laps,
                     great ? 4 : 2, whyNot(villageId));
                 if (ground == null) continue;
+                // [districts] A park's lawn at the middle height of its lot, cut and filled to it (ParkGround).
+                ground = ParkGround.floorFor(level, project, ground);
                 valid++;
                 int score = com.jrpetty.mcassistant.entity.goal.BuildGoal.fillCells(level, ground, back, half[0], half[1]).size()
-                    + 6 * index + Quarters.misfit(villageId, project, lot);     // out of its own quarter: the worse
+                    + 6 * index + Quarters.misfit(villageId, project, lot)      // out of its own quarter: the worse
+                    + ParkGround.roughness(level, project, ground);             // [districts] a park: earth to cut, a drop's edge
                 if (score < bestScore) {
                     bestScore = score;
                     best = lot;

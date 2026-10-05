@@ -50,7 +50,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * handful of bone meal now and then, if the stores can spare it); paths of trodden earth round the
  * fountain and out to the ways in, paved in stone bricks from the Iron Age; the fountain's rough
  * stone dressed; the torches swapped for lanterns once the smith makes them; whatever flowers and
- * water the builder had none of.
+ * water the builder had none of. Its ground is made level before it is laid out, and its fountain kept
+ * from spilling a drop (ParkGround).
  *
  * <p>Folk spend their free time there. Some evenings (more often the ones who live by it, the
  * walkers, the readers, the sociable and the easygoing) and some breaks, a folk walks over, sits on
@@ -103,6 +104,13 @@ public final class Park {
 
     public static Layout layout(Ledger.Building b) {
         return layout(b.anchor(), b.facing());
+    }
+
+    /** The park laid out so far (built, or being built) whose fountain has water here, or null. */
+    @Nullable
+    static Layout layoutWithWater(BlockPos p) {
+        for (Layout l : LAYOUTS.values()) if (l.water().contains(p)) return l;
+        return null;
     }
 
     private static Layout lay(BlockPos anchor, Direction facing) {
@@ -202,13 +210,17 @@ public final class Park {
     public static String tendOne(ServerLevel level, Villages.Village v, Ledger.Building b, int budget) {
         Layout l = layout(b);
         boolean iron = Villages.ageOf(v.id()).ordinal() >= Villages.Age.IRON.ordinal();
-        // The fountain's water: a bucket out of the stores, filled where the water never runs dry.
+        // A stone of the fountain gone (its floor, its rim, its pillar): put back first (ParkGround).
+        String mended = ParkGround.mend(level, v, l, budget);
+        if (mended != null) return mended;
+        // The fountain's water: a bucket out of the stores, filled where the water never runs dry; poured only
+        // where it will stay (ParkGround.holds: a floor under it and a wall round it).
         List<BlockPos> dry = new ArrayList<>();
         for (BlockPos p : l.water()) {
             BlockState st = level.getBlockState(p);
             FluidState fl = level.getFluidState(p);
             if (fl.is(FluidTags.WATER) && fl.isSource()) continue;
-            if (st.isAir() || (fl.is(FluidTags.WATER) && !fl.isSource())) dry.add(p);
+            if ((st.isAir() || (fl.is(FluidTags.WATER) && !fl.isSource())) && ParkGround.holds(level, l, p)) dry.add(p);
         }
         // The pillar's spring last: it wants the basin under it first.
         dry.sort(java.util.Comparator.comparingInt(BlockPos::getY));
@@ -226,6 +238,9 @@ public final class Park {
                 if (n > 0) return "filled the park's fountain";
             }
         }
+        // Its ground: the low ground round it banked up in steps, a bare patch of its lawn turfed (ParkGround).
+        String banked = ParkGround.bank(level, v, l, budget);
+        if (banked != null) return banked;
         // A tree in each corner: a sapling out of the stores; bone meal on one, if the stores can spare it.
         for (BlockPos t : l.trees()) {
             BlockState here = level.getBlockState(t);
@@ -847,8 +862,8 @@ public final class Park {
 
     // ------------------------------------------------------------------ for the photographs and the tests
 
-    /** /village districts park now: the park put up at once on its lot (as the showcase does), its trees grown
-     *  and paths laid, and everybody off work sent to it. Prints "PARK x y z facing dir". */
+    /** /village districts park now: the park put up at once on its lot (as the showcase does), its ground made
+     *  level first, its trees grown and paths laid, and everybody off work sent to it. Prints "PARK x y z facing dir". */
     static int now(CommandContext<CommandSourceStack> ctx) {
         Villages.Village v = Quarters.near(ctx);
         if (v == null) {
@@ -864,22 +879,37 @@ public final class Park {
                 ctx.getSource().sendFailure(Component.literal("No lot for a park yet: the ground is still coming in, or the homes quarter is full."));
                 return 0;
             }
-            BuildGoal.stamp(level, STRUCTURE, site.anchor(), site.facing(), 0,
-                com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
-            Villages.noteProject(v.id(), STRUCTURE, level.getGameTime());
-            have = parks(v.id());
-            if (have.isEmpty()) {
-                Ledger.built(v.id(), STRUCTURE, site.anchor(), site.facing());
-                have = parks(v.id());
-            }
+            b = putUp(level, v.id(), site.anchor(), site.facing());
+        } else {
+            b = have.get(0);
+            grow(level, b);
         }
-        b = have.get(0);
-        grow(level, b);
         int sent = callEveryone(level, v);
         String text = "PARK " + b.anchor().getX() + " " + b.anchor().getY() + " " + b.anchor().getZ() + " facing " + b.facing().getName()
             + " in " + Quarters.districtOf(v.id(), v.centre(), b).words + "; " + sent + " folk sent to it";
         ctx.getSource().sendSuccess(() -> Component.literal(text), false);
         return 1;
+    }
+
+    /**
+     * A park put up at once on its lot, for nothing, as the showcase puts a building up (the photographs, the
+     * tests): its ground made level first as its builder and keepers would leave it (ParkGround.levelNow),
+     * then the drawing, then grown; any water that would not stay in the fountain taken up again.
+     */
+    public static Ledger.Building putUp(ServerLevel level, UUID village, BlockPos anchor, Direction facing) {
+        ParkGround.levelNow(level, anchor);
+        BuildGoal.stamp(level, STRUCTURE, anchor, facing, 0,
+            com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+        Villages.noteProject(village, STRUCTURE, level.getGameTime());
+        List<Ledger.Building> have = parks(village);
+        if (have.isEmpty()) {
+            Ledger.built(village, STRUCTURE, anchor, facing);
+            have = parks(village);
+        }
+        Ledger.Building b = have.get(0);
+        grow(level, b);
+        ParkGround.stopLeaks(level, layout(b));
+        return b;
     }
 
     /** The park finished at once, for nothing (the photographs, the tests): trees grown, paths laid, the spring running. */

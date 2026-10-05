@@ -5,7 +5,9 @@ import com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock;
 import com.jrpetty.mcassistant.entity.AssistantEntity.StationTask;
 import com.jrpetty.mcassistant.entity.Job;
 import com.jrpetty.mcassistant.entity.Park;
+import com.jrpetty.mcassistant.entity.ParkGround;
 import com.jrpetty.mcassistant.entity.Quarters;
+import com.jrpetty.mcassistant.entity.Terraform;
 import com.jrpetty.mcassistant.entity.VillageFolkEntity;
 import com.jrpetty.mcassistant.entity.Villages;
 import com.jrpetty.mcassistant.entity.ZoneChests;
@@ -44,7 +46,8 @@ import java.util.UUID;
  * in quarters of their own, an old town's smeltery decides where its crafts go, a home beside a
  * working smeltery is the gloomier and the cheaper while one by the park is the happier and the
  * dearer, the builders put the park up out of what they carry and its keepers plant it and lay its
- * paths, and folk off work of an evening go and sit in it.
+ * paths, and folk off work of an evening go and sit in it. A park on rough ground gets a level lawn, and
+ * a fountain that keeps its water.
  *
  * <p>All between x 280000 and 287000, z 50000, each on its own ground in a batch of its own.
  */
@@ -300,6 +303,12 @@ public class DistrictGameTests {
      * up: the fountain's basin, its pillar and its water, the benches, the lamps. Then its keepers, out
      * of the stores, plant a tree in its corners and lay its paths.
      *
+     * <p>Its lot is made rough first: a bank of earth two and three high over half of it (and out past its
+     * edge), and a hollow three deep under one corner (out past its edge too). The builder cuts the bank
+     * away and fills the hollow before a stone is laid, so the lawn is level and firm all over; the bank
+     * round it is eased to steps of one and two, and the keepers bank the hollow round it up the same way.
+     * A while after, not a drop of the fountain's water is anywhere but in the fountain.
+     *
      * <p>The clock runs from mid-morning to the afternoon and on to the next mid-morning: no morning
      * assembly (it calls everybody, and what each was doing waits), no dawn bell, no night.
      *
@@ -311,7 +320,7 @@ public class DistrictGameTests {
      * would: at the stores now and then, it looks at the village's work by the real path (the project, its
      * lot, whether the stores pay, stocking up, setting off).
      */
-    @GameTest(template = EMPTY, timeoutTicks = 16400, batch = "dt03_park_goes_up")
+    @GameTest(template = EMPTY, timeoutTicks = 20400, batch = "dt03_park_goes_up")
     public static void dt03_park_goes_up(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         clean(level);
@@ -348,6 +357,10 @@ public class DistrictGameTests {
         District d = at(village, heart, site.anchor());
         Kit.log("dt03 the park's lot: " + site.anchor().toShortString() + " facing " + site.facing() + ", " + d);
         e.that(d == District.HOMES, "the park goes among the homes: " + d);
+        // Its lot made rough: a bank over half of it, a hollow under a corner.
+        BlockPos a = site.anchor();
+        rough(level, a);
+        Kit.log("dt03 the lot made rough: " + groundLine(level, a));
         // The makings, in the stores at the heart.
         stores(level, heart.offset(3, 0, 3), new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.COBBLESTONE, 64),
             new ItemStack(Items.STONE_BRICKS, 64), new ItemStack(Items.OAK_LOG, 32), new ItemStack(Items.OAK_PLANKS, 64),
@@ -359,6 +372,7 @@ public class DistrictGameTests {
         // one up), at the stores, looking at the village's work.
         builder.setJob(StationTask.FARM);
         long[] looked = { level.getGameTime() };
+        long[] stoodAt = { -1L };
         lookAtTheWork(level, village, heart, builder, "at the start");
         helper.onEachTick(() -> {
             long t = helper.getTick();
@@ -383,10 +397,25 @@ public class DistrictGameTests {
                     looked[0] = level.getGameTime();
                     lookAtTheWork(level, village, heart, builder, "@" + t);
                 }
-                if (t >= 16000) helper.fail("the park was not built: " + Villages.builtList(village) + ", next " + next + " — "
+                if (t >= 20000) helper.fail("the park was not built: " + Villages.builtList(village) + ", next " + next + " — "
                     + builder.debugLine());
                 return;
             }
+            if (stoodAt[0] >= 0) {
+                // A while after: the fountain's water is in the fountain and nowhere else.
+                if (t < stoodAt[0] + 400) return;
+                List<String> stray = strayWater(level, a);
+                Kit.log("dt03 " + (t - stoodAt[0]) + " ticks after: water outside the fountain " + stray + "; " + groundLine(level, a));
+                e.that(stray.isEmpty(), "no water outside the fountain: " + stray);
+                helper.assertTrue(e.clean(), e.summary());
+                helper.succeed();
+                return;
+            }
+            stoodAt[0] = t;
+            // Its ground: the lawn level and firm all over, no earth left standing on it.
+            List<String> lawn = lawnFaults(level, a);
+            Kit.log("dt03 the lawn: " + (lawn.isEmpty() ? "level and firm" : lawn) + " — " + groundLine(level, a));
+            e.that(lawn.size() <= 2, "the lawn is level and firm: " + lawn);
             int seats = 0, water = 0, stone = 0, lights = 0;
             for (Park.Seat s : l.seats()) if (level.getBlockState(s.at()).getBlock() instanceof StairBlock) seats++;
             for (BlockPos p : l.water()) if (level.getFluidState(p).is(FluidTags.WATER) && level.getFluidState(p).isSource()) water++;
@@ -402,12 +431,12 @@ public class DistrictGameTests {
             // Its keepers: saplings, a bucket and flowers in the stores; the water, the trees and the
             // paths a visit at a time (the builder's water, if it had none, from the pond).
             stores(level, heart.offset(-3, 0, 3), new ItemStack(Items.OAK_SAPLING, 6), new ItemStack(Items.BIRCH_SAPLING, 2),
-                new ItemStack(Items.BUCKET, 2), new ItemStack(Items.DANDELION, 8));
+                new ItemStack(Items.BUCKET, 2), new ItemStack(Items.DANDELION, 8), new ItemStack(Items.DIRT, 64));
             Villages.forgetStores(village);
             Villages.forgetStock();
             List<String> done = new ArrayList<>();
             Ledger.Building b = Park.parks(village).get(0);
-            for (int i = 0; i < 32; i++) {
+            for (int i = 0; i < 40; i++) {
                 String what = Park.tendOne(level, v, b, 8);
                 if (what == null) break;
                 done.add(what);
@@ -425,8 +454,10 @@ public class DistrictGameTests {
             e.that(water >= l.water().size() - 1, "the fountain holds water: " + water);
             e.that(trees >= 2, "trees planted in its corners: " + trees);
             e.that(paths >= l.paths().size() / 2, "its paths laid: " + paths);
-            helper.assertTrue(e.clean(), e.summary());
-            helper.succeed();
+            // The ground round it in steps: none more than a block above or below the lawn a step out, two at two.
+            List<String> edges = edgeFaults(level, a);
+            Kit.log("dt03 the ground round it: " + (edges.isEmpty() ? "in steps" : edges));
+            e.that(edges.size() <= 2, "the ground round it eased in steps: " + edges);
         });
     }
 
@@ -440,6 +471,199 @@ public class DistrictGameTests {
         boolean set = hand.villageWorkForTests();
         Kit.log("dt03 " + when + " a hand at the stores looks at the village's work: set off " + set + ", next "
             + Villages.nextProject(village) + ", set aside " + Villages.setAside(village) + " — " + hand.debugLine());
+    }
+
+    /** A lot made rough (dt03): a bank of earth two high, then three, over the half of it toward +z and out past
+     *  its edge; a hollow three deep (on earth) under its corner toward -x, -z, out past its edge too. */
+    private static void rough(ServerLevel level, BlockPos a) {
+        BlockState grass = Blocks.GRASS_BLOCK.defaultBlockState(), dirt = Blocks.DIRT.defaultBlockState(), air = Blocks.AIR.defaultBlockState();
+        for (int dx = -7; dx <= 7; dx++) {
+            for (int dz = 2; dz <= 7; dz++) {
+                int high = dz <= 4 ? 2 : 3;
+                level.setBlock(a.offset(dx, -1, dz), dirt, 2);
+                for (int dy = 0; dy < high; dy++) level.setBlock(a.offset(dx, dy, dz), dy == high - 1 ? grass : dirt, 2);
+            }
+        }
+        for (int dx = -7; dx <= -2; dx++) {
+            for (int dz = -7; dz <= -2; dz++) {
+                level.setBlock(a.offset(dx, -4, dz), dirt, 2);
+                for (int dy = -3; dy <= -1; dy++) level.setBlock(a.offset(dx, dy, dz), air, 2);
+            }
+        }
+    }
+
+    /** The first free block over a column's firm ground, looking down from {@code from} (through trees and plants). */
+    private static int firstFree(ServerLevel level, int x, int z, int from) {
+        for (int y = from; y > level.getMinBuildHeight(); y--) {
+            BlockState st = level.getBlockState(new BlockPos(x, y, z));
+            if (st.blocksMotion() && !st.is(BlockTags.LEAVES) && !st.is(BlockTags.LOGS) && !(st.getBlock() instanceof SaplingBlock)) return y + 1;
+        }
+        return level.getMinBuildHeight();
+    }
+
+    /** The ground's height (first free block, against the lawn's) along the lot's middle row and across it, for the log. */
+    private static String groundLine(ServerLevel level, BlockPos a) {
+        StringBuilder sb = new StringBuilder("across");
+        for (int d = -7; d <= 7; d++) sb.append(' ').append(firstFree(level, a.getX() + d, a.getZ() - 4, a.getY() + 12) - a.getY());
+        sb.append("; along");
+        for (int d = -7; d <= 7; d++) sb.append(' ').append(firstFree(level, a.getX() - 4, a.getZ() + d, a.getY() + 12) - a.getY());
+        return sb.toString();
+    }
+
+    /** What is wrong with a park's lawn: a column with no firm ground under it, or earth standing on it. */
+    private static List<String> lawnFaults(ServerLevel level, BlockPos a) {
+        List<String> out = new ArrayList<>();
+        for (int dx = -ParkGround.HALF; dx <= ParkGround.HALF; dx++) {
+            for (int dz = -ParkGround.HALF; dz <= ParkGround.HALF; dz++) {
+                if (!level.getBlockState(a.offset(dx, -1, dz)).blocksMotion()) out.add(dx + "," + dz + " hollow");
+                for (int dy = 0; dy <= 3; dy++) {
+                    if (Terraform.earth(level.getBlockState(a.offset(dx, dy, dz)))) { out.add(dx + "," + dz + " earth at +" + dy); break; }
+                }
+            }
+        }
+        return out;
+    }
+
+    /** The ground round a park out of step: a column a step out more than one block above or below the lawn, two out
+     *  more than two (with its height against the lawn's). */
+    private static List<String> edgeFaults(ServerLevel level, BlockPos a) {
+        List<String> out = new ArrayList<>();
+        int reach = ParkGround.HALF + ParkGround.EDGE;
+        for (int dx = -reach; dx <= reach; dx++) {
+            for (int dz = -reach; dz <= reach; dz++) {
+                int k = ParkGround.ring(a, a.getX() + dx, a.getZ() + dz);
+                if (k == 0) continue;
+                int h = firstFree(level, a.getX() + dx, a.getZ() + dz, a.getY() + 12) - a.getY();
+                if (h < -k || h > k) out.add(dx + "," + dz + ":" + h);
+            }
+        }
+        return out;
+    }
+
+    /** Water round a park that is not in its fountain (the basin, its pillar and the spring's fall). */
+    private static List<String> strayWater(ServerLevel level, BlockPos a) {
+        List<String> out = new ArrayList<>();
+        for (int dx = -9; dx <= 9; dx++) {
+            for (int dz = -9; dz <= 9; dz++) {
+                for (int dy = -8; dy <= 4; dy++) {
+                    boolean fountain = Math.abs(dx) <= ParkGround.BASIN && Math.abs(dz) <= ParkGround.BASIN && dy >= 0 && dy <= 2;
+                    if (!fountain && !level.getFluidState(a.offset(dx, dy, dz)).isEmpty()) out.add(dx + "," + dy + "," + dz);
+                }
+            }
+        }
+        return out;
+    }
+
+    /** Its fountain's water that is standing water (a source), of all of it. */
+    private static int fountainFull(ServerLevel level, Park.Layout l) {
+        int n = 0;
+        for (BlockPos p : l.water()) if (level.getFluidState(p).is(FluidTags.WATER) && level.getFluidState(p).isSource()) n++;
+        return n;
+    }
+
+    // ============================================================ a park on a hillside, its fountain kept tight
+
+    /**
+     * A park put up at once (the photographs' way: Park.putUp) on a hillside that rises a block every three to
+     * the east and drops four more off its south-west corner: its lawn is laid at the middle height of the
+     * ground, cut and filled level and firm, and the ground round it eased and banked in steps. Its fountain is
+     * full and not a drop of its water is anywhere else. Then a stone of its rim is knocked out: the fountain is
+     * emptied before its water can run anywhere (and the little that ran dries up); its keepers put the stone
+     * back out of the stores and fill it again from the pond, and it holds.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 1600, batch = "dt05_park_on_a_hillside")
+    public static void dt05_park_on_a_hillside(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        clean(level);
+        level.setDayTime(5000);
+        int x = 286000, z = 50000;
+        Kit.hold(level, x, z, 64);
+        Kit.prepare(level, x, z, 64);
+        BlockPos heart = Kit.surface(level, x, z);
+        flatten(level, heart, 56);
+        Kit.pond(level, x - 15, z + 15, 2);                                      // a spring for its keepers' buckets
+        VillageFolkEntity founder = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(founder != null, "a village");
+        UUID village = founder.ownerId();
+        Villages.Village v = Villages.get(village);
+        // The hillside, well east of the heart (clear of the village's own works).
+        BlockPos spot = heart.offset(40, 0, 0);
+        int base = heart.getY() + 6;
+        BlockState grass = Blocks.GRASS_BLOCK.defaultBlockState(), dirt = Blocks.DIRT.defaultBlockState(), air = Blocks.AIR.defaultBlockState();
+        for (int dx = -12; dx <= 12; dx++) {
+            for (int dz = -12; dz <= 12; dz++) {
+                int free = base + Math.floorDiv(dx, 3) - (dx <= -2 && dz >= 2 ? 4 : 0);
+                for (int y = heart.getY() - 3; y <= base + 14; y++) {
+                    level.setBlock(new BlockPos(spot.getX() + dx, y, spot.getZ() + dz), y < free - 1 ? dirt : y == free - 1 ? grass : air, 2);
+                }
+            }
+        }
+        BlockPos ground = new BlockPos(spot.getX(), BuildGoal.groundTop(level, spot.getX(), spot.getZ()), spot.getZ());
+        BlockPos a = ParkGround.floorFor(level, Park.STRUCTURE, ground);
+        Kit.log("dt05 the hillside: " + groundLine(level, a) + "; the lawn at " + a.toShortString() + " (" + (a.getY() - base)
+            + " against the hill's middle), roughness " + ParkGround.roughness(level, Park.STRUCTURE, a));
+        helper.assertTrue(a.getY() == base, "the lawn at the middle height of the hillside: " + (a.getY() - base));
+        Ledger.Building b = Park.putUp(level, village, a, Direction.NORTH);
+        Park.Layout l = Park.layout(b);
+        List<String> lawn = lawnFaults(level, a), edges = edgeFaults(level, a);
+        Kit.log("dt05 put up: lawn " + (lawn.isEmpty() ? "level and firm" : lawn) + "; round it " + (edges.isEmpty() ? "in steps" : edges)
+            + "; the fountain " + fountainFull(level, l) + "/" + l.water().size() + ", tight " + ParkGround.sound(level, l)
+            + " — " + groundLine(level, a));
+        Kit.Expect e = new Kit.Expect();
+        e.that(lawn.isEmpty(), "the lawn is level and firm: " + lawn);
+        e.that(edges.isEmpty(), "the ground round it in steps: " + edges);
+        e.that(ParkGround.sound(level, l), "the fountain's basin is tight");
+        BlockPos rim = l.centre().offset(ParkGround.BASIN, 0, 0);
+        long[] knocked = { -1L };
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (knocked[0] < 0) {
+                if (t < 300) return;
+                // Full, and not a drop of it anywhere else.
+                List<String> stray = strayWater(level, a);
+                int full = fountainFull(level, l);
+                Kit.log("dt05 @" + t + ": the fountain " + full + "/" + l.water().size() + ", water outside it " + stray);
+                e.that(full == l.water().size(), "the fountain is full: " + full);
+                e.that(stray.isEmpty(), "no water outside the fountain: " + stray);
+                // A stone of its rim knocked out.
+                level.setBlock(rim, Blocks.AIR.defaultBlockState(), 3);
+                knocked[0] = t;
+                Kit.log("dt05 @" + t + " a stone of the rim knocked out at " + rim.toShortString());
+                return;
+            }
+            long since = t - knocked[0];
+            if (since == 40) {
+                int full = fountainFull(level, l);
+                Kit.log("dt05 @" + t + ": the fountain " + full + "/" + l.water().size() + " (emptied, it would not hold)");
+                e.that(full == 0, "the leaking fountain is emptied at once: " + full + " still in it");
+            } else if (since == 160) {
+                List<String> stray = strayWater(level, a);
+                Kit.log("dt05 @" + t + ": water outside the fountain " + stray);
+                e.that(stray.isEmpty(), "what ran out has dried up: " + stray);
+                // Its keepers: a stone and buckets in the stores.
+                stores(level, heart.offset(3, 0, 3), new ItemStack(Items.STONE_BRICKS, 8), new ItemStack(Items.BUCKET, 4));
+                Villages.forgetStores(village);
+                Villages.forgetStock();
+                List<String> done = new ArrayList<>();
+                for (int i = 0; i < 8; i++) {
+                    String what = Park.tendOne(level, v, b, 8);
+                    if (what == null) break;
+                    done.add(what);
+                }
+                int full = fountainFull(level, l);
+                Kit.log("dt05 the keepers: " + done + "; the rim " + level.getBlockState(rim) + ", the fountain " + full + "/"
+                    + l.water().size() + ", tight " + ParkGround.sound(level, l));
+                e.that(level.getBlockState(rim).blocksMotion(), "the rim's stone is put back");
+                e.that(full == l.water().size(), "the fountain is filled again: " + full);
+            } else if (since == 460) {
+                List<String> stray = strayWater(level, a);
+                Kit.log("dt05 @" + t + ": the fountain " + fountainFull(level, l) + "/" + l.water().size() + ", water outside it " + stray);
+                e.that(stray.isEmpty(), "and it holds: " + stray);
+                e.that(fountainFull(level, l) == l.water().size(), "still full");
+                helper.assertTrue(e.clean(), e.summary());
+                helper.succeed();
+            }
+        });
     }
 
     // ============================================================ an evening in the park

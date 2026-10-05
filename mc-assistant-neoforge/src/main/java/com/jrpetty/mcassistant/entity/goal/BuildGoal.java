@@ -422,7 +422,8 @@ public class BuildGoal extends Goal {
         // cell in order of distance had the builder crossing it and back for every block).
         this.plan.sort(java.util.Comparator
             .comparingInt((Placement p) -> p.part() == Part.CLEAR ? 0 : finishing(p) ? 2 : 1)
-            .thenComparingInt((Placement p) -> p.pos().getY())
+            // [districts] (A park's ground is cut from the top down, so no sand is left to fall into the cut: ParkGround.)
+            .thenComparingInt((Placement p) -> com.jrpetty.mcassistant.entity.ParkGround.digging(p) ? -p.pos().getY() : p.pos().getY())
             .thenComparingInt((Placement p) -> p.pos().getZ())
             .thenComparingInt(p -> (p.pos().getZ() & 1) == 0 ? p.pos().getX() : -p.pos().getX()));
 
@@ -489,6 +490,11 @@ public class BuildGoal extends Goal {
                     if (isInTheWay(assistant.level(), c, assistant.level().getBlockState(c))) plan.add(new Placement(c, Part.CLEAR));
                 }
             }
+        }
+        // [districts] A park's lot is cut and filled to one level, its edges eased, before a stone of it is laid
+        // (entity/ParkGround): a lawn on a hillside is no lawn, and its fountain's water ran out under it.
+        if (com.jrpetty.mcassistant.entity.Park.STRUCTURE.equals(structure)) {
+            com.jrpetty.mcassistant.entity.ParkGround.addTo(assistant.level(), base, facing, plan);
         }
     }
 
@@ -703,6 +709,8 @@ public class BuildGoal extends Goal {
             // so it is only asked whether there is still a trunk or a leaf there.)
             if (p.part() == Part.CLEAR) {
                 if (st.is(net.minecraft.tags.BlockTags.LOGS) || isNaturalLeaves(st)) { target = p; break; }
+                // [districts] Earth above a park's lawn, still to be dug away (entity/ParkGround).
+                if (com.jrpetty.mcassistant.entity.ParkGround.dig(p, st)) { target = p; break; }
             } else if (soft(st)) {
                 if (!assistant.getBoundingBox().intersects(new net.minecraft.world.phys.AABB(p.pos()))) {
                     target = p;
@@ -846,6 +854,8 @@ public class BuildGoal extends Goal {
         }
         if (part == Part.WATER) {
             // Water for a well: a bucket of it poured in, the bucket kept.
+            // [districts] Into a park's fountain only where it will stay: a floor under it, a wall round it (entity/ParkGround).
+            if (!com.jrpetty.mcassistant.entity.ParkGround.mayPour(assistant.level(), building, pos)) { cursor++; return; }
             if (assistant.removeMatching(itemFor(part), 1) < 1) { cursor++; return; }
             ItemStack left = assistant.insertItem(new ItemStack(Items.BUCKET));
             if (!left.isEmpty()) net.minecraft.world.level.block.Block.popResource(assistant.level(), pos, left);
