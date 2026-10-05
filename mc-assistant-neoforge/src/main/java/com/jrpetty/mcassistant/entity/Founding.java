@@ -674,8 +674,10 @@ public final class Founding extends SavedData {
                 int i = g.order[s.goodCursor];
                 byte k = g.kind[i];
                 int dx = g.dx(i), dz = g.dz(i);
-                if (g.target[i] != s.level || (k != FoundingPlan.LAND && k != FoundingPlan.FILL && k != FoundingPlan.OUTSIDE)
-                        || !FoundingPlan.levelled(dx, dz, s.radius, s.seed)) {
+                // The square, and every column of the edge the plan worked (cut or built up).
+                boolean square = FoundingPlan.levelled(dx, dz, s.radius, s.seed);
+                boolean worked = square ? g.target[i] == s.level : g.target[i] != g.ground[i];
+                if (!worked || (k != FoundingPlan.LAND && k != FoundingPlan.FILL && k != FoundingPlan.OUTSIDE)) {
                     s.goodCursor++;
                     continue;
                 }
@@ -683,11 +685,13 @@ public final class Founding extends SavedData {
                 LevelChunk chunk = level.getChunkSource().getChunkNow(x >> 4, z >> 4);
                 if (chunk == null) return false;                   // held, but not back yet: next tick
                 s.goodCursor++;
-                int y = Terraform.groundY(level, x, z);
+                int y = Terraform.groundY(level, x, z), want = g.target[i];
                 // (A shaft to nowhere is not filled from the bottom of the world.)
-                if (y == Integer.MIN_VALUE || Math.abs(y - s.level) > 48) continue;
-                if (!Terraform.wantsWork(level, chunk, x, z, y, s.level, s.surface)) continue;
-                if (Terraform.shape(level, chunk, x, z, y, s.level, true, s.surface) > 0) s.goodMended++;
+                if (y == Integer.MIN_VALUE || Math.abs(y - want) > 48) continue;
+                // The edge in whatever each column was, as the levelling dressed it; the square in the town's soil.
+                Block top = !square && s.tops != null && s.tops[i] > 0 ? Terraform.top(s.tops[i]) : s.surface;
+                if (!Terraform.wantsWork(level, chunk, x, z, y, want, top, square)) continue;
+                if (Terraform.shape(level, chunk, x, z, y, want, square, top) > 0) s.goodMended++;
             }
             s.goodMendedAll += s.goodMended;
             LOG.info("[MCA-FOUND] looked the square over again ({} of {}): {} columns mended", s.goodPass + 1, GOOD_PASSES, s.goodMended);
