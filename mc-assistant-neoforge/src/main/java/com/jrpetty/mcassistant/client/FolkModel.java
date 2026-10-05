@@ -45,7 +45,7 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
     public static final String[] TRADES = {
         "none", "farmer", "lumberjack", "miner", "rancher",
         "guard", "smelter", "fisher", "storekeeper", "hauler",
-        "blacksmith", "tailor", "beekeeper", "brewer", "enchanter", "cook", "shopkeeper", "scout",
+        "blacksmith", "tailor", "beekeeper", "brewer", "enchanter", "cook", "shopkeeper", "scout", "hunter",
     };
 
     /** Which part each trade wears: {part, the part it hangs from, the trade}. */
@@ -127,6 +127,11 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         {"scout_cape", "body", "scout"},
         {"scout_satchel", "body", "scout"},
         {"scout_spyglass", "body", "scout"},
+        {"hunter_hood", "head", "hunter"},
+        {"hunter_mantle", "body", "hunter"},
+        {"hunter_quiver", "body", "hunter"},
+        {"hunter_fletch", "body", "hunter"},
+        {"hunter_knife", "body", "hunter"},
         // END GENERATED WEARERS
     };
 
@@ -253,6 +258,11 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         body.addOrReplaceChild("scout_cape", CubeListBuilder.create().texOffs(64, 20).addBox(-4.5F, 0.0F, 3.3F, 9.0F, 16.0F, 1.0F), PartPose.ZERO);
         body.addOrReplaceChild("scout_satchel", CubeListBuilder.create().texOffs(100, 0).addBox(3.8F, 7.0F, -2.0F, 2.0F, 5.0F, 4.0F), PartPose.ZERO);
         body.addOrReplaceChild("scout_spyglass", CubeListBuilder.create().texOffs(114, 0).addBox(-5.0F, 7.0F, -1.0F, 1.0F, 4.0F, 1.0F), PartPose.ZERO);
+        head.addOrReplaceChild("hunter_hood", CubeListBuilder.create().texOffs(64, 0).addBox(-4.0F, -10.0F, -4.0F, 8.0F, 10.0F, 8.0F, new CubeDeformation(0.75F)), PartPose.ZERO);
+        body.addOrReplaceChild("hunter_mantle", CubeListBuilder.create().texOffs(64, 20).addBox(-4.5F, -0.5F, -3.5F, 9.0F, 4.0F, 7.0F, new CubeDeformation(0.3F)), PartPose.ZERO);
+        body.addOrReplaceChild("hunter_quiver", CubeListBuilder.create().texOffs(100, 0).addBox(-1.5F, -1.0F, 0.0F, 3.0F, 10.0F, 2.0F), PartPose.offsetAndRotation(0.0F, 2.0F, 3.4F, 0.0F, 0.0F, 0.35F));
+        body.addOrReplaceChild("hunter_fletch", CubeListBuilder.create().texOffs(112, 0).addBox(-1.0F, -4.0F, 0.5F, 2.0F, 3.0F, 1.0F), PartPose.offsetAndRotation(0.0F, 2.0F, 3.4F, 0.0F, 0.0F, 0.35F));
+        body.addOrReplaceChild("hunter_knife", CubeListBuilder.create().texOffs(100, 14).addBox(-5.0F, 8.0F, -1.0F, 1.0F, 4.0F, 1.0F), PartPose.ZERO);
         return LayerDefinition.create(mesh, 128, 128);
         // END GENERATED GEOMETRY
     }

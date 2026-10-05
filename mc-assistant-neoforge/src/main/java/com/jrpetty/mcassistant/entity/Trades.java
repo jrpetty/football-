@@ -139,6 +139,12 @@ public final class Trades {
                 List.of(need("food for the road", s -> s.get(net.minecraft.core.component.DataComponents.FOOD) != null, 4, "the stores"),
                     need("torches to mark the way", s -> s.is(Items.TORCH), 2, "the stores")),
                 "what lies beyond the fields: neighbours for the envoys, ore for the miners, a place for the next village");
+            case HUNT -> new Trade("I hunt out past the fields: cows, pigs, sheep, chickens and rabbits gone wild — never the"
+                    + " village's own herd, never the young, and never the last pair of a kind, so there's always game next year",
+                List.of(),
+                List.of(need("arrows", s -> s.is(Items.ARROW), 8, "the smith and the fletcher's feathers"),
+                    need("a bow or a sword", s -> s.is(Items.BOW) || s.is(net.minecraft.tags.ItemTags.SWORDS), 1, "the smith")),
+                "meat for the larder and the café, leather and wool for the tailor, feathers for arrows");
             case NONE -> new Trade("I'm between trades just now", List.of(), List.of(), "whatever the village needs a hand with");
         };
     }
@@ -294,6 +300,12 @@ public final class Trades {
                     kit.add(new ItemStack(Items.LOOM));
                 }
             }
+            // The first hunter's bow and a quiver of arrows: string is spiders' or wool's, and a
+            // young village has neither to spare.
+            case HUNT -> {
+                if (!anywhere(level, id, s -> s.is(Items.BOW)) && Crafts.stock(level, v, s -> s.is(Items.STRING)) < 3) kit.add(new ItemStack(Items.BOW));
+                if (Crafts.stock(level, v, s -> s.is(Items.ARROW)) < 16) kit.add(new ItemStack(Items.ARROW, 16));
+            }
             default -> { }
         }
         return kit;
@@ -308,6 +320,8 @@ public final class Trades {
         else if (isSwarm(s)) each = 10;
         else if (s.is(Items.LOOM)) each = 3;
         else if (s.is(Items.SHEARS)) each = 3;
+        else if (s.is(Items.BOW)) each = 4;
+        else if (s.is(Items.ARROW)) return Math.max(1, s.getCount() / 4);
         else if (s.is(Items.LEAD)) return 2 * s.getCount();
         else if (s.is(Items.BLAZE_POWDER)) return s.getCount();
         else if (s.is(Items.LAPIS_LAZULI) || s.is(Items.NETHER_WART) || s.is(Items.SOUL_SAND)) return (s.getCount() + 1) / 2;
@@ -357,6 +371,7 @@ public final class Trades {
         Ledger.note(village, "kit." + t.name(), Long.toString(today));
         if (kit.isEmpty()) return false;
         Ledger.takeCoins(village, price);
+        Economy.spent(village, price);
         List<String> words = new ArrayList<>();
         for (ItemStack s : kit) {
             words.add(isSwarm(s) ? "a hive with a swarm in it" : Crafts.named(s));
@@ -414,6 +429,7 @@ public final class Trades {
             case TAILOR -> "My loom came with me. I couldn't work without it.";
             case RANCH -> "Two good leads, and shears for the wool. Now to find us some animals.";
             case FARM -> "A few cane cuttings and melon and pumpkin seed, from the old country.";
+            case HUNT -> "A bow and a quiver of arrows, from a pedlar on the road. Now for the game.";
             default -> "I've brought what I need.";
         };
     }

@@ -239,6 +239,7 @@ public final class Tavern {
         if (coins < price) return "A round for " + in.size() + " is " + price + " coins. You have " + coins + ".";
         Market.payOut(p, price);
         com.jrpetty.mcassistant.village.Ledger.addCoins(v.id(), price);
+        Economy.sold(v.id(), price);
         long day = level.getDayTime() / 24000L;
         String name = p.getName().getString();
         for (VillageFolkEntity f : in) {

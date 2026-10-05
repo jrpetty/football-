@@ -845,6 +845,7 @@ public final class Assemblies {
                     s.add(new Line(by, rep.length > 1 ? rep[1] : rep[0], '?', null));
                 }
                 for (String found : Scouts.reports(id)) s.add(new Line(null, found, '?', null));
+                for (String money : Market.reports(id)) s.add(new Line(null, money, '!', null));
                 long dayNow = level.getDayTime() / 24000L;
                 Gatherings.Kind tonight = Gatherings.tonight(id, dayNow);
                 if (tonight != null) s.add(new Line(null, "Tonight: " + Gatherings.describe(tonight, id) + ". Everyone welcome!", '!', null));

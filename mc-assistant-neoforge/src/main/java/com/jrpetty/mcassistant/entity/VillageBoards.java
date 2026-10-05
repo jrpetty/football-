@@ -291,6 +291,18 @@ public final class VillageBoards {
         int toMarket = Market.daysToMarket(id, day);
         out.add("RN|Treasury: " + com.jrpetty.mcassistant.village.Ledger.coins(id) + " coins. Market "
             + (toMarket == 0 ? "today!" : toMarket == 1 ? "tomorrow." : "in " + toMarket + " days."));
+        {
+            int made = Economy.yesterday(id);
+            Integer trend = Economy.trend(id);
+            int worth = Economy.worth(id);
+            if (made > 0 || worth >= 0) {
+                out.add((trend != null && trend <= -10 ? "RW" : trend != null && trend >= 10 ? "RG" : "RN") + "|Output: " + made
+                    + " coins' worth a day" + (trend == null ? "" : trend >= 3 ? ", up " + trend + "%" : trend <= -3 ? ", down " + (-trend) + "%" : ", steady")
+                    + (worth >= 0 ? ". Worth " + worth + "." : "."));
+            }
+            String best = Wealth.bestPaid(id, 3);
+            if (!best.isEmpty()) out.add("RN|Best paid: " + best + " a day.");
+        }
         String open = Cafe.openLine(level, id);
         if (open != null) out.add("RN|Open: " + open + ".");
         int content = Contentment.score(id);

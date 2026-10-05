@@ -409,8 +409,20 @@ public class VillageFolkEntity extends AssistantEntity {
     /** Paid: what it had done so far is paid for. */
     public void paid(int coins) {
         earn(coins);
+        if (coins > 0) earnedInAll += coins;
         paidDeeds = deedsTotal();
     }
+
+    /** Every coin of wages it has ever been paid. */
+    private int earnedInAll;
+    /** The day its wage went up (the place came up in the world), and the last day it was paid short. */
+    private long payRiseDay = -100, shortPaidDay = -100;
+
+    public int earnedInAll() { return earnedInAll; }
+
+    public void payRise(long day) { payRiseDay = day; }
+
+    public void shortPaid(long day) { shortPaidDay = day; }
 
     public boolean spend(int coins) {
         if (coins <= 0 || purse < coins) return false;
@@ -1039,6 +1051,8 @@ public class VillageFolkEntity extends AssistantEntity {
         if (village != null && Diplomacy.sore(village, day)) { m -= 5; why.add(new Object[]{"feud", 5}); }
         if (village != null) {
             if (RestDay.justRested(village, day)) { m += 5; why.add(new Object[]{"rested", 5}); }
+            if (day - payRiseDay <= 1) { m += 5; why.add(new Object[]{"payrise", 5}); }
+            if (day - shortPaidDay <= 0) { m -= 4; why.add(new Object[]{"shortpaid", 4}); }
             int content = Contentment.score(village);
             if (content >= 80) { m += 4; why.add(new Object[]{"thriving", 4}); }
             else if (content < 25) { m -= 6; why.add(new Object[]{"miserable", 6}); }
@@ -3118,6 +3132,7 @@ public class VillageFolkEntity extends AssistantEntity {
             case FARM -> 8;      // a field you can actually keep watered
             case WOOD -> 14;     // woodland is worked wide
             case MINE -> 8;
+            case HUNT -> 20;     // hunting grounds are walked wide
             default -> 6;        // the smelter works at its furnaces
         };
     }
@@ -3550,9 +3565,21 @@ public class VillageFolkEntity extends AssistantEntity {
             brain("a stone" + suffix.replace('_', ' ') + " made from the stores");
             return;
         }
+        boolean stoneInHand = countCarried(stone) >= 3, noWood = countCarried(plank) < 1;
         returnTo(villageCentre, stone, stoneBefore, r);
         returnTo(villageCentre, plank, plankBefore, r);
+        // The stone is there but not a stick of wood in the stores: it cuts its own handle. (Three
+        // miners whose picks had worn through stood at the heart for half a day: the stores held
+        // no timber, and nobody thought to fetch any.)
+        if (stoneInHand && noWood && peekJob() == null && tickCount - handleTick > 1200
+                && countCarried(st -> st.getItem().getDescriptionId().endsWith(suffix)) == 0) {
+            handleTick = tickCount;
+            enqueue(Job.gather(com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.LOGS, 2));
+            brain("off to cut wood for a" + suffix.replace('_', ' ') + " handle: the stores have none");
+        }
     }
+
+    private int handleTick = -100000;
 
     private String patchNameFor(StationTask trade) {
         String base = switch (trade) {
@@ -3560,6 +3587,7 @@ public class VillageFolkEntity extends AssistantEntity {
             case WOOD -> "East Wood";
             case MINE -> "The Pit";
             case SMELT -> "The Forge";
+            case HUNT -> "Hunting Grounds";
             default -> "The Commons";
         };
         // Two farms in one village should not share a name.
@@ -3600,7 +3628,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // Fields, woods and mines are out beyond the town (village/TownPlan): the
         // ground inside it is for streets and houses.
         boolean outdoor = trade == StationTask.FARM || trade == StationTask.WOOD || trade == StationTask.MINE
-            || trade == StationTask.RANCH || trade == StationTask.FISH || trade == StationTask.BEEKEEP;
+            || trade == StationTask.RANCH || trade == StationTask.FISH || trade == StationTask.BEEKEEP || trade == StationTask.HUNT;
         UUID town = ownerId();
         if (outdoor && town != null) reach = Math.max(reach, Villages.townReach(town) + radius + 8);
         java.util.function.Predicate<BlockPos> clear = p -> !outdoor || town == null
@@ -3639,6 +3667,12 @@ public class VillageFolkEntity extends AssistantEntity {
             case FISH -> scan(from, SCAN, 6, radius, p -> clear.test(p) && fishable(p));
             // The hives go out on open grass, where there is room for flowers.
             case BEEKEEP -> scan(from, SCAN, 6, radius, p -> clear.test(p) && meadow(p));
+            // Hunting grounds: wild country with game on it, out past the fields and pastures; failing
+            // that, open grass or woodland, where game wanders through.
+            case HUNT -> {
+                BlockPos game = scan(from, SCAN, 8, radius, p -> clear.test(p) && gameAround(p));
+                yield game != null ? game : scan(from, SCAN, 8, radius, p -> clear.test(p) && (meadow(p) || woodland(p)));
+            }
             // The indoor trades belong in the village rather than out in a
             // field — but not all three in the same square. Each takes its own
             // corner of the middle, on its own bearing, so the forge, the
@@ -3806,6 +3840,12 @@ public class VillageFolkEntity extends AssistantEntity {
     }
 
     /** Livestock on the hoof: a herd worth putting a fence round. */
+    /** Three or more head of game it could fairly take, round about. */
+    private boolean gameAround(BlockPos pos) {
+        return level().getEntitiesOfClass(net.minecraft.world.entity.animal.Animal.class,
+            new net.minecraft.world.phys.AABB(pos).inflate(16, 6, 16), this::fairGame).size() >= 3;
+    }
+
     private boolean pasture(BlockPos pos) {
         return level().getEntitiesOfClass(net.minecraft.world.entity.animal.Animal.class,
             new net.minecraft.world.phys.AABB(
@@ -4064,6 +4104,134 @@ public class VillageFolkEntity extends AssistantEntity {
      * twenty-four blocks, its own pens among them, and no herd ever grew.
      */
     @Override
+    /**
+     * Never the last of a kind: a cow, pig, sheep, chicken or rabbit with fewer than three of its
+     * own kind grown within twenty-four blocks is left to breed. The hunters take the spare ones,
+     * and there is game again next year.
+     */
+    @Override
+    public boolean spareForBreeding(net.minecraft.world.entity.animal.Animal a) {
+        int same = level().getEntitiesOfClass(net.minecraft.world.entity.animal.Animal.class, a.getBoundingBox().inflate(24.0),
+            o -> o.isAlive() && !o.isBaby() && o.getType() == a.getType()).size();
+        return same < 3;
+    }
+
+    // ------------------------------ the hunter -----------------------------
+
+    /** When it last saw game it could take, and when it last walked to another part of its grounds. */
+    private int gameSeenTick, stalkTick = -100000, bowTick = -100000;
+
+    /** The kinds of game a hunter takes, by the word the hunt goes by. */
+    @Nullable
+    static String gameWord(net.minecraft.world.entity.animal.Animal a) {
+        if (a instanceof net.minecraft.world.entity.animal.Cow && !(a instanceof net.minecraft.world.entity.animal.MushroomCow)) return "cow";
+        if (a instanceof net.minecraft.world.entity.animal.Pig) return "pig";
+        if (a instanceof net.minecraft.world.entity.animal.Sheep) return "sheep";
+        if (a instanceof net.minecraft.world.entity.animal.Chicken) return "chicken";
+        if (a instanceof net.minecraft.world.entity.animal.Rabbit) return "rabbit";
+        return null;
+    }
+
+    /** Game it may take: grown, wild (not a herd, not named, not on a lead), and not one of the last of its kind. */
+    private boolean fairGame(net.minecraft.world.entity.animal.Animal a) {
+        return a.isAlive() && !a.isBaby() && !a.hasCustomName() && gameWord(a) != null && !spareTheHerd(a) && !spareForBreeding(a);
+    }
+
+    /**
+     * The hunter's day, out on its grounds: it looks over the ground for game it may fairly take
+     * and goes after the nearest (the hunt itself is HuntGoal: the chase, the bow or the blade, the
+     * drops swept up); with nothing in sight it walks on to another part of its grounds, quietly;
+     * and when a long day has turned up nothing at all, the game has gone from here and it looks
+     * for new grounds. A full pack goes home to the stores (the station's own banking).
+     */
+    @Override
+    protected boolean huntWork() {
+        if (!(level() instanceof net.minecraft.server.level.ServerLevel server) || ownerId() == null) return false;
+        if (peekJob() != null) return true;
+        WorkZone z = workZone();
+        if (z == null) return false;
+        bowFromTheStores();
+        BlockPos c = z.center();
+        int r = z.radius() + 16;
+        net.minecraft.world.entity.animal.Animal quarry = null;
+        double best = Double.MAX_VALUE;
+        for (net.minecraft.world.entity.animal.Animal a : server.getEntitiesOfClass(net.minecraft.world.entity.animal.Animal.class,
+                new net.minecraft.world.phys.AABB(c).inflate(r, 12, r), this::fairGame)) {
+            double d = a.distanceToSqr(this);
+            if (d < best) { best = d; quarry = a; }
+        }
+        if (quarry != null) {
+            gameSeenTick = tickCount;
+            String word = gameWord(quarry);
+            if (quarry.distanceToSqr(this) > 20 * 20) {
+                // Out of the hunt's reach yet: closer first, quietly.
+                if (getNavigation().isDone()) getNavigation().moveTo(quarry, 0.9D);
+                brain("stalking a " + word);
+                return true;
+            }
+            enqueue(Job.hunt(word, 1));
+            brain("after a " + word);
+            return true;
+        }
+        // Nothing to take here: another part of the grounds.
+        if (getNavigation().isDone() && tickCount - stalkTick > 240) {
+            stalkTick = tickCount;
+            int dx = getRandom().nextInt(z.radius() * 2 + 1) - z.radius(), dz = getRandom().nextInt(z.radius() * 2 + 1) - z.radius();
+            BlockPos to = surfaceAt(c.getX() + dx, c.getZ() + dz);
+            if (to != null) getNavigation().moveTo(to.getX() + 0.5, to.getY(), to.getZ() + 0.5, 0.8D);
+            brain("walking the hunting grounds");
+        }
+        // A whole day of nothing: the game has gone from here.
+        if (tickCount - gameSeenTick > 12000) {
+            gameSeenTick = tickCount;
+            newGrounds();
+        }
+        return true;
+    }
+
+    /** New hunting grounds, somewhere else round the village: the game has gone from the old. */
+    private void newGrounds() {
+        searchBearing += 3;
+        BlockPos site = findSite(StationTask.HUNT, radiusFor(StationTask.HUNT));
+        if (site == null || workZone() != null && site.distSqr(workZone().center()) < 32 * 32) {
+            brain("no better grounds to be had; staying put");
+            return;
+        }
+        WorkZone zone = WorkZone.around(site, radiusFor(StationTask.HUNT), WorkZone.DEFAULT_DEPTH);
+        setStation(site, StationTask.HUNT);
+        assignPlot(zone, "Hunting Grounds");
+        setAutonomous(true);
+        FolkTalk.speak(this, FolkTalk.pick(getRandom(), "The game's gone from round here. I'll try further out.",
+            "Nothing but tracks for a day. New grounds, I think."));
+        brain("new hunting grounds");
+    }
+
+    /** A bow from the stores, or one of its own made of three string and three sticks (a log will do). */
+    private void bowFromTheStores() {
+        if (hasBow() || villageCentre == null || tickCount - bowTick < 1200) return;
+        bowTick = tickCount;
+        int r = buildStoresRadius();
+        if (drawFrom(villageCentre, st -> st.is(net.minecraft.world.item.Items.BOW), 1, r) > 0) {
+            brain("a bow from the stores");
+            return;
+        }
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> string = st -> st.is(net.minecraft.world.item.Items.STRING);
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> wood = st -> st.is(net.minecraft.world.item.Items.STICK)
+            || st.is(net.minecraft.tags.ItemTags.PLANKS) || st.is(net.minecraft.tags.ItemTags.LOGS);
+        int s0 = countCarried(string), w0 = countCarried(wood);
+        if (s0 < 3) drawFrom(villageCentre, string, 3 - s0, r);
+        if (w0 < 1) drawFrom(villageCentre, wood, 1, r);
+        if (countCarried(string) >= 3 && countCarried(wood) >= 1) {
+            removeMatching(string, 3);
+            removeMatching(wood, 1);
+            insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BOW));
+            brain("made a bow of the stores' string and wood");
+            return;
+        }
+        returnTo(villageCentre, string, s0, r);
+        returnTo(villageCentre, wood, w0, r);
+    }
+
     public boolean spareTheHerd(net.minecraft.world.entity.animal.Animal a) {
         if (a.isLeashed() || a.getTags().contains(Drover.HERD)) return true;
         UUID village = ownerId();
@@ -4188,6 +4356,7 @@ public class VillageFolkEntity extends AssistantEntity {
             net.minecraft.world.item.ItemStack left = insertItem(lot);
             int taken = move - left.getCount();
             if (taken <= 0) break;                                  // its own pack is full
+            Economy.produced(worker, s.copyWithCount(taken));       // the worker's output, handed over here
             s.shrink(taken);
             moved += taken;
         }
@@ -5766,6 +5935,7 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         tag.putInt("Purse", purse);
         tag.putInt("PaidDeeds", paidDeeds);
+        tag.putInt("EarnedInAll", earnedInAll);
         CompoundTag trades = new CompoundTag();
         for (java.util.Map.Entry<StationTask, Integer> e : tradeXp.entrySet()) trades.putInt(e.getKey().name(), e.getValue());
         tag.put("TradeXp", trades);
@@ -5827,6 +5997,7 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         this.purse = tag.getInt("Purse");
         this.paidDeeds = tag.getInt("PaidDeeds");
+        this.earnedInAll = tag.getInt("EarnedInAll");
         tradeXp.clear();
         if (tag.contains("TradeXp")) {
             CompoundTag trades = tag.getCompound("TradeXp");

@@ -102,6 +102,10 @@ public class BuildGoal extends Goal {
     private double nearest = Double.MAX_VALUE;
     /** Cells given up on since the last block went down. */
     private int skipped;
+    /** Cells given up on the way through (out of reach, or stood in once too often): each gets one
+     *  more look when the rest is down. A frame a block short, a floor with a hole, is no building. */
+    private final java.util.List<Placement> missed = new java.util.ArrayList<>();
+    private boolean lastLook;
     private int myGen;
     private int perimeterRadius = 5; // fortify ring radius (overridable for a big compound)
 
@@ -344,6 +348,8 @@ public class BuildGoal extends Goal {
         this.stuckTicks = 0;
         this.standTicks = 0;
         this.putOff.clear();
+        this.missed.clear();
+        this.lastLook = false;
         this.nearest = Double.MAX_VALUE;
         this.skipped = 0;
         this.perimeterRadius = 5;
@@ -707,6 +713,7 @@ public class BuildGoal extends Goal {
                     // stand — not skipped: skipped, the gateway's tenth obsidian went back to the
                     // stores and the frame stood a block short.
                     if (putOff.merge(at.asLong(), 1, Integer::sum) <= 3) plan.add(p);
+                    else missed.add(p);
                     cursor++;                                                  // not for ever
                     standTicks = 0;
                 }
@@ -716,6 +723,17 @@ public class BuildGoal extends Goal {
             stuckTicks = 0;
             standTicks = 0;
             nearest = Double.MAX_VALUE;
+        }
+        if (target == null && !lastLook && !missed.isEmpty()) {
+            // A last look round: what was missed on the way through, now that the rest is
+            // down, there is somewhere else to stand, and the builder may be set down nearer.
+            lastLook = true;
+            plan.addAll(missed);
+            missed.clear();
+            standTicks = 0;
+            stuckTicks = 0;
+            nearest = Double.MAX_VALUE;
+            return;
         }
         if (target == null) {
             // Only a building that actually has parts in the ground goes on the
@@ -765,6 +783,7 @@ public class BuildGoal extends Goal {
                     nearest = Double.MAX_VALUE;
                     return;
                 }
+                if (!lastLook) missed.add(target);
                 cursor++; // can't get there — skip that cell
                 stuckTicks = 0;
                 nearest = Double.MAX_VALUE;

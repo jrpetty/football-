@@ -27,15 +27,18 @@ public final class Skill {
 
     static Fit fit(Social.Trait trait, StationTask trade) {
         return switch (trait) {
-            case HARDWORKING -> trade == StationTask.SCOUT ? new Fit(6, "covers the ground") : new Fit(12, "puts its back into everything");
+            case HARDWORKING -> trade == StationTask.SCOUT || trade == StationTask.HUNT ? new Fit(6, "covers the ground")
+                : new Fit(12, "puts its back into everything");
             case EASYGOING -> switch (trade) {
                 case FISH, BEEKEEP -> new Fit(0, "unhurried, which suits the water and the hives");
                 case SCOUT -> new Fit(-10, "dawdles on the road");
+                case HUNT -> new Fit(4, "patient enough to wait for the game to come to it");
                 default -> new Fit(-8, "takes its time");
             };
             case SOCIABLE -> switch (trade) {
                 case SHOP, COOK, STORE, HAUL -> new Fit(12, "good with people, made for this");
                 case SCOUT -> new Fit(6, "talks to everybody it meets on the road");
+                case HUNT -> new Fit(-8, "can't keep quiet long enough to get near anything");
                 case MINE, FISH -> new Fit(-5, "misses company down there");
                 default -> new Fit(0, "");
             };
@@ -43,6 +46,7 @@ public final class Skill {
                 case FISH, BEEKEEP, ENCHANT, TAILOR -> new Fit(10, "quiet, careful work suits it");
                 case SHOP, COOK -> new Fit(-8, "finds serving folk hard going");
                 case SCOUT -> new Fit(4, "happy on its own out on the land");
+                case HUNT -> new Fit(12, "quiet as the woods: the game never hears it coming");
                 default -> new Fit(0, "");
             };
             case CHEERFUL -> switch (trade) {
@@ -62,6 +66,7 @@ public final class Skill {
             case CURIOUS -> switch (trade) {
                 case MINE, ENCHANT, BREW, SMITH -> new Fit(10, "loves finding out how things work");
                 case SCOUT -> new Fit(18, "born to see what's over the next hill");
+                case HUNT -> new Fit(8, "reads the tracks like a book");
                 case HAUL, STORE -> new Fit(-4, "wanders off to look at things");
                 default -> new Fit(3, "always learning something");
             };

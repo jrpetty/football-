@@ -60,6 +60,8 @@ public final class Caravans {
         int purse;
         /** What it came back with, for the envoy's report. */
         @Nullable String outcome;
+        /** What the village it went to could not pay for: the sender's own, carried home again. */
+        final List<ItemStack> unsold = new ArrayList<>();
 
         Trip(UUID from, UUID to, List<BlockPos> way) {
             this.from = from;
@@ -144,12 +146,34 @@ public final class Caravans {
         t.trade = true;
         t.gainedTick = carrier.tickCount;
         carrier.trip(t);
+        roadMoney(level, from, carrier, to);
         long day = level.getDayTime() / 24000L;
         Villages.tell(from.id(), day, "a trade caravan set out for " + Villages.name(to.id()));
         FolkTalk.speak(carrier, "Off to " + Villages.name(to.id()) + " to trade!");
         LOG.info("[MCA-ENVOY] trade caravan {} -> {} ({} lots)",
             Villages.name(from.id()), Villages.name(to.id()), cargo.size());
         return true;
+    }
+
+    /**
+     * What a caravan costs the village that sends it, besides the goods: the carrier's road money
+     * (a coin for every hundred blocks of the way, two at least, into its own purse) and its
+     * provisions out of the stores (a loaf a hundred blocks). Trading is never free.
+     */
+    static int roadMoney(ServerLevel level, Villages.Village from, VillageFolkEntity carrier, Villages.Village to) {
+        int far = (int) Math.sqrt(from.centre().distSqr(to.centre()));
+        int coins = Ledger.takeCoins(from.id(), Math.max(2, far / 100));
+        if (coins > 0) {
+            carrier.earn(coins);
+            Economy.spent(from.id(), coins);
+        }
+        int loaves = Math.max(2, Math.min(8, far / 100 + 1));
+        java.util.function.Predicate<ItemStack> food = s -> s.get(net.minecraft.core.component.DataComponents.FOOD) != null;
+        for (ItemStack s : takeOut(level, from, food, loaves)) {
+            ItemStack left = carrier.insertItem(s);
+            if (!left.isEmpty()) Market.intoStores(level, from.id(), left);
+        }
+        return coins;
     }
 
     /** Is a caravan already on this colony's road? */
@@ -180,6 +204,7 @@ public final class Caravans {
         Trip t = new Trip(mother.id(), colony.id(), way(mother, colony));
         t.gainedTick = carrier.tickCount;
         carrier.trip(t);
+        roadMoney(level, mother, carrier, colony);
         // No pack llama: the village keeps none, and one out of nowhere for every caravan was a
         // llama, a chest and a carpet from nothing. The carrier takes the load on its own back.
         long day = level.getDayTime() / 24000L;
@@ -370,32 +395,59 @@ public final class Caravans {
         }
         Villages.Village here = Villages.get(t.destination());
         Villages.Village other = Villages.get(t.back ? t.to : t.from);
-        int unloaded = 0;
-        double worth = 0;
+        long day = level.getDayTime() / 24000L;
+        // The village that sent for the goods buys them off the caravan as they come off its back:
+        // at the market's worth from a trading partner, at the family price (half) between a mother
+        // village and its colony. What its treasury cannot pay for stays on the carrier's back and
+        // goes home again.
+        double rate = t.trade ? 1.0 : 0.5;
+        int unloaded = 0, paidAll = 0, refused = 0;
         java.util.Set<Market.Good> brought = new java.util.HashSet<>();
         StringBuilder what = new StringBuilder();
         if (here != null) {
+            if (t.back) returnUnsold(level, f, t, here);
             for (int i = 0; i < f.getInventoryItems().size(); i++) {
                 ItemStack s = f.getInventoryItems().get(i);
-                if (s.isEmpty() || Market.goodFor(s) == null) continue;
+                Market.Good g = s.isEmpty() ? null : Market.goodFor(s);
+                if (g == null) continue;
                 int move = s.getCount() - carrierKeeps(f, s);
+                if (move <= 0) continue;
+                double unit = g.value() * rate;
+                if (other != null && unit > 0) {
+                    int afford = (int) Math.floor(Ledger.coins(here.id()) / unit);
+                    if (afford < move) {
+                        int no = move - Math.max(0, afford);
+                        refused += no;
+                        if (!t.back) t.unsold.add(s.copyWithCount(no));
+                        move = Math.max(0, afford);
+                    }
+                }
                 if (move <= 0) continue;
                 ItemStack lot = s.copyWithCount(move);
                 ItemStack left = Market.intoStores(level, here.id(), lot);
                 int moved = move - left.getCount();
                 if (moved <= 0) continue;
                 s.shrink(moved);
+                int price = other == null ? 0 : (int) Math.round(unit * moved);
+                if (price > 0) paidAll += Ledger.takeCoins(here.id(), price);
                 unloaded += moved;
-                brought.add(Market.goodFor(lot));
-                worth += Market.goodFor(lot).value() * moved;
+                brought.add(g);
                 if (what.length() < 60) what.append(what.length() == 0 ? "" : ", ").append(moved).append(' ')
-                    .append(Market.goodFor(lot).name().toLowerCase());
+                    .append(g.name().toLowerCase());
+            }
+            if (paidAll > 0 && other != null) {
+                Economy.spent(here.id(), paidAll);
+                if (!t.back) t.purse += paidAll;                                   // carried home to the seller
+                else { Ledger.addCoins(other.id(), paidAll); Economy.sold(other.id(), paidAll); }
             }
         }
-        long day = level.getDayTime() / 24000L;
         if (here != null && unloaded > 0) {
-            Villages.tell(here.id(), day, "a caravan from " + Villages.name(other == null ? t.from : other.id())
-                + " brought " + what);
+            Villages.tell(here.id(), day, "bought " + what + " off the caravan from " + Villages.name(other == null ? t.from : other.id())
+                + (paidAll > 0 ? " for " + paidAll + " coins" + (t.trade ? "" : " (the family price)") : ""));
+        }
+        if (here != null && refused > 0) {
+            Villages.tell(here.id(), day, "could not pay for " + refused + " more of the caravan's goods: they went home with the carrier");
+            FolkTalk.speak(f, "They couldn't pay for all of it. The rest comes home with me.");
         }
         if (!t.back && here != null && other != null) {
             // Load what the colony has plenty of and the mother is short of, for the way home.
@@ -406,20 +458,7 @@ public final class Caravans {
                 if (g != null) back += g.value() * (s.getCount() - left.getCount());
                 if (!left.isEmpty()) Market.intoStores(level, here.id(), left);
             }
-            if (t.trade) {
-                // Between trading partners, the difference is paid in coin, there and then.
-                int owed = (int) Math.round(worth - back);
-                if (owed > 0) {
-                    int paid = Ledger.takeCoins(here.id(), owed);
-                    t.purse += paid;
-                    Villages.tell(here.id(), day, "we paid " + Villages.name(other.id()) + "'s traders " + paid + " coins for their goods");
-                } else if (owed < 0) {
-                    int paid = Ledger.takeCoins(other.id(), -owed);
-                    Ledger.addCoins(here.id(), paid);
-                    Villages.tell(here.id(), day, Villages.name(other.id()) + " paid us " + paid + " coins for our goods");
-                }
-                Ledger.relate(here.id(), other.id(), 3);
-            }
+            if (t.trade) Ledger.relate(here.id(), other.id(), 3);
             t.back = true;
             List<BlockPos> home = new ArrayList<>(way(here, other));
             t.way.clear();
@@ -441,9 +480,28 @@ public final class Caravans {
         }
         if (t.purse > 0) {
             Ledger.addCoins(t.from, t.purse);
-            Villages.tell(t.from, day, "our trade caravan came home from " + Villages.name(t.to) + " with " + t.purse + " coins");
+            Economy.sold(t.from, t.purse);
+            Villages.tell(t.from, day, "our caravan came home from " + Villages.name(t.to) + " with " + t.purse + " coins for the goods");
         }
         f.say("Back from " + Villages.name(t.to) + "!");
+    }
+
+    /** Home again with goods the other village could not pay for: they are the village's own, back into its stores. */
+    private static void returnUnsold(ServerLevel level, VillageFolkEntity f, Trip t, Villages.Village home) {
+        for (ItemStack want : t.unsold) {
+            int n = want.getCount();
+            for (int i = 0; i < f.getInventoryItems().size() && n > 0; i++) {
+                ItemStack s = f.getInventoryItems().get(i);
+                if (s.isEmpty() || !ItemStack.isSameItemSameComponents(s, want)) continue;
+                int k = Math.min(n, s.getCount());
+                ItemStack left = Market.intoStores(level, home.id(), s.copyWithCount(k));
+                int in = k - left.getCount();
+                s.shrink(in);
+                n -= in;
+                if (in < k) break;                                                 // the stores are full: it keeps the rest
+            }
+        }
+        t.unsold.clear();
     }
 
     /**

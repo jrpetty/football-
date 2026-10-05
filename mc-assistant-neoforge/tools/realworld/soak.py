@@ -331,6 +331,7 @@ def epic_day(r, x, z, day, began, last_age, metrics_file="epic-metrics.jsonl"):
             tally[t] = int(n)
     watch = re.search(r"(\d+) gates (?:open|shut), (\d+) posts", status)
     coins = re.search(r"Treasury: (\d+) coins", status)
+    purses = re.search(r"Treasury: \d+ coins, (\d+) in purses", status)
     content = re.search(r"Contentment: (\d+)", status)
     made = re.search(r"homes for (\d+)(?: made up of (\d+))?", status)
     rank = re.search(r"Rank: a (\w+)", status)
@@ -342,7 +343,8 @@ def epic_day(r, x, z, day, began, last_age, metrics_file="epic-metrics.jsonl"):
         "beds_planned": int(made.group(2)) if made and made.group(2) else None,
         "trades": tally, "guards": tally.get("guard", 0),
         "gates": int(watch.group(1)) if watch else None, "posts": int(watch.group(2)) if watch else None,
-        "coins": int(coins.group(1)) if coins else None, "contentment": int(content.group(1)) if content else None,
+        "coins": int(coins.group(1)) if coins else None, "purses": int(purses.group(1)) if purses else None,
+        "contentment": int(content.group(1)) if content else None,
         "minutes": round((time.time() - began) / 60.0, 1),
         "ms_per_tick": LAST_MSPT[0],
         "rank": rank.group(1) if rank else None,

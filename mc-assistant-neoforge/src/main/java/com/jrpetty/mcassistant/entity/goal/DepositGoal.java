@@ -246,6 +246,9 @@ public class DepositGoal extends Goal {
             moved += stashed;
             // Tally it for the daily production report / crew roster.
             assistant.noteProduced(stack.getItem(), stashed);
+            if (stashed > 0 && assistant instanceof com.jrpetty.mcassistant.entity.VillageFolkEntity vf) {
+                com.jrpetty.mcassistant.entity.Economy.produced(vf, stack.copyWithCount(stashed));   // the village's output
+            }
             int remain = keep + leftover.getCount();
             items.set(i, remain == 0 ? ItemStack.EMPTY : stack.copyWithCount(remain));
         }

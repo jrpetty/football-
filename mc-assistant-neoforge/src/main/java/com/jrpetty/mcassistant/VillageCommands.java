@@ -55,6 +55,8 @@ public final class VillageCommands {
             .then(Commands.literal("anchors").requires(src -> src.hasPermission(2))
                 .executes(VillageCommands::anchors))
             .then(Commands.literal("status").executes(VillageCommands::status))
+            .then(Commands.literal("wages").executes(ctx -> page(ctx, 2)))
+            .then(Commands.literal("economy").executes(ctx -> page(ctx, 3)))
             // The morning news of the villages near you, in chat, once a morning: on or off.
             .then(Commands.literal("news")
                 .then(Commands.literal("on").executes(ctx -> news(ctx, true)))
@@ -253,6 +255,7 @@ public final class VillageCommands {
                     case COOK -> net.minecraft.world.item.Items.BREAD;
                     case SHOP -> McAssistantMod.VILLAGE_COIN.get();
                     case SCOUT -> net.minecraft.world.item.Items.COMPASS;
+                    case HUNT -> net.minecraft.world.item.Items.BOW;
                     case NONE -> net.minecraft.world.item.Items.AIR;
                 }));
             folk.rename(switch (trades[i]) {
@@ -457,6 +460,23 @@ public final class VillageCommands {
         return 1;
     }
 
+    /** /village wages (who is paid what, best paid first) and /village economy (what it makes, sells, is worth). */
+    private static int page(CommandContext<CommandSourceStack> ctx, int which) {
+        net.minecraft.server.level.ServerLevel level = ctx.getSource().getLevel();
+        net.minecraft.core.BlockPos here = net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition());
+        Villages.Village v = Villages.nearest(level, here, Villages.VILLAGE_RANGE * 4);
+        if (v == null && ctx.getSource().getPlayer() == null && !Villages.every().isEmpty()) v = Villages.every().get(0);
+        if (v == null) {
+            ctx.getSource().sendSuccess(() -> Component.literal("No village within reach."), false);
+            return 0;
+        }
+        String text = which == 2 ? com.jrpetty.mcassistant.entity.Wealth.wagesPage(level, v)
+            : com.jrpetty.mcassistant.entity.Economy.page(level, v);
+        String title = Villages.name(v.id()) + (which == 2 ? " — wages" : " — economy");
+        ctx.getSource().sendSuccess(() -> Component.literal(title + "\n" + text), false);
+        return 1;
+    }
+
     private static int speedNow(CommandContext<CommandSourceStack> ctx) {
         net.minecraft.server.MinecraftServer server = ctx.getSource().getServer();
         int f = TimeSpeed.factor(server);
@@ -560,6 +580,10 @@ public final class VillageCommands {
             int toMarket = com.jrpetty.mcassistant.entity.Market.daysToMarket(v.id(), today);
             sb.append(". Treasury: ").append(com.jrpetty.mcassistant.village.Ledger.coins(v.id())).append(" coins, ")
               .append(saved).append(" in purses; market ").append(toMarket == 0 ? "today" : "in " + toMarket + " days");
+            sb.append(". Economy: ").append(com.jrpetty.mcassistant.entity.Economy.line(v.id()));
+            String best = com.jrpetty.mcassistant.entity.Wealth.bestPaid(v.id(), 3);
+            if (!best.isEmpty()) sb.append(". Best paid: ").append(best).append(" a day (").append(
+                com.jrpetty.mcassistant.entity.Wealth.standingWords(com.jrpetty.mcassistant.entity.Wealth.standing(v.id()))).append(")");
         }
         sb.append(". Contentment: ").append(com.jrpetty.mcassistant.entity.Contentment.line(level, v.id()));
         {

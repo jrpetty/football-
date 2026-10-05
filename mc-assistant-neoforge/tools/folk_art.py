@@ -51,7 +51,7 @@ SIZE = 128
 
 TRADES = ["none", "farmer", "lumberjack", "miner", "rancher", "guard",
           "smelter", "fisher", "storekeeper", "hauler",
-          "blacksmith", "tailor", "beekeeper", "brewer", "enchanter", "cook", "shopkeeper", "scout"]
+          "blacksmith", "tailor", "beekeeper", "brewer", "enchanter", "cook", "shopkeeper", "scout", "hunter"]
 
 PARTS = [
     # The body every folk has: a villager's head and nose, a coat over a body,
@@ -179,6 +179,14 @@ PARTS = [
     ("scout_cape", "body", (0, 0, 0), (0, 0, 0), [(64, 20, -4.5, 0, 3.3, 9, 16, 1, 0)], "scout"),
     ("scout_satchel", "body", (0, 0, 0), (0, 0, 0), [(100, 0, 3.8, 7, -2, 2, 5, 4, 0)], "scout"),
     ("scout_spyglass", "body", (0, 0, 0), (0, 0, 0), [(114, 0, -5, 7, -1, 1, 4, 1, 0)], "scout"),
+
+    # Hunter: a mottled hood, a fur mantle round its shoulders, a quiver of arrows slung
+    # across its back and a skinning knife at its hip.
+    ("hunter_hood", "head", (0, 0, 0), (0, 0, 0), [(64, 0, -4, -10, -4, 8, 10, 8, 0.75)], "hunter"),
+    ("hunter_mantle", "body", (0, 0, 0), (0, 0, 0), [(64, 20, -4.5, -0.5, -3.5, 9, 4, 7, 0.3)], "hunter"),
+    ("hunter_quiver", "body", (0, 2, 3.4), (0, 0, 0.35), [(100, 0, -1.5, -1, 0, 3, 10, 2, 0)], "hunter"),
+    ("hunter_fletch", "body", (0, 2, 3.4), (0, 0, 0.35), [(112, 0, -1, -4, 0.5, 2, 3, 1, 0)], "hunter"),
+    ("hunter_knife", "body", (0, 0, 0), (0, 0, 0), [(100, 14, -5, 8, -1, 1, 4, 1, 0)], "hunter"),
 ]
 
 
@@ -1546,6 +1554,47 @@ def outfit_scout():
     return cv
 
 
+def outfit_hunter():
+    """A hunter: a weathered leather jerkin and breeches, soft boots, a hood mottled in the
+    browns and greens of the wood, a fur mantle round its shoulders, a quiver of arrows
+    across its back and a knife at its hip."""
+    cv = Canvas()
+    jerkin = (104, 76, 48)
+    jf = leather(jerkin)
+    coat = coat_to(cv, jf, 12)
+    for y in range(0, 12):
+        if y % 3 == 0:
+            coat.put("front", 2, y, lit(jerkin, 0.7))                    # stitched seams
+            coat.put("front", 5, y, lit(jerkin, 0.7))
+    belt(coat, 9, strap=(54, 38, 24), buckle=(150, 130, 96))
+    moss = (78, 88, 52)
+    sleeves(cv, cloth(moss, 6, 250), 9, cuff=lit(jerkin, 0.8))
+    legs(cv, leather((88, 66, 44)), leather((62, 44, 28)), boot_from=6, sole=(30, 22, 16))
+
+    def mottle(x, y):
+        k = (x * 7 + y * 13 + (x * y) % 5) % 9
+        return [(84, 92, 54), (96, 78, 50), (70, 80, 46), (110, 92, 60)][k % 4] if k > 2 else (76, 66, 42)
+
+    def hood_f(face, x, y, w, h):
+        if face == "bottom":
+            return False
+        if face == "front":
+            if 1 <= x <= w - 2 and 2 <= y <= h - 1:
+                return False                                             # the face shows through
+            return lit(mottle(x, y), 0.7)
+        return mottle(x, y)
+    Box(cv, "hunter_hood").all(hood_f)
+    fur = Box(cv, "hunter_mantle")
+    fur.all(lambda face, x, y, w, h: lit((150, 118, 82), 0.8 + ((x * 5 + y * 3) % 4) * 0.08) if face != "bottom" else (110, 84, 58))
+    q = Box(cv, "hunter_quiver")
+    q.all(lambda face, x, y, w, h: grain((120, 80, 44), x, y, 4, 251) if y not in (1, h - 2) else (70, 48, 28))
+    fl = Box(cv, "hunter_fletch")
+    fl.all(lambda face, x, y, w, h: (226, 222, 210) if y < 2 else (120, 96, 62))
+    kn = Box(cv, "hunter_knife")
+    kn.all(lambda face, x, y, w, h: (190, 196, 204) if y >= 2 else (84, 60, 38))
+    return cv
+
+
 OUTFITS = {
     "none": outfit_none,
     "farmer": outfit_farmer,
@@ -1565,6 +1614,7 @@ OUTFITS = {
     "cook": outfit_cook,
     "shopkeeper": outfit_shopkeeper,
     "scout": outfit_scout,
+    "hunter": outfit_hunter,
 }
 GLOWS = {"miner": miner_glow}
 DYED = ("none", "farmer", "lumberjack", "rancher", "guard", "storekeeper", "hauler",

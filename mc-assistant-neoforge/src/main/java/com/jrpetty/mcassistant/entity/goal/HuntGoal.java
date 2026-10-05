@@ -179,6 +179,7 @@ public class HuntGoal extends Goal {
                 Animal.class, assistant.getBoundingBox().inflate(24.0),
                 an -> an.isAlive() && !an.isBaby() && !an.hasCustomName())) {
             if (assistant.spareTheHerd(a)) continue;               // the village's own beasts are not for the pot
+            if (assistant.spareForBreeding(a)) continue;           // the last of their kind hereabouts: left to breed
             if (wanted != null) {
                 if (!wanted.isInstance(a)) continue;
             } else {

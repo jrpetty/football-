@@ -74,6 +74,16 @@ public final class AssistantNetwork {
                 return;
             }
             String title = com.jrpetty.mcassistant.entity.Villages.name(v.id());
+            if (payload.what() == 2) {
+                net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
+                    new VillagePagePayload(title + " — wages", com.jrpetty.mcassistant.entity.Wealth.wagesPage(level, v)));
+                return;
+            }
+            if (payload.what() == 3) {
+                net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
+                    new VillagePagePayload(title + " — economy", com.jrpetty.mcassistant.entity.Economy.page(level, v)));
+                return;
+            }
             net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
                 new VillagePagePayload(title, com.jrpetty.mcassistant.VillageCommands.statusText(level, v)));
         });

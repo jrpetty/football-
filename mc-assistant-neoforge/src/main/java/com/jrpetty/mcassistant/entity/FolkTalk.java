@@ -144,7 +144,7 @@ public final class FolkTalk {
             case BUILD -> Asks.build(f, p, text);
             case GUIDE -> Guide.ask(f, p, text);
             case PRAISE -> praise(f, p, op, day);
-            case WORTH -> Wealth.talk(f);
+            case WORTH -> Wealth.talk(f, text);
             case KNACK -> knack(f);
             case ATLAS -> Scouts.tell(f);
             default -> puzzled(f);
@@ -480,6 +480,8 @@ public final class FolkTalk {
             case "quarrel" -> "I had words with somebody today. Still cross about it.";
             case "feud" -> "It's the neighbours. After what they did, I can't settle.";
             case "rested" -> pick(r, "We had our day of rest — I feel like new.", "A day off does a body good.");
+            case "payrise" -> pick(r, "Wages went up — the town's doing well by us.", "I got a rise! Can't complain about that.");
+            case "shortpaid" -> pick(r, "We were paid short this morning. The treasury's thin.", "Only part of my wage today.");
             case "thriving" -> pick(r, "The village is doing so well!", "Have you ever seen a happier place?");
             case "miserable" -> pick(r, "Everybody's so low round here.", "This village has seen better days.");
             default -> "";
@@ -547,6 +549,9 @@ public final class FolkTalk {
                 ? (f.expedition().returning() ? "On my way home from the " + f.expedition().heading() + ", with news." : "Scouting " + f.expedition().heading() + ". Who knows what's out here?")
                 : pick(r, "Going over the atlas. There's a lot of land out there we've not seen.",
                     "Resting my feet. Out again in the morning — the atlas won't fill itself.");
+            case HUNT -> pick(r, "Out on the hunting grounds" + place + ". Quiet, now — you'll frighten the game.",
+                "Tracking" + place + ". There's a pig about somewhere; I've seen its prints.",
+                "Hunting" + place + ". Only the full-grown, mind, and never the last pair.");
         };
         if (!f.missingEssentials().isEmpty()) work += " Or I would be, if I had " + f.missingEssentials().get(0) + ".";
         if (f.life().has(Social.Trait.HARDWORKING) && r.nextBoolean()) work += " Can't stop long.";
@@ -1070,7 +1075,8 @@ public final class FolkTalk {
         if (has(t, "well done", "good job", "great job", "nice work", "good work", "fine job", "proud of you",
                 "thank you", "thanks", "you're great", "youre great", "amazing work", "keep it up")) return TalkTopic.PRAISE;
         if (has(t, "money", "wage", "wages", "salary", " earn", "savings", "how rich", "are you rich", "are you poor",
-                "your worth", "you worth", "how much are you", "get paid", "your pay")) return TalkTopic.WORTH;
+                "your worth", "you worth", "how much are you", "get paid", "your pay", "best paid", "highest paid", "paid the most",
+                "richest", "most money")) return TalkTopic.WORTH;
         if (has(t, "good at", "your skill", "talent", "best at", "your level", "what level", "how skilled", "your knack")) return TalkTopic.KNACK;
         if (has(t, "scout", "atlas", "out there", "explore", "explored", "landmark", "beyond the", "what's around", "whats around",
                 "found anything", "discover")) return TalkTopic.ATLAS;

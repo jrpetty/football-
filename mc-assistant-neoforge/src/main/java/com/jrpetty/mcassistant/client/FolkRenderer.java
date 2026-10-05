@@ -341,6 +341,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
             case COOK -> Items.CAKE;
             case SHOP -> Items.EMERALD;
             case SCOUT -> Items.COMPASS;
+            case HUNT -> Items.BOW;
             case NONE -> Items.AIR;
         });
     }

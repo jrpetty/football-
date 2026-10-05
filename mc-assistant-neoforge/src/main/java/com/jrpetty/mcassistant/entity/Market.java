@@ -295,6 +295,7 @@ public final class Market {
         if (t < 500 || t > 6000) return;
         if (Ledger.paidOn(id) >= day) return;
         Ledger.paid(id, day);
+        Economy.closeTheDay(level, v, day);              // yesterday's output, and what the village is worth
         mint(level, v);
         trade(level, v);
         payWages(level, v);
@@ -346,6 +347,7 @@ public final class Market {
         }
         if (coins <= 0) return 0;
         Ledger.addCoins(id, coins);
+        Economy.sold(id, coins);
         Villages.tell(id, day, "Traders came for market day and bought " + String.join(", ", sold) + " for " + coins + " coin");
         return coins;
     }
@@ -378,7 +380,12 @@ public final class Market {
         // empty every morning, and nothing it had to buy (a hive, the drover's pair) was ever bought.
         int need = wageBill(id) + saved(id, now) - Ledger.coins(id);
         if (need <= 0) return 0;
-        int want = Math.max(Math.max(2, head / 3) + Villages.ageOf(id).ordinal(), need);
+        // The traders buy what the town makes: never more in a day than its output was worth
+        // (yesterday's, or the week's average if that is more). A busy town meets its wages; an
+        // idle one sells what it can and pays short.
+        int base = Math.max(2, head / 3) + Villages.ageOf(id).ordinal();
+        int makes = Math.max(Economy.yesterday(id), Economy.weekAverage(id));
+        int want = Math.max(base, Math.min(need, makes));
         int in = 0;
         List<String> sold = new ArrayList<>();
         for (Good g : GOODS) {
@@ -398,6 +405,7 @@ public final class Market {
         }
         if (in <= 0) return 0;
         Ledger.addCoins(id, in);
+        Economy.sold(id, in);
         Villages.tell(id, level.getDayTime() / 24000L, "passing traders bought " + String.join(", ", sold) + " for " + in + " coin");
         return in;
     }
@@ -458,7 +466,82 @@ public final class Market {
             hands.get(i).paid(got);
             paid += got;
         }
+        Economy.wages(id, paid);
+        payday(level, v, hands, wages, due, bill <= purse ? 100 : (int) Math.round(100.0 * Math.min(purse, bill) / bill));
         return paid;
+    }
+
+    // ------------------------------------------------------------------ payday
+
+    /** The share of the wages the last payday paid, in the hundred (-1 before the first). */
+    private static final java.util.Map<UUID, Integer> SHARE = new java.util.concurrent.ConcurrentHashMap<>();
+    /** What the elder has to tell the morning assembly about the money (Assemblies). */
+    private static final java.util.Map<UUID, List<String>> NEWS = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public static int lastShare(UUID village) {
+        return SHARE.getOrDefault(village, -1);
+    }
+
+    /** The money news for the morning assembly, once. */
+    public static List<String> reports(UUID village) {
+        List<String> out = NEWS.remove(village);
+        return out == null ? List.of() : out;
+    }
+
+    /**
+     * How the payday went down. A rise when the place has come up in the world (a village pays
+     * half as much again as a hamlet, a town twice): it goes in the chronicle, the elder tells the
+     * morning assembly, and folk are glad of it for a day or two. A short payday: they feel it,
+     * and one or two of the grumpier ones say so — not everybody, every morning.
+     */
+    static void payday(ServerLevel level, Villages.Village v, List<VillageFolkEntity> hands, List<Integer> wages, int[] due, int share) {
+        UUID id = v.id();
+        long day = level.getDayTime() / 24000L;
+        SHARE.put(id, share);
+        int standing = Wealth.standing(id);
+        int before = -1;
+        try { before = Integer.parseInt(String.valueOf(Ledger.note(id, "pay.standing"))); } catch (NumberFormatException ignored) { }
+        Ledger.note(id, "pay.standing", Integer.toString(standing));
+        net.minecraft.util.RandomSource r = level.getRandom();
+        if (before > 0 && standing > before) {
+            String place = Villages.rank(id).label;
+            Villages.tell(id, day, "wages rose: " + place + " pays " + Wealth.standingWords(standing));
+            NEWS.computeIfAbsent(id, k -> new ArrayList<>()).add("Now that we're " + place + ", every wage goes up — "
+                + Wealth.standingWords(standing) + ". You've earned every coin of it.");
+            for (VillageFolkEntity f : hands) f.payRise(day);
+            int said = 0;
+            for (VillageFolkEntity f : hands) {
+                if (said >= 2 || r.nextInt(4) != 0) continue;
+                FolkTalk.speak(f, FolkTalk.pick(r, "A rise! I'll not say no to that.", "More pay — the town's doing well by us.",
+                    "Did you hear? Wages are up!"));
+                said++;
+            }
+        }
+        if (share < 100 && !hands.isEmpty()) {
+            for (VillageFolkEntity f : hands) f.shortPaid(day);
+            if (share < 80) {
+                // The grumpy first, and only a couple of them.
+                List<VillageFolkEntity> by = new ArrayList<>(hands);
+                by.sort(Comparator.comparingInt(f -> f.life().has(Social.Trait.GRUMPY) ? 0 : 1));
+                int said = 0;
+                for (VillageFolkEntity f : by) {
+                    if (said >= 2) break;
+                    if (!f.life().has(Social.Trait.GRUMPY) && r.nextInt(3) != 0) continue;
+                    FolkTalk.speak(f, FolkTalk.pick(r, "Short again this morning. The treasury's thin.",
+                        "Half a wage! We'd best make more than we eat.", "Paid short. Somebody tell the traders we're open.",
+                        "That's not a day's pay. Still — it's a bad week, not a bad town."));
+                    said++;
+                }
+            }
+            String last = Ledger.note(id, "pay.shortnews");
+            long lastDay = -10;
+            try { lastDay = Long.parseLong(String.valueOf(last)); } catch (NumberFormatException ignored) { }
+            if (share < 60 && day - lastDay >= 3) {
+                Ledger.note(id, "pay.shortnews", Long.toString(day));
+                NEWS.computeIfAbsent(id, k -> new ArrayList<>()).add("The treasury's low: this morning's wages were "
+                    + share + " in the hundred. Make more and sell more, and it'll come right.");
+            }
+        }
     }
 
     // ------------------------------------------------------------------ saving up
@@ -493,6 +576,8 @@ public final class Market {
 
     public static void resetForTests() {
         SAVING.clear();
+        SHARE.clear();
+        NEWS.clear();
     }
 
     // ------------------------------------------------------------------ the tithe
@@ -517,6 +602,7 @@ public final class Market {
         }
         if (in <= 0) return 0;
         Ledger.addCoins(id, in);
+        Economy.tithe(id, in);
         Villages.tell(id, day, gave + " folk gave the tithe, " + in + " coin, for the village's purse");
         return in;
     }
@@ -545,6 +631,7 @@ public final class Market {
         lots = Math.min(lots, spare / Math.max(1, price));
         if (lots <= 0) return 0;
         int paid = Ledger.takeCoins(id, lots * price);
+        Economy.spent(id, paid);
         ItemStack bought = new ItemStack(Items.WHITE_WOOL, lots * g.bundle());
         ItemStack left = intoStores(level, id, bought);
         if (!left.isEmpty()) { /* the stores are full: the rest is left with the traders */ }
@@ -659,6 +746,7 @@ public final class Market {
         if (!TownWork.take(level, v, same, g.bundle())) return "They've not got that to spare just now.";
         payOut(p, price);
         Ledger.addCoins(id, price);
+        Economy.sold(id, price);
         ItemStack bought = shown.copyWithCount(g.bundle());
         if (!p.getInventory().add(bought)) p.drop(bought, false);
         thanks(level, v, p);
@@ -713,6 +801,7 @@ public final class Market {
         }
         hand.shrink(g.bundle());
         int paid = Ledger.takeCoins(id, price);
+        Economy.spent(id, paid);
         ItemStack coins = new ItemStack(McAssistantMod.VILLAGE_COIN.get(), paid);
         if (!p.getInventory().add(coins)) p.drop(coins, false);
         thanks(level, v, p);

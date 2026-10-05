@@ -93,7 +93,9 @@ public final class Villages {
         new Slot(AssistantEntity.StationTask.BREW, 1, 22, Age.IRON, 1),
         new Slot(AssistantEntity.StationTask.ENCHANT, 1, 24, Age.DIAMOND, 1),
         // Scouts once the village is a town of forty: one or two, out every morning (Scouts).
-        new Slot(AssistantEntity.StationTask.SCOUT, 1, Scouts.FROM, Age.WOOD, 2));
+        new Slot(AssistantEntity.StationTask.SCOUT, 1, Scouts.FROM, Age.WOOD, 2),
+        // Hunters from fifteen: one, then two, out past the fields after game (VillageFolkEntity.huntWork).
+        new Slot(AssistantEntity.StationTask.HUNT, 1, 15, Age.WOOD, 2));
 
     /** Forget every settlement. For tests, which share one JVM and would
      *  otherwise inherit each other's villages. */
@@ -316,6 +318,7 @@ public final class Villages {
         Envoys.resetForTests();
         TownJobs.resetForTests();
         Market.resetForTests();
+        Economy.resetForTests();
         Scouts.resetForTests();
         Quests.resetForTests();
         Services.resetForTests();

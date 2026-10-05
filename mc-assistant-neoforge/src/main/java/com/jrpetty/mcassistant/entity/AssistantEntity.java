@@ -128,11 +128,13 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         COOK("cooking", "Cook"),
         SHOP("shopkeeping", "Shopkeeper"),
         // A town of forty sends scouts out to see what lies beyond its fields (Scouts).
-        SCOUT("scouting", "Scout");
+        SCOUT("scouting", "Scout"),
+        // Out past the fields after game, for the larder and the tailor (VillageFolkEntity.huntWork).
+        HUNT("hunting", "Hunter");
 
         /** The trades of a grown village, which work out of a building of their own. */
         public boolean isCraft() {
-            return ordinal() >= SMITH.ordinal() && this != SCOUT;
+            return ordinal() >= SMITH.ordinal() && this != SCOUT && this != HUNT;
         }
 
         public final String label;   // lower-case, for sentences
@@ -1260,6 +1262,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 || (mayShoot(s) && !hasBow());
             case RANCH -> BREEDING_FOOD;
             case SMELT -> SMELT_FUEL;
+            case HUNT -> s -> s.is(Items.ARROW);
             case FISH, STORE, HAUL, NONE, SMITH, TAILOR, BEEKEEP, BREW, ENCHANT, COOK, SHOP, SCOUT -> null;
         };
         // ONE restock, one pace. This used to be three separate paced scoops in
@@ -1563,6 +1566,18 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     /** A village carrier's round with no wand-set route (VillageFolkEntity). */
     protected boolean haulerRound() { return false; }
+
+    /** A hunter's day out on its grounds (VillageFolkEntity). */
+    protected boolean huntWork() { return false; }
+
+    /** Should this animal be left alone to breed: one of the last of its kind round here (VillageFolkEntity)? */
+    public boolean spareForBreeding(net.minecraft.world.entity.animal.Animal a) { return false; }
+
+    /** What a hunt brings home: the meat, the hides, the feathers, the wool. */
+    public static final java.util.function.Predicate<ItemStack> GAME = s -> s.is(Items.BEEF) || s.is(Items.PORKCHOP)
+        || s.is(Items.MUTTON) || s.is(Items.CHICKEN) || s.is(Items.RABBIT) || s.is(Items.LEATHER) || s.is(Items.RABBIT_HIDE)
+        || s.is(Items.RABBIT_FOOT) || s.is(Items.FEATHER) || s.is(ItemTags.WOOL) || s.is(Items.COOKED_BEEF)
+        || s.is(Items.COOKED_PORKCHOP) || s.is(Items.COOKED_MUTTON) || s.is(Items.COOKED_CHICKEN) || s.is(Items.COOKED_RABBIT);
 
     /** A carrier's pickup has nothing left worth carrying (VillageFolkEntity chooses the next). */
     protected void routeSpent() { }
@@ -2135,6 +2150,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case GUARD -> countCarried(s -> isToolNamed(s, "_sword")) == 0;
             case FISH -> countCarried(s -> s.is(Items.FISHING_ROD)) == 0;
             case SMELT -> countCarried(SMELT_FUEL) == 0;
+            case HUNT -> countCarried(s -> isToolNamed(s, "_sword")) == 0 && !hasBow();
             case STORE, HAUL, NONE, SMITH, TAILOR, BEEKEEP, BREW, ENCHANT, COOK, SHOP, SCOUT -> false;
         };
     }
@@ -3521,6 +3537,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case STORE -> s.get(DataComponents.FOOD) != null ? 8 : 0;
             case SMITH, TAILOR, BEEKEEP, BREW, ENCHANT, COOK, SHOP -> s.get(DataComponents.FOOD) != null ? 8 : 0;
             case SCOUT -> s.is(Items.TORCH) ? 4 : (s.get(DataComponents.FOOD) != null ? 8 : 0);  // the road's rations, a torch to mark it
+            // A bow and its arrows, a bite to eat; the game itself goes home to the stores.
+            case HUNT -> s.is(Items.ARROW) ? 32 : s.is(Items.BOW) ? 1 : GAME.test(s) ? 0
+                : (s.get(DataComponents.FOOD) != null ? 8 : 0);
             case NONE -> 0;
         };
     }
@@ -4751,6 +4770,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 case SMELT, FISH -> new Branch[]{ PORTER, PROSPECTOR };
                 case SMITH, TAILOR, BEEKEEP, BREW, ENCHANT, COOK, SHOP -> new Branch[]{ PORTER, SENTINEL };
                 case SCOUT -> new Branch[]{ SENTINEL, PROSPECTOR };
+                case HUNT -> new Branch[]{ SENTINEL, HUSBANDRY };
                 case NONE -> new Branch[]{};
             };
         }
@@ -6239,6 +6259,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 // Out on the land, or at the board with the atlas (Scouts).
                 if (scoutWork()) return true;
             }
+            case HUNT -> {
+                // Out on the hunting grounds after game (VillageFolkEntity).
+                if (huntWork()) return true;
+            }
             case NONE -> { }
         }
         // Nothing to do right where it's stood. On a zone bigger than its own
@@ -6766,6 +6790,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 || s.is(Items.COOKED_COD) || s.is(Items.COOKED_SALMON));
             // A storekeeper works the chests directly — nothing to haul back; and the
             // crafts work out of the stores and into them (Crafts).
+            case HUNT -> countMatching(GAME);
             case STORE, HAUL, NONE, SMITH, TAILOR, BEEKEEP, BREW, ENCHANT, COOK, SHOP, SCOUT -> 0;
         };
         // Never more than a stash would actually move. The trade's own sums kept back less

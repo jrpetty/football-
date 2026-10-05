@@ -37,7 +37,12 @@ public class VillageScreen extends Screen {
 
     /** Ask the server for the page (the J key). */
     public static void request() {
-        net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.jrpetty.mcassistant.net.VillageAskPayload(0));
+        request(0);
+    }
+
+    /** 0 the village, 2 its wages (who is paid what, best paid first), 3 its economy (what it makes, earns and is worth). */
+    public static void request(int page) {
+        net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.jrpetty.mcassistant.net.VillageAskPayload(page));
     }
 
     @Override
@@ -45,23 +50,50 @@ public class VillageScreen extends Screen {
         this.left = (this.width - W) / 2;
         this.top = (this.height - H) / 2;
         lines.clear();
-        // "Label: value. Label: value." — a paragraph to each part, its label in bold.
-        for (String part : text.split("\\. (?=[A-Z][A-Za-z' ]{1,24}: )|\\. (?=Village at )")) {
-            String p = part.trim();
-            if (p.isEmpty()) continue;
-            int colon = p.indexOf(": ");
-            Component c = colon > 0 && colon < 26
-                ? Component.empty()
-                    .append(Component.literal(p.substring(0, colon + 1)).withStyle(net.minecraft.ChatFormatting.BOLD))
-                    .append(Component.literal(p.substring(colon + 1)))
-                : Component.literal(p);
-            lines.addAll(this.font.split(c, W - PAD * 2 - 6));
-            lines.add(FormattedCharSequence.EMPTY);
+        if (text.contains("\n")) {
+            // A list page (the wages, the economy): a line to each entry, as the server wrote it.
+            for (String part : text.split("\n", -1)) {
+                String p = part.trim();
+                if (p.isEmpty()) { lines.add(FormattedCharSequence.EMPTY); continue; }
+                int colon = p.indexOf(": ");
+                Component c = colon > 0 && colon < 40
+                    ? Component.empty()
+                        .append(Component.literal(p.substring(0, colon + 1)).withStyle(net.minecraft.ChatFormatting.BOLD))
+                        .append(Component.literal(p.substring(colon + 1)))
+                    : Component.literal(p);
+                lines.addAll(this.font.split(c, W - PAD * 2 - 6));
+            }
+        } else {
+            // "Label: value. Label: value." — a paragraph to each part, its label in bold.
+            for (String part : text.split("\\. (?=[A-Z][A-Za-z' ]{1,24}: )|\\. (?=Village at )")) {
+                String p = part.trim();
+                if (p.isEmpty()) continue;
+                int colon = p.indexOf(": ");
+                Component c = colon > 0 && colon < 26
+                    ? Component.empty()
+                        .append(Component.literal(p.substring(0, colon + 1)).withStyle(net.minecraft.ChatFormatting.BOLD))
+                        .append(Component.literal(p.substring(colon + 1)))
+                    : Component.literal(p);
+                lines.addAll(this.font.split(c, W - PAD * 2 - 6));
+                lines.add(FormattedCharSequence.EMPTY);
+            }
         }
         this.addRenderableWidget(Button.builder(Component.literal("Close"), b -> this.onClose())
-            .bounds(left + W - PAD - 60, top + H - PAD - 18, 60, 18).build());
-        this.addRenderableWidget(Button.builder(Component.literal("Refresh"), b -> request())
-            .bounds(left + W - PAD - 126, top + H - PAD - 18, 60, 18).build());
+            .bounds(left + W - PAD - 50, top + H - PAD - 18, 50, 18).build());
+        // The pages: the village, who is paid what, and what it makes and is worth.
+        String[] pages = {"Village", "Wages", "Economy"};
+        int[] codes = {0, 2, 3};
+        for (int i = 0; i < pages.length; i++) {
+            int code = codes[i];
+            Button b = Button.builder(Component.literal(pages[i]), btn -> request(code))
+                .bounds(left + W - PAD - 50 - (pages.length - i) * 62, top + H - PAD - 18, 60, 18).build();
+            b.setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(switch (code) {
+                case 2 -> "Who is paid what, best paid first, and the town's pay scale";
+                case 3 -> "What the village makes, sells and is worth";
+                default -> "The village: its trades, stores, homes and plans";
+            })));
+            this.addRenderableWidget(b);
+        }
         // Fast time, to watch the village grow: the same as the [ ] \ keys.
         int[] speeds = {1, 2, 4, 8, 16, 32, 64, com.jrpetty.mcassistant.TimeSpeed.MAX};
         int bw = (W - PAD * 2 - 34 - (speeds.length - 1) * 2) / speeds.length;

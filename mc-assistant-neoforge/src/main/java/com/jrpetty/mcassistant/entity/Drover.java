@@ -123,6 +123,7 @@ public final class Drover {
         }
         Market.bought(village, "drover");
         Ledger.takeCoins(village, DROVER_PRICE);
+        Economy.spent(village, DROVER_PRICE);
         Ledger.note(village, "kit.drove", Long.toString(today));
         int put = 0;
         for (EntityType<? extends Animal> type : List.<EntityType<? extends Animal>>of(EntityType.SHEEP, EntityType.SHEEP,
