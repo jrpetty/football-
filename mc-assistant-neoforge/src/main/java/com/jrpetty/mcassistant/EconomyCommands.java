@@ -109,7 +109,9 @@ public final class EconomyCommands {
         for (AssistantEntity a : Villages.folkOf(v.id())) {
             if (!(a instanceof VillageFolkEntity f) || f.stationTask() != AssistantEntity.StationTask.SMELT) continue;
             boolean burning = f.burnCharcoal();
-            BlockPos p = f.blockPosition();
+            // Where it works (its furnaces), not wherever it happens to be standing: a smelter off down the
+            // mine for ore put the smoke's camera inside the hill.
+            BlockPos p = f.workZone() != null ? f.workZone().center() : f.blockPosition();
             String line = "SMELTER " + f.displayNameCap() + " " + p.getX() + " " + p.getY() + " " + p.getZ() + ": "
                 + (burning ? "burning logs into charcoal" : "not now (charcoal "
                     + (Fuel.charcoalWanted(ctx.getSource().getLevel(), v.id()) ? "wanted, but no logs to spare or looked a moment ago" : "not wanted") + ")");
@@ -120,7 +122,8 @@ public final class EconomyCommands {
         return 0;
     }
 
-    /** One line a farmer: "FIELD Name x y z r4: its field grows at 3.25x, well watered; ripe 20%; 2 growth ticks a second". */
+    /** One line a farmer: "FIELD Name x y z r4: its field grows at 3.25x, well watered; ripe 20%; 2 growth ticks a
+     *  second; tilled 40 at x y z" (the middle of its farmland, which is seldom the middle of its plot). */
     private static int fields(CommandContext<CommandSourceStack> ctx) {
         Villages.Village v = near(ctx);
         if (v == null) {
@@ -134,10 +137,25 @@ public final class EconomyCommands {
             BlockPos c = f.workZone().center();
             lines.add("FIELD " + f.displayNameCap() + " " + c.getX() + " " + c.getY() + " " + c.getZ() + " r" + f.workZone().radius() + ": "
                 + com.jrpetty.mcassistant.entity.Fields.careLine(f) + "; ripe " + f.ripePercentNow() + "%; "
-                + com.jrpetty.mcassistant.entity.Fields.picksForTests(f) + " growth ticks a second");
+                + com.jrpetty.mcassistant.entity.Fields.picksForTests(f) + " growth ticks a second; "
+                + tilled(ctx.getSource().getLevel(), c, f.workZone().radius()));
             if (lines.size() > 12) break;
         }
         ctx.getSource().sendSuccess(() -> Component.literal(String.join("\n", lines)), false);
         return lines.size() - 1;
+    }
+
+    /** "tilled N at x y z": the farmland in a plot, and the middle of it. */
+    private static String tilled(net.minecraft.server.level.ServerLevel level, BlockPos c, int r) {
+        int n = 0;
+        long sx = 0, sy = 0, sz = 0;
+        for (BlockPos p : BlockPos.betweenClosed(c.offset(-r, -4, -r), c.offset(r, 4, r))) {
+            if (!level.isLoaded(p) || !level.getBlockState(p).is(net.minecraft.world.level.block.Blocks.FARMLAND)) continue;
+            n++;
+            sx += p.getX();
+            sy += p.getY();
+            sz += p.getZ();
+        }
+        return n == 0 ? "tilled 0" : "tilled " + n + " at " + (sx / n) + " " + (sy / n) + " " + (sz / n);
     }
 }

@@ -1175,12 +1175,35 @@ public final class Workshop {
      * showcase's buildings are), a keeper and a hand for it, the hand at its crafting table and every maker
      * at a piece of work. Says where: "WORKSHOP x y z", "DOOR x y z", "BENCH x y z", "HAND name x y z".
      */
+    /** The nearest spot round here whose footprint (its middle and four corners) is dry land, not a river
+     *  (the smoke's shop once went up in the middle of one), within forty blocks; else the spot itself. */
+    private static BlockPos dryGround(ServerLevel level, BlockPos near) {
+        for (int ring = 0; ring <= 40; ring += 4) {
+            for (int dx = -ring; dx <= ring; dx += 4) {
+                for (int dz = -ring; dz <= ring; dz += 4) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) != ring) continue;
+                    BlockPos at = surface(level, near.getX() + dx, near.getZ() + dz);
+                    boolean dry = true;
+                    for (int[] c : new int[][] { { 0, 0 }, { -7, -7 }, { 7, -7 }, { -7, 7 }, { 7, 7 } }) {
+                        BlockPos q = surface(level, at.getX() + c[0], at.getZ() + c[1]);
+                        if (!level.getFluidState(q.below()).isEmpty() || Math.abs(q.getY() - at.getY()) > 3) { dry = false; break; }
+                    }
+                    if (dry) return at;
+                }
+            }
+        }
+        return surface(level, near.getX(), near.getZ());
+    }
+
+    private static BlockPos surface(ServerLevel level, int x, int z) {
+        return new BlockPos(x, level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z), z);
+    }
+
     public static List<String> stage(ServerLevel level, Villages.Village v, BlockPos near) {
         List<String> out = new ArrayList<>();
         UUID id = v.id();
         if (Villages.builtAt(id, "shop") == null) {
-            int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, near.getX(), near.getZ());
-            BlockPos at = new BlockPos(near.getX(), y, near.getZ());
+            BlockPos at = dryGround(level, near);
             BuildGoal.stamp(level, "shop", at, net.minecraft.core.Direction.NORTH, 13,
                 com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
             com.jrpetty.mcassistant.village.Ledger.built(id, "shop", at, net.minecraft.core.Direction.NORTH);

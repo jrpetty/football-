@@ -784,9 +784,11 @@ def economy_stage(r, look, cx, cz):
     m = re.search(r"SMELTER (.+?) (-?\d+) (-?\d+) (-?\d+)", out)
     if m:
         sx, sy, sz = int(m.group(2)), int(m.group(3)), int(m.group(4))
-        r.cmd("tp %s %d %d %d" % (USER, sx + 6, sy + 4, sz + 6))
+        # Never inside the hill: the camera stands over the ground by the furnaces, whatever their height.
+        cy = max(sy + 3, ground_height(r, sx + 5, sz + 5) + 2)
+        r.cmd("tp %s %d %d %d" % (USER, sx + 6, cy + 2, sz + 6))
         time.sleep(12)                                 # it fills the furnace with logs
-        look("20-economy-1-charcoal", sx + 4.5, sy + 2.5, sz + 4.5, sx, sy + 1, sz, wait=4)
+        look("20-economy-1-charcoal", sx + 5.5, cy + 0.5, sz + 5.5, sx, sy + 1, sz, wait=4)
     else:
         say("no smelter to photograph at its furnace")
     r.cmd("gamemode creative %s" % USER)
@@ -809,19 +811,26 @@ def fields_stage(r, look, cx, cz):
     say("economy: " + r.cmd("execute positioned %d 100 %d run village economy" % (cx, cz))[:1200])
     out = r.cmd("execute positioned %d 100 %d run village economy fields" % (cx, cz))
     say("fields: " + out[:900])
-    m = re.search(r"FIELD (.+?) (-?\d+) (-?\d+) (-?\d+) r(\d+)", out)
-    if not m:
-        say("no farmer's field to photograph")
+    # The field with the most tilled ground, and the middle of its farmland (seldom the middle of the plot:
+    # a riverside field is a strip along the bank).
+    best = None
+    for m in re.finditer(r"FIELD (.+?) (-?\d+) (-?\d+) (-?\d+) r(\d+):.*?tilled (\d+)(?: at (-?\d+) (-?\d+) (-?\d+))?", out):
+        if m.group(7) and (best is None or int(m.group(6)) > int(best.group(6))):
+            best = m
+    if not best:
+        say("no farmer's field with tilled ground to photograph")
         r.cmd("gamemode creative %s" % USER)
         return
-    fx, fy, fz, fr = int(m.group(2)), int(m.group(3)), int(m.group(4)), int(m.group(5))
-    r.cmd("tp %s %d %d %d" % (USER, fx + fr + 4, fy + fr + 6, fz + fr + 4))
+    fx, fy, fz = int(best.group(7)), int(best.group(8)), int(best.group(9))
+    say("photographing %s's field: %s tilled, centred %d %d %d" % (best.group(1), best.group(6), fx, fy, fz))
+    cy = max(fy + 7, ground_height(r, fx + 6, fz + 6) + 3)
+    r.cmd("tp %s %d %d %d" % (USER, fx + 7, cy + 1, fz + 7))
     time.sleep(10)
-    look("21-fields-1-tended", fx + fr + 3.5, fy + fr + 4.5, fz + fr + 3.5, fx, fy, fz, wait=4)
+    look("21-fields-1-tended", fx + 6.5, cy + 0.5, fz + 6.5, fx, fy, fz, wait=4)
     r.cmd("time add 1000")
     time.sleep(50)                                   # a game hour less the jump: the field grows on
     say("fields an hour on: " + r.cmd("execute positioned %d 100 %d run village economy fields" % (cx, cz))[:600])
-    look("21-fields-2-later", fx + fr + 3.5, fy + fr + 4.5, fz + fr + 3.5, fx, fy, fz, wait=4)
+    look("21-fields-2-later", fx + 6.5, cy + 0.5, fz + 6.5, fx, fy, fz, wait=4)
     r.cmd("gamemode creative %s" % USER)
     say("alive after the fields: %s" % client_alive())
 
