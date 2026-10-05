@@ -83,7 +83,8 @@ public final class Villages {
         new Slot(AssistantEntity.StationTask.HAUL, 1, 6),
         new Slot(AssistantEntity.StationTask.STORE, 1, 13),
         new Slot(AssistantEntity.StationTask.RANCH, 1, 14),
-        new Slot(AssistantEntity.StationTask.FISH, 1, 16),
+        // [economy] Fishers from eight (a town of fifteen had none, and no fish), and more when the larder is short (Leader).
+        new Slot(AssistantEntity.StationTask.FISH, 1, 8),
         // The crafts, as a village grows into them: each wants its age and its building
         // (Crafts, Cafe), and one or two hands at most, however big the town.
         new Slot(AssistantEntity.StationTask.COOK, 1, 14, Age.STONE, 2),
@@ -97,8 +98,9 @@ public final class Villages {
         new Slot(AssistantEntity.StationTask.ENCHANT, 1, 24, Age.DIAMOND, 1),
         // Scouts once the village is a town of forty: one or two, out every morning (Scouts).
         new Slot(AssistantEntity.StationTask.SCOUT, 1, Scouts.FROM, Age.WOOD, 2),
-        // Hunters from fifteen: one, then two, out past the fields after game (VillageFolkEntity.huntWork).
-        new Slot(AssistantEntity.StationTask.HUNT, 1, 15, Age.WOOD, 2),
+        // Hunters, out past the fields after game (VillageFolkEntity.huntWork).
+        // [economy] From ten, one to every ten, up to four (more when the larder is short: Leader), while there is game.
+        new Slot(AssistantEntity.StationTask.HUNT, 1, 10, Age.WOOD, 4),
         // The banker, once the bank stands: one, and chosen for its nature (Bank.appoint), not by who asks first.
         new Slot(AssistantEntity.StationTask.BANK, 1, Bank.FROM, Age.IRON, 1));
 
@@ -384,6 +386,8 @@ public final class Villages {
         Strays.resetForTests();             // [economy] stock carried about that is the village's
         PackedLunch.resetForTests();        // [economy] the far hands' meals
         PutAway.resetForTests();            // [economy] the day's work put away twice a day
+        Fields.resetForTests();             // [economy] the tended fields, and folk stuck fast
+        Mishap.resetForTests();             // [economy] the deaths, for the books and the watch
         Ages.resetForTests();
         Interiors.resetForTests();
         Decor.resetForTests();
@@ -845,6 +849,8 @@ public final class Villages {
         t *= leader;
         // Houses waiting on beds want the wool: twice the ranchers (their sheep) till they are made up.
         if (slot.trade() == AssistantEntity.StationTask.RANCH && villageId != null && Market.bedsShort(villageId) >= 6) t *= 2.0;
+        // [economy] The watch grows with the town, and by half again when monsters have been killing its folk (Mishap.watch).
+        if (slot.trade() == AssistantEntity.StationTask.GUARD) t = Mishap.watch(villageId, t, total, CLOCK);
         int max = slot.max() == Integer.MAX_VALUE ? Integer.MAX_VALUE
             : slot.max() + Math.max(0, boost) + Homeland.extraMost(villageId, slot.trade());
         // And the shop's hands at its bench (Workshop): the shop's share is its keeper and the hands it wants.

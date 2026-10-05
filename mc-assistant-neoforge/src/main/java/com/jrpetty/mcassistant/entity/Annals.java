@@ -1146,6 +1146,12 @@ public final class Annals {
         // Meals: did everybody eat, the children and the old as well as the hands at their work (Meals).
         String meals = Meals.townLine(id);
         if (meals != null) out.add(meals);
+        // [economy] The food brought in yesterday, by where it came from and per hand; how fast the fields grow.
+        String foodIn = Larder.inLine(id);
+        if (foodIn != null) out.add(foodIn + " " + Character.toUpperCase(Fields.word(id).charAt(0)) + Fields.word(id).substring(1) + ".");
+        // [economy] The deaths of the week, by what took them (Mishap): the long runs read them here.
+        String dead = Mishap.line(id, level.getDayTime() / 24000L - 6, "over the last 7 days");
+        if (dead != null) out.add(dead);
         // [economy] The day's work put away at noon and at dusk, or carried about overnight (PutAway).
         String banked = PutAway.booksLine(id, level.getDayTime() / 24000L);
         if (banked != null) out.add(banked);

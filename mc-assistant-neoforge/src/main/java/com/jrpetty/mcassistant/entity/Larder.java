@@ -43,11 +43,90 @@ public final class Larder {
 
     public static void resetForTests() {
         HEADS.clear();
+        IN_TODAY.clear();
+        IN_YESTERDAY.clear();
     }
 
-    /** The morning's books are made up, for this many heads (Leader.morning). */
+    /** The morning's books are made up, for this many heads (Leader.morning); yesterday's food in is closed. */
     public static void booked(@Nullable UUID village, int heads) {
-        if (village != null) HEADS.put(village, Math.max(1, heads));
+        if (village == null) return;
+        HEADS.put(village, Math.max(1, heads));
+        double[] day = IN_TODAY.remove(village);
+        double[] closed = new double[SOURCES + 4];
+        if (day != null) System.arraycopy(day, 0, closed, 0, SOURCES);
+        // The hands at each, this morning: farmers, fishers, hunters, ranchers.
+        for (AssistantEntity a : Villages.folkOf(village)) {
+            int i = source(a.stationTask());
+            if (i >= 0 && i < 4 && !a.isBaby()) closed[SOURCES + i]++;
+        }
+        IN_YESTERDAY.put(village, closed);
+    }
+
+    // ------------------------------------------------------------------ food in, by where it came from
+
+    /** Where the food came from: the fields, the water, the hunt, the pen, and the rest (the kitchens). */
+    static final String[] SOURCE_WORDS = { "from the fields", "fish", "from the hunt", "from the pen", "from the kitchens" };
+    static final int SOURCES = SOURCE_WORDS.length;
+    private static final Map<UUID, double[]> IN_TODAY = new ConcurrentHashMap<>();
+    private static final Map<UUID, double[]> IN_YESTERDAY = new ConcurrentHashMap<>();
+
+    static int source(AssistantEntity.StationTask t) {
+        return switch (t) {
+            case FARM -> 0;
+            case FISH -> 1;
+            case HUNT -> 2;
+            case RANCH -> 3;
+            default -> 4;
+        };
+    }
+
+    /** Food brought in by a hand of this trade (Economy.produced): in meals, wheat a third of one. */
+    public static void broughtIn(@Nullable UUID village, AssistantEntity.StationTask trade, net.minecraft.world.item.ItemStack s) {
+        if (village == null || s.isEmpty()) return;
+        double meals = s.get(net.minecraft.core.component.DataComponents.FOOD) != null ? s.getCount()
+            : s.is(net.minecraft.world.item.Items.WHEAT) ? s.getCount() / 3.0 : 0;
+        if (meals <= 0) return;
+        IN_TODAY.computeIfAbsent(village, k -> new double[SOURCES])[source(trade)] += meals;
+    }
+
+    /** Yesterday's food in: {fields, fish, hunt, pen, kitchens, farmers, fishers, hunters, ranchers}, or null. */
+    @Nullable
+    public static double[] yesterdayIn(UUID village) {
+        return IN_YESTERDAY.get(village);
+    }
+
+    /** Today's so far, in words: "12 from the fields, 3 fish" (/village economy). */
+    public static String todayLine(UUID village) {
+        double[] d = todayIn(village);
+        java.util.List<String> parts = new java.util.ArrayList<>();
+        for (int i = 0; i < SOURCES; i++) if (d[i] >= 0.5) parts.add(Math.round(d[i]) + " " + SOURCE_WORDS[i]);
+        return parts.isEmpty() ? "none yet" : String.join(", ", parts);
+    }
+
+    /** Today's so far, by source (tests and /village economy). */
+    public static double[] todayIn(UUID village) {
+        double[] d = IN_TODAY.get(village);
+        return d == null ? new double[SOURCES] : d.clone();
+    }
+
+    /** "+Food in yesterday: 34 from the fields (5 farmers, 7 a farmer), 18 fish (2 fishers, 9 each)...". */
+    @Nullable
+    public static String inLine(UUID village) {
+        double[] d = IN_YESTERDAY.get(village);
+        if (d == null) return null;
+        String[] hands = { "farmer", "fisher", "hunter", "rancher" };
+        java.util.List<String> parts = new java.util.ArrayList<>();
+        double all = 0;
+        for (int i = 0; i < SOURCES; i++) {
+            all += d[i];
+            int n = i < 4 ? (int) d[SOURCES + i] : 0;
+            if (d[i] < 0.5 && n == 0) continue;
+            String part = Math.round(d[i]) + " " + SOURCE_WORDS[i];
+            if (n > 0) part += " (" + n + " " + hands[i] + (n == 1 ? "" : "s") + ", " + Math.round(d[i] / n) + " each)";
+            parts.add(part);
+        }
+        if (parts.isEmpty()) return "-Food in yesterday: none.";
+        return (d[0] + d[1] + d[2] + d[3] > 0 ? "=" : "-") + "Food in yesterday: " + Math.round(all) + " meals: " + String.join(", ", parts) + ".";
     }
 
     /** What one folk eats in a day by the books: the town's day over the heads it had, never under three meals. */

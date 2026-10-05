@@ -151,6 +151,7 @@ public final class Economy {
         if (fresh <= 0) return;
         if (fresh < s.getCount()) s = s.copyWithCount(fresh);
         if (k == Kind.FOOD || s.is(Items.WHEAT)) Leader.foodIn(village, s);     // the leader's food books
+        if (k == Kind.FOOD || s.is(Items.WHEAT)) Larder.broughtIn(village, trade, s);   // [economy] and by where it came from
         // The books, item by item: what it gathered with its own hands was counted when it picked it up
         // (Economy.gathered); only what is new to the books goes in now (a smelter's ingots, a mason's bricks).
         tally(village, trade, s, s.getCount() - credit(f, s), true);

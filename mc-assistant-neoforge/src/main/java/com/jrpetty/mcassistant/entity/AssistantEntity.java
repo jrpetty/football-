@@ -738,6 +738,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** DepositGoal reports a successful stash so the "lingering output" timer resets. */
     public void noteStashed() { lastStashTick = tickCount; }
 
+    /** [economy] How ripe its field was at its last look, 0-100 (Fields.harvestWaits). */
+    public int ripePercentNow() { return ripePercent; }
+
+    /** [economy] Ticks since its last stroke of work (Fields: stuck fast?). */
+    public int ticksSinceWork() { return tickCount - lastWorkTick; }
+
     /** [economy] When it last banked anything (PutAway: was the day's work put away?). */
     public int lastStashTick() { return lastStashTick; }
 
@@ -4048,6 +4054,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case FARM -> (s.is(Items.WHEAT_SEEDS) || s.is(Items.BEETROOT_SEEDS)
                 || s.is(Items.CARROT) || s.is(Items.POTATO))
                 ? Math.min(SEED_MOST, 16 + (workZone == null ? 0 : 2 * Math.max(0, workZone.radius() - 4)))
+                // [economy] Its bone meal for the field, and a few bones to crush into more (Fields).
+                : s.is(Items.BONE_MEAL) ? Fields.BONE_MEAL_KEPT : s.is(Items.BONE) ? 8
                 : (s.is(Items.WATER_BUCKET) || s.is(Items.BUCKET)) ? 10 : 0;
             case WOOD -> s.is(ItemTags.SAPLINGS) ? 16 : 0;
             case RANCH -> BREEDING_FOOD.test(s) ? 16 : (s.is(Items.SHEARS) ? 1 : 0);
@@ -6798,7 +6806,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                     // first, being the village's tools; the stone bricks, smooth stone and bricks
                     // every building after the first few is made of come next.
                     if (masonWork()) return true;
-                    if (!can(Ability.SMELT_COOK)) return false;   // level 30: the cook's rung
+                    // [economy] A village's smelter cooks the fishers' and the hunters' catch whatever its level (the hired hand's rung is level 30).
+                    if (!isSettler() && !can(Ability.SMELT_COOK)) return false;   // level 30: the cook's rung
                     // No ore to run — cook for the crew instead. The rancher's
                     // raw drops become the 100%-pace meals the diet system
                     // wants, and the supply chain hands them to whoever is

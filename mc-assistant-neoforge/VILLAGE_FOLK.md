@@ -2402,12 +2402,52 @@ load in its pack. So:
 * **What took them.** A death is written down with its cause: by drowning, in a fall, in lava,
   fighting a zombie, and so on, not just "by misfortune", in the history, the graves and the
   books. (Hunger never kills: a folk that misses its meals grows weak, but never below three
-  hearts.)
+  hearts.) The town's books add up the last seven days each morning: "6 died over the last 7
+  days: 3 fighting a zombie, 2 in a fall, 1 by drowning".
+* **The town's fields grow faster.** A nine-by-nine of wheat at the game's own pace grows about
+  eleven meals a day, and a farmer needs to feed four. So the farmland of a farmer's plot is a
+  tended field: its crops get the game's own random growth ticks again, twice over by default
+  (`villageCropGrowth`, 3.0, from 1.0 for the game's own pace to 8.0), through each crop's own
+  growth, so a dark or a dry field gains nothing, and only where the game is growing anything
+  at all (a player near, or the town's ground kept awake). The farmer's care adds a quarter each,
+  up to four times in all: its level (ten or more), a field nearly all watered, a field lit, and
+  a composter by its chest. It costs a handful of block looks a field a second (two or three for
+  a nine-by-nine, never more than forty-eight). Wild crops and a player's own farm grow as ever.
+  The books say "the fields grow at 3.0x (tended)", and a farmer's card how its own does.
+* **A practised hand at the field.** A village's farmer takes a crop and sows it again at twice
+  the pace of the rest of its trade's work, and a farmer with a quarter of its field ripe puts
+  its break off till the harvest is in.
+* **Bone meal and a composter.** A farmer passing the stores takes four of their bones (the
+  watch's and the hunters'), crushes one into three bone meal at its field as anybody would, and
+  puts one on a growing crop every few seconds; it keeps sixteen. It sets a composter down beside
+  its work chest out of four of the stores' planks, fills it with the seed past what it keeps and
+  any poisonous potato, and takes the bone meal out when it is ready.
+* **The field lit.** At its field, a farmer sets two of the stores' torches a minute round the
+  field's edge till it is lit, so nothing spawns among the crops at night.
+* **Food in, by where it came from.** The books say each morning what came in the day before:
+  "Food in yesterday: 61 meals: 34 from the fields (3 farmers, 11 each), 18 fish (2 fishers, 9
+  each), 9 from the hunt (1 hunter, 9 each)", wheat counted as a third of a meal.
+* **Fishers and hunters.** A town fishes from eight folk (one to every ten, more on the coast) and
+  hunts from ten (one to every ten, up to four), and on short commons wants half as many fishers
+  again (one to about every six) and a quarter more hunters (one to about every eight); the
+  hunter never takes one of the last two of a kind about it, and the rancher culls past ten
+  head. The village's smelter cooks the fish and the meat whatever its level. And the hands the
+  leader sends to the fields and the water stay there three days after short commons end, so they
+  are not called back before their new fields come in.
+* **The watch grows with the town.** From eleven folk the town wants a guard to every eight
+  (two at sixteen, four at thirty-two, seven or eight at sixty), and half as many again, and two at least, for five days
+  after it has lost a folk to monsters or raiders. What is left of a raiding party slinks off at
+  dawn, all of it: a raider that wandered off out of the loaded ground or outlived its raid no
+  longer waits by the town for the next.
+* **Stuck fast, and frozen.** A folk standing in ground that no longer ticks (beyond the chunks
+  the town keeps awake) is brought home; one on its shift that has done no work in half a day
+  and has not moved in five minutes, off its own plot, is put back on it.
 
 `/village economy` says it all in chat: food grown against eaten and whether a child may be
-raised, the coal in the stores against the floor, who carries the builders' stock about, and
-what the village's dead died of. The Stores page of the town's books shows the larder's word on
-a child under the food chart.
+raised, the coal in the stores against the floor, who carries the builders' stock about, the
+food in by where it came from (yesterday's and today's so far), the fields' pace and each
+farmer's care, the week's deaths and the watch wanted, and what the village's dead died of. The
+Stores page of the town's books shows the larder's word on a child under the food chart.
 
 ### What each folk cares about
 

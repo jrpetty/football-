@@ -43,4 +43,71 @@ public final class Mishap {
     private static boolean startsWithVowel(String s) {
         return !s.isEmpty() && "aeiou".indexOf(s.charAt(0)) >= 0;
     }
+
+    // ------------------------------------------------------------------ the deaths, for the books and the watch
+
+    /** A death: the day, and how. */
+    record Death(long day, long gameTime, String how) {}
+
+    private static final java.util.Map<java.util.UUID, java.util.Deque<Death>> DEATHS = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public static void resetForTests() {
+        DEATHS.clear();
+    }
+
+    /** A folk of this village died today, so (VillageFolkEntity.die). The last sixty are kept. */
+    public static void record(@javax.annotation.Nullable java.util.UUID village, long day, long gameTime, String how) {
+        if (village == null) return;
+        java.util.Deque<Death> d = DEATHS.computeIfAbsent(village, k -> new java.util.concurrent.ConcurrentLinkedDeque<>());
+        d.addLast(new Death(day, gameTime, how == null || how.isEmpty() ? "by misfortune" : how));
+        while (d.size() > 60) d.pollFirst();
+    }
+
+    /** How many died since {@code from} (a day), by how, most first. */
+    public static java.util.Map<String, Integer> since(java.util.UUID village, long from) {
+        java.util.Map<String, Integer> out = new java.util.LinkedHashMap<>();
+        java.util.Deque<Death> d = DEATHS.get(village);
+        if (d == null) return out;
+        java.util.Map<String, Integer> n = new java.util.HashMap<>();
+        for (Death x : d) if (x.day() >= from) n.merge(x.how(), 1, Integer::sum);
+        n.entrySet().stream().sorted((a, b) -> b.getValue() - a.getValue()).forEach(e -> out.put(e.getKey(), e.getValue()));
+        return out;
+    }
+
+    /** "6 died: 3 fighting a zombie, 2 in a fall, 1 by drowning", or null with none. */
+    @javax.annotation.Nullable
+    public static String line(java.util.UUID village, long from, String span) {
+        java.util.Map<String, Integer> by = since(village, from);
+        int all = 0;
+        for (int v : by.values()) all += v;
+        if (all == 0) return null;
+        java.util.List<String> parts = new java.util.ArrayList<>();
+        for (var e : by.entrySet()) parts.add(e.getValue() + " " + e.getKey());
+        return "-" + all + " died " + span + ": " + String.join(", ", parts) + ".";
+    }
+
+    /** Folk lost to monsters or raiders since this game time: what the watch is sized against (Villages.target). */
+    public static int toMonsters(java.util.UUID village, long fromGameTime) {
+        int n = 0;
+        java.util.Deque<Death> d = DEATHS.get(village);
+        if (d == null) return 0;
+        for (Death x : d) {
+            if (x.gameTime() < fromGameTime) continue;
+            String h = x.how();
+            if (h.startsWith("fighting a") && !h.contains("player") || h.equals("when the raiders came") || h.equals("in an explosion")) n++;
+        }
+        return n;
+    }
+
+    /**
+     * The watch a town wants (Villages.target): one guard to every eight folk from eleven, never fewer than
+     * the share it had; half again, and two at least, when it has lost folk to monsters in the last five
+     * days. The hundred days' town of fifteen kept one guard against nightly raids of thirteen to thirty
+     * monsters, and lost six folk in a week.
+     */
+    public static double watch(@javax.annotation.Nullable java.util.UUID village, double share, int total, long gameTime) {
+        double t = Math.max(share, total / 8.0);
+        if (village != null && toMonsters(village, gameTime - 5 * 24000L) > 0) t = Math.max(2.0, t * 1.5);
+        return t;
+    }
 }

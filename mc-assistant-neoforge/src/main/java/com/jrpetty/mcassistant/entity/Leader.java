@@ -85,6 +85,10 @@ public final class Leader {
     private static final Map<UUID, Integer> PAY = new ConcurrentHashMap<>();
     /** What the leader last decided, for the status and the elder's talk. */
     private static final Map<UUID, String> DECIDED = new ConcurrentHashMap<>();
+    /** [economy] The last day the leader had the village on short commons (or in famine). */
+    private static final Map<UUID, Long> SHORT_ON = new ConcurrentHashMap<>();
+    /** [economy] How many days the extra hands stay in the fields after short commons end. */
+    static final long HOLD_DAYS = 3;
 
     public static void resetForTests() {
         NATURE.clear();
@@ -93,6 +97,7 @@ public final class Leader {
         FOOD_IN.clear();
         PAY.clear();
         DECIDED.clear();
+        SHORT_ON.clear();
     }
 
     // ------------------------------------------------------------------ the leader's nature
@@ -321,7 +326,15 @@ public final class Leader {
         if (village == null) return 1.0;
         boolean food = trade == StationTask.FARM || trade == StationTask.FISH || trade == StationTask.HUNT;
         if (!food) return 1.0;
-        return switch (plan(village)) {
+        Plan p = plan(village);
+        // [economy] The hands sent to the fields and the water stay there a few days after short commons end
+        // (not when the larder is full again): new fields take days to come in, and the hundred days' town
+        // sent five hands to the fields and called them back by turns, two, seven, two, eight farmers, each
+        // new one walking out to a new field and back to its old trade before it had grown a thing.
+        Books b = books(village);
+        Long lastShort = SHORT_ON.get(village);
+        if (p == Plan.STEADY && b != null && lastShort != null && b.day() - lastShort <= HOLD_DAYS) p = Plan.SHORT;
+        return switch (p) {
             case FAMINE -> trade == StationTask.HUNT ? 1.5 : 2.0;
             case SHORT -> trade == StationTask.HUNT ? 1.25 : 1.5;
             default -> 1.0;
@@ -431,6 +444,7 @@ public final class Leader {
         boolean settled = kept >= 4;
         boolean draining = settled && draining(stock, inAvg, eat, reserve, was);
         Plan plan = decide(stock, heads, inAvg, eat, reserve, was, settled);
+        if (plan == Plan.SHORT || plan == Plan.FAMINE) SHORT_ON.put(id, day);     // [economy] the hands held a while after
         Books b = new Books(stock, in, use, inAvg, useAvg, days, plan, day);
         BOOKS.put(id, b);
         Larder.booked(id, heads);                                    // [economy] the mouths these books are for

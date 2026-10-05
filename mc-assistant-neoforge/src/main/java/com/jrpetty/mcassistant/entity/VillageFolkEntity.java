@@ -208,6 +208,13 @@ public class VillageFolkEntity extends AssistantEntity {
         return true;
     }
 
+    /** [economy] Stuck fast off its plot half a day (Fields.unstick): put back on it, as a lost hand is. */
+    public boolean unstickToPlot() {
+        boolean put = rescueToPlot();
+        if (put) brain("stuck fast half a day — put back on its plot");
+        return put;
+    }
+
     /** [economy] Tests: as if this hand had drawn materials for a building. */
     public void drewForBuildForTests() { drewForBuild = true; }
 
@@ -1354,6 +1361,7 @@ public class VillageFolkEntity extends AssistantEntity {
             int age = ageYears();
             // [economy] What took it, in words (Mishap): "by misfortune" said nothing about what kills folk.
             String how = passing ? "of old age" : Raids.underAlarm(village) ? "when the raiders came" : Mishap.how(cause);
+            Mishap.record(village, day, level().getGameTime(), how);                    // [economy] for the books' daily line and the watch
             com.jrpetty.mcassistant.village.Ledger.buried(village, new com.jrpetty.mcassistant.village.Ledger.Grave(
                 displayNameCap(), bornDay, day, how, life.parents(), life.partnerName(), stationTask().title));
             Villages.tell(village, day, passing
@@ -5978,6 +5986,8 @@ public class VillageFolkEntity extends AssistantEntity {
         // A carrier with a load in hand takes it to the stores first: the break waits. (One went
         // on its break holding the furnace's sixteen ingots and held them for the whole of it.)
         if (stationTask() == StationTask.HAUL && stashable() > 0) return false;
+        // [economy] A farmer with a ripe field takes the harvest in first: the break waits (Fields).
+        if (Fields.harvestWaits(this)) return false;
         long day = level().getDayTime() % 24000L;
         long bits = getUUID().getLeastSignificantBits();
         // Partners take their break together: both work it out from the same one of

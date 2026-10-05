@@ -32,6 +32,8 @@ import java.util.UUID;
  *                               the builders' stock about; and what its dead died of
  *   /village economy charcoal   (ops) its smelter burns logs into charcoal now, if the village wants it;
  *                               says where the smelter stands
+ *   /village economy fields     its farmers' fields: where each lies, how fast it grows and why, how
+ *                               ripe it was at the farmer's last look, and the growth ticks it was given
  * </pre>
  */
 public final class EconomyCommands {
@@ -41,7 +43,8 @@ public final class EconomyCommands {
     public static LiteralArgumentBuilder<CommandSourceStack> build() {
         return Commands.literal("economy")
             .executes(EconomyCommands::status)
-            .then(Commands.literal("charcoal").requires(src -> src.hasPermission(2)).executes(EconomyCommands::charcoal));
+            .then(Commands.literal("charcoal").requires(src -> src.hasPermission(2)).executes(EconomyCommands::charcoal))
+            .then(Commands.literal("fields").executes(EconomyCommands::fields));
     }
 
     private static Villages.Village near(CommandContext<CommandSourceStack> ctx) {
@@ -74,6 +77,21 @@ public final class EconomyCommands {
             if (n > 0) carriers.add(f.displayNameCap() + " the " + f.stationTask().title.toLowerCase(java.util.Locale.ROOT) + " " + n);
         }
         lines.add("Put away: " + com.jrpetty.mcassistant.entity.PutAway.line(id, level.getDayTime() / 24000L) + ".");
+        // The food in by where it came from, the fields' pace and each farmer's care, the week's deaths and the watch.
+        String foodIn = Larder.inLine(id);
+        lines.add("Food in: " + (foodIn == null ? "no day closed yet" : foodIn.substring(1)) + " Today so far: " + Larder.todayLine(id) + ".");
+        List<String> care = new ArrayList<>();
+        for (AssistantEntity a : Villages.folkOf(id)) {
+            if (a instanceof VillageFolkEntity f && f.stationTask() == AssistantEntity.StationTask.FARM && care.size() < 6) {
+                String c = com.jrpetty.mcassistant.entity.Fields.careLine(f);
+                if (c != null) care.add(f.displayNameCap() + ": " + c);
+            }
+        }
+        lines.add("Fields: " + com.jrpetty.mcassistant.entity.Fields.word(id) + (care.isEmpty() ? "" : "; " + String.join("; ", care)) + ".");
+        String dead = com.jrpetty.mcassistant.entity.Mishap.line(id, level.getDayTime() / 24000L - 6, "over the last 7 days");
+        lines.add("Deaths: " + (dead == null ? "none in the last 7 days" : dead.substring(1, dead.length() - 1))
+            + "; the watch wanted: at least " + String.format(java.util.Locale.ROOT, "%.1f",
+                com.jrpetty.mcassistant.entity.Mishap.watch(id, 0.0, folk, level.getGameTime())) + " guards.");
         lines.add("Builders' stock carried about: " + (carriers.isEmpty() ? "none" : String.join(", ", carriers.subList(0, Math.min(8, carriers.size())))) + ".");
         Map<String, Integer> causes = new LinkedHashMap<>();
         for (Ledger.Grave g : Ledger.graves(id)) causes.merge(g.cause(), 1, Integer::sum);
@@ -100,5 +118,26 @@ public final class EconomyCommands {
         }
         ctx.getSource().sendFailure(Component.literal("The village has no smelter."));
         return 0;
+    }
+
+    /** One line a farmer: "FIELD Name x y z r4: its field grows at 3.25x, well watered; ripe 20%; 2 growth ticks a second". */
+    private static int fields(CommandContext<CommandSourceStack> ctx) {
+        Villages.Village v = near(ctx);
+        if (v == null) {
+            ctx.getSource().sendFailure(Component.literal("No village near enough."));
+            return 0;
+        }
+        List<String> lines = new ArrayList<>();
+        lines.add("FIELDS " + Villages.name(v.id()) + ": " + com.jrpetty.mcassistant.entity.Fields.word(v.id()));
+        for (AssistantEntity a : Villages.folkOf(v.id())) {
+            if (!(a instanceof VillageFolkEntity f) || f.stationTask() != AssistantEntity.StationTask.FARM || f.workZone() == null) continue;
+            BlockPos c = f.workZone().center();
+            lines.add("FIELD " + f.displayNameCap() + " " + c.getX() + " " + c.getY() + " " + c.getZ() + " r" + f.workZone().radius() + ": "
+                + com.jrpetty.mcassistant.entity.Fields.careLine(f) + "; ripe " + f.ripePercentNow() + "%; "
+                + com.jrpetty.mcassistant.entity.Fields.picksForTests(f) + " growth ticks a second");
+            if (lines.size() > 12) break;
+        }
+        ctx.getSource().sendSuccess(() -> Component.literal(String.join("\n", lines)), false);
+        return lines.size() - 1;
     }
 }

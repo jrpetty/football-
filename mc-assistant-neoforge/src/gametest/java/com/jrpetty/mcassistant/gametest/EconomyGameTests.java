@@ -9,6 +9,8 @@ import com.jrpetty.mcassistant.entity.Leader;
 import com.jrpetty.mcassistant.entity.Meals;
 import com.jrpetty.mcassistant.entity.PackedLunch;
 import com.jrpetty.mcassistant.entity.PutAway;
+import com.jrpetty.mcassistant.entity.Fields;
+import com.jrpetty.mcassistant.entity.Mishap;
 import com.jrpetty.mcassistant.entity.Couriers;
 import com.jrpetty.mcassistant.entity.FolkTalk;
 import com.jrpetty.mcassistant.entity.Job;
@@ -31,6 +33,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
+import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -69,6 +72,14 @@ import java.util.function.Predicate;
  *     its pickaxe, its torches and its rations.</li>
  * <li><b>ec07</b>: a farmer at its field at midday puts its harvest into its work chest down to its seed.</li>
  * <li><b>ec08</b>: a courier on a run at midday does not stop to bank: the run is seen through.</li>
+ * <li><b>ec09</b>: two nine-by-nine wheat fields sown the same tick, one a farmer's (tended), one wild:
+ *     the tended one grows about three times as fast, at a handful of growth ticks a second.</li>
+ * <li><b>ec10</b>: a farmer on a kept nine-by-nine field (crops at every age) brings in at least twenty-five
+ *     meals in a day of growth at the game's own tick speed (the game's own pace: about eleven).</li>
+ * <li><b>ec11</b>: a fisher by a pond lands fish at about a player's rate.</li>
+ * <li><b>ec12</b>: a hunter brings meat home, and leaves the last pair of a kind.</li>
+ * <li><b>ec13</b>: the watch grows with the town, and by half again once monsters have killed; the books say
+ *     what took them; a raider left over from a raid that is over goes at dawn.</li>
  * </ul>
  *
  * <p>Each runs on its own ground (x 360,000 to 366,000, z 50,000).
@@ -798,5 +809,301 @@ public class EconomyGameTests {
                     + " in the storehouse — " + courier.debugLine());
             }
         });
+    }
+
+    // ============================================================ ec09: tended fields grow faster
+
+    /** A nine-by-nine field round a water hole at this spot, sown with wheat of this age (-1: every age, by turns); its middle. */
+    private static BlockPos field(ServerLevel level, int x, int z, int age) {
+        int n = 0;
+        BlockPos mid = Kit.surface(level, x, z);
+        for (int dx = -4; dx <= 4; dx++) {
+            for (int dz = -4; dz <= 4; dz++) {
+                BlockPos g = mid.offset(dx, -1, dz);
+                for (int up = 0; up <= 3; up++) level.setBlock(g.above(1 + up), Blocks.AIR.defaultBlockState(), 3);
+                level.setBlock(g.below(), Blocks.DIRT.defaultBlockState(), 3);
+                if (dx == 0 && dz == 0) {
+                    level.setBlock(g, Blocks.WATER.defaultBlockState(), 3);
+                    continue;
+                }
+                level.setBlock(g, Blocks.FARMLAND.defaultBlockState().setValue(net.minecraft.world.level.block.FarmBlock.MOISTURE, 7), 3);
+                level.setBlock(g.above(), Blocks.WHEAT.defaultBlockState().setValue(net.minecraft.world.level.block.CropBlock.AGE,
+                    age >= 0 ? age : n++ % 8), 3);
+            }
+        }
+        return mid;
+    }
+
+    /** The wheat's ages added up over a field. */
+    private static int ages(ServerLevel level, BlockPos mid) {
+        int n = 0;
+        for (BlockPos p : BlockPos.betweenClosed(mid.offset(-4, 0, -4), mid.offset(4, 0, 4))) {
+            var st = level.getBlockState(p);
+            if (st.is(Blocks.WHEAT)) n += st.getValue(net.minecraft.world.level.block.CropBlock.AGE);
+        }
+        return n;
+    }
+
+    @GameTest(template = EMPTY, timeoutTicks = 5200, batch = "ec09_tended_fields_grow")
+    public static void ec09_tended_fields_grow(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        final long noon = 24000L * 8 + 6000;
+        level.setDayTime(noon);
+        final int x = 360150;
+        Kit.hold(level, x, Z, 40);
+        Kit.prepare(level, x, Z, 40);
+        BlockPos heart = Kit.surface(level, x, Z);
+        VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(f != null && f.ownerId() != null, "a village");
+        BlockPos tended = field(level, x + 16, Z, 0), wild = field(level, x - 16, Z, 0);
+        // The farmer's field is tended; it stands still (no hands on the crops: the test is of the growing).
+        f.setJob(StationTask.FARM);
+        f.assignPlot(WorkZone.around(tended, 4, WorkZone.DEFAULT_DEPTH), "Home Fields");
+        f.setNoAi(true);
+        // The game's random tick speed at a known figure (another test may have left it at fifteen, and a
+        // field of ripe wheat grows no further): six, so both fields are well short of ripe in the time.
+        var rule = level.getGameRules().getRule(net.minecraft.world.level.GameRules.RULE_RANDOMTICKING);
+        final int was = rule.get();
+        rule.set(6, level.getServer());
+        int speed = rule.get();
+        Kit.log("ec09 two fields of eighty wheat, sown at once; random tick speed " + speed + "; the town's fields grow at "
+            + com.jrpetty.mcassistant.AssistantConfig.villageCropGrowth() + "x");
+        final int[] most = { 0 };
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            long tod = level.getDayTime() % 24000L;
+            if (tod > 9000 || tod < 3000) level.setDayTime(noon);
+            most[0] = Math.max(most[0], Fields.picksForTests(f));
+            if (t % 500 == 0) Kit.log("ec09 @" + t + ": tended " + ages(level, tended) + ", wild " + ages(level, wild) + " (growth picks "
+                + Fields.picksForTests(f) + " a second; x" + Fields.multiplier(f) + ")");
+            if (t >= 5000) {
+                rule.set(was, level.getServer());
+                int a = ages(level, tended), w = ages(level, wild);
+                double ratio = a / (double) Math.max(1, w);
+                Kit.log("ec09 after 5000 ticks: tended " + a + ", wild " + w + " — " + String.format("%.2f", ratio)
+                    + "x; at most " + most[0] + " growth picks a second; " + Fields.word(f.ownerId()));
+                helper.assertTrue(w > 0, "the wild field grows at its own pace: " + w);
+                helper.assertTrue(ratio >= 2.2 && ratio <= 5.0, "the tended field grows about three times as fast: " + String.format("%.2f", ratio));
+                helper.assertTrue(most[0] <= Fields.PICKS_MOST && most[0] >= 1, "at a handful of growth ticks a second: " + most[0]);
+                helper.succeed();
+            }
+        });
+    }
+
+    // ============================================================ ec10: a farmer's half day
+
+    /** Meals in these goods: food, and wheat a third of one. */
+    private static double meals(Iterable<ItemStack> goods) {
+        double n = 0;
+        for (ItemStack st : goods) {
+            if (st.isEmpty()) continue;
+            if (st.is(Items.WHEAT)) n += st.getCount() / 3.0;
+            else if (st.get(DataComponents.FOOD) != null) n += st.getCount();
+        }
+        return n;
+    }
+
+    private static java.util.List<ItemStack> contents(Container c) {
+        java.util.List<ItemStack> out = new ArrayList<>();
+        for (int i = 0; i < c.getContainerSize(); i++) out.add(c.getItem(i));
+        return out;
+    }
+
+    @GameTest(template = EMPTY, timeoutTicks = 24600, batch = "ec10_farmer_day")
+    public static void ec10_farmer_day(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        // The game's own random tick speed (three), whatever another test left it at.
+        var rule = level.getGameRules().getRule(net.minecraft.world.level.GameRules.RULE_RANDOMTICKING);
+        final int was = rule.get();
+        rule.set(3, level.getServer());
+        final long morning = 24000L * 9 + 1500;
+        level.setDayTime(morning);
+        final int x = 361600;
+        Kit.hold(level, x, Z, 40);
+        Kit.prepare(level, x, Z, 40);
+        BlockPos heart = Kit.surface(level, x, Z);
+        VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(f != null && f.ownerId() != null, "a village");
+        UUID village = f.ownerId();
+        BlockPos mid = field(level, x + 16, Z, -1);                       // a field of eighty at every age, as a kept field is
+        f.setJob(StationTask.FARM);
+        f.assignPlot(WorkZone.around(mid, 4, WorkZone.DEFAULT_DEPTH), "Home Fields");
+        f.getInventoryItems().clear();
+        f.insertItem(new ItemStack(Items.CHEST));
+        BlockPos chest = f.productionChestForTests();
+        helper.assertTrue(chest != null, "its work chest by the field");
+        f.getInventoryItems().clear();
+        f.insertItem(new ItemStack(Items.STONE_HOE));
+        f.insertItem(new ItemStack(Items.BREAD, 8));
+        f.insertItem(new ItemStack(Items.WHEAT_SEEDS, 16));
+        f.moveTo(mid.getX() + 5.5, mid.getY(), mid.getZ() + 0.5, 0.0F, 0.0F);
+        // Wheat brought in, in the pack and every chest about (its work chest, the stores), bread as three.
+        Predicate<ItemStack> wheat = st -> st.is(Items.WHEAT), bread = st -> st.is(Items.BREAD);
+        java.util.function.IntSupplier grain = () -> f.countCarried(wheat) + inChests(level, x, Z, 40, wheat)
+            + 3 * (f.countCarried(bread) + inChests(level, x, Z, 40, bread));
+        final int start = grain.getAsInt();
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            long tod = level.getDayTime() % 24000L;
+            // On its shift the day through: the field grows a whole day (day and night alike, under the open
+            // sky), and the farmer is there to take what ripens.
+            if (tod > 10500 || tod < 1000) level.setDayTime(morning);
+            Villages.noteAttempt(village, level.getGameTime());          // (no building calls the farmer away)
+            if (t % 50 != 0) return;
+            double meals = (grain.getAsInt() - start) / 3.0, booked = Larder.todayIn(village)[0];
+            if (t % 2000 == 0) Kit.log("ec10 @" + t + ": " + String.format("%.1f", meals) + " meals in, "
+                + String.format("%.1f", booked) + " booked to the fields; the field " + ages(level, mid) + " — " + f.debugLine());
+            if (t >= 24000) {
+                rule.set(was, level.getServer());
+                Kit.log("ec10 a day: " + String.format("%.1f", meals) + " meals brought in by one farmer on a field of eighty ("
+                    + String.format("%.1f", booked) + " booked to the fields; the game's own pace would give about 11); "
+                    + Fields.word(village) + "; " + Fields.careLine(f));
+                helper.assertTrue(meals >= 25, "a farmer on a nine-by-nine brings in twenty-five meals a day: "
+                    + String.format("%.1f", meals));
+                helper.succeed();
+            }
+        });
+    }
+
+    // ============================================================ ec11: the fisher's catch
+
+    @GameTest(template = EMPTY, timeoutTicks = 6200, batch = "ec11_fisher_catch")
+    public static void ec11_fisher_catch(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        final long morning = 24000L * 9 + 2000;
+        level.setDayTime(morning);
+        final int x = 363130;
+        Kit.hold(level, x, Z, 40);
+        Kit.prepare(level, x, Z, 40);
+        BlockPos heart = Kit.surface(level, x, Z);
+        VillageFolkEntity fisher = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(fisher != null && fisher.ownerId() != null, "a village");
+        BlockPos pond = Kit.surface(level, x + 12, Z);
+        for (int dx = -3; dx <= 3; dx++) {
+            for (int dz = -3; dz <= 3; dz++) {
+                level.setBlock(pond.offset(dx, -1, dz), Blocks.WATER.defaultBlockState(), 3);
+                level.setBlock(pond.offset(dx, -2, dz), Blocks.WATER.defaultBlockState(), 3);
+            }
+        }
+        fisher.assignPlot(WorkZone.around(pond, 6, WorkZone.DEFAULT_DEPTH), "the pond");
+        fisher.setJob(StationTask.FISH);
+        fisher.getInventoryItems().clear();
+        fisher.insertItem(new ItemStack(Items.FISHING_ROD));
+        fisher.insertItem(new ItemStack(Items.BREAD, 8));
+        fisher.moveTo(pond.getX() + 0.5, pond.getY(), pond.getZ() + 5.5, 0.0F, 0.0F);
+        Predicate<ItemStack> fish = st -> st.is(Items.COD) || st.is(Items.SALMON) || st.is(Items.TROPICAL_FISH) || st.is(Items.PUFFERFISH)
+            || st.is(Items.COOKED_COD) || st.is(Items.COOKED_SALMON);
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            long tod = level.getDayTime() % 24000L;
+            if (tod > 10500 || tod < 1000) level.setDayTime(morning);
+            Villages.noteAttempt(fisher.ownerId(), level.getGameTime());
+            if (t % 50 != 0) return;
+            int caught = fisher.countCarried(fish) + inChests(level, x, Z, 40, fish);
+            if (t % 1000 == 0) Kit.log("ec11 @" + t + ": " + caught + " fish — " + fisher.debugLine());
+            if (t >= 6000) {
+                Kit.log("ec11 a fisher's quarter day: " + caught + " fish (" + String.format("%.1f", caught * 4.0) + " a working day at this rate)");
+                helper.assertTrue(caught >= 8, "a fisher by a pond lands fish at about a player's rate: " + caught + " in 6000 ticks");
+                helper.succeed();
+            }
+        });
+    }
+
+    // ============================================================ ec12: the hunter
+
+    @GameTest(template = EMPTY, timeoutTicks = 4000, batch = "ec12_hunter_meat")
+    public static void ec12_hunter_meat(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(24000L * 9 + 2000);
+        final int x = 364240;
+        Kit.hold(level, x, Z, 50);
+        Kit.prepare(level, x, Z, 50);
+        BlockPos heart = Kit.surface(level, x, Z);
+        VillageFolkEntity hunter = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(hunter != null && hunter.ownerId() != null, "a village");
+        BlockPos grounds = Kit.surface(level, x + 24, Z);
+        for (net.minecraft.world.entity.animal.Animal a : level.getEntitiesOfClass(net.minecraft.world.entity.animal.Animal.class,
+                new AABB(grounds).inflate(60, 32, 60))) a.discard();
+        hunter.assignPlot(WorkZone.around(grounds, 20, WorkZone.DEFAULT_DEPTH), "Hunting Grounds");
+        hunter.setJob(StationTask.HUNT);
+        hunter.getInventoryItems().clear();
+        hunter.insertItem(new ItemStack(Items.IRON_SWORD));
+        hunter.insertItem(new ItemStack(Items.BREAD, 8));
+        for (int i = 0; i < 5; i++) {
+            net.minecraft.world.entity.animal.Pig pig = net.minecraft.world.entity.EntityType.PIG.create(level);
+            pig.moveTo(grounds.getX() + 0.5 + i, grounds.getY(), grounds.getZ() + 3.5, 0.0F, 0.0F);
+            level.addFreshEntity(pig);
+        }
+        for (int i = 0; i < 2; i++) {
+            net.minecraft.world.entity.animal.Sheep sheep = net.minecraft.world.entity.EntityType.SHEEP.create(level);
+            sheep.moveTo(grounds.getX() + 0.5 + i, grounds.getY(), grounds.getZ() - 3.5, 0.0F, 0.0F);
+            level.addFreshEntity(sheep);
+        }
+        hunter.moveTo(grounds.getX() + 0.5, grounds.getY(), grounds.getZ() + 0.5, 0.0F, 0.0F);
+        Predicate<ItemStack> meat = st -> st.is(Items.PORKCHOP) || st.is(Items.COOKED_PORKCHOP) || st.is(Items.MUTTON) || st.is(Items.COOKED_MUTTON);
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            Villages.noteAttempt(hunter.ownerId(), level.getGameTime());
+            if (t % 20 == 0 && hunter.peekJob() == null) hunter.huntForTests();
+            if (t % 50 != 0) return;
+            int pigs = level.getEntitiesOfClass(net.minecraft.world.entity.animal.Pig.class, new AABB(grounds).inflate(50, 16, 50),
+                net.minecraft.world.entity.LivingEntity::isAlive).size();
+            int sheep = level.getEntitiesOfClass(net.minecraft.world.entity.animal.Sheep.class, new AABB(grounds).inflate(50, 16, 50),
+                net.minecraft.world.entity.LivingEntity::isAlive).size();
+            int got = hunter.countCarried(meat) + inChests(level, x, Z, 50, meat);
+            if (t % 500 == 0) Kit.log("ec12 @" + t + ": pigs " + pigs + ", sheep " + sheep + ", meat " + got + " — " + hunter.debugLine());
+            if (pigs < 2 || sheep < 2) {
+                helper.fail("the hunter took one of the last pair: pigs " + pigs + ", sheep " + sheep);
+                return;
+            }
+            if (t >= 3800) {
+                Kit.log("ec12 the hunt: " + got + " meat home; pigs " + pigs + " (of five), sheep " + sheep + " (of two)");
+                helper.assertTrue(got >= 2, "the hunter brings meat home: " + got);
+                helper.succeed();
+            }
+        });
+    }
+
+    // ============================================================ ec13: the watch grows with the town
+
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "ec13_watch_grows")
+    public static void ec13_watch_grows(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(6000);
+        final int x = 365700;
+        Kit.hold(level, x, Z, 24);
+        Kit.prepare(level, x, Z, 24);
+        BlockPos heart = Kit.surface(level, x, Z);
+        VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(f != null && f.ownerId() != null, "a village");
+        UUID village = f.ownerId();
+        long now = level.getGameTime();
+        double at15 = Mishap.watch(village, 1.0, 15, now), at32 = Mishap.watch(village, 2.0, 32, now), at60 = Mishap.watch(village, 4.0, 60, now);
+        Mishap.record(village, now / 24000L, now, "fighting a zombie");
+        Mishap.record(village, now / 24000L, now, "fighting a creeper");
+        Mishap.record(village, now / 24000L, now, "in a fall");
+        double raided = Mishap.watch(village, 1.0, 15, now);
+        String line = Mishap.line(village, now / 24000L - 6, "over the last 7 days");
+        Kit.log("ec13 the watch wanted: 15 folk " + at15 + ", 32 folk " + at32 + ", 60 folk " + at60 + "; 15 folk with two lost to monsters "
+            + raided + "; the books: " + line);
+        helper.assertTrue(at15 >= 15 / 8.0 && at32 >= 4.0 && at60 >= 7.5, "a guard to every eight folk: " + at15 + ", " + at32 + ", " + at60);
+        helper.assertTrue(raided >= 2.0 && raided >= at15 * 1.5 - 0.01, "half again, and two at least, once monsters have killed: " + raided);
+        helper.assertTrue(line != null && line.contains("3 died") && line.contains("fighting a zombie") && line.contains("in a fall"),
+            "the books say what took them: " + line);
+        // A raider left over from a raid that is over (summoned to stay, never despawning) goes at dawn.
+        net.minecraft.world.entity.monster.Zombie straggler = net.minecraft.world.entity.EntityType.ZOMBIE.create(level);
+        straggler.moveTo(heart.getX() + 6.5, heart.getY(), heart.getZ() + 0.5, 0.0F, 0.0F);
+        straggler.setPersistenceRequired();
+        straggler.addTag("mca_raider");
+        level.addFreshEntity(straggler);
+        int sent = com.jrpetty.mcassistant.entity.RaidStragglers.sweep(level);
+        Kit.log("ec13 raid stragglers sent off at dawn: " + sent);
+        helper.assertTrue(sent >= 1 && !straggler.isAlive(), "a raider in no raid goes at dawn: " + sent);
+        helper.succeed();
     }
 }

@@ -182,7 +182,11 @@ public class FarmGoal extends Goal {
         // and the rest (workBonusPercent). Back in hand first if a fight or a
         // feed has taken its place since the run began.
         if (workTicks == 0) assistant.equipToolNamed("_hoe");
-        if (++workTicks < assistant.actionPaceTicks("_hoe")) {
+        // [economy] A village's farmer works its field at twice the pace of the rest of its trade's work:
+        // a crop taken and the seed put back is a moment's work to a practised hand, and at three seconds a
+        // crop a field of eighty was most of a farmer's day (Fields).
+        int pace = assistant.isSettler() ? Math.max(6, assistant.actionPaceTicks("_hoe") / 2) : assistant.actionPaceTicks("_hoe");
+        if (++workTicks < pace) {
             if (workTicks % 8 == 0) {
                 assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
                 assistant.workHit(targetPos);   // a worked farm SOUNDS worked
