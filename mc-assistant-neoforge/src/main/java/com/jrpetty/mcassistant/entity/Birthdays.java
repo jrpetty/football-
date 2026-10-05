@@ -43,6 +43,8 @@ public final class Birthdays {
 
     private Birthdays() {}
 
+    private static final org.slf4j.Logger LOG = com.mojang.logging.LogUtils.getLogger();
+
     /** At most so many come round with a present: the fondest. */
     static final int GIVERS = 3;
 
@@ -164,9 +166,8 @@ public final class Birthdays {
         for (int i = 0; i < givers.size() && i < GIVERS; i++) {
             OWES.computeIfAbsent(givers.get(i).getUUID(), k -> new ArrayDeque<>()).addLast(f.getUUID());
         }
-        com.jrpetty.mcassistant.Guard.run("birthday log", () -> org.slf4j.LoggerFactory.getLogger(Birthdays.class)
-            .info("[MCA-BIRTHDAY] {} of {} turned {}; {} coming round", f.displayNameCap(), Villages.name(v.id()), age,
-                givers.subList(0, Math.min(GIVERS, givers.size())).stream().map(VillageFolkEntity::displayNameCap).toList()));
+        LOG.info("[MCA-BIRTHDAY] {} of {} turned {}; {} coming round", f.displayNameCap(), Villages.name(v.id()), age,
+            givers.subList(0, Math.min(GIVERS, givers.size())).stream().map(VillageFolkEntity::displayNameCap).toList());
     }
 
     /** Close enough to come round with a present: a friend (by its own feeling), its partner, a parent or a child. */
@@ -183,6 +184,17 @@ public final class Birthdays {
     /** Is this folk on its way round with a present (its own work waits)? */
     static boolean busy(VillageFolkEntity f) {
         return VISITS.containsKey(f.getUUID());
+    }
+
+    /** Has it a present still to take round today (the tests)? */
+    public static boolean owes(VillageFolkEntity f) {
+        java.util.Deque<UUID> owed = OWES.get(f.getUUID());
+        return owed != null && !owed.isEmpty();
+    }
+
+    /** Is it on its way round with a present now (the tests)? */
+    public static boolean visiting(VillageFolkEntity f) {
+        return busy(f);
     }
 
     /**
@@ -281,7 +293,7 @@ public final class Birthdays {
                 "Oh, " + giver.displayNameCap() + ", you remembered what I love!")
             : FolkTalk.pick(r, "Thank you, " + giver.displayNameCap() + "! " + cap(what) + " — how kind.", "For me? Thank you!",
                 "You shouldn't have! Thank you."), 40);
-        org.slf4j.LoggerFactory.getLogger(Birthdays.class).info("[MCA-BIRTHDAY] {} gave {} {}{}", giver.displayNameCap(), name, what,
+        LOG.info("[MCA-BIRTHDAY] {} gave {} {}{}", giver.displayNameCap(), name, what,
             bought ? " (bought from the stores)" : " (from its own pack)");
         return what;
     }

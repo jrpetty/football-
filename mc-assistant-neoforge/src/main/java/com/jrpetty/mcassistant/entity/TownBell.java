@@ -3,14 +3,11 @@ package com.jrpetty.mcassistant.entity;
 import com.jrpetty.mcassistant.village.Ledger;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.particles.ItemParticleOption;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
@@ -37,9 +34,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * The town bell keeps the day.
  *
  * <p>Three times a day somebody walks to the town's bell and rings it: <b>three strokes at dawn</b>
- * (half past five) to get the town up and to work, <b>six at noon</b> for the midday meal, and
- * <b>nine at dusk</b> (half past six) to send everybody home. It is rung as a player rings one: the
- * bell swings and is heard all round.
+ * (six in the morning) to get the town up and to work, <b>six at noon</b> for the midday meal, and
+ * <b>nine at dusk</b> (six in the evening) to send everybody home — the hours the town keeps its
+ * meals by (Meals). It is rung as a player rings one: the bell swings and is heard all round.
  * <ul>
  * <li><b>The bell</b> is the town's own: one it already has (the bell tower's, one by the leader's hall
  *     or the board, the alarm bell on the square, the chapel's, the bell of a village the folk moved
@@ -55,11 +52,12 @@ import java.util.concurrent.ConcurrentHashMap;
  *     little late; with nobody by it the hour goes unrung, and the day goes on without it.</li>
  * <li><b>Folk answer it.</b> Before the dawn bell the town lies in (the watch excepted); the bell wakes
  *     it and the day's work begins, the morning assembly at the board first. The noon bell is
- *     everybody's break at once, the meal first: at the café or the tavern's bar for a folk with a few
- *     coins (bought out of the stores, the coin into the treasury), else a ration out of its own pack
- *     — and that meal is the one its work was owed, so no more is eaten than before. At the dusk bell
- *     the day's work stops and folk walk home to their beds; the guards go on watch; on Founding Day
- *     they go to the board instead.</li>
+ *     everybody's break at once, and the midday meal waits for it: to the café or the tavern's bar for
+ *     a folk with a few coins (a dish bought out of the stores, the coin into the treasury), else home
+ *     to its household's table, else to the stores; there it sits down to the meal, which Meals serves
+ *     as it serves every meal (out of its pack, its home's chest or the stores) — nothing eaten twice.
+ *     At the dusk bell the day's work stops and folk walk home to their beds; the guards go on watch;
+ *     on Founding Day they go to the board instead.</li>
  * </ul>
  * The bell keeps the day it began: noon and dusk are rung only on a day the dawn bell was, so a town
  * that comes back to the world mid-morning keeps its own hours till the next dawn. The day's bells,
@@ -73,7 +71,7 @@ public final class TownBell {
 
     /** The three bells of the day: their hour, and how many strokes each has. */
     public enum Peal {
-        DAWN("dawn", 23500L, 3), NOON("noon", 6000L, 6), DUSK("dusk", 12500L, 9);
+        DAWN("dawn", 0L, 3), NOON("noon", 6000L, 6), DUSK("dusk", 12000L, 9);
 
         public final String word;
         /** The time of day it is due. */
@@ -102,6 +100,8 @@ public final class TownBell {
     static final long STROKE = 25L;
     /** How long after the noon bell a folk still goes to its meal, and after the dusk bell home. */
     static final long MEAL_WINDOW = 2400L, HOME_WINDOW = 2000L;
+    /** The end of the midday meal's hours (Meals). */
+    static final long LUNCH_ENDS = 7800L;
 
     /** The bell's day: from an hour before dawn (23000) to the next, so the dawn bell opens the day it rings for. */
     static long bellDay(long dayTime) { return Math.floorDiv(dayTime + 1000L, 24000L); }
@@ -121,6 +121,8 @@ public final class TownBell {
         @Nullable UUID ringer;
         int walkTick = -1000;
         long closeSince = -1;
+        /** Where the ringer stands to ring it, worked out once for the bell it is. */
+        @Nullable BlockPos stand, standFor;
         /** The town lay in for this morning's dawn bell. */
         boolean dawnWaited;
         /** The peal being rung: the strokes so far, the next, the bell and who is ringing it. */
@@ -272,7 +274,11 @@ public final class TownBell {
             FolkTalk.speak(f, FolkTalk.pick(f.getRandom(), "Yawn — bell time already.", "Up, up. The town won't wake itself."));
         }
         BlockPos bell = bellAt(level, v);
-        BlockPos stand = bell != null ? standBy(level, bell) : crierSpot(v);
+        if (bell != null && !bell.equals(d.standFor)) {
+            d.standFor = bell;
+            d.stand = standBy(level, bell);
+        }
+        BlockPos stand = bell != null && d.stand != null ? d.stand : crierSpot(v);
         long t = inDay(level.getDayTime());
         boolean there = there(f, stand, bell, level.getGameTime(), d);
         f.hobbyNow = (there ? "waiting to ring " : "on the way to ring ") + p.title() + (bell == null ? " (calling the hour, for want of a bell)" : "");
@@ -389,7 +395,7 @@ public final class TownBell {
     private static String call(Peal p, boolean bell, RandomSource r) {
         String head = bell ? "" : FolkTalk.pick(r, "Hear ye! ", "Oyez! ", "");
         return head + switch (p) {
-            case DAWN -> FolkTalk.pick(r, "Dawn! Up, all of you, and to work!", "Morning, town! Up you get!", "Half past five and a fine day — up!");
+            case DAWN -> FolkTalk.pick(r, "Dawn! Up, all of you, and to work!", "Morning, town! Up you get!", "Six o'clock and a fine day — up!");
             case NOON -> FolkTalk.pick(r, "Noon! Down tools — time to eat!", "Midday! Go and get your dinner.", "Twelve o'clock! Bread and rest, everybody.");
             case DUSK -> FolkTalk.pick(r, "Dusk! Home, everyone — the day's done.", "That's the day! Home with you.", "Evening! Lay down your tools and go home.");
         };
@@ -567,7 +573,7 @@ public final class TownBell {
         // The noon bell: the break begins, and the meal comes first.
         Rung noon = d.rung.get(Peal.NOON);
         if (noon != null && a.meal == 0 && t - inDay(noon.dayTime()) < MEAL_WINDOW && t >= inDay(noon.dayTime())
-                && !f.isSleeping() && f.peekJob() == null && f.offWorkNow() && !Assemblies.attending(f)) {
+                && dt % 24000L < LUNCH_ENDS - 200L && !f.isSleeping() && f.peekJob() == null && f.offWorkNow() && !Assemblies.attending(f)) {
             startMeal(f, level, a, now);
         }
         if (a.meal == 1 || a.meal == 2) return meal(f, level, a, now);
@@ -581,7 +587,10 @@ public final class TownBell {
         return false;
     }
 
-    /** Off to its meal: to the café or the tavern with coin to spend there, else to its own rations where it is. */
+    /**
+     * Off to its midday meal: to the café or the tavern with coin to spend there, else home to its household's
+     * table, else to the stores — wherever is in reach; else it sits down where it is.
+     */
     private static void startMeal(VillageFolkEntity f, ServerLevel level, Answer a, long now) {
         UUID id = f.ownerId();
         a.meal = 1;
@@ -590,15 +599,23 @@ public final class TownBell {
         a.mealPlace = "";
         BlockPos cafe = Villages.builtAt(id, "cafe");
         Ledger.Building tavern = Tavern.of(id);
+        BlockPos home = Homes.homeOf(f);
+        BlockPos stores = f.storesSpot(level, id);
         if (f.purse() >= 2 && cafe != null && Cafe.open(id, "cafe") && cafe.distSqr(f.blockPosition()) < 96 * 96) {
             a.mealAt = cafe;
             a.mealPlace = "the café";
         } else if (f.purse() >= 2 && tavern != null && tavern.anchor().distSqr(f.blockPosition()) < 96 * 96) {
             a.mealAt = tavern.anchor();
             a.mealPlace = "the tavern";
+        } else if (home != null && home.distSqr(f.blockPosition()) < (double) Meals.HOME_REACH * Meals.HOME_REACH) {
+            a.mealAt = f.bedPos() != null && f.bedPos().distSqr(home) < 16 * 16 ? f.bedPos() : home;
+            a.mealPlace = "home";
+        } else if (stores != null && stores.distSqr(f.blockPosition()) < (double) Meals.STORES_REACH * Meals.STORES_REACH) {
+            a.mealAt = stores;
+            a.mealPlace = "the stores";
         }
         f.getNavigation().stop();
-        if (f.getRandom().nextInt(4) == 0) FolkTalk.speak(f, a.mealAt != null
+        if (f.getRandom().nextInt(4) == 0) FolkTalk.speak(f, a.mealAt != null && !a.mealPlace.equals("home") && !a.mealPlace.equals("the stores")
             ? FolkTalk.pick(f.getRandom(), "Dinner at " + a.mealPlace + " — I've earned it.", "Off to " + a.mealPlace + "!")
             : FolkTalk.pick(f.getRandom(), "Dinner time!", "About time. I'm starving.", "Bread and a sit-down, at last."));
     }
@@ -606,29 +623,25 @@ public final class TownBell {
     private static boolean meal(VillageFolkEntity f, ServerLevel level, Answer a, long now) {
         f.lastLeisureTick = f.tickCount;
         if (a.meal == 1) {
-            if (a.mealAt != null && flat(f, a.mealAt) > 4.0 && now - a.stageAt < 800) {
+            if (a.mealAt != null && flat(f, a.mealAt) > 3.5 && now - a.stageAt < 800) {
                 if (f.getNavigation().isDone() || f.tickCount - a.walkTick > 60) {
                     f.walkTo(a.mealAt, 0.95D);
                     a.walkTick = f.tickCount;
                 }
-                f.hobbyNow = "on the way to " + a.mealPlace + " for the midday meal";
+                f.hobbyNow = "on the way " + (a.mealPlace.equals("home") ? "home" : "to " + a.mealPlace) + " for the midday meal";
                 return true;
             }
             f.getNavigation().stop();
             Villages.Village v = Villages.get(f.ownerId());
-            a.noonWhat = v == null ? "" : eat(level, v, f, a);
+            a.noonWhat = v == null ? "" : sitDown(level, v, f, a);
             a.noon = level.getDayTime();
             a.meal = 2;
             a.stageAt = now;
-            if (!a.noonWhat.startsWith("nothing")) {
-                level.sendParticles(new ItemParticleOption(ParticleTypes.ITEM, new ItemStack(Items.BREAD)),
-                    f.getX(), f.getEyeY(), f.getZ(), 5, 0.15, 0.1, 0.15, 0.03);
-            }
             f.brain("the midday meal: " + a.noonWhat);
             return true;
         }
-        if (now - a.stageAt < 80) {
-            f.hobbyNow = "at the midday meal";
+        if (now - a.stageAt < 100) {
+            f.hobbyNow = "at the midday meal" + (a.mealPlace.isEmpty() ? "" : a.mealPlace.equals("home") ? ", at home" : " at " + a.mealPlace);
             f.getNavigation().stop();
             return true;
         }
@@ -636,34 +649,38 @@ public final class TownBell {
         return false;
     }
 
-    /** The meal itself: bought at the café or the tavern's bar, else a ration out of its own pack. What it had. */
-    private static String eat(ServerLevel level, Villages.Village v, VillageFolkEntity f, Answer a) {
-        if (a.mealAt != null && flat(f, a.mealAt) <= 6.0) {
-            if (a.mealPlace.equals("the café")) {
-                String had = Cafe.folkBuys(level, v, f);
-                if (had != null) {
-                    boolean drink = false;
-                    for (Cafe.Drink k : Cafe.DRINKS) if (k.name().equals(had)) drink = true;
-                    if (drink) {
-                        // A drink is not a dinner: the ration as well.
-                        if (f.sitDownToAMeal()) return lower(had) + " at the café, and " + lower(f.lastMeal()) + " from its pack";
-                        return lower(had) + " at the café";
-                    }
-                    f.hadAMeal();
-                    return lower(had) + " at the café";
-                }
-            } else {
-                String had = barBite(level, v, f);
-                if (had != null) return had + " at the tavern";
-            }
-        }
-        if (f.sitDownToAMeal()) return lower(f.lastMeal()) + " from its pack";
-        return "nothing — its pack was empty";
+    /** Is its midday meal had (Meals keeps the meals: this only asks)? */
+    private static boolean hadLunch(VillageFolkEntity f) {
+        Meals.Book b = f.meals();
+        return b.day == f.level().getDayTime() / 24000L && (b.taken & (1 << Meals.Meal.LUNCH.ordinal())) != 0;
     }
 
-    /** A bite at the tavern's bar: one of the café's dishes out of the stores, at its price, into the treasury. */
+    /**
+     * At the table: a dish bought at the café or the tavern's bar (out of the stores, into its pack, the coin
+     * into the treasury), and the meal itself eaten as Meals has every meal eaten — out of its pack, its
+     * household's chest or the stores — if it has not had it yet. What it had, in words.
+     */
+    private static String sitDown(ServerLevel level, Villages.Village v, VillageFolkEntity f, Answer a) {
+        boolean already = hadLunch(f);
+        String at = a.mealAt == null || flat(f, a.mealAt) > 6.0 ? "" : a.mealPlace;
+        String bought = null;
+        if (!already && (at.equals("the café") || at.equals("the tavern"))) {
+            bought = buyDish(level, v, f, at.equals("the café") ? Stockroom.Seller.CAFE : Stockroom.Seller.TAVERN);
+        }
+        Meals.tick(f);                                          // the meal, if it is mealtime and not had
+        String where = at.isEmpty() ? "where it stood" : at.equals("home") ? "at home" : "at " + at;
+        if (already) return "had eaten already, and sat with the others " + where;
+        if (hadLunch(f)) {
+            String what = lower(f.meals().lastWhat());
+            return (what.isEmpty() ? "its dinner" : what) + " " + where + (bought != null ? " (bought there: " + bought + ")" : "");
+        }
+        if (Meals.Meal.at((int) (level.getDayTime() % 24000L)) != Meals.Meal.LUNCH) return "came too late: the midday meal was over";
+        return "nothing to eat in reach " + where;
+    }
+
+    /** A dish at the café's counter or the tavern's bar: one of the café's menu out of the stores, at its price, into its pack. */
     @Nullable
-    private static String barBite(ServerLevel level, Villages.Village v, VillageFolkEntity f) {
+    private static String buyDish(ServerLevel level, Villages.Village v, VillageFolkEntity f, Stockroom.Seller seller) {
         List<ItemStack> menu = Cafe.menuGoods(level, v.id());
         if (menu.isEmpty()) return null;
         ItemStack pick = menu.get(f.getRandom().nextInt(menu.size()));
@@ -674,12 +691,15 @@ public final class TownBell {
         price = FolkSkills.thrifty(f, price);
         if (f.purse() < price) return null;
         if (!TownWork.take(level, v, s -> ItemStack.isSameItemSameComponents(s, pick), 1)) return null;
+        ItemStack dish = pick.copyWithCount(1);
+        ItemStack left = f.insertGiven(dish);
+        if (!left.isEmpty()) {                                   // no room in its pack: back on the counter
+            Crafts.store(level, v, left);
+            return null;
+        }
         f.spend(price);
         Ledger.addCoins(v.id(), price);
-        Stockroom.sold(level, v.id(), Stockroom.Seller.TAVERN, pick, 1, price);
-        f.heal(2.0F);
-        f.playSound(SoundEvents.GENERIC_EAT, 0.6F, 1.0F);
-        f.hadAMeal();
+        Stockroom.sold(level, v.id(), seller, pick, 1, price);
         return lower(pick.getHoverName().getString());
     }
 
@@ -701,7 +721,7 @@ public final class TownBell {
             return;
         }
         if (f.bedPos() == null) {
-            a.duskWhat = "had no bed of its own to go home to";
+            a.duskWhat = "had no bed of its own yet, so stayed out for the evening";
             return;
         }
         a.homeward = true;
@@ -761,6 +781,24 @@ public final class TownBell {
         if (d.dawnWaited && !d.rung.containsKey(Peal.DAWN) && inDay(dt) < Peal.DAWN.inDay() + LATE) return false;
         if (d.rung.containsKey(Peal.DUSK)) return false;
         return null;
+    }
+
+    /**
+     * Does this town's midday meal wait for its noon bell (Meals)? On a day the bell keeps, till the bell has
+     * rung (or been let go by), and while the meal's hours last.
+     */
+    public static boolean lunchWaits(@Nullable UUID village, long dayTime) {
+        Day d = village == null ? null : DAYS.get(village);
+        if (d == null || d.bellDay != bellDay(dayTime)) return false;
+        if (!d.rung.containsKey(Peal.DAWN) || d.rung.containsKey(Peal.NOON) || d.missed.contains(Peal.NOON)) return false;
+        return dayTime % 24000L < LUNCH_ENDS - 300L;
+    }
+
+    /** Is the town up: not lying in for its dawn bell (the morning assembly waits for it: Assemblies)? */
+    public static boolean up(@Nullable UUID village, long dayTime) {
+        Day d = village == null ? null : DAYS.get(village);
+        if (d == null || d.bellDay != bellDay(dayTime)) return true;
+        return !(d.dawnWaited && !d.rung.containsKey(Peal.DAWN) && !d.missed.contains(Peal.DAWN) && inDay(dayTime) < Peal.DAWN.inDay() + LATE);
     }
 
     /**
@@ -861,7 +899,7 @@ public final class TownBell {
             return out;
         }
         BlockPos bell = bellAt(level, v);
-        out.add(bell != null ? "The town bell hangs " + where(level, v, bell) + ": three strokes at dawn (5:30), six at noon, nine at dusk (18:30)."
+        out.add(bell != null ? "The town bell hangs " + where(level, v, bell) + ": three strokes at dawn (6:00), six at noon, nine at dusk (18:00)."
             : "No town bell yet: the hours are called at the board. A bell put in the stores is hung " + (hallFront(village) != null
                 ? "before the leader's hall." : "on the square."));
         long dt = level.getDayTime();
@@ -919,7 +957,10 @@ public final class TownBell {
     /** /village bell: where it hangs, today's bells, who rings next. A "BELL-AT x y z" line for scripts. */
     public static String status(ServerLevel level, Villages.Village v) {
         StringBuilder sb = new StringBuilder("The bell of " + Villages.name(v.id()) + ". ");
+        LOOKED.remove(v.id());                                  // asked: looked for afresh
         BlockPos bell = bellAt(level, v);
+        BlockPos lectern = VillageBoards.lectern(v.id());
+        if (lectern != null) sb.append("BOARD ").append(lectern.getX()).append(' ').append(lectern.getY()).append(' ').append(lectern.getZ()).append(". ");
         if (bell != null) sb.append("BELL-AT ").append(bell.getX()).append(' ').append(bell.getY()).append(' ').append(bell.getZ()).append(". ");
         else {
             BlockPos spot = crierSpot(v);
@@ -939,6 +980,7 @@ public final class TownBell {
     public static String ringNow(ServerLevel level, Villages.Village v, Peal p) {
         long dt = level.getDayTime();
         Day d = day(v.id(), bellDay(dt));
+        LOOKED.remove(v.id());                                  // a bell set up a moment ago is found
         appoint(level, v, d, p);
         VillageFolkEntity by = d.ringer == null ? null : live(level, d.ringer);
         d.calling = p;

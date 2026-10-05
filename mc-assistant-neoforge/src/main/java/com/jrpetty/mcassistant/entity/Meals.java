@@ -171,6 +171,8 @@ public final class Meals {
         }
         Meal m = Meal.at(tod);
         if (m == null) return;
+        // A town that keeps the bell sits down to its midday meal at the noon bell (TownBell).
+        if (m == Meal.LUNCH && TownBell.lunchWaits(village, time)) return;
         int bit = 1 << m.ordinal();
         if ((b.taken & bit) != 0) return;
         // A ration eaten at its work since this mealtime began is this meal.

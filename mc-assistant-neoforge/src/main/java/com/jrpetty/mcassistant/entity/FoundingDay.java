@@ -121,17 +121,20 @@ public final class FoundingDay {
         String name = Villages.name(id);
         long years = years(id, a.day);
         READ.put(id, new ArrayList<>());
-        s.add(new Assemblies.Line(null, "Friends! It is Founding Day: " + name + " is " + TownCalendar.inWords((int) years)
-            + (years == 1 ? " year old" : " years old") + " today.", '!', null));
+        long since = a.day - founded(id);
+        s.add(new Assemblies.Line(null, years < 1
+            ? "Friends! We keep our founding: " + name + " was founded " + since + (since == 1 ? " day" : " days") + " ago."
+            : "Friends! It is Founding Day: " + name + " is " + TownCalendar.inWords((int) years) + (years == 1 ? " year old" : " years old")
+                + " today.", '!', null));
         List<Chronicle.Entry> year = theYear(id, a.day);
         if (year.isEmpty()) {
             s.add(new Assemblies.Line(null, "A quiet year: we worked, we ate, we slept, and all of us are still here.", '~', null));
         } else {
             s.add(new Assemblies.Line(null, "Hear the year's chronicle, as it was written down.", '~', null));
             for (Chronicle.Entry e : year) {
-                String said = "Day " + (e.day() + 1) + ": " + e.text() + (e.text().endsWith(".") || e.text().endsWith("!") ? "" : ".");
-                String text = said;
-                s.add(new Assemblies.Line(null, said, react(e.text()), () -> READ.computeIfAbsent(id, k -> new ArrayList<>()).add(text)));
+                String what = e.text().isEmpty() ? e.text() : Character.toUpperCase(e.text().charAt(0)) + e.text().substring(1);
+                String said = "Day " + (e.day() + 1) + ": " + what + (what.endsWith(".") || what.endsWith("!") ? "" : ".");
+                s.add(new Assemblies.Line(null, said, react(e.text()), () -> READ.computeIfAbsent(id, k -> new ArrayList<>()).add(said)));
             }
         }
         s.add(new Assemblies.Line(null, FolkTalk.pick(r, "To " + name + ", and to the year to come!", "Here's to " + name
@@ -156,6 +159,7 @@ public final class FoundingDay {
         for (Chronicle.Entry e : Chronicle.of(village)) {
             if (e.day() >= from && e.day() <= day && !e.text().startsWith("Founding Day")) all.add(e);
         }
+        all.sort(Comparator.comparingLong(Chronicle.Entry::day));     // in the order it happened (a stable sort)
         if (all.size() > LINES) {
             List<Chronicle.Entry> best = new ArrayList<>(all);
             best.sort(Comparator.comparingInt((Chronicle.Entry e) -> -weight(e.text())).thenComparingLong(Chronicle.Entry::day));
@@ -186,7 +190,8 @@ public final class FoundingDay {
         UUID id = a.village;
         long years = years(id, a.day);
         TownCalendar.foundingKept(id, a.day);
-        Villages.tell(id, a.day, "Founding Day: " + Villages.name(id) + " kept its " + TownCalendar.ordinal(years) + " year, with a feast"
+        Villages.tell(id, a.day, "Founding Day: " + Villages.name(id) + " kept " + (years < 1 ? "its founding" : "its "
+            + TownCalendar.ordinal(years) + " year") + ", with a feast"
             + (a.fired > 0 ? " and fireworks" : ""));
     }
 

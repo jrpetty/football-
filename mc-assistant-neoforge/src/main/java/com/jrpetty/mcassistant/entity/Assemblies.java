@@ -181,7 +181,7 @@ public final class Assemblies {
         long dayTime = level.getDayTime();
         long t = dayTime % 24000L, day = dayTime / 24000L;
         Assembly next = null;
-        if (t >= 150 && t < 1400 && !level.isRaining() && !held(id, Kind.MORNING, day)) {
+        if (t >= 150 && t < 1400 && !level.isRaining() && !held(id, Kind.MORNING, day) && TownBell.up(id, dayTime)) {   // (after the dawn bell)
             next = morning(level, v, day);
         } else if (t >= 1400 && t < 11500) {
             VillageFolkEntity guest = Envoys.waitingAt(level, v);

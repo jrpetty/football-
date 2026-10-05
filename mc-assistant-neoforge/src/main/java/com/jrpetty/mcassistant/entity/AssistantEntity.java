@@ -2715,22 +2715,6 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         }
     }
 
-    /**
-     * A meal sat down to at the noon bell (TownBell): the best food on hand, eaten now. It is the meal
-     * its work was owed, so the next one comes a full stint later and nothing is eaten twice. False with
-     * nothing to eat.
-     */
-    public boolean sitDownToAMeal() {
-        if (!eatBestFood()) return false;
-        upkeepFoodTick = tickCount;
-        return true;
-    }
-
-    /** A meal had elsewhere (bought at the café or the tavern: TownBell): it counts as the one its work was owed. */
-    public void hadAMeal() {
-        upkeepFoodTick = tickCount;
-    }
-
     private int wagePaidUntil;      // work-tick the current wage runs out on
     private int wagesPaid;          // how many have been drawn, for the ledger
     private int ironPaid, goldPaid, diamondPaid;   // what they were paid in
