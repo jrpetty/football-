@@ -338,11 +338,12 @@ public class BellGameTests {
         final int x = 224000, z = 50000;
         Kit.hold(level, x, z, 40);
         Kit.prepare(level, x, z, 40);
-        // A day far enough on that the town can have been founded a year (twenty-eight days) before it: the test
-        // world may be only a few days old, and a town founded on a day before the world began has no Founding Day.
-        long day = Math.max(level.getDayTime() / 24000L, TownCalendar.YEAR_DAYS + 2L);
+        // The town is founded today, by its own history; then the clock is put on a year (twenty-eight days),
+        // to the evening of its first Founding Day.
+        long founded = level.getDayTime() / 24000L;
+        level.setDayTime(founded * 24000L + 2000L);
+        long day = founded + TownCalendar.YEAR_DAYS;
         long evening = day * 24000L + 12150L;
-        level.setDayTime(evening);
         List<VillageFolkEntity> folk = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
             VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, Kit.surface(level, x + i * 2 - 4, z + 3), 0.0F);
@@ -350,7 +351,7 @@ public class BellGameTests {
             folk.add(f);
         }
         UUID village = folk.get(0).ownerId();
-        FoundingDay.foundedForTests(village, day - TownCalendar.YEAR_DAYS);
+        level.setDayTime(evening);
         String[] year = { "The smithy was opened", "Ash and Rowan were wed", "Wren was born", "The village came into the Stone Age" };
         long[] when = { day - 25, day - 18, day - 9, day - 3 };
         // Written down out of order, as a history is: it is read out in the order things happened.
@@ -365,9 +366,10 @@ public class BellGameTests {
         chest.setItem(slot + 1, new ItemStack(Items.PAPER, 4));
         chest.setItem(slot + 2, new ItemStack(Items.BREAD, 32));
         chest.setChanged();
-        Kit.log("b03 day " + day + ", founded (for the test) on day " + FoundingDay.founded(village) + " (the history says "
+        Kit.log("b03 day " + day + ", founded on day " + FoundingDay.founded(village) + " (the history says "
             + Chronicle.foundedOn(village) + "); Founding Day today " + FoundingDay.today(village, day) + ", yesterday "
             + FoundingDay.today(village, day - 1) + ", due " + FoundingDay.due(village, day));
+        helper.assertTrue(FoundingDay.founded(village) == founded, "the town's history begins the day it was founded");
         helper.assertTrue(FoundingDay.today(village, day) && !FoundingDay.today(village, day - 1), "today, and only today, is Founding Day");
         Kit.log("b03 " + Villages.name(village) + " founded on day " + FoundingDay.founded(village) + ", today " + day + ": "
             + TownCalendar.book(level, village));
@@ -398,6 +400,12 @@ public class BellGameTests {
                 for (int i = 0; i < read.size(); i++) if (read.get(i).contains(y)) { k = i; break; }
                 at.add(k);
             }
+            // The founding itself first: the history's first day, read as the town's first.
+            int foundingAt = -1;
+            for (int i = 0; i < read.size(); i++) if (read.get(i).contains("was founded")) { foundingAt = i; break; }
+            Kit.log("b03 the founding read at " + foundingAt + (foundingAt >= 0 ? ": " + read.get(foundingAt) : ""));
+            helper.assertTrue(foundingAt == 0 && read.get(0).startsWith("Day " + (founded + 1) + ":"),
+                "the year's chronicle begins with the founding, on the day it was: " + read);
             int powder = 0;
             for (int i = 0; i < chest.getContainerSize(); i++) if (chest.getItem(i).is(Items.GUNPOWDER)) powder += chest.getItem(i).getCount();
             String line = Chronicle.of(village).stream().filter(e -> e.text().startsWith("Founding Day")).findFirst().map(Chronicle.Entry::text).orElse("");
