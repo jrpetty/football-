@@ -141,7 +141,9 @@ public final class Reach {
      */
     @Nullable
     public BlockPos waypoint(BlockPos from, BlockPos to, int steps) {
-        int f = nearestWalked(from.getX(), from.getZ(), 6), t = nearestWalked(to.getX(), to.getZ(), 8);
+        // A mine in a hillside or a wood on a slope is not on walkable ground itself: the way goes
+        // to the walkable ground nearest it, and the last few blocks are the pathfinder's.
+        int f = nearestWalked(from.getX(), from.getZ(), 6), t = nearestWalked(to.getX(), to.getZ(), 20);
         if (f < 0 || t < 0) return null;
         // The way from the destination in to the heart, and where each column of it falls.
         java.util.HashMap<Integer, Integer> onWay = new java.util.HashMap<>();

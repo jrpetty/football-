@@ -2013,6 +2013,7 @@ public class VillageFolkEntity extends AssistantEntity {
             }
         }
         BlockPos from = near != null ? near : blockPosition();
+        int heads = 0, offered = 0, fit = 0;
         for (int x = cx - reach; x <= cx + reach; x++) {
             for (int z = cz - reach; z <= cz + reach; z++) {
                 net.minecraft.world.level.chunk.LevelChunk chunk = server.getChunkSource().getChunkNow(x, z);
@@ -2020,16 +2021,27 @@ public class VillageFolkEntity extends AssistantEntity {
                 for (net.minecraft.world.level.block.entity.BlockEntity be : chunk.getBlockEntities().values()) {
                     if (!(be instanceof net.minecraft.world.level.block.entity.BedBlockEntity)) continue;
                     BlockPos p = be.getBlockPos();
-                    if (!bedOnOffer(p) || !bedFit(p)) continue;
+                    net.minecraft.world.level.block.state.BlockState st = level().getBlockState(p);
+                    if (st.hasProperty(net.minecraft.world.level.block.BedBlock.PART)
+                        && st.getValue(net.minecraft.world.level.block.BedBlock.PART)
+                            == net.minecraft.world.level.block.state.properties.BedPart.HEAD) heads++;
+                    if (!bedOnOffer(p)) continue;
+                    offered++;
+                    if (!bedFit(p)) continue;
+                    fit++;
                     double d = p.distSqr(from);
                     if (d < bestDist) { bestDist = d; best = p; }
                 }
             }
         }
+        bedLook = heads + " beds, " + offered + " free, " + fit + " fit";
         if (best == null) return false;
         takeBed(best);
         return true;
     }
+
+    /** What the last look for a bed found (the report line). */
+    private String bedLook = "";
 
     /**
      * A bed down in the ground (a buried ruin's, a vault's) is nobody's home: three folk of one
@@ -2070,7 +2082,8 @@ public class VillageFolkEntity extends AssistantEntity {
             Reach r = Reach.last(ownerId());
             walk = r == null ? " reach=none" : " reach=" + r.count() + (r.reaches(zone.center(), Math.min(zone.radius(), FIELD_MOST)) ? "/ok" : "/NO");
         }
-        return social + walk + (trail.length() == 0 ? "" : " trail=" + trail.toString().trim());
+        String bed = " bed=" + (bedPos() == null ? "none" : "yes") + (bedLook.isEmpty() ? "" : "(" + bedLook + ")");
+        return social + walk + bed + (trail.length() == 0 ? "" : " trail=" + trail.toString().trim());
     }
 
     // ------------------------------ getting started --------------------------
