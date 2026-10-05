@@ -290,12 +290,22 @@ public class BankGameTests {
         }
         BlockPos a = b.anchor();
         int[] half = Blueprints.fullHalf("bank");
+        // The bank's own timber is not a tree: the posts and beams of its roof frame are logs (the
+        // drawing's L, - and |, 28 of them). Only what is not part of the drawing counts.
+        java.util.Set<BlockPos> drawn = new java.util.HashSet<>();
+        int frame = 0;
+        for (BuildGoal.Placement pl : BuildGoal.plan("bank", a, b.facing(), 13)) {
+            drawn.add(pl.pos());
+            if (level.getBlockState(pl.pos()).is(net.minecraft.tags.BlockTags.LOGS)) frame++;
+        }
         // In the bank and a block round it: no wood, no leaves, whatever tree they came from.
         int wood = 0, inside = 0;
         for (int dx = -half[0] - 1; dx <= half[0] + 1; dx++) {
             for (int dz = -half[1] - 1; dz <= half[1] + 1; dz++) {
                 for (int dy = 0; dy <= 12; dy++) {
-                    BlockState st = level.getBlockState(a.offset(dx, dy, dz));
+                    BlockPos q = a.offset(dx, dy, dz);
+                    if (drawn.contains(q)) continue;
+                    BlockState st = level.getBlockState(q);
                     if (st.is(net.minecraft.tags.BlockTags.LOGS)) wood++;
                     if (st.is(net.minecraft.tags.BlockTags.LEAVES)) inside++;
                 }
@@ -307,13 +317,16 @@ public class BankGameTests {
             for (int dx = -2; dx <= 2; dx++) {
                 for (int dz = -2; dz <= 2; dz++) {
                     for (int dy = -1; dy <= 8; dy++) {
-                        BlockState st = level.getBlockState(new BlockPos(spot.getX() + tr[0] + dx, a.getY() + dy, spot.getZ() + tr[1] + dz));
+                        BlockPos q = new BlockPos(spot.getX() + tr[0] + dx, a.getY() + dy, spot.getZ() + tr[1] + dz);
+                        if (drawn.contains(q)) continue;
+                        BlockState st = level.getBlockState(q);
                         if (st.is(net.minecraft.tags.BlockTags.LOGS) || st.is(net.minecraft.tags.BlockTags.LEAVES)) left++;
                     }
                 }
             }
         }
-        Kit.log("bank t4 round the bank at " + a + ": " + wood + " logs and " + inside + " leaves in and round it; " + left + " blocks of the five trees left");
+        Kit.log("bank t4 round the bank at " + a + ": " + wood + " logs and " + inside + " leaves in and round it (besides its own frame, "
+            + frame + " logs); " + left + " blocks of the five trees left");
         ok.that(wood == 0 && inside == 0, "no wood or leaves in the bank or round it: " + wood + " logs, " + inside + " leaves");
         ok.that(left == 0, "the trees felled whole, nothing of them left hanging near it: " + left);
         VillageFolkEntity banker = Bank.banker(id);
