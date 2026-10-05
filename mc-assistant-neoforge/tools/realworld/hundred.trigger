@@ -1,1 +1,1 @@
-the hundred days, on b203 part 2 (fields laid out square by square round dug water holes): 2026-10-05T06:25:04Z
+the hundred days, on b206 part 2 (farmland district with dug water holes, production chests and couriers, unlimited storehouse, chunks wherever the work is, the price list, the village's purse, bonds between villages, player dealings): 2026-10-05T07:40:34Z
