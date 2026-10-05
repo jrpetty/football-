@@ -595,6 +595,27 @@ public final class VillageCommands {
             sb.append(". Quest board: ").append(board.isEmpty() ? "nothing posted" : String.join("; ", board));
             var lent = com.jrpetty.mcassistant.entity.Services.onLoan(id);
             if (!lent.isEmpty()) sb.append(". On loan: ").append(lent);
+            sb.append(". Diplomacy: ").append(com.jrpetty.mcassistant.entity.Envoys.debug(id));
+            String abroad = com.jrpetty.mcassistant.entity.Envoys.latest(id);
+            if (abroad != null) sb.append("; latest ").append(abroad);
+            sb.append(". Scouts: ").append(com.jrpetty.mcassistant.entity.Scouts.debug(id));
+            String open = com.jrpetty.mcassistant.entity.Cafe.openLine(level, id);
+            if (open != null) sb.append(". Open: ").append(open);
+            java.util.List<String> hands = new java.util.ArrayList<>();
+            for (AssistantEntity a : Villages.folkOf(id)) {
+                if (a instanceof VillageFolkEntity f) {
+                    String w = com.jrpetty.mcassistant.entity.TownJobs.doing(f);
+                    if (w != null) hands.add(f.displayNameCap() + " " + w);
+                }
+            }
+            sb.append(". Town works: ").append(hands.isEmpty() ? "nobody on them just now" : String.join(", ", hands));
+            java.util.Map<String, Integer> tiers = new java.util.TreeMap<>();
+            for (AssistantEntity a : Villages.folkOf(id)) {
+                if (a instanceof VillageFolkEntity f && !f.isBaby()) tiers.merge(com.jrpetty.mcassistant.entity.Wealth.tier(f).name().toLowerCase(java.util.Locale.ROOT), 1, Integer::sum);
+            }
+            sb.append(". Wealth: ").append(tiers);
+            String gathering = com.jrpetty.mcassistant.entity.Assemblies.now(id);
+            if (gathering != null) sb.append(". Gathering: ").append(gathering);
         }
         java.util.List<VillageFolkEntity> people = new java.util.ArrayList<>();
         for (AssistantEntity a : Villages.folkOf(v.id())) if (a instanceof VillageFolkEntity f) people.add(f);

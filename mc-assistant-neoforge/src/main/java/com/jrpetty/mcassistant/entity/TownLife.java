@@ -412,7 +412,7 @@ public final class TownLife {
             if (!clear) continue;
             Direction look = Direction.getNearest((double) (centre.getX() - x), 0.0, (double) (centre.getZ() - z));
             if (look.getAxis() == Direction.Axis.Y) look = Direction.NORTH;
-            if (!free && (Crafts.stock(level, v, s -> s.is(Items.CARVED_PUMPKIN) || s.is(Items.PUMPKIN)) == 0
+            if (!free && (Crafts.stock(level, v, st -> st.is(Items.CARVED_PUMPKIN) || st.is(Items.PUMPKIN)) == 0
                 || !TownJobs.atWork(level, v, "fields", foot, "putting up a scarecrow", AssistantEntity.StationTask.FARM))) return false;
             if (!free && !payScarecrow(level, v)) return false;
             level.setBlock(foot, Blocks.OAK_FENCE.defaultBlockState(), 3);

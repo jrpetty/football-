@@ -1,0 +1,174 @@
+name: Village hundred days (one leg)
+
+# One leg of the hundred days (village-hundred-days.yml calls it, leg after leg). The
+# world the last leg saved is loaded, the days go on from the one after it reached, and
+# this leg's world is saved for the next. A leg with nothing left to do does nothing.
+
+on:
+  workflow_call:
+    inputs:
+      leg:
+        type: number
+        required: true
+      prev:
+        type: number
+        default: 0
+      minutes:
+        type: number
+        default: 300
+
+permissions:
+  contents: write
+
+jobs:
+  leg:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: The world so far
+        if: inputs.leg > 1
+        uses: actions/download-artifact@v4
+        with:
+          name: hundred-world-${{ inputs.prev }}
+          path: carried
+
+      - name: Where the last leg got to
+        id: where
+        run: |
+          reached=0
+          if [ -f carried/hundred.tar.gz ]; then
+            mkdir -p mc-assistant-neoforge/run
+            tar -xzf carried/hundred.tar.gz -C mc-assistant-neoforge/run
+            reached=$(cat mc-assistant-neoforge/run/hundred-reached.txt 2>/dev/null || echo 0)
+          fi
+          echo "reached=$reached" >> "$GITHUB_OUTPUT"
+          echo "first=$((reached + 1))" >> "$GITHUB_OUTPUT"
+          echo "the last leg reached day $reached"
+
+      - uses: actions/setup-java@v4
+        if: steps.where.outputs.reached < 100
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Prepare a server directory
+        if: steps.where.outputs.reached < 100
+        working-directory: mc-assistant-neoforge
+        run: |
+          mkdir -p run/config
+          echo "eula=true" > run/eula.txt
+          cat > run/server.properties <<'PROPS'
+          level-seed=7331
+          level-type=minecraft:normal
+          generate-structures=true
+          online-mode=false
+          spawn-protection=0
+          max-tick-time=-1
+          view-distance=6
+          simulation-distance=6
+          sync-chunk-writes=false
+          enable-rcon=true
+          rcon.port=25575
+          rcon.password=soak
+          broadcast-rcon-to-ops=false
+          motd=hundred
+          PROPS
+          cat > run/config/mc_assistant-common.toml <<'TOML'
+          [villages]
+          naturalVillages = false
+          TOML
+
+      - name: Start the server
+        if: steps.where.outputs.reached < 100
+        working-directory: mc-assistant-neoforge
+        run: |
+          chmod +x gradlew
+          nohup ./gradlew --no-daemon runServer > server-gradle.log 2>&1 &
+
+      - name: The days of this leg
+        if: steps.where.outputs.reached < 100
+        working-directory: mc-assistant-neoforge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          FIRST: ${{ steps.where.outputs.first }}
+          MINUTES: ${{ inputs.minutes }}
+        run: |
+          set +e
+          publish() {
+            f="$1"; name=$(basename "$f")
+            [ -s "$f" ] || return 0
+            rel=$(curl -sS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/$REPO/releases/tags/village-test-latest")
+            rid=$(echo "$rel" | jq -r '.id // empty')
+            [ -n "$rid" ] || return 0
+            for aid in $(echo "$rel" | jq -r --arg n "$name" '.assets[]? | select(.name==$n) | .id'); do
+              curl -sS -X DELETE -H "Authorization: Bearer $GH_TOKEN" \
+                "https://api.github.com/repos/$REPO/releases/assets/$aid" > /dev/null
+            done
+            curl -sS -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Content-Type: text/plain" \
+              --data-binary @"$f" "https://uploads.github.com/repos/$REPO/releases/$rid/assets?name=$name" > /dev/null
+          }
+          touch run/real-hundred.txt run/hundred-metrics.jsonl
+          cp run/real-hundred.txt real-hundred.txt
+          cp run/hundred-metrics.jsonl hundred-metrics.jsonl
+          cp run/hundred-spot.txt hundred-spot.txt 2>/dev/null
+          echo "[REAL] ==== leg ${{ inputs.leg }} on $(git rev-parse --short HEAD): from day $FIRST, $MINUTES minutes ====" >> real-hundred.txt
+          ( while sleep 600; do publish real-hundred.txt; publish hundred-metrics.jsonl; done ) &
+          LOOP=$!
+          python3 tools/realworld/soak.py hundred "$FIRST" 100 "$MINUTES" | tee -a real-hundred.txt
+          echo "soak exit: ${PIPESTATUS[0]}"
+          kill $LOOP 2>/dev/null
+          # The server saves the world as it stops (the soak's last command): wait for it.
+          for i in $(seq 1 60); do pgrep -f "net.minecraft" > /dev/null || break; sleep 2; done
+          echo "[REAL] ---- leg ${{ inputs.leg }}: the mod's warnings and errors ----" >> real-hundred.txt
+          grep -aE "Exception|Caused by|ERROR" run/logs/latest.log 2>/dev/null | grep -av "Ambiguity\|Advanced terminal\|^    at " | tail -60 >> real-hundred.txt || true
+          grep -a "MCA-SCOUT\|MCA-ENVOY" run/logs/latest.log 2>/dev/null | tail -80 >> real-hundred.txt || true
+          publish real-hundred.txt
+          publish hundred-metrics.jsonl
+          cp real-hundred.txt hundred-metrics.jsonl run/
+          cp hundred-spot.txt hundred-reached.txt run/ 2>/dev/null
+          gzip -c run/logs/latest.log > server-hundred-${{ inputs.leg }}.log.gz 2>/dev/null || true
+          set -e
+
+      - name: Stop the server
+        if: always()
+        run: pkill -f "net.minecraft" || true; pkill -f "runServer" || true
+
+      - name: Pack the world for the next leg
+        if: always()
+        working-directory: mc-assistant-neoforge
+        run: |
+          mkdir -p ../carry
+          if [ -d run/world ]; then
+            tar -czf ../carry/hundred.tar.gz -C run world real-hundred.txt hundred-metrics.jsonl hundred-spot.txt hundred-reached.txt 2>/dev/null || true
+          elif [ -f ../carried/hundred.tar.gz ]; then
+            cp ../carried/hundred.tar.gz ../carry/hundred.tar.gz
+          fi
+          ls -la ../carry || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hundred-world-${{ inputs.leg }}
+          path: carry/hundred.tar.gz
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Publish the leg's report
+        if: always()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: village-test-latest
+          name: "Village behaviour test output (latest)"
+          prerelease: true
+          make_latest: "false"
+          body: "Raw output of the empirical village tests. Not a mod build."
+          files: |
+            mc-assistant-neoforge/real-hundred.txt
+            mc-assistant-neoforge/hundred-metrics.jsonl
+            mc-assistant-neoforge/server-hundred-${{ inputs.leg }}.log.gz
+          overwrite_files: true

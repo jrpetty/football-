@@ -288,6 +288,98 @@ def twin(r, days=3):
     say("PASS two villages ran %d days side by side" % days)
 
 
+def epic_day(r, x, z, day, began, last_age, metrics_file="epic-metrics.jsonl"):
+    """One game day of the long game: the dusk (every fifth with a raid), the night's beds,
+    the morning, then the village in numbers. Returns the age it is in now."""
+    if day % 5 == 1:
+        # Dusk, with the things that come out at night among them (nothing spawns on
+        # a server with nobody on it, so the watch would otherwise never be tested).
+        sprint(r, 13500)
+        raid(r, x, z)
+        sprint(r, 3500)
+    else:
+        sprint(r, 17000)
+    night(r, x, z, "the long game, night %d" % day)
+    sprint(r, 7000)
+    status = r.cmd("execute positioned %d 64 %d run village status" % (x, z)).replace("\n", " ")
+    listing = r.cmd("village list")
+    villages = [l for l in listing.split("\n") if l.strip().startswith("Village at")]
+    world = sum(int(m) for m in re.findall(r"— (\d+) folk", listing))
+    m = re.search(r"— (\d+) folk.*?, (the \w+ Age)\.", status)
+    folk, age = (m.group(1), m.group(2)) if m else ("?", "?")
+    built = re.search(r"Built: \[([^\]]*)\]", status)
+    names = [b.strip() for b in built.group(1).split(",") if b.strip()] if built else []
+    renown = re.search(r"Renown (\d+)", status)
+    colonies = names.count("colony")
+    community = re.search(r"Community: \d+ folk: ([^;]*)", status)
+    beds = re.search(r"Beds: (\d+) of (\d+) have one, (\d+) asleep", status)
+    say("DAY %d: %s folk, %s, %d buildings, renown %s, %d villages in the world (%d colonies from this one), %d folk in all, %s, %s, %.0f min"
+        % (day, folk, age, len(names) - colonies, renown.group(1) if renown else "0",
+           len(villages), colonies, world, community.group(1) if community else "no community line",
+           ("beds %s/%s" % (beds.group(1), beds.group(2))) if beds else "no beds line",
+           (time.time() - began) / 60.0))
+    if age != last_age:
+        say("AGE on day %d: %s" % (day, age))
+        last_age = age
+    # The day in numbers, one JSON line a day (epic-metrics.jsonl, and the history across
+    # builds the workflow keeps): what a regression looks like is a curve that bends.
+    stores = re.search(r"Stores: food (\d+) logs (\d+) stone (\d+) coal (\d+) iron (\d+) diamond (\d+) obsidian (\d+)", status)
+    trades = re.search(r"Trades: ([^.]*)\.", status)
+    tally = {}
+    if trades:
+        for n, t in re.findall(r"(\d+) ([a-z]+)", trades.group(1)):
+            tally[t] = int(n)
+    watch = re.search(r"(\d+) gates (?:open|shut), (\d+) posts", status)
+    coins = re.search(r"Treasury: (\d+) coins", status)
+    content = re.search(r"Contentment: (\d+)", status)
+    made = re.search(r"homes for (\d+)(?: made up of (\d+))?", status)
+    rank = re.search(r"Rank: a (\w+)", status)
+    metrics = {
+        "day": day, "folk": int(folk) if folk.isdigit() else None, "age": age,
+        "buildings": len(names) - colonies, "renown": int(renown.group(1)) if renown else 0,
+        "villages": len(villages), "colonies": colonies, "world": world,
+        "bedded": int(beds.group(1)) if beds else None, "beds_made": int(made.group(1)) if made else None,
+        "beds_planned": int(made.group(2)) if made and made.group(2) else None,
+        "trades": tally, "guards": tally.get("guard", 0),
+        "gates": int(watch.group(1)) if watch else None, "posts": int(watch.group(2)) if watch else None,
+        "coins": int(coins.group(1)) if coins else None, "contentment": int(content.group(1)) if content else None,
+        "minutes": round((time.time() - began) / 60.0, 1),
+        "ms_per_tick": LAST_MSPT[0],
+        "rank": rank.group(1) if rank else None,
+    }
+    if stores:
+        for i, k in enumerate(["food", "logs", "stone", "coal", "iron", "diamond", "obsidian"]):
+            metrics[k] = int(stores.group(i + 1))
+    # The newer systems: the scouts' atlas, the elders' dealings, who is at the town's works.
+    atlas = re.search(r"Scouts: atlas (\d+), explored (\d+)%", status)
+    if atlas:
+        metrics["atlas"], metrics["explored"] = int(atlas.group(1)), int(atlas.group(2))
+    diplo = re.search(r"Diplomacy: ([^.]*)\.", status)
+    if diplo:
+        temper = re.search(r"temper (\w+)", diplo.group(1))
+        metrics["temper"] = temper.group(1) if temper else None
+        metrics["pacts"] = diplo.group(1).count(" pact")
+        metrics["allies"] = diplo.group(1).count(" allied")
+    works = re.search(r"Town works: ([^.]*)\.", status)
+    if works:
+        metrics["town_hands"] = 0 if works.group(1).startswith("nobody") else works.group(1).count(",") + 1
+    wealth = re.search(r"Wealth: \{([^}]*)\}", status)
+    if wealth:
+        metrics["wealth"] = {k.strip(): int(v) for k, v in re.findall(r"(\w+)=(\d+)", wealth.group(1))}
+    say("METRICS " + json.dumps(metrics, separators=(",", ":")))
+    try:
+        with open(metrics_file, "a") as out:
+            out.write(json.dumps(metrics, separators=(",", ":")) + "\n")
+    except OSError:
+        pass
+    say("STATUS " + status)
+    if day % 5 == 0 or day == 1:
+        report(r, x, z, "the long game, day %d" % day, compact=True)
+        for line in villages:
+            say("  " + line)
+    return last_age
+
+
 def epic(r, days, minutes, biome="plains"):
     """The long game. One village, founded the way a spawner founds one, left alone
     for as many game days as the machine will run in the time it has: does it keep
@@ -304,81 +396,52 @@ def epic(r, days, minutes, biome="plains"):
     began = time.time()
     last_age = None
     for day in range(1, days + 1):
-        if day % 5 == 1:
-            # Dusk, with the things that come out at night among them (nothing spawns on
-            # a server with nobody on it, so the watch would otherwise never be tested).
-            sprint(r, 13500)
-            raid(r, x, z)
-            sprint(r, 3500)
-        else:
-            sprint(r, 17000)
-        night(r, x, z, "the long game, night %d" % day)
-        sprint(r, 7000)
-        status = r.cmd("execute positioned %d 64 %d run village status" % (x, z)).replace("\n", " ")
-        listing = r.cmd("village list")
-        villages = [l for l in listing.split("\n") if l.strip().startswith("Village at")]
-        world = sum(int(m) for m in re.findall(r"— (\d+) folk", listing))
-        m = re.search(r"— (\d+) folk.*?, (the \w+ Age)\.", status)
-        folk, age = (m.group(1), m.group(2)) if m else ("?", "?")
-        built = re.search(r"Built: \[([^\]]*)\]", status)
-        names = [b.strip() for b in built.group(1).split(",") if b.strip()] if built else []
-        renown = re.search(r"Renown (\d+)", status)
-        colonies = names.count("colony")
-        community = re.search(r"Community: \d+ folk: ([^;]*)", status)
-        beds = re.search(r"Beds: (\d+) of (\d+) have one, (\d+) asleep", status)
-        say("DAY %d: %s folk, %s, %d buildings, renown %s, %d villages in the world (%d colonies from this one), %d folk in all, %s, %s, %.0f min"
-            % (day, folk, age, len(names) - colonies, renown.group(1) if renown else "0",
-               len(villages), colonies, world, community.group(1) if community else "no community line",
-               ("beds %s/%s" % (beds.group(1), beds.group(2))) if beds else "no beds line",
-               (time.time() - began) / 60.0))
-        if age != last_age:
-            say("AGE on day %d: %s" % (day, age))
-            last_age = age
-        # The day in numbers, one JSON line a day (epic-metrics.jsonl, and the history across
-        # builds the workflow keeps): what a regression looks like is a curve that bends.
-        stores = re.search(r"Stores: food (\d+) logs (\d+) stone (\d+) coal (\d+) iron (\d+) diamond (\d+) obsidian (\d+)", status)
-        trades = re.search(r"Trades: ([^.]*)\.", status)
-        tally = {}
-        if trades:
-            for n, t in re.findall(r"(\d+) ([a-z]+)", trades.group(1)):
-                tally[t] = int(n)
-        watch = re.search(r"(\d+) gates (?:open|shut), (\d+) posts", status)
-        coins = re.search(r"Treasury: (\d+) coins", status)
-        content = re.search(r"Contentment: (\d+)", status)
-        made = re.search(r"homes for (\d+)(?: made up of (\d+))?", status)
-        rank = re.search(r"Rank: a (\w+)", status)
-        metrics = {
-            "day": day, "folk": int(folk) if folk.isdigit() else None, "age": age,
-            "buildings": len(names) - colonies, "renown": int(renown.group(1)) if renown else 0,
-            "villages": len(villages), "colonies": colonies, "world": world,
-            "bedded": int(beds.group(1)) if beds else None, "beds_made": int(made.group(1)) if made else None,
-            "beds_planned": int(made.group(2)) if made and made.group(2) else None,
-            "trades": tally, "guards": tally.get("guard", 0),
-            "gates": int(watch.group(1)) if watch else None, "posts": int(watch.group(2)) if watch else None,
-            "coins": int(coins.group(1)) if coins else None, "contentment": int(content.group(1)) if content else None,
-            "minutes": round((time.time() - began) / 60.0, 1),
-            "ms_per_tick": LAST_MSPT[0],
-            "rank": rank.group(1) if rank else None,
-        }
-        if stores:
-            for i, k in enumerate(["food", "logs", "stone", "coal", "iron", "diamond", "obsidian"]):
-                metrics[k] = int(stores.group(i + 1))
-        say("METRICS " + json.dumps(metrics, separators=(",", ":")))
-        try:
-            with open("epic-metrics.jsonl", "a") as out:
-                out.write(json.dumps(metrics, separators=(",", ":")) + "\n")
-        except OSError:
-            pass
-        say("STATUS " + status)
-        if day % 5 == 0 or day == 1:
-            report(r, x, z, "the long game, day %d" % day, compact=True)
-            for line in villages:
-                say("  " + line)
+        last_age = epic_day(r, x, z, day, began, last_age)
         if time.time() - began > minutes * 60:
             say("STOP the time this run had is spent, after %d game days" % day)
             break
     say("village list at the end: " + r.cmd("village list").replace("\n", " | "))
     say("PASS the long game ran")
+
+
+def hundred(r, first, last, minutes, biome="plains"):
+    """A hundred days, in legs. A runner has six hours, and a growing town runs slower by
+    the day, so the hundred days are run a leg at a time: each leg plays as many days as fit
+    in the time it has, the server saves the world, and the next leg loads it and goes on
+    from the day after. Where the village is and the day reached are kept beside the world."""
+    spotfile, reached = "hundred-spot.txt", "hundred-reached.txt"
+    if first <= 1:
+        setup(r)
+        spot = where(r, "biome minecraft:" + biome) or where(r, "biome minecraft:forest")
+        if spot is None:
+            say("SKIP no %s within reach of this seed" % biome)
+            return
+        x, z = spot
+        say("the hundred days: a village of 8 at %d, %d (%s)" % (x, z, biome))
+        say("spawn: " + r.cmd("village spawnat %d %d 8" % (x, z)))
+        with open(spotfile, "w") as fh:
+            fh.write("%d %d" % (x, z))
+    else:
+        for c in ("gamerule doDaylightCycle true", "gamerule doWeatherCycle false", "gamerule randomTickSpeed 15",
+                  "gamerule doMobSpawning true", "difficulty normal"):
+            r.cmd(c)
+        with open(spotfile) as fh:
+            x, z = (int(v) for v in fh.read().split())
+        say("the hundred days, on from day %d: the village at %d, %d (game time %s)" % (first, x, z, r.cmd("time query gametime").strip()))
+    began = time.time()
+    last_age, done = None, first - 1
+    for day in range(first, last + 1):
+        last_age = epic_day(r, x, z, day, began, last_age, "hundred-metrics.jsonl")
+        done = day
+        with open(reached, "w") as fh:
+            fh.write(str(done))
+        if time.time() - began > minutes * 60:
+            say("LEG the time this leg had is spent at day %d" % day)
+            break
+    say("village list: " + r.cmd("village list").replace("\n", " | "))
+    say("relations: " + r.cmd("village relations").replace("\n", " | "))
+    if done >= last:
+        say("PASS the hundred days ran: day %d reached" % done)
 
 
 def takeover(r):
@@ -507,6 +570,11 @@ def main():
         elif scenario == "modpack":
             # The mod among others (the workflow puts JEI and Jade in the mods folder).
             village(r, "plains", days=2, label="plains with JEI and Jade")
+        elif scenario == "hundred":
+            first = int(sys.argv[2]) if len(sys.argv) > 2 else 1
+            last = int(sys.argv[3]) if len(sys.argv) > 3 else 100
+            minutes = int(sys.argv[4]) if len(sys.argv) > 4 else 300
+            hundred(r, first, last, minutes)
         elif scenario == "epic":
             days = int(sys.argv[2]) if len(sys.argv) > 2 else 60
             minutes = int(sys.argv[3]) if len(sys.argv) > 3 else 300

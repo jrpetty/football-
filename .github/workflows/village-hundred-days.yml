@@ -1,0 +1,56 @@
+name: Village hundred days
+
+# A village left alone for a hundred game days on a real server: does the town keep growing,
+# trading, building and getting on with its neighbours the whole way? A runner has six hours
+# and a big town runs slower by the day, so it is run in legs (village-hundred-leg.yml): each
+# leg saves the world for the next. Started by touching tools/realworld/hundred.trigger.
+
+on:
+  push:
+    branches:
+      - claude/minecraft-ai-assistant-44hj4f
+    paths:
+      - "mc-assistant-neoforge/tools/realworld/hundred.trigger"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: village-hundred-days
+  cancel-in-progress: false
+
+jobs:
+  leg1:
+    uses: ./.github/workflows/village-hundred-leg.yml
+    with: { leg: 1 }
+    secrets: inherit
+  leg2:
+    needs: leg1
+    if: always()
+    uses: ./.github/workflows/village-hundred-leg.yml
+    with: { leg: 2, prev: 1 }
+    secrets: inherit
+  leg3:
+    needs: leg2
+    if: always()
+    uses: ./.github/workflows/village-hundred-leg.yml
+    with: { leg: 3, prev: 2 }
+    secrets: inherit
+  leg4:
+    needs: leg3
+    if: always()
+    uses: ./.github/workflows/village-hundred-leg.yml
+    with: { leg: 4, prev: 3 }
+    secrets: inherit
+  leg5:
+    needs: leg4
+    if: always()
+    uses: ./.github/workflows/village-hundred-leg.yml
+    with: { leg: 5, prev: 4 }
+    secrets: inherit
+  leg6:
+    needs: leg5
+    if: always()
+    uses: ./.github/workflows/village-hundred-leg.yml
+    with: { leg: 6, prev: 5 }
+    secrets: inherit
