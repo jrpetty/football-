@@ -131,6 +131,9 @@ jobs:
     continue-on-error: true
     strategy:
       fail-fast: false
+      # Four at a time: eleven at once, with the game tests, the client and a long run going, left the
+      # game tests and the client waiting for a hosted runner until they were given up.
+      max-parallel: 4
       matrix:
         scenario: [plains, forest, taiga, savanna, takeover, crowd, natural, restart, pair, twin, modpack]
     steps:
