@@ -1423,6 +1423,24 @@ tree, nothing next to water, and never more than six blocks up or down, so a hil
 hill and just stops at the edge of town. Rock that is cut goes into the stores as
 cobblestone. When the whole town is level, the history says so.
 
+**Every building grows up with its village** (not only the houses). The builders do it a
+few blocks a visit, out of the stores, and what comes off goes back in:
+* **Stone Age:** the timber walls of every building are rebuilt in stone (the land's own
+  stone where the stores have it) and lamp posts go up by every door. A fountain is built
+  on the square.
+* **Iron Age:** the roofs are slated (deepslate tiles) and the footings dressed. The great
+  buildings go up a storey, one at a time: the meeting hall, the tavern (rooms over the
+  bar), the library, the guest house, the shop, the café, the workshop, the brewery, the
+  smithy and the granary. Their walls are built up again over a new floor, with a ladder
+  up and the windows where they were. The old eaves stay as a skirt of roof between the
+  storeys, and the roof is lifted onto the new walls. All of it is paid for out of the
+  stores before the roof comes off. A town of twenty or more builds manor houses, its
+  best homes: two storeys of brick, slate and timber framing, six beds each.
+* **Diamond Age:** the great buildings (hall, chapel, library, granary, tavern, guest
+  house, market, towers, manors) are roofed in copper, which goes green with the years;
+  moss gets into the old footings; and a bell tower goes up on the square, with an open
+  belfry, a copper spire and a lantern at the very top.
+
 **Houses that grow up.** So an old village looks old:
 * **Stone Age:** each house gets a fenced garden with a gate to the street and flowers by
   the path, and its timber walls are rebuilt in stone.
@@ -1542,6 +1560,48 @@ order stands until something else is clearly wanted more.
   are a citizen in good standing, it agrees, as long as the order is one the village can
   carry out. One petition per village a day. An outcast is not listened to.
   `/village status` and the town ledger show the order too.
+
+### The leader runs the village
+
+The elder (the reeve, the thane, the harbourmaster: whatever the land calls its head) does
+more than give orders. Every morning it goes over the village's books and makes the calls,
+and its own nature runs through the place.
+
+* **The food books.** The village counts the food that came into its stores yesterday and
+  what was eaten, and the leader reckons how many days of food are put by. That counts the
+  stores and what its people carry. How much it likes to keep in hand is its nature: a shy
+  leader three days, a grumpy or generous one two and a half, a hardworking or curious one
+  two, a cheerful or sociable one a day and three quarters, an easygoing one a day and a
+  half.
+* **Short of that, or eating more than it grows, it expands the farms.** It orders the
+  larder filled at once, not in three days' time, and wants half as many farmers and
+  fishers again. The fields are widened as soon as they are half sown instead of six parts
+  in ten, and looked at twice as often.
+* **In a famine** (under a day's food left) it wants twice the farmers and fishers and
+  more hunters. If the treasury has the coin, it buys bread from the passing traders to
+  tide the village over.
+* **With plenty** (three times its reserve, and more grown than eaten) the fields can
+  spare a hand for the village's other work again.
+* **Work.** A hardworking leader drives the village: everybody works up to a tenth faster,
+  and the breaks are a fifth shorter. An easygoing one lets it take its time: slower work,
+  longer breaks. A grumpy one is somewhere in between.
+* **Spirits.** A cheerful leader lifts everybody's mood, as does a generous or easygoing
+  one; a grumpy or hard-driving one wears it down. Each folk feels it more or less by how
+  it gets on with the leader: a friend of the leader's is glad of it, a rival chafes, and a
+  folk of a like nature gets on with it best. Ask a folk how it is and it may say so ("Elder
+  Rook works us to the bone").
+* **Pay.** A generous leader pays over the odds, a grumpy, shy or hardworking one keeps the
+  purse tight. When there are beds or bread to buy and the treasury is thin, any leader
+  holds part of the wages back for them, and says so at the morning assembly.
+* **Families.** A sociable, cheerful or generous leader's village has its children sooner;
+  a shy or grumpy one's, later.
+* **The young.** A child that grows up without a trade of its own learned is set to work
+  by the leader where the village most needs hands, and the history says so.
+
+Everything the leader decides goes into the village's history and the morning assembly
+hears it. `/village status` shows the leader, its nature, how much food it reckons is put
+by and the plan; the board shows it too; and the elder will tell you itself when you ask
+about its orders.
 
 ### Neighbours: rivals, allies and feuds
 

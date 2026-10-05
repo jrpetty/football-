@@ -128,7 +128,7 @@ public final class Contentment {
         safety = Math.max(0, Math.min(10, safety));
         // Things to enjoy.
         int amenities = 0;
-        for (String s : new String[]{ "well", "market", "cafe", "tavern", "chapel" }) {
+        for (String s : new String[]{ "well", "market", "cafe", "tavern", "chapel", "fountain", "belltower" }) {
             if (Villages.hasBuilt(id, s)) amenities += 2;
         }
         if (amenities >= 6) good.add("plenty to do of an evening");

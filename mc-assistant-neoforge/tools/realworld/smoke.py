@@ -67,8 +67,10 @@ def showcase(r, cx, cz, look):
     found = re.findall(r"(\w+) (-?\d+) (-?\d+) (-?\d+)", out.replace("SHOWCASE", ""))
     for i, (name, x, y, z) in enumerate(found):
         x, y, z = int(x), int(y), int(z)
-        tall = {"lighthouse": 22, "watchtower": 13, "chapel": 15, "hall": 10, "barracks": 8}.get(name, 7)
-        back = {"hall": 26, "chapel": 28, "barracks": 22, "lighthouse": 24, "watchtower": 18}.get(name, 15)
+        tall = {"lighthouse": 22, "watchtower": 13, "chapel": 15, "hall": 10, "barracks": 8, "belltower": 18,
+                "manor": 14}.get(name, 7)
+        back = {"hall": 26, "chapel": 28, "barracks": 22, "lighthouse": 24, "watchtower": 18, "belltower": 24,
+                "manor": 28}.get(name, 15)
         look("b%02d-%s" % (i + 1, name), x + back * 0.45, y + tall * 0.55 + 2, z + back,
              x, y + tall * 0.4, z, wait=5 if i else 9)
     say("alive after the buildings: %s" % client_alive())

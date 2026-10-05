@@ -48,7 +48,9 @@ public class BuildGoal extends Goal {
         // "I can build: ..." and the café, the shop and the smithy never went up
         "cafe", "shop", "smithy", "brewery", "library", "tavern", "graveyard", "house2",
         // the Village Storehouse laid into a storehouse shed built before there were units
-        "storehouse");
+        "storehouse",
+        // what the later ages add: a fountain on the square, a manor house, a bell tower
+        "fountain", "manor", "belltower");
 
     /** Half the width of a structure's footprint: the meeting hall, the market, the
      *  barracks, the chapel's length and the gateway's step are seven across, the rest

@@ -150,9 +150,100 @@ public final class Blueprints {
         return !cells(name).isEmpty();
     }
 
-    /** The drawing of this building, read once; empty if there is none. */
+    /** The drawing of this building, read once; empty if there is none. A name ending "_tall" is the
+     *  building with a second storey put on (raised). */
     public static List<Cell> cells(String name) {
-        return DRAWINGS.computeIfAbsent(name, Blueprints::read);
+        List<Cell> got = DRAWINGS.get(name);
+        if (got != null) return got;
+        got = name.endsWith(TALL) ? raised(name.substring(0, name.length() - TALL.length())) : read(name);
+        DRAWINGS.put(name, got);
+        return got;
+    }
+
+    /** The mark of a building with a second storey on it. */
+    public static final String TALL = "_tall";
+
+    private static boolean roofish(Style s) {
+        return s == Style.ROOF_STAIR || s == Style.ROOF_STAIR_TOP || s == Style.ROOF_SLAB || s == Style.ROOF_SLAB_TOP
+            || s == Style.ROOF_BLOCK;
+    }
+
+    private static boolean wallish(Key k) {
+        if (k.part() == BuildGoal.Part.WINDOW) return true;
+        if (k.part() == BuildGoal.Part.LANTERN) return k.style() == Style.HANGING;
+        if (k.part() != BuildGoal.Part.BLOCK) return false;
+        return switch (k.style()) {
+            case WALL, POST, MASONRY, BRICK, WALL_LOW, GENERIC, BEAM_ACROSS, BEAM_ALONG, GLASS -> true;
+            default -> false;
+        };
+    }
+
+    /**
+     * A building with a second storey put on it, drawn from the building itself: everything up to
+     * its eaves as it was; over it a new floor (the old ceiling's beams and boards), its walls built
+     * up again a second time (the windows where they were, the doorway walled), a ladder up from the
+     * ground floor, and its roof lifted onto the new walls. The old eaves stay where they were, a
+     * skirt of roof between the storeys. Empty for a building with no eaves to raise (a tower, a well).
+     */
+    private static List<Cell> raised(String base) {
+        List<Cell> cells = cells(base);
+        if (cells.isEmpty()) return List.of();
+        int eaves = Integer.MAX_VALUE;
+        for (Cell c : cells) if (c.h() >= 2 && roofish(c.key().style())) eaves = Math.min(eaves, c.h());
+        if (eaves == Integer.MAX_VALUE) return List.of();
+        int lift = eaves;
+        Key wall = LEGEND.get('W'), ladder = LEGEND.get('H');
+        // The outline of the ground storey: every column a wall, post, window or door stands in.
+        java.util.Set<Long> ring = new java.util.HashSet<>();
+        java.util.Set<Long> used = new java.util.HashSet<>();
+        int minX = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE, minZ = Integer.MAX_VALUE, maxZ = Integer.MIN_VALUE;
+        for (Cell c : cells) {
+            if (c.h() < 0 || c.h() >= eaves) continue;
+            long key = ((long) c.dx() << 32) ^ (c.dz() & 0xffffffffL);
+            used.add(key);
+            if ((wallish(c.key()) && c.key().part() != BuildGoal.Part.LANTERN) || c.key().part() == BuildGoal.Part.DOOR) {
+                ring.add(key);
+                minX = Math.min(minX, c.dx()); maxX = Math.max(maxX, c.dx());
+                minZ = Math.min(minZ, c.dz()); maxZ = Math.max(maxZ, c.dz());
+            }
+        }
+        if (ring.isEmpty()) return List.of();
+        // A ladder up, against the back wall: a column inside that nothing on the ground floor uses.
+        int[] up = null;
+        for (int dz = maxZ - 1; dz > minZ && up == null; dz--) {
+            for (int dx = minX + 1; dx < maxX && up == null; dx++) {
+                long k = ((long) dx << 32) ^ (dz & 0xffffffffL), behind = ((long) dx << 32) ^ ((dz + 1) & 0xffffffffL);
+                if (!used.contains(k) && ring.contains(behind)) up = new int[]{ dx, dz };
+            }
+        }
+        List<Cell> out = new ArrayList<>();
+        for (Cell c : cells) {
+            boolean roof = roofish(c.key().style());
+            if (c.h() < eaves) out.add(c);
+            if (c.h() == eaves) {
+                // The new floor (beams and boards) — and the old eaves left as a skirt between the storeys.
+                boolean ladderHole = up != null && c.dx() == up[0] && c.dz() == up[1];
+                if (!ladderHole) out.add(c);
+            }
+            if (c.h() >= eaves) out.add(new Cell(c.dx(), c.h() + lift, c.dz(), c.key()));    // the roof, lifted
+        }
+        // The walls built up again: each course of the ground storey's walls, a storey higher.
+        for (int h = 1; h < eaves; h++) {
+            java.util.Set<Long> laid = new java.util.HashSet<>();
+            for (Cell c : cells) {
+                if (c.h() != h || !wallish(c.key())) continue;
+                out.add(new Cell(c.dx(), c.h() + lift, c.dz(), c.key()));
+                laid.add(((long) c.dx() << 32) ^ (c.dz() & 0xffffffffL));
+            }
+            for (long k : ring) {
+                if (laid.contains(k)) continue;                                // the doorway, walled up there
+                out.add(new Cell((int) (k >> 32), h + lift, (int) k, wall));
+            }
+        }
+        if (up != null && ladder != null) {
+            for (int h = 0; h <= eaves; h++) out.add(new Cell(up[0], h, up[1], ladder));
+        }
+        return List.copyOf(out);
     }
 
     private static List<Cell> read(String name) {

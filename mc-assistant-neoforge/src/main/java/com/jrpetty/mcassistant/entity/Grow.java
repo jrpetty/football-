@@ -98,6 +98,7 @@ public final class Grow {
             String plan = switch (b.structure()) {
                 case "house" -> Ledger.grown(id, b.anchor()) ? "house2" : "house";
                 case "barracks" -> "barracks";
+                case "manor" -> "manor";
                 default -> null;
             };
             if (plan == null || !Land.areaLoaded(level, b.anchor(), 9)) continue;
@@ -354,21 +355,48 @@ public final class Grow {
      */
     public static int storey(ServerLevel level, Villages.Village v, Ledger.Building b, int budget, Showcase.Palette pal,
                              boolean free) {
+        return raise(level, v, b, "house", "house2", budget, pal, free);
+    }
+
+    private static String named(String structure) {
+        return structure.equals("house") ? "the house" : Villages.spoken(structure);
+    }
+
+    /** Is a second storey going up on this building now (begun, or its old roof off)? */
+    public static boolean raisingNow(UUID village, BlockPos anchor) {
+        Set<Long> started = STARTED.get(village);
+        return (started != null && started.contains(anchor.asLong())) || Ledger.raising(village, anchor);
+    }
+
+    /** Has this building (not a house: Ledger.grown) had its second storey put on (Ages)? */
+    public static boolean tall(UUID village, BlockPos anchor) {
+        return "1".equals(Ledger.note(village, "tall/" + anchor.asLong()));
+    }
+
+    /**
+     * Raise a building a storey, from one drawing of it to the next (a house to house2, a tavern to
+     * tavern_tall): the old roof off, then the new storey and roof a layer at a time, paid for up
+     * front. A house is counted grown (two more beds' room); anything else is marked tall.
+     */
+    public static int raise(ServerLevel level, Villages.Village v, Ledger.Building b, String from, String to, int budget,
+                            Showcase.Palette pal, boolean free) {
         UUID id = v.id();
+        boolean home = from.equals("house");
         Set<Long> started = STARTED.computeIfAbsent(id, k -> ConcurrentHashMap.newKeySet());
-        List<BuildGoal.Placement> was = BuildGoal.plan("house", b.anchor(), b.facing(), 13);
-        List<BuildGoal.Placement> will = BuildGoal.plan("house2", b.anchor(), b.facing(), 13);
+        List<BuildGoal.Placement> was = BuildGoal.plan(from, b.anchor(), b.facing(), 13);
+        List<BuildGoal.Placement> will = BuildGoal.plan(to, b.anchor(), b.facing(), 13);
+        if (will.isEmpty()) return 0;
         if (!started.contains(b.anchor().asLong()) && !Ledger.raising(id, b.anchor())) {
             // The makings for all of it, out of the stores, before the roof comes off.
             if (!free && !payForStorey(level, v, b, was, will, Showcase.painter(pal))) return 0;
             started.add(b.anchor().asLong());
-            Villages.tell(id, level.getDayTime() / 24000L, "the builders began a second storey on the house at "
+            Villages.tell(id, level.getDayTime() / 24000L, "the builders began a second storey on " + named(from) + " at "
                 + b.anchor().getX() + ", " + b.anchor().getZ());
         }
         Map<BlockPos, BuildGoal.Placement> next = new HashMap<>();
         for (BuildGoal.Placement p : will) next.put(p.pos(), p);
         // Raised by hand: the builders there at the house (TownJobs).
-        if (!free && !TownJobs.atWork(level, v, "storeys", b.anchor(), "raising a second storey")) return 0;
+        if (!free && !TownJobs.atWork(level, v, "storeys", b.anchor(), "raising a second storey on " + named(from))) return 0;
         // What comes down to make way, for the stores.
         Map<net.minecraft.world.item.Item, Integer> back = new HashMap<>();
         // The old roof off, from the top down (once: after that, what stands there is the new storey).
@@ -428,18 +456,20 @@ public final class Grow {
         }
         if (missing.isEmpty()) {
             TRIED.keySet().removeIf(k -> k.startsWith(b.anchor().asLong() + ":"));
-            Ledger.grow(id, b.anchor());
+            if (home) Ledger.grow(id, b.anchor());
+            else Ledger.note(id, "tall/" + b.anchor().asLong(), "1");
             Ledger.raising(id, b.anchor(), false);
             started.remove(b.anchor().asLong());
-            Villages.tell(id, level.getDayTime() / 24000L, "the house at " + b.anchor().getX() + ", " + b.anchor().getZ()
-                + " got its second storey");
+            String spoken = named(from);
+            Villages.tell(id, level.getDayTime() / 24000L, Character.toUpperCase(spoken.charAt(0)) + spoken.substring(1)
+                + " at " + b.anchor().getX() + ", " + b.anchor().getZ() + " got its second storey");
             return 0;
         }
         final int layer = lowest;
         TRIED.merge(b.anchor().asLong() + ":" + layer, 1, Integer::sum);
         Set<BlockPos> now = new HashSet<>();
         for (BlockPos p : missing) if (p.getY() == layer && now.size() < Math.max(budget, 12)) now.add(p);
-        return BuildGoal.stampOnly(level, "house2", b.anchor(), b.facing(), 13, Showcase.painter(pal),
+        return BuildGoal.stampOnly(level, to, b.anchor(), b.facing(), 13, Showcase.painter(pal),
             p -> now.contains(p.pos()));
     }
 

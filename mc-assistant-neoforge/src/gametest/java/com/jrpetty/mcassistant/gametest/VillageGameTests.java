@@ -4886,7 +4886,10 @@ public class VillageGameTests {
         ItemStack[] makings = {
             new ItemStack(Items.STONE_BRICKS, 64), new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.COBBLESTONE, 64),
             new ItemStack(Items.COBBLED_DEEPSLATE, 64), new ItemStack(Items.COPPER_INGOT, 64), new ItemStack(Items.COPPER_INGOT, 64),
-            new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.TORCH, 16) };
+            new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.TORCH, 16), new ItemStack(Items.COBBLESTONE, 64),
+            new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.STONE_BRICKS, 64),
+            new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.OAK_LOG, 32), new ItemStack(Items.GLASS_PANE, 32),
+            new ItemStack(Items.COPPER_INGOT, 64), new ItemStack(Items.COPPER_INGOT, 64) };
         for (int i = 0; i < makings.length; i++) stores.setItem(i, makings[i]);
         BlockPos at = Kit.surface(level, heart.getX() + 18, heart.getZ() - 18);
         BuildGoal.stamp(level, "tavern", at, Direction.NORTH, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
@@ -4907,7 +4910,8 @@ public class VillageGameTests {
         int timberBefore = timberWalls.getAsInt();
         int lampsBefore = count.apply(Blocks.LANTERN);
         com.jrpetty.mcassistant.entity.TownJobs.instantForTests(true);
-        int stoneWalls, timberAfter, lamps, slate, footings, copper;
+        int stoneWalls, timberAfter, lamps, slate, footings, copper, upstairs = 0;
+        boolean tall;
         try {
             Villages.ageForTests(village, Villages.Age.STONE);
             for (int i = 0; i < 30; i++) com.jrpetty.mcassistant.entity.Ages.work(level, v, 400);
@@ -4918,6 +4922,8 @@ public class VillageGameTests {
             for (int i = 0; i < 30; i++) com.jrpetty.mcassistant.entity.Ages.work(level, v, 400);
             slate = count.apply(Blocks.DEEPSLATE_TILE_STAIRS) + count.apply(Blocks.DEEPSLATE_TILE_SLAB) + count.apply(Blocks.DEEPSLATE_TILES);
             footings = count.apply(Blocks.STONE_BRICKS);
+            tall = com.jrpetty.mcassistant.entity.Grow.tall(village, at);
+            for (BlockPos q : BlockPos.betweenClosed(at.offset(-8, 5, -8), at.offset(8, 7, 8))) if (!level.getBlockState(q).isAir()) upstairs++;
             Villages.ageForTests(village, Villages.Age.DIAMOND);
             for (int i = 0; i < 30; i++) com.jrpetty.mcassistant.entity.Ages.work(level, v, 400);
             copper = count.apply(Blocks.CUT_COPPER_STAIRS) + count.apply(Blocks.CUT_COPPER_SLAB) + count.apply(Blocks.CUT_COPPER);
@@ -4927,12 +4933,67 @@ public class VillageGameTests {
         int copperLeft = com.jrpetty.mcassistant.entity.Market.stock(level, village, st -> st.is(Items.COPPER_INGOT));
         int planksBack = com.jrpetty.mcassistant.entity.Market.stock(level, village, st -> st.is(net.minecraft.tags.ItemTags.PLANKS));
         Kit.log("t73 the tavern through the ages: timber walls " + timberBefore + " -> " + timberAfter + ", stone " + stoneWalls
-            + ", lanterns " + lamps + "; Iron Age slate " + slate + ", stone footings " + footings + "; Diamond Age copper " + copper
+            + ", lanterns " + lamps + "; Iron Age slate " + slate + ", stone bricks " + footings + "; Diamond Age copper " + copper
             + " (copper left " + copperLeft + " of 128); planks in the stores " + planksBack);
         helper.assertTrue(timberBefore > 0 && timberAfter == 0 && stoneWalls > 0, "the Stone Age rebuilds the timber walls in stone");
         helper.assertTrue(lamps > lampsBefore, "and puts lamp posts by the door: " + lampsBefore + " -> " + lamps);
-        helper.assertTrue(slate > 0 && footings > stoneWalls, "the Iron Age slates the roof and dresses the footings");
+        Kit.log("t73 the Iron Age's second storey: tall " + tall + ", " + upstairs + " blocks four to six above the ground");
+        helper.assertTrue(slate > 0, "the Iron Age slates the roof");
+        helper.assertTrue(tall && upstairs >= 30, "and puts a second storey on the tavern: tall " + tall + ", " + upstairs + " blocks up there");
         helper.assertTrue(copper > 0 && copperLeft < 128, "the Diamond Age roofs a great building in copper, paid in copper");
+        helper.succeed();
+    }
+
+    /**
+     * The new kinds of building the ages bring (a fountain, a manor house, a bell tower) are drawn
+     * and stand up, and every building that goes up a storey in the Iron Age has a taller drawing
+     * of itself than it had: its walls built up again over a new floor, with a ladder up to it.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t74_new_buildings")
+    public static void t74_new_buildings(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 76000, 12000, 48);
+        Kit.prepare(level, 76000, 12000, 48);
+        BlockPos heart = Kit.surface(level, 76000, 12000);
+        StringBuilder log = new StringBuilder();
+        for (String name : java.util.List.of("fountain", "manor", "belltower")) {
+            java.util.List<com.jrpetty.mcassistant.entity.goal.Blueprints.Cell> cells = com.jrpetty.mcassistant.entity.goal.Blueprints.cells(name);
+            helper.assertTrue(!cells.isEmpty() && BuildGoal.STRUCTURES.contains(name), "a drawing of the " + name);
+            log.append(name).append(' ').append(cells.size()).append(" blocks; ");
+        }
+        int beds = 0;
+        for (com.jrpetty.mcassistant.entity.goal.Blueprints.Cell c : com.jrpetty.mcassistant.entity.goal.Blueprints.cells("manor")) {
+            if (c.key().part() == BuildGoal.Part.BED) beds++;
+        }
+        helper.assertTrue(beds == 6, "a manor house sleeps six: " + beds);
+        for (String name : com.jrpetty.mcassistant.entity.Ages.TALL) {
+            int base = com.jrpetty.mcassistant.entity.goal.Blueprints.cells(name).size();
+            java.util.List<com.jrpetty.mcassistant.entity.goal.Blueprints.Cell> tall =
+                com.jrpetty.mcassistant.entity.goal.Blueprints.cells(name + com.jrpetty.mcassistant.entity.goal.Blueprints.TALL);
+            int ladders = 0, top = 0, baseTop = 0;
+            for (com.jrpetty.mcassistant.entity.goal.Blueprints.Cell c : tall) {
+                if (c.key().part() == BuildGoal.Part.LADDER) ladders++;
+                top = Math.max(top, c.h());
+            }
+            for (com.jrpetty.mcassistant.entity.goal.Blueprints.Cell c : com.jrpetty.mcassistant.entity.goal.Blueprints.cells(name)) {
+                baseTop = Math.max(baseTop, c.h());
+            }
+            log.append(name).append(" ").append(base).append("->").append(tall.size()).append(" blocks, ")
+                .append(baseTop).append("->").append(top).append(" high, ladder ").append(ladders).append("; ");
+            helper.assertTrue(tall.size() > base && top > baseTop, "the " + name + " has a storey more: " + base + " -> " + tall.size());
+        }
+        // Stamped on the ground: the three new ones and a tall tavern stand up.
+        int x = heart.getX() - 30;
+        for (String name : java.util.List.of("fountain", "manor", "belltower", "tavern" + com.jrpetty.mcassistant.entity.goal.Blueprints.TALL)) {
+            BlockPos at = new BlockPos(x, heart.getY(), heart.getZ());
+            int put = BuildGoal.stamp(level, name, at, Direction.NORTH, 13,
+                com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+            log.append(name).append(" stamped ").append(put).append("; ");
+            helper.assertTrue(put > 10, "the " + name + " stands: " + put + " blocks");
+            x += 18;
+        }
+        Kit.log("t74 the new buildings: " + log);
         helper.succeed();
     }
 }

@@ -190,8 +190,8 @@ public final class TownPlan {
     public static String placeFor(String structure) {
         return switch (structure) {
             case "well" -> "well";
-            case "monument" -> "monument";
-            case "hall", "chapel", "barracks" -> "great";
+            case "monument", "fountain", "belltower" -> "monument";
+            case "hall", "chapel", "barracks", "manor" -> "great";
             case "storage", "storehouse", "market", "workshop", "smeltery", "granary", "cafe", "shop", "smithy", "brewery", "library",
                  "tavern" -> "civic";
             case "watchtower" -> "corner";

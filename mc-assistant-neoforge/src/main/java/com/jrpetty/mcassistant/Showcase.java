@@ -34,7 +34,7 @@ public final class Showcase {
     public static final List<String> ORDER = List.of(
         "house", "guesthouse", "storage", "shelter", "well", "smeltery", "workshop", "granary",
         "market", "watchtower", "lighthouse", "monument", "gateway", "hall", "chapel", "barracks",
-        "smithy", "brewery", "library", "cafe", "shop", "tavern", "graveyard", "house2");
+        "smithy", "brewery", "library", "cafe", "shop", "tavern", "graveyard", "house2", "fountain", "manor", "belltower");
 
     /** A palette: the woods and stones a building is made of. */
     public record Palette(Block walls, Block frame, Block roofStair, Block roofSlab, Block roofBlock, Block floor,
@@ -147,7 +147,7 @@ public final class Showcase {
     }
 
     /** The buildings shown growing up through the ages, a row each. */
-    static final List<String> AGES_SHOWN = List.of("house", "hall", "tavern", "storage", "chapel", "library");
+    static final List<String> AGES_SHOWN = List.of("house", "hall", "tavern", "library", "chapel", "storage");
 
     /**
      * Each of a few buildings four times over in a row going east, as the village has it in the
@@ -162,7 +162,7 @@ public final class Showcase {
         int z = start.getZ();
         int y = start.getY();
         for (String name : AGES_SHOWN) {
-            int[] half = Blueprints.fullHalf(name.equals("house") ? "house2" : name);
+            int[] half = Blueprints.fullHalf(name);
             int x = start.getX();
             int x0 = x;
             for (com.jrpetty.mcassistant.entity.Villages.Age age : shown) {
@@ -177,6 +177,9 @@ public final class Showcase {
                     if (age.ordinal() >= com.jrpetty.mcassistant.entity.Villages.Age.STONE.ordinal()) {
                         pal = com.jrpetty.mcassistant.entity.Grow.palette(age);
                     }
+                } else if (age.ordinal() >= com.jrpetty.mcassistant.entity.Villages.Age.IRON.ordinal()
+                        && com.jrpetty.mcassistant.entity.Ages.TALL.contains(name) && Blueprints.has(name + Blueprints.TALL)) {
+                    plan = name + Blueprints.TALL;                // a storey put on in the Iron Age (Ages)
                 }
                 BuildGoal.stamp(level, plan, at, Direction.NORTH, 13, painter(pal));
                 if (age.ordinal() >= com.jrpetty.mcassistant.entity.Villages.Age.STONE.ordinal()) {

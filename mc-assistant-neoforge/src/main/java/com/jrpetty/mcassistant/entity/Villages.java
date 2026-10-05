@@ -291,6 +291,9 @@ public final class Villages {
             case "hall" -> "the meeting hall";
             case "pen" -> "the animal pen";
             case "guesthouse" -> "a house for the village's honoured guest";
+            case "fountain" -> "the fountain on the square";
+            case "manor" -> "a manor house";
+            case "belltower" -> "the bell tower";
             default -> "the " + structure;
         };
     }
@@ -1377,6 +1380,8 @@ public final class Villages {
         List<String> extras = new ArrayList<>();
         if (folk >= 14 && built(villageId, "cafe") < 1) extras.add("cafe");
         if (folk >= 12 && built(villageId, "tavern") < 1) extras.add("tavern");
+        // A Stone Age village's square gets a fountain.
+        if (folk >= 10 && built(villageId, "fountain") < 1) extras.add("fountain");
         // Somewhere to lay the dead, once there are any; another when it is full.
         if (com.jrpetty.mcassistant.village.Ledger.graves(villageId).size() > Graves.room(villageId)) extras.add(0, "graveyard");
         if (at == Age.STONE) { homesAndAmenities(villageId, folk, out, extras); return out; }
@@ -1393,11 +1398,16 @@ public final class Villages {
         if (folk >= 16 && built(villageId, "smithy") < 1) extras.add("smithy");
         if (folk >= 18 && built(villageId, "shop") < 1) extras.add("shop");
         if (folk >= 22 && built(villageId, "brewery") < 1) extras.add("brewery");
+        // The Iron Age's best homes: a manor house on a long lot by the square, one for every
+        // thirty folk past twenty — six beds each.
+        if (folk >= 20 && built(villageId, "manor") < 1 + (folk - 20) / 30) extras.add("manor");
         if (at == Age.IRON) { homesAndAmenities(villageId, folk, out, extras); return out; }
 
         if (built(villageId, "lighthouse") < 1) out.add("lighthouse");
         if (built(villageId, "chapel") < 1) out.add("chapel");
         if (folk >= 24 && built(villageId, "library") < 1) extras.add("library");
+        // And a bell tower on the square, to ring the town's hours.
+        if (folk >= 24 && built(villageId, "belltower") < 1) extras.add("belltower");
         if (at == Age.DIAMOND) { homesAndAmenities(villageId, folk, out, extras); return out; }
 
         if (built(villageId, "gateway") < 1) out.add("gateway");
@@ -1505,7 +1515,7 @@ public final class Villages {
     /** Beds the village's homes hold: four a house, six a barracks (the guest house is the player's). */
     public static int bedsPlanned(UUID villageId) {
         return com.jrpetty.mcassistant.village.VillageMath.BEDS_PER_HOUSE * built(villageId, "house")
-            + 6 * built(villageId, "barracks");
+            + 6 * built(villageId, "barracks") + 6 * built(villageId, "manor");
     }
 
     /**
@@ -1593,7 +1603,8 @@ public final class Villages {
      */
     public static int housing(UUID villageId) {
         return 12 + 5 * built(villageId, "house") + 3 * built(villageId, "shelter") + 6 * built(villageId, "hall")
-            + 6 * built(villageId, "barracks") + 2 * com.jrpetty.mcassistant.village.Ledger.grownCount(villageId);
+            + 6 * built(villageId, "barracks") + 6 * built(villageId, "manor")
+            + 2 * com.jrpetty.mcassistant.village.Ledger.grownCount(villageId);
     }
 
     /**
@@ -1673,6 +1684,9 @@ public final class Villages {
             case "shop" -> "a shop, to sell what the village's crafts make";
             case "brewery" -> "a brewery, for the brewer's potions";
             case "library" -> "a library, where the enchanter keeps its books";
+            case "fountain" -> "a fountain on the square, now that the village builds in stone";
+            case "manor" -> "a manor house, six beds under a slate roof: the best homes a town of the Iron Age has";
+            case "belltower" -> "a bell tower on the square, to ring the hours of a Diamond Age town";
             case "gateway" -> "a gateway of obsidian, the way out of the world the Nether Age is named for";
             case "granary" -> "a granary (great work " + (renown(villageId) + 1) + "): a town that has come through every age goes on building";
             case "barracks" -> "barracks (great work " + (renown(villageId) + 1) + "), room for six more and a home for the watch";

@@ -45,11 +45,21 @@ public final class Ages {
 
     /** No walls or roof of their own to make over: they keep the look they were built with. */
     static final Set<String> AS_BUILT = Set.of("well", "gateway", "monument", "graveyard", "fortify", "pen", "platform",
-        "wall", "column", "room");
+        "wall", "column", "room", "fountain");
 
     /** The village's great buildings: copper roofs in the Diamond Age. */
     static final Set<String> GREAT = Set.of("hall", "chapel", "library", "granary", "tavern", "guesthouse", "market",
-        "watchtower", "lighthouse", "barracks");
+        "watchtower", "lighthouse", "barracks", "belltower", "manor");
+
+    /** The buildings that go up a storey in the Iron Age: the meeting hall becomes a town hall, the tavern
+     *  an inn with rooms over the bar, the library and the shops a floor of their own above. */
+    public static final Set<String> TALL = Set.of("hall", "tavern", "library", "guesthouse", "shop", "cafe", "workshop",
+        "brewery", "smithy", "granary");
+
+    /** The look of a storey put on a building in the Iron Age: dressed stone under slate. */
+    static final com.jrpetty.mcassistant.Showcase.Palette CIVIC = new com.jrpetty.mcassistant.Showcase.Palette(
+        Blocks.STONE_BRICKS, Blocks.DARK_OAK_LOG, Blocks.DEEPSLATE_TILE_STAIRS, Blocks.DEEPSLATE_TILE_SLAB, Blocks.DEEPSLATE_TILES,
+        Blocks.SPRUCE_PLANKS, Blocks.SPRUCE_DOOR, Blocks.SPRUCE_FENCE, Blocks.SPRUCE_FENCE_GATE, Blocks.RED_BED, Blocks.RED_CARPET);
 
     /** Each building's age once it has been made over for it (by its anchor), so it is not looked at again. */
     private static final Map<Long, Integer> DONE = new ConcurrentHashMap<>();
@@ -61,6 +71,7 @@ public final class Ages {
     /** The drawing standing at this building now (a grown house is a house2). */
     static String drawing(UUID village, Ledger.Building b) {
         if (b.structure().equals("house") && Ledger.grown(village, b.anchor())) return "house2";
+        if (Grow.tall(village, b.anchor())) return b.structure() + Blueprints.TALL;
         return b.structure();
     }
 
@@ -68,8 +79,10 @@ public final class Ages {
 
     /** What a block of this style should be in this age, given what stands there now; null to leave it. */
     @Nullable
-    static BlockState look(Villages.Age age, String structure, Blueprints.Style style, BlockState now, BlockPos pos,
+    static BlockState look(Villages.Age age, String drawing, Blueprints.Style style, BlockState now, BlockPos pos,
                            @Nullable Block landStone) {
+        // A building with a storey put on is still the same building.
+        String structure = drawing.endsWith(Blueprints.TALL) ? drawing.substring(0, drawing.length() - Blueprints.TALL.length()) : drawing;
         boolean home = structure.equals("house") || structure.equals("house2");
         boolean stone = age.ordinal() >= Villages.Age.STONE.ordinal();
         boolean iron = age.ordinal() >= Villages.Age.IRON.ordinal();
@@ -77,6 +90,8 @@ public final class Ages {
         boolean great = GREAT.contains(structure);
         switch (style) {
             case WALL -> {
+                // A manor is brick from the Iron Age it is built in.
+                if (structure.equals("manor") && iron && now.is(BlockTags.PLANKS)) return Blocks.BRICKS.defaultBlockState();
                 // The houses are Grow's: stone, then brick.
                 if (home || !stone || !now.is(BlockTags.PLANKS)) return null;
                 return (landStone != null ? landStone : Blocks.STONE_BRICKS).defaultBlockState();
@@ -134,6 +149,7 @@ public final class Ages {
         if (b == Blocks.STONE_BRICKS) {
             return Crafts.stock(level, v, s -> s.is(Items.STONE_BRICKS) || s.is(Items.COBBLESTONE) || s.is(Items.COBBLED_DEEPSLATE)) > 0;
         }
+        if (b == Blocks.BRICKS) return Crafts.stock(level, v, s -> s.is(Items.BRICKS)) > 0 || Crafts.stock(level, v, s -> s.is(Items.BRICK)) >= 4;
         if (b == Blocks.DEEPSLATE_TILES || b == Blocks.DEEPSLATE_TILE_STAIRS || b == Blocks.DEEPSLATE_TILE_SLAB) {
             return Crafts.stock(level, v, s -> s.is(Items.COBBLED_DEEPSLATE) || s.is(Items.COBBLESTONE)) > 0;
         }
@@ -148,6 +164,9 @@ public final class Ages {
         Block b = want.getBlock();
         if (local != null && b == local.block()) return Crafts.take(level, v, local.pay(), local.each());
         if (b == Blocks.STONE_BRICKS) return Crafts.masonry(level, v);
+        if (b == Blocks.BRICKS) {
+            return Crafts.take(level, v, s -> s.is(Items.BRICKS), 1) || Crafts.take(level, v, s -> s.is(Items.BRICK), 4);
+        }
         if (b == Blocks.DEEPSLATE_TILES || b == Blocks.DEEPSLATE_TILE_STAIRS || b == Blocks.DEEPSLATE_TILE_SLAB) {
             return Crafts.take(level, v, s -> s.is(Items.COBBLED_DEEPSLATE), 1) || Crafts.take(level, v, s -> s.is(Items.COBBLESTONE), 1);
         }
@@ -165,9 +184,22 @@ public final class Ages {
         Villages.Age age = Villages.ageOf(id);
         if (age.ordinal() < Villages.Age.STONE.ordinal() || budget <= 0) return 0;
         int done = 0;
+        // The Iron Age's second storeys first, one building at a time, oldest first: the new storey
+        // then gets the age's make-over with the rest.
+        if (age.ordinal() >= Villages.Age.IRON.ordinal()) {
+            for (Ledger.Building b : Ledger.buildings(id)) {
+                if (!TALL.contains(b.structure()) || Grow.tall(id, b.anchor()) || !Land.areaLoaded(level, b.anchor(), 9)) continue;
+                if (!Blueprints.has(b.structure() + Blueprints.TALL)) continue;
+                done += Grow.raise(level, v, b, b.structure(), b.structure() + Blueprints.TALL, budget, CIVIC, false);
+                if (Grow.raisingNow(id, b.anchor()) || done >= budget) return done;
+                // Not begun: the stores could not pay for it yet. The make-overs go on meanwhile.
+                break;
+            }
+        }
         for (Ledger.Building b : Ledger.buildings(id)) {
             if (AS_BUILT.contains(b.structure()) || !Land.areaLoaded(level, b.anchor(), 9)) continue;
             if (DONE.getOrDefault(b.anchor().asLong(), -1) >= age.ordinal()) continue;
+            if (Grow.raisingNow(id, b.anchor())) continue;
             // A house waiting on (or raising) its second storey is Grow's first: its old roof is coming off.
             if (b.structure().equals("house") && age.ordinal() >= Villages.Age.IRON.ordinal()
                     && (!Ledger.grown(id, b.anchor()) || Ledger.raising(id, b.anchor()))) continue;
@@ -235,7 +267,8 @@ public final class Ages {
         return n + lamps(level, v, b, plan, free);
     }
 
-    private static String workWords(Villages.Age age, String plan) {
+    private static String workWords(Villages.Age age, String drawing) {
+        String plan = drawing.endsWith(Blueprints.TALL) ? drawing.substring(0, drawing.length() - Blueprints.TALL.length()) : drawing;
         String what = Villages.spoken(plan);
         if (age.ordinal() >= Villages.Age.DIAMOND.ordinal() && GREAT.contains(plan)) return "roofing " + what + " in copper";
         if (age.ordinal() >= Villages.Age.IRON.ordinal()) return "slating the roof of " + what;
