@@ -239,6 +239,28 @@ public final class Terraform {
         return "nothing";
     }
 
+    /**
+     * Whether a column of the levelled square wants working again: its ground off the level, a
+     * hollow (air, water, something growing, sand that would fall) within five of its top, its top
+     * not the town's soil where the town's soil goes, or something growing on it.
+     */
+    static boolean wantsWork(ServerLevel level, LevelChunk chunk, int x, int z, int ground, int target, Block surface) {
+        if (ground != target) return true;
+        BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
+        BlockState top = chunk.getBlockState(m.set(x, target, z));
+        if (natural(top) && !top.is(Blocks.BEDROCK) && !top.is(surface)
+                && (top.isAir() || wet(top) || growth(top) || (soil(surface) && topOf(top) != 0))) return true;
+        for (int d = 1; d < SOLID_DEPTH; d++) {
+            if (target - d < level.getMinBuildHeight()) break;
+            BlockState b = chunk.getBlockState(m.set(x, target - d, z));
+            if (b.is(Blocks.BEDROCK) || !natural(b)) continue;
+            if (b.isAir() || wet(b) || growth(b)
+                    || b.getBlock() instanceof net.minecraft.world.level.block.FallingBlock && !under(surface, d).is(b.getBlock())) return true;
+        }
+        BlockState on = chunk.getBlockState(m.set(x, target + 1, z));
+        return !on.isAir() && natural(on) && (growth(on) || wet(on));
+    }
+
     // ------------------------------------------------------------------ working a column
 
     /** How deep the town's own ground is made solid: its top and four of earth under it. */

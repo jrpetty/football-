@@ -108,6 +108,8 @@ public final class Founding extends SavedData {
         /** Columns of the square left as they were for something built in the way, and the first of them. */
         int blocked;
         String blockedFirst = "";
+        /** The last look over the square: how far along, which time over, and how many columns it mended. */
+        int goodCursor, goodPass, goodMended, goodMendedAll;
         long held = -100000L;
         Block surface = Blocks.GRASS_BLOCK;
 
@@ -649,7 +651,54 @@ public final class Founding extends SavedData {
             }
             s.cursor++;
         }
-        if (s.cursor >= g.order.length && s.founded() && s.spawned >= s.count) finish(level, f, s);
+        if (s.cursor >= g.order.length && s.founded() && s.spawned >= s.count && makeGood(level, s, deadline)) finish(level, f, s);
+    }
+
+    /** The most times the square is looked over again for anything the levelling left wrong. */
+    private static final int GOOD_PASSES = 3;
+
+    /**
+     * The last of the work: every column of the square looked at again, and any the levelling left
+     * off the level, hollow within five of its top, or with something growing on it, worked again
+     * (sand that slid into a cut, water that ran onto it, a column a falling tree or a passing folk
+     * knocked, ground read wrong). Over again while anything was mended, three times at most. Only
+     * columns the plan meant to be level: the bank kept beside water, and the ground round anything
+     * built, are left as they are. True when it is done.
+     */
+    private static boolean makeGood(ServerLevel level, Site s, long deadline) {
+        FoundingPlan.Ground g = s.ground;
+        if (g == null || g.target == null || s.level == UNSET) return true;
+        while (s.goodPass < GOOD_PASSES) {
+            while (s.goodCursor < g.order.length) {
+                if (System.nanoTime() >= deadline) return false;
+                int i = g.order[s.goodCursor];
+                byte k = g.kind[i];
+                int dx = g.dx(i), dz = g.dz(i);
+                if (g.target[i] != s.level || (k != FoundingPlan.LAND && k != FoundingPlan.FILL && k != FoundingPlan.OUTSIDE)
+                        || !FoundingPlan.levelled(dx, dz, s.radius, s.seed)) {
+                    s.goodCursor++;
+                    continue;
+                }
+                int x = s.heart.getX() + dx, z = s.heart.getZ() + dz;
+                LevelChunk chunk = level.getChunkSource().getChunkNow(x >> 4, z >> 4);
+                if (chunk == null) return false;                   // held, but not back yet: next tick
+                s.goodCursor++;
+                int y = Terraform.groundY(level, x, z);
+                // (A shaft to nowhere is not filled from the bottom of the world.)
+                if (y == Integer.MIN_VALUE || Math.abs(y - s.level) > 48) continue;
+                if (!Terraform.wantsWork(level, chunk, x, z, y, s.level, s.surface)) continue;
+                if (Terraform.shape(level, chunk, x, z, y, s.level, true, s.surface) > 0) s.goodMended++;
+            }
+            s.goodMendedAll += s.goodMended;
+            LOG.info("[MCA-FOUND] looked the square over again ({} of {}): {} columns mended", s.goodPass + 1, GOOD_PASSES, s.goodMended);
+            boolean again = s.goodMended > 0;
+            s.goodPass++;
+            s.goodMended = 0;
+            s.goodCursor = 0;
+            if (!again) break;
+        }
+        s.goodPass = GOOD_PASSES;
+        return true;
     }
 
     /**
@@ -833,7 +882,8 @@ public final class Founding extends SavedData {
             + "; held off by the plan " + (g.heldBank + g.heldBuilt)
             + " (" + g.heldBank + " for the bank of water, " + g.heldBuilt + " beside something built"
             + (g.heldFirst.isEmpty() ? "" : "; first, " + g.heldFirst) + ")"
-            + "; left for something in the way " + s.blocked + (s.blocked > 0 ? " (first " + s.blockedFirst + ")" : "");
+            + "; left for something in the way " + s.blocked + (s.blocked > 0 ? " (first " + s.blockedFirst + ")" : "")
+            + "; mended on the last look over " + s.goodMendedAll;
     }
 
     /** It cannot go on: the ground let go, and whoever began it told why. */

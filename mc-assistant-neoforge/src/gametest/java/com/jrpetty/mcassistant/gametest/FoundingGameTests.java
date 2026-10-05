@@ -255,6 +255,127 @@ public class FoundingGameTests {
         });
     }
 
+    // ============================================================ flat beside water
+
+    /**
+     * Flat to the edge whatever water stands about it. On a plateau with a tarn on a hill just past
+     * its west edge (water well above the level, which once held the ground up a block for every
+     * block from it, terraces into the square) and, to the east, a low hollow running into the square
+     * beside a lake well under the level (which once let the fill down to the lake's shore, terraces
+     * again); with a pit and sand over a cave inside: when it is done every column of the square
+     * stands at the level, solid five deep, nothing wet or growing on it, and the tarn and the lake
+     * are both still there.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 4000, batch = "f04_flat_by_water")
+    public static void f04_flat_by_water(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Founding.resetForTests(level.getServer());
+        level.setDayTime(1000);
+        final int cx = 118000, cz = 12000, folk = 20;
+        final int radius = FoundingPlan.coreRadius(folk), outer = radius + FoundingPlan.BAND_MAX;
+        Kit.hold(level, cx, cz, outer + 24);
+        Kit.prepare(level, cx, cz, outer + 24);
+        int base = Kit.surface(level, cx, cz).getY();               // the free block over the flat ground
+        // The plateau: six blocks of earth over the flat, all but a low strip down the east side.
+        int g0 = base + 5;
+        for (int dx = -radius - 20; dx <= radius + 20; dx++) {
+            for (int dz = -radius - 20; dz <= radius + 20; dz++) {
+                if (dx > radius - 10) continue;
+                for (int y = base; y <= g0; y++) {
+                    level.setBlock(new BlockPos(cx + dx, y, cz + dz), (y == g0 ? Blocks.GRASS_BLOCK : Blocks.DIRT).defaultBlockState(), 2);
+                }
+            }
+        }
+        // East: a lake in the low ground, its water six under the plateau, three blocks past the square.
+        final int lakeX = cx + radius + 8;
+        Kit.pond(level, lakeX, cz, 7);
+        // West: a hill just past the edge with a tarn in its top, its water nine over the plateau.
+        final int tarnX = cx - radius - 3, tarnZ = cz + 8;
+        Kit.hill(level, tarnX, tarnZ, 10, 10, 731);
+        // (Sunk a block into the hilltop, so the ring of the hill round it holds its water in.)
+        int hillTop = Kit.surface(level, tarnX, tarnZ).getY() - 1;
+        level.setBlock(new BlockPos(tarnX, hillTop, tarnZ), Blocks.AIR.defaultBlockState(), 2);
+        level.setBlock(new BlockPos(tarnX, hillTop - 1, tarnZ), Blocks.WATER.defaultBlockState(), 2);
+        level.setBlock(new BlockPos(tarnX, hillTop - 2, tarnZ), Blocks.WATER.defaultBlockState(), 2);
+        final int tarnY = hillTop - 1;
+        // Inside: a pit, and sand lying over a cave.
+        hollow(level, cx + 8, cz - 10, 2, 3);
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                level.setBlock(new BlockPos(cx - 10 + dx, g0, cz + 12 + dz), Blocks.SAND.defaultBlockState(), 2);
+                level.setBlock(new BlockPos(cx - 10 + dx, g0 - 1, cz + 12 + dz), Blocks.AIR.defaultBlockState(), 2);
+                level.setBlock(new BlockPos(cx - 10 + dx, g0 - 2, cz + 12 + dz), Blocks.AIR.defaultBlockState(), 2);
+            }
+        }
+        Kit.log("f04 R=" + radius + ": the plateau at y=" + g0 + ", the low strip and the lake at y=" + (base - 1)
+            + ", the tarn's water at y=" + tarnY);
+
+        BlockPos heart = Kit.surface(level, cx, cz);
+        BlockState spawner = McAssistantMod.FOLK_SPAWNER.get().defaultBlockState();
+        level.setBlock(heart, spawner, 3);
+        VillageFolkSpawnerBlock.placed(level, heart, spawner, null, 0.0F);
+        BlockPos board = Founding.boardNear(level, heart, 64);
+        helper.assertTrue(board != null, "the spawner puts a village board up");
+        Founding.Outcome chosen = Founding.confirm(level, board, folk, null);
+        Kit.log("f04 confirmed: " + chosen.message());
+        helper.assertTrue(chosen.ok(), "twenty can be chosen: " + chosen.message());
+        final boolean[] done = { false };
+        helper.onEachTick(() -> {
+            if (done[0]) return;
+            long t = helper.getTick();
+            if (Founding.near(level, heart, 8)) {
+                if (t % 100 == 0) Kit.log("f04 @" + t + " " + Founding.status(level.getServer()));
+                return;
+            }
+            done[0] = true;
+            Kit.Expect expect = new Kit.Expect();
+            Villages.Village v = Villages.nearest(level, heart, 64);
+            expect.that(v != null, "a village is founded at the heart");
+            if (v == null) {
+                helper.fail(expect.summary());
+                return;
+            }
+            int level0 = v.centre().getY() - 1;
+            Kit.log("f04 done at " + t + ": levelled to y=" + level0 + " (the plateau is at y=" + g0 + ")");
+            expect.that(level0 == g0, "levelled to the plateau's height: y=" + level0 + " against " + g0);
+            int columns = 0, off = 0, hollowBlocks = 0, wetOrGrowing = 0;
+            StringBuilder first = new StringBuilder();
+            for (int dx = -radius; dx <= radius; dx++) {
+                for (int dz = -radius; dz <= radius; dz++) {
+                    if (FoundingPlan.reach(dx, dz) > radius - 4) continue;
+                    int x = cx + dx, z = cz + dz;
+                    int y = ground(level, x, z);
+                    columns++;
+                    if (y != level0) {
+                        if (off++ < 8) first.append(' ').append(dx).append(',').append(dz).append(" y=").append(y);
+                        continue;
+                    }
+                    for (int d = 0; d < Terraform.SOLID_DEPTH; d++) {
+                        if (y - d < level.getMinBuildHeight()) break;
+                        BlockState b = level.getBlockState(new BlockPos(x, y - d, z));
+                        if (b.isAir() || !b.getFluidState().isEmpty() || !b.isSolid()) hollowBlocks++;
+                    }
+                    BlockState on = level.getBlockState(new BlockPos(x, y + 1, z));
+                    if (!on.getFluidState().isEmpty() || (!on.isAir() && Terraform.growth(on))) wetOrGrowing++;
+                }
+            }
+            Kit.log("f04 the square: " + columns + " columns, " + off + " off the level" + (off > 0 ? ":" + first : "")
+                + "; " + hollowBlocks + " hollow blocks within five of the top; " + wetOrGrowing + " wet or growing on top");
+            // The east edge and the west edge, column by column across the square, for the log.
+            StringBuilder row = new StringBuilder();
+            for (int dx = -radius; dx <= radius; dx += 2) row.append(ground(level, cx + dx, cz + 8) - level0).append(' ');
+            Kit.log("f04 heights across, west to east, against the level: " + row);
+            expect.that(off == 0, "every column of the square at the level: " + off + " off," + first);
+            expect.that(hollowBlocks == 0, "the square is solid five deep: " + hollowBlocks + " hollow");
+            expect.that(wetOrGrowing == 0, "nothing wet or growing on it: " + wetOrGrowing);
+            expect.that(!level.getFluidState(new BlockPos(tarnX, tarnY, tarnZ)).isEmpty(), "the tarn on the hill is still there");
+            expect.that(!level.getFluidState(new BlockPos(lakeX, base - 1, cz)).isEmpty(), "the lake is still there");
+            if (expect.clean()) helper.succeed();
+            else helper.fail(expect.summary());
+        });
+    }
+
     // ============================================================ a spawner in a village
 
     /**
