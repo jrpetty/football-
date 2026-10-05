@@ -490,6 +490,9 @@ public final class Couriers {
         if (base == null) return false;
         Run r = o.taken.get(c.getUUID());
         if (r == null) {
+            // The street sweeper (Sweepers): the storehouse's sweeper sweeps before anything else, and a
+            // courier part-way through a sweep between runs sees it through first.
+            if (Sweepers.work(c, level, v, o, false)) return true;
             // Something on its back from before (a run cut short, a reload): into the stores first.
             if (c.stashable() > 0) {
                 BlockPos depot = depot(level, v);
@@ -500,7 +503,8 @@ public final class Couriers {
                 }
             }
             r = next(c, level, v, o);
-            if (r == null) return waitAtTheStorehouse(c, o, base);
+            // No run: the streets swept (Sweepers) while the town has no sweeper about, else wait at the door.
+            if (r == null) return Sweepers.work(c, level, v, o, true) || waitAtTheStorehouse(c, o, base);
         }
         o.doing.remove(c.getUUID());
         return switch (r.kind) {
@@ -751,8 +755,9 @@ public final class Couriers {
             if (t0 != StationTask.STORE && t0 != StationTask.HAUL) continue;
             CompoundTag s = new CompoundTag();
             s.putString("name", f.displayNameCap());
-            s.putString("role", t0 == StationTask.STORE ? "storekeeper" : "courier");
+            s.putString("role", t0 == StationTask.STORE ? "storekeeper" : Sweepers.appointed(f) ? "sweeper" : "courier");
             s.putInt("wage", Wealth.wage(f));
+            s.putInt("swept", Sweepers.sweptToday(f));                     // the street sweeper's day (Sweepers)
             int[] day = o.staff.get(f.getUUID());
             s.putInt("runs", day == null ? 0 : day[0]);
             s.putInt("moved", day == null ? 0 : day[1]);

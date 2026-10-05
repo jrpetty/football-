@@ -367,6 +367,7 @@ public final class Storekeeping {
         for (String s : d.lines) ll.add(StringTag.valueOf(s.length() > 160 ? s.substring(0, 160) : s));
         t.put("lines", ll);
         Couriers.report(level, v, t);
+        Sweepers.report(level, v, t);                       // the street sweeper's day, and what lies about the town
         return t;
     }
 
@@ -383,6 +384,7 @@ public final class Storekeeping {
         sb.append("Today: ").append(t.getInt("in")).append(" in, ").append(t.getInt("out")).append(" out; requests ")
             .append(t.getInt("served")).append(" served at the counter, ").append(t.getInt("self")).append(" self-served; ")
             .append(t.getInt("runs")).append(" courier runs carrying ").append(t.getInt("run_goods")).append(".\n");
+        sb.append(Sweepers.line(t)).append("\n");
         if (t.contains("tidy")) {
             CompoundTag r = t.getCompound("tidy");
             sb.append("Last tidy (").append(r.getString("by")).append(", ").append(r.getLong("ago")).append("s ago): ")
@@ -398,6 +400,8 @@ public final class Storekeeping {
                     .append(s.getInt("wage")).append(" a day)");
                 if (s.getString("role").equals("courier")) sb.append(": ").append(s.getInt("runs")).append(" runs, ")
                     .append(s.getInt("moved")).append(" carried");
+                if (s.getInt("swept") > 0 || s.getString("role").equals("sweeper"))
+                    sb.append(s.getString("role").equals("sweeper") ? ": " : ", ").append(s.getInt("swept")).append(" swept in");
                 sb.append(" — ").append(s.getString("doing")).append(".\n");
             }
         }

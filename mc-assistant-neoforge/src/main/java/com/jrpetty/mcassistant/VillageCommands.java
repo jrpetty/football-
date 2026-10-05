@@ -141,6 +141,10 @@ public final class VillageCommands {
             .then(Commands.literal("shop").executes(ctx -> page(ctx, 4)))
             // The storehouse: its books for the day, its storekeeper and couriers, and its run list.
             .then(Commands.literal("stores").executes(ctx -> page(ctx, 5)))
+            // The street sweeper (Sweepers): what it swept in today and what lies about the town; and, for ops
+            // and the client smoke, the nearest grown folk made the storehouse's sweeper now.
+            .then(Commands.literal("sweeper").executes(ctx -> sweeper(ctx, false))
+                .then(Commands.literal("appoint").requires(src -> src.hasPermission(2)).executes(ctx -> sweeper(ctx, true))))
             // The morning news of the villages near you, in chat, once a morning: on or off.
             .then(Commands.literal("news")
                 .then(Commands.literal("on").executes(ctx -> news(ctx, true)))
@@ -954,6 +958,31 @@ public final class VillageCommands {
         String title = Villages.name(v.id()) + (which == 2 ? " — wages" : which == 4 ? " — the sellers' books"
             : which == 5 ? " — the storehouse's books" : " — economy");
         ctx.getSource().sendSuccess(() -> Component.literal(title + "\n" + text), false);
+        return 1;
+    }
+
+    /** /village sweeper [appoint]: the town's sweeping in words; with appoint, the nearest grown folk made its
+     *  sweeper first ("SWEEPER name x y z", for the client smoke). */
+    private static int sweeper(CommandContext<CommandSourceStack> ctx, boolean appoint) {
+        net.minecraft.server.level.ServerLevel level = ctx.getSource().getLevel();
+        net.minecraft.core.BlockPos here = net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition());
+        Villages.Village v = villageHere(ctx);
+        if (v == null) {
+            ctx.getSource().sendFailure(Component.literal("No village within reach."));
+            return 0;
+        }
+        String said = "";
+        if (appoint) {
+            com.jrpetty.mcassistant.entity.VillageFolkEntity f = com.jrpetty.mcassistant.entity.Sweepers.appointNow(level, v, here);
+            if (f == null) {
+                ctx.getSource().sendFailure(Component.literal("Nobody grown in " + Villages.name(v.id()) + " to take up the broom."));
+                return 0;
+            }
+            said = "SWEEPER " + f.displayNameCap() + " " + f.getBlockX() + " " + f.getBlockY() + " " + f.getBlockZ()
+                + (com.jrpetty.mcassistant.entity.Storehouses.stands(v.id()) ? "" : " (no storehouse yet: nowhere to sweep to)") + "\n";
+        }
+        String text = said + com.jrpetty.mcassistant.entity.Sweepers.page(level, v);
+        ctx.getSource().sendSuccess(() -> Component.literal(text), false);
         return 1;
     }
 

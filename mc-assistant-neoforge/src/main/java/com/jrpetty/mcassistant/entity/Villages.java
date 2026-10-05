@@ -329,6 +329,7 @@ public final class Villages {
         Storekeeping.resetForTests();
         Couriers.resetForTests();
         Toolrack.resetForTests();
+        Sweepers.resetForTests();
         VillageBoards.resetForTests();
         Retiring.resetForTests();
         HAS_STORES.clear();
@@ -813,6 +814,9 @@ public final class Villages {
             for (AssistantEntity a : folkOf(villageId)) if (VillageFolkEntity.producer(a.stationTask())) producers++;
             t = Math.max(t, Math.ceil(producers / 5.0));
         }
+        // And the street sweeper (Sweepers): one of the couriers takes up the broom in a town of sixteen with a
+        // storehouse, one more for every sixteen after, so a hand more for each, and the runs not left short.
+        if (slot.trade() == AssistantEntity.StationTask.HAUL && villageId != null) t += Sweepers.wanted(villageId);
         // A hungry village wants its food-makers: half as many farmers and fishers again while
         // the larder is low. It is fed by its own fields and waters, and nothing else.
         // And the leader, reading its books, wants more again in a famine (Leader.foodFactor).

@@ -3950,7 +3950,8 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected boolean walksAbroad() {
         // (And a courier out on one of the storehouse's runs: the whole village is its ground.)
-        return super.walksAbroad() || Patrols.escorting(this) || Patrols.onTheStreets(this) || Couriers.onARun(this);
+        return super.walksAbroad() || Patrols.escorting(this) || Patrols.onTheStreets(this) || Couriers.onARun(this)
+            || Sweepers.sweeping(this);                // (and the street sweeper about the town's streets)
     }
 
     /** What it just drew out of the Village Storehouse: one request, served by the storekeeper at the

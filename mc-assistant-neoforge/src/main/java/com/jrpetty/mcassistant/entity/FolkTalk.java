@@ -281,12 +281,14 @@ public final class FolkTalk {
         Social.Life life = f.life();
         AssistantEntity.StationTask job = f.stationTask();
         line(sb, "Trade", f.isBaby() ? "A child — no trade yet" : job == AssistantEntity.StationTask.NONE ? "Looking for one"
-            : job.title + ", level " + f.veteranLevel() + (f.isElder() ? " · the elder" : ""));
+            : (Sweepers.appointed(f) ? "Street sweeper (a hauler of the storehouse)" : job.title) + ", level " + f.veteranLevel()
+                + (f.isElder() ? " · the elder" : ""));
         // The storehouse's staff: the couriers work for it, under its storekeeper (Couriers).
         if (job == AssistantEntity.StationTask.HAUL && !f.isBaby() && f.ownerId() != null) {
             VillageFolkEntity keeper = Storekeeping.keeper(f.ownerId());
             line(sb, "Works for", "the storehouse, " + (keeper != null ? "under " + keeper.displayNameCap() + ", the storekeeper"
                 : "with no storekeeper yet: its run list sends the couriers out") + "; paid as its staff");
+            line(sb, "Sweeps", Sweepers.cardLine(f));            // the street sweeper (or a courier that swept between runs)
         } else if (job == AssistantEntity.StationTask.STORE && !f.isBaby() && f.ownerId() != null) {
             int couriers = 0;
             for (AssistantEntity a : Villages.folkOf(f.ownerId())) if (a.stationTask() == AssistantEntity.StationTask.HAUL) couriers++;

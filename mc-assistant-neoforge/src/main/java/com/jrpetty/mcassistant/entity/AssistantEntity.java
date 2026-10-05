@@ -3773,6 +3773,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                     net.minecraft.world.entity.item.ItemEntity.class,
                     getBoundingBox().inflate(6.0))) {
                 if (!drop.isAlive() || !inZone(drop.blockPosition())) continue;
+                if (Sweepers.playersOwn(drop)) continue;               // a player's throw is the player's
                 ItemStack left = insertItem(drop.getItem());
                 if (left.isEmpty()) drop.discard(); else drop.setItem(left);
                 return;
@@ -8920,6 +8921,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                     : level().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
                         getBoundingBox().inflate(1.4))) {
                 if (!drop.isAlive() || drop.hasPickUpDelay()) continue;
+                // A player's throw is the player's; a sweeper out sweeping takes only what its broom may (Sweepers).
+                if (Sweepers.notForTheMagnet(this, drop)) continue;
                 ItemStack picked = drop.getItem().copy();
                 ItemStack left = insertItem(drop.getItem());
                 Economy.gathered(this, picked, picked.getCount() - left.getCount());
