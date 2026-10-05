@@ -50,7 +50,25 @@ public enum TalkTopic {
     ATLAS("What have the scouts found out there?"),
     FOR_SALE("What can the village spare?"),
     LETTER("Could I carry a letter for you?"),
-    BROKER("");
+    BROKER(""),
+    MEAL("Shall we eat together?"),
+    DICE("Fancy a game of dice?"),
+    HAGGLE("Can you do it any cheaper?"),
+    TEACH("Let me show you a trick of your trade"),
+    GODPARENT("May I be your godparent?"),
+    KEEPSAKE("Something to remember you by?"),
+    ORDER(""),
+    REPAIR("Could you mend this?"),
+    SPONSOR("I'll pay for tonight's feast"),
+    BULK(""),
+    CONTRACT("Is there a supply contract going?"),
+    STALL("Could I rent a stall on the square?"),
+    BANK(""),
+    INVEST(""),
+    AUCTION("What's up for auction?"),
+    ESCORT("Can I guard your next caravan?"),
+    CHARTER(""),
+    PRICES("Where are things dear, and where cheap?");
 
     public final String line;
 

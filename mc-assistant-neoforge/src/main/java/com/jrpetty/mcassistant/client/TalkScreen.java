@@ -46,7 +46,7 @@ public class TalkScreen extends Screen {
         TAB = 0xFF2A2F3A, TAB_ON = 0xFF51441F, NAV = 0xFF22303A, ERRAND = 0xFFFFC857, PINK = 0xFFF0A0B8;
 
     private enum Tab {
-        TALK("Talk"), ASK("Ask"), VILLAGE("Village"), DEAL("Deal"), ABOUT("About");
+        TALK("Talk"), ASK("Ask"), VILLAGE("Village"), DEAL("Deal"), MONEY("Money"), ABOUT("About");
         final String label;
         Tab(String label) { this.label = label; }
     }
@@ -203,6 +203,26 @@ public class TalkScreen extends Screen {
                 out.add(Choice.of("Build my house", TalkTopic.COMMISSION, "Bring 64 planks, 32 cobblestone and 8 glass, and the builders put up a house for you"));
                 out.add(last.following() ? Choice.of("Go home", TalkTopic.STAY) : Choice.of("Come along", TalkTopic.FOLLOW));
                 out.add(new Choice("Show me…", TalkTopic.GUIDE, "", "Ask it to walk you somewhere"));
+                out.add(Choice.of("Eat together", TalkTopic.MEAL, "Share the food in your hand: it eats with you, and likes you the better"));
+                out.add(Choice.of("Dice?", TalkTopic.DICE, "A game of dice for three coins, out of each other's purses (type \"dice for 10\" to raise it)"));
+                out.add(Choice.of("A lesson", TalkTopic.TEACH, "Show it a trick of its trade with the tool of it in your hand: once a day, it learns"));
+                out.add(Choice.of("Godparent", TalkTopic.GODPARENT, "Ask a child if you may be its godparent (a friend of the village only)"));
+                out.add(Choice.of("Keepsake?", TalkTopic.KEEPSAKE, "A close friend gives you something of its own to remember it by"));
+                out.add(Choice.of("Feast on me", TalkTopic.SPONSOR, "Pay for a feast for the whole village tonight: ten coins and one for every mouth"));
+            }
+            case MONEY -> {
+                out.add(new Choice("Order goods…", TalkTopic.BULK, "", "Order a quantity of anything at a tenth off: type what and how many"));
+                out.add(Choice.of("Contract?", TalkTopic.CONTRACT, "Bring the village what it is short of every week, at a third over its worth (say \"I'll sign\")"));
+                out.add(Choice.of("Rent a stall", TalkTopic.STALL, "Five coins a week for a barrel of your own on the square: on market day the folk buy from it"));
+                out.add(Choice.of("The bank", TalkTopic.BANK, "Your account at the treasury: \"deposit 20\", \"withdraw 10\", \"borrow 30\", \"repay\""));
+                out.add(new Choice("Invest…", TalkTopic.INVEST, "", "Put coin into the village's works: two weeks' share of what it takes each day"));
+                out.add(Choice.of("Auction", TalkTopic.AUCTION, "Market day's lot: the village's finest spare thing, to the best bid (\"I bid 30\")"));
+                out.add(Choice.of("Escort", TalkTopic.ESCORT, "Guard the next caravan: walk with it and be paid at the other end"));
+                out.add(Choice.of("Charter route", TalkTopic.CHARTER, "Fifty coins for a trade route to the nearest neighbour: a tenth of every load sold on it is yours"));
+                out.add(Choice.of("Prices", TalkTopic.PRICES, "Where things are dear and where cheap, round about: buy cheap, sell dear"));
+                out.add(Choice.of("Haggle", TalkTopic.HAGGLE, "Ask the storekeeper or the shopkeeper to do it cheaper: a discount for the day, if they like you"));
+                out.add(new Choice("Make me…", TalkTopic.ORDER, "", "Ask a smith or a tailor to make you something: from your makings and the village's spare, for a fee"));
+                out.add(Choice.of("Mend this", TalkTopic.REPAIR, "The smith mends the worn thing in your hand, for coin and a scrap of its metal"));
             }
             default -> { }
         }
@@ -237,6 +257,12 @@ public class TalkScreen extends Screen {
         }
         if (c.topic() == TalkTopic.STORES) {                  // a question you finish yourself
             say.setValue("Could I have 8 bread?");
+            setFocused(say);
+            return;
+        }
+        if (c.topic() == TalkTopic.BULK || c.topic() == TalkTopic.INVEST || c.topic() == TalkTopic.ORDER) {
+            say.setValue(c.topic() == TalkTopic.BULK ? "I'd like to order 64 " : c.topic() == TalkTopic.INVEST ? "I'd like to invest 50 coins"
+                : "Make me an iron sword");
             setFocused(say);
             return;
         }

@@ -337,6 +337,12 @@ public final class Ledger extends SavedData {
         return l == null ? null : l.notes.getOrDefault(village, Map.of()).get(key);
     }
 
+    /** Every note a village keeps (a copy). */
+    public static Map<String, String> notes(UUID village) {
+        Ledger l = of();
+        return l == null ? Map.of() : new HashMap<>(l.notes.getOrDefault(village, Map.of()));
+    }
+
     public static void note(UUID village, String key, String value) {
         Ledger l = of();
         if (l == null) return;

@@ -435,6 +435,8 @@ public final class Caravans {
                 if (what.length() < 60) what.append(what.length() == 0 ? "" : ", ").append(moved).append(' ')
                     .append(g.name().toLowerCase());
             }
+            // An escort who walked with it is paid; a chartered route's holder takes a tenth (Commerce).
+            if (other != null && !t.back) Commerce.caravanArrived(level, f, other.id(), here.id(), t.trade, paidAll);
             if (paidAll > 0 && other != null) {
                 Economy.spent(here.id(), paidAll);
                 if (!t.back) t.purse += paidAll;                                   // carried home to the seller

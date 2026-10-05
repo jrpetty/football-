@@ -407,13 +407,15 @@ public final class Services {
         double each = Budget.playerPrice(sample);
         int price = (int) Math.max(1, Math.round(each * n));
         if (title == Standing.Title.UNWELCOME) price *= 2;
+        price = Dealings.haggled(village, p.getUUID(), day, price);                 // talked down today (Dealings)
         int coins = Market.coinsHeld(p);
         if (coins < price) return n + " " + word + " would be " + price + " coins. You've " + coins + ".";
         List<ItemStack> got = take(level, village, what, n);
         int count = 0;
         for (ItemStack s : got) { count += s.getCount(); give(p, s); }
         if (count == 0) return "Somebody's just taken the last of it.";
-        price = (int) Math.max(1, Math.round(each * count)) * (title == Standing.Title.UNWELCOME ? 2 : 1);
+        price = Dealings.haggled(village, p.getUUID(), day,
+            (int) Math.max(1, Math.round(each * count)) * (title == Standing.Title.UNWELCOME ? 2 : 1));
         Market.payOut(p, price);
         Ledger.addCoins(village, price);
         Economy.sold(village, price);

@@ -313,6 +313,8 @@ public class VillageFolkEntity extends AssistantEntity {
             if (tickCount % 10 == 0) Drover.drive(this, herding);
             return;
         }
+        // A friend passing by, hailed by name (Dealings).
+        if (!withAPlayer) Dealings.greet(this);
         // Badly hurt: the brewer's healing, its own or (any trade) one from the stores.
         if (tickCount % 20 == 3 && level() instanceof net.minecraft.server.level.ServerLevel hurtIn) {
             if (!Links.drinkIfHurt(this) && stationTask() != StationTask.GUARD) Links.healFromTheStores(this, hurtIn);

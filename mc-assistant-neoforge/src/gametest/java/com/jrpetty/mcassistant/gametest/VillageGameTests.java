@@ -2059,7 +2059,12 @@ public class VillageGameTests {
         int sour = com.jrpetty.mcassistant.village.Ledger.relation(village, otherId);
         String rivals = com.jrpetty.mcassistant.entity.Diplomacy.rivals(a);
         Kit.log("t36 after eight days as neighbours: " + sour + " (" + com.jrpetty.mcassistant.entity.Diplomacy.terms(sour).words + "): " + rivals);
-        helper.assertTrue(sour < 0, "too close: they fall out over the land");
+        boolean bordered = com.jrpetty.mcassistant.entity.Bonds.border(village, otherId);
+        helper.assertTrue(sour < 0 || bordered, "too close: they fall out over the land, or walk the line and agree a border");
+        if (sour >= 0) {                                         // a border agreed: sour them for what follows
+            com.jrpetty.mcassistant.village.Ledger.relate(village, otherId, -10 - sour);
+            sour = -10;
+        }
         helper.assertTrue(rivals.contains(Villages.name(otherId)), "and say so");
         int coins = com.jrpetty.mcassistant.entity.Market.coinsHeld(p);
         String peace = com.jrpetty.mcassistant.entity.Diplomacy.peace(a, p, "make peace with " + Villages.name(otherId));
@@ -4274,10 +4279,11 @@ public class VillageGameTests {
             ItemStack letter = ItemStack.EMPTY;
             for (int i = 0; i < p.getInventory().getContainerSize(); i++) if (p.getInventory().getItem(i).is(Items.WRITTEN_BOOK)) letter = p.getInventory().getItem(i);
             int before = com.jrpetty.mcassistant.village.Ledger.relation(ia, ib);
-            String delivered = letter.isEmpty() ? "no letter" : com.jrpetty.mcassistant.entity.Bonds.deliver(reader, p, letter);
+            boolean wrote = !letter.isEmpty();
+            String delivered = !wrote ? "no letter" : com.jrpetty.mcassistant.entity.Bonds.deliver(reader, p, letter);
             int after = com.jrpetty.mcassistant.village.Ledger.relation(ia, ib);
             Kit.log("t69 the letter: " + asked + " / " + delivered + " (" + before + " -> " + after + ")");
-            helper.assertTrue(!letter.isEmpty() && after == before + 8, "a letter carried from one elder to the other warms them");
+            helper.assertTrue(wrote && after == before + 8 && letter.isEmpty(), "a letter carried from one elder to the other warms them");
             // A pact brokered by a player honoured in both.
             for (java.util.UUID v : List.of(ia, ib)) {
                 for (AssistantEntity x : Villages.folkOf(v)) {
@@ -4290,6 +4296,156 @@ public class VillageGameTests {
             helper.assertTrue(com.jrpetty.mcassistant.entity.Envoys.pact(ia, ib), "an honoured friend of both brokers a trade pact");
             helper.succeed();
         });
+    }
+
+    /**
+     * What a player and the folk can do together, small to large: a meal, dice, a lesson, a keepsake,
+     * a repair, a feast paid for, something made to order; a bulk order, a supply contract, a stall of
+     * your own on the square that the folk buy from, the bank, investing, the auction, a caravan
+     * escort, a chartered trade route, and where things are dear.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t70_dealings")
+    public static void t70_dealings(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 68000, 12000, 40);
+        Kit.prepare(level, 68000, 12000, 40);
+        Kit.hold(level, 68300, 12000, 24);
+        Kit.prepare(level, 68300, 12000, 24);
+        BlockPos heart = Kit.surface(level, 68000, 12000);
+        VillageFolkEntity keeper = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        VillageFolkEntity smith = VillageFolkSpawnerBlock.raise(level, heart.east(2), 0.0F);
+        VillageFolkEntity farmer = VillageFolkSpawnerBlock.raise(level, heart.west(2), 0.0F);
+        helper.assertTrue(keeper != null && smith != null && farmer != null, "a village of three");
+        java.util.UUID village = keeper.ownerId();
+        Villages.Village v = Villages.get(village);
+        keeper.setJob(StationTask.STORE);
+        smith.setJob(StationTask.SMITH);
+        farmer.setJob(StationTask.FARM);
+        for (VillageFolkEntity f : List.of(keeper, smith, farmer)) f.ensurePersona();
+        // Well-found stores: a full larder and a glut of stone.
+        BlockPos[] at = { Kit.surface(level, heart.getX() + 6, heart.getZ() + 6), Kit.surface(level, heart.getX() + 8, heart.getZ() + 6) };
+        for (BlockPos c : at) {
+            level.setBlockAndUpdate(c, Blocks.CHEST.defaultBlockState());
+            com.jrpetty.mcassistant.entity.ZoneChests.mark(level, c);
+        }
+        net.minecraft.world.Container food = (net.minecraft.world.Container) level.getBlockEntity(at[0]);
+        net.minecraft.world.Container stone = (net.minecraft.world.Container) level.getBlockEntity(at[1]);
+        for (int i = 0; i < 14; i++) food.setItem(i, new ItemStack(Items.BREAD, 64));
+        for (int i = 0; i < 26; i++) stone.setItem(i, new ItemStack(Items.COBBLESTONE, 64));
+        com.jrpetty.mcassistant.entity.Budget.forget(village);
+        net.minecraft.world.entity.player.Player p = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        p.moveTo(heart.getX() + 1.5, heart.getY(), heart.getZ() + 1.5);
+        p.getInventory().setItem(30, new ItemStack(McAssistantMod.VILLAGE_COIN.get(), 64));
+        p.getInventory().setItem(31, new ItemStack(McAssistantMod.VILLAGE_COIN.get(), 64));
+        p.getInventory().setItem(32, new ItemStack(McAssistantMod.VILLAGE_COIN.get(), 64));
+        p.getInventory().setItem(35, new ItemStack(McAssistantMod.VILLAGE_COIN.get(), 64));
+        String name = p.getName().getString();
+        long day = level.getDayTime() / 24000L;
+        java.util.List<String> said = new java.util.ArrayList<>();
+        // A meal together.
+        p.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.COOKED_BEEF, 2));
+        int before = farmer.persona().affinity(p.getUUID());
+        said.add("meal: " + com.jrpetty.mcassistant.entity.Dealings.meal(farmer, p));
+        helper.assertTrue(farmer.persona().affinity(p.getUUID()) > before && p.getMainHandItem().getCount() == 1, "a meal together");
+        // Dice.
+        farmer.earn(20);
+        said.add("dice: " + com.jrpetty.mcassistant.entity.Dealings.dice(farmer, p, "dice for 5"));
+        // A lesson, with a hoe in hand: once a day.
+        p.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.IRON_HOE));
+        String lesson = com.jrpetty.mcassistant.entity.Dealings.teach(farmer, p);
+        String again = com.jrpetty.mcassistant.entity.Dealings.teach(farmer, p);
+        said.add("lesson: " + lesson + " / " + again);
+        helper.assertTrue(again.contains("One lesson a day"), "a lesson, once a day");
+        // A keepsake from a close friend.
+        farmer.persona().feelFor(p.getUUID(), name, 60);
+        said.add("keepsake: " + com.jrpetty.mcassistant.entity.Dealings.keepsake(farmer, p));
+        boolean keepsake = false;
+        for (int i = 0; i < p.getInventory().getContainerSize(); i++) {
+            ItemStack s = p.getInventory().getItem(i);
+            if (s.getHoverName().getString().contains("keepsake")) keepsake = true;
+        }
+        helper.assertTrue(keepsake, "a keepsake from a close friend");
+        // A repair at the smith's: coin and a scrap of iron.
+        ItemStack worn = new ItemStack(Items.IRON_SWORD);
+        worn.setDamageValue(150);
+        p.setItemInHand(InteractionHand.MAIN_HAND, worn);
+        p.getInventory().setItem(33, new ItemStack(Items.IRON_INGOT, 3));
+        said.add("repair: " + com.jrpetty.mcassistant.entity.Dealings.repair(smith, p));
+        helper.assertTrue(p.getMainHandItem().getDamageValue() == 0, "the smith mends a worn sword");
+        // Made to order, from the player's own makings: ready tomorrow.
+        p.getInventory().setItem(34, new ItemStack(Items.STICK, 2));
+        String order = com.jrpetty.mcassistant.entity.Dealings.order(smith, p, "make me an iron sword");
+        String early = com.jrpetty.mcassistant.entity.Dealings.order(smith, p, "is it ready");
+        level.setDayTime(level.getDayTime() + 24000L);
+        int swords = 0;
+        String ready = com.jrpetty.mcassistant.entity.Dealings.order(smith, p, "is it ready");
+        for (int i = 0; i < p.getInventory().getContainerSize(); i++) if (p.getInventory().getItem(i).is(Items.IRON_SWORD)) swords++;
+        said.add("order: " + order + " / " + early + " / " + ready);
+        helper.assertTrue(swords == 2, "made to order, and handed over the next day");
+        level.setDayTime(level.getDayTime() - 24000L);
+        // A feast on the player.
+        said.add("feast: " + com.jrpetty.mcassistant.entity.Dealings.sponsor(keeper, p));
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Gatherings.sponsored(village, day), "a feast paid for tonight");
+        // A bulk order out of the glut.
+        int cobbleBefore = 0;
+        for (int i = 0; i < p.getInventory().getContainerSize(); i++) if (p.getInventory().getItem(i).is(Items.COBBLESTONE)) cobbleBefore += p.getInventory().getItem(i).getCount();
+        said.add("bulk: " + com.jrpetty.mcassistant.entity.Commerce.bulk(keeper, p, "I'd like to order 128 cobblestone"));
+        int cobble = 0;
+        for (int i = 0; i < p.getInventory().getContainerSize(); i++) if (p.getInventory().getItem(i).is(Items.COBBLESTONE)) cobble += p.getInventory().getItem(i).getCount();
+        helper.assertTrue(cobble - cobbleBefore == 128, "a bulk order out of what the village can spare");
+        // A stall on the square, and market day at it.
+        said.add("stall: " + com.jrpetty.mcassistant.entity.Commerce.stall(keeper, p, ""));
+        String[] stallNote = com.jrpetty.mcassistant.village.Ledger.note(village, "stall/" + p.getUUID()).split("\\|")[0].split(",");
+        BlockPos stallAt = new BlockPos(Integer.parseInt(stallNote[0]), Integer.parseInt(stallNote[1]), Integer.parseInt(stallNote[2]));
+        net.minecraft.world.Container barrel = (net.minecraft.world.Container) level.getBlockEntity(stallAt);
+        barrel.setItem(0, new ItemStack(Items.APPLE, 8));
+        for (VillageFolkEntity f : List.of(keeper, smith, farmer)) f.earn(10);
+        int sales = com.jrpetty.mcassistant.entity.Commerce.stallDayForTests(level, v, day);
+        int coinsIn = 0;
+        for (int i = 0; i < barrel.getContainerSize(); i++) if (com.jrpetty.mcassistant.entity.Market.isCoin(barrel.getItem(i))) coinsIn += barrel.getItem(i).getCount();
+        said.add("stall day: " + sales + " coins, " + coinsIn + " in the barrel");
+        helper.assertTrue(sales > 0 && coinsIn == sales, "the folk buy from a player's stall, and the coin is left in it");
+        // The bank: put by, take out, borrow (a friend), repay.
+        int treasury = com.jrpetty.mcassistant.village.Ledger.coins(village);
+        said.add("bank: " + com.jrpetty.mcassistant.entity.Commerce.bank(keeper, p, "deposit 20"));
+        helper.assertTrue(com.jrpetty.mcassistant.village.Ledger.coins(village) == treasury + 20, "a deposit into the treasury");
+        said.add("bank: " + com.jrpetty.mcassistant.entity.Commerce.bank(keeper, p, "withdraw 5"));
+        for (VillageFolkEntity f : List.of(keeper, smith, farmer)) f.persona().feelFor(p.getUUID(), name, 40);
+        com.jrpetty.mcassistant.entity.Standing.stir(village, p.getUUID());
+        com.jrpetty.mcassistant.village.Ledger.addCoins(village, 100);
+        said.add("bank: " + com.jrpetty.mcassistant.entity.Commerce.bank(keeper, p, "borrow 10"));
+        said.add("bank: " + com.jrpetty.mcassistant.entity.Commerce.bank(keeper, p, "repay"));
+        String account = com.jrpetty.mcassistant.village.Ledger.note(village, "bank/" + p.getUUID());
+        helper.assertTrue(account != null && account.startsWith("15|0"), "fifteen put by, nothing owed: " + account);
+        // Investing, an escort, the auction.
+        said.add("invest: " + com.jrpetty.mcassistant.entity.Commerce.invest(keeper, p, "invest 50"));
+        helper.assertTrue(com.jrpetty.mcassistant.village.Ledger.note(village, "invest/" + p.getUUID()).startsWith("50|"), "coin in the works");
+        said.add("escort: " + com.jrpetty.mcassistant.entity.Commerce.escort(keeper, p));
+        stone.setItem(26, new ItemStack(Items.DIAMOND_SWORD));
+        food.setItem(20, new ItemStack(Items.DIAMOND_SWORD));
+        com.jrpetty.mcassistant.entity.Budget.forget(village);
+        com.jrpetty.mcassistant.entity.Commerce.auctionForTests(level, v, day, true);
+        said.add("auction: " + com.jrpetty.mcassistant.entity.Commerce.auction(keeper, p, ""));
+        said.add("auction: " + com.jrpetty.mcassistant.entity.Commerce.auction(keeper, p, "I bid 60"));
+        com.jrpetty.mcassistant.entity.Commerce.auctionForTests(level, v, day + 1, false);
+        said.add("auction: " + com.jrpetty.mcassistant.entity.Commerce.auction(keeper, p, ""));
+        int diamond = 0;
+        for (int i = 0; i < p.getInventory().getContainerSize(); i++) if (p.getInventory().getItem(i).is(Items.DIAMOND_SWORD)) diamond++;
+        helper.assertTrue(diamond == 1, "the auction's best bid takes the lot");
+        // A trade route of the player's own, to the neighbour.
+        VillageFolkSpawnerBlock.raiseParty(level, Kit.surface(level, 68300, 12000), 0.0F, 3);
+        Villages.Village other = Villages.nearest(level, Kit.surface(level, 68300, 12000), Villages.VILLAGE_RANGE);
+        helper.assertTrue(other != null && !other.id().equals(village), "a neighbour");
+        said.add("charter: " + com.jrpetty.mcassistant.entity.Commerce.charter(keeper, p, Villages.name(other.id())));
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Envoys.pact(village, other.id()), "a chartered trade route: the caravans run it");
+        said.add("prices: " + com.jrpetty.mcassistant.entity.Commerce.prices(keeper, p, "where's bread dear?"));
+        said.add("haggle: " + com.jrpetty.mcassistant.entity.Dealings.haggle(keeper, p));
+        said.add("contract: " + com.jrpetty.mcassistant.entity.Commerce.contract(keeper, p, ""));
+        said.add("account: " + com.jrpetty.mcassistant.entity.Commerce.account(village, p.getUUID()));
+        Kit.log("t70 " + String.join(" || ", said));
+        helper.succeed();
     }
 
     /** A farmer's ten buckets of water, bought for it out of the treasury once. */

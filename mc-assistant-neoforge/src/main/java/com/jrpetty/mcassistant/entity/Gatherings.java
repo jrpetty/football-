@@ -68,6 +68,25 @@ public final class Gatherings {
             .addLast(new Wedding(a.getUUID(), b.getUUID(), a.displayNameCap() + " and " + b.displayNameCap(), day));
     }
 
+    /** Tonight's feast, paid for by a player (Dealings.sponsor): who, and which night. */
+    private static final Map<UUID, Long> SPONSORED_ON = new ConcurrentHashMap<>();
+    private static final Map<UUID, String> SPONSOR = new ConcurrentHashMap<>();
+
+    public static void sponsor(UUID village, String name, long day) {
+        SPONSORED_ON.put(village, day);
+        SPONSOR.put(village, name);
+    }
+
+    public static boolean sponsored(UUID village, long day) {
+        return SPONSORED_ON.getOrDefault(village, -1L) == day;
+    }
+
+    /** Who is paying for tonight's feast, or null. */
+    @Nullable
+    public static String sponsorOf(UUID village, long day) {
+        return sponsored(village, day) ? SPONSOR.get(village) : null;
+    }
+
     public static void mourn(UUID village, String name, long day) {
         DIED.put(village, day);
         DIED_NAME.put(village, name);
@@ -82,6 +101,8 @@ public final class Gatherings {
         LAST_ROCKET.clear();
         LAST_BELL.clear();
         DONE.clear();
+        SPONSORED_ON.clear();
+        SPONSOR.clear();
     }
 
     /** What the village is gathering for this evening, if anything. */
@@ -98,7 +119,7 @@ public final class Gatherings {
         if (aged >= 0 && day - aged <= 0) return Kind.CELEBRATION;
         Long died = DIED.get(village);
         if (died != null && day - died <= 0) return Kind.VIGIL;
-        if (day > 0 && day % 7 == 6) return Kind.FEAST;
+        if (day > 0 && day % 7 == 6 || sponsored(village, day)) return Kind.FEAST;
         return null;
     }
 

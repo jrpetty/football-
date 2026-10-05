@@ -150,6 +150,25 @@ public final class FolkTalk {
             case FOR_SALE -> Budget.answer(f, p);
             case LETTER -> Bonds.letter(f, p, text);
             case BROKER -> Bonds.broker(f, p, text);
+            case MEAL -> Dealings.meal(f, p);
+            case DICE -> Dealings.dice(f, p, text);
+            case HAGGLE -> Dealings.haggle(f, p);
+            case TEACH -> Dealings.teach(f, p);
+            case GODPARENT -> Dealings.godparent(f, p);
+            case KEEPSAKE -> Dealings.keepsake(f, p);
+            case ORDER -> Dealings.order(f, p, text);
+            case REPAIR -> Dealings.repair(f, p);
+            case SPONSOR -> Dealings.sponsor(f, p);
+            case BULK -> f.ownerId() != null && Dealings.hasOrder(p.getUUID(), f.ownerId()) && Services.itemNamed(text) == null
+                ? Dealings.order(f, p, text) : Commerce.bulk(f, p, text);
+            case CONTRACT -> Commerce.contract(f, p, text);
+            case STALL -> Commerce.stall(f, p, text);
+            case BANK -> Commerce.bank(f, p, text);
+            case INVEST -> Commerce.invest(f, p, text);
+            case AUCTION -> Commerce.auction(f, p, text);
+            case ESCORT -> Commerce.escort(f, p);
+            case CHARTER -> Commerce.charter(f, p, text);
+            case PRICES -> Commerce.prices(f, p, text);
             default -> puzzled(f);
         };
         // Somebody who can't stand you says as little as it can.
@@ -1103,6 +1122,26 @@ public final class FolkTalk {
         if (has(t, "hire", "adventur", "sell your sword", "bodyguard", "escort", "come exploring")) return TalkTopic.HIRE;
         if (has(t, "build me a house", "build me a home", "commission", "a house for me", "house of my own", "my own house")) return TalkTopic.COMMISSION;
         if (has(t, "ledger", "the accounts", "the books", "what's in the stores", "whats in the stores", "the stock")) return TalkTopic.LEDGER;
+        if (has(t, "eat with me", "eat together", "share a meal", "have a bite", "lunch with", "dinner with", "supper with")) return TalkTopic.MEAL;
+        if (has(t, "dice", "gamble", "a wager", "a game of chance")) return TalkTopic.DICE;
+        if (has(t, "cheaper", "discount", "haggle", "lower the price", "better price", "knock some off", "knock a bit off")) return TalkTopic.HAGGLE;
+        if (has(t, "show you a trick", "teach you", "let me show you", "a lesson", "show you how")) return TalkTopic.TEACH;
+        if (has(t, "godparent", "godmother", "godfather")) return TalkTopic.GODPARENT;
+        if (has(t, "keepsake", "remember you by", "a memento")) return TalkTopic.KEEPSAKE;
+        if (has(t, "make me ", "craft me ", "forge me ", "sew me ") && Services.itemNamed(t) != null) return TalkTopic.ORDER;
+        if (has(t, "is it ready", "is my order", "my order ready", "collect my order")) return TalkTopic.BULK;
+        if (has(t, "repair", "mend ", "mend this", "fix my", "fix this")) return TalkTopic.REPAIR;
+        if (has(t, "pay for the feast", "pay for a feast", "pay for tonight", "throw a feast", "feast on me", "sponsor")) return TalkTopic.SPONSOR;
+        if (has(t, "contract", "i'll sign", "ill sign", "sign me up", "i'll do it")) return TalkTopic.CONTRACT;
+        if (has(t, "a stall", "my stall", "market stall", "rent a stall")) return TalkTopic.STALL;
+        if (has(t, "deposit", "withdraw", "borrow", "a loan", "repay", "pay back", "my account", "the bank", "pay off")) return TalkTopic.BANK;
+        if (has(t, "invest", "put money into", "a share in")) return TalkTopic.INVEST;
+        if (has(t, "auction", "i bid", "bid ")) return TalkTopic.AUCTION;
+        if (has(t, "escort", "guard your caravan", "guard the caravan", "guard a caravan")) return TalkTopic.ESCORT;
+        if (has(t, "charter", "trade route")) return TalkTopic.CHARTER;
+        if (has(t, "order ", "in bulk", "bulk", "wholesale")) return TalkTopic.BULK;
+        if (has(t, "where's ", "where is ", "where are ") && has(t, "dear", "cheap") || has(t, "prices", "price of", "what's it worth", "whats it worth"))
+            return TalkTopic.PRICES;
         if (has(t, "for sale", "can you spare", "can the village spare", "what do you sell", "what are you selling", "surplus",
                 "what's spare", "whats spare", "what have you got to sell", "anything to sell") && Services.itemNamed(t) == null) return TalkTopic.FOR_SALE;
         if (has(t, "could i have", "can i have", "may i have", "i'd like", "id like", "borrow", "lend me", "sell me", "from the stores",

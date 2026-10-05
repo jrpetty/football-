@@ -313,6 +313,63 @@ The village keeps its books, and **sees to itself before it sells anything**:
   hive, the drover's pair). The rest is free. The board and the village status show **the purse**:
   the coin, what is kept back, what is put by, what is free, and what is for sale.
 
+### You and the folk: twenty things to do together
+
+Small things first (the **Deal** tab of the talk screen, or just say it):
+* **A greeting by name.** Friends passing by hail you by name now and then.
+* **Eat together.** Share the food in your hand: the folk eats with you and likes you the
+  better, more so if it is its favourite. Once a day each.
+* **Dice.** A game of dice for three coins (say "dice for 10" to raise it), out of each
+  other's purses. A shy folk may not play.
+* **A lesson.** Show a folk a trick of its trade with the tool of it in your hand (a hoe
+  for a farmer, a pickaxe for a miner, a rod for a fisher). Once a day, it learns, and it
+  may go up a level.
+* **Godparent.** Ask a child: a friend of the village may stand godparent. The child thinks
+  the world of you, and its parents the better of you.
+* **A keepsake.** A close friend (affinity 50 and more) gives you something of its own,
+  named and inscribed, to remember it by. Once.
+* **Letters.** Close friends write to you once a week, when you are about the village:
+  the latest news, and a line from them.
+* **Feast on me.** Pay for tonight's feast (ten coins and one for every mouth): the whole
+  village gathers, and remembers who paid.
+
+The trades (the **Money** tab):
+* **Make me…** Ask a smith, tailor, smelter or enchanter to make you something. It is made
+  from its own recipe, out of what you carry and what the village can spare. You pay for
+  the village's makings, a quarter over, and a fifth of the thing's worth for the work.
+  It is ready the next day: ask for it.
+* **Mend this.** The smith mends the worn tool, weapon or armour in your hand, for coin
+  (by how worn it is) and a scrap of its metal, from your pack or the village's spare.
+* **Haggle.** Ask the storekeeper, shopkeeper or cook to do it cheaper. A generous one and
+  a friend are easily talked round; a shrewd elder's village is not. The discount (five
+  to twenty in the hundred) holds at the stores and the counters for the day.
+
+Business with the whole village (the **Money** tab):
+* **Bulk orders.** "I'd like to order 256 cobblestone": what the village can spare goes at
+  once, a tenth off for the quantity. The rest is put by for you as it is made: a quarter
+  down, the rest when you collect, within the week (or your deposit back).
+* **Supply contracts.** The village offers a contract for what it is short of: so much a
+  week for a month, at a third over its worth. Say "I'll sign", then bring it each week.
+  Keep it up and the village thinks the world of you. Miss two weeks and it lapses, and
+  they think less of you.
+* **Your own stall.** Rent a stall on the square for five coins a week: a barrel with your
+  name on it. Stock it, and on market day the folk buy from it out of their own purses and
+  leave the coin in the barrel.
+* **The bank.** "Deposit 20", "withdraw 10": the treasury keeps your coin and pays a coin
+  in fifty a week. A friend may "borrow 30" (an honoured one up to 64), at a tenth a week.
+  A debt left a fortnight shames you. "Repay" pays it off.
+* **Investing.** "Invest 50": for two weeks you take a share of what the village takes in
+  each day, paid into your account.
+* **The auction.** On market day the village puts its finest spare thing up for bids.
+  "I bid 60": the best bid takes it the next day (an outbid bid goes back into your
+  account). Ask for your lot to collect it.
+* **Caravan escort.** Sign on to guard the next caravan, walk with it, and you are paid at
+  the other end. Both villages think the better of you.
+* **A trade route of your own.** Fifty coins charters a trade route to a neighbour: the
+  caravans run it, and a tenth of every load sold on it goes into your account.
+* **Where things are dear.** "Where's iron dear?": what a thing sells for here and in the
+  villages round about. Buy cheap, sell dear.
+
 ### Roads and caravans
 
 * **Roads.** When a village founds a colony, a road is laid between them. It runs

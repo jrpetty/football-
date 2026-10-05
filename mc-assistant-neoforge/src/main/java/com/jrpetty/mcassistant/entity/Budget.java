@@ -98,8 +98,15 @@ public final class Budget {
                 if (!s.isEmpty()) b.held.merge(s.getItem(), s.getCount(), Integer::sum);
             }
         }
-        Villages.Village v = Villages.get(village);
-        b.food = v == null ? 0 : Villages.stock(level, v.centre(), Villages.Task.FOOD, Villages.storesRadius(village));
+        // The larder, counted from the same look at the stores (Villages.stock is a cached count,
+        // ten seconds stale, and a larder just filled still read empty).
+        for (Map.Entry<Item, Integer> e : b.held.entrySet()) {
+            ItemStack one = new ItemStack(e.getKey());
+            Market.Good g = Market.goodFor(one);
+            if (one.get(net.minecraft.core.component.DataComponents.FOOD) != null || g != null && g.need() == Villages.Task.FOOD) {
+                b.food += e.getValue();
+            }
+        }
         b.larder = Math.max(256, 3 * Villages.larderForBirth(village));
         for (Villages.Need n : Villages.needs(level, village)) b.short_.add(n.task());
         b.bedsWait = Market.bedsShort(village) > 0;

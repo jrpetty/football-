@@ -79,6 +79,7 @@ public final class TownLife {
         if (now - LAST.getOrDefault(id, -100000L) < EVERY) return;
         LAST.put(id, now);
         Market.tick(level, v);                      // the treasury, the morning's wages, the market bell
+        Commerce.daily(level, v);                   // players' stalls, the bank, dividends, the auction, contracts, letters
         List<Ledger.Building> all = Ledger.buildings(id);
         long time = level.getDayTime() % 24000L;
         for (Ledger.Building b : all) {

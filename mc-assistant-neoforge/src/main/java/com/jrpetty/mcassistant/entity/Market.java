@@ -818,6 +818,7 @@ public final class Market {
         if (title == Standing.Title.UNWELCOME) price *= 2;
         else if (title.atLeast(Standing.Title.FRIEND)) price = Math.max(1, price - price / 10);
         if (Citizens.is(id, p.getUUID())) price = Math.max(1, price - Math.max(1, price / 10));   // a citizen's ten off
+        price = Dealings.haggled(id, p.getUUID(), level.getDayTime() / 24000L, price);           // talked down today
         if (p.isShiftKeyDown()) return lot + ": " + price + coinWord(price) + ". Right-click to buy.";
         int coins = coinsHeld(p);
         if (coins < price) {
