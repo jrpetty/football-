@@ -758,15 +758,35 @@ public final class Luxuries {
         Decor.Room room = Decor.room(id, b);
         BlockPos door = room.door() != null ? room.door() : house.relative(Direction.SOUTH, 3);
         Direction in = b.facing();
+        // The house from across the way, a little above the heads of whoever is about.
         BlockPos front = door.relative(in.getOpposite(), 8);
-        out.add(String.format(Locale.ROOT, "VIEW decor-1-house %d %d %d %d %d %d", front.getX() + 3, front.getY() + 2, front.getZ(),
-            house.getX(), house.getY() + 2, house.getZ()));
+        out.add(view("decor-1-house", front.getX() + 3, front.getY() + 2.0, front.getZ(), house.getX(), house.getY() + 2.5, house.getZ()));
+        // By day, from inside: from the back of the room over the chest, under the ceiling (clear of the ceiling's
+        // lantern, over the bed head by the wall), looking down the room to the door.
         BlockPos back = door.relative(in, 5);
-        out.add(String.format(Locale.ROOT, "VIEW decor-2-inside %d %d %d %d %d %d", back.getX(), back.getY() + 1, back.getZ(),
-            door.getX(), door.getY(), door.getZ()));
-        out.add(String.format(Locale.ROOT, "VIEW decor-3-dusk %d %d %d %d %d %d", back.getX(), back.getY() + 1, back.getZ(),
-            door.getX(), door.getY(), door.getZ()));
+        out.add(view("decor-2-inside", back.getX(), back.getY() + 1.25, back.getZ(), door.getX(), door.getY() + 0.5, door.getZ()));
+        // At dusk, from outside: in front of the window the household's candle stands in, higher than a body's head
+        // (never inside a folk come home for supper, nor in a wall or a bed), looking in at it lit on the sill.
+        BlockPos candle = null;
+        for (Map.Entry<String, Long> e : Decor.book(id, house).entrySet()) {
+            if (e.getKey().startsWith("lux.candle.")) { candle = BlockPos.of(e.getValue()); break; }
+        }
+        BlockPos aim = candle != null ? candle : door;
+        BlockPos window = null;
+        for (BlockPos w : room.windows()) {
+            boolean frontWall = in.getAxis() == Direction.Axis.Z ? w.getZ() == door.getZ() : w.getX() == door.getX();
+            if (!frontWall || w.getY() != door.getY() + 1) continue;
+            if (window == null || w.distSqr(aim) < window.distSqr(aim)) window = w;
+        }
+        BlockPos stand = (window != null ? window : door).relative(in.getOpposite(), 4);
+        BlockPos lit = candle != null ? candle : window != null ? window : door.above();
+        out.add(view("decor-3-dusk", stand.getX(), door.getY() + 0.9, stand.getZ(), lit.getX(), lit.getY() + 0.4, lit.getZ()));
         out.add("HOUSE " + (h == null ? "none" : String.join("; ", Decor.lines(level, v))));
         return out;
+    }
+
+    /** "VIEW name x y z at-x at-y at-z": where the one looking stands (its feet, in the middle of the block) and what it looks at. */
+    private static String view(String name, int x, double y, int z, int ax, double ay, int az) {
+        return String.format(Locale.ROOT, "VIEW %s %.2f %.2f %.2f %.2f %.2f %.2f", name, x + 0.5, y, z + 0.5, ax + 0.5, ay, az + 0.5);
     }
 }
