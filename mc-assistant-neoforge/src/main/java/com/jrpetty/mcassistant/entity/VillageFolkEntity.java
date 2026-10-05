@@ -1118,8 +1118,50 @@ public class VillageFolkEntity extends AssistantEntity {
     /** A happy village works faster, a miserable one slower (Contentment). */
     @Override
     protected int villageWorkPercent() {
-        // How the village is doing, and how the leader drives it (Leader.pace).
-        return Contentment.workPercent(ownerId()) + Leader.pace(ownerId()) + (isOld() ? -10 : 0);
+        // How the village is doing, and how the leader drives it (Leader.pace). (Old age was
+        // counted in here too; it is its own part of the pace now, ageWorkPercent.)
+        return Contentment.workPercent(ownerId()) + Leader.pace(ownerId());
+    }
+
+    /** The village's part of the pace on its card: the town's spirits and its leader's drive, each on its own. */
+    @Override
+    protected void villagePaceParts(java.util.List<PacePart> parts) {
+        int spirits = Contentment.workPercent(ownerId());
+        addPacePart(parts, "the town's spirits", spirits);
+        addPacePart(parts, "how the leader drives the town", villageWorkPercent() - spirits);
+    }
+
+    /** The old are a little slower at their work, less so the more of it they have done (oldAgePercentAt). */
+    @Override
+    protected int ageWorkPercent() {
+        return isOld() ? oldAgePercentAt(veteranLevel()) : 0;
+    }
+
+    /**
+     * What old age takes off the pace of an old folk's work, by its level at it: ten percent for
+     * one new to the trade, a percent less for every three levels, and never more than five off
+     * from level fifteen. Stiff knees are stiff knees, and the old walk slower besides (the gait,
+     * refreshOldAgeGait); but a lifetime at the work has taught it to spare itself, so an old
+     * master is still a good deal quicker than a young novice: thirty for its level less five
+     * for its years at level thirty, against nought for the novice. At a flat ten off, every old
+     * folk below level ten was slower at its trade than the greenest beginner.
+     */
+    public static int oldAgePercentAt(int level) {
+        return -10 + Math.min(5, Math.max(0, level) / 3);
+    }
+
+    /** Its mood on the pace line of its card, in its own word: "content", "fed up". */
+    @Override
+    protected String moodPaceWord() {
+        return Persona.moodWord(persona.mood());
+    }
+
+    /** Its skills' part of the pace on its card: the town's research and its own knacks, each on its own. */
+    @Override
+    protected void skillPaceParts(java.util.List<PacePart> parts) {
+        int research = CityTree.workPercent(ownerId(), stationTask());
+        addPacePart(parts, "the town's research", research);
+        addPacePart(parts, "its knacks", skillWorkPercent() - research);
     }
 
     // ------------------------------ a level in every trade ------------------------
@@ -1137,6 +1179,13 @@ public class VillageFolkEntity extends AssistantEntity {
     protected void creditTrade(int amount) {
         StationTask t = stationTask();
         if (t != StationTask.NONE && amount > 0) tradeXp.merge(t, amount, (a, b) -> Math.min(1_000_000, a + b));
+    }
+
+    /** Tests: so much experience at a trade, as though it had worked for it (xpForLevel gives a level's worth). */
+    public void tradeXpForTests(StationTask t, int xp) {
+        if (t == StationTask.NONE) return;
+        tradeXp.put(t, Math.max(0, xp));
+        refreshLevelPerks();
     }
 
     /** Its level at a trade (nought for one it has never worked). */
@@ -3790,6 +3839,10 @@ public class VillageFolkEntity extends AssistantEntity {
             case WOOD -> { tool = net.minecraft.world.item.Items.STONE_AXE; kind = "_axe"; }
             case GUARD -> { tool = net.minecraft.world.item.Items.STONE_SWORD; kind = "_sword"; }
             case FARM -> { tool = net.minecraft.world.item.Items.STONE_HOE; kind = "_hoe"; }
+            // A hunter born in the village grew up with the wooden sword of its childhood kit, and
+            // nothing ever made it a better one: the game it could not shoot it hacked at with wood.
+            // Stone, like everybody's; the smith's iron blades stay the watch's (betterToolFromTheStores).
+            case HUNT -> { tool = net.minecraft.world.item.Items.STONE_SWORD; kind = "_sword"; }
             default -> { return; }
         }
         final String suffix = kind;

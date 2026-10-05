@@ -268,8 +268,8 @@ public final class FolkTalk {
     /**
      * Who it is, at a glance, for the talk screen's "About" page: one fact a line, as
      * "Label|what". Its trade and level and its other trades, how its nature suits its work,
-     * what it is worth and earns, its home, its family and friends, what it loves and hopes
-     * for, and what it needs.
+     * how quick it is at it and why (its pace), what it is worth and earns, its home, its
+     * family and friends, what it loves and hopes for, and what it needs.
      */
     public static String card(VillageFolkEntity f) {
         StringBuilder sb = new StringBuilder();
@@ -281,6 +281,9 @@ public final class FolkTalk {
         String levels = f.tradeLevels();
         if (!levels.isEmpty() && levels.contains(",")) line(sb, "Has worked", levels);
         if (!f.isBaby()) line(sb, "At its work", Skill.line(f));
+        // How quick it is at its work, and why, part by part (AssistantEntity.paceLine): its level,
+        // its tool, its spirits, the town, its years, the town's research and its own knacks.
+        if (!f.isBaby() && job != AssistantEntity.StationTask.NONE) line(sb, "Pace", f.paceLine());
         line(sb, "Worth", Wealth.line(f));
         net.minecraft.core.BlockPos bed = f.bedPos();
         String house = Homes.talk(f);

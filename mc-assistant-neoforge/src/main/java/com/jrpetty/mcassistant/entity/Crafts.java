@@ -70,9 +70,12 @@ public final class Crafts {
         Villages.Village v = village == null ? null : Villages.get(village);
         if (v == null) return false;
         int last = LAST.getOrDefault(f.getUUID(), -100000);
-        // Quicker for a veteran, a cheerful hand and a happy village; slower without the craft's
-        // own building and its tools (the anvil, the brewing stand, the enchanting table...).
-        int every = EVERY * (100 - f.workBonusPercent()) / 100;
+        // Quicker for a practised hand (a percent a level at its craft, to thirty), a cheerful one, a
+        // happy village and the town's research; slower without the craft's own building and its
+        // tools (the anvil, the brewing stand, the enchanting table...). The same pace as all the
+        // village's work (AssistantEntity.workBonusPercent): twenty seconds a piece for a new hand,
+        // fourteen at level thirty, nine at the very most.
+        int every = f.pacedTicks(EVERY, 100);
         String building = VillageFolkEntity.buildingFor(f.stationTask());
         if (building != null && Villages.builtAt(v.id(), building) == null) every = every * 3 / 2;
         if (f.tickCount - last < every && f.tickCount >= last) return false;

@@ -1258,6 +1258,65 @@ other occasionally have words when they meet off work:
 * Both are cross for the day.
 * Once in a while it clears the air and they make up.
 
+### Getting quicker: experience and tools
+
+Every folk gets quicker at its work the longer it does it, and quicker again with a better
+tool. This holds for every trade.
+
+* **Experience.** Each level at its trade makes a folk's work 1% quicker, up to 30% at
+  level 30. (It used to come in three steps: 10% at level 10, 20% at 20 and 30% at 35.)
+  The level is the one for the trade it works now. A farmer of level 18 who takes up mining
+  starts at nought down the mine, and has its 18 again when it goes back to the fields.
+* **Tools.** The tool of the trade sets the pace by its tier. Against six seconds a stroke
+  with wood, stone takes 5.3, iron 4.5, diamond 3.8 and netherite 3. With no tool at all it
+  is 7.5. These are a new hand's times; a village folk at its own trade works much quicker,
+  but the tiers keep the same proportions. A village gives its folk better tools as it can
+  make them:
+  * The founders bring stone picks, axes and swords. Children get wooden ones, and as soon
+    as they take up a trade they make a stone tool from three cobblestone and a bit of wood
+    from the stores.
+  * Farmers make a stone hoe the same way, and hold it while they work. A farmer with no
+    hoe is the slowest farmer of all.
+  * Hunters swap their wooden swords for stone ones. The smith's iron blades go to the watch.
+  * Once the smith is at work, its iron picks, axes, hoes and swords in the stores go to any
+    miner, woodcutter, farmer or guard whose tool they beat. The enchanter's Efficiency on
+    top makes a tool an eighth quicker for each level.
+  * A Diamond Age village makes iron picks for its deep miners. A Nether Age village makes
+    one diamond pick, for the miner who cuts the obsidian.
+* **Everything else.** On top of its level a folk's pace is also changed by:
+  * its mood (from −10% to +8%);
+  * how the town is doing (from −10% to +10%);
+  * its leader (from −8% to +10%);
+  * how its nature suits the trade (from −20% to +20%);
+  * working beside its crew (up to +10%);
+  * its quirk;
+  * the town's research and its own knacks.
+
+  Altogether a folk is never more than 55% quicker, nor more than 30% slower. A hungry folk
+  works slower than all of that.
+* **Old age.** From sixty a folk walks more slowly. It also works 10% slower than it did
+  when young, but 1% less slow for every three levels at its trade, down to 5% from level
+  15. So an old master is still much quicker than a young beginner: at level 30 it is 25%
+  quicker than a new hand.
+
+What gets quicker, trade by trade:
+
+| Trade | What gets quicker |
+|---|---|
+| Miner, woodcutter | Every block and every log (pick or axe tier) |
+| Farmer | Every crop cut, every square tilled and planted (hoe tier) |
+| Rancher | Every sheep shorn and every animal fed |
+| Fisher | The wait for a bite. Half its pace counts, since the fish bite when they bite: up to about a quarter off |
+| Smith, tailor, cook, shopkeeper, brewer, enchanter, beekeeper | How often it makes something: every 20 s for a new hand, every 14 s at level 30, every 9 s at the very most |
+| Builder | Every block laid: 6 ticks for a new hand, 4.2 at level 30. Its level here is its trade's, or its *building* level (from the blocks it has laid) if that is higher. Its mood, the town, its years and the town's research count too |
+| Carrier, storekeeper | Handling each load. A carrier, and a scout too, also walks a quarter of a percent quicker a level, up to 5% at level 20 (on top of the Swift perk) |
+| Smelter | Not the smelter: the furnace sets the pace, ten seconds a smelt |
+
+**See it for yourself.** Right-click a folk. Its About page has a **Pace** line, for example
+"23% quicker than a new hand: level 18 (+18%), stone axe (5.3 s a stroke against 6 for
+wood), content (+4%), the town's research (+3%)". A builder's line also gives its building
+level and how often it lays a block.
+
 ### Growing up, growing old
 
 * **Apprentices.** From its second day a child spends its mornings at a grown-up's
@@ -1268,7 +1327,8 @@ other occasionally have words when they meet off work:
 * **Age.**
   * A child is grown at eighteen, three days after it is born.
   * Grown folk age two years a day. The founders were grown when the village began.
-  * From sixty folk are old: they walk a little slower and work a little slower.
+  * From sixty folk are old: they walk a little slower and work a little slower (less
+    so the longer they have worked their trade: see *Getting quicker*).
   * Each folk lives to between seventy and a hundred.
   * A few years before the end, the village hears that they are very frail. At the
     end of their years they die peacefully in their sleep.
@@ -2834,6 +2894,12 @@ Every push to CI:
   nothing sold under cost; an Iron Age village saving its iron gets chests but not a bar beaten
   into a bucket; and the storekeeper makes a chest to order and says why it cannot make a diamond
   pickaxe;
+* measures the pace of work (`PaceGameTests`, pc01 to pc05): stone breaks quicker at level 10
+  than at nought and quicker again at 30, with every other piece of work, the bench and the
+  fisher's wait following; better picks, axes and hoes are quicker at the same level (a farmer
+  with no hoe slowest); a builder lays quicker at 10 and 30, and for blocks laid; an old master
+  is a little slower than it was young but quicker than a young beginner; the About card has
+  the pace line; and a carrier of level 20 walks 5% quicker;
 * checks the money (game test `t30`): a new village's purse, gold minted into coin,
   a day's wages, prices that move with the stores, a folk's market-day treat, a
   player buying bread at a stall and selling iron, and the stalls' price signs;
