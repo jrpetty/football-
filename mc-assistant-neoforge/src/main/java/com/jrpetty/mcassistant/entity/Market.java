@@ -310,8 +310,10 @@ public final class Market {
         takings(level, v, sold);                         // what the village made yesterday is its revenue
         buyWool(level, v, day);                          // the beds, out of half of it at most
         payWages(level, v);
+        Bank.beforeRent(level, v, day);                  // the bank: a saver short of the rent draws it out first (Bank)
         Homes.payday(level, v, day);                     // the rent in, and what the households put by to buy their houses
         if (RestDay.today(id, day)) tithe(level, v, day);
+        Bank.morning(level, v, day);                     // the bank: the day's savings in, and on its seventh day its round (Bank)
         Villages.checkRank(level, v, day);
         News.morning(level, v, day);
         if (marketDay(id, day)) {

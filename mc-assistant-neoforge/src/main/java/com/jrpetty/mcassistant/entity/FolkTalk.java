@@ -146,7 +146,7 @@ public final class FolkTalk {
             case BUILD -> Asks.build(f, p, text);
             case GUIDE -> Guide.ask(f, p, text);
             case PRAISE -> praise(f, p, op, day);
-            case WORTH -> Wealth.talk(f, text);
+            case WORTH -> Wealth.talk(f, text) + Bank.talkLine(f);     // and its savings and its mortgage at the bank
             case KNACK -> knack(f);
             case ATLAS -> Scouts.tell(f);
             case FOR_SALE -> Budget.answer(f, p);
@@ -310,6 +310,7 @@ public final class FolkTalk {
         if (!f.isBaby() && job != AssistantEntity.StationTask.NONE) line(sb, "Pace", f.paceLine());
         line(sb, "Worth", Wealth.line(f));
         line(sb, "Meals", Meals.line(f));
+        line(sb, "Bank", Bank.cardLine(f));                 // its savings at the bank, its mortgage, how careful it is
         net.minecraft.core.BlockPos bed = f.bedPos();
         String house = Homes.talk(f);
         line(sb, "Home", (house != null && !house.isEmpty() ? house + " " : "") + (bed == null ? "No bed of its own yet."
@@ -617,6 +618,7 @@ public final class FolkTalk {
             case HUNT -> pick(r, "Out on the hunting grounds" + place + ". Quiet, now — you'll frighten the game.",
                 "Tracking" + place + ". There's a pig about somewhere; I've seen its prints.",
                 "Hunting" + place + ". Only the full-grown, mind, and never the last pair.");
+            case BANK -> Bank.doing(f, r);                // the banker: its books, its vault, its borrowers
         };
         if (!f.missingEssentials().isEmpty()) work += " Or I would be, if I had " + f.missingEssentials().get(0) + ".";
         if (f.life().has(Social.Trait.HARDWORKING) && r.nextBoolean()) work += " Can't stop long.";
@@ -1166,6 +1168,7 @@ public final class FolkTalk {
         if (has(t, "quest", "notice board", "the board", "bount", "postings", "work going")) return TalkTopic.QUESTS;
         if (has(t, "hire", "adventur", "sell your sword", "bodyguard", "escort", "come exploring")) return TalkTopic.HIRE;
         if (has(t, "where do you live", "your house", "your home", "who do you live with", "where's home", "wheres home")) return TalkTopic.HOUSE;
+        if (has(t, "mortgage")) return TalkTopic.BANK;                      // the bank's loans on a house (Bank)
         if (has(t, "buy a house", "buy this house", "buy the house", "buy that house", "houses for sale", "house for sale", "a house to buy",
                 "houses to buy", "let my house", "let out my house", "rent out my house", "rent my house", "my rent", "my tenants")) return TalkTopic.HOUSING;
         if (has(t, "build me a house", "build me a home", "commission", "a house for me", "house of my own", "my own house")) return TalkTopic.COMMISSION;

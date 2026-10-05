@@ -391,7 +391,10 @@ public class CityScreen extends Screen {
         chart(g, x + half + 6, y, half, chartH, "Treasury, purses and worth", mx, my, new Series("Treasury", series("coins"), AMBER),
             new Series("Purses", series("purses"), PURPLE), new Series("Worth", series("worth"), TEAL));
         int y2 = y + chartH + 14;
-        bars(g, x, y2, half, chartH, "Money in against money out", mx, my, new Series("In", in, BLUE), new Series("Out", outs, RED));
+        // Once the town has a bank, its books take the place of the in-and-out bars (the chart above has both lines).
+        CompoundTag bank = data.getCompound("bank");
+        if (bank.getBoolean("stands")) bankPanel(g, x, y2 - 2, half, chartH + 2, mx, my, bank);
+        else bars(g, x, y2, half, chartH, "Money in against money out", mx, my, new Series("In", in, BLUE), new Series("Out", outs, RED));
         // What it made, by kind, over the range.
         String[] kinds = { "out_food", "out_timber", "out_stone", "out_ore", "out_animal", "out_craft", "out_plant" };
         String[] names = { "Food", "Timber", "Stone", "Ore and metal", "Wool, hides, honey", "Crafts", "Plants" };
@@ -417,6 +420,84 @@ public class CityScreen extends Screen {
             + houses + " houses sold, " + town + " spent in town.", (int) (half / 0.75)), bx, by, Ui.MUTED);
         small(g, Ui.clip(font, "Out: " + wages + " in wages" + (tax > 0 ? " (" + tax + " of it kept back in tax)" : "") + ", " + spent + " bought in. Net "
             + (takings + sold + tax + tithe + rent + houses + town - wages - spent) + ".", (int) (half / 0.75)), bx, by + 9, Ui.MUTED);
+        if (!bank.getBoolean("stands") && by + 27 < y + ch) {
+            small(g, Ui.clip(font, "No bank yet: a town of " + bank.getInt("from") + " in the Iron Age builds one, to keep its savings and lend toward houses.",
+                (int) (half / 0.75)), bx, by + 18, Ui.FAINT);
+        }
+    }
+
+    /**
+     * The bank, on the Money page (Bank.report): the vault, what is on deposit, what is lent out and
+     * what is kept back; the week's interest earned and paid, and the treasury's share; and every
+     * mortgage, a row each — what is owed, the week's payment, the weeks to go, and any payments missed
+     * (the mouse over a row for the whole of it).
+     */
+    private void bankPanel(GuiGraphics g, int x, int y, int w, int h, int mx, int my, CompoundTag bank) {
+        String banker = bank.getString("banker");
+        Ui.section(g, font, "The bank" + (!bank.getBoolean("open") ? " (not yet open)" : banker.isEmpty() ? " (no banker yet)"
+            : ", kept by " + banker), x, y, w);
+        int ty = y + 11;
+        String[][] figs = { { "Vault", bank.getInt("cash") + "c" }, { "On deposit", bank.getInt("deposits") + "c" },
+            { "Lent out", bank.getInt("loans_out") + "c" }, { "Kept back", bank.getInt("reserve") + "c" } };
+        int[] inks = { AMBER, TEAL, PURPLE, GREY };
+        int fw = w / figs.length;
+        for (int i = 0; i < figs.length; i++) {
+            small(g, figs[i][0].toUpperCase(Locale.ROOT), x + i * fw, ty, Ui.FAINT);
+            g.drawString(font, Ui.clip(font, figs[i][1], fw - 4), x + i * fw, ty + 7, inks[i], false);
+        }
+        ty += 18;
+        small(g, Ui.clip(font, "This week: " + bank.getInt("week_earned") + "c earned on its loans, " + bank.getInt("week_paid") + " paid to savers, "
+            + bank.getInt("week_treasury") + " to the treasury · last week " + bank.getInt("last_earned") + " / " + bank.getInt("last_paid") + " / "
+            + bank.getInt("last_treasury") + (bank.getInt("last_written") > 0 ? ", " + bank.getInt("last_written") + " written off" : ""),
+            (int) (w / 0.75)), x, ty, Ui.MUTED);
+        ty += 8;
+        String wants = bank.getString("wants");
+        small(g, Ui.clip(font, bank.getInt("savers") + " savers at " + String.format(Locale.ROOT, "%.0f", bank.getInt("deposit_bp") / 100.0) + "% a week, loans at "
+            + String.format(Locale.ROOT, "%.0f", bank.getInt("loan_bp") / 100.0) + "%; free to lend " + bank.getInt("lendable") + "c; next round day "
+            + bank.getLong("next_round") + (wants.isEmpty() ? "" : "; the banker wants " + wants), (int) (w / 0.75)), x, ty, Ui.MUTED);
+        ty += 10;
+        String[] heads = { "Mortgage", "Owes", "A week", "Left", "Payments" };
+        int[] cols = { 0, w * 44 / 100, w * 58 / 100, w * 71 / 100, w * 81 / 100 };
+        for (int i = 0; i < heads.length; i++) small(g, heads[i], x + cols[i] + (i == 0 ? 2 : 0), ty, Ui.FAINT);
+        ty += 9;
+        List<CompoundTag> loans = new ArrayList<>();
+        ListTag ll = bank.getList("loans", Tag.TAG_COMPOUND);
+        for (int i = 0; i < ll.size(); i++) loans.add(ll.getCompound(i));
+        loans.sort(Comparator.comparingInt((CompoundTag r) -> -r.getInt("missed")).thenComparingInt(r -> -r.getInt("owed")));
+        int fit = Math.max(1, (y + h - ty) / 9);
+        int shown = loans.size() > fit ? Math.max(0, fit - 1) : loans.size();      // the last row says how many more
+        for (int i = 0; i < shown; i++) {
+            CompoundTag r = loans.get(i);
+            boolean over = mx >= x && mx < x + w && my >= ty - 1 && my < ty + 8;
+            g.fill(x, ty - 1, x + w, ty + 8, over ? Ui.HI : i % 2 == 0 ? Ui.ROW : Ui.ROW_ALT);
+            int missed = r.getInt("missed");
+            int c = missed >= 2 ? RED : missed == 1 ? AMBER : GREEN;
+            g.fill(x, ty - 1, x + 2, ty + 8, c);
+            small(g, Ui.clip(font, r.getString("household") + (r.getBoolean("player") ? " (a player)" : ""), (int) ((cols[1] - 6) / 0.75)), x + 4, ty, Ui.INK);
+            small(g, r.getInt("owed") + "c", x + cols[1], ty, Ui.INK);
+            small(g, r.getInt("weekly") + "c", x + cols[2], ty, Ui.INK);
+            small(g, r.getInt("weeks_left") + " wk", x + cols[3], ty, Ui.INK);
+            small(g, Ui.clip(font, missed > 0 ? missed + " missed" : "paying", (int) ((w - cols[4]) / 0.75)), x + cols[4], ty, c);
+            if (over) {
+                List<Component> tip = new ArrayList<>();
+                tip.add(Component.literal(r.getString("household") + (r.getString("address").isEmpty() ? "" : " — " + r.getString("address"))));
+                tip.add(Component.literal("Bought for " + r.getInt("price") + "c: " + r.getInt("down") + " down, " + r.getInt("lent") + " lent on day " + r.getLong("start")));
+                tip.add(Component.literal("Owes " + r.getInt("owed") + "c (" + r.getInt("principal") + " of the loan, " + r.getInt("interest") + " interest run up)"));
+                tip.add(Component.literal(r.getInt("weekly") + "c a week: " + r.getInt("weeks_paid") + " of " + r.getInt("term") + " weeks paid, about "
+                    + r.getInt("weeks_left") + " to go; " + r.getInt("paid_all") + "c paid in all"));
+                if (missed > 0) tip.add(Component.literal("Behind: " + r.getInt("arrears") + "c, " + missed + (missed == 1 ? " payment" : " payments")
+                    + " — three behind and the bank takes the house back").withColor(0xFFE07070));
+                hover = tip;
+                hoverX = mx;
+                hoverY = my;
+            }
+            ty += 9;
+        }
+        if (loans.isEmpty()) {
+            small(g, Ui.clip(font, "No mortgages yet: a household with a fifth of a house's price saved may borrow the rest.", (int) (w / 0.75)), x, ty, Ui.MUTED);
+        } else if (shown < loans.size()) {
+            small(g, "and " + (loans.size() - shown) + " more: /village bank has them all", x + 4, ty, Ui.FAINT);
+        }
     }
 
     // ------------------------------------------------------------------ production
@@ -1144,7 +1225,8 @@ public class CityScreen extends Screen {
     /**
      * Homes: beds against folk and households housed over time, the tenures (rented, owned, saving to
      * buy, the leader's, players'), the rent coming in, and every household: where it lives, on what
-     * terms, its rent, what it has put by toward the price, and whether it wants a house of its own.
+     * terms, its rent, what it has put by toward the price, and whether it wants a house of its own;
+     * a house bought on a mortgage shows what is still owed the bank and the week's payment (Bank).
      */
     private void homes(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my) {
         CompoundTag hm = data.getCompound("homes");
@@ -1156,6 +1238,14 @@ public class CityScreen extends Screen {
             new Series("Rent-free", series("rent_free"), BLUE));
         bars(g, x + 2 * (third + 6), y, third, chartH, "Rent and houses sold, a day (coins)", mx, my,
             new Series("Rent", series("rent"), GREEN), new Series("Sold", series("house_sales"), BROWN));
+        // The bank's mortgages, by house (Bank.report), and why it said no to whom.
+        java.util.Map<Long, CompoundTag> mortgages = new java.util.HashMap<>();
+        java.util.Map<Long, String> refused = new java.util.HashMap<>();
+        CompoundTag bank = data.getCompound("bank");
+        ListTag bl = bank.getList("loans", Tag.TAG_COMPOUND);
+        for (int i = 0; i < bl.size(); i++) mortgages.put(bl.getCompound(i).getLong("anchor"), bl.getCompound(i));
+        ListTag br = bank.getList("refused", Tag.TAG_COMPOUND);
+        for (int i = 0; i < br.size(); i++) refused.put(br.getCompound(i).getLong("anchor"), br.getCompound(i).getString("why"));
         // The figures.
         int ty = y + chartH + 12;
         String[][] figures = {
@@ -1167,7 +1257,8 @@ public class CityScreen extends Screen {
             { "Founders rent-free", Integer.toString(hm.getInt("rent_free")) }, { "Lodging", Integer.toString(hm.getInt("lodging")) },
             // How well the homes are furnished (Decor): the average out of ten, and how many are done well.
             { "Furnished", String.format(java.util.Locale.ROOT, "%.1f", data.getCompound("decor").getInt("avg10") / 10.0) + "/10, "
-                + data.getCompound("decor").getInt("well") + " well" } };
+                + data.getCompound("decor").getInt("well") + " well" },
+            { "Mortgaged", mortgages.size() + (bank.getBoolean("open") ? "" : " (no bank)") } };
         int colW = cw / 5;
         for (int i = 0; i < figures.length; i++) {
             int cx = x + (i % 5) * colW, cy = ty + (i / 5) * 10;
@@ -1198,8 +1289,10 @@ public class CityScreen extends Screen {
             boolean over = mx >= x && mx < x + cw && my >= hy - 1 && my < hy + 9;
             g.fill(x - 2, hy - 1, x + cw, hy + 9, over ? Ui.HI : i % 2 == 0 ? Ui.ROW : Ui.ROW_ALT);
             String status = r.getString("status");
-            int sc = status.equals("owns") ? GREEN : status.equals("saving") ? AMBER : status.equals("the leader's") ? PURPLE
-                : status.equals("rent-free") ? BLUE : TEAL;
+            CompoundTag loan = mortgages.get(r.getLong("anchor"));
+            if (loan != null && status.equals("owns")) status = "owns, mortgaged";          // bought with the bank's loan (Bank)
+            int sc = status.equals("owns, mortgaged") ? (loan != null && loan.getInt("missed") > 0 ? RED : BROWN) : status.equals("owns") ? GREEN
+                : status.equals("saving") ? AMBER : status.equals("the leader's") ? PURPLE : status.equals("rent-free") ? BLUE : TEAL;
             g.fill(x - 2, hy - 1, x, hy + 9, sc);
             String rent = r.getBoolean("rent_free") ? "free (" + r.getInt("rent_due") + "c later)"
                 : r.getInt("rent") == 0 ? "—" : r.getInt("rent") + "c" + (r.getInt("owed") > 0 ? " (owes " + r.getInt("owed") + ")" : "");
@@ -1213,7 +1306,12 @@ public class CityScreen extends Screen {
             // Toward the price: a bar, and the figures.
             int px = x + cols[4], pw = cols[5] - cols[4] - 4;
             int price = r.getInt("price"), saved = r.getInt("saved");
-            if (status.equals("owns")) {
+            if (loan != null && status.equals("owns, mortgaged")) {
+                // Paid off so far, as a bar: what is left owing, and the week's payment.
+                int lent = Math.max(1, loan.getInt("lent"));
+                Ui.bar(g, px, hy + 1, pw / 2, 6, Math.min(1f, (lent - loan.getInt("principal")) / (float) lent), loan.getInt("missed") > 0 ? RED : BROWN);
+                small(g, Ui.clip(font, "owes " + loan.getInt("owed") + ", " + loan.getInt("weekly") + "/wk", (int) ((pw / 2 - 3) / 0.75)), px + pw / 2 + 3, hy + 1, Ui.MUTED);
+            } else if (status.equals("owns")) {
                 small(g, Ui.clip(font, "bought" + (price > 0 ? " for " + price + "c" : ""), (int) (pw / 0.75)), px, hy + 1, GREEN);
             } else if (price > 0) {
                 Ui.bar(g, px, hy + 1, pw / 2, 6, Math.min(1f, saved / (float) price), saved > 0 ? AMBER : Ui.EDGE_SOFT);
@@ -1229,7 +1327,15 @@ public class CityScreen extends Screen {
                 tip.add(Component.literal(r.getString("kind") + ", " + r.getString("address") + " — " + r.getString("terms")));
                 if (r.getInt("rent") > 0) tip.add(Component.literal("Rent " + r.getInt("rent") + "c a day" + (r.getString("rent_note").isEmpty() ? "" : "; " + r.getString("rent_note"))));
                 else if (r.getBoolean("rent_free")) tip.add(Component.literal("Rent-free: " + r.getString("rent_note")));
-                if (price > 0) tip.add(Component.literal("Put by " + saved + " of " + price + "c"));
+                if (price > 0 && loan == null) tip.add(Component.literal("Put by " + saved + " of " + price + "c"));
+                if (loan != null) {
+                    tip.add(Component.literal("Mortgage: owes the bank " + loan.getInt("owed") + "c of " + loan.getInt("lent") + " lent; " + loan.getInt("weekly")
+                        + "c a week, about " + loan.getInt("weeks_left") + " weeks to go").withColor(0xFFC9A26B));
+                    if (loan.getInt("missed") > 0) tip.add(Component.literal("Behind: " + loan.getInt("arrears") + "c, " + loan.getInt("missed")
+                        + " missed — three and the bank takes it back").withColor(0xFFE07070));
+                } else if (refused.containsKey(r.getLong("anchor"))) {
+                    tip.add(Component.literal("The bank: no mortgage yet — " + refused.get(r.getLong("anchor"))));
+                }
                 tip.add(Component.literal((r.getBoolean("wants") ? "Wants a house of its own: " : "Content to rent: ") + r.getString("why")));
                 if (dh != null) {
                     tip.add(Component.literal("Furnished " + dh.getInt("score") + " of 10" + (dh.getString("line").isEmpty() ? " — bare as yet"

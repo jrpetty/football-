@@ -1169,6 +1169,7 @@ with plain blocks, so a building is never held up.
 | Brewery | 9×9 | Timber still-house on a stone footing: two brewing stands on a stone bench, cauldrons, casks, a window to the street |
 | Library | 9×9 | Stone hall with tall windows, walls lined with bookshelves, an enchanting table on a carpet between lecterns |
 | School | 9×11 | Timber schoolroom under a steep roof, tall windows down both sides: two rows of desks (a top slab, a stair for a bench) either side of the aisle, the teacher's lectern, and at the back a blackboard over a cupboard of barrels, a bookshelf either side |
+| Bank | 9×11 | Stone house of business: a counter across the room with a lantern on it, the ledger on a lectern by the door, and a vault at the back, its strongboxes behind a gate and grille of iron bars the banker sets |
 
 Builders take the place the town plan has for the building. Of the first few good
 lots they pick the one that costs least to build on. They level it (filling the low
@@ -2929,7 +2930,7 @@ house of its own (a house or a manor the village built) and sleeps there.
   of 44 coins put by"), counts toward its worth and the village's, and pays the rent if the purses
   run dry. When it covers the house's price (35 coins for a house, 55 for a two-storey one, 120 for
   a manor, a quarter more with each age) the household buys the house outright from the village —
-  no deposit, no instalments, so nobody ever has a house taken back — and pays no more rent; the
+  no deposit, no instalments (until the town has a bank: see *The bank*) — and pays no more rent; the
   price goes into the treasury and onto the books. A household that changes its mind gets its
   savings back; one that moves out takes them with it (the last of a household to die leaves them
   to the village).
@@ -2955,6 +2956,74 @@ of them saving to buy), 1 waiting; 1 empty (to let: house 1c a day); rent 7 coin
 the board "Homes: ... 7 rented, 2 owned, 3 saving to buy; rent 7 yesterday". The town's books get it
 all, a row a household: where, on what terms, the rent, what it owes, what it has put by against
 the price, and whether it wants to own and why.
+
+### The bank
+
+A town of thirty in the Iron Age builds a **bank** on one of the trades' lots facing the square: a
+stone house of business with a counter across the room and a lantern on it, a lectern by the door
+where the bank's ledger lies open for anybody to read, and at the back the vault, its strongboxes
+along the wall behind a barred gate and grille. Until it stands, nothing changes. The day it does
+it opens ("the bank opened its doors at No. 3, Market Row: ..."), the elder tells the morning
+assembly, and the most careful, shrewdest hand the village can spare — a Merchant before a steady
+soul, never a workshop's only hand nor the storekeeper — gives up its trade to keep it, at a
+craftsman's wage. The banker makes the vault's bars out of six of the village's spare iron ingots
+(sixteen bars; the rest go to the stores), writes the ledger up in a book and quill made of a book,
+an ink sac and a feather from the stores, lays it on the lectern, and writes it up again each week:
+the vault, the deposits and the loans, the week's interest, every mortgage and the savers.
+
+* **Savings.** Each morning, after the wages, the rent and the tithe, a folk with more in its purse
+  than its week wants (a dozen coins to live on, its share of the week's rent, and of the week's
+  payment on its house) puts part of the rest in the bank — by its nature: a thrifty one three parts
+  in four, a careful one six in ten, most four in ten, one free with its coin a fifth, a spendthrift
+  none of it. (Merchants are the most careful with their coin, then Traditionalists, Guardians and
+  Homemakers; Free Spirits spend theirs. Hardworking and grumpy folk hold on to it; easygoing,
+  generous and merry ones let it go; the Thrifty knack counts twice, the Haggler once.) Short of
+  what the rent wants, it draws its savings out before the rent is taken. A household saving up for
+  its house keeps that by itself, as before. The tithe is reckoned on what a folk has at the bank
+  as well as in its purse: on the rest day the bank pays a tenth of every account of ten coins or
+  more to the treasury, out of the account.
+* **Mortgages.** The bank lends what is deposited with it, but never all of it: three coins in ten
+  of the deposits stay in the vault for whoever comes to draw. A household that wants a house of
+  its own and has a fifth of the price put by (a Nest Egg counts) draws its savings at the bank
+  toward the price and borrows the rest — if its wages carry the payment (a week's payment no more
+  than a third of what its grown folk earn in a week), over the shortest term from eight weeks to
+  twelve that they carry. The village has the whole price there and then, and the household owns
+  the house ("the bank lent Tansy and Rook 41 coins toward No. 4, Elm Street (14 down; 7 a week for
+  8 weeks)").
+* **The bank's week.** Every seventh day from its opening, the bank's round: each mortgage runs up a
+  week's interest (four in the hundred on what is still owed) and the week's payment is taken from
+  the household's purses, then its savings at the bank. What the loans earned pays the savers their
+  interest — a coin in a hundred a week, but never more than six parts in ten of what the loans
+  earned: no loans, no interest. Of what the bank keeps, half goes to the treasury and half stays
+  in the vault against a bad debt. No coin is made anywhere: a saver's interest is coin a borrower
+  paid in, and every coin is in a purse, the treasury, what a household has put by, the vault, or a
+  player's pack.
+* **Falling behind.** A payment missed goes on the arrears, and the banker warns the household
+  ("Tansy and Rook missed a payment on their mortgage..."), then warns it again. Three weeks'
+  payments behind, the bank takes the house back: the village buys it off the bank for what is
+  still owed on it (never the day's wages: the bank writes off what the treasury cannot spare), and
+  the household stays on in it as the village's tenant, paying rent. The chronicle tells it, and
+  they remember it. A mortgaged house its household leaves (moving up, marrying into the other
+  house, the last of them gone) has its mortgage settled out of their purses and savings, the
+  village making up the rest; grown children who stay on take the mortgage on.
+* **You and the bank.** Talk to the banker (the **Money** tab's *The bank*, or say "deposit 20",
+  "withdraw 10", "my account") or use `/village bank deposit 20` / `withdraw 10`. Your account earns
+  the savers' interest too. Whatever you had put by at the treasury before there was a bank comes
+  over to it the first time you call (when the treasury can spare it over the day's wages). Standing in an empty house, say "a mortgage on this house" (or
+  `/village bank mortgage`): a fifth down (out of your account first, then your pack) and the bank's
+  loan for the rest, paid on the bank's round out of your account — and out of the rent your tenants
+  pay you, if you let it — over ten weeks. `/village bank repay 10` pays it down sooner. Three weeks
+  behind and the house goes back to the village. The treasury's own small loans ("borrow 30",
+  "repay") are as they were.
+* **Where to see it.** The books' **Money** page has the bank where the in-and-out bars were: the
+  vault, what is on deposit, what is lent out and kept back, the week's interest earned and paid
+  and the treasury's share, and a row for every mortgage (what is owed, the week's payment, the
+  weeks to go, payments missed; the mouse over one for the whole of it). The **Homes** page marks
+  each mortgaged house "owns, mortgaged" with a bar of what is paid off, and says why the bank has
+  not lent to a household that wants to buy. A folk's card has a **Bank** line (its savings, its
+  mortgage, how careful it is with its coin; the banker's, its bank), its worth counts its savings
+  less what it owes, and "How are you doing for money?" gets the bank in its answer. Ask the banker
+  "What are you working on?" and it tells you its books — or who is behind with their payments.
 
 ### Knacks: what each folk chooses for itself
 
@@ -3405,6 +3474,13 @@ ripen, days pass, folk work and houses go up at that pace.
 * `/village house` — the nearest village's houses: who lives in each, on what terms, and
   what is for sale. `house buy` buys the empty house you stand in; `house let <coins>` lets
   yours out at that rent a day (0 to take it back); `house rent` collects the rent.
+* `/village bank` — the nearest village's bank: the vault, the deposits, the loans, what it keeps
+  back and may lend, last week's interest and the treasury's share, every mortgage and the biggest
+  savers, and your account. `bank deposit <coins>` / `bank withdraw <coins>` for your account;
+  `bank mortgage` buys the empty house you stand in with a fifth down; `bank repay <coins>` pays
+  your mortgage down. `bank week` (operators) runs the bank's round now; `bank showcase`
+  (operators) puts a bank up ten blocks in front of you, opens it and sets its banker at the
+  counter, with the bars and the ledger in (for the screenshots).
 * `/village stats [page]` — the town's books on the analytics screen (as clicking the village
   board does), opened at a page if one is given (0 the Overview to 18 the Board; 12 is the Stock,
   13 Research); from the console, the reading of what drives the village's growth.

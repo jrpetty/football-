@@ -154,6 +154,7 @@ public final class ClientSetup {
                 case SHOP -> Items.EMERALD;
                 case SCOUT -> Items.COMPASS;
                 case HUNT -> Items.BOW;
+                case BANK -> Items.GOLD_INGOT;
                 case NONE -> Items.AIR;
             });
         }

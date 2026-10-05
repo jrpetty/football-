@@ -281,6 +281,9 @@ public final class Commerce {
     public static String bank(VillageFolkEntity f, Player p, String text) {
         UUID village = f.ownerId();
         if (village == null || !(f.level() instanceof ServerLevel)) return "There's no treasury to keep it in.";
+        // Once the town has a bank, savings and mortgages are its business (Bank); the treasury's small loans stay here.
+        String banked = Bank.ask(f, p, text);
+        if (banked != null) return banked;
         long day = Dealings.day(f);
         String t = text.toLowerCase(Locale.ROOT);
         String key = "bank/" + p.getUUID();

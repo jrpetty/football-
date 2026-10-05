@@ -501,7 +501,7 @@ public final class Economy {
         int purses = Homes.savedTotal(village);
         for (AssistantEntity a : Villages.folkOf(village)) if (a instanceof VillageFolkEntity f) purses += f.purse();
         Ledger.note(village, "worth.stores", Integer.toString((int) Math.round(stores)));
-        return (int) Math.round(stores) + Ledger.coins(village) + purses;
+        return (int) Math.round(stores) + Ledger.coins(village) + purses + Bank.cash(village);   // and the coin in the bank's vault
     }
 
     /** The village's worth as last counted (each morning), or -1 before the first count. */
@@ -596,6 +596,7 @@ public final class Economy {
         sb.append("\nWorth: ").append(w >= 0 ? Integer.toString(w) : "not yet counted").append(" — the stores ")
             .append(stores == null || stores.isEmpty() ? "?" : stores).append(", the treasury ").append(Ledger.coins(id))
             .append(", the folk's savings ").append(purses).append(put > 0 ? " (" + put + " of it put by toward their houses)" : "").append(".");
+        sb.append(Bank.economyLine(id));                  // the bank's vault, its deposits and loans, its week (Bank)
         return sb.toString();
     }
 

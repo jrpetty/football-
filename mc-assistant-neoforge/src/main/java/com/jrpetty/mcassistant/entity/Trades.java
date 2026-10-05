@@ -151,6 +151,13 @@ public final class Trades {
                 List.of(need("arrows", s -> s.is(Items.ARROW), 8, "the smith and the fletcher's feathers"),
                     need("a bow or a sword", s -> s.is(Items.BOW) || s.is(net.minecraft.tags.ItemTags.SWORDS), 1, "the smith")),
                 "meat for the larder and the café, leather and wool for the tailor, feathers for arrows");
+            // The banker (Bank): it makes nothing; its work is the village's savings and its loans.
+            case BANK -> new Trade("I keep the bank: folk put by with me what they don't need this week, I lend it out to"
+                    + " households buying their houses, and I keep the ledger on the lectern and the coin behind the bars",
+                List.of(),
+                List.of(need("a book, an ink sac and a feather for the ledger", s -> s.is(Items.BOOK) || s.is(Items.INK_SAC)
+                    || s.is(Items.FEATHER), 1, "the stores")),
+                "interest for the savers, houses for the borrowers, and a share of what the bank earns for the treasury");
             case NONE -> new Trade("I'm between trades just now", List.of(), List.of(), "whatever the village needs a hand with");
         };
     }
