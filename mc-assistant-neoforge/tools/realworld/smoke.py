@@ -441,13 +441,23 @@ def bell_stage(r, look, cx, cz):
                 goods.append((23, "minecraft:bell 1"))
             for slot, item in goods:
                 say("stores: " + r.cmd("item replace block %d %d %d container.%d with %s" % (sx, sy, sz, slot, item)))
+        # The town's works look at the frame once a minute until a hand is called to it, then every couple
+        # of seconds: up to four minutes, saying each time what it waits on; given up early if it is waiting on
+        # something the stores cannot settle (a first building, a hand that never comes) after two.
         started = time.time()
-        while time.time() - started < 180:
+        last = ""
+        while time.time() - started < 240:
             time.sleep(6)
             out = r.cmd(where + "village bell")
-            fm = re.search(r"FRAME-AT [^.]*\.", out)
-            say("frame: " + (fm.group(0) if fm else out[:200]))
+            fm = re.search(r"FRAME-AT [^.]*\.( WAITING for [^.]*\.)?", out)
+            line = fm.group(0) if fm else out[:200]
+            if line != last:
+                say("frame (%ds): %s" % (time.time() - started, line))
+                last = line
             if " DONE" in out:
+                break
+            if time.time() - started > 120 and "not begun" in out and "WAITING for the timber" not in out:
+                say("the frame has not begun after two minutes; going on without it")
                 break
     frame = re.search(r"FRAME-AT (-?\d+) (-?\d+) (-?\d+) ALONG (\w+) FACING (\w+) DONE \(\d+/\d+ pieces, (\w+)", out)
     step = {"north": (0, -1), "south": (0, 1), "east": (1, 0), "west": (-1, 0)}

@@ -131,13 +131,29 @@ public final class BellFrame {
         NO_LIGHT.clear();
         NOW.clear();
         NO_BELL.clear();
+        CALLED.clear();
+        NO_MAKINGS.clear();
+        WAITING.clear();
     }
 
-    /** A town settled in: past its first day (a camp's first day is for its first buildings). */
-    private static boolean settled(ServerLevel level, UUID village) {
-        if (NOW.contains(village)) return true;
-        long founded = com.jrpetty.mcassistant.village.Chronicle.foundedOn(village);
-        return founded >= 0 && level.getDayTime() / 24000L - founded >= 1;
+    /** When each town last called a hand to its frame (its works are looked at every couple of seconds while one is wanted). */
+    private static final Map<UUID, Long> CALLED = new ConcurrentHashMap<>();
+    /** When each town's stores were last found short of the frame's makings. */
+    private static final Map<UUID, Long> NO_MAKINGS = new ConcurrentHashMap<>();
+    /** What each town's frame is waiting on, in words (/village bell, the smoke test). */
+    private static final Map<UUID, String> WAITING = new ConcurrentHashMap<>();
+
+    /**
+     * A town settled in: its first building up (a camp's first logs and planks are for its first roof).
+     * Not "past its first day": a clock set back (/time set) put a town's every day before its founding,
+     * and its frame was never begun.
+     */
+    private static boolean settled(UUID village) {
+        return NOW.contains(village) || !Villages.builtList(village).isEmpty();
+    }
+
+    private static void waiting(UUID village, String why) {
+        WAITING.put(village, why);
     }
 
     /** The town's frame, planned or standing, or null. */
@@ -205,7 +221,10 @@ public final class BellFrame {
     /** Is there a frame planned for this town that is not finished (its bell not in it)? Its works go quicker then. */
     static boolean building(ServerLevel level, UUID village) {
         Frame f = of(village);
-        return f != null && (f.begun || NOW.contains(village)) && !hung(level, f);
+        if (f == null || hung(level, f)) return false;
+        // Begun, or a hand called to it lately: a look every couple of seconds, or the hand called would be let
+        // go (TownJobs keeps it half a minute after the last call) before the next look found it there.
+        return f.begun || NOW.contains(village) || level.getGameTime() - CALLED.getOrDefault(village, -100000L) < 2400L;
     }
 
     // ------------------------------------------------------------------ where it goes
@@ -354,8 +373,21 @@ public final class BellFrame {
                 save(id, null);
                 return;
             }
-            if (!f.begun && (!settled(level, id) || !choose(level, v, f))) return;   // its first day, or not the makings yet
-            if (!TownJobs.atWork(level, v, "bellframe", f.origin, "building the town bell's frame")) return;
+            if (!f.begun) {
+                if (!settled(id)) { waiting(id, "its first building comes first"); return; }
+                if (now - NO_MAKINGS.getOrDefault(id, -100000L) < 600L) return;
+                if (!choose(level, v, f)) {
+                    NO_MAKINGS.put(id, now);
+                    waiting(id, "the timber: six logs and ten planks in the stores (or the stone bricks, in the Stone Age)");
+                    return;
+                }
+            }
+            CALLED.put(id, now);
+            if (!TownJobs.atWork(level, v, "bellframe", f.origin, "building the town bell's frame")) {
+                waiting(id, "a hand from the town's works, on its way or yet to be spared");
+                return;
+            }
+            waiting(id, "");
             BlockState put = pay(level, v, f, p);
             if (put == null) {
                 if (p.part() == Part.LIGHT) NO_LIGHT.put(id, now);
@@ -372,7 +404,11 @@ public final class BellFrame {
         }
         // The frame stands. The town's bell to it: down from where it hangs, into the stores, and up in the frame.
         if (bell != null && !bell.equals(f.bell())) {
-            if (!TownJobs.atWork(level, v, "bellframe", bell, "taking the town bell down, to hang it in its frame")) return;
+            CALLED.put(id, now);
+            if (!TownJobs.atWork(level, v, "bellframe", bell, "taking the town bell down, to hang it in its frame")) {
+                waiting(id, "a hand to take the old bell down and bring it");
+                return;
+            }
             takeDown(level, v, bell);
             return;
         }
@@ -380,10 +416,15 @@ public final class BellFrame {
         if (now - NO_BELL.getOrDefault(id, -100000L) < 600L) return;
         if (Market.stock(level, id, s -> s.is(Items.BELL)) == 0) {
             NO_BELL.put(id, now);
+            waiting(id, "a bell: none in the town or its stores");
             return;
         }
         if (!clear(level.getBlockState(f.bell()))) return;
-        if (!TownJobs.atWork(level, v, "bellframe", f.origin, "hanging the town bell in its frame")) return;
+        CALLED.put(id, now);
+        if (!TownJobs.atWork(level, v, "bellframe", f.origin, "hanging the town bell in its frame")) {
+            waiting(id, "a hand to hang the bell");
+            return;
+        }
         if (!TownWork.take(level, v, s -> s.is(Items.BELL), 1)) return;
         level.setBlock(f.bell(), Blocks.BELL.defaultBlockState().setValue(BellBlock.FACING, f.along)
             .setValue(BellBlock.ATTACHMENT, BellAttachType.DOUBLE_WALL), 3);
@@ -519,6 +560,8 @@ public final class BellFrame {
             .append(hung(level, f) ? " DONE" : standing(level, f) ? " STANDING (waiting for its bell)" : " BUILDING")
             .append(" (").append(up).append('/').append(all).append(" pieces, ").append(f.begun ? (f.stone ? "stone" : f.wood + " timber") : "not begun")
             .append(").");
+        String why = WAITING.get(v.id());
+        if (!hung(level, f) && why != null && !why.isEmpty()) sb.append(" WAITING for ").append(why).append('.');
         List<BlockPos> stores = Villages.storeChests(level, v.id());
         if (!stores.isEmpty()) sb.append(" STORES ").append(stores.get(0).getX()).append(' ').append(stores.get(0).getY()).append(' ')
             .append(stores.get(0).getZ()).append('.');
