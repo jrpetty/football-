@@ -100,10 +100,30 @@ public class SmeltGoal extends Goal {
         s -> s.is(ItemTags.PLANKS),             //   300
         s -> s.is(Items.STICK));                //   100
 
-    /** The same, with coal last: a village short of coal (the Stone Age counts it) burns its wood first. */
-    private static final java.util.List<Predicate<ItemStack>> COAL_LAST = java.util.List.of(
+    /**
+     * What a village short of coal for its age burns: anything but coal. The Stone Age asks for
+     * coal in the stores, and the smelters were burning it — coal last, but coal all the same
+     * whenever the pack held no wood, and what the couriers carried out with the ore was eight
+     * coal a trip: a mountain town held between none and a hundred and twenty-seven coal through
+     * forty-two days of the Stone Age, and was short of the forty-eight it wanted on thirty-two of
+     * them. Charcoal is coal to the stores, so it is not burnt either; a smelter with no wood lets
+     * the furnace go cold until the stores have the coal.
+     */
+    private static final java.util.List<Predicate<ItemStack>> NO_COAL = java.util.List.of(
         s -> s.is(Items.DRIED_KELP_BLOCK), s -> s.is(Items.BLAZE_ROD), s -> s.is(ItemTags.LOGS), s -> s.is(ItemTags.PLANKS),
-        s -> s.is(Items.STICK), s -> s.is(Items.COAL) || s.is(Items.CHARCOAL), s -> s.is(Items.COAL_BLOCK));
+        s -> s.is(Items.STICK));
+
+    /** The fuels this smelter burns just now, best first. */
+    private java.util.List<Predicate<ItemStack>> fuels() {
+        return assistant.savingCoal() ? NO_COAL : FUEL_PRIORITY;
+    }
+
+    /** Would a smelter put this on the fire — with the village putting coal by for its age, or not?
+     *  (Tests, and anybody asking the same question.) */
+    public static boolean burns(ItemStack s, boolean savingCoal) {
+        for (Predicate<ItemStack> f : savingCoal ? NO_COAL : FUEL_PRIORITY) if (f.test(s)) return true;
+        return false;
+    }
 
     // Foods cook in a furnace or smoker; ores in a furnace or blast furnace;
     // stone/sand/logs only in a plain furnace.
@@ -226,9 +246,11 @@ public class SmeltGoal extends Goal {
         assistant.getNavigation().stop();
     }
 
+    /** The fuel it carries that it will actually burn (fuels): counted as all of it, a smelter
+     *  holding only coal it may not burn would stand at a cold furnace "with fuel" for ever. */
     private int countFuel() {
         int n = 0;
-        for (Predicate<ItemStack> f : FUEL_PRIORITY) n += assistant.countMatching(f);
+        for (Predicate<ItemStack> f : fuels()) n += assistant.countMatching(f);
         return n;
     }
 
@@ -328,7 +350,7 @@ public class SmeltGoal extends Goal {
         //    furnace is already cooking on the fuel it consumed, so leave it be
         //    and don't waste ours (and never bail while it's still burning).
         if (!isLit(furnacePos) && furnace.getItem(1).isEmpty() && !furnace.getItem(0).isEmpty()) {
-            for (Predicate<ItemStack> fuelType : assistant.savingCoal() ? COAL_LAST : FUEL_PRIORITY) {
+            for (Predicate<ItemStack> fuelType : fuels()) {
                 var inv = assistant.getInventoryItems();
                 boolean loaded = false;
                 for (int i = 0; i < inv.size(); i++) {

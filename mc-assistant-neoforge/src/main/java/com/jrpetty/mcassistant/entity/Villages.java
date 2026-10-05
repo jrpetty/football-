@@ -1106,6 +1106,18 @@ public final class Villages {
     }
 
     /**
+     * How far above and below the heart the village's stores reach: the one height every count
+     * of them and every draw on them uses. The plan counted sixty-four up and down while the
+     * builder looked thirty-two (and only a hundred and twelve out, against the plan's two
+     * hundred and twenty): a mountain town of sixty-six whose heart stands at ninety-five, its
+     * plots down the slopes and its mines more than a hundred and fifty blocks off, counted 921
+     * logs and 1,245 stone and had been told by its builders, within the two minutes before, that
+     * it could not afford a meeting hall whose start wants at most 1,367 of them — and it sat in
+     * the Stone Age for forty days.
+     */
+    public static final int STORES_TALL = 64;
+
+    /**
      * What the settlement holds, counted from the chests within {@code radius}
      * of its heart.
      *
@@ -1139,7 +1151,7 @@ public final class Villages {
             boolean before = ZoneChests.askAs(true);
             java.util.List<ZoneChests.Found> stores;
             try {
-                stores = ZoneChests.around(level, centre, radius, 64);
+                stores = ZoneChests.around(level, centre, radius, STORES_TALL);
             } finally {
                 ZoneChests.askAs(before);
             }
@@ -1438,10 +1450,15 @@ public final class Villages {
         if (at == Age.WOOD) { housesForBeds(villageId, folk, out); return out; }
 
         if (built(villageId, "fortify") < 1) out.add("fortify");        // the wall
-        // A Stone Age village keeps a few homes spare, not just one.
-        if (!house && folk >= housing(villageId) - 5) out.add("house");
         if (built(villageId, "smeltery") < 1) out.add("smeltery");
         if (built(villageId, "hall") < 1) out.add("hall");
+        // A Stone Age village keeps a few homes spare, not just one — but after the buildings the
+        // age asks for once. A house kept spare stood in front of the meeting hall, and a growing
+        // village nearly always wants one: a mountain town that spent forty days in the Stone Age
+        // had a house at the head of its list on twenty-five of the days it was looked at (ten of
+        // them only a house kept spare) and its hall on five. A house for somebody with no bed
+        // (the first house rule, above) still comes before all of it.
+        if (!house && folk >= housing(villageId) - 5) out.add("house");
         // The amenities (a café, the crafts' buildings) go on a list of their own, built
         // after everything the age asks for and its homes: they never hold an age back.
         List<String> extras = new ArrayList<>();
@@ -1869,6 +1886,13 @@ public final class Villages {
         UUID cur = LEAD.get(villageId);
         Long since = LEAD_AT.get(villageId);
         return cur != null && since != null && now - since < LEAD_TERM ? cur : null;
+    }
+
+    /** Is the village's building in another living hand's charge just now (one that died or left
+     *  gives the post up at once, as {@link #isLead} has it)? */
+    public static boolean ledByAnother(UUID villageId, UUID me, long now) {
+        UUID cur = currentLead(villageId, now);
+        return cur != null && !cur.equals(me) && livesHere(villageId, cur);
     }
 
     /** Is this hand the lead right now (without taking the post if it is free)? */

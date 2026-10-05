@@ -1376,7 +1376,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case GUARD -> s -> s.is(Items.TORCH) || s.is(Items.ARROW)
                 || (mayShoot(s) && !hasBow());
             case RANCH -> BREEDING_FOOD;
-            case SMELT -> SMELT_FUEL;
+            case SMELT -> smeltFuel();
             case HUNT -> s -> s.is(Items.ARROW);
             case FISH, STORE, HAUL, NONE, SMITH, TAILOR, BEEKEEP, BREW, ENCHANT, COOK, SHOP, SCOUT -> null;
         };
@@ -1832,7 +1832,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case GUARD -> countCarried(s -> s.is(Items.TORCH)) < 6
                 || (hasBow() && countCarried(s -> s.is(Items.ARROW)) < 8);
             case RANCH -> countCarried(BREEDING_FOOD) < 6;
-            case SMELT -> countCarried(SMELT_FUEL) < 8;
+            case SMELT -> countCarried(smeltFuel()) < 8;
             default -> false;
         };
     }
@@ -1854,7 +1854,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case MINE -> s -> s.is(Items.TORCH) || s.is(Items.LADDER);
             case GUARD -> s -> s.is(Items.TORCH) || s.is(Items.ARROW);
             case RANCH -> BREEDING_FOOD;
-            case SMELT -> SMELT_FUEL;
+            case SMELT -> smeltFuel();
             default -> null;
         };
     }
@@ -2268,7 +2268,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 || countCarried(BREEDING_FOOD) < 2;
             case GUARD -> countCarried(s -> isToolNamed(s, "_sword")) == 0;
             case FISH -> countCarried(s -> s.is(Items.FISHING_ROD)) == 0;
-            case SMELT -> countCarried(SMELT_FUEL) == 0;
+            case SMELT -> countCarried(smeltFuel()) == 0;
             case HUNT -> countCarried(s -> isToolNamed(s, "_sword")) == 0 && !hasBow();
             case STORE, HAUL, NONE, SMITH, TAILOR, BEEKEEP, BREW, ENCHANT, COOK, SHOP, SCOUT -> false;
         };
@@ -3700,7 +3700,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case GUARD -> s.is(Items.TORCH) ? 16 : (s.is(Items.ARROW) ? 32
                 : (s.get(DataComponents.FOOD) != null ? 8 : 0));
             case SMELT -> (s.is(Items.RAW_IRON) || s.is(Items.RAW_GOLD) || s.is(Items.RAW_COPPER)) ? 64
-                : ((s.is(Items.COAL) || s.is(Items.CHARCOAL)) ? 32
+                : ((s.is(Items.COAL) || s.is(Items.CHARCOAL)) ? (savingCoal() ? 0 : 32)
                 // What it is firing and cutting for the masons (Masonry), and the sand for its glass.
                 : (s.is(Items.COBBLESTONE) || s.is(Items.STONE) || s.is(Items.CLAY_BALL)) ? 64
                 : (s.is(Items.SAND) || s.is(Items.RED_SAND)) ? 32
@@ -6329,14 +6329,13 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 // Iron before glass — unless the village has next to no glass at all (no bottles for
                 // the brewer, the beekeeper or the café).
                 int sand = countMatching(s -> s.is(Items.SAND) || s.is(Items.RED_SAND));
-                if (sand > 0 && (countMatching(SMELTABLE_ORE) == 0 || wantsGlass()) && (countMatching(s -> s.is(Items.COAL) || s.is(Items.CHARCOAL)) > 0
-                        || countMatching(s -> s.is(ItemTags.PLANKS) || s.is(ItemTags.LOGS)) > 0)) {
+                // (Fuel is what it will burn: not the coal, while the village puts it by for its age.)
+                if (sand > 0 && (countMatching(SMELTABLE_ORE) == 0 || wantsGlass()) && countMatching(smeltFuel()) > 0) {
                     enqueue(Job.smelt("sand", sand));
                     return true;
                 }
-                boolean hasFuel = countMatching(s -> s.is(Items.COAL) || s.is(Items.CHARCOAL)) > 0
-                    || countMatching(s -> s.is(ItemTags.PLANKS) || s.is(ItemTags.LOGS)) > 0
-                    || scoopFromChests(SMELT_FUEL, 16, chestRange()) > 0;
+                boolean hasFuel = countMatching(smeltFuel()) > 0
+                    || scoopFromChests(smeltFuel(), 16, chestRange()) > 0;
                 int iron = countMatching(s -> s.is(Items.RAW_IRON) || s.is(Items.IRON_ORE) || s.is(Items.DEEPSLATE_IRON_ORE));
                 int gold = countMatching(s -> s.is(Items.RAW_GOLD) || s.is(Items.GOLD_ORE) || s.is(Items.DEEPSLATE_GOLD_ORE));
                 int copper = countMatching(s -> s.is(Items.RAW_COPPER) || s.is(Items.COPPER_ORE) || s.is(Items.DEEPSLATE_COPPER_ORE));
@@ -6551,6 +6550,22 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     public static final java.util.function.Predicate<ItemStack> SMELT_FUEL = s ->
         s.is(Items.COAL) || s.is(Items.CHARCOAL)
         || s.is(ItemTags.LOGS) || s.is(ItemTags.PLANKS);
+
+    /** Timber, the fuel that is not coal. */
+    public static final java.util.function.Predicate<ItemStack> WOOD_FUEL = s ->
+        s.is(ItemTags.LOGS) || s.is(ItemTags.PLANKS);
+
+    /**
+     * What this smelter's furnaces run on, as its kit: coal, charcoal and timber; or, while its
+     * village is putting coal by for its age (savingCoal), timber alone. The coal a smelter
+     * carries is not in the stores the age counts: it kept thirty-two back in its pack and its kit
+     * topped up with whatever fuel came first out of the chest, so six smelters could hold a
+     * couple of hundred coal between them while the village was short of forty-eight. Saving,
+     * it keeps none (jobDepositReserve), fetches wood, and burns no coal (SmeltGoal).
+     */
+    protected java.util.function.Predicate<ItemStack> smeltFuel() {
+        return savingCoal() ? WOOD_FUEL : SMELT_FUEL;
+    }
 
     /** Raw or block-form ore the smeltery keeper takes as input. */
     public static final java.util.function.Predicate<ItemStack> SMELTABLE_ORE = s ->
@@ -6815,8 +6830,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         int moved = 0;
         // Tall as well as wide: chests on a hillside or down by a river sit
         // twenty blocks above or below the heart, and the block-entity maps
-        // this reads make height free.
-        for (ZoneChests.Found found : ZoneChests.around(level(), origin, radius, 32)) {
+        // this reads make height free. As tall as the village's own count of its
+        // stores (Villages.STORES_TALL): what the plan counts, a builder can draw.
+        for (ZoneChests.Found found : ZoneChests.around(level(), origin, radius, Villages.STORES_TALL)) {
             if (!found.stillThere() || !ZoneChests.isStashable(found)) continue;
             Container c = found.container();
             for (int i = 0; i < c.getContainerSize() && moved < max; i++) {
@@ -6845,7 +6861,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         int spare = countCarried(what) - keep;
         if (spare <= 0) return 0;
         int moved = 0;
-        for (ZoneChests.Found found : ZoneChests.around(level(), origin, radius, 32)) {
+        for (ZoneChests.Found found : ZoneChests.around(level(), origin, radius, Villages.STORES_TALL)) {
             if (moved >= spare) break;
             if (!found.stillThere() || !ZoneChests.isStashable(found)) continue;
             Container c = found.container();

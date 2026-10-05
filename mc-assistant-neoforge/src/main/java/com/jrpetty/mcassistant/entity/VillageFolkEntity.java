@@ -4830,7 +4830,14 @@ public class VillageFolkEntity extends AssistantEntity {
                 }
             }
             if (got <= 0) break;
-            drawFrom(villageCentre, s -> s.is(net.minecraft.world.item.Items.COAL) || s.is(net.minecraft.world.item.Items.CHARCOAL), 8, buildStoresRadius());
+            // Fuel with it — but not the coal the age is putting by: the smelter burns wood then
+            // (SmeltGoal), and what goes out to it is logs the builders can spare.
+            if (!savingCoal()) {
+                drawFrom(villageCentre, s -> s.is(net.minecraft.world.item.Items.COAL) || s.is(net.minecraft.world.item.Items.CHARCOAL), 8, buildStoresRadius());
+            } else {
+                int wood = Math.min(8, logsToSpare(server, village));
+                if (wood > 0) drawFrom(villageCentre, s -> s.is(net.minecraft.tags.ItemTags.LOGS), wood, buildStoresRadius());
+            }
             haulFor = f.getUUID();
             brain("taking " + got + " " + what + " out to " + f.displayNameCap());
             return true;
@@ -4841,7 +4848,7 @@ public class VillageFolkEntity extends AssistantEntity {
     /** What a courier carries out to the smelter: ore, fuel, and the makings of its mason's work. */
     private static final java.util.function.Predicate<net.minecraft.world.item.ItemStack> FOR_THE_SMELTER =
         s -> AssistantEntity.SMELTABLE_ORE.test(s) || s.is(net.minecraft.world.item.Items.COAL)
-            || s.is(net.minecraft.world.item.Items.CHARCOAL) || Masonry.MAKINGS.test(s);
+            || s.is(net.minecraft.world.item.Items.CHARCOAL) || s.is(net.minecraft.tags.ItemTags.LOGS) || Masonry.MAKINGS.test(s);
 
     /** A worker's load (what it would bank: its output, not its kit) into this carrier's pack. */
     private int takeLoadFrom(VillageFolkEntity worker) {
@@ -5609,6 +5616,16 @@ public class VillageFolkEntity extends AssistantEntity {
         // Only a folk standing near the village heart takes the job on — the
         // buildings go up where people live, not wherever the volunteer was.
         if (villageCentre.distSqr(blockPosition()) > 40.0 * 40.0) { buildNote("build: too far from the heart"); return; }
+        // The hand raising the village's building is the one that judges it. Every passer-by by
+        // the heart used to look at the stores for itself, with an empty pack, after the lead had
+        // drawn its load out of them: it found them short by that load, set the building aside
+        // for two minutes, and the lead's next look went to whatever stood behind it on the list —
+        // a house, raised out of the load drawn for the meeting hall.
+        if (Villages.ledByAnother(village, getUUID(), now)) {
+            if (drewForBuild) handBackTheBuild();
+            buildNote("build: another hand leads");
+            return;
+        }
         // Ground for it, picked once and kept: a build interrupted at dusk must
         // pick up where it left off, not start again somewhere else.
         Villages.Site site = Villages.siteFor(server, village, project);
@@ -5727,13 +5744,7 @@ public class VillageFolkEntity extends AssistantEntity {
     private boolean affordsTimberFor(String project, Villages.Site site) {
         BlockPos heart = villageCentre;
         if (heart == null) return false;
-        int blocks = BuildGoal.partCounts(project, site.radius()).getOrDefault(BuildGoal.Part.BLOCK, 0);
-        blocks += blocks / 10 + 2;
-        // A hillside takes stone to build up to the floor.
-        if (!project.equals("fortify")) {
-            int[] g = BuildGoal.footprint(project);
-            blocks += BuildGoal.fillCells(level(), site.anchor(), site.facing(), g[0], g[1]).size();
-        }
+        int blocks = blocksToLay(project, site, stillToLay(project, site));
         int carried = countCarried(BuildGoal::isBuildingBlock) + roofPiecesCarried();
         // Three parts in four is enough to begin: the rest is dug while the walls go up, and
         // a build that waited for every last block stood in front of its list for days.
@@ -5742,14 +5753,64 @@ public class VillageFolkEntity extends AssistantEntity {
             || carried + storesHold(heart, buildStoresRadius(), BuildGoal::isBuildingBlock) >= least;
     }
 
+    /**
+     * The blocks a building still wants: the cells of its drawing not yet laid, a tenth more for
+     * the cells that are lost, and the ground to build up to its floor on a hillside.
+     *
+     * <p>Counted from the ground as it stands, when the ground is loaded: a building a load short
+     * of done (BuildGoal stops when the pack runs out, and the next run picks up where it left
+     * off) used to be asked for its whole drawing again before the builder would go back to it —
+     * a meeting hall with its walls and its terrace up would still have wanted its six hundred
+     * blocks, and the terrace again, before it was taken up. The wall is the exception: it
+     * follows the ground as it is laid (BuildGoal), so its drawing is what it costs.
+     */
+    private int blocksToLay(String project, Villages.Site site, @Nullable java.util.Map<BuildGoal.Part, Integer> still) {
+        int drawn = still != null && !project.equals("fortify")
+            ? still.getOrDefault(BuildGoal.Part.BLOCK, 0)
+            : BuildGoal.partCounts(project, site.radius()).getOrDefault(BuildGoal.Part.BLOCK, 0);
+        int blocks = drawn + drawn / 10 + 2;                    // a margin for the cells that are lost
+        if (!project.equals("fortify")) {                       // and the ground to build up
+            int[] g = BuildGoal.footprint(project);
+            blocks += BuildGoal.fillCells(level(), site.anchor(), site.facing(), g[0], g[1]).size();
+        }
+        return blocks;
+    }
+
+    /**
+     * What of a building's drawing is still open ground, part by part — or null when its ground is
+     * not all loaded, in which case nothing is read (a block read off an unloaded chunk would make
+     * the server load it, on this thread, while everything waited).
+     */
+    @Nullable
+    private java.util.Map<BuildGoal.Part, Integer> stillToLay(String project, Villages.Site site) {
+        if (!(level() instanceof net.minecraft.server.level.ServerLevel server)) return null;
+        int[] spread = com.jrpetty.mcassistant.entity.goal.Blueprints.has(project)
+            ? com.jrpetty.mcassistant.entity.goal.Blueprints.fullHalf(project)
+            : new int[]{ BuildGoal.halfOf(project), BuildGoal.halfOf(project) };
+        int reach = Math.max(Math.max(8, site.radius()), Math.max(spread[0], spread[1]) + 1);
+        if (!Land.areaLoaded(server, site.anchor(), reach)) return null;
+        java.util.Map<BuildGoal.Part, Integer> still = new java.util.EnumMap<>(BuildGoal.Part.class);
+        for (BuildGoal.Placement p : BuildGoal.plan(project, site.anchor(), site.facing(), site.radius())) {
+            if (BuildGoal.soft(server.getBlockState(p.pos()))) still.merge(p.part(), 1, Integer::sum);
+        }
+        return still;
+    }
+
     /** How far from the heart the builder reads and draws on the stores: as far
      *  as the village's own plan counts them, not the forty-eight blocks round
      *  the storehouse — the woodpile is in the woods and the stone is at the mine,
      *  and a plan that counted them while the builder could not reach them left
-     *  the village "short of timber" beside a full chest for days. */
+     *  the village "short of timber" beside a full chest for days.
+     *
+     *  <p>It was held to a hundred and twelve when the plan's own count stopped at the
+     *  village's core; the plan has since counted as far as its plots reach (Villages.storesRadius:
+     *  two hundred and twenty for a town of sixty-six), and the builders, still at a hundred and
+     *  twelve, saw too little of what the plan said was there to pay for a meeting hall (see
+     *  Villages.STORES_TALL). Now they see what the plan sees, as a
+     *  folk trading with a player, the drover and a hired hand drawing on the stores already did. */
     private int buildStoresRadius() {
         UUID village = ownerId();
-        return Math.min(112, Math.max(48, village == null ? 48 : Villages.storesRadius(village)));
+        return Math.max(48, village == null ? 48 : Villages.storesRadius(village));
     }
 
     /** How much of this the village's stores hold near its heart. */
@@ -5757,10 +5818,12 @@ public class VillageFolkEntity extends AssistantEntity {
         return storesHold(heart, 48, what);
     }
 
+    /** How much of this the stores within {@code radius} of the heart hold, as high and as deep as
+     *  the village's own count of them reaches (Villages.STORES_TALL). */
     private int storesHold(BlockPos heart, int radius,
                            java.util.function.Predicate<net.minecraft.world.item.ItemStack> what) {
         return ZoneChests.countIn(
-            ZoneChests.around(level(), heart, radius, 32).stream()
+            ZoneChests.around(level(), heart, radius, Villages.STORES_TALL).stream()
                 .filter(f -> f.stillThere() && ZoneChests.isStashable(f)).toList(),
             what);
     }
@@ -5787,45 +5850,25 @@ public class VillageFolkEntity extends AssistantEntity {
         // twenty-seven more storehouse units out of the village's planks for a cube already
         // standing, and carried them about for ever. And a village with its storehouse lays
         // no second one (BuildGoal drops those cells).
-        java.util.Map<BuildGoal.Part, Integer> still = null;
-        if (level() instanceof net.minecraft.server.level.ServerLevel server
-                && Land.areaLoaded(server, site.anchor(), Math.max(8, site.radius()))) {
-            still = new java.util.EnumMap<>(BuildGoal.Part.class);
-            for (BuildGoal.Placement p : BuildGoal.plan(project, site.anchor(), site.facing(), site.radius())) {
-                if (BuildGoal.soft(server.getBlockState(p.pos()))) still.merge(p.part(), 1, Integer::sum);
-            }
-        }
+        java.util.Map<BuildGoal.Part, Integer> still = stillToLay(project, site);
         if (Storehouses.stands(village)) need.remove(BuildGoal.Part.STOREHOUSE);
-        int blocks = need.getOrDefault(BuildGoal.Part.BLOCK, 0);
-        blocks += blocks / 10 + 2;                              // a margin for the cells that are lost
-        if (!project.equals("fortify")) {                       // and the ground to build up
-            int[] g = BuildGoal.footprint(project);
-            blocks += BuildGoal.fillCells(level(), site.anchor(), site.facing(), g[0], g[1]).size();
-        }
-
-        // The right things for a drawn building first: stone for its footing, planks for its
-        // walls, logs for its frame, and the stairs and slabs of its roof cut from the planks.
-        int shaped = stockStyles(project, heart);
-        if (shaped > 0) { Villages.leadProgress(village, getUUID(), now); drewForBuild = true; }
-
-        // Timber and stone: only worth a trip if the village has enough.
-        int carried = countCarried(BuildGoal::isBuildingBlock) + shaped;
+        int blocks = blocksToLay(project, site, still);
         int least = blocks * 3 / 4;                             // enough to begin with: see affordsTimberFor
-        if (carried < blocks) {
+
+        // Timber and stone: only worth a trip if the village has enough. (The roof's stairs and
+        // slabs in the pack count: they are laid in place of blocks.)
+        int carried = countCarried(BuildGoal::isBuildingBlock) + roofPiecesCarried();
+        if (carried < least) {
             int inStores = storesHold(heart, buildStoresRadius(), BuildGoal::isBuildingBlock);
             if (carried + inStores < least) { buildNote("build: stores hold " + inStores + ", need " + (least - carried)); return false; }      // not yet
-            // The cheapest first: stone before planks, planks before logs.
-            int got = 0;
-            for (int tier = 0; tier <= 2 && got < blocks - carried; tier++) {
-                final int cost = tier;
-                got += drawFrom(heart, st -> BuildGoal.isBuildingBlock(st) && BuildGoal.blockCost(st) == cost,
-                    blocks - carried - got, buildStoresRadius());
-            }
-            if (got > 0) { Villages.leadProgress(village, getUUID(), now); drewForBuild = true; }
         }
 
         // The fixtures — a chest, a furnace, a bench, ladders, fences — from the
         // stores if they are there, made if they are not. One craft a visit.
+        // They come first, before the drawing's timber and stone: there is one of each and no
+        // making do without it, and a big building's stairs, planks, beams and footing, a stack
+        // or three of each and of more than one wood, can fill a pack before its chest is in it —
+        // and a building that "cannot make" its chest is set aside as one nobody can build.
         for (Fixture fx : FIXTURES) {
             int want = need.getOrDefault(fx.part(), 0);
             if (still != null) want = Math.min(want, still.getOrDefault(fx.part(), 0));
@@ -5858,6 +5901,11 @@ public class VillageFolkEntity extends AssistantEntity {
                 return false;                                    // made, or cannot be: either way, not this visit
             }
         }
+        // The right things for a drawn building next: stone for its footing, planks for its
+        // walls, logs for its frame, and the stairs and slabs of its roof cut from the planks.
+        int shaped = stockStyles(project, heart);
+        if (shaped > 0) { Villages.leadProgress(village, getUUID(), now); drewForBuild = true; }
+
         // Decorations are taken if the stores have them, never waited for.
         for (var deco : java.util.List.of(
                 BuildGoal.Part.TORCH,
@@ -5905,12 +5953,64 @@ public class VillageFolkEntity extends AssistantEntity {
                     need.getOrDefault(BuildGoal.Part.TORCH, 0) + dark, buildStoresRadius());
             }
         }
+        // Then the bulk of it, timber and stone, into whatever room the pack has left once the
+        // fixtures and the finishing are in it (see above).
+        int carriedNow = countCarried(BuildGoal::isBuildingBlock) + roofPiecesCarried();
+        if (carriedNow < blocks) {
+            // The cheapest first: stone before planks, planks before logs.
+            int got = 0;
+            for (int tier = 0; tier <= 2 && got < blocks - carriedNow; tier++) {
+                final int cost = tier;
+                got += drawFrom(heart, st -> BuildGoal.isBuildingBlock(st) && BuildGoal.blockCost(st) == cost,
+                    blocks - carriedNow - got, buildStoresRadius());
+            }
+            if (got > 0) { Villages.leadProgress(village, getUUID(), now); drewForBuild = true; }
+        }
         // The roof's stairs and slabs count: they are cut from the planks and laid in place of
         // blocks. Counted without them, a builder that had cut its roof out of the founding planks
         // was always "carrying 128 of 216", never began, and a village of twelve built nothing.
         int blocksNow = countCarried(BuildGoal::isBuildingBlock) + roofPiecesCarried();
-        if (blocksNow < least) buildNote("build: carrying " + blocksNow + " of " + blocks + " blocks");
-        return blocksNow >= least;
+        // A full pack is a load to begin on. Three parts in four of a building bigger than one pack
+        // can hold never fit in it: the meeting hall's drawing alone (five hundred and forty-odd
+        // blocks, its roof stairs, planks, beams and footing each a stack or three of their own, its
+        // windows, chests and bench) fills most of a pack's twenty-seven slots, and on a mountainside
+        // its terrace wants hundreds more under the floor (up to eight a column, a hundred and
+        // fifty-three columns) — the builder would load up, come short of three in four, and look
+        // again in two minutes, for ever. It goes up a pack at a time instead: BuildGoal lays what
+        // the pack holds, and the next load picks up where that one ran out (blocksToLay).
+        boolean fullLoad = packFull() && countCarried(BuildGoal::isBuildingBlock) >= FULL_LOAD;
+        if (blocksNow < least && !fullLoad) buildNote("build: carrying " + blocksNow + " of " + blocks + " blocks");
+        return blocksNow >= least || fullLoad;
+    }
+
+    /** The least of timber and stone a full pack must hold to count as a load to begin on (six
+     *  stacks): a pack full of its trade's own goods with a handful of planks in it is no load. */
+    static final int FULL_LOAD = 6 * 64;
+
+    /** No empty slot left in the pack. */
+    private boolean packFull() {
+        for (net.minecraft.world.item.ItemStack st : getInventoryItems()) if (st.isEmpty()) return false;
+        return true;
+    }
+
+    /** Tests: would this hand say the village can afford this building on this ground? */
+    public boolean affordsForTests(String project, Villages.Site site) {
+        return affordsTimberFor(project, site);
+    }
+
+    /** Tests: stock up for this building as its lead would; true if it would set off to build. */
+    public boolean stockedForTests(String project, Villages.Site site) {
+        return stockedFor(project, site);
+    }
+
+    /** Tests: the blocks this building still wants laid on this ground (blocksToLay). */
+    public int blocksToLayForTests(String project, Villages.Site site) {
+        return blocksToLay(project, site, stillToLay(project, site));
+    }
+
+    /** Tests: how much of this the stores hold, as far and as high as the builders look. */
+    public int buildersSeeForTests(java.util.function.Predicate<net.minecraft.world.item.ItemStack> what) {
+        return villageCentre == null ? 0 : storesHold(villageCentre, buildStoresRadius(), what);
     }
 
     /** Roof stairs and slabs in the pack, which stand in for blocks of the roof. */
@@ -6626,6 +6726,19 @@ public class VillageFolkEntity extends AssistantEntity {
         return level() instanceof net.minecraft.server.level.ServerLevel server && Masonry.work(this, server);
     }
 
+    /**
+     * Logs the builders can spare: what the stores hold past half the timber the village's houses
+     * want, and never the last sixty-four. Eight smelters burning sixteen apiece kept a town of
+     * sixty-eight at no logs at all for days, and the meeting hall it needed for the Iron Age could
+     * never be paid for. (The charcoal burnt for a village short of coal, and the wood a courier
+     * takes out to the smelter in place of the coal.)
+     */
+    private int logsToSpare(net.minecraft.server.level.ServerLevel server, UUID village) {
+        int stored = Market.stock(server, village, st -> st.is(net.minecraft.tags.ItemTags.LOGS));
+        int keep = Math.max(64, com.jrpetty.mcassistant.village.VillageMath.timberWanted(Villages.headcount(village)) / 2);
+        return Math.max(0, stored - keep);
+    }
+
     @Override
     protected boolean burnCharcoal() {
         UUID village = ownerId();
@@ -6640,12 +6753,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (!wanted) return false;
         java.util.function.Predicate<net.minecraft.world.item.ItemStack> logs =
             st -> st.is(net.minecraft.tags.ItemTags.LOGS);
-        // Only logs the builders can spare: eight smelters burning sixteen apiece kept a town of
-        // sixty-eight at no logs at all for days, and the meeting hall it needed for the Iron Age
-        // could never be paid for. The timber the builders want is kept back.
-        int stored = Market.stock(server, village, logs);
-        int keep = Math.max(64, com.jrpetty.mcassistant.village.VillageMath.timberWanted(Villages.headcount(village)) / 2);
-        int spare = Math.min(16, stored - keep);
+        int spare = Math.min(16, logsToSpare(server, village));
         int have = countCarried(logs);
         if (have < 4 && spare < 4) return false;
         if (have < 16 && spare > 0) have += drawFrom(villageCentre, logs, Math.min(16 - have, spare), buildStoresRadius());
