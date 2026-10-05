@@ -197,6 +197,7 @@ public class TalkScreen extends Screen {
                 out.add(new Choice("Give…", TalkTopic.GIFT, "", "Give it what you are holding"));
                 out.add(new Choice("Hand over", TalkTopic.DELIVER, "", "Give it what it asked you for, or pay for what it offered"));
                 out.add(Choice.of("Trade?", TalkTopic.TRADE));
+                out.add(Choice.of("For sale?", TalkTopic.FOR_SALE, "What the village can spare, and at what price: it sees to itself first"));
                 out.add(Choice.of("Hire you?", TalkTopic.HIRE, "Four coins a day: it goes with you, fights for you, carries for you"));
                 out.add(Choice.of("Build my house", TalkTopic.COMMISSION, "Bring 64 planks, 32 cobblestone and 8 glass, and the builders put up a house for you"));
                 out.add(last.following() ? Choice.of("Go home", TalkTopic.STAY) : Choice.of("Come along", TalkTopic.FOLLOW));

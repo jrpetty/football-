@@ -368,7 +368,15 @@ public final class Services {
         int have = Market.stock(level, village, what);
         String word = sample.getHoverName().getString().toLowerCase(Locale.ROOT);
         if (have <= 0) return "We've no " + word + " in the stores, I'm afraid.";
-        int n = Math.min(want, have);
+        // The village's own needs first (Budget): only what it can spare goes, to friend or stranger.
+        int spare = Budget.spare(level, village, sample);
+        if (spare <= 0) {
+            java.util.List<String> wants = Budget.wants(level, village);
+            return "We can't spare any " + word + " — " + (wants.isEmpty()
+                ? "we need all we have of it ourselves."
+                : "we see to ourselves first, and we're still short: we want " + String.join(", ", wants) + ".");
+        }
+        int n = Math.min(Math.min(want, have), spare);
         boolean friend = Citizens.is(village, p.getUUID()) || f.persona().affinity(p.getUUID()) >= 30;
         String name = p.getName().getString();
         // A tool, a weapon, armour: lent to a friend, to be brought back.
@@ -394,10 +402,9 @@ public final class Services {
             if (GIVEN.size() > 256) GIVEN.clear();
             return "Take " + count + " " + word + ", friend — there's no charge between us." + (count < want ? " That's all we have." : "");
         }
-        // Anybody else pays: the market's price and a little over.
-        Market.Good g = Market.goodFor(sample);
-        double each = g == null ? 0.5 : g.value();
-        int price = (int) Math.max(1, Math.round(each * n * 1.25));
+        // Anybody else pays: the price list's worth and a quarter over (Budget).
+        double each = Budget.playerPrice(sample);
+        int price = (int) Math.max(1, Math.round(each * n));
         if (title == Standing.Title.UNWELCOME) price *= 2;
         int coins = Market.coinsHeld(p);
         if (coins < price) return n + " " + word + " would be " + price + " coins. You've " + coins + ".";
@@ -405,9 +412,11 @@ public final class Services {
         int count = 0;
         for (ItemStack s : got) { count += s.getCount(); give(p, s); }
         if (count == 0) return "Somebody's just taken the last of it.";
-        price = (int) Math.max(1, Math.round(each * count * 1.25)) * (title == Standing.Title.UNWELCOME ? 2 : 1);
+        price = (int) Math.max(1, Math.round(each * count)) * (title == Standing.Title.UNWELCOME ? 2 : 1);
         Market.payOut(p, price);
         Ledger.addCoins(village, price);
+        Economy.sold(village, price);
+        Budget.forget(village);
         return "That's " + count + " " + word + " for " + price + (price == 1 ? " coin" : " coins") + ". "
             + (friend ? "" : "Get to know us, and you'll not pay for bread.");
     }

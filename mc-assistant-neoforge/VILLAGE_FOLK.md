@@ -289,6 +289,30 @@ paid for all of it:
   and a beekeeper for flowers. The economy page counts **plants and flowers** as goods of
   their own.
 
+### The village's purse: its own needs first
+
+The village keeps its books, and **sees to itself before it sells anything**:
+
+* **What it keeps.** A full larder (and never the last sixteen of a thing). A tool for every hand
+  that uses one, and spares: a pickaxe for each miner, an axe for each woodcutter, a hoe for each
+  farmer, a sword and armour for each guard, shears, rods, bows and shields. It keeps its best ones.
+  It also keeps the timber and stone its building wants, the ore its smiths and smelters work, the
+  wool its beds wait on, seed and saplings, torches, buckets and a couple of anything else.
+  Whatever the village is short of, it keeps all of.
+* **When it sells.** Only once it is **making enough for itself**: fed, every bed made, every
+  hand tooled, the wages paid in full. Until then it sells only a **glut** (four times what it
+  keeps, and more), such as the miners' mountain of cobblestone.
+* **What it sells.** Everything over what it keeps, at the price list's worth and **a quarter
+  over**. Ask any folk **"What can the village spare?"** (the **For sale?** button) for the list.
+  Then ask the storekeeper for what you want, for example *"could I have an iron sword?"*. Friends
+  and citizens still get their free share, but only out of what is spare.
+* **The shop and the café.** The shop's counters show spare armour, arms and tools of every
+  kind, as well as what the crafts make. The café sells no bread off a low larder. What the
+  crafts make to sell (drinks, potions, enchanted things, banners, rugs, books) is always for sale.
+* **Its coin.** Two days' wages are kept back first, then what it is saving for (wool for beds, a
+  hive, the drover's pair). The rest is free. The board and the village status show **the purse**:
+  the coin, what is kept back, what is put by, what is free, and what is for sale.
+
 ### Roads and caravans
 
 * **Roads.** When a village founds a colony, a road is laid between them. It runs
@@ -533,7 +557,8 @@ water.
   nothing else, so it looks after them:
   * **Buckets.** Every farmer gets ten buckets of water (a pedlar's, a coin apiece out of the
     treasury): one for the water hole in the middle of each square of its field. A crop on
-    wet farmland grows three times as fast as on dry.
+    wet farmland grows three times as fast as on dry. A field with no pond by it is still a
+    field: its farmer digs the first water hole the day it gets there.
   * **The farmland.** The village marks out one side of the town for its fields: the side
     whose ground is best (open soil, level with the town, water on it or by it). There its
     fields are laid out before the first furrow, in squares a full-grown field across

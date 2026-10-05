@@ -147,6 +147,7 @@ public final class FolkTalk {
             case WORTH -> Wealth.talk(f, text);
             case KNACK -> knack(f);
             case ATLAS -> Scouts.tell(f);
+            case FOR_SALE -> Budget.answer(f, p);
             default -> puzzled(f);
         };
         // Somebody who can't stand you says as little as it can.
@@ -1097,8 +1098,10 @@ public final class FolkTalk {
         if (has(t, "hire", "adventur", "sell your sword", "bodyguard", "escort", "come exploring")) return TalkTopic.HIRE;
         if (has(t, "build me a house", "build me a home", "commission", "a house for me", "house of my own", "my own house")) return TalkTopic.COMMISSION;
         if (has(t, "ledger", "the accounts", "the books", "what's in the stores", "whats in the stores", "the stock")) return TalkTopic.LEDGER;
+        if (has(t, "for sale", "can you spare", "can the village spare", "what do you sell", "what are you selling", "surplus",
+                "what's spare", "whats spare", "what have you got to sell", "anything to sell") && Services.itemNamed(t) == null) return TalkTopic.FOR_SALE;
         if (has(t, "could i have", "can i have", "may i have", "i'd like", "id like", "borrow", "lend me", "sell me", "from the stores",
-                "from the storehouse", "do you have any", "got any") && Services.itemNamed(t) != null) return TalkTopic.STORES;
+                "from the storehouse", "do you have any", "got any", "i'll buy", "ill buy", "buy ", "i want to buy") && Services.itemNamed(t) != null) return TalkTopic.STORES;
         if (has(t, "live here", "citizen", "settle here", "move here", "join the village", "join your village")) return TalkTopic.CITIZEN;
         if (Council.named(t) != null && has(t, "build a", "build an", "should build", "you need a", "propose", "how about a", "vote for")) return TalkTopic.PROPOSE;
         if (Asks.buildingNamed(t) != null && has(t, "build a", "build an", "build the", "build us", "put up a", "should build",

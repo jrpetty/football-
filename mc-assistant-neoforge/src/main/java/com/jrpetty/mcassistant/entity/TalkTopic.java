@@ -47,7 +47,8 @@ public enum TalkTopic {
     PRAISE("Well done — you're doing a fine job"),
     WORTH("How are you doing for money?"),
     KNACK("What are you good at?"),
-    ATLAS("What have the scouts found out there?");
+    ATLAS("What have the scouts found out there?"),
+    FOR_SALE("What can the village spare?");
 
     public final String line;
 

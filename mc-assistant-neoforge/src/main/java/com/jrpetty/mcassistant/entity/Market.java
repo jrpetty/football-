@@ -805,13 +805,15 @@ public final class Market {
         if (Laws.banished(id, p.getUUID(), level.getDayTime() / 24000L)) return "You're banished from " + Villages.name(id) + ". Nobody will serve you.";
         boolean md = marketDay(id, level.getDayTime() / 24000L);
         if (shown.isEmpty()) return "Nothing on this counter today.";
-        Good g = goodFor(shown);
+        Good g = Budget.goodFor(shown);
         if (g == null) return "That's not for sale.";
         // The very thing on the counter: this potion, this drink, this enchanted pick.
         Predicate<ItemStack> same = s -> ItemStack.isSameItemSameComponents(s, shown);
         String lot = lotName(g, shown);
         int stock = stock(level, id, same);
         if (stock < g.bundle()) return "They've not got " + lot + " to spare just now.";
+        // Its own needs first: the guards' swords and the larder's bread are not for sale (Budget).
+        if (Budget.spare(level, id, shown) < g.bundle()) return "They can't spare " + lot + " — the village needs it itself just now.";
         int price = price(g, shown, stock, md);
         if (title == Standing.Title.UNWELCOME) price *= 2;
         else if (title.atLeast(Standing.Title.FRIEND)) price = Math.max(1, price - price / 10);
@@ -825,6 +827,7 @@ public final class Market {
         payOut(p, price);
         Ledger.addCoins(id, price);
         Economy.sold(id, price);
+        Budget.forget(id);
         ItemStack bought = shown.copyWithCount(g.bundle());
         if (!p.getInventory().add(bought)) p.drop(bought, false);
         thanks(level, v, p);
@@ -845,7 +848,7 @@ public final class Market {
     /** A counter's price tag: what is on it and what a lot costs. */
     public static String[] tagLines(ServerLevel level, UUID village, ItemStack shown) {
         if (shown.isEmpty()) return new String[]{ "", "Sold out", "", "" };
-        Good g = goodFor(shown);
+        Good g = Budget.goodFor(shown);
         if (g == null) return new String[]{ "", "", "", "" };
         boolean md = marketDay(village, level.getDayTime() / 24000L);
         int p = price(g, shown, stock(level, village, s -> ItemStack.isSameItemSameComponents(s, shown)), md);

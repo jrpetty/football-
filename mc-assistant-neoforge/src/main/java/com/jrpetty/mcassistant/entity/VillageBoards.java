@@ -332,6 +332,7 @@ public final class VillageBoards {
         }
         out.add("FN|To be " + Villages.nextRankNote(id) + ".");
         out.add("FM|Growing: " + Villages.growthNote(level, id) + ".");
+        out.add("FN|The purse: " + Budget.line(level, id) + ".");
         String neighbours = Envoys.boardLine(id);
         if (neighbours != null) out.add("FN|Neighbours: " + neighbours + ". Elder " + (Villages.elderName(id).isEmpty() ? "none yet" : "is " + Envoys.temper(id).words) + ".");
         String abroad = Envoys.latest(id);

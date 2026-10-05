@@ -4139,6 +4139,68 @@ public class VillageGameTests {
         helper.succeed();
     }
 
+    /**
+     * The village's own needs first. Short of food it sells nothing but a glut (its mountain of
+     * cobblestone): not its swords, not its bread. With a full larder, every hand tooled and its
+     * beds made, what is over is for sale — a stranger buys a spare sword from the storekeeper at
+     * the price list's worth and a quarter over — and it still keeps a sword for itself.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "t68_budget")
+    public static void t68_budget(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 64000, 12000, 40);
+        Kit.prepare(level, 64000, 12000, 40);
+        BlockPos heart = Kit.surface(level, 64000, 12000);
+        VillageFolkEntity keeper = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(keeper != null, "a village");
+        keeper.setJob(StationTask.STORE);
+        java.util.UUID id = keeper.ownerId();
+        BlockPos[] chests = { Kit.surface(level, heart.getX() + 6, heart.getZ() + 6), Kit.surface(level, heart.getX() + 8, heart.getZ() + 6),
+            Kit.surface(level, heart.getX() + 10, heart.getZ() + 6) };
+        for (BlockPos c : chests) {
+            level.setBlockAndUpdate(c, Blocks.CHEST.defaultBlockState());
+            com.jrpetty.mcassistant.entity.ZoneChests.mark(level, c);
+        }
+        net.minecraft.world.Container a = (net.minecraft.world.Container) level.getBlockEntity(chests[0]);
+        net.minecraft.world.Container b = (net.minecraft.world.Container) level.getBlockEntity(chests[1]);
+        net.minecraft.world.Container c = (net.minecraft.world.Container) level.getBlockEntity(chests[2]);
+        for (int i = 0; i < 5; i++) a.setItem(i, new ItemStack(Items.IRON_SWORD));
+        for (int i = 0; i < 26; i++) b.setItem(i, new ItemStack(Items.COBBLESTONE, 64));
+        com.jrpetty.mcassistant.entity.Budget.forget(id);
+        java.util.List<String> wants = com.jrpetty.mcassistant.entity.Budget.wants(level, id);
+        int swordsHungry = com.jrpetty.mcassistant.entity.Budget.spare(level, id, new ItemStack(Items.IRON_SWORD));
+        int cobble = com.jrpetty.mcassistant.entity.Budget.spare(level, id, new ItemStack(Items.COBBLESTONE));
+        net.minecraft.world.entity.player.Player p = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        p.getInventory().setItem(20, new ItemStack(McAssistantMod.VILLAGE_COIN.get(), 64));
+        String early = com.jrpetty.mcassistant.entity.Budget.answer(keeper, p);
+        Kit.log("t68 short of food: wants " + wants + "; spare swords " + swordsHungry + ", cobblestone " + cobble + "; says: " + early);
+        helper.assertTrue(wants.contains("a full larder"), "a village short of food wants a full larder first: " + wants);
+        helper.assertTrue(swordsHungry == 0, "and sells none of its swords meanwhile");
+        helper.assertTrue(cobble > 0, "only its glut of cobblestone");
+        // A full larder: now what is over is for sale.
+        for (int i = 0; i < 14; i++) c.setItem(i, new ItemStack(Items.BREAD, 64));
+        com.jrpetty.mcassistant.entity.Budget.forget(id);
+        java.util.List<String> fed = com.jrpetty.mcassistant.entity.Budget.wants(level, id);
+        int swords = com.jrpetty.mcassistant.entity.Budget.spare(level, id, new ItemStack(Items.IRON_SWORD));
+        int bread = com.jrpetty.mcassistant.entity.Budget.spare(level, id, new ItemStack(Items.BREAD));
+        String offer = com.jrpetty.mcassistant.entity.Budget.answer(keeper, p);
+        Kit.log("t68 fed: wants " + fed + "; spare swords " + swords + ", bread " + bread + "; says: " + offer
+            + " | the purse: " + com.jrpetty.mcassistant.entity.Budget.line(level, id));
+        helper.assertTrue(fed.isEmpty(), "fed, bedded and tooled, it wants nothing more for itself: " + fed);
+        helper.assertTrue(swords >= 1 && swords < 5, "it can spare swords, and keeps one for itself: " + swords);
+        helper.assertTrue(bread > 0, "and bread over a full larder");
+        int coinsBefore = com.jrpetty.mcassistant.village.Ledger.coins(id);
+        String sold = com.jrpetty.mcassistant.entity.Services.stores(keeper, p, "could I have an iron sword?");
+        int got = 0;
+        for (int i = 0; i < p.getInventory().getContainerSize(); i++) if (p.getInventory().getItem(i).is(Items.IRON_SWORD)) got++;
+        int coinsAfter = com.jrpetty.mcassistant.village.Ledger.coins(id);
+        Kit.log("t68 the storekeeper: " + sold + " (treasury " + coinsBefore + " -> " + coinsAfter + ", " + got + " sword)");
+        helper.assertTrue(got == 1 && coinsAfter == coinsBefore + 5, "a stranger buys a spare sword for 5 coins (4, and a quarter over)");
+        helper.succeed();
+    }
+
     /** A farmer's ten buckets of water, bought for it out of the treasury once. */
     @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t64_buckets")
     public static void t64_buckets(GameTestHelper helper) {

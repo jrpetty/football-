@@ -300,7 +300,8 @@ public final class Cafe {
 
     /** What the café has ready, drinks first: one of each, up to a counterful. */
     public static List<ItemStack> menuGoods(ServerLevel level, UUID village) {
-        return fromStores(level, village, s -> isDrink(s) || MENU.stream().anyMatch(s::is), true);
+        // What the village can spare (Budget): no bread off the counter while the larder is low.
+        return fromStores(level, village, s -> (isDrink(s) || MENU.stream().anyMatch(s::is)) && Budget.spare(level, village, s) > 0, true);
     }
 
     private static final List<Item> MENU = List.of(Items.BAKED_POTATO, Items.COOKIE, Items.PUMPKIN_PIE, Items.COOKED_BEEF,
@@ -309,13 +310,16 @@ public final class Cafe {
 
     /** What the crafts have made for the shop: the best of it first. */
     public static List<ItemStack> shopGoods(ServerLevel level, UUID village) {
-        return fromStores(level, village, Cafe::shopWorthy, false);
+        // What the village can spare (Budget): never the guards' only swords or the miners' picks.
+        return fromStores(level, village, s -> shopWorthy(s) && Budget.spare(level, village, s) > 0, false);
     }
 
-    /** What a shop sells: the things the village's crafts make, whole and unworn. */
+    /** What a shop sells: the things the village's crafts make, whole and unworn — and, once it has
+     *  more than its own hands need, its armour, arms and tools of every kind (Budget). */
     public static boolean shopWorthy(ItemStack s) {
-        if (s.isDamaged() || isDrink(s) || Market.goodFor(s) == null) return false;
+        if (s.isDamaged() || isDrink(s) || Budget.goodFor(s) == null) return false;
         if (s.is(Items.POTION)) return true;
+        if (Budget.kitOf(s) != null && Prices.each(s.getItem()) >= 2.0) return true;
         return s.isEnchanted() || s.is(ItemTags.BEDS) || s.is(ItemTags.WOOL_CARPETS) || s.is(ItemTags.BANNERS)
             || s.is(Items.BOOK) || s.is(Items.HONEY_BOTTLE) || s.is(Items.HONEYCOMB) || s.is(Items.SHEARS)
             || s.is(Items.BUCKET) || s.is(Items.IRON_PICKAXE) || s.is(Items.IRON_SWORD) || s.is(Items.IRON_AXE)

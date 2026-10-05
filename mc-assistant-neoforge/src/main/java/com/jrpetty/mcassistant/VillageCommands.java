@@ -620,6 +620,7 @@ public final class VillageCommands {
             sb.append(". Quest board: ").append(board.isEmpty() ? "nothing posted" : String.join("; ", board));
             var lent = com.jrpetty.mcassistant.entity.Services.onLoan(id);
             if (!lent.isEmpty()) sb.append(". On loan: ").append(lent);
+            sb.append(". Budget: ").append(com.jrpetty.mcassistant.entity.Budget.line(level, id));
             sb.append(". Diplomacy: ").append(com.jrpetty.mcassistant.entity.Envoys.debug(id));
             String abroad = com.jrpetty.mcassistant.entity.Envoys.latest(id);
             if (abroad != null) sb.append("; latest ").append(abroad);
