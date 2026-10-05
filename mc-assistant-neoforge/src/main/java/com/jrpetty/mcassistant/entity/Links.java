@@ -72,7 +72,8 @@ public final class Links {
                 // of the masons' stone and brick. And the stores' torches, either way.
                 boolean busy = ore(f, level) != null
                     || (sand(f, level) != null | stone(f, level) != null | clay(f, level) != null);
-                yield torches(f, level) != null | busy;
+                // And what the shop's workshop sent to be fired (Workshop): glass, an ingot, charcoal.
+                yield torches(f, level) != null | busy | Workshop.fire(f, level) != null;
             }
             default -> false;
         };

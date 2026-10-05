@@ -124,6 +124,7 @@ public final class Wealth {
         // The couriers are the storehouse's staff (Couriers), and paid as such: the same rate.
         sb.append(tradeWage(f.stationTask(), f.ownerId())).append(" as a ")
             .append(f.stationTask() == StationTask.HAUL ? "courier of the storehouse"
+                : Workshop.isHand(f) ? "hand at the shop's bench"
                 : f.stationTask().title.toLowerCase(java.util.Locale.ROOT)).append(" in a ").append(place);
         if (lv >= 10) sb.append(", +1 at level ten");
         if (lv >= 25) sb.append(", +1 at twenty-five");

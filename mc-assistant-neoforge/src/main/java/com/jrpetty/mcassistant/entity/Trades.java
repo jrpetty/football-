@@ -134,7 +134,8 @@ public final class Trades {
                 "the café's counter, and the folk's breaks");
             case SHOP -> new Trade("I keep the shop: the crafts' best work on the counter for anybody with coin, and what a"
                     + " house wants made up at my bench the whole way from the stores (logs to planks to sticks to a pick), more of"
-                    + " what sells and less of what doesn't",
+                    + " what sells and less of what doesn't. With my hands at the bench we make whatever the town wears out — the"
+                    + " watch's blades and armour, the rack's spare picks and axes — by any recipe there is, as far as our age has come",
                 List.of(),
                 List.of(need("timber", s -> s.is(net.minecraft.tags.ItemTags.LOGS) || s.is(net.minecraft.tags.ItemTags.PLANKS), 8,
                     "the woodcutters")),

@@ -750,7 +750,7 @@ born or grown up into a big enough village.
 | Tailor | Stone Age, 18 folk | the workshop | Makes beds (in the colour of the wool), rugs, string, and banners on its loom |
 | Beekeeper | Stone Age, 20 folk | a meadow outside town | Keeps up to four hives: comb with shears or honey with a bottle from a full hive, new hives from comb, bees bred on flowers |
 | Blacksmith | Iron Age, 16 folk | the smithy | Makes iron picks for the miners, swords and armour for the watch, shears, buckets, axes and hoes; bows, and arrows of flint, stick and feather |
-| Shopkeeper | Iron Age, 18 folk | the shop | Makes what a house wants at its bench, the whole way from the stores (logs to planks to sticks to a pick), more of what sells, and sets it out on the counter with what the crafts have made |
+| Shopkeeper | Iron Age, 18 folk | the shop | Makes what a house wants at its bench, the whole way from the stores (logs to planks to sticks to a pick), more of what sells, and sets it out on the counter with what the crafts have made; with the hands it takes on, makes the watch's blades and armour and the rack's spare tools, by any recipe there is, as far as the age has come (*The shop's workshop*) |
 | Brewer | Iron Age, 22 folk | the brewery | Brews at a real brewing stand: healing for the watch, then swiftness, night vision, regeneration, leaping, water breathing, fire resistance and strength |
 | Enchanter | Diamond Age, 24 folk | the library | Binds books from paper (the farmers' cane) and leather, then enchants the village's iron and diamond tools and armour with lapis at its table |
 
@@ -2588,6 +2588,59 @@ for their homes. `/village decor` lists every home's furnishing; `/village decor
 them as far as the stores run to and sees to the candles; `/village decor showcase` (ops) sets a
 furnished home out where you stand, for the pictures.
 
+### The shop's workshop: its hands, every blueprint, and the age's say
+
+The shop makes what the town wears out, not only what a house wants (`entity/Workshop.java`). The
+shopkeeper makes between customers, and the shop **takes on hands for its bench**, who work at the
+crafting table in its back room (behind the counter) making whatever is lowest on its order book,
+a piece every twenty seconds or so each.
+
+* **Every blueprint.** The makers know every recipe the game has — every crafting recipe, shaped or
+  not, of any plank or any wool; every furnace firing; the smithing table's netherite — and a
+  modpack's recipes the same way. They work the whole way from what the stores hold (a sword wants
+  sticks: the sticks are cut from planks first, the planks sawn from a log), take out exactly what
+  the recipe takes, and put back what it leaves (the planks and sticks it did not use, an empty
+  bucket). Never the builders' timber and stone, the smith's iron, the coal, nor what the age is
+  putting by; everything in and out is in the storehouse's books and the day's production.
+* **The age's say.** Each age opens its materials, and a thing belongs to the latest age of what
+  goes into it, the whole way down, read off its recipe — so the rule holds for every item there is:
+
+  | Age | Opens | So the makers can make |
+  |---|---|---|
+  | Wood | wood, wool and string, feathers, bone, the fields' goods, sand, clay, gravel | wooden tools, crafting tables, chests, barrels, fences, doors, beds, ladders, boats |
+  | Stone | stone, flint, coal, copper, leather, honeycomb, and anything fired in a furnace | stone tools and swords, furnaces, torches, leather armour, glass, bricks, candles |
+  | Iron | iron, gold, redstone, lapis, emerald, gunpowder, slime, pearls, buckets | iron tools, swords and armour, shields, buckets, rails, anvils, lanterns, chains |
+  | Diamond | diamonds and obsidian | diamond tools, swords and armour, enchanting tables |
+  | Nether | netherite and what comes from the Nether and the End | netherite gear (at the smithing table), brewing stands |
+
+  The same rule holds for the storekeeper's made-to-order: ask for an iron chestplate in the Stone
+  Age and it says it is the Iron Age's work.
+* **The order book.** What the shop keeps made, the town's needs first, then the emptiest shelf:
+  the watch's blades and armour (a piece for every guard who wears worse than the age's best the
+  stores can run to and the guard may wear, and a spare for every four guards), shields, bows and
+  arrows; the storehouse's rack of spare tools (once there is a shop, the rack is its hands' to keep,
+  of the best metal the age and the stores allow); the shop's own shelves (above); what folk and
+  players buy and ask for most; and what you order. Short of something, it says so, and asks for it
+  on the quest board as before.
+* **The watch fitted out.** A guard who wears worse than the best piece in the shop's stock is given
+  it, the village paying (no coin changes hands: the shop's takings are the treasury's), and its
+  old piece goes back into the stores. Workers take their spares off the rack and buy their tools at
+  the counter; you buy at the counter.
+* **Its hands.** One for every fifteen folk in the town, four at the most, while the order book has
+  work in it: hands the village can spare (a folk between trades, or idle in a trade with more hands
+  than it wants), of the shop's trade and paid at its rate. A hand's card says *Shop hand* and what
+  it is making (*Making a stone sword for the shop*); with no keeper left, the most experienced hand
+  takes the shop over.
+* **Fire.** What wants firing (glass for a bottle, an ingot of raw iron, charcoal for a torch) is the
+  smelter's: with a smelter at work the shop sends it to the smeltery and makes the rest when it
+  comes back; with none it fires it at its own bench.
+* **Where to see it.** The town's books → Shops → *The shop's workshop*: who is at the bench and what
+  each made today, the day's pieces and what they were made of, the order book against the stock
+  (and what each is for), what waits on the next age, and what the next age will let it make
+  (*the Iron Age will let us make iron swords, iron pickaxes, shields…*). `/village workshop` reads it
+  out; `/village workshop blueprints [word]` lists the blueprints and the age each belongs to;
+  `/village workshop order <item> [count]` puts something on the order book for you.
+
 ### The leader's hall and the courtyard
 
 Once the village has a meeting hall and a board, its builders lay **the courtyard** before the
@@ -3849,6 +3902,13 @@ ripen, days pass, folk work and houses go up at that pace.
   `stall books` opens the town's books at the players' stalls; `stall market` (operators) brings
   the nearest folk with coin to every open stall to buy as on market day, and `stall lapse`
   (operators) has your rent run out days ago, to see a stall given back.
+* `/village workshop` — the shop's workshop: its keeper and hands, what each made today and of
+  what, its order book against the stock, and what the age lets it make and the next will.
+  `workshop blueprints [word]` — the blueprints the makers know and the age each belongs to;
+  `workshop order <item> [count]` — put something on its order book for you; `workshop books` — the
+  town's books opened at the workshop; `workshop hire`, `workshop work` and `workshop stage`
+  (operators) take the nearest grown folk on as a hand, have every maker do a piece of work, or (the
+  client smoke) put a shop up by you if the village has none, with a keeper and a hand at work in it.
 * `/village stores` — the storehouse's day: its slots, its storekeeper, what went in and out
   and who served the requests, its last tidy, its staff and their runs, and its run list.
 * `/village sweeper` — the street sweeper's day: what it swept in, by whom, and how much is
