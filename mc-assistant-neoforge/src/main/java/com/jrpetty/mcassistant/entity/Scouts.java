@@ -422,8 +422,6 @@ public final class Scouts {
         Expedition e = f.expedition();
         if (e == null) return false;
         keepAwake(level, f, e);
-        // A horse from the stable to ride its rounds on, and an old chest looked into for a saddle (Riding).
-        if (Riding.scout(f, level, e)) return true;
         long time = level.getDayTime() % 24000L;
         // Something hostile close by: away from it, quick.
         Mob foe = foe(level, f);
@@ -437,6 +435,8 @@ public final class Scouts {
             }
             return true;
         }
+        // A horse from the stable to ride its rounds on, and an old chest looked into for a saddle (Riding).
+        if (Riding.scout(f, level, e)) return true;
         if (!e.returning) {
             if (f.getHealth() < f.getMaxHealth() * 0.45F) turnBack(level, f, e, "I got hurt, so I came back");
             else if (time >= 7600 && time < 23000) turnBack(level, f, e, "it was time to turn back");

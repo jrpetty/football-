@@ -2868,8 +2868,9 @@ tamed by its rancher; nothing comes out of nowhere.
   horse without one. The rancher puts a saddle from the stores on a tamed horse, and a chest
   from the stores on a donkey or a mule when the village sends caravans. Leads are plaited by
   the rancher, two from four string and a slime ball, when the stores are short of them.
-* **The stable** (planned once the village has horses of its own, or once an Iron Age town
-  has a rancher and a saddle in the stores; on a lot by the square, near the storehouse): a
+* **The stable** (planned, from the Stone Age on, once the village has horses of its own, or
+  once an Iron Age town has a rancher and a saddle in the stores; on a lot by the square, near
+  the storehouse; the council may put it before or after the other amenities): a
   tall timber barn with **four stalls** fenced off two by two either side of the aisle, hay at
   the front and in the loft, a sunken water trough and a cauldron, and three **gates** across
   the door, open four high so a rider comes in on horseback. Each horse has its stall and
