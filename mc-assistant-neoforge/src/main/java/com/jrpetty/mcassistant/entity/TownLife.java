@@ -794,7 +794,7 @@ public final class TownLife {
             lines[2] = who.isEmpty() ? "" : who.get(0);
             lines[3] = who.size() > 2 ? "& family" : who.size() == 2 ? "& " + who.get(1) : "";
         } else {
-            lines[0] = title(b.structure());
+            lines[0] = Flats.BLOCK.equals(b.structure()) ? Flats.signName(village, b) : title(b.structure());   // [flats] "Elm Row Flats"
             lines[1] = where != null ? where[0] : "";
             lines[2] = where != null ? where[1] : "";
             lines[3] = "";

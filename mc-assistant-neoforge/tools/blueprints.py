@@ -46,6 +46,7 @@ LEGEND = {
     "G": ("glass", "pane", None),
     "O": ("glass", "cube", None),
     "D": ("door", "door", "B"),
+    "Y": ("door", "door", "R"),           # a door in a front-to-back wall (the flats' landings)
     "P": ("plank", "fence", None),
     "g": ("plank", "gate", None),
     "T": ("table", "cube", None),

@@ -1056,6 +1056,7 @@ public final class Annals {
                 if (h.price > 0) c.putInt("price", h.price);
             }
             Quarters.describe(id, v.centre(), b, c);              // its quarter, and the smoke or the park by it
+            Flats.annals(id, b, c);            // [flats] a block's name, storeys and flats let and free
             out.add(c);
         }
         return out;

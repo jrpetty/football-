@@ -1225,6 +1225,12 @@ public class CityScreen extends Screen {
 
     private static final String[] HOME_HEADS = { "Household", "House", "Terms", "Rent", "Put by toward the price", "Own one?" };
 
+    /** Where a household lives, for its row: "house, No. 4, Elm Row"; a flat's address says it already ("flat 2B, Elm Row Flats"). */
+    private static String where(CompoundTag r) {
+        String kind = r.getString("kind"), address = r.getString("address");
+        return "flat".equals(kind) ? address : kind + ", " + address;           // [flats]
+    }
+
     /**
      * Homes: beds against folk and households housed over time, the tenures (rented, owned, saving to
      * buy, the leader's, players'), the rent coming in, and every household: where it lives, on what
@@ -1300,8 +1306,7 @@ public class CityScreen extends Screen {
             String rent = r.getBoolean("rent_free") ? "free (" + r.getInt("rent_due") + "c later)"
                 : r.getInt("rent") == 0 ? "—" : r.getInt("rent") + "c" + (r.getInt("owed") > 0 ? " (owes " + r.getInt("owed") + ")" : "");
             CompoundTag dh = decorOf(r.getLong("anchor"));
-            String[] cells = { r.getString("household"), r.getString("kind") + ", " + r.getString("address")
-                + (dh == null ? "" : " · " + dh.getInt("score") + "/10"), status, rent };
+            String[] cells = { r.getString("household"), where(r) + (dh == null ? "" : " · " + dh.getInt("score") + "/10"), status, rent };
             for (int c = 0; c < cells.length; c++) {
                 int w = cols[c + 1] - cols[c] - 3;
                 small(g, Ui.clip(font, cells[c], (int) (w / 0.75)), x + cols[c] + (c == 0 ? 2 : 0), hy + 1, c == 2 ? sc : Ui.INK);
@@ -1327,8 +1332,9 @@ public class CityScreen extends Screen {
             if (over) {
                 List<Component> tip = new ArrayList<>();
                 tip.add(Component.literal(r.getString("household")));
-                tip.add(Component.literal(r.getString("kind") + ", " + r.getString("address") + " — " + r.getString("terms")));
-                if (r.getInt("rent") > 0) tip.add(Component.literal("Rent " + r.getInt("rent") + "c a day" + (r.getString("rent_note").isEmpty() ? "" : "; " + r.getString("rent_note"))));
+                tip.add(Component.literal(where(r) + " — " + r.getString("terms")));
+                if (r.getInt("rent") > 0) tip.add(Component.literal("Rent " + r.getInt("rent") + ("flat".equals(r.getString("kind")) ? "c every other day" : "c a day")   // [flats]
+                    + (r.getString("rent_note").isEmpty() ? "" : "; " + r.getString("rent_note"))));
                 else if (r.getBoolean("rent_free")) tip.add(Component.literal("Rent-free: " + r.getString("rent_note")));
                 if (price > 0 && loan == null) tip.add(Component.literal("Put by " + saved + " of " + price + "c"));
                 if (loan != null) {
