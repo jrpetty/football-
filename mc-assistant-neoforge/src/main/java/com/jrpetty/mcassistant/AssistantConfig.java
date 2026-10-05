@@ -50,6 +50,7 @@ public final class AssistantConfig {
     public static final ModConfigSpec.IntValue VILLAGE_WORLD_CAP;
     public static final ModConfigSpec.IntValue VILLAGE_BUILD_SPEED;
     public static final ModConfigSpec.BooleanValue VILLAGE_RESHAPE_LAND;
+    public static final ModConfigSpec.BooleanValue VILLAGE_PHANTOMS;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -193,6 +194,13 @@ public final class AssistantConfig {
                 "channels to their fields. Turn it off to keep your terrain as it is;",
                 "buildings still get the footings they need to stand.")
             .define("villageReshapeLand", true);
+        VILLAGE_PHANTOMS = b.comment(
+                "Let phantoms trouble the villages. Off by default: no phantom spawns over a",
+                "village (its town's reach and twenty-four blocks round it) for a player who",
+                "has not slept, and one that strays in from outside is seen off in a puff of",
+                "smoke (one from a spawn egg, a spawner or a command is left alone). Either way",
+                "a phantom never goes for the folk: it hunts players, as in the game.")
+            .define("villagePhantoms", false);
         b.pop();
 
         SPEC = b.build();
@@ -229,6 +237,7 @@ public final class AssistantConfig {
     public static int villageWorldCap() { return read(VILLAGE_WORLD_CAP, 200); }
     public static int villageBuildSpeed() { return read(VILLAGE_BUILD_SPEED, 100); }
     public static boolean villageReshapeLand() { return read(VILLAGE_RESHAPE_LAND, true); }
+    public static boolean villagePhantoms() { return read(VILLAGE_PHANTOMS, false); }
 
     /** Config values throw if read before the file is loaded (early world gen,
      *  datagen, a dedicated server still booting) — fall back rather than crash. */

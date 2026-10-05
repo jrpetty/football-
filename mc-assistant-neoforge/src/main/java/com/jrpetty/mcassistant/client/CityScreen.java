@@ -309,7 +309,12 @@ public class CityScreen extends Screen {
         card(g, x + 3 * (cardW + 4), y2, cardW, cardH, data.getCompound("leader").getString("title").isEmpty() ? "Leader"
             : capital(leader.getString("title")), leader.getString("name"),
             leader.contains("approval") ? leader.getInt("approval") + "% approve" : "", BROWN);
-        small(g, Ui.clip(font, ages(), (int) (cw / 0.75)), x, y2 + cardH + 3, Ui.MUTED);
+        // At the end of the line, what is lying about the town (entity/Sweepers): every one a thing the server ticks.
+        CompoundTag house = data.getCompound("storehouse");
+        String lying = house.contains("lying") ? "Lying about: " + house.getInt("lying") + (house.getInt("lying") == 1 ? " item" : " items") : "";
+        int lyingW = lying.isEmpty() ? 0 : (int) Math.ceil(font.width(lying) * 0.75F) + 8;
+        small(g, Ui.clip(font, ages(), (int) ((cw - lyingW) / 0.75)), x, y2 + cardH + 3, Ui.MUTED);
+        if (!lying.isEmpty()) small(g, lying, x + cw - lyingW + 8, y2 + cardH + 3, house.getInt("lying") > 40 ? Ui.WARN : Ui.MUTED);
         int cy = y2 + cardH + 12;
         int chartH = Math.max(50, (ch - (cy - y)) / 2 - 18);
         int half = (cw - 6) / 2;
@@ -1137,6 +1142,10 @@ public class CityScreen extends Screen {
         row.accept("Today " + s.getInt("in") + " in, " + s.getInt("out") + " out · requests " + s.getInt("served") + " served, "
             + s.getInt("self") + " self-served", Ui.INK);
         row.accept(s.getInt("runs") + " courier runs, " + s.getInt("run_goods") + " carried, " + s.getInt("deliveries") + " loads in", Ui.INK);
+        // The street sweeper (entity/Sweepers): swept in today, and what is lying about the town now.
+        if (s.contains("lying")) row.accept(s.getInt("swept") + " swept in today · lying about the town: " + s.getInt("lying")
+            + (s.getInt("lying") == 1 ? " item" : " items") + " (" + s.getInt("sweepable") + " for the broom)",
+            s.getInt("lying") > 40 ? Ui.WARN : Ui.INK);
         if (s.contains("tidy")) {
             CompoundTag t = s.getCompound("tidy");
             row.accept("Last tidy (" + t.getString("by") + ", " + t.getLong("ago") + "s ago): " + t.getInt("before") + " slots to "
@@ -1149,10 +1158,12 @@ public class CityScreen extends Screen {
             ry[0] += 12;
             for (int i = 0; i < staff.size(); i++) {
                 CompoundTag f = staff.getCompound(i);
-                boolean courier = f.getString("role").equals("courier");
+                boolean courier = f.getString("role").equals("courier"), sweeper = f.getString("role").equals("sweeper");
                 row.accept(f.getString("name") + " (" + f.getString("role") + ", " + f.getInt("wage") + "c a day)"
-                    + (courier ? " " + f.getInt("runs") + " runs, " + f.getInt("moved") + " carried" : "") + " — " + f.getString("doing"),
-                    courier ? Ui.INK : Ui.GOOD);
+                    + (courier ? " " + f.getInt("runs") + " runs, " + f.getInt("moved") + " carried" : "")
+                    + (sweeper ? " " + f.getInt("swept") + " swept in today" : courier && f.getInt("swept") > 0 ? ", " + f.getInt("swept") + " swept" : "")
+                    + " — " + f.getString("doing"),
+                    courier || sweeper ? Ui.INK : Ui.GOOD);
             }
         }
         ListTag running = s.getList("running", Tag.TAG_COMPOUND), queued = s.getList("queued", Tag.TAG_COMPOUND);

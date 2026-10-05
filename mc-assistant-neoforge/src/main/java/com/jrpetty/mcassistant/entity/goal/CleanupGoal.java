@@ -109,6 +109,9 @@ public class CleanupGoal extends Goal {
         double bestDist = Double.MAX_VALUE;
         for (ItemEntity item : assistant.level().getEntitiesOfClass(
                 ItemEntity.class, assistant.getBoundingBox().inflate(16.0))) {
+            // A player's throw is the player's: a village's folk leave it be (Sweepers).
+            if (assistant instanceof com.jrpetty.mcassistant.entity.VillageFolkEntity
+                && com.jrpetty.mcassistant.entity.Sweepers.playersOwn(item)) continue;
             double d = item.distanceToSqr(assistant);
             if (d < bestDist) { bestDist = d; best = item; }
         }

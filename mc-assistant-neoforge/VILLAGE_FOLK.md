@@ -1132,6 +1132,54 @@ fewer than two rows stand empty it grows nine more, so the harvest always has so
   * You can place one yourself within about 38 blocks of a village's heart and the
     village will use it.
 
+### The street sweeper
+
+Things lie about a town: saplings off the trees felled for its buildings, seed the birds
+kicked out of the grass, an egg a hen laid on the square, the bones and string the watch
+left after a night's fighting, the blocks a builder knocked out of the way, a tuft of wool.
+Every one is something the server ticks for five minutes, and something the village could
+have used. **The storehouse keeps a sweeper to see to them.**
+
+* **Who.** Once a town has its storehouse and **16 folk**, one of the storehouse's couriers
+  takes up the broom (*"A broom, is it? Right — the streets it is."*), and one more for every
+  16 folk after that (three at most). The town wants a courier more for each, so the runs are
+  not left short, and the storehouse's **last** courier is never made its sweeper. It is paid
+  as the storehouse's staff, like the couriers. In a **smaller town** (or while the sweeper is
+  asleep or off work) a courier with no run sweeps between runs instead: a few heaps, then in
+  with them, and back to the door.
+* **Where.** The town's streets and squares: anything lying in the open within the town's
+  reach. Not indoors, not down a hole or a mine, not in the water.
+* **What it leaves.**
+  * **Anything a player threw or dropped**, or that fell when a player died — always, however
+    long it lies. (No folk picks those up in passing either: they are yours to come back for.)
+  * Anything at all for a minute while **a player is near**: it may be theirs, out of a block
+    they broke.
+  * The ground of a **building going up**, while the builders are at it.
+  * Anything on **a worker's own ground**, or beside a hand at its work, for two minutes: the
+    woodcutter sweeps up its own saplings between fellings, the farmer and the miner take up
+    what they knock loose. The sweeper takes only what they have **left lying**.
+* **Where it goes.** Into the storehouse (and the store chests beside it), onto the stacks
+  there like everything else, and into the storehouse's books as **swept in**, by whom, item
+  by item.
+* **Seeing it.** A sweeper's *About* card says *Street sweeper* and how much it has swept in
+  today, and the line at the top says what it is doing (*"For the storehouse: sweeping the
+  streets: going for three oak saplings"*). The **Stores** page lists it among the
+  storehouse's staff with what it swept today, and shows how much is **lying about the town**
+  now (*"lying about the town: 12 items (5 for the broom)"*); the **Overview** page shows the
+  same count at the end of the line under its cards, so you can watch the clutter (and the
+  load on the server) go down. `/village sweeper` says it all in chat.
+
+### No phantoms over the villages
+
+The folk keep their own hours, and a town is no place for phantoms. While a village stands,
+**no phantom comes over it of itself**: a player who has not slept, standing within the
+town's reach (and twenty-four blocks round it), has no phantoms sent after them there, and a
+phantom that strays in over the town from outside is seen off in a puff of smoke — nothing
+hurt, nothing dropped. One you brought (a spawn egg, a spawner, a command, a name tag) is left
+alone. And **a phantom never goes for a folk**, whatever the settings: it hunts players, as
+in the game. Turn `villagePhantoms` on in the config to let them come over the villages as
+they always did.
+
 ## How they look
 
 A folk has a villager's head and nose on a body that can hold things: real arms
@@ -3026,6 +3074,9 @@ ripen, days pass, folk work and houses go up at that pace.
   was wanted and not there, what was made, its price and markdown, and what it is short of.
 * `/village stores` — the storehouse's day: its slots, its storekeeper, what went in and out
   and who served the requests, its last tidy, its staff and their runs, and its run list.
+* `/village sweeper` — the street sweeper's day: what it swept in, by whom, and how much is
+  lying about the town now. `sweeper appoint` (operators) makes the nearest grown folk the
+  storehouse's sweeper at once, whatever the size of the town.
 * `/village chronicle` — the nearest village's history, as a written book.
 * `/village standing` — what every village you have met thinks of you.
 * `/village ledger` — the nearest village's town ledger, as a book.
@@ -3054,6 +3105,9 @@ ripen, days pass, folk work and houses go up at that pace.
 * `villageReshapeLand` (on): off keeps your terrain as it is. The town's ground isn't
   levelled, no sand is dug and no irrigation channels are cut. Buildings still get the
   footings they need.
+* `villagePhantoms` (off): on lets phantoms come over the villages as they do anywhere else.
+  Off, none spawns over a village (its town's reach and twenty-four blocks round it) and a
+  stray that flies in is seen off. Phantoms never go for the folk either way.
 
 ## Keeping it steady
 

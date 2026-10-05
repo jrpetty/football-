@@ -224,6 +224,48 @@ def found_village(r, cx, cz, look):
     say("folk founded: " + r.cmd("execute positioned %d %d %d run village list" % (fx, level_y + 1, fz))[:400])
 
 
+def sweeper_stage(r, look, cx, cz):
+    """The street sweeper (entity/Sweepers): the folk nearest the heart made the storehouse's sweeper
+    (whatever the size of the town), saplings, seed, eggs, wool, cobblestone and bones dropped about the
+    square, and the sweeper going among them; then the Stores page, with what it swept in and how much is
+    lying about the town. After the books, so the town has had the days to put its storehouse up."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("time set 6000")
+    r.cmd("gamemode spectator %s" % USER)
+    out = r.cmd("execute positioned %d 100 %d run village sweeper appoint" % (cx, cz))
+    say("sweeper: " + out[:500])
+    m = re.search(r"SWEEPER (.+?) (-?\d+) (-?\d+) (-?\d+)", out)
+    if not m:
+        say("nobody took up the broom; nothing to photograph")
+        return
+    y = int(m.group(3))
+    r.cmd("tp %s %d %d %d" % (USER, cx + 18, y + 10, cz + 18))
+    time.sleep(6)
+    litter = (("oak_sapling", 3), ("wheat_seeds", 6), ("egg", 2), ("white_wool", 3), ("cobblestone", 8),
+              ("bone", 2), ("birch_sapling", 2), ("string", 3))
+    for i, (item, n) in enumerate(litter):
+        a = i * math.pi / 4
+        x, z = cx + 7 * math.cos(a), cz + 7 * math.sin(a)
+        r.cmd('summon minecraft:item %.1f %d %.1f {Item:{id:"minecraft:%s",count:%d}}' % (x, y + 2, z, item, n))
+    look("18-sweeper-1-litter", cx + 16, y + 9, cz + 16, cx, y, cz, wait=6)
+    # A little later: the sweeper among the heaps (it lets them settle a few seconds first).
+    time.sleep(15)
+    pos = r.cmd("data get entity @e[tag=mca_sweeper,limit=1] Pos")
+    pm = re.search(r"\[(-?[\d.]+)d, (-?[\d.]+)d, (-?[\d.]+)d\]", pos)
+    if pm:
+        fx, fy, fz = float(pm.group(1)), float(pm.group(2)), float(pm.group(3))
+        look("18-sweeper-2-at-work", fx + 5, fy + 2, fz + 5, fx, fy + 1, fz, wait=5)
+    else:
+        say("the sweeper is not to be found: %s" % pos[:200])
+    time.sleep(30)
+    say("sweeper: " + r.cmd("execute positioned %d 100 %d run village sweeper" % (cx, cz))[:700])
+    say("stats stores: " + r.cmd("execute as %s at @s run village stats 11" % USER))
+    time.sleep(3)
+    shot("18-sweeper-3-stores")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    say("alive after the sweeper: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")
