@@ -1173,6 +1173,12 @@ public class VillageFolkEntity extends AssistantEntity {
         return Skill.percent(this);
     }
 
+    /** The city's research and its own knacks (CityTree, FolkSkills). */
+    @Override
+    protected int skillWorkPercent() {
+        return CityTree.workPercent(ownerId(), stationTask()) + FolkSkills.workPercent(this);
+    }
+
     /** A good mood makes for quick hands, a black one for slow ones. */
     @Override
     protected int moodWorkPercent() {

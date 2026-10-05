@@ -2077,10 +2077,14 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** How well its nature suits its trade, in percent (village folk: Skill). */
     protected int personalityWorkPercent() { return 0; }
 
+    /** What its skills give the pace of its work, in percent: the city's research (CityTree) and the
+     *  knacks it has chosen for itself (FolkSkills). Village folk only. */
+    protected int skillWorkPercent() { return 0; }
+
     /** Every bonus and penalty to the pace of work, in percent: level, crew, quirk, mood, village. */
     public int workBonusPercent() {
         int bonus = veteranLevel() >= 35 ? 30 : (veteranLevel() >= 20 ? 20 : (veteranLevel() >= 10 ? 10 : 0));
-        return Math.max(-30, Math.min(45, bonus + teamworkPercent() + traitWorkPercent() + moodWorkPercent() + villageWorkPercent() + personalityWorkPercent()));
+        return Math.max(-30, Math.min(45, bonus + teamworkPercent() + traitWorkPercent() + moodWorkPercent() + villageWorkPercent() + personalityWorkPercent() + skillWorkPercent()));
     }
 
     /** The Efficiency on a tool, if it has any. */
@@ -4323,7 +4327,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         int bonus = veteranLevel() >= 35 ? 30 : (veteranLevel() >= 20 ? 20 : (veteranLevel() >= 10 ? 10 : 0));
         // A forester's axe work (and a husbandman's shears) come off the same
         // clock, so the branch discount lands here alongside the veteran rungs.
-        bonus = Math.min(45, bonus + teamworkPercent() + traitWorkPercent() + moodWorkPercent() + villageWorkPercent() + personalityWorkPercent());
+        bonus = Math.min(45, bonus + teamworkPercent() + traitWorkPercent() + moodWorkPercent() + villageWorkPercent() + personalityWorkPercent() + skillWorkPercent());
         int ticks = base * (100 - bonus) / 100 * branchCooldownPercent() / 100;
         // Diet is a multiplier on TIME, not on the bonus: at 30% pace a job
         // takes three times as long, which is what "works at 30% speed" means.
@@ -4365,7 +4369,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      *  level, branch, crewmates, quirk and dinner are taken into account. */
     public int actionPaceTicks() {
         int bonus = veteranLevel() >= 35 ? 30 : (veteranLevel() >= 20 ? 20 : (veteranLevel() >= 10 ? 10 : 0));
-        bonus = Math.min(45, bonus + teamworkPercent() + traitWorkPercent() + moodWorkPercent() + villageWorkPercent() + personalityWorkPercent());
+        bonus = Math.min(45, bonus + teamworkPercent() + traitWorkPercent() + moodWorkPercent() + villageWorkPercent() + personalityWorkPercent() + skillWorkPercent());
         // The tool's tier is the base the bonuses pull against: a fed veteran
         // with a wooden hoe is still slower than a recruit handed netherite.
         int ticks = toolPaceTicks() * (100 - bonus) / 100 * branchCooldownPercent() / 100;
