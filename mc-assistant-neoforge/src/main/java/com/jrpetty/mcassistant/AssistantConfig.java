@@ -41,6 +41,7 @@ public final class AssistantConfig {
     public static final ModConfigSpec.BooleanValue VILLAGE_BREEDING;
     public static final ModConfigSpec.BooleanValue VILLAGE_RAIDS;
     public static final ModConfigSpec.IntValue VILLAGE_GROWTH_CAP;
+    public static final ModConfigSpec.IntValue VILLAGE_FOUNDING_MOST;
     public static final ModConfigSpec.IntValue VILLAGE_LOADED_CHUNKS;
     public static final ModConfigSpec.BooleanValue REPLACE_VILLAGERS;
     public static final ModConfigSpec.BooleanValue PROTECT_TRADED_VILLAGERS;
@@ -138,6 +139,11 @@ public final class AssistantConfig {
                 "needs is area: a hundred folk stake plots up to ~250 blocks out, five",
                 "hundred up to ~500. Every one of those people is a ticking entity.")
             .defineInRange("villageGrowthCap", 100, 2, 500);
+        VILLAGE_FOUNDING_MOST = b.comment(
+                "The most folk a player may found a village with at its board (two to five",
+                "hundred). A founding party may be bigger than villageGrowthCap: the cap is on",
+                "children, so a village founded over it raises none until it is smaller.")
+            .defineInRange("villageFoundingMost", 500, 2, 500);
         VILLAGE_LOADED_CHUNKS = b.comment(
                 "How many chunks around its heart a settlement keeps ticking while",
                 "nobody is there, as a radius. Six is a 13x13 square (169 chunks): the",
@@ -214,6 +220,7 @@ public final class AssistantConfig {
     public static boolean villageBreeding() { return read(VILLAGE_BREEDING, true); }
     public static boolean villageRaids() { return read(VILLAGE_RAIDS, true); }
     public static int villageGrowthCap() { return read(VILLAGE_GROWTH_CAP, 100); }
+    public static int villageFoundingMost() { return read(VILLAGE_FOUNDING_MOST, 500); }
     public static int villageLoadedChunks() { return read(VILLAGE_LOADED_CHUNKS, 6); }
     public static boolean replaceVillagers() { return read(REPLACE_VILLAGERS, true); }
     public static boolean protectTradedVillagers() { return read(PROTECT_TRADED_VILLAGERS, false); }

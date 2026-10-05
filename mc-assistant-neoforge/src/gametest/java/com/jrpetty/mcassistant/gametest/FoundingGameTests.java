@@ -129,9 +129,9 @@ public class FoundingGameTests {
         // What is refused, and what is brought down to the cap.
         helper.assertTrue(!Founding.confirm(level, board, 1, null).ok(), "one is too few to found a village");
         helper.assertTrue(!Founding.confirm(level, board, 501, null).ok(), "five hundred and one is too many");
-        int cap = AssistantConfig.villageGrowthCap();
+        int cap = AssistantConfig.villageFoundingMost();
         helper.assertTrue(Founding.allowed(600) == Math.min(500, cap) && Founding.allowed(150) == Math.min(150, cap),
-            "a count over the growth cap (" + cap + ") is brought down to it: " + Founding.allowed(150));
+            "a count over the founding limit (" + cap + ") is brought down to it: " + Founding.allowed(150));
         List<String> said = Kit.command(level, "village found 900 " + cx + " " + cz);
         Kit.log("f01 /village found 900: " + said);
         helper.assertTrue(Founding.status(level.getServer()).size() == 1

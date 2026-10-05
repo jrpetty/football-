@@ -147,10 +147,16 @@ public class VillageFolkSpawnerBlock extends Block {
      */
     @Nullable
     public static VillageFolkEntity raise(ServerLevel server, BlockPos at, float yaw) {
+        return raise(server, at, yaw, com.jrpetty.mcassistant.AssistantConfig.villageGrowthCap());
+    }
+
+    /** As raise, up to {@code cap} folk in the village: a founding party (Founding) may be bigger than the
+     *  growth cap, which is on children. */
+    @Nullable
+    public static VillageFolkEntity raise(ServerLevel server, BlockPos at, float yaw, int cap) {
         Villages.Village village = Villages.nearest(server, at, Villages.VILLAGE_RANGE * 2);
         boolean founding = village == null;
         if (founding) village = Villages.found(server, at);
-        int cap = com.jrpetty.mcassistant.AssistantConfig.villageGrowthCap();
         if (Villages.headcount(village.id()) >= cap) return null;
 
         VillageFolkEntity folk = McAssistantMod.VILLAGE_FOLK.get().create(server);

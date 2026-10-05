@@ -79,6 +79,11 @@ public class CityScreen extends Screen {
     public static void show(CompoundTag data) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
+        // The server's word to shut the books (/village stats close).
+        if (data.getBoolean("close")) {
+            if (mc.screen instanceof CityScreen open) open.onClose();
+            return;
+        }
         CityScreen next = new CityScreen(data);
         if (mc.screen instanceof CityScreen open) {
             next.tab = open.tab;

@@ -137,6 +137,8 @@ def found_village(r, cx, cz, look):
     ground levelled with its edges sloped into the land, and the folk come, from high up."""
     count = 40
     fx, fz = cx + 280, cz + 40
+    # The books may still be open from the stats stage: shut them, or the board's photograph is of them.
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
     r.cmd("gamemode spectator %s" % USER)
     r.cmd("time set 6000")
     r.cmd("tp %s %d 140 %d" % (USER, fx - 10, fz - 30))

@@ -148,8 +148,8 @@ public class FoundingScreen extends Screen {
 
         int y = top + 80;
         if (most < FoundingPlan.MAX_FOLK) {
-            g.drawString(this.font, Ui.clip(this.font, "This server lets a village grow to " + most
-                + " (villageGrowthCap): that is the most.", inner), x, y, Ui.WARN, false);
+            g.drawString(this.font, Ui.clip(this.font, "This server lets a village be founded with up to " + most
+                + " (villageFoundingMost).", inner), x, y, Ui.WARN, false);
             y += 11;
         }
         y += 2;

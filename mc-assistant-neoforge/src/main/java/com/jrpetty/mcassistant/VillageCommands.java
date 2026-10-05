@@ -85,6 +85,14 @@ public final class VillageCommands {
             .then(Commands.literal("status").executes(VillageCommands::status))
             // The town's books in full, on the analytics screen (as clicking the village board does).
             .then(Commands.literal("stats").executes(ctx -> stats(ctx, -1))
+                .then(Commands.literal("close").executes(ctx -> {
+                    // Shut the books on the screen of whoever asks (the client smoke, between its stages).
+                    if (!(ctx.getSource().getEntity() instanceof ServerPlayer p)) return 0;
+                    net.minecraft.nbt.CompoundTag shut = new net.minecraft.nbt.CompoundTag();
+                    shut.putBoolean("close", true);
+                    net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p, new com.jrpetty.mcassistant.net.CityStatsPayload(shut));
+                    return 1;
+                }))
                 .then(Commands.argument("page", IntegerArgumentType.integer(0, 17))
                     .executes(ctx -> stats(ctx, IntegerArgumentType.getInteger(ctx, "page")))))
             // The village's houses: who lives where, what is for sale; buy one, let it out, take the rent.

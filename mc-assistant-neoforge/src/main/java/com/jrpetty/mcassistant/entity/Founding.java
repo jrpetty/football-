@@ -206,12 +206,13 @@ public final class Founding extends SavedData {
 
     // ------------------------------------------------------------------ asking
 
-    /** The most a village can be founded with on this server: five hundred, or the growth cap if that is less. */
+    /** The most a village can be founded with on this server: five hundred, unless the server says fewer
+     *  (villageFoundingMost). Not the growth cap: that is on children, and a founding may be bigger. */
     public static int most() {
-        return Math.max(FoundingPlan.MIN_FOLK, Math.min(FoundingPlan.MAX_FOLK, AssistantConfig.villageGrowthCap()));
+        return Math.max(FoundingPlan.MIN_FOLK, Math.min(FoundingPlan.MAX_FOLK, AssistantConfig.villageFoundingMost()));
     }
 
-    /** How many will come if this many are asked for: no more than the server lets a village grow to. */
+    /** How many will come if this many are asked for: no more than the server lets a village be founded with. */
     public static int allowed(int asked) {
         return Math.max(FoundingPlan.MIN_FOLK, Math.min(most(), asked));
     }
@@ -668,7 +669,7 @@ public final class Founding extends SavedData {
         }
         BlockPos heart = standing(level, s.heart.getX(), s.heart.getZ());
         VillageBoards.preferSide(heart, s.facing.getOpposite());
-        VillageFolkEntity first = VillageFolkSpawnerBlock.raise(level, heart, s.yaw);
+        VillageFolkEntity first = VillageFolkSpawnerBlock.raise(level, heart, s.yaw, most());
         if (first == null || first.ownerId() == null) {
             abandon(level, f, s, "Nobody could be settled there.");
             return false;
@@ -729,7 +730,7 @@ public final class Founding extends SavedData {
             if (Math.max(Math.abs(d[0]), Math.abs(d[1])) > camp) continue;
             BlockPos spot = safeGround(level, v.centre().getX() + d[0], v.centre().getZ() + d[1]);
             if (spot == null) continue;
-            VillageFolkEntity folk = VillageFolkSpawnerBlock.raise(level, spot, s.yaw);
+            VillageFolkEntity folk = VillageFolkSpawnerBlock.raise(level, spot, s.yaw, most());
             if (folk == null) {
                 s.count = s.spawned;                           // the village is full: that is all who come
                 return;
