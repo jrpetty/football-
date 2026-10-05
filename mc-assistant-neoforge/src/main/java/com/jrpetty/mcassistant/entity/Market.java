@@ -764,6 +764,10 @@ public final class Market {
         if (fav != Items.AIR) wants.add(fav);
         for (Item t : TREATS) if (!wants.contains(t)) wants.add(t);
         for (Item it : wants) {
+            // A player's stall on the square is a seller like any other: bought there if it has this at a
+            // price this folk thinks fair, and no dearer than the village's own (PlayerStalls).
+            String atStall = PlayerStalls.instead(level, v, f, s -> s.is(it), PlayerStalls.Use.TREAT, it == fav ? fav : null);
+            if (atStall != null) return atStall;
             Good g = goodFor(new ItemStack(it));
             int have = stock(level, v.id(), s -> s.is(it));
             int price = g == null ? 1 : Math.max(1, (int) Math.round(each(g, have)));

@@ -228,7 +228,7 @@ public class TalkScreen extends Screen {
             case MONEY -> {
                 out.add(new Choice("Order goods…", TalkTopic.BULK, "", "Order a quantity of anything at a tenth off: type what and how many"));
                 out.add(Choice.of("Contract?", TalkTopic.CONTRACT, "Bring the village what it is short of every week, at a third over its worth (say \"I'll sign\")"));
-                out.add(Choice.of("Rent a stall", TalkTopic.STALL, "Five coins a week for a barrel of your own on the square: on market day the folk buy from it"));
+                out.add(Choice.of("Rent a stall", TalkTopic.STALL, "A stall of your own on the square, a week at a time: stock it, set your prices, and the folk buy from it with their own coin. Ask again for how it's doing, \"take the till\" or \"pay the rent\""));
                 out.add(Choice.of("The bank", TalkTopic.BANK, "Your account at the treasury: \"deposit 20\", \"withdraw 10\", \"borrow 30\", \"repay\""));
                 out.add(new Choice("Invest…", TalkTopic.INVEST, "", "Put coin into the village's works: two weeks' share of what it takes each day"));
                 out.add(Choice.of("Auction", TalkTopic.AUCTION, "Market day's lot: the village's finest spare thing, to the best bid (\"I bid 30\")"));

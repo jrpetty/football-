@@ -623,6 +623,17 @@ public class VillageFolkEntity extends AssistantEntity {
         return true;
     }
 
+    /**
+     * A comfort bought somewhere other than the stores (a player's stall: PlayerStalls), carried home and
+     * set up by its bed as one from the shop is (homeComfort). False if its hands are full with another.
+     */
+    public boolean carryHome(net.minecraft.world.item.ItemStack comfort) {
+        if (comfort.isEmpty() || !comfortCarried.isEmpty() || bedPos() == null) return false;
+        comfortCarried = comfort.copyWithCount(1);
+        comfortSetOff = -1;
+        return true;
+    }
+
     /** Where in its home a comfort goes: indoors, near its bed, on a sound floor, out of the way. */
     @Nullable
     private BlockPos comfortSpot(BlockPos bed, boolean wall) {
@@ -1989,6 +2000,7 @@ public class VillageFolkEntity extends AssistantEntity {
             return;
         }
         if (homeComfort(server)) return;              // its savings, spent on its home
+        if (PlayerStalls.errand(this, server)) return;   // a player's stall on the square, for what it wants (PlayerStalls)
         if (shopping(server)) return;                 // market day: a treat from the stalls
         if (lookRound(server)) return;                // the new building everybody is talking about
         if (cafeVisit(server)) return;                // a drink at the café

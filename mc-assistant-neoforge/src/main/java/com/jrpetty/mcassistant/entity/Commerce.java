@@ -1,20 +1,15 @@
 package com.jrpetty.mcassistant.entity;
 
-import com.jrpetty.mcassistant.McAssistantMod;
 import com.jrpetty.mcassistant.village.Ledger;
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.ItemTags;
-import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.entity.SignBlockEntity;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -33,8 +28,8 @@ import java.util.function.Predicate;
  * <li><b>Supply contracts.</b> Sign up to bring the village what it is short of, every week, at a
  *     third over its worth. Keep it up and the village thinks the world of you; miss two weeks and
  *     the contract lapses.</li>
- * <li><b>Your own market stall.</b> Rent a stall on the square (five coins a week): stock its barrel,
- *     and on market day the folk buy from it out of their own purses, the coin left in the barrel.</li>
+ * <li><b>Your own market stall.</b> Rent a stall on the square a week at a time, stock its barrel and
+ *     set your prices: the folk buy from it out of their own purses, into its till (PlayerStalls).</li>
  * <li><b>The village bank.</b> Put coin by at the treasury and it earns a little every week; borrow
  *     against your good name, and pay it back — a debt left a fortnight shames you.</li>
  * <li><b>Investing.</b> Put coin into the village's works: for two weeks you take a share of what the
@@ -52,7 +47,7 @@ public final class Commerce {
 
     private Commerce() {}
 
-    static final int STALL_RENT = 5, CHARTER_COST = 50, ESCORT_PAY = 5;
+    static final int CHARTER_COST = 50, ESCORT_PAY = 5;
 
     // ------------------------------------------------------------------ helpers
 
@@ -267,108 +262,9 @@ public final class Commerce {
 
     // ------------------------------------------------------------------ 14. a market stall
 
-    /** "Could I rent a stall?" — five coins a week for a barrel of your own on the square. */
+    /** "Could I rent a stall?", "pay the rent", "take the till": a stall of your own on the square (PlayerStalls). */
     public static String stall(VillageFolkEntity f, Player p, String text) {
-        UUID village = f.ownerId();
-        if (village == null || !(f.level() instanceof ServerLevel level)) return "A stall? There's no market here.";
-        Villages.Village v = Villages.get(village);
-        if (v == null) return "A stall? There's no market here.";
-        long day = Dealings.day(f);
-        String key = "stall/" + p.getUUID();
-        String[] s = fields(village, key);
-        if (s != null && s.length >= 2) {
-            long paid = num(s[1]);
-            if (day <= paid) return "Your stall's by the square — paid up to day " + paid + ". Keep it stocked: market day's when they buy.";
-            if (Market.coinsHeld(p) < STALL_RENT) return "Your stall's rent is due: " + STALL_RENT + " coins a week.";
-            Market.payOut(p, STALL_RENT);
-            Ledger.addCoins(village, STALL_RENT);
-            Ledger.note(village, key, s[0] + "|" + (day + 7));
-            return "Rent paid: the stall's yours for another week.";
-        }
-        if (Standing.of(village, p.getUUID(), level.getGameTime()).title() == Standing.Title.OUTCAST) return "No stall for you.";
-        if (Market.coinsHeld(p) < STALL_RENT) return "A stall on the square is " + STALL_RENT + " coins a week. You've " + Market.coinsHeld(p) + ".";
-        BlockPos at = freeStallSpot(level, v);
-        if (at == null) return "There's no room on the square for another stall just now.";
-        Market.payOut(p, STALL_RENT);
-        Ledger.addCoins(village, STALL_RENT);
-        level.setBlockAndUpdate(at, Blocks.BARREL.defaultBlockState());
-        level.setBlockAndUpdate(at.above(), Blocks.OAK_SIGN.defaultBlockState());
-        if (level.getBlockEntity(at.above()) instanceof SignBlockEntity sign) {
-            String who = p.getName().getString();
-            TownLife.write(sign, new String[]{ who.length() > 15 ? who.substring(0, 15) : who, "'s stall", "Market day:", "folk buy here" });
-        }
-        Ledger.note(village, key, at.getX() + "," + at.getY() + "," + at.getZ() + "|" + (day + 7));
-        return "Your stall's set up by the square, at " + at.getX() + ", " + at.getZ() + ". Put what you'd sell in the barrel: on market day the folk"
-            + " buy from it with their own money, and leave the coin in it.";
-    }
-
-    @Nullable
-    static BlockPos freeStallSpot(ServerLevel level, Villages.Village v) {
-        BlockPos c = v.centre();
-        for (int r = 8; r <= 11; r++) {
-            for (int i = -r; i <= r; i += 2) {
-                for (int[] d : new int[][]{ { i, -r }, { i, r }, { -r, i }, { r, i } }) {
-                    int x = c.getX() + d[0], z = c.getZ() + d[1];
-                    if (level.getChunkSource().getChunkNow(x >> 4, z >> 4) == null) continue;
-                    int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
-                    BlockPos p = new BlockPos(x, y, z);
-                    if (Math.abs(y - c.getY()) > 3) continue;
-                    if (!level.getBlockState(p).isAir() || !level.getBlockState(p.above()).isAir()) continue;
-                    if (!level.getBlockState(p.below()).isFaceSturdy(level, p.below(), net.minecraft.core.Direction.UP)) continue;
-                    return p;
-                }
-            }
-        }
-        return null;
-    }
-
-    @Nullable
-    static BlockPos stallOf(UUID village, String[] s) {
-        if (s == null || s.length < 2) return null;
-        String[] xyz = s[0].split(",");
-        if (xyz.length < 3) return null;
-        return new BlockPos((int) num(xyz[0]), (int) num(xyz[1]), (int) num(xyz[2]));
-    }
-
-    /** Market day at the players' stalls: folk buy from them out of their own purses. Returns the sales. */
-    static int stallDay(ServerLevel level, Villages.Village v, long day) {
-        int sales = 0;
-        List<VillageFolkEntity> buyers = new ArrayList<>();
-        for (AssistantEntity a : Villages.folkOf(v.id())) {
-            if (a instanceof VillageFolkEntity f && !f.isBaby() && f.purse() > 0) buyers.add(f);
-        }
-        if (buyers.isEmpty()) return 0;
-        for (Map.Entry<String, String> e : notesStarting(v.id(), "stall/")) {
-            String[] s = e.getValue().split("\\|", -1);
-            BlockPos at = stallOf(v.id(), s);
-            if (at == null || !level.isLoaded(at) || !(level.getBlockEntity(at) instanceof Container box)) continue;
-            if (s.length >= 2 && day > num(s[1])) continue;                       // rent unpaid: shut
-            int sold = 0;
-            for (VillageFolkEntity f : buyers) {
-                if (sold >= 6) break;
-                for (int i = 0; i < box.getContainerSize(); i++) {
-                    ItemStack st = box.getItem(i);
-                    if (st.isEmpty() || Market.isCoin(st)) continue;
-                    int price = (int) Math.max(1, Math.round(Prices.each(st.getItem())));
-                    if (price > f.purse() || price > 20) continue;
-                    if (!f.spend(price)) continue;
-                    st.shrink(1);
-                    ItemStack coins = new ItemStack(McAssistantMod.VILLAGE_COIN.get(), price);
-                    ItemStack left = put(box, coins);
-                    if (!left.isEmpty()) f.earn(left.getCount());
-                    sold++;
-                    sales += price;
-                    break;
-                }
-            }
-            box.setChanged();
-        }
-        return sales;
-    }
-
-    /** Onto the part stacks of the same first, then empty slots (Stacking). Returns what would not fit. */
-    private static ItemStack put(Container c, ItemStack s) {
-        return Stacking.insert(c, s);
+        return PlayerStalls.talk(f, p, text);
     }
 
     static List<Map.Entry<String, String>> notesStarting(UUID village, String prefix) {
@@ -694,9 +590,9 @@ public final class Commerce {
 
     // ------------------------------------------------------------------ the day
 
-    /** Tests: market day at the players' stalls, now. */
+    /** Tests: market day at the players' stalls, now (PlayerStalls). */
     public static int stallDayForTests(ServerLevel level, Villages.Village v, long day) {
-        return stallDay(level, v, day);
+        return PlayerStalls.marketDayForTests(level, v);
     }
 
     /** Tests: put the finest spare thing up for auction now, or settle yesterday's. */
@@ -720,19 +616,16 @@ public final class Commerce {
         DONE.clear();
     }
 
-    /** Once a day for a village (TownLife, after the market's morning): stalls, the bank, dividends,
-     *  the auction, contracts, and friends' letters. */
+    /** Once a day for a village (TownLife, after the market's morning): the bank, dividends, the auction,
+     *  contracts, and friends' letters; and every round, the players' stalls (PlayerStalls). */
     public static void daily(ServerLevel level, Villages.Village v) {
+        PlayerStalls.tick(level, v);                    // the players' stalls: rent run out, given back, one to let
         long t = level.getDayTime() % 24000L;
         if (t < 6000L || t > 11000L) return;
         long day = level.getDayTime() / 24000L;
         if (DONE.getOrDefault(v.id(), -1L) >= day) return;
         DONE.put(v.id(), day);
         com.jrpetty.mcassistant.Guard.run("commerce", () -> {
-            if (Market.marketDay(v.id(), day)) {
-                int sales = stallDay(level, v, day);
-                if (sales > 0) Villages.tell(v.id(), day, "folk spent " + sales + " coins at the players' stalls");
-            }
             if (day % 7 == 0) bankWeek(level, v, day);
             dividends(v, day);
             auctionDay(level, v, day);

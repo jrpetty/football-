@@ -224,6 +224,57 @@ def found_village(r, cx, cz, look):
     say("folk founded: " + r.cmd("execute positioned %d %d %d run village list" % (fx, level_y + 1, fz))[:400])
 
 
+def market_stall_stage(r, look, cx, cz):
+    """A market stall of the player's own (entity/PlayerStalls), photographed: rented on the square of the
+    village at cx, cz (the booth out of the stores, or the player's own barrel, sign, fences and wool),
+    stocked with bread at the going price, apples cheap and pumpkin pies far too dear, then market day at
+    it (the nearest folk with coin come, buy what is fair and say what is not); the booth with its buyers,
+    the stall's screen (the till, the wares against the going price, who bought what), and the Shops page
+    of the town's books on the players' stalls."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode creative %s" % USER)
+    midday(r)
+    say("to the square: " + r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run tp %s ~2 ~ ~2"
+                                  % (cx, cz, USER)))
+    time.sleep(5)
+    for item, n in (("mc_assistant:village_coin", 40), ("minecraft:barrel", 1), ("minecraft:oak_sign", 1),
+                    ("minecraft:spruce_fence", 4), ("minecraft:red_wool", 2), ("minecraft:white_wool", 1)):
+        r.cmd("give %s %s %d" % (USER, item, n))
+    out = r.cmd("execute as %s at @s run village stall rent" % USER)
+    say("stall rent: " + out[:500])
+    m = re.search(r"STALL (-?\d+) (-?\d+) (-?\d+) facing (\w+)", out)
+    if not m:
+        say("no stall was rented; nothing to photograph")
+        return
+    bx, by, bz, facing = int(m.group(1)), int(m.group(2)), int(m.group(3)), m.group(4)
+    for slot, item, n in ((0, "minecraft:bread", 32), (1, "minecraft:apple", 16), (2, "minecraft:pumpkin_pie", 4)):
+        r.cmd("item replace block %d %d %d container.%d with %s %d" % (bx, by, bz, slot, item, n))
+    say("price: " + r.cmd("execute as %s at @s run village stall price -1 bread" % USER))         # the going price
+    say("price: " + r.cmd("execute as %s at @s run village stall price 2 apple" % USER))          # a bargain
+    say("price: " + r.cmd("execute as %s at @s run village stall price 40 pumpkin pie" % USER))   # far too dear
+    front = {"north": (0, -1), "south": (0, 1), "east": (1, 0), "west": (-1, 0)}[facing]
+    # Market day at it, then at once the picture: the buyers in front, their words over their heads.
+    say("market: " + r.cmd("execute as %s at @s run village stall market" % USER)[:700])
+    r.cmd("gamemode spectator %s" % USER)
+    ex = bx + 0.5 + front[0] * 6 + front[1] * 2
+    ez = bz + 0.5 + front[1] * 6 - front[0] * 2
+    look("18-stall-1-booth", ex, by + 1.5, ez, bx + 0.5, by + 1.0, bz + 0.5, wait=3)
+    # The stall's screen, from in front of it.
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %.1f %d %.1f" % (USER, bx + 0.5 + front[0] * 3, by, bz + 0.5 + front[1] * 3))
+    time.sleep(2)
+    say("stall screen: " + r.cmd("execute as %s at @s run village stall screen" % USER))
+    time.sleep(4)
+    shot("18-stall-2-screen")
+    # The town's books, the Shops page, on the players' stalls.
+    say("stall books: " + r.cmd("execute as %s at @s run village stall books" % USER))
+    time.sleep(4)
+    shot("18-stall-3-books")
+    say("stalls: " + r.cmd("execute as %s at @s run village stall" % USER)[:700])
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    say("alive after the stall: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

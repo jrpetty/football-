@@ -4478,18 +4478,20 @@ public class VillageGameTests {
         int cobble = 0;
         for (int i = 0; i < p.getInventory().getContainerSize(); i++) if (p.getInventory().getItem(i).is(Items.COBBLESTONE)) cobble += p.getInventory().getItem(i).getCount();
         helper.assertTrue(cobble - cobbleBefore == 128, "a bulk order out of what the village can spare");
-        // A stall on the square, and market day at it.
+        // A stall on the square (of the player's own barrel and sign if the stores can't spare them), and
+        // market day at it: the coin goes into its till (PlayerStalls).
+        p.getInventory().add(new ItemStack(Items.BARREL));
+        p.getInventory().add(new ItemStack(Items.OAK_SIGN));
         said.add("stall: " + com.jrpetty.mcassistant.entity.Commerce.stall(keeper, p, ""));
-        String[] stallNote = com.jrpetty.mcassistant.village.Ledger.note(village, "stall/" + p.getUUID()).split("\\|")[0].split(",");
-        BlockPos stallAt = new BlockPos(Integer.parseInt(stallNote[0]), Integer.parseInt(stallNote[1]), Integer.parseInt(stallNote[2]));
-        net.minecraft.world.Container barrel = (net.minecraft.world.Container) level.getBlockEntity(stallAt);
+        com.jrpetty.mcassistant.entity.PlayerStalls.Booth booth = com.jrpetty.mcassistant.entity.PlayerStalls.boothOf(village, p.getUUID());
+        helper.assertTrue(booth != null, "a stall of the player's own on the square: " + said.get(said.size() - 1));
+        net.minecraft.world.Container barrel = (net.minecraft.world.Container) level.getBlockEntity(booth.at());
         barrel.setItem(0, new ItemStack(Items.APPLE, 8));
         for (VillageFolkEntity f : List.of(keeper, smith, farmer)) f.earn(10);
         int sales = com.jrpetty.mcassistant.entity.Commerce.stallDayForTests(level, v, day);
-        int coinsIn = 0;
-        for (int i = 0; i < barrel.getContainerSize(); i++) if (com.jrpetty.mcassistant.entity.Market.isCoin(barrel.getItem(i))) coinsIn += barrel.getItem(i).getCount();
-        said.add("stall day: " + sales + " coins, " + coinsIn + " in the barrel");
-        helper.assertTrue(sales > 0 && coinsIn == sales, "the folk buy from a player's stall, and the coin is left in it");
+        int till = com.jrpetty.mcassistant.entity.PlayerStalls.till(village, p.getUUID());
+        said.add("stall day: " + sales + " coins, " + till + " in the till");
+        helper.assertTrue(sales > 0 && till == sales, "the folk buy from a player's stall, and the coin goes into its till");
         // The bank: put by, take out, borrow (a friend), repay.
         int treasury = com.jrpetty.mcassistant.village.Ledger.coins(village);
         said.add("bank: " + com.jrpetty.mcassistant.entity.Commerce.bank(keeper, p, "deposit 20"));

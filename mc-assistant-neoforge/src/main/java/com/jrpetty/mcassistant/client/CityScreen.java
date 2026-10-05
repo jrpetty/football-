@@ -93,8 +93,10 @@ public class CityScreen extends Screen {
             next.tab = open.tab;
             next.range = open.range;
             next.selectedTrade = open.selectedTrade;
+            next.shopSeller = open.shopSeller;
         }
         if (data.contains("tab")) next.tab = Math.max(0, Math.min(TABS.length - 1, data.getInt("tab")));   // a page asked for
+        if (data.contains("shopSeller")) next.shopSeller = data.getString("shopSeller");                   // a seller asked for (/village stall books)
         mc.setScreen(next);
     }
 
@@ -595,6 +597,15 @@ public class CityScreen extends Screen {
         List<CompoundTag> sellers = new ArrayList<>();
         ListTag sl = rep.getList("sellers", Tag.TAG_COMPOUND);
         for (int i = 0; i < sl.size(); i++) sellers.add(sl.getCompound(i));
+        // The players' stalls on the square (PlayerStalls), a seller of their own after the village's.
+        ListTag stalls = rep.getList("stalls", Tag.TAG_COMPOUND);
+        if (!stalls.isEmpty()) {
+            CompoundTag players = new CompoundTag();
+            players.putString("id", "players");
+            players.putString("name", "players' stalls");
+            players.putBoolean("built", true);
+            sellers.add(players);
+        }
         if (sellers.isEmpty()) {
             g.drawString(font, "No shop, café, tavern or market stands yet.", x, y, Ui.MUTED, false);
             return;
@@ -617,6 +628,10 @@ public class CityScreen extends Screen {
             kx += kw + 3;
         }
         if (rep.getBoolean("marketDay")) small(g, "Market day today", x + cw - (int) (font.width("Market day today") * 0.75), y + 2, Ui.GOOD);
+        if (pick.getString("id").equals("players")) {
+            playerStalls(g, x, y + 15, cw, ch - 15, mx, my, stalls);
+            return;
+        }
         // The seller's week.
         int sy = y + 15;
         int cardW = (cw - 3 * 4) / 4, cardH = 28;
@@ -681,6 +696,100 @@ public class CityScreen extends Screen {
         if (wares.isEmpty()) small(g, "Nothing on its books yet.", x, ty, Ui.MUTED);
         small(g, Ui.clip(font, wares.size() + " wares · the stock it keeps follows what sells · the mouse over a ware for its books"
             + (wares.size() > rowsFit ? " · scroll for more" : ""), (int) (cw / 0.75)), x, y + ch - 9, Ui.FAINT);
+    }
+
+    /**
+     * The players' stalls on the square (entity/PlayerStalls), one after another: whose, whether it is open
+     * and how long its rent runs, the week's sales and takings, the till and all it has taken; each thing in
+     * it with the player's price against the going price and what sold of it; the last sales, who bought
+     * what and for how much, and what the folk thought too dear. The scroll wheel goes from stall to stall.
+     */
+    private void playerStalls(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my, ListTag stalls) {
+        List<CompoundTag> list = new ArrayList<>();
+        int free = 0, rent = 0;
+        for (int i = 0; i < stalls.size(); i++) {
+            CompoundTag t = stalls.getCompound(i);
+            if (t.getString("state").equals("let")) { free = t.getInt("free"); rent = t.getInt("rent"); continue; }
+            list.add(t);
+            rent = t.getInt("rent");
+        }
+        int bottom = y + ch - 10;
+        int sy = y;
+        int start = list.isEmpty() ? 0 : Math.max(0, Math.min(scroll / 3, list.size() - 1));
+        int cardW = (cw - 3 * 4) / 4, cardH = 28;
+        for (int k = start; k < list.size() && sy + cardH + 24 < bottom; k++) {
+            CompoundTag s = list.get(k);
+            String state = s.getString("state");
+            long daysLeft = s.getLong("paidTill") - data.getCompound("shops").getLong("day");
+            String rentNote = switch (state) {
+                case "open" -> daysLeft <= 0 ? "the last day paid" : daysLeft + (daysLeft == 1 ? " day to run" : " days to run");
+                case "due" -> "shut: rent due";
+                case "held" -> "given back on day " + s.getLong("gaveBack");
+                default -> "";
+            };
+            int stateColour = state.equals("open") ? GREEN : state.equals("due") ? AMBER : RED;
+            card(g, x, sy, cardW, cardH, "Stall", s.getString("owner") + "'s", state.equals("open") ? "open, at " + s.getInt("bx") + ", " + s.getInt("bz")
+                : state.equals("due") ? "shut" : state.equals("held") ? "goods kept to collect" : "given up: its till to collect", stateColour);
+            card(g, x + cardW + 4, sy, cardW, cardH, "Rent paid to", "day " + s.getLong("paidTill"), rentNote, stateColour);
+            card(g, x + 2 * (cardW + 4), sy, cardW, cardH, "Sold this week", s.getInt("sold7") + " for " + s.getInt("coin7") + "c",
+                s.getInt("soldToday") + " today, for " + s.getInt("coinToday") + "c", BLUE);
+            card(g, x + 3 * (cardW + 4), sy, cardW, cardH, "In its till", s.getInt("till") + "c", s.getInt("takenAll") + "c taken in all", AMBER);
+            sy += cardH + 4;
+            // The wares.
+            String[] heads = { "Ware", "In stall", "Price (a lot)", "Going", "Sold 7d", "" };
+            int[] cols = { 0, cw * 30 / 100, cw * 42 / 100, cw * 58 / 100, cw * 68 / 100, cw * 80 / 100 };
+            for (int i = 0; i < heads.length; i++) small(g, heads[i], x + cols[i], sy, Ui.FAINT);
+            sy += 10;
+            ListTag wares = s.getList("wares", Tag.TAG_COMPOUND);
+            for (int i = 0; i < wares.size() && sy < bottom - 30; i++) {
+                CompoundTag w = wares.getCompound(i);
+                boolean over = mx >= x && mx < x + cw && my >= sy - 1 && my < sy + 9;
+                g.fill(x - 2, sy - 1, x + cw, sy + 9, over ? Ui.HI : i % 2 == 0 ? Ui.ROW : Ui.ROW_ALT);
+                icon(g, w.getString("item"), x, sy - 1, 0.6F);
+                small(g, Ui.clip(font, w.getString("name"), (int) ((cols[1] - 14) / 0.75)), x + 11, sy + 1, Ui.INK);
+                small(g, w.getInt("count") == 0 ? "sold out" : num(w.getInt("count")), x + cols[1], sy + 1, w.getInt("count") == 0 ? Ui.BAD : Ui.INK);
+                int price = w.getInt("price"), going = w.getInt("going"), lot = w.getInt("lot");
+                small(g, (price <= 0 ? "kept back" : price + "c") + (lot > 1 ? " for " + lot : "") + (w.getBoolean("set") || price <= 0 ? "" : " (going)"),
+                    x + cols[2], sy + 1, Ui.INK);
+                small(g, going > 0 ? going + "c" : "—", x + cols[3], sy + 1, Ui.MUTED);
+                small(g, w.getInt("sold7") > 0 ? w.getInt("sold7") + " (" + w.getInt("coin7") + "c)" : "—", x + cols[4], sy + 1, Ui.INK);
+                String judged = going <= 0 ? "nobody here buys it" : price <= 0 ? "" : price <= going ? "fair" : price <= going * 1.25 ? "dear"
+                    : price <= going * 1.5 ? "dear: the rich only" : "too dear: nobody buys";
+                small(g, judged, x + cols[5], sy + 1, price > going * 1.5 && going > 0 ? Ui.BAD : price > going ? Ui.WARN : Ui.GOOD);
+                if (over) {
+                    List<Component> tip = new ArrayList<>();
+                    tip.add(Component.literal(w.getString("name") + (lot > 1 ? ", by the " + lot : "")));
+                    tip.add(Component.literal("Its price " + (price <= 0 ? "kept back" : price + "c") + "; the village's going price " + going + "c."));
+                    tip.add(Component.literal("Sold " + w.getInt("sold7") + " this week for " + w.getInt("coin7") + "c."));
+                    hover = tip;
+                    hoverX = mx;
+                    hoverY = my;
+                }
+                sy += 10;
+            }
+            if (wares.isEmpty()) { small(g, "Nothing in it.", x, sy, Ui.MUTED); sy += 10; }
+            // The last sales, and what was turned down.
+            ListTag sales = s.getList("sales", Tag.TAG_COMPOUND);
+            ListTag dear = s.getList("dear", Tag.TAG_COMPOUND);
+            int half = (cw - 8) / 2, ly = sy + 2;
+            for (int i = 0; i < Math.min(3, sales.size()) && ly < bottom - 8; i++) {
+                CompoundTag x2 = sales.getCompound(i);
+                small(g, Ui.clip(font, "Day " + x2.getLong("day") + ": " + x2.getString("who") + " bought " + x2.getInt("count") + " "
+                    + x2.getString("what") + " for " + x2.getInt("price") + "c", (int) (half / 0.75)), x, ly + i * 9, Ui.INK);
+            }
+            if (sales.isEmpty()) small(g, "Nothing sold yet.", x, ly, Ui.MUTED);
+            for (int i = 0; i < Math.min(3, dear.size()) && ly < bottom - 8; i++) {
+                CompoundTag d = dear.getCompound(i);
+                small(g, Ui.clip(font, d.getString("who") + " thought " + d.getInt("price") + "c for " + d.getString("what") + " too dear (going "
+                    + d.getInt("going") + "c)", (int) (half / 0.75)), x + half + 8, ly + i * 9, Ui.WARN);
+            }
+            sy = ly + Math.max(1, Math.min(3, Math.max(sales.size(), dear.size()))) * 9 + 8;
+        }
+        if (list.isEmpty()) small(g, "No player keeps a stall here yet.", x, y, Ui.MUTED);
+        String foot = (free > 0 ? free + (free == 1 ? " stall" : " stalls") + " to let on the square, " + rent + "c a week: right-click one to rent it. "
+            : "A stall on the square is " + rent + "c a week: ask anybody. ")
+            + (list.size() > 1 ? "Scroll for the other stalls. " : "") + "The folk weigh each price against the going price.";
+        small(g, Ui.clip(font, foot, (int) (cw / 0.75)), x, y + ch - 9, Ui.FAINT);
     }
 
     private void jobs(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my) {
