@@ -828,7 +828,7 @@ public final class JobSeekers {
                 c.setChanged();
             }
         }
-        if (refugee) return;
+        if (refugee || !Villages.hasStores(level, from)) return;          // (no stores to give them back to: it keeps them)
         // The village's goods it was carrying (the day's ore, a load for the stores) are the village's: into the stores.
         net.minecraft.core.NonNullList<ItemStack> pack = m.getInventoryItems();
         int food = 0;
