@@ -337,6 +337,7 @@ public final class Villages {
         REQUESTED.clear();
         ELECTED_ON.clear();
         Assemblies.resetForTests();
+        TownCalendar.resetForTests();       // the town bell, birthdays, Founding Day
         GLUT.clear();
         GLUT_AT.clear();
         GREW.clear();

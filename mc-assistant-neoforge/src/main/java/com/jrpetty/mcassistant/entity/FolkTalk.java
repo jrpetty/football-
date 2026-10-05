@@ -336,6 +336,8 @@ public final class FolkTalk {
         if (!needs.isEmpty()) line(sb, "Needs", String.join(", ", needs));
         java.util.List<Persona.Memory> mem = me.memories();
         if (!mem.isEmpty()) line(sb, "Remembers", mem.get(mem.size() - 1).text());
+        line(sb, "Birthday", Birthdays.cardLine(f));        // its birthday, its age and the next (Birthdays)
+        line(sb, "The bell", TownBell.cardLine(f));         // when it answered today's bells (TownBell)
         return sb.toString();
     }
 
@@ -546,6 +548,7 @@ public final class FolkTalk {
             case "unflappable" -> pick(r, "Things could be better, but I don't let it get to me.", "Nothing much rattles me.");
             case "civic" -> CityTree.moodWords(f);
             case "homely" -> Decor.moodWords(f);
+            case "birthday" -> Birthdays.moodWords(f);
             default -> "";
         };
     }

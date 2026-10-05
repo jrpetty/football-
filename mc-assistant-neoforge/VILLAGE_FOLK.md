@@ -1681,6 +1681,72 @@ Folk feel the better for it the next day.
 
 **Running.** On a long walk, folk who are fed and well break into a run.
 
+### The town bell, birthdays and Founding Day
+
+**The town bell keeps the day.** Three times a day somebody walks to the town's bell and rings
+it, as you would — the bell swings and is heard all round:
+
+| Bell | When | Strokes | What the town does |
+|---|---|---|---|
+| Dawn | 6:00 | 3 | Gets up. Before it the town lies in (the watch excepted); it wakes them, the morning assembly at the board follows, then work |
+| Noon | 12:00 | 6 | Everybody's break at once, and the midday meal with it: to the café or the tavern's bar with a few coins (a dish bought out of the stores, the coin into the treasury), else home to its household's table, else to the stores, and it sits down to the meal there (the meals come out of its pack, its home's chest or the stores, as every meal does; nobody eats twice) |
+| Dusk | 18:00 | 9 | The day's work stops and folk walk home to their beds; the guards go on watch; on Founding Day the town goes to the board instead |
+
+* **The bell** is the town's own: a bell it already has — the bell tower's, one by the leader's
+  hall or the board, the alarm bell on the square, the chapel's, the bell of a village its folk
+  moved into — the nearest to where a town bell belongs (before the leader's hall, else the board,
+  else the heart). Nobody in a village can make a bell: **put one in the stores** (found in a
+  village, bought from a villager or brought) and the town's works hang it on a plinth of stone
+  out of the stores, before the leader's hall once it stands, else on the square where the watch
+  hangs its alarm bell. Till there is one, the ringer **calls the hours at the board**, as a town
+  crier would.
+* **The ringer** is somebody sensible and awake: at dawn a guard of the second watch (up all night
+  anyway), at noon the storekeeper, at dusk a guard going on watch — else the next of them, a
+  courier, or whoever is grown and nearest (woken a little early for the dawn bell). It sets off a
+  little before the hour, waits at the bell and rings on the hour. If it cannot get there, whoever
+  is standing by the bell rings it a little late; with nobody by it the hour goes unrung and the
+  day goes on without it.
+* **The bell keeps the day it began.** Noon and dusk are rung only on a day the dawn bell was, so a
+  town that comes back to the world mid-morning keeps its own hours (each folk its own break) until
+  the next dawn. A camp of fewer than three keeps its own hours too, and the alarm bell has the bell
+  while it rings.
+* **Where you see it.** The board's right-hand column has today's bells (*The bell today: dawn
+  6:02 (Holt), noon 12:00 (Holt), dusk at 18:00*); the town's books' **News** page has the town's
+  calendar (where the bell hangs, each bell: when, rung by whom, how many answered it); a folk's
+  card (**The bell**) says when it got up, ate and went home, and any bell it rang.
+
+**Birthdays.** Folk count their years two to the day (six as children), so a birthday by their count
+comes twice a day. What they keep are the **round ones**: the day a folk's years pass into a new
+ten — a child's when it comes into double figures (its second day), then twenty, thirty, forty and
+on, every five days. The day comes from when it was born, or for one who came to the village grown,
+from the years it came with; it is saved with the folk, and the last birthday kept with the world.
+
+* It says so ("Forty today!"), remembers it, and is the happier for the day.
+* Its **friends** (those fond enough of it), its partner, its parents and children — the three
+  fondest — each come round in their own time (a break, the evening) with **a present**: something
+  out of their own pack — a flower, a cookie, a slice of pie, bread, an apple, a rug, a book — the
+  kind it loves first, never the kind it hates, never the giver's last rations or the tools of its
+  trade; or, with nothing fit to give, one **bought out of its own purse** from the stores (the coin
+  into the treasury). The present goes from the one pack to the other — nothing is made out of
+  nothing — and a flower or a rug is kept as its own. It says thank you, and both are the fonder.
+* The village's history notes **a child's birthday** and **an elder's** (sixty and over).
+* A folk's card (**Birthday**) has when it was born, its age and its next birthday (or today's,
+  with the presents); the board and the books' News page list **the week's birthdays**.
+
+**Founding Day.** Nothing in a folk's life measures a year, so the town counts its own: **four of
+its weeks, twenty-eight days** (long enough to be an occasion, short enough that a town sees one
+every few evenings' play and a folk lives through one or two). Every twenty-eight days from the
+day it was founded, in the evening, before any other gathering that night (the weekly feast waits a
+week; rain does not put it off):
+
+* the village gathers before the board (the leader's hall behind it, once there is one);
+* the leader — or, with nobody leading, the eldest — **reads out the year's chronicle**: the eight
+  things that mattered most, in the order they happened, a line at a time, slowly enough to read
+  over their heads ("Day 9: The smithy was opened.");
+* then **a feast** out of the stores, and **fireworks** over the board if the stores hold the
+  gunpowder and the paper to make them (one of each a rocket; a bonfire's sparks once they run out);
+* and the history notes the year kept. The board and the books show **the next Founding Day**.
+
 ## Life together
 
 A village keeps some evenings together, at its heart, once the day's work is done:
@@ -3372,6 +3438,13 @@ ripen, days pass, folk work and houses go up at that pace.
   favourite colours), how it is furnished out of ten, what is in it and what it waits on the stores
   for. `decor now` (operators) furnishes the homes as far as the stores run to and sees to the
   candles; `decor showcase` (operators) sets a furnished home out where you stand, for the pictures.
+* `/village bell` — the town bell: where it hangs (or that there is none yet), today's bells, who
+  rang them and how many answered. `bell ring dawn|noon|dusk` (operators) has it rung now, by
+  whoever would ring it, and the town answers it.
+* `/village founding` — when the town was founded and its next Founding Day; `founding now`
+  (operators) keeps it this minute, before the board.
+* `/village birthdays` — whose birthday falls this week; `birthdays now <name>` (operators) has
+  that folk keep one today, and its friends go round with presents.
 * `/village chronicle` — the nearest village's history, as a written book.
 * `/village standing` — what every village you have met thinks of you.
 * `/village ledger` — the nearest village's town ledger, as a book.
@@ -3565,6 +3638,14 @@ Every push to CI:
   the treasury as tax over eight paydays on less coming in than goes out, the treasury never below
   nothing, no coin from nowhere, the tax in the books, none from the poor and none while the
   treasury holds a week's wages;
+* keeps the town's calendar (`BellGameTests`, b01 to b03): a town of six with a bell lies in before
+  the dawn bell, is rung up by a ringer who walks to the bell (three strokes, the bell swinging) and
+  goes to work; at the noon bell (six) most of it goes to its midday meal and eats; at the dusk bell
+  (nine) the day's work stops, the hands go home to their beds and the guard goes on watch; on a
+  folk's fortieth birthday its friend walks round with the flower from its own pack, which goes from
+  the one pack to the other as a keepsake, and the birthday and the present raise its spirits; and
+  twenty-eight days after the founding the town gathers for Founding Day, hears the year's chronicle
+  read out in the order it happened, feasts, and the history notes its first year kept;
 * checks the money (game test `t30`): a new village's purse, gold minted into coin,
   a day's wages, prices that move with the stores, a folk's market-day treat, a
   player buying bread at a stall and selling iron, and the stalls' price signs;

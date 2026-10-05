@@ -2085,6 +2085,13 @@ public class CityScreen extends Screen {
             for (String s : n) all.add("  " + s);
             all.add("");
         }
+        // The town's calendar (TownCalendar): today's bells, the next Founding Day, the week's birthdays.
+        List<String> cal = strings("calendar");
+        if (!cal.isEmpty()) {
+            all.add("The town's calendar:");
+            for (String s : cal) all.add("  " + s);
+            all.add("");
+        }
         all.add("The chronicle, latest first:");
         all.addAll(strings("news"));
         lines(g, all, x, y, cw, ch);

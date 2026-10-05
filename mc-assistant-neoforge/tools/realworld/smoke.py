@@ -371,6 +371,47 @@ def market_stall_stage(r, look, cx, cz):
     say("stalls: " + r.cmd("execute as %s at @s run village stall" % USER)[:700])
     say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
     say("alive after the stall: %s" % client_alive())
+def bell_stage(r, look, cx, cz):
+    """The town's calendar (TownBell, Birthdays, FoundingDay), photographed in the village spawned at cx, cz:
+    the town bell rung at dawn by its ringer (a bell set by the board for the picture if the town has none
+    yet, as a player brings one), the town gathered before the board for Founding Day hearing its year's
+    chronicle read out, and the town's calendar (today's bells, the next Founding Day, the week's
+    birthdays) on the News page of its books."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    out = r.cmd("execute positioned %d 100 %d run village bell" % (cx, cz))
+    say("bell: " + out[:700])
+    board = re.search(r"BOARD (-?\d+) (-?\d+) (-?\d+)", out)
+    m = re.search(r"BELL-AT (-?\d+) (-?\d+) (-?\d+)", out)
+    if not m:
+        spot = re.search(r"SPOT (-?\d+) (-?\d+) (-?\d+)", out) or board
+        if not spot:
+            say("no bell and nowhere to set one; no bell pictures")
+            return
+        sx, sy, sz = (int(v) for v in spot.groups())
+        say("a bell for the town: " + r.cmd("setblock %d %d %d minecraft:bell[attachment=floor,facing=north]" % (sx + 3, sy, sz)))
+        out = r.cmd("execute positioned %d 100 %d run village bell" % (cx, cz))
+        m = re.search(r"BELL-AT (-?\d+) (-?\d+) (-?\d+)", out)
+    if m:
+        bx, by, bz = (int(v) for v in m.groups())
+        # The dawn bell: the ringer at it, the bell swinging, the call over its head.
+        say("ring: " + r.cmd("execute positioned %d 100 %d run village bell ring dawn" % (cx, cz)))
+        look("18-bell-1-dawn", bx + 4.5, by + 1, bz + 4.5, bx + 0.5, by + 0.5, bz + 0.5, wait=2)
+    # Founding Day before the board: the crowd, and the year's chronicle read out over the leader's head.
+    say("founding: " + r.cmd("execute positioned %d 100 %d run village founding now" % (cx, cz)))
+    time.sleep(35)                                     # they gather; the first lines are read
+    if board:
+        lx, ly, lz = (int(v) for v in board.groups())
+        look("18-bell-2-founding", lx + 9.5, ly + 6, lz + 9.5, lx + 0.5, ly + 1.5, lz + 0.5, wait=3)
+    else:
+        look("18-bell-2-founding", cx + 9.5, 100, cz + 9.5, cx + 0.5, 95, cz + 0.5, wait=3)
+    say("founding: " + r.cmd("execute positioned %d 100 %d run village founding" % (cx, cz))[:500])
+    # The town's books, the News page: the town's calendar above the chronicle.
+    say("stats news: " + r.cmd("execute as %s at @s run village stats 17" % USER))
+    time.sleep(3)
+    shot("18-bell-3-news")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    say("alive after the bell: %s" % client_alive())
 
 
 def main():
@@ -548,6 +589,10 @@ def main():
         found_village(r, cx, cz, look)
     except Exception as e:  # noqa: BLE001
         say("founding failed: %s" % e)
+    try:
+        bell_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("bell stage failed: %s" % e)
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the founding: %s" % client_alive())
     try:

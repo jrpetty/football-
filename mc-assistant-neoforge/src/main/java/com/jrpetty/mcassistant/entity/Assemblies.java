@@ -50,7 +50,7 @@ public final class Assemblies {
         MORNING("the morning assembly"), OPENING("an opening"), FEAST("the village feast"), WEDDING("a wedding"),
         VIGIL("a vigil"), CELEBRATION("a celebration"), HONOUR("an honouring"), COUNCIL("the council's meeting"),
         ELECTION("an election"), COMING_OF_AGE("a coming of age"), ENVOY("an envoy's audience"),
-        WATCH("the changing of the watch");
+        WATCH("the changing of the watch"), FOUNDING("Founding Day");
 
         public final String label;
         Kind(String label) { this.label = label; }
@@ -89,6 +89,8 @@ public final class Assemblies {
         int expected;
         long lastStep = -1;
         int rockets;
+        /** Rockets actually sent up (rockets stands at 99 once the powder or the paper runs out). */
+        int fired;
 
         Assembly(UUID village, Kind kind, String subject, long day, BlockPos focus, Direction audience, Layout layout) {
             this.village = village;
@@ -179,7 +181,7 @@ public final class Assemblies {
         long dayTime = level.getDayTime();
         long t = dayTime % 24000L, day = dayTime / 24000L;
         Assembly next = null;
-        if (t >= 150 && t < 1400 && !level.isRaining() && !held(id, Kind.MORNING, day)) {
+        if (t >= 150 && t < 1400 && !level.isRaining() && !held(id, Kind.MORNING, day) && TownBell.up(id, dayTime)) {   // (after the dawn bell)
             next = morning(level, v, day);
         } else if (t >= 1400 && t < 11500) {
             VillageFolkEntity guest = Envoys.waitingAt(level, v);
@@ -188,8 +190,10 @@ public final class Assemblies {
             // At dusk the watch changes: the guards meet at the bell and the night's watch takes over.
             if (!held(id, Kind.WATCH, day) && guards(id) >= 2) next = watch(level, v, day);
         } else if (t >= 12100 && t < 13200) {
+            // Founding Day (FoundingDay): once a year, before any other gathering that evening.
+            if (FoundingDay.due(id, day) && !held(id, Kind.FOUNDING, day)) next = FoundingDay.assembly(level, v, day);
             Gatherings.Kind tonight = Gatherings.tonight(id, day);
-            if (tonight != null) next = evening(level, v, tonight, day);
+            if (next == null && tonight != null) next = evening(level, v, tonight, day);
             if (next == null) next = planned(id, day);
             if (next == null && day % 7 == 3 && !held(id, Kind.COUNCIL, day) && Council.members(id).size() >= 3) {
                 next = council(level, v, day);
@@ -198,7 +202,8 @@ public final class Assemblies {
                 next = election(level, v, day);
             }
             // Rain puts off a feast, not a vigil, the council, or the count of an election.
-            if (next != null && level.isRaining() && next.kind != Kind.VIGIL && next.kind != Kind.COUNCIL && next.kind != Kind.ELECTION) next = null;
+            if (next != null && level.isRaining() && next.kind != Kind.VIGIL && next.kind != Kind.COUNCIL && next.kind != Kind.ELECTION
+                && next.kind != Kind.FOUNDING) next = null;            // (nor Founding Day: it comes once a year)
         }
         boolean several = next != null && (next.kind == Kind.OPENING || next.kind == Kind.ENVOY);
         if (next == null || held(id, next.kind, day) && !several) return;
@@ -265,7 +270,8 @@ public final class Assemblies {
             case SPEECH -> {
                 if (now < a.nextLineAt) return;
                 if (a.line >= a.script.size()) {
-                    a.phase = a.kind == Kind.FEAST || a.kind == Kind.CELEBRATION || a.kind == Kind.HONOUR ? Phase.MINGLE : Phase.CLOSE;
+                    a.phase = a.kind == Kind.FEAST || a.kind == Kind.CELEBRATION || a.kind == Kind.HONOUR || a.kind == Kind.FOUNDING
+                        ? Phase.MINGLE : Phase.CLOSE;
                     a.phaseAt = now;
                     return;
                 }
@@ -286,13 +292,14 @@ public final class Assemblies {
                 a.nextLineAt = now + Math.max(60, 40 + text.length() * 2);
             }
             case MINGLE -> {
-                if (a.kind == Kind.CELEBRATION || a.kind == Kind.HONOUR) {
+                if (a.kind == Kind.CELEBRATION || a.kind == Kind.HONOUR || a.kind == Kind.FOUNDING) {
                     if ((now - a.phaseAt) % 40 == 0 && a.rockets < 12) {
                         Villages.Village v = Villages.get(a.village);
                         if (v != null && Crafts.take(level, v, s -> s.is(Items.GUNPOWDER), 1)) {
                             if (Crafts.take(level, v, s -> s.is(Items.PAPER), 1)) {
                                 Gatherings.launch(level, a.focus, r);
                                 a.rockets++;
+                                a.fired++;
                             } else {
                                 Crafts.store(level, v, new ItemStack(Items.GUNPOWDER));
                                 a.rockets = 99;
@@ -306,7 +313,7 @@ public final class Assemblies {
                         level.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, a.focus.getX() + 0.5, a.focus.getY() + 1, a.focus.getZ() + 0.5, 1, 0.1, 0.1, 0.1, 0.01);
                     }
                 }
-                if (now - a.phaseAt > (a.kind == Kind.FEAST ? 1200 : 700)) {
+                if (now - a.phaseAt > (a.kind == Kind.FEAST || a.kind == Kind.FOUNDING ? 1200 : 700)) {
                     a.phase = Phase.CLOSE;
                     a.phaseAt = now;
                 }
@@ -368,7 +375,8 @@ public final class Assemblies {
         for (UUID u : a.seated.keySet()) {
             if (!(level.getEntity(u) instanceof VillageFolkEntity f)) continue;
             if (a.kind != Kind.MORNING) f.persona().remember(day, "I was at " + what, a.kind == Kind.WEDDING || a.kind == Kind.VIGIL ? 4 : 2);
-            if (a.kind == Kind.FEAST || a.kind == Kind.CELEBRATION || a.kind == Kind.HONOUR || a.kind == Kind.WEDDING) {
+            if (a.kind == Kind.FEAST || a.kind == Kind.CELEBRATION || a.kind == Kind.HONOUR || a.kind == Kind.WEDDING
+                    || a.kind == Kind.FOUNDING) {
                 f.persona().feasted(day);
             }
             if (a.kind != Kind.VIGIL && a.kind != Kind.MORNING && a.kind != Kind.COUNCIL) {
@@ -386,6 +394,7 @@ public final class Assemblies {
             OPENED.put(a.village, new Opened(a.subject, a.focus.immutable(), day));
         }
         if (a.kind == Kind.COMING_OF_AGE) Villages.tell(a.village, day, a.subject.split("\\|", 2)[0] + " was welcomed among the grown folk");
+        if (a.kind == Kind.FOUNDING) FoundingDay.kept(level, a);
     }
 
     // ------------------------------------------------------------------ being there
@@ -491,7 +500,7 @@ public final class Assemblies {
 
     /** The feast and the celebration: eat (out of the stores), dance, raise a cup. */
     private static void mingle(VillageFolkEntity f, ServerLevel level, Assembly a, RandomSource r) {
-        if (a.kind == Kind.FEAST && !a.ate.contains(f.getUUID()) && r.nextInt(30) == 0) {
+        if ((a.kind == Kind.FEAST || a.kind == Kind.FOUNDING) && !a.ate.contains(f.getUUID()) && r.nextInt(30) == 0) {
             a.ate.add(f.getUUID());
             Villages.Village v = Villages.get(a.village);
             ItemStack food = v == null ? ItemStack.EMPTY : Crafts.takeOne(level, v,
@@ -509,7 +518,7 @@ public final class Assemblies {
             f.swing(r.nextBoolean() ? net.minecraft.world.InteractionHand.MAIN_HAND : net.minecraft.world.InteractionHand.OFF_HAND);
         }
         if (r.nextInt(160) == 0) {
-            FolkTalk.speak(f, a.kind == Kind.FEAST
+            FolkTalk.speak(f, a.kind == Kind.FEAST || a.kind == Kind.FOUNDING
                 ? FolkTalk.pick(r, "Pass the bread!", "To " + Villages.name(a.village) + "!", "Best feast in years.", "Another slice? Go on then.")
                 : FolkTalk.pick(r, "Ooooh!", "Look at that one!", "To " + Villages.name(a.village) + "!"));
         }
@@ -620,6 +629,7 @@ public final class Assemblies {
             }
             if (senior != null) a.host = senior.getUUID();
         }
+        if (a.kind == Kind.FOUNDING && a.host == null) a.host = FoundingDay.eldest(a.village);   // nobody leads: the eldest reads
         if (a.kind == Kind.COMING_OF_AGE || a.kind == Kind.OPENING || a.host == null) {
             if (a.host == null) a.host = oldest(level, a.village);
         }
@@ -926,6 +936,7 @@ public final class Assemblies {
                     : FolkTalk.pick(r, "I'll take your answer home, then.", "So be it. I'll tell them."), ' ', () -> Envoys.heard(guest)));
             }
             case ELECTION -> Elections.script(level, id, s, r);
+            case FOUNDING -> FoundingDay.script(level, a, s, r);
             case COMING_OF_AGE -> {
                 String[] parts = a.subject.split("\\|", -1);
                 String who = parts[0];
@@ -1006,6 +1017,7 @@ public final class Assemblies {
             case COUNCIL -> council(level, v, day);
             case ELECTION -> election(level, v, day);
             case FEAST -> new Assembly(v.id(), Kind.FEAST, "", day, v.centre(), Direction.SOUTH, Layout.RING);
+            case FOUNDING -> FoundingDay.assembly(level, v, day);
             default -> null;
         };
         if (a == null) return false;
