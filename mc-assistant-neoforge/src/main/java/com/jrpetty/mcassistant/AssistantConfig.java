@@ -205,11 +205,11 @@ public final class AssistantConfig {
             .define("villagePhantoms", false);
         VILLAGE_CROP_GROWTH = b.comment(
                 "How much faster crops grow on a village's tended fields (the farmland inside a",
-                "farmer's plot) than in the wild: 3.0 is three times as fast, 1.0 the game's own",
-                "pace. A farmer's care (its level, a watered and lit field, a composter) lifts it",
-                "up to a quarter more again. Wild crops and your own farms are never touched; the",
+                "farmer's plot) than in the wild: 2.0 is twice as fast, 1.0 the game's own pace.",
+                "A farmer's care (its level, a watered and lit field, a composter) lifts it a",
+                "tenth more again at most. Wild crops and your own farms are never touched; the",
                 "crops still have to be planted, and the harvest still has to be brought in.")
-            .defineInRange("villageCropGrowth", 3.0, 1.0, 8.0);
+            .defineInRange("villageCropGrowth", 2.0, 1.0, 8.0);
         b.pop();
 
         SPEC = b.build();
@@ -247,7 +247,7 @@ public final class AssistantConfig {
     public static int villageBuildSpeed() { return read(VILLAGE_BUILD_SPEED, 100); }
     public static boolean villageReshapeLand() { return read(VILLAGE_RESHAPE_LAND, true); }
     public static boolean villagePhantoms() { return read(VILLAGE_PHANTOMS, false); }
-    public static double villageCropGrowth() { return read(VILLAGE_CROP_GROWTH, 3.0); }
+    public static double villageCropGrowth() { return read(VILLAGE_CROP_GROWTH, 2.0); }
 
     /** Config values throw if read before the file is loaded (early world gen,
      *  datagen, a dedicated server still booting) — fall back rather than crash. */

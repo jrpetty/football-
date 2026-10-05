@@ -37,12 +37,12 @@ import java.util.concurrent.ConcurrentHashMap;
  * a nine-by-nine of wheat at the game's own pace growing eleven meals a day, the bone meal in its pack
  * never used. So:
  * <ul>
- * <li><b>Tended fields grow faster</b> (villageCropGrowth, three times by default): on the farmland of a
+ * <li><b>Tended fields grow faster</b> (villageCropGrowth, twice by default: three looked too quick to be true): on the farmland of a
  *     farmer's plot the server gives the crops extra growth ticks, the way the game's own random ticks
  *     come (the crop's own randomTick, which still wants its light and its water: a dark or a dry field
  *     gains nothing by it), and only where the game gives random ticks at all (a player near, or the
  *     town's ground kept awake). A handful of columns a field a second, never more than {@link #PICKS_MOST}.
- *     A farmer's care adds up to one more: a quarter each for its level (ten or more), a field nearly
+ *     A farmer's care adds a little: a twentieth each for its level (ten or more), a field nearly
  *     all watered, a field lit, and a composter on it. Wild crops and a player's own farm are never
  *     touched.</li>
  * <li><b>Bone meal</b>: a farmer at its field puts one on a growing crop every few seconds, out of its
@@ -127,7 +127,7 @@ public final class Fields {
         return base + (c == null ? 0.0 : c.bonus());
     }
 
-    /** The town's word on its fields, for the books: "the fields grow at 3x (tended)". */
+    /** The town's word on its fields, for the books: "the fields grow at 2.0x (tended)". */
     public static String word(UUID village) {
         double base = AssistantConfig.villageCropGrowth(), most = base;
         for (AssistantEntity a : Villages.folkOf(village)) {
@@ -174,7 +174,7 @@ public final class Fields {
 
     /**
      * Does the game give this chunk its random ticks now? Only where it would (a player near enough, or
-     * the chunk kept awake and ticking, as the town's are: ChunkLoad), so a tended field grows three times
+     * the chunk kept awake and ticking, as the town's are: ChunkLoad), so a tended field grows twice
      * as fast as the game's own, never where the game grows nothing at all.
      */
     static boolean ticksNaturally(ServerLevel level, int cx, int cz) {
@@ -241,7 +241,8 @@ public final class Fields {
         boolean lit = crops >= 4 && bright * 2 >= crops;
         BlockPos comp = COMPOSTER.get(f.getUUID());
         boolean composter = comp != null && level.getBlockState(comp).is(Blocks.COMPOSTER);
-        double bonus = (lv ? 0.25 : 0) + (watered ? 0.25 : 0) + (lit ? 0.25 : 0) + (composter ? 0.25 : 0);
+        // A twentieth each, a fifth in all: a well-kept field a little quicker, never far past the town's pace.
+        double bonus = (lv ? 0.05 : 0) + (watered ? 0.05 : 0) + (lit ? 0.05 : 0) + (composter ? 0.05 : 0);
         CARE.put(f.getUUID(), new Care(bonus, lv, watered, lit, composter));
     }
 

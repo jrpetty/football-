@@ -215,9 +215,10 @@ public final class VillageMath {
     // how many mouths and hands it actually has.
 
     /** Meals one pair of hands eats in a Minecraft day. A folk eats a ration
-     *  every 4500 ticks of work (the assistants' 3000, and half as much again:
-     *  villagers are not hired hands on a clock), against a 24000-tick day. */
-    public static final int MEALS_PER_DAY = 5;
+     *  every 6750 ticks of work (the assistants' 3000, and more than twice as long:
+     *  villagers are not hired hands on a clock, and keep two meals a day), against
+     *  a 24000-tick day. */
+    public static final int MEALS_PER_DAY = 4;
 
     /** Iron in a full set of armour: helmet 5, chest 8, legs 7, boots 4. */
     public static final int ARMOUR_SET = 24;

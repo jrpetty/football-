@@ -15,7 +15,7 @@ import java.util.function.Predicate;
  * Nobody goes hungry while the larder is full: a packed lunch for a hand going out to a far plot, and a
  * walk in for food when one is out there with nothing left.
  *
- * <p>A folk eats its three meals from its pack, from its household's chest if it is near home, or from
+ * <p>A folk eats its two meals from its pack, from its household's chest if it is near home, or from
  * the village's stores if it is within sixty-four blocks of them (Meals). A miner ninety blocks out,
  * a woodcutter, a farmer at the far edge of its field: with nothing in the pack, the meal is missed
  * there, and nothing ever sent it for more. On the hundred days' tenth day one folk went a whole day
@@ -25,7 +25,7 @@ import java.util.function.Predicate;
  * <ul>
  * <li><b>A packed lunch.</b> A hand whose plot lies beyond the stores' reach, in the town and about to
  *     set out on a working day with fewer than a day's meals in its pack (its seed not counted), takes
- *     them out of the stores first: three meals and one over, two more for a trade that eats its
+ *     them out of the stores first: two meals and one over, two more for a trade that eats its
  *     rations at work.</li>
  * <li><b>Out of food, out there.</b> A mealtime come with nothing to eat in reach: the storehouse sends
  *     some out with a courier if it has couriers, and otherwise the hand walks in to the stores for a
@@ -36,8 +36,8 @@ public final class PackedLunch {
 
     private PackedLunch() {}
 
-    /** A day's meals in a pack: breakfast, the midday meal and supper, and one over. */
-    public static final int DAY = 4;
+    /** A day's meals in a pack: the midday meal and supper, and one over. */
+    public static final int DAY = 3;
     /** How often a hand looks, in ticks. */
     static final long LOOK = 1200;
 

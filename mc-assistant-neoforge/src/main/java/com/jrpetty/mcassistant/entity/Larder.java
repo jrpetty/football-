@@ -31,8 +31,8 @@ public final class Larder {
 
     private Larder() {}
 
-    /** The least one folk eats in a day: three meals, child, elder or hand alike (Meals). */
-    public static final double MEALS_A_HEAD = 3.0;
+    /** The least one folk eats in a day: two meals, child, elder or hand alike (Meals). */
+    public static final double MEALS_A_HEAD = 2.0;
     /** The gap between grown and eaten the larder may carry, as a part of what is eaten... */
     public static final double CARRY_GAP = 0.2;
     /** ...and how many days of that gap it must hold to carry it. */
@@ -129,7 +129,7 @@ public final class Larder {
         return (d[0] + d[1] + d[2] + d[3] > 0 ? "=" : "-") + "Food in yesterday: " + Math.round(all) + " meals: " + String.join(", ", parts) + ".";
     }
 
-    /** What one folk eats in a day by the books: the town's day over the heads it had, never under three meals. */
+    /** What one folk eats in a day by the books: the town's day over the heads it had, never under two meals. */
     public static double perHead(UUID village, double useAvg) {
         Integer then = HEADS.get(village);
         int heads = then != null ? then : Math.max(1, Villages.headcount(village));

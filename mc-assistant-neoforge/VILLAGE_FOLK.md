@@ -436,16 +436,17 @@ output, the worth and the three best paid, and any folk will tell you who earns 
     one near the stores a couple of days' (eight), and no more than a day's while the larder
     is low. Rations are food that will not poison it: no rotten flesh, spider eyes or raw
     chicken.
-  * **Three meals a day, for everybody.** Every folk eats **breakfast** (from six in the
-    morning), **the midday meal** (from half past eleven) and **supper** (from five in the
-    evening): the children, the old, the leader and folk between trades as well as the hands at
+  * **Two meals a day, for everybody.** Every folk eats **the midday meal** (from half past
+    eleven) and **supper** (from five in the evening), and is content on the two: there is no
+    breakfast (there was, and a town ate a third more than it needed). A hand at its work eats a
+    ration every five and a half minutes of work, a third less often than it did. The children, the old, the leader and folk between trades as well as the hands at
     their work. At each mealtime it eats out of its own pack first, then its household's chest at
     home, then the village's stores (the town feeds its own; a far hand at its work has its rations
     sent out instead), always a real loaf, fish or stew out of somewhere, booked in the books. A
     ration eaten at its work while the mealtime is on is that meal: nobody eats twice. With nothing
     in reach it **misses the meal** and is **hungry** (its contentment falls, more for every meal
-    missed, and it says so); a whole day without and it can't work properly; two days and it grows
-    weak (it loses health, never past three hearts). Its card says when it last ate and what, and
+    missed, and it says so); a whole day without (both meals) and it can't work properly; two days
+    and it grows weak (it loses health, never past three hearts). Its card says when it last ate and what, and
     how many meals it has had today; the Why page says whether every folk had its meals yesterday,
     or how many were missed and by how many folk. (Once only a hand at its work ever ate, and a
     child, an elder or a folk off its shift went all its life without a bite.)
@@ -2353,7 +2354,7 @@ load in its pack. So:
 * **A child is a mouth for good.** A full larder is no longer enough. A child is raised only
   when the fields, the waters and the hunt grow at least what the town eats in a day, counting
   every mouth it has now and the child's besides (a folk eats what the leader's books say a head
-  eats, and never less than its three meals). A small gap (a fifth of what is eaten) is allowed
+  eats, and never less than its two meals). A small gap (a fifth of what is eaten) is allowed
   when the larder could carry it for a fortnight while new fields come in. On short commons, no
   child is raised at all. The board's **Growing:** line and the town's books say why not:
   "no — 70 meals grown a day against 90 eaten with one more mouth: the fields first".
@@ -2408,7 +2409,7 @@ load in its pack. So:
 * **Nobody goes hungry with the larder full.** A hand whose plot lies beyond the stores' reach
   (more than sixty-four blocks out, where the stores cannot feed it at mealtimes) takes a packed
   lunch before it sets out on a working day: if it carries fewer than a day's meals (its seed
-  not counted), it takes three meals and one over out of the stores, two more for a trade that
+  not counted), it takes two meals and one over out of the stores, two more for a trade that
   eats rations at its work. Caught out there at a mealtime with nothing to eat, it sends for
   food once a meal: a courier brings it if the storehouse has couriers, else it walks in when
   its work in hand is done. And a farmer with nothing but its seed eats a carrot or a potato of
@@ -2420,14 +2421,15 @@ load in its pack. So:
   days: 3 fighting a zombie, 2 in a fall, 1 by drowning".
 * **The town's fields grow faster.** A nine-by-nine of wheat at the game's own pace grows about
   eleven meals a day, and a farmer needs to feed four. So the farmland of a farmer's plot is a
-  tended field: its crops get the game's own random growth ticks again, twice over by default
-  (`villageCropGrowth`, 3.0, from 1.0 for the game's own pace to 8.0), through each crop's own
-  growth, so a dark or a dry field gains nothing, and only where the game is growing anything
-  at all (a player near, or the town's ground kept awake). The farmer's care adds a quarter each,
-  up to four times in all: its level (ten or more), a field nearly all watered, a field lit, and
-  a composter by its chest. It costs a handful of block looks a field a second (two or three for
-  a nine-by-nine, never more than forty-eight). Wild crops and a player's own farm grow as ever.
-  The books say "the fields grow at 3.0x (tended)", and a farmer's card how its own does.
+  tended field: its crops get the game's own random growth ticks once more, so they grow twice
+  as fast (`villageCropGrowth`, 2.0, from 1.0 for the game's own pace to 8.0; it was three, which
+  looked too quick to be natural), through each crop's own growth, so a dark or a dry field gains
+  nothing, and only where the game is growing anything at all (a player near, or the town's
+  ground kept awake). The farmer's care adds a twentieth each, up to 2.2 times in all: its level
+  (ten or more), a field nearly all watered, a field lit, and a composter by its chest. It costs
+  a handful of block looks a field a second (two or three for a nine-by-nine, never more than
+  forty-eight). Wild crops and a player's own farm grow as ever. The books say "the fields grow
+  at 2.0x (tended)", and a farmer's card how its own does.
 * **A practised hand at the field.** A village's farmer takes a crop and sows it again at twice
   the pace of the rest of its trade's work, and a farmer with a quarter of its field ripe puts
   its break off till the harvest is in.

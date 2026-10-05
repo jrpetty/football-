@@ -290,7 +290,7 @@ public class SupplyAtScaleGameTests {
     public static void sa03_far_rations(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
-        level.setDayTime(3000);                                              // after breakfast, well before the midday meal
+        level.setDayTime(3000);                                              // the morning, well before the midday meal
         int x = 187000;
         Kit.hold(level, x, Z, 96);
         Kit.prepare(level, x, Z, 96);

@@ -86,14 +86,15 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected boolean drawsWages() { return false; }
 
-    /** A villager is not a hired hand on a clock: it eats a ration every four and a
-     *  half minutes of work where an assistant eats one every two and a half. Nineteen
-     *  mouths on a young village's first fields were eating more than five farmers
-     *  grew, and by the third day half of them stood at the heart with no rations. */
+    /** A villager is not a hired hand on a clock: it eats a ration every five and a
+     *  half minutes of work where an assistant eats one every two and a half (it was four
+     *  and a half, and a third less now the town keeps two meals a day, not three).
+     *  Nineteen mouths on a young village's first fields were eating more than five
+     *  farmers grew, and by the third day half of them stood at the heart with no rations. */
     @Override
     public int traitUpkeepPercent() {
         // And the town's Granaries (CityTree) make the larder go a tenth further: meals a little further apart.
-        return super.traitUpkeepPercent() * 3 / 2 * CityTree.mealPercent(ownerId()) / 100;
+        return super.traitUpkeepPercent() * 9 / 4 * CityTree.mealPercent(ownerId()) / 100;
     }
 
     /**
@@ -1489,7 +1490,7 @@ public class VillageFolkEntity extends AssistantEntity {
      */
     private boolean showcase;
 
-    /** Its three meals a day (Meals). */
+    /** Its two meals a day (Meals). */
     private final Meals.Book meals = new Meals.Book();
 
     public Meals.Book meals() { return meals; }

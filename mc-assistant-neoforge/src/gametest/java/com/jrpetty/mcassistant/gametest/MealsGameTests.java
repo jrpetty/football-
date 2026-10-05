@@ -19,14 +19,14 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import java.util.UUID;
 
 /**
- * Everybody eats: breakfast, the midday meal and supper, the children and the old and the folk between
+ * Everybody eats: the midday meal and supper (two meals a day: no breakfast), the children and the old and the folk between
  * trades as well as the hands at their work, out of a real pack, home chest or the stores.
  *
  * <ul>
- * <li><b>me01</b>: a child with nothing in its pack has its three meals out of the village's stores,
- *     one loaf each, and its card says so.</li>
- * <li><b>me02</b>: with nothing to eat anywhere a folk misses its breakfast and is hungry; food in the
- *     stores by the midday meal, it eats and is hungry no longer.</li>
+ * <li><b>me01</b>: a child with nothing in its pack has its two meals out of the village's stores,
+ *     one loaf each, and nothing at dawn (there is no breakfast); its card says so.</li>
+ * <li><b>me02</b>: with nothing to eat anywhere a folk misses its midday meal and is hungry; food in
+ *     the stores by supper, it eats and is hungry no longer.</li>
  * <li><b>me03</b>: a hand that ate a ration at its work while the mealtime was on has had that meal:
  *     nothing more comes out of its pack.</li>
  * </ul>
@@ -96,8 +96,8 @@ public class MealsGameTests {
         return n;
     }
 
-    @GameTest(template = EMPTY, timeoutTicks = 1700, batch = "me01_three_meals")
-    public static void me01_three_meals(GameTestHelper helper) {
+    @GameTest(template = EMPTY, timeoutTicks = 1700, batch = "me01_two_meals")
+    public static void me01_two_meals(GameTestHelper helper) {
         int x = 340000, z = 50000;
         VillageFolkEntity first = founder(helper, x, z);
         ServerLevel level = helper.getLevel();
@@ -112,10 +112,10 @@ public class MealsGameTests {
         int[] ate = new int[3];
         String[] said = new String[1];
         // Each meal on a day of its own that the child has not eaten in yet (left to itself over its
-        // first ticks it may have had its own breakfast on the day the test began).
+        // first ticks it may have had its own meal on the day the test began).
         long[] at = { DAY + 240000 + 300, DAY + 264000 + 6000, DAY + 288000 + 11500 };
         int[] when = { 10, 700, 1400 };
-        String[] meal = { "breakfast", "the midday meal", "supper" };
+        String[] meal = { "dawn", "the midday meal", "supper" };
         for (int k = 0; k < 3; k++) {
             final int m = k;
             helper.runAtTickTime(when[m], () -> {
@@ -133,9 +133,9 @@ public class MealsGameTests {
         }
         helper.runAtTickTime(1401, () -> {
             String line = said[0];
-            helper.assertTrue(ate[0] == 1, "breakfast is a loaf out of the stores: " + ate[0]);
-            helper.assertTrue(ate[1] == 1, "the midday meal another: " + ate[1]);
-            helper.assertTrue(ate[2] == 1, "supper a third: " + ate[2]);
+            helper.assertTrue(ate[0] == 0, "no breakfast: nothing out of the stores at dawn: " + ate[0]);
+            helper.assertTrue(ate[1] == 1, "the midday meal is a loaf out of the stores: " + ate[1]);
+            helper.assertTrue(ate[2] == 1, "supper another: " + ate[2]);
             helper.assertTrue(child.meals().missedInRow() == 0, "none missed: " + child.meals().missedInRow());
             helper.assertTrue(line.contains("1 meal today") && line.contains("bread") && line.contains("supper"), "its card says so: " + line);
             helper.succeed();
@@ -150,22 +150,22 @@ public class MealsGameTests {
         BlockPos heart = Kit.surface(level, x, z);
         helper.runAtTickTime(10, () -> {
             noFood(f);
-            level.setDayTime(DAY + 2350);                        // the end of breakfast, nothing to eat
+            level.setDayTime(DAY + 7750);                        // the end of the midday meal, nothing to eat
             Meals.tick(f);
             String line = Meals.line(f);
-            Kit.log("me02 no breakfast: " + line);
-            helper.assertTrue(f.meals().missedInRow() == 1 && line.startsWith("Hungry"), "it misses breakfast and is hungry: " + line);
+            Kit.log("me02 no midday meal: " + line);
+            helper.assertTrue(f.meals().missedInRow() == 1 && line.startsWith("Hungry"), "it misses its midday meal and is hungry: " + line);
             int[] today = Meals.today(f.ownerId());
             helper.assertTrue(today[1] >= 1, "the town's books count the meal missed: " + today[1]);
         });
         helper.runAtTickTime(700, () -> {
             Container c = larder(level, heart, 4);
             onlyTheLarder(level, f, c);
-            level.setDayTime(DAY + 6000);
+            level.setDayTime(DAY + 11500);
             Meals.tick(f);
             String line = Meals.line(f);
-            Kit.log("me02 the midday meal: " + line + "; bread left " + bread(c));
-            helper.assertTrue(f.meals().missedInRow() == 0 && f.meals().eatenToday() == 1, "fed at midday, hungry no longer: " + line);
+            Kit.log("me02 supper: " + line + "; bread left " + bread(c));
+            helper.assertTrue(f.meals().missedInRow() == 0 && f.meals().eatenToday() == 1, "fed at supper, hungry no longer: " + line);
             helper.assertTrue(bread(c) == 3, "out of the stores: " + bread(c));
             helper.succeed();
         });

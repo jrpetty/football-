@@ -63,7 +63,7 @@ import java.util.function.Predicate;
  *     its cobblestone and stairs, and of its own logs, for the stores.</li>
  * <li><b>ec04</b>: a farmer with a grown field keeps thirty-two of each crop it plants and banks the rest
  *     (seventy-eight potatoes, sixty carrots and fifty-six seeds were all kept as seed); out at a far
- *     field at breakfast with nothing but its seed, it eats a carrot rather than go without.</li>
+ *     field at the midday meal with nothing but its seed, it eats a carrot rather than go without.</li>
  * <li><b>ec05</b>: a farmer setting out for a field seventy-five blocks from the stores takes a day's meals
  *     out of them first; out there at a mealtime with nothing to eat, it sends for food (walks in, with no
  *     couriers), once a meal.</li>
@@ -73,8 +73,8 @@ import java.util.function.Predicate;
  * <li><b>ec07</b>: a farmer at its field at midday puts its harvest into its work chest down to its seed.</li>
  * <li><b>ec08</b>: a courier on a run at midday does not stop to bank: the run is seen through.</li>
  * <li><b>ec09</b>: two nine-by-nine wheat fields sown the same tick, one a farmer's (tended), one wild:
- *     the tended one grows about three times as fast, at a handful of growth ticks a second.</li>
- * <li><b>ec10</b>: a farmer on a kept nine-by-nine field (crops at every age) brings in at least twenty-five
+ *     the tended one grows about twice as fast, at a handful of growth ticks a second.</li>
+ * <li><b>ec10</b>: a farmer on a kept nine-by-nine field (crops at every age) brings in at least fifteen
  *     meals in a day of growth at the game's own tick speed (the game's own pace: about eleven).</li>
  * <li><b>ec11</b>: a fisher by a pond lands fish at about a player's rate.</li>
  * <li><b>ec12</b>: a hunter brings meat home, and leaves the last pair of a kind.</li>
@@ -471,19 +471,19 @@ public class EconomyGameTests {
             if (p <= 32 && c <= 32 && sd <= 32 && banked >= 90) {
                 Kit.log("ec04 banked " + banked + " at " + t + ", keeping " + p + ", " + c + ", " + sd);
                 fed[0] = true;
-                // Out at the far edge of its field, past the stores' reach, at breakfast, nothing but its seed.
+                // Out at the far edge of its field, past the stores' reach, at the midday meal, nothing but its seed.
                 BlockPos out = Kit.surface(level, x + 72, Z);
                 f.clearQueue();
                 f.moveTo(out.getX() + 0.5, out.getY(), out.getZ() + 0.5, 0.0F, 0.0F);
                 f.getInventoryItems().clear();
                 f.insertItem(new ItemStack(Items.STONE_HOE));
                 f.insertItem(new ItemStack(Items.CARROT, 20));
-                level.setDayTime(24000L * 9 + 300);
+                level.setDayTime(24000L * 9 + 5700);
                 Meals.tick(f);
                 int left = f.countCarried(s -> s.is(Items.CARROT));
-                Kit.log("ec04 breakfast out at the field: " + Meals.line(f) + "; carrots " + left);
+                Kit.log("ec04 the midday meal out at the field: " + Meals.line(f) + "; carrots " + left);
                 helper.assertTrue(left == 19 && f.meals().missedInRow() == 0 && f.meals().eatenToday() >= 1,
-                    "with nothing but its seed, it eats a carrot rather than miss its breakfast: " + Meals.line(f));
+                    "with nothing but its seed, it eats a carrot rather than miss its meal: " + Meals.line(f));
                 helper.succeed();
             } else if (t >= 3800) {
                 helper.fail("the farmer did not bank past its seed: carrying " + p + ", " + c + ", " + sd + "; banked " + banked
@@ -519,16 +519,16 @@ public class EconomyGameTests {
         f.insertItem(new ItemStack(Items.STONE_HOE));
         f.insertItem(new ItemStack(Items.WHEAT_SEEDS, 16));
 
-        // Out there first, at breakfast, with nothing to eat: it sends for food, once.
+        // Out there first, at the midday meal, with nothing to eat: it sends for food, once.
         BlockPos out = Kit.surface(level, x + 75, Z + 2);
         f.clearQueue();
         f.moveTo(out.getX() + 0.5, out.getY(), out.getZ() + 0.5, 0.0F, 0.0F);
-        level.setDayTime(24000L * 9 + 300);
+        level.setDayTime(24000L * 9 + 5700);
         Meals.tick(f);
         int queued = 0;
         for (var j : f.queuedJobs()) if (j.type() == com.jrpetty.mcassistant.entity.Job.Type.WITHDRAW && j.arg().startsWith("ration@")) queued++;
         boolean again = PackedLunch.sendFor(f, 9L * 4);
-        Kit.log("ec05 breakfast out at the field with nothing: " + Meals.line(f) + "; going in for food: " + queued + "; again " + again
+        Kit.log("ec05 the midday meal out at the field with nothing: " + Meals.line(f) + "; going in for food: " + queued + "; again " + again
             + " — " + f.debugLine());
         helper.assertTrue(queued == 1 && !again, "with nothing to eat in reach it goes in to the stores for food, once a meal: " + queued);
         helper.assertTrue(f.meals().missedInRow() == 0, "and the meal is not yet missed: the mealtime lasts");
@@ -886,7 +886,7 @@ public class EconomyGameTests {
                 Kit.log("ec09 after 5000 ticks: tended " + a + ", wild " + w + " — " + String.format("%.2f", ratio)
                     + "x; at most " + most[0] + " growth picks a second; " + Fields.word(f.ownerId()));
                 helper.assertTrue(w > 0, "the wild field grows at its own pace: " + w);
-                helper.assertTrue(ratio >= 2.2 && ratio <= 5.0, "the tended field grows about three times as fast: " + String.format("%.2f", ratio));
+                helper.assertTrue(ratio >= 1.5 && ratio <= 3.2, "the tended field grows about twice as fast: " + String.format("%.2f", ratio));
                 helper.assertTrue(most[0] <= Fields.PICKS_MOST && most[0] >= 1, "at a handful of growth ticks a second: " + most[0]);
                 helper.succeed();
             }
@@ -962,7 +962,8 @@ public class EconomyGameTests {
                 Kit.log("ec10 a day: " + String.format("%.1f", meals) + " meals brought in by one farmer on a field of eighty ("
                     + String.format("%.1f", booked) + " booked to the fields; the game's own pace would give about 11); "
                     + Fields.word(village) + "; " + Fields.careLine(f));
-                helper.assertTrue(meals >= 25, "a farmer on a nine-by-nine brings in twenty-five meals a day: "
+                // Twice the game's pace, less the walking: fifteen is enough for seven folk on two meals a day.
+                helper.assertTrue(meals >= 15, "a farmer on a nine-by-nine brings in fifteen meals a day: "
                     + String.format("%.1f", meals));
                 helper.succeed();
             }

@@ -13,7 +13,8 @@ import java.util.UUID;
 import java.util.function.Predicate;
 
 /**
- * Three meals a day for every folk: breakfast, the midday meal and supper.
+ * Two meals a day for every folk: the midday meal and supper. (There were three, with breakfast at
+ * dawn; a town eats a third less without it, and its folk are content on two.)
  *
  * <p>A hand at its work has always eaten a ration every couple of minutes of labour (AssistantEntity's
  * upkeep), but that was the only eating there was: a child, an elder past work, the leader, a folk with
@@ -34,9 +35,8 @@ public final class Meals {
 
     private Meals() {}
 
-    /** The three meals, and the hours of the day (day time, 0 at six in the morning) each is eaten in. */
+    /** The two meals, and the hours of the day (day time, 0 at six in the morning) each is eaten in. */
     public enum Meal {
-        BREAKFAST("breakfast", 0, 2400),
         LUNCH("the midday meal", 5400, 7800),
         SUPPER("supper", 11000, 13400);
 
@@ -64,8 +64,8 @@ public final class Meals {
     static final int HOME_REACH = 64;
     /** How far from the stores a hand at its work will walk in to eat out of them (a far one carries rations). */
     static final int STORES_REACH = 64;
-    /** Meals missed in a row before a folk works poorly, and before it grows weak. */
-    static final int POOR_AFTER = 3, WEAK_AFTER = 6;
+    /** Meals missed in a row before a folk works poorly (a whole day), and before it grows weak (two days). */
+    static final int POOR_AFTER = 2, WEAK_AFTER = 4;
 
     // ------------------------------------------------------------------ one folk's meals
 
@@ -264,7 +264,7 @@ public final class Meals {
         }
         if (!b.lastWhat.isEmpty()) {
             sb.append("Last ate ").append(b.lastWhat.toLowerCase(java.util.Locale.ROOT));
-            if (b.lastMeal >= 0) sb.append(" at ").append(Meal.values()[b.lastMeal].label);
+            if (b.lastMeal >= 0 && b.lastMeal < Meal.values().length) sb.append(" at ").append(Meal.values()[b.lastMeal].label);
             sb.append(". ");
         }
         sb.append(b.eaten).append(b.eaten == 1 ? " meal" : " meals").append(" today");
