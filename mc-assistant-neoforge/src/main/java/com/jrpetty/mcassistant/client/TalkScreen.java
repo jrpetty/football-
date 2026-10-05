@@ -82,10 +82,15 @@ public class TalkScreen extends Screen {
         toSkillsIfAsked(first);
     }
 
-    /** Asked about its skills or its knacks: the Skills page, where they are laid out. */
+    /**
+     * Asked about its skills or its knacks: the Skills page, where they are laid out. Asked anything
+     * else with the About or Skills page open (which have no conversation on them): back to the talk,
+     * where the answer is — "my account" said to the banker came back to a Skills page last left open.
+     */
     private void toSkillsIfAsked(FolkReplyPayload reply) {
         String asked = reply.asked() == null ? "" : reply.asked().toLowerCase(java.util.Locale.ROOT);
         if (asked.contains("skill") || asked.contains("knack")) tab = lastTab = Tab.SKILLS;
+        else if (!reply.open() && !asked.isBlank() && (tab == Tab.ABOUT || tab == Tab.SKILLS)) tab = lastTab = Tab.TALK;
     }
 
     public int entityId() { return last.entityId(); }
