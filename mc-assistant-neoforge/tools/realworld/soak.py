@@ -432,6 +432,12 @@ def epic_day(r, x, z, day, began, last_age, metrics_file="epic-metrics.jsonl"):
         except Exception as e:  # noqa: BLE001
             say("books failed: %s" % e)
     if day % 5 == 0 or day == 1:
+        # The economy's own word: food in by where it came from, the fields, the deaths by name, trade and cause.
+        try:
+            econ = r.cmd("execute positioned %d 64 %d run village economy" % (x, z))
+            say("ECONOMY day %d: %s" % (day, econ.replace("\n", " | ")))
+        except Exception as e:  # noqa: BLE001
+            say("economy failed: %s" % e)
         report(r, x, z, "the long game, day %d" % day, compact=True)
         for line in villages:
             say("  " + line)

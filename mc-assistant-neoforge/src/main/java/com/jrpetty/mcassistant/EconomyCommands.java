@@ -96,6 +96,15 @@ public final class EconomyCommands {
         Map<String, Integer> causes = new LinkedHashMap<>();
         for (Ledger.Grave g : Ledger.graves(id)) causes.merge(g.cause(), 1, Integer::sum);
         lines.add("The dead: " + (causes.isEmpty() ? "none" : causes.toString()) + ".");
+        // The last few by name, trade and day: what kills folk, and at what work (a miner in lava, a woodcutter in a fall).
+        List<Ledger.Grave> all = Ledger.graves(id);
+        List<String> last = new ArrayList<>();
+        for (int i = Math.max(0, all.size() - 8); i < all.size(); i++) {
+            Ledger.Grave g = all.get(i);
+            last.add(g.name() + (g.trade() == null || g.trade().isEmpty() ? "" : " the " + g.trade().toLowerCase(java.util.Locale.ROOT))
+                + ", day " + g.died() + ", " + g.cause());
+        }
+        if (!last.isEmpty()) lines.add("Lately: " + String.join("; ", last) + ".");
         ctx.getSource().sendSuccess(() -> Component.literal(String.join("\n", lines)), false);
         return lines.size();
     }
