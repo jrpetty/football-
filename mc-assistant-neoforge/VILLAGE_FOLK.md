@@ -624,6 +624,14 @@ water.
     middle as a farm track. Each new farmer takes the nearest free square, so the fields
     come up side by side and never overlap. A square more than ten blocks above or below the
     town is passed over: a farmer walks there and back every day.
+  * **Only where the farmers can walk.** The village maps the ground it can reach on foot from
+    its heart, out to a hundred and twenty-eight blocks: a step up or down at a time, round
+    trees, houses and cliffs, and never through water deeper than a wade. Its fields go only
+    on that ground, and a field nobody can walk to (one staked before the map, or by an older
+    village) is given up for one they can. The long walks out to a field and home to bed
+    follow the map, about twenty-eight blocks at a time, so the folk go round a pond or a
+    ridge instead of swimming into it. A folk stuck in water climbs out onto the nearest bank,
+    choosing one that leads somewhere.
   * **The town keeps off it.** The town grows the other three ways. Its lots on the
     farmland side past the first block are never built on, nor any lot over a field, pen or
     hives that is already there. Its streets stop at the field edge, and woods, mines, pens
@@ -1402,7 +1410,11 @@ heroes.
 
 **Flat ground.** Settlers look about before they pitch camp: of the dry ground within
 thirty-odd blocks, the flattest piece wins. This applies to a natural village, a colony,
-and a lone folk founding one.
+and a lone folk founding one. A party you set down yourself (the spawner block, or
+`/village spawnat`) stays where you put it if the ground there is fit for a village. On a
+mountainside, a ledge or a cliff over a pond, it makes camp on the best ground within forty
+blocks instead: flat, dry, and joined on foot to plenty more. The founders' beds go in a
+ring round the stores, and on broken ground a second ring further out.
 
 **Levelling the town.** Every day the village levels a little more of its town to the
 height of the square: knolls cut down, hollows filled, so houses and streets stand true.
@@ -1936,7 +1948,9 @@ Every push to CI:
   and carries on from the day after. One line and one row of numbers a day go to
   `real-hundred.txt` and `hundred-metrics.jsonl`: folk, age, buildings, stores,
   coin, contentment, the atlas, pacts and allies, who is at the town's works, and
-  how the wealth is spread;
+  how the wealth is spread. Each folk's line in a report ends with where its day went
+  (`day={job FARM 42%, asleep 37%, ...} wet=1%`), sampled once a second, and a farmer's
+  with whether its field is on ground the village can walk to (`reach=27570/ok`);
 * gathers the village for its morning assembly and checks folk take their places and
   the elder speaks (`t50`), and holds an election (`t51`);
 * sends an envoy to offer trade and checks the other village gathers to hear it and
