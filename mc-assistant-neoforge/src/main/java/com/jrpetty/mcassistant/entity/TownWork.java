@@ -100,18 +100,19 @@ public final class TownWork {
         // A lamp post along the avenues and round the ring street.
         if (ironAge && avenue && lampSpot(dx, dz) && above.isAir() && ground.isSolid()
                 && !level.getBlockState(top.above(2)).isSolid()) {
-            // The light first: no light, no post (and no logs spent on one).
-            if (Market.stock(level, v.id(), s -> s.is(Items.LANTERN) || s.is(Items.TORCH)) == 0) return 0;
+            // The light first: no light, no post (and no logs spent on one). A lantern if the smith has
+            // made one (or left the nuggets for one), a torch if not (Masonry).
+            if (!Masonry.canLight(level, v)) return 0;
             if (!TownJobs.atWork(level, v, "streets", top.above(), "putting up a lamp post")) return -1;
-            boolean lantern = take(level, v, s -> s.is(Items.LANTERN), 1);
-            if (!lantern && !take(level, v, s -> s.is(Items.TORCH), 1)) return 0;
+            net.minecraft.world.level.block.Block light = Masonry.light(level, v);
+            if (light == null) return 0;
             if (!take(level, v, s -> s.is(net.minecraft.tags.ItemTags.LOGS), 2)) {
-                give(level, v, new ItemStack(lantern ? Items.LANTERN : Items.TORCH));
+                Masonry.unlight(level, v, light);
                 return 0;
             }
             level.setBlockAndUpdate(top.above(), Blocks.SPRUCE_FENCE.defaultBlockState());
             level.setBlockAndUpdate(top.above(2), Blocks.SPRUCE_FENCE.defaultBlockState());
-            level.setBlockAndUpdate(top.above(3), lantern ? Blocks.LANTERN.defaultBlockState() : Blocks.TORCH.defaultBlockState());
+            level.setBlockAndUpdate(top.above(3), light.defaultBlockState());
             return 1;
         }
         // Before the Iron Age's lamp posts: a torch on a fence post at the same spots, from the

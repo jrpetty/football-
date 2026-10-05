@@ -34,10 +34,14 @@ import java.util.concurrent.ConcurrentHashMap;
  *     the granary, the tavern, the guest house, the market, the towers — are roofed in copper,
  *     which goes green with the years; and moss gets into the old footings.</li>
  * </ul>
- * Done by the village's builders as town work, a few blocks a visit, and out of its stores: a
- * block of stone for a stone wall, a brick or four for brick, a stone of slate (cobbled deepslate,
- * or cobble) for each tile, a copper ingot for each piece of copper roof, a torch and two planks
- * for a lamp post. What comes off goes back into the stores.
+ * Done by the village's builders as town work, a few blocks a visit, and out of its stores, at
+ * what each block really costs (Masonry): a block of stone bricks the masons cut for a stone wall,
+ * a block of brick (or four fired bricks) for brick, slate dressed from the deep stone the miners
+ * brought up, cut copper at nine ingots a block, moss only where the woodcutters brought vines, and
+ * for a lamp post two planks and its light, a lantern if the smith has made one and a torch if
+ * not. Where the stores cannot pay for what the age wants, the next best thing they can (a roof of
+ * stone bricks for want of slate or copper), or the block is left as it is till they can. What
+ * comes off goes back into the stores. Iron never goes on a roof.
  */
 public final class Ages {
 
@@ -92,11 +96,13 @@ public final class Ages {
             case WALL -> {
                 // A manor is brick from the Iron Age it is built in.
                 if (structure.equals("manor") && iron && now.is(BlockTags.PLANKS)) return Blocks.BRICKS.defaultBlockState();
-                // The houses are Grow's: stone, then brick.
-                if (home || !stone || !now.is(BlockTags.PLANKS)) return null;
+                // The houses are Grow's: stone, then brick. Timber, or the rough cobble a storey went up
+                // in for want of dressed stone (Masonry.buildIn), is dressed.
+                if (home || !stone || !(now.is(BlockTags.PLANKS) || now.is(Blocks.COBBLESTONE))) return null;
                 return (landStone != null ? landStone : Blocks.STONE_BRICKS).defaultBlockState();
             }
             case FOUNDATION, WALL_LOW -> {
+                // Moss in the old footings: only where the stores have the vines for it (affordable).
                 if (diamond && Math.floorMod(pos.hashCode(), 3) == 0) {
                     if (now.is(Blocks.STONE_BRICKS)) return Blocks.MOSSY_STONE_BRICKS.defaultBlockState();
                     if (now.is(Blocks.COBBLESTONE)) return Blocks.MOSSY_COBBLESTONE.defaultBlockState();
@@ -105,21 +111,24 @@ public final class Ages {
                 return null;
             }
             case ROOF_STAIR, ROOF_STAIR_TOP -> {
-                if (diamond && great && (now.is(BlockTags.WOODEN_STAIRS) || now.is(Blocks.DEEPSLATE_TILE_STAIRS))) {
+                if (diamond && great && (now.is(BlockTags.WOODEN_STAIRS) || now.is(Blocks.DEEPSLATE_TILE_STAIRS)
+                        || now.is(Blocks.STONE_BRICK_STAIRS))) {
                     return like(now, Blocks.CUT_COPPER_STAIRS);
                 }
                 if (iron && now.is(BlockTags.WOODEN_STAIRS)) return like(now, Blocks.DEEPSLATE_TILE_STAIRS);
                 return null;
             }
             case ROOF_SLAB, ROOF_SLAB_TOP -> {
-                if (diamond && great && (now.is(BlockTags.WOODEN_SLABS) || now.is(Blocks.DEEPSLATE_TILE_SLAB))) {
+                if (diamond && great && (now.is(BlockTags.WOODEN_SLABS) || now.is(Blocks.DEEPSLATE_TILE_SLAB)
+                        || now.is(Blocks.STONE_BRICK_SLAB))) {
                     return like(now, Blocks.CUT_COPPER_SLAB);
                 }
                 if (iron && now.is(BlockTags.WOODEN_SLABS)) return like(now, Blocks.DEEPSLATE_TILE_SLAB);
                 return null;
             }
             case ROOF_BLOCK -> {
-                if (diamond && great && (now.is(BlockTags.PLANKS) || now.is(Blocks.DEEPSLATE_TILES))) {
+                if (diamond && great && (now.is(BlockTags.PLANKS) || now.is(Blocks.DEEPSLATE_TILES)
+                        || now.is(Blocks.STONE_BRICKS))) {
                     return Blocks.CUT_COPPER.defaultBlockState();
                 }
                 if (iron && now.is(BlockTags.PLANKS)) return Blocks.DEEPSLATE_TILES.defaultBlockState();
@@ -142,39 +151,69 @@ public final class Ages {
         return s.setValue(p, from.getValue(p));
     }
 
-    /** Could the stores pay for a block of the new look (nothing taken)? */
-    private static boolean canPay(ServerLevel level, Villages.Village v, BlockState want, @Nullable Homeland.Stone local) {
+    /** Could the stores pay for a block of the new look (nothing taken)? Asked once a block a visit. */
+    private static boolean canPay(ServerLevel level, Villages.Village v, BlockState want, @Nullable Homeland.Stone local,
+                                  Map<Block, Boolean> known) {
         Block b = want.getBlock();
-        if (local != null && b == local.block()) return Crafts.stock(level, v, local.pay()) >= local.each();
-        if (b == Blocks.STONE_BRICKS) {
-            return Crafts.stock(level, v, s -> s.is(Items.STONE_BRICKS)) > 0
-                || Crafts.stock(level, v, s -> s.is(Items.COBBLESTONE)) > 0 && Crafts.stoneToSpare(level, v);
-        }
-        if (b == Blocks.BRICKS) return Crafts.stock(level, v, s -> s.is(Items.BRICKS)) > 0 || Crafts.stock(level, v, s -> s.is(Items.BRICK)) >= 4;
-        if (b == Blocks.DEEPSLATE_TILES || b == Blocks.DEEPSLATE_TILE_STAIRS || b == Blocks.DEEPSLATE_TILE_SLAB) {
-            return Crafts.stock(level, v, s -> s.is(Items.COBBLED_DEEPSLATE) || s.is(Items.COBBLESTONE)) > 0;
-        }
-        if (b == Blocks.CUT_COPPER || b == Blocks.CUT_COPPER_STAIRS || b == Blocks.CUT_COPPER_SLAB) {
-            return Crafts.stock(level, v, s -> s.is(Items.COPPER_INGOT)) > 0;
-        }
-        return true;
+        Boolean k = known.get(b);
+        if (k != null) return k;
+        boolean can;
+        if (local != null && b == local.block()) can = Masonry.canLand(level, v, local, 1);
+        else can = Masonry.can(level, v, b);
+        known.put(b, can);
+        return can;
     }
 
-    /** Pay for a block of the new look out of the stores; false if they cannot. */
+    /** Pay for a block of the new look out of the stores, at what it really costs (Masonry); false if they cannot. */
     private static boolean pay(ServerLevel level, Villages.Village v, BlockState want, @Nullable Homeland.Stone local) {
         Block b = want.getBlock();
-        if (local != null && b == local.block()) return Crafts.take(level, v, local.pay(), local.each());
-        if (b == Blocks.STONE_BRICKS) return Crafts.masonryForLooks(level, v);
+        if (local != null && b == local.block()) return Masonry.payLand(level, v, local);
+        return Masonry.take(level, v, b);
+    }
+
+    /**
+     * What a block of the new look will be, as far as the stores can pay: what the age wants, or the
+     * next best thing (a roof in stone bricks for want of slate or copper; stone bricks for want of
+     * brick), or null to leave it as it stands till they can. Moss is a nicety: no vines, no moss.
+     * Nothing precious ever goes on a roof.
+     */
+    @Nullable
+    static BlockState affordable(ServerLevel level, Villages.Village v, BlockState want, BlockState now,
+                                 @Nullable Homeland.Stone local, Map<Block, Boolean> known) {
+        Block b = want.getBlock();
+        if (!Masonry.fitForARoof(b) && (b instanceof net.minecraft.world.level.block.StairBlock
+                || b instanceof net.minecraft.world.level.block.SlabBlock)) return null;
+        if (canPay(level, v, want, local, known)) return want;
+        if (b == Blocks.MOSSY_STONE_BRICKS || b == Blocks.MOSSY_COBBLESTONE) {
+            // No moss to be had: the Iron Age's dressed footing, if it is still rough cobble.
+            BlockState dressed = Blocks.STONE_BRICKS.defaultBlockState();
+            return now.is(Blocks.COBBLESTONE) && canPay(level, v, dressed, local, known) ? dressed : null;
+        }
         if (b == Blocks.BRICKS) {
-            return Crafts.take(level, v, s -> s.is(Items.BRICKS), 1) || Crafts.take(level, v, s -> s.is(Items.BRICK), 4);
+            BlockState dressed = Blocks.STONE_BRICKS.defaultBlockState();
+            return !now.is(Blocks.STONE_BRICKS) && canPay(level, v, dressed, local, known) ? dressed : null;
         }
-        if (b == Blocks.DEEPSLATE_TILES || b == Blocks.DEEPSLATE_TILE_STAIRS || b == Blocks.DEEPSLATE_TILE_SLAB) {
-            return Crafts.take(level, v, s -> s.is(Items.COBBLED_DEEPSLATE), 1) || Crafts.take(level, v, s -> s.is(Items.COBBLESTONE), 1);
+        boolean copper = b == Blocks.CUT_COPPER || b == Blocks.CUT_COPPER_STAIRS || b == Blocks.CUT_COPPER_SLAB;
+        boolean slate = b == Blocks.DEEPSLATE_TILES || b == Blocks.DEEPSLATE_TILE_STAIRS || b == Blocks.DEEPSLATE_TILE_SLAB;
+        boolean wooden = now.is(BlockTags.WOODEN_STAIRS) || now.is(BlockTags.WOODEN_SLABS) || now.is(BlockTags.PLANKS);
+        if (copper && !wooden) return null;                         // slated or stone already: it waits for copper
+        if (copper) {
+            // A wooden roof the stores cannot copper: slate it, as the Iron Age would have.
+            Block tile = b == Blocks.CUT_COPPER_STAIRS ? Blocks.DEEPSLATE_TILE_STAIRS
+                : b == Blocks.CUT_COPPER_SLAB ? Blocks.DEEPSLATE_TILE_SLAB : Blocks.DEEPSLATE_TILES;
+            BlockState slated = tile == Blocks.DEEPSLATE_TILES ? tile.defaultBlockState() : like(now, tile);
+            if (canPay(level, v, slated, local, known)) return slated;
+            b = tile;
+            slate = true;
         }
-        if (b == Blocks.CUT_COPPER || b == Blocks.CUT_COPPER_STAIRS || b == Blocks.CUT_COPPER_SLAB) {
-            return Crafts.take(level, v, s -> s.is(Items.COPPER_INGOT), 1);
+        if (slate) {
+            // No slate (the mines never went deep enough): stone bricks, cut by the masons.
+            Block stone = b == Blocks.DEEPSLATE_TILE_STAIRS ? Blocks.STONE_BRICK_STAIRS
+                : b == Blocks.DEEPSLATE_TILE_SLAB ? Blocks.STONE_BRICK_SLAB : Blocks.STONE_BRICKS;
+            BlockState instead = stone == Blocks.STONE_BRICKS ? stone.defaultBlockState() : like(now, stone);
+            return canPay(level, v, instead, local, known) ? instead : null;
         }
-        return true;                                                       // moss: the years, for nothing
+        return null;
     }
 
     // ------------------------------------------------------------------ the work
@@ -219,10 +258,12 @@ public final class Ages {
         String plan = drawing(v.id(), b);
         if (!Blueprints.has(plan)) return true;
         Homeland.Stone local = Homeland.walls(v.id());
-        Block land = local != null && Crafts.stock(level, v, local.pay()) >= 16 ? local.block() : null;
+        Block land = local != null && Masonry.canLand(level, v, local, 16) ? local.block() : null;
         for (BuildGoal.Placement p : BuildGoal.plan(plan, b.anchor(), b.facing(), 13)) {
             if (p.part() != BuildGoal.Part.BLOCK) continue;
-            if (look(age, plan, p.style(), level.getBlockState(p.pos()), p.pos(), land) != null) return false;
+            BlockState want = look(age, plan, p.style(), level.getBlockState(p.pos()), p.pos(), land);
+            // Moss is a nicety: a footing waiting on vines that never come is not work left undone.
+            if (want != null && !want.is(Blocks.MOSSY_COBBLESTONE) && !want.is(Blocks.MOSSY_STONE_BRICKS)) return false;
         }
         return lampsDone(level, b, plan);
     }
@@ -237,14 +278,17 @@ public final class Ages {
         String plan = v == null ? b.structure() : drawing(v.id(), b);
         if (!Blueprints.has(plan)) return 0;
         Homeland.Stone local = v == null ? null : Homeland.walls(v.id());
-        Block land = local != null && Crafts.stock(level, v, local.pay()) >= 16 ? local.block() : null;
+        Block land = local != null && Masonry.canLand(level, v, local, 16) ? local.block() : null;
         java.util.List<BuildGoal.Placement> todo = new java.util.ArrayList<>();
+        Map<Block, Boolean> known = new HashMap<>();
         for (BuildGoal.Placement p : BuildGoal.plan(plan, b.anchor(), b.facing(), 13)) {
             if (p.part() != BuildGoal.Part.BLOCK) continue;
-            BlockState want = look(age, plan, p.style(), level.getBlockState(p.pos()), p.pos(), land);
+            BlockState now = level.getBlockState(p.pos());
+            BlockState want = look(age, plan, p.style(), now, p.pos(), land);
             // Only what the stores can pay for: a builder is not called out to stand by a wall
             // waiting on stone that is not there.
-            if (want != null && (free || canPay(level, v, want, local))) todo.add(p);
+            if (want != null && !free) want = affordable(level, v, want, now, local, known);
+            if (want != null) todo.add(p);
         }
         int n = 0;
         if (!todo.isEmpty()) {
@@ -255,8 +299,15 @@ public final class Ages {
                 BlockState now = level.getBlockState(p.pos());
                 BlockState want = look(age, plan, p.style(), now, p.pos(), land);
                 if (want == null) continue;
-                if (!free && !pay(level, v, want, local)) break;
-                if (!free && !want.is(Blocks.MOSSY_COBBLESTONE) && !want.is(Blocks.MOSSY_STONE_BRICKS)) {
+                if (!free) {
+                    want = affordable(level, v, want, now, local, known);
+                    if (want == null) continue;
+                    if (!pay(level, v, want, local)) {
+                        known.put(want.getBlock(), false);                // run out: the next block may be of something else
+                        continue;
+                    }
+                    // What comes out goes back into the stores (and for moss, the block it was worked
+                    // into: the stores paid a block and a vine, and get the block back).
                     back.merge(now.getBlock().asItem(), 1, Integer::sum);
                 }
                 level.setBlock(p.pos(), want, 3);
@@ -304,7 +355,8 @@ public final class Ages {
             && !level.getBlockState(s.below()).is(Blocks.FARMLAND) && !level.getBlockState(s.below()).is(Blocks.DIRT_PATH);
     }
 
-    /** Lamp posts by the doors (from the Stone Age): a fence post and a lantern each, of two planks and a torch. */
+    /** Lamp posts by the doors (from the Stone Age): a fence post of two planks, and on it a lantern if the
+     *  smith has made one (Masonry: a lantern is iron), else a torch. */
     static int lamps(ServerLevel level, @Nullable Villages.Village v, Ledger.Building b, String plan, boolean free) {
         if (v != null && Villages.ageOf(v.id()).ordinal() < Villages.Age.STONE.ordinal() && !free) return 0;
         int n = 0;
@@ -316,14 +368,19 @@ public final class Ages {
                 if (com.jrpetty.mcassistant.village.TownPlan.isStreet(dx, dz)
                     || com.jrpetty.mcassistant.village.TownPlan.isSquare(dx, dz)) continue;
             }
+            Block light = Blocks.LANTERN;
             if (!free) {
                 if (!TownJobs.atWork(level, v, "walls", s, "putting up lamp posts")) return n;
-                if (Crafts.stock(level, v, st -> st.is(Items.TORCH)) < 1) return n;
+                if (!Masonry.canLight(level, v)) return n;
                 if (!Crafts.usePlanks(level, v, 2)) return n;
-                Crafts.take(level, v, st -> st.is(Items.TORCH), 1);
+                light = Masonry.light(level, v);
+                if (light == null) {
+                    Crafts.store(level, v, new net.minecraft.world.item.ItemStack(Items.OAK_PLANKS, 2));
+                    return n;
+                }
             }
             level.setBlock(s, Blocks.SPRUCE_FENCE.defaultBlockState(), 3);
-            level.setBlock(s.above(), Blocks.LANTERN.defaultBlockState(), 3);
+            level.setBlock(s.above(), light.defaultBlockState(), 3);
             n += 2;
         }
         return n;

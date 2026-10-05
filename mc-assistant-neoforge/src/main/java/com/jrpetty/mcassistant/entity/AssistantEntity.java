@@ -2658,6 +2658,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Is its village nearly out of glass and bottles? (VillageFolkEntity) */
     protected boolean wantsGlass() { return false; }
 
+    /** The mason's work at the smeltery when there is no ore to run (VillageFolkEntity: Masonry). */
+    protected boolean masonWork() { return false; }
+
     /** An evening hour off shift that is not spent in bed; true while it lasts. */
     protected boolean eveningSocial() { return false; }
 
@@ -3673,6 +3676,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 : (s.get(DataComponents.FOOD) != null ? 8 : 0));
             case SMELT -> (s.is(Items.RAW_IRON) || s.is(Items.RAW_GOLD) || s.is(Items.RAW_COPPER)) ? 64
                 : ((s.is(Items.COAL) || s.is(Items.CHARCOAL)) ? 32
+                // What it is firing and cutting for the masons (Masonry), and the sand for its glass.
+                : (s.is(Items.COBBLESTONE) || s.is(Items.STONE) || s.is(Items.CLAY_BALL)) ? 64
+                : (s.is(Items.SAND) || s.is(Items.RED_SAND)) ? 32
                 : (s.is(ItemTags.LOGS) || s.is(ItemTags.PLANKS)) ? 16
                 : (s.get(DataComponents.FOOD) != null ? 8 : 0));
             case HAUL -> s.get(DataComponents.FOOD) != null ? 8 : 0; // rations for the road
@@ -6297,6 +6303,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 int copper = countMatching(s -> s.is(Items.RAW_COPPER) || s.is(Items.COPPER_ORE) || s.is(Items.DEEPSLATE_COPPER_ORE));
                 if (iron + gold + copper == 0) {
                     if (burnCharcoal()) return true;              // a settlement short of coal
+                    // No ore: the mason's firings and the bench (a village's: Masonry). Iron came
+                    // first, being the village's tools; the stone bricks, smooth stone and bricks
+                    // every building after the first few is made of come next.
+                    if (masonWork()) return true;
                     if (!can(Ability.SMELT_COOK)) return false;   // level 30: the cook's rung
                     // No ore to run — cook for the crew instead. The rancher's
                     // raw drops become the 100%-pace meals the diet system
@@ -6947,6 +6957,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 || s.is(Items.STRING) || s.is(Items.GUNPOWDER) || s.is(Items.SPIDER_EYE));
             case SMELT -> surplusOf(Items.IRON_INGOT, 0) + surplusOf(Items.GOLD_INGOT, 0)
                 + surplusOf(Items.COPPER_INGOT, 0) + surplusOf(Items.GLASS, 0)
+                // The mason's work, for the builders: the dressed stone, the smooth stone, the brick.
+                + surplusOf(Items.STONE_BRICKS, 0) + surplusOf(Items.SMOOTH_STONE, 0)
+                + surplusOf(Items.BRICKS, 0) + surplusOf(Items.BRICK, 0)
                 // The crew's dinners: banked so the supply chain can route
                 // them, minus a few kept back for the cook's own table.
                 + surplusOf(Items.COOKED_BEEF, 3) + surplusOf(Items.COOKED_PORKCHOP, 3)
