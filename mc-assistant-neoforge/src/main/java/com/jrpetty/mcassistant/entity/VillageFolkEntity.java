@@ -591,6 +591,38 @@ public class VillageFolkEntity extends AssistantEntity {
     private int cafeSetOff = -1;
     private long shopDay = -1;
     private int shopSetOff = -1;
+    private long lookedRound = -1;
+
+    /**
+     * The curious and the sociable go to have a look at a building the day it is opened: walk
+     * round to it, take it in, and say what they think.
+     */
+    private boolean lookRound(net.minecraft.server.level.ServerLevel server) {
+        UUID village = ownerId();
+        if (village == null || isBaby() || !(life.has(Social.Trait.CURIOUS) || life.has(Social.Trait.SOCIABLE))) return false;
+        long day = level().getDayTime() / 24000L;
+        Assemblies.Opened o = Assemblies.lastOpened(village, day);
+        if (o == null || lookedRound >= o.day()) return false;
+        if (blockPosition().distSqr(o.at()) > 25.0) {
+            if (getNavigation().isDone() || tickCount - socialWalkTick >= 100) {
+                walkTo(o.at(), 0.85D);
+                socialWalkTick = tickCount;
+            }
+            hobbyNow = "going to see the new " + Villages.spoken(o.structure()).replaceFirst("^(the|a) ", "");
+            return true;
+        }
+        lookedRound = day;
+        getLookControl().setLookAt(o.at().getX() + 0.5, o.at().getY() + 2.0, o.at().getZ() + 0.5);
+        String what = Villages.spoken(o.structure());
+        FolkTalk.speak(this, FolkTalk.pick(getRandom(), "So this is " + what + ". Lovely work!", "Look at that — " + what + ", and we built it.",
+            "I had to come and see " + what + " for myself.", capitalFirst(what) + "! Whatever next?"));
+        persona.remember(day, "I went to see " + what + " when it was new", 2);
+        return true;
+    }
+
+    private static String capitalFirst(String s) {
+        return s.isEmpty() ? s : Character.toUpperCase(s.charAt(0)) + s.substring(1);
+    }
 
     /**
      * Now and then, off work, a folk goes to the shop: for the tool its trade wants if it has
@@ -1784,6 +1816,7 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         if (homeComfort(server)) return;              // its savings, spent on its home
         if (shopping(server)) return;                 // market day: a treat from the stalls
+        if (lookRound(server)) return;                // the new building everybody is talking about
         if (cafeVisit(server)) return;                // a drink at the café
         if (shopVisit(server)) return;                // the shop: a tool for its work, or something nice
         if (Leisure.listen(this, server)) return;

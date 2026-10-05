@@ -49,7 +49,8 @@ public final class Assemblies {
     public enum Kind {
         MORNING("the morning assembly"), OPENING("an opening"), FEAST("the village feast"), WEDDING("a wedding"),
         VIGIL("a vigil"), CELEBRATION("a celebration"), HONOUR("an honouring"), COUNCIL("the council's meeting"),
-        ELECTION("an election"), COMING_OF_AGE("a coming of age"), ENVOY("an envoy's audience");
+        ELECTION("an election"), COMING_OF_AGE("a coming of age"), ENVOY("an envoy's audience"),
+        WATCH("the changing of the watch");
 
         public final String label;
         Kind(String label) { this.label = label; }
@@ -107,10 +108,22 @@ public final class Assemblies {
     private static final Map<UUID, Assembly> NOW = new ConcurrentHashMap<>();
     private static final Map<UUID, List<Assembly>> PLANNED = new ConcurrentHashMap<>();
     private static final Map<String, Long> HELD = new ConcurrentHashMap<>();
+    /** The building last opened in each village, for the curious to go and look round. */
+    public record Opened(String structure, BlockPos at, long day) {}
+    private static final Map<UUID, Opened> OPENED = new ConcurrentHashMap<>();
+
+    /** What was last opened, if it was in the last couple of days. */
+    @Nullable
+    public static Opened lastOpened(UUID village, long day) {
+        Opened o = OPENED.get(village);
+        return o != null && day - o.day() <= 2 ? o : null;
+    }
+
     /** Who built what, for the opening. */
     private static final Map<String, String> BUILDERS = new ConcurrentHashMap<>();
 
     public static void resetForTests() {
+        OPENED.clear();
         NOW.clear();
         PLANNED.clear();
         HELD.clear();
@@ -171,6 +184,9 @@ public final class Assemblies {
         } else if (t >= 1400 && t < 11500) {
             VillageFolkEntity guest = Envoys.waitingAt(level, v);
             if (guest != null && guest.trip() != null && guest.trip().errand() != null) next = envoy(level, v, guest);
+        } else if (t >= 11500 && t < 12100) {
+            // At dusk the watch changes: the guards meet at the bell and the night's watch takes over.
+            if (!held(id, Kind.WATCH, day) && guards(id) >= 2) next = watch(level, v, day);
         } else if (t >= 12100 && t < 13200) {
             Gatherings.Kind tonight = Gatherings.tonight(id, day);
             if (tonight != null) next = evening(level, v, tonight, day);
@@ -364,7 +380,10 @@ public final class Assemblies {
             if (w != null) Villages.tell(a.village, day, w.names() + " were wed");
             Gatherings.wed(a.village);
         }
-        if (a.kind == Kind.OPENING) Villages.tell(a.village, day, Villages.spoken(a.subject) + " was opened");
+        if (a.kind == Kind.OPENING) {
+            Villages.tell(a.village, day, Villages.spoken(a.subject) + " was opened");
+            OPENED.put(a.village, new Opened(a.subject, a.focus.immutable(), day));
+        }
         if (a.kind == Kind.COMING_OF_AGE) Villages.tell(a.village, day, a.subject.split("\\|", 2)[0] + " was welcomed among the grown folk");
     }
 
@@ -591,6 +610,15 @@ public final class Assemblies {
         // Who leads it.
         UUID elder = Villages.elder(a.village);
         a.host = elder;
+        if (a.kind == Kind.WATCH) {
+            // The changing of the watch is the senior guard's to lead.
+            VillageFolkEntity senior = null;
+            for (AssistantEntity x : Villages.folkOf(a.village)) {
+                if (x instanceof VillageFolkEntity g && g.stationTask() == AssistantEntity.StationTask.GUARD
+                        && (senior == null || g.veteranLevel() > senior.veteranLevel())) senior = g;
+            }
+            if (senior != null) a.host = senior.getUUID();
+        }
         if (a.kind == Kind.COMING_OF_AGE || a.kind == Kind.OPENING || a.host == null) {
             if (a.host == null) a.host = oldest(level, a.village);
         }
@@ -759,6 +787,24 @@ public final class Assemblies {
         return a;
     }
 
+    private static int guards(UUID village) {
+        int n = 0;
+        for (AssistantEntity a : Villages.folkOf(village)) if (a.stationTask() == AssistantEntity.StationTask.GUARD && !a.isBaby()) n++;
+        return n;
+    }
+
+    /** The changing of the watch, before the board: the guards only. */
+    private static Assembly watch(ServerLevel level, Villages.Village v, long day) {
+        UUID id = v.id();
+        BlockPos at = VillageBoards.lectern(id);
+        Direction facing = VillageBoards.facingOf(id);
+        Assembly a = new Assembly(id, Kind.WATCH, "", day, at != null ? at : v.centre(), facing != null ? facing : Direction.SOUTH, Layout.CIRCLE);
+        Set<UUID> guards = new HashSet<>();
+        for (AssistantEntity x : Villages.folkOf(id)) if (x.stationTask() == AssistantEntity.StationTask.GUARD && !x.isBaby()) guards.add(x.getUUID());
+        a.invited = guards;
+        return a;
+    }
+
     private static Assembly election(ServerLevel level, Villages.Village v, long day) {
         UUID id = v.id();
         BlockPos lectern = VillageBoards.lectern(id);
@@ -842,6 +888,17 @@ public final class Assemblies {
                 s.add(new Line(null, "Three cheers! Hip hip —", '!', null));
             }
             case COUNCIL -> { }                                  // written below
+            case WATCH -> {
+                List<UUID> guards = new ArrayList<>(a.invited == null ? Set.of() : a.invited);
+                guards.remove(a.host);
+                guards.sort(java.util.Comparator.comparing(UUID::toString));
+                s.add(new Line(null, "The watch changes. Report.", '~', null));
+                String seen = Raids.why(id) != null ? "Trouble at the walls today." : FolkTalk.pick(r, "Quiet day on the walls.",
+                    "All quiet. A fox by the east gate, nothing worse.", "Nothing moving out there but the sheep.");
+                if (!guards.isEmpty()) s.add(new Line(guards.get(0), seen, ' ', null));
+                if (guards.size() > 1) s.add(new Line(guards.get(1), FolkTalk.pick(r, "I have the watch.", "I'll take the walls tonight."), ' ', null));
+                s.add(new Line(null, FolkTalk.pick(r, "Stay sharp. Goodnight, all.", "Eyes open. The village sleeps on us."), '~', null));
+            }
             case ENVOY -> {
                 if (a.principals.isEmpty() || !(level.getEntity(a.principals.get(0)) instanceof VillageFolkEntity e)) return;
                 Caravans.Trip t = e.trip();

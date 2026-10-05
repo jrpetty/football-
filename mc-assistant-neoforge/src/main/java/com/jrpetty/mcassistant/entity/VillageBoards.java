@@ -261,6 +261,22 @@ public final class VillageBoards {
         out.add("RN|Our trades: " + (t.length() == 0 ? "none yet" : t) + (idle > 0 ? "; " + idle + " still choosing" : "")
             + (children > 0 ? "; " + children + (children == 1 ? " child" : " children") : "") + ".");
         out.add("RN|At work right now: " + working + " of " + Math.max(0, folk - children) + ".");
+        // Who is on duty: the watch, the town's works, the scouts and envoys out on the road.
+        List<String> watch = new ArrayList<>(), works = new ArrayList<>(), away = new ArrayList<>();
+        for (AssistantEntity a : Villages.folkOf(id)) {
+            if (!(a instanceof VillageFolkEntity f) || f.isBaby()) continue;
+            if (f.stationTask() == AssistantEntity.StationTask.GUARD) watch.add(f.displayNameCap());
+            String job = TownJobs.doing(f);
+            if (job != null) works.add(f.displayNameCap() + " (" + job + ")");
+            if (f.expedition() != null) away.add(f.displayNameCap() + " scouting " + f.expedition().heading());
+            else if (f.trip() != null && f.trip().errand() != null) away.add(f.displayNameCap() + " envoy to " + Villages.name(f.trip().destination()));
+            else if (f.trip() != null) away.add(f.displayNameCap() + " with a caravan");
+        }
+        List<String> rota = new ArrayList<>();
+        if (!watch.isEmpty()) rota.add("the watch — " + String.join(", ", watch.subList(0, Math.min(4, watch.size()))));
+        if (!works.isEmpty()) rota.add("the town's works — " + String.join(", ", works));
+        if (!away.isEmpty()) rota.add("away — " + String.join(", ", away));
+        if (!rota.isEmpty()) out.add("RM|On duty: " + String.join("; ", rota) + ".");
         int radius = Villages.storesRadius(id);
         int food = Villages.stock(level, v.centre(), Villages.Task.FOOD, radius);
         int logs = Villages.stock(level, v.centre(), Villages.Task.LOGS, radius);
