@@ -178,7 +178,9 @@ public final class RestDay {
             BlockPos heart = f.villageCentre();
             RandomSource r = f.getRandom();
             if (heart != null) {
-                BlockPos to = f.surfaceAt(heart.getX() + r.nextInt(41) - 20, heart.getZ() + r.nextInt(41) - 20);
+                // Round the park's paths, now and then, if the town has one (Park).
+                BlockPos to = r.nextBoolean() ? Park.strollSpot(f) : null;
+                if (to == null) to = f.surfaceAt(heart.getX() + r.nextInt(41) - 20, heart.getZ() + r.nextInt(41) - 20);
                 if (to != null) f.walkTo(to, 0.6D);
             }
             f.life().feel(other.getUUID(), other.displayNameCap(), 3);

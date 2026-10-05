@@ -273,6 +273,7 @@ public class VillageFolkEntity extends AssistantEntity {
             laterLine = null;
         }
         Leisure.tick(this);
+        Park.tick(this);                                       // sat on a park bench, or on its way round the park
         if (hiredBy != null && tickCount % 20 == 0 && level() instanceof net.minecraft.server.level.ServerLevel out) Hire.tick(this, out);
         if (tickCount % 160 == 80) CityTree.tend(this);          // the town's research on it: roads, drills, healers
         // The watch does not open the gates to go out after them: with the bell ringing a guard's
@@ -1121,6 +1122,7 @@ public class VillageFolkEntity extends AssistantEntity {
             else if (led <= -3) { m += led; why.add(new Object[]{"leaderhard", -led}); }
             else m += led;
         }
+        m = Quarters.mood(this, m, why);                // where it lives: the crafts' smoke and din, the park (Quarters)
         m = FolkSkills.mood(this, m, why);              // Bright Spirit, a bright friend near, Unflappable's floor
         why.sort((a, b) -> Integer.compare((Integer) b[1], (Integer) a[1]));
         java.util.List<String> keys = new java.util.ArrayList<>();
@@ -1766,6 +1768,8 @@ public class VillageFolkEntity extends AssistantEntity {
         if (!(level() instanceof net.minecraft.server.level.ServerLevel server) || villageCentre == null) return;
         // Mornings, once it is old enough: at a grown-up's side at work, learning the trade.
         if (day - bornDay >= 1 && level().getDayTime() % 24000L < 7000L && apprentice(server)) return;
+        // Afternoons in the park, when the town has one (Park).
+        if (Park.play(this, server)) return;
         // Tag with the other children, when there are any.
         java.util.List<VillageFolkEntity> kids = level().getEntitiesOfClass(VillageFolkEntity.class,
             getBoundingBox().inflate(20.0), f -> f != this && f.isAlive() && f.isBaby() && !f.isSleeping());
@@ -1994,6 +1998,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (cafeVisit(server)) return;                // a drink at the café
         if (shopVisit(server)) return;                // the shop: a tool for its work, or something nice
         if (Leisure.listen(this, server)) return;
+        if (Park.visit(this, server)) return;                 // a sit in the park, now and then (Park)
         // Rain: indoors, under its own roof if it has one.
         if (level().isRaining() && bedPos() != null && !level().canSeeSky(blockPosition())) {
             getNavigation().stop();
@@ -2125,6 +2130,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (isBaby()) return false;
         if (familySupper(t)) return true;
         if (Tavern.evening(this, t)) return true;
+        if (Park.evening(this, t)) return true;               // some evenings, an hour in the park (Park)
         if (Leisure.evening(this, t)) return true;
         socialise();
         return true;

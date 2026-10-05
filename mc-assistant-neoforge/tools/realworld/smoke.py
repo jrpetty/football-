@@ -224,6 +224,36 @@ def found_village(r, cx, cz, look):
     say("folk founded: " + r.cmd("execute positioned %d %d %d run village list" % (fx, level_y + 1, fz))[:400])
 
 
+def districts_stage(r, look, cx, cz):
+    """The town's quarters and its park (Quarters, Park): the park put up at once on its lot in the
+    homes quarter (as the showcase does), its trees grown and its paths laid, and everybody off work
+    sent to it of an evening; the folk on its benches and its paths; then the books' map of the
+    quarters (the Buildings page's map). Not wired in: call it from main() after the stats pages."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("time set 13000")                            # an evening: everybody off work
+    out = r.cmd("execute positioned %d 100 %d run village districts park now" % (cx, cz))
+    say("park: " + out[:300])
+    m = re.search(r"PARK (-?\d+) (-?\d+) (-?\d+) facing (\w+)", out)
+    if not m:
+        say("no park went up; nothing to photograph")
+        r.cmd("time set 6000")
+        return
+    px, py, pz = int(m.group(1)), int(m.group(2)), int(m.group(3))
+    r.cmd("tp %s %d %d %d" % (USER, px + 12, py + 8, pz + 12))
+    time.sleep(30)                                     # the folk walk over and sit down
+    look("18-park-1-evening", px + 12, py + 8, pz + 12, px, py, pz, wait=8)
+    look("18-park-2-benches", px + 7, py + 1.5, pz - 7, px, py + 0.5, pz, wait=6)
+    say("districts: " + r.cmd("execute positioned %d %d %d run village districts" % (cx, py, cz))[:900])
+    r.cmd("time set 6000")
+    r.cmd("gamemode creative %s" % USER)
+    say("map: " + r.cmd("execute as %s at @s run village districts map" % USER))
+    time.sleep(4)
+    shot("18-park-3-quarters-map")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    say("alive after the park: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

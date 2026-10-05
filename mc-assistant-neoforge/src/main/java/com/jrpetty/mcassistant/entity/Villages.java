@@ -1468,6 +1468,8 @@ public final class Villages {
         if (folk >= 12 && built(villageId, "tavern") < 1) extras.add("tavern");
         // A Stone Age village's square gets a fountain.
         if (folk >= 10 && built(villageId, "fountain") < 1) extras.add("fountain");
+        // And a park among the homes, once the town is big enough to want one (Park).
+        if (Park.wanted(villageId, folk)) extras.add(Park.STRUCTURE);
         // The courtyard before the board, where the village gathers; and, once the town is big enough
         // to want governing, a hall for whoever leads it, on the great lot behind the board.
         if (VillageBoards.boardOf(villageId) != null && built(villageId, "hall") > 0 && built(villageId, "court") < 1) extras.add("court");
@@ -1821,6 +1823,8 @@ public final class Villages {
             case "brewery" -> "a brewery, for the brewer's potions";
             case "library" -> "a library, where the enchanter keeps its books";
             case "fountain" -> "a fountain on the square, now that the village builds in stone";
+            case "park" -> "a park among the homes, a fountain and benches: somewhere to sit of an evening, now the town has "
+                + folk + " folk";
             case "manor" -> "a manor house, six beds under a slate roof: the best homes a town of the Iron Age has";
             case "belltower" -> "a bell tower on the square, to ring the hours of a Diamond Age town";
             case "gateway" -> "a gateway of obsidian, the way out of the world the Nether Age is named for";
@@ -2403,7 +2407,9 @@ public final class Villages {
             boolean waiting = false;
             // The great lot behind the board is the leader's hall's: kept for it, and offered it first.
             com.jrpetty.mcassistant.village.TownPlan.Lot seat = built(villageId, "townhall") < 1 ? seatLot(villageId) : null;
-            List<com.jrpetty.mcassistant.village.TownPlan.Lot> places = new ArrayList<>(com.jrpetty.mcassistant.village.TownPlan.candidates(project));
+            // The plan's lots for it, its own quarter's first (Quarters: the market round the square,
+            // the crafts on their side, the homes on theirs).
+            List<com.jrpetty.mcassistant.village.TownPlan.Lot> places = new ArrayList<>(Quarters.candidates(villageId, project));
             if (seat != null) {
                 places.remove(seat);
                 if (project.equals("townhall")) places.add(0, seat);
@@ -2442,7 +2448,7 @@ public final class Villages {
                 if (ground == null) continue;
                 valid++;
                 int score = com.jrpetty.mcassistant.entity.goal.BuildGoal.fillCells(level, ground, back, half[0], half[1]).size()
-                    + 6 * index;
+                    + 6 * index + Quarters.misfit(villageId, project, lot);     // out of its own quarter: the worse
                 if (score < bestScore) {
                     bestScore = score;
                     best = lot;

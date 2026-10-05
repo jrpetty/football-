@@ -525,6 +525,7 @@ public final class Annals {
         // The storehouse's books, its staff (the storekeeper, the couriers) and its run list: the Stores page.
         out.put("storehouse", Storekeeping.report(level, v));
         out.put("buildings", buildings(level, v));
+        out.put("districts", Quarters.report(level, v));       // the town's quarters, the smoke, the park (Quarters)
         out.put("research", CityTree.report(id));                // the city's research: the tree, the pick and why
         List<String> queue = new ArrayList<>();
         for (String p : Villages.projectsWanted(id)) queue.add(Villages.spoken(p));
@@ -917,6 +918,7 @@ public final class Annals {
         c.putInt("single", grown.size() - partnered);
         c.putInt("friendships", friends / 2);
         c.putInt("rivalries", rivals / 2);
+        Quarters.society(id, folk, c);                             // who lives in the smoke, who by the park
         // How the money is spread: the purses of the grown, poorest first.
         List<VillageFolkEntity> byPurse = new ArrayList<>(grown);
         byPurse.sort((a, b) -> Integer.compare(Math.max(0, a.purse()), Math.max(0, b.purse())));
@@ -1042,6 +1044,7 @@ public final class Annals {
                 c.putString("tenure", Homes.seat(h) ? "the leader's" : h.members.isEmpty() && h.tenure != Homes.Tenure.PLAYER ? "empty" : h.tenure.word);
                 if (h.price > 0) c.putInt("price", h.price);
             }
+            Quarters.describe(id, v.centre(), b, c);              // its quarter, and the smoke or the park by it
             out.add(c);
         }
         return out;
