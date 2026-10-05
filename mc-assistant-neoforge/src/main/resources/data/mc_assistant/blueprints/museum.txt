@@ -1,0 +1,93 @@
+# The museum and the archive: a hall of dressed stone under a flat roof with a parapet, lit from
+# above by a skylight and from the sides by tall windows, a double door with a glass fanlight over
+# it, steps before it and a lantern either side. Inside, along its walls, the places its finds go on
+# show (entity/Museum hangs the frames and the labels, stands the stands, sets the jukebox and the
+# cases as they are wanted): two glass cases let into the floor, a lectern at the back where the
+# latest volume of the chronicle lies open, and the archive's shelves either side of it.
+# Ten across with the door in the middle of it: the drawing's middle column is the left-hand door.
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name museum
+layer -1
+............
+.FFFFFFFFFF.
+.FSSSSSSSSF.
+.FSSSSSSSSF.
+.FSSSSSSSSF.
+.FSOSSSSOSF.
+.FSSSSSSSSF.
+.FSSSSSSSSF.
+.FSSSSSSSSF.
+.FFFFFFFFFF.
+....kkkk....
+layer 0
+............
+.SSSSSSSSSS.
+.S...r....S.
+.S........S.
+.S........S.
+.S........S.
+.S........S.
+.S........S.
+.S........S.
+.SSSSDDSSSS.
+..l......l..
+layer 1
+............
+.SSSSSSSSSS.
+.S........S.
+.S........S.
+.G........G.
+.S........S.
+.G........G.
+.S........S.
+.S........S.
+.SSSS..SSSS.
+............
+layer 2
+............
+.SSSSSSSSSS.
+.S........S.
+.S........S.
+.G........G.
+.S........S.
+.G........G.
+.S........S.
+.S........S.
+.SSSSOOSSSS.
+............
+layer 3
+............
+.SSSSSSSSSS.
+.S........S.
+.S.j....j.S.
+.S........S.
+.S........S.
+.S........S.
+.S.j....j.S.
+.S........S.
+.SSSSSSSSSS.
+............
+layer 4
+............
+.SSSSSSSSSS.
+.SSSSSSSSSS.
+.SSSSSSSSSS.
+.SSSOOOOSSS.
+.SSSOOOOSSS.
+.SSSOOOOSSS.
+.SSSSSSSSSS.
+.SSSSSSSSSS.
+.SSSSSSSSSS.
+............
+layer 5
+............
+.SssssssssS.
+.s........s.
+.s........s.
+.s........s.
+.s........s.
+.s........s.
+.s........s.
+.s........s.
+.SsssSSsssS.
+............

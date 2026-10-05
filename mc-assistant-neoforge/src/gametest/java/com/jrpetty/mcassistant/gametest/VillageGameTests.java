@@ -567,7 +567,8 @@ public class VillageGameTests {
         helper.assertTrue(order.equals(List.of("gateway", "cafe", "tavern", "fountain", "townhall", "smithy", "shop", "manor",
                 "granary", "barracks", "monument")),
             "the Nether Age raises its gateway, its amenities and the leader's hall, then the great works go round: " + order);
-        helper.assertTrue(Villages.renown(late) == 3, "three great works raised, renown " + Villages.renown(late));
+        helper.assertTrue(Villages.greatWorks(late) == 3 && Villages.renown(late) == 3 * com.jrpetty.mcassistant.entity.Museum.GREAT_WORK_RENOWN,
+            "three great works raised, ten renown each: " + Villages.greatWorks(late) + ", renown " + Villages.renown(late));
         helper.assertTrue(Villages.housing(late) == roomBefore + 12, "the manor and the barracks are room for twelve more: "
             + roomBefore + " -> " + Villages.housing(late));
         helper.succeed();

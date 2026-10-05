@@ -526,6 +526,7 @@ public final class Annals {
         out.put("storehouse", Storekeeping.report(level, v));
         out.put("buildings", buildings(level, v));
         out.put("research", CityTree.report(id));                // the city's research: the tree, the pick and why
+        out.put("museum", Museum.report(level, v));              // the museum: what is on show, who found it, the archive
         List<String> queue = new ArrayList<>();
         for (String p : Villages.projectsWanted(id)) queue.add(Villages.spoken(p));
         out.put("queue", strings(queue));

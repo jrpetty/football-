@@ -395,6 +395,8 @@ public final class VillageBoards {
         if (abroad != null) out.add("FM|Abroad: " + abroad + ".");
         String scouts = Scouts.boardLine(id);
         if (scouts != null) out.add("FN|" + scouts);
+        String museum = Museum.boardLine(id, day);              // what is new in the museum (Museum)
+        if (museum != null) out.add("FN|" + museum);
         List<Villages.News> news = Villages.news(id);
         if (!news.isEmpty()) out.add("FM|Latest: " + news.get(news.size() - 1).text() + ".");
         return out;

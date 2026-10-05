@@ -52,7 +52,9 @@ public class BuildGoal extends Goal {
         // what the later ages add: a fountain on the square, a manor house, a bell tower
         "fountain", "manor", "belltower",
         // the leader's hall, the best and biggest in the town, and the courtyard before the board
-        "townhall", "court");
+        "townhall", "court",
+        // the museum, where the town's rare finds go on show and its chronicle is kept as books (Museum)
+        "museum");
 
     /** Half the width of a structure's footprint: the meeting hall, the market, the
      *  barracks, the chapel's length and the gateway's step are seven across, the rest

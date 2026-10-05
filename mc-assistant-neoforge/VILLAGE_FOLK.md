@@ -190,15 +190,16 @@ own, and each step is there for a reason the village can see.
 10. **And then it never stops.** A village that has come through every age raises
     **great works** — a granary, barracks, a monument, round and round, each on new
     ground — and every one asks the stores for a quarter more food, stone and iron
-    than the last. `/village status` shows its **renown** (great works raised).
+    than the last. `/village status` shows its **renown**: ten for every great work raised,
+    and whatever its museum has on show (see *The museum and the archive*).
     **Rank** goes on past the ages:
 
     | Rank | Needs |
     |---|---|
     | Village | the Stone Age and 12 folk |
     | Town | the Iron Age and 30 folk |
-    | City | the Diamond Age, two great works and 50 folk |
-    | Capital | the Nether Age, six great works, 80 folk and two colonies of its own |
+    | City | the Diamond Age, renown 20 (two great works, or a museum of rare finds) and 50 folk |
+    | Capital | the Nether Age, renown 60 (six great works, or fewer and a museum), 80 folk and two colonies of its own |
 
     A rise in rank is told to everyone, the treasury gets a purse for it, and the folk
     remember the day. `/village status` and the journal show the rank and what the
@@ -2186,7 +2187,7 @@ its own. The council sits in the hall's council chamber.
 Right-click the village board (or press **Analytics** in the village journal, or type
 `/village stats`) and the town's books open: everything the village is and has been, with
 charts, so you can see exactly what is driving its growth. Every morning the village is
-written down (kept for four hundred days), and the books have nineteen pages, picked along the
+written down (kept for four hundred days), and the books have twenty pages, picked along the
 top (in two rows on a small window; the arrow keys turn the pages); the range (a week, a month, a hundred days, or all of it) is picked at the top right, and
 every chart reads out the day under the mouse.
 
@@ -2298,7 +2299,8 @@ every chart reads out the day under the mouse.
   hands and the watch, and buildings, renown and the ages over time.
 * **Records:** its bests (most folk, most made in a day, fullest treasury, greatest worth,
   most born in a day, most and least content, most buildings and renown, each with its day,
-  and its longest run without a loss); everything all told (born, died, came, left, made,
+  and its longest run without a loss); its renown now, and how much of it the museum's finds
+  bring (the Overview says so too, under its cards); everything all told (born, died, came, left, made,
   money in, wages paid); a day on average over the range; and where it is heading: folk,
   output, treasury, worth and buildings in thirty days at the pace of the last fortnight, and
   when the larder would run dry if it is emptying.
@@ -2306,9 +2308,15 @@ every chart reads out the day under the mouse.
   buildings, how far and which way, and the terms it is on with each), its neighbours, and
   the latest of its chronicle.
 * **Board:** the board's own page.
+* **Museum:** what is on show, a row each: what it is, who found it and at what trade, the day
+  it was found, where it stands (in a frame, under glass, on a stand, in the jukebox) and the
+  renown it brings; the curator and what it is doing now; the archive's volumes of the chronicle
+  (title, pages, where each stands, a copy or the one first written) and the years waiting to be
+  bound; what may go on show next, and what the museum is short of. Before there is a museum: the
+  town's finds so far, and what it waits on.
 
 `/village stats <page>` opens the books at a page by its number, counting from Overview at 0:
-Stock is 12, Research 13, Why 14, Trends 15, Records 16, News 17 and the Board 18.
+Stock is 12, Research 13, Why 14, Trends 15, Records 16, News 17, the Board 18 and the Museum 19.
 
 ### The city's research
 
@@ -2841,6 +2849,64 @@ food (and a torch or two) from the stores:
   tab). A scout gives the exact coordinates, and will **walk you** to a find that is
   near enough.
 
+### The museum and the archive
+
+A town keeps what it is proudest of.
+
+* **Finds.** Whatever a folk picks up out of the world is looked at as it comes into its hands:
+  a miner's diamond or emerald, a **fossil** (bone blocks dug out of the deep rock), a fisher's
+  nautilus shell or saddle (a fisher's line brings up treasure now and then, as a player's does:
+  a saddle, a nautilus shell, a name tag or an enchanted book; and an ink sac, sometimes), a
+  guard's trophy off a monster (a skull, a trident, chainmail, a totem), a hunter's rabbit's foot,
+  a ghast's tear from the Nether. Who found it, at what trade and on what day is written down then
+  and there, and the first of every rare kind is told in the chronicle ("Ember the miner mined the
+  town's first diamond").
+* **The museum.** A town of twenty in the Iron Age with three different rare finds plans a
+  **museum** among its amenities, on a lot facing the square: a hall of stone bricks with a
+  skylight, tall windows, a double door under a glass fanlight, lanterns, steps. It is built like
+  any other building, out of the stores. A **curator** looks after it: the folk with the most
+  curiosity and learning in it (a curious nature, a love of reading, the enchanter's trade), or
+  else the eldest. It keeps its own trade, and does the museum's work by day.
+* **What goes on show.** One of every kind: the first diamond, the first emerald, a fossil, a
+  music disc, an enchanted book, a trident, a nautilus shell, the heart of the sea, a totem, a
+  saddle, a rare fish, a monster's skull, chainmail, a rabbit's foot, a ghast's tear, amethyst, a
+  name tag, a **map** of one of the scouts' finds (drawn by the curator on an empty map made out
+  of the stores, the ruin marked with a red cross), and the first iron of the Iron Age. Nothing
+  comes from nowhere:
+  * the curator **asks** for the rarest thing the stores hold that is not on show yet; from then
+    on the stores keep it back from every maker (the Stock page says *kept for the museum*);
+  * it walks to the stores and takes it out, with whatever its place wants, made out of the
+    stores by the game's own recipes: a frame (sticks and leather), a sign for its label
+    (planks and a stick), glass for a case, an armour stand, a jukebox. If the stores cannot run
+    to it, it waits, and the Museum page says what it is short of;
+  * it carries it to the museum (you can see it in its hand) and sets it out: **in a frame** on
+    the wall, **under glass** let into the floor (the fossil, a skull), **on a stand** by the
+    door (the trident in its hand, the skull on its head, the chainmail on its back), or **in
+    the jukebox**.
+  * Its **label** (a sign) says what it is, who found it, at what trade and on what day
+    ("Diamond / mined by Ember / the miner / day 41"); look at the thing itself and its name
+    says the same.
+* **Pride and renown.** The finder is proud of its find on show, says so, and is the happier
+  for it for days. The town's **renown** rises with every thing on show, the rarer the more: one
+  for a rare fish, three for a diamond or a fossil, five for the heart of the sea or a totem
+  (a great work is ten). The board tells what is new in the museum.
+* **Visitors.** Folk look round of an evening, the curious and the readers most, finders to see
+  their own finds: they stop before a thing and say a word about it. Come in yourself and the
+  curator welcomes you; every label can be read. On the **day of rest** the jukebox plays its
+  disc. Something taken away is missed, and the chronicle says so.
+* **The archive.** The town counts its years from its founding, **ten days to a year**. When a
+  year is over, what the chronicle says of it is written down at once (the chronicle itself keeps
+  only so many lines). The curator makes a **book and quill** out of the stores (a book, a feather
+  and an ink sac; the book out of paper and leather if need be), writes the year into it and signs
+  it: **"Chronicle of Oakhollow, Year 2"**, by the curator, with a title page and then the year
+  day by day, every line fitted to the page. The newest volume lies **open on the lectern** at the
+  back of the hall for anyone to read; the one before goes onto the archive's **chiseled
+  bookshelves** either side of it (made out of the stores as they are wanted), six to a shelf. A
+  year too long for one book goes into two. Take a volume away if you like: the curator writes it
+  out again, a fair copy, from its notes.
+* `/village museum` says it all in chat: the curator, every exhibit and who found it, the
+  volumes and where they stand, what is waiting and what the museum is short of.
+
 ### Built by hand
 
 Everything the town does to itself is **done by somebody**:
@@ -3015,8 +3081,8 @@ ripen, days pass, folk work and houses go up at that pace.
   what is for sale. `house buy` buys the empty house you stand in; `house let <coins>` lets
   yours out at that rent a day (0 to take it back); `house rent` collects the rent.
 * `/village stats [page]` — the town's books on the analytics screen (as clicking the village
-  board does), opened at a page if one is given (0 the Overview to 18 the Board; 12 is the Stock,
-  13 Research); from the console, the reading of what drives the village's growth.
+  board does), opened at a page if one is given (0 the Overview to 18 the Board and 19 the Museum;
+  12 is the Stock, 13 Research); from the console, the reading of what drives the village's growth.
 * `/village research` — the city's research: points in hand and a day, what is being studied,
   who chose it and why, and every branch's civics with their keys, states and costs. Works from
   the console. `research pick <civic>` and `research grant <civic>` (operators) set the town to an
@@ -3027,6 +3093,11 @@ ripen, days pass, folk work and houses go up at that pace.
 * `/village stores` — the storehouse's day: its slots, its storekeeper, what went in and out
   and who served the requests, its last tidy, its staff and their runs, and its run list.
 * `/village chronicle` — the nearest village's history, as a written book.
+* `/village museum` — the nearest village's museum: its curator, what is on show and who found
+  each thing, the archive's volumes and where they stand, what waits to be bound, and what it is
+  short of. `museum work` (operators) has the curator do its next piece of work now, out of the
+  stores; `museum stage` (operators) sets a museum out where you stand for the pictures, its places
+  filled with one of everything and the chronicle so far bound into its archive.
 * `/village standing` — what every village you have met thinks of you.
 * `/village ledger` — the nearest village's town ledger, as a book.
 * `/village relations` — every pair of neighbouring villages: allies, friends, uneasy,
@@ -3193,6 +3264,13 @@ Every push to CI:
   by toward it (never the whole), or set aside and paid later when the treasury is empty; a Merchant
   chooses a money knack, a miner a miner's, a cheerful Free Spirit Bright Spirit; a trade's knack
   quickens only its trade; and the knacks survive a save and reach the talk screen's Skills page;
+* runs the museum and its archive (`MuseumGameTests`, mu01 to mu03): the miner's first diamond in
+  the stores is chosen, taken out with a frame and a sign (no more), hung in a frame on the
+  museum's wall with a label saying who found it, at what trade and on what day, and the town's
+  renown rises by three; a year of the chronicle is written into a book and quill made of the
+  stores' book, feather and ink sac, signed with the year's title by the curator and laid open on
+  the archive's lectern, every page and line fitting the book; and a curator does it on foot, the
+  stores keeping the find back from the makers while it walks;
 * checks the money (game test `t30`): a new village's purse, gold minted into coin,
   a day's wages, prices that move with the stores, a folk's market-day treat, a
   player buying bread at a stall and selling iron, and the stalls' price signs;

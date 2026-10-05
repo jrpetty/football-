@@ -232,6 +232,7 @@ public final class Economy {
      * timber was counted as nothing at all. What it later brings home of it is not counted twice.
      */
     public static void gathered(AssistantEntity a, ItemStack s, int n) {
+        if (a instanceof VillageFolkEntity finder && n > 0) Museum.found(finder, s, n);    // a rare find, for the museum's labels
         if (!(a instanceof VillageFolkEntity f) || n <= 0 || s.isEmpty()) return;
         UUID village = f.ownerId();
         StationTask trade = f.stationTask();

@@ -174,8 +174,10 @@ public final class Chronicles {
         if (founded >= 0) front.append("Founded on day ").append(founded).append(".\n");
         front.append("Now in ").append(Villages.ageOf(village).label).append(", ")
             .append(Villages.headcount(village)).append(" people.\n");
+        int works = Villages.greatWorks(village);
+        if (works > 0) front.append(works).append(works == 1 ? " great work.\n" : " great works.\n");
         int renown = Villages.renown(village);
-        if (renown > 0) front.append(renown).append(renown == 1 ? " great work.\n" : " great works.\n");
+        if (renown > 0) front.append("Renown ").append(renown).append(".\n");
         front.append("\nWritten on day ").append(today).append('.');
         pages.add(Filterable.passThrough(Component.literal(front.toString())));
 

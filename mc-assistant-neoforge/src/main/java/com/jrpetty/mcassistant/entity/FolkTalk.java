@@ -306,6 +306,8 @@ public final class FolkTalk {
             : "A bed of its own" + (f.comforts() > 0 ? ", and " + f.comforts() + (f.comforts() == 1 ? " comfort" : " comforts") + " it bought" : "") + "."));
         line(sb, "Nature", life.traitsLabel());
         line(sb, "Knacks", FolkSkills.cardLine(f));         // what it chose for itself: the Skills page has the rest
+        line(sb, "Curator", Museum.curatorLine(f));         // the museum's keeper (Museum)
+        line(sb, "In the museum", Museum.cardLine(f));      // its finds on show there
         String family = life.partnerName().isEmpty() ? "" : "partner " + life.partnerName();
         if (life.children() > 0) family += (family.isEmpty() ? "" : "; ") + life.children() + (life.children() == 1 ? " child" : " children");
         if (!life.parents().isEmpty()) family += (family.isEmpty() ? "" : "; ") + "child of " + life.parents();
@@ -534,6 +536,7 @@ public final class FolkTalk {
             case "brightfriend" -> "There's a friend near who always cheers me up.";
             case "unflappable" -> pick(r, "Things could be better, but I don't let it get to me.", "Nothing much rattles me.");
             case "civic" -> CityTree.moodWords(f);
+            case "proud" -> Museum.prideWords(f);
             default -> "";
         };
     }
