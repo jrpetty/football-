@@ -604,8 +604,9 @@ public final class Quarters {
         com.jrpetty.mcassistant.Guard.run("quarters", () -> {
             for (ServerLevel level : event.getServer().getAllLevels()) {
                 for (Villages.Village v : Villages.every()) {
-                    if (Math.floorMod(v.id().hashCode() >> 3, 5) != phase) continue;
                     if (!v.dim().equals(level.dimension()) || !level.isLoaded(v.centre())) continue;
+                    ParkGround.watch(level, v);                    // every second: a fountain that would not hold, emptied
+                    if (Math.floorMod(v.id().hashCode() >> 3, 5) != phase) continue;
                     if (level.getGameTime() - SCANNED.getOrDefault(v.id(), -100000L) >= 200L) scan(level, v);
                     Park.tend(level, v);
                 }

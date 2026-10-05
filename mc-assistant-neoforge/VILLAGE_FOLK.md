@@ -291,6 +291,19 @@ earth round the fountain and out to the four ways in, whatever flowers and water
 none of, and lanterns for the torches once the smith makes them. From the Iron Age the paths are
 paved and the fountain's rough stone dressed, in stone bricks.
 
+**A level lawn, and a fountain that keeps its water.** A park is a lawn, and a lawn is level. The
+plan gives it the flattest lot it can (a lot on the edge of a drop counts heavily against it), and
+lays the lawn at the middle height of the ground there. Before a stone of it goes down, the builder
+digs away the earth above that height, from the top down, and fills the hollows under it, the top
+of the fill in the earth it dug (the grass grows back over it); the high ground round the lot is
+cut back to a step of one block, then two, so the park doesn't sit in a pit. Its keepers bank up
+the low ground round it the same way, and turf any bare stone or sand in the lawn, with earth from
+the stores. The fountain stands on a stone footing. Water goes into it only where it will stay:
+there must be a floor under it and a wall on every side, and the spring on the pillar only runs
+over a whole basin. If a stone of the rim or the floor is knocked out, the fountain is emptied at
+once, before its water can run anywhere. Its keepers then put the stone back from the stores and
+fill it again.
+
 **Folk spend their free time there.** Some evenings (more often the ones who live by it, the
 walkers and the readers, the sociable and the easygoing; less often the shy) and some breaks, a
 folk walks over, sits on a bench looking at the fountain (partners and best friends side by side),

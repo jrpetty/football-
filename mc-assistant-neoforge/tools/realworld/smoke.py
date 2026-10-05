@@ -524,13 +524,15 @@ def bank_stage(r, look, cx, cz):
 
 
 def districts_stage(r, look, cx, cz):
-    """The town's quarters and its park (Quarters, Park): the park put up at once on its lot in the
-    homes quarter (as the showcase does), its trees grown and its paths laid, and everybody off work
-    sent to it of an evening; the folk on its benches and its paths; then the books' map of the
-    quarters (the Buildings page's map). Not wired in: call it from main() after the stats pages."""
+    """The town's quarters and its park (Quarters, Park, ParkGround): the park put up at once on its lot in
+    the homes quarter (as the showcase does), its ground made level first (cut and filled to one height,
+    the ground round it eased in steps), its trees grown and its paths laid, and everybody off work sent to
+    it. Photographed by day from outside its front, a few blocks up, looking in at the fountain with the
+    benches, lamps and trees round it; then early in the evening from beyond a front corner, lower down,
+    the benches before the fountain; then the books' map of the quarters (the Buildings page's map)."""
     say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
     r.cmd("gamemode spectator %s" % USER)
-    r.cmd("time set 13000")                            # an evening: everybody off work
+    r.cmd("time set 10000")                            # a bright afternoon: folk on their break go too
     out = r.cmd("execute positioned %d 100 %d run village districts park now" % (cx, cz))
     say("park: " + out[:300])
     m = re.search(r"PARK (-?\d+) (-?\d+) (-?\d+) facing (\w+)", out)
@@ -539,10 +541,17 @@ def districts_stage(r, look, cx, cz):
         r.cmd("time set 6000")
         return
     px, py, pz = int(m.group(1)), int(m.group(2)), int(m.group(3))
-    r.cmd("tp %s %d %d %d" % (USER, px + 12, py + 8, pz + 12))
-    time.sleep(30)                                     # the folk walk over and sit down
-    look("18-park-1-evening", px + 12, py + 8, pz + 12, px, py, pz, wait=8)
-    look("18-park-2-benches", px + 7, py + 1.5, pz - 7, px, py + 0.5, pz, wait=6)
+    # "facing" names the lot's back; its front, on the street, is the other way, and the camera stands out there.
+    back = {"north": (0, -1), "south": (0, 1), "west": (-1, 0), "east": (1, 0)}.get(m.group(4), (0, 1))
+    fx, fz = -back[0], -back[1]
+    rx, rz = -fz, fx                                   # across the front
+    r.cmd("tp %s %d %d %d" % (USER, px + fx * 14, py + 6, pz + fz * 14))
+    time.sleep(30)                                     # the ground arrives; the folk walk over and sit down
+    # From fourteen out in front and six up, over the street: the whole lawn, the fountain in the middle.
+    look("18-park-1-day", px + fx * 14, py + 6, pz + fz * 14, px, py + 1, pz, wait=8)
+    r.cmd("time set 11800")                            # early evening, the light low and warm
+    # From beyond a front corner (ten out, four across, three up): the benches before the fountain.
+    look("18-park-2-benches", px + fx * 10 + rx * 4, py + 3, pz + fz * 10 + rz * 4, px, py + 0.5, pz, wait=8)
     say("districts: " + r.cmd("execute positioned %d %d %d run village districts" % (cx, py, cz))[:900])
     r.cmd("time set 6000")
     r.cmd("gamemode creative %s" % USER)
