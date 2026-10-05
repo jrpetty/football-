@@ -69,25 +69,32 @@ public final class Graves {
         return put;
     }
 
+    /** Is this a headstone: chiselled stone bricks, stone bricks, or a rough stone of cobble? */
+    static boolean isHeadstone(BlockState st) {
+        return st.is(Blocks.CHISELED_STONE_BRICKS) || st.is(Blocks.STONE_BRICKS) || st.is(Blocks.COBBLESTONE);
+    }
+
     /** One grave, for nothing (the showcase): the stone, the mound, the words on the stone. */
     public static boolean headstone(ServerLevel level, BlockPos stone, BlockPos mound, Direction front, Ledger.Grave g) {
         return headstone(level, null, stone, mound, front, g, true);
     }
 
-    /** One grave: the stone, the mound, the words on the stone. The stone (a block of stone bricks or
-     *  cobble) and the sign (a sign, or two planks) come out of the village's stores now, unless
-     *  {@code free}; what they can't pay for waits till they can. */
+    /** One grave: the stone, the mound, the words on the stone. The stone (chiselled stone bricks if
+     *  the masons' stone bricks run to it, else a plain block of stone bricks, else a rough one of
+     *  cobble: Crafts.masonry) and the sign (a sign, or two planks) come out of the village's stores
+     *  now, unless {@code free}; what they can't pay for waits till they can. */
     static boolean headstone(ServerLevel level, @javax.annotation.Nullable Villages.Village v, BlockPos stone, BlockPos mound,
                              Direction front, Ledger.Grave g, boolean free) {
         if (!free && v == null) return false;
         boolean fresh = false;
         BlockState at = level.getBlockState(stone);
-        if (!at.is(Blocks.CHISELED_STONE_BRICKS)) {
+        if (!isHeadstone(at)) {
             if (!at.isAir() && !at.canBeReplaced()) return false;
             // Dug and set by a hand from the village, at the graveside (TownJobs).
             if (!free && !TownJobs.atWork(level, v, "graves", mound, "setting a headstone")) return false;
-            if (!free && !Crafts.masonry(level, v)) return false;
-            level.setBlock(stone, Blocks.CHISELED_STONE_BRICKS.defaultBlockState(), 3);
+            net.minecraft.world.level.block.Block carved = free ? Blocks.CHISELED_STONE_BRICKS : Crafts.masonry(level, v);
+            if (carved == null) return false;
+            level.setBlock(stone, carved.defaultBlockState(), 3);
             BlockState earth = level.getBlockState(mound.below());
             if (earth.is(Blocks.GRASS_BLOCK) || earth.is(Blocks.DIRT)) level.setBlock(mound.below(), Blocks.COARSE_DIRT.defaultBlockState(), 3);
             fresh = true;

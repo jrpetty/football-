@@ -43,6 +43,11 @@ public class SmeltGoal extends Goal {
         SMELTABLES.put("logs", s -> s.is(ItemTags.LOGS)); // -> charcoal
         SMELTABLES.put("stone", s -> s.is(Items.COBBLESTONE) || s.is(Items.COBBLED_DEEPSLATE));
         SMELTABLES.put("sand", s -> s.is(Items.SAND) || s.is(Items.RED_SAND)); // -> glass
+        // The mason's firings (Masonry): cobblestone alone to stone (never the deep stone, which the
+        // slaters want as it is), stone again to smooth stone, and clay to bricks.
+        SMELTABLES.put("cobble", s -> s.is(Items.COBBLESTONE));
+        SMELTABLES.put("smooth", s -> s.is(Items.STONE));
+        SMELTABLES.put("clay", s -> s.is(Items.CLAY_BALL));
         // One word for the whole larder: what the station brain queues when
         // the ore runs dry and the rancher's drops are waiting.
         SMELTABLES.put("food", com.jrpetty.mcassistant.entity.AssistantEntity.RAW_FOOD);
@@ -56,7 +61,7 @@ public class SmeltGoal extends Goal {
     }
 
     public static String smeltableList() {
-        return "iron, gold, copper, logs (charcoal), stone, sand (glass), and raw food (beef, porkchop, chicken, mutton, rabbit, fish, potato)";
+        return "iron, gold, copper, logs (charcoal), stone, smooth stone, clay (bricks), sand (glass), and raw food (beef, porkchop, chicken, mutton, rabbit, fish, potato)";
     }
 
     /** Map a spoken clause to a canonical smeltable ("cook the steak" -> "beef"). */
@@ -66,7 +71,10 @@ public class SmeltGoal extends Goal {
         if (clause.contains("gold")) return "gold";
         if (clause.contains("copper")) return "copper";
         if (clause.contains("charcoal") || clause.contains("log") || clause.contains("wood")) return "logs";
+        if (clause.contains("smooth")) return "smooth";
+        if (clause.contains("clay")) return "clay";
         if (clause.contains("stone") || clause.contains("cobble")) return "stone";
+        if (clause.contains("brick")) return "clay";
         if (clause.contains("sand") || clause.contains("glass")) return "sand";
         if (clause.contains("beef") || clause.contains("steak")) return "beef";
         if (clause.contains("pork")) return "porkchop";
@@ -368,7 +376,9 @@ public class SmeltGoal extends Goal {
         return switch (word) {
             case "iron", "gold", "copper" -> word + " ingots";
             case "logs" -> "charcoal";
-            case "stone" -> "stone";
+            case "stone", "cobble" -> "stone";
+            case "smooth" -> "smooth stone";
+            case "clay" -> "bricks";
             case "sand" -> "glass";
             default -> "cooked " + word;
         };

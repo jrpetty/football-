@@ -168,8 +168,9 @@ public final class Citizens {
 
     /**
      * The statue, out of the village's stores unless {@code free}: the stand (an armour stand put
-     * by, or three planks for its sticks and a cobblestone for its foot) and the plinth (a block
-     * of stone bricks or cobble) or no statue; the likeness carved out of another block of stone,
+     * by, or three planks for its six sticks and a slab of the smelter's smooth stone for its foot,
+     * as a player makes one) and the plinth (chiselled stone bricks, stone bricks or a block of
+     * cobble: Crafts.masonry) or no statue; the likeness carved out of another block of stone,
      * or the statue goes bareheaded; the gold it wears only what gold armour and blade the stores
      * hold, piece by piece; the plaque a sign (or two planks), or none. Its gear is fixed to it: a
      * passer-by can't help themselves to it.
@@ -185,18 +186,23 @@ public final class Citizens {
                 || !level.getBlockState(plinth.above(2)).isAir()) return null;
         ArmorStand st = EntityType.ARMOR_STAND.create(level);
         if (st == null) return null;
+        net.minecraft.world.level.block.Block carved = Blocks.CHISELED_STONE_BRICKS;
         if (!free) {
             boolean stand = Crafts.take(level, v, s -> s.is(Items.ARMOR_STAND), 1);
             if (!stand) {
-                if (Crafts.stock(level, v, s -> s.is(Items.COBBLESTONE)) < 1 || !Crafts.usePlanks(level, v, 3)
-                        || !Crafts.take(level, v, s -> s.is(Items.COBBLESTONE), 1)) return null;
+                if (!Masonry.can(level, v, Items.SMOOTH_STONE_SLAB, 1) || !Crafts.usePlanks(level, v, 3)) return null;
+                if (!Masonry.take(level, v, Items.SMOOTH_STONE_SLAB, 1)) {
+                    Crafts.store(level, v, new ItemStack(Items.OAK_PLANKS, 3));
+                    return null;
+                }
             }
-            if (!Crafts.masonry(level, v)) {
+            carved = Crafts.masonry(level, v);
+            if (carved == null) {
                 Crafts.store(level, v, new ItemStack(Items.ARMOR_STAND));          // made, and kept for another day
                 return null;
             }
         }
-        level.setBlock(plinth, Blocks.CHISELED_STONE_BRICKS.defaultBlockState(), 3);
+        level.setBlock(plinth, carved.defaultBlockState(), 3);
         // Facing the heart of the village.
         Direction toHeart = Direction.getNearest(heart.getX() - spot.getX(), 0, heart.getZ() - spot.getZ());
         st.moveTo(plinth.getX() + 0.5, plinth.getY() + 1, plinth.getZ() + 0.5, toHeart.toYRot(), 0.0F);
@@ -204,7 +210,7 @@ public final class Citizens {
         st.setInvulnerable(true);
         st.setShowArms(true);
         st.setNoBasePlate(true);
-        if (free || Crafts.masonry(level, v)) {
+        if (free || Crafts.masonry(level, v) != null) {
             ItemStack head = new ItemStack(Items.PLAYER_HEAD);
             if (face != null) head.set(DataComponents.PROFILE, new ResolvableProfile(face));
             st.setItemSlot(EquipmentSlot.HEAD, head);

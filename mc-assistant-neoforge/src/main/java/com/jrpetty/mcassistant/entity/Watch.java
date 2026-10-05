@@ -361,16 +361,33 @@ public final class Watch {
             }
         }
         // Six planks for the doors (or two logs: the stores keep the woodcutters' logs, and seldom
-        // planks) and ten stone for the posts and the lintel.
+        // planks), ten stone for the posts and the lintel, and three slabs to cap them: the masons'
+        // stone bricks if the stores run to it (Masonry), else plain cobblestone, three of it cut into
+        // six slabs and the other three put back.
+        BlockState stone = Blocks.STONE_BRICKS.defaultBlockState();
+        BlockState cap = Blocks.STONE_BRICK_SLAB.defaultBlockState();
         if (!free) {
-            java.util.function.Predicate<net.minecraft.world.item.ItemStack> stone = st -> st.is(Items.COBBLESTONE) || st.is(Items.STONE_BRICKS);
-            if (Market.stock(level, v.id(), stone) < 10) return null;
+            Map<net.minecraft.world.item.Item, Integer> dressed = new java.util.LinkedHashMap<>();
+            dressed.put(Items.STONE_BRICKS, 10);
+            dressed.put(Items.STONE_BRICK_SLAB, 3);
+            boolean fine = Masonry.canAll(level, v, dressed);
+            if (!fine && Market.stock(level, v.id(), st -> st.is(Items.COBBLESTONE)) < 13) return null;
             if (!TownJobs.atWork(level, v, "watch", floors.get(2), "hanging the " + side.getName() + " gate", AssistantEntity.StationTask.GUARD)) return null;
             boolean wood = TownWork.take(level, v, st -> st.is(ItemTags.PLANKS), 6)
                 || TownWork.take(level, v, st -> st.is(ItemTags.LOGS), 2);
-            if (!wood || !TownWork.take(level, v, stone, 10)) return null;
+            if (!wood) return null;
+            boolean paid = fine && Masonry.takeAll(level, v, dressed);
+            if (!paid && TownWork.take(level, v, st -> st.is(Items.COBBLESTONE), 13)) {
+                TownWork.give(level, v, new net.minecraft.world.item.ItemStack(Items.COBBLESTONE_SLAB, 3));
+                stone = Blocks.COBBLESTONE.defaultBlockState();
+                cap = Blocks.COBBLESTONE_SLAB.defaultBlockState();
+                paid = true;
+            }
+            if (!paid) {
+                TownWork.give(level, v, new net.minecraft.world.item.ItemStack(Items.OAK_PLANKS, 6));
+                return null;
+            }
         }
-        BlockState stone = Blocks.STONE_BRICKS.defaultBlockState();
         for (int i : new int[]{ 0, 4 }) {
             for (int h = 0; h <= 2; h++) level.setBlock(floors.get(i).above(h), stone, 3);
         }
@@ -387,7 +404,7 @@ public final class Watch {
         }
         for (int i : new int[]{ 0, 2, 4 }) {
             BlockPos top = floors.get(i).above(3);
-            if (level.getBlockState(top).isAir()) level.setBlock(top, Blocks.STONE_BRICK_SLAB.defaultBlockState(), 3);
+            if (level.getBlockState(top).isAir()) level.setBlock(top, cap, 3);
         }
         if (!free) Villages.tell(v.id(), level.getDayTime() / 24000L, "the " + side.getName() + " gate was hung");
         return new Gate(side, List.copyOf(doors), floors.get(2).relative(side.getOpposite(), 2));
@@ -447,17 +464,24 @@ public final class Watch {
         BlockPos floor = floorAt(level, at.getX(), at.getZ(), v.centre().getY());
         if (floor == null) return null;
         // The bell itself out of the stores too, now, and not cast from nothing: no bell put by,
-        // no bell on the square (and no plinth for it) until one is.
+        // no bell on the square (and no plinth for it) until one is. Nobody in a village can make a
+        // bell; one found, bought or brought by a player is hung, and without one the watch shouts.
+        BlockState plinth = Blocks.STONE_BRICKS.defaultBlockState();
         if (!free) {
             if (Market.stock(level, v.id(), st -> st.is(Items.BELL)) == 0) return null;
             if (!TownJobs.atWork(level, v, "watch", floor, "hanging the alarm bell", AssistantEntity.StationTask.GUARD)) return null;
             if (!TownWork.take(level, v, st -> st.is(Items.BELL), 1)) return null;
-            if (!TownWork.take(level, v, st -> st.is(Items.COBBLESTONE) || st.is(Items.STONE_BRICKS), 2)) {
+            // Its plinth of the masons' stone bricks, or of cobble: what the stores paid is what is laid.
+            if (TownWork.take(level, v, st -> st.is(Items.STONE_BRICKS), 1)) {
+                plinth = Blocks.STONE_BRICKS.defaultBlockState();
+            } else if (TownWork.take(level, v, st -> st.is(Items.COBBLESTONE), 1)) {
+                plinth = Blocks.COBBLESTONE.defaultBlockState();
+            } else {
                 TownWork.give(level, v, new net.minecraft.world.item.ItemStack(Items.BELL));
                 return null;
             }
         }
-        level.setBlock(floor, Blocks.STONE_BRICKS.defaultBlockState(), 3);
+        level.setBlock(floor, plinth, 3);
         BlockPos b = floor.above();
         level.setBlock(b, Blocks.BELL.defaultBlockState()
             .setValue(BellBlock.FACING, Direction.NORTH)

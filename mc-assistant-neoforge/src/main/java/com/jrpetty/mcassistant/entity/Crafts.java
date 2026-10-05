@@ -42,9 +42,10 @@ import java.util.function.Predicate;
  * <ul>
  * <li><b>the blacksmith</b> (Iron Age, at the smithy) beats the stores' iron into what the
  *     village wears out — picks for the miners, blades and armour for the watch, shears,
- *     buckets, axes and hoes — and keeps a few of each in the stores;</li>
+ *     buckets, axes and hoes — and keeps a few of each in the stores; and out of the iron the
+ *     village can spare after that, lanterns (nuggets and a torch) and a cauldron;</li>
  * <li><b>the tailor</b> (Stone Age, at the workshop) turns the rancher's wool into beds for
- *     the houses, rugs and banners;</li>
+ *     the houses, rugs and banners, and binds the books the library's shelves are made of;</li>
  * <li><b>the beekeeper</b> (Stone Age, a meadow outside the town) keeps hives, plants
  *     flowers round them for the bees, and takes the honey and the comb;</li>
  * <li><b>the brewer</b> (Diamond Age, at the brewery) brews potions — healing for the watch,
@@ -229,31 +230,17 @@ public final class Crafts {
         return wooden(level, v, s -> s.is(ItemTags.WOODEN_FENCES), 2);
     }
 
-    /** A lantern: one put by, or a torch and a log for its making. */
-    static boolean lantern(ServerLevel level, Villages.Village v) {
-        if (take(level, v, s -> s.is(Items.LANTERN), 1)) return true;
-        if (!take(level, v, s -> s.is(Items.TORCH), 1)) return false;
-        if (take(level, v, s -> s.is(ItemTags.LOGS), 1)) return true;
-        store(level, v, new ItemStack(Items.TORCH));
-        return false;
-    }
-
-    /** A block of dressed stone (a headstone, a plinth): stone bricks put by, else cobblestone. */
-    static boolean masonry(ServerLevel level, Villages.Village v) {
-        return take(level, v, s -> s.is(Items.STONE_BRICKS), 1) || take(level, v, s -> s.is(Items.COBBLESTONE), 1);
-    }
-
-    /** Is there plain stone past what the age keeps back (Villages.stoneHeldBack)? */
-    static boolean stoneToSpare(ServerLevel level, Villages.Village v) {
-        int held = Villages.stoneHeldBack(v.id());
-        return held <= 0 || stock(level, v, s -> s.is(Items.COBBLESTONE) || s.is(Items.STONE)
-            || s.is(Items.COBBLED_DEEPSLATE)) > held;
-    }
-
-    /** Dressed stone for the village's looks: stone bricks put by, else cobblestone it can spare. */
-    static boolean masonryForLooks(ServerLevel level, Villages.Village v) {
-        return take(level, v, s -> s.is(Items.STONE_BRICKS), 1)
-            || stoneToSpare(level, v) && take(level, v, s -> s.is(Items.COBBLESTONE), 1);
+    /**
+     * A block of stone for a headstone or a plinth, paid for out of the stores, and what it is: chiselled
+     * stone bricks if the masons' stone bricks run to it (two slabs a block, Masonry), else a plain block
+     * of stone bricks, else a rough block of cobblestone. Null if the stores hold none of them.
+     */
+    @Nullable
+    static Block masonry(ServerLevel level, Villages.Village v) {
+        if (Masonry.take(level, v, Blocks.CHISELED_STONE_BRICKS)) return Blocks.CHISELED_STONE_BRICKS;
+        if (take(level, v, s -> s.is(Items.STONE_BRICKS), 1)) return Blocks.STONE_BRICKS;
+        if (take(level, v, s -> s.is(Items.COBBLESTONE), 1)) return Blocks.COBBLESTONE;
+        return null;
     }
 
     /** So many of a thing taken down to make way (a roof stripped, a wall refaced, earth cut) back
@@ -313,8 +300,75 @@ public final class Crafts {
             if (fletched != null) return fletched;
         }
         String forged = forge(level, v, f, wants);
-        if (forged != null || fletchFirst) return forged;
-        return fletch(level, v, guards(v));
+        if (forged != null) return forged;
+        if (!fletchFirst) {
+            String fletched = fletch(level, v, guards(v));
+            if (fletched != null) return fletched;
+        }
+        // The tools and the watch seen to: the village's lights and pots, of the iron it can spare.
+        return ironwork(level, v);
+    }
+
+    /** Is the village still putting iron by for its age (Villages.needs)? */
+    static boolean savingIron(ServerLevel level, Villages.Village v) {
+        for (Villages.Need n : Villages.needs(level, v.id())) {
+            if (n.task() == Villages.Task.IRON) return true;
+        }
+        return false;
+    }
+
+    /** Bars the smith never beats into lanterns and pots: the next pick, the next blade. */
+    static final int IRON_KEPT = 16;
+    /** Lanterns the smith keeps in the stores, for the lamp posts and the buildings' lantern hooks. */
+    static final int LANTERNS_KEPT = 8;
+
+    /**
+     * The smith's lighter work, out of iron the village can spare once its tools and armour are seen to
+     * (never while it is putting iron by for its age, and never the last sixteen bars): lanterns for the
+     * lamp posts and the buildings' lantern hooks (an ingot beaten into nine nuggets; eight and a torch
+     * make a lantern, and the ninth waits for the next), and a cauldron (seven ingots) for a building
+     * going up with a place for one. Until there are lanterns the village lights itself with torches.
+     */
+    @Nullable
+    static String ironwork(ServerLevel level, Villages.Village v) {
+        if (savingIron(level, v)) return null;
+        int iron = stock(level, v, s -> s.is(Items.IRON_INGOT));
+        if (stock(level, v, s -> s.is(Items.LANTERN)) < LANTERNS_KEPT && stock(level, v, s -> s.is(Items.TORCH)) >= 1) {
+            if (stock(level, v, s -> s.is(Items.IRON_NUGGET)) < 8) {
+                if (iron < 1 + IRON_KEPT || !take(level, v, s -> s.is(Items.IRON_INGOT), 1)) return null;
+                store(level, v, new ItemStack(Items.IRON_NUGGET, 9));
+                iron--;
+            }
+            if (take(level, v, s -> s.is(Items.IRON_NUGGET), 8)) {
+                if (!take(level, v, s -> s.is(Items.TORCH), 1)) {
+                    store(level, v, new ItemStack(Items.IRON_NUGGET, 8));
+                    return null;
+                }
+                store(level, v, new ItemStack(Items.LANTERN));
+                return "a lantern, of eight nuggets and a torch";
+            }
+        }
+        if (stock(level, v, s -> s.is(Items.CAULDRON)) < 1 && iron >= 7 + IRON_KEPT && wantsCauldron(v)
+                && take(level, v, s -> s.is(Items.IRON_INGOT), 7)) {
+            store(level, v, new ItemStack(Items.CAULDRON));
+            return "a cauldron";
+        }
+        return null;
+    }
+
+    /** Tests: the smith's lighter work, now. */
+    @Nullable
+    public static String ironworkForTests(ServerLevel level, Villages.Village v) {
+        return ironwork(level, v);
+    }
+
+    /** Is a building going up that has a place for a cauldron (the smeltery, the brewery, the café)? */
+    private static boolean wantsCauldron(Villages.Village v) {
+        for (Map.Entry<String, Villages.Site> e : Villages.sitesOf(v.id()).entrySet()) {
+            if (com.jrpetty.mcassistant.entity.goal.BuildGoal.partCounts(e.getKey(), e.getValue().radius())
+                    .getOrDefault(com.jrpetty.mcassistant.entity.goal.BuildGoal.Part.CAULDRON, 0) > 0) return true;
+        }
+        return false;
     }
 
     /**
@@ -432,6 +486,22 @@ public final class Crafts {
             return "four lengths of string, spun from wool";
         }
         if (bedsFirst) return null;
+        // Books for the library's shelves (three to a bookshelf) and the enchanter's table: three paper
+        // pressed from the farmers' cane and a piece of the rancher's leather. Shelves were only ever
+        // made of books the enchanter happened to have bound, and the library stood with bare walls.
+        if (stock(level, v, s -> s.is(Items.BOOK)) < booksWanted(level, v) && stock(level, v, s -> s.is(Items.LEATHER)) >= 1) {
+            if (stock(level, v, s -> s.is(Items.PAPER)) < 3 && stock(level, v, s -> s.is(Items.SUGAR_CANE)) >= 3
+                    && take(level, v, s -> s.is(Items.SUGAR_CANE), 3)) {
+                store(level, v, new ItemStack(Items.PAPER, 3));
+            }
+            if (stock(level, v, s -> s.is(Items.PAPER)) >= 3 && take(level, v, s -> s.is(Items.PAPER), 3)) {
+                if (take(level, v, s -> s.is(Items.LEATHER), 1)) {
+                    store(level, v, new ItemStack(Items.BOOK));
+                    return "a book bound, for the library's shelves";
+                }
+                store(level, v, new ItemStack(Items.PAPER, 3));
+            }
+        }
         // Boots of the rancher's leather: everybody's, a pair each. Plain leather from a beginner;
         // in the village's colour from a tailor of ten years and more.
         int barefoot = 0;
@@ -489,6 +559,35 @@ public final class Crafts {
         String path = BuiltInRegistries.ITEM.getKey(wool).getPath().replace("_wool", suffix);
         Item it = BuiltInRegistries.ITEM.get(ResourceLocation.withDefaultNamespace(path));
         return it == Items.AIR ? fallback : it;
+    }
+
+    /**
+     * The books the village would like put by: three for each bookshelf its library has room for and
+     * no shelf in (fourteen for a library still to go up), and one for the enchanter.
+     */
+    static int booksWanted(ServerLevel level, Villages.Village v) {
+        int shelves = 0;
+        boolean standing = false;
+        for (com.jrpetty.mcassistant.village.Ledger.Building b : com.jrpetty.mcassistant.village.Ledger.buildings(v.id())) {
+            if (!b.structure().equals("library") || !level.isLoaded(b.anchor())) continue;
+            standing = true;
+            shelves += emptyShelves(level, v, b).size();
+        }
+        if (!standing && Villages.sitesOf(v.id()).containsKey("library")) shelves = 14;
+        return 1 + 3 * Math.min(shelves, 14);
+    }
+
+    /** The places in a library for a bookshelf that have none. */
+    static List<BlockPos> emptyShelves(ServerLevel level, Villages.Village v, com.jrpetty.mcassistant.village.Ledger.Building b) {
+        List<BlockPos> out = new ArrayList<>();
+        String plan = Grow.tall(v.id(), b.anchor()) ? "library" + com.jrpetty.mcassistant.entity.goal.Blueprints.TALL : "library";
+        for (com.jrpetty.mcassistant.entity.goal.BuildGoal.Placement p
+                : com.jrpetty.mcassistant.entity.goal.BuildGoal.plan(plan, b.anchor(), b.facing(), 13)) {
+            if (p.part() == com.jrpetty.mcassistant.entity.goal.BuildGoal.Part.BOOKSHELF && level.getBlockState(p.pos()).isAir()) {
+                out.add(p.pos());
+            }
+        }
+        return out;
     }
 
     // ------------------------------------------------------------------ the beekeeper
@@ -780,7 +879,7 @@ public final class Crafts {
 
     /** A wild flower out in the country round here, not on the meadow itself. */
     @Nullable
-    private static BlockPos wildFlower(ServerLevel level, BlockPos near, int r, @Nullable UUID village) {
+    static BlockPos wildFlower(ServerLevel level, BlockPos near, int r, @Nullable UUID village) {
         if (!Land.areaLoaded(level, near, r)) return null;
         for (int ring = 6; ring <= r; ring += 2) {
             for (int dx = -ring; dx <= ring; dx += 2) {

@@ -2102,6 +2102,11 @@ public class VillageGameTests {
         helper.assertTrue(lines.stream().anyMatch(x -> x.contains("fell into a feud")), "the feud goes into the history");
         helper.assertTrue(mood.bad().contains("the feud"), "and weighs on the village");
         // A statue for the hero.
+        // The smelter's smooth stone in the stores: an armour stand stands on a slab of it, as a player's does.
+        BlockPos masons = Kit.surface(level, heart.getX() - 4, heart.getZ() - 4);
+        level.setBlock(masons, Blocks.CHEST.defaultBlockState(), 3);
+        com.jrpetty.mcassistant.entity.ZoneChests.mark(level, masons);
+        ((net.minecraft.world.Container) level.getBlockEntity(masons)).setItem(0, new ItemStack(Items.SMOOTH_STONE, 3));
         boolean raised = com.jrpetty.mcassistant.entity.Citizens.statue(level, v, p);
         BlockPos spot = v.centre().offset(5, 0, -5);
         int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, spot.getX(), spot.getZ()) - 1;
@@ -2867,6 +2872,12 @@ public class VillageGameTests {
         BlockPos yard = Kit.surface(level, heart.getX(), heart.getZ() - 18);
         BuildGoal.stamp(level, "graveyard", yard, Direction.NORTH, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
         com.jrpetty.mcassistant.village.Ledger.built(village, "graveyard", yard, Direction.NORTH);
+        // The masons' stone bricks in the stores: a headstone is chiselled out of them (two slabs, Masonry),
+        // never out of cobble.
+        BlockPos masons = Kit.surface(level, heart.getX() - 4, heart.getZ() - 4);
+        level.setBlock(masons, Blocks.CHEST.defaultBlockState(), 3);
+        com.jrpetty.mcassistant.entity.ZoneChests.mark(level, masons);
+        ((net.minecraft.world.Container) level.getBlockEntity(masons)).setItem(0, new ItemStack(Items.STONE_BRICKS, 3));
         int stones = com.jrpetty.mcassistant.entity.Graves.tend(level, village);
         int[] plot = com.jrpetty.mcassistant.entity.Graves.PLOTS[0];
         BlockPos mound = yard.relative(Direction.EAST, plot[0]).relative(Direction.NORTH, plot[1]);
@@ -4933,7 +4944,8 @@ public class VillageGameTests {
             return n;
         };
         int timberBefore = timberWalls.getAsInt();
-        int lampsBefore = count.apply(Blocks.LANTERN);
+        // A lamp post carries a lantern if the smith has made one, a torch till then (Masonry).
+        int lampsBefore = count.apply(Blocks.LANTERN) + count.apply(Blocks.TORCH);
         com.jrpetty.mcassistant.entity.TownJobs.instantForTests(true);
         int stoneWalls, timberAfter, lamps, slate, footings, copper, upstairs = 0;
         boolean tall;
@@ -4942,7 +4954,7 @@ public class VillageGameTests {
             for (int i = 0; i < 30; i++) com.jrpetty.mcassistant.entity.Ages.work(level, v, 400);
             timberAfter = timberWalls.getAsInt();
             stoneWalls = count.apply(Blocks.STONE_BRICKS);
-            lamps = count.apply(Blocks.LANTERN);
+            lamps = count.apply(Blocks.LANTERN) + count.apply(Blocks.TORCH);
             Villages.ageForTests(village, Villages.Age.IRON);
             for (int i = 0; i < 30; i++) com.jrpetty.mcassistant.entity.Ages.work(level, v, 400);
             slate = count.apply(Blocks.DEEPSLATE_TILE_STAIRS) + count.apply(Blocks.DEEPSLATE_TILE_SLAB) + count.apply(Blocks.DEEPSLATE_TILES);
@@ -4958,7 +4970,7 @@ public class VillageGameTests {
         int copperLeft = com.jrpetty.mcassistant.entity.Market.stock(level, village, st -> st.is(Items.COPPER_INGOT));
         int planksBack = com.jrpetty.mcassistant.entity.Market.stock(level, village, st -> st.is(net.minecraft.tags.ItemTags.PLANKS));
         Kit.log("t73 the tavern through the ages: timber walls " + timberBefore + " -> " + timberAfter + ", stone " + stoneWalls
-            + ", lanterns " + lamps + "; Iron Age slate " + slate + ", stone bricks " + footings + "; Diamond Age copper " + copper
+            + ", lamps " + lamps + "; Iron Age slate " + slate + ", stone bricks " + footings + "; Diamond Age copper " + copper
             + " (copper left " + copperLeft + " of 128); planks in the stores " + planksBack);
         helper.assertTrue(timberBefore > 0 && timberAfter == 0 && stoneWalls > 0, "the Stone Age rebuilds the timber walls in stone");
         helper.assertTrue(lamps > lampsBefore, "and puts lamp posts by the door: " + lampsBefore + " -> " + lamps);

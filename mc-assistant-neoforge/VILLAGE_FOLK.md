@@ -1726,6 +1726,85 @@ Nothing precious goes into a wall or a roof: no iron, no gold, no gems. A roof i
 Age slates it and the Diamond Age roofs the great buildings in copper. `/village status` shows the
 village's look.
 
+### Where everything comes from: the supply chains
+
+Nothing a village lays is conjured. Every block a building, a make-over, a street or a grave is made
+of has a way to it from what the land gives, through the village's own trades, and the builders only
+lay what the stores actually hold. Where an optional block cannot be had, the next best thing is used,
+or the cell is left as it is till it can. The recipes and the real prices live in one place,
+`entity/Masonry.java`.
+
+#### Who makes what
+
+| Block or thing | Made of | Who makes it | Who carries it |
+|---|---|---|---|
+| Stone | Cobblestone, smelted | The smelter, from the cobble the village can spare (never the stone the age holds back, never the builders' working 64) | The smelter fetches it (Links.stone); couriers bring it when there is no ore |
+| Stone bricks | 4 stone make 4 | The smelter, at its bench, as mason | Banked by the smelter; drawn by builders for dressed-stone cells |
+| Smooth stone | Stone, smelted again | The smelter (a quarter of each batch of stone, while the village is short) | Banked by the smelter |
+| Stone brick stairs, slabs, chiselled stone | 6 bricks make 4 stairs, 3 make 6 slabs, 2 slabs make a chiselled block | Cut at payment time from the stores, whole batches, the rest of a batch back into the stores | |
+| Brick | Clay balls, fired; 4 bricks make a block | The smelter digs clay off a river or pond bed (4 balls a block) or takes the stores' clay, fires it, cuts blocks | The smelter fetches it (Links.clay); couriers bring the stores' clay |
+| Slate (deepslate tiles) | Cobbled deepslate, dressed through polished deepslate and deepslate bricks, 4 for 4 each time | Cut at payment time from the miners' deep stone | |
+| Cut copper | 9 ingots a copper block, 4 blocks to 4 cut copper (9 ingots a block); stairs 6 to 4, slabs 3 to 6 | Cut at payment time | |
+| Mossy cobble, mossy stone bricks | A cobble or a stone brick and a vine (or a moss block) | Made at payment time; the woodcutters cut vines with shears when they find them (Links.vines) | Woodcutter's deposit |
+| Lantern | 8 iron nuggets and a torch (an ingot is 9 nuggets) | The smith, only from iron the village can spare (never while saving iron for its age, never the last 16 bars); keeps 8 | |
+| Cauldron | 7 iron | The smith, when a building going up has a place for one and iron is spare | |
+| Torches | A coal or charcoal and a stick make 4 | The smelter keeps the stores in torches (32 plus 2 a head, up to 96); a village saving coal uses only charcoal, and only when nearly out | |
+| Glass and panes | Sand, smelted; 6 glass make 16 panes | The smelter digs or fetches sand while the stores hold under 48 glass (panes counted) | Couriers bring the stores' sand |
+| Books and bookshelves | 3 paper (cane) and a leather; 6 planks and 3 books a shelf | The tailor binds books for the library's empty shelves; the shelves go up one a turn (Grow.shelve) | |
+| Flowers | Picked wild | Farmers pick one or two on their rounds while the stores hold under 8 | Farmer's deposit |
+| Water for a well | A bucket filled at the nearest water | The builder, with the smith's bucket | |
+| Armour stand (a statue) | 6 sticks and a smooth stone slab | Made at payment time | |
+| Bell | Cannot be made | Found, bought or brought by a player; never required, and without one the watch shouts | |
+
+#### What happens when something is missing
+
+* **Stone bricks in a drawing** ('S' cells): the builder draws the masons' stone bricks first; short of
+  them it lays rough cobble. Footings take rough stone first, so the dressed stone goes where it shows.
+* **Brick in a drawing** ('Z' cells): blocks of brick, made up of the stores' fired bricks if need be;
+  else dressed stone; else cobble.
+* **A lantern cell**: a lantern if the builder has one, else a torch (standing on the block under it,
+  or on a wall beside it), else left out.
+* **Lamp posts** (by the doors, along the avenues, on the roads, at the jetty, on street signs): a
+  lantern if the smith has made one, else a torch.
+* **The Ages' make-overs**: stone walls only of real stone bricks; brick only of real brick, else stone
+  bricks; a slate roof only of deep stone, else stone bricks, else the wood stays; copper at its real
+  price, else slate, else stone; moss only of vines, else the footing stays plain (and moss never holds
+  a building's make-over open).
+* **A second storey** (houses and the Iron Age's tall buildings) is chosen and paid for all at once out
+  of what the stores can pay for (Masonry.buildIn): the palette's walls, else stone bricks, else cobble,
+  else the village's own boards; the palette's roof, else stone brick, else the village's own wood; the
+  windows, lights, doors and rugs left out when there is nothing to make them of. What it was paid in is
+  kept in the ledger, so it goes up in what was paid for.
+* **Headstones and statue plinths**: chiselled stone bricks if the stone bricks run to it, else plain
+  stone bricks, else a rough block of cobble.
+* **Watch gates and the bell's plinth**: stone bricks if the stores have them, else cobble and cobble slabs.
+
+#### Never on a roof
+
+Iron (and gold, diamond, emerald, netherite, lapis, amethyst) never goes on a roof, whatever the
+stores or a palette hold: the builder's roof fallbacks, the Ages' roof looks and a storey's roof
+choices all go through `Masonry.fitForARoof`. Copper and stone are fine.
+
+#### The smeltery and the couriers
+
+The smelter works its furnaces for iron first. With no ore to run it turns mason: it cuts the stone
+it has fired into stone bricks, fires clay into bricks, smooths stone and fires spare cobble, as the
+village is short of each (Masonry.work, called from the station brain). It fetches the makings itself
+from the stores every couple of minutes (Links.stone, Links.clay, Links.sand), and the couriers carry
+ore, coal, spare cobble, clay and sand out to it by hand when it runs low (haulerRound). What it makes
+it banks at the stores (its deposit rung now banks stone bricks, smooth stone and brick), and the
+couriers still take what the furnaces have made straight out of them. The smeltery's own chests stay
+unmarked furniture: the village's stores are the storehouse, and nothing in the courier model routes
+through them.
+
+#### Tests
+
+`SupplyGameTests` (s01 to s06): the smelter fires cobble to stone in real furnaces, cuts stone bricks
+and smooths stone; a builder lays a torch in each of a monument's lantern cells when it has no
+lantern; no roof has iron in it through the ages, even with stores full of iron; the smelter digs and
+fires clay and a house is refaced in brick only of real brick; the real prices of cut copper, slate,
+lanterns, moss and chiselled stone; moss only of vines.
+
 ### Furnished for the age
 
 A building's insides come up in the world with the village, a piece at a time, out of its stores

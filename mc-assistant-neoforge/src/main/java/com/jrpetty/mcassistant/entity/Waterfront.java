@@ -189,15 +189,18 @@ public final class Waterfront {
         BlockPos lamp = d.end().above();
         if (level.getBlockState(d.end()).is(BlockTags.PLANKS) && level.getBlockState(lamp).isAir()
                 && level.getBlockState(lamp.above()).isAir()) {
+            net.minecraft.world.level.block.Block light = Blocks.LANTERN;
             if (!free) {
-                if (!Crafts.lantern(level, v)) return n;
+                // A lantern if the smith has made one, a torch till it does (Masonry).
+                light = Masonry.light(level, v);
+                if (light == null) return n;
                 if (!Crafts.fence(level, v)) {
-                    Crafts.store(level, v, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.LANTERN));
+                    Masonry.unlight(level, v, light);
                     return n;
                 }
             }
             level.setBlock(lamp, Blocks.SPRUCE_FENCE.defaultBlockState(), 3);
-            level.setBlock(lamp.above(), Blocks.LANTERN.defaultBlockState(), 3);
+            level.setBlock(lamp.above(), light.defaultBlockState(), 3);
             n += 2;
         }
         return n;

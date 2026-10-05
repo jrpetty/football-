@@ -228,9 +228,11 @@ public final class Roads {
                 if (Math.abs(side) == 2 && level.getBlockState(d.above()).isAir()) {
                     if (!Crafts.fence(level, mother)) return UNPAID;
                     level.setBlock(d.above(), Blocks.SPRUCE_FENCE.defaultBlockState(), 3);
-                    // A lantern on the rail if the stores can spare one; the bridge doesn't wait on it.
-                    if (index % 8 == 0 && level.getBlockState(d.above(2)).isAir() && Crafts.lantern(level, mother)) {
-                        level.setBlock(d.above(2), Blocks.LANTERN.defaultBlockState(), 3);
+                    // A light on the rail if the stores can spare one (a lantern, or a torch till the smith
+                    // makes lanterns: Masonry); the bridge doesn't wait on it.
+                    if (index % 8 == 0 && level.getBlockState(d.above(2)).isAir()) {
+                        net.minecraft.world.level.block.Block light = Masonry.light(level, mother);
+                        if (light != null) level.setBlock(d.above(2), light.defaultBlockState(), 3);
                     }
                 }
             }
@@ -275,30 +277,34 @@ public final class Roads {
             Crafts.giveBack(level, mother, net.minecraft.world.item.Items.COBBLESTONE, cobble);
         }
         // A lamp now and then, beside the road, out in the wilds: two lengths of fence and a
-        // lantern out of the mother's stores, or no lamp there (the road doesn't wait on it).
+        // lantern (or a torch) out of the mother's stores, or no lamp there (the road doesn't wait on it).
         if (index % LAMP_EVERY == LAMP_EVERY / 2) {
             int lx = alongX ? x : x + 2, lz = alongX ? z + 2 : z;
             Ground lg = ground(level, lx, lz);
             if (lg != null && !lg.water && Math.abs(lg.y - want) <= 1) {
                 BlockPos post = new BlockPos(lx, lg.y + 1, lz);
+                net.minecraft.world.level.block.Block light = null;
                 if (level.getBlockState(post).isAir() && level.getBlockState(post.above()).isAir() && level.getBlockState(post.above(2)).isAir()
-                        && lampPost(level, mother)) {
+                        && (light = lampPost(level, mother)) != null) {
                     level.setBlock(post, Blocks.SPRUCE_FENCE.defaultBlockState(), 3);
                     level.setBlock(post.above(), Blocks.SPRUCE_FENCE.defaultBlockState(), 3);
-                    level.setBlock(post.above(2), Blocks.LANTERN.defaultBlockState(), 3);
+                    level.setBlock(post.above(2), light.defaultBlockState(), 3);
                 }
             }
         }
         return want;
     }
 
-    /** A lamp post's makings out of the stores: the lantern first (no light, no post), then its two
-     *  lengths of fence; the lantern goes back if the fence can't be had. */
-    private static boolean lampPost(ServerLevel level, Villages.Village v) {
-        if (!Crafts.lantern(level, v)) return false;
-        if (Crafts.take(level, v, s -> s.is(net.minecraft.tags.ItemTags.WOODEN_FENCES), 2) || Crafts.usePlanks(level, v, 4)) return true;
-        Crafts.store(level, v, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.LANTERN));
-        return false;
+    /** A lamp post's makings out of the stores: the light first (no light, no post: a lantern, or a torch
+     *  till the smith makes lanterns), then its two lengths of fence; the light goes back if the fence
+     *  can't be had. Returns the light it is to carry, or null. */
+    @javax.annotation.Nullable
+    private static net.minecraft.world.level.block.Block lampPost(ServerLevel level, Villages.Village v) {
+        net.minecraft.world.level.block.Block light = Masonry.light(level, v);
+        if (light == null) return null;
+        if (Crafts.take(level, v, s -> s.is(net.minecraft.tags.ItemTags.WOODEN_FENCES), 2) || Crafts.usePlanks(level, v, 4)) return light;
+        Masonry.unlight(level, v, light);
+        return null;
     }
 
     /** Earth from the stores, for made ground. */

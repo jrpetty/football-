@@ -256,7 +256,9 @@ public final class Homeland {
 
     // ------------------------------------------------------------------ the houses
 
-    /** The land's own walling, and what pays for a block of it out of the stores; null for the usual. */
+    /** The land's own walling, and what pays for a block of it out of the stores; null for the usual. A
+     *  block is paid for in itself or in what it is cut from, four for four (cut sandstone of sandstone,
+     *  polished andesite of andesite); never in something it cannot be made of. */
     public record Stone(Block block, Predicate<ItemStack> pay, int each) {}
 
     @Nullable
@@ -264,14 +266,14 @@ public final class Homeland {
         Land l = known(village);
         if (l == null) return null;
         return switch (l) {
-            case DESERT -> new Stone(Blocks.CUT_SANDSTONE, s -> s.is(Items.SANDSTONE) || s.is(Items.CUT_SANDSTONE)
-                || s.is(Items.SMOOTH_SANDSTONE), 1);
+            case DESERT -> new Stone(Blocks.CUT_SANDSTONE, s -> s.is(Items.SANDSTONE) || s.is(Items.CUT_SANDSTONE), 1);
             case BADLANDS -> new Stone(Blocks.TERRACOTTA, s -> s.is(Items.TERRACOTTA) || s.is(Items.ORANGE_TERRACOTTA)
                 || s.is(Items.RED_TERRACOTTA) || s.is(Items.BROWN_TERRACOTTA) || s.is(Items.YELLOW_TERRACOTTA), 1);
             case MOUNTAIN -> new Stone(Blocks.POLISHED_ANDESITE, s -> s.is(Items.ANDESITE) || s.is(Items.POLISHED_ANDESITE), 1);
-            case JUNGLE, SWAMP -> new Stone(Blocks.MOSSY_STONE_BRICKS, s -> s.is(Items.MOSSY_COBBLESTONE) || s.is(Items.MOSSY_STONE_BRICKS)
-                || s.is(Items.COBBLESTONE), 1);
-            case SNOW -> new Stone(Blocks.STONE_BRICKS, s -> s.is(Items.STONE_BRICKS) || s.is(Items.COBBLESTONE), 1);
+            // Mossy stone bricks only of the masons' mossy bricks (stone bricks and the woodcutters' vines,
+            // Masonry): moss is a nicety, and without it the walls go up in plain stone like anybody's.
+            case JUNGLE, SWAMP -> new Stone(Blocks.MOSSY_STONE_BRICKS, s -> s.is(Items.MOSSY_STONE_BRICKS), 1);
+            case SNOW -> new Stone(Blocks.STONE_BRICKS, s -> s.is(Items.STONE_BRICKS), 1);
             default -> null;
         };
     }

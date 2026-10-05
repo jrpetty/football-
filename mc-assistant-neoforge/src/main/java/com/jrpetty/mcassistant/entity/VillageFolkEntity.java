@@ -175,7 +175,7 @@ public class VillageFolkEntity extends AssistantEntity {
                 || s.is(net.minecraft.world.item.Items.ENCHANTING_TABLE) || s.is(net.minecraft.world.item.Items.BREWING_STAND)
                 || s.is(net.minecraft.world.item.Items.SMOKER) || s.is(net.minecraft.world.item.Items.LOOM)
                 || s.is(net.minecraft.world.item.Items.GRINDSTONE) || s.is(net.minecraft.world.item.Items.CAMPFIRE)
-                || s.is(net.minecraft.world.item.Items.NOTE_BLOCK)) {
+                || s.is(net.minecraft.world.item.Items.NOTE_BLOCK) || s.is(net.minecraft.world.item.Items.CAULDRON)) {
             return 64 * 27;
         }
         return 0;
@@ -4746,22 +4746,26 @@ public class VillageFolkEntity extends AssistantEntity {
                 return true;
             }
         }
-        // Ore and fuel for the smelter, carried out to it.
+        // Ore and fuel for the smelter, carried out to it; or, with no ore about, the makings of its
+        // mason's work (spare cobblestone, clay, sand: Masonry.makings).
         if (haulFor != null) {
             if (!(server.getEntity(haulFor) instanceof VillageFolkEntity smelter) || !smelter.isAlive()
-                    || countCarried(AssistantEntity.SMELTABLE_ORE) == 0) {
+                    || countCarried(FOR_THE_SMELTER) == 0) {
                 haulFor = null;
             } else if (distanceToSqr(smelter) > 3.0 * 3.0) {
                 walkTo(smelter.blockPosition(), 1.1D);
-                hobbyNow = "taking ore to " + smelter.displayNameCap();
+                hobbyNow = "taking " + (countCarried(AssistantEntity.SMELTABLE_ORE) > 0 ? "ore" : "stone and clay")
+                    + " to " + smelter.displayNameCap();
                 return true;
             } else {
-                int given = handOver(smelter, s -> AssistantEntity.SMELTABLE_ORE.test(s)
-                    || s.is(net.minecraft.world.item.Items.COAL) || s.is(net.minecraft.world.item.Items.CHARCOAL));
+                boolean ore = countCarried(AssistantEntity.SMELTABLE_ORE) > 0;
+                int given = handOver(smelter, FOR_THE_SMELTER);
                 haulFor = null;
                 if (given > 0) {
                     note(Deed.LOADS_HAULED, 1);
-                    FolkTalk.speak(this, FolkTalk.pick(getRandom(), "Ore for the furnaces, " + smelter.displayNameCap() + "!", "Here — keep those fires going."));
+                    FolkTalk.speak(this, ore
+                        ? FolkTalk.pick(getRandom(), "Ore for the furnaces, " + smelter.displayNameCap() + "!", "Here — keep those fires going.")
+                        : FolkTalk.pick(getRandom(), "Stone for the bench, " + smelter.displayNameCap() + ".", "Something for your furnaces — the builders are waiting on bricks."));
                     return true;
                 }
             }
@@ -4793,19 +4797,36 @@ public class VillageFolkEntity extends AssistantEntity {
                 return true;
             }
         }
-        // The smelter running low, and ore in the stores.
+        // The smelter running low, and ore in the stores. With no ore to take, what the smeltery works
+        // for the masons and the glaziers: the stores' spare cobblestone (stone bricks and smooth stone
+        // are fired from it), their clay (bricks) and their sand (glass), each only while the village is
+        // short of what it makes.
+        Villages.Village vill = Villages.get(village);
         for (AssistantEntity a : Villages.folkOf(village)) {
             if (!(a instanceof VillageFolkEntity f) || f.stationTask() != StationTask.SMELT || !f.isAlive()) continue;
             if (f.countCarried(AssistantEntity.SMELTABLE_ORE) >= 8) continue;
             int got = drawFrom(villageCentre, AssistantEntity.SMELTABLE_ORE, 32, buildStoresRadius());
+            String what = "ore";
+            if (got <= 0 && vill != null && f.countCarried(Masonry.MAKINGS) < 16) {
+                for (Masonry.Lot lot : Masonry.makings(server, vill)) {
+                    int n = drawFrom(villageCentre, lot.what(), lot.n(), buildStoresRadius());
+                    if (n > 0 && got == 0) what = lot.word();
+                    got += n;
+                }
+            }
             if (got <= 0) break;
             drawFrom(villageCentre, s -> s.is(net.minecraft.world.item.Items.COAL) || s.is(net.minecraft.world.item.Items.CHARCOAL), 8, buildStoresRadius());
             haulFor = f.getUUID();
-            brain("taking " + got + " ore out to " + f.displayNameCap());
+            brain("taking " + got + " " + what + " out to " + f.displayNameCap());
             return true;
         }
         return false;
     }
+
+    /** What a courier carries out to the smelter: ore, fuel, and the makings of its mason's work. */
+    private static final java.util.function.Predicate<net.minecraft.world.item.ItemStack> FOR_THE_SMELTER =
+        s -> AssistantEntity.SMELTABLE_ORE.test(s) || s.is(net.minecraft.world.item.Items.COAL)
+            || s.is(net.minecraft.world.item.Items.CHARCOAL) || Masonry.MAKINGS.test(s);
 
     /** A worker's load (what it would bank: its output, not its kit) into this carrier's pack. */
     private int takeLoadFrom(VillageFolkEntity worker) {
@@ -5859,6 +5880,16 @@ public class VillageFolkEntity extends AssistantEntity {
             // Without the wool, the founders' bedding comes in from the camp: but a bed at a
             // time, as each is laid (BuildGoal, bedFromTheCamp), not all of them up front.
         }
+        // A lantern the village has not got (a lantern is iron: Masonry) is a torch on the day: the
+        // drawing's lantern cells are lit with the torches drawn for them.
+        int lanterns = need.getOrDefault(BuildGoal.Part.LANTERN, 0);
+        if (lanterns > 0) {
+            int dark = Math.max(0, lanterns - countCarried(BuildGoal.itemForPart(BuildGoal.Part.LANTERN)));
+            if (dark > 0) {
+                topUp(heart, st -> st.is(net.minecraft.world.item.Items.TORCH),
+                    need.getOrDefault(BuildGoal.Part.TORCH, 0) + dark, buildStoresRadius());
+            }
+        }
         // The roof's stairs and slabs count: they are cut from the planks and laid in place of
         // blocks. Counted without them, a builder that had cut its roof out of the founding planks
         // was always "carrying 128 of 216", never began, and a village of twelve built nothing.
@@ -5907,9 +5938,30 @@ public class VillageFolkEntity extends AssistantEntity {
             com.jrpetty.mcassistant.entity.goal.Blueprints.Style.ROOF_SLAB, com.jrpetty.mcassistant.entity.goal.Blueprints.Style.ROOF_SLAB_TOP});
         int stoneSlabs = want.getOrDefault(com.jrpetty.mcassistant.entity.goal.Blueprints.Style.STONE_SLAB, 0);
         int stoneStairs = want.getOrDefault(com.jrpetty.mcassistant.entity.goal.Blueprints.Style.STONE_STAIR, 0);
+        // Dressed stone for the drawing's dressed stone, and brick for its chimney, when the stores have
+        // them (the smelter's work: Masonry); a block of brick made up of four fired bricks if need be.
+        // Short of either, rough stone does instead: never a stone brick that nobody cut.
+        int masonry = want.getOrDefault(com.jrpetty.mcassistant.entity.goal.Blueprints.Style.MASONRY, 0);
+        int brick = want.getOrDefault(com.jrpetty.mcassistant.entity.goal.Blueprints.Style.BRICK, 0);
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> brickBlocks = st -> st.is(net.minecraft.world.item.Items.BRICKS);
+        topUp(heart, brickBlocks, brick, r);
+        if (countCarried(brickBlocks) < brick && level() instanceof net.minecraft.server.level.ServerLevel server
+                && ownerId() != null && Villages.get(ownerId()) != null) {
+            Villages.Village vill = Villages.get(ownerId());
+            int more = Math.min(brick - countCarried(brickBlocks),
+                Market.stock(server, ownerId(), st -> st.is(net.minecraft.world.item.Items.BRICK)) / 4);
+            if (more > 0 && Masonry.take(server, vill, net.minecraft.world.item.Items.BRICKS, more)) {
+                net.minecraft.world.item.ItemStack left = insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BRICKS, more));
+                if (!left.isEmpty()) Crafts.store(server, vill, left);
+            }
+        }
+        int bricksHeld = countCarried(brickBlocks);
         // The village's own stone and timber first (Palettes), then whatever else will do.
-        topUpRanked(heart, com.jrpetty.mcassistant.entity.goal.Blueprints.Style.FOUNDATION, BuildGoal::isStoneLike, stone, r);
-        topUp(heart, BuildGoal::isStoneLike, stone, r);
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> dressed = BuildGoal.preferred(com.jrpetty.mcassistant.entity.goal.Blueprints.Style.MASONRY);
+        topUpRanked(heart, com.jrpetty.mcassistant.entity.goal.Blueprints.Style.MASONRY, dressed, masonry + Math.max(0, brick - bricksHeld), r);
+        topUp(heart, dressed, masonry + Math.max(0, brick - bricksHeld), r);
+        topUpRanked(heart, com.jrpetty.mcassistant.entity.goal.Blueprints.Style.FOUNDATION, BuildGoal::isStoneLike, Math.max(0, stone - bricksHeld), r);
+        topUp(heart, BuildGoal::isStoneLike, Math.max(0, stone - bricksHeld), r);
         topUpRanked(heart, com.jrpetty.mcassistant.entity.goal.Blueprints.Style.POST, st -> st.is(net.minecraft.tags.ItemTags.LOGS), logs, r);
         topUp(heart, st -> st.is(net.minecraft.tags.ItemTags.LOGS), logs, r);
         topUpRanked(heart, com.jrpetty.mcassistant.entity.goal.Blueprints.Style.WALL, st -> st.is(net.minecraft.tags.ItemTags.PLANKS), boards, r);
@@ -5937,8 +5989,10 @@ public class VillageFolkEntity extends AssistantEntity {
     /** As topUp, the village's own kinds for this part first, one kind after another (Palettes). */
     private void topUpRanked(BlockPos heart, com.jrpetty.mcassistant.entity.goal.Blueprints.Style style,
                              java.util.function.Predicate<net.minecraft.world.item.ItemStack> group, int want, int r) {
-        for (net.minecraft.world.item.Item it : com.jrpetty.mcassistant.entity.Palettes.ranked(ownerId(), style)) {
-            int have = countCarried(group);
+        java.util.List<net.minecraft.world.item.Item> ranked = com.jrpetty.mcassistant.entity.Palettes.ranked(ownerId(), style);
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> any = group.or(st -> ranked.contains(st.getItem()));
+        for (net.minecraft.world.item.Item it : ranked) {
+            int have = countCarried(any);
             if (have >= want) return;
             drawFrom(heart, st -> st.is(it), want - have, r);
         }
@@ -6054,6 +6108,25 @@ public class VillageFolkEntity extends AssistantEntity {
                 }
                 return Math.min(made, wanted);
             }
+            case WATER -> {
+                // Water for a well or a fountain: a bucket (the smith's, out of the stores) filled at the
+                // nearest water to the heart. The water is the world's; only the bucket is made.
+                java.util.function.Predicate<net.minecraft.world.item.ItemStack> bucket = st -> st.is(net.minecraft.world.item.Items.BUCKET);
+                BlockPos water = null;
+                int made = 0;
+                while (made < wanted) {
+                    if (countCarried(bucket) < 1) drawFrom(heart, bucket, 1, r);
+                    if (countCarried(bucket) < 1) break;
+                    if (water == null) water = waterNear(heart, 32);
+                    if (water == null) break;
+                    if (removeMatching(bucket, 1) < 1) break;
+                    net.minecraft.world.item.ItemStack left = insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.WATER_BUCKET));
+                    if (!left.isEmpty()) { spawnAtLocation(left); break; }
+                    made++;
+                }
+                if (made > 0) brain("filled " + made + (made == 1 ? " bucket" : " buckets") + " at the water for the well");
+                return made;
+            }
             case HAY -> {
                 java.util.function.Predicate<net.minecraft.world.item.ItemStack> wheat = st -> st.is(net.minecraft.world.item.Items.WHEAT);
                 int made = 0;
@@ -6071,8 +6144,9 @@ public class VillageFolkEntity extends AssistantEntity {
                 java.util.Map.entry(COBBLE, 8), java.util.Map.entry(LOGS, 4)); }
             case LOOM -> { return makeFromStores(net.minecraft.world.item.Items.LOOM, wanted, heart, r, 2,
                 java.util.Map.entry(STRING, 2)); }
+            // A grindstone's middle is a slab of smelted stone, not cobble (the smelter's: Masonry).
             case GRINDSTONE -> { return makeFromStores(net.minecraft.world.item.Items.GRINDSTONE, wanted, heart, r, 3,
-                java.util.Map.entry(COBBLE, 1)); }
+                java.util.Map.entry(st -> st.is(net.minecraft.world.item.Items.STONE), 1)); }
             case BOOKSHELF -> { return makeFromStores(net.minecraft.world.item.Items.BOOKSHELF, wanted, heart, r, 6,
                 java.util.Map.entry(BOOKS, 3)); }
             case LECTERN -> { return makeFromStores(net.minecraft.world.item.Items.LECTERN, wanted, heart, r, 8,
@@ -6087,6 +6161,24 @@ public class VillageFolkEntity extends AssistantEntity {
                 java.util.Map.entry(BOOKS, 1), java.util.Map.entry(DIAMONDS, 2), java.util.Map.entry(OBSIDIAN, 4)); }
             default -> { return 0; }
         }
+    }
+
+    /** A block of still water near here, open to the sky (a pond, a river, the sea), or null. */
+    @Nullable
+    private BlockPos waterNear(BlockPos near, int r) {
+        BlockPos best = null;
+        double bd = Double.MAX_VALUE;
+        for (int dx = -r; dx <= r; dx += 2) {
+            for (int dz = -r; dz <= r; dz += 2) {
+                int x = near.getX() + dx, z = near.getZ() + dz;
+                if (!level().hasChunk(x >> 4, z >> 4)) continue;
+                BlockPos top = new BlockPos(x, level().getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, x, z) - 1, z);
+                if (!level().getFluidState(top).isSourceOfType(net.minecraft.world.level.material.Fluids.WATER)) continue;
+                double d = top.distSqr(near);
+                if (d < bd) { bd = d; best = top; }
+            }
+        }
+        return best;
     }
 
     private static final java.util.function.Predicate<net.minecraft.world.item.ItemStack> COBBLE =
@@ -6502,12 +6594,21 @@ public class VillageFolkEntity extends AssistantEntity {
         return coalShort;
     }
 
+    /** Next to no glass at all (no bottles for the brewer, the beekeeper or the café): glass before iron.
+     *  Short of glass for the windows only, the sand waits for a gap in the ore (Masonry.glassShort is
+     *  what the smelter fetches and digs sand for: enough for the windows, not sixteen blocks). */
     @Override
     protected boolean wantsGlass() {
         UUID village = ownerId();
         return village != null && level() instanceof net.minecraft.server.level.ServerLevel server
             && Market.stock(server, village, s -> s.is(net.minecraft.world.item.Items.GLASS)
                 || s.is(net.minecraft.world.item.Items.GLASS_BOTTLE)) < 16;
+    }
+
+    /** The mason's work at the smeltery, when there is no ore to run (Masonry). */
+    @Override
+    protected boolean masonWork() {
+        return level() instanceof net.minecraft.server.level.ServerLevel server && Masonry.work(this, server);
     }
 
     @Override

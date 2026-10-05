@@ -909,11 +909,12 @@ public final class TownLife {
             if (!level.getBlockState(p).isAir()) return false;
         }
         if (!free && !TownJobs.atWork(level, v, "signs", post, "putting up a street sign")) return false;
-        if (!free && !payForPost(level, v)) return false;
+        net.minecraft.world.level.block.Block light = free ? Blocks.LANTERN : payForPost(level, v);
+        if (light == null) return false;
         BlockState fence = Blocks.SPRUCE_FENCE.defaultBlockState();
         level.setBlock(post, fence, 3);
         level.setBlock(post.above(), fence, 3);
-        level.setBlock(post.above(2), Blocks.LANTERN.defaultBlockState(), 3);
+        level.setBlock(post.above(2), light.defaultBlockState(), 3);
         String ns = streetName(village, false, x, cz >= 0 ? 1 : -1);
         String ew = streetName(village, true, z, cx >= 0 ? 1 : -1);
         level.setBlock(signNS, Blocks.SPRUCE_WALL_SIGN.defaultBlockState().setValue(WallSignBlock.FACING, toNS), 3);
@@ -923,19 +924,22 @@ public final class TownLife {
         return true;
     }
 
-    /** A street post's makings out of the stores, all or none: its lantern, two lengths of fence
-     *  (or four planks) and two signs (or four planks). */
-    private static boolean payForPost(ServerLevel level, Villages.Village v) {
-        if (!Crafts.lantern(level, v)) return false;
+    /** A street post's makings out of the stores, all or none: its light (a lantern, or a torch till the
+     *  smith makes lanterns: Masonry), two lengths of fence (or four planks) and two signs (or four
+     *  planks). Returns the light it carries, or null. */
+    @Nullable
+    private static net.minecraft.world.level.block.Block payForPost(ServerLevel level, Villages.Village v) {
+        net.minecraft.world.level.block.Block light = Masonry.light(level, v);
+        if (light == null) return null;
         if (!Crafts.take(level, v, s -> s.is(net.minecraft.tags.ItemTags.WOODEN_FENCES), 2) && !Crafts.usePlanks(level, v, 4)) {
-            Crafts.store(level, v, new ItemStack(Items.LANTERN));
-            return false;
+            Masonry.unlight(level, v, light);
+            return null;
         }
         if (!Crafts.take(level, v, s -> s.is(net.minecraft.tags.ItemTags.SIGNS), 2) && !Crafts.usePlanks(level, v, 4)) {
-            Crafts.store(level, v, new ItemStack(Items.LANTERN));
+            Masonry.unlight(level, v, light);
             Crafts.store(level, v, new ItemStack(Items.SPRUCE_FENCE, 2));
-            return false;
+            return null;
         }
-        return true;
+        return light;
     }
 }

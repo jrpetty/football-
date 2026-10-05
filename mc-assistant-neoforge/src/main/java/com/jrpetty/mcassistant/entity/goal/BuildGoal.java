@@ -844,6 +844,17 @@ public class BuildGoal extends Goal {
                 return;
             }
             state = orient(state, target, pos);
+        } else if (part == Part.LANTERN) {
+            // A lantern if the village has made one; a torch until it can (a lantern is eight iron
+            // nuggets and a torch, the smith's: Masonry), and nothing where a torch would not hold.
+            state = takeBlockMatching(itemFor(part));
+            if (state != null) {
+                state = orient(state, target, pos);
+            } else {
+                state = com.jrpetty.mcassistant.entity.Masonry.torchFor(assistant.level(), pos);
+                if (state != null && assistant.removeMatching(s -> s.is(Items.TORCH), 1) < 1) state = null;
+            }
+            if (state == null) { cursor++; return; }
         } else if (part == Part.WINDOW) {
             state = takeBlockMatching(target.style() == Blueprints.Style.GLASS ? Blueprints_GLASS : Blueprints_PANE);
             if (state == null) state = takeBlockMatching(itemFor(part));
@@ -1006,6 +1017,26 @@ public class BuildGoal extends Goal {
             || p.contains("tuff") || p.contains("blackstone") || p.equals("mud_bricks") || p.contains("sandstone");
     }
 
+    /** Stone that has been worked: cut, polished, smoothed, chiselled, or fired into brick. */
+    public static boolean isDressed(ItemStack s) {
+        String p = path(s);
+        return p.contains("brick") || p.contains("tiles") || p.startsWith("polished") || p.startsWith("smooth")
+            || p.startsWith("chiseled") || p.startsWith("cut_");
+    }
+
+    /** Rough stone, as it comes out of the ground: what a footing is laid in, leaving the dressed
+     *  stone for the courses that show. */
+    public static boolean isRoughStone(ItemStack s) {
+        return isStoneLike(s) && !isDressed(s);
+    }
+
+    /** Is this style part of a roof? Nothing precious goes up there (Masonry.fitForARoof). */
+    public static boolean isRoof(Blueprints.Style style) {
+        return style == Blueprints.Style.ROOF_STAIR || style == Blueprints.Style.ROOF_STAIR_TOP
+            || style == Blueprints.Style.ROOF_SLAB || style == Blueprints.Style.ROOF_SLAB_TOP
+            || style == Blueprints.Style.ROOF_BLOCK;
+    }
+
     private static boolean isSoil(ItemStack s) {
         return s.is(Items.DIRT) || s.is(Items.GRASS_BLOCK) || s.is(Items.COARSE_DIRT) || s.is(Items.ROOTED_DIRT)
             || s.is(Items.PODZOL) || s.is(Items.MUD) || s.is(Items.MYCELIUM);
@@ -1014,7 +1045,9 @@ public class BuildGoal extends Goal {
     /** What a builder looks for first for a block of this style. */
     public static Predicate<ItemStack> preferred(Blueprints.Style style) {
         return switch (style) {
-            case FOUNDATION, WALL_LOW -> BuildGoal::isStoneLike;
+            // Rough stone in the footing first: the stone bricks the masons cut are for the courses
+            // that show (a footing laid of them left the walls above in cobble).
+            case FOUNDATION, WALL_LOW -> BuildGoal::isRoughStone;
             case MASONRY -> s -> isStoneLike(s) && (path(s).contains("brick") || path(s).startsWith("polished"));
             case BRICK -> s -> s.is(Items.BRICKS);
             case FLOOR, WALL, ROOF_BLOCK -> s -> s.is(ItemTags.PLANKS);
@@ -1033,7 +1066,7 @@ public class BuildGoal extends Goal {
     /** What will do instead: the next best thing, and then any building block that is not earth. */
     private static Predicate<ItemStack> secondBest(Blueprints.Style style) {
         return switch (style) {
-            case MASONRY, BRICK -> BuildGoal::isStoneLike;
+            case MASONRY, BRICK, FOUNDATION, WALL_LOW -> BuildGoal::isStoneLike;
             case ROOF_STAIR, ROOF_STAIR_TOP, ROOF_SLAB, ROOF_SLAB_TOP, POST, BEAM_ACROSS, BEAM_ALONG -> s -> s.is(ItemTags.PLANKS);
             case STONE_SLAB, STONE_STAIR -> BuildGoal::isStoneLike;
             case FLOOR, WALL, ROOF_BLOCK -> s -> s.is(ItemTags.LOGS);
@@ -1043,18 +1076,19 @@ public class BuildGoal extends Goal {
 
     @Nullable
     private BlockState takeStyled(Blueprints.Style style) {
+        // Whatever a roof falls back on, it is never iron or anything else precious: a roof of the
+        // village's iron is its tools and armour gone (Masonry.fitForARoof). No wall of it either.
+        Predicate<ItemStack> fit = isRoof(style) ? com.jrpetty.mcassistant.entity.Masonry::fitForARoof
+            : s -> !com.jrpetty.mcassistant.entity.Palettes.precious(s);
         // The village's own look first (Palettes): its wood and its stone for this part, best first.
         for (net.minecraft.world.item.Item it : com.jrpetty.mcassistant.entity.Palettes.ranked(assistant.ownerId(), style)) {
-            BlockState st = takeBlockMatching(s -> s.is(it));
+            BlockState st = takeBlockMatching(s -> s.is(it) && fit.test(s));
             if (st != null) return st;
         }
-        BlockState st = takeBlockMatching(preferred(style));
-        if (st == null) st = takeBlockMatching(secondBest(style));
-        // Anything else that will stand, but never the metals and the gems (no iron roof, ever).
-        if (st == null && style != Blueprints.Style.SOIL) {
-            st = takeBlockMatching(s -> isBuildingBlock(s) && !isSoil(s) && !com.jrpetty.mcassistant.entity.Palettes.precious(s));
-        }
-        if (st == null) st = takeBlockMatching(s -> isBuildingBlock(s) && !com.jrpetty.mcassistant.entity.Palettes.precious(s));
+        BlockState st = takeBlockMatching(preferred(style).and(fit));
+        if (st == null) st = takeBlockMatching(secondBest(style).and(fit));
+        if (st == null && style != Blueprints.Style.SOIL) st = takeBlockMatching(s -> isBuildingBlock(s) && !isSoil(s) && fit.test(s));
+        if (st == null) st = takeBlockMatching(s -> isBuildingBlock(s) && fit.test(s));
         return st;
     }
 

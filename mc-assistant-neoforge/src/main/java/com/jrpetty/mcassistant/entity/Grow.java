@@ -28,8 +28,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * <li><b>Gardens and fences</b> (from the Stone Age): a fence round each house's plot with a
  *     gate to the street, and flowers either side of the path.</li>
  * <li><b>Wood, then stone, then brick.</b> In the Stone Age the timber walls are rebuilt in
- *     stone; in the Iron Age, in brick. By the Diamond Age moss has got into the old
- *     footings.</li>
+ *     stone bricks; in the Iron Age, in brick, or in stone bricks while the smeltery is short of
+ *     brick (Masonry). By the Diamond Age moss has got into the old footings, where the woodcutters
+ *     have brought in the vines for it.</li>
  * <li><b>A second storey</b> (from the Iron Age), one house at a time, oldest first: the old
  *     roof comes off, a floor of bedrooms goes on (two more beds, a ladder up), and a new
  *     slate roof over it, with the chimney carried up. It wants all its makings out of the
@@ -79,8 +80,38 @@ public final class Grow {
         long now = level.getGameTime();
         if (now - LAST.getOrDefault(id, -100000L) < 300L) return;
         LAST.put(id, now);
-        furnish(level, v);
+        if (!furnish(level, v)) shelve(level, v);
         work(level, v, 24);
+    }
+
+    /**
+     * A bookshelf into the library where its drawing has one and it stands without: from the stores,
+     * or made there and then of six planks and three of the tailor's books (Crafts.tailor binds them
+     * of the farmers' cane and the rancher's leather). A library went up with what books there were
+     * that day, which was mostly none, and none came after. One shelf a turn. Returns whether one
+     * was put up.
+     */
+    public static boolean shelve(ServerLevel level, Villages.Village v) {
+        for (Ledger.Building b : Ledger.buildings(v.id())) {
+            if (!b.structure().equals("library") || !Land.areaLoaded(level, b.anchor(), 9)) continue;
+            List<BlockPos> empty = Crafts.emptyShelves(level, v, b);
+            if (empty.isEmpty()) continue;
+            boolean shelf = Market.stock(level, v.id(), s -> s.is(net.minecraft.world.item.Items.BOOKSHELF)) > 0;
+            boolean makings = Market.stock(level, v.id(), s -> s.is(net.minecraft.world.item.Items.BOOK)) >= 3
+                && Market.stock(level, v.id(), s -> s.is(ItemTags.PLANKS)) + 4 * Market.stock(level, v.id(), s -> s.is(ItemTags.LOGS)) >= 6;
+            if (!shelf && !makings) return false;
+            if (!TownJobs.atWork(level, v, "shelves", empty.get(0), "putting up a bookshelf in the library")) return false;
+            if (!Crafts.take(level, v, s -> s.is(net.minecraft.world.item.Items.BOOKSHELF), 1)) {
+                if (!Crafts.take(level, v, s -> s.is(net.minecraft.world.item.Items.BOOK), 3)) return false;
+                if (!Crafts.usePlanks(level, v, 6)) {
+                    Crafts.store(level, v, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BOOK, 3));
+                    return false;
+                }
+            }
+            level.setBlock(empty.get(0), Blocks.BOOKSHELF.defaultBlockState(), 3);
+            return true;
+        }
+        return false;
     }
 
     // ------------------------------------------------------------------ beds
@@ -285,9 +316,11 @@ public final class Grow {
 
     /**
      * The house's timber walls rebuilt in stone (Stone Age) or brick (Iron Age on). Returns blocks
-     * changed. Each block of the new wall is paid out of the stores now (a block of stone bricks
-     * or cobblestone for stone; a block of bricks, or four bricks, for brick), unless {@code free},
-     * and what comes out of the wall goes back into them. It stops when they run short.
+     * changed. Each block of the new wall is paid out of the stores now, at what it really costs
+     * (Masonry: a block of the stone bricks the masons cut; a block of brick, or four fired bricks),
+     * unless {@code free}, and what comes out of the wall goes back into them. Short of brick, stone
+     * bricks; short of those too, the timber stays till the smeltery has made some. It stops when
+     * the stores run short.
      */
     public static int reface(ServerLevel level, Villages.Village v, Ledger.Building b, Villages.Age age, int budget,
                              boolean grown, boolean free) {
@@ -295,17 +328,28 @@ public final class Grow {
         // The land's own stone, while the stores have it (Homeland): sandstone in the desert,
         // terracotta in the badlands, andesite in the hills, mossy stone in the jungle.
         Homeland.Stone local = Homeland.walls(v.id());
-        if (local != null && Crafts.stock(level, v, local.pay()) >= 16) want = local.block();
+        if (local != null && Masonry.canLand(level, v, local, 16)) want = local.block();
         boolean old = age.ordinal() >= Villages.Age.DIAMOND.ordinal();
+        // Moss in the old footings: only of vines the woodcutters brought in (a block of moss is a
+        // nicety, and the footing stays plain cobble without one).
+        boolean moss = old && (free || Masonry.can(level, v, Blocks.MOSSY_COBBLESTONE));
+        if (!free && !wallPayable(level, v, want, local)) {
+            want = want == Blocks.BRICKS && Masonry.can(level, v, Blocks.STONE_BRICKS) ? Blocks.STONE_BRICKS : null;
+        }
         if (!free) {
             // Only if there is wall to change, and a hand there to change it (TownJobs).
             boolean any = false;
             for (BuildGoal.Placement p : BuildGoal.plan(grown ? "house2" : "house", b.anchor(), b.facing(), 13)) {
-                if (p.part() != BuildGoal.Part.BLOCK || p.style() != com.jrpetty.mcassistant.entity.goal.Blueprints.Style.WALL) continue;
+                if (p.part() != BuildGoal.Part.BLOCK) continue;
                 BlockState now = level.getBlockState(p.pos());
-                if (now.is(BlockTags.PLANKS) || now.is(Blocks.STONE_BRICKS) && want != Blocks.STONE_BRICKS) { any = true; break; }
+                if (p.style() == com.jrpetty.mcassistant.entity.goal.Blueprints.Style.WALL && want != null
+                        && (now.is(BlockTags.PLANKS) || now.is(Blocks.STONE_BRICKS) && want != Blocks.STONE_BRICKS)) { any = true; break; }
+                if (moss && (p.style() == com.jrpetty.mcassistant.entity.goal.Blueprints.Style.FOUNDATION
+                        || p.style() == com.jrpetty.mcassistant.entity.goal.Blueprints.Style.WALL_LOW)
+                        && now.is(Blocks.COBBLESTONE) && Math.floorMod(p.pos().hashCode(), 3) == 0) { any = true; break; }
             }
-            if (!any || !TownJobs.atWork(level, v, "walls", b.anchor(), want == Blocks.BRICKS ? "rebuilding a house in brick" : "rebuilding a house in stone")) return 0;
+            if (!any || !TownJobs.atWork(level, v, "walls", b.anchor(), want == Blocks.BRICKS ? "rebuilding a house in brick"
+                : want == null ? "working moss into the old footings" : "rebuilding a house in stone")) return 0;
         }
         int n = 0;
         boolean stop = false;
@@ -316,10 +360,18 @@ public final class Grow {
             BlockState now = level.getBlockState(p.pos());
             switch (p.style()) {
                 case WALL -> {
+                    if (want == null) break;
                     boolean timber = now.is(BlockTags.PLANKS);
                     boolean stone = now.is(Blocks.STONE_BRICKS) && want != Blocks.STONE_BRICKS;
                     if (timber || stone) {
-                        if (!free && !wallBlock(level, v, want)) {
+                        boolean paid = free || wallBlock(level, v, want);
+                        if (!paid && want == Blocks.BRICKS && Masonry.can(level, v, Blocks.STONE_BRICKS)) {
+                            // Out of brick partway: the rest of the wall in the masons' stone bricks.
+                            want = Blocks.STONE_BRICKS;
+                            if (stone) break;                               // stone bricks already
+                            paid = wallBlock(level, v, want);
+                        }
+                        if (!paid) {
                             stop = true;
                         } else {
                             if (!free) back.merge(now.getBlock().asItem(), 1, Integer::sum);
@@ -329,7 +381,13 @@ public final class Grow {
                     }
                 }
                 case FOUNDATION, WALL_LOW -> {
-                    if (old && now.is(Blocks.COBBLESTONE) && Math.floorMod(p.pos().hashCode(), 3) == 0) {
+                    if (moss && now.is(Blocks.COBBLESTONE) && Math.floorMod(p.pos().hashCode(), 3) == 0) {
+                        // A block of mossy cobble (a cobble and a vine) for the one that comes out.
+                        if (!free && !Masonry.take(level, v, Blocks.MOSSY_COBBLESTONE)) {
+                            moss = false;
+                            break;
+                        }
+                        if (!free) back.merge(now.getBlock().asItem(), 1, Integer::sum);
                         level.setBlock(p.pos(), Blocks.MOSSY_COBBLESTONE.defaultBlockState(), 3);
                         n++;
                     }
@@ -341,15 +399,18 @@ public final class Grow {
         return n;
     }
 
-    /** A block of the new wall out of the stores: brick for brick, else dressed stone or cobble. */
+    /** A block of the new wall out of the stores, at what it really costs: the land's own stone, a block of
+     *  brick (or four bricks), a block of the stone bricks the masons cut (Masonry). */
     private static boolean wallBlock(ServerLevel level, Villages.Village v, Block want) {
         Homeland.Stone local = Homeland.walls(v.id());
-        if (local != null && want == local.block()) return Crafts.take(level, v, local.pay(), local.each());
-        if (want == Blocks.BRICKS) {
-            return Crafts.take(level, v, s -> s.is(net.minecraft.world.item.Items.BRICKS), 1)
-                || Crafts.take(level, v, s -> s.is(net.minecraft.world.item.Items.BRICK), 4);
-        }
-        return Crafts.masonryForLooks(level, v);
+        if (local != null && want == local.block()) return Masonry.payLand(level, v, local);
+        return Masonry.take(level, v, want);
+    }
+
+    /** Could the stores pay for a block of this wall (nothing taken)? */
+    private static boolean wallPayable(ServerLevel level, Villages.Village v, Block want, @javax.annotation.Nullable Homeland.Stone local) {
+        if (local != null && want == local.block()) return Masonry.canLand(level, v, local, 1);
+        return Masonry.can(level, v, want);
     }
 
     // ------------------------------------------------------------------ the second storey
@@ -395,8 +456,9 @@ public final class Grow {
         List<BuildGoal.Placement> will = BuildGoal.plan(to, b.anchor(), b.facing(), 13);
         if (will.isEmpty()) return 0;
         if (!started.contains(b.anchor().asLong()) && !Ledger.raising(id, b.anchor())) {
-            // The makings for all of it, out of the stores, before the roof comes off.
-            if (!free && !payForStorey(level, v, b, was, will, Showcase.painter(pal))) return 0;
+            // The makings for all of it, out of the stores, before the roof comes off: and the storey goes
+            // up in what the stores could pay for (Masonry.buildIn), not in what the palette would like.
+            if (!free && !payForStorey(level, v, b, was, will, pal)) return 0;
             started.add(b.anchor().asLong());
             Villages.tell(id, level.getDayTime() / 24000L, "the builders began a second storey on " + named(from) + " at "
                 + b.anchor().getX() + ", " + b.anchor().getZ());
@@ -464,9 +526,11 @@ public final class Grow {
         // whatever would not go in (something in the way) must not hold up the roof.
         int lowest = Integer.MAX_VALUE;
         Set<BlockPos> missing = new HashSet<>();
+        java.util.function.Function<BuildGoal.Placement, BlockState> paint = free ? Showcase.painter(pal) : lookOf(level, id, b, pal);
         for (BuildGoal.Placement p : will) {
             if (p.part() == BuildGoal.Part.CLEAR) continue;
             if (!free && p.part() == BuildGoal.Part.BED) continue;               // furnished out of the stores later
+            if (paint.apply(p) == null) continue;                                // left out: nothing was paid for it
             BlockState now = level.getBlockState(p.pos());
             if (!now.isAir() && !(now.canBeReplaced() && now.getFluidState().isEmpty())) continue;
             if (TRIED.getOrDefault(b.anchor().asLong() + ":" + p.pos().getY(), 0) >= 3) continue;
@@ -478,6 +542,7 @@ public final class Grow {
             if (home) Ledger.grow(id, b.anchor());
             else Ledger.note(id, "tall/" + b.anchor().asLong(), "1");
             Ledger.raising(id, b.anchor(), false);
+            Ledger.note(id, LOOK + b.anchor().asLong(), "");
             started.remove(b.anchor().asLong());
             String spoken = named(from);
             Villages.tell(id, level.getDayTime() / 24000L, Character.toUpperCase(spoken.charAt(0)) + spoken.substring(1)
@@ -488,24 +553,36 @@ public final class Grow {
         TRIED.merge(b.anchor().asLong() + ":" + layer, 1, Integer::sum);
         Set<BlockPos> now = new HashSet<>();
         for (BlockPos p : missing) if (p.getY() == layer && now.size() < Math.max(budget, 12)) now.add(p);
-        return BuildGoal.stampOnly(level, to, b.anchor(), b.facing(), 13, Showcase.painter(pal),
-            p -> now.contains(p.pos()));
+        return BuildGoal.stampOnly(level, to, b.anchor(), b.facing(), 13, paint, p -> now.contains(p.pos()));
+    }
+
+    /** The ledger's note of what a storey was paid for in, by the building's anchor (Masonry.Look). */
+    private static final String LOOK = "storeylook/";
+
+    /** What a rising storey is laid in: what was paid for (Masonry.Look, kept in the ledger); a storey begun
+     *  before the looks were kept goes up in its palette, as it was paid for then. */
+    private static java.util.function.Function<BuildGoal.Placement, BlockState> lookOf(ServerLevel level, UUID village,
+                                                                                    Ledger.Building b, Showcase.Palette pal) {
+        Masonry.Look look = Masonry.Look.decode(Ledger.note(village, LOOK + b.anchor().asLong()));
+        return look != null ? look.painter(level) : Showcase.painter(pal);
     }
 
     /**
-     * What a second storey will put in, counted against the stores and paid for all at once: a
-     * plank for each wooden block (the floor, the beams, the ladder; the stores' logs are sawn if
-     * they are short of planks) and a block of stone (cobble, stone bricks or bricks) for each of
-     * the rest (the walls, the roof, the chimney, the glass). The beds are not counted: they come
-     * out of the stores as any house's do. Nothing is taken unless all of it can be.
+     * What a second storey will put in, counted against the stores and paid for all at once, in what
+     * the stores can pay for (Masonry.buildIn): the palette's brick or stone and slate where the
+     * stores have them, the next best where they have not (stone bricks, then the village's own
+     * timber), each block at what it really costs; the windows glazed, the lanterns lit and the door
+     * hung only if there is the glass, the light and the wood. The beds are not counted: they come
+     * out of the stores as any house's do. Nothing is taken unless all of the walls, floor and roof
+     * can be; what it was paid in is kept (the ledger) for the storey to be built of.
      */
     private static boolean payForStorey(ServerLevel level, Villages.Village v, Ledger.Building b,
                                         List<BuildGoal.Placement> was, List<BuildGoal.Placement> will,
-                                        java.util.function.Function<BuildGoal.Placement, BlockState> paint) {
+                                        Showcase.Palette pal) {
         Map<BlockPos, BuildGoal.Placement> before = new HashMap<>();
         for (BuildGoal.Placement p : was) before.put(p.pos(), p);
         int top = b.anchor().getY() + 3;
-        int wood = 0, stone = 0;
+        List<BuildGoal.Placement> cells = new ArrayList<>();
         for (BuildGoal.Placement p : will) {
             if (p.part() == BuildGoal.Part.CLEAR || p.part() == BuildGoal.Part.BED) continue;
             BlockState now = level.getBlockState(p.pos());
@@ -519,21 +596,11 @@ public final class Grow {
                 boolean ladderFoot = p.part() == BuildGoal.Part.LADDER && p.pos().getY() < top && !now.is(Blocks.LADDER);
                 if (!comesOff && !ladderFoot) continue;
             }
-            BlockState st = paint.apply(p);
-            if (st == null) continue;
-            if (st.is(BlockTags.MINEABLE_WITH_AXE)) wood++;
-            else stone++;
+            cells.add(p);
         }
-        java.util.function.Predicate<net.minecraft.world.item.ItemStack> stoneWork = s -> s.is(net.minecraft.world.item.Items.COBBLESTONE)
-            || s.is(net.minecraft.world.item.Items.STONE_BRICKS) || s.is(net.minecraft.world.item.Items.BRICKS)
-            || s.is(net.minecraft.world.item.Items.COBBLED_DEEPSLATE);
-        if (Crafts.stock(level, v, stoneWork) < stone) return false;
-        if (Crafts.stock(level, v, s -> s.is(ItemTags.PLANKS)) + 4 * Crafts.stock(level, v, s -> s.is(ItemTags.LOGS)) < wood) return false;
-        if (!Crafts.take(level, v, stoneWork, stone)) return false;
-        if (!Crafts.usePlanks(level, v, wood)) {
-            Crafts.giveBack(level, v, net.minecraft.world.item.Items.COBBLESTONE, stone);
-            return false;
-        }
+        Masonry.Look look = Masonry.buildIn(level, v, pal, cells, true);
+        if (look == null) return false;
+        Ledger.note(v.id(), LOOK + b.anchor().asLong(), look.encode());
         return true;
     }
 
