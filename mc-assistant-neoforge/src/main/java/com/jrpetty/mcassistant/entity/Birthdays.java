@@ -388,7 +388,9 @@ public final class Birthdays {
     public static int mood(VillageFolkEntity f, long day, int m, List<Object[]> why) {
         Today t = TODAY.get(f.getUUID());
         if (t == null || t.day() != day) return m;
-        why.add(new Object[]{ "birthday", 6 });
+        // Six better for the day; and on its birthday the birthday is the first thing it speaks of (a card shows
+        // the first three reasons, the weightiest first: at six it fell behind a good night's sleep).
+        why.add(new Object[]{ "birthday", 12 });
         return m + 6;
     }
 

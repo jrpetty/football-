@@ -830,6 +830,12 @@ public final class TownBell {
         return STROKES.getOrDefault(village, 0);
     }
 
+    /** For the tests: is a peal being rung on this town's bell just now (strokes still to come)? */
+    public static boolean ringing(UUID village) {
+        Day d = DAYS.get(village);
+        return d != null && d.striking != null;
+    }
+
     /** For the tests: who is to ring the bell now, or null. */
     @Nullable
     public static UUID ringer(UUID village) {
