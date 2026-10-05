@@ -230,6 +230,9 @@ public final class Terraform {
 
     // ------------------------------------------------------------------ working a column
 
+    /** How deep the town's own ground is made solid: its top and four of earth under it. */
+    public static final int SOLID_DEPTH = 5;
+
     /**
      * Bring one column from {@code ground} (its earth's top) to {@code target}: everything above
      * the new height cleared away, earth built up to it in the land's own soil, and a cut top
@@ -271,7 +274,7 @@ public final class Terraform {
             if (!natural(at) || at.is(Blocks.BEDROCK)) dress = false;          // something buried: left be
             else if (at.isAir() || wet(at)) dress = true;                      // a cave or a spring under a cut: closed over
             else if (!soil(surface) || at.is(surface)) dress = false;          // rock left rock; the right soil already
-            else dress = cut || (levelled && topOf(at) == ROCK);               // a cut, or bare rock in the square
+            else dress = cut || (levelled && topOf(at) != 0);                  // a cut, or any other earth in the square
             if (dress) {
                 // Sand or gravel over a hollow would fall into it: its stone instead.
                 boolean falls = surface.defaultBlockState().getBlock() instanceof net.minecraft.world.level.block.FallingBlock;
@@ -285,6 +288,29 @@ public final class Terraform {
                         changed++;
                     }
                 }
+            }
+        }
+        // The town's own ground is solid five deep: its top and four of earth under it, whatever the
+        // land had there. A cave, a spring, a pocket of sand over a hollow, a buried root or a stump
+        // under the new top is filled in the land's own earth (dirt under grass, sandstone under
+        // sand), so nothing a builder sets on it sinks, nobody steps through it into a cave, and
+        // nothing falls. Stone, ore and earth already there are kept; the world's floor and
+        // anything somebody buried are left be.
+        if (levelled) {
+            BlockState topNow = chunk.getBlockState(m.set(x, target, z));
+            if (natural(topNow) && !topNow.is(Blocks.BEDROCK) && !topNow.is(surface)
+                    && (topNow.isAir() || wet(topNow) || growth(topNow) || (soil(surface) && topOf(topNow) != 0))) {
+                level.setBlock(m, surface.defaultBlockState(), QUIET);
+                changed++;
+            }
+            for (int d = 1; d < SOLID_DEPTH; d++) {
+                BlockState below = chunk.getBlockState(m.set(x, target - d, z));
+                if (below.is(Blocks.BEDROCK) || !natural(below)) continue;
+                boolean hollow = below.isAir() || wet(below) || growth(below)
+                    || below.getBlock() instanceof net.minecraft.world.level.block.FallingBlock && !under(surface, d).is(below.getBlock());
+                if (!hollow) continue;
+                level.setBlock(m, under(surface, d), QUIET);
+                changed++;
             }
         }
         // Grass that had snow lying on it, cleared: green again (its neighbours were not told).

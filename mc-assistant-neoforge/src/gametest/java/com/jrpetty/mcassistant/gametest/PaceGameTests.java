@@ -68,7 +68,7 @@ public class PaceGameTests {
     // ============================================================ experience
 
     /**
-     * Every level counts: a percent a level, to thirty at level thirty, and never less than the old
+     * Every level counts: three percent quicker a level (ninety at level thirty), and never less than the old
      * rungs gave (10% at 10, 20% at 20, 30% at 35). A miner with the same stone pick breaks stone
      * quicker at level ten than at nought, and quicker again at thirty; its other work (the pace
      * actionPaceTicks sets, a shear, a crop, a feed) the same; and the crafts' bench and the
@@ -81,9 +81,10 @@ public class PaceGameTests {
             int now = AssistantEntity.experiencePercentAt(lv);
             int rung = lv >= 35 ? 30 : lv >= 20 ? 20 : lv >= 10 ? 10 : 0;
             helper.assertTrue(now >= rung, "level " + lv + " is never slower than it was on the rungs: " + now + "% against " + rung + "%");
-            helper.assertTrue(now <= AssistantEntity.MOST_EXPERIENCE_PERCENT, "and never more than thirty: " + now);
-            if (lv > 0 && lv <= 30) {
-                helper.assertTrue(now == AssistantEntity.experiencePercentAt(lv - 1) + 1, "every level to thirty counts, a percent each: level " + lv);
+            helper.assertTrue(now <= AssistantEntity.MOST_EXPERIENCE_PERCENT, "and never more than the most: " + now);
+            helper.assertTrue(AssistantEntity.experienceSpeedAt(lv) == 3 * lv, "three percent quicker a level: level " + lv);
+            if (lv > 0) {
+                helper.assertTrue(now >= AssistantEntity.experiencePercentAt(lv - 1), "every level counts: level " + lv);
             }
         }
         VillageFolkEntity f = folk(helper, 120000, 40000, StationTask.MINE);
@@ -93,7 +94,8 @@ public class PaceGameTests {
         int[] stroke = new int[3], action = new int[3], bench = new int[3], bite = new int[3];
         for (int i = 0; i < levels.length; i++) {
             level(helper, f, levels[i]);
-            helper.assertTrue(f.experiencePercent() == Math.min(30, levels[i]), "level " + levels[i] + " is worth " + levels[i] + "%: " + f.experiencePercent());
+            helper.assertTrue(f.experiencePercent() == AssistantEntity.experiencePercentAt(levels[i]),
+                "level " + levels[i] + " is worth " + AssistantEntity.experienceSpeedAt(levels[i]) + "% quicker: " + f.experiencePercent() + "% off the time");
             helper.assertTrue(f.workBonusPercent() == f.experiencePercent(), "and nothing else counts with the pace kept plain: " + f.workBonusPercent());
             stroke[i] = f.workTicksFor(stone);
             action[i] = f.actionPaceTicks();
@@ -105,8 +107,10 @@ public class PaceGameTests {
             + "; the longest wait for a bite: " + java.util.Arrays.toString(bite));
         helper.assertTrue(stroke[0] > stroke[1] && stroke[1] > stroke[2], "stone breaks quicker at level 10, and quicker again at 30: " + java.util.Arrays.toString(stroke));
         helper.assertTrue(action[0] > action[1] && action[1] > action[2], "and every other piece of work too: " + java.util.Arrays.toString(action));
-        helper.assertTrue(bench[0] == 400 && bench[2] == 280, "a piece at the bench every twenty seconds for a new hand, fourteen at level thirty: " + java.util.Arrays.toString(bench));
-        helper.assertTrue(bite[0] == 400 && bite[2] == 340, "and the fish bite sooner for an old hand, by half as much: " + java.util.Arrays.toString(bite));
+        // Three percent quicker a level: level thirty is 90% quicker, a job in 53% of the time.
+        helper.assertTrue(bench[0] == 400 && bench[1] == 308 && bench[2] == 212,
+            "a piece at the bench every twenty seconds for a new hand, 15.4 at level ten, 10.6 at thirty: " + java.util.Arrays.toString(bench));
+        helper.assertTrue(bite[0] == 400 && bite[2] == 308, "and the fish bite sooner for an old hand, by half as much: " + java.util.Arrays.toString(bite));
         helper.assertTrue(stroke[2] >= 12 && action[2] >= 12, "never quicker than about half a second");
         helper.succeed();
     }
@@ -188,8 +192,8 @@ public class PaceGameTests {
         helper.assertTrue(fine[0] >= fine[1] && fine[1] >= fine[2] && ticks[0] >= ticks[1] && ticks[1] >= ticks[2],
             "a builder never lays slower for more experience: " + java.util.Arrays.toString(fine));
         if (AssistantConfig.villageBuildSpeed() == 100) {
-            helper.assertTrue(fine[0] == 600 && fine[1] == 540 && fine[2] == 420,
-                "six ticks a block for a new hand, 5.4 at level ten, 4.2 at thirty: " + java.util.Arrays.toString(fine));
+            helper.assertTrue(fine[0] == 600 && fine[1] == 462 && fine[2] == 318,
+                "six ticks a block for a new hand, 4.6 at level ten, 3.2 at thirty (three percent quicker a level): " + java.util.Arrays.toString(fine));
             helper.assertTrue(ticks[0] > ticks[1] && ticks[1] > ticks[2], "to the nearest tick, too: " + java.util.Arrays.toString(ticks));
             helper.assertTrue(f.buildingLevel() >= 1 && after < before, "laying blocks makes a quicker builder: " + before + " -> " + after);
         }

@@ -60,13 +60,19 @@ has to run to hold them):
 | 250 | 135 by 135 | 23 |
 | 500 | 179 by 179: the whole of the town's plan, all three rings | 31 |
 
-* **Inside**, everything is brought to one level: the middle height of the dry land there, and
-  never below the sea (a town in a pit behind its banks would flood). Hills and knolls are cut
+* **Inside**, everything is brought to one level: the middle height of the dry land there (by
+  water a little under the sea's height, lifted just out of it, so a town by the shore does not
+  stand in a pit behind its banks; dry ground well under the sea's height keeps its own). Hills and knolls are cut
   down, hollows filled, trees, plants and snow cleared, and the ground is dressed in the land's
   own soil: grass on the plains, sand in the desert, podzol in the pine woods (grass where it was
   all rock: the folk are going to farm it), with earth under a cut and sandstone under deep sand.
   Ponds are filled. Rivers, lakes and the sea are left exactly as they are, the land beside them
   is never cut below the water, and the fill slopes down to them as a bank, not a wall.
+  The level ground is **solid five deep**: its top (the town's grass, or sand or podzol) and four
+  blocks of earth under it, whatever the land had there. Caves, springs, pockets of water or lava,
+  buried roots and stumps, and sand over a hollow are filled in the land's own earth (dirt under
+  grass, sandstone under sand), so nothing built on it sinks and nobody steps through it; stone,
+  ore and earth already there are kept, and nothing is left growing on it.
 * **At the edge** the level ground meets the land as it was, and nothing is cut or built more
   steeply than a slope: rounding off from the flat over the first six blocks, a block up for every
   block across after that, a block and a half from twenty-four out. So a hill a few blocks high is
@@ -1263,8 +1269,11 @@ other occasionally have words when they meet off work:
 Every folk gets quicker at its work the longer it does it, and quicker again with a better
 tool. This holds for every trade.
 
-* **Experience.** Each level at its trade makes a folk's work 1% quicker, up to 30% at
-  level 30. (It used to come in three steps: 10% at level 10, 20% at 20 and 30% at 35.)
+* **Experience.** Each level at its trade makes a folk's work 3% quicker: 30% quicker at
+  level 10, 60% at 20, 90% at 30 (nearly twice a new hand's speed) and 150% at level 50, the
+  most a level goes. All told, with its mood, its crew, its nature, the town's research and its
+  knacks, the quickest hand in a town works up to three and a half times a new hand's speed.
+  (It used to come in three steps: 10% at level 10, 20% at 20 and 30% at 35.)
   The level is the one for the trade it works now. A farmer of level 18 who takes up mining
   starts at nought down the mine, and has its 18 again when it goes back to the fields.
 * **Tools.** The tool of the trade sets the pace by its tier. Against six seconds a stroke

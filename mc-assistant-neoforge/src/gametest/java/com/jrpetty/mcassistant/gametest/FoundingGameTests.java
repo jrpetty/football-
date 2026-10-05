@@ -177,6 +177,27 @@ public class FoundingGameTests {
             }
             Kit.log("f01 the square: " + columns + " columns from y=" + lo + " to y=" + hi);
             expect.that(hi - lo <= 1, "the levelled square is flat: from y=" + lo + " to y=" + hi);
+            // And solid five deep: its top and four of earth under it, nothing hollow, nothing growing on it.
+            int hollow = 0, growing = 0;
+            String firstHollow = "";
+            for (int dx = -radius; dx <= radius; dx++) {
+                for (int dz = -radius; dz <= radius; dz++) {
+                    if (FoundingPlan.reach(dx, dz) > radius - 4) continue;
+                    int x = cx + dx, z = cz + dz;
+                    if (Math.abs(x - (hut.getX() + 1)) <= 4 && Math.abs(z - (hut.getZ() + 1)) <= 4) continue;
+                    int y = ground(level, x, z);
+                    for (int d = 0; d < com.jrpetty.mcassistant.entity.Terraform.SOLID_DEPTH; d++) {
+                        net.minecraft.world.level.block.state.BlockState b = level.getBlockState(new BlockPos(x, y - d, z));
+                        if (b.isAir() || !b.getFluidState().isEmpty() || !b.isSolid()) {
+                            if (hollow++ == 0) firstHollow = x + "," + (y - d) + "," + z + " " + b;
+                        }
+                    }
+                    net.minecraft.world.level.block.state.BlockState on = level.getBlockState(new BlockPos(x, y + 1, z));
+                    if (!on.isAir() && com.jrpetty.mcassistant.entity.Terraform.growth(on)) growing++;
+                }
+            }
+            Kit.log("f01 five deep: " + hollow + " hollow blocks" + (hollow > 0 ? " (first " + firstHollow + ")" : "") + ", " + growing + " plants left on it");
+            expect.that(hollow == 0, "the square is solid five deep: " + hollow + " hollow, first " + firstHollow);
             // The edge: sloped, never a cliff.
             int worst = 0;
             String where = "";
