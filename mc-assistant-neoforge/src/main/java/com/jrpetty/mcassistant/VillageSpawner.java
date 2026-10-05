@@ -481,6 +481,55 @@ public final class VillageSpawner {
         return true;
     }
 
+    /** A founding site this good is kept as it is: most of the ground about it walkable. */
+    private static final int FIT_SITE = 1500;
+
+    /**
+     * Where a founding party makes its camp: where it was set down, if the ground there is fit for
+     * a village; failing that, the best ground within forty blocks — flat, dry, and joined on foot
+     * to plenty more. Settlers set down on a mountainside, by the cliff over a pond, stayed there:
+     * their stores on a ledge, their fields out past the pond, and the whole village swimming
+     * between the two all day. Only ground already loaded is looked at.
+     */
+    public static BlockPos campSite(ServerLevel level, BlockPos at) {
+        int here = siteScore(level, at);
+        if (here >= FIT_SITE) return at;
+        BlockPos chosen = at;
+        int best = here + 800;                                   // only for clearly better ground
+        for (int r = 8; r <= 40; r += 8) {
+            for (int dx = -r; dx <= r; dx += 8) {
+                for (int dz = -r; dz <= r; dz += 8) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) != r) continue;
+                    int x = at.getX() + dx, z = at.getZ() + dz;
+                    if (level.getChunkSource().getChunkNow(x >> 4, z >> 4) == null) continue;
+                    BlockPos g = groundAt(level, x, z);
+                    if (g == null) continue;
+                    int s = siteScore(level, g) - r * 10;          // the nearer the better, all else equal
+                    if (s > best) { best = s; chosen = g; }
+                }
+            }
+        }
+        return chosen;
+    }
+
+    /** How good a founding site this is: the ground walkable from it, less a lot for a slope. */
+    private static int siteScore(ServerLevel level, BlockPos g) {
+        if (!level.getFluidState(g).isEmpty() || !level.getFluidState(g.below()).isEmpty()) return -100000;
+        int lo = Integer.MAX_VALUE, hi = Integer.MIN_VALUE;
+        for (int dx = -4; dx <= 4; dx += 2) {
+            for (int dz = -4; dz <= 4; dz += 2) {
+                int x = g.getX() + dx, z = g.getZ() + dz;
+                if (level.getChunkSource().getChunkNow(x >> 4, z >> 4) == null) return -100000;
+                int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+                lo = Math.min(lo, y);
+                hi = Math.max(hi, y);
+            }
+        }
+        int spread = hi - lo;
+        if (spread > 6) return -50000;
+        return com.jrpetty.mcassistant.entity.Reach.walkableAround(level, g, 32) - 300 * Math.max(0, spread - 2);
+    }
+
     /** The heads of the beds still standing at a village's camp, nearest the heart first. */
     public static List<BlockPos> campBeds(Level level, BlockPos heart) {
         List<BlockPos> out = new java.util.ArrayList<>();

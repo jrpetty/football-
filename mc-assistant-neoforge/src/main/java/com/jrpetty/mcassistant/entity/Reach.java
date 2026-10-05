@@ -163,6 +163,46 @@ public final class Reach {
         return at(way.get(Math.max(0, onWay.get(c) - (steps - taken))));
     }
 
+    /**
+     * How much ground can be walked to from this spot within {@code r} blocks — the measure of a
+     * place to found a village on (VillageSpawner.campSite). Only ground already loaded counts.
+     */
+    public static int walkableAround(ServerLevel level, BlockPos at, int r) {
+        int size = 2 * r + 1;
+        int[] h = new int[size * size];
+        for (int ix = 0; ix < size; ix++) {
+            for (int iz = 0; iz < size; iz++) {
+                int x = at.getX() - r + ix, z = at.getZ() - r + iz;
+                LevelChunk chunk = level.getChunkSource().getChunkNow(x >> 4, z >> 4);
+                if (chunk == null) { h[ix * size + iz] = Integer.MIN_VALUE; continue; }
+                int top = chunk.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x & 15, z & 15);
+                int floor = chunk.getHeight(Heightmap.Types.OCEAN_FLOOR, x & 15, z & 15);
+                h[ix * size + iz] = top - floor >= 2 ? Integer.MIN_VALUE : top;
+            }
+        }
+        int start = r * size + r;
+        if (h[start] == Integer.MIN_VALUE) return 0;
+        boolean[] seen = new boolean[size * size];
+        int[] queue = new int[size * size];
+        int head = 0, tail = 0;
+        seen[start] = true;
+        queue[tail++] = start;
+        while (head < tail) {
+            int i = queue[head++];
+            int ix = i / size, iz = i % size, hi = h[i];
+            for (int k = 0; k < 4; k++) {
+                int nx = ix + (k == 0 ? 1 : k == 1 ? -1 : 0);
+                int nz = iz + (k == 2 ? 1 : k == 3 ? -1 : 0);
+                if (nx < 0 || nz < 0 || nx >= size || nz >= size) continue;
+                int n = nx * size + nz;
+                if (seen[n] || h[n] == Integer.MIN_VALUE || Math.abs(h[n] - hi) > 1) continue;
+                seen[n] = true;
+                queue[tail++] = n;
+            }
+        }
+        return tail;
+    }
+
     private static Reach survey(ServerLevel level, BlockPos heart, long now) {
         int[] h = new int[SIZE * SIZE];
         java.util.Arrays.fill(h, Integer.MIN_VALUE);
@@ -190,13 +230,17 @@ public final class Reach {
         short[] feet = new short[SIZE * SIZE];
         int[] queue = new int[SIZE * SIZE];
         int head = 0, tail = 0;
-        // Out from the heart's own ground: the square round it, whatever stands there.
-        for (int dx = -4; dx <= 4; dx++) {
-            for (int dz = -4; dz <= 4; dz++) {
-                int i = (R + dx) * SIZE + (R + dz);
-                if (h[i] == Integer.MIN_VALUE || dist[i] != 0) continue;
-                dist[i] = 1;
-                queue[tail++] = i;
+        // Out from the heart's own ground: the square round it at the heart's own level — not the
+        // foot of the cliff beside it, which a folk can jump down to and never climb back from.
+        for (int pass = 0; pass < 2 && tail == 0; pass++) {
+            for (int dx = -4; dx <= 4; dx++) {
+                for (int dz = -4; dz <= 4; dz++) {
+                    int i = (R + dx) * SIZE + (R + dz);
+                    if (h[i] == Integer.MIN_VALUE || dist[i] != 0) continue;
+                    if (pass == 0 && Math.abs(h[i] + 1 - heart.getY()) > 2) continue;
+                    dist[i] = 1;
+                    queue[tail++] = i;
+                }
             }
         }
         while (head < tail) {

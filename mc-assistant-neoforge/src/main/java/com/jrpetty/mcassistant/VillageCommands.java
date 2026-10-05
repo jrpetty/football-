@@ -291,7 +291,11 @@ public final class VillageCommands {
         net.minecraft.server.level.ServerLevel level = ctx.getSource().getLevel();
         int x = IntegerArgumentType.getInteger(ctx, "x");
         int z = IntegerArgumentType.getInteger(ctx, "z");
-        level.getChunk(x >> 4, z >> 4);          // make sure the ground is really there
+        // Make sure the ground is really there — and the ground round about, where the party may
+        // choose to make its camp instead (VillageSpawner.campSite).
+        for (int cx = -3; cx <= 3; cx++) {
+            for (int cz = -3; cz <= 3; cz++) level.getChunk((x >> 4) + cx, (z >> 4) + cz);
+        }
         return raiseMany(ctx, level, groundAt(level, x, z), 0.0F, count);
     }
 
