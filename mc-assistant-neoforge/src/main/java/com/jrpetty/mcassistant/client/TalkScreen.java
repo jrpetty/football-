@@ -229,7 +229,8 @@ public class TalkScreen extends Screen {
                 out.add(new Choice("Order goods…", TalkTopic.BULK, "", "Order a quantity of anything at a tenth off: type what and how many"));
                 out.add(Choice.of("Contract?", TalkTopic.CONTRACT, "Bring the village what it is short of every week, at a third over its worth (say \"I'll sign\")"));
                 out.add(Choice.of("Rent a stall", TalkTopic.STALL, "Five coins a week for a barrel of your own on the square: on market day the folk buy from it"));
-                out.add(Choice.of("The bank", TalkTopic.BANK, "Your account at the treasury: \"deposit 20\", \"withdraw 10\", \"borrow 30\", \"repay\""));
+                out.add(Choice.of("The bank", TalkTopic.BANK, "Your account: at the town's bank once it has one (see the banker: \"deposit 20\", \"withdraw 10\", "
+                    + "\"a mortgage on this house\" standing in an empty one), else at the treasury; \"borrow 30\", \"repay\" for the treasury's small loans"));
                 out.add(new Choice("Invest…", TalkTopic.INVEST, "", "Put coin into the village's works: two weeks' share of what it takes each day"));
                 out.add(Choice.of("Auction", TalkTopic.AUCTION, "Market day's lot: the village's finest spare thing, to the best bid (\"I bid 30\")"));
                 out.add(Choice.of("Escort", TalkTopic.ESCORT, "Guard the next caravan: walk with it and be paid at the other end"));

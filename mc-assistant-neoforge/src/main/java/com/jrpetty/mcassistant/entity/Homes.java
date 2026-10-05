@@ -1149,6 +1149,8 @@ public final class Homes {
             // The town's Housing Fund (CityTree): the treasury adds a coin for every ten put by.
             h.saved += CityTree.housingFund(id, h.saved - was, h.price - h.saved);
         }
+        // The bank (Bank): its savings there toward the price, and with a fifth put by, a mortgage for the rest.
+        if (w.yes() && h.owed == 0 && h.price > 0 && h.saved < h.price) Bank.lend(level, v, h, household, day);
         if (w.yes() && h.price > 0 && h.saved >= h.price) {
             buy(level, v, h, household, day);
             return;
@@ -1245,7 +1247,7 @@ public final class Homes {
         save(id, h);
         String where = address(id, v, h);
         Villages.tell(id, day, names(household) + " bought " + where + ", the house they rented, for " + price + coins(price)
-            + " put by out of their wages");
+            + Bank.howPaid(id, h));                    // " put by out of their wages", or part of it on a mortgage
         List<VillageFolkEntity> grown = grown(household);
         for (VillageFolkEntity f : grown) f.persona().remember(day, "we bought " + where + " for " + price + " coins, saved up out of our wages", 7);
         if (!grown.isEmpty()) FolkTalk.speak(grown.get(0), FolkTalk.pick(level.getRandom(), "It's ours now — every brick of it!",

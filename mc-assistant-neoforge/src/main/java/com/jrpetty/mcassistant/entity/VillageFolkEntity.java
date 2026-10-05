@@ -367,6 +367,7 @@ public class VillageFolkEntity extends AssistantEntity {
                 if (home != null) {
                     Elections.tick(polls, home);
                     Homes.tick(polls, home);
+                    Bank.tick(polls, home);              // the bank opens the day it stands, and gets its banker
                 }
             }
             if (level() instanceof net.minecraft.server.level.ServerLevel orders) Orders.consider(orders, ownerId(), level().getDayTime() / 24000L);
@@ -1404,6 +1405,7 @@ public class VillageFolkEntity extends AssistantEntity {
                 : displayNameCap() + " died, aged " + age);
             Gatherings.mourn(village, displayNameCap(), day);
             Homes.left(village, getUUID());
+            Bank.left(village, this, true);              // its savings at the bank to its partner, a child, or the village
             Annals.died(village, how);
             // The leader gone: an election to choose another (Elections).
             if (getUUID().equals(Villages.elder(village)) && level() instanceof net.minecraft.server.level.ServerLevel lost) {
@@ -4000,6 +4002,7 @@ public class VillageFolkEntity extends AssistantEntity {
             case MINE -> "The Pit";
             case SMELT -> "The Forge";
             case HUNT -> "Hunting Grounds";
+            case BANK -> "The Bank";
             default -> "The Commons";
         };
         // Two farms in one village should not share a name.
@@ -4527,6 +4530,7 @@ public class VillageFolkEntity extends AssistantEntity {
             case ENCHANT -> "library";
             case COOK -> "cafe";
             case SHOP -> "shop";
+            case BANK -> "bank";                  // the banker (Bank)
             default -> null;
         };
     }
@@ -4585,6 +4589,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (from != null) {
             Villages.recordDeath(from);
             Homes.left(from, getUUID());
+            Bank.left(from, this, false);                // its savings at the bank go with it
         }
         Annals.moved(from, to.id());
         joinVillage(to.id(), to.centre());

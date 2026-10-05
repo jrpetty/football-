@@ -97,6 +97,7 @@ public final class Crafts {
                 case ENCHANT -> enchant(level, v, f);
                 case COOK -> Cafe.cook(level, v, f);
                 case SHOP -> Cafe.keepShop(level, v, f);
+                case BANK -> Bank.work(level, v, f);          // the vault's bars, the ledger on the lectern
                 default -> null;
             };
         } finally {
@@ -131,6 +132,7 @@ public final class Crafts {
             case BREW -> "A fresh brew: " + made + ".";
             case ENCHANT -> made + ". I can feel it humming.";
             case COOK -> "Fresh from the kitchen: " + made + ".";
+            case BANK -> "There — " + made + ". Every coin counted.";
             default -> "Done: " + made + ".";
         };
     }

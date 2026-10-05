@@ -90,7 +90,7 @@ public final class Values {
             case WOOD -> Value.HOMES;
             case MINE, SMELT, SMITH, ENCHANT -> Value.PROGRESS;
             case GUARD, SCOUT -> Value.SAFETY;
-            case SHOP, STORE, HAUL, TAILOR, BREW -> Value.WEALTH;
+            case SHOP, STORE, HAUL, TAILOR, BREW, BANK -> Value.WEALTH;
             default -> null;
         };
     }

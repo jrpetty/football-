@@ -98,7 +98,9 @@ public final class Villages {
         // Scouts once the village is a town of forty: one or two, out every morning (Scouts).
         new Slot(AssistantEntity.StationTask.SCOUT, 1, Scouts.FROM, Age.WOOD, 2),
         // Hunters from fifteen: one, then two, out past the fields after game (VillageFolkEntity.huntWork).
-        new Slot(AssistantEntity.StationTask.HUNT, 1, 15, Age.WOOD, 2));
+        new Slot(AssistantEntity.StationTask.HUNT, 1, 15, Age.WOOD, 2),
+        // The banker, once the bank stands: one, and chosen for its nature (Bank.appoint), not by who asks first.
+        new Slot(AssistantEntity.StationTask.BANK, 1, Bank.FROM, Age.IRON, 1));
 
     /** Forget every settlement. For tests, which share one JVM and would
      *  otherwise inherit each other's villages. */
@@ -325,6 +327,7 @@ public final class Villages {
 
     public static void resetForTests() {
         MADE_UP.clear();
+        Bank.resetForTests();
         Storehouses.resetForTests();
         Storekeeping.resetForTests();
         Couriers.resetForTests();
@@ -635,6 +638,7 @@ public final class Villages {
         for (Slot slot : SLOTS) {
             if (!wantedHere(slot, villageId, total, at)) continue;      // too small (or too young) to want one yet
             if (!craftReady(villageId, slot.trade())) continue;   // a smith with no smithy has nothing to work at
+            if (slot.trade() == AssistantEntity.StationTask.BANK) continue;   // the banker is appointed (Bank.appoint)
             double target = target(villageId, slot, total) * fit;
             double deficit = target - have.getOrDefault(slot.trade(), 0);
             // The first hand of a craft the village has grown into comes before one more of a trade
@@ -692,6 +696,7 @@ public final class Villages {
         // eighty had no beekeeper and no brewer in fifty days, and its first cook came at day 35.
         for (Slot slot : SLOTS) {
             if (slot.age() == Age.WOOD || !wantedHere(slot, villageId, total, at)) continue;
+            if (slot.trade() == AssistantEntity.StationTask.BANK) continue;   // the banker is appointed (Bank.appoint)
             if (have.getOrDefault(slot.trade(), 0) > 0) continue;
             if (craftReady(villageId, slot.trade())) return slot.trade();
         }
@@ -1488,6 +1493,8 @@ public final class Villages {
         if (folk >= 16 && built(villageId, "smithy") < 1) extras.add("smithy");
         if (folk >= 18 && built(villageId, "shop") < 1) extras.add("shop");
         if (folk >= 22 && built(villageId, "brewery") < 1) extras.add("brewery");
+        // A town of thirty keeps its savings somewhere safe and lends them to its home-buyers: a bank (Bank).
+        if (folk >= Bank.FROM && built(villageId, "bank") < 1 && builtStructure(villageId, "bank") == null) extras.add("bank");
         // The Iron Age's best homes: a manor house on a long lot by the square, one for every
         // thirty folk past twenty — six beds each.
         if (folk >= 20 && built(villageId, "manor") < 1 + (folk - 20) / 30 || Homes.wantsAManor(villageId)) extras.add("manor");
@@ -1818,6 +1825,7 @@ public final class Villages {
             case "graveyard" -> "a graveyard, to lay our dead to rest";
             case "smithy" -> "a smithy, for the watch's armour and the miners' picks";
             case "shop" -> "a shop, to sell what the village's crafts make";
+            case "bank" -> "a bank, " + folk + " folk's savings kept safe behind iron bars, and lent to households buying their houses";
             case "brewery" -> "a brewery, for the brewer's potions";
             case "library" -> "a library, where the enchanter keeps its books";
             case "fountain" -> "a fountain on the square, now that the village builds in stone";

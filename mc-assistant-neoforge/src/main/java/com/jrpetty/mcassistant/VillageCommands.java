@@ -28,6 +28,7 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  *   /village chronicle        the nearest village's history, as a book
  *   /village standing         what every village you have met thinks of you
  *   /village house            the village's houses; house buy | house let N | house rent
+ *   /village bank             the bank's books; bank deposit|withdraw|repay N, bank mortgage; bank week|showcase (ops)
  *   /village knacks [name]    the knacks each folk chose for itself; knacks grant <name> <key> (ops)
  *   /village stats            the town's books in full: the analytics screen (as the village board)
  *   /village research         the city's research: what the leader has the town studying, and the tree
@@ -135,6 +136,8 @@ public final class VillageCommands {
                 .then(Commands.literal("let")
                     .then(Commands.argument("coins", IntegerArgumentType.integer(0, 20))
                         .executes(ctx -> house(ctx, "let", IntegerArgumentType.getInteger(ctx, "coins"))))))
+            // The bank (entity/Bank): its books; your account (deposit, withdraw), a mortgage on a house, repay it.
+            .then(com.jrpetty.mcassistant.entity.Bank.command())
             .then(Commands.literal("wages").executes(ctx -> page(ctx, 2)))
             .then(Commands.literal("economy").executes(ctx -> page(ctx, 3)))
             // The sellers' books: what the shop, the café, the tavern and the stores have, sell and make.
@@ -349,6 +352,7 @@ public final class VillageCommands {
                     case SHOP -> McAssistantMod.VILLAGE_COIN.get();
                     case SCOUT -> net.minecraft.world.item.Items.COMPASS;
                     case HUNT -> net.minecraft.world.item.Items.BOW;
+                    case BANK -> net.minecraft.world.item.Items.GOLD_INGOT;
                     case NONE -> net.minecraft.world.item.Items.AIR;
                 }));
             folk.rename(switch (trades[i]) {
