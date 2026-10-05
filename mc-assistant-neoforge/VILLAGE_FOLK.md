@@ -2127,7 +2127,9 @@ the tavern, the café, the shop, the library, the chapel, the guest house and th
 Where each piece goes is worked out from the building's own drawing: furniture against the walls
 from the corners in, the rug on the open floor, and never across the doorway, the way in from it,
 a ladder or a chest. Nothing goes in that the stores did not hold. A child's bed set down later
-rolls a rug back into the stores rather than going without.
+rolls a rug back into the stores rather than going without. After the age's furnishing, each
+household's house gets the things of its own trades and its colours (*Homes that show the trade,
+and luxuries*).
 
 ### The shop's shelves
 
@@ -2144,14 +2146,90 @@ shop means to keep (*What sells, and what to make next*):
 | Flower pot | 2 / 1 / 8 | bricks |
 | Painting, item frame | 1 / 1 / 4 | sticks, and wool or leather |
 | Lantern | 2 / 1 / 8 | iron nuggets (an ingot beaten into nine) and a torch |
+| Glass panes | 8 / 0 / 24 | sixteen cut from six of the smelter's glass (sand from the river bed) |
 | Bucket, shears | 1 / 1 / 4 (shears 3) | iron |
 | Stone pick, axe, hoe, shovel, sword | 1 / 1 / 4 | cobblestone and sticks |
 | Iron pick, axe, shovel, hoe | 1 / 0 / 3 | iron and sticks, of iron the village can spare |
 
 Never out of the builders' timber and stone, nor the smith's iron, nor anything the age is putting
-by. Folk buy their comforts there once there is a shop open (a rug, a pot, a candle, a lantern, a
-chest of their own, a barrel, a bookshelf), and their children's beds; a folk come for the tool of
-its trade and finding none is a sale the shop had not got, and it keeps more of that tool.
+by. Folk buy their luxuries there once there is a shop open (a carpet, a painting, glass for the
+windows, a candle, a pot and a flower for it, a lantern, a banner, a bookshelf: see *Homes that show
+the trade, and luxuries*), and their children's beds; a folk come for the tool of its trade and
+finding none is a sale the shop had not got, and it keeps more of that tool.
+
+### Homes that show the trade, and luxuries
+
+**A house shows who lives in it.** When the village furnishes its houses for the age, each
+household's house also gets the things of its folk's trades, out of the stores and set out tidily
+against the walls (never across the doorway or the way in, never where it would cut a room in two,
+never on the age's own rug and barrel):
+
+| Trade | In its house |
+|---|---|
+| Blacksmith | its anvil |
+| Fisher | a barrel with cod in it, and a rod on the wall |
+| Farmer | a composter, and a sack of seed (a barrel of it) |
+| Miner | its lantern, and a pickaxe in a frame on the wall |
+| Woodcutter | a chopping block (a log, stood on end), and an axe on the wall |
+| Cook | a smoker |
+| Beekeeper | a shelf of honey (a barrel of honey bottles) |
+| Guard | an armour stand |
+| Scout | a map table, and a compass on the wall |
+| Tailor | a loom |
+| Rancher | a bale of hay, and shears on the wall |
+| Smelter | a furnace of its own |
+| Storekeeper | a lectern |
+| Brewer | a brewing stand |
+| Enchanter | a shelf of books |
+| Shopkeeper | a bench of its own |
+| Hunter | a fletching table, and a bow on the wall |
+| Courier | a crate |
+
+Each grown folk's first thing goes in before anybody's second: a little house has room by its walls
+for two. **Nothing comes from nothing.** The thing comes out of the stores; a tool for the wall only
+if the village has more than it keeps (else a plain wooden one, whittled of the stores' planks), the
+cod only out of a full larder; plain joinery (a composter, a barrel, a map table, an armour stand)
+is made there and then of the stores' planks and stone by the game's recipes. What wants a maker —
+the smith's anvil, a dyed rug — the house **waits on the stores for** (the Homes page says what), and
+the makers see to it between their own work: the tailor dyes and weaves, the smith beats out an
+anvil or a lantern, the cook builds a smoker, the beekeeper dips candles, the enchanter makes up a
+bookshelf, the shopkeeper's bench the rest. A trade's own workstation goes to its building first. A
+household that moves out leaves its things to be cleared back into the stores for the next.
+
+**Its colours.** Every folk has a favourite colour, from what it loves: a gardener's is a flower's,
+a stargazer's the night's blue, one that loves gems the diamond's, gold the sun's, books a binding's,
+fish the sea's, sweets a sugared pink, music a royal purple. Always one the meadows give a dye for
+(purple of red and blue). The house gets a rug by the bed in its owner's colour and a banner on the
+wall in its partner's, of wool the tailor dyed with flowers.
+
+**Luxuries: made, bought and used.** Rugs (the tailor, of wool), paintings (sticks and wool), glass
+panes (the smelter's glass, cut at the shop's bench), candles (the beekeeper's comb and string),
+flower pots (fired clay) and lanterns are made of real things and stand on the shop's shelves at the
+price list's prices. A **comfortable** folk, every second day at most, walks to the shop for
+something its home lacks and it can afford — a carpet (in its own colour if the shop has one), a
+painting, glass for an open window, a candle, a pot and a flower to go in it — and a **well-off** one
+for a lantern, a banner in its colour or a bookshelf. It pays at the counter out of its own purse,
+the way every sale at the shop is paid (the shop's books, the treasury), carries it home and sets it
+where it belongs: the carpet on the floor by its bed, the painting on the wall, the panes in the
+window, the candle on a table or the sill, the pot with its flower on the sill. Two things for a
+comfortable folk, four for a well-off one, seven for the wealthy. **Its candles are lit at dusk**,
+each house a minute of its own, and snuffed when the last of the household goes to bed. Players buy
+the same luxuries at the shop's counters.
+
+**What it does for a home.** A home is furnished out of ten: the age's furnishing (two), the things
+of its trades (two), its colours (two) and its luxuries (four, a point a kind). At four its folk are
+a little happier, at seven happier still ("My home's a picture: a blue rug, the smith's anvil, two
+paintings, candles lit"), and what the village put in raises the house's price, three in the hundred
+a point.
+
+**Seeing it.** A folk's card has a **Comforts** line ("a blue rug and banner, the smith's anvil, two
+paintings, candles lit (furnished 7 of 10); blue is its colour"). The town's books: the **Homes**
+page gives each house's score out of ten, and the mouse over a row what is in it, what it waits on
+and its folk's colours; the **Production** page has a **Luxuries** button for what was made of them;
+the **Shops** page says how many luxuries were made and sold this week and how many the folk bought
+for their homes. `/village decor` lists every home's furnishing; `/village decor now` (ops) furnishes
+them as far as the stores run to and sees to the candles; `/village decor showcase` (ops) sets a
+furnished home out where you stand, for the pictures.
 
 ### The leader's hall and the courtyard
 
@@ -3026,6 +3104,10 @@ ripen, days pass, folk work and houses go up at that pace.
   was wanted and not there, what was made, its price and markdown, and what it is short of.
 * `/village stores` — the storehouse's day: its slots, its storekeeper, what went in and out
   and who served the requests, its last tidy, its staff and their runs, and its run list.
+* `/village decor` — every home of the nearest village: who lives there (their trades and
+  favourite colours), how it is furnished out of ten, what is in it and what it waits on the stores
+  for. `decor now` (operators) furnishes the homes as far as the stores run to and sees to the
+  candles; `decor showcase` (operators) sets a furnished home out where you stand, for the pictures.
 * `/village chronicle` — the nearest village's history, as a written book.
 * `/village standing` — what every village you have met thinks of you.
 * `/village ledger` — the nearest village's town ledger, as a book.
@@ -3182,6 +3264,11 @@ Every push to CI:
   nothing sold under cost; an Iron Age village saving its iron gets chests but not a bar beaten
   into a bucket; and the storekeeper makes a chest to order and says why it cannot make a diamond
   pickaxe;
+* furnishes homes and sells luxuries (`DecorGameTests`, dc01 to dc03): a smith's house is given the
+  anvil out of the stores, against its wall with the way in clear, and its colours are waited on; a
+  well-off farmer buys a carpet and a candle the shopkeeper made, its purse down and the shop's
+  takings up, the stores one fewer of each and not a coin made or lost, and both are set out in its
+  house; and the candle is unlit by day, lit at dusk and snuffed after bedtime;
 * measures the pace of work (`PaceGameTests`, pc01 to pc05): stone breaks quicker at level 10
   than at nought and quicker again at 30, with every other piece of work, the bench and the
   fisher's wait following; better picks, axes and hoes are quicker at the same level (a farmer

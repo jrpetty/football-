@@ -512,6 +512,7 @@ public final class Annals {
         out.put("players", players(level, id));
         out.put("leader", leader(level, id, folk, today));
         out.put("homes", homes(level, id, folk));
+        out.put("decor", Decor.report(level, id));                // how each home is furnished, and its luxuries (Decor)
         out.put("now", now(level, v, folk));
         out.put("drivers", strings(drivers(level, v, folk, days)));
         out.put("news", strings(news(id)));

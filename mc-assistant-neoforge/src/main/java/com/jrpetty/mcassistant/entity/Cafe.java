@@ -196,6 +196,8 @@ public final class Cafe {
         out.add(Stockroom.ware(Items.PAINTING, 1, 1, 4, 1, false));
         out.add(Stockroom.ware(Items.ITEM_FRAME, 1, 1, 4, 1, false));
         out.add(Stockroom.ware(Items.LANTERN, 2, 1, 8, 1, false));
+        // Glass for a household's windows (Luxuries): sixteen panes cut from six of the smelter's glass.
+        out.add(Stockroom.ware(Items.GLASS_PANE, 8, 0, 24, 16, false));
         out.add(Stockroom.ware(Items.BUCKET, 1, 1, 4, 1, false));
         out.add(Stockroom.ware(Items.SHEARS, 1, 1, 3, 1, false));
         for (Item tool : new Item[]{ Items.STONE_PICKAXE, Items.STONE_AXE, Items.STONE_HOE, Items.STONE_SHOVEL, Items.STONE_SWORD }) {
@@ -449,13 +451,23 @@ public final class Cafe {
      */
     @Nullable
     public static String folkShops(ServerLevel level, Villages.Village v, VillageFolkEntity f, boolean forWork) {
+        return folkShops(level, v, f, forWork, null);
+    }
+
+    /**
+     * As folkShops, for the one thing it came in for ({@code after}: a luxury for its home, Luxuries), priced
+     * by the price list as a player's would be; null for whatever takes its fancy. The same sale either way.
+     */
+    @Nullable
+    public static String folkShops(ServerLevel level, Villages.Village v, VillageFolkEntity f, boolean forWork,
+                                   @Nullable Predicate<ItemStack> after) {
         if (!open(v.id(), "shop")) return null;
         Predicate<ItemStack> want;
         if (forWork) {
             want = toolFor(f.stationTask());
             if (want == null) return null;
         } else {
-            want = s -> shopWorthy(s) && !s.isDamageableItem();
+            want = after != null ? after : s -> shopWorthy(s) && !s.isDamageableItem();
         }
         List<ItemStack> goods = fromStores(level, v.id(), want, false);
         if (goods.isEmpty()) {
@@ -466,7 +478,7 @@ public final class Cafe {
             return null;
         }
         ItemStack pick = forWork ? goods.get(0) : goods.get(f.getRandom().nextInt(goods.size()));
-        Market.Good g = Market.goodFor(pick);
+        Market.Good g = after != null ? Budget.goodFor(pick) : Market.goodFor(pick);
         int price = g == null ? 3 : Market.sellPrice(g, Market.stock(level, v.id(), s -> ItemStack.isSameItemSameComponents(s, pick)), false);
         price = Math.max(1, pick.isEnchanted() ? price * 3 : price);
         price = Stockroom.asked(level, v.id(), pick, price, 1);              // slow stock marked down, never under cost

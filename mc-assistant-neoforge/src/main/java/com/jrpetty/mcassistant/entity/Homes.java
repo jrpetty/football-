@@ -577,7 +577,8 @@ public final class Homes {
     /** What a house sells for: by its size and the age of the town (a tenth less under the town's Home Loans: CityTree). */
     static int price(UUID village, Home h) {
         int base = h.structure.equals("manor") ? 120 : Ledger.grown(village, h.anchor) ? 55 : 35;
-        return (int) Math.round(base * (1.0 + 0.25 * Villages.ageOf(village).ordinal()) * CityTree.pricePercent(village) / 100.0);
+        return (int) Math.round(base * (1.0 + 0.25 * Villages.ageOf(village).ordinal()) * CityTree.pricePercent(village) / 100.0
+            * Decor.pricePercent(village, h.anchor) / 100.0);                // a furnished house is worth more (Decor)
     }
 
     /** How big a house is, for its rent: a house 1, a two-storey house 2, a manor 4. */

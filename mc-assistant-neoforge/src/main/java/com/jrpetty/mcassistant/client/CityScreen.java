@@ -405,9 +405,19 @@ public class CityScreen extends Screen {
 
     // ------------------------------------------------------------------ production
 
-    private static final String[] KINDS = { "all", "food", "timber", "stone", "ore", "animal", "craft", "plant", "other" };
-    private static final String[] KIND_WORDS = { "All", "Food", "Timber", "Stone", "Ore & metal", "Wool, hides", "Crafts", "Plants", "Other" };
+    private static final String[] KINDS = { "all", "food", "timber", "stone", "ore", "animal", "craft", "plant", "other", "luxury" };
+    private static final String[] KIND_WORDS = { "All", "Food", "Timber", "Stone", "Ore & metal", "Wool, hides", "Crafts", "Plants", "Other",
+        "Luxuries" };
     private static final String[] PROD_HEADS = { "Item", "Yest.", "A day", "30 d", "In all", "Used", "Stock", "c a day", "" };
+
+    /** A luxury for a home, by its name in the books (as entity/Luxuries counts them): carpets and banners of
+     *  every colour, candles, paintings, glass and its panes, flower pots, lanterns, bookshelves. */
+    private static boolean luxury(String id) {
+        String p = id.contains(":") ? id.substring(id.indexOf(':') + 1) : id;
+        return p.endsWith("_carpet") || p.endsWith("_banner") || p.endsWith("candle") || p.equals("painting") || p.equals("glass_pane")
+            || p.equals("glass") || p.equals("flower_pot") || p.equals("lantern") || p.equals("bookshelf") || p.equals("rug")
+            || p.equals("banner");
+    }
 
     private static net.minecraft.world.item.ItemStack stackOf(String id) {
         net.minecraft.resources.ResourceLocation rl = net.minecraft.resources.ResourceLocation.tryParse(id.contains(":") ? id : "minecraft:" + id);
@@ -488,7 +498,11 @@ public class CityScreen extends Screen {
         int[] cols = new int[8];
         for (int i = 1; i < 8; i++) cols[i] = nameW + (i - 1) * figW;
         List<CompoundTag> shown = new ArrayList<>();
-        for (CompoundTag r : rows) if (prodKind == null || prodKind.equals(r.getString("kind"))) shown.add(r);
+        for (CompoundTag r : rows) {
+            // Luxuries (Luxuries): the carpets, paintings, glass, candles, pots, lanterns, banners and bookshelves made for homes.
+            boolean lux = luxury(r.getString("id"));
+            if (prodKind == null || prodKind.equals(r.getString("kind")) || (prodKind.equals("luxury") && lux)) shown.add(r);
+        }
         Comparator<CompoundTag> order = switch (prodSort) {
             case 0 -> Comparator.comparing((CompoundTag r) -> itemName(r.getString("id")));
             case 1 -> Comparator.comparingInt((CompoundTag r) -> r.getInt("d1"));
@@ -627,6 +641,24 @@ public class CityScreen extends Screen {
         card(g, x + 3 * (cardW + 4), sy, cardW, cardH, "Made this week", pick.getBoolean("makes") ? num(pick.getInt("made7")) : "—",
             pick.getBoolean("makes") ? pick.getInt("madeToday") + " today" : "sells what others make", PURPLE);
         int ty = sy + cardH + 6;
+        if (pick.getString("id").equals("shop")) {
+            // Luxuries for homes: made this week (the town's production), sold at this counter, bought by the folk.
+            int made = 0, sold = 0, coin = 0;
+            ListTag made7 = data.getCompound("production").getList("items", Tag.TAG_COMPOUND);
+            for (int i = 0; i < made7.size(); i++) if (luxury(made7.getCompound(i).getString("id"))) made += made7.getCompound(i).getInt("w7");
+            ListTag wl0 = pick.getList("wares", Tag.TAG_COMPOUND);
+            for (int i = 0; i < wl0.size(); i++) {
+                CompoundTag r = wl0.getCompound(i);
+                if (!luxury(r.getString("item")) && !luxury(r.getString("id"))) continue;
+                sold += r.getInt("sold7");
+                coin += r.getInt("coin7");
+            }
+            CompoundTag decor = data.getCompound("decor");
+            String lux = "Luxuries this week: " + made + " made, " + sold + " sold here for " + coin + "c; the folk bought "
+                + decor.getInt("bought7") + " for their homes (" + decor.getInt("coin7") + "c)";
+            small(g, Ui.clip(font, lux, (int) (cw / 0.75)), x, ty, PURPLE);
+            ty += 10;
+        }
         ListTag shorts = pick.getList("short", Tag.TAG_STRING);
         if (shorts.size() > 0) {
             StringBuilder sb = new StringBuilder("Short of: ");
@@ -1009,7 +1041,10 @@ public class CityScreen extends Screen {
             { "Saving to buy", Integer.toString(hm.getInt("saving")) }, { "Put by", hm.getInt("saved") + "c" },
             { "Rent yesterday", hm.getInt("rent_yesterday") + "c" }, { "Owed", hm.getInt("owed") + "c" },
             { "Players'", Integer.toString(hm.getInt("players")) }, { "Empty", Integer.toString(hm.getInt("empty")) },
-            { "Founders rent-free", Integer.toString(hm.getInt("rent_free")) } };
+            { "Founders rent-free", Integer.toString(hm.getInt("rent_free")) },
+            // How well the homes are furnished (Decor): the average out of ten, and how many are done well.
+            { "Furnished", String.format(java.util.Locale.ROOT, "%.1f", data.getCompound("decor").getInt("avg10") / 10.0) + "/10, "
+                + data.getCompound("decor").getInt("well") + " well" } };
         int colW = cw / 5;
         for (int i = 0; i < figures.length; i++) {
             int cx = x + (i % 5) * colW, cy = ty + (i / 5) * 10;
@@ -1044,7 +1079,9 @@ public class CityScreen extends Screen {
             g.fill(x - 2, hy - 1, x, hy + 9, sc);
             String rent = r.getBoolean("rent_free") ? "free (" + r.getInt("rent_due") + "c later)"
                 : r.getInt("rent") == 0 ? "—" : r.getInt("rent") + "c" + (r.getInt("owed") > 0 ? " (owes " + r.getInt("owed") + ")" : "");
-            String[] cells = { r.getString("household"), r.getString("kind") + ", " + r.getString("address"), status, rent };
+            CompoundTag dh = decorOf(r.getLong("anchor"));
+            String[] cells = { r.getString("household"), r.getString("kind") + ", " + r.getString("address")
+                + (dh == null ? "" : " · " + dh.getInt("score") + "/10"), status, rent };
             for (int c = 0; c < cells.length; c++) {
                 int w = cols[c + 1] - cols[c] - 3;
                 small(g, Ui.clip(font, cells[c], (int) (w / 0.75)), x + cols[c] + (c == 0 ? 2 : 0), hy + 1, c == 2 ? sc : Ui.INK);
@@ -1070,6 +1107,12 @@ public class CityScreen extends Screen {
                 else if (r.getBoolean("rent_free")) tip.add(Component.literal("Rent-free: " + r.getString("rent_note")));
                 if (price > 0) tip.add(Component.literal("Put by " + saved + " of " + price + "c"));
                 tip.add(Component.literal((r.getBoolean("wants") ? "Wants a house of its own: " : "Content to rent: ") + r.getString("why")));
+                if (dh != null) {
+                    tip.add(Component.literal("Furnished " + dh.getInt("score") + " of 10" + (dh.getString("line").isEmpty() ? " — bare as yet"
+                        : ": " + dh.getString("line"))));
+                    if (!dh.getString("waiting").isEmpty()) tip.add(Component.literal("Waiting on the stores for " + dh.getString("waiting")));
+                    if (!dh.getString("colours").isEmpty()) tip.add(Component.literal("Favourite colours: " + dh.getString("colours")));
+                }
                 hover = tip;
                 hoverX = mx;
                 hoverY = my;
@@ -1077,8 +1120,18 @@ public class CityScreen extends Screen {
             hy += 10;
         }
         if (rows.isEmpty()) small(g, "No household has a house yet.", x, hy, Ui.MUTED);
-        small(g, Ui.clip(font, rows.size() + " households · the mouse over a row for the whole of it" + (rows.size() > rowsFit ? " · scroll for more" : ""),
-            (int) (cw / 0.75)), x, y + ch - 9, Ui.FAINT);
+        ListTag waits = data.getCompound("decor").getList("wants", Tag.TAG_STRING);
+        String waiting = waits.isEmpty() ? "" : " · homes wait on the stores for " + waits.getString(0)
+            + (waits.size() > 1 ? " and " + (waits.size() - 1) + " more" : "");
+        small(g, Ui.clip(font, rows.size() + " households · the mouse over a row for the whole of it" + (rows.size() > rowsFit ? " · scroll for more" : "")
+            + waiting, (int) (cw / 0.75)), x, y + ch - 9, Ui.FAINT);
+    }
+
+    /** A house's furnishing from the books (Decor), by its anchor; null if not counted. */
+    private CompoundTag decorOf(long anchor) {
+        ListTag l = data.getCompound("decor").getList("houses", Tag.TAG_COMPOUND);
+        for (int i = 0; i < l.size(); i++) if (l.getCompound(i).getLong("anchor") == anchor) return l.getCompound(i);
+        return null;
     }
 
     private void stores(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my) {
