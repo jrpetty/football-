@@ -1182,7 +1182,8 @@ public final class Homes {
         for (VillageFolkEntity f : grown(household)) {
             f.persona().remember(day, "we started paying rent on day " + day + ": we can afford it now", 4);
         }
-        FolkTalk.speak(household.get(0), FolkTalk.pick(level.getRandom(), "We can pay our way now. Rent from today — fair's fair.",
+        List<VillageFolkEntity> grown = grown(household);
+        FolkTalk.speak(grown.isEmpty() ? household.get(0) : grown.get(0), FolkTalk.pick(level.getRandom(), "We can pay our way now. Rent from today — fair's fair.",
             "No more living on the village's kindness: we pay rent now.", "Rent day, our first. Feels like we've made it."));
     }
 
