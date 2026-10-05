@@ -134,9 +134,9 @@ public final class Dealings {
     public static String dice(VillageFolkEntity f, Player p, String text) {
         if (f.isBaby()) return "My mum says I'm not allowed to play dice.";
         int stake = Math.max(1, Math.min(20, Commerce.number(text, 3)));
-        if (f.purse() < stake) return "I've not got " + stake + " coins to lose. Something smaller?";
+        if (f.purse() < stake) return "I've not got " + coins(stake) + " to lose. Something smaller?";
         int coins = Market.coinsHeld(p);
-        if (coins < stake) return "You've not got " + stake + " coins on you. Put your money where your mouth is!";
+        if (coins < stake) return "You've not got " + coins(stake) + " on you. Put your money where your mouth is!";
         if (f.life().has(Social.Trait.SHY) && f.getRandom().nextInt(3) == 0) return "Oh, I'm no good at games. Ask somebody else.";
         int mine = 2 + f.getRandom().nextInt(6) + f.getRandom().nextInt(6);
         int yours = 2 + f.getRandom().nextInt(6) + f.getRandom().nextInt(6);
@@ -146,12 +146,12 @@ public final class Dealings {
             f.spend(stake);
             giveCoins(p, stake);
             return "You rolled " + yours + ", I rolled " + mine + ". " + FolkTalk.pick(f.getRandom(), "Curses! Here's your " + stake + ".",
-                "Beginner's luck. Again tomorrow?", "Well played. " + stake + " coins to you.");
+                "Beginner's luck. Again tomorrow?", "Well played. " + coins(stake) + " to you.");
         }
         if (mine > yours) {
             Market.payOut(p, stake);
             f.earn(stake);
-            return "You rolled " + yours + ", I rolled " + mine + ". " + FolkTalk.pick(f.getRandom(), "Ha! " + stake + " coins to me.",
+            return "You rolled " + yours + ", I rolled " + mine + ". " + FolkTalk.pick(f.getRandom(), "Ha! " + coins(stake) + " to me.",
                 "The dice love me today.", "Better luck next time!");
         }
         return "We both rolled " + mine + "! A draw — nobody pays.";
@@ -394,7 +394,7 @@ public final class Dealings {
         for (Map.Entry<Item, Integer> e : fromStores.entrySet()) storesWorth += Prices.each(e.getKey()) * e.getValue();
         int price = (int) Math.max(1, Math.round(storesWorth * Budget.PLAYER_MARKUP + Prices.each(want) * 0.2));
         price = haggled(village, p.getUUID(), d, price);
-        if (Market.coinsHeld(p) < price) return "That'd be " + price + " coins, makings and work. You've " + Market.coinsHeld(p) + ".";
+        if (Market.coinsHeld(p) < price) return "That'd be " + coins(price) + ", makings and work. You've " + Market.coinsHeld(p) + ".";
         // Take it all.
         for (Map.Entry<Integer, Integer> e : fromPlayer.entrySet()) p.getInventory().getItem(e.getKey()).shrink(e.getValue());
         for (Map.Entry<Item, Integer> e : fromStores.entrySet()) {
@@ -407,7 +407,7 @@ public final class Dealings {
         Budget.forget(village);
         ORDERS.put(p.getUUID(), new Order(village, want, d + 1, f.displayNameCap()));
         f.persona().feelFor(p.getUUID(), p.getName().getString(), 2);
-        return "Right you are: " + price + " coins, and it'll be ready tomorrow. Come and ask for it.";
+        return "Right you are: " + coins(price) + ", and it'll be ready tomorrow. Come and ask for it.";
     }
 
     private static boolean craftsman(AssistantEntity.StationTask t) {
@@ -472,7 +472,7 @@ public final class Dealings {
                     + " to mend that, and we've none to spare. Bring one.";
             }
         }
-        if (Market.coinsHeld(p) < price) return "Mending that would be " + price + " coins. You've " + Market.coinsHeld(p) + ".";
+        if (Market.coinsHeld(p) < price) return "Mending that would be " + coins(price) + ". You've " + Market.coinsHeld(p) + ".";
         if (scrap != null) {
             final Item s0 = scrap;
             if (fromPlayer) {
@@ -491,7 +491,7 @@ public final class Dealings {
         held.setDamageValue(0);
         f.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
         level.playSound(null, f.blockPosition(), net.minecraft.sounds.SoundEvents.ANVIL_USE, net.minecraft.sounds.SoundSource.NEUTRAL, 0.6F, 1.0F);
-        return "There — good as new. " + price + (price == 1 ? " coin" : " coins") + ", thank you.";
+        return "There — good as new. " + coins(price) + ", thank you.";
     }
 
     // ------------------------------------------------------------------ 11. a feast on you
@@ -503,7 +503,7 @@ public final class Dealings {
         long d = day(f);
         int cost = 10 + Villages.headcount(village);
         if (Gatherings.sponsored(village, d)) return "Somebody's paying for tonight already. Come and eat with us!";
-        if (Market.coinsHeld(p) < cost) return "A feast for the whole village would be " + cost + " coins. You've " + Market.coinsHeld(p) + ".";
+        if (Market.coinsHeld(p) < cost) return "A feast for the whole village would be " + coins(cost) + ". You've " + Market.coinsHeld(p) + ".";
         Market.payOut(p, cost);
         Ledger.addCoins(village, cost);
         String name = p.getName().getString();
@@ -515,4 +515,7 @@ public final class Dealings {
         Villages.tell(village, d, name + " paid for a feast for the whole village tonight");
         return "A feast? Tonight? On you? Everybody will be there — thank you, " + name + "!";
     }
+
+    /** "1 coin", "5 coins". */
+    static String coins(int n) { return n + (n == 1 ? " coin" : " coins"); }
 }
