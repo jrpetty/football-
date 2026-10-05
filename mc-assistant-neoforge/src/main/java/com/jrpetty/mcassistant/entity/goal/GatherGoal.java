@@ -556,6 +556,21 @@ public class GatherGoal extends Goal {
         if (targetPos != null) {
             unreachable.add(targetPos.immutable());
             assistant.noteUnreachable(targetPos);   // survives this goal ending
+            // What could not be reached is seldom alone: the rest of the tree across the ravine,
+            // the rest of the seam up the cliff. The blocks of the same kind round it go too, so
+            // the next pick is somewhere else, not the block beside this one.
+            // (Not stone, sand or gravel: those are the ground itself, and the next pick is anywhere.)
+            if (request != null && request.kind() != Kind.STONE && request.kind() != Kind.SAND && request.kind() != Kind.GRAVEL) {
+                int marked = 0;
+                for (BlockPos p : BlockPos.betweenClosed(targetPos.offset(-2, -2, -2), targetPos.offset(2, 2, 2))) {
+                    if (marked >= 16) break;
+                    if (request.kind().matches(assistant.level().getBlockState(p))) {
+                        unreachable.add(p.immutable());
+                        assistant.noteUnreachable(p);
+                        marked++;
+                    }
+                }
+            }
         }
         if (!announcedReroute && request != null) {
             assistant.say("Can't reach that " + request.kind().label + " — going after another.");

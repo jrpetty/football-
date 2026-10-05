@@ -226,6 +226,16 @@ public final class Caravans {
 
     /** As above; {@code take} false only says what it would be, and takes nothing. */
     static List<ItemStack> load(ServerLevel level, Villages.Village from, UUID to, boolean neededOnly, boolean take) {
+        return load(level, from, to, neededOnly, take, java.util.Set.of());
+    }
+
+    /**
+     * As above, leaving out the goods the caravan has just brought: the carrier that unloaded the
+     * mother's spare bread in the colony took it all straight back again, because the mother, once
+     * the bread was gone, was short of bread.
+     */
+    static List<ItemStack> load(ServerLevel level, Villages.Village from, UUID to, boolean neededOnly, boolean take,
+                                java.util.Set<Market.Good> brought) {
         java.util.Set<Villages.Task> wanted = java.util.EnumSet.noneOf(Villages.Task.class);
         for (Villages.Need n : Villages.needs(level, to)) wanted.add(n.task());
         List<Market.Good> order = new ArrayList<>();
@@ -236,6 +246,7 @@ public final class Caravans {
         List<ItemStack> out = new ArrayList<>();
         for (Market.Good g : order) {
             if (out.size() >= 4) break;
+            if (brought.contains(g)) continue;
             int have = Market.stock(level, from.id(), g.what());
             int plenty = g.bundle() * 4;
             int spare = Math.min(64, have - plenty);
@@ -361,6 +372,7 @@ public final class Caravans {
         Villages.Village other = Villages.get(t.back ? t.to : t.from);
         int unloaded = 0;
         double worth = 0;
+        java.util.Set<Market.Good> brought = new java.util.HashSet<>();
         StringBuilder what = new StringBuilder();
         if (here != null) {
             for (int i = 0; i < f.getInventoryItems().size(); i++) {
@@ -374,6 +386,7 @@ public final class Caravans {
                 if (moved <= 0) continue;
                 s.shrink(moved);
                 unloaded += moved;
+                brought.add(Market.goodFor(lot));
                 worth += Market.goodFor(lot).value() * moved;
                 if (what.length() < 60) what.append(what.length() == 0 ? "" : ", ").append(moved).append(' ')
                     .append(Market.goodFor(lot).name().toLowerCase());
@@ -387,7 +400,7 @@ public final class Caravans {
         if (!t.back && here != null && other != null) {
             // Load what the colony has plenty of and the mother is short of, for the way home.
             double back = 0;
-            for (ItemStack s : load(level, here, other.id(), true)) {
+            for (ItemStack s : load(level, here, other.id(), true, true, brought)) {
                 Market.Good g = Market.goodFor(s);
                 ItemStack left = f.insertItem(s);
                 if (g != null) back += g.value() * (s.getCount() - left.getCount());

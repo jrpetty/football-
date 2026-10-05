@@ -2002,7 +2002,7 @@ public class VillageFolkEntity extends AssistantEntity {
                 for (net.minecraft.world.level.block.entity.BlockEntity be : chunk.getBlockEntities().values()) {
                     if (!(be instanceof net.minecraft.world.level.block.entity.BedBlockEntity)) continue;
                     BlockPos p = be.getBlockPos();
-                    if (!bedOnOffer(p)) continue;
+                    if (!bedOnOffer(p) || !bedFit(p)) continue;
                     double d = p.distSqr(from);
                     if (d < bestDist) { bestDist = d; best = p; }
                 }
@@ -2011,6 +2011,19 @@ public class VillageFolkEntity extends AssistantEntity {
         if (best == null) return false;
         takeBed(best);
         return true;
+    }
+
+    /**
+     * A bed down in the ground (a buried ruin's, a vault's) is nobody's home: three folk of one
+     * village claimed one eighteen below sea level a hundred blocks off, could not walk to it, and
+     * were set down beside it every night, to spend the morning climbing out.
+     */
+    @Override
+    protected boolean bedFit(BlockPos bed) {
+        if (!level().hasChunkAt(bed)) return true;                   // out of sight: as it was
+        int surface = level().getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+            bed.getX(), bed.getZ());
+        return bed.getY() >= surface - 8;
     }
 
     /** Where its partner sleeps, else one of its parents (a child sleeps by its family). */
@@ -4062,6 +4075,13 @@ public class VillageFolkEntity extends AssistantEntity {
             if (Math.abs(a.getBlockX() - c.getX()) <= r && Math.abs(a.getBlockZ() - c.getZ()) <= r) return true;
         }
         return false;
+    }
+
+    @Override
+    protected int tripToStores() {
+        UUID village = ownerId();
+        if (village == null || villageCentre == null || workZone() == null) return 0;
+        return (int) Math.sqrt(workZone().center().distSqr(villageCentre));
     }
 
     /** Carrying a load it took off a worker's hands, on its way to the stores. */

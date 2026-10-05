@@ -42,12 +42,24 @@ public final class TownJobs {
      * get to none of them.
      */
     static final long STICKY = 100;
+    /**
+     * A hand's turn on the town's work, and then its rest from it: it goes back to its own trade
+     * (and, between trades, gets the chance to look for ground) while another takes its place.
+     * The road out to a colony is a long walk, so its crew does a longer turn.
+     */
+    static final long SHIFT = 2400, ROAD_SHIFT = 6000, REST = 4800;
+    /**
+     * A village of fewer grown folk than this spares nobody for its finer works (the streets, the
+     * lamps, the gardens, the signs): every hand it has is needed at its trade and on its first
+     * buildings. Its beds are made up and its stores given room all the same.
+     */
+    static final int SETTLED = 5;
 
     static final class Crew {
         final UUID folk;
         BlockPos at;
         String what = "";
-        long calledAt, spotCalledAt = -100000L;
+        long calledAt, spotCalledAt = -100000L, since;
         int walkTick = -1000;
         int pieces;
 
@@ -58,12 +70,15 @@ public final class TownJobs {
 
     private static final Map<String, Crew> CREW = new ConcurrentHashMap<>();
     private static final Map<UUID, String> ON = new ConcurrentHashMap<>();
+    /** Hands resting from the town's work after a turn at it, till when. */
+    private static final Map<UUID, Long> RESTING = new ConcurrentHashMap<>();
     /** The game tests that check what the works build (not who builds it) have them done at once. */
     private static volatile boolean instant;
 
     public static void resetForTests() {
         CREW.clear();
         ON.clear();
+        RESTING.clear();
     }
 
     /** Tests: the works done at once (true), or by hand (false, as in a real game). */
@@ -96,11 +111,21 @@ public final class TownJobs {
             f = choose(level, v, works, at, prefer, now);
             if (f == null) return false;
             c = new Crew(f.getUUID());
+            c.since = now;
             CREW.put(key, c);
             ON.put(f.getUUID(), key);
             f.clearQueue();
             f.getNavigation().stop();
             f.brain("called to the town's work: " + what);
+        }
+        if (now - c.since > (works.startsWith("road/") ? ROAD_SHIFT : SHIFT)) {
+            // Its turn is done: back to its own work, and the next call sends somebody else.
+            CREW.remove(key);
+            ON.remove(f.getUUID());
+            RESTING.put(f.getUUID(), now + REST);
+            release(level, f, c);
+            f.brain("its turn at the town's work done: " + c.what);
+            return false;
         }
         boolean sameArea = c.at != null && c.at.distSqr(at) <= (double) (REACH * 2) * (REACH * 2);
         if (c.at != null && !sameArea && now - c.spotCalledAt < STICKY) return false;   // busy at another spot: this waits its turn
@@ -205,14 +230,22 @@ public final class TownJobs {
             adults++;
             if (a instanceof VillageFolkEntity f && ON.containsKey(f.getUUID()) && busy(f)) busy++;
         }
+        if (adults < SETTLED && !essential(works)) return null;      // a young village: its trades first
         if (busy >= Math.max(1, adults / 8)) return null;            // never more than one hand in eight
+        RESTING.values().removeIf(until -> until <= now);
         VillageFolkEntity best = null;
         double bestScore = -Double.MAX_VALUE;
         for (AssistantEntity a : Villages.folkOf(v.id())) {
             if (!(a instanceof VillageFolkEntity f) || !fit(f, works) || ON.containsKey(f.getUUID()) && busy(f)) continue;
+            if (RESTING.containsKey(f.getUUID())) continue;              // had its turn: somebody else's now
             AssistantEntity.StationTask trade = f.stationTask();
+            // Not yet decided on a trade: it is about to, and that comes first. (Once decided, a
+            // folk with no ground for it yet is just the hand to spare: see below.)
+            if (trade == AssistantEntity.StationTask.NONE && f.workZone() == null) continue;
             double score = 0;
             if (prefer != null && trade == prefer) score += 60;
+            if (f.workZone() == null && trade != AssistantEntity.StationTask.HAUL
+                && trade != AssistantEntity.StationTask.STORE && trade != AssistantEntity.StationTask.GUARD) score += 40;   // between grounds
             switch (trade) {
                 case NONE -> score += 50;
                 case HAUL -> score += 35;
@@ -227,6 +260,11 @@ public final class TownJobs {
             if (score > bestScore) { bestScore = score; best = f; }
         }
         return best;
+    }
+
+    /** The works a village has done even while it is young: its beds made up, room in its stores. */
+    static boolean essential(String works) {
+        return works.equals("beds") || works.equals("stores");
     }
 
     private static UUID owner(VillageFolkEntity f) {

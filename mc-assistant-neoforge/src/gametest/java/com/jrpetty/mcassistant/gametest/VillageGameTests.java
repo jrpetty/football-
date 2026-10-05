@@ -2539,6 +2539,7 @@ public class VillageGameTests {
         level.setBlock(field.below(), Blocks.WATER.defaultBlockState(), 3);
         farmer.assignPlot(com.jrpetty.mcassistant.entity.WorkZone.around(field, 5, com.jrpetty.mcassistant.entity.WorkZone.DEFAULT_DEPTH), "the field");
         farmer.setJob(StationTask.FARM);
+        com.jrpetty.mcassistant.village.Ledger.addCoins(village, 50);        // the cuttings are bought from a pedlar
         boolean cuttings = com.jrpetty.mcassistant.entity.Trades.kit(farmer);
         int cane = farmer.countCarried(s -> s.is(Items.SUGAR_CANE));
         String planted = com.jrpetty.mcassistant.entity.Links.cane(farmer, level);
@@ -2546,6 +2547,8 @@ public class VillageGameTests {
         for (BlockPos q : BlockPos.betweenClosed(field.offset(-2, -1, -2), field.offset(2, 1, 2))) {
             if (level.getBlockState(q).is(Blocks.SUGAR_CANE)) { caneAt = q.immutable(); break; }
         }
+        Kit.log("t41 the cuttings: bought " + cuttings + ", cane " + cane + ", planted " + planted + " at " + caneAt
+            + "; coins " + com.jrpetty.mcassistant.village.Ledger.coins(village));
         helper.assertTrue(cuttings && cane == 3 && planted != null && caneAt != null,
             "the first farmer brings cane cuttings and plants one on the water's edge (" + planted + ")");
         level.setBlock(caneAt.above(), Blocks.SUGAR_CANE.defaultBlockState(), 2 | 16);

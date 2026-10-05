@@ -1558,6 +1558,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Is this animal one of its village's own herd (penned, led, brought home), not game? (VillageFolkEntity) */
     public boolean spareTheHerd(net.minecraft.world.entity.animal.Animal a) { return false; }
 
+    /** How far its work is from where it banks, in blocks (VillageFolkEntity; 0 otherwise). */
+    protected int tripToStores() { return 0; }
+
     /** A village carrier's round with no wand-set route (VillageFolkEntity). */
     protected boolean haulerRound() { return false; }
 
@@ -2550,6 +2553,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Find a bed of its own for tonight. A settlement's folk look all over the village. */
     protected boolean findABed(BlockPos base) { return claimBedNear(base); }
 
+    /** Is this bed one to sleep in at all (VillageFolkEntity: not one down a cave)? */
+    protected boolean bedFit(BlockPos bed) { return true; }
+
     /** Is this bed (its head) free to be claimed: nobody in it, not a player's, not a mate's? */
     protected boolean bedOnOffer(BlockPos pos) {
         BlockState bedState = level().getBlockState(pos);
@@ -2624,9 +2630,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // The end of the day is for company before it is for bed (VillageFolkEntity).
         if (!isSleeping() && eveningSocial()) return true;
         BlockPos bed = bedPos;
-        if (bed != null && !(level().getBlockState(bed).getBlock()
-                instanceof net.minecraft.world.level.block.BedBlock)) {
-            bed = null;                 // someone mined it
+        if (bed != null && (!(level().getBlockState(bed).getBlock()
+                instanceof net.minecraft.world.level.block.BedBlock) || !bedFit(bed))) {
+            bed = null;                 // someone mined it (or it is no bed to sleep in: VillageFolkEntity)
             bedPos = null;
         }
         // No bed of its own? Claim the nearest free one around home or the
@@ -6770,12 +6776,16 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // Stash sooner than a third of a pack: a rancher trickling in 1-3 wool
         // at a time looked like it never used its chest at all. Any output at
         // all gets banked once the bot has been holding it a while.
-        boolean lingering = surplus > 0 && tickCount - lastStashTick > (isSettler() ? 1800 : 3600);
+        // The longer the walk to the stores, the bigger the load worth carrying and the longer
+        // a trickle waits: a miner a hundred blocks out walked home with three cobblestone.
+        // (A far worker's load is also what the village's carriers come out for.)
+        int trip = tripToStores();
+        boolean lingering = surplus > 0 && tickCount - lastStashTick > (isSettler() ? 1800 + trip * 20 : 3600);
         // Bank a batch, not a handful: every stash is a walk there and back,
         // so waiting for a fuller load halves the trips for the same output.
         // The lingering timer still banks a trickle, and a full pack always
         // forces a run — nothing is ever left uncollectable.
-        if (!isPackFull() && surplus < (isSettler() ? Math.min(carryThreshold(), 24) : carryThreshold())
+        if (!isPackFull() && surplus < Math.max(trip / 6, isSettler() ? Math.min(carryThreshold(), 24) : carryThreshold())
             && !lingering) {
             return false;
         }
