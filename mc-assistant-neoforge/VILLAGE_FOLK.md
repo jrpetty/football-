@@ -2391,6 +2391,108 @@ the board "Homes: ... 7 rented, 2 owned, 3 saving to buy; rent 7 yesterday". The
 all, a row a household: where, on what terms, the rent, what it owes, what it has put by against
 the price, and whether it wants to own and why.
 
+### Knacks: what each folk chooses for itself
+
+As a folk grows in experience it earns **knack points**, one at each fifth level of the trade it is
+best at (levels 5, 10, 15, 20, 25 and 30), six in a lifetime at most. A child earns none. It spends
+each point on a **knack** of its own choosing: nobody chooses for it. It chooses by itself, at a quiet
+moment of its day (on its break, or off work in the evening, awake), one a day at most, and says so
+out loud ("I've got the knack of it now: Steady Hands."). It remembers what it chose, the day, and
+why, and keeps its knacks for life, even when it changes its trade. A trade's knack only works while
+it works that trade (the Skills page shows it as "resting" otherwise); the others go with it
+everywhere.
+
+Every knack is slight: a few in a hundred quicker, a little more of something, a little less spent.
+There are twenty-four, in three families.
+
+**Trade** (only in its own trade):
+
+| Knack | Trade | What it does |
+|---|---|---|
+| Steady Hands | miner | +5% pace at the mine |
+| Keen Eye | miner | one ore in eight gives one more of what it drops |
+| Green Thumb | farmer | +5% pace in the fields |
+| Careful Harvest | farmer | one harvest in three gives a seed back |
+| Clean Cut | lumberjack | +5% pace felling trees |
+| Drilled | guard | +1 armour while it is a guard |
+| Sharp Eyes | guard | picks out its mark from 32 blocks off the wall instead of 28 |
+| Practised Hand | smith, tailor, brewer, enchanter | +5% pace at the bench |
+| Fire Tender | smelter | the furnaces' fuel goes about an eighth further (one load in two costs a piece less) |
+| Strong Back | hauler | carries 32 more on each load of its round (288 instead of 256) |
+| Tidy Shelves | storekeeper | +5% pace in the storehouse |
+| Patient | fisher, hunter | +5% pace |
+| Gentle Hand | rancher, beekeeper | +5% pace |
+| Friendly Face | cook, shopkeeper | +5% takings: a buyer at its counter leaves a coin's tip now and then (a twentieth of the price, on average), while it is at work |
+
+**Nature** (one for each trait; open to anyone whose nature is not the opposite, so a grump never
+takes Bright Spirit, nor a cheerful folk Grim Resolve):
+
+| Knack | Nature | What it does |
+|---|---|---|
+| Bright Spirit | cheerful | its mood +3, and its friends' +1 while they are near it |
+| Early Riser | hardworking | its break is 15% shorter |
+| Good Company | sociable | its friendships grow about a quarter quicker |
+| Unflappable | easygoing | its mood never falls below 35 |
+| Quiet Focus | shy | +3% pace with nobody else within 8 blocks |
+| Quick Study | curious | +10% experience at its trade |
+| Grim Resolve | grumpy | +4% pace when its mood is low (under 45) |
+
+**Purse**:
+
+| Knack | What it does |
+|---|---|
+| Thrifty | pays a tenth less at the shop, the café and the market |
+| Haggler | +5% on its wages: an extra coin now and then (on four coins a day, a coin every fifth day) |
+| Nest Egg | once: about 30% of its house's price toward buying it |
+
+**How it chooses.** It weighs every knack open to it:
+
+* **its trade**: the knacks of the trade it works count most, and more the better it is at it; a
+  trade it once worked counts a little. A hard worker likes the pace knacks, a Guardian the watch's,
+  a Provider the fields', a Visionary the mine's and the bench's;
+* **its nature**: the knack of its own trait counts as much as its trade's;
+* **what it cares about** (see *What each folk cares about*): a Merchant at heart reaches for Thrifty
+  or Haggler, a Homemaker for Nest Egg, a Free Spirit for Bright Spirit, Unflappable and Good
+  Company, a Visionary for Quick Study;
+* **how it is placed**: a household that rents its house and wants to buy it reaches for Nest Egg
+  before anything else; a lonely folk for Good Company; a folk that has been low for Unflappable,
+  Bright Spirit or Grim Resolve; a folk whose work is a lonely one (the mine, the river, the hives,
+  the furnaces) for Quiet Focus.
+
+A little leaning of its own breaks a tie, so two miners need not choose alike.
+
+**Nest Egg.** A one-time grant of about three tenths of the price of the house it lives in (a plain
+house's, if it has none of its own), toward buying it. It never covers the whole: a household that
+takes it still saves the rest out of its wages and buys on payday, as always. The coin is the
+village's: the treasury pays it out of what it can spare (what it holds over what it is saving for
+and a day's wages), at once if it can. If it cannot, it pays what it can and sets the rest aside,
+and pays it a part at a time, each afternoon it has coin to spare, until it is paid. It goes into
+what the household has put by toward its house if it rents it and wants to buy it (never past the
+price), and otherwise into the folk's own purse. The chronicle says so ("Tansy chose Nest Egg: 11
+coins toward the house its household rents and means to buy (30% of a 35-coin house), paid from the
+treasury"), and so does the folk: "That's a good start on a house of our own." Once a household:
+a folk whose partner has had it cannot choose it again.
+
+**Seeing them.** Right-click a folk and open its **Skills** page: its knack points as six pips (gold
+for a point spent, a gold ring for one to spend, grey for one still to earn), a bar to its next
+point, its trades as rulers marked at every fifth level, a card for each knack it chose (what it
+does, why it chose it, the day, and whether it is resting), and its tree of knacks in three
+branches, Trade, Nature and Purse, with what it chose in gold and what is still open to it greyed
+(the mouse over any of them tells the whole of it; a dot marks the ones it leans toward). Scroll it
+with the wheel. Its **About** card has a **Knacks** line too ("Steady Hands, Nest Egg · next point at
+level 15"), and asked "What are you good at?" it names its knacks. `/village knacks` lists every
+folk's in the nearest village; `/village knacks <name>` one folk's, with the knacks still open to it
+and how much it wants each.
+
+Tested in `KnackGameTests` (kn01 to kn05): points at levels 5 and 10 (one still at 9, six at most,
+none for a child, kept across a change of trade); a Homemaker renting its house chooses Nest Egg and
+has 30% of the price put by toward it, never the whole, out of the treasury, into the chronicle and
+its memory, and another, the treasury empty, has it set aside and paid when the coin comes; a
+Merchant chooses a money knack, a miner a miner's knack, a cheerful Free Spirit Bright Spirit, one
+a day; Steady Hands quickens mining only, Drilled is armour on the watch only, a Haggler's wage
+comes to a twentieth more, Thrifty pays a tenth less; and the knacks survive a save and a load, and
+reach the Skills page and the About card through the reply's codec.
+
 ### Neighbours: rivals, allies and feuds
 
 Villages within about six hundred blocks of each other have dealings, and what each
@@ -2729,6 +2831,10 @@ ripen, days pass, folk work and houses go up at that pace.
   Off unless you turn it on; the choice is kept with you.
 * `/village people` — who everybody is: trade, temperament, partner, friends,
   rivals and family, under a line on the village's couples and friendships.
+* `/village knacks [name]` — the knacks each folk of the nearest village chose for itself (its
+  points, each knack with its day and its reason, how far to the next point); with a name, that
+  folk, and the knacks still open to it with how much it wants each. `knacks grant <name> <key>`
+  (operators) gives a folk a knack as though it chose it (`nest_egg`, `steady_hands`, ...).
 * `/village house` — the nearest village's houses: who lives in each, on what terms, and
   what is for sale. `house buy` buys the empty house you stand in; `house let <coins>` lets
   yours out at that rent a day (0 to take it back); `house rent` collects the rent.
@@ -2900,6 +3006,11 @@ Every push to CI:
   with no hoe slowest); a builder lays quicker at 10 and 30, and for blocks laid; an old master
   is a little slower than it was young but quicker than a young beginner; the About card has
   the pace line; and a carrier of level 20 walks 5% quicker;
+* runs the folk's own knacks (`KnackGameTests`, kn01 to kn05): points at every fifth level, six at
+  most, none for a child; a Homemaker renting its house chooses Nest Egg and has 30% of the price put
+  by toward it (never the whole), or set aside and paid later when the treasury is empty; a Merchant
+  chooses a money knack, a miner a miner's, a cheerful Free Spirit Bright Spirit; a trade's knack
+  quickens only its trade; and the knacks survive a save and reach the talk screen's Skills page;
 * checks the money (game test `t30`): a new village's purse, gold minted into coin,
   a day's wages, prices that move with the stores, a folk's market-day treat, a
   player buying bread at a stall and selling iron, and the stalls' price signs;

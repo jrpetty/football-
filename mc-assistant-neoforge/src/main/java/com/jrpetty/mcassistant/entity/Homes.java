@@ -1434,6 +1434,69 @@ public final class Homes {
         return n;
     }
 
+    // ------------------------------------------------------------------ a helping hand toward a house (FolkSkills)
+
+    /**
+     * What a grant toward a folk's house came to: so much put by toward the house its household
+     * rents (and means to buy), so much into its purse, which house (or null) and its price.
+     */
+    public record Grant(int towardHouse, int toPurse, @Nullable BlockPos house, int price) {}
+
+    /**
+     * The price of the house this folk lives in: what it sells for now, or what its household paid
+     * if it owns it. A folk with no house of its own (or in the leader's hall, which is never sold)
+     * gets the price of a plain house in its village as it stands. (FolkSkills: Nest Egg.)
+     */
+    public static int priceFor(VillageFolkEntity f) {
+        UUID village = f.ownerId();
+        if (village == null) return 35;                     // a plain house in a new village
+        Home h = homeOf(village, f.getUUID());
+        if (h == null || seat(h)) return price(village, new Home(BlockPos.ZERO, "house"));
+        if (h.tenure == Tenure.OWNED && h.price > 0) return h.price;
+        return price(village, h);
+    }
+
+    /** Does this folk's household rent its house from the village and want to buy it (or has it started saving)? */
+    public static boolean rentsAndWantsToOwn(VillageFolkEntity f) {
+        UUID village = f.ownerId();
+        if (village == null || f.isBaby()) return false;
+        Home h = homeOf(village, f.getUUID());
+        if (h == null || seat(h) || h.tenure != Tenure.RENTED) return false;
+        return h.saved > 0 || wish(village, h, loadedMembers(village, h)).yes();
+    }
+
+    /** Does this folk's household own the house it lives in? */
+    public static boolean ownsItsHouse(VillageFolkEntity f) {
+        UUID village = f.ownerId();
+        if (village == null) return false;
+        Home h = homeOf(village, f.getUUID());
+        return h != null && h.tenure == Tenure.OWNED;
+    }
+
+    /**
+     * Coin given toward a folk's house (FolkSkills: Nest Egg). If its household rents its house from
+     * the village and wants to buy it, the coin goes into what it has put by toward the price, never
+     * past the price (it still buys on payday, as it always does, once what it has put by covers it);
+     * whatever is over, and all of it for a folk that owns its house, has none, or would rather rent,
+     * goes into its own purse. The caller has already taken the coin from wherever it came from.
+     */
+    public static Grant grantTowardHouse(ServerLevel level, VillageFolkEntity f, int coins) {
+        if (coins <= 0) return new Grant(0, 0, homeOf(f), priceFor(f));
+        UUID village = f.ownerId();
+        Home h = village == null ? null : homeOf(village, f.getUUID());
+        int toward = 0, price = priceFor(f);
+        if (h != null && rentsAndWantsToOwn(f)) {
+            h.price = price(village, h);
+            price = h.price;
+            toward = Math.max(0, Math.min(coins, h.price - h.saved));
+            h.saved += toward;
+            save(village, h);
+        }
+        int rest = coins - toward;
+        if (rest > 0) f.earn(rest);
+        return new Grant(toward, rest, h == null ? null : h.anchor, price);
+    }
+
     // ------------------------------------------------------------------ builders, the leader, talk
 
     /** Is there a household waiting for a house, and no house standing empty for it? (Villages.projectsWanted) */

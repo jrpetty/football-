@@ -33,8 +33,11 @@ import java.util.Map;
  * <b>Village</b> (who lives here, the council, the neighbours, your standing, citizenship,
  * the board), <b>Deal</b> (gifts, errands, trade, hiring, a house, a walk together) and
  * <b>About</b> (its card: trade and levels, how its nature suits its work, what it is
- * worth, its home, family, friends, hopes, needs and latest memory) — and its Pack and its
- * Work record a click away. The conversation runs down the middle and is kept while you
+ * worth, its home, family, friends, hopes, needs and latest memory) and <b>Skills</b> (the
+ * knacks it chose for itself: its trades' levels and how near its next knack point is, the
+ * points earned, spent and free, each knack it chose as a card with what it does, why it
+ * chose it and when, and its tree of knacks, the ones still open to it greyed) — and its Pack
+ * and its Work record a click away. The conversation runs down the middle and is kept while you
  * are in the world, so you can pick up where you left off; anything can be typed at the foot.
  */
 public class TalkScreen extends Screen {
@@ -46,7 +49,7 @@ public class TalkScreen extends Screen {
         TAB = 0xFF2A2F3A, TAB_ON = 0xFF51441F, NAV = 0xFF22303A, ERRAND = 0xFFFFC857, PINK = 0xFFF0A0B8;
 
     private enum Tab {
-        TALK("Talk"), ASK("Ask"), VILLAGE("Village"), DEAL("Deal"), MONEY("Money"), ABOUT("About");
+        TALK("Talk"), ASK("Ask"), VILLAGE("Village"), DEAL("Deal"), MONEY("Money"), ABOUT("About"), SKILLS("Skills");
         final String label;
         Tab(String label) { this.label = label; }
     }
@@ -61,13 +64,16 @@ public class TalkScreen extends Screen {
     private FolkReplyPayload last;
     private Tab tab = lastTab;
     private boolean places;
-    private int scroll, aboutScroll;
+    private int scroll, aboutScroll, skillsScroll, skillsMax;
     private EditBox say;
     private String draft = "";
     private Button gift, deliver;
     private boolean saidBye;
     private int w, h, left, top;
-    private final List<int[]> tabRects = new ArrayList<>();     // x, y, w, h, index (5 = pack, 6 = work)
+    private final List<int[]> tabRects = new ArrayList<>();     // x, y, w, h, tab index, or PACK / WORK
+    /** The pack and the work record's places in tabRects: well clear of the tabs' own numbers. (They were
+     *  5 and 6, which the About tab became when the Money tab came in: clicking About opened the pack.) */
+    private static final int PACK = 100, WORK = 101;
 
     public TalkScreen(FolkReplyPayload first) {
         super(Component.literal(first.name()));
@@ -121,7 +127,7 @@ public class TalkScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal("Bye"), b -> onClose())
             .bounds(left + w - PAD - 46, inputY, 46, 18).build());
 
-        if (tab == Tab.ABOUT) return;
+        if (tab == Tab.ABOUT || tab == Tab.SKILLS) return;
         List<Choice> choices = places ? placeChoices() : choices(tab);
         int cols = w >= 340 ? 4 : 3;
         int bw = (w - 2 * PAD - (cols - 1) * 3) / cols;
@@ -140,7 +146,7 @@ public class TalkScreen extends Screen {
 
     private int logBottom() {
         int inputY = top + h - PAD - 18;
-        if (tab == Tab.ABOUT) return inputY - 6;
+        if (tab == Tab.ABOUT || tab == Tab.SKILLS) return inputY - 6;
         int cols = w >= 340 ? 4 : 3;
         int n = places ? placeChoices().size() : choices(tab).size();
         int rows = (n + cols - 1) / cols;
@@ -174,7 +180,7 @@ public class TalkScreen extends Screen {
                 out.add(Choice.of("A favour?", TalkTopic.FAVOUR));
                 out.add(Choice.of("What's short?", TalkTopic.SHORT, "What the village is short of, and how you could help"));
                 out.add(Choice.of("Your trade?", TalkTopic.WORKINGS, "How its work goes: tools, where it works, what it needs, where its work goes"));
-                out.add(Choice.of("Good at?", TalkTopic.KNACK, "Its level in every trade it has worked, and how its nature suits its work"));
+                out.add(Choice.of("Good at?", TalkTopic.KNACK, "Its level in every trade it has worked, how its nature suits its work, and the knacks it chose (its Skills page)"));
                 out.add(Choice.of("Money?", TalkTopic.WORTH, "What it earns and what it is worth"));
                 out.add(new Choice("Show me…", TalkTopic.GUIDE, "", "Ask it to walk you somewhere: the stores, the board, the elder, any building"));
                 out.add(new Choice("Ask the stores", TalkTopic.STORES, "", "Ask the storekeeper for something: type what and how many"));
@@ -314,8 +320,8 @@ public class TalkScreen extends Screen {
     public boolean mouseClicked(double mx, double my, int button) {
         for (int[] r : tabRects) {
             if (mx >= r[0] && mx < r[0] + r[2] && my >= r[1] && my < r[1] + r[3]) {
-                if (r[4] == 5) { openPack(); return true; }
-                if (r[4] == 6) { openWork(); return true; }
+                if (r[4] == PACK) { openPack(); return true; }
+                if (r[4] == WORK) { openWork(); return true; }
                 Tab t = Tab.values()[r[4]];
                 if (t != tab || places) {
                     tab = t;
@@ -349,6 +355,7 @@ public class TalkScreen extends Screen {
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         if (tab == Tab.ABOUT) aboutScroll = Math.max(0, aboutScroll - (int) Math.signum(scrollY));
+        else if (tab == Tab.SKILLS) skillsScroll = Math.max(0, Math.min(skillsMax, skillsScroll - 12 * (int) Math.signum(scrollY)));
         else scroll = Math.max(0, scroll + (int) Math.signum(scrollY));
         return true;
     }
@@ -399,6 +406,7 @@ public class TalkScreen extends Screen {
         header(g, mouseX, mouseY);
         tabs(g, mouseX, mouseY);
         if (tab == Tab.ABOUT) about(g);
+        else if (tab == Tab.SKILLS) skills(g, mouseX, mouseY);
         else conversation(g);
     }
 
@@ -433,28 +441,41 @@ public class TalkScreen extends Screen {
         tabRects.clear();
         int y = top + HEADER + 4;
         int x = left + PAD;
+        // Seven tabs and the two links on the right fill a narrow window: when they would run into
+        // each other the tabs pad less, and then the links shorten.
+        String[] nav = { "Work done ›", "Pack ›" };
+        int pad = 14, navPad = 12;
+        if (tabsWidth(pad, nav, navPad) > w - 2 * PAD) { pad = 8; navPad = 8; }
+        if (tabsWidth(pad, nav, navPad) > w - 2 * PAD) nav = new String[]{ "Work ›", "Pack ›" };
         for (Tab t : Tab.values()) {
-            int tw = font.width(t.label) + 14;
+            int tw = font.width(t.label) + pad;
             boolean on = t == tab && !places;
             boolean hover = mouseX >= x && mouseX < x + tw && mouseY >= y && mouseY < y + TAB_H;
             g.fill(x, y, x + tw, y + TAB_H, on ? TAB_ON : hover ? 0xFF353B48 : TAB);
             if (on) g.fill(x, y + TAB_H - 2, x + tw, y + TAB_H, GOLD);
-            g.drawString(font, t.label, x + 7, y + 4, on ? GOLD : INK, false);
+            g.drawString(font, t.label, x + pad / 2, y + 4, on ? GOLD : INK, false);
             tabRects.add(new int[]{ x, y, tw, TAB_H, t.ordinal() });
             x += tw + 2;
         }
         // The pack and the work record, on the right.
-        String[] nav = { "Work done ›", "Pack ›" };
         int rx = left + w - PAD;
         for (int i = 0; i < nav.length; i++) {
-            int tw = font.width(nav[i]) + 12;
+            int tw = font.width(nav[i]) + navPad;
             rx -= tw;
             boolean hover = mouseX >= rx && mouseX < rx + tw && mouseY >= y && mouseY < y + TAB_H;
             g.fill(rx, y, rx + tw, y + TAB_H, hover ? 0xFF2F4350 : NAV);
-            g.drawString(font, nav[i], rx + 6, y + 4, MUTED, false);
-            tabRects.add(new int[]{ rx, y, tw, TAB_H, i == 0 ? 6 : 5 });
+            g.drawString(font, nav[i], rx + navPad / 2, y + 4, MUTED, false);
+            tabRects.add(new int[]{ rx, y, tw, TAB_H, i == 0 ? WORK : PACK });
             rx -= 2;
         }
+    }
+
+    /** How wide the tabs and the links on the right come to, with this much padding. */
+    private int tabsWidth(int pad, String[] nav, int navPad) {
+        int n = 0;
+        for (Tab t : Tab.values()) n += font.width(t.label) + pad + 2;
+        for (String s : nav) n += font.width(s) + navPad + 2;
+        return n + 6;
     }
 
     private void conversation(GuiGraphics g) {
@@ -523,6 +544,296 @@ public class TalkScreen extends Screen {
             y += o[1] == null ? 3 : LINE;
         }
         if (rows.isEmpty()) g.drawString(font, "It has not said much about itself yet.", x + 5, top0 + 4, MUTED, false);
+    }
+
+    // ------------------------------------------------------------------ the Skills page
+
+    /** The knacks' colours, by family: a trade's amber, a nature's green, a purse's blue; and the greys of what is still open. */
+    private static final int TRADE_INK = 0xFFD9A441, NATURE_INK = 0xFF86C98A, PURSE_INK = 0xFF7FB2E5,
+        OPEN_EDGE = 0xFF3C424E, OPEN_NAME = 0xFFA4ABB8, OPEN_DIM = 0xFF7A808C, OPEN_TEXT = 0xFF6E7480,
+        TRACK = 0x40FFFFFF, FILL = 0xFFB8963A, CARD = 0x26FFFFFF;
+
+    /** What the folk sent for its Skills page (FolkSkills.encode), read once a reply. */
+    private record Points(int earned, int spent, int free, int nextAt, int pct, String best, int bestLevel, boolean child) {}
+    private record TradeRow(String title, int level, boolean now) {}
+    private record KnackRow(String key, String title, String family, String effect, String why, String day, boolean active) {}
+    private record OpenRow(String key, String title, String family, String effect, int fit) {}
+    private record SkillsPage(Points points, List<TradeRow> trades, List<KnackRow> chosen, List<OpenRow> open, int[] nest) {}
+
+    private String skillsRead;
+    private SkillsPage skillsPage;
+
+    private SkillsPage skillsPage() {
+        String raw = last.skills();
+        if (raw == null || raw.isEmpty()) return null;
+        if (raw.equals(skillsRead)) return skillsPage;
+        Points points = null;
+        List<TradeRow> trades = new ArrayList<>();
+        List<KnackRow> chosen = new ArrayList<>();
+        List<OpenRow> open = new ArrayList<>();
+        int[] nest = null;
+        for (String line : raw.split("\n")) {
+            String[] f = line.split("\\|", -1);
+            try {
+                switch (f[0]) {
+                    case "P" -> points = new Points(num(f[1]), num(f[2]), num(f[3]), num(f[4]), num(f[5]), f[6], num(f[7]), "1".equals(f[8]));
+                    case "T" -> trades.add(new TradeRow(f[1], num(f[2]), "1".equals(f[3])));
+                    case "K" -> chosen.add(new KnackRow(f[1], f[2], f[3], f[4], f[5], f[6], "1".equals(f[7])));
+                    case "O" -> open.add(new OpenRow(f[1], f[2], f[3], f[4], num(f[5])));
+                    case "N" -> nest = new int[]{ num(f[1]), num(f[2]) };
+                    default -> { }
+                }
+            } catch (RuntimeException ignored) {
+                // a line from a newer or older folk than this screen knows: left out
+            }
+        }
+        skillsRead = raw;
+        skillsPage = points == null ? null : new SkillsPage(points, trades, chosen, open, nest);
+        return skillsPage;
+    }
+
+    private static int num(String s) {
+        try {
+            return Integer.parseInt(s.trim());
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    private static int familyInk(String family) {
+        return switch (family) {
+            case "NATURE" -> NATURE_INK;
+            case "PURSE" -> PURSE_INK;
+            default -> TRADE_INK;
+        };
+    }
+
+    private static String familyName(String family) {
+        return switch (family) {
+            case "NATURE" -> "Nature";
+            case "PURSE" -> "Purse";
+            default -> "Trade";
+        };
+    }
+
+    /**
+     * The folk's knacks, drawn: along the top its knack points (a pip each: gold for one spent, a
+     * gold ring for one to spend, grey for one still to earn) and a bar to its next point; its
+     * trades as rulers marked at every fifth level, where the points come; a card for each knack
+     * it chose (what it does, why it chose it, the day, and whether it works in the trade it has
+     * now); and its tree, three branches (its trade, its nature, its purse) with what it chose in
+     * gold and what is still open to it greyed, the mouse over any of them for the whole of it.
+     * Scrolls with the wheel.
+     */
+    private void skills(GuiGraphics g, int mouseX, int mouseY) {
+        int x0 = left + PAD, x1 = left + w - PAD, top0 = bodyTop(), bottom = logBottom();
+        g.fill(x0, top0, x1, bottom, LOG);
+        SkillsPage page = skillsPage();
+        if (page == null) {
+            g.drawString(font, "It has said nothing yet of what it is good at.", x0 + 5, top0 + 4, MUTED, false);
+            return;
+        }
+        Points pt = page.points();
+        int cx = x0 + 6, inner = x1 - x0 - 12;
+        boolean hovering = mouseX >= x0 && mouseX < x1 && mouseY >= top0 && mouseY < bottom;
+        List<FormattedCharSequence> tip = null;
+        g.enableScissor(x0, top0, x1, bottom);
+        int y = top0 + 5 - skillsScroll;
+
+        // ---- the points: six pips, and what they come to
+        g.drawString(font, "Knack points", cx, y, GOLD, false);
+        int px = cx + font.width("Knack points") + 6;
+        for (int i = 0; i < 6; i++) {
+            int bx = px + i * 10;
+            if (i < pt.spent()) {
+                g.fill(bx, y, bx + 7, y + 7, GOLD);
+            } else if (i < pt.earned()) {
+                g.fill(bx, y, bx + 7, y + 7, GOLD);
+                g.fill(bx + 1, y + 1, bx + 6, y + 6, 0xFF141821);
+            } else {
+                g.fill(bx, y, bx + 7, y + 7, SOFT);
+                g.fill(bx + 1, y + 1, bx + 6, y + 6, 0xFF1E222B);
+            }
+        }
+        String tally = pt.child() ? "none yet: a child" : pt.earned() + " earned · " + pt.spent() + " chosen · " + pt.free() + " to choose";
+        g.drawString(font, Ui.clip(font, tally, Math.max(20, x1 - 6 - (px + 64))), px + 64, y, pt.free() > 0 ? INK : MUTED, false);
+        y += 12;
+
+        // ---- how near the next point is
+        if (pt.child()) {
+            y = wrapped(g, "Its knacks come with a trade: a point at every fifth level of the trade it is best at, six in all.",
+                cx, y, inner, MUTED);
+        } else if (pt.nextAt() <= 0) {
+            g.drawString(font, "All six points earned" + (pt.best().isEmpty() ? "" : " — " + pt.best().toLowerCase(java.util.Locale.ROOT)
+                + " " + pt.bestLevel()), cx, y, MUTED, false);
+            y += LINE + 2;
+        } else {
+            String label = (pt.best().isEmpty() ? "No trade" : pt.best()) + " " + pt.bestLevel();
+            String after = "next point at level " + pt.nextAt();
+            int lw = font.width(label) + 6, aw = font.width(after) + 6;
+            int bx = cx + lw, bw = Math.max(20, inner - lw - aw);
+            g.drawString(font, label, cx, y, INK, false);
+            g.fill(bx, y + 2, bx + bw, y + 7, TRACK);
+            g.fill(bx, y + 2, bx + Math.max(1, bw * Math.max(0, Math.min(100, pt.pct())) / 100), y + 7, FILL);
+            g.drawString(font, after, bx + bw + 6, y, MUTED, false);
+            if (hovering && mouseX >= bx && mouseX < bx + bw && mouseY >= y && mouseY < y + 9) {
+                tip = font.split(FormattedText.of(pt.pct() + "% of the way from level " + (pt.nextAt() - 5) + " to level " + pt.nextAt()
+                    + ", by its experience at its best trade."), 200);
+            }
+            y += LINE + 2;
+        }
+
+        // ---- its trades, each a ruler to level thirty marked where the points come
+        if (!page.trades().isEmpty()) {
+            int nameW = 0;
+            for (TradeRow t : page.trades()) nameW = Math.max(nameW, font.width(t.title()));
+            nameW += 6;
+            int tx = cx + nameW, tw = Math.max(30, inner - nameW - 30);
+            for (TradeRow t : page.trades()) {
+                g.drawString(font, t.title(), cx, y, t.now() ? GOLD : INK, false);
+                g.fill(tx, y + 3, tx + tw, y + 6, TRACK);
+                int lv = Math.min(30, t.level());
+                g.fill(tx, y + 3, tx + tw * lv / 30, y + 6, t.now() ? FILL : 0xFF7D6A3A);
+                for (int n = 5; n <= 30; n += 5) {
+                    int nx = tx + tw * n / 30 - 1;
+                    g.fill(nx, y + 1, nx + 1, y + 8, t.level() >= n ? GOLD : SOFT);
+                }
+                g.drawString(font, "lv " + t.level(), tx + tw + 5, y, t.now() ? INK : MUTED, false);
+                y += LINE;
+            }
+            y += 4;
+        }
+
+        // ---- what it chose: a card each
+        y = heading(g, "Chosen", cx, y, inner);
+        if (page.chosen().isEmpty()) {
+            y = wrapped(g, pt.child() ? "Nothing yet." : pt.free() > 0
+                ? "Nothing yet. It has a point to spend, and chooses for itself at a quiet moment: its break, or the evening."
+                : "Nothing yet. Its first point comes at level 5 of its best trade.", cx, y, inner, MUTED);
+        }
+        for (KnackRow k : page.chosen()) {
+            List<FormattedCharSequence> effect = font.split(FormattedText.of(k.effect()), inner - 12);
+            List<FormattedCharSequence> why = font.split(FormattedText.of("Why: " + k.why()), inner - 12);
+            int h = 4 + LINE + effect.size() * LINE + why.size() * LINE + (k.active() ? 0 : LINE) + 3;
+            int ink = familyInk(k.family());
+            g.fill(cx, y, cx + inner, y + h, CARD);
+            g.fill(cx, y, cx + 2, y + h, ink);
+            int ty = y + 4;
+            g.drawString(font, k.title(), cx + 7, ty, GOLD, false);
+            String when = familyName(k.family()) + " · day " + k.day();
+            g.drawString(font, when, cx + inner - 4 - font.width(when), ty, ink, false);
+            ty += LINE;
+            for (FormattedCharSequence l : effect) { g.drawString(font, l, cx + 7, ty, INK, false); ty += LINE; }
+            for (FormattedCharSequence l : why) { g.drawString(font, l, cx + 7, ty, MUTED, false); ty += LINE; }
+            if (!k.active()) g.drawString(font, "Resting: it works another trade now", cx + 7, ty, 0xFFB0A080, false);
+            y += h + 4;
+        }
+        if (page.nest() != null) {
+            y = wrapped(g, "Nest Egg: " + page.nest()[0] + " of " + page.nest()[1]
+                + " coins paid so far; the treasury pays the rest as it can spare it.", cx, y, inner, PURSE_INK);
+        }
+        y += 2;
+
+        // ---- the tree: three branches, what it chose in gold, what is open to it in grey
+        y = heading(g, "Its knacks", cx, y, inner);
+        String[] families = { "TRADE", "NATURE", "PURSE" };
+        int gap = 6, cw = (inner - 2 * gap) / 3;
+        // The root and its three branches.
+        int rootX = cx + inner / 2;
+        g.fill(rootX, y, rootX + 1, y + 4, SOFT);
+        g.fill(cx + cw / 2, y + 4, cx + 2 * (cw + gap) + cw / 2 + 1, y + 5, SOFT);
+        y += 5;
+        int colTop = y, deepest = y;
+        for (int c = 0; c < 3; c++) {
+            String fam = families[c];
+            int colX = cx + c * (cw + gap), ink = familyInk(fam);
+            int yy = colTop;
+            g.fill(colX + cw / 2, yy, colX + cw / 2 + 1, yy + 3, SOFT);
+            yy += 3;
+            String head = familyName(fam);
+            g.fill(colX, yy, colX + cw, yy + 12, 0xFF262B35);
+            g.fill(colX, yy + 11, colX + cw, yy + 12, ink);
+            g.drawString(font, head, colX + (cw - font.width(head)) / 2, yy + 2, ink, false);
+            yy += 15;
+            int stem = colX + 3, stemTop = yy;
+            List<Object[]> nodes = new ArrayList<>();       // {title, effect, chosen?, row}
+            for (KnackRow k : page.chosen()) if (k.family().equals(fam)) nodes.add(new Object[]{ k.title(), k.effect(), true, k });
+            for (OpenRow o : page.open()) if (o.family().equals(fam)) nodes.add(new Object[]{ o.title(), o.effect(), false, o });
+            if (nodes.isEmpty()) {
+                g.drawString(font, Ui.clip(font, "nothing open", cw - 10), colX + 9, yy, OPEN_DIM, false);
+                yy += LINE + 2;
+            }
+            int lastMid = yy;
+            for (Object[] n : nodes) {
+                boolean chosen = (Boolean) n[2];
+                String title = (String) n[0];
+                List<FormattedCharSequence> body = chosen
+                    ? font.split(FormattedText.of("✓ day " + ((KnackRow) n[3]).day()), cw - 14)
+                    : font.split(FormattedText.of((String) n[1]), cw - 14);
+                int nh = 3 + LINE + body.size() * 9 + 2;
+                int nx = colX + 9;
+                lastMid = yy + 6;
+                g.fill(stem, lastMid, nx, lastMid + 1, SOFT);           // the twig to the stem
+                if (chosen) {
+                    g.fill(nx, yy, colX + cw, yy + nh, GOLD);
+                    g.fill(nx + 1, yy + 1, colX + cw - 1, yy + nh - 1, 0xFF3A3220);
+                } else {
+                    g.fill(nx, yy, colX + cw, yy + nh, OPEN_EDGE);
+                    g.fill(nx + 1, yy + 1, colX + cw - 1, yy + nh - 1, 0xFF1A1E26);
+                }
+                int fit = chosen ? 2 : ((OpenRow) n[3]).fit();
+                String name = Ui.clip(font, title, cw - 16);
+                g.drawString(font, name, nx + 3, yy + 3, chosen ? GOLD : fit >= 1 ? OPEN_NAME : OPEN_DIM, false);
+                if (!chosen && fit >= 2) g.drawString(font, "•", colX + cw - 7, yy + 3, ink, false);   // it leans this way
+                int by = yy + 3 + LINE;
+                for (FormattedCharSequence l : body) { g.drawString(font, l, nx + 3, by, chosen ? MUTED : OPEN_TEXT, false); by += 9; }
+                if (hovering && mouseX >= nx && mouseX < colX + cw && mouseY >= yy && mouseY < yy + nh) {
+                    StringBuilder t = new StringBuilder(title).append(" — ").append((String) n[1]).append('.');
+                    if (chosen) {
+                        KnackRow k = (KnackRow) n[3];
+                        t.append(" Chosen on day ").append(k.day()).append(": ").append(k.why()).append('.');
+                        if (!k.active()) t.append(" Resting while it works another trade.");
+                    } else {
+                        t.append(fit >= 2 ? " Open to it, and it leans this way." : fit == 1 ? " Open to it." : " Open to it, though it hardly wants it.");
+                    }
+                    tip = font.split(FormattedText.of(t.toString()), 220);
+                }
+                yy += nh + 3;
+            }
+            g.fill(stem, stemTop - 3, stem + 1, lastMid + 1, SOFT);     // the branch's stem
+            deepest = Math.max(deepest, yy);
+        }
+        y = deepest + 4;
+        y = wrapped(g, "It chooses for itself when a point is free, by its trade, its nature and what it cares about. "
+            + "A trade's knacks work only in that trade; the rest go with it everywhere.", cx, y, inner, MUTED);
+        g.disableScissor();
+
+        // Scrolling: how far the page runs past the bottom.
+        int content = y + skillsScroll - top0 + 2;
+        skillsMax = Math.max(0, content - (bottom - top0));
+        if (skillsScroll > skillsMax) skillsScroll = skillsMax;
+        if (skillsMax > 0) {
+            g.drawString(font, skillsScroll > 0 ? "▲" : " ", x1 - 9, top0 + 2, MUTED, false);
+            g.drawString(font, skillsScroll < skillsMax ? "▼" : " ", x1 - 9, bottom - 10, MUTED, false);
+        }
+        if (tip != null) g.renderTooltip(font, tip, mouseX, mouseY);
+    }
+
+    /** A section heading with a rule after it; returns where the section starts. */
+    private int heading(GuiGraphics g, String text, int x, int y, int width) {
+        g.drawString(font, text, x, y, GOLD, false);
+        int rx = x + font.width(text) + 6;
+        g.fill(rx, y + 4, x + width, y + 5, SOFT);
+        return y + LINE + 3;
+    }
+
+    /** Text wrapped to a width; returns the line after it. */
+    private int wrapped(GuiGraphics g, String text, int x, int y, int width, int colour) {
+        for (FormattedCharSequence l : font.split(FormattedText.of(text), width)) {
+            g.drawString(font, l, x, y, colour, false);
+            y += LINE;
+        }
+        return y + 2;
     }
 
     @Override

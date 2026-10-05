@@ -217,7 +217,8 @@ public final class FolkTalk {
             : "I'm a " + job.title.toLowerCase(Locale.ROOT) + ", level " + f.veteranLevel() + ".";
         String others = levels.isEmpty() ? "" : " All told: " + levels + ".";
         String nature = Skill.line(f);
-        return now + others + " " + nature;
+        String knacks = FolkSkills.talk(f);
+        return now + others + " " + nature + (knacks.isEmpty() ? "" : " " + knacks);
     }
 
     /** Right-click: open the talk screen with a greeting. */
@@ -241,7 +242,8 @@ public final class FolkTalk {
         PacketDistributor.sendToPlayer(p, new FolkReplyPayload(f.getId(), open, f.displayNameCap(), about, said,
             me.mood(), Persona.moodWord(me.mood()), aff, Persona.standing(aff), f.isFollowing(p), asked,
             where, errand, Errands.canDeliver(f, p) || Trade.canPay(f, p),
-            clip(nowDoing(f), 200), clip(card(f), 1800), clip(Guide.encode(Guide.places(f, p)), 900)));
+            clip(nowDoing(f), 200), clip(card(f), 1800), clip(Guide.encode(Guide.places(f, p)), 900),
+            clip(FolkSkills.encode(f), FolkReplyPayload.MAX_SKILLS - 100)));
     }
 
     private static String clip(String s, int most) {
@@ -290,6 +292,7 @@ public final class FolkTalk {
         line(sb, "Home", (house != null && !house.isEmpty() ? house + " " : "") + (bed == null ? "No bed of its own yet."
             : "A bed of its own" + (f.comforts() > 0 ? ", and " + f.comforts() + (f.comforts() == 1 ? " comfort" : " comforts") + " it bought" : "") + "."));
         line(sb, "Nature", life.traitsLabel());
+        line(sb, "Knacks", FolkSkills.cardLine(f));         // what it chose for itself: the Skills page has the rest
         String family = life.partnerName().isEmpty() ? "" : "partner " + life.partnerName();
         if (life.children() > 0) family += (family.isEmpty() ? "" : "; ") + life.children() + (life.children() == 1 ? " child" : " children");
         if (!life.parents().isEmpty()) family += (family.isEmpty() ? "" : "; ") + "child of " + life.parents();
@@ -514,6 +517,9 @@ public final class FolkTalk {
             case "miserable" -> pick(r, "Everybody's so low round here.", "This village has seen better days.");
             case "leader" -> Leader.moodWords(f, true);
             case "leaderhard" -> Leader.moodWords(f, false);
+            case "brightspirit" -> pick(r, "I try to look on the bright side. It's my way.", "Why be glum? There's always something.");
+            case "brightfriend" -> "There's a friend near who always cheers me up.";
+            case "unflappable" -> pick(r, "Things could be better, but I don't let it get to me.", "Nothing much rattles me.");
             default -> "";
         };
     }

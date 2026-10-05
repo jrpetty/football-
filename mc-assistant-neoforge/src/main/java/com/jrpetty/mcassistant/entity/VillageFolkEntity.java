@@ -356,6 +356,8 @@ public class VillageFolkEntity extends AssistantEntity {
         refreshMood();
         dreamCameTrue();
         if (level() instanceof net.minecraft.server.level.ServerLevel valuing) Values.daily(valuing, this, level().getDayTime() / 24000L);
+        // Its own knacks (FolkSkills): a point to spend, chosen at a quiet moment; a guard's armour kept up.
+        if (level() instanceof net.minecraft.server.level.ServerLevel knackLevel) FolkSkills.tick(knackLevel, this);
         if (ownerId() != null) {
             Villages.chooseElder(ownerId(), level().getDayTime() / 24000L);
             if (level() instanceof net.minecraft.server.level.ServerLevel polls) {
@@ -417,6 +419,18 @@ public class VillageFolkEntity extends AssistantEntity {
     int note;
 
     public Persona persona() { return persona; }
+
+    /** The knacks it has chosen for itself as it rose in its trades (FolkSkills): kept for life, saved with it. */
+    private final FolkSkills.Book knacks = new FolkSkills.Book();
+
+    public FolkSkills.Book knacks() { return knacks; }
+
+    /** Its experience at a trade, nought for one it never worked (FolkSkills: how near its next knack point is). */
+    public int xpInTrade(StationTask t) { return t == StationTask.NONE ? 0 : tradeXp.getOrDefault(t, 0); }
+
+    /** Strong Back (FolkSkills): a bigger load on each trip of its round. */
+    @Override
+    protected int haulLoadBonus() { return FolkSkills.haulBonus(this); }
 
     // ------------------------------ money --------------------------------------
 
@@ -1103,6 +1117,7 @@ public class VillageFolkEntity extends AssistantEntity {
             else if (led <= -3) { m += led; why.add(new Object[]{"leaderhard", -led}); }
             else m += led;
         }
+        m = FolkSkills.mood(this, m, why);              // Bright Spirit, a bright friend near, Unflappable's floor
         why.sort((a, b) -> Integer.compare((Integer) b[1], (Integer) a[1]));
         java.util.List<String> keys = new java.util.ArrayList<>();
         for (Object[] w : why) keys.add((String) w[0]);
@@ -1178,7 +1193,7 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected void creditTrade(int amount) {
         StationTask t = stationTask();
-        if (t != StationTask.NONE && amount > 0) tradeXp.merge(t, amount, (a, b) -> Math.min(1_000_000, a + b));
+        if (t != StationTask.NONE && amount > 0) tradeXp.merge(t, amount + FolkSkills.extraXp(this, amount), (a, b) -> Math.min(1_000_000, a + b));
     }
 
     /** Tests: so much experience at a trade, as though it had worked for it (xpForLevel gives a level's worth). */
@@ -1551,7 +1566,7 @@ public class VillageFolkEntity extends AssistantEntity {
         for (int i = 0; i < Math.min(2, near.size()); i++) {
             VillageFolkEntity other = near.get(i);
             if (!other.life.rolled()) continue;
-            int delta = Social.warmth(life, other.life, other.stationTask() == stationTask(), offWork, getRandom());
+            int delta = FolkSkills.warmth(this, Social.warmth(life, other.life, other.stationTask() == stationTask(), offWork, getRandom()));
             life.feel(other.getUUID(), other.displayNameCap(), delta);
             if (isSleeping() || other.isSleeping()) continue;
             int now = life.affinity(other.getUUID());
@@ -5645,6 +5660,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (life.has(Social.Trait.EASYGOING)) length = length * 3 / 2;
         // A hard-driving leader cuts the breaks short; an easygoing one lets them run on.
         length = (long) (length * Leader.restScale(ownerId()));
+        length = (long) (length * FolkSkills.breakScale(this));      // Early Riser: a shorter break
         return day >= start && day < start + length;
     }
 
@@ -6880,6 +6896,7 @@ public class VillageFolkEntity extends AssistantEntity {
         CompoundTag trades = new CompoundTag();
         for (java.util.Map.Entry<StationTask, Integer> e : tradeXp.entrySet()) trades.putInt(e.getKey().name(), e.getValue());
         tag.put("TradeXp", trades);
+        if (!knacks.isEmpty()) tag.put("Knacks", knacks.save());
         tag.putInt("Comforts", comforts);
         tag.putLong("ComfortDay", comfortDay);
         if (isBaby()) tag.putBoolean("Child", true);
@@ -6963,6 +6980,7 @@ public class VillageFolkEntity extends AssistantEntity {
             tradeXp.put(stationTask(), lifetimeXp());       // from before trades had levels of their own
         }
         refreshLevelPerks();
+        knacks.load(tag.getCompound("Knacks"));                 // none in an older save
         this.comforts = tag.getInt("Comforts");
         this.comfortDay = tag.contains("ComfortDay") ? tag.getLong("ComfortDay") : -10;
         if (tag.getBoolean("Child")) setChild(true);

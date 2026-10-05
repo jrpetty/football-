@@ -303,6 +303,10 @@ public class FarmGoal extends Goal {
             assistant.note(AssistantEntity.Deed.CROPS_HARVESTED, 1);
             sweepDrops(pos);
             Item seed = REPLANT.get(cropBlock);
+            // A farmer's Careful Harvest (FolkSkills): a seed back, one harvest in three.
+            if (assistant instanceof com.jrpetty.mcassistant.entity.VillageFolkEntity folk) {
+                com.jrpetty.mcassistant.entity.FolkSkills.seedBack(folk, seed);
+            }
             if (seed != null && assistant.level().getBlockState(pos.below()).is(Blocks.FARMLAND)
                 && assistant.removeMatching(s -> s.is(seed), 1) == 1) {
                 assistant.level().setBlockAndUpdate(pos, cropBlock.defaultBlockState());

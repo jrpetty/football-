@@ -763,6 +763,7 @@ public final class Market {
             int have = stock(level, v.id(), s -> s.is(it));
             int price = g == null ? 1 : Math.max(1, (int) Math.round(each(g, have)));
             price = Stockroom.asked(level, v.id(), new ItemStack(it), price, 1);
+            price = FolkSkills.thrifty(f, price);                             // a Thrifty folk pays a tenth less
             if (f.purse() < price) continue;
             // Its favourite not to be had: the market's books count the sale it had not got (Stockroom).
             if (have <= 0 && it == fav) Stockroom.missed(level, v.id(), Stockroom.Seller.MARKET, new ItemStack(it));

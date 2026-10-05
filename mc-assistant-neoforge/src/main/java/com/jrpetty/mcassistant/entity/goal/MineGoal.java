@@ -972,6 +972,10 @@ public class MineGoal extends Goal {
                 // Iron is what a village's mines are for: an iron vein never uses up the run's
                 // vein budget, so coal and copper met first can't leave the iron in the wall.
                 if (!state.is(BlockTags.IRON_ORES)) veinMined++;
+                // A miner's Keen Eye (FolkSkills): now and then one more of what the ore drops.
+                if (assistant instanceof com.jrpetty.mcassistant.entity.VillageFolkEntity folk) {
+                    com.jrpetty.mcassistant.entity.FolkSkills.oreLuck(folk, state, pos);
+                }
                     }
             if (pendingLadder != null && pos.equals(pendingLadder)) {
                 placeLadder(pos);       // rung in before the bot steps down
