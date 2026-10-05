@@ -105,6 +105,9 @@ public final class Founding extends SavedData {
         @Nullable FoundingPlan.Ground ground;
         @Nullable byte[] tops;
         int surveyed, waited;
+        /** Columns of the square left as they were for something built in the way, and the first of them. */
+        int blocked;
+        String blockedFirst = "";
         long held = -100000L;
         Block surface = Blocks.GRASS_BLOCK;
 
@@ -638,6 +641,9 @@ public final class Founding extends SavedData {
                     boolean own = !levelled && k == FoundingPlan.LAND && s.tops != null && s.tops[i] > 0;
                     Block top = own ? Terraform.top(s.tops[i]) : s.surface;
                     int c = Terraform.shape(level, chunk, x, z, g.ground[i], g.target[i], levelled, top);
+                    if (c < 0 && levelled && s.blocked++ == 0) {
+                        s.blockedFirst = Terraform.inTheWay(chunk, x, z, g.ground[i], g.target[i]) + " at " + x + "," + z;
+                    }
                     moved += Math.max(1, c);
                 }
             }
@@ -768,6 +774,7 @@ public final class Founding extends SavedData {
         Villages.tell(id, day, folk + " founders came to " + Villages.name(id) + ", and the ground was levelled for them, "
             + across + " blocks across");
         LOG.info("[MCA-FOUND] {} is founded: {} folk, the ground levelled {} across", Villages.name(id), folk, across);
+        if (s.ground != null && s.level != UNSET) LOG.info("[MCA-FOUND] {}: {}", Villages.name(id), flatness(level, s));
         Villages.Village v = Villages.get(id);
         if (v != null) {
             // The first of them says so, to whoever is there to hear it.
@@ -792,6 +799,41 @@ public final class Founding extends SavedData {
             ServerPlayer founder = s.founder == null ? null : level.getServer().getPlayerList().getPlayer(s.founder);
             if (founder != null) founder.sendSystemMessage(Component.literal("<Village> " + said));
         }
+    }
+
+    /**
+     * How flat the square came out, measured: of its columns (those the plan levelled, less any
+     * round something built), how many stand at the level and how many above or below it, and
+     * why the plan or the work left any off it. For the log, and the founding's own test.
+     */
+    static String flatness(ServerLevel level, Site s) {
+        FoundingPlan.Ground g = s.ground;
+        int at = 0, up = 0, down = 0, most = 0, worked = 0;
+        String first = "";
+        for (int i = 0; i < g.kind.length; i++) {
+            byte k = g.kind[i];
+            if (k != FoundingPlan.LAND && k != FoundingPlan.FILL && k != FoundingPlan.OUTSIDE) continue;
+            int dx = g.dx(i), dz = g.dz(i);
+            if (!FoundingPlan.levelled(dx, dz, s.radius, s.seed)) continue;
+            int x = s.heart.getX() + dx, z = s.heart.getZ() + dz;
+            int y = Terraform.groundY(level, x, z);
+            if (y == Integer.MIN_VALUE) continue;
+            worked++;
+            if (y == s.level) at++;
+            else {
+                if (y > s.level) up++; else down++;
+                if (Math.abs(y - s.level) > most) {
+                    most = Math.abs(y - s.level);
+                    first = x + "," + z + " at y=" + y;
+                }
+            }
+        }
+        return "the square measured: " + worked + " columns, " + at + " at y=" + s.level + ", " + up + " above and "
+            + down + " below" + (most > 0 ? " (the farthest off " + first + ")" : "")
+            + "; held off by the plan " + (g.heldBank + g.heldShore + g.heldBuilt)
+            + " (" + g.heldBank + " for a bank of water, " + g.heldShore + " for a shore, " + g.heldBuilt + " beside something built"
+            + (g.heldFirst.isEmpty() ? "" : "; first, " + g.heldFirst) + ")"
+            + "; left for something in the way " + s.blocked + (s.blocked > 0 ? " (first " + s.blockedFirst + ")" : "");
     }
 
     /** It cannot go on: the ground let go, and whoever began it told why. */

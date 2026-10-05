@@ -204,6 +204,14 @@ public final class FoundingPlan {
         public int campIndex;
         /** How many columns hold water left as it is, and how many ponds are filled. */
         public int keptWater, filledPonds, protectedColumns;
+        /**
+         * How many columns of the levelled square itself the plan holds off the level, and by what:
+         * the bank of water left as it is (never cut below the water, or it runs into the town),
+         * its shore (never filled above it but a block a block), or something built beside it. With
+         * the first of them, for the log.
+         */
+        public int heldBank, heldShore, heldBuilt;
+        public String heldFirst = "";
 
         public Ground(int outer) {
             this.outer = outer;
@@ -364,6 +372,13 @@ public final class FoundingPlan {
             double upper = Math.max(was, Math.min(high[i], shore[i]) / 10.0);
             want = Math.max(lower, Math.min(upper, want));
             g.target[i] = (int) Math.round(want);
+            if (u <= 0 && g.target[i] != level) {
+                String why;
+                if (g.target[i] > level && low[i] > level * 10) { g.heldBank++; why = "the bank of water"; }
+                else if (g.target[i] < level && shore[i] < high[i]) { g.heldShore++; why = "the shore of water"; }
+                else { g.heldBuilt++; why = "something built"; }
+                if (g.heldFirst.isEmpty()) g.heldFirst = why + " at " + dx + "," + dz + " (y=" + (int) Math.round(was) + " kept at " + g.target[i] + ")";
+            }
         }
         // ---- the order: nearest the heart first, so the camp is level first.
         long[] keys = new long[n];

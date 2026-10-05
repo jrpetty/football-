@@ -228,6 +228,17 @@ public final class Terraform {
         return y;
     }
 
+    /** The first thing in this column that keeps it from being worked (somebody's), by name. For the log. */
+    static String inTheWay(LevelChunk chunk, int x, int z, int ground, int target) {
+        BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
+        int top = chunk.getHeight(Heightmap.Types.WORLD_SURFACE, x & 15, z & 15);
+        for (int y = top; y > Math.min(target, ground); y--) {
+            BlockState s = chunk.getBlockState(m.set(x, y, z));
+            if (!natural(s)) return BuiltInRegistries.BLOCK.getKey(s.getBlock()).getPath() + " (y=" + y + ")";
+        }
+        return "nothing";
+    }
+
     // ------------------------------------------------------------------ working a column
 
     /** How deep the town's own ground is made solid: its top and four of earth under it. */

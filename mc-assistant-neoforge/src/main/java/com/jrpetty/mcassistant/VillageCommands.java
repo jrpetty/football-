@@ -64,6 +64,11 @@ public final class VillageCommands {
             // (found status).
             .then(Commands.literal("found").requires(src -> src.hasPermission(2))
                 .then(Commands.literal("status").executes(VillageCommands::foundStatus))
+                .then(Commands.literal("ground")
+                    .then(Commands.argument("x", IntegerArgumentType.integer())
+                        .then(Commands.argument("z", IntegerArgumentType.integer())
+                            .then(Commands.argument("radius", IntegerArgumentType.integer(1, 96))
+                                .executes(VillageCommands::foundGround)))))
                 .then(Commands.literal("board")
                     .executes(ctx -> foundBoard(ctx, false))
                     .then(Commands.argument("x", IntegerArgumentType.integer())
@@ -500,6 +505,53 @@ public final class VillageCommands {
         }
         ctx.getSource().sendSuccess(() -> Component.literal(String.join(" | ", lines)), false);
         return lines.size();
+    }
+
+    /**
+     * How flat the ground is round a spot, measured: the top of the earth in every column within
+     * the radius (looking through plants), how many stand at the commonest height and how many off
+     * it, and the first few that are off with what tops them. For the smoke's check of a founding.
+     */
+    private static int foundGround(CommandContext<CommandSourceStack> ctx) {
+        net.minecraft.server.level.ServerLevel level = ctx.getSource().getLevel();
+        int cx = IntegerArgumentType.getInteger(ctx, "x"), cz = IntegerArgumentType.getInteger(ctx, "z");
+        int r = IntegerArgumentType.getInteger(ctx, "radius");
+        java.util.TreeMap<Integer, Integer> heights = new java.util.TreeMap<>();
+        java.util.Map<Long, Integer> at = new java.util.HashMap<>();
+        for (int dx = -r; dx <= r; dx++) {
+            for (int dz = -r; dz <= r; dz++) {
+                if (com.jrpetty.mcassistant.village.FoundingPlan.reach(dx, dz) > r) continue;
+                int y = com.jrpetty.mcassistant.entity.Terraform.groundY(level, cx + dx, cz + dz);
+                if (y == Integer.MIN_VALUE) continue;
+                heights.merge(y, 1, Integer::sum);
+                at.put(net.minecraft.core.BlockPos.asLong(cx + dx, 0, cz + dz), y);
+            }
+        }
+        if (heights.isEmpty()) {
+            ctx.getSource().sendFailure(Component.literal("None of that ground is loaded."));
+            return 0;
+        }
+        int mode = heights.entrySet().stream().max(java.util.Map.Entry.comparingByValue()).get().getKey();
+        int all = at.size(), on = heights.get(mode);
+        StringBuilder sb = new StringBuilder("GROUND " + all + " columns, " + on + " at y=" + mode + ", " + (all - on) + " off it");
+        StringBuilder spread = new StringBuilder();
+        for (java.util.Map.Entry<Integer, Integer> e : heights.entrySet()) {
+            if (spread.length() > 0) spread.append(' ');
+            spread.append("y").append(e.getKey()).append(':').append(e.getValue());
+        }
+        sb.append(" | heights ").append(spread);
+        int shown = 0;
+        for (java.util.Map.Entry<Long, Integer> e : at.entrySet()) {
+            if (e.getValue() == mode || shown >= 6) continue;
+            net.minecraft.core.BlockPos p = net.minecraft.core.BlockPos.of(e.getKey());
+            net.minecraft.core.BlockPos top = new net.minecraft.core.BlockPos(p.getX(), e.getValue(), p.getZ());
+            sb.append(shown == 0 ? " | off: " : "; ").append(p.getX()).append(',').append(p.getZ()).append(" y=").append(e.getValue())
+                .append(' ').append(net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(level.getBlockState(top).getBlock()).getPath());
+            shown++;
+        }
+        String out = sb.toString();
+        ctx.getSource().sendSuccess(() -> Component.literal(out), false);
+        return all - on;
     }
 
     private static int raiseMany(CommandContext<CommandSourceStack> ctx,
