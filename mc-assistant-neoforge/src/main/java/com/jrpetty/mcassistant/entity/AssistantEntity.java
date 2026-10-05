@@ -3002,6 +3002,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Is its village short of coal (so logs burn before coal, and charcoal is made)? (VillageFolkEntity) */
     public boolean savingCoal() { return false; }
 
+    /** [economy] Are its village's stores under the floor of coal it keeps whatever its age? (VillageFolkEntity: Fuel) */
+    public boolean coalLow() { return false; }
+
     /** Is its village nearly out of glass and bottles? (VillageFolkEntity) */
     protected boolean wantsGlass() { return false; }
 
@@ -4023,7 +4026,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case GUARD -> s.is(Items.TORCH) ? 16 : (s.is(Items.ARROW) ? 32
                 : (s.get(DataComponents.FOOD) != null ? 8 : 0));
             case SMELT -> (s.is(Items.RAW_IRON) || s.is(Items.RAW_GOLD) || s.is(Items.RAW_COPPER)) ? 64
-                : ((s.is(Items.COAL) || s.is(Items.CHARCOAL)) ? (savingCoal() ? 0 : 32)
+                : ((s.is(Items.COAL) || s.is(Items.CHARCOAL)) ? (savingCoal() || (s.is(Items.CHARCOAL) && coalLow()) ? 0 : 32)   // [economy] its charcoal is the stores'
                 // What it is firing and cutting for the masons (Masonry), and the sand for its glass.
                 : (s.is(Items.COBBLESTONE) || s.is(Items.STONE) || s.is(Items.CLAY_BALL)) ? 64
                 : (s.is(Items.SAND) || s.is(Items.RED_SAND)) ? 32
@@ -5993,10 +5996,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         String want = null;
         int many = 1;
         boolean needsLight = stationTask == StationTask.MINE || stationTask == StationTask.GUARD;
-        if (needsLight && countCarried(s -> s.is(Items.TORCH)) < 8
-            && countStocked(s -> s.is(Items.COAL) || s.is(Items.CHARCOAL)) > 0) {
+        int lumps;
+        if (needsLight && countCarried(s -> s.is(Items.TORCH)) < 8 && (lumps = torchLumps()) > 0) {
             want = "torch";
-            many = 16;
+            many = lumps * 4;                         // [economy] as many as the coal in hand makes
         } else if (countStocked(s -> s.is(Items.WHEAT)) >= 3
             && (countFood() < 4
                 || (stationTask == StationTask.FARM && countStocked(s -> s.is(Items.WHEAT)) >= 9))) {
@@ -6023,9 +6026,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         consumableCraftTick = tickCount;
         if ("bread".equals(want)) {
             scoopFromChests(s -> s.is(Items.WHEAT), many * 3, chestRange(), false);
-        } else {
-            scoopFromChests(s -> metalAllowed(s) && (s.is(Items.COAL) || s.is(Items.CHARCOAL) || s.is(Items.WHEAT)
-                || s.is(Items.STICK) || s.is(ItemTags.PLANKS) || s.is(ItemTags.LOGS)
+        } else if (!"torch".equals(want)) {             // [economy] a torch's makings are in hand already (torchLumps)
+            // (A bucket or a piece of kit wants metal and wood: not the stores' coal or wheat in a pack.)
+            scoopFromChests(s -> metalAllowed(s) && (s.is(Items.STICK) || s.is(ItemTags.PLANKS) || s.is(ItemTags.LOGS)
                 || s.is(Items.IRON_INGOT) || s.is(Items.DIAMOND)),
                 16, chestRange(), false);
         }
@@ -6038,6 +6041,28 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             default -> "Making myself " + want.replace('_', ' ');
         }, plan);
         return true;
+    }
+
+    /**
+     * [economy] The lumps of coal a miner or a guard may make into torches now, with the stick for each to
+     * hand (Fuel). Only coal in hand: short of a lump, the planner sent a guard out to mine for one, and
+     * every try first scooped sixteen of whatever came first out of the chests (logs, mostly) into its
+     * pack, there to stay: the hundred days' guard held eighty-eight logs and never stood its watch. And
+     * not the village's coal while it is short for its age (savingCoal) or under the floor it keeps
+     * (coalLow): a miner may light its shaft with what it dug itself; the watch waits for the stores' torches.
+     */
+    private int torchLumps() {
+        java.util.function.Predicate<ItemStack> lump = s -> s.is(Items.COAL) || s.is(Items.CHARCOAL);
+        boolean saving = savingCoal() || coalLow();
+        if (saving && stationTask != StationTask.MINE) return 0;
+        if (!saving && countCarried(lump) < 4 && countStocked(lump) > 0) {
+            scoopFromChests(lump, 4 - countCarried(lump), chestRange(), false);
+        }
+        int lumps = Math.min(4, countCarried(lump));
+        if (lumps <= 0) return 0;
+        java.util.function.Predicate<ItemStack> wood = s -> s.is(Items.STICK) || s.is(ItemTags.PLANKS) || s.is(ItemTags.LOGS);
+        if (countCarried(wood) == 0) scoopFromChests(s -> s.is(Items.STICK) || s.is(ItemTags.PLANKS), 4, chestRange(), false);
+        return countCarried(wood) > 0 ? lumps : 0;
     }
 
     /**
@@ -6708,7 +6733,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 // while a smelt was running, and sat there for good once the ore ran out.
                 emptyFurnaceOutputs();
                 // A village short of coal: charcoal first, ore or no ore (it checks once a minute).
-                if (savingCoal() && burnCharcoal()) return true;
+                if ((savingCoal() || coalLow()) && burnCharcoal()) return true;   // [economy] or under the floor (Fuel)
                 if (countMatching(SMELTABLE_ORE) == 0) {
                     scoopFromChests(SMELTABLE_ORE, 64, chestRange());
                 }
@@ -7397,6 +7422,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 // The mason's work, for the builders: the dressed stone, the smooth stone, the brick.
                 + surplusOf(Items.STONE_BRICKS, 0) + surplusOf(Items.SMOOTH_STONE, 0)
                 + surplusOf(Items.BRICKS, 0) + surplusOf(Items.BRICK, 0)
+                // [economy] The charcoal it burnt for the stores, and any coal past its own fuel: banked,
+                // all of it while the village is saving coal (Fuel), for it sat in the pack otherwise.
+                + surplusOf(Items.CHARCOAL, savingCoal() || coalLow() ? 0 : 32) + surplusOf(Items.COAL, savingCoal() ? 0 : 32)
                 // The crew's dinners: banked so the supply chain can route
                 // them, minus a few kept back for the cook's own table.
                 + surplusOf(Items.COOKED_BEEF, 3) + surplusOf(Items.COOKED_PORKCHOP, 3)

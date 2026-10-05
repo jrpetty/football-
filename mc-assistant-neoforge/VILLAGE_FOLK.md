@@ -2298,6 +2298,53 @@ hears it. `/village status` shows the leader, its nature, how much food it recko
 by and the plan; the board shows it too; and the elder will tell you itself when you ask
 about its orders.
 
+### Mouths, fuel and the builders' stock
+
+A village of eight on the plains, left to itself for a hundred days, showed three ways a town
+goes wrong: it had sixteen children in a week on a full larder and then ate the larder down; it
+went most days with no coal in its stores; and its guard walked the streets with a builder's
+load in its pack. So:
+
+* **A child is a mouth for good.** A full larder is no longer enough. A child is raised only
+  when the fields, the waters and the hunt grow at least what the town eats in a day, counting
+  every mouth it has now and the child's besides (a folk eats what the leader's books say a head
+  eats, and never less than its three meals). A small gap (a fifth of what is eaten) is allowed
+  when the larder could carry it for a fortnight while new fields come in. On short commons, no
+  child is raised at all. The board's **Growing:** line and the town's books say why not:
+  "no — 70 meals grown a day against 90 eaten with one more mouth: the fields first".
+* **The leader counts the new mouths.** Its forecast of what is eaten a day is never less than
+  what every folk here now eats by its books, so a run of births turns the plan to short commons
+  (more farmers and fishers, the fields widened) at once, not three days later; and once the
+  forecast has turned, a miner or woodcutter whose stone or logs are piled past twice what the
+  age wants goes to the fields before the larder runs low.
+* **Coal in the stores, whatever the age.** A village keeps a floor of coal or charcoal in its
+  stores: sixteen, or one a head, up to forty-eight. Under it, the smelter burns logs the
+  builders can spare into charcoal for the stores before anything else (half of them to burn,
+  half as fuel), as a player would, and banks it rather than keeping it as fuel; its furnaces
+  burn wood first; the couriers take it logs, not the last coal; and the stores' torches are
+  made of charcoal only. In the Wood Age it waits while the age still wants timber: the houses
+  come first.
+* **Torches out of coal in hand.** A miner or a guard makes torches only out of the coal it
+  has, as many as it makes (four a lump), and the watch makes none while the stores are short of
+  coal or under the floor; a miner may still light its shaft with what it dug. A miner hands in
+  every lump past that.
+* **The builders' stock goes back.** Once a minute a hand with nothing to do looks in its pack.
+  Anything the builders use (logs, planks, stone and brick, stairs, slabs, doors, glass, sand,
+  ingots, fences, ladders, beds) that is not its own trade's work (a woodcutter's logs, a
+  miner's stone) and not held back (its kit, or the building it is leading) goes back to the
+  stores: a load of sixteen or more at once, anything less after three minutes. A builder who
+  gives up the lead hands back its stairs, slabs, doors and glass with its timber and stone.
+  The smelter, the crafts, the couriers and the storekeeper work with that stock and are let be.
+* **What took them.** A death is written down with its cause: by drowning, in a fall, in lava,
+  fighting a zombie, and so on, not just "by misfortune", in the history, the graves and the
+  books. (Hunger never kills: a folk that misses its meals grows weak, but never below three
+  hearts.)
+
+`/village economy` says it all in chat: food grown against eaten and whether a child may be
+raised, the coal in the stores against the floor, who carries the builders' stock about, and
+what the village's dead died of. The Stores page of the town's books shows the larder's word on
+a child under the food chart.
+
 ### What each folk cares about
 
 Every grown folk weighs seven things a village can be run for, and the heaviest names the kind of
@@ -3946,6 +3993,10 @@ ripen, days pass, folk work and houses go up at that pace.
   short of. `museum work` (operators) has the curator do its next piece of work now, out of the
   stores; `museum stage` (operators) sets a museum out where you stand for the pictures, its places
   filled with one of everything and the chronicle so far bound into its archive.
+* `/village economy` — the nearest village's larder against its mouths (grown a day, eaten a
+  day, whether a child may be raised and why), its coal and charcoal against the floor it keeps,
+  who carries the builders' stock about, and what its dead died of. `economy charcoal`
+  (operators) has its smelter burn logs into charcoal now, if the village wants it.
 * `/village standing` — what every village you have met thinks of you.
 * `/village ledger` — the nearest village's town ledger, as a book.
 * `/village relations` — every pair of neighbouring villages: allies, friends, uneasy,
