@@ -71,6 +71,8 @@ public final class VillageCommands {
                         .executes(ctx -> house(ctx, "let", IntegerArgumentType.getInteger(ctx, "coins"))))))
             .then(Commands.literal("wages").executes(ctx -> page(ctx, 2)))
             .then(Commands.literal("economy").executes(ctx -> page(ctx, 3)))
+            // The sellers' books: what the shop, the café, the tavern and the stores have, sell and make.
+            .then(Commands.literal("shop").executes(ctx -> page(ctx, 4)))
             // The morning news of the villages near you, in chat, once a morning: on or off.
             .then(Commands.literal("news")
                 .then(Commands.literal("on").executes(ctx -> news(ctx, true)))
@@ -565,8 +567,9 @@ public final class VillageCommands {
             return 0;
         }
         String text = which == 2 ? com.jrpetty.mcassistant.entity.Wealth.wagesPage(level, v)
+            : which == 4 ? com.jrpetty.mcassistant.entity.Stockroom.page(level, v)
             : com.jrpetty.mcassistant.entity.Economy.page(level, v);
-        String title = Villages.name(v.id()) + (which == 2 ? " — wages" : " — economy");
+        String title = Villages.name(v.id()) + (which == 2 ? " — wages" : which == 4 ? " — the sellers' books" : " — economy");
         ctx.getSource().sendSuccess(() -> Component.literal(title + "\n" + text), false);
         return 1;
     }

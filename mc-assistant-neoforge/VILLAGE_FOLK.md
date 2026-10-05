@@ -2471,6 +2471,9 @@ ripen, days pass, folk work and houses go up at that pace.
 * `/village stats [page]` — the town's books on the analytics screen (as clicking the village
   board does), opened at a page if one is given (0 the Overview to 14 the Board); from the
   console, the reading of what drives the village's growth.
+* `/village shop` — the sellers' books: for the shop, the café, the tavern, the market and the
+  stores, what each ware has on hand against what is kept, what sold today and this week, what
+  was wanted and not there, what was made, its price and markdown, and what it is short of.
 * `/village chronicle` — the nearest village's history, as a written book.
 * `/village standing` — what every village you have met thinks of you.
 * `/village ledger` — the nearest village's town ledger, as a book.

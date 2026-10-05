@@ -741,6 +741,49 @@ public final class Stockroom {
         return out;
     }
 
+    /**
+     * The sellers' books as a page of text (/village shop): each seller that stands, keeps a keeper or
+     * has sold anything, with its week, and a line a ware worth a line (on its shelf, wanted, sold or
+     * made): on hand against what it keeps, what sold today and this week, what was made, the price,
+     * any markdown, and what it is short of.
+     */
+    public static String page(ServerLevel level, Villages.Village v) {
+        CompoundTag report = inventoryReport(level, v.id());
+        StringBuilder sb = new StringBuilder();
+        ListTag sellers = report.getList("sellers", net.minecraft.nbt.Tag.TAG_COMPOUND);
+        for (int i = 0; i < sellers.size(); i++) {
+            CompoundTag s = sellers.getCompound(i);
+            ListTag rows = s.getList("wares", net.minecraft.nbt.Tag.TAG_COMPOUND);
+            if (!s.getBoolean("built") && !s.getBoolean("open") && s.getInt("sold7") == 0 && s.getInt("made7") == 0) continue;
+            String keeper = s.getString("keeper");
+            sb.append(cap(s.getString("name"))).append(keeper.isEmpty() ? "" : " (" + keeper + ")")
+                .append(": sold ").append(s.getInt("sold7")).append(" this week for ").append(s.getInt("coin7"))
+                .append(" coin, made ").append(s.getInt("made7")).append('\n');
+            int shown = 0;
+            for (int k = 0; k < rows.size() && shown < 14; k++) {
+                CompoundTag r = rows.getCompound(k);
+                if (r.getInt("onHand") == 0 && r.getInt("target") == 0 && r.getInt("sold7") == 0 && r.getInt("made7") == 0) continue;
+                shown++;
+                sb.append("  ").append(r.getString("name")).append(": ").append(r.getInt("onHand"));
+                if (r.getInt("target") > 0) sb.append(" of ").append(r.getInt("target"));
+                sb.append(", sold ").append(r.getInt("soldToday")).append(" today, ").append(r.getInt("sold7")).append(" this week");
+                if (r.getInt("missed7") > 0) sb.append(" (").append(r.getInt("missed7")).append(" wanted and not there)");
+                if (r.getInt("made7") > 0) sb.append(", made ").append(r.getInt("made7"));
+                if (r.getInt("price") > 0) {
+                    sb.append(", ").append(r.getInt("lot") > 1 ? r.getInt("lot") + " for " : "").append(r.getInt("price")).append('c');
+                }
+                if (r.getInt("markdown") > 0) sb.append(" (").append(r.getInt("markdown")).append(" off)");
+                if (!r.getString("short").isEmpty()) sb.append(" — short of ").append(r.getString("short"));
+                sb.append('\n');
+            }
+        }
+        return sb.length() == 0 ? "No shop, café or tavern yet, and nothing sold." : sb.toString().stripTrailing();
+    }
+
+    private static String cap(String s) {
+        return s.isEmpty() ? s : Character.toUpperCase(s.charAt(0)) + s.substring(1);
+    }
+
     private static CompoundTag sellerTag(ServerLevel level, UUID village, Seller s) {
         CompoundTag t = new CompoundTag();
         t.putString("id", s.id);

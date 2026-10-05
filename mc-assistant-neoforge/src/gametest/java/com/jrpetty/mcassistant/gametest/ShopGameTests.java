@@ -264,6 +264,9 @@ public class ShopGameTests {
             helper.assertTrue(ironFloor > 1, "and an iron pickaxe is never sold under what it cost");
             helper.assertTrue(row(shop, "candle").getInt("sold7") == 20 && row(shop, "candle").getInt("missed7") == 4,
                 "the shop's books count the week's sales, and the sales it had not got");
+            String page = Stockroom.page(level, v);
+            Kit.log("sh03 /village shop:\n" + page);
+            helper.assertTrue(page.contains("Candles"), "and /village shop reads them out");
             helper.succeed();
         });
     }
