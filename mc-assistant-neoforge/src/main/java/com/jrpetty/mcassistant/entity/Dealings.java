@@ -331,8 +331,9 @@ public final class Dealings {
 
     // ------------------------------------------------------------------ 9. made to order
 
-    /** Orders taken: by player, what is being made, when it is ready, and the craftsman's village. */
-    record Order(UUID village, Item item, long ready, String maker) {}
+    /** Orders taken: by player, what is being made, when it is ready, the craftsman's village, and the
+     *  craftsman's name and level at its trade when it took the order (Craftsmanship: how well it is made). */
+    record Order(UUID village, Item item, long ready, String maker, int skill) {}
 
     private static final Map<UUID, Order> ORDERS = new ConcurrentHashMap<>();
 
@@ -354,12 +355,25 @@ public final class Dealings {
                 + " is still at it — come back tomorrow.";
             ORDERS.remove(p.getUUID());
             String what = made.getHoverName().getString().toLowerCase(Locale.ROOT);
+            // As well made as the hand that took the order (Craftsmanship).
+            Craftsmanship.Grade grade = Craftsmanship.grade(mine.skill());
+            made = Craftsmanship.finish(level, made, mine.skill(), mine.maker());
             give(p, made);
-            return "Here's your " + what + ", fresh from " + mine.maker() + ". Wear it well.";
+            String how = switch (grade) {
+                case ROUGH -> " It's a learner's work, mind — it won't last like a master's.";
+                case PLAIN -> "";
+                case GOOD -> " Good work, that: it'll outlast most.";
+                case FINE -> " Fine work: it'll last a third longer than most.";
+                case MASTER -> " A master's work: tempered, and it'll last half as long again.";
+            };
+            return "Here's your " + what + ", fresh from " + mine.maker() + ". Wear it well." + how;
         }
         if (!craftsman(f.stationTask())) return "That's work for a smith, a tailor or a carpenter — ask one of them.";
         Item want = Services.itemNamed(text);
         if (want == null) return "What shall I make? Say what — \"make me an iron sword\".";
+        // Only what its hand is up to: a beginner at the anvil forges tools, not a diamond chestplate.
+        int skill = f.veteranLevel();
+        if (!Craftsmanship.canMake(skill, want)) return Craftsmanship.beyond(f, want);
         RecipeHolder<?> recipe = recipeFor(level, want);
         if (recipe == null) return "I don't know how to make that, I'm afraid.";
         // The makings: what the player carries first, then what the village can spare.
@@ -392,7 +406,9 @@ public final class Dealings {
         }
         double storesWorth = 0;
         for (Map.Entry<Item, Integer> e : fromStores.entrySet()) storesWorth += Prices.each(e.getKey()) * e.getValue();
-        int price = (int) Math.max(1, Math.round(storesWorth * Budget.PLAYER_MARKUP + Prices.each(want) * 0.2));
+        // The makings, and the work: a master's work dearer than a beginner's.
+        double work = Prices.each(want) * 0.2 * Craftsmanship.grade(skill).worth;
+        int price = (int) Math.max(1, Math.round(storesWorth * Budget.PLAYER_MARKUP + work));
         price = haggled(village, p.getUUID(), d, price);
         if (Market.coinsHeld(p) < price) return "That'd be " + coins(price) + ", makings and work. You've " + Market.coinsHeld(p) + ".";
         // Take it all.
@@ -405,7 +421,7 @@ public final class Dealings {
         Ledger.addCoins(village, price);
         Economy.sold(village, price);
         Budget.forget(village);
-        ORDERS.put(p.getUUID(), new Order(village, want, d + 1, f.displayNameCap()));
+        ORDERS.put(p.getUUID(), new Order(village, want, d + 1, f.displayNameCap(), skill));
         f.persona().feelFor(p.getUUID(), p.getName().getString(), 2);
         return "Right you are: " + coins(price) + ", and it'll be ready tomorrow. Come and ask for it.";
     }

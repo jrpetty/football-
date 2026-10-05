@@ -848,10 +848,12 @@ public final class Market {
         return g.bundle() > 1 ? g.bundle() + " " + g.name().toLowerCase() : shown.getHoverName().getString();
     }
 
-    /** What the village asks for a lot of what is on a counter: more for an enchanted thing. */
+    /** What the village asks for a lot of what is on a counter: more for an enchanted thing, and
+     *  more for a master's work than a beginner's (Craftsmanship). */
     static int price(Good g, ItemStack shown, int stock, boolean marketDay) {
         int p = sellPrice(g, stock, marketDay);
-        return shown.isEnchanted() ? p * 3 : p;
+        if (shown.isEnchanted()) p *= 3;
+        return (int) Math.max(1, Math.round(p * Craftsmanship.worth(shown)));
     }
 
     /** A counter's price tag: what is on it and what a lot costs. */

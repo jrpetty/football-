@@ -106,6 +106,7 @@ public final class Raids {
         QUIETED.clear();
         CLIMB.clear();
         Watch.resetForTests();
+        Patrols.resetForTests();
     }
 
     /** Is the bell ringing in this village? */
@@ -133,6 +134,14 @@ public final class Raids {
             for (ServerLevel level : event.getServer().getAllLevels()) {
                 for (Villages.Village v : Villages.every()) {
                     if (v.dim().equals(level.dimension())) tick(level, v);
+                }
+            }
+        });
+        // Between the bells: a monster near the village's people draws a guard (Patrols).
+        Guard.run("patrols", () -> {
+            for (ServerLevel level : event.getServer().getAllLevels()) {
+                for (Villages.Village v : Villages.every()) {
+                    if (v.dim().equals(level.dimension())) Patrols.tick(level, v);
                 }
             }
         });

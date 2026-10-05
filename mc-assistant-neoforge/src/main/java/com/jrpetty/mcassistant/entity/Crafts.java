@@ -276,7 +276,10 @@ public final class Crafts {
 
     // ------------------------------------------------------------------ the blacksmith
 
-    private record Smithing(Item item, int iron, int sticks, int keep) {}
+    /** A piece of the smith's work: what, of how much of what metal, sticks and planks, and how many to keep in the stores. */
+    private record Smithing(Item item, Item metal, int bars, int sticks, int planks, int keep) {
+        Smithing(Item item, int iron, int sticks, int keep) { this(item, Items.IRON_INGOT, iron, sticks, 0, keep); }
+    }
 
     @Nullable
     static String smith(ServerLevel level, Villages.Village v, VillageFolkEntity f) {
@@ -293,11 +296,15 @@ public final class Crafts {
             new Smithing(Items.IRON_CHESTPLATE, 8, 0, Math.min(3, watch)),
             new Smithing(Items.IRON_LEGGINGS, 7, 0, Math.min(3, watch)),
             new Smithing(Items.IRON_BOOTS, 4, 0, Math.min(3, watch)),
+            new Smithing(Items.SHIELD, Items.IRON_INGOT, 1, 0, 6, Math.min(3, watch)),
             new Smithing(Items.SHEARS, 2, 0, 1),
             new Smithing(Items.BUCKET, 3, 0, 2),
             new Smithing(Items.IRON_AXE, 3, 2, 1),
             new Smithing(Items.IRON_HOE, 2, 2, 1),
-            new Smithing(Items.IRON_SHOVEL, 1, 2, 1));
+            new Smithing(Items.IRON_SHOVEL, 1, 2, 1),
+            // With the hand for it, and the diamonds to hand: the miners' best pick and the watch's best blade.
+            new Smithing(Items.DIAMOND_PICKAXE, Items.DIAMOND, 3, 2, 0, 1),
+            new Smithing(Items.DIAMOND_SWORD, Items.DIAMOND, 2, 1, 0, 1));
         // The watch's bows and arrows, turn about with the iron work: a guard on the wall with
         // nothing to shoot is no guard, and a miner with a broken pick is no miner.
         boolean fletchFirst = (level.getGameTime() / EVERY) % 2 == 0;
@@ -305,31 +312,44 @@ public final class Crafts {
             String fletched = fletch(level, v, guards(v));
             if (fletched != null) return fletched;
         }
-        String forged = forge(level, v, wants);
+        String forged = forge(level, v, f, wants);
         if (forged != null || fletchFirst) return forged;
         return fletch(level, v, guards(v));
     }
 
+    /**
+     * The first thing on the list the village is short of that the smith has the hand for
+     * (Craftsmanship: a beginner makes tools and blades, armour comes with the years, diamond
+     * later still) and the metal for, made as well as its hand makes it.
+     */
     @Nullable
-    private static String forge(ServerLevel level, Villages.Village v, List<Smithing> wants) {
-        int iron = stock(level, v, s -> s.is(Items.IRON_INGOT));
+    private static String forge(ServerLevel level, Villages.Village v, VillageFolkEntity f, List<Smithing> wants) {
         // While the village is still putting iron by for its age, the smith makes only what gets
         // more of it (picks for the mine) and what keeps it safe (a blade for the watch): the
         // armour and the buckets wait. It used to keep four bars back and forge the rest into
-        // armour the guards then took out of the stores, and the age's iron never came.
-        boolean saving = false;
+        // armour the guards then took out of the stores, and the age's iron never came. The
+        // same for the diamonds the age asks for.
+        boolean saving = false, savingDiamonds = false;
         for (Villages.Need n : Villages.needs(level, v.id())) {
-            if (n.task() == Villages.Task.IRON) { saving = true; break; }
+            if (n.task() == Villages.Task.IRON) saving = true;
+            if (n.task() == Villages.Task.DIAMOND) savingDiamonds = true;
         }
+        int skill = f.veteranLevel();
         for (Smithing w : wants) {
             Item it = w.item();
-            if (saving && it != Items.IRON_PICKAXE && it != Items.IRON_SWORD) continue;
+            if (!Craftsmanship.canMake(skill, it)) continue;                // not the hand for it yet
+            boolean diamond = w.metal() == Items.DIAMOND;
+            if (diamond ? savingDiamonds : saving && it != Items.IRON_PICKAXE && it != Items.IRON_SWORD) continue;
             if (stock(level, v, s -> s.is(it)) >= w.keep()) continue;
-            if (iron < w.iron() + 4) continue;                       // a few bars kept back for the village
-            if (w.sticks() > 0 && !planks(level, v, (w.sticks() + 1) / 2)) continue;
-            if (!take(level, v, s -> s.is(Items.IRON_INGOT), w.iron())) return null;
+            Item metal = w.metal();
+            int bars = stock(level, v, s -> s.is(metal));
+            if (bars < w.bars() + (diamond ? 2 : 4)) continue;             // a few kept back for the village
+            int wood = w.planks() + (w.sticks() + 1) / 2;
+            if (wood > 0 && !planks(level, v, wood)) continue;
+            if (!take(level, v, s -> s.is(metal), w.bars())) return null;
             sticks(level, v, w.sticks());
-            ItemStack made = new ItemStack(it);
+            if (w.planks() > 0) take(level, v, s -> s.is(ItemTags.PLANKS), w.planks());
+            ItemStack made = Craftsmanship.finish(level, new ItemStack(it), skill, f.displayNameCap());
             store(level, v, made.copy());
             return name(made);
         }
@@ -394,11 +414,13 @@ public final class Crafts {
         }
         boolean bedsFirst = bedded < adults && bedded < Villages.bedsPlanned(v.id());
         int beds = stock(level, v, s -> s.is(ItemTags.BEDS));
+        // What it can make, and how well, is its years at the loom (Craftsmanship).
+        int skill = f.veteranLevel();
         if ((beds < 2 || (bedsFirst && beds < 4)) && have >= 3 && planks(level, v, 3)) {
             Item colour = woolColour(level, v);
             if (!take(level, v, s -> s.is(colour), 3) && !take(level, v, wool, 3)) return null;
             take(level, v, s -> s.is(ItemTags.PLANKS), 3);
-            ItemStack bed = new ItemStack(byColour(colour, "_bed", Items.RED_BED));
+            ItemStack bed = Craftsmanship.finish(level, new ItemStack(byColour(colour, "_bed", Items.RED_BED)), skill, f.displayNameCap());
             store(level, v, bed.copy());
             return name(bed);
         }
@@ -410,7 +432,8 @@ public final class Crafts {
             return "four lengths of string, spun from wool";
         }
         if (bedsFirst) return null;
-        // Boots in the village's colour, of the rancher's leather: everybody's, a pair each.
+        // Boots of the rancher's leather: everybody's, a pair each. Plain leather from a beginner;
+        // in the village's colour from a tailor of ten years and more.
         int barefoot = 0;
         for (AssistantEntity a : Villages.folkOf(v.id())) {
             if (!a.isBaby() && a.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.FEET).isEmpty()) barefoot++;
@@ -418,10 +441,13 @@ public final class Crafts {
         if (barefoot > stock(level, v, s -> s.is(Items.LEATHER_BOOTS)) && stock(level, v, s -> s.is(Items.LEATHER)) >= 4
                 && take(level, v, s -> s.is(Items.LEATHER), 4)) {
             ItemStack boots = new ItemStack(Items.LEATHER_BOOTS);
-            boots.set(net.minecraft.core.component.DataComponents.DYED_COLOR,
-                new net.minecraft.world.item.component.DyedItemColor(Villages.colour(v.id()), false));
-            store(level, v, boots);
-            return "a pair of boots in the village's colour";
+            boolean dyed = skill >= 10;
+            if (dyed) {
+                boots.set(net.minecraft.core.component.DataComponents.DYED_COLOR,
+                    new net.minecraft.world.item.component.DyedItemColor(Villages.colour(v.id()), false));
+            }
+            store(level, v, Craftsmanship.finish(level, boots, skill, f.displayNameCap()));
+            return dyed ? "a pair of boots in the village's colour" : "a pair of plain leather boots";
         }
         if (stock(level, v, s -> s.is(ItemTags.WOOL_CARPETS)) < 8 && have >= 2) {
             Item colour = woolColour(level, v);
@@ -430,14 +456,17 @@ public final class Crafts {
             store(level, v, rugs.copy());
             return name(rugs);
         }
-        // Banners are woven on the loom.
-        if (loom != null && stock(level, v, s -> s.is(ItemTags.BANNERS)) < 2 && have >= 6 && planks(level, v, 1)) {
+        // Banners are woven on the loom, by a tailor with the hand for it; a better hand weaves a
+        // border into them, and a master a stripe as well.
+        if (loom != null && Craftsmanship.canMake(skill, Items.WHITE_BANNER) && stock(level, v, s -> s.is(ItemTags.BANNERS)) < 2
+                && have >= 6 && planks(level, v, 1)) {
             Item colour = woolColour(level, v);
             if (!take(level, v, s -> s.is(colour), 6) && !take(level, v, wool, 6)) return null;
             sticks(level, v, 1);
             ItemStack banner = new ItemStack(byColour(colour, "_banner", Items.WHITE_BANNER));
+            Craftsmanship.weave(level, banner, skill);
             store(level, v, banner.copy());
-            return name(banner);
+            return name(banner) + (skill >= 25 ? ", with a border woven in" : "");
         }
         return null;
     }
@@ -1021,15 +1050,20 @@ public final class Crafts {
             }
         }
         shelves = Math.min(15, shelves);
-        int tier = shelves >= 15 ? 3 : shelves >= 6 ? 2 : 1;
+        // The shelves set how strong the work can be, and so does the enchanter's own hand: a
+        // beginner lays the first rank only, however many books are round it (Craftsmanship).
+        int skill = f.veteranLevel();
+        int tier = Math.min(shelves >= 15 ? 3 : shelves >= 6 ? 2 : 1, Craftsmanship.enchantTier(skill));
         var reg = level.registryAccess().registryOrThrow(Registries.ENCHANTMENT);
         for (BlockPos p : Villages.storeChests(level, v.id())) {
             if (!(level.getBlockEntity(p) instanceof net.minecraft.world.Container c)) continue;
             for (int i = 0; i < c.getContainerSize(); i++) {
                 ItemStack s = c.getItem(i);
-                if (s.isEmpty() || s.isEnchanted() || s.getCount() != 1) continue;
-                List<Map.Entry<ResourceKey<Enchantment>, Integer>> spell = spellFor(s, tier);
-                if (spell.isEmpty()) continue;
+                if (s.isEmpty() || s.getCount() != 1 || !Craftsmanship.canEnchant(skill, s)) continue;
+                List<Map.Entry<ResourceKey<Enchantment>, Integer>> spell = spellFor(s, tier, skill >= 30);
+                // Something already as good (its own work done before; a master smith's tempering
+                // is only a start on it) is left be.
+                if (spell.isEmpty() || !betters(s, spell, reg)) continue;
                 if (!use(level, v, f, x -> x.is(Items.LAPIS_LAZULI), 3) || !take(level, v, x -> x.is(Items.BOOK), 1)) return null;
                 for (Map.Entry<ResourceKey<Enchantment>, Integer> e : spell) {
                     reg.getHolder(e.getKey()).ifPresent(h -> s.enchant(h, e.getValue()));
@@ -1045,11 +1079,12 @@ public final class Crafts {
 
     /** What the enchanter puts on a thing: what it is for, made better and longer-lasting; stronger
      *  with more bookshelves round the table. */
-    private static List<Map.Entry<ResourceKey<Enchantment>, Integer>> spellFor(ItemStack s, int tier) {
+    private static List<Map.Entry<ResourceKey<Enchantment>, Integer>> spellFor(ItemStack s, int tier, boolean bound) {
         String path = BuiltInRegistries.ITEM.getKey(s.getItem()).getPath();
         boolean good = path.startsWith("iron_") || path.startsWith("diamond_") || path.startsWith("netherite_") || s.is(Items.BOW);
         if (!good) return List.of();
-        int lasting = tier >= 3 ? 2 : 1;
+        // An enchanter of thirty years binds its work to last: Unbreaking one better.
+        int lasting = (tier >= 3 ? 2 : 1) + (bound ? 1 : 0);
         if (path.endsWith("_pickaxe") || path.endsWith("_shovel") || path.endsWith("_axe")) {
             return List.of(Map.entry(Enchantments.EFFICIENCY, tier), Map.entry(Enchantments.UNBREAKING, lasting));
         }
@@ -1059,5 +1094,17 @@ public final class Crafts {
         }
         if (s.is(Items.BOW)) return List.of(Map.entry(Enchantments.POWER, tier));
         return List.of();
+    }
+
+    /** Would this work make the thing better: is any of it stronger than what is on it already? */
+    private static boolean betters(ItemStack s, List<Map.Entry<ResourceKey<Enchantment>, Integer>> spell,
+                                   net.minecraft.core.Registry<Enchantment> reg) {
+        var on = s.getOrDefault(net.minecraft.core.component.DataComponents.ENCHANTMENTS,
+            net.minecraft.world.item.enchantment.ItemEnchantments.EMPTY);
+        for (Map.Entry<ResourceKey<Enchantment>, Integer> e : spell) {
+            var h = reg.getHolder(e.getKey());
+            if (h.isPresent() && on.getLevel(h.get()) < e.getValue()) return true;
+        }
+        return false;
     }
 }

@@ -319,6 +319,12 @@ public class VillageFolkEntity extends AssistantEntity {
         if (tickCount % 20 == 3 && level() instanceof net.minecraft.server.level.ServerLevel hurtIn) {
             if (!Links.drinkIfHurt(this) && stationTask() != StationTask.GUARD) Links.healFromTheStores(this, hurtIn);
         }
+        // The watch between the bells (Patrols): a chase let go at the village's edge, and the
+        // leader's escort at its shoulder while it is out and about — the assembly, the board, the
+        // poll and the rest of its own day wait on the leader's.
+        if ((stationTask() == StationTask.GUARD || Patrols.escorting(this)) && tickCount % 5 == 2
+                && level() instanceof net.minecraft.server.level.ServerLevel watchIn) Patrols.step(this, watchIn);
+        if (!withAPlayer && Patrols.escorting(this)) return;
         // The village coming together (Assemblies): the bell rung, it goes, finds a place and takes part.
         if (!withAPlayer && tickCount % 4 == 1 && level() instanceof net.minecraft.server.level.ServerLevel gathering
                 && Assemblies.attend(this, gathering)) {
@@ -1240,14 +1246,18 @@ public class VillageFolkEntity extends AssistantEntity {
                 saw.persona.feelFor(p.getUUID(), who, -8);
             }
             refreshMood();
-        } else if (took && !level().isClientSide && persona.rolled() && !showcase
+        } else if (took && !level().isClientSide && !showcase
                 && source.getEntity() instanceof net.minecraft.world.entity.monster.Enemy
                 && source.getEntity() instanceof net.minecraft.world.entity.LivingEntity monster) {
-            // Set on by a monster with somebody near enough to help: it shouts for them.
+            // Set on by a monster: it shouts for the watch, and the nearest guard comes running
+            // (Patrols). With no guard to shout for, it shouts for whoever is near enough to help.
+            boolean watchComing = Patrols.cryForHelp(this, monster);
+            if (watchComing) lastCryTick = tickCount;
+            if (!persona.rolled()) return took;
             beset = monster.getUUID();
             besetUntil = tickCount + 600;
             net.minecraft.world.entity.player.Player near = level().getNearestPlayer(this, 24.0);
-            if (near != null && !near.isSpectator() && tickCount - lastCryTick > 100) {
+            if (!watchComing && near != null && !near.isSpectator() && tickCount - lastCryTick > 100) {
                 lastCryTick = tickCount;
                 String you = near.getName().getString();
                 String what = monster.getType().getDescription().getString().toLowerCase(java.util.Locale.ROOT);
@@ -2225,6 +2235,8 @@ public class VillageFolkEntity extends AssistantEntity {
      */
     @Override
     public boolean onShift() {
+        // Walking with the leader (Patrols, by day only): that is the work, assembly or none.
+        if (Patrols.escorting(this)) return true;
         // Called to the village's gathering: its work waits (the watch is never called away).
         if (Assemblies.attending(this)) return false;
         // On the town's own work (TownJobs): its trade waits till that is done.
@@ -2681,8 +2693,9 @@ public class VillageFolkEntity extends AssistantEntity {
      */
     private void putBackIfLost() {
         WorkZone zone = workZone();
+        // (A guard on its beat, or at the leader's shoulder, is not lost: the streets are its work.)
         if (zone == null || peekJob() != null || !onShift() || onBreak()
-            || zone.containsColumn(blockPosition())) {
+            || zone.containsColumn(blockPosition()) || walksAbroad()) {
             lostFor = 0;
             lostBest = Double.MAX_VALUE;
             return;
@@ -3617,6 +3630,16 @@ public class VillageFolkEntity extends AssistantEntity {
                 else put++;
             }
         }
+        // A shield, for a guard that can work one, once the smith has the hand to make them (Craftsmanship).
+        if (can(Ability.GUARD_SHIELD) && countCarried(st -> st.is(net.minecraft.world.item.Items.SHIELD)) == 0
+                && !getItemBySlot(net.minecraft.world.entity.EquipmentSlot.OFFHAND).is(net.minecraft.world.item.Items.SHIELD)) {
+            net.minecraft.world.item.ItemStack shield = Crafts.takeOne(server, v, st -> st.is(net.minecraft.world.item.Items.SHIELD));
+            if (!shield.isEmpty()) {
+                net.minecraft.world.item.ItemStack left = insertItem(shield);
+                if (!left.isEmpty()) Crafts.store(server, v, left);
+                else put++;
+            }
+        }
         if (put > 0) brain("took " + put + " piece" + (put == 1 ? "" : "s") + " of the smith's iron from the stores");
     }
 
@@ -3715,40 +3738,27 @@ public class VillageFolkEntity extends AssistantEntity {
         brain("put on a pair of the tailor's boots");
     }
 
-    private int roundIndex = -1;
-    private int roundTick = -100000;
-    private int roundLegStart = -100000;
-
     /**
-     * The night round: a guard on watch walks the ring street round the square, corner to corner
-     * and past each gate, instead of only the corners of its own plot. A watch that keeps to its
-     * plot meets only what comes to the plot; the streets are where the folk are coming home.
+     * The round: a guard walks its beat of the town's streets (Patrols), by day and by night,
+     * instead of only the corners of its own plot. A watch that keeps to its plot meets only what
+     * comes to the plot; the streets are where the folk are.
      */
     @Override
-    protected boolean nightRound() {
-        if (villageCentre == null || movementBlocked() || Raids.underAlarm(ownerId())) return false;
-        if (!getNavigation().isDone()) {
-            if (tickCount - roundLegStart < 200) return true;
-            getNavigation().stop();
-        } else if (tickCount - roundTick < 40) {
-            return true;                                                  // a look round at each stop
-        }
-        int r = com.jrpetty.mcassistant.village.TownPlan.RING + 1;
-        int[][] stops = { { -r, -r }, { 0, -r }, { r, -r }, { r, 0 }, { r, r }, { 0, r }, { -r, r }, { -r, 0 } };
-        if (roundIndex < 0) roundIndex = Math.floorMod(getUUID().hashCode(), stops.length);   // the watch spread round the ring
-        for (int i = 0; i < stops.length; i++) {
-            int[] s = stops[Math.floorMod(roundIndex + i, stops.length)];
-            int x = villageCentre.getX() + s[0], z = villageCentre.getZ() + s[1];
-            int y = level().getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
-            if (getNavigation().moveTo(x + 0.5, y, z + 0.5, 0.9D)) {
-                roundIndex = Math.floorMod(roundIndex + i + 1, stops.length);
-                roundTick = tickCount;
-                roundLegStart = tickCount;
-                return true;
-            }
-        }
-        roundTick = tickCount;
-        return false;
+    protected boolean streetRound() {
+        if (villageCentre == null || isHired() || !(level() instanceof net.minecraft.server.level.ServerLevel server)) return false;
+        return Patrols.round(this, server);
+    }
+
+    /** At the leader's shoulder (Patrols): that is the post while the leader is out and about. */
+    @Override
+    protected boolean onEscort() {
+        return Patrols.escorting(this);
+    }
+
+    /** A village's guard about the town's streets is at its work, wherever its plot is. */
+    @Override
+    protected boolean walksAbroad() {
+        return super.walksAbroad() || Patrols.escorting(this) || Patrols.onTheStreets(this);
     }
 
     private void stoneToolFromTheStores() {

@@ -1099,9 +1099,21 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      * you marked the patch, and a beat that follows the boundary is what the
      * boundary is for.
      */
-    /** A guard's round of the town by night; a hired guard has none (its plot is its beat). */
-    protected boolean nightRound() {
+    /** A guard's round of the town's streets, by day and by night (VillageFolkEntity, Patrols); a
+     *  hired guard has none (its plot is its beat). True while it is on its round. */
+    protected boolean streetRound() {
         return false;
+    }
+
+    /** A village guard walking at its leader's shoulder (VillageFolkEntity, Patrols): that is its post. */
+    protected boolean onEscort() {
+        return false;
+    }
+
+    /** Off its plot on its proper business: at a crewmate's shoulder on escort, or (a village's
+     *  guard) walking the town's streets. The leash back to the plot does not apply. */
+    protected boolean walksAbroad() {
+        return escortWard() != null;
     }
 
     private boolean walkTheBeat() {
@@ -5901,7 +5913,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     /** Off its own ground with work to go back to (a carrier's round is not a plot). */
     private boolean awayFromPlot() {
-        return workZone != null && stationTask != StationTask.HAUL && escortWard() == null
+        return workZone != null && stationTask != StationTask.HAUL && !walksAbroad()
             && !workZone.containsColumn(blockPosition());
     }
 
@@ -6067,7 +6079,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // there — and never came home to the place where the answer was.
         // Above the upkeep check for the same reason: a bot out of rations
         // must still be able to walk to the chest holding them.
-        if (workZone != null && escortWard() == null && stationTask != StationTask.HAUL
+        if (workZone != null && !walksAbroad() && stationTask != StationTask.HAUL
                 && !workZone.containsColumn(blockPosition())) {
             brain("walking back to the plot" + headForPlot());
             return true;
@@ -6240,6 +6252,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                     }
                     return true;
                 }
+                // A village's leader out and about with its escort beside it: the escort's step
+                // (Patrols, from the folk's own tick) keeps it there, and nothing here may call it off.
+                if (onEscort()) return true;
                 Monster m = nearestMonster((workZone != null
                     ? Math.min(32, Math.max(STATION_RADIUS, workZone.workRadius())) : STATION_RADIUS)
                     + branchWorkRadiusBonus());
@@ -6263,8 +6278,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 // standing in the middle of its plot only ever meets what comes
                 // to it; one walking the perimeter meets it at the edge, which
                 // is the whole point of posting a guard on a boundary.
-                // After dark a village's watch walks the streets (VillageFolkEntity), not its plot.
-                if (level().isNight() && nightRound()) return true;
+                // A village's watch walks the town's streets, by day and by night (Patrols), not
+                // its plot: the plot is a few yards of grass by the stores, and the folk are out
+                // in the streets.
+                if (streetRound()) return true;
                 if (walkTheBeat()) return true;
             }
             case SMELT -> {

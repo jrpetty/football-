@@ -88,6 +88,8 @@ public final class Prices {
         for (var e : ench.entrySet()) levels += e.getIntValue();
         for (var e : stored.entrySet()) levels += e.getIntValue();
         each += levels * 2.0;
+        // A master's piece is worth more than a beginner's (Craftsmanship: its maker's mark).
+        each *= Craftsmanship.worth(s);
         if (s.isDamageableItem() && s.getMaxDamage() > 0) {
             each *= Math.max(0.1, 1.0 - s.getDamageValue() / (double) s.getMaxDamage());
         }
