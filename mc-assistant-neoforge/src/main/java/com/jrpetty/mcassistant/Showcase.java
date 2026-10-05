@@ -146,6 +146,50 @@ public final class Showcase {
         return out;
     }
 
+    /** The buildings shown growing up through the ages, a row each. */
+    static final List<String> AGES_SHOWN = List.of("house", "hall", "tavern", "storage", "chapel", "library");
+
+    /**
+     * Each of a few buildings four times over in a row going east, as the village has it in the
+     * Wood, Stone, Iron and Diamond Ages (Grow and Ages, done all at once), one row behind another
+     * going south. Returns a line per row: "name x y z width", the middle of the row and its length.
+     */
+    public static List<String> ages(ServerLevel level, BlockPos start) {
+        List<String> out = new ArrayList<>();
+        com.jrpetty.mcassistant.entity.Villages.Age[] shown = {
+            com.jrpetty.mcassistant.entity.Villages.Age.WOOD, com.jrpetty.mcassistant.entity.Villages.Age.STONE,
+            com.jrpetty.mcassistant.entity.Villages.Age.IRON, com.jrpetty.mcassistant.entity.Villages.Age.DIAMOND };
+        int z = start.getZ();
+        int y = start.getY();
+        for (String name : AGES_SHOWN) {
+            int[] half = Blueprints.fullHalf(name.equals("house") ? "house2" : name);
+            int x = start.getX();
+            int x0 = x;
+            for (com.jrpetty.mcassistant.entity.Villages.Age age : shown) {
+                x += half[0] + 3;
+                stage(level, x - half[0] - 3, x + half[0] + 3, z - half[1] - 4, z + half[1] + 5, y);
+                BlockPos at = new BlockPos(x, y, z);
+                String plan = name;
+                Palette pal = OAK;
+                if (name.equals("house")) {
+                    // A house's own growing up (Grow): stone walls, then brick and a second storey.
+                    if (age.ordinal() >= com.jrpetty.mcassistant.entity.Villages.Age.IRON.ordinal()) plan = "house2";
+                    if (age.ordinal() >= com.jrpetty.mcassistant.entity.Villages.Age.STONE.ordinal()) {
+                        pal = com.jrpetty.mcassistant.entity.Grow.palette(age);
+                    }
+                }
+                BuildGoal.stamp(level, plan, at, Direction.NORTH, 13, painter(pal));
+                if (age.ordinal() >= com.jrpetty.mcassistant.entity.Villages.Age.STONE.ordinal()) {
+                    com.jrpetty.mcassistant.entity.Ages.now(level, null, new Ledger.Building(plan, at, Direction.NORTH), age);
+                }
+                x += half[0] + 3;
+            }
+            out.add(name + " " + ((x0 + x) / 2) + " " + y + " " + z + " " + (x - x0));
+            z += 70;                                    // room to stand back and take each row whole
+        }
+        return out;
+    }
+
     /**
      * A whole town, to the plan, centred on {@code heart}: the square paved and walled, the
      * streets laid and lit, and on its lots the buildings a grown village has. Returns how

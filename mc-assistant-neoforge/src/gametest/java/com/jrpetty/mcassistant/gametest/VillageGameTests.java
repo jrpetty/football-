@@ -4782,6 +4782,8 @@ public class VillageGameTests {
                 for (int i = 0; i < box.getContainerSize(); i++) if (eats.test(box.getItem(i))) box.setItem(i, ItemStack.EMPTY);
             }
         }
+        // And their packs: the leader counts the bread folk carry as the village's too.
+        for (AssistantEntity a : Villages.folkOf(id)) a.removeMatching(eats, 999);
         Villages.resetStockForTests();
         com.jrpetty.mcassistant.entity.Leader.resetForTests();
         int hard = com.jrpetty.mcassistant.entity.Leader.spirits(other);
@@ -4856,6 +4858,81 @@ public class VillageGameTests {
         helper.assertTrue(stillChild, "a day-old child is still a child");
         helper.assertTrue(!kid.isBaby() && kid.stationTask() != StationTask.NONE,
             "grown, it is set to work by the leader: " + kid.stationTask());
+        helper.succeed();
+    }
+
+    /**
+     * Every building grows up with its village (Ages). A tavern built of timber in the Wood Age is
+     * rebuilt in stone in the Stone Age, with lamp posts by its door; slate-roofed with dressed-stone
+     * footings in the Iron Age; and roofed in copper in the Diamond Age — every block paid for out
+     * of the stores, and what came off put back in them.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 300, batch = "t73_ages")
+    public static void t73_ages(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 74000, 12000, 40);
+        Kit.prepare(level, 74000, 12000, 40);
+        BlockPos heart = Kit.surface(level, 74000, 12000);
+        VillageFolkEntity a = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(a != null, "a village");
+        java.util.UUID village = a.ownerId();
+        Villages.Village v = Villages.get(village);
+        BlockPos chest = Kit.surface(level, heart.getX() + 3, heart.getZ() + 1);
+        level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
+        com.jrpetty.mcassistant.entity.ZoneChests.mark(level, chest);
+        net.minecraft.world.Container stores = (net.minecraft.world.Container) level.getBlockEntity(chest);
+        ItemStack[] makings = {
+            new ItemStack(Items.STONE_BRICKS, 64), new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.COBBLESTONE, 64),
+            new ItemStack(Items.COBBLED_DEEPSLATE, 64), new ItemStack(Items.COPPER_INGOT, 64), new ItemStack(Items.COPPER_INGOT, 64),
+            new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.TORCH, 16) };
+        for (int i = 0; i < makings.length; i++) stores.setItem(i, makings[i]);
+        BlockPos at = Kit.surface(level, heart.getX() + 18, heart.getZ() - 18);
+        BuildGoal.stamp(level, "tavern", at, Direction.NORTH, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+        com.jrpetty.mcassistant.village.Ledger.built(village, "tavern", at, Direction.NORTH);
+        java.util.function.IntSupplier timberWalls = () -> {
+            int n = 0;
+            for (BuildGoal.Placement p : BuildGoal.plan("tavern", at, Direction.NORTH, 13)) {
+                if (p.part() == BuildGoal.Part.BLOCK && p.style() == com.jrpetty.mcassistant.entity.goal.Blueprints.Style.WALL
+                    && level.getBlockState(p.pos()).is(net.minecraft.tags.BlockTags.PLANKS)) n++;
+            }
+            return n;
+        };
+        java.util.function.Function<net.minecraft.world.level.block.Block, Integer> count = block -> {
+            int n = 0;
+            for (BlockPos q : BlockPos.betweenClosed(at.offset(-9, -2, -9), at.offset(9, 14, 9))) if (level.getBlockState(q).is(block)) n++;
+            return n;
+        };
+        int timberBefore = timberWalls.getAsInt();
+        int lampsBefore = count.apply(Blocks.LANTERN);
+        com.jrpetty.mcassistant.entity.TownJobs.instantForTests(true);
+        int stoneWalls, timberAfter, lamps, slate, footings, copper;
+        try {
+            Villages.ageForTests(village, Villages.Age.STONE);
+            for (int i = 0; i < 30; i++) com.jrpetty.mcassistant.entity.Ages.work(level, v, 400);
+            timberAfter = timberWalls.getAsInt();
+            stoneWalls = count.apply(Blocks.STONE_BRICKS);
+            lamps = count.apply(Blocks.LANTERN);
+            Villages.ageForTests(village, Villages.Age.IRON);
+            for (int i = 0; i < 30; i++) com.jrpetty.mcassistant.entity.Ages.work(level, v, 400);
+            slate = count.apply(Blocks.DEEPSLATE_TILE_STAIRS) + count.apply(Blocks.DEEPSLATE_TILE_SLAB) + count.apply(Blocks.DEEPSLATE_TILES);
+            footings = count.apply(Blocks.STONE_BRICKS);
+            Villages.ageForTests(village, Villages.Age.DIAMOND);
+            for (int i = 0; i < 30; i++) com.jrpetty.mcassistant.entity.Ages.work(level, v, 400);
+            copper = count.apply(Blocks.CUT_COPPER_STAIRS) + count.apply(Blocks.CUT_COPPER_SLAB) + count.apply(Blocks.CUT_COPPER);
+        } finally {
+            com.jrpetty.mcassistant.entity.TownJobs.instantForTests(false);
+        }
+        int copperLeft = com.jrpetty.mcassistant.entity.Market.stock(level, village, st -> st.is(Items.COPPER_INGOT));
+        int planksBack = com.jrpetty.mcassistant.entity.Market.stock(level, village, st -> st.is(net.minecraft.tags.ItemTags.PLANKS));
+        Kit.log("t73 the tavern through the ages: timber walls " + timberBefore + " -> " + timberAfter + ", stone " + stoneWalls
+            + ", lanterns " + lamps + "; Iron Age slate " + slate + ", stone footings " + footings + "; Diamond Age copper " + copper
+            + " (copper left " + copperLeft + " of 128); planks in the stores " + planksBack);
+        helper.assertTrue(timberBefore > 0 && timberAfter == 0 && stoneWalls > 0, "the Stone Age rebuilds the timber walls in stone");
+        helper.assertTrue(lamps > lampsBefore, "and puts lamp posts by the door: " + lampsBefore + " -> " + lamps);
+        helper.assertTrue(slate > 0 && footings > stoneWalls, "the Iron Age slates the roof and dresses the footings");
+        helper.assertTrue(copper > 0 && copperLeft < 128, "the Diamond Age roofs a great building in copper, paid in copper");
         helper.succeed();
     }
 }

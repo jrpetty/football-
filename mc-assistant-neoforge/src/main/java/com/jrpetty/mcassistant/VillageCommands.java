@@ -94,6 +94,7 @@ public final class VillageCommands {
             .then(Commands.literal("showcase").requires(src -> src.hasPermission(2))
                 .then(Commands.literal("buildings").executes(ctx -> showcase(ctx, false)))
                 .then(Commands.literal("town").executes(ctx -> showcase(ctx, true)))
+                .then(Commands.literal("ages").executes(VillageCommands::showcaseAges))
                 // A raid on the staged town at night: the watch on the wall, a band at the gate.
                 .then(Commands.literal("raid").executes(VillageCommands::showcaseRaid))
                 // The staged town's windows lit, as they are after dark, or put out.
@@ -114,6 +115,14 @@ public final class VillageCommands {
         ctx.getSource().sendSuccess(() -> Component.literal("LIGHTS " + (on ? "on" : "off") + " in "
             + Showcase.STAGED.size() + " buildings"), false);
         return Showcase.STAGED.size();
+    }
+
+    private static int showcaseAges(CommandContext<CommandSourceStack> ctx) {
+        net.minecraft.server.level.ServerLevel level = ctx.getSource().getLevel();
+        net.minecraft.core.BlockPos at = net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition());
+        java.util.List<String> lines = Showcase.ages(level, at);
+        ctx.getSource().sendSuccess(() -> Component.literal("AGES " + String.join(" | ", lines)), false);
+        return lines.size();
     }
 
     private static int showcase(CommandContext<CommandSourceStack> ctx, boolean town) {

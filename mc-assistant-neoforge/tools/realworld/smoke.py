@@ -72,6 +72,20 @@ def showcase(r, cx, cz, look):
         look("b%02d-%s" % (i + 1, name), x + back * 0.45, y + tall * 0.55 + 2, z + back,
              x, y + tall * 0.4, z, wait=5 if i else 9)
     say("alive after the buildings: %s" % client_alive())
+    # The ages: a few buildings as a village has them in the Wood, Stone, Iron and Diamond Ages,
+    # side by side (Grow and Ages), one row a building.
+    ax, ay, az = cx - 300, 150, cz + 300
+    r.cmd("tp %s %d %d %d" % (USER, ax + 40, ay + 20, az + 30))
+    time.sleep(8)
+    out = r.cmd("execute positioned %d %d %d run village showcase ages" % (ax, ay, az))
+    say("ages: " + out[:600])
+    for name, x, y, z, width in re.findall(r"(\w+) (-?\d+) (-?\d+) (-?\d+) (\d+)", out.replace("AGES", "")):
+        x, y, z, width = int(x), int(y), int(z), int(width)
+        back = min(55, max(22, width * 0.7))
+        r.cmd("tp %s %d %d %d" % (USER, x, y + 14, z + back))
+        time.sleep(4)
+        look("a-%s-ages" % name, x, y + 14, z + back, x, y + 3, z, wait=8)
+    say("alive after the ages: %s" % client_alive())
     # The town.
     # Below the clouds (they are at 192): a camera above them photographs clouds.
     tx, ty, tz = cx - 300, 118, cz - 200

@@ -166,6 +166,8 @@ public final class Grow {
                 break;                                                   // one house at a time
             }
         }
+        // And every other building, made over for the age: stone, slate, copper, lamp posts (Ages).
+        if (done < budget) done += Ages.work(level, v, budget - done);
         return done;
     }
 

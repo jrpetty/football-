@@ -338,6 +338,7 @@ public final class Villages {
         Waterfront.resetForTests();
         Orders.resetForTests();
         Leader.resetForTests();
+        Ages.resetForTests();
         Trades.resetForTests();
         Links.resetForTests();
         Asks.resetForTests();
