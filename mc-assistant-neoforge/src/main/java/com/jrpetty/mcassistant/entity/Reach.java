@@ -6,7 +6,6 @@ import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.levelgen.Heightmap;
 
 import javax.annotation.Nullable;
-import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -37,13 +36,17 @@ public final class Reach {
 
     private final BlockPos heart;
     private final long made;
-    private final BitSet walked;
+    /** Steps from the heart's ground on foot, plus one; 0 where it cannot be walked to. */
+    private final char[] dist;
+    /** The standing height of each column. */
+    private final short[] feet;
     private final int count;
 
-    private Reach(BlockPos heart, long made, BitSet walked, int count) {
+    private Reach(BlockPos heart, long made, char[] dist, short[] feet, int count) {
         this.heart = heart;
         this.made = made;
-        this.walked = walked;
+        this.dist = dist;
+        this.feet = feet;
         this.count = count;
     }
 
@@ -54,6 +57,8 @@ public final class Reach {
         long now = level.getGameTime();
         Reach r = SURVEYS.get(village);
         if (r == null || !r.heart.equals(heart) || now - r.made >= FRESH || now < r.made) {
+            // Old surveys nobody has asked for in a while are let go (a world of many villages).
+            SURVEYS.values().removeIf(o -> now - o.made > 4 * FRESH || now < o.made);
             r = survey(level, heart, now);
             SURVEYS.put(village, r);
         }
@@ -84,7 +89,7 @@ public final class Reach {
             for (int dz = -slack; dz <= slack; dz += 2) {
                 int ix = cx + dx, iz = cz + dz;
                 if (ix < 0 || iz < 0 || ix >= SIZE || iz >= SIZE) continue;
-                if (walked.get(ix * SIZE + iz)) return true;
+                if (dist[ix * SIZE + iz] != 0) return true;
             }
         }
         return false;
@@ -92,6 +97,70 @@ public final class Reach {
 
     public boolean reaches(BlockPos p, int slack) {
         return reaches(p.getX(), p.getZ(), slack);
+    }
+
+    /** The walked column nearest this one, within {@code slack} blocks; -1 if none. */
+    private int nearestWalked(int x, int z, int slack) {
+        int cx = x - heart.getX() + R, cz = z - heart.getZ() + R;
+        for (int r = 0; r <= slack; r++) {
+            for (int dx = -r; dx <= r; dx++) {
+                for (int dz = -r; dz <= r; dz++) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) != r) continue;
+                    int ix = cx + dx, iz = cz + dz;
+                    if (ix < 0 || iz < 0 || ix >= SIZE || iz >= SIZE) continue;
+                    if (dist[ix * SIZE + iz] != 0) return ix * SIZE + iz;
+                }
+            }
+        }
+        return -1;
+    }
+
+    /** One step nearer the heart: a neighbouring column one step less from it; -1 at the heart. */
+    private int down(int i) {
+        int d = dist[i];
+        if (d <= 1) return -1;
+        int ix = i / SIZE, iz = i % SIZE;
+        if (ix + 1 < SIZE && dist[i + SIZE] == d - 1) return i + SIZE;
+        if (ix > 0 && dist[i - SIZE] == d - 1) return i - SIZE;
+        if (iz + 1 < SIZE && dist[i + 1] == d - 1) return i + 1;
+        if (iz > 0 && dist[i - 1] == d - 1) return i - 1;
+        return -1;
+    }
+
+    private BlockPos at(int i) {
+        return new BlockPos(heart.getX() - R + i / SIZE, feet[i], heart.getZ() - R + i % SIZE);
+    }
+
+    /**
+     * The next stop on the walkable way from one place to another, about {@code steps} blocks
+     * along it: on toward the heart from where it stands until the way meets the way out to the
+     * destination, then out along that. A stop that near, on ground the survey walked, is one the
+     * pathfinder always finds — where asked for the whole of a long walk round a pond or a ridge
+     * at once, it gave up part way and planned a route that ended in the water. Null when either
+     * end is off the walkable ground.
+     */
+    @Nullable
+    public BlockPos waypoint(BlockPos from, BlockPos to, int steps) {
+        int f = nearestWalked(from.getX(), from.getZ(), 6), t = nearestWalked(to.getX(), to.getZ(), 8);
+        if (f < 0 || t < 0) return null;
+        // The way from the destination in to the heart, and where each column of it falls.
+        java.util.HashMap<Integer, Integer> onWay = new java.util.HashMap<>();
+        java.util.ArrayList<Integer> way = new java.util.ArrayList<>();
+        for (int c = t; c >= 0; c = down(c)) {
+            onWay.put(c, way.size());
+            way.add(c);
+        }
+        // In toward the heart until on that way...
+        int c = f, taken = 0;
+        while (!onWay.containsKey(c)) {
+            if (taken >= steps) return at(c);
+            int next = down(c);
+            if (next < 0) return null;
+            c = next;
+            taken++;
+        }
+        // ...then out along it.
+        return at(way.get(Math.max(0, onWay.get(c) - (steps - taken))));
     }
 
     private static Reach survey(ServerLevel level, BlockPos heart, long now) {
@@ -117,31 +186,34 @@ public final class Reach {
                 }
             }
         }
-        BitSet walked = new BitSet(SIZE * SIZE);
+        char[] dist = new char[SIZE * SIZE];
+        short[] feet = new short[SIZE * SIZE];
         int[] queue = new int[SIZE * SIZE];
         int head = 0, tail = 0;
         // Out from the heart's own ground: the square round it, whatever stands there.
         for (int dx = -4; dx <= 4; dx++) {
             for (int dz = -4; dz <= 4; dz++) {
                 int i = (R + dx) * SIZE + (R + dz);
-                if (h[i] == Integer.MIN_VALUE || walked.get(i)) continue;
-                walked.set(i);
+                if (h[i] == Integer.MIN_VALUE || dist[i] != 0) continue;
+                dist[i] = 1;
                 queue[tail++] = i;
             }
         }
         while (head < tail) {
             int i = queue[head++];
             int ix = i / SIZE, iz = i % SIZE, hi = h[i];
+            feet[i] = (short) (hi + 1);
+            char next = (char) Math.min(Character.MAX_VALUE, dist[i] + 1);
             for (int k = 0; k < 4; k++) {
                 int nx = ix + (k == 0 ? 1 : k == 1 ? -1 : 0);
                 int nz = iz + (k == 2 ? 1 : k == 3 ? -1 : 0);
                 if (nx < 0 || nz < 0 || nx >= SIZE || nz >= SIZE) continue;
                 int n = nx * SIZE + nz;
-                if (walked.get(n) || h[n] == Integer.MIN_VALUE || Math.abs(h[n] - hi) > 1) continue;
-                walked.set(n);
+                if (dist[n] != 0 || h[n] == Integer.MIN_VALUE || Math.abs(h[n] - hi) > 1) continue;
+                dist[n] = next;
                 queue[tail++] = n;
             }
         }
-        return new Reach(heart.immutable(), now, walked, tail);
+        return new Reach(heart.immutable(), now, dist, feet, tail);
     }
 }

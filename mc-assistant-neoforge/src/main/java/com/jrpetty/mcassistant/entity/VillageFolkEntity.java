@@ -6175,6 +6175,22 @@ public class VillageFolkEntity extends AssistantEntity {
 
     private int reachCheckTick = -100000;
 
+    @Override
+    @Nullable
+    protected BlockPos wayToward(BlockPos dest) {
+        UUID village = ownerId();
+        BlockPos heart = villageCentre;
+        if (village == null || heart == null || !(level() instanceof net.minecraft.server.level.ServerLevel sl)) return null;
+        Reach walk = Reach.of(sl, village, heart);
+        return walk == null ? null : walk.waypoint(blockPosition(), dest, 28);
+    }
+
+    @Override
+    protected boolean onWalkedGround(BlockPos p) {
+        Reach walk = ownerId() == null ? null : Reach.last(ownerId());
+        return walk != null && walk.reaches(p, 0);
+    }
+
     /**
      * A field the town cannot walk to (Reach) is given up for one it can. Staked before the
      * village knew its ground — or by an older village that marked its farmland out over a ridge
