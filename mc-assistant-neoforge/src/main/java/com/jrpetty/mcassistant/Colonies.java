@@ -266,21 +266,37 @@ public final class Colonies {
     private static void packs(ServerLevel level, Villages.Village mother, BlockPos at) {
         Villages.Village colony = Villages.nearest(level, at, 40);
         if (colony == null || colony.id().equals(mother.id())) return;
-        for (com.jrpetty.mcassistant.entity.AssistantEntity a : Villages.folkOf(colony.id())) {
+        List<com.jrpetty.mcassistant.entity.AssistantEntity> folk = Villages.folkOf(colony.id());
+        List<List<ItemStack>> wanted = new ArrayList<>();
+        for (com.jrpetty.mcassistant.entity.AssistantEntity a : folk) {
             var inv = a.getInventoryItems();
-            List<ItemStack> wanted = new ArrayList<>();
+            List<ItemStack> mine = new ArrayList<>();
             for (int i = 0; i < inv.size(); i++) {
                 if (inv.get(i).isEmpty()) continue;
-                wanted.add(inv.get(i).copy());
+                mine.add(inv.get(i).copy());
                 inv.set(i, ItemStack.EMPTY);
             }
-            for (ItemStack want : wanted) {
-                for (ItemStack got : supply(level, mother, want)) {
-                    ItemStack left = a.insertItem(got);
-                    if (!left.isEmpty()) net.minecraft.world.level.block.Block.popResource(level, a.blockPosition(), left);
+            wanted.add(mine);
+        }
+        // Everybody's tools first, then the rest: the first settlers' chests and benches used up
+        // the timber, and half the party set out without an axe or a pick.
+        for (boolean tools : new boolean[] { true, false }) {
+            for (int k = 0; k < folk.size(); k++) {
+                com.jrpetty.mcassistant.entity.AssistantEntity a = folk.get(k);
+                for (ItemStack want : wanted.get(k)) {
+                    if (isTool(want) != tools) continue;
+                    for (ItemStack got : supply(level, mother, want)) {
+                        ItemStack left = a.insertItem(got);
+                        if (!left.isEmpty()) net.minecraft.world.level.block.Block.popResource(level, a.blockPosition(), left);
+                    }
                 }
             }
         }
+    }
+
+    private static boolean isTool(ItemStack st) {
+        return st.is(ItemTags.AXES) || st.is(ItemTags.PICKAXES) || st.is(ItemTags.SWORDS)
+            || st.is(ItemTags.HOES) || st.is(ItemTags.SHOVELS);
     }
 
     /**
