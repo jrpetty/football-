@@ -15,10 +15,10 @@ layer -1
 layer 0
 .........
 .LwwwwwL.
-.wTNUCQw.
+.wTNUC.w.
+.w.....w.
 .w....Qw.
-.w.....w.
-.w.....w.
+.w....Qw.
 .wy...&w.
 .Lw...wL.
 .........
@@ -35,9 +35,9 @@ layer 1
 layer 2
 .........
 .LWWWWWL.
-.W.....W.
-.W.....W.
 .W..j..W.
+.W.....W.
+.W.....W.
 .W.....W.
 .W.....W.
 .LW---WL.

@@ -100,11 +100,11 @@ layer 10
 .......
 layer 11
 vvvvvvv
->.....<
->.....<
->.....<
->.....<
->.....<
+>fffff<
+>fffff<
+>fffff<
+>fffff<
+>fffff<
 ^^^^^^^
 layer 12
 .......

@@ -45,7 +45,7 @@ layer 2
 .LWWWWWL.
 ..j...j..
 layer 3
-.........
+vvvvvvvvv
 .L-----L.
 .|ffHff|.
 .|fffff|.
@@ -53,7 +53,7 @@ layer 3
 .|fffff|S
 .|fffff|.
 .L-----L.
-.........
+^^^^^^^^^
 layer 4
 .........
 .LWWWWWL.

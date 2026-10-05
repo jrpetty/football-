@@ -21,8 +21,8 @@ layer -1
 .FSSSSSF.
 .FSSSSSF.
 .FFFFFFF.
-.........
-.........
+..FFFFF..
+..FFFFF..
 ....k....
 layer 0
 .........
@@ -40,9 +40,9 @@ layer 0
 .S^^.^^S.
 .S.....S.
 .S^^.^^S.
+.SSS.SSS.
+.SS..HSS.
 .SS...SS.
-.SS...SS.
-.SSSSSSS.
 ..S...S..
 ..SSDSS..
 .........
@@ -62,9 +62,9 @@ layer 1
 .S.....S.
 .G.....G.
 .S.....S.
-.GS...SG.
+.GSS.SSG.
+.SS..HSS.
 .SS...SS.
-.SSSSSSS.
 ..S...S..
 ..SS.SS..
 .........
@@ -84,11 +84,11 @@ layer 2
 .S.....S.
 .G.....G.
 .S.....S.
-.GS...SG.
+.GSS.SSG.
+.SS..HSS.
 .SS...SS.
-.SSSSSSS.
 ..S...S..
-..SS.SS..
+..SSGSS..
 .........
 layer 3
 .........
@@ -106,9 +106,9 @@ layer 3
 .S.....S.
 .G.....G.
 .S.....S.
-.GS...SG.
+.GSSSSSG.
+.SS..HSS.
 .SS...SS.
-.SSSSSSS.
 ..S...S..
 ..SSSSS..
 .........
@@ -128,9 +128,9 @@ layer 4
 .S.....S.
 .S..j..S.
 .S.....S.
-.SS...SS.
-.SS...SS.
 .SSSSSSS.
+.SS..HSS.
+.SS...SS.
 ..S...S..
 ..SSSSS..
 .........
@@ -141,17 +141,17 @@ layer 5
 >SSSSSSS<
 >S.....S<
 >S.....S<
+>S-----S<
 >S.....S<
 >S.....S<
 >S.....S<
+>S-----S<
 >S.....S<
 >S.....S<
->S.....S<
->S.....S<
->S.....S<
+>S-----S<
 >SSSSSSS<
 ..SSSSS..
-..S...S..
+..S..HS..
 ..S...S..
 ..S...S..
 ..SSGSS..
@@ -173,7 +173,7 @@ layer 6
 .>.....<.
 .>.....<.
 ..SSSSS..
-..S...S..
+..S..HS..
 ..S...S..
 ..S...S..
 ..SSGSS..
@@ -195,7 +195,7 @@ layer 7
 ..>...<..
 ..>...<..
 ..SSSSS..
-..S...S..
+..S..HS..
 ..S...S..
 ..S...S..
 ..SSSSS..
@@ -217,7 +217,7 @@ layer 8
 ...>.<...
 ...>.<...
 ..SSSSS..
-..SfffS..
+..SffHS..
 ..SfffS..
 ..SfffS..
 ..SSSSS..

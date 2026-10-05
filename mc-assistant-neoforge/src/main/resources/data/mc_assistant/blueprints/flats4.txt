@@ -43,12 +43,12 @@ SSGSGSSS.GS
 layer 2
 ...........
 SSGSGSSSSSS
-S......W..S
-S...j..W.vS
+Sj.....W..S
+S......W.vS
 S......W..S
 SWWWWWWW..S
-S......W.jS
-S...j..W..S
+Sj.....W.jS
+S......W..S
 S......W..S
 SSGSGSSSSSS
 ...........
@@ -91,12 +91,12 @@ SSGSGSSSGGS
 layer 6
 ...........
 SSGSGSSSSSS
-S......W..S
-S...j..W.vS
+Sj.....W..S
+S......W.vS
 S......W..S
 SWWWWWWW..S
-S......W.jS
-S...j..W..S
+Sj.....W.jS
+S......W..S
 S......W..S
 SSGSGSSSSSS
 ...........
@@ -139,12 +139,12 @@ SSGSGSSSGGS
 layer 10
 ...........
 SSGSGSSSSSS
-S......W..S
-S...j..W.vS
+Sj.....W..S
+S......W.vS
 S......W..S
 SWWWWWWW..S
-S......W.jS
-S...j..W..S
+Sj.....W.jS
+S......W..S
 S......W..S
 SSGSGSSSSSS
 ...........
@@ -187,12 +187,12 @@ SSGSGSSSGGS
 layer 14
 ...........
 SSGSGSSSSSS
+Sj.....W..S
 S......W..S
-S...j..W..S
 S......W..S
 SWWWWWWW..S
-S......W.jS
-S...j..W..S
+Sj.....W.jS
+S......W..S
 S......W..S
 SSGSGSSSSSS
 ...........

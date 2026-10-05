@@ -131,26 +131,26 @@ layer 14
 ..SSS..
 .......
 layer 15
-.SSSSS.
-S.....S
-S.fHf.S
-S.fff.S
-S.fff.S
-S.....S
-.SSSSS.
+SSSSSSS
+SSSSSSS
+SSSHSSS
+SSSSSSS
+SSSSSSS
+SSSSSSS
+SSSSSSS
 layer 16
-.......
-.PPPPP.
-.PLOLP.
-.PO&OP.
-.PLOLP.
-.PPPPP.
-.......
+PPPPPPP
+P.....P
+P.L.L.P
+P.O&O.P
+P.LOL.P
+P.....P
+PPPPPPP
 layer 17
 .......
 .......
-..LOL..
-..OjO..
+..L.L..
+..O.O..
 ..LOL..
 .......
 .......
@@ -158,7 +158,7 @@ layer 18
 .......
 .......
 ..LOL..
-..O.O..
+..OjO..
 ..LOL..
 .......
 .......
@@ -182,7 +182,7 @@ layer 21
 .......
 .......
 ..vvv..
-..>.<..
+..>R<..
 ..^^^..
 .......
 .......

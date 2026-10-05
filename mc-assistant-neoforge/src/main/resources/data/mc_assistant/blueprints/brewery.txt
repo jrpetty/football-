@@ -36,9 +36,9 @@ layer 1
 layer 2
 .........
 .LWWWWWL.
-.W.....W.
-.W.....WS
 .W..j..W.
+.W.....WS
+.W.....W.
 .W.....W.
 .W.....W.
 .LWWWWWL.

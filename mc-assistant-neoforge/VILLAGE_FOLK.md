@@ -1227,14 +1227,14 @@ with plain blocks, so a building is never held up.
 | Shelter | 7×7 | Four log posts, a low stone wall and a pitched roof |
 | Well | 5×5 | Stone curb round water, four posts, a little roof with a hanging lantern |
 | Smeltery | 9×9 | Stone forge open to the street, three furnaces under a brick chimney, anvil, bench and chests |
-| Workshop | 9×9 | Timber workroom with a wide door, two benches, furnace, barrels and a hayloft |
+| Workshop | 9×9 | Timber workroom with a wide door, a bench and the tailor's loom, furnace, barrels and a hayloft |
 | Granary | 7×7 | Squat store on a stone base, full of hay, three chests, hipped roof |
-| Market | 11×11 | Open hall on log posts under a broad hipped roof, stalls of hay and barrels, a fountain |
-| Meeting hall | 11×19 | Long timber hall: tall windows, double doors up steps, a long table, the elder's seat |
-| Chapel | 9×21 | Stone nave with tall windows, a bell tower over the door, pews, an altar and lights |
+| Market | 11×11 | Open hall on log posts under a broad hipped roof, stalls of hay and barrels, a fountain, lanterns hung from cross beams |
+| Meeting hall | 11×19 | Long timber hall: tall windows, a pair of doors up steps between lamp posts, a long table under tie beams hung with lanterns, the elder's seat |
+| Chapel | 9×21 | Stone nave with tall windows, a bell tower over the door (a ladder up to its bell), pews, an altar and lights hung from tie beams |
 | Barracks | 9×15 | Stone-and-timber dormitory with six bunks, chests, a bench and an anvil |
 | Watchtower | 7×7 | Stone tower three storeys high, ladder inside, battlemented deck with a lookout roof |
-| Lighthouse | 7×7 | Tall banded stone tower, ladder all the way up, glass lamp room, pointed roof |
+| Lighthouse | 7×7 | Tall banded stone tower, ladder all the way up to a railed gallery round the glass lamp room, pointed roof |
 | Monument | 7×7 | Stepped plinth, banded pillar, lanterns at the corners and on top |
 | Gateway | 9×5 | The Nether Age's obsidian frame on a stone dais between lantern pillars |
 | Wall | ring of 27 | Round the square: battlements, a gate onto each avenue, lantern pillars, corner towers |
@@ -1251,6 +1251,13 @@ with plain blocks, so a building is never held up.
 | School | 9×11 | Timber schoolroom under a steep roof, tall windows down both sides: two rows of desks (a top slab, a stair for a bench) either side of the aisle, the teacher's lectern, and at the back a blackboard over a cupboard of barrels, a bookshelf either side with a lamp on it; a lamp hung under the ceiling over the desks by each wall, none in the aisle |
 | Bank | 9×11 | Stone house of business: a counter across the room with a lantern on its far end, the ledger on a lectern before it, and a vault at the back, its strongboxes behind a gate and grille of iron bars the banker sets; its two lanterns hang flush under the ceiling, over the counter and over the strongboxes |
 | Park | 11×11 | A green: a stone fountain with a spring spilling from its pillar, sixteen wooden benches round it, lamp posts at the four ways in, flowers along its edges; then a tree in each corner, paths and lanterns (see *The town's quarters, and the park*) |
+
+Every drawing is sound as built: a hanging lantern hangs from a beam, a ceiling, an eave or a
+bracket, never from thin air, and indoors it hangs over a bed, a table or a counter or by the wall,
+not over the middle of the floor; a torch or a standing lantern stands on something; a ladder has a
+wall at its back; a door opens onto a floor with headroom; water is held in its basin; and every bed,
+bench, bell and storey can be walked to from the street, up the stairs and the ladders, in the
+buildings the Iron Age puts a second storey on as well. (A test reads every drawing and checks it.)
 
 Builders take the place the town plan has for the building. Of the first few good
 lots they pick the one that costs least to build on. They level it (filling the low
@@ -2721,14 +2728,14 @@ celebrations, and weddings (the couple at the board, the village down the aisle 
 benches).
 
 Once the town is sixteen strong it builds **the leader's hall**, the best and biggest building in
-it (1,557 blocks, 24 high), on the great lot behind the board, which is kept for it:
+it (1,569 blocks, 24 high), on the great lot behind the board, which is kept for it:
 * below, a great hall of dressed stone: tall windows between stone piers, benches either side of
   a red runner up to a dais, the leader's seat under a great window with lamps either side, the
   clerks' lecterns, and walls of books;
 * above, a timber storey: the leader's family's rooms at the back (a bed for two, the children's
   beds at the other end of the room) and the council chamber at the front, with its long table;
-* over the door, a stone tower four storeys high with the leader's study in it and an open
-  lantern-room at the top, seen from the fields.
+* over the door, a stone tower four storeys high with the leader's study in it, a ladder from the
+  study up through its floors, and an open lantern-room at the top, seen from the fields.
 
 Every morning, after the business at the board, the leader walks to the hall and holds court
 for a while from the dais at the head of the great hall, looking down it to the door ("Next! Who
