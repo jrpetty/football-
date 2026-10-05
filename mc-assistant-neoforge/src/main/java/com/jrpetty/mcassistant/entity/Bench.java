@@ -309,6 +309,7 @@ public final class Bench {
             }
             List<String> out = new ArrayList<>();
             for (Step s : steps) out.add(s.words() + (s.fire() == Fire.NONE ? "" : " " + s.where()));
+            if (out.isEmpty()) return "out of " + String.join(", ", in);                 // a recipe of its own: nothing to make first
             return (in.isEmpty() ? "" : String.join(", ", in) + ", into ") + String.join(", ", out);
         }
     }
