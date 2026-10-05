@@ -2511,6 +2511,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (resting()) return;                         // off the clock for a bit
         if (movedOnFromSpentGround()) return;          // this patch is finished
         if (unstuckFromGround()) return;               // a plot that cannot be set up is given up
+        if (fieldOutOfReach()) return;                 // a field nobody can walk to is given up
         if (changedTrade()) return;                    // the village lost a trade
         if (raisedAChild(12.0)) return;                // the village grew
 
@@ -3697,7 +3698,7 @@ public class VillageFolkEntity extends AssistantEntity {
      * another and never where the town will build.
      */
     @Nullable
-    private BlockPos farmlandPlot(BlockPos heart) {
+    private BlockPos farmlandPlot(BlockPos heart, @Nullable Reach walk) {
         UUID town = ownerId();
         if (town == null) return null;
         int side = Villages.fieldsSide(town);
@@ -3706,6 +3707,8 @@ public class VillageFolkEntity extends AssistantEntity {
         neighbours = Villages.folkOf(town);
         try {
             for (int[] f : Villages.fieldSquares(side)) {
+                // A square the farmer cannot walk to from the town is no field of the town's.
+                if (walk != null && !walk.reaches(heart.getX() + f[0], heart.getZ() + f[1], FIELD_MOST / 2)) continue;
                 BlockPos p = surfaceAt(heart.getX() + f[0], heart.getZ() + f[1]);
                 // Not up a mountain or down a ravine from the town: a farmer walks there and back
                 // every day, and a field it cannot get to is no field (the mountains' hundred days).
@@ -3746,6 +3749,7 @@ public class VillageFolkEntity extends AssistantEntity {
             return side;
         }
         int best = -1, bestScore = 0;
+        Reach walk = level() instanceof net.minecraft.server.level.ServerLevel sl ? Reach.of(sl, town, heart) : null;
         for (int side = 0; side < 4; side++) {
             java.util.List<int[]> squares = Villages.fieldSquares(side);
             int score = 0;
@@ -3756,6 +3760,8 @@ public class VillageFolkEntity extends AssistantEntity {
                     if (i < 2) return -1;                       // the first row has not come in yet
                     continue;
                 }
+                // Over a ridge or across a pond from the town: no use, however good the soil.
+                if (walk != null && !walk.reaches(at, FIELD_MOST / 2)) continue;
                 BlockPos p = surfaceAt(at.getX(), at.getZ());
                 if (p == null || Math.abs(p.getY() - heart.getY()) > FIELD_CLIMB) continue;
                 if (Villages.builtOver(town, f[0], f[1], FIELD_MOST, FIELD_MOST)) { score -= 4; continue; }
@@ -3868,15 +3874,29 @@ public class VillageFolkEntity extends AssistantEntity {
             // walked seventy or eighty blocks to a pond while there was a river by the town), and
             // failing that the nearest good soil — a farmer digs its own water holes (FarmGoal).
             case FARM -> {
+                // Only ground the farmer can walk to from the town (Reach): on a mountain map the
+                // farmland went out over a ridge and across a pond, and nobody ever got there.
+                Reach walk = town != null && level() instanceof net.minecraft.server.level.ServerLevel sl
+                    ? Reach.of(sl, town, heart) : null;
+                java.util.function.Predicate<BlockPos> near = p -> clear.test(p)
+                    && (walk == null || walk.reaches(p, FIELD_MOST / 2));
                 // The village's farmland first: its fields side by side, on the side of the town it chose.
-                BlockPos plot = farmlandPlot(heart);
+                BlockPos plot = farmlandPlot(heart, walk);
                 if (plot != null) yield plot;
                 // Nowhere on the farmland (the ground not in yet, or no soil on it): the nearest water
                 // outside the town, or the nearest good soil.
-                BlockPos wet = nearestWaterField(heart, outdoor && town != null ? Villages.townReach(town) + keep + 2 : 8,
-                    keep, clear);
-                if (wet == null) wet = scan(from, SCAN, 6, keep, p -> clear.test(p) && farmable(p));
-                if (wet == null) wet = scan(from, SCAN, 6, keep, p -> clear.test(p) && soilField(p));
+                int out = outdoor && town != null ? Villages.townReach(town) + keep + 2 : 8;
+                BlockPos wet = nearestWaterField(heart, out, keep, near);
+                if (wet == null) wet = scan(from, SCAN, 6, keep, p -> near.test(p) && farmable(p));
+                if (wet == null) wet = scan(from, SCAN, 6, keep, p -> near.test(p) && soilField(p));
+                // Nothing the town can walk to (its ground still coming in): wherever there is soil.
+                if (wet == null && walk != null) {
+                    plot = farmlandPlot(heart, null);
+                    if (plot != null) yield plot;
+                    wet = nearestWaterField(heart, out, keep, clear);
+                    if (wet == null) wet = scan(from, SCAN, 6, keep, p -> clear.test(p) && farmable(p));
+                    if (wet == null) wet = scan(from, SCAN, 6, keep, p -> clear.test(p) && soilField(p));
+                }
                 // A field sown before the village chose its farmland marks the side it will choose.
                 if (wet != null && town != null && Villages.fieldsSide(town) < 0 && fieldsOrigin(town) == null) {
                     com.jrpetty.mcassistant.village.Ledger.note(town, "fields.origin", wet.getX() + "," + wet.getY() + "," + wet.getZ());
@@ -6144,6 +6164,35 @@ public class VillageFolkEntity extends AssistantEntity {
         assignPlot(WorkZone.around(site, radiusFor(trade), depthFor(trade, site)), patchNameFor(trade));
         setAutonomous(true);
         brain("gave up ground it could not set up, for new ground");
+        return true;
+    }
+
+    private int reachCheckTick = -100000;
+
+    /**
+     * A field the town cannot walk to (Reach) is given up for one it can. Staked before the
+     * village knew its ground — or by an older village that marked its farmland out over a ridge
+     * — it was a field its farmer was carried to and stranded on, or never reached at all.
+     */
+    private boolean fieldOutOfReach() {
+        if (stationTask() != StationTask.FARM || tickCount - reachCheckTick < 6000) return false;
+        reachCheckTick = tickCount;
+        WorkZone zone = workZone();
+        UUID village = ownerId();
+        BlockPos heart = villageCentre;
+        if (zone == null || village == null || heart == null
+                || !(level() instanceof net.minecraft.server.level.ServerLevel sl)) return false;
+        Reach walk = Reach.of(sl, village, heart);
+        if (walk == null || walk.reaches(zone.center(), Math.min(zone.radius(), FIELD_MOST))) return false;
+        avoidHere = zone;
+        BlockPos site = findSite(StationTask.FARM, radiusFor(StationTask.FARM));
+        avoidHere = null;
+        if (site == null || !walk.reaches(site, FIELD_MOST / 2)) return false;
+        setStation(site, StationTask.FARM);
+        assignPlot(WorkZone.around(site, radiusFor(StationTask.FARM), depthFor(StationTask.FARM, site)),
+            patchNameFor(StationTask.FARM));
+        setAutonomous(true);
+        brain("gave up a field the town could not walk to, for one it can");
         return true;
     }
 
