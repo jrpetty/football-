@@ -89,6 +89,16 @@ public final class Drover {
         public boolean inside(BlockPos p) {
             return Math.abs(p.getX() - centre.getX()) <= 2 && Math.abs(p.getZ() - centre.getZ()) <= 2;
         }
+        /** In, and clear of the gate's mouth: an animal standing just inside the gate walks out
+         *  again the moment it opens for the folk going back out. */
+        public boolean settled(BlockPos p) {
+            return inside(p) && Math.abs(p.getX() - gate.getX()) + Math.abs(p.getZ() - gate.getZ()) > 2;
+        }
+        /** The far side of the pen from the gate: where a folk leads an animal, so it ends up well in. */
+        public BlockPos farSide() {
+            int dx = Integer.signum(centre.getX() - gate.getX()), dz = Integer.signum(centre.getZ() - gate.getZ());
+            return centre.offset(dx * 2, 0, dz * 2);
+        }
     }
 
     private static final Map<UUID, Pen> PENS = new ConcurrentHashMap<>();
@@ -341,7 +351,7 @@ public final class Drover {
             return;
         }
         if (f.getNavigation().isDone() || f.tickCount - d.walked > 60) {
-            f.walkTo(d.pen, 0.6D);
+            f.walkTo(goal(f, d), 0.6D);
             d.walked = f.tickCount;
         }
     }
@@ -407,7 +417,7 @@ public final class Drover {
             return;
         }
         if (f.getNavigation().isDone() || f.tickCount - d.walked > 40) {
-            f.walkTo(d.pen, 0.5D);
+            f.walkTo(goal(f, d), 0.5D);
             d.walked = f.tickCount;
         }
     }
@@ -453,9 +463,16 @@ public final class Drover {
      */
     private static boolean home(VillageFolkEntity f, Animal a, Drive d) {
         Pen p = f.ownerId() == null ? null : pen(f.ownerId());
-        if (p != null && p.centre().equals(d.pen)) return p.inside(a.blockPosition());
+        if (p != null && p.centre().equals(d.pen)) return p.settled(a.blockPosition());
         double dx = a.getX() - (d.pen.getX() + 0.5), dz = a.getZ() - (d.pen.getZ() + 0.5);
         return dx * dx + dz * dz < (d.lure != null ? 5.0 * 5.0 : 6.0 * 6.0);
+    }
+
+    /** Where the fetch walks to: the far side of the built pen (the animal following ends up well
+     *  in, not in the gate's mouth), or the pen's ground. */
+    private static BlockPos goal(VillageFolkEntity f, Drive d) {
+        Pen p = f.ownerId() == null ? null : pen(f.ownerId());
+        return p != null && p.centre().equals(d.pen) ? p.farSide() : d.pen;
     }
 
     /** What an animal will follow, or null if it follows nothing a village grows. */
@@ -483,6 +500,9 @@ public final class Drover {
             if (!left.isEmpty()) f.spawnAtLocation(left);
         }
         if (home && a != null) {
+            // It was walking to the folk; the folk is about to walk off. It stays where it was brought
+            // (the last path it had led back to wherever the folk stood, which could be the gate).
+            a.getNavigation().stop();
             a.setPersistenceRequired();
             a.addTag(HERD);
             f.brain("brought a wild " + kind(a) + " home to the pen");

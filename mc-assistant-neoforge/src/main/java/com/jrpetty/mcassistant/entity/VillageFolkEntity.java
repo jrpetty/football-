@@ -2493,6 +2493,7 @@ public class VillageFolkEntity extends AssistantEntity {
             Drover.tidy(this, supplies);
             moveIntoThePen();
             Trades.kit(this);
+            if (mindTheHerd(supplies)) return;
             if (Links.tend(this, supplies)) return;
         }
         // The mine's depth too: the next run digs at the new one. Behind the busy check
@@ -4202,6 +4203,17 @@ public class VillageFolkEntity extends AssistantEntity {
         setAutonomous(true);
         brain("the herd's ground is the pen now");
         FolkTalk.speak(this, "The pen's built! I'll bring the herd in.");
+    }
+
+    /** A rancher with a built pen looks over the herd every half-minute: one that got out (through a
+     *  gate a player left open, or slipping past a folk) is fetched back while it is still near. */
+    private boolean mindTheHerd(net.minecraft.server.level.ServerLevel level) {
+        if (stationTask() != StationTask.RANCH || ownerId() == null || peekJob() != null || Drover.busy(this)) return false;
+        if (!level.isDay() || Raids.underAlarm(ownerId())) return false;
+        Drover.Pen p = Drover.pen(ownerId());
+        WorkZone z = workZone();
+        if (p == null || z == null || !z.center().equals(p.centre())) return false;
+        return Drover.fetchStray(this, level, p);
     }
 
     /** Tests: a beat of the hunter's day, as the station brain would run it. */
