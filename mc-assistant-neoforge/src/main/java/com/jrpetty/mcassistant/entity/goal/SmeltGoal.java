@@ -331,21 +331,9 @@ public class SmeltGoal extends Goal {
             }
         }
 
-        // 4) This one is served — move down the row. A smelter that plants
-        //    itself at one furnace leaves the rest to burn out unattended; the
-        //    job is keeping the whole bank lit, which means walking it.
-        if (furnaces.size() > 1) {
-            boolean servedThisOne = furnace.getItem(2).isEmpty()          // nothing to collect
-                && (!furnace.getItem(0).isEmpty() || remainingToLoad <= 0) // it has work, or we have none
-                && (isLit(furnacePos) || !furnace.getItem(1).isEmpty());   // and it is burning
-            if (servedThisOne) {
-                furnaceIndex = (furnaceIndex + 1) % furnaces.size();
-                furnacePos = furnaces.get(furnaceIndex);
-                return;
-            }
-        }
-
-        // 5) Done? Nothing left anywhere in the bank to load, cook or collect.
+        // 4) Done? Nothing left anywhere in the bank to load, cook or collect. Asked before
+        //    walking the row: a bank that still has coal in it after the last firing is
+        //    "served" at every furnace, and a smelter that walks it first walks it for ever.
         if (remainingToLoad <= 0 && furnace.getItem(0).isEmpty() && furnace.getItem(2).isEmpty()
             && bankIsIdle()) {
             finish("Smelting done — collected " + collected + " " + (job != null ? resultName(job.arg()) : "items") + ".");
@@ -356,6 +344,20 @@ public class SmeltGoal extends Goal {
         if (assistant.tickCount - lastProgressTick > 1200) {
             reclaim(furnace);
             finish("That furnace isn't making progress — took my materials back (got " + collected + ").");
+            return;
+        }
+
+        // 6) This one is served — move down the row. A smelter that plants
+        //    itself at one furnace leaves the rest to burn out unattended; the
+        //    job is keeping the whole bank lit, which means walking it.
+        if (furnaces.size() > 1) {
+            boolean servedThisOne = furnace.getItem(2).isEmpty()          // nothing to collect
+                && (!furnace.getItem(0).isEmpty() || remainingToLoad <= 0) // it has work, or we have none
+                && (isLit(furnacePos) || !furnace.getItem(1).isEmpty());   // and it is burning
+            if (servedThisOne) {
+                furnaceIndex = (furnaceIndex + 1) % furnaces.size();
+                furnacePos = furnaces.get(furnaceIndex);
+            }
         }
     }
 

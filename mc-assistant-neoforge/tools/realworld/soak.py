@@ -424,6 +424,13 @@ def epic_day(r, x, z, day, began, last_age, metrics_file="epic-metrics.jsonl"):
     except OSError:
         pass
     say("STATUS " + status)
+    if day % 10 == 0 or day == 1:
+        # The town's books' own reading of what is driving its growth and what is holding it back.
+        try:
+            books = r.cmd("execute positioned %d 64 %d run village stats" % (x, z))
+            say("BOOKS day %d: %s" % (day, books.replace("\n", " | ")))
+        except Exception as e:  # noqa: BLE001
+            say("books failed: %s" % e)
     if day % 5 == 0 or day == 1:
         report(r, x, z, "the long game, day %d" % day, compact=True)
         for line in villages:

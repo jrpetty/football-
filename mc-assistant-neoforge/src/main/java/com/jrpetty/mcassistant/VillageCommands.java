@@ -385,6 +385,22 @@ public final class VillageCommands {
         net.minecraft.nbt.ListTag d = t.getList("drivers", net.minecraft.nbt.Tag.TAG_STRING);
         StringBuilder sb = new StringBuilder("STATS " + Villages.name(v.id()) + " (" + t.getIntArray("days").length + " days in the books)");
         for (int i = 0; i < d.size(); i++) sb.append(" | ").append(d.getString(i));
+        net.minecraft.nbt.CompoundTag so = t.getCompound("society");
+        sb.append(" | Society: ").append(so.getInt("grown")).append(" grown, ").append(so.getInt("children")).append(" children, ")
+            .append(so.getInt("old")).append(" old; ").append(so.getInt("couples")).append(" couples, ").append(so.getInt("households"))
+            .append(" households; purses spread Gini ").append(so.getInt("gini")).append(", middle purse ").append(so.getInt("median")).append('c');
+        java.util.List<net.minecraft.nbt.CompoundTag> jobs = new java.util.ArrayList<>();
+        net.minecraft.nbt.ListTag jl = t.getList("jobs", net.minecraft.nbt.Tag.TAG_COMPOUND);
+        for (int i = 0; i < jl.size(); i++) jobs.add(jl.getCompound(i));
+        jobs.sort((a, b) -> Integer.compare(b.getInt("week"), a.getInt("week")));
+        sb.append(" | Week's output by trade:");
+        for (int i = 0; i < Math.min(8, jobs.size()); i++) {
+            net.minecraft.nbt.CompoundTag j = jobs.get(i);
+            sb.append(i == 0 ? " " : ", ").append(j.getString("title")).append(' ').append(j.getInt("share")).append("% (")
+                .append(j.getInt("hands")).append(" hands, ").append(j.getInt("per_head")).append("c a hand a day)");
+        }
+        sb.append(" | Buildings: ").append(t.getList("buildings", net.minecraft.nbt.Tag.TAG_COMPOUND).size())
+            .append("; next: ").append(String.join(", ", t.getList("queue", net.minecraft.nbt.Tag.TAG_STRING).stream().limit(4).map(net.minecraft.nbt.Tag::getAsString).toList()));
         String line = sb.toString();
         ctx.getSource().sendSuccess(() -> Component.literal(line), false);
         return d.size();

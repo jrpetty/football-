@@ -265,7 +265,9 @@ public final class Interiors {
                 case FLOOR, FOUNDATION, MASONRY, GENERIC -> { }
                 default -> { continue; }
             }
-            if (!enclosed(at, cell, r + 2)) continue;                         // a room: walls round it, a roof over it (not the attic)
+            // A room: walls round it, a roof over it (not the attic). Looked for right across the building:
+            // a cell by one wall of a great room is the whole width of it from the other.
+            if (!enclosed(at, cell, 2 * r + 2)) continue;
             // Not where something stands already (a bed bought since, a folk's own chest), unless it is
             // one of the furnishing's own pieces: a building looked at again after a restart keeps its plan.
             BlockState there = level.getBlockState(cell);

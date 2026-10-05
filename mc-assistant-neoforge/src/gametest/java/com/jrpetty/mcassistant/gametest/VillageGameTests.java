@@ -5521,7 +5521,9 @@ public class VillageGameTests {
         java.util.Map<String, Integer> stone = after.get("STONE"), iron = after.get("IRON"), diamond = after.get("DIAMOND manor");
         helper.assertTrue(stone.getOrDefault("carpet", 0) > before.getOrDefault("carpet", 0), "a rug down the middle in the Stone Age: " + stone);
         helper.assertTrue(stone.getOrDefault("barrel", 0) >= 1, "and a barrel by the wall: " + stone);
-        helper.assertTrue(iron.getOrDefault("shelf", 0) >= 1, "a shelf of books in the Iron Age: " + iron);
+        java.util.Map<String, Integer> ironManor = after.get("IRON manor");
+        helper.assertTrue(iron.getOrDefault("shelf", 0) + ironManor.getOrDefault("shelf", 0) >= 1, "a shelf of books in the Iron Age: " + iron + ", the manor " + ironManor);
+        helper.assertTrue(ironManor.getOrDefault("shelf", 0) >= 2, "and the manor's walls lined with them: " + ironManor);
         helper.assertTrue(iron.getOrDefault("lantern", 0) > before.getOrDefault("lantern", 0), "and a lantern: " + iron);
         helper.assertTrue(diamond.getOrDefault("candle", 0) >= 1, "candles in the Diamond Age: " + diamond);
         // The door stays clear: the cell inside it and the one beyond.

@@ -405,7 +405,10 @@ public final class Annals {
         VillageFolkEntity f = null;
         for (VillageFolkEntity x : folk) if (x.getUUID().equals(who)) f = x;
         if (f == null) {
-            c.putString("name", Villages.elderName(id));
+            // Nobody leads yet (a new village, or the leader just dead and nobody stood in yet).
+            String name = Villages.elderName(id);
+            c.putString("name", name.isEmpty() ? "Nobody yet" : name);
+            if (name.isEmpty()) c.putString("line", "Nobody leads the village yet: it will look for someone to, at the board.");
             return c;
         }
         c.putString("name", f.displayNameCap());
