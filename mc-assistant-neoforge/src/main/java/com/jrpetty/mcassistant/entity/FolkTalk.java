@@ -258,6 +258,8 @@ public final class FolkTalk {
         String status = f.clientStatus();
         if (f.stationTask() == AssistantEntity.StationTask.NONE) return "Looking for a trade";
         if (f.offWorkNow()) return "Off work";
+        String run = Couriers.doing(f);
+        if (run != null) return "For the storehouse: " + run;
         return status.startsWith("Needs") ? status : "At work: " + f.stationTask().label;
     }
 
@@ -278,6 +280,17 @@ public final class FolkTalk {
         AssistantEntity.StationTask job = f.stationTask();
         line(sb, "Trade", f.isBaby() ? "A child — no trade yet" : job == AssistantEntity.StationTask.NONE ? "Looking for one"
             : job.title + ", level " + f.veteranLevel() + (f.isElder() ? " · the elder" : ""));
+        // The storehouse's staff: the couriers work for it, under its storekeeper (Couriers).
+        if (job == AssistantEntity.StationTask.HAUL && !f.isBaby() && f.ownerId() != null) {
+            VillageFolkEntity keeper = Storekeeping.keeper(f.ownerId());
+            line(sb, "Works for", "the storehouse, " + (keeper != null ? "under " + keeper.displayNameCap() + ", the storekeeper"
+                : "with no storekeeper yet: its run list sends the couriers out") + "; paid as its staff");
+        } else if (job == AssistantEntity.StationTask.STORE && !f.isBaby() && f.ownerId() != null) {
+            int couriers = 0;
+            for (AssistantEntity a : Villages.folkOf(f.ownerId())) if (a.stationTask() == AssistantEntity.StationTask.HAUL) couriers++;
+            line(sb, "Keeps", "the storehouse: its counter, its books" + (couriers > 0 ? ", and its " + couriers
+                + (couriers == 1 ? " courier" : " couriers") : ""));
+        }
         String levels = f.tradeLevels();
         if (!levels.isEmpty() && levels.contains(",")) line(sb, "Has worked", levels);
         if (!f.isBaby()) line(sb, "At its work", Skill.line(f));

@@ -941,34 +941,32 @@ public final class Market {
         return n == 1 ? " coin" : " coins";
     }
 
-    /** Put a lot into the village's stores, the storehouse first. Returns what would not fit. */
+    /**
+     * Put a lot into the village's stores, the storehouse first. Returns what would not fit. Onto
+     * the part stacks of the same in every store first, then into empty slots (Stacking): this used
+     * to drop a lot into the first empty slot it came to, before a half stack of the same further
+     * along, and filled chest after chest without topping up the one before.
+     */
     static ItemStack intoStores(ServerLevel level, UUID village, ItemStack stack) {
         Economy.storesIn(village, stack);                                       // a maker's work, item by item
-        ItemStack left = stack.copy();
         List<BlockPos> stores = new ArrayList<>(Villages.storeChests(level, village));
+        List<net.minecraft.world.Container> boxes = new ArrayList<>();
+        int storehouse = -1;
         for (BlockPos p : stores) {
-            if (left.isEmpty()) break;
             if (!(level.getBlockEntity(p) instanceof net.minecraft.world.Container c)) continue;
-            for (int i = 0; i < c.getContainerSize() && !left.isEmpty(); i++) {
-                ItemStack there = c.getItem(i);
-                if (there.isEmpty()) {
-                    c.setItem(i, left.copy());
-                    left = ItemStack.EMPTY;
-                } else if (ItemStack.isSameItemSameComponents(there, left) && there.getCount() < there.getMaxStackSize()) {
-                    int move = Math.min(left.getCount(), there.getMaxStackSize() - there.getCount());
-                    there.grow(move);
-                    left.shrink(move);
-                }
-            }
-            c.setChanged();
+            if (c instanceof com.jrpetty.mcassistant.block.StorehouseBlockEntity) storehouse = boxes.size();
+            boxes.add(c);
         }
+        int[] took = new int[boxes.size()];
+        ItemStack left = Stacking.insert(boxes, stack, took);
+        // What went into the storehouse is in its books (the stores' own dealings: a sale, a
+        // maker's work, a caravan home, a gift).
+        if (storehouse >= 0 && took[storehouse] > 0) Storekeeping.bookIn(level, village, null, stack, took[storehouse], false);
         // Every store full: another chest for it (Villages.growStores), rather than the ground.
         if (!left.isEmpty()) {
             BlockPos more = Villages.growStores(level, village);
             if (more != null && level.getBlockEntity(more) instanceof net.minecraft.world.Container c) {
-                c.setItem(0, left.copy());
-                c.setChanged();
-                left = ItemStack.EMPTY;
+                left = Stacking.insert(c, left);
             }
         }
         return left;

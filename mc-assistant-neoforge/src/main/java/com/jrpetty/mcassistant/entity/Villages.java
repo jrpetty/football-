@@ -326,6 +326,8 @@ public final class Villages {
     public static void resetForTests() {
         MADE_UP.clear();
         Storehouses.resetForTests();
+        Storekeeping.resetForTests();
+        Couriers.resetForTests();
         VillageBoards.resetForTests();
         Retiring.resetForTests();
         HAS_STORES.clear();
@@ -1973,12 +1975,16 @@ public final class Villages {
         if (v == null) return List.of();
         BlockPos house = builtAt(villageId, "storage");
         List<BlockPos> out = new ArrayList<>();
+        // A worker's production chest near the heart is its own, not the stores': the couriers empty
+        // it, and nothing of the stores' is put into it.
+        java.util.Set<Long> inUse = VillageFolkEntity.chestsInUse(villageId);
         boolean before = ZoneChests.askAs(true);
         try {
             for (ZoneChests.Found f : ZoneChests.around(level, v.centre(), STORE_AREA, 16)) {
                 if (!f.stillThere() || !ZoneChests.isStashable(f)) continue;
                 if (inAGuestHouse(villageId, f.pos())) continue;
                 if (Homes.inAHome(villageId, f.pos())) continue;          // a household's own chest (Homes)
+                if (inUse.contains(f.pos().asLong())) continue;
                 out.add(f.pos().immutable());
             }
         } finally {

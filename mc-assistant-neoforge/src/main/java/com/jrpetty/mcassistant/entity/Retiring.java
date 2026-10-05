@@ -62,12 +62,13 @@ public final class Retiring {
             chests = new ArrayList<>();
             int radius = Math.min(112, Math.max(48, Villages.storesRadius(village)));
             boolean before = ZoneChests.askAs(true);
-            java.util.Set<Long> production = VillageFolkEntity.productionChests(village);
+            java.util.Set<Long> production = VillageFolkEntity.chestsInUse(village);
             try {
                 for (ZoneChests.Found found : ZoneChests.around(level, v.centre(), radius, 32)) {
                     if (!found.stillThere() || !retirable(level, found.pos(), found.blockEntity())) continue;
                     if (Villages.inAGuestHouse(village, found.pos())) continue;
-                    // A worker's production chest is where its output waits for the couriers, not an old chest.
+                    // A worker's production chest is where its output waits for the couriers, not an old chest
+                    // (nor one a worker is bringing along to its new plot).
                     if (production.contains(found.pos().asLong())) continue;
                     chests.add(found.pos().immutable());
                 }
@@ -79,8 +80,12 @@ public final class Retiring {
         }
         BlockPos best = null;
         double bestDist = Double.MAX_VALUE;
+        // Looked at again now, not only when the list was made: a chest set down since as somebody's
+        // production chest (or one its worker is carrying along) is in use, and never retired.
+        java.util.Set<Long> inUse = VillageFolkEntity.chestsInUse(village);
         for (BlockPos p : chests) {
             long key = p.asLong();
+            if (inUse.contains(key)) continue;
             long[] claim = CLAIMED.get(key);
             if (claim != null && now < claim[1] && claim[0] != f.getUUID().getLeastSignificantBits()) continue;
             Long away = UNREACHABLE.get(key);

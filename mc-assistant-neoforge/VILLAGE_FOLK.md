@@ -891,23 +891,51 @@ hands back to their own work the same morning.
 * **The stores grow.** The storehouse has no bottom (see *The Village Storehouse*). Before
   there is one, when every store is full, another chest is set down beside them, made of the
   stores' own planks.
-* **Production chests and couriers.** Every farmer, woodcutter, miner, fisher, rancher,
-  hunter and beekeeper sets a **production chest** down on its own plot: a farmer's in the
+* **One production chest a worker.** Every farmer, woodcutter, miner, fisher, rancher,
+  hunter and beekeeper keeps **one production chest** on its own plot: a farmer's in the
   corner of its field nearest the town, the others just inside the edge of theirs on the
   town side. It is the folk's own chest, or one from the stores, or one made of the stores'
-  planks. Everything it makes goes in there, and it is **paid for it as it puts it in**.
-  When the chest is full, the load goes to the stores instead. The **couriers** bring the
-  production chests in to the storehouse: the fullest first, a hungry village's food before
-  anything else. A village takes on its first courier from its sixth folk, then one for
-  every five workers on plots. A courier leaves the seed, the saplings and the planting
-  carrots where they are. A production chest is never cleared away as an old chest.
+  planks. Everything it makes goes in there, not on a walk to the storehouse, and it is
+  **paid for it as it puts it in**. When the chest is full, the load goes to the stores
+  instead. That chest is where the couriers know to come for it.
+  * **It moves with the plot.** When a worker's plot moves on (a miner's seam runs out, a
+    hunter's game goes, a rancher moves into the new pen), it does not leave its chest
+    behind and set down another. It walks back to the old one, takes what is in it and the
+    chest itself, sets it down at the edge of the new plot and puts the goods back in. If
+    its pack could not hold what is in it, or it cannot get there, it leaves it for the
+    couriers: they empty it into the storehouse and take the chest up, and the worker has
+    another from the stores. A worker never has two.
+  * The smelter and the crafts keep no chest of their own: the forge and the workshops are
+    a few steps from the storehouse (the couriers take what the furnaces have made straight
+    out of them), and the crafts work out of the stores and into them.
+* **The storehouse runs the couriers.** The **couriers** are the storehouse's staff: they
+  work out of it, wait at its door between runs, and are paid as its staff (the hauler's
+  rate; the wages page says *courier of the storehouse*). They do not choose their own
+  rounds: the storehouse keeps a **run list**, and each courier takes the next run on it —
+  sent out by the storekeeper when it is at the counter, or straight off the list when it
+  is not, so nothing waits on one pair of hands. Best first:
+  1. a worker's **kit** (seed, saplings, torches, feed, arrows) carried **out** to it, when
+     it is far out on its plot and asks for it: it keeps working instead of walking in;
+  2. **ore and fuel out to the smelter** when it runs low (or the stone and clay for its
+     masonry);
+  3. the **production chests**, the fullest first, and of two as full the one that has
+     waited longer; a hungry village's food before anything else;
+  4. a worker far out with a heavy pack and no chest: its load, off its back;
+  5. what the furnaces have made, and any other of the village's chests out on the plots;
+  6. with nothing else, an **old chest** to clear into the storehouse and take up.
+  A courier does the run, carries the goods into the storehouse (stacked onto what is there),
+  **reports back at the door**, and the run goes into the storehouse's books. A courier
+  leaves the seed, the saplings and the planting carrots where they are, and a production
+  chest is never cleared away as an old chest. A village takes on its first courier from its
+  sixth folk, then one for every five workers on plots. Builders still fill their packs
+  from the stores themselves.
 * **Work never stops for want of a player.** Every plot keeps its own chunks loaded, the
   whole of it: a field grown twenty-seven across, a wood, hunting grounds forty across. A
   folk out past the village's loaded ground (a walk to a far field, a fetch across the map)
   carries a window of loaded chunks with it, so nobody stops dead in a chunk nobody is near.
 * **Nobody stands about.** A folk whose trade has nothing for it, and that can fetch
   nothing the village is short of or help the builder, finds something anyway, whatever
-  its trade. It clears out an old chest into the storehouse, takes what it carries to the
+  its trade (except a courier, whose place between runs is the storehouse door). It clears out an old chest into the storehouse, takes what it carries to the
   stores, or goes to a woodcutter's or a miner's ground and brings timber or stone home.
 * **Nothing out of nothing.** Every block the village puts down is paid for: by the
   builder out of its pack, or by the town out of the stores. That goes for the chimney
@@ -1042,12 +1070,39 @@ fewer than two rows stand empty it grows nine more, so the harvest always has so
     plot. Everything they make goes there (or to the stores when it is full), and the
     couriers bring it in: to the storehouse once it stands, the chests at the heart before
     that. Their tools, seed and supplies are fetched from there.
-  * **The old chests are cleared out.** Once the storehouse stands, carriers, and anybody
-    with nothing else to do, walk to the chests folk set down over the years, empty them,
-    take the chest up and carry the lot into the storehouse. A chest that is part of a
-    building is left where it is as furniture and is no longer one of the stores. Your
-    guest house and any chest with a sign on it are never touched.
-  * The storekeeper tidies the storehouse every so often.
+  * **Things stack the way you would stack them.** Whatever goes into the stores — a
+    courier's load, a sale, a maker's work, a caravan home — goes onto the part stacks of
+    the same thing first, wherever they are in the storehouse and the store chests, and only
+    then into an empty slot, a full stack at a time. A thing with a maker's mark or an
+    enchantment keeps to its own stack, as it would for you.
+  * **The old chests are cleared out.** Once the storehouse stands, the couriers (off the
+    bottom of the run list), and anybody with nothing else to do, walk to the chests folk
+    set down over the years, empty them, take the chest up and carry the lot into the
+    storehouse. A chest that is part of a building is left where it is as furniture and is
+    no longer one of the stores. A worker's production chest, and one it is carrying along
+    to a new plot, is never touched. Nor are your guest house and any chest with a sign on it.
+* **The storekeeper keeps the storehouse.**
+  * **In order.** While it is on duty it tidies the storehouse **once a minute**, and at once
+    after a big delivery: like with like, every stack topped up, in order by kind — food, crops
+    and seed, timber, stone and earth, ore and metal, cloth and hides, tools and arms, then the
+    rest — and it tops up the part stacks in the store chests round about. It sorts the store
+    chests into the storehouse too.
+  * **At the counter.** A folk who comes to the storehouse for something is served by the
+    storekeeper when it is on duty there (awake, at work, not on its break, and at the
+    storehouse): a moment at the counter, and *"Sixteen torches for you, Holt."* A folk that
+    draws on the stores from its plot is handed it the same way. With nobody at the counter
+    (no storekeeper, or asleep, or out) folk help themselves, as they always have, so the
+    village never waits. A storekeeper with couriers to run keeps its counter all day; one
+    without bakes and builds between tidies.
+  * **The couriers.** It sends them out on their runs (see *The storehouse runs the couriers*).
+  * **The books.** It keeps a day's books: what went in and came out, by item; who brought
+    it and who took it; the requests it served and the ones folk served themselves; the
+    couriers' runs and what they carried; and how the last tidy went (the slots used before
+    and after, the stacks merged, the slots free). They are on the **Stores** page of the
+    town's books, with the storehouse's staff (the storekeeper and each courier: runs today,
+    goods carried, what it is doing now) and the run list (under way and waiting), and in
+    chat with `/village stores`. A courier's *About* card says it works for the storehouse,
+    under the storekeeper.
   * You can place one yourself within about 38 blocks of a village's heart and the
     village will use it.
 
@@ -2124,7 +2179,12 @@ every chart reads out the day under the mouse.
   house how many live there and on what terms; how many of each kind; and what the village
   will build next, in order, with why.
 * **Stores:** food, the days of food put by, timber and stone, coal and iron over time, what
-  is in the stores now and the larder's books.
+  is in the stores now and the larder's books; and beside them **the storehouse**: its slots
+  used and free, its storekeeper and whether it is at the counter, the day's goods in and out
+  and the requests served at the counter against those folk served themselves, the couriers'
+  runs, the last tidy (slots before and after, stacks merged), its **staff** (the storekeeper
+  and each courier: wage, runs today, goods carried, what it is doing now), its **run list**
+  (under way and waiting), and the day's books by item and by folk.
 * **Why:** what is driving its growth and what is holding it back, read from its books:
   population and where it came from, whether every bed is taken, whether the larder is full
   enough for children, output up or down and which trades moved it, the most productive trade
@@ -2661,6 +2721,8 @@ ripen, days pass, folk work and houses go up at that pace.
 * `/village shop` — the sellers' books: for the shop, the café, the tavern, the market and the
   stores, what each ware has on hand against what is kept, what sold today and this week, what
   was wanted and not there, what was made, its price and markdown, and what it is short of.
+* `/village stores` — the storehouse's day: its slots, its storekeeper, what went in and out
+  and who served the requests, its last tidy, its staff and their runs, and its run list.
 * `/village chronicle` — the nearest village's history, as a written book.
 * `/village standing` — what every village you have met thinks of you.
 * `/village ledger` — the nearest village's town ledger, as a book.

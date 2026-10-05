@@ -521,6 +521,8 @@ public final class Annals {
         out.put("league", league(level, v));
         out.put("production", production(level, v));
         out.put("shops", Stockroom.inventoryReport(level, id));
+        // The storehouse's books, its staff (the storekeeper, the couriers) and its run list: the Stores page.
+        out.put("storehouse", Storekeeping.report(level, v));
         out.put("buildings", buildings(level, v));
         List<String> queue = new ArrayList<>();
         for (String p : Villages.projectsWanted(id)) queue.add(Villages.spoken(p));

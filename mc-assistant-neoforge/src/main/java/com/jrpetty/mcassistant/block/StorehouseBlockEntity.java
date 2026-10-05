@@ -143,17 +143,30 @@ public class StorehouseBlockEntity extends BlockEntity implements Container, Men
 
     /**
      * Tidy it: like with like, stacks topped up, sorted by what they are. The storekeeper
-     * does it each morning; anybody can with the button.
+     * does it while it is on duty (VillageFolkEntity.tidyTheStorehouse); anybody can with the button.
      */
     public void sort() {
+        tidy();
+    }
+
+    /**
+     * Tidy it, and say how it went: {slots used before, slots used after}. Like with like (the same
+     * item with the same components: a maker's marked work and enchanted things keep to their own
+     * stacks), every stack topped up to the full, and in order by kind — food, then crops and seed,
+     * timber, stone and earth, ore and metal, cloth and hides, tools and arms, and the rest
+     * (entity/Stacking.KINDS) — then by what it is, the fullest stack first.
+     */
+    public int[] tidy() {
+        int before = used();
         List<ItemStack> all = takeAll();
         List<ItemStack> merged = new ArrayList<>();
         for (ItemStack s : all) {
             ItemStack left = s;
             for (ItemStack m : merged) {
                 if (left.isEmpty()) break;
-                if (ItemStack.isSameItemSameComponents(m, left) && m.getCount() < m.getMaxStackSize()) {
-                    int move = Math.min(m.getMaxStackSize() - m.getCount(), left.getCount());
+                int cap = Math.min(m.getMaxStackSize(), getMaxStackSize());
+                if (ItemStack.isSameItemSameComponents(m, left) && m.getCount() < cap) {
+                    int move = Math.min(cap - m.getCount(), left.getCount());
                     m.grow(move);
                     left.shrink(move);
                 }
@@ -161,13 +174,15 @@ public class StorehouseBlockEntity extends BlockEntity implements Container, Men
             if (!left.isEmpty()) merged.add(left);
         }
         merged.sort(java.util.Comparator
-            .comparing((ItemStack s) -> net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(s.getItem()).toString())
+            .comparingInt(com.jrpetty.mcassistant.entity.Stacking::kind)
+            .thenComparing((ItemStack s) -> net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(s.getItem()).toString())
             .thenComparing(s -> -s.getCount()));
         NonNullList<ItemStack> into = items();
         while (into.size() < merged.size()) into.add(ItemStack.EMPTY);
         for (int i = 0; i < merged.size(); i++) into.set(i, merged.get(i));
         roomToSpare();
         setChanged();
+        return new int[]{ before, merged.size() };
     }
 
     // ------------------------------------------------------------------ Container

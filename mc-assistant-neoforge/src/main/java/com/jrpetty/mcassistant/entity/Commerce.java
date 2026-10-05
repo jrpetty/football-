@@ -366,17 +366,9 @@ public final class Commerce {
         return sales;
     }
 
+    /** Onto the part stacks of the same first, then empty slots (Stacking). Returns what would not fit. */
     private static ItemStack put(Container c, ItemStack s) {
-        for (int i = 0; i < c.getContainerSize() && !s.isEmpty(); i++) {
-            ItemStack in = c.getItem(i);
-            if (in.isEmpty()) { c.setItem(i, s.copy()); s.setCount(0); }
-            else if (ItemStack.isSameItemSameComponents(in, s) && in.getCount() < in.getMaxStackSize()) {
-                int n = Math.min(s.getCount(), in.getMaxStackSize() - in.getCount());
-                in.grow(n);
-                s.shrink(n);
-            }
-        }
-        return s;
+        return Stacking.insert(c, s);
     }
 
     static List<Map.Entry<String, String>> notesStarting(UUID village, String prefix) {

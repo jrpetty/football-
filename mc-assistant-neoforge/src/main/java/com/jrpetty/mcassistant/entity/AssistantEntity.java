@@ -1720,6 +1720,15 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         forgetChestIndex();
     }
 
+    /** No route of its own: a village's courier takes its runs from the storehouse (Couriers),
+     *  and a route left over from before (a saved world) would only get in their way. */
+    protected void clearHaulRoute() {
+        if (preferredChest == null && deliveryChest == null) return;
+        preferredChest = null;
+        deliveryChest = null;
+        forgetChestIndex();
+    }
+
     public void linkChest(BlockPos pos) {
         preferredChest = pos.immutable();
         lastGoodChest = pos.immutable();
@@ -6765,7 +6774,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         return 1;
     }
 
-    private int loadFrom(BlockPos chestPos, int max, java.util.function.Predicate<ItemStack> only) {
+    protected int loadFrom(BlockPos chestPos, int max, java.util.function.Predicate<ItemStack> only) {
         if (!transferReady()) return 0;
         if (!(level().getBlockEntity(chestPos) instanceof Container c)) return 0;
         // A furnace gives up only what it has made (its output), never the ore and fuel in it.
@@ -6813,28 +6822,41 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     public int drawFrom(BlockPos origin, java.util.function.Predicate<ItemStack> what,
                         int max, int radius) {
         int moved = 0;
+        // What came out of the Village Storehouse, for its books (drewFromStorehouse).
+        java.util.List<ItemStack> fromStore = null;
         // Tall as well as wide: chests on a hillside or down by a river sit
         // twenty blocks above or below the heart, and the block-entity maps
         // this reads make height free.
         for (ZoneChests.Found found : ZoneChests.around(level(), origin, radius, 32)) {
             if (!found.stillThere() || !ZoneChests.isStashable(found)) continue;
             Container c = found.container();
+            boolean store = c instanceof com.jrpetty.mcassistant.block.StorehouseBlockEntity;
+            boolean full = false;
             for (int i = 0; i < c.getContainerSize() && moved < max; i++) {
                 ItemStack st = c.getItem(i);
                 if (st.isEmpty() || !what.test(st)) continue;
                 int take = Math.min(st.getCount(), max - moved);
                 ItemStack leftover = insertItem(st.copyWithCount(take));
                 int taken = take - leftover.getCount();
-                if (taken <= 0) { c.setChanged(); return moved; }   // pack is full
+                if (taken <= 0) { full = true; break; }              // pack is full
+                if (store) {
+                    if (fromStore == null) fromStore = new java.util.ArrayList<>();
+                    fromStore.add(st.copyWithCount(taken));
+                }
                 st.shrink(taken);
                 if (st.isEmpty()) c.setItem(i, ItemStack.EMPTY);
                 moved += taken;
             }
             c.setChanged();
-            if (moved >= max) break;
+            if (full || moved >= max) break;
         }
+        if (fromStore != null) drewFromStorehouse(fromStore);
         return moved;
     }
+
+    /** What this hand just drew out of the Village Storehouse (drawFrom): VillageFolkEntity books it,
+     *  and the storekeeper on duty hands it over (Storekeeping). */
+    protected void drewFromStorehouse(java.util.List<ItemStack> lots) { }
 
     /**
      * The other way from {@link #drawFrom}: put what this bot carries of
@@ -6867,27 +6889,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         return moved;
     }
 
-    /** Merge into matching stacks first, then empty slots. Returns what did not fit. */
+    /** Merge into matching stacks first, then empty slots (the one way in: Stacking). Returns what did not fit. */
     private static ItemStack putInto(Container c, ItemStack stack) {
-        ItemStack rest = stack.copy();
-        for (int pass = 0; pass < 2 && !rest.isEmpty(); pass++) {
-            for (int i = 0; i < c.getContainerSize() && !rest.isEmpty(); i++) {
-                ItemStack slot = c.getItem(i);
-                int cap = Math.min(rest.getMaxStackSize(), c.getMaxStackSize());
-                if (pass == 0) {
-                    if (slot.isEmpty() || !ItemStack.isSameItemSameComponents(slot, rest)) continue;
-                    int m = Math.min(cap - slot.getCount(), rest.getCount());
-                    if (m <= 0) continue;
-                    slot.grow(m);
-                    rest.shrink(m);
-                } else if (slot.isEmpty() && c.canPlaceItem(i, rest)) {
-                    int m = Math.min(cap, rest.getCount());
-                    c.setItem(i, rest.copyWithCount(m));
-                    rest.shrink(m);
-                }
-            }
-        }
-        return rest;
+        return Stacking.insert(c, stack);
     }
 
     /** Queue the making of something by name out of what is in the pack. The

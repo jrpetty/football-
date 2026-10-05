@@ -291,18 +291,9 @@ public final class Diplomacy {
         return sent;
     }
 
+    /** Onto the part stacks of the same first, then empty slots (Stacking). Returns what would not fit. */
     private static net.minecraft.world.item.ItemStack put(net.minecraft.world.Container c, net.minecraft.world.item.ItemStack s) {
-        for (int i = 0; i < c.getContainerSize() && !s.isEmpty(); i++) {
-            net.minecraft.world.item.ItemStack in = c.getItem(i);
-            if (in.isEmpty()) { c.setItem(i, s.copy()); s.setCount(0); }
-            else if (net.minecraft.world.item.ItemStack.isSameItemSameComponents(in, s) && in.getCount() < in.getMaxStackSize()) {
-                int n = Math.min(s.getCount(), in.getMaxStackSize() - in.getCount());
-                in.grow(n);
-                s.shrink(n);
-            }
-        }
-        c.setChanged();
-        return s;
+        return Stacking.insert(c, s);
     }
 
     /** Is a tribute due from this village (a week since it last paid or refused)? */

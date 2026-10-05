@@ -114,8 +114,10 @@ public final class Wealth {
         int lv = f.veteranLevel(), b = bonus(f);
         String place = f.ownerId() == null ? "hamlet" : Villages.rank(f.ownerId()).label.replace("a ", "");
         StringBuilder sb = new StringBuilder();
+        // The couriers are the storehouse's staff (Couriers), and paid as such: the same rate.
         sb.append(tradeWage(f.stationTask(), f.ownerId())).append(" as a ")
-            .append(f.stationTask().title.toLowerCase(java.util.Locale.ROOT)).append(" in a ").append(place);
+            .append(f.stationTask() == StationTask.HAUL ? "courier of the storehouse"
+                : f.stationTask().title.toLowerCase(java.util.Locale.ROOT)).append(" in a ").append(place);
         if (lv >= 10) sb.append(", +1 at level ten");
         if (lv >= 25) sb.append(", +1 at twenty-five");
         if (f.isElder()) sb.append(", +1 as the elder");

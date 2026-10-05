@@ -98,6 +98,14 @@ public class RetireGoal extends Goal {
             return;
         }
         BlockEntity be = assistant.level().getBlockEntity(chest);
+        // Somebody's production chest (or one it is bringing along to its new plot) is in use: never
+        // cleared away. Only its own worker takes its own old chest up.
+        if (assistant.ownerId() != null
+                && com.jrpetty.mcassistant.entity.VillageFolkEntity.chestInUseByAnother(assistant.ownerId(), chest, assistant)) {
+            LOG.info("[MCA-RETIRE] {} left {} alone: it is a worker's production chest", assistant.getName().getString(), chest.toShortString());
+            finish(null);
+            return;
+        }
         if (!(be instanceof Container c) || !com.jrpetty.mcassistant.entity.Retiring.retirable(assistant.level(), chest, be)) {
             LOG.info("[MCA-RETIRE] {} found no old chest of the village's at {} ({})", assistant.getName().getString(),
                 chest.toShortString(), assistant.level().getBlockState(chest));
@@ -139,6 +147,9 @@ public class RetireGoal extends Goal {
             if (!left.isEmpty()) net.minecraft.world.level.block.Block.popResource(assistant.level(), chest, left);
         }
         assistant.note(AssistantEntity.Deed.LOADS_HAULED, 1);
-        finish("Took the old chest up — everything goes to the storehouse now.");
+        com.jrpetty.mcassistant.entity.VillageFolkEntity mine = assistant instanceof com.jrpetty.mcassistant.entity.VillageFolkEntity vf
+            && chest.equals(vf.oldProductionChest()) ? vf : null;
+        finish(mine != null ? "Got my old chest — it comes with me to my new plot." : "Took the old chest up — everything goes to the storehouse now.");
+        if (mine != null) mine.oldChestTakenUp();                  // set down at its new plot, the goods back in it
     }
 }
