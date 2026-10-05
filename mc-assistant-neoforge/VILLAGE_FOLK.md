@@ -3415,8 +3415,9 @@ Neighbours who know each other hear of them a day later. Rivals hear too, but it
 to make a folk go over to them, and an elder who mistrusts a rival will not take its folk
 on. A town that has never met another hears nothing of it.
 
-**Who goes looking.** Only a folk with a reason: out of work, or idle at a trade its town
-has more hands at than it needs; paid less than a notice elsewhere offers (by what that
+**Who goes looking.** Only a folk with a reason: out of work (no trade, or a trade it has had
+no ground to work at for a couple of minutes: a woodcutter with no wood about, a miner with no
+hill), or idle at a trade its town has more hands at than it needs; paid less than a notice elsewhere offers (by what that
 town's paydays really pay, against its own); unhappy at home; family living in the other
 town; or young, with no trade much learned yet, wanting a start. It takes enough of them
 to go (more to go over to a rival, and more again if its own town is short of its trade).

@@ -393,11 +393,13 @@ public class JobMarketGameTests {
 
     /**
      * A notice for a farmer goes up in one town; its pact partner has a farmer content at home (at a
-     * trade the town needs, paid as well, not young) and a folk out of work. Both are sent to look at
-     * the board: the one out of work goes, reads it and applies; the one with no reason to move does
-     * not go at all.
+     * trade the town needs, paid as well, not young) and a folk out of work: one that came with no
+     * trade, which its town sets to the trade it is shortest of (the woods, here, on bare ground with
+     * no tree for miles), and which finds no ground for it. The content farmer is sent to look at the
+     * board and does not go at all. Once the other has gone two minutes with no ground to work, it
+     * counts as out of work: sent to look, it goes, reads the board and applies.
      */
-    @GameTest(template = EMPTY, timeoutTicks = 3000, batch = "jm03_only_with_a_reason")
+    @GameTest(template = EMPTY, timeoutTicks = 6000, batch = "jm03_only_with_a_reason")
     public static void jm03_only_with_a_reason(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
@@ -427,8 +429,8 @@ public class JobMarketGameTests {
         pact(c, d);
         int[] stage = { 0 };
         boolean[] contentWent = { false };
-        boolean[] lookedAtReasons = { false };
         boolean[] hadNoReason = { false };
+        long[] sent = { -1 };
         helper.onEachTick(() -> {
             long t = helper.getTick();
             level.setDayTime(base + HOUR);
@@ -442,18 +444,22 @@ public class JobMarketGameTests {
                 content.persona().setMood(70, List.of("a good day"));
                 JobSeekers.Reasons why = JobSeekers.reasons(content, d.id(), farm);
                 hadNoReason[0] = why.why().isEmpty();
-                lookedAtReasons[0] = true;
                 Kit.log("jm03 the content farmer " + content.displayNameCap() + ": " + JobSeekers.reasonsLine(content) + " (reasons: "
                     + (why.why().isEmpty() ? "none" : why.words()) + ")");
-                Kit.log("jm03 the folk out of work " + idle.displayNameCap() + ": " + JobSeekers.reasonsLine(idle));
                 JobSeekers.lookNow(content);
-                JobSeekers.lookNow(idle);
                 stage[0] = 1;
                 return;
             }
             if (JobSeekers.busy(content)) contentWent[0] = true;
+            // The other: sent to look as soon as it is out of work (no trade, or no ground for the one it has).
+            if (sent[0] < 0 && JobSeekers.outOfWork(idle)) {
+                sent[0] = t;
+                Kit.log("jm03 tick " + t + ": " + idle.displayNameCap() + " is out of work (" + idle.stationTask() + ", ground "
+                    + (idle.workZone() == null ? "none" : "some") + "): " + JobSeekers.reasonsLine(idle));
+                JobSeekers.lookNow(idle);
+            }
             JobMarket.Application idleApp = applicationOf(d, idle);
-            if (idleApp != null && t > 300) {
+            if (idleApp != null && t > 300 && sent[0] >= 0) {
                 JobMarket.Application contentApp = applicationOf(d, content);
                 logMarket(level, d);
                 Kit.log("jm03 " + idle.displayNameCap() + " applied: " + idleApp.verdict() + " (level " + idleApp.level() + ", "
@@ -467,9 +473,10 @@ public class JobMarketGameTests {
                 helper.succeed();
                 return;
             }
-            if (t % 100 == 0) Kit.log("jm03 tick " + t + ": idle busy " + JobSeekers.busy(idle) + " at " + idle.blockPosition().toShortString()
-                + ", content busy " + JobSeekers.busy(content));
-            if (t > 2800) helper.fail("the folk out of work never applied: " + idle.debugLine());
+            if (t % 200 == 0) Kit.log("jm03 tick " + t + ": idle " + idle.stationTask() + " ground " + (idle.workZone() == null ? "none" : "some")
+                + ", out of work " + JobSeekers.outOfWork(idle) + ", busy " + JobSeekers.busy(idle) + " at " + idle.blockPosition().toShortString()
+                + "; content busy " + JobSeekers.busy(content));
+            if (t > 5800) helper.fail("the folk out of work never applied (sent at " + sent[0] + "): " + idle.debugLine());
         });
     }
 }
