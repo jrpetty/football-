@@ -1269,16 +1269,15 @@ public final class JobMarket {
         for (VillageFolkEntity f : homeless) {
             if (placed.add(f.getUUID())) households.add(new ArrayList<>(List.of(f)));     // a child left alone: it goes too
         }
-        Map<UUID, Integer> taken = new HashMap<>();
         int sent = 0;
         List<String> stayed = new ArrayList<>();
         for (List<VillageFolkEntity> h : households) {
-            Villages.Village to = refuge(level, v, h.size(), taken);
+            // (Each household sent is on the new town's roll at once, so the next is weighed against the room left.)
+            Villages.Village to = refuge(level, v, h.size());
             if (to == null) {
                 for (VillageFolkEntity m : h) if (!m.isBaby()) stayed.add(m.displayNameCap());
                 continue;
             }
-            taken.merge(to.id(), h.size(), Integer::sum);
             List<String> names = new ArrayList<>();
             for (VillageFolkEntity m : h) if (!m.isBaby()) names.add(m.displayNameCap());
             int kids = h.size() - names.size();
@@ -1345,7 +1344,7 @@ public final class JobMarket {
 
     /** The nearest friendly town with room for so many, or null. */
     @Nullable
-    static Villages.Village refuge(ServerLevel level, Villages.Village from, int n, Map<UUID, Integer> taken) {
+    static Villages.Village refuge(ServerLevel level, Villages.Village from, int n) {
         Villages.Village best = null;
         double bestScore = Double.MAX_VALUE;
         for (Villages.Village o : Villages.every()) {
@@ -1353,7 +1352,7 @@ public final class JobMarket {
             Link link = link(from.id(), o.id());
             if (link == Link.NONE || link == Link.RIVALS || link == Link.FEUD) continue;
             if (Villages.folkOf(o.id()).isEmpty()) continue;
-            int room = room(level, o.id()) - taken.getOrDefault(o.id(), 0);
+            int room = room(level, o.id());
             if (room < n) continue;
             double score = Math.sqrt(o.centre().distSqr(from.centre())) - link.ease * 20.0;
             if (score < bestScore) {

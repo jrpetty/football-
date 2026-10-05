@@ -279,8 +279,8 @@ public class JobMarketGameTests {
                             "its card says where it came from: " + card);
                         helper.assertTrue(JobMarket.moves(a.id()).stream().anyMatch(m -> m.in() && m.name().equals(veteran.displayNameCap())),
                             "A's books have it coming");
-                        helper.assertTrue(JobMarket.moves(b.id()).stream().anyMatch(m -> !m.in() && m.name().equals(veteran.displayNameCap())),
-                            "B's books have it leaving");
+                        helper.assertTrue(JobMarket.moves(b.id()).stream().anyMatch(m -> !m.in() && m.other().equals(Villages.name(a.id()))),
+                            "B's books have it leaving for A");
                         helper.assertTrue(newsHas(a, "came from " + Villages.name(b.id())), "A's chronicle tells it");
                         helper.assertTrue(JobMarket.report(level, a.id()).getList("applications", 10).size() >= 3,
                             "the city books' Jobs page has the applications");
