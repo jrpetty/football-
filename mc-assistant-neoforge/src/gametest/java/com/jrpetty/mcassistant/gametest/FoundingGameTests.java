@@ -187,6 +187,8 @@ public class FoundingGameTests {
                     if (Math.abs(x - (hut.getX() + 1)) <= 4 && Math.abs(z - (hut.getZ() + 1)) <= 4) continue;
                     int y = ground(level, x, z);
                     for (int d = 0; d < com.jrpetty.mcassistant.entity.Terraform.SOLID_DEPTH; d++) {
+                        // (The test world's flat ground is only four deep over the bottom of the world.)
+                        if (y - d < level.getMinBuildHeight()) break;
                         net.minecraft.world.level.block.state.BlockState b = level.getBlockState(new BlockPos(x, y - d, z));
                         if (b.isAir() || !b.getFluidState().isEmpty() || !b.isSolid()) {
                             if (hollow++ == 0) firstHollow = x + "," + (y - d) + "," + z + " " + b;
