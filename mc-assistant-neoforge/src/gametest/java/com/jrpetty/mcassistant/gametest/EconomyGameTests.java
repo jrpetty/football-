@@ -6,6 +6,8 @@ import com.jrpetty.mcassistant.entity.AssistantEntity.StationTask;
 import com.jrpetty.mcassistant.entity.Fuel;
 import com.jrpetty.mcassistant.entity.Larder;
 import com.jrpetty.mcassistant.entity.Leader;
+import com.jrpetty.mcassistant.entity.Meals;
+import com.jrpetty.mcassistant.entity.PackedLunch;
 import com.jrpetty.mcassistant.entity.Strays;
 import com.jrpetty.mcassistant.entity.VillageFolkEntity;
 import com.jrpetty.mcassistant.entity.Villages;
@@ -46,7 +48,15 @@ import java.util.function.Predicate;
  *     never more charcoal than logs taken.</li>
  * <li><b>ec03</b>: a guard carrying eighty-five of the builders' stock (logs, stairs, glass, doors)
  *     takes it back to the stores and keeps its sword and its bread; a woodcutter's own logs are not
- *     counted against it; and with the stores' coal under the floor the watch makes no torches of it.</li>
+ *     counted against it; and with the stores' coal under the floor the watch makes no torches of it. A
+ *     lead's building stays in its hands; a lapsed lead (a farmer made a woodcutter, far out) lets go of
+ *     its cobblestone and stairs, and of its own logs, for the stores.</li>
+ * <li><b>ec04</b>: a farmer with a grown field keeps thirty-two of each crop it plants and banks the rest
+ *     (seventy-eight potatoes, sixty carrots and fifty-six seeds were all kept as seed); out at a far
+ *     field at breakfast with nothing but its seed, it eats a carrot rather than go without.</li>
+ * <li><b>ec05</b>: a farmer setting out for a field seventy-five blocks from the stores takes a day's meals
+ *     out of them first; out there at a mealtime with nothing to eat, it sends for food (walks in, with no
+ *     couriers), once a meal.</li>
  * </ul>
  *
  * <p>Each runs on its own ground (x 360,000 to 366,000, z 50,000).
@@ -322,6 +332,29 @@ public class EconomyGameTests {
         // The woodcutter holds the village's building lead, so the guard is not called off to raise the first
         // building with the very timber it is carrying back (the test is of the carrying back).
         Villages.isLead(village, cutter.getUUID(), level.getGameTime());
+        // A lead keeps what it drew for its building: nothing of it is a stray.
+        cutter.drewForBuildForTests();
+        boolean leadSent = Strays.tend(cutter);
+        int leadHeld = Strays.carried(cutter);
+        // A lapsed lead (a farmer made a woodcutter, its building now another's) lets go of all of it.
+        VillageFolkEntity lapsed = VillageFolkSpawnerBlock.raise(level, Kit.surface(level, x - 3, Z + 3), 0.0F);
+        helper.assertTrue(lapsed != null && village.equals(lapsed.ownerId()), "a third folk of the village");
+        lapsed.setJob(StationTask.WOOD);
+        lapsed.getInventoryItems().clear();
+        lapsed.insertItem(new ItemStack(Items.COBBLESTONE, 64));
+        lapsed.insertItem(new ItemStack(Items.JUNGLE_STAIRS, 8));
+        lapsed.insertItem(new ItemStack(Items.ACACIA_LOG, 20));
+        lapsed.drewForBuildForTests();
+        int heldBack = Strays.carried(lapsed), logsHeldBack = lapsed.countStashable(s -> s.is(Items.ACACIA_LOG));
+        boolean lapsedSent = Strays.tend(lapsed);
+        int letGo = Strays.carried(lapsed), logsLetGo = lapsed.countStashable(s -> s.is(Items.ACACIA_LOG));
+        Kit.log("ec03 the lead: sent " + leadSent + ", strays " + leadHeld + "; the lapsed lead: strays " + heldBack + " and logs "
+            + logsHeldBack + " held as the building's, then " + letGo + " and " + logsLetGo + ", sent " + lapsedSent);
+        helper.assertTrue(!leadSent && leadHeld == 0, "the lead keeps its building's stock: " + leadHeld);
+        helper.assertTrue(heldBack == 0 && logsHeldBack == 0, "a lapsed lead's stock was held as the building's: " + heldBack);
+        helper.assertTrue(letGo == 72 && logsLetGo == 20 && lapsedSent,
+            "the lapsed lead lets go of its cobblestone and stairs, and its own logs, and takes them in: " + letGo + ", " + logsLetGo);
+        lapsed.clearQueue();                                            // (its walk is the guard's, below)
         int before = inChests(level, x, Z, 40, stock);
         boolean off = Strays.tend(guard);
         Kit.log("ec03 the guard sets off: " + off + "; the stores hold " + before + " of it — " + guard.debugLine());
@@ -343,6 +376,159 @@ public class EconomyGameTests {
                 helper.succeed();
             } else if (t >= 5800) {
                 helper.fail("the guard still carries " + left + " of the builders' stock — " + guard.debugLine());
+            }
+        });
+    }
+
+    // ============================================================ ec04: the farmer's seed
+
+    @GameTest(template = EMPTY, timeoutTicks = 4000, batch = "ec04_farmer_seed_cap")
+    public static void ec04_farmer_seed_cap(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(24000L * 3 + 4000);
+        final int x = 364500;
+        Kit.hold(level, x, Z, 80);
+        Kit.prepare(level, x, Z, 80);
+        BlockPos heart = Kit.surface(level, x, Z);
+        VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(f != null && f.ownerId() != null, "a village");
+        UUID village = f.ownerId();
+        emptyStores(level, village);
+        chestAt(level, Kit.surface(level, x + 3, Z + 3));
+        Villages.forgetStock();
+        // A grown field (twenty-seven across) a little way out, and a farmer back from it with its harvest.
+        BlockPos field = Kit.surface(level, x + 24, Z);
+        f.setJob(StationTask.FARM);
+        f.assignPlot(WorkZone.around(field, 13, WorkZone.DEFAULT_DEPTH), "Home Fields");
+        f.getInventoryItems().clear();
+        f.insertItem(new ItemStack(Items.STONE_HOE));
+        f.insertItem(new ItemStack(Items.POTATO, 64));
+        f.insertItem(new ItemStack(Items.POTATO, 14));
+        f.insertItem(new ItemStack(Items.CARROT, 60));
+        f.insertItem(new ItemStack(Items.WHEAT_SEEDS, 56));
+        int keepPotato = f.depositReserve(new ItemStack(Items.POTATO)), keepSeed = f.depositReserve(new ItemStack(Items.WHEAT_SEEDS));
+        int spareP = f.countStashable(s -> s.is(Items.POTATO)), spareC = f.countStashable(s -> s.is(Items.CARROT)),
+            spareS = f.countStashable(s -> s.is(Items.WHEAT_SEEDS));
+        Kit.log("ec04 a farmer with a field " + (2 * f.workZone().radius() + 1) + " across keeps " + keepPotato + " potatoes and "
+            + keepSeed + " seeds; of 78 potatoes, 60 carrots and 56 seeds the stores' are " + spareP + ", " + spareC + ", " + spareS);
+        helper.assertTrue(keepPotato == AssistantEntity.SEED_MOST && keepSeed == AssistantEntity.SEED_MOST,
+            "thirty-two of each crop at most is seed: " + keepPotato + ", " + keepSeed);
+        helper.assertTrue(spareP == 46 && spareC == 28 && spareS == 24, "the rest is the stores': " + spareP + ", " + spareC + ", " + spareS);
+        Predicate<ItemStack> crop = s -> s.is(Items.POTATO) || s.is(Items.CARROT) || s.is(Items.WHEAT_SEEDS);
+        int before = inChests(level, x, Z, 70, crop);
+        var job = f.villageDepositJob();
+        helper.assertTrue(job != null, "a village hand banks at the village's chests");
+        f.clearQueue();
+        f.enqueue(job);
+        final boolean[] fed = { false };
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (level.getDayTime() % 24000 > 11000) level.setDayTime(24000L * 3 + 4000);
+            if (t % 10 != 0 || fed[0]) return;
+            int p = f.countCarried(s -> s.is(Items.POTATO)), c = f.countCarried(s -> s.is(Items.CARROT)),
+                sd = f.countCarried(s -> s.is(Items.WHEAT_SEEDS));
+            int banked = inChests(level, x, Z, 70, crop) - before;
+            if (t % 200 == 0) Kit.log("ec04 @" + t + ": carrying " + p + " potatoes, " + c + " carrots, " + sd + " seeds; banked " + banked
+                + " — " + f.debugLine());
+            if (p <= 32 && c <= 32 && sd <= 32 && banked >= 90) {
+                Kit.log("ec04 banked " + banked + " at " + t + ", keeping " + p + ", " + c + ", " + sd);
+                fed[0] = true;
+                // Out at the far edge of its field, past the stores' reach, at breakfast, nothing but its seed.
+                BlockPos out = Kit.surface(level, x + 72, Z);
+                f.clearQueue();
+                f.moveTo(out.getX() + 0.5, out.getY(), out.getZ() + 0.5, 0.0F, 0.0F);
+                f.getInventoryItems().clear();
+                f.insertItem(new ItemStack(Items.STONE_HOE));
+                f.insertItem(new ItemStack(Items.CARROT, 20));
+                level.setDayTime(24000L * 9 + 300);
+                Meals.tick(f);
+                int left = f.countCarried(s -> s.is(Items.CARROT));
+                Kit.log("ec04 breakfast out at the field: " + Meals.line(f) + "; carrots " + left);
+                helper.assertTrue(left == 19 && f.meals().missedInRow() == 0 && f.meals().eatenToday() >= 1,
+                    "with nothing but its seed, it eats a carrot rather than miss its breakfast: " + Meals.line(f));
+                helper.succeed();
+            } else if (t >= 3800) {
+                helper.fail("the farmer did not bank past its seed: carrying " + p + ", " + c + ", " + sd + "; banked " + banked
+                    + " — " + f.debugLine());
+            }
+        });
+    }
+
+    // ============================================================ ec05: a packed lunch
+
+    @GameTest(template = EMPTY, timeoutTicks = 4000, batch = "ec05_packed_lunch")
+    public static void ec05_packed_lunch(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        final long morning = 24000L * 3 + 4000;
+        level.setDayTime(morning);
+        final int x = 365300;
+        Kit.hold(level, x, Z, 90);
+        Kit.prepare(level, x, Z, 90);
+        BlockPos heart = Kit.surface(level, x, Z);
+        VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(f != null && f.ownerId() != null, "a village");
+        UUID village = f.ownerId();
+        emptyStores(level, village);
+        chestAt(level, Kit.surface(level, x + 3, Z + 3), new ItemStack(Items.BREAD, 32));
+        Villages.forgetStock();
+        Predicate<ItemStack> bread = s -> s.is(Items.BREAD);
+        // A field seventy-five blocks out: past where the stores feed a hand at mealtimes.
+        BlockPos field = Kit.surface(level, x + 75, Z);
+        f.setJob(StationTask.FARM);
+        f.assignPlot(WorkZone.around(field, 4, WorkZone.DEFAULT_DEPTH), "Far Fields");
+        f.getInventoryItems().clear();
+        f.insertItem(new ItemStack(Items.STONE_HOE));
+        f.insertItem(new ItemStack(Items.WHEAT_SEEDS, 16));
+
+        // Out there first, at breakfast, with nothing to eat: it sends for food, once.
+        BlockPos out = Kit.surface(level, x + 75, Z + 2);
+        f.clearQueue();
+        f.moveTo(out.getX() + 0.5, out.getY(), out.getZ() + 0.5, 0.0F, 0.0F);
+        level.setDayTime(24000L * 9 + 300);
+        Meals.tick(f);
+        int queued = 0;
+        for (var j : f.queuedJobs()) if (j.type() == com.jrpetty.mcassistant.entity.Job.Type.WITHDRAW && j.arg().startsWith("ration@")) queued++;
+        boolean again = PackedLunch.sendFor(f, 9L * 4);
+        Kit.log("ec05 breakfast out at the field with nothing: " + Meals.line(f) + "; going in for food: " + queued + "; again " + again
+            + " — " + f.debugLine());
+        helper.assertTrue(queued == 1 && !again, "with nothing to eat in reach it goes in to the stores for food, once a meal: " + queued);
+        helper.assertTrue(f.meals().missedInRow() == 0, "and the meal is not yet missed: the mealtime lasts");
+
+        // Back in the town in the morning, setting out: a packed lunch.
+        f.clearQueue();
+        f.moveTo(heart.getX() + 1.5, heart.getY(), heart.getZ() + 0.5, 0.0F, 0.0F);
+        level.setDayTime(morning);
+        PackedLunch.resetForTests();
+        final int stored = inChests(level, x, Z, 40, bread);
+        final boolean[] set = { PackedLunch.take(f) };
+        Kit.log("ec05 setting out with " + PackedLunch.meals(f) + " meals: a packed lunch " + set[0] + " — " + f.debugLine());
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (level.getDayTime() % 24000 > 9000 || level.getDayTime() % 24000 < 3000) level.setDayTime(morning);
+            if (t % 10 != 0) return;
+            int meals = PackedLunch.meals(f);
+            boolean going = false;
+            for (var j : f.queuedJobs()) if (j.type() == com.jrpetty.mcassistant.entity.Job.Type.WITHDRAW) going = true;
+            if (!set[0] && !going && meals < PackedLunch.DAY) {
+                // (Not yet on shift, or it wandered: back to the heart and look again.)
+                if (f.blockPosition().distSqr(heart) > 20 * 20) {
+                    f.clearQueue();
+                    f.moveTo(heart.getX() + 1.5, heart.getY(), heart.getZ() + 0.5, 0.0F, 0.0F);
+                }
+                set[0] = PackedLunch.take(f);
+            }
+            int taken = stored - inChests(level, x, Z, 40, bread);
+            if (t % 200 == 0) Kit.log("ec05 @" + t + ": " + meals + " meals carried, " + taken + " bread out of the stores — " + f.debugLine());
+            if (meals >= PackedLunch.DAY) {
+                int carried = f.countCarried(bread);
+                Kit.log("ec05 a packed lunch at " + t + ": " + meals + " meals, " + carried + " bread, " + taken + " out of the stores");
+                helper.assertTrue(carried <= taken, "nothing from nothing: every loaf came out of the stores (" + carried + " of " + taken + ")");
+                helper.assertTrue(taken <= 12, "a day's meals, not the larder: " + taken);
+                helper.succeed();
+            } else if (t >= 3800) {
+                helper.fail("no packed lunch: " + meals + " meals carried — " + f.debugLine());
             }
         });
     }

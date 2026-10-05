@@ -2364,8 +2364,24 @@ load in its pack. So:
   ingots, fences, ladders, beds) that is not its own trade's work (a woodcutter's logs, a
   miner's stone) and not held back (its kit, or the building it is leading) goes back to the
   stores: a load of sixteen or more at once, anything less after three minutes. A builder who
-  gives up the lead hands back its stairs, slabs, doors and glass with its timber and stone.
-  The smelter, the crafts, the couriers and the storekeeper work with that stock and are let be.
+  gives up the lead hands back its stairs, slabs, doors and glass with its timber and stone, and
+  a lead that has lapsed (five minutes without getting anywhere, or another hand leading now)
+  lets go of what it drew wherever it is, so its next trip to the stores takes it in, its own
+  trade's work with it. The smelter, the crafts, the couriers and the storekeeper work with that
+  stock and are let be.
+* **A farmer keeps its seed, not the harvest.** It keeps sixteen of each crop it plants for a
+  first field, two more for each ring the field has grown, and never more than thirty-two;
+  every carrot, potato and seed past that goes in with the rest of the harvest. (A grown field's
+  farmer used to keep forty-eight of each, and walked about with a hundred and thirty meals while
+  the stores held thirteen.)
+* **Nobody goes hungry with the larder full.** A hand whose plot lies beyond the stores' reach
+  (more than sixty-four blocks out, where the stores cannot feed it at mealtimes) takes a packed
+  lunch before it sets out on a working day: if it carries fewer than a day's meals (its seed
+  not counted), it takes three meals and one over out of the stores, two more for a trade that
+  eats rations at its work. Caught out there at a mealtime with nothing to eat, it sends for
+  food once a meal: a courier brings it if the storehouse has couriers, else it walks in when
+  its work in hand is done. And a farmer with nothing but its seed eats a carrot or a potato of
+  it rather than miss the meal.
 * **What took them.** A death is written down with its cause: by drowning, in a fall, in lava,
   fighting a zombie, and so on, not just "by misfortune", in the history, the graves and the
   books. (Hunger never kills: a folk that misses its meals grows weak, but never below three

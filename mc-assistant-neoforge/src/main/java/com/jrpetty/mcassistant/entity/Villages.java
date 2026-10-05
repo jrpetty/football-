@@ -382,6 +382,7 @@ public final class Villages {
         Leader.resetForTests();
         Larder.resetForTests();             // [economy] the mouths the books were made up for
         Strays.resetForTests();             // [economy] stock carried about that is the village's
+        PackedLunch.resetForTests();        // [economy] the far hands' meals
         Ages.resetForTests();
         Interiors.resetForTests();
         Decor.resetForTests();

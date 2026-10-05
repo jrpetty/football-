@@ -107,7 +107,7 @@ public final class Strays {
      * stores with the builders' stock.
      */
     public static boolean tend(VillageFolkEntity f) {
-        if (f.isBaby() || !f.isAlive() || !looksAt(f.stationTask())) return false;
+        if (f.isBaby() || !f.isAlive()) return false;
         UUID village = f.ownerId();
         if (village == null || !(f.level() instanceof ServerLevel level)) return false;
         UUID me = f.getUUID();
@@ -120,6 +120,10 @@ public final class Strays {
             SINCE.remove(me);
             return false;
         }
+        // A lead that has lapsed lets go of what it drew, whatever its trade: it is the stores' again, and
+        // its own deposits take it in from now (a smelter's, a courier's) or the look below does.
+        f.releaseLapsedBuild();
+        if (!looksAt(f.stationTask())) return false;
         int n = carried(f);
         if (n <= 0) {
             SINCE.remove(me);

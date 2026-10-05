@@ -185,6 +185,7 @@ public final class Meals {
             had(f, b, m, bit, village, day);
             return;
         }
+        PackedLunch.sendFor(f, day * 4 + m.ordinal());      // [economy] food sent for, or walked in for, once a meal
         // Nothing to eat yet: it keeps looking while the mealtime lasts, and only at its end is the meal missed.
         if (tod + 100 < m.to) return;
         b.taken |= bit;
@@ -233,7 +234,7 @@ public final class Meals {
         if (v != null && (fedWhereItStands || f.blockPosition().closerThan(v.centre(), STORES_REACH))) {
             if (f.mealFromTheStores() > 0) return f.eatFromPack();
         }
-        return false;
+        return f.eatFromSeed();                             // [economy] a carrot of its seed, before it goes without
     }
 
     /** One meal's worth out of a chest and into the pack. */

@@ -194,6 +194,24 @@ public class VillageFolkEntity extends AssistantEntity {
     private boolean drewForBuild;
 
     /**
+     * [economy] A lead that has lapsed (five minutes without getting anywhere, or another hand leading now)
+     * holds what it drew as the stores' again, and its next deposit takes it in (Strays). The hand-back
+     * only ever happened at the heart, when a building was next due: a farmer whose lead lapsed, made a
+     * woodcutter far out, kept a hundred and twenty-eight cobblestone and seventy-one stairs as "the
+     * building's" for days, and its own logs with them (logs are building blocks), so it banked nothing.
+     * True if it let go.
+     */
+    public boolean releaseLapsedBuild() {
+        if (!drewForBuild || holdsBuildLead()) return false;
+        drewForBuild = false;
+        buildNote("build: the lead lapsed; what it drew goes back to the stores");
+        return true;
+    }
+
+    /** [economy] Tests: as if this hand had drawn materials for a building. */
+    public void drewForBuildForTests() { drewForBuild = true; }
+
+    /**
      * What a builder drew for a building it is not going to raise goes back into
      * the stores, for whoever raises it. A taiga village's first builder gave up an
      * unreachable lot for its storehouse with all four founding chests, sixty-four
@@ -2766,6 +2784,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (turnedToTheFields()) return;               // a hungry village needs farmers (busy or not)
         if (peekJob() != null) return;                 // already busy
         if (onShift() && Strays.tend(this)) return;    // [economy] the builders' stock it carries, back to the stores
+        if (PackedLunch.take(this)) return;            // [economy] a day's meals before it sets out for a far plot
         if (kitFromTheStores()) return;                // seed, saplings, torches, feed, arrows
         if (resting()) return;                         // off the clock for a bit
         if (movedOnFromSpentGround()) return;          // this patch is finished

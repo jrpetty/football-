@@ -2690,6 +2690,25 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         return true;
     }
 
+    /**
+     * [economy] Nothing else to eat: the best of what it carries, its working stock too (a farmer's carrot
+     * or potato, a rancher's), as anybody would rather than go hungry with a pack of it (Meals). A farmer
+     * a field away from the stores, its pack full of potatoes, missed its meals because they were seed.
+     */
+    public boolean eatFromSeed() {
+        int bestSlot = -1, bestScore = -1;
+        for (int i = 0; i < inventory.size(); i++) {
+            ItemStack s = inventory.get(i);
+            if (s.isEmpty() || s.get(DataComponents.FOOD) == null) continue;
+            int score = foodQuality(s);
+            if (score <= 30) continue;                       // nothing that would poison it
+            if (score > bestScore) { bestScore = score; bestSlot = i; }
+        }
+        if (bestSlot < 0) return false;
+        eatSlot(bestSlot, bestScore);
+        return true;
+    }
+
     /** Something eaten: told to whoever keeps the meals (a village folk's Meals). */
     protected void ateFood(ItemStack meal) {}
 
@@ -4013,13 +4032,19 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         return false;
     }
 
+    /** [economy] The most seed of each crop a farmer keeps back in its pack; the rest goes to the stores. */
+    public static final int SEED_MOST = 32;
+
     private int jobDepositReserve(ItemStack s) {
         return switch (stationTask) {
-            // Seed enough for the field and the ring it is growing into: twelve of each for a first
-            // field, and more for each ring it has grown (VillageFolkEntity.growTheField).
+            // Seed enough for the field and the ring it is growing into: sixteen of each for a first
+            // field, and more for each ring it has grown (VillageFolkEntity.growTheField), but never more
+            // than SEED_MOST: [economy] four a ring kept forty-eight carrots, potatoes and seeds apiece in a
+            // grown field's farmer's pack (the hundred days' farmers walked about with a hundred and thirty
+            // meals each while the stores held thirteen), and the harvest gives the seed back anyway.
             case FARM -> (s.is(Items.WHEAT_SEEDS) || s.is(Items.BEETROOT_SEEDS)
                 || s.is(Items.CARROT) || s.is(Items.POTATO))
-                ? 12 + (workZone == null ? 0 : 4 * Math.max(0, workZone.radius() - 4))
+                ? Math.min(SEED_MOST, 16 + (workZone == null ? 0 : 2 * Math.max(0, workZone.radius() - 4)))
                 : (s.is(Items.WATER_BUCKET) || s.is(Items.BUCKET)) ? 10 : 0;
             case WOOD -> s.is(ItemTags.SAPLINGS) ? 16 : 0;
             case RANCH -> BREEDING_FOOD.test(s) ? 16 : (s.is(Items.SHEARS) ? 1 : 0);
@@ -8190,6 +8215,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     @Nullable
     public Job peekJob() {
         return jobs.peekFirst();
+    }
+
+    /** [economy] What is queued, a copy (PackedLunch: is it already going for food?). */
+    public java.util.List<Job> queuedJobs() {
+        return new java.util.ArrayList<>(jobs);
     }
 
     @Nullable
