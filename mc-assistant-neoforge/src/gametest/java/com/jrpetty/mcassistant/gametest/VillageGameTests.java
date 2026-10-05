@@ -3997,6 +3997,11 @@ public class VillageGameTests {
                 + " gate " + (open ? "open" : "shut"));
             if (inAt[0] < 0 && pen.inside(sheep.blockPosition())) inAt[0] = t;
             if (inAt[0] >= 0 && t - inAt[0] > 200 && !com.jrpetty.mcassistant.entity.Drover.busy(rancher)) {
+                // Caught in the gateway on its way out: the gate is shut behind it once it is through
+                // (the gate is minded every half-second), so look again in a moment.
+                boolean through = open && !pen.inside(rancher.blockPosition())
+                    && rancher.distanceToSqr(pen.gate().getX() + 0.5, pen.gate().getY(), pen.gate().getZ() + 0.5) < 3.0 * 3.0;
+                if (through && t - inAt[0] < 600) return;
                 Kit.log("t60 the pen: " + String.join(" | ", trail) + " | in at " + inAt[0] + ", now " + t + ": gate " + (open ? "open" : "shut")
                     + ", sheep inside " + pen.inside(sheep.blockPosition()));
                 helper.assertTrue(pen.inside(sheep.blockPosition()), "the sheep is in the pen");
