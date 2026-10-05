@@ -8,7 +8,10 @@ the player goes over as a camera and takes the town from the air on four sides, 
 in its square and down a street, and again by night with its windows lit. The town's own
 account of itself (/village status) goes in the report beside the pictures.
 
-    photo.py        (the server and the client are already starting; hundred-spot.txt is here)
+    photo.py [spot file] [name prefix]
+                    (the server and the client are already starting; the spot file, by default
+                    hundred-spot.txt, says where the town is; the pictures are named
+                    smoke-<prefix><shot>.png, by default smoke-hundred-*.png)
 
 Every line of output starts [REAL], like soak.py.
 """
@@ -23,12 +26,14 @@ from smoke import USER, client_alive, position, shot  # noqa: E402
 
 
 def main():
+    spotfile = sys.argv[1] if len(sys.argv) > 1 else "hundred-spot.txt"
+    prefix = sys.argv[2] if len(sys.argv) > 2 else "hundred-"
     r = Rcon()
     try:
-        with open("hundred-spot.txt") as fh:
+        with open(spotfile) as fh:
             cx, cz = (int(v) for v in fh.read().split())
     except (OSError, ValueError):
-        say("FAIL no hundred-spot.txt: nothing to photograph")
+        say("FAIL no %s: nothing to photograph" % spotfile)
         return
     say("connected; the town is at %d, %d; waiting for the client to join" % (cx, cz))
     deadline = time.time() + 900
@@ -70,7 +75,7 @@ def main():
         pitch = -math.degrees(math.atan2(ty - (y + 1.62), math.hypot(dx, dz)))
         r.cmd("tp %s %.2f %.2f %.2f %.1f %.1f" % (USER, x, y, z, yaw, pitch))
         time.sleep(wait)
-        shot("hundred-" + label)
+        shot(prefix + label)
 
     # From the air on four sides (below the clouds), then straight down on the heart.
     look("1-air-southeast", cx + 70, gy + 55, cz + 80, cx, gy, cz, wait=20)

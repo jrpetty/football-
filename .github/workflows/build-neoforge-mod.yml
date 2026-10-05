@@ -194,10 +194,45 @@ jobs:
           FIRST="${{ matrix.scenario }}"
           # "restart" is two runs of one world: found and save, then start again.
           if [ "$FIRST" = "restart" ]; then FIRST=restart1; fi
+          # The plains town is photographed afterwards: the server is left running for it.
+          if [ "${{ matrix.scenario }}" = "plains" ]; then export SOAK_KEEP=1; fi
           python3 tools/realworld/soak.py "$FIRST" | tee real-${{ matrix.scenario }}.txt
           echo "soak exit: ${PIPESTATUS[0]}"
           set -e
           sleep 5
+
+      # The town the folk made in those three days, in pictures: a real client on a virtual
+      # display joins the same server, and the player goes over it as a camera (photo.py).
+      - name: Photograph the town the folk made
+        if: matrix.scenario == 'plains'
+        working-directory: mc-assistant-neoforge
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb mesa-utils libgl1-mesa-dri libglx-mesa0 libxrandr2 libxxf86vm1 libxi6 libxcursor1 libxinerama1 imagemagick
+          mkdir -p run-client
+          cat > run-client/options.txt <<'OPTS'
+          onboardAccessibility:false
+          tutorialStep:none
+          pauseOnLostFocus:false
+          narrator:0
+          fancyGraphics:true
+          renderDistance:8
+          simulationDistance:6
+          maxFps:30
+          guiScale:2
+          hideGui:true
+          joinedFirstServer:true
+          skipMultiplayerWarning:true
+          OPTS
+          nohup Xvfb :99 -screen 0 1280x720x24 +extension GLX +render -noreset > xvfb.log 2>&1 &
+          sleep 3
+          export DISPLAY=:99
+          export LIBGL_ALWAYS_SOFTWARE=1
+          nohup ./gradlew --no-daemon -Psmoke=true runSmoke > client-gradle.log 2>&1 &
+          set +e
+          python3 tools/realworld/photo.py village-spot.txt plains- | tee -a real-plains.txt
+          set -e
+          ls -la smoke-plains-*.png || true
 
       - name: Start the same world again and see what came back
         if: matrix.scenario == 'restart'
@@ -239,7 +274,7 @@ jobs:
 
       - name: Stop the server
         if: always()
-        run: pkill -f "net.minecraft" || true; pkill -f "runServer" || true
+        run: pkill -f "net.minecraft" || true; pkill -f "runServer" || true; pkill -f "runSmoke" || true; pkill Xvfb || true
 
       - name: Publish the report
         if: always()
@@ -253,6 +288,7 @@ jobs:
           files: |
             mc-assistant-neoforge/real-${{ matrix.scenario }}.txt
             mc-assistant-neoforge/server-${{ matrix.scenario }}.log.gz
+            mc-assistant-neoforge/smoke-plains-*.png
           overwrite_files: true
 
 

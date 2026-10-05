@@ -1479,6 +1479,11 @@ public final class Villages {
                         || st.getValue(net.minecraft.world.level.block.BedBlock.PART) != net.minecraft.world.level.block.state.properties.BedPart.HEAD) continue;
                     if (Math.max(Math.abs(p.getX() - v.centre().getX()), Math.abs(p.getZ() - v.centre().getZ())) <= 6) continue;   // the camp
                     if (guest != null && p.distSqr(guest) <= 100) continue;
+                    // A bed buried in the ground (a ruin's, a vault's) is nobody's home and nobody sleeps
+                    // in it (VillageFolkEntity.bedFit): counted, a mountain town of twenty-five thought
+                    // it had four beds more than it had, and built and bought for four fewer.
+                    if (p.getY() < level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                            p.getX(), p.getZ()) - 8) continue;
                     n++;
                 }
             }

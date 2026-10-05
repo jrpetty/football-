@@ -164,5 +164,5 @@ jobs:
           body: "Raw output of the empirical village tests. Not a mod build."
           files: |
             mc-assistant-neoforge/hundred-photos.txt
-            mc-assistant-neoforge/hundred-*.png
+            mc-assistant-neoforge/smoke-hundred-*.png
           overwrite_files: true

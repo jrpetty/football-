@@ -20,6 +20,7 @@ Every line of output starts [REAL]. Only a dead or hung server is a hard
 failure; everything else is measurement, read from the published report.
 """
 import json
+import os
 import re
 import socket
 import struct
@@ -264,6 +265,12 @@ def village(r, biome, count=12, compact=False, days=3, label=None, raided=True):
             say("after the raid: " + r.cmd("execute if entity @e[tag=raid]"))
         if upto >= 24000 * 2:
             say("village list: " + r.cmd("village list").replace("\n", " | "))
+    # Where the village stands now (a party may have made camp off the spot it was set down
+    # on), for the pictures taken afterwards (photo.py).
+    status = r.cmd("execute positioned %d 64 %d run village status" % (x, z))
+    m = re.search(r"Village at (-?\d+), (-?\d+)", status)
+    with open("village-spot.txt", "w") as fh:
+        fh.write("%s %s" % ((m.group(1), m.group(2)) if m else (x, z)))
     say("PASS the server ran %d game days on %s" % (days, label or biome))
 
 
@@ -632,6 +639,10 @@ def main():
     except (EOFError, OSError) as e:
         say("DIED: the server went away (%s)" % e)
         raise SystemExit(3)
+    # Left running when the town is to be photographed next (SOAK_KEEP; photo.py stops it).
+    if os.environ.get("SOAK_KEEP"):
+        say("server left running for the pictures")
+        return
     try:
         r.cmd("stop")
     except Exception:
