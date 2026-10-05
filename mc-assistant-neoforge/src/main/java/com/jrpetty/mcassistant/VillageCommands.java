@@ -26,6 +26,7 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  *   /village lineup           one folk of every trade, dressed, to look at (ops)
  *   /village talk [words]     talk with the nearest folk, as a right-click would (ops)
  *   /village chronicle        the nearest village's history, as a book
+ *   /village museum           the nearest village's museum: its finds on show, its archive; museum work | stage (ops)
  *   /village standing         what every village you have met thinks of you
  *   /village house            the village's houses; house buy | house let N | house rent
  *   /village stall            the players' market stalls; stall rent | screen | till | books | price N item
@@ -121,7 +122,7 @@ public final class VillageCommands {
                     net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p, new com.jrpetty.mcassistant.net.CityStatsPayload(shut));
                     return 1;
                 }))
-                .then(Commands.argument("page", IntegerArgumentType.integer(0, 18))
+                .then(Commands.argument("page", IntegerArgumentType.integer(0, 40))
                     .executes(ctx -> stats(ctx, IntegerArgumentType.getInteger(ctx, "page")))))
             // The city's research (CityTree): the tree and what the leader has the town studying; and,
             // for ops and tests, a civic set to study now (pick) or done at once (grant), each only
@@ -207,6 +208,8 @@ public final class VillageCommands {
                     .executes(ctx -> speed(ctx, IntegerArgumentType.getInteger(ctx, "times")))))
             // The nearest village's history, as a book.
             .then(Commands.literal("chronicle").executes(VillageCommands::chronicle))
+            // The museum and its archive: what is on show, who found it, the volumes (MuseumCommands).
+            .then(MuseumCommands.build())
             // What every village you have met thinks of you.
             .then(Commands.literal("standing").executes(VillageCommands::standing))
             // How the villages stand with each other: allies, feuds, tribute.

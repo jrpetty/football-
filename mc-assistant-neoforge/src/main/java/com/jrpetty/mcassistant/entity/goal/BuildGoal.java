@@ -60,7 +60,10 @@ public class BuildGoal extends Goal {
         // the park among the homes, with its fountain and benches (entity/Park)
         "park",
         // [flats] the Iron Age's blocks of flats (entity/Flats)
-        "flats");
+        "flats",
+
+        // the museum, where the town's rare finds go on show and its chronicle is kept as books (Museum)
+        "museum");
 
     /** Half the width of a structure's footprint: the meeting hall, the market, the
      *  barracks, the chapel's length and the gateway's step are seven across, the rest

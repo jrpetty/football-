@@ -358,6 +358,9 @@ public class VillageFolkEntity extends AssistantEntity {
         // home at the dusk bell; round to a friend with a birthday present.
         if (!withAPlayer && tickCount % 4 == 0 && level() instanceof net.minecraft.server.level.ServerLevel calendar
                 && TownCalendar.hold(this, calendar)) return;
+        // The museum's curator on its errand (Museum): a find fetched out of the stores and set out, a year bound.
+        if (!withAPlayer && tickCount % 4 == 0 && level() instanceof net.minecraft.server.level.ServerLevel museum
+                && Museum.hold(this, museum)) return;
         if (tickCount - agendaTick < 100) return;   // folk think slowly, on purpose
         agendaTick = tickCount;
         flyTheColours();
@@ -387,6 +390,7 @@ public class VillageFolkEntity extends AssistantEntity {
             if (home != null) {
                 TownWork.tick(townLevel, home);
                 TownLife.tick(townLevel, home);         // lit windows, chimney smoke, washing, stalls, signs
+                Museum.tick(townLevel, home);           // the museum's finds and its archive
                 Assemblies.tick(townLevel, home);       // the morning assembly, openings, feasts, the council, elections
                 Contentment.daily(townLevel, home);     // how it is doing; at its worst, folk leave
             }
@@ -1022,6 +1026,8 @@ public class VillageFolkEntity extends AssistantEntity {
             if (civic > 0) { m += civic; why.add(new Object[]{"civic", civic}); }
             int homely = Decor.moodBonus(this);                       // a home well furnished (Decor)
             if (homely > 0) { m += homely; why.add(new Object[]{"homely", homely}); }
+            int proud = Museum.pride(this, day);                      // its find on show in the museum
+            if (proud > 0) { m += proud; why.add(new Object[]{"proud", proud}); }
             // The leader: its own spirits, and how this folk gets on with it.
             int led = Leader.spirits(this);
             if (led >= 3) { m += led; why.add(new Object[]{"leader", led}); }
@@ -1180,7 +1186,7 @@ public class VillageFolkEntity extends AssistantEntity {
             case FRIENDS -> life.friends().size() >= 5;
             case DIAMOND -> countCarried(st -> st.is(net.minecraft.world.item.Items.DIAMOND)) > 0;
             case NETHER -> village != null && Villages.ageOf(village) == Villages.Age.NETHER;
-            case GREAT_WORK -> village != null && Villages.renown(village) >= 1;
+            case GREAT_WORK -> village != null && Villages.greatWorks(village) >= 1;
             case GARDEN -> persona.flowersPlanted() >= 6;
             case WELL_FED -> village != null && villageCentre != null
                 && level() instanceof net.minecraft.server.level.ServerLevel server
@@ -1947,6 +1953,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (PlayerStalls.errand(this, server)) return;   // a player's stall on the square, for what it wants (PlayerStalls)
         if (shopping(server)) return;                 // market day: a treat from the stalls
         if (lookRound(server)) return;                // the new building everybody is talking about
+        if (Museum.visit(this, server)) return;       // round the museum, before a find or two
         if (cafeVisit(server)) return;                // a drink at the café
         if (shopVisit(server)) return;                // the shop: a tool for its work, or something nice
         if (Leisure.listen(this, server)) return;

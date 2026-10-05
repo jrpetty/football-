@@ -320,6 +320,8 @@ public final class FolkTalk {
         line(sb, "Quarter", Quarters.cardLine(f));          // its quarter of the town, the smoke, the park (Quarters)
         line(sb, "Nature", life.traitsLabel());
         line(sb, "Knacks", FolkSkills.cardLine(f));         // what it chose for itself: the Skills page has the rest
+        line(sb, "Curator", Museum.curatorLine(f));         // the museum's keeper (Museum)
+        line(sb, "In the museum", Museum.cardLine(f));      // its finds on show there
         String family = life.partnerName().isEmpty() ? "" : "partner " + life.partnerName();
         if (life.children() > 0) family += (family.isEmpty() ? "" : "; ") + life.children() + (life.children() == 1 ? " child" : " children");
         if (!life.parents().isEmpty()) family += (family.isEmpty() ? "" : "; ") + "child of " + life.parents();
@@ -553,6 +555,7 @@ public final class FolkTalk {
             case "homely" -> Decor.moodWords(f);
             case "birthday" -> Birthdays.moodWords(f);
             case "smoke", "noise", "parkside", "park" -> Quarters.words(f, why);      // where it lives (Quarters, Park)
+            case "proud" -> Museum.prideWords(f);
             default -> "";
         };
     }

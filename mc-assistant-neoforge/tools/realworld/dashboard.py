@@ -30,7 +30,7 @@ CHARTS = [
     ("Contentment", lambda d: d.get("contentment"), ""),
     ("Gates on the wall", lambda d: d.get("gates"), ""),
     ("Watch posts", lambda d: d.get("posts"), ""),
-    ("Renown (great works)", lambda d: d.get("renown"), ""),
+    ("Renown (great works, ten each, and the museum)", lambda d: d.get("renown"), ""),
     ("Server ms per tick (sprint)", lambda d: d.get("ms_per_tick"), ""),
 ]
 

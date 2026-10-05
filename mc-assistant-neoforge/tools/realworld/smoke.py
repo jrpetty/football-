@@ -511,6 +511,30 @@ def districts_stage(r, look, cx, cz):
     shot("18-park-3-quarters-map")
     say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
     say("alive after the park: %s" % client_alive())
+def museum_stage(r, look, cx, cz):
+    """The museum and its archive, set out on a stage in clear air beside the village the smoke spawned at
+    cx, cz (/village museum stage: one of everything on show, each credited to one of its folk, the chronicle
+    so far bound onto the lectern and the shelves): the hall from inside the door, a label close up, and the
+    Museum page of the town's books."""
+    mx, my, mz = cx + 60, 150, cz + 40
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("time set 6000")
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, mx, my + 10, mz - 20))
+    time.sleep(10)                                     # the stage's chunks arrive
+    out = r.cmd("execute positioned %d %d %d run village museum stage" % (mx, my, mz))
+    say("museum: " + out[:900])
+    views = dict((v[0], [float(n) for n in v[1:]]) for v in
+                 re.findall(r"VIEW (\S+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+)", out))
+    for name in ("m2-hall", "m4-label"):
+        if name in views:
+            look("18-museum-" + name, *views[name], wait=8)
+    say("museum status: " + r.cmd("execute positioned %d %d %d run village museum" % (mx, my, mz))[:600])
+    say("stats museum: " + r.cmd("execute as %s at @s run village stats 20" % USER))
+    time.sleep(3)
+    shot("18-museum-page")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    say("alive after the museum: %s" % client_alive())
 
 
 def main():
@@ -692,6 +716,10 @@ def main():
         districts_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("districts stage failed: %s" % e)
+    try:
+        museum_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("museum stage failed: %s" % e)
     try:
         found_village(r, cx, cz, look)
     except Exception as e:  # noqa: BLE001

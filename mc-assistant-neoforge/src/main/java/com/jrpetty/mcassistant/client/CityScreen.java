@@ -46,11 +46,11 @@ public class CityScreen extends Screen {
     // and the smoke test's page lists follow the same numbers).
     private static final String[] TABS = { "Overview", "Growth", "Money", "Production", "Shops", "Jobs", "Folk", "Society", "Leader", "Homes",
         "Buildings", "Stores", "Stock", "Research", "Why", "Trends", "Records", "News", "Board",
-        // The school, last, so the pages before it keep their numbers (School).
-        "School" };
+        // The school and the museum, last, so the pages before them keep their numbers (School, Museum).
+        "School", "Museum" };
     /** The pages that read today's figures, not the books (so they show from the first day). */
     private static final java.util.Set<String> TODAY_PAGES = java.util.Set.of("Folk", "Society", "Leader", "Buildings", "Why", "News", "Board",
-        "Shops", "Homes", "Stock", "Research", "School");
+        "Shops", "Homes", "Stock", "Research", "School", "Museum");
     private static final int[] RANGES = { 7, 30, 100, 0 };
     private static final String[] RANGE_NAMES = { "7d", "30d", "100d", "All" };
 
@@ -286,6 +286,7 @@ public class CityScreen extends Screen {
                 case "News" -> news(g, x, y, cw, ch);
                 case "Research" -> research(g, x, y, cw, ch, mouseX, mouseY);
                 case "School" -> school(g, x, y, cw, ch, mouseX, mouseY);
+                case "Museum" -> museum(g, x, y, cw, ch);
                 default -> board(g, x, y, cw, ch);
             }
         }
@@ -325,7 +326,11 @@ public class CityScreen extends Screen {
         CompoundTag house = data.getCompound("storehouse");
         String lying = house.contains("lying") ? "Lying about: " + house.getInt("lying") + (house.getInt("lying") == 1 ? " item" : " items") : "";
         int lyingW = lying.isEmpty() ? 0 : (int) Math.ceil(font.width(lying) * 0.75F) + 8;
-        small(g, Ui.clip(font, ages(), (int) ((cw - lyingW) / 0.75)), x, y2 + cardH + 3, Ui.MUTED);
+        // And the town's renown, with the museum's share of it (Museum).
+        CompoundTag museum = data.getCompound("museum");
+        String renown = museum.getInt("renown") > 0 ? " · Renown " + museum.getInt("renown")
+            + (museum.getInt("renown_museum") > 0 ? " (the museum's finds " + museum.getInt("renown_museum") + ")" : "") : "";
+        small(g, Ui.clip(font, ages() + renown, (int) ((cw - lyingW) / 0.75)), x, y2 + cardH + 3, Ui.MUTED);
         if (!lying.isEmpty()) small(g, lying, x + cw - lyingW + 8, y2 + cardH + 3, house.getInt("lying") > 40 ? Ui.WARN : Ui.MUTED);
         int cy = y2 + cardH + 12;
         int chartH = Math.max(50, (ch - (cy - y)) / 2 - 18);
@@ -2107,7 +2112,15 @@ public class CityScreen extends Screen {
         }
         g.drawString(font, "Longest run without a loss", x, ly, Ui.INK, false);
         Ui.right(g, font, bestRun + " days", x + half, ly, Ui.MUTED);
-        ly += 14;
+        ly += 10;
+        // Renown now, and how much of it the museum's collection brings (Museum).
+        CompoundTag museum = data.getCompound("museum");
+        if (museum.getInt("renown") > 0) {
+            g.drawString(font, "Renown now", x, ly, Ui.INK, false);
+            Ui.right(g, font, museum.getInt("renown") + "  (the museum " + museum.getInt("renown_museum") + ")", x + half, ly, Ui.MUTED);
+            ly += 10;
+        }
+        ly += 4;
         Ui.section(g, font, "All told (" + days.length + " days in the books)", x, ly, half);
         ly += 12;
         int[] wagesAll = series("wages"), inAll = plus(series("takings"), series("sold"), series("tithe"), series("rent"), series("house_sales"),
@@ -2189,6 +2202,110 @@ public class CityScreen extends Screen {
         }
         double d = k * sxx - sx * sx;
         return d == 0 ? 0 : (k * sxy - sx * sy) / d;
+    }
+
+    // ------------------------------------------------------------------ the museum
+
+    private static final String[] MUSEUM_HEADS = { "On show", "Found by", "Day", "Where", "Renown" };
+    private static final int[] MUSEUM_COLS = { 0, 104, 190, 216, 266 };
+
+    /**
+     * The museum (Museum, from the server's "museum"): what is on show, who found it and on what day,
+     * where it stands and the renown it brings; the curator, and what it is doing; the archive's
+     * volumes of the chronicle, where each stands, and the years waiting to be bound; what may go on
+     * show next, and what the museum is short of.
+     */
+    private void museum(GuiGraphics g, int x, int y, int cw, int ch) {
+        CompoundTag m = data.getCompound("museum");
+        List<String> coming = new ArrayList<>();
+        ListTag cl = m.getList("coming", Tag.TAG_STRING);
+        for (int i = 0; i < cl.size(); i++) coming.add(cl.getString(i));
+        if (!m.getBoolean("built")) {
+            List<String> l = new ArrayList<>();
+            l.add(m.getBoolean("wanted")
+                ? "No museum yet, but the town has finds worth showing: it goes up among the amenities from "
+                    + m.getInt("from_folk") + " folk in the Iron Age."
+                : "No museum yet. A town plans one when it has three different rare finds to show (a diamond, an emerald, a fossil, "
+                    + "the sea's treasure, a monster's skull...), " + m.getInt("from_folk") + " folk and the Iron Age.");
+            l.add("");
+            l.add(coming.isEmpty() ? "Nothing found yet that would go on show." : "Found so far:");
+            for (String s : coming) l.add("  " + s);
+            ListTag wl = m.getList("waiting", Tag.TAG_STRING);
+            if (!wl.isEmpty()) {
+                l.add("");
+                l.add("The chronicle, kept for the archive it will have:");
+                for (int i = 0; i < wl.size(); i++) l.add("  " + wl.getString(i));
+            }
+            lines(g, l, x, y, cw, ch);
+            return;
+        }
+        int side = Math.min(200, cw * 2 / 5);
+        int tw = cw - side - 8;
+        String curator = m.getString("curator");
+        small(g, Ui.clip(font, "Curator: " + (curator.isEmpty() ? "none yet" : curator + (m.getLong("curator_since") >= 0
+            ? ", since day " + m.getLong("curator_since") : "")) + ".  Renown from the museum " + m.getInt("renown_museum")
+            + " of the town's " + m.getInt("renown") + " (great works " + m.getInt("renown_works") + ").", (int) (cw / 0.75)), x, y, Ui.MUTED);
+        y += 10;
+        ch -= 10;
+        for (int i = 0; i < MUSEUM_HEADS.length; i++) {
+            if (MUSEUM_COLS[i] >= tw - 20) break;
+            small(g, MUSEUM_HEADS[i], x + MUSEUM_COLS[i], y, Ui.FAINT);
+        }
+        List<CompoundTag> shown = new ArrayList<>();
+        ListTag sl = m.getList("shown", Tag.TAG_COMPOUND);
+        for (int i = 0; i < sl.size(); i++) shown.add(sl.getCompound(i));
+        int ry = y + 10;
+        int rows = Math.max(1, (ch - 34) / 10);
+        int start = Math.max(0, Math.min(scroll, Math.max(0, shown.size() - rows)));
+        int total = 0;
+        for (CompoundTag s : shown) total += s.getInt("renown");
+        if (shown.isEmpty()) small(g, "Nothing on show yet: the curator fetches the finds out of the stores.", x, ry + 1, Ui.MUTED);
+        for (int i = start; i < Math.min(shown.size(), start + rows); i++) {
+            CompoundTag s = shown.get(i);
+            g.fill(x - 2, ry - 1, x + tw, ry + 9, i % 2 == 0 ? Ui.ROW : Ui.ROW_ALT);
+            long found = s.getLong("found");
+            String[] cells = { capital(s.getString("what")), s.getString("finder"), found >= 0 ? Long.toString(found) : "—",
+                s.getString("where"), "+" + s.getInt("renown") };
+            for (int c = 0; c < cells.length; c++) {
+                if (MUSEUM_COLS[c] >= tw - 20) break;
+                int colW = (c + 1 < MUSEUM_COLS.length ? MUSEUM_COLS[c + 1] : tw) - MUSEUM_COLS[c] - 3;
+                small(g, Ui.clip(font, cells[c], (int) (colW / 0.75)), x + MUSEUM_COLS[c], ry + 1, c == 4 ? Ui.GOOD : Ui.INK);
+            }
+            ry += 10;
+        }
+        small(g, Ui.clip(font, shown.size() + " of " + m.getInt("places") + " places filled, renown " + total
+            + (m.getInt("lost") > 0 ? "; " + m.getInt("lost") + " gone missing over the years" : "")
+            + (shown.size() > rows ? " · scroll for more" : ""), (int) (tw / 0.75)), x, y + ch - 10, Ui.FAINT);
+        // The side: the archive, the years waiting, what is coming, what the curator is doing.
+        int sx = x + tw + 8, sy = y;
+        Ui.section(g, font, "The archive", sx, sy, side);
+        sy += 12;
+        ListTag vl = m.getList("volumes", Tag.TAG_COMPOUND);
+        if (vl.isEmpty()) { small(g, "No volumes bound yet.", sx, sy, Ui.MUTED); sy += 9; }
+        for (int i = Math.max(0, vl.size() - 8); i < vl.size() && sy < y + ch / 2 + 20; i++) {
+            CompoundTag v = vl.getCompound(i);
+            String line = v.getString("title") + " · " + v.getInt("pages") + "pp · " + v.getString("where") + (v.getBoolean("copy") ? " (copy)" : "");
+            small(g, Ui.clip(font, line, (int) (side / 0.75)), sx, sy, v.getString("where").equals("taken away") ? Ui.BAD : Ui.INK);
+            sy += 9;
+        }
+        ListTag wl = m.getList("waiting", Tag.TAG_STRING);
+        for (int i = 0; i < wl.size() && sy < y + ch / 2 + 30; i++) {
+            small(g, Ui.clip(font, wl.getString(i), (int) (side / 0.75)), sx, sy, Ui.MUTED);
+            sy += 9;
+        }
+        sy += 5;
+        Ui.section(g, font, "Next to go on show", sx, sy, side);
+        sy += 12;
+        if (coming.isEmpty()) { small(g, "Nothing in the stores to show.", sx, sy, Ui.MUTED); sy += 9; }
+        for (String s : coming) {
+            if (sy > y + ch - 30) break;
+            small(g, Ui.clip(font, s, (int) (side / 0.75)), sx, sy, Ui.INK);
+            sy += 9;
+        }
+        String doing = m.getString("doing"), shortOf = m.getString("short");
+        sy = Math.max(sy + 3, y + ch - 20);
+        if (!doing.isEmpty()) small(g, Ui.clip(font, capital(doing) + ".", (int) (side / 0.75)), sx, sy, Ui.GOOD);
+        if (!shortOf.isEmpty()) small(g, Ui.clip(font, "Short of " + shortOf + ".", (int) (side / 0.75)), sx, sy + 9, Ui.WARN);
     }
 
     private static final String[] LEAGUE_HEADS = { "Village", "Folk", "Age", "Worth", "Buildings", "Where", "Terms" };

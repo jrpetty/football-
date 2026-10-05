@@ -329,6 +329,7 @@ public final class Villages {
     public static void resetForTests() {
         MADE_UP.clear();
         Bank.resetForTests();
+        Museum.resetForTests();
         Storehouses.resetForTests();
         Storekeeping.resetForTests();
         Couriers.resetForTests();
@@ -1090,7 +1091,7 @@ public final class Villages {
                 }
                 // ...and after that it never stops: every great work raised asks the
                 // stores for a quarter more of everything before the next.
-                int r = renown(villageId);
+                int r = greatWorks(villageId);
                 int more = 4 + r;                        // in quarters
                 need(wants, level, v, "food in the stores", Task.FOOD, foodNow * more / 4);
                 need(wants, level, v, "stone", Task.STONE,
@@ -1540,6 +1541,8 @@ public final class Villages {
         if (folk >= 22 && built(villageId, "brewery") < 1) extras.add("brewery");
         // A town of thirty keeps its savings somewhere safe and lends them to its home-buyers: a bank (Bank).
         if (folk >= Bank.FROM && built(villageId, "bank") < 1 && builtStructure(villageId, "bank") == null) extras.add("bank");
+        // A museum, once the town has finds worth showing (Museum): its diamonds, fossils, the sea's treasure.
+        if (folk >= Museum.FROM_FOLK && built(villageId, "museum") < 1 && Museum.worthAMuseum(villageId)) extras.add("museum");
         // The Iron Age's best homes: a manor house on a long lot by the square, one for every
         // thirty folk past twenty — six beds each.
         if (folk >= 20 && built(villageId, "manor") < 1 + (folk - 20) / 30 || Homes.wantsAManor(villageId)) extras.add("manor");
@@ -1707,8 +1710,16 @@ public final class Villages {
      */
     public static final List<String> GREAT_WORKS = List.of("granary", "barracks", "monument");
 
-    /** How many great works this village has raised: its renown. */
+    /**
+     * Its renown: ten for every great work it has raised, and what its museum has on show, the
+     * rarer the more (Museum). It is what the ranks ask for past the Town.
+     */
     public static int renown(UUID villageId) {
+        return Museum.GREAT_WORK_RENOWN * greatWorks(villageId) + Museum.renown(villageId);
+    }
+
+    /** How many great works this village has raised. */
+    public static int greatWorks(UUID villageId) {
         int n = 0;
         for (String g : GREAT_WORKS) n += built(villageId, g);
         return n;
@@ -1731,8 +1742,8 @@ public final class Villages {
         int colonies = 0;
         for (String s : BUILT.getOrDefault(villageId, List.of())) if ("colony".equals(s)) colonies++;
         Age age = ageOf(villageId);
-        if (age == Age.NETHER && renown >= 6 && folk >= 80 && colonies >= 2) return Rank.CAPITAL;
-        if (age.ordinal() >= Age.DIAMOND.ordinal() && renown >= 2 && folk >= 50) return Rank.CITY;
+        if (age == Age.NETHER && renown >= 6 * Museum.GREAT_WORK_RENOWN && folk >= 80 && colonies >= 2) return Rank.CAPITAL;
+        if (age.ordinal() >= Age.DIAMOND.ordinal() && renown >= 2 * Museum.GREAT_WORK_RENOWN && folk >= 50) return Rank.CITY;
         if (age.ordinal() >= Age.IRON.ordinal() && folk >= 30) return Rank.TOWN;
         if (age.ordinal() >= Age.STONE.ordinal() && folk >= 12) return Rank.VILLAGE;
         return Rank.HAMLET;
@@ -1743,8 +1754,8 @@ public final class Villages {
         return switch (rank(villageId)) {
             case HAMLET -> "a village: the Stone Age and twelve folk";
             case VILLAGE -> "a town: the Iron Age and thirty folk";
-            case TOWN -> "a city: the Diamond Age, two great works and fifty folk";
-            case CITY -> "a capital: the Nether Age, six great works, eighty folk and two colonies";
+            case TOWN -> "a city: the Diamond Age, renown 20 (two great works, or the finds in a museum) and fifty folk";
+            case CITY -> "a capital: the Nether Age, renown 60 (six great works, or fewer and a museum), eighty folk and two colonies";
             case CAPITAL -> "nothing higher — every great work adds to its renown";
         };
     }
@@ -1773,7 +1784,7 @@ public final class Villages {
 
     /** The great work this village raises next. */
     public static String nextGreatWork(UUID villageId) {
-        return GREAT_WORKS.get(renown(villageId) % GREAT_WORKS.size());
+        return GREAT_WORKS.get(greatWorks(villageId) % GREAT_WORKS.size());
     }
 
     /**
@@ -1883,9 +1894,10 @@ public final class Villages {
             case "flats" -> Flats.why(villageId);                  // [flats]
             case "belltower" -> "a bell tower on the square, to ring the hours of a Diamond Age town";
             case "gateway" -> "a gateway of obsidian, the way out of the world the Nether Age is named for";
-            case "granary" -> "a granary (great work " + (renown(villageId) + 1) + "): a town that has come through every age goes on building";
-            case "barracks" -> "barracks (great work " + (renown(villageId) + 1) + "), room for six more and a home for the watch";
-            case "monument" -> "a monument (great work " + (renown(villageId) + 1) + ") to how far the village has come";
+            case "granary" -> "a granary (great work " + (greatWorks(villageId) + 1) + "): a town that has come through every age goes on building";
+            case "barracks" -> "barracks (great work " + (greatWorks(villageId) + 1) + "), room for six more and a home for the watch";
+            case "monument" -> "a monument (great work " + (greatWorks(villageId) + 1) + ") to how far the village has come";
+            case "museum" -> "a museum, to put the town's rare finds on show and keep its chronicle as books";
             default -> "the " + project;
         };
     }
