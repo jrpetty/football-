@@ -184,6 +184,8 @@ public final class Bench {
         k.add(new Kept(s -> s.is(Items.FEATHER), 4, "the watch's arrows"));
         k.add(new Kept(s -> s.is(Items.TORCH), 8, "the village's lights"));
         k.add(new Kept(s -> s.is(Items.STONE_BRICKS), Masonry.keep(id, Items.STONE_BRICKS), "the masons' stone"));
+        // What the museum's curator has asked for, until it is fetched (Museum).
+        Museum.keptBack(id, (what, n, why) -> k.add(new Kept(what, n, why)));
         return k;
     }
 

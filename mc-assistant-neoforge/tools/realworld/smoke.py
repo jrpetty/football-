@@ -158,6 +158,44 @@ def decor_stage(r, look, cx, cz):
             look(name, int(ex) + 0.5, int(ey), int(ez) + 0.5, int(ax) + 0.5, int(ay) + 0.5, int(az) + 0.5, wait=8)
     r.cmd("time set 6000")
     say("alive after the furnished home: %s" % client_alive())
+def flats_stage(r, look, cx, cz):
+    """A block of flats, furnished, on a stage of its own (/village flats stage): from across the street
+    (three storeys, the brick bands, the parapet, the railings and the step), the stair hall from just
+    inside the front door (the flats' doors and numbers, the stair winding up the back), and a couple's
+    flat on the first floor from its door (two beds, the chest, the table, the lantern)."""
+    bx, by, bz = cx + 140, 150, cz - 60
+    r.cmd("time set 6000")
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, bx, by + 12, bz + 30))
+    time.sleep(10)                                    # the stage's chunks arrive
+    out = r.cmd("execute positioned %d %d %d run village flats stage" % (bx, by, bz))
+    say("flats stage: " + out[:200])
+    m = re.search(r"FLATSTAGE (-?\d+) (-?\d+) (-?\d+)", out)
+    if m:
+        bx, by, bz = int(m.group(1)), int(m.group(2)), int(m.group(3))
+    # Its back is to the north: the front door at x+3, z+4, the street to the south.
+    look("flats-1-front", bx - 8.5, by + 3, bz + 17.5, bx + 0.5, by + 6, bz + 0.5, wait=8)
+    look("flats-2-hall", bx + 3.5, by, bz + 3.5, bx + 3.5, by + 2.5, bz - 2.5, wait=6)
+    look("flats-3-flat", bx + 1.5, by + 4, bz - 1.5, bx - 3.5, by + 4.2, bz - 2.5, wait=6)
+    say("alive after the flats: %s" % client_alive())
+
+
+def horses_stage(r, look, cx, cz):
+    """The stable (Stables, Riding): a stable stood up on its own ground, from the front with its
+    gates and the courier on horseback at its door, and from the doorway in along the stalls where
+    a saddled horse and a donkey with a chest stand; then cleared away."""
+    sx, sz = cx + 140, cz - 240
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("time set 6000")
+    r.cmd("tp %s %d 150 %d" % (USER, sx + 10, sz + 30))
+    time.sleep(12)                                     # the ground arrives at the client
+    out = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village horses showcase" % (sx, sz))
+    say("stable: " + out[:400])
+    views = re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out)
+    for i, (name, x, y, z, ax, ay, az) in enumerate(views):
+        look(name, int(x) + 0.5, int(y), int(z) + 0.5, int(ax) + 0.5, int(ay) + 0.5, int(az) + 0.5, wait=10 if i == 0 else 6)
+    say("alive after the stable: %s" % client_alive())
+    r.cmd("kill @e[tag=folk_lineup,type=!player]")
 
 
 def found_village(r, cx, cz, look):
@@ -491,6 +529,87 @@ def districts_stage(r, look, cx, cz):
     shot("18-park-3-quarters-map")
     say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
     say("alive after the park: %s" % client_alive())
+def museum_stage(r, look, cx, cz):
+    """The museum and its archive, set out on a stage in clear air beside the village the smoke spawned at
+    cx, cz (/village museum stage: one of everything on show, each credited to one of its folk, the chronicle
+    so far bound onto the lectern and the shelves): the hall from inside the door, a label close up, and the
+    Museum page of the town's books."""
+    mx, my, mz = cx + 60, 150, cz + 40
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("time set 6000")
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, mx, my + 10, mz - 20))
+    time.sleep(10)                                     # the stage's chunks arrive
+    out = r.cmd("execute positioned %d %d %d run village museum stage" % (mx, my, mz))
+    say("museum: " + out[:900])
+    views = dict((v[0], [float(n) for n in v[1:]]) for v in
+                 re.findall(r"VIEW (\S+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+)", out))
+    for name in ("m2-hall", "m4-label"):
+        if name in views:
+            look("18-museum-" + name, *views[name], wait=8)
+    say("museum status: " + r.cmd("execute positioned %d %d %d run village museum" % (mx, my, mz))[:600])
+    say("stats museum: " + r.cmd("execute as %s at @s run village stats 20" % USER))
+    time.sleep(3)
+    shot("18-museum-page")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    say("alive after the museum: %s" % client_alive())
+
+
+def jobs_stage(r, look, cx, cz):
+    """The job market between towns (entity/JobMarket, JobSeekers): a second town a little way off,
+    the two agreeing to trade, a Wanted notice put up on the second town's board, a folk of the first
+    town sent to read its own board (the notice it heard of read out over its head), the Wanted
+    notice on the second town's board, and the city books open at the job market."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    tx, tz = cx + 230, cz + 20
+    r.cmd("tp %s %d 140 %d" % (USER, tx, tz))
+    time.sleep(15)                                     # the ground arrives
+    say("second town: " + r.cmd("village spawnat %d %d 8" % (tx, tz))[:200])
+    time.sleep(20)                                     # its board goes up, its folk take up their trades
+    hy = ground_height(r, cx, cz)
+    ty = ground_height(r, tx, tz)
+    say("pact: " + r.cmd("execute positioned %d %d %d run village jobs pact" % (cx, hy + 1, cz)))
+    say("want: " + r.cmd("execute positioned %d %d %d run village jobs want farmer" % (tx, ty + 1, tz)))
+    step = {"north": (0, -1), "south": (0, 1), "east": (1, 0), "west": (-1, 0)}
+
+    def board_view(x, y, z, far):
+        """Where to stand to see a town's board whole, and where to look: (eye, target), or None."""
+        out = r.cmd("execute positioned %d %d %d run village jobs" % (x, y, z))
+        say("jobs: " + out[:600])
+        m = re.search(r"Board: (-?\d+) (-?\d+) (-?\d+) facing (\w+)", out)
+        if not m:
+            return None
+        bx, by, bz, facing = int(m.group(1)), int(m.group(2)), int(m.group(3)), m.group(4)
+        right = {"north": "west", "west": "south", "south": "east", "east": "north"}[facing]
+        mid_x = bx + 0.5 + step[right][0] * 4.5
+        mid_z = bz + 0.5 + step[right][1] * 4.5
+        eye = (mid_x + step[facing][0] * far, by + 1.0, mid_z + step[facing][1] * far)
+        return eye, (mid_x, by + 2.5, mid_z)
+
+    # A folk of the first town sent to read its own board: the notice it has heard of, over its head.
+    first = board_view(cx, hy + 1, cz, 7)
+    say("look: " + r.cmd("execute positioned %d %d %d run village jobs look" % (cx, hy + 1, cz))[:300])
+    time.sleep(10)                                     # it walks there and starts reading
+    if first:
+        (ex, ey, ez), (mx, my, mz) = first
+        look("19-jobs-1-reading", ex, ey, ez, mx, my - 1.0, mz, wait=4)
+    # The Wanted notice on the second town's board.
+    second = board_view(tx, ty + 1, tz, 9)
+    if second:
+        (ex, ey, ez), (mx, my, mz) = second
+        look("19-jobs-2-wanted", ex, ey, ez, mx, my, mz, wait=6)
+    # The city books at the job market: the notice, and anybody who has applied to it.
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, tx, ty + 1, tz))
+    time.sleep(3)
+    say("books: " + r.cmd("execute as %s at @s run village jobs books" % USER))
+    time.sleep(4)
+    shot("19-jobs-3-books")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the job market: %s" % client_alive())
 
 
 def main():
@@ -673,6 +792,10 @@ def main():
     except Exception as e:  # noqa: BLE001
         say("districts stage failed: %s" % e)
     try:
+        museum_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("museum stage failed: %s" % e)
+    try:
         found_village(r, cx, cz, look)
     except Exception as e:  # noqa: BLE001
         say("founding failed: %s" % e)
@@ -680,6 +803,14 @@ def main():
         bell_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("bell stage failed: %s" % e)
+    try:
+        horses_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("horses stage failed: %s" % e)
+    try:
+        jobs_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("jobs stage failed: %s" % e)
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the founding: %s" % client_alive())
     try:
@@ -694,6 +825,10 @@ def main():
         decor_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("decor failed: %s" % e)
+    try:
+        flats_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("flats failed: %s" % e)
     alive = client_alive()
     say("alive at the end: %s" % alive)
     say("PASS the client drew the village and kept running" if alive else "FAIL the client died while drawing the village")

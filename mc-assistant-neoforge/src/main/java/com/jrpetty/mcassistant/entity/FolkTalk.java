@@ -263,8 +263,13 @@ public final class FolkTalk {
         Job j = f.peekJob();
         if (j != null) return capFirst(j.label());
         if (f.guidePlayer() != null) return "Showing somebody the way to " + f.guideWhat();
+        String market = JobSeekers.doing(f);                    // at the board, saying goodbye, on the road (JobSeekers)
+        if (market != null) return market;
         String status = f.clientStatus();
         if (f.stationTask() == AssistantEntity.StationTask.NONE) return "Looking for a trade";
+        // On horseback, or about the horses (Stables, Riding): "Riding Bay to the north mine".
+        String horses = Stables.doing(f);
+        if (horses != null) return horses;
         if (f.offWorkNow()) return park != null ? "Off work: " + park.substring(0, 1).toLowerCase(Locale.ROOT) + park.substring(1) : "Off work";
         String run = Couriers.doing(f);
         if (run != null) return "For the storehouse: " + run;
@@ -305,7 +310,11 @@ public final class FolkTalk {
         line(sb, f.isBaby() ? "School" : "Teaches", School.cardLine(f));
         String levels = f.tradeLevels();
         if (!f.isBaby() && !levels.isEmpty() && levels.contains(",")) line(sb, "Has worked", levels);
+        if (!f.isBaby()) line(sb, "Job market", JobMarket.cardLine(f));       // applied elsewhere, or came from elsewhere (JobMarket)
         if (!f.isBaby()) line(sb, "At its work", Skill.line(f));
+        // Its horses: the rancher's gentling and the stable, a rider's horse and rides (Stables).
+        String horses = f.isBaby() ? null : Stables.card(f);
+        if (horses != null) line(sb, "Horses", horses);
         // How quick it is at its work, and why, part by part (AssistantEntity.paceLine): its level,
         // its tool, its spirits, the town, its years, the town's research and its own knacks.
         if (!f.isBaby() && job != AssistantEntity.StationTask.NONE) line(sb, "Pace", f.paceLine());
@@ -320,6 +329,8 @@ public final class FolkTalk {
         line(sb, "Quarter", Quarters.cardLine(f));          // its quarter of the town, the smoke, the park (Quarters)
         line(sb, "Nature", life.traitsLabel());
         line(sb, "Knacks", FolkSkills.cardLine(f));         // what it chose for itself: the Skills page has the rest
+        line(sb, "Curator", Museum.curatorLine(f));         // the museum's keeper (Museum)
+        line(sb, "In the museum", Museum.cardLine(f));      // its finds on show there
         String family = life.partnerName().isEmpty() ? "" : "partner " + life.partnerName();
         if (life.children() > 0) family += (family.isEmpty() ? "" : "; ") + life.children() + (life.children() == 1 ? " child" : " children");
         if (!life.parents().isEmpty()) family += (family.isEmpty() ? "" : "; ") + "child of " + life.parents();
@@ -553,6 +564,7 @@ public final class FolkTalk {
             case "homely" -> Decor.moodWords(f);
             case "birthday" -> Birthdays.moodWords(f);
             case "smoke", "noise", "parkside", "park" -> Quarters.words(f, why);      // where it lives (Quarters, Park)
+            case "proud" -> Museum.prideWords(f);
             default -> "";
         };
     }

@@ -82,6 +82,8 @@ public class MealsGameTests {
     private static Container larder(ServerLevel level, BlockPos heart, int loaves) {
         BlockPos at = Kit.surface(level, heart.getX() + 3, heart.getZ() + 3);
         level.setBlock(at, Blocks.CHEST.defaultBlockState(), 3);
+        // Marked as the village's, as a chest of the stores is (a plain chest by the heart is nobody's).
+        com.jrpetty.mcassistant.entity.ZoneChests.mark(level, at);
         Container c = (Container) level.getBlockEntity(at);
         c.setItem(0, new ItemStack(Items.BREAD, loaves));
         c.setChanged();

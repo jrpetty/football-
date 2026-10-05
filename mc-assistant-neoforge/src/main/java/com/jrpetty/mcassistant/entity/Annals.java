@@ -533,8 +533,11 @@ public final class Annals {
         out.put("storehouse", Storekeeping.report(level, v));
         out.put("buildings", buildings(level, v));
         out.put("districts", Quarters.report(level, v));       // the town's quarters, the smoke, the park (Quarters)
+        out.put("stable", Stables.report(level, v));             // the horses, donkeys, saddles and the stable (Jobs, Buildings)
         out.put("research", CityTree.report(id));                // the city's research: the tree, the pick and why
         out.put("school", School.report(level, v));              // the school: its teacher, its pupils and what they lean to
+        out.put("museum", Museum.report(level, v));              // the museum: what is on show, who found it, the archive
+        out.put("jobmarket", JobMarket.report(level, id));         // the job market between towns: the Jobs page's other view
         List<String> queue = new ArrayList<>();
         for (String p : Villages.projectsWanted(id)) queue.add(Villages.spoken(p));
         out.put("queue", strings(queue));
@@ -1056,6 +1059,7 @@ public final class Annals {
                 if (h.price > 0) c.putInt("price", h.price);
             }
             Quarters.describe(id, v.centre(), b, c);              // its quarter, and the smoke or the park by it
+            Flats.annals(id, b, c);            // [flats] a block's name, storeys and flats let and free
             out.add(c);
         }
         return out;

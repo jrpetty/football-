@@ -285,6 +285,8 @@ public final class VillageBoards {
             for (String w : after) words.add(Villages.spoken(w));
             out.add("LN|After that: " + String.join(", then ", words) + ".");
         }
+        // The job market (JobMarket): our Wanted notices, who is on the road here, who came and went, word from other towns.
+        out.addAll(JobMarket.board(level, id));
         Orders.Order order = Orders.current(id);
         out.add(order == null ? "LM|Elder's orders: none yet — the elder is watching how things go."
             : "LN|Elder's orders: " + order.title + ". " + order.words);
@@ -396,6 +398,8 @@ public final class VillageBoards {
         if (abroad != null) out.add("FM|Abroad: " + abroad + ".");
         String scouts = Scouts.boardLine(id);
         if (scouts != null) out.add("FN|" + scouts);
+        String museum = Museum.boardLine(id, day);              // what is new in the museum (Museum)
+        if (museum != null) out.add("FN|" + museum);
         List<Villages.News> news = Villages.news(id);
         if (!news.isEmpty()) out.add("FM|Latest: " + news.get(news.size() - 1).text() + ".");
         return out;

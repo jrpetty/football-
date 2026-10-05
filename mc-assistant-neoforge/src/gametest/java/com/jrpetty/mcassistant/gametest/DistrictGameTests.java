@@ -293,21 +293,28 @@ public class DistrictGameTests {
     // ============================================================ the park goes up
 
     /**
-     * A Stone Age town of twenty-two wants a park and the plan gives it a lot in the homes quarter; a
-     * builder with the makings in its pack (stone, logs, wooden stairs, torches, flowers, buckets of
-     * water) puts it up there: the fountain's basin, its pillar and its water, the benches, the lamps.
-     * Then its keepers, out of the stores, plant a tree in its corners and lay its paths.
+     * A Stone Age town of twenty-two wants a park, and the plan gives it a lot in the homes quarter. The
+     * village raises it the way it raises anything: its own hand takes the project up (the park asked for
+     * first, the rest of its list set aside), draws the makings out of the stores (stone, logs, planks
+     * cut to the benches' stairs, torches for the lamps, flowers, buckets filled at the pond), and puts it
+     * up: the fountain's basin, its pillar and its water, the benches, the lamps. Then its keepers, out
+     * of the stores, plant a tree in its corners and lay its paths.
+     *
+     * <p>The clock runs from mid-morning to the afternoon and on to the next mid-morning: no morning
+     * assembly (it calls everybody, and what each was doing waits), no dawn bell, no night.
      */
-    @GameTest(template = EMPTY, timeoutTicks = 7000, batch = "dt03_park_goes_up")
+    @GameTest(template = EMPTY, timeoutTicks = 16400, batch = "dt03_park_goes_up")
     public static void dt03_park_goes_up(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         clean(level);
-        level.setDayTime(1000);
+        long day0 = level.getDayTime() / 24000L + 1;
+        level.setDayTime(day0 * 24000L + DAY_FROM);
         int x = 283000, z = 50000;
         Kit.hold(level, x, z, 64);
         Kit.prepare(level, x, z, 64);
         BlockPos heart = Kit.surface(level, x, z);
         flatten(level, heart, 56);
+        Kit.pond(level, x + 20, z + 20, 2);                                     // water for the fountain, by the heart
         VillageFolkEntity builder = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
         helper.assertTrue(builder != null, "a village");
         UUID village = builder.ownerId();
@@ -321,26 +328,42 @@ public class DistrictGameTests {
         Kit.log("dt03 a town of " + Villages.headcount(village) + " wants: " + list);
         e.that(wanted && list.contains(Park.STRUCTURE), "a Stone Age town of twenty-two wants a park");
         e.that(!Park.wanted(village, Park.FOLK - 1), "a town of nineteen does not yet");
+        // The park asked for first (as a player asks the elder: Asks), and the rest of the list set aside,
+        // so nothing else is raised out of its makings meanwhile.
+        Villages.request(village, Park.STRUCTURE);
+        long now = level.getGameTime();
+        for (String p : list) if (!p.equals(Park.STRUCTURE)) Villages.defer(village, p, now + 10_000_000L, "the test asks for the park");
+        Kit.log("dt03 next to build: " + Villages.nextProject(village));
+        e.that(Park.STRUCTURE.equals(Villages.nextProject(village)), "the park is the next thing to build");
         Villages.Site site = Villages.siteFor(level, village, Park.STRUCTURE);
         helper.assertTrue(site != null, "a lot for the park: " + Villages.lotReport(village));
         District d = at(village, heart, site.anchor());
         Kit.log("dt03 the park's lot: " + site.anchor().toShortString() + " facing " + site.facing() + ", " + d);
         e.that(d == District.HOMES, "the park goes among the homes: " + d);
-        for (int i = 0; i < 2; i++) builder.insertItem(new ItemStack(Items.COBBLESTONE, 64));
-        builder.insertItem(new ItemStack(Items.STONE_BRICKS, 40));
-        builder.insertItem(new ItemStack(Items.OAK_LOG, 16));
-        builder.insertItem(new ItemStack(Items.OAK_STAIRS, 20));
-        builder.insertItem(new ItemStack(Items.TORCH, 10));
-        builder.insertItem(new ItemStack(Items.POPPY, 12));
-        for (int i = 0; i < 10; i++) builder.insertItem(new ItemStack(Items.WATER_BUCKET));
-        builder.enqueue(Job.buildAt(Park.STRUCTURE, site.anchor(), site.facing(), 0));
+        // The makings, in the stores at the heart.
+        stores(level, heart.offset(3, 0, 3), new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.COBBLESTONE, 64),
+            new ItemStack(Items.STONE_BRICKS, 64), new ItemStack(Items.OAK_LOG, 32), new ItemStack(Items.OAK_PLANKS, 64),
+            new ItemStack(Items.TORCH, 16), new ItemStack(Items.POPPY, 12), new ItemStack(Items.BUCKET, 16));
+        Villages.forgetStores(village);
+        Villages.forgetStock();
         Park.Layout l = Park.layout(site.anchor(), site.facing());
         helper.onEachTick(() -> {
             long t = helper.getTick();
-            if (level.getDayTime() % 24000 > 11000) level.setDayTime(1000);          // building is day work
-            if (t % 600 == 0) Kit.log("dt03 @" + t + " built=" + Villages.builtList(village) + " — " + builder.debugLine());
+            // A working day, mid-morning to the afternoon, over and over (see above).
+            level.setDayTime((day0 + t / DAY_SPAN) * 24000L + DAY_FROM + t % DAY_SPAN);
+            if (t % 600 == 0) {
+                Kit.log("dt03 @" + t + " built=" + Villages.builtList(village) + ", next " + Villages.nextProject(village)
+                    + ", the park's site " + Villages.sitesOf(village).get(Park.STRUCTURE) + " — " + builder.debugLine());
+            }
+            // Anything else the village comes to want meanwhile waits for the park too.
+            String next = Villages.nextProject(village);
+            if (next != null && !next.equals(Park.STRUCTURE) && !Villages.builtList(village).contains(Park.STRUCTURE)) {
+                Villages.defer(village, next, level.getGameTime() + 10_000_000L, "the test asks for the park");
+                Kit.log("dt03 @" + t + " set aside " + next + ", which came before the park");
+            }
             if (!Villages.builtList(village).contains(Park.STRUCTURE)) {
-                if (t >= 6600) helper.fail("the park was not built: " + Villages.builtList(village) + " — " + builder.debugLine());
+                if (t >= 16000) helper.fail("the park was not built: " + Villages.builtList(village) + ", next " + next + " — "
+                    + builder.debugLine());
                 return;
             }
             int seats = 0, water = 0, stone = 0, lights = 0;
@@ -350,38 +373,44 @@ public class DistrictGameTests {
             for (BlockPos p : l.lights()) if (!level.getBlockState(p).isAir()) lights++;
             Kit.log("dt03 the park stands at " + t + ": " + seats + "/" + l.seats().size() + " bench seats, water " + water + "/"
                 + l.water().size() + ", stone " + stone + "/" + l.stone().size() + ", lights " + lights + "/" + l.lights().size()
-                + "; in the ledger: " + Park.parks(village).size());
+                + "; in the ledger: " + Park.parks(village).size() + " — " + builder.debugLine());
             e.that(seats >= l.seats().size() - 2, "the benches are down: " + seats);
-            e.that(water >= l.water().size() - 1, "the fountain holds water: " + water);
             e.that(stone >= l.stone().size() - 2, "the fountain's stone is laid: " + stone);
             e.that(lights >= 4, "the lamps are lit: " + lights);
             e.that(!Park.parks(village).isEmpty(), "the park is in the village's register");
-            // Its keepers: saplings and a bucket in the stores; trees and paths a visit at a time.
-            stores(level, heart.offset(3, 0, 3), new ItemStack(Items.OAK_SAPLING, 6), new ItemStack(Items.BIRCH_SAPLING, 2),
-                new ItemStack(Items.BUCKET, 1), new ItemStack(Items.DANDELION, 8));
+            // Its keepers: saplings, a bucket and flowers in the stores; the water, the trees and the
+            // paths a visit at a time (the builder's water, if it had none, from the pond).
+            stores(level, heart.offset(-3, 0, 3), new ItemStack(Items.OAK_SAPLING, 6), new ItemStack(Items.BIRCH_SAPLING, 2),
+                new ItemStack(Items.BUCKET, 2), new ItemStack(Items.DANDELION, 8));
             Villages.forgetStores(village);
             Villages.forgetStock();
             List<String> done = new ArrayList<>();
             Ledger.Building b = Park.parks(village).get(0);
-            for (int i = 0; i < 24; i++) {
+            for (int i = 0; i < 32; i++) {
                 String what = Park.tendOne(level, v, b, 8);
                 if (what == null) break;
                 done.add(what);
             }
             int trees = 0, paths = 0;
+            water = 0;
             for (BlockPos p : l.trees()) {
                 BlockState st = level.getBlockState(p);
                 if (st.getBlock() instanceof SaplingBlock || st.is(BlockTags.LOGS)) trees++;
             }
             for (BlockPos p : l.paths()) if (level.getBlockState(p).is(Blocks.DIRT_PATH)) paths++;
+            for (BlockPos p : l.water()) if (level.getFluidState(p).is(FluidTags.WATER) && level.getFluidState(p).isSource()) water++;
             Kit.log("dt03 the keepers: " + done + "; trees " + trees + "/" + l.trees().size() + ", path " + paths + "/" + l.paths().size()
-                + "; " + Park.status(level, v));
+                + ", water " + water + "/" + l.water().size() + "; " + Park.status(level, v));
+            e.that(water >= l.water().size() - 1, "the fountain holds water: " + water);
             e.that(trees >= 2, "trees planted in its corners: " + trees);
             e.that(paths >= l.paths().size() / 2, "its paths laid: " + paths);
             helper.assertTrue(e.clean(), e.summary());
             helper.succeed();
         });
     }
+
+    /** The test's working day: from mid-morning, so long, then the next day's mid-morning. */
+    private static final long DAY_FROM = 2000L, DAY_SPAN = 9000L;
 
     // ============================================================ an evening in the park
 

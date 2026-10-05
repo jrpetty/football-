@@ -105,6 +105,8 @@ public final class Blueprints {
         key('G', BuildGoal.Part.WINDOW, Style.PANE, Way.UP);
         key('O', BuildGoal.Part.WINDOW, Style.GLASS, Way.UP);
         key('D', BuildGoal.Part.DOOR, Style.NONE, Way.BACK);
+        // [flats] A door in a wall that runs front to back (a flat's, off the stair hall: entity/Flats).
+        key('Y', BuildGoal.Part.DOOR, Style.NONE, Way.RIGHT);
         key('P', BuildGoal.Part.FENCE, Style.NONE, Way.UP);
         key('g', BuildGoal.Part.GATE, Style.NONE, Way.BACK);
         key('T', BuildGoal.Part.CRAFTING_TABLE, Style.NONE, Way.UP);

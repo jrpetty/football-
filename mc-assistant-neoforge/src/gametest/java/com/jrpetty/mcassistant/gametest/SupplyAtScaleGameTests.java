@@ -290,7 +290,7 @@ public class SupplyAtScaleGameTests {
     public static void sa03_far_rations(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
-        level.setDayTime(2000);
+        level.setDayTime(3000);                                              // after breakfast, well before the midday meal
         int x = 187000;
         Kit.hold(level, x, Z, 96);
         Kit.prepare(level, x, Z, 96);
@@ -329,27 +329,29 @@ public class SupplyAtScaleGameTests {
                     || taken != null && taken.startsWith("KIT"),
                 "the rations are on the storehouse's run list (or already in the courier's hands): " + runs + ", " + taken);
         });
-        final int[] most = { 0 };
+        // What came into its pack, counted as it comes (it eats as it works, so what it holds says less).
+        final int[] came = { 0 }, last = { -1 };
         helper.onEachTick(() -> {
             long t = helper.getTick();
             Villages.noteAttempt(village, level.getGameTime());
+            int now = cutter.countCarried(ration);
+            if (t >= 5 && last[0] >= 0 && now > last[0]) came[0] += now - last[0];
+            last[0] = now;
             if (t < 10 || t % 20 != 0) return;
-            // (It eats its meals as the day goes on: what came out is the most it has held.)
-            int has = Math.max(most[0], cutter.countCarried(ration));
-            most[0] = has;
+            int has = start[0] + came[0];
             int bread = count(store, s -> s.is(Items.BREAD));
             String run = Couriers.runOfForTests(courier);
-            if (t % 400 == 0) Kit.log("sa03 @" + t + " the woodcutter has " + has + " rations, the storehouse " + bread + " bread; run " + run
+            if (t % 400 == 0) Kit.log("sa03 @" + t + " the woodcutter has " + now + " rations (" + came[0] + " come in), the storehouse " + bread + " bread; run " + run
                 + " — " + courier.debugLine());
             // The run carries what was asked for (four, here: a day's to a woodcutter out at its plot).
             if (has >= start[0] + 4) {
-                Kit.log("sa03 rations out by tick " + t + ": the woodcutter has " + has + " (from " + start[0] + "), the storehouse's bread "
+                Kit.log("sa03 rations out by tick " + t + ": " + came[0] + " came into the woodcutter's pack (it had " + start[0] + ", holds " + now + "), the storehouse's bread "
                     + bread0 + " -> " + bread + "; the courier's day " + java.util.Arrays.toString(Couriers.staffForTests(courier)));
                 // Out of the storehouse's own bread: in the courier's hands from the stores, if not taken this very run.
                 helper.assertTrue(bread0 - bread >= 0, "never more bread in the storehouse than before: " + bread0 + " -> " + bread);
                 helper.succeed();
             } else if (t >= 4800) {
-                helper.fail("no rations came out to the woodcutter: it has " + has + ", the storehouse " + bread + "; run " + run
+                helper.fail("no rations came out to the woodcutter: " + came[0] + " came in, it holds " + now + ", the storehouse " + bread + "; run " + run
                     + " — " + courier.debugLine() + " | " + cutter.debugLine());
             }
         });

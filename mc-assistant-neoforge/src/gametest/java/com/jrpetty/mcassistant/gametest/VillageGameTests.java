@@ -554,7 +554,7 @@ public class VillageGameTests {
         Villages.restore(level, late, new BlockPos(4600, 64, 4600), Villages.Age.NETHER, raised, 20);
         List<String> order = new java.util.ArrayList<>();
         int roomBefore = Villages.housing(late);
-        for (int i = 0; i < 11; i++) {
+        for (int i = 0; i < 12; i++) {
             String next = Villages.nextProject(late);
             order.add(next);
             if (next == null) break;
@@ -562,12 +562,13 @@ public class VillageGameTests {
         }
         Kit.log("t15 past the last age: " + order + ", renown " + Villages.renown(late)
             + ", room " + roomBefore + " -> " + Villages.housing(late));
-        // Twenty folk: the café, the tavern, the fountain, the smithy, the shop and a manor house
-        // after the gateway, before the great works.
-        helper.assertTrue(order.equals(List.of("gateway", "cafe", "tavern", "fountain", "townhall", "smithy", "shop", "manor",
+        // Twenty folk: the café, the tavern, the fountain, the park among the homes (Park), the smithy,
+        // the shop and a manor house after the gateway, before the great works.
+        helper.assertTrue(order.equals(List.of("gateway", "cafe", "tavern", "fountain", "park", "townhall", "smithy", "shop", "manor",
                 "granary", "barracks", "monument")),
             "the Nether Age raises its gateway, its amenities and the leader's hall, then the great works go round: " + order);
-        helper.assertTrue(Villages.renown(late) == 3, "three great works raised, renown " + Villages.renown(late));
+        helper.assertTrue(Villages.greatWorks(late) == 3 && Villages.renown(late) == 3 * com.jrpetty.mcassistant.entity.Museum.GREAT_WORK_RENOWN,
+            "three great works raised, ten renown each: " + Villages.greatWorks(late) + ", renown " + Villages.renown(late));
         helper.assertTrue(Villages.housing(late) == roomBefore + 12, "the manor and the barracks are room for twelve more: "
             + roomBefore + " -> " + Villages.housing(late));
         helper.succeed();

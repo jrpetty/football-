@@ -207,8 +207,9 @@ public class FishGoal extends Goal {
         else if (roll < 92) loot = new ItemStack(Items.STRING, 1 + assistant.getRandom().nextInt(2));
         else if (roll < 95) loot = new ItemStack(Items.BONE, 1 + assistant.getRandom().nextInt(2));
         else if (roll < 97) loot = new ItemStack(Items.LEATHER);
-        else if (roll < 99) loot = new ItemStack(Items.BOWL);
-        else loot = new ItemStack(Items.SADDLE);
+        else if (roll < 98) loot = new ItemStack(Items.BOWL);
+        else if (roll < 99) loot = new ItemStack(Items.INK_SAC);          // the archive's ink, as a player's line brings it up
+        else loot = com.jrpetty.mcassistant.entity.Museum.treasure(sl, assistant.getRandom());   // treasure: a saddle, a shell, a name tag, a book
 
         assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
         if (bobber != null) {

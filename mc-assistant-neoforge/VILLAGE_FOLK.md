@@ -192,15 +192,16 @@ own, and each step is there for a reason the village can see.
 10. **And then it never stops.** A village that has come through every age raises
     **great works** — a granary, barracks, a monument, round and round, each on new
     ground — and every one asks the stores for a quarter more food, stone and iron
-    than the last. `/village status` shows its **renown** (great works raised).
+    than the last. `/village status` shows its **renown**: ten for every great work raised,
+    and whatever its museum has on show (see *The museum and the archive*).
     **Rank** goes on past the ages:
 
     | Rank | Needs |
     |---|---|
     | Village | the Stone Age and 12 folk |
     | Town | the Iron Age and 30 folk |
-    | City | the Diamond Age, two great works and 50 folk |
-    | Capital | the Nether Age, six great works, 80 folk and two colonies of its own |
+    | City | the Diamond Age, renown 20 (two great works, or a museum of rare finds) and 50 folk |
+    | Capital | the Nether Age, renown 60 (six great works, or fewer and a museum), 80 folk and two colonies of its own |
 
     A rise in rank is told to everyone, the treasury gets a purse for it, and the folk
     remember the day. `/village status` and the journal show the rank and what the
@@ -1225,6 +1226,7 @@ with plain blocks, so a building is never held up.
 | Gateway | 9×5 | The Nether Age's obsidian frame on a stone dais between lantern pillars |
 | Wall | ring of 27 | Round the square: battlements, a gate onto each avenue, lantern pillars, corner towers |
 | Pen | 7×7 | Fence ring with a gate, once there is a rancher |
+| Stable | 9×9 | Tall timber barn on a stone footing: four fenced stalls either side of an aisle, hay at the front and in the loft, a sunken trough and a cauldron, three gates across a door four high, once the village has horses |
 | Tavern | 11×11 | Broad timber inn: stone hearth with its fire and chimney, a bar of casks, tables and benches, note blocks, lanterns |
 | Graveyard | 9×9 | Fenced plot with a gate, a path to a stone cross, lanterns on the corner posts, twelve graves |
 | House, grown | 9×9 | The family house with a second storey: a ladder up to two more beds and a chest under the eaves |
@@ -2737,7 +2739,8 @@ every chart reads out the day under the mouse.
   hands and the watch, and buildings, renown and the ages over time.
 * **Records:** its bests (most folk, most made in a day, fullest treasury, greatest worth,
   most born in a day, most and least content, most buildings and renown, each with its day,
-  and its longest run without a loss); everything all told (born, died, came, left, made,
+  and its longest run without a loss); its renown now, and how much of it the museum's finds
+  bring (the Overview says so too, under its cards); everything all told (born, died, came, left, made,
   money in, wages paid); a day on average over the range; and where it is heading: folk,
   output, treasury, worth and buildings in thirty days at the pace of the last fortnight, and
   when the larder would run dry if it is emptying.
@@ -2756,6 +2759,15 @@ every chart reads out the day under the mouse.
 `/village stats <page>` opens the books at a page by its number, counting from Overview at 0:
 Stock is 12, Research 13, Why 14, Trends 15, Records 16, News 17 and the Board 18. The School page
 comes after the Board: `/village school page` opens the books at it.
+* **Museum:** what is on show, a row each: what it is, who found it and at what trade, the day
+  it was found, where it stands (in a frame, under glass, on a stand, in the jukebox) and the
+  renown it brings; the curator and what it is doing now; the archive's volumes of the chronicle
+  (title, pages, where each stands, a copy or the one first written) and the years waiting to be
+  bound; what may go on show next, and what the museum is short of. Before there is a museum: the
+  town's finds so far, and what it waits on.
+
+`/village stats <page>` opens the books at a page by its number, counting from Overview at 0:
+Stock is 12, Research 13, Why 14, Trends 15, Records 16, News 17, the Board 18 and the Museum 19.
 
 ### The city's research
 
@@ -3094,6 +3106,66 @@ the vault, the deposits and the loans, the week's interest, every mortgage and t
   mortgage, how careful it is with its coin; the banker's, its bank), its worth counts its savings
   less what it owes, and "How are you doing for money?" gets the bank in its answer. Ask the banker
   "What are you working on?" and it tells you its books — or who is behind with their payments.
+### Blocks of flats
+
+From the Iron Age a town that is short of homes builds **up** instead of out: a block of flats,
+three storeys of small homes on one house's lot.
+
+* **When.** Households are waiting for a home, some of them the flats' sort (a grown folk on its
+  own, a couple with no children yet, a household that couldn't afford a house's rent), and the
+  ground near the square is running short (three home lots or fewer free in the first ring of
+  streets) or the queue is long (three households or more). One block for every thirty folk, the
+  first at once; never while a block has more than one flat standing empty. It goes on the
+  builders' list ahead of the next house, on a home lot as near the square as there is, and the
+  status line says why ("a block of flats ...: 4 households wait for a home (3 of them young or
+  hard up) and 2 lots stand free near the square").
+* **The building.** Eleven blocks wide: stone walls with a brick band at every floor, glass in
+  the windows, a flat roof of stone slabs behind a parapet, two chimney stacks, a step up to the
+  front door. Inside, a stair hall up one side with a stair that winds up the back of it to every
+  landing (real steps, a rail at the well's edge, a lantern on every landing), and two flats to a
+  landing: six in all, three for couples (two beds) and three for singles (one bed). Each flat is
+  a room with its bed or beds, a chest, a little table (a post with a cloth on it), a lantern and
+  windows on two sides. The builders raise it like anything else, out of the stores, a load at a
+  time and storey by storey from the footing up; the Iron Age's make-over dresses its footing and
+  slates its stair like the rest of the town, and lamp posts go up by its front door.
+* **Seen to.** Once it stands the town's hands see to it, out of the stores: the beds it went up
+  without (from the stores, or three wool and three planks), the ground floor's two doors, each
+  flat's number on a sign on its landing with who lives there ("Flat 2B / Tansy & Rook"), and a run
+  of iron railings along the front (iron bars put by, or six bars of iron beaten into sixteen, never
+  while the village is putting iron by for its age). The sign by the front door gives its name.
+* **Its name.** Each block is named for its street: Elm Row Flats, and a second on the same street
+  Elm Row Buildings (then Court, Mansions, House). Each flat has a number: the storey (1 the ground
+  floor) and A for the front, B for the back. A folk's card says "I live in flat 2B, Elm Row Flats,
+  with Tansy — ...".
+* **Who gets one.** The flats are let, never sold, and the young and the hard-up are offered them
+  first: a grown child who has come of age moves out of its parents' house into a flat of its own
+  ("A flat of my own! Small, but it's mine."), a couple starting out takes a couple's flat, and a
+  household that couldn't afford a house's rent (nobody earning, or not a week of it in hand over
+  the dozen coins a head it lives on) takes one too. A family that can afford a house is offered a
+  house first, and a flat only when there is none. A family's child gets a bed of its own in the
+  flat, bought at the shop as in a house.
+* **Half a house's rent.** A flat's rent is a house's day's rent every other day (so a coin every
+  other day in a village or a town). It goes on the slate, is let off and written off just as a
+  house's is: nobody is put out.
+* **Moving on.** A household in a flat that wants a house of its own saves on payday toward a
+  house's price (never the flat's), and says so ("we're saving for a house of our own: 34 of 53
+  coins put by"). Once it has the price and a house stands empty, it moves out and buys the house
+  outright; a family with children that can afford a house's rent moves out to an empty one as its
+  tenants. While such a household waits with no house empty, the builders put one up. The flat is
+  let to the next household. Two who marry and set up together in a single's flat move across to a
+  couple's flat when one is free (or to a house, if they can afford one).
+* **Every bed counts.** The flats' beds are the town's beds: counted in the room it has, in the
+  houses it plans (nine a block), and in "with a bed" on the books.
+* **The Diamond Age.** A block whose flats are all let while folk still wait gets a fourth storey:
+  paid for out of the stores before its roof comes off, raised a layer at a time, the stair carried
+  up, and two more flats (twelve beds).
+* **Seeing it.** The chronicle notes the town's first block ("the town's first block of flats
+  opened: Elm Row Flats, 6 flats on one lot ...") and each after it; the books' Buildings page
+  shows each block by name with its storeys and its flats let and free ("4 of 6 flats let, 2
+  free"); the Homes page lists every household in a flat (kind "flat", rent due every other day,
+  what it has put by toward a house); the status line adds "flats: 4 of 6 let"; and `/village flats`
+  lists every block, every flat, who lives there and on what terms. (`/village flats stage` sets a
+  furnished block out on a stage, for the pictures.)
 
 ### Knacks: what each folk chooses for itself
 
@@ -3264,6 +3336,80 @@ Every alliance, feud, truce, border, marriage and tribute goes into both village
 (border, truce, pact, alliance, marriages, warm memories or a grudge). `/village status`
 gives the council, the citizens and the neighbours.
 
+### The job market between towns
+
+Towns that know each other trade hands as well as goods. A town short of a pair of hands
+puts a notice up on its village board; folk in the towns round about who have a reason to
+move read it on their own boards, apply, and the best of them comes.
+
+**Wanted notices.** A town puts a notice up when it is a whole hand short at a trade it
+needs (or has nobody at all at one it wants), or when a new workplace stands with nobody in
+it: a smithy wants a smith, a café a cook, a library an enchanter; a school, a bank or a
+stable too, once the town has them. Idle hands at home take up its wants first. The notice
+says the trade, the wage (the trade's rate at the place's standing, at the leader's rate:
+what it will really pay out of the treasury), and what it wants: some years at the trade,
+and an age where it matters (the watch able-bodied, eighteen to fifty; the mines and the
+woods strong backs, up to sixty; a teacher an older, wiser head, thirty-five or more). A
+town that cannot pay posts nothing; three notices at most; a notice nobody answers comes
+down after six days, and one the town filled from its own folk comes down at once.
+
+**Who hears of them.** Word goes by the roads, the caravans and the elders' dealings. A
+colony and its mother village see each other's notices the day they go up (and a laid road
+between them makes going easiest of all), and so do towns with a trade pact or an alliance.
+Neighbours who know each other hear of them a day later. Rivals hear too, but it takes more
+to make a folk go over to them, and an elder who mistrusts a rival will not take its folk
+on. A town that has never met another hears nothing of it.
+
+**Who goes looking.** Only a folk with a reason: out of work, or idle at a trade its town
+has more hands at than it needs; paid less than a notice elsewhere offers (by what that
+town's paydays really pay, against its own); unhappy at home; family living in the other
+town; or young, with no trade much learned yet, wanting a start. It takes enough of them
+to go (more to go over to a rival, and more again if its own town is short of its trade).
+Folk with no reason stay put, and the elder never goes, nor the builder leading a build,
+nor a newcomer not five days settled. On its free time (its break, the evening before bed,
+the day of rest, or any time if it has no work) a folk with a reason walks to its own
+board, stands and reads the notices ("Wanted, a miner in Oakhollow, two a day, some years
+at it..."), and if one suits it, it puts its name down: an application to that town.
+
+**The leader decides.** A while after the first application comes (or as soon as three
+have), the hiring town's elder looks the applicants over: their level at the trade and the
+knacks of it they chose, their years (too old for the mines, too young to teach; an old
+head counts where wisdom is wanted), how cheerful or sour they are, family already in the
+town, and how the two towns stand (a shrewd elder weighs the years at the trade above all;
+a warm one gives the young a start; a wary one is slow to take a stranger). The best gets
+the place; the others are told no and why, and say so when you are about ("Too old for the
+mines, Oakhollow says. Hmph."). An elder that could do better holds out a day or two for a
+hand with the years the notice asked for. And the applicant's own town must be able to
+spare it: a town keeps four grown folk at least, its last farmer, its last guard behind a
+wall, and no more than one in eight of its folk leave for work elsewhere in a week.
+
+**The move.** Taken on, the folk says so, walks to the square and says its goodbyes (its
+friends see it off), and goes: what it carries of the village's goods back into the
+stores, its own things out of its house's chest, off the old town's roll and onto the new
+one's, and down the road the caravans take, its partner and children with it if it has
+them. The new town pays its road money, a coin a hundred blocks. At the other end it is
+found a home (an empty house for the household, or a bed at the camp) and takes up the
+trade it was taken on for. Both chronicles tell it, the morning assembly welcomes it, and
+the old town, one hand short now, may put up a notice of its own. Because the wages differ
+by town, folk drift, slowly, to where they are paid and needed.
+
+**Refugees.** A raid that leaves folk without a bed (their beds gone from under them, their
+house left with none) sends them, with their households, to the nearest friendly town with
+room, once no bed can be found at home. The town takes them in: a bed found, work as they
+fit. If so few are left after a raid that the village cannot go on, they all go, sharing
+out what was in its treasury, and the village is given up. Both chronicles tell it, and the
+two towns think the better of each other for it.
+
+**Where you see it.** The board shows the town's Wanted notices (and how many have applied),
+word of other towns' notices from the road, who is on the road here, and who came and went
+this week. The city books' **Jobs** page has a switch at the top: **Between towns** lists
+every notice and how it went, every application with the applicant's level, age and knacks,
+why it applied and the leader's verdict (the mouse over a row for all of it), who came and
+went this week and why, who is on the road here, and what the other towns want. A folk's
+card says what it applied for, that it was taken on and is saying its goodbyes, that it is on
+the road, or where it came from and why ("Came from Riverford for the wages, to work as a
+miner"). `/village jobs` gives the same from the console.
+
 ### Every town its own: the land
 
 When a village is founded it looks over its land, and the land shapes it:
@@ -3368,6 +3514,128 @@ food (and a torch or two) from the stores:
 * **Asking.** Ask anybody "What's out there?" (or press **Out there** on the Village
   tab). A scout gives the exact coordinates, and will **walk you** to a find that is
   near enough.
+
+### The museum and the archive
+
+A town keeps what it is proudest of.
+
+* **Finds.** Whatever a folk picks up out of the world is looked at as it comes into its hands:
+  a miner's diamond or emerald, a **fossil** (bone blocks dug out of the deep rock), a fisher's
+  nautilus shell or saddle (a fisher's line brings up treasure now and then, as a player's does:
+  a saddle, a nautilus shell, a name tag or an enchanted book; and an ink sac, sometimes), a
+  guard's trophy off a monster (a skull, a trident, chainmail, a totem), a hunter's rabbit's foot,
+  a ghast's tear from the Nether. Who found it, at what trade and on what day is written down then
+  and there, and the first of every rare kind is told in the chronicle ("Ember the miner mined the
+  town's first diamond").
+* **The museum.** A town of twenty in the Iron Age with three different rare finds plans a
+  **museum** among its amenities, on a lot facing the square: a hall of stone bricks with a
+  skylight, tall windows, a double door under a glass fanlight, lanterns, steps. It is built like
+  any other building, out of the stores. A **curator** looks after it: the folk with the most
+  curiosity and learning in it (a curious nature, a love of reading, the enchanter's trade), or
+  else the eldest. It keeps its own trade, and does the museum's work by day.
+* **What goes on show.** One of every kind: the first diamond, the first emerald, a fossil, a
+  music disc, an enchanted book, a trident, a nautilus shell, the heart of the sea, a totem, a
+  saddle, a rare fish, a monster's skull, chainmail, a rabbit's foot, a ghast's tear, amethyst, a
+  name tag, a **map** of one of the scouts' finds (drawn by the curator on an empty map made out
+  of the stores, the ruin marked with a red cross), and the first iron of the Iron Age. Nothing
+  comes from nowhere:
+  * the curator **asks** for the rarest thing the stores hold that is not on show yet; from then
+    on the stores keep it back from every maker (the Stock page says *kept for the museum*);
+  * it walks to the stores and takes it out, with whatever its place wants, made out of the
+    stores by the game's own recipes: a frame (sticks and leather), a sign for its label
+    (planks and a stick), glass for a case, an armour stand, a jukebox. If the stores cannot run
+    to it, it waits, and the Museum page says what it is short of;
+  * it carries it to the museum (you can see it in its hand) and sets it out: **in a frame** on
+    the wall, **under glass** let into the floor (the fossil, a skull), **on a stand** by the
+    door (the trident in its hand, the skull on its head, the chainmail on its back), or **in
+    the jukebox**.
+  * Its **label** (a sign) says what it is, who found it, at what trade and on what day
+    ("Diamond / mined by Ember / the miner / day 41"); look at the thing itself and its name
+    says the same.
+* **Pride and renown.** The finder is proud of its find on show, says so, and is the happier
+  for it for days. The town's **renown** rises with every thing on show, the rarer the more: one
+  for a rare fish, three for a diamond or a fossil, five for the heart of the sea or a totem
+  (a great work is ten). The board tells what is new in the museum.
+* **Visitors.** Folk look round of an evening, the curious and the readers most, finders to see
+  their own finds: they stop before a thing and say a word about it. Come in yourself and the
+  curator welcomes you; every label can be read. On the **day of rest** the jukebox plays its
+  disc. Something taken away is missed, and the chronicle says so.
+* **The archive.** The town counts its years from its founding, **twenty-eight days to a year** (the town calendar's year, the same as its birthdays and Founding Day). When a
+  year is over, what the chronicle says of it is written down at once (the chronicle itself keeps
+  only so many lines). The curator makes a **book and quill** out of the stores (a book, a feather
+  and an ink sac; the book out of paper and leather if need be), writes the year into it and signs
+  it: **"Chronicle of Oakhollow, Year 2"**, by the curator, with a title page and then the year
+  day by day, every line fitted to the page. The newest volume lies **open on the lectern** at the
+  back of the hall for anyone to read; the one before goes onto the archive's **chiseled
+  bookshelves** either side of it (made out of the stores as they are wanted), six to a shelf. A
+  year too long for one book goes into two. Take a volume away if you like: the curator writes it
+  out again, a fair copy, from its notes.
+* `/village museum` says it all in chat: the curator, every exhibit and who found it, the
+  volumes and where they stand, what is waiting and what the museum is short of.
+
+### Horses and the stable
+
+A village keeps **horses, donkeys and mules**, every one of them a wild one brought home and
+tamed by its rancher; nothing comes out of nowhere.
+* **Bringing one home.** Horses and donkeys come into the world wild, on the plains and the
+  savanna. The rancher goes out to one within sixty-odd blocks with something it eats in its
+  hand — wheat, an apple, a golden carrot if the stores have any (out of the stores) — and
+  walks it home with the animal following the hand: into the stable if there is one, to the
+  pen or the rancher's ground if not. A donkey first, when the village sends caravans.
+* **Gentling it.** At home it is the village's catch, and the rancher gentles it a go at a
+  time, as you would: a bite to eat (wheat, an apple or sugar sweeten its temper by three, a
+  golden carrot by five), then up on its back. It bucks. If its temper is up it stands for the
+  rider and is **tamed**; if not, the rancher is thrown and the horse is a little calmer for
+  next time (five more temper). Once tamed it is the village's own (the village is its owner),
+  it gets a name by its colour — *Bay*, *Dapple*, *Chestnut*, *Ned* the donkey — and the
+  chronicle says who tamed it after how many goes. Two tamed horses with room in the stable
+  and a golden carrot each make a **foal**; a foal born in the stable is gentled when it is
+  grown.
+* **Saddles, leads and chests.** Nobody can make a saddle. The fishers land one now and then
+  (about one catch in a hundred, near enough the game's own odds), a scout who comes on an
+  old unopened chest out in the world (a ruin's, a temple's, a villagers' village's) looks in
+  it and brings home any saddle or lead, and on **market day** the traders sell the village a
+  saddle (24 coin, out of what the treasury can spare after the wages) when the stable has a
+  horse without one. The rancher puts a saddle from the stores on a tamed horse, and a chest
+  from the stores on a donkey or a mule when the village sends caravans. Leads are plaited by
+  the rancher, two from four string and a slime ball, when the stores are short of them.
+* **The stable** (planned, from the Stone Age on, once the village has horses of its own, or
+  once an Iron Age town has a rancher and a saddle in the stores; on a lot by the square, near
+  the storehouse; the council may put it before or after the other amenities): a
+  tall timber barn with **four stalls** fenced off two by two either side of the aisle, hay at
+  the front and in the loft, a sunken water trough and a cauldron, and three **gates** across
+  the door, open four high so a rider comes in on horseback. Each horse has its stall and
+  stands in it when it is not out. The gates open for whoever is going through and shut behind
+  them. One that strays into the yard walks back in; further out, the rancher fetches it (rides
+  it home if it has a saddle on, coaxes it home with a bite if not). Every evening the rancher
+  goes round the stalls with the feed, a bite each of wheat, an apple or hay out of the stores.
+* **Couriers ride.** A courier with a **long run** (forty-eight blocks or more) takes the
+  quickest saddled horse in the stable, if the walk to the stable is worth it. Up in its stall,
+  out through the gates and away: the horse goes where the courier would have walked, at its
+  own pace under a rider — an ordinary horse is about **half again as quick as a folk at a
+  run**, and a slow one is not taken. A few steps short of the chest it gets down, leaves the
+  horse tied (it does not wander), empties the chest on foot, rides back, and ties the horse by
+  the storehouse while it carries the load in. Another long run, and it is back on it; a minute
+  with none, or the evening, and it rides the horse home and puts it in its stall. Its card
+  says so: *"Riding Bay to the north mine."* Nobody rides a horse without a saddle.
+* **Scouts ride** their rounds the same way, all day, and put the horse away when they are
+  home.
+* **Caravans take a donkey.** A caravan takes a donkey (or a mule) with a chest on it from the
+  stable, on a lead from the stores: the carrier fetches it, ties it and puts the load **in the
+  donkey's chest** rather than on its own back. At the other end the load comes out of the
+  chest to be sold and the goods for home go back in. Home again, the carrier leads the donkey
+  back to the stable and hangs the lead up with the stores.
+* **Never lost.** A rider gets down where it is too low to ride under, or where it can get no
+  nearer, and goes on foot. A horse whose rider could not get back to it stands where it was
+  left, and the rancher brings it in.
+* **Where to see it.** The **Jobs** page of the town's books has a line for the horses (how many,
+  how many saddled, the donkeys and their chests, the saddles in the stores, the stable and
+  its stalls, the rides today); the **Buildings** page has *The stable*, with every animal by
+  name and where it is (*"Bay (brown horse), saddled: out with Holt, to the north mine"*). A
+  rider's card has *Horses* (the horse it has out and how quick it is, its rides today); the
+  rancher's card shows its **gentling** (*"a brown horse (temper 31 of 100, 4 goes)"*), and its
+  top line what it is doing (*"Gentling a wild brown horse: its temper 31 of 100 after 4
+  goes"*). `/village horses` says it all in chat.
 
 ### Built by hand
 
@@ -3551,6 +3819,10 @@ ripen, days pass, folk work and houses go up at that pace.
   your mortgage down. `bank week` (operators) runs the bank's round now; `bank showcase`
   (operators) puts a bank up ten blocks in front of you, opens it and sets its banker at the
   counter, with the bars and the ledger in (for the screenshots).
+* `/village flats` — the nearest village's blocks of flats: each block's name and storeys, every
+  flat, who lives in it, its rent and what its household has put by for a house; and whether the
+  town wants another block, and why. `flats stage` (operators) sets a furnished block out on a
+  stage where you stand, for the pictures.
 * `/village stats [page]` — the town's books on the analytics screen (as clicking the village
   board does), opened at a page if one is given (0 the Overview to 18 the Board; 12 is the Stock,
   13 Research); from the console, the reading of what drives the village's growth.
@@ -3561,6 +3833,8 @@ ripen, days pass, folk work and houses go up at that pace.
   whatever the hour, for two minutes; `school say` (operators) has the nearest teacher say a
   line of the lesson; `school stage` (operators) sets a schoolhouse out on a stage mid-lesson for
   the pictures (`/kill @e[tag=folk_lineup]` clears its folk).
+  board does), opened at a page if one is given (0 the Overview to 18 the Board and 19 the Museum;
+  12 is the Stock, 13 Research); from the console, the reading of what drives the village's growth.
 * `/village research` — the city's research: points in hand and a day, what is being studied,
   who chose it and why, and every branch's civics with their keys, states and costs. Works from
   the console. `research pick <civic>` and `research grant <civic>` (operators) set the town to an
@@ -3597,11 +3871,30 @@ ripen, days pass, folk work and houses go up at that pace.
   the Buildings page's map; `districts park now` (operators) puts the park up at once on its lot,
   as the showcase does, with its trees grown and its paths laid, and sends everybody off work to
   it (it prints `PARK x y z facing dir`); `districts park visit` (operators) sends them again.
+* `/village horses` — the stable: the village's horses, donkeys and mules (saddled, with a
+  chest, being gentled), each by name and where it is, who has one out, and the saddles and
+  leads in the stores.
 * `/village chronicle` — the nearest village's history, as a written book.
+* `/village museum` — the nearest village's museum: its curator, what is on show and who found
+  each thing, the archive's volumes and where they stand, what waits to be bound, and what it is
+  short of. `museum work` (operators) has the curator do its next piece of work now, out of the
+  stores; `museum stage` (operators) sets a museum out where you stand for the pictures, its places
+  filled with one of everything and the chronicle so far bound into its archive.
 * `/village standing` — what every village you have met thinks of you.
 * `/village ledger` — the nearest village's town ledger, as a book.
 * `/village relations` — every pair of neighbouring villages: allies, friends, uneasy,
   in a feud, how far apart, and whether they are kin.
+* `/village jobs` — the nearest town's job market: its notices and how each went, the
+  applications with each applicant's level, age and knacks, why it applied and the verdict,
+  who is on the road here, what other towns want that word of has come here, and who came and
+  went this week. `jobs why <name>` says what a folk would make of the notices (its reasons, or
+  why it stays); `jobs books` opens the city books at the job market. For operators: `jobs post`
+  (the town looks over its notices now), `jobs decide` (its leader decides the applications now),
+  `jobs look [name]` (a folk, or the one with most reason to, goes to read the board now: it reads
+  the notices out, and applies only if one is for it and it has a reason to go), `jobs want <trade>`
+  (the town puts a notice up for that trade now, at the trade's real wage, whatever it is short of),
+  and `jobs pact` (the nearest town and its nearest neighbour agree to trade, so word of their
+  notices passes).
 * `/village talk [words]` — (operators) talk with the nearest folk, as a right-click
   would; with words, say them to it.
 * `/village lineup` — (operators) one folk of every trade, dressed and holding
@@ -3680,6 +3973,15 @@ Every push to CI:
   the elder speaks (`t50`), and holds an election (`t51`);
 * sends an envoy to offer trade and checks the other village gathers to hear it and
   answers (`t52`);
+* runs the job market between two towns two hundred blocks apart (`jm01`): a town short of a
+  miner puts a notice up, a town that has never met it hears nothing and one with a trade pact
+  hears of it the same day; that town's three idle miners walk to their own board, read it and
+  apply; the leader takes the twelve-level miner of thirty and turns down the fifteen-level one
+  of sixty-four (too old for the mines) and the learner; the one taken on walks the road, joins
+  the new town's roll and takes up mining, and its card and both towns' books say so. Four folk
+  whose beds a raid burned are taken in by a friendly neighbour with beds to spare, found a bed
+  and work (`jm02`); and of two folk sent to read the board, the one out of work applies and the
+  one with no reason to move does not go (`jm03`);
 * sends a scout 260 blocks to a town it has never seen and checks it finds it, comes
   home and can tell you where it is (`t53`);
 * checks a street is not laid until a folk from the village has walked to it (`t54`);
@@ -3798,6 +4100,19 @@ Every push to CI:
   the one pack to the other as a keepsake, and the birthday and the present raise its spirits; and
   twenty-eight days after the founding the town gathers for Founding Day, hears the year's chronicle
   read out in the order it happened, feasts, and the history notes its first year kept;
+* runs the museum and its archive (`MuseumGameTests`, mu01 to mu03): the miner's first diamond in
+  the stores is chosen, taken out with a frame and a sign (no more), hung in a frame on the
+  museum's wall with a label saying who found it, at what trade and on what day, and the town's
+  renown rises by three; a year of the chronicle is written into a book and quill made of the
+  stores' book, feather and ink sac, signed with the year's title by the curator and laid open on
+  the archive's lectern, every page and line fitting the book; and a curator does it on foot, the
+  stores keeping the find back from the makers while it walks;
+* runs the horses (`StableGameTests`, hs01 to hs03): a rancher coaxes a wild horse home to the
+  stable with wheat out of the stores and gentles it, thrown a go at a time, till it is tamed, the
+  village's own with a name; a courier with a long run takes the saddled horse from the stable,
+  rides it out quicker than a folk can run, gets down by the chest, rides back, and puts it back in
+  its stall; a caravan's donkey with a chest carries the bread in its chest, the colony buys it out
+  of the chest, and the donkey is led home to the stable and the lead hung up with the stores;
 * checks the money (game test `t30`): a new village's purse, gold minted into coin,
   a day's wages, prices that move with the stores, a folk's market-day treat, a
   player buying bread at a stall and selling iron, and the stalls' price signs;

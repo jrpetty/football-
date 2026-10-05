@@ -26,6 +26,7 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  *   /village lineup           one folk of every trade, dressed, to look at (ops)
  *   /village talk [words]     talk with the nearest folk, as a right-click would (ops)
  *   /village chronicle        the nearest village's history, as a book
+ *   /village museum           the nearest village's museum: its finds on show, its archive; museum work | stage (ops)
  *   /village standing         what every village you have met thinks of you
  *   /village house            the village's houses; house buy | house let N | house rent
  *   /village stall            the players' market stalls; stall rent | screen | till | books | price N item
@@ -39,6 +40,7 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  *   /village founding         the next Founding Day; founding now (ops) keeps it this minute
  *   /village birthdays        the week's birthdays; birthdays now &lt;name&gt; (ops) keeps one now
  *   /village speed 16|max|normal   time runs faster, to watch a village grow (ops / world owner)
+ *   /village jobs [why|books|post|decide|look|want|pact]   the job market between towns (JobMarketCommands)
  * </pre>
  */
 public final class VillageCommands {
@@ -121,7 +123,7 @@ public final class VillageCommands {
                     net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p, new com.jrpetty.mcassistant.net.CityStatsPayload(shut));
                     return 1;
                 }))
-                .then(Commands.argument("page", IntegerArgumentType.integer(0, 18))
+                .then(Commands.argument("page", IntegerArgumentType.integer(0, 40))
                     .executes(ctx -> stats(ctx, IntegerArgumentType.getInteger(ctx, "page")))))
             // The city's research (CityTree): the tree and what the leader has the town studying; and,
             // for ops and tests, a civic set to study now (pick) or done at once (grant), each only
@@ -177,6 +179,13 @@ public final class VillageCommands {
                         .executes(ctx -> house(ctx, "let", IntegerArgumentType.getInteger(ctx, "coins"))))))
             // The bank (entity/Bank): its books; your account (deposit, withdraw), a mortgage on a house, repay it.
             .then(com.jrpetty.mcassistant.entity.Bank.command())
+            // [flats] The village's blocks of flats: each flat, who lives there, on what terms. `stage`
+            // sets a furnished block out on a stage at the spot, for the pictures (from a palette, not the stores).
+            .then(Commands.literal("flats")
+                .executes(VillageCommands::flats)
+                .then(Commands.literal("stage").requires(src -> src.hasPermission(2)).executes(VillageCommands::flatsStage)))
+            // The job market between towns: the notices, the applications, who came and went (JobMarketCommands).
+            .then(JobMarketCommands.node())
             .then(Commands.literal("wages").executes(ctx -> page(ctx, 2)))
             .then(Commands.literal("economy").executes(ctx -> page(ctx, 3)))
             // The sellers' books: what the shop, the café, the tavern and the stores have, sell and make.
@@ -189,6 +198,16 @@ public final class VillageCommands {
             // and the client smoke, the nearest grown folk made the storehouse's sweeper now.
             .then(Commands.literal("sweeper").executes(ctx -> sweeper(ctx, false))
                 .then(Commands.literal("appoint").requires(src -> src.hasPermission(2)).executes(ctx -> sweeper(ctx, true))))
+            // The stable: the village's horses, donkeys and mules, who has one out, the saddles (Stables).
+            // `horses showcase` (operators): a stable stood up where you are, with horses in its stalls
+            // and a courier on horseback at its door, to be looked at (cleared with the line-up's tag).
+            .then(Commands.literal("horses").executes(ctx -> page(ctx, 6))
+                .then(Commands.literal("showcase").requires(src -> src.hasPermission(2)).executes(ctx -> {
+                    java.util.List<String> views = com.jrpetty.mcassistant.entity.Stables.showcase(ctx.getSource().getLevel(),
+                        net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition()));
+                    ctx.getSource().sendSuccess(() -> Component.literal("STABLE | " + String.join(" | ", views)), false);
+                    return views.size();
+                })))
             // The morning news of the villages near you, in chat, once a morning: on or off.
             .then(Commands.literal("news")
                 .then(Commands.literal("on").executes(ctx -> news(ctx, true)))
@@ -202,6 +221,8 @@ public final class VillageCommands {
                     .executes(ctx -> speed(ctx, IntegerArgumentType.getInteger(ctx, "times")))))
             // The nearest village's history, as a book.
             .then(Commands.literal("chronicle").executes(VillageCommands::chronicle))
+            // The museum and its archive: what is on show, who found it, the volumes (MuseumCommands).
+            .then(MuseumCommands.build())
             // What every village you have met thinks of you.
             .then(Commands.literal("standing").executes(VillageCommands::standing))
             // How the villages stand with each other: allies, feuds, tribute.
@@ -874,6 +895,22 @@ public final class VillageCommands {
         return lines.size();
     }
 
+    /** [flats] /village flats: the nearest village's blocks of flats and who lives in each flat. */
+    private static int flats(CommandContext<CommandSourceStack> ctx) {
+        net.minecraft.core.BlockPos at = net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition());
+        java.util.List<String> lines = com.jrpetty.mcassistant.entity.Flats.list(ctx.getSource().getLevel(), at);
+        ctx.getSource().sendSuccess(() -> Component.literal("FLATS " + String.join(" | ", lines)), false);
+        return lines.size();
+    }
+
+    /** [flats] /village flats stage: a furnished block of flats set out at the spot, its door to the south. */
+    private static int flatsStage(CommandContext<CommandSourceStack> ctx) {
+        net.minecraft.core.BlockPos at = net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition());
+        String where = com.jrpetty.mcassistant.entity.Flats.stage(ctx.getSource().getLevel(), at);
+        ctx.getSource().sendSuccess(() -> Component.literal("FLATSTAGE " + where), false);
+        return 1;
+    }
+
     private static int house(CommandContext<CommandSourceStack> ctx, String what, int coins) {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer p)) {
             ctx.getSource().sendFailure(Component.literal("Only a player can buy or let a house."));
@@ -1166,9 +1203,10 @@ public final class VillageCommands {
         String text = which == 2 ? com.jrpetty.mcassistant.entity.Wealth.wagesPage(level, v)
             : which == 4 ? com.jrpetty.mcassistant.entity.Stockroom.page(level, v)
             : which == 5 ? com.jrpetty.mcassistant.entity.Storekeeping.page(level, v)
+            : which == 6 ? com.jrpetty.mcassistant.entity.Stables.page(level, v)
             : com.jrpetty.mcassistant.entity.Economy.page(level, v);
         String title = Villages.name(v.id()) + (which == 2 ? " — wages" : which == 4 ? " — the sellers' books"
-            : which == 5 ? " — the storehouse's books" : " — economy");
+            : which == 5 ? " — the storehouse's books" : which == 6 ? " — the stable" : " — economy");
         ctx.getSource().sendSuccess(() -> Component.literal(title + "\n" + text), false);
         return 1;
     }

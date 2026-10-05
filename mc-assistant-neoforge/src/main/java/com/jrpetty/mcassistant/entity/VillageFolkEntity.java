@@ -298,6 +298,17 @@ public class VillageFolkEntity extends AssistantEntity {
         // Somebody is talking to it, or it is out walking with somebody: its own day
         // waits until they are done.
         boolean withAPlayer = talkPartner() != null || companionPlayer() != null || guidePlayer() != null;
+        // Horses (Stables, Riding): a ridden horse kept at its pace, the stable's gates and its day; and a
+        // horse being fetched or put away, or the rancher's work at the stable, is the work just now.
+        if (level() instanceof net.minecraft.server.level.ServerLevel stableLevel) {
+            if (tickCount % 2 == 0) Riding.tick(this, stableLevel);
+            if (tickCount % 10 == 3) Stables.gate(this, stableLevel);
+            if (tickCount % 20 == 11) Stables.tick(this, stableLevel);
+            if (!withAPlayer && Stables.busy(this)) {
+                if (tickCount % 5 == 0) Stables.drive(this, stableLevel);
+                return;
+            }
+        }
         // On the road with a caravan: walked step by step, not thought about once in five seconds.
         if (trip != null && !withAPlayer && tickCount % 10 == 0 && level() instanceof net.minecraft.server.level.ServerLevel road) {
             Caravans.drive(this, road);
@@ -317,6 +328,9 @@ public class VillageFolkEntity extends AssistantEntity {
             if (tickCount % 10 == 0) Drover.drive(this, herding);
             return;
         }
+        // The job market between towns (JobSeekers): reading the notices at the board, saying its
+        // goodbyes, or on the road to a new place; the rest of its day waits.
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel market && JobSeekers.step(this, market)) return;
         // A friend passing by, hailed by name (Dealings).
         if (!withAPlayer) Dealings.greet(this);
         // Badly hurt: the brewer's healing, its own or (any trade) one from the stores.
@@ -358,6 +372,9 @@ public class VillageFolkEntity extends AssistantEntity {
         // home at the dusk bell; round to a friend with a birthday present.
         if (!withAPlayer && tickCount % 4 == 0 && level() instanceof net.minecraft.server.level.ServerLevel calendar
                 && TownCalendar.hold(this, calendar)) return;
+        // The museum's curator on its errand (Museum): a find fetched out of the stores and set out, a year bound.
+        if (!withAPlayer && tickCount % 4 == 0 && level() instanceof net.minecraft.server.level.ServerLevel museum
+                && Museum.hold(this, museum)) return;
         if (tickCount - agendaTick < 100) return;   // folk think slowly, on purpose
         agendaTick = tickCount;
         flyTheColours();
@@ -387,6 +404,7 @@ public class VillageFolkEntity extends AssistantEntity {
             if (home != null) {
                 TownWork.tick(townLevel, home);
                 TownLife.tick(townLevel, home);         // lit windows, chimney smoke, washing, stalls, signs
+                Museum.tick(townLevel, home);           // the museum's finds and its archive
                 Assemblies.tick(townLevel, home);       // the morning assembly, openings, feasts, the council, elections
                 Contentment.daily(townLevel, home);     // how it is doing; at its worst, folk leave
             }
@@ -1022,6 +1040,8 @@ public class VillageFolkEntity extends AssistantEntity {
             if (civic > 0) { m += civic; why.add(new Object[]{"civic", civic}); }
             int homely = Decor.moodBonus(this);                       // a home well furnished (Decor)
             if (homely > 0) { m += homely; why.add(new Object[]{"homely", homely}); }
+            int proud = Museum.pride(this, day);                      // its find on show in the museum
+            if (proud > 0) { m += proud; why.add(new Object[]{"proud", proud}); }
             // The leader: its own spirits, and how this folk gets on with it.
             int led = Leader.spirits(this);
             if (led >= 3) { m += led; why.add(new Object[]{"leader", led}); }
@@ -1180,7 +1200,7 @@ public class VillageFolkEntity extends AssistantEntity {
             case FRIENDS -> life.friends().size() >= 5;
             case DIAMOND -> countCarried(st -> st.is(net.minecraft.world.item.Items.DIAMOND)) > 0;
             case NETHER -> village != null && Villages.ageOf(village) == Villages.Age.NETHER;
-            case GREAT_WORK -> village != null && Villages.renown(village) >= 1;
+            case GREAT_WORK -> village != null && Villages.greatWorks(village) >= 1;
             case GARDEN -> persona.flowersPlanted() >= 6;
             case WELL_FED -> village != null && villageCentre != null
                 && level() instanceof net.minecraft.server.level.ServerLevel server
@@ -1301,6 +1321,7 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     public void die(net.minecraft.world.damagesource.DamageSource cause) {
         if (trip != null && level() instanceof net.minecraft.server.level.ServerLevel road) Caravans.abandon(road, this);
+        if (level() instanceof net.minecraft.server.level.ServerLevel horses) Riding.fell(horses, this);   // a horse it had out (Riding)
         if (expedition != null && level() instanceof net.minecraft.server.level.ServerLevel land) {
             UUID home = ownerId();
             if (home != null) Villages.tell(home, level().getDayTime() / 24000L, displayNameCap() + " was lost while scouting the " + expedition.heading());
@@ -1947,6 +1968,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (PlayerStalls.errand(this, server)) return;   // a player's stall on the square, for what it wants (PlayerStalls)
         if (shopping(server)) return;                 // market day: a treat from the stalls
         if (lookRound(server)) return;                // the new building everybody is talking about
+        if (Museum.visit(this, server)) return;       // round the museum, before a find or two
         if (cafeVisit(server)) return;                // a drink at the café
         if (shopVisit(server)) return;                // the shop: a tool for its work, or something nice
         if (Leisure.listen(this, server)) return;
@@ -2283,6 +2305,8 @@ public class VillageFolkEntity extends AssistantEntity {
      */
     @Override
     public boolean onShift() {
+        // Fetching a horse or putting one away (Stables): seen through before bed.
+        if (Stables.busy(this)) return true;
         // Walking with the leader (Patrols, by day only): that is the work, assembly or none.
         if (Patrols.escorting(this)) return true;
         // Called to the village's gathering: its work waits (the watch is never called away).
@@ -2727,6 +2751,7 @@ public class VillageFolkEntity extends AssistantEntity {
             Trades.buckets(this);
             keepProductionChest(supplies);
             if (mindTheHerd(supplies)) return;
+            if (Stables.ranch(this, supplies)) return;      // the rancher's horses: fed, fetched, saddled, gentled (Stables)
             if (Links.tend(this, supplies)) return;
         }
         // Its plot moved on: its old production chest comes along (one chest a worker, ever).
@@ -4730,6 +4755,16 @@ public class VillageFolkEntity extends AssistantEntity {
         FolkTalk.speak(this, FolkTalk.pick(getRandom(), "A fresh start.", "Hello! I've come to live here.", "I hope it's better here."));
     }
 
+    /**
+     * Off to another town for good (JobSeekers): its production chest stays behind on the old plot,
+     * the old town's for its couriers to clear (Retiring), and is never looked for from the new one.
+     */
+    public void leftItsPlot() {
+        productionChest = null;
+        oldProductionChest = null;
+        oldChestTries = 0;
+    }
+
     /** Leave for good, with nowhere to go (Contentment): out of the world. */
     public void walkOut() {
         FolkTalk.speak(this, FolkTalk.pick(getRandom(), "I can't stay here any longer. Goodbye.", "I'm off to find a better life."));
@@ -5889,7 +5924,7 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected boolean onBreak() {
         // On the road with a caravan, its own work waits until it is home.
-        return trip != null || expedition != null || Drover.busy(this) || Nether.away(this) || breakNow();
+        return trip != null || expedition != null || Drover.busy(this) || Stables.busy(this) || Nether.away(this) || JobSeekers.busy(this) || breakNow();
     }
 
     /** The caravan this folk is taking to a colony and back, or null (Caravans). */
@@ -6347,6 +6382,17 @@ public class VillageFolkEntity extends AssistantEntity {
     /** Tests: stock up for this building as its lead would; true if it would set off to build. */
     public boolean stockedForTests(String project, Villages.Site site) {
         return stockedFor(project, site);
+    }
+
+    /** Tests: the village's work looked at now (considerVillageWork), as this hand would standing idle where it
+     *  is: the next project, its lot, whether the stores can pay for it, stocking up, and setting off. True if
+     *  it set off to build. (What it had in hand of its own trade is put down first, as an idle hand has none.) */
+    public boolean villageWorkForTests() {
+        clearQueue();
+        getNavigation().stop();
+        considerVillageWork();
+        Job j = peekJob();
+        return j != null && j.type() == Job.Type.BUILD;
     }
 
     /** Tests: the blocks this building still wants laid on this ground (blocksToLay). */

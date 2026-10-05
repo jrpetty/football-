@@ -146,6 +146,7 @@ public final class Caravans {
         t.trade = true;
         t.gainedTick = carrier.tickCount;
         carrier.trip(t);
+        Riding.packFor(level, from, carrier);                    // a donkey from the stable to carry it (Riding)
         roadMoney(level, from, carrier, to);
         long day = level.getDayTime() / 24000L;
         Villages.tell(from.id(), day, "a trade caravan set out for " + Villages.name(to.id()));
@@ -204,9 +205,12 @@ public final class Caravans {
         Trip t = new Trip(mother.id(), colony.id(), way(mother, colony));
         t.gainedTick = carrier.tickCount;
         carrier.trip(t);
+        Riding.packFor(level, mother, carrier);                  // a donkey from the stable to carry it (Riding)
         roadMoney(level, mother, carrier, colony);
         // No pack llama: the village keeps none, and one out of nowhere for every caravan was a
-        // llama, a chest and a carpet from nothing. The carrier takes the load on its own back.
+        // llama, a chest and a carpet from nothing. The carrier takes the load on its own back —
+        // or, if the stable has a donkey with a chest on it and there is a lead, in the donkey's
+        // chest (Riding.packFor, above).
         long day = level.getDayTime() / 24000L;
         Villages.tell(mother.id(), day, "a caravan set out for " + Villages.name(colony.id()));
         for (ServerPlayer p : level.players()) {
@@ -336,6 +340,8 @@ public final class Caravans {
             Envoys.waitThere(level, f, t);
             return f.trip() != null;
         }
+        // The pack donkey fetched from the stable, tied and loaded, and kept up with (Riding).
+        if (Riding.caravan(f, level, t)) return true;
         Llama llama = llama(level, t);
         if (llama != null) {
             if (!llama.isLeashed() || llama.distanceToSqr(f) > 12.0 * 12.0) {
@@ -365,6 +371,7 @@ public final class Caravans {
         if (f.tickCount - t.gainedTick > 600) {
             f.moveTo(onGround.getX() + 0.5, onGround.getY(), onGround.getZ() + 0.5, f.getYRot(), 0.0F);
             if (llama != null) llama.moveTo(onGround.getX() + 1.5, onGround.getY(), onGround.getZ() + 0.5, llama.getYRot(), 0.0F);
+            Riding.bringAlong(f, level, onGround.getX() + 0.5, onGround.getY(), onGround.getZ() + 0.5);
             t.gainedTick = f.tickCount;
             t.best = Double.MAX_VALUE;
         }
@@ -396,6 +403,7 @@ public final class Caravans {
         Villages.Village here = Villages.get(t.destination());
         Villages.Village other = Villages.get(t.back ? t.to : t.from);
         long day = level.getDayTime() / 24000L;
+        Riding.unpack(f, level);                                 // the load out of the donkey's chest, to be sold (Riding)
         // The village that sent for the goods buys them off the caravan as they come off its back:
         // at the market's worth from a trading partner, at the family price (half) between a mother
         // village and its colony. What its treasury cannot pay for stays on the carrier's back and
@@ -460,6 +468,7 @@ public final class Caravans {
                 if (g != null) back += g.value() * (s.getCount() - left.getCount());
                 if (!left.isEmpty()) Market.intoStores(level, here.id(), left);
             }
+            Riding.pack(f, level);                               // and the goods for home back into it
             if (t.trade) Ledger.relate(here.id(), other.id(), 3);
             t.back = true;
             List<BlockPos> home = new ArrayList<>(way(here, other));
@@ -476,6 +485,7 @@ public final class Caravans {
         if (llama != null) llama.discard();
         release(level, f, t);
         f.trip(null);
+        Riding.caravanHome(f, level);                            // the donkey led back to the stable (Riding)
         if (t.errand != null) {
             Envoys.home(level, f, t);
             return;
@@ -551,6 +561,7 @@ public final class Caravans {
         if (t == null) return;
         Llama llama = llama(level, t);
         if (llama != null) llama.dropLeash(true, false);
+        Riding.caravanLost(f, level);                            // its donkey let go, for the stable to bring in
         release(level, f, t);
         f.trip(null);
     }
