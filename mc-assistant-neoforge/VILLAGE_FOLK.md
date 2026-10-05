@@ -136,6 +136,27 @@ staked outside the town, so it always has ground to grow into.
 
 ### Life in town
 
+**The village gathers.** The bell rings and the village comes together, by itself, for:
+* the **morning assembly** at the board before work: what is being built, what the
+  village is short of, the elder's orders, tonight's doings, what the scouts and envoys
+  came back with;
+* the **opening** of a new building, with thanks to its builder;
+* the weekly **feast** (food out of the stores, fireworks only if there is gunpowder and
+  paper);
+* **weddings** before the chapel, **vigils**, **celebrations** of a new age, an
+  **honouring**, and a child's **coming of age**;
+* the **council** every seventh day, which hears complaints and votes on what to build
+  next;
+* the **election** of the elder, two days later.
+
+Folk walk there and take their places, in rows before the speaker, in a ring, along an
+aisle or in a circle, children at the front. They face the speaker, cheer, murmur or
+hush, then mingle and drift home talking. Two folk passing chat about what is really
+going on (the building going up, what the village is short of, the weather, the scouts'
+finds), each in its own way. Families have supper together, and everybody runs for
+cover when it rains.
+
+
 The village keeps a register of every building it raises: what it is, where it
 stands and which way it faces. It is saved with the world. The details below are
 added a little at a time round those buildings:
@@ -1288,6 +1309,117 @@ Every alliance, feud, truce and tribute goes into both villages' history.
 `/village relations` lists every pair of neighbours and how they stand, and
 `/village status` gives the council, the citizens and the neighbours.
 
+### Leaders and envoys
+
+How a village gets on with its neighbours is down to who leads it. The elder's nature
+sets the village's temper:
+
+| Elder | Temper | How it deals with the neighbours |
+|---|---|---|
+| cheerful | warm-hearted | makes friends; forgives a feud quickly |
+| sociable | friendly | always sending somebody to see the neighbours |
+| generous | open-handed | sends gifts; never asks for tribute |
+| easygoing | easygoing | lets most things go; quick to a truce |
+| curious | curious | wants to meet everybody |
+| (none yet) | steady | keeps a steady hand |
+| hardworking | shrewd | wants trade pacts, and tribute from a weaker neighbour |
+| shy | wary | keeps itself to itself; slow to trust |
+| grumpy | prickly | takes offence, complains about the boundary, never pays tribute |
+
+Two elders who share a trait get on. Two opposites (cheerful and grumpy, sociable and
+shy, hardworking and easygoing) do not.
+
+Dealings are done **in person**. The elder sends an **envoy**, a real folk on foot (the
+elder itself for an alliance or a peace), down the road to the neighbour. When the envoy
+arrives, the neighbour's bell rings and its folk gather before their board to hear it.
+Their elder answers there and then, in its own way. The envoy walks home, and the answer
+is told at the next morning assembly. An envoy can carry:
+* a first **greeting**;
+* an offer of **trade**: a pact, after which **trade caravans** run both ways every
+  few days. The goods are paid for in coin, and each trip warms the two villages a
+  little;
+* an **alliance**, sworn before the village board. Allies feed each other when one goes
+  hungry;
+* **peace**, with gifts out of the stores and a few coins;
+* a demand for **tribute**, which comes home in the envoy's purse, or with a refusal;
+* a **complaint** about the boundary, answered with an apology or with "it's ours!";
+* a **gift**, from an open-handed elder.
+
+A feud tears up the pacts and alliances between two villages. The board shows the
+neighbours, how the village stands with each, which it trades with, and its elder's
+temper. Ask any folk "Neighbours?" to hear about its elder too.
+
+### Scouts and the atlas
+
+A town of **forty** takes up one or two **scouts** (a hood, a cape, a map case and a
+spyglass). Every morning a scout picks the way the village knows least and sets off with
+food (and a torch or two) from the stores:
+* **Finding the way.** It walks in stages of about twenty blocks. At each stage it
+  looks at the ground ahead, straight on and to either side, and takes the best line:
+  dry, an easy slope, still heading the right way. It checks the path before it
+  commits. Where the way is blocked it searches wider, step by step: round the lake,
+  along the cliff foot. If the whole way is blocked, it notes that in the atlas and
+  comes back.
+* **Coming home.** It drops a breadcrumb every sixteen blocks and comes home along its
+  own trail. It keeps clear of anything hostile, turns back if hurt, and is home by
+  dusk.
+* **What it finds:**
+  * other towns, and villages of villagers;
+  * temples, igloos, ruined portals, trail ruins and beached shipwrecks;
+  * dangers: pillager outposts, witch huts, mansions and monuments. Danger near home
+    sends it running back to warn the village;
+  * high peaks, lakes and the sea, and other lands (a desert, a cherry grove);
+  * iron, coal, gold, diamonds and other ore showing in the rock (marked with a
+    torch), and pools of lava;
+  * good flat ground by water for a new village;
+  * the players it meets on the road, whom it hails.
+* **Telling.** It calls out what it finds as it goes. At home, the finds go into the
+  village's **atlas**, the chronicle, the board ("Scouts: 12 things in the atlas,
+  lately a desert temple 340 south-east; 18% of the land explored") and the next morning
+  assembly.
+* **Other towns.** A town the scouts reach and their own swap their atlases, and count
+  as neighbours twice as far off as before, so envoys and trade can reach them.
+* **Asking.** Ask anybody "What's out there?" (or press **Out there** on the Village
+  tab). A scout gives the exact coordinates, and will **walk you** to a find that is
+  near enough.
+
+### Built by hand
+
+Everything the town does to itself is **done by somebody**:
+* streets worn and paved, lamp posts;
+* gardens, refacing and second storeys, beds made up;
+* ground levelled, chimney fires, washing lines, scarecrows;
+* market stalls, house and street signs;
+* the jetty and the boat, the wall's ladders, the gates and the bell;
+* headstones, new store chests;
+* the road to a colony, and the iron golem (36 iron and a pumpkin).
+
+The materials come out of the stores as before. Now the work also waits until a folk
+from the village has walked to the spot, and then it is done in that folk's hands. The
+hand is one the village can spare: one between trades, a carrier or storekeeper, one
+whose own trade has nothing to work on, or the trade the work belongs to (a fisher for
+the jetty, a guard for the gate). There is never more than one hand in eight on it at a
+time, and only by day. A road crew works out along the road and keeps the ground around
+it loaded as it goes. `/village status` shows who is at the town's works.
+
+And nothing comes from nothing:
+* **Bought, not given:**
+  * the trades' hard-to-get workstations (a brewing stand, an enchanting table, an
+    anvil, a hive with its swarm) are bought from a pedlar out of the treasury;
+  * so is a drover's pair of sheep and hens.
+* **Coin** comes only from goods the village sells, gold it mints and players. Errands
+  and quests are paid from the treasury or a folk's own purse.
+* **The Nether party** takes provisions and wears its tools. It brings back only what
+  it had the means to get: blaze rods only with a blade or bow, quartz and glowstone
+  only with a pick.
+* **Settlers' kits:** a child's first tools come out of the stores, and a colony's
+  settlers are outfitted by their mother village.
+* **Gifts and pastimes:**
+  * gifts and keepsakes come from what a folk has: its pack, the stores, or a flower
+    it picks;
+  * hobby fishing needs a real rod;
+  * a pastime's prop in the hand is only for show, and is never dropped.
+
 ## What they do
 
 * **Trades** — at ten folk: four farmers, three miners, two woodcutters, one
@@ -1477,6 +1609,20 @@ Every push to CI:
   alone for up to sixty game days, with a line a day saying how many folk, which
   age, how many buildings, its renown and how many villages the world now holds —
   published every ten minutes while it runs (`real-epic.txt`);
+* plays **a hundred days** (`village-hundred-days.yml`, started by touching
+  `tools/realworld/hundred.trigger`). A runner has six hours and a big town runs
+  slower by the day, so it is run in legs: each leg loads the world the last one saved
+  and carries on from the day after. One line and one row of numbers a day go to
+  `real-hundred.txt` and `hundred-metrics.jsonl`: folk, age, buildings, stores,
+  coin, contentment, the atlas, pacts and allies, who is at the town's works, and
+  how the wealth is spread;
+* gathers the village for its morning assembly and checks folk take their places and
+  the elder speaks (`t50`), and holds an election (`t51`);
+* sends an envoy to offer trade and checks the other village gathers to hear it and
+  answers (`t52`);
+* sends a scout 260 blocks to a town it has never seen and checks it finds it, comes
+  home and can tell you where it is (`t53`);
+* checks a street is not laid until a folk from the village has walked to it (`t54`);
 * raises a house and a storehouse on the plan's lots and checks the town's life round
   them: the chimney fire, the door's number and names, the washing line, the windows lit
   by night and dark by day, a street sign, the stalls and their goods, a scarecrow
