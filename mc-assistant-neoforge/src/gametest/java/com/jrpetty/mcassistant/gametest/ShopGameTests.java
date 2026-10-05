@@ -89,11 +89,11 @@ public class ShopGameTests {
     // ============================================================ the shop's bench
 
     /**
-     * A shopkeeper in a Stone Age village (timber and iron to spare; stone and coal put by for the age)
-     * with nothing in the stores but oak logs, iron and a crafting table, and no tools on its shelves:
-     * it saws the logs to planks, the planks to sticks, and makes a tool for its shelves, with its mark
-     * on it. It never saws into the builders' sixteen logs nor beats the smith's last sixteen bars, and
-     * the shop's books say what it made and how.
+     * A shopkeeper in a Stone Age village (timber, iron and the age's stone to spare; coal put by for the
+     * age) with nothing in the stores but oak logs, iron, cobblestone and a crafting table, and no tools on
+     * its shelves: it saws the logs to planks, the planks to sticks, and makes a stone tool for its shelves,
+     * with its mark on it. It never saws into the builders' sixteen logs, and leaves the iron be: an iron
+     * tool is the Iron Age's work (Workshop, Tiers). The shop's books say what it made and how.
      */
     @GameTest(template = EMPTY, timeoutTicks = 200, batch = "sh01_shop_makes_a_tool")
     public static void sh01_shop_makes_a_tool(GameTestHelper helper) {
@@ -112,7 +112,8 @@ public class ShopGameTests {
             Villages.ageForTests(village, Villages.Age.STONE);
             emptyStores(level, village);
             stores(level, heart, 4, 0, new ItemStack(Items.OAK_LOG, 32), new ItemStack(Items.IRON_INGOT, 40),
-                new ItemStack(Items.CRAFTING_TABLE));
+                new ItemStack(Items.CRAFTING_TABLE), new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.COBBLESTONE, 64),
+                new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.COBBLESTONE, 64));
             Villages.forgetStock();
             keeper.setJob(StationTask.SHOP);
             Predicate<ItemStack> handled = s -> s.is(Items.IRON_PICKAXE) || s.is(Items.IRON_AXE) || s.is(Items.IRON_SHOVEL)
@@ -140,7 +141,8 @@ public class ShopGameTests {
                 + "; the books: " + shop);
             helper.assertTrue(!tool.isEmpty(), "a tool with a handle made for the shelves: " + made);
             helper.assertTrue(logs < 32 && logs >= 16, "the logs were sawn, and never into the builders' sixteen: " + logs);
-            helper.assertTrue(iron < 40 && iron >= 16, "the iron was beaten, and never the smith's last sixteen bars: " + iron);
+            helper.assertTrue(iron == 40 && !BuiltInRegistries.ITEM.getKey(tool.getItem()).getPath().startsWith("iron_"),
+                "a stone tool, and not a bar of the iron: an iron tool is the Iron Age's work: " + iron + ", " + id);
             helper.assertTrue(r.getInt("madeToday") >= 1 && r.getString("how").contains("planks") && r.getString("how").contains("stick"),
                 "the shop's books have it made, the whole way from planks and sticks: " + r.getString("how"));
             helper.assertTrue(Craftsmanship.gradeOf(tool) != null, "and it carries the shopkeeper's mark");

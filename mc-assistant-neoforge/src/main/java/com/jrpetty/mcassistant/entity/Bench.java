@@ -72,8 +72,12 @@ public final class Bench {
 
     /** Who is at the bench and what it has to work with: its level at the trade (Craftsmanship), its
      *  name (for its mark; empty with nobody at the bench, and then no mark), and whether a crafting
-     *  table, a furnace, a smoker and a hearth are to hand. */
-    public record Hand(int skill, String maker, boolean table, boolean furnace, boolean smoker, boolean campfire) {}
+     *  table, a furnace, a smoker, a hearth and a smithing table are to hand. */
+    public record Hand(int skill, String maker, boolean table, boolean furnace, boolean smoker, boolean campfire, boolean smithy) {
+        public Hand(int skill, String maker, boolean table, boolean furnace, boolean smoker, boolean campfire) {
+            this(skill, maker, table, furnace, smoker, campfire, false);
+        }
+    }
 
     private static final Map<String, long[]> STANDS = new ConcurrentHashMap<>();
 
@@ -99,7 +103,10 @@ public final class Bench {
             || Villages.hasBuilt(v.id(), "smeltery");
         boolean smoker = toHand(level, v, f, Items.SMOKER, Blocks.SMOKER, building);
         boolean campfire = Tavern.of(v.id()) != null || standsIn(level, v, building, Blocks.CAMPFIRE);
-        return new Hand(skill, maker, table, furnace, smoker, campfire);
+        // The smithing table (the shop's workshop's netherite: Workshop): its own, the stores', its building's or the smithy's.
+        boolean smithy = toHand(level, v, f, Items.SMITHING_TABLE, Blocks.SMITHING_TABLE, building)
+            || standsIn(level, v, "smithy", Blocks.SMITHING_TABLE);
+        return new Hand(skill, maker, table, furnace, smoker, campfire, smithy);
     }
 
     private static boolean toHand(ServerLevel level, Villages.Village v, @Nullable VillageFolkEntity f, Item item, Block block,
@@ -257,6 +264,7 @@ public final class Bench {
                 case FURNACE -> "in the furnace";
                 case SMOKER -> "in the smoker";
                 case CAMPFIRE -> "over the hearth";
+                case SMITHING -> "at the smithing table";
             };
         }
     }
@@ -334,10 +342,15 @@ public final class Bench {
         final Map<Item, Integer> takes;
         final List<Step> steps;
         final List<Item> tools;
-        boolean table, furnace;
+        boolean table, furnace, smithy;
 
         State(Map<Item, Integer> free, boolean table, boolean furnace) {
             this(new HashMap<>(free), new HashMap<>(), new LinkedHashMap<>(), new ArrayList<>(), new ArrayList<>(), table, furnace);
+        }
+
+        State(Map<Item, Integer> free, Hand hand) {
+            this(free, hand.table(), hand.furnace());
+            this.smithy = hand.smithy();
         }
 
         private State(Map<Item, Integer> free, Map<Item, Integer> spare, Map<Item, Integer> takes, List<Step> steps, List<Item> tools,
@@ -352,8 +365,10 @@ public final class Bench {
         }
 
         State copy() {
-            return new State(new HashMap<>(free), new HashMap<>(spare), new LinkedHashMap<>(takes), new ArrayList<>(steps),
+            State c = new State(new HashMap<>(free), new HashMap<>(spare), new LinkedHashMap<>(takes), new ArrayList<>(steps),
                 new ArrayList<>(tools), table, furnace);
+            c.smithy = smithy;
+            return c;
         }
 
         void set(State o) {
@@ -364,6 +379,7 @@ public final class Bench {
             tools.clear(); tools.addAll(o.tools);
             table = o.table;
             furnace = o.furnace;
+            smithy = o.smithy;
         }
     }
 
@@ -416,7 +432,7 @@ public final class Bench {
         Map<Item, Integer> held = held(level, v.id());
         Map<Item, String> why = new HashMap<>();
         Ctx c = new Ctx(level, hand, held, why);
-        State s = new State(free(level, v, held, why), hand.table(), hand.furnace());
+        State s = new State(free(level, v, held, why), hand);
         if (!Craftsmanship.canMake(hand.skill(), target)) {
             return new Plan(target, 0, List.of(), Map.of(), Map.of(), List.of(), "the hand for it",
                 null, 0, "it's level " + Craftsmanship.rung(target) + " work, and I'm level " + hand.skill());
@@ -442,7 +458,7 @@ public final class Bench {
         Map<Item, Integer> held = held(level, v.id());
         Map<Item, String> why = new HashMap<>();
         Ctx c = new Ctx(level, hand, held, why);
-        State s = new State(free(level, v, held, why), hand.table(), hand.furnace());
+        State s = new State(free(level, v, held, why), hand);
         for (Want w : wants) {
             if (!need(c, s, w.what(), w.kinds(), w.count(), 0, new HashSet<>(), false, w.words())) {
                 String words = c.missing == null ? w.words() : c.missingWords;
@@ -566,6 +582,7 @@ public final class Bench {
                 if (!all) continue;
                 if (w.fire() == Fire.NONE && w.needsTable() && !t.table && !setUp(c, t, Items.CRAFTING_TABLE, depth, path)) continue;
                 if (w.fire() == Fire.FURNACE && !t.furnace && !setUp(c, t, Items.FURNACE, depth, path)) continue;
+                if (w.fire() == Fire.SMITHING && !t.smithy && !setUp(c, t, Items.SMITHING_TABLE, depth, path)) continue;
                 if ((w.fire() == Fire.FURNACE || w.fire() == Fire.SMOKER) && !fuel(c, t, times, depth)) continue;
                 int made = times * w.yield();
                 t.free.merge(item, made, Integer::sum);
@@ -586,6 +603,7 @@ public final class Bench {
             case FURNACE -> true;                       // one to hand, or one made first (setUp)
             case SMOKER -> c.hand.smoker();
             case CAMPFIRE -> c.hand.campfire();
+            case SMITHING -> true;                      // one to hand, or one made first (setUp)
         };
     }
 
@@ -593,17 +611,18 @@ public final class Bench {
      *  and last a furnace still to be made. */
     private static int firePreference(Ctx c, State s, Fire f) {
         return switch (f) {
-            case NONE -> 0;
+            case NONE, SMITHING -> 0;
             case SMOKER -> 1;
             case CAMPFIRE -> 2;
             case FURNACE -> s.furnace ? 3 : 4;
         };
     }
 
-    /** A crafting table or a furnace the maker has not got: made first, of the stores, and kept. */
+    /** A crafting table, a furnace or a smithing table the maker has not got: made first, of the stores, and kept. */
     private static boolean setUp(Ctx c, State t, Item tool, int depth, Set<Item> path) {
         if (!produce(c, t, tool, 1, depth + 1, path)) {
-            c.lacking(depth, List.of(tool), x -> x.is(tool), 1, tool == Items.CRAFTING_TABLE ? "a crafting table" : "a furnace");
+            c.lacking(depth, List.of(tool), x -> x.is(tool), 1, tool == Items.CRAFTING_TABLE ? "a crafting table"
+                : tool == Items.SMITHING_TABLE ? "a smithing table" : "a furnace");
             return false;
         }
         t.free.merge(tool, -1, Integer::sum);
@@ -611,6 +630,7 @@ public final class Bench {
         t.tools.add(tool);
         if (tool == Items.CRAFTING_TABLE) t.table = true;
         if (tool == Items.FURNACE) t.furnace = true;
+        if (tool == Items.SMITHING_TABLE) t.smithy = true;
         return true;
     }
 

@@ -228,7 +228,13 @@ public final class Cafe {
     @Nullable
     public static String keepShop(ServerLevel level, Villages.Village v, @Nullable VillageFolkEntity f) {
         VillageFolkEntity hand = f != null ? f : Stockroom.keeperOf(v.id(), Stockroom.Seller.SHOP);
-        Stockroom.Made made = Stockroom.restock(level, v, Stockroom.Seller.SHOP, shopWares(), hand);
+        // The shop's workshop (Workshop): its round (its staff, its order book, a hand taken on, the watch fitted
+        // out), and a piece off its order book — the town's needs, the shelves, what sells — at what the age
+        // lets it make. Its hands make as the keeper does; the counter is the keeper's.
+        Workshop.tick(level, v);
+        Stockroom.Made made = Stockroom.restock(level, v, Stockroom.Seller.SHOP, Workshop.wares(level, v.id()), hand);
+        if (made != null) Workshop.made(level, v, hand, made);
+        if (Workshop.isHand(hand)) return made != null ? name(made.out()) + " for the shop" : null;
         int set = dress(level, v, "shop");
         return made != null ? name(made.out()) + " for the shelves" : set > 0 ? "the shop counter set out" : null;
     }
@@ -357,6 +363,8 @@ public final class Cafe {
         if (s.is(Items.POTION)) return true;
         if (Budget.kitOf(s) != null && Prices.each(s.getItem()) >= 2.0) return true;
         if (houseware(s)) return true;
+        // The workshop's tools, arms and armour (Workshop), whatever their price: the village keeps its own first (Budget).
+        if (Budget.kitOf(s) != null && Workshop.wareFor(Stockroom.key(s)) != null) return true;
         return s.isEnchanted() || s.is(ItemTags.BEDS) || s.is(ItemTags.WOOL_CARPETS) || s.is(ItemTags.BANNERS)
             || s.is(Items.BOOK) || s.is(Items.HONEY_BOTTLE) || s.is(Items.HONEYCOMB) || s.is(Items.SHEARS)
             || s.is(Items.BUCKET) || s.is(Items.IRON_PICKAXE) || s.is(Items.IRON_SWORD) || s.is(Items.IRON_AXE)

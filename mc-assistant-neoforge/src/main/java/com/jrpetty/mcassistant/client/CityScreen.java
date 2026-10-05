@@ -95,6 +95,7 @@ public class CityScreen extends Screen {
             next.selectedTrade = open.selectedTrade;
         }
         if (data.contains("tab")) next.tab = Math.max(0, Math.min(TABS.length - 1, data.getInt("tab")));   // a page asked for
+        if (data.contains("shopSeller")) next.shopSeller = data.getString("shopSeller");                   // and a seller on it (the workshop)
         mc.setScreen(next);
     }
 
@@ -612,16 +613,31 @@ public class CityScreen extends Screen {
         if (pick == null) pick = sellers.get(0);
         // The sellers, along the top.
         int kx = x;
+        boolean workshop = "workshop".equals(shopSeller);
         for (CompoundTag t : sellers) {
             String label = capital(t.getString("name")) + (t.getBoolean("built") ? "" : " (none yet)");
             int kw = (int) (font.width(label) * 0.75) + 10;
-            boolean on = t == pick;
+            boolean on = t == pick && !workshop;
             g.fill(kx, y, kx + kw, y + 11, on ? Ui.ROW_PICK : Ui.ROW);
             g.renderOutline(kx, y, kw, 11, Ui.EDGE_SOFT);
             small(g, label, kx + 5, y + 2, on ? Ui.GOOD : t.getBoolean("built") ? Ui.INK : Ui.FAINT);
             final String id = t.getString("id");
             zones.add(new Zone(kx, y, kx + kw, y + 11, () -> { shopSeller = id; scroll = 0; }));
             kx += kw + 3;
+        }
+        // The shop's workshop (Workshop): its makers, its order book and what the age lets it make, a tab of its own.
+        CompoundTag ws = data.getCompound("workshop");
+        if (!ws.isEmpty()) {
+            String label = "The shop's workshop" + (ws.getBoolean("built") ? "" : " (no shop yet)");
+            int kw = (int) (font.width(label) * 0.75) + 10;
+            g.fill(kx, y, kx + kw, y + 11, workshop ? Ui.ROW_PICK : Ui.ROW);
+            g.renderOutline(kx, y, kw, 11, Ui.EDGE_SOFT);
+            small(g, label, kx + 5, y + 2, workshop ? Ui.GOOD : ws.getBoolean("built") ? Ui.INK : Ui.FAINT);
+            zones.add(new Zone(kx, y, kx + kw, y + 11, () -> { shopSeller = "workshop"; scroll = 0; }));
+            if (workshop) {
+                workshop(g, x, y + 15, cw, ch - 15, mx, my, ws);
+                return;
+            }
         }
         if (rep.getBoolean("marketDay")) small(g, "Market day today", x + cw - (int) (font.width("Market day today") * 0.75), y + 2, Ui.GOOD);
         // The seller's week.
@@ -688,6 +704,126 @@ public class CityScreen extends Screen {
         if (wares.isEmpty()) small(g, "Nothing on its books yet.", x, ty, Ui.MUTED);
         small(g, Ui.clip(font, wares.size() + " wares · the stock it keeps follows what sells · the mouse over a ware for its books"
             + (wares.size() > rowsFit ? " · scroll for more" : ""), (int) (cw / 0.75)), x, y + ch - 9, Ui.FAINT);
+    }
+
+    private static final String[] WORKSHOP_HEADS = { "On the book", "Stock / target", "For", "Note" };
+
+    /**
+     * The shop's workshop (Workshop): who makes at its bench (the shopkeeper and its hands, what each made
+     * today and is making), the day's book of pieces made (who, what, of what, and what for), the order book
+     * against the stock (what the watch, the rack, the shelves and the players want kept, and what the bench
+     * is short of), and the age's say: the blueprints it knows, those its age opens, and what the next age will
+     * let it make.
+     */
+    private void workshop(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my, CompoundTag ws) {
+        int cardW = (cw - 3 * 4) / 4, cardH = 28;
+        card(g, x, y, cardW, cardH, "Kept by", ws.getString("keeper").isEmpty() ? "nobody" : ws.getString("keeper"),
+            ws.getInt("hands") + (ws.getInt("hands") == 1 ? " hand" : " hands") + " at the bench (wants " + ws.getInt("handsWanted") + ")",
+            ws.getBoolean("open") ? GREEN : RED);
+        card(g, x + cardW + 4, y, cardW, cardH, "Made today", num(ws.getInt("madeToday")),
+            ws.getInt("madeYesterday") + " yesterday; " + ws.getInt("toTheWatch") + " to the watch", PURPLE);
+        card(g, x + 2 * (cardW + 4), y, cardW, cardH, "Blueprints open", num(ws.getInt("allowed")) + " of " + num(ws.getInt("blueprints")),
+            "every recipe; " + ws.getString("age") + " allows these", BLUE);
+        card(g, x + 3 * (cardW + 4), y, cardW, cardH, "Next age", ws.getString("nextAge").isEmpty() ? "—" : "+" + num(ws.getInt("nextCount")),
+            ws.getString("nextAge").isEmpty() ? "every age reached" : "more with " + ws.getString("nextAge"), AMBER);
+        int top = y + cardH + 6;
+        int left = cw * 40 / 100, rx = x + left + 6, rw = cw - left - 6;
+        // The makers.
+        int ly = top;
+        Ui.section(g, font, "At the bench", x, ly, left);
+        ly += 11;
+        ListTag makers = ws.getList("makers", Tag.TAG_COMPOUND);
+        if (makers.isEmpty()) {
+            small(g, "Nobody: the shop has no keeper yet.", x, ly, Ui.MUTED);
+            ly += 9;
+        }
+        for (int i = 0; i < Math.min(5, makers.size()); i++) {
+            CompoundTag m = makers.getCompound(i);
+            small(g, Ui.clip(font, m.getString("name") + " (" + m.getString("role") + ", L" + m.getInt("level") + ") — " + m.getInt("made")
+                + " today", (int) (left / 0.75)), x, ly, m.getString("role").equals("hand") ? Ui.INK : Ui.GOOD);
+            small(g, Ui.clip(font, "  " + m.getString("doing"), (int) (left / 0.75)), x, ly + 8, Ui.MUTED);
+            ly += 17;
+        }
+        // The day's pieces.
+        ly += 2;
+        Ui.section(g, font, "Made today, and of what", x, ly, left);
+        ly += 11;
+        ListTag log = ws.getList("log", Tag.TAG_COMPOUND);
+        if (log.isEmpty()) {
+            small(g, "Nothing yet today.", x, ly, Ui.MUTED);
+            ly += 9;
+        }
+        int bottom = y + ch - 30;
+        for (int i = 0; i < log.size() && ly <= bottom - 8; i++) {
+            CompoundTag l = log.getCompound(i);
+            String line = l.getString("time") + " " + l.getString("who") + ": " + l.getString("what")
+                + (l.getString("from").isEmpty() ? "" : ", of " + l.getString("from")) + " — for " + l.getString("why");
+            boolean over = mx >= x && mx < x + left && my >= ly - 1 && my < ly + 8;
+            small(g, Ui.clip(font, line, (int) (left / 0.75)), x, ly, l.getString("role").equals("guard") ? Ui.GOOD : Ui.INK);
+            if (over) {
+                hover = List.of(Component.literal(line));
+                hoverX = mx;
+                hoverY = my;
+            }
+            ly += 9;
+        }
+        // The order book against the stock.
+        int ty = top;
+        int[] cols = { 0, rw * 36 / 100, rw * 60 / 100, rw * 78 / 100 };
+        for (int i = 0; i < WORKSHOP_HEADS.length; i++) small(g, WORKSHOP_HEADS[i], rx + cols[i], ty, Ui.FAINT);
+        ty += 10;
+        ListTag book = ws.getList("book", Tag.TAG_COMPOUND);
+        int rowsFit = Math.max(1, (bottom - ty) / 10);
+        int start = Math.max(0, Math.min(scroll, Math.max(0, book.size() - rowsFit)));
+        for (int i = start; i < Math.min(book.size(), start + rowsFit); i++) {
+            CompoundTag r = book.getCompound(i);
+            boolean over = mx >= rx && mx < rx + rw && my >= ty - 1 && my < ty + 9;
+            g.fill(rx - 2, ty - 1, rx + rw, ty + 9, over ? Ui.HI : i % 2 == 0 ? Ui.ROW : Ui.ROW_ALT);
+            icon(g, r.getString("item"), rx, ty - 1, 0.6F);
+            small(g, Ui.clip(font, r.getString("name"), (int) ((cols[1] - 14) / 0.75)), rx + 11, ty + 1, Ui.INK);
+            int have = r.getInt("have"), target = Math.max(1, r.getInt("target"));
+            int bw = Math.max(10, cols[2] - cols[1] - 30);
+            float frac = Math.min(1f, have / (float) target);
+            Ui.bar(g, rx + cols[1], ty + 1, bw, 6, frac, frac >= 1f ? GREEN : frac >= 0.5f ? AMBER : RED);
+            small(g, have + "/" + r.getInt("target"), rx + cols[1] + bw + 2, ty + 1, Ui.MUTED);
+            small(g, Ui.clip(font, r.getString("why"), (int) ((cols[3] - cols[2] - 2) / 0.75)), rx + cols[2], ty + 1, Ui.MUTED);
+            String note = !r.getString("short").isEmpty() ? "short: " + r.getString("short") : r.getString("status");
+            small(g, Ui.clip(font, note, (int) ((rw - cols[3]) / 0.75)), rx + cols[3], ty + 1, !r.getString("short").isEmpty() ? Ui.WARN : Ui.MUTED);
+            if (over) {
+                List<Component> tip = new ArrayList<>();
+                tip.add(Component.literal(r.getString("name")));
+                tip.add(Component.literal("In stock " + have + ", keeps " + r.getInt("target") + (r.getInt("need") > 0
+                    ? " (the town needs " + r.getInt("need") + ": " + r.getString("why") + ")" : "")));
+                if (r.getInt("madeToday") > 0) tip.add(Component.literal("Made today: " + r.getInt("madeToday")));
+                if (!r.getString("how").isEmpty()) tip.add(Component.literal("Last made: " + r.getString("how")));
+                if (!r.getString("short").isEmpty()) tip.add(Component.literal("Short of " + r.getString("short")));
+                hover = tip;
+                hoverX = mx;
+                hoverY = my;
+            }
+            ty += 10;
+        }
+        if (book.isEmpty()) small(g, "Nothing on the order book yet.", rx, ty, Ui.MUTED);
+        // The age's say, and what waits on it.
+        List<String> next = new ArrayList<>();
+        ListTag nl = ws.getList("next", Tag.TAG_STRING);
+        for (int i = 0; i < nl.size(); i++) next.add(nl.getString(i));
+        int fy = y + ch - 27;
+        String nextLine = ws.getString("nextAge").isEmpty() ? "Every age reached: the makers may work every blueprint they know."
+            : capital(ws.getString("nextAge")) + " will let us make " + (next.isEmpty() ? "nothing new" : String.join(", ", next))
+                + (ws.getInt("nextCount") > next.size() ? " and " + (ws.getInt("nextCount") - next.size()) + " more" : "") + ".";
+        small(g, Ui.clip(font, nextLine, (int) (cw / 0.75)), x, fy, Ui.GOOD);
+        StringBuilder more = new StringBuilder();
+        for (String[] part : new String[][]{ { "waiting", "Waiting on the age: " }, { "firing", "At the smeltery: " }, { "orders", "Ordered: " } }) {
+            ListTag l = ws.getList(part[0], Tag.TAG_STRING);
+            if (l.isEmpty()) continue;
+            List<String> items = new ArrayList<>();
+            for (int i = 0; i < l.size(); i++) items.add(l.getString(i));
+            more.append(more.length() == 0 ? "" : " · ").append(part[1]).append(String.join(", ", items));
+        }
+        if (more.length() > 0) small(g, Ui.clip(font, more.toString(), (int) (cw / 0.75)), x, fy + 9, Ui.WARN);
+        small(g, Ui.clip(font, book.size() + " on the order book · the town's needs first, then the shelves and what sells · "
+            + "the mouse over a line for its books" + (book.size() > rowsFit ? " · scroll for more" : ""), (int) (cw / 0.75)), x, y + ch - 9, Ui.FAINT);
     }
 
     private void jobs(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my) {

@@ -337,6 +337,12 @@ public final class Stockroom {
 
     // ------------------------------------------------------------------ which seller
 
+    /** The wares a seller makes (or, for the tavern, pours), in this village: the shop's are its workshop's
+     *  order book (Workshop: the town's needs, the shelves and what sells, at what the age lets it make). */
+    static List<Ware> wares(Seller s, ServerLevel level, UUID village) {
+        return s == Seller.SHOP ? Workshop.wares(level, village) : wares(s);
+    }
+
     /** The wares a seller makes (or, for the tavern, pours). */
     static List<Ware> wares(Seller s) {
         return switch (s) {
@@ -368,6 +374,8 @@ public final class Stockroom {
     static Found find(String key) {
         for (Ware w : Cafe.shopWares()) if (w.key().equals(key)) return new Found(Seller.SHOP, w);
         for (Ware w : Cafe.cafeWares()) if (w.key().equals(key)) return new Found(Seller.CAFE, w);
+        Ware made = Workshop.wareFor(key);                       // the shop's workshop's own (Workshop)
+        if (made != null) return new Found(Seller.SHOP, made);
         return null;
     }
 
@@ -389,6 +397,7 @@ public final class Stockroom {
     @Nullable
     static VillageFolkEntity keeperOf(UUID village, Seller s) {
         if (s.keeper == null) return null;
+        if (s == Seller.SHOP) return Workshop.keeper(village);       // not one of its hands (Workshop)
         for (AssistantEntity a : Villages.folkOf(village)) {
             if (a instanceof VillageFolkEntity f && !f.isBaby() && f.stationTask() == s.keeper) return f;
         }
@@ -434,9 +443,20 @@ public final class Stockroom {
         return d;
     }
 
-    /** How many of this ware its maker means to keep (the rules in the class comment). */
+    /** How many of this ware its maker means to keep (the rules in the class comment). The shop's workshop
+     *  (Workshop) keeps nothing the village's age has not come to, and never fewer than the town needs of it
+     *  (the watch's armour, the storehouse's rack, an order). */
     public static int target(ServerLevel level, UUID village, Seller maker, Ware w) {
         if (!w.made()) return 0;
+        if (maker == Seller.SHOP) {
+            if (!Workshop.allows(level, village, w)) return 0;
+            return Math.max(booked(level, village, maker, w), Workshop.need(level, village, w.key()));
+        }
+        return booked(level, village, maker, w);
+    }
+
+    /** What the books say to keep: the usual at first, then two and a half days' sales. */
+    private static int booked(ServerLevel level, UUID village, Seller maker, Ware w) {
         Book b = book(level, village, maker);
         int closed = (int) Math.min(WEEK - 1, Math.max(0, b.day - b.opened));
         if (closed < 2) return w.usual();
@@ -546,6 +566,15 @@ public final class Stockroom {
                 if (firstShort == null) { firstShort = l; firstWare = w.key(); }
                 continue;
             }
+            // The shop's firing is the smeltery's, with a smelter at work (Workshop): the piece waits for it.
+            String fired = s == Seller.SHOP ? Workshop.forTheSmelter(level, v, p) : null;
+            if (fired != null) {
+                l.shortOf = fired;
+                l.why = Workshop.WAITS_ON_THE_SMELTER;
+                l.missing = null;
+                l.missingCount = 0;
+                continue;
+            }
             ItemStack out;
             if (w.own() != null) {
                 if (!Bench.take(level, v, p, f)) continue;
@@ -591,6 +620,8 @@ public final class Stockroom {
      */
     public static Order makeToOrder(ServerLevel level, Villages.Village v, VillageFolkEntity keeper, Item it, int n) {
         if (n <= 0 || RecipeBook.waysFor(level, it).isEmpty()) return new Order(0, "");
+        String age = Workshop.refuse(level, v, it);                  // nothing the village's age has not come to (Tiers)
+        if (!age.isEmpty()) return new Order(0, age);
         ItemStack one = new ItemStack(it);
         int most = one.getMaxStackSize() == 1 ? 1 : Math.min(n, one.getMaxStackSize());
         Bench.Hand hand = Bench.handOf(level, v, keeper, Seller.STORES.building);
@@ -626,7 +657,7 @@ public final class Stockroom {
             Line best = null;
             String bestKey = null;
             int most = -1;
-            for (Ware w : wares(s)) {
+            for (Ware w : wares(s, level, v.id())) {
                 Line l = b.lines.get(w.key());
                 if (l == null || l.missing == null || !l.why.isEmpty()) continue;
                 if (Market.stock(level, v.id(), w.is()) > 0) continue;
@@ -686,7 +717,7 @@ public final class Stockroom {
         List<String> cheap = new ArrayList<>();
         String short_ = null;
         Book b = book(level, village, s);
-        for (Ware w : wares(s)) {
+        for (Ware w : wares(s, level, village)) {
             if (!w.made()) continue;
             int t = target(level, village, s, w), have = Market.stock(level, village, w.is());
             if (have < t && low.size() < 3) low.add(plural(w.key()) + " (" + have + " of " + t + ")");
@@ -709,7 +740,7 @@ public final class Stockroom {
         for (Seller s : new Seller[]{ Seller.SHOP, Seller.CAFE }) {
             if (keeperOf(village, s) == null) continue;
             Book b = book(level, village, s);
-            for (Ware w : wares(s)) {
+            for (Ware w : wares(s, level, village)) {
                 Line l = b.lines.get(w.key());
                 if (l == null || l.shortOf.isEmpty()) continue;
                 out.add(s.words + " needs " + l.shortOf + " for its " + plural(w.key()));
@@ -798,7 +829,7 @@ public final class Stockroom {
         t.putInt("daysKept", (int) (b.day - b.opened));
         // The rows: the wares it makes (or pours) first, then anything else sold or asked for here.
         List<String> keys = new ArrayList<>();
-        for (Ware w : wares(s)) keys.add(w.key());
+        for (Ware w : wares(s, level, village)) keys.add(w.key());
         for (Line l : b.lines.values()) if (!keys.contains(l.key)) keys.add(l.key);
         ListTag rows = new ListTag();
         ListTag shorts = new ListTag();
