@@ -279,13 +279,14 @@ public class BellGameTests {
         friend.life().feel(birthday.getUUID(), birthday.displayNameCap(), 60);
         birthday.life().feel(friend.getUUID(), friend.displayNameCap(), 60);
         friend.insertItem(new ItemStack(Items.POPPY));
-        birthday.bornDaysAgo(14);                                    // forty today: thirty-eight yesterday
+        birthday.setAgeForTests(40);                                 // forty today: thirty-nine yesterday
         int[] before = { carried(friend, Items.POPPY), carried(birthday, Items.POPPY) };
         birthday.refreshMood();
         int moodBefore = birthday.persona().mood();
         Kit.log("b02 the mood before its birthday: " + moodBefore + " " + birthday.persona().moodWhy());
-        helper.assertTrue(birthday.ageYears() == 40 && Birthdays.ageOn(birthday.bornDay(), day - 1) == 38,
-            "forty today, thirty-eight yesterday: a birthday (" + birthday.ageYears() + ")");
+        helper.assertTrue(birthday.ageYears() == 40 && Birthdays.ageOn(birthday.bornDay(), day - 1) == 39,
+            "forty today, thirty-nine yesterday: a birthday (" + birthday.ageYears() + ", yesterday "
+                + Birthdays.ageOn(birthday.bornDay(), day - 1) + ")");
         Birthdays.celebrate(level, Villages.get(village), birthday, day);
         Kit.log("b02 " + birthday.displayNameCap() + "'s birthday, " + birthday.ageYears() + "; " + friend.displayNameCap() + " owes a present: "
             + Birthdays.owes(friend) + "; poppies " + before[0] + "/" + before[1] + "; card: " + Birthdays.cardLine(birthday));

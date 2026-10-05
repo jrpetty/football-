@@ -25,12 +25,14 @@ import java.util.UUID;
  * (Birthdays) and the day once a year it keeps for its founding (FoundingDay) — what they have in
  * common, and what of them is kept with the world.
  *
- * <p><b>The town's year.</b> Nothing in a folk's life measures a year: folk count their ages two
- * years to the day (six, as children), so a year by their count is half a day — a feast twice a
- * day. The town counts its own years by the weeks it already keeps (the rest day, market day, the
- * council's sitting, the feast): four of them, twenty-eight days. Long enough that its Founding Day is
- * an occasion, short enough that a town sees one every few evenings' play and a folk lives through
- * one or two (a folk lives thirty to forty-five days).
+ * <p><b>The town's year.</b> Nothing in a folk's life measures a year: folk count their ages a
+ * year to every three days once grown (six to the day, as children), so a year by their count is
+ * three days — a feast every third evening. The town counts its own years by the weeks it already
+ * keeps (the rest day, market day, the council's sitting, the feast): four of them, twenty-eight days.
+ * Long enough that its Founding Day is an occasion, short enough that a town sees one every few
+ * evenings' play, and a folk lives through a good many of them (a founder seventy-five days to two
+ * hundred and forty-odd, about a hundred and sixty as a rule; one born in the village a hundred and
+ * fifty to two hundred and fifty: VillageFolkEntity.DAYS_A_YEAR).
  *
  * <p>Kept with the world (the rest of a village rides on its folk, but these are dates): the day's
  * bells, so a restart does not ring them twice or let a town lie in; the last birthday each folk kept,

@@ -147,6 +147,17 @@ public final class VillageCommands {
                 .then(Commands.literal("now").requires(src -> src.hasPermission(2))
                     .then(Commands.argument("name", com.mojang.brigadier.arguments.StringArgumentType.greedyString())
                         .executes(ctx -> birthdays(ctx, com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "name"))))))
+            // [ageing] Each folk's years, the age it will live to and the day that falls on (Lifespans).
+            .then(Commands.literal("lifespans").executes(ctx -> {
+                Villages.Village v = villageHere(ctx);
+                if (v == null) {
+                    ctx.getSource().sendFailure(Component.literal("No village yet."));
+                    return 0;
+                }
+                java.util.List<String> lines = com.jrpetty.mcassistant.entity.Lifespans.lines(v.id(), ctx.getSource().getLevel().getDayTime() / 24000L);
+                for (String l : lines) ctx.getSource().sendSuccess(() -> Component.literal(l), false);
+                return lines.size();
+            }))
             .then(Commands.literal("research").executes(VillageCommands::research)
                 .then(Commands.literal("pick").requires(src -> src.hasPermission(2))
                     .then(Commands.argument("civic", com.mojang.brigadier.arguments.StringArgumentType.word())

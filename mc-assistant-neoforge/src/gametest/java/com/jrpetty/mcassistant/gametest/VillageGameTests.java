@@ -2884,7 +2884,7 @@ public class VillageGameTests {
         // Old age.
         level.setDayTime((level.getDayTime() / 24000L) * 24000L + 600L);
         int lifespan = mum.lifespan();
-        mum.bornDaysAgo(3 + lifespan);                 // well past its years
+        mum.setAgeForTests(lifespan + 1);              // past its years
         String name = mum.displayNameCap();
         Kit.log("t35 " + name + " is " + mum.ageYears() + " (lifespan " + lifespan + "), old " + mum.isOld());
         mum.growOldForTests();

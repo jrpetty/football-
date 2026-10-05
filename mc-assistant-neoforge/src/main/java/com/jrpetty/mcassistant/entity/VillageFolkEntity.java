@@ -1825,9 +1825,18 @@ public class VillageFolkEntity extends AssistantEntity {
 
     /** Years a child grows a day (it is grown at eighteen, three days old). */
     static final int CHILD_YEARS_A_DAY = 6;
-    /** Years a grown folk ages in a day. */
-    static final int YEARS_A_DAY = 2;
-    /** The age folk are old at: slower about the place and at work. */
+    /**
+     * [ageing] Days a grown folk takes to age a year: a year every third day. At two years a day
+     * every founder grew old together and the lot of them died between about the fifteenth day and
+     * the fortieth; at a year in three a founder lives a season of play (seventy-five days at the
+     * least, two hundred and forty-odd at the most, about a hundred and sixty as a rule) and a child
+     * born in the village a hundred and fifty to two hundred and fifty. Childhood is as quick as
+     * ever: school, apprenticeships and families want it.
+     */
+    public static final int DAYS_A_YEAR = 3;
+    /** [ageing] The founders' years when the village began: eighteen to forty-five, a spread of them. */
+    static final int FOUNDER_YOUNGEST = 18, FOUNDER_OLDEST = 45;
+    /** The age folk are old at. It costs them nothing at their work (oldAgePercentAt). */
     public static final int OLD_AT = 60;
     /** What an apprenticeship is worth when it is over: a few levels' knack. */
     static final int APPRENTICE_XP = 400;
@@ -1845,11 +1854,44 @@ public class VillageFolkEntity extends AssistantEntity {
         long day = level().getDayTime() / 24000L;
         if (bornDay == UNKNOWN) {
             if (isBaby()) bornDay = day;
-            else bornDay = day - GROW_DAYS - (2 + Math.floorMod(getUUID().hashCode(), 21)) / YEARS_A_DAY;
+            else {
+                // [ageing] A founder's years, eighteen to forty-five, and which of the three days of its
+                // year it came on: so the founders neither grow old together nor all keep their
+                // birthdays on the one day.
+                int h = getUUID().hashCode();
+                bornDay = day - daysOldAt(FOUNDER_YOUNGEST + Math.floorMod(h, FOUNDER_OLDEST - FOUNDER_YOUNGEST + 1))
+                    - Math.floorMod(h >> 10, DAYS_A_YEAR);
+            }
         }
         long days = Math.max(0, day - bornDay);
-        if (isBaby()) return (int) Math.min(17, days * CHILD_YEARS_A_DAY);
-        return (int) (18 + Math.max(0, days - GROW_DAYS) * YEARS_A_DAY);
+        return isBaby() ? childYears(days) : grownYears(days);
+    }
+
+    /** [ageing] A child's years at so many days old: six to the day, and seventeen at the most. */
+    public static int childYears(long days) {
+        return (int) Math.min(17, Math.max(0, days) * CHILD_YEARS_A_DAY);
+    }
+
+    /** [ageing] A grown folk's years at so many days old: eighteen the day it is grown, a year more every third day after. */
+    public static int grownYears(long days) {
+        return (int) (18 + Math.max(0, days - GROW_DAYS) / DAYS_A_YEAR);
+    }
+
+    /** [ageing] How many days old a folk is on the day it comes to so many years (a child, the first day it is that old or more). */
+    public static long daysOldAt(int years) {
+        if (years < 18) return (Math.max(0, years) + CHILD_YEARS_A_DAY - 1) / CHILD_YEARS_A_DAY;
+        return GROW_DAYS + (long) (years - 18) * DAYS_A_YEAR;
+    }
+
+    /**
+     * [ageing] A grown folk's born day as it was saved while grown folk aged two years a day, put
+     * so that it is the same age today and goes on at a year every third day from here: nobody
+     * comes out of the change of pace thirty years younger than it went in.
+     */
+    static long bornAtTheOldPace(long born, long today) {
+        long days = today - born;
+        if (days <= GROW_DAYS) return born;
+        return today - daysOldAt((int) Math.min(200, 18 + (days - GROW_DAYS) * 2));
     }
 
     /** The age it will live to: seventy to a hundred (a tenth more where the town keeps Healers: CityTree). */
@@ -1943,6 +1985,9 @@ public class VillageFolkEntity extends AssistantEntity {
 
     /** Tests only: a child born this many days ago. */
     public void bornDaysAgo(long days) { bornDay = level().getDayTime() / 24000L - days; }
+
+    /** [ageing] Tests only: a grown folk of just so many years, come to them today (yesterday it was a year younger). */
+    public void setAgeForTests(int years) { bornDay = level().getDayTime() / 24000L - daysOldAt(years); }
 
     /** The bed in a house the village built for a player is that player's. */
     @Override
@@ -7340,6 +7385,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (productionChest != null) tag.putLong("ProductionChest", productionChest.asLong());
         if (oldProductionChest != null) tag.putLong("OldProductionChest", oldProductionChest.asLong());
         tag.putLong("BornDay", bornDay);
+        tag.putInt("DaysAYear", DAYS_A_YEAR);           // [ageing] counted at a year every third day
         if (rentFree) tag.putBoolean("RentFree", true);
         if (mentor != null) tag.putUUID("Mentor", mentor);
         if (apprenticeTo != StationTask.NONE) tag.putString("Apprentice", apprenticeTo.name());
@@ -7409,6 +7455,10 @@ public class VillageFolkEntity extends AssistantEntity {
         this.productionChest = tag.contains("ProductionChest") ? BlockPos.of(tag.getLong("ProductionChest")) : null;
         this.oldProductionChest = tag.contains("OldProductionChest") ? BlockPos.of(tag.getLong("OldProductionChest")) : null;
         this.bornDay = tag.contains("BornDay") ? tag.getLong("BornDay") : UNKNOWN;
+        // [ageing] Saved while grown folk aged two years a day: the years it had then, at the new pace from here.
+        if (bornDay != UNKNOWN && !tag.contains("DaysAYear") && !tag.getBoolean("Child")) {
+            bornDay = bornAtTheOldPace(bornDay, level().getDayTime() / 24000L);
+        }
         this.rentFree = tag.getBoolean("RentFree");
         this.mentor = tag.hasUUID("Mentor") ? tag.getUUID("Mentor") : null;
         try {

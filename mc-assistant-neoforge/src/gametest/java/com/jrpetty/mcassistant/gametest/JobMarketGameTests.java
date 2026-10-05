@@ -47,7 +47,7 @@ public class JobMarketGameTests {
     /** The hour the clock is held at: late afternoon, past the caravans' and the envoys' hours, before dusk. */
     private static final long HOUR = 11600L;
 
-    /** A grown folk of this village standing here, at this trade and level, so many years old (even). */
+    /** A grown folk of this village standing here, at this trade and level, so many years old. */
     private static VillageFolkEntity folk(ServerLevel level, Villages.Village v, int x, int z, StationTask trade, int lv, int years) {
         VillageFolkEntity f = McAssistantMod.VILLAGE_FOLK.get().create(level);
         BlockPos at = Kit.surface(level, x, z);
@@ -57,8 +57,8 @@ public class JobMarketGameTests {
         f.joinVillage(v.id(), v.centre());
         level.addFreshEntity(f);
         Villages.recordBirth(v.id());
-        // Years as folk count them: eighteen at three days old, and two more every day after.
-        f.bornDaysAgo(VillageFolkEntity.GROW_DAYS + Math.max(0, (years - 18) / 2));
+        // Years as folk count them (eighteen at three days old, a year more every third day after).
+        f.setAgeForTests(Math.max(18, years));
         if (trade != StationTask.NONE) {
             f.setJob(trade);
             if (lv > 0) f.tradeXpForTests(trade, lv * lv * Math.max(1, AssistantConfig.levelCurveFactor()) + 1);

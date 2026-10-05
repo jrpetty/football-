@@ -826,6 +826,27 @@ def fields_stage(r, look, cx, cz):
     say("alive after the fields: %s" % client_alive())
 
 
+def ageing_stage(r, look, cx, cz):
+    """Growing old slowly (entity/VillageFolkEntity.ageYears, Lifespans): grown folk age a year every
+    three days and the founders come eighteen to forty-five. What /village lifespans says of the town
+    (each folk's age, the age it will live to and the day that falls on), then the town's books at the
+    Folk page (each one's years) and the Society page (the ages by tens)."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, cx, ground_height(r, cx, cz) + 1, cz))
+    time.sleep(3)
+    say("lifespans: " + r.cmd("execute positioned %d 100 %d run village lifespans" % (cx, cz))[:1500])
+    say("stats folk: " + r.cmd("execute as %s at @s run village stats 6" % USER))
+    time.sleep(4)
+    shot("22-ageing-1-folk")
+    say("stats society: " + r.cmd("execute as %s at @s run village stats 7" % USER))
+    time.sleep(4)
+    shot("22-ageing-2-society")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the ageing: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

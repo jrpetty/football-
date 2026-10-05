@@ -51,7 +51,7 @@ public class PaceGameTests {
         helper.assertTrue(f != null, "a village");
         f.setJob(trade);
         f.plainPaceForTests(true);
-        f.bornDaysAgo(VillageFolkEntity.GROW_DAYS);         // just grown: eighteen, nowhere near old
+        f.setAgeForTests(18);                                // just grown: eighteen, nowhere near old
         return f;
     }
 
@@ -215,18 +215,18 @@ public class PaceGameTests {
         level(helper, master, 30);
         hold(master, Items.STONE_PICKAXE);
         int masterYoung = master.actionPaceTicks();
-        master.bornDaysAgo(25);                                   // sixty-two: old, and well short of its years
+        master.setAgeForTests(62);                                // sixty-two: old, and well short of its years
         int masterOld = master.actionPaceTicks();
         boolean old = master.isOld();
         VillageFolkEntity novice = VillageFolkSpawnerBlock.raise(helper.getLevel(), master.blockPosition().east(2), 0.0F);
         helper.assertTrue(novice != null, "a second folk");
         novice.setJob(StationTask.MINE);
         novice.plainPaceForTests(true);
-        novice.bornDaysAgo(VillageFolkEntity.GROW_DAYS);
+        novice.setAgeForTests(18);
         novice.tradeXpForTests(StationTask.MINE, 0);
         hold(novice, Items.STONE_PICKAXE);
         int noviceYoung = novice.actionPaceTicks();
-        novice.bornDaysAgo(25);
+        novice.setAgeForTests(62);
         int noviceOld = novice.actionPaceTicks();
         String card = master.paceLine();
         Kit.log("pc04 an action with a stone pick: the master (level 30) young " + masterYoung + ", old " + masterOld

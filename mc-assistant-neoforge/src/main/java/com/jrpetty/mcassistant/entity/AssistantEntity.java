@@ -2175,7 +2175,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      * Tests: measure the pace from its level, its years and its tool alone. Without this a test can
      * never say by how much a level quickens the work, since the folk it raised comes with a crew,
      * a quirk, a nature, a mood and a village of its own, much of it drawn at random, and any of
-     * them can fill the cap. Its years stay in: they are the test's to set (bornDaysAgo).
+     * them can fill the cap. Its years stay in: they are the test's to set (setAgeForTests).
      */
     public void plainPaceForTests(boolean on) {
         this.plainPaceForTests = on;
