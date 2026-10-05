@@ -184,6 +184,32 @@ added a little at a time round those buildings:
 
 ### Money and the market
 
+**What a village makes, earns and is worth.** Everything a working folk brings home to the
+stores is the village's **output**, valued at what the market says it is worth: the
+farmers' bread, the woodcutters' logs, the miners' stone and ore, the smelter's iron, the
+fishers' catch, the hunters' meat and hides, the crafts' tools, beds and drinks. A carrier
+makes nothing of its own: the load it fetches is the worker's output. The books close every
+morning and a week is kept, so the village knows whether it is making more or less. The
+**traders who come each morning buy up to what the town made**: a busy town meets its
+wages, an idle one sells what it can and pays short. Its **worth** is its treasury, its
+stores at the market's prices, and its folk's savings.
+
+**Pay** is the trade's rate (a coin a day for the fields, the woods, the water and the
+stores; two for miners, guards, smelters, ranchers, cooks, shopkeepers, beekeepers, scouts
+and hunters; three for the smith, the tailor, the brewer and the enchanter) **times what the
+place is**: a hamlet pays the rate, a village half as much again, a town twice, a city two
+and a half times, a capital three. On top: a coin at level ten and another at twenty-five,
+one for the elder, and up to two for a hard day's work. When the town comes up in the world
+the elder tells the morning assembly that wages are going up; when the treasury is short,
+everybody gets the same share and a grumbler or two says so.
+
+**Seeing it.** The village journal (J) has three pages: **Village**, **Wages** — the pay
+scale, everybody who works, best paid first, with what their wage is made of, what they have
+earned in all and what they are worth, and the richest — and **Economy** — what was made
+yesterday by kind and by trade, the week, the best producers, money in and out, and the
+village's worth. The same as `/village wages` and `/village economy`; the board shows the
+output, the worth and the three best paid, and any folk will tell you who earns the most.
+
 * **Coin.** A *Village Coin* is a gold coin. A new village's treasury starts with
   32. From the Iron Age the village mints more from the gold in its stores, nine
   coins to an ingot, whenever the treasury runs low.
@@ -235,11 +261,15 @@ added a little at a time round those buildings:
   away it is. `/village status` shows how far along each road is.
 * **Caravans.** Every two days, in the morning, the village sends a caravan to
   each of its colonies, usually led by a carrier:
-  * The carrier leads a pack llama in the village's colours and carries what the
-    stores have more than plenty of, the colony's needs first.
-  * It walks the road to the colony and unloads into the colony's stores. Then it
-    loads what the colony can spare that the mother village is short of, and
-    walks home.
+  * The carrier carries on its own back what the stores have more than plenty of, the
+    colony's needs first: what the colony has sent for. The mother village pays its road
+    money (a coin a hundred blocks) and its provisions.
+  * At the colony, **the colony buys the goods as they come off the carrier's back**, at the
+    family price (half what the market says they're worth); between two villages with a
+    trade pact it's the full price. What the treasury can't pay for goes home again with the
+    carrier. Then it loads what the colony can spare that the mother village is short of —
+    never what it just brought — which the mother buys the same way when it gets home, and
+    walks home with the coin.
   * Players nearby are told when a caravan sets out, and both towns record each
     delivery in their history.
   * You can meet a caravan on the road. Ask the carrier what it is doing and it
@@ -385,6 +415,11 @@ days later):
 | Tailor | a loom, if the village has no string | string comes from spiders |
 | Rancher | two leads, and shears if the village has no iron for them | leads need slime; shears need iron a young village spends on picks |
 | First farmer | 3 sugar cane, 2 melon seeds, 2 pumpkin seeds (if nobody has any) | seeds and cuttings like these are rare finds |
+| First fisher | a fishing rod, if the village has no string | a rod is string, and string is spiders' or wool's |
+| Hunter | a bow (if nobody has one and there's no string), 16 arrows, 2 leads | a bow is string; arrows want feathers and flint |
+
+Every one of these is **bought from a pedlar**, out of the treasury: no coin, no kit — and
+the wages leave the price put by in the treasury until it can be paid.
 
 A workstation that belongs in a building (the brewer's stand in the brewery, the
 enchanter's table in the library) stays in its owner's pack until that building
@@ -429,6 +464,22 @@ Everything after that the village makes for itself:
   knapped from the miners' gravel, and feathers come from the rancher's hens. Planks
   are sawn from the woodcutters' logs as needed.
 
+**Hunters** (from fifteen folk; sooner in forest, pine woods, snowfields and savanna).
+Hunting grounds out past the fields, wherever the game is. A hunter takes only grown wild
+cows, pigs, sheep, hens and rabbits — never the village's herd, never one with a name, never
+the young, and **never the last pair of a kind** within twenty-four blocks, so there is
+always game next year. It stalks quietly up to the quarry and takes it with its bow or its
+blade, sweeps up the meat, hides, feathers and wool, and brings them home for the stores (the
+cook and the café turn the meat into meals; the tailor has the leather). When the village's
+pens are short of a kind, the hunter brings one home **alive** instead, with feed or on one
+of its leads. When a whole day turns up nothing, the game has gone, and it finds new
+grounds. It wears a mottled hood, a fur mantle, a quiver across its back and a knife.
+
+**Fishers** need a rod: the first brings one, and after that one is made from the stores'
+string and wood — a lock of wool spun into line when there's no string. A fisher fishes from
+the bank, up to six blocks out, and tries another stretch of bank before it gives up on the
+water.
+
 **The links between trades.**
 
 * **Farmers.** Plant the cane along the field's water and cut it back to its
@@ -436,6 +487,15 @@ Everything after that the village makes for itself:
   sugar and the café's pies and cakes. They also plant the melon and pumpkin seed.
 * **Ranchers.** Shear the sheep: the wool is the village's beds. They breed sheep
   before cows, and a pen with no sheep fetches a wild one even when it has a pair of cows.
+  **Breeding is done the way you'd do it:** the rancher holds the right feed out in its
+  hand (wheat for sheep and cows, a carrot for pigs, seeds for hens), the pair come to it,
+  and it feeds each. **Fetching a wild animal home** is done the same way: the feed held
+  out, the animal following the hand, the rancher walking slowly home and waiting when it
+  lags — a lead only when there's no feed to hand.
+  **The pen.** Once the village has built its pen (a fenced square with a gate), the
+  rancher's ground is the pen and the herd lives inside it. Animals are brought in through
+  the gate; the gate opens for a folk going through it and is shut behind them (one you
+  open is yours to shut). One of the herd that gets out is fetched back.
   Milk the cows with a bucket for the café's cakes; the café sends
   the buckets back. When the pen has no pair to breed, the rancher takes a lead,
   finds a wild sheep, cow, pig or hen, and walks it home. If there is nothing wild
@@ -940,7 +1000,7 @@ The buttons ask:
 | What do you hope for? | Its dream, and how far it has got |
 | What do you do for fun? | Its pastime |
 | Tell me a joke | One of its jokes (a grump won't) |
-| Trade? | A bundle of what its work makes, for an emerald (see below) |
+| Trade? | A bundle of what its work makes, for village coin or an emerald (see below) |
 | Gossip? | Who is sweet on whom, who can't stand whom, what's said about other players, and what's said about you |
 | Residents? | The village register (see "Your place in a village") |
 | I'm sorry | An apology, for whatever you did. A folk accepts one a day |
@@ -974,7 +1034,8 @@ What a folk says depends on who it is and what it thinks of you:
   | Guard | Arrows |
 
   A folk offers a bundle of what it can spare, from its own pack or the village
-  stores, for an emerald. When the village is short of something, it will take some
+  stores, for its worth in village coin (the coin goes to the treasury), or an emerald.
+  When the village is short of something, it will take some
   of that instead ("Or 16 cobblestone — we're short of it, and I'd sooner have
   that."). The offer shows under the village line. Carry the price and press **Hand
   over**.
@@ -1320,6 +1381,37 @@ Every alliance, feud, truce and tribute goes into both villages' history.
 `/village relations` lists every pair of neighbours and how they stand, and
 `/village status` gives the council, the citizens and the neighbours.
 
+### Every town its own: the land
+
+When a village is founded it looks over its land, and the land shapes it:
+
+| Land | What it lives by | Its leader |
+|---|---|---|
+| The coast | fishing from its first days, three times the fishers | the harbourmaster |
+| A river | twice the fishers, more farmers | the reeve |
+| Forest / pine woods | more woodcutters, hunters from eight | the warden |
+| The snowfields | hunters from six, fishers from eight, fewer farmers | the hearthkeeper |
+| The mountains | more miners and smelters | the thane |
+| The desert | more miners, fewer farmers and herds | the wellkeeper |
+| The savanna | twice the herds, a rancher from eight | the herdmaster |
+| The jungle | woodcutters and hunters | the chief |
+| The swamp | fishers | the fen-reeve |
+| The badlands | miners and smelters | the headman |
+| Cherry groves | herds and hives | the mayor |
+| The plains | an ordinary mix | the elder |
+
+* **Its leader.** The folk look for the nature the land asks for in whoever leads them:
+  open and easy on the coast and the rivers, hard and steady in the hills and the snow,
+  quiet and watchful in the woods, shrewd in the desert. That nature is also how the
+  village treats its neighbours (see Leaders and envoys).
+* **Its houses** are rebuilt in the land's own stone, while the stores have it:
+  sandstone in the desert, terracotta in the badlands, andesite in the hills, mossy stone
+  in the jungle and the swamp. The timber is whatever its own woods grow.
+* **Its name**, for a village founded now: a haven or a mere on the coast, a crag or a
+  fell in the hills, a fen in the swamp, a well in the desert.
+* `/village status` and the board say what land it is and who leads it, and its folk will
+  tell you.
+
 ### Leaders and envoys
 
 How a village gets on with its neighbours is down to who leads it. The elder's nature
@@ -1636,6 +1728,10 @@ Every push to CI:
 * checks a street is not laid until a folk from the village has walked to it (`t54`);
 * checks the wages are shared out fairly when coin is short, that what the village is saving
   for stays in the treasury, and that the tithe brings coin back (`t55`);
+* checks a hunter takes a grown cow and leaves the last pair of pigs to breed (`t56`);
+* checks the village's books: a farmer's bread counted at the market's worth, its stone not
+  (`t57`);
+* checks a sheep is coaxed home with wheat held out, no lead, and kept as the herd's (`t58`);
 * raises a house and a storehouse on the plan's lots and checks the town's life round
   them: the chimney fire, the door's number and names, the washing line, the windows lit
   by night and dark by day, a street sign, the stalls and their goods, a scarecrow

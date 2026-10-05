@@ -74,6 +74,7 @@ public final class Drover {
         LOOKED.clear();
         GAVE_UP.clear();
         PENS.clear();
+        PEN_LOOKED.clear();
         OPENED.clear();
     }
 
@@ -91,6 +92,19 @@ public final class Drover {
     }
 
     private static final Map<UUID, Pen> PENS = new ConcurrentHashMap<>();
+    /** When each village's pen was last looked for (the gate is minded every half-second by every folk). */
+    private static final Map<UUID, Long> PEN_LOOKED = new ConcurrentHashMap<>();
+
+    /** The pen, looked for at most every half-minute. */
+    @Nullable
+    static Pen penNow(UUID village, long now) {
+        Long at = PEN_LOOKED.get(village);
+        if (at != null && now - at < 600) return PENS.get(village);
+        PEN_LOOKED.put(village, now);
+        Pen p = pen(village);
+        if (p == null) PENS.remove(village);
+        return p;
+    }
     /** Gates the folk opened, and when: they shut them behind them. */
     private static final Map<Long, Long> OPENED = new ConcurrentHashMap<>();
 
@@ -122,7 +136,7 @@ public final class Drover {
     public static void gate(VillageFolkEntity f, ServerLevel level) {
         UUID village = f.ownerId();
         if (village == null) return;
-        Pen p = pen(village);
+        Pen p = penNow(village, level.getGameTime());
         if (p == null || !level.isLoaded(p.gate())) return;
         BlockPos g = p.gate();
         net.minecraft.world.level.block.state.BlockState st = level.getBlockState(g);

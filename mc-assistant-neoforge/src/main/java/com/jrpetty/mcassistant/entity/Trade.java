@@ -36,7 +36,7 @@ public final class Trade {
     record Goods(String words, Predicate<ItemStack> what, int count, Villages.Task need, int reserve) {}
 
     /** An offer on the table: lasts a few minutes, for the one player it was made to. */
-    record Deal(UUID player, Goods goods, int count, int emeralds, String alt, int altCount, long until) {}
+    record Deal(UUID player, Goods goods, int count, int emeralds, String alt, int altCount, long until, int coins) {}
 
     private static final Map<UUID, Deal> DEALS = new ConcurrentHashMap<>();
     private static final long LASTS = 6000L;
@@ -120,12 +120,15 @@ public final class Trade {
                 if (title == Standing.Title.UNWELCOME) altCount *= 2;
                 break;
             }
-            Deal d = new Deal(p.getUUID(), g, count, emeralds, alt, altCount, f.level().getGameTime() + LASTS);
+            // Its price in the village's coin, at the market's worth of the bundle it would ask an emerald for.
+            int coins = coinPrice(f, g, (int) Math.round(g.count()));
+            if (title == Standing.Title.UNWELCOME) coins *= 2;
+            Deal d = new Deal(p.getUUID(), g, count, emeralds, alt, altCount, f.level().getGameTime() + LASTS, coins);
             DEALS.put(f.getUUID(), d);
             if (DEALS.size() > 256) DEALS.clear();
             StringBuilder said = new StringBuilder(pick(r, "I could let you have ", "You can have ", "I'll part with "))
-                .append(count).append(' ').append(g.words()).append(" for ")
-                .append(emeralds == 1 ? "an emerald" : emeralds + " emeralds").append('.');
+                .append(count).append(' ').append(g.words()).append(" for ").append(coins).append(coins == 1 ? " coin" : " coins")
+                .append(", or ").append(emeralds == 1 ? "an emerald" : emeralds + " emeralds").append('.');
             if (!alt.isEmpty()) {
                 said.append(" Or ").append(Errands.words(alt, altCount))
                     .append(" instead — we're short of it, and I'd sooner have that.");
@@ -173,7 +176,8 @@ public final class Trade {
     public static String describe(VillageFolkEntity f) {
         Deal d = DEALS.get(f.getUUID());
         if (d == null) return "";
-        return d.count() + " " + d.goods().words() + " for " + (d.emeralds() == 1 ? "an emerald" : d.emeralds() + " emeralds")
+        return d.count() + " " + d.goods().words() + " for " + d.coins() + (d.coins() == 1 ? " coin, or " : " coins, or ")
+            + (d.emeralds() == 1 ? "an emerald" : d.emeralds() + " emeralds")
             + (d.alt().isEmpty() ? "" : " (or " + Errands.words(d.alt(), d.altCount()) + ")");
     }
 
@@ -182,7 +186,7 @@ public final class Trade {
         if (!live(f, p)) return false;
         Deal d = DEALS.get(f.getUUID());
         if (d == null) return false;
-        return carried(p, s -> s.is(Items.EMERALD)) >= d.emeralds()
+        return Market.coinsHeld(p) >= d.coins() || carried(p, s -> s.is(Items.EMERALD)) >= d.emeralds()
             || (!d.alt().isEmpty() && carried(p, Errands.matcher(d.alt())) >= d.altCount());
     }
 
@@ -194,7 +198,13 @@ public final class Trade {
         boolean inKind;
         Predicate<ItemStack> price;
         int priceCount;
-        if (carried(p, s -> s.is(Items.EMERALD)) >= d.emeralds()) {
+        boolean inCoin = false;
+        if (Market.coinsHeld(p) >= d.coins()) {
+            inKind = false;
+            inCoin = true;
+            price = s -> false;
+            priceCount = 0;
+        } else if (carried(p, s -> s.is(Items.EMERALD)) >= d.emeralds()) {
             inKind = false;
             price = s -> s.is(Items.EMERALD);
             priceCount = d.emeralds();
@@ -210,10 +220,19 @@ public final class Trade {
             DEALS.remove(f.getUUID());
             return pick(r, "Oh — the last of it's gone since I offered. Sorry!", "Ah. Somebody's had it already. Another time.");
         }
-        List<ItemStack> paid = take(p.getInventory().items, price, priceCount);
-        for (ItemStack s : paid) {
-            ItemStack left = f.insertItem(s);
-            if (!left.isEmpty()) f.spawnAtLocation(left);
+        if (inCoin) {
+            // Coin goes to the treasury: the goods were the village's.
+            Market.payOut(p, d.coins());
+            if (f.ownerId() != null) {
+                com.jrpetty.mcassistant.village.Ledger.addCoins(f.ownerId(), d.coins());
+                Economy.sold(f.ownerId(), d.coins());
+            }
+        } else {
+            List<ItemStack> paid = take(p.getInventory().items, price, priceCount);
+            for (ItemStack s : paid) {
+                ItemStack left = f.insertItem(s);
+                if (!left.isEmpty()) f.spawnAtLocation(left);
+            }
         }
         List<ItemStack> goods = take(f.getInventoryItems(), d.goods().what(), d.count());
         for (ItemStack s : goods) if (!p.getInventory().add(s)) p.drop(s, false);
@@ -230,6 +249,18 @@ public final class Trade {
         f.playSound(net.minecraft.sounds.SoundEvents.VILLAGER_TRADE, 1.0F, 1.0F);
         return pick(r, "Pleasure doing business!", "A fair trade. Enjoy them!", "Done! Come back any time.")
             + (inKind ? pick(r, " That'll go straight to the stores.", " The village will be glad of it.") : "");
+    }
+
+    /** The bundle's worth at the market, in coin (a coin at least). */
+    private static int coinPrice(VillageFolkEntity f, Goods g, int count) {
+        for (ItemStack s : f.getInventoryItems()) {
+            if (s.isEmpty() || !g.what().test(s)) continue;
+            Market.Good mg = Market.goodFor(s);
+            if (mg == null) break;
+            int stock = f.ownerId() == null || !(f.level() instanceof ServerLevel sl) ? 0 : Market.stock(sl, f.ownerId(), g.what());
+            return Math.max(1, (int) Math.round(Market.each(mg, stock) * count));
+        }
+        return Math.max(1, count / 4);
     }
 
     private static int carried(Player p, Predicate<ItemStack> what) {

@@ -319,11 +319,18 @@ public class MineGoal extends Goal {
                 tunnelSteps = 0;
                 // Down the same stairs as last time: the gallery turns, run by run, into fresh rock.
                 if (assistant.isSettler()) {
-                    dir = switch (assistant.mineRuns % 3) {
+                    Direction turned = switch (assistant.mineRuns % 3) {
                         case 1 -> dir.getClockWise();
                         case 2 -> dir.getCounterClockWise();
                         default -> dir;
                     };
+                    // ...but only a way with room in the patch: turned at the patch's edge, a
+                    // shallow gallery cut nothing at all and the mine was called done ("0 blocks
+                    // dug, that's the edge of my patch") run after run.
+                    for (Direction d : new Direction[]{ turned, dir, dir.getClockWise(), dir.getCounterClockWise(), dir.getOpposite() }) {
+                        if (assistant.inZoneColumn(cursor.relative(d, 3))) { turned = d; break; }
+                    }
+                    dir = turned;
                 }
                 assistant.sayRoutine("At Y" + cursor.getY() + " — opening the gallery.");
                 return;

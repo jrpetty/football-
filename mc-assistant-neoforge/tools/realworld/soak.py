@@ -177,6 +177,30 @@ def report(r, x, z, label, compact=False):
         say("  " + line)
 
 
+def tally(r, x, z):
+    """Every folk's state by trade: how many are at work, how many have not worked in five
+    minutes, and how many are short of something (and of what) — which trades are pulling their
+    weight, day by day."""
+    lines = [l for l in r.cmd("execute positioned %d 64 %d run village folk" % (x, z)).split("\n") if l.strip()]
+    out = {"trades": {}, "idle": {}, "short": {}, "short_of": {}}
+    for line in lines[1:]:
+        m = re.search(r" L\d+ (\w[\w ]*?) hp=", line)
+        if not m:
+            continue
+        t = m.group(1)
+        out["trades"][t] = out["trades"].get(t, 0) + 1
+        w = re.search(r"sinceWork=(\d+)", line)
+        if w and int(w.group(1)) > 6000:
+            out["idle"][t] = out["idle"].get(t, 0) + 1
+        miss = re.search(r"missing=\[([^\]]*)\]", line)
+        if miss:
+            out["short"][t] = out["short"].get(t, 0) + 1
+            for what in miss.group(1).split(", "):
+                if what:
+                    out["short_of"][what] = out["short_of"].get(what, 0) + 1
+    return out
+
+
 def setup(r):
     for c in ("gamerule doDaylightCycle true", "gamerule doWeatherCycle false",
               "gamerule randomTickSpeed 15", "gamerule doMobSpawning true",
@@ -368,6 +392,24 @@ def epic_day(r, x, z, day, began, last_age, metrics_file="epic-metrics.jsonl"):
     wealth = re.search(r"Wealth: \{([^}]*)\}", status)
     if wealth:
         metrics["wealth"] = {k.strip(): int(v) for k, v in re.findall(r"(\w+)=(\d+)", wealth.group(1))}
+    economy = re.search(r"Economy: (\d+) coins' worth made yesterday[^;]*(?:; (\d+) a day this week)?", status)
+    if economy:
+        metrics["output"] = int(economy.group(1))
+        if economy.group(2):
+            metrics["output_week"] = int(economy.group(2))
+    worth = re.search(r"; worth (\d+)", status)
+    if worth:
+        metrics["worth"] = int(worth.group(1))
+    land = re.search(r"Land: ([^.—]*)", status)
+    if land:
+        metrics["land"] = land.group(1).strip()
+    best = re.search(r"Best paid: ([^(]*)", status)
+    if best:
+        metrics["best_paid"] = best.group(1).strip()
+    try:
+        metrics["roles"] = tally(r, x, z)
+    except Exception as e:  # noqa: BLE001
+        say("tally failed: %s" % e)
     say("METRICS " + json.dumps(metrics, separators=(",", ":")))
     try:
         with open(metrics_file, "a") as out:

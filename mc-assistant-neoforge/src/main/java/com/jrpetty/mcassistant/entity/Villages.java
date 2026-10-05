@@ -215,6 +215,7 @@ public final class Villages {
         for (VillageFolkEntity c : folk) {
             int score = (int) Math.min(30, Math.max(0, day - c.persona().since()));
             for (VillageFolkEntity o : folk) if (o != c) score += o.life().affinity(c.getUUID());
+            score += Homeland.leaderFit(villageId, c);                    // the nature the land asks for in a leader
             esteem.put(c, score);
         }
         List<VillageFolkEntity> standing = new ArrayList<>(folk);
@@ -226,7 +227,7 @@ public final class Villages {
             VillageFolkEntity pick = null;
             int best = Integer.MIN_VALUE;
             for (VillageFolkEntity c : standing) {
-                int like = c == voter ? 60 : voter.life().affinity(c.getUUID());
+                int like = (c == voter ? 60 : voter.life().affinity(c.getUUID())) + Homeland.leaderFit(villageId, c) / 2;
                 if (like > best) { best = like; pick = c; }
             }
             if (pick != null) votes.merge(pick, 1, Integer::sum);

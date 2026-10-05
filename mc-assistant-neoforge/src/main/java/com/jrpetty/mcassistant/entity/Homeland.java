@@ -77,6 +77,18 @@ public final class Homeland {
         KNOWN.clear();
     }
 
+    /** Tests: a village on this land (the test world is all plains). */
+    public static void setForTests(UUID village, Land l) {
+        KNOWN.put(village, l);
+        Ledger.note(village, "land", l.name());
+    }
+
+    /** Tests: the name a village founded on this land would get. */
+    @Nullable
+    public static String nameForTests(UUID village, Land l) {
+        return nameFor(village, "Ash", l);
+    }
+
     /** The village's land as it was surveyed, or null before it has been. */
     @Nullable
     public static Land known(@Nullable UUID village) {

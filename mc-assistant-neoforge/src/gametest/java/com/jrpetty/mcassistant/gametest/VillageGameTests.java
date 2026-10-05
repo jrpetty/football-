@@ -3918,4 +3918,95 @@ public class VillageGameTests {
             helper.fail("the sheep never came home");
         });
     }
+
+    /**
+     * Every town its own: a town on the coast takes up fishing from its first days and calls its
+     * elder the harbourmaster; a desert town rebuilds in sandstone; a new town's name fits its land.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "t59_land")
+    public static void t59_land(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(6000);
+        Kit.hold(level, 48000, 12000, 24);
+        Kit.prepare(level, 48000, 12000, 24);
+        BlockPos heart = Kit.surface(level, 48000, 12000);
+        VillageFolkSpawnerBlock.raiseParty(level, heart, 0.0F, 6);
+        Villages.Village v = Villages.nearest(level, heart, Villages.VILLAGE_RANGE);
+        helper.assertTrue(v != null, "a village");
+        java.util.UUID id = v.id();
+        boolean fishPlains = Villages.wants(id, StationTask.FISH);
+        com.jrpetty.mcassistant.entity.Homeland.setForTests(id, com.jrpetty.mcassistant.entity.Homeland.Land.COAST);
+        boolean fishCoast = Villages.wants(id, StationTask.FISH);
+        String title = com.jrpetty.mcassistant.entity.Homeland.leaderTitle(id);
+        String status = com.jrpetty.mcassistant.VillageCommands.statusText(level, v);
+        String coastName = com.jrpetty.mcassistant.entity.Homeland.nameForTests(id, com.jrpetty.mcassistant.entity.Homeland.Land.COAST);
+        com.jrpetty.mcassistant.entity.Homeland.setForTests(id, com.jrpetty.mcassistant.entity.Homeland.Land.DESERT);
+        var desert = com.jrpetty.mcassistant.entity.Homeland.walls(id);
+        Kit.log("t59 the land: six folk on the plains want a fisher " + fishPlains + ", on the coast " + fishCoast + "; the leader is the "
+            + title + "; a coast town is called " + coastName + "; desert walls " + (desert == null ? "none" : desert.block())
+            + "; status: " + status.replaceAll(".*(Land: [^.]*).*", "$1"));
+        helper.assertTrue(!fishPlains && fishCoast, "a coast town takes up fishing from its first days");
+        helper.assertTrue("harbourmaster".equals(title), "and its elder is the harbourmaster: " + title);
+        helper.assertTrue(status.contains("Land: on the coast"), "the status says where it stands");
+        helper.assertTrue(coastName != null && coastName.startsWith("Ash") && !coastName.equals("Ash"), "a coast town's name fits: " + coastName);
+        helper.assertTrue(desert != null && desert.block() == Blocks.CUT_SANDSTONE, "a desert town rebuilds in sandstone");
+        helper.succeed();
+    }
+
+    /**
+     * The pen: once the village has built one, the rancher brings a wild sheep home through the
+     * gate (opened to go through, shut behind) into the fenced square.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 2600, batch = "t60_pen")
+    public static void t60_pen(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 50000, 12000, 72);
+        Kit.prepare(level, 50000, 12000, 72);
+        BlockPos heart = Kit.surface(level, 50000, 12000);
+        VillageFolkEntity rancher = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(rancher != null, "a village");
+        java.util.UUID id = rancher.ownerId();
+        BlockPos penAt = Kit.surface(level, heart.getX() + 16, heart.getZ());
+        for (net.minecraft.world.entity.animal.Animal a : level.getEntitiesOfClass(net.minecraft.world.entity.animal.Animal.class,
+                new AABB(penAt).inflate(70, 32, 70))) a.discard();
+        com.jrpetty.mcassistant.entity.goal.BuildGoal.stamp(level, "pen", penAt, net.minecraft.core.Direction.SOUTH, 13,
+            p -> p.part() == com.jrpetty.mcassistant.entity.goal.BuildGoal.Part.GATE
+                ? Blocks.OAK_FENCE_GATE.defaultBlockState() : Blocks.OAK_FENCE.defaultBlockState());
+        com.jrpetty.mcassistant.village.Ledger.built(id, "pen", penAt, net.minecraft.core.Direction.SOUTH);
+        var pen = com.jrpetty.mcassistant.entity.Drover.pen(id);
+        helper.assertTrue(pen != null && level.getBlockState(pen.gate()).getBlock() instanceof net.minecraft.world.level.block.FenceGateBlock,
+            "the pen stands, with its gate");
+        rancher.assignPlot(com.jrpetty.mcassistant.entity.WorkZone.around(pen.centre(), 3, com.jrpetty.mcassistant.entity.WorkZone.DEFAULT_DEPTH), "The Pen");
+        rancher.setJob(StationTask.RANCH);
+        rancher.insertItem(new ItemStack(Items.WHEAT, 8));
+        rancher.moveTo(pen.centre().getX() + 0.5, pen.centre().getY(), pen.centre().getZ() - 6.5, 0.0F, 0.0F);
+        net.minecraft.world.entity.animal.Sheep sheep = EntityType.SHEEP.create(level);
+        sheep.moveTo(pen.centre().getX() + 0.5, pen.centre().getY(), pen.centre().getZ() - 24.5, 0.0F, 0.0F);
+        level.addFreshEntity(sheep);
+        final boolean[] set = { false };
+        final long[] inAt = { -1 };
+        final java.util.List<String> trail = new java.util.ArrayList<>();
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (!set[0] && t > 5) set[0] = com.jrpetty.mcassistant.entity.Drover.consider(rancher, level);
+            boolean open = level.getBlockState(pen.gate()).getValue(net.minecraft.world.level.block.FenceGateBlock.OPEN);
+            if (t % 200 == 0) trail.add(t + ": sheep " + sheep.blockPosition().toShortString() + " rancher " + rancher.blockPosition().toShortString()
+                + " gate " + (open ? "open" : "shut"));
+            if (inAt[0] < 0 && pen.inside(sheep.blockPosition())) inAt[0] = t;
+            if (inAt[0] >= 0 && t - inAt[0] > 200 && !com.jrpetty.mcassistant.entity.Drover.busy(rancher)) {
+                Kit.log("t60 the pen: " + String.join(" | ", trail) + " | in at " + inAt[0] + ", now " + t + ": gate " + (open ? "open" : "shut")
+                    + ", sheep inside " + pen.inside(sheep.blockPosition()));
+                helper.assertTrue(pen.inside(sheep.blockPosition()), "the sheep is in the pen");
+                helper.assertTrue(!open || pen.inside(rancher.blockPosition()), "and the gate is shut behind (or the rancher is still in it)");
+                helper.succeed();
+            }
+        });
+        helper.runAtTickTime(2500, () -> {
+            Kit.log("t60 the pen (not in): " + String.join(" | ", trail));
+            helper.fail("the sheep never went into the pen");
+        });
+    }
 }
