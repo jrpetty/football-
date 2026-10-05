@@ -353,8 +353,9 @@ public final class Dealings {
             if (d < mine.ready()) return "Your " + made.getHoverName().getString().toLowerCase(Locale.ROOT) + "? " + mine.maker()
                 + " is still at it — come back tomorrow.";
             ORDERS.remove(p.getUUID());
+            String what = made.getHoverName().getString().toLowerCase(Locale.ROOT);
             give(p, made);
-            return "Here's your " + made.getHoverName().getString().toLowerCase(Locale.ROOT) + ", fresh from " + mine.maker() + ". Wear it well.";
+            return "Here's your " + what + ", fresh from " + mine.maker() + ". Wear it well.";
         }
         if (!craftsman(f.stationTask())) return "That's work for a smith, a tailor or a carpenter — ask one of them.";
         Item want = Services.itemNamed(text);

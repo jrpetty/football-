@@ -207,7 +207,9 @@ public final class Budget {
         if (kitOf(s) != null) return b.keptKit.getOrDefault(it, 0);
         Market.Good g = Market.goodFor(s);
         // Whatever the village is short of itself, it keeps all of.
-        if (g != null && g.need() != Villages.Task.NONE && b.short_.contains(g.need())) return Integer.MAX_VALUE;
+        // (Food goes by the larder, counted just now, below: the village's list of shortages is a
+        // few seconds stale, and read a larder just filled as empty.)
+        if (g != null && g.need() != Villages.Task.NONE && g.need() != Villages.Task.FOOD && b.short_.contains(g.need())) return Integer.MAX_VALUE;
         if (s.is(ItemTags.WOOL)) return b.bedsWait ? Integer.MAX_VALUE : 32;
         if (s.is(ItemTags.BEDS)) return b.bedsWait ? Integer.MAX_VALUE : 2;
         Economy.Kind kind = Economy.kindOf(s);
