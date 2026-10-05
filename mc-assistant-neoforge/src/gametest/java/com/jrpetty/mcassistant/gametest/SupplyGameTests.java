@@ -122,7 +122,7 @@ public class SupplyGameTests {
         helper.assertTrue(set && first != null && first.type() == Job.Type.SMELT && "cobble".equals(first.arg()),
             "with stone bricks wanted, it fires the cobblestone");
         Predicate<ItemStack> stone = s -> s.is(Items.STONE);
-        final int[] seen = { 0, 0, 0 };                                  // most stone, stone bricks, smooth stone seen
+        final int[] seen = { 0, 0, 0, 0 };                               // most stone, stone bricks, smooth stone seen; cobblestone fed in
         helper.onEachTick(() -> {
             long t = helper.getTick();
             if (level.getDayTime() % 24000 > 11000) level.setDayTime(1000);
@@ -135,6 +135,7 @@ public class SupplyGameTests {
                     ItemStack out = fb.getItem(2);
                     if (out.is(Items.SMOOTH_STONE)) smooth += out.getCount();
                     if (out.is(Items.STONE)) fired += out.getCount();
+                    if (fb.getItem(0).is(Items.COBBLESTONE)) seen[3] = Math.max(seen[3], fb.getItem(0).getCount());
                 }
             }
             seen[0] = Math.max(seen[0], fired);
@@ -147,7 +148,9 @@ public class SupplyGameTests {
             if (seen[1] >= 4 && seen[2] >= 1) {
                 Kit.log("s01 done at " + t + ": stone fired " + seen[0] + ", stone bricks " + seen[1] + ", smooth stone " + seen[2]);
                 helper.assertTrue(seen[1] % 4 == 0, "stone bricks come four for four from stone: " + seen[1]);
-                helper.assertTrue(f.countCarried(s -> s.is(Items.COBBLESTONE)) < cobble, "the cobblestone went into the furnaces");
+                // The rest of the founding party fills the stores as it goes, and the smelter may fetch
+                // more of the spare: what shows the stone was fired is cobblestone seen in the furnaces.
+                helper.assertTrue(seen[3] > 0, "the cobblestone went into the furnaces");
                 helper.succeed();
             } else if (t >= 5800) {
                 helper.fail("no stone bricks and smooth stone from the smeltery: stone " + seen[0] + ", bricks " + seen[1]
