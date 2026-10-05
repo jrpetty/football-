@@ -565,6 +565,20 @@ public class VillageGameTests {
         VillageFolkEntity founder = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
         helper.assertTrue(founder != null, "could not found the mother village");
         Villages.Village mother = Villages.nearest(level, heart, 100);
+        // Stocked like a town that can spare a party: logs (not planks), stone and bread put by, and
+        // no storehouse units loose (hers are built into her storehouse): the colony's are made
+        // out of her timber.
+        net.minecraft.world.Container motherChest = (net.minecraft.world.Container) level.getBlockEntity(heart);
+        helper.assertTrue(motherChest != null, "the mother's stores");
+        for (int i = 0; i < motherChest.getContainerSize(); i++) {
+            if (motherChest.getItem(i).is(com.jrpetty.mcassistant.McAssistantMod.STOREHOUSE_ITEM.get())) motherChest.setItem(i, ItemStack.EMPTY);
+        }
+        for (ItemStack st : List.of(new ItemStack(Items.OAK_LOG, 64), new ItemStack(Items.COBBLESTONE, 64),
+                new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.BREAD, 64))) {
+            for (int i = 0; i < motherChest.getContainerSize(); i++) {
+                if (motherChest.getItem(i).isEmpty()) { motherChest.setItem(i, st); break; }
+            }
+        }
         int foodBefore = storedAt(level, heart, Items.BREAD);
         BlockPos far = Kit.surface(level, 5200, 5000);
         boolean sent = com.jrpetty.mcassistant.Colonies.found(level, mother, far, level.getGameTime());
@@ -572,8 +586,21 @@ public class VillageGameTests {
             Villages.Village colony = Villages.nearest(level, far, 40);
             int folk = colony == null ? 0 : Villages.headcount(colony.id());
             int foodAfter = storedAt(level, heart, Items.BREAD);
+            int units = colony == null ? 0 : com.jrpetty.mcassistant.entity.Market.stock(level, colony.id(),
+                st -> st.is(com.jrpetty.mcassistant.McAssistantMod.STOREHOUSE_ITEM.get()));
+            int fed = 0, tooled = 0;
+            if (colony != null) {
+                for (AssistantEntity a : Villages.folkOf(colony.id())) {
+                    if (a.countCarried(st -> st.get(net.minecraft.core.component.DataComponents.FOOD) != null) > 0) fed++;
+                    if (a.countCarried(st -> st.is(net.minecraft.tags.ItemTags.AXES)) > 0
+                        && a.countCarried(st -> st.is(net.minecraft.tags.ItemTags.PICKAXES)) > 0) tooled++;
+                }
+            }
             Kit.log("t16 colony sent " + sent + ": " + (colony == null ? "none" : colony.centre() + ", " + folk + " folk")
-                + "; mother's record " + Villages.builtList(mother.id()) + "; bread " + foodBefore + " -> " + foodAfter);
+                + "; mother's record " + Villages.builtList(mother.id()) + "; bread " + foodBefore + " -> " + foodAfter
+                + "; the colony's storehouse units " + units + ", " + fed + " fed, " + tooled + " with an axe and a pick");
+            helper.assertTrue(units >= 27, "the colony's storehouse, made out of the mother's timber: " + units + " units");
+            helper.assertTrue(fed == folk && tooled >= folk - 2, "the settlers go fed and with their tools: " + fed + " fed, " + tooled + " tooled");
             helper.assertTrue(sent && colony != null && !colony.id().equals(mother.id()),
                 "a new village should stand two hundred blocks out");
             helper.assertTrue(folk == com.jrpetty.mcassistant.Colonies.party(),
@@ -3822,8 +3849,8 @@ public class VillageGameTests {
             + in + " coin, " + leather + " left");
         // Two houses with no beds made up and no wool: the wool is saved for, then bought.
         com.jrpetty.mcassistant.village.Ledger.takeCoins(id, com.jrpetty.mcassistant.village.Ledger.coins(id));
-        com.jrpetty.mcassistant.village.Ledger.built(id, "house", heart.offset(20, 0, 20), net.minecraft.core.Direction.NORTH);
-        com.jrpetty.mcassistant.village.Ledger.built(id, "house", heart.offset(-20, 0, 20), net.minecraft.core.Direction.NORTH);
+        Villages.noteProject(id, "house", level.getGameTime());
+        Villages.noteProject(id, "house", level.getGameTime());
         long day = level.getDayTime() / 24000L;
         int none = com.jrpetty.mcassistant.entity.Market.buyWool(level, v, day);
         int putBy = com.jrpetty.mcassistant.entity.Market.saved(id, level.getGameTime());

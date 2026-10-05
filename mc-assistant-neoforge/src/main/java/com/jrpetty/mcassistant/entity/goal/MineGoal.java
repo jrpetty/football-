@@ -77,6 +77,10 @@ public class MineGoal extends Goal {
     private int workNeeded;
     private int moveStuck;
     private int tunnelSteps;
+    /** Steps of the gallery that cut fresh rock (a village miner's run is measured in these), and
+     *  whether the step under way has cut any. */
+    private int freshSteps;
+    private boolean dugThisStep;
     private int sinceTorch;
     private int veinMined;
     private int oresMined;
@@ -123,6 +127,7 @@ public class MineGoal extends Goal {
         this.currentDig = null;
         this.moveTarget = null;
         this.tunnelSteps = 0;
+        this.freshSteps = 0;
         this.sinceTorch = 0;
         this.veinMined = 0;
         this.saidCapped = false;
@@ -319,7 +324,7 @@ public class MineGoal extends Goal {
         if (phase == Phase.DESCEND) {
             if (cursor.getY() <= levelFloor) {
                 phase = Phase.TUNNEL;
-                tunnelSteps = 0;
+                tunnelSteps = 0; freshSteps = 0;
                 // Down the same stairs as last time: the gallery turns, run by run, into fresh rock.
                 if (assistant.isSettler()) {
                     Direction turned = switch (assistant.mineRuns % 3) {
@@ -345,7 +350,7 @@ public class MineGoal extends Goal {
             Direction step = descentDir(dir);
             if (step == null) {
                 phase = Phase.TUNNEL;   // genuinely boxed in: cut here instead
-                tunnelSteps = 0;
+                tunnelSteps = 0; freshSteps = 0;
                 return;
             }
             dir = step;
@@ -359,7 +364,14 @@ public class MineGoal extends Goal {
             // runs came home with a staircase's worth of stone and no ore).
             boolean deep = assistant.isSettler() && !stairPath.isEmpty() && cursor.getY() < stairPath.get(0).getY() - 12;
             boolean leavingZone = !deep && !assistant.inZoneColumn(cursor.relative(dir));
-            if (tunnelSteps >= TUNNEL_LENGTH || leavingZone) {
+            // A village miner goes back down the same stairs run after run: a gallery that counted
+            // every step came home, from the fourth run on, having walked twenty-four blocks of its
+            // own old tunnel and cut nothing. It counts the steps that cut fresh rock (the old
+            // tunnel walked through, up to four lengths of it, to the face).
+            boolean longEnough = assistant.isSettler()
+                ? freshSteps >= TUNNEL_LENGTH || tunnelSteps >= 4 * TUNNEL_LENGTH
+                : tunnelSteps >= TUNNEL_LENGTH;
+            if (longEnough || leavingZone) {
                 // Quarry: this floor is cut — drop four, aim back into the
                 // patch, and open the next one, down to the depth that was set.
                 //
@@ -381,7 +393,7 @@ public class MineGoal extends Goal {
                     if (viaShaft || descentDir(inward) != null) {
                         levelFloor = Math.max(target, levelFloor - 4);
                         levelsCut++;
-                        tunnelSteps = 0;
+                        tunnelSteps = 0; freshSteps = 0;
                         if (viaShaft) {
                             phase = Phase.SHAFT;
                             dir = dir.getClockWise();   // spokes, not one long trench
@@ -450,7 +462,7 @@ public class MineGoal extends Goal {
         }
         if (cursor.getY() <= levelFloor) {
             phase = Phase.TUNNEL;
-            tunnelSteps = 0;
+            tunnelSteps = 0; freshSteps = 0;
             assistant.sayRoutine("At Y" + cursor.getY() + " — opening the gallery.");
             return;
         }
@@ -462,7 +474,7 @@ public class MineGoal extends Goal {
         BlockPos below = cursor.below();
         if (!mayDig(below)) {                // the depth the player set
             phase = Phase.TUNNEL;
-            tunnelSteps = 0;
+            tunnelSteps = 0; freshSteps = 0;
             return;
         }
         if (touchesFluid(below) && !capFluid(below)) {
@@ -475,7 +487,7 @@ public class MineGoal extends Goal {
         BlockPos under = below.below();
         if (assistant.level().getBlockState(under).canBeReplaced() && !placeFiller(under)) {
             phase = Phase.TUNNEL;
-            tunnelSteps = 0;
+            tunnelSteps = 0; freshSteps = 0;
             assistant.sayRoutine("The shaft opened into a cavity — cutting here instead.");
             return;
         }
@@ -690,7 +702,10 @@ public class MineGoal extends Goal {
         }
 
         for (BlockPos cell : cells) {
-            if (!assistant.level().getBlockState(cell).canBeReplaced()) {
+            BlockState cs = assistant.level().getBlockState(cell);
+            // Not what can be walked through: its own torches were broken on every run back down
+            // the gallery, and each counted as a block dug (a spent mine never looked spent).
+            if (!cs.canBeReplaced() && !cs.getCollisionShape(assistant.level(), cell).isEmpty()) {
                 digQueue.addLast(cell);
             }
         }
@@ -783,6 +798,7 @@ public class MineGoal extends Goal {
         boolean ore = isOre(state);
         if (assistant.level().destroyBlock(pos, true, assistant)) {
             blocksMined++;
+            dugThisStep = true;
         assistant.note(AssistantEntity.Deed.BLOCKS_MINED, 1);
             if (ore) {
                 oresMined++;
@@ -840,7 +856,11 @@ public class MineGoal extends Goal {
         if (distSq < 2.5) {
             cursor = dest;
             moveTarget = null;
-            if (phase == Phase.TUNNEL) tunnelSteps++;
+            if (phase == Phase.TUNNEL) {
+                tunnelSteps++;
+                if (dugThisStep) freshSteps++;
+            }
+            dugThisStep = false;
             if (phase == Phase.DESCEND || phase == Phase.SHAFT) {
                 breadcrumb(dest);
             } else if (phase == Phase.TUNNEL && assistant.quarry() && tunnelSteps % 4 == 0) {

@@ -2798,7 +2798,9 @@ public class VillageFolkEntity extends AssistantEntity {
         // their work comes in bursts at their own bench, stand or post (a brew is twenty
         // seconds of waiting), and a brewer sent for timber between brews never brewed.
         StationTask trade = stationTask();
-        if (trade.isCraft() || trade == StationTask.STORE || trade == StationTask.GUARD) return false;
+        // Nor a miner: its "nothing to do" is the walk up its own stairs, and lent out to cut stone
+        // at the surface it brought home dirt and cobble all afternoon while the age waited on iron.
+        if (trade.isCraft() || trade == StationTask.STORE || trade == StationTask.GUARD || trade == StationTask.MINE) return false;
         // Timber one time, stone the next, whichever has ground to get it from.
         com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind first = (tickCount / 2400) % 2 == 0
             ? com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.LOGS : com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.STONE;

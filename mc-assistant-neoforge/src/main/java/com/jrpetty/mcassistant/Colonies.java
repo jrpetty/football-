@@ -45,7 +45,7 @@ public final class Colonies {
     /** How far out a colony goes: far enough to be a village of its own. */
     public static final int DISTANCE = 200;
     /** Food each colonist is sent out with, from the mother village's stores. */
-    private static final int FOOD_EACH = 6;
+    private static final int FOOD_EACH = 10;
 
     private static final Map<UUID, Long> LAST = new ConcurrentHashMap<>();
     private static final Map<UUID, BlockPos> PENDING = new ConcurrentHashMap<>();
@@ -165,18 +165,33 @@ public final class Colonies {
     public static boolean found(ServerLevel level, Villages.Village mother, BlockPos ground, long now) {
         UUID id = mother.id();
         int food = party() * FOOD_EACH;
-        if (takeFood(level, mother, food) < food) {
+        boolean founding = Villages.nearest(level, ground, Villages.VILLAGE_RANGE * 2) == null;
+        // Not before she can send them properly: the storehouse's timber and the stone for their
+        // tools. A party sent out with what she happened to have loose (no planks, no tools, no
+        // bread) sat at its camp for good: three colonies of a hundred-day town, built [] apiece.
+        if (founding && !canOutfit(level, mother)) {
             LAST.put(id, now - INTERVAL + 6000L);
             return false;
         }
-        boolean founding = Villages.nearest(level, ground, Villages.VILLAGE_RANGE * 2) == null;
+        List<ItemStack> provisions = takeFood(level, mother, food);
+        int took = 0;
+        for (ItemStack st : provisions) took += st.getCount();
+        if (took < food) {
+            for (ItemStack st : provisions) intoStores(level, mother, st);   // back where it came from
+            LAST.put(id, now - INTERVAL + 6000L);
+            return false;
+        }
         int stood = VillageFolkSpawnerBlock.raiseParty(level, ground, 0.0F, party());
         LAST.put(id, now);
-        if (stood == 0) return false;
+        if (stood == 0) {
+            for (ItemStack st : provisions) intoStores(level, mother, st);
+            return false;
+        }
         // The new village's founding stores and the beds of its camp are the mother's to give, not
         // something from nothing: what she could spare goes, and only that.
         if (founding) outfit(level, mother, ground);
         if (founding) packs(level, mother, ground);
+        provision(level, ground, provisions);
         Villages.noteColony(id);
         long day = level.getDayTime() / 24000L;
         Villages.Village colony = Villages.nearest(level, ground, 40);
@@ -212,7 +227,7 @@ public final class Colonies {
                 ItemStack want = chest.getItem(i);
                 if (want.isEmpty()) continue;
                 chest.setItem(i, ItemStack.EMPTY);
-                for (ItemStack got : take(level, mother, like(want), want.getCount(), false)) merge(sent, got);
+                for (ItemStack got : supply(level, mother, want)) merge(sent, got);
             }
             int slot = 0;
             for (ItemStack st : sent) {
@@ -260,7 +275,7 @@ public final class Colonies {
                 inv.set(i, ItemStack.EMPTY);
             }
             for (ItemStack want : wanted) {
-                for (ItemStack got : take(level, mother, like(want), want.getCount(), false)) {
+                for (ItemStack got : supply(level, mother, want)) {
                     ItemStack left = a.insertItem(got);
                     if (!left.isEmpty()) net.minecraft.world.level.block.Block.popResource(level, a.blockPosition(), left);
                 }
@@ -268,11 +283,138 @@ public final class Colonies {
         }
     }
 
+    /**
+     * One thing of a founding kit out of the mother's stores: the like of it if she has it put by,
+     * else made by her hands out of her own timber and stone (a storehouse unit is six planks, a
+     * chest eight, a bench four, a log four planks; a stone pick or axe three cobble and a stick
+     * or two). Bread is not asked for here: the settlers' food is their provisions. What she
+     * cannot find or make, they go without.
+     */
+    private static List<ItemStack> supply(ServerLevel level, Villages.Village mother, ItemStack want) {
+        List<ItemStack> out = new ArrayList<>();
+        if (want.is(net.minecraft.world.item.Items.BREAD)) return out;
+        int need = want.getCount();
+        for (ItemStack got : take(level, mother, like(want), need, false)) { need -= got.getCount(); out.add(got); }
+        int planks = planksFor(want), cobble = cobbleFor(want);
+        if (need <= 0 || planks + cobble <= 0) return out;
+        int can = need;
+        if (planks > 0) can = Math.min(can, timber(level, mother) / planks);
+        if (cobble > 0) can = Math.min(can, count(level, mother, s -> s.is(net.minecraft.world.item.Items.COBBLESTONE)) / cobble);
+        if (can <= 0) return out;
+        List<ItemStack> sawn = planks > 0 ? takeTimber(level, mother, can * planks) : List.of();
+        if (cobble > 0) take(level, mother, s -> s.is(net.minecraft.world.item.Items.COBBLESTONE), can * cobble, true);
+        if (want.is(ItemTags.PLANKS)) { out.addAll(sawn); return out; }     // planks wanted are the planks
+        int max = want.getMaxStackSize();
+        for (int left = can; left > 0; left -= max) out.add(want.copyWithCount(Math.min(max, left)));
+        int spare = -can * planks;                                            // a log's odd planks come too
+        for (ItemStack st : sawn) spare += st.getCount();
+        if (spare > 0) out.add(new ItemStack(net.minecraft.world.item.Items.OAK_PLANKS, spare));
+        return out;
+    }
+
+    /** The planks it takes the mother to make one of these, or 0. */
+    private static int planksFor(ItemStack want) {
+        if (want.is(com.jrpetty.mcassistant.McAssistantMod.STOREHOUSE_ITEM.get())) return 6;
+        if (want.is(net.minecraft.world.item.Items.CHEST)) return 8;
+        if (want.is(net.minecraft.world.item.Items.CRAFTING_TABLE)) return 4;
+        if (want.is(ItemTags.PLANKS)) return 1;
+        if (want.is(net.minecraft.world.item.Items.STONE_AXE) || want.is(net.minecraft.world.item.Items.STONE_PICKAXE)
+            || want.is(net.minecraft.world.item.Items.STONE_SWORD) || want.is(net.minecraft.world.item.Items.STONE_HOE)
+            || want.is(net.minecraft.world.item.Items.STONE_SHOVEL)) return 1;     // the sticks
+        return 0;
+    }
+
+    /** The cobblestone it takes to make one of these, or 0. */
+    private static int cobbleFor(ItemStack want) {
+        if (want.is(net.minecraft.world.item.Items.STONE_AXE) || want.is(net.minecraft.world.item.Items.STONE_PICKAXE)) return 3;
+        if (want.is(net.minecraft.world.item.Items.STONE_SWORD) || want.is(net.minecraft.world.item.Items.STONE_HOE)) return 2;
+        if (want.is(net.minecraft.world.item.Items.STONE_SHOVEL)) return 1;
+        return 0;
+    }
+
+    /** The mother's timber in planks: her planks, and four for every log. */
+    private static int timber(ServerLevel level, Villages.Village v) {
+        return count(level, v, s -> s.is(ItemTags.PLANKS)) + 4 * count(level, v, s -> s.is(ItemTags.LOGS));
+    }
+
+    /** So many planks' worth out of her stores: planks first, then logs sawn four planks apiece
+     *  (a log's odd planks come too). Returns the planks. */
+    private static List<ItemStack> takeTimber(ServerLevel level, Villages.Village v, int planks) {
+        List<ItemStack> out = new ArrayList<>();
+        int got = 0;
+        for (ItemStack st : take(level, v, s -> s.is(ItemTags.PLANKS), planks, false)) { got += st.getCount(); out.add(st); }
+        int logs = (planks - got + 3) / 4;
+        if (logs > 0) {
+            int sawn = 0;
+            for (ItemStack st : take(level, v, s -> s.is(ItemTags.LOGS), logs, false)) sawn += st.getCount() * 4;
+            for (int left = sawn; left > 0; left -= 64) out.add(new ItemStack(net.minecraft.world.item.Items.OAK_PLANKS, Math.min(64, left)));
+        }
+        return out;
+    }
+
+    /** Can the mother send a party properly: the storehouse's timber and planks, and stone for tools? */
+    static boolean canOutfit(ServerLevel level, Villages.Village mother) {
+        int units = count(level, mother, s -> s.is(com.jrpetty.mcassistant.McAssistantMod.STOREHOUSE_ITEM.get()));
+        int planksNeed = Math.max(0, 27 - units) * 6 + 48 + party() * 2;
+        int cobbleNeed = 64 + party() * 6;
+        return timber(level, mother) >= planksNeed
+            && count(level, mother, s -> s.is(net.minecraft.world.item.Items.COBBLESTONE)) >= cobbleNeed;
+    }
+
+    /** The settlers' provisions shared out among them, the rest into their stores. */
+    private static void provision(ServerLevel level, BlockPos at, List<ItemStack> provisions) {
+        Villages.Village colony = Villages.nearest(level, at, 40);
+        List<com.jrpetty.mcassistant.entity.AssistantEntity> folk = colony == null ? List.of() : Villages.folkOf(colony.id());
+        int k = 0;
+        for (ItemStack st : provisions) {
+            while (!st.isEmpty()) {
+                ItemStack part = st.split(Math.max(1, Math.min(st.getCount(), FOOD_EACH)));
+                if (folk.isEmpty()) {
+                    if (colony != null) intoStores(level, colony, part);
+                    continue;
+                }
+                ItemStack left = folk.get(k++ % folk.size()).insertItem(part);
+                if (!left.isEmpty() && colony != null) intoStores(level, colony, left);
+            }
+        }
+    }
+
+    /** Into a village's stores, or dropped at its heart if they are full. */
+    private static void intoStores(ServerLevel level, Villages.Village v, ItemStack st) {
+        if (st.isEmpty()) return;
+        boolean before = ZoneChests.askAs(true);
+        try {
+            for (ZoneChests.Found f : ZoneChests.around(level, v.centre(), Villages.storesRadius(v.id()), 64)) {
+                if (st.isEmpty()) break;
+                if (!f.stillThere() || !ZoneChests.isStashable(f)) continue;
+                net.minecraft.world.Container c = f.container();
+                for (int i = 0; i < c.getContainerSize() && !st.isEmpty(); i++) {
+                    ItemStack there = c.getItem(i);
+                    if (there.isEmpty()) { c.setItem(i, st.copy()); st.setCount(0); }
+                    else if (ItemStack.isSameItemSameComponents(there, st) && there.getCount() < there.getMaxStackSize()) {
+                        int move = Math.min(st.getCount(), there.getMaxStackSize() - there.getCount());
+                        there.grow(move);
+                        st.shrink(move);
+                    }
+                }
+                c.setChanged();
+            }
+        } finally {
+            ZoneChests.askAs(before);
+        }
+        if (!st.isEmpty()) net.minecraft.world.level.block.Block.popResource(level, v.centre().above(), st);
+    }
+
     /** What will do in place of this in a founding kit: any planks for planks, any sapling for a
      *  sapling, anything else itself. */
     private static Predicate<ItemStack> like(ItemStack want) {
         if (want.is(ItemTags.PLANKS)) return s -> s.is(ItemTags.PLANKS);
         if (want.is(ItemTags.SAPLINGS)) return s -> s.is(ItemTags.SAPLINGS);
+        // Any axe for an axe: an exact stone one was what the mother never had loose.
+        for (net.minecraft.tags.TagKey<net.minecraft.world.item.Item> tool : List.of(ItemTags.AXES, ItemTags.PICKAXES,
+                ItemTags.SWORDS, ItemTags.HOES, ItemTags.SHOVELS)) {
+            if (want.is(tool)) return s -> s.is(tool);
+        }
         net.minecraft.world.item.Item item = want.getItem();
         return s -> s.is(item);
     }
@@ -351,8 +493,10 @@ public final class Colonies {
         return got;
     }
 
-    /** Take this much food out of the village's stores. Returns how much was taken. */
-    private static int takeFood(ServerLevel level, Villages.Village v, int want) {
+    /** Take this much food out of the village's stores. Returns what was taken (it goes with the
+     *  settlers: it used to be taken and given to nobody). */
+    private static List<ItemStack> takeFood(ServerLevel level, Villages.Village v, int want) {
+        List<ItemStack> got = new ArrayList<>();
         int taken = 0;
         boolean before = ZoneChests.askAs(true);
         try {
@@ -364,7 +508,7 @@ public final class Colonies {
                     net.minecraft.world.item.ItemStack st = c.getItem(i);
                     if (st.isEmpty() || st.get(net.minecraft.core.component.DataComponents.FOOD) == null) continue;
                     int n = Math.min(st.getCount(), want - taken);
-                    st.shrink(n);
+                    got.add(st.split(n));
                     if (st.isEmpty()) c.setItem(i, net.minecraft.world.item.ItemStack.EMPTY);
                     taken += n;
                 }
@@ -373,6 +517,6 @@ public final class Colonies {
         } finally {
             ZoneChests.askAs(before);
         }
-        return taken;
+        return got;
     }
 }

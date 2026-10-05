@@ -95,7 +95,9 @@ own, and each step is there for a reason the village can see.
     next one asks for.
 11. **Colonies.** From the Stone Age on, a village of forty sends a founding party of
     eight a couple of hundred blocks out, fed from its own larder, and they found a
-    village of their own that climbs the ages from the start — at most one every two
+    village of their own that climbs the ages from the start. The mother sends them
+    properly or not yet: their storehouse is made out of her timber, their tools out of
+    her stone, and her bread goes with them in their packs — at most one every two
     game days from any one village, and never past the folk the whole world may
     hold (`villageWorldCap`). Over a long game the settlements spread across the map.
 
@@ -220,13 +222,20 @@ output, the worth and the three best paid, and any folk will tell you who earns 
     round, starting with somebody different each day.
   * **Saving up.** When the village can't yet afford something it must buy (a trade's
     kit, the drover's pair), the wages leave that much in the treasury for three days.
-  * **Passing traders** come every morning and buy enough of what the village has
-    plenty of to meet the day's wages and what it is saving for.
+  * **Passing traders** come every morning and buy enough of what the village has to
+    spare (anything over four lots of it) to meet the day's wages and what it is saving
+    for, at a fair price. They never take what the village is short of itself — the
+    stone for the hall it is raising, the food for a lean larder — nor the wool its beds
+    are waiting on.
+  * **Contentment knows the difference.** Wages paid in full are a good thing; paid
+    short, or hardly at all, folk say so.
   * **The tithe.** On the day of rest every folk with savings gives one coin in ten of
     what it holds over a dozen back to the treasury.
-* **Wool for the beds.** On market day, a village whose houses wait for beds and that
-  has no wool to make them buys up to three lots from the traders, out of what the
-  treasury holds beyond the day's wages.
+* **Wool for the beds.** Every morning, before the wages, a village whose houses wait
+  for beds and that has no wool to make them buys a lot or two from the traders. Short
+  of the coin, it puts it by: the wages leave it in the treasury, and the traders buy
+  enough of the village's goods to make it up. While the beds wait, the village keeps
+  twice the ranchers, for their sheep.
 * **Market day.** Once a week, on a different day for every village, the bell
   rings on the square in the morning and players nearby are told. On their break
   that day, folk go to the stalls and buy a treat with their savings: their
@@ -529,6 +538,10 @@ banners, the quest board asks for wool, and the elder may order the herds grown.
 * **Iron first.** An iron vein never uses up a miner's vein budget, and is dug before
   any other ore it finds. The smelter fires ore before sand, and fetches the raw iron
   the carriers have brought to the stores.
+* **Every run cuts fresh rock.** A miner goes back down the same stairs run after run;
+  its galleries are measured in fresh rock, so each run walks along the old tunnel to the
+  face and cuts new ground (and walks past its own torches). Between runs a miner stays
+  with its mine rather than going up to quarry stone at the surface.
 * **A spent mine is left.** Three galleries in a row that come home with next to nothing
   and the miner stakes fresh rock somewhere else round the village, rather than going back
   to the same dug-out hole between odd jobs.
