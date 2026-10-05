@@ -6366,8 +6366,15 @@ public class VillageFolkEntity extends AssistantEntity {
         if (!wanted) return false;
         java.util.function.Predicate<net.minecraft.world.item.ItemStack> logs =
             st -> st.is(net.minecraft.tags.ItemTags.LOGS);
+        // Only logs the builders can spare: eight smelters burning sixteen apiece kept a town of
+        // sixty-eight at no logs at all for days, and the meeting hall it needed for the Iron Age
+        // could never be paid for. The timber the builders want is kept back.
+        int stored = Market.stock(server, village, logs);
+        int keep = Math.max(64, com.jrpetty.mcassistant.village.VillageMath.timberWanted(Villages.headcount(village)) / 2);
+        int spare = Math.min(16, stored - keep);
         int have = countCarried(logs);
-        if (have < 16) have += drawFrom(villageCentre, logs, 16 - have, buildStoresRadius());
+        if (have < 4 && spare < 4) return false;
+        if (have < 16 && spare > 0) have += drawFrom(villageCentre, logs, Math.min(16 - have, spare), buildStoresRadius());
         if (have < 4) return false;
         enqueue(Job.smelt("logs", have / 2));
         brain("burning " + have / 2 + " logs into charcoal for the village");

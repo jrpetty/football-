@@ -697,6 +697,11 @@ anything; when look after look finds them no lot, they are let onto steeper grou
 terraced up under the floor, so a mountain town is not kept out of the Iron Age for want of
 a flat place for its hall.
 
+**Timber is kept for the builders.** A village short of coal has its idle smelters burn logs
+into charcoal, but only logs the builders can spare: the timber its buildings want is kept
+back. When the stores run low on logs, past the Wood Age as much as in it, the leader orders
+more axes into the woods.
+
 **How the village keeps its balance.**
 
 * **Gluts.** A trade whose stores are piled far past any use gets a smaller share of the

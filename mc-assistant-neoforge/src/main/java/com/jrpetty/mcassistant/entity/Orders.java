@@ -203,6 +203,13 @@ public final class Orders {
                 default -> { }
             }
         }
+        // Past the Wood Age nothing asks for timber by name, but every building is half wood: a
+        // town of sixty-eight with no logs in its stores for days could not pay for its hall.
+        if (Villages.ageOf(village).ordinal() >= Villages.Age.STONE.ordinal()) {
+            int logs = Market.stock(level, village, s -> s.is(net.minecraft.tags.ItemTags.LOGS));
+            if (logs < 16) score.merge(Order.TIMBER, 7, Integer::sum);         // nothing can be built
+            else if (logs < 48) score.merge(Order.TIMBER, 4, Integer::sum);
+        }
         Contentment.View c = Contentment.of(level, village);
         if (c != null) {
             if (c.food() < 12) score.merge(Order.LARDER, 4, Integer::sum);
