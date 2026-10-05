@@ -423,10 +423,13 @@ public class DistrictGameTests {
             for (BlockPos p : l.lights()) if (!level.getBlockState(p).isAir()) lights++;
             Kit.log("dt03 the park stands at " + t + ": " + seats + "/" + l.seats().size() + " bench seats, water " + water + "/"
                 + l.water().size() + ", stone " + stone + "/" + l.stone().size() + ", lights " + lights + "/" + l.lights().size()
-                + "; in the ledger: " + Park.parks(village).size() + " — " + builder.debugLine());
+                + " (" + lamps(level, l) + "); in the ledger: " + Park.parks(village).size() + "; torches left in the builder's pack "
+                + builder.countMatching(st -> st.is(Items.TORCH)) + " — " + builder.debugLine());
             e.that(seats >= l.seats().size() - 2, "the benches are down: " + seats);
             e.that(stone >= l.stone().size() - 2, "the fountain's stone is laid: " + stone);
-            e.that(lights >= 4, "the lamps are lit: " + lights);
+            // The builder carries the lamps' torches to the lot and puts them up (it used to drop them on the grass on
+            // its way, to light the ground it walked over); one may wait for its keepers, where it stood on the post.
+            e.that(lights >= l.lights().size() - 1, "the lamps are lit: " + lights);
             e.that(!Park.parks(village).isEmpty(), "the park is in the village's register");
             // Its keepers: saplings, a bucket and flowers in the stores; the water, the trees and the
             // paths a visit at a time (the builder's water, if it had none, from the pond).
@@ -449,8 +452,12 @@ public class DistrictGameTests {
             }
             for (BlockPos p : l.paths()) if (level.getBlockState(p).is(Blocks.DIRT_PATH)) paths++;
             for (BlockPos p : l.water()) if (level.getFluidState(p).is(FluidTags.WATER) && level.getFluidState(p).isSource()) water++;
+            int lit = 0;
+            for (BlockPos p : l.lights()) if (!level.getBlockState(p).isAir()) lit++;
             Kit.log("dt03 the keepers: " + done + "; trees " + trees + "/" + l.trees().size() + ", path " + paths + "/" + l.paths().size()
-                + ", water " + water + "/" + l.water().size() + "; " + Park.status(level, v));
+                + ", water " + water + "/" + l.water().size() + ", lamps " + lit + "/" + l.lights().size() + " (" + lamps(level, l) + "); "
+                + Park.status(level, v));
+            e.that(lit == l.lights().size(), "every lamp lit: " + lit + " (" + lamps(level, l) + ")");
             e.that(water >= l.water().size() - 1, "the fountain holds water: " + water);
             e.that(trees >= 2, "trees planted in its corners: " + trees);
             e.that(paths >= l.paths().size() / 2, "its paths laid: " + paths);
@@ -552,6 +559,20 @@ public class DistrictGameTests {
             }
         }
         return out;
+    }
+
+    /** Each lamp of a park, what is on it and what it stands on, for the log. */
+    private static String lamps(ServerLevel level, Park.Layout l) {
+        StringBuilder sb = new StringBuilder();
+        for (BlockPos p : l.lights()) {
+            if (sb.length() > 0) sb.append(", ");
+            sb.append(name(level.getBlockState(p))).append(" on ").append(name(level.getBlockState(p.below())));
+        }
+        return sb.toString();
+    }
+
+    private static String name(BlockState st) {
+        return net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(st.getBlock()).getPath();
     }
 
     /** Its fountain's water that is standing water (a source), of all of it. */

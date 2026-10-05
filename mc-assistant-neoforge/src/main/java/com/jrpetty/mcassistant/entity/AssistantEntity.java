@@ -5116,12 +5116,23 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Drop a torch at our feet when working somewhere dark. */
     private void torchIfDark() {
         BlockPos pos = blockPosition();
+        if (carriesABuilding()) return;            // [districts] its torches are the building's lamps (see carriesABuilding)
         if (level().getMaxLocalRawBrightness(pos) >= 6) return;
         if (!level().getBlockState(pos).canBeReplaced()) return;
         if (!level().getBlockState(pos.below()).isFaceSturdy(level(), pos.below(), net.minecraft.core.Direction.UP)) return;
         if (removeMatching(s -> s.is(Items.TORCH), 1) == 1) {
             level().setBlockAndUpdate(pos, Blocks.TORCH.defaultBlockState());
         }
+    }
+
+    /**
+     * [districts] Has it a building in hand (a build job queued or under way)? Then the torches and lanterns in
+     * its pack were drawn for that building's lamps and lights, and are not dropped on the way to light the
+     * ground it walks over.
+     */
+    private boolean carriesABuilding() {
+        Job j = peekJob();
+        return j != null && j.type() == Job.Type.BUILD;
     }
 
     // ------------------------------- waypoints --------------------------------
@@ -8988,7 +8999,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
         // Proactive lighting: standing somewhere dark with torches on hand and
         // none already nearby -> drop one to keep mobs from spawning around it.
-        if (tickCount % 60 == 0 && this.onGround() && getTarget() == null
+        // [districts] Not while it has a building in hand: the torches and lanterns it carries then are the
+        // building's lamps (a park's builder used to drop all eight of its lamp torches on the grass on its
+        // way to the lot, one a few seconds, and the park went up dark).
+        if (tickCount % 60 == 0 && this.onGround() && getTarget() == null && !carriesABuilding()
             && level().getBrightness(net.minecraft.world.level.LightLayer.BLOCK, blockPosition()) < 7
             && countMatching(s -> s.is(Items.TORCH)) > 0 && noTorchNear(5)) {
             placeTorchNearby();

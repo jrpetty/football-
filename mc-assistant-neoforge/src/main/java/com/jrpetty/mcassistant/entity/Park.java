@@ -313,7 +313,9 @@ public final class Park {
             BlockState st = level.getBlockState(p);
             boolean torch = st.is(Blocks.TORCH);
             if (!st.isAir() && !torch) continue;
-            if (!level.getBlockState(p.below()).is(BlockTags.LOGS)) continue;          // its post is gone: let be
+            // Its post gone: let be. (A post is whatever the builder had for it: a log, or a block of stone when
+            // its own trade had used the last log; a lamp on a stone post is lit like any other.)
+            if (!Block.canSupportCenter(level, p.below(), Direction.UP)) continue;
             if (torch && !Masonry.can(level, v, Items.LANTERN, 1)) continue;
             if (!torch && !Masonry.canLight(level, v) && !Masonry.can(level, v, Items.LANTERN, 1)) continue;
             if (!TownJobs.atWork(level, v, "park", p, "lighting the park's lamps")) return null;
