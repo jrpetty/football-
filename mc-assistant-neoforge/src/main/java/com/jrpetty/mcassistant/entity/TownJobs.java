@@ -234,13 +234,25 @@ public final class TownJobs {
             if (a instanceof VillageFolkEntity f && ON.containsKey(f.getUUID()) && busy(f)) busy++;
         }
         if (adults < SETTLED && !essential(works)) return null;      // a young village: its trades first
-        if (busy >= Math.max(1, adults / 8)) return null;            // never more than one hand in eight
+        // Never more than one hand in eight — unless hands are standing idle in trades with more
+        // hands than they want (or short of their kit): then up to one in four, and the hands past
+        // the eighth only from those. The hundred had sixty standing about while its works waited,
+        // its one hand in eight (ten or eleven) already at them.
+        java.util.Set<AssistantEntity.StationTask> over = null;
+        if (busy >= Math.max(1, adults / 8)) {
+            if (busy >= Math.max(1, adults / 4)) return null;
+            over = java.util.EnumSet.noneOf(AssistantEntity.StationTask.class);
+            for (AssistantEntity.StationTask t : AssistantEntity.StationTask.values()) {
+                if (Villages.overStaffed(v.id(), t)) over.add(t);
+            }
+        }
         RESTING.values().removeIf(until -> until <= now);
         VillageFolkEntity best = null;
         double bestScore = -Double.MAX_VALUE;
         for (AssistantEntity a : Villages.folkOf(v.id())) {
             if (!(a instanceof VillageFolkEntity f) || !fit(f, works) || ON.containsKey(f.getUUID()) && busy(f)) continue;
             if (RESTING.containsKey(f.getUUID())) continue;              // had its turn: somebody else's now
+            if (over != null && !spare(f, over)) continue;               // past the eighth: only a hand standing idle
             AssistantEntity.StationTask trade = f.stationTask();
             // Not yet decided on a trade: it is about to, and that comes first. (Once decided, a
             // folk with no ground for it yet is just the hand to spare: see below.)
@@ -263,6 +275,20 @@ public final class TownJobs {
             if (score > bestScore) { bestScore = score; best = f; }
         }
         return best;
+    }
+
+    /**
+     * A hand standing idle that its trade can spare: nothing done at its trade a while, and either a
+     * trade with more hands than the village's shape wants of it (its goods piling up in the stores
+     * as often as not), or none to work at it with (its kit still to come). Never a craft's one hand,
+     * a courier or the storekeeper (the storehouse's staff), nor the watch.
+     */
+    static boolean spare(VillageFolkEntity f, java.util.Set<AssistantEntity.StationTask> over) {
+        AssistantEntity.StationTask trade = f.stationTask();
+        if (trade == AssistantEntity.StationTask.HAUL || trade == AssistantEntity.StationTask.STORE
+            || trade == AssistantEntity.StationTask.GUARD || trade.isCraft()) return false;
+        if (!f.workedOut()) return false;
+        return trade == AssistantEntity.StationTask.NONE || !f.missingEssentials().isEmpty() || over.contains(trade);
     }
 
     /** The works a village has done even while it is young: its beds made up, room in its stores. */
