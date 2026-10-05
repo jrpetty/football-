@@ -1023,6 +1023,13 @@ the stores can make that day (three wool and three planks each), and any it stil
 are brought in later, one at a time, as wool comes in: a bed from the stores, or one made
 there and then. With no wool, a bed comes in from the founders' camp, one at a time as
 each is laid, so the village never has fewer beds than it had while a house is going up.
+**A new house always gets two beds**: with none in the builder's pack and none at the
+camp, the builder lays the house's first two beds free (the one thing in the village that
+comes from nothing, so a house can take folk in the day it goes up; a town of eight once
+stood a week with five houses and twelve beds unmade). Making up the rest has a hand of
+its own: one more than the one in eight the town's work may take, so it is never waiting
+behind the levelling. And while any house waits on a bed, the stores' wool goes to the
+beds, not to washing lines or market stalls.
 Bedding lying in the stores is laid out at the camp each morning by the leader for anybody
 without a bed. A bed under one of the village's own roofs is a home however high the roof
 over it; only a bed down in the ground, in nothing the village built, is passed over. While

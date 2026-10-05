@@ -109,6 +109,11 @@ public class BuildGoal extends Goal {
     private int placed;
     /** What we set out to build, kept so the finish can report it. */
     @Nullable private String building;
+    /** The beds a new house gets laid free, wool or none: a town of eight stood a week at eight folk with
+     *  five houses up and their twelve beds unmade, and no child was born for want of one. */
+    public static final int FREE_BEDS = 2;
+    /** The bed being laid now is one of those. */
+    private boolean freeBedNow;
     /** Toward the next block, in hundredths of a tick (a hundred a tick; buildPaceHundredths a block). */
     private int workTicks;
     private int stuckTicks;
@@ -911,9 +916,13 @@ public class BuildGoal extends Goal {
                 // None in the pack: one of the founders' beds comes in from the camp, now it will be laid.
                 if (bedItem.isEmpty() && (tries > 0 || !assistant.bedFromTheCamp())) break;
             }
-            if (bedItem.isEmpty()) { cursor++; return; }                  // none: Grow.furnish brings one later
-            net.minecraft.world.item.Item kind = bedItem.getItem();
-            if (assistant.removeMatching(st -> st.is(kind), 1) < 1) { cursor++; return; }
+            // None to be had: a new house gets its first two beds all the same (FREE_BEDS), so it can take
+            // folk in the day it goes up rather than wait a week on wool. Past those, Grow.furnish brings
+            // one later, made of the stores' wool.
+            freeBedNow = bedItem.isEmpty() && assistant.isSettler() && homeForFreeBeds(building) && bedsLaidHere() < FREE_BEDS;
+            if (bedItem.isEmpty() && !freeBedNow) { cursor++; return; }
+            net.minecraft.world.item.Item kind = freeBedNow ? Items.WHITE_BED : bedItem.getItem();
+            if (!freeBedNow && assistant.removeMatching(st -> st.is(kind), 1) < 1) { cursor++; return; }
             state = net.minecraft.world.level.block.Block.byItem(kind) instanceof net.minecraft.world.level.block.BedBlock bb
                 ? bb.defaultBlockState() : Blocks.RED_BED.defaultBlockState();
         } else {
@@ -965,6 +974,20 @@ public class BuildGoal extends Goal {
      *  anybody living here skips a night. */
     private Direction bedHead(Placement p) {
         return p.way() == Blueprints.Way.UP ? facing : Blueprints.world(p.way(), facing);
+    }
+
+    /** A home folk sleep in: a house of either kind, or a manor. */
+    private static boolean homeForFreeBeds(@Nullable String structure) {
+        return structure != null && (structure.startsWith("house") || structure.equals("manor"));
+    }
+
+    /** Beds already laid in what is being built (its plan's bed cells), whatever they were made of. */
+    private int bedsLaidHere() {
+        int n = 0;
+        for (Placement p : plan) {
+            if (p.part() == Part.BED && assistant.level().getBlockState(p.pos()).getBlock() instanceof net.minecraft.world.level.block.BedBlock) n++;
+        }
+        return n;
     }
 
     private boolean layBed(BlockPos foot, BlockState carried, Direction lie) {

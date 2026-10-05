@@ -82,6 +82,8 @@ import java.util.function.Predicate;
  *     what took them; a raider left over from a raid that is over goes at dawn.</li>
  * <li><b>ec14</b>: a worker whose plot's edge towards the town is under a bluff ten blocks high sets its work
  *     chest down on its own level, not on the top of the bluff where it could never get to it.</li>
+ * <li><b>ec15</b>: a town of eight with its one hand for the town's work at the levelling still gets a hand to
+ *     make up the beds; a third piece of work waits.</li>
  * </ul>
  *
  * <p>Each runs on its own ground (x 360,000 to 366,000, z 50,000).
@@ -1141,5 +1143,41 @@ public class EconomyGameTests {
         helper.assertTrue(Math.abs(chest.getY() - mine.getY()) <= 3, "on the plot's own level, not the bluff's top: y " + chest.getY()
             + " against the plot's " + mine.getY());
         helper.succeed();
+    }
+
+    // ============================================================ ec15: a hand for the beds
+
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "ec15_a_hand_for_the_beds")
+    public static void ec15_a_hand_for_the_beds(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        com.jrpetty.mcassistant.entity.TownJobs.instantForTests(false);
+        final int x = 360900;
+        Kit.hold(level, x, Z, 40);
+        Kit.prepare(level, x, Z, 40);
+        level.setDayTime(24000L * 4 + 2000);
+        BlockPos heart = Kit.surface(level, x, Z);
+        VillageFolkSpawnerBlock.raiseParty(level, heart, 0.0F, 8);
+        Villages.Village v = Villages.nearest(level, heart, Villages.VILLAGE_RANGE);
+        helper.assertTrue(v != null, "a village");
+        helper.runAtTickTime(10, () -> {
+            level.setDayTime(24000L * 4 + 2000);
+            com.jrpetty.mcassistant.entity.TownJobs.atWork(level, v, "levelling", heart.offset(12, 0, 0), "levelling the ground");
+            com.jrpetty.mcassistant.entity.TownJobs.atWork(level, v, "beds", heart.offset(0, 0, 12), "making up the beds");
+            com.jrpetty.mcassistant.entity.TownJobs.atWork(level, v, "paths", heart.offset(-12, 0, 0), "laying a path");
+            java.util.Map<String, Integer> at = new java.util.TreeMap<>();
+            for (AssistantEntity a : Villages.folkOf(v.id())) {
+                if (a instanceof VillageFolkEntity f) {
+                    String doing = com.jrpetty.mcassistant.entity.TownJobs.doing(f);
+                    if (doing != null) at.merge(doing, 1, Integer::sum);
+                }
+            }
+            com.jrpetty.mcassistant.entity.TownJobs.instantForTests(true);
+            Kit.log("ec15 eight folk, three pieces of the town's work called: " + at);
+            helper.assertTrue(at.getOrDefault("levelling the ground", 0) == 1, "one hand at the levelling: " + at);
+            helper.assertTrue(at.getOrDefault("making up the beds", 0) == 1, "and one more for the beds, past the one in eight: " + at);
+            helper.assertTrue(!at.containsKey("laying a path"), "but not a third for the paths: " + at);
+            helper.succeed();
+        });
     }
 }

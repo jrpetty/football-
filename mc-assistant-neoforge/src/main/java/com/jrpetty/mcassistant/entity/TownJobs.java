@@ -239,7 +239,12 @@ public final class TownJobs {
         // the eighth only from those. The hundred had sixty standing about while its works waited,
         // its one hand in eight (ten or eleven) already at them.
         java.util.Set<AssistantEntity.StationTask> over = null;
-        if (busy >= Math.max(1, adults / 8)) {
+        int cap = Math.max(1, adults / 8);
+        // The beds made up and room in the stores may have one hand past the eighth: a town of eight had
+        // one hand, always at the levelling on its hillside, and five houses stood a week with twelve beds
+        // unmade and no child born for want of one.
+        boolean extra = essential(works) && busy < cap + 1;
+        if (busy >= cap && !extra) {
             if (busy >= Math.max(1, adults / 4)) return null;
             over = java.util.EnumSet.noneOf(AssistantEntity.StationTask.class);
             for (AssistantEntity.StationTask t : AssistantEntity.StationTask.values()) {

@@ -365,6 +365,9 @@ public final class TownLife {
             if (!level.getBlockState(p).isAir() || !level.getBlockState(p.below()).isAir()) continue;
             if (!(level.getBlockState(p.relative(back.getOpposite())).getBlock() instanceof net.minecraft.world.level.block.FenceBlock)) continue;
             if (!Crafts.take(level, v, s -> s.is(net.minecraft.tags.ItemTags.BANNERS), 1)) {
+                // The beds come first: no wool for the washing while a house waits on one (the traders' wool,
+                // bought for the beds, went on the lines behind the houses).
+                if (Market.bedsShort(v.id()) > 0) break;
                 java.util.function.Predicate<ItemStack> wool = s -> s.is(net.minecraft.tags.ItemTags.WOOL);
                 if (Crafts.stock(level, v, wool) < 6 || !Crafts.take(level, v, wool, 6)) break;
                 if (!Crafts.usePlanks(level, v, 1)) {
@@ -584,7 +587,7 @@ public final class TownLife {
         int planks = (12 - fences) * 2 + (4 - barrels) * 7;
         boolean hay = Crafts.stock(level, v, s -> s.is(Items.HAY_BLOCK)) >= 1;
         if (!hay && Crafts.stock(level, v, s -> s.is(Items.WHEAT)) < 9) return false;
-        if (Crafts.stock(level, v, wool) < 15) return false;
+        if (Crafts.stock(level, v, wool) < 15 || Market.bedsShort(v.id()) > 0) return false;   // the beds' wool first
         if (Crafts.stock(level, v, s -> s.is(net.minecraft.tags.ItemTags.PLANKS))
                 + 4 * Crafts.stock(level, v, s -> s.is(net.minecraft.tags.ItemTags.LOGS)) < planks) return false;
         if (!Crafts.take(level, v, wool, 15)) return false;

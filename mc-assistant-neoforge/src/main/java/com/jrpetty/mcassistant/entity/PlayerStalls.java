@@ -1145,7 +1145,7 @@ public final class PlayerStalls {
         List<Block> wool = new ArrayList<>();
         if (free) {
             for (int i = 0; i < 3; i++) wool.add(i == 1 ? Blocks.WHITE_WOOL : Blocks.RED_WOOL);
-        } else if (!shortOfTimber(level, v) && Crafts.stock(level, v, s -> s.is(ItemTags.WOOL)) >= 3
+        } else if (!shortOfTimber(level, v) && Market.bedsShort(v.id()) == 0 && Crafts.stock(level, v, s -> s.is(ItemTags.WOOL)) >= 3
                 && Crafts.stock(level, v, s -> s.is(ItemTags.WOODEN_FENCES))
                     + (Crafts.stock(level, v, s -> s.is(ItemTags.PLANKS)) + 4 * Crafts.stock(level, v, s -> s.is(ItemTags.LOGS))) / 2 >= 4 + 8) {
             int fences = 0;
@@ -1318,7 +1318,8 @@ public final class PlayerStalls {
         if (!near) return;
         int wood = Crafts.stock(level, v, s -> s.is(ItemTags.PLANKS)) + 4 * Crafts.stock(level, v, s -> s.is(ItemTags.LOGS));
         boolean barrel = Crafts.stock(level, v, s -> s.is(Items.BARREL)) > 0;
-        if (wood < (barrel ? 0 : 7) + 2 + 8 + 64 || Crafts.stock(level, v, s -> s.is(ItemTags.WOOL)) < 3) return;   // and the builders' timber kept
+        if (wood < (barrel ? 0 : 7) + 2 + 8 + 64 || Crafts.stock(level, v, s -> s.is(ItemTags.WOOL)) < 3
+                || Market.bedsShort(id) > 0) return;   // and the builders' timber kept, and the beds' wool
         if (shortOfTimber(level, v)) return;
         Booth spot = spot(level, v);
         if (spot == null) return;
