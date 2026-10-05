@@ -4524,13 +4524,20 @@ public class VillageFolkEntity extends AssistantEntity {
         // Off the clock is not "found nothing": a night parked at home records
         // no work either, and a folk that gave up its shaft every dusk had a
         // new plot, no chest, and no way of making one out on bare stone.
-        if (!onShift() || onBreak() || !workedOut()) { spentSince = 0; return false; }
-        if (spentSince == 0) { spentSince = tickCount; return false; }
-        // Three solid minutes of finding nothing: long enough that a slow
-        // patch is not abandoned, short enough that nobody stands in a
-        // clearing all afternoon.
-        if (tickCount - spentSince < 3600) return false;
+        // Three empty galleries in a row say it plainly. The clock below never saw them:
+        // a miner whose runs came home empty lent a hand to the woodpile in between,
+        // which counted as work, and it went back to the same spent hole all game.
+        boolean barren = trade == StationTask.MINE && barrenMineRuns >= 3 && onShift() && !onBreak();
+        if (!barren) {
+            if (!onShift() || onBreak() || !workedOut()) { spentSince = 0; return false; }
+            if (spentSince == 0) { spentSince = tickCount; return false; }
+            // Three solid minutes of finding nothing: long enough that a slow
+            // patch is not abandoned, short enough that nobody stands in a
+            // clearing all afternoon.
+            if (tickCount - spentSince < 3600) return false;
+        }
         spentSince = 0;
+        barrenMineRuns = 0;
         // Look somewhere ELSE. findSite is deterministic and a mined-out patch
         // still looks like perfectly good stone from the surface, so searching
         // the same way returns the same spent ground every time. Turning the

@@ -218,6 +218,9 @@ public class MineGoal extends Goal {
     private void finish(String message) {
         assistant.say(message);
         assistant.noteJobOutcome(oresMined > 0 || blocksMined > 8);
+        // A run that cut almost nothing found its gallery already dug: run after run
+        // like that and the patch is spent, whatever else the miner did in between.
+        assistant.barrenMineRuns = oresMined == 0 && blocksMined < 4 ? assistant.barrenMineRuns + 1 : 0;
         assistant.pollJob();
         // Turn the raw metal we dug up into ingots automatically — for a hired
         // hand with a furnace of its own. A settler has none: the ore goes to the
