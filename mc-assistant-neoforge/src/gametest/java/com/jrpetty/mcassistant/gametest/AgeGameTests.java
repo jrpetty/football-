@@ -119,7 +119,8 @@ public class AgeGameTests {
      * A Stone Age village with the stone, the coal and the food the age asks for, its wall, its
      * smeltery and four houses, and a house's worth short of the five homes it keeps spare: the
      * meeting hall is its next project, not the spare house (which goes up meanwhile only if the
-     * hall is set aside). A village with every bed but one taken still raises a house first.
+     * hall is set aside). A town of that size with every bed but one taken raises its hall and then a house;
+     * with five folk who have no bed at all, a house first.
      * When the hall stands (room for six more besides), nothing is left on the Stone Age's list
      * and the village comes into the Iron Age.
      */
@@ -169,12 +170,21 @@ public class AgeGameTests {
         String meanwhile = Villages.nextProject(id);
         helper.assertTrue("house".equals(meanwhile), "with the hall set aside a house goes up meanwhile, got " + meanwhile);
 
-        // Every bed but one taken: a house first, whatever the age wants.
+        // Every bed but one taken in a town this size (past Villages.AGE_FOLK): still the hall first, and the
+        // house straight after it (a town having children faster than it houses them always wants one more).
         UUID full = UUID.randomUUID();
         Villages.restore(level, full, heart.offset(400, 0, 0), Villages.Age.STONE, built, room - 1);
         String crowded = Villages.nextProject(full);
-        Kit.log("ag01 " + (room - 1) + " folk in room for " + room + ": next " + crowded);
-        helper.assertTrue("house".equals(crowded), "a village with every bed but one taken builds a house first, got " + crowded);
+        List<String> crowdedList = Villages.projectsWanted(full);
+        Kit.log("ag01 " + (room - 1) + " folk in room for " + room + ": next " + crowded + " of " + crowdedList);
+        helper.assertTrue("hall".equals(crowded) && crowdedList.indexOf("house") == crowdedList.indexOf("hall") + 1,
+            "a town of " + (room - 1) + " with every bed but one taken raises its hall, then a house: " + crowdedList);
+        // Five with nowhere to sleep: a house first, whatever the age wants.
+        UUID homeless = UUID.randomUUID();
+        Villages.restore(level, homeless, heart.offset(800, 0, 0), Villages.Age.STONE, built, room + 5);
+        String roof = Villages.nextProject(homeless);
+        Kit.log("ag01 " + (room + 5) + " folk in room for " + room + ": next " + roof);
+        helper.assertTrue("house".equals(roof), "five folk with no bed: a house first, got " + roof);
 
         // The hall goes up: room for six more, nothing left on the list, and the Iron Age.
         Villages.noteProject(id, "hall", now);

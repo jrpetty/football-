@@ -3986,7 +3986,10 @@ And nothing comes from nothing:
   chosen once on the village's own grid: storage, shelter, houses, a well, then
   (as the village comes of age) a wall, a smeltery, a meeting hall, a workshop, a
   watchtower, a market, a lighthouse, a chapel, a gateway, and after that the great
-  works for ever. A lot is dry, within twelve blocks of the ground at the heart and
+  works for ever. A house comes first while folk are short of beds; but in a town of
+  twenty-four or more where all but four or fewer have one, the buildings the age asks
+  for go up before the next house (a town having children faster than it can house them
+  would otherwise never get to its hall). A lot is dry, within twelve blocks of the ground at the heart and
   no steeper than four blocks across; the builder fills the low side up to the
   floor and fells any tree in the way (keeping the wood). If the builders cannot
   get to a lot (three cells in a row out of reach and nothing standing) it is

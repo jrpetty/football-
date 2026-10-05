@@ -1489,7 +1489,31 @@ public final class Villages {
      */
     public static List<String> projectsWanted(UUID villageId) {
         // [flats] a block of flats ahead of the next house, in the Iron Age when the town wants one (Flats)
-        return requestedFirst(villageId, Flats.wanted(villageId, projectsWantedInOrder(villageId)));
+        return requestedFirst(villageId, Flats.wanted(villageId, ageBeforeTheHouse(villageId, projectsWantedInOrder(villageId))));
+    }
+
+    /** The buildings an age asks for before the next (Villages.needs): the wall, the smeltery and the hall;
+     *  the workshop, the watchtower and the market; the lighthouse and the chapel; the gateway. */
+    private static final java.util.Set<String> AGE_BUILDINGS = java.util.Set.of(
+        "fortify", "smeltery", "hall", "workshop", "watchtower", "market", "lighthouse", "chapel", "gateway");
+
+    /**
+     * In a big town where all but a few have a bed, the age's own buildings go up before the next house.
+     * A town having children faster than it can house them always wants one more: a mountain town of
+     * seventy-seven, every day of its third week with "a new house, the meeting hall" at the head of its
+     * list, was nineteen days in the Stone Age for want of a hall. Short of beds for more than a few,
+     * the house still comes first (nobody sleeps on the ground for a hall).
+     */
+    static List<String> ageBeforeTheHouse(UUID villageId, List<String> out) {
+        int folk = headcount(villageId);
+        if (age(villageId) == Age.WOOD || folk < AGE_FOLK || folk - housing(villageId) > 4) return out;
+        int house = out.indexOf("house");
+        if (house < 0) return out;
+        int lastAge = -1;
+        for (int i = house + 1; i < out.size(); i++) if (AGE_BUILDINGS.contains(out.get(i))) lastAge = i;
+        if (lastAge < 0) return out;
+        out.add(lastAge, out.remove(house));          // just after the last of the age's buildings
+        return out;
     }
 
     private static List<String> projectsWantedInOrder(UUID villageId) {
