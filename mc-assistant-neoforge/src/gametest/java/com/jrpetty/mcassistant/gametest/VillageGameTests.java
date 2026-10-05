@@ -3787,6 +3787,58 @@ public class VillageGameTests {
     }
 
     /**
+     * The traders and the wool: the morning's traders buy what the village has to spare at a fair
+     * price, enough toward the wages; and houses waiting on beds get their wool bought every
+     * morning, saved up for when the treasury is short.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "t62_traders")
+    public static void t62_traders(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(7000);
+        Kit.hold(level, 54000, 12000, 24);
+        Kit.prepare(level, 54000, 12000, 24);
+        BlockPos heart = Kit.surface(level, 54000, 12000);
+        VillageFolkSpawnerBlock.raiseParty(level, heart, 0.0F, 8);
+        Villages.Village v = Villages.nearest(level, heart, Villages.VILLAGE_RANGE);
+        helper.assertTrue(v != null, "a village");
+        java.util.UUID id = v.id();
+        for (AssistantEntity a : Villages.folkOf(id)) if (a instanceof VillageFolkEntity f && !f.isBaby()) f.setJob(StationTask.FARM);
+        java.util.List<BlockPos> stores = Villages.storeChests(level, id);
+        helper.assertTrue(!stores.isEmpty(), "the village has its stores");
+        net.minecraft.world.Container box = (net.minecraft.world.Container) level.getBlockEntity(stores.get(0));
+        helper.assertTrue(box != null, "a chest at the stores");
+        int slot = -1;
+        for (int i = 0; i < box.getContainerSize() && slot < 0; i++) if (box.getItem(i).isEmpty()) slot = i;
+        helper.assertTrue(slot >= 0, "room in the stores");
+        box.setItem(slot, new ItemStack(Items.LEATHER, 64));
+        // An empty treasury on a working morning: the traders come for what it has to spare.
+        com.jrpetty.mcassistant.village.Ledger.takeCoins(id, com.jrpetty.mcassistant.village.Ledger.coins(id));
+        int bill = com.jrpetty.mcassistant.entity.Market.wageBill(id);
+        int in = com.jrpetty.mcassistant.entity.Market.trade(level, v);
+        int leather = com.jrpetty.mcassistant.entity.Market.stock(level, id, st -> st.is(Items.LEATHER));
+        Kit.log("t62 the traders: wages " + bill + ", they paid " + in + " coin; leather left " + leather);
+        helper.assertTrue(in > 0 && leather < 64 && leather >= 16, "the traders bought spare leather and left a reserve: "
+            + in + " coin, " + leather + " left");
+        // Two houses with no beds made up and no wool: the wool is saved for, then bought.
+        com.jrpetty.mcassistant.village.Ledger.takeCoins(id, com.jrpetty.mcassistant.village.Ledger.coins(id));
+        com.jrpetty.mcassistant.village.Ledger.built(id, "house", heart.offset(20, 0, 20), net.minecraft.core.Direction.NORTH);
+        com.jrpetty.mcassistant.village.Ledger.built(id, "house", heart.offset(-20, 0, 20), net.minecraft.core.Direction.NORTH);
+        long day = level.getDayTime() / 24000L;
+        int none = com.jrpetty.mcassistant.entity.Market.buyWool(level, v, day);
+        int putBy = com.jrpetty.mcassistant.entity.Market.saved(id, level.getGameTime());
+        com.jrpetty.mcassistant.village.Ledger.addCoins(id, 40);
+        int paid = com.jrpetty.mcassistant.entity.Market.buyWool(level, v, day);
+        int wool = com.jrpetty.mcassistant.entity.Market.stock(level, id, st -> st.is(net.minecraft.tags.ItemTags.WOOL));
+        Kit.log("t62 the wool: beds short " + com.jrpetty.mcassistant.entity.Market.bedsShort(id) + "; with no coin it spent " + none
+            + " and put by " + putBy + "; with 40 it paid " + paid + " for " + wool + " wool");
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Market.bedsShort(id) > 0, "the houses are waiting on beds");
+        helper.assertTrue(none == 0 && putBy > 0, "short of coin, the wool is saved for: " + putBy);
+        helper.assertTrue(paid > 0 && wool >= 8, "with the coin, the wool is bought into the stores: " + wool);
+        helper.succeed();
+    }
+
+    /**
      * The hunter: out on its grounds it takes a grown wild cow, never the last pair of pigs, and
      * brings the meat and the hide home.
      */

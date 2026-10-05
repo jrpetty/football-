@@ -299,13 +299,13 @@ public final class Market {
         Economy.closeTheDay(level, v, day);              // yesterday's output, and what the village is worth
         mint(level, v);
         trade(level, v);
+        buyWool(level, v, day);                          // the beds before the wages: coin put by for it
         payWages(level, v);
         if (RestDay.today(id, day)) tithe(level, v, day);
         Villages.checkRank(level, v, day);
         News.morning(level, v, day);
         if (marketDay(id, day)) {
             sellSurplus(level, v, day);
-            buyWool(level, v, day);
             level.playSound(null, v.centre(), SoundEvents.BELL_BLOCK, SoundSource.BLOCKS, 3.0F, 1.0F);
             for (ServerPlayer p : level.players()) {
                 if (p.blockPosition().closerThan(v.centre(), 96)) {
@@ -387,19 +387,28 @@ public final class Market {
         int base = Math.max(2, head / 3) + Villages.ageOf(id).ordinal();
         int makes = Math.max(Economy.yesterday(id), Economy.weekAverage(id));
         int want = Math.max(base, Math.min(need, makes));
+        // Never what the village is short of itself (the stone for the hall it is raising, the food
+        // for a lean larder), nor the wool while beds wait for it. They used to buy only what the
+        // stores held ten lots of, at a third of its worth: a mining town of fifty sold three coin
+        // of a day's hundred and sixteen, and paid its wages out of nothing.
+        Set<Villages.Task> short_ = EnumSet.noneOf(Villages.Task.class);
+        for (Villages.Need n : Villages.needs(level, id)) short_.add(n.task());
+        boolean bedsWait = bedsShort(id) > 0;
         int in = 0;
         List<String> sold = new ArrayList<>();
         for (Good g : GOODS) {
             if (in >= want) break;
             if (g.need() == Villages.Task.NONE && g.value() < 0.3) continue;
+            if (g.need() != Villages.Task.NONE && short_.contains(g.need())) continue;
+            if (bedsWait && g.name().equals("Wool")) continue;
             int have = stock(level, id, g.what());
-            int plenty = g.bundle() * 8;
-            if (have < plenty + g.bundle() * 2) continue;
-            // As much as is wanted, from what it has plenty of: up to six lots of a thing.
-            int lotWorth = Math.max(1, (int) Math.floor(g.bundle() * each(g, have) * 0.6));
-            int lots = Math.min(Math.min(6, (have - plenty) / g.bundle()), Math.max(1, (want - in + lotWorth - 1) / lotWorth));
+            int plenty = g.bundle() * 4;
+            if (have < plenty + g.bundle()) continue;
+            // As much as is wanted, from what it has to spare: up to eight lots of a thing.
+            int lotWorth = Math.max(1, (int) Math.floor(g.bundle() * each(g, have) * 0.8));
+            int lots = Math.min(Math.min(8, (have - plenty) / g.bundle()), Math.max(1, (want - in + lotWorth - 1) / lotWorth));
             int n = lots * g.bundle();
-            int paid = (int) Math.floor(n * each(g, have) * 0.6);
+            int paid = (int) Math.floor(n * each(g, have) * 0.8);
             if (paid < 1 || !TownWork.take(level, v, g.what(), n)) continue;
             in += paid;
             sold.add(n + " " + g.name().toLowerCase());
@@ -447,7 +456,13 @@ public final class Market {
             bill += w;
         }
         int purse = Ledger.coins(id) - saved(id, level.getGameTime());
-        if (bill <= 0 || purse <= 0) return 0;
+        if (bill <= 0) return 0;
+        if (purse <= 0) {
+            // Nothing to pay with is a payday too: an empty treasury kept the last good morning's
+            // "paid in full" on the books for days.
+            payday(level, v, hands, wages, new int[hands.size()], 0);
+            return 0;
+        }
         int[] due = new int[hands.size()];
         int given = 0;
         for (int i = 0; i < due.length; i++) {
@@ -575,7 +590,15 @@ public final class Market {
         return (int) Math.min(Integer.MAX_VALUE, sum);
     }
 
+    /** What is being put by for this one thing. */
+    static int savedFor(UUID village, String what, long now) {
+        java.util.Map<String, long[]> m = SAVING.get(village);
+        long[] e = m == null ? null : m.get(what);
+        return e == null || e[1] < now ? 0 : (int) e[0];
+    }
+
     public static void resetForTests() {
+        BEDS_SHORT.clear();
         SAVING.clear();
         SHARE.clear();
         NEWS.clear();
@@ -610,31 +633,44 @@ public final class Market {
 
     // ------------------------------------------------------------------ buying in
 
+    /** Beds the village's houses want and nobody has made up yet, as of this morning. */
+    private static final java.util.Map<UUID, Integer> BEDS_SHORT = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** How many beds the village's houses are waiting on (this morning's count). */
+    public static int bedsShort(UUID village) {
+        return BEDS_SHORT.getOrDefault(village, 0);
+    }
+
     /**
-     * Market day: a village with houses whose beds are not made up, and not the wool to make
-     * them, buys wool from the traders (dear: it pays what they would ask), up to three lots a
-     * week, out of what its treasury holds beyond the day's wages. A town of sixty-eight had
-     * fifty-two beds planned and seven made: two ranchers, and no sheep within fifty blocks.
+     * Every morning: a village with houses whose beds are not made up, and not the wool to make
+     * them, buys wool from the traders (dear: it pays what they would ask), a lot or two a day,
+     * before the wages. Short of the coin, it puts it by: the wages leave it in the treasury and
+     * the traders buy enough of the village's goods to make it up. (It bought only on market day,
+     * out of what was left after a full day's wages, which never happened: a town of fifty-two had
+     * thirty-six beds planned, eight made, and never bought a strand.) Returns the coin spent.
      */
     public static int buyWool(ServerLevel level, Villages.Village v, long day) {
         UUID id = v.id();
-        int missing = Villages.bedsPlanned(id) - Villages.bedsMadeUp(level, id);
-        if (missing <= 0) return 0;
+        int missing = Math.max(0, Villages.bedsPlanned(id) - Villages.bedsMadeUp(level, id));
+        BEDS_SHORT.put(id, missing);
+        long now = level.getGameTime();
         int wool = stock(level, id, s -> s.is(ItemTags.WOOL));
         int beds = stock(level, id, s -> s.is(ItemTags.BEDS));
         int short_ = 3 * Math.max(0, missing - beds) - wool;
-        if (short_ < 8) return 0;
+        if (short_ < 3) { bought(id, "wool"); return 0; }
         Good g = goodFor(new ItemStack(Items.WHITE_WOOL));
         if (g == null) return 0;
-        int lots = Math.min(3, (short_ + g.bundle() - 1) / g.bundle());
-        int price = sellPrice(g, wool, true);
-        int spare = Ledger.coins(id) - wageBill(id) - saved(id, level.getGameTime());
-        lots = Math.min(lots, spare / Math.max(1, price));
+        int lots = Math.min(2, (short_ + g.bundle() - 1) / g.bundle());
+        int price = sellPrice(g, wool, marketDay(id, day));
+        int other = saved(id, now) - savedFor(id, "wool", now);
+        int can = (Ledger.coins(id) - other) / Math.max(1, price);
+        if (can < lots) saveFor(id, "wool", (lots - Math.max(0, can)) * price, now);   // the rest tomorrow
+        lots = Math.min(lots, can);
         if (lots <= 0) return 0;
         int paid = Ledger.takeCoins(id, lots * price);
         Economy.spent(id, paid);
-        ItemStack bought = new ItemStack(Items.WHITE_WOOL, lots * g.bundle());
-        ItemStack left = intoStores(level, id, bought);
+        if (lots * g.bundle() >= short_) bought(id, "wool");
+        ItemStack left = intoStores(level, id, new ItemStack(Items.WHITE_WOOL, lots * g.bundle()));
         if (!left.isEmpty()) { /* the stores are full: the rest is left with the traders */ }
         Villages.tell(id, day, "bought " + lots * g.bundle() + " wool from the traders for " + paid + " coin, for the beds");
         return paid;

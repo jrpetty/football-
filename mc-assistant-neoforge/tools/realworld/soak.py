@@ -349,10 +349,10 @@ def epic_day(r, x, z, day, began, last_age, metrics_file="epic-metrics.jsonl"):
     # builds the workflow keeps): what a regression looks like is a curve that bends.
     stores = re.search(r"Stores: food (\d+) logs (\d+) stone (\d+) coal (\d+) iron (\d+) diamond (\d+) obsidian (\d+)", status)
     trades = re.search(r"Trades: ([^.]*)\.", status)
-    tally = {}
+    counts = {}
     if trades:
         for n, t in re.findall(r"(\d+) ([a-z]+)", trades.group(1)):
-            tally[t] = int(n)
+            counts[t] = int(n)
     watch = re.search(r"(\d+) gates (?:open|shut), (\d+) posts", status)
     coins = re.search(r"Treasury: (\d+) coins", status)
     purses = re.search(r"Treasury: \d+ coins, (\d+) in purses", status)
@@ -365,7 +365,7 @@ def epic_day(r, x, z, day, began, last_age, metrics_file="epic-metrics.jsonl"):
         "villages": len(villages), "colonies": colonies, "world": world,
         "bedded": int(beds.group(1)) if beds else None, "beds_made": int(made.group(1)) if made else None,
         "beds_planned": int(made.group(2)) if made and made.group(2) else None,
-        "trades": tally, "guards": tally.get("guard", 0),
+        "trades": counts, "guards": counts.get("guard", 0),
         "gates": int(watch.group(1)) if watch else None, "posts": int(watch.group(2)) if watch else None,
         "coins": int(coins.group(1)) if coins else None, "purses": int(purses.group(1)) if purses else None,
         "contentment": int(content.group(1)) if content else None,

@@ -2805,6 +2805,10 @@ public class VillageFolkEntity extends AssistantEntity {
         com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind second = first == com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.LOGS
             ? com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.STONE : com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.LOGS;
         for (var kind : java.util.List.of(first, second)) {
+            // Stone wants a pickaxe: one from the stores, or timber instead. A farmer sent to the
+            // quarry with a hoe stood there saying it couldn't cut stone without one, day after day.
+            if (kind == com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.STONE && countCarried(AssistantEntity::isPickaxe) == 0
+                && (villageCentre == null || drawFrom(villageCentre, AssistantEntity::isPickaxe, 1, buildStoresRadius()) <= 0)) continue;
             WorkZone ground = groundFor(server, village, kind);
             if (ground == null) continue;
             lentTo = ground;

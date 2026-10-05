@@ -133,8 +133,12 @@ public final class Contentment {
         }
         if (amenities >= 6) good.add("plenty to do of an evening");
         // Wages.
-        int wages = Ledger.paidOn(id) >= day - 1 ? 5 : 0;
-        if (wages > 0) good.add("the wages are paid");
+        // What the last payday actually paid: the morning's business ran every day whether there
+        // was coin for the wages or not, and "the wages are paid" was said of a town paying 2%.
+        int share = Ledger.paidOn(id) >= day - 1 ? Market.lastShare(id) : -1;
+        int wages = share >= 90 ? 5 : share >= 50 ? 3 : share >= 20 ? 1 : 0;
+        if (share >= 90) good.add("the wages are paid");
+        else if (share >= 0) bad.add(share >= 50 ? "the wages are paid short" : "the wages are hardly paid");
         // A day of rest kept this week.
         int rest = RestDay.keptThisWeek(id, day) ? 5 : 0;
         if (rest > 0) good.add("a day of rest");

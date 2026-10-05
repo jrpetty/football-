@@ -723,6 +723,8 @@ public final class Villages {
         // coast, more woodcutters and hunters in the forest, more miners in the hills.
         double t = (slot.weight() + boost) * total / (double) VILLAGE_SIZE * Orders.scale(villageId)
             * glut(villageId, slot.trade()) * Homeland.lean(villageId, slot.trade());
+        // Houses waiting on beds want the wool: twice the ranchers (their sheep) till they are made up.
+        if (slot.trade() == AssistantEntity.StationTask.RANCH && villageId != null && Market.bedsShort(villageId) >= 6) t *= 2.0;
         int max = slot.max() == Integer.MAX_VALUE ? Integer.MAX_VALUE
             : slot.max() + Math.max(0, boost) + Homeland.extraMost(villageId, slot.trade());
         return Math.max(0.0, Math.min(max, t));
