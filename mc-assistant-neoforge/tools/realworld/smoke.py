@@ -320,8 +320,10 @@ def found_village(r, cx, cz, look):
     # The levelled ground and its sloped edges from high up, the hill's cut face, and the folk at their camp.
     # (Inside the client's sight: ten chunks, its fog closing in from about a hundred and forty blocks.
     # From higher up the square was lost in the fog and the overhead saw nothing but sky.)
-    look("17-found-4-done-air", fx + 78, level_y + 58, fz + 78, fx, level_y, fz, wait=14)
-    look("17-found-5-done-overhead", fx + 2, level_y + 82, fz + 6, fx, level_y, fz, wait=10)
+    # (Long waits: at ten chunks a whole square's chunks take a while to draw, and a chunk not yet drawn shows
+    # as a hole of sky where the ground is whole.)
+    look("17-found-4-done-air", fx + 78, level_y + 58, fz + 78, fx, level_y, fz, wait=35)
+    look("17-found-5-done-overhead", fx + 2, level_y + 82, fz + 6, fx, level_y, fz, wait=30)
     ex, ez = at(radius + 34, 46)
     look("17-found-6-edge", ex, level_y + 22, ez, hill_x, level_y + 4, hill_z, wait=8)
     look("17-found-7-folk", fx + 10, level_y + 6, fz + 10, fx, level_y + 1, fz, wait=8)
