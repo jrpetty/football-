@@ -460,6 +460,16 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         publishJobState();
     }
 
+    /**
+     * Look at the checklist again now, because a tool or a ration has just come to hand some other way
+     * than the station brain's own (a spare off the storehouse's rack, rations at the counter). The
+     * list is otherwise only looked at again by the station brain, which a hand away from its plot or
+     * gone to bed does not run: it went on reading "needs a pickaxe" all night with a new one in hand.
+     */
+    public void recheckKit() {
+        if (stationTask != StationTask.NONE) refreshJobState();
+    }
+
     /** Publish the cached job/zone/status to watching clients. Scans nothing —
      *  safe to call while the entity is still loading in. */
     private void publishJobState() {
@@ -6461,6 +6471,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // And before the last good tool snaps, not after.
         if (missingEssentials.isEmpty() && precraftWornTool()) { brain("making a new tool"); return true; }
         if (!missingEssentials.isEmpty()) {
+            // A full pack has no room for the kit it is short of, nor for the makings of it: the
+            // output goes to the stores first. A miner whose pick broke on the run that also filled
+            // its pack could take neither a new pick nor a handle for one, and nothing ever banked
+            // its load, because the banking (below) waits behind this checklist.
+            if (isPackFull() && stashable() > 0 && stationDepositDue()) { brain("banking output to make room for kit"); return true; }
             // Help itself from its own chests before bothering anyone. A player
             // who stocked spare hoes, pickaxes or torches at the station should
             // be able to walk away for hours — a worn-out tool shouldn't idle a

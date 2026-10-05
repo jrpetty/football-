@@ -390,7 +390,7 @@ public final class Couriers {
         r.count = count;
         r.priority = 0;
         r.queued = level.getGameTime();
-        r.what = count + " " + plural(ask) + " out to " + worker.displayNameCap();
+        r.what = lot(count, ask) + " out to " + worker.displayNameCap();
         o.queue.add(0, r);
         return true;
     }
@@ -439,6 +439,14 @@ public final class Couriers {
         return r;
     }
 
+    /** So many of a kit word, in words: "a pickaxe", "an axe", "a pair of shears", "twelve rations". */
+    static String lot(int n, @Nullable String ask) {
+        if (n != 1 || ask == null || ask.isEmpty()) return Storekeeping.words(n) + " " + plural(ask);
+        if (ask.equals("shears")) return "a pair of shears";
+        if (ask.endsWith("s") || ask.equals("wheat")) return "one lot of " + ask;
+        return (ask.matches("^[aeiou].*") ? "an " : "a ") + ask;
+    }
+
     /** A kit word in the plural: "torches", "wheat seeds", "potatoes", "wheat". */
     static String plural(@Nullable String ask) {
         if (ask == null || ask.isEmpty()) return "goods";
@@ -447,10 +455,17 @@ public final class Couriers {
         return ask + "s";
     }
 
+    /** What a kit run carries: what the worker asked for, and of a tool a good one off the rack, never
+     *  one somebody put back worn through (Toolrack). */
+    private static Predicate<ItemStack> kit(String ask) {
+        Predicate<ItemStack> word = com.jrpetty.mcassistant.entity.goal.WithdrawGoal.matcherFor(ask);
+        return s -> word.test(s) && !(s.isDamageableItem() && Toolrack.worn(s));
+    }
+
     /** What the storekeeper says sending a courier out. */
     private static String sendLine(ServerLevel level, Run r, String name) {
         return switch (r.kind) {
-            case KIT -> name + ", " + Storekeeping.words(r.count) + " " + plural(r.ask) + " out to " + r.folkName + ", please.";
+            case KIT -> name + ", " + lot(r.count, r.ask) + " out to " + r.folkName + ", please.";
             case SMELTER -> name + ", take some ore out to " + r.folkName + " at the forge.";
             case CHEST -> FolkTalk.pick(level.getRandom(), r.folkName + "'s chest is filling up — off you go, " + name + ".",
                 name + ", bring in " + r.folkName + "'s chest, would you?");
@@ -583,8 +598,7 @@ public final class Couriers {
      *  handed over, and back to the storehouse. */
     private static boolean deliver(VillageFolkEntity c, ServerLevel level, UUID v, Office o, Run r, BlockPos base) {
         VillageFolkEntity to = r.folk == null ? null : level.getEntity(r.folk) instanceof VillageFolkEntity f && f.isAlive() ? f : null;
-        Predicate<ItemStack> what = r.kind == Kind.KIT && r.ask != null
-            ? com.jrpetty.mcassistant.entity.goal.WithdrawGoal.matcherFor(r.ask) : VillageFolkEntity.FOR_THE_SMELTER;
+        Predicate<ItemStack> what = r.kind == Kind.KIT && r.ask != null ? kit(r.ask) : VillageFolkEntity.FOR_THE_SMELTER;
         if (r.stage == Stage.PACKING) {
             if (to == null) { close(level, v, o, c, r, 0L); return true; }
             if (c.distanceToSqr(base.getX() + 0.5, base.getY(), base.getZ() + 0.5) > 5.0 * 5.0) return walk(c, level, v, o, r, base);
@@ -619,8 +633,8 @@ public final class Couriers {
             c.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
             c.note(AssistantEntity.Deed.LOADS_HAULED, 1);
             FolkTalk.speak(c, r.kind == Kind.KIT
-                ? FolkTalk.pick(level.getRandom(), "From the storehouse, " + to.displayNameCap() + ": " + Storekeeping.words(given) + " " + plural(r.ask) + ".",
-                    "Here — " + plural(r.ask) + ", sent out from the storehouse.")
+                ? FolkTalk.pick(level.getRandom(), "From the storehouse, " + to.displayNameCap() + ": " + lot(given, r.ask) + ".",
+                    "Here — " + lot(given, r.ask) + ", sent out from the storehouse.")
                 : FolkTalk.pick(level.getRandom(), "Ore for the furnaces, " + to.displayNameCap() + "!", "From the storehouse — keep those fires going."));
             r.stage = Stage.BACK;
             r.best = Double.MAX_VALUE;

@@ -336,6 +336,13 @@ output, the worth and the three best paid, and any folk will tell you who earns 
     over a full larder.
   * **Hungry, the fields still get worked.** Every hand needs its rations to work, except
     the farmers, fishers and hunters: their work is the food.
+  * **Rations before they run out.** A hand down to its last three or so takes more at the
+    counter if it is at the stores (after the morning assembly, say), or, far out on its plot,
+    has a courier bring them out while it works. Of an evening anybody living in the town
+    tops up at the stores. A hand whose plot is a long walk out carries a few days' (twelve),
+    one near the stores a couple of days' (eight), and no more than a day's while the larder
+    is low. Rations are food that will not poison it: no rotten flesh, spider eyes or raw
+    chicken.
   * **Contentment knows the difference.** Wages paid in full are a good thing; paid
     short, or hardly at all, folk say so.
   * **The tithe.** On the day of rest every folk with savings gives one coin in ten of
@@ -878,7 +885,9 @@ hands back to their own work the same morning.
 * **Gluts.** A trade whose stores are piled far past any use gets a smaller share of the
   village. With food over four larders the farms are halved (over two, cut by a quarter),
   and logs and stone likewise. The mines are never cut while the age is short of iron or
-  diamonds. Hands a trade can spare go to whichever trade is a hand and a half short.
+  diamonds. Hands a trade can spare go to whichever trade is a hand and a half short; if
+  that trade has no ground to be had (no water within reach for a fisher), to the next one
+  short that has, the couriers (whose ground is the storehouse) as often as not.
 * **Iron first.** An iron vein never uses up a miner's vein budget, and is dug before
   any other ore it finds. The smelter fires ore before sand, and fetches the raw iron
   the carriers have brought to the stores.
@@ -928,8 +937,10 @@ hands back to their own work the same morning.
   rounds: the storehouse keeps a **run list**, and each courier takes the next run on it —
   sent out by the storekeeper when it is at the counter, or straight off the list when it
   is not, so nothing waits on one pair of hands. Best first:
-  1. a worker's **kit** (seed, saplings, torches, feed, arrows) carried **out** to it, when
-     it is far out on its plot and asks for it: it keeps working instead of walking in;
+  1. a worker's **kit** (seed, saplings, torches, feed, arrows, its **rations** while it still
+     has a meal or two left, and a **spare tool** off the rack before its own wears through)
+     carried **out** to it, when it is far out on its plot and asks for it: it keeps working
+     instead of walking in;
   2. **ore and fuel out to the smelter** when it runs low (or the stone and clay for its
      masonry);
   3. the **production chests**, the fullest first, and of two as full the one that has
@@ -971,6 +982,25 @@ hands back to their own work the same morning.
 
 **Tools, potions and clothes.**
 
+* **The rack of spare tools.** The storehouse keeps spares ahead of need: a pick for every
+  four miners, an axe for every four woodcutters, a blade for every four of the watch and the
+  hunters, a hoe for every eight farmers, a rod for every four fishers and shears for the pen
+  (at least one of each that anybody uses, never more than eight). Whoever is at the stores
+  with a bench makes them — the storekeeper at its counter through the day, anybody at the
+  heart of an evening or with nothing better to do there — two at a time, out of the stores'
+  own goods: three cobblestone (or iron) and two sticks for a pick or an axe, the sticks out
+  of the stores' sticks, else planks, else a log sawn for them, and what is left of the log goes
+  back; a rod of three sticks and two string, shears of two iron. Stone, once there is stone
+  to spare (in the Wood Age the builders' stack comes first, and with none a wooden one); iron
+  once the village has come to iron and is not putting it by for its age, never the smith's
+  last bars. Nothing goes on the rack while the founding stores are the storehouse's.
+* **A broken tool is replaced from the rack.** A hand whose tool is gone takes a spare there
+  and then (booked out in the storehouse's books), by day or of an evening, so a pick that
+  broke at dusk is replaced before the morning. One whose tool is nearly worn through takes
+  its spare before it breaks — brought out by a courier if its plot is far out, so it works
+  on. A hand with a full pack banks its load first, to have room for it. With the rack empty,
+  it makes itself one of the stores' stone and a stick, as before. Wear is as it was: a spare
+  wears through like any other tool.
 * **The best tool of the trade.** Every few minutes a miner, woodcutter, farmer or guard
   takes the best tool of its kind the stores hold, if it beats its own: the smith's iron
   and the enchanter's work. Its old tool goes back.
@@ -2845,7 +2875,9 @@ from the village has walked to the spot, and then it is done in that folk's hand
 hand is one the village can spare: one between trades, a carrier or storekeeper, one
 whose own trade has nothing to work on, or the trade the work belongs to (a fisher for
 the jetty, a guard for the gate). There is never more than one hand in eight on it at a
-time, and only by day. A road crew works out along the road and keeps the ground around
+time — unless hands are standing idle in a trade that has more than it wants (or short of
+their kit): then up to one in four, the extra ones only from those idle hands — and only by
+day. A road crew works out along the road and keeps the ground around
 it loaded as it goes. `/village status` shows who is at the town's works.
 
 And nothing comes from nothing:
