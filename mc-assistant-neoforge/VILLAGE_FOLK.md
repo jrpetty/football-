@@ -74,13 +74,15 @@ has to run to hold them):
   water above the level inside the square (a stream down the hillside the town is cut into) is let
   out there and dammed by its bank where it comes in. (Once the ground was held up a block for every
   block from a stream on the hill, and let down to a lake's shore, which left terraces in the square.)
-  When the levelling is done, **the square is looked over again, column by column**: any the
+  When the levelling is done, **the square and its worked edge are looked over again, column by
+  column**: any the
   levelling left off the level, hollow within five of its top (sand that slid, water that ran in,
   a cave it missed), not dressed in the town's soil, or with anything growing on it, is worked
   again, and the square looked over again while anything was mended (three times at most). Only
   then is the founding done. The server log says how flat it came out (every column measured, and
   why any is off), and `/village found ground <x> <z> <radius>` measures any ground.
-  The level ground is **solid five deep**: its top (the town's grass, or sand or podzol) and four
+  The level ground is **solid five deep**, and so is every column of its sloped edge that was cut
+  or built up: its top (the town's grass, or sand or podzol; the edge keeps its own) and four
   blocks of earth under it, whatever the land had there. Caves, springs, pockets of water or lava,
   buried roots and stumps, and sand over a hollow are filled in the land's own earth (dirt under
   grass, sandstone under sand), so nothing built on it sinks and nobody steps through it; stone,
