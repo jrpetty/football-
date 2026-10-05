@@ -411,6 +411,15 @@ public final class Leader {
             }
         }
 
+        // Bedding lying in the stores (a builder's, handed back when its lot would not do) while
+        // folk sleep on their feet: laid out at the camp, for tonight.
+        int laid = bedsOut(level, v);
+        if (laid > 0) {
+            Villages.tell(id, day, who + " had " + laid + " bed" + (laid == 1 ? "" : "s")
+                + " out of the stores laid at the camp, so nobody sleeps on their feet");
+            calls.add(laid + " bed" + (laid == 1 ? "" : "s") + " put out at the camp");
+        }
+
         // The pay: the leader's usual, and part held back when there is buying to do and no coin.
         int pay = usualPay(id);
         int coins = Ledger.coins(id);
@@ -437,6 +446,25 @@ public final class Leader {
         DECIDED.put(id, plan.word + ": " + daysWords + " food (" + (int) Math.round(inAvg) + " in, "
             + (int) Math.round(useAvg) + " eaten a day)" + (calls.isEmpty() ? "" : "; " + String.join(", ", calls))
             + (pay != 100 ? "; wages at " + pay + "%" : ""));
+    }
+
+    /** Beds out of the stores laid at the camp, one for each grown folk with none. Returns how many. */
+    static int bedsOut(ServerLevel level, Villages.Village v) {
+        UUID id = v.id();
+        int without = 0;
+        for (AssistantEntity a : Villages.folkOf(id)) if (!a.isBaby() && a.bedPos() == null) without++;
+        int laid = 0;
+        while (laid < without) {
+            ItemStack bed = Crafts.takeOne(level, v, s -> s.is(net.minecraft.tags.ItemTags.BEDS));
+            if (bed.isEmpty()) break;
+            if (!(net.minecraft.world.level.block.Block.byItem(bed.getItem()) instanceof net.minecraft.world.level.block.BedBlock b)
+                    || !com.jrpetty.mcassistant.VillageSpawner.campBed(level, v.centre(), b)) {
+                Crafts.store(level, v, bed);                              // no room left at the camp
+                break;
+            }
+            laid++;
+        }
+        return laid;
     }
 
     /** Famine bread off the passing traders, out of half the treasury at most. Returns the coin spent. */

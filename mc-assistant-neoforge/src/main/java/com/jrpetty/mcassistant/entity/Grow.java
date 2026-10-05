@@ -113,9 +113,15 @@ public final class Grow {
                 if (!level.getBlockState(foot).canBeReplaced() || !level.getBlockState(head).canBeReplaced()) continue;
                 if (!level.getBlockState(foot.below()).isSolid() || !level.getBlockState(head.below()).isSolid()) continue;
                 // Carried in and made up by a hand from the village, once there is one to make up.
-                if (Market.stock(level, id, s -> s.is(ItemTags.BEDS)) == 0 && Market.stock(level, id, s -> s.is(ItemTags.WOOL)) < 3) return false;
+                // Or, with neither, one of the founders' beds carried in from the camp.
+                boolean camp = !com.jrpetty.mcassistant.VillageSpawner.campBeds(level, v.centre()).isEmpty();
+                if (Market.stock(level, id, s -> s.is(ItemTags.BEDS)) == 0 && Market.stock(level, id, s -> s.is(ItemTags.WOOL)) < 3 && !camp) return false;
                 if (!TownJobs.atWork(level, v, "beds", foot, "making up a bed")) return false;
                 BlockState bed = bedFromTheStores(level, v);
+                if (bed == null && camp) {
+                    Block lifted = com.jrpetty.mcassistant.VillageSpawner.liftCampBed(level, v.centre(), Villages.bedsClaimed(id));
+                    if (lifted != null) bed = lifted.defaultBlockState();
+                }
                 if (bed == null) return false;                                        // nothing to make one of
                 final BlockState laid = bed;
                 BuildGoal.stampOnly(level, plan, b.anchor(), b.facing(), 13, x -> laid, x -> x.pos().equals(foot));

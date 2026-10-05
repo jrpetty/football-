@@ -862,8 +862,12 @@ public class BuildGoal extends Goal {
             if (!assistant.level().getBlockState(head).canBeReplaced()
                     || !assistant.level().getBlockState(head.below()).isSolid()) { cursor++; return; }
             ItemStack bedItem = ItemStack.EMPTY;
-            for (ItemStack st : assistant.getInventoryItems()) {
-                if (st.is(ItemTags.BEDS)) { bedItem = st; break; }
+            for (int tries = 0; tries < 2 && bedItem.isEmpty(); tries++) {
+                for (ItemStack st : assistant.getInventoryItems()) {
+                    if (st.is(ItemTags.BEDS)) { bedItem = st; break; }
+                }
+                // None in the pack: one of the founders' beds comes in from the camp, now it will be laid.
+                if (bedItem.isEmpty() && (tries > 0 || !assistant.bedFromTheCamp())) break;
             }
             if (bedItem.isEmpty()) { cursor++; return; }                  // none: Grow.furnish brings one later
             net.minecraft.world.item.Item kind = bedItem.getItem();

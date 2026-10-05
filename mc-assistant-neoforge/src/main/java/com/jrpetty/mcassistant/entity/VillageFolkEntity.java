@@ -2076,9 +2076,12 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected boolean bedFit(BlockPos bed) {
         if (!level().hasChunkAt(bed)) return true;                   // out of sight: as it was
-        int surface = level().getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
-            bed.getX(), bed.getZ());
-        return bed.getY() >= surface - 8;
+        UUID village = ownerId();
+        if (village == null) {
+            return bed.getY() >= level().getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                bed.getX(), bed.getZ()) - 8;
+        }
+        return !Villages.buriedBed(level(), village, bed);           // a bed under its house's roof is a home
     }
 
     /** Where its partner sleeps, else one of its parents (a child sleeps by its family). */
@@ -5432,7 +5435,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (site == null) {
             buildNote("build: no lot for the " + project + " (" + Villages.lotReport(village) + ")");
             // Set aside, so the next thing on the list goes up meanwhile (Villages.defer).
-            Villages.defer(village, project, now + 6000L);
+            Villages.defer(village, project, now + 6000L, "no lot: " + Villages.lotReport(village));
             Villages.retryShortly(village, now);
             return;
         }
@@ -5442,7 +5445,7 @@ public class VillageFolkEntity extends AssistantEntity {
             buildNote("build: cannot afford the " + project);
             // Something cheaper further down the list may be affordable now: the smeltery
             // need not wait while the stone for the wall piles up.
-            Villages.defer(village, project, now + 2400L);
+            Villages.defer(village, project, now + 2400L, "cannot afford it yet");
             Villages.retrySoon(village, now);
             return;
         }
@@ -5477,7 +5480,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (!stockedFor(project, site)) {
             // A part nobody can make (obsidian before anybody has found any), or a making
             // that has not come to anything four visits running: set this one aside a while.
-            if (stuckOnAPart) Villages.defer(village, project, now + 2400L);
+            if (stuckOnAPart) Villages.defer(village, project, now + 2400L, "a part nobody can make yet");
             // Setting about making a chest or a furnace takes a few seconds, so look again in
             // thirty; a wait for stone takes minutes.
             // (Not if the same making has been set in hand four times running: whatever is
@@ -5709,8 +5712,8 @@ public class VillageFolkEntity extends AssistantEntity {
             if (have < want) have += finishing(deco, want - have);
             // Beds are made, not only found: three wool and three planks from the stores.
             if (deco == BuildGoal.Part.BED && have < want) have += makeBeds(want - have);
-            // And without the wool, the founders' bedding comes in from the camp.
-            if (deco == BuildGoal.Part.BED && have < want) bedsFromTheCamp(want - have);
+            // Without the wool, the founders' bedding comes in from the camp: but a bed at a
+            // time, as each is laid (BuildGoal, bedFromTheCamp), not all of them up front.
         }
         // The roof's stairs and slabs count: they are cut from the planks and laid in place of
         // blocks. Counted without them, a builder that had cut its roof out of the founding planks
@@ -5973,28 +5976,20 @@ public class VillageFolkEntity extends AssistantEntity {
     }
 
     /**
-     * The camp round the heart is where the founders slept before there were houses.
-     * A builder with a house to furnish and no wool to make beds takes theirs up and
-     * carries them in: the camp empties into the houses as they go up.
+     * The camp round the heart is where the founders slept before there were houses. A builder
+     * laying a house's bed with no wool to make one takes one up from the camp and carries it in:
+     * the camp empties into the houses a bed at a time (VillageSpawner.liftCampBed).
      */
-    private int bedsFromTheCamp(int wanted) {
-        if (villageCentre == null) return 0;
-        int took = 0;
-        for (BlockPos head : com.jrpetty.mcassistant.VillageSpawner.campBeds(level(), villageCentre)) {
-            if (took >= wanted) break;
-            net.minecraft.world.level.block.state.BlockState st = level().getBlockState(head);
-            if (!(st.getBlock() instanceof net.minecraft.world.level.block.BedBlock)
-                    || st.getValue(net.minecraft.world.level.block.BedBlock.OCCUPIED)) continue;
-            BlockPos foot = head.relative(st.getValue(net.minecraft.world.level.block.BedBlock.FACING).getOpposite());
-            net.minecraft.world.item.ItemStack bed = new net.minecraft.world.item.ItemStack(st.getBlock().asItem());
-            level().setBlock(foot, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2 | 16);
-            level().setBlock(head, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
-            net.minecraft.world.item.ItemStack left = insertItem(bed);
-            if (!left.isEmpty()) spawnAtLocation(left);
-            took++;
-        }
-        if (took > 0) brain("took " + took + " bed" + (took == 1 ? "" : "s") + " in from the camp");
-        return took;
+    @Override
+    public boolean bedFromTheCamp() {
+        if (villageCentre == null || ownerId() == null) return false;
+        net.minecraft.world.level.block.Block bed = com.jrpetty.mcassistant.VillageSpawner.liftCampBed(
+            level(), villageCentre, Villages.bedsClaimed(ownerId()));
+        if (bed == null) return false;
+        net.minecraft.world.item.ItemStack left = insertItem(new net.minecraft.world.item.ItemStack(bed.asItem()));
+        if (!left.isEmpty()) spawnAtLocation(left);
+        brain("carried a bed in from the camp");
+        return true;
     }
 
     /** A bed somebody gave it: laid at the camp by the heart, and its own from tonight. */

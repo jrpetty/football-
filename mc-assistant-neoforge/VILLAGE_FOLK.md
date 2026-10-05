@@ -681,8 +681,21 @@ water.
 **Beds.** Every house has four beds in its drawing. A house goes up with whatever beds
 the stores can make that day (three wool and three planks each), and any it still lacks
 are brought in later, one at a time, as wool comes in: a bed from the stores, or one made
-there and then. While folk sleep on the ground the tailor makes beds before rugs and
-banners, the quest board asks for wool, and the elder may order the herds grown.
+there and then. With no wool, a bed comes in from the founders' camp, one at a time as
+each is laid, so the village never has fewer beds than it had while a house is going up.
+Bedding lying in the stores is laid out at the camp each morning by the leader for anybody
+without a bed. A bed under one of the village's own roofs is a home however high the roof
+over it; only a bed down in the ground, in nothing the village built, is passed over. While
+folk sleep on the ground the tailor makes beds before rugs and banners, the quest board asks
+for wool, and the elder may order the herds grown.
+
+**When a building waits.** A project the village cannot start (no lot will take it, the
+stores cannot pay for it yet, or a part nobody can make) is set aside for a while and the
+next thing on the list goes up. `/village status` says what is set aside and why. The great
+buildings (the meeting hall, the chapel, the barracks, the manor) want the most ground of
+anything; when look after look finds them no lot, they are let onto steeper ground and
+terraced up under the floor, so a mountain town is not kept out of the Iron Age for want of
+a flat place for its hall.
 
 **How the village keeps its balance.**
 

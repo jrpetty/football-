@@ -672,6 +672,8 @@ public final class VillageCommands {
         }
         String next = Villages.nextProject(v.id());
         sb.append(". Next: ").append(Villages.whyBuild(v.id(), next));
+        String aside = Villages.setAside(v.id());
+        if (!aside.isEmpty()) sb.append(". Set aside: ").append(aside);
         sb.append(". Short of:");
         java.util.List<Villages.Need> needs = Villages.needs(level, v.id());
         if (needs.isEmpty()) sb.append(" nothing — about to come of age.");

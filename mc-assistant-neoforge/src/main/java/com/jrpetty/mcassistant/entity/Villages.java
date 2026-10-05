@@ -358,6 +358,7 @@ public final class Villages {
         WHY_NOT.clear();
         LAPS.clear();
         DEFERRED.clear();
+        DEFER_WHY.clear();
         FOUNDED.clear();
         LEAD.clear();
         LEAD_AT.clear();
@@ -541,6 +542,13 @@ public final class Villages {
         for (AssistantEntity a : AssistantEntity.allFor(villageId)) {
             if (a.isAlive()) out.add(a);
         }
+        return out;
+    }
+
+    /** The beds this settlement's folk call their own (the heads). */
+    public static java.util.Set<BlockPos> bedsClaimed(@Nullable UUID villageId) {
+        java.util.Set<BlockPos> out = new java.util.HashSet<>();
+        for (AssistantEntity a : folkOf(villageId)) if (a.bedPos() != null) out.add(a.bedPos());
         return out;
     }
 
@@ -1300,6 +1308,27 @@ public final class Villages {
         DEFERRED.computeIfAbsent(villageId, k -> new ConcurrentHashMap<>()).put(project, until);
     }
 
+    /** Set aside, and why (the status line says it: "Set aside: the meeting hall (no lot ...)"). */
+    public static void defer(UUID villageId, String project, long until, String why) {
+        defer(villageId, project, until);
+        DEFER_WHY.computeIfAbsent(villageId, k -> new ConcurrentHashMap<>()).put(project, why);
+    }
+
+    private static final Map<UUID, Map<String, String>> DEFER_WHY = new ConcurrentHashMap<>();
+
+    /** The projects the village wants that are set aside just now, each with why; "" if none. */
+    public static String setAside(UUID villageId) {
+        Map<String, Long> d = DEFERRED.get(villageId);
+        if (d == null) return "";
+        List<String> out = new ArrayList<>();
+        for (String p : projectsWanted(villageId)) {
+            if (open(villageId, p)) continue;
+            String why = DEFER_WHY.getOrDefault(villageId, Map.of()).get(p);
+            out.add(p + (why == null ? "" : " (" + why + ")"));
+        }
+        return String.join("; ", out);
+    }
+
     /** Not set aside: the village may take this project on now. */
     private static boolean open(UUID villageId, String project) {
         Map<String, Long> d = DEFERRED.get(villageId);
@@ -1502,14 +1531,29 @@ public final class Villages {
                     // A bed buried in the ground (a ruin's, a vault's) is nobody's home and nobody sleeps
                     // in it (VillageFolkEntity.bedFit): counted, a mountain town of twenty-five thought
                     // it had four beds more than it had, and built and bought for four fewer.
-                    if (p.getY() < level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
-                            p.getX(), p.getZ()) - 8) continue;
+                    if (buriedBed(level, villageId, p)) continue;
                     n++;
                 }
             }
         }
         MADE_UP.put(villageId, new long[]{ now, n });
         return n;
+    }
+
+    /**
+     * A bed down in the ground (a buried ruin's, a vault's), not one in a home: more than eight
+     * under the surface over it, and not in anything the village built. The village's own roofs are
+     * no ground: under the eaves of a two-storey house, or the ridge of a cottage, a bed is ten or
+     * eleven below the top of the roof, and every bed in every house was passed over as buried (a
+     * town of fifty-eight with thirty-five beds made up had sixteen folk in them).
+     */
+    public static boolean buriedBed(net.minecraft.world.level.LevelReader level, UUID villageId, BlockPos p) {
+        if (p.getY() >= level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                p.getX(), p.getZ()) - 8) return false;
+        Village v = get(villageId);
+        if (v != null && Math.max(Math.abs(p.getX() - v.centre().getX()), Math.abs(p.getZ() - v.centre().getZ())) <= 6
+                && Math.abs(p.getY() - v.centre().getY()) <= 3) return false;          // the camp
+        return !Land.inABuilding(villageId, p);
     }
 
     /** Beds the village's homes hold: four a house, six a barracks (the guest house is the player's). */
@@ -2240,6 +2284,7 @@ public final class Villages {
             int heartGround = heartGround(level, v.centre());
             int laps = LAPS.getOrDefault(villageId, 0);
             int[] half = com.jrpetty.mcassistant.entity.goal.BuildGoal.footprint(project);
+            boolean great = "great".equals(com.jrpetty.mcassistant.village.TownPlan.placeFor(project));
             // The town plan's places for this kind of building, best first; of the first few
             // that will do, the one that costs least to build on — a flat lot a little further
             // down the list beats a slope that wants fifty blocks of stone under its floor.
@@ -2270,7 +2315,12 @@ public final class Villages {
                 // of chunks round a new village comes in over its first minute, and every lot
                 // looked at before that used to be written off for good.
                 if (!lotLoaded(level, x, z, hx, hz)) { waiting = true; continue; }
-                BlockPos ground = groundFor(level, x, z, hx, hz, true, heartGround, laps, whyNot(villageId));
+                // The great buildings (the hall above all: no Iron Age without one) want the most
+                // ground of anything, and on a mountainside found none flat to six blocks across
+                // twenty: a town of fifty-eight sat in the Stone Age for want of one. Missed on
+                // look after look, they are let onto steeper ground, terraced up under the floor.
+                BlockPos ground = groundFor(level, x, z, hx, hz, true, heartGround, laps,
+                    great ? 4 : 2, whyNot(villageId));
                 if (ground == null) continue;
                 valid++;
                 int score = com.jrpetty.mcassistant.entity.goal.BuildGoal.fillCells(level, ground, back, half[0], half[1]).size()
@@ -2371,13 +2421,13 @@ public final class Villages {
     @Nullable
     private static BlockPos groundFor(net.minecraft.server.level.ServerLevel level, int x, int z,
                                       boolean needsClearance, int heartGround, int laps, @Nullable Why why) {
-        return groundFor(level, x, z, 3, 3, needsClearance, heartGround, laps, why);
+        return groundFor(level, x, z, 3, 3, needsClearance, heartGround, laps, 2, why);
     }
 
     /** As above, for a footprint {@code hx} blocks each side across x and {@code hz} across z. */
     @Nullable
     private static BlockPos groundFor(net.minecraft.server.level.ServerLevel level, int x, int z, int hx, int hz,
-                                      boolean needsClearance, int heartGround, int laps, @Nullable Why why) {
+                                      boolean needsClearance, int heartGround, int laps, int mostLaps, @Nullable Why why) {
         int lo = Integer.MAX_VALUE, hi = Integer.MIN_VALUE;
         for (int dx : new int[]{ -hx, 0, hx }) {
             for (int dz : new int[]{ -hz, 0, hz }) {
@@ -2392,7 +2442,7 @@ public final class Villages {
             }
         }
         int slope = hi - lo;
-        if (slope > 4 + Math.min(laps, 2)) {                 // a cliff, not a lot
+        if (slope > 4 + Math.min(laps, mostLaps)) {          // a cliff, not a lot
             why(why, CLIFF);
             if (why != null) why.lastCliff = x + "," + z + " from " + lo + " to " + hi;
             return null;
@@ -2420,7 +2470,7 @@ public final class Villages {
             }
         }
         int area = (2 * hx + 1) * (2 * hz + 1);
-        if (blocked > Math.max(10, area / 5) + 12 * Math.min(laps, 2)) { why(why, BLOCKED); return null; }
+        if (blocked > Math.max(10, area / 5) + 12 * Math.min(laps, mostLaps)) { why(why, BLOCKED); return null; }
         return at;
     }
 

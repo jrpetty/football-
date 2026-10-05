@@ -440,8 +440,8 @@ public final class VillageSpawner {
     /**
      * The founders' camp. Settlers come with their bedding, and lay it out round the
      * stores: a ring of beds about the heart, heads out, one each. So nobody spends
-     * the first nights on their feet. As each house goes up, its builder carries beds
-     * in from here (VillageFolkEntity.bedsFromTheCamp), and the camp empties into the
+     * the first nights on their feet. As each house goes up, a bed is carried in from
+     * here as each of its beds is laid (liftCampBed), and the camp empties into the
      * houses. Returns how many beds were laid.
      */
     public static int pitchCamp(ServerLevel level, BlockPos heart, int beds) {
@@ -528,6 +528,37 @@ public final class VillageSpawner {
         int spread = hi - lo;
         if (spread > 6) return -50000;
         return com.jrpetty.mcassistant.entity.Reach.walkableAround(level, g, 32) - 300 * Math.max(0, spread - 2);
+    }
+
+    /**
+     * One bed taken up from the camp to be carried into a house, laid the moment it comes up: the
+     * camp empties into the houses a bed at a time, and the village never has fewer beds than it
+     * had. (A builder used to take all its house's beds up before it began; when the lot would not
+     * do and it went looking for another, eleven of fifteen folk spent the nights on their feet.)
+     * The outer ring goes first, a bed nobody calls theirs before one somebody does, and never a
+     * bed with somebody in it. Returns the bed's block, or null if the camp has none to give.
+     */
+    @javax.annotation.Nullable
+    public static net.minecraft.world.level.block.Block liftCampBed(Level level, BlockPos heart, java.util.Set<BlockPos> claimed) {
+        List<BlockPos> beds = campBeds(level, heart);
+        BlockPos pick = null;
+        for (int pass = 0; pass < 2 && pick == null; pass++) {
+            for (int i = beds.size() - 1; i >= 0; i--) {
+                BlockPos head = beds.get(i);
+                net.minecraft.world.level.block.state.BlockState st = level.getBlockState(head);
+                if (!(st.getBlock() instanceof net.minecraft.world.level.block.BedBlock)
+                        || st.getValue(net.minecraft.world.level.block.BedBlock.OCCUPIED)) continue;
+                if (pass == 0 && claimed.contains(head)) continue;
+                pick = head;
+                break;
+            }
+        }
+        if (pick == null) return null;
+        net.minecraft.world.level.block.state.BlockState st = level.getBlockState(pick);
+        BlockPos foot = pick.relative(st.getValue(net.minecraft.world.level.block.BedBlock.FACING).getOpposite());
+        level.setBlock(foot, Blocks.AIR.defaultBlockState(), 2 | 16);
+        level.setBlock(pick, Blocks.AIR.defaultBlockState(), 3);
+        return st.getBlock();
     }
 
     /** The heads of the beds still standing at a village's camp, nearest the heart first. */

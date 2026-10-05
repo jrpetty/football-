@@ -537,7 +537,7 @@ public class VillageGameTests {
         Villages.restore(level, late, new BlockPos(4600, 64, 4600), Villages.Age.NETHER, raised, 20);
         List<String> order = new java.util.ArrayList<>();
         int roomBefore = Villages.housing(late);
-        for (int i = 0; i < 9; i++) {
+        for (int i = 0; i < 11; i++) {
             String next = Villages.nextProject(late);
             order.add(next);
             if (next == null) break;
@@ -545,11 +545,14 @@ public class VillageGameTests {
         }
         Kit.log("t15 past the last age: " + order + ", renown " + Villages.renown(late)
             + ", room " + roomBefore + " -> " + Villages.housing(late));
-        // Twenty folk: the café, the tavern, the smithy and the shop after the gateway, before the great works.
-        helper.assertTrue(order.equals(List.of("gateway", "cafe", "tavern", "smithy", "shop", "granary", "barracks", "monument", "granary")),
+        // Twenty folk: the café, the tavern, the fountain, the smithy, the shop and a manor house
+        // after the gateway, before the great works.
+        helper.assertTrue(order.equals(List.of("gateway", "cafe", "tavern", "fountain", "smithy", "shop", "manor",
+                "granary", "barracks", "monument", "granary")),
             "the Nether Age raises its gateway, its amenities, then the great works go round: " + order);
         helper.assertTrue(Villages.renown(late) == 4, "four great works raised, renown " + Villages.renown(late));
-        helper.assertTrue(Villages.housing(late) == roomBefore + 6, "the barracks are room for six more");
+        helper.assertTrue(Villages.housing(late) == roomBefore + 12, "the manor and the barracks are room for twelve more: "
+            + roomBefore + " -> " + Villages.housing(late));
         helper.succeed();
     }
 
@@ -1242,6 +1245,19 @@ public class VillageGameTests {
             helper.assertTrue(c.layGivenBed() && c.bedPos() != null
                     && com.jrpetty.mcassistant.VillageSpawner.campBeds(level, chest).size() == 4,
                 "a bed brought to a folk is laid at the camp, and it is that folk's");
+            // A builder carries the camp's beds into a house a bed at a time, as each is laid, and
+            // takes up a bed nobody calls theirs before one somebody does.
+            BlockPos mine = c.bedPos();
+            int before = com.jrpetty.mcassistant.VillageSpawner.campBeds(level, chest).size();
+            boolean carried = c.bedFromTheCamp();
+            int after = com.jrpetty.mcassistant.VillageSpawner.campBeds(level, chest).size();
+            boolean kept = level.getBlockState(mine).getBlock() instanceof net.minecraft.world.level.block.BedBlock;
+            int packed = 0;
+            for (ItemStack st : c.getInventoryItems()) if (st.is(net.minecraft.tags.ItemTags.BEDS)) packed += st.getCount();
+            Kit.log("t27 a bed for a house: carried " + carried + ", camp " + before + " -> " + after
+                + ", its own still standing " + kept + ", beds in the pack " + packed);
+            helper.assertTrue(carried && after == before - 1 && kept && packed >= 1,
+                "one camp bed is carried in for the house, and not the one somebody sleeps in");
             helper.succeed();
         });
     }
@@ -4994,6 +5010,61 @@ public class VillageGameTests {
             x += 18;
         }
         Kit.log("t74 the new buildings: " + log);
+        helper.succeed();
+    }
+
+    /**
+     * A bed in a house is a home, however high the roof over it: the ground floor of a two-storey
+     * house lies ten or eleven under its ridge, and every bed in every house was once passed over
+     * as buried (a town of fifty-eight had thirty-five beds made up and sixteen folk in them). A bed
+     * down in the rock, in nothing the village built, is still nobody's.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t75_house_beds")
+    public static void t75_house_beds(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 78000, 12000, 40);
+        Kit.prepare(level, 78000, 12000, 40);
+        BlockPos heart = Kit.surface(level, 78000, 12000);
+        VillageFolkEntity a = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(a != null, "a village");
+        java.util.UUID village = a.ownerId();
+        BlockPos at = Kit.surface(level, heart.getX() + 18, heart.getZ() - 18);
+        BuildGoal.stamp(level, "house2", at, Direction.NORTH, 13,
+            com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+        com.jrpetty.mcassistant.village.Ledger.built(village, "house", at, Direction.NORTH);
+        int beds = 0, homes = 0, deepest = 0;
+        for (BlockPos p : BlockPos.betweenClosed(at.offset(-8, -2, -8), at.offset(8, 14, 8))) {
+            net.minecraft.world.level.block.state.BlockState st = level.getBlockState(p);
+            if (!(st.getBlock() instanceof net.minecraft.world.level.block.BedBlock)
+                    || st.getValue(net.minecraft.world.level.block.BedBlock.PART)
+                        != net.minecraft.world.level.block.state.properties.BedPart.HEAD) continue;
+            beds++;
+            deepest = Math.max(deepest, level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                p.getX(), p.getZ()) - p.getY());
+            if (!Villages.buriedBed(level, village, p)) homes++;
+        }
+        // And one under a dozen blocks of rock, well away from anything built (the test world is
+        // flat and a few blocks deep, so the rock is piled over it rather than the bed dug down).
+        BlockPos deep = Kit.surface(level, heart.getX() - 25, heart.getZ() + 25);
+        net.minecraft.world.level.block.state.BlockState red = Blocks.RED_BED.defaultBlockState()
+            .setValue(net.minecraft.world.level.block.BedBlock.FACING, Direction.NORTH);
+        level.setBlock(deep, red.setValue(net.minecraft.world.level.block.BedBlock.PART,
+            net.minecraft.world.level.block.state.properties.BedPart.FOOT), 3);
+        level.setBlock(deep.north(), red.setValue(net.minecraft.world.level.block.BedBlock.PART,
+            net.minecraft.world.level.block.state.properties.BedPart.HEAD), 3);
+        for (int dy = 1; dy <= 12; dy++) {
+            if (level.getBlockState(deep.above(dy)).isAir()) level.setBlock(deep.above(dy), Blocks.STONE.defaultBlockState(), 3);
+            if (level.getBlockState(deep.north().above(dy)).isAir()) level.setBlock(deep.north().above(dy), Blocks.STONE.defaultBlockState(), 3);
+        }
+        boolean buried = Villages.buriedBed(level, village, deep.north());
+        int madeUp = Villages.bedsMadeUp(level, village);
+        Kit.log("t75 a two-storey house: " + beds + " beds, " + homes + " homes, the deepest " + deepest
+            + " under its roof; made up " + madeUp + "; a bed down in the rock buried " + buried);
+        helper.assertTrue(beds >= 4 && homes == beds, "every bed in a house is a home: " + homes + " of " + beds);
+        helper.assertTrue(madeUp >= beds, "and the village counts them made up: " + madeUp + " of " + beds);
+        helper.assertTrue(buried, "a bed down in the rock is nobody's home");
         helper.succeed();
     }
 }
