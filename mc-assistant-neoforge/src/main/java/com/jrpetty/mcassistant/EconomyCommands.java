@@ -73,6 +73,7 @@ public final class EconomyCommands {
             int n = Strays.carried(f);
             if (n > 0) carriers.add(f.displayNameCap() + " the " + f.stationTask().title.toLowerCase(java.util.Locale.ROOT) + " " + n);
         }
+        lines.add("Put away: " + com.jrpetty.mcassistant.entity.PutAway.line(id, level.getDayTime() / 24000L) + ".");
         lines.add("Builders' stock carried about: " + (carriers.isEmpty() ? "none" : String.join(", ", carriers.subList(0, Math.min(8, carriers.size())))) + ".");
         Map<String, Integer> causes = new LinkedHashMap<>();
         for (Ledger.Grave g : Ledger.graves(id)) causes.merge(g.cause(), 1, Integer::sum);

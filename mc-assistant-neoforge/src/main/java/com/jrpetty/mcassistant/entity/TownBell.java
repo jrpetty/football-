@@ -586,14 +586,14 @@ public final class TownBell {
         Rung noon = d.rung.get(Peal.NOON);
         if (noon != null && a.meal == 0 && t - inDay(noon.dayTime()) < MEAL_WINDOW && t >= inDay(noon.dayTime())
                 && dt % 24000L < LUNCH_ENDS - 200L && !f.isSleeping() && f.peekJob() == null && f.offWorkNow() && !Assemblies.attending(f)) {
-            startMeal(f, level, a, now);
+            if (!PutAway.look(f)) startMeal(f, level, a, now);  // [economy] the morning's work put away first (PutAway)
         }
         if (a.meal == 1 || a.meal == 2) return meal(f, level, a, now);
         // The dusk bell: the day's work is done; home.
         Rung dusk = d.rung.get(Peal.DUSK);
         if (dusk != null && a.dusk < 0 && t >= inDay(dusk.dayTime()) && t - inDay(dusk.dayTime()) < HOME_WINDOW
                 && !f.isSleeping() && f.peekJob() == null && !Assemblies.attending(f)) {
-            answerDusk(f, level, a, dt, now);
+            if (!PutAway.look(f)) answerDusk(f, level, a, dt, now);  // [economy] the day's work put away, then home (PutAway)
         }
         if (a.homeward) return homeward(f, a, now);
         return false;

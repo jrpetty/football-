@@ -890,6 +890,7 @@ public final class Annals {
         c.putString("food_books", b == null ? "" : "stock " + b.stock() + ", in " + Math.round(b.inAvg()) + " a day, eaten "
             + Math.round(b.useAvg()) + " a day, " + String.format(Locale.ROOT, "%.1f", b.days()) + " days put by"
             + "; a child: " + Larder.word(id, b.stock()));   // [economy] whether the larder can take one more mouth
+        c.putString("put_away", PutAway.line(id, level.getDayTime() / 24000L));   // [economy] the day's work banked, noon and dusk
         c.putString("wealth", Wealth.bestPaid(id, 5));
         c.putString("open", String.valueOf(Cafe.openLine(level, id)));
         c.putString("first_day", String.valueOf(Ledger.note(id, "annals.first")));
@@ -1145,6 +1146,9 @@ public final class Annals {
         // Meals: did everybody eat, the children and the old as well as the hands at their work (Meals).
         String meals = Meals.townLine(id);
         if (meals != null) out.add(meals);
+        // [economy] The day's work put away at noon and at dusk, or carried about overnight (PutAway).
+        String banked = PutAway.booksLine(id, level.getDayTime() / 24000L);
+        if (banked != null) out.add(banked);
         // Output: up or down, and which trades moved it.
         int outNow = sum(days, key("output"), days.size() - window, days.size());
         int prevFrom = Math.max(0, days.size() - 2 * window), prevTo = days.size() - window;

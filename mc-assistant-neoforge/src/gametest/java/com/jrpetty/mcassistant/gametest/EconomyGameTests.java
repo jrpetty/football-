@@ -8,6 +8,13 @@ import com.jrpetty.mcassistant.entity.Larder;
 import com.jrpetty.mcassistant.entity.Leader;
 import com.jrpetty.mcassistant.entity.Meals;
 import com.jrpetty.mcassistant.entity.PackedLunch;
+import com.jrpetty.mcassistant.entity.PutAway;
+import com.jrpetty.mcassistant.entity.Couriers;
+import com.jrpetty.mcassistant.entity.FolkTalk;
+import com.jrpetty.mcassistant.entity.Job;
+import com.jrpetty.mcassistant.block.StorehouseBlock;
+import com.jrpetty.mcassistant.block.StorehouseBlockEntity;
+import net.minecraft.core.Direction;
 import com.jrpetty.mcassistant.entity.Strays;
 import com.jrpetty.mcassistant.entity.VillageFolkEntity;
 import com.jrpetty.mcassistant.entity.Villages;
@@ -57,6 +64,11 @@ import java.util.function.Predicate;
  * <li><b>ec05</b>: a farmer setting out for a field seventy-five blocks from the stores takes a day's meals
  *     out of them first; out there at a mealtime with nothing to eat, it sends for food (walks in, with no
  *     couriers), once a meal.</li>
+ * <li><b>ec06</b>: a miner at its plot with a pack of cobblestone, coal and iron at nightfall puts the day's
+ *     work into its work chest before home and bed ("Putting the day's work away" on its card), and keeps
+ *     its pickaxe, its torches and its rations.</li>
+ * <li><b>ec07</b>: a farmer at its field at midday puts its harvest into its work chest down to its seed.</li>
+ * <li><b>ec08</b>: a courier on a run at midday does not stop to bank: the run is seen through.</li>
  * </ul>
  *
  * <p>Each runs on its own ground (x 360,000 to 366,000, z 50,000).
@@ -86,6 +98,18 @@ public class EconomyGameTests {
                 c.setChanged();
             }
         }
+    }
+
+    private static int count(Container c, Predicate<ItemStack> what) {
+        int n = 0;
+        for (int i = 0; i < c.getContainerSize(); i++) if (what.test(c.getItem(i))) n += c.getItem(i).getCount();
+        return n;
+    }
+
+    /** Is the day's work being put away (its queue)? */
+    private static boolean puttingAway(VillageFolkEntity f) {
+        for (Job j : f.queuedJobs()) if (j.putAway()) return true;
+        return false;
     }
 
     /** How much of this the chests round here hold (not the furnaces: what is in the fire is not in the stores). */
@@ -529,6 +553,249 @@ public class EconomyGameTests {
                 helper.succeed();
             } else if (t >= 3800) {
                 helper.fail("no packed lunch: " + meals + " meals carried — " + f.debugLine());
+            }
+        });
+    }
+
+    // ============================================================ ec06: the miner at nightfall
+
+    @GameTest(template = EMPTY, timeoutTicks = 3000, batch = "ec06_miner_banks_at_dusk")
+    public static void ec06_miner_banks_at_dusk(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        final long day = 24000L * 5;
+        level.setDayTime(day + 4000);
+        final int x = 361250;
+        Kit.hold(level, x, Z, 40);
+        Kit.prepare(level, x, Z, 40);
+        BlockPos heart = Kit.surface(level, x, Z);
+        VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(f != null && f.ownerId() != null, "a village");
+        BlockPos mine = Kit.surface(level, x + 16, Z);
+        f.setJob(StationTask.MINE);
+        f.assignPlot(WorkZone.around(mine, 8, WorkZone.DEFAULT_DEPTH), "The Pit");
+        f.getInventoryItems().clear();
+        f.insertItem(new ItemStack(Items.CHEST));
+        BlockPos chest = f.productionChestForTests();
+        helper.assertTrue(chest != null && level.getBlockEntity(chest) instanceof Container, "the miner's work chest at its plot");
+        Container box = (Container) level.getBlockEntity(chest);
+        f.moveTo(chest.getX() + 2.5, chest.getY(), chest.getZ() + 0.5, 0.0F, 0.0F);
+        f.getInventoryItems().clear();
+        f.insertItem(new ItemStack(Items.STONE_PICKAXE));
+        f.insertItem(new ItemStack(Items.TORCH, 16));
+        f.insertItem(new ItemStack(Items.BREAD, 6));
+        f.insertItem(new ItemStack(Items.COBBLESTONE, 64));
+        f.insertItem(new ItemStack(Items.COBBLESTONE, 64));
+        f.insertItem(new ItemStack(Items.COAL, 20));
+        f.insertItem(new ItemStack(Items.RAW_IRON, 12));
+        int keepCobble = f.depositReserve(new ItemStack(Items.COBBLESTONE));
+        f.noteStashed();                                                // (it banked a moment ago: no full-pack run of its own)
+        Kit.log("ec06 a miner at its plot, its work chest at " + chest.toShortString() + "; it keeps " + keepCobble
+            + " cobblestone; a pack of 128 cobblestone, 20 coal, 12 raw iron at nightfall — " + f.debugLine());
+        // Nightfall: the shift is over. From here the folk acts on its own.
+        final long night = day + 13600;
+        level.setDayTime(night);
+        final String[] card = { null };
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            long tod = level.getDayTime() % 24000L;
+            if (tod > 15000 || tod < 13000) level.setDayTime(night);
+            if (card[0] == null && puttingAway(f)) {
+                card[0] = FolkTalk.nowDoing(f);
+                Kit.log("ec06 at " + t + " the card reads: " + card[0]);
+            }
+            if (t % 10 != 0) return;
+            int cobble = count(box, st -> st.is(Items.COBBLESTONE)), coal = count(box, st -> st.is(Items.COAL)),
+                iron = count(box, st -> st.is(Items.RAW_IRON));
+            if (t % 200 == 0) Kit.log("ec06 @" + t + ": the work chest holds " + cobble + " cobblestone, " + coal + " coal, " + iron
+                + " raw iron — " + f.debugLine());
+            if (cobble >= 128 - keepCobble && coal >= 20 && iron >= 12) {
+                int pick = f.countCarried(st -> st.is(Items.STONE_PICKAXE)), torches = f.countCarried(st -> st.is(Items.TORCH)),
+                    bread = f.countCarried(st -> st.is(Items.BREAD));
+                boolean done = PutAway.doneForTests(f, PutAway.When.DUSK);
+                Kit.log("ec06 put away at " + t + ": " + cobble + ", " + coal + ", " + iron + "; kept pickaxe " + pick + ", torches "
+                    + torches + ", bread " + bread + "; booked " + done + "; " + PutAway.line(f.ownerId(), level.getDayTime() / 24000L));
+                helper.assertTrue("Putting the day's work away".equals(card[0]), "the card says what it is about: " + card[0]);
+                helper.assertTrue(pick == 1 && torches >= 16 && bread >= 4, "it keeps its pickaxe, its torches and its rations: "
+                    + pick + ", " + torches + ", " + bread);
+                helper.assertTrue(f.stashable() == 0, "nothing past its keep left in its pack: " + f.stashable());
+                helper.assertTrue(done, "the put-away is booked for the town's books");
+                helper.succeed();
+            } else if (t >= 2800) {
+                helper.fail("the day's work was not put away: the chest holds " + cobble + ", " + coal + ", " + iron + " — " + f.debugLine());
+            }
+        });
+    }
+
+    // ============================================================ ec07: the farmer at noon
+
+    @GameTest(template = EMPTY, timeoutTicks = 6000, batch = "ec07_farmer_banks_at_noon")
+    public static void ec07_farmer_banks_at_noon(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        final long day = 24000L * 6;
+        level.setDayTime(day + 3000);
+        final int x = 362750;
+        Kit.hold(level, x, Z, 50);
+        Kit.prepare(level, x, Z, 50);
+        BlockPos heart = Kit.surface(level, x, Z);
+        VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(f != null && f.ownerId() != null, "a village");
+        BlockPos field = Kit.surface(level, x + 26, Z);
+        f.setJob(StationTask.FARM);
+        f.assignPlot(WorkZone.around(field, 13, WorkZone.DEFAULT_DEPTH), "Home Fields");
+        f.getInventoryItems().clear();
+        f.insertItem(new ItemStack(Items.CHEST));
+        BlockPos chest = f.productionChestForTests();
+        helper.assertTrue(chest != null && level.getBlockEntity(chest) instanceof Container, "the farmer's work chest at its field");
+        Container box = (Container) level.getBlockEntity(chest);
+        f.moveTo(chest.getX() + 1.5, chest.getY(), chest.getZ() + 1.5, 0.0F, 0.0F);
+        f.getInventoryItems().clear();
+        f.insertItem(new ItemStack(Items.STONE_HOE));
+        f.insertItem(new ItemStack(Items.BREAD, 6));
+        // A morning's harvest past its seed: twenty, under what it would make a trip for on its own (a load of
+        // twenty-four), and it banked a moment ago. The point of the midday put-away is the pack that is not full.
+        f.insertItem(new ItemStack(Items.POTATO, AssistantEntity.SEED_MOST + 10));
+        f.insertItem(new ItemStack(Items.CARROT, AssistantEntity.SEED_MOST + 5));
+        f.insertItem(new ItemStack(Items.WHEAT_SEEDS, AssistantEntity.SEED_MOST + 5));
+        f.noteStashed();
+        Predicate<ItemStack> harvest = st -> st.is(Items.POTATO) || st.is(Items.CARROT) || st.is(Items.WHEAT_SEEDS);
+        int spare = f.countStashable(harvest);
+        Kit.log("ec07 a farmer at its field with " + spare + " of the harvest past its seed; its work chest at "
+            + chest.toShortString() + " — " + f.debugLine());
+        helper.assertTrue(spare == 20, "twenty past its seed: " + spare);
+        // Midday: from here the folk acts on its own.
+        final long noon = day + 6000;
+        level.setDayTime(noon);
+        final boolean[] seen = { false };
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            long tod = level.getDayTime() % 24000L;
+            if (tod > 8500 || tod < 5600) level.setDayTime(noon);
+            if (!seen[0] && puttingAway(f)) {
+                seen[0] = true;
+                Kit.log("ec07 at " + t + " the card reads: " + FolkTalk.nowDoing(f));
+            }
+            if (t % 10 != 0) return;
+            int banked = count(box, harvest);
+            int p = f.countCarried(st -> st.is(Items.POTATO)), c = f.countCarried(st -> st.is(Items.CARROT)),
+                sd = f.countCarried(st -> st.is(Items.WHEAT_SEEDS));
+            if (t % 300 == 0) Kit.log("ec07 @" + t + ": the work chest holds " + banked + " of the harvest; carrying " + p + " potatoes, "
+                + c + " carrots, " + sd + " seeds — " + f.debugLine());
+            // (It may plant some of its seed meanwhile: the chest gets what is past the seed, at most twenty.)
+            if (seen[0] && banked >= 1 && p <= AssistantEntity.SEED_MOST && c <= AssistantEntity.SEED_MOST
+                    && sd <= AssistantEntity.SEED_MOST) {
+                Kit.log("ec07 the morning's harvest put away at " + t + ": " + banked + " in the chest; kept " + p + ", " + c + ", " + sd
+                    + "; " + PutAway.line(f.ownerId(), level.getDayTime() / 24000L));
+                helper.assertTrue(f.countCarried(st -> st.is(Items.STONE_HOE)) == 1, "it keeps its hoe");
+                helper.succeed();
+            } else if (t >= 5800) {
+                helper.fail("the harvest was not put away at noon: the chest holds " + banked + "; carrying " + p + ", " + c + ", " + sd
+                    + " (put-away seen " + seen[0] + ") — " + f.debugLine());
+            }
+        });
+    }
+
+    // ============================================================ ec08: a courier on its run
+
+    /** A storehouse (twenty-seven units) beside the heart; its door. */
+    private static StorehouseBlockEntity storehouse(GameTestHelper helper, ServerLevel level, BlockPos heart, int dx, int dz) {
+        BlockPos origin = Kit.surface(level, heart.getX() + dx, heart.getZ() + dz);
+        for (BlockPos p : BlockPos.betweenClosed(origin.offset(-1, 0, -1), origin.offset(3, 4, 3))) {
+            level.setBlock(p, Blocks.AIR.defaultBlockState(), 2 | 16);
+        }
+        net.minecraft.world.level.block.state.BlockState unit = StorehouseBlock.loose();
+        StorehouseBlock.hintFront(Direction.SOUTH);
+        try {
+            for (int y = 0; y < 3; y++) for (int i = 0; i < 3; i++) for (int k = 0; k < 3; k++) {
+                level.setBlock(origin.offset(i, y, k), unit, 3);
+            }
+        } finally {
+            StorehouseBlock.hintFront(null);
+        }
+        BlockPos door = origin.offset(StorehouseBlock.doorOffset(Direction.SOUTH));
+        helper.assertTrue(level.getBlockEntity(door) instanceof StorehouseBlockEntity sb && sb.isStore(), "a storehouse stands");
+        return (StorehouseBlockEntity) level.getBlockEntity(door);
+    }
+
+    @GameTest(template = EMPTY, timeoutTicks = 5000, batch = "ec08_courier_mid_run")
+    public static void ec08_courier_mid_run(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        final long day = 24000L * 7;
+        final long noon = day + 6000;
+        level.setDayTime(day + 3000);
+        final int x = 364000;
+        Kit.hold(level, x, Z, 64);
+        Kit.prepare(level, x, Z, 64);
+        BlockPos heart = Kit.surface(level, x, Z);
+        VillageFolkEntity farmer = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(farmer != null && farmer.ownerId() != null, "a village");
+        UUID village = farmer.ownerId();
+        StorehouseBlockEntity store = storehouse(helper, level, heart, 8, 8);
+        // The founders' chest is an old chest to clear; the test is of a run out to a work chest.
+        for (BlockPos p : Villages.storeChests(level, village)) {
+            if (level.getBlockEntity(p) instanceof net.minecraft.world.level.block.entity.ChestBlockEntity c) {
+                c.clearContent();
+                level.removeBlock(p, false);
+            }
+        }
+        Villages.forgetStores(village);
+        BlockPos site = Kit.surface(level, heart.getX() + 40, heart.getZ());
+        farmer.setJob(StationTask.FARM);
+        farmer.assignPlot(WorkZone.around(site, 4, WorkZone.DEFAULT_DEPTH), "Farm");
+        farmer.moveTo(site.getX() + 0.5, site.getY(), site.getZ() + 0.5, 0.0F, 0.0F);
+        farmer.insertItem(new ItemStack(Items.CHEST));
+        BlockPos chest = farmer.productionChestForTests();
+        helper.assertTrue(chest != null, "the farmer's work chest");
+        Container box = (Container) level.getBlockEntity(chest);
+        box.setItem(0, new ItemStack(Items.WHEAT, 40));
+        box.setItem(5, new ItemStack(Items.WHEAT, 40));
+        VillageFolkEntity courier = VillageFolkSpawnerBlock.raise(level, heart.south(3), 0.0F);
+        helper.assertTrue(courier != null && village.equals(courier.ownerId()), "a courier for the village");
+        courier.setJob(StationTask.HAUL);
+        courier.getInventoryItems().clear();
+        courier.insertItem(new ItemStack(Items.BREAD, 4));
+        helper.assertTrue(Couriers.employed(courier), "the courier is the storehouse's");
+        java.util.List<String> runs = Couriers.refreshForTests(level, village);
+        Kit.log("ec08 the run list: " + runs);
+        int before = count(store, st -> st.is(Items.WHEAT));
+        level.setDayTime(noon);
+        final boolean[] onRun = { false }, carrying = { false }, looked = { false };
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            long tod = level.getDayTime() % 24000L;
+            if (tod > 8500 || tod < 5600) level.setDayTime(noon);
+            Villages.noteAttempt(village, level.getGameTime());      // (no building calls the courier away)
+            // Its rounds, as its station brain has them whenever its queue is empty (on its break or not).
+            if (t % 20 == 5 && courier.peekJob() == null) Couriers.work(courier, level);
+            if (Couriers.onARun(courier)) onRun[0] = true;
+            // Midday, on its run with the wheat on its back: it does not stop to bank (the folk looks for itself
+            // every few seconds; the test looks too, on the real path).
+            if (Couriers.onARun(courier) && courier.countCarried(st -> st.is(Items.WHEAT)) > 0) {
+                carrying[0] = true;
+                if (!looked[0]) {
+                    looked[0] = true;
+                    boolean set = PutAway.look(courier);
+                    Kit.log("ec08 at " + t + " on its run with " + courier.countCarried(st -> st.is(Items.WHEAT)) + " wheat at midday: put away "
+                        + set + " (" + PutAway.excused(courier) + ")");
+                    helper.assertTrue(!set && PutAway.excused(courier) != null, "a courier on its run is let be");
+                }
+                if (puttingAway(courier)) {
+                    helper.fail("a courier on its run stopped to bank — " + courier.debugLine());
+                    return;
+                }
+            }
+            if (t % 20 != 0) return;
+            int stored = count(store, st -> st.is(Items.WHEAT)) - before;
+            if (t % 400 == 0) Kit.log("ec08 @" + t + ": run " + Couriers.runOfForTests(courier) + ", carrying "
+                + courier.countCarried(st -> st.is(Items.WHEAT)) + " wheat, " + stored + " in the storehouse — " + courier.debugLine());
+            if (carrying[0] && stored >= 60) {
+                Kit.log("ec08 the run seen through at " + t + ": " + stored + " wheat in the storehouse");
+                helper.succeed();
+            } else if (t >= 4800) {
+                helper.fail("the run was not seen through: on a run " + onRun[0] + ", carried " + carrying[0] + ", " + stored
+                    + " in the storehouse — " + courier.debugLine());
             }
         });
     }

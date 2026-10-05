@@ -2704,6 +2704,8 @@ public class VillageFolkEntity extends AssistantEntity {
         // mine was spent and staked a new one.
         keepShift();
         if (!onShift()) {
+            // [economy] The shift is over: the day's work put away before home and bed (PutAway).
+            if (PutAway.look(this)) return;
             if (isSleeping()) {                        // asleep: nothing until morning
                 persona.sleptInABed(level().getDayTime() / 24000L);
                 return;
@@ -2782,6 +2784,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (seekTheSeam()) return;                     // dig where the village's metal is
         growTheField();                                // a full field breaks new ground
         if (turnedToTheFields()) return;               // a hungry village needs farmers (busy or not)
+        PutAway.look(this);                            // [economy] midday (and the watch at dusk): the work put away, busy or not
         if (peekJob() != null) return;                 // already busy
         if (onShift() && Strays.tend(this)) return;    // [economy] the builders' stock it carries, back to the stores
         if (PackedLunch.take(this)) return;            // [economy] a day's meals before it sets out for a far plot

@@ -383,6 +383,7 @@ public final class Villages {
         Larder.resetForTests();             // [economy] the mouths the books were made up for
         Strays.resetForTests();             // [economy] stock carried about that is the village's
         PackedLunch.resetForTests();        // [economy] the far hands' meals
+        PutAway.resetForTests();            // [economy] the day's work put away twice a day
         Ages.resetForTests();
         Interiors.resetForTests();
         Decor.resetForTests();
