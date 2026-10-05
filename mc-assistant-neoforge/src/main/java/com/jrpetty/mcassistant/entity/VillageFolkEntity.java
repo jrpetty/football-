@@ -497,6 +497,8 @@ public class VillageFolkEntity extends AssistantEntity {
         new Comfort(st -> st.is(net.minecraft.world.item.Items.FLOWER_POT), 1, false, Wealth.Tier.COMFORTABLE, "a pot for my windowsill"),
         new Comfort(st -> st.is(net.minecraft.tags.ItemTags.CANDLES), 1, false, Wealth.Tier.COMFORTABLE, "a candle for the evenings"),
         new Comfort(st -> st.is(net.minecraft.world.item.Items.LANTERN), 2, false, Wealth.Tier.COMFORTABLE, "a lantern for my table"),
+        new Comfort(st -> st.is(net.minecraft.world.item.Items.CHEST), 2, true, Wealth.Tier.COMFORTABLE, "a chest of my own for my things"),
+        new Comfort(st -> st.is(net.minecraft.world.item.Items.BARREL), 2, true, Wealth.Tier.COMFORTABLE, "a barrel by the wall"),
         new Comfort(st -> st.is(net.minecraft.world.item.Items.BOOKSHELF), 4, true, Wealth.Tier.WELL_OFF, "a bookshelf, like the elder's"));
 
     /**
@@ -566,7 +568,9 @@ public class VillageFolkEntity extends AssistantEntity {
             if (want == null || c.price() > want.price()) want = c;
         }
         if (want == null) { comfortDay = day; return false; }
-        BlockPos stores = storesSpot(server, village);
+        // At the shop, once the village has one open; else straight from the stores.
+        BlockPos shop = Villages.builtAt(village, "shop");
+        BlockPos stores = shop != null && Cafe.open(village, "shop") ? shop : storesSpot(server, village);
         if (stores == null) return false;
         if (blockPosition().distSqr(stores) > 3.5 * 3.5) {
             if (comfortSetOff < 0) comfortSetOff = tickCount;

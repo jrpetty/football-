@@ -8,6 +8,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -343,6 +344,7 @@ public final class Homes {
         TICKED.put(id, now);
         long day = level.getDayTime() / 24000L;
         enrol(id);
+        Villages.bedsMadeUp(level, id);                // the room the village has, counted afresh (Villages.housing)
         Map<Long, Home> homes = homes(id);
         List<VillageFolkEntity> folk = new ArrayList<>();
         for (AssistantEntity a : Villages.folkOf(id)) {
@@ -684,31 +686,35 @@ public final class Homes {
     /** One bed bought and set up for a child that has none; false if none was wanted, or none could be had. */
     static boolean childBed(ServerLevel level, Villages.Village v, Home h, long day) {
         UUID id = v.id();
-        if (h.members.isEmpty() || !level.isLoaded(h.anchor) || Ledger.raising(id, h.anchor)) return false;
+        if (h.members.isEmpty() || !level.isLoaded(h.anchor) || Ledger.raising(id, h.anchor)) return why(h, "empty, unloaded or going up");
         List<VillageFolkEntity> members = loadedMembers(id, h);
         List<BlockPos> beds = bedsIn(level, id, h);
         int children = (int) members.stream().filter(VillageFolkEntity::isBaby).count();
-        if (children == 0 || beds.size() >= members.size()) return false;
+        if (children == 0 || beds.size() >= members.size()) return why(h, "none wanted: " + beds.size() + " beds for " + members.size());
         // A bed: out of the stores (the tailor's), bought with the parents' coin; or the village's gift if
         // the parents have none and the leader is a generous one.
-        if (Market.stock(level, id, s -> s.is(ItemTags.BEDS)) == 0) return false;
+        if (Market.stock(level, id, s -> s.is(ItemTags.BEDS)) == 0) return why(h, "no bed in the stores");
         Market.Good g = Market.goodFor(new ItemStack(Items.WHITE_BED));
         int price = g == null ? 4 : Math.max(1, Market.sellPrice(g, Market.stock(level, id, g.what()), false));
         boolean paid = pay(members, price);
-        if (!paid && !generous(id)) return false;
+        if (!paid && !generous(id)) return why(h, "the parents cannot pay " + price);
         BlockPos spot = bedSpot(level, id, h, beds);
         if (spot == null) {
             if (paid) members.stream().filter(m -> !m.isBaby()).max(Comparator.comparingInt(VillageFolkEntity::purse)).ifPresent(m -> m.earn(price));
-            return false;
+            return why(h, "no room for it in the house");
         }
         ItemStack bed = Crafts.takeOne(level, v, s -> s.is(ItemTags.BEDS));
         if (bed.isEmpty() || !(Block.byItem(bed.getItem()) instanceof BedBlock bb)) {
             if (paid) members.stream().filter(m -> !m.isBaby()).findFirst().ifPresent(m -> m.earn(price));
             if (!bed.isEmpty()) Crafts.store(level, v, bed);
-            return false;
+            return why(h, "the bed could not be taken from the stores");
         }
         if (paid) Ledger.addCoins(id, price);
         Direction lie = spotLie(level, spot);
+        for (BlockPos rug : List.of(spot, spot.relative(lie))) {
+            BlockState was = level.getBlockState(rug);
+            if (was.is(BlockTags.WOOL_CARPETS)) Crafts.store(level, v, new ItemStack(was.getBlock().asItem()));   // rolled up, back to the stores
+        }
         BlockState st = bb.defaultBlockState().setValue(BedBlock.FACING, lie);
         level.setBlock(spot, st.setValue(BedBlock.PART, BedPart.FOOT), 3);
         level.setBlock(spot.relative(lie), st.setValue(BedBlock.PART, BedPart.HEAD), 3);
@@ -720,7 +726,20 @@ public final class Homes {
         Villages.tell(id, day, (parent == null ? "the village" : parent.displayNameCap()) + (paid ? " bought a bed at the shop for " : " was given a bed for ")
             + (child == null ? "a child" : child.displayNameCap()) + " (" + price + coins(price) + ")");
         if (parent != null) parent.persona().remember(day, "I bought a bed for " + (child == null ? "the little one" : child.displayNameCap()), 4);
+        why(h, "bought one");
         return true;
+    }
+
+    private static final Map<Long, String> WHY = new ConcurrentHashMap<>();
+
+    private static boolean why(Home h, String reason) {
+        WHY.put(h.anchor.asLong(), reason);
+        return false;
+    }
+
+    /** Tests: what became of the last look for a child's bed in this house. */
+    public static String whyForTests(BlockPos anchor) {
+        return WHY.getOrDefault(anchor.asLong(), "not looked");
     }
 
     /**
@@ -750,7 +769,9 @@ public final class Homes {
 
     /** A cell a bed may stand in: air, on something solid, under a roof, and not by a door or a ladder. */
     static boolean clear(ServerLevel level, BlockPos p) {
-        if (!level.getBlockState(p).isAir() || !level.getBlockState(p.above()).isAir()) return false;
+        // A rug may be rolled back for it (Interiors); anything else stands in the way.
+        BlockState here = level.getBlockState(p);
+        if (!here.isAir() && !here.is(BlockTags.WOOL_CARPETS) || !level.getBlockState(p.above()).isAir()) return false;
         if (!level.getBlockState(p.below()).isSolidRender(level, p.below())) return false;
         if (level.canSeeSky(p)) return false;
         for (Direction d : Direction.Plane.HORIZONTAL) {
@@ -1219,6 +1240,7 @@ public final class Homes {
     }
 
     static String address(UUID village, Villages.Village v, Home h) {
+        if (seat(h)) return "the leader's hall";
         Ledger.Building b = building(village, h.anchor);
         String[] a = b == null ? null : TownLife.address(village, v.centre(), b);
         return a == null ? "the house at " + h.anchor.getX() + ", " + h.anchor.getZ() : a[0] + ", " + a[1];

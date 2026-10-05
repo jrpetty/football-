@@ -197,11 +197,83 @@ public final class Cafe {
 
     // ------------------------------------------------------------------ the shopkeeper
 
-    /** The shopkeeper's work: the shop's counters set out afresh from what the crafts have
-     *  put in the stores. Returns what it did, or null if they were already right. */
+    /**
+     * What a house wants and a hand can make at the shop's bench, out of what the stores can spare:
+     * chests and barrels for a household's things, torches and candles for its evenings, a fishing
+     * rod, a pot for the windowsill, a painting and a frame for the wall, a bucket, and the plain
+     * stone tools a folk whose own wore out comes in for. Each kept to a few on the shelves; never
+     * out of the builders' timber and stone (the reserves), nor the smith's iron while it is short.
+     */
+    private static List<Recipe> wares() {
+        List<Recipe> m = new ArrayList<>();
+        Predicate<ItemStack> planks = s -> s.is(ItemTags.PLANKS);
+        Predicate<ItemStack> fuel = s -> s.is(Items.COAL) || s.is(Items.CHARCOAL);
+        Predicate<ItemStack> wool = s -> s.is(ItemTags.WOOL);
+        Predicate<ItemStack> cobble = s -> s.is(Items.COBBLESTONE) || s.is(Items.COBBLED_DEEPSLATE);
+        m.add(new Recipe(is(Items.TORCH), 24, List.of(new Need(fuel, 2, 8), new Need(planks, 1, 48)), false, new ItemStack(Items.TORCH, 8)));
+        m.add(new Recipe(is(Items.CHEST), 2, List.of(new Need(planks, 8, 64)), false, new ItemStack(Items.CHEST)));
+        m.add(new Recipe(is(Items.BARREL), 2, List.of(new Need(planks, 7, 64)), false, new ItemStack(Items.BARREL)));
+        m.add(new Recipe(s -> s.is(ItemTags.CANDLES), 4, List.of(of(Items.STRING, 1, 2), of(Items.HONEYCOMB, 1, 0)), false,
+            new ItemStack(Items.CANDLE)));
+        m.add(new Recipe(is(Items.FISHING_ROD), 1, List.of(of(Items.STRING, 2, 2), new Need(planks, 2, 48)), false,
+            new ItemStack(Items.FISHING_ROD)));
+        m.add(new Recipe(is(Items.FLOWER_POT), 2, List.of(of(Items.BRICK, 3, 0)), false, new ItemStack(Items.FLOWER_POT)));
+        m.add(new Recipe(is(Items.PAINTING), 1, List.of(new Need(planks, 4, 64), new Need(wool, 1, 3)), false, new ItemStack(Items.PAINTING)));
+        m.add(new Recipe(is(Items.ITEM_FRAME), 1, List.of(new Need(planks, 4, 64), of(Items.LEATHER, 1, 2)), false,
+            new ItemStack(Items.ITEM_FRAME)));
+        m.add(new Recipe(is(Items.LANTERN), 2, List.of(of(Items.IRON_NUGGET, 8, 0), of(Items.TORCH, 1, 8)), false,
+            new ItemStack(Items.LANTERN)));
+        m.add(new Recipe(is(Items.BUCKET), 1, List.of(of(Items.IRON_INGOT, 3, 12)), false, new ItemStack(Items.BUCKET)));
+        m.add(new Recipe(is(Items.STONE_PICKAXE), 1, List.of(new Need(cobble, 3, 48), new Need(planks, 1, 48)), false,
+            new ItemStack(Items.STONE_PICKAXE)));
+        m.add(new Recipe(is(Items.STONE_AXE), 1, List.of(new Need(cobble, 3, 48), new Need(planks, 1, 48)), false,
+            new ItemStack(Items.STONE_AXE)));
+        m.add(new Recipe(is(Items.STONE_HOE), 1, List.of(new Need(cobble, 2, 48), new Need(planks, 1, 48)), false,
+            new ItemStack(Items.STONE_HOE)));
+        m.add(new Recipe(is(Items.STONE_SHOVEL), 1, List.of(new Need(cobble, 1, 48), new Need(planks, 1, 48)), false,
+            new ItemStack(Items.STONE_SHOVEL)));
+        return m;
+    }
+
+    /** The household goods the shop keeps on its shelves (for the board, the talk and the tests). */
+    public static boolean houseware(ItemStack s) {
+        for (Recipe r : wares()) if (r.made().test(s)) return true;
+        return s.is(ItemTags.BEDS) || s.is(ItemTags.WOOL_CARPETS);
+    }
+
+    /**
+     * The shopkeeper's work: whatever household good the shelves are shortest of that the stores can
+     * spare the makings of, made up at the bench; then the counters set out afresh from what the
+     * crafts and the bench have put in the stores. Returns what it did, or null if there was nothing to do.
+     */
     @Nullable
     public static String keepShop(ServerLevel level, Villages.Village v) {
-        return dress(level, v, "shop") > 0 ? "the shop counter set out" : null;
+        Recipe best = null;
+        double bestFill = 1.0;
+        for (Recipe r : wares()) {
+            double fill = Crafts.stock(level, v, r.made()) / (double) r.keep();
+            if (fill >= bestFill || !canMake(level, v, r)) continue;
+            best = r;
+            bestFill = fill;
+        }
+        String made = null;
+        if (best != null) {
+            boolean all = true;
+            for (Need n : best.needs()) {
+                if (!Crafts.take(level, v, n.what(), n.n())) { all = false; break; }
+            }
+            if (all) {
+                ItemStack out = best.out().copy();
+                if (out.getMaxStackSize() == 1) {
+                    for (int i = 0; i < out.getCount(); i++) Crafts.store(level, v, out.copyWithCount(1));
+                } else {
+                    Crafts.store(level, v, out.copy());
+                }
+                made = name(out) + " for the shelves";
+            }
+        }
+        int set = dress(level, v, "shop");
+        return made != null ? made : set > 0 ? "the shop counter set out" : null;
     }
 
     // ------------------------------------------------------------------ the counters
@@ -320,6 +392,7 @@ public final class Cafe {
         if (s.isDamaged() || isDrink(s) || Budget.goodFor(s) == null) return false;
         if (s.is(Items.POTION)) return true;
         if (Budget.kitOf(s) != null && Prices.each(s.getItem()) >= 2.0) return true;
+        if (houseware(s)) return true;
         return s.isEnchanted() || s.is(ItemTags.BEDS) || s.is(ItemTags.WOOL_CARPETS) || s.is(ItemTags.BANNERS)
             || s.is(Items.BOOK) || s.is(Items.HONEY_BOTTLE) || s.is(Items.HONEYCOMB) || s.is(Items.SHEARS)
             || s.is(Items.BUCKET) || s.is(Items.IRON_PICKAXE) || s.is(Items.IRON_SWORD) || s.is(Items.IRON_AXE)

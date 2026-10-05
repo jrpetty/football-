@@ -159,8 +159,8 @@ layer 5
 .G.........G.
 .L..XXXX...L.
 .G..XXXX...G.
-.W........QW.
-.Gbb......TG.
+.Wbb......QW.
+.G........TG.
 .LWWWWDWWWWL.
 .GC...^...KG.
 .W...>P<...W.

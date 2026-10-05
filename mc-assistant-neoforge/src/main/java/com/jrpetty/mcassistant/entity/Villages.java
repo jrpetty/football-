@@ -367,6 +367,7 @@ public final class Villages {
         Orders.resetForTests();
         Leader.resetForTests();
         Ages.resetForTests();
+        Interiors.resetForTests();
         Trades.resetForTests();
         Links.resetForTests();
         Asks.resetForTests();
@@ -1574,7 +1575,7 @@ public final class Villages {
         BlockPos guest = builtAt(villageId, "guesthouse");
         int reach = Math.min(6, Math.max(3, storesRadius(villageId) / 16));
         int cx = v.centre().getX() >> 4, cz = v.centre().getZ() >> 4;
-        int n = 0;
+        int n = 0, camp = 0;
         for (int x = cx - reach; x <= cx + reach; x++) {
             for (int z = cz - reach; z <= cz + reach; z++) {
                 net.minecraft.world.level.chunk.LevelChunk chunk = level.getChunkSource().getChunkNow(x, z);
@@ -1585,7 +1586,10 @@ public final class Villages {
                     net.minecraft.world.level.block.state.BlockState st = level.getBlockState(p);
                     if (!st.hasProperty(net.minecraft.world.level.block.BedBlock.PART)
                         || st.getValue(net.minecraft.world.level.block.BedBlock.PART) != net.minecraft.world.level.block.state.properties.BedPart.HEAD) continue;
-                    if (Math.max(Math.abs(p.getX() - v.centre().getX()), Math.abs(p.getZ() - v.centre().getZ())) <= 6) continue;   // the camp
+                    if (Math.max(Math.abs(p.getX() - v.centre().getX()), Math.abs(p.getZ() - v.centre().getZ())) <= 6) {
+                        camp++;                                // the camp: room, but not a home
+                        continue;
+                    }
                     if (guest != null && p.distSqr(guest) <= 100) continue;
                     // A bed buried in the ground (a ruin's, a vault's) is nobody's home and nobody sleeps
                     // in it (VillageFolkEntity.bedFit): counted, a mountain town of twenty-five thought
@@ -1595,7 +1599,7 @@ public final class Villages {
                 }
             }
         }
-        MADE_UP.put(villageId, new long[]{ now, n });
+        MADE_UP.put(villageId, new long[]{ now, n, camp });
         return n;
     }
 
@@ -1705,6 +1709,11 @@ public final class Villages {
      * fast as it builds homes, and that is the reason it builds them.
      */
     public static int housing(UUID villageId) {
+        // The beds actually made up, in the houses and still at the camp, once they have been counted
+        // (bedsMadeUp): the reckoning by buildings said a mountain town of eighty-three had room for
+        // eighty-three when it had forty-five beds, so it built no houses and went on having children.
+        long[] seen = MADE_UP.get(villageId);
+        if (seen != null && seen.length > 2) return (int) (seen[1] + seen[2]);
         return 12 + 5 * built(villageId, "house") + 3 * built(villageId, "shelter") + 6 * built(villageId, "hall")
             + 6 * built(villageId, "barracks") + 6 * built(villageId, "manor")
             + 2 * com.jrpetty.mcassistant.village.Ledger.grownCount(villageId);

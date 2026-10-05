@@ -127,7 +127,7 @@ put(5, 3, 4, 'l'); put(5, 3, 7, 'l')
 put(5, 3, 2, 'C')
 for h in (5, 6): put(h, 3, 8, 'K'); put(h, 3, 9, 'K')
 put(5, 3, 10, 'H'); put(6, 3, 10, 'H')
-put(5, 9, 2, 'b'); put(5, 9, 3, 'b')             # the children's beds, the other end of the room
+put(5, 8, 2, 'b'); put(5, 8, 3, 'b')             # the children's beds, the other end of the room, heads to the partition
 for r in (6, 7):
     for c in (4, 5, 6, 7): put(5, r, c, 'X')
 put(5, 8, 10, 'Q'); put(5, 9, 10, 'T')

@@ -1700,6 +1700,32 @@ word).
 `/village status` shows the election (who stands and the count so far, or the last result and the
 next day), and the board shows it too.
 
+### Furnished for the age
+
+A building's insides come up in the world with the village, a piece at a time, out of its stores
+and by its own hands (town work), in the houses, the manors, the leader's hall, the meeting hall,
+the tavern, the café, the shop, the library, the chapel, the guest house and the barracks:
+* **the Stone Age:** a rug down the middle of every room (the tailor's carpet, or two wool cut into
+  three), a barrel by the wall for the household's odds and ends, and a pot of flowers;
+* **the Iron Age:** the rug gets a border in a second colour, a shelf of books goes up by the wall
+  (two in the great rooms), and a lantern stands on the barrel;
+* **the Diamond Age:** candles on the shelf, a second pot of flowers, another shelf.
+
+Where each piece goes is worked out from the building's own drawing: furniture against the walls
+from the corners in, the rug on the open floor, and never across the doorway, the way in from it,
+a ladder or a chest. Nothing goes in that the stores did not hold. A child's bed set down later
+rolls a rug back into the stores rather than going without.
+
+### The shop's shelves
+
+The shopkeeper keeps what a house wants on the shelves, made up at the shop's bench out of what the
+stores can spare when anything runs low: chests and barrels, torches and candles, a fishing rod, a
+flower pot (from bricks), a painting and an item frame, a lantern (when there are iron nuggets), a
+bucket (when there is iron to spare), and the plain stone pick, axe, hoe and shovel a folk whose own
+wore out comes in for. Never out of the builders' timber and stone, nor the smith's iron while it
+is short. Folk buy their comforts there once there is a shop open (a rug, a pot, a candle, a
+lantern, a chest of their own, a barrel, a bookshelf), and their children's beds.
+
 ### The leader's hall and the courtyard
 
 Once the village has a meeting hall and a board, its builders lay **the courtyard** before the

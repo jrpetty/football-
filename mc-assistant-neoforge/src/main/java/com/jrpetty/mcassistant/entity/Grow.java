@@ -175,6 +175,8 @@ public final class Grow {
         }
         // And every other building, made over for the age: stone, slate, copper, lamp posts (Ages).
         if (done < budget) done += Ages.work(level, v, budget - done);
+        // And their insides furnished for the age: rugs, barrels, shelves, lamps, flowers (Interiors).
+        if (done < budget) done += Interiors.work(level, v, budget - done);
         return done;
     }
 

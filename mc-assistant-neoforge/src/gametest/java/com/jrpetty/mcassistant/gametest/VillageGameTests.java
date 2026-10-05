@@ -547,10 +547,10 @@ public class VillageGameTests {
             + ", room " + roomBefore + " -> " + Villages.housing(late));
         // Twenty folk: the café, the tavern, the fountain, the smithy, the shop and a manor house
         // after the gateway, before the great works.
-        helper.assertTrue(order.equals(List.of("gateway", "cafe", "tavern", "fountain", "smithy", "shop", "manor",
-                "granary", "barracks", "monument", "granary")),
-            "the Nether Age raises its gateway, its amenities, then the great works go round: " + order);
-        helper.assertTrue(Villages.renown(late) == 4, "four great works raised, renown " + Villages.renown(late));
+        helper.assertTrue(order.equals(List.of("gateway", "cafe", "tavern", "fountain", "townhall", "smithy", "shop", "manor",
+                "granary", "barracks", "monument")),
+            "the Nether Age raises its gateway, its amenities and the leader's hall, then the great works go round: " + order);
+        helper.assertTrue(Villages.renown(late) == 3, "three great works raised, renown " + Villages.renown(late));
         helper.assertTrue(Villages.housing(late) == roomBefore + 12, "the manor and the barracks are room for twelve more: "
             + roomBefore + " -> " + Villages.housing(late));
         helper.succeed();
@@ -5225,7 +5225,10 @@ public class VillageGameTests {
         java.util.List<java.util.UUID> in = com.jrpetty.mcassistant.entity.Homes.membersForTests(id, one);
         java.util.List<BlockPos> beds = com.jrpetty.mcassistant.entity.Homes.bedsForTests(level, id, one);
         Kit.log("t77 the family: " + in.size() + " under one roof (" + com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, one)
-            + "), " + beds.size() + " beds; " + com.jrpetty.mcassistant.entity.Homes.line(level, id));
+            + "), " + beds.size() + " beds; " + com.jrpetty.mcassistant.entity.Homes.line(level, id) + "; a child's bed: "
+            + com.jrpetty.mcassistant.entity.Homes.whyForTests(one) + "; beds in the stores "
+            + com.jrpetty.mcassistant.entity.Market.stock(level, id, st -> st.is(net.minecraft.tags.ItemTags.BEDS)) + ", store chests "
+            + Villages.storeChests(level, id));
         helper.assertTrue(in.contains(a.getUUID()) && in.contains(b.getUUID()), "the couple share a house");
         for (VillageFolkEntity c : kids) helper.assertTrue(in.contains(c.getUUID()), "and their children live with them");
         helper.assertTrue("GIVEN".equals(com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, one)), "a young village gives its houses");
@@ -5381,6 +5384,129 @@ public class VillageGameTests {
             + "; " + first.displayNameCap() + " now at " + com.jrpetty.mcassistant.entity.Homes.homeOf(first));
         helper.assertTrue(site.anchor().equals(com.jrpetty.mcassistant.entity.Homes.homeOf(second)), "the new leader moves in");
         helper.assertTrue(!site.anchor().equals(com.jrpetty.mcassistant.entity.Homes.homeOf(first)), "and the old one moves out");
+        helper.succeed();
+    }
+
+    /**
+     * The shop keeps what a house wants: the shopkeeper makes up chests, barrels, torches, candles, a
+     * fishing rod and plain stone tools at its bench out of what the stores can spare, never into the
+     * builders' timber and stone, and they go on its shelves.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t79_shop_wares")
+    public static void t79_shop_wares(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 86000, 12000, 32);
+        Kit.prepare(level, 86000, 12000, 32);
+        BlockPos heart = Kit.surface(level, 86000, 12000);
+        VillageFolkEntity a = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(a != null, "a village");
+        Villages.Village v = Villages.get(a.ownerId());
+        BlockPos chest = Kit.surface(level, heart.getX() + 3, heart.getZ() + 3);
+        level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
+        level.setBlock(chest.east(), Blocks.CHEST.defaultBlockState(), 3);
+        Villages.forgetStores(v.id());
+        java.util.function.Consumer<net.minecraft.world.item.ItemStack> put = st -> com.jrpetty.mcassistant.entity.Homes.storeForTests(level, v, st);
+        put.accept(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_PLANKS, 64));
+        put.accept(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_PLANKS, 50));
+        put.accept(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COAL, 20));
+        put.accept(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COBBLESTONE, 64));
+        put.accept(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STRING, 6));
+        put.accept(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.HONEYCOMB, 2));
+        java.util.List<String> made = new java.util.ArrayList<>();
+        for (int i = 0; i < 14; i++) {
+            String m = com.jrpetty.mcassistant.entity.Cafe.keepShop(level, v);
+            if (m != null) made.add(m);
+        }
+        int planks = com.jrpetty.mcassistant.entity.Market.stock(level, v.id(), st -> st.is(net.minecraft.tags.ItemTags.PLANKS));
+        int cobble = com.jrpetty.mcassistant.entity.Market.stock(level, v.id(), st -> st.is(net.minecraft.world.item.Items.COBBLESTONE));
+        java.util.function.Function<net.minecraft.world.item.Item, Integer> n = it -> com.jrpetty.mcassistant.entity.Market.stock(level, v.id(), st -> st.is(it));
+        Kit.log("t79 the shop's bench: " + made + "; planks left " + planks + ", cobble left " + cobble + "; for sale: "
+            + com.jrpetty.mcassistant.entity.Cafe.shopGoods(level, v.id()).size());
+        helper.assertTrue(n.apply(net.minecraft.world.item.Items.TORCH) >= 8, "torches made");
+        helper.assertTrue(n.apply(net.minecraft.world.item.Items.CHEST) >= 1, "a chest made");
+        helper.assertTrue(n.apply(net.minecraft.world.item.Items.STONE_PICKAXE) >= 1, "a stone pick made");
+        helper.assertTrue(n.apply(net.minecraft.world.item.Items.CANDLE) >= 1, "a candle made");
+        helper.assertTrue(planks >= 48, "never into the builders' timber: " + planks);
+        helper.assertTrue(cobble >= 48, "nor their stone: " + cobble);
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Cafe.houseware(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.CHEST))
+            && com.jrpetty.mcassistant.entity.Cafe.shopWorthy(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.CHEST)), "and a chest is for sale");
+        helper.succeed();
+    }
+
+    /**
+     * The insides of a village's buildings, furnished better age by age out of its stores: a rug down
+     * the middle of each room and a barrel and a pot of flowers by the wall in the Stone Age; the rug
+     * bordered, a shelf of books and a lantern on the barrel in the Iron Age; candles and more in the
+     * Diamond Age. The doorway and the way in are kept clear, and nothing is put in that the stores
+     * did not hold.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 300, batch = "t80_interiors")
+    public static void t80_interiors(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 88000, 12000, 40);
+        Kit.prepare(level, 88000, 12000, 40);
+        BlockPos heart = Kit.surface(level, 88000, 12000);
+        VillageFolkEntity a = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(a != null, "a village");
+        java.util.UUID id = a.ownerId();
+        Villages.Village v = Villages.get(id);
+        BlockPos chest = Kit.surface(level, heart.getX() + 3, heart.getZ() + 3);
+        for (int i = 0; i < 4; i++) level.setBlock(chest.east(i), Blocks.CHEST.defaultBlockState(), 3);
+        Villages.forgetStores(id);
+        BlockPos home = Kit.surface(level, heart.getX() - 20, heart.getZ() + 20);
+        BlockPos manor = Kit.surface(level, heart.getX() + 20, heart.getZ() + 20);
+        BuildGoal.stamp(level, "house", home, Direction.NORTH, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+        BuildGoal.stamp(level, "manor", manor, Direction.NORTH, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+        com.jrpetty.mcassistant.village.Ledger.built(id, "house", home, Direction.NORTH);
+        com.jrpetty.mcassistant.village.Ledger.built(id, "manor", manor, Direction.NORTH);
+        java.util.function.Consumer<net.minecraft.world.item.ItemStack> put = st -> com.jrpetty.mcassistant.entity.Homes.storeForTests(level, v, st);
+        put.accept(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.RED_CARPET, 64));
+        put.accept(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.YELLOW_CARPET, 32));
+        put.accept(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BARREL, 8));
+        put.accept(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.FLOWER_POT, 8));
+        put.accept(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.POPPY, 8));
+        put.accept(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BOOKSHELF, 8));
+        put.accept(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.LANTERN, 8));
+        put.accept(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.CANDLE, 8));
+        com.jrpetty.mcassistant.entity.TownJobs.instantForTests(true);
+        java.util.Map<String, Integer> counts = new java.util.LinkedHashMap<>();
+        java.util.function.Function<BlockPos, java.util.Map<String, Integer>> census = at -> {
+            java.util.Map<String, Integer> n = new java.util.TreeMap<>();
+            for (BlockPos p : BlockPos.betweenClosed(at.offset(-7, 0, -7), at.offset(7, 10, 7))) {
+                net.minecraft.world.level.block.state.BlockState st = level.getBlockState(p);
+                String k = st.is(net.minecraft.tags.BlockTags.WOOL_CARPETS) ? "carpet" : st.is(Blocks.BARREL) ? "barrel"
+                    : st.is(Blocks.BOOKSHELF) ? "shelf" : st.is(Blocks.LANTERN) ? "lantern" : st.is(net.minecraft.tags.BlockTags.CANDLES) ? "candle"
+                    : st.is(net.minecraft.tags.BlockTags.FLOWER_POTS) ? "pot" : null;
+                if (k != null) n.merge(k, 1, Integer::sum);
+            }
+            return n;
+        };
+        java.util.Map<String, Integer> before = census.apply(home);
+        String[] ages = { "STONE", "IRON", "DIAMOND" };
+        java.util.Map<String, java.util.Map<String, Integer>> after = new java.util.LinkedHashMap<>();
+        for (String age : ages) {
+            Villages.ageForTests(id, Villages.Age.valueOf(age));
+            for (int i = 0; i < 12; i++) com.jrpetty.mcassistant.entity.Interiors.work(level, v, 40);
+            after.put(age, census.apply(home));
+            after.put(age + " manor", census.apply(manor));
+        }
+        com.jrpetty.mcassistant.entity.TownJobs.instantForTests(false);
+        Kit.log("t80 the house before " + before + "; then " + after + "; the manor's plan for the Diamond Age "
+            + com.jrpetty.mcassistant.entity.Interiors.planForTests(level, id, new com.jrpetty.mcassistant.village.Ledger.Building("manor", manor, Direction.NORTH), 3));
+        java.util.Map<String, Integer> stone = after.get("STONE"), iron = after.get("IRON"), diamond = after.get("DIAMOND manor");
+        helper.assertTrue(stone.getOrDefault("carpet", 0) > before.getOrDefault("carpet", 0), "a rug down the middle in the Stone Age: " + stone);
+        helper.assertTrue(stone.getOrDefault("barrel", 0) >= 1, "and a barrel by the wall: " + stone);
+        helper.assertTrue(iron.getOrDefault("shelf", 0) >= 1, "a shelf of books in the Iron Age: " + iron);
+        helper.assertTrue(iron.getOrDefault("lantern", 0) > before.getOrDefault("lantern", 0), "and a lantern: " + iron);
+        helper.assertTrue(diamond.getOrDefault("candle", 0) >= 1, "candles in the Diamond Age: " + diamond);
+        // The door stays clear: the cell inside it and the one beyond.
+        BlockPos door = null;
+        for (BuildGoal.Placement p : BuildGoal.plan("house", home, Direction.NORTH, 13)) if (p.part() == BuildGoal.Part.DOOR) door = p.pos();
+        helper.assertTrue(door != null && level.getBlockState(door.relative(Direction.NORTH)).isAir(), "and the way in is clear");
         helper.succeed();
     }
 }
