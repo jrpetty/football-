@@ -435,6 +435,8 @@ public final class Scouts {
             }
             return true;
         }
+        // A horse from the stable to ride its rounds on, and an old chest looked into for a saddle (Riding).
+        if (Riding.scout(f, level, e)) return true;
         if (!e.returning) {
             if (f.getHealth() < f.getMaxHealth() * 0.45F) turnBack(level, f, e, "I got hurt, so I came back");
             else if (time >= 7600 && time < 23000) turnBack(level, f, e, "it was time to turn back");
@@ -493,7 +495,7 @@ public final class Scouts {
                 } else {
                     // Coming home it knows the way: it has walked it. Over the bad patch to the next mark.
                     BlockPos to = surface(level, dest);
-                    f.moveTo(to.getX() + 0.5, to.getY(), to.getZ() + 0.5, f.getYRot(), 0.0F);
+                    Riding.carry(f, to.getX() + 0.5, to.getY(), to.getZ() + 0.5);       // (its horse with it: Riding)
                     e.detour = 0;
                     e.best = Double.MAX_VALUE;
                 }

@@ -1,0 +1,140 @@
+# The stable: a tall timber barn on a stone footing, four stalls two by two
+# either side of an aisle three wide, fenced off one from the next, a sunken
+# water trough and a cauldron by the door, hay at the front and up in the loft,
+# and three fence gates across the doorway, which stands open four high (up to
+# the loft's beam) so a rider can come in on horseback. The stalls: 2.5 across
+# either side, 2.5 and -0.5 deep (Stables reads them from here).
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name stable
+layer -1
+...........
+.FFFFFFFFF.
+.FfffffffF.
+.FfffffffF.
+.FfffffffF.
+.FfffffffF.
+.FfffffffF.
+.FfffffffF.
+.F~ffffffF.
+.FFFFFFFFF.
+...........
+layer 0
+...........
+.LwwwwwwwL.
+.w.......w.
+.w.......w.
+.wPP...PPw.
+.w.......w.
+.w.......w.
+.wPP...PPw.
+.w.y...y&w.
+.LwwgggwwL.
+...........
+layer 1
+...........
+.LWWWWWWWL.
+.W.......W.
+.G.......G.
+.W.......W.
+.G.......G.
+.W.......W.
+.W.......W.
+.W.......W.
+.LWW...WWL.
+...........
+layer 2
+...........
+.LWWWWWWWL.
+.W.......W.
+.G.......G.
+.W.......W.
+.G.......G.
+.W.......W.
+.W.......W.
+.W.......W.
+.LWW...WWL.
+...........
+layer 3
+...........
+.LWWWWWWWL.
+.W.......W.
+.W.......W.
+.W.......W.
+.W...j...W.
+.W.......W.
+.W.......W.
+.W.......W.
+.LWW...WWL.
+...j...j...
+layer 4
+vvvvvvvvvvv
+.L-------L.
+.|fffffff|.
+.|fffffff|.
+.|fffffff|.
+.|fffffff|.
+.|fffffff|.
+.|fffffff|.
+.|fffffff|.
+.L-------L.
+^^^^^^^^^^^
+layer 5
+...........
+vvvvvvvvvvv
+.Wyy...yyW.
+.W.......W.
+.W.......W.
+.W.......W.
+.W.......W.
+.W.......W.
+.Wy.....yW.
+^^^^^^^^^^^
+...........
+layer 6
+...........
+...........
+vvvvvvvvvvv
+.W.......W.
+.W.......W.
+.W.......W.
+.W.......W.
+.W.......W.
+^^^^^^^^^^^
+...........
+...........
+layer 7
+...........
+...........
+...........
+vvvvvvvvvvv
+.W.......W.
+.W.......W.
+.W.......W.
+^^^^^^^^^^^
+...........
+...........
+...........
+layer 8
+...........
+...........
+...........
+...........
+vvvvvvvvvvv
+.W.......W.
+^^^^^^^^^^^
+...........
+...........
+...........
+...........
+layer 9
+...........
+...........
+...........
+...........
+...........
+___________
+...........
+...........
+...........
+...........
+...........

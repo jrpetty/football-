@@ -533,6 +533,7 @@ public final class Annals {
         out.put("storehouse", Storekeeping.report(level, v));
         out.put("buildings", buildings(level, v));
         out.put("districts", Quarters.report(level, v));       // the town's quarters, the smoke, the park (Quarters)
+        out.put("stable", Stables.report(level, v));             // the horses, donkeys, saddles and the stable (Jobs, Buildings)
         out.put("research", CityTree.report(id));                // the city's research: the tree, the pick and why
         out.put("school", School.report(level, v));              // the school: its teacher, its pupils and what they lean to
         out.put("museum", Museum.report(level, v));              // the museum: what is on show, who found it, the archive

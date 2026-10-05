@@ -1226,6 +1226,7 @@ with plain blocks, so a building is never held up.
 | Gateway | 9×5 | The Nether Age's obsidian frame on a stone dais between lantern pillars |
 | Wall | ring of 27 | Round the square: battlements, a gate onto each avenue, lantern pillars, corner towers |
 | Pen | 7×7 | Fence ring with a gate, once there is a rancher |
+| Stable | 9×9 | Tall timber barn on a stone footing: four fenced stalls either side of an aisle, hay at the front and in the loft, a sunken trough and a cauldron, three gates across a door four high, once the village has horses |
 | Tavern | 11×11 | Broad timber inn: stone hearth with its fire and chimney, a bar of casks, tables and benches, note blocks, lanterns |
 | Graveyard | 9×9 | Fenced plot with a gate, a path to a stone cross, lanterns on the corner posts, twelve graves |
 | House, grown | 9×9 | The family house with a second storey: a ladder up to two more beds and a chest under the eaves |
@@ -3498,6 +3499,70 @@ A town keeps what it is proudest of.
 * `/village museum` says it all in chat: the curator, every exhibit and who found it, the
   volumes and where they stand, what is waiting and what the museum is short of.
 
+### Horses and the stable
+
+A village keeps **horses, donkeys and mules**, every one of them a wild one brought home and
+tamed by its rancher; nothing comes out of nowhere.
+* **Bringing one home.** Horses and donkeys come into the world wild, on the plains and the
+  savanna. The rancher goes out to one within sixty-odd blocks with something it eats in its
+  hand — wheat, an apple, a golden carrot if the stores have any (out of the stores) — and
+  walks it home with the animal following the hand: into the stable if there is one, to the
+  pen or the rancher's ground if not. A donkey first, when the village sends caravans.
+* **Gentling it.** At home it is the village's catch, and the rancher gentles it a go at a
+  time, as you would: a bite to eat (wheat, an apple or sugar sweeten its temper by three, a
+  golden carrot by five), then up on its back. It bucks. If its temper is up it stands for the
+  rider and is **tamed**; if not, the rancher is thrown and the horse is a little calmer for
+  next time (five more temper). Once tamed it is the village's own (the village is its owner),
+  it gets a name by its colour — *Bay*, *Dapple*, *Chestnut*, *Ned* the donkey — and the
+  chronicle says who tamed it after how many goes. Two tamed horses with room in the stable
+  and a golden carrot each make a **foal**; a foal born in the stable is gentled when it is
+  grown.
+* **Saddles, leads and chests.** Nobody can make a saddle. The fishers land one now and then
+  (about one catch in a hundred, near enough the game's own odds), a scout who comes on an
+  old unopened chest out in the world (a ruin's, a temple's, a villagers' village's) looks in
+  it and brings home any saddle or lead, and on **market day** the traders sell the village a
+  saddle (24 coin, out of what the treasury can spare after the wages) when the stable has a
+  horse without one. The rancher puts a saddle from the stores on a tamed horse, and a chest
+  from the stores on a donkey or a mule when the village sends caravans. Leads are plaited by
+  the rancher, two from four string and a slime ball, when the stores are short of them.
+* **The stable** (planned, from the Stone Age on, once the village has horses of its own, or
+  once an Iron Age town has a rancher and a saddle in the stores; on a lot by the square, near
+  the storehouse; the council may put it before or after the other amenities): a
+  tall timber barn with **four stalls** fenced off two by two either side of the aisle, hay at
+  the front and in the loft, a sunken water trough and a cauldron, and three **gates** across
+  the door, open four high so a rider comes in on horseback. Each horse has its stall and
+  stands in it when it is not out. The gates open for whoever is going through and shut behind
+  them. One that strays into the yard walks back in; further out, the rancher fetches it (rides
+  it home if it has a saddle on, coaxes it home with a bite if not). Every evening the rancher
+  goes round the stalls with the feed, a bite each of wheat, an apple or hay out of the stores.
+* **Couriers ride.** A courier with a **long run** (forty-eight blocks or more) takes the
+  quickest saddled horse in the stable, if the walk to the stable is worth it. Up in its stall,
+  out through the gates and away: the horse goes where the courier would have walked, at its
+  own pace under a rider — an ordinary horse is about **half again as quick as a folk at a
+  run**, and a slow one is not taken. A few steps short of the chest it gets down, leaves the
+  horse tied (it does not wander), empties the chest on foot, rides back, and ties the horse by
+  the storehouse while it carries the load in. Another long run, and it is back on it; a minute
+  with none, or the evening, and it rides the horse home and puts it in its stall. Its card
+  says so: *"Riding Bay to the north mine."* Nobody rides a horse without a saddle.
+* **Scouts ride** their rounds the same way, all day, and put the horse away when they are
+  home.
+* **Caravans take a donkey.** A caravan takes a donkey (or a mule) with a chest on it from the
+  stable, on a lead from the stores: the carrier fetches it, ties it and puts the load **in the
+  donkey's chest** rather than on its own back. At the other end the load comes out of the
+  chest to be sold and the goods for home go back in. Home again, the carrier leads the donkey
+  back to the stable and hangs the lead up with the stores.
+* **Never lost.** A rider gets down where it is too low to ride under, or where it can get no
+  nearer, and goes on foot. A horse whose rider could not get back to it stands where it was
+  left, and the rancher brings it in.
+* **Where to see it.** The **Jobs** page of the town's books has a line for the horses (how many,
+  how many saddled, the donkeys and their chests, the saddles in the stores, the stable and
+  its stalls, the rides today); the **Buildings** page has *The stable*, with every animal by
+  name and where it is (*"Bay (brown horse), saddled: out with Holt, to the north mine"*). A
+  rider's card has *Horses* (the horse it has out and how quick it is, its rides today); the
+  rancher's card shows its **gentling** (*"a brown horse (temper 31 of 100, 4 goes)"*), and its
+  top line what it is doing (*"Gentling a wild brown horse: its temper 31 of 100 after 4
+  goes"*). `/village horses` says it all in chat.
+
 ### Built by hand
 
 Everything the town does to itself is **done by somebody**:
@@ -3732,6 +3797,9 @@ ripen, days pass, folk work and houses go up at that pace.
   the Buildings page's map; `districts park now` (operators) puts the park up at once on its lot,
   as the showcase does, with its trees grown and its paths laid, and sends everybody off work to
   it (it prints `PARK x y z facing dir`); `districts park visit` (operators) sends them again.
+* `/village horses` — the stable: the village's horses, donkeys and mules (saddled, with a
+  chest, being gentled), each by name and where it is, who has one out, and the saddles and
+  leads in the stores.
 * `/village chronicle` — the nearest village's history, as a written book.
 * `/village museum` — the nearest village's museum: its curator, what is on show and who found
   each thing, the archive's volumes and where they stand, what waits to be bound, and what it is
@@ -3945,6 +4013,12 @@ Every push to CI:
   stores' book, feather and ink sac, signed with the year's title by the curator and laid open on
   the archive's lectern, every page and line fitting the book; and a curator does it on foot, the
   stores keeping the find back from the makers while it walks;
+* runs the horses (`StableGameTests`, hs01 to hs03): a rancher coaxes a wild horse home to the
+  stable with wheat out of the stores and gentles it, thrown a go at a time, till it is tamed, the
+  village's own with a name; a courier with a long run takes the saddled horse from the stable,
+  rides it out quicker than a folk can run, gets down by the chest, rides back, and puts it back in
+  its stall; a caravan's donkey with a chest carries the bread in its chest, the colony buys it out
+  of the chest, and the donkey is led home to the stable and the lead hung up with the stores;
 * checks the money (game test `t30`): a new village's purse, gold minted into coin,
   a day's wages, prices that move with the stores, a folk's market-day treat, a
   player buying bread at a stall and selling iron, and the stalls' price signs;

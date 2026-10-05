@@ -967,6 +967,12 @@ public class CityScreen extends Screen {
         if (jobs.size() > maxRows) small(g, "(scroll for more trades)", x, ry, Ui.FAINT);
         // The chosen trade's history, or the five biggest earners'.
         int cy = y + tableH + 8;
+        // The horses the couriers and scouts ride, and the donkeys the caravans load (Stables).
+        String horses = horsesLine();
+        if (horses != null) {
+            small(g, Ui.clip(font, "Horses: " + horses, (int) (cw / 0.75)), x, cy - 4, Ui.MUTED);
+            cy += 8;
+        }
         int chartH = y + ch - cy - 4;
         if (chartH < 40) return;
         int half = (cw - 6) / 2;
@@ -982,6 +988,16 @@ public class CityScreen extends Screen {
             chart(g, x + half + 6, cy, half, chartH, "Hands, the five biggest trades", mx, my,
                 tradeSeries("trade_hands", 5).toArray(new Series[0]));
         }
+    }
+
+    /** The stable's line ("3 horses (2 saddled) · 1 donkey (1 with a chest) · ..."), or null when the village has none of it. */
+    @javax.annotation.Nullable
+    private String horsesLine() {
+        CompoundTag t = data.getCompound("stable");
+        if (t.isEmpty()) return null;
+        int all = t.getInt("horses") + t.getInt("donkeys") + t.getInt("mules") + t.getInt("catches");
+        if (all == 0 && !t.getBoolean("stable") && t.getInt("saddles") == 0) return null;
+        return com.jrpetty.mcassistant.entity.Stables.line(t);
     }
 
     /** Every trade's series, the biggest few by name and the rest together as "Others". */
@@ -2071,6 +2087,26 @@ public class CityScreen extends Screen {
                 if (sy > y + ch - 9) break;
                 small(g, line, sx, sy, Ui.MUTED);
                 sy += 9;
+            }
+        }
+        // The stable and its horses (Stables), under the rest when there is room.
+        String horses = horsesLine();
+        if (horses != null && sy < y + ch - 30) {
+            sy += 6;
+            Ui.section(g, font, "The stable", sx, sy, side);
+            sy += 12;
+            for (FormattedCharSequence line : font.split(Component.literal(horses), (int) (side / 0.75))) {
+                if (sy > y + ch - 9) break;
+                small(g, line, sx, sy, Ui.INK);
+                sy += 9;
+            }
+            net.minecraft.nbt.ListTag names = data.getCompound("stable").getList("names", net.minecraft.nbt.Tag.TAG_STRING);
+            for (int i = 0; i < names.size() && sy <= y + ch - 9; i++) {
+                for (FormattedCharSequence line : font.split(Component.literal(names.getString(i)), (int) (side / 0.75))) {
+                    if (sy > y + ch - 9) break;
+                    small(g, line, sx, sy, Ui.MUTED);
+                    sy += 9;
+                }
             }
         }
     }

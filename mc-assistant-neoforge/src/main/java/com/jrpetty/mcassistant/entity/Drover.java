@@ -361,7 +361,7 @@ public final class Drover {
      * (the fetch is not saved, the lead is): let it off where it stands and put the lead away.
      */
     public static void tidy(VillageFolkEntity f, ServerLevel level) {
-        if (busy(f)) return;
+        if (busy(f) || Riding.leading(f)) return;                       // (a caravan's donkey on its lead: Riding)
         for (Animal a : level.getEntitiesOfClass(Animal.class, f.getBoundingBox().inflate(12),
                 x -> x.isLeashed() && x.getLeashHolder() == f)) {
             a.dropLeash(true, false);
