@@ -1700,6 +1700,42 @@ word).
 `/village status` shows the election (who stands and the count so far, or the last result and the
 next day), and the board shows it too.
 
+### Homes: households, houses for sale, and yours to buy
+
+Every folk belongs to a household: itself, its partner and their children. Each household has a
+house of its own (a house or a manor the village built) and sleeps there.
+
+* **Families together.** A couple sleep side by side; their children's beds are on the other side
+  of the room. Two folk who marry move in together, into the better of their two houses; the other
+  goes back to the village (bought back at half what they paid for it, if it was theirs).
+* **A bed for every child.** A child born into a full house gets a bed of its own: its parents buy
+  it at the shop out of their purses (a generous leader's village gives it if they can't pay) and
+  set it up across the room from theirs. Twins want two beds, and get them. Births come one at a
+  time mostly; twins about one birth in seventeen, triplets once in two hundred, quadruplets once in
+  four thousand.
+* **Grown children move out.** A child who comes of age stays at home until there is a house for it,
+  then moves into a place of its own. While anyone waits for a house and none stands empty, the
+  builders put one up.
+* **Moving house.** A household that moves carries its belongings: it walks to the old house's
+  chest, takes its things, and puts them in the new one's. Its keepsakes (presents it loved, treats it
+  bought at the shop for itself) are its own: never banked in the village stores.
+* **Given, then sold.** While the village is young its houses are given, families first. Once it is
+  getting rich (the Stone Age past, 120 coins in the treasury, sixteen folk), a new house is sold: a
+  household with the coin buys it outright, one without rents it from the village at a coin or two a
+  day (half that under a leader elected for homes), and buys it when it has saved enough. A rich
+  household moves up to a manor, which the builders put up once someone can afford one, selling its
+  old house back.
+* **Your house.** Stand in an empty house and buy it with village coin (`/village house buy`, or ask
+  any folk "buy this house"): a citizen pays the price, a friend of the village a quarter more. You
+  get its key. Sleep in it, or let it (`/village house let 3` for three coins a day): the next
+  household with nowhere to live moves in and pays you rent each morning, which you collect with
+  `/village house rent`. `/village house let 0` gives your tenants notice. `/village house` lists every
+  house, who lives in it, on what terms, and what is for sale.
+
+Ask a folk "Where do you live?" (on the Talk page) and it tells you: "I live at No. 4, Elm Street,
+with Tansy and the children, the village gave it us." The status line shows the homes:
+"9 households housed (6 given, 2 owned, 1 rented), 1 waiting; 1 empty".
+
 ### Neighbours: rivals, allies and feuds
 
 Villages within about six hundred blocks of each other have dealings, and what each
@@ -2033,6 +2069,9 @@ ripen, days pass, folk work and houses go up at that pace.
   Off unless you turn it on; the choice is kept with you.
 * `/village people` — who everybody is: trade, temperament, partner, friends,
   rivals and family, under a line on the village's couples and friendships.
+* `/village house` — the nearest village's houses: who lives in each, on what terms, and
+  what is for sale. `house buy` buys the empty house you stand in; `house let <coins>` lets
+  yours out at that rent a day (0 to take it back); `house rent` collects the rent.
 * `/village chronicle` — the nearest village's history, as a written book.
 * `/village standing` — what every village you have met thinks of you.
 * `/village ledger` — the nearest village's town ledger, as a book.

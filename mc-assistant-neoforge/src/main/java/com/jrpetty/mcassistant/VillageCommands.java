@@ -26,6 +26,7 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  *   /village talk [words]     talk with the nearest folk, as a right-click would (ops)
  *   /village chronicle        the nearest village's history, as a book
  *   /village standing         what every village you have met thinks of you
+ *   /village house            the village's houses; house buy | house let N | house rent
  *   /village speed 16|max|normal   time runs faster, to watch a village grow (ops / world owner)
  * </pre>
  */
@@ -55,6 +56,14 @@ public final class VillageCommands {
             .then(Commands.literal("anchors").requires(src -> src.hasPermission(2))
                 .executes(VillageCommands::anchors))
             .then(Commands.literal("status").executes(VillageCommands::status))
+            // The village's houses: who lives where, what is for sale; buy one, let it out, take the rent.
+            .then(Commands.literal("house")
+                .executes(VillageCommands::houses)
+                .then(Commands.literal("buy").executes(ctx -> house(ctx, "buy", 0)))
+                .then(Commands.literal("rent").executes(ctx -> house(ctx, "rent", 0)))
+                .then(Commands.literal("let")
+                    .then(Commands.argument("coins", IntegerArgumentType.integer(0, 20))
+                        .executes(ctx -> house(ctx, "let", IntegerArgumentType.getInteger(ctx, "coins"))))))
             .then(Commands.literal("wages").executes(ctx -> page(ctx, 2)))
             .then(Commands.literal("economy").executes(ctx -> page(ctx, 3)))
             // The morning news of the villages near you, in chat, once a morning: on or off.
@@ -351,6 +360,31 @@ public final class VillageCommands {
      * temperament, its partner, its friends and anyone it does not get on with, and
      * its family — and above them, how the village hangs together.
      */
+    private static int houses(CommandContext<CommandSourceStack> ctx) {
+        if (!(ctx.getSource().getEntity() instanceof ServerPlayer p)) {
+            ctx.getSource().sendFailure(Component.literal("Only a player can ask after houses."));
+            return 0;
+        }
+        java.util.List<String> lines = com.jrpetty.mcassistant.entity.Homes.list(ctx.getSource().getLevel(), p);
+        ctx.getSource().sendSuccess(() -> Component.literal("HOUSES " + String.join(" | ", lines)), false);
+        return lines.size();
+    }
+
+    private static int house(CommandContext<CommandSourceStack> ctx, String what, int coins) {
+        if (!(ctx.getSource().getEntity() instanceof ServerPlayer p)) {
+            ctx.getSource().sendFailure(Component.literal("Only a player can buy or let a house."));
+            return 0;
+        }
+        net.minecraft.server.level.ServerLevel level = ctx.getSource().getLevel();
+        String said = switch (what) {
+            case "buy" -> com.jrpetty.mcassistant.entity.Homes.playerBuys(level, p);
+            case "let" -> com.jrpetty.mcassistant.entity.Homes.playerLets(level, p, coins);
+            default -> com.jrpetty.mcassistant.entity.Homes.playerCollects(level, p);
+        };
+        ctx.getSource().sendSuccess(() -> Component.literal(said), false);
+        return 1;
+    }
+
     private static int people(CommandContext<CommandSourceStack> ctx) {
         net.minecraft.server.level.ServerLevel level = ctx.getSource().getLevel();
         net.minecraft.core.BlockPos here = net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition());
@@ -627,6 +661,7 @@ public final class VillageCommands {
             sb.append(". Elder's orders: ").append(order == null ? "none yet" : order.title);
             sb.append(". Leader: ").append(com.jrpetty.mcassistant.entity.Leader.line(id));
             sb.append(". Election: ").append(com.jrpetty.mcassistant.entity.Elections.line(id, level.getDayTime() / 24000L));
+            sb.append(". Homes: ").append(com.jrpetty.mcassistant.entity.Homes.line(level, id));
             java.util.Map<java.util.UUID, String> citizens = com.jrpetty.mcassistant.village.Ledger.citizens(id);
             if (!citizens.isEmpty()) sb.append("; citizens ").append(String.join(", ", citizens.values()));
             String n = com.jrpetty.mcassistant.entity.Diplomacy.status(id);

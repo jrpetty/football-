@@ -329,6 +329,9 @@ public class VillageFolkEntity extends AssistantEntity {
             }
             return;
         }
+        // Moving house, or its keepsakes home of an evening (Homes).
+        if (!withAPlayer && tickCount % 4 == 0 && level() instanceof net.minecraft.server.level.ServerLevel homing
+                && Homes.moving(this, homing)) return;
         // Election day (Elections): at its own hour, to the board to cast its vote.
         if (!withAPlayer && tickCount % 4 == 2 && level() instanceof net.minecraft.server.level.ServerLevel polling
                 && Elections.goVote(this, polling)) return;
@@ -348,7 +351,10 @@ public class VillageFolkEntity extends AssistantEntity {
             Villages.chooseElder(ownerId(), level().getDayTime() / 24000L);
             if (level() instanceof net.minecraft.server.level.ServerLevel polls) {
                 Villages.Village home = Villages.get(ownerId());
-                if (home != null) Elections.tick(polls, home);
+                if (home != null) {
+                    Elections.tick(polls, home);
+                    Homes.tick(polls, home);
+                }
             }
             if (level() instanceof net.minecraft.server.level.ServerLevel orders) Orders.consider(orders, ownerId(), level().getDayTime() / 24000L);
         }
@@ -374,6 +380,11 @@ public class VillageFolkEntity extends AssistantEntity {
     // Leisure (what it does with its own time).
 
     private final Persona persona = new Persona();
+    /** Who its parents are (Homes): by their ids, for children born from now on. */
+    private final java.util.List<UUID> parentIds = new java.util.ArrayList<>();
+
+    public java.util.List<UUID> parentIds() { return parentIds; }
+
     /** What it cares about (Values): set up from its nature, then moved by its life. */
     final int[] values = new int[Values.N];
     boolean valuesSet;
@@ -1300,6 +1311,7 @@ public class VillageFolkEntity extends AssistantEntity {
                 ? displayNameCap() + " died peacefully in their sleep, aged " + age
                 : displayNameCap() + " died, aged " + age);
             Gatherings.mourn(village, displayNameCap(), day);
+            Homes.left(village, getUUID());
             // The leader gone: an election to choose another (Elections).
             if (getUUID().equals(Villages.elder(village)) && level() instanceof net.minecraft.server.level.ServerLevel lost) {
                 Elections.vacancy(lost, village, displayNameCap(), day);
@@ -1835,7 +1847,8 @@ public class VillageFolkEntity extends AssistantEntity {
     protected boolean bedOnOffer(BlockPos pos) {
         if (!super.bedOnOffer(pos)) return false;
         UUID village = ownerId();
-        return village == null || !Villages.inAGuestHouse(village, pos);
+        // Not a player's guest house, and not another household's home (Homes).
+        return village == null || !Villages.inAGuestHouse(village, pos) && !Homes.someoneElses(village, pos, this);
     }
 
     /** Hand two rations to a friend: whatever food is in the pack, as it is. */
@@ -2080,6 +2093,13 @@ public class VillageFolkEntity extends AssistantEntity {
         if (villageCentre == null || village == null
                 || !(level() instanceof net.minecraft.server.level.ServerLevel server)) {
             return super.findABed(base);
+        }
+        // Its own house first (Homes): the grown-ups' pair side by side, the children's beds across the room.
+        BlockPos own = Homes.bedFor(server, this);
+        if (own != null && bedOnOffer(own)) {
+            bedLook = "its own house";
+            takeBed(own);
+            return true;
         }
         int reach = Math.min(6, Math.max(3, Villages.storesRadius(village) / 16));
         int cx = villageCentre.getX() >> 4, cz = villageCentre.getZ() >> 4;
@@ -4451,7 +4471,10 @@ public class VillageFolkEntity extends AssistantEntity {
         stopFollowing();
         setWorkZone(null);
         forgetBed();
-        if (from != null) Villages.recordDeath(from);
+        if (from != null) {
+            Villages.recordDeath(from);
+            Homes.left(from, getUUID());
+        }
         joinVillage(to.id(), to.centre());
         Villages.recordBirth(to.id());
         BlockPos at = Contentment.arrival(level, to, getRandom());
@@ -5214,10 +5237,62 @@ public class VillageFolkEntity extends AssistantEntity {
     /**
      * Raise a child with this partner, now: what it costs, who it is, whose it is.
      * The village's rules about when (room, food put by, the pace of births) are
-     * {@link #raisedAChild}'s; this is the raising itself.
+     * {@link #raisedAChild}'s; this is the raising itself. Now and then two come at once (one birth
+     * in seventeen or so), more rarely three, four once in a long while ({@link #litter}).
      */
     @Nullable
     public VillageFolkEntity raiseChildWith(VillageFolkEntity partner) {
+        return raise(partner);
+    }
+
+    /** One child born to this folk and its partner, into the village: named, kitted, knowing whose it is. */
+    @Nullable
+    private VillageFolkEntity bear(net.minecraft.server.level.ServerLevel server, VillageFolkEntity partner, UUID village, long bornOn) {
+        VillageFolkEntity child = com.jrpetty.mcassistant.McAssistantMod.VILLAGE_FOLK.get().create(server);
+        if (child == null) return null;
+        child.moveTo(getX(), getY(), getZ(), getYRot(), 0.0F);
+        child.rename(Names.freeFor(village));
+        // Less than its parents spent on it — see childKit. A village that
+        // could breed its way to a full larder would never have to farm.
+        com.jrpetty.mcassistant.VillageSpawner.childKit(child);
+        // BORN INTO THIS VILLAGE, not left to go and look for one: born a step too far out on its
+        // parents' plot, it would have founded a rival village on top of them.
+        child.joinVillage(village, villageCentre);
+        life.hadAChild();
+        partner.life.hadAChild();
+        child.life.roll(getRandom(), life, partner.life);
+        child.life.setParents(displayNameCap(), partner.displayNameCap());
+        child.parentIds.add(getUUID());
+        child.parentIds.add(partner.getUUID());
+        child.life.feel(getUUID(), displayNameCap(), 70);
+        child.life.feel(partner.getUUID(), partner.displayNameCap(), 70);
+        life.feel(child.getUUID(), child.displayNameCap(), 70);
+        partner.life.feel(child.getUUID(), child.displayNameCap(), 70);
+        server.sendParticles(net.minecraft.core.particles.ParticleTypes.HEART,
+            getX(), getY() + 2.0, getZ(), 6, 0.6, 0.3, 0.6, 0.0);
+        server.addFreshEntity(child);
+        Villages.recordBirth(village);
+        child.bornDay = bornOn;
+        child.setChild(true);
+        persona.remember(bornOn, "my child " + child.displayNameCap() + " was born", 9);
+        partner.persona.remember(bornOn, "my child " + child.displayNameCap() + " was born", 9);
+        return child;
+    }
+
+    /** The odds of one more at a birth: of a second, then of a third given two, then of a fourth given three. */
+    private static final double[] ONE_MORE = {0.06, 0.08, 0.05};
+
+    /**
+     * How many are born at once: one, mostly; twins about one birth in seventeen; triplets once in
+     * two hundred; quadruplets once in four thousand.
+     */
+    public static int litter(net.minecraft.util.RandomSource r) {
+        int n = 1;
+        while (n < 4 && r.nextDouble() < ONE_MORE[n - 1]) n++;
+        return n;
+    }
+
+    private VillageFolkEntity raise(VillageFolkEntity partner) {
         if (isBaby() || partner.isBaby()) return null;
         if (!(level() instanceof net.minecraft.server.level.ServerLevel server)) return null;
         UUID village = ownerId();
@@ -5232,48 +5307,32 @@ public class VillageFolkEntity extends AssistantEntity {
         partner.breedTick = partner.tickCount;
         this.breedTick = tickCount;
 
-        VillageFolkEntity child = com.jrpetty.mcassistant.McAssistantMod.VILLAGE_FOLK.get()
-            .create(server);
-        if (child == null) return null;
-        child.moveTo(getX(), getY(), getZ(), getYRot(), 0.0F);
-        child.rename(Names.freeFor(village));
-        // Less than its parents spent on it — see childKit. A village that
-        // could breed its way to a full larder would never have to farm.
-        com.jrpetty.mcassistant.VillageSpawner.childKit(child);
-        // BORN INTO THIS VILLAGE, not left to go and look for one. A newborn
-        // settles by finding the nearest settlement within ninety-six blocks,
-        // and it is born wherever its parents were STANDING — which is out on
-        // their plot, which as a village grows is most of ninety-six blocks
-        // from the heart already. A child born a step too far would have
-        // FOUNDED A RIVAL VILLAGE on top of its own parents, split the
-        // headcount, and set both halves back to the Wood Age. It is given the
-        // village it was born into, and its agenda picks up from there.
-        child.joinVillage(village, villageCentre);
-        // A family: the two who raised it are partners from now on, and the child
-        // takes after one of them and knows whose it is.
         long bornOn = level().getDayTime() / 24000L;
         if (life.partner() == null && partner.life.partner() == null) {
             Villages.tell(village, bornOn, displayNameCap() + " and " + partner.displayNameCap() + " are together now");
         }
         if (life.partner() == null) life.partnerWith(partner.getUUID(), partner.displayNameCap());
         if (partner.life.partner() == null) partner.life.partnerWith(getUUID(), displayNameCap());
-        life.hadAChild();
-        partner.life.hadAChild();
-        child.life.roll(getRandom(), life, partner.life);
-        child.life.setParents(displayNameCap(), partner.displayNameCap());
-        child.life.feel(getUUID(), displayNameCap(), 70);
-        child.life.feel(partner.getUUID(), partner.displayNameCap(), 70);
-        life.feel(child.getUUID(), child.displayNameCap(), 70);
-        partner.life.feel(child.getUUID(), child.displayNameCap(), 70);
-        server.sendParticles(net.minecraft.core.particles.ParticleTypes.HEART,
-            getX(), getY() + 2.0, getZ(), 6, 0.6, 0.3, 0.6, 0.0);
-        server.addFreshEntity(child);
-        Villages.recordBirth(village);
-        child.bornDay = bornOn;
-        child.setChild(true);
-        Villages.tell(village, bornOn, displayNameCap() + " and " + partner.displayNameCap() + " had a child, " + child.displayNameCap());
-        persona.remember(bornOn, "my child " + child.displayNameCap() + " was born", 9);
-        partner.persona.remember(bornOn, "my child " + child.displayNameCap() + " was born", 9);
+        VillageFolkEntity child = bear(server, partner, village, bornOn);
+        if (child == null) return null;
+        int more = litter(getRandom()) - 1;
+        java.util.List<VillageFolkEntity> brood = new java.util.ArrayList<>();
+        brood.add(child);
+        for (int i = 0; i < more; i++) {
+            VillageFolkEntity twin = bear(server, partner, village, bornOn);
+            if (twin != null) brood.add(twin);
+        }
+        if (brood.size() == 1) {
+            Villages.tell(village, bornOn, displayNameCap() + " and " + partner.displayNameCap() + " had a child, " + child.displayNameCap());
+        } else {
+            String word = brood.size() == 2 ? "twins" : brood.size() == 3 ? "triplets" : "quadruplets";
+            java.util.List<String> names = new java.util.ArrayList<>();
+            for (VillageFolkEntity c : brood) names.add(c.displayNameCap());
+            Villages.tell(village, bornOn, displayNameCap() + " and " + partner.displayNameCap() + " had " + word + ": " + String.join(", ", names));
+            persona.remember(bornOn, "we had " + word + "!", 10);
+            partner.persona.remember(bornOn, "we had " + word + "!", 10);
+            FolkTalk.speak(this, FolkTalk.pick(getRandom(), word.substring(0, 1).toUpperCase() + word.substring(1) + "! All at once!", "More than we bargained for — and every one perfect."));
+        }
         Villages.noteBirth(village, level().getGameTime());
         // The settlement is bigger than it was, so it keeps more ground awake.
         // Re-taken at the new radius, which is a superset of the old one, so
@@ -6589,6 +6648,11 @@ public class VillageFolkEntity extends AssistantEntity {
             tag.putString("HiredSaw", String.join("|", hiredSaw));
             tag.putString("HiredName", hiredName);
         }
+        if (!parentIds.isEmpty()) {
+            net.minecraft.nbt.ListTag ps = new net.minecraft.nbt.ListTag();
+            for (UUID u : parentIds) ps.add(net.minecraft.nbt.NbtUtils.createUUID(u));
+            tag.put("ParentIds", ps);
+        }
         if (valuesSet) {
             tag.putIntArray("Values", values.clone());
             tag.putLong("ValuesDay", valuesDay);
@@ -6655,6 +6719,10 @@ public class VillageFolkEntity extends AssistantEntity {
             for (String b : tag.getString("HiredSaw").split("\\|")) if (!b.isEmpty()) hiredSaw.add(b);
             this.companion = hiredBy;
             this.companionUntil = Integer.MAX_VALUE;
+        }
+        parentIds.clear();
+        if (tag.contains("ParentIds")) {
+            for (net.minecraft.nbt.Tag t : tag.getList("ParentIds", net.minecraft.nbt.Tag.TAG_INT_ARRAY)) parentIds.add(net.minecraft.nbt.NbtUtils.loadUUID(t));
         }
         if (tag.contains("Values")) {
             int[] saved = tag.getIntArray("Values");

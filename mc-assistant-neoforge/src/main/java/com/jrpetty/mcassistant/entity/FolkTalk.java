@@ -127,6 +127,8 @@ public final class FolkTalk {
             case CENSUS -> census(f, p);
             case CITIZEN -> Citizens.ask(f, p);
             case COUNCIL -> Council.news(f) + " " + Elections.talk(f);
+            case HOUSE -> Homes.talk(f);
+            case HOUSING -> Homes.ask(f, p, text);
             case FINE -> Laws.pay(f, p);
             case RIVALS -> Diplomacy.rivals(f);
             case PROPOSE -> Council.propose(f, p, text);
@@ -178,7 +180,7 @@ public final class FolkTalk {
         }
         boolean answering = switch (topic) {
             case HOW, DOING, ABOUT, PEOPLE, VILLAGE, DREAMS, HOBBY, MEMORY, REPUTE, GOSSIP, COUNCIL, RIVALS, QUESTS, ORDERS, WORKINGS, SHORT,
-                 WORTH, KNACK -> true;
+                 WORTH, KNACK, HOUSE -> true;
             default -> false;
         };
         return manner(f, said, answering);
@@ -281,8 +283,9 @@ public final class FolkTalk {
         if (!f.isBaby()) line(sb, "At its work", Skill.line(f));
         line(sb, "Worth", Wealth.line(f));
         net.minecraft.core.BlockPos bed = f.bedPos();
-        line(sb, "Home", bed == null ? "No bed of its own yet"
-            : "A bed of its own" + (f.comforts() > 0 ? ", and " + f.comforts() + (f.comforts() == 1 ? " comfort" : " comforts") + " it bought" : ""));
+        String house = Homes.talk(f);
+        line(sb, "Home", (house != null && !house.isEmpty() ? house + " " : "") + (bed == null ? "No bed of its own yet."
+            : "A bed of its own" + (f.comforts() > 0 ? ", and " + f.comforts() + (f.comforts() == 1 ? " comfort" : " comforts") + " it bought" : "") + "."));
         line(sb, "Nature", life.traitsLabel());
         String family = life.partnerName().isEmpty() ? "" : "partner " + life.partnerName();
         if (life.children() > 0) family += (family.isEmpty() ? "" : "; ") + life.children() + (life.children() == 1 ? " child" : " children");
@@ -962,6 +965,8 @@ public final class FolkTalk {
             said = pick(r, "Oh. Er — thank you, I suppose.", "A " + what + ". Well. That's… something.");
         }
         ItemStack one = held.split(1);
+        // A loved thing that isn't eaten is kept: its own, not the stores', and it moves house with it (Homes).
+        if (kind != null && kind == me.loves() && one.get(DataComponents.FOOD) == null) Homes.keepsake(one, f);
         ItemStack left = f.insertItem(one);
         if (!left.isEmpty()) f.spawnAtLocation(left);
         op.giftsToday++;
@@ -1122,6 +1127,9 @@ public final class FolkTalk {
         if (has(t, "short of", "running low", "what's short", "whats short", "what do you lack", "what does the village need")) return TalkTopic.SHORT;
         if (has(t, "quest", "notice board", "the board", "bount", "postings", "work going")) return TalkTopic.QUESTS;
         if (has(t, "hire", "adventur", "sell your sword", "bodyguard", "escort", "come exploring")) return TalkTopic.HIRE;
+        if (has(t, "where do you live", "your house", "your home", "who do you live with", "where's home", "wheres home")) return TalkTopic.HOUSE;
+        if (has(t, "buy a house", "buy this house", "buy the house", "buy that house", "houses for sale", "house for sale", "a house to buy",
+                "houses to buy", "let my house", "let out my house", "rent out my house", "rent my house", "my rent", "my tenants")) return TalkTopic.HOUSING;
         if (has(t, "build me a house", "build me a home", "commission", "a house for me", "house of my own", "my own house")) return TalkTopic.COMMISSION;
         if (has(t, "ledger", "the accounts", "the books", "what's in the stores", "whats in the stores", "the stock")) return TalkTopic.LEDGER;
         if (has(t, "eat with me", "eat together", "share a meal", "have a bite", "lunch with", "dinner with", "supper with")) return TalkTopic.MEAL;

@@ -416,6 +416,8 @@ public final class Cafe {
         f.spend(price);
         Ledger.addCoins(v.id(), price);
         ItemStack bought = pick.copyWithCount(1);
+        // A treat is its own: kept off the stores, and carried along when it moves house (Homes).
+        if (!forWork) Homes.keepsake(bought, f);
         ItemStack left = f.insertItem(bought);
         if (!left.isEmpty()) Crafts.store(level, v, left);
         return bought.getHoverName().getString().toLowerCase(java.util.Locale.ROOT) + " for " + price + (price == 1 ? " coin" : " coins");

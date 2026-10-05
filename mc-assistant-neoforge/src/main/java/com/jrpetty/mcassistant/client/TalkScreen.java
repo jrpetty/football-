@@ -159,6 +159,7 @@ public class TalkScreen extends Screen {
                 out.add(Choice.of("Your work?", TalkTopic.DOING));
                 out.add(Choice.of("About you", TalkTopic.ABOUT));
                 out.add(Choice.of("Family?", TalkTopic.PEOPLE));
+                out.add(Choice.of("Your home?", TalkTopic.HOUSE, "Where it lives, who with, and whether the house is its own"));
                 out.add(Choice.of("Any news?", TalkTopic.VILLAGE));
                 out.add(Choice.of("Your hopes?", TalkTopic.DREAMS));
                 out.add(Choice.of("Memories?", TalkTopic.MEMORY));
@@ -219,6 +220,7 @@ public class TalkScreen extends Screen {
                 out.add(Choice.of("Auction", TalkTopic.AUCTION, "Market day's lot: the village's finest spare thing, to the best bid (\"I bid 30\")"));
                 out.add(Choice.of("Escort", TalkTopic.ESCORT, "Guard the next caravan: walk with it and be paid at the other end"));
                 out.add(Choice.of("Charter route", TalkTopic.CHARTER, "Fifty coins for a trade route to the nearest neighbour: a tenth of every load sold on it is yours"));
+                out.add(Choice.of("Buy a house", TalkTopic.HOUSING, "The village's empty houses and their prices. Say \"buy this house\" standing in one, \"let my house for 3\", or \"my rent\""));
                 out.add(Choice.of("Prices", TalkTopic.PRICES, "Where things are dear and where cheap, round about: buy cheap, sell dear"));
                 out.add(Choice.of("Haggle", TalkTopic.HAGGLE, "Ask the storekeeper or the shopkeeper to do it cheaper: a discount for the day, if they like you"));
                 out.add(new Choice("Make me…", TalkTopic.ORDER, "", "Ask a smith or a tailor to make you something: from your makings and the village's spare, for a fee"));

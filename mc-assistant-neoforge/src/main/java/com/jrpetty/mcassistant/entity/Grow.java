@@ -415,7 +415,14 @@ public final class Grow {
             if (level.getBlockState(p.pos()).isAir()) continue;
             off.add(p);
         }
-        // Whatever stands where the new ladder goes up (the old chest): its contents into the stores.
+        // Whatever stands where the new ladder goes up (the old chest): its contents to the household that
+        // lives there, to carry up to the new chest upstairs when it is in (Homes); an empty house's into
+        // the stores.
+        VillageFolkEntity keeper = null;
+        for (java.util.UUID m : Homes.membersForTests(id, b.anchor())) {
+            VillageFolkEntity f = Homes.loaded(id, m);
+            if (f != null && !f.isBaby()) { keeper = f; break; }
+        }
         for (BuildGoal.Placement q : will) {
             if (q.part() != BuildGoal.Part.LADDER || q.pos().getY() >= b.anchor().getY() + 3) continue;
             BlockState there = level.getBlockState(q.pos());
@@ -423,6 +430,10 @@ public final class Grow {
             if (level.getBlockEntity(q.pos()) instanceof net.minecraft.world.Container c) {
                 for (int i = 0; i < c.getContainerSize(); i++) {
                     net.minecraft.world.item.ItemStack st = c.removeItemNoUpdate(i);
+                    if (!st.isEmpty() && keeper != null) {
+                        Homes.keepsake(st, keeper);
+                        st = keeper.insertItem(st);
+                    }
                     if (!st.isEmpty()) {
                         net.minecraft.world.item.ItemStack left = Market.intoStores(level, id, st);
                         if (!left.isEmpty()) net.minecraft.world.Containers.dropItemStack(level, q.pos().getX() + 0.5,

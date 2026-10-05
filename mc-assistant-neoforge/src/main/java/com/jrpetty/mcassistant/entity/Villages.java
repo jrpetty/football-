@@ -377,6 +377,7 @@ public final class Villages {
         DEFERRED.clear();
         DEFER_WHY.clear();
         Elections.resetForTests();
+        Homes.resetForTests();
         FOUNDED.clear();
         LEAD.clear();
         LEAD_AT.clear();
@@ -1416,7 +1417,7 @@ public final class Villages {
         // growing is the whole of how it gets the hands for everything after this. A leader
         // elected for homes (Elections) keeps more spare.
         int spare = Elections.mandate(villageId) == Values.Value.HOMES ? 6 : 2;
-        boolean house = folk >= housing(villageId) - spare || built(villageId, "house") < 1;
+        boolean house = folk >= housing(villageId) - spare || built(villageId, "house") < 1 || HOUSE_WANTED.getOrDefault(villageId, false);
         if (house) out.add("house");
         if (built(villageId, "well") < 1) out.add("well");
         // A house for the player the village has taken to its heart.
@@ -1454,7 +1455,7 @@ public final class Villages {
         if (folk >= 22 && built(villageId, "brewery") < 1) extras.add("brewery");
         // The Iron Age's best homes: a manor house on a long lot by the square, one for every
         // thirty folk past twenty — six beds each.
-        if (folk >= 20 && built(villageId, "manor") < 1 + (folk - 20) / 30) extras.add("manor");
+        if (folk >= 20 && built(villageId, "manor") < 1 + (folk - 20) / 30 || Homes.wantsAManor(villageId)) extras.add("manor");
         if (at == Age.IRON) { homesAndAmenities(villageId, folk, out, extras); return out; }
 
         if (built(villageId, "lighthouse") < 1) out.add("lighthouse");
@@ -1471,6 +1472,9 @@ public final class Villages {
         out.add(nextGreatWork(villageId));
         return out;
     }
+
+    /** A household waiting for a house and none empty (Homes.wantsAHouse), refreshed with the homes. */
+    static final Map<UUID, Boolean> HOUSE_WANTED = new ConcurrentHashMap<>();
 
     /** What a player asked the elder to build next (Asks.build), until it goes up. */
     private static final Map<UUID, String> REQUESTED = new ConcurrentHashMap<>();
@@ -1948,6 +1952,7 @@ public final class Villages {
             for (ZoneChests.Found f : ZoneChests.around(level, v.centre(), STORE_AREA, 16)) {
                 if (!f.stillThere() || !ZoneChests.isStashable(f)) continue;
                 if (inAGuestHouse(villageId, f.pos())) continue;
+                if (Homes.inAHome(villageId, f.pos())) continue;          // a household's own chest (Homes)
                 out.add(f.pos().immutable());
             }
         } finally {

@@ -181,10 +181,14 @@ public final class Elections {
         List<VillageFolkEntity> folk = voters(village);
         UUID leader = Villages.elder(village);
         Map<VillageFolkEntity, Integer> score = new HashMap<>();
+        // A newcomer does not stand, unless there are hardly any others (a village just founded).
+        int settled = 0;
+        for (VillageFolkEntity c : folk) if (c.persona().since() < 0 || day - c.persona().since() >= 1) settled++;
+        boolean newcomersToo = settled < 2;
         for (VillageFolkEntity c : folk) {
             long since = c.persona().since();
             boolean incumbent = c.getUUID().equals(leader);
-            if (!incumbent && since >= 0 && day - since < 1) continue;           // a newcomer does not stand
+            if (!incumbent && !newcomersToo && since >= 0 && day - since < 1) continue;
             int s = (int) Math.min(30, Math.max(0, day - since));
             for (VillageFolkEntity o : folk) if (o != c) s += o.life().affinity(c.getUUID()) / 2;
             s += Homeland.leaderFit(village, c);

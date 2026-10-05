@@ -68,7 +68,9 @@ public enum TalkTopic {
     AUCTION("What's up for auction?"),
     ESCORT("Can I guard your next caravan?"),
     CHARTER(""),
-    PRICES("Where are things dear, and where cheap?");
+    PRICES("Where are things dear, and where cheap?"),
+    HOUSE("Where do you live?"),
+    HOUSING("Any houses to buy?");
 
     public final String line;
 

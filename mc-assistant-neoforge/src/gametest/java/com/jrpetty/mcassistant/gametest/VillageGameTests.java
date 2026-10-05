@@ -5156,4 +5156,132 @@ public class VillageGameTests {
             helper.succeed();
         });
     }
+
+    /**
+     * Homes: a couple and their children share a house, the children's beds across the room from
+     * theirs; a child born into a full house gets a bed bought at the shop; a grown child moves out
+     * into a place of its own; a player buys a house and lets it, and collects the rent; and once
+     * the village sells its houses, a household with coin buys one and one without rents. Twins
+     * come now and then, triplets rarely, quadruplets hardly ever.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "t77_homes")
+    public static void t77_homes(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(24000L * 6 + 2000);
+        Kit.hold(level, 82000, 12000, 48);
+        Kit.prepare(level, 82000, 12000, 48);
+        BlockPos heart = Kit.surface(level, 82000, 12000);
+        // Twins and more, by the odds.
+        int[] litters = new int[5];
+        net.minecraft.util.RandomSource rr = net.minecraft.util.RandomSource.create(77L);
+        for (int i = 0; i < 200000; i++) litters[VillageFolkEntity.litter(rr)]++;
+        Kit.log("t77 two hundred thousand births: " + litters[1] + " single, " + litters[2] + " twins, " + litters[3] + " triplets, " + litters[4] + " quadruplets");
+        helper.assertTrue(litters[2] > 8000 && litters[2] < 15000, "twins about one birth in seventeen: " + litters[2]);
+        helper.assertTrue(litters[3] > 200 && litters[3] < litters[2] / 5, "triplets far rarer: " + litters[3]);
+        helper.assertTrue(litters[4] > 0 && litters[4] < litters[3] / 5, "quadruplets rarest of all: " + litters[4]);
+
+        VillageFolkEntity a = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(a != null, "a village");
+        java.util.UUID id = a.ownerId();
+        Villages.Village v = Villages.get(id);
+        VillageFolkEntity b = VillageFolkSpawnerBlock.raise(level, heart.east(2), 0.0F);
+        helper.assertTrue(b != null && id.equals(b.ownerId()), "a second folk");
+        java.util.function.Function<Integer, BlockPos> house = n -> {
+            BlockPos at = Kit.surface(level, heart.getX() - 30 + 14 * n, heart.getZ() + 22);
+            BuildGoal.stamp(level, "house", at, Direction.NORTH, 13,
+                com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+            com.jrpetty.mcassistant.village.Ledger.built(id, "house", at, Direction.NORTH);
+            return at;
+        };
+        BlockPos one = house.apply(0);
+        // Three children: one more than the house has beds for.
+        java.util.List<VillageFolkEntity> kids = new java.util.ArrayList<>();
+        for (int i = 0; i < 3; i++) {
+            a.insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BREAD, 2));
+            b.insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BREAD, 2));
+            VillageFolkEntity c = a.raiseChildWith(b);
+            helper.assertTrue(c != null, "a child born");
+            kids.add(c);
+        }
+        for (AssistantEntity e : Villages.folkOf(id)) {
+            if (e instanceof VillageFolkEntity f && f.isBaby() && !kids.contains(f)) kids.add(f);   // twins
+        }
+        a.earn(30);
+        b.earn(30);
+        com.jrpetty.mcassistant.entity.Homes.storeForTests(level, v, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.WHITE_BED, 3));
+        com.jrpetty.mcassistant.entity.Homes.tickForTests(level, v);
+        java.util.List<java.util.UUID> in = com.jrpetty.mcassistant.entity.Homes.membersForTests(id, one);
+        java.util.List<BlockPos> beds = com.jrpetty.mcassistant.entity.Homes.bedsForTests(level, id, one);
+        Kit.log("t77 the family: " + in.size() + " under one roof (" + com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, one)
+            + "), " + beds.size() + " beds; " + com.jrpetty.mcassistant.entity.Homes.line(level, id));
+        helper.assertTrue(in.contains(a.getUUID()) && in.contains(b.getUUID()), "the couple share a house");
+        for (VillageFolkEntity c : kids) helper.assertTrue(in.contains(c.getUUID()), "and their children live with them");
+        helper.assertTrue("GIVEN".equals(com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, one)), "a young village gives its houses");
+        helper.assertTrue(beds.size() >= 2 + kids.size(), "a bed bought for the child the house had no bed for: " + beds.size() + " beds for " + in.size());
+        BlockPos ma = com.jrpetty.mcassistant.entity.Homes.bedFor(level, a), mb = com.jrpetty.mcassistant.entity.Homes.bedFor(level, b);
+        helper.assertTrue(ma != null && mb != null && ma.distSqr(mb) <= 2.0, "the parents sleep side by side: " + ma + ", " + mb);
+        java.util.Set<BlockPos> used = new java.util.HashSet<>(java.util.List.of(ma, mb));
+        StringBuilder kb = new StringBuilder();
+        for (VillageFolkEntity c : kids) {
+            BlockPos cb = com.jrpetty.mcassistant.entity.Homes.bedFor(level, c);
+            kb.append(c.displayNameCap()).append(' ').append(cb).append("; ");
+            helper.assertTrue(cb != null && used.add(cb), "every child a bed of its own: " + kb);
+            helper.assertTrue(cb.distSqr(ma) > 2.0 && cb.distSqr(mb) > 2.0, "apart from the parents' beds: " + kb);
+        }
+        Kit.log("t77 the parents' beds " + ma + " " + mb + "; the children's " + kb);
+        // A child grows up and moves out, into the next house built.
+        BlockPos two = house.apply(1);
+        VillageFolkEntity grown = kids.get(0);
+        grown.childhoodForTests(VillageFolkEntity.GROW_DAYS + 2);
+        helper.assertTrue(!grown.isBaby(), "the eldest has grown up");
+        com.jrpetty.mcassistant.entity.Homes.tickForTests(level, v);
+        Kit.log("t77 grown up: " + grown.displayNameCap() + " lives at " + com.jrpetty.mcassistant.entity.Homes.homeOf(grown)
+            + " (the family's " + one + ", the new house " + two + "); moving its things to " + com.jrpetty.mcassistant.entity.Homes.movingToForTests(grown.getUUID()));
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Homes.membersForTests(id, two).contains(grown.getUUID()), "a grown child moves into a place of its own");
+        helper.assertTrue(!com.jrpetty.mcassistant.entity.Homes.membersForTests(id, one).contains(grown.getUUID()), "and off its parents' books");
+        // A player buys a house, and lets it.
+        BlockPos three = house.apply(2);
+        net.minecraft.world.entity.player.Player you = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        you.setPos(three.getX() + 0.5, three.getY(), three.getZ() + 0.5);
+        com.jrpetty.mcassistant.village.Ledger.addCitizen(id, you.getUUID(), you.getName().getString());
+        you.getInventory().add(new net.minecraft.world.item.ItemStack(com.jrpetty.mcassistant.McAssistantMod.VILLAGE_COIN.get(), 64));
+        String bought = com.jrpetty.mcassistant.entity.Homes.playerBuys(level, you);
+        int left = com.jrpetty.mcassistant.entity.Market.coinsHeld(you);
+        Kit.log("t77 a player buys: " + bought + " (" + left + " coins left)");
+        helper.assertTrue("PLAYER".equals(com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, three)), "the player owns the house: " + bought);
+        helper.assertTrue(left < 64, "and paid for it");
+        VillageFolkEntity d = VillageFolkSpawnerBlock.raise(level, heart.west(2), 0.0F);
+        helper.assertTrue(d != null, "a folk with nowhere to live");
+        com.jrpetty.mcassistant.entity.Homes.tickForTests(level, v);
+        helper.assertTrue(!com.jrpetty.mcassistant.entity.Homes.membersForTests(id, three).contains(d.getUUID()), "a player's house is not the village's to give");
+        String let = com.jrpetty.mcassistant.entity.Homes.playerLets(level, you, 2);
+        d.earn(10);
+        com.jrpetty.mcassistant.entity.Homes.tickForTests(level, v);
+        com.jrpetty.mcassistant.entity.Homes.morningForTests(level, v);
+        String rent = com.jrpetty.mcassistant.entity.Homes.playerCollects(level, you);
+        Kit.log("t77 let: " + let + " | tenant " + d.displayNameCap() + " in " + com.jrpetty.mcassistant.entity.Homes.homeOf(d) + " | " + rent
+            + " | " + d.displayNameCap() + " says: " + com.jrpetty.mcassistant.entity.Homes.talk(d));
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Homes.membersForTests(id, three).contains(d.getUUID()), "a household takes the house the player lets");
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Market.coinsHeld(you) == left + 2, "and the player collects the rent: " + rent);
+        // A rich village sells its houses: one with coin buys, one without rents.
+        com.jrpetty.mcassistant.entity.Homes.saleForTests(true);
+        BlockPos four = house.apply(3), five = house.apply(4);
+        VillageFolkEntity rich = VillageFolkSpawnerBlock.raise(level, heart.north(2), 0.0F);
+        VillageFolkEntity poor = VillageFolkSpawnerBlock.raise(level, heart.south(2), 0.0F);
+        helper.assertTrue(rich != null && poor != null, "two more folk");
+        rich.earn(200);
+        poor.spend(poor.purse());
+        com.jrpetty.mcassistant.entity.Homes.tickForTests(level, v);
+        BlockPos rh = com.jrpetty.mcassistant.entity.Homes.homeOf(rich), ph = com.jrpetty.mcassistant.entity.Homes.homeOf(poor);
+        String rt = rh == null ? null : com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, rh), pt = ph == null ? null : com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, ph);
+        Kit.log("t77 for sale: " + rich.displayNameCap() + " " + rt + " (purse " + rich.purse() + "), " + poor.displayNameCap() + " " + pt
+            + "; " + com.jrpetty.mcassistant.entity.Homes.line(level, id));
+        helper.assertTrue("OWNED".equals(rt), "a folk with the coin buys its house: " + rt);
+        // (A generous leader, or one elected for homes, gives a house to a folk who can't pay.)
+        boolean generous = com.jrpetty.mcassistant.entity.Homes.generous(id);
+        helper.assertTrue("RENTED".equals(pt) || generous && "GIVEN".equals(pt), "one without rents it from the village: " + pt + (generous ? " (a generous leader)" : ""));
+        com.jrpetty.mcassistant.entity.Homes.saleForTests(null);
+        helper.succeed();
+    }
 }
