@@ -82,16 +82,23 @@ public final class Crafts {
 
     /** The piece of work, now (the tests). */
     public static boolean now(VillageFolkEntity f, ServerLevel level, Villages.Village v) {
-        String made = switch (f.stationTask()) {
-            case SMITH -> smith(level, v, f);
-            case TAILOR -> tailor(level, v, f);
-            case BEEKEEP -> beekeep(level, v, f);
-            case BREW -> brew(level, v, f);
-            case ENCHANT -> enchant(level, v, f);
-            case COOK -> Cafe.cook(level, v);
-            case SHOP -> Cafe.keepShop(level, v);
-            default -> null;
-        };
+        // What goes in and out of the stores while it works is its making, item by item (Economy).
+        Economy.openCraft(v.id(), f.stationTask());
+        String made;
+        try {
+            made = switch (f.stationTask()) {
+                case SMITH -> smith(level, v, f);
+                case TAILOR -> tailor(level, v, f);
+                case BEEKEEP -> beekeep(level, v, f);
+                case BREW -> brew(level, v, f);
+                case ENCHANT -> enchant(level, v, f);
+                case COOK -> Cafe.cook(level, v);
+                case SHOP -> Cafe.keepShop(level, v);
+                default -> null;
+            };
+        } finally {
+            Economy.closeCraft();
+        }
         if (made == null) return false;
         f.swing(InteractionHand.MAIN_HAND);
         level.playSound(null, f.blockPosition(), sound(f.stationTask()), SoundSource.NEUTRAL, 0.7F, 1.0F);
@@ -857,6 +864,7 @@ public final class Crafts {
             for (int i = 0; i < c.getContainerSize(); i++) {
                 ItemStack s = c.getItem(i);
                 if (s.isEmpty() || !what.test(s)) continue;
+                Economy.storesOut(v.id(), s, 1);
                 ItemStack one = s.split(1);
                 c.setChanged();
                 return one;

@@ -17,10 +17,12 @@ import java.util.Locale;
 /**
  * The town's books, opened at the village board: how the village has grown and why.
  *
- * <p>Fifteen pages, picked along the top: the <b>Overview</b> (the figures that matter, with how they
+ * <p>Sixteen pages, picked along the top: the <b>Overview</b> (the figures that matter, with how they
  * have moved over the week, and the first of what is driving it); <b>Growth</b> (its people over
  * time, births against deaths, comings and goings, what they died of); <b>Money</b> (what it makes,
- * takes in and pays out each day, the treasury and its worth, and its output by kind); <b>Jobs</b>
+ * takes in and pays out each day, the treasury and its worth, and its output by kind);
+ * <b>Production</b> (every item it makes: yesterday, a day, a month, all told, used, in store,
+ * worth, trend, who makes it, and the leader's reading of it against what is short); <b>Jobs</b>
  * (every trade: hands, level, pay, what it made yesterday and this week, per hand, and its share
  * of the whole, with any trade's own history a click away); <b>Folk</b> (everybody, sortable by any
  * column); <b>Society</b> (the age pyramid, moods, how evenly the money is spread, natures, skill,
@@ -36,8 +38,8 @@ import java.util.Locale;
  */
 public class CityScreen extends Screen {
 
-    private static final String[] TABS = { "Overview", "Growth", "Money", "Jobs", "Folk", "Society", "Leader", "Homes", "Buildings",
-        "Stores", "Why", "Trends", "Records", "News", "Board" };
+    private static final String[] TABS = { "Overview", "Growth", "Money", "Production", "Jobs", "Folk", "Society", "Leader", "Homes",
+        "Buildings", "Stores", "Why", "Trends", "Records", "News", "Board" };
     /** The pages that read today's figures, not the books (so they show from the first day). */
     private static final java.util.Set<String> TODAY_PAGES = java.util.Set.of("Folk", "Society", "Leader", "Buildings", "Why", "News", "Board");
     private static final int[] RANGES = { 7, 30, 100, 0 };
@@ -51,6 +53,14 @@ public class CityScreen extends Screen {
     private final CompoundTag data;
     private int tab, range = 1, scroll, w, h, left, top;
     private String selectedTrade;
+    /** The production page: the kind shown (null: all), the column sorted by and which way, the item picked. */
+    private String prodKind, prodItem;
+    private int prodSort = 7;
+    private boolean prodDown = true;
+    /** What can be clicked on the page just drawn: its box and what a click does. */
+    private final List<Zone> zones = new ArrayList<>();
+
+    private record Zone(int x0, int y0, int x1, int y1, Runnable act) {}
     private int sortColumn = 6;
     private boolean sortDown = true;
     /** What the mouse is over in a chart: drawn last, over everything. */
@@ -199,6 +209,7 @@ public class CityScreen extends Screen {
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.render(g, mouseX, mouseY, partialTick);
         hover = null;
+        zones.clear();
         Ui.panel(g, left, top, w, h, 34);
         String head = data.getString("name") + " — " + data.getString("age") + ", " + data.getString("rank").toLowerCase(Locale.ROOT)
             + ", day " + data.getLong("today");
@@ -236,6 +247,7 @@ public class CityScreen extends Screen {
                 case "Overview" -> overview(g, x, y, cw, ch, mouseX, mouseY);
                 case "Growth" -> growth(g, x, y, cw, ch, mouseX, mouseY);
                 case "Money" -> money(g, x, y, cw, ch, mouseX, mouseY);
+                case "Production" -> production(g, x, y, cw, ch, mouseX, mouseY);
                 case "Jobs" -> jobs(g, x, y, cw, ch, mouseX, mouseY);
                 case "Folk" -> folk(g, x, y, cw, ch, mouseX, mouseY);
                 case "Society" -> society(g, x, y, cw, ch);
@@ -372,6 +384,179 @@ public class CityScreen extends Screen {
         by += 2;
         small(g, "In: " + takings + " from the work, " + sold + " sold, " + tithe + " tithe.", bx, by, Ui.MUTED);
         small(g, "Out: " + wages + " in wages, " + spent + " bought in. Net " + (takings + sold + tithe - wages - spent) + ".", bx, by + 9, Ui.MUTED);
+    }
+
+    // ------------------------------------------------------------------ production
+
+    private static final String[] KINDS = { "all", "food", "timber", "stone", "ore", "animal", "craft", "plant", "other" };
+    private static final String[] KIND_WORDS = { "All", "Food", "Timber", "Stone", "Ore & metal", "Wool, hides", "Crafts", "Plants", "Other" };
+    private static final String[] PROD_HEADS = { "Item", "Yest.", "A day", "30 days", "All time", "Used/wk", "In store", "Worth/day", "Trend" };
+
+    private static net.minecraft.world.item.ItemStack stackOf(String id) {
+        net.minecraft.resources.ResourceLocation rl = net.minecraft.resources.ResourceLocation.tryParse(id.contains(":") ? id : "minecraft:" + id);
+        if (rl == null) return net.minecraft.world.item.ItemStack.EMPTY;
+        return new net.minecraft.world.item.ItemStack(net.minecraft.core.registries.BuiltInRegistries.ITEM.get(rl));
+    }
+
+    private static String itemName(String id) {
+        net.minecraft.world.item.ItemStack s = stackOf(id);
+        return s.isEmpty() ? id : s.getHoverName().getString();
+    }
+
+    /** An item's icon, at half size (a row is ten pixels). */
+    private void icon(GuiGraphics g, String id, int x, int y, float scale) {
+        net.minecraft.world.item.ItemStack s = stackOf(id);
+        if (s.isEmpty()) return;
+        g.pose().pushPose();
+        g.pose().translate(x, y, 0);
+        g.pose().scale(scale, scale, 1F);
+        g.renderItem(s, 0, 0);
+        g.pose().popPose();
+    }
+
+    private static String num(double v) {
+        if (v >= 10000) return shortNum((int) Math.min(Integer.MAX_VALUE, Math.round(v)));
+        if (v >= 10 || v == 0 || v == Math.rint(v)) return Long.toString(Math.round(v));
+        return String.format(Locale.ROOT, "%.1f", v);
+    }
+
+    private double worthADay(CompoundTag r) {
+        return r.getInt("w7") / 7.0 * r.getInt("each100") / 100.0;
+    }
+
+    /**
+     * What the village makes, item by item: every log, stone, loaf and lantern it has brought in or
+     * made, yesterday, a day this week, the month, all told; what it used of it making other things,
+     * what it has in the stores, what it is worth a day, and whether it is making more or less of it.
+     * Pick a kind along the top, sort by any column, click an item for its own story.
+     */
+    private void production(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my) {
+        CompoundTag p = data.getCompound("production");
+        List<CompoundTag> rows = new ArrayList<>();
+        ListTag l = p.getList("items", Tag.TAG_COMPOUND);
+        for (int i = 0; i < l.size(); i++) rows.add(l.getCompound(i));
+        int[] made = p.getIntArray("made"), kinds = p.getIntArray("kinds"), worth = p.getIntArray("worth");
+        int[] adults = series("adults");
+        // The cards.
+        int cardW = (cw - 4 * 4) / 5, cardH = 30;
+        int week = Math.min(7, made.length);
+        double perDay = week == 0 ? 0 : sumLast(made, week) / (double) week;
+        double worthDay = week == 0 ? 0 : sumLast(worth, week) / (double) week;
+        int distinct = 0;
+        for (CompoundTag r : rows) if (r.getInt("w7") > 0) distinct++;
+        card(g, x, y, cardW, cardH, "Made yesterday", num(last(made)), delta(made, 7, ""), GREEN);
+        card(g, x + (cardW + 4), y, cardW, cardH, "A day, this week", num(perDay), "things brought in or made", BLUE);
+        card(g, x + 2 * (cardW + 4), y, cardW, cardH, "Kinds of thing", Integer.toString(distinct), "made this week", PURPLE);
+        card(g, x + 3 * (cardW + 4), y, cardW, cardH, "Worth a day", num(worthDay) + "c", "at the market's prices", AMBER);
+        card(g, x + 4 * (cardW + 4), y, cardW, cardH, "Per grown folk", num(last(adults) == 0 ? 0 : perDay / last(adults)), "things a day each", TEAL);
+        // The kinds.
+        int ky = y + cardH + 4, kx = x;
+        for (int i = 0; i < KINDS.length; i++) {
+            String k = KINDS[i];
+            boolean on = k.equals("all") ? prodKind == null : k.equals(prodKind);
+            int kw = (int) (font.width(KIND_WORDS[i]) * 0.75) + 8;
+            g.fill(kx, ky, kx + kw, ky + 10, on ? Ui.ROW_PICK : Ui.ROW);
+            g.renderOutline(kx, ky, kw, 10, Ui.EDGE_SOFT);
+            small(g, KIND_WORDS[i], kx + 4, ky + 2, on ? Ui.GOOD : Ui.MUTED);
+            final String pick = k.equals("all") ? null : k;
+            zones.add(new Zone(kx, ky, kx + kw, ky + 10, () -> { prodKind = pick; scroll = 0; }));
+            kx += kw + 2;
+        }
+        // The table.
+        int ty = ky + 14;
+        int side = Math.max(150, cw * 36 / 100);
+        int tw = cw - side - 8;
+        int[] cols = { 0, tw * 30 / 100, tw * 39 / 100, tw * 48 / 100, tw * 58 / 100, tw * 69 / 100, tw * 79 / 100, tw * 89 / 100 };
+        List<CompoundTag> shown = new ArrayList<>();
+        for (CompoundTag r : rows) if (prodKind == null || prodKind.equals(r.getString("kind"))) shown.add(r);
+        Comparator<CompoundTag> order = switch (prodSort) {
+            case 0 -> Comparator.comparing((CompoundTag r) -> itemName(r.getString("id")));
+            case 1 -> Comparator.comparingInt((CompoundTag r) -> r.getInt("d1"));
+            case 2 -> Comparator.comparingInt((CompoundTag r) -> r.getInt("w7"));
+            case 3 -> Comparator.comparingInt((CompoundTag r) -> r.getInt("m30"));
+            case 4 -> Comparator.comparingLong((CompoundTag r) -> r.getLong("total"));
+            case 5 -> Comparator.comparingInt((CompoundTag r) -> r.getInt("used7"));
+            case 6 -> Comparator.comparingInt((CompoundTag r) -> r.getInt("on_hand"));
+            case 8 -> Comparator.comparingInt((CompoundTag r) -> r.getInt("w7") - r.getInt("prev7"));
+            default -> Comparator.comparingDouble(this::worthADay);
+        };
+        shown.sort(prodDown ? order.reversed() : order);
+        for (int i = 0; i < PROD_HEADS.length; i++) {
+            int cx0 = i < cols.length ? cols[i] : tw - 22;
+            String hd = PROD_HEADS[i] + (i == prodSort ? (prodDown ? " ▼" : " ▲") : "");
+            small(g, hd, x + cx0, ty, i == prodSort ? Ui.GOOD : Ui.FAINT);
+            int cx1 = i + 1 < cols.length ? cols[i + 1] : i + 1 == cols.length ? tw - 22 : tw;
+            final int col = i;
+            zones.add(new Zone(x + cx0, ty, x + cx1, ty + 9, () -> {
+                if (prodSort == col) prodDown = !prodDown; else { prodSort = col; prodDown = col != 0; }
+            }));
+        }
+        int ry = ty + 10;
+        int rows_ = Math.max(1, (y + ch - 12 - ry) / 10);
+        int start = Math.max(0, Math.min(scroll, Math.max(0, shown.size() - rows_)));
+        for (int i = start; i < Math.min(shown.size(), start + rows_); i++) {
+            CompoundTag r = shown.get(i);
+            String id = r.getString("id");
+            boolean picked = id.equals(prodItem);
+            boolean over = mx >= x && mx < x + tw && my >= ry - 1 && my < ry + 9;
+            g.fill(x - 2, ry - 1, x + tw, ry + 9, picked ? Ui.ROW_PICK : over ? Ui.HI : i % 2 == 0 ? Ui.ROW : Ui.ROW_ALT);
+            icon(g, id, x, ry - 1, 0.6F);
+            int trend = r.getInt("w7") - r.getInt("prev7");
+            String[] cells = { itemName(id), num(r.getInt("d1")), num(r.getInt("w7") / 7.0), num(r.getInt("m30")), num(r.getLong("total")),
+                num(r.getInt("used7")), num(r.getInt("on_hand")), num(worthADay(r)) + "c" };
+            for (int c = 0; c < cells.length; c++) {
+                int colW = (c + 1 < cols.length ? cols[c + 1] : tw - 22) - cols[c] - 3 - (c == 0 ? 11 : 0);
+                small(g, Ui.clip(font, cells[c], (int) (colW / 0.75)), x + cols[c] + (c == 0 ? 11 : 0), ry + 1, c == 0 ? Ui.INK : Ui.INK);
+            }
+            String arrow = r.getInt("prev7") == 0 && r.getInt("w7") > 0 ? "new" : trend > 0 ? "▲" : trend < 0 ? "▼" : "=";
+            small(g, arrow, x + tw - 18, ry + 1, trend > 0 ? Ui.GOOD : trend < 0 ? Ui.BAD : Ui.FAINT);
+            zones.add(new Zone(x, ry - 1, x + tw, ry + 9, () -> prodItem = id.equals(prodItem) ? null : id));
+            ry += 10;
+        }
+        if (shown.isEmpty()) small(g, "Nothing of this kind made yet: the books are written each morning.", x, ry + 2, Ui.MUTED);
+        small(g, Ui.clip(font, shown.size() + " things · click a heading to sort, an item for its story" + (shown.size() > rows_ ? " · scroll for more" : ""),
+            (int) (tw / 0.75)), x, y + ch - 9, Ui.FAINT);
+        // The side: the item picked, or the whole; and the leader's reading.
+        int sx = x + tw + 8, sy = ty;
+        CompoundTag pick = null;
+        for (CompoundTag r : rows) if (r.getString("id").equals(prodItem)) pick = r;
+        int chartH = Math.max(50, (y + ch - sy) / 2 - 4);
+        if (pick != null) {
+            String id = pick.getString("id");
+            icon(g, id, sx, sy - 2, 1F);
+            g.drawString(font, Ui.clip(font, itemName(id), side - 20), sx + 18, sy + 2, Ui.INK, false);
+            sy += 16;
+            String[] facts = {
+                "Made by: " + (pick.getString("by").isEmpty() ? "brought in" : pick.getString("by")),
+                num(pick.getInt("w7") / 7.0) + " a day this week, " + num(pick.getInt("prev7") / 7.0) + " the week before",
+                num(pick.getLong("total")) + " made in all, " + num(pick.getLong("used_total")) + " used making other things",
+                num(pick.getInt("on_hand")) + " in the stores" + (pick.getInt("w7") > 0 && pick.getInt("used7") > pick.getInt("w7")
+                    ? " — used faster than made" : ""),
+                "Worth " + num(pick.getInt("each100") / 100.0) + "c each, " + num(worthADay(pick)) + "c a day" };
+            for (String f : facts) {
+                small(g, Ui.clip(font, f, (int) (side / 0.75)), sx, sy, Ui.MUTED);
+                sy += 9;
+            }
+            sy += 2;
+            chart(g, sx, sy, side, chartH, "Made a day", mx, my, new Series(itemName(id), pick.getIntArray("series"), GREEN));
+        } else {
+            chart(g, sx, sy, side, chartH, "Things made a day, and their worth", mx, my, new Series("Made", made, GREEN),
+                new Series("Worth", worth, AMBER), new Series("Kinds", kinds, PURPLE));
+        }
+        sy += chartH + 12;
+        Ui.section(g, font, "What the leader reads from it", sx, sy, side);
+        sy += 12;
+        List<String> reading = new ArrayList<>();
+        ListTag rl = p.getList("reading", Tag.TAG_STRING);
+        for (int i = 0; i < rl.size(); i++) reading.add(rl.getString(i));
+        if (reading.isEmpty()) { small(g, "Nothing short: it makes what it needs.", sx, sy, Ui.GOOD); sy += 9; }
+        for (String line : reading) {
+            for (FormattedCharSequence part : font.split(Component.literal("· " + line), (int) (side / 0.75))) {
+                if (sy > y + ch - 9) break;
+                small(g, part, sx, sy, line.contains("none at all") ? Ui.BAD : line.contains("more hands") ? Ui.WARN : Ui.INK);
+                sy += 9;
+            }
+        }
     }
 
     private void jobs(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my) {
@@ -1417,6 +1602,9 @@ public class CityScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
+        for (Zone z : new ArrayList<>(zones)) {
+            if (mx >= z.x0() && mx < z.x1() && my >= z.y0() && my < z.y1()) { z.act().run(); return true; }
+        }
         // The range buttons.
         int rx = left + w - 8;
         for (int i = RANGE_NAMES.length - 1; i >= 0; i--) {

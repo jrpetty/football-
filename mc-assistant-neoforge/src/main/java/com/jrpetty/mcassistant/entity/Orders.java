@@ -209,6 +209,19 @@ public final class Orders {
                 default -> { }
             }
             if (n.task() != Villages.Task.BUILD && n.task() != Villages.Task.HANDS && n.task() != Villages.Task.NONE) short_ = true;
+            // What the village is making of it (the town's books, item by item): a want it makes none
+            // of at all, or too little to have it within the week, weighs more than one coming in fast.
+            Order toIt = switch (n.task()) {
+                case FOOD -> Order.LARDER;
+                case LOGS -> Order.TIMBER;
+                case STONE, IRON, COAL, DIAMOND, OBSIDIAN -> Order.DIG;
+                default -> null;
+            };
+            if (toIt != null && n.amount() > 0) {
+                double rate = Annals.ratePerDay(village, Annals.forTask(n.task()), 7);
+                if (rate <= 0) score.merge(toIt, 2, Integer::sum);
+                else if (n.amount() / rate > 7) score.merge(toIt, 1, Integer::sum);
+            }
         }
         // "Steady as we go" is no order while the age waits on something the village could go and
         // get: an easygoing thane sat on it for days with the hamlet short of timber.

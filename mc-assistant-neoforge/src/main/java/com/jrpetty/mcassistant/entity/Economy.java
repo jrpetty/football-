@@ -59,6 +59,10 @@ public final class Economy {
         final Map<StationTask, Double> trades = new EnumMap<>(StationTask.class);
         final Map<UUID, Double> folk = new HashMap<>();
         final Map<UUID, String> names = new HashMap<>();
+        /** Item by item: how many were made {@code [0]} and how many used up in making other things {@code [1]}. */
+        final Map<String, int[]> items = new HashMap<>();
+        /** Item by item, which trades made them. */
+        final Map<String, Map<StationTask, Integer>> by = new HashMap<>();
         int sold, spent, tithe, wages, takings;
 
         double total() {
@@ -76,6 +80,8 @@ public final class Economy {
         TODAY.clear();
         YESTERDAY.clear();
         WORTH.clear();
+        CRAFT_VILLAGE = null;
+        CRAFT_NET.clear();
     }
 
     // ------------------------------------------------------------------ output
@@ -130,6 +136,7 @@ public final class Economy {
         Kind k = kindOf(s);
         if (k == null || !makes(trade, k, s)) return;
         if (k == Kind.FOOD || s.is(Items.WHEAT)) Leader.foodIn(village, s);     // the leader's food books
+        tally(village, trade, s, s.getCount(), true);                           // the books, item by item
         double v = worthOf(s);
         if (v <= 0) return;
         Day d = TODAY.computeIfAbsent(village, x -> new Day());
@@ -137,6 +144,92 @@ public final class Economy {
         d.trades.merge(trade, v, Double::sum);
         d.folk.merge(f.getUUID(), v, Double::sum);
         d.names.put(f.getUUID(), f.displayNameCap());
+    }
+
+    // ------------------------------------------------------------------ item by item
+
+    /** An item's short name in the books: "oak_log" for the game's own, "mod:thing" for anything else's. */
+    public static String id(ItemStack s) {
+        net.minecraft.resources.ResourceLocation k = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(s.getItem());
+        return k.getNamespace().equals("minecraft") ? k.getPath() : k.toString();
+    }
+
+    /** So many of this made today (by this trade) or used up making something else. */
+    static void tally(UUID village, @Nullable StationTask trade, ItemStack s, int n, boolean made) {
+        if (village == null || s.isEmpty() || n <= 0) return;
+        Day d = TODAY.computeIfAbsent(village, x -> new Day());
+        String key = id(s);
+        d.items.computeIfAbsent(key, x -> new int[2])[made ? 0 : 1] += n;
+        if (made && trade != null) d.by.computeIfAbsent(key, x -> new EnumMap<>(StationTask.class)).merge(trade, n, Integer::sum);
+    }
+
+    /*
+     * A maker's piece of work (Crafts.now): everything it takes out of the stores and puts back in
+     * is reckoned up, item by item, and what is left over at the end is what it made (more went in
+     * than came out) or used (more came out than went in). A lantern: an ingot out, nine nuggets in,
+     * eight nuggets and a torch out, a lantern in — a lantern and a nugget made, an ingot and a torch
+     * used. What was taken out and put back as it was cancels itself out.
+     */
+    @Nullable private static UUID CRAFT_VILLAGE;
+    @Nullable private static StationTask CRAFT_TRADE;
+    private static final Map<String, Integer> CRAFT_NET = new HashMap<>();
+    private static final Map<String, ItemStack> CRAFT_KIND = new HashMap<>();
+
+    /** A maker sets to work: from here, what goes in and out of the stores is its making. */
+    public static void openCraft(UUID village, StationTask trade) {
+        CRAFT_VILLAGE = village;
+        CRAFT_TRADE = trade;
+        CRAFT_NET.clear();
+        CRAFT_KIND.clear();
+    }
+
+    /** The piece of work done: what it made and what it used, into the day's books. */
+    public static void closeCraft() {
+        UUID v = CRAFT_VILLAGE;
+        CRAFT_VILLAGE = null;
+        if (v == null) return;
+        for (Map.Entry<String, Integer> e : CRAFT_NET.entrySet()) {
+            ItemStack kind = CRAFT_KIND.get(e.getKey());
+            if (kind == null || e.getValue() == 0) continue;
+            tally(v, CRAFT_TRADE, kind, Math.abs(e.getValue()), e.getValue() > 0);
+        }
+        CRAFT_NET.clear();
+        CRAFT_KIND.clear();
+    }
+
+    /** Into the stores (Market.intoStores). */
+    static void storesIn(UUID village, ItemStack s) {
+        if (CRAFT_VILLAGE == null || s.isEmpty() || !CRAFT_VILLAGE.equals(village)) return;
+        String key = id(s);
+        CRAFT_NET.merge(key, s.getCount(), Integer::sum);
+        CRAFT_KIND.putIfAbsent(key, s.copyWithCount(1));
+    }
+
+    /** Out of the stores (TownWork.take, Crafts.takeOne). */
+    static void storesOut(UUID village, ItemStack s, int n) {
+        if (CRAFT_VILLAGE == null || s.isEmpty() || n <= 0 || !CRAFT_VILLAGE.equals(village)) return;
+        String key = id(s);
+        CRAFT_NET.merge(key, -n, Integer::sum);
+        CRAFT_KIND.putIfAbsent(key, s.copyWithCount(1));
+    }
+
+    /** Yesterday, item by item: {made, used}. */
+    static Map<String, int[]> yesterdayItems(UUID village) {
+        Day d = YESTERDAY.get(village);
+        return d == null ? Map.of() : d.items;
+    }
+
+    /** Yesterday, item by item, the trades that made it. */
+    static Map<String, Map<StationTask, Integer>> yesterdayMakers(UUID village) {
+        Day d = YESTERDAY.get(village);
+        return d == null ? Map.of() : d.by;
+    }
+
+    /** Tests: today's tally of an item so far, {made, used}. */
+    public static int[] todayForTests(UUID village, String id) {
+        Day d = TODAY.get(village);
+        int[] t = d == null ? null : d.items.get(id);
+        return t == null ? new int[2] : t.clone();
     }
 
     /**

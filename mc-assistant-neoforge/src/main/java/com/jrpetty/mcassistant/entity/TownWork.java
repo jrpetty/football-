@@ -281,6 +281,7 @@ public final class TownWork {
                     ItemStack st = c.getItem(i);
                     if (st.isEmpty() || !what.test(st)) continue;
                     int k = Math.min(left, st.getCount());
+                    Economy.storesOut(v.id(), st, k);                           // a maker's work, item by item
                     st.shrink(k);
                     if (st.isEmpty()) c.setItem(i, ItemStack.EMPTY);
                     left -= k;

@@ -350,6 +350,14 @@ public final class Ledger extends SavedData {
         l.setDirty();
     }
 
+    /** A note let go altogether (not left behind empty). */
+    public static void forget(UUID village, String key) {
+        Ledger l = of();
+        if (l == null) return;
+        Map<String, String> m = l.notes.get(village);
+        if (m != null && m.remove(key) != null) l.setDirty();
+    }
+
     public static int grownCount(UUID village) {
         Ledger l = of();
         return l == null ? 0 : l.grown.getOrDefault(village, java.util.Set.of()).size();

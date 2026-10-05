@@ -907,6 +907,7 @@ public final class Market {
 
     /** Put a lot into the village's stores, the storehouse first. Returns what would not fit. */
     static ItemStack intoStores(ServerLevel level, UUID village, ItemStack stack) {
+        Economy.storesIn(village, stack);                                       // a maker's work, item by item
         ItemStack left = stack.copy();
         List<BlockPos> stores = new ArrayList<>(Villages.storeChests(level, village));
         for (BlockPos p : stores) {

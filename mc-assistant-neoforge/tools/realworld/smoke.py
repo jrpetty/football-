@@ -272,9 +272,9 @@ def main():
             r.cmd("time add 24000")
             time.sleep(4)
         say("stats: " + r.cmd("village stats"))
-        for page, name in ((0, "overview"), (1, "growth"), (2, "money"), (3, "jobs"), (4, "folk"), (5, "society"),
-                           (6, "leader"), (7, "homes"), (8, "buildings"), (9, "stores"), (10, "why"), (11, "trends"),
-                           (12, "records")):
+        for page, name in ((0, "overview"), (1, "growth"), (2, "money"), (3, "production"), (4, "jobs"), (5, "folk"),
+                           (6, "society"), (7, "leader"), (8, "homes"), (9, "buildings"), (10, "stores"), (11, "why"),
+                           (12, "trends"), (13, "records"), (14, "news")):
             say("stats %s: %s" % (name, r.cmd("execute as %s at @s run village stats %d" % (USER, page))))
             time.sleep(3)
             shot("16-stats-%d-%s" % (page, name))

@@ -5592,6 +5592,66 @@ public class VillageGameTests {
      * day after day; the analytics screen's snapshot carries every series, every trade, every folk and
      * the leader's profile, and a reading of what drives its growth; and it fits in one packet.
      */
+    /**
+     * The town's books, item by item: a farmer's bread brought home and a smith's lantern made in the
+     * stores (an ingot beaten to nuggets, eight and a torch made a lantern) go into the day's making,
+     * with the lantern and the spare nugget made and the ingot and the torch used; the morning writes
+     * them down, the analytics read them back with who made what, and the leader reads the rate.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t83_production")
+    public static void t83_production(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        com.jrpetty.mcassistant.entity.Economy.resetForTests();
+        level.setDayTime(24000L * 2 + 2000);
+        Kit.hold(level, 97000, 12000, 32);
+        Kit.prepare(level, 97000, 12000, 32);
+        BlockPos heart = Kit.surface(level, 97000, 12000);
+        VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(f != null, "a village");
+        java.util.UUID id = f.ownerId();
+        Villages.Village v = Villages.get(id);
+        f.setJob(StationTask.FARM);
+        com.jrpetty.mcassistant.entity.Economy.produced(f, new ItemStack(Items.BREAD, 5));
+        java.util.function.Consumer<ItemStack> put = st -> com.jrpetty.mcassistant.entity.Homes.storeForTests(level, v, st);
+        put.accept(new ItemStack(Items.IRON_INGOT, 20));
+        put.accept(new ItemStack(Items.TORCH, 4));
+        com.jrpetty.mcassistant.entity.Economy.openCraft(id, StationTask.SMITH);
+        String made = com.jrpetty.mcassistant.entity.Crafts.ironworkForTests(level, v);
+        com.jrpetty.mcassistant.entity.Economy.closeCraft();
+        int[] lantern = com.jrpetty.mcassistant.entity.Economy.todayForTests(id, "lantern");
+        int[] ingot = com.jrpetty.mcassistant.entity.Economy.todayForTests(id, "iron_ingot");
+        int[] nugget = com.jrpetty.mcassistant.entity.Economy.todayForTests(id, "iron_nugget");
+        int[] bread = com.jrpetty.mcassistant.entity.Economy.todayForTests(id, "bread");
+        Kit.log("t83 the smith: " + made + "; lantern " + java.util.Arrays.toString(lantern) + ", ingot " + java.util.Arrays.toString(ingot)
+            + ", nugget " + java.util.Arrays.toString(nugget) + ", bread " + java.util.Arrays.toString(bread));
+        helper.assertTrue(bread[0] == 5, "the farmer's bread is in the day's making: " + bread[0]);
+        helper.assertTrue(made != null && lantern[0] == 1 && ingot[1] == 1 && nugget[0] == 1,
+            "the lantern made, the nugget left over, the ingot used: " + made);
+        long day = level.getDayTime() / 24000L;
+        com.jrpetty.mcassistant.entity.Economy.closeTheDay(level, v, day);
+        com.jrpetty.mcassistant.entity.Annals.record(level, v, day);
+        net.minecraft.nbt.CompoundTag snap = com.jrpetty.mcassistant.entity.Annals.snapshot(level, v);
+        net.minecraft.nbt.ListTag items = snap.getCompound("production").getList("items", net.minecraft.nbt.Tag.TAG_COMPOUND);
+        net.minecraft.nbt.CompoundTag breadRow = null, lanternRow = null, ingotRow = null;
+        for (int i = 0; i < items.size(); i++) {
+            net.minecraft.nbt.CompoundTag r = items.getCompound(i);
+            if (r.getString("id").equals("bread")) breadRow = r;
+            if (r.getString("id").equals("lantern")) lanternRow = r;
+            if (r.getString("id").equals("iron_ingot")) ingotRow = r;
+        }
+        Kit.log("t83 the books: " + items.size() + " things; bread " + breadRow + "; lantern " + lanternRow + "; ingot " + ingotRow);
+        helper.assertTrue(breadRow != null && breadRow.getInt("d1") == 5 && breadRow.getLong("total") == 5
+            && breadRow.getString("by").contains("Farmer"), "the bread written down, and who made it: " + breadRow);
+        helper.assertTrue(lanternRow != null && lanternRow.getInt("d1") == 1 && lanternRow.getString("by").contains("Smith")
+            && lanternRow.getInt("on_hand") >= 1, "the lantern, its maker and the one in the stores: " + lanternRow);
+        helper.assertTrue(ingotRow != null && ingotRow.getInt("used7") == 1, "the ingot used: " + ingotRow);
+        double rate = com.jrpetty.mcassistant.entity.Annals.ratePerDay(id,
+            com.jrpetty.mcassistant.entity.Annals.forTask(Villages.Task.FOOD), 7);
+        helper.assertTrue(rate >= 5, "the leader reads the food coming in: " + rate + " a day");
+        helper.succeed();
+    }
+
     @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t82_annals")
     public static void t82_annals(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();

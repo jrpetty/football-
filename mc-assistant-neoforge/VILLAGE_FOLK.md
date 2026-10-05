@@ -1871,7 +1871,7 @@ its own. The council sits in the hall's council chamber.
 Right-click the village board (or press **Analytics** in the village journal, or type
 `/village stats`) and the town's books open: everything the village is and has been, with
 charts, so you can see exactly what is driving its growth. Every morning the village is
-written down (kept for four hundred days), and the books have fifteen pages, picked along the
+written down (kept for four hundred days), and the books have sixteen pages, picked along the
 top (in two rows on a small window; the arrow keys turn the pages); the range (a week, a month, a hundred days, or all of it) is picked at the top right, and
 every chart reads out the day under the mouse.
 
@@ -1886,6 +1886,27 @@ every chart reads out the day under the mouse.
   its worth over time; money in against money out; and what it made by kind (food, timber,
   stone, ore and metal, wool and hides, crafts, plants), with the takings, sales, tithe,
   wages and buying-in for the range.
+* **Production:** everything the village makes, item by item: every log, cobblestone, loaf,
+  ingot, stone brick, lantern and bed its folk bring home or make in the stores. Five cards
+  give the whole of it: what it made yesterday, a day this week, how many kinds of thing,
+  what that is worth a day at the market's prices, and how much each grown folk makes a day.
+  Below, a table of every item (with its icon): yesterday, a day this week, the last thirty
+  days, all told since the village began, how many it used up making other things this week,
+  how many are in the stores now, what it is worth a day, and whether it is making more or
+  less than the week before. Pick a kind along the top (food, timber, stone, ore and metal,
+  wool and hides, crafts, plants), click a heading to sort by it, click an item for its own
+  story: which trades make it, this week against last, made against used, and its making day
+  by day on a chart. Down the side, what the leader reads from it: each thing the village is
+  short of for its next age, how much more it wants, how many it makes a day, and how many
+  days that is at this rate. The leader uses the same books: a want the village makes none of
+  at all, or too little of to have within the week, counts for more when the leader chooses
+  the orders (more hands to the fields, the woods or the mine).
+
+  How it is counted: what a working folk brings home to the stores is its trade's making; what a
+  maker (the smith, the tailor, the brewer, the cook, the shopkeeper...) does in the stores is
+  reckoned up item by item, so a lantern beaten out of an ingot counts the lantern (and the
+  spare nugget) made and the ingot and the torch used. Each morning the day is written down
+  (kept a hundred days, item by item, and the totals since the village began for ever).
 * **Jobs:** every trade: its hands, their average level, their pay, what it made yesterday
   and this week, what it makes per hand a day, its return (what a hand makes for each coin of
   its pay: green when the trade earns its keep, red when it does not, as the watch never does),
@@ -2394,7 +2415,7 @@ ripen, days pass, folk work and houses go up at that pace.
   what is for sale. `house buy` buys the empty house you stand in; `house let <coins>` lets
   yours out at that rent a day (0 to take it back); `house rent` collects the rent.
 * `/village stats [page]` — the town's books on the analytics screen (as clicking the village
-  board does), opened at a page if one is given (0 the Overview to 14 the Board); from the
+  board does), opened at a page if one is given (0 the Overview to 15 the Board); from the
   console, the reading of what drives the village's growth.
 * `/village chronicle` — the nearest village's history, as a written book.
 * `/village standing` — what every village you have met thinks of you.

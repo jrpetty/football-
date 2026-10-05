@@ -39,6 +39,8 @@ public final class Annals {
 
     /** How many days are kept. */
     public static final int KEEP = 400;
+    /** How many days of the item-by-item books are kept (the totals are kept for ever). */
+    public static final int ITEM_KEEP = 100;
 
     /** What is written each morning, in order (the client reads the names). */
     public static final List<String> KEYS = List.of(
@@ -173,7 +175,8 @@ public final class Annals {
             first = false;
         }
         Ledger.note(id, "annals/" + day, sb.toString());
-        Ledger.note(id, "annals/" + (day - KEEP), "");                       // the oldest day let go
+        Ledger.forget(id, "annals/" + (day - KEEP));                          // the oldest day let go
+        recordItems(id, day);
         String first0 = Ledger.note(id, "annals.first");
         if (first0 == null || first0.isEmpty()) Ledger.note(id, "annals.first", Long.toString(day));
         // An election since yesterday: into the history of elections.
@@ -188,6 +191,225 @@ public final class Annals {
             if (parts.length > 40) all = String.join(";", java.util.Arrays.copyOfRange(parts, parts.length - 40, parts.length));
             Ledger.note(id, "annals.elections", all);
         }
+    }
+
+    // ------------------------------------------------------------------ item by item
+
+    /**
+     * Yesterday's making, item by item, into the books: "oak_log=212/0/WOOD;bread=40/0/FARM.COOK;
+     * iron_ingot=9/1/SMELT" (made, used up in making other things, the trades that made it, most
+     * first), and onto the totals since the village began.
+     */
+    static void recordItems(UUID id, long day) {
+        Map<String, int[]> items = Economy.yesterdayItems(id);
+        Map<String, Map<StationTask, Integer>> makers = Economy.yesterdayMakers(id);
+        StringBuilder sb = new StringBuilder();
+        Map<String, long[]> totals = itemTotals(id);
+        for (Map.Entry<String, int[]> e : items.entrySet()) {
+            int[] n = e.getValue();
+            if (n[0] <= 0 && n[1] <= 0) continue;
+            if (sb.length() > 0) sb.append(';');
+            sb.append(e.getKey()).append('=').append(n[0]).append('/').append(n[1]).append('/');
+            Map<StationTask, Integer> by = makers.getOrDefault(e.getKey(), Map.of());
+            List<Map.Entry<StationTask, Integer>> order = new ArrayList<>(by.entrySet());
+            order.sort((a, b) -> b.getValue() - a.getValue());
+            for (int i = 0; i < Math.min(3, order.size()); i++) sb.append(i == 0 ? "" : ".").append(order.get(i).getKey().name());
+            long[] t = totals.computeIfAbsent(e.getKey(), k -> new long[2]);
+            t[0] += n[0];
+            t[1] += n[1];
+        }
+        Ledger.note(id, "annals.items/" + day, sb.length() == 0 ? "-" : sb.toString());   // "-": a day nothing was made
+        Ledger.forget(id, "annals.items/" + (day - ITEM_KEEP));
+        StringBuilder tb = new StringBuilder();
+        for (Map.Entry<String, long[]> e : totals.entrySet()) {
+            if (tb.length() > 0) tb.append(';');
+            tb.append(e.getKey()).append('=').append(e.getValue()[0]).append('/').append(e.getValue()[1]);
+        }
+        Ledger.note(id, "annals.items.total", tb.toString());
+    }
+
+    /** The totals since the village began: {made, used}, item by item. */
+    static Map<String, long[]> itemTotals(UUID id) {
+        Map<String, long[]> out = new TreeMap<>();
+        String note = Ledger.note(id, "annals.items.total");
+        if (note == null || note.isEmpty()) return out;
+        for (String part : note.split(";")) {
+            int eq = part.lastIndexOf('=');
+            if (eq <= 0) continue;
+            String[] n = part.substring(eq + 1).split("/");
+            try {
+                out.put(part.substring(0, eq), new long[]{ Long.parseLong(n[0]), n.length > 1 ? Long.parseLong(n[1]) : 0 });
+            } catch (NumberFormatException ignored) { }
+        }
+        return out;
+    }
+
+    /** One day of the item books: made and used, item by item, and who made each. */
+    record ItemDay(long day, Map<String, int[]> items, Map<String, String> makers) {}
+
+    static List<ItemDay> itemDays(UUID village) {
+        List<ItemDay> out = new ArrayList<>();
+        for (Map.Entry<String, String> e : Ledger.notes(village).entrySet()) {
+            if (!e.getKey().startsWith("annals.items/") || e.getValue() == null || e.getValue().isEmpty()) continue;
+            long day;
+            try { day = Long.parseLong(e.getKey().substring(13)); } catch (NumberFormatException ex) { continue; }
+            Map<String, int[]> items = new HashMap<>();
+            Map<String, String> makers = new HashMap<>();
+            if (!e.getValue().equals("-")) {
+                for (String part : e.getValue().split(";")) {
+                    int eq = part.lastIndexOf('=');
+                    if (eq <= 0) continue;
+                    String[] n = part.substring(eq + 1).split("/", -1);
+                    String key = part.substring(0, eq);
+                    items.put(key, new int[]{ parse(n[0]), n.length > 1 ? parse(n[1]) : 0 });
+                    if (n.length > 2 && !n[2].isEmpty()) makers.put(key, n[2]);
+                }
+            }
+            out.add(new ItemDay(day, items, makers));
+        }
+        out.sort((a, b) -> Long.compare(a.day(), b.day()));
+        return out;
+    }
+
+    /** The item an entry in the books names. */
+    static net.minecraft.world.item.Item itemOf(String id) {
+        net.minecraft.resources.ResourceLocation rl = net.minecraft.resources.ResourceLocation.tryParse(id.contains(":") ? id : "minecraft:" + id);
+        return rl == null ? net.minecraft.world.item.Items.AIR : net.minecraft.core.registries.BuiltInRegistries.ITEM.get(rl);
+    }
+
+    /** What stands for a need of the village's in the item books: logs for timber, raw iron and ingots for iron... */
+    @Nullable
+    public static java.util.function.Predicate<net.minecraft.world.item.ItemStack> forTask(Villages.Task t) {
+        return switch (t) {
+            case LOGS -> st -> st.is(net.minecraft.tags.ItemTags.LOGS);
+            case STONE -> st -> Economy.kindOf(st) == Economy.Kind.STONE;
+            case COAL -> st -> st.is(net.minecraft.world.item.Items.COAL) || st.is(net.minecraft.world.item.Items.CHARCOAL);
+            case IRON -> st -> st.is(net.minecraft.world.item.Items.RAW_IRON) || st.is(net.minecraft.world.item.Items.IRON_INGOT);
+            case FOOD -> st -> Economy.kindOf(st) == Economy.Kind.FOOD;
+            case DIAMOND -> st -> st.is(net.minecraft.world.item.Items.DIAMOND);
+            case OBSIDIAN -> st -> st.is(net.minecraft.world.item.Items.OBSIDIAN);
+            default -> null;
+        };
+    }
+
+    /** How many of what matches the village made a day, on average, over the last so many days of its books. */
+    public static double ratePerDay(UUID village, @Nullable java.util.function.Predicate<net.minecraft.world.item.ItemStack> what, int days) {
+        if (what == null) return 0;
+        List<ItemDay> all = itemDays(village);
+        if (all.isEmpty()) return 0;
+        int from = Math.max(0, all.size() - days);
+        Map<String, Boolean> matches = new HashMap<>();
+        long sum = 0;
+        for (int i = from; i < all.size(); i++) {
+            for (Map.Entry<String, int[]> e : all.get(i).items().entrySet()) {
+                boolean m = matches.computeIfAbsent(e.getKey(), k -> what.test(new net.minecraft.world.item.ItemStack(itemOf(k))));
+                if (m) sum += e.getValue()[0];
+            }
+        }
+        return sum / (double) (all.size() - from);
+    }
+
+    /**
+     * The production page: every item the village has made, with what it made of it yesterday, in
+     * the last week and month and in all, what it used of it, how many it has in its stores, what
+     * one is worth, who makes it, and its day-by-day making; the whole of it a day; and the leader's
+     * reading of it against what the village is short of.
+     */
+    private static CompoundTag production(ServerLevel level, Villages.Village v) {
+        UUID id = v.id();
+        CompoundTag out = new CompoundTag();
+        List<ItemDay> days = itemDays(id);
+        int n = days.size();
+        int[] dayNums = new int[n];
+        for (int i = 0; i < n; i++) dayNums[i] = (int) days.get(i).day();
+        out.put("days", new IntArrayTag(dayNums));
+        Map<String, long[]> totals = itemTotals(id);
+        // What the stores hold now, item by item.
+        Map<String, Integer> onHand = new HashMap<>();
+        for (net.minecraft.core.BlockPos p : Villages.storeChests(level, id)) {
+            if (!(level.getBlockEntity(p) instanceof net.minecraft.world.Container c)) continue;
+            for (int i = 0; i < c.getContainerSize(); i++) {
+                net.minecraft.world.item.ItemStack st = c.getItem(i);
+                if (!st.isEmpty()) onHand.merge(Economy.id(st), st.getCount(), Integer::sum);
+            }
+        }
+        java.util.Set<String> ids = new java.util.TreeSet<>(totals.keySet());
+        for (ItemDay d : days) ids.addAll(d.items().keySet());
+        int[] madeAll = new int[n], kindsAll = new int[n];
+        long[] worthAll = new long[n];
+        List<CompoundTag> rows = new ArrayList<>();
+        for (String key : ids) {
+            net.minecraft.world.item.Item item = itemOf(key);
+            if (item == net.minecraft.world.item.Items.AIR) continue;
+            net.minecraft.world.item.ItemStack one = new net.minecraft.world.item.ItemStack(item);
+            double each = Math.max(0, Prices.of(one));
+            int[] series = new int[n];
+            int used7 = 0;
+            Map<String, Integer> who = new HashMap<>();
+            for (int i = 0; i < n; i++) {
+                int[] c = days.get(i).items().get(key);
+                if (c == null) continue;
+                series[i] = c[0];
+                madeAll[i] += c[0];
+                if (c[0] > 0) kindsAll[i]++;
+                worthAll[i] += Math.round(c[0] * each);
+                if (i >= n - 7) used7 += c[1];
+                String m = days.get(i).makers().get(key);
+                if (m != null && i >= n - 30) for (String t : m.split("\\.")) who.merge(t, c[0], Integer::sum);
+            }
+            int d1 = n == 0 ? 0 : series[n - 1], w7 = 0, prev7 = 0, m30 = 0;
+            for (int i = Math.max(0, n - 7); i < n; i++) w7 += series[i];
+            for (int i = Math.max(0, n - 14); i < Math.max(0, n - 7); i++) prev7 += series[i];
+            for (int i = Math.max(0, n - 30); i < n; i++) m30 += series[i];
+            long[] t = totals.getOrDefault(key, new long[2]);
+            if (t[0] <= 0 && m30 <= 0 && used7 <= 0) continue;                // only ever used, long ago
+            CompoundTag r = new CompoundTag();
+            r.putString("id", key);
+            Economy.Kind k = Economy.kindOf(one);
+            r.putString("kind", k == null ? "other" : k.name().toLowerCase(Locale.ROOT));
+            r.putIntArray("series", series);
+            r.putInt("d1", d1);
+            r.putInt("w7", w7);
+            r.putInt("prev7", prev7);
+            r.putInt("m30", m30);
+            r.putLong("total", t[0]);
+            r.putLong("used_total", t[1]);
+            r.putInt("used7", used7);
+            r.putInt("on_hand", onHand.getOrDefault(key, 0));
+            r.putInt("each100", (int) Math.round(each * 100));
+            List<Map.Entry<String, Integer>> makers = new ArrayList<>(who.entrySet());
+            makers.sort((a, b) -> b.getValue() - a.getValue());
+            List<String> names = new ArrayList<>();
+            for (Map.Entry<String, Integer> e : makers) {
+                try { names.add(StationTask.valueOf(e.getKey()).title); } catch (IllegalArgumentException ex) { names.add(e.getKey()); }
+            }
+            r.putString("by", String.join(", ", names));
+            rows.add(r);
+        }
+        // Most worth a day first; at most two hundred kinds of thing.
+        rows.sort((a, b) -> Long.compare((long) b.getInt("w7") * b.getInt("each100"), (long) a.getInt("w7") * a.getInt("each100")));
+        ListTag list = new ListTag();
+        for (int i = 0; i < Math.min(200, rows.size()); i++) list.add(rows.get(i));
+        out.put("items", list);
+        out.putIntArray("made", madeAll);
+        out.putIntArray("kinds", kindsAll);
+        int[] worth = new int[n];
+        for (int i = 0; i < n; i++) worth[i] = (int) Math.min(Integer.MAX_VALUE, worthAll[i]);
+        out.putIntArray("worth", worth);
+        // The leader's reading: what the village is short of, against what it is making of it.
+        List<String> reading = new ArrayList<>();
+        for (Villages.Need need : Villages.needs(level, id)) {
+            java.util.function.Predicate<net.minecraft.world.item.ItemStack> what = forTask(need.task());
+            if (what == null || need.amount() <= 0) continue;
+            double rate = ratePerDay(id, what, 7);
+            String line = need.what() + ": " + need.amount() + " more wanted; making " + (rate >= 10 ? Long.toString(Math.round(rate))
+                : String.format(Locale.ROOT, "%.1f", rate)) + " a day";
+            line += rate <= 0 ? " — none at all: the leader puts hands to it first" : need.amount() / rate > 5
+                ? " — " + Math.round(need.amount() / rate) + " days at this rate: more hands to it" : " — there in " + Math.max(1, Math.round(need.amount() / rate)) + " days";
+            reading.add(line);
+        }
+        out.put("reading", strings(reading));
+        return out;
     }
 
     /** One day of the books, read back: the numbers by KEYS, what each trade made, how many worked at each. */
@@ -289,6 +511,7 @@ public final class Annals {
         out.put("neighbours", strings(neighbours(id)));
         out.put("society", society(id, folk));
         out.put("league", league(level, v));
+        out.put("production", production(level, v));
         out.put("buildings", buildings(level, v));
         List<String> queue = new ArrayList<>();
         for (String p : Villages.projectsWanted(id)) queue.add(Villages.spoken(p));
@@ -775,6 +998,34 @@ public final class Annals {
                     + ": " + Math.round(a) + " coins' worth a day against " + Math.round(bb) + " the days before"
                     + (who.isEmpty() ? "." : ", mostly " + String.join(", ", who) + " a day."));
             }
+        }
+        // What it makes, item by item: more or less than the week before, and the most of it.
+        List<ItemDay> idays = itemDays(id);
+        if (idays.size() >= 2) {
+            int iw = Math.min(7, idays.size());
+            Map<String, Integer> lately = new HashMap<>();
+            long now = 0, before = 0;
+            for (int i = idays.size() - iw; i < idays.size(); i++) {
+                for (Map.Entry<String, int[]> e : idays.get(i).items().entrySet()) {
+                    now += e.getValue()[0];
+                    lately.merge(e.getKey(), e.getValue()[0], Integer::sum);
+                }
+            }
+            int bFrom = Math.max(0, idays.size() - 2 * iw), bTo = idays.size() - iw;
+            for (int i = bFrom; i < bTo; i++) for (int[] c : idays.get(i).items().values()) before += c[0];
+            List<Map.Entry<String, Integer>> most = new ArrayList<>(lately.entrySet());
+            most.sort((p, q) -> q.getValue() - p.getValue());
+            List<String> top = new ArrayList<>();
+            for (int i = 0; i < Math.min(3, most.size()); i++) {
+                if (most.get(i).getValue() <= 0) break;
+                top.add(new net.minecraft.world.item.ItemStack(itemOf(most.get(i).getKey())).getHoverName().getString().toLowerCase(Locale.ROOT)
+                    + " " + Math.round(most.get(i).getValue() / (double) iw));
+            }
+            double perDay = now / (double) iw, was = bTo - bFrom > 0 ? before / (double) (bTo - bFrom) : 0;
+            int pct = was > 0 ? (int) Math.round((perDay - was) * 100 / was) : 0;
+            out.add((was <= 0 || Math.abs(pct) < 5 ? "=" : pct > 0 ? "+" : "-") + "Making " + Math.round(perDay) + " things a day"
+                + (was > 0 ? (Math.abs(pct) < 5 ? ", as the week before" : (pct > 0 ? ", up " : ", down ") + Math.abs(pct) + "% on the week before") : "")
+                + (top.isEmpty() ? "." : "; most of all " + String.join(", ", top) + " a day."));
         }
         // The best and the worst trades for their hands.
         Map<String, Integer> week = new HashMap<>();
