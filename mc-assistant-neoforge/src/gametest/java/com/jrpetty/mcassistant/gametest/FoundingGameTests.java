@@ -339,16 +339,24 @@ public class FoundingGameTests {
             int level0 = v.centre().getY() - 1;
             Kit.log("f04 done at " + t + ": levelled to y=" + level0 + " (the plateau is at y=" + g0 + ")");
             expect.that(level0 == g0, "levelled to the plateau's height: y=" + level0 + " against " + g0);
-            int columns = 0, off = 0, hollowBlocks = 0, wetOrGrowing = 0;
-            StringBuilder first = new StringBuilder();
+            int columns = 0, off = 0, hollowBlocks = 0, wetOrGrowing = 0, built = 0;
+            StringBuilder first = new StringBuilder(), growing = new StringBuilder(), builtOn = new StringBuilder();
             for (int dx = -radius; dx <= radius; dx++) {
                 for (int dz = -radius; dz <= radius; dz++) {
                     if (FoundingPlan.reach(dx, dz) > radius - 4) continue;
                     int x = cx + dx, z = cz + dz;
+                    // What the town itself set down on the square (its board, the camp's beds, the stores) is not the ground.
+                    BlockState at = level.getBlockState(new BlockPos(x, level0, z)), over = level.getBlockState(new BlockPos(x, level0 + 1, z));
+                    if (!Terraform.natural(at) || !Terraform.natural(over)) {
+                        if (built++ < 4) builtOn.append(' ').append(net.minecraft.core.registries.BuiltInRegistries.BLOCK
+                            .getKey((Terraform.natural(over) ? at : over).getBlock()).getPath());
+                        continue;
+                    }
                     int y = ground(level, x, z);
                     columns++;
                     if (y != level0) {
-                        if (off++ < 8) first.append(' ').append(dx).append(',').append(dz).append(" y=").append(y);
+                        if (off++ < 8) first.append(' ').append(dx).append(',').append(dz).append(" y=").append(y).append(' ')
+                            .append(net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(at.getBlock()).getPath());
                         continue;
                     }
                     for (int d = 0; d < Terraform.SOLID_DEPTH; d++) {
@@ -357,18 +365,22 @@ public class FoundingGameTests {
                         if (b.isAir() || !b.getFluidState().isEmpty() || !b.isSolid()) hollowBlocks++;
                     }
                     BlockState on = level.getBlockState(new BlockPos(x, y + 1, z));
-                    if (!on.getFluidState().isEmpty() || (!on.isAir() && Terraform.growth(on))) wetOrGrowing++;
+                    if (!on.getFluidState().isEmpty() || (!on.isAir() && Terraform.growth(on))) {
+                        if (wetOrGrowing++ < 6) growing.append(' ').append(dx).append(',').append(dz).append(' ')
+                            .append(net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(on.getBlock()).getPath());
+                    }
                 }
             }
-            Kit.log("f04 the square: " + columns + " columns, " + off + " off the level" + (off > 0 ? ":" + first : "")
-                + "; " + hollowBlocks + " hollow blocks within five of the top; " + wetOrGrowing + " wet or growing on top");
+            Kit.log("f04 the square: " + columns + " columns of ground (" + built + " with the town's own things on them:" + builtOn
+                + "), " + off + " off the level" + (off > 0 ? ":" + first : "")
+                + "; " + hollowBlocks + " hollow blocks within five of the top; " + wetOrGrowing + " wet or growing on top" + growing);
             // The east edge and the west edge, column by column across the square, for the log.
             StringBuilder row = new StringBuilder();
             for (int dx = -radius; dx <= radius; dx += 2) row.append(ground(level, cx + dx, cz + 8) - level0).append(' ');
             Kit.log("f04 heights across, west to east, against the level: " + row);
             expect.that(off == 0, "every column of the square at the level: " + off + " off," + first);
             expect.that(hollowBlocks == 0, "the square is solid five deep: " + hollowBlocks + " hollow");
-            expect.that(wetOrGrowing == 0, "nothing wet or growing on it: " + wetOrGrowing);
+            expect.that(wetOrGrowing == 0, "nothing wet or growing on it: " + wetOrGrowing + growing);
             expect.that(!level.getFluidState(new BlockPos(tarnX, tarnY, tarnZ)).isEmpty(), "the tarn on the hill is still there");
             expect.that(!level.getFluidState(new BlockPos(lakeX, base - 1, cz)).isEmpty(), "the lake is still there");
             if (expect.clean()) helper.succeed();
