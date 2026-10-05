@@ -129,6 +129,8 @@ public class SmeltGoal extends Goal {
     private int stuckTicks;
     private int lastProgressTick;
     private int myGen;
+    /** Where the last tick stopped (tests). */
+    private String last = "";
 
     public SmeltGoal(AssistantEntity assistant) {
         this.assistant = assistant;
@@ -220,9 +222,21 @@ public class SmeltGoal extends Goal {
         return n;
     }
 
+    /** Tests: where it is, what each furnace holds, and where its last tick stopped. */
+    public String stateForTests() {
+        StringBuilder sb = new StringBuilder("at " + furnacePos + " #" + furnaceIndex + "/" + furnaces.size() + " load " + remainingToLoad
+            + " share " + sharePerFurnace + " stuck " + stuckTicks + " last " + last + " furnaces");
+        for (BlockPos p : furnaces) {
+            if (assistant.level().getBlockEntity(p) instanceof AbstractFurnaceBlockEntity f) {
+                sb.append(" [").append(f.getItem(0)).append('|').append(f.getItem(1)).append('|').append(f.getItem(2)).append(isLit(p) ? " lit" : "").append(']');
+            }
+        }
+        return sb.toString();
+    }
+
     @Override
     public void tick() {
-        if (job == null || input == null || furnacePos == null) return;
+        if (job == null || input == null || furnacePos == null) { last = "nothing to do"; return; }
 
         if (!isFurnaceBlock(assistant.level().getBlockState(furnacePos))) {
             finish("The furnace is gone.");
@@ -241,11 +255,13 @@ public class SmeltGoal extends Goal {
             if (++stuckTicks > 140) {
                 finish("I couldn't reach the furnace.");
             }
+            last = "walking, " + Math.round(Math.sqrt(distSq) * 10) / 10.0 + " away";
             return;
         }
         stuckTicks = 0;
 
         if (assistant.tickCount % 10 != 0) return; // tend twice a second
+        last = "tending";
         if (!(assistant.level().getBlockEntity(furnacePos) instanceof AbstractFurnaceBlockEntity furnace)) {
             finish("The furnace is gone.");
             return;

@@ -683,6 +683,14 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Which of this hand's job goals are running right now: a job at the head of
      *  the queue that no goal is running is the first thing to look for in a hand
      *  that has stood still for a day. */
+    /** Tests: the running smelt goal's own account of where it is (or "" if none is running). */
+    public String smeltStateForTests() {
+        for (net.minecraft.world.entity.ai.goal.WrappedGoal g : goalSelector.getAvailableGoals()) {
+            if (g.isRunning() && g.getGoal() instanceof com.jrpetty.mcassistant.entity.goal.SmeltGoal sg) return sg.stateForTests();
+        }
+        return "";
+    }
+
     private String runningGoals() {
         StringBuilder sb = new StringBuilder("[");
         for (net.minecraft.world.entity.ai.goal.WrappedGoal g : goalSelector.getAvailableGoals()) {

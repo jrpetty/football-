@@ -102,6 +102,7 @@ public class SupplyGameTests {
         BlockPos forge = Kit.surface(level, heart.getX() - 4, heart.getZ());
         for (int i = -1; i <= 1; i++) {
             BlockPos p = forge.offset(0, 0, i);
+            level.setBlock(p, Blocks.AIR.defaultBlockState(), 3);                // a fresh furnace, nothing left in it
             level.setBlock(p, Blocks.FURNACE.defaultBlockState(), 3);
             ZoneChests.mark(level, p);
         }
@@ -142,7 +143,7 @@ public class SupplyGameTests {
             // Between firings, the bench and the next firing (as the station brain does when there is no ore).
             if (f.peekJob() == null) Masonry.work(f, level);
             if (t % 400 == 0) Kit.log("s01 @" + t + ": stone " + fired + ", stone bricks " + bricks + ", smooth " + smooth
-                + ", cobble " + f.countCarried(s -> s.is(Items.COBBLESTONE)) + " — " + f.debugLine());
+                + ", cobble " + f.countCarried(s -> s.is(Items.COBBLESTONE)) + " — smelt " + f.smeltStateForTests() + " — " + f.debugLine());
             if (seen[1] >= 4 && seen[2] >= 1) {
                 Kit.log("s01 done at " + t + ": stone fired " + seen[0] + ", stone bricks " + seen[1] + ", smooth stone " + seen[2]);
                 helper.assertTrue(seen[1] % 4 == 0, "stone bricks come four for four from stone: " + seen[1]);
