@@ -1054,7 +1054,34 @@ public class CityScreen extends Screen {
         return d == 0 ? 0 : (k * sxy - sx * sy) / d;
     }
 
+    private static final String[] LEAGUE_HEADS = { "Village", "Folk", "Age", "Worth", "Buildings", "Where", "Terms" };
+    private static final int[] LEAGUE_COLS = { 0, 110, 140, 200, 240, 286, 370 };
+
     private void news(GuiGraphics g, int x, int y, int cw, int ch) {
+        // The villages of the world, biggest first: how this one measures up.
+        List<CompoundTag> league = compounds("league");
+        if (league.size() > 1) {
+            Ui.section(g, font, "The villages of the world, biggest first", x, y, cw);
+            y += 12;
+            for (int i = 0; i < LEAGUE_HEADS.length; i++) if (LEAGUE_COLS[i] < cw - 20) small(g, LEAGUE_HEADS[i], x + LEAGUE_COLS[i], y, Ui.FAINT);
+            y += 9;
+            int shown = 0;
+            for (int i = 0; i < league.size() && shown < 6; i++, shown++) {
+                CompoundTag v = league.get(i);
+                g.fill(x - 2, y - 1, x + cw, y + 8, v.getBoolean("self") ? Ui.ROW_PICK : i % 2 == 0 ? Ui.ROW : Ui.ROW_ALT);
+                String[] cells = { (i + 1) + ". " + v.getString("name"), Integer.toString(v.getInt("folk")), v.getString("age"),
+                    shortNum(v.getInt("worth")) + "c", Integer.toString(v.getInt("buildings")),
+                    v.getBoolean("self") ? "here" : v.getInt("dist") + " " + v.getString("dir"), v.getString("terms") };
+                for (int c = 0; c < cells.length; c++) {
+                    if (LEAGUE_COLS[c] >= cw - 20) break;
+                    int colW = (c + 1 < LEAGUE_COLS.length ? LEAGUE_COLS[c + 1] : cw) - LEAGUE_COLS[c] - 3;
+                    small(g, Ui.clip(font, cells[c], (int) (colW / 0.75)), x + LEAGUE_COLS[c], y, Ui.INK);
+                }
+                y += 9;
+            }
+            y += 6;
+            ch -= 27 + shown * 9 + 6;
+        }
         List<String> all = new ArrayList<>();
         List<String> n = strings("neighbours");
         if (!n.isEmpty()) {

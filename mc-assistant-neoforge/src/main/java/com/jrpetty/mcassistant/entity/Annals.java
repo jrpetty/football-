@@ -288,6 +288,7 @@ public final class Annals {
         out.put("needs", strings(needs(level, id)));
         out.put("neighbours", strings(neighbours(id)));
         out.put("society", society(id, folk));
+        out.put("league", league(level, v));
         out.put("buildings", buildings(level, v));
         List<String> queue = new ArrayList<>();
         for (String p : Villages.projectsWanted(id)) queue.add(Villages.spoken(p));
@@ -607,6 +608,31 @@ public final class Annals {
         c.putInt("household_avg10", households == 0 ? 0 : Math.round(members * 10f / households));
         c.putInt("household_max", largest);
         return c;
+    }
+
+    /** Every village in the world, biggest first, with this one marked: folk, age, worth, buildings, and its terms with this one. */
+    private static ListTag league(ServerLevel level, Villages.Village here) {
+        List<Villages.Village> all = new ArrayList<>();
+        for (Villages.Village o : Villages.every()) if (o.dim().equals(level.dimension())) all.add(o);
+        all.sort((a, b) -> Integer.compare(Villages.headcount(b.id()), Villages.headcount(a.id())));
+        ListTag out = new ListTag();
+        for (Villages.Village o : all) {
+            if (out.size() >= 24) break;
+            CompoundTag c = new CompoundTag();
+            c.putString("name", Villages.name(o.id()));
+            c.putInt("folk", Villages.headcount(o.id()));
+            c.putString("age", Villages.ageOf(o.id()).label);
+            c.putInt("worth", Math.max(0, Economy.worth(o.id())));
+            c.putInt("buildings", Ledger.buildings(o.id()).size());
+            int dx = o.centre().getX() - here.centre().getX(), dz = o.centre().getZ() - here.centre().getZ();
+            c.putInt("dist", (int) Math.round(Math.sqrt(dx * (double) dx + dz * (double) dz)));
+            c.putString("dir", compass(dx, dz));
+            boolean self = o.id().equals(here.id());
+            c.putBoolean("self", self);
+            c.putString("terms", self ? "" : Diplomacy.terms(here.id(), o.id()).words);
+            out.add(c);
+        }
+        return out;
     }
 
     private static CompoundTag counts(Map<String, Integer> m) {

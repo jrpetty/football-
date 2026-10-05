@@ -1918,7 +1918,9 @@ every chart reads out the day under the mouse.
   money in, wages paid); a day on average over the range; and where it is heading: folk,
   output, treasury, worth and buildings in thirty days at the pace of the last fortnight, and
   when the larder would run dry if it is emptying.
-* **News:** its neighbours, and the latest of its chronicle.
+* **News:** the villages of the world, biggest first, with this one marked (folk, age, worth,
+  buildings, how far and which way, and the terms it is on with each), its neighbours, and
+  the latest of its chronicle.
 * **Board:** the board's own page.
 
 ### The watch between the bells
