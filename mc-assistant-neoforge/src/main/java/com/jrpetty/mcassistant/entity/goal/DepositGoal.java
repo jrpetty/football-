@@ -234,6 +234,8 @@ public class DepositGoal extends Goal {
         }
 
         int moved = 0;
+        // What went into the Village Storehouse, for its books (Storekeeping).
+        java.util.List<ItemStack> booked = new java.util.ArrayList<>();
         var items = assistant.getInventoryItems();
         // Station reserve: a stationed farmer keeps its seed stock, a stationed
         // lumberjack its saplings — only the surplus above the reserve is stashed.
@@ -254,6 +256,7 @@ public class DepositGoal extends Goal {
             ItemStack leftover = insertInto(container, toMove);
             int stashed = toMove.getCount() - leftover.getCount();
             moved += stashed;
+            if (stashed > 0) booked.add(stack.copyWithCount(stashed));
             // Tally it for the daily production report / crew roster.
             assistant.noteProduced(stack.getItem(), stashed);
             if (stashed > 0 && assistant instanceof com.jrpetty.mcassistant.entity.VillageFolkEntity vf) {
@@ -264,6 +267,13 @@ public class DepositGoal extends Goal {
         }
         container.setChanged();
         assistant.rememberChest(chestPos, container); // storage memory: learn what's where
+        // Into the storehouse: in its books, to who brought it (a courier's load is a delivery).
+        if (moved > 0 && container instanceof com.jrpetty.mcassistant.block.StorehouseBlockEntity
+                && assistant.ownerId() != null && assistant.usesVillageStores()
+                && assistant.level() instanceof net.minecraft.server.level.ServerLevel books) {
+            com.jrpetty.mcassistant.entity.Storekeeping.bookIn(books, assistant.ownerId(), assistant.displayNameCap(), booked,
+                assistant.stationTask() == AssistantEntity.StationTask.HAUL);
+        }
         if (moved > 0) {
             assistant.noteStashed();
             // Work that was never once written down: the career tally (and,
@@ -298,24 +308,10 @@ public class DepositGoal extends Goal {
         finish("That chest is full.", false);
     }
 
+    /** Onto the part stacks of the same first, then into empty slots (entity/Stacking): this put a
+     *  load into the first empty slot it came to, before a half stack of the same further along. */
     private static ItemStack insertInto(Container container, ItemStack stack) {
-        ItemStack remaining = stack.copy();
-        for (int i = 0; i < container.getContainerSize() && !remaining.isEmpty(); i++) {
-            ItemStack slot = container.getItem(i);
-            if (slot.isEmpty()) {
-                container.setItem(i, remaining);
-                return ItemStack.EMPTY;
-            }
-            if (ItemStack.isSameItemSameComponents(slot, remaining)) {
-                int room = slot.getMaxStackSize() - slot.getCount();
-                if (room > 0) {
-                    int n = Math.min(room, remaining.getCount());
-                    slot.grow(n);
-                    remaining.shrink(n);
-                }
-            }
-        }
-        return remaining;
+        return com.jrpetty.mcassistant.entity.Stacking.insert(container, stack);
     }
 
     /** The specific depot named by a town-work deposit job ("x y z"), or null. */

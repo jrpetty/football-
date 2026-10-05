@@ -114,13 +114,16 @@ public class SortGoal extends Goal {
         BlockPos feet = assistant.stationSearchOrigin();
         java.util.Set<Long> seen = new java.util.HashSet<>();
         // A village's storekeeper sorts the village's stores: its marked chests and barrels,
-        // never a chest of a player's that happens to stand nearby.
+        // never a chest of a player's that happens to stand nearby — and only the STORES: not a
+        // household's own chest, not a guest house's, and never a worker's production chest (the
+        // field's seed is the field's), which a look round its post took in with the rest.
         if (assistant.isSettler()) {
-            for (com.jrpetty.mcassistant.entity.ZoneChests.Found f
-                    : com.jrpetty.mcassistant.entity.ZoneChests.around(assistant.level(), feet, RADIUS, 5)) {
-                if (f.stillThere() && com.jrpetty.mcassistant.entity.ZoneChests.isStashable(f) && seen.add(f.pos().asLong())) {
-                    chests.add(f.pos().immutable());
-                }
+            java.util.List<BlockPos> stores = assistant.ownerId() != null
+                && assistant.level() instanceof net.minecraft.server.level.ServerLevel server
+                ? com.jrpetty.mcassistant.entity.Villages.storeChests(server, assistant.ownerId()) : java.util.List.of();
+            for (BlockPos p : stores) {
+                if (Math.max(Math.abs(p.getX() - feet.getX()), Math.abs(p.getZ() - feet.getZ())) > RADIUS + 12) continue;
+                if (seen.add(p.asLong())) chests.add(p.immutable());
             }
             return;
         }
@@ -140,8 +143,24 @@ public class SortGoal extends Goal {
         }
     }
 
-    /** Each item type's home = the chest that already holds the most of it. */
+    /** Each item type's home = the chest that already holds the most of it — or, for a village's
+     *  storekeeper, the Village Storehouse, which is where the village keeps its goods (it never
+     *  fills: it grows), so the stores round it are gathered into it rather than the other way. */
     private void assignHomes() {
+        if (assistant.isSettler()) {
+            for (BlockPos pos : chests) {
+                if (!(assistant.level().getBlockEntity(pos) instanceof com.jrpetty.mcassistant.block.StorehouseBlockEntity store)
+                        || !store.isStore()) continue;
+                for (BlockPos from : chests) {
+                    if (!(assistant.level().getBlockEntity(from) instanceof Container c)) continue;
+                    for (int i = 0; i < c.getContainerSize(); i++) {
+                        ItemStack s = c.getItem(i);
+                        if (!s.isEmpty()) homes.put(keyOf(s), pos);
+                    }
+                }
+                return;
+            }
+        }
         Map<String, Map<BlockPos, Integer>> tally = new HashMap<>();
         for (BlockPos pos : chests) {
             if (!(assistant.level().getBlockEntity(pos) instanceof Container c)) continue;
@@ -235,25 +254,8 @@ public class SortGoal extends Goal {
         return false;
     }
 
+    /** Onto the part stacks of the same first, then empty slots, never past what a slot holds (entity/Stacking). */
     private static ItemStack insertInto(Container container, ItemStack stack) {
-        ItemStack remaining = stack.copy();
-        for (int i = 0; i < container.getContainerSize() && !remaining.isEmpty(); i++) {
-            ItemStack slot = container.getItem(i);
-            if (!slot.isEmpty() && ItemStack.isSameItemSameComponents(slot, remaining)) {
-                int room = slot.getMaxStackSize() - slot.getCount();
-                if (room > 0) {
-                    int n = Math.min(room, remaining.getCount());
-                    slot.grow(n);
-                    remaining.shrink(n);
-                }
-            }
-        }
-        for (int i = 0; i < container.getContainerSize() && !remaining.isEmpty(); i++) {
-            if (container.getItem(i).isEmpty()) {
-                container.setItem(i, remaining);
-                return ItemStack.EMPTY;
-            }
-        }
-        return remaining;
+        return com.jrpetty.mcassistant.entity.Stacking.insert(container, stack);
     }
 }

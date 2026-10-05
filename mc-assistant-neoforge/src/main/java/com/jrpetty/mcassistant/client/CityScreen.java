@@ -1083,7 +1083,9 @@ public class CityScreen extends Screen {
 
     private void stores(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my) {
         CompoundTag now = now();
-        int half = (cw - 6) / 2, chartH = (ch - 40) / 2;
+        // The charts on the left; the storehouse itself — its books, its staff, its run list — on the right.
+        int lw = cw * 11 / 20, rx = x + lw + 8, rw = cw - lw - 8;
+        int half = (lw - 6) / 2, chartH = (ch - 40) / 2;
         chart(g, x, y, half, chartH, "Food in the stores", mx, my, new Series("Food", series("food"), GREEN));
         int[] fd = series("food_days10");
         chart(g, x + half + 6, y, half, chartH, "Days of food put by (tenths)", mx, my, new Series("Days ×10", fd, AMBER));
@@ -1094,8 +1096,101 @@ public class CityScreen extends Screen {
         String[] keys = { "food", "logs", "stone", "coal", "iron", "diamond", "obsidian" };
         StringBuilder sb = new StringBuilder("Now: ");
         for (String k : keys) sb.append(k).append(' ').append(now.getInt(k)).append("  ");
-        small(g, Ui.clip(font, sb.toString(), (int) (cw / 0.75)), x, ty, Ui.INK);
-        small(g, Ui.clip(font, "The larder's books: " + now.getString("food_books"), (int) (cw / 0.75)), x, ty + 9, Ui.MUTED);
+        small(g, Ui.clip(font, sb.toString(), (int) (lw / 0.75)), x, ty, Ui.INK);
+        small(g, Ui.clip(font, "The larder's books: " + now.getString("food_books"), (int) (lw / 0.75)), x, ty + 9, Ui.MUTED);
+        storehouse(g, rx, y, rw, ch, mx, my);
+    }
+
+    /**
+     * The Stores page's right-hand side: the Village Storehouse's day (Annals.snapshot "storehouse",
+     * entity/Storekeeping): its slots, its storekeeper, what went in and out and who served the
+     * requests, its last tidy; its staff — the storekeeper and the couriers, their runs and what they
+     * are doing now; and its run list, under way and waiting. A line too long for the column shows
+     * whole under the mouse.
+     */
+    private void storehouse(GuiGraphics g, int x, int y, int w, int ch, int mx, int my) {
+        CompoundTag s = data.getCompound("storehouse");
+        int bottom = y + ch - 2, wide = (int) (w / 0.75);
+        int[] ry = { y };
+        java.util.function.BiConsumer<String, Integer> row = (text, colour) -> {
+            if (ry[0] > bottom - 9) return;
+            String shown = Ui.clip(font, text, wide);
+            small(g, shown, x, ry[0], colour);
+            if (!shown.equals(text) && mx >= x && mx < x + w && my >= ry[0] && my < ry[0] + 9) {
+                hover = new ArrayList<>();
+                for (FormattedCharSequence l : font.split(Component.literal(text), 220)) hover.add(Component.literal(toPlain(l)));
+                hoverX = mx;
+                hoverY = my;
+            }
+            ry[0] += 9;
+        };
+        Ui.section(g, font, "The storehouse", x, ry[0], w);
+        ry[0] += 12;
+        if (s.isEmpty() || !s.getBoolean("stands")) {
+            row.accept("No Village Storehouse stands yet: the stores are the chests at the heart.", Ui.MUTED);
+        } else if (s.contains("slots")) {
+            row.accept(s.getInt("used") + " of " + s.getInt("slots") + " slots used · " + s.getInt("free") + " free", Ui.INK);
+        }
+        String keeper = s.getString("keeper");
+        row.accept(keeper.isEmpty() ? "No storekeeper: folk serve themselves." : "Storekeeper " + keeper + ", " + s.getString("keeper_doing"),
+            keeper.isEmpty() ? Ui.WARN : s.getBoolean("on_duty") ? Ui.GOOD : Ui.MUTED);
+        row.accept("Today " + s.getInt("in") + " in, " + s.getInt("out") + " out · requests " + s.getInt("served") + " served, "
+            + s.getInt("self") + " self-served", Ui.INK);
+        row.accept(s.getInt("runs") + " courier runs, " + s.getInt("run_goods") + " carried, " + s.getInt("deliveries") + " loads in", Ui.INK);
+        if (s.contains("tidy")) {
+            CompoundTag t = s.getCompound("tidy");
+            row.accept("Last tidy (" + t.getString("by") + ", " + t.getLong("ago") + "s ago): " + t.getInt("before") + " slots to "
+                + t.getInt("after") + ", " + t.getInt("merged") + " stacks merged, " + t.getInt("free") + " free", Ui.MUTED);
+        }
+        ListTag staff = s.getList("staff", Tag.TAG_COMPOUND);
+        if (!staff.isEmpty() && ry[0] < bottom - 30) {
+            ry[0] += 3;
+            Ui.section(g, font, "Staff", x, ry[0], w);
+            ry[0] += 12;
+            for (int i = 0; i < staff.size(); i++) {
+                CompoundTag f = staff.getCompound(i);
+                boolean courier = f.getString("role").equals("courier");
+                row.accept(f.getString("name") + " (" + f.getString("role") + ", " + f.getInt("wage") + "c a day)"
+                    + (courier ? " " + f.getInt("runs") + " runs, " + f.getInt("moved") + " carried" : "") + " — " + f.getString("doing"),
+                    courier ? Ui.INK : Ui.GOOD);
+            }
+        }
+        ListTag running = s.getList("running", Tag.TAG_COMPOUND), queued = s.getList("queued", Tag.TAG_COMPOUND);
+        if (ry[0] < bottom - 30) {
+            ry[0] += 3;
+            Ui.section(g, font, "Run list" + (s.getInt("queued_n") > 0 ? " (" + s.getInt("queued_n") + " waiting)" : ""), x, ry[0], w);
+            ry[0] += 12;
+            if (running.isEmpty() && queued.isEmpty()) row.accept("Nothing to run just now.", Ui.MUTED);
+            for (int i = 0; i < running.size(); i++) {
+                CompoundTag r = running.getCompound(i);
+                row.accept("▶ " + r.getString("what") + " — " + r.getString("courier") + ", " + r.getString("stage"), Ui.INK);
+            }
+            for (int i = 0; i < queued.size(); i++) row.accept("· " + queued.getCompound(i).getString("what"), Ui.MUTED);
+        }
+        ListTag items = s.getList("items", Tag.TAG_COMPOUND);
+        if (!items.isEmpty() && ry[0] < bottom - 20) {
+            ry[0] += 3;
+            Ui.section(g, font, "The day's books: in / out", x, ry[0], w);
+            ry[0] += 12;
+            for (int i = 0; i < items.size(); i++) {
+                CompoundTag r = items.getCompound(i);
+                row.accept(r.getString("name") + "  " + r.getInt("in") + " / " + r.getInt("out"), Ui.INK);
+            }
+            ListTag folk = s.getList("folk", Tag.TAG_COMPOUND);
+            List<String> who = new ArrayList<>();
+            for (int i = 0; i < Math.min(4, folk.size()); i++) {
+                CompoundTag r = folk.getCompound(i);
+                who.add(r.getString("name") + " " + r.getInt("brought") + "/" + r.getInt("took"));
+            }
+            if (!who.isEmpty()) row.accept("Brought/took: " + String.join(", ", who), Ui.MUTED);
+        }
+    }
+
+    /** A line of formatted text back to plain text (for a tooltip). */
+    private static String toPlain(FormattedCharSequence seq) {
+        StringBuilder sb = new StringBuilder();
+        seq.accept((i, style, cp) -> { sb.appendCodePoint(cp); return true; });
+        return sb.toString();
     }
 
     // ------------------------------------------------------------------ the stock

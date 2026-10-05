@@ -2561,6 +2561,8 @@ public class VillageFolkEntity extends AssistantEntity {
     /** The kit of its trade, kept in its pack (Trades.keeps). */
     @Override
     protected int kitReserve(net.minecraft.world.item.ItemStack s) {
+        // Its own chest, on its way from the old plot to the new one, is not cargo for the stores.
+        if (oldProductionChest != null && s.is(net.minecraft.world.item.Items.CHEST)) return 1;
         return Trades.keeps(stationTask(), s);
     }
 
@@ -2583,6 +2585,12 @@ public class VillageFolkEntity extends AssistantEntity {
                 com.jrpetty.mcassistant.entity.goal.WithdrawGoal.matcherFor(ask);
             if (ZoneChests.countIn(linkedChests(), what) >= 8) return false;   // its own chest has plenty
             if (storesHold(heart, radius, what) < 8) continue;                 // not worth the walk for a few
+            // Far out on its plot, with couriers at the storehouse: a request the storekeeper cannot
+            // hand over at the counter, so a courier brings it out and the work goes on (Couriers).
+            if (Couriers.sendOut(this, ask, 16)) {
+                brain("asked the storehouse to send " + ask + " out");
+                return false;
+            }
             enqueue(Job.withdrawAt(ask, 16, heart, radius));
             brain("fetching " + ask + " from the stores");
             return true;
@@ -2703,11 +2711,9 @@ public class VillageFolkEntity extends AssistantEntity {
         // A village with no stores at all: the first chest goes to the heart.
         if (peekJob() == null && level() instanceof net.minecraft.server.level.ServerLevel firstStores
                 && foundTheStores(firstStores, ownerId())) return;
-        // A carrier's first work once the storehouse stands: the old chests, into it.
-        if (stationTask() == StationTask.HAUL && peekJob() == null
-                && level() instanceof net.minecraft.server.level.ServerLevel clearing
-                && retireAChest(clearing, ownerId())) return;
-        mindTheRoute();                                // a carrier's round is chosen, not clicked
+        // (A courier's old chests to clear into the storehouse come off the storehouse's run list
+        // now, with the rest of its runs: Couriers.)
+        mindTheRoute();                                // a courier's runs are the storehouse's to give
         workInTheBuilding();                           // the smelter in the smeltery, the storekeeper in the storehouse
         putBackIfLost();
         // Tools from the stores, busy or not: they are made on the spot, and a miner
@@ -2735,6 +2741,8 @@ public class VillageFolkEntity extends AssistantEntity {
             if (mindTheHerd(supplies)) return;
             if (Links.tend(this, supplies)) return;
         }
+        // Its plot moved on: its old production chest comes along (one chest a worker, ever).
+        if (level() instanceof net.minecraft.server.level.ServerLevel moving && carryTheOldChest(moving)) return;
         // The mine's depth too: the next run digs at the new one. Behind the busy check
         // it never ran, and every mine staked in the Wood Age stayed at forty-odd for the
         // rest of the game — copper and coal by the hundred, iron one or two a day.
@@ -2754,7 +2762,12 @@ public class VillageFolkEntity extends AssistantEntity {
         // days were spent standing at the heart (two runs, two storekeepers, not
         // a stroke of work in three game days). It bakes and it builds.
         if (stationTask() == StationTask.STORE) tidyTheStorehouse();
+        // A storekeeper with couriers to run keeps its counter: it serves the folk who come for
+        // things and sends the couriers out (Storekeeping, Couriers). One without, bakes and builds.
+        if (stationTask() == StationTask.STORE && keepTheCounter()) return;
         if (stationTask() == StationTask.STORE && idleHands()) return;
+        // The storehouse's couriers wait at its door between runs; they are not lent out.
+        if (stationTask() == StationTask.HAUL && Couriers.employed(this)) return;
         if (workedOut() && lendAHand()) return;        // my trade has nothing: help
         considerVillageWork();
     }
@@ -2841,18 +2854,76 @@ public class VillageFolkEntity extends AssistantEntity {
 
     private int tidyTick = -100000;
 
-    /** The storekeeper sets the Village Storehouse in order once in a while: like with like,
-     *  stacks topped up, in order — when it is there to do it. */
+    /**
+     * The storekeeper keeps the Village Storehouse in order while it is on duty there: once a minute,
+     * and at once after a big delivery (a few hundred goods in since the last tidy) — like with like,
+     * every stack topped up, in order by kind (StorehouseBlockEntity.tidy), and the part stacks of the
+     * store chests round about topped up from each other. Once every five minutes, and only when it
+     * happened to be standing by, left a busy storehouse in forty half stacks of everything.
+     */
     private void tidyTheStorehouse() {
-        if (tickCount - tidyTick < 6000 || !(level() instanceof net.minecraft.server.level.ServerLevel server)) return;
+        if (!(level() instanceof net.minecraft.server.level.ServerLevel server) || ownerId() == null) return;
+        boolean big = Storekeeping.bigDeliverySinceTidy(ownerId());
+        if (tickCount - tidyTick < (big ? 200 : 1200) && tickCount >= tidyTick) return;
         com.jrpetty.mcassistant.block.StorehouseBlockEntity store = Storehouses.storeFor(server, ownerId());
-        if (store == null || store.getBlockPos().distSqr(blockPosition()) > 10.0 * 10.0) return;
+        if (store == null || Storekeeping.onDuty(server, ownerId()) != this) return;
         tidyTick = tickCount;
-        store.sort();
+        tidyNow(server, store);
+    }
+
+    /** The tidy itself: the storehouse, then the store chests round it; how it went, into the books. */
+    private void tidyNow(net.minecraft.server.level.ServerLevel server, com.jrpetty.mcassistant.block.StorehouseBlockEntity store) {
+        int[] r = store.tidy();
+        int chests = 0;
+        for (BlockPos p : Villages.storeChests(server, ownerId())) {
+            if (p.equals(store.getBlockPos())) continue;
+            if (server.getBlockEntity(p) instanceof net.minecraft.world.Container c
+                    && !(c instanceof com.jrpetty.mcassistant.block.StorehouseBlockEntity)) {
+                chests += Stacking.compact(c);
+            }
+        }
+        Storekeeping.tidied(server, ownerId(), displayNameCap(), r[0], r[1], store.getContainerSize(), chests);
         note(Deed.CHESTS_SORTED, 1);
         swing(net.minecraft.world.InteractionHand.MAIN_HAND);
-        FolkTalk.speak(this, FolkTalk.pick(getRandom(), "There — the storehouse is in order.",
-            "Like with like. That's better.", "A tidy store is a happy village."));
+        if (r[0] - r[1] + chests > 0 && getRandom().nextInt(3) == 0) {
+            FolkTalk.speak(this, FolkTalk.pick(getRandom(), "There — the storehouse is in order.",
+                "Like with like. That's better.", "A tidy store is a happy village."));
+        }
+    }
+
+    /** Tests: the storekeeper tidies the storehouse now, as it would on duty. False with no storehouse. */
+    public boolean tidyForTests() {
+        if (!(level() instanceof net.minecraft.server.level.ServerLevel server) || ownerId() == null) return false;
+        com.jrpetty.mcassistant.block.StorehouseBlockEntity store = Storehouses.storeFor(server, ownerId());
+        if (store == null) return false;
+        tidyTick = tickCount;
+        tidyNow(server, store);
+        return true;
+    }
+
+    /**
+     * A storekeeper with couriers to run keeps its counter, through the working day: it stands at
+     * the storehouse's door, where the folk who come for things are served and the couriers are sent
+     * out (Storekeeping, Couriers). One with nobody to run lends a hand, baking and building, as
+     * before (two storekeepers once stood at the heart for three game days without a stroke of work).
+     */
+    private boolean keepTheCounter() {
+        UUID village = ownerId();
+        if (village == null || !(level() instanceof net.minecraft.server.level.ServerLevel server) || !onShift() || onBreak()) return false;
+        boolean staff = false;
+        for (AssistantEntity a : Villages.folkOf(village)) {
+            if (a instanceof VillageFolkEntity c && c != this && c.isAlive() && Couriers.employed(c)) { staff = true; break; }
+        }
+        if (!staff) return false;
+        BlockPos spot = Storehouses.standingSpot(server, village);
+        if (spot == null) return false;
+        if (distanceToSqr(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5) > 3.0 * 3.0) {
+            if (getNavigation().isDone()) walkTo(spot, 1.0D);
+            brain("back to the counter");
+            return true;
+        }
+        brain("at the counter");
+        return true;
     }
 
     // ------------------------------ the forge ----------------------------------
@@ -3846,7 +3917,15 @@ public class VillageFolkEntity extends AssistantEntity {
     /** A village's guard about the town's streets is at its work, wherever its plot is. */
     @Override
     protected boolean walksAbroad() {
-        return super.walksAbroad() || Patrols.escorting(this) || Patrols.onTheStreets(this);
+        // (And a courier out on one of the storehouse's runs: the whole village is its ground.)
+        return super.walksAbroad() || Patrols.escorting(this) || Patrols.onTheStreets(this) || Couriers.onARun(this);
+    }
+
+    /** What it just drew out of the Village Storehouse: one request, served by the storekeeper at the
+     *  counter if one is on duty, or by itself — in the storehouse's books either way (Storekeeping). */
+    @Override
+    protected void drewFromStorehouse(java.util.List<net.minecraft.world.item.ItemStack> lots) {
+        Storekeeping.handedOut(this, lots);
     }
 
     private void stoneToolFromTheStores() {
@@ -4389,104 +4468,21 @@ public class VillageFolkEntity extends AssistantEntity {
         return false;
     }
 
-    // ------------------------------ the carrier's round ---------------------
+    // ------------------------------ the courier's round ---------------------
 
     private int routeTick = -100000;
-    private int storesFullTick = -100000;
 
     /**
-     * A hauler's round, chosen rather than clicked. There is no wand and no
-     * player in a settlement, and the freight checklist will not let a carrier
-     * move so much as a loaf until both ends of a route stand — so a village's
-     * carrier would have been a permanent no-op.
-     *
-     * <p>The round a carrier would pick for itself: load wherever the goods
-     * are actually piling up — the field chest, the woodpile, the mine head —
-     * and unload at the storehouse in the middle. Re-read every couple of
-     * minutes, because the fullest chest in a working village is a different
-     * chest by the afternoon.
+     * A village's courier does not choose its own round. It is the storehouse's: it takes its runs
+     * from the storehouse's run list (Couriers) — the production chests, fullest and longest waiting
+     * first; ore out to the smelter; kit out to a worker far out on its plot; a worker's load; the old
+     * chests — and waits at the storehouse's door between them. (Its round used to be its own: the
+     * fullest chest near its post, re-chosen every minute, two chests wand-fashion.) A route of two
+     * chests kept from before (a saved world) is let go, so its station work comes to the storehouse.
      */
     private void mindTheRoute() {
-        if (stationTask() != StationTask.HAUL) return;
-        if (tickCount - routeTick < 1200) return;
-        routeTick = tickCount;
-        BlockPos heart = villageCentre;
-        UUID village = ownerId();
-        if (heart == null || village == null || !(level() instanceof net.minecraft.server.level.ServerLevel server)) return;
-
-        // The depot is the storehouse: its chests first, then the founding chest and the
-        // other stores round the square — whichever has room (Villages.depot). It used to be
-        // the one chest nearest the middle, which was the founding chest, every time; the
-        // storehouse was never filled and the founding chest was full by the second day.
-        BlockPos depot = Villages.depot(server, village);
-        if (depot == null) {
-            if (tickCount - storesFullTick > 4800) {
-                storesFullTick = tickCount;
-                say("The stores are full — the village needs another storehouse chest.");
-            }
-            return;
-        }
-        // The load is the fullest chest near THIS carrier's own post, not the
-        // fullest in the settlement. A town of a hundred has several carriers
-        // and reaches two hundred blocks out; one shared answer would have put
-        // every one of them on the same chest and left three quarters of the
-        // place uncollected — and a scan of the whole town, per carrier, every
-        // two minutes, is a bill nobody wants to pay either. Each has its own
-        // post on its own bearing, so a sector each falls out of it.
-        // Everything worth fetching, out from the heart as far as the village's plots go:
-        // the fields', woods' and mines' chests, and what the furnaces have made (their output
-        // was taken out only while a smelt was running, and otherwise sat there for good).
-        // Never the stores themselves, and never a player's guest house.
-        int reach = Math.min(112, Math.max(48, Villages.storesRadius(village)));
-        java.util.List<BlockPos> loads = new java.util.ArrayList<>();
-        java.util.List<Integer> worth = new java.util.ArrayList<>();
-        // The production chests first, wherever the plots are: what every worker makes waits in
-        // its own chest at the edge of its plot for a courier to bring it in. A hungry village's
-        // food comes in first.
-        boolean hungry = Market.hungry(village);
-        java.util.Set<Long> seen = new java.util.HashSet<>();
-        for (AssistantEntity a : Villages.folkOf(village)) {
-            BlockPos p = a instanceof VillageFolkEntity vf ? vf.productionChest() : null;
-            if (p == null || !seen.add(p.asLong()) || !server.isLoaded(p)) continue;
-            if (!(server.getBlockEntity(p) instanceof net.minecraft.world.Container box)) continue;
-            Integer spent = spentPickups.get(p.asLong());
-            if (spent != null && tickCount - spent < 2400) continue;
-            int held = 0, food = 0;
-            for (int i = 0; i < box.getContainerSize(); i++) {
-                net.minecraft.world.item.ItemStack st = box.getItem(i);
-                if (st.isEmpty()) continue;
-                held += st.getCount();
-                if (st.get(net.minecraft.core.component.DataComponents.FOOD) != null) food += st.getCount();
-            }
-            if (held < 16 && !(hungry && food >= 4)) continue;
-            int score = held + (hungry ? food * 4 : 0);
-            int at = 0;
-            while (at < worth.size() && worth.get(at) >= score) at++;
-            loads.add(at, p.immutable());
-            worth.add(at, score);
-        }
-        for (ZoneChests.Found f : ZoneChests.around(level(), heart, reach, 32)) {
-            if (!f.stillThere() || seen.contains(f.pos().asLong())) continue;
-            boolean furnace = f.blockEntity() instanceof net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
-            if (!furnace && (!ZoneChests.isStashable(f) || Villages.inStoreArea(village, f.pos()))) continue;
-            if (Villages.inAGuestHouse(village, f.pos())) continue;
-            Integer spent = spentPickups.get(f.pos().asLong());
-            if (spent != null && tickCount - spent < 2400) continue;          // just came up empty: the next one
-            int held = furnace ? furnaceOutput(f) : stockIn(f);
-            if (held < (furnace ? 4 : 24)) continue;      // a handful is not worth the walk
-            int at = 0;
-            while (at < worth.size() && worth.get(at) >= held) at++;
-            loads.add(at, f.pos().immutable());
-            worth.add(at, held);
-        }
-        if (loads.isEmpty()) return;
-        // Several carriers share the round: each takes the next fullest after the ones
-        // before it, so they are not all on the same chest.
-        int rank = 0;
-        for (AssistantEntity mate : Villages.folkOf(village)) {
-            if (mate != this && mate.stationTask() == StationTask.HAUL && mate.getUUID().compareTo(getUUID()) < 0) rank++;
-        }
-        setHaulRoute(loads.get(rank % loads.size()), depot);
+        if (stationTask() != StationTask.HAUL || !Couriers.employed(this)) return;
+        clearHaulRoute();
     }
 
     private int buildingCheckTick = -100000;
@@ -4499,13 +4495,18 @@ public class VillageFolkEntity extends AssistantEntity {
      */
     private void workInTheBuilding() {
         StationTask trade = stationTask();
-        String building = buildingFor(trade);
+        // The couriers are the storehouse's staff, and work out of it too (Couriers): their post is
+        // the storehouse, where they wait between runs and report back after each.
+        String building = trade == StationTask.HAUL ? "storage" : buildingFor(trade);
         if (building == null) return;
         if (tickCount - buildingCheckTick < 1200) return;
         buildingCheckTick = tickCount;
         UUID village = ownerId();
         if (village == null) return;
         BlockPos at = Villages.builtAt(village, building);
+        if (at == null && trade == StationTask.HAUL && level() instanceof net.minecraft.server.level.ServerLevel s) {
+            at = Storehouses.doorFor(s, village);                    // a storehouse with no shed round it
+        }
         WorkZone zone = workZone();
         if (at == null || (zone != null && zone.center().distSqr(at) <= 4)) return;
         assignPlot(WorkZone.around(at, 5, WorkZone.DEFAULT_DEPTH), patchNameFor(trade));
@@ -4826,6 +4827,9 @@ public class VillageFolkEntity extends AssistantEntity {
     protected boolean haulerRound() {
         UUID village = ownerId();
         if (village == null || villageCentre == null || !(level() instanceof net.minecraft.server.level.ServerLevel server)) return false;
+        // The storehouse's courier: its runs come off the storehouse's run list (Couriers). What
+        // follows is only for a carrier with no storehouse (or storage) to work out of.
+        if (Couriers.work(this, server)) return true;
         BlockPos depot = storesSpot(server, village);
         if (depot == null) depot = villageCentre;
         // A load on its back: home with it.
@@ -4922,12 +4926,12 @@ public class VillageFolkEntity extends AssistantEntity {
     }
 
     /** What a courier carries out to the smelter: ore, fuel, and the makings of its mason's work. */
-    private static final java.util.function.Predicate<net.minecraft.world.item.ItemStack> FOR_THE_SMELTER =
+    static final java.util.function.Predicate<net.minecraft.world.item.ItemStack> FOR_THE_SMELTER =
         s -> AssistantEntity.SMELTABLE_ORE.test(s) || s.is(net.minecraft.world.item.Items.COAL)
             || s.is(net.minecraft.world.item.Items.CHARCOAL) || s.is(net.minecraft.tags.ItemTags.LOGS) || Masonry.MAKINGS.test(s);
 
     /** A worker's load (what it would bank: its output, not its kit) into this carrier's pack. */
-    private int takeLoadFrom(VillageFolkEntity worker) {
+    int takeLoadFrom(VillageFolkEntity worker) {
         int moved = 0;
         var inv = worker.getInventoryItems();
         for (int i = 0; i < inv.size(); i++) {
@@ -4976,13 +4980,6 @@ public class VillageFolkEntity extends AssistantEntity {
         // A village's farmers feed its fields with bone meal (the watch's bones, the compost).
         if (a == Ability.FARM_BONEMEAL && stationTask() == StationTask.FARM) return true;
         return super.can(a);
-    }
-
-    /** What a furnace has made and nobody has taken out, weighted like a chest's goods. */
-    private int furnaceOutput(ZoneChests.Found f) {
-        if (!(f.blockEntity() instanceof net.minecraft.world.Container box) || box.getContainerSize() < 3) return 0;
-        net.minecraft.world.item.ItemStack st = box.getItem(2);
-        return st.getCount() * Math.max(1, haulWeight(st));
     }
 
     /** The delivery chest, or the next store with room when it is full. */
@@ -5056,6 +5053,10 @@ public class VillageFolkEntity extends AssistantEntity {
     /** Its production chest (a producer's, at the edge of its plot), or null. */
     @Nullable private BlockPos productionChest;
     private int productionTick = -100000;
+    /** Its production chest from the plot it has moved on from, which it is bringing along to the new
+     *  one (carryTheOldChest), or null. Never a second chest: while it is set, none other goes down. */
+    @Nullable private BlockPos oldProductionChest;
+    private int oldChestTries;
 
     /** The trades that make things out on a plot of their own, into a production chest of their own. */
     static boolean producer(StationTask t) {
@@ -5070,7 +5071,7 @@ public class VillageFolkEntity extends AssistantEntity {
     }
 
     /** The village's production chests (never cleared out into the storehouse), as BlockPos longs. */
-    static java.util.Set<Long> productionChests(UUID village) {
+    public static java.util.Set<Long> productionChests(UUID village) {
         java.util.Set<Long> out = new java.util.HashSet<>();
         for (AssistantEntity a : Villages.folkOf(village)) {
             if (a instanceof VillageFolkEntity f && f.productionChest != null) out.add(f.productionChest.asLong());
@@ -5081,6 +5082,119 @@ public class VillageFolkEntity extends AssistantEntity {
     /** Is this one of the village's production chests? */
     static boolean isProductionChest(UUID village, BlockPos pos) {
         return productionChests(village).contains(pos.asLong());
+    }
+
+    /** Its old production chest, which it is bringing along to its new plot, or null. */
+    @Nullable
+    public BlockPos oldProductionChest() {
+        return oldProductionChest;
+    }
+
+    /** Every chest a worker of the village has in use: its production chest, and an old one it is
+     *  bringing along to its new plot. Never an old chest to clear away, nor one of the stores. */
+    static java.util.Set<Long> chestsInUse(UUID village) {
+        java.util.Set<Long> out = new java.util.HashSet<>();
+        for (AssistantEntity a : Villages.folkOf(village)) {
+            if (!(a instanceof VillageFolkEntity f)) continue;
+            if (f.productionChest != null) out.add(f.productionChest.asLong());
+            if (f.oldProductionChest != null) out.add(f.oldProductionChest.asLong());
+        }
+        return out;
+    }
+
+    /** Is this chest one a worker of the village has in use (chestsInUse)? */
+    static boolean chestInUse(UUID village, BlockPos pos) {
+        return chestsInUse(village).contains(pos.asLong());
+    }
+
+    /** Is this chest in use by a worker other than {@code who}? Only its own worker takes it up. */
+    public static boolean chestInUseByAnother(UUID village, BlockPos pos, AssistantEntity who) {
+        long key = pos.asLong();
+        for (AssistantEntity a : Villages.folkOf(village)) {
+            if (!(a instanceof VillageFolkEntity f) || f == who) continue;
+            if (f.productionChest != null && f.productionChest.asLong() == key) return true;
+            if (f.oldProductionChest != null && f.oldProductionChest.asLong() == key) return true;
+        }
+        return false;
+    }
+
+    /** It has just taken its old production chest up (RetireGoal): down it goes at the new plot at once,
+     *  and what was in it back into it — before anything else sends the load to the stores. */
+    public void oldChestTakenUp() {
+        if (level() instanceof net.minecraft.server.level.ServerLevel server) carryTheOldChest(server);
+    }
+
+    /** Tests: bring the old production chest along now, whatever the clock says (as the agenda would). */
+    public boolean carryTheOldChestForTests() {
+        return level() instanceof net.minecraft.server.level.ServerLevel server && carryTheOldChest(server);
+    }
+
+    /**
+     * Its plot has moved on (a spent mine, new hunting grounds, the pen built...): its production
+     * chest comes along. It walks back to the old chest, takes what is in it and the chest itself
+     * (RetireGoal), and sets it down at the edge of the new plot with the goods in it — one chest a
+     * worker, ever. A pack that could not hold what is in it leaves it for the couriers: the chest
+     * becomes an old chest for them to clear into the storehouse and take up (Retiring), and the
+     * worker has another from the stores. So does one that cannot get to it twice. It used to
+     * simply leave the old one standing, full, and set another down: a miner a few spent mines on
+     * had a chest at every one of them.
+     */
+    private boolean carryTheOldChest(net.minecraft.server.level.ServerLevel server) {
+        BlockPos old = oldProductionChest;
+        if (old == null) return false;
+        if (!producer(stationTask()) || workZone() == null || ownerId() == null) {
+            letTheOldChestGo(false);
+            return false;
+        }
+        boolean loaded = server.isLoaded(old);
+        boolean standing = !loaded || server.getBlockEntity(old) instanceof net.minecraft.world.level.block.entity.ChestBlockEntity;
+        if (!standing) {
+            // Taken up (by its own hands, or it is gone): down it goes at the new plot, from the pack.
+            oldProductionChest = null;
+            oldChestTries = 0;
+            boolean carried = countCarried(s -> s.is(net.minecraft.world.item.Items.CHEST)) > 0;
+            productionTick = -100000;
+            BlockPos fresh = keepProductionChest(server);
+            if (fresh != null) {
+                if (carried) FolkTalk.speak(this, FolkTalk.pick(getRandom(), "Brought my chest along — it goes here now.",
+                    "Same chest, new plot. The couriers will find it at the edge, as ever."));
+                brain("brought its production chest along to " + fresh.toShortString());
+                if (stashable() > 0) enqueue(outputDeposit());             // what was in it goes back in
+            }
+            return fresh != null;
+        }
+        if (peekJob() != null || !onShift() || onBreak()) return false;
+        if (oldChestTries >= 2) {
+            letTheOldChestGo(true);
+            return false;
+        }
+        // Room in its pack for everything in it, and for the chest? If not, it is the couriers'.
+        if (loaded && server.getBlockEntity(old) instanceof net.minecraft.world.Container box) {
+            int stacks = 0, free = 0;
+            for (int i = 0; i < box.getContainerSize(); i++) if (!box.getItem(i).isEmpty()) stacks++;
+            for (net.minecraft.world.item.ItemStack st : getInventoryItems()) if (st.isEmpty()) free++;
+            if (stacks + 1 > free) {
+                letTheOldChestGo(true);
+                return false;
+            }
+        }
+        oldChestTries++;
+        enqueue(Job.retire(old));
+        brain("going back for its production chest at " + old.toShortString());
+        return true;
+    }
+
+    /** It will not be bringing its old chest along: the couriers clear it into the storehouse and take
+     *  it up (Retiring), and the chest goes back to the stores. */
+    private void letTheOldChestGo(boolean say) {
+        BlockPos old = oldProductionChest;
+        oldProductionChest = null;
+        oldChestTries = 0;
+        productionTick = -100000;
+        if (old == null) return;
+        brain("left its old production chest at " + old.toShortString() + " for the couriers");
+        if (say) FolkTalk.speak(this, FolkTalk.pick(getRandom(), "I can't bring my old chest along — the couriers can clear it into the storehouse.",
+            "My old chest's too full to carry. I'll leave it for the couriers."));
     }
 
     /** Tests: the production chest now, set down if it can be. */
@@ -5101,18 +5215,31 @@ public class VillageFolkEntity extends AssistantEntity {
     private BlockPos keepProductionChest(net.minecraft.server.level.ServerLevel level) {
         StationTask t = stationTask();
         WorkZone z = workZone();
-        if (!producer(t) || z == null || villageCentre == null || ownerId() == null || isBaby()) {
+        if (!producer(t) || z == null) {
+            // No plot of its own to keep one on (another trade now, or none): its chest is the village's
+            // to clear — the couriers empty it into the storehouse and take it up (Retiring).
             productionChest = null;
+            oldProductionChest = null;
             return null;
         }
+        if (villageCentre == null || ownerId() == null || isBaby()) return null;
         int reach = (t == StationTask.FARM ? Math.max(FIELD_MOST, z.radius()) : z.radius()) + 2;
         if (productionChest != null) {
             if (!level.isLoaded(productionChest)) return productionChest;
             BlockPos c = z.center();
             boolean near = Math.max(Math.abs(productionChest.getX() - c.getX()), Math.abs(productionChest.getZ() - c.getZ())) <= reach + 4;
-            if (near && level.getBlockEntity(productionChest) instanceof net.minecraft.world.level.block.entity.ChestBlockEntity) return productionChest;
+            boolean standing = level.getBlockEntity(productionChest) instanceof net.minecraft.world.level.block.entity.ChestBlockEntity;
+            if (near && standing) return productionChest;
+            if (standing && oldProductionChest == null) {
+                // The plot has moved on: the chest comes along to the new one (carryTheOldChest).
+                oldProductionChest = productionChest;
+                oldChestTries = 0;
+                brain("its plot moved on: bringing its production chest along");
+            }
             productionChest = null;                              // gone, or the plot has moved
         }
+        // One chest a worker: while the old one is on its way, no other goes down.
+        if (oldProductionChest != null) return null;
         if (tickCount - productionTick < 600) return null;
         productionTick = tickCount;
         BlockPos c = z.center();
@@ -5191,20 +5318,6 @@ public class VillageFolkEntity extends AssistantEntity {
             if (depot != null) return Job.depositAt(depot);
         }
         return Job.deposit();
-    }
-
-    /** How much is actually sitting in this chest. */
-    /** What a chest is worth a trip: its goods weighted by how much the village
-     *  wants them (stone, timber, ore over wheat over odds and ends), and its
-     *  trade stock — seeds, saplings, tools — not counted at all. */
-    private int stockIn(ZoneChests.Found f) {
-        if (!(f.blockEntity() instanceof net.minecraft.world.Container box)) return 0;
-        int n = 0;
-        for (int i = 0; i < box.getContainerSize(); i++) {
-            net.minecraft.world.item.ItemStack st = box.getItem(i);
-            n += st.getCount() * haulWeight(st);
-        }
-        return n;
     }
 
     /**
@@ -6980,6 +7093,7 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         if (showcase) tag.putBoolean("Showcase", true);
         if (productionChest != null) tag.putLong("ProductionChest", productionChest.asLong());
+        if (oldProductionChest != null) tag.putLong("OldProductionChest", oldProductionChest.asLong());
         tag.putLong("BornDay", bornDay);
         if (rentFree) tag.putBoolean("RentFree", true);
         if (mentor != null) tag.putUUID("Mentor", mentor);
@@ -7047,6 +7161,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (tag.contains("Persona")) persona.load(tag.getCompound("Persona"));
         this.showcase = tag.getBoolean("Showcase");
         this.productionChest = tag.contains("ProductionChest") ? BlockPos.of(tag.getLong("ProductionChest")) : null;
+        this.oldProductionChest = tag.contains("OldProductionChest") ? BlockPos.of(tag.getLong("OldProductionChest")) : null;
         this.bornDay = tag.contains("BornDay") ? tag.getLong("BornDay") : UNKNOWN;
         this.rentFree = tag.getBoolean("RentFree");
         this.mentor = tag.hasUUID("Mentor") ? tag.getUUID("Mentor") : null;

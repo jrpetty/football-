@@ -403,17 +403,8 @@ public final class Colonies {
             for (ZoneChests.Found f : ZoneChests.around(level, v.centre(), Villages.storesRadius(v.id()), 64)) {
                 if (st.isEmpty()) break;
                 if (!f.stillThere() || !ZoneChests.isStashable(f)) continue;
-                net.minecraft.world.Container c = f.container();
-                for (int i = 0; i < c.getContainerSize() && !st.isEmpty(); i++) {
-                    ItemStack there = c.getItem(i);
-                    if (there.isEmpty()) { c.setItem(i, st.copy()); st.setCount(0); }
-                    else if (ItemStack.isSameItemSameComponents(there, st) && there.getCount() < there.getMaxStackSize()) {
-                        int move = Math.min(st.getCount(), there.getMaxStackSize() - there.getCount());
-                        there.grow(move);
-                        st.shrink(move);
-                    }
-                }
-                c.setChanged();
+                // Onto the part stacks of the same first, then empty slots (entity/Stacking).
+                st.setCount(com.jrpetty.mcassistant.entity.Stacking.insert(f.container(), st).getCount());
             }
         } finally {
             ZoneChests.askAs(before);

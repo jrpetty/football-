@@ -522,6 +522,8 @@ public final class Annals {
         out.put("production", production(level, v));
         out.put("shops", Stockroom.inventoryReport(level, id));
         out.put("stock", stock(level, v));
+        // The storehouse's books, its staff (the storekeeper, the couriers) and its run list: the Stores page.
+        out.put("storehouse", Storekeeping.report(level, v));
         out.put("buildings", buildings(level, v));
         out.put("research", CityTree.report(id));                // the city's research: the tree, the pick and why
         List<String> queue = new ArrayList<>();

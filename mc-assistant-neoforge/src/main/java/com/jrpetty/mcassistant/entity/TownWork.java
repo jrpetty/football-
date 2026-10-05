@@ -229,31 +229,35 @@ public final class TownWork {
             || st.is(Blocks.MYCELIUM) || st.is(Blocks.ROOTED_DIRT);
     }
 
-    /** Put a thing back in the village's stores: the Village Storehouse, else the first chest with room. */
+    /** Put a thing back in the village's stores: the Village Storehouse, else the chests with room —
+     *  onto the part stacks of the same in all of them first, then empty slots (Stacking). */
     static void give(ServerLevel level, Villages.Village v, ItemStack stack) {
+        if (stack.isEmpty()) return;
         com.jrpetty.mcassistant.block.StorehouseBlockEntity store = Storehouses.storeFor(level, v.id());
-        if (store != null && !stack.isEmpty()) {
-            ItemStack left = store.insert(stack);
-            stack.setCount(left.getCount());
-            if (stack.isEmpty()) return;
-        }
-        boolean before = ZoneChests.askAs(true);
-        try {
-            for (ZoneChests.Found f : ZoneChests.around(level, v.centre(), Villages.storesRadius(v.id()), 32)) {
-                if (stack.isEmpty()) return;
-                if (!f.stillThere() || !ZoneChests.isStashable(f)) continue;
-                net.minecraft.world.Container c = f.container();
-                for (int i = 0; i < c.getContainerSize() && !stack.isEmpty(); i++) {
-                    if (c.getItem(i).isEmpty()) {
-                        c.setItem(i, stack.copy());
-                        stack.setCount(0);
-                    }
-                }
-                c.setChanged();
+        List<net.minecraft.world.Container> boxes = new ArrayList<>();
+        if (store != null) {
+            // The storehouse first, and the stores round it: never a chest out on somebody's plot.
+            boxes.add(store);
+            for (BlockPos p : Villages.storeChests(level, v.id())) {
+                if (level.getBlockEntity(p) instanceof net.minecraft.world.Container c && c != store) boxes.add(c);
             }
-        } finally {
-            ZoneChests.askAs(before);
+        } else {
+            java.util.Set<Long> inUse = VillageFolkEntity.chestsInUse(v.id());
+            boolean before = ZoneChests.askAs(true);
+            try {
+                for (ZoneChests.Found f : ZoneChests.around(level, v.centre(), Villages.storesRadius(v.id()), 32)) {
+                    if (!f.stillThere() || !ZoneChests.isStashable(f)) continue;
+                    if (inUse.contains(f.pos().asLong())) continue;           // a worker's own, not the stores'
+                    boxes.add(f.container());
+                }
+            } finally {
+                ZoneChests.askAs(before);
+            }
         }
+        int[] took = new int[boxes.size()];
+        ItemStack left = Stacking.insert(boxes, stack, took);
+        if (store != null && took[0] > 0) Storekeeping.bookIn(level, v.id(), null, stack, took[0], false);
+        stack.setCount(left.getCount());
     }
 
     /** Take so many of a thing out of the village's stores; all or nothing. */
@@ -282,6 +286,9 @@ public final class TownWork {
                     if (st.isEmpty() || !what.test(st)) continue;
                     int k = Math.min(left, st.getCount());
                     Economy.storesOut(v.id(), st, k);                           // a maker's work, item by item
+                    if (f.blockEntity() instanceof com.jrpetty.mcassistant.block.StorehouseBlockEntity) {
+                        Storekeeping.bookOut(level, v.id(), null, st, k, null);   // the town's works, in its books
+                    }
                     st.shrink(k);
                     if (st.isEmpty()) c.setItem(i, ItemStack.EMPTY);
                     left -= k;

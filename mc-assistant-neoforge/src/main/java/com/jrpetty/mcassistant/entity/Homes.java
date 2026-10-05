@@ -1048,21 +1048,7 @@ public final class Homes {
 
     /** Put a stack into a chest, onto stacks of its own kind first, then into empty slots. Returns what would not fit. */
     static ItemStack insertInto(net.minecraft.world.Container c, ItemStack s) {
-        for (int i = 0; i < c.getContainerSize() && !s.isEmpty(); i++) {
-            ItemStack in = c.getItem(i);
-            if (in.isEmpty() || !ItemStack.isSameItemSameComponents(in, s)) continue;
-            int room = Math.min(c.getMaxStackSize(), in.getMaxStackSize()) - in.getCount();
-            if (room <= 0) continue;
-            int k = Math.min(room, s.getCount());
-            in.grow(k);
-            s.shrink(k);
-        }
-        for (int i = 0; i < c.getContainerSize() && !s.isEmpty(); i++) {
-            if (!c.getItem(i).isEmpty()) continue;
-            c.setItem(i, s.copy());
-            s = ItemStack.EMPTY;
-        }
-        return s;
+        return Stacking.insert(c, s);
     }
 
     static boolean ownedBy(ItemStack s, VillageFolkEntity f) {

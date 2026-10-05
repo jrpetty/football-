@@ -30,6 +30,9 @@ public class WithdrawGoal extends Goal {
     private double bestDistSq = Double.MAX_VALUE;
     private int myGen;
     private String word = "";
+    /** At the storehouse's counter: when it got there, and the storekeeper serving it (or null: itself). */
+    private int serviceStart = -1;
+    @Nullable private com.jrpetty.mcassistant.entity.VillageFolkEntity keeper;
 
     public WithdrawGoal(AssistantEntity assistant) {
         this.assistant = assistant;
@@ -92,6 +95,8 @@ public class WithdrawGoal extends Goal {
         this.stuckTicks = 0;
         this.bestDistSq = Double.MAX_VALUE;
         this.chestPos = null;
+        this.serviceStart = -1;
+        this.keeper = null;
         if (job == null || job.arg() == null) {
             finish("I didn't catch what to fetch.");
             return;
@@ -128,6 +133,8 @@ public class WithdrawGoal extends Goal {
     public void stop() {
         this.job = null;
         this.chestPos = null;
+        this.serviceStart = -1;
+        this.keeper = null;
         assistant.getNavigation().stop();
     }
 
@@ -177,9 +184,28 @@ public class WithdrawGoal extends Goal {
             return;
         }
 
+        // At the Village Storehouse with its storekeeper at the counter: the storekeeper serves it — a
+        // moment at the counter while it fetches the goods out and hands them over. With nobody at
+        // the counter, the folk helps itself as it always has (Storekeeping).
+        boolean store = container instanceof com.jrpetty.mcassistant.block.StorehouseBlockEntity
+            && assistant instanceof com.jrpetty.mcassistant.entity.VillageFolkEntity;
+        if (store && serviceStart < 0) {
+            serviceStart = assistant.tickCount;
+            keeper = com.jrpetty.mcassistant.entity.Storekeeping.counterFor((com.jrpetty.mcassistant.entity.VillageFolkEntity) assistant);
+        }
+        if (keeper != null && assistant.tickCount - serviceStart < com.jrpetty.mcassistant.entity.Storekeeping.SERVICE_TICKS) {
+            if (keeper.isAlive() && !keeper.isSleeping()) {
+                keeper.getLookControl().setLookAt(assistant, 30.0F, 30.0F);
+                if ((assistant.tickCount - serviceStart) % 10 == 0) keeper.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+                return;
+            }
+            keeper = null;                                          // gone from the counter: it helps itself
+        }
+
         Predicate<ItemStack> match = matcherFor(word);
         int wanted = job.amount();
         int moved = 0;
+        java.util.List<ItemStack> took = new java.util.ArrayList<>();
         for (int i = 0; i < container.getContainerSize() && moved < wanted; i++) {
             ItemStack slot = container.getItem(i);
             if (slot.isEmpty() || !match.test(slot)) continue;
@@ -187,12 +213,16 @@ public class WithdrawGoal extends Goal {
             ItemStack taking = slot.copyWithCount(take);
             ItemStack leftover = assistant.insertGiven(taking);
             int actuallyTaken = take - leftover.getCount();
+            if (actuallyTaken > 0) took.add(slot.copyWithCount(actuallyTaken));
             slot.shrink(actuallyTaken);
             if (slot.isEmpty()) container.setItem(i, ItemStack.EMPTY);
             moved += actuallyTaken;
             if (!leftover.isEmpty()) break; // backpack is full
         }
         container.setChanged();
+        if (store && !took.isEmpty()) {
+            com.jrpetty.mcassistant.entity.Storekeeping.withdrew((com.jrpetty.mcassistant.entity.VillageFolkEntity) assistant, keeper, took);
+        }
         assistant.rememberChest(chestPos, container);
         finish(moved > 0
             ? "Got " + moved + " " + word + " from the chest."
