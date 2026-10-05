@@ -79,6 +79,7 @@ public final class TownJobs {
         CREW.clear();
         ON.clear();
         RESTING.clear();
+        HOMEWARD.clear();
     }
 
     /** Tests: the works done at once (true), or by hand (false, as in a real game). */
@@ -110,6 +111,8 @@ public final class TownJobs {
             if (c != null) ON.remove(c.folk);
             f = choose(level, v, works, at, prefer, now);
             if (f == null) return false;
+            Crew back = HOMEWARD.remove(f.getUUID());          // called out again on its way home
+            if (back != null) release(level, f, back);
             c = new Crew(f.getUUID());
             c.since = now;
             CREW.put(key, c);
@@ -123,7 +126,7 @@ public final class TownJobs {
             CREW.remove(key);
             ON.remove(f.getUUID());
             RESTING.put(f.getUUID(), now + REST);
-            release(level, f, c);
+            sendHome(level, f, c);
             f.brain("its turn at the town's work done: " + c.what);
             return false;
         }
@@ -168,13 +171,13 @@ public final class TownJobs {
      */
     public static boolean hold(VillageFolkEntity f, ServerLevel level) {
         String key = ON.get(f.getUUID());
-        if (key == null) return false;
+        if (key == null) return homeward(level, f);
         Crew c = CREW.get(key);
         if (c == null || !c.folk.equals(f.getUUID()) || level.getGameTime() - c.calledAt > HOLD || !fit(f, key)) {
             ON.remove(f.getUUID());
             if (c != null && c.folk.equals(f.getUUID())) {
                 CREW.remove(key);
-                release(level, f, c);
+                sendHome(level, f, c);
             }
             return false;
         }
@@ -286,6 +289,41 @@ public final class TownJobs {
         if (c.window != null) com.jrpetty.mcassistant.ChunkLoad.setLoaded(level, owner(f), c.window, 1, false);
         com.jrpetty.mcassistant.ChunkLoad.setLoaded(level, owner(f), here, 1, true);
         c.window = here.immutable();
+    }
+
+    /** Hands whose turn ended out beyond the town, on their way home: the ground round each kept
+     *  awake till it is back. The ground used to be let go where the turn ended, and a farmer sent
+     *  to level a road's end stood frozen a hundred blocks out for the rest of the game. */
+    private static final Map<UUID, Crew> HOMEWARD = new ConcurrentHashMap<>();
+
+    private static void sendHome(ServerLevel level, VillageFolkEntity f, Crew c) {
+        if (c.window == null) return;                 // never left the town: nothing kept awake
+        c.calledAt = level.getGameTime();
+        HOMEWARD.put(f.getUUID(), c);
+    }
+
+    /** From the folk's tick: on its way home from the town's work, out beyond the town. */
+    private static boolean homeward(ServerLevel level, VillageFolkEntity f) {
+        Crew c = HOMEWARD.get(f.getUUID());
+        if (c == null) return false;
+        UUID id = f.ownerId();
+        Villages.Village v = id == null ? null : Villages.get(id);
+        if (v == null || level.getGameTime() - c.calledAt > 12000L) {
+            release(level, f, c);
+            HOMEWARD.remove(f.getUUID());
+            return false;
+        }
+        keepAwake(level, f, c);                       // the window goes with it, and is let go at home
+        if (c.window == null) {
+            HOMEWARD.remove(f.getUUID());
+            return false;
+        }
+        if (f.getNavigation().isDone() || f.tickCount - c.walkTick > 60) {
+            f.walkTo(v.centre(), 1.0D);
+            c.walkTick = f.tickCount;
+        }
+        f.brain("on the way home from the town's work");
+        return true;
     }
 
     private static void release(ServerLevel level, VillageFolkEntity f, Crew c) {

@@ -68,7 +68,11 @@ public final class JobSpec {
         // every checklist. Silently stalling ten minutes after the player walks
         // away — with a green "Working" status — is the worst failure this mod
         // can have. Carried or stocked at the station both count.
-        if (com.jrpetty.mcassistant.AssistantConfig.upkeepEnabled()
+        // Except for the hands whose work IS the food: a village whose larder ran dry had its
+        // farmers stand at the stores waiting for rations nobody could grow, and starved to five.
+        boolean growsFood = task == AssistantEntity.StationTask.FARM || task == AssistantEntity.StationTask.FISH
+            || task == AssistantEntity.StationTask.HUNT;
+        if (com.jrpetty.mcassistant.AssistantConfig.upkeepEnabled() && !growsFood
             && !held(a, stores, s -> s.get(net.minecraft.core.component.DataComponents.FOOD) != null)) {
             gaps.add("food (its rations)");
         }

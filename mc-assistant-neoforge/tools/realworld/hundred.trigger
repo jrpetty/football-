@@ -1,1 +1,1 @@
-the hundred days, on b202 (a town that earns its wages, colonies that stand up, iron from the mines): 2026-10-05T03:22:18Z
+the hundred days, on b202 part 4 (a larder not for sale, fields worked hungry, home from the town's work): 2026-10-05T04:49:10Z

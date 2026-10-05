@@ -225,8 +225,10 @@ output, the worth and the three best paid, and any folk will tell you who earns 
   * **Passing traders** come every morning and buy enough of what the village has to
     spare (anything over four lots of it) to meet the day's wages and what it is saving
     for, at a fair price. They never take what the village is short of itself — the
-    stone for the hall it is raising, the food for a lean larder — nor the wool its beds
-    are waiting on.
+    stone for the hall it is raising — nor the wool its beds are waiting on, and food only
+    over a full larder.
+  * **Hungry, the fields still get worked.** Every hand needs its rations to work, except
+    the farmers, fishers and hunters: their work is the food.
   * **Contentment knows the difference.** Wages paid in full are a good thing; paid
     short, or hardly at all, folk say so.
   * **The tithe.** On the day of rest every folk with savings gives one coin in ten of

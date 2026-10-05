@@ -3842,9 +3842,14 @@ public class VillageGameTests {
         // An empty treasury on a working morning: the traders come for what it has to spare.
         com.jrpetty.mcassistant.village.Ledger.takeCoins(id, com.jrpetty.mcassistant.village.Ledger.coins(id));
         int bill = com.jrpetty.mcassistant.entity.Market.wageBill(id);
+        java.util.function.Predicate<ItemStack> eats = st -> st.get(net.minecraft.core.component.DataComponents.FOOD) != null;
+        int foodBefore = com.jrpetty.mcassistant.entity.Market.stock(level, id, eats);
         int in = com.jrpetty.mcassistant.entity.Market.trade(level, v);
         int leather = com.jrpetty.mcassistant.entity.Market.stock(level, id, st -> st.is(Items.LEATHER));
-        Kit.log("t62 the traders: wages " + bill + ", they paid " + in + " coin; leather left " + leather);
+        int foodAfter = com.jrpetty.mcassistant.entity.Market.stock(level, id, eats);
+        Kit.log("t62 the traders: wages " + bill + ", they paid " + in + " coin; leather left " + leather
+            + "; the larder " + foodBefore + " -> " + foodAfter);
+        helper.assertTrue(foodAfter == foodBefore, "a small larder is not for sale: " + foodBefore + " -> " + foodAfter);
         helper.assertTrue(in > 0 && leather < 64 && leather >= 16, "the traders bought spare leather and left a reserve: "
             + in + " coin, " + leather + " left");
         // Two houses with no beds made up and no wool: the wool is saved for, then bought.
@@ -3862,6 +3867,23 @@ public class VillageGameTests {
         helper.assertTrue(com.jrpetty.mcassistant.entity.Market.bedsShort(id) > 0, "the houses are waiting on beds");
         helper.assertTrue(none == 0 && putBy > 0, "short of coin, the wool is saved for: " + putBy);
         helper.assertTrue(paid > 0 && wool >= 8, "with the coin, the wool is bought into the stores: " + wool);
+        // A larder run dry: the farmer still goes to its field (its work is the food); a woodcutter waits on rations.
+        for (BlockPos c : Villages.storeChests(level, id)) {
+            if (level.getBlockEntity(c) instanceof net.minecraft.world.Container box2) {
+                for (int i = 0; i < box2.getContainerSize(); i++) if (eats.test(box2.getItem(i))) box2.setItem(i, ItemStack.EMPTY);
+            }
+        }
+        VillageFolkEntity hand = null;
+        for (AssistantEntity a : Villages.folkOf(id)) if (a instanceof VillageFolkEntity f && !f.isBaby()) { hand = f; break; }
+        helper.assertTrue(hand != null, "a hand");
+        hand.removeMatching(eats, 999);
+        hand.setJob(StationTask.FARM);
+        java.util.List<String> farmer = com.jrpetty.mcassistant.entity.JobSpec.missing(hand);
+        hand.setJob(StationTask.WOOD);
+        java.util.List<String> woodcutter = com.jrpetty.mcassistant.entity.JobSpec.missing(hand);
+        Kit.log("t62 an empty larder: the farmer is missing " + farmer + "; the woodcutter " + woodcutter);
+        helper.assertTrue(!farmer.contains("food (its rations)") && woodcutter.contains("food (its rations)"),
+            "a farmer works to fill an empty larder; other hands wait on their rations");
         helper.succeed();
     }
 

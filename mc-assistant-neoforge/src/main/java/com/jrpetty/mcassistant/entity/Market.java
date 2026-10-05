@@ -394,6 +394,10 @@ public final class Market {
         Set<Villages.Task> short_ = EnumSet.noneOf(Villages.Task.class);
         for (Villages.Need n : Villages.needs(level, id)) short_.add(n.task());
         boolean bedsWait = bedsShort(id) > 0;
+        // Food only over a full larder (as on market day): a young village not yet "short of food"
+        // with a hundred put by sold half of it in a morning, and starved.
+        int foodSpare = Villages.stock(level, v.centre(), Villages.Task.FOOD, Villages.storesRadius(id))
+            - Math.max(256, 3 * Villages.larderForBirth(id));
         int in = 0;
         List<String> sold = new ArrayList<>();
         for (Good g : GOODS) {
@@ -401,12 +405,16 @@ public final class Market {
             if (g.need() == Villages.Task.NONE && g.value() < 0.3) continue;
             if (g.need() != Villages.Task.NONE && short_.contains(g.need())) continue;
             if (bedsWait && g.name().equals("Wool")) continue;
+            boolean food = g.need() == Villages.Task.FOOD;
+            if (food && foodSpare < g.bundle()) continue;
             int have = stock(level, id, g.what());
             int plenty = g.bundle() * 4;
             if (have < plenty + g.bundle()) continue;
             // As much as is wanted, from what it has to spare: up to eight lots of a thing.
             int lotWorth = Math.max(1, (int) Math.floor(g.bundle() * each(g, have) * 0.8));
             int lots = Math.min(Math.min(8, (have - plenty) / g.bundle()), Math.max(1, (want - in + lotWorth - 1) / lotWorth));
+            if (food) lots = Math.min(lots, foodSpare / g.bundle());
+            if (lots <= 0) continue;
             int n = lots * g.bundle();
             int paid = (int) Math.floor(n * each(g, have) * 0.8);
             if (paid < 1 || !TownWork.take(level, v, g.what(), n)) continue;
