@@ -1250,6 +1250,7 @@ with plain blocks, so a building is never held up.
 | Library | 9×9 | Stone hall with tall windows, walls lined with bookshelves, an enchanting table on a carpet between lecterns |
 | School | 9×11 | Timber schoolroom under a steep roof, tall windows down both sides: two rows of desks (a top slab, a stair for a bench) either side of the aisle, the teacher's lectern, and at the back a blackboard over a cupboard of barrels, a bookshelf either side with a lamp on it; a lamp hung under the ceiling over the desks by each wall, none in the aisle |
 | Bank | 9×11 | Stone house of business: a counter across the room with a lantern on its far end, the ledger on a lectern before it, and a vault at the back, its strongboxes behind a gate and grille of iron bars the banker sets; its two lanterns hang flush under the ceiling, over the counter and over the strongboxes |
+| Block of flats | 11×11 | A stone town house three storeys high (four in the Diamond Age) with brick quoins, balconies, window boxes, a pedimented front door between lanterns, a slate roof with a dormer and two chimney stacks: six small flats off a winding stair (see Blocks of flats) |
 | Park | 11×11 | A green: a stone fountain with a spring spilling from its pillar, sixteen wooden benches round it, lamp posts at the four ways in, flowers along its edges; then a tree in each corner, paths and lanterns (see *The town's quarters, and the park*) |
 
 Every drawing is sound as built: a hanging lantern hangs from a beam, a ceiling, an eave or a
@@ -3253,19 +3254,26 @@ three storeys of small homes on one house's lot.
   builders' list ahead of the next house, on a home lot as near the square as there is, and the
   status line says why ("a block of flats ...: 4 households wait for a home (3 of them young or
   hard up) and 2 lots stand free near the square").
-* **The building.** Eleven blocks wide: stone walls with a brick band at every floor, glass in
-  the windows, a flat roof of stone slabs behind a parapet, two chimney stacks, a step up to the
-  front door. Inside, a stair hall up one side with a stair that winds up the back of it to every
-  landing (real steps, a rail at the well's edge, a lantern on every landing), and two flats to a
-  landing: six in all, three for couples (two beds) and three for singles (one bed). Each flat is
-  a room with its bed or beds, a chest, a little table (a post with a cloth on it), a lantern and
-  windows on two sides. The builders raise it like anything else, out of the stores, a load at a
-  time and storey by storey from the footing up; the Iron Age's make-over dresses its footing and
-  slates its stair like the rest of the town, and lamp posts go up by its front door.
+* **The building.** Eleven blocks wide and built to look like a town house: a slate plinth, stone
+  walls with toothed brick quoins at the corners, tall windows in three even bays front and back,
+  window boxes of flowers under the ground floor's windows, a balcony on two brackets across each
+  upper flat's front, slate sills under the rest, a bracketed cornice under the eaves, and a
+  pitched slate roof with a dormer over the middle bay, between stone gables each with a brick
+  chimney stack rising out of it (and smoking: a grate in every flat). The front door, on a stone
+  doorstep, has a fanlight over it and a little slate pediment over that, a lantern hung at either end
+  of it, and the block's name on a sign beside it. Inside, a stair hall up one side with a stair
+  that winds up the back of it to every landing (real steps, a rail at the well's edge, a lantern
+  on every landing), and two flats to a landing: six in all, three for couples (two beds) and three
+  for singles (one bed). Each flat is a room with its bed or beds, a chest, a little table (a post
+  with a cloth on it), a lantern over the bed and windows on two sides. The builders raise it like
+  anything else, out of the stores, a load at a time and storey by storey from the footing up; its
+  roof, plinth, sills, balconies and brackets go up in the stores' wood and the Iron Age's
+  make-over slates them like the rest of the town's roofs, and lamp posts go up by its front door.
+  (The drawings are made by `tools/flats_design.py`.)
 * **Seen to.** Once it stands the town's hands see to it, out of the stores: the beds it went up
   without (from the stores, or three wool and three planks), the ground floor's two doors, each
-  flat's number on a sign on its landing with who lives there ("Flat 2B / Tansy & Rook"), and a run
-  of iron railings along the front (iron bars put by, or six bars of iron beaten into sixteen, never
+  flat's number on a sign on its landing with who lives there ("Flat 2B / Tansy & Rook"), and iron
+  railings round the balconies (iron bars put by, or six bars of iron beaten into sixteen, never
   while the village is putting iron by for its age). The sign by the front door gives its name.
 * **Its name.** Each block is named for its street: Elm Row Flats, and a second on the same street
   Elm Row Buildings (then Court, Mansions, House). Each flat has a number: the storey (1 the ground
@@ -3292,7 +3300,8 @@ three storeys of small homes on one house's lot.
   houses it plans (nine a block), and in "with a bed" on the books.
 * **The Diamond Age.** A block whose flats are all let while folk still wait gets a fourth storey:
   paid for out of the stores before its roof comes off, raised a layer at a time, the stair carried
-  up, and two more flats (twelve beds).
+  up, a balcony more, the roof, gables and chimneys put back on top, and two more flats (twelve
+  beds).
 * **Seeing it.** The chronicle notes the town's first block ("the town's first block of flats
   opened: Elm Row Flats, 6 flats on one lot ...") and each after it; the books' Buildings page
   shows each block by name with its storeys and its flats let and free ("4 of 6 flats let, 2
