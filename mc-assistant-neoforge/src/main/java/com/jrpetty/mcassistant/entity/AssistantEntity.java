@@ -2667,7 +2667,34 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             }
             if (bestSlot < 0) return false;
         }
+        eatSlot(bestSlot, bestScore);
+        return true;
+    }
+
+    /**
+     * A meal out of the pack, now (Meals: breakfast, the midday meal, supper): the best food it carries
+     * that is not its working stock, eaten as at its work. False if it carries nothing to eat.
+     */
+    public boolean eatFromPack() {
+        int bestSlot = -1, bestScore = -1;
+        for (int i = 0; i < inventory.size(); i++) {
+            ItemStack s = inventory.get(i);
+            if (s.isEmpty() || s.get(DataComponents.FOOD) == null || isWorkingStock(s)) continue;
+            int score = foodQuality(s);
+            if (score > bestScore) { bestScore = score; bestSlot = i; }
+        }
+        if (bestSlot < 0) return false;
+        eatSlot(bestSlot, bestScore);
+        return true;
+    }
+
+    /** Something eaten: told to whoever keeps the meals (a village folk's Meals). */
+    protected void ateFood(ItemStack meal) {}
+
+    /** The eating itself: the sound, the swing, one of the stack gone, the pace it sets. */
+    private void eatSlot(int bestSlot, int bestScore) {
         ItemStack meal = inventory.get(bestSlot);
+        ateFood(meal);
         int was = dietPercent;
         dietPercent = bestScore;
         lastMeal = meal.getHoverName().getString();
@@ -2686,7 +2713,6 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                     ? "Scraps again. I'll work, but don't expect much."
                     : "That'll keep me going.");
         }
-        return true;
     }
 
     private int wagePaidUntil;      // work-tick the current wage runs out on

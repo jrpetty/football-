@@ -357,6 +357,19 @@ output, the worth and the three best paid, and any folk will tell you who earns 
     one near the stores a couple of days' (eight), and no more than a day's while the larder
     is low. Rations are food that will not poison it: no rotten flesh, spider eyes or raw
     chicken.
+  * **Three meals a day, for everybody.** Every folk eats **breakfast** (from six in the
+    morning), **the midday meal** (from half past eleven) and **supper** (from five in the
+    evening): the children, the old, the leader and folk between trades as well as the hands at
+    their work. At each mealtime it eats out of its own pack first, then its household's chest at
+    home, then the village's stores (the town feeds its own; a far hand at its work has its rations
+    sent out instead), always a real loaf, fish or stew out of somewhere, booked in the books. A
+    ration eaten at its work while the mealtime is on is that meal: nobody eats twice. With nothing
+    in reach it **misses the meal** and is **hungry** (its contentment falls, more for every meal
+    missed, and it says so); a whole day without and it can't work properly; two days and it grows
+    weak (it loses health, never past three hearts). Its card says when it last ate and what, and
+    how many meals it has had today; the Why page says whether every folk had its meals yesterday,
+    or how many were missed and by how many folk. (Once only a hand at its work ever ate, and a
+    child, an elder or a folk off its shift went all its life without a bite.)
   * **Contentment knows the difference.** Wages paid in full are a good thing; paid
     short, or hardly at all, folk say so.
   * **The tax.** A tenth of every wage is the village's tax: it never leaves the treasury, and

@@ -273,6 +273,7 @@ public class VillageFolkEntity extends AssistantEntity {
             laterLine = null;
         }
         Leisure.tick(this);
+        if (tickCount % 100 == 53) Meals.tick(this);           // breakfast, the midday meal, supper
         if (hiredBy != null && tickCount % 20 == 0 && level() instanceof net.minecraft.server.level.ServerLevel out) Hire.tick(this, out);
         if (tickCount % 160 == 80) CityTree.tend(this);          // the town's research on it: roads, drills, healers
         // The watch does not open the gates to go out after them: with the bell ringing a guard's
@@ -1068,9 +1069,17 @@ public class VillageFolkEntity extends AssistantEntity {
         if (life.has(Social.Trait.GRUMPY)) m -= 10;
         if (persona.sleptDay >= day - 1) { m += 6; why.add(new Object[]{"slept", 6}); }
         else if (persona.since() >= 0 && day > persona.since() + 1) { m -= 6; why.add(new Object[]{"rough", 6}); }
-        int food = countFood();
-        if (food == 0) { m -= 14; why.add(new Object[]{"hungry", 14}); }
-        else if (food >= 4) { m += 3; why.add(new Object[]{"fed", 2}); }
+        // Hungry is a meal missed (Meals), more with every one; fed is its meals had. (It once read the
+        // pack: a folk carrying bread it never ate was "fed", and a child fed at home "hungry".)
+        int missed = meals.missedInRow();
+        if (missed > 0) {
+            int h = Math.min(24, 8 + 4 * missed);
+            m -= h;
+            why.add(new Object[]{"hungry", h});
+        } else if (meals.eatenToday() > 0 || countFood() >= 4) {
+            m += 3;
+            why.add(new Object[]{"fed", 2});
+        }
         int friends = life.friends().size();
         if (life.partner() != null) { m += 6; why.add(new Object[]{"partner", 7}); }
         if (friends >= 3) { m += 6; why.add(new Object[]{"friends", 6}); }
@@ -1524,6 +1533,25 @@ public class VillageFolkEntity extends AssistantEntity {
      * its trade's tool.
      */
     private boolean showcase;
+
+    /** Its three meals a day (Meals). */
+    private final Meals.Book meals = new Meals.Book();
+
+    public Meals.Book meals() { return meals; }
+
+    /** A folk of the showcase lineup: it stands for its picture and lives no life. */
+    public boolean showcaseFolk() { return showcase; }
+
+    @Override
+    protected void ateFood(net.minecraft.world.item.ItemStack meal) {
+        meals.ate(level().getGameTime(), meal.getHoverName().getString());
+    }
+
+    /** One meal's worth out of the village's stores and into the pack (Meals), booked; how many came. */
+    public int mealFromTheStores() {
+        if (!(level() instanceof net.minecraft.server.level.ServerLevel server)) return 0;
+        return drawFromTheStores(server, Meals.FOOD, 1);
+    }
 
     public void makeShowcase(StationTask trade) {
         this.showcase = true;
@@ -7279,6 +7307,7 @@ public class VillageFolkEntity extends AssistantEntity {
             tag.put("Persona", inner);
         }
         if (showcase) tag.putBoolean("Showcase", true);
+        tag.put("Meals", meals.save());
         if (productionChest != null) tag.putLong("ProductionChest", productionChest.asLong());
         if (oldProductionChest != null) tag.putLong("OldProductionChest", oldProductionChest.asLong());
         tag.putLong("BornDay", bornDay);
@@ -7347,6 +7376,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (tag.contains("Social")) life.load(tag.getCompound("Social"));
         if (tag.contains("Persona")) persona.load(tag.getCompound("Persona"));
         this.showcase = tag.getBoolean("Showcase");
+        if (tag.contains("Meals")) meals.load(tag.getCompound("Meals"));
         this.productionChest = tag.contains("ProductionChest") ? BlockPos.of(tag.getLong("ProductionChest")) : null;
         this.oldProductionChest = tag.contains("OldProductionChest") ? BlockPos.of(tag.getLong("OldProductionChest")) : null;
         this.bornDay = tag.contains("BornDay") ? tag.getLong("BornDay") : UNKNOWN;

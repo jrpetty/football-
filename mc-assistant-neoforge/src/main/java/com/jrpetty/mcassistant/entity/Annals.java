@@ -1122,6 +1122,9 @@ public final class Annals {
             else out.add("+The larder is full enough: " + String.format(Locale.ROOT, "%.1f", b.days()) + " days put by, "
                 + Math.round(b.inAvg()) + " meals in a day against " + Math.round(b.useAvg()) + " eaten.");
         }
+        // Meals: did everybody eat, the children and the old as well as the hands at their work (Meals).
+        String meals = Meals.townLine(id);
+        if (meals != null) out.add(meals);
         // Output: up or down, and which trades moved it.
         int outNow = sum(days, key("output"), days.size() - window, days.size());
         int prevFrom = Math.max(0, days.size() - 2 * window), prevTo = days.size() - window;

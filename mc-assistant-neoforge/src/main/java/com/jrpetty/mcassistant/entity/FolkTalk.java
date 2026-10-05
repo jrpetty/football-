@@ -302,6 +302,7 @@ public final class FolkTalk {
         // its tool, its spirits, the town, its years, the town's research and its own knacks.
         if (!f.isBaby() && job != AssistantEntity.StationTask.NONE) line(sb, "Pace", f.paceLine());
         line(sb, "Worth", Wealth.line(f));
+        line(sb, "Meals", Meals.line(f));
         net.minecraft.core.BlockPos bed = f.bedPos();
         String house = Homes.talk(f);
         line(sb, "Home", (house != null && !house.isEmpty() ? house + " " : "") + (bed == null ? "No bed of its own yet."
