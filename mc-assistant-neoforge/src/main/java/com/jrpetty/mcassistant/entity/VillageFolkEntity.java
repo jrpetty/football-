@@ -2962,7 +2962,11 @@ public class VillageFolkEntity extends AssistantEntity {
      * home, which a village never has enough of. Returns true if it found something.
      */
     private boolean lendOut(net.minecraft.server.level.ServerLevel server, UUID village) {
-        if (retireAChest(server, village)) return true;
+        // Not a miner, for the reason below: it is "worked out" for a minute between two runs (a
+        // short one backs it off, and the walk back from the stores counts as no work), and an
+        // old chest across the village took it off its mine for up to two thousand ticks at a
+        // time: t10's miners spent up to a fifth of their first day clearing chests.
+        if (stationTask() != StationTask.MINE && retireAChest(server, village)) return true;
         if (stashable() > 0) {
             sayRoutine("Nothing in my own line — taking this to the stores.");
             enqueue(storesDeposit());
@@ -5193,7 +5197,15 @@ public class VillageFolkEntity extends AssistantEntity {
         searchBearing++;
         BlockPos site = findSite(trade, radiusFor(trade));
         avoidHere = null;
-        if (site == null) return false;
+        if (site == null) {
+            // Nowhere else yet. The empty galleries are no less empty for that: the very next
+            // one looks again (on the next bearing round). Forgetting them meant three more
+            // empty runs before it so much as looked, a good part of a working day, and on
+            // ground as scarce as a hill or two the first look often finds nothing: one of t10's
+            // miners went the best part of five thousand ticks before it found its first plot.
+            if (barren) barrenMineRuns = 2;
+            return false;
+        }
         WorkZone zone = WorkZone.around(site, radiusFor(trade), depthFor(trade, site));
         setStation(site, trade);
         assignPlot(zone, patchNameFor(trade));

@@ -3188,6 +3188,7 @@ public class VillageGameTests {
                 int dug = 0;
                 for (AssistantEntity a : crew) dug += a.deedCount(AssistantEntity.Deed.BLOCKS_MINED);
                 Kit.log("  stone in chests + built: " + stoneBanked + "; blocks dug by the crew: " + dug);
+                Kit.log("  " + minersReport(crew));
                 dugFirst[0] = dug;
                 ex.that(dug >= 20, "the miners have dug (" + dug + " blocks)");
                 ex.that(world.get("wheat") > 0 || chests.getOrDefault("wheat", 0) > 0,
@@ -3217,6 +3218,7 @@ public class VillageGameTests {
                 int dug = 0;
                 for (AssistantEntity a : crew) dug += a.deedCount(AssistantEntity.Deed.BLOCKS_MINED);
                 Kit.log("  stone in chests + built: " + stoneBanked + "; blocks dug by the crew: " + dug);
+                Kit.log("  " + minersReport(crew));
                 // Still at it on the second day: more dug than by the first afternoon, and a fair
                 // pile in all (106 and 78 on two runs of the same build; the patches on this
                 // ground are shallow, and a hand moves on from a spent one).
@@ -3235,6 +3237,19 @@ public class VillageGameTests {
                 if (ex.clean()) helper.succeed(); else helper.fail(ex.summary());
             }
         });
+    }
+
+    /** Each miner's own count, so a report says which mine is pulling its weight: what it has
+     *  dug, in how many runs, and how many of the last ones in a row came home empty. */
+    private static String minersReport(List<AssistantEntity> crew) {
+        StringBuilder sb = new StringBuilder("miners:");
+        for (AssistantEntity a : crew) {
+            if (a.stationTask() != StationTask.MINE) continue;
+            sb.append(' ').append(a.displayNameCap()).append(' ')
+                .append(a.deedCount(AssistantEntity.Deed.BLOCKS_MINED)).append(" dug in ")
+                .append(a.mineRuns).append(" runs (").append(a.barrenMineRuns).append(" empty);");
+        }
+        return sb.toString();
     }
 
     /**
