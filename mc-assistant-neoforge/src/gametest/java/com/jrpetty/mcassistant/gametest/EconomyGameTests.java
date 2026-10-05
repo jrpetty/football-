@@ -1053,6 +1053,7 @@ public class EconomyGameTests {
         }
         hunter.moveTo(grounds.getX() + 0.5, grounds.getY(), grounds.getZ() + 0.5, 0.0F, 0.0F);
         Predicate<ItemStack> meat = st -> st.is(Items.PORKCHOP) || st.is(Items.COOKED_PORKCHOP) || st.is(Items.MUTTON) || st.is(Items.COOKED_MUTTON);
+        final boolean[] counted = { false };
         helper.onEachTick(() -> {
             long t = helper.getTick();
             Villages.noteAttempt(hunter.ownerId(), level.getGameTime());
@@ -1064,6 +1065,13 @@ public class EconomyGameTests {
                 net.minecraft.world.entity.LivingEntity::isAlive).size();
             int got = hunter.countCarried(meat) + inChests(level, x, Z, 50, meat);
             if (t % 500 == 0) Kit.log("ec12 @" + t + ": pigs " + pigs + ", sheep " + sheep + ", meat " + got + " — " + hunter.debugLine());
+            // The game puts the animals down a moment after they are made (once they read as none at the first
+            // look, and the test failed before the hunter had stirred): the pairs are watched from when all are counted.
+            if (!counted[0]) {
+                if (pigs >= 2 && sheep >= 2) counted[0] = true;
+                else if (t >= 600) helper.fail("the animals never came into the world: pigs " + pigs + ", sheep " + sheep);
+                if (!counted[0]) return;
+            }
             if (pigs < 2 || sheep < 2) {
                 helper.fail("the hunter took one of the last pair: pigs " + pigs + ", sheep " + sheep);
                 return;
