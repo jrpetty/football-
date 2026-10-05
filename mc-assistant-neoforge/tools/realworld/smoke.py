@@ -266,11 +266,14 @@ def main():
     shot("15-talk-trade")
     say("alive after talking: %s" % client_alive())
     # The town's books (the analytics screen the village board opens): eight mornings
-    # first, so there are days in them, then a picture of each page.
+    # first, so there are days in them, with an hour or so of the village's work in each
+    # (four times the speed for fifteen seconds), then a picture of each page.
     try:
+        say("speed: " + r.cmd("village speed 4"))
         for d in range(8):
             r.cmd("time add 24000")
-            time.sleep(4)
+            time.sleep(15)
+        say("speed: " + r.cmd("village speed 1"))
         say("stats: " + r.cmd("village stats"))
         for page, name in ((0, "overview"), (1, "growth"), (2, "money"), (3, "production"), (4, "jobs"), (5, "folk"),
                            (6, "society"), (7, "leader"), (8, "homes"), (9, "buildings"), (10, "stores"), (11, "why"),
