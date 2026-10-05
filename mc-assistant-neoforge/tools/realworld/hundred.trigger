@@ -1,1 +1,1 @@
-the hundred days, on b207 part 4 (fields the farmers can walk to, walk-map routing, a camp on good ground, out of the water, a wider founders' camp): 2026-10-05T08:34:29Z
+the hundred days, on b212 (every bed in a house is a home, camp beds moved one at a time, timber kept for the builders and the hall on steeper ground, the leader running the village, buildings growing with the ages): 2026-10-05T09:54:25Z
