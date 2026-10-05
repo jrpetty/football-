@@ -62,6 +62,8 @@ public class CityScreen extends Screen {
     private String prodKind, prodItem;
     /** The shops page: the seller shown (by id; null: the first that stands). */
     private String shopSeller;
+    /** The Jobs page at its other view: the job market between towns (JobMarketPage). */
+    private boolean jobsMarket;
     private int prodSort = 7;
     private boolean prodDown = true;
     /** What can be clicked on the page just drawn: its box and what a click does. */
@@ -93,7 +95,9 @@ public class CityScreen extends Screen {
             next.tab = open.tab;
             next.range = open.range;
             next.selectedTrade = open.selectedTrade;
+            next.jobsMarket = open.jobsMarket;
         }
+        if (data.getBoolean("jobmarket_view")) next.jobsMarket = true;       // /village jobs books
         if (data.contains("tab")) next.tab = Math.max(0, Math.min(TABS.length - 1, data.getInt("tab")));   // a page asked for
         mc.setScreen(next);
     }
@@ -684,6 +688,27 @@ public class CityScreen extends Screen {
     }
 
     private void jobs(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my) {
+        // Two views of the page, a switch at the top: the trades, and the job market between towns (JobMarketPage).
+        CompoundTag market = data.getCompound("jobmarket");
+        String[] views = { "The trades", JobMarketPage.label(market) };
+        int vx = x;
+        for (int i = 0; i < 2; i++) {
+            boolean on = (i == 1) == jobsMarket;
+            int bw = (int) (font.width(views[i]) * 0.75F) + 8;
+            g.fill(vx, y - 1, vx + bw, y + 8, on ? Ui.ROW_PICK : Ui.ROW);
+            g.renderOutline(vx, y - 1, bw, 9, Ui.EDGE_SOFT);
+            small(g, views[i], vx + 4, y + 1, on ? Ui.GOOD : Ui.MUTED);
+            final boolean market_ = i == 1;
+            zones.add(new Zone(vx, y - 1, vx + bw, y + 8, () -> { jobsMarket = market_; scroll = 0; }));
+            vx += bw + 3;
+        }
+        y += 12;
+        ch -= 12;
+        if (jobsMarket) {
+            List<Component> tip = JobMarketPage.draw(g, font, market, x, y, cw, ch, scroll, mx, my);
+            if (tip != null) { hover = tip; hoverX = mx; hoverY = my; }
+            return;
+        }
         List<CompoundTag> jobs = compounds("jobs");
         jobs.sort(Comparator.comparingInt((CompoundTag c) -> c.getInt("week")).reversed().thenComparing(c -> -c.getInt("hands")));
         int tableH = Math.min(ch / 2 + 20, 14 + jobs.size() * 11);
@@ -2258,7 +2283,8 @@ public class CityScreen extends Screen {
             if (mx >= tx && mx < tx + tw && my >= ty && my < ty + 13) { tab = i; scroll = 0; return true; }
         }
         int x = left + 8, y = pageTop(), cw = w - 16;
-        if (page().equals("Jobs")) {
+        if (page().equals("Jobs") && !jobsMarket) {
+            y += 12;                                       // under the switch between the trades and the job market
             // A trade picked from the table: its own history below.
             List<CompoundTag> jobs = compounds("jobs");
             jobs.sort(Comparator.comparingInt((CompoundTag c) -> c.getInt("week")).reversed().thenComparing(c -> -c.getInt("hands")));

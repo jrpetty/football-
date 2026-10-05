@@ -33,6 +33,7 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  *   /village research         the city's research: what the leader has the town studying, and the tree
  *   /village research pick|grant &lt;civic&gt;   study this civic now, or have it done (ops; for tests)
  *   /village speed 16|max|normal   time runs faster, to watch a village grow (ops / world owner)
+ *   /village jobs [why|books|post|decide|look|want|pact]   the job market between towns (JobMarketCommands)
  * </pre>
  */
 public final class VillageCommands {
@@ -135,6 +136,8 @@ public final class VillageCommands {
                 .then(Commands.literal("let")
                     .then(Commands.argument("coins", IntegerArgumentType.integer(0, 20))
                         .executes(ctx -> house(ctx, "let", IntegerArgumentType.getInteger(ctx, "coins"))))))
+            // The job market between towns: the notices, the applications, who came and went (JobMarketCommands).
+            .then(JobMarketCommands.node())
             .then(Commands.literal("wages").executes(ctx -> page(ctx, 2)))
             .then(Commands.literal("economy").executes(ctx -> page(ctx, 3)))
             // The sellers' books: what the shop, the café, the tavern and the stores have, sell and make.

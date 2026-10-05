@@ -357,6 +357,7 @@ public final class Villages {
         Diplomacy.resetForTests();
         Envoys.resetForTests();
         TownJobs.resetForTests();
+        JobMarket.resetForTests();
         Market.resetForTests();
         Homeland.resetForTests();
         Economy.resetForTests();

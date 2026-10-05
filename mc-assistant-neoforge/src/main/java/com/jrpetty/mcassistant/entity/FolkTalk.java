@@ -295,6 +295,7 @@ public final class FolkTalk {
         }
         String levels = f.tradeLevels();
         if (!levels.isEmpty() && levels.contains(",")) line(sb, "Has worked", levels);
+        if (!f.isBaby()) line(sb, "Job market", JobMarket.cardLine(f));       // applied elsewhere, or came from elsewhere (JobMarket)
         if (!f.isBaby()) line(sb, "At its work", Skill.line(f));
         // How quick it is at its work, and why, part by part (AssistantEntity.paceLine): its level,
         // its tool, its spirits, the town, its years, the town's research and its own knacks.

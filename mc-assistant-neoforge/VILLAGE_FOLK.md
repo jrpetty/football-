@@ -2736,6 +2736,80 @@ Every alliance, feud, truce, border, marriage and tribute goes into both village
 (border, truce, pact, alliance, marriages, warm memories or a grudge). `/village status`
 gives the council, the citizens and the neighbours.
 
+### The job market between towns
+
+Towns that know each other trade hands as well as goods. A town short of a pair of hands
+puts a notice up on its village board; folk in the towns round about who have a reason to
+move read it on their own boards, apply, and the best of them comes.
+
+**Wanted notices.** A town puts a notice up when it is a whole hand short at a trade it
+needs (or has nobody at all at one it wants), or when a new workplace stands with nobody in
+it: a smithy wants a smith, a café a cook, a library an enchanter; a school, a bank or a
+stable too, once the town has them. Idle hands at home take up its wants first. The notice
+says the trade, the wage (the trade's rate at the place's standing, at the leader's rate:
+what it will really pay out of the treasury), and what it wants: some years at the trade,
+and an age where it matters (the watch able-bodied, eighteen to fifty; the mines and the
+woods strong backs, up to sixty; a teacher an older, wiser head, thirty-five or more). A
+town that cannot pay posts nothing; three notices at most; a notice nobody answers comes
+down after six days, and one the town filled from its own folk comes down at once.
+
+**Who hears of them.** Word goes by the roads, the caravans and the elders' dealings. A
+colony and its mother village see each other's notices the day they go up (and a laid road
+between them makes going easiest of all), and so do towns with a trade pact or an alliance.
+Neighbours who know each other hear of them a day later. Rivals hear too, but it takes more
+to make a folk go over to them, and an elder who mistrusts a rival will not take its folk
+on. A town that has never met another hears nothing of it.
+
+**Who goes looking.** Only a folk with a reason: out of work, or idle at a trade its town
+has more hands at than it needs; paid less than a notice elsewhere offers (by what that
+town's paydays really pay, against its own); unhappy at home; family living in the other
+town; or young, with no trade much learned yet, wanting a start. It takes enough of them
+to go (more to go over to a rival, and more again if its own town is short of its trade).
+Folk with no reason stay put, and the elder never goes, nor the builder leading a build,
+nor a newcomer not five days settled. On its free time (its break, the evening before bed,
+the day of rest, or any time if it has no work) a folk with a reason walks to its own
+board, stands and reads the notices ("Wanted, a miner in Oakhollow, two a day, some years
+at it..."), and if one suits it, it puts its name down: an application to that town.
+
+**The leader decides.** A while after the first application comes (or as soon as three
+have), the hiring town's elder looks the applicants over: their level at the trade and the
+knacks of it they chose, their years (too old for the mines, too young to teach; an old
+head counts where wisdom is wanted), how cheerful or sour they are, family already in the
+town, and how the two towns stand (a shrewd elder weighs the years at the trade above all;
+a warm one gives the young a start; a wary one is slow to take a stranger). The best gets
+the place; the others are told no and why, and say so when you are about ("Too old for the
+mines, Oakhollow says. Hmph."). An elder that could do better holds out a day or two for a
+hand with the years the notice asked for. And the applicant's own town must be able to
+spare it: a town keeps four grown folk at least, its last farmer, its last guard behind a
+wall, and no more than one in eight of its folk leave for work elsewhere in a week.
+
+**The move.** Taken on, the folk says so, walks to the square and says its goodbyes (its
+friends see it off), and goes: what it carries of the village's goods back into the
+stores, its own things out of its house's chest, off the old town's roll and onto the new
+one's, and down the road the caravans take, its partner and children with it if it has
+them. The new town pays its road money, a coin a hundred blocks. At the other end it is
+found a home (an empty house for the household, or a bed at the camp) and takes up the
+trade it was taken on for. Both chronicles tell it, the morning assembly welcomes it, and
+the old town, one hand short now, may put up a notice of its own. Because the wages differ
+by town, folk drift, slowly, to where they are paid and needed.
+
+**Refugees.** A raid that leaves folk without a bed (their beds gone from under them, their
+house left with none) sends them, with their households, to the nearest friendly town with
+room, once no bed can be found at home. The town takes them in: a bed found, work as they
+fit. If so few are left after a raid that the village cannot go on, they all go, sharing
+out what was in its treasury, and the village is given up. Both chronicles tell it, and the
+two towns think the better of each other for it.
+
+**Where you see it.** The board shows the town's Wanted notices (and how many have applied),
+word of other towns' notices from the road, who is on the road here, and who came and went
+this week. The city books' **Jobs** page has a switch at the top: **Between towns** lists
+every notice and how it went, every application with the applicant's level, age and knacks,
+why it applied and the leader's verdict (the mouse over a row for all of it), who came and
+went this week and why, who is on the road here, and what the other towns want. A folk's
+card says what it applied for, that it was taken on and is saying its goodbyes, that it is on
+the road, or where it came from and why ("Came from Riverford for the wages, to work as a
+miner"). `/village jobs` gives the same from the console.
+
 ### Every town its own: the land
 
 When a village is founded it looks over its land, and the land shapes it:
@@ -3031,6 +3105,17 @@ ripen, days pass, folk work and houses go up at that pace.
 * `/village ledger` — the nearest village's town ledger, as a book.
 * `/village relations` — every pair of neighbouring villages: allies, friends, uneasy,
   in a feud, how far apart, and whether they are kin.
+* `/village jobs` — the nearest town's job market: its notices and how each went, the
+  applications with each applicant's level, age and knacks, why it applied and the verdict,
+  who is on the road here, what other towns want that word of has come here, and who came and
+  went this week. `jobs why <name>` says what a folk would make of the notices (its reasons, or
+  why it stays); `jobs books` opens the city books at the job market. For operators: `jobs post`
+  (the town looks over its notices now), `jobs decide` (its leader decides the applications now),
+  `jobs look [name]` (a folk, or the one with most reason to, goes to read the board now: it reads
+  the notices out, and applies only if one is for it and it has a reason to go), `jobs want <trade>`
+  (the town puts a notice up for that trade now, at the trade's real wage, whatever it is short of),
+  and `jobs pact` (the nearest town and its nearest neighbour agree to trade, so word of their
+  notices passes).
 * `/village talk [words]` — (operators) talk with the nearest folk, as a right-click
   would; with words, say them to it.
 * `/village lineup` — (operators) one folk of every trade, dressed and holding
@@ -3106,6 +3191,15 @@ Every push to CI:
   the elder speaks (`t50`), and holds an election (`t51`);
 * sends an envoy to offer trade and checks the other village gathers to hear it and
   answers (`t52`);
+* runs the job market between two towns two hundred blocks apart (`jm01`): a town short of a
+  miner puts a notice up, a town that has never met it hears nothing and one with a trade pact
+  hears of it the same day; that town's three idle miners walk to their own board, read it and
+  apply; the leader takes the twelve-level miner of thirty and turns down the fifteen-level one
+  of sixty-four (too old for the mines) and the learner; the one taken on walks the road, joins
+  the new town's roll and takes up mining, and its card and both towns' books say so. Four folk
+  whose beds a raid burned are taken in by a friendly neighbour with beds to spare, found a bed
+  and work (`jm02`); and of two folk sent to read the board, the one out of work applies and the
+  one with no reason to move does not go (`jm03`);
 * sends a scout 260 blocks to a town it has never seen and checks it finds it, comes
   home and can tell you where it is (`t53`);
 * checks a street is not laid until a folk from the village has walked to it (`t54`);

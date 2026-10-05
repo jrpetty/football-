@@ -234,6 +234,7 @@ public final class McAssistantMod {
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Citizens.class);
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Laws.class);
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Diplomacy.class);
+        NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.JobMarket.class);
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Quests.class);
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Hire.class);
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Land.class);
