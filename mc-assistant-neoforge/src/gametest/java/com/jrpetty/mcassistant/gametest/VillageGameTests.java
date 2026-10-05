@@ -5082,4 +5082,78 @@ public class VillageGameTests {
             "the bed beside a claimed one is free to claim: " + a.bedPos() + ", " + b.bedPos());
         helper.succeed();
     }
+
+    /**
+     * The village chooses its leader (Elections). Folk care about different things (Values) and vote
+     * by them: one who cares for the larder above all prefers the one who stands for it. The ones
+     * the village thinks most of stand, each for something of its own; on the day the folk walk to
+     * the board to vote; the count makes the winner leader, with what it promised as its mandate;
+     * and a leader's death calls an election two days on.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 1600, batch = "t76_election")
+    public static void t76_election(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 80000, 12000, 48);
+        Kit.prepare(level, 80000, 12000, 48);
+        level.setDayTime(24000L * 9 + 2000);
+        BlockPos heart = Kit.surface(level, 80000, 12000);
+        int stood = VillageFolkSpawnerBlock.raiseParty(level, heart, 0.0F, 8);
+        Villages.Village v = Villages.nearest(level, heart, Villages.VILLAGE_RANGE);
+        helper.assertTrue(v != null && stood >= 6, "a village of eight: " + stood);
+        java.util.UUID id = v.id();
+        long[] day = new long[1];
+        helper.runAtTickTime(40, () -> {
+            day[0] = level.getDayTime() / 24000L;
+            java.util.List<VillageFolkEntity> folk = new java.util.ArrayList<>();
+            for (AssistantEntity a : Villages.folkOf(id)) if (a instanceof VillageFolkEntity f) { f.ensurePersona(); folk.add(f); }
+            // What a folk cares about decides how it votes.
+            VillageFolkEntity voter = folk.get(0);
+            com.jrpetty.mcassistant.entity.Values.setForTests(voter, com.jrpetty.mcassistant.entity.Values.Value.FOOD, 95);
+            com.jrpetty.mcassistant.entity.Values.setForTests(voter, com.jrpetty.mcassistant.entity.Values.Value.SAFETY, 5);
+            String pick = com.jrpetty.mcassistant.entity.Elections.preferForTests(level, voter,
+                java.util.UUID.randomUUID(), com.jrpetty.mcassistant.entity.Values.Value.FOOD,
+                java.util.UUID.randomUUID(), com.jrpetty.mcassistant.entity.Values.Value.SAFETY);
+            Kit.log("t76 a folk who minds the larder (" + com.jrpetty.mcassistant.entity.Values.describe(voter) + ") between the larder and the watch: " + pick);
+            helper.assertTrue(pick.startsWith("A|"), "one who cares for the larder votes for the one who stands for it: " + pick);
+            StringBuilder types = new StringBuilder();
+            for (VillageFolkEntity f : folk) types.append(f.displayNameCap()).append(' ').append(com.jrpetty.mcassistant.entity.Values.brief(f)).append("; ");
+            Kit.log("t76 the village's folk: " + types);
+            // The ones who stand.
+            int standing = com.jrpetty.mcassistant.entity.Elections.callForTests(level, v, day[0]);
+            java.util.List<String> who = com.jrpetty.mcassistant.entity.Elections.standingForTests(id);
+            java.util.List<String> board = com.jrpetty.mcassistant.entity.Elections.board(id, day[0]);
+            Kit.log("t76 standing: " + who + "; the board: " + board);
+            helper.assertTrue(standing >= 2, "at least two stand: " + who);
+            helper.assertTrue(board.stream().anyMatch(l -> l.contains("ELECTION TODAY")), "the board calls the village to vote: " + board);
+            // The polls open: late in the day every folk's hour has come.
+            level.setDayTime(day[0] * 24000L + 10500);
+        });
+        helper.runAtTickTime(900, () -> {
+            int voted = 0, walked = 0;
+            for (AssistantEntity a : Villages.folkOf(id)) {
+                boolean[] b = com.jrpetty.mcassistant.entity.Elections.votedForTests(id, a.getUUID());
+                if (b[0]) voted++;
+                if (b[1]) walked++;
+            }
+            Kit.log("t76 the polls: " + voted + " voted, " + walked + " walked to the board; " + com.jrpetty.mcassistant.entity.Elections.line(id, day[0]));
+            helper.assertTrue(walked >= 1, "folk walk to the board to cast their votes: " + walked);
+            com.jrpetty.mcassistant.entity.Elections.Result r = com.jrpetty.mcassistant.entity.Elections.countForTests(level, v);
+            java.util.UUID elder = Villages.elder(id);
+            Kit.log("t76 the count: winner " + (r.winner() == null ? "none" : r.winner().name() + " for " + r.winner().platform())
+                + ", " + r.voted() + " of " + r.voters() + " voted; elder now " + Villages.elderName(id)
+                + "; mandate " + com.jrpetty.mcassistant.entity.Elections.mandate(id) + "; " + com.jrpetty.mcassistant.entity.Elections.line(id, day[0]));
+            helper.assertTrue(r.winner() != null && r.winner().id().equals(elder), "the winner leads");
+            helper.assertTrue(r.voted() == r.voters(), "every grown folk's vote is counted: " + r.voted() + " of " + r.voters());
+            helper.assertTrue(com.jrpetty.mcassistant.entity.Elections.mandate(id) == r.winner().platform(), "with what it stood for as its mandate");
+            // The leader dies: an election two days on.
+            for (AssistantEntity a : Villages.folkOf(id)) if (a.getUUID().equals(elder)) a.kill();
+        });
+        helper.runAtTickTime(920, () -> {
+            String line = com.jrpetty.mcassistant.entity.Elections.line(id, day[0]);
+            Kit.log("t76 after the leader's death: " + line);
+            helper.assertTrue(line.contains("next on day " + (day[0] + 2)), "an election is called two days on: " + line);
+            helper.succeed();
+        });
+    }
 }

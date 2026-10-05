@@ -369,7 +369,8 @@ public final class VillageCommands {
             final String line = f.life().describe(f.displayNameCap(), f.stationTask().title)
                 + " Feeling " + com.jrpetty.mcassistant.entity.Persona.moodWord(f.persona().mood())
                 + "; loves " + f.persona().hobby().doing + "; hopes " + f.persona().ambition().hope
-                + (f.persona().ambitionMet() ? " (and did)" : "") + ".";
+                + (f.persona().ambitionMet() ? " (and did)" : "") + "."
+                + (f.isBaby() ? "" : " " + capitalFirst(com.jrpetty.mcassistant.entity.Values.describe(f)) + ".");
             ctx.getSource().sendSuccess(() -> Component.literal(line), false);
         }
         return folk.size();
@@ -625,6 +626,7 @@ public final class VillageCommands {
             com.jrpetty.mcassistant.entity.Orders.Order order = com.jrpetty.mcassistant.entity.Orders.current(id);
             sb.append(". Elder's orders: ").append(order == null ? "none yet" : order.title);
             sb.append(". Leader: ").append(com.jrpetty.mcassistant.entity.Leader.line(id));
+            sb.append(". Election: ").append(com.jrpetty.mcassistant.entity.Elections.line(id, level.getDayTime() / 24000L));
             java.util.Map<java.util.UUID, String> citizens = com.jrpetty.mcassistant.village.Ledger.citizens(id);
             if (!citizens.isEmpty()) sb.append("; citizens ").append(String.join(", ", citizens.values()));
             String n = com.jrpetty.mcassistant.entity.Diplomacy.status(id);
@@ -679,5 +681,9 @@ public final class VillageCommands {
         if (needs.isEmpty()) sb.append(" nothing — about to come of age.");
         for (Villages.Need n : needs) sb.append(' ').append(n.what()).append(';');
         return sb.toString();
+    }
+
+    private static String capitalFirst(String s) {
+        return s.isEmpty() ? s : Character.toUpperCase(s.charAt(0)) + s.substring(1);
     }
 }

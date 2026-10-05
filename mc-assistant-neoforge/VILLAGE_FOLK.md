@@ -1633,6 +1633,73 @@ hears it. `/village status` shows the leader, its nature, how much food it recko
 by and the plan; the board shows it too; and the elder will tell you itself when you ask
 about its orders.
 
+### What each folk cares about
+
+Every grown folk weighs seven things a village can be run for, and the heaviest names the kind of
+folk it is:
+
+| It cares most for | It is a… | With an hour to itself it… |
+|---|---|---|
+| a full larder | Provider | looks over the fields |
+| a home for every family | Homemaker | tidies round its house |
+| the next age | Visionary | watches the new building go up |
+| safe streets | Guardian | walks the wall, keeping an eye out |
+| good wages and trade | Merchant | sees what is for sale at the market or shop |
+| rest and merriment | Free Spirit | idles the hour away at the tavern |
+| the old ways | Traditionalist | sits quietly by the chapel or the well |
+
+It starts from its two traits (a hardworking folk minds the next age, a generous one the larder and
+homes, a grumpy one safety, a shy one the old ways) and a little of its own, and then its life moves
+it, a little each day:
+
+* **What happens to it.** Going hungry makes it mind the larder; a night on the ground makes it want
+  homes built; seeing the raiders come, or being hurt, makes it want the watch; a short wage makes it
+  want better pay; a feast or a day of rest, merriment; a death, the old ways.
+* **Its trade, more as it rises in it.** A farmer, fisher or cook learns what a larder is for; a
+  miner, smelter or smith what the next age is for; a guard what safety is for; a shopkeeper or
+  hauler what trade is for. A master of its trade feels it most.
+* **The people it loves.** Each day it leans a little toward what its partner and its best friend
+  care about most, so a village grows its own camps.
+
+Ask one about the vote and it tells you what kind of folk it is. `/village people` shows each folk's
+kind and `/village folk` its weights (`type=Provider(food 62,safety 40)`).
+
+### Elections
+
+Every ten days the village chooses its leader (its elder, thane, mayor or reeve: the land decides the
+word).
+
+* **Two days before**, the ones the village thinks most of stand, the leader in office again if it
+  will: liked by many, long in the village, good at its trade, sociable or hardworking rather than
+  shy. Two stand in a small village, three or four in a town. Each stands for what it cares about
+  most (or its second care, if another already stands for the first) and promises it: "a full larder:
+  wider fields and more hands on the water", "on to the Iron Age: more picks in the mine and the
+  furnaces kept hot", "safe streets: the watch walking every road, day and night". They say so at the
+  morning assembly, the board in the square lists them, and folk argue it over in the street ("Who
+  are you voting for?" "Fen. We've stood still too long, and they'll take us on.").
+* **On the day** each grown folk walks to the board at an hour of its own, when its work allows, and
+  casts its vote there, with a word to anyone nearby about who and why. It votes for whoever it judges
+  best:
+  * what the candidate stands for against what it cares about;
+  * what the village needs just now, as it feels it (hungry folk want the larder filled, folk on the
+    ground want homes, folk who saw the raiders want the watch, folk paid short want better wages);
+  * the people: a partner, family, friends, and folk it cannot abide;
+  * a nature like its own, and a hand that knows its trade;
+  * and, for the one in office, how it has done by them on what it promised.
+* **At dusk** the village gathers at the board, those who stand speak, the votes are counted aloud
+  and the winner is announced. The others answer in their own way: a generous loser offers its help,
+  a grumpy one says "we'll see how long that lasts". Rain does not put off the count.
+* **The mandate.** What the winner stood for steers the village until the next election: a
+  Provider's village orders more hands to the fields and keeps half a day more food put by, a
+  Homemaker's builds houses sooner, a Visionary's digs, a Guardian's mans the walls, a Merchant's pays
+  better, a Free Spirit's takes longer breaks. At the next election the one in office is judged on it,
+  and folk will tell you whether it kept its word.
+* The one elected leads its whole term, through restarts. If it dies, someone speaks for the village
+  and an election is held two days later.
+
+`/village status` shows the election (who stands and the count so far, or the last result and the
+next day), and the board shows it too.
+
 ### Neighbours: rivals, allies and feuds
 
 Villages within about six hundred blocks of each other have dealings, and what each

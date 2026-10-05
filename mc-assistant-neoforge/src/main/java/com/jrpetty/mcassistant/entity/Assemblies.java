@@ -194,10 +194,11 @@ public final class Assemblies {
             if (next == null && day % 7 == 3 && !held(id, Kind.COUNCIL, day) && Council.members(id).size() >= 3) {
                 next = council(level, v, day);
             }
-            if (next == null && day % 7 == 5 && day > 0 && !held(id, Kind.ELECTION, day) && adults(id) >= 5) {
+            if (next == null && Elections.countsToday(id, day) && !held(id, Kind.ELECTION, day)) {
                 next = election(level, v, day);
             }
-            if (next != null && level.isRaining() && next.kind != Kind.VIGIL && next.kind != Kind.COUNCIL) next = null;   // put off
+            // Rain puts off a feast, not a vigil, the council, or the count of an election.
+            if (next != null && level.isRaining() && next.kind != Kind.VIGIL && next.kind != Kind.COUNCIL && next.kind != Kind.ELECTION) next = null;
         }
         boolean several = next != null && (next.kind == Kind.OPENING || next.kind == Kind.ENVOY);
         if (next == null || held(id, next.kind, day) && !several) return;
@@ -912,26 +913,7 @@ public final class Assemblies {
                 s.add(new Line(guest, ans.yes() ? FolkTalk.pick(r, "Thank you! They'll be glad to hear it.", "I'll tell them at once!")
                     : FolkTalk.pick(r, "I'll take your answer home, then.", "So be it. I'll tell them."), ' ', () -> Envoys.heard(guest)));
             }
-            case ELECTION -> {
-                long dayNow = level.getDayTime() / 24000L;
-                LinkedHashMap<VillageFolkEntity, Integer> votes = Villages.election(id, dayNow);
-                if (votes.isEmpty()) return;
-                List<String> names = new ArrayList<>();
-                StringBuilder count = new StringBuilder();
-                VillageFolkEntity winner = null;
-                for (Map.Entry<VillageFolkEntity, Integer> e : votes.entrySet()) {
-                    if (winner == null) winner = e.getKey();
-                    names.add(e.getKey().displayNameCap());
-                    if (count.length() > 0) count.append(", ");
-                    count.append(e.getKey().displayNameCap()).append(' ').append(e.getValue());
-                }
-                final VillageFolkEntity elected = winner;
-                s.add(new Line(null, "It is time to choose our elder.", '?', null));
-                s.add(new Line(null, "Standing: " + String.join(", ", names) + ".", ' ', null));
-                s.add(new Line(null, "The count: " + count + ".", '?', null));
-                s.add(new Line(null, elected.displayNameCap() + " is our elder!", '!', () -> Villages.electElder(id, elected, dayNow)));
-                s.add(new Line(elected.getUUID(), FolkTalk.pick(r, "Thank you. I'll do my best by all of you.", "I won't let you down."), '!', null));
-            }
+            case ELECTION -> Elections.script(level, id, s, r);
             case COMING_OF_AGE -> {
                 String[] parts = a.subject.split("\\|", -1);
                 String who = parts[0];

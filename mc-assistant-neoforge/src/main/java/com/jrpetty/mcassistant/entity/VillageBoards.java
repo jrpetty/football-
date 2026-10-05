@@ -318,7 +318,7 @@ public final class VillageBoards {
         if (tonight != null) out.add("RG|Tonight: " + Gatherings.describe(tonight, id) + " — everybody welcome.");
         for (String p : Assemblies.planned(id)) out.add("RG|This evening: " + p + ".");
         if (day % 7 == 3) out.add("RM|The council sits this evening.");
-        if (day % 7 == 5 && day > 0) out.add("RM|This evening: the election of the elder.");
+        out.addAll(Elections.board(id, day));
 
         // ---- what we're working towards
         out.add("FH|What we're working towards");

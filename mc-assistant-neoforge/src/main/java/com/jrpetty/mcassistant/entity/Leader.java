@@ -154,6 +154,8 @@ public final class Leader {
                 default -> 1.0;
             };
         }
+        // Elected for rest and merriment (Elections): longer breaks.
+        if (Elections.mandate(village) == Values.Value.LEISURE) s *= 1.1;
         return s;
     }
 
@@ -228,7 +230,9 @@ public final class Leader {
                 case EASYGOING -> 1.5;
             };
         }
-        return sum / n.traits().size();
+        // Elected for a full larder (Elections): half a day more put by.
+        double extra = Elections.mandate(village) == Values.Value.FOOD ? 0.5 : 0.0;
+        return sum / n.traits().size() + extra;
     }
 
     /** The leader's usual pay, in the hundred of the standard wage. */
@@ -245,7 +249,9 @@ public final class Leader {
                 default -> 0;
             };
         }
-        return Math.max(85, Math.min(115, p));
+        // Elected for good wages (Elections): it pays them.
+        if (Elections.mandate(village) == Values.Value.WEALTH) p += 5;
+        return Math.max(85, Math.min(120, p));
     }
 
     /** Today's pay, in the hundred of the standard wage (Market.payWages). */

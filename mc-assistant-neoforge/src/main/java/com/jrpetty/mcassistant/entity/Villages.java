@@ -195,12 +195,31 @@ public final class Villages {
 
     /** Elected: the elder until the next election, or until it is gone. */
     public static void electElder(UUID villageId, VillageFolkEntity f, long day) {
+        electElder(villageId, f.getUUID(), f.displayNameCap(), day, f);
+    }
+
+    /** Elected (Elections): kept in the Ledger, so the one the village chose leads its whole term, restarts and all. */
+    public static void electElder(UUID villageId, UUID who, String name, long day, @Nullable VillageFolkEntity f) {
         Elder was = ELDERS.get(villageId);
-        ELDERS.put(villageId, new Elder(f.getUUID(), f.displayNameCap(), day));
+        ELDERS.put(villageId, new Elder(who, name, day));
         ELECTED_ON.put(villageId, day);
-        if (was == null || !was.id().equals(f.getUUID())) {
-            tell(villageId, day, f.displayNameCap() + " was elected elder");
-            f.persona().remember(day, "the village elected me its elder", 9);
+        com.jrpetty.mcassistant.village.Ledger.note(villageId, "elder", who + "|" + name + "|" + day);
+        if (was == null || !was.id().equals(who)) {
+            tell(villageId, day, name + " was elected " + Homeland.leaderTitle(villageId));
+            if (f != null) f.persona().remember(day, "the village elected me its " + Homeland.leaderTitle(villageId), 9);
+        }
+    }
+
+    /** The one the village elected, if it still holds office (the Ledger, after a restart). */
+    @Nullable
+    private static Elder elected(UUID villageId) {
+        String saved = com.jrpetty.mcassistant.village.Ledger.note(villageId, "elder");
+        if (saved == null || saved.isEmpty()) return null;
+        String[] p = saved.split("\\|", 3);
+        try {
+            return new Elder(UUID.fromString(p[0]), p.length > 1 ? p[1] : "", p.length > 2 ? Long.parseLong(p[2]) : -1L);
+        } catch (RuntimeException e) {
+            return null;
         }
     }
 
@@ -249,15 +268,13 @@ public final class Villages {
     public static void chooseElder(UUID villageId, long day) {
         Elder now = ELDERS.get(villageId);
         if (now != null && now.day() == day) return;
-        // An elected elder serves until the next election, while it is with us.
-        Long elected = ELECTED_ON.get(villageId);
-        if (now != null && elected != null && day - elected < 8) {
-            for (AssistantEntity a : folkOf(villageId)) {
-                if (a.getUUID().equals(now.id()) && a.isAlive()) {
-                    ELDERS.put(villageId, new Elder(now.id(), now.name(), day));
-                    return;
-                }
-            }
+        // An elected leader serves its whole term (Elections), whether or not it happens to be about
+        // just now; only its death (Elections.vacancy) ends it early.
+        Elder office = elected(villageId);
+        if (office != null) {
+            ELDERS.put(villageId, new Elder(office.id(), office.name(), day));
+            if (office.day() >= 0) ELECTED_ON.putIfAbsent(villageId, office.day());
+            return;
         }
         List<VillageFolkEntity> folk = new ArrayList<>();
         for (AssistantEntity a : folkOf(villageId)) {
@@ -359,6 +376,7 @@ public final class Villages {
         LAPS.clear();
         DEFERRED.clear();
         DEFER_WHY.clear();
+        Elections.resetForTests();
         FOUNDED.clear();
         LEAD.clear();
         LEAD_AT.clear();
@@ -1395,8 +1413,10 @@ public final class Villages {
         else if (built(villageId, "storehouse") < 1 && !Storehouses.stands(villageId)) out.add("storehouse");
         if (built(villageId, "shelter") < 1) out.add("shelter");
         // Room before anything else: a village with every home full stops growing, and
-        // growing is the whole of how it gets the hands for everything after this.
-        boolean house = folk >= housing(villageId) - 2 || built(villageId, "house") < 1;
+        // growing is the whole of how it gets the hands for everything after this. A leader
+        // elected for homes (Elections) keeps more spare.
+        int spare = Elections.mandate(villageId) == Values.Value.HOMES ? 6 : 2;
+        boolean house = folk >= housing(villageId) - spare || built(villageId, "house") < 1;
         if (house) out.add("house");
         if (built(villageId, "well") < 1) out.add("well");
         // A house for the player the village has taken to its heart.

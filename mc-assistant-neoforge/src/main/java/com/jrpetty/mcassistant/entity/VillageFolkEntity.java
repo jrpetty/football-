@@ -329,6 +329,9 @@ public class VillageFolkEntity extends AssistantEntity {
             }
             return;
         }
+        // Election day (Elections): at its own hour, to the board to cast its vote.
+        if (!withAPlayer && tickCount % 4 == 2 && level() instanceof net.minecraft.server.level.ServerLevel polling
+                && Elections.goVote(this, polling)) return;
         // Called to the town's own work (TownJobs): to the spot, and at it.
         if (!withAPlayer && tickCount % 4 == 3 && level() instanceof net.minecraft.server.level.ServerLevel works
                 && TownJobs.hold(this, works)) return;
@@ -340,8 +343,13 @@ public class VillageFolkEntity extends AssistantEntity {
         ensurePersona();
         refreshMood();
         dreamCameTrue();
+        if (level() instanceof net.minecraft.server.level.ServerLevel valuing) Values.daily(valuing, this, level().getDayTime() / 24000L);
         if (ownerId() != null) {
             Villages.chooseElder(ownerId(), level().getDayTime() / 24000L);
+            if (level() instanceof net.minecraft.server.level.ServerLevel polls) {
+                Villages.Village home = Villages.get(ownerId());
+                if (home != null) Elections.tick(polls, home);
+            }
             if (level() instanceof net.minecraft.server.level.ServerLevel orders) Orders.consider(orders, ownerId(), level().getDayTime() / 24000L);
         }
         // The town's streets, worn and paved and lit a little at a time (TownWork).
@@ -366,6 +374,10 @@ public class VillageFolkEntity extends AssistantEntity {
     // Leisure (what it does with its own time).
 
     private final Persona persona = new Persona();
+    /** What it cares about (Values): set up from its nature, then moved by its life. */
+    final int[] values = new int[Values.N];
+    boolean valuesSet;
+    long valuesDay = -1;
     @Nullable private UUID talkingTo;
     private int talkUntil;
     @Nullable private UUID companion;
@@ -420,7 +432,7 @@ public class VillageFolkEntity extends AssistantEntity {
     /** Every coin of wages it has ever been paid. */
     private int earnedInAll;
     /** The day its wage went up (the place came up in the world), and the last day it was paid short. */
-    private long payRiseDay = -100, shortPaidDay = -100;
+    long payRiseDay = -100, shortPaidDay = -100;
 
     public int earnedInAll() { return earnedInAll; }
 
@@ -1288,6 +1300,10 @@ public class VillageFolkEntity extends AssistantEntity {
                 ? displayNameCap() + " died peacefully in their sleep, aged " + age
                 : displayNameCap() + " died, aged " + age);
             Gatherings.mourn(village, displayNameCap(), day);
+            // The leader gone: an election to choose another (Elections).
+            if (getUUID().equals(Villages.elder(village)) && level() instanceof net.minecraft.server.level.ServerLevel lost) {
+                Elections.vacancy(lost, village, displayNameCap(), day);
+            }
             for (AssistantEntity a : Villages.folkOf(village)) {
                 if (!(a instanceof VillageFolkEntity f) || f == this) continue;
                 int warmth = f.life.affinity(getUUID());
@@ -1876,6 +1892,7 @@ public class VillageFolkEntity extends AssistantEntity {
             }
             return;
         }
+        if (typeOuting(server)) return;               // an hour of its own kind (Values)
         VillageFolkEntity mate = company(server);
         if (mate != null) {
             if (distanceToSqr(mate) > 9.0) {
@@ -1904,6 +1921,53 @@ public class VillageFolkEntity extends AssistantEntity {
                 villageCentre.getZ() + getRandom().nextInt(2 * reach + 1) - reach);
             if (to != null) { walkTo(to, 0.7D); socialWalkTick = tickCount; }
         }
+    }
+
+    @Nullable private BlockPos typeOutingAt;
+    private String typeOutingDoing = "";
+    private int typeOutingUntil;
+    private long typeOutingDay = -1;
+
+    /**
+     * Once a day, now and then, an hour spent the way its kind of folk spends one (Values): a
+     * Guardian walks the wall, a Traditionalist sits where the old folk sit, a Visionary watches
+     * the new building go up, a Merchant looks over what is for sale, a Free Spirit idles at the
+     * tavern, a Provider looks over the fields, a Homemaker tidies round its house.
+     */
+    private boolean typeOuting(net.minecraft.server.level.ServerLevel server) {
+        if (isBaby()) return false;
+        long day = level().getDayTime() / 24000L;
+        if (typeOutingAt == null) {
+            if (typeOutingDay == day || getRandom().nextInt(3) != 0) return false;
+            typeOutingDay = day;
+            String[] doing = { "" };
+            BlockPos at = Values.freeTime(server, this, doing);
+            if (at == null) return false;
+            BlockPos ground = surfaceAt(at.getX(), at.getZ());
+            typeOutingAt = ground != null ? ground : at;
+            typeOutingDoing = doing[0];
+            typeOutingUntil = tickCount + 600 + getRandom().nextInt(600);
+        }
+        if (tickCount > typeOutingUntil) {
+            typeOutingAt = null;
+            return false;
+        }
+        if (blockPosition().distSqr(typeOutingAt) > 9.0) {
+            if (getNavigation().isDone() || tickCount - socialWalkTick >= 100) {
+                walkTo(typeOutingAt, 0.8D);
+                socialWalkTick = tickCount;
+            }
+        } else if (Values.top(this) == Values.Value.SAFETY && getRandom().nextInt(8) == 0) {
+            // Along the wall a few steps, looking out.
+            String[] doing = { "" };
+            BlockPos next = Values.freeTime(server, this, doing);
+            if (next != null) typeOutingAt = next.offset(getRandom().nextInt(7) - 3, 0, getRandom().nextInt(7) - 3);
+        } else {
+            getNavigation().stop();
+        }
+        hobbyNow = typeOutingDoing;
+        lastLeisureTick = tickCount;
+        return true;
     }
 
     /** Who this folk wants to be with now: its partner, its best friend, or (if it is
@@ -2101,7 +2165,7 @@ public class VillageFolkEntity extends AssistantEntity {
 
     @Override
     protected String debugExtra() {
-        String social = " traits=" + life.traitsLabel().replace(' ', '-')
+        String social = " traits=" + life.traitsLabel().replace(' ', '-') + " type=" + Values.brief(this)
             + (life.partner() != null ? " partner=" + life.partnerName() : "")
             + " friends=" + life.friends().size();
         String walk = "";
@@ -6525,6 +6589,10 @@ public class VillageFolkEntity extends AssistantEntity {
             tag.putString("HiredSaw", String.join("|", hiredSaw));
             tag.putString("HiredName", hiredName);
         }
+        if (valuesSet) {
+            tag.putIntArray("Values", values.clone());
+            tag.putLong("ValuesDay", valuesDay);
+        }
         tag.putInt("Purse", purse);
         tag.putInt("PaidDeeds", paidDeeds);
         tag.putInt("EarnedInAll", earnedInAll);
@@ -6587,6 +6655,14 @@ public class VillageFolkEntity extends AssistantEntity {
             for (String b : tag.getString("HiredSaw").split("\\|")) if (!b.isEmpty()) hiredSaw.add(b);
             this.companion = hiredBy;
             this.companionUntil = Integer.MAX_VALUE;
+        }
+        if (tag.contains("Values")) {
+            int[] saved = tag.getIntArray("Values");
+            if (saved.length == Values.N) {
+                System.arraycopy(saved, 0, values, 0, Values.N);
+                valuesSet = true;
+                valuesDay = tag.getLong("ValuesDay");
+            }
         }
         this.purse = tag.getInt("Purse");
         this.paidDeeds = tag.getInt("PaidDeeds");

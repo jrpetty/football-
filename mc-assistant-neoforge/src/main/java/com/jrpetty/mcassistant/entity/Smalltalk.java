@@ -69,6 +69,13 @@ public final class Smalltalk {
                 pick(r, "Let's hope so.", "True enough.", "")));
             break;
         }
+        // The election (Elections): who each of them is voting for, and why. Talked of above all else.
+        String[] vote = Elections.gossip(a, b);
+        if (vote != null) {
+            Talk t = new Talk(vote[0], vote[1], vote[2]);
+            options.add(t);
+            options.add(t);
+        }
         // The weather.
         if (level.isRaining()) {
             options.add(new Talk(pick(r, "Wet one today.", "Will this rain never stop?"),

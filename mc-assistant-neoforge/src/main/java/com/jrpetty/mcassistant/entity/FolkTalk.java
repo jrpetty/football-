@@ -126,7 +126,7 @@ public final class FolkTalk {
             case CHRONICLE -> chronicle(f, p, op, day);
             case CENSUS -> census(f, p);
             case CITIZEN -> Citizens.ask(f, p);
-            case COUNCIL -> Council.news(f);
+            case COUNCIL -> Council.news(f) + " " + Elections.talk(f);
             case FINE -> Laws.pay(f, p);
             case RIVALS -> Diplomacy.rivals(f);
             case PROPOSE -> Council.propose(f, p, text);

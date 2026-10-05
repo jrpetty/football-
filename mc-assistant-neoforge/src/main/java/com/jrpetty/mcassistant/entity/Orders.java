@@ -220,6 +220,10 @@ public final class Orders {
             if (logs < 16) score.merge(Order.TIMBER, 7, Integer::sum);         // nothing can be built
             else if (logs < 48) score.merge(Order.TIMBER, 4, Integer::sum);
         }
+        // What the leader was elected for (Elections): a Provider's village orders the fields filled,
+        // a Guardian's the walls manned, a Visionary's the mines dug.
+        Order promised = Elections.orderFor(Elections.mandate(village));
+        if (promised != null) score.merge(promised, 3, Integer::sum);
         Contentment.View c = Contentment.of(level, village);
         if (c != null) {
             if (c.food() < 12) score.merge(Order.LARDER, 4, Integer::sum);
