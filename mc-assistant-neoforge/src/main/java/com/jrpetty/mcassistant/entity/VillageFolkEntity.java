@@ -349,6 +349,10 @@ public class VillageFolkEntity extends AssistantEntity {
         // Called to the town's own work (TownJobs): to the spot, and at it.
         if (!withAPlayer && tickCount % 4 == 3 && level() instanceof net.minecraft.server.level.ServerLevel works
                 && TownJobs.hold(this, works)) return;
+        // The town's calendar (TownCalendar): the ringer to the town bell; to the midday meal at the noon bell,
+        // home at the dusk bell; round to a friend with a birthday present.
+        if (!withAPlayer && tickCount % 4 == 0 && level() instanceof net.minecraft.server.level.ServerLevel calendar
+                && TownCalendar.hold(this, calendar)) return;
         if (tickCount - agendaTick < 100) return;   // folk think slowly, on purpose
         agendaTick = tickCount;
         flyTheColours();
@@ -1122,6 +1126,7 @@ public class VillageFolkEntity extends AssistantEntity {
             else m += led;
         }
         m = FolkSkills.mood(this, m, why);              // Bright Spirit, a bright friend near, Unflappable's floor
+        m = Birthdays.mood(this, day, m, why);          // its birthday (Birthdays)
         why.sort((a, b) -> Integer.compare((Integer) b[1], (Integer) a[1]));
         java.util.List<String> keys = new java.util.ArrayList<>();
         for (Object[] w : why) keys.add((String) w[0]);
@@ -2118,6 +2123,7 @@ public class VillageFolkEntity extends AssistantEntity {
     protected boolean eveningSocial() {
         if (Assemblies.attending(this)) return true;          // at the village's gathering (Assemblies)
         if (TownJobs.busy(this)) return true;                 // at the town's work (TownJobs)
+        if (TownCalendar.busy(this)) return true;             // ringing the bell, home at the dusk bell, a birthday present (TownCalendar)
         if (Raids.underAlarm(ownerId())) return false;       // the bell is ringing: no evening out
         long t = level().getDayTime() % 24000L;
         long bedtime = bedtimeTick();
@@ -2330,6 +2336,9 @@ public class VillageFolkEntity extends AssistantEntity {
         if (alarmed != null && Raids.underAlarm(alarmed)) return stationTask() == StationTask.GUARD;
         // The day of rest: nobody works but the watch.
         if (alarmed != null && stationTask() != StationTask.GUARD && RestDay.now(alarmed, level().getDayTime()) != null) return false;
+        // The town bell (TownBell): the day's work from the dawn bell to the dusk bell, and the bell's own business first.
+        Boolean bell = TownBell.shift(this);
+        if (bell != null) return bell;
         if (stationTask() != StationTask.GUARD || shift() != Shift.ALWAYS || !level().isNight()) return super.onShift();
         return firstWatch() == (level().getDayTime() % 24000L < MIDNIGHT);
     }
@@ -5779,6 +5788,8 @@ public class VillageFolkEntity extends AssistantEntity {
         UUID partner = life.partner();
         if (partner != null && partner.getLeastSignificantBits() < bits) bits = partner.getLeastSignificantBits();
         long start = 1000L + Math.floorMod(bits, 8000L);
+        // A town that keeps the bell takes its break together, at the noon bell (TownBell).
+        start = TownBell.breakFrom(ownerId(), level(), start);
         long length = 1200L + Math.floorMod(bits >>> 24, 1200L);
         if (life.has(Social.Trait.HARDWORKING)) length /= 2;
         if (life.has(Social.Trait.EASYGOING)) length = length * 3 / 2;

@@ -32,6 +32,9 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  *   /village stats            the town's books in full: the analytics screen (as the village board)
  *   /village research         the city's research: what the leader has the town studying, and the tree
  *   /village research pick|grant &lt;civic&gt;   study this civic now, or have it done (ops; for tests)
+ *   /village bell             the town bell: where it hangs, today's bells; bell ring dawn|noon|dusk (ops)
+ *   /village founding         the next Founding Day; founding now (ops) keeps it this minute
+ *   /village birthdays        the week's birthdays; birthdays now &lt;name&gt; (ops) keeps one now
  *   /village speed 16|max|normal   time runs faster, to watch a village grow (ops / world owner)
  * </pre>
  */
@@ -118,6 +121,20 @@ public final class VillageCommands {
             // The city's research (CityTree): the tree and what the leader has the town studying; and,
             // for ops and tests, a civic set to study now (pick) or done at once (grant), each only
             // once the civic before it in its branch is done.
+            // The town's calendar (TownCalendar): the town bell — where it hangs, today's bells and who rang
+            // them; for ops and tests, one rung now (bell ring dawn|noon|dusk). Founding Day: the next, or kept
+            // now (founding now). Birthdays: the week's, or one kept now (birthdays now <name>).
+            .then(Commands.literal("bell").executes(VillageCommands::bell)
+                .then(Commands.literal("ring").requires(src -> src.hasPermission(2))
+                    .then(Commands.argument("peal", com.mojang.brigadier.arguments.StringArgumentType.word())
+                        .suggests((ctx, b) -> net.minecraft.commands.SharedSuggestionProvider.suggest(java.util.List.of("dawn", "noon", "dusk"), b))
+                        .executes(VillageCommands::ringBell))))
+            .then(Commands.literal("founding").executes(ctx -> foundingDay(ctx, false))
+                .then(Commands.literal("now").requires(src -> src.hasPermission(2)).executes(ctx -> foundingDay(ctx, true))))
+            .then(Commands.literal("birthdays").executes(ctx -> birthdays(ctx, null))
+                .then(Commands.literal("now").requires(src -> src.hasPermission(2))
+                    .then(Commands.argument("name", com.mojang.brigadier.arguments.StringArgumentType.greedyString())
+                        .executes(ctx -> birthdays(ctx, com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "name"))))))
             .then(Commands.literal("research").executes(VillageCommands::research)
                 .then(Commands.literal("pick").requires(src -> src.hasPermission(2))
                     .then(Commands.argument("civic", com.mojang.brigadier.arguments.StringArgumentType.word())
@@ -655,6 +672,96 @@ public final class VillageCommands {
         Villages.Village v = Villages.nearest(level, here, Villages.VILLAGE_RANGE * 4);
         if (v == null && !Villages.every().isEmpty()) v = Villages.every().get(0);
         return v;
+    }
+
+    // ------------------------------------------------------------------ the town's calendar
+
+    /** /village bell: where the town bell hangs (a "BELL-AT x y z" for scripts), today's bells and who rang them. */
+    private static int bell(CommandContext<CommandSourceStack> ctx) {
+        Villages.Village v = villageHere(ctx);
+        if (v == null) {
+            ctx.getSource().sendFailure(Component.literal("No village yet."));
+            return 0;
+        }
+        String said = com.jrpetty.mcassistant.entity.TownBell.status(ctx.getSource().getLevel(), v);
+        ctx.getSource().sendSuccess(() -> Component.literal(said), false);
+        return 1;
+    }
+
+    /** /village bell ring dawn|noon|dusk (ops): the bell rung now by whoever would ring it, and the town answers it. */
+    private static int ringBell(CommandContext<CommandSourceStack> ctx) {
+        Villages.Village v = villageHere(ctx);
+        if (v == null) {
+            ctx.getSource().sendFailure(Component.literal("No village yet."));
+            return 0;
+        }
+        String which = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "peal").toUpperCase(java.util.Locale.ROOT);
+        com.jrpetty.mcassistant.entity.TownBell.Peal peal;
+        try {
+            peal = com.jrpetty.mcassistant.entity.TownBell.Peal.valueOf(which);
+        } catch (IllegalArgumentException e) {
+            ctx.getSource().sendFailure(Component.literal("Which bell? dawn, noon or dusk."));
+            return 0;
+        }
+        String said = com.jrpetty.mcassistant.entity.TownBell.ringNow(ctx.getSource().getLevel(), v, peal);
+        ctx.getSource().sendSuccess(() -> Component.literal("BELL " + Villages.name(v.id()) + ": " + said), true);
+        return 1;
+    }
+
+    /** /village founding: the town's next Founding Day; founding now (ops): kept this minute, before the board. */
+    private static int foundingDay(CommandContext<CommandSourceStack> ctx, boolean now) {
+        Villages.Village v = villageHere(ctx);
+        if (v == null) {
+            ctx.getSource().sendFailure(Component.literal("No village yet."));
+            return 0;
+        }
+        net.minecraft.server.level.ServerLevel level = ctx.getSource().getLevel();
+        long day = level.getDayTime() / 24000L;
+        if (!now) {
+            String line = com.jrpetty.mcassistant.entity.FoundingDay.founded(v.id()) < 0 ? "No history yet, so no Founding Day."
+                : "FOUNDING " + Villages.name(v.id()) + ": founded on day " + (com.jrpetty.mcassistant.entity.FoundingDay.founded(v.id()) + 1)
+                + "; the town's year is " + com.jrpetty.mcassistant.entity.TownCalendar.YEAR_DAYS + " days. "
+                + com.jrpetty.mcassistant.entity.TownCalendar.book(level, v.id()).stream().filter(l -> l.startsWith("Founding Day"))
+                    .findFirst().orElse("");
+            java.util.List<String> read = com.jrpetty.mcassistant.entity.FoundingDay.readOut(v.id());
+            String all = line + (read.isEmpty() ? "" : " Read out last time: " + String.join(" / ", read));
+            ctx.getSource().sendSuccess(() -> Component.literal(all), false);
+            return 1;
+        }
+        boolean started = com.jrpetty.mcassistant.entity.Assemblies.startNow(level, v,
+            com.jrpetty.mcassistant.entity.Assemblies.Kind.FOUNDING);
+        if (!started) {
+            ctx.getSource().sendFailure(Component.literal("FOUNDING " + Villages.name(v.id()) + ": nobody to gather (or something under way): "
+                + com.jrpetty.mcassistant.entity.Assemblies.debug(v.id())));
+            return 0;
+        }
+        ctx.getSource().sendSuccess(() -> Component.literal("FOUNDING " + Villages.name(v.id()) + ": Founding Day is called, before the board."), true);
+        return 1;
+    }
+
+    /** /village birthdays: whose birthday falls this week; birthdays now &lt;name&gt; (ops): that folk's kept now. */
+    private static int birthdays(CommandContext<CommandSourceStack> ctx, @javax.annotation.Nullable String name) {
+        Villages.Village v = villageHere(ctx);
+        if (v == null) {
+            ctx.getSource().sendFailure(Component.literal("No village yet."));
+            return 0;
+        }
+        net.minecraft.server.level.ServerLevel level = ctx.getSource().getLevel();
+        long day = level.getDayTime() / 24000L;
+        if (name == null) {
+            java.util.List<String> week = com.jrpetty.mcassistant.entity.Birthdays.thisWeek(level, v.id(), day);
+            String said = "BIRTHDAYS " + Villages.name(v.id()) + ": " + (week.isEmpty() ? "none this week." : String.join("; ", week) + ".");
+            ctx.getSource().sendSuccess(() -> Component.literal(said), false);
+            return week.size();
+        }
+        for (AssistantEntity a : Villages.folkOf(v.id())) {
+            if (!(a instanceof VillageFolkEntity f) || !f.displayNameCap().equalsIgnoreCase(name.trim())) continue;
+            com.jrpetty.mcassistant.entity.Birthdays.celebrate(level, v, f, day);
+            ctx.getSource().sendSuccess(() -> Component.literal("BIRTHDAYS " + f.displayNameCap() + " is keeping a birthday today."), true);
+            return 1;
+        }
+        ctx.getSource().sendFailure(Component.literal("Nobody called " + name + " in " + Villages.name(v.id()) + "."));
+        return 0;
     }
 
     /** /village research: the city's research, the whole tree, a line a branch. */
