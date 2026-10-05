@@ -162,9 +162,14 @@ public final class Orders {
 
     /** Once a day, from the elder's daily look round: every third day, the orders. */
     public static void consider(ServerLevel level, UUID village, long day) {
+        consider(level, village, day, false);
+    }
+
+    /** As above; {@code now}: the leader calls it this morning, not when the three days are up. */
+    public static void consider(ServerLevel level, UUID village, long day, boolean now) {
         Given g = given(village);
         // (A clock set back — /time set — makes the day go backwards: that counts as due.)
-        if (g != null && day >= g.day() && day - g.day() < 3) return;
+        if (!now && g != null && day >= g.day() && day - g.day() < 3) return;
         if (Villages.headcount(village) < 8 || day - Math.max(0, com.jrpetty.mcassistant.village.Chronicle.foundedOn(village)) < 2) return;
         VillageFolkEntity elder = elderOf(village);
         if (elder == null) return;
@@ -194,6 +199,7 @@ public final class Orders {
         Map<Order, Integer> score = new EnumMap<>(Order.class);
         for (Order o : Order.values()) score.put(o, 0);
         score.merge(Order.STEADY, 2, Integer::sum);
+        boolean short_ = false;
         for (Villages.Need n : Villages.needs(level, village)) {
             switch (n.task()) {
                 case FOOD -> score.merge(Order.LARDER, 5, Integer::sum);
@@ -202,7 +208,11 @@ public final class Orders {
                 case DIAMOND, OBSIDIAN -> score.merge(Order.DIG, 2, Integer::sum);
                 default -> { }
             }
+            if (n.task() != Villages.Task.BUILD && n.task() != Villages.Task.HANDS && n.task() != Villages.Task.NONE) short_ = true;
         }
+        // "Steady as we go" is no order while the age waits on something the village could go and
+        // get: an easygoing thane sat on it for days with the hamlet short of timber.
+        if (short_) score.merge(Order.STEADY, -3, Integer::sum);
         // Past the Wood Age nothing asks for timber by name, but every building is half wood: a
         // town of sixty-eight with no logs in its stores for days could not pay for its hall.
         if (Villages.ageOf(village).ordinal() >= Villages.Age.STONE.ordinal()) {
@@ -260,7 +270,8 @@ public final class Orders {
         for (Map.Entry<Order, Integer> e : score.entrySet()) if (e.getValue() > top) { top = e.getValue(); best = e.getKey(); }
         // A standing order stays unless something else is clearly wanted more — but not while the
         // village goes hungry on an order that is not for food.
-        if (now != null && possible(village, now) && score.get(now) >= top - 2 && !(hungry && now != Order.LARDER)) return now;
+        if (now != null && possible(village, now) && score.get(now) >= top - 2 && !(hungry && now != Order.LARDER)
+                && !(short_ && now == Order.STEADY && best != Order.STEADY)) return now;
         return best;
     }
 

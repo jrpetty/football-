@@ -707,6 +707,13 @@ the village's looks: a building is made over in stone, or a house rebuilt in it,
 bricks put by and whatever is quarried past the age's need, so a growing town is not kept
 out of the Iron Age by its own new walls.
 
+**What an age asks for.** The stock an age wants before the next (timber in the Wood Age,
+stone and coal in the Stone Age) is sized to a village of up to twenty-four folk; the larder
+still grows with every mouth. A village that grows faster than it gathers is not left chasing a
+mark that keeps moving. The leader does not keep the village on "steady as we go" while it is
+short of something it could go and get, and once a famine is over it sends the extra field
+hands back to their own work the same morning.
+
 **How the village keeps its balance.**
 
 * **Gluts.** A trade whose stores are piled far past any use gets a smaller share of the

@@ -941,6 +941,11 @@ public final class Villages {
         // twenty minutes' eating for a hundred: a town would have declared
         // itself well fed and then starved with the plan saying nothing.
         int foodNow = com.jrpetty.mcassistant.village.VillageMath.foodWanted(folk);
+        // The stock an age asks for before the next is sized to a village of up to AGE_FOLK: past
+        // that, a village growing faster than it gathers chased a mark that moved away from it
+        // (a hamlet of forty-six, still in the Wood Age at day sixteen, wanted five hundred and
+        // twenty-eight logs put by). The larder still grows with every mouth.
+        int ageFolk = Math.min(folk, AGE_FOLK);
         switch (at) {
             case WOOD -> {
                 // Timber, a roof, and food coming in. Everything a place needs
@@ -948,7 +953,7 @@ public final class Villages {
                 need(wants, level, v, "food in the stores", Task.FOOD, foodNow);
                 if (built(villageId, "storage") < 1) wants.add(new Need("somewhere to store things", Task.BUILD, 1));
                 need(wants, level, v, "timber", Task.LOGS,
-                    com.jrpetty.mcassistant.village.VillageMath.timberWanted(folk));
+                    com.jrpetty.mcassistant.village.VillageMath.timberWanted(ageFolk));
                 if (built(villageId, "shelter") < 1) wants.add(new Need("a shelter", Task.BUILD, 1));
                 // Houses are measured the way they are used: room for everybody, and some to spare.
                 if (built(villageId, "house") < 1 || folk >= housing(villageId) - 2) {
@@ -959,9 +964,9 @@ public final class Villages {
             case STONE -> {
                 // Quarry, wall, and a fire to work by.
                 need(wants, level, v, "stone", Task.STONE,
-                    com.jrpetty.mcassistant.village.VillageMath.stoneWanted(folk));
+                    com.jrpetty.mcassistant.village.VillageMath.stoneWanted(ageFolk));
                 need(wants, level, v, "coal", Task.COAL,
-                    com.jrpetty.mcassistant.village.VillageMath.coalWanted(folk));
+                    com.jrpetty.mcassistant.village.VillageMath.coalWanted(ageFolk));
                 if (built(villageId, "fortify") < 1) wants.add(new Need("a wall around the village", Task.BUILD, 1));
                 if (folk >= housing(villageId) - 5) {
                     wants.add(new Need("more houses", Task.BUILD, 1));
@@ -1510,8 +1515,11 @@ public final class Villages {
      */
     public static int stoneHeldBack(UUID villageId) {
         return age(villageId) == Age.STONE
-            ? com.jrpetty.mcassistant.village.VillageMath.stoneWanted(headcount(villageId)) : 0;
+            ? com.jrpetty.mcassistant.village.VillageMath.stoneWanted(Math.min(headcount(villageId), AGE_FOLK)) : 0;
     }
+
+    /** The headcount the ages' stock is sized to, at most (wantsFor). */
+    public static final int AGE_FOLK = 24;
 
     /** Count the beds afresh next time (a house just made up, or a test that has just built one). */
     public static void recountBeds(UUID villageId) { MADE_UP.remove(villageId); }

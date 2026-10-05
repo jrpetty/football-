@@ -392,6 +392,12 @@ public final class Leader {
                 if (bought > 0) calls.add("bread bought from the traders (" + bought + " coin)");
             }
         }
+        // Fed again after a famine or short commons: the hands sent to the fields go back to the
+        // work in hand this morning, not when the larder order runs its three days out.
+        if ((was == Plan.FAMINE || was == Plan.SHORT) && (plan == Plan.STEADY || plan == Plan.PLENTY)
+                && Orders.current(id) == Orders.Order.LARDER) {
+            Orders.consider(level, id, day, true);
+        }
         if (plan != was) {
             String line = switch (plan) {
                 case FAMINE -> who + " called a famine: " + daysWords + " food left";

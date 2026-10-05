@@ -5035,12 +5035,14 @@ public class VillageGameTests {
             com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
         com.jrpetty.mcassistant.village.Ledger.built(village, "house", at, Direction.NORTH);
         int beds = 0, homes = 0, deepest = 0;
+        java.util.List<BlockPos> heads = new java.util.ArrayList<>();
         for (BlockPos p : BlockPos.betweenClosed(at.offset(-8, -2, -8), at.offset(8, 14, 8))) {
             net.minecraft.world.level.block.state.BlockState st = level.getBlockState(p);
             if (!(st.getBlock() instanceof net.minecraft.world.level.block.BedBlock)
                     || st.getValue(net.minecraft.world.level.block.BedBlock.PART)
                         != net.minecraft.world.level.block.state.properties.BedPart.HEAD) continue;
             beds++;
+            heads.add(p.immutable());
             deepest = Math.max(deepest, level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
                 p.getX(), p.getZ()) - p.getY());
             if (!Villages.buriedBed(level, village, p)) homes++;
@@ -5066,6 +5068,18 @@ public class VillageGameTests {
         helper.assertTrue(beds >= 4 && homes == beds, "every bed in a house is a home: " + homes + " of " + beds);
         helper.assertTrue(madeUp >= beds, "and the village counts them made up: " + madeUp + " of " + beds);
         helper.assertTrue(buried, "a bed down in the rock is nobody's home");
+        // Two beds side by side are two beds: the one beside a claimed bed is free (a bed within a
+        // block and a half of a claimed one used to count as taken, and every house slept half).
+        BlockPos one = null, two = null;
+        for (BlockPos h : heads) for (BlockPos k : heads) if (!h.equals(k) && h.distSqr(k) <= 2.0 && one == null) { one = h; two = k; }
+        helper.assertTrue(one != null, "the house has two beds side by side");
+        VillageFolkEntity b = VillageFolkSpawnerBlock.raise(level, heart.east(2), 0.0F);
+        helper.assertTrue(b != null && village.equals(b.ownerId()), "a second folk of the village");
+        a.claimBedNear(one);
+        b.claimBedNear(one);
+        Kit.log("t75 beds side by side: " + one + " and " + two + "; claimed " + a.bedPos() + " and " + b.bedPos());
+        helper.assertTrue(one.equals(a.bedPos()) && two.equals(b.bedPos()),
+            "the bed beside a claimed one is free to claim: " + a.bedPos() + ", " + b.bedPos());
         helper.succeed();
     }
 }
