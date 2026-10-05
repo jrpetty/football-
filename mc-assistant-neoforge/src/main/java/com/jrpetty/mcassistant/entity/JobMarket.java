@@ -87,6 +87,8 @@ public final class JobMarket {
      * unless three have come in by then.
      */
     static long decideAfter = 3000L;
+    /** Tests: the market held still: the leaders decide only when the test says (considerNow), however many apply, and no notice comes down by itself. */
+    static boolean holdDecisions;
 
     private static final String REC = "~", FLD = "|";
 
@@ -101,7 +103,13 @@ public final class JobMarket {
         DAILY.clear();
         BEDS_AT_RAID.clear();
         decideAfter = 3000L;
+        holdDecisions = false;
         JobSeekers.resetForTests();
+    }
+
+    /** Tests: how long the first application waits before the leader decides. */
+    public static void holdDecisionsForTests(boolean hold) {
+        holdDecisions = hold;
     }
 
     /** Tests: how long the first application waits before the leader decides. */
@@ -748,7 +756,7 @@ public final class JobMarket {
             String why = null;
             if (!still) why = "the place was filled at home";
             else if (day - o.posted >= LAPSE_DAYS) why = "nobody suitable came";
-            if (why == null) continue;
+            if (why == null || holdDecisions) continue;                    // (tests: the notice stays up)
             o.state = still ? State.LAPSED : State.WITHDRAWN;
             o.closed = day;
             o.note = why;
@@ -945,6 +953,7 @@ public final class JobMarket {
 
     /** Every open notice with applications waiting long enough (or three of them): decided. Returns how many were taken on. */
     static int decide(ServerLevel level, Villages.Village v, boolean now) {
+        if (holdDecisions && !now) return 0;
         UUID id = v.id();
         long tick = level.getGameTime(), day = level.getDayTime() / 24000L;
         List<Application> apps = applications(id);

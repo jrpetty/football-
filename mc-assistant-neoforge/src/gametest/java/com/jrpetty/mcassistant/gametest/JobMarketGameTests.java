@@ -398,12 +398,20 @@ public class JobMarketGameTests {
      * no tree for miles), and which finds no ground for it. The content farmer is sent to look at the
      * board and does not go at all. Once the other has gone two minutes with no ground to work, it
      * counts as out of work: sent to look, it goes, reads the board and applies.
+     *
+     * <p>On bare ground nobody in either town has much of a living: the rest of the first town's folk
+     * (unhappy, or out of work themselves) may put their names down for the same place first, and the
+     * other town may turn its own idle hands to the fields. The market is held still for the test (no
+     * leader decides, no notice comes down by itself), so the notice is still up when the one out of
+     * work gets to its board: in the run of 2836c82 it was gone, filled one way or the other, by the
+     * time that folk was out of work, and it read the board and found nothing to apply for.
      */
     @GameTest(template = EMPTY, timeoutTicks = 6000, batch = "jm03_only_with_a_reason")
     public static void jm03_only_with_a_reason(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
         JobMarket.decideAfterForTests(1_000_000L);
+        JobMarket.holdDecisionsForTests(true);
         long base = (level.getDayTime() / 24000L) * 24000L;
         level.setDayTime(base + HOUR);
         int cx = 314000, dx = 314200, z = 50000;
@@ -456,6 +464,7 @@ public class JobMarketGameTests {
                 sent[0] = t;
                 Kit.log("jm03 tick " + t + ": " + idle.displayNameCap() + " is out of work (" + idle.stationTask() + ", ground "
                     + (idle.workZone() == null ? "none" : "some") + "): " + JobSeekers.reasonsLine(idle));
+                logMarket(level, d);
                 JobSeekers.lookNow(idle);
             }
             JobMarket.Application idleApp = applicationOf(d, idle);
@@ -476,7 +485,11 @@ public class JobMarketGameTests {
             if (t % 200 == 0) Kit.log("jm03 tick " + t + ": idle " + idle.stationTask() + " ground " + (idle.workZone() == null ? "none" : "some")
                 + ", out of work " + JobSeekers.outOfWork(idle) + ", busy " + JobSeekers.busy(idle) + " at " + idle.blockPosition().toShortString()
                 + "; content busy " + JobSeekers.busy(content));
-            if (t > 5800) helper.fail("the folk out of work never applied (sent at " + sent[0] + "): " + idle.debugLine());
+            if (t > 5800) {
+                logMarket(level, d);
+                logMarket(level, c);
+                helper.fail("the folk out of work never applied (sent at " + sent[0] + "; " + JobSeekers.reasonsLine(idle) + "): " + idle.debugLine());
+            }
         });
     }
 }
