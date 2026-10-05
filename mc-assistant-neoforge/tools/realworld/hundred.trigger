@@ -1,1 +1,1 @@
-the hundred days, on b212 (every bed in a house is a home, camp beds moved one at a time, timber kept for the builders and the hall on steeper ground, the leader running the village, buildings growing with the ages): 2026-10-05T09:54:25Z
+the hundred days, on b214 (two beds side by side are two beds, every bed in a house a home, age stock sized to twenty-four, no steady orders while short, timber kept for the builders, the hall on steeper ground, the age before the looks): 2026-10-05T10:27:34Z
