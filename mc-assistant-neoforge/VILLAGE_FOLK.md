@@ -494,8 +494,10 @@ water.
   lags — a lead only when there's no feed to hand.
   **The pen.** Once the village has built its pen (a fenced square with a gate), the
   rancher's ground is the pen and the herd lives inside it. Animals are brought in through
-  the gate; the gate opens for a folk going through it and is shut behind them (one you
-  open is yours to shut). One of the herd that gets out is fetched back.
+  the gate and led to the far side, well clear of it, before the rancher lets them be; the
+  gate opens for a folk going through it and is shut behind them (one you open is yours to
+  shut). The rancher looks the herd over every half-minute, and one that got out is fetched
+  back.
   Milk the cows with a bucket for the café's cakes; the café sends
   the buckets back. When the pen has no pair to breed, the rancher takes a lead,
   finds a wild sheep, cow, pig or hen, and walks it home. If there is nothing wild
@@ -527,6 +529,9 @@ banners, the quest board asks for wool, and the elder may order the herds grown.
 * **Iron first.** An iron vein never uses up a miner's vein budget, and is dug before
   any other ore it finds. The smelter fires ore before sand, and fetches the raw iron
   the carriers have brought to the stores.
+* **A spent mine is left.** Three galleries in a row that come home with next to nothing
+  and the miner stakes fresh rock somewhere else round the village, rather than going back
+  to the same dug-out hole between odd jobs.
 * **Idle hands help the builder.** A folk whose trade has nothing to do, and that can
   fetch nothing the village is short of, goes and helps whoever is raising the village's
   building. Each helper (up to three) makes the blocks go down a tick faster.
