@@ -177,9 +177,16 @@ public class BankGameTests {
         Bank.morningForTests(level, t.v());
         ok.that(!Bank.open(id) && Bank.cash(id) == 0 && merchant.purse() == 100, "no bank, no savings taken: purse " + merchant.purse());
 
-        // It stands: it opens, and gets its banker.
+        // It stands: it opens, and gets its banker. A tree's leaves and a tuft of grass got into its rooms
+        // as it went up: they are swept out the day it opens.
         standBank(level, id, t.bank());
+        Direction right = Direction.NORTH.getClockWise();
+        BlockPos leaf = t.bank().above(2).relative(right, -1), tuft = t.bank().relative(right, 1).relative(Direction.NORTH, -2);
+        level.setBlock(leaf, Blocks.OAK_LEAVES.defaultBlockState(), 2);
+        level.setBlock(tuft, Blocks.SHORT_GRASS.defaultBlockState(), 2);
         boolean open = Bank.openForTests(level, t.v());
+        ok.that(level.getBlockState(leaf).isAir() && level.getBlockState(tuft).isAir(), "nothing of a tree or the ground left in its rooms: "
+            + level.getBlockState(leaf) + ", " + level.getBlockState(tuft));
         VillageFolkEntity banker = Bank.banker(id);
         Kit.log("bank t1 opened " + open + ", banker " + (banker == null ? "none" : banker.displayNameCap() + " " + banker.stationTask())
             + " | " + Bank.line(id));
@@ -232,8 +239,12 @@ public class BankGameTests {
 
         // The banker's work: the vault's bars and the ledger on the lectern, out of the stores.
         stores(level, id, t.heart(), new ItemStack(Items.IRON_BARS, 8), new ItemStack(Items.BOOK), new ItemStack(Items.INK_SAC), new ItemStack(Items.FEATHER));
-        boolean w1 = Crafts.now(merchant, level, t.v());
-        boolean w2 = Crafts.now(merchant, level, t.v());
+        boolean w1 = false, w2 = false;
+        for (int i = 0; i < 4; i++) {                                    // a piece of work at a time: the bars, then the ledger
+            boolean did = Crafts.now(merchant, level, t.v());
+            if (i == 0) w1 = did;
+            else w2 |= did;
+        }
         int bars = 0;
         for (BlockPos p : Bank.barSpotsForTests(id)) if (level.getBlockState(p).is(Blocks.IRON_BARS)) bars++;
         BlockPos lec = Bank.lecternForTests(id);
@@ -246,6 +257,78 @@ public class BankGameTests {
         net.minecraft.nbt.CompoundTag report = Bank.report(level, id);
         Kit.log("bank t1 the books: " + report);
         ok.that(report.getBoolean("open") && report.getInt("deposits") == Bank.deposits(id), "the books show the bank");
+        if (!ok.clean()) helper.fail(ok.summary());
+        helper.succeed();
+    }
+
+    /**
+     * The camera's bank (/village bank showcase), stood up where trees grow: every tree reaching into
+     * it or round it is felled whole first, so no wood or leaves are left in its rooms or hanging over
+     * it; its banker is held at the counter facing the door, the vault barred and the ledger on its
+     * lectern; and "showcase done" lets the banker go.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 300, batch = "bank_t4_showcase")
+    public static void bank_t4_showcase(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.Expect ok = new Kit.Expect();
+        Town t = town(helper, level, 276000, 50000, 3, 0, Villages.Age.IRON, false);
+        UUID id = t.id();
+        t.folk().get(0).setJob(StationTask.NONE);                      // a hand to spare for the counter
+        for (int i = 1; i < t.folk().size(); i++) t.folk().get(i).setJob(StationTask.FARM);
+        // Trees where the bank will go: ten blocks north of where the command is given, and round it.
+        BlockPos spot = t.heart().north(10);
+        int[][] trees = { { 0, 0 }, { 3, -3 }, { -3, 2 }, { 7, 0 }, { -2, -6 } };
+        for (int[] tr : trees) Kit.wildTree(level, spot.getX() + tr[0], spot.getZ() + tr[1]);
+        List<String> said = Kit.command(level, "execute positioned " + t.heart().getX() + " " + t.heart().getY() + " " + t.heart().getZ()
+            + " run village bank showcase");
+        Kit.log("bank t4 showcase: " + said);
+        com.jrpetty.mcassistant.village.Ledger.Building b = Bank.buildingForTests(id);
+        ok.that(b != null, "the bank stands");
+        if (b == null) {
+            helper.fail(ok.summary());
+            return;
+        }
+        BlockPos a = b.anchor();
+        int[] half = Blueprints.fullHalf("bank");
+        // In the bank and a block round it: no wood, no leaves, whatever tree they came from.
+        int wood = 0, inside = 0;
+        for (int dx = -half[0] - 1; dx <= half[0] + 1; dx++) {
+            for (int dz = -half[1] - 1; dz <= half[1] + 1; dz++) {
+                for (int dy = 0; dy <= 12; dy++) {
+                    BlockState st = level.getBlockState(a.offset(dx, dy, dz));
+                    if (st.is(net.minecraft.tags.BlockTags.LOGS)) wood++;
+                    if (st.is(net.minecraft.tags.BlockTags.LEAVES)) inside++;
+                }
+            }
+        }
+        // And the trees that stood there felled whole: nothing of them left hanging round it.
+        int left = 0;
+        for (int[] tr : trees) {
+            for (int dx = -2; dx <= 2; dx++) {
+                for (int dz = -2; dz <= 2; dz++) {
+                    for (int dy = -1; dy <= 8; dy++) {
+                        BlockState st = level.getBlockState(new BlockPos(spot.getX() + tr[0] + dx, a.getY() + dy, spot.getZ() + tr[1] + dz));
+                        if (st.is(net.minecraft.tags.BlockTags.LOGS) || st.is(net.minecraft.tags.BlockTags.LEAVES)) left++;
+                    }
+                }
+            }
+        }
+        Kit.log("bank t4 round the bank at " + a + ": " + wood + " logs and " + inside + " leaves in and round it; " + left + " blocks of the five trees left");
+        ok.that(wood == 0 && inside == 0, "no wood or leaves in the bank or round it: " + wood + " logs, " + inside + " leaves");
+        ok.that(left == 0, "the trees felled whole, nothing of them left hanging near it: " + left);
+        VillageFolkEntity banker = Bank.banker(id);
+        ok.that(banker != null && banker.isNoAi() && banker.blockPosition().closerThan(a, 1.5), "the banker held at its counter: "
+            + (banker == null ? "none" : banker.blockPosition() + " noAi " + banker.isNoAi()));
+        int bars = 0;
+        for (BlockPos p : Bank.barSpotsForTests(id)) if (level.getBlockState(p).is(Blocks.IRON_BARS)) bars++;
+        BlockPos lec = Bank.lecternForTests(id);
+        BlockState ls = lec == null ? Blocks.AIR.defaultBlockState() : level.getBlockState(lec);
+        ok.that(bars == 4 && ls.getBlock() instanceof LecternBlock && ls.getValue(LecternBlock.HAS_BOOK), "the vault barred and the ledger on its lectern: "
+            + bars + " bars, " + ls);
+        List<String> done = Kit.command(level, "execute positioned " + t.heart().getX() + " " + t.heart().getY() + " " + t.heart().getZ()
+            + " run village bank showcase done");
+        Kit.log("bank t4 done: " + done);
+        ok.that(banker == null || !banker.isNoAi(), "and let go again");
         if (!ok.clean()) helper.fail(ok.summary());
         helper.succeed();
     }

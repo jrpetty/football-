@@ -41,9 +41,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * The bank.
  *
  * <p>A town of thirty in the Iron Age builds a bank on one of the trades' lots facing the square
- * (Villages, blueprints/bank.txt): a stone house of business with a counter across it, a lectern by
- * the door where the bank's ledger lies open for anybody to read, and a vault at the back behind
- * iron bars. Until it stands nothing changes. The day it stands it opens, and it is told in the
+ * (Villages, blueprints/bank.txt): a stone house of business with a counter across it, a lectern
+ * before the counter where the bank's ledger lies open for anybody to read, and a vault at the back
+ * behind iron bars. Its builders fell the trees on its lot first (BuildGoal); whatever got into its
+ * rooms besides is swept out the day it opens, and by the banker after (tidy). Until it stands nothing changes. The day it stands it opens, and it is told in the
  * chronicle; and the most careful, shrewdest hand the village can spare gives up its trade to keep
  * it, at a craftsman's wage (Wealth). The banker makes the vault's bars out of six of the village's
  * spare ingots, writes the ledger up in a book and quill made of what the stores hold, and keeps it
@@ -495,7 +496,10 @@ public final class Bank {
         if (b == null) return;
         long day = level.getDayTime() / 24000L;
         State s = state(id);
-        if (s.opened < 0) openBank(v, b, s, day);
+        if (s.opened < 0) {
+            openBank(v, b, s, day);
+            if (level.isLoaded(b.anchor())) tidy(level, v, b);           // nothing of a tree left in its rooms
+        }
         appoint(level, v, day);
     }
 
@@ -1145,6 +1149,7 @@ public final class Bank {
         UUID id = v.id();
         Ledger.Building b = building(id);
         if (b == null || !open(id) || !level.isLoaded(b.anchor())) return null;
+        if (tidy(level, v, b) > 0) return "the leaves and the litter swept out of the bank";
         String bars = bars(level, v, b);
         if (bars != null) return bars;
         return ledger(level, v, b, f, true);
@@ -1672,7 +1677,7 @@ public final class Bank {
 
     // ------------------------------------------------------------------ /village bank
 
-    /** /village bank [deposit N | withdraw N | mortgage | repay N | week | showcase]. */
+    /** /village bank [deposit N | withdraw N | mortgage | repay N | week | showcase [done]]. */
     public static LiteralArgumentBuilder<CommandSourceStack> command() {
         return Commands.literal("bank")
             .executes(Bank::cmdReport)
@@ -1686,7 +1691,8 @@ public final class Bank {
             // The week's round now: payments, interest, the treasury's share (ops; for tests and the screenshots).
             .then(Commands.literal("week").requires(src -> src.hasPermission(2)).executes(Bank::cmdWeek))
             // A bank put up where you look, opened, its banker at the counter, the ledger and the bars in (ops; the screenshots).
-            .then(Commands.literal("showcase").requires(src -> src.hasPermission(2)).executes(Bank::cmdShowcase));
+            .then(Commands.literal("showcase").requires(src -> src.hasPermission(2)).executes(Bank::cmdShowcase)
+                .then(Commands.literal("done").executes(Bank::cmdShowcaseDone)));
     }
 
     @Nullable
@@ -1756,7 +1762,14 @@ public final class Bank {
         return 1;
     }
 
-    /** Put a bank up in front of you (stamped, like the showcase's buildings), open it, and set its banker at the counter. */
+    /** The tag on the banker the camera's bank holds still at its counter (cmdShowcase), till "showcase done". */
+    static final String STAGED = "mca_bank_staged";
+
+    /**
+     * Put a bank up in front of you (stamped, like the showcase's buildings) on ground cleared for it
+     * first, open it, and set its banker at the counter facing the door, held still there for the
+     * camera (its own wits back with "showcase done"). Run again, it puts the banker back at its counter.
+     */
     private static int cmdShowcase(CommandContext<CommandSourceStack> ctx) {
         ServerLevel level = ctx.getSource().getLevel();
         Villages.Village v = villageOf(ctx);
@@ -1770,19 +1783,32 @@ public final class Bank {
             Direction facing = ctx.getSource().getEntity() != null ? ctx.getSource().getEntity().getDirection() : Direction.NORTH;
             BlockPos from = BlockPos.containing(ctx.getSource().getPosition());
             BlockPos spot = from.relative(facing, 10);
-            int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, spot.getX(), spot.getZ());
-            BlockPos at = new BlockPos(spot.getX(), y, spot.getZ());
+            // Never through one of the village's own buildings: on along the way it looks till the ground is free.
+            for (int tries = 0; tries < 8 && besideABuilding(id, spot); tries++) spot = spot.relative(facing, 8);
+            BlockPos at = new BlockPos(spot.getX(), groundFor(level, spot, facing), spot.getZ());
+            clearSite(level, at, facing);
             BuildGoal.stamp(level, "bank", at, facing, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
             Ledger.built(id, "bank", at, facing);
             b = building(id);
         }
         if (b == null) return 0;
+        tidy(level, v, b);
         long day = level.getDayTime() / 24000L;
         State s = state(id);
         if (s.opened < 0) openBank(v, b, s, day);
         appoint(level, v, day);
         VillageFolkEntity banker = banker(id);
-        if (banker != null) banker.teleportTo(b.anchor().getX() + 0.5, b.anchor().getY(), b.anchor().getZ() + 0.5);
+        if (banker != null) {
+            // At its counter, facing the door, and held there for the camera.
+            float yaw = b.facing().getOpposite().toYRot();
+            banker.getNavigation().stop();
+            banker.teleportTo(b.anchor().getX() + 0.5, b.anchor().getY(), b.anchor().getZ() + 0.5);
+            banker.setYRot(yaw);
+            banker.setYHeadRot(yaw);
+            banker.setYBodyRot(yaw);
+            banker.setNoAi(true);
+            banker.addTag(STAGED);
+        }
         // Staged for the camera: the bars and the ledger set straight in (a banker makes them of the stores' iron and paper).
         for (BlockPos p : barSpots(b)) {
             if (level.getBlockState(p).canBeReplaced()) level.setBlock(p, Block.updateFromNeighbourShapes(Blocks.IRON_BARS.defaultBlockState(), level, p), 3);
@@ -1792,9 +1818,142 @@ public final class Bank {
             LecternBlock.tryPlaceBook(banker, level, lec, level.getBlockState(lec), book(id, banker));
         }
         Ledger.Building at = b;
+        String who = banker == null ? "no banker" : banker.displayNameCap() + " at the counter";
         ctx.getSource().sendSuccess(() -> Component.literal("The bank stands at " + at.anchor().toShortString() + ", facing " + at.facing()
-            + ": " + line(id) + "."), false);
+            + " (" + who + "): " + line(id) + "."), false);
         return 1;
+    }
+
+    /** /village bank showcase done: the banker held at its counter for the camera goes about its business again. */
+    private static int cmdShowcaseDone(CommandContext<CommandSourceStack> ctx) {
+        Villages.Village v = villageOf(ctx);
+        int n = 0;
+        if (v != null) {
+            for (AssistantEntity a : Villages.folkOf(v.id())) {
+                if (!(a instanceof VillageFolkEntity f) || !f.getTags().contains(STAGED)) continue;
+                f.setNoAi(false);
+                f.removeTag(STAGED);
+                n++;
+            }
+        }
+        int done = n;
+        ctx.getSource().sendSuccess(() -> Component.literal(done == 0 ? "Nobody held at the bank." : "The banker is about its business again."), false);
+        return done;
+    }
+
+    /** Would a bank here, and the ground cleared round it, reach one of the village's buildings? */
+    private static boolean besideABuilding(UUID village, BlockPos spot) {
+        for (Ledger.Building o : Ledger.buildings(village)) {
+            if (Math.abs(o.anchor().getX() - spot.getX()) <= 15 && Math.abs(o.anchor().getZ() - spot.getZ()) <= 15) return true;
+        }
+        return false;
+    }
+
+    /** The floor's height for a bank here: the ground under its footing (seeing through a tree's trunk), the middle of nine looks. */
+    static int groundFor(ServerLevel level, BlockPos spot, Direction facing) {
+        int[] half = com.jrpetty.mcassistant.entity.goal.Blueprints.groundHalf("bank");
+        Direction right = facing.getClockWise();
+        List<Integer> ys = new ArrayList<>();
+        for (int dx = -half[0]; dx <= half[0]; dx += half[0]) {
+            for (int dz = -half[1]; dz <= half[1]; dz += half[1]) {
+                BlockPos c = spot.relative(right, dx).relative(facing, dz);
+                ys.add(BuildGoal.groundTop(level, c.getX(), c.getZ()));
+            }
+        }
+        ys.sort(Integer::compare);
+        return ys.get(ys.size() / 2);
+    }
+
+    /** A tree's wood or leaves, or what grows on a tree: felled with it. */
+    private static boolean treeBlock(BlockState st) {
+        return st.is(net.minecraft.tags.BlockTags.LOGS) || st.is(net.minecraft.tags.BlockTags.LEAVES) || st.is(Blocks.VINE)
+            || st.is(Blocks.COCOA) || st.is(Blocks.BEE_NEST);
+    }
+
+    /**
+     * Ground cleared for the camera's bank before it is stamped: every tree that reaches into the
+     * building or a block or two round it felled whole (its wood and leaves, wherever they spread),
+     * everything else standing there taken away (grass, flowers, stones), from the floor to well over
+     * the ridge, and the ground under its footing and round it made up to the floor.
+     */
+    static void clearSite(ServerLevel level, BlockPos at, Direction facing) {
+        int[] half = com.jrpetty.mcassistant.entity.goal.Blueprints.fullHalf("bank");
+        Direction right = facing.getClockWise();
+        int mx = half[0] + 2, mz = half[1] + 2, top = 16;
+        java.util.ArrayDeque<BlockPos> todo = new java.util.ArrayDeque<>();
+        java.util.Set<BlockPos> seen = new java.util.HashSet<>();
+        for (int dx = -mx; dx <= mx; dx++) {
+            for (int dz = -mz; dz <= mz; dz++) {
+                for (int dy = 0; dy <= top; dy++) {
+                    BlockPos p = at.relative(right, dx).relative(facing, dz).above(dy);
+                    if (treeBlock(level.getBlockState(p)) && seen.add(p)) todo.add(p);
+                }
+            }
+        }
+        // The whole of each tree, as far as it reaches (not past a few trees' width).
+        int reach = Math.max(mx, mz) + 10, felled = 0;
+        while (!todo.isEmpty() && felled < 6000) {
+            BlockPos p = todo.poll();
+            level.setBlock(p, Blocks.AIR.defaultBlockState(), 2);
+            felled++;
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dy = -1; dy <= 1; dy++) {
+                    for (int dz = -1; dz <= 1; dz++) {
+                        BlockPos q = p.offset(dx, dy, dz);
+                        if (Math.abs(q.getX() - at.getX()) > reach || Math.abs(q.getZ() - at.getZ()) > reach || q.getY() < at.getY() - 2) continue;
+                        if (!seen.contains(q) && treeBlock(level.getBlockState(q))) { seen.add(q); todo.add(q); }
+                    }
+                }
+            }
+        }
+        // Everything else in the building's room and round it: grass, flowers, a boulder, snow.
+        for (int dx = -mx; dx <= mx; dx++) {
+            for (int dz = -mz; dz <= mz; dz++) {
+                BlockPos col = at.relative(right, dx).relative(facing, dz);
+                for (int dy = 0; dy <= top; dy++) {
+                    BlockPos p = col.above(dy);
+                    if (!level.getBlockState(p).isAir()) level.setBlock(p, Blocks.AIR.defaultBlockState(), 2);
+                }
+                // The ground made up to the floor: earth under it, and grass on top round the footing.
+                for (int dy = -1; dy >= -8; dy--) {
+                    BlockPos q = col.above(dy);
+                    BlockState st = level.getBlockState(q);
+                    if (st.isSolidRender(level, q) && !treeBlock(st)) break;
+                    level.setBlock(q, (dy == -1 ? Blocks.GRASS_BLOCK : Blocks.DIRT).defaultBlockState(), 2);
+                }
+            }
+        }
+    }
+
+    /**
+     * Whatever a tree or the ground left inside the bank's room (leaves of a canopy it went up
+     * through, a sapling, grass, flowers, a log): swept out, the wood to the stores. A builder clears a
+     * lot's trees before it builds (BuildGoal); this sees to anything that got in after, or round it.
+     * Returns how many blocks went.
+     */
+    static int tidy(ServerLevel level, @Nullable Villages.Village v, Ledger.Building b) {
+        java.util.Set<Long> drawn = new java.util.HashSet<>();
+        for (BuildGoal.Placement p : BuildGoal.plan("bank", b.anchor(), b.facing(), 13)) drawn.add(p.pos().asLong());
+        Direction right = b.facing().getClockWise();
+        int n = 0;
+        // The rooms: inside the walls (five across, seven deep), floor to ceiling.
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -3; dz <= 3; dz++) {
+                for (int h = 0; h <= 2; h++) {
+                    BlockPos p = b.anchor().relative(right, dx).relative(b.facing(), dz).above(h);
+                    if (drawn.contains(p.asLong()) || !level.isLoaded(p)) continue;
+                    BlockState st = level.getBlockState(p);
+                    if (st.isAir() || st.is(Blocks.IRON_BARS) || !st.getFluidState().isEmpty()) continue;
+                    boolean wood = st.is(net.minecraft.tags.BlockTags.LOGS);
+                    if (!(wood || st.is(net.minecraft.tags.BlockTags.LEAVES) || st.canBeReplaced() || st.is(net.minecraft.tags.BlockTags.SAPLINGS)
+                            || st.is(net.minecraft.tags.BlockTags.FLOWERS))) continue;
+                    if (wood && v != null) Crafts.store(level, v, new ItemStack(st.getBlock().asItem()));
+                    level.setBlock(p, Blocks.AIR.defaultBlockState(), 3);
+                    n++;
+                }
+            }
+        }
+        return n;
     }
 
     // ------------------------------------------------------------------ tests
@@ -1874,6 +2033,12 @@ public final class Bank {
     public static List<BlockPos> barSpotsForTests(UUID village) {
         Ledger.Building b = building(village);
         return b == null ? List.of() : barSpots(b);
+    }
+
+    /** Tests: the bank's anchor (the banker's place behind the counter) and which way its back is, or null. */
+    @Nullable
+    public static Ledger.Building buildingForTests(UUID village) {
+        return building(village);
     }
 
     @Nullable

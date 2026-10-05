@@ -1236,7 +1236,7 @@ with plain blocks, so a building is never held up.
 | Brewery | 9×9 | Timber still-house on a stone footing: two brewing stands on a stone bench, cauldrons, casks, a window to the street |
 | Library | 9×9 | Stone hall with tall windows, walls lined with bookshelves, an enchanting table on a carpet between lecterns |
 | School | 9×11 | Timber schoolroom under a steep roof, tall windows down both sides: two rows of desks (a top slab, a stair for a bench) either side of the aisle, the teacher's lectern, and at the back a blackboard over a cupboard of barrels, a bookshelf either side |
-| Bank | 9×11 | Stone house of business: a counter across the room with a lantern on it, the ledger on a lectern by the door, and a vault at the back, its strongboxes behind a gate and grille of iron bars the banker sets |
+| Bank | 9×11 | Stone house of business: a counter across the room with a lantern on its far end, the ledger on a lectern before it, and a vault at the back, its strongboxes behind a gate and grille of iron bars the banker sets; its two lanterns hang flush under the ceiling, over the counter and over the strongboxes |
 | Park | 11×11 | A green: a stone fountain with a spring spilling from its pillar, sixteen wooden benches round it, lamp posts at the four ways in, flowers along its edges; then a tree in each corner, paths and lanterns (see *The town's quarters, and the park*) |
 
 Builders take the place the town plan has for the building. Of the first few good
@@ -3095,9 +3095,11 @@ the price, and whether it wants to own and why.
 ### The bank
 
 A town of thirty in the Iron Age builds a **bank** on one of the trades' lots facing the square: a
-stone house of business with a counter across the room and a lantern on it, a lectern by the door
-where the bank's ledger lies open for anybody to read, and at the back the vault, its strongboxes
-along the wall behind a barred gate and grille. Until it stands, nothing changes. The day it does
+stone house of business with a counter across the room and a lantern on its far end, a lectern
+before the counter where the bank's ledger lies open for anybody to read, and at the back the vault,
+its strongboxes along the wall behind a barred gate and grille. The builders fell any tree on its
+lot before they build, and whatever got into its rooms (a canopy's leaves, a tuft of grass) is swept
+out the day it opens, and by the banker after. Until it stands, nothing changes. The day it does
 it opens ("the bank opened its doors at No. 3, Market Row: ..."), the elder tells the morning
 assembly, and the most careful, shrewdest hand the village can spare — a Merchant before a steady
 soul, never a workshop's only hand nor the storekeeper — gives up its trade to keep it, at a
@@ -3870,8 +3872,10 @@ ripen, days pass, folk work and houses go up at that pace.
   savers, and your account. `bank deposit <coins>` / `bank withdraw <coins>` for your account;
   `bank mortgage` buys the empty house you stand in with a fifth down; `bank repay <coins>` pays
   your mortgage down. `bank week` (operators) runs the bank's round now; `bank showcase`
-  (operators) puts a bank up ten blocks in front of you, opens it and sets its banker at the
-  counter, with the bars and the ledger in (for the screenshots).
+  (operators) puts a bank up ten blocks in front of you (on past any of the village's buildings,
+  every tree reaching into it felled whole and the ground cleared first), opens it and holds its
+  banker at the counter facing the door, with the bars and the ledger in (for the screenshots);
+  run again, it puts the banker back at the counter; `bank showcase done` lets the banker go.
 * `/village flats` — the nearest village's blocks of flats: each block's name and storeys, every
   flat, who lives in it, its rent and what its household has put by for a house; and whether the
   town wants another block, and why. `flats stage` (operators) sets a furnished block out on a
