@@ -427,6 +427,48 @@ public final class VillageSpawner {
         chest.setChanged();
     }
 
+    /** Where the founding stores' further chests go: a ring two blocks out from the first, clear of the camp's beds. */
+    private static final int[][] STORE_RING = { {2, 0}, {-2, 0}, {0, 2}, {0, -2}, {2, 2}, {-2, -2}, {2, -2}, {-2, 2} };
+
+    /**
+     * The founding stores of a party bigger than the usual (entity/Founding). The one chest every
+     * village is founded with (supplyChest) seeds and lights a dozen; for every sixteen more there
+     * is a second of the same, bread, seed, saplings, light, planks and stone, up to six of them;
+     * and the bedding of those the camp has no room for (it lays two dozen) is carried in chests
+     * of its own, up to two of them, for the first houses to be made up with. Every chest is the
+     * village's stores (ZoneChests.mark), in a ring round the first. Returns the chests set down.
+     */
+    public static int foundingStores(ServerLevel level, BlockPos heart, int folk) {
+        int supplies = folk <= 12 ? 0 : Math.min(6, (folk - 12 + 15) / 16);
+        int unbedded = Math.max(0, folk - CAMP.length);
+        int bedding = Math.min(2, (unbedded + 26) / 27);
+        int set = 0, beds = 0;
+        for (int[] at : STORE_RING) {
+            if (set >= supplies + bedding) break;
+            BlockPos spot = groundAt(level, heart.getX() + at[0], heart.getZ() + at[1]);
+            if (spot == null || Math.abs(spot.getY() - heart.getY()) > 1 || !level.getBlockState(spot).canBeReplaced()
+                    || !level.getFluidState(spot).isEmpty()) continue;
+            level.setBlockAndUpdate(spot, Blocks.CHEST.defaultBlockState());
+            com.jrpetty.mcassistant.entity.ZoneChests.mark(level, spot);
+            if (!(level.getBlockEntity(spot) instanceof Container chest)) continue;
+            List<ItemStack> goods = new java.util.ArrayList<>();
+            if (set < supplies) {
+                goods.addAll(List.of(new ItemStack(Items.BREAD, 32), new ItemStack(Items.WHEAT_SEEDS, 32),
+                    new ItemStack(Items.CARROT, 16), new ItemStack(Items.POTATO, 16), new ItemStack(Items.OAK_SAPLING, 16),
+                    new ItemStack(Items.TORCH, 32), new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.COBBLESTONE, 64),
+                    new ItemStack(Items.STRING, 2)));
+            } else {
+                for (int i = 0; i < chest.getContainerSize() && beds < unbedded; i++, beds++) {
+                    goods.add(new ItemStack(BEDDING[beds % BEDDING.length].asItem()));
+                }
+            }
+            for (int i = 0; i < goods.size() && i < chest.getContainerSize(); i++) chest.setItem(i, goods.get(i));
+            chest.setChanged();
+            set++;
+        }
+        return set;
+    }
+
     /** Where the camp's beds go round the heart: (dx, dz) of the foot; the head points away from the middle.
      *  A second ring further out for broken ground: on a mountainside the first ring had nowhere
      *  level enough for one bed, and a village of twelve spent every night on its feet. */

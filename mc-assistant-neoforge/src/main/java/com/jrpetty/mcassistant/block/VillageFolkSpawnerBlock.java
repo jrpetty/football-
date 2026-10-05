@@ -24,11 +24,13 @@ import javax.annotation.Nullable;
  *
  * <p>Exactly the Assistant Spawner's shape — a block you craft, place and
  * spend — because that is the one way of getting a hand into the world here
- * that has been proven to work. The first one placed founds a settlement on
- * the spot with a founding party ({@link #foundingParty}) and leaves the
- * founding stores where it stood; every one placed after that within reach
- * adds a settler to it. No charter to right-click, no command to remember,
- * and nothing more to do.
+ * that has been proven to work. The first one placed puts the village board
+ * up on the spot and waits for you to say, at the board, how many folk are to
+ * found the village (entity/Founding): two of them or five hundred. Once you
+ * have, the ground round about is made level for them and they come, the
+ * founding stores where the block stood. Every one placed after that within
+ * reach of a village adds a settler to it. No charter to right-click, no
+ * command to remember, and nothing more to do.
  */
 public class VillageFolkSpawnerBlock extends Block {
 
@@ -44,15 +46,35 @@ public class VillageFolkSpawnerBlock extends Block {
             || !(placer instanceof ServerPlayer player)) {
             return;
         }
+        placed(server, pos, state, player, player.getYRot());
+    }
+
+    /**
+     * The spawner set down at {@code pos} (by a player, or by a test standing in for one). Within
+     * reach of a village it adds one settler to it, as it always has. Anywhere else it puts up the
+     * board of a village to be founded, and nobody comes until somebody at the board says how many.
+     */
+    public static void placed(ServerLevel server, BlockPos pos, BlockState state, @Nullable ServerPlayer player, float yaw) {
         // The block is spent by being placed. Take it away FIRST: the founding
         // stores stand where it stood, and removing it afterwards would have
         // taken the chest with it.
         server.levelEvent(2001, pos, Block.getId(state));
         server.removeBlock(pos, false);
-        boolean founding = Villages.nearest(server, pos, Villages.VILLAGE_RANGE * 2) == null;
-        int stood = raiseParty(server, pos, player.getYRot(), founding ? foundingParty() : 1);
+        if (Villages.nearest(server, pos, Villages.VILLAGE_RANGE * 2) == null) {
+            com.jrpetty.mcassistant.entity.Founding.Outcome asked =
+                com.jrpetty.mcassistant.entity.Founding.propose(server, pos, player, yaw);
+            if (player == null) return;
+            if (!asked.ok() && !player.getAbilities().instabuild) {
+                // Give the spawner back rather than eating it.
+                ItemStack back = new ItemStack(McAssistantMod.FOLK_SPAWNER_ITEM.get());
+                if (!player.getInventory().add(back)) player.drop(back, false);
+            }
+            player.sendSystemMessage(Component.literal("<Village> " + asked.message()));
+            return;
+        }
+        int stood = raiseParty(server, pos, yaw, 1);
         if (stood == 0) {
-            player.sendSystemMessage(Component.literal(
+            if (player != null) player.sendSystemMessage(Component.literal(
                 "<Village> That settlement is full. Found another further out."));
             // Give the block back rather than eating it.
             server.setBlockAndUpdate(pos, state);
@@ -60,13 +82,13 @@ public class VillageFolkSpawnerBlock extends Block {
         }
         Villages.Village v = Villages.nearest(server, pos, Villages.VILLAGE_RANGE * 2);
         int total = v == null ? stood : Villages.headcount(v.id());
-        player.displayClientMessage(Component.literal(founding
-            ? "A village of " + total + " is founded here. They will run it themselves."
-            : total + " live here now. They will run it themselves."), true);
+        if (player != null) player.displayClientMessage(Component.literal(
+            total + " live here now. They will run it themselves."), true);
     }
 
     /**
-     * How many stand up when a spawner or a charter FOUNDS a village: as many as
+     * How many stand up when a charter FOUNDS a village, and how many the founding
+     * screen offers first when a spawner is set down: as many as
      * a village the world grows by itself starts with ({@code villageMinFolk}).
      * One settler on its own can never raise a child and cannot farm, dig, fell
      * and build at once, so a founding of one was a village only if the player

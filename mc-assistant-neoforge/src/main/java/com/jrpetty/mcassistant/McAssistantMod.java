@@ -79,7 +79,8 @@ public final class McAssistantMod {
         ITEMS.registerSimpleBlockItem(ASSISTANT_SPAWNER);
 
     // The Village Folk Spawner: the same shape as the assistant's — craft it,
-    // place it, and a settler stands up. The first one founds a village.
+    // place it, and a settler stands up. The first one puts up the board of a village
+    // to be founded, where you choose how many start it (entity/Founding).
     public static final DeferredBlock<com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock> FOLK_SPAWNER =
         BLOCKS.registerBlock("village_folk_spawner",
             com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock::new,
@@ -236,6 +237,7 @@ public final class McAssistantMod {
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Quests.class);
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Hire.class);
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Land.class);
+        NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Founding.class);
         NeoForge.EVENT_BUS.register(TimeSpeed.class);
     }
 
