@@ -1229,8 +1229,8 @@ with plain blocks, so a building is never held up.
 | Smeltery | 9×9 | Stone forge open to the street, three furnaces under a brick chimney, anvil, bench and chests |
 | Workshop | 9×9 | Timber workroom with a wide door, a bench and the tailor's loom, furnace, barrels and a hayloft |
 | Granary | 7×7 | Squat store on a stone base, full of hay, three chests, hipped roof |
-| Market | 11×11 | Open hall on log posts under a broad hipped roof, stalls of hay and barrels, a fountain, lanterns hung from cross beams |
-| Meeting hall | 11×19 | Long timber hall: tall windows, a pair of doors up steps between lamp posts, a long table under tie beams hung with lanterns, the elder's seat |
+| Market | 11×11 | Open hall on log posts under a broad hipped roof, stalls of hay and barrels, a fountain, lanterns hung from the eaves over the stalls |
+| Meeting hall | 11×19 | Long timber hall: tall windows, a pair of doors up steps between lamp posts, a long table, lanterns hung from the rafters down both sides, the elder's seat |
 | Chapel | 9×21 | Stone nave with tall windows, a bell tower over the door (a ladder up to its bell), pews, an altar and lights hung from tie beams |
 | Barracks | 9×15 | Stone-and-timber dormitory with six bunks, chests, a bench and an anvil |
 | Watchtower | 7×7 | Stone tower three storeys high, ladder inside, battlemented deck with a lookout roof |
@@ -1252,8 +1252,8 @@ with plain blocks, so a building is never held up.
 | Bank | 9×11 | Stone house of business: a counter across the room with a lantern on its far end, the ledger on a lectern before it, and a vault at the back, its strongboxes behind a gate and grille of iron bars the banker sets; its two lanterns hang flush under the ceiling, over the counter and over the strongboxes |
 | Park | 11×11 | A green: a stone fountain with a spring spilling from its pillar, sixteen wooden benches round it, lamp posts at the four ways in, flowers along its edges; then a tree in each corner, paths and lanterns (see *The town's quarters, and the park*) |
 
-Every drawing is sound as built: a hanging lantern hangs from a beam, a ceiling, an eave or a
-bracket, never from thin air, and indoors it hangs over a bed, a table or a counter or by the wall,
+Every drawing is sound as built: a hanging lantern hangs from a beam, a ceiling, the rafters, an eave or
+a beam end, never from thin air, and indoors it hangs over a bed, a table or a counter or by the wall,
 not over the middle of the floor; a torch or a standing lantern stands on something; a ladder has a
 wall at its back; a door opens onto a floor with headroom; water is held in its basin; and every bed,
 bench, bell and storey can be walked to from the street, up the stairs and the ladders, in the

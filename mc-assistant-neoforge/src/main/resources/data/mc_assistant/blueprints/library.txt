@@ -26,7 +26,7 @@ layer 0
 .S.r.r.S.
 .S.....S.
 .LSSDSSL.
-..P...P..
+..L...L..
 layer 1
 .........
 .LWWWWWL.
@@ -38,7 +38,7 @@ layer 1
 .G.....G.
 .W.....W.
 .LWW.WWL.
-..P...P..
+..L...L..
 layer 2
 .........
 .LWWWWWL.
