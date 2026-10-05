@@ -130,6 +130,36 @@ def showcase(r, cx, cz, look):
     say("alive after the town: %s" % client_alive())
 
 
+def decor_stage(r, look, cx, cz):
+    """A home that shows its trade: a smith and a farmer wed and living in a house furnished out of the
+    stores (Decor, Luxuries) — the smith's anvil, the farmer's composter and sack of seed, a rug and a
+    banner in their favourite colours, and the luxuries they bought (paintings, candles, a pot of flowers,
+    a lantern, a carpet) — from the street, from inside by day, and at dusk with its candles lit."""
+    x, z = cx - 340, cz + 520
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("time set 6000")
+    r.cmd("tp %s %d 140 %d" % (USER, x, z + 12))
+    time.sleep(12)                                     # the ground arrives at the server and the client
+    out = r.cmd("execute positioned %d 100 %d run village decor showcase" % (x, z))
+    say("decor: " + out[:900])
+    views = re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out)
+    if not views:
+        say("no furnished home was set out; nothing to photograph")
+        return
+    for name, ex, ey, ez, ax, ay, az in views:
+        if "dusk" in name:
+            continue
+        look(name, int(ex) + 0.5, int(ey), int(ez) + 0.5, int(ax) + 0.5, int(ay) + 0.5, int(az) + 0.5, wait=8)
+    # Dusk: the household's candles lit (and every window yellow with lamplight).
+    r.cmd("time set 12700")
+    say("decor at dusk: " + r.cmd("execute positioned %d 100 %d run village decor now" % (x, z))[:600])
+    for name, ex, ey, ez, ax, ay, az in views:
+        if "dusk" in name:
+            look(name, int(ex) + 0.5, int(ey), int(ez) + 0.5, int(ax) + 0.5, int(ay) + 0.5, int(az) + 0.5, wait=8)
+    r.cmd("time set 6000")
+    say("alive after the furnished home: %s" % client_alive())
+
+
 def found_village(r, cx, cz, look):
     """A village founded the way a player founds one, photographed: the board a spawner puts up,
     on ground made rough on purpose whatever the seed gave (a hill across the edge, a knoll, a pit,
@@ -528,6 +558,10 @@ def main():
         school_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("school stage failed: %s" % e)
+    try:
+        decor_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("decor failed: %s" % e)
     alive = client_alive()
     say("alive at the end: %s" % alive)
     say("PASS the client drew the village and kept running" if alive else "FAIL the client died while drawing the village")

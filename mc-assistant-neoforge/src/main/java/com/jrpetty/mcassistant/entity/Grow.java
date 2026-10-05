@@ -80,6 +80,7 @@ public final class Grow {
         long now = level.getGameTime();
         if (now - LAST.getOrDefault(id, -100000L) < 300L) return;
         LAST.put(id, now);
+        Luxuries.candles(level, v);                                  // the households' candles, lit at dusk (Luxuries)
         if (!furnish(level, v)) shelve(level, v);
         work(level, v, 24);
     }
@@ -208,6 +209,8 @@ public final class Grow {
         if (done < budget) done += Ages.work(level, v, budget - done);
         // And their insides furnished for the age: rugs, barrels, shelves, lamps, flowers (Interiors).
         if (done < budget) done += Interiors.work(level, v, budget - done);
+        // And each household's own: the things of its trades, and its colours (Decor).
+        if (done < budget) done += Decor.work(level, v, budget - done);
         return done;
     }
 

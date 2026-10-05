@@ -89,7 +89,8 @@ public final class Crafts {
         Economy.openCraft(v.id(), f.stationTask());
         String made;
         try {
-            made = switch (f.stationTask()) {
+            made = Luxuries.craft(level, v, f, true);                 // a turn at what the houses wait on (Luxuries)
+            if (made == null) made = switch (f.stationTask()) {
                 case SMITH -> smith(level, v, f);
                 case TAILOR -> tailor(level, v, f);
                 case BEEKEEP -> beekeep(level, v, f);
@@ -99,6 +100,7 @@ public final class Crafts {
                 case SHOP -> Cafe.keepShop(level, v, f);
                 default -> null;
             };
+            if (made == null) made = Luxuries.craft(level, v, f, false);   // its own work done: the houses' wants
         } finally {
             Economy.closeCraft();
         }

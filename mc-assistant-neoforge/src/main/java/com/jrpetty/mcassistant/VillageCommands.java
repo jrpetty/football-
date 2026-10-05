@@ -29,6 +29,7 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  *   /village standing         what every village you have met thinks of you
  *   /village house            the village's houses; house buy | house let N | house rent
  *   /village stall            the players' market stalls; stall rent | screen | till | books | price N item
+ *   /village decor            how each home is furnished; decor now | decor showcase (ops)
  *   /village knacks [name]    the knacks each folk chose for itself; knacks grant <name> <key> (ops)
  *   /village stats            the town's books in full: the analytics screen (as the village board)
  *   /village research         the city's research: what the leader has the town studying, and the tree
@@ -185,6 +186,12 @@ public final class VillageCommands {
             .then(Commands.literal("relations").executes(VillageCommands::relations))
             // The nearest village's town ledger, as a book: stores, residents, building, shortages.
             .then(Commands.literal("ledger").executes(VillageCommands::ledger))
+            // How each home is furnished: its trades' things, its colours, the luxuries its folk bought
+            // (Decor, Luxuries); "now" furnishes them as far as the stores run to and sees to the candles
+            // (ops); "showcase" sets a furnished home out where you stand, for the pictures (ops).
+            .then(Commands.literal("decor").executes(ctx -> decor(ctx, ""))
+                .then(Commands.literal("now").requires(src -> src.hasPermission(2)).executes(ctx -> decor(ctx, "now")))
+                .then(Commands.literal("showcase").requires(src -> src.hasPermission(2)).executes(ctx -> decor(ctx, "showcase"))))
             // Talk with the nearest folk, as a right-click would (for scripts and tests).
             .then(Commands.literal("talk").requires(src -> src.hasPermission(2))
                 .executes(ctx -> talk(ctx, ""))
@@ -210,6 +217,30 @@ public final class VillageCommands {
                 .then(Commands.literal("lights")
                     .then(Commands.literal("on").executes(ctx -> showcaseLights(ctx, true)))
                     .then(Commands.literal("off").executes(ctx -> showcaseLights(ctx, false))))));
+    }
+
+    /** /village decor [now|showcase]: the homes' furnishing, a line a house (Decor); or a home set out for the pictures. */
+    private static int decor(CommandContext<CommandSourceStack> ctx, String what) {
+        net.minecraft.server.level.ServerLevel level = ctx.getSource().getLevel();
+        net.minecraft.core.BlockPos here = net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition());
+        if (what.equals("showcase")) {
+            java.util.List<String> views = com.jrpetty.mcassistant.entity.Luxuries.showcase(level, here);
+            ctx.getSource().sendSuccess(() -> Component.literal("DECOR | " + String.join(" | ", views)), false);
+            return views.size();
+        }
+        Villages.Village v = Villages.nearest(level, here, Villages.VILLAGE_RANGE * 4);
+        if (v == null) {
+            ctx.getSource().sendFailure(Component.literal("No village near enough."));
+            return 0;
+        }
+        if (what.equals("now")) {
+            com.jrpetty.mcassistant.entity.Decor.workNow(level, v, 200);
+            com.jrpetty.mcassistant.entity.Luxuries.candles(level, v);
+        }
+        java.util.List<String> lines = com.jrpetty.mcassistant.entity.Decor.lines(level, v);
+        String said = "HOMES of " + Villages.name(v.id()) + (lines.isEmpty() ? ": no household has a house yet" : " | " + String.join(" | ", lines));
+        ctx.getSource().sendSuccess(() -> Component.literal(said), false);
+        return lines.size();
     }
 
     private static int showcaseRaid(CommandContext<CommandSourceStack> ctx) {

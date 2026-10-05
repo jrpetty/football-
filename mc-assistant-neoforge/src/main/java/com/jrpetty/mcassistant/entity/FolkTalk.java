@@ -314,6 +314,7 @@ public final class FolkTalk {
         String house = Homes.talk(f);
         line(sb, "Home", (house != null && !house.isEmpty() ? house + " " : "") + (bed == null ? "No bed of its own yet."
             : "A bed of its own" + (f.comforts() > 0 ? ", and " + f.comforts() + (f.comforts() == 1 ? " comfort" : " comforts") + " it bought" : "") + "."));
+        line(sb, "Comforts", Decor.cardLine(f));            // its home's things, its trade's and its colour (Decor)
         line(sb, "Nature", life.traitsLabel());
         line(sb, "Knacks", FolkSkills.cardLine(f));         // what it chose for itself: the Skills page has the rest
         String family = life.partnerName().isEmpty() ? "" : "partner " + life.partnerName();
@@ -544,6 +545,7 @@ public final class FolkTalk {
             case "brightfriend" -> "There's a friend near who always cheers me up.";
             case "unflappable" -> pick(r, "Things could be better, but I don't let it get to me.", "Nothing much rattles me.");
             case "civic" -> CityTree.moodWords(f);
+            case "homely" -> Decor.moodWords(f);
             default -> "";
         };
     }
