@@ -329,6 +329,7 @@ public final class Villages {
         Storekeeping.resetForTests();
         Couriers.resetForTests();
         Toolrack.resetForTests();
+        Meals.resetForTests();
         VillageBoards.resetForTests();
         Retiring.resetForTests();
         HAS_STORES.clear();
