@@ -1135,8 +1135,8 @@ public class VillageGameTests {
             String offer = com.jrpetty.mcassistant.entity.FolkTalk.answer(a, you,
                 com.jrpetty.mcassistant.entity.TalkTopic.TRADE, "");
             Kit.log("t26 the offer: " + offer);
-            helper.assertTrue(offer.contains("for an emerald") && com.jrpetty.mcassistant.entity.Trade.canPay(a, you),
-                "it offers what it has to spare, for what you can pay: " + offer);
+            helper.assertTrue(offer.contains("coin") && offer.contains("an emerald") && com.jrpetty.mcassistant.entity.Trade.canPay(a, you),
+                "it offers what it has to spare, for coin or what you can pay: " + offer);
             String done = com.jrpetty.mcassistant.entity.FolkTalk.answer(a, you,
                 com.jrpetty.mcassistant.entity.TalkTopic.DELIVER, "");
             int goods = 0, emeralds = 0;
@@ -4007,6 +4007,49 @@ public class VillageGameTests {
         helper.runAtTickTime(2500, () -> {
             Kit.log("t60 the pen (not in): " + String.join(" | ", trail));
             helper.fail("the sheep never went into the pen");
+        });
+    }
+
+    /**
+     * The fisher fishes: from eight blocks off a pond, it walks to the bank, casts, and lands fish.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 2400, batch = "t61_fisher")
+    public static void t61_fisher(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 52000, 12000, 32);
+        Kit.prepare(level, 52000, 12000, 32);
+        BlockPos heart = Kit.surface(level, 52000, 12000);
+        VillageFolkEntity fisher = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(fisher != null, "a village");
+        BlockPos pond = Kit.surface(level, heart.getX() + 12, heart.getZ());
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                level.setBlock(pond.offset(dx, -1, dz), Blocks.WATER.defaultBlockState(), 3);
+                level.setBlock(pond.offset(dx, -2, dz), Blocks.WATER.defaultBlockState(), 3);
+            }
+        }
+        fisher.assignPlot(com.jrpetty.mcassistant.entity.WorkZone.around(pond, 6, com.jrpetty.mcassistant.entity.WorkZone.DEFAULT_DEPTH), "the pond");
+        fisher.setJob(StationTask.FISH);
+        fisher.insertItem(new ItemStack(Items.FISHING_ROD));
+        fisher.moveTo(pond.getX() + 0.5, pond.getY(), pond.getZ() + 8.5, 0.0F, 0.0F);
+        fisher.enqueue(com.jrpetty.mcassistant.entity.Job.fish(2));
+        final java.util.List<String> trail = new java.util.ArrayList<>();
+        java.util.function.Predicate<ItemStack> fish = st -> st.is(Items.COD) || st.is(Items.SALMON) || st.is(Items.PUFFERFISH)
+            || st.is(Items.TROPICAL_FISH) || st.is(Items.STRING) || st.is(Items.BONE) || st.is(Items.LEATHER) || st.is(Items.BOWL) || st.is(Items.SADDLE);
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            int caught = fisher.countCarried(fish);
+            if (t % 200 == 0) trail.add(t + ": at " + fisher.blockPosition().toShortString() + ", caught " + caught + ", job " + fisher.peekJob());
+            if (caught >= 1) {
+                Kit.log("t61 the fisher: " + String.join(" | ", trail) + " | landed " + caught + " at " + t + " from " + fisher.blockPosition().toShortString());
+                helper.succeed();
+            }
+        });
+        helper.runAtTickTime(2300, () -> {
+            Kit.log("t61 the fisher (nothing): " + String.join(" | ", trail));
+            helper.fail("the fisher caught nothing");
         });
     }
 }
