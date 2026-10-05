@@ -1091,7 +1091,10 @@ hands back to their own work the same morning.
 * **One production chest a worker.** Every farmer, woodcutter, miner, fisher, rancher,
   hunter and beekeeper keeps **one production chest** on its own plot: a farmer's in the
   corner of its field nearest the town, the others just inside the edge of theirs on the
-  town side. It is the folk's own chest, or one from the stores, or one made of the stores'
+  town side, always **on the plot's own level** (a step or two up or down at most): where
+  that edge is the top of a cliff over a riverbank, the chest goes down by the middle of the
+  plot instead, and a chest left up a cliff from an older game is given up for the couriers
+  and a new one set down where the worker can reach it. It is the folk's own chest, or one from the stores, or one made of the stores'
   planks. Everything it makes goes in there, not on a walk to the storehouse, and it is
   **paid for it as it puts it in**. When the chest is full, the load goes to the stores
   instead. That chest is where the couriers know to come for it.

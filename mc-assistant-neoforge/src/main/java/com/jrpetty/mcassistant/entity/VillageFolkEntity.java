@@ -5469,7 +5469,10 @@ public class VillageFolkEntity extends AssistantEntity {
         if (productionChest != null) {
             if (!level.isLoaded(productionChest)) return productionChest;
             BlockPos c = z.center();
-            boolean near = Math.max(Math.abs(productionChest.getX() - c.getX()), Math.abs(productionChest.getZ() - c.getZ())) <= reach + 4;
+            // And on the plot's own level: a riverside fisher's chest set down on the clifftop fourteen blocks
+            // over its bank was never reached again, and three days' catch went nowhere.
+            boolean near = Math.max(Math.abs(productionChest.getX() - c.getX()), Math.abs(productionChest.getZ() - c.getZ())) <= reach + 4
+                && Math.abs(productionChest.getY() - c.getY()) <= CHEST_RISE + 1;
             boolean standing = level.getBlockEntity(productionChest) instanceof net.minecraft.world.level.block.entity.ChestBlockEntity;
             if (near && standing) return productionChest;
             if (standing && oldProductionChest == null) {
@@ -5491,13 +5494,15 @@ public class VillageFolkEntity extends AssistantEntity {
             // The corner of the field (as it will grow) nearest the town: one square of eighty given up,
             // on its own ground, by the way in from the town.
             int sx = dx >= 0 ? 1 : -1, sz = dz >= 0 ? 1 : -1;
-            spot = chestSpot(level, c.getX() + sx * FIELD_MOST, c.getZ() + sz * FIELD_MOST);
+            spot = chestSpot(level, c.getX() + sx * FIELD_MOST, c.getZ() + sz * FIELD_MOST, c.getY());
         } else {
             // Just inside the edge of its plot, on the side towards the town.
             double len = Math.max(1.0, Math.sqrt(dx * dx + dz * dz));
             int in = Math.max(1, z.radius() - 1);
-            spot = chestSpot(level, c.getX() + (int) Math.round(dx / len * in), c.getZ() + (int) Math.round(dz / len * in));
+            spot = chestSpot(level, c.getX() + (int) Math.round(dx / len * in), c.getZ() + (int) Math.round(dz / len * in), c.getY());
         }
+        // Nowhere on its own level by the edge towards the town (a bank under a cliff): by the middle of the plot.
+        if (spot == null) spot = chestSpot(level, c.getX() + 1, c.getZ() + 1, c.getY());
         if (spot == null) return null;
         if (countCarried(s -> s.is(net.minecraft.world.item.Items.CHEST)) == 0) {
             drawFrom(villageCentre, s -> s.is(net.minecraft.world.item.Items.CHEST), 1, buildStoresRadius());
@@ -5522,17 +5527,21 @@ public class VillageFolkEntity extends AssistantEntity {
         return productionChest;
     }
 
-    /** Open, level ground for a chest near here: a solid floor, nothing in the way, no water, and on
-     *  nobody else's plot. Null if there is none within three blocks. */
+    /** How far above or below its plot's ground a worker's chest may stand: a step or two, never a cliff. */
+    private static final int CHEST_RISE = 3;
+
+    /** Open, level ground for a chest near here, on the plot's own level (within {@link #CHEST_RISE} of
+     *  {@code y}): a solid floor, nothing in the way, no water, and on nobody else's plot. Null if there
+     *  is none within three blocks. */
     @Nullable
-    private BlockPos chestSpot(net.minecraft.server.level.ServerLevel level, int x, int z) {
+    private BlockPos chestSpot(net.minecraft.server.level.ServerLevel level, int x, int z, int y) {
         UUID village = ownerId();
         for (int r = 0; r <= 3; r++) {
             for (int ix = -r; ix <= r; ix++) {
                 for (int iz = -r; iz <= r; iz++) {
                     if (Math.max(Math.abs(ix), Math.abs(iz)) != r) continue;
                     BlockPos p = surfaceAt(x + ix, z + iz);
-                    if (p == null) continue;
+                    if (p == null || Math.abs(p.getY() - y) > CHEST_RISE) continue;
                     BlockState below = level.getBlockState(p.below());
                     if (!below.isFaceSturdy(level, p.below(), net.minecraft.core.Direction.UP) || !below.getFluidState().isEmpty()) continue;
                     if (!level.getBlockState(p).canBeReplaced() || !level.getBlockState(p).getFluidState().isEmpty()) continue;

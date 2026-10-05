@@ -80,6 +80,8 @@ import java.util.function.Predicate;
  * <li><b>ec12</b>: a hunter brings meat home, and leaves the last pair of a kind.</li>
  * <li><b>ec13</b>: the watch grows with the town, and by half again once monsters have killed; the books say
  *     what took them; a raider left over from a raid that is over goes at dawn.</li>
+ * <li><b>ec14</b>: a worker whose plot's edge towards the town is under a bluff ten blocks high sets its work
+ *     chest down on its own level, not on the top of the bluff where it could never get to it.</li>
  * </ul>
  *
  * <p>Each runs on its own ground (x 360,000 to 366,000, z 50,000).
@@ -1104,6 +1106,39 @@ public class EconomyGameTests {
         int sent = com.jrpetty.mcassistant.entity.RaidStragglers.sweep(level);
         Kit.log("ec13 raid stragglers sent off at dawn: " + sent);
         helper.assertTrue(sent >= 1 && !straggler.isAlive(), "a raider in no raid goes at dawn: " + sent);
+        helper.succeed();
+    }
+
+    // ============================================================ ec14: the work chest on the plot's own level
+
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "ec14_chest_not_on_the_cliff")
+    public static void ec14_chest_not_on_the_cliff(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(24000L * 5 + 4000);
+        final int x = 364900;
+        Kit.hold(level, x, Z, 40);
+        Kit.prepare(level, x, Z, 40);
+        BlockPos heart = Kit.surface(level, x, Z);
+        VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(f != null && f.ownerId() != null, "a village");
+        // The plot sixteen blocks east; between it and the town, over the plot's west edge, a bluff ten high.
+        BlockPos mine = Kit.surface(level, x + 16, Z);
+        for (int bx = x + 5; bx <= x + 13; bx++) {
+            for (int bz = Z - 6; bz <= Z + 6; bz++) {
+                for (int by = mine.getY(); by < mine.getY() + 10; by++) level.setBlock(new BlockPos(bx, by, bz), Blocks.STONE.defaultBlockState(), 2);
+            }
+        }
+        f.setJob(StationTask.MINE);
+        f.assignPlot(WorkZone.around(mine, 8, WorkZone.DEFAULT_DEPTH), "The Pit");
+        f.getInventoryItems().clear();
+        f.insertItem(new ItemStack(Items.CHEST));
+        BlockPos chest = f.productionChestForTests();
+        Kit.log("ec14 the plot at " + mine.toShortString() + ", the bluff's top at y " + (mine.getY() + 10) + "; the work chest at "
+            + (chest == null ? "none" : chest.toShortString()));
+        helper.assertTrue(chest != null && level.getBlockEntity(chest) instanceof Container, "a work chest goes down");
+        helper.assertTrue(Math.abs(chest.getY() - mine.getY()) <= 3, "on the plot's own level, not the bluff's top: y " + chest.getY()
+            + " against the plot's " + mine.getY());
         helper.succeed();
     }
 }
