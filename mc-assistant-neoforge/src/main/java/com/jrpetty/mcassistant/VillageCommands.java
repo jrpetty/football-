@@ -36,7 +36,7 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  *   /village stats            the town's books in full: the analytics screen (as the village board)
  *   /village research         the city's research: what the leader has the town studying, and the tree
  *   /village research pick|grant &lt;civic&gt;   study this civic now, or have it done (ops; for tests)
- *   /village bell             the town bell: where it hangs, today's bells; bell ring dawn|noon|dusk (ops)
+ *   /village bell             the town bell: where it hangs, its frame, today's bells; bell ring|call dawn|noon|dusk (ops)
  *   /village founding         the next Founding Day; founding now (ops) keeps it this minute
  *   /village birthdays        the week's birthdays; birthdays now &lt;name&gt; (ops) keeps one now
  *   /village speed 16|max|normal   time runs faster, to watch a village grow (ops / world owner)
@@ -135,7 +135,12 @@ public final class VillageCommands {
                 .then(Commands.literal("ring").requires(src -> src.hasPermission(2))
                     .then(Commands.argument("peal", com.mojang.brigadier.arguments.StringArgumentType.word())
                         .suggests((ctx, b) -> net.minecraft.commands.SharedSuggestionProvider.suggest(java.util.List.of("dawn", "noon", "dusk"), b))
-                        .executes(VillageCommands::ringBell))))
+                        .executes(ctx -> ringBell(ctx, false))))
+                // ...or called for now: its ringer walks to the bell and rings it there.
+                .then(Commands.literal("call").requires(src -> src.hasPermission(2))
+                    .then(Commands.argument("peal", com.mojang.brigadier.arguments.StringArgumentType.word())
+                        .suggests((ctx, b) -> net.minecraft.commands.SharedSuggestionProvider.suggest(java.util.List.of("dawn", "noon", "dusk"), b))
+                        .executes(ctx -> ringBell(ctx, true)))))
             .then(Commands.literal("founding").executes(ctx -> foundingDay(ctx, false))
                 .then(Commands.literal("now").requires(src -> src.hasPermission(2)).executes(ctx -> foundingDay(ctx, true))))
             .then(Commands.literal("birthdays").executes(ctx -> birthdays(ctx, null))
@@ -772,7 +777,7 @@ public final class VillageCommands {
     }
 
     /** /village bell ring dawn|noon|dusk (ops): the bell rung now by whoever would ring it, and the town answers it. */
-    private static int ringBell(CommandContext<CommandSourceStack> ctx) {
+    private static int ringBell(CommandContext<CommandSourceStack> ctx, boolean walk) {
         Villages.Village v = villageHere(ctx);
         if (v == null) {
             ctx.getSource().sendFailure(Component.literal("No village yet."));
@@ -786,7 +791,8 @@ public final class VillageCommands {
             ctx.getSource().sendFailure(Component.literal("Which bell? dawn, noon or dusk."));
             return 0;
         }
-        String said = com.jrpetty.mcassistant.entity.TownBell.ringNow(ctx.getSource().getLevel(), v, peal);
+        String said = walk ? com.jrpetty.mcassistant.entity.TownBell.callNow(ctx.getSource().getLevel(), v, peal)
+            : com.jrpetty.mcassistant.entity.TownBell.ringNow(ctx.getSource().getLevel(), v, peal);
         ctx.getSource().sendSuccess(() -> Component.literal("BELL " + Villages.name(v.id()) + ": " + said), true);
         return 1;
     }

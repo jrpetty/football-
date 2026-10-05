@@ -18,7 +18,6 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BellBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.properties.BellAttachType;
 import net.minecraft.world.level.chunk.LevelChunk;
 
 import javax.annotation.Nullable;
@@ -125,6 +124,9 @@ public final class TownBell {
         @Nullable BlockPos stand, standFor;
         /** The town lay in for this morning's dawn bell. */
         boolean dawnWaited;
+        /** A bell called for out of its hour (/village bell call): its ringer walks to it and rings it, whatever the clock says. */
+        boolean forced;
+        long forcedAt;
         /** The peal being rung: the strokes so far, the next, the bell and who is ringing it. */
         @Nullable Peal striking;
         int struck;
@@ -192,7 +194,14 @@ public final class TownBell {
             return;
         }
         if (Villages.headcount(id) < 3) return;            // a camp of two keeps its own hours
-        if (now % 1200L < EVERY && t > 1000L && t < 13500L) keepTheBell(level, v);
+        if (t > 1000L && t < 13500L && now % (BellFrame.building(level, id) ? 40L : 1200L) < EVERY) keepTheBell(level, v);
+        if (d.forced && d.calling != null) {
+            // Called for out of its hour: the ringer on its way, and rung by whoever is by it if it never gets there.
+            VillageFolkEntity ringer = d.ringer == null ? null : live(level, d.ringer);
+            if (ringer == null || !fitToRing(ringer, d.calling, id)) appoint(level, v, d, d.calling);
+            if (now - d.forcedAt > 1200L) late(level, v, d, d.calling);
+            return;
+        }
         for (Peal p : Peal.values()) {
             if (d.rung.containsKey(p) || d.missed.contains(p)) continue;
             long due = p.inDay();
@@ -275,8 +284,9 @@ public final class TownBell {
         }
         BlockPos bell = bellAt(level, v);
         if (bell != null && !bell.equals(d.standFor)) {
+            BellFrame.Frame frame = BellFrame.of(id);
             d.standFor = bell;
-            d.stand = standBy(level, bell);
+            d.stand = frame != null && bell.equals(frame.bell()) ? frame.stand() : standBy(level, bell);   // before its frame
         }
         BlockPos stand = bell != null && d.stand != null ? d.stand : crierSpot(v);
         long t = inDay(level.getDayTime());
@@ -293,7 +303,7 @@ public final class TownBell {
         f.getNavigation().stop();
         BlockPos look = bell != null ? bell : v.centre();
         f.getLookControl().setLookAt(look.getX() + 0.5, look.getY() + 0.5, look.getZ() + 0.5);
-        if (t >= p.inDay()) begin(level, v, d, p, f, false);
+        if (t >= p.inDay() || d.forced) begin(level, v, d, p, f, false);
         return true;
     }
 
@@ -333,6 +343,7 @@ public final class TownBell {
 
     private static void miss(Villages.Village v, Day d, Peal p, String why) {
         d.missed.add(p);
+        d.forced = false;
         if (d.calling == p) {
             d.calling = null;
             d.ringer = null;
@@ -347,6 +358,7 @@ public final class TownBell {
         long dt = level.getDayTime();
         d.rung.put(p, new Rung(p, dt, by == null ? "" : by.displayNameCap(), late, bell != null));
         d.missed.remove(p);
+        d.forced = false;
         if (d.calling == p) {
             d.calling = null;
             d.ringer = null;
@@ -403,12 +415,29 @@ public final class TownBell {
 
     // ------------------------------------------------------------------ the bell itself
 
-    /** Where the town's bell belongs: before the leader's hall, else at the board, else at the heart. */
+    /** Where the town's bell belongs: in its frame on the square (BellFrame), else at the board, else at the heart. */
     static BlockPos place(Villages.Village v) {
-        BlockPos hall = hallFront(v.id());
-        if (hall != null) return hall;
+        BellFrame.Frame frame = BellFrame.of(v.id());
+        if (frame != null) return frame.bell();
         BlockPos lectern = VillageBoards.lectern(v.id());
         return lectern != null ? lectern : v.centre();
+    }
+
+    /** Forget where the bell hung (it has been taken down): looked for afresh. */
+    static void forget(UUID village) {
+        BELL.remove(village);
+        LOOKED.remove(village);
+    }
+
+    /** For the tests: where the bell hangs looked for afresh. */
+    public static void forgetForTests(UUID village) {
+        forget(village);
+    }
+
+    /** A bell in a bell tower or a chapel's tower: the town has its belfry, and rings it where it hangs. */
+    static boolean inABelfry(Villages.Village v, BlockPos bell) {
+        BlockPos tower = Villages.builtAt(v.id(), "belltower"), chapel = Villages.builtAt(v.id(), "chapel");
+        return tower != null && bell.distSqr(tower) < 8 * 8 || chapel != null && bell.distSqr(chapel) < 14 * 14;
     }
 
     /** Before the leader's hall's door, or null if there is no hall. */
@@ -423,8 +452,10 @@ public final class TownBell {
         return null;
     }
 
-    /** Where the hours are called with no bell to ring: at the board, else the heart. */
+    /** Where the hours are called with no bell to ring: before the bell's frame once it is begun, else at the board, else the heart. */
     static BlockPos crierSpot(Villages.Village v) {
+        BellFrame.Frame frame = BellFrame.of(v.id());
+        if (frame != null && frame.begun) return frame.stand();
         BlockPos lectern = VillageBoards.lectern(v.id());
         return lectern != null ? lectern : v.centre();
     }
@@ -444,11 +475,12 @@ public final class TownBell {
         return found;
     }
 
-    /** Every bell standing in the town, the nearest to where the town bell belongs (a bell tower's first). */
+    /** Every bell standing in the town, the nearest to where the town bell belongs (a bell tower's first, then its frame's). */
     @Nullable
     private static BlockPos findBell(ServerLevel level, Villages.Village v) {
         BlockPos want = place(v);
         BlockPos tower = Villages.builtAt(v.id(), "belltower");
+        BellFrame.Frame frame = BellFrame.of(v.id());
         int cx = v.centre().getX() >> 4, cz = v.centre().getZ() >> 4, reach = 5;
         BlockPos best = null;
         double bestScore = Double.MAX_VALUE;
@@ -461,6 +493,7 @@ public final class TownBell {
                     BlockPos p = be.getBlockPos();
                     double score = Math.sqrt(p.distSqr(want));
                     if (tower != null && Math.abs(p.getX() - tower.getX()) <= 4 && Math.abs(p.getZ() - tower.getZ()) <= 4) score -= 200;
+                    if (frame != null && p.equals(frame.bell())) score -= 150;
                     if (score < bestScore) { bestScore = score; best = p.immutable(); }
                 }
             }
@@ -492,47 +525,26 @@ public final class TownBell {
     }
 
     /**
-     * A town with no bell, and one put by in its stores: hung by the town's works on a plinth out of the
-     * stores — before the leader's hall once it stands, else where the watch hangs its alarm bell.
+     * The town's bell seen to (by day): its own frame on the square, built by the town's works out of the
+     * stores and the bell moved into it (BellFrame). A bell in a bell tower or a chapel is rung where it
+     * hangs. With no frame to be had (no board yet, no ground for one), a bell put by in the stores is hung
+     * where the watch hangs its alarm bell, on a plinth out of the stores.
      */
     private static void keepTheBell(ServerLevel level, Villages.Village v) {
-        if (bellAt(level, v) != null) return;
         UUID id = v.id();
-        if (Market.stock(level, id, st -> st.is(Items.BELL)) == 0) return;
-        long day = level.getDayTime() / 24000L;
-        BlockPos front = hallFront(id);
-        if (front == null) {
-            BlockPos hung = Watch.bell(level, v, false);        // the square, as the watch hangs its alarm bell
-            if (hung != null) {
-                LOOKED.remove(id);
-                BELL.put(id, hung);
-                Villages.tell(id, day, "The town bell was hung on the square");
-            }
-            return;
+        BlockPos bell = bellAt(level, v);
+        if (bell != null && inABelfry(v, bell)) return;
+        if (VillageBoards.lectern(id) != null) {
+            BellFrame.work(level, v, bell);
+            if (BellFrame.of(id) != null) return;
         }
-        Ledger.Building hall = null;
-        for (Ledger.Building b : Ledger.buildings(id)) if (b.structure().equals("townhall")) { hall = b; break; }
-        if (hall == null) return;
-        BlockPos side = front.relative(hall.facing().getClockWise(), 4);
-        BlockPos floor = Watch.floorAt(level, side.getX(), side.getZ(), front.getY());
-        if (floor == null) return;
-        if (!TownJobs.atWork(level, v, "bell", floor, "hanging the town bell", AssistantEntity.StationTask.STORE)) return;
-        if (!TownWork.take(level, v, st -> st.is(Items.BELL), 1)) return;
-        BlockState plinth;
-        if (TownWork.take(level, v, st -> st.is(Items.STONE_BRICKS), 1)) plinth = Blocks.STONE_BRICKS.defaultBlockState();
-        else if (TownWork.take(level, v, st -> st.is(Items.COBBLESTONE), 1)) plinth = Blocks.COBBLESTONE.defaultBlockState();
-        else {
-            TownWork.give(level, v, new ItemStack(Items.BELL));
-            return;
+        if (bell != null || Market.stock(level, id, st -> st.is(Items.BELL)) == 0) return;
+        BlockPos hung = Watch.bell(level, v, false);            // the square, as the watch hangs its alarm bell
+        if (hung != null) {
+            LOOKED.remove(id);
+            BELL.put(id, hung);
+            Villages.tell(id, level.getDayTime() / 24000L, "The town bell was hung on the square");
         }
-        level.setBlock(floor, plinth, 3);
-        BlockPos b = floor.above();
-        level.setBlock(b, Blocks.BELL.defaultBlockState()
-            .setValue(BellBlock.FACING, hall.facing().getClockWise())
-            .setValue(BellBlock.ATTACHMENT, BellAttachType.FLOOR), 3);
-        BELL.put(id, b);
-        LOOKED.remove(id);
-        Villages.tell(id, day, "The town bell was hung before the leader's hall");
     }
 
     // ------------------------------------------------------------------ folk answering it
@@ -867,6 +879,8 @@ public final class TownBell {
     private static String where(ServerLevel level, Villages.Village v, BlockPos bell) {
         BlockPos hall = hallFront(v.id()), tower = Villages.builtAt(v.id(), "belltower"), chapel = Villages.builtAt(v.id(), "chapel");
         BlockPos lectern = VillageBoards.lectern(v.id());
+        BellFrame.Frame frame = BellFrame.of(v.id());
+        if (frame != null && bell.equals(frame.bell())) return "in its own frame on the square";
         if (tower != null && bell.distSqr(tower) < 8 * 8) return "in the bell tower";
         if (hall != null && bell.distSqr(hall) < 10 * 10) return "before the leader's hall";
         if (chapel != null && bell.distSqr(chapel) < 14 * 14) return "in the chapel's tower";
@@ -906,8 +920,14 @@ public final class TownBell {
         }
         BlockPos bell = bellAt(level, v);
         out.add(bell != null ? "The town bell hangs " + where(level, v, bell) + ": three strokes at dawn (6:00), six at noon, nine at dusk (18:00)."
-            : "No town bell yet: the hours are called at the board. A bell put in the stores is hung " + (hallFront(village) != null
-                ? "before the leader's hall." : "on the square."));
+            : "No town bell yet: the hours are called " + (BellFrame.of(village) != null ? "before its frame" : "at the board")
+                + ". A bell put in the stores is hung " + (BellFrame.of(village) != null ? "in its frame on the square." : "on the square."));
+        BellFrame.Frame frame = BellFrame.of(village);
+        if (frame != null && !BellFrame.hung(level, frame)) {
+            out.add(BellFrame.standing(level, frame) ? "The bell's frame stands on the square, waiting for the bell."
+                : "The town bell's own frame is going up on the square" + (frame.begun ? "" : " (once the stores have the timber for it)")
+                    + "; the bell keeps ringing where it hangs till it is moved there.");
+        }
         long dt = level.getDayTime();
         Day d = day(village, bellDay(dt));
         int up = 0, ate = 0, cafe = 0, home = 0, grown = 0;
@@ -973,6 +993,7 @@ public final class TownBell {
             sb.append("BELL-NONE (the hours are called at the board) SPOT ").append(spot.getX()).append(' ').append(spot.getY())
                 .append(' ').append(spot.getZ()).append(". ");
         }
+        sb.append(BellFrame.status(level, v)).append(' ');
         for (String l : book(level, v.id())) sb.append(l).append(' ');
         Day d = DAYS.get(v.id());
         if (d != null && d.calling != null) {
@@ -980,6 +1001,26 @@ public final class TownBell {
             sb.append("On the way to ring ").append(d.calling.title()).append(": ").append(r == null ? "nobody yet" : r.displayNameCap()).append('.');
         }
         return sb.toString().trim();
+    }
+
+    /**
+     * /village bell call dawn|noon|dusk: the bell called for now, out of its hour: its ringer walks to it and
+     * rings it, and the town answers it as at its hour.
+     */
+    public static String callNow(ServerLevel level, Villages.Village v, Peal p) {
+        long dt = level.getDayTime();
+        Day d = day(v.id(), bellDay(dt));
+        LOOKED.remove(v.id());
+        d.rung.remove(p);
+        d.missed.remove(p);
+        d.calling = p;
+        d.forced = true;
+        d.forcedAt = level.getGameTime();
+        if (p == Peal.DAWN) d.dawnWaited = true;
+        appoint(level, v, d, p);
+        afresh(v, d, p);
+        VillageFolkEntity by = d.ringer == null ? null : live(level, d.ringer);
+        return capital(p.title()) + " called for: " + (by == null ? "nobody to ring it yet" : by.displayNameCap() + " is on the way to ring it") + ".";
     }
 
     /** /village bell ring dawn|noon|dusk: the bell rung now, by whoever would ring it, and the town answers. */
@@ -992,7 +1033,13 @@ public final class TownBell {
         d.calling = p;
         if (p == Peal.DAWN) d.dawnWaited = true;
         begin(level, v, d, p, by, false);
-        // A bell rung by hand today answers to it afresh.
+        afresh(v, d, p);
+        return capital(p.title()) + " rang at " + TownCalendar.clock(dt) + (by == null ? " (nobody to ring it: rung by hand)" : ", rung by " + by.displayNameCap())
+            + (bellAt(level, v) == null ? " — called aloud: the town has no bell yet" : "") + ".";
+    }
+
+    /** A bell rung (or called for) by hand today: the town answers it afresh. */
+    private static void afresh(Villages.Village v, Day d, Peal p) {
         for (AssistantEntity a : Villages.folkOf(v.id())) {
             Answer an = ANSWERS.get(a.getUUID());
             if (an == null || an.bellDay != d.bellDay) continue;
@@ -1002,8 +1049,6 @@ public final class TownBell {
                 case DUSK -> { an.dusk = -1; an.homeward = false; an.duskWhat = ""; }
             }
         }
-        return capital(p.title()) + " rang at " + TownCalendar.clock(dt) + (by == null ? " (nobody to ring it: rung by hand)" : ", rung by " + by.displayNameCap())
-            + (bellAt(level, v) == null ? " — called aloud: the town has no bell yet" : "") + ".";
     }
 
     // ------------------------------------------------------------------ kept with the world
