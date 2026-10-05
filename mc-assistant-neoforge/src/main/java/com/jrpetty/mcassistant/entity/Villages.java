@@ -328,6 +328,7 @@ public final class Villages {
         Storehouses.resetForTests();
         Storekeeping.resetForTests();
         Couriers.resetForTests();
+        Stables.resetForTests();
         VillageBoards.resetForTests();
         Retiring.resetForTests();
         HAS_STORES.clear();
@@ -1468,6 +1469,8 @@ public final class Villages {
         if (folk >= 12 && built(villageId, "tavern") < 1) extras.add("tavern");
         // A Stone Age village's square gets a fountain.
         if (folk >= 10 && built(villageId, "fountain") < 1) extras.add("fountain");
+        // A stable, once the village has horses of its own (or, in the Iron Age, a rancher and a saddle: Stables).
+        if (built(villageId, "stable") < 1 && Stables.wanted(villageId)) extras.add("stable");
         // The courtyard before the board, where the village gathers; and, once the town is big enough
         // to want governing, a hall for whoever leads it, on the great lot behind the board.
         if (VillageBoards.boardOf(villageId) != null && built(villageId, "hall") > 0 && built(villageId, "court") < 1) extras.add("court");
@@ -1811,6 +1814,7 @@ public final class Villages {
             case "watchtower" -> "a watchtower, to see trouble coming";
             case "lighthouse" -> "a lighthouse, so anyone out after dark can find the way home";
             case "pen" -> "a pen, for the rancher's herd";
+            case "stable" -> "a stable for the village's horses: four stalls, hay and water, so the couriers and scouts can ride";
             case "market" -> "a market, stalls under one roof for what the village makes";
             case "chapel" -> "a chapel, which the Diamond Age asks for";
             case "cafe" -> "a café, where folk can sit down to a drink and a bite on their break";

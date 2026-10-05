@@ -474,6 +474,8 @@ public final class Couriers {
         BlockPos base = base(level, v);
         if (base == null) return false;
         Run r = o.taken.get(c.getUUID());
+        // Its business at the far end done, with a horse out (Riding): back to the horse and home on it first.
+        if ((r == null || r.stage == Stage.IN || r.stage == Stage.BACK) && Riding.homeFirst(c, level)) return true;
         if (r == null) {
             // Something on its back from before (a run cut short, a reload): into the stores first.
             if (c.stashable() > 0) {
@@ -531,7 +533,7 @@ public final class Couriers {
             BlockPos depot = depot(level, v);
             if (depot == null) { r.stage = Stage.BACK; return true; }
             r.stage = Stage.IN;
-            c.enqueue(Job.depositAt(depot));
+            if (!Riding.homeFirst(c, level)) c.enqueue(Job.depositAt(depot));     // (on horseback: ridden home first)
             if (level.getRandom().nextInt(3) == 0 && r.folkName.length() > 0) {
                 FolkTalk.speak(c, FolkTalk.pick(level.getRandom(), "That's " + r.folkName + "'s chest done. In it goes.",
                     Storekeeping.words(r.moved) + " for the storehouse."));
@@ -573,7 +575,7 @@ public final class Couriers {
                 "Give it here — the storehouse sent me."));
             BlockPos depot = depot(level, v);
             r.stage = Stage.IN;
-            if (depot != null) c.enqueue(Job.depositAt(depot));
+            if (depot != null && !Riding.homeFirst(c, level)) c.enqueue(Job.depositAt(depot));   // (on horseback: ridden home first)
             return true;
         }
         return carryIn(c, level, v, o, r, base);
@@ -653,6 +655,12 @@ public final class Couriers {
      *  beside it (as any stuck village hand is), or failing that the run is set aside. */
     private static boolean walk(VillageFolkEntity c, ServerLevel level, UUID v, Office o, Run r, BlockPos to) {
         long now = level.getGameTime();
+        // A long run on horseback (Riding): a horse from the stable first, ridden to near the place.
+        if (Riding.courier(c, level, to, r)) {
+            r.best = Double.MAX_VALUE;
+            r.progress = now;
+            return true;
+        }
         double d = c.distanceToSqr(to.getX() + 0.5, to.getY(), to.getZ() + 0.5);
         if (d < r.best - 1.0) {
             r.best = d;
@@ -749,6 +757,8 @@ public final class Couriers {
                 Run r = o.taken.get(f.getUUID());
                 doing = r != null ? r.stage.words + ": " + r.what
                     : f.offWorkNow() ? "off work" : o.doing.getOrDefault(f.getUUID(), "waiting for a run");
+                String ride = Riding.doing(f);                                  // on horseback (Riding)
+                if (ride != null) doing = ride.substring(0, 1).toLowerCase(java.util.Locale.ROOT) + ride.substring(1) + "; " + doing;
             }
             s.putString("doing", doing);
             staff.add(s);

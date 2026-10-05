@@ -422,6 +422,8 @@ public final class Scouts {
         Expedition e = f.expedition();
         if (e == null) return false;
         keepAwake(level, f, e);
+        // A horse from the stable to ride its rounds on, and an old chest looked into for a saddle (Riding).
+        if (Riding.scout(f, level, e)) return true;
         long time = level.getDayTime() % 24000L;
         // Something hostile close by: away from it, quick.
         Mob foe = foe(level, f);
@@ -493,7 +495,7 @@ public final class Scouts {
                 } else {
                     // Coming home it knows the way: it has walked it. Over the bad patch to the next mark.
                     BlockPos to = surface(level, dest);
-                    f.moveTo(to.getX() + 0.5, to.getY(), to.getZ() + 0.5, f.getYRot(), 0.0F);
+                    Riding.carry(f, to.getX() + 0.5, to.getY(), to.getZ() + 0.5);       // (its horse with it: Riding)
                     e.detour = 0;
                     e.best = Double.MAX_VALUE;
                 }

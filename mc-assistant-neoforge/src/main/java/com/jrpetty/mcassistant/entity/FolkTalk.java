@@ -259,6 +259,9 @@ public final class FolkTalk {
         if (f.guidePlayer() != null) return "Showing somebody the way to " + f.guideWhat();
         String status = f.clientStatus();
         if (f.stationTask() == AssistantEntity.StationTask.NONE) return "Looking for a trade";
+        // On horseback, or about the horses (Stables, Riding): "Riding Bay to the north mine".
+        String horses = Stables.doing(f);
+        if (horses != null) return horses;
         if (f.offWorkNow()) return "Off work";
         String run = Couriers.doing(f);
         if (run != null) return "For the storehouse: " + run;
@@ -296,6 +299,9 @@ public final class FolkTalk {
         String levels = f.tradeLevels();
         if (!levels.isEmpty() && levels.contains(",")) line(sb, "Has worked", levels);
         if (!f.isBaby()) line(sb, "At its work", Skill.line(f));
+        // Its horses: the rancher's gentling and the stable, a rider's horse and rides (Stables).
+        String horses = f.isBaby() ? null : Stables.card(f);
+        if (horses != null) line(sb, "Horses", horses);
         // How quick it is at its work, and why, part by part (AssistantEntity.paceLine): its level,
         // its tool, its spirits, the town, its years, the town's research and its own knacks.
         if (!f.isBaby() && job != AssistantEntity.StationTask.NONE) line(sb, "Pace", f.paceLine());

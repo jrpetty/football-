@@ -130,6 +130,24 @@ def showcase(r, cx, cz, look):
     say("alive after the town: %s" % client_alive())
 
 
+def horses_stage(r, look, cx, cz):
+    """The stable (Stables, Riding): a stable stood up on its own ground, from the front with its
+    gates and the courier on horseback at its door, and from the doorway in along the stalls where
+    a saddled horse and a donkey with a chest stand; then cleared away."""
+    sx, sz = cx + 140, cz - 240
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("time set 6000")
+    r.cmd("tp %s %d 150 %d" % (USER, sx + 10, sz + 30))
+    time.sleep(12)                                     # the ground arrives at the client
+    out = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village horses showcase" % (sx, sz))
+    say("stable: " + out[:400])
+    views = re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out)
+    for i, (name, x, y, z, ax, ay, az) in enumerate(views):
+        look(name, int(x) + 0.5, int(y), int(z) + 0.5, int(ax) + 0.5, int(ay) + 0.5, int(az) + 0.5, wait=10 if i == 0 else 6)
+    say("alive after the stable: %s" % client_alive())
+    r.cmd("kill @e[tag=folk_lineup,type=!player]")
+
+
 def found_village(r, cx, cz, look):
     """A village founded the way a player founds one, photographed: the board a spawner puts up,
     on ground made rough on purpose whatever the seed gave (a hill across the edge, a knoll, a pit,

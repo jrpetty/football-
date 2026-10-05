@@ -141,6 +141,16 @@ public final class VillageCommands {
             .then(Commands.literal("shop").executes(ctx -> page(ctx, 4)))
             // The storehouse: its books for the day, its storekeeper and couriers, and its run list.
             .then(Commands.literal("stores").executes(ctx -> page(ctx, 5)))
+            // The stable: the village's horses, donkeys and mules, who has one out, the saddles (Stables).
+            // `horses showcase` (operators): a stable stood up where you are, with horses in its stalls
+            // and a courier on horseback at its door, to be looked at (cleared with the line-up's tag).
+            .then(Commands.literal("horses").executes(ctx -> page(ctx, 6))
+                .then(Commands.literal("showcase").requires(src -> src.hasPermission(2)).executes(ctx -> {
+                    java.util.List<String> views = com.jrpetty.mcassistant.entity.Stables.showcase(ctx.getSource().getLevel(),
+                        net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition()));
+                    ctx.getSource().sendSuccess(() -> Component.literal("STABLE | " + String.join(" | ", views)), false);
+                    return views.size();
+                })))
             // The morning news of the villages near you, in chat, once a morning: on or off.
             .then(Commands.literal("news")
                 .then(Commands.literal("on").executes(ctx -> news(ctx, true)))
@@ -950,9 +960,10 @@ public final class VillageCommands {
         String text = which == 2 ? com.jrpetty.mcassistant.entity.Wealth.wagesPage(level, v)
             : which == 4 ? com.jrpetty.mcassistant.entity.Stockroom.page(level, v)
             : which == 5 ? com.jrpetty.mcassistant.entity.Storekeeping.page(level, v)
+            : which == 6 ? com.jrpetty.mcassistant.entity.Stables.page(level, v)
             : com.jrpetty.mcassistant.entity.Economy.page(level, v);
         String title = Villages.name(v.id()) + (which == 2 ? " — wages" : which == 4 ? " — the sellers' books"
-            : which == 5 ? " — the storehouse's books" : " — economy");
+            : which == 5 ? " — the storehouse's books" : which == 6 ? " — the stable" : " — economy");
         ctx.getSource().sendSuccess(() -> Component.literal(title + "\n" + text), false);
         return 1;
     }

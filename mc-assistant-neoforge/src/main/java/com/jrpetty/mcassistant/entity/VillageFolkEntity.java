@@ -296,6 +296,17 @@ public class VillageFolkEntity extends AssistantEntity {
         // Somebody is talking to it, or it is out walking with somebody: its own day
         // waits until they are done.
         boolean withAPlayer = talkPartner() != null || companionPlayer() != null || guidePlayer() != null;
+        // Horses (Stables, Riding): a ridden horse kept at its pace, the stable's gates and its day; and a
+        // horse being fetched or put away, or the rancher's work at the stable, is the work just now.
+        if (level() instanceof net.minecraft.server.level.ServerLevel stableLevel) {
+            if (tickCount % 2 == 0) Riding.tick(this, stableLevel);
+            if (tickCount % 10 == 3) Stables.gate(this, stableLevel);
+            if (tickCount % 20 == 11) Stables.tick(this, stableLevel);
+            if (!withAPlayer && Stables.busy(this)) {
+                if (tickCount % 5 == 0) Stables.drive(this, stableLevel);
+                return;
+            }
+        }
         // On the road with a caravan: walked step by step, not thought about once in five seconds.
         if (trip != null && !withAPlayer && tickCount % 10 == 0 && level() instanceof net.minecraft.server.level.ServerLevel road) {
             Caravans.drive(this, road);
@@ -1385,6 +1396,7 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     public void die(net.minecraft.world.damagesource.DamageSource cause) {
         if (trip != null && level() instanceof net.minecraft.server.level.ServerLevel road) Caravans.abandon(road, this);
+        if (level() instanceof net.minecraft.server.level.ServerLevel horses) Riding.fell(horses, this);   // a horse it had out (Riding)
         if (expedition != null && level() instanceof net.minecraft.server.level.ServerLevel land) {
             UUID home = ownerId();
             if (home != null) Villages.tell(home, level().getDayTime() / 24000L, displayNameCap() + " was lost while scouting the " + expedition.heading());
@@ -2319,6 +2331,8 @@ public class VillageFolkEntity extends AssistantEntity {
      */
     @Override
     public boolean onShift() {
+        // Fetching a horse or putting one away (Stables): seen through before bed.
+        if (Stables.busy(this)) return true;
         // Walking with the leader (Patrols, by day only): that is the work, assembly or none.
         if (Patrols.escorting(this)) return true;
         // Called to the village's gathering: its work waits (the watch is never called away).
@@ -2739,6 +2753,7 @@ public class VillageFolkEntity extends AssistantEntity {
             Trades.buckets(this);
             keepProductionChest(supplies);
             if (mindTheHerd(supplies)) return;
+            if (Stables.ranch(this, supplies)) return;      // the rancher's horses: fed, fetched, saddled, gentled (Stables)
             if (Links.tend(this, supplies)) return;
         }
         // Its plot moved on: its old production chest comes along (one chest a worker, ever).
@@ -5743,7 +5758,7 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected boolean onBreak() {
         // On the road with a caravan, its own work waits until it is home.
-        return trip != null || expedition != null || Drover.busy(this) || Nether.away(this) || breakNow();
+        return trip != null || expedition != null || Drover.busy(this) || Stables.busy(this) || Nether.away(this) || breakNow();
     }
 
     /** The caravan this folk is taking to a colony and back, or null (Caravans). */

@@ -525,6 +525,7 @@ public final class Annals {
         // The storehouse's books, its staff (the storekeeper, the couriers) and its run list: the Stores page.
         out.put("storehouse", Storekeeping.report(level, v));
         out.put("buildings", buildings(level, v));
+        out.put("stable", Stables.report(level, v));             // the horses, donkeys, saddles and the stable (Jobs, Buildings)
         out.put("research", CityTree.report(id));                // the city's research: the tree, the pick and why
         List<String> queue = new ArrayList<>();
         for (String p : Villages.projectsWanted(id)) queue.add(Villages.spoken(p));
