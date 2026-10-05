@@ -13,6 +13,8 @@ a few of the folk in armour, and takes screenshots. Only a client that dies is
 a hard failure; the pictures are read by a person.
 
     smoke.py        (the server and the client are already starting)
+    smoke.py mature (the same, on a world the hundred days saved: the biggest town in it
+                    from the air, then every page of its books; smoke-mature-*.png)
 
 Every line of output starts [REAL], like soak.py.
 """
@@ -394,9 +396,192 @@ def main():
         pass
 
 
+# ---------------------------------------------------------------------------------------------
+# smoke.py mature: the books of a town with real years in it. The first mode photographs the
+# books of a hamlet eight days old, so the Homes, Shops and Buildings pages have next to nothing
+# on them; this one is run on the world the hundred days saved (village-mature-photos.yml).
+# ---------------------------------------------------------------------------------------------
+
+# Every page of the analytics screen (client/CityScreen.TABS), by its number for /village stats.
+MATURE_PAGES = ((0, "overview"), (1, "growth"), (2, "money"), (3, "production"), (4, "shops"), (5, "jobs"),
+                (6, "folk"), (7, "society"), (8, "leader"), (9, "homes"), (10, "buildings"), (11, "stores"),
+                (12, "why"), (13, "trends"), (14, "records"), (15, "news"), (16, "board"))
+
+# One village of /village list: "Village at X, Z (Name) — N folk (M loaded), the Iron Age, built [hall, ...]".
+# Read with findall over the whole answer, so it does not matter how RCON joins the lines.
+LISTED = re.compile(r"Village at (-?\d+), (-?\d+) \((.*?)\) — (\d+) folk \((\d+) loaded\), (.*?), built \[(.*?)\]")
+
+
+def wait_for_join(r):
+    """The client on the server, or False (and the server stopped) if it never came."""
+    deadline = time.time() + 900
+    while time.time() < deadline:
+        if USER in r.cmd("list"):
+            return True
+        if not client_alive():
+            say("FAIL the client process ended before it joined")
+            break
+        time.sleep(5)
+    else:
+        say("FAIL the client never joined the server")
+    try:
+        r.cmd("stop")
+    except Exception:  # noqa: BLE001
+        pass
+    return False
+
+
+def listed_villages(r):
+    """Every village the server knows of now, biggest first: (folk, buildings, x, z, name, age, loaded).
+    A village is only known once one of its folk has loaded (the folk carry it), so this is the
+    villages round wherever the player has been."""
+    found = []
+    for x, z, name, folk, loaded, age, built in LISTED.findall(r.cmd("village list")):
+        raised = [b.strip() for b in built.split(",") if b.strip() and b.strip() != "colony"]
+        found.append((int(folk), len(raised), int(x), int(z), name, age.strip(), int(loaded)))
+    found.sort(key=lambda v: (v[0], v[1]), reverse=True)
+    return found
+
+
+def midday(r):
+    """Noon of the day it is. Not /time set: that puts the world's clock back to day nought, and the
+    town's books, its folk's ages and its elections all count their days from that clock."""
+    m = re.search(r"(\d+)", r.cmd("time query daytime"))
+    now = int(m.group(1)) % 24000 if m else 6000
+    if not 1000 <= now <= 11000:
+        r.cmd("time add %d" % ((6000 - now) % 24000))
+    say("the clock: %s (the day), %s (the time of day)" % (r.cmd("time query day"), r.cmd("time query daytime")))
+
+
+def ground_height(r, cx, cz):
+    """How high the town stands: the top of the ground (or a roof) at nine points round the heart,
+    the middle one of them. The player is moved to each (a spectator, so nothing falls)."""
+    ys = []
+    for dx in (-16, 0, 16):
+        for dz in (-16, 0, 16):
+            out = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run tp %s ~ ~ ~"
+                        % (cx + dx, cz + dz, USER))
+            if "Teleported" not in out:
+                continue
+            pos = position(r)
+            if pos and pos[1] > -60:                   # an unloaded chunk reads as the bottom of the world
+                ys.append(int(pos[1]))
+    if ys:
+        ys.sort()
+        say("the ground round the heart: %s" % ys)
+        return ys[len(ys) // 2]
+    # The old way, as photo.py does it: stand on whatever is there.
+    r.cmd("gamemode creative %s" % USER)
+    say("standing at the heart: " + r.cmd("spreadplayers %d %d 0 4 false %s" % (cx, cz, USER)))
+    time.sleep(5)
+    pos = position(r)
+    r.cmd("gamemode spectator %s" % USER)
+    return int(pos[1]) if pos else 70
+
+
+def mature():
+    r = Rcon()
+    spot = None
+    for name in ("hundred-spot.txt", "run/hundred-spot.txt"):
+        try:
+            with open(name) as fh:
+                x, z = (int(v) for v in fh.read().split()[:2])
+            spot = (x, z)
+            break
+        except (OSError, ValueError):
+            continue
+    say("connected; the hundred days put their village at %s; waiting for the client to join"
+        % ("%d, %d" % spot if spot else "an unknown spot"))
+    if not wait_for_join(r):
+        return
+    say("the client joined: %s" % r.cmd("list"))
+    for c in ("gamerule doDaylightCycle false", "weather clear 1000000", "gamerule doMobSpawning false",
+              "gamemode spectator %s" % USER):
+        r.cmd(c)
+    midday(r)
+    # The folk carry their village: nothing is known of it until the ground it stands on is loaded.
+    if spot:
+        r.cmd("tp %s %d 150 %d" % (USER, spot[0], spot[1]))
+        time.sleep(30)
+    towns = []
+    for _ in range(12):
+        towns = listed_villages(r)
+        if towns:
+            break
+        time.sleep(10)
+    for folk, raised, x, z, name, age, loaded in towns:
+        say("VILLAGE %s at %d, %d: %d folk (%d loaded), %d buildings, %s" % (name, x, z, folk, loaded, raised, age))
+    if towns:
+        folk, raised, cx, cz, name, age, loaded = towns[0]
+        say("the biggest: %s at %d, %d, %d folk, %d buildings, %s" % (name, cx, cz, folk, raised, age))
+    elif spot:
+        cx, cz = spot
+        name = "the hundred days' village"
+        say("no village listed yet; going by the spot the hundred days kept, %d, %d" % (cx, cz))
+    else:
+        say("FAIL no village in the world, and no spot to look for one at")
+        try:
+            r.cmd("stop")
+        except Exception:  # noqa: BLE001
+            pass
+        return
+    if not spot or math.hypot(cx - spot[0], cz - spot[1]) > 48:
+        r.cmd("tp %s %d 150 %d" % (USER, cx, cz))
+        time.sleep(30)
+    gy = ground_height(r, cx, cz)
+    say("the heart of %s is at %d, %d, %d" % (name, cx, gy, cz))
+    for line in r.cmd("execute positioned %d %d %d run village status" % (cx, gy, cz)).split("\n"):
+        if line.strip():
+            say("STATUS " + line.strip())
+    # The books' own reading of the town, in words (from the console, with no player, it answers in text).
+    say("BOOKS " + r.cmd("execute positioned %d %d %d run village stats" % (cx, gy, cz)).replace("\n", " | "))
+
+    def look(label, x, y, z, tx, ty, tz, wait=12):
+        # A camera: yaw 0 looks south (+z), a positive pitch looks down, eyes 1.62 above the feet.
+        dx, dz = tx - x, tz - z
+        yaw = math.degrees(math.atan2(-dx, dz))
+        pitch = -math.degrees(math.atan2(ty - (y + 1.62), math.hypot(dx, dz)))
+        r.cmd("tp %s %.2f %.2f %.2f %.1f %.1f" % (USER, x, y, z, yaw, pitch))
+        time.sleep(wait)
+        shot("mature-" + label)
+
+    # The town from the air (below the clouds, at 192), from two sides and from straight above.
+    try:
+        look("1-air-southeast", cx + 70, gy + 55, cz + 80, cx, gy, cz, wait=25)
+        look("2-air-northwest", cx - 70, gy + 55, cz - 80, cx, gy, cz, wait=18)
+        look("3-overhead", cx + 0.5, min(gy + 110, 185), cz + 1.5, cx + 0.5, gy, cz + 0.5, wait=18)
+    except Exception as e:  # noqa: BLE001
+        say("the air views failed: %s" % e)
+    say("alive after the air views: %s" % client_alive())
+    # The books, every page. /village stats as the player opens the screen on the nearest village's
+    # books (as clicking the village board does), so the player hangs over the heart.
+    try:
+        r.cmd("tp %s %.1f %d %.1f 0 60" % (USER, cx + 0.5, gy + 30, cz + 0.5))
+        time.sleep(8)
+        for page, title in MATURE_PAGES:
+            out = r.cmd("execute as %s at @s run village stats %d" % (USER, page))
+            say("stats %d %s: %s" % (page, title, out[:200] or "sent"))
+            time.sleep(12 if page == 0 else 5)      # the first is the whole town's books arriving
+            shot("mature-stats-%d-%s" % (page, title))
+        say("still on the server after the books: %s" % (USER in r.cmd("list")))
+    except Exception as e:  # noqa: BLE001
+        say("the books failed: %s" % e)
+    alive = client_alive()
+    say("alive at the end: %s" % alive)
+    say("PASS the mature town and its books were photographed" if alive
+        else "FAIL the client died while photographing the mature town")
+    try:
+        r.cmd("stop")
+    except Exception:  # noqa: BLE001
+        pass
+
+
 if __name__ == "__main__":
     try:
-        main()
+        if len(sys.argv) > 1 and sys.argv[1] == "mature":
+            mature()
+        else:
+            main()
     except (EOFError, OSError) as e:
         say("DIED: the server went away (%s)" % e)
         sys.exit(3)
