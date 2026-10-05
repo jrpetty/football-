@@ -70,9 +70,9 @@ def showcase(r, cx, cz, look):
     for i, (name, x, y, z) in enumerate(found):
         x, y, z = int(x), int(y), int(z)
         tall = {"lighthouse": 22, "watchtower": 13, "chapel": 15, "hall": 10, "barracks": 8, "belltower": 18,
-                "manor": 14}.get(name, 7)
+                "manor": 14, "museum": 10}.get(name, 7)
         back = {"hall": 26, "chapel": 28, "barracks": 22, "lighthouse": 24, "watchtower": 18, "belltower": 24,
-                "manor": 28}.get(name, 15)
+                "manor": 28, "museum": 22}.get(name, 15)
         look("b%02d-%s" % (i + 1, name), x + back * 0.45, y + tall * 0.55 + 2, z + back,
              x, y + tall * 0.4, z, wait=5 if i else 9)
     say("alive after the buildings: %s" % client_alive())
@@ -649,11 +649,12 @@ def districts_stage(r, look, cx, cz):
 def museum_stage(r, look, cx, cz):
     """The museum and its archive, set out on a stage in clear air beside the village the smoke spawned at
     cx, cz (/village museum stage: one of everything on show, each credited to one of its folk, the chronicle
-    so far bound onto the lectern and the shelves): the hall from inside the door, a label close up, and the
-    Museum page of the town's books."""
+    so far bound onto the lectern and the shelves, the name over the door and the town's banners either side):
+    the whole front from out on its forecourt at noon (the plinth and stair, the portico, the pediment), the
+    hall from inside the door, and the Museum page of the town's books."""
     mx, my, mz = cx + 60, 150, cz + 40
     say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
-    r.cmd("time set 6000")
+    midday(r)
     r.cmd("gamemode spectator %s" % USER)
     r.cmd("tp %s %d %d %d" % (USER, mx, my + 10, mz - 20))
     time.sleep(10)                                     # the stage's chunks arrive
@@ -661,7 +662,7 @@ def museum_stage(r, look, cx, cz):
     say("museum: " + out[:900])
     views = dict((v[0], [float(n) for n in v[1:]]) for v in
                  re.findall(r"VIEW (\S+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+)", out))
-    for name in ("m2-hall", "m4-label"):
+    for name in ("m1-front", "m2-hall"):
         if name in views:
             look("18-museum-" + name, *views[name], wait=8)
     say("museum status: " + r.cmd("execute positioned %d %d %d run village museum" % (mx, my, mz))[:600])
