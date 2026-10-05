@@ -599,6 +599,7 @@ public class VillageFolkEntity extends AssistantEntity {
             return false;
         }
         com.jrpetty.mcassistant.village.Ledger.addCoins(village, want.price());
+        Stockroom.sold(server, village, Stockroom.Seller.SHOP, got, 1, want.price());     // the shop's books (Stockroom)
         comfortCarried = got;
         swing(net.minecraft.world.InteractionHand.MAIN_HAND);
         FolkTalk.speak(this, pick("I've been saving for " + want.words() + ".", "Treating myself: " + want.words() + "!",

@@ -49,6 +49,10 @@ import java.util.function.Predicate;
  * Each counter has one thing on it in a frame and a price tag in front. Right-click a
  * counter to buy what is on it with village coin (crouch to ask the price first); folk
  * drop in to the café on their break and spend their wages there.
+ * <p>Both know their trade the whole way: each makes what it sells by the game's own recipes from
+ * what the stores hold (Bench: logs to planks to sticks to a pick, wheat to bread, cane to sugar to a
+ * pie), and keeps its books (Stockroom): what sells, how many to keep of each, what to make next,
+ * what is slow and marked down, and what it is short of.
  */
 public final class Cafe {
 
@@ -102,185 +106,140 @@ public final class Cafe {
 
     // ------------------------------------------------------------------ the cook
 
-    /** So much of one thing (and never the last {@code reserve} of it: seed and the larder). */
-    private record Need(Predicate<ItemStack> what, int n, int reserve) {}
+    private static volatile List<Stockroom.Ware> MENU_WARES;
+    private static volatile List<Stockroom.Ware> SHOP_WARES;
 
-    /** A dish or a drink: what it is, how many the café likes to have ready, what goes into
-     *  a batch, whether a batch needs three bottles, and what a batch makes. */
-    private record Recipe(Predicate<ItemStack> made, int keep, List<Need> needs, boolean bottled, ItemStack out) {}
-
-    private static Need of(Item it, int n, int reserve) {
-        return new Need(s -> s.is(it), n, reserve);
-    }
-
-    private static Predicate<ItemStack> is(Item it) {
-        return s -> s.is(it);
-    }
-
-    private static List<Recipe> menu() {
-        List<Recipe> m = new ArrayList<>();
+    /**
+     * The café's menu, and how much of each the cook usually keeps ready (Stockroom moves it with what
+     * sells): its six drinks, three to a batch, of its own recipes (the fruit, and three glass bottles,
+     * blown from the smelter's glass if the stores have none); then the kitchen's dishes, by the game's
+     * own recipes, the whole way from what the stores hold (Bench) — potatoes baked and the pens' and
+     * the boats' meat and fish roasted in the café's smoker (or a furnace, or the tavern's hearth), bread
+     * of the farmers' wheat, cookies of wheat and cocoa, pumpkin pie of a pumpkin, an egg and sugar
+     * pressed from cane, and a cake of the rancher's milk (the buckets go back), eggs, sugar and wheat.
+     * Never the last twelve of a seed crop (Bench). Bread, potatoes and the roasts are the larder's own,
+     * and never kept under the usual.
+     */
+    public static List<Stockroom.Ware> cafeWares() {
+        List<Stockroom.Ware> m = MENU_WARES;
+        if (m != null) return m;
+        List<Stockroom.Ware> out = new ArrayList<>();
         for (Drink d : DRINKS) {
-            int reserve = d.from() == Items.CARROT ? 12 : 0;
-            m.add(new Recipe(s -> d.id().equals(drinkOf(s)), 3, List.of(of(d.from(), d.needs(), reserve)), true,
-                drink(d).copyWithCount(3)));
+            ItemStack one = drink(d);
+            out.add(new Stockroom.Ware("drink/" + d.id(), s -> d.id().equals(drinkOf(s)), one, null,
+                new Stockroom.Own(List.of(Bench.Want.of(d.from(), d.needs()), Bench.Want.of(Items.GLASS_BOTTLE, 3)), one.copyWithCount(3)),
+                3, 1, 12, 3, false));
         }
-        m.add(new Recipe(is(Items.BAKED_POTATO), 16, List.of(of(Items.POTATO, 4, 12)), false, new ItemStack(Items.BAKED_POTATO, 4)));
-        m.add(new Recipe(is(Items.COOKED_BEEF), 6, List.of(of(Items.BEEF, 2, 0)), false, new ItemStack(Items.COOKED_BEEF, 2)));
-        m.add(new Recipe(is(Items.COOKED_PORKCHOP), 6, List.of(of(Items.PORKCHOP, 2, 0)), false, new ItemStack(Items.COOKED_PORKCHOP, 2)));
-        m.add(new Recipe(is(Items.COOKED_MUTTON), 6, List.of(of(Items.MUTTON, 2, 0)), false, new ItemStack(Items.COOKED_MUTTON, 2)));
-        m.add(new Recipe(is(Items.COOKED_CHICKEN), 6, List.of(of(Items.CHICKEN, 2, 0)), false, new ItemStack(Items.COOKED_CHICKEN, 2)));
-        m.add(new Recipe(is(Items.COOKED_COD), 6, List.of(of(Items.COD, 2, 0)), false, new ItemStack(Items.COOKED_COD, 2)));
-        m.add(new Recipe(is(Items.COOKED_SALMON), 6, List.of(of(Items.SALMON, 2, 0)), false, new ItemStack(Items.COOKED_SALMON, 2)));
-        m.add(new Recipe(is(Items.COOKIE), 16, List.of(of(Items.WHEAT, 2, 12), of(Items.COCOA_BEANS, 1, 0)), false,
-            new ItemStack(Items.COOKIE, 8)));
-        m.add(new Recipe(is(Items.PUMPKIN_PIE), 4, List.of(of(Items.PUMPKIN, 1, 0),
-            new Need(s -> s.is(Items.SUGAR) || s.is(Items.SUGAR_CANE), 1, 0), of(Items.EGG, 1, 0)), false,
-            new ItemStack(Items.PUMPKIN_PIE)));
-        m.add(new Recipe(is(Items.BREAD), 12, List.of(of(Items.WHEAT, 3, 12)), false, new ItemStack(Items.BREAD)));
-        // A cake: the rancher's milk and eggs, the farmers' wheat and cane (the buckets go back).
-        m.add(new Recipe(is(Items.CAKE), 2, List.of(of(Items.MILK_BUCKET, 3, 0),
-            new Need(s -> s.is(Items.SUGAR) || s.is(Items.SUGAR_CANE), 2, 0), of(Items.EGG, 1, 0), of(Items.WHEAT, 3, 12)), false,
-            new ItemStack(Items.CAKE)));
+        out.add(Stockroom.ware(Items.BAKED_POTATO, 16, 4, 48, 4, true));
+        for (Item roast : new Item[]{ Items.COOKED_BEEF, Items.COOKED_PORKCHOP, Items.COOKED_MUTTON, Items.COOKED_CHICKEN,
+                Items.COOKED_COD, Items.COOKED_SALMON }) {
+            out.add(Stockroom.ware(roast, 6, 2, 24, 2, true));
+        }
+        out.add(Stockroom.ware(Items.COOKIE, 16, 8, 48, 8, false));
+        out.add(Stockroom.ware(Items.PUMPKIN_PIE, 4, 1, 12, 1, false));
+        out.add(Stockroom.ware(Items.BREAD, 12, 4, 48, 1, true));
+        out.add(Stockroom.ware(Items.CAKE, 2, 1, 4, 1, false));
+        MENU_WARES = m = List.copyOf(out);
         return m;
     }
 
-    /** Can the stores stand this batch? */
-    private static boolean canMake(ServerLevel level, Villages.Village v, Recipe r) {
-        for (Need n : r.needs()) {
-            if (Crafts.stock(level, v, n.what()) < n.n() + n.reserve()) return false;
-        }
-        return !r.bottled() || bottles(level, v);
-    }
-
-    private static boolean bottles(ServerLevel level, Villages.Village v) {
-        return Crafts.stock(level, v, is(Items.GLASS_BOTTLE)) >= 3 || Crafts.stock(level, v, is(Items.GLASS)) >= 3;
-    }
-
     /**
-     * The cook's work: whatever the café is shortest of, against what it likes to have ready,
-     * and that the stores have the makings of — then set out on the counter. Returns what it
-     * made, or null.
+     * The cook's work: of the menu, whatever the café's shelf is emptiest of against what it means to
+     * keep (the drinks and dishes that sell, kept two and a half days deep: Stockroom) that the stores
+     * can run to, the whole way through; then set out on the counter. Returns what it made, or null.
      */
     @Nullable
     public static String cook(ServerLevel level, Villages.Village v) {
-        Recipe best = null;
-        double bestFill = 1.0;
-        for (Recipe r : menu()) {
-            double fill = Crafts.stock(level, v, r.made()) / (double) r.keep();
-            if (fill >= bestFill || !canMake(level, v, r)) continue;
-            best = r;
-            bestFill = fill;
-        }
-        if (best == null) {
+        return cook(level, v, null);
+    }
+
+    @Nullable
+    public static String cook(ServerLevel level, Villages.Village v, @Nullable VillageFolkEntity f) {
+        VillageFolkEntity hand = f != null ? f : Stockroom.keeperOf(v.id(), Stockroom.Seller.CAFE);
+        Stockroom.Made made = Stockroom.restock(level, v, Stockroom.Seller.CAFE, cafeWares(), hand);
+        if (made == null) {
             return dress(level, v, "cafe") > 0 ? "the café counter set out" : null;
         }
-        for (Need n : best.needs()) {
-            if (!Crafts.take(level, v, n.what(), n.n())) return null;
-        }
-        if (best.bottled() && !Crafts.take(level, v, is(Items.GLASS_BOTTLE), 3)) Crafts.take(level, v, is(Items.GLASS), 3);
-        if (best.out().is(Items.CAKE)) Crafts.store(level, v, new ItemStack(Items.BUCKET, 3));   // the milk's buckets, back
-        ItemStack out = best.out().copy();
-        if (out.getMaxStackSize() == 1) {
-            for (int i = 0; i < out.getCount(); i++) Crafts.store(level, v, out.copyWithCount(1));
-        } else {
-            Crafts.store(level, v, out.copy());
-        }
         dress(level, v, "cafe");
-        return name(out);
+        return name(made.out());
     }
 
     private static String name(ItemStack s) {
         String n = s.getHoverName().getString();
         if (isDrink(s)) return (s.getCount() > 1 ? s.getCount() + " bottles of " : "a bottle of ") + n;
-        return (s.getCount() > 1 ? s.getCount() + " " : "a ") + n.toLowerCase();
+        return Bench.words(s.getItem(), s.getCount());
     }
 
     // ------------------------------------------------------------------ the shopkeeper
 
     /**
-     * What a house wants and a hand can make at the shop's bench, out of what the stores can spare:
-     * chests and barrels for a household's things, torches and candles for its evenings, a fishing
-     * rod, a pot for the windowsill, a painting and a frame for the wall, a bucket, and the plain
-     * stone tools a folk whose own wore out comes in for. Each kept to a few on the shelves; never
-     * out of the builders' timber and stone (the reserves), nor the smith's iron while it is short.
+     * What a house wants and a hand can make at the shop's bench, by the game's own recipes, the whole
+     * way from what the stores hold (Bench: logs sawn to planks, planks to sticks and slabs, an ingot
+     * beaten to nuggets, a log burnt to charcoal for torches when there is no coal): chests and barrels
+     * for a household's things, torches and candles for its evenings, a fishing rod, a pot for the
+     * windowsill, a painting and a frame for the wall, a lantern, a bucket, shears, the plain stone
+     * tools and blade a folk whose own wore out comes in for, and — of iron the village can spare — the
+     * iron tools. Each with how many the shop usually keeps, the fewest and the most (Stockroom moves it
+     * with what sells; the iron tools are not kept at all once they stop selling). Never out of the
+     * builders' timber and stone, nor the smith's iron, nor anything the age is putting by (Bench).
      */
-    private static List<Recipe> wares() {
-        List<Recipe> m = new ArrayList<>();
-        Predicate<ItemStack> planks = s -> s.is(ItemTags.PLANKS);
-        Predicate<ItemStack> fuel = s -> s.is(Items.COAL) || s.is(Items.CHARCOAL);
-        Predicate<ItemStack> wool = s -> s.is(ItemTags.WOOL);
-        Predicate<ItemStack> cobble = s -> s.is(Items.COBBLESTONE) || s.is(Items.COBBLED_DEEPSLATE);
-        m.add(new Recipe(is(Items.TORCH), 24, List.of(new Need(fuel, 2, 8), new Need(planks, 1, 48)), false, new ItemStack(Items.TORCH, 8)));
-        m.add(new Recipe(is(Items.CHEST), 2, List.of(new Need(planks, 8, 64)), false, new ItemStack(Items.CHEST)));
-        m.add(new Recipe(is(Items.BARREL), 2, List.of(new Need(planks, 7, 64)), false, new ItemStack(Items.BARREL)));
-        m.add(new Recipe(s -> s.is(ItemTags.CANDLES), 4, List.of(of(Items.STRING, 1, 2), of(Items.HONEYCOMB, 1, 0)), false,
-            new ItemStack(Items.CANDLE)));
-        m.add(new Recipe(is(Items.FISHING_ROD), 1, List.of(of(Items.STRING, 2, 2), new Need(planks, 2, 48)), false,
-            new ItemStack(Items.FISHING_ROD)));
-        m.add(new Recipe(is(Items.FLOWER_POT), 2, List.of(of(Items.BRICK, 3, 0)), false, new ItemStack(Items.FLOWER_POT)));
-        m.add(new Recipe(is(Items.PAINTING), 1, List.of(new Need(planks, 4, 64), new Need(wool, 1, 3)), false, new ItemStack(Items.PAINTING)));
-        m.add(new Recipe(is(Items.ITEM_FRAME), 1, List.of(new Need(planks, 4, 64), of(Items.LEATHER, 1, 2)), false,
-            new ItemStack(Items.ITEM_FRAME)));
-        m.add(new Recipe(is(Items.LANTERN), 2, List.of(of(Items.IRON_NUGGET, 8, 0), of(Items.TORCH, 1, 8)), false,
-            new ItemStack(Items.LANTERN)));
-        m.add(new Recipe(is(Items.BUCKET), 1, List.of(of(Items.IRON_INGOT, 3, 12)), false, new ItemStack(Items.BUCKET)));
-        m.add(new Recipe(is(Items.STONE_PICKAXE), 1, List.of(new Need(cobble, 3, 48), new Need(planks, 1, 48)), false,
-            new ItemStack(Items.STONE_PICKAXE)));
-        m.add(new Recipe(is(Items.STONE_AXE), 1, List.of(new Need(cobble, 3, 48), new Need(planks, 1, 48)), false,
-            new ItemStack(Items.STONE_AXE)));
-        m.add(new Recipe(is(Items.STONE_HOE), 1, List.of(new Need(cobble, 2, 48), new Need(planks, 1, 48)), false,
-            new ItemStack(Items.STONE_HOE)));
-        m.add(new Recipe(is(Items.STONE_SHOVEL), 1, List.of(new Need(cobble, 1, 48), new Need(planks, 1, 48)), false,
-            new ItemStack(Items.STONE_SHOVEL)));
+    public static List<Stockroom.Ware> shopWares() {
+        List<Stockroom.Ware> m = SHOP_WARES;
+        if (m != null) return m;
+        List<Stockroom.Ware> out = new ArrayList<>();
+        out.add(Stockroom.ware(Items.TORCH, 24, 8, 64, 8, true));
+        out.add(Stockroom.ware(Items.CHEST, 2, 1, 6, 1, false));
+        out.add(Stockroom.ware(Items.BARREL, 2, 1, 6, 1, false));
+        out.add(new Stockroom.Ware("candle", s -> s.is(ItemTags.CANDLES), new ItemStack(Items.CANDLE), Items.CANDLE, null, 4, 1, 12, 1, false));
+        out.add(Stockroom.ware(Items.FISHING_ROD, 1, 1, 4, 1, false));
+        out.add(Stockroom.ware(Items.FLOWER_POT, 2, 1, 8, 1, false));
+        out.add(Stockroom.ware(Items.PAINTING, 1, 1, 4, 1, false));
+        out.add(Stockroom.ware(Items.ITEM_FRAME, 1, 1, 4, 1, false));
+        out.add(Stockroom.ware(Items.LANTERN, 2, 1, 8, 1, false));
+        out.add(Stockroom.ware(Items.BUCKET, 1, 1, 4, 1, false));
+        out.add(Stockroom.ware(Items.SHEARS, 1, 1, 3, 1, false));
+        for (Item tool : new Item[]{ Items.STONE_PICKAXE, Items.STONE_AXE, Items.STONE_HOE, Items.STONE_SHOVEL, Items.STONE_SWORD }) {
+            out.add(Stockroom.ware(tool, 1, 1, 4, 1, false));
+        }
+        for (Item tool : new Item[]{ Items.IRON_PICKAXE, Items.IRON_AXE, Items.IRON_SHOVEL, Items.IRON_HOE }) {
+            out.add(Stockroom.ware(tool, 1, 0, 3, 1, false));
+        }
+        SHOP_WARES = m = List.copyOf(out);
         return m;
     }
 
     /** The household goods the shop keeps on its shelves (for the board, the talk and the tests). */
     public static boolean houseware(ItemStack s) {
-        for (Recipe r : wares()) if (r.made().test(s)) return true;
+        for (Stockroom.Ware w : shopWares()) if (w.is().test(s)) return true;
         return s.is(ItemTags.BEDS) || s.is(ItemTags.WOOL_CARPETS);
     }
 
     /**
-     * The shopkeeper's work: whatever household good the shelves are shortest of that the stores can
-     * spare the makings of, made up at the bench; then the counters set out afresh from what the
-     * crafts and the bench have put in the stores. Returns what it did, or null if there was nothing to do.
+     * The shopkeeper's work: of the household goods, whatever the shelves are emptiest of against what
+     * the shop means to keep (Stockroom: what sells, kept two and a half days deep) that the stores can
+     * spare the makings of, made the whole way at the bench; then the counters set out afresh from what
+     * the crafts and the bench have put in the stores. Returns what it did, or null if there was nothing to do.
      */
     @Nullable
     public static String keepShop(ServerLevel level, Villages.Village v) {
-        Recipe best = null;
-        double bestFill = 1.0;
-        for (Recipe r : wares()) {
-            double fill = Crafts.stock(level, v, r.made()) / (double) r.keep();
-            if (fill >= bestFill || !canMake(level, v, r)) continue;
-            best = r;
-            bestFill = fill;
-        }
-        String made = null;
-        if (best != null) {
-            boolean all = true;
-            for (Need n : best.needs()) {
-                if (!Crafts.take(level, v, n.what(), n.n())) { all = false; break; }
-            }
-            if (all) {
-                ItemStack out = best.out().copy();
-                if (out.getMaxStackSize() == 1) {
-                    for (int i = 0; i < out.getCount(); i++) Crafts.store(level, v, out.copyWithCount(1));
-                } else {
-                    Crafts.store(level, v, out.copy());
-                }
-                made = name(out) + " for the shelves";
-            }
-        }
-        int set = dress(level, v, "shop");
-        return made != null ? made : set > 0 ? "the shop counter set out" : null;
+        return keepShop(level, v, null);
     }
 
+    @Nullable
+    public static String keepShop(ServerLevel level, Villages.Village v, @Nullable VillageFolkEntity f) {
+        VillageFolkEntity hand = f != null ? f : Stockroom.keeperOf(v.id(), Stockroom.Seller.SHOP);
+        Stockroom.Made made = Stockroom.restock(level, v, Stockroom.Seller.SHOP, shopWares(), hand);
+        int set = dress(level, v, "shop");
+        return made != null ? name(made.out()) + " for the shelves" : set > 0 ? "the shop counter set out" : null;
+    }
     // ------------------------------------------------------------------ the counters
 
     private static final Map<Ledger.Building, List<BlockPos>> COUNTERS = new ConcurrentHashMap<>();
 
-    public static void resetForTests() { COUNTERS.clear(); }
+    public static void resetForTests() {
+        COUNTERS.clear();
+        Stockroom.resetForTests();
+    }
 
     /** A building's counters: the casks in its drawing with nothing drawn on top of them
      *  (the casks under the shelves are the stock, not the counter). */
@@ -380,6 +339,11 @@ public final class Cafe {
         Items.COOKED_PORKCHOP, Items.COOKED_CHICKEN, Items.COOKED_MUTTON, Items.COOKED_COD, Items.COOKED_SALMON,
         Items.BREAD, Items.HONEY_BOTTLE, Items.CAKE, Items.APPLE);
 
+    /** The café's drinks the stores hold, one of each (what the tavern pours). */
+    public static List<ItemStack> drinksInStores(ServerLevel level, UUID village) {
+        return fromStores(level, village, Cafe::isDrink, true);
+    }
+
     /** What the crafts have made for the shop: the best of it first. */
     public static List<ItemStack> shopGoods(ServerLevel level, UUID village) {
         // What the village can spare (Budget): never the guards' only swords or the miners' picks.
@@ -463,6 +427,21 @@ public final class Cafe {
         };
     }
 
+    /** The plainest of the tool a trade works with, that the shop's bench makes: what a folk that found
+     *  none on the shelves was after, in the shop's books (Stockroom). */
+    @Nullable
+    static Item plainToolFor(AssistantEntity.StationTask t) {
+        return switch (t) {
+            case MINE -> Items.STONE_PICKAXE;
+            case WOOD -> Items.STONE_AXE;
+            case GUARD -> Items.STONE_SWORD;
+            case RANCH -> Items.SHEARS;
+            case FISH -> Items.FISHING_ROD;
+            case FARM -> Items.STONE_HOE;
+            default -> null;
+        };
+    }
+
     /**
      * A folk at the shop, buying out of its own savings: the tool its trade wants if it has
      * none, or — doing well — something nice (a potion, a book, a banner, a rug). The coin goes
@@ -479,15 +458,23 @@ public final class Cafe {
             want = s -> shopWorthy(s) && !s.isDamageableItem();
         }
         List<ItemStack> goods = fromStores(level, v.id(), want, false);
-        if (goods.isEmpty()) return null;
+        if (goods.isEmpty()) {
+            // Come for the tool of its trade and found none: the shop's books count it as a sale it
+            // had not got (Stockroom), and the shelf it was after is kept fuller from now on.
+            Item plain = forWork ? plainToolFor(f.stationTask()) : null;
+            if (plain != null) Stockroom.missed(level, v.id(), Stockroom.Seller.SHOP, new ItemStack(plain));
+            return null;
+        }
         ItemStack pick = forWork ? goods.get(0) : goods.get(f.getRandom().nextInt(goods.size()));
         Market.Good g = Market.goodFor(pick);
         int price = g == null ? 3 : Market.sellPrice(g, Market.stock(level, v.id(), s -> ItemStack.isSameItemSameComponents(s, pick)), false);
         price = Math.max(1, pick.isEnchanted() ? price * 3 : price);
+        price = Stockroom.asked(level, v.id(), pick, price, 1);              // slow stock marked down, never under cost
         if (f.purse() < price) return null;
         if (!TownWork.take(level, v, s -> ItemStack.isSameItemSameComponents(s, pick), 1)) return null;
         f.spend(price);
         Ledger.addCoins(v.id(), price);
+        Stockroom.sold(level, v.id(), Stockroom.Seller.SHOP, pick, 1, price);
         ItemStack bought = pick.copyWithCount(1);
         // A treat is its own: kept off the stores, and carried along when it moves house (Homes).
         if (!forWork) Homes.keepsake(bought, f);
@@ -511,10 +498,12 @@ public final class Cafe {
         Market.Good g = Market.goodFor(pick);
         int price = g == null ? 1 : Market.sellPrice(g, Market.stock(level, v.id(), s -> ItemStack.isSameItemSameComponents(s, pick)), false);
         price = Math.max(1, price / Math.max(1, g == null ? 1 : g.bundle()));
+        price = Stockroom.asked(level, v.id(), pick, price, 1);              // slow stock marked down, never under cost
         if (f.purse() < price) return null;
         if (!TownWork.take(level, v, s -> ItemStack.isSameItemSameComponents(s, pick), 1)) return null;
         f.spend(price);
         Ledger.addCoins(v.id(), price);
+        Stockroom.sold(level, v.id(), Stockroom.Seller.CAFE, pick, 1, price);
         // Had there and then: a drink does its little good, a bite fills it up.
         String drink = drinkOf(pick);
         if (drink != null) {

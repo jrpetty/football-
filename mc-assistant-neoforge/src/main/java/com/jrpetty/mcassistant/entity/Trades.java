@@ -124,15 +124,21 @@ public final class Trades {
                     need("sugar cane or paper", s -> s.is(Items.SUGAR_CANE) || s.is(Items.PAPER), 3, "the farmers' cane"),
                     need("leather", s -> s.is(Items.LEATHER), 1, "the rancher and the fishers")),
                 "picks that dig faster, blades that cut deeper, armour that holds");
-            case COOK -> new Trade("I cook at the café: cider, honey tea, pies, cakes and bread for the counter",
+            case COOK -> new Trade("I cook at the café: cider, honey tea, pies, cakes and bread for the counter, and the"
+                    + " tavern's drinks; I keep more of what sells, and make it the whole way from what the stores hold",
                 List.of(),
                 List.of(need("apples", s -> s.is(Items.APPLE), 2, "the woodcutters"),
                     need("wheat or bread", s -> s.is(Items.WHEAT) || s.is(Items.BREAD), 3, "the farmers"),
                     need("sugar, honey or eggs", s -> s.is(Items.SUGAR) || s.is(Items.SUGAR_CANE) || s.is(Items.HONEY_BOTTLE)
                         || s.is(Items.EGG), 1, "the farmers, the beekeeper and the rancher")),
                 "the café's counter, and the folk's breaks");
-            case SHOP -> new Trade("I keep the shop: the crafts' best work on the counter for anybody with coin",
-                List.of(), List.of(), "coin for the treasury, and the crafts' work into players' hands");
+            case SHOP -> new Trade("I keep the shop: the crafts' best work on the counter for anybody with coin, and what a"
+                    + " house wants made up at my bench the whole way from the stores (logs to planks to sticks to a pick), more of"
+                    + " what sells and less of what doesn't",
+                List.of(),
+                List.of(need("timber", s -> s.is(net.minecraft.tags.ItemTags.LOGS) || s.is(net.minecraft.tags.ItemTags.PLANKS), 8,
+                    "the woodcutters")),
+                "coin for the treasury, the crafts' work into players' hands, and a house's comforts");
             case SCOUT -> new Trade("I scout the land round the town: other towns, old ruins, peaks and lakes, iron in the rock,"
                     + " good ground for a new village — and I come home along my own trail and put it all in the atlas",
                 List.of(),
@@ -200,6 +206,9 @@ public final class Trades {
         // The watch's beat (Patrols), and what a maker's years at the trade let it make, and how well (Craftsmanship).
         String own = t == StationTask.GUARD ? Patrols.line(f) : Craftsmanship.line(f);
         if (!own.isEmpty()) sb.append(own).append(' ');
+        // A seller's shelves: what sells, what is low, what is marked down, what it is short of (Stockroom).
+        String shelves = Stockroom.talk(f);
+        if (!shelves.isEmpty()) sb.append(shelves).append(' ');
         if (lacking.isEmpty()) sb.append("I've everything I need, thank you.");
         else sb.append("I'm short of ").append(String.join(", ", lacking.subList(0, Math.min(3, lacking.size())))).append('.');
         return sb.toString();
@@ -227,6 +236,8 @@ public final class Trades {
             }
             if (trades.size() >= 3) break;
         }
+        // And the sellers that cannot make what sells for want of something (Stockroom).
+        for (String s : Stockroom.shortages(level, village)) if (trades.size() < 4) trades.add(s);
         StringBuilder sb = new StringBuilder();
         if (out.isEmpty() && trades.isEmpty()) return "Nothing much, for once. The stores are full and every trade has what it needs.";
         if (!out.isEmpty()) sb.append("For the village: ").append(String.join(", ", out)).append(". ");

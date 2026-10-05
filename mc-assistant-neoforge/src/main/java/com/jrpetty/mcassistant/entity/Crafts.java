@@ -88,8 +88,8 @@ public final class Crafts {
             case BEEKEEP -> beekeep(level, v, f);
             case BREW -> brew(level, v, f);
             case ENCHANT -> enchant(level, v, f);
-            case COOK -> Cafe.cook(level, v);
-            case SHOP -> Cafe.keepShop(level, v);
+            case COOK -> Cafe.cook(level, v, f);
+            case SHOP -> Cafe.keepShop(level, v, f);
             default -> null;
         };
         if (made == null) return false;
