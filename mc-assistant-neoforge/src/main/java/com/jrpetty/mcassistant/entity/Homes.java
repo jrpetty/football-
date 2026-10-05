@@ -43,6 +43,12 @@ import java.util.concurrent.ConcurrentHashMap;
  * goes into the new one's, and its keepsakes (presents, things it bought for itself) are never
  * banked in the village stores.
  *
+ * <p>A grown child who marries and lives at its parents' (or its partner's) waits for a house of its
+ * own with its partner and their children, and they move out together. Meanwhile, and for anybody
+ * else with no bed of its own, a bed another household can spare is a bed to lodge in: a house has
+ * four beds and a couple does not need them all. The household always comes first: one of its own
+ * who wants the bed has it back, and the lodger finds another.
+ *
  * <p>The village gives no houses away: it lets them. A household moves in as the village's tenant,
  * families first, rich or poor, and pays its rent on payday out of its wages, into the treasury: half
  * a field hand's day for a house, a field hand's day for a two-storey one, two for a manor (so the
@@ -363,6 +369,141 @@ public final class Homes {
         return !h.members.isEmpty() && !h.members.contains(f.getUUID());
     }
 
+    /**
+     * As someoneElses, but a bed another household has no need of is not "theirs" tonight: a folk with
+     * no bed of its own may lodge in it. A house has room for a lodger when it has more beds made up than
+     * folk of its own (all of them, the ones out on the road too) and than lodgers already in it; a
+     * player's house never takes one. The household comes first: one of its own who wants the bed has it
+     * back (bedBack), and the lodger looks for another.
+     *
+     * <p>Houses were let one household to a house, and a house has four beds (a two-storey one or a manor
+     * six): a couple in a cottage left two standing empty, a widower five, while a family of six next door
+     * was two short and the grown children's households had nowhere at all. A town of eighty-seven with
+     * eighty-nine beds made up had sixty-six folk in them.
+     */
+    public static boolean someoneElses(ServerLevel level, UUID village, BlockPos bed, VillageFolkEntity f) {
+        Home h = homeAt(village, bed);
+        if (h == null) return false;
+        if (h.tenure == Tenure.PLAYER) return !h.members.isEmpty() ? !h.members.contains(f.getUUID()) : !h.toLet;
+        if (h.members.isEmpty() || h.members.contains(f.getUUID())) return false;
+        return !roomForALodger(level, village, h, f);
+    }
+
+    /** Has this house a bed to spare for one more, over its own household and the lodgers it has (this one left out)? */
+    static boolean roomForALodger(ServerLevel level, UUID village, Home h, VillageFolkEntity lodger) {
+        List<BlockPos> beds = bedsIn(level, village, h);
+        if (beds.size() <= h.members.size()) return false;
+        return beds.size() - h.members.size() - lodgersIn(village, h, beds, lodger) >= 1;
+    }
+
+    /** How many folk not of this household have a bed in it (leaving one out, or none). */
+    static int lodgersIn(UUID village, Home h, List<BlockPos> beds, @Nullable VillageFolkEntity but) {
+        int n = 0;
+        for (AssistantEntity a : Villages.folkOf(village)) {
+            if (a == but || !a.isAlive() || h.members.contains(a.getUUID())) continue;
+            BlockPos b = a.bedPos();
+            if (b != null && beds.contains(b)) n++;
+        }
+        return n;
+    }
+
+    /**
+     * One of the household wants its own bed (VillageFolkEntity.findABed), and it is not free: a lodger in
+     * it gives it up (out of it, if it is asleep in it) and looks for another tonight. If it is one of the
+     * household's own in it (the beds shared out afresh when somebody moved in), a lodger in another of the
+     * house's beds gives that one up instead. Returns the bed to take now (the one asked for, or the other
+     * one given up).
+     */
+    public static BlockPos bedBack(ServerLevel level, VillageFolkEntity f, BlockPos bed) {
+        UUID village = f.ownerId();
+        Home h = village == null ? null : homeOf(village, f.getUUID());
+        if (h == null) return bed;
+        AssistantEntity in = sleeperOf(village, bed, f);
+        if (in == null) return bed;
+        if (!h.members.contains(in.getUUID())) {
+            giveUp(level, in);
+            return bed;
+        }
+        List<BlockPos> beds = bedsIn(level, village, h);
+        for (BlockPos other : beds) if (free(level, village, other)) return other;     // one standing free at home
+        for (BlockPos other : beds) {
+            AssistantEntity lodger = sleeperOf(village, other, f);
+            if (lodger == null || h.members.contains(lodger.getUUID())) continue;
+            giveUp(level, lodger);
+            return other;
+        }
+        return bed;
+    }
+
+    /** Whoever of the village calls this bed its own (not this one), or null. */
+    @Nullable
+    private static AssistantEntity sleeperOf(UUID village, BlockPos bed, AssistantEntity but) {
+        for (AssistantEntity a : Villages.folkOf(village)) if (a != but && a.isAlive() && bed.equals(a.bedPos())) return a;
+        return null;
+    }
+
+    /** A lodger gives its bed back to the household it belongs to, and looks for another tonight. */
+    private static void giveUp(ServerLevel level, AssistantEntity a) {
+        if (a.isSleeping()) a.stopSleeping();
+        a.forgetBed();
+        if (!(a instanceof VillageFolkEntity lodger)) return;
+        lodger.persona().remember(level.getDayTime() / 24000L, "I gave a spare bed back to the household it belonged to", 1);
+        if (level.getRandom().nextInt(2) == 0) FolkTalk.speak(lodger, FolkTalk.pick(level.getRandom(),
+            "Fair enough — it's their house. I'll find another bed.", "Back to their own, quite right. I'll look elsewhere.",
+            "Needed it back? Of course. Thank you for the loan of it."));
+    }
+
+    /** Is this folk sleeping in a bed in a house that is not its own (a lodger, or in a house nobody lives in)? */
+    public static boolean lodging(VillageFolkEntity f) {
+        UUID village = f.ownerId();
+        BlockPos bed = f.bedPos();
+        if (village == null || bed == null) return false;
+        Home at = homeAt(village, bed);
+        return at != null && !at.members.contains(f.getUUID());
+    }
+
+    /** Where it lodges: the address of the house its bed is in, or null if it is not lodging. */
+    @Nullable
+    static String lodgingAt(VillageFolkEntity f) {
+        UUID village = f.ownerId();
+        BlockPos bed = f.bedPos();
+        Villages.Village v = village == null ? null : Villages.get(village);
+        if (v == null || bed == null) return null;
+        Home at = homeAt(village, bed);
+        return at == null || at.members.contains(f.getUUID()) ? null : address(village, v, at);
+    }
+
+    /** Is this bed (its head) free: a bed still, nobody in it, and no folk of the village calling it its own? */
+    static boolean free(ServerLevel level, UUID village, BlockPos bed) {
+        if (!isBedHead(level, bed) || level.getBlockState(bed).getValue(BedBlock.OCCUPIED)) return false;
+        for (AssistantEntity a : Villages.folkOf(village)) if (a.isAlive() && bed.equals(a.bedPos())) return false;
+        return true;
+    }
+
+    /**
+     * Folk of a house with no bed in it while theirs at home stands free take it, there and then: one
+     * sleeping out (lodging in another's spare bed, since there was none for them at home when they
+     * looked), which frees the spare one; one just moved in, who used to have no bed at all till its first
+     * night's look; and a guard, who keeps the watch all night and so never goes looking for one. Not while
+     * asleep, and not in a player's house (its tenants find theirs at bedtime). Returns how many came home.
+     */
+    static int comeHome(ServerLevel level, UUID village, Home h) {
+        if (h.members.isEmpty() || h.tenure == Tenure.PLAYER || !level.isLoaded(h.anchor)) return 0;
+        List<BlockPos> beds = null;
+        int n = 0;
+        for (VillageFolkEntity m : loadedMembers(village, h)) {
+            if (m.isSleeping()) continue;
+            if (beds == null) beds = bedsIn(level, village, h);
+            BlockPos b = m.bedPos();
+            if (b != null && beds.contains(b)) continue;
+            BlockPos mine = bedFor(level, m);
+            if (mine == null || !free(level, village, mine)) continue;
+            m.takeBed(mine);
+            n++;
+        }
+        return n;
+    }
+
     // ------------------------------------------------------------------ the households
 
     /** Every so often for each village (TownLife): homes for those without, couples together, grown children out, beds for the children. */
@@ -415,6 +556,8 @@ public final class Homes {
             else BED_ERRANDS.values().remove(e);
         }
         for (Home h : homes.values()) childBeds(level, v, h, day);
+        // Anybody with a bed free at home and none there: it is theirs now (and a spare bed out is free again).
+        for (Home h : homes.values()) comeHome(level, id, h);
         // The rent, the saving and the buying are payday's (Market.tick, after the wages: payday).
     }
 
@@ -459,7 +602,7 @@ public final class Homes {
         hall.since = day;
         moveIn(level, v, hall, household, day, true);
         if (old != null && old != hall && old.members.isEmpty() && old.tenure != Tenure.PLAYER) {
-            if (old.tenure == Tenure.OWNED && old.price > 0) f.earn(Ledger.takeCoins(id, old.price / 2));
+            if (old.tenure == Tenure.OWNED && old.price > 0) f.earn(boughtBack(id, old.price / 2));
             vacate(id, old, f);                        // and what they had put by toward buying it, back to them
         }
         Villages.tell(id, day, names(household) + " moved into the leader's hall");
@@ -483,6 +626,15 @@ public final class Homes {
         return !parents.isEmpty() && parents.contains(parent.displayNameCap());
     }
 
+    /**
+     * Is this one born to that one? By its parents' own ids when it has them (every child born in the
+     * village has), else by name as childOf: a grandchild of "Rook" is not "Rook2"'s, and the other way
+     * round, as the names alone would have it.
+     */
+    static boolean bornTo(VillageFolkEntity child, VillageFolkEntity parent) {
+        return child.parentIds().isEmpty() ? childOf(child, parent) : child.parentIds().contains(parent.getUUID());
+    }
+
     @Nullable
     static Home parentsHome(UUID village, VillageFolkEntity f, List<VillageFolkEntity> folk) {
         for (VillageFolkEntity o : folk) {
@@ -496,7 +648,10 @@ public final class Homes {
     /**
      * Households wanting a home of their own, neediest first: grown folk with no house (and their
      * partners and children with them), then grown children still at their parents' a day after
-     * they came of age.
+     * they came of age — wed or not: a couple living at his parents' or hers waits for a house of its
+     * own with its children, and moves out together. (Only the unwed used to wait: a grown child who
+     * married moved in with the other's family, and the couple and its children stayed there for good,
+     * six and seven to a four-bed house, while the waiting list said nobody was waiting.)
      */
     static List<List<VillageFolkEntity>> waiting(UUID village, List<VillageFolkEntity> folk, long day) {
         List<List<VillageFolkEntity>> out = new ArrayList<>();
@@ -506,31 +661,35 @@ public final class Homes {
             Home h = homeOf(village, f.getUUID());
             boolean homeless = h == null;
             boolean grownAtHome = false;
-            if (h != null && f.life().partner() == null) {
-                // At its parents' still: a grown child of somebody in the house.
+            VillageFolkEntity p = partner(f, folk);
+            if (h != null && (p == null || homeOf(village, p.getUUID()) == h)) {
+                // At its parents' still (or its partner's): a grown child of somebody else in the house.
+                VillageFolkEntity child = null;
                 for (UUID m : h.members) {
                     VillageFolkEntity o = loaded(village, m);
-                    if (o != null && o != f && !o.isBaby() && childOf(f, o)) { grownAtHome = true; break; }
+                    if (o == null || o == f || o == p || o.isBaby()) continue;
+                    if (childOf(f, o)) { child = f; break; }
+                    if (p != null && bornTo(p, o)) { child = p; break; }
                 }
-                if (grownAtHome && day - Math.max(0, f.bornDay() + VillageFolkEntity.GROW_DAYS) < 1) grownAtHome = false;
+                grownAtHome = child != null && day - Math.max(0, child.bornDay() + VillageFolkEntity.GROW_DAYS) >= 1;
             }
             if (!homeless && !grownAtHome) continue;
             List<VillageFolkEntity> household = new ArrayList<>();
             household.add(f);
             seen.add(f.getUUID());
-            VillageFolkEntity p = partner(f, folk);
-            if (p != null && homeOf(village, p.getUUID()) == null && !seen.contains(p.getUUID())) {
+            if (p != null && !seen.contains(p.getUUID()) && (homeOf(village, p.getUUID()) == null || homeOf(village, p.getUUID()) == h)) {
                 household.add(p);
                 seen.add(p.getUUID());
             }
-            if (homeless) {
-                for (VillageFolkEntity c : folk) {
-                    if (c.isBaby() && !seen.contains(c.getUUID()) && homeOf(village, c.getUUID()) == null
-                            && (childOf(c, f) || p != null && childOf(c, p))) {
-                        household.add(c);
-                        seen.add(c.getUUID());
-                    }
-                }
+            for (VillageFolkEntity c : folk) {
+                if (!c.isBaby() || seen.contains(c.getUUID())) continue;
+                Home ch = homeOf(village, c.getUUID());
+                // Its children: with nowhere, or (moving out of the family house) under the same roof.
+                boolean theirs = homeless ? ch == null && (childOf(c, f) || p != null && childOf(c, p))
+                    : ch == h && (bornTo(c, f) || p != null && bornTo(c, p));
+                if (!theirs) continue;
+                household.add(c);
+                seen.add(c.getUUID());
             }
             out.add(household);
         }
@@ -742,7 +901,7 @@ public final class Homes {
         if (leave != null && leave.members.isEmpty()) {
             // Back to the village: bought back at half what was paid, if it was theirs.
             if (leave.tenure == Tenure.OWNED && leave.price > 0) {
-                int back = Ledger.takeCoins(id, leave.price / 2);
+                int back = boughtBack(id, leave.price / 2);
                 mover.earn(back);
                 Villages.tell(id, day, mover.displayNameCap() + " sold " + address(id, v, leave) + " back to the village for " + back + coins(back));
             }
@@ -786,7 +945,10 @@ public final class Homes {
             if (!bed.isEmpty()) Crafts.store(level, v, bed);
             return why(h, "the bed could not be taken from the stores");
         }
-        if (paid) Ledger.addCoins(id, price);
+        if (paid) {
+            Ledger.addCoins(id, price);
+            Economy.spentInTown(id, price);
+        }
         Direction lie = spotLie(level, spot);
         VillageFolkEntity parent0 = members.stream().filter(m -> !m.isBaby() && !BED_ERRANDS.containsKey(m.getUUID())).findFirst().orElse(null);
         VillageFolkEntity child0 = members.stream().filter(VillageFolkEntity::isBaby)
@@ -1231,6 +1393,14 @@ public final class Homes {
         h.saved = 0;
     }
 
+    /** A house bought back from the household leaving it, at half what it paid: out of the treasury (as far as it
+     *  has it), into the books as bought in. Returns what was paid. */
+    static int boughtBack(UUID village, int price) {
+        int paid = Ledger.takeCoins(village, Math.max(0, price));
+        Economy.spent(village, paid);
+        return paid;
+    }
+
     /** Saved up: the household buys the house it rents from the village, for its price, into the treasury. No more rent. */
     static void buy(ServerLevel level, Villages.Village v, Home h, List<VillageFolkEntity> household, long day) {
         UUID id = v.id();
@@ -1261,7 +1431,7 @@ public final class Homes {
             int price = price(id, m), back = h.price / 2;
             if (purses(household) + back < price + 20) return;
             VillageFolkEntity seller = null;
-            for (VillageFolkEntity f : household) if (!f.isBaby()) { seller = f; f.earn(Ledger.takeCoins(id, back)); break; }
+            for (VillageFolkEntity f : household) if (!f.isBaby()) { seller = f; f.earn(boughtBack(id, back)); break; }
             if (!pay(household, price)) return;
             Ledger.addCoins(id, price);
             Economy.houseSold(id, price);
@@ -1548,7 +1718,8 @@ public final class Homes {
         }
         return c[0] + " households housed (" + (c[2] > 0 ? c[2] + " given, " : "") + c[3] + " owned, " + c[4] + " rented"
             + (c[8] > 0 ? ", " + c[8] + " of them saving to buy" : "") + (c[13] > 0 ? ", " + c[13] + " founders' rent-free" : "") + ")"
-            + (c[5] > 0 ? ", " + c[5] + " players'" : "") + ", " + c[1] + " waiting; " + c[6] + " empty"
+            + (c[5] > 0 ? ", " + c[5] + " players'" : "") + ", " + c[1] + " waiting"
+            + (c.length > 14 && c[14] > 0 ? " (" + c[14] + " folk lodging in spare beds meanwhile)" : "") + "; " + c[6] + " empty"
             + (let.length() > 0 ? " (to let: " + let + ")" : "")
             + "; rent " + c[9] + coins(c[9]) + " yesterday" + (c[11] > 0 ? ", " + c[11] + " owed" : "")
             + "; houses are let, and sold to the tenants who save for them";
@@ -1565,8 +1736,8 @@ public final class Homes {
     /**
      * For the town's books (Annals): {housed, waiting, given, owned, rented, players', empty, for sale (1/0),
      * saving (tenant households putting by to buy), rent collected yesterday, coin put by toward houses,
-     * rent owed, coin from houses sold yesterday, founders' households still rent-free}. The first eight are as
-     * they always were.
+     * rent owed, coin from houses sold yesterday, founders' households still rent-free, folk lodging in a
+     * spare bed in a house not their own}. The first eight are as they always were.
      */
     public static int[] counts(ServerLevel level, UUID village) {
         enrol(village);
@@ -1595,8 +1766,10 @@ public final class Homes {
         List<VillageFolkEntity> folk = new ArrayList<>();
         for (AssistantEntity a : Villages.folkOf(village)) if (a instanceof VillageFolkEntity f && !f.isShowcase()) folk.add(f);
         int waiting = waiting(village, folk, level.getDayTime() / 24000L).size();
+        int lodging = 0;
+        for (VillageFolkEntity f : folk) if (lodging(f)) lodging++;
         return new int[]{ given + owned + rented, waiting, given, owned, rented, let, empty, forSale(village) ? 1 : 0,
-            saving, Economy.rentYesterday(village), saved, owed, Economy.housesSoldYesterday(village), free };
+            saving, Economy.rentYesterday(village), saved, owed, Economy.housesSoldYesterday(village), free, lodging };
     }
 
     /**
@@ -1610,8 +1783,8 @@ public final class Homes {
         CompoundTag out = new CompoundTag();
         int[] c = counts(level, village);
         String[] names = { "housed", "waiting", "given", "owned", "rented", "players", "empty", "for_sale",
-            "saving", "rent_yesterday", "saved", "owed", "sales_yesterday", "rent_free" };
-        for (int i = 0; i < names.length; i++) out.putInt(names[i], c[i]);
+            "saving", "rent_yesterday", "saved", "owed", "sales_yesterday", "rent_free", "lodging" };
+        for (int i = 0; i < names.length && i < c.length; i++) out.putInt(names[i], c[i]);
         out.putInt("hand_wage", Wealth.tradeWage(AssistantEntity.StationTask.FARM, village));
         out.putString("line", line(level, village));
         Villages.Village v = Villages.get(village);
@@ -1683,7 +1856,11 @@ public final class Homes {
         if (village == null) return "";
         Home h = homeOf(village, f.getUUID());
         Villages.Village v = Villages.get(village);
-        if (h == null || v == null) return "I've no house of my own yet. I'm waiting for one.";
+        if (h == null || v == null) {
+            String at = lodgingAt(f);
+            return at == null ? "I've no house of my own yet. I'm waiting for one."
+                : "I've no house of my own yet: I sleep in a spare bed at " + at + " till there's one for me.";
+        }
         List<String> others = new ArrayList<>();
         int kids = 0;
         for (UUID m : h.members) {
@@ -2004,5 +2181,10 @@ public final class Homes {
     public static List<BlockPos> bedsForTests(ServerLevel level, UUID village, BlockPos anchor) {
         Home h = homes(village).get(anchor.asLong());
         return h == null ? List.of() : bedsIn(level, village, h);
+    }
+
+    /** Tests: the folk's own look for a bed for tonight, now (VillageFolkEntity.findABed). */
+    public static boolean findABedForTests(VillageFolkEntity f) {
+        return f.findABed(f.blockPosition());
     }
 }

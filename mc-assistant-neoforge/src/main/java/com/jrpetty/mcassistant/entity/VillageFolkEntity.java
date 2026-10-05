@@ -579,6 +579,7 @@ public class VillageFolkEntity extends AssistantEntity {
             return true;
         }
         if (day - comfortDay < 2) return false;
+        if (Homes.lodging(this)) return false;          // a spare bed in another's house is no home to furnish
         Wealth.Tier tier = Wealth.tier(this);
         if (comforts >= tier.comforts) return false;
         Villages.Village v = Villages.get(village);
@@ -615,6 +616,7 @@ public class VillageFolkEntity extends AssistantEntity {
             return false;
         }
         com.jrpetty.mcassistant.village.Ledger.addCoins(village, want.price());
+        Economy.spentInTown(village, want.price());
         Stockroom.sold(server, village, Stockroom.Seller.SHOP, got, 1, want.price());     // the shop's books (Stockroom)
         comfortCarried = got;
         swing(net.minecraft.world.InteractionHand.MAIN_HAND);
@@ -1949,8 +1951,12 @@ public class VillageFolkEntity extends AssistantEntity {
     protected boolean bedOnOffer(BlockPos pos) {
         if (!super.bedOnOffer(pos)) return false;
         UUID village = ownerId();
-        // Not a player's guest house, and not another household's home (Homes).
-        return village == null || !Villages.inAGuestHouse(village, pos) && !Homes.someoneElses(village, pos, this);
+        // Not a player's guest house, and not another household's home (Homes) — unless it is a bed that
+        // household has no need of, which a folk with none of its own may lodge in.
+        if (village == null) return true;
+        if (Villages.inAGuestHouse(village, pos)) return false;
+        return level() instanceof net.minecraft.server.level.ServerLevel server
+            ? !Homes.someoneElses(server, village, pos, this) : !Homes.someoneElses(village, pos, this);
     }
 
     /** Hand two rations to a friend: whatever food is in the pack, as it is. */
@@ -2197,7 +2203,9 @@ public class VillageFolkEntity extends AssistantEntity {
             return super.findABed(base);
         }
         // Its own house first (Homes): the grown-ups' pair side by side, the children's beds across the room.
+        // A lodger in it (a folk with no bed of its own, put up in a bed the house could spare) gives it back.
         BlockPos own = Homes.bedFor(server, this);
+        if (own != null && !bedOnOffer(own)) own = Homes.bedBack(server, this, own);
         if (own != null && bedOnOffer(own)) {
             bedLook = "its own house";
             takeBed(own);
@@ -2214,9 +2222,11 @@ public class VillageFolkEntity extends AssistantEntity {
         // still has no bed of its own: the beds go to those who work. (Two children are counted
         // as one bed's worth when the village works out how many houses it needs.)
         if (isBaby()) {
+            // (Not the watch: a guard is up all night and never goes looking for a bed, and one without
+            // kept every child in the village off the spare beds.)
             boolean adultWithout = false;
             for (AssistantEntity a : Villages.folkOf(village)) {
-                if (!a.isBaby() && a.bedPos() == null) { adultWithout = true; break; }
+                if (!a.isBaby() && a.bedPos() == null && a.shift() != Shift.ALWAYS) { adultWithout = true; break; }
             }
             if (adultWithout) {
                 if (near != null) setHome(near);

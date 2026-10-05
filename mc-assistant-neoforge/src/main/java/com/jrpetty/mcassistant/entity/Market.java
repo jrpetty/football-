@@ -474,11 +474,48 @@ public final class Market {
         return bill;
     }
 
+    /** The village's tax: this much in the hundred of every wage stays in the treasury on payday. */
+    public static final int TAX_PERCENT = 10;
+    /** No tax is taken while the treasury (over what it is saving for) holds this many days' wages. */
+    public static final int TAX_TILL_DAYS = 7;
+
+    /** What each folk's tax has come to so far that is short of a whole coin, in hundredths (by the folk). */
+    private static final java.util.Map<UUID, Integer> TAX_CARRY = new java.util.concurrent.ConcurrentHashMap<>();
+    /** Whether the village's last payday took the tax (by the village). */
+    private static final java.util.Map<UUID, Boolean> TAXING = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * The tax on a wage of {@code wage}: a tenth of it, the part of a coin carried to the folk's next
+     * payday, so a hand paid three a day pays a coin every third or fourth morning and a tenth in the end.
+     * The poor pay none. Never more than the wage.
+     */
+    static int taxOn(VillageFolkEntity f, int wage) {
+        if (wage <= 0 || Wealth.tier(f) == Wealth.Tier.POOR) return 0;
+        if (TAX_CARRY.size() > 8192) TAX_CARRY.clear();               // folk long gone: under a coin each, let go
+        int owed = TAX_CARRY.getOrDefault(f.getUUID(), 0) + wage * TAX_PERCENT;
+        int tax = Math.min(wage, owed / 100);
+        TAX_CARRY.put(f.getUUID(), owed - tax * 100);
+        return tax;
+    }
+
+    /** Did the village's last payday take the tax (its treasury short of a week's wages)? True before the first. */
+    public static boolean taxing(@Nullable UUID village) {
+        return village == null || TAXING.getOrDefault(village, true);
+    }
+
     /**
      * Every working folk paid, out of what the treasury holds beyond what it is saving for. Short
      * of coin, every folk gets the same share of its wage, and the odd coins go round, starting
      * with a different folk each day. (The coin used to go down the list until it ran out: the
      * first dozen were paid in full every day, and the rest never.) Returns the coin paid out.
+     *
+     * <p>A tenth of every wage is the village's tax and never leaves the treasury: a folk is paid the
+     * rest. The wages are reckoned before it, out of what the treasury holds, so whatever it pays out
+     * it keeps a tenth of, and it is never emptied by a payday. Once the treasury holds a week's wages
+     * over what it is saving for, it takes no tax until it holds less again: it is a purse to pay the
+     * wages out of, not a hoard. (Every coin of the wages used to go out of it every morning, the
+     * treasury paid out whatever it held, and only the weekly tithe and what the folk spent came back:
+     * a town of a hundred kept a few coins in its treasury and three thousand in its purses.)
      */
     public static int payWages(ServerLevel level, Villages.Village v) {
         UUID id = v.id();
@@ -514,20 +551,27 @@ public final class Market {
             int i = (start + k) % due.length;
             if (due[i] < wages.get(i)) { due[i]++; given++; }
         }
-        int paid = 0;
+        int paid = 0, taxed = 0;
         long day = level.getDayTime() / 24000L;
+        boolean taxing = purse < TAX_TILL_DAYS * bill;
+        TAXING.put(id, taxing);
         for (int i = 0; i < due.length; i++) {
             if (due[i] <= 0) continue;
-            int got = Ledger.takeCoins(id, due[i]);
-            if (got <= 0) break;
+            int tax = taxing ? taxOn(hands.get(i), due[i]) : 0;
+            int net = due[i] - tax;
+            int got = net <= 0 ? 0 : Ledger.takeCoins(id, net);
+            if (net > 0 && got <= 0) break;
             hands.get(i).paid(got);
             PAID.put(hands.get(i).getUUID(), new long[]{ day, got });
             paid += got;
+            taxed += tax;
         }
         // The town's Counting House (CityTree): a twentieth of it back into the treasury; the folk keep every coin.
         int back = CityTree.countingHouse(id, paid);
         if (back > 0) Ledger.addCoins(id, back);
-        Economy.wages(id, paid - back);
+        // In the books: the wages as earned (what the folk were paid and the tax on it), and the tax as money in.
+        Economy.wages(id, paid + taxed - back);
+        Economy.tax(id, taxed);
         payday(level, v, hands, wages, due, bill <= purse ? 100 : (int) Math.round(100.0 * Math.min(purse, bill) / bill));
         return paid;
     }
@@ -656,6 +700,11 @@ public final class Market {
         return e == null || e[1] < now ? 0 : (int) e[0];
     }
 
+    /** Tests: the tax on this wage for this folk, as payday would take it (its odd part carried). */
+    public static int taxOnForTests(VillageFolkEntity f, int wage) {
+        return taxOn(f, wage);
+    }
+
     public static void resetForTests() {
         BEDS_SHORT.clear();
         HUNGRY.clear();
@@ -663,6 +712,8 @@ public final class Market {
         SHARE.clear();
         NEWS.clear();
         PAID.clear();
+        TAX_CARRY.clear();
+        TAXING.clear();
     }
 
     // ------------------------------------------------------------------ the tithe
@@ -775,6 +826,7 @@ public final class Market {
             if (!TownWork.take(level, v, s -> s.is(it), 1)) continue;
             f.spend(price);
             Ledger.addCoins(v.id(), price);
+            Economy.spentInTown(v.id(), price);
             Stockroom.sold(level, v.id(), Stockroom.Seller.MARKET, new ItemStack(it), 1, price);
             ItemStack bought = new ItemStack(it);
             ItemStack left = f.insertItem(bought);

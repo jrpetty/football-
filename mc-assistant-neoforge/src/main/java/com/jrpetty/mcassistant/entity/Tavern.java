@@ -125,6 +125,7 @@ public final class Tavern {
             return;
         }
         Ledger.addCoins(v.id(), price);
+        Economy.spentInTown(v.id(), price);
         Stockroom.sold(level, v.id(), Stockroom.Seller.TAVERN, d, 1, price);
         drunk(level, v, f, d);
     }
