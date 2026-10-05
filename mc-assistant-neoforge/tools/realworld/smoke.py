@@ -893,9 +893,13 @@ def main():
     pos = position(r)
     py = int(pos[1]) if pos else 70
 
+    # The ground of the founded town (the heart cleared and levelled), not wherever the player was set down:
+    # from there the first picture was taken from inside an acacia's leaves.
+    gy = ground_height(r, cx, cz) or py
+
     def look_at_the_village(label):
-        # From fourteen blocks off and a little above, at the middle of it.
-        r.cmd("execute positioned %d %d %d run tp %s ~-14 ~3 ~ facing ~ ~1 ~" % (cx, py, cz, USER))
+        # From fourteen blocks off and six above the town's ground, at the middle of it.
+        r.cmd("tp %s %d %d %d facing %d %d %d" % (USER, cx - 14, gy + 6, cz, cx, gy + 1, cz))
         time.sleep(8)
         shot(label)
         say("alive after %s: %s" % (label, client_alive()))

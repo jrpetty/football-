@@ -121,6 +121,9 @@ public final class EconomyCommands {
             // Where it works (its furnaces), not wherever it happens to be standing: a smelter off down the
             // mine for ore put the smoke's camera inside the hill.
             BlockPos p = f.workZone() != null ? f.workZone().center() : f.blockPosition();
+            // And the furnace itself if one stands near (the middle of its ground can be the founders' camp).
+            BlockPos furnace = nearestFurnace(ctx.getSource().getLevel(), p, 10);
+            if (furnace != null) p = furnace;
             String line = "SMELTER " + f.displayNameCap() + " " + p.getX() + " " + p.getY() + " " + p.getZ() + ": "
                 + (burning ? "burning logs into charcoal" : "not now (charcoal "
                     + (Fuel.charcoalWanted(ctx.getSource().getLevel(), v.id()) ? "wanted, but no logs to spare or looked a moment ago" : "not wanted") + ")");
@@ -152,6 +155,22 @@ public final class EconomyCommands {
         }
         ctx.getSource().sendSuccess(() -> Component.literal(String.join("\n", lines)), false);
         return lines.size() - 1;
+    }
+
+    /** The furnace (or blast furnace or smoker) nearest this spot within r, or null. */
+    @org.jetbrains.annotations.Nullable
+    private static BlockPos nearestFurnace(net.minecraft.server.level.ServerLevel level, BlockPos c, int r) {
+        BlockPos best = null;
+        double bd = Double.MAX_VALUE;
+        for (BlockPos q : BlockPos.betweenClosed(c.offset(-r, -4, -r), c.offset(r, 4, r))) {
+            if (!level.isLoaded(q)) continue;
+            var st = level.getBlockState(q);
+            if (!st.is(net.minecraft.world.level.block.Blocks.FURNACE) && !st.is(net.minecraft.world.level.block.Blocks.BLAST_FURNACE)
+                    && !st.is(net.minecraft.world.level.block.Blocks.SMOKER)) continue;
+            double d = q.distSqr(c);
+            if (d < bd) { bd = d; best = q.immutable(); }
+        }
+        return best;
     }
 
     /** "tilled N at x y z": the farmland in a plot, and the middle of it. */
