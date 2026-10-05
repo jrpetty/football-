@@ -4099,12 +4099,6 @@ public class VillageFolkEntity extends AssistantEntity {
     }
 
     /**
-     * The village's herd is not game: an animal on a lead, one the rancher brought home or bought
-     * (marked as the village's), or one inside a rancher's ground. A hungry village hunted every food animal within
-     * twenty-four blocks, its own pens among them, and no herd ever grew.
-     */
-    @Override
-    /**
      * Never the last of a kind: a cow, pig, sheep, chicken or rabbit with fewer than three of its
      * own kind grown within twenty-four blocks is left to breed. The hunters take the spare ones,
      * and there is game again next year.
@@ -4232,6 +4226,12 @@ public class VillageFolkEntity extends AssistantEntity {
         returnTo(villageCentre, wood, w0, r);
     }
 
+    /**
+     * The village's herd is not game: an animal on a lead, one the rancher brought home or bought
+     * (marked as the village's), or one inside a rancher's ground. A hungry village hunted every food animal within
+     * twenty-four blocks, its own pens among them, and no herd ever grew.
+     */
+    @Override
     public boolean spareTheHerd(net.minecraft.world.entity.animal.Animal a) {
         if (a.isLeashed() || a.getTags().contains(Drover.HERD)) return true;
         UUID village = ownerId();

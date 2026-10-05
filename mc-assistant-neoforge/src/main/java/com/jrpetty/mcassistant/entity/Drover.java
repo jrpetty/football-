@@ -24,9 +24,11 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Animals for the pen. A rancher whose pen has no pair to breed goes out with one of the leads it
- * brought, finds a wild sheep, cow, pig or chicken, puts the lead on it and walks it home, as a
- * player would; then another of the same kind, until there is a pair. Only if there is nothing
+ * Animals for the pen. A rancher whose pen has no pair to breed goes out and fetches a wild sheep,
+ * cow, pig or chicken home, as a player would: it holds out what the animal eats (wheat for sheep
+ * and cows, a carrot for a pig, seeds for a hen) and walks slowly home with the animal following
+ * its hand; or, with no feed to hand, it puts one of its leads on it. Then another of the same
+ * kind, until there is a pair. Only if there is nothing
  * wild for fifty blocks round does the village buy a drover's pair (two sheep and two hens) —
  * once, and in the chronicle.
  */
@@ -46,6 +48,9 @@ public final class Drover {
         final BlockPos pen;
         final long started;
         boolean leading;
+        /** Fetched by its feed held out, not on a lead: what it is holding, and what it held before. */
+        @Nullable ItemStack lure;
+        ItemStack heldBefore = ItemStack.EMPTY;
         int walked = -1000;
         /** Where the animal was last seen, for the lead if it dies or wanders off loaded ground. */
         BlockPos seen;
@@ -96,6 +101,23 @@ public final class Drover {
         if (pair && herd.getOrDefault(EntityType.SHEEP, 0) >= 2) return false;
         long today = level.getDayTime() / 24000L;
         Animal wild = wild(level, pen, herd, today, pair ? EntityType.SHEEP : null);
+        // Feed held out is how anybody fetches a sheep home: a lead only when there is none to hand.
+        if (wild != null) {
+            java.util.function.Predicate<ItemStack> feed = feedFor(wild);
+            if (feed != null && f.countCarried(feed) < 1 && f.villageCentre() != null) {
+                f.drawFrom(f.villageCentre(), feed, 2, Villages.storesRadius(village));
+            }
+            if (feed != null && f.countCarried(feed) > 0) {
+                Drive d = new Drive(wild.getUUID(), pen, level.getGameTime());
+                for (ItemStack s : f.getInventoryItems()) if (!s.isEmpty() && feed.test(s)) { d.lure = s.copyWithCount(1); break; }
+                DRIVES.put(f.getUUID(), d);
+                f.clearQueue();
+                f.brain("off to coax a wild " + kind(wild) + " home with " + Crafts.named(d.lure));
+                FolkTalk.speak(f, "There's a " + kind(wild) + " out there with no home. A bit of " + Crafts.named(d.lure)
+                    + " and it'll follow me in.");
+                return true;
+            }
+        }
         if (wild != null && f.countCarried(s -> s.is(Items.LEAD)) < 1) {
             // A lead from the stores (the market sells them, and players bring them).
             Villages.Village v = Villages.get(village);
@@ -157,6 +179,10 @@ public final class Drover {
             if (a == null && d.leading) pickUpLeads(f, level, d.seen);   // it died on the lead: the lead lies there
             if (tooLong) GAVE_UP.put(d.animal, level.getDayTime() / 24000L);   // one it couldn't get home: not again today
             stop(f, a, d, false);
+            return;
+        }
+        if (d.lure != null) {
+            lure(f, a, d);
             return;
         }
         if (!d.leading) {
@@ -221,8 +247,67 @@ public final class Drover {
     }
 
     /** The fetch is over: the lead off (and back in the pack), home or not. */
+    /**
+     * Coaxing an animal home with its feed held out: up to it, and then slowly home with it
+     * following the hand; a step back for it when it lags, as anybody leading a sheep with a sheaf
+     * of wheat does. In the pen it is given the feed, and the hand put away.
+     */
+    private static void lure(VillageFolkEntity f, Animal a, Drive d) {
+        if (!d.lure.isEmpty() && !f.getMainHandItem().is(d.lure.getItem())) {
+            d.heldBefore = f.getMainHandItem().copy();
+            f.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, d.lure.copy());
+        }
+        double gap = f.distanceToSqr(a);
+        double dx = a.getX() - (d.pen.getX() + 0.5), dz = a.getZ() - (d.pen.getZ() + 0.5);
+        if (dx * dx + dz * dz < 5.0 * 5.0) {
+            // Home: it gets what it followed.
+            f.removeMatching(s -> s.is(d.lure.getItem()), 1);
+            if (a.getAge() == 0 && !a.isBaby()) a.setInLove(null);
+            f.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+            stop(f, a, d, true);
+            return;
+        }
+        if (gap > 7.0 * 7.0) {
+            // Too far for it to smell the feed: walk up to it again.
+            if (f.getNavigation().isDone() || f.tickCount - d.walked > 40) {
+                f.walkTo(a.blockPosition(), 0.8D);
+                d.walked = f.tickCount;
+            }
+            return;
+        }
+        // Near enough: it follows the hand.
+        a.getNavigation().moveTo(f, 1.1D);
+        a.getLookControl().setLookAt(f, 30.0F, 30.0F);
+        f.getLookControl().setLookAt(a);
+        if (gap > 4.0 * 4.0) {
+            f.getNavigation().stop();                                    // let it catch up
+            return;
+        }
+        if (f.getNavigation().isDone() || f.tickCount - d.walked > 40) {
+            f.walkTo(d.pen, 0.5D);
+            d.walked = f.tickCount;
+        }
+    }
+
+    /** What an animal will follow, or null if it follows nothing a village grows. */
+    @Nullable
+    static java.util.function.Predicate<ItemStack> feedFor(Animal a) {
+        if (a instanceof net.minecraft.world.entity.animal.Sheep || a instanceof net.minecraft.world.entity.animal.Cow) {
+            return s -> s.is(Items.WHEAT);
+        }
+        if (a instanceof net.minecraft.world.entity.animal.Pig) return s -> s.is(Items.CARROT) || s.is(Items.POTATO) || s.is(Items.BEETROOT);
+        if (a instanceof net.minecraft.world.entity.animal.Chicken) {
+            return s -> s.is(Items.WHEAT_SEEDS) || s.is(Items.BEETROOT_SEEDS) || s.is(Items.MELON_SEEDS) || s.is(Items.PUMPKIN_SEEDS);
+        }
+        if (a instanceof net.minecraft.world.entity.animal.Rabbit) return s -> s.is(Items.CARROT) || s.is(Items.DANDELION);
+        return null;
+    }
+
     private static void stop(VillageFolkEntity f, @Nullable Animal a, Drive d, boolean home) {
         DRIVES.remove(f.getUUID());
+        if (d.lure != null && f.getMainHandItem().is(d.lure.getItem())) {
+            f.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, d.heldBefore);   // the feed put away
+        }
         if (a != null && a.isLeashed() && a.getLeashHolder() == f) {
             a.dropLeash(true, false);
             ItemStack left = f.insertItem(new ItemStack(Items.LEAD));
@@ -235,7 +320,8 @@ public final class Drover {
             UUID village = f.ownerId();
             if (village != null) {
                 Villages.tell(village, f.level().getDayTime() / 24000L,
-                    f.displayNameCap() + " brought a wild " + kind(a) + " home to the pen on a lead.");
+                    f.displayNameCap() + " brought a wild " + kind(a) + " home to the pen" + (d.lure != null ? ", coaxed with "
+                        + Crafts.named(d.lure) : " on a lead") + ".");
             }
         }
     }

@@ -82,13 +82,26 @@ public class BreedGoal extends Goal {
 
     @Override
     public void stop() {
+        putAwayFeed();
         this.job = null;
         this.first = null;
         this.second = null;
         assistant.getNavigation().stop();
     }
 
+    /** What it held before it held out the feed. */
+    @Nullable private ItemStack heldBefore;
+
+    private void putAwayFeed() {
+        if (heldBefore == null) return;
+        boolean feed = false;
+        for (Species sp : SPECIES) if (sp.food().test(assistant.getMainHandItem())) feed = true;
+        if (feed) assistant.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, heldBefore);
+        heldBefore = null;
+    }
+
     private void finish(String message) {
+        putAwayFeed();
         assistant.say(message);
         assistant.noteJobOutcome(pairsBred > 0);
         assistant.pollJob();
@@ -143,6 +156,27 @@ public class BreedGoal extends Goal {
 
         Animal target = !first.isInLove() ? first : second;
         assistant.getLookControl().setLookAt(target, 30.0F, 30.0F);
+        // The feed held out, as anybody breeding a pen does: the pair come to the hand.
+        Species held = speciesForAnimal(target);
+        if (held != null) {
+            if (!held.food().test(assistant.getMainHandItem())) {
+                for (ItemStack s : assistant.getInventoryItems()) {
+                    if (!s.isEmpty() && held.food().test(s)) {
+                        if (heldBefore == null) heldBefore = assistant.getMainHandItem().copy();
+                        assistant.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, s.copyWithCount(1));
+                        break;
+                    }
+                }
+            }
+            if (jobTicks % 10 == 0) {
+                for (Animal a : new Animal[]{ first, second }) {
+                    if (a != null && a.isAlive() && !a.isInLove() && a.distanceToSqr(assistant) < 10.0 * 10.0) {
+                        a.getNavigation().moveTo(assistant, 1.0D);
+                        a.getLookControl().setLookAt(assistant, 30.0F, 30.0F);
+                    }
+                }
+            }
+        }
         if (assistant.distanceToSqr(target) > 6.25) {
             if (assistant.getNavigation().isDone()) {
                 assistant.getNavigation().moveTo(target, 1.15D);

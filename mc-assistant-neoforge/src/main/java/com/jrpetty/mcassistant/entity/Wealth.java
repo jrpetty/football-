@@ -100,7 +100,7 @@ public final class Wealth {
     public static String breakdown(VillageFolkEntity f) {
         if (f.isBaby() || f.stationTask() == StationTask.NONE) return "no trade, no wage";
         int lv = f.veteranLevel(), b = bonus(f);
-        String place = Villages.rank(f.ownerId()).label.replace("a ", "");
+        String place = f.ownerId() == null ? "hamlet" : Villages.rank(f.ownerId()).label.replace("a ", "");
         StringBuilder sb = new StringBuilder();
         sb.append(tradeWage(f.stationTask(), f.ownerId())).append(" as a ")
             .append(f.stationTask().title.toLowerCase(java.util.Locale.ROOT)).append(" in a ").append(place);
