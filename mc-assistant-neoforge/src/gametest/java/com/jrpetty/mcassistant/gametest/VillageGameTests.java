@@ -5059,6 +5059,7 @@ public class VillageGameTests {
             if (level.getBlockState(deep.north().above(dy)).isAir()) level.setBlock(deep.north().above(dy), Blocks.STONE.defaultBlockState(), 3);
         }
         boolean buried = Villages.buriedBed(level, village, deep.north());
+        Villages.recountBeds(village);                     // counted once already, when the village was founded
         int madeUp = Villages.bedsMadeUp(level, village);
         Kit.log("t75 a two-storey house: " + beds + " beds, " + homes + " homes, the deepest " + deepest
             + " under its roof; made up " + madeUp + "; a bed down in the rock buried " + buried);

@@ -1501,6 +1501,9 @@ public final class Villages {
 
     private static final Map<UUID, long[]> MADE_UP = new ConcurrentHashMap<>();
 
+    /** Count the beds afresh next time (a house just made up, or a test that has just built one). */
+    public static void recountBeds(UUID villageId) { MADE_UP.remove(villageId); }
+
     /**
      * The beds actually made up in the village's houses and barracks, counted from the world (the
      * camp's round the heart and the guest house's left out): "homes for" used to be four a house
