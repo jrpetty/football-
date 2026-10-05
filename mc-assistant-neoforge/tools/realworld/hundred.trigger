@@ -1,1 +1,1 @@
-the hundred days, on b202 part 4 (a larder not for sale, fields worked hungry, home from the town's work): 2026-10-05T04:49:10Z
+the hundred days, on b202 part 5 (the day's work is the revenue): 2026-10-05T05:17:26Z

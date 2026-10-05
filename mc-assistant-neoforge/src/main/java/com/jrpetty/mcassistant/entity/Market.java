@@ -298,8 +298,9 @@ public final class Market {
         Homeland.survey(level, v);                       // a village from before: its land, looked over now
         Economy.closeTheDay(level, v, day);              // yesterday's output, and what the village is worth
         mint(level, v);
-        trade(level, v);
-        buyWool(level, v, day);                          // the beds before the wages: coin put by for it
+        int sold = trade(level, v);
+        takings(level, v, sold);                         // what the village made yesterday is its revenue
+        buyWool(level, v, day);                          // the beds, out of half of it at most
         payWages(level, v);
         if (RestDay.today(id, day)) tithe(level, v, day);
         Villages.checkRank(level, v, day);
@@ -425,6 +426,22 @@ public final class Market {
         Ledger.addCoins(id, in);
         Economy.sold(id, in);
         Villages.tell(id, level.getDayTime() / 24000L, "passing traders bought " + String.join(", ", sold) + " for " + in + " coin");
+        return in;
+    }
+
+    /**
+     * The day's work is the village's revenue: what it made yesterday (its fields, woods, mines,
+     * pens and crafts, at the market's prices: Economy) comes into the treasury each morning, less
+     * what the traders have just paid for. A village that used everything it made on its own walls
+     * and bread sold nothing, earned nothing, and paid no wages for a month however hard it worked.
+     * Returns the coin.
+     */
+    public static int takings(ServerLevel level, Villages.Village v, int sold) {
+        UUID id = v.id();
+        int in = Math.max(0, Economy.yesterday(id) - Math.max(0, sold));
+        if (in <= 0) return 0;
+        Ledger.addCoins(id, in);
+        Economy.takings(id, in);
         return in;
     }
 
@@ -671,8 +688,10 @@ public final class Market {
         int lots = Math.min(2, (short_ + g.bundle() - 1) / g.bundle());
         int price = sellPrice(g, wool, marketDay(id, day));
         int other = saved(id, now) - savedFor(id, "wool", now);
-        int can = (Ledger.coins(id) - other) / Math.max(1, price);
-        if (can < lots) saveFor(id, "wool", (lots - Math.max(0, can)) * price, now);   // the rest tomorrow
+        // Half of what the treasury has free at most: the beds came before the wages and took all
+        // of it, and nobody was paid for a fortnight.
+        int can = Math.max(0, (Ledger.coins(id) - other) / 2) / Math.max(1, price);
+        if (can < lots) saveFor(id, "wool", price, now);  // a lot put by for tomorrow
         lots = Math.min(lots, can);
         if (lots <= 0) return 0;
         int paid = Ledger.takeCoins(id, lots * price);

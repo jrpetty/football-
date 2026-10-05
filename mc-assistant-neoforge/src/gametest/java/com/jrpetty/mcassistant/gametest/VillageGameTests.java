@@ -3884,6 +3884,14 @@ public class VillageGameTests {
         Kit.log("t62 an empty larder: the farmer is missing " + farmer + "; the woodcutter " + woodcutter);
         helper.assertTrue(!farmer.contains("food (its rations)") && woodcutter.contains("food (its rations)"),
             "a farmer works to fill an empty larder; other hands wait on their rations");
+        // The day's work is the revenue: fifty coins' worth made yesterday, ten of it sold to the
+        // traders this morning, so forty more come in.
+        com.jrpetty.mcassistant.village.Ledger.note(id, "output.week", "50,30");
+        int before = com.jrpetty.mcassistant.village.Ledger.coins(id);
+        int took = com.jrpetty.mcassistant.entity.Market.takings(level, v, 10);
+        int after = com.jrpetty.mcassistant.village.Ledger.coins(id);
+        Kit.log("t62 the day's work: " + took + " coin taken, the treasury " + before + " -> " + after);
+        helper.assertTrue(took == 40 && after == before + 40, "yesterday's output, less what was sold, is the treasury's takings");
         helper.succeed();
     }
 

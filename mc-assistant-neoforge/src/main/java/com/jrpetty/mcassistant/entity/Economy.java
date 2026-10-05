@@ -58,7 +58,7 @@ public final class Economy {
         final Map<StationTask, Double> trades = new EnumMap<>(StationTask.class);
         final Map<UUID, Double> folk = new HashMap<>();
         final Map<UUID, String> names = new HashMap<>();
-        int sold, spent, tithe, wages;
+        int sold, spent, tithe, wages, takings;
 
         double total() {
             double t = 0;
@@ -152,6 +152,11 @@ public final class Economy {
 
     public static void sold(UUID village, int coins) {
         if (coins > 0) TODAY.computeIfAbsent(village, x -> new Day()).sold += coins;
+    }
+
+    /** The day's work, taken into the treasury (Market.takings). */
+    static void takings(UUID village, int coins) {
+        if (coins > 0) TODAY.computeIfAbsent(village, x -> new Day()).takings += coins;
     }
 
     public static void spent(UUID village, int coins) {
@@ -270,7 +275,7 @@ public final class Economy {
         Integer t = trend(village);
         if (t != null) sb.append(t >= 3 ? ", up " + t + "%" : t <= -3 ? ", down " + (-t) + "%" : ", steady");
         if (d != null) {
-            sb.append("; sold ").append(d.sold).append(", wages ").append(d.wages);
+            sb.append("; takings ").append(d.takings).append(", sold ").append(d.sold).append(", wages ").append(d.wages);
             if (d.tithe > 0) sb.append(", tithe ").append(d.tithe);
             if (d.spent > 0) sb.append(", bought in ").append(d.spent);
         }
@@ -316,7 +321,7 @@ public final class Economy {
                 }
                 sb.append("Best producers: ").append(String.join(", ", parts)).append(".\n");
             }
-            sb.append("\nMoney in: ").append(d.sold).append(" from sales").append(d.tithe > 0 ? ", " + d.tithe + " from the tithe" : "").append(".\n");
+            sb.append("\nMoney in: ").append(d.takings).append(" from the day's work, ").append(d.sold).append(" from sales").append(d.tithe > 0 ? ", " + d.tithe + " from the tithe" : "").append(".\n");
             sb.append("Money out: ").append(d.wages).append(" in wages").append(d.spent > 0 ? ", " + d.spent + " buying in" : "").append(".\n");
         } else {
             sb.append("The books close each morning: come back tomorrow for yesterday's figures.\n");

@@ -222,6 +222,10 @@ output, the worth and the three best paid, and any folk will tell you who earns 
     round, starting with somebody different each day.
   * **Saving up.** When the village can't yet afford something it must buy (a trade's
     kit, the drover's pair), the wages leave that much in the treasury for three days.
+  * **The day's work is the revenue.** What the village made yesterday — its fields, woods,
+    mines, pens and crafts, valued at the market's prices — comes into the treasury every
+    morning (less whatever the traders paid for that morning). A busy village pays its
+    wages; an idle one pays short. The journal's Economy page shows the takings.
   * **Passing traders** come every morning and buy enough of what the village has to
     spare (anything over four lots of it) to meet the day's wages and what it is saving
     for, at a fair price. They never take what the village is short of itself — the
@@ -234,9 +238,8 @@ output, the worth and the three best paid, and any folk will tell you who earns 
   * **The tithe.** On the day of rest every folk with savings gives one coin in ten of
     what it holds over a dozen back to the treasury.
 * **Wool for the beds.** Every morning, before the wages, a village whose houses wait
-  for beds and that has no wool to make them buys a lot or two from the traders. Short
-  of the coin, it puts it by: the wages leave it in the treasury, and the traders buy
-  enough of the village's goods to make it up. While the beds wait, the village keeps
+  for beds and that has no wool to make them buys a lot or two from the traders, out of
+  half the treasury at most. Short of the coin, it puts a lot's price by for tomorrow. While the beds wait, the village keeps
   twice the ranchers, for their sheep.
 * **Market day.** Once a week, on a different day for every village, the bell
   rings on the square in the morning and players nearby are told. On their break
