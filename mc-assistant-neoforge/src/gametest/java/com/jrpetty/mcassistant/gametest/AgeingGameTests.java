@@ -35,7 +35,7 @@ public class AgeingGameTests {
 
     /**
      * Founders raised today are eighteen to forty-five, and fifty days on each is ten years older —
-     * not sixty. Each has a season of play in it (seventy-five days to two hundred and fifty), and
+     * not sixty. Each has a season of play in it (a hundred and twenty-five days to four hundred and sixty), and
      * a hundred and fifty folk come into the world grown have years spread over the whole span, on
      * all five days of the year.
      */
@@ -67,7 +67,8 @@ public class AgeingGameTests {
                 + f.displayNameCap() + " is " + was[i]);
             helper.assertTrue(Birthdays.ageOn(f.bornDay(), day) == was[i], "its birthdays count its years as it does: "
                 + Birthdays.ageOn(f.bornDay(), day) + " against " + was[i]);
-            helper.assertTrue(left >= 70 && left <= 250, "a founder has a season of play in it, not a few weeks: " + left + " days");
+            // Eighteen to forty-five, living seventy to a hundred (a tenth more with a healer): five days a year.
+            helper.assertTrue(left >= 120 && left <= 460, "a founder has a season of play in it, not a few weeks: " + left + " days");
         }
         Kit.log("ag01 the founders on day " + (day + 1) + ": " + seen);
         for (String l : Lifespans.lines(founders.get(0).ownerId(), day)) Kit.log("ag01 " + l);

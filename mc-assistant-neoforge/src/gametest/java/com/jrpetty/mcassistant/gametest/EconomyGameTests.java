@@ -1005,6 +1005,9 @@ public class EconomyGameTests {
             long t = helper.getTick();
             long tod = level.getDayTime() % 24000L;
             if (tod > 10500 || tod < 1000) level.setDayTime(morning);
+            // Its daily break falls at an hour of its own (from its id): the clock goes past it, so the
+            // quarter day measured is a working one (a fisher on its break for the first half once landed four).
+            if (fisher.breakNowForTests()) level.setDayTime(level.getDayTime() + 200);
             Villages.noteAttempt(fisher.ownerId(), level.getGameTime());
             if (t % 50 != 0) return;
             int caught = fisher.countCarried(fish) + inChests(level, x, Z, 40, fish);

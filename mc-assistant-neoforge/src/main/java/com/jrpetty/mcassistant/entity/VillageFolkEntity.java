@@ -6073,6 +6073,11 @@ public class VillageFolkEntity extends AssistantEntity {
         return day >= start && day < start + length;
     }
 
+    /** Tests: is this its break hour (a test of a trade's pace skips it)? */
+    public boolean breakNowForTests() {
+        return breakNow();
+    }
+
     private boolean resting() {
         if (!breakNow()) return false;
         socialise();
