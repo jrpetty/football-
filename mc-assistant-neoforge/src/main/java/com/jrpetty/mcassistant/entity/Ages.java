@@ -147,7 +147,8 @@ public final class Ages {
         Block b = want.getBlock();
         if (local != null && b == local.block()) return Crafts.stock(level, v, local.pay()) >= local.each();
         if (b == Blocks.STONE_BRICKS) {
-            return Crafts.stock(level, v, s -> s.is(Items.STONE_BRICKS) || s.is(Items.COBBLESTONE) || s.is(Items.COBBLED_DEEPSLATE)) > 0;
+            return Crafts.stock(level, v, s -> s.is(Items.STONE_BRICKS)) > 0
+                || Crafts.stock(level, v, s -> s.is(Items.COBBLESTONE)) > 0 && Crafts.stoneToSpare(level, v);
         }
         if (b == Blocks.BRICKS) return Crafts.stock(level, v, s -> s.is(Items.BRICKS)) > 0 || Crafts.stock(level, v, s -> s.is(Items.BRICK)) >= 4;
         if (b == Blocks.DEEPSLATE_TILES || b == Blocks.DEEPSLATE_TILE_STAIRS || b == Blocks.DEEPSLATE_TILE_SLAB) {
@@ -163,7 +164,7 @@ public final class Ages {
     private static boolean pay(ServerLevel level, Villages.Village v, BlockState want, @Nullable Homeland.Stone local) {
         Block b = want.getBlock();
         if (local != null && b == local.block()) return Crafts.take(level, v, local.pay(), local.each());
-        if (b == Blocks.STONE_BRICKS) return Crafts.masonry(level, v);
+        if (b == Blocks.STONE_BRICKS) return Crafts.masonryForLooks(level, v);
         if (b == Blocks.BRICKS) {
             return Crafts.take(level, v, s -> s.is(Items.BRICKS), 1) || Crafts.take(level, v, s -> s.is(Items.BRICK), 4);
         }

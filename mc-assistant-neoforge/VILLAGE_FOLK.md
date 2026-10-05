@@ -702,6 +702,11 @@ into charcoal, but only logs the builders can spare: the timber its buildings wa
 back. When the stores run low on logs, past the Wood Age as much as in it, the leader orders
 more axes into the woods.
 
+**The age comes first.** In the Stone Age, the plain stone the age asks for is kept back from
+the village's looks: a building is made over in stone, or a house rebuilt in it, out of stone
+bricks put by and whatever is quarried past the age's need, so a growing town is not kept
+out of the Iron Age by its own new walls.
+
 **How the village keeps its balance.**
 
 * **Gluts.** A trade whose stores are piled far past any use gets a smaller share of the

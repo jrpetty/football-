@@ -347,7 +347,7 @@ public final class Grow {
             return Crafts.take(level, v, s -> s.is(net.minecraft.world.item.Items.BRICKS), 1)
                 || Crafts.take(level, v, s -> s.is(net.minecraft.world.item.Items.BRICK), 4);
         }
-        return Crafts.masonry(level, v);
+        return Crafts.masonryForLooks(level, v);
     }
 
     // ------------------------------------------------------------------ the second storey

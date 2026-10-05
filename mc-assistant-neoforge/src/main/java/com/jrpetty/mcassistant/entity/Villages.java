@@ -1501,6 +1501,18 @@ public final class Villages {
 
     private static final Map<UUID, long[]> MADE_UP = new ConcurrentHashMap<>();
 
+    /**
+     * Plain stone kept back from the village's looks (a building made over, a house rebuilt in
+     * stone): in the Stone Age, what the age itself asks for before the Iron Age. A town of sixty
+     * spent its stone on new walls as fast as it was quarried and sat a few dozen short of the
+     * Iron Age for a fortnight. Stone bricks put by are not held back, and after the Stone Age
+     * nothing is.
+     */
+    public static int stoneHeldBack(UUID villageId) {
+        return age(villageId) == Age.STONE
+            ? com.jrpetty.mcassistant.village.VillageMath.stoneWanted(headcount(villageId)) : 0;
+    }
+
     /** Count the beds afresh next time (a house just made up, or a test that has just built one). */
     public static void recountBeds(UUID villageId) { MADE_UP.remove(villageId); }
 

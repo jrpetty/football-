@@ -243,6 +243,19 @@ public final class Crafts {
         return take(level, v, s -> s.is(Items.STONE_BRICKS), 1) || take(level, v, s -> s.is(Items.COBBLESTONE), 1);
     }
 
+    /** Is there plain stone past what the age keeps back (Villages.stoneHeldBack)? */
+    static boolean stoneToSpare(ServerLevel level, Villages.Village v) {
+        int held = Villages.stoneHeldBack(v.id());
+        return held <= 0 || stock(level, v, s -> s.is(Items.COBBLESTONE) || s.is(Items.STONE)
+            || s.is(Items.COBBLED_DEEPSLATE)) > held;
+    }
+
+    /** Dressed stone for the village's looks: stone bricks put by, else cobblestone it can spare. */
+    static boolean masonryForLooks(ServerLevel level, Villages.Village v) {
+        return take(level, v, s -> s.is(Items.STONE_BRICKS), 1)
+            || stoneToSpare(level, v) && take(level, v, s -> s.is(Items.COBBLESTONE), 1);
+    }
+
     /** So many of a thing taken down to make way (a roof stripped, a wall refaced, earth cut) back
      *  into the stores, in whole stacks, rather than thrown away. */
     static void giveBack(ServerLevel level, Villages.Village v, Item item, int n) {
