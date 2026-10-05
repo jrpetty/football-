@@ -2110,7 +2110,7 @@ its own. The council sits in the hall's council chamber.
 Right-click the village board (or press **Analytics** in the village journal, or type
 `/village stats`) and the town's books open: everything the village is and has been, with
 charts, so you can see exactly what is driving its growth. Every morning the village is
-written down (kept for four hundred days), and the books have eighteen pages, picked along the
+written down (kept for four hundred days), and the books have nineteen pages, picked along the
 top (in two rows on a small window; the arrow keys turn the pages); the range (a week, a month, a hundred days, or all of it) is picked at the top right, and
 every chart reads out the day under the mouse.
 
@@ -2202,6 +2202,12 @@ every chart reads out the day under the mouse.
   storehouse's slots used, and what is on its way in. Pick a kind (food, timber, stone, ore and
   metal, wool and hides, crafts, plants), type to find a thing (backspace to take a letter back),
   click a heading to sort by it, and the mouse over a row tells the whole of it.
+* **Research:** the city's research (see *The city's research* below): what the town is studying,
+  how many of its points are in, how many mornings to go, who chose it and why; the points in hand
+  and how they come; the tree itself, five branches as columns of four civics, each with its name,
+  its effect and its cost, green when done (with the day), amber with a bar while it is being
+  studied, light when it is open to choose, grey when it waits on the one before it (the mouse over
+  one tells the whole of it); and every civic done, with its day. It shows from the first day.
 * **Why:** what is driving its growth and what is holding it back, read from its books:
   population and where it came from, whether every bed is taken, whether the larder is full
   enough for children, output up or down and which trades moved it, the most productive trade
@@ -2219,6 +2225,95 @@ every chart reads out the day under the mouse.
   buildings, how far and which way, and the terms it is on with each), its neighbours, and
   the latest of its chronicle.
 * **Board:** the board's own page.
+
+`/village stats <page>` opens the books at a page by its number, counting from Overview at 0:
+Stock is 12, Research 13, Why 14, Trends 15, Records 16, News 17 and the Board 18.
+
+### The city's research
+
+Every village studies one **civic improvement** at a time, chosen by its leader, and the whole town
+works toward it: twenty in all, in five branches of four. Each is a slight buff (a few in the
+hundred off someone's pace, a tenth or a fifth off a price), nothing that runs the village for you;
+together they make an old town a good deal easier to live in than a new one.
+
+**The branches.** **Industry** (the trades), **Land** (the fields, the herds and the larder),
+**Homes** (rent, building and buying), **Wellbeing** (spirits, health and rest) and **Trade** (the
+market, the roads and the watch). A civic is open once the one before it in its branch is done, so
+the Watch Drills wait on the Market Charter and the Paved Roads. They cost **10, 25, 50 and 90
+points** by tier: 875 for the whole tree.
+
+**Points.** Every morning, with the day's books, the village earns research points:
+
+* a point for every four grown folk, up to sixteen of them, and a point for every twelve more past
+  that (twelve at most from its people: a big town has more hands, not many more scholars);
+* a point each for a **meeting hall**, a **library** and a **chapel**;
+* a point while its leader was elected for **the next age**;
+* never less than a point a day.
+
+A village of twelve earns three a day and finishes its first civic on its fourth morning. A town of
+sixty with a hall, a library and a chapel earns nine or ten, and finishes all twenty in about ninety
+days of its own, more counting the years it was small. Points over a civic's cost go toward the next.
+
+**Who chooses, and why.** When nothing is being studied, the leader chooses among the open civics:
+
+* by **what it cares about**: a Provider leans to the Land, a Homemaker to Homes, a Visionary to
+  Industry, a Merchant to Trade, a Free Spirit to Wellbeing, a Guardian to the Watch Drills and the
+  Healers, a Traditionalist to the Land and to Wellbeing; above all by **what it was elected for**;
+* by **its nature**: a hardworking leader likes Industry, a cheerful or sociable one Wellbeing, a
+  generous one Homes, a grumpy one the Watch Drills, a shy one the Land;
+* by **what the village is short of now**: food short → the Land; families waiting for houses or rent
+  owed → Homes; folk low → Wellbeing; the raiders at the gate this week → the Watch Drills (and the
+  Healers); the treasury thin → Trade;
+* and by what it leads to: a Guardian who wants the Watch Drills starts on the Market Charter, "the
+  road to Watch Drills". The cheaper tiers come a little before the dearer ones.
+
+Whatever weighed most is the reason it gives. The chronicle has it (*Reeve Bramble set the town to
+work on Crop Rotation: our fields need it*), the leader says so aloud if it is about, and the morning
+assembly hears it; the day it is finished is told the same way. With nobody leading, the council
+chooses whatever is most pressing.
+
+**The twenty civics.**
+
+| Branch | Tier | Civic | Cost | What it does |
+|---|---|---|---|---|
+| Industry | 1 | Common Tools | 10 | Every trade works 3% quicker. |
+| Industry | 2 | Apprentice Halls | 25 | A tenth more experience from every piece of work. |
+| Industry | 3 | Guild Charters | 50 | The smith, tailor, cook, shopkeeper, brewer, enchanter and smelter work 5% quicker. |
+| Industry | 4 | Master Workshops | 90 | Tools wear a fifth slower (one use in five is not charged to the tool). |
+| Land | 1 | Crop Rotation | 10 | Farmers work 5% quicker. |
+| Land | 2 | Herd Books | 25 | Ranchers, hunters, fishers and beekeepers work 5% quicker. |
+| Land | 3 | Seed Exchange | 50 | One harvested crop in ten gives one more wheat, carrot, potato or beetroot. |
+| Land | 4 | Granaries | 90 | Folk go a tenth longer between meals: the larder goes a tenth further. |
+| Homes | 1 | Cheap Homes | 10 | A fifth off every rent of three coins or more; a rent of a coin or two is let off one payday in five. |
+| Homes | 2 | Builders' Guild | 25 | Builders lay their blocks about a tenth quicker. |
+| Homes | 3 | Home Loans | 50 | Every house the village sells costs a tenth less. |
+| Homes | 4 | Housing Fund | 90 | For every ten coins a renting household puts by toward its house, the treasury adds one (while it has it). |
+| Wellbeing | 1 | Feast Days | 10 | The village's contentment is 3 points higher ("feast days kept"). |
+| Wellbeing | 2 | Tavern Songs | 25 | Every folk's mood is 3 better. |
+| Wellbeing | 3 | Healers | 50 | The hurt mend twice as fast between meals, and folk live a tenth longer. |
+| Wellbeing | 4 | Rest Day Charter | 90 | Breaks are a tenth shorter, and every folk's mood is 2 better for them. |
+| Trade | 1 | Market Charter | 10 | The village's daily takings, and what the market-day traders pay, are 5% higher. |
+| Trade | 2 | Paved Roads | 25 | Everybody walks 5% faster. |
+| Trade | 3 | Watch Drills | 50 | Every guard has a point more armour and hits a point harder. |
+| Trade | 4 | Counting House | 90 | A twentieth of each payday's wages comes back to the treasury; the folk keep every coin. |
+
+The paces add to the rest of a folk's pace (its level, its tools, its mood, the leader): eight in
+the hundred at most from the city's research for any one trade.
+
+**Seeing it.**
+
+* **The village board**, in *What we're working towards*: *Researching: Herd Books 12/25, about 5
+  days (Reeve Bramble: our fields need it) · Done: Crop Rotation, Cheap Homes.* Past three done it
+  says how many and the latest two. It runs the width of the board near the top of its foot, which
+  is always drawn in full, so a busy board does not push it off the bottom.
+* **The town's books**, the **Research** page: the tree, coloured by state, with the leader's
+  reason and the day each was done.
+* **Talk:** ask any folk about the elder's orders and it adds what the town is studying and why.
+* **`/village research`**: the points, the rate and what makes it, what is being studied and why,
+  and every branch with each civic's key, state and cost. For ops (and tests): `/village research
+  pick <civic>` sets the town to study an open civic now (the points in hand go toward it), and
+  `/village research grant <civic>` has an open civic done at once. Both refuse a civic whose branch
+  has not reached it.
 
 ### The watch between the bells
 
@@ -2839,8 +2934,12 @@ ripen, days pass, folk work and houses go up at that pace.
   what is for sale. `house buy` buys the empty house you stand in; `house let <coins>` lets
   yours out at that rent a day (0 to take it back); `house rent` collects the rent.
 * `/village stats [page]` — the town's books on the analytics screen (as clicking the village
-  board does), opened at a page if one is given (0 the Overview to 17 the Board; 12 is the Stock); from the
-  console, the reading of what drives the village's growth.
+  board does), opened at a page if one is given (0 the Overview to 18 the Board; 12 is the Stock,
+  13 Research); from the console, the reading of what drives the village's growth.
+* `/village research` — the city's research: points in hand and a day, what is being studied,
+  who chose it and why, and every branch's civics with their keys, states and costs. Works from
+  the console. `research pick <civic>` and `research grant <civic>` (operators) set the town to an
+  open civic now, or have it done at once (see *The city's research*).
 * `/village shop` — the sellers' books: for the shop, the café, the tavern, the market and the
   stores, what each ware has on hand against what is kept, what sold today and this week, what
   was wanted and not there, what was made, its price and markdown, and what it is short of.

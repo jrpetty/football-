@@ -92,7 +92,8 @@ public class VillageFolkEntity extends AssistantEntity {
      *  grew, and by the third day half of them stood at the heart with no rations. */
     @Override
     public int traitUpkeepPercent() {
-        return super.traitUpkeepPercent() * 3 / 2;
+        // And the town's Granaries (CityTree) make the larder go a tenth further: meals a little further apart.
+        return super.traitUpkeepPercent() * 3 / 2 * CityTree.mealPercent(ownerId()) / 100;
     }
 
     /**
@@ -273,6 +274,7 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         Leisure.tick(this);
         if (hiredBy != null && tickCount % 20 == 0 && level() instanceof net.minecraft.server.level.ServerLevel out) Hire.tick(this, out);
+        if (tickCount % 160 == 80) CityTree.tend(this);          // the town's research on it: roads, drills, healers
         // The watch does not open the gates to go out after them: with the bell ringing a guard's
         // way lies inside the wall (folk going indoors still use their doors).
         if (tickCount % 20 == 7 && stationTask() == StationTask.GUARD
@@ -1111,6 +1113,8 @@ public class VillageFolkEntity extends AssistantEntity {
             int content = Contentment.score(village);
             if (content >= 80) { m += 4; why.add(new Object[]{"thriving", 4}); }
             else if (content < 25) { m -= 6; why.add(new Object[]{"miserable", 6}); }
+            int civic = CityTree.moodBonus(village);                  // the town's Tavern Songs and Rest Day Charter
+            if (civic > 0) { m += civic; why.add(new Object[]{"civic", civic}); }
             // The leader: its own spirits, and how this folk gets on with it.
             int led = Leader.spirits(this);
             if (led >= 3) { m += led; why.add(new Object[]{"leader", led}); }
@@ -1848,8 +1852,8 @@ public class VillageFolkEntity extends AssistantEntity {
         return (int) (18 + Math.max(0, days - GROW_DAYS) * YEARS_A_DAY);
     }
 
-    /** The age it will live to: seventy to a hundred. */
-    public int lifespan() { return 70 + Math.floorMod(getUUID().hashCode() >> 5, 31); }
+    /** The age it will live to: seventy to a hundred (a tenth more where the town keeps Healers: CityTree). */
+    public int lifespan() { return CityTree.lifespan(ownerId(), 70 + Math.floorMod(getUUID().hashCode() >> 5, 31)); }
 
     public boolean isOld() { return !isBaby() && ageYears() >= OLD_AT; }
 

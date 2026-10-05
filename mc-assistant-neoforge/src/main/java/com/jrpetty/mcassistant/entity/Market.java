@@ -304,6 +304,7 @@ public final class Market {
         Economy.closeTheDay(level, v, day);              // yesterday's output, and what the village is worth
         Annals.record(level, v, day);                    // and the morning written into the town's books
         Leader.morning(level, v, day);                   // the leader's books, the plan and the day's pay
+        CityTree.morning(level, v, day);                 // the day's research points, and the leader's next civic
         mint(level, v);
         int sold = trade(level, v);
         takings(level, v, sold);                         // what the village made yesterday is its revenue
@@ -349,7 +350,7 @@ public final class Market {
             int n = Math.min(192, have - keep);
             if (g.need() == Villages.Task.FOOD) n = Math.min(n, foodStock - foodKeep);
             if (n < 32) continue;
-            int paid = (int) Math.floor(n * each(g, have) * 0.5);
+            int paid = (int) Math.floor(n * each(g, have) * 0.5 * CityTree.takingsPercent(id) / 100.0);   // the Market Charter
             if (paid < 1 || !TownWork.take(level, v, g.what(), n)) continue;
             if (g.need() == Villages.Task.FOOD) foodStock -= n;
             coins += paid;
@@ -448,7 +449,8 @@ public final class Market {
         UUID id = v.id();
         // At the place's standing, as its wages are: a town's work fetches more than a hamlet's
         // (bigger markets for it), so what comes in and what is paid out grow together.
-        int worth = (int) Math.round(Economy.yesterday(id) * Wealth.standing(id) / 10.0);
+        // And a twentieth more under the town's Market Charter (CityTree).
+        int worth = (int) Math.round(Economy.yesterday(id) * Wealth.standing(id) / 10.0 * CityTree.takingsPercent(id) / 100.0);
         int in = Math.max(0, worth - Math.max(0, sold));
         if (in <= 0) return 0;
         Ledger.addCoins(id, in);
@@ -522,7 +524,10 @@ public final class Market {
             PAID.put(hands.get(i).getUUID(), new long[]{ day, got });
             paid += got;
         }
-        Economy.wages(id, paid);
+        // The town's Counting House (CityTree): a twentieth of it back into the treasury; the folk keep every coin.
+        int back = CityTree.countingHouse(id, paid);
+        if (back > 0) Ledger.addCoins(id, back);
+        Economy.wages(id, paid - back);
         payday(level, v, hands, wages, due, bill <= purse ? 100 : (int) Math.round(100.0 * Math.min(purse, bill) / bill));
         return paid;
     }

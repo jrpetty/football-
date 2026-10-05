@@ -17,7 +17,7 @@ import java.util.Locale;
 /**
  * The town's books, opened at the village board: how the village has grown and why.
  *
- * <p>Sixteen pages, picked along the top: the <b>Overview</b> (the figures that matter, with how they
+ * <p>Eighteen pages, picked along the top: the <b>Overview</b> (the figures that matter, with how they
  * have moved over the week, and the first of what is driving it); <b>Growth</b> (its people over
  * time, births against deaths, comings and goings, what they died of); <b>Money</b> (what it makes,
  * takes in and pays out each day, the treasury and its worth, and its output by kind);
@@ -30,7 +30,9 @@ import java.util.Locale;
  * what it cares about, how long, what it promised, what the village thinks of it, the elections);
  * <b>Homes</b> (beds, households, tenure); <b>Buildings</b> (every building, where, its storeys,
  * how furnished, who lives there, and what is to be built next); <b>Stores</b> (food, timber,
- * stone, coal, iron over time); <b>Why</b> (what is driving its growth and what is holding it
+ * stone, coal, iron over time); <b>Research</b> (the city's research tree: twenty civics in five
+ * branches as columns of four, what the leader has the town studying and why, how far on, and what
+ * was finished when); <b>Why</b> (what is driving its growth and what is holding it
  * back); <b>Trends</b> (per hand, per head); <b>Records</b> (its bests, its totals, its averages and
  * where it is heading); <b>News</b> (the chronicle); and the <b>Board</b> itself. The charts follow
  * the mouse: the day under it, and every line's value that day. The range (a week, a month, a
@@ -38,11 +40,13 @@ import java.util.Locale;
  */
 public class CityScreen extends Screen {
 
+    // Research sits after the stores, before Why: the pages after it are one further on (/village stats <page>
+    // and the smoke test's page lists follow the same numbers).
     private static final String[] TABS = { "Overview", "Growth", "Money", "Production", "Shops", "Jobs", "Folk", "Society", "Leader", "Homes",
-        "Buildings", "Stores", "Stock", "Why", "Trends", "Records", "News", "Board" };
+        "Buildings", "Stores", "Stock", "Research", "Why", "Trends", "Records", "News", "Board" };
     /** The pages that read today's figures, not the books (so they show from the first day). */
     private static final java.util.Set<String> TODAY_PAGES = java.util.Set.of("Folk", "Society", "Leader", "Buildings", "Why", "News", "Board",
-        "Shops", "Homes", "Stock");
+        "Shops", "Homes", "Stock", "Research");
     private static final int[] RANGES = { 7, 30, 100, 0 };
     private static final String[] RANGE_NAMES = { "7d", "30d", "100d", "All" };
 
@@ -249,7 +253,7 @@ public class CityScreen extends Screen {
         int x = left + 8, y = pageTop(), cw = w - 16, ch = top + h - 8 - y;
         if (days().length == 0 && !TODAY_PAGES.contains(page())) {
             g.drawString(font, "The town's books are written each morning. Come back tomorrow for the first of them;", x, y, Ui.MUTED, false);
-            g.drawString(font, "the Folk, Society, Leader, Buildings, Why, News and Board pages have today's figures.", x, y + 11, Ui.MUTED, false);
+            g.drawString(font, "the Folk, Society, Leader, Buildings, Why, News, Board and Research pages have today's figures.", x, y + 11, Ui.MUTED, false);
         } else {
             switch (page()) {
                 case "Overview" -> overview(g, x, y, cw, ch, mouseX, mouseY);
@@ -269,6 +273,7 @@ public class CityScreen extends Screen {
                 case "Trends" -> trends(g, x, y, cw, ch, mouseX, mouseY);
                 case "Records" -> records(g, x, y, cw, ch);
                 case "News" -> news(g, x, y, cw, ch);
+                case "Research" -> research(g, x, y, cw, ch, mouseX, mouseY);
                 default -> board(g, x, y, cw, ch);
             }
         }
@@ -1727,6 +1732,152 @@ public class CityScreen extends Screen {
             ly += 10;
         }
         if (all.isEmpty()) g.drawString(font, "Nothing written yet.", x, y, Ui.MUTED, false);
+    }
+
+    // ------------------------------------------------------------------ research
+
+    /** A civic's node, by its state: done, being studied, open to choose, locked. */
+    private static final int NODE_DONE = 0xFFB9D7A8, NODE_NOW = 0xFFEAD49C, NODE_OPEN = 0xFFDADADA, NODE_LOCKED = 0xFFABABAB;
+
+    /**
+     * The city's research (CityTree, from the server's "research"): what the town is studying, who
+     * chose it and why, its points and how they come; the tree, five branches as columns of four
+     * civics (done green, being studied amber with its progress, open light, locked grey; the mouse
+     * over one tells the whole of it); and what was done when.
+     */
+    private void research(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my) {
+        CompoundTag r = data.getCompound("research");
+        List<CompoundTag> civics = new ArrayList<>();
+        ListTag cl = r.getList("civics", Tag.TAG_COMPOUND);
+        for (int i = 0; i < cl.size(); i++) civics.add(cl.getCompound(i));
+        if (civics.isEmpty()) {
+            g.drawString(font, "No research in these books yet.", x, y, Ui.MUTED, false);
+            return;
+        }
+        int points = r.getInt("points"), rate = r.getInt("rate");
+        // The head: what is being studied, and how far on.
+        String head;
+        if (r.contains("now")) {
+            int cost = r.getInt("now_cost"), days = r.getInt("days_left");
+            head = "Researching " + r.getString("now_title") + ": " + Math.min(points, cost) + " of " + cost + " points, "
+                + (days > 0 ? "about " + plural(days, "day") + " to go" : "done at the next morning's books");
+        } else if (r.getInt("done") >= r.getInt("total")) {
+            head = "Every civic is done: all " + r.getInt("total") + " of them.";
+        } else {
+            head = "Nothing chosen yet: " + r.getString("chooser") + " chooses at the next morning's books.";
+        }
+        g.drawString(font, Ui.clip(font, head, cw), x, y, Ui.INK, false);
+        if (r.contains("now")) {
+            long since = r.getLong("since");
+            small(g, Ui.clip(font, r.getString("by") + " chose it: " + r.getString("why") + (since > 0 ? " (day " + since + ")" : "") + ".",
+                (int) (cw / 0.75)), x, y + 11, Ui.MUTED);
+        }
+        small(g, Ui.clip(font, r.getInt("done") + " of " + r.getInt("total") + " done · " + plural(points, "point") + " in hand · +" + rate
+            + " a day (" + r.getString("rate_why") + ")", (int) (cw / 0.75)), x, y + 19, Ui.MUTED);
+        // The tree.
+        int gy = y + 30, cols = 5, gap = 6, nodeGap = 6;
+        int colW = (cw - gap * (cols - 1)) / cols;
+        int histH = 20;
+        int gridH = ch - (gy - y) - histH;
+        int nodeH = Math.max(20, (gridH - 12 - nodeGap * 3) / 4);
+        ListTag branches = r.getList("branches", Tag.TAG_COMPOUND);
+        for (int b = 0; b < cols && b < branches.size(); b++) {
+            Ui.section(g, font, branches.getCompound(b).getString("title"), x + b * (colW + gap), gy, colW);
+        }
+        int ny = gy + 12;
+        CompoundTag over = null;
+        for (CompoundTag c : civics) {
+            int col = c.getInt("branch"), row = c.getInt("tier") - 1;
+            if (col < 0 || col >= cols || row < 0 || row > 3) continue;
+            int nx = x + col * (colW + gap), top = ny + row * (nodeH + nodeGap);
+            if (row > 0) {
+                // The step up from the one before: a line between the two, dark where it is open to walk.
+                boolean walked = !c.getString("state").equals("locked");
+                g.fill(nx + colW / 2, top - nodeGap, nx + colW / 2 + 1, top, walked ? Ui.EDGE : Ui.EDGE_SOFT);
+            }
+            civicNode(g, c, nx, top, colW, nodeH, points);
+            if (mx >= nx && mx < nx + colW && my >= top && my < top + nodeH) over = c;
+        }
+        // What was done when.
+        int hy = ny + 4 * (nodeH + nodeGap) - nodeGap + 4;
+        ListTag hist = r.getList("history", Tag.TAG_STRING);
+        List<String> done = new ArrayList<>();
+        for (int i = 0; i < hist.size(); i++) done.add(hist.getString(i));
+        String history = done.isEmpty() ? "Nothing done yet: the first civic comes in a few mornings." : "Done: " + String.join(" · ", done);
+        List<FormattedCharSequence> hl = font.split(Component.literal(history), (int) (cw / 0.75));
+        for (int i = 0; i < hl.size() && hy <= y + ch - 7; i++) {
+            small(g, hl.get(i), x, hy, Ui.MUTED);
+            hy += 8;
+        }
+        if (over != null) {
+            List<Component> tip = new ArrayList<>();
+            String branch = over.getInt("branch") < branches.size() ? branches.getCompound(over.getInt("branch")).getString("title") : "";
+            tip.add(Component.literal(over.getString("title")).withStyle(net.minecraft.ChatFormatting.BOLD));
+            tip.add(Component.literal(branch + ", tier " + over.getInt("tier") + " · " + over.getInt("cost") + " points").withColor(0xA0A0A0));
+            for (String line : wrapWords(over.getString("about"), 46)) tip.add(Component.literal(line));
+            String state = over.getString("state");
+            int cost = over.getInt("cost");
+            String says = switch (state) {
+                case "done" -> "Done on day " + over.getLong("day") + ".";
+                case "now" -> "Being studied: " + Math.min(points, cost) + " of " + cost + " points"
+                    + (r.getInt("days_left") > 0 ? ", about " + plural(r.getInt("days_left"), "day") + " to go." : ", done tomorrow.");
+                case "open" -> "Open: the leader may choose it next.";
+                default -> "Locked: " + over.getString("needs") + " first.";
+            };
+            int colour = state.equals("done") ? 0x7FD67F : state.equals("now") ? 0xF2C14E : state.equals("open") ? 0xFFFFFF : 0xB0B0B0;
+            tip.add(Component.literal(says).withColor(colour));
+            hover = tip;
+            hoverX = mx;
+            hoverY = my;
+        }
+    }
+
+    /** One civic on the tree: its name, its effect, and its cost, progress or the day it was done. */
+    private void civicNode(GuiGraphics g, CompoundTag c, int x, int y, int w, int h, int points) {
+        String state = c.getString("state");
+        int bed = switch (state) { case "done" -> NODE_DONE; case "now" -> NODE_NOW; case "open" -> NODE_OPEN; default -> NODE_LOCKED; };
+        int spine = switch (state) { case "done" -> GREEN; case "now" -> AMBER; case "open" -> BLUE; default -> GREY; };
+        boolean locked = state.equals("locked");
+        g.fill(x, y, x + w, y + h, bed);
+        g.renderOutline(x, y, w, h, locked ? Ui.EDGE_SOFT : Ui.EDGE);
+        g.fill(x, y, x + 2, y + h, spine);
+        g.drawString(font, Ui.clip(font, c.getString("title"), w - 7), x + 4, y + 3, locked ? Ui.FAINT : Ui.INK, false);
+        // The effect, in the small hand: two lines if the node has room, one if not.
+        int lines = h >= 40 ? 2 : h >= 30 ? 1 : 0;
+        List<FormattedCharSequence> eff = font.split(Component.literal(c.getString("effect")), (int) ((w - 7) / 0.75));
+        int ey = y + 13;
+        for (int i = 0; i < Math.min(lines, eff.size()); i++) {
+            small(g, eff.get(i), x + 4, ey, locked ? Ui.FAINT : Ui.MUTED);
+            ey += 7;
+        }
+        int fy = y + h - 9, cost = c.getInt("cost");
+        switch (state) {
+            case "done" -> small(g, "Done, day " + c.getLong("day"), x + 4, fy, Ui.GOOD);
+            case "now" -> {
+                String of = Math.min(points, cost) + "/" + cost;
+                int lw = (int) (font.width(of) * 0.75) + 3;
+                Ui.bar(g, x + 4, fy + 1, Math.max(8, w - 8 - lw), 5, Math.min(1F, points / (float) Math.max(1, cost)), AMBER);
+                small(g, of, x + w - lw - 1, fy, Ui.WARN);
+            }
+            case "open" -> small(g, Ui.clip(font, cost + " points · open", (int) ((w - 7) / 0.75)), x + 4, fy, Ui.MUTED);
+            default -> small(g, Ui.clip(font, cost + " points · after " + c.getString("needs"), (int) ((w - 7) / 0.75)), x + 4, fy, Ui.FAINT);
+        }
+    }
+
+    /** Words broken into lines of at most this many letters, for a tooltip. */
+    private static List<String> wrapWords(String text, int max) {
+        List<String> out = new ArrayList<>();
+        StringBuilder line = new StringBuilder();
+        for (String word : text.split(" ")) {
+            if (line.length() > 0 && line.length() + 1 + word.length() > max) {
+                out.add(line.toString());
+                line.setLength(0);
+            }
+            if (line.length() > 0) line.append(' ');
+            line.append(word);
+        }
+        if (line.length() > 0) out.add(line.toString());
+        return out;
     }
 
     private void board(GuiGraphics g, int x, int y, int cw, int ch) {

@@ -28,7 +28,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * and what comes after, what it is short of, the elder's orders and what the council
  * last decided; how many it is and at what trades, its stores, its homes, its purse, how
  * content it is and whether the watch is quiet; and what it is working towards — the
- * next age, the next rank — with the latest news at the foot.
+ * next age, the next rank, the civic its leader has the town researching (CityTree) — with
+ * the latest news at the foot.
  */
 public final class VillageBoards {
 
@@ -383,6 +384,9 @@ public final class VillageBoards {
             out.add("FN|Every age reached. Now: great works, colonies and renown.");
         }
         out.add("FN|To be " + Villages.nextRankNote(id) + ".");
+        // The city's research (CityTree): what the leader has the town studying, how far on, why, and what is done.
+        // In the foot, which the board always has room for, a line or two the width of the board.
+        out.addAll(CityTree.board(id));
         out.add("FM|Growing: " + Villages.growthNote(level, id) + ".");
         out.add("FN|The purse: " + Budget.line(level, id) + ".");
         String neighbours = Envoys.boardLine(id);

@@ -30,6 +30,8 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  *   /village house            the village's houses; house buy | house let N | house rent
  *   /village knacks [name]    the knacks each folk chose for itself; knacks grant <name> <key> (ops)
  *   /village stats            the town's books in full: the analytics screen (as the village board)
+ *   /village research         the city's research: what the leader has the town studying, and the tree
+ *   /village research pick|grant &lt;civic&gt;   study this civic now, or have it done (ops; for tests)
  *   /village speed 16|max|normal   time runs faster, to watch a village grow (ops / world owner)
  * </pre>
  */
@@ -106,8 +108,20 @@ public final class VillageCommands {
                     net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p, new com.jrpetty.mcassistant.net.CityStatsPayload(shut));
                     return 1;
                 }))
-                .then(Commands.argument("page", IntegerArgumentType.integer(0, 17))
+                .then(Commands.argument("page", IntegerArgumentType.integer(0, 18))
                     .executes(ctx -> stats(ctx, IntegerArgumentType.getInteger(ctx, "page")))))
+            // The city's research (CityTree): the tree and what the leader has the town studying; and,
+            // for ops and tests, a civic set to study now (pick) or done at once (grant), each only
+            // once the civic before it in its branch is done.
+            .then(Commands.literal("research").executes(VillageCommands::research)
+                .then(Commands.literal("pick").requires(src -> src.hasPermission(2))
+                    .then(Commands.argument("civic", com.mojang.brigadier.arguments.StringArgumentType.word())
+                        .suggests((ctx, b) -> net.minecraft.commands.SharedSuggestionProvider.suggest(civicKeys(), b))
+                        .executes(ctx -> research(ctx, false))))
+                .then(Commands.literal("grant").requires(src -> src.hasPermission(2))
+                    .then(Commands.argument("civic", com.mojang.brigadier.arguments.StringArgumentType.word())
+                        .suggests((ctx, b) -> net.minecraft.commands.SharedSuggestionProvider.suggest(civicKeys(), b))
+                        .executes(ctx -> research(ctx, true)))))
             // The village's houses: who lives where, what is for sale; buy one, let it out, take the rent.
             .then(Commands.literal("house")
                 .executes(VillageCommands::houses)
@@ -570,6 +584,61 @@ public final class VillageCommands {
         String line = sb.toString();
         ctx.getSource().sendSuccess(() -> Component.literal(line), false);
         return d.size();
+    }
+
+    /** Every civic's key, for the command's suggestions: "common_tools", "crop_rotation"... */
+    private static java.util.List<String> civicKeys() {
+        java.util.List<String> keys = new java.util.ArrayList<>();
+        for (com.jrpetty.mcassistant.entity.CityTree.Civic c : com.jrpetty.mcassistant.entity.CityTree.Civic.values()) keys.add(c.key());
+        return keys;
+    }
+
+    /** The village the command means: the nearest, or the first there is. */
+    @javax.annotation.Nullable
+    private static Villages.Village villageHere(CommandContext<CommandSourceStack> ctx) {
+        net.minecraft.server.level.ServerLevel level = ctx.getSource().getLevel();
+        net.minecraft.core.BlockPos here = net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition());
+        Villages.Village v = Villages.nearest(level, here, Villages.VILLAGE_RANGE * 4);
+        if (v == null && !Villages.every().isEmpty()) v = Villages.every().get(0);
+        return v;
+    }
+
+    /** /village research: the city's research, the whole tree, a line a branch. */
+    private static int research(CommandContext<CommandSourceStack> ctx) {
+        Villages.Village v = villageHere(ctx);
+        if (v == null) {
+            ctx.getSource().sendFailure(Component.literal("No village yet."));
+            return 0;
+        }
+        java.util.List<String> lines = com.jrpetty.mcassistant.entity.CityTree.lines(v.id());
+        for (String l : lines) ctx.getSource().sendSuccess(() -> Component.literal(l), false);
+        return lines.size();
+    }
+
+    /** /village research pick|grant &lt;civic&gt; (ops): study it now, or have it done at once. */
+    private static int research(CommandContext<CommandSourceStack> ctx, boolean grant) {
+        Villages.Village v = villageHere(ctx);
+        if (v == null) {
+            ctx.getSource().sendFailure(Component.literal("No village yet."));
+            return 0;
+        }
+        String key = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "civic");
+        com.jrpetty.mcassistant.entity.CityTree.Civic c = com.jrpetty.mcassistant.entity.CityTree.byKey(key);
+        if (c == null) {
+            ctx.getSource().sendFailure(Component.literal("No civic called " + key + ". One of: " + String.join(", ", civicKeys())));
+            return 0;
+        }
+        net.minecraft.server.level.ServerLevel level = ctx.getSource().getLevel();
+        long day = level.getDayTime() / 24000L;
+        String said = grant ? com.jrpetty.mcassistant.entity.CityTree.grant(level, v.id(), c, day)
+            : com.jrpetty.mcassistant.entity.CityTree.pick(level, v.id(), c, day);
+        boolean ok = grant ? com.jrpetty.mcassistant.entity.CityTree.has(v.id(), c) : c == com.jrpetty.mcassistant.entity.CityTree.current(v.id());
+        if (!ok) {
+            ctx.getSource().sendFailure(Component.literal("RESEARCH " + Villages.name(v.id()) + ": " + said));
+            return 0;
+        }
+        ctx.getSource().sendSuccess(() -> Component.literal("RESEARCH " + Villages.name(v.id()) + ": " + said), true);
+        return 1;
     }
 
     private static int houses(CommandContext<CommandSourceStack> ctx) {

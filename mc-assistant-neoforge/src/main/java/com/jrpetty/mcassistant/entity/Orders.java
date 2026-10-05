@@ -338,7 +338,7 @@ public final class Orders {
         }
         Given g = given(village);
         String next = Villages.nextProject(village);
-        String building = next == null ? "" : " We're building " + Villages.spoken(next) + " next.";
+        String building = (next == null ? "" : " We're building " + Villages.spoken(next) + " next.") + CityTree.talk(f);   // and studying (CityTree)
         if (g == null) {
             return (elder == null ? "We've no elder yet to give orders." : "Elder " + elder.displayNameCap() + " hasn't given any orders yet.")
                 + building;

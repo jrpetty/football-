@@ -520,6 +520,7 @@ public final class FolkTalk {
             case "brightspirit" -> pick(r, "I try to look on the bright side. It's my way.", "Why be glum? There's always something.");
             case "brightfriend" -> "There's a friend near who always cheers me up.";
             case "unflappable" -> pick(r, "Things could be better, but I don't let it get to me.", "Nothing much rattles me.");
+            case "civic" -> CityTree.moodWords(f);
             default -> "";
         };
     }

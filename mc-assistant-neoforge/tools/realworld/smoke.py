@@ -374,9 +374,10 @@ def main():
             time.sleep(15)
         say("speed: " + r.cmd("village speed 1"))
         say("stats: " + r.cmd("village stats"))
+        say("research: " + r.cmd("village research"))        # the city's research, after eight mornings of points
         for page, name in ((0, "overview"), (1, "growth"), (2, "money"), (3, "production"), (4, "shops"), (5, "jobs"),
                            (6, "folk"), (7, "society"), (8, "leader"), (9, "homes"), (10, "buildings"), (11, "stores"),
-                           (12, "stock"), (13, "why"), (14, "trends"), (15, "records"), (16, "news")):
+                           (12, "stock"), (13, "research"), (14, "why"), (15, "trends"), (16, "records"), (17, "news")):
             say("stats %s: %s" % (name, r.cmd("execute as %s at @s run village stats %d" % (USER, page))))
             time.sleep(3)
             shot("16-stats-%d-%s" % (page, name))
@@ -412,7 +413,7 @@ def main():
 # Every page of the analytics screen (client/CityScreen.TABS), by its number for /village stats.
 MATURE_PAGES = ((0, "overview"), (1, "growth"), (2, "money"), (3, "production"), (4, "shops"), (5, "jobs"),
                 (6, "folk"), (7, "society"), (8, "leader"), (9, "homes"), (10, "buildings"), (11, "stores"),
-                (12, "stock"), (13, "why"), (14, "trends"), (15, "records"), (16, "news"), (17, "board"))
+                (12, "stock"), (13, "research"), (14, "why"), (15, "trends"), (16, "records"), (17, "news"), (18, "board"))
 
 # One village of /village list: "Village at X, Z (Name) — N folk (M loaded), the Iron Age, built [hall, ...]".
 # Read with findall over the whole answer, so it does not matter how RCON joins the lines.
