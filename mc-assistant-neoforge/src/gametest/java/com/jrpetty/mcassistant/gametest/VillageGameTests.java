@@ -4857,6 +4857,19 @@ public class VillageGameTests {
         Kit.log("t71 with the stores full: " + com.jrpetty.mcassistant.entity.Leader.line(id));
         helper.assertTrue(after != com.jrpetty.mcassistant.entity.Leader.Plan.FAMINE
             && after != com.jrpetty.mcassistant.entity.Leader.Plan.SHORT, "the famine is over: " + after);
+        // A full larder eaten down three meals for every one grown (the four-hundred-day run: 1,110
+        // meals, 46 grown and 151 eaten a day, 37 folk) is short commons now, not in a week's time;
+        // the same larder with as much grown as eaten is not; and once short, a village that grows
+        // four meals for every five it eats stays short until it grows nearly enough.
+        com.jrpetty.mcassistant.entity.Leader.Plan STEADY = com.jrpetty.mcassistant.entity.Leader.Plan.STEADY,
+            SHORT = com.jrpetty.mcassistant.entity.Leader.Plan.SHORT;
+        com.jrpetty.mcassistant.entity.Leader.Plan draining = com.jrpetty.mcassistant.entity.Leader.decideForTests(1110, 37, 46, 151, 2.0, STEADY);
+        com.jrpetty.mcassistant.entity.Leader.Plan even = com.jrpetty.mcassistant.entity.Leader.decideForTests(1110, 37, 150, 151, 2.0, STEADY);
+        com.jrpetty.mcassistant.entity.Leader.Plan stays = com.jrpetty.mcassistant.entity.Leader.decideForTests(610, 37, 120, 151, 2.0, SHORT);
+        com.jrpetty.mcassistant.entity.Leader.Plan fresh = com.jrpetty.mcassistant.entity.Leader.decideForTests(610, 37, 120, 151, 2.0, STEADY);
+        helper.assertTrue(draining == SHORT, "a larder emptying three to one is short commons at once: " + draining);
+        helper.assertTrue(even != SHORT && even != com.jrpetty.mcassistant.entity.Leader.Plan.FAMINE, "an even larder is not: " + even);
+        helper.assertTrue(stays == SHORT && fresh != SHORT, "short stays short till nearly enough is grown: " + stays + " / " + fresh);
         helper.succeed();
     }
 

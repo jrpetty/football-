@@ -739,8 +739,12 @@ public final class Annals {
         // Food: births wait on the larder too.
         Leader.Books b = Leader.books(id);
         if (b != null) {
+            double net = b.useAvg() - b.inAvg();
             if (b.days() < 1.5) out.add("-Food is short: " + String.format(Locale.ROOT, "%.1f", b.days()) + " days put by, " + Math.round(b.inAvg())
                 + " meals in a day against " + Math.round(b.useAvg()) + " eaten. No children are raised on an empty larder.");
+            else if (net > 0 && b.inAvg() < b.useAvg() * 0.9) out.add("-More eaten than grown: " + Math.round(b.inAvg()) + " meals in a day against "
+                + Math.round(b.useAvg()) + " eaten; the " + String.format(Locale.ROOT, "%.1f", b.days()) + " days put by are gone in about "
+                + Math.round(b.stock() / net) + " at this rate. More hands to the fields and the water.");
             else out.add("+The larder is full enough: " + String.format(Locale.ROOT, "%.1f", b.days()) + " days put by, "
                 + Math.round(b.inAvg()) + " meals in a day against " + Math.round(b.useAvg()) + " eaten.");
         }
@@ -823,7 +827,7 @@ public final class Annals {
         if (!aside.isEmpty()) out.add("-Set aside: " + aside + ".");
         // What would help most.
         if (everyone >= room) out.add("!Most help now: houses. Every bed is full.");
-        else if (b != null && b.days() < 1.5) out.add("!Most help now: food. More hands on the fields and the water.");
+        else if (b != null && (b.days() < 1.5 || b.inAvg() < b.useAvg() * 0.7)) out.add("!Most help now: food. More hands on the fields and the water.");
         else if (idle * 5 > adults) out.add("!Most help now: work for the idle hands (a workplace for a new trade).");
         else if (!needs.isEmpty()) out.add("!Most help now: " + needs.get(0).what() + ".");
         else out.add("!Nothing holding it back: it grows as fast as its children are born.");

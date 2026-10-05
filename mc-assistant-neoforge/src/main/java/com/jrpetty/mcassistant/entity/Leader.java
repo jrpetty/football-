@@ -341,6 +341,36 @@ public final class Leader {
 
     // ------------------------------------------------------------------ the morning's calls
 
+    /**
+     * Is the larder going down fast enough to call short commons now, however full it looks: empty
+     * within twelve days at a rate of more than two eaten for every one grown, within eight (or five
+     * of the leader's reserves) at three for two. Once short, it stays short till nearly as much is
+     * grown as eaten, or there is three weeks' food at the rate it is going down.
+     */
+    static boolean draining(int stock, double inAvg, double useAvg, double reserve, Plan was) {
+        double net = useAvg - inAvg;
+        if (net <= 0) return false;
+        double emptyIn = stock / net;
+        boolean wasShort = was == Plan.SHORT || was == Plan.FAMINE;
+        if (inAvg < useAvg * 0.5 && emptyIn < Math.max(12.0, reserve * 6)) return true;
+        if (wasShort) return inAvg < useAvg * 0.9 && emptyIn < Math.max(20.0, reserve * 10);
+        return inAvg < useAvg * 0.7 && emptyIn < Math.max(8.0, reserve * 5);
+    }
+
+    /** The plan for the larder, from what is in it, what comes in and what goes out a day. */
+    static Plan decide(int stock, int heads, double inAvg, double useAvg, double reserve, Plan was) {
+        double days = stock / Math.max(1.0, useAvg);
+        if (days < 0.75 || stock < heads) return Plan.FAMINE;
+        if (days < reserve || (inAvg < useAvg * 0.9 && days < reserve * 2) || draining(stock, inAvg, useAvg, reserve, was)) return Plan.SHORT;
+        if (days > reserve * 3 && inAvg >= useAvg) return Plan.PLENTY;
+        return Plan.STEADY;
+    }
+
+    /** Tests: the plan for these books. */
+    public static Plan decideForTests(int stock, int heads, double inAvg, double useAvg, double reserve, Plan was) {
+        return decide(stock, heads, inAvg, useAvg, reserve, was);
+    }
+
     /** The leader's morning: the books, the plan, the pay. From Market.tick, before the wages. */
     public static void morning(ServerLevel level, Villages.Village v, long day) {
         UUID id = v.id();
@@ -371,12 +401,16 @@ public final class Leader {
         double days = stock / Math.max(1.0, useAvg);
         double reserve = reserveDays(id);
         int heads = Math.max(1, Villages.headcount(id));
-        Plan plan;
-        if (days < 0.75 || stock < heads) plan = Plan.FAMINE;
-        else if (days < reserve || (inAvg < useAvg * 0.9 && days < reserve * 2)) plan = Plan.SHORT;
-        else if (days > reserve * 3 && inAvg >= useAvg) plan = Plan.PLENTY;
-        else plan = Plan.STEADY;
         Plan was = last == null ? Plan.STEADY : last.plan();
+        // A larder going down day after day: when it will be empty at this rate. New fields take days
+        // to come in, so a village eating three meals for every one it grows is short now, however
+        // full the larder still looks (the four-hundred-day run ate 1,200 meals down to 300 in a week,
+        // with eight miners and two farmers, before the leader noticed). Once short, it stays short
+        // till nearly as much is grown as eaten, so the hands are not sent back to the mine too soon.
+        double net = useAvg - inAvg;
+        double emptyIn = net > 0 ? stock / net : Double.MAX_VALUE;
+        boolean draining = draining(stock, inAvg, useAvg, reserve, was);
+        Plan plan = decide(stock, heads, inAvg, useAvg, reserve, was);
         Books b = new Books(stock, in, use, inAvg, useAvg, days, plan, day);
         BOOKS.put(id, b);
         Ledger.note(id, "leader.books", stock + "|" + round(inAvg) + "|" + round(useAvg) + "|" + round(days) + "|" + plan.name() + "|" + day);
@@ -408,7 +442,9 @@ public final class Leader {
             String line = switch (plan) {
                 case FAMINE -> who + " called a famine: " + daysWords + " food left";
                 case SHORT -> who + " put the village on short commons: " + daysWords + " food put by, "
-                    + (inAvg < useAvg ? "and more eaten than grown" : "less than " + String.format(Locale.ROOT, "%.1f", reserve) + " days'");
+                    + (draining && days >= reserve * 2 ? "but " + Math.round(inAvg) + " grown a day against " + Math.round(useAvg)
+                        + " eaten: empty in " + Math.round(emptyIn) + " days at this rate"
+                        : inAvg < useAvg ? "and more eaten than grown" : "less than " + String.format(Locale.ROOT, "%.1f", reserve) + " days'");
                 case PLENTY -> who + " said the larder is full: " + daysWords + " food, and more grown than eaten";
                 case STEADY -> who + " said the village is fed again: " + daysWords + " food put by";
             };

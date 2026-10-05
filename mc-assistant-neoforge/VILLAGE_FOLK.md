@@ -1606,7 +1606,13 @@ and its own nature runs through the place.
 * **Short of that, or eating more than it grows, it expands the farms.** It orders the
   larder filled at once, not in three days' time, and wants half as many farmers and
   fishers again. The fields are widened as soon as they are half sown instead of six parts
-  in ten, and looked at twice as often.
+  in ten, and looked at twice as often. It also watches the trend, not only the stock: a
+  larder going down faster than it is filled is short commons as soon as it would be empty
+  within twelve days at more than two meals eaten for every one grown (or within eight at
+  three for two), however full it still looks, because new fields take days to come in.
+  Once short, it stays short until nearly as much is grown as eaten, so the extra hands are
+  not sent back to the mine too soon. The town's books say so too: "more eaten than grown,
+  gone in about N days at this rate".
 * **In a famine** (under a day's food left) it wants twice the farmers and fishers and
   more hunters. If the treasury has the coin, it buys bread from the passing traders to
   tide the village over.
