@@ -132,6 +132,29 @@ public final class Crafts {
     }
 
     /** Take so many from the stores, all or nothing. */
+    /**
+     * A child's first things, made for it out of the village's stores: wooden tools and a
+     * crafting table (fourteen planks, or four logs), a loaf or two and a handful of seed. What
+     * the stores cannot run to, it goes without: it learns to make its own.
+     */
+    public static void childKit(VillageFolkEntity folk) {
+        UUID id = folk.ownerId();
+        Villages.Village v = id == null ? null : Villages.get(id);
+        if (v == null || !(folk.level() instanceof ServerLevel level)) return;
+        if (take(level, v, s -> s.is(net.minecraft.tags.ItemTags.PLANKS), 14) || take(level, v, s -> s.is(net.minecraft.tags.ItemTags.LOGS), 4)) {
+            folk.insertItem(new ItemStack(Items.WOODEN_PICKAXE));
+            folk.insertItem(new ItemStack(Items.WOODEN_AXE));
+            folk.insertItem(new ItemStack(Items.WOODEN_SWORD));
+            folk.insertItem(new ItemStack(Items.CRAFTING_TABLE));
+        }
+        for (int i = 0; i < 2; i++) {
+            ItemStack food = takeOne(level, v, s -> s.is(Items.BREAD) || s.is(Items.BAKED_POTATO) || s.is(Items.APPLE) || s.is(Items.CARROT));
+            if (food.isEmpty()) break;
+            folk.insertItem(food);
+        }
+        if (take(level, v, s -> s.is(Items.WHEAT_SEEDS), 4)) folk.insertItem(new ItemStack(Items.WHEAT_SEEDS, 4));
+    }
+
     static boolean take(ServerLevel level, Villages.Village v, Predicate<ItemStack> what, int n) {
         return n <= 0 || TownWork.take(level, v, what, n);
     }
@@ -277,8 +300,17 @@ public final class Crafts {
     @Nullable
     private static String forge(ServerLevel level, Villages.Village v, List<Smithing> wants) {
         int iron = stock(level, v, s -> s.is(Items.IRON_INGOT));
+        // While the village is still putting iron by for its age, the smith makes only what gets
+        // more of it (picks for the mine) and what keeps it safe (a blade for the watch): the
+        // armour and the buckets wait. It used to keep four bars back and forge the rest into
+        // armour the guards then took out of the stores, and the age's iron never came.
+        boolean saving = false;
+        for (Villages.Need n : Villages.needs(level, v.id())) {
+            if (n.task() == Villages.Task.IRON) { saving = true; break; }
+        }
         for (Smithing w : wants) {
             Item it = w.item();
+            if (saving && it != Items.IRON_PICKAXE && it != Items.IRON_SWORD) continue;
             if (stock(level, v, s -> s.is(it)) >= w.keep()) continue;
             if (iron < w.iron() + 4) continue;                       // a few bars kept back for the village
             if (w.sticks() > 0 && !planks(level, v, (w.sticks() + 1) / 2)) continue;

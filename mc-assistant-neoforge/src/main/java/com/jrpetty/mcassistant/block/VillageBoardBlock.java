@@ -162,6 +162,8 @@ public class VillageBoardBlock extends Block implements EntityBlock {
     private static void takeDown(Level level, BlockPos pos, BlockState state, boolean drop) {
         BlockPos anchor = anchor(pos, state);
         Direction facing = state.getValue(FACING);
+        // The board a village put up at its founding is the village's: taking it down gives nothing.
+        if (level.getBlockEntity(anchor) instanceof VillageBoardBlockEntity be && be.raised()) drop = false;
         TAKING_DOWN.set(Boolean.TRUE);
         try {
             for (int c = 0; c < WIDE; c++) {

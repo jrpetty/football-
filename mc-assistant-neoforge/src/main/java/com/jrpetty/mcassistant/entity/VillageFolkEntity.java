@@ -325,6 +325,9 @@ public class VillageFolkEntity extends AssistantEntity {
             }
             return;
         }
+        // Called to the town's own work (TownJobs): to the spot, and at it.
+        if (!withAPlayer && tickCount % 4 == 3 && level() instanceof net.minecraft.server.level.ServerLevel works
+                && TownJobs.hold(this, works)) return;
         if (tickCount - agendaTick < 100) return;   // folk think slowly, on purpose
         agendaTick = tickCount;
         flyTheColours();
@@ -586,6 +589,48 @@ public class VillageFolkEntity extends AssistantEntity {
     /** The day it last dropped in to the café, and when it set off there. */
     private long cafeDay = -1;
     private int cafeSetOff = -1;
+    private long shopDay = -1;
+    private int shopSetOff = -1;
+
+    /**
+     * Now and then, off work, a folk goes to the shop: for the tool its trade wants if it has
+     * none (paid for out of its own savings, not taken from the stores), or, doing well, for
+     * something nice. Every coin of it goes into the treasury that pays the wages.
+     */
+    private boolean shopVisit(net.minecraft.server.level.ServerLevel server) {
+        UUID village = ownerId();
+        if (village == null || purse < 3 || isBaby()) return false;
+        long day = level().getDayTime() / 24000L;
+        if (shopDay == day) return false;
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> tool = Cafe.toolFor(stationTask());
+        boolean forWork = tool != null && countCarried(tool) == 0;
+        boolean treat = Wealth.tier(this).ordinal() >= Wealth.Tier.WELL_OFF.ordinal() && Math.floorMod(getUUID().hashCode() + day, 4L) == 0;
+        if (!forWork && !treat) { shopDay = day; return false; }
+        BlockPos shop = Villages.builtAt(village, "shop");
+        if (shop == null || !Cafe.open(village, "shop")) { shopDay = day; return false; }
+        Villages.Village v = Villages.get(village);
+        if (v == null) return false;
+        if (blockPosition().distSqr(shop) > 16.0) {
+            if (shopSetOff < 0) shopSetOff = tickCount;
+            if (tickCount - shopSetOff > 1200) { shopDay = day; shopSetOff = -1; return false; }   // could not get in
+            if (getNavigation().isDone() || tickCount - socialWalkTick >= 100) {
+                walkTo(shop, 0.9D);
+                socialWalkTick = tickCount;
+            }
+            hobbyNow = "on the way to the shop";
+            return true;
+        }
+        shopDay = day;
+        shopSetOff = -1;
+        String bought = Cafe.folkShops(server, v, this, forWork);
+        if (bought != null) {
+            FolkTalk.speak(this, forWork ? "New tools for the job: " + bought + ". Money well spent."
+                : FolkTalk.pick(getRandom(), "Treated myself: " + bought + ".", "Couldn't resist — " + bought + "!"));
+            brain("bought " + bought + " at the shop");
+            persona.remember(day, "I bought " + bought + " at the shop", 2);
+        }
+        return true;
+    }
 
     /**
      * Some breaks (about one day in three), a folk with a few coins saved drops in to the café
@@ -872,16 +917,42 @@ public class VillageFolkEntity extends AssistantEntity {
                 && removeMatching(st -> st.is(net.minecraft.world.item.Items.BREAD), 1) == 1) {
             return new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BREAD);
         }
+        // Everything given is something it has: out of its own pack, or picked there and then.
         if (stationTask() == StationTask.MINE) {
-            return new net.minecraft.world.item.ItemStack(getRandom().nextInt(3) == 0
-                ? net.minecraft.world.item.Items.AMETHYST_SHARD : net.minecraft.world.item.Items.COAL);
+            for (net.minecraft.world.item.Item it : new net.minecraft.world.item.Item[]{
+                    net.minecraft.world.item.Items.AMETHYST_SHARD, net.minecraft.world.item.Items.COAL}) {
+                if (removeMatching(st -> st.is(it), 1) == 1) return new net.minecraft.world.item.ItemStack(it);
+            }
         }
-        if (persona.hobby() == Persona.Hobby.WHITTLING) return new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BOWL);
-        if (persona.hobby() == Persona.Hobby.MUSIC) return new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.NOTE_BLOCK);
-        net.minecraft.world.item.Item[] flowers = {net.minecraft.world.item.Items.POPPY, net.minecraft.world.item.Items.DANDELION,
-            net.minecraft.world.item.Items.CORNFLOWER, net.minecraft.world.item.Items.OXEYE_DAISY,
-            net.minecraft.world.item.Items.ALLIUM, net.minecraft.world.item.Items.AZURE_BLUET};
-        return new net.minecraft.world.item.ItemStack(flowers[getRandom().nextInt(flowers.length)]);
+        if (persona.hobby() == Persona.Hobby.WHITTLING) {
+            if (removeMatching(st -> st.is(net.minecraft.world.item.Items.BOWL), 1) == 1
+                    || removeMatching(st -> st.is(net.minecraft.tags.ItemTags.PLANKS), 1) == 1) {
+                return new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BOWL);   // whittled from a plank it had
+            }
+        }
+        for (net.minecraft.world.item.ItemStack st : getInventoryItems()) {
+            if (st.is(net.minecraft.tags.ItemTags.SMALL_FLOWERS)) {
+                net.minecraft.world.item.ItemStack one = st.copyWithCount(1);
+                st.shrink(1);
+                return one;
+            }
+        }
+        return pickAFlower();
+    }
+
+    /** A flower picked from the ground near it, for somebody: out of the meadow, not out of the air. */
+    private net.minecraft.world.item.ItemStack pickAFlower() {
+        BlockPos here = blockPosition();
+        for (BlockPos p : BlockPos.betweenClosed(here.offset(-6, -2, -6), here.offset(6, 2, 6))) {
+            net.minecraft.world.level.block.state.BlockState st = level().getBlockState(p);
+            if (!st.is(net.minecraft.tags.BlockTags.SMALL_FLOWERS)) continue;
+            net.minecraft.world.item.Item it = st.getBlock().asItem();
+            if (it == net.minecraft.world.item.Items.AIR) continue;
+            level().removeBlock(p, false);
+            swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+            return new net.minecraft.world.item.ItemStack(it);
+        }
+        return net.minecraft.world.item.ItemStack.EMPTY;
     }
 
     /** How it feels today, and why: worked out from its own life. */
@@ -1714,6 +1785,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (homeComfort(server)) return;              // its savings, spent on its home
         if (shopping(server)) return;                 // market day: a treat from the stalls
         if (cafeVisit(server)) return;                // a drink at the café
+        if (shopVisit(server)) return;                // the shop: a tool for its work, or something nice
         if (Leisure.listen(this, server)) return;
         // Rain: indoors, under its own roof if it has one.
         if (level().isRaining() && bedPos() != null && !level().canSeeSky(blockPosition())) {
@@ -1790,6 +1862,7 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected boolean eveningSocial() {
         if (Assemblies.attending(this)) return true;          // at the village's gathering (Assemblies)
+        if (TownJobs.busy(this)) return true;                 // at the town's work (TownJobs)
         if (Raids.underAlarm(ownerId())) return false;       // the bell is ringing: no evening out
         long t = level().getDayTime() % 24000L;
         long bedtime = bedtimeTick();
@@ -1951,6 +2024,8 @@ public class VillageFolkEntity extends AssistantEntity {
     public boolean onShift() {
         // Called to the village's gathering: its work waits (the watch is never called away).
         if (Assemblies.attending(this)) return false;
+        // On the town's own work (TownJobs): its trade waits till that is done.
+        if (TownJobs.busy(this)) return false;
         // The bell: every guard turns out, whichever watch it keeps; nobody else works.
         UUID alarmed = ownerId();
         if (alarmed != null && Raids.underAlarm(alarmed)) return stationTask() == StationTask.GUARD;
@@ -2341,6 +2416,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // whose pickaxe had worn out stood "needing a pickaxe" for days.
         pickaxeFromTheStores();                        // the iron, and then the diamond, pickaxe
         shearsFromTheStores();                         // a rancher's shears, for the wool
+        rodFromTheStores();                            // a fisher's rod, of the stores' string and wood
         stoneToolFromTheStores();                      // no more wooden tools once there is stone
         guardKitFromTheStores();                       // the smith's iron armour and sword, on the watch
         betterToolFromTheStores();                     // the smith's iron and the enchanter's work, in use
@@ -3004,11 +3080,10 @@ public class VillageFolkEntity extends AssistantEntity {
         if (trade != StationTask.MINE) return WorkZone.DEFAULT_DEPTH;
         int floor = level().getMinBuildHeight() + 8;
         int shallow = site.getY() - 24;
-        UUID village = ownerId();
-        if (village != null && Villages.ageOf(village).ordinal() >= Villages.Age.STONE.ordinal()) {
-            return Math.max(floor, Math.min(shallow, IRON_SEAM_Y));
-        }
-        return Math.max(floor, shallow);
+        // Down to the iron from the first day: the Wood Age's shallow mines worked the stone at forty-odd,
+        // where there is next to none, and the Stone Age then had none to start on. (The staircase is
+        // kept and walked again, so the depth costs one long dig, not one a run.)
+        return Math.max(floor, Math.min(shallow, IRON_SEAM_Y));
     }
 
     /**
@@ -3510,7 +3585,11 @@ public class VillageFolkEntity extends AssistantEntity {
             // water — both were staking the village square, where a rancher
             // found nothing to breed and a fisher nothing to cast into, and
             // both trades were a silent no-op for the life of the settlement.
-            case RANCH -> scan(from, SCAN, 6, radius, p -> clear.test(p) && pasture(p));
+            // A pasture with animals on it; failing that, open meadow to bring them home to (Drover).
+            case RANCH -> {
+                BlockPos grazed = scan(from, SCAN, 6, radius, p -> clear.test(p) && pasture(p));
+                yield grazed != null ? grazed : scan(from, SCAN, 6, radius, p -> clear.test(p) && meadow(p));
+            }
             case FISH -> scan(from, SCAN, 6, radius, p -> clear.test(p) && fishable(p));
             // The hives go out on open grass, where there is room for flowers.
             case BEEKEEP -> scan(from, SCAN, 6, radius, p -> clear.test(p) && meadow(p));
@@ -3931,6 +4010,151 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected boolean craftWork() {
         return level() instanceof net.minecraft.server.level.ServerLevel server && Crafts.work(this, server);
+    }
+
+    /**
+     * The village's herd is not game: an animal on a lead, one the rancher brought home or bought
+     * (marked as the village's), or one inside a rancher's ground. A hungry village hunted every food animal within
+     * twenty-four blocks, its own pens among them, and no herd ever grew.
+     */
+    @Override
+    public boolean spareTheHerd(net.minecraft.world.entity.animal.Animal a) {
+        if (a.isLeashed() || a.getTags().contains(Drover.HERD)) return true;
+        UUID village = ownerId();
+        if (village == null) return false;
+        for (AssistantEntity x : Villages.folkOf(village)) {
+            if (x.stationTask() != StationTask.RANCH || x.workZone() == null) continue;
+            BlockPos c = x.workZone().center();
+            int r = x.workZone().radius() + 4;
+            if (Math.abs(a.getBlockX() - c.getX()) <= r && Math.abs(a.getBlockZ() - c.getZ()) <= r) return true;
+        }
+        return false;
+    }
+
+    /** Carrying a load it took off a worker's hands, on its way to the stores. */
+    private boolean haulLoad;
+    /** Carrying ore and fuel for the smelter. */
+    @Nullable private UUID haulFor;
+
+    /**
+     * A village's carrier. With no chests to run between (a village banks at its stores), it
+     * carries for the trades instead:
+     * <ul>
+     * <li>a worker out on a far plot with a heavy pack has its load taken off its hands, and the
+     *     carrier walks it home to the stores, so the miner keeps mining and the woodcutter keeps
+     *     cutting;</li>
+     * <li>the smelter is brought ore and fuel out of the stores when it is running low.</li>
+     * </ul>
+     */
+    @Override
+    protected boolean haulerRound() {
+        UUID village = ownerId();
+        if (village == null || villageCentre == null || !(level() instanceof net.minecraft.server.level.ServerLevel server)) return false;
+        BlockPos depot = storesSpot(server, village);
+        if (depot == null) depot = villageCentre;
+        // A load on its back: home with it.
+        if (haulLoad) {
+            haulLoad = false;
+            if (stashable() > 0) {
+                enqueue(Job.depositAt(depot));
+                brain("carrying a load home to the stores");
+                return true;
+            }
+        }
+        // Ore and fuel for the smelter, carried out to it.
+        if (haulFor != null) {
+            if (!(server.getEntity(haulFor) instanceof VillageFolkEntity smelter) || !smelter.isAlive()
+                    || countCarried(AssistantEntity.SMELTABLE_ORE) == 0) {
+                haulFor = null;
+            } else if (distanceToSqr(smelter) > 3.0 * 3.0) {
+                walkTo(smelter.blockPosition(), 1.1D);
+                hobbyNow = "taking ore to " + smelter.displayNameCap();
+                return true;
+            } else {
+                int given = handOver(smelter, s -> AssistantEntity.SMELTABLE_ORE.test(s)
+                    || s.is(net.minecraft.world.item.Items.COAL) || s.is(net.minecraft.world.item.Items.CHARCOAL));
+                haulFor = null;
+                if (given > 0) {
+                    note(Deed.LOADS_HAULED, 1);
+                    FolkTalk.speak(this, FolkTalk.pick(getRandom(), "Ore for the furnaces, " + smelter.displayNameCap() + "!", "Here — keep those fires going."));
+                    return true;
+                }
+            }
+        }
+        // A worker far out with a heavy pack.
+        VillageFolkEntity far = null;
+        int most = 47;
+        for (AssistantEntity a : Villages.folkOf(village)) {
+            if (!(a instanceof VillageFolkEntity f) || f == this || f.isBaby() || !f.isAlive() || f.workZone() == null) continue;
+            StationTask t = f.stationTask();
+            if (t != StationTask.MINE && t != StationTask.WOOD && t != StationTask.FARM && t != StationTask.FISH && t != StationTask.RANCH) continue;
+            if (f.workZone().center().distSqr(depot) < 40 * 40) continue;     // near enough to bank its own
+            int load = f.stashable();
+            if (load > most) { most = load; far = f; }
+        }
+        if (far != null) {
+            if (distanceToSqr(far) > 3.0 * 3.0) {
+                walkTo(far.blockPosition(), 1.1D);
+                hobbyNow = "on the way to fetch " + far.displayNameCap() + "'s load";
+                return true;
+            }
+            int took = takeLoadFrom(far);
+            if (took > 0) {
+                haulLoad = true;
+                note(Deed.LOADS_HAULED, 1);
+                FolkTalk.speak(this, FolkTalk.pick(getRandom(), "I'll take that off your hands, " + far.displayNameCap() + ".",
+                    "Give it here — I'm going that way."));
+                enqueue(Job.depositAt(depot));
+                return true;
+            }
+        }
+        // The smelter running low, and ore in the stores.
+        for (AssistantEntity a : Villages.folkOf(village)) {
+            if (!(a instanceof VillageFolkEntity f) || f.stationTask() != StationTask.SMELT || !f.isAlive()) continue;
+            if (f.countCarried(AssistantEntity.SMELTABLE_ORE) >= 8) continue;
+            int got = drawFrom(villageCentre, AssistantEntity.SMELTABLE_ORE, 32, buildStoresRadius());
+            if (got <= 0) break;
+            drawFrom(villageCentre, s -> s.is(net.minecraft.world.item.Items.COAL) || s.is(net.minecraft.world.item.Items.CHARCOAL), 8, buildStoresRadius());
+            haulFor = f.getUUID();
+            brain("taking " + got + " ore out to " + f.displayNameCap());
+            return true;
+        }
+        return false;
+    }
+
+    /** A worker's load (what it would bank: its output, not its kit) into this carrier's pack. */
+    private int takeLoadFrom(VillageFolkEntity worker) {
+        int moved = 0;
+        var inv = worker.getInventoryItems();
+        for (int i = 0; i < inv.size(); i++) {
+            net.minecraft.world.item.ItemStack s = inv.get(i);
+            if (s.isEmpty() || s.isDamageableItem()) continue;
+            int move = s.getCount() - Math.max(0, worker.depositReserve(s));
+            if (move <= 0) continue;
+            net.minecraft.world.item.ItemStack lot = s.copyWithCount(move);
+            net.minecraft.world.item.ItemStack left = insertItem(lot);
+            int taken = move - left.getCount();
+            if (taken <= 0) break;                                  // its own pack is full
+            s.shrink(taken);
+            moved += taken;
+        }
+        return moved;
+    }
+
+    /** What matches out of this pack into another's. Returns how many went. */
+    private int handOver(VillageFolkEntity to, java.util.function.Predicate<net.minecraft.world.item.ItemStack> what) {
+        int moved = 0;
+        var inv = getInventoryItems();
+        for (int i = 0; i < inv.size(); i++) {
+            net.minecraft.world.item.ItemStack s = inv.get(i);
+            if (s.isEmpty() || !what.test(s)) continue;
+            net.minecraft.world.item.ItemStack left = to.insertItem(s.copy());
+            int taken = s.getCount() - left.getCount();
+            s.shrink(taken);
+            moved += taken;
+        }
+        swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+        return moved;
     }
 
     /** A scout's day (Scouts): out at first light, home by dusk, the atlas in between. */
@@ -5157,7 +5381,20 @@ public class VillageFolkEntity extends AssistantEntity {
         for (BlockPos p : BlockPos.betweenClosed(c.offset(-r, -3, -r), c.offset(r, 3, r))) {
             if (level().getFluidState(p).is(net.minecraft.tags.FluidTags.WATER)) return;   // water already
         }
+        // A bucket the stores already have before a new one out of the age's iron, and a new one at
+        // most once a day for the whole village (every dry field had one made, three iron each).
+        Villages.Village home = Villages.get(ownerId());
+        net.minecraft.world.item.ItemStack kept = home == null ? net.minecraft.world.item.ItemStack.EMPTY
+            : Crafts.takeOne(server, home, st -> st.is(net.minecraft.world.item.Items.WATER_BUCKET) || st.is(net.minecraft.world.item.Items.BUCKET));
+        if (!kept.isEmpty()) {
+            insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.WATER_BUCKET));   // filled at the river on the way
+            brain("a bucket from the stores, filled for the field");
+            return;
+        }
+        long today = level().getDayTime() / 24000L;
+        if (Long.toString(today).equals(com.jrpetty.mcassistant.village.Ledger.note(ownerId(), "bucket.day"))) return;
         if (ironFromTheStores(3)) {
+            com.jrpetty.mcassistant.village.Ledger.note(ownerId(), "bucket.day", Long.toString(today));
             insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.WATER_BUCKET));
             brain("a bucket of water from the stores, for the field");
         }
@@ -5165,6 +5402,8 @@ public class VillageFolkEntity extends AssistantEntity {
 
     /** Since when this folk has been missing something its trade needs to start. */
     private int stuckSince = -1;
+    /** Whole days in a row it has been stuck at its trade. */
+    private int stuckDays;
 
     /**
      * Ground that cannot be set up is given up. A farmer was staked on ground where its
@@ -5173,6 +5412,7 @@ public class VillageFolkEntity extends AssistantEntity {
      * for new ground for the same trade somewhere else.
      */
     private boolean unstuckFromGround() {
+        if (missingEssentials().isEmpty()) stuckDays = 0;
         if (missingEssentials().isEmpty() || !onShift()) { stuckSince = -1; return false; }
         if (stuckSince < 0) { stuckSince = tickCount; return false; }
         if (tickCount - stuckSince < 12000) return false;
@@ -5180,6 +5420,22 @@ public class VillageFolkEntity extends AssistantEntity {
         StationTask trade = stationTask();
         if (trade == StationTask.NONE || trade == StationTask.GUARD || trade == StationTask.HAUL
                 || trade == StationTask.STORE) return false;
+        // Twice a whole day stuck at it (new ground or not): the trade cannot be got going here,
+        // so it takes up one the village needs instead of standing about holding the place —
+        // a hand that cannot work counted as one of its trade, and nobody else was sent.
+        if (++stuckDays >= 2) {
+            stuckDays = 0;
+            StationTask next = Villages.needed(ownerId());
+            if (next == trade) next = nextTradeAfter(trade);
+            if (next != trade && next != StationTask.NONE) {
+                UUID village = ownerId();
+                if (village != null) Villages.tell(village, level().getDayTime() / 24000L, displayNameCap() + " gave up "
+                    + trade.label + " (it could never get started: " + missingEssentials().get(0) + ") and took up " + next.label);
+                brain("gave up " + trade.label + " for " + next.label);
+                setStation(blockPosition(), next);
+                return true;
+            }
+        }
         // The smeltery is the smelter's ground for good (workInTheBuilding): short of ore
         // or coal it waits for the carriers, it does not wander off to stake new ground.
         if (buildingFor(trade) != null && ownerId() != null && Villages.builtAt(ownerId(), buildingFor(trade)) != null) return false;
@@ -5265,6 +5521,31 @@ public class VillageFolkEntity extends AssistantEntity {
      * ore to run, in a village short of coal, burns logs from the stores into charcoal
      * (which counts as coal): half of them to burn, half as fuel.
      */
+    private int coalCheckTick = -100000;
+    private boolean coalShort;
+
+    @Override
+    public boolean savingCoal() {
+        UUID village = ownerId();
+        if (village == null || !(level() instanceof net.minecraft.server.level.ServerLevel server)) return false;
+        if (tickCount - coalCheckTick >= 1200) {
+            coalCheckTick = tickCount;
+            coalShort = false;
+            for (Villages.Need n : Villages.needs(server, village)) {
+                if (n.task() == Villages.Task.COAL) { coalShort = true; break; }
+            }
+        }
+        return coalShort;
+    }
+
+    @Override
+    protected boolean wantsGlass() {
+        UUID village = ownerId();
+        return village != null && level() instanceof net.minecraft.server.level.ServerLevel server
+            && Market.stock(server, village, s -> s.is(net.minecraft.world.item.Items.GLASS)
+                || s.is(net.minecraft.world.item.Items.GLASS_BOTTLE)) < 16;
+    }
+
     @Override
     protected boolean burnCharcoal() {
         UUID village = ownerId();
@@ -5309,6 +5590,37 @@ public class VillageFolkEntity extends AssistantEntity {
             insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.SHEARS));
             brain("shears made from the stores");
         }
+    }
+
+    private int rodCheckTick = -100000;
+
+    /**
+     * A fisher with no rod has one made there and then out of the stores: a rod put by, or two
+     * string and a plank (three sticks' worth). Fishers stood at the water "needing a fishing
+     * rod" in every real-world game: the makings went back into the stores before the rod was
+     * ever made of them.
+     */
+    private void rodFromTheStores() {
+        if (stationTask() != StationTask.FISH || villageCentre == null || ownerId() == null) return;
+        if (tickCount - rodCheckTick < 1200) return;
+        rodCheckTick = tickCount;
+        if (countCarried(st -> st.is(net.minecraft.world.item.Items.FISHING_ROD)) > 0) return;
+        int r = buildStoresRadius();
+        if (drawFrom(villageCentre, st -> st.is(net.minecraft.world.item.Items.FISHING_ROD), 1, r) > 0) {
+            brain("a fishing rod from the stores");
+            return;
+        }
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> string = st -> st.is(net.minecraft.world.item.Items.STRING);
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> wood =
+            st -> st.is(net.minecraft.tags.ItemTags.PLANKS) || st.is(net.minecraft.tags.ItemTags.LOGS) || st.is(net.minecraft.world.item.Items.STICK);
+        int haveString = countCarried(string), haveWood = countCarried(wood);
+        if (haveString < 2) haveString += drawFrom(villageCentre, string, 2 - haveString, r);
+        if (haveWood < 1) haveWood += drawFrom(villageCentre, wood, 1, r);
+        if (haveString < 2 || haveWood < 1) return;                    // the rest waits in its pack for more
+        removeMatching(string, 2);
+        removeMatching(wood, 1);
+        insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.FISHING_ROD));
+        brain("made a fishing rod of the stores' string and wood");
     }
 
     /** Take this much iron out of the stores to make something with: ingots first, raw

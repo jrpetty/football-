@@ -191,7 +191,7 @@ public final class Gatherings {
                 Long last = LAST_ROCKET.get(village);
                 if (last == null || now - last >= 40) {
                     LAST_ROCKET.put(village, now);
-                    launch(server, heart, r);
+                    paidLaunch(server, village, heart, r);
                 }
                 if (r.nextInt(4) == 0) FolkTalk.speak(f, FolkTalk.pick(r, "To " + hero + "!", "Three cheers for " + hero + "!",
                     "Hip hip — hooray!", "The hero of " + Villages.name(village) + "!"));
@@ -267,7 +267,7 @@ public final class Gatherings {
         Long last = LAST_ROCKET.get(village);
         if (last == null || now - last >= 40) {
             LAST_ROCKET.put(village, now);
-            launch(server, heart, r);
+            paidLaunch(server, village, heart, r);
         }
         if (r.nextInt(4) == 0) FolkTalk.speak(f, FolkTalk.pick(r, "To " + Villages.name(village) + "!", "Ooooh!", "Look at that one!",
             Villages.ageOf(village).label.substring(4, 5).toUpperCase() + Villages.ageOf(village).label.substring(5) + " at last!"));
@@ -275,6 +275,20 @@ public final class Gatherings {
     }
 
     /** A rocket over the heart of the village, in village colours. */
+    /** A rocket out of the stores' gunpowder and paper; with none put by, a bonfire's sparks instead. */
+    static void paidLaunch(ServerLevel server, java.util.UUID village, BlockPos heart, RandomSource r) {
+        Villages.Village v = Villages.get(village);
+        if (v != null && Crafts.take(server, v, x -> x.is(Items.GUNPOWDER), 1)) {
+            if (Crafts.take(server, v, x -> x.is(Items.PAPER), 1)) {
+                launch(server, heart, r);
+                return;
+            }
+            Crafts.store(server, v, new ItemStack(Items.GUNPOWDER));
+        }
+        server.sendParticles(net.minecraft.core.particles.ParticleTypes.FLAME, heart.getX() + 0.5, heart.getY() + 0.3, heart.getZ() + 0.5,
+            6, 0.3, 0.2, 0.3, 0.01);
+    }
+
     static void launch(ServerLevel server, BlockPos heart, RandomSource r) {
         int[] palette = {0xE8C547, 0xD94F3D, 0x4F86D9, 0x5BC26B, 0xC45BD9, 0xF2F2F2, 0xF28C38};
         int c1 = palette[r.nextInt(palette.length)], c2 = palette[r.nextInt(palette.length)];

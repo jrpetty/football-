@@ -111,6 +111,9 @@ public final class Grow {
                 if (level.getBlockState(foot).is(BlockTags.BEDS)) continue;          // made up already
                 if (!level.getBlockState(foot).canBeReplaced() || !level.getBlockState(head).canBeReplaced()) continue;
                 if (!level.getBlockState(foot.below()).isSolid() || !level.getBlockState(head.below()).isSolid()) continue;
+                // Carried in and made up by a hand from the village, once there is one to make up.
+                if (Market.stock(level, id, s -> s.is(ItemTags.BEDS)) == 0 && Market.stock(level, id, s -> s.is(ItemTags.WOOL)) < 3) return false;
+                if (!TownJobs.atWork(level, v, "beds", foot, "making up a bed")) return false;
                 BlockState bed = bedFromTheStores(level, v);
                 if (bed == null) return false;                                        // nothing to make one of
                 final BlockState laid = bed;
@@ -177,7 +180,11 @@ public final class Grow {
     public static int garden(ServerLevel level, Villages.Village v, Ledger.Building b, boolean free) {
         UUID village = v.id();
         Set<Long> gardened = GARDENED.computeIfAbsent(village, k -> ConcurrentHashMap.newKeySet());
-        if (!gardened.add(b.anchor().asLong())) return 0;
+        if (gardened.contains(b.anchor().asLong())) return 0;
+        // Fenced and planted by a hand from the village, there at the plot (TownJobs).
+        if (!free && (Market.stock(level, village, s -> s.is(ItemTags.PLANKS) || s.is(ItemTags.LOGS) || s.is(ItemTags.FENCES)) < 4
+                || !TownJobs.atWork(level, v, "gardens", b.anchor().relative(b.facing().getOpposite(), 5), "fencing a garden"))) return 0;
+        gardened.add(b.anchor().asLong());
         Direction back = b.facing(), right = back.getClockWise(), front = back.getOpposite();
         int y = b.anchor().getY();
         int n = 0;
@@ -275,6 +282,16 @@ public final class Grow {
                              boolean grown, boolean free) {
         Block want = palette(age).walls();
         boolean old = age.ordinal() >= Villages.Age.DIAMOND.ordinal();
+        if (!free) {
+            // Only if there is wall to change, and a hand there to change it (TownJobs).
+            boolean any = false;
+            for (BuildGoal.Placement p : BuildGoal.plan(grown ? "house2" : "house", b.anchor(), b.facing(), 13)) {
+                if (p.part() != BuildGoal.Part.BLOCK || p.style() != com.jrpetty.mcassistant.entity.goal.Blueprints.Style.WALL) continue;
+                BlockState now = level.getBlockState(p.pos());
+                if (now.is(BlockTags.PLANKS) || now.is(Blocks.STONE_BRICKS) && want == Blocks.BRICKS) { any = true; break; }
+            }
+            if (!any || !TownJobs.atWork(level, v, "walls", b.anchor(), want == Blocks.BRICKS ? "rebuilding a house in brick" : "rebuilding a house in stone")) return 0;
+        }
         int n = 0;
         boolean stop = false;
         Map<net.minecraft.world.item.Item, Integer> back = new HashMap<>();
@@ -342,6 +359,8 @@ public final class Grow {
         }
         Map<BlockPos, BuildGoal.Placement> next = new HashMap<>();
         for (BuildGoal.Placement p : will) next.put(p.pos(), p);
+        // Raised by hand: the builders there at the house (TownJobs).
+        if (!free && !TownJobs.atWork(level, v, "storeys", b.anchor(), "raising a second storey")) return 0;
         // What comes down to make way, for the stores.
         Map<net.minecraft.world.item.Item, Integer> back = new HashMap<>();
         // The old roof off, from the top down (once: after that, what stands there is the new storey).

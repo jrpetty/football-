@@ -64,6 +64,8 @@ final class Kit {
         for (Entity e : doomed) e.discard();
         Villages.resetForTests();
         AssistantEntity.resetRegistryForTests();
+        // What the town's works build is checked here at once; who builds it, by hand, in t54.
+        com.jrpetty.mcassistant.entity.TownJobs.instantForTests(true);
     }
 
     // -------------------------------------------------------------- terrain

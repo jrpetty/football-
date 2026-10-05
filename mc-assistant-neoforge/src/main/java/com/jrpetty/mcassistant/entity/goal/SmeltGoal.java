@@ -92,6 +92,11 @@ public class SmeltGoal extends Goal {
         s -> s.is(ItemTags.PLANKS),             //   300
         s -> s.is(Items.STICK));                //   100
 
+    /** The same, with coal last: a village short of coal (the Stone Age counts it) burns its wood first. */
+    private static final java.util.List<Predicate<ItemStack>> COAL_LAST = java.util.List.of(
+        s -> s.is(Items.DRIED_KELP_BLOCK), s -> s.is(Items.BLAZE_ROD), s -> s.is(ItemTags.LOGS), s -> s.is(ItemTags.PLANKS),
+        s -> s.is(Items.STICK), s -> s.is(Items.COAL) || s.is(Items.CHARCOAL), s -> s.is(Items.COAL_BLOCK));
+
     // Foods cook in a furnace or smoker; ores in a furnace or blast furnace;
     // stone/sand/logs only in a plain furnace.
     private static final Set<String> FOODS = Set.of(
@@ -289,7 +294,7 @@ public class SmeltGoal extends Goal {
         //    furnace is already cooking on the fuel it consumed, so leave it be
         //    and don't waste ours (and never bail while it's still burning).
         if (!isLit(furnacePos) && furnace.getItem(1).isEmpty() && !furnace.getItem(0).isEmpty()) {
-            for (Predicate<ItemStack> fuelType : FUEL_PRIORITY) {
+            for (Predicate<ItemStack> fuelType : assistant.savingCoal() ? COAL_LAST : FUEL_PRIORITY) {
                 var inv = assistant.getInventoryItems();
                 boolean loaded = false;
                 for (int i = 0; i < inv.size(); i++) {

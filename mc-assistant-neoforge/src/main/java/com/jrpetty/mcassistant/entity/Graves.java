@@ -84,6 +84,8 @@ public final class Graves {
         BlockState at = level.getBlockState(stone);
         if (!at.is(Blocks.CHISELED_STONE_BRICKS)) {
             if (!at.isAir() && !at.canBeReplaced()) return false;
+            // Dug and set by a hand from the village, at the graveside (TownJobs).
+            if (!free && !TownJobs.atWork(level, v, "graves", mound, "setting a headstone")) return false;
             if (!free && !Crafts.masonry(level, v)) return false;
             level.setBlock(stone, Blocks.CHISELED_STONE_BRICKS.defaultBlockState(), 3);
             BlockState earth = level.getBlockState(mound.below());

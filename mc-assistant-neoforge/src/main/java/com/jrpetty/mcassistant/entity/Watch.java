@@ -204,12 +204,16 @@ public final class Watch {
      *  in the showcase). It goes up as far as the stores pay, and the rest another day. */
     static void ladder(ServerLevel level, Villages.Village v, Post p, boolean free) {
         BlockState ladder = Blocks.LADDER.defaultBlockState().setValue(LadderBlock.FACING, p.out().getOpposite());
+        boolean there = free;
         for (int y = p.foot().getY(); y < p.stand().getY(); y++) {
             BlockPos at = new BlockPos(p.foot().getX(), y, p.foot().getZ());
             BlockState s = level.getBlockState(at);
             if (s.is(Blocks.LADDER)) continue;
             if (!s.isAir() && !s.canBeReplaced()) return;
             if (!ladder.canSurvive(level, at)) return;
+            // Fixed to the wall by the watch (or a spare hand), there at the foot of it.
+            if (!there && !(there = TownJobs.atWork(level, v, "watch", p.foot(), "fixing a ladder to the wall",
+                    AssistantEntity.StationTask.GUARD))) return;
             if (!free && !TownWork.take(level, v, st -> st.is(Items.LADDER), 1)
                     && !TownWork.take(level, v, st -> st.is(ItemTags.PLANKS), 1)) return;
             level.setBlock(at, ladder, 3);
@@ -361,6 +365,7 @@ public final class Watch {
         if (!free) {
             java.util.function.Predicate<net.minecraft.world.item.ItemStack> stone = st -> st.is(Items.COBBLESTONE) || st.is(Items.STONE_BRICKS);
             if (Market.stock(level, v.id(), stone) < 10) return null;
+            if (!TownJobs.atWork(level, v, "watch", floors.get(2), "hanging the " + side.getName() + " gate", AssistantEntity.StationTask.GUARD)) return null;
             boolean wood = TownWork.take(level, v, st -> st.is(ItemTags.PLANKS), 6)
                 || TownWork.take(level, v, st -> st.is(ItemTags.LOGS), 2);
             if (!wood || !TownWork.take(level, v, stone, 10)) return null;
@@ -444,6 +449,8 @@ public final class Watch {
         // The bell itself out of the stores too, now, and not cast from nothing: no bell put by,
         // no bell on the square (and no plinth for it) until one is.
         if (!free) {
+            if (Market.stock(level, v.id(), st -> st.is(Items.BELL)) == 0) return null;
+            if (!TownJobs.atWork(level, v, "watch", floor, "hanging the alarm bell", AssistantEntity.StationTask.GUARD)) return null;
             if (!TownWork.take(level, v, st -> st.is(Items.BELL), 1)) return null;
             if (!TownWork.take(level, v, st -> st.is(Items.COBBLESTONE) || st.is(Items.STONE_BRICKS), 2)) {
                 TownWork.give(level, v, new net.minecraft.world.item.ItemStack(Items.BELL));

@@ -269,6 +269,10 @@ public final class TownLife {
             if (!level.getBlockState(top).isSolid()) continue;       // the chimney is not up (or is down)
             BlockPos fire = top.above();
             if (!level.getBlockState(fire).isAir()) continue;
+            if (!free && Crafts.stock(level, v, s -> s.is(Items.CAMPFIRE)) == 0
+                && (Crafts.stock(level, v, s -> s.is(Items.COAL) || s.is(Items.CHARCOAL)) < 1
+                    || Crafts.stock(level, v, s -> s.is(net.minecraft.tags.ItemTags.LOGS)) < 3)) return;
+            if (!free && !TownJobs.atWork(level, v, "hearths", b.anchor(), "laying a hearth fire")) return;
             if (!free && !campfire(level, v)) return;
             level.setBlock(fire, Blocks.CAMPFIRE.defaultBlockState(), 3);
         }
@@ -311,7 +315,7 @@ public final class TownLife {
         int first = Math.floorMod(b.anchor().hashCode(), WASH.length);
         if (level.getBlockState(middle).getBlock() instanceof net.minecraft.world.level.block.FenceBlock) {
             // Up already: only any washing the stores could not spare before.
-            return !free && hang(level, v, base, right, back, first);
+            return !free && TownJobs.atWork(level, v, "yards", base, "hanging out the washing") && hang(level, v, base, right, back, first);
         }
         List<BlockPos> fences = new ArrayList<>();
         for (int a = -3; a <= 3; a++) {
@@ -328,6 +332,7 @@ public final class TownLife {
         for (BlockPos p : fences) if (!level.getBlockState(p).isAir()) return false;
         for (BlockPos p : wash) if (!level.getBlockState(p).isAir() || !level.getBlockState(p.below()).isAir()) return false;
         int n = fences.size();
+        if (!free && !TownJobs.atWork(level, v, "yards", base, "putting up a washing line")) return false;
         if (!free && !Crafts.take(level, v, s -> s.is(net.minecraft.tags.ItemTags.WOODEN_FENCES), n)
                 && !Crafts.usePlanks(level, v, 2 * n)) return false;
         BlockState post = Blocks.SPRUCE_FENCE.defaultBlockState();
@@ -407,6 +412,8 @@ public final class TownLife {
             if (!clear) continue;
             Direction look = Direction.getNearest((double) (centre.getX() - x), 0.0, (double) (centre.getZ() - z));
             if (look.getAxis() == Direction.Axis.Y) look = Direction.NORTH;
+            if (!free && (Crafts.stock(level, v, s -> s.is(Items.CARVED_PUMPKIN) || s.is(Items.PUMPKIN)) == 0
+                || !TownJobs.atWork(level, v, "fields", foot, "putting up a scarecrow", AssistantEntity.StationTask.FARM))) return false;
             if (!free && !payScarecrow(level, v)) return false;
             level.setBlock(foot, Blocks.OAK_FENCE.defaultBlockState(), 3);
             level.setBlock(foot.above(), Blocks.HAY_BLOCK.defaultBlockState(), 3);
@@ -535,6 +542,7 @@ public final class TownLife {
             if (level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, p.getX(), p.getZ()) != ground.getY()) return false;
             for (int h = 0; h <= 3; h++) if (!level.getBlockState(p.above(h)).isAir()) return false;
         }
+        if (!free && (v == null || !TownJobs.atWork(level, v, "market", ground, "putting up a market stall"))) return false;
         if (!free && (v == null || !payForStall(level, v))) return false;
         BlockState post = Blocks.SPRUCE_FENCE.defaultBlockState();
         for (int d : new int[]{ -1, 1 }) {
@@ -796,6 +804,7 @@ public final class TownLife {
             boolean ours = there.getBlock() instanceof WallSignBlock;
             if (!ours && (!there.isAir() || !level.getBlockState(wall).isSolid())) continue;
             if (!ours) {
+                if (!free && !TownJobs.atWork(level, v, "signs", spot, "nailing up a house sign")) return false;
                 if (!free && !Crafts.sign(level, v)) return false;
                 level.setBlock(spot, Blocks.SPRUCE_WALL_SIGN.defaultBlockState().setValue(WallSignBlock.FACING, front), 3);
             }
@@ -896,6 +905,7 @@ public final class TownLife {
         for (BlockPos p : List.of(post, post.above(), post.above(2), signNS, signEW)) {
             if (!level.getBlockState(p).isAir()) return false;
         }
+        if (!free && !TownJobs.atWork(level, v, "signs", post, "putting up a street sign")) return false;
         if (!free && !payForPost(level, v)) return false;
         BlockState fence = Blocks.SPRUCE_FENCE.defaultBlockState();
         level.setBlock(post, fence, 3);

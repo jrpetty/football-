@@ -314,6 +314,7 @@ public final class Villages {
         Laws.resetForTests();
         Diplomacy.resetForTests();
         Envoys.resetForTests();
+        TownJobs.resetForTests();
         Scouts.resetForTests();
         Quests.resetForTests();
         Services.resetForTests();
@@ -1508,7 +1509,6 @@ public final class Villages {
         com.jrpetty.mcassistant.village.Ledger.note(v.id(), "rank", now.name());
         if (was == null && now.ordinal() <= Rank.VILLAGE.ordinal()) return;   // a new or restored place: nothing to tell
         tell(v.id(), day, name(v.id()) + " has grown into " + now.label);
-        com.jrpetty.mcassistant.village.Ledger.addCoins(v.id(), 25 * now.ordinal());
         for (AssistantEntity a : folkOf(v.id())) {
             if (a instanceof VillageFolkEntity f) f.persona().remember(day, "I saw " + name(v.id()) + " become " + now.label, 6);
         }
@@ -1870,6 +1870,9 @@ public final class Villages {
             spot = Trades.floorSpot(level, house != null ? house : v.centre(), 6);
         }
         if (spot == null || !inStoreArea(villageId, spot)) return null;
+        // Knocked together and set down by a hand from the village (TownJobs). (Unpaid hands
+        // are the rule for this one: whatever needed the room waits a moment at the door.)
+        if (!TownJobs.atWork(level, v, "stores", spot, "setting down another store chest")) return null;
         if (!TownWork.take(level, v, s -> s.is(net.minecraft.tags.ItemTags.PLANKS), 8)
                 && !TownWork.take(level, v, s -> s.is(net.minecraft.tags.ItemTags.LOGS), 2)) return null;
         level.setBlock(spot, net.minecraft.world.level.block.Blocks.CHEST.defaultBlockState(), 3);

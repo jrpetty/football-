@@ -89,6 +89,11 @@ public final class Nether {
             if (a instanceof VillageFolkEntity f && !f.isBaby() && f.stationTask() == AssistantEntity.StationTask.MINE) party.add(f.getUUID());
         }
         if (party.size() < 2) return;
+        // Not without provisions: four of food a head out of the stores, and a torch or two.
+        java.util.function.Predicate<ItemStack> food = s -> s.get(net.minecraft.core.component.DataComponents.FOOD) != null
+            && !s.is(Items.ROTTEN_FLESH) && !s.is(Items.SPIDER_EYE);
+        if (Market.stock(level, id, food) < 4 * party.size() || !Crafts.take(level, v, food, 4 * party.size())) return;
+        Crafts.take(level, v, s -> s.is(Items.TORCH), 4);
         Ledger.note(id, "nether.last", Long.toString(day));
         OUT.put(id, new Party(party, now + 6000L));
         List<String> names = new ArrayList<>();
@@ -107,15 +112,25 @@ public final class Nether {
         OUT.remove(id);
         net.minecraft.util.RandomSource r = level.getRandom();
         int size = party.folk().size();
+        // What they could bring back is what they had the means to get: blaze rods only with a
+        // blade or a bow to take them, quartz and glowstone only with a pick to dig them; and the
+        // tools come back the worse for it.
+        boolean armed = false, picks = false;
+        for (UUID u : party.folk()) {
+            if (!(level.getEntity(u) instanceof VillageFolkEntity f)) continue;
+            if (f.countMatching(s -> s.getItem() instanceof net.minecraft.world.item.SwordItem || s.getItem() instanceof net.minecraft.world.item.BowItem) > 0) armed = true;
+            if (f.countMatching(s -> s.getItem() instanceof net.minecraft.world.item.PickaxeItem) > 0) picks = true;
+            for (int i = 0; i < 12; i++) f.damageHeldTool();
+        }
         List<ItemStack> haul = new ArrayList<>();
-        haul.add(new ItemStack(Items.BLAZE_ROD, 1 + r.nextInt(2 + size)));
+        if (armed) haul.add(new ItemStack(Items.BLAZE_ROD, 1 + r.nextInt(2 + size)));
         haul.add(new ItemStack(Items.NETHER_WART, 2 + r.nextInt(6)));
         haul.add(new ItemStack(Items.SOUL_SAND, 2 + r.nextInt(4)));
-        haul.add(new ItemStack(Items.QUARTZ, 4 + r.nextInt(12)));
-        haul.add(new ItemStack(Items.GLOWSTONE_DUST, 2 + r.nextInt(6)));
-        haul.add(new ItemStack(Items.GOLD_NUGGET, 4 + r.nextInt(12)));
-        if (r.nextInt(4) == 0) haul.add(new ItemStack(Items.MAGMA_CREAM, 1 + r.nextInt(2)));
-        if (r.nextInt(5) == 0) haul.add(new ItemStack(Items.GHAST_TEAR));
+        if (picks) haul.add(new ItemStack(Items.QUARTZ, 4 + r.nextInt(12)));
+        if (picks) haul.add(new ItemStack(Items.GLOWSTONE_DUST, 2 + r.nextInt(6)));
+        if (picks) haul.add(new ItemStack(Items.GOLD_NUGGET, 4 + r.nextInt(12)));
+        if (armed && r.nextInt(4) == 0) haul.add(new ItemStack(Items.MAGMA_CREAM, 1 + r.nextInt(2)));
+        if (armed && r.nextInt(5) == 0) haul.add(new ItemStack(Items.GHAST_TEAR));
         List<String> what = new ArrayList<>();
         for (ItemStack s : haul) {
             what.add(s.getCount() + " " + s.getHoverName().getString().toLowerCase());

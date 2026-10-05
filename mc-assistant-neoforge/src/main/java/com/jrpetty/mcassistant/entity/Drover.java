@@ -32,6 +32,12 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class Drover {
 
+    /** The tag on an animal that is the village's own (brought home or bought): not game for the hunters. */
+    public static final String HERD = "mca_herd";
+
+    /** What a drover asks for a pair of sheep and a pair of hens. */
+    static final int DROVER_PRICE = 12;
+
     private Drover() {}
 
     /** One animal being fetched. */
@@ -109,8 +115,10 @@ public final class Drover {
         if (pair) return false;                                          // the drover's pair is for an empty pen
         if (LOOKED.getOrDefault(f.getUUID(), -1L) == today) return false;
         LOOKED.put(f.getUUID(), today);
-        // Nothing wild for fifty blocks: the drover's pair, once.
+        // Nothing wild for fifty blocks: the drover's pair, once — bought out of the treasury.
         if (Ledger.note(village, "kit.drove") != null) return false;
+        if (Ledger.coins(village) < DROVER_PRICE) return false;
+        Ledger.takeCoins(village, DROVER_PRICE);
         Ledger.note(village, "kit.drove", Long.toString(today));
         int put = 0;
         for (EntityType<? extends Animal> type : List.<EntityType<? extends Animal>>of(EntityType.SHEEP, EntityType.SHEEP,
@@ -121,11 +129,12 @@ public final class Drover {
             int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
             a.moveTo(x + 0.5, y, z + 0.5, level.getRandom().nextFloat() * 360.0F, 0.0F);
             a.setPersistenceRequired();
+            a.addTag(HERD);
             if (level.addFreshEntity(a)) put++;
         }
         if (put == 0) return false;
         Villages.tell(village, today, "A drover came by and sold " + Villages.name(village)
-            + " a pair of sheep and a pair of hens: there was nothing wild to be had for miles.");
+            + " a pair of sheep and a pair of hens for " + DROVER_PRICE + " coin: there was nothing wild to be had for miles.");
         FolkTalk.speak(f, "No wild animals for miles, so I bought a drover's pair. Sheep and hens!");
         f.brain("bought the drover's pair");
         return true;
@@ -216,6 +225,7 @@ public final class Drover {
         }
         if (home && a != null) {
             a.setPersistenceRequired();
+            a.addTag(HERD);
             f.brain("brought a wild " + kind(a) + " home to the pen");
             UUID village = f.ownerId();
             if (village != null) {

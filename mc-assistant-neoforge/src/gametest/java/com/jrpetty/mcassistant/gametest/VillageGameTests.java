@@ -1092,6 +1092,7 @@ public class VillageGameTests {
             helper.assertTrue(b.persona().affinity(you.getUUID()) == before + 4, "a grudge softens a little each day");
             // A friend brings you something, unasked — but not every time you pass.
             boolean given = false;
+            a.insertItem(new ItemStack(Items.POPPY));      // what it gives is what it has: a flower it picked
             for (int i = 0; i < 60 && !given; i++) given = a.present(you);
             int carried = 0;
             for (int i = 0; i < you.getInventory().getContainerSize(); i++) carried += you.getInventory().getItem(i).getCount();
@@ -1585,6 +1586,7 @@ public class VillageGameTests {
         helper.assertTrue(tailored && stock.applyAsInt(cloth) > clothBefore, "the tailor makes a bed (or rugs, or a banner) from wool");
         // The beekeeper: the hive it brought set down, then the honey once it is full.
         folk.setJob(StationTask.BEEKEEP);
+        com.jrpetty.mcassistant.village.Ledger.addCoins(village, 200);       // the kits are bought from a pedlar
         boolean hiveKit = com.jrpetty.mcassistant.entity.Trades.kit(folk);
         boolean hived = hiveKit && com.jrpetty.mcassistant.entity.Crafts.now(folk, level, v);
         BlockPos hive = null;
@@ -2405,6 +2407,7 @@ public class VillageGameTests {
 
         // The kit, once.
         brewer.setJob(StationTask.BREW);
+        com.jrpetty.mcassistant.village.Ledger.addCoins(brewer.ownerId(), 200);   // bought from a pedlar, out of the treasury
         boolean first = com.jrpetty.mcassistant.entity.Trades.kit(brewer);
         boolean again = com.jrpetty.mcassistant.entity.Trades.kit(brewer);
         int stands = brewer.countCarried(s -> s.is(Items.BREWING_STAND)), powder = brewer.countCarried(s -> s.is(Items.BLAZE_POWDER));
@@ -2603,6 +2606,7 @@ public class VillageGameTests {
                 helper.assertTrue(home && !sheep.isLeashed(), "the rancher walks the wild sheep home on the lead and lets it off in the pen");
                 helper.assertTrue(rancher.countCarried(s -> s.is(Items.LEAD)) == 2, "and keeps its lead");
                 // Nothing else wild near: the drover's pair.
+                com.jrpetty.mcassistant.village.Ledger.addCoins(rancher.ownerId(), 50);   // the drover is paid
                 for (net.minecraft.world.entity.animal.Animal a : level.getEntitiesOfClass(net.minecraft.world.entity.animal.Animal.class,
                         new AABB(pen).inflate(64, 32, 64))) {
                     if (a != cow && a != sheep) a.discard();
@@ -2913,10 +2917,26 @@ public class VillageGameTests {
             "a caravan sets out with the mother's spare bread on its own back (no llama out of nowhere)");
         Kit.log("t31 before unloading: carrier " + carrier.stationTask() + " keeps " + carrier.depositReserve(new ItemStack(Items.BREAD, 64))
             + " of a stack of bread; the colony's stores " + Villages.storeChests(level, colony.id()) + "; " + carrier.debugLine());
+        int carried = carrier.countCarried(st -> st.is(Items.BREAD));
         com.jrpetty.mcassistant.entity.Caravans.arriveForTests(level, carrier);
         int after = com.jrpetty.mcassistant.entity.Market.stock(level, colony.id(), st -> st.is(Items.BREAD));
-        Kit.log("t31 at the colony: its bread " + before + " -> " + after + "; homeward " + (carrier.trip() != null && carrier.trip().homeward()));
-        helper.assertTrue(after >= before + 32 && carrier.trip() != null && carrier.trip().homeward(),
+        int left = carrier.countCarried(st -> st.is(Items.BREAD));
+        StringBuilder chests = new StringBuilder();
+        for (BlockPos c : Villages.storeChests(level, colony.id())) {
+            chests.append(c.toShortString()).append('{');
+            if (level.getBlockEntity(c) instanceof net.minecraft.world.Container box2) {
+                int used = 0, bread = 0;
+                for (int i = 0; i < box2.getContainerSize(); i++) {
+                    if (!box2.getItem(i).isEmpty()) used++;
+                    if (box2.getItem(i).is(Items.BREAD)) bread += box2.getItem(i).getCount();
+                }
+                chests.append(used).append(" slots used, bread ").append(bread);
+            }
+            chests.append("} ");
+        }
+        Kit.log("t31 at the colony: its bread " + before + " -> " + after + "; the carrier's " + carried + " -> " + left
+            + "; stores " + chests + "; homeward " + (carrier.trip() != null && carrier.trip().homeward()));
+        helper.assertTrue(left <= carried - 32 && carrier.trip() != null && carrier.trip().homeward(),
             "the caravan unloads in the colony's stores and turns for home");
         com.jrpetty.mcassistant.entity.Caravans.arriveForTests(level, carrier);
         helper.assertTrue(carrier.trip() == null, "and is home again");
@@ -3639,6 +3659,64 @@ public class VillageGameTests {
         helper.runAtTickTime(5900, () -> {
             Kit.log("t53 the scout's day (not home): " + String.join(" | ", trail) + "; " + (scout[0] == null ? "" : scout[0].debugLine()));
             helper.fail("the scout never came home");
+        });
+    }
+
+    /**
+     * The town's works are done by hand: a street is not laid until a folk from the village has
+     * walked to it, and then it is laid there, in its hands.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 2600, batch = "t54_town_hands")
+    public static void t54_town_hands(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        com.jrpetty.mcassistant.entity.TownJobs.instantForTests(false);
+        Kit.hold(level, 38000, 12000, 48);
+        Kit.prepare(level, 38000, 12000, 48);
+        level.setDayTime(2000);
+        BlockPos heart = Kit.surface(level, 38000, 12000);
+        VillageFolkSpawnerBlock.raiseParty(level, heart, 0.0F, 8);
+        Villages.Village v = Villages.nearest(level, heart, Villages.VILLAGE_RANGE);
+        helper.assertTrue(v != null, "a village");
+        java.util.function.IntSupplier paths = () -> {
+            int n = 0;
+            for (int dx = -40; dx <= 40; dx++) {
+                for (int dz = -40; dz <= 40; dz++) {
+                    int x = heart.getX() + dx, z = heart.getZ() + dz;
+                    int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+                    if (level.getBlockState(new BlockPos(x, y - 1, z)).is(Blocks.DIRT_PATH)) n++;
+                }
+            }
+            return n;
+        };
+        final int[] counts = { 0, 0 };
+        java.util.Set<String> seen = new java.util.TreeSet<>();
+        helper.runAtTickTime(10, () -> {
+            // Everybody out at the edge of town, thirty blocks from the first street to be laid.
+            BlockPos edge = Kit.surface(level, heart.getX(), heart.getZ() - 30);
+            for (AssistantEntity a : Villages.folkOf(v.id())) a.moveTo(edge.getX() + 0.5, edge.getY(), edge.getZ() + 0.5, 0.0F, 0.0F);
+            counts[0] = paths.getAsInt();
+            com.jrpetty.mcassistant.entity.TownWork.tick(level, v);
+            counts[1] = paths.getAsInt();
+            Kit.log("t54 at the call: paths " + counts[0] + " -> " + counts[1]);
+        });
+        helper.onEachTick(() -> {
+            if (helper.getTick() % 20 != 0) return;
+            for (AssistantEntity a : Villages.folkOf(v.id())) {
+                if (a instanceof VillageFolkEntity f) {
+                    String doing = com.jrpetty.mcassistant.entity.TownJobs.doing(f);
+                    if (doing != null) seen.add(f.displayNameCap() + ": " + doing);
+                }
+            }
+        });
+        helper.runAtTickTime(2400, () -> {
+            int after = paths.getAsInt();
+            Kit.log("t54 by hand: paths " + counts[1] + " -> " + after + "; the hands at it: " + seen);
+            com.jrpetty.mcassistant.entity.TownJobs.instantForTests(true);
+            helper.assertTrue(counts[1] == counts[0], "nothing laid while the hands are thirty blocks off: " + counts[0] + " -> " + counts[1]);
+            helper.assertTrue(after > counts[1], "and the streets laid once a hand got there: " + after);
+            helper.assertTrue(!seen.isEmpty(), "by somebody from the village");
+            helper.succeed();
         });
     }
 }

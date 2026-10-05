@@ -37,6 +37,8 @@ public class VillageBoardBlockEntity extends BlockEntity {
 
     @Nullable private UUID village;
     private List<String> lines = new ArrayList<>();
+    /** Put up by a village at its founding (not made by a player): taking it down gives nothing back. */
+    private boolean raised;
 
     public VillageBoardBlockEntity(BlockPos pos, BlockState state) {
         super(McAssistantMod.VILLAGE_BOARD_BE.get(), pos, state);
@@ -44,6 +46,15 @@ public class VillageBoardBlockEntity extends BlockEntity {
 
     public List<String> lines() {
         return lines;
+    }
+
+    public boolean raised() {
+        return raised;
+    }
+
+    public void markRaised() {
+        raised = true;
+        setChanged();
     }
 
     @Nullable
@@ -97,6 +108,7 @@ public class VillageBoardBlockEntity extends BlockEntity {
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         village = tag.hasUUID("Village") ? tag.getUUID("Village") : null;
+        raised = tag.getBoolean("Raised");
         List<String> read = new ArrayList<>();
         ListTag list = tag.getList("Lines", Tag.TAG_STRING);
         for (int i = 0; i < list.size(); i++) read.add(list.getString(i));
@@ -105,6 +117,7 @@ public class VillageBoardBlockEntity extends BlockEntity {
 
     private void write(CompoundTag tag) {
         if (village != null) tag.putUUID("Village", village);
+        if (raised) tag.putBoolean("Raised", true);
         ListTag list = new ListTag();
         for (String l : lines) list.add(StringTag.valueOf(l));
         tag.put("Lines", list);

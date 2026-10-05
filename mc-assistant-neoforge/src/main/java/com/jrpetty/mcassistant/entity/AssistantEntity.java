@@ -1514,6 +1514,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** A scout's day (Scouts): VillageFolkEntity does it. */
     protected boolean scoutWork() { return false; }
 
+    /** Is this animal one of its village's own herd (penned, led, brought home), not game? (VillageFolkEntity) */
+    public boolean spareTheHerd(net.minecraft.world.entity.animal.Animal a) { return false; }
+
+    /** A village carrier's round with no wand-set route (VillageFolkEntity). */
+    protected boolean haulerRound() { return false; }
+
     /** A carrier's pickup has nothing left worth carrying (VillageFolkEntity chooses the next). */
     protected void routeSpent() { }
 
@@ -2491,6 +2497,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** A smelter with no ore to run: make charcoal if that is what is wanted. */
     protected boolean burnCharcoal() { return false; }
 
+    /** Is its village short of coal (so logs burn before coal, and charcoal is made)? (VillageFolkEntity) */
+    public boolean savingCoal() { return false; }
+
+    /** Is its village nearly out of glass and bottles? (VillageFolkEntity) */
+    protected boolean wantsGlass() { return false; }
+
     /** An evening hour off shift that is not spent in bed; true while it lasts. */
     protected boolean eveningSocial() { return false; }
 
@@ -3455,7 +3467,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case HAUL -> s.get(DataComponents.FOOD) != null ? 8 : 0; // rations for the road
             case MINE -> s.is(Items.TORCH) ? 16 : (s.is(Items.COBBLESTONE) ? (isSettler() ? 32 : 16)
                 : (s.get(DataComponents.FOOD) != null ? 8 : 0)); // torches, bridging blocks, rations
-            case FISH -> s.is(Items.FISHING_ROD) ? 1 : (s.get(DataComponents.FOOD) != null ? 8 : 0);
+            case FISH -> s.is(Items.FISHING_ROD) ? 1
+                // The makings of a rod, while it has none: kept, not banked back before it is made.
+                : countCarried(x -> x.is(Items.FISHING_ROD)) == 0 && (s.is(Items.STRING) || s.is(ItemTags.PLANKS)) ? (s.is(Items.STRING) ? 2 : 1)
+                : (s.get(DataComponents.FOOD) != null ? 8 : 0);
             case STORE -> s.get(DataComponents.FOOD) != null ? 8 : 0;
             case SMITH, TAILOR, BEEKEEP, BREW, ENCHANT, COOK, SHOP -> s.get(DataComponents.FOOD) != null ? 8 : 0;
             case SCOUT -> s.is(Items.TORCH) ? 4 : (s.get(DataComponents.FOOD) != null ? 8 : 0);  // the road's rations, a torch to mark it
@@ -5727,6 +5742,14 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      *  when there is any choice at all. */
     private net.minecraft.core.Direction faceTheRock() {
         if (chosenFacing != null) return chosenFacing;
+        // A village's miner keeps one staircase to a plot: every run went down a fresh one (the
+        // last way was marked down), and most of each run was fifty steps of iron-poor rock
+        // before the seam. Same stairs every time; the gallery at the bottom turns instead.
+        long plot = workZone != null ? workZone.center().asLong() : Long.MIN_VALUE;
+        if (isSettler() && workZone != null && plotFacingZone == plot && plotFacing >= 0) {
+            chosenFacing = net.minecraft.core.Direction.from2DDataValue(plotFacing);
+            return chosenFacing;
+        }
         net.minecraft.core.Direction best = net.minecraft.core.Direction.NORTH;
         int bestScore = Integer.MIN_VALUE;
         BlockPos feet = feetPos();
@@ -5745,8 +5768,17 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         }
         chosenFacing = best;
         lastMineFacing = best.get2DDataValue();
+        if (isSettler() && workZone != null) {
+            plotFacing = best.get2DDataValue();
+            plotFacingZone = plot;
+        }
         return best;
     }
+
+    /** The staircase's way down on this plot (village miners keep one), and the runs down it. */
+    private int plotFacing = -1;
+    private long plotFacingZone = Long.MIN_VALUE;
+    public int mineRuns;
 
     private boolean decideStation() {
         chosenFacing = null;
@@ -6000,13 +6032,16 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 // What the furnaces have made comes out first, every round: it used to come out only
                 // while a smelt was running, and sat there for good once the ore ran out.
                 emptyFurnaceOutputs();
+                // A village short of coal: charcoal first, ore or no ore (it checks once a minute).
+                if (savingCoal() && burnCharcoal()) return true;
                 if (countMatching(SMELTABLE_ORE) == 0) {
                     scoopFromChests(SMELTABLE_ORE, 64, chestRange());
                 }
                 // Sand it has dug (Links.sand) fired into glass: the village's bottles and windows.
-                // Only once the ore is done: iron before glass.
+                // Iron before glass — unless the village has next to no glass at all (no bottles for
+                // the brewer, the beekeeper or the café).
                 int sand = countMatching(s -> s.is(Items.SAND) || s.is(Items.RED_SAND));
-                if (sand > 0 && countMatching(SMELTABLE_ORE) == 0 && (countMatching(s -> s.is(Items.COAL) || s.is(Items.CHARCOAL)) > 0
+                if (sand > 0 && (countMatching(SMELTABLE_ORE) == 0 || wantsGlass()) && (countMatching(s -> s.is(Items.COAL) || s.is(Items.CHARCOAL)) > 0
                         || countMatching(s -> s.is(ItemTags.PLANKS) || s.is(ItemTags.LOGS)) > 0)) {
                     enqueue(Job.smelt("sand", sand));
                     return true;
@@ -6091,6 +6126,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 }
             }
             case HAUL -> {
+                // A village's carrier with no wand-set route carries for the trades instead.
+                if (usesVillageStores() && (preferredChest == null || deliveryChest == null)) return haulerRound();
                 // Two chests, one route: the wand links the pickup, then the
                 // delivery, and the hauler ferries everything between them.
                 BlockPos from = preferredChest;
@@ -7049,6 +7086,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 labelled = true;
                 if (!frame.getItem().is(main)) {
                     frame.setItem(new ItemStack(main));
+                    fixed(frame);                   // a label, not a free item: it cannot be taken out
                     swing(net.minecraft.world.InteractionHand.MAIN_HAND);
                 }
                 break;
@@ -7063,6 +7101,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 if (removeMatching(t -> t.is(Items.ITEM_FRAME), 1) != 1) return;
                 level().addFreshEntity(frame);
                 frame.setItem(new ItemStack(main));
+                fixed(frame);                       // a label, not a free item: it cannot be taken out
                 placeSound(f.pos());
                 swing(net.minecraft.world.InteractionHand.MAIN_HAND);
                 sayRoutine("Labelled the chest — it's mostly "
@@ -8742,6 +8781,14 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     /** Drop the backpack AND worn gear on the ground — used on death and on
      *  dismiss, so nothing the player gave it is ever lost. */
+    /** A label's frame made fast, as a map-maker's are: the sample in it is for reading, not for taking. */
+    private static void fixed(net.minecraft.world.entity.decoration.ItemFrame frame) {
+        net.minecraft.nbt.CompoundTag t = new net.minecraft.nbt.CompoundTag();
+        frame.saveWithoutId(t);
+        t.putBoolean("Fixed", true);
+        frame.load(t);
+    }
+
     public void dropEverything() {
         for (int i = 0; i < inventory.size(); i++) {
             ItemStack s = inventory.get(i);
@@ -8753,7 +8800,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         for (EquipmentSlot slot : EquipmentSlot.values()) {
             ItemStack s = this.getItemBySlot(slot);
             if (!s.isEmpty()) {
-                this.spawnAtLocation(s);
+                if (!Leisure.isProp(s)) this.spawnAtLocation(s);      // a pastime's prop is only for show
                 this.setItemSlot(slot, ItemStack.EMPTY);
             }
         }

@@ -56,8 +56,11 @@ public final class TownWork {
         int budget = age.ordinal() >= Villages.Age.STONE.ordinal()
             && Market.stock(level, id, s -> s.is(net.minecraft.world.item.Items.COBBLESTONE)) > 512 ? 64 : 24;
         for (int looked = 0; looked < 400 && done < budget; looked++) {
-            int[] c = cells.get(Math.floorMod(cursor++, cells.size()));
-            if (work(level, v, c[0], c[1], age)) done++;
+            int[] c = cells.get(Math.floorMod(cursor, cells.size()));
+            int r = work(level, v, c[0], c[1], age);
+            if (r < 0) break;                       // a hand is on its way to it: the work waits there
+            cursor++;
+            if (r > 0) done++;
         }
         CURSOR.put(id, cursor);
     }
@@ -77,16 +80,16 @@ public final class TownWork {
         });
     }
 
-    /** Wear, pave or light one cell. Returns true if anything changed. */
-    private static boolean work(ServerLevel level, Villages.Village v, int dx, int dz, Villages.Age age) {
+    /** Wear, pave or light one cell, by hand (TownJobs). 1 if it changed, 0 if nothing to do, -1 if it waits for a hand. */
+    private static int work(ServerLevel level, Villages.Village v, int dx, int dz, Villages.Age age) {
         int x = v.centre().getX() + dx, z = v.centre().getZ() + dz;
-        if (!level.hasChunk(x >> 4, z >> 4)) return false;
+        if (!level.hasChunk(x >> 4, z >> 4)) return 0;
         int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
         BlockPos top = new BlockPos(x, y - 1, z);
         BlockState ground = level.getBlockState(top);
         BlockState above = level.getBlockState(top.above());
         // Not up a hill or down a hole from the heart: those are somebody's to sort out by hand.
-        if (Math.abs(top.getY() + 1 - v.centre().getY()) > 10) return false;
+        if (Math.abs(top.getY() + 1 - v.centre().getY()) > 10) return 0;
         boolean square = TownPlan.isSquare(dx, dz);
         boolean avenue = !square && (Math.abs(dx) <= TownPlan.AVENUE || Math.abs(dz) <= TownPlan.AVENUE
             || ring(dx, dz));
@@ -96,16 +99,18 @@ public final class TownWork {
         if (ironAge && avenue && lampSpot(dx, dz) && above.isAir() && ground.isSolid()
                 && !level.getBlockState(top.above(2)).isSolid()) {
             // The light first: no light, no post (and no logs spent on one).
+            if (Market.stock(level, v.id(), s -> s.is(Items.LANTERN) || s.is(Items.TORCH)) == 0) return 0;
+            if (!TownJobs.atWork(level, v, "streets", top.above(), "putting up a lamp post")) return -1;
             boolean lantern = take(level, v, s -> s.is(Items.LANTERN), 1);
-            if (!lantern && !take(level, v, s -> s.is(Items.TORCH), 1)) return false;
+            if (!lantern && !take(level, v, s -> s.is(Items.TORCH), 1)) return 0;
             if (!take(level, v, s -> s.is(net.minecraft.tags.ItemTags.LOGS), 2)) {
                 give(level, v, new ItemStack(lantern ? Items.LANTERN : Items.TORCH));
-                return false;
+                return 0;
             }
             level.setBlockAndUpdate(top.above(), Blocks.SPRUCE_FENCE.defaultBlockState());
             level.setBlockAndUpdate(top.above(2), Blocks.SPRUCE_FENCE.defaultBlockState());
             level.setBlockAndUpdate(top.above(3), lantern ? Blocks.LANTERN.defaultBlockState() : Blocks.TORCH.defaultBlockState());
-            return true;
+            return 1;
         }
         // Before the Iron Age's lamp posts: a torch on a fence post at the same spots, from the
         // first days, so the streets are not dark enough for monsters to come up in the middle
@@ -113,26 +118,28 @@ public final class TownWork {
         // here from the stores' coal and a stick's worth of wood if there is none put by.
         if (!ironAge && avenue && lampSpot(dx, dz) && above.isAir() && ground.isSolid()
                 && !level.getBlockState(top.above(2)).isSolid()) {
+            if (Market.stock(level, v.id(), s -> s.is(Items.TORCH) || s.is(Items.COAL) || s.is(Items.CHARCOAL)) == 0) return 0;
+            if (!TownJobs.atWork(level, v, "streets", top.above(), "putting up a street light")) return -1;
             if (!take(level, v, s -> s.is(Items.TORCH), 1)) {
-                if (!take(level, v, s -> s.is(Items.COAL) || s.is(Items.CHARCOAL), 1)) return false;
+                if (!take(level, v, s -> s.is(Items.COAL) || s.is(Items.CHARCOAL), 1)) return 0;
                 if (!take(level, v, s -> s.is(net.minecraft.tags.ItemTags.PLANKS), 1)
                         && !take(level, v, s -> s.is(net.minecraft.tags.ItemTags.LOGS), 1)) {
                     give(level, v, new ItemStack(Items.COAL));
-                    return false;
+                    return 0;
                 }
                 give(level, v, new ItemStack(Items.TORCH, 3));               // four made, one used
             }
             if (!take(level, v, s -> s.is(net.minecraft.tags.ItemTags.PLANKS), 1)
                     && !take(level, v, s -> s.is(net.minecraft.tags.ItemTags.LOGS), 1)) {
                 give(level, v, new ItemStack(Items.TORCH));
-                return false;
+                return 0;
             }
             level.setBlockAndUpdate(top.above(), Blocks.OAK_FENCE.defaultBlockState());
             level.setBlockAndUpdate(top.above(2), Blocks.TORCH.defaultBlockState());
-            return true;
+            return 1;
         }
-        if (!earth(ground) && !(ground.is(Blocks.DIRT_PATH) && (square ? stoneAge : avenue && ironAge))) return false;
-        if (!above.isAir() && !(above.canBeReplaced() && above.getFluidState().isEmpty())) return false;
+        if (!earth(ground) && !(ground.is(Blocks.DIRT_PATH) && (square ? stoneAge : avenue && ironAge))) return 0;
+        if (!above.isAir() && !(above.canBeReplaced() && above.getFluidState().isEmpty())) return 0;
         BlockState paving = null;
         if (square && stoneAge) {
             Predicate<ItemStack> stone = ironAge ? s -> s.is(Items.STONE_BRICKS) : s -> s.is(Items.COBBLESTONE);
@@ -142,12 +149,16 @@ public final class TownWork {
             if (take(level, v, s -> s.is(Items.COBBLESTONE), 1)) paving = Blocks.COBBLESTONE.defaultBlockState();
         }
         if (paving == null) {
-            if (ground.is(Blocks.DIRT_PATH)) return false;
+            if (ground.is(Blocks.DIRT_PATH)) return 0;
             paving = Blocks.DIRT_PATH.defaultBlockState();
+        }
+        if (!TownJobs.atWork(level, v, "streets", top, paving.is(Blocks.DIRT_PATH) ? "laying the streets" : "paving the streets")) {
+            if (!paving.is(Blocks.DIRT_PATH)) give(level, v, new ItemStack(paving.getBlock().asItem()));   // the stone back, till a hand is there
+            return -1;
         }
         if (!above.isAir()) level.removeBlock(top.above(), false);   // the grass and flowers in the way
         level.setBlockAndUpdate(top, paving);
-        return true;
+        return 1;
     }
 
     /**
@@ -170,10 +181,22 @@ public final class TownWork {
                 if (day - Long.parseLong(last) < 3) return false;              // a new one takes a few days
             } catch (NumberFormatException ignored) { }
         }
-        net.minecraft.world.entity.animal.IronGolem g = net.minecraft.world.entity.EntityType.IRON_GOLEM.create(level);
-        if (g == null) return false;
         BlockPos at = Trades.floorSpot(level, c, 8);
         if (at == null) return false;
+        // A golem is made, not conjured: four blocks of iron and a carved pumpkin out of the stores
+        // (thirty-six ingots will do for the iron, a plain pumpkin carved on the spot for the head).
+        boolean blocks = Market.stock(level, id, s -> s.is(Items.IRON_BLOCK)) >= 4;
+        boolean ingots = Market.stock(level, id, s -> s.is(Items.IRON_INGOT)) >= 36 + 16;   // and some left over for the age
+        boolean head = Market.stock(level, id, s -> s.is(Items.CARVED_PUMPKIN) || s.is(Items.PUMPKIN)) >= 1;
+        if (!head || !blocks && !ingots) return false;
+        if (!TownJobs.atWork(level, v, "golem", at, "building an iron golem")) return false;
+        if (blocks ? !take(level, v, s -> s.is(Items.IRON_BLOCK), 4) : !take(level, v, s -> s.is(Items.IRON_INGOT), 36)) return false;
+        if (!take(level, v, s -> s.is(Items.CARVED_PUMPKIN) || s.is(Items.PUMPKIN), 1)) {
+            give(level, v, blocks ? new ItemStack(Items.IRON_BLOCK, 4) : new ItemStack(Items.IRON_INGOT, 36));
+            return false;
+        }
+        net.minecraft.world.entity.animal.IronGolem g = net.minecraft.world.entity.EntityType.IRON_GOLEM.create(level);
+        if (g == null) return false;
         g.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, level.getRandom().nextFloat() * 360.0F, 0.0F);
         g.setPersistenceRequired();
         if (!level.addFreshEntity(g)) return false;

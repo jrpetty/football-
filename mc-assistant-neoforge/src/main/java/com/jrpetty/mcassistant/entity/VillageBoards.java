@@ -154,6 +154,7 @@ public final class VillageBoards {
             }
         }
         VillageBoardBlock.raise(level, best, bestFacing, v.id());
+        if (level.getBlockEntity(best) instanceof com.jrpetty.mcassistant.block.VillageBoardBlockEntity be) be.markRaised();
         known(level, best, v.id());
         LOG.info("[MCA-BOARD] {}: the board is up at {}, facing {}", Villages.name(v.id()), best.toShortString(), bestFacing);
         return best;
@@ -274,6 +275,8 @@ public final class VillageBoards {
         int toMarket = Market.daysToMarket(id, day);
         out.add("RN|Treasury: " + com.jrpetty.mcassistant.village.Ledger.coins(id) + " coins. Market "
             + (toMarket == 0 ? "today!" : toMarket == 1 ? "tomorrow." : "in " + toMarket + " days."));
+        String open = Cafe.openLine(level, id);
+        if (open != null) out.add("RN|Open: " + open + ".");
         int content = Contentment.score(id);
         out.add((content >= 60 ? "RG" : content >= 35 ? "RN" : "RW") + "|Contentment: " + Contentment.line(level, id) + ".");
         String alarm = Raids.why(id);

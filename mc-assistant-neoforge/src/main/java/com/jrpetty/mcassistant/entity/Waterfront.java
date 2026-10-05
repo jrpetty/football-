@@ -68,7 +68,16 @@ public final class Waterfront {
                     && com.jrpetty.mcassistant.AssistantConfig.villageReshapeLand()) {
                 // Not before the Stone Age: channels cut in the first days ran into the miners'
                 // shafts beside a dry field and flooded them. A dry field grows slower till then.
-                irrigate(level, id, c, f.workZone().radius(), 12);
+                // Cut by the field's own farmer, there in it, with a bucket of water carried from the
+                // river (the bucket comes back empty): no farmer at its field, no bucket, no channel.
+                boolean bucket = f.countMatching(s -> s.is(net.minecraft.world.item.Items.WATER_BUCKET) || s.is(net.minecraft.world.item.Items.BUCKET)) > 0
+                    || Market.stock(level, id, s -> s.is(net.minecraft.world.item.Items.WATER_BUCKET) || s.is(net.minecraft.world.item.Items.BUCKET)) > 0;
+                if (!bucket || f.blockPosition().distSqr(c) > (double) (f.workZone().radius() + 6) * (f.workZone().radius() + 6)) continue;
+                int cut = irrigate(level, id, c, f.workZone().radius(), 12);
+                if (cut > 0) {
+                    f.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+                    f.note(AssistantEntity.Deed.BLOCKS_BUILT, cut);
+                }
             }
         }
     }
@@ -147,6 +156,9 @@ public final class Waterfront {
      */
     static int build(ServerLevel level, @Nullable Villages.Village v, Dock d, boolean free) {
         if (!free && v == null) return 0;
+        // The jetty is laid by the fishers (or whoever can be spared), there at the water.
+        if (!free && Market.stock(level, v.id(), s -> s.is(net.minecraft.tags.ItemTags.PLANKS) || s.is(net.minecraft.tags.ItemTags.LOGS)) == 0) return 0;
+        if (!free && !TownJobs.atWork(level, v, "waterfront", d.start(), "laying the jetty", AssistantEntity.StationTask.FISH)) return 0;
         int n = 0;
         Direction side = d.out().getClockWise();
         for (int k = 0; k < d.length(); k++) {
@@ -213,6 +225,7 @@ public final class Waterfront {
             if (spot != null) break;
         }
         if (spot == null) return false;
+        if (!free && !TownJobs.atWork(level, v, "waterfront", mid, "putting a boat in the water", AssistantEntity.StationTask.FISH)) return false;
         if (!free && !Crafts.take(level, v, st -> st.is(net.minecraft.tags.ItemTags.BOATS), 1)
                 && !Crafts.usePlanks(level, v, 5)) return false;
         Boat boat = EntityType.BOAT.create(level);

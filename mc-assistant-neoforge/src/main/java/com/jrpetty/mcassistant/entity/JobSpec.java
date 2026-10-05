@@ -129,19 +129,26 @@ public final class JobSpec {
                 if (!furnaceIn(stores)) gaps.add("a furnace in the zone");
                 boolean fuel = held(a, stores, AssistantEntity.SMELT_FUEL);
                 if (!fuel) gaps.add("fuel (coal or logs)");
-                if (!held(a, stores, AssistantEntity.SMELTABLE_ORE)) {
-                    gaps.add(a.usesVillageStores() ? "raw ore in the stores" : "raw ore in the input chest");
+                // A village's smelter with no ore still has work: the furnaces to empty, charcoal
+                // for a village short of coal, sand to fire into glass, meat to cook. So no ore is
+                // not a gap for it (it was, and none of that work was ever reached).
+                if (!held(a, stores, AssistantEntity.SMELTABLE_ORE) && !a.usesVillageStores()) {
+                    gaps.add("raw ore in the input chest");
                 }
                 needChest(a, stores, gaps, 1);
             }
             case HAUL -> {
                 // The route is two wand-linked chests, nothing else: no zone,
                 // no home, no minimum distance. If both ends stand, it can run.
-                if (a.preferredChest() == null) {
-                    gaps.add("a pickup chest (wand-click it)");
-                }
-                if (a.deliveryChest() == null) {
-                    gaps.add("a delivery chest (wand-click it second)");
+                // A village's carrier has no wand-set route: it carries for the trades
+                // (VillageFolkEntity.haulerRound), so a missing route is no gap for it.
+                if (!a.usesVillageStores()) {
+                    if (a.preferredChest() == null) {
+                        gaps.add("a pickup chest (wand-click it)");
+                    }
+                    if (a.deliveryChest() == null) {
+                        gaps.add("a delivery chest (wand-click it second)");
+                    }
                 }
             }
             case FISH -> {

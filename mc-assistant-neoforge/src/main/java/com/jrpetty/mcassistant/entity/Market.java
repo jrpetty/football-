@@ -291,7 +291,7 @@ public final class Market {
         if (Ledger.paidOn(id) >= day) return;
         Ledger.paid(id, day);
         mint(level, v);
-        trade(v);
+        trade(level, v);
         payWages(level, v);
         Villages.checkRank(level, v, day);
         News.morning(level, v, day);
@@ -357,14 +357,34 @@ public final class Market {
         return took * COINS_PER_GOLD;
     }
 
-    /** Passing traders buy a little of what the village makes, every day: coin enough that a
-     *  village's treasury never runs quite dry, so it can always pay a player for its work. */
-    public static int trade(Villages.Village v) {
+    /**
+     * Passing traders buy a little of what the village makes, every day, while its treasury is
+     * low: a lot or two of whatever it has plenty of, at the going price — goods out, coin in.
+     * (They used to leave the coin and take nothing: coin out of thin air.) Returns the coin.
+     */
+    public static int trade(ServerLevel level, Villages.Village v) {
         UUID id = v.id();
         int head = Math.max(1, Villages.headcount(id));
         if (Ledger.coins(id) >= 10 * head) return 0;
-        int in = Math.max(2, head / 3) + Villages.ageOf(id).ordinal();
+        int want = Math.max(2, head / 3) + Villages.ageOf(id).ordinal();
+        int in = 0;
+        List<String> sold = new ArrayList<>();
+        for (Good g : GOODS) {
+            if (in >= want) break;
+            if (g.need() == Villages.Task.NONE && g.value() < 0.3) continue;
+            int have = stock(level, id, g.what());
+            int plenty = g.bundle() * 8;
+            if (have < plenty + g.bundle() * 2) continue;
+            int lots = Math.min(2, (have - plenty) / g.bundle());
+            int n = lots * g.bundle();
+            int paid = (int) Math.floor(n * each(g, have) * 0.6);
+            if (paid < 1 || !TownWork.take(level, v, g.what(), n)) continue;
+            in += paid;
+            sold.add(n + " " + g.name().toLowerCase());
+        }
+        if (in <= 0) return 0;
         Ledger.addCoins(id, in);
+        Villages.tell(id, level.getDayTime() / 24000L, "passing traders bought " + String.join(", ", sold) + " for " + in + " coin");
         return in;
     }
 

@@ -178,6 +178,7 @@ public class HuntGoal extends Goal {
         for (Animal a : assistant.level().getEntitiesOfClass(
                 Animal.class, assistant.getBoundingBox().inflate(24.0),
                 an -> an.isAlive() && !an.isBaby() && !an.hasCustomName())) {
+            if (assistant.spareTheHerd(a)) continue;               // the village's own beasts are not for the pot
             if (wanted != null) {
                 if (!wanted.isInstance(a)) continue;
             } else {

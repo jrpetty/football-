@@ -347,6 +347,76 @@ public final class Cafe {
         return 1;
     }
 
+    /** For the board: what is open, and what it has — "the café (cider, bread...), the shop (6 things)". */
+    @Nullable
+    public static String openLine(ServerLevel level, UUID village) {
+        List<String> parts = new ArrayList<>();
+        if (Villages.builtAt(village, "cafe") != null) {
+            if (open(village, "cafe")) {
+                List<String> menu = new ArrayList<>();
+                for (ItemStack s : menuGoods(level, village)) {
+                    menu.add(s.getHoverName().getString().toLowerCase(java.util.Locale.ROOT));
+                    if (menu.size() >= 3) break;
+                }
+                parts.add("the café" + (menu.isEmpty() ? " (nothing ready yet)" : " (" + String.join(", ", menu) + ")"));
+            } else {
+                parts.add("the café wants a cook");
+            }
+        }
+        if (Villages.builtAt(village, "shop") != null) {
+            parts.add(open(village, "shop") ? "the shop (" + shopGoods(level, village).size() + " things for sale)" : "the shop wants a keeper");
+        }
+        if (Tavern.of(village) != null) parts.add("the tavern of an evening");
+        return parts.isEmpty() ? null : String.join("; ", parts);
+    }
+
+    // ------------------------------------------------------------------ folk at the shop
+
+    /** The tool a trade works with, as the shop would sell it. */
+    @Nullable
+    static Predicate<ItemStack> toolFor(AssistantEntity.StationTask t) {
+        return switch (t) {
+            case MINE -> s -> s.getItem() instanceof net.minecraft.world.item.PickaxeItem;
+            case WOOD -> s -> s.getItem() instanceof net.minecraft.world.item.AxeItem;
+            case GUARD -> s -> s.getItem() instanceof net.minecraft.world.item.SwordItem;
+            case RANCH -> s -> s.is(Items.SHEARS);
+            case FISH -> s -> s.is(Items.FISHING_ROD);
+            case FARM -> s -> s.getItem() instanceof net.minecraft.world.item.HoeItem;
+            default -> null;
+        };
+    }
+
+    /**
+     * A folk at the shop, buying out of its own savings: the tool its trade wants if it has
+     * none, or — doing well — something nice (a potion, a book, a banner, a rug). The coin goes
+     * into the treasury. Returns what it bought, or null.
+     */
+    @Nullable
+    public static String folkShops(ServerLevel level, Villages.Village v, VillageFolkEntity f, boolean forWork) {
+        if (!open(v.id(), "shop")) return null;
+        Predicate<ItemStack> want;
+        if (forWork) {
+            want = toolFor(f.stationTask());
+            if (want == null) return null;
+        } else {
+            want = s -> shopWorthy(s) && !s.isDamageableItem();
+        }
+        List<ItemStack> goods = fromStores(level, v.id(), want, false);
+        if (goods.isEmpty()) return null;
+        ItemStack pick = forWork ? goods.get(0) : goods.get(f.getRandom().nextInt(goods.size()));
+        Market.Good g = Market.goodFor(pick);
+        int price = g == null ? 3 : Market.sellPrice(g, Market.stock(level, v.id(), s -> ItemStack.isSameItemSameComponents(s, pick)), false);
+        price = Math.max(1, pick.isEnchanted() ? price * 3 : price);
+        if (f.purse() < price) return null;
+        if (!TownWork.take(level, v, s -> ItemStack.isSameItemSameComponents(s, pick), 1)) return null;
+        f.spend(price);
+        Ledger.addCoins(v.id(), price);
+        ItemStack bought = pick.copyWithCount(1);
+        ItemStack left = f.insertItem(bought);
+        if (!left.isEmpty()) Crafts.store(level, v, left);
+        return bought.getHoverName().getString().toLowerCase(java.util.Locale.ROOT) + " for " + price + (price == 1 ? " coin" : " coins");
+    }
+
     // ------------------------------------------------------------------ folk at the café
 
     /**

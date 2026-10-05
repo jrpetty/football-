@@ -514,9 +514,19 @@ public final class Quests {
         UUID id = v.id();
         long day = level.getDayTime() / 24000L;
         int fromTreasury = Ledger.takeCoins(id, q.reward);
-        int paid = Math.max(fromTreasury, Math.min(q.reward, fromTreasury + Math.max(2, q.reward / 2)));
-        ItemStack coins = new ItemStack(McAssistantMod.VILLAGE_COIN.get(), paid);
-        if (!p.getInventory().add(coins)) p.drop(coins, false);
+        int paid = fromTreasury;
+        if (paid < q.reward) {
+            // The treasury short: the elder makes up what it can out of its own purse.
+            java.util.UUID elder = Villages.elder(id);
+            if (elder != null && level.getEntity(elder) instanceof VillageFolkEntity e) {
+                int own = Math.min(e.purse(), Math.min(q.reward - paid, Math.max(2, q.reward / 2)));
+                if (own > 0) { e.spend(own); paid += own; }
+            }
+        }
+        if (paid > 0) {
+            ItemStack coins = new ItemStack(McAssistantMod.VILLAGE_COIN.get(), paid);
+            if (!p.getInventory().add(coins)) p.drop(coins, false);
+        }
         p.giveExperiencePoints(5 + q.count / 2);
         String name = p.getName().getString();
         for (AssistantEntity a : Villages.folkOf(id)) {

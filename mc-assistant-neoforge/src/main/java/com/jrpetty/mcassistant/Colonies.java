@@ -176,6 +176,7 @@ public final class Colonies {
         // The new village's founding stores and the beds of its camp are the mother's to give, not
         // something from nothing: what she could spare goes, and only that.
         if (founding) outfit(level, mother, ground);
+        if (founding) packs(level, mother, ground);
         Villages.noteColony(id);
         long day = level.getDayTime() / 24000L;
         Villages.Village colony = Villages.nearest(level, ground, 40);
@@ -239,6 +240,31 @@ public final class Colonies {
             BlockPos head = foot.relative(st.getValue(net.minecraft.world.level.block.BedBlock.FACING));
             level.removeBlock(head, false);
             level.removeBlock(foot, false);
+        }
+    }
+
+    /**
+     * The settlers' packs squared with the mother's stores, as the founding chest is: each new
+     * settler's tools, food and seed taken out of her stores in place of a kit out of nowhere, as
+     * much as she has; what she has not, it goes without (and makes for itself).
+     */
+    private static void packs(ServerLevel level, Villages.Village mother, BlockPos at) {
+        Villages.Village colony = Villages.nearest(level, at, 40);
+        if (colony == null || colony.id().equals(mother.id())) return;
+        for (com.jrpetty.mcassistant.entity.AssistantEntity a : Villages.folkOf(colony.id())) {
+            var inv = a.getInventoryItems();
+            List<ItemStack> wanted = new ArrayList<>();
+            for (int i = 0; i < inv.size(); i++) {
+                if (inv.get(i).isEmpty()) continue;
+                wanted.add(inv.get(i).copy());
+                inv.set(i, ItemStack.EMPTY);
+            }
+            for (ItemStack want : wanted) {
+                for (ItemStack got : take(level, mother, like(want), want.getCount(), false)) {
+                    ItemStack left = a.insertItem(got);
+                    if (!left.isEmpty()) net.minecraft.world.level.block.Block.popResource(level, a.blockPosition(), left);
+                }
+            }
         }
     }
 

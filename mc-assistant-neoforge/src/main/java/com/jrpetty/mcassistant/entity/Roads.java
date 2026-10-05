@@ -139,6 +139,10 @@ public final class Roads {
                 keepAwake(level, id, head);
                 break;
             }
+            // Laid by hand: a road crew from the mother village works at the road's head, and the
+            // road goes no faster than they do (TownJobs).
+            if (!inATown(level, p[0], p[1]) && !TownJobs.atWork(level, mother, "road/" + id, head,
+                    "laying the road to " + Villages.name(id), AssistantEntity.StationTask.HAUL)) break;
             // Paid for out of the mother's stores, a block at a time: when they run short the road
             // stops where it is, and goes on from there another visit, once there is more put by.
             int y = step(level, mother, colony, p[0], p[1], lastY, alongX, next);

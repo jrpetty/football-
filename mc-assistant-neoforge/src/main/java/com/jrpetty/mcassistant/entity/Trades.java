@@ -299,6 +299,22 @@ public final class Trades {
         return kit;
     }
 
+    /** What a pedlar asks for a piece of a kit, in the village's coin. */
+    static int priceOf(ItemStack s) {
+        int each;
+        if (s.is(Items.ENCHANTING_TABLE)) each = 36;
+        else if (s.is(Items.BREWING_STAND)) each = 18;
+        else if (s.is(Items.CHIPPED_ANVIL)) each = 20;
+        else if (isSwarm(s)) each = 10;
+        else if (s.is(Items.LOOM)) each = 3;
+        else if (s.is(Items.SHEARS)) each = 3;
+        else if (s.is(Items.LEAD)) return 2 * s.getCount();
+        else if (s.is(Items.BLAZE_POWDER)) return s.getCount();
+        else if (s.is(Items.LAPIS_LAZULI) || s.is(Items.NETHER_WART) || s.is(Items.SOUL_SAND)) return (s.getCount() + 1) / 2;
+        else return Math.max(1, s.getCount() / 3);
+        return each * s.getCount();
+    }
+
     /** The hive the beekeeper brings, with its swarm. */
     public static ItemStack swarm() {
         ItemStack hive = new ItemStack(Items.BEEHIVE);
@@ -328,9 +344,15 @@ public final class Trades {
         Long given = given(village, t);
         if (given != null && (Math.abs(today - given) < 3 || !lost(level, v, t))) return false;
         List<ItemStack> kit = kitFor(level, v, t);
+        // Bought, not conjured: a pedlar sells the village what it could not make, for coin out of
+        // its treasury (which only fills by selling what it makes). No coin, no kit — yet.
+        int price = 0;
+        for (ItemStack s : kit) price += priceOf(s);
+        if (!kit.isEmpty() && Ledger.coins(village) < price) return false;
         GIVEN.computeIfAbsent(village, k -> new ConcurrentHashMap<>()).put(t.name(), today);
         Ledger.note(village, "kit." + t.name(), Long.toString(today));
         if (kit.isEmpty()) return false;
+        Ledger.takeCoins(village, price);
         List<String> words = new ArrayList<>();
         for (ItemStack s : kit) {
             words.add(isSwarm(s) ? "a hive with a swarm in it" : Crafts.named(s));
@@ -339,8 +361,8 @@ public final class Trades {
         }
         String what = String.join(", ", words);
         f.brain("brought " + what);
-        Villages.tell(village, today, f.displayNameCap() + " brought " + what + " for the " + t.title.toLowerCase(Locale.ROOT)
-            + "'s work: things the village could not have made.");
+        Villages.tell(village, today, "a pedlar sold the village " + what + " for the " + t.title.toLowerCase(Locale.ROOT)
+            + "'s work, for " + price + " coin: things it could not have made");
         FolkTalk.speak(f, broughtLine(t));
         return true;
     }

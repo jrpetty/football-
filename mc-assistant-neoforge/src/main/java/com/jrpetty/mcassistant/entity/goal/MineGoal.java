@@ -111,6 +111,7 @@ public class MineGoal extends Goal {
     public void start() {
         this.job = assistant.peekJob();
         this.myGen = assistant.taskGen();
+        assistant.mineRuns++;
         this.dir = Direction.fromYRot(assistant.getYRot());
         if (assistant.peekJob() != null && assistant.peekJob().arg() != null) {
             Direction chosen = Direction.byName(assistant.peekJob().arg());
@@ -316,6 +317,14 @@ public class MineGoal extends Goal {
             if (cursor.getY() <= levelFloor) {
                 phase = Phase.TUNNEL;
                 tunnelSteps = 0;
+                // Down the same stairs as last time: the gallery turns, run by run, into fresh rock.
+                if (assistant.isSettler()) {
+                    dir = switch (assistant.mineRuns % 3) {
+                        case 1 -> dir.getClockWise();
+                        case 2 -> dir.getCounterClockWise();
+                        default -> dir;
+                    };
+                }
                 assistant.sayRoutine("At Y" + cursor.getY() + " — opening the gallery.");
                 return;
             }
@@ -335,7 +344,11 @@ public class MineGoal extends Goal {
             // Stop at the edge of the assigned patch as well as at length — a
             // stationed miner's gallery must not tunnel out from under a
             // neighbour's farm.
-            boolean leavingZone = !assistant.inZoneColumn(cursor.relative(dir));
+            // Deep under the patch there is no neighbour's field to undermine: a village's gallery runs
+            // its full length down there (it stopped at the plot's edge after a few blocks, and most
+            // runs came home with a staircase's worth of stone and no ore).
+            boolean deep = assistant.isSettler() && !stairPath.isEmpty() && cursor.getY() < stairPath.get(0).getY() - 12;
+            boolean leavingZone = !deep && !assistant.inZoneColumn(cursor.relative(dir));
             if (tunnelSteps >= TUNNEL_LENGTH || leavingZone) {
                 // Quarry: this floor is cut — drop four, aim back into the
                 // patch, and open the next one, down to the depth that was set.

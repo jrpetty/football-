@@ -287,10 +287,18 @@ public final class Errands {
                 wage = 5;
             }
             int paid = com.jrpetty.mcassistant.village.Ledger.takeCoins(home, wage);
-            if (paid < 2) paid = 2;                                          // the elder's own purse, at a pinch
-            ItemStack coins = new ItemStack(com.jrpetty.mcassistant.McAssistantMod.VILLAGE_COIN.get(), paid);
-            if (!p.getInventory().add(coins)) p.drop(coins, false);
-            said.append("Here's ").append(paid).append(" coins for your trouble. ");
+            if (paid < wage) {
+                // The treasury short: the rest out of its own purse, as far as that goes.
+                int own = Math.min(f.purse(), wage - paid);
+                if (own > 0) { f.spend(own); paid += own; }
+            }
+            if (paid > 0) {
+                ItemStack coins = new ItemStack(com.jrpetty.mcassistant.McAssistantMod.VILLAGE_COIN.get(), paid);
+                if (!p.getInventory().add(coins)) p.drop(coins, false);
+                said.append("Here's ").append(paid).append(" coins for your trouble").append(paid < wage ? " — all I could find" : "").append(". ");
+            } else {
+                said.append("I've no coin to give you, I'm sorry — the treasury's empty and so's my purse. ");
+            }
         }
         // A bed of its own at last: laid out at the camp, and slept in tonight.
         if ("bed".equals(me.errandItem()) && f.layGivenBed()) said.append("A bed of my own! I'll sleep well tonight. ");
@@ -304,8 +312,12 @@ public final class Errands {
         // And for a personal favour, something it made itself.
         if (kind.equals(WANT)) {
             ItemStack keepsake = keepsake(f);
-            said.append("And this — I made it myself. ");
-            if (!p.getInventory().add(keepsake)) p.drop(keepsake, false);
+            if (keepsake.isEmpty()) {
+                said.append("I wish I had something to give you, but I've nothing to make it of. ");
+            } else {
+                said.append("And this — I made it myself. ");
+                if (!p.getInventory().add(keepsake)) p.drop(keepsake, false);
+            }
             if ("diamond".equals(me.errandItem()) && !me.ambitionMet()) said.append("I can't believe I'm holding a diamond. ");
         }
         me.feelFor(p.getUUID(), you, kind.equals(SUPPLY) ? 20 : 15);
@@ -359,22 +371,44 @@ public final class Errands {
         Persona me = f.persona();
         ItemStack s;
         String what;
+        // Made of something it has, or something out of the stores: no keepsake out of thin air.
         switch (me.hobby()) {
-            case WHITTLING -> { s = new ItemStack(Items.BOWL); what = "carved bowl"; }
-            case GARDENING -> { s = new ItemStack(Items.POPPY); what = "pressed flower"; }
-            case FISHING -> { s = new ItemStack(Items.TRIPWIRE_HOOK); what = "lucky fishhook"; }
-            case READING -> { s = new ItemStack(Items.BOOK); what = "favourite book"; }
-            case STARGAZING -> { s = new ItemStack(Items.PAPER); what = "star chart"; }
-            case MUSIC -> { s = new ItemStack(Items.STICK); what = "tin whistle"; }
-            case CARDS -> { s = new ItemStack(Items.PAPER); what = "lucky card"; }
-            default -> { s = new ItemStack(Items.STICK); what = "walking stick"; }
+            case WHITTLING -> { s = made(f, x -> x.is(net.minecraft.tags.ItemTags.PLANKS), Items.BOWL); what = "carved bowl"; }
+            case GARDENING -> { s = one(f, x -> x.is(net.minecraft.tags.ItemTags.SMALL_FLOWERS)); what = "pressed flower"; }
+            case FISHING -> { s = one(f, x -> x.is(Items.COOKED_COD) || x.is(Items.COOKED_SALMON) || x.is(Items.COD) || x.is(Items.SALMON)); what = "smoked fish"; }
+            case READING -> { s = one(f, x -> x.is(Items.BOOK)); what = "favourite book"; }
+            case STARGAZING -> { s = one(f, x -> x.is(Items.PAPER)); what = "star chart"; }
+            case MUSIC -> { s = one(f, x -> x.is(Items.SUGAR_CANE)); what = "reed pipe"; }
+            case CARDS -> { s = one(f, x -> x.is(Items.PAPER)); what = "lucky card"; }
+            default -> { s = made(f, x -> x.is(net.minecraft.tags.ItemTags.PLANKS), Items.STICK); what = "walking stick"; }
         }
+        if (s.isEmpty()) return s;
         String village = f.ownerId() == null ? "" : " of " + Villages.name(f.ownerId());
         s.set(DataComponents.CUSTOM_NAME, Component.literal(f.displayNameCap() + "'s " + what));
         s.set(DataComponents.LORE, new ItemLore(List.of(
             Component.literal("A keepsake from " + f.displayNameCap() + village + ",").withStyle(net.minecraft.ChatFormatting.GRAY),
             Component.literal("for your kindness.").withStyle(net.minecraft.ChatFormatting.GRAY))));
         return s;
+    }
+
+    /** One of something out of its pack, or else out of the village's stores. */
+    private static ItemStack one(VillageFolkEntity f, java.util.function.Predicate<ItemStack> what) {
+        for (ItemStack s : f.getInventoryItems()) {
+            if (!s.isEmpty() && what.test(s)) {
+                ItemStack one = s.copyWithCount(1);
+                s.shrink(1);
+                return one;
+            }
+        }
+        Villages.Village v = f.ownerId() == null ? null : Villages.get(f.ownerId());
+        if (v == null || !(f.level() instanceof net.minecraft.server.level.ServerLevel level)) return ItemStack.EMPTY;
+        ItemStack got = Crafts.takeOne(level, v, what);
+        return got.isEmpty() ? got : got.copyWithCount(1);
+    }
+
+    /** Something made of one of these, out of its pack or the stores. */
+    private static ItemStack made(VillageFolkEntity f, java.util.function.Predicate<ItemStack> of, net.minecraft.world.item.Item into) {
+        return one(f, of).isEmpty() ? ItemStack.EMPTY : new ItemStack(into);
     }
 
     // ------------------------------------------------------------------ hunting

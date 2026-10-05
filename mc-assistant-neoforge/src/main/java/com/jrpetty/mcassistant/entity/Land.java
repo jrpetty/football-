@@ -204,7 +204,8 @@ public final class Land {
             }
         }
         boolean noEarth = false;                                  // the stores ran out of earth this pass
-        for (int i = 0; i < look && done < changes; i++) {
+        int i = 0;
+        for (; i < look && done < changes; i++) {
             int c = (cursor + i) % cells;
             int x = v.centre().getX() - r + c % side, z = v.centre().getZ() - r + c / side;
             if (!areaLoaded(level, new BlockPos(x, target, z), 1)) continue;
@@ -212,10 +213,11 @@ public final class Land {
             for (int[] zn : zones) if (Math.abs(x - zn[0]) <= zn[2] && Math.abs(z - zn[1]) <= zn[2]) { worked = true; break; }
             if (worked) continue;
             int got = cell(level, v, x, z, target, noEarth);
+            if (got == WAIT) break;                               // a digger is on the way there: the rest waits
             if (got < 0) noEarth = true;
             else done += got;
         }
-        int next = (cursor + look) % cells;
+        int next = (cursor + i) % cells;
         // A full sweep with nothing left to do: say so once.
         int moved = MOVED.merge(id, done, Integer::sum);
         if (next < cursor) {
@@ -231,8 +233,11 @@ public final class Land {
         return done;
     }
 
+    /** What cell returns while it waits for a hand to come and dig it (TownJobs). */
+    static final int WAIT = -2;
+
     /** One column: a block cut off the top, or a block of earth laid on it. Returns blocks changed,
-     *  or -1 if it wanted filling and the stores had no earth to fill it with. */
+     *  -1 if it wanted filling and the stores had no earth to fill it with, or WAIT. */
     static int cell(ServerLevel level, Villages.Village v, int x, int z, int target, boolean noEarth) {
         BlockPos top = surface(level, x, z);
         if (top == null) return 0;
@@ -248,6 +253,10 @@ public final class Land {
         }
         BlockState above = level.getBlockState(top);
         if (!above.isAir() && !(above.canBeReplaced() && above.getFluidState().isEmpty())) return 0;
+        if (diff < 0 && (noEarth || Market.stock(level, v.id(), s -> s.is(Items.DIRT) || s.is(Items.COARSE_DIRT)
+                || s.is(Items.GRASS_BLOCK) || s.is(Items.ROOTED_DIRT)) == 0)) return diff < 0 && noEarth ? 0 : -1;
+        // Dug and filled by hand, with a spade (TownJobs).
+        if (!TownJobs.atWork(level, v, "levelling", ground, "levelling the ground", AssistantEntity.StationTask.MINE)) return WAIT;
         if (diff > 0) {
             // Cut: the plant on top goes, then the block; the one beneath shows grass if it is earth.
             if (!above.isAir()) level.setBlock(top, Blocks.AIR.defaultBlockState(), 3);

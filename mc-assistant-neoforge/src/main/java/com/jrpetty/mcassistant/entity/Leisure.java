@@ -158,9 +158,22 @@ final class Leisure {
         if (item == Items.AIR) return;
         ItemStack off = f.getItemBySlot(EquipmentSlot.OFFHAND);
         if (off.isEmpty()) {
-            f.setItemSlot(EquipmentSlot.OFFHAND, new ItemStack(item));
+            ItemStack prop = new ItemStack(item);
+            net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
+            tag.putBoolean(PROP, true);
+            prop.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.of(tag));
+            f.setItemSlot(EquipmentSlot.OFFHAND, prop);
             f.propInHand = true;
         }
+    }
+
+    private static final String PROP = "mca_prop";
+
+    /** A pastime's prop (the rod, the book, the fiddle): for show only. It is never dropped, and
+     *  is put away when the evening is over, even after a restart. */
+    public static boolean isProp(ItemStack s) {
+        return !s.isEmpty() && s.getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
+            net.minecraft.world.item.component.CustomData.EMPTY).copyTag().getBoolean(PROP);
     }
 
     /** Doing it: every couple of seconds, the next bit of the pastime. */
@@ -173,7 +186,13 @@ final class Leisure {
             case FISHING -> {
                 BlockPos water = nearbyWater(f, server);
                 if (water != null) f.getLookControl().setLookAt(water.getX() + 0.5, water.getY() + 0.5, water.getZ() + 0.5);
-                if (water != null && r.nextInt(7) == 0) {
+                // A catch only with a rod of its own (the one in its hand is for show): no rod, it
+                // just watches the water.
+                ItemStack rod = ItemStack.EMPTY;
+                for (ItemStack s : f.getInventoryItems()) if (s.is(Items.FISHING_ROD)) { rod = s; break; }
+                if (water != null && !rod.isEmpty() && r.nextInt(7) == 0) {
+                    rod.setDamageValue(rod.getDamageValue() + 1);
+                    if (rod.getDamageValue() >= rod.getMaxDamage()) rod.shrink(1);
                     server.sendParticles(ParticleTypes.SPLASH, water.getX() + 0.5, water.getY() + 1.0, water.getZ() + 0.5,
                         12, 0.3, 0.1, 0.3, 0.1);
                     f.playSound(SoundEvents.FISHING_BOBBER_SPLASH, 0.6F, 1.0F);
@@ -232,8 +251,8 @@ final class Leisure {
                 f.playSound(SoundEvents.AXE_STRIP, 0.3F, 1.6F);
                 server.sendParticles(new ItemParticleOption(ParticleTypes.ITEM, new ItemStack(Items.OAK_PLANKS)),
                     f.getX(), f.getY() + 1.1, f.getZ(), 4, 0.15, 0.1, 0.15, 0.02);
-                if (r.nextInt(25) == 0) {
-                    f.insertItem(new ItemStack(Items.BOWL));
+                if (r.nextInt(25) == 0 && f.removeMatching(s -> s.is(net.minecraft.tags.ItemTags.PLANKS), 1) == 1) {
+                    f.insertItem(new ItemStack(Items.BOWL));                    // whittled out of a plank it had
                     FolkTalk.speak(f, FolkTalk.pick(r, "There — a bowl.", "Not bad, if I say so myself."));
                 }
             }
@@ -242,6 +261,10 @@ final class Leisure {
 
     /** Every few ticks: the music itself, and putting the props away when the evening is over. */
     static void tick(VillageFolkEntity f) {
+        // A prop left in the hand across a restart (the flag is not saved): put away.
+        if (!f.propInHand && f.tickCount % 100 == 0 && isProp(f.getItemBySlot(EquipmentSlot.OFFHAND))) {
+            f.setItemSlot(EquipmentSlot.OFFHAND, ItemStack.EMPTY);
+        }
         if (f.hobbyNow == null) return;
         if (f.tickCount - f.lastLeisureTick > 200) {
             f.hobbyNow = null;
