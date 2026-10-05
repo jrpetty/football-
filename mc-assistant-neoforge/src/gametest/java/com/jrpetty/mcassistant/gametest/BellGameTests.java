@@ -338,11 +338,12 @@ public class BellGameTests {
         final int x = 224000, z = 50000;
         Kit.hold(level, x, z, 40);
         Kit.prepare(level, x, z, 40);
-        // A day far enough on that the town can have been founded a year (twenty-eight days) before it: the test
-        // world may be only a few days old, and a town founded on a day before the world began has no Founding Day.
-        long day = Math.max(level.getDayTime() / 24000L, TownCalendar.YEAR_DAYS + 2L);
+        // The town is founded today, by its own history; then the clock is put on a year (twenty-eight days),
+        // to the evening of its first Founding Day.
+        long founded = level.getDayTime() / 24000L;
+        level.setDayTime(founded * 24000L + 2000L);
+        long day = founded + TownCalendar.YEAR_DAYS;
         long evening = day * 24000L + 12150L;
-        level.setDayTime(evening);
         List<VillageFolkEntity> folk = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
             VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, Kit.surface(level, x + i * 2 - 4, z + 3), 0.0F);
@@ -350,7 +351,7 @@ public class BellGameTests {
             folk.add(f);
         }
         UUID village = folk.get(0).ownerId();
-        FoundingDay.foundedForTests(village, day - TownCalendar.YEAR_DAYS);
+        level.setDayTime(evening);
         String[] year = { "The smithy was opened", "Ash and Rowan were wed", "Wren was born", "The village came into the Stone Age" };
         long[] when = { day - 25, day - 18, day - 9, day - 3 };
         // Written down out of order, as a history is: it is read out in the order things happened.
@@ -365,9 +366,10 @@ public class BellGameTests {
         chest.setItem(slot + 1, new ItemStack(Items.PAPER, 4));
         chest.setItem(slot + 2, new ItemStack(Items.BREAD, 32));
         chest.setChanged();
-        Kit.log("b03 day " + day + ", founded (for the test) on day " + FoundingDay.founded(village) + " (the history says "
+        Kit.log("b03 day " + day + ", founded on day " + FoundingDay.founded(village) + " (the history says "
             + Chronicle.foundedOn(village) + "); Founding Day today " + FoundingDay.today(village, day) + ", yesterday "
             + FoundingDay.today(village, day - 1) + ", due " + FoundingDay.due(village, day));
+        helper.assertTrue(FoundingDay.founded(village) == founded, "the town's history begins the day it was founded");
         helper.assertTrue(FoundingDay.today(village, day) && !FoundingDay.today(village, day - 1), "today, and only today, is Founding Day");
         Kit.log("b03 " + Villages.name(village) + " founded on day " + FoundingDay.founded(village) + ", today " + day + ": "
             + TownCalendar.book(level, village));
@@ -398,6 +400,12 @@ public class BellGameTests {
                 for (int i = 0; i < read.size(); i++) if (read.get(i).contains(y)) { k = i; break; }
                 at.add(k);
             }
+            // The founding itself first: the history's first day, read as the town's first.
+            int foundingAt = -1;
+            for (int i = 0; i < read.size(); i++) if (read.get(i).contains("was founded")) { foundingAt = i; break; }
+            Kit.log("b03 the founding read at " + foundingAt + (foundingAt >= 0 ? ": " + read.get(foundingAt) : ""));
+            helper.assertTrue(foundingAt == 0 && read.get(0).startsWith("Day " + (founded + 1) + ":"),
+                "the year's chronicle begins with the founding, on the day it was: " + read);
             int powder = 0;
             for (int i = 0; i < chest.getContainerSize(); i++) if (chest.getItem(i).is(Items.GUNPOWDER)) powder += chest.getItem(i).getCount();
             String line = Chronicle.of(village).stream().filter(e -> e.text().startsWith("Founding Day")).findFirst().map(Chronicle.Entry::text).orElse("");
@@ -408,6 +416,163 @@ public class BellGameTests {
             helper.assertTrue(line.contains("first year"), "the history notes the town's first year kept: " + line);
             if (powder >= 4) Kit.log("b03 (no rocket went up: the feast's steps never fell on a launch tick)");
             helper.succeed();
+        });
+    }
+
+    // ============================================================ the bell's own frame
+
+    /** How many of a thing the village's stores hold. */
+    private static int inStores(ServerLevel level, UUID village, java.util.function.Predicate<ItemStack> what) {
+        int n = 0;
+        for (BlockPos p : Villages.storeChests(level, village)) {
+            if (!(level.getBlockEntity(p) instanceof Container c)) continue;
+            for (int i = 0; i < c.getContainerSize(); i++) if (what.test(c.getItem(i))) n += c.getItem(i).getCount();
+        }
+        return n;
+    }
+
+    /**
+     * A town whose bell stands on the ground under the village board, half hidden. The town's works build
+     * the bell its own frame on the square, a few blocks from the board and clear of it, its courtyard and the
+     * ways in, its front to the square: two log posts, a roof of stairs and slabs cut from the stores' planks
+     * (the rest of each batch back in the stores), a lantern under each eave out of the stores. The old bell
+     * is rung till then; when the frame stands it is taken down into the stores and hung in the frame, and
+     * the frame's bell is the one the town rings.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 3600, batch = "b04_bell_frame")
+    public static void b04_bell_frame(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        final int x = 226000, z = 50000;
+        Kit.hold(level, x, z, 48);
+        Kit.prepare(level, x, z, 48);
+        BlockPos heart = Kit.surface(level, x, z);
+        long morning = quietDay(level.getDayTime() / 24000L) * 24000L + 2000L;
+        level.setDayTime(morning);
+        List<VillageFolkEntity> folk = new ArrayList<>();
+        for (int i = 0; i < 6; i++) {
+            VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, Kit.surface(level, x + (i % 3) * 2 - 2, z + (i / 3) * 2 + 2), 0.0F);
+            helper.assertTrue(f != null, "a folk of the town");
+            f.setNoAi(true);                                  // the stores are the frame's alone while it goes up
+            folk.add(f);
+        }
+        UUID village = folk.get(0).ownerId();
+        BlockPos board = com.jrpetty.mcassistant.entity.VillageBoards.boardOf(village);
+        Direction facing = com.jrpetty.mcassistant.entity.VillageBoards.facingOf(village);
+        BlockPos lectern = com.jrpetty.mcassistant.entity.VillageBoards.lectern(village);
+        helper.assertTrue(board != null && facing != null && lectern != null, "the town has its board");
+        // The old bell, on the ground under the board, between its posts.
+        Direction right = com.jrpetty.mcassistant.block.VillageBoardBlock.right(facing);
+        BlockPos old = board.relative(right, 4).atY(heart.getY());
+        helper.assertTrue(level.getBlockState(old).isAir(), "room under the board for the old bell: " + level.getBlockState(old));
+        level.setBlock(old, Blocks.BELL.defaultBlockState().setValue(BellBlock.FACING, facing)
+            .setValue(BellBlock.ATTACHMENT, BellAttachType.FLOOR), 3);
+        // The makings: logs and two lanterns, with the founders' planks.
+        List<BlockPos> stores = Villages.storeChests(level, village);
+        helper.assertTrue(!stores.isEmpty(), "the founders' stores");
+        Container chest = (Container) level.getBlockEntity(stores.get(0));
+        int slot = 0;
+        while (slot < chest.getContainerSize() && !chest.getItem(slot).isEmpty()) slot++;
+        chest.setItem(slot, new ItemStack(Items.OAK_LOG, 16));
+        chest.setItem(slot + 1, new ItemStack(Items.LANTERN, 2));
+        chest.setChanged();
+        int[] before = { inStores(level, village, s -> s.is(Items.OAK_LOG)), inStores(level, village, s -> s.is(Items.OAK_PLANKS)),
+            inStores(level, village, s -> s.is(Items.LANTERN)) };
+        Villages.Village v = Villages.get(village);
+        BlockPos rang0 = TownBell.bellAt(level, v);
+        Kit.log("b04 the board at " + board.toShortString() + " facing " + facing + ", the lectern " + lectern.toShortString()
+            + "; the old bell at " + old.toShortString() + " (the town rings " + (rang0 == null ? "none" : rang0.toShortString())
+            + "); stores: logs " + before[0] + ", planks " + before[1] + ", lanterns " + before[2]);
+        helper.assertTrue(old.equals(rang0), "till its frame is built, the town rings the bell it has, under the board");
+        com.jrpetty.mcassistant.entity.BellFrame.Frame frame = com.jrpetty.mcassistant.entity.BellFrame.planForTests(level, v);
+        helper.assertTrue(frame != null, "ground on the square for a bell frame");
+        Kit.log("b04 the frame is to stand at " + frame.origin.toShortString() + " along " + frame.along + ", its front " + frame.front
+            + ", " + String.format("%.1f", Math.sqrt(frame.origin.distSqr(lectern))) + " blocks from the lectern");
+        boolean[] rung = { false };
+        long[] hungAt = { -1 };
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            level.setDayTime(morning);
+            if (t % 100 == 0) Kit.log("b04 tick " + t + ": " + TownBell.status(level, v));
+            boolean hung = level.getBlockState(frame.bell()).is(Blocks.BELL);
+            if (!hung) {
+                if (t >= 3300) helper.fail("the bell never went up in its frame: " + TownBell.status(level, v));
+                return;
+            }
+            if (hungAt[0] < 0) {
+                hungAt[0] = t;
+                // Its own frame: posts, roof, lights, the bell between the posts.
+                int posts = frame.posts();
+                StringBuilder seen = new StringBuilder();
+                boolean ok = true;
+                for (int k = -2; k <= 2; k++) {
+                    for (int h = 0; h <= posts; h++) {
+                        BlockState st = level.getBlockState(frame.origin.relative(frame.along, k).above(h));
+                        if (!st.isAir()) seen.append(" [").append(k).append(',').append(h).append(' ')
+                            .append(net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(st.getBlock()).getPath()).append(']');
+                    }
+                }
+                Kit.log("b04 the frame:" + seen);
+                for (int h = 0; h < posts; h++) {
+                    for (int k : new int[]{ -1, 1 }) {
+                        BlockState st = level.getBlockState(frame.origin.relative(frame.along, k).above(h));
+                        ok &= st.is(net.minecraft.tags.BlockTags.LOGS) || st.is(Blocks.STONE_BRICKS);
+                    }
+                }
+                helper.assertTrue(ok, "two posts, of logs (or stone bricks): " + seen);
+                BlockPos top = frame.origin.above(posts);
+                helper.assertTrue(level.getBlockState(top.relative(frame.along, -1)).is(net.minecraft.tags.BlockTags.STAIRS)
+                        && level.getBlockState(top.relative(frame.along, 1)).is(net.minecraft.tags.BlockTags.STAIRS)
+                        && level.getBlockState(top.relative(frame.along, -2)).is(net.minecraft.tags.BlockTags.SLABS)
+                        && level.getBlockState(top.relative(frame.along, 2)).is(net.minecraft.tags.BlockTags.SLABS)
+                        && !level.getBlockState(top).isAir(),
+                    "a roof over it: a ridge, a stair either side, slabs at the eaves: " + seen);
+                helper.assertTrue(level.getBlockState(top.below().relative(frame.along, -2)).is(Blocks.LANTERN)
+                        && level.getBlockState(top.below().relative(frame.along, 2)).is(Blocks.LANTERN),
+                    "a lantern under each eave: " + seen);
+                BlockState bell = level.getBlockState(frame.bell());
+                helper.assertTrue(bell.getValue(BellBlock.ATTACHMENT) == BellAttachType.DOUBLE_WALL,
+                    "the bell hung between the posts: " + bell);
+                helper.assertTrue(level.getBlockState(old).isAir(), "the old bell taken down from under the board");
+                // Clear of the board and its courtyard, a few blocks from it.
+                int[] court = Villages.courtRectForTests(village);
+                for (int k = -2; k <= 2; k++) {
+                    BlockPos c = frame.origin.relative(frame.along, k);
+                    helper.assertTrue(court == null || c.getX() < court[0] || c.getX() > court[1] || c.getZ() < court[2] || c.getZ() > court[3],
+                        "the frame is clear of the courtyard before the board");
+                    for (int b = -1; b <= 10; b++) {
+                        BlockPos col = board.relative(right, b);
+                        helper.assertTrue(c.getX() != col.getX() || c.getZ() != col.getZ(), "and of the board itself");
+                    }
+                }
+                helper.assertTrue(frame.origin.distSqr(lectern) <= 20 * 20, "a few blocks from the board");
+                // Out of the stores, nothing from nothing: six logs, ten planks (a batch of stairs and one of slabs,
+                // the rest of each back in the stores), two lanterns; the bell back to the frame.
+                int[] after = { inStores(level, village, s -> s.is(Items.OAK_LOG)), inStores(level, village, s -> s.is(Items.OAK_PLANKS)),
+                    inStores(level, village, s -> s.is(Items.LANTERN)), inStores(level, village, s -> s.is(Items.OAK_STAIRS)),
+                    inStores(level, village, s -> s.is(Items.OAK_SLAB)), inStores(level, village, s -> s.is(Items.BELL)) };
+                Kit.log("b04 stores after: logs " + after[0] + ", planks " + after[1] + ", lanterns " + after[2] + ", stairs " + after[3]
+                    + ", slabs " + after[4] + ", bells " + after[5]);
+                // (Other hands may draw on the stores meanwhile: what the frame took is at least this, and the
+                // rest of its batches, made of nothing else, are in the stores.)
+                helper.assertTrue(after[0] <= before[0] - 2 * posts, "a log a post block: " + before[0] + " -> " + after[0]);
+                helper.assertTrue(after[1] <= before[1] - 10 && after[3] >= 1 && after[4] >= 1,
+                    "the roof cut from ten planks, the rest of the batches put by: planks " + before[1] + " -> " + after[1]
+                        + ", stairs " + after[3] + ", slabs " + after[4]);
+                if (after[1] != before[1] - 10 || after[3] != 2 || after[4] != 4) Kit.log("b04 (the stores were drawn on by others too)");
+                helper.assertTrue(after[2] <= before[2] - 2, "two lanterns out of the stores");
+                helper.assertTrue(after[5] == 0, "the bell is in the frame, not left in the stores");
+                Villages.Village vv = Villages.get(village);
+                TownBell.forgetForTests(village);
+                helper.assertTrue(frame.bell().equals(TownBell.bellAt(level, vv)), "and the frame's bell is the town bell");
+                Kit.log("b04 " + TownBell.ringNow(level, vv, TownBell.Peal.DAWN));
+                return;
+            }
+            if (level.getBlockEntity(frame.bell()) instanceof BellBlockEntity be && be.shaking) rung[0] = true;
+            if (t - hungAt[0] >= 20) {
+                helper.assertTrue(rung[0], "rung in its frame, the bell swings");
+                helper.succeed();
+            }
         });
     }
 }

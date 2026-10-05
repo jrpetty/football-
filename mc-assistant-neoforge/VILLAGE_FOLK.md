@@ -1761,14 +1761,24 @@ it, as you would — the bell swings and is heard all round:
 | Noon | 12:00 | 6 | Everybody's break at once, and the midday meal with it: to the café or the tavern's bar with a few coins (a dish bought out of the stores, the coin into the treasury), else home to its household's table, else to the stores, and it sits down to the meal there (the meals come out of its pack, its home's chest or the stores, as every meal does; nobody eats twice) |
 | Dusk | 18:00 | 9 | The day's work stops and folk walk home to their beds; the guards go on watch; on Founding Day the town goes to the board instead |
 
-* **The bell** is the town's own: a bell it already has — the bell tower's, one by the leader's
-  hall or the board, the alarm bell on the square, the chapel's, the bell of a village its folk
-  moved into — the nearest to where a town bell belongs (before the leader's hall, else the board,
-  else the heart). Nobody in a village can make a bell: **put one in the stores** (found in a
-  village, bought from a villager or brought) and the town's works hang it on a plinth of stone
-  out of the stores, before the leader's hall once it stands, else on the square where the watch
-  hangs its alarm bell. Till there is one, the ringer **calls the hours at the board**, as a town
-  crier would.
+* **The bell's own frame.** From its second day, once its stores have the timber, the town's
+  works build its bell a frame on the square, a few blocks from the board with its front to the
+  square: two posts with a beam across, the bell hung between them, a little roof of stairs and
+  slabs over it and a lantern under each eave. It stands on level ground of its own, clear of the
+  board and its courtyard, the gates' ways in, the market stalls, the well and the monuments, and
+  off the worn paths. It is built a piece at a time out of the stores, like everything else: posts
+  of logs and a roof of the village's own wood, cut from its planks (six planks make four stairs,
+  three make six slabs, the rest of each batch back into the stores); in a town in the Stone Age
+  whose masons have the bricks, of stone bricks a post higher, a short belfry; lanterns if the smith
+  has made them, else a torch on each post. `/village bell` says where it stands and how far on it is.
+* **The bell** is the town's own: a bell it already has — one by the board, the alarm bell on the
+  square, the bell of a village its folk moved into — keeps being rung where it hangs, even under
+  the board, until the frame stands; then it is taken down (its plinth's stone back into the
+  stores) and hung in the frame. Nobody in a village can make a bell: **put one in the stores**
+  (found in a village, bought from a villager or brought) and it is hung in the frame. A bell in
+  a bell tower or a chapel's tower is rung where it hangs: the town has its belfry. The alarm is
+  rung on the town bell too. Till there is a bell, the ringer **calls the hours** before the
+  frame (or at the board), as a town crier would.
 * **The ringer** is somebody sensible and awake: at dawn a guard of the second watch (up all night
   anyway), at noon the storekeeper, at dusk a guard going on watch — else the next of them, a
   courier, or whoever is grown and nearest (woken a little early for the dawn bell). It sets off a
@@ -3972,8 +3982,9 @@ ripen, days pass, folk work and houses go up at that pace.
   for. `decor now` (operators) furnishes the homes as far as the stores run to and sees to the
   candles; `decor showcase` (operators) sets a furnished home out where you stand, for the pictures.
 * `/village bell` — the town bell: where it hangs (or that there is none yet), today's bells, who
-  rang them and how many answered. `bell ring dawn|noon|dusk` (operators) has it rung now, by
-  whoever would ring it, and the town answers it.
+  rang them and how many answered, and its frame (`FRAME-AT x y z ALONG .. FACING ..` and how far on
+  it is). `bell ring dawn|noon|dusk` (operators) has it rung now, by whoever would ring it, and the
+  town answers it; `bell call dawn|noon|dusk` sends its ringer to it to ring it there.
 * `/village founding` — when the town was founded and its next Founding Day; `founding now`
   (operators) keeps it this minute, before the board.
 * `/village birthdays` — whose birthday falls this week; `birthdays now <name>` (operators) has
@@ -4209,14 +4220,18 @@ Every push to CI:
   the treasury as tax over eight paydays on less coming in than goes out, the treasury never below
   nothing, no coin from nowhere, the tax in the books, none from the poor and none while the
   treasury holds a week's wages;
-* keeps the town's calendar (`BellGameTests`, b01 to b03): a town of six with a bell lies in before
+* keeps the town's calendar (`BellGameTests`, b01 to b04): a town of six with a bell lies in before
   the dawn bell, is rung up by a ringer who walks to the bell (three strokes, the bell swinging) and
   goes to work; at the noon bell (six) most of it goes to its midday meal and eats; at the dusk bell
   (nine) the day's work stops, the hands go home to their beds and the guard goes on watch; on a
   folk's fortieth birthday its friend walks round with the flower from its own pack, which goes from
   the one pack to the other as a keepsake, and the birthday and the present raise its spirits; and
   twenty-eight days after the founding the town gathers for Founding Day, hears the year's chronicle
-  read out in the order it happened, feasts, and the history notes its first year kept;
+  read out in the order it happened, beginning with the founding, feasts, and the history notes its
+  first year kept; and a town whose bell stands under its board builds the bell its own frame on the
+  square, clear of the board and its courtyard: log posts, a roof cut from ten planks with the rest
+  of the batches put by, two lanterns out of the stores; the old bell is taken down and hung in it,
+  and rung there;
 * runs the museum and its archive (`MuseumGameTests`, mu01 to mu03): the miner's first diamond in
   the stores is chosen, taken out with a frame and a sign (no more), hung in a frame on the
   museum's wall with a label saying who found it, at what trade and on what day, and the town's

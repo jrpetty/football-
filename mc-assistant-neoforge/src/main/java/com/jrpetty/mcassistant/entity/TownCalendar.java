@@ -50,12 +50,15 @@ public final class TownCalendar extends SavedData {
     private final Map<UUID, Long> birthdays = new HashMap<>();
     /** The last Founding Day each town kept (its day). */
     private final Map<UUID, Long> founding = new HashMap<>();
+    /** Each town's bell frame: where it stands and of what (BellFrame). */
+    private final Map<UUID, CompoundTag> frames = new HashMap<>();
 
     public TownCalendar() {}
 
     /** Everything that is only in memory forgotten (the tests share one JVM; a new world is a new start). */
     public static void resetForTests() {
         TownBell.resetForTests();
+        BellFrame.resetForTests();
         Birthdays.resetForTests();
         FoundingDay.resetForTests();
     }
@@ -203,6 +206,21 @@ public final class TownCalendar extends SavedData {
         c.setDirty();
     }
 
+    /** This town's bell frame, as written down, or null. */
+    @Nullable
+    static CompoundTag frame(UUID village) {
+        TownCalendar c = of();
+        return c == null ? null : c.frames.get(village);
+    }
+
+    static void frame(UUID village, @Nullable CompoundTag frame) {
+        TownCalendar c = of();
+        if (c == null) return;
+        if (frame == null) c.frames.remove(village);
+        else c.frames.put(village, frame);
+        c.setDirty();
+    }
+
     /** The day this town last kept its Founding Day, or a long time ago. */
     static long foundingKept(UUID village) {
         TownCalendar c = of();
@@ -229,6 +247,10 @@ public final class TownCalendar extends SavedData {
         for (Tag t : tag.getList("Founding", Tag.TAG_COMPOUND)) {
             CompoundTag one = (CompoundTag) t;
             if (one.hasUUID("Id")) c.founding.put(one.getUUID("Id"), one.getLong("Day"));
+        }
+        for (Tag t : tag.getList("Frames", Tag.TAG_COMPOUND)) {
+            CompoundTag one = (CompoundTag) t;
+            if (one.hasUUID("Id")) c.frames.put(one.getUUID("Id"), one.getCompound("Frame"));
         }
         return c;
     }
@@ -259,6 +281,14 @@ public final class TownCalendar extends SavedData {
             f.add(one);
         }
         tag.put("Founding", f);
+        ListTag fr = new ListTag();
+        for (Map.Entry<UUID, CompoundTag> e : frames.entrySet()) {
+            CompoundTag one = new CompoundTag();
+            one.putUUID("Id", e.getKey());
+            one.put("Frame", e.getValue());
+            fr.add(one);
+        }
+        tag.put("Frames", fr);
         return tag;
     }
 }
