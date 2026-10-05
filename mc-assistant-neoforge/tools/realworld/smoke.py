@@ -460,10 +460,12 @@ def bell_stage(r, look, cx, cz):
     say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
     say("alive after the bell: %s" % client_alive())
 def bank_stage(r, look, cx, cz):
-    """The bank (entity/Bank): put up beside the village and opened (/village bank showcase), its
-    banker behind the counter; from the street, then from inside by the lectern looking at the vault's
-    bars; a word with the banker about an account the player has just opened; and the books' Money page
-    with the bank's panel on it. Best called after the stats stage, so the books have days in them."""
+    """The bank (entity/Bank): put up beside the village on ground cleared for it and opened
+    (/village bank showcase), its banker held at the counter facing the door; from the street; then
+    from the front corner inside, the ledger open on its lectern, the banker at the counter and the
+    vault behind its iron bars; then a word with the banker across the counter about the account the
+    player has just opened (the talk screen); and the books' Money and Homes pages with the bank on
+    them. Best called after the stats stage, so the books have days in them."""
     say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
     r.cmd("gamemode spectator %s" % USER)
     r.cmd("time set 6000")
@@ -479,23 +481,36 @@ def bank_stage(r, look, cx, cz):
         return
     ax, ay, az, facing = int(m.group(1)), int(m.group(2)), int(m.group(3)), m.group(4).lower()
     step = {"north": (0, -1), "south": (0, 1), "east": (1, 0), "west": (-1, 0)}
-    back = step.get(facing, (0, -1))
-    front = (-back[0], -back[1])
-    side = (back[1], -back[0])
+    back = step.get(facing, (0, -1))                     # the vault's end of the building
+    right = (-back[1], back[0])                          # to the right, looking in from the door
+
+    def at(across, deep, up=0.0):
+        # A point of the drawing (blueprints/bank.txt): so far to the right of the middle, looking in
+        # from the door, so far toward the back from the counter's banker (the anchor), so far up from
+        # the floor. The banker stands at (0, 0); the counter is a row in front (-1), the vault's bars a
+        # row behind (+1), the lectern at (2, -2), the door at (0, -4).
+        return (ax + 0.5 + right[0] * across + back[0] * deep, ay + up, az + 0.5 + right[1] * across + back[1] * deep)
+
+    def face(x, y, z, tx, ty, tz):
+        # The yaw and pitch from feet at (x, y, z), eyes 1.62 above them, to (tx, ty, tz).
+        dx, dz = tx - x, tz - z
+        return math.degrees(math.atan2(-dx, dz)), -math.degrees(math.atan2(ty - (y + 1.62), math.hypot(dx, dz)))
+
     time.sleep(4)
-    # From the street: the stone front, its door and windows, the banker inside.
-    look("bank-1-front", ax + front[0] * 14 + side[0] * 6 + 0.5, ay + 4, az + front[1] * 14 + side[1] * 6 + 0.5,
-         ax + 0.5, ay + 2, az + 0.5, wait=8)
-    # Inside, by the lectern: the counter, the banker behind it, and the vault's barred gate and grille.
-    look("bank-2-vault", ax + front[0] * 3 + 0.5, ay, az + front[1] * 3 + 0.5,
-         ax + back[0] * 1 + 0.5, ay + 1.2, az + back[1] * 1 + 0.5, wait=6)
-    # An account: coin in, then a word with the banker across the counter.
+    # From the street: the stone front, its door and windows.
+    look("bank-1-front", *at(6, -15, 4), *at(0, 0, 2), wait=8)
+    # Inside, from the front corner by the window: the ledger open on its lectern at the right, the
+    # banker behind the counter, and behind it the vault, its strongboxes behind the barred gate and grille.
+    say("banker: " + r.cmd("execute as %s at @s run village bank showcase" % USER)[:200])
+    look("bank-2-vault", *at(-2, -3, 0.3), *at(0.6, 0.4, 1.0), wait=6)
+    # An account: coin in, then a word with the banker across the counter, the talk screen open on it.
     r.cmd("gamemode creative %s" % USER)
     r.cmd("give %s mc_assistant:village_coin 40" % USER)
-    say("bank deposit: " + r.cmd("execute as %s at @s run village bank deposit 25" % USER))
-    r.cmd("tp %s %.1f %d %.1f" % (USER, ax + front[0] * 2 + 0.5, ay, az + front[1] * 2 + 0.5))
-    r.cmd("execute as %s at @s run tp @s ~ ~ ~ facing %d %d %d" % (USER, ax, ay + 1, az))
-    time.sleep(3)
+    say("bank deposit: " + r.cmd("execute as %s at @s run village bank deposit 40" % USER))
+    px, py, pz = at(0, -2)
+    yaw, pitch = face(px, py, pz, *at(0, 0, 1.5))
+    r.cmd("tp %s %.2f %.2f %.2f %.1f %.1f" % (USER, px, py, pz, yaw, pitch))
+    time.sleep(10)                                       # the chat's game-mode and deposit lines fade
     say("bank talk: " + r.cmd("execute as %s at @s run village talk my account" % USER))
     time.sleep(4)
     shot("bank-3-talk-account")
@@ -508,8 +523,11 @@ def bank_stage(r, look, cx, cz):
     time.sleep(3)
     shot("bank-5-homes-page")
     say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    say("banker free: " + r.cmd("execute as %s at @s run village bank showcase done" % USER))
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the bank: %s" % client_alive())
+
+
 def districts_stage(r, look, cx, cz):
     """The town's quarters and its park (Quarters, Park): the park put up at once on its lot in the
     homes quarter (as the showcase does), its trees grown and its paths laid, and everybody off work
