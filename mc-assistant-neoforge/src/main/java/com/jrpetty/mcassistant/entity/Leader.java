@@ -77,6 +77,8 @@ public final class Leader {
 
     private static final Map<UUID, Nature> NATURE = new ConcurrentHashMap<>();
     private static final Map<UUID, Books> BOOKS = new ConcurrentHashMap<>();
+    /** How many mornings running the larder's books have been kept (the trend means nothing on the first few). */
+    private static final Map<UUID, Integer> KEPT = new ConcurrentHashMap<>();
     /** Food brought into the stores today, in meals (wheat is a third of one). */
     private static final Map<UUID, Integer> FOOD_IN = new ConcurrentHashMap<>();
     /** Today's pay, in the hundred of the standard wage. */
@@ -87,6 +89,7 @@ public final class Leader {
     public static void resetForTests() {
         NATURE.clear();
         BOOKS.clear();
+        KEPT.clear();
         FOOD_IN.clear();
         PAY.clear();
         DECIDED.clear();
@@ -358,17 +361,18 @@ public final class Leader {
     }
 
     /** The plan for the larder, from what is in it, what comes in and what goes out a day. */
-    static Plan decide(int stock, int heads, double inAvg, double useAvg, double reserve, Plan was) {
+    static Plan decide(int stock, int heads, double inAvg, double useAvg, double reserve, Plan was, boolean settled) {
         double days = stock / Math.max(1.0, useAvg);
         if (days < 0.75 || stock < heads) return Plan.FAMINE;
-        if (days < reserve || (inAvg < useAvg * 0.9 && days < reserve * 2) || draining(stock, inAvg, useAvg, reserve, was)) return Plan.SHORT;
+        if (days < reserve || (inAvg < useAvg * 0.9 && days < reserve * 2)
+                || (settled && draining(stock, inAvg, useAvg, reserve, was))) return Plan.SHORT;
         if (days > reserve * 3 && inAvg >= useAvg) return Plan.PLENTY;
         return Plan.STEADY;
     }
 
     /** Tests: the plan for these books. */
     public static Plan decideForTests(int stock, int heads, double inAvg, double useAvg, double reserve, Plan was) {
-        return decide(stock, heads, inAvg, useAvg, reserve, was);
+        return decide(stock, heads, inAvg, useAvg, reserve, was, true);
     }
 
     /** The leader's morning: the books, the plan, the pay. From Market.tick, before the wages. */
@@ -387,7 +391,10 @@ public final class Leader {
         double guess = guessedUse(id);
         int use;
         double inAvg, useAvg;
-        if (last == null || day - last.day() > 3 || day <= last.day()) {
+        boolean fresh = last == null || day - last.day() > 3 || day <= last.day();
+        int kept = fresh ? 1 : KEPT.getOrDefault(id, 1) + 1;
+        KEPT.put(id, kept);
+        if (fresh) {
             use = (int) Math.round(guess);
             inAvg = in;
             useAvg = guess;
@@ -409,8 +416,11 @@ public final class Leader {
         // till nearly as much is grown as eaten, so the hands are not sent back to the mine too soon.
         double net = useAvg - inAvg;
         double emptyIn = net > 0 ? stock / net : Double.MAX_VALUE;
-        boolean draining = draining(stock, inAvg, useAvg, reserve, was);
-        Plan plan = decide(stock, heads, inAvg, useAvg, reserve, was);
+        // The trend only once there are a few days of it: a village just founded has grown nothing yet,
+        // and its settlers' bread would read as a larder draining away (and every hand sent to sow).
+        boolean settled = kept >= 4;
+        boolean draining = settled && draining(stock, inAvg, useAvg, reserve, was);
+        Plan plan = decide(stock, heads, inAvg, useAvg, reserve, was, settled);
         Books b = new Books(stock, in, use, inAvg, useAvg, days, plan, day);
         BOOKS.put(id, b);
         Ledger.note(id, "leader.books", stock + "|" + round(inAvg) + "|" + round(useAvg) + "|" + round(days) + "|" + plan.name() + "|" + day);

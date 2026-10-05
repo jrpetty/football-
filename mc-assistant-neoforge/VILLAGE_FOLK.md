@@ -1609,7 +1609,8 @@ and its own nature runs through the place.
   in ten, and looked at twice as often. It also watches the trend, not only the stock: a
   larder going down faster than it is filled is short commons as soon as it would be empty
   within twelve days at more than two meals eaten for every one grown (or within eight at
-  three for two), however full it still looks, because new fields take days to come in.
+  three for two), however full it still looks, because new fields take days to come in
+  (once its books have a few days in them: a village just founded has grown nothing yet).
   Once short, it stays short until nearly as much is grown as eaten, so the extra hands are
   not sent back to the mine too soon. The town's books say so too: "more eaten than grown,
   gone in about N days at this rate".
