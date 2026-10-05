@@ -375,6 +375,18 @@ public final class Elections {
         }
     }
 
+    /** Is this folk's own hour to vote come, with its ballot not yet cast? (The leader's escort
+     *  leaves the leader's side for that much: Patrols.) */
+    public static boolean dueToVote(VillageFolkEntity f, ServerLevel level) {
+        UUID id = f.ownerId();
+        if (id == null || f.isBaby() || !f.persona().rolled()) return false;
+        Campaign c = NOW.get(id);
+        if (c == null || c.counted || c.candidates.isEmpty()) return false;
+        long dayTime = level.getDayTime(), day = dayTime / 24000L, t = dayTime % 24000L;
+        if (day != c.voteDay || t < OPEN || t >= CLOSE || c.ballots.containsKey(f.getUUID())) return false;
+        return t >= OPEN + Math.floorMod(f.getUUID().getLeastSignificantBits(), CLOSE - OPEN - 2500L);
+    }
+
     /**
      * Every few ticks for each folk (VillageFolkEntity): on the day of the vote, at its own hour and
      * when its work allows, it walks to the board and votes. True while it is about it.

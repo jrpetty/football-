@@ -197,6 +197,9 @@ public final class Trades {
             }
         }
         sb.append("What I make: ").append(trade.output()).append(". ");
+        // The watch's beat (Patrols), and what a maker's years at the trade let it make, and how well (Craftsmanship).
+        String own = t == StationTask.GUARD ? Patrols.line(f) : Craftsmanship.line(f);
+        if (!own.isEmpty()) sb.append(own).append(' ');
         if (lacking.isEmpty()) sb.append("I've everything I need, thank you.");
         else sb.append("I'm short of ").append(String.join(", ", lacking.subList(0, Math.min(3, lacking.size())))).append('.');
         return sb.toString();

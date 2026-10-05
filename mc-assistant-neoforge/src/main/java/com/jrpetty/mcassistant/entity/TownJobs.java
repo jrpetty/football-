@@ -217,7 +217,7 @@ public final class TownJobs {
         if (!f.isAlive() || f.isBaby() || f.isSleeping() || f.isHired() || f.getTarget() != null) return false;
         if (f.trip() != null || f.expedition() != null || Nether.away(f) || Drover.busy(f)) return false;
         if (f.talkPartner() != null || f.companionPlayer() != null || f.guidePlayer() != null) return false;
-        if (Assemblies.attending(f)) return false;
+        if (Assemblies.attending(f) || Patrols.escorting(f)) return false;      // (or walking with the leader)
         if (f.stationTask() == AssistantEntity.StationTask.GUARD && (f.level().isNight() || f.onWatch()) && !works.endsWith("watch")) return false;
         UUID id = f.ownerId();
         return id == null || !Villages.holdsTheLead(id, f.getUUID(), f.level().getGameTime());

@@ -552,7 +552,7 @@ public final class FolkTalk {
                     ? "diamonds" : "iron") + ".";
             }
             case RANCH -> "Minding the animals" + place + ".";
-            case GUARD -> f.level().isNight() ? "The night watch. Quiet so far." : "Keeping watch. Nothing gets past me.";
+            case GUARD -> Patrols.doing(f);
             case SMELT -> "Running the furnaces" + place + ".";
             case FISH -> "Fishing for the village" + place + ".";
             case STORE -> "Keeping the stores in order. You wouldn't believe the mess.";
