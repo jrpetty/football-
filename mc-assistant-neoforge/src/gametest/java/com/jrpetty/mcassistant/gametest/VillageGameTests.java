@@ -660,7 +660,8 @@ public class VillageGameTests {
             helper.assertTrue(b.getUUID().equals(la.partner()) && a.getUUID().equals(lb.partner()), "parents become partners");
             helper.assertTrue(lc.parents().contains(a.displayNameCap()) && lc.parents().contains(b.displayNameCap()),
                 "the child knows whose it is: " + lc.parents());
-            helper.assertTrue(la.children() == 1 && lb.children() == 1, "both parents count the child");
+            // Twins now and then (VillageFolkEntity.litter): both parents count every child born.
+            helper.assertTrue(la.children() >= 1 && la.children() == lb.children(), "both parents count the child: " + la.children() + " / " + lb.children());
             boolean takesAfter = false;
             for (var t : lc.traits()) takesAfter |= la.has(t) || lb.has(t);
             helper.assertTrue(lc.traits().size() == 2 && takesAfter, "the child takes after a parent: " + lc.traits());
@@ -2091,6 +2092,9 @@ public class VillageGameTests {
         java.util.List<String> lines = new java.util.ArrayList<>();
         // Soured past mending; a day's roll may bring the elders to a truce instead, so a few days of it.
         for (int k = 9; k < 16 && lines.stream().noneMatch(x -> x.contains("fell into a feud")); k++) {
+            // No truce standing between them (one called on an earlier day holds the relation off a feud).
+            com.jrpetty.mcassistant.village.Ledger.note(village, "truce/" + otherId, "");
+            com.jrpetty.mcassistant.village.Ledger.note(otherId, "truce/" + village, "");
             com.jrpetty.mcassistant.village.Ledger.relate(village, otherId, -200);
             com.jrpetty.mcassistant.entity.Diplomacy.daily(level, v, other, day + k);
             lines.clear();
