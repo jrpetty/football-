@@ -319,6 +319,7 @@ public final class Villages {
             case "fountain" -> "the fountain on the square";
             case "manor" -> "a manor house";
             case "belltower" -> "the bell tower";
+            case "flats" -> "a block of flats";                   // [flats]
             default -> "the " + structure;
         };
     }
@@ -1423,7 +1424,8 @@ public final class Villages {
      * set aside is the next project (see {@link #defer}); the rest wait their turn.
      */
     public static List<String> projectsWanted(UUID villageId) {
-        return requestedFirst(villageId, projectsWantedInOrder(villageId));
+        // [flats] a block of flats ahead of the next house, in the Iron Age when the town wants one (Flats)
+        return requestedFirst(villageId, Flats.wanted(villageId, projectsWantedInOrder(villageId)));
     }
 
     private static List<String> projectsWantedInOrder(UUID villageId) {
@@ -1644,7 +1646,8 @@ public final class Villages {
     /** Beds the village's homes hold: four a house, six a barracks (the guest house is the player's). */
     public static int bedsPlanned(UUID villageId) {
         return com.jrpetty.mcassistant.village.VillageMath.BEDS_PER_HOUSE * built(villageId, "house")
-            + 6 * built(villageId, "barracks") + 6 * built(villageId, "manor");
+            + 6 * built(villageId, "barracks") + 6 * built(villageId, "manor")
+            + Flats.bedsPlanned(villageId);                         // [flats] nine a block of flats
     }
 
     /**
@@ -1738,7 +1741,8 @@ public final class Villages {
         if (seen != null && seen.length > 2) return (int) (seen[1] + seen[2]);
         return 12 + 5 * built(villageId, "house") + 3 * built(villageId, "shelter") + 6 * built(villageId, "hall")
             + 6 * built(villageId, "barracks") + 6 * built(villageId, "manor")
-            + 2 * com.jrpetty.mcassistant.village.Ledger.grownCount(villageId);
+            + 2 * com.jrpetty.mcassistant.village.Ledger.grownCount(villageId)
+            + Flats.bedsPlanned(villageId);                         // [flats]
     }
 
     /**
@@ -1822,6 +1826,7 @@ public final class Villages {
             case "library" -> "a library, where the enchanter keeps its books";
             case "fountain" -> "a fountain on the square, now that the village builds in stone";
             case "manor" -> "a manor house, six beds under a slate roof: the best homes a town of the Iron Age has";
+            case "flats" -> Flats.why(villageId);                  // [flats]
             case "belltower" -> "a bell tower on the square, to ring the hours of a Diamond Age town";
             case "gateway" -> "a gateway of obsidian, the way out of the world the Nether Age is named for";
             case "granary" -> "a granary (great work " + (renown(villageId) + 1) + "): a town that has come through every age goes on building";

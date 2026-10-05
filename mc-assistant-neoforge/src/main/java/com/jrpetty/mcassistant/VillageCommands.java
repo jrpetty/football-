@@ -135,6 +135,11 @@ public final class VillageCommands {
                 .then(Commands.literal("let")
                     .then(Commands.argument("coins", IntegerArgumentType.integer(0, 20))
                         .executes(ctx -> house(ctx, "let", IntegerArgumentType.getInteger(ctx, "coins"))))))
+            // [flats] The village's blocks of flats: each flat, who lives there, on what terms. `stage`
+            // sets a furnished block out on a stage at the spot, for the pictures (from a palette, not the stores).
+            .then(Commands.literal("flats")
+                .executes(VillageCommands::flats)
+                .then(Commands.literal("stage").requires(src -> src.hasPermission(2)).executes(VillageCommands::flatsStage)))
             .then(Commands.literal("wages").executes(ctx -> page(ctx, 2)))
             .then(Commands.literal("economy").executes(ctx -> page(ctx, 3)))
             // The sellers' books: what the shop, the café, the tavern and the stores have, sell and make.
@@ -703,6 +708,22 @@ public final class VillageCommands {
         java.util.List<String> lines = com.jrpetty.mcassistant.entity.Homes.list(ctx.getSource().getLevel(), p);
         ctx.getSource().sendSuccess(() -> Component.literal("HOUSES " + String.join(" | ", lines)), false);
         return lines.size();
+    }
+
+    /** [flats] /village flats: the nearest village's blocks of flats and who lives in each flat. */
+    private static int flats(CommandContext<CommandSourceStack> ctx) {
+        net.minecraft.core.BlockPos at = net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition());
+        java.util.List<String> lines = com.jrpetty.mcassistant.entity.Flats.list(ctx.getSource().getLevel(), at);
+        ctx.getSource().sendSuccess(() -> Component.literal("FLATS " + String.join(" | ", lines)), false);
+        return lines.size();
+    }
+
+    /** [flats] /village flats stage: a furnished block of flats set out at the spot, its door to the south. */
+    private static int flatsStage(CommandContext<CommandSourceStack> ctx) {
+        net.minecraft.core.BlockPos at = net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition());
+        String where = com.jrpetty.mcassistant.entity.Flats.stage(ctx.getSource().getLevel(), at);
+        ctx.getSource().sendSuccess(() -> Component.literal("FLATSTAGE " + where), false);
+        return 1;
     }
 
     private static int house(CommandContext<CommandSourceStack> ctx, String what, int coins) {

@@ -2567,6 +2567,67 @@ the board "Homes: ... 7 rented, 2 owned, 3 saving to buy; rent 7 yesterday". The
 all, a row a household: where, on what terms, the rent, what it owes, what it has put by against
 the price, and whether it wants to own and why.
 
+### Blocks of flats
+
+From the Iron Age a town that is short of homes builds **up** instead of out: a block of flats,
+three storeys of small homes on one house's lot.
+
+* **When.** Households are waiting for a home, some of them the flats' sort (a grown folk on its
+  own, a couple with no children yet, a household that couldn't afford a house's rent), and the
+  ground near the square is running short (three home lots or fewer free in the first ring of
+  streets) or the queue is long (three households or more). One block for every thirty folk, the
+  first at once; never while a block has more than one flat standing empty. It goes on the
+  builders' list ahead of the next house, on a home lot as near the square as there is, and the
+  status line says why ("a block of flats ...: 4 households wait for a home (3 of them young or
+  hard up) and 2 lots stand free near the square").
+* **The building.** Eleven blocks wide: stone walls with a brick band at every floor, glass in
+  the windows, a flat roof of stone slabs behind a parapet, two chimney stacks, a step up to the
+  front door. Inside, a stair hall up one side with a stair that winds up the back of it to every
+  landing (real steps, a rail at the well's edge, a lantern on every landing), and two flats to a
+  landing: six in all, three for couples (two beds) and three for singles (one bed). Each flat is
+  a room with its bed or beds, a chest, a little table (a post with a cloth on it), a lantern and
+  windows on two sides. The builders raise it like anything else, out of the stores, a load at a
+  time and storey by storey from the footing up; the Iron Age's make-over dresses its footing and
+  slates its stair like the rest of the town, and lamp posts go up by its front door.
+* **Seen to.** Once it stands the town's hands see to it, out of the stores: the beds it went up
+  without (from the stores, or three wool and three planks), the ground floor's two doors, each
+  flat's number on a sign on its landing with who lives there ("Flat 2B / Tansy & Rook"), and a run
+  of iron railings along the front (iron bars put by, or six bars of iron beaten into sixteen, never
+  while the village is putting iron by for its age). The sign by the front door gives its name.
+* **Its name.** Each block is named for its street: Elm Row Flats, and a second on the same street
+  Elm Row Buildings (then Court, Mansions, House). Each flat has a number: the storey (1 the ground
+  floor) and A for the front, B for the back. A folk's card says "I live in flat 2B, Elm Row Flats,
+  with Tansy — ...".
+* **Who gets one.** The flats are let, never sold, and the young and the hard-up are offered them
+  first: a grown child who has come of age moves out of its parents' house into a flat of its own
+  ("A flat of my own! Small, but it's mine."), a couple starting out takes a couple's flat, and a
+  household that couldn't afford a house's rent (nobody earning, or not a week of it in hand over
+  the dozen coins a head it lives on) takes one too. A family that can afford a house is offered a
+  house first, and a flat only when there is none. A family's child gets a bed of its own in the
+  flat, bought at the shop as in a house.
+* **Half a house's rent.** A flat's rent is a house's day's rent every other day (so a coin every
+  other day in a village or a town). It goes on the slate, is let off and written off just as a
+  house's is: nobody is put out.
+* **Moving on.** A household in a flat that wants a house of its own saves on payday toward a
+  house's price (never the flat's), and says so ("we're saving for a house of our own: 34 of 53
+  coins put by"). Once it has the price and a house stands empty, it moves out and buys the house
+  outright; a family with children that can afford a house's rent moves out to an empty one as its
+  tenants. While such a household waits with no house empty, the builders put one up. The flat is
+  let to the next household. Two who marry and set up together in a single's flat move across to a
+  couple's flat when one is free (or to a house, if they can afford one).
+* **Every bed counts.** The flats' beds are the town's beds: counted in the room it has, in the
+  houses it plans (nine a block), and in "with a bed" on the books.
+* **The Diamond Age.** A block whose flats are all let while folk still wait gets a fourth storey:
+  paid for out of the stores before its roof comes off, raised a layer at a time, the stair carried
+  up, and two more flats (twelve beds).
+* **Seeing it.** The chronicle notes the town's first block ("the town's first block of flats
+  opened: Elm Row Flats, 6 flats on one lot ...") and each after it; the books' Buildings page
+  shows each block by name with its storeys and its flats let and free ("4 of 6 flats let, 2
+  free"); the Homes page lists every household in a flat (kind "flat", rent due every other day,
+  what it has put by toward a house); the status line adds "flats: 4 of 6 let"; and `/village flats`
+  lists every block, every flat, who lives there and on what terms. (`/village flats stage` sets a
+  furnished block out on a stage, for the pictures.)
+
 ### Knacks: what each folk chooses for itself
 
 As a folk grows in experience it earns **knack points**, one at each fifth level of the trade it is
@@ -3014,6 +3075,10 @@ ripen, days pass, folk work and houses go up at that pace.
 * `/village house` — the nearest village's houses: who lives in each, on what terms, and
   what is for sale. `house buy` buys the empty house you stand in; `house let <coins>` lets
   yours out at that rent a day (0 to take it back); `house rent` collects the rent.
+* `/village flats` — the nearest village's blocks of flats: each block's name and storeys, every
+  flat, who lives in it, its rent and what its household has put by for a house; and whether the
+  town wants another block, and why. `flats stage` (operators) sets a furnished block out on a
+  stage where you stand, for the pictures.
 * `/village stats [page]` — the town's books on the analytics screen (as clicking the village
   board does), opened at a page if one is given (0 the Overview to 18 the Board; 12 is the Stock,
   13 Research); from the console, the reading of what drives the village's growth.

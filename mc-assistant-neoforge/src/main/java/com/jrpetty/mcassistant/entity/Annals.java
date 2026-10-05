@@ -1042,6 +1042,7 @@ public final class Annals {
                 c.putString("tenure", Homes.seat(h) ? "the leader's" : h.members.isEmpty() && h.tenure != Homes.Tenure.PLAYER ? "empty" : h.tenure.word);
                 if (h.price > 0) c.putInt("price", h.price);
             }
+            Flats.annals(id, b, c);            // [flats] a block's name, storeys and flats let and free
             out.add(c);
         }
         return out;

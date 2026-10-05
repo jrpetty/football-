@@ -1,0 +1,234 @@
+# A block of flats (the Iron Age): four storeys of small flats for the young and the hard-up,
+# two to a landing, off a stair that winds up the back of the hall. Stone walls with a brick band at
+# every floor, glass in the windows, a flat roof behind a parapet. Each flat a room with a bed (two
+# for a couple's flat), a chest, a table and a lantern; the ground floor's doors are hung once it
+# stands (Flats). Rows run from the back of the building (top) to the front (bottom, the door).
+name flats4
+layer -1
+...........
+FFFFFFFFFFF
+FffffffFFFF
+FffffffFFFF
+FffffffFFFF
+FFFFFFFFFFF
+FffffffFFFF
+FffffffFFFF
+FffffffFFFF
+FFFFFFFFFFF
+........k..
+layer 0
+...........
+SSSSSSSSSSS
+S.C..P.W^SS
+SB.....W.SS
+S.........S
+SWWWWWWW..S
+S......W..S
+SBB.......S
+Sc...P.W..S
+SSSSSSSSDSS
+...........
+layer 1
+...........
+SSGSGSSSSSS
+S....X.W.>S
+G......W.SS
+S.........G
+SWWWWWWW..S
+S......W..S
+G.........G
+S....X.W..S
+SSGSGSSS.GS
+...........
+layer 2
+...........
+SSGSGSSSSSS
+S......W..S
+S...j..W.vS
+S......W..S
+SWWWWWWW..S
+S......W.jS
+S...j..W..S
+S......W..S
+SSGSGSSSSSS
+...........
+layer 3
+...........
+ZZZZZZZZZZZ
+Zfffffff..Z
+Zfffffff<.Z
+ZfffffffffZ
+ZfffffffffZ
+ZfffffffffZ
+ZfffffffffZ
+ZfffffffffZ
+ZZZZZZZZZZZ
+...........
+layer 4
+...........
+SSSSSSSSSSS
+S..C.P.W^.S
+SBB....W..S
+S......Y.PS
+SWWWWWWW..S
+S......W..S
+SB.....Y..S
+Sc...P.W..S
+SSSSSSSSSSS
+...........
+layer 5
+...........
+SSGSGSSSSSS
+S....X.W.>S
+G......W..S
+S.........G
+SWWWWWWW..S
+S......W..S
+G.........G
+S....X.W..S
+SSGSGSSSGGS
+...........
+layer 6
+...........
+SSGSGSSSSSS
+S......W..S
+S...j..W.vS
+S......W..S
+SWWWWWWW..S
+S......W.jS
+S...j..W..S
+S......W..S
+SSGSGSSSSSS
+...........
+layer 7
+...........
+ZZZZZZZZZZZ
+Zfffffff..Z
+Zfffffff<.Z
+ZfffffffffZ
+ZfffffffffZ
+ZfffffffffZ
+ZfffffffffZ
+ZfffffffffZ
+ZZZZZZZZZZZ
+...........
+layer 8
+...........
+SSSSSSSSSSS
+S.C..P.W^.S
+SB.....W..S
+S......Y.PS
+SWWWWWWW..S
+S......W..S
+SBB....Y..S
+Sc...P.W..S
+SSSSSSSSSSS
+...........
+layer 9
+...........
+SSGSGSSSSSS
+S....X.W.>S
+G......W..S
+S.........G
+SWWWWWWW..S
+S......W..S
+G.........G
+S....X.W..S
+SSGSGSSSGGS
+...........
+layer 10
+...........
+SSGSGSSSSSS
+S......W..S
+S...j..W.vS
+S......W..S
+SWWWWWWW..S
+S......W.jS
+S...j..W..S
+S......W..S
+SSGSGSSSSSS
+...........
+layer 11
+...........
+ZZZZZZZZZZZ
+Zfffffff..Z
+Zfffffff<.Z
+ZfffffffffZ
+ZfffffffffZ
+ZfffffffffZ
+ZfffffffffZ
+ZfffffffffZ
+ZZZZZZZZZZZ
+...........
+layer 12
+...........
+SSSSSSSSSSS
+S..C.P.WP.S
+SBB....W..S
+S......Y.PS
+SWWWWWWW..S
+S......W..S
+SB.....Y..S
+Sc...P.W..S
+SSSSSSSSSSS
+...........
+layer 13
+...........
+SSGSGSSSSSS
+S....X.W..S
+G......W..S
+S.........G
+SWWWWWWW..S
+S......W..S
+G.........G
+S....X.W..S
+SSGSGSSSGGS
+...........
+layer 14
+...........
+SSGSGSSSSSS
+S......W..S
+S...j..W..S
+S......W..S
+SWWWWWWW..S
+S......W.jS
+S...j..W..S
+S......W..S
+SSGSGSSSSSS
+...........
+layer 15
+...........
+SSSSSSSSSSS
+SsssssssssS
+SsssssssssS
+SsssssssssS
+SsssssssssS
+SsssssssssS
+SsssssssssS
+SsssssssssS
+SSSSSSSSSSS
+...........
+layer 16
+...........
+SSSSSSSSSSS
+S.........S
+S.........S
+S.........S
+Z.........Z
+S.........S
+S.........S
+S.........S
+SSSSSSSSSSS
+...........
+layer 17
+...........
+...........
+...........
+...........
+...........
+Z.........Z
+...........
+...........
+...........
+...........
+...........
