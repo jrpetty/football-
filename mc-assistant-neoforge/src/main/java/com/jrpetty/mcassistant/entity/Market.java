@@ -43,6 +43,9 @@ import java.util.function.Predicate;
  *     an old hand — out of what it holds beyond what it is saving for (a trade's kit, the
  *     drover's pair). Short of coin, everybody gets the same share of its wage. Folk save
  *     what they earn, spend it in town, and once a week pay a tithe back.</li>
+ * <li><b>Rent.</b> Straight after the wages, the village's tenants pay their rent into the
+ *     treasury, and the households saving for a house of their own put part of their pay by
+ *     (Homes.payday).</li>
  * <li><b>Selling.</b> Every morning passing traders buy enough of what the village has
  *     plenty of to meet the day's wages; on market day the traders take its surplus.</li>
  * <li><b>Buying.</b> A village short of wool for its beds buys it on market day.</li>
@@ -306,6 +309,7 @@ public final class Market {
         takings(level, v, sold);                         // what the village made yesterday is its revenue
         buyWool(level, v, day);                          // the beds, out of half of it at most
         payWages(level, v);
+        Homes.payday(level, v, day);                     // the rent in, and what the households put by to buy their houses
         if (RestDay.today(id, day)) tithe(level, v, day);
         Villages.checkRank(level, v, day);
         News.morning(level, v, day);
@@ -509,11 +513,13 @@ public final class Market {
             if (due[i] < wages.get(i)) { due[i]++; given++; }
         }
         int paid = 0;
+        long day = level.getDayTime() / 24000L;
         for (int i = 0; i < due.length; i++) {
             if (due[i] <= 0) continue;
             int got = Ledger.takeCoins(id, due[i]);
             if (got <= 0) break;
             hands.get(i).paid(got);
+            PAID.put(hands.get(i).getUUID(), new long[]{ day, got });
             paid += got;
         }
         Economy.wages(id, paid);
@@ -522,6 +528,15 @@ public final class Market {
     }
 
     // ------------------------------------------------------------------ payday
+
+    /** What each folk was paid at its last payday: {day, coin}. */
+    private static final java.util.Map<UUID, long[]> PAID = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** What this folk was paid on this day's payday (0 if nothing, or not that day): Homes puts a share of it by. */
+    public static int paidOn(UUID folk, long day) {
+        long[] p = PAID.get(folk);
+        return p == null || p[0] != day ? 0 : (int) p[1];
+    }
 
     /** The share of the wages the last payday paid, in the hundred (-1 before the first). */
     private static final java.util.Map<UUID, Integer> SHARE = new java.util.concurrent.ConcurrentHashMap<>();
@@ -642,6 +657,7 @@ public final class Market {
         SAVING.clear();
         SHARE.clear();
         NEWS.clear();
+        PAID.clear();
     }
 
     // ------------------------------------------------------------------ the tithe

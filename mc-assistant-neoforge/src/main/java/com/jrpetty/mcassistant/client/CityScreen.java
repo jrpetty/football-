@@ -354,7 +354,7 @@ public class CityScreen extends Screen {
 
     private void money(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my) {
         int half = (cw - 6) / 2, chartH = (ch - 30) / 2;
-        int[] in = plus(series("takings"), series("sold"), series("tithe"));
+        int[] in = plus(series("takings"), series("sold"), series("tithe"), series("rent"), series("house_sales"));
         int[] outs = plus(series("wages"), series("spent"));
         chart(g, x, y, half, chartH, "Made, earned and paid out, a day", mx, my, new Series("Made", series("output"), GREEN),
             new Series("Money in", in, BLUE), new Series("Paid out", outs, RED));
@@ -380,10 +380,12 @@ public class CityScreen extends Screen {
             by += 12;
         }
         int takings = sumLast(series("takings"), n), sold = sumLast(series("sold"), n), tithe = sumLast(series("tithe"), n),
-            wages = sumLast(series("wages"), n), spent = sumLast(series("spent"), n);
+            wages = sumLast(series("wages"), n), spent = sumLast(series("spent"), n), rent = sumLast(series("rent"), n),
+            houses = sumLast(series("house_sales"), n);
         by += 2;
-        small(g, "In: " + takings + " from the work, " + sold + " sold, " + tithe + " tithe.", bx, by, Ui.MUTED);
-        small(g, "Out: " + wages + " in wages, " + spent + " bought in. Net " + (takings + sold + tithe - wages - spent) + ".", bx, by + 9, Ui.MUTED);
+        small(g, Ui.clip(font, "In: " + takings + " from the work, " + sold + " sold, " + tithe + " tithe, " + rent + " rent, " + houses + " houses sold.",
+            (int) (half / 0.75)), bx, by, Ui.MUTED);
+        small(g, "Out: " + wages + " in wages, " + spent + " bought in. Net " + (takings + sold + tithe + rent + houses - wages - spent) + ".", bx, by + 9, Ui.MUTED);
     }
 
     // ------------------------------------------------------------------ production
@@ -799,28 +801,95 @@ public class CityScreen extends Screen {
         }
     }
 
+    private static final String[] HOME_HEADS = { "Household", "House", "Terms", "Rent", "Put by toward the price", "Own one?" };
+
+    /**
+     * Homes: beds against folk and households housed over time, the tenures (rented, owned, saving to
+     * buy, the leader's, players'), the rent coming in, and every household: where it lives, on what
+     * terms, its rent, what it has put by toward the price, and whether it wants a house of its own.
+     */
     private void homes(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my) {
         CompoundTag hm = data.getCompound("homes");
-        int half = (cw - 6) / 2, chartH = ch - 96;
-        chart(g, x, y, half, chartH, "Folk against beds", mx, my, new Series("Folk", series("pop"), BLUE),
+        int third = (cw - 12) / 3, chartH = Math.max(50, ch * 34 / 100);
+        chart(g, x, y, third, chartH, "Folk against beds", mx, my, new Series("Folk", series("pop"), BLUE),
             new Series("Room", series("room"), GREEN), new Series("With a bed", series("bedded"), AMBER));
-        chart(g, x + half + 6, y, half, chartH, "Households housed and waiting", mx, my, new Series("Housed", series("housed"), GREEN),
-            new Series("Waiting", series("waiting"), RED), new Series("Buildings", series("buildings"), BROWN));
-        int ty = y + chartH + 14;
-        String[] names = { "housed", "waiting", "given", "owned", "rented", "players", "empty" };
-        String[] words = { "Households housed", "Waiting for a house", "Given by the village", "Owned", "Rented", "Players' houses", "Empty" };
-        int colW = cw / 4;
-        for (int i = 0; i < names.length; i++) {
-            int cx = x + (i % 4) * colW, cy = ty + (i / 4) * 11;
-            g.drawString(font, words[i] + ": ", cx, cy, Ui.FAINT, false);
-            g.drawString(font, Integer.toString(hm.getInt(names[i])), cx + font.width(words[i] + ": "), cy, Ui.INK, false);
+        chart(g, x + third + 6, y, third, chartH, "Rented, owned, saving to buy", mx, my, new Series("Rented", series("rented"), TEAL),
+            new Series("Owned", series("owned"), PURPLE), new Series("Saving", series("saving"), AMBER), new Series("Waiting", series("waiting"), RED));
+        bars(g, x + 2 * (third + 6), y, third, chartH, "Rent and houses sold, a day (coins)", mx, my,
+            new Series("Rent", series("rent"), GREEN), new Series("Sold", series("house_sales"), BROWN));
+        // The figures.
+        int ty = y + chartH + 12;
+        String[][] figures = {
+            { "Housed", Integer.toString(hm.getInt("housed")) }, { "Waiting", Integer.toString(hm.getInt("waiting")) },
+            { "Renting", Integer.toString(hm.getInt("rented")) }, { "Owned", Integer.toString(hm.getInt("owned")) },
+            { "Saving to buy", Integer.toString(hm.getInt("saving")) }, { "Put by", hm.getInt("saved") + "c" },
+            { "Rent yesterday", hm.getInt("rent_yesterday") + "c" }, { "Owed", hm.getInt("owed") + "c" },
+            { "Players'", Integer.toString(hm.getInt("players")) }, { "Empty", Integer.toString(hm.getInt("empty")) } };
+        int colW = cw / 5;
+        for (int i = 0; i < figures.length; i++) {
+            int cx = x + (i % 5) * colW, cy = ty + (i / 5) * 10;
+            small(g, figures[i][0] + ":", cx, cy, Ui.FAINT);
+            small(g, figures[i][1], cx + (int) (font.width(figures[i][0] + ": ") * 0.75), cy, Ui.INK);
         }
-        int by = ty + 24;
-        g.drawString(font, "Beds", x, by, Ui.FAINT, false);
-        Ui.bar(g, x + 30, by, cw / 2, 8, hm.getInt("folk") == 0 ? 0 : hm.getInt("bedded") / (float) Math.max(1, hm.getInt("folk")), GREEN);
-        g.drawString(font, hm.getInt("bedded") + " of " + hm.getInt("folk") + " folk have a bed; " + hm.getInt("beds_made") + " made up in houses, room for "
-            + hm.getInt("room") + (hm.getInt("for_sale") == 1 ? "; houses are sold" : "; houses are given"), x + 36 + cw / 2, by, Ui.MUTED, false);
-        small(g, Ui.clip(font, hm.getString("line"), (int) (cw / 0.75)), x, by + 12, Ui.MUTED);
+        int by = ty + 22;
+        small(g, "Beds", x, by, Ui.FAINT);
+        Ui.bar(g, x + 22, by, cw / 4, 6, hm.getInt("folk") == 0 ? 0 : hm.getInt("bedded") / (float) Math.max(1, hm.getInt("folk")), GREEN);
+        small(g, Ui.clip(font, hm.getInt("bedded") + " of " + hm.getInt("folk") + " folk have a bed, " + hm.getInt("beds_made") + " made up, room for "
+            + hm.getInt("room") + "; houses are let to their households, who buy them when they have saved the price", (int) ((cw * 3 / 4 - 30) / 0.75)),
+            x + 28 + cw / 4, by, Ui.MUTED);
+        // Every household.
+        int hy = by + 12;
+        int[] cols = { 0, cw * 26 / 100, cw * 42 / 100, cw * 55 / 100, cw * 61 / 100, cw * 80 / 100 };
+        for (int i = 0; i < HOME_HEADS.length; i++) small(g, HOME_HEADS[i], x + cols[i], hy, Ui.FAINT);
+        hy += 10;
+        List<CompoundTag> rows = new ArrayList<>();
+        ListTag rl = hm.getList("rows", Tag.TAG_COMPOUND);
+        for (int i = 0; i < rl.size(); i++) rows.add(rl.getCompound(i));
+        rows.sort(Comparator.comparing((CompoundTag r) -> r.getString("status")).thenComparing(r -> -r.getInt("saved")));
+        int rowsFit = Math.max(1, (y + ch - 10 - hy) / 10);
+        int start = Math.max(0, Math.min(scroll, Math.max(0, rows.size() - rowsFit)));
+        for (int i = start; i < Math.min(rows.size(), start + rowsFit); i++) {
+            CompoundTag r = rows.get(i);
+            boolean over = mx >= x && mx < x + cw && my >= hy - 1 && my < hy + 9;
+            g.fill(x - 2, hy - 1, x + cw, hy + 9, over ? Ui.HI : i % 2 == 0 ? Ui.ROW : Ui.ROW_ALT);
+            String status = r.getString("status");
+            int sc = status.equals("owns") ? GREEN : status.equals("saving") ? AMBER : status.equals("the leader's") ? PURPLE : TEAL;
+            g.fill(x - 2, hy - 1, x, hy + 9, sc);
+            String rent = r.getInt("rent") == 0 ? "—" : r.getInt("rent") + "c" + (r.getInt("owed") > 0 ? " (owes " + r.getInt("owed") + ")" : "");
+            String[] cells = { r.getString("household"), r.getString("kind") + ", " + r.getString("address"), status, rent };
+            for (int c = 0; c < cells.length; c++) {
+                int w = cols[c + 1] - cols[c] - 3;
+                small(g, Ui.clip(font, cells[c], (int) (w / 0.75)), x + cols[c] + (c == 0 ? 2 : 0), hy + 1, c == 2 ? sc : Ui.INK);
+            }
+            // Toward the price: a bar, and the figures.
+            int px = x + cols[4], pw = cols[5] - cols[4] - 4;
+            int price = r.getInt("price"), saved = r.getInt("saved");
+            if (status.equals("owns")) {
+                small(g, Ui.clip(font, "bought" + (price > 0 ? " for " + price + "c" : ""), (int) (pw / 0.75)), px, hy + 1, GREEN);
+            } else if (price > 0) {
+                Ui.bar(g, px, hy + 1, pw / 2, 6, Math.min(1f, saved / (float) price), saved > 0 ? AMBER : Ui.EDGE_SOFT);
+                small(g, saved + " of " + price + "c", px + pw / 2 + 3, hy + 1, Ui.MUTED);
+            } else {
+                small(g, "—", px, hy + 1, Ui.FAINT);
+            }
+            small(g, Ui.clip(font, (r.getBoolean("wants") ? "yes: " : "no: ") + r.getString("why"), (int) ((cw - cols[5]) / 0.75)),
+                x + cols[5], hy + 1, r.getBoolean("wants") ? Ui.INK : Ui.MUTED);
+            if (over) {
+                List<Component> tip = new ArrayList<>();
+                tip.add(Component.literal(r.getString("household")));
+                tip.add(Component.literal(r.getString("kind") + ", " + r.getString("address") + " — " + r.getString("terms")));
+                if (r.getInt("rent") > 0) tip.add(Component.literal("Rent " + r.getInt("rent") + "c a day" + (r.getString("rent_note").isEmpty() ? "" : "; " + r.getString("rent_note"))));
+                if (price > 0) tip.add(Component.literal("Put by " + saved + " of " + price + "c"));
+                tip.add(Component.literal((r.getBoolean("wants") ? "Wants a house of its own: " : "Content to rent: ") + r.getString("why")));
+                hover = tip;
+                hoverX = mx;
+                hoverY = my;
+            }
+            hy += 10;
+        }
+        if (rows.isEmpty()) small(g, "No household has a house yet.", x, hy, Ui.MUTED);
+        small(g, Ui.clip(font, rows.size() + " households · the mouse over a row for the whole of it" + (rows.size() > rowsFit ? " · scroll for more" : ""),
+            (int) (cw / 0.75)), x, y + ch - 9, Ui.FAINT);
     }
 
     private void stores(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my) {
@@ -1169,7 +1238,7 @@ public class CityScreen extends Screen {
         ly += 14;
         Ui.section(g, font, "All told (" + days.length + " days in the books)", x, ly, half);
         ly += 12;
-        int[] wagesAll = series("wages"), inAll = plus(series("takings"), series("sold"), series("tithe"));
+        int[] wagesAll = series("wages"), inAll = plus(series("takings"), series("sold"), series("tithe"), series("rent"), series("house_sales"));
         String[][] totals = {
             { "Born", Integer.toString(sumLast(series("born"), days.length)) }, { "Died", Integer.toString(sumLast(series("died"), days.length)) },
             { "Came to live here", Integer.toString(sumLast(series("moved_in"), days.length)) },

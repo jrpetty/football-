@@ -242,6 +242,10 @@ output, the worth and the three best paid, and any folk will tell you who earns 
     short, or hardly at all, folk say so.
   * **The tithe.** On the day of rest every folk with savings gives one coin in ten of
     what it holds over a dozen back to the treasury.
+  * **Rent.** Straight after the wages, every household that rents from the village pays its
+    day's rent into the treasury (a coin for a house in most places: see Homes), and those
+    saving for a house of their own put some of their pay by; a household that has saved the
+    price buys its house. The Economy page counts both as money in.
 * **Wool for the beds.** Every morning, before the wages, a village whose houses wait
   for beds and that has no wool to make them buys a lot or two from the traders, out of
   half the treasury at most. Short of the coin, it puts a lot's price by for tomorrow. While the beds wait, the village keeps
@@ -1885,7 +1889,7 @@ every chart reads out the day under the mouse.
 * **Money:** what it made, took in and paid out each day; the treasury, the folk's purses and
   its worth over time; money in against money out; and what it made by kind (food, timber,
   stone, ore and metal, wool and hides, crafts, plants), with the takings, sales, tithe,
-  wages and buying-in for the range.
+  rent, houses sold, wages and buying-in for the range.
 * **Production:** everything the village makes, item by item: every log, cobblestone, loaf,
   ingot, stone brick, lantern and bed its folk bring home or make in the stores. Five cards
   give the whole of it: what it made yesterday, a day this week, how many kinds of thing,
@@ -1925,8 +1929,12 @@ every chart reads out the day under the mouse.
   and level, family, home and escort, how long in office, its mandate and orders, the
   council, the pace and pay it sets, its approval and regard, the elections (the one coming
   and the ones before), and what it has been doing lately.
-* **Homes:** folk against beds and room over time, households housed and waiting, and the
-  houses by tenure (given, owned, rented, players', empty).
+* **Homes:** folk against beds and room over time; households renting, owning, saving to buy
+  and waiting over time; the rent and the houses sold each day; the figures (housed, waiting,
+  renting, owned, saving, coin put by, rent yesterday, owed, players' houses, empty); and every
+  household: who, which house and where, renting or saving or owning, its rent (and anything it
+  owes), a bar of what it has put by toward the price, and whether it wants a house of its own
+  and why (the mouse over a row tells the whole of it).
 * **Buildings:** every building: what it is, how far and which way from the heart, its
   storeys (or a storey going up), how far its insides are furnished for the age, and for a
   house how many live there and on what terms; how many of each kind; and what the village
@@ -2041,7 +2049,7 @@ beats over different parts of the town), g03 (the leader's escort: chosen by lev
 fights, stands down at work), g04 (a beginner's, a veteran's and a master's iron pick), g05
 (an order turned down by a beginner and made by a veteran).
 
-### Homes: households, houses for sale, and yours to buy
+### Homes: households, rent first, saving up to buy, and yours to buy
 
 Every folk belongs to a household: itself, its partner and their children. Each household has a
 house of its own (a house or a manor the village built) and sleeps there.
@@ -2061,22 +2069,59 @@ house of its own (a house or a manor the village built) and sleeps there.
 * **Moving house.** A household that moves carries its belongings: it walks to the old house's
   chest, takes its things, and puts them in the new one's. Its keepsakes (presents it loved, treats it
   bought at the shop for itself) are its own: never banked in the village stores.
-* **Given, then sold.** While the village is young its houses are given, families first. Once it is
-  getting rich (the Stone Age past, 120 coins in the treasury, sixteen folk), a new house is sold: a
-  household with the coin buys it outright, one without rents it from the village at a coin or two a
-  day (half that under a leader elected for homes), and buys it when it has saved enough. A rich
-  household moves up to a manor, which the builders put up once someone can afford one, selling its
-  old house back.
+* **Rented first, never given.** The village lets its houses; it gives none away. A household moves
+  in as the village's tenant, families first, rich or poor, and pays its rent on payday, straight
+  after the wages, out of its purses into the treasury (the books count it as money in: the
+  Economy page's "in rent"). The rent follows the wages: half a field hand's day for a house, a
+  field hand's day for a two-storey house, two for a manor, rounded up — so a house is a coin a day
+  in a hamlet, a village or a town and two in a city; a two-storey house one in a hamlet, two in a
+  village or a town, three in a city; a manor two, four and six. Half that (never under a coin)
+  under a leader elected for homes. The only free roof is the leader's hall: it goes with
+  the office.
+* **Nobody is put out.** A tenant that can't pay has its rent put on the slate and pays it back
+  out of later wages (before it saves a coin); the village writes off more than a week's rent owed,
+  and says so in the chronicle. A house where nobody earns (no grown folk with a trade) pays no
+  rent at all, and a generous leader (or one elected for homes) lets off whatever a tenant is
+  short. A household that cannot pay anything is housed all the same.
+* **Some want to own, some never do.** Each household weighs it by what its grown folk care about
+  most: a Homemaker wants a house of its own, a Traditionalist and a Provider like to own the roof
+  over their heads, a Guardian a little; a Visionary isn't fussed; a Free Spirit would rather rent
+  and keep its coin and its freedom; a Merchant buys only when it is a good deal (the price no more
+  than forty days' rent: in a city, or early on, but not a village's houses in the Iron Age). A
+  couple settling down, children, and the middle years (thirty to sixty) pull toward buying;
+  youth (under twenty-four) and old age away. Ask the household and it tells you why.
+* **Saving up, then buying.** A household that wants to own puts by on payday a third of what each
+  of its grown folk was paid, or all its purse holds over a dozen coins, whichever is more: it
+  lives on a dozen coins a head and saves the rest. What it has put by shows ("saving to buy it: 34
+  of 44 coins put by"), counts toward its worth and the village's, and pays the rent if the purses
+  run dry. When it covers the house's price (35 coins for a house, 55 for a two-storey one, 120 for
+  a manor, a quarter more with each age) the household buys the house outright from the village —
+  no deposit, no instalments, so nobody ever has a house taken back — and pays no more rent; the
+  price goes into the treasury and onto the books. A household that changes its mind gets its
+  savings back; one that moves out takes them with it (the last of a household to die leaves them
+  to the village).
+* **Owners.** An owner sells its house back to the village at half what it paid when it leaves it:
+  to marry into its partner's house, for the leader's hall, or up to a manor. A rich owner moves
+  up to a manor, which the builders put up once someone can afford one (once the town is getting
+  rich: the Stone Age past, 120 coins in the treasury, sixteen folk); an empty manor is kept for a
+  household that could buy it, which rents it first like anyone else. Houses given before the
+  village let them are let to their households from the next payday.
 * **Your house.** Stand in an empty house and buy it with village coin (`/village house buy`, or ask
   any folk "buy this house"): a citizen pays the price, a friend of the village a quarter more. You
   get its key. Sleep in it, or let it (`/village house let 3` for three coins a day): the next
-  household with nowhere to live moves in and pays you rent each morning, which you collect with
+  household with nowhere to live moves in and pays you rent each payday, which you collect with
   `/village house rent`. `/village house let 0` gives your tenants notice. `/village house` lists every
-  house, who lives in it, on what terms, and what is for sale.
+  house, who lives in it, on what terms, what each tenant has put by, and what stands empty. A
+  player's tenants don't save to buy it: it isn't the village's to sell.
 
 Ask a folk "Where do you live?" (on the Talk page) and it tells you: "I live at No. 4, Elm Street,
-with Tansy and the children, the village gave it us." The status line shows the homes:
-"9 households housed (6 given, 2 owned, 1 rented), 1 waiting; 1 empty".
+with Tansy and the children — we rent it from the village at 1 coin a day; we're saving to buy it:
+34 of 44 coins put by (we want a place of our own)", or "...; renting suits me (I'd rather keep my
+coin and my freedom)". The status line shows the homes: "9 households housed (2 owned, 7 rented, 3
+of them saving to buy), 1 waiting; 1 empty (to let: house 1c a day); rent 7 coins yesterday", and
+the board "Homes: ... 7 rented, 2 owned, 3 saving to buy; rent 7 yesterday". The town's books get it
+all, a row a household: where, on what terms, the rent, what it owes, what it has put by against
+the price, and whether it wants to own and why.
 
 ### Neighbours: rivals, allies and feuds
 

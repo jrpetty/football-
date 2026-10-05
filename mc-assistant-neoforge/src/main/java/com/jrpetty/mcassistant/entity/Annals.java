@@ -47,7 +47,8 @@ public final class Annals {
         "pop", "adults", "kids", "born", "died", "moved_in", "moved_out", "age", "buildings", "room", "bedded",
         "housed", "waiting", "coins", "purses", "worth", "stores_worth", "output", "takings", "sold", "tithe", "wages",
         "spent", "food", "logs", "stone", "coal", "iron", "content", "idle", "guards", "renown", "food_days10",
-        "out_food", "out_timber", "out_stone", "out_ore", "out_animal", "out_craft", "out_plant");
+        "out_food", "out_timber", "out_stone", "out_ore", "out_animal", "out_craft", "out_plant",
+        "rent", "house_sales", "saving", "owned", "rented");
 
     /** Today's comings and goings, before the morning writes them down. */
     private static final Map<UUID, int[]> TODAY = new ConcurrentHashMap<>();
@@ -138,6 +139,11 @@ public final class Annals {
         n.put("takings", d == null ? 0 : d.takings);
         n.put("sold", d == null ? 0 : d.sold);
         n.put("tithe", d == null ? 0 : d.tithe);
+        n.put("rent", d == null ? 0 : d.rent);
+        n.put("house_sales", d == null ? 0 : d.houses);
+        n.put("saving", homes.length > 8 ? homes[8] : 0);
+        n.put("owned", homes[3]);
+        n.put("rented", homes[4]);
         n.put("wages", d == null ? 0 : d.wages);
         n.put("spent", d == null ? 0 : d.spent);
         int r = Villages.storesRadius(id);
@@ -678,8 +684,12 @@ public final class Annals {
     private static CompoundTag homes(ServerLevel level, UUID id, List<VillageFolkEntity> folk) {
         int[] h = Homes.counts(level, id);
         CompoundTag c = new CompoundTag();
-        String[] names = { "housed", "waiting", "given", "owned", "rented", "players", "empty", "for_sale" };
-        for (int i = 0; i < names.length; i++) c.putInt(names[i], h[i]);
+        String[] names = { "housed", "waiting", "given", "owned", "rented", "players", "empty", "for_sale",
+            "saving", "rent_yesterday", "saved", "owed", "sales_yesterday" };
+        for (int i = 0; i < names.length && i < h.length; i++) c.putInt(names[i], h[i]);
+        CompoundTag report = Homes.report(level, id);
+        c.put("rows", report.getList("rows", net.minecraft.nbt.Tag.TAG_COMPOUND));
+        c.putInt("hand_wage", report.getInt("hand_wage"));
         c.putInt("room", Villages.housing(id));
         c.putInt("beds_made", Villages.bedsMadeUp(level, id));
         int bedded = 0;
@@ -1053,7 +1063,8 @@ public final class Annals {
         if (idle * 5 > adults) out.add("-" + idle + " of " + adults + " grown folk have no trade yet: hands the village is not using.");
         // Money: wages against what comes in.
         int takings = sum(days, key("takings"), days.size() - window, days.size()) + sum(days, key("sold"), days.size() - window, days.size())
-            + sum(days, key("tithe"), days.size() - window, days.size());
+            + sum(days, key("tithe"), days.size() - window, days.size()) + sum(days, key("rent"), days.size() - window, days.size())
+            + sum(days, key("house_sales"), days.size() - window, days.size());
         int wages = sum(days, key("wages"), days.size() - window, days.size()) + sum(days, key("spent"), days.size() - window, days.size());
         int coinsNow = last.values()[key("coins")], coinsThen = then.values()[key("coins")];
         out.add((takings >= wages ? "+" : "-") + "Money " + span + ": " + takings + " in, " + wages + " out (wages and buying in); the treasury "

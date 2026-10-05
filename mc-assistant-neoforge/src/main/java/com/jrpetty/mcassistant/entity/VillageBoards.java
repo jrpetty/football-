@@ -289,7 +289,9 @@ public final class VillageBoards {
             + ", coal " + coal + ", iron " + iron + "."
             + (Storehouses.stands(id) ? " (the storehouse)" : ""));
         int room = Villages.housing(id);
-        out.add((room < folk ? "RW" : "RN") + "|Homes: room for " + room + ", beds made up for " + Villages.bedsMadeUp(level, id) + ".");
+        String homes = Homes.brief(level, id);                  // let, owned, saving to buy, and yesterday's rent
+        out.add((room < folk ? "RW" : "RN") + "|Homes: room for " + room + ", beds made up for " + Villages.bedsMadeUp(level, id)
+            + (homes.isEmpty() ? "" : "; " + homes) + ".");
         int toMarket = Market.daysToMarket(id, day);
         if (Homeland.known(id) != null) out.add("RN|Land: " + Homeland.line(id) + ".");
         out.add("RN|Treasury: " + com.jrpetty.mcassistant.village.Ledger.coins(id) + " coins. Market "
