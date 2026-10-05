@@ -2071,8 +2071,14 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Work-speed swing from how it feels today (village folk; a hired hand has no moods). */
     protected int moodWorkPercent() { return 0; }
 
+    /** What its mood is called on its card's pace line ("cheerful", "fed up"). */
+    protected String moodPaceWord() { return "its mood"; }
+
     /** How the whole village's spirits speed (or slow) its people's work, in percent (Contentment). */
     protected int villageWorkPercent() { return 0; }
+
+    /** What its years do to the pace of its work, in percent (village folk: the old are a little slower). */
+    protected int ageWorkPercent() { return 0; }
 
     /** How well its nature suits its trade, in percent (village folk: Skill). */
     protected int personalityWorkPercent() { return 0; }
@@ -2081,10 +2087,243 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      *  knacks it has chosen for itself (FolkSkills). Village folk only. */
     protected int skillWorkPercent() { return 0; }
 
-    /** Every bonus and penalty to the pace of work, in percent: level, crew, quirk, mood, village. */
+    // ----------------------------- the pace of work --------------------------
+    // Experience, the tool in hand, the crew, the quirk, the mood, the village, the years, its nature
+    // and its skills: everything that makes one pair of hands quicker or slower than another at the
+    // same work. Each trade's clock (a block broken, a crop cut, a sheep shorn, a piece made at the
+    // bench, a block laid, a fish landed) is set by the tool's tier and then shortened by the sum.
+
+    /** The most experience takes off the pace of work: 1% a level, all the way to level 30. */
+    public static final int MOST_EXPERIENCE_PERCENT = 30;
+    /**
+     * The most everything together takes off the pace of work. Forty-five, while experience came
+     * only in three rungs; fifty-five now that every level counts and the city's research and a
+     * folk's own knacks add a little of their own. Even at the most, the tool still sets the base
+     * the bonuses pull against: the quickest hand in the town with a wooden axe is barely quicker
+     * than a recruit handed netherite, and works a quarter quicker itself with iron.
+     */
+    public static final int MOST_PACE_PERCENT = 55;
+    /** And the most everything together puts on it: a miserable, quarrelsome, ill-suited hand. */
+    public static final int LEAST_PACE_PERCENT = -30;
+
+    /**
+     * What so many levels of experience at a trade take off the pace of its work: one percent a
+     * level, up to thirty at level thirty. It came in three rungs before (10% at level 10, 20% at
+     * 20, 30% at 35), and a hand that went from level eleven to nineteen at its trade worked not a
+     * whit quicker for it; now every level counts, and none is slower than it was on the rungs.
+     */
+    public static int experiencePercentAt(int level) {
+        return Math.max(0, Math.min(MOST_EXPERIENCE_PERCENT, level));
+    }
+
+    /** What its own level at the work it does now takes off the pace of that work. */
+    public int experiencePercent() {
+        return experiencePercentAt(veteranLevel());
+    }
+
+    /** Tests: leave out of the pace everything but its level, its years and its tool (see otherWorkPercent). */
+    private boolean plainPaceForTests;
+
+    /**
+     * Tests: measure the pace from its level, its years and its tool alone. Without this a test can
+     * never say by how much a level quickens the work, since the folk it raised comes with a crew,
+     * a quirk, a nature, a mood and a village of its own, much of it drawn at random, and any of
+     * them can fill the cap. Its years stay in: they are the test's to set (bornDaysAgo).
+     */
+    public void plainPaceForTests(boolean on) {
+        this.plainPaceForTests = on;
+    }
+
+    /** Everything in the pace of work but its experience: crew, quirk, mood, village, years, nature, skills. */
+    private int otherWorkPercent() {
+        if (plainPaceForTests) return ageWorkPercent();
+        return teamworkPercent() + traitWorkPercent() + moodWorkPercent() + villageWorkPercent() + ageWorkPercent()
+            + personalityWorkPercent() + skillWorkPercent();
+    }
+
+    /**
+     * Every bonus and penalty to the pace of work, in percent, with its caps: level, crew, quirk,
+     * mood, village, years, nature and skills. One sum for every trade's clock (workTicksFor,
+     * actionPaceTicks, the crafts' bench, the fisher's wait), so a bonus added anywhere reaches
+     * all the work at once.
+     */
     public int workBonusPercent() {
-        int bonus = veteranLevel() >= 35 ? 30 : (veteranLevel() >= 20 ? 20 : (veteranLevel() >= 10 ? 10 : 0));
-        return Math.max(-30, Math.min(45, bonus + teamworkPercent() + traitWorkPercent() + moodWorkPercent() + villageWorkPercent() + personalityWorkPercent() + skillWorkPercent()));
+        return Math.max(LEAST_PACE_PERCENT, Math.min(MOST_PACE_PERCENT, experiencePercent() + otherWorkPercent()));
+    }
+
+    /**
+     * A wait the work sets for itself (a fish's bite, a piece at the bench, a load handled at a
+     * chest), shortened by the pace of the hands at it. {@code sharePercent} is how much of the
+     * pace counts: all of it for work that is all in the hands, half for a wait the world mostly
+     * sets (the fish bite when they bite; a practised fisher only reads the water better).
+     */
+    public int pacedTicks(int ticks, int sharePercent) {
+        int bonus = workBonusPercent() * sharePercent / 100;
+        return Math.max(1, ticks * (100 - bonus) / 100);
+    }
+
+    /** One part of the pace of its work, for its card: what, and how many percent it gives (or takes). */
+    public record PacePart(String label, int percent) {}
+
+    /**
+     * The pace of its work, part by part, for the card a player reads (FolkTalk.card): its level
+     * first, then whatever else is not nought. The parts add up to workBonusPercent() but for the
+     * caps. Its tool is not among them: it sets the pace the parts pull against (paceLine says it).
+     */
+    public java.util.List<PacePart> paceParts() {
+        java.util.List<PacePart> parts = new java.util.ArrayList<>();
+        parts.add(new PacePart("level " + veteranLevel(), experiencePercent()));
+        if (plainPaceForTests) {
+            addPacePart(parts, "its years", ageWorkPercent());
+            return parts;
+        }
+        addPacePart(parts, "working with its crew", teamworkPercent());
+        addPacePart(parts, trait.label, traitWorkPercent());
+        addPacePart(parts, moodPaceWord(), moodWorkPercent());
+        villagePaceParts(parts);
+        addPacePart(parts, "its years", ageWorkPercent());
+        addPacePart(parts, "its nature", personalityWorkPercent());
+        skillPaceParts(parts);
+        return parts;
+    }
+
+    /** The village's part in the pace, for the card (VillageFolkEntity splits it: its spirits, its leader). */
+    protected void villagePaceParts(java.util.List<PacePart> parts) {
+        addPacePart(parts, "the village", villageWorkPercent());
+    }
+
+    /** Its skills' part in the pace, for the card (VillageFolkEntity splits it: the town's research, its knacks). */
+    protected void skillPaceParts(java.util.List<PacePart> parts) {
+        addPacePart(parts, "skills", skillWorkPercent());
+    }
+
+    /** A part of the pace, if it is anything at all. */
+    protected static void addPacePart(java.util.List<PacePart> parts, String label, int percent) {
+        if (percent != 0 && label != null && !label.isEmpty()) parts.add(new PacePart(label, percent));
+    }
+
+    /** "+18%", or "−5%" with a true minus. */
+    private static String signedPercent(int p) {
+        return (p >= 0 ? "+" : "−") + Math.abs(p) + "%";
+    }
+
+    /** Seconds, to a tenth, without a needless ".0": "5.3", "6". */
+    private static String seconds(float s) {
+        float tenth = Math.round(s * 10.0F) / 10.0F;
+        return tenth == (int) tenth ? Integer.toString((int) tenth) : String.format(java.util.Locale.ROOT, "%.1f", tenth);
+    }
+
+    /** The kind of tool a trade works with, as the end of its item id ("_hoe"); null for one with no tiered tool. */
+    @Nullable
+    public static String toolKindFor(StationTask trade) {
+        return switch (trade) {
+            case FARM -> "_hoe";
+            case WOOD -> "_axe";
+            case MINE -> "_pickaxe";
+            case GUARD, HUNT -> "_sword";
+            default -> null;
+        };
+    }
+
+    /** The best tool of this kind it has, in hand or in its pack (the quickest by toolPaceTicksOf); empty if none. */
+    public ItemStack bestToolOfKind(String kind) {
+        ItemStack best = ItemStack.EMPTY;
+        java.util.List<ItemStack> all = new java.util.ArrayList<>();
+        all.add(getMainHandItem());
+        all.addAll(inventory);
+        for (ItemStack s : all) {
+            if (s.isEmpty() || !(s.getItem() instanceof net.minecraft.world.item.TieredItem)) continue;
+            if (!net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(s.getItem()).getPath().endsWith(kind)) continue;
+            if (best.isEmpty() || toolPaceTicksOf(s) < toolPaceTicksOf(best)) best = s;
+        }
+        return best;
+    }
+
+    /**
+     * The pace of its work in a line, for its card (FolkTalk.card): how much quicker (or slower)
+     * than a new hand it is, and why, part by part, with the tool of its trade and what that tool's
+     * tier is worth against a wooden one. "23% quicker than a new hand: level 18 (+18%), stone axe
+     * (5.3 s a stroke against 6 for wood), cheerful (+4%), the town's research (+3%)". A stroke's
+     * seconds are a new hand's, before its level and the rest; a village folk at its own trade
+     * works a good deal quicker than that (workTicksFor).
+     */
+    public String paceLine() {
+        java.util.List<PacePart> parts = paceParts();
+        int sum = 0;
+        for (PacePart p : parts) sum += p.percent();
+        int total = workBonusPercent();
+        StringBuilder sb = new StringBuilder();
+        if (total > 0) sb.append(total).append("% quicker than a new hand");
+        else if (total < 0) sb.append(-total).append("% slower than a new hand");
+        else sb.append("a new hand's pace");
+        if (sum > total) sb.append(" (as quick as anybody gets)");
+        else if (sum < total) sb.append(" (as slow as anybody gets)");
+        java.util.List<String> why = new java.util.ArrayList<>();
+        boolean first = true;
+        for (PacePart p : parts) {
+            // (Only its level is ever on the card at nought: "level 0, new to it".)
+            why.add(p.label() + (p.percent() == 0 ? ", new to it" : " (" + signedPercent(p.percent()) + ")"));
+            // The tool next after the level, as the trade's own reason to want a better one.
+            if (first) {
+                first = false;
+                String tool = toolClause();
+                if (tool != null) why.add(tool);
+            }
+        }
+        sb.append(": ").append(String.join(", ", why));
+        if (dietPercent < 100) sb.append("; on its last meal it works at ").append(Math.max(20, dietPercent)).append("% of that");
+        if (deedCount(Deed.BLOCKS_BUILT) > 0) {
+            sb.append("; at building, level ").append(buildingLevel()).append(", a block every ")
+                .append(String.format(java.util.Locale.ROOT, "%.2f", buildPaceHundredths() / 2000.0F)).append(" s");
+        }
+        return sb.toString();
+    }
+
+    /** Its trade's tool on the pace line: "stone axe (5.3 s a stroke against 6 for wood)"; null for a trade with none. */
+    @Nullable
+    private String toolClause() {
+        String kind = toolKindFor(stationTask);
+        if (kind == null) return null;
+        String noun = kind.substring(1);
+        ItemStack best = bestToolOfKind(kind);
+        if (best.isEmpty()) {
+            return "no " + noun + " (bare hands, " + seconds(BARE_HANDS / 20.0F) + " s a stroke against "
+                + seconds(WOOD_TOOL_PACE / 20.0F) + " with a wooden one)";
+        }
+        // Named by its kind, not its hover name: a smith's mark or a player's name for it is no
+        // help here, and the server has no language of its own to put a name in.
+        String name = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(best.getItem()).getPath().replace('_', ' ');
+        // A blade is the watch's and the hunter's: its tier is in its bite, not in a clock.
+        if (kind.equals("_sword")) return name;
+        int pace = toolPaceTicksOf(best);
+        int efficiency = efficiencyOf(best);
+        if (efficiency > 0) pace = pace * Math.max(40, 100 - 12 * efficiency) / 100;
+        return name + " (" + seconds(pace / 20.0F) + " s a stroke against " + seconds(WOOD_TOOL_PACE / 20.0F) + " for wood)";
+    }
+
+    /**
+     * Its level at building, from the blocks it has laid in its life (a block laid is half a point
+     * of building experience, on the same curve as a trade's levels): a builder who has raised a
+     * dozen houses has the knack of it, whatever its own trade.
+     */
+    public int buildingLevel() {
+        return levelFor(deedCount(Deed.BLOCKS_BUILT) / 2);
+    }
+
+    /** The most a builder's level, spirits and skills take off its pace: a block every 3.6 ticks at best. */
+    public static final int MOST_BUILD_PERCENT = 40;
+
+    /**
+     * What quickens (or slows) a builder: its experience (its level at its trade, which every
+     * block it lays adds to, or its level at building, whichever is the more), its spirits, its
+     * village, its years and its skills (the town's research, its knacks). Its quirk and nature
+     * are left out, as they always were: a crew lays a house together, and nobody's nature suits
+     * the trowel better than another's.
+     */
+    public int buildBonusPercent() {
+        int experience = experiencePercentAt(Math.max(veteranLevel(), buildingLevel()));
+        int other = ageWorkPercent() + (plainPaceForTests ? 0 : moodWorkPercent() + villageWorkPercent() + skillWorkPercent());
+        return Math.max(LEAST_PACE_PERCENT, Math.min(MOST_BUILD_PERCENT, experience + other));
     }
 
     /** The Efficiency on a tool, if it has any. */
@@ -2096,16 +2335,24 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             .orElse(0);
     }
 
-    /** Ticks between the blocks a builder lays: six, give or take what the village and the
-     *  builder's own spirits make of it. */
-    public int buildPaceTicks() {
-        int pct = Math.max(-30, Math.min(30, moodWorkPercent() + villageWorkPercent()));
-        int pace = Math.max(4, Math.round(6.0F * (100 - pct) / 100.0F));
+    /**
+     * Hundredths of a tick between the blocks a builder lays: six ticks, give or take what its
+     * experience, its spirits, its village and its skills make of it (buildBonusPercent): 3.6 at
+     * the quickest, 7.8 at the slowest. Kept to the hundredth so that every level counts: in whole
+     * ticks a builder's pace went six, five, four, and eighteen levels in a row changed nothing.
+     */
+    public int buildPaceHundredths() {
+        int pace = 600 * (100 - buildBonusPercent()) / 100;
         // The server's pace for village builders (config villageBuildSpeed, a percentage).
-        if (isSettler()) pace = Math.max(1, Math.round(pace * 100.0F / com.jrpetty.mcassistant.AssistantConfig.villageBuildSpeed()));
+        if (isSettler()) pace = Math.max(100, Math.round(pace * 100.0F / com.jrpetty.mcassistant.AssistantConfig.villageBuildSpeed()));
         // Hands lending it a hand (VillageFolkEntity.helpTheBuilder): a block a tick sooner for
         // each of the first three — a crew raises a house quicker than one builder alone.
-        return Math.max(2, pace - Math.min(3, buildHelpers()));
+        return Math.max(200, pace - 100 * Math.min(3, buildHelpers()));
+    }
+
+    /** Ticks between the blocks a builder lays, to the nearest tick (BuildGoal keeps the hundredths). */
+    public int buildPaceTicks() {
+        return Math.max(1, Math.round(buildPaceHundredths() / 100.0F));
     }
 
     /** How many are helping this one build right now (a village's idle hands). */
@@ -2172,7 +2419,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Call when a bot actually moves something. Two seconds, and it swings for
      *  it, so you can see the work happening. */
     public void beginTransfer() {
-        transferBusyUntil = tickCount + 40;
+        // A carrier and a storekeeper handle loads for a living: theirs go at the pace of their
+        // hands (workBonusPercent), never slower than the two seconds anybody else takes.
+        boolean handler = stationTask == StationTask.HAUL || stationTask == StationTask.STORE;
+        transferBusyUntil = tickCount + (handler ? Math.min(40, pacedTicks(40, 100)) : 40);
         swing(net.minecraft.world.InteractionHand.MAIN_HAND);
     }
 
@@ -4288,9 +4538,17 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      * — keep the three-second base; there is no better tool to buy them.
      */
     public int toolPaceTicks() {
-        if (getMainHandItem().getItem() instanceof net.minecraft.world.item.TieredItem tiered) {
+        return toolPaceTicksOf(getMainHandItem());
+    }
+
+    /** The pace a wooden tool sets: what every better tier is measured against on a folk's card. */
+    public static final int WOOD_TOOL_PACE = 120;
+
+    /** The pace this tool sets, in hand (toolPaceTicks): by its tier, or the three-second base for a tool with none. */
+    public static int toolPaceTicksOf(ItemStack tool) {
+        if (tool.getItem() instanceof net.minecraft.world.item.TieredItem tiered) {
             var tier = tiered.getTier();
-            if (tier == net.minecraft.world.item.Tiers.WOOD) return 120;      // 6.0s
+            if (tier == net.minecraft.world.item.Tiers.WOOD) return WOOD_TOOL_PACE;  // 6.0s
             if (tier == net.minecraft.world.item.Tiers.STONE) return 105;     // 5.25s
             if (tier == net.minecraft.world.item.Tiers.IRON) return 90;       // 4.5s
             if (tier == net.minecraft.world.item.Tiers.GOLD) return 80;       // fast metal, brittle tool
@@ -4298,7 +4556,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             if (tier == net.minecraft.world.item.Tiers.NETHERITE) return 60;  // 3.0s
             // A modded tier: place it by its dig speed against the vanilla run.
             float sp = tier.getSpeed();
-            return sp >= 9.0F ? 60 : sp >= 8.0F ? 75 : sp >= 6.0F ? 90 : sp >= 4.0F ? 105 : 120;
+            return sp >= 9.0F ? 60 : sp >= 8.0F ? 75 : sp >= 6.0F ? 90 : sp >= 4.0F ? 105 : WOOD_TOOL_PACE;
         }
         return ACTION_PACE;
     }
@@ -4322,12 +4580,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // An enchanted tool: an eighth quicker for every level of Efficiency.
         int efficiency = efficiencyOf(tool);
         if (efficiency > 0) base = base * Math.max(40, 100 - 12 * efficiency) / 100;
-        // Veteran hands: 10% faster work at level 10, 20% at 20, 30% at 35 —
-        // the cap. An edge you can feel, not a cheat.
-        int bonus = veteranLevel() >= 35 ? 30 : (veteranLevel() >= 20 ? 20 : (veteranLevel() >= 10 ? 10 : 0));
+        // Experienced hands: a percent quicker for every level at the trade, to thirty at level
+        // thirty, and the crew, the quirk, the mood, the village, the years, its nature and its
+        // skills on top (workBonusPercent, capped). An edge you can feel, not a cheat.
+        int bonus = workBonusPercent();
         // A forester's axe work (and a husbandman's shears) come off the same
-        // clock, so the branch discount lands here alongside the veteran rungs.
-        bonus = Math.min(45, bonus + teamworkPercent() + traitWorkPercent() + moodWorkPercent() + villageWorkPercent() + personalityWorkPercent() + skillWorkPercent());
+        // clock, so the branch discount lands here alongside the rest.
         int ticks = base * (100 - bonus) / 100 * branchCooldownPercent() / 100;
         // Diet is a multiplier on TIME, not on the bonus: at 30% pace a job
         // takes three times as long, which is what "works at 30% speed" means.
@@ -4368,14 +4626,34 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** What three seconds has become for this particular specialist, once its
      *  level, branch, crewmates, quirk and dinner are taken into account. */
     public int actionPaceTicks() {
-        int bonus = veteranLevel() >= 35 ? 30 : (veteranLevel() >= 20 ? 20 : (veteranLevel() >= 10 ? 10 : 0));
-        bonus = Math.min(45, bonus + teamworkPercent() + traitWorkPercent() + moodWorkPercent() + villageWorkPercent() + personalityWorkPercent() + skillWorkPercent());
-        // The tool's tier is the base the bonuses pull against: a fed veteran
-        // with a wooden hoe is still slower than a recruit handed netherite.
-        int ticks = toolPaceTicks() * (100 - bonus) / 100 * branchCooldownPercent() / 100;
+        return actionPaceFrom(toolPaceTicks());
+    }
+
+    /**
+     * The pace of work done with a tool of this kind ("_hoe"): the tool's tier sets it when one is in
+     * hand, and without one the work goes at the pace of bare hands, slower than the worst tool —
+     * as breaking a block does (workTicksFor). The farmer's clock: before this a farmer with no hoe
+     * at all, or with a sheaf of wheat in its hand, worked at the three-second base, which is a
+     * netherite hoe's pace, and the stone hoe the village made it slowed it by three quarters.
+     */
+    public int actionPaceTicks(String toolKind) {
+        ItemStack held = getMainHandItem();
+        boolean right = held.getItem() instanceof net.minecraft.world.item.TieredItem
+            && net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(held.getItem()).getPath().endsWith(toolKind);
+        return actionPaceFrom(right ? toolPaceTicks() : BARE_HANDS);
+    }
+
+    /** The pace an action goes at from this base (the tool's), once everything about the hands at it is counted. */
+    private int actionPaceFrom(int base) {
+        int bonus = workBonusPercent();
+        // The tool's tier is the base the bonuses pull against: a fed veteran with
+        // a wooden hoe is slower than a recruit handed netherite until its bonuses
+        // come to more than half, and even at the cap is only a tenth quicker;
+        // with an iron hoe the same veteran is a quarter quicker again.
+        int ticks = base * (100 - bonus) / 100 * branchCooldownPercent() / 100;
         ticks = ticks * 100 / Math.max(20, dietPercent);
         if (isSettler()) ticks = ticks * 3 / 5;
-        return Math.max(12, ticks);
+        return Math.max(12, ticks);   // never faster than about half a second
     }
 
     /** Wear the held tool by one use; announces when it breaks. */
@@ -4917,11 +5195,15 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                     case 40 -> " Netherite kit is mine to use.";
                     default -> "";
                 };
+                // Every level makes the work a percent quicker (experiencePercent); the
+                // milestones say how far it has come.
                 String perk = switch (after) {
-                    case 10 -> " I work 10% faster now.";
-                    case 20 -> " +2 hearts, and 20% faster work.";
-                    case 30 -> " 20% quicker on my feet now.";
-                    case 35 -> " 30% faster work — as good as I'll get.";
+                    case 5 -> " A twentieth quicker at the work than when I started.";
+                    case 10 -> " A tenth quicker at the work than when I started.";
+                    case 15 -> " 15% quicker at the work now.";
+                    case 20 -> " +2 hearts, and a fifth quicker at the work.";
+                    case 25 -> " A quarter quicker at the work.";
+                    case 30 -> " 30% quicker at the work — as quick as practice makes anybody.";
                     default -> "";
                 };
                 say("Level " + after + "!" + perk + kit + rungNote(after));
@@ -5019,6 +5301,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             xp / (double) Math.max(1, com.jrpetty.mcassistant.AssistantConfig.levelCurveFactor()))));
     }
 
+    /** The least experience that makes this level (levelFor turned about): the factor times the level squared. */
+    public static int xpForLevel(int level) {
+        int l = Math.max(0, Math.min(50, level));
+        return l * l * Math.max(1, com.jrpetty.mcassistant.AssistantConfig.levelCurveFactor());
+    }
+
     /** The experience its level is reckoned from: all of it, for a hired hand; a village
      *  folk's in the trade it works now (VillageFolkEntity), since a good farmer is not a
      *  good smith for being a good farmer. */
@@ -5038,9 +5326,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** It has taken up another trade (VillageFolkEntity remembers it). */
     protected void tradeTakenUp(StationTask from, StationTask to) { }
 
-    /** Perks with teeth but a ceiling: +2 hearts at level 20 and 20% faster
-     *  movement at 30 (attribute modifiers, re-applied idempotently); the
-     *  work-speed rungs (10/20/30%) live in workTicksFor. */
+    /** Perks with teeth but a ceiling: +2 hearts at level 20, the perk chosen at
+     *  30 (Swift: 20% faster movement; Tough: armour), and a carrier's or a scout's
+     *  surer stride (attribute modifiers, re-applied idempotently); the pace of
+     *  work, a percent a level to thirty, is experiencePercent, in workBonusPercent. */
     private static final net.minecraft.resources.ResourceLocation BRANCH_DMG_ID =
         net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mc_assistant", "branch_damage");
 
@@ -5073,6 +5362,16 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                     VETERAN_SPEED_ID, 0.20,
                     net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
             }
+            // A carrier's work is the walking, and so is a scout's: an old hand at it knows the
+            // ways and keeps a steadier stride, a quarter of a percent a level, to 5% at level
+            // twenty. Small beside the Swift perk, which it is added to, not instead of.
+            speed.removeModifier(STRIDE_SPEED_ID);
+            int stride = strideTenths();
+            if (stride > 0) {
+                speed.addPermanentModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(
+                    STRIDE_SPEED_ID, stride / 1000.0,
+                    net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+            }
         }
         var armor = getAttribute(Attributes.ARMOR);
         if (armor != null) {
@@ -5089,8 +5388,16 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mc_assistant", "veteran_hearts");
     private static final net.minecraft.resources.ResourceLocation VETERAN_SPEED_ID =
         net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mc_assistant", "veteran_speed");
+    private static final net.minecraft.resources.ResourceLocation STRIDE_SPEED_ID =
+        net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mc_assistant", "practised_stride");
     private static final net.minecraft.resources.ResourceLocation PERK_ARMOR_ID =
         net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mc_assistant", "perk_armor");
+
+    /** A carrier's or a scout's surer stride, in tenths of a percent: 2.5 a level, 50 (5%) at level twenty. */
+    public int strideTenths() {
+        if (stationTask != StationTask.HAUL && stationTask != StationTask.SCOUT) return 0;
+        return Math.min(20, veteranLevel()) * 25 / 10;
+    }
 
     /** Spend up to `amount` XP; returns true if it could be paid in full. */
     public boolean spendXp(int amount) {

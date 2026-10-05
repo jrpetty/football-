@@ -336,15 +336,13 @@ public class OrdersScreen extends Screen {
 
     /** What it has earned, and what it earns next. */
     private String perkLine(int lvl) {
-        String have = lvl >= 35 ? "+2♥ +30% work +20% speed"
-            : lvl >= 30 ? "+2♥ +20% work +20% speed"
-            : lvl >= 20 ? "+2♥ +20% work"
-            : lvl >= 10 ? "+10% work"
-            : "No bonuses yet";
-        String next = lvl < 10 ? "next lv10: +10% work"
-            : lvl < 20 ? "next lv20: +2♥, +20% work"
-            : lvl < 30 ? "next lv30: +20% speed"
-            : lvl < 35 ? "next lv35: +30% work"
+        // Work is a percent quicker for every level, to thirty at level thirty (experiencePercentAt);
+        // it came in rungs at 10, 20 and 35 once.
+        int work = com.jrpetty.mcassistant.entity.AssistantEntity.experiencePercentAt(lvl);
+        String have = lvl <= 0 ? "No bonuses yet"
+            : (lvl >= 20 ? "+2♥ " : "") + "+" + work + "% work" + (lvl >= 30 ? " +20% speed" : "");
+        String next = lvl < 20 ? "+1%/level; lv20 +2♥"
+            : lvl < 30 ? "+1%/level; lv30 +20% speed"
             : "fully trained";
         return have + "  ·  " + next;
     }

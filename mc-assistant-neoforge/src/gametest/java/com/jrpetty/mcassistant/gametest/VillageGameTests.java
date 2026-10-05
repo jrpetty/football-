@@ -1926,7 +1926,11 @@ public class VillageGameTests {
         Kit.log("t34 contentment: hungry " + hungry.score() + " " + hungry.bad() + ", fed " + fed.score() + " " + fed.good()
             + " — " + com.jrpetty.mcassistant.entity.Contentment.line(level, village));
         helper.assertTrue(fed.score() > hungry.score() && fed.food() > hungry.food(), "a full larder makes a happier village");
-        // Tools: the right tool by its tier, bare hands slowest.
+        // Tools: the right tool by its tier, bare hands slowest. Measured on its level and tool
+        // alone (plainPaceForTests): with the cap on the pace at 55% a folk whose random quirk,
+        // nature, mood and village came to over half could have both picks at the half-second
+        // floor, and wood and iron would read the same. (PaceGameTests has the rest of it.)
+        a.plainPaceForTests(true);
         net.minecraft.world.level.block.state.BlockState stone = Blocks.STONE.defaultBlockState();
         a.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, ItemStack.EMPTY);
         int bare = a.workTicksFor(stone);
@@ -1939,6 +1943,7 @@ public class VillageGameTests {
             + " with an iron one; iron ore " + ore + " with the iron pick");
         helper.assertTrue(bare > wood && wood > iron, "bare hands slowest, then wood, then iron");
         helper.assertTrue(ore > iron, "ore is harder work than stone");
+        a.plainPaceForTests(false);
         // The day of rest.
         Villages.ageForTests(village, Villages.Age.STONE);
         long founded = Math.max(0L, com.jrpetty.mcassistant.village.Chronicle.foundedOn(village));

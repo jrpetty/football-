@@ -96,6 +96,7 @@ public class BuildGoal extends Goal {
     private int placed;
     /** What we set out to build, kept so the finish can report it. */
     @Nullable private String building;
+    /** Toward the next block, in hundredths of a tick (a hundred a tick; buildPaceHundredths a block). */
     private int workTicks;
     private int stuckTicks;
     /** Ticks spent waiting for the builder's own feet to move off a cell. */
@@ -801,11 +802,16 @@ public class BuildGoal extends Goal {
             return;
         }
 
-        // A block about every third of a second: quicker in a happy village, slower in a sad one.
-        if (++workTicks < assistant.buildPaceTicks()) {
+        // A block about every third of a second: quicker for a practised builder and in a happy
+        // village, slower in a sad one. Counted in hundredths of a tick (buildPaceHundredths), and
+        // what is over carried to the next block, so a pace of 5.4 lays five blocks in 27 ticks:
+        // in whole ticks most of a builder's levels changed nothing at all.
+        workTicks += 100;
+        int pace = assistant.buildPaceHundredths();
+        if (workTicks < pace) {
             return;
         }
-        workTicks = 0;
+        workTicks = Math.min(99, workTicks - pace);
 
         BlockState state;
         Part part = target.part();

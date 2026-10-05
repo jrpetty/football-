@@ -150,7 +150,10 @@ public class FishGoal extends Goal {
             // lands ON the water — the whole wait is visible and audible,
             // the way a player's cast is.
             bobber = water.immutable();
-            biteTimer = 100 + assistant.getRandom().nextInt(300);
+            // Five to twenty seconds for a bite, like a player's, less for a practised hand: half
+            // its pace counts here (pacedTicks), since the fish bite when they bite and an old
+            // fisher only reads the water, the weather and the hour better. Up to a quarter off.
+            biteTimer = assistant.pacedTicks(100 + assistant.getRandom().nextInt(300), 50);
             reelTicks = 0;
             assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
             sl.playSound(null, assistant.blockPosition(),

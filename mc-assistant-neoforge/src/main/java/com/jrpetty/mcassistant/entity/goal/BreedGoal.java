@@ -189,6 +189,10 @@ public class BreedGoal extends Goal {
             return;
         }
         stuckTicks = 0;
+        // A feed is a beat of work, as a shear is (ShearGoal): half an action at the hand's own
+        // pace, so a practised rancher gets a pair fed quicker than a new one. Light on purpose:
+        // the beasts' own cooldown, five minutes between litters, is the clock that matters here.
+        if (!assistant.actionReady()) return;
 
         Species sp = speciesForAnimal(target);
         // Out of feed with a chest full of wheat ten blocks away is not out of
@@ -200,6 +204,7 @@ public class BreedGoal extends Goal {
         }
         target.setInLove(null);
         assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+        assistant.noteAction(0.5F);
     }
 
     @Nullable

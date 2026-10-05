@@ -96,6 +96,10 @@ public class FarmGoal extends Goal {
         this.mode = Mode.HARVEST;
         this.skip.clear();
         this.plantedByType.clear();
+        // The hoe in hand for the whole run: the work's pace is the hoe's tier (actionPaceTicks),
+        // and it was only ever put in hand to break new ground, so a farmer harvested with
+        // whatever it last held (the axe from the woods, a sword from a fight) at that tool's pace.
+        assistant.equipToolNamed("_hoe");
         assistant.sayRoutine("Tending the crops.");
     }
 
@@ -173,9 +177,12 @@ public class FarmGoal extends Goal {
         }
 
         // Half a second per crop was the farm equivalent of a machine gun. Use
-        // the bot's own pace — three seconds for a recruit, down to about one
-        // and a half for a well-fed veteran working alongside its crew.
-        if (++workTicks < assistant.actionPaceTicks()) {
+        // the bot's own pace: its hoe's tier (wood slowest, then stone, iron,
+        // diamond; no hoe slower than any), shortened by its level at the trade
+        // and the rest (workBonusPercent). Back in hand first if a fight or a
+        // feed has taken its place since the run began.
+        if (workTicks == 0) assistant.equipToolNamed("_hoe");
+        if (++workTicks < assistant.actionPaceTicks("_hoe")) {
             if (workTicks % 8 == 0) {
                 assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
                 assistant.workHit(targetPos);   // a worked farm SOUNDS worked
