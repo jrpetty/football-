@@ -506,6 +506,8 @@ public final class FolkTalk {
             case "shortpaid" -> pick(r, "We were paid short this morning. The treasury's thin.", "Only part of my wage today.");
             case "thriving" -> pick(r, "The village is doing so well!", "Have you ever seen a happier place?");
             case "miserable" -> pick(r, "Everybody's so low round here.", "This village has seen better days.");
+            case "leader" -> Leader.moodWords(f, true);
+            case "leaderhard" -> Leader.moodWords(f, false);
             default -> "";
         };
     }

@@ -106,6 +106,12 @@ public final class Social {
 
         public boolean rolled() { return !traits.isEmpty(); }
 
+        /** Tests: these traits and no others. */
+        public void setTraitsForTests(Trait... ts) {
+            traits.clear();
+            for (Trait t : ts) if (!traits.contains(t)) traits.add(t);
+        }
+
         /**
          * Two traits, never a pair that contradicts itself (a sociable shy folk). A child
          * takes one of them from a parent and gets the other of its own.

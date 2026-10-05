@@ -129,6 +129,7 @@ public final class Economy {
         if (village == null || s.isEmpty() || trade == StationTask.NONE || trade == StationTask.HAUL || trade == StationTask.STORE) return;
         Kind k = kindOf(s);
         if (k == null || !makes(trade, k, s)) return;
+        if (k == Kind.FOOD || s.is(Items.WHEAT)) Leader.foodIn(village, s);     // the leader's food books
         double v = worthOf(s);
         if (v <= 0) return;
         Day d = TODAY.computeIfAbsent(village, x -> new Day());

@@ -4744,4 +4744,118 @@ public class VillageGameTests {
             helper.fail("the fisher caught nothing");
         });
     }
+
+    /**
+     * The leader runs the village. With the larder empty the leader calls a famine at its morning
+     * look at the books: the larder ordered filled at once, more food-makers wanted, the fields to
+     * be widened sooner. A hardworking, grumpy leader drives the village (faster work, shorter
+     * breaks) and wears an easygoing folk down; a cheerful, generous one lifts it, and its village
+     * has its children sooner. With the stores full again the famine is over.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 300, batch = "t71_leader")
+    public static void t71_leader(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 70000, 12000, 40);
+        Kit.prepare(level, 70000, 12000, 40);
+        BlockPos heart = Kit.surface(level, 70000, 12000);
+        VillageFolkSpawnerBlock.raiseParty(level, heart, 0.0F, 10);
+        Villages.Village v = Villages.nearest(level, heart, Villages.VILLAGE_RANGE);
+        helper.assertTrue(v != null, "a village");
+        java.util.UUID id = v.id();
+        java.util.List<VillageFolkEntity> folk = new java.util.ArrayList<>();
+        for (AssistantEntity a : Villages.folkOf(id)) if (a instanceof VillageFolkEntity f && !f.isBaby()) folk.add(f);
+        helper.assertTrue(folk.size() >= 3, "a village of grown folk: " + folk.size());
+        long day = level.getDayTime() / 24000L;
+        VillageFolkEntity elder = folk.get(0), other = folk.get(1);
+        Villages.electElder(id, elder, day);
+        elder.life().setTraitsForTests(com.jrpetty.mcassistant.entity.Social.Trait.HARDWORKING,
+            com.jrpetty.mcassistant.entity.Social.Trait.GRUMPY);
+        other.life().setTraitsForTests(com.jrpetty.mcassistant.entity.Social.Trait.EASYGOING,
+            com.jrpetty.mcassistant.entity.Social.Trait.SOCIABLE);
+        // The larder emptied.
+        java.util.function.Predicate<ItemStack> eats = st -> st.get(net.minecraft.core.component.DataComponents.FOOD) != null
+            || st.is(Items.WHEAT);
+        for (BlockPos c : Villages.storeChests(level, id)) {
+            if (level.getBlockEntity(c) instanceof net.minecraft.world.Container box) {
+                for (int i = 0; i < box.getContainerSize(); i++) if (eats.test(box.getItem(i))) box.setItem(i, ItemStack.EMPTY);
+            }
+        }
+        Villages.resetStockForTests();
+        com.jrpetty.mcassistant.entity.Leader.resetForTests();
+        int hard = com.jrpetty.mcassistant.entity.Leader.spirits(other);
+        com.jrpetty.mcassistant.entity.Leader.morning(level, v, day);
+        com.jrpetty.mcassistant.entity.Leader.Plan plan = com.jrpetty.mcassistant.entity.Leader.plan(id);
+        com.jrpetty.mcassistant.entity.Orders.Order order = com.jrpetty.mcassistant.entity.Orders.current(id);
+        int pace = com.jrpetty.mcassistant.entity.Leader.pace(id);
+        double rest = com.jrpetty.mcassistant.entity.Leader.restScale(id);
+        double farm = com.jrpetty.mcassistant.entity.Leader.foodFactor(id, StationTask.FARM);
+        Kit.log("t71 the leader: " + com.jrpetty.mcassistant.entity.Leader.line(id) + "; order " + order
+            + "; farm factor " + farm + "; an easygoing folk's spirits under it " + hard);
+        helper.assertTrue(plan == com.jrpetty.mcassistant.entity.Leader.Plan.FAMINE, "an empty larder is a famine: " + plan);
+        helper.assertTrue(order == com.jrpetty.mcassistant.entity.Orders.Order.LARDER, "the larder ordered filled at once: " + order);
+        helper.assertTrue(farm > 1.0 && com.jrpetty.mcassistant.entity.Leader.widening(id), "more farmers, and the fields widened sooner");
+        helper.assertTrue(pace > 0 && rest < 1.0, "a hardworking leader drives the village: work " + pace + "%, breaks x" + rest);
+        helper.assertTrue(hard < 0, "and an easygoing folk feels it: " + hard);
+        // A cheerful, generous leader instead.
+        elder.life().setTraitsForTests(com.jrpetty.mcassistant.entity.Social.Trait.CHEERFUL,
+            com.jrpetty.mcassistant.entity.Social.Trait.GENEROUS);
+        com.jrpetty.mcassistant.entity.Leader.resetForTests();
+        int kind = com.jrpetty.mcassistant.entity.Leader.spirits(other);
+        double family = com.jrpetty.mcassistant.entity.Leader.family(id);
+        Kit.log("t71 a cheerful, generous leader: spirits " + kind + ", families x" + family
+            + ", pay " + com.jrpetty.mcassistant.entity.Leader.payRate(id) + "%");
+        helper.assertTrue(kind > 0 && kind > hard, "a cheerful, generous leader lifts everybody: " + kind);
+        helper.assertTrue(family < 1.0, "and its village has its children sooner: x" + family);
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Leader.payRate(id) > 100, "and pays over the odds");
+        // The stores full again: the famine is over.
+        BlockPos chest = Villages.storeChests(level, id).get(0);
+        net.minecraft.world.Container box = (net.minecraft.world.Container) level.getBlockEntity(chest);
+        for (int i = 0; i < 8; i++) box.setItem(i, new ItemStack(Items.BREAD, 64));
+        Villages.resetStockForTests();
+        com.jrpetty.mcassistant.entity.Leader.morning(level, v, day + 1);
+        com.jrpetty.mcassistant.entity.Leader.Plan after = com.jrpetty.mcassistant.entity.Leader.plan(id);
+        Kit.log("t71 with the stores full: " + com.jrpetty.mcassistant.entity.Leader.line(id));
+        helper.assertTrue(after != com.jrpetty.mcassistant.entity.Leader.Plan.FAMINE
+            && after != com.jrpetty.mcassistant.entity.Leader.Plan.SHORT, "the famine is over: " + after);
+        helper.succeed();
+    }
+
+    /**
+     * The young: a child that has learned no trade grows up and is set to work by the leader, at
+     * what the village most needs.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t72_young")
+    public static void t72_young(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 72000, 12000, 32);
+        Kit.prepare(level, 72000, 12000, 32);
+        BlockPos heart = Kit.surface(level, 72000, 12000);
+        VillageFolkSpawnerBlock.raiseParty(level, heart, 0.0F, 6);
+        Villages.Village v = Villages.nearest(level, heart, Villages.VILLAGE_RANGE);
+        helper.assertTrue(v != null, "a village");
+        java.util.UUID id = v.id();
+        VillageFolkEntity kid = null, elder = null;
+        for (AssistantEntity a : Villages.folkOf(id)) {
+            if (!(a instanceof VillageFolkEntity f)) continue;
+            if (elder == null) elder = f;
+            else if (kid == null) kid = f;
+        }
+        helper.assertTrue(kid != null && elder != null, "an elder and a child");
+        Villages.electElder(id, elder, level.getDayTime() / 24000L);
+        kid.setStation(null, StationTask.NONE);
+        kid.setChild(true);
+        kid.childhoodForTests(1);
+        boolean stillChild = kid.isBaby();
+        kid.childhoodForTests(VillageFolkEntity.GROW_DAYS);
+        Kit.log("t72 the young: a child of a day still a child " + stillChild + "; grown at "
+            + VillageFolkEntity.GROW_DAYS + " days: child " + kid.isBaby() + ", trade " + kid.stationTask());
+        helper.assertTrue(stillChild, "a day-old child is still a child");
+        helper.assertTrue(!kid.isBaby() && kid.stationTask() != StationTask.NONE,
+            "grown, it is set to work by the leader: " + kid.stationTask());
+        helper.succeed();
+    }
 }

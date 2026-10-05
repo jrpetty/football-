@@ -299,6 +299,7 @@ public final class Market {
         HUNGRY.put(id, Villages.stock(level, v.centre(), Villages.Task.FOOD, Villages.storesRadius(id)) * 2
             < Villages.larderForBirth(id));
         Economy.closeTheDay(level, v, day);              // yesterday's output, and what the village is worth
+        Leader.morning(level, v, day);                   // the leader's books, the plan and the day's pay
         mint(level, v);
         int sold = trade(level, v);
         takings(level, v, sold);                         // what the village made yesterday is its revenue
@@ -481,6 +482,8 @@ public final class Market {
             if (!(a instanceof VillageFolkEntity f) || f.isBaby() || f.stationTask() == AssistantEntity.StationTask.NONE) continue;
             int w = wage(f);
             if (w <= 0) continue;
+            // At the rate the leader set today (Leader.payRate): over the odds, or part held back.
+            w = Math.max(1, (int) Math.round(w * Leader.payRate(id) / 100.0));
             hands.add(f);
             wages.add(w);
             bill += w;
@@ -526,6 +529,11 @@ public final class Market {
 
     public static int lastShare(UUID village) {
         return SHARE.getOrDefault(village, -1);
+    }
+
+    /** Something the elder has to tell the morning assembly (the leader's calls: Leader). */
+    public static void assemblyNews(UUID village, String line) {
+        NEWS.computeIfAbsent(village, k -> new ArrayList<>()).add(line);
     }
 
     /** The money news for the morning assembly, once. */

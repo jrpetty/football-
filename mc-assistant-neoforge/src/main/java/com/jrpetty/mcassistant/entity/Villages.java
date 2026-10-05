@@ -105,6 +105,9 @@ public final class Villages {
     /** Tests only: put a village straight into an age. */
     public static void ageForTests(UUID id, Age age) { AGE.put(id, age); }
 
+    /** Tests: the stores counted afresh on the next look. */
+    public static void resetStockForTests() { STOCK_TICK.clear(); }
+
     // ------------------------------ the village's news ------------------------
     //
     // What everybody is talking about: who had a child, who took up with whom, what
@@ -334,6 +337,7 @@ public final class Villages {
         Grow.resetForTests();
         Waterfront.resetForTests();
         Orders.resetForTests();
+        Leader.resetForTests();
         Trades.resetForTests();
         Links.resetForTests();
         Asks.resetForTests();
@@ -499,6 +503,8 @@ public final class Villages {
     public static boolean mayBirth(UUID villageId, long gameTime, int stretch) {
         int folk = Math.max(1, headcount(villageId));
         long gap = Math.max(600L, Math.min(6000L, 12000L / (folk / 4 + 1))) * Math.max(1, stretch);
+        // A sociable, cheerful or generous leader's village has its children sooner (Leader.family).
+        gap = (long) (gap * Leader.family(villageId));
         return gameTime - LAST_BIRTH.getOrDefault(villageId, -gap) >= gap;
     }
 
@@ -734,8 +740,11 @@ public final class Villages {
         }
         // A hungry village wants its food-makers: half as many farmers and fishers again while
         // the larder is low. It is fed by its own fields and waters, and nothing else.
+        // And the leader, reading its books, wants more again in a famine (Leader.foodFactor).
+        double leader = Leader.foodFactor(villageId, slot.trade());
         if ((slot.trade() == AssistantEntity.StationTask.FARM || slot.trade() == AssistantEntity.StationTask.FISH)
-                && villageId != null && Market.hungry(villageId)) t *= 1.5;
+                && villageId != null && Market.hungry(villageId)) leader = Math.max(leader, 1.5);
+        t *= leader;
         // Houses waiting on beds want the wool: twice the ranchers (their sheep) till they are made up.
         if (slot.trade() == AssistantEntity.StationTask.RANCH && villageId != null && Market.bedsShort(villageId) >= 6) t *= 2.0;
         int max = slot.max() == Integer.MAX_VALUE ? Integer.MAX_VALUE

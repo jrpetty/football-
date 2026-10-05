@@ -239,6 +239,8 @@ public final class VillageBoards {
         Orders.Order order = Orders.current(id);
         out.add(order == null ? "LM|Elder's orders: none yet — the elder is watching how things go."
             : "LN|Elder's orders: " + order.title + ". " + order.words);
+        String plan = Leader.board(id);
+        if (plan != null) out.add("LN|" + plan);
         String decided = Council.lastDecision(id);
         if (decided != null) out.add("LM|The council: " + capital(decided) + ".");
         String chosen = Council.chosen(id);

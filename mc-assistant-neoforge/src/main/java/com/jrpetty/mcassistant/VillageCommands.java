@@ -615,6 +615,7 @@ public final class VillageCommands {
             sb.append(". Council: ").append(council.isEmpty() ? "none" : String.join(", ", council));
             com.jrpetty.mcassistant.entity.Orders.Order order = com.jrpetty.mcassistant.entity.Orders.current(id);
             sb.append(". Elder's orders: ").append(order == null ? "none yet" : order.title);
+            sb.append(". Leader: ").append(com.jrpetty.mcassistant.entity.Leader.line(id));
             java.util.Map<java.util.UUID, String> citizens = com.jrpetty.mcassistant.village.Ledger.citizens(id);
             if (!citizens.isEmpty()) sb.append("; citizens ").append(String.join(", ", citizens.values()));
             String n = com.jrpetty.mcassistant.entity.Diplomacy.status(id);

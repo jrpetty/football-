@@ -1060,6 +1060,11 @@ public class VillageFolkEntity extends AssistantEntity {
             int content = Contentment.score(village);
             if (content >= 80) { m += 4; why.add(new Object[]{"thriving", 4}); }
             else if (content < 25) { m -= 6; why.add(new Object[]{"miserable", 6}); }
+            // The leader: its own spirits, and how this folk gets on with it.
+            int led = Leader.spirits(this);
+            if (led >= 3) { m += led; why.add(new Object[]{"leader", led}); }
+            else if (led <= -3) { m += led; why.add(new Object[]{"leaderhard", -led}); }
+            else m += led;
         }
         why.sort((a, b) -> Integer.compare((Integer) b[1], (Integer) a[1]));
         java.util.List<String> keys = new java.util.ArrayList<>();
@@ -1076,7 +1081,8 @@ public class VillageFolkEntity extends AssistantEntity {
     /** A happy village works faster, a miserable one slower (Contentment). */
     @Override
     protected int villageWorkPercent() {
-        return Contentment.workPercent(ownerId()) + (isOld() ? -10 : 0);
+        // How the village is doing, and how the leader drives it (Leader.pace).
+        return Contentment.workPercent(ownerId()) + Leader.pace(ownerId()) + (isOld() ? -10 : 0);
     }
 
     // ------------------------------ a level in every trade ------------------------
@@ -1610,10 +1616,23 @@ public class VillageFolkEntity extends AssistantEntity {
                     m.life.feel(getUUID(), displayNameCap(), 10);
                 }
             }
+            // No trade learned: the leader sets it to the work the village most needs.
+            boolean called = false;
+            if (village != null && learned == null) {
+                StationTask t = Leader.calledUp(this, day);
+                if (t != StationTask.NONE) {
+                    setStation(blockPosition(), t);
+                    learned = t.title.toLowerCase(java.util.Locale.ROOT);
+                    called = true;
+                }
+            }
             if (village != null) Assemblies.cameOfAge(village, this, learned);
             if (village != null) Villages.tell(village, day, displayNameCap() + " grew up"
-                + (learned == null ? "" : " and became a " + learned + ", as " + mentorName() + " taught them"));
-            FolkTalk.speak(this, learned != null
+                + (learned == null ? "" : called ? " and went to work as a " + learned
+                    : " and became a " + learned + ", as " + mentorName() + " taught them"));
+            FolkTalk.speak(this, called
+                ? FolkTalk.pick(getRandom(), "All grown up — and I'm to be a " + learned + "!", "A " + learned + ", they say. I'll do my best.")
+                : learned != null
                 ? FolkTalk.pick(getRandom(), "I'm a " + learned + " now, like " + mentorName() + "!", "All grown up, and I know my trade.")
                 : FolkTalk.pick(getRandom(), "I'm all grown up!", "Time I learned a trade.", "No more playing — I'm a grown-up now."));
             return;
@@ -1785,6 +1804,12 @@ public class VillageFolkEntity extends AssistantEntity {
 
     /** Tests only: the day's look at its years, now. */
     public void growOldForTests() { growingOld(level().getDayTime() / 24000L); }
+
+    /** Tests: a child born this many days ago has its day (and, old enough, grows up). */
+    public void childhoodForTests(int daysOld) {
+        bornDay = level().getDayTime() / 24000L - daysOld;
+        childhood();
+    }
 
     /** Tests only: a child born this many days ago. */
     public void bornDaysAgo(long days) { bornDay = level().getDayTime() / 24000L - days; }
@@ -3178,7 +3203,7 @@ public class VillageFolkEntity extends AssistantEntity {
      * planted.) The seed for the new squares is kept back from the stores (jobDepositReserve).
      */
     private void growTheField() {
-        if (stationTask() != StationTask.FARM || tickCount - fieldCheckTick < 2400) return;
+        if (stationTask() != StationTask.FARM || tickCount - fieldCheckTick < (Leader.widening(ownerId()) ? 1200 : 2400)) return;
         fieldCheckTick = tickCount;
         WorkZone z = workZone();
         UUID id = ownerId();
@@ -3198,7 +3223,8 @@ public class VillageFolkEntity extends AssistantEntity {
                 }
             }
         }
-        if (field < 16 || field * 10 < ground * 6) return;           // not full yet: six in ten under crops
+        // Not full yet: six in ten under crops — half, when the leader wants the fields widened.
+        if (field < 16 || field * 10 < ground * (Leader.widening(id) ? 5 : 6)) return;
         // The next ring of nine-by-nine squares round the first (FarmGoal lays them out, a water source
         // in the middle of each): from one square to three by three.
         int grown = Math.min(FIELD_MOST, r < FIELD_MOST ? FIELD_MOST : r + 1);
@@ -5369,6 +5395,8 @@ public class VillageFolkEntity extends AssistantEntity {
         long length = 1200L + Math.floorMod(bits >>> 24, 1200L);
         if (life.has(Social.Trait.HARDWORKING)) length /= 2;
         if (life.has(Social.Trait.EASYGOING)) length = length * 3 / 2;
+        // A hard-driving leader cuts the breaks short; an easygoing one lets them run on.
+        length = (long) (length * Leader.restScale(ownerId()));
         return day >= start && day < start + length;
     }
 

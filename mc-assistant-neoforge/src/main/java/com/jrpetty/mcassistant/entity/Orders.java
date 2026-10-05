@@ -309,7 +309,7 @@ public final class Orders {
                 + building;
         }
         String who = elder == f ? "I've told everybody" : "Elder " + g.by() + " says";
-        return who + ": " + g.order().title.toLowerCase(Locale.ROOT) + ". " + g.order().words + building
+        return who + ": " + g.order().title.toLowerCase(Locale.ROOT) + ". " + g.order().words + Leader.plan(f) + building
             + (elder == f ? " If you think we should be doing something else, tell me." : "");
     }
 
