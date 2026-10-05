@@ -264,6 +264,31 @@ output, the worth and the three best paid, and any folk will tell you who earns 
   can't trade at all. `/village status` shows the treasury, what is in the
   folk's purses, and how many days until market day.
 
+### The price list
+
+Everything the folk can mine, grow, catch or make has a price in village coin, and they are
+paid for all of it:
+
+* **The market's board first.** A loaf 0.3, a log 0.25, a cobblestone 0.04, an iron ingot
+  1.5, a gold ingot 9, a diamond 24. The board, the shop and the wages never disagree.
+* **Everything gathered** is on a base list: every ore (in the block and out of it), every
+  kind of stone, earth and sand, the Nether's and the End's blocks, crops and seeds,
+  saplings, flowers, mushrooms and coral, everything from animals and monsters (hides,
+  wool, bones, pearls, rods, heads, shells), every fish, and the rare finds (the heart of the
+  sea, a nether star, music discs, trim templates, pottery sherds).
+* **Everything made** is priced from its own recipe when the world starts: crafting, the
+  furnace, the smoker, the blast furnace, the campfire and the stonecutter. Its price is
+  what goes in, by the cheapest way of making it, plus the work: a tenth on top for a
+  craft, the fuel for a smelt. So a block of iron is nine ingots, a diamond pickaxe its
+  three diamonds and two sticks and the smith's time, and a beacon its nether star, glass
+  and obsidian. A modpack's items are priced the same way from their own recipes.
+* **Enchantments add to a thing's worth, and wear takes from it.** Anything nobody can make
+  in survival (command blocks, spawn eggs) is worth nothing.
+* **What sort of goods it is** comes with the price, so each trade is paid for its own
+  work. A miner is paid for deepslate bricks, a woodcutter for saplings, a farmer for seed
+  and a beekeeper for flowers. The economy page counts **plants and flowers** as goods of
+  their own.
+
 ### Roads and caravans
 
 * **Roads.** When a village founds a colony, a road is laid between them. It runs
@@ -509,9 +534,18 @@ water.
   * **Buckets.** Every farmer gets ten buckets of water (a pedlar's, a coin apiece out of the
     treasury): one for the water hole in the middle of each square of its field. A crop on
     wet farmland grows three times as fast as on dry.
-  * **The farmland.** The village's fields are laid out as a district: the first goes by the
-    water nearest the town, and each new farmer's field goes beside the others, a full-grown
-    field's width apart (twenty-nine blocks), spreading out from the first ring by ring.
+  * **The farmland.** The village marks out one side of the town for its fields: the side
+    whose ground is best (open soil, level with the town, water on it or by it). There its
+    fields are laid out before the first furrow, in squares a full-grown field across
+    (twenty-seven blocks) with a two-block lane between, starting just past the town's
+    first block (forty-one blocks out) and going on outward, the avenue running up the
+    middle as a farm track. Each new farmer takes the nearest free square, so the fields
+    come up side by side and never overlap. A square more than ten blocks above or below the
+    town is passed over: a farmer walks there and back every day.
+  * **The town keeps off it.** The town grows the other three ways. Its lots on the
+    farmland side past the first block are never built on, nor any lot over a field, pen or
+    hives that is already there. Its streets stop at the field edge, and woods, mines, pens
+    and hives are never staked on the farmland.
   * **Hungry, more hands to the fields.** While the larder is low the village takes on half as
     many farmers and fishers again; in famine its miners and woodcutters go to the fields
     whatever its building wants.
@@ -581,8 +615,23 @@ banners, the quest board asks for wool, and the elder may order the herds grown.
   building. Each helper (up to three) makes the blocks go down a tick faster.
 * **Market day sells the surplus.** Travelling traders buy logs, cobblestone and food
   far over a reserve (up to three stacks each) for coin into the treasury.
-* **The stores grow.** When every store is full (the storehouse holds 729 stacks, so this
-  is rare), another chest is set down beside them, made of the stores' own planks.
+* **The stores grow.** The storehouse has no bottom (see *The Village Storehouse*). Before
+  there is one, when every store is full, another chest is set down beside them, made of the
+  stores' own planks.
+* **Production chests and couriers.** Every farmer, woodcutter, miner, fisher, rancher,
+  hunter and beekeeper sets a **production chest** down on its own plot: a farmer's in the
+  corner of its field nearest the town, the others just inside the edge of theirs on the
+  town side. It is the folk's own chest, or one from the stores, or one made of the stores'
+  planks. Everything it makes goes in there, and it is **paid for it as it puts it in**.
+  When the chest is full, the load goes to the stores instead. The **couriers** bring the
+  production chests in to the storehouse: the fullest first, a hungry village's food before
+  anything else. A village takes on its first courier from its sixth folk, then one for
+  every five workers on plots. A courier leaves the seed, the saplings and the planting
+  carrots where they are. A production chest is never cleared away as an old chest.
+* **Work never stops for want of a player.** Every plot keeps its own chunks loaded, the
+  whole of it: a field grown twenty-seven across, a wood, hunting grounds forty across. A
+  folk out past the village's loaded ground (a walk to a far field, a fetch across the map)
+  carries a window of loaded chunks with it, so nobody stops dead in a chunk nobody is near.
 * **Nobody stands about.** A folk whose trade has nothing for it, and that can fetch
   nothing the village is short of or help the builder, finds something anyway, whatever
   its trade. It clears out an old chest into the storehouse, takes what it carries to the
@@ -692,7 +741,8 @@ plan.
 ## The Village Storehouse
 
 One store for the whole village: a cube **three blocks wide, three deep and three high**
-that holds **729 stacks** — as much as twenty-seven chests, **46,656 blocks** of stone.
+that starts with **729 slots** (as much as twenty-seven chests) and **never fills**. Whenever
+fewer than two rows stand empty it grows nine more, so the harvest always has somewhere to go.
 
 * **Made of storehouse units.** A unit is a crate: four planks and four sticks
   (plank, stick, plank / stick, empty, stick / plank, stick, plank). Stack 27 of them in
@@ -700,8 +750,8 @@ that holds **729 stacks** — as much as twenty-seven chests, **46,656 blocks** 
   bottom row of the front (the side facing you as you lay the last one). Right-click any
   face to open it.
 * **Its screen** shows six rows at a time. Scroll with the wheel (shift scrolls a page)
-  or drag the bar; **Sort** puts like with like, tops stacks up, and puts them in order.
-  It shows how many of its 729 slots are used. Shift-click from your pack puts things
+  or drag the bar through all of it, however big it has grown; **Sort** puts like with like,
+  tops stacks up, and puts them in order. It shows how many stacks it holds. Shift-click from your pack puts things
   anywhere in the store, not just the rows on screen.
 * **Taking it apart.** Break a unit and it drops; the rest go back to loose units, and
   the goods wait safely in the door unit until the cube is whole again. Break the door
@@ -715,9 +765,10 @@ that holds **729 stacks** — as much as twenty-seven chests, **46,656 blocks** 
   * A village whose shed was built before there were units has the units laid into its
     shed (made from the stores' planks, six a unit). A village with no shed puts its
     storehouse up on a lot of its own on the square.
-  * Folk **set no chests of their own down**. Everything they make goes to the village's
-    stores: the storehouse once it stands, the chests at the heart before that. Their
-    tools, seed and supplies are fetched from there.
+  * Folk set no chests of their own down except a producer's one **production chest** on its
+    plot. Everything they make goes there (or to the stores when it is full), and the
+    couriers bring it in: to the storehouse once it stands, the chests at the heart before
+    that. Their tools, seed and supplies are fetched from there.
   * **The old chests are cleared out.** Once the storehouse stands, carriers, and anybody
     with nothing else to do, walk to the chests folk set down over the years, empty them,
     take the chest up and carry the lot into the storehouse. A chest that is part of a
@@ -1592,7 +1643,8 @@ And nothing comes from nothing:
   bread baked at dusk. When its chests are full, the load goes to the next
   store with room (the founding chest, then the granary, the market and the
   workshop). When every store is full, the carrier says so.
-* **Carriers** — a carrier's round is chosen, not set with the wand. Every
+* **Carriers** — a carrier's round is chosen, not set with the wand. The
+  workers' production chests come first, wherever the plots are. Then every
   minute it looks at every chest and furnace out to where the village's plots
   reach. That includes the farms', woods' and mines' chests and anything the
   furnaces have finished. It walks to the fullest and carries the load to the

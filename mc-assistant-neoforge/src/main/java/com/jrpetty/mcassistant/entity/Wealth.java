@@ -230,7 +230,7 @@ public final class Wealth {
         for (Market.Good g : Market.GOODS) {
             if (g.what().test(s)) return g.value() * s.getCount();
         }
-        return 0.02 * s.getCount();
+        return Prices.of(s);
     }
 
     /** Savings, belongings and the comforts of home, in coin. */

@@ -99,7 +99,8 @@ public final class TownLife {
         }
         // A street corner.
         if (all.size() >= 2) {
-            List<int[]> corners = corners(Villages.townReach(id));
+            List<int[]> corners = new ArrayList<>(corners(Villages.townReach(id)));
+            corners.removeIf(c -> Villages.onFarmland(id, c[0], c[1], 2, 2));     // no streets out in the fields
             if (!corners.isEmpty()) streetSign(level, id, v.centre(), corners.get(Math.floorMod(turn, corners.size())), v, false);
         }
         // The stalls on the square, and what is on them.

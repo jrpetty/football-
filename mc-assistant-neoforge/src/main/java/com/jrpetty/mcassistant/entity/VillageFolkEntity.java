@@ -2494,6 +2494,7 @@ public class VillageFolkEntity extends AssistantEntity {
             moveIntoThePen();
             Trades.kit(this);
             Trades.buckets(this);
+            keepProductionChest(supplies);
             if (mindTheHerd(supplies)) return;
             if (Links.tend(this, supplies)) return;
         }
@@ -3142,6 +3143,8 @@ public class VillageFolkEntity extends AssistantEntity {
     /** A new field's reach (one nine-by-nine square round its water), and the most it grows to (three
      *  squares by three, twenty-seven across: FarmGoal.CELL). */
     static final int FIELD_FIRST = 4, FIELD_MOST = 13;
+    /** The most a square of the farmland may lie above or below the town. */
+    static final int FIELD_CLIMB = 10;
     private int fieldCheckTick = -100000;
 
     /**
@@ -3177,7 +3180,11 @@ public class VillageFolkEntity extends AssistantEntity {
         // The next ring of nine-by-nine squares round the first (FarmGoal lays them out, a water source
         // in the middle of each): from one square to three by three.
         int grown = Math.min(FIELD_MOST, r < FIELD_MOST ? FIELD_MOST : r + 1);
-        if (!Villages.outsideTown(id, villageCentre, c, grown)) return;
+        // Clear of the town's own ground and of every lot it has built on (the town keeps off a
+        // field once it is there: Villages.lotKeptOff).
+        int fx = c.getX() - villageCentre.getX(), fz = c.getZ() - villageCentre.getZ();
+        if (Math.max(Math.abs(fx), Math.abs(fz)) - grown <= Villages.FIRST_BLOCK) return;
+        if (Villages.builtOver(id, fx, fz, grown, grown)) return;
         for (com.jrpetty.mcassistant.village.Ledger.Building b : com.jrpetty.mcassistant.village.Ledger.buildings(id)) {
             BlockPos a = b.anchor();
             if (Math.max(Math.abs(a.getX() - c.getX()), Math.abs(a.getZ() - c.getZ())) <= grown + 8) return;
@@ -3682,39 +3689,113 @@ public class VillageFolkEntity extends AssistantEntity {
     // ------------------------------ finding ground ---------------------------
 
     /**
-     * The village's farmland: its fields laid out side by side, a full-grown field's width apart,
-     * in a district that starts at its first field and spreads out from it ring by ring — rather
-     * than wherever each farmer happened to look. The first field is found the usual way (by the
-     * water nearest the town) and marks where the district begins.
+     * A square of the village's farmland for a new field (Villages.fieldSquares): the nearest one
+     * still unworked whose ground will take a plough. The squares are laid out before the first
+     * furrow, a full-grown field's width apart, so the fields come up side by side, never over one
+     * another and never where the town will build.
      */
     @Nullable
-    private BlockPos districtPlot(BlockPos heart, java.util.function.Predicate<BlockPos> clear) {
+    private BlockPos farmlandPlot(BlockPos heart) {
         UUID town = ownerId();
         if (town == null) return null;
-        BlockPos origin = fieldsOrigin(town);
-        if (origin == null) return null;
-        int step = 2 * FIELD_MOST + 3;
+        int side = Villages.fieldsSide(town);
+        if (side < 0) side = chooseFieldsSide(town, heart);
+        if (side < 0) return null;
         neighbours = Villages.folkOf(town);
         try {
-            for (int ring = 0; ring <= 4; ring++) {
-                BlockPos best = null;
-                double bestD = Double.MAX_VALUE;
-                for (int i = -ring; i <= ring; i++) {
-                    for (int j = -ring; j <= ring; j++) {
-                        if (Math.max(Math.abs(i), Math.abs(j)) != ring) continue;
-                        BlockPos p = surfaceAt(origin.getX() + i * step, origin.getZ() + j * step);
-                        if (p == null || !level().isLoaded(p) || !clear.test(p) || taken(p, FIELD_MOST)) continue;
-                        if (!soilField(p) && !farmable(p)) continue;
-                        double d = p.distSqr(heart);
-                        if (d < bestD) { bestD = d; best = p; }
-                    }
-                }
-                if (best != null) return best;
+            for (int[] f : Villages.fieldSquares(side)) {
+                BlockPos p = surfaceAt(heart.getX() + f[0], heart.getZ() + f[1]);
+                // Not up a mountain or down a ravine from the town: a farmer walks there and back
+                // every day, and a field it cannot get to is no field (the mountains' hundred days).
+                if (p == null || Math.abs(p.getY() - heart.getY()) > FIELD_CLIMB || taken(p, FIELD_MOST)) continue;
+                if (Villages.builtOver(town, f[0], f[1], FIELD_MOST, FIELD_MOST) || buildingNear(town, p, FIELD_MOST + 4)) continue;
+                if (soilField(p) || farmable(p)) return p;
             }
             return null;
         } finally {
             neighbours = null;
         }
+    }
+
+    /** Does any of the village's buildings stand within this many blocks of the spot? */
+    private static boolean buildingNear(UUID town, BlockPos p, int within) {
+        for (com.jrpetty.mcassistant.village.Ledger.Building b : com.jrpetty.mcassistant.village.Ledger.buildings(town)) {
+            BlockPos a = b.anchor();
+            if (Math.max(Math.abs(a.getX() - p.getX()), Math.abs(a.getZ() - p.getZ())) <= within) return true;
+        }
+        return false;
+    }
+
+    /**
+     * The village marks out its farmland: the side of the town whose ground suits fields best —
+     * open soil, flat with the town, water about it — and the fields go out that way from then on,
+     * while the town grows the other three (Villages.lotKeptOff). A village whose first field was
+     * sown before this keeps the side it is on. Waits (-1) while the near ground is still loading.
+     */
+    private int chooseFieldsSide(UUID town, BlockPos heart) {
+        BlockPos origin = fieldsOrigin(town);
+        if (origin != null) {
+            int dx = origin.getX() - heart.getX(), dz = origin.getZ() - heart.getZ();
+            int side = Math.abs(dx) >= Math.abs(dz)
+                ? (dx >= 0 ? com.jrpetty.mcassistant.village.TownPlan.EAST : com.jrpetty.mcassistant.village.TownPlan.WEST)
+                : (dz >= 0 ? com.jrpetty.mcassistant.village.TownPlan.SOUTH : com.jrpetty.mcassistant.village.TownPlan.NORTH);
+            Villages.setFieldsSide(town, side);
+            return side;
+        }
+        int best = -1, bestScore = 0;
+        for (int side = 0; side < 4; side++) {
+            java.util.List<int[]> squares = Villages.fieldSquares(side);
+            int score = 0;
+            for (int i = 0; i < Math.min(6, squares.size()); i++) {
+                int[] f = squares.get(i);
+                BlockPos at = heart.offset(f[0], 0, f[1]);
+                if (!boxReady(at, 6)) {
+                    if (i < 2) return -1;                       // the first row has not come in yet
+                    continue;
+                }
+                BlockPos p = surfaceAt(at.getX(), at.getZ());
+                if (p == null || Math.abs(p.getY() - heart.getY()) > FIELD_CLIMB) continue;
+                if (Villages.builtOver(town, f[0], f[1], FIELD_MOST, FIELD_MOST)) { score -= 4; continue; }
+                if (!soilField(p) && !farmable(p)) continue;
+                // The nearest row counts twice: it is the one farmed first, and walked to every day.
+                int weight = i < 2 ? 2 : 1;
+                int good = 2;                                                // soil that will take a plough
+                if (waterOn(at, FIELD_MOST + 2)) good += 3;                  // and water on it, or by it
+                if (Math.abs(p.getY() - heart.getY()) <= 4) good += 2;       // level with the town: an easy walk
+                score += weight * good;
+            }
+            if (score > bestScore) { bestScore = score; best = side; }
+        }
+        if (best < 0) return -1;                                // no soil on any side: fields go where they can
+        Villages.setFieldsSide(town, best);
+        String way = switch (best) {
+            case com.jrpetty.mcassistant.village.TownPlan.EAST -> "east";
+            case com.jrpetty.mcassistant.village.TownPlan.WEST -> "west";
+            case com.jrpetty.mcassistant.village.TownPlan.SOUTH -> "south";
+            default -> "north";
+        };
+        brain("marked out the village's farmland to the " + way + " of the town, where the ground is best");
+        com.jrpetty.mcassistant.village.Ledger.note(town, "fields.way", way);
+        return best;
+    }
+
+    /** Is there open water at the surface anywhere in this square (every other column looked at)? */
+    private boolean waterOn(BlockPos centre, int r) {
+        for (int dx = -r; dx <= r; dx += 2) {
+            for (int dz = -r; dz <= r; dz += 2) {
+                int x = centre.getX() + dx, z = centre.getZ() + dz;
+                if (!chunkReady(x, z)) continue;
+                BlockPos top = new BlockPos(x, level().getHeight(Heightmap.Types.WORLD_SURFACE, x, z) - 1, z);
+                if (level().getFluidState(top).is(net.minecraft.tags.FluidTags.WATER)) return true;
+            }
+        }
+        return false;
+    }
+
+    /** Tests: have this folk's village mark out its farmland now. */
+    public int chooseFieldsSideForTests() {
+        BlockPos heart = villageCentre != null ? villageCentre : blockPosition();
+        return ownerId() == null ? -1 : chooseFieldsSide(ownerId(), heart);
     }
 
     /** Where the village's fields begin (its first field), or null before it has one. */
@@ -3759,10 +3840,16 @@ public class VillageFolkEntity extends AssistantEntity {
         // ground inside it is for streets and houses.
         boolean outdoor = trade == StationTask.FARM || trade == StationTask.WOOD || trade == StationTask.MINE
             || trade == StationTask.RANCH || trade == StationTask.FISH || trade == StationTask.BEEKEEP || trade == StationTask.HUNT;
+        // The land is planned. The fields go on the village's farmland — one side of the town, laid
+        // out in squares side by side (farmlandPlot) — and the town grows round the other three.
+        // Woods, mines, pens and hives go outside the town as it stands and off the farmland (the
+        // fisher may cast from its banks: water is not a field).
         UUID town = ownerId();
-        if (outdoor && town != null) reach = Math.max(reach, Villages.townReach(town) + radius + 8);
+        int keep = trade == StationTask.FARM ? FIELD_MOST : radius;
+        if (outdoor && town != null) reach = Math.max(reach, Villages.townReach(town) + keep + 8);
         java.util.function.Predicate<BlockPos> clear = p -> !outdoor || town == null
-            || Villages.outsideTown(town, heart, p, radius);
+            || Villages.outsideTown(town, heart, p, keep)
+               && (trade == StationTask.FARM || trade == StationTask.FISH || !Villages.onFarmland(town, heart, p, radius));
         BlockPos from = heart.offset(
             (int) Math.round(Math.cos(angle) * reach), 0,
             (int) Math.round(Math.sin(angle) * reach));
@@ -3772,21 +3859,22 @@ public class VillageFolkEntity extends AssistantEntity {
             // from how far a plot can end up, and neither can be reasoned
             // about while the woodcutter quietly reaches a third further than
             // everybody else.
-            // A field goes by the nearest water to the village (just outside the town's own
-            // ground), whichever way it lies: farmers used to look on their own bearing, fifty
-            // blocks out and a scan beyond that, and walked seventy or eighty blocks to a pond
-            // while there was a river by the town. No water anywhere near: the nearest good
-            // soil, and the channel the field needs is cut to it.
+            // A field goes on the village's farmland, the nearest square of it free; failing that,
+            // by the nearest water outside the town (farmers used to look on their own bearing and
+            // walked seventy or eighty blocks to a pond while there was a river by the town), and
+            // failing that the nearest good soil — a farmer digs its own water holes (FarmGoal).
             case FARM -> {
-                // The village's farmland first: its fields side by side, spreading out from the first.
-                BlockPos plot = districtPlot(heart, clear);
+                // The village's farmland first: its fields side by side, on the side of the town it chose.
+                BlockPos plot = farmlandPlot(heart);
                 if (plot != null) yield plot;
-                BlockPos wet = nearestWaterField(heart, outdoor && town != null ? Villages.townReach(town) + radius + 2 : 8,
-                    radius, clear);
-                if (wet == null) wet = scan(from, SCAN, 6, radius, p -> clear.test(p) && farmable(p));
-                if (wet == null) wet = scan(from, SCAN, 6, radius, p -> clear.test(p) && soilField(p));
-                // The first field marks where the village's farmland begins (districtPlot).
-                if (wet != null && town != null && fieldsOrigin(town) == null) {
+                // Nowhere on the farmland (the ground not in yet, or no soil on it): the nearest water
+                // outside the town, or the nearest good soil.
+                BlockPos wet = nearestWaterField(heart, outdoor && town != null ? Villages.townReach(town) + keep + 2 : 8,
+                    keep, clear);
+                if (wet == null) wet = scan(from, SCAN, 6, keep, p -> clear.test(p) && farmable(p));
+                if (wet == null) wet = scan(from, SCAN, 6, keep, p -> clear.test(p) && soilField(p));
+                // A field sown before the village chose its farmland marks the side it will choose.
+                if (wet != null && town != null && Villages.fieldsSide(town) < 0 && fieldsOrigin(town) == null) {
                     com.jrpetty.mcassistant.village.Ledger.note(town, "fields.origin", wet.getX() + "," + wet.getY() + "," + wet.getZ());
                 }
                 yield wet;
@@ -4086,8 +4174,33 @@ public class VillageFolkEntity extends AssistantEntity {
         int reach = Math.min(112, Math.max(48, Villages.storesRadius(village)));
         java.util.List<BlockPos> loads = new java.util.ArrayList<>();
         java.util.List<Integer> worth = new java.util.ArrayList<>();
+        // The production chests first, wherever the plots are: what every worker makes waits in
+        // its own chest at the edge of its plot for a courier to bring it in. A hungry village's
+        // food comes in first.
+        boolean hungry = Market.hungry(village);
+        java.util.Set<Long> seen = new java.util.HashSet<>();
+        for (AssistantEntity a : Villages.folkOf(village)) {
+            BlockPos p = a instanceof VillageFolkEntity vf ? vf.productionChest() : null;
+            if (p == null || !seen.add(p.asLong()) || !server.isLoaded(p)) continue;
+            if (!(server.getBlockEntity(p) instanceof net.minecraft.world.Container box)) continue;
+            Integer spent = spentPickups.get(p.asLong());
+            if (spent != null && tickCount - spent < 2400) continue;
+            int held = 0, food = 0;
+            for (int i = 0; i < box.getContainerSize(); i++) {
+                net.minecraft.world.item.ItemStack st = box.getItem(i);
+                if (st.isEmpty()) continue;
+                held += st.getCount();
+                if (st.get(net.minecraft.core.component.DataComponents.FOOD) != null) food += st.getCount();
+            }
+            if (held < 16 && !(hungry && food >= 4)) continue;
+            int score = held + (hungry ? food * 4 : 0);
+            int at = 0;
+            while (at < worth.size() && worth.get(at) >= score) at++;
+            loads.add(at, p.immutable());
+            worth.add(at, score);
+        }
         for (ZoneChests.Found f : ZoneChests.around(level(), heart, reach, 32)) {
-            if (!f.stillThere()) continue;
+            if (!f.stillThere() || seen.contains(f.pos().asLong())) continue;
             boolean furnace = f.blockEntity() instanceof net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
             if (!furnace && (!ZoneChests.isStashable(f) || Villages.inStoreArea(village, f.pos()))) continue;
             if (Villages.inAGuestHouse(village, f.pos())) continue;
@@ -4597,6 +4710,179 @@ public class VillageFolkEntity extends AssistantEntity {
     /** Pickups that came up empty, and when: passed over a while (a field's chest keeps its seed,
      *  and counted fuller than the furnace's ingots, it was chosen and found empty again and again). */
     private final java.util.Map<Long, Integer> spentPickups = new java.util.HashMap<>();
+
+    /**
+     * What a worker makes goes into its own production chest at its plot — and only that: the
+     * couriers carry it in to the storehouse, and the worker is paid for what it put in. A chest
+     * that is full (the couriers behind), or none yet: the load goes to the stores itself.
+     */
+    @Override
+    protected Job outputDeposit() {
+        if (level() instanceof net.minecraft.server.level.ServerLevel server) {
+            BlockPos chest = keepProductionChest(server);
+            if (chest != null && server.isLoaded(chest) && server.getBlockEntity(chest) instanceof net.minecraft.world.Container c) {
+                for (int i = 0; i < c.getContainerSize(); i++) {
+                    if (c.getItem(i).isEmpty()) return Job.depositAt(chest);
+                }
+            }
+        }
+        return storesDeposit();
+    }
+
+    @Override
+    public Job villageDepositJob() {
+        return usesVillageStores() ? outputDeposit() : null;
+    }
+
+    /**
+     * Out past the chunks its village keeps awake (VillageSpawner's ring round the heart) and its
+     * own plot's window, a folk takes a window of loaded chunks with it — on the walk out to a far
+     * field or wood, a long way round to the stores, a fetch for the builders — so the village
+     * goes on working, every one of them, wherever they are, with nobody about.
+     */
+    @Override
+    protected boolean carriesChunkWindow() {
+        if (super.carriesChunkWindow()) return true;
+        UUID village = ownerId();
+        BlockPos heart = villageCentre;
+        if (village == null || heart == null) return false;
+        BlockPos here = blockPosition();
+        int ring = com.jrpetty.mcassistant.VillageSpawner.loadedRadiusFor(Villages.headcount(village));
+        if (Math.abs((here.getX() >> 4) - (heart.getX() >> 4)) < ring
+            && Math.abs((here.getZ() >> 4) - (heart.getZ() >> 4)) < ring) return false;
+        return !nearOwnPost(here);
+    }
+
+    // ------------------------------ the production chest ------------------------
+
+    /** Its production chest (a producer's, at the edge of its plot), or null. */
+    @Nullable private BlockPos productionChest;
+    private int productionTick = -100000;
+
+    /** The trades that make things out on a plot of their own, into a production chest of their own. */
+    static boolean producer(StationTask t) {
+        return t == StationTask.FARM || t == StationTask.WOOD || t == StationTask.MINE || t == StationTask.FISH
+            || t == StationTask.RANCH || t == StationTask.HUNT || t == StationTask.BEEKEEP;
+    }
+
+    /** Its production chest, or null. */
+    @Nullable
+    public BlockPos productionChest() {
+        return productionChest;
+    }
+
+    /** The village's production chests (never cleared out into the storehouse), as BlockPos longs. */
+    static java.util.Set<Long> productionChests(UUID village) {
+        java.util.Set<Long> out = new java.util.HashSet<>();
+        for (AssistantEntity a : Villages.folkOf(village)) {
+            if (a instanceof VillageFolkEntity f && f.productionChest != null) out.add(f.productionChest.asLong());
+        }
+        return out;
+    }
+
+    /** Is this one of the village's production chests? */
+    static boolean isProductionChest(UUID village, BlockPos pos) {
+        return productionChests(village).contains(pos.asLong());
+    }
+
+    /** Tests: the production chest now, set down if it can be. */
+    @Nullable
+    public BlockPos productionChestForTests() {
+        productionTick = -100000;
+        return level() instanceof net.minecraft.server.level.ServerLevel server ? keepProductionChest(server) : null;
+    }
+
+    /**
+     * Its production chest, standing — set down if it has none yet: on its own plot, at the edge
+     * towards the town (a field's in the corner of the field it will grow to), where the couriers
+     * come for it and nobody else's ground is touched. Its own chest from its pack, or one from the
+     * stores, or one made of eight planks (or two logs) from the stores. Null if it cannot have
+     * one yet, or keeps no plot.
+     */
+    @Nullable
+    private BlockPos keepProductionChest(net.minecraft.server.level.ServerLevel level) {
+        StationTask t = stationTask();
+        WorkZone z = workZone();
+        if (!producer(t) || z == null || villageCentre == null || ownerId() == null || isBaby()) {
+            productionChest = null;
+            return null;
+        }
+        int reach = (t == StationTask.FARM ? Math.max(FIELD_MOST, z.radius()) : z.radius()) + 2;
+        if (productionChest != null) {
+            if (!level.isLoaded(productionChest)) return productionChest;
+            BlockPos c = z.center();
+            boolean near = Math.max(Math.abs(productionChest.getX() - c.getX()), Math.abs(productionChest.getZ() - c.getZ())) <= reach + 4;
+            if (near && level.getBlockEntity(productionChest) instanceof net.minecraft.world.level.block.entity.ChestBlockEntity) return productionChest;
+            productionChest = null;                              // gone, or the plot has moved
+        }
+        if (tickCount - productionTick < 600) return null;
+        productionTick = tickCount;
+        BlockPos c = z.center();
+        double dx = villageCentre.getX() - c.getX(), dz = villageCentre.getZ() - c.getZ();
+        BlockPos spot;
+        if (t == StationTask.FARM) {
+            // The corner of the field (as it will grow) nearest the town: one square of eighty given up,
+            // on its own ground, by the way in from the town.
+            int sx = dx >= 0 ? 1 : -1, sz = dz >= 0 ? 1 : -1;
+            spot = chestSpot(level, c.getX() + sx * FIELD_MOST, c.getZ() + sz * FIELD_MOST);
+        } else {
+            // Just inside the edge of its plot, on the side towards the town.
+            double len = Math.max(1.0, Math.sqrt(dx * dx + dz * dz));
+            int in = Math.max(1, z.radius() - 1);
+            spot = chestSpot(level, c.getX() + (int) Math.round(dx / len * in), c.getZ() + (int) Math.round(dz / len * in));
+        }
+        if (spot == null) return null;
+        if (countCarried(s -> s.is(net.minecraft.world.item.Items.CHEST)) == 0) {
+            drawFrom(villageCentre, s -> s.is(net.minecraft.world.item.Items.CHEST), 1, buildStoresRadius());
+        }
+        if (countCarried(s -> s.is(net.minecraft.world.item.Items.CHEST)) == 0) {
+            int r = buildStoresRadius();
+            if (drawFrom(villageCentre, s -> s.is(net.minecraft.tags.ItemTags.PLANKS), 8, r) >= 8
+                    && removeMatching(s -> s.is(net.minecraft.tags.ItemTags.PLANKS), 8) == 8) {
+                insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.CHEST));
+            } else if (drawFrom(villageCentre, s -> s.is(net.minecraft.tags.ItemTags.LOGS), 2, r) >= 2
+                    && removeMatching(s -> s.is(net.minecraft.tags.ItemTags.LOGS), 2) == 2) {
+                insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.CHEST));
+            }
+        }
+        if (removeMatching(s -> s.is(net.minecraft.world.item.Items.CHEST), 1) != 1) return null;
+        level.setBlockAndUpdate(spot, Blocks.CHEST.defaultBlockState());
+        ZoneChests.mark(level, spot);
+        productionChest = spot.immutable();
+        brain("set down its production chest at the edge of " + (patchName() != null ? patchName() : "its plot"));
+        FolkTalk.speak(this, FolkTalk.pick(getRandom(), "A chest at the edge of my plot: everything I make goes in, and the couriers take it in.",
+            "There — my production chest. The couriers will fetch from it."));
+        return productionChest;
+    }
+
+    /** Open, level ground for a chest near here: a solid floor, nothing in the way, no water, and on
+     *  nobody else's plot. Null if there is none within three blocks. */
+    @Nullable
+    private BlockPos chestSpot(net.minecraft.server.level.ServerLevel level, int x, int z) {
+        UUID village = ownerId();
+        for (int r = 0; r <= 3; r++) {
+            for (int ix = -r; ix <= r; ix++) {
+                for (int iz = -r; iz <= r; iz++) {
+                    if (Math.max(Math.abs(ix), Math.abs(iz)) != r) continue;
+                    BlockPos p = surfaceAt(x + ix, z + iz);
+                    if (p == null) continue;
+                    BlockState below = level.getBlockState(p.below());
+                    if (!below.isFaceSturdy(level, p.below(), net.minecraft.core.Direction.UP) || !below.getFluidState().isEmpty()) continue;
+                    if (!level.getBlockState(p).canBeReplaced() || !level.getBlockState(p).getFluidState().isEmpty()) continue;
+                    if (below.is(Blocks.FARMLAND)) continue;
+                    boolean onAPlot = false;
+                    if (village != null) {
+                        for (AssistantEntity a : Villages.folkOf(village)) {
+                            WorkZone o = a == this ? null : a.workZone();
+                            if (o != null && o.containsColumn(p)) { onAPlot = true; break; }
+                        }
+                    }
+                    if (!onAPlot) return p;
+                }
+            }
+        }
+        return null;
+    }
 
     /** A load for the village's stores: to the storehouse (or the next store with room). */
     @Override
@@ -6108,6 +6394,7 @@ public class VillageFolkEntity extends AssistantEntity {
             tag.put("Persona", inner);
         }
         if (showcase) tag.putBoolean("Showcase", true);
+        if (productionChest != null) tag.putLong("ProductionChest", productionChest.asLong());
         tag.putLong("BornDay", bornDay);
         if (mentor != null) tag.putUUID("Mentor", mentor);
         if (apprenticeTo != StationTask.NONE) tag.putString("Apprentice", apprenticeTo.name());
@@ -6163,6 +6450,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (tag.contains("Social")) life.load(tag.getCompound("Social"));
         if (tag.contains("Persona")) persona.load(tag.getCompound("Persona"));
         this.showcase = tag.getBoolean("Showcase");
+        this.productionChest = tag.contains("ProductionChest") ? BlockPos.of(tag.getLong("ProductionChest")) : null;
         this.bornDay = tag.contains("BornDay") ? tag.getLong("BornDay") : UNKNOWN;
         this.mentor = tag.hasUUID("Mentor") ? tag.getUUID("Mentor") : null;
         try {

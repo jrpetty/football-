@@ -45,7 +45,8 @@ public final class Economy {
     private Economy() {}
 
     public enum Kind {
-        FOOD("food"), TIMBER("timber"), STONE("stone"), ORE("ore and metal"), ANIMAL("wool, hides and honey"), CRAFT("crafts");
+        FOOD("food"), TIMBER("timber"), STONE("stone"), ORE("ore and metal"), ANIMAL("wool, hides and honey"), CRAFT("crafts"),
+        PLANT("plants and flowers");
 
         public final String word;
 
@@ -79,9 +80,18 @@ public final class Economy {
 
     // ------------------------------------------------------------------ output
 
-    /** What kind of goods this is, or null if it is not the village's output (a tool lent out, a torch). */
+    /** What kind of goods this is, or null if it is not the village's output: by name, then by the
+     *  price list (Prices: everything mined, grown, caught or made). */
     @Nullable
     public static Kind kindOf(ItemStack s) {
+        Kind named = kindOfNamed(s);
+        if (named != null || s.isEmpty() || s.is(Items.TORCH)) return named;
+        return Prices.kindOf(s.getItem());
+    }
+
+    /** The kinds the village names outright. */
+    @Nullable
+    static Kind kindOfNamed(ItemStack s) {
         if (s.isEmpty()) return null;
         if (s.get(net.minecraft.core.component.DataComponents.FOOD) != null || s.is(Items.WHEAT) || s.is(Items.SUGAR_CANE)
                 || s.is(Items.PUMPKIN) || s.is(Items.MELON) || s.is(Items.COCOA_BEANS) || s.is(Items.SUGAR)) return Kind.FOOD;
@@ -105,7 +115,7 @@ public final class Economy {
     static double worthOf(ItemStack s) {
         Market.Good g = Market.goodFor(s);
         if (g != null) return g.value() * s.getCount();
-        return Wealth.value(s);
+        return Prices.of(s);
     }
 
     /**
@@ -134,14 +144,14 @@ public final class Economy {
      */
     static boolean makes(StationTask t, Kind k, ItemStack s) {
         return switch (t) {
-            case FARM -> k == Kind.FOOD;
-            case WOOD -> k == Kind.TIMBER || s.is(Items.APPLE) || s.is(Items.STICK);
+            case FARM -> k == Kind.FOOD || k == Kind.PLANT;
+            case WOOD -> k == Kind.TIMBER || k == Kind.PLANT || s.is(Items.APPLE) || s.is(Items.STICK);
             case MINE -> k == Kind.STONE || k == Kind.ORE;
             case SMELT -> k == Kind.ORE || k == Kind.CRAFT || k == Kind.FOOD || s.is(Items.STONE);
             case RANCH -> k == Kind.ANIMAL || k == Kind.FOOD;
             case FISH -> k == Kind.FOOD || k == Kind.ANIMAL;
             case HUNT -> k == Kind.FOOD || k == Kind.ANIMAL;
-            case BEEKEEP -> k == Kind.ANIMAL || s.is(Items.HONEY_BOTTLE) || k == Kind.FOOD;
+            case BEEKEEP -> k == Kind.ANIMAL || s.is(Items.HONEY_BOTTLE) || k == Kind.FOOD || k == Kind.PLANT;
             case COOK -> k == Kind.FOOD || k == Kind.CRAFT;
             case GUARD -> k == Kind.ANIMAL;                                    // what the night's monsters drop
             default -> k == Kind.CRAFT || k == Kind.ANIMAL;                     // the crafts: smith, tailor, brewer, enchanter, shop

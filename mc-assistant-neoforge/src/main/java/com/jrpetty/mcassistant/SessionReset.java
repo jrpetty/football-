@@ -26,11 +26,13 @@ public final class SessionReset {
     @SubscribeEvent
     public static void onServerStarting(ServerStartingEvent event) {
         resetAll();
+        com.jrpetty.mcassistant.entity.Prices.reset();      // this world's recipes, priced afresh
     }
 
     @SubscribeEvent
     public static void onServerStopped(ServerStoppedEvent event) {
         resetAll();
+        com.jrpetty.mcassistant.entity.Prices.reset();
     }
 
     /** Wipe every piece of in-memory village and crew state. */

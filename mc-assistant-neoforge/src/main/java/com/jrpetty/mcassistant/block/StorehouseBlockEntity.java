@@ -36,8 +36,12 @@ import java.util.List;
 public class StorehouseBlockEntity extends BlockEntity implements Container, MenuProvider, Nameable {
 
     public static final int COLUMNS = 9;
+    /** The rows it starts with: it grows nine rows at a time whenever it gets near full, so it is
+     *  never full (the village's goods are never left lying at the door). */
     public static final int ROWS = 81;
     public static final int SIZE = COLUMNS * ROWS;
+    /** Rows added at a time, and the empty rows it always keeps in hand. */
+    private static final int GROW_ROWS = 9, SPARE_ROWS = 2;
     /** The most a unit carries out of a broken store in one item; more than this spills. */
     private static final int MOST_IN_AN_ITEM = 1_000_000;
     private static final String GOODS = "Goods";
@@ -51,8 +55,31 @@ public class StorehouseBlockEntity extends BlockEntity implements Container, Men
     }
 
     private NonNullList<ItemStack> items() {
-        if (items == null) items = NonNullList.withSize(SIZE, ItemStack.EMPTY);
+        if (items == null) {
+            items = NonNullList.create();
+            for (int i = 0; i < SIZE; i++) items.add(ItemStack.EMPTY);
+        }
         return items;
+    }
+
+    /** How many rows it has now (it grows: see roomToSpare). */
+    public int rows() {
+        return items().size() / COLUMNS;
+    }
+
+    /**
+     * Never full: whenever fewer than two rows stand empty, nine more are added. The storehouse
+     * held seven hundred and twenty-nine stacks and a town of fifty filled it, and the harvest
+     * had nowhere to go; a village's stores have no bottom now.
+     */
+    private void roomToSpare() {
+        NonNullList<ItemStack> all = items();
+        int empty = 0;
+        for (ItemStack s : all) if (s.isEmpty()) empty++;
+        while (empty < SPARE_ROWS * COLUMNS) {
+            for (int i = 0; i < GROW_ROWS * COLUMNS; i++) all.add(ItemStack.EMPTY);
+            empty += GROW_ROWS * COLUMNS;
+        }
     }
 
     /** Is this a working store — the door of a whole cube — rather than goods waiting in a unit? */
@@ -91,7 +118,7 @@ public class StorehouseBlockEntity extends BlockEntity implements Container, Men
         if (stack.isEmpty()) return ItemStack.EMPTY;
         ItemStack left = stack.copy();
         NonNullList<ItemStack> all = items();
-        for (int i = 0; i < SIZE && !left.isEmpty(); i++) {
+        for (int i = 0; i < all.size() && !left.isEmpty(); i++) {
             ItemStack s = all.get(i);
             if (!s.isEmpty() && ItemStack.isSameItemSameComponents(s, left)) {
                 int room = Math.min(s.getMaxStackSize(), getMaxStackSize()) - s.getCount();
@@ -101,12 +128,15 @@ public class StorehouseBlockEntity extends BlockEntity implements Container, Men
                 left.shrink(move);
             }
         }
-        for (int i = 0; i < SIZE && !left.isEmpty(); i++) {
+        for (int i = 0; !left.isEmpty(); i++) {
+            if (i >= all.size()) roomToSpare();                       // never full: it grows
+            if (i >= all.size()) break;
             if (all.get(i).isEmpty()) {
                 int move = Math.min(left.getCount(), Math.min(left.getMaxStackSize(), getMaxStackSize()));
                 all.set(i, left.split(move));
             }
         }
+        roomToSpare();
         setChanged();
         return left;
     }
@@ -134,7 +164,9 @@ public class StorehouseBlockEntity extends BlockEntity implements Container, Men
             .comparing((ItemStack s) -> net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(s.getItem()).toString())
             .thenComparing(s -> -s.getCount()));
         NonNullList<ItemStack> into = items();
-        for (int i = 0; i < merged.size() && i < SIZE; i++) into.set(i, merged.get(i));
+        while (into.size() < merged.size()) into.add(ItemStack.EMPTY);
+        for (int i = 0; i < merged.size(); i++) into.set(i, merged.get(i));
+        roomToSpare();
         setChanged();
     }
 
@@ -142,7 +174,7 @@ public class StorehouseBlockEntity extends BlockEntity implements Container, Men
 
     @Override
     public int getContainerSize() {
-        return SIZE;
+        return items().size();
     }
 
     @Override
@@ -152,7 +184,7 @@ public class StorehouseBlockEntity extends BlockEntity implements Container, Men
 
     @Override
     public ItemStack getItem(int slot) {
-        return items == null || slot < 0 || slot >= SIZE ? ItemStack.EMPTY : items.get(slot);
+        return items == null || slot < 0 || slot >= items.size() ? ItemStack.EMPTY : items.get(slot);
     }
 
     @Override
@@ -171,9 +203,11 @@ public class StorehouseBlockEntity extends BlockEntity implements Container, Men
 
     @Override
     public void setItem(int slot, ItemStack stack) {
-        if (slot < 0 || slot >= SIZE) return;
+        if (slot < 0) return;
+        while (items().size() <= slot) items().add(ItemStack.EMPTY);
         items().set(slot, stack);
         stack.limitSize(this.getMaxStackSize(stack));
+        if (!stack.isEmpty()) roomToSpare();
         setChanged();
     }
 
@@ -184,7 +218,7 @@ public class StorehouseBlockEntity extends BlockEntity implements Container, Men
 
     @Override
     public void clearContent() {
-        if (items != null) items.clear();
+        items = null;
         setChanged();
     }
 
@@ -269,7 +303,7 @@ public class StorehouseBlockEntity extends BlockEntity implements Container, Men
             ItemStack s = items.get(i);
             if (s.isEmpty()) continue;
             CompoundTag one = new CompoundTag();
-            one.putShort("Slot", (short) i);
+            one.putInt("Slot", i);
             list.add(s.save(registries, one));
         }
         return list;
@@ -278,10 +312,14 @@ public class StorehouseBlockEntity extends BlockEntity implements Container, Men
     private void readGoods(ListTag list, HolderLookup.Provider registries) {
         for (int i = 0; i < list.size(); i++) {
             CompoundTag one = list.getCompound(i);
-            int slot = one.getShort("Slot");
-            if (slot < 0 || slot >= SIZE) continue;
-            ItemStack.parse(registries, one).ifPresent(s -> items().set(slot, s));
+            int slot = one.getInt("Slot");                        // a short before the store grew
+            if (slot < 0) continue;
+            ItemStack.parse(registries, one).ifPresent(s -> {
+                while (items().size() <= slot) items().add(ItemStack.EMPTY);
+                items().set(slot, s);
+            });
         }
+        roomToSpare();
     }
 
     // ------------------------------------------------------------------ carried in a unit

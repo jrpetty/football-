@@ -44,18 +44,16 @@ public class StorehouseScreen extends AbstractContainerScreen<StorehouseMenu> {
         }
     }
 
-    private void scrollTo(int row) {
-        int to = Math.max(0, Math.min(StorehouseMenu.LAST_ROW, row));
-        if (to == menu.row()) return;
-        menu.scrollTo(to);
-        click(to);
-    }
-
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         if (scrollY == 0) return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
-        int step = hasShiftDown() ? StorehouseMenu.SHOWN_ROWS : 1;
-        scrollTo(menu.row() - (int) Math.signum(scrollY) * step);
+        boolean page = hasShiftDown();
+        boolean up = scrollY > 0;
+        int to = menu.row() + (up ? -1 : 1) * (page ? StorehouseMenu.SHOWN_ROWS : 1);
+        if (Math.max(0, Math.min(menu.lastRow(), to)) == menu.row()) return true;
+        menu.scrollTo(to);
+        click(page ? (up ? StorehouseMenu.BUTTON_PAGE_UP : StorehouseMenu.BUTTON_PAGE_DOWN)
+            : (up ? StorehouseMenu.BUTTON_UP : StorehouseMenu.BUTTON_DOWN));
         return true;
     }
 
@@ -65,8 +63,12 @@ public class StorehouseScreen extends AbstractContainerScreen<StorehouseMenu> {
     }
 
     private void dragTo(double mouseY) {
-        double f = (mouseY - topPos - BAR_Y - THUMB / 2.0) / (BAR_H - THUMB);
-        scrollTo((int) Math.round(Math.max(0, Math.min(1, f)) * StorehouseMenu.LAST_ROW));
+        double f = Math.max(0, Math.min(1, (mouseY - topPos - BAR_Y - THUMB / 2.0) / (BAR_H - THUMB)));
+        int hundredths = (int) Math.round(f * 100);
+        int to = (int) Math.round(hundredths / 100.0 * menu.lastRow());
+        if (to == menu.row()) return;
+        menu.scrollTo(to);
+        click(hundredths);
     }
 
     @Override
@@ -108,7 +110,7 @@ public class StorehouseScreen extends AbstractContainerScreen<StorehouseMenu> {
         g.fill(bx, by + BAR_H + 7, bx + BAR_W + 6, by + BAR_H + 8, 0xFF555555);
         g.fill(x + BAR_X, y + BAR_Y, x + BAR_X + BAR_W, y + BAR_Y + BAR_H, 0xFF8B8B8B);
         g.fill(x + BAR_X, y + BAR_Y, x + BAR_X + BAR_W, y + BAR_Y + 1, 0xFF373737);
-        int t = y + BAR_Y + (int) Math.round((BAR_H - THUMB) * (menu.row() / (double) StorehouseMenu.LAST_ROW));
+        int t = y + BAR_Y + (int) Math.round((BAR_H - THUMB) * (menu.row() / (double) Math.max(1, menu.lastRow())));
         g.fill(x + BAR_X + 1, t, x + BAR_X + BAR_W - 1, t + THUMB, 0xFFF0F0F0);
         g.fill(x + BAR_X + 1, t + THUMB - 1, x + BAR_X + BAR_W - 1, t + THUMB, 0xFF8B8B8B);
         g.fill(x + BAR_X + BAR_W - 2, t, x + BAR_X + BAR_W - 1, t + THUMB, 0xFF8B8B8B);
@@ -121,7 +123,7 @@ public class StorehouseScreen extends AbstractContainerScreen<StorehouseMenu> {
         if (font.width(title) > room) title = font.plainSubstrByWidth(title, room - font.width("...")) + "...";
         g.drawString(font, title, titleLabelX, titleLabelY, 0x404040, false);
         g.drawString(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, 0x404040, false);
-        String full = menu.used() + " / " + StorehouseBlockEntity.SIZE + " used";
+        String full = menu.used() + " stacks";
         g.drawString(font, full, 176 - 8 - font.width(full), inventoryLabelY, 0x404040, false);
     }
 
@@ -131,7 +133,7 @@ public class StorehouseScreen extends AbstractContainerScreen<StorehouseMenu> {
         renderTooltip(g, mouseX, mouseY);
         if (onBar(mouseX, mouseY) && !dragging) {
             g.renderTooltip(font, Component.literal("Rows " + (menu.row() + 1) + "–"
-                + (menu.row() + StorehouseMenu.SHOWN_ROWS) + " of " + StorehouseBlockEntity.ROWS
+                + (menu.row() + StorehouseMenu.SHOWN_ROWS) + " of " + menu.rows() + ", and it grows as it fills"
                 + " (scroll, or drag; shift scrolls a page)"), mouseX, mouseY);
         }
     }

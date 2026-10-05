@@ -84,6 +84,8 @@ public final class TownWork {
     private static int work(ServerLevel level, Villages.Village v, int dx, int dz, Villages.Age age) {
         int x = v.centre().getX() + dx, z = v.centre().getZ() + dz;
         if (!level.hasChunk(x >> 4, z >> 4)) return 0;
+        // The streets stop at the farmland: the town grows round its fields, never through them.
+        if (Villages.onFarmland(v.id(), dx, dz, 0, 0)) return 0;
         int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
         BlockPos top = new BlockPos(x, y - 1, z);
         BlockState ground = level.getBlockState(top);

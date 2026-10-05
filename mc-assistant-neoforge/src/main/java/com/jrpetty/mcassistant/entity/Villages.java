@@ -78,7 +78,9 @@ public final class Villages {
         // four farmers, three miners, two woodcutters and a smelter is exactly
         // what ten still comes out as.
         new Slot(AssistantEntity.StationTask.GUARD, 1, 11),
-        new Slot(AssistantEntity.StationTask.HAUL, 1, 12),
+        // The couriers: every worker's output waits in its production chest at its plot for one of
+        // them to bring it in to the storehouse, so the first comes early, and more with the plots.
+        new Slot(AssistantEntity.StationTask.HAUL, 1, 6),
         new Slot(AssistantEntity.StationTask.STORE, 1, 13),
         new Slot(AssistantEntity.StationTask.RANCH, 1, 14),
         new Slot(AssistantEntity.StationTask.FISH, 1, 16),
@@ -724,6 +726,12 @@ public final class Villages {
         // coast, more woodcutters and hunters in the forest, more miners in the hills.
         double t = (slot.weight() + boost) * total / (double) VILLAGE_SIZE * Orders.scale(villageId)
             * glut(villageId, slot.trade()) * Homeland.lean(villageId, slot.trade());
+        // A courier for every five workers out on plots of their own (their production chests).
+        if (slot.trade() == AssistantEntity.StationTask.HAUL && villageId != null) {
+            int producers = 0;
+            for (AssistantEntity a : folkOf(villageId)) if (VillageFolkEntity.producer(a.stationTask())) producers++;
+            t = Math.max(t, Math.ceil(producers / 5.0));
+        }
         // A hungry village wants its food-makers: half as many farmers and fishers again while
         // the larder is low. It is fed by its own fields and waters, and nothing else.
         if ((slot.trade() == AssistantEntity.StationTask.FARM || slot.trade() == AssistantEntity.StationTask.FISH)
@@ -1982,6 +1990,166 @@ public final class Villages {
         return com.jrpetty.mcassistant.village.TownPlan.RING + rings * com.jrpetty.mcassistant.village.TownPlan.PERIOD + 2;
     }
 
+    // ------------------------------------------------------------------ the farmland
+
+    /**
+     * The town's own ground, never farmed: the square, its first block of lots and the street
+     * round them (village/TownPlan), forty-one blocks out.
+     */
+    public static final int FIRST_BLOCK = com.jrpetty.mcassistant.village.TownPlan.RING
+        + com.jrpetty.mcassistant.village.TownPlan.PERIOD + 2;
+
+    /** From one field to the next: a full-grown field and a two-block lane between. */
+    public static final int FIELD_STEP = 2 * VillageFolkEntity.FIELD_MOST + 3;
+
+    /** How far out the farmland's squares are laid (they go on past the town's plan). */
+    private static final int FIELD_ROWS = 6;
+
+    /**
+     * Which side of the town is its farmland (TownPlan.NORTH..WEST), or -1 before the village
+     * has chosen. The village chooses once, by the ground (VillageFolkEntity.chooseFieldsSide):
+     * its fields go out that way, side by side, and the town grows the other three ways.
+     */
+    public static int fieldsSide(@Nullable UUID villageId) {
+        if (villageId == null) return -1;
+        String note = com.jrpetty.mcassistant.village.Ledger.note(villageId, "fields.side");
+        if (note == null || note.isEmpty()) return -1;
+        try {
+            int side = Integer.parseInt(note.trim());
+            return side >= 0 && side <= 3 ? side : -1;
+        } catch (NumberFormatException e) {
+            return -1;
+        }
+    }
+
+    public static void setFieldsSide(UUID villageId, int side) {
+        com.jrpetty.mcassistant.village.Ledger.note(villageId, "fields.side", Integer.toString(side));
+    }
+
+    /** How far out this offset from the heart is, toward the given side. */
+    public static int along(int side, int dx, int dz) {
+        return switch (side) {
+            case com.jrpetty.mcassistant.village.TownPlan.EAST -> dx;
+            case com.jrpetty.mcassistant.village.TownPlan.WEST -> -dx;
+            case com.jrpetty.mcassistant.village.TownPlan.SOUTH -> dz;
+            default -> -dz;
+        };
+    }
+
+    /** How far this offset is to one side of the line out to the given side. */
+    public static int across(int side, int dx, int dz) {
+        return side == com.jrpetty.mcassistant.village.TownPlan.EAST || side == com.jrpetty.mcassistant.village.TownPlan.WEST ? dz : dx;
+    }
+
+    /** The offset (dx, dz) from the heart that is this far out toward the side and this far across. */
+    public static int[] offset(int side, int along, int across) {
+        return switch (side) {
+            case com.jrpetty.mcassistant.village.TownPlan.EAST -> new int[]{ along, across };
+            case com.jrpetty.mcassistant.village.TownPlan.WEST -> new int[]{ -along, across };
+            case com.jrpetty.mcassistant.village.TownPlan.SOUTH -> new int[]{ across, along };
+            default -> new int[]{ across, -along };
+        };
+    }
+
+    /**
+     * The village's farmland, laid out before a furrow is cut: full-grown fields (twenty-seven
+     * across) side by side on one side of the town, a two-block lane between each and the next,
+     * starting just past the town's first block (FIRST_BLOCK) and going on out — the nearest
+     * first. The lane up the middle is the avenue, carried on out as a farm track. Each is an
+     * offset (dx, dz) from the heart to the field's middle. The fields widen as they go out (each
+     * row keeps inside the diagonals from the heart), so the town can grow round the other three
+     * sides without ever coming up against them.
+     */
+    public static java.util.List<int[]> fieldSquares(int side) {
+        return FIELD_SQUARES.get(Math.floorMod(side, 4));
+    }
+
+    /** The farmland's squares for each side, worked out once (they are the same for every village). */
+    private static final java.util.List<java.util.List<int[]>> FIELD_SQUARES = java.util.List.of(
+        layFieldSquares(0), layFieldSquares(1), layFieldSquares(2), layFieldSquares(3));
+
+    private static java.util.List<int[]> layFieldSquares(int side) {
+        int most = VillageFolkEntity.FIELD_MOST;
+        int first = FIRST_BLOCK + most + 1;
+        int lane = com.jrpetty.mcassistant.village.TownPlan.AVENUE + 1 + most;
+        java.util.List<int[]> out = new java.util.ArrayList<>();
+        for (int row = 0; row < FIELD_ROWS; row++) {
+            int far = first + row * FIELD_STEP;
+            for (int k = 0; ; k++) {
+                int across = lane + k * FIELD_STEP;
+                if (across > far - most) break;
+                out.add(offset(side, far, across));
+                out.add(offset(side, far, -across));
+            }
+        }
+        return java.util.List.copyOf(out);
+    }
+
+    /** Do two boxes, each a centre and a half-width each way, overlap (with a gap of this many blocks wanted between)? */
+    static boolean boxesMeet(int ax, int az, int ahx, int ahz, int bx, int bz, int bhx, int bhz, int gap) {
+        return Math.abs(ax - bx) <= ahx + bhx + gap && Math.abs(az - bz) <= ahz + bhz + gap;
+    }
+
+    /**
+     * Is this box (an offset from the heart and its half-widths) on the village's farmland — on
+     * any of its fields, sown or still to be? Nothing but fields goes there: not the town's
+     * houses, not a mine, not a wood.
+     */
+    public static boolean onFarmland(@Nullable UUID villageId, int dx, int dz, int hx, int hz) {
+        int side = fieldsSide(villageId);
+        if (side < 0) return false;
+        int most = VillageFolkEntity.FIELD_MOST;
+        // Nowhere near the farmland's side of the town: no need to look at its squares one by one.
+        int al = along(side, dx, dz), ac = Math.abs(across(side, dx, dz));
+        int reachOut = Math.max(hx, hz);
+        if (al + reachOut < FIRST_BLOCK || ac - reachOut > al + reachOut + most) return false;
+        for (int[] f : fieldSquares(side)) {
+            if (boxesMeet(dx, dz, hx, hz, f[0], f[1], most, most, 0)) return true;
+        }
+        return false;
+    }
+
+    /** The same, for a plot this big round a spot. */
+    public static boolean onFarmland(@Nullable UUID villageId, BlockPos heart, BlockPos spot, int plotRadius) {
+        return onFarmland(villageId, spot.getX() - heart.getX(), spot.getZ() - heart.getZ(), plotRadius, plotRadius);
+    }
+
+    /**
+     * Is this lot of the town's plan kept off? It is if it lies on the farmland, or on ground
+     * somebody already works for good — a field (sown before the village chose its farmland),
+     * a pen or the hives: the town builds round its fields and pastures, never over them.
+     */
+    public static boolean lotKeptOff(UUID villageId, BlockPos heart, com.jrpetty.mcassistant.village.TownPlan.Lot lot) {
+        boolean turned = lot.back() == com.jrpetty.mcassistant.village.TownPlan.EAST
+            || lot.back() == com.jrpetty.mcassistant.village.TownPlan.WEST;
+        int hx = turned ? lot.halfDeep() : lot.halfAcross();
+        int hz = turned ? lot.halfAcross() : lot.halfDeep();
+        if (lot.kind() == com.jrpetty.mcassistant.village.TownPlan.Kind.SQUARE) return false;
+        if (onFarmland(villageId, lot.x(), lot.z(), hx, hz)) return true;
+        for (AssistantEntity a : folkOf(villageId)) {
+            AssistantEntity.StationTask t = a.stationTask();
+            if (t != AssistantEntity.StationTask.FARM && t != AssistantEntity.StationTask.RANCH
+                && t != AssistantEntity.StationTask.BEEKEEP) continue;
+            WorkZone z = a.workZone();
+            if (z == null) continue;
+            if (boxesMeet(lot.x(), lot.z(), hx, hz, z.center().getX() - heart.getX(), z.center().getZ() - heart.getZ(),
+                    z.radius(), z.radius(), 1)) return true;
+        }
+        return false;
+    }
+
+    /** Has the town built (or claimed for building) any lot this box would overlap? */
+    public static boolean builtOver(UUID villageId, int dx, int dz, int hx, int hz) {
+        java.util.Set<Long> taken = LOT_TAKEN.get(villageId);
+        if (taken == null || taken.isEmpty()) return false;
+        int half = com.jrpetty.mcassistant.village.TownPlan.LOT / 2;
+        for (com.jrpetty.mcassistant.village.TownPlan.Lot lot : com.jrpetty.mcassistant.village.TownPlan.lots()) {
+            if (lot.kind() != com.jrpetty.mcassistant.village.TownPlan.Kind.LOT || !taken.contains(lot.key())) continue;
+            if (boxesMeet(dx, dz, hx, hz, lot.x(), lot.z(), half, half, 1)) return true;
+        }
+        return false;
+    }
+
     /** Is this spot, with a plot this big round it, clear of the town's ground? */
     public static boolean outsideTown(UUID villageId, BlockPos centre, BlockPos spot, int plotRadius) {
         int d = Math.max(Math.abs(spot.getX() - centre.getX()), Math.abs(spot.getZ() - centre.getZ()));
@@ -2058,6 +2226,8 @@ public final class Villages {
                 boolean spoken = false;
                 for (long cell : lot.cells()) if (taken.contains(cell)) { spoken = true; break; }
                 if (spoken) continue;
+                // The farmland and the pastures are kept off: the town grows round them.
+                if (lotKeptOff(villageId, v.centre(), lot)) continue;
                 int x = v.centre().getX() + lot.x();
                 int z = v.centre().getZ() + lot.z();
                 if (bad.contains(BlockPos.asLong(x, 0, z))) continue;

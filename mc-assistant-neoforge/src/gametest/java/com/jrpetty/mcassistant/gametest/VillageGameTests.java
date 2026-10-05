@@ -2762,7 +2762,8 @@ public class VillageGameTests {
 
     /**
      * A farmer puts its field by the water nearest the village: a pond just past the town's
-     * edge one way, another twice as far the other, and the field goes on the near one's bank.
+     * edge one way, another twice as far the other, and the village marks out its farmland on the
+     * near one's side, the first field beside it.
      * And monsters about a village with no wall don't ring the bell (it rang the first night
      * in every new village, and in one never stopped: nobody worked for three days).
      */
@@ -2786,7 +2787,8 @@ public class VillageGameTests {
         int fromHeart = site == null ? -1 : Math.max(Math.abs(site.getX() - heart.getX()), Math.abs(site.getZ() - heart.getZ()));
         Kit.log("t42 the town reaches " + reach + "; ponds at " + (reach + 12) + " east and " + (reach + 45)
             + " north; the field goes at " + site + ", " + fromPond + " from the near pond, " + fromHeart + " from the heart");
-        helper.assertTrue(site != null && fromPond <= 9, "the field goes on the bank of the nearest water");
+        helper.assertTrue(site != null && fromPond <= 18 && site.getX() - heart.getX() > reach,
+            "the farmland is marked out on the side of the nearest water, and the field goes beside it");
         // Monsters about a village with no wall, at night: no bell.
         level.setDayTime(14000);
         for (int i = 0; i < 5; i++) {
@@ -3259,6 +3261,26 @@ public class VillageGameTests {
         }
         helper.assertTrue(level.getBlockEntity(door) instanceof com.jrpetty.mcassistant.block.StorehouseBlockEntity again
             && again.isStore() && again.used() == 40, "whole again, with its goods");
+        // No bottom to it: eight hundred stacks more (past its first 729 slots) and every one goes in;
+        // it grows a few rows at a time and always keeps empty rows in hand.
+        com.jrpetty.mcassistant.block.StorehouseBlockEntity big = (com.jrpetty.mcassistant.block.StorehouseBlockEntity) level.getBlockEntity(door);
+        int refused = 0;
+        for (int i = 0; i < 800; i++) {
+            refused += big.insert(new ItemStack(i % 2 == 0 ? Items.OAK_LOG : Items.DIRT, 64)).getCount();
+        }
+        int empty = 0;
+        for (int i = 0; i < big.getContainerSize(); i++) if (big.getItem(i).isEmpty()) empty++;
+        Kit.log("t45 the storehouse grown: " + big.used() + " stacks in " + big.getContainerSize() + " slots (" + big.rows()
+            + " rows), " + empty + " empty, " + refused + " refused");
+        helper.assertTrue(refused == 0 && big.used() == 840 && big.rows() > 81 && empty >= 18,
+            "the storehouse takes all 840 stacks and keeps room to spare: " + big.used() + " in " + big.getContainerSize());
+        // Saved and loaded, every stack comes back, the last slots too.
+        net.minecraft.nbt.CompoundTag saved = big.saveWithoutMetadata(level.registryAccess());
+        com.jrpetty.mcassistant.block.StorehouseBlockEntity copy =
+            new com.jrpetty.mcassistant.block.StorehouseBlockEntity(door, level.getBlockState(door));
+        copy.loadWithComponents(saved, level.registryAccess());
+        helper.assertTrue(copy.used() == 840 && copy.getContainerSize() >= 840,
+            "a grown storehouse saves and loads whole: " + copy.used() + " stacks in " + copy.getContainerSize());
 
         // The door taken out: the unit dropped carries the goods. (Once the ground's entities are
         // live: a drop made in the tick the chunks were first held is there, but not yet seen.)
@@ -3273,10 +3295,10 @@ public class VillageGameTests {
                     new AABB(door).inflate(4))) {
                 int n = com.jrpetty.mcassistant.block.StorehouseBlockEntity.stacksCarried(drop.getItem());
                 seen.append(drop.getItem()).append(" carrying ").append(n).append("; ");
-                if (drop.getItem().is(McAssistantMod.STOREHOUSE_ITEM.get()) && n >= 40) carried = true;
+                if (drop.getItem().is(McAssistantMod.STOREHOUSE_ITEM.get()) && n >= 840) carried = true;
             }
             Kit.log("t45 the door broken at tick " + helper.getTick() + ": " + level.getBlockState(door) + ", dropped " + seen);
-            helper.assertTrue(carried, "the door unit carries the forty stacks away: " + seen);
+            helper.assertTrue(carried, "the door unit carries all 840 stacks away: " + seen);
             helper.succeed();
         });
     }
@@ -3898,6 +3920,7 @@ public class VillageGameTests {
     /**
      * A field that is full grows: a new farmer's plot is one nine-by-nine square; most of it under
      * crops, it lays out the squares round it (twenty-seven across); half-empty, it stays as it is.
+     * (Where the fields go is t65's.)
      */
     @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t63_field")
     public static void t63_field(GameTestHelper helper) {
@@ -3932,17 +3955,187 @@ public class VillageGameTests {
         Kit.log("t63 the field: " + (2 * before + 1) + " across half-empty, " + (2 * after + 1) + " across once full; " + farmer.debugLine());
         helper.assertTrue(before == 4, "a half-empty field stays as it is: " + before);
         helper.assertTrue(after == 13, "a full square lays out the squares round it, three by three: " + after);
-        // The village's farmland: the next field goes beside this one, a full field's width over.
-        com.jrpetty.mcassistant.village.Ledger.note(farmer.ownerId(), "fields.origin", site.getX() + "," + site.getY() + "," + site.getZ());
+        helper.succeed();
+    }
+
+    /**
+     * The village's farmland. The village marks out one side of the town for its fields — the side
+     * whose ground is best (here the west, where the water is) — and lays them out there in squares
+     * a full-grown field across, side by side and never overlapping: the first farmer takes the
+     * nearest, the second the one beside it. The town keeps off them: its lots on that side, past
+     * its first block, are not built on (it grows the other three ways), and no mine or wood is
+     * staked on them.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t65_farmland")
+    public static void t65_farmland(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 60000, 12000, 112);
+        Kit.prepare(level, 60000, 12000, 112);
+        BlockPos heart = Kit.surface(level, 60000, 12000);
+        VillageFolkEntity farmer = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(farmer != null, "a village");
+        java.util.UUID id = farmer.ownerId();
+        int west = com.jrpetty.mcassistant.village.TownPlan.WEST;
+        // Water by the west's first two squares.
+        for (int[] f : Villages.fieldSquares(west).subList(0, 2)) Kit.pond(level, heart.getX() + f[0], heart.getZ() + f[1], 2);
+        int side = farmer.chooseFieldsSideForTests();
+        Kit.log("t65 the farmland: side " + side + " (" + com.jrpetty.mcassistant.village.Ledger.note(id, "fields.way") + ")");
+        helper.assertTrue(side == west && Villages.fieldsSide(id) == west, "the village marks out its farmland where the water is (west): " + side);
+
+        farmer.setJob(StationTask.FARM);
+        BlockPos first = farmer.farmSiteForTests();
+        int[] sq0 = Villages.fieldSquares(west).get(0), sq1 = Villages.fieldSquares(west).get(1);
+        Kit.log("t65 the first field: " + (first == null ? "none" : first.toShortString()) + " (square " + sq0[0] + "," + sq0[1] + " from the heart)");
+        helper.assertTrue(first != null && first.getX() == heart.getX() + sq0[0] && first.getZ() == heart.getZ() + sq0[1],
+            "the first field goes on the farmland's nearest square: " + first);
+        farmer.assignPlot(com.jrpetty.mcassistant.entity.WorkZone.around(first, 13, com.jrpetty.mcassistant.entity.WorkZone.DEFAULT_DEPTH), "Farm");
+
         VillageFolkEntity second = VillageFolkSpawnerBlock.raise(level, heart.east(2), 0.0F);
-        helper.assertTrue(second != null && farmer.ownerId().equals(second.ownerId()), "a second folk of the village");
+        helper.assertTrue(second != null && id.equals(second.ownerId()), "a second folk of the village");
         second.setJob(StationTask.FARM);
         BlockPos next = second.farmSiteForTests();
-        Kit.log("t63 the next field: " + (next == null ? "none" : next.toShortString()) + " beside the first at " + site.toShortString());
-        int step = 2 * 13 + 3;
-        helper.assertTrue(next != null && Math.floorMod(next.getX() - site.getX(), step) == 0 && Math.floorMod(next.getZ() - site.getZ(), step) == 0
-            && Math.max(Math.abs(next.getX() - site.getX()), Math.abs(next.getZ() - site.getZ())) == step,
-            "the next field is laid out beside the first, in the village's farmland: " + next);
+        Kit.log("t65 the next field: " + (next == null ? "none" : next.toShortString()));
+        helper.assertTrue(next != null && next.getX() == heart.getX() + sq1[0] && next.getZ() == heart.getZ() + sq1[1],
+            "the next field goes on the square beside it: " + next);
+        com.jrpetty.mcassistant.entity.WorkZone a = farmer.workZone();
+        com.jrpetty.mcassistant.entity.WorkZone b = com.jrpetty.mcassistant.entity.WorkZone.around(next, 13, com.jrpetty.mcassistant.entity.WorkZone.DEFAULT_DEPTH);
+        helper.assertFalse(a.overlaps(b), "full-grown, the two fields do not overlap");
+
+        // The town keeps off the farmland: a lot on the west side past the first block is not built on;
+        // its twin on the east side, and the first block's lots, are.
+        com.jrpetty.mcassistant.village.TownPlan.Lot onFields = null, twin = null, near = null;
+        for (com.jrpetty.mcassistant.village.TownPlan.Lot l : com.jrpetty.mcassistant.village.TownPlan.lots()) {
+            if (l.kind() != com.jrpetty.mcassistant.village.TownPlan.Kind.LOT) continue;
+            if (l.x() == -47 && l.z() == 8) onFields = l;
+            if (l.x() == 47 && l.z() == 8) twin = l;
+            if (l.x() == -22 && l.z() == 8) near = l;
+        }
+        helper.assertTrue(onFields != null && twin != null && near != null, "the plan's lots");
+        boolean keptOff = Villages.lotKeptOff(id, heart, onFields);
+        boolean twinFree = !Villages.lotKeptOff(id, heart, twin), nearFree = !Villages.lotKeptOff(id, heart, near);
+        Kit.log("t65 the town's lots: west of the first block kept off " + keptOff + "; east free " + twinFree + "; first block free " + nearFree);
+        helper.assertTrue(keptOff && twinFree && nearFree, "the town builds round its farmland, not on it");
+        helper.assertTrue(Villages.onFarmland(id, heart, heart.offset(-60, 0, 0), 8) && !Villages.onFarmland(id, heart, heart.offset(60, 0, 0), 8),
+            "and no mine or wood is staked on it");
+        helper.succeed();
+    }
+
+    /**
+     * Production chests and couriers. A farmer sets its production chest down on its own plot (the
+     * corner of its field nearest the town); what it makes goes in there, and it is paid for it as
+     * it puts it in. A courier brings the chest's goods in to the storehouse — the harvest, not the
+     * field's seed — and the chest is the farmer's for good, never cleared away as an old chest.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 6000, batch = "t66_production")
+    public static void t66_production(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(1000);
+        Kit.hold(level, 62000, 12000, 80);
+        Kit.prepare(level, 62000, 12000, 80);
+        BlockPos heart = Kit.surface(level, 62000, 12000);
+        VillageFolkEntity farmer = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(farmer != null, "a village");
+        java.util.UUID village = farmer.ownerId();
+        BlockPos store = Kit.surface(level, heart.getX() + 8, heart.getZ() - 22);
+        level.setBlockAndUpdate(store, Blocks.CHEST.defaultBlockState());
+        com.jrpetty.mcassistant.entity.ZoneChests.mark(level, store);
+        Villages.builtAtForTests(village, "storage", store);
+        BlockPos site = Kit.surface(level, heart.getX() + 56, heart.getZ() + 16);
+        farmer.setJob(StationTask.FARM);
+        farmer.assignPlot(com.jrpetty.mcassistant.entity.WorkZone.around(site, 4, com.jrpetty.mcassistant.entity.WorkZone.DEFAULT_DEPTH), "Farm");
+        farmer.moveTo(site.getX() + 0.5, site.getY(), site.getZ() + 0.5, 0.0F, 0.0F);
+        farmer.insertItem(new ItemStack(Items.CHEST));
+        BlockPos chest = farmer.productionChestForTests();
+        Kit.log("t66 the production chest: " + (chest == null ? "none" : chest.toShortString()) + " for the field at " + site.toShortString());
+        helper.assertTrue(chest != null && level.getBlockState(chest).is(Blocks.CHEST), "the farmer sets its production chest down");
+        helper.assertTrue(Math.max(Math.abs(chest.getX() - site.getX()), Math.abs(chest.getZ() - site.getZ())) <= 16
+            && chest.getX() < site.getX() && chest.getZ() < site.getZ(),
+            "on its own plot, at the corner nearest the town: " + chest.toShortString());
+        // What it makes goes into the production chest, and it is paid for it there.
+        farmer.insertItem(new ItemStack(Items.WHEAT, 48));
+        Job put = farmer.villageDepositJob();
+        String want = chest.getX() + " " + chest.getY() + " " + chest.getZ();
+        helper.assertTrue(put != null && put.type() == Job.Type.DEPOSIT && want.equals(put.arg()),
+            "its output goes to its production chest: " + put);
+        net.minecraft.world.Container box = (net.minecraft.world.Container) level.getBlockEntity(chest);
+        box.setItem(0, new ItemStack(Items.WHEAT, 48));
+        box.setItem(1, new ItemStack(Items.BREAD, 16));
+        box.setItem(2, new ItemStack(Items.WHEAT_SEEDS, 12));
+        farmer.removeMatching(st -> st.is(Items.WHEAT), 999);
+
+        VillageFolkEntity courier = VillageFolkSpawnerBlock.raise(level, heart.south(2), 0.0F);
+        helper.assertTrue(courier != null && village.equals(courier.ownerId()), "a courier for the village");
+        courier.setJob(StationTask.HAUL);
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (level.getDayTime() % 24000 > 11000) level.setDayTime(1000);   // carrying is day work
+            Villages.noteAttempt(village, level.getGameTime());                 // and nobody builds meanwhile
+            int wheat = holding(level, store, Items.WHEAT), bread = holding(level, store, Items.BREAD);
+            if (t % 600 == 0) {
+                Kit.log("t66 @" + t + " store: wheat " + wheat + ", bread " + bread + "; the production chest: wheat "
+                    + holding(level, chest, Items.WHEAT) + ", seeds " + holding(level, chest, Items.WHEAT_SEEDS) + " — " + courier.debugLine());
+            }
+            if (wheat >= 48 && bread >= 16) {
+                Kit.log("t66 the courier brought the harvest in by tick " + t + "; the chest keeps " + holding(level, chest, Items.WHEAT_SEEDS) + " seed");
+                helper.assertTrue(level.getBlockState(chest).is(Blocks.CHEST), "the production chest stays where it is");
+                helper.assertTrue(holding(level, chest, Items.WHEAT_SEEDS) >= 8, "and keeps the field's seed");
+                helper.succeed();
+            } else if (t >= 5600) {
+                helper.fail("the courier did not bring the production chest's goods in: wheat " + wheat + ", bread " + bread
+                    + " — " + courier.debugLine());
+            }
+        });
+    }
+
+    /**
+     * The price list: everything the village's folk can mine, grow, catch or make has a price, and
+     * the prices hang together — what is made is worth what went into it and a little for the work.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "t67_prices")
+    public static void t67_prices(GameTestHelper helper) {
+        com.jrpetty.mcassistant.entity.Prices.reset();
+        int priced = com.jrpetty.mcassistant.entity.Prices.priced();
+        java.util.List<String> unpriced = new java.util.ArrayList<>();
+        int survival = 0;
+        for (net.minecraft.world.item.Item item : net.minecraft.core.registries.BuiltInRegistries.ITEM) {
+            if (item == Items.AIR || item instanceof net.minecraft.world.item.SpawnEggItem) continue;
+            if (com.jrpetty.mcassistant.entity.Prices.each(item) <= 0) continue;          // not to be had in survival
+            survival++;
+            if (!com.jrpetty.mcassistant.entity.Prices.known(item)) {
+                unpriced.add(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item).getPath());
+            }
+        }
+        double diamond = com.jrpetty.mcassistant.entity.Prices.each(Items.DIAMOND);
+        double pick = com.jrpetty.mcassistant.entity.Prices.each(Items.DIAMOND_PICKAXE);
+        double ingot = com.jrpetty.mcassistant.entity.Prices.each(Items.IRON_INGOT);
+        double block = com.jrpetty.mcassistant.entity.Prices.each(Items.IRON_BLOCK);
+        double sword = com.jrpetty.mcassistant.entity.Prices.each(Items.DIAMOND_SWORD);
+        double nether = com.jrpetty.mcassistant.entity.Prices.each(Items.NETHERITE_SWORD);
+        double chest = com.jrpetty.mcassistant.entity.Prices.each(Items.IRON_CHESTPLATE);
+        double stairs = com.jrpetty.mcassistant.entity.Prices.each(Items.OAK_STAIRS);
+        double beacon = com.jrpetty.mcassistant.entity.Prices.each(Items.BEACON);
+        Kit.log("t67 " + com.jrpetty.mcassistant.entity.Prices.summary() + "; " + survival + " to be had in survival, "
+            + unpriced.size() + " only guessed at: " + unpriced.subList(0, Math.min(60, unpriced.size())));
+        Kit.log("t67 diamond " + diamond + ", diamond pickaxe " + pick + ", iron " + ingot + ", block of iron " + block
+            + ", diamond sword " + sword + ", netherite sword " + nether + ", iron chestplate " + chest + ", oak stairs " + stairs
+            + ", beacon " + beacon + ", command block " + com.jrpetty.mcassistant.entity.Prices.each(Items.COMMAND_BLOCK));
+        helper.assertTrue(priced >= 900, "a price for nine hundred things and more: " + priced);
+        helper.assertTrue(unpriced.size() * 20 <= survival, "all but a few of what can be had are priced by name or recipe: "
+            + unpriced.size() + " of " + survival + " guessed at");
+        helper.assertTrue(diamond == 24.0 && ingot == 1.5, "the board's own prices stand");
+        helper.assertTrue(pick >= 3 * diamond && pick < 3 * diamond * 1.5, "a diamond pickaxe is its three diamonds and the work: " + pick);
+        helper.assertTrue(block >= 9 * ingot && block <= 9 * ingot * 1.2, "a block of iron is nine ingots: " + block);
+        helper.assertTrue(nether > sword, "netherite is worth more than the diamond it is made from");
+        helper.assertTrue(stairs > 0 && com.jrpetty.mcassistant.entity.Prices.known(Items.OAK_STAIRS), "even the stairs have a price");
+        helper.assertTrue(beacon > 200, "a beacon is its nether star and more: " + beacon);
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Prices.each(Items.COMMAND_BLOCK) == 0, "and nothing for what nobody can make");
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Economy.kindOf(new ItemStack(Items.DEEPSLATE_BRICKS))
+                == com.jrpetty.mcassistant.entity.Economy.Kind.STONE
+            && com.jrpetty.mcassistant.entity.Economy.kindOf(new ItemStack(Items.OAK_SAPLING)) == com.jrpetty.mcassistant.entity.Economy.Kind.PLANT,
+            "and it knows what sort of goods each is (a miner is paid for deepslate bricks, a woodcutter for saplings)");
         helper.succeed();
     }
 

@@ -52,7 +52,7 @@ public final class Retiring {
     @Nullable
     public static BlockPos next(VillageFolkEntity f, ServerLevel level, UUID village) {
         StorehouseBlockEntity store = Storehouses.storeFor(level, village);
-        if (store == null || StorehouseBlockEntity.SIZE - store.used() < 27) return null;
+        if (store == null) return null;                     // the storehouse always has room: it grows
         Villages.Village v = Villages.get(village);
         if (v == null) return null;
         long now = level.getGameTime();
@@ -62,10 +62,13 @@ public final class Retiring {
             chests = new ArrayList<>();
             int radius = Math.min(112, Math.max(48, Villages.storesRadius(village)));
             boolean before = ZoneChests.askAs(true);
+            java.util.Set<Long> production = VillageFolkEntity.productionChests(village);
             try {
                 for (ZoneChests.Found found : ZoneChests.around(level, v.centre(), radius, 32)) {
                     if (!found.stillThere() || !retirable(level, found.pos(), found.blockEntity())) continue;
                     if (Villages.inAGuestHouse(village, found.pos())) continue;
+                    // A worker's production chest is where its output waits for the couriers, not an old chest.
+                    if (production.contains(found.pos().asLong())) continue;
                     chests.add(found.pos().immutable());
                 }
             } finally {
