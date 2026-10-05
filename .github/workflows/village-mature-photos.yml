@@ -1,0 +1,258 @@
+name: Village mature photos
+
+# The town's books (the analytics screen, client/CityScreen) for a town with real years in it.
+# The client job in build-neoforge-mod.yml photographs them for a hamlet eight days old, so the
+# Homes, Shops and Buildings pages are close to empty there. This takes the world the hundred
+# days saved (the hundred-world-<leg> artifact of village-hundred-leg.yml), loads it on a real
+# server with a real client on a virtual display, finds the biggest town in it, photographs it
+# from the air and then every page of its books (tools/realworld/smoke.py mature), and publishes
+# smoke-mature-*.png and smoke-mature.txt to the village-test-latest release.
+#
+# Which world:
+#   - workflow_dispatch: the run_id input (a "Village hundred days" run), else the newest
+#     hundred-world artifact in the repository (pick=largest: the biggest one instead); leg
+#     narrows it to one leg.
+#   - push of tools/realworld/mature.trigger: the same choices, written in the file as
+#     run=<id>, leg=<n>, pick=newest|largest (any of them, or none).
+#   - workflow_run: the hundred-days run that just finished, its last leg. (The legs are
+#     reusable-workflow calls, so they raise no workflow_run of their own; and GitHub only
+#     honours workflow_run for a workflow file on the default branch.)
+
+on:
+  push:
+    branches:
+      - claude/minecraft-ai-assistant-44hj4f
+    paths:
+      - "mc-assistant-neoforge/tools/realworld/mature.trigger"
+      - ".github/workflows/village-mature-photos.yml"
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "A 'Village hundred days' run id to take the world from (empty: the newest hundred-world artifact)"
+        required: false
+        default: ""
+      leg:
+        description: "Which leg's world (empty: the newest of them)"
+        required: false
+        default: ""
+      pick:
+        description: "With no leg given: the newest world, or the largest (the most built-up)"
+        type: choice
+        options: [newest, largest]
+        default: newest
+  workflow_run:
+    workflows: ["Village hundred days"]
+    types: [completed]
+
+permissions:
+  contents: write
+  actions: read
+
+# Its own group, never cancelled by a push: a second run waits behind the first.
+concurrency:
+  group: village-mature-photos
+  cancel-in-progress: false
+
+jobs:
+  mature:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion != 'skipped'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    continue-on-error: true
+    steps:
+      # A workflow_run would check out the default branch, which does not hold the mod: take the
+      # newest code of the branch the hundred days ran on instead.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || '' }}
+
+      - name: Find the world the hundred days saved
+        id: world
+        working-directory: mc-assistant-neoforge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          EVENT: ${{ github.event_name }}
+          RUN_ID: ${{ github.event.workflow_run.id || inputs.run_id }}
+          LEG: ${{ inputs.leg }}
+          PICK: ${{ inputs.pick }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" = "push" ] && [ -f tools/realworld/mature.trigger ]; then
+            T=tools/realworld/mature.trigger
+            RUN_ID=$( (grep -oE 'run=[0-9]+' "$T" || true) | head -1 | cut -d= -f2)
+            LEG=$( (grep -oE 'leg=[0-9]+' "$T" || true) | head -1 | cut -d= -f2)
+            PICK=$( (grep -oE 'pick=(newest|largest)' "$T" || true) | head -1 | cut -d= -f2)
+          fi
+          PICK=${PICK:-newest}
+          api() {
+            curl -sSf --retry 3 --retry-delay 5 \
+              -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" "https://api.github.com/repos/$REPO/$1"
+          }
+          : > artifacts.jsonl
+          if [ -n "$RUN_ID" ]; then
+            api "actions/runs/$RUN_ID/artifacts?per_page=100" | jq -c '.artifacts[]' >> artifacts.jsonl \
+              || echo "[REAL] could not list the artifacts of run $RUN_ID" | tee -a lookup-errors.txt
+          else
+            # By name, one leg at a time: the repository's whole list is mostly mod jars.
+            for n in $(seq 1 20); do
+              api "actions/artifacts?name=hundred-world-$n&per_page=100" | jq -c '.artifacts[]' >> artifacts.jsonl \
+                || echo "[REAL] could not list hundred-world-$n" | tee -a lookup-errors.txt
+            done
+          fi
+          chosen=$(jq -sc --arg leg "${LEG:-}" --arg pick "$PICK" '
+            map(select(.expired == false and (.name | test("^hundred-world-[0-9]+$"))))
+            | map(. + {leg: (.name | ltrimstr("hundred-world-") | tonumber)})
+            | (if $leg != "" then map(select(.leg == ($leg | tonumber))) else . end)
+            | (if $pick == "largest" then sort_by(.size_in_bytes) else sort_by(.created_at) end)
+            | last // empty' artifacts.jsonl)
+          {
+            echo "[REAL] ==== the mature town: run ${RUN_ID:-any}, leg ${LEG:-any}, pick $PICK ($EVENT) ===="
+            echo "[REAL] hundred-world artifacts seen: $(jq -sc '[.[] | select(.name | startswith("hundred-world-")) | {name, run: .workflow_run.id, mb: (.size_in_bytes / 1048576 | floor), created_at, expired}]' artifacts.jsonl)"
+            cat lookup-errors.txt 2>/dev/null || true
+          } | tee smoke-mature.txt
+          if [ -z "$chosen" ]; then
+            echo "[REAL] FAIL no hundred-world artifact to load (none yet, or all expired)" | tee -a smoke-mature.txt
+            exit 1
+          fi
+          name=$(echo "$chosen" | jq -r .name)
+          run=$(echo "$chosen" | jq -r .workflow_run.id)
+          echo "[REAL] the world: $name of run $run ($(echo "$chosen" | jq -r '"\(.size_in_bytes / 1048576 | floor) MB, uploaded \(.created_at), commit \(.workflow_run.head_sha[0:8])"'))" | tee -a smoke-mature.txt
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+
+      - name: Download it
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ steps.world.outputs.name }}
+          run-id: ${{ steps.world.outputs.run }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: carried
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Install a virtual display and software OpenGL
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb mesa-utils libgl1-mesa-dri libglx-mesa0 libxrandr2 libxxf86vm1 libxi6 libxcursor1 libxinerama1 imagemagick netcat-openbsd
+
+      - name: Prepare the server (with the world) and the client
+        working-directory: mc-assistant-neoforge
+        run: |
+          mkdir -p run/config run-client
+          ls -la ../carried
+          # The world, and beside it where the village was put down and the day it reached. The
+          # archive goes as soon as it is unpacked: it can run to hundreds of megabytes.
+          tar -xzf ../carried/hundred.tar.gz -C run
+          rm -rf ../carried
+          cp run/hundred-spot.txt hundred-spot.txt 2>/dev/null || true
+          echo "[REAL] the hundred days reached day $(cat run/hundred-reached.txt 2>/dev/null || echo '?'); the village was put down at $(cat hundred-spot.txt 2>/dev/null || echo '?'); the world is $(du -sh run/world | cut -f1)" | tee -a smoke-mature.txt
+          df -h . | tail -1
+          echo "eula=true" > run/eula.txt
+          # As the client job has it, less the seed (the world is made already), and a little
+          # further to see: the town is a big one.
+          cat > run/server.properties <<'EOF'
+          level-type=minecraft:normal
+          generate-structures=true
+          online-mode=false
+          spawn-protection=0
+          max-tick-time=-1
+          view-distance=10
+          simulation-distance=6
+          sync-chunk-writes=false
+          enable-rcon=true
+          rcon.port=25575
+          rcon.password=soak
+          broadcast-rcon-to-ops=false
+          motd=mature
+          EOF
+          cat > run/config/mc_assistant-common.toml <<'EOF'
+          [villages]
+          naturalVillages = false
+          EOF
+          cat > run-client/options.txt <<'EOF'
+          onboardAccessibility:false
+          tutorialStep:none
+          pauseOnLostFocus:false
+          narrator:0
+          fancyGraphics:false
+          renderDistance:10
+          simulationDistance:6
+          maxFps:30
+          guiScale:2
+          joinedFirstServer:true
+          skipMultiplayerWarning:true
+          EOF
+
+      - name: Start the server
+        working-directory: mc-assistant-neoforge
+        run: |
+          chmod +x gradlew
+          nohup ./gradlew --no-daemon runServer > server-gradle.log 2>&1 &
+
+      - name: Start the client on a virtual display
+        working-directory: mc-assistant-neoforge
+        run: |
+          nohup Xvfb :99 -screen 0 1280x720x24 +extension GLX +render -noreset > xvfb.log 2>&1 &
+          sleep 3
+          export DISPLAY=:99
+          export LIBGL_ALWAYS_SOFTWARE=1
+          glxinfo -B > glxinfo.txt 2>&1 || true
+          head -12 glxinfo.txt
+          # The server has to be listening before the client is told to join it.
+          for i in $(seq 1 300); do nc -z localhost 25565 && break; sleep 5; done
+          nc -z localhost 25565 && echo "the server is listening"
+          nohup ./gradlew --no-daemon -Psmoke=true runSmoke > client-gradle.log 2>&1 &
+
+      - name: Look at the town and its books
+        working-directory: mc-assistant-neoforge
+        run: |
+          export DISPLAY=:99
+          set +e
+          python3 tools/realworld/smoke.py mature | tee -a smoke-mature.txt
+          echo "smoke exit: ${PIPESTATUS[0]}"
+          set -e
+          sleep 3
+
+      - name: Collect the logs
+        if: always()
+        working-directory: mc-assistant-neoforge
+        run: |
+          echo "[REAL] ---- glxinfo ----" >> smoke-mature.txt
+          head -20 glxinfo.txt >> smoke-mature.txt 2>/dev/null || true
+          echo "[REAL] ---- the client's log: anything it complained about ----" >> smoke-mature.txt
+          grep -aE "Exception|Caused by|ERROR|FATAL|mc_assistant|GLFW|OpenGL|Crash|[Pp]ayload" run-client/logs/latest.log 2>/dev/null | grep -av "Ambiguity\|^    at " | tail -120 >> smoke-mature.txt || true
+          echo "[REAL] ---- the client's crash reports ----" >> smoke-mature.txt
+          ls run-client/crash-reports 2>/dev/null >> smoke-mature.txt || true
+          head -80 run-client/crash-reports/*.txt 2>/dev/null >> smoke-mature.txt || true
+          echo "[REAL] ---- the last of the client's gradle output ----" >> smoke-mature.txt
+          tail -40 client-gradle.log >> smoke-mature.txt 2>/dev/null || true
+          echo "[REAL] ---- the server's log: anything from the mod ----" >> smoke-mature.txt
+          grep -aE "Exception|Caused by|ERROR|mc_assistant|com\.jrpetty" run/logs/latest.log 2>/dev/null | grep -av "Ambiguity\|^    at " | tail -60 >> smoke-mature.txt || true
+          gzip -c run-client/logs/latest.log > smoke-mature-client.log.gz 2>/dev/null || true
+          wc -l smoke-mature.txt
+          ls -la smoke-mature-*.png || true
+
+      - name: Stop everything
+        if: always()
+        run: pkill -f "net.minecraft" || true; pkill -f "runServer" || true; pkill -f "runSmoke" || true; pkill Xvfb || true
+
+      - name: Publish the pictures and the report
+        if: always()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: village-test-latest
+          name: "Village behaviour test output (latest)"
+          prerelease: true
+          make_latest: "false"
+          body: "Raw output of the empirical village tests. Not a mod build."
+          files: |
+            mc-assistant-neoforge/smoke-mature.txt
+            mc-assistant-neoforge/smoke-mature-*.png
+            mc-assistant-neoforge/smoke-mature-client.log.gz
+          overwrite_files: true
