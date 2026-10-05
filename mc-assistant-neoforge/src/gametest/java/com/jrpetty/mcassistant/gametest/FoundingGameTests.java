@@ -365,6 +365,12 @@ public class FoundingGameTests {
                         if (b.isAir() || !b.getFluidState().isEmpty() || !b.isSolid()) hollowBlocks++;
                     }
                     BlockState on = level.getBlockState(new BlockPos(x, y + 1, z));
+                    // The village board stands on posts of dark oak logs: the town's, not a tree's.
+                    boolean post = false;
+                    for (int up = 2; up <= 8 && on.is(BlockTags.LOGS) && !post; up++) {
+                        post = level.getBlockState(new BlockPos(x, y + up, z)).getBlock() instanceof com.jrpetty.mcassistant.block.VillageBoardBlock;
+                    }
+                    if (post) continue;
                     if (!on.getFluidState().isEmpty() || (!on.isAir() && Terraform.growth(on))) {
                         if (wetOrGrowing++ < 6) growing.append(' ').append(dx).append(',').append(dz).append(' ')
                             .append(net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(on.getBlock()).getPath());

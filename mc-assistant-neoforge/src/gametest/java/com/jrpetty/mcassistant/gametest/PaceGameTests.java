@@ -265,7 +265,7 @@ public class PaceGameTests {
         helper.assertTrue(plain.startsWith("30% quicker than a new hand: level 10 (+30%, 3% a level), stone pickaxe (5.3 s a stroke against 6 for wood)"),
             "its pace, part by part: " + plain);
         helper.assertTrue(card.contains("Pace|30% quicker than a new hand"), "and it is on its card: " + card);
-        helper.assertTrue(full.contains("Pace|") && full.contains("level 10 (+10%)") && full.contains("for wood"),
+        helper.assertTrue(full.contains("Pace|") && full.contains("level 10 (+30%") && full.contains("for wood"),
             "with everything else counted too: " + full);
         // The carrier's stride.
         f.plainPaceForTests(true);

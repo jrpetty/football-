@@ -3183,7 +3183,14 @@ public class VillageGameTests {
                 done[2] = true;
                 Kit.log("---- checkpoint 12000: producing");
                 var chests = Kit.chestContents(level, cx, cz, 110);
-                ex.that(chests.getOrDefault("logs", 0) > 0, "logs have reached a chest " + chests.getOrDefault("logs", 0));
+                // Cut and brought in — whether still logs in a chest, sawn into planks and sticks, or in a
+                // woodcutter's pack on its way: the builders draw the stores' logs as soon as they come,
+                // so the chests alone were empty at this moment in some runs and full in others.
+                int carried = 0;
+                for (AssistantEntity a : crew) carried += a.countCarried(st -> st.is(net.minecraft.tags.ItemTags.LOGS));
+                int timber = chests.getOrDefault("logs", 0) + chests.getOrDefault("planks", 0) + chests.getOrDefault("stick", 0) + carried;
+                ex.that(timber > 0, "logs have been cut and brought in: " + chests.getOrDefault("logs", 0) + " in chests, "
+                    + chests.getOrDefault("planks", 0) + " planks, " + chests.getOrDefault("stick", 0) + " sticks, " + carried + " carried");
                 var world = Kit.census(level, cx, cz, 90);
                 // Mined and banked — whether it is still lying in a chest or has already
                 // gone into a wall (the builders draw on it as soon as it arrives).
