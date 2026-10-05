@@ -3139,16 +3139,18 @@ public class VillageFolkEntity extends AssistantEntity {
         };
     }
 
-    /** A new field's reach (nine blocks across), and the most it grows to (twenty-five across). */
-    static final int FIELD_FIRST = 4, FIELD_MOST = 12;
+    /** A new field's reach (one nine-by-nine square round its water), and the most it grows to (three
+     *  squares by three, twenty-seven across: FarmGoal.CELL). */
+    static final int FIELD_FIRST = 4, FIELD_MOST = 13;
     private int fieldCheckTick = -100000;
 
     /**
-     * A field that is full grows. Once most of a farmer's plot is under crops it breaks new
-     * ground a ring further out, from nine blocks across to twenty-five, as long as the new ground
+     * A field that is full grows. Once most of a farmer's first square is under crops it lays out
+     * the squares round it (FarmGoal digs a water hole in the middle of each and tills the eighty
+     * squares round it), from nine blocks across to twenty-seven, as long as the new ground
      * is clear of the town, of the village's buildings and of the other fields. (The plots were
      * a fixed size from the first day, and the first season's few rows were all most of them ever
-     * planted.) The seed for the new ring is kept back from the stores (jobDepositReserve).
+     * planted.) The seed for the new squares is kept back from the stores (jobDepositReserve).
      */
     private void growTheField() {
         if (stationTask() != StationTask.FARM || tickCount - fieldCheckTick < 2400) return;
@@ -3172,7 +3174,9 @@ public class VillageFolkEntity extends AssistantEntity {
             }
         }
         if (field < 16 || field * 10 < ground * 6) return;           // not full yet: six in ten under crops
-        int grown = r + 1;
+        // The next ring of nine-by-nine squares round the first (FarmGoal lays them out, a water source
+        // in the middle of each): from one square to three by three.
+        int grown = Math.min(FIELD_MOST, r < FIELD_MOST ? FIELD_MOST : r + 1);
         if (!Villages.outsideTown(id, villageCentre, c, grown)) return;
         for (com.jrpetty.mcassistant.village.Ledger.Building b : com.jrpetty.mcassistant.village.Ledger.buildings(id)) {
             BlockPos a = b.anchor();
@@ -3185,10 +3189,10 @@ public class VillageFolkEntity extends AssistantEntity {
             if (gap <= grown + o.radius()) return;                     // up against another plot
         }
         assignPlot(WorkZone.around(c, grown, z.depth()), patchName() != null ? patchName() : patchNameFor(StationTask.FARM));
-        brain("the field is full: breaking new ground, " + (2 * grown + 1) + " across now");
+        brain("the field is full: breaking new ground, " + (2 * grown + 1) + " across now, square by square");
         if (getRandom().nextInt(2) == 0) {
-            FolkTalk.speak(this, FolkTalk.pick(getRandom(), "The field's full. I'm breaking new ground round the edge.",
-                "Another ring of furrows this year — the field's growing."));
+            FolkTalk.speak(this, FolkTalk.pick(getRandom(), "The field's full. Time to dig the next water hole and lay out another square.",
+                "Another square of furrows round a new water hole — the field's growing."));
         }
     }
 

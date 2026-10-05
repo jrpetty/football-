@@ -234,9 +234,12 @@ public class FarmGoal extends Goal {
                 // (no water on the patch at all), then each next one where it wets the most dry
                 // ground. This was a level-forty skill, and every village's fields were dry but for
                 // the one pond: a crop on dry farmland grows at a third of the pace.
-                targetPos = water == null ? centreWaterSpot() : null;
+                // A field is laid out the way anybody lays one out: a hole dug in the middle of a
+                // nine-by-nine square and filled from a bucket wets the eighty squares round it (four
+                // blocks every way, diagonals too, at its own level), and the next square goes
+                // beside it, nine blocks over. The middle square first, then outward one by one.
+                targetPos = nextCellSpot();
                 if (targetPos == null && water == null) targetPos = findWaterSpot();
-                if (targetPos == null && water != null) targetPos = findIrrigationSpot();
                 if (targetPos != null) { mode = Mode.WATER; claim(); return; }
             }
             // No dry-farming fallback for a hired hand. Farmland with no water within
@@ -424,17 +427,44 @@ public class FarmGoal extends Goal {
         return false;
     }
 
-    /** The middle of its field: where the first water goes, so the field is wet all round it. */
+    /** Squares of a field: one water source in the middle of each wets the rest (nine across). */
+    public static final int CELL = 9;
+
+    /**
+     * Where the next water goes: the middle of the next nine-by-nine square of its field that has
+     * none yet, the field's own middle first and then outward square by square (the squares a
+     * water source's reach apart, so they fit edge to edge). Only squares wholly inside the field,
+     * and only where the middle can be dug.
+     */
     @Nullable
-    private BlockPos centreWaterSpot() {
+    private BlockPos nextCellSpot() {
         com.jrpetty.mcassistant.entity.WorkZone z = assistant.workZone();
         if (z == null) return null;
         BlockPos c = z.center();
-        for (int dy = 2; dy >= -3; dy--) {
-            BlockPos p = c.offset(0, dy, 0);
-            if (isTillable(p) && isTillable(p.north()) && isTillable(p.south()) && isTillable(p.east()) && isTillable(p.west())) return p;
+        int r = z.radius();
+        BlockPos best = null;
+        int bestRing = Integer.MAX_VALUE;
+        double bestD = Double.MAX_VALUE;
+        BlockPos feet = assistant.feetPos();
+        for (int i = -2; i <= 2; i++) {
+            for (int j = -2; j <= 2; j++) {
+                int dx = CELL * i, dz = CELL * j;
+                if (Math.abs(dx) + CELL / 2 > r || Math.abs(dz) + CELL / 2 > r) continue;
+                int ring = Math.max(Math.abs(i), Math.abs(j));
+                if (ring > bestRing) continue;
+                for (int dy = 2; dy >= -3; dy--) {
+                    BlockPos p = c.offset(dx, dy, dz);
+                    BlockState st = assistant.level().getBlockState(p);
+                    if (st.getFluidState().is(net.minecraft.tags.FluidTags.WATER)) break;   // this square has its water
+                    if (!isTillable(p)) continue;
+                    if (hydrated(p)) break;                                                 // wet from a pond already
+                    double d = p.distSqr(feet);
+                    if (ring < bestRing || d < bestD) { best = p.immutable(); bestRing = ring; bestD = d; }
+                    break;
+                }
+            }
         }
-        return null;
+        return best;
     }
 
     private boolean hasWaterBucket() {

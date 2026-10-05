@@ -507,20 +507,24 @@ water.
 * **A village feeds itself.** Its food comes from its own farmers, fishers and hunters and
   nothing else, so it looks after them:
   * **Buckets.** Every farmer gets ten buckets of water (a pedlar's, a coin apiece out of the
-    treasury). It sets the first in the middle of its field and each next one where it wets
-    the most dry ground: a crop on wet farmland grows three times as fast as on dry.
+    treasury): one for the water hole in the middle of each square of its field. A crop on
+    wet farmland grows three times as fast as on dry.
   * **The farmland.** The village's fields are laid out as a district: the first goes by the
     water nearest the town, and each new farmer's field goes beside the others, a full-grown
-    field's width apart, spreading out from the first ring by ring.
+    field's width apart (twenty-nine blocks), spreading out from the first ring by ring.
   * **Hungry, more hands to the fields.** While the larder is low the village takes on half as
     many farmers and fishers again; in famine its miners and woodcutters go to the fields
     whatever its building wants.
   * **Room for the harvest.** Stores full of rubbish (dirt, gravel, spare rough stone, rotten
     flesh) throw it out, so the crops always have somewhere to go.
-* **Fields that grow.** A new farmer's field is nine blocks across. Once six squares in ten
-  are under crops it breaks new ground a ring further out — eleven, thirteen, up to
-  twenty-five across — as long as the new ground is clear of the town, its buildings and
-  the other fields. The farmer keeps back enough seed for the ring it is growing into.
+* **Fields that grow, square by square.** A field is laid out the way you would lay one out:
+  a hole dug in the middle of a nine-by-nine square and filled from a bucket keeps the eighty
+  squares round it wet (water reaches four blocks every way, diagonals too, at its own level
+  or one below). A new farmer's field is that one square. Once six squares in ten are under
+  crops it lays out the squares round it, nine blocks over, each with its own water hole —
+  up to three squares by three, twenty-seven blocks across and over seven hundred crops — as
+  long as the ground is clear of the town, its buildings and the other fields. The farmer
+  keeps back the seed for the squares it is sowing.
 * **Ranchers.** Shear the sheep: the wool is the village's beds. They breed sheep
   before cows, and a pen with no sheep fetches a wild one even when it has a pair of cows.
   **Breeding is done the way you'd do it:** the rancher holds the right feed out in its
