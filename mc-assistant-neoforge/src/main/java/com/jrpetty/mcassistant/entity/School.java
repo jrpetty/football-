@@ -1199,17 +1199,30 @@ public final class School {
     // ------------------------------------------------------------------ the pictures
 
     /**
-     * A schoolhouse set out on a stage at {@code at}, door to the south, in the middle of a lesson: the
-     * blackboard up and a book on the lectern, the teacher at it and six children at their desks (folk to
-     * be looked at, as the lineup's: /kill @e[tag=folk_lineup] clears them). For the pictures; from a
-     * palette, not the stores. Returns "SCHOOL x y z" and the views, "VIEW name x y z ax ay az".
+     * A schoolhouse set out at {@code at}, door to the south, in the middle of a lesson: the blackboard up
+     * and a book on the lectern, the teacher at it and six children at their desks (folk to be looked at,
+     * as the lineup's: /kill @e[tag=folk_lineup] clears them). For the pictures; from a palette, not the
+     * stores. It stands on the land itself (only {@code at}'s x and z are taken): the lot levelled to the
+     * ground's own height there, built up with earth where it is low and cut down where it is high, the
+     * trees on it cleared, and its edges sloped back into the land round about; only where there is no
+     * land at all, on a stage at {@code at}'s height. Returns "SCHOOL x y z" and the views, "VIEW name x y
+     * z ax ay az": from the street, and from the back of the schoolroom down the aisle (nothing hangs
+     * there) to the teacher at the lectern before the blackboard, over the children's heads.
      */
     public static List<String> stage(ServerLevel level, BlockPos at) {
-        int x = at.getX(), y = at.getY(), z = at.getZ();
-        com.jrpetty.mcassistant.Showcase.stage(level, x - 9, x + 9, z - 10, z + 18, y);
-        BuildGoal.stamp(level, "school", at, Direction.NORTH, 13,
+        int x = at.getX(), z = at.getZ();
+        int x0 = x - 8, x1 = x + 8, z0 = z - 9, z1 = z + 16;
+        int y = lotHeight(level, x0, x1, z0, z1);
+        if (y == Integer.MIN_VALUE) {
+            y = at.getY();
+            com.jrpetty.mcassistant.Showcase.stage(level, x - 9, x + 9, z - 10, z + 18, y);
+        } else {
+            levelLot(level, x0, x1, z0, z1, y, 6);
+        }
+        BlockPos anchor = new BlockPos(x, y, z);
+        BuildGoal.stamp(level, "school", anchor, Direction.NORTH, 13,
             com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
-        Ledger.Building b = new Ledger.Building("school", at.immutable(), Direction.NORTH);
+        Ledger.Building b = new Ledger.Building("school", anchor, Direction.NORTH);
         for (BlockPos p : board(b)) level.setBlock(p, Blocks.BLACK_WOOL.defaultBlockState(), 3);
         BlockPos lec = lectern(b);
         BlockState ls = level.getBlockState(lec);
@@ -1223,11 +1236,80 @@ public final class School {
         String[] names = { "Ada", "Tom", "Wren", "Pip", "Nell", "Kit" };
         for (int i = 0; i < Math.min(names.length, seats.size()); i++) standIn(level, seats.get(i), 180.0F, StationTask.NONE, true, names[i]);
         if (teacher != null) FolkTalk.speak(teacher, lessonLine(StationTask.MINE, r));
+        BlockPos spot = teacherSpot(b);
         List<String> out = new ArrayList<>();
         out.add("SCHOOL " + x + " " + y + " " + z);
         out.add("VIEW school-front " + (x + 7) + " " + (y + 5) + " " + (z + 15) + " " + x + " " + (y + 3) + " " + z);
-        out.add("VIEW school-lesson " + x + " " + (y + 2) + " " + (z + 3) + " " + x + " " + (y + 1) + " " + (z - 3));
+        // From the back of the aisle by the door, eyes a little above a grown folk's: over the children at their
+        // desks to the teacher at the lectern, the blackboard behind it.
+        out.add("VIEW school-lesson " + x + " " + (y + 1) + " " + (z + 3) + " " + spot.getX() + " " + (y + 1) + " " + spot.getZ());
         return out;
+    }
+
+    /** Is this where the land is (not a tree, a plant, snow or water standing on it)? */
+    private static boolean land(BlockState s) {
+        return !s.isAir() && s.getFluidState().isEmpty() && !s.canBeReplaced()
+            && !s.is(net.minecraft.tags.BlockTags.LOGS) && !s.is(net.minecraft.tags.BlockTags.LEAVES);
+    }
+
+    /** The first free height above the land in this column (under any tree, plant or water); MIN_VALUE for none. */
+    private static int ground(ServerLevel level, int x, int z) {
+        level.getChunk(x >> 4, z >> 4);
+        int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, x, z) - 1;
+        int bottom = level.getMinBuildHeight();
+        while (y > bottom && !land(level.getBlockState(new BlockPos(x, y, z)))) y--;
+        return y <= bottom ? Integer.MIN_VALUE : y + 1;
+    }
+
+    /** The height to level a lot to: the middle of the land's own heights over it (never under the sea's
+     *  surface); MIN_VALUE where there is no land under it at all. */
+    private static int lotHeight(ServerLevel level, int x0, int x1, int z0, int z1) {
+        List<Integer> heights = new ArrayList<>();
+        for (int x = x0; x <= x1; x += 2) {
+            for (int z = z0; z <= z1; z += 2) {
+                int g = ground(level, x, z);
+                if (g != Integer.MIN_VALUE) heights.add(g);
+            }
+        }
+        if (heights.isEmpty()) return Integer.MIN_VALUE;
+        heights.sort(Integer::compare);
+        return Math.max(heights.get(heights.size() / 2), level.getSeaLevel());
+    }
+
+    /**
+     * A lot made level at this height: earth (grass on top) where the land is lower, cut down where it is
+     * higher, everything standing on it cleared; and round it, so far out, the ground sloped from the lot's
+     * height back to the land's own, with any tree standing there taken down.
+     */
+    private static void levelLot(ServerLevel level, int x0, int x1, int z0, int z1, int y, int margin) {
+        BlockState grass = Blocks.GRASS_BLOCK.defaultBlockState(), dirt = Blocks.DIRT.defaultBlockState(),
+            air = Blocks.AIR.defaultBlockState();
+        for (int cx = x0 - margin; cx <= x1 + margin; cx++) {
+            for (int cz = z0 - margin; cz <= z1 + margin; cz++) {
+                int ox = cx < x0 ? x0 - cx : cx > x1 ? cx - x1 : 0;
+                int oz = cz < z0 ? z0 - cz : cz > z1 ? cz - z1 : 0;
+                int d = Math.max(ox, oz);
+                int natural = ground(level, cx, cz);
+                if (natural == Integer.MIN_VALUE) continue;
+                int target = d == 0 ? y : (int) Math.round(y + (natural - y) * (d / (double) (margin + 1)));
+                // Built up: earth from the land (or the water's bed) to the level, grass on top; at most twenty deep.
+                for (int h = Math.max(natural, target - 20); h < target; h++) {
+                    level.setBlock(new BlockPos(cx, h, cz), h == target - 1 ? grass : dirt, 2 | 16);
+                }
+                // Cut down: the land above the level taken off, the new top grassed.
+                if (natural > target) level.setBlock(new BlockPos(cx, target - 1, cz), grass, 2 | 16);
+                // Cleared above: on the lot, everything (trees, rock, water) for the building's height; round it,
+                // the cut land and whatever stands on the ground there, but not the water of a shore.
+                int top = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, cx, cz);
+                int to = d == 0 ? Math.max(top, target + 16) : top;
+                for (int h = target; h < to; h++) {
+                    BlockPos p = new BlockPos(cx, h, cz);
+                    BlockState st = level.getBlockState(p);
+                    if (st.isAir() || d > 0 && !st.getFluidState().isEmpty()) continue;
+                    level.setBlock(p, air, 2 | 16);
+                }
+            }
+        }
     }
 
     @Nullable

@@ -1235,7 +1235,7 @@ with plain blocks, so a building is never held up.
 | Smithy | 9×9 | Stone forge open to the street between log pillars: two furnaces under a brick hood, the anvil, a grindstone, a quenching tub, a bench and chests |
 | Brewery | 9×9 | Timber still-house on a stone footing: two brewing stands on a stone bench, cauldrons, casks, a window to the street |
 | Library | 9×9 | Stone hall with tall windows, walls lined with bookshelves, an enchanting table on a carpet between lecterns |
-| School | 9×11 | Timber schoolroom under a steep roof, tall windows down both sides: two rows of desks (a top slab, a stair for a bench) either side of the aisle, the teacher's lectern, and at the back a blackboard over a cupboard of barrels, a bookshelf either side |
+| School | 9×11 | Timber schoolroom under a steep roof, tall windows down both sides: two rows of desks (a top slab, a stair for a bench) either side of the aisle, the teacher's lectern, and at the back a blackboard over a cupboard of barrels, a bookshelf either side with a lamp on it; a lamp hung under the ceiling over the desks by each wall, none in the aisle |
 | Bank | 9×11 | Stone house of business: a counter across the room with a lantern on it, the ledger on a lectern by the door, and a vault at the back, its strongboxes behind a gate and grille of iron bars the banker sets |
 | Park | 11×11 | A green: a stone fountain with a spring spilling from its pillar, sixteen wooden benches round it, lamp posts at the four ways in, flowers along its edges; then a tree in each corner, paths and lanterns (see *The town's quarters, and the park*) |
 
@@ -3831,8 +3831,9 @@ ripen, days pass, folk work and houses go up at that pace.
   level so far and its mornings, and who has left school. Works from the console. `school page`
   opens the town's books at the School page; `school lesson` (operators) calls a lesson now,
   whatever the hour, for two minutes; `school say` (operators) has the nearest teacher say a
-  line of the lesson; `school stage` (operators) sets a schoolhouse out on a stage mid-lesson for
-  the pictures (`/kill @e[tag=folk_lineup]` clears its folk).
+  line of the lesson; `school stage` (operators) sets a schoolhouse out mid-lesson where you stand,
+  for the pictures, on the land itself (its lot levelled to the ground's height there, the edges
+  sloped back into the land; `/kill @e[tag=folk_lineup]` clears its folk).
   board does), opened at a page if one is given (0 the Overview to 18 the Board and 19 the Museum;
   12 is the Stock, 13 Research); from the console, the reading of what drives the village's growth.
 * `/village research` — the city's research: points in hand and a day, what is being studied,

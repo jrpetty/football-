@@ -333,11 +333,12 @@ def sweeper_stage(r, look, cx, cz):
     say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
     say("alive after the sweeper: %s" % client_alive())
 def school_stage(r, look, cx, cz):
-    """The village school mid-lesson: a schoolhouse set out on a stage in clear air (/village school
-    stage), the blackboard up, the teacher at the lectern and six children at their desks; from the
-    street, then from the back of the schoolroom over the children's heads while the teacher says a
-    line of the lesson; and the School page of the nearest village's books."""
-    sx, sy, sz = cx - 120, 150, cz + 120
+    """The village school mid-lesson: a schoolhouse set out on the land out past the village (/village
+    school stage levels a lot to the ground's own height there and slopes its edges back into the land),
+    the blackboard up, the teacher at the lectern and six children at their desks; from the street, then
+    from the back of the aisle over the children's heads to the teacher and the blackboard while the
+    teacher says a line of the lesson; and the School page of the nearest village's books."""
+    sx, sy, sz = cx - 90, 150, cz + 90                 # (the height is only a fallback: the stage finds the ground)
     r.cmd("gamemode spectator %s" % USER)
     r.cmd("time set 2500")
     r.cmd("tp %s %d %d %d" % (USER, sx + 7, sy + 6, sz + 16))
@@ -360,6 +361,8 @@ def school_stage(r, look, cx, cz):
     r.cmd("execute as %s run village stats close" % USER)
     say("school: " + r.cmd("execute as %s at @s run village school" % USER)[:400])
     say("alive after the school: %s" % client_alive())
+
+
 def market_stall_stage(r, look, cx, cz):
     """A market stall of the player's own (entity/PlayerStalls), photographed: rented on the square of the
     village at cx, cz (the booth out of the stores, or the player's own barrel, sign, fences and wool),
