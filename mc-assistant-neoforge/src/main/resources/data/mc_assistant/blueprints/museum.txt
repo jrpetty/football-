@@ -1,14 +1,15 @@
-# The museum and the archive: a hall of dressed stone under a flat roof with a parapet, lit from
-# above by a skylight and from the sides by tall windows, a double door with a glass fanlight over
-# it, steps before it and a lantern either side. Inside, along its walls, the places its finds go on
-# show (entity/Museum hangs the frames and the labels, stands the stands, sets the jukebox and the
-# cases as they are wanted): two glass cases let into the floor, a lectern at the back where the
+# The museum and the archive (drawn by tools/museum_design.py: change that, and run it).
+# A hall of dressed stone on a plinth behind a portico of four columns under a low pediment, a
+# stair up between the middle two, a lantern on a post either side; a double door under a
+# fanlight with a window either side, tall windows down the sides, a flat roof with a skylight
+# and a parapet. Entity/Museum puts the museum's name up over the door and a banner in the town's
+# colours either side, out of the stores. Inside
+# (entity/Museum hangs the frames and the labels, stands the stands, sets the jukebox and the
+# cases as they are wanted): two glass cases let into the floor, the lectern at the back where the
 # latest volume of the chronicle lies open, and the archive's shelves either side of it.
-# Ten across with the door in the middle of it: the drawing's middle column is the left-hand door.
 # Rows run from the back of the building (top) to the front (bottom, the door).
 name museum
-layer -1
-............
+layer 0
 .FFFFFFFFFF.
 .FSSSSSSSSF.
 .FSSSSSSSSF.
@@ -18,9 +19,9 @@ layer -1
 .FSSSSSSSSF.
 .FSSSSSSSSF.
 .FFFFFFFFFF.
-....kkkk....
-layer 0
-............
+.FFFFFFFFFF.
+.FFFkkkkFFF.
+layer 1
 .SSSSSSSSSS.
 .S...r....S.
 .S........S.
@@ -30,21 +31,9 @@ layer 0
 .S........S.
 .S........S.
 .SSSSDDSSSS.
-..l......l..
-layer 1
 ............
-.SSSSSSSSSS.
-.S........S.
-.S........S.
-.G........G.
-.S........S.
-.G........G.
-.S........S.
-.S........S.
-.SSSS..SSSS.
-............
+.SSS....SSS.
 layer 2
-............
 .SSSSSSSSSS.
 .S........S.
 .S........S.
@@ -52,35 +41,59 @@ layer 2
 .S........S.
 .G........G.
 .S........S.
-.S........S.
-.SSSSOOSSSS.
+.G........G.
+.SSSG..GSSS.
 ............
+.SlS....SlS.
 layer 3
-............
 .SSSSSSSSSS.
 .S........S.
-.S.j....j.S.
 .S........S.
+.G........G.
 .S........S.
+.G........G.
 .S........S.
-.S.j....j.S.
-.S........S.
-.SSSSSSSSSS.
+.G........G.
+.SSSGOOGSSS.
 ............
+.S.S....S.S.
 layer 4
+.SSSSSSSSSS.
+.S........S.
+.S........S.
+.G........G.
+.S........S.
+.G........G.
+.S........S.
+.G........G.
+.SSSSSSSSSS.
 ............
-.SSSSSSSSSS.
-.SSSSSSSSSS.
-.SSSSSSSSSS.
-.SSSOOOOSSS.
-.SSSOOOOSSS.
-.SSSOOOOSSS.
-.SSSSSSSSSS.
-.SSSSSSSSSS.
-.SSSSSSSSSS.
-............
+.S.S....S.S.
 layer 5
-............
+.SSSSSSSSSS.
+.S........S.
+.S.j....j.S.
+.S........S.
+.S........S.
+.S........S.
+.S.j....j.S.
+.S........S.
+.SSSSSSSSSS.
+....j..j....
+.S.S....S.S.
+layer 6
+.SSSSSSSSSS.
+.SSSSSSSSSS.
+.SSSSSSSSSS.
+.SSSOOOOSSS.
+.SSSOOOOSSS.
+.SSSOOOOSSS.
+.SSSSSSSSSS.
+.SSSSSSSSSS.
+.SSSSSSSSSS.
+.SSSSSSSSSS.
+.SSSSSSSSSS.
+layer 7
 .SssssssssS.
 .s........s.
 .s........s.
@@ -89,5 +102,30 @@ layer 5
 .s........s.
 .s........s.
 .s........s.
-.SsssSSsssS.
+._RSSSSSSR_.
+._RSSSSSSR_.
+._RSSSSSSR_.
+layer 8
 ............
+............
+............
+............
+............
+............
+............
+............
+..._RSSR_...
+..._RSSR_...
+..._RSSR_...
+layer 9
+............
+............
+............
+............
+............
+............
+............
+............
+.....__.....
+.....__.....
+.....__.....

@@ -7,7 +7,9 @@ import com.jrpetty.mcassistant.entity.AssistantEntity.StationTask;
 import com.jrpetty.mcassistant.entity.Bench;
 import com.jrpetty.mcassistant.entity.Market;
 import com.jrpetty.mcassistant.entity.Museum;
+import com.jrpetty.mcassistant.entity.MuseumFront;
 import com.jrpetty.mcassistant.entity.RestDay;
+import com.jrpetty.mcassistant.entity.TownJobs;
 import com.jrpetty.mcassistant.entity.VillageFolkEntity;
 import com.jrpetty.mcassistant.entity.Villages;
 import com.jrpetty.mcassistant.entity.ZoneChests;
@@ -18,20 +20,27 @@ import com.jrpetty.mcassistant.village.MuseumRecords;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.network.Filterable;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.decoration.ItemFrame;
+import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.WrittenBookContent;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.DoorBlock;
+import net.minecraft.world.level.block.WallBannerBlock;
+import net.minecraft.world.level.block.WallSignBlock;
 import net.minecraft.world.level.block.entity.LecternBlockEntity;
 import net.minecraft.world.level.block.entity.SignBlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
@@ -81,7 +90,7 @@ public class MuseumGameTests {
 
     /** The museum, stamped on cleared, level ground (as the showcase stamps a building) and in the town's register. */
     private static Ledger.Building museum(ServerLevel level, UUID village, BlockPos at) {
-        for (BlockPos p : BlockPos.betweenClosed(at.offset(-7, 0, -7), at.offset(7, 9, 7))) {
+        for (BlockPos p : BlockPos.betweenClosed(at.offset(-7, 0, -7), at.offset(7, 11, 7))) {
             if (!level.getBlockState(p).isAir()) level.setBlock(p, Blocks.AIR.defaultBlockState(), 2);
         }
         for (BlockPos p : BlockPos.betweenClosed(at.offset(-7, -3, -7), at.offset(7, -1, 7))) {
@@ -279,6 +288,76 @@ public class MuseumGameTests {
                     && stock(level, village, s -> s.is(Items.FEATHER)) == 7,
                 "the book and quill was made of the stores' book, an ink sac and one feather");
             helper.assertTrue(chronicle(village).contains("Year 1 of the chronicle was written up"), "and the chronicle says so");
+            helper.succeed();
+        });
+    }
+
+    // ============================================================ the front
+
+    /**
+     * The museum's front: built to the drawing, its hall stands up the stair behind the portico (the double
+     * door and the lectern where the museum looks for them), and out of the stores' signs and two banners in
+     * the town's colours its name goes up over the door ("The Museum | of ...") and a banner either side of
+     * it, all facing the street. Two signs and the two banners are taken, and nothing more; nothing is made
+     * out of nothing.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "mu04_the_museum_front")
+    public static void mu04_the_museum_front(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(6000);
+        int x = 324500, z = 50000;
+        Kit.hold(level, x, z, 40);
+        Kit.prepare(level, x, z, 40);
+        BlockPos heart = Kit.surface(level, x, z);
+        VillageFolkEntity folk = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(folk != null, "a village");
+        UUID village = folk.ownerId();
+        helper.runAtTickTime(10, () -> {
+            Villages.Village v = Villages.get(village);
+            Villages.ageForTests(village, Villages.Age.IRON);
+            emptyStores(level, village);
+            Ledger.Building b = museum(level, village, Kit.surface(level, x + 24, z));
+            DyeColor colour = MuseumFront.colour(village);
+            Item banner = BuiltInRegistries.ITEM.get(ResourceLocation.withDefaultNamespace(colour.getName() + "_banner"));
+            stores(level, heart, 4, 0, new ItemStack(Items.OAK_SIGN, 3), new ItemStack(banner, 2));
+            Villages.forgetStock();
+            // The hall up the stair, behind the portico: its door and its lectern where the museum looks for them.
+            helper.assertTrue(level.getBlockState(Museum.at(b, 0, 0, -4)).getBlock() instanceof DoorBlock
+                && level.getBlockState(Museum.at(b, 1, 0, -4)).getBlock() instanceof DoorBlock,
+                "the double door stands up the stair, behind the portico: " + level.getBlockState(Museum.at(b, 0, 0, -4)));
+            helper.assertTrue(level.getBlockState(Museum.at(b, 0, 0, 3)).is(Blocks.LECTERN), "the lectern stands at the back of the hall");
+            TownJobs.instantForTests(true);
+            try {
+                MuseumFront.putForTests(level, v, b);
+            } finally {
+                TownJobs.instantForTests(false);
+            }
+            Direction out = b.facing().getOpposite();
+            String town = Villages.name(village);
+            String[] read = new String[2];
+            for (int i = 0; i < 2; i++) {
+                BlockPos at = Museum.at(b, i, 3, -5);
+                BlockState st = level.getBlockState(at);
+                StringBuilder sb = new StringBuilder();
+                if (level.getBlockEntity(at) instanceof SignBlockEntity s) {
+                    for (Component c : s.getFrontText().getMessages(false)) sb.append(c.getString()).append(" | ");
+                }
+                read[i] = sb.toString();
+                helper.assertTrue(st.getBlock() instanceof WallSignBlock && st.getValue(WallSignBlock.FACING) == out,
+                    "a sign over the door, facing the street: " + st);
+            }
+            Kit.log("mu04 the name over the door: [" + read[0] + "] [" + read[1] + "] for " + town + "; the colours " + colour.getName()
+                + "; the stores: signs " + stock(level, village, s -> s.is(Items.OAK_SIGN)) + ", banners " + stock(level, village, s -> s.is(banner)));
+            helper.assertTrue(read[0].contains("The Museum") && read[1].contains("of")
+                && read[1].contains(town.substring(0, Math.min(4, town.length()))), "the sign reads The Museum of " + town + ": " + read[0] + read[1]);
+            for (int[] c : new int[][]{ { -3, 4, -5 }, { 4, 4, -5 } }) {
+                BlockState st = level.getBlockState(Museum.at(b, c[0], c[1], c[2]));
+                helper.assertTrue(st.getBlock() instanceof WallBannerBlock wb && wb.getColor() == colour && st.getValue(WallBannerBlock.FACING) == out,
+                    "a banner in the town's colours (" + colour.getName() + ") either side of the door, facing the street: " + st);
+            }
+            helper.assertTrue(stock(level, village, s -> s.is(Items.OAK_SIGN)) == 1 && stock(level, village, s -> s.is(banner)) == 0,
+                "two signs and the two banners out of the stores, and no more");
             helper.succeed();
         });
     }

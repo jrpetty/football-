@@ -66,7 +66,9 @@ import java.util.function.Predicate;
  *
  * <p><b>The building.</b> A town of twenty in the Iron Age with three different finds worth
  * showing plans a museum among its amenities, on a lot facing the square: a hall of dressed stone with
- * a skylight and a double door, built like any other building out of the stores. A curator looks after
+ * a skylight and a double door, up a stair on a plinth behind a portico of four columns under a low
+ * pediment, built like any other building out of the stores; its name goes up over the door and the
+ * town's banners either side (MuseumFront). A curator looks after
  * it: the folk with the most curiosity and learning in it (a curious nature, a love of reading, the
  * enchanter's trade), or else the eldest, chosen once and told in the chronicle.
  *
@@ -195,8 +197,8 @@ public final class Museum {
     // ------------------------------------------------------------------ the places
 
     /**
-     * A place something goes on show, in the drawing's terms (across, up, back from the anchor; see
-     * blueprints/museum.txt), which way it faces, and where its label goes and which way that faces
+     * A place something goes on show, in the hall's terms (across, up from its floor, back from its middle;
+     * see at() and blueprints/museum.txt), which way it faces, and where its label goes and which way that faces
      * (a wall sign, or a sign standing on the floor).
      */
     public record Place(Show show, int dx, int h, int dz, Blueprints.Way faces, int lx, int lh, int lz,
@@ -222,9 +224,43 @@ public final class Museum {
         new Place(Show.STAND, 4, 0, -3, LEFT, 3, 1, -3, BACK, false),
         new Place(Show.JUKEBOX, 1, 0, 3, FRONT, 1, 1, 3, FRONT, false));
 
-    /** A spot in the museum, from the drawing's across, up and back. */
+    /**
+     * The hall stands a block up on its plinth and a block back behind its portico (blueprints/museum.txt,
+     * drawn by tools/museum_design.py). Every place in this class and in Archive is in the hall's own terms
+     * (across from the middle, up from its floor, back from its middle), and at() carries them onto the
+     * drawing. A museum built to the first drawing (its hall on the ground, its door on the front row, no
+     * portico) keeps its places where they always were: HALLS remembers which drawing each museum was
+     * built to, by its anchor, once one door or the other is seen hanging.
+     */
+    static final int HALL_UP = 1, HALL_BACK = 1;
+    private static final int[] GRAND = { HALL_UP, HALL_BACK }, FIRST = { 0, 0 };
+    private static final Map<Long, int[]> HALLS = new ConcurrentHashMap<>();
+
+    /** How far up and back this museum's hall stands from its anchor: the new drawing's, unless it is
+     *  known to be built to the first. */
+    private static int[] hall(Ledger.Building b) {
+        return HALLS.getOrDefault(b.anchor().asLong(), GRAND);
+    }
+
+    /** Is this museum known to be built to the new drawing, portico and all? */
+    static boolean grand(Ledger.Building b) {
+        return HALLS.get(b.anchor().asLong()) == GRAND;
+    }
+
+    /** Which drawing this museum was built to, by where its door hangs; not settled until one does. */
+    static void whichHall(ServerLevel level, Ledger.Building b) {
+        long key = b.anchor().asLong();
+        if (HALLS.containsKey(key)) return;
+        BlockPos grandDoor = b.anchor().relative(b.facing(), HALL_BACK - 4).above(HALL_UP);
+        BlockPos firstDoor = b.anchor().relative(b.facing(), -4);
+        if (level.getBlockState(grandDoor).getBlock() instanceof DoorBlock) HALLS.put(key, GRAND);
+        else if (level.getBlockState(firstDoor).getBlock() instanceof DoorBlock) HALLS.put(key, FIRST);
+    }
+
+    /** A spot in the museum, from the hall's across, up and back. */
     public static BlockPos at(Ledger.Building b, int dx, int h, int dz) {
-        return b.anchor().relative(b.facing().getClockWise(), dx).relative(b.facing(), dz).above(h);
+        int[] o = hall(b);
+        return b.anchor().relative(b.facing().getClockWise(), dx).relative(b.facing(), dz + o[1]).above(h + o[0]);
     }
 
     static Direction world(Ledger.Building b, Blueprints.Way way) {
@@ -393,6 +429,8 @@ public final class Museum {
         CURATOR_MISSING.clear();
         IN_STORES.clear();
         DOORS_HUNG.clear();
+        HALLS.clear();
+        MuseumFront.resetForTests();
         WELCOMED.clear();
         VISITS.clear();
         VISITED.clear();
@@ -505,6 +543,7 @@ public final class Museum {
         }
         Ledger.Building b = building(id);
         if (b == null || !level.isLoaded(b.anchor())) return;
+        whichHall(level, b);
         MuseumRecords.Book book = MuseumRecords.book(id);
         Errand e = ERRANDS.get(id);
         if (e == null && !book.carrying.isEmpty()) putBack(level, v, book);       // what a curator had in hand when the world stopped
@@ -526,6 +565,9 @@ public final class Museum {
             if (instant || rest == null || now >= rest) e = next(level, v, b, book, curator, day, now);
         }
         if (e != null && instant) atOnce(level, v, b, e, curator);
+        // The front: the museum's name over its door and the town's banners either side, out of the stores
+        // (MuseumFront). Not in the game tests' instant museum, whose stores are counted to the item.
+        if (!instant) MuseumFront.tick(level, v, b, curator, now);
     }
 
     /** The curator's hours: by day, not on the day of rest, not with the bell ringing. */
@@ -1562,10 +1604,11 @@ public final class Museum {
     /** Is this inside the museum's walls? */
     public static boolean inside(Ledger.Building b, BlockPos p) {
         Direction right = b.facing().getClockWise();
+        int[] o = hall(b);
         int dx = (p.getX() - b.anchor().getX()) * right.getStepX() + (p.getZ() - b.anchor().getZ()) * right.getStepZ();
-        int dz = (p.getX() - b.anchor().getX()) * b.facing().getStepX() + (p.getZ() - b.anchor().getZ()) * b.facing().getStepZ();
-        int dy = p.getY() - b.anchor().getY();
-        return dx >= -3 && dx <= 4 && dz >= -3 && dz <= 3 && dy >= -1 && dy <= 3;
+        int dz = (p.getX() - b.anchor().getX()) * b.facing().getStepX() + (p.getZ() - b.anchor().getZ()) * b.facing().getStepZ() - o[1];
+        int dy = p.getY() - b.anchor().getY() - o[0];
+        return dx >= -3 && dx <= 4 && dz >= -3 && dz <= 3 && dy >= -1 && dy <= 4;
     }
 
     // ------------------------------------------------------------------ visitors
@@ -1901,20 +1944,24 @@ public final class Museum {
         UUID id = v.id();
         long day = level.getDayTime() / 24000L;
         Direction back = Direction.NORTH;
-        for (BlockPos p : BlockPos.betweenClosed(at.offset(-8, -1, -8), at.offset(8, -1, 8))) {
+        // A forecourt of smooth stone to stand it on, running out to the south (its front) far enough for
+        // the picture of the whole front to stand on it, and the air above it cleared, pediment and all.
+        for (BlockPos p : BlockPos.betweenClosed(at.offset(-13, -1, -9), at.offset(13, -1, 17))) {
             level.setBlock(p, Blocks.SMOOTH_STONE.defaultBlockState(), 2);
         }
-        for (BlockPos p : BlockPos.betweenClosed(at.offset(-8, 0, -8), at.offset(8, 9, 8))) {
+        for (BlockPos p : BlockPos.betweenClosed(at.offset(-13, 0, -9), at.offset(13, 12, 17))) {
             if (!level.getBlockState(p).isAir()) level.setBlock(p, Blocks.AIR.defaultBlockState(), 2);
         }
-        for (net.minecraft.world.entity.Entity old : level.getEntitiesOfClass(net.minecraft.world.entity.Entity.class, new AABB(at).inflate(10),
+        for (net.minecraft.world.entity.Entity old : level.getEntitiesOfClass(net.minecraft.world.entity.Entity.class, new AABB(at).inflate(14),
                 x -> x instanceof ItemFrame || x instanceof ArmorStand)) old.discard();
         com.jrpetty.mcassistant.entity.goal.BuildGoal.stamp(level, "museum", at, back, 13,
             com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
         Ledger.built(id, "museum", at, back);
         Ledger.Building b = new Ledger.Building("museum", at.immutable(), back);
+        HALLS.put(at.asLong(), GRAND);
         DOORS_HUNG.remove(at.asLong());
         hangTheDoors(level, b);
+        MuseumFront.put(level, v, b, true);
         MuseumRecords.Book book = MuseumRecords.book(id);
         book.shown.clear();
         VillageFolkEntity curator = curator(level, v, book, day, level.getGameTime());
@@ -2003,7 +2050,9 @@ public final class Museum {
         List<String> out = new ArrayList<>();
         out.add(at.getX() + " " + at.getY() + " " + at.getZ() + " facing " + back.getOpposite().getName() + ", " + n + " on show, "
             + bound + " volumes, for " + Villages.name(id));
-        out.add(view(b, "m1-front", 0.5, 1.0, -15, 0.5, 2.5, -4));
+        // The whole front from out on the forecourt, a little to the right of the middle: the plinth and its
+        // stair, the columns standing out from the wall, the banners, the name over the door, the pediment.
+        out.add(view(b, "m1-front", 3.5, 0.5, -16, 0.5, 3.6, -5));
         out.add(view(b, "m2-hall", 0.5, 0, -2.6, 0.5, 1.4, 3));
         out.add(view(b, "m3-frames", 2.0, 0, 1.2, -3, 1.2, 1));
         out.add(view(b, "m4-label", -1.1, -0.7, 2, -3, 0.8, 2));
@@ -2013,7 +2062,7 @@ public final class Museum {
         return out;
     }
 
-    /** "VIEW name x y z tx ty tz": a camera's feet and what it looks at, from the drawing's across, up and back. */
+    /** "VIEW name x y z tx ty tz": a camera's feet and what it looks at, from the hall's across, up and back. */
     private static String view(Ledger.Building b, String name, double dx, double h, double dz, double tx, double th, double tz) {
         double[] from = spot(b, dx, h, dz), to = spot(b, tx, th, tz);
         return String.format(Locale.ROOT, "VIEW %s %.2f %.2f %.2f %.2f %.2f %.2f", name, from[0], from[1], from[2], to[0], to[1], to[2]);
@@ -2021,6 +2070,9 @@ public final class Museum {
 
     private static double[] spot(Ledger.Building b, double dx, double h, double dz) {
         Direction r = b.facing().getClockWise(), f = b.facing();
+        int[] o = hall(b);
+        h += o[0];
+        dz += o[1];
         double x = b.anchor().getX() + 0.5 + r.getStepX() * dx + f.getStepX() * dz;
         double z = b.anchor().getZ() + 0.5 + r.getStepZ() * dx + f.getStepZ() * dz;
         return new double[]{ x, b.anchor().getY() + h, z };

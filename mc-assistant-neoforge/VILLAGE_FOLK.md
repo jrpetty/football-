@@ -3705,9 +3705,22 @@ A town keeps what it is proudest of.
   and there, and the first of every rare kind is told in the chronicle ("Ember the miner mined the
   town's first diamond").
 * **The museum.** A town of twenty in the Iron Age with three different rare finds plans a
-  **museum** among its amenities, on a lot facing the square: a hall of stone bricks with a
-  skylight, tall windows, a double door under a glass fanlight, lanterns, steps. It is built like
-  any other building, out of the stores. A **curator** looks after it: the folk with the most
+  **museum** among its amenities, on a lot facing the square: the town's grandest front. A hall
+  of dressed stone stands on a **plinth**, up a stair four wide between the middle two of a
+  **portico of four columns**, with a lantern on a stone post either side of the stair and two
+  more hung from the entablature over the door. Over the portico rises a low **pediment**, half
+  a block a step, its face of stone and its raking edge of the town's roofing. The double door
+  stands under a glass fanlight with a window either side of it; **tall windows**, three panes
+  high, run down each side; a flat roof with a **skylight** over the middle of the hall has a
+  stone **parapet** round it. It is built like any other building, out of the stores (about as
+  much stone as the chapel; the plinth is rough stone until the Iron Age's make-over dresses it).
+  Once it stands, its **name goes up over the door** on two signs ("The Museum | of Oakhollow")
+  and a **banner in the town's colours** (its watch's: blue, red, green, purple, black, teal or
+  orange) is hung either side of the door between the columns: put up a piece at a time by a
+  hand sent to the town's work, a sign out of the stores (or two planks), a banner out of the
+  stores (or the wool, the dye and the stick it is made of), and not before the stores can run
+  to it. The name follows the town's if it is renamed. A museum built before it had a portico
+  keeps its old front, and everything inside stays where it was. A **curator** looks after it: the folk with the most
   curiosity and learning in it (a curious nature, a love of reading, the enchanter's trade), or
   else the eldest. It keeps its own trade, and does the museum's work by day.
 * **What goes on show.** One of every kind: the first diamond, the first emerald, a fossil, a
@@ -4066,8 +4079,9 @@ ripen, days pass, folk work and houses go up at that pace.
 * `/village museum` — the nearest village's museum: its curator, what is on show and who found
   each thing, the archive's volumes and where they stand, what waits to be bound, and what it is
   short of. `museum work` (operators) has the curator do its next piece of work now, out of the
-  stores; `museum stage` (operators) sets a museum out where you stand for the pictures, its places
-  filled with one of everything and the chronicle so far bound into its archive.
+  stores; `museum stage` (operators) sets a museum out where you stand for the pictures, on a
+  forecourt of smooth stone, its places filled with one of everything, the chronicle so far bound
+  into its archive, and its name and the town's banners up over the door.
 * `/village economy` — the nearest village's larder against its mouths (grown a day, eaten a
   day, whether a child may be raised and why), its coal and charcoal against the floor it keeps,
   who carries the builders' stock about, and what its dead died of. `economy charcoal`
