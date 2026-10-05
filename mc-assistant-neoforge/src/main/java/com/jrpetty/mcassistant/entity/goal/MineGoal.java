@@ -81,6 +81,12 @@ public class MineGoal extends Goal {
      *  whether the step under way has cut any. */
     private int freshSteps;
     private boolean dugThisStep;
+    /** Whether a village miner's gallery has picked its way yet this run (openGallery). */
+    private boolean galleryOpened;
+    /** The block under each step of this run's stairs. A village miner's gallery never cuts
+     *  one: a gallery opened back under the staircase, or turned along a patch's edge beneath
+     *  it, took the steps out from under the way home. */
+    private final java.util.HashSet<Long> stairFloors = new java.util.HashSet<>();
     private int sinceTorch;
     private int veinMined;
     private int oresMined;
@@ -133,6 +139,9 @@ public class MineGoal extends Goal {
         this.saidCapped = false;
         this.stairPath.clear();
         this.stairPath.add(this.cursor.immutable());   // the shaft head itself
+        this.stairFloors.clear();
+        this.stairFloors.add(this.cursor.below().asLong());
+        this.galleryOpened = false;
         this.returnIndex = -1;
         this.oresMined = 0;
         this.blocksMined = 0;
@@ -141,6 +150,21 @@ public class MineGoal extends Goal {
         // surface; a single gallery drops straight to the target and cuts once.
         this.levelFloor = assistant.quarry()
             ? Math.max(target, cursor.getY() - 4) : target;
+        // A village's plot on low ground is floored where the bedrock guard puts it
+        // (VillageFolkEntity.depthFor: never under eight above the bottom of the world), and
+        // on a flat world, or a hill standing on one, that floor is level with the plot or
+        // ABOVE it: "mine west to Y-56", said standing at Y-56, or at Y-58. So the run never
+        // went down at all. It cut one gallery along the top of the rock from wherever it
+        // stood, the same way every time (the plot keeps its facing), and every run after the
+        // first walked that same gallery out to the edge and came home with "0 blocks dug, 0
+        // ore collected (that's the edge of my patch)": every mine in a village of twelve, for
+        // two days, one gallery of fifteen blocks a plot. The rock the plot was staked for is UNDER
+        // it (VillageFolkEntity.diggable reads the six blocks below the ground), so the miner
+        // goes down to the bottom of that rock, as far as its patch lets it dig, and opens its
+        // galleries there.
+        if (followsTheRock() && cursor.getY() <= levelFloor) {
+            this.levelFloor = Math.min(levelFloor, rockBottom());
+        }
         this.levelsCut = 0;
         this.returnReason = null;
         com.jrpetty.mcassistant.entity.WorkZone zone = assistant.workZone();
@@ -325,21 +349,11 @@ public class MineGoal extends Goal {
             if (cursor.getY() <= levelFloor) {
                 phase = Phase.TUNNEL;
                 tunnelSteps = 0; freshSteps = 0;
-                // Down the same stairs as last time: the gallery turns, run by run, into fresh rock.
-                if (assistant.isSettler()) {
-                    Direction turned = switch (assistant.mineRuns % 3) {
-                        case 1 -> dir.getClockWise();
-                        case 2 -> dir.getCounterClockWise();
-                        default -> dir;
-                    };
-                    // ...but only a way with room in the patch: turned at the patch's edge, a
-                    // shallow gallery cut nothing at all and the mine was called done ("0 blocks
-                    // dug, that's the edge of my patch") run after run.
-                    for (Direction d : new Direction[]{ turned, dir, dir.getClockWise(), dir.getCounterClockWise(), dir.getOpposite() }) {
-                        if (assistant.inZoneColumn(cursor.relative(d, 3))) { turned = d; break; }
-                    }
-                    dir = turned;
-                }
+                // Down the same stairs as last time: a village miner's gallery then turns, run
+                // by run, into fresh rock. Which way is chosen as it opens (openGallery), by the
+                // rock left each way, so a run that starts with no stairs to walk (a plot with
+                // nothing under it) chooses the same way: the turn used to be made only here,
+                // and t10's miners, who never had a staircase, never turned at all.
                 assistant.sayRoutine("At Y" + cursor.getY() + " — opening the gallery.");
                 return;
             }
@@ -356,12 +370,28 @@ public class MineGoal extends Goal {
             dir = step;
             planStep(cursor.relative(dir).below());
         } else {
+            // A village miner's gallery picks its way as it opens: at the foot of the stairs,
+            // or wherever a run with no stairs to walk began. Nothing at all to cut or walk
+            // from here, and the run is over before it has started.
+            if (followsTheRock() && !galleryOpened) {
+                galleryOpened = true;
+                Direction way = openGallery();
+                if (way == null) {
+                    String none = "Mine's done — " + blocksMined + " blocks dug, " + oresMined
+                        + " ore collected (nothing left to cut down here).";
+                    if (climbOut(none)) return;
+                    finish(none);
+                    return;
+                }
+                dir = way;
+            }
             // Stop at the edge of the assigned patch as well as at length — a
             // stationed miner's gallery must not tunnel out from under a
             // neighbour's farm.
             // Deep under the patch there is no neighbour's field to undermine: a village's gallery runs
             // its full length down there (it stopped at the plot's edge after a few blocks, and most
-            // runs came home with a staircase's worth of stone and no ore).
+            // runs came home with a staircase's worth of stone and no ore). The rock decides where a
+            // village's gallery goes now, edge or no edge: see wayOn, below.
             boolean deep = assistant.isSettler() && !stairPath.isEmpty() && cursor.getY() < stairPath.get(0).getY() - 12;
             boolean leavingZone = !deep && !assistant.inZoneColumn(cursor.relative(dir));
             // A village miner goes back down the same stairs run after run: a gallery that counted
@@ -371,7 +401,21 @@ public class MineGoal extends Goal {
             boolean longEnough = assistant.isSettler()
                 ? freshSteps >= TUNNEL_LENGTH || tunnelSteps >= 4 * TUNNEL_LENGTH
                 : tunnelSteps >= TUNNEL_LENGTH;
-            if (longEnough || leavingZone) {
+            // A village miner's gallery follows the rock (wayOn): straight on while there is
+            // rock ahead, then along whichever side still has some, then on through its own
+            // old workings to rock beside them, and the run is done only when none of that is
+            // left. It used to stop dead at the patch's edge, eight blocks from the middle, so
+            // a plot gave one short gallery a run; and deep under the patch ("deep", above) it
+            // walked on past the edge into rock it may not break (mayDig) and stood there stuck.
+            // It is the rock that ends a village gallery now: the edge is where the rock stops.
+            boolean rockOut = false;
+            if (followsTheRock() && !longEnough) {
+                Direction way = wayOn();
+                if (way != null && way != dir) { dir = way; return; }   // turned: the step is planned next tick
+                rockOut = way == null;
+                leavingZone = false;
+            }
+            if (longEnough || leavingZone || rockOut) {
                 // Quarry: this floor is cut — drop four, aim back into the
                 // patch, and open the next one, down to the depth that was set.
                 //
@@ -411,7 +455,9 @@ public class MineGoal extends Goal {
                           + " levels, "
                         : "Mine's done — ")
                     + blocksMined + " blocks dug, " + oresMined + " ore collected"
-                    + (leavingZone ? " (that's the edge of my patch)." : ".");
+                    + (leavingZone || rockOut && !assistant.inZoneColumn(cursor.relative(dir))
+                        ? " (that's the edge of my patch)."
+                        : rockOut ? " (no more rock this way)." : ".");
                 // Deep in a terraced quarry, "finish here" leaves the bot at
                 // the bottom of a hole with four-block walls and asks the
                 // pathfinder to get it to a chest at the surface. It walks
@@ -605,6 +651,113 @@ public class MineGoal extends Goal {
         return dz >= 0 ? Direction.SOUTH : Direction.NORTH;
     }
 
+    // --- a village miner's galleries follow the rock --------------------------
+    // A hired hand cuts the straight gallery it was told to. A village's miner goes
+    // back to the same plot run after run with nobody to tell it where, so it has
+    // to see for itself where the rock still is: down to the bottom of it, then
+    // along it, and off its own old workings into whatever is left beside them.
+
+    private boolean followsTheRock() {
+        return assistant.isSettler() && !assistant.quarry();
+    }
+
+    private static boolean isRock(BlockState state) {
+        return state.is(BlockTags.BASE_STONE_OVERWORLD) || isOre(state);
+    }
+
+    /** The bottom of the rock straight under the miner, no deeper than it may dig:
+     *  its own feet when what is under them is not rock at all (grass, dirt, air). */
+    private int rockBottom() {
+        int floor = Math.max(digFloor(), assistant.level().getMinBuildHeight() + 1);
+        BlockPos.MutableBlockPos p = cursor.mutable();
+        int y = cursor.getY();
+        while (y - 1 >= floor && isRock(assistant.level().getBlockState(p.setY(y - 1)))) y--;
+        return y;
+    }
+
+    /**
+     * Which way a village miner's gallery opens: of straight on and the two turns, the
+     * way with the most rock still to cut, the run-by-run turn deciding between equals.
+     * With no rock left on any of them, one that is already open, so the run walks its
+     * old workings and turns off them into the rock beside (wayOn). Never back the way
+     * it came: at the foot of the stairs that is UNDER the staircase. Null when there
+     * is nowhere at all to go.
+     */
+    @Nullable
+    private Direction openGallery() {
+        Direction[] ways = { dir, dir.getClockWise(), dir.getCounterClockWise() };
+        int first = Math.floorMod(assistant.mineRuns, 3);
+        Direction[] order = { ways[first], ways[(first + 1) % 3], ways[(first + 2) % 3] };
+        Direction rock = mostRock(order);
+        if (rock != null) return rock;
+        for (Direction d : order) {
+            if (openAhead(d)) return d;
+        }
+        return null;
+    }
+
+    /** The way the gallery goes on from here: straight on while there is rock ahead;
+     *  else toward whichever side has the more rock; else on through what is already
+     *  open, looking for rock to either side. Null when the run is done. */
+    @Nullable
+    private Direction wayOn() {
+        if (uncutRock(dir, 1) > 0) return dir;
+        Direction side = mostRock(dir.getClockWise(), dir.getCounterClockWise());
+        if (side != null) return side;
+        return openAhead(dir) ? dir : null;
+    }
+
+    /** Of these ways, earliest first among equals, the one with the most rock left to
+     *  cut; null when none of them has any. */
+    @Nullable
+    private Direction mostRock(Direction... ways) {
+        Direction best = null;
+        int most = 0;
+        for (Direction d : ways) {
+            int rock = uncutRock(d, 2 * TUNNEL_LENGTH);
+            if (rock > most) { most = rock; best = d; }
+        }
+        return best;
+    }
+
+    /** How much rock a gallery cut this way from here would meet before the patch's
+     *  edge, the stairs, or anything solid it may not break (a chest, a bed, a door),
+     *  counted no further than `enough`. Only rock the miner may break counts: the
+     *  open cells of an old gallery, the far side of a hill, are not worth walking to. */
+    private int uncutRock(Direction way, int enough) {
+        int rock = 0;
+        line:
+        for (int i = 1; i <= 4 * TUNNEL_LENGTH && rock < enough; i++) {
+            BlockPos c = cursor.relative(way, i);
+            if (!assistant.inZoneColumn(c) || underStairs(c)) break;
+            for (BlockPos cell : new BlockPos[] { c, c.above() }) {
+                BlockState s = assistant.level().getBlockState(cell);
+                boolean may = mayDig(cell);
+                if (may && isRock(s)) rock++;
+                else if (!may && !s.getCollisionShape(assistant.level(), cell).isEmpty()) break line;
+            }
+        }
+        return rock;
+    }
+
+    /** Can the gallery walk on this way, one step, through what is already open (its
+     *  own old workings, a cave, the open air off the side of a hill) without cutting
+     *  anything? */
+    private boolean openAhead(Direction way) {
+        BlockPos c = cursor.relative(way);
+        if (!assistant.inZoneColumn(c) || underStairs(c)) return false;
+        for (BlockPos cell : new BlockPos[] { c, c.above() }) {
+            BlockState s = assistant.level().getBlockState(cell);
+            if (!s.getCollisionShape(assistant.level(), cell).isEmpty() || !s.getFluidState().isEmpty()) return false;
+        }
+        return true;
+    }
+
+    /** Would a gallery standing here cut the floor of one of this run's stair steps? */
+    private boolean underStairs(BlockPos feet) {
+        return stairFloors.contains(feet.asLong()) || stairFloors.contains(feet.above().asLong());
+    }
+
     /** Switch to the walk home along our own workings, carrying the message to
      *  say once we surface. False when there is no trail worth walking. */
     private boolean climbOut(@Nullable String message) {
@@ -652,6 +805,15 @@ public class MineGoal extends Goal {
         }
         com.jrpetty.mcassistant.entity.WorkZone zone = assistant.workZone();
         if (zone == null) return true;               // unzoned: old behaviour
+        int ceiling = zone.max().getY() + 4;         // headroom to stand and swing
+        return pos.getY() >= digFloor() && pos.getY() <= ceiling;
+    }
+
+    /** The lowest Y this miner may break on its patch (mayDig); the bottom of the world
+     *  without a patch. */
+    private int digFloor() {
+        com.jrpetty.mcassistant.entity.WorkZone zone = assistant.workZone();
+        if (zone == null) return assistant.level().getMinBuildHeight();
         int floor = Math.min(zone.depth(), zone.min().getY());
         // The mine ladder: shallow ground until 10, iron country until 20,
         // then the deep — whatever the depth buttons are set to.
@@ -666,8 +828,7 @@ public class MineGoal extends Goal {
             int rung = assistant.veteranLevel() >= 10 ? 16 : 32;
             floor = Math.max(floor, Math.min(rung, zone.max().getY() - 24));
         }
-        int ceiling = zone.max().getY() + 4;         // headroom to stand and swing
-        return pos.getY() >= floor && pos.getY() <= ceiling;
+        return floor;
     }
 
     /** Queue the digs for one step of shaft/gallery ending at newFeet. */
@@ -758,6 +919,9 @@ public class MineGoal extends Goal {
 
     private void beginDig(BlockPos pos) {
         if (!mayDig(pos)) return;          // never off the marked patch
+        // Nor a step out of its own stairs, chasing a vein: the gallery's way is kept off
+        // them (underStairs), and an ore in a step's floor stays where it is.
+        if (followsTheRock() && stairFloors.contains(pos.asLong())) return;
         BlockState state = assistant.level().getBlockState(pos);
         if (state.canBeReplaced()) return; // already open
         assistant.equipBestTool(state);
@@ -863,6 +1027,7 @@ public class MineGoal extends Goal {
             dugThisStep = false;
             if (phase == Phase.DESCEND || phase == Phase.SHAFT) {
                 breadcrumb(dest);
+                stairFloors.add(dest.below().asLong());
             } else if (phase == Phase.TUNNEL && assistant.quarry() && tunnelSteps % 4 == 0) {
                 // In a quarry the way home runs along the galleries too, so
                 // breadcrumb them sparsely — every fourth step is enough of a

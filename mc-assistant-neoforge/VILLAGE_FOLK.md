@@ -879,10 +879,18 @@ hands back to their own work the same morning.
 * **Every run cuts fresh rock.** A miner goes back down the same stairs run after run;
   its galleries are measured in fresh rock, so each run walks along the old tunnel to the
   face and cuts new ground (and walks past its own torches). Between runs a miner stays
-  with its mine rather than going up to quarry stone at the surface.
+  with its mine rather than going up to quarry stone at the surface, or across the village
+  to clear out old chests.
+* **The gallery follows the rock.** A mine on low ground (a flat world, a hill standing on
+  one) is floored at or above the plot itself, so the miner first goes down to the bottom of
+  the rock under its plot. Its gallery opens the way with the most rock left in it, goes on
+  while there is rock ahead, turns along whichever side still has some (at the patch's edge,
+  at the far side of a hill), and walks its own old workings to rock beside them; the run is
+  over when none of that is left. A gallery never cuts the floor of its own stairs.
 * **A spent mine is left.** Three galleries in a row that come home with next to nothing
   and the miner stakes fresh rock somewhere else round the village, rather than going back
-  to the same dug-out hole between odd jobs.
+  to the same dug-out hole between odd jobs. With nowhere else to go yet, the next empty run
+  looks again.
 * **Idle hands help the builder.** A folk whose trade has nothing to do, and that can
   fetch nothing the village is short of, goes and helps whoever is raising the village's
   building. Each helper (up to three) makes the blocks go down a tick faster.
