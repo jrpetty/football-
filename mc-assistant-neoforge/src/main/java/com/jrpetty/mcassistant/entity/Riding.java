@@ -497,7 +497,7 @@ public final class Riding {
         if (there) {
             if (r.phase == Phase.HOME) {
                 getOff(f, h);
-                h.restrictTo(BlockPos.containing(goal), st != null ? 1 : 3);
+                h.restrictTo(BlockPos.containing(goal), st != null ? 0 : 3);
                 end(f, level, r, "put " + Stables.name(h) + " back in its stall");
                 if (level.getRandom().nextInt(3) == 0) {
                     FolkTalk.speak(f, FolkTalk.pick(level.getRandom(), "There you go, " + Stables.name(h) + ". Hay's in the rack.",
@@ -522,8 +522,8 @@ public final class Riding {
             return;
         }
         if (h.getNavigation().isDone() || f.tickCount - r.walked > 100) {
-            Vec3 to = r.phase == Phase.HOME ? Stables.walkTarget(st, goal) : goal;
-            f.getNavigation().moveTo(to.x, to.y, to.z, 1.0D);
+            if (r.phase == Phase.HOME) Stables.walkInto(f.getNavigation(), Stables.walkTarget(st, goal), 1.0D);
+            else f.getNavigation().moveTo(goal.x, goal.y, goal.z, 1.0D);
             r.walked = f.tickCount;
         }
     }

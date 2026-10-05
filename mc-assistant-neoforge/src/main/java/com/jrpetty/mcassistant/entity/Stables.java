@@ -326,9 +326,25 @@ public final class Stables {
         return Math.sqrt(dx * dx + dz * dz);
     }
 
-    /** Is it standing in its place? */
+    /** Is it at its place, near enough to be seen to there (fed, saddled, gentled)? In a stall, mostly in it. */
     static boolean inPlace(@Nullable Stable st, Vec3 place, AbstractHorse h) {
-        return flat(h.position(), place) <= (st != null ? 1.3 : 3.5) && Math.abs(h.getY() - place.y) < 2.5;
+        return flat(h.position(), place) <= (st != null ? 1.6 : 3.5) && Math.abs(h.getY() - place.y) < 2.5;
+    }
+
+    /** Square in its stall (or about its place, with no stable): no need to walk it in. */
+    static boolean settled(@Nullable Stable st, Vec3 place, AbstractHorse h) {
+        return flat(h.position(), place) <= (st != null ? 0.6 : 3.5) && Math.abs(h.getY() - place.y) < 2.5;
+    }
+
+    /**
+     * Walk an animal (or the horse under a rider) right on to a spot: a path that ends on the very
+     * block, not the game's usual one that stops a block short of it — a block short of a stall is a
+     * horse standing half out in the aisle, and the next walk-in from there was taken as already done.
+     */
+    static void walkInto(net.minecraft.world.entity.ai.navigation.PathNavigation nav, Vec3 to, double speed) {
+        net.minecraft.world.level.pathfinder.Path exact = nav.createPath(BlockPos.containing(to), 0);
+        if (exact != null && exact.canReach()) nav.moveTo(exact, speed);
+        else nav.moveTo(to.x, to.y, to.z, speed);
     }
 
     // ------------------------------------------------------------------ the stable's gates
@@ -500,16 +516,13 @@ public final class Stables {
         for (AbstractHorse h : ordered) {
             if (atWork(h)) continue;
             Vec3 place = placeOf(st, v.id(), ordered, h);
-            if (inPlace(st, place, h)) {
-                h.restrictTo(BlockPos.containing(place), st != null ? 1 : 3);
-                continue;
-            }
-            // Its wandering drawn toward its place (the game's strolls lean toward where a mob is kept).
-            h.restrictTo(BlockPos.containing(place), st != null ? 1 : 3);
+            // Kept to its place: in a stall it does not stroll at all (a two-wide animal let stroll a
+            // block from its stall's middle ends up half out in the aisle); in a pen it wanders a little.
+            h.restrictTo(BlockPos.containing(place), st != null ? 0 : 3);
+            if (settled(st, place, h)) continue;
             if (flat(h.position(), place) > YARD) continue;            // a stray: the rancher's to fetch
             h.setEating(false);
-            Vec3 to = walkTarget(st, place);
-            h.getNavigation().moveTo(to.x, to.y, to.z, 1.0D);
+            walkInto(h.getNavigation(), walkTarget(st, place), 1.0D);
             if (st != null && flat(h.position(), Vec3.atCenterOf(st.door())) < 8) openGates(level, v.id(), st);
         }
     }
@@ -1012,6 +1025,7 @@ public final class Stables {
                 GENTLED.put(h.getUUID(), now);
                 boolean tamed = h.getMaxTemper() > 0 && h.getRandom().nextInt(h.getMaxTemper()) < h.getTemper();
                 if (f.getVehicle() == h) f.stopRiding();
+                h.getNavigation().stop();                               // (where its rider's feet would have gone, not its own)
                 if (tamed) {
                     tame(level, h, w.village, f);
                 } else {
