@@ -302,6 +302,14 @@ public class DistrictGameTests {
      *
      * <p>The clock runs from mid-morning to the afternoon and on to the next mid-morning: no morning
      * assembly (it calls everybody, and what each was doing waits), no dawn bell, no night.
+     *
+     * <p>The town is one folk with a roll of twenty-two: twenty-two mouths and no fields make it hungry, and
+     * its one hand a farmer out at a plot fifty blocks from the heart, with work of its own all day. Nobody
+     * of a real town's twenty-two (its storekeeper, a hand worked out or between jobs) is idle at the heart
+     * to look at the village's work (considerVillageWork is the agenda's last word, for a hand with nothing
+     * of its own in hand, within forty blocks of the heart), so the test has its one hand do as such a one
+     * would: at the stores now and then, it looks at the village's work by the real path (the project, its
+     * lot, whether the stores pay, stocking up, setting off).
      */
     @GameTest(template = EMPTY, timeoutTicks = 16400, batch = "dt03_park_goes_up")
     public static void dt03_park_goes_up(GameTestHelper helper) {
@@ -347,6 +355,11 @@ public class DistrictGameTests {
         Villages.forgetStores(village);
         Villages.forgetStock();
         Park.Layout l = Park.layout(site.anchor(), site.facing());
+        // A hand of the village with a trade of its own (so the town's hunger puts nothing down when it takes
+        // one up), at the stores, looking at the village's work.
+        builder.setJob(StationTask.FARM);
+        long[] looked = { level.getGameTime() };
+        lookAtTheWork(level, village, heart, builder, "at the start");
         helper.onEachTick(() -> {
             long t = helper.getTick();
             // A working day, mid-morning to the afternoon, over and over (see above).
@@ -362,6 +375,14 @@ public class DistrictGameTests {
                 Kit.log("dt03 @" + t + " set aside " + next + ", which came before the park");
             }
             if (!Villages.builtList(village).contains(Park.STRUCTURE)) {
+                // Not at it (the stores not yet drawn, a run that ran short, its plot calling it back): it looks at
+                // the village's work again, as an idle hand at the heart does, now and then.
+                Job j = builder.peekJob();
+                boolean building = j != null && j.type() == Job.Type.BUILD;
+                if (!building && level.getGameTime() - looked[0] >= 400) {
+                    looked[0] = level.getGameTime();
+                    lookAtTheWork(level, village, heart, builder, "@" + t);
+                }
                 if (t >= 16000) helper.fail("the park was not built: " + Villages.builtList(village) + ", next " + next + " — "
                     + builder.debugLine());
                 return;
@@ -411,6 +432,15 @@ public class DistrictGameTests {
 
     /** The test's working day: from mid-morning, so long, then the next day's mid-morning. */
     private static final long DAY_FROM = 2000L, DAY_SPAN = 9000L;
+
+    /** A hand at the stores by the heart looks at the village's work, by the real path (considerVillageWork). */
+    private static void lookAtTheWork(ServerLevel level, UUID village, BlockPos heart, VillageFolkEntity hand, String when) {
+        if (hand.blockPosition().distSqr(heart) > 5 * 5) hand.teleportTo(heart.getX() + 1.5, heart.getY(), heart.getZ() + 1.5);
+        Villages.retryIn(village, level.getGameTime(), 0L);
+        boolean set = hand.villageWorkForTests();
+        Kit.log("dt03 " + when + " a hand at the stores looks at the village's work: set off " + set + ", next "
+            + Villages.nextProject(village) + ", set aside " + Villages.setAside(village) + " — " + hand.debugLine());
+    }
 
     // ============================================================ an evening in the park
 
