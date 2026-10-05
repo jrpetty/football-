@@ -5860,6 +5860,18 @@ public class VillageGameTests {
         helper.assertTrue(lanternRow != null && lanternRow.getInt("d1") == 1 && lanternRow.getString("by").toLowerCase().contains("smith")
             && lanternRow.getInt("on_hand") >= 1, "the lantern, its maker and the one in the stores: " + lanternRow);
         helper.assertTrue(ingotRow != null && ingotRow.getInt("used7") == 1, "the ingot used: " + ingotRow);
+        // The Stock page: every thing in store, with how many, where, and what it is worth.
+        net.minecraft.nbt.ListTag stock = snap.getCompound("stock").getList("rows", net.minecraft.nbt.Tag.TAG_COMPOUND);
+        long ingotsInStore = -1, lanternsInStore = -1;
+        for (int i = 0; i < stock.size(); i++) {
+            net.minecraft.nbt.CompoundTag r = stock.getCompound(i);
+            if (r.getString("id").equals("iron_ingot")) ingotsInStore = r.getLong("n");
+            if (r.getString("id").equals("lantern")) lanternsInStore = r.getLong("n");
+        }
+        Kit.log("t83 the stock: " + stock.size() + " things, " + snap.getCompound("stock").getLong("total") + " in all, worth "
+            + snap.getCompound("stock").getInt("worth") + "; ingots " + ingotsInStore + ", lanterns " + lanternsInStore);
+        helper.assertTrue(ingotsInStore >= 19 && lanternsInStore >= 1 && snap.getCompound("stock").getInt("worth") > 0,
+            "the Stock page lists what is in store: ingots " + ingotsInStore + ", lanterns " + lanternsInStore);
         double rate = com.jrpetty.mcassistant.entity.Annals.ratePerDay(id,
             com.jrpetty.mcassistant.entity.Annals.forTask(Villages.Task.FOOD), 7);
         helper.assertTrue(rate >= 5, "the leader reads the food coming in: " + rate + " a day");

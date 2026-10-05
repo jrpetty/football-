@@ -521,6 +521,7 @@ public final class Annals {
         out.put("league", league(level, v));
         out.put("production", production(level, v));
         out.put("shops", Stockroom.inventoryReport(level, id));
+        out.put("stock", stock(level, v));
         out.put("buildings", buildings(level, v));
         List<String> queue = new ArrayList<>();
         for (String p : Villages.projectsWanted(id)) queue.add(Villages.spoken(p));
@@ -657,6 +658,94 @@ public final class Annals {
             c.putBoolean("citizen", Ledger.citizen(id, e.getKey()));
             out.add(c);
         }
+        return out;
+    }
+
+    /**
+     * Everything the village holds, item by item, for the Stock page: how many in all, in how many
+     * stacks, how many in the storehouse and how many in its other store chests, how many more are on
+     * their way in the workers' production chests, what one is worth, how many the village keeps back
+     * (and why: the builders' timber, the age's iron...), whether its next age wants it, and how many are
+     * somebody's marked work or enchanted. With the storehouse's slots used and free.
+     */
+    private static CompoundTag stock(ServerLevel level, Villages.Village v) {
+        UUID id = v.id();
+        net.minecraft.core.BlockPos door = Storehouses.doorFor(level, id);
+        java.util.Map<String, long[]> by = new java.util.LinkedHashMap<>();       // n, stacks, storehouse, chests, on the way, marked
+        java.util.Map<String, net.minecraft.world.item.ItemStack> kind = new java.util.HashMap<>();
+        int slotsUsed = 0, slotsAll = 0;
+        java.util.function.BiConsumer<net.minecraft.world.Container, Integer> count = (c, where) -> {
+            for (int i = 0; i < c.getContainerSize(); i++) {
+                net.minecraft.world.item.ItemStack s = c.getItem(i);
+                if (s.isEmpty()) continue;
+                String key = Economy.id(s);
+                long[] r = by.computeIfAbsent(key, k -> new long[6]);
+                kind.putIfAbsent(key, s.copyWithCount(1));
+                if (where < 2) { r[0] += s.getCount(); r[1]++; }
+                r[2 + where] += s.getCount();
+                if (where < 2 && !s.getComponentsPatch().isEmpty()) r[5] += s.getCount();
+            }
+        };
+        for (net.minecraft.core.BlockPos p : Villages.storeChests(level, id)) {
+            if (!(level.getBlockEntity(p) instanceof net.minecraft.world.Container c)) continue;
+            boolean house = p.equals(door);
+            if (house) {
+                slotsAll += c.getContainerSize();
+                for (int i = 0; i < c.getContainerSize(); i++) if (!c.getItem(i).isEmpty()) slotsUsed++;
+            }
+            count.accept(c, house ? 0 : 1);
+        }
+        for (long at : VillageFolkEntity.productionChests(id)) {
+            net.minecraft.core.BlockPos p = net.minecraft.core.BlockPos.of(at);
+            if (level.isLoaded(p) && level.getBlockEntity(p) instanceof net.minecraft.world.Container c) count.accept(c, 2);
+        }
+        // What the village keeps back of its plain stacks, and why; and what its next age wants.
+        java.util.Map<net.minecraft.world.item.Item, String> why = new java.util.HashMap<>();
+        java.util.Map<net.minecraft.world.item.Item, int[]> book = Bench.keepBook(level, v, why);
+        List<java.util.function.Predicate<net.minecraft.world.item.ItemStack>> wanted = new ArrayList<>();
+        for (Villages.Need n : Villages.needs(level, id)) {
+            java.util.function.Predicate<net.minecraft.world.item.ItemStack> p = forTask(n.task());
+            if (p != null) wanted.add(p);
+        }
+        ListTag rows = new ListTag();
+        long total = 0;
+        double worth = 0;
+        for (java.util.Map.Entry<String, long[]> e : by.entrySet()) {
+            long[] r = e.getValue();
+            net.minecraft.world.item.ItemStack one = kind.get(e.getKey());
+            CompoundTag c = new CompoundTag();
+            c.putString("id", e.getKey());
+            Economy.Kind k = Economy.kindOf(one);
+            c.putString("kind", k == null ? "other" : k.name().toLowerCase(Locale.ROOT));
+            c.putLong("n", r[0]);
+            c.putLong("stacks", r[1]);
+            c.putLong("house", r[2]);
+            c.putLong("chests", r[3]);
+            c.putLong("way", r[4]);
+            c.putLong("marked", r[5]);
+            double each = Wealth.value(one);
+            c.putInt("each100", (int) Math.round(each * 100));
+            int[] kb = book.get(one.getItem());
+            int kept = kb == null ? 0 : Math.max(0, kb[0] - kb[1]);
+            c.putInt("kept", kept);
+            c.putString("why", kept > 0 ? why.getOrDefault(one.getItem(), "") : "");
+            boolean want = false;
+            for (java.util.function.Predicate<net.minecraft.world.item.ItemStack> p : wanted) if (p.test(one)) { want = true; break; }
+            c.putBoolean("wanted", want);
+            rows.add(c);
+            total += r[0];
+            worth += each * r[0];
+        }
+        CompoundTag out = new CompoundTag();
+        out.put("rows", rows);
+        out.putLong("total", total);
+        out.putInt("kinds", by.size());
+        out.putInt("worth", (int) Math.round(worth));
+        out.putInt("slots_used", slotsUsed);
+        out.putInt("slots_all", slotsAll);
+        out.putBoolean("storehouse", door != null);
+        out.putInt("chests", Math.max(0, Villages.storeChests(level, id).size() - (door != null ? 1 : 0)));
+        out.putInt("work_chests", VillageFolkEntity.productionChests(id).size());
         return out;
     }
 

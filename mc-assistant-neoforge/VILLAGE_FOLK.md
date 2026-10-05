@@ -2042,7 +2042,7 @@ its own. The council sits in the hall's council chamber.
 Right-click the village board (or press **Analytics** in the village journal, or type
 `/village stats`) and the town's books open: everything the village is and has been, with
 charts, so you can see exactly what is driving its growth. Every morning the village is
-written down (kept for four hundred days), and the books have seventeen pages, picked along the
+written down (kept for four hundred days), and the books have eighteen pages, picked along the
 top (in two rows on a small window; the arrow keys turn the pages); the range (a week, a month, a hundred days, or all of it) is picked at the top right, and
 every chart reads out the day under the mouse.
 
@@ -2125,6 +2125,15 @@ every chart reads out the day under the mouse.
   will build next, in order, with why.
 * **Stores:** food, the days of food put by, timber and stone, coal and iron over time, what
   is in the stores now and the larder's books.
+* **Stock:** everything the village holds, item by item, with its icon: how many in all and in how
+  many stacks, how many in the storehouse and how many in the other store chests, how many more
+  are on their way in the workers' chests (waiting for the couriers), what one is worth and what
+  they all are, and how many the village keeps back from its makers and why (the builders'
+  timber, the iron its age is putting by, seed for the fields...). What the next age wants is
+  marked in amber. Five cards along the top: things in store, how many kinds, their worth, the
+  storehouse's slots used, and what is on its way in. Pick a kind (food, timber, stone, ore and
+  metal, wool and hides, crafts, plants), type to find a thing (backspace to take a letter back),
+  click a heading to sort by it, and the mouse over a row tells the whole of it.
 * **Why:** what is driving its growth and what is holding it back, read from its books:
   population and where it came from, whether every bed is taken, whether the larder is full
   enough for children, output up or down and which trades moved it, the most productive trade
@@ -2656,7 +2665,7 @@ ripen, days pass, folk work and houses go up at that pace.
   what is for sale. `house buy` buys the empty house you stand in; `house let <coins>` lets
   yours out at that rent a day (0 to take it back); `house rent` collects the rent.
 * `/village stats [page]` — the town's books on the analytics screen (as clicking the village
-  board does), opened at a page if one is given (0 the Overview to 16 the Board); from the
+  board does), opened at a page if one is given (0 the Overview to 17 the Board; 12 is the Stock); from the
   console, the reading of what drives the village's growth.
 * `/village shop` — the sellers' books: for the shop, the café, the tavern, the market and the
   stores, what each ware has on hand against what is kept, what sold today and this week, what

@@ -211,6 +211,18 @@ public final class Bench {
         return free;
     }
 
+    /**
+     * The stores' plain stacks by item, each with what a maker may use of it (the rest is kept back),
+     * and why the village keeps it ({@code why}, filled in): the town's books' Stock page.
+     */
+    public static Map<Item, int[]> keepBook(ServerLevel level, Villages.Village v, Map<Item, String> why) {
+        Map<Item, Integer> held = held(level, v.id());
+        Map<Item, Integer> free = free(level, v, held, why);
+        Map<Item, int[]> out = new HashMap<>();
+        for (Map.Entry<Item, Integer> e : held.entrySet()) out.put(e.getKey(), new int[]{ e.getValue(), free.getOrDefault(e.getKey(), 0) });
+        return out;
+    }
+
     /** What the stores hold, plain stacks only, by item. */
     static Map<Item, Integer> held(ServerLevel level, UUID village) {
         Map<Item, Integer> held = new HashMap<>();

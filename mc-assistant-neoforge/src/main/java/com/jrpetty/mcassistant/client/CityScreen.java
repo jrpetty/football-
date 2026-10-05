@@ -39,10 +39,10 @@ import java.util.Locale;
 public class CityScreen extends Screen {
 
     private static final String[] TABS = { "Overview", "Growth", "Money", "Production", "Shops", "Jobs", "Folk", "Society", "Leader", "Homes",
-        "Buildings", "Stores", "Why", "Trends", "Records", "News", "Board" };
+        "Buildings", "Stores", "Stock", "Why", "Trends", "Records", "News", "Board" };
     /** The pages that read today's figures, not the books (so they show from the first day). */
     private static final java.util.Set<String> TODAY_PAGES = java.util.Set.of("Folk", "Society", "Leader", "Buildings", "Why", "News", "Board",
-        "Shops", "Homes");
+        "Shops", "Homes", "Stock");
     private static final int[] RANGES = { 7, 30, 100, 0 };
     private static final String[] RANGE_NAMES = { "7d", "30d", "100d", "All" };
 
@@ -259,6 +259,7 @@ public class CityScreen extends Screen {
                 case "Homes" -> homes(g, x, y, cw, ch, mouseX, mouseY);
                 case "Buildings" -> buildings(g, x, y, cw, ch, mouseX, mouseY);
                 case "Stores" -> stores(g, x, y, cw, ch, mouseX, mouseY);
+                case "Stock" -> stock(g, x, y, cw, ch, mouseX, mouseY);
                 case "Why" -> why(g, x, y, cw, ch);
                 case "Trends" -> trends(g, x, y, cw, ch, mouseX, mouseY);
                 case "Records" -> records(g, x, y, cw, ch);
@@ -1087,6 +1088,138 @@ public class CityScreen extends Screen {
         small(g, Ui.clip(font, "The larder's books: " + now.getString("food_books"), (int) (cw / 0.75)), x, ty + 9, Ui.MUTED);
     }
 
+    // ------------------------------------------------------------------ the stock
+
+    /** The Stock page's kind (null for all), sort column and way, and what is typed to find. */
+    private String stockKind;
+    private int stockSort = 1;
+    private boolean stockDown = true;
+    private String stockFind = "";
+
+    private static final String[] STOCK_HEADS = { "Item", "In store", "Stacks", "Storehouse", "Chests", "On the way", "Each", "Worth", "Kept back" };
+
+    /**
+     * Stock: everything the village holds, item by item, with its icon: how many in all and in how many
+     * stacks, how many in the storehouse and how many in the other store chests, how many more are on
+     * their way in the workers' production chests, what one is worth and what they all are, and how
+     * many the village keeps back from its makers and why. A kind along the top; type to find a thing;
+     * click a heading to sort; the mouse over a row for the whole of it. What the next age wants is
+     * marked. Five cards along the top: things in store, kinds, their worth, the storehouse's slots, and
+     * what is on its way in.
+     */
+    private void stock(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my) {
+        CompoundTag st = data.getCompound("stock");
+        List<CompoundTag> rows = new ArrayList<>();
+        ListTag l = st.getList("rows", Tag.TAG_COMPOUND);
+        for (int i = 0; i < l.size(); i++) rows.add(l.getCompound(i));
+        long way = 0;
+        for (CompoundTag r : rows) way += r.getLong("way");
+        int cardW = (cw - 4 * 4) / 5, cardH = 30;
+        card(g, x, y, cardW, cardH, "In store", num(st.getLong("total")), "things, all told", GREEN);
+        card(g, x + (cardW + 4), y, cardW, cardH, "Kinds", Integer.toString(st.getInt("kinds")), "different things", PURPLE);
+        card(g, x + 2 * (cardW + 4), y, cardW, cardH, "Worth", num(st.getInt("worth")) + "c", "at the market's prices", AMBER);
+        int used = st.getInt("slots_used"), all = st.getInt("slots_all");
+        card(g, x + 3 * (cardW + 4), y, cardW, cardH, "Storehouse", st.getBoolean("storehouse") ? used + "/" + all : "none yet",
+            st.getBoolean("storehouse") ? (all == 0 ? 0 : used * 100 / all) + "% of its slots, " + st.getInt("chests") + " chests more"
+                : st.getInt("chests") + " store chests", BLUE);
+        card(g, x + 4 * (cardW + 4), y, cardW, cardH, "On the way", num(way), "in " + st.getInt("work_chests") + " work chests", TEAL);
+        // The kinds, and what is typed.
+        int ky = y + cardH + 4, kx = x;
+        for (int i = 0; i < KINDS.length; i++) {
+            String k = KINDS[i];
+            boolean on = k.equals("all") ? stockKind == null : k.equals(stockKind);
+            int kw = (int) (font.width(KIND_WORDS[i]) * 0.75) + 8;
+            g.fill(kx, ky, kx + kw, ky + 10, on ? Ui.ROW_PICK : Ui.ROW);
+            g.renderOutline(kx, ky, kw, 10, Ui.EDGE_SOFT);
+            small(g, KIND_WORDS[i], kx + 4, ky + 2, on ? Ui.GOOD : Ui.MUTED);
+            final String pick = k.equals("all") ? null : k;
+            zones.add(new Zone(kx, ky, kx + kw, ky + 10, () -> { stockKind = pick; scroll = 0; }));
+            kx += kw + 2;
+        }
+        String findText = stockFind.isEmpty() ? "Type to find a thing" : "Find: " + stockFind + "_";
+        int fw = (int) (font.width(findText) * 0.75) + 8;
+        g.fill(x + cw - fw, ky, x + cw, ky + 10, Ui.ROW);
+        g.renderOutline(x + cw - fw, ky, fw, 10, Ui.EDGE_SOFT);
+        small(g, findText, x + cw - fw + 4, ky + 2, stockFind.isEmpty() ? Ui.FAINT : Ui.INK);
+        // The table.
+        List<CompoundTag> shown = new ArrayList<>();
+        String find = stockFind.toLowerCase(Locale.ROOT);
+        for (CompoundTag r : rows) {
+            if (stockKind != null && !stockKind.equals(r.getString("kind"))) continue;
+            if (!find.isEmpty() && !itemName(r.getString("id")).toLowerCase(Locale.ROOT).contains(find)
+                && !r.getString("id").contains(find)) continue;
+            shown.add(r);
+        }
+        Comparator<CompoundTag> order = switch (stockSort) {
+            case 0 -> Comparator.comparing((CompoundTag r) -> itemName(r.getString("id")));
+            case 2 -> Comparator.comparingLong((CompoundTag r) -> r.getLong("stacks"));
+            case 3 -> Comparator.comparingLong((CompoundTag r) -> r.getLong("house"));
+            case 4 -> Comparator.comparingLong((CompoundTag r) -> r.getLong("chests"));
+            case 5 -> Comparator.comparingLong((CompoundTag r) -> r.getLong("way"));
+            case 6 -> Comparator.comparingInt((CompoundTag r) -> r.getInt("each100"));
+            case 7 -> Comparator.comparingDouble((CompoundTag r) -> r.getInt("each100") * (double) r.getLong("n"));
+            case 8 -> Comparator.comparingInt((CompoundTag r) -> r.getInt("kept"));
+            default -> Comparator.comparingLong((CompoundTag r) -> r.getLong("n"));
+        };
+        shown.sort(stockDown ? order.reversed() : order);
+        int ty = ky + 14;
+        int nameW = cw * 26 / 100, figW = (cw - nameW) / (STOCK_HEADS.length - 1 + 1);
+        int[] cols = new int[STOCK_HEADS.length];
+        for (int i = 1; i < cols.length; i++) cols[i] = nameW + (i - 1) * figW;
+        int noteX = nameW + (STOCK_HEADS.length - 1) * figW;
+        for (int i = 0; i < STOCK_HEADS.length; i++) {
+            int cx0 = cols[i], cx1 = i + 1 < cols.length ? cols[i + 1] : noteX;
+            String hd = STOCK_HEADS[i] + (i == stockSort ? (stockDown ? "▼" : "▲") : "");
+            small(g, Ui.clip(font, hd, (int) ((cx1 - cx0 - 2) / 0.75)), x + cx0, ty, i == stockSort ? Ui.GOOD : Ui.FAINT);
+            final int col = i;
+            zones.add(new Zone(x + cx0, ty, x + cx1, ty + 9, () -> {
+                if (stockSort == col) stockDown = !stockDown; else { stockSort = col; stockDown = col != 0; }
+            }));
+        }
+        small(g, "Note", x + noteX, ty, Ui.FAINT);
+        int ry = ty + 10;
+        int fit = Math.max(1, (y + ch - 12 - ry) / 10);
+        int start = Math.max(0, Math.min(scroll, Math.max(0, shown.size() - fit)));
+        for (int i = start; i < Math.min(shown.size(), start + fit); i++) {
+            CompoundTag r = shown.get(i);
+            String id = r.getString("id");
+            boolean over = mx >= x && mx < x + cw && my >= ry - 1 && my < ry + 9;
+            g.fill(x - 2, ry - 1, x + cw, ry + 9, over ? Ui.HI : i % 2 == 0 ? Ui.ROW : Ui.ROW_ALT);
+            if (r.getBoolean("wanted")) g.fill(x - 2, ry - 1, x, ry + 9, AMBER);
+            icon(g, id, x, ry - 1, 0.6F);
+            double each = r.getInt("each100") / 100.0;
+            String[] cells = { itemName(id), num(r.getLong("n")), num(r.getLong("stacks")), num(r.getLong("house")), num(r.getLong("chests")),
+                r.getLong("way") > 0 ? "+" + num(r.getLong("way")) : "—", each > 0 ? num(each) + "c" : "—",
+                each > 0 ? num(each * r.getLong("n")) + "c" : "—", r.getInt("kept") > 0 ? num(r.getInt("kept")) : "—" };
+            for (int c = 0; c < cells.length; c++) {
+                int colW = (c + 1 < cols.length ? cols[c + 1] : noteX) - cols[c] - 2 - (c == 0 ? 11 : 0);
+                small(g, Ui.clip(font, cells[c], (int) (colW / 0.75)), x + cols[c] + (c == 0 ? 11 : 0), ry + 1,
+                    c == 5 && r.getLong("way") > 0 ? Ui.GOOD : c == 8 && r.getInt("kept") > 0 ? AMBER : Ui.INK);
+            }
+            String note = r.getBoolean("wanted") ? "wanted for the next age" : r.getInt("kept") > 0 ? r.getString("why")
+                : r.getLong("marked") > 0 ? r.getLong("marked") + " marked or enchanted" : "";
+            small(g, Ui.clip(font, note, (int) ((cw - noteX - 2) / 0.75)), x + noteX, ry + 1, r.getBoolean("wanted") ? AMBER : Ui.MUTED);
+            if (over) {
+                List<Component> tip = new ArrayList<>();
+                tip.add(Component.literal(itemName(id)));
+                tip.add(Component.literal(num(r.getLong("n")) + " in store, in " + num(r.getLong("stacks")) + " stacks").withColor(0x9EE07A));
+                tip.add(Component.literal(num(r.getLong("house")) + " in the storehouse, " + num(r.getLong("chests")) + " in the other store chests"));
+                if (r.getLong("way") > 0) tip.add(Component.literal(num(r.getLong("way")) + " more in the workers' chests, waiting for the couriers"));
+                if (each > 0) tip.add(Component.literal(num(each) + "c each; " + num(each * r.getLong("n")) + "c all told").withColor(0xE8C46A));
+                if (r.getInt("kept") > 0) tip.add(Component.literal(num(r.getInt("kept")) + " kept back from the makers: " + r.getString("why")));
+                if (r.getLong("marked") > 0) tip.add(Component.literal(num(r.getLong("marked")) + " are somebody's marked work, or enchanted"));
+                if (r.getBoolean("wanted")) tip.add(Component.literal("The village's next age wants this").withColor(0xE8A94A));
+                hover = tip;
+                hoverX = mx;
+                hoverY = my;
+            }
+            ry += 10;
+        }
+        if (shown.isEmpty()) small(g, rows.isEmpty() ? "The stores are empty." : "Nothing in store of that.", x, ry + 2, Ui.MUTED);
+        small(g, Ui.clip(font, shown.size() + " of " + rows.size() + " things · click a heading to sort · type to find · the mouse over a row for the whole of it"
+            + (shown.size() > fit ? " · scroll for more" : "") + " · amber: wanted for the next age", (int) (cw / 0.75)), x, y + ch - 9, Ui.FAINT);
+    }
+
     private void why(GuiGraphics g, int x, int y, int cw, int ch) {
         CompoundTag now = now();
         int half = cw * 3 / 5;
@@ -1908,7 +2041,24 @@ public class CityScreen extends Screen {
     }
 
     @Override
+    public boolean charTyped(char c, int mods) {
+        // On the Stock page, what is typed finds a thing.
+        if (page().equals("Stock") && (Character.isLetterOrDigit(c) || c == ' ' || c == '_') && stockFind.length() < 24) {
+            stockFind += c;
+            scroll = 0;
+            return true;
+        }
+        return super.charTyped(c, mods);
+    }
+
+    @Override
     public boolean keyPressed(int key, int scan, int mods) {
+        // On the Stock page, backspace takes back a letter of what is typed.
+        if (page().equals("Stock") && key == 259 && !stockFind.isEmpty()) {
+            stockFind = stockFind.substring(0, stockFind.length() - 1);
+            scroll = 0;
+            return true;
+        }
         // Left and right: the next page.
         if (key == 263) { tab = (tab + TABS.length - 1) % TABS.length; scroll = 0; return true; }
         if (key == 262) { tab = (tab + 1) % TABS.length; scroll = 0; return true; }
