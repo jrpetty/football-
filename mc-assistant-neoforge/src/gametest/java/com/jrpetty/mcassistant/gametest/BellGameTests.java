@@ -575,4 +575,60 @@ public class BellGameTests {
             }
         });
     }
+
+    /**
+     * The frame begun by the town on its own, the way a real game has it: no hand from the test, the town's
+     * look at its bell finds the timber in the stores, calls a hand from the town's works and keeps calling
+     * it while it builds. And on a clock set back a day (/time set), so every day reads as before the town's
+     * founding: the frame waits only on the town's first building, not on its age in days. (A real run's
+     * town, its clock set back, never began its frame.)
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 4000, batch = "b05_frame_begun_by_the_town")
+    public static void b05_frame_begun_by_the_town(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        final int x = 226500, z = 50000;
+        Kit.hold(level, x, z, 48);
+        Kit.prepare(level, x, z, 48);
+        long day0 = quietDay(level.getDayTime() / 24000L + 2);
+        level.setDayTime(day0 * 24000L + 2000L);
+        List<VillageFolkEntity> folk = new ArrayList<>();
+        for (int i = 0; i < 6; i++) {
+            VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, Kit.surface(level, x + (i % 3) * 2 - 2, z + (i / 3) * 2 + 2), 0.0F);
+            helper.assertTrue(f != null, "a folk of the town");
+            f.setNoAi(true);
+            folk.add(f);
+        }
+        UUID village = folk.get(0).ownerId();
+        Villages.noteProject(village, "storage", level.getGameTime());          // its first building up
+        // The clock set back a day: today is before the day the town was founded.
+        long morning = (day0 - 1) * 24000L + 2000L;
+        level.setDayTime(morning);
+        List<BlockPos> stores = Villages.storeChests(level, village);
+        helper.assertTrue(!stores.isEmpty(), "the founders' stores");
+        Container chest = (Container) level.getBlockEntity(stores.get(0));
+        int slot = 0;
+        while (slot < chest.getContainerSize() && !chest.getItem(slot).isEmpty()) slot++;
+        chest.setItem(slot, new ItemStack(Items.OAK_LOG, 16));
+        chest.setItem(slot + 1, new ItemStack(Items.BELL, 1));
+        chest.setChanged();
+        Kit.log("b05 founded on day " + Chronicle.foundedOn(village) + ", the clock at day " + (morning / 24000L) + "; built "
+            + Villages.builtList(village));
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            level.setDayTime(morning);
+            Villages.Village v = Villages.get(village);
+            if (v == null) return;
+            String status = TownBell.status(level, v);
+            if (t % 200 == 0) Kit.log("b05 tick " + t + ": " + status);
+            com.jrpetty.mcassistant.entity.BellFrame.Frame frame = com.jrpetty.mcassistant.entity.BellFrame.of(village);
+            if (frame == null || !level.getBlockState(frame.bell()).is(Blocks.BELL)) {
+                if (t >= 3800) helper.fail("the town never built its bell frame: " + status);
+                return;
+            }
+            Kit.log("b05 done by tick " + t + ": " + status);
+            helper.assertTrue(status.contains(" DONE"), "the frame done, its bell in it: " + status);
+            helper.succeed();
+        });
+    }
 }
