@@ -49,6 +49,16 @@ public class DepositGoal extends Goal {
         return active && assistant.getTarget() == null && assistant.taskGen() == myGen;
     }
 
+    /**
+     * Every tick, not every other: a goal the game ticks only on alternate ticks, and only on the odd
+     * ones or the even ones as its folk's number falls, never sees a {@code tickCount % 10 == 0}
+     * when it is odd — half the village's smelters stood at their furnaces all day and lit none.
+     */
+    @Override
+    public boolean requiresUpdateEveryTick() {
+        return true;
+    }
+
     @Override
     public void start() {
         this.myGen = assistant.taskGen();
@@ -192,7 +202,7 @@ public class DepositGoal extends Goal {
             if (distSq < bestDistSq - 1.0) {
                 bestDistSq = distSq;
                 stuckTicks = 0;
-            } else if (++stuckTicks > 300) {
+            } else if (++stuckTicks > 600) {                         // fifteen seconds (ticked every tick)
                 if (assistant.isSettler() && assistant.putBeside(chestPos)) {
                     stuckTicks = 0;
                     bestDistSq = Double.MAX_VALUE;

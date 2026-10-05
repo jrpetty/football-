@@ -44,6 +44,16 @@ public class RecoverGoal extends Goal {
         return job != null && assistant.taskGen() == myGen && assistant.peekJob() == job;
     }
 
+    /**
+     * Every tick, not every other: a goal the game ticks only on alternate ticks, and only on the odd
+     * ones or the even ones as its folk's number falls, never sees a {@code tickCount % 10 == 0}
+     * when it is odd — half the village's smelters stood at their furnaces all day and lit none.
+     */
+    @Override
+    public boolean requiresUpdateEveryTick() {
+        return true;
+    }
+
     @Override
     public void start() {
         this.job = assistant.peekJob();
@@ -98,7 +108,7 @@ public class RecoverGoal extends Goal {
                 if (distSq < lastDistSq - 0.5) {
                     lastDistSq = distSq;
                     noProgressTicks = 0;
-                } else if (++noProgressTicks > 400) {
+                } else if (++noProgressTicks > 800) {                   // forty seconds (ticked every tick)
                     finish("I couldn't reach where you fell — got as close as I could.");
                 }
                 return;

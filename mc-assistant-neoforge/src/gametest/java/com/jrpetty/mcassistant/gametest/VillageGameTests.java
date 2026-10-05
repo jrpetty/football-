@@ -5643,7 +5643,7 @@ public class VillageGameTests {
         Kit.log("t83 the books: " + items.size() + " things; bread " + breadRow + "; lantern " + lanternRow + "; ingot " + ingotRow);
         helper.assertTrue(breadRow != null && breadRow.getInt("d1") == 5 && breadRow.getLong("total") == 5
             && breadRow.getString("by").contains("Farmer"), "the bread written down, and who made it: " + breadRow);
-        helper.assertTrue(lanternRow != null && lanternRow.getInt("d1") == 1 && lanternRow.getString("by").contains("Smith")
+        helper.assertTrue(lanternRow != null && lanternRow.getInt("d1") == 1 && lanternRow.getString("by").toLowerCase().contains("smith")
             && lanternRow.getInt("on_hand") >= 1, "the lantern, its maker and the one in the stores: " + lanternRow);
         helper.assertTrue(ingotRow != null && ingotRow.getInt("used7") == 1, "the ingot used: " + ingotRow);
         double rate = com.jrpetty.mcassistant.entity.Annals.ratePerDay(id,

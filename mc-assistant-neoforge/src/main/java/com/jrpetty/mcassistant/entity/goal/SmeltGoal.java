@@ -148,6 +148,16 @@ public class SmeltGoal extends Goal {
         return job != null && assistant.getTarget() == null && assistant.taskGen() == myGen;
     }
 
+    /**
+     * Every tick, not every other: a goal the game ticks only on alternate ticks, and only on the odd
+     * ones or the even ones as its folk's number falls, never sees a {@code tickCount % 10 == 0}
+     * when it is odd — half the village's smelters stood at their furnaces all day and lit none.
+     */
+    @Override
+    public boolean requiresUpdateEveryTick() {
+        return true;
+    }
+
     @Override
     public void start() {
         this.job = assistant.peekJob();
@@ -252,7 +262,7 @@ public class SmeltGoal extends Goal {
                 assistant.getNavigation().moveTo(
                     furnacePos.getX() + 0.5, furnacePos.getY(), furnacePos.getZ() + 0.5, 1.1D);
             }
-            if (++stuckTicks > 140) {
+            if (++stuckTicks > 280) {                                // seven seconds (it is ticked every tick)
                 finish("I couldn't reach the furnace.");
             }
             last = "walking, " + Math.round(Math.sqrt(distSq) * 10) / 10.0 + " away";

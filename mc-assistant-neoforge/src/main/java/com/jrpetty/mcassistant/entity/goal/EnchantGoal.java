@@ -57,6 +57,16 @@ public class EnchantGoal extends Goal {
             && assistant.taskGen() == myGen && assistant.peekJob() == job;
     }
 
+    /**
+     * Every tick, not every other: a goal the game ticks only on alternate ticks, and only on the odd
+     * ones or the even ones as its folk's number falls, never sees a {@code tickCount % 10 == 0}
+     * when it is odd — half the village's smelters stood at their furnaces all day and lit none.
+     */
+    @Override
+    public boolean requiresUpdateEveryTick() {
+        return true;
+    }
+
     @Override
     public void start() {
         this.job = assistant.peekJob();
@@ -113,7 +123,7 @@ public class EnchantGoal extends Goal {
                 assistant.getNavigation().moveTo(
                     tablePos.getX() + 0.5, tablePos.getY(), tablePos.getZ() + 0.5, 1.1D);
             }
-            if (++stuckTicks > 140) finish("I couldn't reach the enchanting table.");
+            if (++stuckTicks > 280) finish("I couldn't reach the enchanting table.");
             return;
         }
 
