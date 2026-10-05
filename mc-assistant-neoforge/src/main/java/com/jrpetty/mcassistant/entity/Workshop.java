@@ -609,6 +609,10 @@ public final class Workshop {
             if (in.size() >= 4) { in.add("more"); break; }
             in.add(Bench.words(e.getKey(), e.getValue()));
         }
+        // The shop's books say the whole way it was made: what this piece took ready-made out of the stores
+        // (the sticks the morning's torches left over) said made in its turn, down to what is gathered.
+        Stockroom.Line line = Stockroom.book(level, v.id(), Stockroom.Seller.SHOP).lines.get(key);
+        if (line != null) line.how = wholeWay(level, made.plan());
         String role = maker == null ? "the shop" : isHand(maker) ? "hand" : "shopkeeper";
         String who = maker == null ? "the shop" : maker.displayNameCap();
         s.log.add(new Entry(clock(level), who, role, what, String.join(", ", in), forWhat));
@@ -618,6 +622,67 @@ public final class Workshop {
         s.madeBy.merge(maker.getUUID(), 1, Integer::sum);
         DOINGS.put(maker.getUUID(), new Doing(what, forWhat, level.getGameTime() + DOING));
         if (isHand(maker)) atTheBench(level, v, maker);
+    }
+
+    /**
+     * The whole way a piece was made, for the shop's books: the piece's own chain, and then, for what it took
+     * ready-made out of the stores (sticks, planks, glass, paper — made earlier, here or anywhere), how that is
+     * made in its turn by the game's usual recipe, down to what is gathered: "3 cobblestone, 2 sticks, into a
+     * stone pickaxe; the sticks of planks, the oak planks of oak logs". What is a material in its own right (an
+     * ingot, a diamond, cobblestone, leather) or only ever unpacked from a block of itself (wheat out of a
+     * hay bale) is taken as gathered.
+     */
+    static String wholeWay(ServerLevel level, Bench.Plan p) {
+        String chain = p.chain();
+        if (!p.ok()) return chain;
+        List<String> notes = new ArrayList<>();
+        java.util.Set<Item> seen = new java.util.HashSet<>();
+        for (Bench.Step st : p.steps) seen.add(st.made());              // made in this piece: the chain says how
+        for (Item taken : p.takes.keySet()) explain(level, taken, notes, seen, 0);
+        return notes.isEmpty() ? chain : chain + "; " + String.join(", ", notes);
+    }
+
+    /** How this is made in its turn (its usual recipe's parts), and how they are, a few makings deep. */
+    private static void explain(ServerLevel level, Item it, List<String> notes, java.util.Set<Item> seen, int depth) {
+        if (depth > 3 || notes.size() >= 4 || !seen.add(it) || Tiers.material(it) != null) return;
+        List<RecipeBook.Way> ways = RecipeBook.waysFor(level, it);
+        if (ways.isEmpty() || !ways.get(0).canonical()) return;          // gathered, or not the usual way of it
+        RecipeBook.Way w = ways.get(0);
+        if (w.yield() == 9 && w.parts().size() == 1 && w.parts().get(0).count() == 1) return;   // unpacked from a block of itself
+        List<String> of = new ArrayList<>();
+        List<Item> next = new ArrayList<>();
+        for (RecipeBook.Part part : w.parts()) {
+            ItemStack[] kinds = part.ingredient().getItems();
+            if (kinds.length == 0) continue;
+            of.add(family(kinds));
+            next.add(kinds[0].getItem());
+        }
+        if (of.isEmpty()) return;
+        String name = Bench.plural(new ItemStack(it).getHoverName().getString().toLowerCase(Locale.ROOT));
+        String how = switch (w.fire()) {
+            case NONE -> " of ";
+            case SMITHING -> " at the smithing table, of ";
+            default -> " fired from ";
+        };
+        notes.add("the " + name + how + String.join(" and ", of));
+        for (Item n : next) explain(level, n, notes, seen, depth + 1);
+    }
+
+    /** What an ingredient takes, in the plural: "planks" for any plank, "oak logs" for an oak log or its wood. */
+    private static String family(ItemStack[] kinds) {
+        String first = BuiltInRegistries.ITEM.getKey(kinds[0].getItem()).getPath();
+        if (kinds.length > 1) {
+            String common = first;
+            for (ItemStack k : kinds) {
+                String path = BuiltInRegistries.ITEM.getKey(k.getItem()).getPath();
+                while (!common.isEmpty() && !(path.equals(common) || path.endsWith("_" + common))) {
+                    int cut = common.indexOf('_');
+                    common = cut < 0 ? "" : common.substring(cut + 1);
+                }
+            }
+            if (!common.isEmpty()) return Bench.plural(common.replace('_', ' '));
+        }
+        return Bench.plural(kinds[0].getHoverName().getString().toLowerCase(Locale.ROOT));
     }
 
     /** A hand to its crafting table in the shop's back room (setting its own down there if the shop has none). */

@@ -2713,7 +2713,9 @@ a piece every twenty seconds or so each.
   comes back; with none it fires it at its own bench.
 * **Where to see it.** The town's books → Shops → *The shop's workshop*: who is at the bench and what
   each made today, the day's pieces and what they were made of, the order book against the stock
-  (and what each is for), what waits on the next age, and what the next age will let it make
+  (and what each is for, and the whole way it was last made — what it took ready-made out of the stores
+  said made in its turn: *3 cobblestone, 2 sticks, into a stone pickaxe; the sticks of planks, the oak
+  planks of oak logs*), what waits on the next age, and what the next age will let it make
   (*the Iron Age will let us make iron swords, iron pickaxes, shields…*). `/village workshop` reads it
   out; `/village workshop blueprints [word]` lists the blueprints and the age each belongs to;
   `/village workshop order <item> [count]` puts something on the order book for you.
