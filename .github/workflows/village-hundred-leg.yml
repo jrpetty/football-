@@ -16,6 +16,10 @@ on:
       minutes:
         type: number
         default: 300
+      # The day the whole run goes to (a hundred, or four hundred for the long one).
+      days:
+        type: number
+        default: 100
 
 permissions:
   contents: write
@@ -48,14 +52,14 @@ jobs:
           echo "the last leg reached day $reached"
 
       - uses: actions/setup-java@v4
-        if: steps.where.outputs.reached < 100
+        if: steps.where.outputs.reached < inputs.days
         with:
           distribution: temurin
           java-version: "21"
           cache: gradle
 
       - name: Prepare a server directory
-        if: steps.where.outputs.reached < 100
+        if: steps.where.outputs.reached < inputs.days
         working-directory: mc-assistant-neoforge
         run: |
           mkdir -p run/config
@@ -82,14 +86,14 @@ jobs:
           TOML
 
       - name: Start the server
-        if: steps.where.outputs.reached < 100
+        if: steps.where.outputs.reached < inputs.days
         working-directory: mc-assistant-neoforge
         run: |
           chmod +x gradlew
           nohup ./gradlew --no-daemon runServer > server-gradle.log 2>&1 &
 
       - name: The days of this leg
-        if: steps.where.outputs.reached < 100
+        if: steps.where.outputs.reached < inputs.days
         working-directory: mc-assistant-neoforge
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -119,7 +123,7 @@ jobs:
           echo "[REAL] ==== leg ${{ inputs.leg }} on $(git rev-parse --short HEAD): from day $FIRST, $MINUTES minutes ====" >> real-hundred.txt
           ( while sleep 600; do publish real-hundred.txt; publish hundred-metrics.jsonl; done ) &
           LOOP=$!
-          python3 tools/realworld/soak.py hundred "$FIRST" 100 "$MINUTES" | tee -a real-hundred.txt
+          python3 tools/realworld/soak.py hundred "$FIRST" "${{ inputs.days }}" "$MINUTES" | tee -a real-hundred.txt
           echo "soak exit: ${PIPESTATUS[0]}"
           kill $LOOP 2>/dev/null
           # The server saves the world as it stops (the soak's last command): wait for it.

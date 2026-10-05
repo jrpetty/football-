@@ -1,9 +1,11 @@
 name: Village hundred days
 
-# A village left alone for a hundred game days on a real server: does the town keep growing,
+# A village left alone for four hundred game days on a real server: does the town keep growing,
 # trading, building and getting on with its neighbours the whole way? A runner has six hours
 # and a big town runs slower by the day, so it is run in legs (village-hundred-leg.yml): each
-# leg saves the world for the next. Started by touching tools/realworld/hundred.trigger.
+# leg saves the world for the next, and a leg that finds the days all done does nothing. The
+# hundred-day marks (day 10, day 100) are read from the same run's metrics. Started by touching
+# tools/realworld/hundred.trigger.
 
 on:
   push:
@@ -22,43 +24,67 @@ concurrency:
 jobs:
   leg1:
     uses: ./.github/workflows/village-hundred-leg.yml
-    with: { leg: 1 }
+    with: { leg: 1, days: 400 }
     secrets: inherit
   leg2:
     needs: leg1
     if: ${{ !cancelled() }}
     uses: ./.github/workflows/village-hundred-leg.yml
-    with: { leg: 2, prev: 1 }
+    with: { leg: 2, prev: 1, days: 400 }
     secrets: inherit
   leg3:
     needs: leg2
     if: ${{ !cancelled() }}
     uses: ./.github/workflows/village-hundred-leg.yml
-    with: { leg: 3, prev: 2 }
+    with: { leg: 3, prev: 2, days: 400 }
     secrets: inherit
   leg4:
     needs: leg3
     if: ${{ !cancelled() }}
     uses: ./.github/workflows/village-hundred-leg.yml
-    with: { leg: 4, prev: 3 }
+    with: { leg: 4, prev: 3, days: 400 }
     secrets: inherit
   leg5:
     needs: leg4
     if: ${{ !cancelled() }}
     uses: ./.github/workflows/village-hundred-leg.yml
-    with: { leg: 5, prev: 4 }
+    with: { leg: 5, prev: 4, days: 400 }
     secrets: inherit
   leg6:
     needs: leg5
     if: ${{ !cancelled() }}
     uses: ./.github/workflows/village-hundred-leg.yml
-    with: { leg: 6, prev: 5 }
+    with: { leg: 6, prev: 5, days: 400 }
+    secrets: inherit
+  leg7:
+    needs: leg6
+    if: ${{ !cancelled() }}
+    uses: ./.github/workflows/village-hundred-leg.yml
+    with: { leg: 7, prev: 6, days: 400 }
+    secrets: inherit
+  leg8:
+    needs: leg7
+    if: ${{ !cancelled() }}
+    uses: ./.github/workflows/village-hundred-leg.yml
+    with: { leg: 8, prev: 7, days: 400 }
+    secrets: inherit
+  leg9:
+    needs: leg8
+    if: ${{ !cancelled() }}
+    uses: ./.github/workflows/village-hundred-leg.yml
+    with: { leg: 9, prev: 8, days: 400 }
+    secrets: inherit
+  leg10:
+    needs: leg9
+    if: ${{ !cancelled() }}
+    uses: ./.github/workflows/village-hundred-leg.yml
+    with: { leg: 10, prev: 9, days: 400 }
     secrets: inherit
 
   # The town at the end of it, in pictures: the last leg's world loaded by a server, and a
   # real client on a virtual display photographing it (tools/realworld/photo.py).
   photos:
-    needs: leg6
+    needs: leg10
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -69,7 +95,7 @@ jobs:
       - name: The world the hundred days made
         uses: actions/download-artifact@v4
         with:
-          name: hundred-world-6
+          name: hundred-world-10
           path: carried
 
       - uses: actions/setup-java@v4
