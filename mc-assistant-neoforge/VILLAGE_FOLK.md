@@ -1111,6 +1111,7 @@ with plain blocks, so a building is never held up.
 | Smithy | 9×9 | Stone forge open to the street between log pillars: two furnaces under a brick hood, the anvil, a grindstone, a quenching tub, a bench and chests |
 | Brewery | 9×9 | Timber still-house on a stone footing: two brewing stands on a stone bench, cauldrons, casks, a window to the street |
 | Library | 9×9 | Stone hall with tall windows, walls lined with bookshelves, an enchanting table on a carpet between lecterns |
+| School | 9×11 | Timber schoolroom under a steep roof, tall windows down both sides: two rows of desks (a top slab, a stair for a bench) either side of the aisle, the teacher's lectern, and at the back a blackboard over a cupboard of barrels, a bookshelf either side |
 
 Builders take the place the town plan has for the building. Of the first few good
 lots they pick the one that costs least to build on. They level it (filling the low
@@ -1502,7 +1503,9 @@ level and how often it lays a block.
   side at work, watching and having a go. The teacher is a parent at work, or else the
   most practised hand at the trade the village needs most. When the child grows up it
   takes up that trade (unless the village has more than enough hands at it) with a few
-  levels' knack already. The village's history records who taught whom.
+  levels' knack already. The village's history records who taught whom. Once the village has a
+  school, the morning's lessons come first and the apprenticeship has what is left of the
+  morning; a schooled child takes up the trade it leaned to at school instead (see *The school*).
 * **Age.**
   * A child is grown at eighteen, three days after it is born.
   * Grown folk age two years a day. The founders were grown when the village began.
@@ -1526,6 +1529,63 @@ level and how often it lays a block.
   * the **family trees**: every couple who came from outside the village, and under
     them their children, grandchildren and great-grandchildren, a dash deeper for each
     generation, with a dagger by those who have died.
+
+### The school
+
+Once a Stone Age village has ten folk or more and three children, it wants a **schoolhouse**
+(one of its amenities, after what its age asks for; the council may vote it up the list, the
+parents of little ones first). The builders raise it like any other building, out of the stores:
+a timber schoolroom with two rows of desks either side of the aisle (a top slab for the desk, a
+stair for the bench: eight places), the teacher's lectern, and at the back a cupboard of barrels
+with a bookshelf either side. It is rebuilt in stone and slate with the ages, and furnished for
+them, like the rest.
+
+* **The teacher.** A grown folk with a trade is asked to teach: an old hand first, then the
+  curious, the patient (easygoing), the kind, the readers, and the best at their trade; never the
+  elder or the watch, and seldom a village's only smith. It teaches in the mornings and goes back
+  to its own trade at noon, and it is paid for teaching on top of its trade's wage (a miner's rate
+  at the place's standing: 2 coins a day in a hamlet, 3 in a village...). Its card says
+  "Teacher", with what it teaches; the Jobs page has a row for it. The village's history records
+  who took the school.
+* **The schoolroom put to rights.** Before its first lesson of a morning the teacher puts up what
+  is missing, out of the stores: the **blackboard** on the back wall (six blocks of black wool, or
+  black terracotta or concrete, a block of coal, blackstone or slate: whatever the stores have),
+  a **book on the lectern** (a book and quill or a written book if there is one, else a plain book),
+  and the lectern itself or a bookshelf if the builders had no books for them (eight or six planks
+  and three books). What the stores cannot pay for waits.
+* **Lessons**, on working mornings (never on the day of rest), from half past seven to half past
+  eleven (after the morning assembly). Every child from a day old until it grows up goes to its
+  desk; the teacher stands at the lectern before the blackboard, wishes the class good morning,
+  says what the day's lesson is (a trade a day, one of the class's own), and now and then a line
+  of it: "A good miner listens to the stone: a hollow knock means a cave behind it." The children
+  answer back. After school, the apprenticeship (see above) has the rest of the morning.
+* **What a child leans to.** On its first morning each child takes a leaning to a trade: its
+  parents' trades pull hardest, then what it has watched at its apprenticeship, its own nature
+  (curious: the mine, the library, the brewery; shy: the hives, the loom, the water; generous: the
+  fields and the kitchen...), what it loves doing (fishing, gardening, reading, whittling...) and
+  what it loves to be given, and what the village has a use for.
+* **Learning.** Every five seconds at its desk with the teacher in the room, a child learns a
+  little of its trade, and a little of the day's lesson if that is another trade (a level or two
+  at most). A full schooling, about two mornings, is worth **level five** under a plain teacher
+  and up to **eight** under a good one: one more for a teacher of level ten at its trade, one for a
+  master of twenty, one for an old, patient or curious one. A curious or patient teacher teaches a
+  little quicker, a grumpy one slower; a hardworking or curious child learns quicker, an easygoing
+  one slower.
+* **Truants.** Now and then a child plays instead: an easygoing one most, a grumpy or sociable
+  one sometimes, a curious one seldom, a hardworking one never. It learns nothing that morning.
+* **Grown up.** A child that went to school takes up the trade it leaned to, at the level its
+  lessons made ("Ada grew up and went to work as a miner, level 6 from the school"), with its
+  apprenticeship's knack on top when that was the same trade; only if the village has more than
+  enough hands at it does it go where it is needed instead, its school levels kept for the day it
+  takes the trade up. A child that never went (no school yet, or a truant every morning) starts
+  at level nought, as before. A schooled child grown up at level five has its first knack point
+  at once (see *Knacks*).
+* **See it.** A child's card has a **School** line: "at school: learning to be a miner, level 3
+  (2 mornings; its parent Tom is a miner)", or "playing truant this morning"; its talk screen says
+  "At school, learning to be a miner" while it is at its desk; ask it what it is good at and it
+  tells you. The teacher's card says it **Teaches**: its pupils, the mornings taught, how far a
+  schooling under it goes and what it is paid for it. The town's books have a **School** page (see
+  *The town's books*), and `/village school` says it all in chat.
 
 ### The tavern
 
@@ -2289,7 +2349,7 @@ its own. The council sits in the hall's council chamber.
 Right-click the village board (or press **Analytics** in the village journal, or type
 `/village stats`) and the town's books open: everything the village is and has been, with
 charts, so you can see exactly what is driving its growth. Every morning the village is
-written down (kept for four hundred days), and the books have nineteen pages, picked along the
+written down (kept for four hundred days), and the books have twenty pages, picked along the
 top (in two rows on a small window; the arrow keys turn the pages); the range (a week, a month, a hundred days, or all of it) is picked at the top right, and
 every chart reads out the day under the mouse.
 
@@ -2339,7 +2399,9 @@ every chart reads out the day under the mouse.
   and its share of everything the village made, biggest earner first; under it, what every trade made each day, stacked, so you can
   see at a glance which trades bring in the most and how that has changed (the mouse reads out
   each trade's share of the day). Click a trade for its own history (what it made, and how many
-  worked at it, day by day).
+  worked at it, day by day). Once the school has a teacher it has a row of its own, the
+  **Teacher**: one hand, its level and what teaching pays it a day (it is counted at its own trade
+  too, which it works in the afternoons).
 * **Folk:** everybody, with trade, level, age (in years), loose money (what is in its purse),
   pay, what each made yesterday, mood, nature and net worth; click any heading to sort by it (sort
   by "Loose" or "Net worth" for the richest). The mouse over a folk lays its money out: loose money,
@@ -2409,9 +2471,17 @@ every chart reads out the day under the mouse.
   buildings, how far and which way, and the terms it is on with each), its neighbours, and
   the latest of its chronicle.
 * **Board:** the board's own page.
+* **School:** the schoolhouse (where, its desks, whether the blackboard is up and a book on the
+  lectern; or why there is none yet), the teacher (who, its trade and level, why it was chosen,
+  what it is paid for it, how far a schooling under it goes), this morning's lesson and the
+  mornings taught, who has left school and as what; and every child: its age, the trade it leans
+  to (the mouse over it says why), its level at it so far against a full schooling, the mornings
+  it has been, and where it is now (at its desk, on the way, home, too young, truant). See *The
+  school* below.
 
 `/village stats <page>` opens the books at a page by its number, counting from Overview at 0:
-Stock is 12, Research 13, Why 14, Trends 15, Records 16, News 17 and the Board 18.
+Stock is 12, Research 13, Why 14, Trends 15, Records 16, News 17 and the Board 18. The School page
+comes after the Board: `/village school page` opens the books at it.
 
 ### The city's research
 
@@ -3135,6 +3205,13 @@ ripen, days pass, folk work and houses go up at that pace.
 * `/village stats [page]` — the town's books on the analytics screen (as clicking the village
   board does), opened at a page if one is given (0 the Overview to 18 the Board; 12 is the Stock,
   13 Research); from the console, the reading of what drives the village's growth.
+* `/village school` — the nearest village's school: the schoolhouse, the teacher (why, its pay,
+  how far a schooling under it goes), this morning, every child with the trade it leans to, its
+  level so far and its mornings, and who has left school. Works from the console. `school page`
+  opens the town's books at the School page; `school lesson` (operators) calls a lesson now,
+  whatever the hour, for two minutes; `school say` (operators) has the nearest teacher say a
+  line of the lesson; `school stage` (operators) sets a schoolhouse out on a stage mid-lesson for
+  the pictures (`/kill @e[tag=folk_lineup]` clears its folk).
 * `/village research` — the city's research: points in hand and a day, what is being studied,
   who chose it and why, and every branch's civics with their keys, states and costs. Works from
   the console. `research pick <civic>` and `research grant <civic>` (operators) set the town to an

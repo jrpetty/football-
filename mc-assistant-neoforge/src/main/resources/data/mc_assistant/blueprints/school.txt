@@ -1,0 +1,128 @@
+# The schoolhouse: a timber schoolroom on a stone footing, under a steep roof that
+# runs from the gable over the door to the back, tall windows down both sides. At the back of
+# the room a cupboard of barrels with a bookshelf either side, and over it the blackboard
+# (put up by the teacher, of black wool or slate out of the stores: School); the teacher's
+# lectern before it; and two rows of desks either side of the aisle, a top slab for a desk
+# with a stair for a bench behind it, eight places in all. Lanterns hang from the beams.
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name school
+layer -1
+.........
+.FFFFFFF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FFFFFFF.
+....k....
+layer 0
+.........
+.LwwwwwL.
+.wKQQQKw.
+.wK...Kw.
+.w..r..w.
+.w==.==w.
+.wvv.vvw.
+.w==.==w.
+.wvv.vvw.
+.LwwDwwL.
+.........
+layer 1
+.........
+.LWWWWWL.
+.W.....W.
+.W.....W.
+.G.....G.
+.W.....W.
+.G.....G.
+.W.....W.
+.G.....G.
+.LGW.WGL.
+.........
+layer 2
+.........
+.LWWWWWL.
+.W.....W.
+.W.....W.
+.G.....G.
+.W.....W.
+.G.....G.
+.W.....W.
+.G.....G.
+.LWWWWWL.
+.........
+layer 3
+.........
+.LWWWWWL.
+.W.....W.
+.W.....W.
+.W..j..W.
+.W.....W.
+.W.....W.
+.W..j..W.
+.W.....W.
+.LWWWWWL.
+.........
+layer 4
+>.......<
+>L-----L<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>L-----L<
+>.......<
+layer 5
+.>.....<.
+.>WWWWW<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>WWWWW<.
+.>.....<.
+layer 6
+..>...<..
+..>WWW<..
+..>...<..
+..>...<..
+..>...<..
+..>...<..
+..>...<..
+..>...<..
+..>...<..
+..>WWW<..
+..>...<..
+layer 7
+...>.<...
+...>W<...
+...>.<...
+...>.<...
+...>.<...
+...>.<...
+...>.<...
+...>.<...
+...>.<...
+...>W<...
+...>.<...
+layer 8
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....

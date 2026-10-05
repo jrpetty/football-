@@ -112,7 +112,7 @@ public final class Wealth {
     static int earned(VillageFolkEntity f) {
         int lv = f.veteranLevel();
         return tradeWage(f.stationTask(), f.ownerId()) + (lv >= 10 ? 1 : 0) + (lv >= 25 ? 1 : 0) + (f.isElder() ? 1 : 0) + bonus(f)
-            + madeShare(f);
+            + madeShare(f) + School.pay(f);                    // the village's teacher: a teacher's wage on top (School)
     }
 
     /** How today's wage is made up: "6 as a smith in a town, +1 at level ten, +2 for a hard day". */
@@ -128,6 +128,8 @@ public final class Wealth {
         if (lv >= 10) sb.append(", +1 at level ten");
         if (lv >= 25) sb.append(", +1 at twenty-five");
         if (f.isElder()) sb.append(", +1 as the elder");
+        int teaching = School.pay(f);
+        if (teaching > 0) sb.append(", +").append(teaching).append(" for teaching the school");
         if (b > 0) sb.append(", +").append(b).append(b == 2 ? " for a hard day's work" : " for a fair day's work");
         int made = madeShare(f);
         if (made > 0) sb.append(", +").append(made).append(" for what it made yesterday");

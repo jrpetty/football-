@@ -264,6 +264,34 @@ def sweeper_stage(r, look, cx, cz):
     shot("18-sweeper-3-stores")
     say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
     say("alive after the sweeper: %s" % client_alive())
+def school_stage(r, look, cx, cz):
+    """The village school mid-lesson: a schoolhouse set out on a stage in clear air (/village school
+    stage), the blackboard up, the teacher at the lectern and six children at their desks; from the
+    street, then from the back of the schoolroom over the children's heads while the teacher says a
+    line of the lesson; and the School page of the nearest village's books."""
+    sx, sy, sz = cx - 120, 150, cz + 120
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("time set 2500")
+    r.cmd("tp %s %d %d %d" % (USER, sx + 7, sy + 6, sz + 16))
+    time.sleep(10)                                     # the stage's chunks arrive
+    out = r.cmd("execute positioned %d %d %d run village school stage" % (sx, sy, sz))
+    say("school stage: " + out[:400])
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        x, y, z, ax, ay, az = int(x), int(y), int(z), int(ax), int(ay), int(az)
+        if name == "school-lesson":
+            # In close first, so the teacher's words reach the camera; its bubble lasts a few seconds.
+            r.cmd("tp %s %d %d %d" % (USER, x, y, z))
+            time.sleep(2)
+            say("lesson: " + r.cmd("execute positioned %d %d %d run village school say" % (x, y, z))[:200])
+        look("20-%s" % name, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=3 if name == "school-lesson" else 8)
+    r.cmd("kill @e[tag=folk_lineup,type=!player]")
+    # The School page of the books (the last page; opened by its name).
+    say("school page: " + r.cmd("execute as %s at @s run village school page" % USER)[:200])
+    time.sleep(4)
+    shot("20-school-page")
+    r.cmd("execute as %s run village stats close" % USER)
+    say("school: " + r.cmd("execute as %s at @s run village school" % USER)[:400])
+    say("alive after the school: %s" % client_alive())
 
 
 def main():
@@ -443,6 +471,10 @@ def main():
         showcase(r, cx, cz, look)
     except Exception as e:  # noqa: BLE001
         say("showcase failed: %s" % e)
+    try:
+        school_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("school stage failed: %s" % e)
     alive = client_alive()
     say("alive at the end: %s" % alive)
     say("PASS the client drew the village and kept running" if alive else "FAIL the client died while drawing the village")

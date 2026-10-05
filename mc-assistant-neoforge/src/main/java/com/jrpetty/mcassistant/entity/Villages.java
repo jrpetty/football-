@@ -375,6 +375,7 @@ public final class Villages {
         Interiors.resetForTests();
         Palettes.resetForTests();
         Court.resetForTests();
+        School.resetForTests();
         Annals.resetForTests();
         Trades.resetForTests();
         Links.resetForTests();
@@ -1503,6 +1504,8 @@ public final class Villages {
         if (folk >= 12 && built(villageId, "tavern") < 1) extras.add("tavern");
         // A Stone Age village's square gets a fountain.
         if (folk >= 10 && built(villageId, "fountain") < 1) extras.add("fountain");
+        // A schoolhouse, once there are children enough to fill one (School).
+        if (School.wanted(villageId, folk) && built(villageId, "school") < 1) extras.add("school");
         // The courtyard before the board, where the village gathers; and, once the town is big enough
         // to want governing, a hall for whoever leads it, on the great lot behind the board.
         if (VillageBoards.boardOf(villageId) != null && built(villageId, "hall") > 0 && built(villageId, "court") < 1) extras.add("court");
@@ -1855,6 +1858,7 @@ public final class Villages {
             case "shop" -> "a shop, to sell what the village's crafts make";
             case "brewery" -> "a brewery, for the brewer's potions";
             case "library" -> "a library, where the enchanter keeps its books";
+            case "school" -> School.why(villageId);
             case "fountain" -> "a fountain on the square, now that the village builds in stone";
             case "manor" -> "a manor house, six beds under a slate roof: the best homes a town of the Iron Age has";
             case "belltower" -> "a bell tower on the square, to ring the hours of a Diamond Age town";

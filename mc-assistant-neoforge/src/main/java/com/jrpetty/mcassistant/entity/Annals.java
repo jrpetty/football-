@@ -529,6 +529,7 @@ public final class Annals {
         out.put("storehouse", Storekeeping.report(level, v));
         out.put("buildings", buildings(level, v));
         out.put("research", CityTree.report(id));                // the city's research: the tree, the pick and why
+        out.put("school", School.report(level, v));              // the school: its teacher, its pupils and what they lean to
         List<String> queue = new ArrayList<>();
         for (String p : Villages.projectsWanted(id)) queue.add(Villages.spoken(p));
         out.put("queue", strings(queue));
@@ -592,6 +593,9 @@ public final class Annals {
             c.putInt("wage_bill", a[2]);
             out.add(c);
         }
+        // The school's teacher, on top of its own trade (School).
+        CompoundTag teacher = School.jobsRow(id);
+        if (teacher != null) out.add(teacher);
         return out;
     }
 

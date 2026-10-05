@@ -347,6 +347,9 @@ public class VillageFolkEntity extends AssistantEntity {
         // Election day (Elections): at its own hour, to the board to cast its vote.
         if (!withAPlayer && tickCount % 4 == 2 && level() instanceof net.minecraft.server.level.ServerLevel polling
                 && Elections.goVote(this, polling)) return;
+        // The school's morning (School): the children to their desks, the teacher to the lectern.
+        if (!withAPlayer && tickCount % 4 == 0 && level() instanceof net.minecraft.server.level.ServerLevel schooling
+                && School.hold(this, schooling)) return;
         // Called to the town's own work (TownJobs): to the spot, and at it.
         if (!withAPlayer && tickCount % 4 == 3 && level() instanceof net.minecraft.server.level.ServerLevel works
                 && TownJobs.hold(this, works)) return;
@@ -1213,6 +1216,11 @@ public class VillageFolkEntity extends AssistantEntity {
         if (t != StationTask.NONE && amount > 0) tradeXp.merge(t, amount + FolkSkills.extraXp(this, amount), (a, b) -> Math.min(1_000_000, a + b));
     }
 
+    /** What a lesson at the school taught it of a trade (School): put by for the day it takes the trade up. */
+    public void schoolXp(StationTask t, int amount) {
+        if (t != StationTask.NONE && amount > 0) tradeXp.merge(t, amount, (a, b) -> Math.min(1_000_000, a + b));
+    }
+
     /** Tests: so much experience at a trade, as though it had worked for it (xpForLevel gives a level's worth). */
     public void tradeXpForTests(StationTask t, int xp) {
         if (t == StationTask.NONE) return;
@@ -1757,7 +1765,15 @@ public class VillageFolkEntity extends AssistantEntity {
             // An apprentice takes up the trade it learned, unless the village has more than enough
             // hands at it already, and starts it with a few years' knack already in its hands.
             String learned = null;
-            if (village != null && apprenticeTo != StationTask.NONE && apprenticeTo != StationTask.GUARD
+            // Schooled (School): it takes up the trade it leaned to at school, what it learned there in
+            // hand (and its apprenticeship's knack too, where that was the same trade).
+            StationTask schooled = village == null ? StationTask.NONE : School.graduate(this, day);
+            if (schooled != StationTask.NONE) {
+                setStation(blockPosition(), schooled);
+                if (apprenticeTo == schooled) awardXp(APPRENTICE_XP);
+                learned = schooled.title.toLowerCase(java.util.Locale.ROOT);
+            }
+            if (village != null && learned == null && apprenticeTo != StationTask.NONE && apprenticeTo != StationTask.GUARD
                     && !Villages.overStaffed(village, apprenticeTo)) {
                 setStation(blockPosition(), apprenticeTo);
                 awardXp(APPRENTICE_XP);
@@ -1782,9 +1798,14 @@ public class VillageFolkEntity extends AssistantEntity {
             }
             if (village != null) Assemblies.cameOfAge(village, this, learned);
             if (village != null) Villages.tell(village, day, displayNameCap() + " grew up"
-                + (learned == null ? "" : called ? " and went to work as a " + learned
+                + (learned == null ? "" : schooled != StationTask.NONE ? " and went to work as " + School.a(schooled) + ", level "
+                    + veteranLevel() + " from the school"
+                    : called ? " and went to work as a " + learned
                     : " and became a " + learned + ", as " + mentorName() + " taught them"));
-            FolkTalk.speak(this, called
+            FolkTalk.speak(this, schooled != StationTask.NONE
+                ? FolkTalk.pick(getRandom(), "I'm " + School.a(schooled) + " at last — I learned it at school!", "All grown up, and "
+                    + School.a(schooled) + " already: level " + veteranLevel() + "!")
+                : called
                 ? FolkTalk.pick(getRandom(), "All grown up — and I'm to be a " + learned + "!", "A " + learned + ", they say. I'll do my best.")
                 : learned != null
                 ? FolkTalk.pick(getRandom(), "I'm a " + learned + " now, like " + mentorName() + "!", "All grown up, and I know my trade.")
@@ -2154,6 +2175,7 @@ public class VillageFolkEntity extends AssistantEntity {
     protected boolean eveningSocial() {
         if (Assemblies.attending(this)) return true;          // at the village's gathering (Assemblies)
         if (TownJobs.busy(this)) return true;                 // at the town's work (TownJobs)
+        if (School.teaching(this)) return true;               // at the school's lectern (School)
         if (Raids.underAlarm(ownerId())) return false;       // the bell is ringing: no evening out
         long t = level().getDayTime() % 24000L;
         long bedtime = bedtimeTick();
@@ -2365,6 +2387,8 @@ public class VillageFolkEntity extends AssistantEntity {
         if (Assemblies.attending(this)) return false;
         // On the town's own work (TownJobs): its trade waits till that is done.
         if (TownJobs.busy(this)) return false;
+        // At the school's lectern (School): its trade waits for the afternoon.
+        if (School.teaching(this)) return false;
         // The bell: every guard turns out, whichever watch it keeps; nobody else works.
         UUID alarmed = ownerId();
         if (alarmed != null && Raids.underAlarm(alarmed)) return stationTask() == StationTask.GUARD;

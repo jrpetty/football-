@@ -1090,9 +1090,50 @@ windows all round both floors, and the chimney carried up past the new roof.""")
     b.write()
 
 
+def school():
+    b = B("school", 4, 5, """The schoolhouse: a timber schoolroom on a stone footing, under a steep roof that
+runs from the gable over the door to the back, tall windows down both sides. At the back of
+the room a cupboard of barrels with a bookshelf either side, and over it the blackboard
+(put up by the teacher, of black wool or slate out of the stores: School); the teacher's
+lectern before it; and two rows of desks either side of the aisle, a top slab for a desk
+with a stair for a bench behind it, eight places in all. Lanterns hang from the beams.""")
+    b.ring(-3, 3, -1, -4, 4, "F")
+    b.fill(-2, 2, -1, -3, 3, "f")
+    b.set(0, -1, -5, "k")                                  # a step up to the door
+    for h in (0, 1, 2, 3):
+        b.ring(-3, 3, h, -4, 4, "w" if h == 0 else "W", corner="L")
+    b.set(0, 0, -4, "D")
+    b.set(0, 1, -4, ".")
+    for z in (-3, -1, 1):                                  # tall windows down both sides
+        for h in (1, 2):
+            b.set(-3, h, z, "G")
+            b.set(3, h, z, "G")
+    for x in (-2, 2):                                      # and either side of the door
+        b.set(x, 1, -4, "G")
+    for x in (-1, 0, 1):                                   # the cupboard under the blackboard
+        b.set(x, 0, 3, "Q")
+    for z in (2, 3):                                       # a bookshelf either side
+        b.set(-2, 0, z, "K")
+        b.set(2, 0, z, "K")
+    b.set(0, 0, 1, "r")                                    # the lectern; the teacher stands behind it
+    for z in (0, -2):                                      # the desks, a bench behind each
+        for x in (-2, -1, 1, 2):
+            b.set(x, 0, z, "=")
+            b.set(x, 0, z - 1, "v")
+    b.ring(-3, 3, 4, -4, 4, "-", corner="L")
+    for z in range(-3, 4):
+        b.set(-3, 4, z, "|")
+        b.set(3, 4, z, "|")
+    b.fill(-2, 2, 4, -3, 3, "f")
+    gable_z(b, -4, 4, -5, 5, 4, gable_z0=-4, gable_z1=4)
+    for z in (1, -2):
+        b.set(0, 3, z, "j")
+    b.write()
+
+
 ALL = [house, guesthouse, storage, shelter, well, smeltery, workshop, hall, market, watchtower,
        smithy, brewery, library, cafe, shop, tavern, graveyard, house2,
-       lighthouse, chapel, gateway, granary, barracks, monument]
+       lighthouse, chapel, gateway, granary, barracks, monument, school]
 
 if __name__ == "__main__":
     want = sys.argv[1:]

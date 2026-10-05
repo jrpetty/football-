@@ -210,7 +210,10 @@ public final class FolkTalk {
 
     /** "What are you good at?" — its trades and its nature, in its own words. */
     static String knack(VillageFolkEntity f) {
-        if (f.isBaby()) return "Hide and seek! I'm the best at hide and seek.";
+        if (f.isBaby()) {
+            String school = School.childSays(f);              // what it is learning at school (School)
+            return school != null ? school : "Hide and seek! I'm the best at hide and seek.";
+        }
         AssistantEntity.StationTask job = f.stationTask();
         String levels = f.tradeLevels();
         String now = job == AssistantEntity.StationTask.NONE ? "I've no trade just now."
@@ -229,7 +232,7 @@ public final class FolkTalk {
     private static void send(VillageFolkEntity f, ServerPlayer p, boolean open, String said, String asked) {
         Persona me = f.persona();
         int aff = me.affinity(p.getUUID());
-        String about = (f.isElder() ? "Elder · " : "") + (f.isBaby() ? "Child" : f.stationTask().title) + " · "
+        String about = (f.isElder() ? "Elder · " : "") + School.title(f) + (f.isBaby() ? "Child" : f.stationTask().title) + " · "
             + f.life().traitsLabel().toLowerCase(Locale.ROOT) + " · loves " + me.hobby().doing;
         String where = "";
         if (f.ownerId() != null) {
@@ -253,6 +256,8 @@ public final class FolkTalk {
     /** What it is doing this minute, in a line for the top of the talk screen. */
     public static String nowDoing(VillageFolkEntity f) {
         if (f.isSleeping()) return "Asleep";
+        String school = School.doing(f);                     // at a desk, or at the lectern (School)
+        if (school != null) return school;
         if (f.isBaby()) return "Playing";
         Job j = f.peekJob();
         if (j != null) return capFirst(j.label());
@@ -295,8 +300,10 @@ public final class FolkTalk {
             line(sb, "Keeps", "the storehouse: its counter, its books" + (couriers > 0 ? ", and its " + couriers
                 + (couriers == 1 ? " courier" : " couriers") : ""));
         }
+        // Its schooling (a child: what it is learning and how far; the teacher: its school).
+        line(sb, f.isBaby() ? "School" : "Teaches", School.cardLine(f));
         String levels = f.tradeLevels();
-        if (!levels.isEmpty() && levels.contains(",")) line(sb, "Has worked", levels);
+        if (!f.isBaby() && !levels.isEmpty() && levels.contains(",")) line(sb, "Has worked", levels);
         if (!f.isBaby()) line(sb, "At its work", Skill.line(f));
         // How quick it is at its work, and why, part by part (AssistantEntity.paceLine): its level,
         // its tool, its spirits, the town, its years, the town's research and its own knacks.
