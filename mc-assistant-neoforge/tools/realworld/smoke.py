@@ -284,8 +284,10 @@ def found_village(r, cx, cz, look):
     # Measured: the square inside its wobbling edge (radius less four) should all stand at one height.
     say("ground check: " + r.cmd("village found ground %d %d %d" % (fx, fz, radius - 4))[:900])
     # The levelled ground and its sloped edges from high up, the hill's cut face, and the folk at their camp.
-    look("17-found-4-done-air", fx + 100, level_y + 85, fz + 100, fx, level_y, fz, wait=12)
-    look("17-found-5-done-overhead", fx + 4, level_y + 130, fz + 10, fx, level_y, fz, wait=8)
+    # (Inside the client's sight: ten chunks, its fog closing in from about a hundred and forty blocks.
+    # From higher up the square was lost in the fog and the overhead saw nothing but sky.)
+    look("17-found-4-done-air", fx + 78, level_y + 58, fz + 78, fx, level_y, fz, wait=14)
+    look("17-found-5-done-overhead", fx + 2, level_y + 82, fz + 6, fx, level_y, fz, wait=10)
     ex, ez = at(radius + 34, 46)
     look("17-found-6-edge", ex, level_y + 22, ez, hill_x, level_y + 4, hill_z, wait=8)
     look("17-found-7-folk", fx + 10, level_y + 6, fz + 10, fx, level_y + 1, fz, wait=8)

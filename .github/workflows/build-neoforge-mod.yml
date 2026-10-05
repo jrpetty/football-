@@ -330,7 +330,7 @@ jobs:
           online-mode=false
           spawn-protection=0
           max-tick-time=-1
-          view-distance=8
+          view-distance=10
           simulation-distance=6
           sync-chunk-writes=false
           enable-rcon=true
@@ -349,7 +349,7 @@ jobs:
           pauseOnLostFocus:false
           narrator:0
           fancyGraphics:false
-          renderDistance:8
+          renderDistance:10
           simulationDistance:6
           maxFps:30
           guiScale:2
