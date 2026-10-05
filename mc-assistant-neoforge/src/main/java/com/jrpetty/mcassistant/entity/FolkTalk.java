@@ -511,6 +511,7 @@ public final class FolkTalk {
             case "miserable" -> pick(r, "Everybody's so low round here.", "This village has seen better days.");
             case "leader" -> Leader.moodWords(f, true);
             case "leaderhard" -> Leader.moodWords(f, false);
+            case "civic" -> CityTree.moodWords(f);
             default -> "";
         };
     }

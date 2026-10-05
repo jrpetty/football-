@@ -120,6 +120,11 @@ public final class Raids {
         return a != null && a.raid;
     }
 
+    /** The last day a raiding band came at this village (-100 if never): the leader's research looks to the watch after it (CityTree). */
+    public static long raidedOn(@Nullable UUID village) {
+        return village == null ? -100L : RAIDED.getOrDefault(village, -100L);
+    }
+
     /** Why the bell is ringing, for the status line; null when it is not. */
     @Nullable
     public static String why(@Nullable UUID village) {

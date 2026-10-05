@@ -142,7 +142,10 @@ public final class Contentment {
         // A day of rest kept this week.
         int rest = RestDay.keptThisWeek(id, day) ? 5 : 0;
         if (rest > 0) good.add("a day of rest");
-        int score = Math.max(0, Math.min(100, foodPts + homesPts + moodPts + safety + amenities + wages + rest));
+        // The town's Feast Days (CityTree): a little more content, all year round.
+        int feasts = CityTree.contentment(id);
+        if (feasts > 0) good.add("feast days kept");
+        int score = Math.max(0, Math.min(100, foodPts + homesPts + moodPts + safety + amenities + wages + rest + feasts));
         return new View(score, word(score), foodPts, homesPts, moodPts, safety, amenities, wages, good, bad);
     }
 

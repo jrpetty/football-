@@ -2101,6 +2101,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     public int buildPaceTicks() {
         int pct = Math.max(-30, Math.min(30, moodWorkPercent() + villageWorkPercent()));
         int pace = Math.max(4, Math.round(6.0F * (100 - pct) / 100.0F));
+        pace = Math.max(2, Math.round(pace * (100 - CityTree.buildPercent(ownerId())) / 100.0F));   // the Builders' Guild (CityTree)
         // The server's pace for village builders (config villageBuildSpeed, a percentage).
         if (isSettler()) pace = Math.max(1, Math.round(pace * 100.0F / com.jrpetty.mcassistant.AssistantConfig.villageBuildSpeed()));
         // Hands lending it a hand (VillageFolkEntity.helpTheBuilder): a block a tick sooner for
@@ -3934,6 +3935,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             if (veteranLevel() < 10 && hasMentorNearby()) {
                 cents += cents / 2;   // an old hand showing you the grip
             }
+            cents = CityTree.moreXp(ownerId(), cents, getRandom());   // the Apprentice Halls: a tenth more (CityTree)
             xpCents += cents;
             if (xpCents >= 100) {
                 awardXp(xpCents / 100);
@@ -4386,6 +4388,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // otherwise last under four minutes, and a village would spend its days making
         // pickaxes. One use in three is charged.
         if (isSettler() && this.getRandom().nextInt(3) != 0) return;
+        if (CityTree.sparesTool(ownerId(), this.getRandom())) return;      // the Master Workshops: a fifth less wear (CityTree)
         boolean nearlyDone = tool.getDamageValue() >= tool.getMaxDamage() - 2;
         tool.hurtAndBreak(1, this, EquipmentSlot.MAINHAND);
         if (nearlyDone && this.getMainHandItem().isEmpty()) {

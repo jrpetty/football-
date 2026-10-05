@@ -365,9 +365,10 @@ def main():
             time.sleep(15)
         say("speed: " + r.cmd("village speed 1"))
         say("stats: " + r.cmd("village stats"))
+        say("research: " + r.cmd("village research"))        # the city's research, after eight mornings of points
         for page, name in ((0, "overview"), (1, "growth"), (2, "money"), (3, "production"), (4, "shops"), (5, "jobs"),
                            (6, "folk"), (7, "society"), (8, "leader"), (9, "homes"), (10, "buildings"), (11, "stores"),
-                           (12, "why"), (13, "trends"), (14, "records"), (15, "news")):
+                           (12, "research"), (13, "why"), (14, "trends"), (15, "records"), (16, "news")):
             say("stats %s: %s" % (name, r.cmd("execute as %s at @s run village stats %d" % (USER, page))))
             time.sleep(3)
             shot("16-stats-%d-%s" % (page, name))

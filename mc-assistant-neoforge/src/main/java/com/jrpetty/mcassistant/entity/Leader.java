@@ -145,8 +145,10 @@ public final class Leader {
     /** How long a break runs under this leader, against the usual. */
     public static double restScale(@Nullable UUID village) {
         Nature n = natureOf(village);
-        if (n == null) return 1.0;
-        double s = 1.0;
+        // The town's Rest Day Charter (CityTree): breaks a tenth shorter, leader or none.
+        double charter = CityTree.restPercent(village) / 100.0;
+        if (n == null) return charter;
+        double s = charter;
         for (Social.Trait t : n.traits()) {
             s *= switch (t) {
                 case HARDWORKING -> 0.8;

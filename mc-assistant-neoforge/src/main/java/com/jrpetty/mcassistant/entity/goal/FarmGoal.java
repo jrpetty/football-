@@ -295,6 +295,7 @@ public class FarmGoal extends Goal {
             harvested++;
             assistant.note(AssistantEntity.Deed.CROPS_HARVESTED, 1);
             sweepDrops(pos);
+            com.jrpetty.mcassistant.entity.CityTree.seedExchange(assistant, cropBlock);   // the town's Seed Exchange: one in ten, one more
             Item seed = REPLANT.get(cropBlock);
             if (seed != null && assistant.level().getBlockState(pos.below()).is(Blocks.FARMLAND)
                 && assistant.removeMatching(s -> s.is(seed), 1) == 1) {

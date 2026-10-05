@@ -574,10 +574,10 @@ public final class Homes {
             && Ledger.coins(village) >= 120 && Villages.headcount(village) >= 16;
     }
 
-    /** What a house sells for: by its size and the age of the town. */
+    /** What a house sells for: by its size and the age of the town (a tenth less under the town's Home Loans: CityTree). */
     static int price(UUID village, Home h) {
         int base = h.structure.equals("manor") ? 120 : Ledger.grown(village, h.anchor) ? 55 : 35;
-        return (int) Math.round(base * (1.0 + 0.25 * Villages.ageOf(village).ordinal()));
+        return (int) Math.round(base * (1.0 + 0.25 * Villages.ageOf(village).ordinal()) * CityTree.pricePercent(village) / 100.0);
     }
 
     /** How big a house is, for its rent: a house 1, a two-storey house 2, a manor 4. */
@@ -589,9 +589,16 @@ public final class Homes {
      * A day's rent, scaled to the wages: half a field hand's day for a house, a field hand's day for
      * a two-storey house, two for a manor (rounded up). A field hand gets a coin in a hamlet, two in
      * a village or a town, three in a city, so a house is a coin a day until the place is a city. Half
-     * that under a leader elected for homes.
+     * that under a leader elected for homes. Once the town has Cheap Homes (CityTree), a fifth off:
+     * a rent of three coins or more is four-fifths of itself, rounded; a rent of one or two coins
+     * is too small to cut, and is let off one payday in five instead (tenants).
      */
     static int rent(UUID village, Home h) {
+        return CityTree.rent(village, baseRent(village, h));
+    }
+
+    /** The rent before the town's Cheap Homes. */
+    static int baseRent(UUID village, Home h) {
         int hand = Wealth.tradeWage(AssistantEntity.StationTask.FARM, village);
         int r = Math.max(1, (size(village, h) * hand + 1) / 2);
         if (Elections.mandate(village) == Values.Value.HOMES) r = Math.max(1, r / 2);
@@ -1133,7 +1140,8 @@ public final class Homes {
             startPaying(level, v, h, household, day);
             free = false;
         }
-        int due = (hard || free ? 0 : h.rent) + h.owed;
+        boolean letOff = CityTree.rentFreeToday(id, baseRent(id, h), day);   // Cheap Homes: a small rent, one payday in five
+        int due = (hard || free || letOff ? 0 : h.rent) + h.owed;
         int paid = take(household, h, due);
         if (paid > 0) {
             Ledger.addCoins(id, paid);
@@ -1149,7 +1157,12 @@ public final class Homes {
         }
         Wish w = wish(id, h, household);
         if (!w.yes() && h.saved > 0 && w.score() <= 0) giveBack(household, h);     // changed its mind: its savings back
-        if (w.yes() && h.owed == 0) putBy(h, household, day);
+        if (w.yes() && h.owed == 0) {
+            int was = h.saved;
+            putBy(h, household, day);
+            // The town's Housing Fund (CityTree): the treasury adds a coin for every ten put by.
+            h.saved += CityTree.housingFund(id, h.saved - was, h.price - h.saved);
+        }
         if (w.yes() && h.price > 0 && h.saved >= h.price) {
             buy(level, v, h, household, day);
             return;
@@ -1887,6 +1900,16 @@ public final class Homes {
     public static int[] termsForTests(UUID village, BlockPos anchor) {
         Home h = homes(village).get(anchor.asLong());
         return h == null ? null : new int[]{ h.rent, h.owed, h.saved, h.tenure == Tenure.OWNED ? h.price : price(village, h) };
+    }
+
+    /** Tests: the rent the village would ask for a house of this kind ("house", "manor") in this village now. */
+    public static int rentForTests(UUID village, String structure) {
+        return rent(village, new Home(BlockPos.ZERO, structure));
+    }
+
+    /** Tests: what the village would sell a house of this kind for now. */
+    public static int priceForTests(UUID village, String structure) {
+        return price(village, new Home(BlockPos.ZERO, structure));
     }
 
     /** Tests: something into the village's stores. */
