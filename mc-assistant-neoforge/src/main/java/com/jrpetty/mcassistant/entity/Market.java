@@ -296,6 +296,8 @@ public final class Market {
         if (Ledger.paidOn(id) >= day) return;
         Ledger.paid(id, day);
         Homeland.survey(level, v);                       // a village from before: its land, looked over now
+        HUNGRY.put(id, Villages.stock(level, v.centre(), Villages.Task.FOOD, Villages.storesRadius(id)) * 2
+            < Villages.larderForBirth(id));
         Economy.closeTheDay(level, v, day);              // yesterday's output, and what the village is worth
         mint(level, v);
         int sold = trade(level, v);
@@ -627,6 +629,7 @@ public final class Market {
 
     public static void resetForTests() {
         BEDS_SHORT.clear();
+        HUNGRY.clear();
         SAVING.clear();
         SHARE.clear();
         NEWS.clear();
@@ -660,6 +663,14 @@ public final class Market {
     }
 
     // ------------------------------------------------------------------ buying in
+
+    /** Villages whose larder was low this morning (under half what a birth wants put by). */
+    private static final java.util.Map<UUID, Boolean> HUNGRY = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Is the village's larder low (this morning's count)? Its farms and waters take more hands. */
+    public static boolean hungry(UUID village) {
+        return HUNGRY.getOrDefault(village, false);
+    }
 
     /** Beds the village's houses want and nobody has made up yet, as of this morning. */
     private static final java.util.Map<UUID, Integer> BEDS_SHORT = new java.util.concurrent.ConcurrentHashMap<>();

@@ -2493,6 +2493,7 @@ public class VillageFolkEntity extends AssistantEntity {
             Drover.tidy(this, supplies);
             moveIntoThePen();
             Trades.kit(this);
+            Trades.buckets(this);
             if (mindTheHerd(supplies)) return;
             if (Links.tend(this, supplies)) return;
         }
@@ -3191,6 +3192,12 @@ public class VillageFolkEntity extends AssistantEntity {
         }
     }
 
+    /** Tests: where this folk would stake a new field. */
+    @Nullable
+    public BlockPos farmSiteForTests() {
+        return findSite(StationTask.FARM, radiusFor(StationTask.FARM));
+    }
+
     /** Tests: the farmer's look at its field now, whatever the clock says. */
     public void growTheFieldForTests() {
         fieldCheckTick = -100000;
@@ -3671,6 +3678,55 @@ public class VillageFolkEntity extends AssistantEntity {
     // ------------------------------ finding ground ---------------------------
 
     /**
+     * The village's farmland: its fields laid out side by side, a full-grown field's width apart,
+     * in a district that starts at its first field and spreads out from it ring by ring — rather
+     * than wherever each farmer happened to look. The first field is found the usual way (by the
+     * water nearest the town) and marks where the district begins.
+     */
+    @Nullable
+    private BlockPos districtPlot(BlockPos heart, java.util.function.Predicate<BlockPos> clear) {
+        UUID town = ownerId();
+        if (town == null) return null;
+        BlockPos origin = fieldsOrigin(town);
+        if (origin == null) return null;
+        int step = 2 * FIELD_MOST + 3;
+        neighbours = Villages.folkOf(town);
+        try {
+            for (int ring = 0; ring <= 4; ring++) {
+                BlockPos best = null;
+                double bestD = Double.MAX_VALUE;
+                for (int i = -ring; i <= ring; i++) {
+                    for (int j = -ring; j <= ring; j++) {
+                        if (Math.max(Math.abs(i), Math.abs(j)) != ring) continue;
+                        BlockPos p = surfaceAt(origin.getX() + i * step, origin.getZ() + j * step);
+                        if (p == null || !level().isLoaded(p) || !clear.test(p) || taken(p, FIELD_MOST)) continue;
+                        if (!soilField(p) && !farmable(p)) continue;
+                        double d = p.distSqr(heart);
+                        if (d < bestD) { bestD = d; best = p; }
+                    }
+                }
+                if (best != null) return best;
+            }
+            return null;
+        } finally {
+            neighbours = null;
+        }
+    }
+
+    /** Where the village's fields begin (its first field), or null before it has one. */
+    @Nullable
+    static BlockPos fieldsOrigin(UUID town) {
+        String note = com.jrpetty.mcassistant.village.Ledger.note(town, "fields.origin");
+        if (note == null || note.isEmpty()) return null;
+        String[] p = note.split(",");
+        try {
+            return new BlockPos(Integer.parseInt(p[0].trim()), Integer.parseInt(p[1].trim()), Integer.parseInt(p[2].trim()));
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    /**
      * Ground that suits the trade, searched outward from the village so a
      * settlement stays a settlement rather than scattering. Coarse on purpose:
      * this runs at most once every five seconds and only while a folk is
@@ -3718,10 +3774,18 @@ public class VillageFolkEntity extends AssistantEntity {
             // while there was a river by the town. No water anywhere near: the nearest good
             // soil, and the channel the field needs is cut to it.
             case FARM -> {
+                // The village's farmland first: its fields side by side, spreading out from the first.
+                BlockPos plot = districtPlot(heart, clear);
+                if (plot != null) yield plot;
                 BlockPos wet = nearestWaterField(heart, outdoor && town != null ? Villages.townReach(town) + radius + 2 : 8,
                     radius, clear);
                 if (wet == null) wet = scan(from, SCAN, 6, radius, p -> clear.test(p) && farmable(p));
-                yield wet != null ? wet : scan(from, SCAN, 6, radius, p -> clear.test(p) && soilField(p));
+                if (wet == null) wet = scan(from, SCAN, 6, radius, p -> clear.test(p) && soilField(p));
+                // The first field marks where the village's farmland begins (districtPlot).
+                if (wet != null && town != null && fieldsOrigin(town) == null) {
+                    com.jrpetty.mcassistant.village.Ledger.note(town, "fields.origin", wet.getX() + "," + wet.getY() + "," + wet.getZ());
+                }
+                yield wet;
             }
             case WOOD -> scan(from, SCAN, 6, radius, p -> clear.test(p) && woodland(p));
             case MINE -> scan(from, SCAN, 6, radius, p -> clear.test(p) && diggable(p));
@@ -5811,7 +5875,10 @@ public class VillageFolkEntity extends AssistantEntity {
         int r = Villages.storesRadius(village);
         int food = Villages.stock(server, villageCentre, Villages.Task.FOOD, r);
         if (food * 2 >= Villages.larderForBirth(village)) return false;
-        int surplus = mine == StationTask.MINE
+        // Next to nothing put by is famine: hands go to the fields whatever the stone or timber
+        // wants (a town raising its walls had never any to spare, and starved with three farmers).
+        boolean famine = food < Math.max(8, 2 * folk);
+        int surplus = famine ? 1 : mine == StationTask.MINE
             ? Villages.stock(server, villageCentre, Villages.Task.STONE, r)
                 - 2 * com.jrpetty.mcassistant.village.VillageMath.stoneWanted(folk)
             : Villages.stock(server, villageCentre, Villages.Task.LOGS, r)

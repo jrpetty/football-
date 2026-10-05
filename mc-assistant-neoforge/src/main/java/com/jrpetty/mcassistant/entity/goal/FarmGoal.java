@@ -230,21 +230,14 @@ public class FarmGoal extends Goal {
                 if (targetPos != null) { mode = Mode.TILL; claim(); return; }
             }
             if (hasWaterBucket()) {
-                if (water == null) {
-                    // No water on this patch AT ALL. Sinking a one-block hole
-                    // and pouring the bucket into it is the oldest farming
-                    // trick there is, and it needs no skill worth gating: a
-                    // field with no water is a field that cannot exist. This
-                    // is what lets a farmer settle dry ground and make it wet.
-                    targetPos = findWaterSpot();
-                    if (targetPos != null) { mode = Mode.WATER; claim(); return; }
-                } else if (assistant.can(AssistantEntity.Ability.FARM_IRRIGATE)) {
-                    // Level 40, the waterwright's rung: with water already
-                    // here, the next source goes where it wets the MOST dry
-                    // ground rather than into the first hole to hand.
-                    targetPos = findIrrigationSpot();
-                    if (targetPos != null) { mode = Mode.WATER; claim(); return; }
-                }
+                // Water through the field, as anybody with a bucket would: the first in its middle
+                // (no water on the patch at all), then each next one where it wets the most dry
+                // ground. This was a level-forty skill, and every village's fields were dry but for
+                // the one pond: a crop on dry farmland grows at a third of the pace.
+                targetPos = water == null ? centreWaterSpot() : null;
+                if (targetPos == null && water == null) targetPos = findWaterSpot();
+                if (targetPos == null && water != null) targetPos = findIrrigationSpot();
+                if (targetPos != null) { mode = Mode.WATER; claim(); return; }
             }
             // No dry-farming fallback for a hired hand. Farmland with no water within
             // four blocks dries out and reverts to dirt when nothing grows on it, so
@@ -429,6 +422,19 @@ public class FarmGoal extends Goal {
             if (assistant.countMatching(s -> s.is(seed)) > 0) return true;
         }
         return false;
+    }
+
+    /** The middle of its field: where the first water goes, so the field is wet all round it. */
+    @Nullable
+    private BlockPos centreWaterSpot() {
+        com.jrpetty.mcassistant.entity.WorkZone z = assistant.workZone();
+        if (z == null) return null;
+        BlockPos c = z.center();
+        for (int dy = 2; dy >= -3; dy--) {
+            BlockPos p = c.offset(0, dy, 0);
+            if (isTillable(p) && isTillable(p.north()) && isTillable(p.south()) && isTillable(p.east()) && isTillable(p.west())) return p;
+        }
+        return null;
     }
 
     private boolean hasWaterBucket() {

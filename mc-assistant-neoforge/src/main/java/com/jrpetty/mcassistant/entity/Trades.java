@@ -319,6 +319,41 @@ public final class Trades {
         return kit;
     }
 
+    /**
+     * A farmer's buckets: ten, filled at the well, so it can set water through its field as it
+     * grows (FarmGoal) — a crop on wet farmland grows three times as fast as on dry. Each farmer
+     * has its own, bought for the village from a pedlar (a coin a bucket); short of the coin, it
+     * is put by for. Returns whether it got them.
+     */
+    public static boolean buckets(VillageFolkEntity f) {
+        UUID village = f.ownerId();
+        if (village == null || f.stationTask() != StationTask.FARM || !(f.level() instanceof ServerLevel level)) return false;
+        String key = "buckets." + f.getUUID();
+        if (Ledger.note(village, key) != null) return false;
+        if (f.countCarried(s -> s.is(Items.BUCKET) || s.is(Items.WATER_BUCKET)) >= 10) return false;
+        int price = BUCKETS;
+        if (Ledger.coins(village) < price) {
+            Market.saveFor(village, key, price, level.getGameTime());
+            return false;
+        }
+        Market.bought(village, key);
+        Ledger.takeCoins(village, price);
+        Economy.spent(village, price);
+        Ledger.note(village, key, Long.toString(level.getGameTime() / 24000L));
+        for (int i = 0; i < BUCKETS; i++) {
+            ItemStack left = f.insertItem(new ItemStack(Items.WATER_BUCKET));
+            if (!left.isEmpty()) { Villages.Village v = Villages.get(village); if (v != null) Crafts.store(level, v, left); }
+        }
+        f.brain("ten buckets of water for the field");
+        FolkTalk.speak(f, "Ten buckets, filled at the well. A field wants water through it.");
+        Villages.tell(village, level.getGameTime() / 24000L, "a pedlar sold " + f.displayNameCap() + " ten buckets for the fields, for "
+            + price + " coin");
+        return true;
+    }
+
+    /** How many buckets a farmer gets. */
+    public static final int BUCKETS = 10;
+
     /** What a pedlar asks for a piece of a kit, in the village's coin. */
     static int priceOf(ItemStack s) {
         int each;

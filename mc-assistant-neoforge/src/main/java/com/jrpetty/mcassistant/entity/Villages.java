@@ -6,6 +6,7 @@ import net.minecraft.world.level.Level;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -723,6 +724,10 @@ public final class Villages {
         // coast, more woodcutters and hunters in the forest, more miners in the hills.
         double t = (slot.weight() + boost) * total / (double) VILLAGE_SIZE * Orders.scale(villageId)
             * glut(villageId, slot.trade()) * Homeland.lean(villageId, slot.trade());
+        // A hungry village wants its food-makers: half as many farmers and fishers again while
+        // the larder is low. It is fed by its own fields and waters, and nothing else.
+        if ((slot.trade() == AssistantEntity.StationTask.FARM || slot.trade() == AssistantEntity.StationTask.FISH)
+                && villageId != null && Market.hungry(villageId)) t *= 1.5;
         // Houses waiting on beds want the wool: twice the ranchers (their sheep) till they are made up.
         if (slot.trade() == AssistantEntity.StationTask.RANCH && villageId != null && Market.bedsShort(villageId) >= 6) t *= 2.0;
         int max = slot.max() == Integer.MAX_VALUE ? Integer.MAX_VALUE
@@ -1860,7 +1865,55 @@ public final class Villages {
             if (!(level.getBlockEntity(p) instanceof net.minecraft.world.Container c)) continue;
             for (int i = 0; i < c.getContainerSize(); i++) if (c.getItem(i).isEmpty()) return p;
         }
-        return growStores(level, villageId);
+        BlockPos grown = growStores(level, villageId);
+        if (grown != null || !clearRubbish(level, villageId)) return grown;
+        for (BlockPos p : storeChests(level, villageId)) {
+            if (!(level.getBlockEntity(p) instanceof net.minecraft.world.Container c)) continue;
+            for (int i = 0; i < c.getContainerSize(); i++) if (c.getItem(i).isEmpty()) return p;
+        }
+        return null;
+    }
+
+    private static final Map<UUID, Long> CLEARED = new ConcurrentHashMap<>();
+
+    /** What the stores keep of the rubbish (any more goes out): dirt, gravel, rough stone and the like. */
+    private static final Map<net.minecraft.world.item.Item, Integer> RUBBISH = Map.ofEntries(
+        Map.entry(net.minecraft.world.item.Items.DIRT, 16), Map.entry(net.minecraft.world.item.Items.COARSE_DIRT, 0),
+        Map.entry(net.minecraft.world.item.Items.ROOTED_DIRT, 0), Map.entry(net.minecraft.world.item.Items.GRAVEL, 32),
+        Map.entry(net.minecraft.world.item.Items.ANDESITE, 64), Map.entry(net.minecraft.world.item.Items.DIORITE, 64),
+        Map.entry(net.minecraft.world.item.Items.GRANITE, 64), Map.entry(net.minecraft.world.item.Items.TUFF, 0),
+        Map.entry(net.minecraft.world.item.Items.CALCITE, 0), Map.entry(net.minecraft.world.item.Items.COBBLED_DEEPSLATE, 64),
+        Map.entry(net.minecraft.world.item.Items.ROTTEN_FLESH, 0), Map.entry(net.minecraft.world.item.Items.POISONOUS_POTATO, 0),
+        Map.entry(net.minecraft.world.item.Items.SPIDER_EYE, 8), Map.entry(net.minecraft.world.item.Items.STICK, 64));
+
+    /**
+     * Every store full and no timber for another chest: the rubbish goes out (dirt, gravel, spare
+     * rough stone, rotten flesh), past a handful of each, so the harvest has somewhere to go. A
+     * town's stores filled with what the miners and levellers brought in, the farmers had nowhere to
+     * put their crops, and the village starved with full packs. Returns whether room was made.
+     */
+    static boolean clearRubbish(net.minecraft.server.level.ServerLevel level, UUID villageId) {
+        long now = level.getGameTime();
+        if (now - CLEARED.getOrDefault(villageId, -100000L) < 600L) return false;
+        CLEARED.put(villageId, now);
+        Map<net.minecraft.world.item.Item, Integer> seen = new HashMap<>();
+        int freed = 0;
+        for (BlockPos p : storeChests(level, villageId)) {
+            if (!(level.getBlockEntity(p) instanceof net.minecraft.world.Container c)) continue;
+            for (int i = 0; i < c.getContainerSize(); i++) {
+                net.minecraft.world.item.ItemStack st = c.getItem(i);
+                Integer keep = st.isEmpty() ? null : RUBBISH.get(st.getItem());
+                if (keep == null) continue;
+                int had = seen.merge(st.getItem(), st.getCount(), Integer::sum);
+                int over = Math.min(st.getCount(), had - keep);
+                if (over <= 0) continue;
+                st.shrink(over);
+                if (st.isEmpty()) { c.setItem(i, net.minecraft.world.item.ItemStack.EMPTY); freed++; }
+            }
+            c.setChanged();
+        }
+        if (freed > 0) tell(villageId, now / 24000L, "the stores were full: the rubbish went out to make room for the harvest");
+        return freed > 0;
     }
 
     /** The village's colour (its guards' tabards, the tailor's boots): the client's banner colours. */

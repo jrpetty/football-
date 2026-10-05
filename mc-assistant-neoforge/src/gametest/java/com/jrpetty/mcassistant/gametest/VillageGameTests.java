@@ -3932,6 +3932,42 @@ public class VillageGameTests {
         Kit.log("t63 the field: " + (2 * before + 1) + " across half-empty, " + (2 * after + 1) + " across once full; " + farmer.debugLine());
         helper.assertTrue(before == 4, "a half-empty field stays as it is: " + before);
         helper.assertTrue(after == 5, "a full field breaks new ground a ring further out: " + after);
+        // The village's farmland: the next field goes beside this one, a full field's width over.
+        com.jrpetty.mcassistant.village.Ledger.note(farmer.ownerId(), "fields.origin", site.getX() + "," + site.getY() + "," + site.getZ());
+        VillageFolkEntity second = VillageFolkSpawnerBlock.raise(level, heart.east(2), 0.0F);
+        helper.assertTrue(second != null && farmer.ownerId().equals(second.ownerId()), "a second folk of the village");
+        second.setJob(StationTask.FARM);
+        BlockPos next = second.farmSiteForTests();
+        Kit.log("t63 the next field: " + (next == null ? "none" : next.toShortString()) + " beside the first at " + site.toShortString());
+        int step = 2 * 12 + 3;
+        helper.assertTrue(next != null && Math.floorMod(next.getX() - site.getX(), step) == 0 && Math.floorMod(next.getZ() - site.getZ(), step) == 0
+            && Math.max(Math.abs(next.getX() - site.getX()), Math.abs(next.getZ() - site.getZ())) == step,
+            "the next field is laid out beside the first, in the village's farmland: " + next);
+        helper.succeed();
+    }
+
+    /** A farmer's ten buckets of water, bought for it out of the treasury once. */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t64_buckets")
+    public static void t64_buckets(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 58000, 12000, 24);
+        Kit.prepare(level, 58000, 12000, 24);
+        BlockPos heart = Kit.surface(level, 58000, 12000);
+        VillageFolkEntity farmer = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(farmer != null, "a village");
+        farmer.setJob(StationTask.FARM);
+        java.util.UUID id = farmer.ownerId();
+        com.jrpetty.mcassistant.village.Ledger.takeCoins(id, com.jrpetty.mcassistant.village.Ledger.coins(id));
+        com.jrpetty.mcassistant.village.Ledger.addCoins(id, 30);
+        boolean got = com.jrpetty.mcassistant.entity.Trades.buckets(farmer);
+        int buckets = farmer.countCarried(st -> st.is(Items.WATER_BUCKET));
+        int coins = com.jrpetty.mcassistant.village.Ledger.coins(id);
+        boolean again = com.jrpetty.mcassistant.entity.Trades.buckets(farmer);
+        Kit.log("t64 the buckets: got " + got + ", " + buckets + " of water; the treasury 30 -> " + coins + "; again " + again);
+        helper.assertTrue(got && buckets == 10 && coins == 30 - com.jrpetty.mcassistant.entity.Trades.BUCKETS && !again,
+            "a farmer's ten buckets of water, bought once out of the treasury");
         helper.succeed();
     }
 

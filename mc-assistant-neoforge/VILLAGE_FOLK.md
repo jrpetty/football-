@@ -504,6 +504,19 @@ water.
 * **Farmers.** Plant the cane along the field's water and cut it back to its
   bottom so it grows again. The cane goes to the enchanter's paper, the brewer's
   sugar and the café's pies and cakes. They also plant the melon and pumpkin seed.
+* **A village feeds itself.** Its food comes from its own farmers, fishers and hunters and
+  nothing else, so it looks after them:
+  * **Buckets.** Every farmer gets ten buckets of water (a pedlar's, a coin apiece out of the
+    treasury). It sets the first in the middle of its field and each next one where it wets
+    the most dry ground: a crop on wet farmland grows three times as fast as on dry.
+  * **The farmland.** The village's fields are laid out as a district: the first goes by the
+    water nearest the town, and each new farmer's field goes beside the others, a full-grown
+    field's width apart, spreading out from the first ring by ring.
+  * **Hungry, more hands to the fields.** While the larder is low the village takes on half as
+    many farmers and fishers again; in famine its miners and woodcutters go to the fields
+    whatever its building wants.
+  * **Room for the harvest.** Stores full of rubbish (dirt, gravel, spare rough stone, rotten
+    flesh) throw it out, so the crops always have somewhere to go.
 * **Fields that grow.** A new farmer's field is nine blocks across. Once six squares in ten
   are under crops it breaks new ground a ring further out — eleven, thirteen, up to
   twenty-five across — as long as the new ground is clear of the town, its buildings and
