@@ -34,7 +34,9 @@ import java.util.Locale;
  * branches as columns of four, what the leader has the town studying and why, how far on, and what
  * was finished when); <b>Why</b> (what is driving its growth and what is holding it
  * back); <b>Trends</b> (per hand, per head); <b>Records</b> (its bests, its totals, its averages and
- * where it is heading); <b>News</b> (the chronicle); and the <b>Board</b> itself. The charts follow
+ * where it is heading); <b>News</b> (the chronicle); the <b>Board</b> itself; and the <b>School</b> (the
+ * schoolhouse, its teacher, the morning's lesson, every child with the trade it leans to and how far
+ * it has got, and who has left school as what). The charts follow
  * the mouse: the day under it, and every line's value that day. The range (a week, a month, a
  * hundred days, all of it) is picked at the top right.
  */
@@ -43,10 +45,12 @@ public class CityScreen extends Screen {
     // Research sits after the stores, before Why: the pages after it are one further on (/village stats <page>
     // and the smoke test's page lists follow the same numbers).
     private static final String[] TABS = { "Overview", "Growth", "Money", "Production", "Shops", "Jobs", "Folk", "Society", "Leader", "Homes",
-        "Buildings", "Stores", "Stock", "Research", "Why", "Trends", "Records", "News", "Board" };
+        "Buildings", "Stores", "Stock", "Research", "Why", "Trends", "Records", "News", "Board",
+        // The school, last, so the pages before it keep their numbers (School).
+        "School" };
     /** The pages that read today's figures, not the books (so they show from the first day). */
     private static final java.util.Set<String> TODAY_PAGES = java.util.Set.of("Folk", "Society", "Leader", "Buildings", "Why", "News", "Board",
-        "Shops", "Homes", "Stock", "Research");
+        "Shops", "Homes", "Stock", "Research", "School");
     private static final int[] RANGES = { 7, 30, 100, 0 };
     private static final String[] RANGE_NAMES = { "7d", "30d", "100d", "All" };
 
@@ -95,6 +99,8 @@ public class CityScreen extends Screen {
             next.selectedTrade = open.selectedTrade;
         }
         if (data.contains("tab")) next.tab = Math.max(0, Math.min(TABS.length - 1, data.getInt("tab")));   // a page asked for
+        // A page asked for by its name (/village school page), whatever its number.
+        if (data.contains("page")) for (int i = 0; i < TABS.length; i++) if (TABS[i].equals(data.getString("page"))) next.tab = i;
         mc.setScreen(next);
     }
 
@@ -274,6 +280,7 @@ public class CityScreen extends Screen {
                 case "Records" -> records(g, x, y, cw, ch);
                 case "News" -> news(g, x, y, cw, ch);
                 case "Research" -> research(g, x, y, cw, ch, mouseX, mouseY);
+                case "School" -> school(g, x, y, cw, ch, mouseX, mouseY);
                 default -> board(g, x, y, cw, ch);
             }
         }
@@ -1531,6 +1538,138 @@ public class CityScreen extends Screen {
                 cy += 9;
             }
         }
+    }
+
+    // ------------------------------------------------------------------ the school
+
+    private static final String[] SCHOOL_HEADS = { "Child", "Age", "Leans to", "Lvl", "Schooling", "Morns", "Now" };
+
+    /**
+     * The school (entity/School): down the left, the schoolhouse, its teacher (who, why it was chosen,
+     * what it is paid, how far a schooling under it goes), this morning's lesson and who has left
+     * school as what; on the right every child, with the trade it leans to, its level at it so far
+     * against a full schooling, the mornings it has come and where it is now (the mouse over a row:
+     * why it leans as it does).
+     */
+    private void school(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my) {
+        CompoundTag s = data.getCompound("school");
+        int side = Math.min(180, cw / 3);
+        int bottom = y + ch - 2;
+        int ly = y;
+        Ui.section(g, font, "The schoolhouse", x, ly, side);
+        ly += 12;
+        List<String> house = new ArrayList<>();
+        if (s.getBoolean("stands")) {
+            house.add("Stands at " + s.getString("where") + ", " + plural(s.getInt("desks"), "desk") + ".");
+            house.add("The blackboard " + s.getInt("board") + " of 6 up; " + (s.getBoolean("book") ? "a book on the lectern."
+                : s.getBoolean("lectern") ? "the lectern bare." : "no lectern yet."));
+        } else {
+            house.add(s.getBoolean("wanted") ? "Not built yet: it is on the list of what the village will build."
+                : "Not built yet: a Stone Age village wants one at 3 children and 10 folk (now "
+                    + s.getInt("children") + " and " + s.getInt("folk") + ").");
+        }
+        ly = schoolText(g, house, x, ly, side, bottom, Ui.INK);
+        ly += 4;
+        Ui.section(g, font, "The teacher", x, ly, side);
+        ly += 12;
+        List<String> teacher = new ArrayList<>();
+        if (s.contains("teacher")) {
+            teacher.add(s.getString("teacher") + (s.getBoolean("teaching") ? ", at the lectern now" : "")
+                + (s.contains("since") ? " (since day " + s.getString("since") + ")" : ""));
+            if (s.contains("teacher_trade")) {
+                teacher.add(s.getString("teacher_trade"));
+                teacher.add("Chosen: " + s.getString("teacher_why") + ".");
+                teacher.add("Paid " + s.getInt("teacher_pay") + "c a day for it, on top of its trade's wage.");
+                teacher.add("A schooling under it: up to level " + s.getInt("cap") + ".");
+            }
+        } else {
+            teacher.add("None yet: one is chosen when the school first opens.");
+        }
+        ly = schoolText(g, teacher, x, ly, side, bottom, Ui.INK);
+        ly += 4;
+        Ui.section(g, font, "This morning", x, ly, side);
+        ly += 12;
+        ly = schoolText(g, List.of(s.getString("today"), plural(s.getInt("taught"), "morning") + " taught, all told."),
+            x, ly, side, bottom, Ui.INK);
+        ly += 4;
+        if (ly < bottom - 20) {
+            Ui.section(g, font, "Left school", x, ly, side);
+            ly += 12;
+            ListTag left = s.getList("graduates", Tag.TAG_STRING);
+            if (left.isEmpty()) {
+                small(g, "Nobody yet.", x, ly, Ui.MUTED);
+                ly += 9;
+            }
+            for (int i = 0; i < left.size() && ly < bottom - 8; i++) {
+                String[] p = left.getString(i).split("\\|", -1);
+                if (p.length < 4) continue;
+                String what = p[0] + ": " + p[1].toLowerCase(Locale.ROOT) + " " + p[2] + (p.length > 4 && !p[4].isEmpty() ? " (no place)" : "");
+                small(g, Ui.clip(font, what, (int) ((side - 28) / 0.75)), x, ly, Ui.INK);
+                Ui.right(g, font, "d" + p[3], x + side, ly - 1, Ui.MUTED);
+                ly += 9;
+            }
+        }
+        // Every child.
+        int tx = x + side + 10, tw = cw - side - 10;
+        int[] cols = { 0, 66, 90, 152, 172, tw - 82, tw - 52 };
+        Ui.section(g, font, "The children", tx, y, tw);
+        int ry = y + 12;
+        for (int i = 0; i < SCHOOL_HEADS.length; i++) small(g, SCHOOL_HEADS[i], tx + cols[i], ry, Ui.FAINT);
+        ry += 9;
+        List<CompoundTag> pupils = new ArrayList<>();
+        ListTag pl = s.getList("pupils", Tag.TAG_COMPOUND);
+        for (int i = 0; i < pl.size(); i++) pupils.add(pl.getCompound(i));
+        int rows = Math.max(1, (bottom - ry - 10) / 11);
+        int start = Math.max(0, Math.min(scroll, Math.max(0, pupils.size() - rows)));
+        for (int i = start; i < Math.min(pupils.size(), start + rows); i++) {
+            CompoundTag p = pupils.get(i);
+            boolean over = mx >= tx && mx < tx + tw && my >= ry && my < ry + 11;
+            g.fill(tx - 2, ry - 1, tx + tw, ry + 10, over ? Ui.HI : (i % 2 == 0 ? Ui.ROW : Ui.ROW_ALT));
+            g.drawString(font, Ui.clip(font, p.getString("name"), cols[1] - 4), tx, ry + 1, Ui.INK, false);
+            g.drawString(font, Integer.toString(p.getInt("years")), tx + cols[1], ry + 1, Ui.INK, false);
+            if (p.contains("leaning")) {
+                Ui.chip(g, tx + cols[2], ry + 1, Ui.job(p.getInt("ordinal")));
+                g.drawString(font, Ui.clip(font, p.getString("leaning"), cols[3] - cols[2] - 12), tx + cols[2] + 9, ry + 1, Ui.INK, false);
+                g.drawString(font, Integer.toString(p.getInt("level")), tx + cols[3], ry + 1, Ui.INK, false);
+                int bw = Math.max(10, cols[5] - cols[4] - 30);
+                float frac = p.getInt("cap_xp") <= 0 ? 0F : Math.min(1F, p.getInt("xp") / (float) p.getInt("cap_xp"));
+                Ui.bar(g, tx + cols[4], ry + 1, bw, 7, frac, GREEN);
+                small(g, "of " + p.getInt("cap"), tx + cols[4] + bw + 3, ry + 2, Ui.MUTED);
+                g.drawString(font, Integer.toString(p.getInt("mornings")), tx + cols[5], ry + 1, Ui.INK, false);
+            } else {
+                small(g, "no desk yet", tx + cols[2], ry + 2, Ui.MUTED);
+            }
+            String now = p.getString("now");
+            small(g, Ui.clip(font, now, (int) ((tw - cols[6]) / 0.75)), tx + cols[6], ry + 2,
+                now.startsWith("truant") ? Ui.BAD : now.equals("at its desk") ? Ui.GOOD : Ui.MUTED);
+            if (over && p.contains("why")) {
+                hover = List.of(Component.literal(p.getString("name") + " leans to " + p.getString("leaning").toLowerCase(Locale.ROOT)),
+                    Component.literal("because " + p.getString("why")),
+                    Component.literal(p.getInt("level") + " of a schooling's " + p.getInt("cap") + " levels, "
+                        + plural(p.getInt("mornings"), "morning") + " at school"));
+                hoverX = mx;
+                hoverY = my;
+            }
+            ry += 11;
+        }
+        if (pupils.isEmpty()) small(g, "No children in the village just now.", tx, ry + 2, Ui.MUTED);
+        else if (pupils.size() > rows) small(g, "(scroll for more)", tx, ry + 2, Ui.FAINT);
+        else if (ry < bottom - 30) {
+            schoolText(g, List.of("Lessons are on working mornings. A child at its desk learns the trade it leans to, and a little of the day's lesson;"
+                + " two full mornings make a full schooling, and it starts that trade at that level when it grows up."), tx, ry + 6, tw, bottom, Ui.MUTED);
+        }
+    }
+
+    /** Lines in the small hand, wrapped to the width; returns where the next line goes. */
+    private int schoolText(GuiGraphics g, List<String> lines, int x, int y, int w, int bottom, int colour) {
+        for (String l : lines) {
+            for (FormattedCharSequence line : font.split(Component.literal(l), (int) (w / 0.75))) {
+                if (y > bottom - 8) return y;
+                small(g, line, x, y, colour);
+                y += 9;
+            }
+        }
+        return y;
     }
 
     private static final String[] BUILDING_HEADS = { "Building", "Where", "Storeys", "Furnished", "Home" };

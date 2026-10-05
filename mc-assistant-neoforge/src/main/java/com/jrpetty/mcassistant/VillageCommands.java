@@ -127,6 +127,24 @@ public final class VillageCommands {
                     .then(Commands.argument("civic", com.mojang.brigadier.arguments.StringArgumentType.word())
                         .suggests((ctx, b) -> net.minecraft.commands.SharedSuggestionProvider.suggest(civicKeys(), b))
                         .executes(ctx -> research(ctx, true)))))
+            // The village school (entity/School): its teacher, its pupils and what each leans to, in chat; the
+            // books opened at its page; and, for operators and the pictures, a lesson called now, a teacher's
+            // line said out loud, or a schoolhouse set out on a stage mid-lesson.
+            .then(Commands.literal("school").executes(VillageCommands::school)
+                .then(Commands.literal("page").executes(VillageCommands::schoolPage))
+                .then(Commands.literal("lesson").requires(src -> src.hasPermission(2)).executes(VillageCommands::schoolLesson))
+                .then(Commands.literal("say").requires(src -> src.hasPermission(2)).executes(ctx -> {
+                    String said = com.jrpetty.mcassistant.entity.School.sayNow(ctx.getSource().getLevel(),
+                        net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition()));
+                    ctx.getSource().sendSuccess(() -> Component.literal("SAID " + said), false);
+                    return 1;
+                }))
+                .then(Commands.literal("stage").requires(src -> src.hasPermission(2)).executes(ctx -> {
+                    java.util.List<String> lines = com.jrpetty.mcassistant.entity.School.stage(ctx.getSource().getLevel(),
+                        net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition()));
+                    ctx.getSource().sendSuccess(() -> Component.literal(String.join(" | ", lines)), false);
+                    return lines.size();
+                })))
             // The village's houses: who lives where, what is for sale; buy one, let it out, take the rent.
             .then(Commands.literal("house")
                 .executes(VillageCommands::houses)
@@ -938,6 +956,53 @@ public final class VillageCommands {
     }
 
     /** /village wages (who is paid what, best paid first) and /village economy (what it makes, sells, is worth). */
+    /** The nearest village (any, from the console), or null with a word said. */
+    @javax.annotation.Nullable
+    private static Villages.Village schoolVillage(CommandContext<CommandSourceStack> ctx) {
+        net.minecraft.server.level.ServerLevel level = ctx.getSource().getLevel();
+        net.minecraft.core.BlockPos here = net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition());
+        Villages.Village v = Villages.nearest(level, here, Villages.VILLAGE_RANGE * 4);
+        if (v == null && ctx.getSource().getPlayer() == null && !Villages.every().isEmpty()) v = Villages.every().get(0);
+        if (v == null) ctx.getSource().sendFailure(Component.literal("No village within reach."));
+        return v;
+    }
+
+    /** /village school: the nearest village's school, in chat. */
+    private static int school(CommandContext<CommandSourceStack> ctx) {
+        Villages.Village v = schoolVillage(ctx);
+        if (v == null) return 0;
+        java.util.List<String> lines = com.jrpetty.mcassistant.entity.School.lines(ctx.getSource().getLevel(), v);
+        ctx.getSource().sendSuccess(() -> Component.literal(String.join("\n", lines)), false);
+        return lines.size();
+    }
+
+    /** /village school page: the town's books, opened at the School page. */
+    private static int schoolPage(CommandContext<CommandSourceStack> ctx) {
+        Villages.Village v = schoolVillage(ctx);
+        if (v == null) return 0;
+        if (!(ctx.getSource().getEntity() instanceof ServerPlayer p)) return school(ctx);
+        net.minecraft.nbt.CompoundTag books = com.jrpetty.mcassistant.entity.Annals.snapshot(ctx.getSource().getLevel(), v);
+        books.putString("page", "School");
+        net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p, new com.jrpetty.mcassistant.net.CityStatsPayload(books));
+        return 1;
+    }
+
+    /** /village school lesson: lessons now at the nearest village's school, whatever the hour, for two minutes. */
+    private static int schoolLesson(CommandContext<CommandSourceStack> ctx) {
+        Villages.Village v = schoolVillage(ctx);
+        if (v == null) return 0;
+        net.minecraft.server.level.ServerLevel level = ctx.getSource().getLevel();
+        if (!com.jrpetty.mcassistant.entity.School.stands(v.id())) {
+            ctx.getSource().sendFailure(Component.literal(Villages.name(v.id()) + " has no schoolhouse yet."));
+            return 0;
+        }
+        com.jrpetty.mcassistant.entity.School.callLesson(level, v.id(), 2400);
+        com.jrpetty.mcassistant.entity.VillageFolkEntity t = com.jrpetty.mcassistant.entity.School.teacher(level, v.id(), true);
+        ctx.getSource().sendSuccess(() -> Component.literal("LESSON at " + Villages.name(v.id()) + "'s school for two minutes; teacher "
+            + (t == null ? "none fit to teach" : t.displayNameCap())), false);
+        return 1;
+    }
+
     private static int page(CommandContext<CommandSourceStack> ctx, int which) {
         net.minecraft.server.level.ServerLevel level = ctx.getSource().getLevel();
         net.minecraft.core.BlockPos here = net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition());

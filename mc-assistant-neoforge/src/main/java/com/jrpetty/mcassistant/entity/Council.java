@@ -56,6 +56,7 @@ public final class Council {
         CHOICES.put("brewery", new String[]{ "brewery", "brewhouse" });
         CHOICES.put("library", new String[]{ "library", "books" });
         CHOICES.put("graveyard", new String[]{ "graveyard", "cemetery" });
+        CHOICES.put("school", new String[]{ "schoolhouse", "school" });
     }
 
     /** The councillors: the elder, then the four the village thinks most of. */
@@ -160,6 +161,7 @@ public final class Council {
                 case "library" -> s += (trade == AssistantEntity.StationTask.ENCHANT ? 4 : 0) + (life.has(Social.Trait.CURIOUS) ? 2 : 0)
                     + (life.has(Social.Trait.SHY) ? 1 : 0);
                 case "graveyard" -> s += m.griefDay >= m.level().getDayTime() / 24000L - 7 ? 4 : 1;
+                case "school" -> s += School.councilScore(m);       // parents of the little ones most (School)
                 default -> { }
             }
             // Swayed by players it thinks well of: what they asked for.
