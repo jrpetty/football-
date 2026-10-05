@@ -3956,6 +3956,8 @@ public class VillageFolkEntity extends AssistantEntity {
             boolean furnace = f.blockEntity() instanceof net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
             if (!furnace && (!ZoneChests.isStashable(f) || Villages.inStoreArea(village, f.pos()))) continue;
             if (Villages.inAGuestHouse(village, f.pos())) continue;
+            Integer spent = spentPickups.get(f.pos().asLong());
+            if (spent != null && tickCount - spent < 2400) continue;          // just came up empty: the next one
             int held = furnace ? furnaceOutput(f) : stockIn(f);
             if (held < (furnace ? 4 : 24)) continue;      // a handful is not worth the walk
             int at = 0;
@@ -4442,8 +4444,13 @@ public class VillageFolkEntity extends AssistantEntity {
     /** The pickup has nothing left worth the walk: choose the next round at once. */
     @Override
     protected void routeSpent() {
+        if (preferredChest() != null) spentPickups.put(preferredChest().asLong(), tickCount);
         if (tickCount - routeTick > 200) routeTick = -100000;
     }
+
+    /** Pickups that came up empty, and when: passed over a while (a field's chest keeps its seed,
+     *  and counted fuller than the furnace's ingots, it was chosen and found empty again and again). */
+    private final java.util.Map<Long, Integer> spentPickups = new java.util.HashMap<>();
 
     /** A load for the village's stores: to the storehouse (or the next store with room). */
     @Override
