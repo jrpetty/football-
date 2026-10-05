@@ -378,8 +378,8 @@ public class CityScreen extends Screen {
         List<CompoundTag> jobs = compounds("jobs");
         jobs.sort(Comparator.comparingInt((CompoundTag c) -> c.getInt("week")).reversed().thenComparing(c -> -c.getInt("hands")));
         int tableH = Math.min(ch / 2 + 20, 14 + jobs.size() * 11);
-        String[] heads = { "Trade", "Hands", "Lvl", "Pay", "Yesterday", "Week", "Per hand", "Share of the week's output" };
-        int[] cols = { 0, 92, 128, 152, 182, 232, 272, 318 };
+        String[] heads = { "Trade", "Hands", "Lvl", "Pay", "Yesterday", "Week", "Per hand", "Return", "Share of the week's output" };
+        int[] cols = { 0, 92, 124, 146, 174, 220, 258, 298, 336 };
         for (int i = 0; i < heads.length; i++) small(g, heads[i], x + cols[i], y, Ui.FAINT);
         int ry = y + 9;
         int maxRows = (tableH - 9) / 11;
@@ -397,8 +397,15 @@ public class CityScreen extends Screen {
             g.drawString(font, j.getInt("yesterday") + "c", x + cols[4], ry + 1, Ui.INK, false);
             g.drawString(font, j.getInt("week") + "c", x + cols[5], ry + 1, Ui.INK, false);
             g.drawString(font, j.getInt("per_head") + "c", x + cols[6], ry + 1, Ui.INK, false);
-            int bw = cw - cols[7] - 30;
-            Ui.bar(g, x + cols[7], ry + 1, bw, 7, j.getInt("share") / 100f, Ui.job(j.getInt("ordinal")));
+            // What a hand makes a day for each coin of its pay: above 1, the trade earns its keep.
+            if (j.getInt("hands") > 0 && j.getInt("wage") > 0) {
+                float ret = j.getInt("per_head") / (float) j.getInt("wage");
+                g.drawString(font, String.format(Locale.ROOT, "%.1f×", ret), x + cols[7], ry + 1, ret >= 1 ? Ui.GOOD : Ui.BAD, false);
+            } else {
+                g.drawString(font, "—", x + cols[7], ry + 1, Ui.FAINT, false);
+            }
+            int bw = cw - cols[8] - 30;
+            Ui.bar(g, x + cols[8], ry + 1, bw, 7, j.getInt("share") / 100f, Ui.job(j.getInt("ordinal")));
             Ui.right(g, font, j.getInt("share") + "%", x + cw, ry + 1, Ui.MUTED);
             ry += 11;
         }

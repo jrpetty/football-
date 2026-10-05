@@ -1880,8 +1880,9 @@ every chart reads out the day under the mouse.
   stone, ore and metal, wool and hides, crafts, plants), with the takings, sales, tithe,
   wages and buying-in for the range.
 * **Jobs:** every trade: its hands, their average level, their pay, what it made yesterday
-  and this week, what it makes per hand a day, and its share of everything the village
-  made, biggest earner first; under it, what every trade made each day, stacked, so you can
+  and this week, what it makes per hand a day, its return (what a hand makes for each coin of
+  its pay: green when the trade earns its keep, red when it does not, as the watch never does),
+  and its share of everything the village made, biggest earner first; under it, what every trade made each day, stacked, so you can
   see at a glance which trades bring in the most and how that has changed (the mouse reads out
   each trade's share of the day). Click a trade for its own history (what it made, and how many
   worked at it, day by day).
