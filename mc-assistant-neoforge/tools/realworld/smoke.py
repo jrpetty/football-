@@ -190,10 +190,10 @@ def flats_stage(r, look, cx, cz):
 
 def blueprints_stage(r, look, cx, cz):
     """The drawings put right (tools/blueprint_designs.py, BlueprintSoundnessTest), by night, when the
-    lanterns tell: the meeting hall from just inside its doors (the tie beams across under its open roof,
-    a lantern hung from each over the long table), the market from among its stalls (its lanterns hung
-    from the new cross beams), and the lighthouse's railed gallery from the back, where the ladder comes
-    up beside the lamp room and the lamp hangs from the cap over its brazier."""
+    lanterns tell: the meeting hall from just inside its doors (its lanterns hung from the rafters down
+    both sides), the market from among its stalls (its lanterns hung from the eave plates over them), and
+    the lighthouse's railed gallery from the back, where the ladder comes up beside the lamp room and the
+    lamp hangs from the cap over its brazier."""
     bx, by, bz = cx - 300, 150, cz + 200              # where the showcase sets its buildings out
     r.cmd("gamemode spectator %s" % USER)
     r.cmd("time set 6000")
@@ -207,10 +207,10 @@ def blueprints_stage(r, look, cx, cz):
     # Each building's back is to the north: a block (dx, h, dz) of its drawing is at x + dx, y + h, z - dz.
     if "hall" in at:
         x, y, z = at["hall"]
-        look("bp-1-hall-beams", x + 2.5, y, z + 5.5, x + 0.5, y + 3.5, z - 3.5, wait=8)
+        look("bp-1-hall-rafters", x + 0.5, y, z + 5.5, x + 0.5, y + 4.5, z - 3.5, wait=8)
     if "market" in at:
         x, y, z = at["market"]
-        look("bp-2-market-beams", x + 0.5, y, z + 3.5, x + 0.5, y + 3.5, z - 1.5, wait=6)
+        look("bp-2-market-eaves", x + 0.5, y, z + 3.5, x + 0.5, y + 3.0, z - 2.5, wait=6)
     if "lighthouse" in at:
         x, y, z = at["lighthouse"]
         look("bp-3-lighthouse-gallery", x + 2.5, y + 16, z - 1.5, x + 0.5, y + 18.5, z + 0.5, wait=6)

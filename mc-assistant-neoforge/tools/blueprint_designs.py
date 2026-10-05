@@ -242,8 +242,9 @@ of twenty-seven chests, its door facing the shed's door. Barrels by the door."""
     b.fill(-1, 1, 3, -2, 2, "f")
     gable_z(b, -3, 3, -4, 4, 3, gable_z0=-3, gable_z1=3)
     b.set(0, 4, -3, "G")
-    b.set(0, 3, -4, "P")                                    # a bracket out of the wall plate over the door
-    b.set(0, 2, -4, "j")                                    # and the lantern hung from it
+    b.set(0, 3, -4, "|")                                    # a beam end out of the wall plate over the door
+    b.set(0, 2, -4, "j")                                    # and the lantern hung from it (a fence would be one
+                                                            # more thing for a new village to make before it builds)
     b.write()
 
 
@@ -270,9 +271,7 @@ stone wall on three sides, a pitched roof, and a fire-pit's worth of room.""")
     gable_x(b, -3, 3, -3, 3, 3, gable_x0=-2, gable_x1=2)
     b.set(0, 0, 1, "T")
     b.set(1, 0, 1, "C")
-    for z in (-1, 0, 1):
-        b.set(0, 3, z, "|")                                 # a tie beam from the front plate to the back
-    b.set(0, 2, 1, "j")                                     # the lantern hung from it, over the table
+    b.set(0, 2, 2, "j")                                     # hung from the back plate, over the table
     b.write()
 
 
@@ -448,17 +447,16 @@ chests and a bench, lanterns overhead, and steps up to a double door.""")
     for x in range(-W_ + 1, W_):
         b.set(x, 4, -D_, "-")
         b.set(x, 4, D_, "-")
-    for z in (-4, 0, 4):
-        for x in range(-W_ + 1, W_):
-            b.set(x, 4, z, "-")                             # tie beams across the hall under the open roof
-        b.set(0, 3, z, "j")                                 # and the lanterns hung from them
     gable_z(b, -W_ - 1, W_ + 1, -D_ - 1, D_ + 1, 4, gable_z0=-D_, gable_z1=D_)
+    for z in (-4, 0, 4):                                    # lanterns hung from the rafters down both sides,
+        for x in (-W_ + 1, W_ - 1):                         # high over the benches: nothing more to build for them
+            b.set(x, 5, z, "j")
     b.set(0, 6, -D_, "G")
     b.set(0, 7, -D_, "G")
     b.set(0, 6, D_, "G")
-    for x in (-3, 3):                                       # lamp posts either side of the steps
-        b.set(x, 0, -D_ - 1, "P")
-        b.set(x, 1, -D_ - 1, "P")
+    for x in (-3, 3):                                       # lamp posts either side of the steps, of the frame's
+        b.set(x, 0, -D_ - 1, "L")                           # logs (a fence is a thing to be made first)
+        b.set(x, 1, -D_ - 1, "L")
         b.set(x, 2, -D_ - 1, "l")
     b.write()
 
@@ -493,11 +491,8 @@ from the beams.""")
         b.set(-4, 4, z, "|")
         b.set(4, 4, z, "|")
         b.set(0, 4, z, "|")
-    for z in (-2, 2):                                       # cross beams over the stalls, to hang the lanterns from
-        for x in (-3, -2, -1, 1, 2, 3):
-            b.set(x, 4, z, "-")
     hip(b, -5, 5, -5, 5, 4)
-    for (x, z) in ((-2, -2), (2, -2), (-2, 2), (2, 2)):
+    for (x, z) in ((-4, -2), (4, -2), (-4, 2), (4, 2)):    # hung from the eave plates, over the stalls
         b.set(x, 3, z, "j")
     b.write()
 
@@ -536,8 +531,7 @@ battlemented deck with a pitched lookout roof, and lanterns for the watch.""")
             for h in (9, 10):
                 b.set(x, h, z, "P")
     hip(b, -3, 3, -3, 3, 11)
-    b.fill(-2, 2, 11, -2, 2, "f")                           # a boarded ceiling on the posts, under the roof
-    b.set(0, 10, 0, "j")                                    # and the watch's lantern hung from it
+    b.set(0, 13, 0, "j")                                    # the watch's lantern, hung in the peak of the roof
     b.write()
 
 
@@ -728,7 +722,7 @@ battlemented roof walk at the front.""")
     gable_z(b, -W_ - 1, W_ + 1, -D_ - 1, D_ + 1, 3, gable_z0=-D_, gable_z1=D_)
     b.set(0, 5, -D_, "G")
     for x in (-2, 2):
-        b.set(x, 3, -D_ - 1, "P")                           # brackets out of the wall plate either side of the door
+        b.set(x, 3, -D_ - 1, "|")                           # beam ends out of the wall plate either side of the door
         b.set(x, 2, -D_ - 1, "j")                           # and the lanterns hung from them
     b.write()
 
@@ -883,9 +877,9 @@ and lanterns hung from the beams. The enchanter works here.""")
     gable_z(b, -4, 4, -5, 5, 4, gable_z0=-4, gable_z1=4)
     for z in (-2, 2):
         b.set(0, 3, z, "j")
-    for x in (-2, 2):                                       # lamp posts either side of the door
-        b.set(x, 0, -5, "P")
-        b.set(x, 1, -5, "P")
+    for x in (-2, 2):                                       # lamp posts either side of the door, of the frame's
+        b.set(x, 0, -5, "L")                                # logs (a fence is a thing to be made first)
+        b.set(x, 1, -5, "L")
         b.set(x, 2, -5, "l")
     b.write()
 
