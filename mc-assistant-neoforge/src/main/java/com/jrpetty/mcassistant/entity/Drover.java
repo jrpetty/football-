@@ -117,7 +117,11 @@ public final class Drover {
         LOOKED.put(f.getUUID(), today);
         // Nothing wild for fifty blocks: the drover's pair, once — bought out of the treasury.
         if (Ledger.note(village, "kit.drove") != null) return false;
-        if (Ledger.coins(village) < DROVER_PRICE) return false;
+        if (Ledger.coins(village) < DROVER_PRICE) {
+            Market.saveFor(village, "drover", DROVER_PRICE, level.getGameTime());       // the wages leave it put by
+            return false;
+        }
+        Market.bought(village, "drover");
         Ledger.takeCoins(village, DROVER_PRICE);
         Ledger.note(village, "kit.drove", Long.toString(today));
         int put = 0;

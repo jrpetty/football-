@@ -348,7 +348,11 @@ public final class Trades {
         // its treasury (which only fills by selling what it makes). No coin, no kit — yet.
         int price = 0;
         for (ItemStack s : kit) price += priceOf(s);
-        if (!kit.isEmpty() && Ledger.coins(village) < price) return false;
+        if (!kit.isEmpty() && Ledger.coins(village) < price) {
+            Market.saveFor(village, "kit." + t.name(), price, level.getGameTime());   // the wages leave it put by
+            return false;
+        }
+        Market.bought(village, "kit." + t.name());
         GIVEN.computeIfAbsent(village, k -> new ConcurrentHashMap<>()).put(t.name(), today);
         Ledger.note(village, "kit." + t.name(), Long.toString(today));
         if (kit.isEmpty()) return false;

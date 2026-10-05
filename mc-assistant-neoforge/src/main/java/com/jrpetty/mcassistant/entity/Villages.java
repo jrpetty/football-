@@ -315,6 +315,7 @@ public final class Villages {
         Diplomacy.resetForTests();
         Envoys.resetForTests();
         TownJobs.resetForTests();
+        Market.resetForTests();
         Scouts.resetForTests();
         Quests.resetForTests();
         Services.resetForTests();

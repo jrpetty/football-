@@ -3722,4 +3722,59 @@ public class VillageGameTests {
             helper.succeed();
         });
     }
+
+    /**
+     * The treasury keeps the coin going round: short of coin, every working folk gets the same
+     * share of its wage (not the first on the list all of it); what the village is saving for is
+     * left in the treasury; and the day of rest's tithe brings coin back out of the purses.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "t55_treasury")
+    public static void t55_treasury(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(7000);
+        Kit.hold(level, 40000, 12000, 24);
+        Kit.prepare(level, 40000, 12000, 24);
+        BlockPos heart = Kit.surface(level, 40000, 12000);
+        VillageFolkSpawnerBlock.raiseParty(level, heart, 0.0F, 8);
+        Villages.Village v = Villages.nearest(level, heart, Villages.VILLAGE_RANGE);
+        helper.assertTrue(v != null, "a village");
+        java.util.UUID id = v.id();
+        java.util.List<VillageFolkEntity> hands = new java.util.ArrayList<>();
+        for (AssistantEntity a : Villages.folkOf(id)) {
+            if (a instanceof VillageFolkEntity f && !f.isBaby()) { f.setJob(StationTask.FARM); f.spend(f.purse()); hands.add(f); }
+        }
+        int bill = com.jrpetty.mcassistant.entity.Market.wageBill(id);
+        // Half the day's wages in the treasury.
+        com.jrpetty.mcassistant.village.Ledger.takeCoins(id, com.jrpetty.mcassistant.village.Ledger.coins(id));
+        int half = bill / 2;
+        com.jrpetty.mcassistant.village.Ledger.addCoins(id, half);
+        int paid = com.jrpetty.mcassistant.entity.Market.payWages(level, v);
+        int got = 0, most = 0;
+        for (VillageFolkEntity f : hands) { if (f.purse() > 0) got++; most = Math.max(most, f.purse() - com.jrpetty.mcassistant.entity.Wealth.wage(f)); }
+        Kit.log("t55 wages: bill " + bill + " for " + hands.size() + " hands; " + half + " in the treasury; paid " + paid + " to " + got + " folk");
+        helper.assertTrue(paid == half && got >= 2 && got >= Math.min(hands.size(), half) - 1 && most <= 0,
+            "short of coin, the wages are shared out (" + paid + " to " + got + " folk), nobody paid over its wage");
+        // Saving up: twelve coin put by for a kit, fifteen in the treasury, so only three go in wages.
+        com.jrpetty.mcassistant.village.Ledger.takeCoins(id, com.jrpetty.mcassistant.village.Ledger.coins(id));
+        com.jrpetty.mcassistant.village.Ledger.addCoins(id, 15);
+        com.jrpetty.mcassistant.entity.Market.saveFor(id, "kit.TEST", 12, level.getGameTime());
+        int paidSaving = com.jrpetty.mcassistant.entity.Market.payWages(level, v);
+        int left = com.jrpetty.mcassistant.village.Ledger.coins(id);
+        Kit.log("t55 saving for a kit: paid " + paidSaving + ", the treasury keeps " + left);
+        helper.assertTrue(paidSaving <= 3 && left >= 12, "what it is saving for stays in the treasury: paid " + paidSaving + ", kept " + left);
+        com.jrpetty.mcassistant.entity.Market.bought(id, "kit.TEST");
+        // The tithe: a folk with fifty-two coin gives four of them.
+        VillageFolkEntity rich = hands.get(0);
+        rich.spend(rich.purse());
+        rich.earn(52);
+        int before = com.jrpetty.mcassistant.village.Ledger.coins(id);
+        long day = level.getDayTime() / 24000L;
+        int tithe = com.jrpetty.mcassistant.entity.Market.tithe(level, v, day);
+        int again = com.jrpetty.mcassistant.entity.Market.tithe(level, v, day);
+        Kit.log("t55 the tithe: " + tithe + " coin (" + rich.displayNameCap() + " now has " + rich.purse() + "); again the same day " + again);
+        helper.assertTrue(tithe >= 4 && rich.purse() == 48 && com.jrpetty.mcassistant.village.Ledger.coins(id) == before + tithe && again == 0,
+            "the tithe: one in ten of what a folk holds over a dozen, once a week");
+        helper.succeed();
+    }
 }

@@ -5668,6 +5668,14 @@ public class VillageFolkEntity extends AssistantEntity {
             st -> st.is(net.minecraft.tags.ItemTags.PLANKS) || st.is(net.minecraft.tags.ItemTags.LOGS) || st.is(net.minecraft.world.item.Items.STICK);
         int haveString = countCarried(string), haveWood = countCarried(wood);
         if (haveString < 2) haveString += drawFrom(villageCentre, string, 2 - haveString, r);
+        // No string in the stores: a lock of wool spun into a line (a tailor spins it, but a village
+        // with no tailor, or one making beds of every scrap, left its fishers rodless for good).
+        if (haveString < 2 && drawFrom(villageCentre, st -> st.is(net.minecraft.tags.ItemTags.WOOL), 1, r) > 0) {
+            removeMatching(st -> st.is(net.minecraft.tags.ItemTags.WOOL), 1);
+            insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STRING, 4));
+            haveString += 4;
+            brain("spun a lock of wool into a fishing line");
+        }
         if (haveWood < 1) haveWood += drawFrom(villageCentre, wood, 1, r);
         if (haveString < 2 || haveWood < 1) return;                    // the rest waits in its pack for more
         removeMatching(string, 2);

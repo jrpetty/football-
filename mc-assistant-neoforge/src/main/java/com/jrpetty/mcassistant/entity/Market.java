@@ -40,7 +40,12 @@ import java.util.function.Predicate;
  *     Iron Age it mints more from the gold in its stores (nine coins a bar) whenever the
  *     treasury runs low.</li>
  * <li><b>Wages.</b> Every morning the treasury pays every working folk a wage — more to
- *     an old hand — for as long as the coin lasts. Folk save what they earn.</li>
+ *     an old hand — out of what it holds beyond what it is saving for (a trade's kit, the
+ *     drover's pair). Short of coin, everybody gets the same share of its wage. Folk save
+ *     what they earn, spend it in town, and once a week pay a tithe back.</li>
+ * <li><b>Selling.</b> Every morning passing traders buy enough of what the village has
+ *     plenty of to meet the day's wages; on market day the traders take its surplus.</li>
+ * <li><b>Buying.</b> A village short of wool for its beds buys it on market day.</li>
  * <li><b>Market day.</b> Once a week, a different day for every village, the bell rings
  *     in the morning, prices at the stalls are kinder, and folk spend some of their
  *     savings at the stalls on their break: their favourite treat if the stores have it.</li>
@@ -293,10 +298,12 @@ public final class Market {
         mint(level, v);
         trade(level, v);
         payWages(level, v);
+        if (RestDay.today(id, day)) tithe(level, v, day);
         Villages.checkRank(level, v, day);
         News.morning(level, v, day);
         if (marketDay(id, day)) {
             sellSurplus(level, v, day);
+            buyWool(level, v, day);
             level.playSound(null, v.centre(), SoundEvents.BELL_BLOCK, SoundSource.BLOCKS, 3.0F, 1.0F);
             for (ServerPlayer p : level.players()) {
                 if (p.blockPosition().closerThan(v.centre(), 96)) {
@@ -365,8 +372,13 @@ public final class Market {
     public static int trade(ServerLevel level, Villages.Village v) {
         UUID id = v.id();
         int head = Math.max(1, Villages.headcount(id));
-        if (Ledger.coins(id) >= 10 * head) return 0;
-        int want = Math.max(2, head / 3) + Villages.ageOf(id).ordinal();
+        long now = level.getGameTime();
+        // Enough to meet today's wages and what it is saving for: a town of sixty paid a hundred
+        // and fifty coin a day in wages, and the traders brought in two dozen; the treasury stood
+        // empty every morning, and nothing it had to buy (a hive, the drover's pair) was ever bought.
+        int need = wageBill(id) + saved(id, now) - Ledger.coins(id);
+        if (need <= 0) return 0;
+        int want = Math.max(Math.max(2, head / 3) + Villages.ageOf(id).ordinal(), need);
         int in = 0;
         List<String> sold = new ArrayList<>();
         for (Good g : GOODS) {
@@ -375,7 +387,9 @@ public final class Market {
             int have = stock(level, id, g.what());
             int plenty = g.bundle() * 8;
             if (have < plenty + g.bundle() * 2) continue;
-            int lots = Math.min(2, (have - plenty) / g.bundle());
+            // As much as is wanted, from what it has plenty of: up to six lots of a thing.
+            int lotWorth = Math.max(1, (int) Math.floor(g.bundle() * each(g, have) * 0.6));
+            int lots = Math.min(Math.min(6, (have - plenty) / g.bundle()), Math.max(1, (want - in + lotWorth - 1) / lotWorth));
             int n = lots * g.bundle();
             int paid = (int) Math.floor(n * each(g, have) * 0.6);
             if (paid < 1 || !TownWork.take(level, v, g.what(), n)) continue;
@@ -395,17 +409,146 @@ public final class Market {
         return 1 + (lv >= 10 ? 1 : 0) + (lv >= 25 ? 1 : 0);
     }
 
-    /** Every working folk paid, while the coin lasts. Returns the coin paid out. */
+    /** The day's wages, all told. */
+    public static int wageBill(UUID village) {
+        int bill = 0;
+        for (AssistantEntity a : Villages.folkOf(village)) {
+            if (a instanceof VillageFolkEntity f && !f.isBaby() && f.stationTask() != AssistantEntity.StationTask.NONE) bill += wage(f);
+        }
+        return bill;
+    }
+
+    /**
+     * Every working folk paid, out of what the treasury holds beyond what it is saving for. Short
+     * of coin, every folk gets the same share of its wage, and the odd coins go round, starting
+     * with a different folk each day. (The coin used to go down the list until it ran out: the
+     * first dozen were paid in full every day, and the rest never.) Returns the coin paid out.
+     */
     public static int payWages(ServerLevel level, Villages.Village v) {
         UUID id = v.id();
-        int paid = 0;
+        List<VillageFolkEntity> hands = new ArrayList<>();
+        List<Integer> wages = new ArrayList<>();
+        int bill = 0;
         for (AssistantEntity a : Villages.folkOf(id)) {
             if (!(a instanceof VillageFolkEntity f) || f.isBaby() || f.stationTask() == AssistantEntity.StationTask.NONE) continue;
-            int got = Ledger.takeCoins(id, wage(f));
+            int w = wage(f);
+            if (w <= 0) continue;
+            hands.add(f);
+            wages.add(w);
+            bill += w;
+        }
+        int purse = Ledger.coins(id) - saved(id, level.getGameTime());
+        if (bill <= 0 || purse <= 0) return 0;
+        int[] due = new int[hands.size()];
+        int given = 0;
+        for (int i = 0; i < due.length; i++) {
+            due[i] = bill <= purse ? wages.get(i) : (int) Math.floor(wages.get(i) * (double) purse / bill);
+            given += due[i];
+        }
+        int start = (int) Math.floorMod(level.getDayTime() / 24000L, (long) due.length);
+        for (int k = 0; k < due.length && given < Math.min(purse, bill); k++) {
+            int i = (start + k) % due.length;
+            if (due[i] < wages.get(i)) { due[i]++; given++; }
+        }
+        int paid = 0;
+        for (int i = 0; i < due.length; i++) {
+            if (due[i] <= 0) continue;
+            int got = Ledger.takeCoins(id, due[i]);
             if (got <= 0) break;
-            f.paid(got);
+            hands.get(i).paid(got);
             paid += got;
         }
+        return paid;
+    }
+
+    // ------------------------------------------------------------------ saving up
+
+    /** What a village is putting coin by for, and how much, till when (game time). */
+    private static final java.util.Map<UUID, java.util.Map<String, long[]>> SAVING = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * The village wants to buy this and has not the coin for it yet: for the next three days the
+     * wages leave that much in the treasury, and the morning's traders buy enough to make it up.
+     */
+    public static void saveFor(UUID village, String what, int price, long now) {
+        if (price <= 0) return;
+        SAVING.computeIfAbsent(village, k -> new java.util.concurrent.ConcurrentHashMap<>()).put(what, new long[] { price, now + 72000L });
+    }
+
+    /** Bought (or no longer wanted): no more coin put by for it. */
+    public static void bought(UUID village, String what) {
+        java.util.Map<String, long[]> m = SAVING.get(village);
+        if (m != null) m.remove(what);
+    }
+
+    /** The coin the treasury is keeping back. */
+    public static int saved(UUID village, long now) {
+        java.util.Map<String, long[]> m = SAVING.get(village);
+        if (m == null) return 0;
+        m.values().removeIf(e -> e[1] < now);
+        long sum = 0;
+        for (long[] e : m.values()) sum += e[0];
+        return (int) Math.min(Integer.MAX_VALUE, sum);
+    }
+
+    public static void resetForTests() {
+        SAVING.clear();
+    }
+
+    // ------------------------------------------------------------------ the tithe
+
+    /**
+     * The day of rest: every folk with savings puts one coin in ten (of what it holds over a
+     * dozen) into the treasury, which pays the wages. Without it the coin only went one way:
+     * a town of sixty held 385 coins in its purses and two in its treasury.
+     */
+    public static int tithe(ServerLevel level, Villages.Village v, long day) {
+        UUID id = v.id();
+        if (Ledger.note(id, "tithe.day") != null && Ledger.note(id, "tithe.day").equals(Long.toString(day))) return 0;
+        Ledger.note(id, "tithe.day", Long.toString(day));
+        int in = 0, gave = 0;
+        for (AssistantEntity a : Villages.folkOf(id)) {
+            if (!(a instanceof VillageFolkEntity f) || f.isBaby()) continue;
+            int over = f.purse() - 12;
+            int due = over >= 10 ? over / 10 : 0;
+            if (due <= 0 || !f.spend(due)) continue;
+            in += due;
+            gave++;
+        }
+        if (in <= 0) return 0;
+        Ledger.addCoins(id, in);
+        Villages.tell(id, day, gave + " folk gave the tithe, " + in + " coin, for the village's purse");
+        return in;
+    }
+
+    // ------------------------------------------------------------------ buying in
+
+    /**
+     * Market day: a village with houses whose beds are not made up, and not the wool to make
+     * them, buys wool from the traders (dear: it pays what they would ask), up to three lots a
+     * week, out of what its treasury holds beyond the day's wages. A town of sixty-eight had
+     * fifty-two beds planned and seven made: two ranchers, and no sheep within fifty blocks.
+     */
+    public static int buyWool(ServerLevel level, Villages.Village v, long day) {
+        UUID id = v.id();
+        int missing = Villages.bedsPlanned(id) - Villages.bedsMadeUp(level, id);
+        if (missing <= 0) return 0;
+        int wool = stock(level, id, s -> s.is(ItemTags.WOOL));
+        int beds = stock(level, id, s -> s.is(ItemTags.BEDS));
+        int short_ = 3 * Math.max(0, missing - beds) - wool;
+        if (short_ < 8) return 0;
+        Good g = goodFor(new ItemStack(Items.WHITE_WOOL));
+        if (g == null) return 0;
+        int lots = Math.min(3, (short_ + g.bundle() - 1) / g.bundle());
+        int price = sellPrice(g, wool, true);
+        int spare = Ledger.coins(id) - wageBill(id) - saved(id, level.getGameTime());
+        lots = Math.min(lots, spare / Math.max(1, price));
+        if (lots <= 0) return 0;
+        int paid = Ledger.takeCoins(id, lots * price);
+        ItemStack bought = new ItemStack(Items.WHITE_WOOL, lots * g.bundle());
+        ItemStack left = intoStores(level, id, bought);
+        if (!left.isEmpty()) { /* the stores are full: the rest is left with the traders */ }
+        Villages.tell(id, day, "bought " + lots * g.bundle() + " wool from the traders for " + paid + " coin, for the beds");
         return paid;
     }
 

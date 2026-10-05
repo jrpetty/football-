@@ -187,9 +187,20 @@ added a little at a time round those buildings:
 * **Coin.** A *Village Coin* is a gold coin. A new village's treasury starts with
   32. From the Iron Age the village mints more from the gold in its stores, nine
   coins to an ingot, whenever the treasury runs low.
-* **Wages.** Every morning the treasury pays each working folk 1 coin, 2 from
-  level 10 and 3 from level 25, for as long as the coin lasts. Folk save what
+* **Wages.** Every morning the treasury pays each working folk its wage: more for a
+  skilled trade, a high level, the elder's office and a hard day's work. Folk save what
   they earn and will tell you how much they have put by.
+  * **Short of coin**, every folk gets the same share of its wage. The odd coins go
+    round, starting with somebody different each day.
+  * **Saving up.** When the village can't yet afford something it must buy (a trade's
+    kit, the drover's pair), the wages leave that much in the treasury for three days.
+  * **Passing traders** come every morning and buy enough of what the village has
+    plenty of to meet the day's wages and what it is saving for.
+  * **The tithe.** On the day of rest every folk with savings gives one coin in ten of
+    what it holds over a dozen back to the treasury.
+* **Wool for the beds.** On market day, a village whose houses wait for beds and that
+  has no wool to make them buys up to three lots from the traders, out of what the
+  treasury holds beyond the day's wages.
 * **Market day.** Once a week, on a different day for every village, the bell
   rings on the square in the morning and players nearby are told. On their break
   that day, folk go to the stalls and buy a treat with their savings: their
@@ -1183,8 +1194,8 @@ cobblestone. When the whole town is level, the history says so.
 * **Do its errands.** Errands for the village are paid in coin as well as goods.
 * **Answer the quest board.** See below.
 
-Passing traders buy a little of what every village makes each day, so the treasury never
-runs quite dry.
+Passing traders buy enough of what every village makes each day to meet its wages, so the
+treasury never runs quite dry.
 
 **The quest board** hangs on the front of the meeting hall (on the storehouse until there
 is a hall). Real postings, worked out from what the village needs right now:
@@ -1623,6 +1634,8 @@ Every push to CI:
 * sends a scout 260 blocks to a town it has never seen and checks it finds it, comes
   home and can tell you where it is (`t53`);
 * checks a street is not laid until a folk from the village has walked to it (`t54`);
+* checks the wages are shared out fairly when coin is short, that what the village is saving
+  for stays in the treasury, and that the tithe brings coin back (`t55`);
 * raises a house and a storehouse on the plan's lots and checks the town's life round
   them: the chimney fire, the door's number and names, the washing line, the windows lit
   by night and dark by day, a street sign, the stalls and their goods, a scarecrow
