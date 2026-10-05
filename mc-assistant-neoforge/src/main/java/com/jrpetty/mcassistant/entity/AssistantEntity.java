@@ -738,6 +738,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** DepositGoal reports a successful stash so the "lingering output" timer resets. */
     public void noteStashed() { lastStashTick = tickCount; }
 
+    /** [economy] When it last banked anything (PutAway: was the day's work put away?). */
+    public int lastStashTick() { return lastStashTick; }
+
     public void noteDepositBlocked() {
         depositBlockedTick = tickCount;
         say("My output chest is full — I'll keep working, but it needs emptying.");
@@ -4049,6 +4052,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case WOOD -> s.is(ItemTags.SAPLINGS) ? 16 : 0;
             case RANCH -> BREEDING_FOOD.test(s) ? 16 : (s.is(Items.SHEARS) ? 1 : 0);
             case GUARD -> s.is(Items.TORCH) ? 16 : (s.is(Items.ARROW) ? 32
+                // [economy] Its bow and its shield are its arms, not the day's takings (PutAway banks twice a day).
+                : (s.is(Items.BOW) || s.is(Items.CROSSBOW) || s.is(Items.SHIELD)) ? 1
                 : (s.get(DataComponents.FOOD) != null ? 8 : 0));
             case SMELT -> (s.is(Items.RAW_IRON) || s.is(Items.RAW_GOLD) || s.is(Items.RAW_COPPER)) ? 64
                 : ((s.is(Items.COAL) || s.is(Items.CHARCOAL)) ? (savingCoal() || (s.is(Items.CHARCOAL) && coalLow()) ? 0 : 32)   // [economy] its charcoal is the stores'

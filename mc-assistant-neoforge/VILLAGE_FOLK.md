@@ -2369,6 +2369,23 @@ load in its pack. So:
   lets go of what it drew wherever it is, so its next trip to the stores takes it in, its own
   trade's work with it. The smelter, the crafts, the couriers and the storekeeper work with that
   stock and are let be.
+* **The day's work is put away twice a day.** Every working hand (the fields, the woods, the
+  mines, the waters, the pen, the hives, the hunt, the watch, the smeltery, and the couriers
+  between runs) banks what it has collected at midday and again at the end of its shift, full
+  pack or not, so nobody goes to bed with the day's work on its back. At midday (the noon bell,
+  or from the midday meal's hour, before it sits down to eat) it walks to its own work chest at
+  its plot, a few steps off, or to the stores if they are as near; a hand far out with neither
+  near keeps it till the evening rather than walk to town. At the end of its shift (the dusk bell,
+  or nightfall in a town with no bell; the watch at dusk, before it goes on watch) it puts it in
+  its work chest, or the stores if it has none with room, and then goes home: the bell's "home"
+  waits for it. It keeps what a deposit always keeps: its tools, weapons and armour (a guard its
+  sword, bow, shield and arrows), its trade's kit and working stock (a farmer's seed, a miner's
+  torches and a little stone for bridging), a day's rations, and a builder's materials for the
+  building it is leading; a guard banks its mob drops. A courier on a run banks when the run is
+  done; a folk away with a caravan, scouting, through the gateway, out after a wild animal or
+  on the road to another town is let be. Its card reads "Putting the day's work away" while it
+  is about it; the town's books say "Banked yesterday at noon 11 of 12 hands, at dusk 12 of 12",
+  the Stores page and `/village economy` today's so far.
 * **A farmer keeps its seed, not the harvest.** It keeps sixteen of each crop it plants for a
   first field, two more for each ring the field has grown, and never more than thirty-two;
   every carrot, potato and seed past that goes in with the rest of the harvest. (A grown field's

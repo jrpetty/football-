@@ -33,6 +33,19 @@ public record Job(Type type, @Nullable GatherGoal.Kind kind, int amount,
         return new Job(Type.DEPOSIT, null, 0, null, null);
     }
 
+    /** [economy] A deposit's amount when it is the day's work put away (PutAway): its label says so. */
+    public static final int PUT_AWAY = 1;
+
+    /** [economy] The day's work put away, into this chest (or, with none named, wherever a deposit goes). */
+    public static Job putAway(@Nullable net.minecraft.core.BlockPos pos) {
+        return new Job(Type.DEPOSIT, null, PUT_AWAY, null, pos == null ? null : pos.getX() + " " + pos.getY() + " " + pos.getZ());
+    }
+
+    /** [economy] Is this the day's work being put away? */
+    public boolean putAway() {
+        return type == Type.DEPOSIT && amount == PUT_AWAY;
+    }
+
     /** Deposit into one specific chest (arg = "x y z") — the town depot. */
     public static Job depositAt(net.minecraft.core.BlockPos pos) {
         return new Job(Type.DEPOSIT, null, 0, null, pos.getX() + " " + pos.getY() + " " + pos.getZ());
@@ -198,7 +211,7 @@ public record Job(Type type, @Nullable GatherGoal.Kind kind, int amount,
     public String label() {
         return switch (type) {
             case GATHER -> "gather " + amount + " " + (kind != null ? kind.label : "?");
-            case DEPOSIT -> "deposit loot";
+            case DEPOSIT -> amount == PUT_AWAY ? "putting the day's work away" : "deposit loot";   // [economy] PutAway
             case MODE -> "switch to " + (mode != null ? mode.name().toLowerCase() : "?");
             case GO_HOME -> "go home";
             case CRAFT -> "craft " + amount + " " + arg;

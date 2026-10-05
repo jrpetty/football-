@@ -1558,7 +1558,7 @@ public class CityScreen extends Screen {
         CompoundTag now = now();
         // The charts on the left; the storehouse itself — its books, its staff, its run list — on the right.
         int lw = cw * 11 / 20, rx = x + lw + 8, rw = cw - lw - 8;
-        int half = (lw - 6) / 2, chartH = (ch - 40) / 2;
+        int half = (lw - 6) / 2, chartH = (ch - 49) / 2;     // [economy] a line more under the charts: the work put away
         chart(g, x, y, half, chartH, "Food in the stores", mx, my, new Series("Food", series("food"), GREEN));
         int[] fd = series("food_days10");
         chart(g, x + half + 6, y, half, chartH, "Days of food put by (tenths)", mx, my, new Series("Days ×10", fd, AMBER));
@@ -1571,6 +1571,8 @@ public class CityScreen extends Screen {
         for (String k : keys) sb.append(k).append(' ').append(now.getInt(k)).append("  ");
         small(g, Ui.clip(font, sb.toString(), (int) (lw / 0.75)), x, ty, Ui.INK);
         small(g, Ui.clip(font, "The larder's books: " + now.getString("food_books"), (int) (lw / 0.75)), x, ty + 9, Ui.MUTED);
+        // [economy] The day's work put away: how many hands banked at noon and at dusk (PutAway).
+        if (!now.getString("put_away").isEmpty()) small(g, Ui.clip(font, "Put away: " + now.getString("put_away"), (int) (lw / 0.75)), x, ty + 18, Ui.MUTED);
         storehouse(g, rx, y, rw, ch, mx, my);
     }
 
