@@ -662,6 +662,7 @@ public final class VillageCommands {
             sb.append(". Leader: ").append(com.jrpetty.mcassistant.entity.Leader.line(id));
             sb.append(". Election: ").append(com.jrpetty.mcassistant.entity.Elections.line(id, level.getDayTime() / 24000L));
             sb.append(". Homes: ").append(com.jrpetty.mcassistant.entity.Homes.line(level, id));
+            sb.append(". Look: ").append(com.jrpetty.mcassistant.entity.Palettes.line(id));
             java.util.Map<java.util.UUID, String> citizens = com.jrpetty.mcassistant.village.Ledger.citizens(id);
             if (!citizens.isEmpty()) sb.append("; citizens ").append(String.join(", ", citizens.values()));
             String n = com.jrpetty.mcassistant.entity.Diplomacy.status(id);

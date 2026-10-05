@@ -2312,12 +2312,17 @@ public class VillageGameTests {
         BlockPos houseAt = Kit.surface(level, heart.getX(), heart.getZ() - 26);
         BuildGoal.stamp(level, "house", houseAt, Direction.NORTH, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
         com.jrpetty.mcassistant.village.Ledger.built(village, "house", houseAt, Direction.NORTH);
+        // The room the village has is its beds, counted (Villages.bedsMadeUp; the households do it every half a minute).
+        Villages.recountBeds(village);
+        Villages.bedsMadeUp(level, village);
         int roomBefore = Villages.housing(village);
         for (int i = 0; i < 80 && !com.jrpetty.mcassistant.village.Ledger.grown(village, houseAt); i++) {
             com.jrpetty.mcassistant.entity.Grow.work(level, v, 3000);
         }
         // The new bedrooms' beds are made and put in out of the stores, one a turn.
         for (int i = 0; i < 12 && com.jrpetty.mcassistant.entity.Grow.furnish(level, v); i++) { }
+        Villages.recountBeds(village);
+        Villages.bedsMadeUp(level, village);
         int bricks = 0, upstairs = 0, beds = 0, fences = 0;
         for (BlockPos q : BlockPos.betweenClosed(houseAt.offset(-6, -1, -6), houseAt.offset(6, 12, 6))) {
             net.minecraft.world.level.block.state.BlockState st = level.getBlockState(q);
@@ -5507,6 +5512,42 @@ public class VillageGameTests {
         BlockPos door = null;
         for (BuildGoal.Placement p : BuildGoal.plan("house", home, Direction.NORTH, 13)) if (p.part() == BuildGoal.Part.DOOR) door = p.pos();
         helper.assertTrue(door != null && level.getBlockState(door.relative(Direction.NORTH)).isAir(), "and the way in is clear");
+        helper.succeed();
+    }
+
+    /**
+     * Every town its own look: for every land, each part of a building has six to a dozen kinds it may
+     * be made of, best first, every one a real block the woods, the mine or the smeltery can give, and
+     * nothing precious (no iron, no gold) in any wall or roof.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 40, batch = "t81_palettes")
+    public static void t81_palettes(GameTestHelper helper) {
+        StringBuilder log = new StringBuilder();
+        com.jrpetty.mcassistant.entity.goal.Blueprints.Style[] parts = {
+            com.jrpetty.mcassistant.entity.goal.Blueprints.Style.WALL, com.jrpetty.mcassistant.entity.goal.Blueprints.Style.FLOOR,
+            com.jrpetty.mcassistant.entity.goal.Blueprints.Style.ROOF_STAIR, com.jrpetty.mcassistant.entity.goal.Blueprints.Style.ROOF_SLAB,
+            com.jrpetty.mcassistant.entity.goal.Blueprints.Style.ROOF_BLOCK, com.jrpetty.mcassistant.entity.goal.Blueprints.Style.POST,
+            com.jrpetty.mcassistant.entity.goal.Blueprints.Style.FOUNDATION, com.jrpetty.mcassistant.entity.goal.Blueprints.Style.MASONRY };
+        for (com.jrpetty.mcassistant.entity.Homeland.Land land : com.jrpetty.mcassistant.entity.Homeland.Land.values()) {
+            java.util.UUID v = java.util.UUID.randomUUID();
+            com.jrpetty.mcassistant.entity.Homeland.setForTests(v, land);
+            com.jrpetty.mcassistant.entity.Palettes.forget(v);
+            for (var part : parts) {
+                java.util.List<net.minecraft.world.item.Item> kinds = com.jrpetty.mcassistant.entity.Palettes.ranked(v, part);
+                helper.assertTrue(kinds.size() >= 6 && kinds.size() <= 12, land + " " + part + ": six to a dozen kinds, got " + kinds.size());
+                for (net.minecraft.world.item.Item it : kinds) {
+                    helper.assertTrue(it instanceof net.minecraft.world.item.BlockItem, land + " " + part + ": " + it + " is a block");
+                    helper.assertTrue(!com.jrpetty.mcassistant.entity.Palettes.precious(new net.minecraft.world.item.ItemStack(it)),
+                        land + " " + part + ": nothing precious, got " + it);
+                    String id = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(it).getPath();
+                    helper.assertTrue(!id.contains("iron") && !id.contains("gold"), land + " " + part + ": no iron or gold, got " + id);
+                }
+            }
+            log.append(land).append(": ").append(com.jrpetty.mcassistant.entity.Palettes.line(v)).append("; ");
+        }
+        Kit.log("t81 the looks: " + log);
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Palettes.precious(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_BLOCK)),
+            "an iron block is never a roof");
         helper.succeed();
     }
 }

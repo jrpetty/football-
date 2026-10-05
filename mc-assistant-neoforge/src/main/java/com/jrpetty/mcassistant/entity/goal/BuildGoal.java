@@ -1043,10 +1043,18 @@ public class BuildGoal extends Goal {
 
     @Nullable
     private BlockState takeStyled(Blueprints.Style style) {
+        // The village's own look first (Palettes): its wood and its stone for this part, best first.
+        for (net.minecraft.world.item.Item it : com.jrpetty.mcassistant.entity.Palettes.ranked(assistant.ownerId(), style)) {
+            BlockState st = takeBlockMatching(s -> s.is(it));
+            if (st != null) return st;
+        }
         BlockState st = takeBlockMatching(preferred(style));
         if (st == null) st = takeBlockMatching(secondBest(style));
-        if (st == null && style != Blueprints.Style.SOIL) st = takeBlockMatching(s -> isBuildingBlock(s) && !isSoil(s));
-        if (st == null) st = takeBlockMatching(BuildGoal::isBuildingBlock);
+        // Anything else that will stand, but never the metals and the gems (no iron roof, ever).
+        if (st == null && style != Blueprints.Style.SOIL) {
+            st = takeBlockMatching(s -> isBuildingBlock(s) && !isSoil(s) && !com.jrpetty.mcassistant.entity.Palettes.precious(s));
+        }
+        if (st == null) st = takeBlockMatching(s -> isBuildingBlock(s) && !com.jrpetty.mcassistant.entity.Palettes.precious(s));
         return st;
     }
 

@@ -368,6 +368,8 @@ public final class Villages {
         Leader.resetForTests();
         Ages.resetForTests();
         Interiors.resetForTests();
+        Palettes.resetForTests();
+        Court.resetForTests();
         Trades.resetForTests();
         Links.resetForTests();
         Asks.resetForTests();

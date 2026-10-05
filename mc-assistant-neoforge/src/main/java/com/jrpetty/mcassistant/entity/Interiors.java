@@ -230,8 +230,9 @@ public final class Interiors {
                     if (door == null || p.pos().getY() < door.getY()) door = p.pos();
                     for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) keepClear.add(p.pos().offset(dx, 0, dz));
                 }
-                // Room to get at a ladder, a chest, a bench of the trade (a bed is got into from anywhere).
-                case LADDER, CHEST, FURNACE, CRAFTING_TABLE, ANVIL, BREWING, ENCHANTING, LECTERN, SMOKER, LOOM, GRINDSTONE, CAMPFIRE -> {
+                // Room to get at a ladder, a chest, a stand or a table of the crafts (a bed is got into from
+                // anywhere, a bench or an oven from the side).
+                case LADDER, CHEST, ANVIL, BREWING, ENCHANTING, LECTERN, LOOM, GRINDSTONE, CAMPFIRE -> {
                     for (Direction d : Direction.Plane.HORIZONTAL) keepClear.add(p.pos().relative(d));
                     keepClear.add(p.pos());
                 }
@@ -255,7 +256,7 @@ public final class Interiors {
                 case FLOOR, FOUNDATION, MASONRY, GENERIC -> { }
                 default -> { continue; }
             }
-            if (!enclosed(at, cell, r + 2)) continue;
+            if (!enclosed(at, cell, r + 2)) continue;                         // a room: walls round it, a roof over it (not the attic)
             floor.add(cell);
         }
         floor.sort(Comparator.<BlockPos>comparingInt(BlockPos::getY).thenComparingInt(BlockPos::getX).thenComparingInt(BlockPos::getZ));
@@ -290,7 +291,7 @@ public final class Interiors {
             List<BlockPos> picked = new ArrayList<>();
             for (BlockPos c : cells) {
                 boolean near = false;
-                for (BlockPos o : picked) if (o.distManhattan(c) < 3) { near = true; break; }
+                for (BlockPos o : picked) if (o.distManhattan(c) < 2) { near = true; break; }
                 if (!near) picked.add(c);
             }
             List<Kind> pieces = new ArrayList<>();
@@ -320,15 +321,33 @@ public final class Interiors {
         return n;
     }
 
-    /** Walls (anything the drawing puts down) within reach in every direction along the floor: a room, not the yard. */
+    /**
+     * Walls within reach in every direction along the floor (a wall, a post, a window or a door: not the
+     * slope of a roof, so the space under the rafters is not a room) and a roof over it: a room, not the
+     * yard or the attic.
+     */
     private static boolean enclosed(Map<BlockPos, BuildGoal.Placement> at, BlockPos c, int reach) {
         for (Direction d : Direction.Plane.HORIZONTAL) {
             boolean hit = false;
-            for (int k = 1; k <= reach && !hit; k++) if (at.containsKey(c.relative(d, k))) hit = true;
+            for (int k = 1; k <= reach && !hit; k++) {
+                BuildGoal.Placement n = at.get(c.relative(d, k));
+                if (n == null) continue;
+                if (wallish(n)) hit = true;
+                else if (n.part() == BuildGoal.Part.BLOCK) break;                    // a roof slope or a beam first: not a room
+            }
             if (!hit) return false;
         }
         for (int k = 2; k <= 10; k++) if (at.containsKey(c.above(k))) return true;     // under a roof
         return false;
+    }
+
+    private static boolean wallish(BuildGoal.Placement p) {
+        if (p.part() == BuildGoal.Part.WINDOW || p.part() == BuildGoal.Part.DOOR) return true;
+        if (p.part() != BuildGoal.Part.BLOCK) return false;
+        return switch (p.style()) {
+            case WALL, WALL_LOW, MASONRY, BRICK, POST, GENERIC, GLASS, FOUNDATION -> true;
+            default -> false;
+        };
     }
 
     // ------------------------------------------------------------------ tests

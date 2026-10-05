@@ -1700,6 +1700,32 @@ word).
 `/village status` shows the election (who stands and the count so far, or the last result and the
 next day), and the board shows it too.
 
+### Every town its own look
+
+A village builds in a look of its own, so its streets are of a piece: its walls in the wood its
+own woods grow, its roofs in a darker wood against them, its floors in a third, its posts and
+beams in the roof's wood (dark timbers on light walls), and its footings and dressed stone in the
+land's own stone. Each part has a short list of six to a dozen kinds, best first, and a builder
+takes the first it has enough of, going down the list only for what it has none of:
+
+| Land | Walls | Roofs | Floors | Beams | Footings | Dressed stone |
+|---|---|---|---|---|---|---|
+| plains | oak | dark oak | spruce | spruce | cobblestone | stone bricks |
+| forest | birch | dark oak | oak | dark oak | cobblestone | stone bricks (mossy if any) |
+| pine woods, snow | spruce | dark oak | spruce | dark oak | cobblestone | stone bricks |
+| mountains | spruce | dark oak | spruce | spruce | cobbled deepslate | deepslate bricks |
+| desert | birch | jungle | acacia | jungle | sandstone | cut sandstone |
+| savanna | acacia | dark oak | acacia | dark oak | cobblestone | stone bricks |
+| jungle | jungle | dark oak | jungle | jungle | mossy cobblestone (if any) | mossy stone bricks (if any) |
+| swamp | mangrove | dark oak | spruce | mangrove | mud bricks | mud bricks |
+| badlands | dark oak | spruce | acacia | spruce | terracotta | cut red sandstone |
+| cherry groves | cherry | spruce | oak | spruce | cobblestone | stone bricks |
+| coast, river | oak | spruce | spruce | spruce | cobblestone | stone bricks |
+
+Nothing precious goes into a wall or a roof: no iron, no gold, no gems. A roof is wood until the Iron
+Age slates it and the Diamond Age roofs the great buildings in copper. `/village status` shows the
+village's look.
+
 ### Furnished for the age
 
 A building's insides come up in the world with the village, a piece at a time, out of its stores
@@ -1745,6 +1771,10 @@ it (1,557 blocks, 24 high), on the great lot behind the board, which is kept for
 * over the door, a stone tower four storeys high with the leader's study in it and an open
   lantern-room at the top, seen from the fields.
 
+Every morning, after the business at the board, the leader walks to the hall and holds court
+for a while from the dais at the head of the great hall, looking down it to the door ("Next! Who
+has business with the hall?"), then goes back to its own work.
+
 Whoever leads the village lives there, with its partner and their children; its old house goes
 back to the village (bought back at half what they paid, if it was theirs). When another is
 elected the households change over, and the last leader's family goes on the list for a house of
@@ -1759,8 +1789,9 @@ house of its own (a house or a manor the village built) and sleeps there.
   of the room. Two folk who marry move in together, into the better of their two houses; the other
   goes back to the village (bought back at half what they paid for it, if it was theirs).
 * **A bed for every child.** A child born into a full house gets a bed of its own: its parents buy
-  it at the shop out of their purses (a generous leader's village gives it if they can't pay) and
-  set it up across the room from theirs. Twins want two beds, and get them. Births come one at a
+  it out of their purses (a generous leader's village gives it if they can't pay). Once the village
+  has a shop, a parent walks to the shop for it ("One bed, please — for Wren."), carries it home and
+  sets it up across the room from theirs. Twins want two beds, and get them. Births come one at a
   time mostly; twins about one birth in seventeen, triplets once in two hundred, quadruplets once in
   four thousand.
 * **Grown children move out.** A child who comes of age stays at home until there is a house for it,

@@ -332,6 +332,9 @@ public class VillageFolkEntity extends AssistantEntity {
         // Moving house, or its keepsakes home of an evening (Homes).
         if (!withAPlayer && tickCount % 4 == 0 && level() instanceof net.minecraft.server.level.ServerLevel homing
                 && Homes.moving(this, homing)) return;
+        // The leader's morning at the leader's hall (Court).
+        if (!withAPlayer && tickCount % 4 == 1 && level() instanceof net.minecraft.server.level.ServerLevel court
+                && Court.hold(this, court)) return;
         // Election day (Elections): at its own hour, to the board to cast its vote.
         if (!withAPlayer && tickCount % 4 == 2 && level() instanceof net.minecraft.server.level.ServerLevel polling
                 && Elections.goVote(this, polling)) return;
@@ -5891,8 +5894,12 @@ public class VillageFolkEntity extends AssistantEntity {
             com.jrpetty.mcassistant.entity.goal.Blueprints.Style.ROOF_SLAB, com.jrpetty.mcassistant.entity.goal.Blueprints.Style.ROOF_SLAB_TOP});
         int stoneSlabs = want.getOrDefault(com.jrpetty.mcassistant.entity.goal.Blueprints.Style.STONE_SLAB, 0);
         int stoneStairs = want.getOrDefault(com.jrpetty.mcassistant.entity.goal.Blueprints.Style.STONE_STAIR, 0);
+        // The village's own stone and timber first (Palettes), then whatever else will do.
+        topUpRanked(heart, com.jrpetty.mcassistant.entity.goal.Blueprints.Style.FOUNDATION, BuildGoal::isStoneLike, stone, r);
         topUp(heart, BuildGoal::isStoneLike, stone, r);
+        topUpRanked(heart, com.jrpetty.mcassistant.entity.goal.Blueprints.Style.POST, st -> st.is(net.minecraft.tags.ItemTags.LOGS), logs, r);
         topUp(heart, st -> st.is(net.minecraft.tags.ItemTags.LOGS), logs, r);
+        topUpRanked(heart, com.jrpetty.mcassistant.entity.goal.Blueprints.Style.WALL, st -> st.is(net.minecraft.tags.ItemTags.PLANKS), boards, r);
         // The roof first, out of the planks: it is the thing that makes a building look like one.
         java.util.function.Predicate<net.minecraft.world.item.ItemStack> woodStairs = st -> st.is(net.minecraft.tags.ItemTags.WOODEN_STAIRS);
         java.util.function.Predicate<net.minecraft.world.item.ItemStack> woodSlabs = st -> st.is(net.minecraft.tags.ItemTags.WOODEN_SLABS);
@@ -5912,6 +5919,16 @@ public class VillageFolkEntity extends AssistantEntity {
             stoneStairs - countCarried(rockStairs), heart, r);
         planksInHand(boards, heart, r);
         return countCarried(woodStairs) + countCarried(woodSlabs) + countCarried(rockSlabs) + countCarried(rockStairs);
+    }
+
+    /** As topUp, the village's own kinds for this part first, one kind after another (Palettes). */
+    private void topUpRanked(BlockPos heart, com.jrpetty.mcassistant.entity.goal.Blueprints.Style style,
+                             java.util.function.Predicate<net.minecraft.world.item.ItemStack> group, int want, int r) {
+        for (net.minecraft.world.item.Item it : com.jrpetty.mcassistant.entity.Palettes.ranked(ownerId(), style)) {
+            int have = countCarried(group);
+            if (have >= want) return;
+            drawFrom(heart, st -> st.is(it), want - have, r);
+        }
     }
 
     /** Have at least this many of a thing in the pack, out of the stores if they have it. */

@@ -101,6 +101,13 @@ public final class Homes {
 
     record Move(@Nullable BlockPos from, BlockPos to, boolean whole, long started, boolean[] fetched) {}
 
+    /** A child's bed bought at the shop, on its way home with a parent: where it goes, how it lies, for whom. */
+    record BedErrand(UUID village, BlockPos house, BlockPos shop, BlockPos spot, Direction lie, BlockState bed, long started,
+                     boolean[] collected, String child) {}
+
+    /** Parents fetching a child's bed from the shop (by the parent). */
+    private static final Map<UUID, BedErrand> BED_ERRANDS = new ConcurrentHashMap<>();
+
     @Nullable private static Boolean SALE_FOR_TESTS;
 
     public static void resetForTests() {
@@ -109,6 +116,7 @@ public final class Homes {
         TICKED.clear();
         MORNING.clear();
         MOVES.clear();
+        BED_ERRANDS.clear();
     }
 
     /** What the village builds for living in. */
@@ -377,7 +385,13 @@ public final class Homes {
         }
         // The builders' list: a house for whoever still waits, with none standing empty.
         Villages.HOUSE_WANTED.put(id, wantsAHouse(level, id));
-        // A bed for every child.
+        // A bed for every child (and any fetched from the shop that never came: delivered).
+        for (BedErrand e : List.copyOf(BED_ERRANDS.values())) {
+            if (!e.village().equals(id) || level.getGameTime() - e.started() < 6000L) continue;
+            Home eh = homes.get(e.house().asLong());
+            if (eh != null) deliver(level, v, eh, e, null);
+            else BED_ERRANDS.values().remove(e);
+        }
         for (Home h : homes.values()) childBeds(level, v, h, day);
         // Keepsakes into the household's chest, for those at home.
         morning(level, v, day);
@@ -691,6 +705,7 @@ public final class Homes {
         List<BlockPos> beds = bedsIn(level, id, h);
         int children = (int) members.stream().filter(VillageFolkEntity::isBaby).count();
         if (children == 0 || beds.size() >= members.size()) return why(h, "none wanted: " + beds.size() + " beds for " + members.size());
+        for (BedErrand e : BED_ERRANDS.values()) if (e.house().equals(h.anchor)) return why(h, "a bed on its way from the shop");
         // A bed: out of the stores (the tailor's), bought with the parents' coin; or the village's gift if
         // the parents have none and the leader is a generous one.
         if (Market.stock(level, id, s -> s.is(ItemTags.BEDS)) == 0) return why(h, "no bed in the stores");
@@ -711,15 +726,21 @@ public final class Homes {
         }
         if (paid) Ledger.addCoins(id, price);
         Direction lie = spotLie(level, spot);
-        for (BlockPos rug : List.of(spot, spot.relative(lie))) {
-            BlockState was = level.getBlockState(rug);
-            if (was.is(BlockTags.WOOL_CARPETS)) Crafts.store(level, v, new ItemStack(was.getBlock().asItem()));   // rolled up, back to the stores
+        VillageFolkEntity parent0 = members.stream().filter(m -> !m.isBaby() && !BED_ERRANDS.containsKey(m.getUUID())).findFirst().orElse(null);
+        VillageFolkEntity child0 = members.stream().filter(VillageFolkEntity::isBaby)
+            .max(Comparator.comparingLong(VillageFolkEntity::bornDay)).orElse(null);
+        BlockPos shop = Villages.builtAt(id, "shop");
+        if (shop != null && Cafe.open(id, "shop") && parent0 != null && !instantBeds) {
+            // Bought at the shop: a parent goes for it and carries it home (moving), and sets it up.
+            BED_ERRANDS.put(parent0.getUUID(), new BedErrand(id, h.anchor, shop, spot, lie, bb.defaultBlockState().setValue(BedBlock.FACING, lie),
+                level.getGameTime(), new boolean[]{ false }, child0 == null ? "the little one" : child0.displayNameCap()));
+            Villages.tell(id, day, parent0.displayNameCap() + " bought a bed at the shop for " + (child0 == null ? "a child" : child0.displayNameCap())
+                + " (" + price + coins(price) + ")");
+            parent0.persona().remember(day, "I bought a bed for " + (child0 == null ? "the little one" : child0.displayNameCap()), 4);
+            why(h, "bought one at the shop");
+            return true;
         }
-        BlockState st = bb.defaultBlockState().setValue(BedBlock.FACING, lie);
-        level.setBlock(spot, st.setValue(BedBlock.PART, BedPart.FOOT), 3);
-        level.setBlock(spot.relative(lie), st.setValue(BedBlock.PART, BedPart.HEAD), 3);
-        String extra = Ledger.note(id, "homebeds/" + h.anchor.asLong());
-        Ledger.note(id, "homebeds/" + h.anchor.asLong(), (extra == null || extra.isEmpty() ? "" : extra + ",") + spot.relative(lie).asLong());
+        layBed(level, v, h, spot, lie, bb.defaultBlockState());
         VillageFolkEntity parent = members.stream().filter(m -> !m.isBaby()).findFirst().orElse(null);
         VillageFolkEntity child = members.stream().filter(VillageFolkEntity::isBaby)
             .max(Comparator.comparingLong(VillageFolkEntity::bornDay)).orElse(null);
@@ -740,6 +761,80 @@ public final class Homes {
     /** Tests: what became of the last look for a child's bed in this house. */
     public static String whyForTests(BlockPos anchor) {
         return WHY.getOrDefault(anchor.asLong(), "not looked");
+    }
+
+    /** Tests: a child's bed set up there and then, not fetched from the shop. */
+    static boolean instantBeds;
+
+    public static void instantBedsForTests(boolean on) {
+        instantBeds = on;
+    }
+
+    /** A child's bed set down in its house: any rug there rolled back into the stores, and the bed on the house's books. */
+    static void layBed(ServerLevel level, Villages.Village v, Home h, BlockPos spot, Direction lie, BlockState bed) {
+        for (BlockPos rug : List.of(spot, spot.relative(lie))) {
+            BlockState was = level.getBlockState(rug);
+            if (was.is(BlockTags.WOOL_CARPETS)) Crafts.store(level, v, new ItemStack(was.getBlock().asItem()));   // rolled up, back to the stores
+        }
+        BlockState st = bed.setValue(BedBlock.FACING, lie);
+        level.setBlock(spot, st.setValue(BedBlock.PART, BedPart.FOOT), 3);
+        level.setBlock(spot.relative(lie), st.setValue(BedBlock.PART, BedPart.HEAD), 3);
+        String extra = Ledger.note(v.id(), "homebeds/" + h.anchor.asLong());
+        Ledger.note(v.id(), "homebeds/" + h.anchor.asLong(), (extra == null || extra.isEmpty() ? "" : extra + ",") + spot.relative(lie).asLong());
+    }
+
+    /**
+     * A parent with a child's bed to fetch: to the shop for it, then home with it, and set it up across
+     * the room from its own. Returns whether it is about it. Too long about it (a shut door, a long
+     * way round), the shop's boy brings it round and it is set up all the same.
+     */
+    static boolean bedErrand(VillageFolkEntity f, ServerLevel level) {
+        BedErrand e = BED_ERRANDS.get(f.getUUID());
+        if (e == null) return false;
+        Villages.Village v = Villages.get(e.village());
+        Home h = v == null ? null : homes(e.village()).get(e.house().asLong());
+        long now = level.getGameTime();
+        if (v == null || h == null) { BED_ERRANDS.remove(f.getUUID()); return false; }
+        if (now - e.started() > 4800L) {
+            deliver(level, v, h, e, null);
+            return false;
+        }
+        BlockPos target = e.collected()[0] ? e.spot() : e.shop();
+        if (!level.isLoaded(target)) return false;
+        if (f.blockPosition().distSqr(target) > (e.collected()[0] ? 2.5 * 2.5 : 4.0 * 4.0)) {
+            if (f.getNavigation().isDone() || (now - e.started()) % 80L == 0) f.walkTo(target, 0.9D);
+            f.hobbyNow = e.collected()[0] ? "carrying a bed home for " + e.child() : "off to the shop for a bed for " + e.child();
+            f.lastLeisureTick = f.tickCount;
+            return true;
+        }
+        f.getNavigation().stop();
+        f.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+        if (!e.collected()[0]) {
+            e.collected()[0] = true;
+            FolkTalk.speak(f, FolkTalk.pick(level.getRandom(), "One bed, please — for " + e.child() + ".",
+                "A bed for " + e.child() + ". The good one."));
+            return true;
+        }
+        deliver(level, v, h, e, f);
+        return true;
+    }
+
+    /** The bed set up (where it was meant to go, or wherever there is room now). */
+    private static void deliver(ServerLevel level, Villages.Village v, Home h, BedErrand e, @Nullable VillageFolkEntity f) {
+        BED_ERRANDS.values().remove(e);
+        BlockPos spot = e.spot();
+        Direction lie = e.lie();
+        if (!clear(level, spot) || !clear(level, spot.relative(lie))) {
+            spot = bedSpot(level, v.id(), h, bedsIn(level, v.id(), h));
+            if (spot == null) {                                                // no room after all: back to the stores
+                Crafts.store(level, v, new ItemStack(e.bed().getBlock().asItem()));
+                return;
+            }
+            lie = spotLie(level, spot);
+        }
+        layBed(level, v, h, spot, lie, e.bed());
+        if (f != null) FolkTalk.speak(f, FolkTalk.pick(level.getRandom(), "There — a bed of your own, " + e.child() + ".",
+            "All made up. Sleep well tonight, " + e.child() + "."));
     }
 
     /**
@@ -773,7 +868,8 @@ public final class Homes {
         BlockState here = level.getBlockState(p);
         if (!here.isAir() && !here.is(BlockTags.WOOL_CARPETS) || !level.getBlockState(p.above()).isAir()) return false;
         if (!level.getBlockState(p.below()).isSolidRender(level, p.below())) return false;
-        if (level.canSeeSky(p)) return false;
+        // Under a roof: something built over it (the sky's light inside a new house can take a while to go).
+        if (level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, p.getX(), p.getZ()) <= p.getY() + 1) return false;
         for (Direction d : Direction.Plane.HORIZONTAL) {
             BlockState n = level.getBlockState(p.relative(d));
             if (n.getBlock() instanceof net.minecraft.world.level.block.DoorBlock || n.is(Blocks.LADDER)) return false;
@@ -831,6 +927,7 @@ public final class Homes {
     public static boolean moving(VillageFolkEntity f, ServerLevel level) {
         UUID village = f.ownerId();
         if (village == null || f.isBaby() || f.isSleeping() || f.getTarget() != null) return false;
+        if (bedErrand(f, level)) return true;
         Move m = MOVES.get(f.getUUID());
         long now = level.getGameTime();
         if (m == null) {
