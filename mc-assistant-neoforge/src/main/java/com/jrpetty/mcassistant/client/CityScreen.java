@@ -32,7 +32,7 @@ import java.util.Locale;
  */
 public class CityScreen extends Screen {
 
-    private static final String[] TABS = { "Overview", "Growth", "Money", "Jobs", "Folk", "Leader", "Homes", "Stores", "Why", "News", "Board" };
+    private static final String[] TABS = { "Overview", "Growth", "Money", "Jobs", "Folk", "Leader", "Homes", "Stores", "Why", "Trends", "News", "Board" };
     private static final int[] RANGES = { 7, 30, 100, 0 };
     private static final String[] RANGE_NAMES = { "7d", "30d", "100d", "All" };
 
@@ -85,6 +85,17 @@ public class CityScreen extends Screen {
     @Override
     public boolean isPauseScreen() {
         return false;
+    }
+
+    private int tabWidth(int i, boolean narrow) {
+        return narrow ? (int) (font.width(TABS[i]) * 0.75) + 6 : font.width(TABS[i]) + 8;
+    }
+
+    /** Do the tabs need the small hand to fit across the window? */
+    private boolean narrowTabs() {
+        int total = 0;
+        for (int i = 0; i < TABS.length; i++) total += tabWidth(i, false) + 1;
+        return total > w - 8;
     }
 
     // ------------------------------------------------------------------ the data
@@ -169,19 +180,21 @@ public class CityScreen extends Screen {
             g.drawString(font, RANGE_NAMES[i], rx + 3, top + 8, on ? Ui.GOOD : Ui.MUTED, false);
         }
         g.drawString(font, "Close ×", left + w - 8 - font.width("Close ×"), top + 21, Ui.FAINT, false);
-        // The tabs.
+        // The tabs (in the small hand when the window is narrow).
         int tx = left + 4, ty = top + 36;
+        boolean narrow = narrowTabs();
         for (int i = 0; i < TABS.length; i++) {
-            int tw = font.width(TABS[i]) + 8;
+            int tw = tabWidth(i, narrow);
             boolean on = i == tab;
             g.fill(tx, ty, tx + tw, ty + 13, on ? Ui.PANEL : Ui.HEADER);
             g.renderOutline(tx, ty, tw, 13, on ? Ui.EDGE : Ui.EDGE_SOFT);
             if (on) g.fill(tx + 1, ty + 12, tx + tw - 1, ty + 13, Ui.PANEL);
-            g.drawString(font, TABS[i], tx + 4, ty + 3, on ? Ui.INK : Ui.MUTED, false);
+            if (narrow) small(g, TABS[i], tx + 3, ty + 4, on ? Ui.INK : Ui.MUTED);
+            else g.drawString(font, TABS[i], tx + 4, ty + 3, on ? Ui.INK : Ui.MUTED, false);
             tx += tw + 1;
         }
         int x = left + 8, y = top + 54, cw = w - 16, ch = h - 62;
-        if (days().length == 0 && tab != 4 && tab != 5 && tab != 9 && tab != 10 && tab != 8) {
+        if (days().length == 0 && tab != 4 && tab != 5 && tab != 10 && tab != 11 && tab != 8) {
             g.drawString(font, "The town's books are written each morning. Come back tomorrow for the first of them;", x, y, Ui.MUTED, false);
             g.drawString(font, "the Folk, Leader, Why, News and Board pages have today's figures already.", x, y + 11, Ui.MUTED, false);
         } else {
@@ -195,7 +208,8 @@ public class CityScreen extends Screen {
                 case 6 -> homes(g, x, y, cw, ch, mouseX, mouseY);
                 case 7 -> stores(g, x, y, cw, ch, mouseX, mouseY);
                 case 8 -> why(g, x, y, cw, ch);
-                case 9 -> lines(g, strings("news"), x, y, cw, ch);
+                case 9 -> trends(g, x, y, cw, ch, mouseX, mouseY);
+                case 10 -> news(g, x, y, cw, ch);
                 default -> board(g, x, y, cw, ch);
             }
         }
@@ -231,7 +245,8 @@ public class CityScreen extends Screen {
         card(g, x + 3 * (cardW + 4), y2, cardW, cardH, data.getCompound("leader").getString("title").isEmpty() ? "Leader"
             : capital(leader.getString("title")), leader.getString("name"),
             leader.contains("approval") ? leader.getInt("approval") + "% approve" : "", BROWN);
-        int cy = y2 + cardH + 6;
+        small(g, Ui.clip(font, ages(), (int) (cw / 0.75)), x, y2 + cardH + 3, Ui.MUTED);
+        int cy = y2 + cardH + 12;
         int chartH = Math.max(50, (ch - (cy - y)) / 2 - 18);
         int half = (cw - 6) / 2;
         chart(g, x, cy, half, chartH, "Population", mx, my, new Series("Folk", pop, BLUE), new Series("Children", series("kids"), PINK));
@@ -419,7 +434,16 @@ public class CityScreen extends Screen {
             }
             ry += 10;
         }
-        small(g, people.size() + " folk · click a heading to sort · scroll for more · ★ the leader", x, y + ch - 10, Ui.FAINT);
+        java.util.Map<String, Integer> bands = new java.util.TreeMap<>();
+        int purses = 0;
+        for (CompoundTag p : people) {
+            if (!p.getString("wealth").isEmpty()) bands.merge(p.getString("wealth"), 1, Integer::sum);
+            purses += p.getInt("purse");
+        }
+        StringBuilder bs = new StringBuilder();
+        for (var e : bands.entrySet()) bs.append(bs.length() == 0 ? "" : ", ").append(e.getValue()).append(' ').append(e.getKey());
+        small(g, Ui.clip(font, people.size() + " folk (" + bs + "); " + purses + " coins in purses, "
+            + (people.isEmpty() ? 0 : purses / people.size()) + " each · click a heading to sort · ★ the leader", (int) (cw / 0.75)), x, y + ch - 10, Ui.FAINT);
     }
 
     private Comparator<CompoundTag> folkOrder() {
@@ -607,6 +631,50 @@ public class CityScreen extends Screen {
                 ry += 9;
             }
         }
+    }
+
+    /** What each head makes and is worth, how content they are, and how the town has come on. */
+    private void trends(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my) {
+        int half = (cw - 6) / 2, chartH = (ch - 30) / 2;
+        int[] out = series("output"), adults = series("adults"), worth = series("worth"), pop = series("pop");
+        int[] perHand = new int[out.length], perHead = new int[worth.length];
+        for (int i = 0; i < out.length; i++) perHand[i] = i < adults.length && adults[i] > 0 ? Math.round(out[i] / (float) adults[i]) : 0;
+        for (int i = 0; i < worth.length; i++) perHead[i] = i < pop.length && pop[i] > 0 ? Math.round(worth[i] / (float) pop[i]) : 0;
+        chart(g, x, y, half, chartH, "Made per grown folk a day (coins' worth)", mx, my, new Series("Per hand", perHand, GREEN));
+        chart(g, x + half + 6, y, half, chartH, "Worth per head (coins)", mx, my, new Series("Per head", perHead, PURPLE));
+        int y2 = y + chartH + 14;
+        chart(g, x, y2, half, chartH, "Contentment, idle hands and the watch", mx, my, new Series("Content", series("content"), AMBER),
+            new Series("Idle", series("idle"), RED), new Series("Guards", series("guards"), GREY));
+        chart(g, x + half + 6, y2, half, chartH, "Buildings and renown", mx, my, new Series("Buildings", series("buildings"), BROWN),
+            new Series("Renown", series("renown"), TEAL), new Series("Age", series("age"), BLUE));
+    }
+
+    private void news(GuiGraphics g, int x, int y, int cw, int ch) {
+        List<String> all = new ArrayList<>();
+        List<String> n = strings("neighbours");
+        if (!n.isEmpty()) {
+            all.add("Neighbours:");
+            for (String s : n) all.add("  " + s);
+            all.add("");
+        }
+        all.add("The chronicle, latest first:");
+        all.addAll(strings("news"));
+        lines(g, all, x, y, cw, ch);
+    }
+
+    /** The ages and the day each began, read from the books: "Wood Age day 1 · Stone Age day 6 · ...". */
+    private String ages() {
+        int[] age = series("age"), days = days();
+        String[] names = { "Wood", "Stone", "Iron", "Diamond", "Nether", "Beyond" };
+        StringBuilder sb = new StringBuilder();
+        int was = -1;
+        for (int i = 0; i < age.length && i < days.length; i++) {
+            if (age[i] == was) continue;
+            was = age[i];
+            if (sb.length() > 0) sb.append(" · ");
+            sb.append(was < names.length ? names[was] : "Age " + was).append(" Age from day ").append(days[i]);
+        }
+        return sb.toString();
     }
 
     /** A line of the analysis: its mark (+ - = !) as a coloured tick, the rest wrapped. Returns the next line's y. */
@@ -842,8 +910,9 @@ public class CityScreen extends Screen {
         if (mx >= left + w - 8 - font.width("Close ×") && mx < left + w - 8 && my >= top + 20 && my < top + 30) { onClose(); return true; }
         // The tabs.
         int tx = left + 4, ty = top + 36;
+        boolean narrow = narrowTabs();
         for (int i = 0; i < TABS.length; i++) {
-            int tw = font.width(TABS[i]) + 8;
+            int tw = tabWidth(i, narrow);
             if (mx >= tx && mx < tx + tw && my >= ty && my < ty + 13) { tab = i; scroll = 0; return true; }
             tx += tw + 1;
         }

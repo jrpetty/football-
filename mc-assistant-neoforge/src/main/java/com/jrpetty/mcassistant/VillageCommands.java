@@ -59,7 +59,7 @@ public final class VillageCommands {
             .then(Commands.literal("status").executes(VillageCommands::status))
             // The town's books in full, on the analytics screen (as clicking the village board does).
             .then(Commands.literal("stats").executes(ctx -> stats(ctx, -1))
-                .then(Commands.argument("page", IntegerArgumentType.integer(0, 10))
+                .then(Commands.argument("page", IntegerArgumentType.integer(0, 11))
                     .executes(ctx -> stats(ctx, IntegerArgumentType.getInteger(ctx, "page")))))
             // The village's houses: who lives where, what is for sale; buy one, let it out, take the rent.
             .then(Commands.literal("house")
