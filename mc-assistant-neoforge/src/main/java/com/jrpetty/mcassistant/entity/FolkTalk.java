@@ -1176,7 +1176,7 @@ public final class FolkTalk {
         if (has(t, "repair", "mend ", "mend this", "fix my", "fix this")) return TalkTopic.REPAIR;
         if (has(t, "pay for the feast", "pay for a feast", "pay for tonight", "throw a feast", "feast on me", "sponsor")) return TalkTopic.SPONSOR;
         if (has(t, "contract", "i'll sign", "ill sign", "sign me up", "i'll do it")) return TalkTopic.CONTRACT;
-        if (has(t, "a stall", "my stall", "market stall", "rent a stall")) return TalkTopic.STALL;
+        if (has(t, "a stall", "my stall", "market stall", "rent a stall", "the till", "my takings")) return TalkTopic.STALL;
         if (has(t, "deposit", "withdraw", "borrow", "a loan", "repay", "pay back", "my account", "the bank", "pay off")) return TalkTopic.BANK;
         if (has(t, "invest", "put money into", "a share in")) return TalkTopic.INVEST;
         if (has(t, "auction", "i bid", "bid ")) return TalkTopic.AUCTION;

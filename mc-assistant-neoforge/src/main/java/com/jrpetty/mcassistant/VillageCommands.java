@@ -28,6 +28,7 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  *   /village chronicle        the nearest village's history, as a book
  *   /village standing         what every village you have met thinks of you
  *   /village house            the village's houses; house buy | house let N | house rent
+ *   /village stall            the players' market stalls; stall rent | screen | till | books | price N item
  *   /village knacks [name]    the knacks each folk chose for itself; knacks grant <name> <key> (ops)
  *   /village stats            the town's books in full: the analytics screen (as the village board)
  *   /village research         the city's research: what the leader has the town studying, and the tree
@@ -157,6 +158,8 @@ public final class VillageCommands {
             .then(Commands.literal("economy").executes(ctx -> page(ctx, 3)))
             // The sellers' books: what the shop, the café, the tavern and the stores have, sell and make.
             .then(Commands.literal("shop").executes(ctx -> page(ctx, 4)))
+            // A player's market stall: the stalls here; rent, screen, till, books, price; market day now, a lapse (ops).
+            .then(com.jrpetty.mcassistant.entity.PlayerStalls.command())
             // The storehouse: its books for the day, its storekeeper and couriers, and its run list.
             .then(Commands.literal("stores").executes(ctx -> page(ctx, 5)))
             // The street sweeper (Sweepers): what it swept in today and what lies about the town; and, for ops

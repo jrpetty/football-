@@ -395,7 +395,9 @@ output, the worth and the three best paid, and any folk will tell you who earns 
 * **Market day.** Once a week, on a different day for every village, the bell
   rings on the square in the morning and players nearby are told. On their break
   that day, folk go to the stalls and buy a treat with their savings: their
-  favourite food if the stores have it. The coin goes back into the treasury.
+  favourite food if the stores have it. The coin goes back into the treasury. A
+  player's own stall on the square is weighed like any other seller (see *Your stall
+  on the square*).
 * **Prices.** Everything the market deals in has a worth. Its price moves with
   how much of it the stores hold: dear when it is scarce, cheap when there is
   plenty, and kinder on market day. Each stall has two signs:
@@ -461,6 +463,60 @@ The village keeps its books, and **sees to itself before it sells anything**:
   hive, the drover's pair). The rest is free. The board and the village status show **the purse**:
   the coin, what is kept back, what is put by, what is free, and what is for sale.
 
+### Your stall on the square
+
+A market stall of your own (`entity/PlayerStalls.java`), let a week at a time.
+
+* **Renting.** Ask any folk *"Could I rent a stall?"* (the **Rent a stall** button on the Money tab),
+  right-click a stall standing empty on the square (its sign says *Stall to let*), or
+  `/village stall rent`. A week costs five coins in a hamlet, more in a bigger place (eight in a
+  village, ten in a town, thirteen in a city, fifteen in a capital), paid into the treasury; pay up to
+  four weeks ahead. Up to four stalls stand on a square, on the sides near the wall, clear of the
+  market's own stalls, the well and the ways in.
+* **The booth.** A barrel, a sign on its lid with your name and what it sells, two posts and a
+  striped awning. The market's hands put it up out of the stores (a barrel or seven planks, a sign or
+  two planks, four lengths of fence or eight planks, three wool), never while the village is short of
+  timber; if the stores can't spare them, out of your own pack (a barrel or a chest and a sign; fences
+  and wool for the posts and awning). From the Stone Age, with you about and the makings to spare, the
+  market keeps one booth standing empty, to let. Nobody else may open or break your booth, and no folk
+  or helper takes anything from it.
+* **Stocking it.** Right-click its barrel and put in whatever you'd sell.
+* **Your prices.** Crouch and right-click the barrel, or right-click its sign: the stall's screen lists
+  each kind of thing in the barrel with a price box for a lot of it (the market's lot: eight bread,
+  eight apples, one pick), the village's **going price** beside it (what its own counter asks today:
+  dear when its stores are short of it, kinder on market day), and how the folk will take your price:
+  *a bargain*, *fair*, *a little dear*, *dear: the well-off*, *dear: the rich only*, *too dear: nobody*.
+  Leave a box empty for the going price; 0 keeps a thing back. Enter, **Save prices** or closing the
+  screen sets them. Or `/village stall price 3 bread`.
+* **Who buys.** On market day nearly everybody with coin walks over to look; on other days a folk comes
+  when it wants something you have: the tool of its trade when it has none, food when the larder is
+  low, a comfort for its home (a rug, a pot, a candle, a lantern, a chest, a barrel, a bookshelf once
+  it is well off, which it carries home and sets up by its bed), something nice when it is doing well.
+  At the market's own stalls on market day a folk weighs yours as it would any other seller.
+* **What they pay.** Weighed against the going price: the thrifty want it cheaper (a tenth under), most
+  folk pay the going price, the comfortable a tenth over, the well-off a quarter, the wealthy two fifths,
+  a generous folk a little more, and a little more for its favourite food; nobody pays half as much
+  again. And nobody pays more than the village asks for something the village has itself. Out of its
+  own purse (keeping a couple of coins back, unless it needs the thing). A thing priced too high sells
+  nothing, and the folk say so: *"Thirty for bread? Not likely."* Worn tools don't sell.
+* **The till.** What the folk pay goes into the stall's till, not the barrel. Take it on the stall's
+  screen (**Take the till**), by asking any folk to *"take the till"*, or `/village stall till`. The
+  market takes no cut: the rent is its due.
+* **The books.** Every sale is booked: who bought what, how many, for how much. You are told in chat
+  whenever something sells, and (once a thing a day) when a folk thought it too dear and what the going
+  price was. The stall's screen shows the till, the week's sales and takings and all of them, the last
+  sales and what was turned down. The town's books (the village board) have a **players' stalls** tab
+  on the **Shops** page: every stall, its rent and how long it runs, its stock and prices against the
+  going prices, the week's sales and takings, the till, the last sales and the turnings-down. Yesterday's
+  takings go in the chronicle.
+* **When the rent runs out** the stall shuts (its sign says *Rent due*, and you are told). Pay another
+  week and it opens again. Three days on it is **given back**: everything in its barrel stays there for
+  you to collect (nobody else can open it), and its till is kept for you. Once you have emptied it, it
+  is let again. Ask any folk to *"give up my stall"* (or the screen's **Give it up**) to have your goods
+  and the till back at once; the rent paid is the market's. Nothing you put in it is ever lost.
+* `/village stall` lists the stalls of the village you stand in; `/village stall screen` opens yours;
+  `/village stall books` opens the town's books at the players' stalls.
+
 ### You and the folk: twenty things to do together
 
 Small things first (the **Deal** tab of the talk screen, or just say it):
@@ -500,9 +556,10 @@ Business with the whole village (the **Money** tab):
   week for a month, at a third over its worth. Say "I'll sign", then bring it each week.
   Keep it up and the village thinks the world of you. Miss two weeks and it lapses, and
   they think less of you.
-* **Your own stall.** Rent a stall on the square for five coins a week: a barrel with your
-  name on it. Stock it, and on market day the folk buy from it out of their own purses and
-  leave the coin in the barrel.
+* **Your own stall.** Rent a stall on the square a week at a time (five coins in a hamlet):
+  a booth with your name on its sign. Stock its barrel, set your prices against the going
+  price, and the folk buy from it out of their own purses into its till. See *Your stall on
+  the square*.
 * **The bank.** "Deposit 20", "withdraw 10": the treasury keeps your coin and pays a coin
   in fifty a week. A friend may "borrow 30" (an honoured one up to 64), at a tenth a week.
   A debt left a fortnight shames you. "Repay" pays it off.
@@ -1954,10 +2011,12 @@ few blocks a visit, out of the stores, and what comes off goes back in:
 
 ### Work, coin and services
 
-**Earning coin.** There are three ways:
+**Earning coin.** There are four ways:
 * **Sell to the village.** Right-click a market stall with what the village is buying
   (the stall's sign says what). It pays from the treasury, and what you sell goes into
   the stores.
+* **Keep a stall of your own** on the square and sell to the folk at your own prices, out of
+  their own purses (see *Your stall on the square*).
 * **Do its errands.** Errands for the village are paid in coin as well as goods.
 * **Answer the quest board.** See below.
 
@@ -3219,6 +3278,13 @@ ripen, days pass, folk work and houses go up at that pace.
 * `/village shop` — the sellers' books: for the shop, the café, the tavern, the market and the
   stores, what each ware has on hand against what is kept, what sold today and this week, what
   was wanted and not there, what was made, its price and markdown, and what it is short of.
+* `/village stall` — the players' market stalls in the village you stand in: whose, where, rent
+  paid to, the till, the week's sales, each thing at its price against the going price, the last
+  sales. `stall rent` rents one (or pays another week), `stall screen` opens yours, `stall till`
+  takes the till, `stall price <coins> <item>` sets a price (-1 the going price, 0 kept back),
+  `stall books` opens the town's books at the players' stalls; `stall market` (operators) brings
+  the nearest folk with coin to every open stall to buy as on market day, and `stall lapse`
+  (operators) has your rent run out days ago, to see a stall given back.
 * `/village stores` — the storehouse's day: its slots, its storekeeper, what went in and out
   and who served the requests, its last tidy, its staff and their runs, and its run list.
 * `/village sweeper` — the street sweeper's day: what it swept in, by whom, and how much is
@@ -3383,6 +3449,16 @@ Every push to CI:
   nothing sold under cost; an Iron Age village saving its iron gets chests but not a bar beaten
   into a bucket; and the storekeeper makes a chest to order and says why it cannot make a diamond
   pickaxe;
+* keeps a player's market stall (`StallGameTests`, st01 to st05): a player rents one (the rent into
+  the treasury, a booth of the stores' timber or the player's own barrel and sign, their name on its
+  sign), stocks it with bread a little under the going price, and a folk out for food buys a lot of it
+  (its purse down, the till up, eight loaves out of the barrel and into its pack); at the market's own
+  stalls a second folk buys there as at any seller, and the stall's screen has the till, the bread
+  against the going price and both sales; bread at thirty doesn't sell, the folk keep their coin and
+  the books say it was too dear, and brought down to a fair price it sells; the till pays out to the
+  player and the town's books list the stall; a stall whose rent runs out shuts, is given back with
+  its bread kept in it, every loaf goes back to the player and another takes the stall; and on market
+  day a folk comes to the stall of its own accord and buys apples;
 * measures the pace of work (`PaceGameTests`, pc01 to pc05): stone breaks quicker at level 10
   than at nought and quicker again at 30, with every other piece of work, the bench and the
   fisher's wait following; better picks, axes and hoes are quicker at the same level (a farmer
