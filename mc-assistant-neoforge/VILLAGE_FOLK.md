@@ -63,7 +63,10 @@ out the town's plan has to run to hold them), so it has level room to grow into:
 
 * **Inside**, everything is brought to one level: the middle height of the dry land there (by
   water a little under the sea's height, lifted just out of it, so a town by the shore does not
-  stand in a pit behind its banks; dry ground well under the sea's height keeps its own). Hills and knolls are cut
+  stand in a pit behind its banks; dry ground well under the sea's height keeps its own; and an
+  island, or a shore where water covers two fifths or more of the square, is brought down to a block
+  over the water, so its edge is a step down to it and not a cliff as high as the hill was, unless
+  that would cut more than sixteen blocks off it). Hills and knolls are cut
   down, hollows filled, trees, plants and snow cleared, and the ground is dressed in the land's
   own soil: grass on the plains, sand in the desert, podzol in the pine woods (grass where it was
   all rock: the folk are going to farm it), with earth under a cut and sandstone under deep sand.

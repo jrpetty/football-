@@ -250,4 +250,40 @@ class FoundingPlanTest {
             else assertTrue(r > FoundingPlan.campRadius(folk), "and nothing of the camp after it");
         }
     }
+
+    @Test
+    @DisplayName("an island town sits a block over the water, not on a cliff the height of its hill")
+    void anIslandSitsLow() {
+        int folk = 12, radius = FoundingPlan.coreRadius(folk);
+        // A hill nine over the sea in the middle, the sea all round it over more than half the square.
+        FoundingPlan.Ground g = ground(folk, (dx, dz) -> 71);
+        for (int i = 0; i < g.side * g.side; i++) {
+            if (FoundingPlan.reach(g.dx(i), g.dz(i)) > radius * 0.55 && g.kind[i] == FoundingPlan.LAND) {
+                g.kind[i] = FoundingPlan.WATER;
+                g.ground[i] = 55;
+                g.fluid[i] = 62;
+            }
+        }
+        assertEquals(63, FoundingPlan.level(g, radius, 63), "a block over the water");
+        // A high island (thirty over the sea) keeps its height: it is not razed to the waterline.
+        FoundingPlan.Ground high = ground(folk, (dx, dz) -> 92);
+        for (int i = 0; i < high.side * high.side; i++) {
+            if (FoundingPlan.reach(high.dx(i), high.dz(i)) > radius * 0.55 && high.kind[i] == FoundingPlan.LAND) {
+                high.kind[i] = FoundingPlan.WATER;
+                high.ground[i] = 55;
+                high.fluid[i] = 62;
+            }
+        }
+        assertEquals(92, FoundingPlan.level(high, radius, 63), "a high island keeps its height");
+        // Dry ground with a lake just past the square keeps its own height (the square is mostly land).
+        FoundingPlan.Ground shore = ground(folk, (dx, dz) -> 70);
+        for (int i = 0; i < shore.side * shore.side; i++) {
+            if (shore.dx(i) > radius - 6 && shore.kind[i] == FoundingPlan.LAND) {
+                shore.kind[i] = FoundingPlan.WATER;
+                shore.ground[i] = 60;
+                shore.fluid[i] = 64;
+            }
+        }
+        assertEquals(70, FoundingPlan.level(shore, radius, 63), "mostly land: its own height");
+    }
 }

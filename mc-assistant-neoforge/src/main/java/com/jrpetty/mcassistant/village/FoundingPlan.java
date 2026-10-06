@@ -264,10 +264,14 @@ public final class FoundingPlan {
      */
     public static int level(Ground g, int radius, int seaLevel) {
         int[] heights = new int[g.side * g.side];
-        int n = 0;
+        int[] tops = new int[g.side * g.side];
+        int n = 0, wetIn = 0;
         boolean water = false;
         for (int i = 0; i < heights.length; i++) {
-            if (g.kind[i] == WATER) water = true;
+            if (g.kind[i] == WATER) {
+                water = true;
+                if (reach(g.dx(i), g.dz(i)) <= radius) tops[wetIn++] = g.fluid[i];
+            }
             if (g.kind[i] != LAND || reach(g.dx(i), g.dz(i)) > radius) continue;
             heights[n++] = g.ground[i];
         }
@@ -275,8 +279,19 @@ public final class FoundingPlan {
         Arrays.sort(heights, 0, n);
         int middle = heights[n / 2];
         if (water && middle < seaLevel - 1 && seaLevel - 1 - middle <= MOST_LIFT) return seaLevel - 1;
+        // An island, or a shore with a lake or the sea over much of the square: the town sits a block over the
+        // water, its edge a step down to it, not a quay as high as the hill was. A jungle island's town was
+        // levelled to its hilltop, nine over the sea, and stood on a cliff all round.
+        if (wetIn > 0 && n * 5 < (n + wetIn) * 3) {
+            Arrays.sort(tops, 0, wetIn);
+            int low = tops[wetIn / 2] + 1;
+            if (middle > low && middle - low <= MOST_ISLAND_CUT) return low;
+        }
         return middle;
     }
+
+    /** The most a town by the water is cut down to sit a block over it: a high island keeps its height. */
+    public static final int MOST_ISLAND_CUT = 16;
 
     /**
      * Plan the ground: which ponds are filled and which water is left, what is left alone round
