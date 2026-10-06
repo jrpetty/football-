@@ -108,6 +108,9 @@ public final class Assemblies {
     /** Stands in a council script for its decision, read out once the vote is taken. */
     private static final String DECISION = "\u0000decision";
 
+    /** [townlife] How far from its place in the crowd a seat may be and still be its place. */
+    private static final double AT_A_SEAT = Seats.AT_GATHERING + 1.0;
+
     /** What is under way in each village, and what is to come. */
     private static final Map<UUID, Assembly> NOW = new ConcurrentHashMap<>();
     private static final Map<UUID, List<Assembly>> PLANNED = new ConcurrentHashMap<>();
@@ -472,7 +475,9 @@ public final class Assemblies {
             }
             spot = seat == null ? approach(a) : a.seats.get(seat);
         }
-        double d = horizontal(f, spot);
+        // [townlife] A seat taken by its place (Seats): the seat is its place now.
+        boolean onASeat = !isHost && Seats.atGatheringNear(f, spot, AT_A_SEAT);
+        double d = onASeat ? 0.0 : horizontal(f, spot);
         if (d > 0.9) {
             Integer last = a.pathAt.get(me);
             if (last == null || f.tickCount - last > 40 || f.getNavigation().isDone()) {
@@ -482,9 +487,11 @@ public final class Assemblies {
             f.hobbyNow = "on the way to " + describe(a);
             return true;
         }
-        f.getNavigation().stop();
+        if (!onASeat) f.getNavigation().stop();
         f.hobbyNow = "at " + describe(a);
         f.lastLeisureTick = f.tickCount;
+        // [townlife] In the crowd while it listens: a seat a step or two from its place is sat on (Seats).
+        if (!isHost && !a.principals.contains(me) && (a.phase == Phase.GATHER || a.phase == Phase.SPEECH)) Seats.atGathering(f, level, spot);
         // Facing the right way: the host to the crowd, the crowd to the host.
         if (isHost) {
             BlockPos crowd = a.focus.relative(a.audience, 4);
@@ -521,7 +528,7 @@ public final class Assemblies {
                 f.heal(2.0F);
             }
         }
-        if (r.nextInt(40) == 0) {
+        if (r.nextInt(40) == 0 && !Seats.seated(f)) {                   // [townlife] not off a seat (Seats)
             if (f.onGround()) f.getJumpControl().jump();
             f.setYRot(f.getYRot() + 45.0F * (r.nextBoolean() ? 1 : -1));
             f.swing(r.nextBoolean() ? net.minecraft.world.InteractionHand.MAIN_HAND : net.minecraft.world.InteractionHand.OFF_HAND);

@@ -302,6 +302,8 @@ public class VillageFolkEntity extends AssistantEntity {
         Leisure.tick(this);
         if (tickCount % 100 == 53) Meals.tick(this);           // breakfast, the midday meal, supper
         Park.tick(this);                                       // sat on a park bench, or on its way round the park
+        Seats.tick(this);                                      // [townlife] sat down on its break or at a gathering (Seats)
+        if (tickCount % 20 == 13) NightLight.tick(this);       // [townlife] a light in its hand out of doors after dark (NightLight)
         if (hiredBy != null && tickCount % 20 == 0 && level() instanceof net.minecraft.server.level.ServerLevel out) Hire.tick(this, out);
         if (tickCount % 160 == 80) CityTree.tend(this);          // the town's research on it: roads, drills, healers
         // The watch does not open the gates to go out after them: with the bell ringing a guard's
@@ -325,6 +327,8 @@ public class VillageFolkEntity extends AssistantEntity {
         // Somebody is talking to it, or it is out walking with somebody: its own day
         // waits until they are done.
         boolean withAPlayer = talkPartner() != null || companionPlayer() != null || guidePlayer() != null;
+        // [townlife] A child tagging along after a player it waved to (Greetings): its own day waits a little.
+        if (!withAPlayer && isBaby() && Greetings.tagAlong(this)) return;
         // Horses (Stables, Riding): a ridden horse kept at its pace, the stable's gates and its day; and a
         // horse being fetched or put away, or the rancher's work at the stable, is the work just now.
         if (level() instanceof net.minecraft.server.level.ServerLevel stableLevel) {
@@ -874,6 +878,11 @@ public class VillageFolkEntity extends AssistantEntity {
         if (isSleeping() || talkPartner() != null || !persona.rolled()) return;
         net.minecraft.world.entity.player.Player p = level().getNearestPlayer(this, 5.0);
         if (p == null || p.isSpectator() || p.isInvisible()) return;
+        // [townlife] Somebody it knows: once a day, a wave and a hello by name (Greetings); the passing word after it waits.
+        if (Greetings.wave(this, p)) {
+            greeted.put(p.getUUID(), tickCount);
+            return;
+        }
         Integer last = greeted.get(p.getUUID());
         if (last != null && tickCount - last < 4800) return;
         greeted.put(p.getUUID(), tickCount);
@@ -6080,8 +6089,15 @@ public class VillageFolkEntity extends AssistantEntity {
 
     private boolean resting() {
         if (!breakNow()) return false;
+        // [townlife] Most breaks, a sit down on a bench, a step or a chair near it first (Seats).
+        if (level() instanceof net.minecraft.server.level.ServerLevel seatLevel && Seats.onBreak(this, seatLevel)) return true;
         socialise();
         return true;
+    }
+
+    /** Is this its break (Seats: it gets up when the break is over)? */
+    boolean onItsBreak() {
+        return breakNow();
     }
 
     // ------------------------------ the village's work -----------------------

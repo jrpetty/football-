@@ -63,6 +63,7 @@ public final class TownCalendar extends SavedData {
         BellFrame.resetForTests();
         Birthdays.resetForTests();
         FoundingDay.resetForTests();
+        Crier.resetForTests();
     }
 
     // ------------------------------------------------------------------ the clock
@@ -108,6 +109,7 @@ public final class TownCalendar extends SavedData {
      */
     public static boolean hold(VillageFolkEntity f, ServerLevel level) {
         if (f.isShowcase() || f.ownerId() == null || f.isHired()) return false;
+        if (Crier.hold(f, level)) return true;                // [townlife] the noon news cried on the square (Crier)
         if (TownBell.hold(f, level)) return true;
         return Birthdays.hold(f, level);
     }
@@ -118,7 +120,7 @@ public final class TownCalendar extends SavedData {
      * and its evening too (eveningSocial), till it is done.
      */
     public static boolean busy(VillageFolkEntity f) {
-        return TownBell.busy(f) || Birthdays.busy(f);
+        return TownBell.busy(f) || Birthdays.busy(f) || Crier.busy(f);
     }
 
     // ------------------------------------------------------------------ the town's part
@@ -132,6 +134,7 @@ public final class TownCalendar extends SavedData {
                 for (Villages.Village v : Villages.every()) {
                     if (!v.dim().equals(level.dimension()) || !level.isLoaded(v.centre())) continue;
                     TownBell.tick(level, v);
+                    if (tick % 20 == 3) Crier.tick(level, v);       // [townlife] the town crier at noon
                     if (tick % 100 == 3) Birthdays.tick(level, v);
                 }
             }

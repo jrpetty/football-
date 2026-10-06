@@ -4465,3 +4465,41 @@ why it is not doing more.
   diamond in its stores are written into the chronicle as milestones, and the town celebrates on
   the square: three rockets made of the stores' paper and gunpowder (sparks, if it has none),
   the folk cheering, and a message to every player within 128 blocks.
+## Town life
+
+* **The town crier.** At the noon bell (or at noon by the clock, in a town that rang no bell that
+  day) one folk walks to the square and reads out the day's news, a line every few seconds, in
+  bubbles over its head: what happened yesterday and this morning (who was born, who died, what
+  went up), the elder's order, when market day is and what the town is short of. The crier is the
+  elder's pick, a sociable one by preference, never the elder itself or the bell-ringer; its dinner
+  waits till it is done. Stand on the square at noon to hear it.
+* **The gazette.** A town with a meeting hall keeps its paper there: a written book open on a
+  lectern beside the elder's chair, written up afresh every morning with yesterday's births,
+  deaths and new buildings, the elder's order and the market's prices (what the stores sell their
+  goods for, and what the town is buying). Right-click the lectern to read it. The lectern comes
+  out of the stores (or is made of three books and eight planks), and the book is a book from the
+  stores or one made of three paper and a leather: no book, no gazette, so put a book or the
+  makings of one in the stores if your town has none. A book you put on that lectern yourself is
+  left alone.
+* **The welcome sign.** Where the main road leaves town (the avenue the most roads go out along:
+  to its colonies and its mother town, else toward its nearest neighbour, else away from its
+  fields), a signpost stands at the town's edge beside the road, facing whoever is coming in:
+  "Welcome to", the town's name, its population and its age, with when it was founded on the back.
+  It is written up every day. The post and the sign are a fence and a sign from the stores, or two
+  planks each; as the town grows its edge moves out, and the sign is taken down (back into the
+  stores) and put up again at the new edge.
+* **Sitting down.** Most days, a folk on its break looks round for somewhere to sit near it — a
+  bench, a step, a chair (any stair the right way up, on solid ground, with room over it) — and
+  sits down on it, chatting with whoever is by, until its break is over and it goes back to work.
+  At a gathering, a folk whose place in the crowd has a seat a step or two away sits on it and
+  stands when the gathering is over. Put a few stairs out as benches on the square, by the board or
+  outside the hall, and you will see them used.
+* **A wave and a hello.** A folk who knows you (has talked with you, not just heard of you) waves
+  and says hello by name the first time each day you come within a few blocks. A child who likes
+  you tags along after you for half a minute or so, chattering, then runs back to its own day.
+* **A light after dark.** A grown folk out of doors after dark holds a lantern or a torch from its
+  own pack in its free hand (a lantern if it has one), and puts it back in its pack when it goes
+  indoors, goes to bed, has a fight on its hands, or the day breaks. Nothing is lit or made: a folk
+  with no light in its pack walks in the dark, and a guard with a shield keeps its hand for that.
+
+Tested by `TownLifeGameTests` (tl01 to tl06).
