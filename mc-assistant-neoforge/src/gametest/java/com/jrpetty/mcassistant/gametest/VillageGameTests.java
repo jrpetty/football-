@@ -152,10 +152,11 @@ public class VillageGameTests {
     }
 
     /** Using the charter on the ground. */
-    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "t03_charter")
+    @GameTest(template = EMPTY, timeoutTicks = 3000, batch = "t03_charter")
     public static void t03_charter(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
+        com.jrpetty.mcassistant.entity.Founding.resetForTests(level.getServer());
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
         Kit.hold(level, 2700, 2700, 48);
         BlockPos ground = Kit.surface(level, 2700, 2700);
@@ -163,13 +164,19 @@ public class VillageGameTests {
         player.setItemInHand(InteractionHand.MAIN_HAND, stack);
         BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(ground.below()), Direction.UP, ground.below(), false);
         InteractionResult r = stack.useOn(new UseOnContext(player, InteractionHand.MAIN_HAND, hit));
-        Kit.log("t03 useOn result: " + r);
-        helper.runAtTickTime(40, () -> {
-            // Thirty-two blocks: two seconds in, a founder or two is already setting off for its plot.
-            List<VillageFolkEntity> folk = level.getEntitiesOfClass(VillageFolkEntity.class, around(ground, 32));
-            Kit.log("t03 folk near the click: " + folk.size()
-                + (folk.isEmpty() ? "" : " — " + folk.get(0).debugLine()));
-            helper.assertTrue(folk.size() == VillageFolkSpawnerBlock.foundingParty(),
+        Kit.log("t03 useOn result: " + r + "; a founding under way " + com.jrpetty.mcassistant.entity.Founding.near(level, ground, 16));
+        // The charter founds as a board does now: the ground made level first, and its folk come after.
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Founding.near(level, ground, 16), "the charter begins a founding");
+        helper.assertTrue(stack.isEmpty(), "and is spent on it");
+        final boolean[] done = { false };
+        helper.onEachTick(() -> {
+            if (done[0] || com.jrpetty.mcassistant.entity.Founding.near(level, ground, 16)) return;
+            done[0] = true;
+            Villages.Village v = Villages.nearest(level, ground, 64);
+            List<VillageFolkEntity> folk = level.getEntitiesOfClass(VillageFolkEntity.class, around(ground, 64));
+            Kit.log("t03 founded at " + helper.getTick() + ": " + (v == null ? "no village" : Villages.name(v.id()))
+                + ", folk near the click: " + folk.size() + (folk.isEmpty() ? "" : " — " + folk.get(0).debugLine()));
+            helper.assertTrue(v != null && folk.size() == VillageFolkSpawnerBlock.foundingParty(),
                 "the charter should found a village of " + VillageFolkSpawnerBlock.foundingParty()
                 + ", found " + folk.size());
             helper.succeed();
