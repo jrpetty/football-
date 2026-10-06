@@ -66,6 +66,13 @@ import java.util.concurrent.ConcurrentHashMap;
  * Its work is a beat of the courier's (Couriers.work): walk to the nearest heap it may take, sweep
  * it up (and whatever else lies within reach), and with a sackful — or nothing left to sweep — carry
  * it in, and say so. The town's streets are looked over every five seconds.
+ *
+ * <p>[wf] <b>Snow.</b> In a town where snow falls (its heart cold enough for it: a snowy biome, or high in
+ * the mountains), the broom clears the snow lying on the town's streets, its worn paths and its square
+ * too, once there is nothing lying about to sweep: the layers shovelled off, and the snowballs they
+ * give (with a shovel, as the game gives them: the stores' shovel, or a wooden one made of two of their
+ * planks; by hand the snow goes, and gives nothing) into the sack and in with the rest, into the
+ * storehouse's books. The snow is looked for every twenty seconds.
  */
 @EventBusSubscriber(modid = McAssistantMod.MODID)
 public final class Sweepers {
@@ -92,6 +99,10 @@ public final class Sweepers {
     static final long STALE = 600L;
     /** Within this of a heap it sweeps it up, and whatever else it may take within a little more. */
     static final double BROOM = 2.3, SCOOP = 3.0;
+    /** [wf] How often the town's streets are looked over for snow (ticks); the most patches of it kept in
+     *  mind at once; and how far round where it stands it shovels the snow off at a go. */
+    static final long SNOW_LOOK = 400L;
+    static final int SNOW_CELLS = 256, SHOVEL = 2;
 
     /** The tag on an item a player threw or dropped, or that fell when a player died: never swept, never
      *  picked up by a folk passing by. */
@@ -113,6 +124,8 @@ public final class Sweepers {
         final List<ItemStack> sack = new ArrayList<>();
         int heaps;
         boolean carrying;
+        /** [wf] The patch of snow on the streets it is going for, if any. */
+        @Nullable BlockPos snow;
 
         Broom(boolean courier, long now) {
             this.courier = courier;
@@ -147,6 +160,14 @@ public final class Sweepers {
         final Map<UUID, int[]> staff = new LinkedHashMap<>();
         final Map<UUID, String> names = new HashMap<>();
         long appointed = -100000L;
+        /** [wf] Snow lying on the town's streets, paths and square (a snowy town's), nearest the heart first;
+         *  who is going for which patch; patches nobody could get to, left until when; and today's tally. */
+        long snowLooked = -100000L;
+        final List<BlockPos> snow = new ArrayList<>();
+        final Set<Long> snowAt = new java.util.HashSet<>();
+        final Map<Long, UUID> snowClaimed = new HashMap<>();
+        final Map<Long, Long> snowAvoid = new HashMap<>();
+        int cleared, snowballs;
     }
 
     private static final Map<UUID, Broom> BROOMS = new ConcurrentHashMap<>();
@@ -158,6 +179,7 @@ public final class Sweepers {
         BROOMS.clear();
         TOWNS.clear();
         MADE.clear();
+        snowyForTests = null;
     }
 
     static Town town(ServerLevel level, UUID village) {
@@ -167,6 +189,8 @@ public final class Sweepers {
             t.day = today;
             t.swept = 0;
             t.loads = 0;
+            t.cleared = 0;
+            t.snowballs = 0;
             t.staff.clear();
         }
         return t;
@@ -399,6 +423,201 @@ public final class Sweepers {
             }
         }
         t.claimed.keySet().retainAll(t.sweepable);
+        if (force || now - t.snowLooked >= SNOW_LOOK || now < t.snowLooked) lookForSnow(level, v, t);
+    }
+
+    // ------------------------------------------------------------------ [wf] snow
+
+    /** Tests: the town where snow falls (true), not (false), or as its ground is (null). */
+    private static volatile Boolean snowyForTests;
+
+    public static void snowyForTests(@Nullable Boolean on) {
+        snowyForTests = on;
+    }
+
+    /** Does snow fall on this town: its heart cold enough for it (a snowy biome, or high in the mountains)? */
+    public static boolean snowy(ServerLevel level, Villages.Village v) {
+        Boolean t = snowyForTests;
+        if (t != null) return t;
+        BlockPos c = v.centre();
+        return level.getBiome(c).value().coldEnoughToSnow(c);
+    }
+
+    /** A column of the town's streets, square or worn paths: the plan's, or ground worn to a path. */
+    private static boolean street(ServerLevel level, int dx, int dz, BlockPos ground) {
+        return com.jrpetty.mcassistant.village.TownPlan.isSquare(dx, dz) || com.jrpetty.mcassistant.village.TownPlan.isStreet(dx, dz)
+            || level.getBlockState(ground).is(net.minecraft.world.level.block.Blocks.DIRT_PATH);
+    }
+
+    /** The snow lying on the town's streets, paths and square, nearest the heart first (a snowy town's only). */
+    static void lookForSnow(ServerLevel level, Villages.Village v, Town t) {
+        long now = level.getGameTime();
+        t.snowLooked = now;
+        t.snow.clear();
+        t.snowAt.clear();
+        t.snowAvoid.values().removeIf(until -> until < now);
+        if (!snowy(level, v)) {
+            t.snowClaimed.clear();
+            return;
+        }
+        BlockPos c = v.centre();
+        if (!v.dim().equals(level.dimension()) || !level.isLoaded(c)) return;
+        int reach = Villages.townReach(v.id());
+        // Ring by ring out from the heart, so the square and the streets nearest it are cleared first.
+        for (int r = 0; r <= reach && t.snow.size() < SNOW_CELLS; r++) {
+            int side = r == 0 ? 1 : 8 * r;
+            for (int i = 0; i < side && t.snow.size() < SNOW_CELLS; i++) {
+                int dx, dz;
+                if (r == 0) { dx = 0; dz = 0; }
+                else if (i < 2 * r + 1) { dx = -r + i; dz = -r; }                       // the north side
+                else if (i < 4 * r + 2) { dx = -r + (i - 2 * r - 1); dz = r; }          // the south side
+                else if (i < 6 * r + 1) { dx = -r; dz = -r + 1 + (i - 4 * r - 2); }     // the west side, between
+                else { dx = r; dz = -r + 1 + (i - 6 * r - 1); }                         // the east side, between
+                lookAtForSnow(level, t, c, dx, dz);
+            }
+        }
+        t.snowClaimed.keySet().retainAll(t.snowAt);
+    }
+
+    /** One column of the town looked at for snow on its streets. */
+    private static void lookAtForSnow(ServerLevel level, Town t, BlockPos c, int dx, int dz) {
+        int x = c.getX() + dx, z = c.getZ() + dz;
+        if (!level.hasChunk(x >> 4, z >> 4)) return;
+        int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+        if (Math.abs(y - c.getY()) > 12) return;
+        BlockPos at = new BlockPos(x, y, z);
+        if (!level.getBlockState(at).is(net.minecraft.world.level.block.Blocks.SNOW)) return;
+        if (!street(level, dx, dz, at.below()) || t.snowAvoid.containsKey(at.asLong())) return;
+        t.snow.add(at);
+        t.snowAt.add(at.asLong());
+    }
+
+    /** Is there snow on the streets this sweeper may go for (nobody else going for it)? */
+    private static boolean snowFor(VillageFolkEntity c, Town t) {
+        for (BlockPos p : t.snow) {
+            UUID by = t.snowClaimed.get(p.asLong());
+            if (by == null || by.equals(c.getUUID()) || !BROOMS.containsKey(by)) return true;
+        }
+        return false;
+    }
+
+    /** The patch of snow it is going for: the one it had while there is still snow on it, else the nearest nobody else has. */
+    @Nullable
+    private static BlockPos snowPatch(VillageFolkEntity c, ServerLevel level, Town t, Broom b, long now) {
+        if (b.snow != null) {
+            if (t.snowAt.contains(b.snow.asLong()) && level.getBlockState(b.snow).is(net.minecraft.world.level.block.Blocks.SNOW)) return b.snow;
+            t.snowClaimed.remove(b.snow.asLong());
+            b.snow = null;
+        }
+        BlockPos best = null;
+        double bd = Double.MAX_VALUE;
+        for (BlockPos p : t.snow) {
+            UUID by = t.snowClaimed.get(p.asLong());
+            if (by != null && !by.equals(c.getUUID()) && BROOMS.containsKey(by)) continue;
+            if (!level.getBlockState(p).is(net.minecraft.world.level.block.Blocks.SNOW)) continue;
+            double d = p.distToCenterSqr(c.position());
+            if (d < bd) {
+                bd = d;
+                best = p;
+            }
+        }
+        if (best != null) {
+            b.snow = best;
+            b.best = Double.MAX_VALUE;
+            b.progress = now;
+            b.walk = true;
+            t.snowClaimed.put(best.asLong(), c.getUUID());
+        }
+        return best;
+    }
+
+    /**
+     * A shovel for the snow: its own, else one out of the stores, else a wooden one made there and then of
+     * two of their planks (a plank and two sticks, as the game makes one). Empty if there is none to be had.
+     */
+    private static ItemStack shovelFor(VillageFolkEntity c, ServerLevel level, Villages.Village v) {
+        for (ItemStack s : c.getInventoryItems()) if (!s.isEmpty() && s.is(net.minecraft.tags.ItemTags.SHOVELS)) return s;
+        ItemStack got = Crafts.takeOne(level, v, s -> s.is(net.minecraft.tags.ItemTags.SHOVELS));
+        if (got.isEmpty() && Crafts.usePlanks(level, v, 2)) {
+            got = new ItemStack(net.minecraft.world.item.Items.WOODEN_SHOVEL);
+            c.brain("made a wooden shovel of the stores' planks, for the snow");
+        }
+        if (got.isEmpty()) return ItemStack.EMPTY;
+        ItemStack left = c.insertItem(got);
+        if (!left.isEmpty()) {
+            Crafts.store(level, v, left);
+            return ItemStack.EMPTY;
+        }
+        for (ItemStack s : c.getInventoryItems()) if (!s.isEmpty() && s.is(net.minecraft.tags.ItemTags.SHOVELS)) return s;
+        return ItemStack.EMPTY;
+    }
+
+    /** Walk on to the snow; at it, shovel the streets clear round it, and the snowballs into the sack. */
+    private static boolean shovel(VillageFolkEntity c, ServerLevel level, Villages.Village v, Town t, Broom b, BlockPos at,
+                                  Couriers.Office o, long now) {
+        double dx = at.getX() + 0.5 - c.getX(), dz = at.getZ() + 0.5 - c.getZ();
+        double d = Math.sqrt(dx * dx + dz * dz);
+        if (d <= BROOM + 0.5 && Math.abs(at.getY() - c.getY()) <= 2.5) {
+            c.getNavigation().stop();
+            c.getLookControl().setLookAt(at.getX() + 0.5, at.getY(), at.getZ() + 0.5);
+            ItemStack spade = shovelFor(c, level, v);
+            int layers = 0, balls = 0;
+            for (BlockPos p : BlockPos.betweenClosed(at.offset(-SHOVEL, -1, -SHOVEL), at.offset(SHOVEL, 1, SHOVEL))) {
+                if (!t.snowAt.contains(p.asLong())) continue;           // the streets only, not somebody's garden
+                net.minecraft.world.level.block.state.BlockState st = level.getBlockState(p);
+                if (!st.is(net.minecraft.world.level.block.Blocks.SNOW)) continue;
+                List<ItemStack> drops = !spade.isEmpty() && spade.isCorrectToolForDrops(st)
+                    ? net.minecraft.world.level.block.Block.getDrops(st, level, p, null, c, spade) : List.of();
+                level.levelEvent(2001, p, net.minecraft.world.level.block.Block.getId(st));   // the crunch, and the puff of snow
+                level.removeBlock(p, false);
+                layers += st.getValue(net.minecraft.world.level.block.SnowLayerBlock.LAYERS);
+                for (ItemStack dr : drops) {
+                    if (dr.isEmpty()) continue;
+                    ItemStack left = c.insertItem(dr.copy());
+                    int took = dr.getCount() - left.getCount();
+                    if (took > 0) {
+                        addTo(b.sack, dr.copyWithCount(took));
+                        balls += took;
+                    }
+                    if (!left.isEmpty()) net.minecraft.world.level.block.Block.popResource(level, p, left);
+                }
+                if (!spade.isEmpty()) spade.hurtAndBreak(1, level, c, item -> { });
+                t.snowAt.remove(p.asLong());
+                t.snowClaimed.remove(p.asLong());
+            }
+            t.snow.removeIf(p -> !t.snowAt.contains(p.asLong()));
+            b.snow = null;
+            b.heaps++;
+            t.cleared += layers;
+            t.snowballs += balls;
+            c.swing(InteractionHand.MAIN_HAND);
+            o.doing.put(c.getUUID(), "clearing the snow off the streets: " + b.inSack() + " in the sack");
+            c.brain("shovelled " + layers + " layers of snow off the street" + (balls > 0 ? ", " + balls + " snowballs into the sack" : ""));
+            if (layers > 0 && level.getRandom().nextInt(6) == 0) {
+                FolkTalk.speak(c, FolkTalk.pick(level.getRandom(), "Can't have folk slipping on the square.", "There. A path you can walk.",
+                    "Snowballs for the stores — the children will have them."));
+            }
+            return true;
+        }
+        if (d < b.best - 0.5) {
+            b.best = d;
+            b.progress = now;
+        } else if (now - b.progress > NO_NEARER || now < b.progress) {
+            t.snowAvoid.put(at.asLong(), now + LEAVE_A_WHILE);
+            t.snowClaimed.remove(at.asLong());
+            t.snowAt.remove(at.asLong());
+            t.snow.remove(at);
+            c.brain("could not get to the snow there; left it a while");
+            b.snow = null;
+            return true;
+        }
+        if (b.walk || c.getNavigation().isDone()) {
+            c.walkTo(at, 1.0D);
+            b.walk = false;
+        }
+        o.doing.put(c.getUUID(), "clearing the snow off the streets");
+        c.brain("going to clear the snow off the street");
+        return true;
     }
 
     // ------------------------------------------------------------------ the sweeping
@@ -420,7 +639,9 @@ public final class Sweepers {
         if (b != null && (now - b.beat > STALE || now < b.beat)) {
             // Called away a while (the town's works, its bed): it walks afresh to whatever is nearest now.
             if (b.heap != null) t.claimed.remove(b.heap);
+            if (b.snow != null) t.snowClaimed.remove(b.snow.asLong());
             b.heap = null;
+            b.snow = null;
             b.best = Double.MAX_VALUE;
             b.progress = now;
             b.walk = true;
@@ -429,7 +650,7 @@ public final class Sweepers {
             boolean mine = appointed(c);
             if (!mine && !(idle && !sweeperAbout(village))) return false;
             look(level, v, t, false);
-            if (!anyFor(level, c, t)) return false;
+            if (!anyFor(level, c, t) && !snowFor(c, t)) return false;   // [wf] or snow on the streets
             b = new Broom(!mine, now);
             BROOMS.put(c.getUUID(), b);
             c.brain(mine ? "sweeping the town's streets" : "sweeping the streets between runs");
@@ -439,6 +660,9 @@ public final class Sweepers {
         if (!b.carrying) {
             ItemEntity heap = heap(c, level, v, t, b, now);
             if (heap != null) return sweep(c, level, t, b, heap, o, now);
+            // [wf] Nothing lying about: the snow off the streets, paths and square, in a snowy town.
+            BlockPos snow = snowPatch(c, level, t, b, now);
+            if (snow != null) return shovel(c, level, v, t, b, snow, o, now);
             if (b.sack.isEmpty()) {
                 putAway(t, c);
                 return false;
@@ -460,6 +684,7 @@ public final class Sweepers {
     private static void putAway(Town t, VillageFolkEntity c) {
         Broom b = BROOMS.remove(c.getUUID());
         if (b != null && b.heap != null) t.claimed.remove(b.heap);
+        if (b != null && b.snow != null) t.snowClaimed.remove(b.snow.asLong());
     }
 
     /** Is there a heap lying about that this sweeper may go for (nobody else going for it)? */
@@ -713,6 +938,9 @@ public final class Sweepers {
         out.putInt("lying_goods", t.goods);
         out.putInt("sweepable", t.sweepable.size());
         out.putInt("sweepers_wanted", wanted(v.id()));
+        out.putInt("snow_cleared", t.cleared);                  // [wf] layers of snow off the streets today
+        out.putInt("snowballs", t.snowballs);
+        out.putInt("snow_lying", t.snow.size());
         List<String> who = new ArrayList<>();
         for (AssistantEntity a : Villages.folkOf(v.id())) if (a instanceof VillageFolkEntity f && appointed(f)) who.add(f.displayNameCap());
         out.putString("sweepers", String.join(", ", who));
@@ -723,7 +951,10 @@ public final class Sweepers {
         String who = t.getString("sweepers");
         return "Swept in today: " + t.getInt("swept") + " (" + t.getInt("sweep_loads") + (t.getInt("sweep_loads") == 1 ? " load" : " loads")
             + (who.isEmpty() ? ", by the couriers between runs" : ", by " + who) + "). Lying about the town: " + t.getInt("lying")
-            + (t.getInt("lying") == 1 ? " item" : " items") + " (" + t.getInt("lying_goods") + " goods; " + t.getInt("sweepable") + " for the broom).";
+            + (t.getInt("lying") == 1 ? " item" : " items") + " (" + t.getInt("lying_goods") + " goods; " + t.getInt("sweepable") + " for the broom)."
+            + (t.getInt("snow_cleared") > 0 || t.getInt("snow_lying") > 0
+                ? " Snow cleared off the streets today: " + t.getInt("snow_cleared") + " layers (" + t.getInt("snowballs") + " snowballs banked); "
+                    + t.getInt("snow_lying") + " patches still lying." : "");
     }
 
     /** /village sweeper: the town's sweeping in words. */
@@ -825,6 +1056,14 @@ public final class Sweepers {
     public static boolean mayTakeForTests(ServerLevel level, UUID village, ItemEntity e) {
         Villages.Village v = Villages.get(village);
         return v != null && mayTake(level, v, e, new Ground(level, v));
+    }
+
+    /** [wf] Tests: the snow on the town's streets now, {patches lying, layers cleared today, snowballs banked today}. */
+    public static int[] snowForTests(ServerLevel level, UUID village) {
+        Villages.Village v = Villages.get(village);
+        Town t = town(level, village);
+        if (v != null) lookForSnow(level, v, t);
+        return new int[]{ t.snow.size(), t.cleared, t.snowballs };
     }
 
     /** Tests: the town today, {goods swept in, loads, heaps lying about, heaps for the broom}. */

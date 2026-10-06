@@ -405,6 +405,9 @@ public final class Villages {
         Nether.resetForTests();
         Drover.resetForTests();
         Cafe.resetForTests();
+        Woods.resetForTests();              // [wf] the woodcutters' stumps and errands
+        FireBrigade.resetForTests();        // [wf] the fires and the hands at them
+        Weather.resetForTests();            // [wf] the storm (and a test's storm let go), the rods looked at
         Roads.reset();
         LAST_PROJECT.clear();
         POP.clear();

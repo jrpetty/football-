@@ -4428,3 +4428,49 @@ chunk queue (`MCA-CHUNKS`), and why a village was or was not building
 The reports are published to the `village-test-latest` release: `vt-report.txt`,
 `real-<scenario>.txt` and `smoke.txt` with its pictures. Each dashboard line says what one folk is doing and
 why it is not doing more.
+
+## Fuel, fire and weather
+
+* **Coal when the age wants it.** While the stores are short of the coal the Stone Age asks for, two
+  miners in three take their mines up to the coal seam (Y96, or twelve blocks under the ground if that is
+  shallower; higher up in the mountains' own band) instead of down at the iron, and stay there until the
+  stores hold half as much again as the age wants, so the mines do not go up and down their stairs with
+  every swing of the stores; then they go back down to the iron. The third keeps on at the iron. The
+  smelters burn the logs the builders can spare into charcoal first and put no coal on the fire, and the
+  stores' torches are made of charcoal while coal is short. `/village economy` shows the fuel.
+* **The woods kept growing.** A woodcutter puts a sapling on every stump it makes. Out of saplings, it
+  knocks down the crown of a tree it has felled and takes up what falls (saplings, sticks, the odd apple)
+  rather than wait for the leaves to drop. With saplings to spare (it keeps four for the stumps), it
+  plants the open ground of its wood, two blocks clear of any trunk or sapling, until the wood holds a
+  tree or a sapling to every twenty blocks of ground; never in the town, on the farmland or on a building
+  site. While the town is short of timber it feeds its saplings bone meal from the stores (or the watch's
+  bones, crushed). Leave saplings or bone meal in the stores and the woods grow back the faster.
+* **Lightning rods.** Once the stores hold copper ingots, a hand on the town's works puts a lightning rod
+  on the highest point of the roof of the meeting hall, the bell tower, the chapel and the leader's hall,
+  one each, made of three of the stores' copper ingots (or a rod you left in the stores). The game sends a
+  storm's lightning to a rod near where it strikes, so the town's timber is spared. Take one down and
+  another goes up when there is copper for it.
+* **The fire brigade.** Fire on or next to the town's own blocks (from lightning, lava, a campfire, or
+  anything else) is seen within a couple of seconds, and the nearest grown folk run to put it out, woken
+  if need be: with a bucket of water from the stores; else an empty bucket from the stores, or one made of
+  three of the stores' iron, filled at the nearest water; else with their fists, a flame at a time, as a
+  player can. One hand to a small fire, up to three to a big one. A fire laid on netherrack (a hearth) is
+  left to burn. The news and the town's books (`fires` and `fire_log` on the analytics page) note every
+  fire: where, how it started and who put it out, or that it burnt itself out out of reach.
+* **Snow off the streets.** In a town where snow falls (a snowy biome, or high in the mountains), the
+  street sweeper (or a courier between runs) shovels the snow off the town's streets, worn paths and
+  square once there is nothing lying about to sweep, and carries the snowballs into the storehouse with
+  the rest of its sack. It uses a shovel from the stores or makes a wooden one of two of their planks;
+  without one the snow goes but gives nothing. Gardens and lots are left alone. The Stores page and
+  `/village sweeper` show the snow cleared today.
+* **In out of the storm.** During a thunderstorm everybody but the watch drops its work and goes indoors,
+  home or into the nearest of the town's buildings, whichever is nearer, and waits there until the storm
+  has passed; the town's works wait too. Farmers do not stand in open fields under the lightning. A miner
+  down its mine keeps working (the rock is its roof), a fire still gets its brigade, and folk off work
+  with a bed of their own go home as they always do in the wet.
+
+The game tests `WeatherFuelGameTests` (wf01 to wf06) check each of these: the miners up to the coal and
+back, the charcoal and the charcoal torches; a sapling from the crowns on every felled stump, the open
+ground planted and the saplings fed; a rod a building, of three copper ingots; a fire put out with a
+bucket made of the stores' iron and noted in the books; the snow shovelled off the square into the
+storehouse and not off a garden; and a farmer in out of the storm while the watch stays out.

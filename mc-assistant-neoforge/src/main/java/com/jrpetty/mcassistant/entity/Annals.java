@@ -95,6 +95,38 @@ public final class Annals {
         return out;
     }
 
+    // ------------------------------------------------------------------ [wf] fires
+
+    /** How many of a town's fires its books keep word of (the count is kept for ever). */
+    static final int FIRES_KEPT = 12;
+
+    /**
+     * [wf] A fire in the town, out (FireBrigade): counted, and written up in a line — the day, where, how
+     * it started and who put it out — the last dozen kept, for the books and the town's page.
+     */
+    public static void fire(@Nullable UUID village, long day, String line) {
+        if (village == null) return;
+        Ledger.note(village, "annals.fires", Integer.toString(fires(village) + 1));
+        List<String> log = new ArrayList<>(fireLog(village));
+        log.add("Day " + (day + 1) + ": " + line.replace(';', ','));
+        while (log.size() > FIRES_KEPT) log.remove(0);
+        Ledger.note(village, "annals.fires.log", String.join(";", log));
+    }
+
+    /** [wf] How many fires the town has had. */
+    public static int fires(UUID village) {
+        return parse(Ledger.note(village, "annals.fires"));
+    }
+
+    /** [wf] The town's last fires, oldest first, a line each. */
+    public static List<String> fireLog(UUID village) {
+        String note = Ledger.note(village, "annals.fires.log");
+        List<String> out = new ArrayList<>();
+        if (note == null || note.isEmpty()) return out;
+        for (String s : note.split(";")) if (!s.isEmpty()) out.add(s);
+        return out;
+    }
+
     // ------------------------------------------------------------------ the morning's record
 
     /** The village as it is this morning, written down (after Economy.closeTheDay has closed yesterday). */
@@ -546,6 +578,8 @@ public final class Annals {
         CompoundTag c = new CompoundTag();
         for (Map.Entry<String, Integer> e : causes.entrySet()) c.putInt(e.getKey(), e.getValue());
         out.put("causes", c);
+        out.putInt("fires", fires(id));                          // [wf] the town's fires, and the last of them (FireBrigade)
+        out.put("fire_log", strings(fireLog(id)));
         String[] page = VillageBoards.page(VillageBoards.compose(level, id));
         out.putString("board_title", page[0]);
         out.putString("board", page[1].length() > 20000 ? page[1].substring(0, 20000) : page[1]);
