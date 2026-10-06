@@ -3066,6 +3066,13 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** A smelter with no ore to run: make charcoal if that is what is wanted. */
     protected boolean burnCharcoal() { return false; }
 
+    /** [wf] A woodcutter's errand in its wood between fellings (VillageFolkEntity: Woods). True while at one. */
+    protected boolean woodsWork() { return false; }
+
+    /** [wf] Called away from its own work just now — at a fire, or in out of a thunderstorm (VillageFolkEntity):
+     *  the idle brain plans nothing for it till it is back. */
+    protected boolean calledAway() { return false; }
+
     /** Is its village short of coal (so logs burn before coal, and charcoal is made)? (VillageFolkEntity) */
     public boolean savingCoal() { return false; }
 
@@ -4218,7 +4225,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 // [economy] Its bone meal for the field, and a few bones to crush into more (Fields).
                 : s.is(Items.BONE_MEAL) ? Fields.BONE_MEAL_KEPT : s.is(Items.BONE) ? 8
                 : (s.is(Items.WATER_BUCKET) || s.is(Items.BUCKET)) ? 10 : 0;
-            case WOOD -> s.is(ItemTags.SAPLINGS) ? 16 : 0;
+            case WOOD -> s.is(ItemTags.SAPLINGS) ? 16 : s.is(Items.BONE_MEAL) ? 8 : 0;   // [wf] and bone meal for them (Woods)
             case RANCH -> BREEDING_FOOD.test(s) ? 16 : (s.is(Items.SHEARS) ? 1 : 0);
             case GUARD -> s.is(Items.TORCH) ? 16 : (s.is(Items.ARROW) ? 32
                 // [economy] Its bow and its shield are its arms, not the day's takings (PutAway banks twice a day).
@@ -6837,6 +6844,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                     enqueue(Job.cleanup());
                     return true;
                 }
+                // [wf] A village's wood kept growing between the fellings (Woods): a felled crown shaken
+                // down for its saplings, the stumps and the thin ground planted, the saplings fed.
+                if (woodsWork()) return true;
                 if (resourceNearby(GatherGoal.Kind.LOGS, STATION_RADIUS)) {
                     enqueue(Job.gather(GatherGoal.Kind.LOGS, 16));
                     return true;
@@ -9495,7 +9505,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         if (!isWatched()) decideEvery *= 3;
         if (autonomous && jobs.isEmpty() && !retreating && getTarget() == null
             && (idleKick || tickCount % decideEvery == 0)
-            && !restingAtHome) {
+            && !restingAtHome && !calledAway()) {
             idleKick = false;
             boolean townMember = ownerId != null && Town.center(ownerId) != null;
             // Survival ALWAYS runs — never held off by the idle-work cool-off; a

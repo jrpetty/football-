@@ -386,6 +386,9 @@ public class GatherGoal extends Goal {
             && assistant.level().getBlockState(pos.below()).is(BlockTags.DIRT)) {
             stumps.add(pos.immutable());
             assistant.note(AssistantEntity.Deed.TREES_FELLED, 1);
+            // [wf] A village's woodcutter keeps the stump on its wood's books too, till a sapling is on it
+            // (Woods): the crown's own saplings, shaken down, if it has none in hand now.
+            com.jrpetty.mcassistant.entity.Woods.felled(assistant, pos);
         }
         if (assistant.level().destroyBlock(pos, true, assistant)) {
             collected++;

@@ -28,6 +28,10 @@ import java.util.UUID;
  * </ul>
  * A smelter's own coal (given it, or drawn while the stores had plenty) is still its fuel: the floor is
  * about what the stores hold, not about taking the fire out of a smelter's hands.
+ *
+ * <p>[wf] And while the age is short of coal, two miners in three take their mines up to the coal seam
+ * ({@link #coalSeamFor}, VillageFolkEntity.seekTheSeam) instead of down at the iron, and stay there till
+ * the stores hold half as much again as the age asks ({@link #coalSeamWanted}).
  */
 public final class Fuel {
 
@@ -68,5 +72,45 @@ public final class Fuel {
         if (ageWants(level, village, Villages.Task.COAL)) return true;
         if (!low(level, village)) return false;
         return Villages.ageOf(village) != Villages.Age.WOOD || !ageWants(level, village, Villages.Task.LOGS);
+    }
+
+    // ------------------------------------------------------------------ [wf] the coal seam
+
+    /**
+     * Where coal lies thickest in the ground this game makes, below the mountains' own band: ninety-six.
+     * It thins to nothing at the bottom of the band, at nought, and the iron seam the mines are taken
+     * down to is at sixteen, where there is a sixth as much. A mountain town of seventy-seven with twenty
+     * miners sat in the Stone Age for want of coal, its stores swinging between thirty-two and ninety-four
+     * from one morning to the next against the forty-eight the age asked for, every one of its mines
+     * down at the iron.
+     */
+    public static final int COAL_SEAM_Y = 96;
+    /** Above this the mountains' own coal begins, as thick all the way up: a mine high in a mountain digs there. */
+    static final int UPPER_COAL_Y = 136;
+    /** Rock left over a coal gallery: the seam is dug under the ground, not along the top of it. */
+    static final int COAL_COVER = 12;
+
+    /**
+     * The depth a mine on ground this high goes to for its coal: ninety-six, or twelve under the ground
+     * if that is higher up in the mountains' band, or shallower; or -1 where that would be little better
+     * than the iron seam itself ({@code ironSeam}), on low ground.
+     */
+    public static int coalSeamFor(int groundY, int ironSeam) {
+        int under = groundY - COAL_COVER;
+        int y = under >= UPPER_COAL_Y ? under : Math.min(COAL_SEAM_Y, under);
+        return y >= ironSeam + 8 ? y : -1;
+    }
+
+    /**
+     * Is a mine wanted at the coal seam? While the age asks for coal (the town is short of it for its
+     * next age), yes. And a mine already there stays till the stores hold half as much again as the age
+     * asks, or the age has moved on: the stores swung across the age's mark from day to day, and a mine
+     * sent up and down its staircase with every swing would dig nothing but stairs.
+     */
+    public static boolean coalSeamWanted(ServerLevel level, UUID village, boolean there) {
+        if (ageWants(level, village, Villages.Task.COAL)) return true;
+        if (!there || Villages.ageOf(village) != Villages.Age.STONE) return false;
+        int folk = Math.min(Villages.headcount(village), Villages.AGE_FOLK);
+        return inStores(level, village) < com.jrpetty.mcassistant.village.VillageMath.coalWanted(folk) * 3 / 2;
     }
 }

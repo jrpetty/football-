@@ -103,6 +103,7 @@ public final class TownJobs {
         if (t >= 12500L && t < 23500L) return false;                 // by day
         UUID id = v.id();
         if (Raids.underAlarm(id)) return false;
+        if (Weather.stormy(level)) return false;                       // [wf] nobody up a ladder in a thunderstorm
         long now = level.getGameTime();
         String key = id + "/" + works;
         Crew c = CREW.get(key);
@@ -218,6 +219,7 @@ public final class TownJobs {
         if (f.trip() != null || f.expedition() != null || Nether.away(f) || Drover.busy(f)) return false;
         if (f.talkPartner() != null || f.companionPlayer() != null || f.guidePlayer() != null) return false;
         if (Assemblies.attending(f) || Patrols.escorting(f)) return false;      // (or walking with the leader)
+        if (FireBrigade.onIt(f) || Weather.sheltering(f)) return false;          // [wf] at a fire, or in out of a storm
         if (f.stationTask() == AssistantEntity.StationTask.GUARD && (f.level().isNight() || f.onWatch()) && !works.endsWith("watch")) return false;
         UUID id = f.ownerId();
         return id == null || !Villages.holdsTheLead(id, f.getUUID(), f.level().getGameTime());

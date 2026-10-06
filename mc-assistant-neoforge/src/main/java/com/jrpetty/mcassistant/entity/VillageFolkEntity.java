@@ -374,6 +374,13 @@ public class VillageFolkEntity extends AssistantEntity {
         if ((stationTask() == StationTask.GUARD || Patrols.escorting(this)) && tickCount % 5 == 2
                 && level() instanceof net.minecraft.server.level.ServerLevel watchIn) Patrols.step(this, watchIn);
         if (!withAPlayer && Patrols.escorting(this)) return;
+        // [wf] Fire on or by the town's own blocks: the nearest hands to it, with a bucket of water or their
+        // fists, before anything else (FireBrigade; the town is looked over every two seconds).
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel fireLevel
+                && FireBrigade.hold(this, fireLevel)) return;
+        // [wf] A thunderstorm: indoors, everybody but the watch, and there till it has passed (Weather).
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel stormLevel
+                && Weather.shelter(this, stormLevel)) return;
         // The village coming together (Assemblies): the bell rung, it goes, finds a place and takes part.
         if (!withAPlayer && tickCount % 4 == 1 && level() instanceof net.minecraft.server.level.ServerLevel gathering
                 && Assemblies.attend(this, gathering)) {
@@ -3692,11 +3699,53 @@ public class VillageFolkEntity extends AssistantEntity {
         if (at.ordinal() >= Villages.Age.DIAMOND.ordinal() && pickTierCarried() >= 3 && deepMiner()) {
             want = floor;
         }
-        if (zone.depth() <= want + 4) return false;              // there already, or deeper
+        // [wf] Short of coal for the age: up to the coal seam, two miners in three, and there till the
+        // stores have it with some to spare (Fuel.coalSeamWanted). The mountain town of seventy-seven sat
+        // in the Stone Age with all twenty of its mines down at the iron, where there is a sixth of the
+        // coal there is at ninety-six.
+        int coal = Fuel.coalSeamFor(zone.center().getY(), want);
+        boolean atCoal = coal > 0 && zone.depth() == coal;
+        if (coal > 0 && want != floor && coalMiner()
+                && level() instanceof net.minecraft.server.level.ServerLevel server
+                && Fuel.coalSeamWanted(server, village, atCoal)) {
+            if (atCoal) return false;
+            assignPlot(WorkZone.around(zone.center(), zone.radius(), coal), patchNameFor(StationTask.MINE));
+            setAutonomous(true);
+            brain("mine taken to Y" + coal + " for the coal the age wants");
+            if (getRandom().nextInt(3) == 0) {
+                FolkTalk.speak(this, FolkTalk.pick(getRandom(), "Coal's what we're short of. Up to the black seam with me.",
+                    "No coal down at the iron worth the name. I'll dig where it's thick."));
+            }
+            return true;
+        }
+        if (!atCoal && zone.depth() <= want + 4) return false;   // there already, or deeper
         assignPlot(WorkZone.around(zone.center(), zone.radius(), want), patchNameFor(StationTask.MINE));
         setAutonomous(true);
         brain("mine taken down to Y" + want + " for the " + (want == floor ? "diamonds" : "iron"));
         return true;
+    }
+
+    /** [wf] Tests: the miner's look at where its mine should be, now, whatever the clock says. */
+    public boolean seekTheSeamForTests() {
+        seamCheckTick = -100000;
+        return seekTheSeam();
+    }
+
+    /**
+     * [wf] Two miners in three, counted in a fixed order, go up for the coal while the age is short of
+     * it; the third keeps on at the iron the next age will want. A village of one or two miners sends
+     * them all.
+     */
+    private boolean coalMiner() {
+        UUID village = ownerId();
+        if (village == null) return false;
+        UUID me = getUUID();
+        int before = 0;
+        for (AssistantEntity mate : Villages.folkOf(village)) {
+            if (mate == this || mate.stationTask() != StationTask.MINE) continue;
+            if (mate.getUUID().compareTo(me) < 0) before++;
+        }
+        return before % 3 != 2;
     }
 
     private int pickCheckTick = -100000;
@@ -7432,6 +7481,18 @@ public class VillageFolkEntity extends AssistantEntity {
         return village != null && level() instanceof net.minecraft.server.level.ServerLevel server
             && Market.stock(server, village, s -> s.is(net.minecraft.world.item.Items.GLASS)
                 || s.is(net.minecraft.world.item.Items.GLASS_BOTTLE)) < 16;
+    }
+
+    /** [wf] At a fire (FireBrigade), or in out of a thunderstorm (Weather): its own work waits. */
+    @Override
+    protected boolean calledAway() {
+        return FireBrigade.onIt(this) || Weather.sheltering(this);
+    }
+
+    /** [wf] The woodcutter's wood kept growing between its fellings (Woods). */
+    @Override
+    protected boolean woodsWork() {
+        return level() instanceof net.minecraft.server.level.ServerLevel server && Woods.tend(this, server);
     }
 
     /** The mason's work at the smeltery, when there is no ore to run (Masonry). */
