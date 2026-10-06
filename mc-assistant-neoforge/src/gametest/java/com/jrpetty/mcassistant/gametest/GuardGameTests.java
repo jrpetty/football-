@@ -163,7 +163,7 @@ public class GuardGameTests {
      * quarters of the town all walked between them, and the street at a building's door among
      * the stops. Each guard sets off for a stop of its own beat.
      */
-    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "g02_beats")
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "g02_beats")
     public static void g02_beats(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
@@ -177,6 +177,7 @@ public class GuardGameTests {
         for (int i = 0; i < 3; i++) guards.add(VillageFolkSpawnerBlock.raise(level, Kit.surface(level, x + 2 + i, z + 2), 0.0F));
         helper.assertTrue(citizen != null && guards.stream().allMatch(g -> g != null), "a village with three guards");
         UUID village = citizen.ownerId();
+        List<List<BlockPos>> walked = new ArrayList<>();      // the beats, once drawn at tick 20
         helper.runAtTickTime(20, () -> {
             for (VillageFolkEntity g : guards) arm(g);
             Villages.Village v = Villages.get(village);
@@ -223,18 +224,33 @@ public class GuardGameTests {
                 boolean byDoor = seen.stream().map(BlockPos::of).anyMatch(p -> Math.abs(p.getX() - house.getX()) <= 10 && Math.abs(p.getZ() - house.getZ()) <= 10);
                 helper.assertTrue(byDoor, "the street by a house at " + house.toShortString() + " is on a beat");
             }
-            // Each guard on its own beat, and off to a stop on it.
-            Set<Integer> beatsWalked = new HashSet<>();
+            walked.addAll(beats);
+        });
+        // Each guard on its own beat, and off to a stop on it. A guard that can't set off this tick
+        // (in the air from a hop, or held a moment) stands and looks about, and tries again after
+        // Patrols.LOOK, so each has a few looks' time to be on its way.
+        Set<UUID> off = new HashSet<>();
+        Set<Integer> beatsWalked = new HashSet<>();
+        helper.onEachTick(() -> {
+            if (walked.isEmpty() || off.size() == guards.size()) return;
+            BlockPos c = Villages.get(village).centre();
             for (VillageFolkEntity g : guards) {
+                if (off.contains(g.getUUID())) continue;
                 List<BlockPos> mine = Patrols.beatForTests(g);
-                beatsWalked.add(beats.indexOf(mine));
-                boolean off = Patrols.round(g, level);
+                boolean going = Patrols.round(g, level);
                 BlockPos to = Patrols.headingForTests(g);
-                Kit.log("g02 " + g.displayNameCap() + " walks beat " + beats.indexOf(mine) + ", off " + off + " to "
-                    + (to == null ? "nowhere" : (to.getX() - c.getX()) + "," + (to.getZ() - c.getZ())) + "; says: " + Patrols.line(g));
-                helper.assertTrue(off && to != null && mine.contains(to), "a guard sets off for a stop on its own beat");
+                if (!going || to == null || !mine.contains(to)) {
+                    if (helper.getTick() % 40 == 0) Kit.log("g02 @" + helper.getTick() + " " + g.displayNameCap() + " not off yet (going " + going
+                        + ", on the ground " + g.onGround() + "): " + g.debugLine());
+                    continue;
+                }
+                off.add(g.getUUID());
+                beatsWalked.add(walked.indexOf(mine));
+                Kit.log("g02 @" + helper.getTick() + " " + g.displayNameCap() + " walks beat " + walked.indexOf(mine) + ", off to "
+                    + (to.getX() - c.getX()) + "," + (to.getZ() - c.getZ()) + "; says: " + Patrols.line(g));
             }
-            helper.assertTrue(beatsWalked.size() == 3, "three guards on three different beats");
+            if (off.size() < guards.size()) return;
+            helper.assertTrue(beatsWalked.size() == 3, "three guards on three different beats: " + beatsWalked);
             helper.succeed();
         });
     }
