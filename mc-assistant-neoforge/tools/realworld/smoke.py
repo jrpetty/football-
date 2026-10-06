@@ -334,6 +334,49 @@ def found_village(r, cx, cz, look):
     say("folk founded: " + r.cmd("execute positioned %d %d %d run village list" % (fx, level_y + 1, fz))[:400])
 
 
+def jungle_stage(r, look):
+    """A village founded in a jungle (entity/Founding, VillageBoards, Terraform): the nearest jungle found,
+    the trunks photographed from the air, then twelve founded there as /village spawn, a charter or the world
+    itself now founds one, the board put up among the trunks and the ground levelled and cleared before the
+    folk come; the same view after. (The board once had nowhere to stand in a jungle, and a town founded any
+    other way stood among the trees on its hillside.)"""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("time set 6000")
+    out = r.cmd("locate biome minecraft:jungle")
+    say("jungle: " + out[:200])
+    m = re.search(r"\[(-?\d+), [^,\]]+, (-?\d+)\]", out)
+    if not m:
+        say("no jungle within reach of this seed; nothing to photograph")
+        return
+    jx, jz = int(m.group(1)) + 24, int(m.group(2)) + 24
+    r.cmd("tp %s %d 170 %d" % (USER, jx, jz))
+    time.sleep(30)                                     # the jungle is generated and arrives at the client
+    gy = ground_height(r, jx, jz)
+    look("24-jungle-1-before", jx + 46, gy + 38, jz + 46, jx, gy, jz, wait=20)
+    out = r.cmd("village found 12 %d %d" % (jx, jz))
+    say("jungle found: " + out[:300])
+    if "FOUNDING" not in out and "being made ready" not in out:
+        say("FAIL the jungle founding did not begin: " + out[:200])
+        return
+    started = time.time()
+    level_y = gy - 1
+    while time.time() - started < 300:
+        status = r.cmd("village found status")
+        mm = re.search(r"FOUNDING -?\d+ (-?\d+) -?\d+ (\w+) folk (\d+)/(\d+) ground (\d+)%", status)
+        if not mm:
+            say("jungle founding done after %d s" % (time.time() - started))
+            break
+        level_y = int(mm.group(1)) - 1
+        say("jungle founding: %s, folk %s/%s, ground %s%%" % (mm.group(2), mm.group(3), mm.group(4), mm.group(5)))
+        time.sleep(5)
+    say("jungle ground check: " + r.cmd("village found ground %d %d 24" % (jx, jz))[:600])
+    say("jungle village: " + r.cmd("execute positioned %d %d %d run village status" % (jx, level_y + 1, jz))[:300])
+    look("24-jungle-2-levelled", jx + 46, level_y + 38, jz + 46, jx, level_y, jz, wait=30)
+    look("24-jungle-3-square", jx + 14, level_y + 6, jz + 14, jx, level_y + 1, jz, wait=10)
+    say("alive after the jungle: %s" % client_alive())
+
+
 def sweeper_stage(r, look, cx, cz):
     """The street sweeper (entity/Sweepers): the folk nearest the heart made the storehouse's sweeper
     (whatever the size of the town), saplings, seed, eggs, wool, cobblestone and bones dropped about the
@@ -1146,6 +1189,10 @@ def main():
         found_village(r, cx, cz, look)
     except Exception as e:  # noqa: BLE001
         say("founding failed: %s" % e)
+    try:
+        jungle_stage(r, look)
+    except Exception as e:  # noqa: BLE001
+        say("jungle stage failed: %s" % e)
     try:
         bell_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
