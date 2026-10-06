@@ -664,6 +664,8 @@ public class WeatherFuelGameTests {
         helper.assertTrue(snow[0] == street.size(), "the snow on the streets seen, not the garden's: " + snow[0] + " of " + street.size());
         helper.onEachTick(() -> {
             long t = helper.getTick();
+            // Its daily break (a minute or two, three for an easygoing one) is skipped: this is the sweeping's pace.
+            if (courier.breakNowForTests()) level.setDayTime(level.getDayTime() + 200);
             int lying = 0;
             for (BlockPos p : street) if (level.getBlockState(p).is(Blocks.SNOW)) lying++;
             int balls = count(store, s -> s.is(Items.SNOWBALL));

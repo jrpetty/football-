@@ -173,6 +173,8 @@ public class SweeperGameTests {
         for (int i = 0; i < kinds.length; i++) before[i] = count(store, kinds[i]);
         helper.onEachTick(() -> {
             long t = helper.getTick();
+            // Its daily break (a minute or two, three for an easygoing one) is skipped: this is the sweeping's pace.
+            if (courier.breakNowForTests()) level.setDayTime(level.getDayTime() + 200);
             Villages.noteAttempt(village, level.getGameTime());
             int left = 0;
             for (ItemEntity e : lying) if (e.isAlive()) left++;
@@ -194,8 +196,10 @@ public class SweeperGameTests {
                 Kit.log("sw01 the streets swept by tick " + t + ": " + have + "town " + java.util.Arrays.toString(town)
                     + "; the emeralds " + thrown.getItem() + " alive " + thrown.isAlive() + "; books saplings in " + saplings[0]);
                 Kit.log("sw01 the books: " + Storekeeping.page(level, Villages.get(village)).replace('\n', '|'));
-                helper.assertTrue(thrown.isAlive() && thrown.getItem().is(Items.EMERALD) && thrown.getItem().getCount() == 4,
-                    "the player's emeralds left where they lay: " + thrown.getItem() + " alive " + thrown.isAlive());
+                // Left where they lay; or, once left lying two minutes, taken to the Lost and Found (PlayerServices),
+                // which the next assertion holds to: never the stores, never the courier's pack.
+                helper.assertTrue(thrown.isAlive() ? thrown.getItem().is(Items.EMERALD) && thrown.getItem().getCount() == 4 : t >= 2400,
+                    "the player's emeralds left where they lay: " + thrown.getItem() + " alive " + thrown.isAlive() + " at " + t);
                 helper.assertTrue(count(store, Items.EMERALD) == 0 && courier.countCarried(s -> s.is(Items.EMERALD)) == 0,
                     "and nobody took them in");
                 helper.assertTrue(saplings[0] >= 3, "the saplings are in the storehouse's books: " + saplings[0]);
