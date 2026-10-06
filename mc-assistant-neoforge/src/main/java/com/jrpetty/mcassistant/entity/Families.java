@@ -2000,6 +2000,63 @@ public final class Families {
         return String.join("; ", parts);
     }
 
+    // ------------------------------------------------------------------ the sights (/village sights)
+
+    /**
+     * Every household for /village sights, a line each: "HOME x y z kids N grown N chest x y z|none
+     * garden yes|no pet kind name x y z|none (doing)". The pictures find a family to look in on with it.
+     */
+    public static List<String> sightsLines(ServerLevel level, Villages.Village v) {
+        UUID id = v.id();
+        List<String> out = new ArrayList<>();
+        for (Homes.Home h : List.copyOf(Homes.homes(id).values())) {
+            if (h.members.isEmpty() || !level.isLoaded(h.anchor)) continue;
+            BlockPos a = h.anchor, chest = Homes.chestOf(level, id, h);
+            Pet p = pet(id, a.asLong());
+            Entity pe = p == null ? null : level.getEntity(p.id());
+            String pet = pe == null ? "none"
+                : p.kind() + " " + p.name() + " " + pe.blockPosition().getX() + " " + pe.blockPosition().getY() + " " + pe.blockPosition().getZ()
+                    + " (" + PET_DOING.getOrDefault(p.id(), "about") + ")";
+            out.add("HOME " + a.getX() + " " + a.getY() + " " + a.getZ() + " kids " + children(id, h).size() + " grown " + grown(id, h).size()
+                + " chest " + (chest == null ? "none" : chest.getX() + " " + chest.getY() + " " + chest.getZ())
+                + " garden " + (gardened(id, a.asLong()) ? "yes" : "no") + " pet " + pet);
+        }
+        return out;
+    }
+
+    /**
+     * For /village sights pet and garden (operators, and the pictures): the households' looks for a pet, or
+     * the first gardenless house's garden, made now whatever the hour, and each errand seen through at
+     * once. The fish, the bones, the flowers and the sapling still come out of the house chest and the
+     * stores, and the garden is still paid for: only the walk is skipped. What was done, a line each.
+     */
+    public static List<String> sightsNow(ServerLevel level, Villages.Village v, boolean pets) {
+        UUID id = v.id();
+        List<String> out = new ArrayList<>();
+        if (pets) {
+            petsForTests(level, v);
+        } else {
+            for (Homes.Home h : List.copyOf(Homes.homes(id).values())) {
+                if (h.members.isEmpty() || Flats.isFlat(h) || h.tenure == Homes.Tenure.PLAYER || !level.isLoaded(h.anchor)) continue;
+                if (gardened(id, h.anchor.asLong())) continue;
+                if (planGarden(level, v, h, level.getDayTime() / 24000L)) break;
+            }
+        }
+        Kind want = pets ? Kind.PET : Kind.GARDEN;
+        for (Map.Entry<UUID, Errand> en : List.copyOf(ERRANDS.entrySet())) {
+            if (en.getValue().kind != want || !id.equals(en.getValue().village)) continue;
+            VillageFolkEntity f = folk(level, en.getKey());
+            if (f == null) continue;
+            BlockPos a = BlockPos.of(en.getValue().anchor);
+            boolean did = errandNowForTests(level, f);
+            out.add((pets ? "PET-ERRAND " : "GARDEN-ERRAND ") + f.displayNameCap() + " home " + a.getX() + " " + a.getY() + " " + a.getZ()
+                + (did ? " done" : " could not begin"));
+        }
+        if (out.isEmpty()) out.add(pets ? "no household could take in a pet now (no stray cat or wolf near, or no fish or bones put by)"
+            : "no household could plant a garden now (too little put by, or no flower and sapling in the stores)");
+        return out;
+    }
+
     // ------------------------------------------------------------------ tests
 
     /** Tests: what the family's folk have said lately ("Name: words"). */

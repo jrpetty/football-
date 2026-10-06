@@ -161,6 +161,12 @@ public final class VillageCommands {
                 for (String l : lines) ctx.getSource().sendSuccess(() -> Component.literal(l), false);
                 return lines.size();
             }))
+            // The town's newer sights and where they stand (entity/Sights): for operators looking round and
+            // for the pictures; "now" does what the town would have done later today, with the same stores.
+            .then(Commands.literal("sights").requires(src -> src.hasPermission(2)).executes(ctx -> sights(ctx, null))
+                .then(Commands.argument("what", com.mojang.brigadier.arguments.StringArgumentType.word())
+                    .suggests((ctx, b) -> net.minecraft.commands.SharedSuggestionProvider.suggest(com.jrpetty.mcassistant.entity.Sights.kinds(), b))
+                    .executes(ctx -> sights(ctx, com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "what")))))
             .then(Commands.literal("research").executes(VillageCommands::research)
                 .then(Commands.literal("pick").requires(src -> src.hasPermission(2))
                     .then(Commands.argument("civic", com.mojang.brigadier.arguments.StringArgumentType.word())
@@ -778,6 +784,20 @@ public final class VillageCommands {
         Villages.Village v = Villages.nearest(level, here, Villages.VILLAGE_RANGE * 4);
         if (v == null && !Villages.every().isEmpty()) v = Villages.every().get(0);
         return v;
+    }
+
+    /** /village sights [what]: the newer sights of the town and where they are; with a what, that one made now. */
+    private static int sights(CommandContext<CommandSourceStack> ctx, @javax.annotation.Nullable String what) {
+        Villages.Village v = villageHere(ctx);
+        if (v == null) {
+            ctx.getSource().sendFailure(Component.literal("No village yet."));
+            return 0;
+        }
+        net.minecraft.server.level.ServerLevel level = ctx.getSource().getLevel();
+        java.util.List<String> lines = what == null ? com.jrpetty.mcassistant.entity.Sights.lines(level, v)
+            : com.jrpetty.mcassistant.entity.Sights.now(level, v, what);
+        for (String l : lines) ctx.getSource().sendSuccess(() -> Component.literal(l), false);
+        return lines.size();
     }
 
     // ------------------------------------------------------------------ the town's calendar

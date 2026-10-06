@@ -252,6 +252,12 @@ public final class WelcomeSign {
         return v.centre().relative(out, Villages.townReach(v.id())).relative(out.getCounterClockWise(), ACROSS);
     }
 
+    /** Where the town's sign stands (for /village sights), or null if it has not gone up yet. */
+    @Nullable
+    public static BlockPos postedAt(UUID village) {
+        return remembered(village);
+    }
+
     /** For the tests: the way out the sign is put up on. */
     public static Direction wayForTests(ServerLevel level, Villages.Village v) {
         return way(level, v);
