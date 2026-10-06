@@ -298,6 +298,7 @@ jobs:
 
       - name: Publish the report
         if: always()
+        continue-on-error: true   # a picture lost to an upload race is not a failed town
         uses: softprops/action-gh-release@v2
         with:
           tag_name: village-test-latest
