@@ -78,7 +78,7 @@ public final class ZoneChests {
      * marks its chests with the same name, and a look round a big town's heart (a couple of hundred
      * blocks for a town of fifty) took in the town next door: a second village founded two hundred
      * blocks off counted the first one's stores as its own and drew its builders' timber out of them
-     * without a soul walking over, the chests nearest the west first.
+     * without a soul walking over.
      */
     private static void keepOurs(Level level, BlockPos origin, List<Found> out) {
         if (out.isEmpty()) return;
@@ -240,10 +240,7 @@ public final class ZoneChests {
             }
         }
         if (settlerAsking()) keepOurs(level, origin, out);
-        // Nearest first (and by place between equals, so two looks at the same world answer alike): a
-        // village's builder drawing what it needs takes it from its own stores at hand before the far ones.
-        out.sort(java.util.Comparator.<Found>comparingDouble(f -> f.pos().distSqr(origin))
-            .thenComparingLong(f -> f.pos().asLong()));
+        out.sort((a, b) -> Long.compare(a.pos().asLong(), b.pos().asLong()));
         return out;
     }
 

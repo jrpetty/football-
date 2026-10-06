@@ -128,18 +128,26 @@ public class MineStairsGameTests {
         VillageFolkEntity f = folk(level, new BlockPos(x + 4, top, z + 4), pocket);
         helper.assertTrue(f != null, "a folk");
         helper.runAtTickTime(5, () -> f.enqueueFront(Job.mine(pocket.getY(), MineStairs.OUT)));
+        final long[] out = { -1 };
         helper.onEachTick(() -> {
             keepAtWork(level, f);
             long t = helper.getTick();
             BlockPos at = f.blockPosition();
             if (t % 300 == 0) Kit.log("ms02 @" + t + " at " + at.toShortString() + " — " + f.debugLine());
-            if (t > 5 && MineStairs.open(level, at)) {
-                int longest = 0;
-                for (long key : MineStairs.keysForTests(level)) longest = Math.max(longest, MineStairs.stairsForTests(level, key).size());
-                Kit.log("ms02 out at " + t + " at " + at.toShortString() + " (" + (at.getY() - pocket.getY()) + " up); stairs kept: " + longest + " steps");
+            if (out[0] < 0 && t > 5 && MineStairs.open(level, at)) {
+                out[0] = t;
+                Kit.log("ms02 out at " + t + " at " + at.toShortString() + " (" + (at.getY() - pocket.getY()) + " up)");
                 helper.assertTrue(at.getY() - pocket.getY() >= 10, "it climbed out of the rock, not round it: " + at.toShortString());
-                helper.assertTrue(longest >= 8, "the stairs it cut are kept: " + longest + " steps");
+            }
+            if (out[0] < 0) return;
+            // Its run ends on its next look round, out in the open: the stairs it cut are kept then.
+            int longest = 0;
+            for (long key : MineStairs.keysForTests(level)) longest = Math.max(longest, MineStairs.stairsForTests(level, key).size());
+            if (longest >= 8) {
+                Kit.log("ms02 stairs kept by " + t + ": " + longest + " steps");
                 helper.succeed();
+            } else if (t - out[0] > 200) {
+                helper.fail("the stairs it cut are kept: " + longest + " steps — " + f.debugLine());
             }
         });
     }

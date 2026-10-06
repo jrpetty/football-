@@ -1234,6 +1234,15 @@ shelves, with a nudge to bring them to the stalls or look at the quest board.
 
 ### The buildings
 
+**A way in at every door.** A building is laid out at one height, but the ground in front of
+its door is whatever the world made. Now and then a door opened onto a bank of earth a block
+high, or over a drop too deep to step up from. On its rounds of the streets the town checks its
+buildings' doors one by one. Wherever the way in can't be walked, a hand comes to fix it: earth
+in the doorway is dug out, a doorstep is laid level with the door, and steps are cut into the
+bank or built up out of the hollow, a block at a time, until the way meets the ground. Only the
+ground the world made is dug. Nothing built is touched, nor anything under a porch roof. The
+blocks come out of the stores, and what is dug goes into them.
+
 Every building is drawn. Each drawing is a text file in
 `data/mc_assistant/blueprints/`, and `tools/blueprints.py` renders them.
 
