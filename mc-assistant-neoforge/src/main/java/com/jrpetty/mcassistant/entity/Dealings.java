@@ -39,7 +39,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * <li><b>Letters.</b> Close friends write to you, once a week, when you are about.</li>
  * <li><b>Made to order.</b> Ask a craftsman to make you something: it is made from its own recipe,
  *     out of what you bring and what the village can spare, for its worth and the work.</li>
- * <li><b>Repairs.</b> The smith mends a worn tool, weapon or armour for coin and a scrap of its metal.</li>
+ * <li><b>Repairs.</b> The smith (or a smelter at its forge, in a town with no smith) mends a worn tool, weapon or
+ *     armour: its metal out of the stores, a unit a quarter of the wear, at the market's price and a fee
+ *     (PlayerServices).</li>
  * <li><b>A feast on you.</b> Pay for tonight's feast: the whole village gathers, and remembers who paid.</li>
  * </ul>
  */
@@ -460,54 +462,10 @@ public final class Dealings {
 
     // ------------------------------------------------------------------ 10. repairs
 
-    /** "Could you mend this?" — the worn thing in the player's hand, at the smith's. */
+    /** "Could you mend this?" — the worn thing in the player's hand, at the smith's (PlayerServices: the metal
+     *  out of the stores at the market's price, a unit for every quarter of the wear, and a fee for the work). */
     public static String repair(VillageFolkEntity f, Player p) {
-        AssistantEntity.StationTask t = f.stationTask();
-        if (t != AssistantEntity.StationTask.SMITH && t != AssistantEntity.StationTask.SMELT) return "Mending's the smith's work. Ask them.";
-        ItemStack held = p.getMainHandItem();
-        if (held.isEmpty() || !held.isDamageableItem() || !held.isDamaged()) return "Hand me whatever wants mending — it looks fine to me.";
-        UUID village = f.ownerId();
-        if (village == null || !(f.level() instanceof ServerLevel level)) return "I've no forge to do it at.";
-        double worn = held.getDamageValue() / (double) held.getMaxDamage();
-        int price = (int) Math.max(1, Math.round(Prices.each(held.getItem()) * worn * 0.4));
-        price = haggled(village, p.getUUID(), day(f), price);
-        // A scrap of what it is made of: from the player's pack, or the village's spare.
-        Item scrap = null;
-        for (Item candidate : new Item[]{ Items.IRON_INGOT, Items.GOLD_INGOT, Items.DIAMOND, Items.NETHERITE_INGOT, Items.LEATHER,
-                Items.OAK_PLANKS, Items.COBBLESTONE, Items.STRING }) {
-            if (held.getItem().isValidRepairItem(held, new ItemStack(candidate))) { scrap = candidate; break; }
-        }
-        boolean fromPlayer = false;
-        if (scrap != null) {
-            final Item s0 = scrap;
-            for (int i = 0; i < p.getInventory().getContainerSize(); i++) {
-                if (p.getInventory().getItem(i).is(s0)) { fromPlayer = true; break; }
-            }
-            if (!fromPlayer && Budget.spare(level, village, new ItemStack(scrap)) < 1) {
-                return "I'd need a bit of " + new ItemStack(scrap).getHoverName().getString().toLowerCase(Locale.ROOT)
-                    + " to mend that, and we've none to spare. Bring one.";
-            }
-        }
-        if (Market.coinsHeld(p) < price) return "Mending that would be " + coins(price) + ". You've " + Market.coinsHeld(p) + ".";
-        if (scrap != null) {
-            final Item s0 = scrap;
-            if (fromPlayer) {
-                for (int i = 0; i < p.getInventory().getContainerSize(); i++) {
-                    if (p.getInventory().getItem(i).is(s0)) { p.getInventory().getItem(i).shrink(1); break; }
-                }
-            } else {
-                Villages.Village v = Villages.get(village);
-                if (v != null) TownWork.take(level, v, s -> s.is(s0), 1);
-                Budget.forget(village);
-            }
-        }
-        Market.payOut(p, price);
-        Ledger.addCoins(village, price);
-        Economy.sold(village, price);
-        held.setDamageValue(0);
-        f.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
-        level.playSound(null, f.blockPosition(), net.minecraft.sounds.SoundEvents.ANVIL_USE, net.minecraft.sounds.SoundSource.NEUTRAL, 0.6F, 1.0F);
-        return "There — good as new. " + coins(price) + ", thank you.";
+        return PlayerServices.repair(f, p);
     }
 
     // ------------------------------------------------------------------ 11. a feast on you

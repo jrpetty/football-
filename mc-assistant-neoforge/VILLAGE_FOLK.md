@@ -4050,6 +4050,9 @@ ripen, days pass, folk work and houses go up at that pace.
 
 * `/village list` — every village the game knows of: where, how many live
   there, what age, what has been built. Works from the console.
+* `/village top` — every village side by side, the biggest first: its folk, its age and how
+  many days old it is, what it is worth (its treasury and its stores at the market's prices)
+  and its renown. Works from the console.
 * `/village found <count> [x z]` — (operators) found a village of that many (2 to 500)
   where you stand or at x z, exactly as the founding screen's **Confirm and spawn** does: on
   the board waiting there, or on one put up for it. `found board [x z]` puts the board up
@@ -4428,3 +4431,37 @@ chunk queue (`MCA-CHUNKS`), and why a village was or was not building
 The reports are published to the `village-test-latest` release: `vt-report.txt`,
 `real-<scenario>.txt` and `smoke.txt` with its pictures. Each dashboard line says what one folk is doing and
 why it is not doing more.
+
+## Services for players
+
+* **Mending at the forge.** Hold a worn tool, weapon or piece of armour and ask the smith
+  ("could you mend this?", or **Mend this** on the talk screen). It mends it with its own metal
+  out of the stores, a unit for every quarter of the wear, as an anvil would (three iron ingots for
+  a badly worn iron sword, a diamond for each quarter of a diamond pick), and charges the market's
+  price for the metal plus a fee of two coins for the work. In a town with no smith, a smelter
+  mends things at its forge (by its furnace). No metal in the stores, and none in your pack: no
+  mending. Not enough: it is mended as far as the metal goes. Bring your own metal and you pay
+  only the fee.
+* **A map of the town.** A citizen or an honoured guest can ask the storekeeper or the elder for
+  a map ("could I have a map of the town?", or **Town map**). It is a real map drawn on a sheet of
+  the stores' paper, centred exactly on the heart, filled in from the town as it stands, with the
+  heart marked and the storekeeper's name on it. One a day; no paper in the stores, no map.
+* **`/village top`.** Every village in the world on one list, the biggest first: its folk, its
+  age, what it is worth (treasury and stores) and its renown.
+* **A bounty on a busy night.** When the watch has had a busy night — three monsters killed by
+  the town's folk, or the bell rung — the board posts a bounty (you are told in chat, and the
+  Village Board shows it): every hostile mob you kill inside the town before dawn earns a coin
+  out of the treasury (two for a creeper, a witch, an enderman or an illager), up to twelve coins
+  a night, and the town thanks you for it. The morning's news says who earned it.
+* **Lost and Found.** Something you drop in the streets (or that falls when you die there) and
+  leave lying two minutes is swept up by the street sweeper (or a courier between runs) and put
+  in a chest named **Lost and Found** by the storehouse — a chest out of the stores, or eight of
+  their planks knocked together, set down the first time it is needed. It is kept for you, and
+  only you, for three days: right-click the chest, or ask the storekeeper "has anything of mine
+  turned up?" (**Lost & found**), and it is handed back. Nobody else can take it out. What
+  nobody comes for goes into the stores. A town with no storehouse, or with no chest or planks
+  to spare, leaves your things where they lie, as before.
+* **Milestones.** A town of twenty-five, fifty and a hundred folk, each new age, and the first
+  diamond in its stores are written into the chronicle as milestones, and the town celebrates on
+  the square: three rockets made of the stores' paper and gunpowder (sparks, if it has none),
+  the folk cheering, and a message to every player within 128 blocks.

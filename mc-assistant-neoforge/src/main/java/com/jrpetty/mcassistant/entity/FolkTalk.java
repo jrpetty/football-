@@ -134,7 +134,7 @@ public final class FolkTalk {
             case PROPOSE -> Council.propose(f, p, text);
             case PEACE -> Diplomacy.peace(f, p, text);
             case STIR -> Diplomacy.stir(f, p, text);
-            case QUESTS -> Quests.talk(f, p);
+            case QUESTS -> Quests.talk(f, p) + PlayerServices.bountyTalk(f);   // and the night's bounty, if one is up
             case HIRE -> Hire.ask(f, p);
             case COMMISSION -> Services.commission(f, p);
             case LEDGER -> Services.ledgerFor(f, p);
@@ -160,6 +160,8 @@ public final class FolkTalk {
             case KEEPSAKE -> Dealings.keepsake(f, p);
             case ORDER -> Dealings.order(f, p, text);
             case REPAIR -> Dealings.repair(f, p);
+            case TOWN_MAP -> PlayerServices.townMap(f, p);                    // [players] a map of the town
+            case LOST -> PlayerServices.lostAndFound(f, p);                   // [players] the Lost and Found
             case SPONSOR -> Dealings.sponsor(f, p);
             case BULK -> f.ownerId() != null && Dealings.hasOrder(p.getUUID(), f.ownerId()) && Services.itemNamed(text) == null
                 ? Dealings.order(f, p, text) : Commerce.bulk(f, p, text);
@@ -1171,6 +1173,11 @@ public final class FolkTalk {
     public static TalkTopic understand(String text) {
         String t = " " + text.toLowerCase(Locale.ROOT).replaceAll("[^a-z' ]", " ") + " ";
         if (has(t, "make peace", "peace with", "olive branch", "patch things up", "end the feud", "settle the feud")) return TalkTopic.PEACE;
+        // [players] Before "could I have" (the stores) and "where is" (the guide): a map, and the Lost and Found.
+        if (has(t, "map of the town", "map of town", "map of the village", "town map", "village map", "a map of", "a map please",
+                "draw me a map")) return TalkTopic.TOWN_MAP;
+        if (has(t, "lost and found", "lost property", "lost my", "i lost", "dropped my", "i dropped", "anything of mine", "my things",
+                "turned up")) return TalkTopic.LOST;
         if (has(t, "stir trouble", "stir up", "rumours about", "rumors about", "they say about you", "saying about you")) return TalkTopic.STIR;
         if (has(t, "pay my fine", "pay the fine", "my fine", "what i owe", "my debt", "pay what")) return TalkTopic.FINE;
         if (has(t, "show me", "take me to", "where is", "where's", "wheres", "how do i get to", "lead me", "guide me",

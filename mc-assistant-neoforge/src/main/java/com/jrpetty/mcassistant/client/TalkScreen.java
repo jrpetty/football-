@@ -200,6 +200,8 @@ public class TalkScreen extends Screen {
                 out.add(Choice.of("Elder's orders", TalkTopic.ORDERS, "What the elder wants the village to put its back into"));
                 out.add(Choice.of("Quest board", TalkTopic.QUESTS, "What the village wants done, and what it pays"));
                 out.add(Choice.of("Town ledger", TalkTopic.LEDGER, "A book of the village's affairs"));
+                out.add(Choice.of("Town map", TalkTopic.TOWN_MAP, "A map of the town, centred on its heart: for citizens and honoured guests, from the storekeeper or the elder, one a day"));
+                out.add(Choice.of("Lost & found", TalkTopic.LOST, "Anything of yours the sweeper found lying in the streets, kept for you in the Lost and Found by the storehouse"));
                 out.add(Choice.of("History", TalkTopic.CHRONICLE, "Ask for a copy of the village's chronicle"));
             }
             case VILLAGE -> {
@@ -244,7 +246,7 @@ public class TalkScreen extends Screen {
                 out.add(Choice.of("Prices", TalkTopic.PRICES, "Where things are dear and where cheap, round about: buy cheap, sell dear"));
                 out.add(Choice.of("Haggle", TalkTopic.HAGGLE, "Ask the storekeeper or the shopkeeper to do it cheaper: a discount for the day, if they like you"));
                 out.add(new Choice("Make me…", TalkTopic.ORDER, "", "Ask a smith or a tailor to make you something: from your makings and the village's spare, for a fee"));
-                out.add(Choice.of("Mend this", TalkTopic.REPAIR, "The smith mends the worn thing in your hand, for coin and a scrap of its metal"));
+                out.add(Choice.of("Mend this", TalkTopic.REPAIR, "The smith (or, with no smith, a smelter at its forge) mends the worn thing in your hand: its metal from the stores at the market's price, a unit a quarter of the wear, and a fee"));
             }
             default -> { }
         }

@@ -380,6 +380,7 @@ public final class Villages {
         Scouts.resetForTests();
         Quests.resetForTests();
         Services.resetForTests();
+        PlayerServices.resetForTests();     // [players] the nights' bounties, the milestones' looks
         Land.resetForTests();
         Grow.resetForTests();
         Waterfront.resetForTests();

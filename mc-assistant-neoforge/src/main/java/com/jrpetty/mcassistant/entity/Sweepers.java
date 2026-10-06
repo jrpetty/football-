@@ -51,8 +51,10 @@ import java.util.concurrent.ConcurrentHashMap;
  *     heaps, and then in with them, and back to the door for the next run.</li>
  * <li><b>Where.</b> The town's streets and squares: anything lying in the open within the town's
  *     reach. Not under a roof (inside a house), not down a hole or a mine, not in water.</li>
- * <li><b>What it leaves.</b> Anything a player threw or dropped, or that fell when a player died —
- *     always, however long it has lain (and no folk picks those up in passing either). Anything at
+ * <li><b>What it leaves.</b> Anything a player threw or dropped, or that fell when a player died, while
+ *     it is fresh, or its owner is about, or the town has no Lost and Found to keep it in (and no folk
+ *     picks those up in passing either). Left lying two minutes, it goes into the Lost and Found by the
+ *     storehouse for its owner (PlayerServices), never into the stores. Anything at
  *     all while a player is near, for a minute: it may be theirs, out of a block they broke. The
  *     ground of a building going up, while the builders are at it. And anything on a worker's own
  *     ground, or beside a hand at its work, for two minutes: the woodcutter sweeps up its own
@@ -113,6 +115,9 @@ public final class Sweepers {
         final List<ItemStack> sack = new ArrayList<>();
         int heaps;
         boolean carrying;
+        /** Players' things swept up for the Lost and Found (PlayerServices): never into the pack, never the stores'. */
+        final List<ItemStack> lost = new ArrayList<>();
+        @Nullable UUID village;
 
         Broom(boolean courier, long now) {
             this.courier = courier;
@@ -214,7 +219,15 @@ public final class Sweepers {
         long now = level.getGameTime();
         if (now - t.appointed < 200L && now >= t.appointed) return;
         t.appointed = now;
-        BROOMS.values().removeIf(b -> now - b.beat > 24000L || now < b.beat);
+        for (java.util.Iterator<Map.Entry<UUID, Broom>> i = BROOMS.entrySet().iterator(); i.hasNext(); ) {
+            Map.Entry<UUID, Broom> en = i.next();
+            Broom b = en.getValue();
+            if (now - b.beat <= 24000L && now >= b.beat) continue;
+            i.remove();
+            // A sweeper gone a day with players' things in hand: they go to the Lost and Found all the same.
+            if (!b.lost.isEmpty()) PlayerServices.intoLostAndFound(level, b.village != null ? b.village : village,
+                level.getEntity(en.getKey()) instanceof VillageFolkEntity f ? f : null, b.lost);
+        }
         List<VillageFolkEntity> couriers = new ArrayList<>(), mine = new ArrayList<>();
         for (AssistantEntity a : Villages.folkOf(village)) {
             if (!(a instanceof VillageFolkEntity f)) continue;
@@ -295,6 +308,13 @@ public final class Sweepers {
         final List<int[]> grounds = new ArrayList<>();
         final List<BlockPos> hands = new ArrayList<>();
         final List<BlockPos> players = new ArrayList<>();
+        /** Will the town's Lost and Found take a player's things (PlayerServices)? Asked once a look, when there are any. */
+        @Nullable Boolean lostAndFound;
+
+        boolean lostAndFound(ServerLevel level, Villages.Village v) {
+            if (lostAndFound == null) lostAndFound = PlayerServices.lostAndFoundOpen(level, v);
+            return lostAndFound;
+        }
 
         Ground(ServerLevel level, Villages.Village v) {
             UUID id = v.id();
@@ -357,7 +377,9 @@ public final class Sweepers {
      *  what it leaves.) */
     private static boolean mayTake(ServerLevel level, Villages.Village v, ItemEntity e, Ground g) {
         if (!e.isAlive() || e.getItem().isEmpty() || e.hasPickUpDelay()) return false;
-        if (playersOwn(e) || e.getItem().is(McAssistantMod.MEMORY_CORE.get())) return false;
+        if (e.getItem().is(McAssistantMod.MEMORY_CORE.get())) return false;
+        // A player's own: only once it has been left lying, for the Lost and Found, never the stores.
+        if (playersOwn(e) && !PlayerServices.forTheLostAndFound(level, e, g.lostAndFound(level, v))) return false;
         int age = e.getAge();
         if (age < SETTLE) return false;
         BlockPos p = e.blockPosition();
@@ -431,6 +453,7 @@ public final class Sweepers {
             look(level, v, t, false);
             if (!anyFor(level, c, t)) return false;
             b = new Broom(!mine, now);
+            b.village = village;
             BROOMS.put(c.getUUID(), b);
             c.brain(mine ? "sweeping the town's streets" : "sweeping the streets between runs");
         }
@@ -439,7 +462,7 @@ public final class Sweepers {
         if (!b.carrying) {
             ItemEntity heap = heap(c, level, v, t, b, now);
             if (heap != null) return sweep(c, level, t, b, heap, o, now);
-            if (b.sack.isEmpty()) {
+            if (b.sack.isEmpty() && b.lost.isEmpty()) {
                 putAway(t, c);
                 return false;
             }
@@ -460,6 +483,10 @@ public final class Sweepers {
     private static void putAway(Town t, VillageFolkEntity c) {
         Broom b = BROOMS.remove(c.getUUID());
         if (b != null && b.heap != null) t.claimed.remove(b.heap);
+        // Players' things still in hand: to the Lost and Found with them (or set down again, still theirs).
+        if (b != null && !b.lost.isEmpty() && c.level() instanceof ServerLevel level && c.ownerId() != null) {
+            PlayerServices.intoLostAndFound(level, c.ownerId(), c, b.lost);
+        }
     }
 
     /** Is there a heap lying about that this sweeper may go for (nobody else going for it)? */
@@ -555,6 +582,20 @@ public final class Sweepers {
     private static int pickUp(VillageFolkEntity c, ServerLevel level, Town t, Broom b, ItemEntity e) {
         ItemStack st = e.getItem();
         if (st.isEmpty()) return 0;
+        if (playersOwn(e)) {
+            // A player's, left lying: for the Lost and Found, written with whose it is (PlayerServices).
+            UUID owner = PlayerServices.ownerOf(e);
+            if (owner == null) return 0;
+            int n = st.getCount();
+            b.lost.add(PlayerServices.markLost(level, st, owner));
+            e.discard();
+            t.sweepable.remove(e.getUUID());
+            t.claimed.remove(e.getUUID());
+            b.heaps++;
+            c.swing(InteractionHand.MAIN_HAND);
+            level.playSound(null, e.getX(), e.getY(), e.getZ(), SoundEvents.ITEM_PICKUP, SoundSource.NEUTRAL, 0.25F, 1.1F);
+            return n;
+        }
         ItemStack left = c.insertItem(st.copy());
         int took = st.getCount() - left.getCount();
         if (took <= 0) return 0;
@@ -617,7 +658,17 @@ public final class Sweepers {
         List<ItemStack> lots = intoTheStores(c, level, village, spot, b);
         int n = 0;
         for (ItemStack s : lots) n += s.getCount();
+        // Players' things into the Lost and Found beside the storehouse (PlayerServices), not the stores.
+        String lostWhat = Storekeeping.list(b.lost);
+        int lostIn = PlayerServices.intoLostAndFound(level, village, c, b.lost);
+        if (lostIn > 0) {
+            o.doing.put(c.getUUID(), "put " + lostWhat + " in the Lost and Found");
+            c.brain("put " + lostWhat + " in the Lost and Found for its owner");
+            FolkTalk.speak(c, FolkTalk.pick(level.getRandom(), capFirst(lostWhat) + " — somebody's. Into the Lost and Found it goes.",
+                "Into the Lost and Found with this. Somebody'll be glad of it."));
+        }
         putAway(t, c);
+        if (n == 0 && lostIn > 0) return true;
         if (n > 0) {
             book(level, village, t, c, lots, n);
             o.doing.put(c.getUUID(), "swept in " + Storekeeping.list(lots));
@@ -735,6 +786,8 @@ public final class Sweepers {
         sb.append(want > 0 ? "The town keeps " + (want == 1 ? "a sweeper" : want + " sweepers") + ". "
             : "No sweeper yet (a storehouse and " + FROM + " folk first): the couriers sweep between runs. ");
         sb.append(line(t));
+        String lnf = PlayerServices.lostAndFoundLine(level, v.id());
+        if (!lnf.isEmpty()) sb.append(' ').append(lnf);
         Town town = town(level, v.id());
         for (Map.Entry<UUID, int[]> e : town.staff.entrySet()) {
             sb.append(" | ").append(town.names.getOrDefault(e.getKey(), "?")).append(": ").append(e.getValue()[0]).append(" swept in, ")
@@ -779,8 +832,11 @@ public final class Sweepers {
     /** What fell when a player died: theirs, to come back for. */
     @SubscribeEvent
     public static void onDrops(LivingDropsEvent event) {
-        if (!(event.getEntity() instanceof Player)) return;
-        for (ItemEntity e : event.getDrops()) e.addTag(PLAYERS);
+        if (!(event.getEntity() instanceof Player p)) return;
+        for (ItemEntity e : event.getDrops()) {
+            e.addTag(PLAYERS);
+            e.addTag(PlayerServices.OWNER_TAG + p.getUUID());       // whose, for the Lost and Found
+        }
     }
 
     /** Anything else a player dropped: thrown by a player, or dropped from where a player stands (a full
@@ -796,6 +852,7 @@ public final class Sweepers {
             if (Math.abs(e.getX() - p.getX()) < 1.0e-3 && Math.abs(e.getZ() - p.getZ()) < 1.0e-3
                     && Math.abs(e.getY() - (p.getEyeY() - 0.3)) < 0.05) {
                 e.addTag(PLAYERS);
+                e.addTag(PlayerServices.OWNER_TAG + p.getUUID());   // whose, for the Lost and Found
                 return;
             }
         }
@@ -825,6 +882,21 @@ public final class Sweepers {
     public static boolean mayTakeForTests(ServerLevel level, UUID village, ItemEntity e) {
         Villages.Village v = Villages.get(village);
         return v != null && mayTake(level, v, e, new Ground(level, v));
+    }
+
+    /**
+     * Tests: this folk sweeps up a player's drop as the broom does (into its hands, written with whose it is)
+     * and puts it in the Lost and Found (set down by the storehouse if there is none yet). Returns how many
+     * went in, or -1 if the broom would not take it.
+     */
+    public static int sweepLostForTests(VillageFolkEntity c, ServerLevel level, UUID village, ItemEntity e) {
+        Villages.Village v = Villages.get(village);
+        if (v == null || !mayTake(level, v, e, new Ground(level, v))) return -1;
+        Town t = town(level, village);
+        Broom b = new Broom(false, level.getGameTime());
+        b.village = village;
+        if (pickUp(c, level, t, b, e) <= 0) return -1;
+        return PlayerServices.intoLostAndFound(level, village, c, b.lost);
     }
 
     /** Tests: the town today, {goods swept in, loads, heaps lying about, heaps for the broom}. */
