@@ -1694,6 +1694,12 @@ level and how often it lays a block.
   levels' knack already. The village's history records who taught whom. Once the village has a
   school, the morning's lessons come first and the apprenticeship has what is left of the
   morning; a schooled child takes up the trade it leaned to at school instead (see *The school*).
+* **No trade yet.** A grown folk without a trade (one who has just moved in from another town,
+  married into this one, or given up a trade there was no ground for) takes up the trade the
+  village is shortest of the first time it looks round by day, a few seconds at most, and then
+  goes looking for ground for it. Until it finds some it lends a hand at the heart, baking and
+  building. Children have no trade at all until they grow up, so the folk list
+  (`/village folk`) and the register (`/village people`) call them *Child*, not *Unassigned*.
 * **Age.**
   * A child grows six years a day, and is grown at eighteen, three days after it is born.
   * Grown folk age **a year every five game days**. Round birthdays (thirty, forty…) come

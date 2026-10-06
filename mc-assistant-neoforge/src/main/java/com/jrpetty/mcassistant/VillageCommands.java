@@ -1126,7 +1126,7 @@ public final class VillageCommands {
         ctx.getSource().sendSuccess(() -> Component.literal(summary), false);
         for (VillageFolkEntity f : folk) {
             f.ensurePersona();
-            final String line = f.life().describe(f.displayNameCap(), f.stationTask().title)
+            final String line = f.life().describe(f.displayNameCap(), f.tradeTitle())     // [ua] "a child", not "unassigned"
                 + " Feeling " + com.jrpetty.mcassistant.entity.Persona.moodWord(f.persona().mood())
                 + "; loves " + f.persona().hobby().doing + "; hopes " + f.persona().ambition().hope
                 + (f.persona().ambitionMet() ? " (and did)" : "") + "."

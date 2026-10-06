@@ -543,7 +543,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     public String debugLine() {
         StringBuilder sb = new StringBuilder(160);
         sb.append(assistantName).append(" L").append(veteranLevel())
-          .append(' ').append(stationTask.title)
+          .append(' ').append(tradeTitle())                // [ua] a child says so (VillageFolkEntity)
           .append(" hp=").append((int) getHealth())
           .append(" at ").append(blockPosition().getX()).append(',').append(blockPosition().getY())
           .append(',').append(blockPosition().getZ());
@@ -738,6 +738,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     /** Anything a subclass wants on the end of its debug line. */
     protected String debugExtra() { return ""; }
+
+    /** [ua] What it is, for the debug line and the village's people: its trade's name ("Unassigned" with none). */
+    public String tradeTitle() { return stationTask.title; }
 
     /** DepositGoal calls this when it reached a chest and could not fit anything
      *  in. Backs the deposit rung off so productive work resumes meanwhile. */

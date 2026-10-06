@@ -165,6 +165,10 @@ def report(r, x, z, label, compact=False):
         m = re.search(r" L\d+ (\w[\w ]*?) hp=", line)
         if m:
             trades[m.group(1)] = trades.get(m.group(1), 0) + 1
+        # A child has no trade and no work to do yet: counted as a child, not as a hand standing idle
+        # (the hundred's tallies read its children as ten-odd grown folk with no trade).
+        if m and m.group(1) == "Child":
+            continue
         if " job=- " in line:
             idle += 1
         if "missing=[" in line:
@@ -190,6 +194,8 @@ def tally(r, x, z):
             continue
         t = m.group(1)
         out["trades"][t] = out["trades"].get(t, 0) + 1
+        if t == "Child":
+            continue                       # no trade to be idle at yet
         w = re.search(r"sinceWork=(\d+)", line)
         if w and int(w.group(1)) > 6000:
             out["idle"][t] = out["idle"].get(t, 0) + 1
