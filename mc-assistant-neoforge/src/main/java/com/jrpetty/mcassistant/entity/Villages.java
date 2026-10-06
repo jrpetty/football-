@@ -1811,6 +1811,9 @@ public final class Villages {
     /** Count the beds afresh next time (a house just made up, or a test that has just built one). */
     public static void recountBeds(UUID villageId) { MADE_UP.remove(villageId); }
 
+    /** Tests: so many beds made up, as if just counted. */
+    public static void bedsForTests(UUID villageId, long now, int beds) { MADE_UP.put(villageId, new long[]{ now, beds, 0 }); }
+
     /**
      * The beds actually made up in the village's houses and barracks, counted from the world (the
      * camp's round the heart and the guest house's left out): "homes for" used to be four a house

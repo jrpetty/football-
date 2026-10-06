@@ -3706,6 +3706,20 @@ public class VillageFolkEntity extends AssistantEntity {
         if (tickCount - seamCheckTick < 1200) return false;
         seamCheckTick = tickCount;
         Villages.Age at = Villages.ageOf(village);
+        // A plot the town has built over (a house, the square): the miner takes a face of the town's mine
+        // instead, at the depth it was working (TownMine). Staircases cut down from plots the town had
+        // built over took up a house's floor, and once the square's. (An old plot of its own out of the
+        // town's way is worked out first, and its next ground is a face of the mine.)
+        if (villageCentre != null && level() instanceof net.minecraft.server.level.ServerLevel mineLevel
+                && TownMine.underTheTown(TownMine.builtGround(village, villageCentre, level().getGameTime()), zone.center(), zone.radius() + 2)) {
+            BlockPos face = TownMine.faceFor(mineLevel, this, villageCentre, this::diggable);
+            if (face != null) {
+                assignPlot(WorkZone.around(face, radiusFor(StationTask.MINE), zone.depth()), patchNameFor(StationTask.MINE));
+                setAutonomous(true);
+                brain("moved to a face of the town's mine");
+                return true;
+            }
+        }
         int floor = deepestMine();
         // A mine marked down into the lava (below the deepest a mine now goes, from an older world)
         // comes up to the deepest it may go.
@@ -4550,7 +4564,13 @@ public class VillageFolkEntity extends AssistantEntity {
                 yield wet;
             }
             case WOOD -> scan(from, SCAN, 6, radius, p -> clear.test(p) && woodland(p));
-            case MINE -> scan(from, SCAN, 6, radius, p -> clear.test(p) && diggable(p));
+            // A village's miners work the town's mine, side by side, out beyond the town (TownMine); a
+            // look round for a plot of its own only while the town has no mine to give.
+            case MINE -> {
+                BlockPos face = town != null && level() instanceof net.minecraft.server.level.ServerLevel minesLevel
+                    ? TownMine.faceFor(minesLevel, this, heart, p -> clear.test(p) && diggable(p)) : null;
+                yield face != null ? face : scan(from, SCAN, 6, radius, p -> clear.test(p) && diggable(p));
+            }
             // A pen goes where the animals already are and a jetty goes on
             // water — both were staking the village square, where a rancher
             // found nothing to breed and a fisher nothing to cast into, and
@@ -5894,6 +5914,8 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         spentSince = 0;
         barrenMineRuns = 0;
+        // The face of the town's mine it worked is worked out: nobody is sent to it again (TownMine).
+        if (trade == StationTask.MINE && ownerId() != null && workZone() != null) TownMine.spent(ownerId(), workZone().center());
         // Look somewhere ELSE. findSite is deterministic and a mined-out patch
         // still looks like perfectly good stone from the surface, so searching
         // the same way returns the same spent ground every time. Turning the

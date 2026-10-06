@@ -173,6 +173,7 @@ public class MineGoal extends Goal {
         this.stepIndex = 0;
         com.jrpetty.mcassistant.entity.WorkZone plot = assistant.workZone();
         this.stairsKey = com.jrpetty.mcassistant.entity.MineStairs.plotKey(plot != null ? plot.center() : cursor);
+        this.townGround = townGroundNow();
         if (outJob) {
             this.phase = Phase.RETURN;
             this.levelFloor = cursor.getY();
@@ -853,10 +854,61 @@ public class MineGoal extends Goal {
             || there.is(net.minecraft.tags.BlockTags.DOORS)) {
             return false;
         }
+        if (!settlerMay(pos, there)) return false;
         com.jrpetty.mcassistant.entity.WorkZone zone = assistant.workZone();
         if (zone == null) return true;               // unzoned: old behaviour
         int ceiling = zone.max().getY() + 4;         // headroom to stand and swing
         return pos.getY() >= digFloor() && pos.getY() <= ceiling;
+    }
+
+    /** The ground the miner's town stands on when the run began (TownMine.builtGround); null for the
+     *  player's own helper, who digs where it is told. */
+    @Nullable
+    private int[][] townGround;
+
+    @Nullable
+    private int[][] townGroundNow() {
+        if (!(assistant instanceof com.jrpetty.mcassistant.entity.VillageFolkEntity folk)) return null;
+        if (folk.ownerId() == null || folk.villageCentre() == null) return null;
+        return com.jrpetty.mcassistant.entity.TownMine.builtGround(folk.ownerId(), folk.villageCentre(), assistant.level().getGameTime());
+    }
+
+    /**
+     * A settler's own rule, over whatever its plot allows: never a block under the town (a building with
+     * two blocks round it, or the square: TownMine.builtGround), and of the rest only the ground the world
+     * made (rock, earth, sand and gravel, the ores, a tree in the way). Plots staked before the town grew
+     * out over them, and galleries that followed the rock under the nearest houses, cut out the floor of a
+     * house, and once the middle of the square. A cobbled street, a plank floor or a brick wall, the town's
+     * or a player's, is never the miner's to break, wherever it is.
+     */
+    private boolean settlerMay(BlockPos pos, BlockState there) {
+        if (!(assistant instanceof com.jrpetty.mcassistant.entity.VillageFolkEntity)) return true;
+        if (townGround != null && com.jrpetty.mcassistant.entity.TownMine.underTheTown(townGround, pos, 0)) return false;
+        return wild(assistant.level(), pos, there);
+    }
+
+    /** Ground the world made: nothing to break (air, water, a flower), rock and earth and the ores in them,
+     *  ice, a tree's trunk and leaves; never cobblestone, planks, bricks, a path or a field, which somebody laid. */
+    public static boolean wild(net.minecraft.world.level.Level level, BlockPos pos, BlockState s) {
+        if (s.canBeReplaced()) return true;
+        if (s.hasBlockEntity() || s.is(Blocks.FARMLAND) || s.is(Blocks.DIRT_PATH)) return false;
+        if (s.is(Blocks.COBBLESTONE) || s.is(Blocks.COBBLED_DEEPSLATE) || s.is(Blocks.MOSSY_COBBLESTONE)) return false;
+        if (s.is(Blocks.TORCH) || s.is(Blocks.WALL_TORCH)) return true;              // its own, in its galleries
+        if (com.jrpetty.mcassistant.entity.MineStairs.ground(s)) return true;
+        if (s.is(net.minecraft.tags.BlockTags.LEAVES)) return true;
+        if (s.is(net.minecraft.tags.BlockTags.LOGS)) return com.jrpetty.mcassistant.entity.goal.BuildGoal.isTreeLog(level, pos);
+        return s.is(Blocks.OBSIDIAN) || s.is(Blocks.ICE) || s.is(Blocks.PACKED_ICE) || s.is(Blocks.BLUE_ICE)
+            || s.is(Blocks.MAGMA_BLOCK) || s.is(Blocks.POINTED_DRIPSTONE) || s.is(Blocks.AMETHYST_BLOCK)
+            || s.is(Blocks.AMETHYST_CLUSTER) || s.is(Blocks.SCULK) || s.is(Blocks.MUD) || s.is(Blocks.MOSS_BLOCK)
+            || s.is(Blocks.NETHER_QUARTZ_ORE) || s.is(Blocks.NETHER_GOLD_ORE) || s.is(Blocks.RAW_IRON_BLOCK)
+            || s.is(Blocks.RAW_COPPER_BLOCK) || s.is(Blocks.BROWN_MUSHROOM_BLOCK) || s.is(Blocks.RED_MUSHROOM_BLOCK)
+            || s.is(Blocks.MUSHROOM_STEM);
+    }
+
+    /** Tests: may this miner break this block, as things stand now (the town's ground read afresh)? */
+    public boolean mayDigForTests(BlockPos pos) {
+        this.townGround = townGroundNow();
+        return mayDig(pos);
     }
 
     /** The lowest Y this miner may break on its patch (mayDig); the bottom of the world
@@ -1290,7 +1342,12 @@ public class MineGoal extends Goal {
     private boolean allowed(BlockPos pos) {
         if (mayDig(pos)) return true;
         if (!escaping && phase != Phase.RETURN) return false;
-        return com.jrpetty.mcassistant.entity.MineStairs.ground(assistant.level().getBlockState(pos));
+        BlockState s = assistant.level().getBlockState(pos);
+        // Lost under the town, it climbs out through the rock, never through a cellar's cobbled floor.
+        if (townGround != null && com.jrpetty.mcassistant.entity.TownMine.underTheTown(townGround, pos, 0)) {
+            return wild(assistant.level(), pos, s);
+        }
+        return com.jrpetty.mcassistant.entity.MineStairs.ground(s);
     }
 
     /**

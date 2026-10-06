@@ -231,6 +231,8 @@ public final class VillageCommands {
             .then(WorkshopCommands.node())
             // The storehouse: its books for the day, its storekeeper and couriers, and its run list.
             .then(Commands.literal("stores").executes(ctx -> page(ctx, 5)))
+            // The town's mine (TownMine): where it was opened, the faces worked out, who works which face and how deep.
+            .then(Commands.literal("mine").executes(VillageCommands::mine))
             // The street sweeper (Sweepers): what it swept in today and what lies about the town; and, for ops
             // and the client smoke, the nearest grown folk made the storehouse's sweeper now.
             .then(Commands.literal("sweeper").executes(ctx -> sweeper(ctx, false))
@@ -403,6 +405,18 @@ public final class VillageCommands {
         if (!player.getInventory().add(book)) player.drop(book, false);
         ctx.getSource().sendSuccess(() -> Component.literal("The chronicle of " + Villages.name(v.id()) + "."), false);
         return 1;
+    }
+
+    private static int mine(CommandContext<CommandSourceStack> ctx) {
+        net.minecraft.core.BlockPos at = net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition());
+        Villages.Village v = Villages.nearest(ctx.getSource().getLevel(), at, Villages.VILLAGE_RANGE * 2);
+        if (v == null) {
+            ctx.getSource().sendFailure(Component.literal("No village near enough to have a mine."));
+            return 0;
+        }
+        java.util.List<String> lines = com.jrpetty.mcassistant.entity.TownMine.report(v.id(), v.centre());
+        ctx.getSource().sendSuccess(() -> Component.literal("The mine of " + Villages.name(v.id()) + " | " + String.join(" | ", lines)), false);
+        return lines.size();
     }
 
     private static int ledger(CommandContext<CommandSourceStack> ctx) throws com.mojang.brigadier.exceptions.CommandSyntaxException {

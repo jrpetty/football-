@@ -48,6 +48,7 @@ public class BuildCrewsGameTests {
         helper.assertTrue(Villages.crewsAllowed(v) == 1, "a town getting by builds one thing at a time");
 
         Leader.booksForTests(v, new Leader.Books(4000, 200, 50, 200.0, 50.0, 80.0, Leader.Plan.PLENTY, 0L));
+        Villages.bedsForTests(v, now, 14);          // a bed for all but two
         helper.assertTrue(Villages.thriving(v), "food to spare and a bed for nearly all: a thriving town");
         helper.assertTrue(Villages.crewsAllowed(v) == 2, "a thriving town of sixteen has two crews: " + Villages.crewsAllowed(v));
 

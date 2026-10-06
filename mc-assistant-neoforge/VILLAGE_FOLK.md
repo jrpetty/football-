@@ -4083,6 +4083,42 @@ underground away from any run of its own: a run cut short by the morning bell or
 fall into a cave. Once it finds no way up it can walk, it is sent up of its own accord, by the
 nearest stairs (mended) or by stairs of its own.
 
+## The town's mine
+
+A town has one mine, and all its miners work it together. It is opened the first time a miner
+looks for ground: out on the best rock fifty to a hundred-odd blocks from the heart (further
+when the town is big), clear of the town, off the farmland, short of a neighbour's border and
+never on water. Hills count for more, having more rock above the seams. The place is kept with
+the world, and the town's book records the day it was opened.
+
+The mine is laid out in faces, each a miner's plot across (seventeen blocks). Each miner works
+one face, beside the others, so their stairs and galleries run into one another and the rock is
+dug out between them, down and across. When a face is worked out, nobody is sent to it again;
+its miner takes the next free face, a ring further out and on the far side from the town, so
+the mine spreads away from the houses as it is dug. A face the town has since built on is passed
+over.
+
+How deep the mine goes depends on the age and on what the town needs:
+
+* to the iron (Y16) from the first day;
+* up to the coal seam, for two miners in three, while the age is short of coal;
+* down to the diamonds (Y-50, never lower, out of the lava) only from the Diamond Age, and only
+  for a miner with an iron pickaxe.
+
+Bedrock is never the aim.
+
+No miner of a town cuts a block under its buildings (each with two blocks round it) or under
+the square. Plots staked before the town grew out over them, and galleries that followed the
+rock under the nearest houses, used to cut out the floor of a house, and once the middle of the
+square. A miner whose plot the town has built over now moves to a face of the mine at the depth
+it was working. Wherever it digs, a miner cuts only ground the world made: rock, earth, sand,
+gravel, clay, the ores, ice, and a tree in its way. Cobblestone, planks, bricks, a path or a
+field were laid by somebody, the town or a player, and are never broken. A miner lost under the
+town climbs out through the rock, never through a cellar floor.
+
+`/village mine` shows where the mine is, how many faces are worked out, and which face each
+miner works and how deep.
+
 ## Names
 
 There are close to six hundred names: hedgerow and meadow, birds and beasts, old names, trade
@@ -4188,6 +4224,7 @@ ripen, days pass, folk work and houses go up at that pace.
   town's books opened at the workshop; `workshop hire`, `workshop work` and `workshop stage`
   (operators) take the nearest grown folk on as a hand, have every maker do a piece of work, or (the
   client smoke) put a shop up by you if the village has none, with a keeper and a hand at work in it.
+* `/village mine` — the town's mine: where it was opened, the faces worked out, who works which face and how deep
 * `/village stores` — the storehouse's day: its slots, its storekeeper, what went in and out
   and who served the requests, its last tidy, its staff and their runs, and its run list.
 * `/village sweeper` — the street sweeper's day: what it swept in, by whom, and how much is
