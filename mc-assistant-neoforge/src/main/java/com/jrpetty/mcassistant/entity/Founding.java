@@ -100,6 +100,8 @@ public final class Founding extends SavedData {
         int radius, outer;
         int cursor, spawned, nextSpot;
         @Nullable UUID village;
+        /** A town already standing whose ground is levelled round it (/village level): nobody comes. */
+        boolean existing;
         String soil = "";
         // Not kept: the ground as read, and when it was last held or told about.
         @Nullable FoundingPlan.Ground ground;
@@ -135,6 +137,7 @@ public final class Founding extends SavedData {
             t.putInt("Spawned", spawned);
             t.putInt("Next", nextSpot);
             if (village != null) t.putUUID("Village", village);
+            if (existing) t.putBoolean("Existing", true);
             t.putString("Soil", soil);
             return t;
         }
@@ -158,6 +161,7 @@ public final class Founding extends SavedData {
             s.spawned = t.getInt("Spawned");
             s.nextSpot = t.getInt("Next");
             s.village = t.hasUUID("Village") ? t.getUUID("Village") : null;
+            s.existing = t.getBoolean("Existing");
             s.soil = t.getString("Soil");
             // The ground as read is not kept: after a restart it is waited for and walked again, and
             // the work goes on from the column it had got to (the level and the soil are kept).
@@ -366,6 +370,62 @@ public final class Founding extends SavedData {
         return new Outcome(true, said, board);
     }
 
+    /**
+     * A village founded in the one go by whatever founds one with nobody at a board to choose (the world's own
+     * settlements as they are come upon, /village spawn, a charter): its board put up and the founding confirmed
+     * at once, so its ground is made ready first, exactly as for a founding chosen at a board, and its folk come
+     * when the heart of it is level. The board's answer if it could not be put up.
+     */
+    public static Outcome foundNow(ServerLevel level, BlockPos at, int count, float yaw, @Nullable ServerPlayer player) {
+        Outcome asked = propose(level, at, player, yaw);
+        if (!asked.ok() || asked.board() == null) return asked;
+        int folk = Math.max(FoundingPlan.MIN_FOLK, Math.min(FoundingPlan.MAX_FOLK, count));
+        return confirm(level, asked.board(), folk, null);
+    }
+
+    /**
+     * /village level: the ground of a town already standing made level round it, as a founding would have made
+     * it (a town of the world's own, or one founded before its ground was levelled, stood in the jungle as it
+     * grew). Only what the world put there is moved; what anybody built, and the ground under it, is left as
+     * it is. Nobody new comes, and the folk already there are kept from harm while the ground moves.
+     */
+    public static Outcome levelExisting(ServerLevel level, Villages.Village v, @Nullable ServerPlayer player) {
+        Founding f = of(level.getServer());
+        if (f == null) return Outcome.no("The world is not ready.");
+        if (level.dimensionType().hasCeiling()) return Outcome.no("There is no levelling ground under a roof of rock.");
+        if (siteNear(level, v.centre(), Villages.VILLAGE_RANGE) != null) {
+            return Outcome.no("The ground round " + Villages.name(v.id()) + " is being levelled already.");
+        }
+        Site s = new Site();
+        s.dim = level.dimension();
+        s.heart = v.centre().immutable();
+        s.board = s.heart;
+        s.facing = Direction.NORTH;
+        s.yaw = 0.0F;
+        s.founder = player == null ? null : player.getUUID();
+        s.existing = true;
+        s.village = v.id();
+        s.count = 0;
+        s.state = UNDER_WAY;
+        s.seed = level.getRandom().nextLong();
+        s.phase = LOAD;
+        s.radius = FoundingPlan.coreRadius(Math.max(FoundingPlan.MIN_FOLK, Villages.headcount(v.id())));
+        s.outer = s.radius + FoundingPlan.BAND_MAX;
+        for (Villages.Village o : Villages.every()) {
+            if (o.id().equals(v.id()) || !o.dim().equals(level.dimension())) continue;
+            double d = Math.sqrt(Math.pow(o.centre().getX() - s.heart.getX(), 2) + Math.pow(o.centre().getZ() - s.heart.getZ(), 2));
+            int room = (int) d - Villages.townReach(o.id()) - 8;
+            if (room < s.outer) s.outer = Math.max(FoundingPlan.BARE + 8, room);
+        }
+        if (s.outer < s.radius + 8) s.radius = Math.max(FoundingPlan.BARE, s.outer - 8);
+        f.sites.add(s);
+        f.setDirty();
+        LOG.info("[MCA-FOUND] the ground of {} at {} to be levelled {} round, worked to {}", Villages.name(v.id()),
+            s.heart.toShortString(), s.radius, s.outer);
+        return new Outcome(true, "The ground of " + Villages.name(v.id()) + " is being levelled, about "
+            + (2 * s.radius + 1) + " blocks across. Its folk carry on meanwhile.", null);
+    }
+
     /** The waiting board was taken down: the founding is called off. */
     public static void calledOff(ServerLevel level, BlockPos board) {
         Founding f = of(level.getServer());
@@ -502,11 +562,16 @@ public final class Founding extends SavedData {
     private static void tick(MinecraftServer server) {
         Founding f = of(server);
         if (f == null || f.sites.isEmpty()) return;
-        for (Site s : new ArrayList<>(f.sites)) {
-            if (s.state != UNDER_WAY) continue;
+        // One budget a tick, shared by every site at work: villages the world founds as the player explores
+        // are levelled too now, and three of them at once must not cost the server three times the time.
+        List<Site> working = new ArrayList<>();
+        for (Site s : f.sites) if (s.state == UNDER_WAY) working.add(s);
+        if (working.isEmpty()) return;
+        long share = Math.max(TICK_NANOS / working.size(), 1_500_000L);
+        for (Site s : working) {
             ServerLevel level = server.getLevel(s.dim);
             if (level == null) continue;
-            long deadline = System.nanoTime() + TICK_NANOS;
+            long deadline = System.nanoTime() + share;
             work(level, f, s, deadline);
             f.setDirty();
         }
@@ -528,6 +593,25 @@ public final class Founding extends SavedData {
             }
             case SURVEY -> survey(level, s, deadline);
             default -> shape(level, f, s, deadline);
+        }
+        if (s.existing && level.getGameTime() % 5 == 0) keepSafe(level, s);
+    }
+
+    /**
+     * A town levelled round its folk: none of them is buried by ground raised under it (it is stood on the
+     * new top) or hurt falling where a hill is cut away from under it.
+     */
+    private static void keepSafe(ServerLevel level, Site s) {
+        if (s.village == null) return;
+        int reach = s.outer + 2;
+        for (AssistantEntity a : Villages.folkOf(s.village)) {
+            if (!(a instanceof VillageFolkEntity vf) || !vf.isAlive() || vf.level() != level) continue;
+            if (Math.abs(vf.getBlockX() - s.heart.getX()) > reach || Math.abs(vf.getBlockZ() - s.heart.getZ()) > reach) continue;
+            vf.resetFallDistance();
+            if (vf.isInWall()) {
+                BlockPos up = standing(level, vf.getBlockX(), vf.getBlockZ());
+                vf.teleportTo(vf.getX(), up.getY(), vf.getZ());
+            }
         }
     }
 
@@ -586,7 +670,7 @@ public final class Founding extends SavedData {
                     return;
                 }
                 Terraform.survey(chunk, minY, x, z, g, i, s.tops, m);
-                if (board.contains(BlockPos.asLong(x, 0, z))) g.kind[i] = FoundingPlan.BOARD;
+                if (!s.existing && board.contains(BlockPos.asLong(x, 0, z))) g.kind[i] = FoundingPlan.BOARD;
             }
             s.surveyed++;
             done++;
@@ -824,6 +908,18 @@ public final class Founding extends SavedData {
         int folk = Villages.headcount(id);
         int across = 2 * s.radius + 1;
         long day = level.getDayTime() / 24000L;
+        if (s.existing) {
+            Villages.tell(id, day, "the ground of " + Villages.name(id) + " was levelled, " + across + " blocks across");
+            LOG.info("[MCA-FOUND] the ground of {} is levelled {} across", Villages.name(id), across);
+            if (s.ground != null && s.level != UNSET) LOG.info("[MCA-FOUND] {}: {}", Villages.name(id), flatness(level, s));
+            String said = "The ground of " + Villages.name(id) + " is level, " + across + " blocks across.";
+            for (ServerPlayer p : level.players()) {
+                if (p.blockPosition().distSqr(s.heart) <= (double) TELL * TELL) p.displayClientMessage(Component.literal(said), true);
+            }
+            ServerPlayer by = s.founder == null ? null : level.getServer().getPlayerList().getPlayer(s.founder);
+            if (by != null) by.sendSystemMessage(Component.literal("<Village> " + said));
+            return;
+        }
         Villages.tell(id, day, folk + " founders came to " + Villages.name(id) + ", and the ground was levelled for them, "
             + across + " blocks across");
         LOG.info("[MCA-FOUND] {} is founded: {} folk, the ground levelled {} across", Villages.name(id), folk, across);
@@ -908,7 +1004,8 @@ public final class Founding extends SavedData {
             case LOAD -> name + ": the ground is coming in — " + loaded[0] + " of " + loaded[1] + " chunks";
             case SURVEY -> name + ": walking the ground — " + (s.ground == null ? 0
                 : (int) (100L * s.surveyed / Math.max(1, s.ground.side * s.ground.side))) + "%";
-            default -> s.founded()
+            default -> s.existing ? name + ": levelling the ground — " + percent(s) + "%"
+                : s.founded()
                 ? name + ": " + s.spawned + " of " + s.count + " folk have come — the ground " + percent(s) + "% level"
                 : name + ": levelling the heart of it — " + percent(s) + "%";
         };

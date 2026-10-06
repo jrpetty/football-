@@ -12,10 +12,11 @@ Everything is obtainable in **survival**.
 | How | What you do |
 |---|---|
 | **Village Folk Spawner** (recommended) | Craft it — 8 bread round a gold ingot — and *place* it. The first one puts the village board up on the spot; go to the board and choose how many folk start the village, from two to five hundred (see *Founding a village: choose how many*). The ground round about is made level for them, and they come, with the founding stores in a chest where the spawner stood. Each one placed after that, within reach of the village, adds one settler. That is the last thing a village needs from you. |
-| **Village Charter** | Right-click the ground. Founds a village of eight on the spot at once (the same start a village the world grows gets), without levelling anything; craftable with paper, bread, a gold ingot, seeds and a chest. |
+| **Village Charter** | Right-click the ground. Founds a village of eight there (the same start a village the world grows gets): its ground is made level first, as for a spawner, and the folk come when the heart of it is level. Craftable with paper, bread, a gold ingot, seeds and a chest. |
 | **Where to find them** | In creative, everything the mod adds is in its own **Village Folk** tab (the spawner is also under Functional Blocks). In survival, every recipe is in the recipe book from the moment you join; the spawner is a gold ingot in the middle of the crafting grid with bread in all eight squares round it. |
-| **/village spawn [1-100]** | Stands folk up two blocks ahead of you. `spawnat <x> <z> [n]` for the console. |
-| **The world** | Villages generate as you explore (config `naturalVillages`), in groups of three to five. |
+| **/village spawn [1-100]** | Out of reach of a village, founds one two blocks ahead of you, its ground made level first (at least two folk); in reach of one, stands that many more up in it. `spawnat <x> <z> [n]` for the console and scripts founds at once, levelling nothing. |
+| **The world** | Villages generate as you explore (config `naturalVillages`), in groups of three to five. Each has its ground made level before its folk come, as a founding at a board does. |
+| **/village level** | A town already standing (one from before its ground was levelled) has the ground round it made level now: trees cleared, hills cut, hollows filled, nothing built touched, and its folk kept clear of the moving ground. Operators, or the world's owner. |
 | **Vanilla villagers** | Turned into folk as you meet them (config `replaceVillagers`). Trading with them stops working; wandering traders are untouched. |
 
 ## Founding a village: choose how many
@@ -117,9 +118,15 @@ where it had got to. Anybody within 160 blocks sees how it is going on the actio
 says it while it waits, and the village's own board says it once the village is founded. When it
 is done, the first of them says so, and the village's history remembers it.
 
-A spawner placed within reach of a village adds one settler, as it always has. `/village
-spawnat` still stands a party up at once with no levelling (the soak tests use it), and so does
-the Village Charter.
+A spawner placed within reach of a village adds one settler, as it always has. Every other way a
+village begins levels its ground the same way: a village the world founds as you come upon it,
+`/village spawn` out of reach of a village, and the Village Charter all put the board up and
+confirm the founding at once, and the folk come when the heart is level. Only `/village spawnat`
+(the console and the soak tests) still stands a party up at once with no levelling, and a colony
+sent out by its mother town is founded where it stops. The board clears whatever grew where it
+stands, tree trunks too: in a jungle every place on the square's edge has one, and the board once
+could not go up there at all. A town that was founded before any of this, standing among its
+trees, has its ground levelled with `/village level`.
 
 Tested in `FoundingGameTests`: on rough ground (a stone hill across the edge, a knoll and a hollow
 inside, a pond, trees and somebody's hut), a spawner brings nobody until the founders are chosen,
@@ -4057,6 +4064,10 @@ ripen, days pass, folk work and houses go up at that pace.
 * `/village top` — every village side by side, the biggest first: its folk, its age and how
   many days old it is, what it is worth (its treasury and its stores at the market's prices)
   and its renown. Works from the console.
+* `/village level` — (operators, or the world's owner) the ground round the nearest town made level
+  as a founding makes it: about as wide as a founding of its size, trees cleared, hills cut and
+  hollows filled; anything built, and the ground under it, left as it is. Its folk carry on, and
+  none is buried or hurt as the ground moves. The action bar says how far it has got.
 * `/village found <count> [x z]` — (operators) found a village of that many (2 to 500)
   where you stand or at x z, exactly as the founding screen's **Confirm and spawn** does: on
   the board waiting there, or on one put up for it. `found board [x z]` puts the board up

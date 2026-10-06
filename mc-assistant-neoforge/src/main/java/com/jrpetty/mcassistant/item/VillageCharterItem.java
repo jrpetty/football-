@@ -42,6 +42,15 @@ public class VillageCharterItem extends Item {
         // as any other — it used to have a copy of its own that had quietly
         // fallen behind the real one.
         boolean founding = Villages.nearest(level, spot, Villages.VILLAGE_RANGE * 2) == null;
+        if (founding) {
+            // A new village has its ground made ready first, as one founded at a board does (entity/Founding):
+            // the folk come when the heart of it is level.
+            com.jrpetty.mcassistant.entity.Founding.Outcome o = com.jrpetty.mcassistant.entity.Founding.foundNow(
+                level, spot, VillageFolkSpawnerBlock.foundingParty(), player.getYRot(), player);
+            player.displayClientMessage(Component.literal(o.message()), true);
+            if (o.ok() && !player.getAbilities().instabuild) ctx.getItemInHand().shrink(1);
+            return InteractionResult.CONSUME;
+        }
         int stood = VillageFolkSpawnerBlock.raiseParty(level, spot, player.getYRot(),
             founding ? VillageFolkSpawnerBlock.foundingParty() : 1);
         if (stood == 0) {

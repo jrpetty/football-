@@ -488,4 +488,172 @@ public class FoundingGameTests {
             helper.succeed();
         });
     }
+
+    // ============================================================ the jungle, and the other ways a village begins
+
+    /** A trunk of jungle logs, eight high, with a cap of leaves: a jungle's tree as the world grows it. */
+    private static void trunk(ServerLevel level, int x, int z) {
+        BlockPos base = Kit.surface(level, x, z);
+        for (int i = 0; i < 8; i++) level.setBlock(base.above(i), Blocks.JUNGLE_LOG.defaultBlockState(), 3);
+        level.setBlock(base.above(8), Blocks.JUNGLE_LEAVES.defaultBlockState(), 3);
+    }
+
+    /** Of the columns of the levelled square (less the ring at its rim), how many stand within a block of
+     *  the commonest height: {within, all, the commonest height}. */
+    private static int[] flat(ServerLevel level, int cx, int cz, int radius) {
+        java.util.Map<Integer, Integer> heights = new java.util.HashMap<>();
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dz = -radius; dz <= radius; dz++) {
+                if (FoundingPlan.reach(dx, dz) > radius - 4) continue;
+                heights.merge(ground(level, cx + dx, cz + dz), 1, Integer::sum);
+            }
+        }
+        int mode = 0, most = -1, all = 0;
+        for (var e : heights.entrySet()) {
+            all += e.getValue();
+            if (e.getValue() > most) { most = e.getValue(); mode = e.getKey(); }
+        }
+        int within = 0;
+        for (var e : heights.entrySet()) if (Math.abs(e.getKey() - mode) <= 1) within += e.getValue();
+        return new int[]{ within, all, mode };
+    }
+
+    /**
+     * In a jungle every place on the square's edge has a trunk in it: the spawner's board still goes up (it
+     * clears what grew where it stands, the trunks with the rest), and so the founding can begin. It once
+     * could not, and a village had to be founded some other way, with nothing levelled.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "f05_board_among_trunks")
+    public static void f05_board_among_trunks(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Founding.resetForTests(level.getServer());
+        final int cx = 124000, cz = 12000;
+        Kit.hold(level, cx, cz, 48);
+        Kit.prepare(level, cx, cz, 48);
+        int trunks = 0;
+        for (int dx = -40; dx <= 40; dx += 3) {
+            for (int dz = -40; dz <= 40; dz += 3) {
+                if (Math.abs(dx) <= 2 && Math.abs(dz) <= 2) continue;
+                trunk(level, cx + dx, cz + dz);
+                trunks++;
+            }
+        }
+        BlockPos heart = Kit.surface(level, cx, cz);
+        BlockState spawner = McAssistantMod.FOLK_SPAWNER.get().defaultBlockState();
+        level.setBlock(heart, spawner, 3);
+        VillageFolkSpawnerBlock.placed(level, heart, spawner, null, 0.0F);
+        BlockPos board = Founding.boardNear(level, heart, 64);
+        Kit.log("f05 " + trunks + " trunks three apart; the board " + board);
+        helper.assertTrue(board != null && level.getBlockEntity(board) instanceof VillageBoardBlockEntity be
+            && be.founding() == Founding.PENDING, "the board goes up among the trunks: " + board);
+        helper.succeed();
+    }
+
+    /**
+     * A village founded with nobody at a board to choose (the world's own as they are come upon, /village spawn,
+     * a charter): its ground is made ready first, just as at a board. Nobody comes at once; when the founding is
+     * done the folk live on a levelled square, the knoll on it cut down and the trees on it cleared.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 3600, batch = "f06_found_now")
+    public static void f06_found_now(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Founding.resetForTests(level.getServer());
+        level.setDayTime(1000);
+        final int cx = 132000, cz = 12000, folk = 6;
+        final int radius = FoundingPlan.coreRadius(folk), outer = radius + FoundingPlan.BAND_MAX;
+        Kit.hold(level, cx, cz, outer + 16);
+        Kit.prepare(level, cx, cz, outer + 16);
+        Kit.hill(level, cx + 10, cz - 8, 6, 5, 731);             // a knoll on the square: cut down
+        for (int[] t : new int[][]{ {-9, 7}, {6, 12}, {-14, -10}, {12, 4} }) trunk(level, cx + t[0], cz + t[1]);
+        BlockPos heart = Kit.surface(level, cx, cz);
+        Founding.Outcome o = Founding.foundNow(level, heart, folk, 0.0F, null);
+        int nobody = level.getEntitiesOfClass(VillageFolkEntity.class, around(heart, outer)).size();
+        Kit.log("f06 founded now: " + o.message() + "; folk " + nobody + "; R=" + radius);
+        helper.assertTrue(o.ok(), "founded with nobody at the board: " + o.message());
+        helper.assertTrue(nobody == 0 && Villages.nearest(level, heart, 64) == null, "nobody comes before the ground is made ready");
+        final boolean[] done = { false };
+        helper.onEachTick(() -> {
+            if (done[0]) return;
+            long t = helper.getTick();
+            if (Founding.near(level, heart, 8)) {
+                if (t % 200 == 0) Kit.log("f06 @" + t + " " + Founding.status(level.getServer()));
+                return;
+            }
+            done[0] = true;
+            Villages.Village v = Villages.nearest(level, heart, 64);
+            helper.assertTrue(v != null, "a village is founded");
+            int[] f = flat(level, cx, cz, radius);
+            boolean logs = false;
+            for (int[] tr : new int[][]{ {-9, 7}, {6, 12}, {-14, -10}, {12, 4} }) {
+                for (int dy = 1; dy <= 9; dy++) {
+                    if (level.getBlockState(new BlockPos(cx + tr[0], f[2] + dy, cz + tr[1])).is(BlockTags.LOGS)) logs = true;
+                }
+            }
+            int knoll = ground(level, cx + 10, cz - 8);
+            Kit.log("f06 done at " + t + ": " + Villages.headcount(v.id()) + " folk; the square " + f[0] + " of " + f[1]
+                + " columns within a block of y=" + f[2] + "; the knoll's top now y=" + knoll + "; trunks left " + logs);
+            helper.assertTrue(Villages.headcount(v.id()) == folk, "its folk came: " + Villages.headcount(v.id()));
+            helper.assertTrue(f[0] * 100 >= f[1] * 95, "the square is level: " + f[0] + " of " + f[1]);
+            helper.assertTrue(Math.abs(knoll - f[2]) <= 1, "the knoll is cut down: y=" + knoll + " against " + f[2]);
+            helper.assertTrue(!logs, "the trees are cleared off the square");
+            helper.succeed();
+        });
+    }
+
+    /**
+     * /village level: a town standing on rough ground (a knoll, trees, its storehouse and somebody's hut on
+     * it) has its ground levelled round it. Nobody new comes, the hut is left as it is, and every one of its
+     * folk is still alive and standing clear of the ground when it is done.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 3600, batch = "f07_level_existing")
+    public static void f07_level_existing(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Founding.resetForTests(level.getServer());
+        level.setDayTime(1000);
+        final int cx = 140000, cz = 12000;
+        final int radius = FoundingPlan.coreRadius(4), outer = radius + FoundingPlan.BAND_MAX;
+        Kit.hold(level, cx, cz, outer + 16);
+        Kit.prepare(level, cx, cz, outer + 16);
+        Kit.hill(level, cx - 12, cz + 10, 6, 5, 741);            // a knoll in the town: cut down
+        for (int[] t : new int[][]{ {8, 9}, {-6, -11}, {13, -5} }) trunk(level, cx + t[0], cz + t[1]);
+        BlockPos hut = hut(level, cx + 14, cz + 10);             // somebody's: left as it is
+        BlockPos heart = Kit.surface(level, cx, cz);
+        int stood = VillageFolkSpawnerBlock.raiseParty(level, heart, 0.0F, 4);
+        Villages.Village v = Villages.nearest(level, heart, 64);
+        helper.assertTrue(stood == 4 && v != null, "a town of four, founded where it stood: " + stood);
+        final java.util.UUID id = v.id();
+        helper.runAtTickTime(5, () -> {
+            Founding.Outcome o = Founding.levelExisting(level, Villages.get(id), null);
+            Kit.log("f07 levelled: " + o.message());
+            helper.assertTrue(o.ok(), "the town's ground is to be levelled: " + o.message());
+            helper.assertTrue(!Founding.levelExisting(level, Villages.get(id), null).ok(), "and not twice at once");
+        });
+        final boolean[] done = { false };
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (done[0] || t < 10) return;
+            if (Founding.near(level, heart, 8)) {
+                if (t % 200 == 0) Kit.log("f07 @" + t + " " + Founding.status(level.getServer()));
+                return;
+            }
+            done[0] = true;
+            int[] f = flat(level, cx, cz, radius);
+            int knoll = ground(level, cx - 12, cz + 10);
+            List<VillageFolkEntity> folk = level.getEntitiesOfClass(VillageFolkEntity.class, around(heart, outer), VillageFolkEntity::isAlive);
+            int buried = 0;
+            for (VillageFolkEntity vf : folk) if (vf.isInWall()) buried++;
+            Kit.log("f07 done at " + t + ": " + Villages.headcount(id) + " on the roll, " + folk.size() + " standing, " + buried
+                + " in the ground; the square " + f[0] + " of " + f[1] + " within a block of y=" + f[2] + "; the knoll y=" + knoll);
+            helper.assertTrue(Villages.headcount(id) == 4 && folk.size() == 4, "nobody new came, nobody was lost: " + folk.size());
+            helper.assertTrue(buried == 0, "nobody is left in the ground: " + buried);
+            helper.assertTrue(f[0] * 100 >= f[1] * 85, "the town's ground is level: " + f[0] + " of " + f[1]);
+            helper.assertTrue(Math.abs(knoll - f[2]) <= 1, "the knoll is cut down: y=" + knoll + " against " + f[2]);
+            helper.assertTrue(level.getBlockState(hut).is(Blocks.OAK_PLANKS) && level.getBlockState(hut.offset(2, 2, 2)).is(Blocks.OAK_PLANKS),
+                "the hut somebody built is untouched");
+            helper.succeed();
+        });
+    }
 }

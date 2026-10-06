@@ -151,8 +151,9 @@ public final class VillageSpawner {
         // Not loaded any more: leave it. It is queued again the next time the
         // chunk loads, and reading it now would only load it for us.
         if (!level.hasChunk(anchor.getX() >> 4, anchor.getZ() >> 4)) return;
-        if (Villages.nearest(level, anchor) != null || folkNearby(level, anchor)) {
-            CONSIDERED.add(c.key());               // somebody already lives here
+        if (Villages.nearest(level, anchor) != null || folkNearby(level, anchor)
+                || com.jrpetty.mcassistant.entity.Founding.near(level, anchor, Villages.VILLAGE_RANGE * 2)) {
+            CONSIDERED.add(c.key());               // somebody already lives here, or its ground is being made ready
             return;
         }
         BlockPos ground = groundAt(level, anchor.getX(), anchor.getZ());
@@ -290,6 +291,14 @@ public final class VillageSpawner {
         int max = Math.max(min, AssistantConfig.villageMaxFolk());
         RandomSource r = RandomSource.create(level.getSeed() ^ ground.asLong());
         int size = min + r.nextInt(max - min + 1);
+
+        // Its ground made ready first, as a founding chosen at a board is (entity/Founding): the board put up,
+        // the square levelled, cleared of its trees and dressed, and the folk come when the heart of it is
+        // level. A jungle town of the world's own once stood among the trunks on the hillside it was found on.
+        com.jrpetty.mcassistant.entity.Founding.Outcome levelled =
+            com.jrpetty.mcassistant.entity.Founding.foundNow(level, ground, size, r.nextFloat() * 360.0F, null);
+        if (levelled.ok()) return;
+        // No room at all for its board (sheer rock all round): founded where it stands, as before.
 
         Villages.Village village = Villages.found(level, ground);
         supplyChest(level, ground);

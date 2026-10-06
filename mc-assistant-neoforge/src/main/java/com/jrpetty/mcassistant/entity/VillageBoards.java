@@ -211,8 +211,10 @@ public final class VillageBoards {
 
     /** What may be cleared for a board: what grows, never what was built. */
     private static boolean clearable(BlockState s) {
+        // A tree's trunk too (Terraform.growth: what the world grew, never a log somebody laid): in a jungle every
+        // place on the square's edge had a trunk in it, and the board, and so the founding, could go nowhere.
         return s.canBeReplaced() || s.is(BlockTags.LEAVES) || s.is(BlockTags.FLOWERS) || s.is(BlockTags.SAPLINGS)
-            || s.getBlock() instanceof net.minecraft.world.level.block.BushBlock;
+            || s.getBlock() instanceof net.minecraft.world.level.block.BushBlock || Terraform.growth(s);
     }
 
     /** The first free block above the ground here: through trees, plants and snow to the earth. */

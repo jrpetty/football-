@@ -167,6 +167,9 @@ public final class VillageCommands {
                 .then(Commands.argument("what", com.mojang.brigadier.arguments.StringArgumentType.word())
                     .suggests((ctx, b) -> net.minecraft.commands.SharedSuggestionProvider.suggest(com.jrpetty.mcassistant.entity.Sights.kinds(), b))
                     .executes(ctx -> sights(ctx, com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "what")))))
+            // The ground of a town already standing levelled round it, as a founding at a board levels it (a town
+            // the world founded, or one from before its ground was levelled). An operator, or the world's owner.
+            .then(Commands.literal("level").executes(VillageCommands::levelGround))
             // Which version of the mod is loaded: its number and the newest change in it.
             .then(Commands.literal("version").executes(ctx -> {
                 String v = "MC Assistant " + com.jrpetty.mcassistant.McAssistantMod.version() + " — "
@@ -793,6 +796,29 @@ public final class VillageCommands {
         return v;
     }
 
+    /** /village level: the ground round the nearest town levelled, its folk kept from harm while it moves. */
+    private static int levelGround(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack src = ctx.getSource();
+        ServerPlayer p = src.getPlayer();
+        if (p != null ? !TimeSpeed.mayChange(p) : !src.hasPermission(2)) {
+            src.sendFailure(Component.literal("Only an operator (or the owner of this world) can have a town's ground levelled."));
+            return 0;
+        }
+        Villages.Village v = villageHere(ctx);
+        if (v == null) {
+            src.sendFailure(Component.literal("No village yet."));
+            return 0;
+        }
+        com.jrpetty.mcassistant.entity.Founding.Outcome o =
+            com.jrpetty.mcassistant.entity.Founding.levelExisting(src.getLevel(), v, p);
+        if (!o.ok()) {
+            src.sendFailure(Component.literal(o.message()));
+            return 0;
+        }
+        src.sendSuccess(() -> Component.literal(o.message()), true);
+        return 1;
+    }
+
     /** /village sights [what]: the newer sights of the town and where they are; with a what, that one made now. */
     private static int sights(CommandContext<CommandSourceStack> ctx, @javax.annotation.Nullable String what) {
         Villages.Village v = villageHere(ctx);
@@ -1171,8 +1197,21 @@ public final class VillageCommands {
         // A couple of blocks AHEAD of the player, on the ground — never on
         // top of them, and never at head height where a chest would go.
         net.minecraft.core.BlockPos ahead = player.blockPosition().relative(player.getDirection(), 2);
-        return raiseMany(ctx, player.serverLevel(), groundAt(player.serverLevel(), ahead.getX(), ahead.getZ()),
-            player.getYRot(), count);
+        net.minecraft.core.BlockPos ground = groundAt(player.serverLevel(), ahead.getX(), ahead.getZ());
+        if (Villages.nearest(player.serverLevel(), ground, Villages.VILLAGE_RANGE * 2) == null) {
+            // A new village has its ground made ready first, as one founded at a board does (entity/Founding);
+            // its folk come when the heart of it is level. (spawnat, for the console and scripts, founds at once.)
+            com.jrpetty.mcassistant.entity.Founding.Outcome o = com.jrpetty.mcassistant.entity.Founding.foundNow(
+                player.serverLevel(), ground, Math.max(com.jrpetty.mcassistant.village.FoundingPlan.MIN_FOLK, count),
+                player.getYRot(), player);
+            if (!o.ok()) {
+                ctx.getSource().sendFailure(Component.literal(o.message()));
+                return 0;
+            }
+            ctx.getSource().sendSuccess(() -> Component.literal(o.message()), false);
+            return count;
+        }
+        return raiseMany(ctx, player.serverLevel(), ground, player.getYRot(), count);
     }
 
     private static int status(CommandContext<CommandSourceStack> ctx) {
