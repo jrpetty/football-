@@ -64,8 +64,10 @@ public class BellGameTests {
         return b;
     }
 
+    /** What it carries of a thing, a pastime's prop (a gardener's show poppy in its other hand) not counted. */
     private static int carried(VillageFolkEntity f, Item it) {
-        return f.countCarried(s -> s.is(it));
+        return f.countCarried(s -> s.is(it) && !s.getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
+            net.minecraft.world.item.component.CustomData.EMPTY).copyTag().getBoolean("mca_prop"));   // Leisure's prop mark
     }
 
     /** The first day from this one with no gathering of its own in the evening (the weekly feast, the council). */
