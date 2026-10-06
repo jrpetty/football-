@@ -315,7 +315,7 @@ public final class VillageSpawner {
             VillageFolkEntity folk = McAssistantMod.VILLAGE_FOLK.get().create(level);
             if (folk == null) continue;
             folk.moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, r.nextFloat() * 360F, 0F);
-            folk.rename(freshName(used));
+            folk.rename(Names.freshAmong(used, r));
             starterKit(folk);
             folk.joinVillage(village.id(), village.centre());
             level.addFreshEntity(folk);
@@ -627,10 +627,4 @@ public final class VillageSpawner {
         return out;
     }
 
-    private static String freshName(Set<String> used) {
-        for (String candidate : Names.POOL) {
-            if (used.add(candidate.toLowerCase())) return candidate;
-        }
-        return "folk_" + (used.size() + 1);
-    }
 }

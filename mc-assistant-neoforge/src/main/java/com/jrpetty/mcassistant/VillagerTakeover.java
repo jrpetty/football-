@@ -188,7 +188,7 @@ public final class VillagerTakeover {
         // Named, then joined: joining files it on the register under that
         // name at once, so the next villager converted in this same tick
         // asks for a free name and does not get this one.
-        folk.rename(com.jrpetty.mcassistant.entity.Names.freeFor(village.id()));
+        folk.rename(com.jrpetty.mcassistant.entity.Names.freshFor(village.id(), level.getRandom()));
         // A grown villager is sent out like any other adult: with its tools, not
         // a child's two loaves. A converted mason given no pickaxe had to make
         // one out of logs it could not find on a stony plot.

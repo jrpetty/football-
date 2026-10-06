@@ -6006,7 +6006,7 @@ public class VillageFolkEntity extends AssistantEntity {
         VillageFolkEntity child = com.jrpetty.mcassistant.McAssistantMod.VILLAGE_FOLK.get().create(server);
         if (child == null) return null;
         child.moveTo(getX(), getY(), getZ(), getYRot(), 0.0F);
-        child.rename(Names.freeFor(village));
+        child.rename(Names.freshFor(village, server.getRandom()));
         // Less than its parents spent on it — see childKit. A village that
         // could breed its way to a full larder would never have to farm.
         com.jrpetty.mcassistant.VillageSpawner.childKit(child);

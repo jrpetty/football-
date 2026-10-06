@@ -163,7 +163,7 @@ public class VillageFolkSpawnerBlock extends Block {
         if (folk == null) return null;
         Vec3 spot = safeSpot(server, at);
         folk.moveTo(spot.x, spot.y, spot.z, yaw, 0.0F);
-        folk.rename(Names.freeFor(village.id()));
+        folk.rename(Names.freshFor(village.id(), server.getRandom()));
         VillageSpawner.starterKit(folk);
         folk.joinVillage(village.id(), village.centre());
         // The founding party, and whoever comes on the day the village was founded: the houses the village
