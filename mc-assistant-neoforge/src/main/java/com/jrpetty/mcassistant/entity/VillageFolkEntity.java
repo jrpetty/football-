@@ -402,6 +402,10 @@ public class VillageFolkEntity extends AssistantEntity {
         // The museum's curator on its errand (Museum): a find fetched out of the stores and set out, a year bound.
         if (!withAPlayer && tickCount % 4 == 0 && level() instanceof net.minecraft.server.level.ServerLevel museum
                 && Museum.hold(this, museum)) return;
+        // The family's own (Families): its pet walked; a pet, a garden or a grave to see to; supper at home; a story
+        // at bedtime; the children's games of an afternoon. Between its looks, nothing else takes the folk away.
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel family
+                && (tickCount % 4 == 2 ? Families.hold(this, family) : Families.busy(this))) return;
         if (tickCount - agendaTick < 100) return;   // folk think slowly, on purpose
         agendaTick = tickCount;
         flyTheColours();
@@ -420,6 +424,7 @@ public class VillageFolkEntity extends AssistantEntity {
                 if (home != null) {
                     Elections.tick(polls, home);
                     Homes.tick(polls, home);
+                    Families.tick(polls, home);          // pets, gardens, graves visited, anniversaries (Families)
                     Bank.tick(polls, home);              // the bank opens the day it stands, and gets its banker
                 }
             }
@@ -1078,6 +1083,7 @@ public class VillageFolkEntity extends AssistantEntity {
         m = Quarters.mood(this, m, why);                // where it lives: the crafts' smoke and din, the park (Quarters)
         m = FolkSkills.mood(this, m, why);              // Bright Spirit, a bright friend near, Unflappable's floor
         m = Birthdays.mood(this, day, m, why);          // its birthday (Birthdays)
+        m = Families.mood(this, day, m, why);           // its wedding anniversary (Families)
         why.sort((a, b) -> Integer.compare((Integer) b[1], (Integer) a[1]));
         java.util.List<String> keys = new java.util.ArrayList<>();
         for (Object[] w : why) keys.add((String) w[0]);

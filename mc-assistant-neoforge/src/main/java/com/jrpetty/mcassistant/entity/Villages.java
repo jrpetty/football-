@@ -355,6 +355,7 @@ public final class Villages {
         GREW.clear();
         Standing.resetForTests();
         Gatherings.resetForTests();
+        Families.resetForTests();           // pets, games, suppers, stories, gardens, remembrance
         ELDERS.clear();
         NEWS.clear();
         AGED_ON.clear();

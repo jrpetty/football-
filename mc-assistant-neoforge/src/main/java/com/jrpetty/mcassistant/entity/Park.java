@@ -741,12 +741,13 @@ public final class Park {
     static void tick(VillageFolkEntity f) {
         Visit vis = VISITS.get(f.getUUID());
         if (vis == null) {
-            if (f.getPose() == Pose.SITTING && f.tickCount % 20 == 0) f.setPose(Pose.STANDING);   // after a restart
+            // After a restart (but not one sat down for a story: Families).
+            if (f.getPose() == Pose.SITTING && f.tickCount % 20 == 0 && !Families.seated(f)) f.setPose(Pose.STANDING);
             return;
         }
         if (!(f.level() instanceof ServerLevel level)) return;
         if (vis.over) {
-            if (f.getPose() == Pose.SITTING) standUp(f, vis);
+            if (f.getPose() == Pose.SITTING && !Families.seated(f)) standUp(f, vis);
             if (vis.day != level.getDayTime() / 24000L) VISITS.remove(f.getUUID(), vis);
             return;
         }

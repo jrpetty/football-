@@ -69,6 +69,28 @@ public final class Graves {
         return put;
     }
 
+    /**
+     * Where the village's {@code index}-th grave lies, as tend lays them out (the graveyards in the order
+     * they were built, twelve plots each): {its mound, the ground in front of it where a flower is laid},
+     * or null while no graveyard has room for it. [families]
+     */
+    @javax.annotation.Nullable
+    public static BlockPos[] graveOf(UUID village, int index) {
+        if (index < 0) return null;
+        int i = 0;
+        for (Ledger.Building b : Ledger.buildings(village)) {
+            if (!b.structure().equals("graveyard")) continue;
+            if (index < i + PLOTS.length) {
+                int[] plot = PLOTS[index - i];
+                Direction back = b.facing(), right = back.getClockWise();
+                BlockPos mound = b.anchor().relative(right, plot[0]).relative(back, plot[1]);
+                return new BlockPos[]{ mound, mound.relative(back.getOpposite()) };
+            }
+            i += PLOTS.length;
+        }
+        return null;
+    }
+
     /** Is this a headstone: chiselled stone bricks, stone bricks, or a rough stone of cobble? */
     static boolean isHeadstone(BlockState st) {
         return st.is(Blocks.CHISELED_STONE_BRICKS) || st.is(Blocks.STONE_BRICKS) || st.is(Blocks.COBBLESTONE);

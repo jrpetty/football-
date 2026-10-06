@@ -258,6 +258,8 @@ public final class FolkTalk {
         if (f.isSleeping()) return "Asleep";
         String school = School.doing(f);                     // at a desk, or at the lectern (School)
         if (school != null) return school;
+        String family = Families.doing(f);                    // a game, supper at home, a story, a family errand (Families)
+        if (family != null) return family;
         String park = Park.doing(f);                          // in the park, or on its way there
         if (f.isBaby()) return park != null ? park : "Playing";
         Job j = f.peekJob();
@@ -343,6 +345,7 @@ public final class FolkTalk {
         if (life.children() > 0) family += (family.isEmpty() ? "" : "; ") + life.children() + (life.children() == 1 ? " child" : " children");
         if (!life.parents().isEmpty()) family += (family.isEmpty() ? "" : "; ") + "child of " + life.parents();
         if (!family.isEmpty()) line(sb, "Family", family);
+        line(sb, "Household", Families.cardLine(f));        // its pet, its garden, its wedding anniversary (Families)
         java.util.List<String> friends = new java.util.ArrayList<>();
         for (Social.Bond b : life.friends()) {
             if (b.name != null && !b.name.isEmpty()) friends.add(b.name);
@@ -571,6 +574,7 @@ public final class FolkTalk {
             case "civic" -> CityTree.moodWords(f);
             case "homely" -> Decor.moodWords(f);
             case "birthday" -> Birthdays.moodWords(f);
+            case "anniversary" -> Families.moodWords(f);
             case "smoke", "noise", "parkside", "park" -> Quarters.words(f, why);      // where it lives (Quarters, Park)
             case "proud" -> Museum.prideWords(f);
             default -> "";

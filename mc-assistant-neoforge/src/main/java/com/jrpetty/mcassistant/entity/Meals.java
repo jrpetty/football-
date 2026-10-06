@@ -23,6 +23,8 @@ import java.util.function.Predicate;
  * at each mealtime it eats, from its own pack first, then its household's chest at home, then the
  * village's stores (the town feeds its own: a child, an elder and a hand between trades as much as a
  * worker). A meal eaten at its work while the mealtime is on counts as that meal, so nobody eats twice.
+ * Supper is a household's (Families): one that lives with its family eats it at home, out of the
+ * household's chest first, and the meal waits for it to get there while there is time to.
  *
  * <p>Nothing comes from nowhere: every meal is a real item out of a pack, a chest or the stores, and the
  * stores' share is booked in the storehouse's books. A folk that finds nothing to eat misses the meal:
@@ -181,6 +183,17 @@ public final class Meals {
             had(f, b, m, bit, village, day);
             return;
         }
+        // [families] Supper is the household's: eaten at home round its own table, out of its own chest first
+        // (Families). On its way home, or still at its work, the meal waits for the table while there is time.
+        if (m == Meal.SUPPER) {
+            Families.Table table = Families.table(level, f, village, tod, m.to);
+            if (table == Families.Table.WAIT) return;
+            if (table == Families.Table.HOME && eatAtHome(level, f, village)) {
+                had(f, b, m, bit, village, day);
+                Families.supped(f, day);
+                return;
+            }
+        }
         if (eat(level, f, village)) {
             had(f, b, m, bit, village, day);
             return;
@@ -235,6 +248,23 @@ public final class Meals {
             if (f.mealFromTheStores() > 0) return f.eatFromPack();
         }
         return f.eatFromSeed();                             // [economy] a carrot of its seed, before it goes without
+    }
+
+    /**
+     * [families] Supper at home: out of the household's chest first (the family's food, put by for it), then
+     * its own pack. False with neither: the stores, as at any meal (eat).
+     */
+    static boolean eatAtHome(ServerLevel level, VillageFolkEntity f, UUID village) {
+        Homes.Home home = Homes.homeOf(village, f.getUUID());
+        BlockPos chest = home == null ? null : Homes.chestOf(level, village, home);
+        if (chest != null && level.getBlockEntity(chest) instanceof Container c && takeOne(c, f) && f.eatFromPack()) return true;
+        return f.eatFromPack();
+    }
+
+    /** Is this meal behind this folk today: eaten (or, its hour over, gone without)? */
+    static boolean hadToday(VillageFolkEntity f, Meal m, long day) {
+        Book b = f.meals();
+        return b.day == day && (b.taken & (1 << m.ordinal())) != 0;
     }
 
     /** One meal's worth out of a chest and into the pack. */

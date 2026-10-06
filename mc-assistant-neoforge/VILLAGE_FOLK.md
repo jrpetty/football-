@@ -4428,3 +4428,35 @@ chunk queue (`MCA-CHUNKS`), and why a village was or was not building
 The reports are published to the `village-test-latest` release: `vt-report.txt`,
 `real-<scenario>.txt` and `smoke.txt` with its pictures. Each dashboard line says what one folk is doing and
 why it is not doing more.
+
+## Families, pets and gardens
+
+* **A pet** — a household with children takes in a stray cat or a wolf from the wild near town,
+  the way you would: one of the parents takes raw cod or salmon (for a cat) or bones (for a wolf)
+  out of the house's chest, else the stores, and offers them one at a time till the animal takes
+  to them. A child names it, and the town's history says so. By day it trots after the
+  household's children; at night, or while they are at school, it goes home and sits. One pet a
+  household. Put bones or fish in a family's chest, with a wolf or a cat about, to give them the idea.
+* **The children's games** — of an afternoon, after school and before supper, the children
+  gather in the park (or the square, with no park) and play: tag one afternoon, whoever is it
+  chasing the rest about, and hide-and-seek the next, the seeker counting to ten out loud at the
+  den while the others crouch out of sight by a wall.
+* **Supper at home** — at supper a family goes home and eats together round its own table, out
+  of the house's chest first, rather than wherever each of them happens to be. A child comes home
+  for it; a parent comes in when its day's work is done. Anybody who cannot get home in time eats
+  where it is, as before, so nobody goes hungry for it. Keep a family's chest stocked and you will
+  find them at table.
+* **A story at bedtime** — most evenings, after supper, an old folk of the family (a grandparent
+  from another house, if one is free) or else a parent sits down with the children at home and
+  tells them a story out of the town's chronicle: a wedding, a death, a birth, a building opened,
+  by the names of the folk it happened to and the day it was. The children go to bed after it.
+* **A garden** — a household with thirty coins or so put by buys a few flowers and a sapling from
+  the stores and plants a little bed of flowers in front of its house and the sapling off to one
+  side, clear of the walls. Once a house.
+* **Remembrance** — on the anniversary of a death (the town's year of four weeks) the one closest
+  to the dead — its partner, else a child, else a parent — takes a flower from the stores out to the
+  grave, lays it in front of the stone and says a few words. A couple marks its wedding
+  anniversary too: a word to each other, a heart or two, and the day the happier for it.
+
+A folk's card has a *Household* line: the family's pet and what it is doing, whether the house has
+had its garden, and when the next wedding anniversary falls.
