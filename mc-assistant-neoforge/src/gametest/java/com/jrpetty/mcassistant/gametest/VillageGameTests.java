@@ -4466,11 +4466,12 @@ public class VillageGameTests {
             if (s.getHoverName().getString().contains("keepsake")) keepsake = true;
         }
         helper.assertTrue(keepsake, "a keepsake from a close friend");
-        // A repair at the smith's: coin and a scrap of iron.
+        // A repair at the smith's: coin, and an ingot for every quarter of the wear (three, for a sword 150 worn,
+        // from the player's own with none in the stores; it once took a scrap, and the order below the rest).
         ItemStack worn = new ItemStack(Items.IRON_SWORD);
         worn.setDamageValue(150);
         p.setItemInHand(InteractionHand.MAIN_HAND, worn);
-        p.getInventory().setItem(33, new ItemStack(Items.IRON_INGOT, 3));
+        p.getInventory().setItem(33, new ItemStack(Items.IRON_INGOT, 6));
         said.add("repair: " + com.jrpetty.mcassistant.entity.Dealings.repair(smith, p));
         helper.assertTrue(p.getMainHandItem().getDamageValue() == 0, "the smith mends a worn sword");
         // Made to order, from the player's own makings: ready tomorrow.

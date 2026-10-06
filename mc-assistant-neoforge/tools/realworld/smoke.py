@@ -856,6 +856,101 @@ def ageing_stage(r, look, cx, cz):
     say("alive after the ageing: %s" % client_alive())
 
 
+def sights_stage(r, look, cx, cz):
+    """The town's newer sights, found with /village sights (entity/Sights): the welcome sign at the edge of
+    town from the road coming in; the gazette on its lectern in the hall; the crier reading the news; the
+    children at tag in the park; a family's new cat, taken in with fish a player put in the house chest;
+    and a garden in front of a house, with a few flowers and a sapling a player brought to the stores.
+    Each is made now (the town's own stores, purses and hands, only not waiting for the hour)."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("time set 6000")
+    r.cmd("weather clear")
+    r.cmd("gamemode spectator %s" % USER)
+    where = "execute positioned %d 100 %d run " % (cx, cz)
+    out = r.cmd(where + "village sights")
+    say("sights: " + out[:1500])
+    xyz = r"(-?\d+) (-?\d+) (-?\d+)"
+    dirs = {"north": (0, -1), "south": (0, 1), "east": (1, 0), "west": (-1, 0)}
+
+    # The welcome sign: its face is to the road coming in, so the camera stands out on the road.
+    out = r.cmd(where + "village sights sign")
+    say("sign: " + out[:600])
+    m = re.search(r"SIGN " + xyz + r" out (\w+)", out)
+    if m:
+        x, y, z = (int(v) for v in m.groups()[:3])
+        dx, dz = dirs.get(m.group(4), (1, 0))
+        look("23-sights-1-welcome-sign", x + 0.5 + dx * 4, y, z + 0.5 + dz * 4, x + 0.5, y + 1.3, z + 0.5, wait=6)
+    else:
+        say("no welcome sign up to photograph")
+
+    # The gazette on its lectern.
+    out = r.cmd(where + "village sights gazette")
+    say("gazette: " + out[:500])
+    m = re.search(r"LECTERN " + xyz, out)
+    if m:
+        x, y, z = (int(v) for v in m.groups())
+        look("23-sights-2-gazette", x + 2.5, y + 0.6, z + 2.5, x + 0.5, y + 0.8, z + 0.5, wait=5)
+
+    # The crier sent to read the news: a little while to walk to its spot and begin.
+    out = r.cmd(where + "village sights crier")
+    say("crier: " + out[:500])
+    time.sleep(25)
+    out = r.cmd(where + "village sights")
+    m = re.search(r"CRIER (.+?) " + xyz + r"(?: stand " + xyz + r")?", out)
+    if m and m.group(2):
+        x, y, z = int(m.group(2)), int(m.group(3)), int(m.group(4))
+        look("23-sights-3-crier", x + 4.5, y + 1, z + 3.5, x + 0.5, y + 1.6, z + 0.5, wait=4)
+        say("crier later: " + m.group(0)[:200])
+    else:
+        say("no crier to be seen")
+
+    # The children's game.
+    out = r.cmd(where + "village sights tag")
+    say("game: " + out[:500])
+    m = re.search(r"GAME .*? ground " + xyz, out)
+    if m:
+        x, y, z = (int(v) for v in m.groups())
+        time.sleep(12)
+        look("23-sights-4-tag", x + 9, y + 6, z + 9, x, y + 1, z, wait=4)
+        time.sleep(8)
+        look("23-sights-5-tag-later", x - 9, y + 6, z + 9, x, y + 1, z, wait=4)
+
+    # A pet: a stray cat by a house with children, and fish in that house's chest, as a player would leave it.
+    homes = re.findall(r"HOME " + xyz + r" kids (\d+) grown (\d+) chest (-?\d+ -?\d+ -?\d+|none) garden (\w+) pet (\S+)", out)
+    say("households: %d, with children: %d" % (len(homes), sum(1 for h in homes if int(h[3]) > 0)))
+    family = next((h for h in homes if int(h[3]) > 0 and h[5] != "none" and h[7] == "none"), None)
+    if family:
+        hx, hy, hz = int(family[0]), int(family[1]), int(family[2])
+        chx, chy, chz = (int(v) for v in family[5].split())
+        say("fish: " + r.cmd("item replace block %d %d %d container.26 with minecraft:cod 12" % (chx, chy, chz)))
+        r.cmd("summon minecraft:cat %d %d %d" % (hx + 3, hy + 1, hz + 3))
+        time.sleep(2)
+        out = r.cmd(where + "village sights pet")
+        say("pet: " + out[:700])
+        pm = re.search(r"HOME %d %d %d .*? pet (cat|wolf) (\S+) " % (hx, hy, hz) + xyz, out)
+        if pm:
+            x, y, z = int(pm.group(3)), int(pm.group(4)), int(pm.group(5))
+            look("23-sights-6-pet", x + 3, y + 1, z + 3, x + 0.5, y + 0.4, z + 0.5, wait=5)
+    else:
+        say("no household with children and a chest, without a pet")
+
+    # A garden: flowers and a sapling brought to the stores; the household with most put by plants it.
+    bell = r.cmd(where + "village bell")
+    st = re.search(r"STORES " + xyz, bell)
+    if st:
+        sx, sy, sz = (int(v) for v in st.groups())
+        for slot, item in ((22, "minecraft:poppy 4"), (21, "minecraft:dandelion 4"), (20, "minecraft:oak_sapling 1")):
+            say("stores: " + r.cmd("item replace block %d %d %d container.%d with %s" % (sx, sy, sz, slot, item)))
+    out = r.cmd(where + "village sights garden")
+    say("garden: " + out[:700])
+    gm = re.search(r"GARDEN-ERRAND .*? home " + xyz + " done", out)
+    if gm:
+        x, y, z = (int(v) for v in gm.groups())
+        look("23-sights-7-garden", x + 9, y + 5, z + 9, x, y + 1, z, wait=5)
+    r.cmd("gamemode creative %s" % USER)
+    say("alive after the sights: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")
@@ -1075,6 +1170,10 @@ def main():
         ageing_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("ageing stage failed: %s" % e)
+    try:
+        sights_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("sights stage failed: %s" % e)
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the founding: %s" % client_alive())
     try:

@@ -127,9 +127,15 @@ public final class WelcomeSign {
         Direction left = out.getCounterClockWise();
         BlockPos heart = v.centre();
         int reach = Villages.townReach(v.id());
+        BlockPos old = remembered(v.id());
         for (int in = 0; in <= 6; in++) {
             BlockPos col = heart.relative(out, reach - in).relative(left, ACROSS);
             if (!level.isLoaded(col)) return null;
+            // Its own post still standing here: that is the spot. (The ground under the column, read from the
+            // top down, is the post itself, a fence being solid; so the sign once took the next column in each
+            // morning, and the one after back again, and the test of the sign written up found none.)
+            if (old != null && old.getX() == col.getX() && old.getZ() == col.getZ()
+                    && level.getBlockState(old).getBlock() instanceof FenceBlock) return old;
             Roads.Ground g = Roads.ground(level, col.getX(), col.getZ());
             if (g == null || g.water() || Math.abs(g.y() - heart.getY()) > 12) continue;
             BlockPos post = new BlockPos(col.getX(), g.y() + 1, col.getZ());

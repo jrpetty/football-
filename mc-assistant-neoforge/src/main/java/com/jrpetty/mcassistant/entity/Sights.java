@@ -29,7 +29,7 @@ public final class Sights {
         List<String> out = new ArrayList<>();
         BlockPos sign = WelcomeSign.postedAt(id);
         out.add(sign == null ? "SIGN none yet (the edge of town at " + at(WelcomeSign.columnForTests(level, v)) + ")"
-            : "SIGN " + at(sign) + " facing " + WelcomeSign.wayForTests(level, v).getOpposite().getName());
+            : "SIGN " + at(sign) + " out " + WelcomeSign.wayForTests(level, v).getName());   // its face is to the road coming in
         BlockPos lectern = Gazette.lecternForTests(level, id);
         out.add(lectern == null ? "LECTERN none (no hall)" : "LECTERN " + at(lectern));
         UUID crier = Crier.crier(id);

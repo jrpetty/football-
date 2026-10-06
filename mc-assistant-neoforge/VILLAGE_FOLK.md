@@ -4141,6 +4141,11 @@ ripen, days pass, folk work and houses go up at that pace.
 * `/village lifespans` — the nearest town's folk, eldest first: each one's age, the day it was
   born, the age it will live to and the day that falls on, and how many of them are old. Grown folk
   age a year every five days. Works from the console.
+* `/village sights` (operators) — where the nearest town's newer sights are: the welcome sign at
+  the edge of town, the gazette's lectern, today's crier and where it reads, the children's game
+  and its playground, and every household with its children, its chest, its garden and its pet.
+  `sights sign`, `gazette`, `crier`, `tag`, `hide`, `pet` or `garden` makes that one now rather than
+  later in the day, out of the same stores and purses as ever (only the walk is skipped).
 * `/village districts` — the nearest town's quarters: the plan in a line, how many buildings
   each quarter has, which works are at work, the homes in the smoke and din and the homes by the
   park, and how the park is coming on. Works from the console. `districts map` opens the books at

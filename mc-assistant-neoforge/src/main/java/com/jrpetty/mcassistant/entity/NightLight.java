@@ -1,6 +1,7 @@
 package com.jrpetty.mcassistant.entity;
 
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -43,13 +44,21 @@ public final class NightLight {
         ItemStack off = f.getItemBySlot(EquipmentSlot.OFFHAND);
         boolean holding = isLight(off);
         boolean wants = !f.isBaby() && !f.isSleeping() && f.getTarget() == null && !f.isPassenger()
-            && dark(level.getDayTime()) && level.canSeeSky(f.blockPosition())
+            && dark(level.getDayTime()) && underSky(level, f)
             && !(f.stationTask() == AssistantEntity.StationTask.GUARD && f.countMatching(s -> s.is(Items.SHIELD)) > 0);   // the watch's hand is for its shield
         if (holding && !wants) {
             putAway(f, off);
         } else if (!holding && wants && off.isEmpty()) {
             takeOut(f);
         }
+    }
+
+    /**
+     * Nothing over its head: read off the heightmap, which knows of a roof the moment it is laid (the sky
+     * light under a new roof is worked out a little later, so a folk once kept its lantern out indoors).
+     */
+    static boolean underSky(ServerLevel level, VillageFolkEntity f) {
+        return level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, f.getBlockX(), f.getBlockZ()) <= f.getBlockY() + 1;
     }
 
     /** The best light in its pack into its free hand. False if it carries none. */
