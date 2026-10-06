@@ -2370,6 +2370,16 @@ public class VillageFolkEntity extends AssistantEntity {
         return null;
     }
 
+    /**
+     * [ua] A child has no trade until it is grown (childhood), and its line said "Unassigned" like a grown
+     * folk with none. A hundred-day town's tallies read its ten or fifteen children as that many grown
+     * folk standing about without work, and a day was spent looking for why they never took one up.
+     */
+    @Override
+    public String tradeTitle() {
+        return isBaby() ? "Child" : super.tradeTitle();
+    }
+
     @Override
     protected String debugExtra() {
         String social = " traits=" + life.traitsLabel().replace(' ', '-') + " type=" + Values.brief(this)
@@ -3506,6 +3516,18 @@ public class VillageFolkEntity extends AssistantEntity {
      * needs water and a miner needs stone — what you are decides where you go.
      */
     private void takeUpATrade() {
+        // Claim the trade BEFORE going to look for ground. The village works
+        // out what it is short of from what its folk ARE, so a folk that has
+        // decided but not yet settled used to be invisible — and every folk
+        // in the village would pick the same trade, look for the same ground,
+        // and fail together, for ever.
+        // [ua] And claim it at once, ahead of the wait between searches: the claim is
+        // cheap, only the search is not. A folk that had looked for ground a minute
+        // before it lost its trade (married into another town, moved away, gave up
+        // its fishing) stood about with none for up to two minutes more.
+        if (stationTask() == StationTask.NONE) {
+            setStation(blockPosition(), Villages.needed(ownerId()));
+        }
         // Looking for ground is expensive and the answer rarely changes from
         // one second to the next. Once a minute is plenty, and it stops every
         // folk in a village re-running a quarter-million block reads on the
@@ -3520,15 +3542,6 @@ public class VillageFolkEntity extends AssistantEntity {
             return;
         }
         searchFailTick = tickCount;
-
-        // Claim the trade BEFORE going to look for ground. The village works
-        // out what it is short of from what its folk ARE, so a folk that has
-        // decided but not yet settled used to be invisible — and every folk
-        // in the village would pick the same trade, look for the same ground,
-        // and fail together, for ever.
-        if (stationTask() == StationTask.NONE) {
-            setStation(blockPosition(), Villages.needed(ownerId()));
-        }
         StationTask trade = stationTask();
         BlockPos site = findSite(trade, radiusFor(trade));
         if (site == null) {
