@@ -70,6 +70,11 @@ public final class TownLife {
         GUARDED.clear();
         FITTINGS.clear();
         NAMES.clear();
+        // [townlife] the gazette, the welcome sign, the seats, the waves and the night lights
+        Gazette.resetForTests();
+        WelcomeSign.resetForTests();
+        Seats.resetForTests();
+        Greetings.resetForTests();
     }
 
     /** One visit to a village's life: at most once every ten seconds. */
@@ -110,6 +115,9 @@ public final class TownLife {
         }
         // The graves the village owes its dead, and the chapel's memorial.
         if (turn % 10 == 5) Graves.tend(level, id);
+        // [townlife] The gazette on the meeting hall's lectern, and the welcome sign at the edge of town: once a day each.
+        Gazette.tick(level, v);
+        WelcomeSign.tick(level, v);
         // The café's and the shop's counters.
         if (turn % 6 == 3) {
             Cafe.dress(level, v, "cafe");
