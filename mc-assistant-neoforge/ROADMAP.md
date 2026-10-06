@@ -69,3 +69,100 @@ micromanaged. Separate units, shared skill code underneath.
 
 Steps 1 and 2 are worth building for assistants regardless; 3 onward is what
 turns them into Village Folk.
+
+---
+
+## Fifty upgrades for the towns and their people (b275 onward)
+
+Seven batches, each built in its own worktree and merged one at a time. Everything follows the
+house rules: folk speak through FolkTalk, nothing comes from nothing, and every addition shows
+somewhere a player can see it.
+
+### A. Health and care
+1. **Colds and recovery.** Folk caught in the rain or worked to exhaustion can catch a cold.
+   It may spread to housemates. A sick folk rests at home and works slowly for a day or two.
+2. **The infirmary** (Stone Age, 20 folk). Beds, a brewing stand and a cauldron. The wounded and
+   the sick go there and mend twice as fast.
+3. **The healer.** A trade that tends the infirmary's patients and visits the bedridden at home,
+   using honey, golden carrots and the brewer's potions from the stores.
+4. **Neighbours look after the old.** The very old and frail get a daily visit and a meal carried
+   in from the stores.
+5. **The poor box.** Well-off folk drop coins in the chapel's poor box. The poor get help with
+   rent and bread from it.
+6. **Housewarming.** Neighbours and friends call on a family's new house that evening with a
+   small gift.
+7. **The welcome committee.** A newcomer is greeted, walked round the town and given a welcome
+   basket from the stores.
+
+### B. Seasons and festivals
+8. **Seasons.** The town's 28-day year is split into four seasons. Tended crops grow faster in
+   spring and summer and slower in winter. The season shows on the board, in the books and in
+   the crier's news.
+9. **The maypole and the May dance** on the first rest day of spring.
+10. **The midsummer bonfire** on the square at dusk, with singing.
+11. **The harvest festival.** The harvest is brought to the square for a long-table feast, with
+    a prize for the best crop.
+12. **Midwinter lanterns and gifts.** Lanterns line the avenue and friends and families exchange
+    gifts.
+13. **Winter in town.** Children build snowmen and folk wrap up warm.
+14. **The town fair.** Competitions for the best bread, wool, fish and honey, judged by the
+    elder. Players can enter too and win a ribbon and a purse.
+
+### C. Sport and play
+15. **The football pitch** (20 folk, Stone Age), with goals and lines.
+16. **Football on rest days.** Two teams from the town's quarters, a ball, goals, a crowd, and
+    the score in the chronicle.
+17. **The league and the cup.** A season table, with the champions' cup on show in the hall.
+18. **Friendly matches between towns** on good terms. The visiting team walks over with its
+    supporters.
+19. **The fishing contest** on summer rest days.
+20. **Children's sports day**, with races in the park and prizes.
+21. **The archery range.** The watch practises at targets and holds a contest.
+
+### D. Culture and identity
+22. **The town banner**, its colours drawn from the land and the leader. The tailor makes it and
+    it flies from the hall, the gates and the market.
+23. **The town motto**, carved over the hall's door.
+24. **Traditions.** The town's great days (a storm weathered, a raid beaten off, the first
+    diamond) become yearly customs.
+25. **The theatre** (Iron Age). Plays from the chronicle on rest-day evenings.
+26. **The band and the choir**, at the tavern, weddings, festivals and the chapel.
+27. **Paintings.** Folk with an artist's hobby paint, and the well-off hang paintings at home
+    and in public buildings.
+28. **Plaques** at notable places: the founding spot, the first house, a hero's last stand.
+
+### E. The town's look
+29. **Tree-lined avenues.**
+30. **Street furniture.** Benches at corners, flower boxes under windows and notice boards.
+31. **Allotments** for folk without a garden.
+32. **The orchard.** Apples for the café.
+33. **The windmill** by the fields.
+34. **The bakery.** Bread, cookies, pies and cakes from the stores, for the café, the shop and
+    feasts.
+35. **The inn.** Rooms for travellers, caravan drivers, envoys, visiting teams and players.
+
+### F. Town life and governance
+36. **The post office and letters.** Letters travel between towns, and a player can post a
+    letter to a folk and get a reply.
+37. **Petitions.** A grievance on the board gathers signatures, and the council takes it up.
+38. **The town meeting.** Every week the elder gives a report and answers questions.
+39. **Quarter wardens.** An evening round of each district, reporting what needs fixing and
+    settling small quarrels.
+40. **The public works fund.** Donations go towards a monument, with the donors named on a
+    plaque.
+41. **Search parties** for a folk not seen all day.
+42. **Neighbourly favours.** Folk lend tools and help each other carry, and friendships grow
+    from it.
+
+### G. Visitors and the player
+43. **The travelling bard.** Visits a few nights, plays at the tavern and brings news of other
+    towns.
+44. **Tourists.** A town of renown draws visitors who stay at the inn and spend at the shop and
+    café.
+45. **Advancements.** Game toasts for founding, town size, ages, citizenship, the cup, the fair
+    and letters.
+46. **The map room.** The hall's map wall, kept up to date by the clerk.
+47. **Watch dogs.** Guards keep a dog that patrols with them and barks at monsters.
+48. **Travelling merchants** on market day, with exotic goods.
+49. **Friends from other towns** come to visit.
+50. **Gifts kept.** A folk displays a player's gifts at home.
