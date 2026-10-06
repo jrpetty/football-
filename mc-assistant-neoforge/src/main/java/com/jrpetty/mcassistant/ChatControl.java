@@ -911,8 +911,8 @@ public final class ChatControl {
                     a.enqueue(job);
                     queuedLabels.add(job.label());
                 }
-                case VERSION -> a.say("Build " + AssistantEntity.BUILD_TAG
-                    + ". If any of those don't work in-game, an older jar is loaded — "
+                case VERSION -> a.say("Version " + McAssistantMod.version() + " (" + AssistantEntity.latestBuild() + ")"
+                    + ". If that's not the newest you downloaded, an older jar is loaded — "
                     + "keep only the newest mc-assistant jar in your mods folder.");
                 case JOBS -> reportJobs(a);
                 case HELP -> a.say("Talk to me like a person — orders chain with \"and\"/\"then\" and queue up. I understand: "

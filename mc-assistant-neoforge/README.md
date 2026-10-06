@@ -26,7 +26,7 @@ gradlew.bat build
 First build downloads the toolchain (a few minutes). The jar lands in:
 
 ```
-build/libs/mc-assistant-neoforge-0.1.0.jar
+build/libs/mc-assistant-neoforge-<version>.jar   (0.<build>.0, e.g. 0.266.0 for build b266)
 ```
 
 Drop it in your `mods/` folder (client for single player; server **and**

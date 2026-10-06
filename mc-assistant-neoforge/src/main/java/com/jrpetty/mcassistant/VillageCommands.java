@@ -167,6 +167,13 @@ public final class VillageCommands {
                 .then(Commands.argument("what", com.mojang.brigadier.arguments.StringArgumentType.word())
                     .suggests((ctx, b) -> net.minecraft.commands.SharedSuggestionProvider.suggest(com.jrpetty.mcassistant.entity.Sights.kinds(), b))
                     .executes(ctx -> sights(ctx, com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "what")))))
+            // Which version of the mod is loaded: its number and the newest change in it.
+            .then(Commands.literal("version").executes(ctx -> {
+                String v = "MC Assistant " + com.jrpetty.mcassistant.McAssistantMod.version() + " — "
+                    + com.jrpetty.mcassistant.entity.AssistantEntity.latestBuild();
+                ctx.getSource().sendSuccess(() -> Component.literal(v), false);
+                return 1;
+            }))
             .then(Commands.literal("research").executes(VillageCommands::research)
                 .then(Commands.literal("pick").requires(src -> src.hasPermission(2))
                     .then(Commands.argument("civic", com.mojang.brigadier.arguments.StringArgumentType.word())

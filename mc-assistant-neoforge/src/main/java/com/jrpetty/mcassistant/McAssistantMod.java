@@ -35,6 +35,17 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 public final class McAssistantMod {
     public static final String MODID = "mc_assistant";
 
+    /** The loaded jar's version (0.<build>.0, from the newest changelog entry: build.gradle), or "?" outside the game. */
+    public static String version() {
+        try {
+            net.neoforged.fml.ModList mods = net.neoforged.fml.ModList.get();
+            if (mods == null) return "?";
+            return mods.getModContainerById(MODID).map(c -> c.getModInfo().getVersion().toString()).orElse("?");
+        } catch (RuntimeException e) {
+            return "?";
+        }
+    }
+
     private static final DeferredRegister<EntityType<?>> ENTITY_TYPES =
         DeferredRegister.create(Registries.ENTITY_TYPE, MODID);
     private static final DeferredRegister<MenuType<?>> MENU_TYPES =

@@ -7,7 +7,17 @@ plugins {
 }
 
 group = mod_group
-version = mod_version
+// The mod's version follows its build: 0.<build>.0, the build being the newest entry of the changelog at the
+// head of AssistantEntity.BUILD_TAG ("2026-07-b266 · ..."). Every change lands with a changelog entry, so every
+// change is a new version: in the game's Mods list, in the jar's name and on the release. (gradle.properties'
+// mod_version stands in only if the changelog cannot be read.)
+ext.modVersion = {
+    def src = file('src/main/java/com/jrpetty/mcassistant/entity/AssistantEntity.java')
+    if (!src.exists()) return mod_version
+    def m = (src.getText('UTF-8') =~ /BUILD_TAG\s*=\s*"\d{4}-\d{2}-b(\d+)/)
+    return m.find() ? "0.${m.group(1)}.0".toString() : mod_version
+}()
+version = modVersion
 
 java {
     toolchain {
@@ -114,7 +124,7 @@ processResources {
         minecraft_version: minecraft_version,
         neo_version      : neo_version,
         mod_id           : mod_id,
-        mod_version      : mod_version,
+        mod_version      : modVersion,
     ]
     inputs.properties replaceProperties
     filesMatching(['META-INF/neoforge.mods.toml']) {

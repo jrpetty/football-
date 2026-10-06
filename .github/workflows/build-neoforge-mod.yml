@@ -68,6 +68,23 @@ jobs:
             assistant in chat: `!follow`, `!guard`, `!gather logs 16`.
           files: mc-assistant-neoforge/build/libs/*.jar
 
+      # Each build is a version of its own (0.<build>.0, its jar named for it): the release keeps this one's jar
+      # and lets the older ones go, so the download is never a choice between versions.
+      - name: Keep only this version's jar on the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          keep=$(cd mc-assistant-neoforge/build/libs && ls *.jar | grep -v -e '-sources' -e '-javadoc' | head -1)
+          echo "this build's jar: $keep"
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}"
+          rel=$(curl -sS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "$api/releases/tags/neoforge-mod-latest")
+          echo "$rel" | jq -r '.assets[] | select(.name | endswith(".jar")) | "\(.id) \(.name)"' | while read -r id name; do
+            if [ "$name" != "$keep" ]; then
+              echo "removing the older $name"
+              curl -sS -X DELETE -H "Authorization: Bearer $GH_TOKEN" "$api/releases/assets/$id" || true
+            fi
+          done
+
   # -------------------------------------------------------------------------
   # Village behaviour tests. Runs in parallel with the build and can never
   # fail it: this is where the mod is actually RUN, on a real headless

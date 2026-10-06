@@ -4145,6 +4145,8 @@ ripen, days pass, folk work and houses go up at that pace.
 * `/village lifespans` — the nearest town's folk, eldest first: each one's age, the day it was
   born, the age it will live to and the day that falls on, and how many of them are old. Grown folk
   age a year every five days. Works from the console.
+* `/village version` — which version of the mod is loaded: its number (0.<build>.0, one higher
+  with every update) and the newest change in it. The jar's name carries the same number.
 * `/village sights` (operators) — where the nearest town's newer sights are: the welcome sign at
   the edge of town, the gazette's lectern, today's crier and where it reads, the children's game
   and its playground, and every household with its children, its chest, its garden and its pet.
