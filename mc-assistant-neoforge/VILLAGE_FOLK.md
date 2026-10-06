@@ -690,6 +690,10 @@ Business with the whole village (the **Money** tab):
 
 Once a village has its wall, it sees to its own safety.
 
+* **Guards are hardier.** A guard has twice the health of any other folk (forty, where the rest
+  have twenty; a sturdy one's extra heart and a veteran's are doubled with it). A folk at full
+  health when it takes up the watch is at its new full at once; one who leaves the watch is back
+  to the ordinary, keeping its wounds where they fit.
 * **Lights from the first days.** A torch on a fence post goes up every few blocks along
   the streets, made from the stores' coal and wood; from the Iron Age, lamp posts.
 * **An iron golem.** An Iron Age village keeps one, as a vanilla village does. If it is

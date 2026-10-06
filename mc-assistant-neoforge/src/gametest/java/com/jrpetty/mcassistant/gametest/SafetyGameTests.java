@@ -61,6 +61,8 @@ import java.util.function.Predicate;
  *     town's whole reach; a morning's count that has lost three quarters while the storehouse stands is not
  *     believed for the day (a second such morning is); the goods waiting in a storehouse come apart are still
  *     counted.</li>
+ * <li><b>sf07</b>: a guard has twice the health of any other folk, whole on taking up the watch; off it, as the
+ *     rest again, its wounds kept.</li>
  * </ul>
  *
  * <p>Each runs on its own ground (x 400,000 to 406,000, z 50,000).
@@ -584,6 +586,49 @@ public class SafetyGameTests {
                 + "; the stores read " + counted + " food");
             helper.assertTrue(waiting, "the goods wait in the door of the cube come apart");
             helper.assertTrue(counted >= 200, "and are counted with the stores: " + counted);
+            helper.succeed();
+        });
+    }
+
+    // ============================================================ sf07: the watch's health
+
+    /**
+     * A guard has twice the health of any other folk (AssistantEntity.applyLevelPerks): taking up the watch whole,
+     * it is whole at its new most; off the watch it is as the rest again, its wounds kept where they fit.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "sf07_guard_health")
+    public static void sf07_guard_health(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(24000L * 3 + 2000);
+        final int x = 404200;
+        Kit.hold(level, x, Z, 24);
+        Kit.prepare(level, x, Z, 24);
+        BlockPos heart = Kit.surface(level, x, Z);
+        VillageFolkEntity folk = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(folk != null && folk.ownerId() != null, "a village");
+        helper.runAtTickTime(5, () -> {
+            folk.setJob(StationTask.FARM);
+            float before = folk.getMaxHealth();
+            folk.setHealth(before);
+            folk.setJob(StationTask.GUARD);
+            float most = folk.getMaxHealth(), now = folk.getHealth();
+            Kit.log("sf07 a farmer of " + before + " health takes up the watch: " + now + " of " + most);
+            helper.assertTrue(Math.abs(most - 2.0F * before) < 0.01F, "a guard has twice the health: " + before + " -> " + most);
+            helper.assertTrue(Math.abs(now - most) < 0.01F, "whole before, whole on the watch: " + now + " of " + most);
+            // Wounded on the watch, then back to the fields: the wound kept, as far as the old most lets it be.
+            folk.setHealth(before * 0.75F);
+            folk.setJob(StationTask.FARM);
+            float back = folk.getMaxHealth(), left = folk.getHealth();
+            Kit.log("sf07 wounded to " + (before * 0.75F) + " and off the watch: " + left + " of " + back);
+            helper.assertTrue(Math.abs(back - before) < 0.01F, "off the watch, as the rest again: " + back);
+            helper.assertTrue(Math.abs(left - before * 0.75F) < 0.01F, "its wound kept: " + left);
+            // Hale on the watch and off it: no more health than its most.
+            folk.setJob(StationTask.GUARD);
+            folk.setHealth(folk.getMaxHealth());
+            folk.setJob(StationTask.FARM);
+            Kit.log("sf07 hale on the watch, then off: " + folk.getHealth() + " of " + folk.getMaxHealth());
+            helper.assertTrue(folk.getHealth() <= folk.getMaxHealth() + 0.01F, "no more than its most: " + folk.getHealth());
             helper.succeed();
         });
     }
