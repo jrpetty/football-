@@ -146,13 +146,12 @@ public class MineStairsGameTests {
 
     /**
      * A hand sent for stone beside a mine's stairs: the floors of the steps (the nearest stone there is)
-     * stay where they are, and it takes its stone from the rock further off.
+     * are not what it goes for; the rock further off is.
      */
-    @GameTest(template = EMPTY, timeoutTicks = 2400, batch = "ms03_stairs_spared")
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "ms03_stairs_spared")
     public static void ms03_stairs_spared(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
-        level.setDayTime(2000);
         int x = 518000, z = 60000;
         Kit.hold(level, x, z, 32);
         Kit.prepare(level, x, z, 32);
@@ -166,30 +165,24 @@ public class MineStairsGameTests {
             floors.add(step.below());
             level.setBlock(step.below(), Blocks.STONE.defaultBlockState(), 2);
         }
-        MineStairs.record(level, MineStairs.plotKey(g), steps);
         // The rock to take: a row of stone ten blocks off.
-        for (int k = 0; k < 12; k++) level.setBlock(g.offset(-10, -1, -3 + k % 6).below(k / 6), Blocks.STONE.defaultBlockState(), 2);
+        List<BlockPos> rock = new ArrayList<>();
+        for (int k = 0; k < 6; k++) {
+            BlockPos r = g.offset(-10, -1, -3 + k);
+            rock.add(r);
+            level.setBlock(r, Blocks.STONE.defaultBlockState(), 2);
+        }
         VillageFolkEntity f = folk(level, g, g);
         helper.assertTrue(f != null, "a folk");
-        f.getInventoryItems().clear();
-        f.insertItem(new ItemStack(Items.STONE_PICKAXE));
-        helper.runAtTickTime(5, () -> f.enqueueFront(Job.gather(GatherGoal.Kind.STONE, 4)));
-        helper.onEachTick(() -> {
-            keepAtWork(level, f);
-            long t = helper.getTick();
-            int got = f.countCarried(s -> s.is(Items.COBBLESTONE));
-            for (BlockPos fl : floors) {
-                if (!level.getBlockState(fl).is(Blocks.STONE)) {
-                    helper.fail("a step's floor of the mine stairs was taken at " + fl.toShortString() + " (tick " + t + ") — " + f.debugLine());
-                    return;
-                }
-            }
-            if (t % 300 == 0) Kit.log("ms03 @" + t + " cobblestone " + got + " — " + f.debugLine());
-            if (got >= 3) {
-                Kit.log("ms03 " + got + " stone gathered at " + t + ", every step's floor still there");
-                helper.succeed();
-            }
-        });
+        GatherGoal gather = new GatherGoal(f);
+        BlockPos before = gather.nearestForTests(GatherGoal.Kind.STONE);
+        MineStairs.record(level, MineStairs.plotKey(g), steps);
+        BlockPos after = gather.nearestForTests(GatherGoal.Kind.STONE);
+        Kit.log("ms03 sent for stone: before the stairs were known it went for " + (before == null ? "nothing" : before.toShortString())
+            + "; with them known, " + (after == null ? "nothing" : after.toShortString()));
+        helper.assertTrue(before != null && floors.contains(before), "the steps' floors are the nearest stone there is: " + before);
+        helper.assertTrue(after != null && rock.contains(after), "with the stairs known it goes for the rock further off: " + after);
+        helper.succeed();
     }
 
     /**

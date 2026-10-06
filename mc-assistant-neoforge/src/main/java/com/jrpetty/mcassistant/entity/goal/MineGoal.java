@@ -1174,7 +1174,13 @@ public class MineGoal extends Goal {
         BlockPos dest = moveTarget;
         if (dest == null) return;
         double distSq = assistant.distanceToSqr(dest.getX() + 0.5, dest.getY(), dest.getZ() + 0.5);
-        if (distSq < 2.5) {
+        // A step up is one across and one up, two blocks' distance squared: on the way up it is reached
+        // only when it is stood on, or every step "arrived" before it was climbed and the climb began
+        // again from the bottom.
+        boolean there = phase == Phase.ASCEND
+            ? assistant.feetPos().equals(dest) && assistant.onGround()
+            : distSq < 2.5;
+        if (there) {
             cursor = dest;
             moveTarget = null;
             if (phase == Phase.RETURN) returnSkips = 0;

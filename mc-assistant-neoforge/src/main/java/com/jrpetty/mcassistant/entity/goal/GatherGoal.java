@@ -625,6 +625,13 @@ public class GatherGoal extends Goal {
         return solid(pos.below()) && !solid(pos) && !solid(pos.above()) && !nearLiquid(pos);
     }
 
+    /** Tests: the block it would go for first, sent for this kind. */
+    @Nullable
+    public BlockPos nearestForTests(Kind kind) {
+        this.request = new Request(kind, 1);
+        return findNearest();
+    }
+
     @Nullable
     private BlockPos findNearest() {
         BlockPos hit = scanOutward(true);
