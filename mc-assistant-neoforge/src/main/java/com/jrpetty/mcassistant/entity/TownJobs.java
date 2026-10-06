@@ -108,6 +108,10 @@ public final class TownJobs {
         String key = id + "/" + works;
         Crew c = CREW.get(key);
         VillageFolkEntity f = c == null ? null : live(level, c.folk);
+        if (f != null && works.equals(LEAST) && !key.equals(ON.get(f.getUUID()))) {
+            CREW.remove(key);                                        // its hand taken for other works: these wait
+            return false;
+        }
         if (f == null || !fit(f, works)) {
             if (c != null) ON.remove(c.folk);
             f = choose(level, v, works, at, prefer, now);
@@ -155,6 +159,28 @@ public final class TownJobs {
     }
 
     /** Is this folk on the town's work just now (its own trade waits)? */
+    /**
+     * [townlife] The works that wait for all the others: a hand at them is a hand to spare for anything
+     * else. (A town of eight had its one hand putting up the welcome sign while its streets waited.)
+     */
+    static final String LEAST = "signs";
+
+    private static boolean onLeast(VillageFolkEntity f) {
+        String k = ON.get(f.getUUID());
+        return k != null && k.endsWith("/" + LEAST);
+    }
+
+    /** Is a hand at this town's work anywhere but at these works, just now? */
+    public static boolean busyElsewhere(ServerLevel level, UUID village, String works) {
+        String prefix = village + "/", mine = prefix + works;
+        for (Map.Entry<String, Crew> e : CREW.entrySet()) {
+            if (!e.getKey().startsWith(prefix) || e.getKey().equals(mine)) continue;
+            VillageFolkEntity f = live(level, e.getValue().folk);
+            if (f != null && busy(f)) return true;
+        }
+        return false;
+    }
+
     public static boolean busy(VillageFolkEntity f) {
         String key = ON.get(f.getUUID());
         if (key == null) return false;
@@ -233,7 +259,7 @@ public final class TownJobs {
         for (AssistantEntity a : Villages.folkOf(v.id())) {
             if (a.isBaby()) continue;
             adults++;
-            if (a instanceof VillageFolkEntity f && ON.containsKey(f.getUUID()) && busy(f)) busy++;
+            if (a instanceof VillageFolkEntity f && ON.containsKey(f.getUUID()) && busy(f) && (works.equals(LEAST) || !onLeast(f))) busy++;
         }
         if (adults < SETTLED && !essential(works)) return null;      // a young village: its trades first
         // Never more than one hand in eight — unless hands are standing idle in trades with more
@@ -257,7 +283,8 @@ public final class TownJobs {
         VillageFolkEntity best = null;
         double bestScore = -Double.MAX_VALUE;
         for (AssistantEntity a : Villages.folkOf(v.id())) {
-            if (!(a instanceof VillageFolkEntity f) || !fit(f, works) || ON.containsKey(f.getUUID()) && busy(f)) continue;
+            if (!(a instanceof VillageFolkEntity f) || !fit(f, works)
+                || ON.containsKey(f.getUUID()) && busy(f) && (works.equals(LEAST) || !onLeast(f))) continue;
             if (RESTING.containsKey(f.getUUID())) continue;              // had its turn: somebody else's now
             if (over != null && !spare(f, over)) continue;               // past the eighth: only a hand standing idle
             AssistantEntity.StationTask trade = f.stationTask();

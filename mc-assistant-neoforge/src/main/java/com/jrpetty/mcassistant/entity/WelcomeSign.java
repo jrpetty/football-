@@ -162,7 +162,8 @@ public final class WelcomeSign {
         String did = "written up";
         if (!up) {
             if (!toHand(level, v, posted)) return null;               // nobody is sent till the stores can pay for it
-            if (!TownJobs.atWork(level, v, "signs", post, "putting up the welcome sign")) return null;
+            if (TownJobs.busyElsewhere(level, id, TownJobs.LEAST)) return null;   // the town's other works first
+            if (!TownJobs.atWork(level, v, TownJobs.LEAST, post, "putting up the welcome sign")) return null;
             if (!posted && !Crafts.fence(level, v)) return null;
             if (!Crafts.sign(level, v)) {
                 if (!posted) Crafts.store(level, v, new ItemStack(Items.SPRUCE_FENCE));

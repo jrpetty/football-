@@ -520,6 +520,9 @@ public class EconomyGameTests {
         f.getInventoryItems().clear();
         f.insertItem(new ItemStack(Items.STONE_HOE));
         f.insertItem(new ItemStack(Items.WHEAT_SEEDS, 16));
+        // Whole: a folk short of its health eats to heal, and one raised with two hearts short of its most
+        // ate a loaf of its packed lunch the moment it had it (and set out with two meals of the three).
+        f.setHealth(f.getMaxHealth());
 
         // Out there first, at the midday meal, with nothing to eat: it sends for food, once.
         BlockPos out = Kit.surface(level, x + 75, Z + 2);

@@ -138,6 +138,7 @@ public final class Crier {
         c.walkTick = -1000;
         c.closeSince = -1;
         c.arrived = false;                                    // a crier taking over walks to the square too
+        f.clearQueue();                                       // a walk in for food queued: after the news
         f.getNavigation().stop();
         f.brain("to cry the news on the square");
     }

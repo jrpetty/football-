@@ -173,6 +173,9 @@ public final class Meals {
         }
         Meal m = Meal.at(tod);
         if (m == null) return;
+        // The crier reading the noon news has its meal after (Crier): with nothing in its pack it was sent in
+        // to the stores for food, and read the rest of the news twenty blocks off the square.
+        if (Crier.busy(f)) return;
         // A town that keeps the bell sits down to its midday meal at the noon bell (TownBell).
         if (m == Meal.LUNCH && TownBell.lunchWaits(village, time)) return;
         int bit = 1 << m.ordinal();

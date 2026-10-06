@@ -50,7 +50,7 @@ public final class Sights {
         switch (what) {
             case "sign" -> {
                 String did = WelcomeSign.putForTests(level, v);
-                out.add("SIGN-NOW " + (did == null ? "waits (nothing to make it with in the stores, or no ground at the edge)" : did));
+                out.add("SIGN-NOW " + (did == null ? "waits (a hand is on its way to put it up, or nothing to make it with in the stores, or no ground at the edge)" : did));
             }
             case "gazette" -> {
                 String did = Gazette.writeForTests(level, v);
