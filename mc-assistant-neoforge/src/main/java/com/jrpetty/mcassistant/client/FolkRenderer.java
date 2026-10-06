@@ -258,10 +258,12 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
     public void render(VillageFolkEntity folk, float entityYaw, float partialTick,
                        PoseStack pose, MultiBufferSource buffer, int packedLight) {
         // Sat on a bench (entity/Park): the whole of it lowered onto the seat, its legs out in front.
-        boolean sat = folk.getPose() == net.minecraft.world.entity.Pose.SITTING;
+        // Crouched in a hiding place (hide-and-seek: entity/Families): a little lower, its knees up.
+        boolean crouched = folk.getPose() == net.minecraft.world.entity.Pose.CROUCHING;
+        boolean sat = folk.getPose() == net.minecraft.world.entity.Pose.SITTING || crouched;
         if (sat) {
             pose.pushPose();
-            pose.translate(0.0F, folk.isBaby() ? -0.32F : -0.6F, 0.0F);
+            pose.translate(0.0F, crouched ? (folk.isBaby() ? -0.14F : -0.25F) : folk.isBaby() ? -0.32F : -0.6F, 0.0F);
         }
         super.render(folk, entityYaw, partialTick, pose, buffer, packedLight);
         if (sat) pose.popPose();

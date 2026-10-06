@@ -332,6 +332,13 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
             rightArm.xRot = -Mth.PI / 5.0F;
             leftArm.xRot = -Mth.PI / 5.0F;
         }
+        // Crouched out of sight (hide-and-seek: entity/Families): knees up, hands on them, the whole of it lower.
+        if (folk.getPose() == net.minecraft.world.entity.Pose.CROUCHING) {
+            rightLeg.xRot = -0.9F;
+            leftLeg.xRot = -0.9F;
+            rightArm.xRot = -0.7F;
+            leftArm.xRot = -0.7F;
+        }
 
         // A hand with something in it is carried a little forward.
         boolean rightMain = folk.getMainArm() == HumanoidArm.RIGHT;

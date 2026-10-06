@@ -263,6 +263,7 @@ public final class Gatherings {
                 String key = village + "/wed/" + w.a() + "/" + w.b();
                 if (DONE.putIfAbsent(key, day) != null) {
                     Villages.tell(village, day, w.names() + " were wed");
+                    Families.wed(village, w.a(), w.b(), day);      // the day kept, for its anniversaries
                 }
             }
         } else if (first) {
