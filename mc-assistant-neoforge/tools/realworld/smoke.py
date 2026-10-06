@@ -894,7 +894,7 @@ def sights_stage(r, look, cx, cz):
     # The crier sent to read the news: a little while to walk to its spot and begin.
     out = r.cmd(where + "village sights crier")
     say("crier: " + out[:500])
-    time.sleep(25)
+    time.sleep(10)                                   # at its spot and reading (eleven lines take it half a minute)
     out = r.cmd(where + "village sights")
     m = re.search(r"CRIER (.+?) " + xyz + r"(?: stand " + xyz + r")?", out)
     if m and m.group(2):
@@ -1362,6 +1362,13 @@ def mature():
     except Exception as e:  # noqa: BLE001
         say("the air views failed: %s" % e)
     say("alive after the air views: %s" % client_alive())
+    # The newer sights of a town with families in it: the sign, the gazette, the crier, the children's game,
+    # a pet and a garden (a young town has no households yet to show them).
+    try:
+        sights_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("the sights failed: %s" % e)
+    r.cmd("gamemode spectator %s" % USER)
     # The books, every page. /village stats as the player opens the screen on the nearest village's
     # books (as clicking the village board does), so the player hangs over the heart.
     try:
