@@ -412,6 +412,9 @@ public class SafetyGameTests {
 
             // Down off the ledge to the foot of it: round by the steps, not straight over the four-block edge.
             BlockPos foot = new BlockPos(x + 36, y0, Z + 3);
+            // Stood on the ledge (a folk with no AI never lands of itself, and the game plans no walk for
+            // one in the air).
+            walker.setOnGround(true);
             Path p = walker.getNavigation().createPath(foot, 0);
             int worst = 0, nodes = p == null ? 0 : p.getNodeCount();
             if (p != null) for (int i = 1; i < nodes; i++) worst = Math.max(worst, p.getNode(i - 1).y - p.getNode(i).y);

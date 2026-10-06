@@ -573,7 +573,9 @@ public class FamilyGameTests {
     @GameTest(template = EMPTY, timeoutTicks = 200, batch = "fm06_remembrance")
     public static void fm06_remembrance(GameTestHelper helper) {
         int x = 435000, z = 50000;
-        VillageFolkEntity widow = founder(helper, x, z, DAY + 3000);
+        // Day forty: a year (twenty-eight days) back from it is a day the town could have buried somebody on.
+        // (On day four the grave's year fell on day minus twenty-four, and no anniversary is kept of that.)
+        VillageFolkEntity widow = founder(helper, x, z, 24000L * 40 + 3000);
         ServerLevel level = helper.getLevel();
         UUID id = widow.ownerId();
         Villages.Village v = Villages.get(id);
