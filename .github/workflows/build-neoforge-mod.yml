@@ -415,6 +415,9 @@ jobs:
 
       - name: Publish the pictures and the report
         if: always()
+        # A hundred and forty pictures at once now and then meet GitHub's secondary rate limit on one of them;
+        # the smoke's own verdict is the step before, so a picture refused does not fail the run.
+        continue-on-error: true
         uses: softprops/action-gh-release@v2
         with:
           tag_name: village-test-latest
