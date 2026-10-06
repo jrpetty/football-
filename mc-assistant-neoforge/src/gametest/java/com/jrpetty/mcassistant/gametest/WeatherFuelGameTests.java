@@ -237,7 +237,8 @@ public class WeatherFuelGameTests {
         Kit.log("wf01 the smelter: burning " + burning + ", drew " + drawn + " logs, a smelt queued " + smelting + " — " + smelter.debugLine());
         helper.assertTrue(burning && smelting && drawn > 0 && drawn <= 16, "charcoal out of the spare logs: drew " + drawn);
 
-        // Three miners, their mines on ground at a hundred, down at the iron.
+        // Three miners, their mines on ground at a hundred, down at the iron (out beyond the square: a plot
+        // up against it is moved out to the town's mine, TownMine).
         int seam = Fuel.coalSeamFor(100, 16);
         helper.assertTrue(seam == 88 && Fuel.coalSeamFor(30, 16) == -1 && Fuel.coalSeamFor(170, 16) == 158,
             "the coal seam: twelve under the ground, at most ninety-six below the mountains' band; none worth it on low ground: "
@@ -246,7 +247,7 @@ public class WeatherFuelGameTests {
         for (int i = 0; i < miners.size(); i++) {
             VillageFolkEntity m = miners.get(i);
             m.setJob(StationTask.MINE);
-            m.assignPlot(WorkZone.around(new BlockPos(x + 20 + 20 * i, 100, Z + 20), 6, 16), "Pit " + i);
+            m.assignPlot(WorkZone.around(new BlockPos(x + 20 + 20 * i, 100, Z + 40), 6, 16), "Pit " + i);
         }
         int atCoal = 0, atIron = 0;
         for (VillageFolkEntity m : miners) {
