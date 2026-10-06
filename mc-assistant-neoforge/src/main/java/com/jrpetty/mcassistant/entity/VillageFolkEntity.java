@@ -3663,9 +3663,19 @@ public class VillageFolkEntity extends AssistantEntity {
         };
     }
 
+    /**
+     * The deepest a village's mine goes: fourteen over the bottom of the world (Y-50 in the overworld).
+     * Every open cave below Y-54 is full of lava, and the diamond mines went down to eight over the
+     * bottom, Y-56, through the middle of it: the hundred-day town lost nine and eleven folk a week in
+     * lava once its miners went for the diamonds. There are diamonds enough at Y-50.
+     */
+    private int deepestMine() {
+        return level().getMinBuildHeight() + 14;
+    }
+
     private int depthFor(StationTask trade, BlockPos site) {
         if (trade != StationTask.MINE) return WorkZone.DEFAULT_DEPTH;
-        int floor = level().getMinBuildHeight() + 8;
+        int floor = deepestMine();
         int shallow = site.getY() - 24;
         // Down to the iron from the first day: the Wood Age's shallow mines worked the stone at forty-odd,
         // where there is next to none, and the Stone Age then had none to start on. (The staircase is
@@ -3696,8 +3706,16 @@ public class VillageFolkEntity extends AssistantEntity {
         if (tickCount - seamCheckTick < 1200) return false;
         seamCheckTick = tickCount;
         Villages.Age at = Villages.ageOf(village);
+        int floor = deepestMine();
+        // A mine marked down into the lava (below the deepest a mine now goes, from an older world)
+        // comes up to the deepest it may go.
+        if (zone.depth() < floor) {
+            assignPlot(WorkZone.around(zone.center(), zone.radius(), floor), patchNameFor(StationTask.MINE));
+            setAutonomous(true);
+            brain("mine brought up out of the lava, to Y" + floor);
+            return true;
+        }
         if (at.ordinal() < Villages.Age.STONE.ordinal()) return false;
-        int floor = level().getMinBuildHeight() + 8;
         int want = Math.max(floor, IRON_SEAM_Y);
         if (at.ordinal() >= Villages.Age.DIAMOND.ordinal() && pickTierCarried() >= 3 && deepMiner()) {
             want = floor;
@@ -5827,7 +5845,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // An iron pickaxe, not twenty levels of experience: a village's miners stood at
         // level one after three game days, and diamond ore wants iron to break.
         if (zone == null || pickTierCarried() < 3) return false;
-        int floor = level().getMinBuildHeight() + 8;
+        int floor = deepestMine();
         if (zone.depth() <= floor + 4) return false;          // already down there
         assignPlot(WorkZone.around(zone.center(), zone.radius(), floor),
             patchNameFor(StationTask.MINE));
