@@ -882,8 +882,9 @@ public class MineGoal extends Goal {
     private boolean capFluid(BlockPos cell) {
         BlockPos[] suspects = { cell, cell.relative(dir), cell.above(), cell.below() };
         for (BlockPos f : suspects) {
-            if (!assistant.level().getFluidState(f).isEmpty()) {
-                if (!placeFiller(f)) return false;
+            net.minecraft.world.level.material.FluidState fs = assistant.level().getFluidState(f);
+            if (!fs.isEmpty()) {
+                if (!seal(f, fs.is(net.minecraft.tags.FluidTags.LAVA))) return false;
                 if (!saidCapped) {
                     saidCapped = true;
                     assistant.sayRoutine("Walled off liquid in the tunnel.");
@@ -898,6 +899,89 @@ public class MineGoal extends Goal {
         if (!assistant.level().getFluidState(pos).isEmpty()) return true;
         // Also peek one block beyond in the digging direction.
         return !assistant.level().getFluidState(pos.relative(dir)).isEmpty();
+    }
+
+    /**
+     * [sf] Seal a fluid off with a block from the pack. Lava takes one that does not burn and does not fall
+     * (cobblestone first: a miner always has it), never a plank, which catches, nor gravel, which drops out
+     * of the hole it was put in.
+     */
+    private boolean seal(BlockPos pos, boolean lava) {
+        if (!lava) return placeFiller(pos);
+        var inv = assistant.getInventoryItems();
+        int best = -1, bestRank = Integer.MAX_VALUE;
+        for (int i = 0; i < inv.size(); i++) {
+            ItemStack s = inv.get(i);
+            if (!BuildGoal.isBuildingBlock(s)) continue;
+            BlockState st = ((net.minecraft.world.item.BlockItem) s.getItem()).getBlock().defaultBlockState();
+            if (st.ignitedByLava() || st.getBlock() instanceof FallingBlock) continue;
+            int rank = s.is(Items.COBBLESTONE) ? 0 : s.is(Items.COBBLED_DEEPSLATE) ? 1 : 2;
+            if (rank < bestRank) { bestRank = rank; best = i; }
+        }
+        if (best < 0) return false;
+        ItemStack s = inv.get(best);
+        BlockState state = ((net.minecraft.world.item.BlockItem) s.getItem()).getBlock().defaultBlockState();
+        s.shrink(1);
+        if (s.isEmpty()) inv.set(best, ItemStack.EMPTY);
+        assistant.level().setBlockAndUpdate(pos, state);
+        assistant.placeSound(pos);
+        return true;
+    }
+
+    /** [sf] Tests: seal what is at this spot as the miner would. */
+    public boolean sealForTests(BlockPos pos) {
+        net.minecraft.world.level.material.FluidState fs = assistant.level().getFluidState(pos);
+        return !fs.isEmpty() && seal(pos, fs.is(net.minecraft.tags.FluidTags.LAVA));
+    }
+
+    /**
+     * [sf] Lava beside where it stands (or where its head is) on a step through open cave, which no dig of
+     * its own uncovered: sealed off, or (with nothing to seal it with) the run is over and it goes home.
+     * False when the way is clear.
+     */
+    private boolean lavaBeside(BlockPos feet) {
+        boolean open = false;
+        for (BlockPos cell : new BlockPos[] { feet, feet.above() }) {
+            for (Direction d : Direction.values()) {
+                BlockPos n = cell.relative(d);
+                if (n.equals(feet) || n.equals(feet.above())) continue;
+                if (!assistant.level().getFluidState(n).is(net.minecraft.tags.FluidTags.LAVA)) continue;
+                if (seal(n, true)) {
+                    if (!saidCapped) {
+                        saidCapped = true;
+                        assistant.sayRoutine("Lava! Sealed it off.");
+                    }
+                } else {
+                    open = true;
+                }
+            }
+        }
+        if (!open) return false;
+        headHome("Lava beside the gallery, and nothing in my pack to seal it with — out of here (" + oresMined + " ore so far).");
+        return true;
+    }
+
+    /** [sf] The run is over: up the ladder, back up its own stairs, or (with neither) where it stands. */
+    private void headHome(String why) {
+        digQueue.clear();
+        veinQueue.clear();
+        currentDig = null;
+        moveTarget = null;
+        if (phase == Phase.RETURN || phase == Phase.CLIMB) return;
+        if (shaftLined && cursor.getY() < shaftTopY - 4) {
+            assistant.sayRoutine("Lava — I'm getting out of here.");
+            returnReason = why;                        // said once it is out
+            beginClimb();
+            return;
+        }
+        if (stairPath.size() > 1) {
+            assistant.sayRoutine("Lava — I'm getting out of here.");
+            returnReason = why;
+            phase = Phase.RETURN;
+            returnIndex = stairPath.size() - 1;
+            return;
+        }
+        finish(why);
     }
 
     private boolean placeFiller(BlockPos pos) {
@@ -985,15 +1069,30 @@ public class MineGoal extends Goal {
             // A dug face can open onto lava or water SIDEWAYS — the planning
             // checks only ever looked ahead. Wall the pocket off with filler
             // before it pours into the gallery.
+            // [sf] Lava with a block that will not burn (cobblestone first), and lava it has nothing to seal
+            // with is the end of the run: it went on digging beside it before, the likeliest way the
+            // mountain town lost a folk "in lava".
+            boolean openLava = false;
             for (Direction d : Direction.values()) {
                 BlockPos side = pos.relative(d);
-                if (!assistant.level().getFluidState(side).isEmpty() && placeFiller(side)
-                    && !saidCapped) {
-                    saidCapped = true;
-                    assistant.sayRoutine("Walled off liquid in the tunnel.");
+                net.minecraft.world.level.material.FluidState fs = assistant.level().getFluidState(side);
+                if (fs.isEmpty()) continue;
+                boolean lava = fs.is(net.minecraft.tags.FluidTags.LAVA);
+                if (seal(side, lava)) {
+                    if (!saidCapped) {
+                        saidCapped = true;
+                        assistant.sayRoutine(lava ? "Lava! Sealed it off." : "Walled off liquid in the tunnel.");
+                    }
+                } else if (lava) {
+                    openLava = true;
                 }
             }
             sweepDrops(pos);
+            if (openLava) {
+                currentDig = null;
+                headHome("Lava, and nothing in my pack to seal it with — out of here (" + oresMined + " ore so far).");
+                return;
+            }
             // Gravel/sand above will fall into the hole — take it down too.
             BlockPos above = pos.above();
             for (int guard = 0; guard < 4
@@ -1029,6 +1128,8 @@ public class MineGoal extends Goal {
                 if (dugThisStep) freshSteps++;
             }
             dugThisStep = false;
+            // [sf] A step through open cave can come out beside lava nobody dug to: sealed first, or home.
+            if (phase != Phase.RETURN && phase != Phase.CLIMB && lavaBeside(cursor)) return;
             if (phase == Phase.DESCEND || phase == Phase.SHAFT) {
                 breadcrumb(dest);
                 stairFloors.add(dest.below().asLong());

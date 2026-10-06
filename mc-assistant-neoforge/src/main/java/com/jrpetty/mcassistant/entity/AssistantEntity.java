@@ -1715,6 +1715,45 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         || s.is(Items.RABBIT_FOOT) || s.is(Items.FEATHER) || s.is(ItemTags.WOOL) || s.is(Items.COOKED_BEEF)
         || s.is(Items.COOKED_PORKCHOP) || s.is(Items.COOKED_MUTTON) || s.is(Items.COOKED_CHICKEN) || s.is(Items.COOKED_RABBIT);
 
+    /** [sf] What a line brings up that is food: the fish, raw or cooked. */
+    public static final java.util.function.Predicate<ItemStack> FISH_CATCH = s -> s.is(Items.COD) || s.is(Items.SALMON)
+        || s.is(Items.TROPICAL_FISH) || s.is(Items.PUFFERFISH) || s.is(Items.COOKED_COD) || s.is(Items.COOKED_SALMON);
+
+    /** [sf] Meat, raw or cooked: the hunt's, or the pen's when the rancher culls. */
+    public static final java.util.function.Predicate<ItemStack> MEAT = s -> s.is(Items.BEEF) || s.is(Items.PORKCHOP)
+        || s.is(Items.MUTTON) || s.is(Items.CHICKEN) || s.is(Items.RABBIT) || s.is(Items.COOKED_BEEF)
+        || s.is(Items.COOKED_PORKCHOP) || s.is(Items.COOKED_MUTTON) || s.is(Items.COOKED_CHICKEN) || s.is(Items.COOKED_RABBIT);
+
+    /** [sf] Meat and fish as they come: what a hunt, a cull or a line brings in (a village's folk cook nothing of it). */
+    public static final java.util.function.Predicate<ItemStack> RAW_CATCH = s -> s.is(Items.BEEF) || s.is(Items.PORKCHOP)
+        || s.is(Items.MUTTON) || s.is(Items.CHICKEN) || s.is(Items.RABBIT) || s.is(Items.COD) || s.is(Items.SALMON)
+        || s.is(Items.TROPICAL_FISH) || s.is(Items.PUFFERFISH);
+
+    /**
+     * [sf] Is this what the hand's own trade brings in as food (its catch, its kill), not its rations? Raw only:
+     * the cooked loaf or chop it was given out of the stores for its dinner is its rations, and is kept.
+     */
+    public boolean ownCatch(ItemStack s) {
+        if (!RAW_CATCH.test(s)) return false;
+        return switch (stationTask) {
+            case FISH -> FISH_CATCH.test(s);
+            case HUNT, RANCH -> MEAT.test(s);
+            default -> false;
+        };
+    }
+
+    /** A fisher's day at the water: other water when this has given nothing (VillageFolkEntity). */
+    protected boolean fishWork() { return false; }
+
+    /** A rancher's herd past its breeding stock: one culled for the larder (VillageFolkEntity). */
+    protected boolean cullWork() { return false; }
+
+    /** A fish (or anything) landed: the line is worth casting here (VillageFolkEntity). */
+    public void landedACatch() { }
+
+    /** The cast found no water it could fish, or could not reach it (VillageFolkEntity). */
+    public void noWaterToFish() { }
+
     /** A carrier's pickup has nothing left worth carrying (VillageFolkEntity chooses the next). */
     protected void routeSpent() { }
 
@@ -3264,10 +3303,117 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             .add(Attributes.SAFE_FALL_DISTANCE, 5.0D);
     }
 
-    /** The drop the pathfinder will plan down: five blocks (see SAFE_FALL_DISTANCE); in a fight, the game's own. */
+    /**
+     * The drop the pathfinder will plan down: five blocks (see SAFE_FALL_DISTANCE); in a fight, the game's own.
+     *
+     * <p>[sf] Not for a village's folk. The game's own in a fight is the safe drop and as much again as its
+     * health will stand — fourteen blocks for a folk at full health — and a hunt is a "fight" to it: a
+     * hunter after a pig on a mountainside would plan its way straight down a cliff after it, in the mountain
+     * town that lost two folk "in a fall". A village's folk never plan a drop that hurts (five, fight or no fight); a builder
+     * at its building plans none over three; and outside a fight every walk is planned first with no drop
+     * over three, the five only where there is no other way (FolkNavigation).
+     */
     @Override
     public int getMaxFallDistance() {
-        return getTarget() == null ? 5 : super.getMaxFallDistance();
+        if (!isSettler()) return getTarget() == null ? 5 : super.getMaxFallDistance();
+        int most = inAFight() ? Math.min(5, super.getMaxFallDistance()) : 5;
+        if (carriesABuilding()) most = Math.min(most, CAREFUL_DROP);
+        return dropCap >= 0 ? Math.min(most, dropCap) : most;
+    }
+
+    /** [sf] The drop a village's folk plan a walk down first, and the most a builder steps off at its building. */
+    public static final int CAREFUL_DROP = 3;
+    /** [sf] The drop the planner is held to for the plan it is making now (FolkNavigation), or -1. */
+    private int dropCap = -1;
+    /** [sf] The most the path it is walking was planned to drop at a step (FolkNavigation). */
+    private int pathDrop = 5;
+
+    /** [sf] Plan the next path with no drop over this (-1: as far as getMaxFallDistance allows). */
+    public void capDrops(int cap) { this.dropCap = cap; }
+
+    /** [sf] The path just planned drops at most this far at a step. */
+    public void plannedDrop(int drop) { this.pathDrop = drop; }
+
+    /** [sf] Does a walk get planned the careful way first: a village's folk, not in a fight, not already held to it? */
+    public boolean plansCarefully() {
+        return isSettler() && !inAFight() && getMaxFallDistance() > CAREFUL_DROP;
+    }
+
+    /** [sf] Is it fighting (a foe to strike), rather than hunting or culling (an animal) or about its work? */
+    public boolean inAFight() {
+        LivingEntity t = getTarget();
+        return t != null && !(t instanceof net.minecraft.world.entity.animal.Animal);
+    }
+
+    /**
+     * [sf] The deepest drop it lets itself be carried over at a step: what its path was planned to drop while
+     * it walks one; at its building, three; otherwise the five it takes without harm.
+     */
+    private int edgeLimit() {
+        if (!getNavigation().isDone()) return Math.max(CAREFUL_DROP, Math.min(5, pathDrop));
+        return carriesABuilding() ? CAREFUL_DROP : 5;
+    }
+
+    /**
+     * [sf] At an edge, as a player crouching at one does: no step that would carry it over a drop deeper than
+     * it should take (edgeLimit), whether the step was its own, a shove from the crowd at the square, or the
+     * last of a blow it took: nothing stopped a folk going over a ledge no path of its own went over, and the
+     * mountain town lost two folk "in a fall". A drop into water, or down a ladder or a vine, is no fall.
+     */
+    @Override
+    protected net.minecraft.world.phys.Vec3 maybeBackOffFromEdge(net.minecraft.world.phys.Vec3 vec, net.minecraft.world.entity.MoverType mover) {
+        if (!isSettler() || level().isClientSide || mover != net.minecraft.world.entity.MoverType.SELF || vec.y > 0.0 || !onGround()
+                || onClimbable() || isInWater() || isInLava() || isPassenger() || isSleeping()) {
+            return vec;
+        }
+        double dx = vec.x, dz = vec.z;
+        if (dx * dx + dz * dz < 1.0E-7) return vec;
+        int limit = edgeLimit();
+        if (!overDrop(dx, dz, limit)) return vec;
+        final double step = 0.05;
+        while (dx != 0.0 && overDrop(dx, 0.0, limit)) dx = Math.abs(dx) < step ? 0.0 : dx - Math.signum(dx) * step;
+        while (dz != 0.0 && overDrop(0.0, dz, limit)) dz = Math.abs(dz) < step ? 0.0 : dz - Math.signum(dz) * step;
+        while (dx != 0.0 && dz != 0.0 && overDrop(dx, dz, limit)) {
+            dx = Math.abs(dx) < step ? 0.0 : dx - Math.signum(dx) * step;
+            dz = Math.abs(dz) < step ? 0.0 : dz - Math.signum(dz) * step;
+        }
+        return new net.minecraft.world.phys.Vec3(dx, vec.y, dz);
+    }
+
+    /** [sf] Would a step this far leave it over open air deeper than {@code limit}, with no water or ladder under it? */
+    private boolean overDrop(double dx, double dz, int limit) {
+        net.minecraft.world.phys.AABB moved = getBoundingBox().move(dx, 0.0, dz);
+        net.minecraft.world.phys.AABB below = new net.minecraft.world.phys.AABB(moved.minX, moved.minY - limit - 0.5, moved.minZ, moved.maxX, moved.minY, moved.maxZ);
+        if (!level().noCollision(this, below)) return false;          // ground within the drop it takes
+        BlockPos.MutableBlockPos p = BlockPos.containing((moved.minX + moved.maxX) / 2.0, moved.minY, (moved.minZ + moved.maxZ) / 2.0).mutable();
+        for (int i = 0; i < 32; i++) {
+            BlockState st = level().getBlockState(p);
+            if (st.getFluidState().is(net.minecraft.tags.FluidTags.WATER) || st.is(net.minecraft.tags.BlockTags.CLIMBABLE)) return false;
+            if (!st.getCollisionShape(level(), p).isEmpty() || !st.getFluidState().isEmpty()) break;
+            p.move(net.minecraft.core.Direction.DOWN);
+        }
+        return true;
+    }
+
+    /**
+     * [sf] A blow that would throw it over a ledge: it braces against it, as anybody at the edge of a drop
+     * does, and gives a step where it would have flown three. Away from an edge a blow is a blow.
+     */
+    @Override
+    public void knockback(double strength, double x, double z) {
+        if (isSettler() && !level().isClientSide && onGround() && strength > 0.0 && x * x + z * z > 1.0E-5) {
+            double len = Math.sqrt(x * x + z * z);
+            double px = -x / len, pz = -z / len;                       // the way the blow throws it
+            for (int d = 1; d <= 2; d++) {
+                BlockPos p = BlockPos.containing(getX() + px * d, getY(), getZ() + pz * d);
+                if (level().getBlockState(p).getCollisionShape(level(), p).isEmpty() && dropBelow(p) > CAREFUL_DROP
+                        && level().getFluidState(p.below(dropBelow(p) + 1)).isEmpty()) {
+                    strength *= 0.25;
+                    break;
+                }
+            }
+        }
+        super.knockback(strength, x, z);
     }
 
     /** A ground navigator that floats over water, opens/passes doors, and
@@ -3304,6 +3450,15 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
         // On fire or in lava: get out, and stop whatever we were walking to.
         if (this.isInLava() || (this.isOnFire() && this.getRemainingFireTicks() > 20)) {
+            // [sf] Burning, and out of the lava: water a few steps off puts it out at once, where dry
+            // ground only waits for the fire to burn itself out (eight seconds of it, after lava).
+            if (!this.isInLava() && !this.isInWater()) {
+                BlockPos water = findNearestWater(4);
+                if (water != null) {
+                    getNavigation().moveTo(water.getX() + 0.5, water.getY(), water.getZ() + 0.5, 1.4D);
+                    return;
+                }
+            }
             BlockPos safe = nearestSafeGround(6);
             if (safe != null) {
                 getNavigation().moveTo(safe.getX() + 0.5, safe.getY(), safe.getZ() + 0.5, 1.4D);
@@ -3976,6 +4131,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         }
         int job = jobDepositReserve(s);
         if (stationTask == StationTask.NONE) return job;
+        // [sf] The catch is the town's, not the hand's rations. The upkeep below kept eight of every
+        // kind of food in the pack, so a hunter kept eight beef, eight pork and eight mutton, a fisher
+        // eight cod and eight salmon, and ate them there; a hunter that took two or three beasts a day
+        // never banked any, and a mountain town of seventy-seven read "0 from the hunt (2 hunters, 0
+        // each)". Its rations are bread like anybody's; what it catches goes home.
+        if (isSettler() && ownCatch(s)) return job;
         // Every working specialist holds its own upkeep back, whatever its job.
         // Without this a miner stashes the very redstone its core charge is
         // about to need — and a farmer the food it eats — then immediately digs
@@ -4076,6 +4237,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case FISH -> s.is(Items.FISHING_ROD) ? 1
                 // The makings of a rod, while it has none: kept, not banked back before it is made.
                 : countCarried(x -> x.is(Items.FISHING_ROD)) == 0 && (s.is(Items.STRING) || s.is(ItemTags.PLANKS)) ? (s.is(Items.STRING) ? 2 : 1)
+                // [sf] The catch goes home; a bite of something else is its rations.
+                : FISH_CATCH.test(s) ? 0
                 : (s.get(DataComponents.FOOD) != null ? 8 : 0);
             case STORE -> s.get(DataComponents.FOOD) != null ? 8 : 0;
             case SMITH, TAILOR, BEEKEEP, BREW, ENCHANT, COOK, SHOP, BANK -> s.get(DataComponents.FOOD) != null ? 8 : 0;
@@ -6583,6 +6746,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             // its pack could take neither a new pick nor a handle for one, and nothing ever banked
             // its load, because the banking (below) waits behind this checklist.
             if (isPackFull() && stashable() > 0 && stationDepositDue()) { brain("banking output to make room for kit"); return true; }
+            // [sf] A fisher with no water at its ground: other water, or another trade (VillageFolkEntity).
+            // Nothing in the stores is water; asking for it all day helped nobody.
+            if (stationTask == StationTask.FISH && missingEssentials.contains("water in the zone") && fishWork()) {
+                brain("no water here: looking for other water");
+                return true;
+            }
             // Help itself from its own chests before bothering anyone. A player
             // who stocked spare hoes, pickaxes or torches at the station should
             // be able to walk away for hours — a worn-out tool shouldn't idle a
@@ -6699,8 +6868,13 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                         }
                     }
                 }
+                // [sf] A village's rancher keeps a breeding herd of each kind and culls past it for
+                // the larder (VillageFolkEntity.cullWork). The count below cannot do it for a village:
+                // its hunt spares every animal in the rancher's own ground, so it never took one, and
+                // "0 from the pen" was all the pen ever gave.
+                if (cullWork()) return true;
                 int adults = adultAnimalsNearby(STATION_RADIUS);
-                if (adults > 10) {
+                if (adults > 10 && !isSettler()) {
                     say("Herd's getting big — culling a couple for the larder.");
                     enqueue(Job.hunt(null, 2));
                     return true;
@@ -6860,6 +7034,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case FISH -> {
                 // A resident angler: fishes the zone's water, cooks nothing, and
                 // the deposit rung banks the catch (plus whatever junk treasure).
+                // [sf] A village's fisher whose water has given nothing all day looks for other water first.
+                if (fishWork()) return true;
                 enqueue(Job.fish(8));
                 return true;
             }

@@ -113,7 +113,7 @@ public final class Villages {
     public static void ageForTests(UUID id, Age age) { AGE.put(id, age); }
 
     /** Tests: the stores counted afresh on the next look. */
-    public static void resetStockForTests() { STOCK_TICK.clear(); }
+    public static void resetStockForTests() { STOCK_TICK.clear(); STEADY.clear(); }
 
     // ------------------------------ the village's news ------------------------
     //
@@ -424,6 +424,8 @@ public final class Villages {
         LAST_BAKE.clear();
         STOCK.clear();
         STOCK_TICK.clear();
+        NO_WATER.clear();                   // [sf] the water no fisher could fish
+        STEADY.clear();                     // [sf] the stores' last good morning reading
     }
 
     /** Every settlement this session knows about. */
@@ -799,6 +801,10 @@ public final class Villages {
      * makes for itself, so those want nothing built first.)
      */
     static boolean craftReady(@Nullable UUID villageId, AssistantEntity.StationTask trade) {
+        // [sf] A fisher needs water it can get a line into and walk to. Where its fishers found none within reach
+        // of the town, the village wants none for a few days: the mountain town kept one fisher on "0 fish" for
+        // good, and every newcomer it sent to the trade looked for the water that was not there.
+        if (trade == AssistantEntity.StationTask.FISH) return !dryForFishers(villageId);
         if (trade == AssistantEntity.StationTask.STORE || trade == AssistantEntity.StationTask.HAUL) {
             return villageId != null && (Storehouses.stands(villageId) || hasBuilt(villageId, "storage")
                 || builtAt(villageId, "storage") != null);
@@ -806,6 +812,37 @@ public final class Villages {
         if (!trade.isCraft() || trade == AssistantEntity.StationTask.BEEKEEP) return true;
         String building = VillageFolkEntity.buildingFor(trade);
         return building == null || (villageId != null && (hasBuilt(villageId, building) || builtAt(villageId, building) != null));
+    }
+
+    /** [sf] How long a village wants no fisher after its fishers found no water within reach of the town. */
+    public static final long NO_WATER_FOR = 3 * 24000L;
+    /** [sf] When each village's fishers last found no water within reach (game time); kept in the ledger too. */
+    private static final Map<UUID, Long> NO_WATER = new ConcurrentHashMap<>();
+
+    /** [sf] No open water the town can walk to, as its fisher found (VillageFolkEntity.newWaters): no fisher wanted for now. */
+    public static void noWaterForFishers(@Nullable UUID villageId, long gameTime) {
+        if (villageId == null) return;
+        if (gameTime > CLOCK) CLOCK = gameTime;
+        NO_WATER.put(villageId, gameTime);
+        com.jrpetty.mcassistant.village.Ledger.note(villageId, "fish.dry", Long.toString(gameTime));
+    }
+
+    /** [sf] Has the village found no water for a fisher in the last few days? */
+    public static boolean dryForFishers(@Nullable UUID villageId) {
+        if (villageId == null) return false;
+        Long at = NO_WATER.get(villageId);
+        if (at == null) {
+            String kept = com.jrpetty.mcassistant.village.Ledger.note(villageId, "fish.dry");
+            try {
+                at = kept == null || kept.isEmpty() ? Long.MIN_VALUE : Long.parseLong(kept);
+            } catch (NumberFormatException e) {
+                at = Long.MIN_VALUE;
+            }
+            NO_WATER.put(villageId, at);
+        }
+        if (at == Long.MIN_VALUE) return false;
+        long since = CLOCK - at;
+        return since >= 0 && since < NO_WATER_FOR;
     }
 
     /** Is this village big enough (and far enough on) to want this trade at all? */
@@ -1205,7 +1242,10 @@ public final class Villages {
      */
     public static int stock(net.minecraft.server.level.ServerLevel level, BlockPos centre,
                             Task task, int radius) {
-        UUID key = UUID.nameUUIDFromBytes(("v" + centre.asLong()).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        // [sf] Kept by the reach it was counted over as well as the heart: one count over thirty-two blocks
+        // (stock(level, centre, task)) answered every count over the whole of a big town's reach for the next
+        // ten seconds, the field chests out past thirty-two missing from it.
+        UUID key = UUID.nameUUIDFromBytes(("v" + centre.asLong() + "r" + radius).getBytes(java.nio.charset.StandardCharsets.UTF_8));
         long[] when = STOCK_TICK.computeIfAbsent(key, k -> new long[1]);
         int[] cache = STOCK.computeIfAbsent(key, k -> new int[Task.values().length]);
         long now = level.getGameTime();
@@ -1218,10 +1258,18 @@ public final class Villages {
             boolean before = ZoneChests.askAs(true);
             java.util.List<ZoneChests.Found> stores;
             try {
-                stores = ZoneChests.around(level, centre, radius, STORES_TALL);
+                stores = new java.util.ArrayList<>(ZoneChests.around(level, centre, radius, STORES_TALL));
             } finally {
                 ZoneChests.askAs(before);
             }
+            // [sf] And the goods waiting in the door of a storehouse that has come apart (a unit out of its
+            // cube, being laid again): still the village's, and still counted. Skipped as "not a store",
+            // the whole storehouse went out of the count for as long as the cube stood broken, which is
+            // what one morning in the mountain town looked like: "food 185 stone 151 iron 0" against
+            // 1,235, 1,658 and 31 the day before and back to 1,200 the day after, and eight hands sent to
+            // the fields for the day.
+            // (Only round the heart, where a storehouse stands: Storehouses.REACH.)
+            stores.addAll(ZoneChests.waitingGoods(level, centre, Storehouses.REACH, STORES_TALL));
             for (ZoneChests.Found f : stores) {
                 if (!f.stillThere() || !ZoneChests.isStashable(f)) continue;
                 net.minecraft.world.Container c = f.container();
@@ -1241,6 +1289,54 @@ public final class Villages {
             }
         }
         return cache[task.ordinal()];
+    }
+
+    /** [sf] The stores' last good morning reading, by village: what each count read, and the morning it was last doubted. */
+    private static final class Steady {
+        final int[] good = new int[Task.values().length];
+        final long[] doubted = new long[Task.values().length];
+
+        Steady() {
+            java.util.Arrays.fill(doubted, Long.MIN_VALUE);
+        }
+    }
+
+    private static final Map<UUID, Steady> STEADY = new ConcurrentHashMap<>();
+    /** [sf] A good reading under this is too small to doubt a fall from: a few loaves either way. */
+    static final int STEADY_FLOOR = 48;
+
+    /**
+     * [sf] The stores as the morning's decisions read them (Market's hungry village, the leader's books and
+     * plan): the count as it stands, unless it has fallen by more than three quarters since the last good one
+     * while the storehouse stands. A storehouse does not empty itself overnight; a count that missed it does
+     * (a cube come apart and being laid again, a chunk half come back from the disk), and the mountain town
+     * read "food 185" against 1,235 the day before and 1,200 the day after, and sent eight hands to the
+     * fields for a day. Then the last good reading is used for the day, and the books say so. Only one morning
+     * in a row: a second low morning is believed.
+     */
+    public static int steadyStock(net.minecraft.server.level.ServerLevel level, Village v, Task task, long day) {
+        Steady s = STEADY.computeIfAbsent(v.id(), k -> new Steady());
+        int i = task.ordinal();
+        synchronized (s) {
+            int now = stock(level, v.centre(), task, storesRadius(v.id()));
+            int good = s.good[i];
+            boolean low = good >= STEADY_FLOOR && now * 4 < good && Storehouses.stands(v.id());
+            if (low && s.doubted[i] == day) return good;               // doubted already this morning
+            if (low && s.doubted[i] != day - 1) {
+                s.doubted[i] = day;
+                tell(v.id(), day, "the stores read " + now + " " + task.name().toLowerCase(java.util.Locale.ROOT) + " this morning against "
+                    + good + " at the last good count, with the storehouse standing: the day was planned on the last good count");
+                return good;
+            }
+            s.good[i] = now;
+            return now;
+        }
+    }
+
+    /** [sf] Tests: the morning's read of the stores on this day. */
+    public static int steadyStockForTests(net.minecraft.server.level.ServerLevel level, Village v, Task task, long day) {
+        forgetStock();
+        return steadyStock(level, v, task, day);
     }
 
     /**

@@ -525,6 +525,35 @@ public final class Drover {
         return out;
     }
 
+    /**
+     * [sf] One grown animal past the herd kept, of the kind the pen has most of past it, or null when every
+     * kind is at the herd kept or under. Never one of a kind down to its breeding pair, whatever is asked; never
+     * one with a name or on a lead; and the pair in love are left to it.
+     */
+    @Nullable
+    static Animal surplus(ServerLevel level, BlockPos pen, int r, int keep) {
+        int kept = Math.max(2, keep);
+        Map<EntityType<?>, Integer> herd = herd(level, pen, r);
+        EntityType<?> most = null;
+        int over = 0;
+        for (Map.Entry<EntityType<?>, Integer> e : herd.entrySet()) {
+            int past = e.getValue() - kept;
+            if (past > over) { over = past; most = e.getKey(); }
+        }
+        if (most == null) return null;
+        final EntityType<?> kind = most;
+        Animal pick = null;
+        for (Animal a : level.getEntitiesOfClass(Animal.class, new AABB(pen).inflate(r, 6, r),
+                a -> a.isAlive() && !a.isBaby() && a.getType() == kind && !a.hasCustomName() && !a.isLeashed())) {
+            if (a.isInLove()) continue;
+            // A sheep with its wool on gives it with the meat; otherwise the oldest goes first.
+            boolean woolly = a instanceof Sheep sh && !sh.isSheared();
+            boolean pickWoolly = pick instanceof Sheep ps && !ps.isSheared();
+            if (pick == null || woolly && !pickWoolly || woolly == pickWoolly && a.tickCount > pick.tickCount) pick = a;
+        }
+        return pick;
+    }
+
     private static boolean farmed(Animal a) {
         return a instanceof Sheep || a instanceof Cow || a instanceof Pig || a instanceof Chicken;
     }

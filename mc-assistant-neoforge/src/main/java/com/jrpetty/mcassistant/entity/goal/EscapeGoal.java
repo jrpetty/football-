@@ -169,6 +169,12 @@ public class EscapeGoal extends Goal {
         if (!s.isSolid()) return;
         // Don't smash chests/furnaces/spawners and the like to get free.
         if (a.level().getBlockEntity(p) != null) return;
+        // [sf] Nor a block with lava behind it: a folk wedged in a cave that carved its way out through the
+        // wall of a lava pocket let the lava in on itself. The miner seals what it uncovers (MineGoal); a
+        // folk only trying to get free leaves that wall alone and tries another way.
+        for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
+            if (a.level().getFluidState(p.relative(d)).is(net.minecraft.tags.FluidTags.LAVA)) return;
+        }
         if (a.level().destroyBlock(p, true, a)) {
             for (ItemEntity drop : a.level().getEntitiesOfClass(
                     ItemEntity.class, new AABB(p).inflate(2.0))) {

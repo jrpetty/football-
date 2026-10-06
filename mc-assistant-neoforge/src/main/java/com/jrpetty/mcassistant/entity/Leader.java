@@ -403,7 +403,9 @@ public final class Leader {
         // The village's food: what is in its stores and in its people's packs (a day's rations or
         // so each: a founder carries a few days' bread, and a village that counted only its stores
         // called a famine on its first morning and sent its miners to the fields).
-        int stock = Villages.stock(level, v.centre(), Villages.Task.FOOD, Villages.storesRadius(id));
+        // [sf] Steadied against a count that missed the storehouse (Villages.steadyStock): one such morning
+        // reads as a thousand meals eaten in a day, and puts the town on short commons.
+        int stock = Villages.steadyStock(level, v, Villages.Task.FOOD, day);
         for (AssistantEntity a : Villages.folkOf(id)) stock += Math.min(16, a.countFood());
         int in = FOOD_IN.getOrDefault(id, 0);
         FOOD_IN.remove(id);
