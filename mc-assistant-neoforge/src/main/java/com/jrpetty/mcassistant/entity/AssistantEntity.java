@@ -5642,6 +5642,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         }
         var hp = getAttribute(Attributes.MAX_HEALTH);
         if (hp != null) {
+            // Whole before, whole after: a sturdy folk raised at twenty of its twenty-two ate a loaf of its packed
+            // lunch (or the hunt's beef) to heal the two it was never short of.
+            float most = getMaxHealth();
+            boolean whole = getHealth() >= most;
             hp.removeModifier(VETERAN_HP_ID);
             double hearts = (veteranLevel() >= 20 ? 4.0 : 0.0) + loyaltyHearts() * 2.0
                 + (trait == Trait.STURDY ? 2.0 : 0.0);
@@ -5650,6 +5654,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                     VETERAN_HP_ID, hearts,
                     net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE));
             }
+            if (whole && getMaxHealth() > most) setHealth(getMaxHealth());
         }
         var speed = getAttribute(Attributes.MOVEMENT_SPEED);
         if (speed != null) {

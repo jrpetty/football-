@@ -224,6 +224,8 @@ public class SafetyGameTests {
         hunter.insertItem(new ItemStack(Items.BEEF, 5));
         hunter.insertItem(new ItemStack(Items.PORKCHOP, 3));
         hunter.insertItem(new ItemStack(Items.LEATHER, 2));
+        // Whole: one raised two hearts short of its most ate a beef to heal, and seven of the eight reached the chest.
+        hunter.setHealth(hunter.getMaxHealth());
         hunter.moveTo(chest.getX() + 2.5, chest.getY(), chest.getZ() + 0.5, 0.0F, 0.0F);
         int keepBeef = hunter.depositReserve(new ItemStack(Items.BEEF, 5));
         int keepPork = hunter.depositReserve(new ItemStack(Items.PORKCHOP, 3));
