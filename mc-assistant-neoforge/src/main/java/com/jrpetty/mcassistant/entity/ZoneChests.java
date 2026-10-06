@@ -147,9 +147,15 @@ public final class ZoneChests {
         // The village's storehouse is one of its stores wherever on its square it went up: a cube
         // raised a few blocks past the edge of a look round the heart was a store nobody found —
         // goods cleared into it were gone, and the village counted no food in a full larder.
+        // [sf] And inside the look as well, when the walk over the chunk did not find it: a chunk's map of
+        // its block entities holds only those made so far, and a chunk come back from the disk makes them
+        // as they are asked for — the door asked for by name is made then and there; walked past in the
+        // map, it was not there, and a count of the stores could go without the storehouse.
         if (settlerAsking()) {
+            java.util.Set<BlockPos> seen = new java.util.HashSet<>();
+            for (Found f : out) seen.add(f.pos());
             for (BlockPos door : Storehouses.doorsNear(level, origin)) {
-                if (inBox(door, min, max)) continue;                       // seen already
+                if (seen.contains(door)) continue;                          // seen already
                 LevelChunk chunk = level.getChunkSource().getChunkNow(door.getX() >> 4, door.getZ() >> 4);
                 if (chunk == null) continue;
                 BlockEntity be = chunk.getBlockEntity(door);
@@ -160,6 +166,31 @@ public final class ZoneChests {
             }
         }
         out.sort((a, b) -> Long.compare(a.pos().asLong(), b.pos().asLong()));
+        return out;
+    }
+
+    /**
+     * [sf] The storehouse units holding a store's goods while their cube is not whole (StorehouseBlock): not a
+     * store to put anything into or take anything out of, but the village's goods all the same, for a count of
+     * what it holds (Villages.stock).
+     */
+    public static List<Found> waitingGoods(Level level, BlockPos origin, int radius, int height) {
+        BlockPos min = origin.offset(-radius, -height, -radius);
+        BlockPos max = origin.offset(radius, height, radius);
+        List<Found> out = new ArrayList<>(1);
+        for (int cx = min.getX() >> 4; cx <= (max.getX() >> 4); cx++) {
+            for (int cz = min.getZ() >> 4; cz <= (max.getZ() >> 4); cz++) {
+                LevelChunk chunk = level.getChunkSource().getChunkNow(cx, cz);
+                if (chunk == null) continue;
+                for (var entry : chunk.getBlockEntities().entrySet()) {
+                    if (entry.getValue() instanceof com.jrpetty.mcassistant.block.StorehouseBlockEntity unit
+                            && !unit.isStore() && !unit.isRemoved() && unit.hasGoods() && inBox(entry.getKey(), min, max)
+                            && !isPrivate(level, entry.getKey())) {
+                        out.add(new Found(entry.getKey().immutable(), unit));
+                    }
+                }
+            }
+        }
         return out;
     }
 

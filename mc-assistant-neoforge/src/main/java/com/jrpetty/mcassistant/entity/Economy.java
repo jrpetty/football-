@@ -134,6 +134,10 @@ public final class Economy {
         return Prices.of(s);
     }
 
+    /** [sf] A fish as it comes out of the water. */
+    static final java.util.function.Predicate<ItemStack> RAW_FISH = s -> s.is(Items.COD) || s.is(Items.SALMON)
+        || s.is(Items.TROPICAL_FISH) || s.is(Items.PUFFERFISH);
+
     /**
      * A working folk brought this home to the stores (or handed it to the carrier that came out
      * for it): it is the village's output, and its own. Carriers and storekeepers make nothing
@@ -143,6 +147,10 @@ public final class Economy {
         UUID village = f.ownerId();
         StationTask trade = f.stationTask();
         if (village == null || s.isEmpty() || trade == StationTask.NONE || trade == StationTask.HAUL || trade == StationTask.STORE) return;
+        // [sf] A raw fish came off a line, whoever brings it in: a fisher that gave up its water for the woods
+        // banks the last of its catch as a woodcutter, and a woodcutter makes no food, so it went down as
+        // nothing at all. It is the water's, booked as fish (Larder).
+        if (RAW_FISH.test(s)) trade = StationTask.FISH;
         Kind k = kindOf(s);
         if (k == null || !makes(trade, k, s)) return;
         // What it was given (its kit) or fetched out of the stores, put back, was not made by anybody:

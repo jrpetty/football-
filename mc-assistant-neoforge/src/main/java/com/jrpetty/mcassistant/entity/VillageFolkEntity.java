@@ -3528,6 +3528,9 @@ public class VillageFolkEntity extends AssistantEntity {
             triedTrades++;
             if (triedTrades >= 3) {
                 triedTrades = 0;
+                // [sf] Three looks on three bearings and no open water the town can walk to: no fisher is wanted
+                // for a few days, so the next newcomer is not sent to look for it again (Villages.craftReady).
+                if (trade == StationTask.FISH && ownerId() != null) Villages.noWaterForFishers(ownerId(), level().getGameTime());
                 StationTask fallback = nextTradeAfter(trade);
                 if (fallback != trade) setStation(blockPosition(), fallback);
             }
@@ -4481,7 +4484,13 @@ public class VillageFolkEntity extends AssistantEntity {
                 BlockPos grazed = scan(from, SCAN, 6, radius, p -> clear.test(p) && pasture(p));
                 yield grazed != null ? grazed : scan(from, SCAN, 6, radius, p -> clear.test(p) && meadow(p));
             }
-            case FISH -> scan(from, SCAN, 6, radius, p -> clear.test(p) && fishable(p));
+            // [sf] Open water the town can walk to (Reach), as the farmer's field is: a mountain town's fisher
+            // could be staked on a lake under ice, or on water down a cliff, and land nothing for good.
+            case FISH -> {
+                Reach walk = town != null && level() instanceof net.minecraft.server.level.ServerLevel sl
+                    ? Reach.of(sl, town, heart) : null;
+                yield scan(from, SCAN, 6, radius, p -> clear.test(p) && (walk == null || walk.reaches(p, radius + 2)) && fishable(p));
+            }
             // The hives go out on open grass, where there is room for flowers.
             case BEEKEEP -> scan(from, SCAN, 6, radius, p -> clear.test(p) && meadow(p));
             // Hunting grounds: wild country with game on it, out past the fields and pastures; failing
@@ -4687,7 +4696,12 @@ public class VillageFolkEntity extends AssistantEntity {
         if (!boxReady(pos, 6)) return false;
         int water = 0;
         for (BlockPos p : BlockPos.betweenClosed(pos.offset(-6, -3, -6), pos.offset(6, 1, 6))) {
-            if (level().getBlockState(p).is(Blocks.WATER) && ++water >= 12) return true;
+            // [sf] The top of the water, open to the sky a line is cast from (FishGoal casts nowhere else): water
+            // under ice, or under a ledge, counted here, and a fisher sent to it had nowhere to cast.
+            if (!level().getBlockState(p).is(Blocks.WATER)) continue;
+            BlockPos up = p.above();
+            if (!level().getBlockState(up).canBeReplaced() || !level().getFluidState(up).isEmpty()) continue;
+            if (++water >= 9) return true;
         }
         return false;
     }
@@ -4881,6 +4895,7 @@ public class VillageFolkEntity extends AssistantEntity {
      */
     @Override
     public boolean spareForBreeding(net.minecraft.world.entity.animal.Animal a) {
+        if (cullMark != null && cullMark.equals(a.getUUID())) return false;   // [sf] past the herd kept (cullWork counted)
         int same = level().getEntitiesOfClass(net.minecraft.world.entity.animal.Animal.class, a.getBoundingBox().inflate(24.0),
             o -> o.isAlive() && !o.isBaby() && o.getType() == a.getType()).size();
         return same < 3;
@@ -4991,6 +5006,166 @@ public class VillageFolkEntity extends AssistantEntity {
         return huntWork();
     }
 
+    // ------------------------------ the pen's larder [sf] ---------------------
+
+    /**
+     * The herd a rancher keeps of each kind: a pair to breed and a pair besides. What the pen has past it
+     * is the larder's: the mountain town's two ranchers never brought in a meal ("0 from the pen (2
+     * ranchers, 0 each)"), because the cull went through the hunt, and the hunt spares every animal on a
+     * rancher's ground.
+     */
+    public static final int HERD_KEPT = 4;
+    /** The one animal being culled now: neither the herd's nor the breeding pair's to spare. */
+    @Nullable private UUID cullMark;
+    private int cullTick = -100000;
+
+    /** A look over the pen every half-minute: one past the herd kept of any kind is culled for the larder. */
+    @Override
+    protected boolean cullWork() {
+        if (cullMark != null && peekJob() == null) cullMark = null;       // that cull is over, one way or the other
+        if (stationTask() != StationTask.RANCH || ownerId() == null || peekJob() != null || Drover.busy(this)) return false;
+        if (tickCount - cullTick < 600) return false;
+        return cullNow();
+    }
+
+    private boolean cullNow() {
+        if (!(level() instanceof net.minecraft.server.level.ServerLevel server)) return false;
+        WorkZone z = workZone();
+        if (z == null) return false;
+        cullTick = tickCount;
+        net.minecraft.world.entity.animal.Animal one = Drover.surplus(server, z.center(), Math.max(8, Math.min(16, z.radius())), HERD_KEPT);
+        String word = one == null ? null : gameWord(one);
+        if (word == null) return false;
+        // The hunt does the killing (the blade, the drops swept into the pack); the meat, the hide and the wool
+        // go home to the stores with the rest of the pen's work, booked "from the pen" (Larder).
+        cullMark = one.getUUID();
+        enqueue(Job.hunt(word, 1));
+        brain("culling a " + Drover.kind(one) + ": the pen has more than " + HERD_KEPT);
+        return true;
+    }
+
+    /** Tests: look over the pen now, as the station brain would, without the half-minute's wait. */
+    public boolean cullForTests() {
+        if (cullMark != null && peekJob() == null) cullMark = null;
+        if (stationTask() != StationTask.RANCH || peekJob() != null) return false;
+        return cullNow();
+    }
+
+    // ------------------------------ the fisher [sf] ----------------------------
+
+    /**
+     * A working day at one water with nothing landed: the fish are not to be had there. The hunter has
+     * always gone looking for new grounds after a day of nothing (huntWork); the fisher sat by its pond.
+     * The mountain town's one fisher brought in "0 fish" day after day, and a mountain town's water is
+     * under ice, or down a cliff nobody can get to: it would have cast at it for good.
+     */
+    static final int FISHLESS_TICKS = 9000;
+    /**
+     * Working time at this water since it last landed anything (counted between the station brain's looks,
+     * so a night in bed is not a day without a bite), the water it is for, and casts that found no water it
+     * could fish.
+     */
+    private int fishlessTicks, fishLookTick;
+    @Nullable private BlockPos catchGround;
+    private int dryCasts;
+    private int waterLookTick = -100000;
+
+    @Override
+    public void landedACatch() {
+        fishlessTicks = 0;
+        dryCasts = 0;
+    }
+
+    @Override
+    public void noWaterToFish() {
+        dryCasts++;
+    }
+
+    /** True when it has moved: to other water, or (with none within reach of the town) to another trade. */
+    @Override
+    protected boolean fishWork() {
+        if (!(level() instanceof net.minecraft.server.level.ServerLevel server) || ownerId() == null
+                || stationTask() != StationTask.FISH) return false;
+        WorkZone z = workZone();
+        if (z == null) return false;
+        if (catchGround == null || !catchGround.equals(z.center())) {
+            catchGround = z.center();
+            fishlessTicks = 0;
+            dryCasts = 0;
+        }
+        int gap = tickCount - fishLookTick;
+        fishLookTick = tickCount;
+        if (gap > 0 && gap < 600) fishlessTicks += gap;          // its working time, not the night or a long errand
+        boolean dry = dryCasts >= 2;
+        if (!dry && tickCount - waterLookTick > 1200) {
+            waterLookTick = tickCount;
+            dry = com.jrpetty.mcassistant.entity.goal.FishGoal.waterFor(this) == null;
+        }
+        boolean fishless = fishlessTicks > FISHLESS_TICKS;
+        if (!dry && !fishless) return false;
+        boolean couldNotCast = dry || dryCasts > 0;
+        fishlessTicks = 0;
+        dryCasts = 0;
+        return newWaters(server, couldNotCast);
+    }
+
+    /**
+     * Other water, as the hunter finds new grounds: open water (not under ice, not under a ledge) that the
+     * town can walk to (findSite). With none to be had and this water no use to it either, the village
+     * stops wanting a fisher for a few days (Villages.noWaterForFishers) and this one takes up the trade
+     * the village is shortest of.
+     */
+    private boolean newWaters(net.minecraft.server.level.ServerLevel server, boolean dry) {
+        UUID village = ownerId();
+        if (village == null) return false;
+        WorkZone was = workZone();
+        avoidHere = was;
+        searchBearing += 3;
+        BlockPos site = findSite(StationTask.FISH, radiusFor(StationTask.FISH));
+        avoidHere = null;
+        long day = level().getDayTime() / 24000L;
+        if (site != null && (was == null || site.distSqr(was.center()) >= 16 * 16)) {
+            setStation(site, StationTask.FISH);
+            assignPlot(WorkZone.around(site, radiusFor(StationTask.FISH), WorkZone.DEFAULT_DEPTH), patchNameFor(StationTask.FISH));
+            setAutonomous(true);
+            FolkTalk.speak(this, dry
+                ? FolkTalk.pick(getRandom(), "There's no getting a line into that water. I'll find some that'll take one.",
+                    "Ice and rock, no fishing here. Other water, then.")
+                : FolkTalk.pick(getRandom(), "Not a bite all day. The fish are somewhere else.",
+                    "Nothing landed since morning. I'll try other water."));
+            brain("new waters: " + site.toShortString());
+            return true;
+        }
+        if (!dry) {
+            brain("no other water to try; this one will give a fish yet");
+            return false;
+        }
+        Villages.noWaterForFishers(village, level().getGameTime());
+        Villages.tell(village, day, displayNameCap() + " gave up fishing: no water fit to fish within reach of the town");
+        FolkTalk.speak(this, "There's no water within reach of the town that'll give a fish. I'll turn my hand to something else.");
+        StationTask next = Villages.needed(village);
+        if (next == StationTask.FISH) next = StationTask.FARM;
+        BlockPos there = findSite(next, radiusFor(next));
+        if (there != null) {
+            setStation(there, next);
+            assignPlot(WorkZone.around(there, radiusFor(next), depthFor(next, there)), patchNameFor(next));
+            setAutonomous(true);
+        } else {
+            setWorkZone(null);              // its trade and its ground let go: it takes up what the town wants (takeUpATrade)
+        }
+        brain("no water for a fisher within reach of the town: now " + stationTask().label);
+        return true;
+    }
+
+    /** Tests: the fisher's look at its water, as the station brain runs it; {@code day} pretends a working day went by. */
+    public boolean fishWorkForTests(boolean day) {
+        WorkZone z = workZone();
+        if (z != null) catchGround = z.center();
+        if (day) fishlessTicks = FISHLESS_TICKS + 1;
+        waterLookTick = -100000;
+        return fishWork();
+    }
+
     /** New hunting grounds, somewhere else round the village: the game has gone from the old. */
     private void newGrounds() {
         searchBearing += 3;
@@ -5041,6 +5216,7 @@ public class VillageFolkEntity extends AssistantEntity {
      */
     @Override
     public boolean spareTheHerd(net.minecraft.world.entity.animal.Animal a) {
+        if (cullMark != null && cullMark.equals(a.getUUID()) && !a.isLeashed()) return false;   // [sf] the one it is culling
         if (a.isLeashed() || a.getTags().contains(Drover.HERD)) return true;
         UUID village = ownerId();
         if (village == null) return false;

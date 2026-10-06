@@ -4503,3 +4503,37 @@ why it is not doing more.
   with no light in its pack walks in the dark, and a guard with a shield keeps its hand for that.
 
 Tested by `TownLifeGameTests` (tl01 to tl06).
+## Safety and food from every trade
+
+* **Fishers fish where a line can go in.** A fisher's water is open water on top (not a lake under
+  ice, not water under a ledge) that the town can walk to. A fisher whose water gives it nothing, or
+  that it cannot cast into or reach, goes looking for other water as a hunter looks for new grounds
+  ("Not a bite all day. The fish are somewhere else."). With no such water anywhere within reach of
+  the town it gives the trade up, the books say so ("gave up fishing: no water fit to fish within
+  reach of the town"), and the village wants no fisher for the next three days.
+* **The catch goes home.** A fisher's fish, a hunter's meat and a rancher's mutton or beef are not
+  kept in the pack as the hand's own rations (it used to keep eight of every kind, and eat them):
+  they are banked with the rest of the day's work, and the books count them, "fish", "from the hunt"
+  and "from the pen". A fish banked by somebody who has since given the water up still counts as fish.
+* **The pen feeds the town.** A rancher keeps four of each kind in its pen, a pair to breed and a pair
+  besides; once a kind is past four it culls one at a time for the larder (the meat, the hide, the
+  wool go home with it). It never takes a kind below four, never one with a name or on a lead, and
+  leaves a pair in love to it.
+* **No falls.** Folk plan their walks with no drop over three blocks wherever there is such a way,
+  and the five-block drop they take unhurt only where there is not; a hunter or a guard after
+  something plans no drop that would hurt either (it used to follow its quarry down any cliff its
+  health would stand). A builder at its building plans no drop over three. At the edge of a drop
+  deeper than it should take, a folk stops as a player crouching at an edge does, whether it was
+  walking or shoved by the crowd, and a blow taken at a ledge is braced against rather than thrown
+  over it. A drop into water or down a ladder is no fall.
+* **No lava.** A miner that uncovers lava seals it with a block from its pack, cobblestone first
+  and never anything that burns or falls; with nothing to seal it with it stops the run and goes
+  home rather than dig on beside it, and lava met on a step through open cave is sealed the same
+  way. A folk digging itself free never breaks into a wall with lava behind it. A folk on fire with
+  water within four blocks runs into it.
+* **The stores read steady.** The morning's count of the stores finds the storehouse even in a
+  chunk just back from the disk, and counts the goods waiting in a storehouse whose cube has come
+  apart while it is laid again. If the morning's count still reads less than a quarter of the last
+  good one while the storehouse stands, the hungry-village check and the leader's books use the last
+  good count for the day and the town's books say why; a second such morning is believed.
+* Tested by `SafetyGameTests` (sf01 to sf06).

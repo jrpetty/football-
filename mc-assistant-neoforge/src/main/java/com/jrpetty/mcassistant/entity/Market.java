@@ -299,7 +299,8 @@ public final class Market {
         if (Ledger.paidOn(id) >= day) return;
         Ledger.paid(id, day);
         Homeland.survey(level, v);                       // a village from before: its land, looked over now
-        HUNGRY.put(id, Villages.stock(level, v.centre(), Villages.Task.FOOD, Villages.storesRadius(id)) * 2
+        // [sf] The morning's count of the stores, steadied against one that missed the storehouse (Villages.steadyStock).
+        HUNGRY.put(id, Villages.steadyStock(level, v, Villages.Task.FOOD, day) * 2
             < Villages.larderForBirth(id));
         Economy.closeTheDay(level, v, day);              // yesterday's output, and what the village is worth
         Annals.record(level, v, day);                    // and the morning written into the town's books

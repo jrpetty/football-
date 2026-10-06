@@ -28,10 +28,46 @@ public class FolkNavigation extends GroundPathNavigation {
         setMaxVisitedNodesMultiplier(2.5F);
     }
 
+    /** [sf] The last place the careful plan could not reach, and when: planned at full drop straight away for a while. */
+    @Nullable private BlockPos looseTo;
+    private long looseAt;
+
     @Nullable
     @Override
     protected Path createPath(Set<BlockPos> targets, int regionOffset, boolean offsetUpward, int accuracy) {
         float range = Math.max(REACH, (float) this.mob.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.FOLLOW_RANGE));
-        return createPath(targets, regionOffset, offsetUpward, accuracy, range);
+        if (!(this.mob instanceof AssistantEntity a) || !a.plansCarefully()) {
+            Path was = this.path;
+            Path p = createPath(targets, regionOffset, offsetUpward, accuracy, range);
+            if (p != null && p != was && this.mob instanceof AssistantEntity a2) a2.plannedDrop(this.mob.getMaxFallDistance());
+            return p;
+        }
+        // [sf] A village's folk outside a fight: first a way with no drop over three blocks, the five-block
+        // drop it takes without a scratch only where there is no such way. A five-block drop hurts nobody,
+        // but the folk who died "in a fall" in the mountain town went down ledges, and a way round a ledge
+        // is a way that does not end at the bottom of one. (A plan that could not be made carefully is
+        // not tried carefully again for half a minute: the second search is not paid for twice.)
+        long now = this.level.getGameTime();
+        Path current = this.path;
+        boolean skip = looseTo != null && now - looseAt < 600 && targets.contains(looseTo);
+        if (!skip) {
+            Path careful;
+            a.capDrops(AssistantEntity.CAREFUL_DROP);
+            try {
+                careful = createPath(targets, regionOffset, offsetUpward, accuracy, range);
+            } finally {
+                a.capDrops(-1);
+            }
+            if (careful != null && careful == current) return careful;     // the walk under way, as it was planned
+            if (careful != null && careful.canReach()) {
+                a.plannedDrop(AssistantEntity.CAREFUL_DROP);
+                return careful;
+            }
+            looseTo = targets.isEmpty() ? null : targets.iterator().next();
+            looseAt = now;
+        }
+        Path loose = createPath(targets, regionOffset, offsetUpward, accuracy, range);
+        if (loose != null && loose != current) a.plannedDrop(this.mob.getMaxFallDistance());
+        return loose;
     }
 }

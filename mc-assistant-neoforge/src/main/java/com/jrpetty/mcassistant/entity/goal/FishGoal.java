@@ -68,6 +68,7 @@ public class FishGoal extends Goal {
             if (assistant.level().getFluidState(past).is(FluidTags.WATER)) this.water = past;
         }
         if (water == null) {
+            assistant.noWaterToFish();                 // [sf] counted: a fisher with no water goes and finds some
             finish("No open water within 12 blocks.");
             return;
         }
@@ -137,6 +138,7 @@ public class FishGoal extends Goal {
                     shore = bankBy(other);
                     return;
                 }
+                assistant.noWaterToFish();             // [sf] water it cannot get to is no water to it
                 finish("Couldn't reach the water.");
             }
             return;
@@ -235,6 +237,7 @@ public class FishGoal extends Goal {
             return;
         }
         caught++;
+        assistant.landedACatch();                      // [sf] this water gives: the fisher stays by it
         assistant.note(AssistantEntity.Deed.FISH_CAUGHT, 1);
         ItemStack rod = assistant.getMainHandItem();
         if (rod.is(Items.FISHING_ROD)) {
@@ -261,6 +264,15 @@ public class FishGoal extends Goal {
 
     @Nullable
     private BlockPos findWater() {
+        return waterFor(assistant);
+    }
+
+    /**
+     * [sf] The open water on this hand's patch a line can be cast into, nearest the middle of it, or null: what
+     * a cast looks for, and what a village's fisher asks before it decides its water is no use to it.
+     */
+    @Nullable
+    public static BlockPos waterFor(AssistantEntity assistant) {
         // Search from the same place the checklist verified the water: the
         // middle of the patch. Searching from the BOT meant that after one
         // drift to a far corner the pond it was posted to fell out of range and
@@ -273,6 +285,9 @@ public class FishGoal extends Goal {
             if (!assistant.inZone(pos)) continue; // fish our own patch, not next door
             if (!assistant.level().getFluidState(pos).is(FluidTags.WATER)) continue;
             if (!assistant.level().getBlockState(pos.above()).canBeReplaced()) continue;
+            // [sf] The top of the water, open to the air: water is "replaceable", so the second layer of a
+            // frozen lake, under its ice, passed for open water, and a line went through the ice.
+            if (!assistant.level().getFluidState(pos.above()).isEmpty()) continue;
             double d = pos.distSqr(feet);
             if (d < bestDist) {
                 bestDist = d;
