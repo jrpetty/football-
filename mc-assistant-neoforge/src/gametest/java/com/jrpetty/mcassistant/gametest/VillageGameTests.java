@@ -158,6 +158,7 @@ public class VillageGameTests {
         Kit.reset(level);
         com.jrpetty.mcassistant.entity.Founding.resetForTests(level.getServer());
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        player.getAbilities().instabuild = false;   // the mock player is in creative, where a charter is never used up
         Kit.hold(level, 2700, 2700, 48);
         BlockPos ground = Kit.surface(level, 2700, 2700);
         ItemStack stack = new ItemStack(McAssistantMod.VILLAGE_CHARTER.get());
