@@ -61,6 +61,80 @@ public final class ZoneChests {
         return before;
     }
 
+    /** Which village a folk thinking just now belongs to (set for the whole of its tick, like ASKING). */
+    private static final ThreadLocal<java.util.UUID> FOR = new ThreadLocal<>();
+
+    /** Set the village asking; returns the one asking before, to restore. */
+    @javax.annotation.Nullable
+    public static java.util.UUID askFor(@javax.annotation.Nullable java.util.UUID village) {
+        java.util.UUID before = FOR.get();
+        FOR.set(village);
+        return before;
+    }
+
+    /**
+     * Every village is its own. A container is the village's whose heart is nearest it, and a
+     * village asking after its stores is answered with its own and nobody else's. Every village
+     * marks its chests with the same name, and a look round a big town's heart (a couple of hundred
+     * blocks for a town of fifty) took in the town next door: a second village founded two hundred
+     * blocks off counted the first one's stores as its own and drew its builders' timber out of them
+     * without a soul walking over, the chests nearest the west first.
+     */
+    private static void keepOurs(Level level, BlockPos origin, List<Found> out) {
+        if (out.isEmpty()) return;
+        List<Villages.Village> here = new ArrayList<>();
+        for (Villages.Village v : Villages.every()) if (v.dim().equals(level.dimension())) here.add(v);
+        if (here.size() < 2) return;                                   // one village: everything is its own
+        java.util.UUID asker = asker(level, origin, here);
+        if (asker == null) return;
+        // A worker's own chest is its village's wherever its plot is (a big town's mine can be nearer the
+        // next town's heart than its own); the rest go to the nearest heart.
+        java.util.Set<Long> ours = VillageFolkEntity.chestsInUse(asker);
+        java.util.Set<Long> theirs = new java.util.HashSet<>();
+        for (Villages.Village v : here) if (!v.id().equals(asker)) theirs.addAll(VillageFolkEntity.chestsInUse(v.id()));
+        out.removeIf(f -> {
+            long at = f.pos().asLong();
+            if (ours.contains(at)) return false;
+            if (theirs.contains(at)) return true;
+            Villages.Village owner = nearestOf(here, f.pos());
+            return owner != null && !owner.id().equals(asker);
+        });
+    }
+
+    /** Which village is asking: the one whose heart the question is asked from (the stores, the
+     *  counts, the town's works all ask from there), else the village of the folk thinking, else the
+     *  village nearest where it is asked. */
+    @javax.annotation.Nullable
+    private static java.util.UUID asker(Level level, BlockPos origin, List<Villages.Village> here) {
+        for (Villages.Village v : here) if (v.centre().distManhattan(origin) <= 3) return v.id();
+        java.util.UUID who = FOR.get();
+        if (who != null && Villages.get(who) != null) return who;
+        Villages.Village near = nearestOf(here, origin);
+        return near == null ? null : near.id();
+    }
+
+    @javax.annotation.Nullable
+    private static Villages.Village nearestOf(List<Villages.Village> here, BlockPos pos) {
+        Villages.Village best = null;
+        double bestD = Double.MAX_VALUE;
+        for (Villages.Village v : here) {
+            double d = (double) (v.centre().getX() - pos.getX()) * (v.centre().getX() - pos.getX())
+                + (double) (v.centre().getZ() - pos.getZ()) * (v.centre().getZ() - pos.getZ());
+            if (d < bestD) { bestD = d; best = v; }
+        }
+        return best;
+    }
+
+    /** Is this container one another village's, not the one asking from `origin`'s? (Tests and checks.) */
+    public static boolean anotherVillages(Level level, BlockPos origin, BlockPos container) {
+        List<Villages.Village> here = new ArrayList<>();
+        for (Villages.Village v : Villages.every()) if (v.dim().equals(level.dimension())) here.add(v);
+        if (here.size() < 2) return false;
+        java.util.UUID asker = asker(level, origin, here);
+        Villages.Village owner = nearestOf(here, container);
+        return asker != null && owner != null && !owner.id().equals(asker);
+    }
+
     /** Does this container belong to a village? */
     public static boolean isVillageStore(BlockEntity be) {
         // The Village Storehouse is a village's whatever it is called.
@@ -165,7 +239,11 @@ public final class ZoneChests {
                 }
             }
         }
-        out.sort((a, b) -> Long.compare(a.pos().asLong(), b.pos().asLong()));
+        if (settlerAsking()) keepOurs(level, origin, out);
+        // Nearest first (and by place between equals, so two looks at the same world answer alike): a
+        // village's builder drawing what it needs takes it from its own stores at hand before the far ones.
+        out.sort(java.util.Comparator.<Found>comparingDouble(f -> f.pos().distSqr(origin))
+            .thenComparingLong(f -> f.pos().asLong()));
         return out;
     }
 

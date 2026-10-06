@@ -253,12 +253,13 @@ public final class Bonds {
         // The weekly feast: friends send a guest with a gift.
         if (day % 7 == 6 && r >= Diplomacy.FRIENDLY && !Caravans.between(x, y) && rng.nextInt(2) == 0) {
             boolean aGives = rng.nextBoolean();
-            if (Envoys.send(level, aGives ? a : b, aGives ? b : a, Envoys.Errand.GIFT, day)) {
+            if (com.jrpetty.mcassistant.AssistantConfig.villagesShareGoods()
+                    && Envoys.send(level, aGives ? a : b, aGives ? b : a, Envoys.Errand.GIFT, day)) {
                 remember(x, y, day, 3, Villages.name(aGives ? x : y) + " sent a guest to the feast with a gift");
             }
         }
         // A hand when short: what one can spare, of what the other wants.
-        if (r >= Diplomacy.FRIENDLY && day % 3 == 0) delta += lendAHand(level, a, b, day);
+        if (r >= Diplomacy.FRIENDLY && day % 3 == 0 && com.jrpetty.mcassistant.AssistantConfig.villagesShareGoods()) delta += lendAHand(level, a, b, day);
         // The harvest contest.
         if (day % 7 == 3 && r > Diplomacy.UNEASY) delta += contest(a, b, day);
         // Word of a player spreads between allies, and between enemies.

@@ -46,6 +46,7 @@ public final class AssistantConfig {
     public static final ModConfigSpec.BooleanValue REPLACE_VILLAGERS;
     public static final ModConfigSpec.BooleanValue PROTECT_TRADED_VILLAGERS;
     public static final ModConfigSpec.BooleanValue VILLAGE_COLONIES;
+    public static final ModConfigSpec.BooleanValue VILLAGES_SHARE_GOODS;
     public static final ModConfigSpec.IntValue VILLAGE_COLONY_AT;
     public static final ModConfigSpec.IntValue VILLAGE_WORLD_CAP;
     public static final ModConfigSpec.IntValue VILLAGE_BUILD_SPEED;
@@ -176,6 +177,13 @@ public final class AssistantConfig {
                 "hundred blocks away, which then grows up through the ages of its own.",
                 "This is how settlements spread across the map over a long game.")
             .define("villageColonies", true);
+        VILLAGES_SHARE_GOODS = b.comment(
+                "Let villages on good terms send each other goods and coin outright, with nobody carrying",
+                "them: a hand when one is short, food for an ally, tribute to a bigger neighbour, an",
+                "envoy's gift. Off (the default), every village is its own: it keeps to its own stores,",
+                "its own chests and its own treasury, and never touches another's. Trade between",
+                "villages still goes by caravan, on the road, paid for, under a pact.")
+            .define("villagesShareGoods", false);
         VILLAGE_COLONY_AT = b.comment(
                 "How many people a village (of the Stone Age or later) must have before it",
                 "sends a founding party out. It sends one every two game days at most.")
@@ -242,6 +250,7 @@ public final class AssistantConfig {
     public static boolean replaceVillagers() { return read(REPLACE_VILLAGERS, true); }
     public static boolean protectTradedVillagers() { return read(PROTECT_TRADED_VILLAGERS, false); }
     public static boolean villageColonies() { return read(VILLAGE_COLONIES, true); }
+    public static boolean villagesShareGoods() { return read(VILLAGES_SHARE_GOODS, false); }
     public static int villageColonyAt() { return read(VILLAGE_COLONY_AT, 40); }
     public static int villageWorldCap() { return read(VILLAGE_WORLD_CAP, 200); }
     public static int villageBuildSpeed() { return read(VILLAGE_BUILD_SPEED, 100); }

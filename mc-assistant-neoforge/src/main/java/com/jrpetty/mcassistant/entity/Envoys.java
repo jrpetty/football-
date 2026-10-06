@@ -251,7 +251,8 @@ public final class Envoys {
             return Errand.TRADE;
         }
         if (!allied(x, y) && r >= Diplomacy.ALLIANCE - 15 && t != Temper.WARY && t != Temper.PRICKLY) return Errand.ALLIANCE;
-        if (t == Temper.GENEROUS && r >= 0 && !Caravans.load(level, from, y, true, false).isEmpty()) return Errand.GIFT;
+        if (t == Temper.GENEROUS && r >= 0 && com.jrpetty.mcassistant.AssistantConfig.villagesShareGoods()
+                && !Caravans.load(level, from, y, true, false).isEmpty()) return Errand.GIFT;
         if (r >= -5 && (t == Temper.FRIENDLY || t == Temper.CURIOUS || t == Temper.WARM) && rng.nextInt(3) == 0) return Errand.GREETING;
         return null;
     }

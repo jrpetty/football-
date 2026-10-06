@@ -201,9 +201,12 @@ public final class Diplomacy {
             Bonds.remember(x, y, day, 5, "our elders agreed a truce");
         }
         // Allies look after each other: the stronger feeds the hungrier.
-        if (now == Terms.ALLIES || Envoys.allied(x, y)) helpAlly(level, a, b, day);
+        // (Only where villages may send each other goods outright: AssistantConfig.villagesShareGoods.
+        // Every village is its own otherwise, and the food and the coin stay where they are.)
+        boolean share = com.jrpetty.mcassistant.AssistantConfig.villagesShareGoods();
+        if (share && (now == Terms.ALLIES || Envoys.allied(x, y))) helpAlly(level, a, b, day);
         // Tribute, once a week — if the bigger village's elder is the sort to ask for it.
-        delta += tribute(level, a, b, day, rng);
+        if (share) delta += tribute(level, a, b, day, rng);
         // Who leads them: a warm-hearted elder makes friends, a prickly one enemies; two elders
         // alike get on, two opposites do not.
         delta += Envoys.temper(x).warmth + Envoys.temper(y).warmth + Envoys.chemistry(x, y);

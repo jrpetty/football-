@@ -3524,6 +3524,14 @@ reach the Skills page and the About card through the reply's codec.
 
 ### Neighbours: rivals, allies and feuds
 
+**Every village is its own.** A chest or a storehouse belongs to the village whose heart is
+nearest it, and a worker's own chest to that worker's village, wherever its plot is. A village
+counts, takes from and fills only its own. A second town founded a couple of hundred blocks off
+used to count the first town's stores as its own and draw its builders' timber out of them, with
+nobody walking over. Goods and coin pass between villages only by caravan, unless the config
+option `villagesShareGoods` is turned on (see Config). Then the alliance food, tribute,
+neighbourly help and envoys' gifts below also move goods outright.
+
 Villages within about six hundred blocks of each other have dealings, and what each
 thinks of the other runs from -100 to 100:
 * **Land disputes.** Two villages whose lands overlap quarrel over the ground between
@@ -4042,6 +4050,31 @@ And nothing comes from nothing:
 Right-click a folk to see what it carries and what it is doing. You can look;
 only its owner (nobody, for folk) can rearrange the pack.
 
+## Down the mines and back up
+
+Every mine's stairs are kept with the world, step by step. Nothing takes the floor of a step:
+not a gallery or a vein, not a quarry's next level, not a hand sent for stone. The head of a
+mine's stairs used to be the nearest stone to a plot's middle, and it went first.
+
+A miner climbing out mends its stairs as it goes. It lays a step's floor again where something
+took it, and cuts out a block or a fall of gravel lying across the stairs. If it has no stairs
+it can climb, it cuts its own up to the open sky, the way a player would, walling off water and
+lava as it goes. Those stairs are kept too.
+
+A run that ends deep down (liquid ahead, a cavity, a stuck step) never ends there: the miner
+goes up its ladder, back up its stairs, or cuts new stairs out. A folk can also end up lost
+underground away from any run of its own: a run cut short by the morning bell or a fight, or a
+fall into a cave. Once it finds no way up it can walk, it is sent up of its own accord, by the
+nearest stairs (mended) or by stairs of its own.
+
+## Names
+
+There are close to six hundred names: hedgerow and meadow, birds and beasts, old names, trade
+names, the lie of the land, the weather and a few fond nonsenses. A town's folk are named at
+random from every name nobody in that town has yet: founders, newcomers, villagers taken over
+and children born. So no two towns begin with the same folk. Your own crew's names still go
+down the list in order, and the rename screen pages through all of them.
+
 ## Watching it grow: fast time
 
 The whole world can run faster, so you can sit back and watch a village grow: fields
@@ -4224,6 +4257,11 @@ ripen, days pass, folk work and houses go up at that pace.
 * `villageReshapeLand` (on): off keeps your terrain as it is. The town's ground isn't
   levelled, no sand is dug and no irrigation channels are cut. Buildings still get the
   footings they need.
+* `villagesShareGoods` (off): every village is its own. It keeps to its own stores, chests
+  and treasury and never touches another village's, however close the two are. On, villages
+  on good terms may send each other goods and coin outright: a hand when one is short, food
+  for an ally, tribute to a bigger neighbour, an envoy's gift. Either way, trade between
+  villages goes by caravan, on the road, paid for, under a pact.
 * `villagePhantoms` (off): on lets phantoms come over the villages as they do anywhere else.
   Off, none spawns over a village (its town's reach and twenty-four blocks round it) and a
   stray that flies in is seen off. Phantoms never go for the folk either way.
