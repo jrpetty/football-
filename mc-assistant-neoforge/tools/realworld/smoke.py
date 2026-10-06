@@ -1409,6 +1409,18 @@ def mature():
     except Exception as e:  # noqa: BLE001
         say("the air views failed: %s" % e)
     say("alive after the air views: %s" % client_alive())
+    # The town's mine, from above and from its edge (where `village mine` says its first face is).
+    try:
+        mine = r.cmd("execute positioned %d %d %d run village mine" % (cx, gy, cz))
+        say("MINE " + mine.replace("\n", " | "))
+        m = re.search(r"first face at (-?\d+), (-?\d+)", mine)
+        if m:
+            mx, mz = int(m.group(1)), int(m.group(2))
+            my = ground_height(r, mx, mz)
+            look("4-mine-above", mx + 0.5, my + 45, mz + 1.5, mx + 0.5, my - 10, mz + 0.5, wait=20)
+            look("5-mine-edge", mx + 22, my + 14, mz + 22, mx, my - 6, mz, wait=12)
+    except Exception as e:  # noqa: BLE001
+        say("the mine views failed: %s" % e)
     # The newer sights of a town with families in it: the sign, the gazette, the crier, the children's game,
     # a pet and a garden (a young town has no households yet to show them).
     try:

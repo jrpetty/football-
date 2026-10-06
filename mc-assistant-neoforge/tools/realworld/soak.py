@@ -438,6 +438,12 @@ def epic_day(r, x, z, day, began, last_age, metrics_file="epic-metrics.jsonl"):
             say("ECONOMY day %d: %s" % (day, econ.replace("\n", " | ")))
         except Exception as e:  # noqa: BLE001
             say("economy failed: %s" % e)
+        # The town's mine: where it is, the faces worked out, who works which face and how deep.
+        try:
+            mine = r.cmd("execute positioned %d 64 %d run village mine" % (x, z))
+            say("MINE day %d: %s" % (day, mine.replace("\n", " | ")))
+        except Exception as e:  # noqa: BLE001
+            say("mine failed: %s" % e)
         report(r, x, z, "the long game, day %d" % day, compact=True)
         for line in villages:
             say("  " + line)
