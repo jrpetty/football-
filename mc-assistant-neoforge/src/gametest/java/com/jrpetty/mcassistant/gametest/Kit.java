@@ -64,6 +64,7 @@ final class Kit {
         for (Entity e : doomed) e.discard();
         Villages.resetForTests();
         AssistantEntity.resetRegistryForTests();
+        com.jrpetty.mcassistant.entity.MineStairs.resetForTests(level);
         // What the town's works build is checked here at once; who builds it, by hand, in t54.
         com.jrpetty.mcassistant.entity.TownJobs.instantForTests(true);
     }

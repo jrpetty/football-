@@ -36,7 +36,7 @@ public class MineGoal extends Goal {
         BlockTags.COAL_ORES, BlockTags.IRON_ORES, BlockTags.COPPER_ORES, BlockTags.GOLD_ORES,
         BlockTags.REDSTONE_ORES, BlockTags.LAPIS_ORES, BlockTags.DIAMOND_ORES, BlockTags.EMERALD_ORES);
 
-    private enum Phase { DESCEND, TUNNEL, RETURN, SHAFT, CLIMB }
+    private enum Phase { DESCEND, TUNNEL, RETURN, SHAFT, CLIMB, ASCEND }
 
     private final AssistantEntity assistant;
     @Nullable private Job job;
@@ -87,6 +87,26 @@ public class MineGoal extends Goal {
      *  one: a gallery opened back under the staircase, or turned along a patch's edge beneath
      *  it, took the steps out from under the way home. */
     private final java.util.HashSet<Long> stairFloors = new java.util.HashSet<>();
+    // --- the way up -----------------------------------------------------------
+    // Stairs it cannot climb (a step taken from under them, a fall of gravel across them, a block
+    // laid in them) are mended as it goes up (mend). With no stairs of its own to climb, or none it
+    // can get up, it cuts new ones to the open sky (ASCEND), as a player would. A folk lost
+    // underground away from any run of its own is sent down here with a job "out" (MineStairs).
+    /** The run is a way out (MineStairs.OUT), not a mine. */
+    private boolean outJob;
+    /** Getting out: it may cut the ground it must to get up, wherever that is (allowed). */
+    private boolean escaping;
+    /** The staircase this run keeps in MineStairs, and how many steps of it are down so far. */
+    private long stairsKey;
+    private int stepIndex;
+    /** The steps of the stairs it is cutting up, bottom first; the way it went last; how many. */
+    private final java.util.ArrayList<BlockPos> ascent = new java.util.ArrayList<>();
+    @Nullable private Direction upWay;
+    private int ascentSteps;
+    private int ascentFails;
+    /** Steps of the way up it could not get onto and went past. */
+    private int returnSkips;
+    private static final int MOST_ASCENT = 320;
     private int sinceTorch;
     private int veinMined;
     private int oresMined;
@@ -145,6 +165,22 @@ public class MineGoal extends Goal {
         this.returnIndex = -1;
         this.oresMined = 0;
         this.blocksMined = 0;
+        this.outJob = job != null && com.jrpetty.mcassistant.entity.MineStairs.OUT.equals(job.arg());
+        this.escaping = false;
+        this.ascent.clear();
+        this.upWay = null;
+        this.returnSkips = 0;
+        this.stepIndex = 0;
+        com.jrpetty.mcassistant.entity.WorkZone plot = assistant.workZone();
+        this.stairsKey = com.jrpetty.mcassistant.entity.MineStairs.plotKey(plot != null ? plot.center() : cursor);
+        if (outJob) {
+            this.phase = Phase.RETURN;
+            this.levelFloor = cursor.getY();
+            this.shaftCol = null;
+            this.shaftLined = false;
+            startOut();
+            return;
+        }
         int target = job != null ? job.amount() : cursor.getY();
         // A quarry works DOWN in four-block terraces from just under the
         // surface; a single gallery drops straight to the target and cuts once.
@@ -212,6 +248,10 @@ public class MineGoal extends Goal {
         }
         this.phase = cursor.getY() <= levelFloor ? Phase.TUNNEL
             : (assistant.quarry() && (hasLadders() || shaftLined) ? Phase.SHAFT : Phase.DESCEND);
+        // The head of the stairs is their first step: kept, so nobody takes the ground from under it.
+        if (phase == Phase.DESCEND && assistant.level() instanceof net.minecraft.server.level.ServerLevel sl) {
+            com.jrpetty.mcassistant.entity.MineStairs.step(sl, stairsKey, 0, cursor);
+        }
 
         // No pickaxe, no mine — player rules.
         assistant.equipBestTool(Blocks.STONE.defaultBlockState());
@@ -222,10 +262,12 @@ public class MineGoal extends Goal {
             assistant.equipBestTool(Blocks.STONE.defaultBlockState());
         }
         if (!assistant.getMainHandItem().isCorrectToolForDrops(Blocks.STONE.defaultBlockState())) {
+            if (buried()) { beginAscend("Out — and I need a pickaxe before I dig any more."); return; }
             finish("I need a pickaxe before I can dig a mine — \"craft a wooden pickaxe\".");
             return;
         }
         if (assistant.isPackFull()) {
+            if (buried()) { beginAscend("Out — pack's full, let me deposit first."); return; }
             finish("Pack's full — let me deposit first.");
             return;
         }
@@ -245,11 +287,15 @@ public class MineGoal extends Goal {
     }
 
     private void finish(String message) {
+        escaping = false;
         assistant.say(message);
-        assistant.noteJobOutcome(oresMined > 0 || blocksMined > 8);
-        // A run that cut almost nothing found its gallery already dug: run after run
-        // like that and the patch is spent, whatever else the miner did in between.
-        assistant.barrenMineRuns = oresMined == 0 && blocksMined < 4 ? assistant.barrenMineRuns + 1 : 0;
+        // (A way out is not a mine run: it says nothing of the mine.)
+        if (!outJob) {
+            assistant.noteJobOutcome(oresMined > 0 || blocksMined > 8);
+            // A run that cut almost nothing found its gallery already dug: run after run
+            // like that and the patch is spent, whatever else the miner did in between.
+            assistant.barrenMineRuns = oresMined == 0 && blocksMined < 4 ? assistant.barrenMineRuns + 1 : 0;
+        }
         assistant.pollJob();
         // Turn the raw metal we dug up into ingots automatically — for a hired
         // hand with a furnace of its own. A settler has none: the ore goes to the
@@ -284,7 +330,7 @@ public class MineGoal extends Goal {
         // dug route — and only then stash. Finishing on the spot handed the
         // pathfinder a bot at Y-50 and let it wander whatever caves the dig
         // had breached on the way.
-        if (assistant.isPackFull() && phase != Phase.RETURN && phase != Phase.CLIMB) {
+        if (assistant.isPackFull() && phase != Phase.RETURN && phase != Phase.CLIMB && phase != Phase.ASCEND) {
             if (shaftLined && cursor.getY() < shaftTopY - 4) {
                 returnReason = "Pack's full — got " + oresMined + " ore. Stashing now.";
                 assistant.sayRoutine("Pack's full — up the ladder.");
@@ -311,7 +357,7 @@ public class MineGoal extends Goal {
             return;
         }
         if (!digQueue.isEmpty()) {
-            beginDig(digQueue.pollFirst());
+            beginDig(digQueue.pollFirst(), true);
             return;
         }
         // Veins BEFORE the tunnel advances: every exposed ore face gets dug
@@ -322,7 +368,7 @@ public class MineGoal extends Goal {
             BlockPos vein = veinQueue.pollFirst();
             if (isOre(assistant.level().getBlockState(vein))
                 && vein.distSqr(cursor) <= 20.0) {
-                beginDig(vein);
+                beginDig(vein, false);
                 return;
             }
         }
@@ -334,14 +380,20 @@ public class MineGoal extends Goal {
         // Plan the next step.
         if (phase == Phase.SHAFT) { shaftTick(); return; }
         if (phase == Phase.CLIMB) { climbTick(); return; }
+        if (phase == Phase.ASCEND) { ascendTick(); return; }
         if (phase == Phase.RETURN) {
             if (returnIndex < 0) {
+                // At the head of the stairs, and rock still over its head (they began underground, or
+                // the top of them was let go): the rest of the way it cuts for itself.
+                if (buried()) { beginAscend(returnReason); return; }
                 finish(returnReason != null ? returnReason
                     : "Back at the shaft head — got " + oresMined + " ore. Stashing now.");
                 if (assistant.stashable() > 0) assistant.enqueueFront(Job.deposit());
                 return;
             }
-            moveTarget = stairPath.get(returnIndex--);
+            BlockPos next = stairPath.get(returnIndex--);
+            mend(next);
+            moveTarget = next;
             moveStuck = 0;
             return;
         }
@@ -379,8 +431,7 @@ public class MineGoal extends Goal {
                 if (way == null) {
                     String none = "Mine's done — " + blocksMined + " blocks dug, " + oresMined
                         + " ore collected (nothing left to cut down here).";
-                    if (climbOut(none)) return;
-                    finish(none);
+                    leave(none);
                     return;
                 }
                 dir = way;
@@ -394,6 +445,8 @@ public class MineGoal extends Goal {
             // village's gallery goes now, edge or no edge: see wayOn, below.
             boolean deep = assistant.isSettler() && !stairPath.isEmpty() && cursor.getY() < stairPath.get(0).getY() - 12;
             boolean leavingZone = !deep && !assistant.inZoneColumn(cursor.relative(dir));
+            // A quarry's gallery ends at the stairs as at the edge: it never cuts the ground from under a step.
+            if (!followsTheRock() && underStairs(cursor.relative(dir))) leavingZone = true;
             // A village miner goes back down the same stairs run after run: a gallery that counted
             // every step came home, from the fourth run on, having walked twenty-four blocks of its
             // own old tunnel and cut nothing. It counts the steps that cut fresh rock (the old
@@ -463,13 +516,7 @@ public class MineGoal extends Goal {
                 // pathfinder to get it to a chest at the surface. It walks
                 // back up its own workings instead — the same trail the
                 // full-pack return uses.
-                if (shaftLined && cursor.getY() < shaftTopY - 4) {
-                    returnReason = done;
-                    beginClimb();
-                    return;
-                }
-                if (climbOut(done)) return;
-                finish(done);
+                leave(done);
                 return;
             }
             planStep(cursor.relative(dir));
@@ -524,7 +571,7 @@ public class MineGoal extends Goal {
             return;
         }
         if (touchesFluid(below) && !capFluid(below)) {
-            finish("Liquid in the shaft and nothing to wall it off with — stopping ("
+            leave("Liquid in the shaft and nothing to wall it off with — stopping ("
                 + oresMined + " ore so far).");
             return;
         }
@@ -619,6 +666,7 @@ public class MineGoal extends Goal {
 
     private void finishClimb() {
         assistant.setJumping(false);
+        if (buried()) { beginAscend(returnReason); return; }
         finish(returnReason != null ? returnReason
             : "Back at the surface — " + oresMined + " ore.");
         if (assistant.stashable() > 0) assistant.enqueueFront(Job.deposit());
@@ -755,7 +803,9 @@ public class MineGoal extends Goal {
 
     /** Would a gallery standing here cut the floor of one of this run's stair steps? */
     private boolean underStairs(BlockPos feet) {
-        return stairFloors.contains(feet.asLong()) || stairFloors.contains(feet.above().asLong());
+        return stairFloors.contains(feet.asLong()) || stairFloors.contains(feet.above().asLong())
+            || com.jrpetty.mcassistant.entity.MineStairs.isFloor(assistant.level(), feet)
+            || com.jrpetty.mcassistant.entity.MineStairs.isFloor(assistant.level(), feet.above());
     }
 
     /** Switch to the walk home along our own workings, carrying the message to
@@ -840,13 +890,13 @@ public class MineGoal extends Goal {
             : new BlockPos[] { newFeet.above(), newFeet };
         for (BlockPos cell : cells) {
             if (touchesFluid(cell) && !capFluid(cell)) {
-                finish("Hit liquid and I'm out of blocks to wall it off — stopping here ("
+                leave("Hit liquid and I'm out of blocks to wall it off — stopping here ("
                     + oresMined + " ore so far).");
                 return;
             }
         }
         if (touchesFluid(newFeet.below()) && !capFluid(newFeet.below())) {
-            finish("Liquid underfoot and nothing to cap it with — stopping here ("
+            leave("Liquid underfoot and nothing to cap it with — stopping here ("
                 + oresMined + " ore so far).");
             return;
         }
@@ -856,7 +906,7 @@ public class MineGoal extends Goal {
         BlockState floorState = assistant.level().getBlockState(floor);
         if (!floorState.isFaceSturdy(assistant.level(), floor, Direction.UP)) {
             if (!placeFiller(floor)) {
-                finish("The shaft opened into a cavity and I'm out of filler blocks ("
+                leave("The shaft opened into a cavity and I'm out of filler blocks ("
                     + oresMined + " ore so far).");
                 return;
             }
@@ -967,7 +1017,7 @@ public class MineGoal extends Goal {
         veinQueue.clear();
         currentDig = null;
         moveTarget = null;
-        if (phase == Phase.RETURN || phase == Phase.CLIMB) return;
+        if (phase == Phase.RETURN || phase == Phase.CLIMB || phase == Phase.ASCEND) return;
         if (shaftLined && cursor.getY() < shaftTopY - 4) {
             assistant.sayRoutine("Lava — I'm getting out of here.");
             returnReason = why;                        // said once it is out
@@ -981,6 +1031,7 @@ public class MineGoal extends Goal {
             returnIndex = stairPath.size() - 1;
             return;
         }
+        if (buried()) { beginAscend(why); return; }
         finish(why);
     }
 
@@ -1001,11 +1052,13 @@ public class MineGoal extends Goal {
         return false;
     }
 
-    private void beginDig(BlockPos pos) {
-        if (!mayDig(pos)) return;          // never off the marked patch
-        // Nor a step out of its own stairs, chasing a vein: the gallery's way is kept off
-        // them (underStairs), and an ore in a step's floor stays where it is.
-        if (followsTheRock() && stairFloors.contains(pos.asLong())) return;
+    private void beginDig(BlockPos pos, boolean planned) {
+        if (!allowed(pos)) return;          // never off the marked patch (getting out: never what somebody built)
+        // Nor a step out of anybody's stairs, chasing a vein or cutting a gallery: the gallery's way is
+        // kept off them (underStairs), and an ore in a step's floor stays where it is. The stairs it is
+        // cutting down cut what they must where they part from old ones, and a way out what it must.
+        if (!escaping && !(planned && phase == Phase.DESCEND)
+                && (stairFloors.contains(pos.asLong()) || com.jrpetty.mcassistant.entity.MineStairs.isFloor(assistant.level(), pos))) return;
         BlockState state = assistant.level().getBlockState(pos);
         if (state.canBeReplaced()) return; // already open
         assistant.equipBestTool(state);
@@ -1037,7 +1090,7 @@ public class MineGoal extends Goal {
         // shaft — which also means a base built above or below the patch was
         // fair game. Vein-chasing then dug sideways off the plan entirely.
         // Nothing outside the marked patch gets broken, however we got here.
-        if (!mayDig(pos)) {
+        if (!allowed(pos)) {
             currentDig = null;      // drop it and take the next queued cell
             workTicks = 0;
             return;
@@ -1101,7 +1154,8 @@ public class MineGoal extends Goal {
                 above = above.above();
             }
             // Scan the fresh walls for exposed ore: iron first, and iron whatever the budget.
-            for (Direction d : Direction.values()) {
+            // (Not on the way up or out: that is no time to go after a seam.)
+            if (chasing()) for (Direction d : Direction.values()) {
                 BlockPos n = pos.relative(d);
                 BlockState ns = assistant.level().getBlockState(n);
                 boolean iron = ns.is(BlockTags.IRON_ORES);
@@ -1123,16 +1177,22 @@ public class MineGoal extends Goal {
         if (distSq < 2.5) {
             cursor = dest;
             moveTarget = null;
+            if (phase == Phase.RETURN) returnSkips = 0;
+            if (phase == Phase.ASCEND) ascent.add(dest.immutable());
             if (phase == Phase.TUNNEL) {
                 tunnelSteps++;
                 if (dugThisStep) freshSteps++;
             }
             dugThisStep = false;
             // [sf] A step through open cave can come out beside lava nobody dug to: sealed first, or home.
-            if (phase != Phase.RETURN && phase != Phase.CLIMB && lavaBeside(cursor)) return;
+            if (chasing() && lavaBeside(cursor)) return;
             if (phase == Phase.DESCEND || phase == Phase.SHAFT) {
                 breadcrumb(dest);
                 stairFloors.add(dest.below().asLong());
+                // Kept with the world: the next run, the next miner, and anybody sent for stone know it.
+                if (phase == Phase.DESCEND && assistant.level() instanceof net.minecraft.server.level.ServerLevel sl) {
+                    com.jrpetty.mcassistant.entity.MineStairs.step(sl, stairsKey, ++stepIndex, dest);
+                }
             } else if (phase == Phase.TUNNEL && assistant.quarry() && tunnelSteps % 4 == 0) {
                 // In a quarry the way home runs along the galleries too, so
                 // breadcrumb them sparsely — every fourth step is enough of a
@@ -1142,7 +1202,7 @@ public class MineGoal extends Goal {
             // A step can pass through open cave: those walls were never dug,
             // so the after-dig scan never saw them. Check around the two cells
             // now occupied, so ore in a cavity wall is chased like any other.
-            if (phase != Phase.RETURN) {
+            if (chasing()) {
                 for (BlockPos cell : new BlockPos[] { cursor, cursor.above() }) {
                     for (Direction d : Direction.values()) {
                         BlockPos ore = cell.relative(d);
@@ -1176,21 +1236,272 @@ public class MineGoal extends Goal {
             assistant.getNavigation().moveTo(dest.getX() + 0.5, dest.getY(), dest.getZ() + 0.5, 1.0D);
         }
         if (++moveStuck > 100) {
-            // On the way out, one unreachable waypoint is not a dead end —
-            // the trail has hundreds. Skip it and aim at the next one up
-            // rather than abandoning the bot at the bottom of its own quarry.
-            if (phase == Phase.RETURN && returnIndex >= 0) {
-                moveTarget = stairPath.get(returnIndex--);
-                moveStuck = 0;
+            moveStuck = 0;
+            // On the way out, one step it cannot get onto even mended is not a dead end: it tries the
+            // next one up, mended too. Twice running, and the stairs are no way up at all from here:
+            // it cuts its own.
+            if (phase == Phase.RETURN) {
+                if (returnIndex >= 0 && returnSkips < 2) {
+                    returnSkips++;
+                    BlockPos next = stairPath.get(returnIndex--);
+                    mend(next);
+                    moveTarget = next;
+                    return;
+                }
+                moveTarget = null;
+                beginAscend(returnReason);
+                return;
+            }
+            if (phase == Phase.ASCEND) {
+                moveTarget = null;
+                ascendStuck();
                 return;
             }
             // Stuck below ground: walk back up its own workings rather than stop where it stands
             // (a miner left at the bottom of its shaft stood there "stuck" until somebody came).
-            moveStuck = 0;
             if (climbOut("Got stuck down there — came back up with " + oresMined + " ore.")) return;
+            if (buried()) { moveTarget = null; beginAscend("Got stuck down there — cut my way up with " + oresMined + " ore."); return; }
             finish("Got stuck in the shaft — stopping here (" + oresMined + " ore so far).");
             if (assistant.isPackFull()) assistant.enqueueFront(Job.deposit());
         }
+    }
+
+    // --- the way up -------------------------------------------------------------
+
+    /** Rock over its head: it is underground (MineStairs.underground). */
+    private boolean buried() {
+        return com.jrpetty.mcassistant.entity.MineStairs.underground(assistant.level(), assistant.feetPos());
+    }
+
+    /** Going after ore: on the way down or along a gallery, never on the way up or out. */
+    private boolean chasing() {
+        return phase == Phase.DESCEND || phase == Phase.TUNNEL || phase == Phase.SHAFT;
+    }
+
+    /** May this block be broken? On a mine run, what its patch allows (mayDig); getting out, or mending
+     *  the way up, the ground as well wherever it is (the stairs it is climbing may run off a patch since
+     *  moved, and the way out off it altogether): never what somebody built or put there. */
+    private boolean allowed(BlockPos pos) {
+        if (mayDig(pos)) return true;
+        if (!escaping && phase != Phase.RETURN) return false;
+        return com.jrpetty.mcassistant.entity.MineStairs.ground(assistant.level().getBlockState(pos));
+    }
+
+    /**
+     * The run is over down here. Up its ladder, or back up its own stairs (mended as it climbs); with
+     * neither, and rock over its head, it cuts stairs of its own; only out in the open does it finish
+     * where it stands. It used to finish wherever the run ended (liquid ahead, a cavity, a stuck step),
+     * at the bottom of the mine, and walk off from there to its chest: a walk nobody could find.
+     */
+    private void leave(String why) {
+        if (phase == Phase.ASCEND) { finish(why); return; }
+        if (shaftLined && cursor.getY() < shaftTopY - 4) {
+            returnReason = why;
+            beginClimb();
+            return;
+        }
+        if (climbOut(why)) return;
+        if (buried()) { beginAscend(why); return; }
+        finish(why);
+    }
+
+    /**
+     * A job "out" (MineStairs.lookForAWayUp): lost underground. The nearest stairs it can get onto,
+     * climbed and mended as it goes; else stairs of its own.
+     */
+    private void startOut() {
+        assistant.equipBestTool(Blocks.STONE.defaultBlockState());
+        escaping = true;
+        if (!buried()) {
+            finish("Out in the open again.");
+            return;
+        }
+        if (assistant.level() instanceof net.minecraft.server.level.ServerLevel sl) {
+            com.jrpetty.mcassistant.entity.MineStairs.Near near =
+                com.jrpetty.mcassistant.entity.MineStairs.nearest(sl, cursor, 12);
+            if (near != null && near.index() > 0) {
+                BlockPos onIt = near.steps().get(near.index());
+                boolean there = near.distance() < 1.8;
+                net.minecraft.world.level.pathfinder.Path way = there ? null : assistant.getNavigation().createPath(onIt, 0);
+                if (there || (way != null && way.canReach())) {
+                    stairPath.clear();
+                    stairPath.addAll(near.steps());
+                    phase = Phase.RETURN;
+                    returnIndex = near.index();
+                    returnReason = "Up and out — I'd lost my way down there.";
+                    assistant.sayRoutine("Lost down here — up the mine stairs, mending them as I go.");
+                    return;
+                }
+            }
+        }
+        stairPath.clear();               // where it stood is no head of any stairs: it makes for its plot or its town
+        beginAscend("Out at last — cut my own stairs up to the daylight.");
+    }
+
+    /**
+     * A step of the way up made good before it is climbed: its floor laid again where something took it
+     * (a vein cut under it, a hand sent for stone, the ground levelled), and the room cut to stand on it
+     * and to rise onto it where something filled it (a fall of gravel, a block laid across it).
+     */
+    private void mend(BlockPos step) {
+        net.minecraft.world.level.Level lv = assistant.level();
+        BlockPos from = assistant.feetPos();
+        BlockPos floor = step.below();
+        BlockState fs = lv.getBlockState(floor);
+        if (!fs.isFaceSturdy(lv, floor, Direction.UP) && (fs.canBeReplaced() || !fs.getFluidState().isEmpty())
+                && !assistant.getBoundingBox().intersects(new AABB(floor))) {
+            placeFiller(floor);
+        }
+        java.util.List<BlockPos> room = new java.util.ArrayList<>(3);
+        room.add(step);
+        room.add(step.above());
+        if (step.getY() > from.getY()) room.add(from.above(2));
+        for (BlockPos cell : room) {
+            BlockState cs = lv.getBlockState(cell);
+            if (!cs.getCollisionShape(lv, cell).isEmpty() && !digQueue.contains(cell)) digQueue.addLast(cell);
+        }
+    }
+
+    /** No way up it can walk: from here it cuts stairs of its own to the open sky. */
+    private void beginAscend(@Nullable String why) {
+        digQueue.clear();
+        veinQueue.clear();
+        currentDig = null;
+        moveTarget = null;
+        pendingLadder = null;
+        assistant.getNavigation().stop();
+        assistant.setJumping(false);
+        if (why != null) returnReason = why;
+        escaping = true;
+        phase = Phase.ASCEND;
+        cursor = assistant.feetPos();
+        ascent.clear();
+        ascent.add(cursor.immutable());
+        ascentSteps = 0;
+        ascentFails = 0;
+        upWay = null;
+        assistant.sayRoutine("No way up from here I can walk — I'll cut my own stairs out.");
+    }
+
+    private void ascendTick() {
+        cursor = assistant.feetPos();
+        if (com.jrpetty.mcassistant.entity.MineStairs.open(assistant.level(), cursor)) {
+            finishAscent();
+            return;
+        }
+        if (++ascentSteps > MOST_ASCENT) {
+            finish("Couldn't cut my way out of there — I'll try again in a while (" + oresMined + " ore).");
+            return;
+        }
+        for (Direction d : upWays()) {
+            if (planRise(d)) { upWay = d; return; }
+        }
+        // Walled in on every side by what it may not cut (bedrock, somebody's cellar), or water all round.
+        finish("Shut in down here — nothing I can cut my way up through (" + oresMined + " ore).");
+    }
+
+    /** The ways to try a step up, best first: on the way it was going (a straight stair is the shortest),
+     *  toward home when home is off to one side, then round. */
+    private java.util.List<Direction> upWays() {
+        java.util.LinkedHashSet<Direction> ways = new java.util.LinkedHashSet<>();
+        BlockPos home = ascentTarget();
+        if (home != null) {
+            int dx = home.getX() - cursor.getX(), dz = home.getZ() - cursor.getZ();
+            if (Math.abs(dx) + Math.abs(dz) > 3) {
+                Direction ex = dx >= 0 ? Direction.EAST : Direction.WEST;
+                Direction ez = dz >= 0 ? Direction.SOUTH : Direction.NORTH;
+                if (Math.abs(dx) >= Math.abs(dz)) { ways.add(ex); if (dz != 0) ways.add(ez); }
+                else { ways.add(ez); if (dx != 0) ways.add(ex); }
+            }
+        }
+        if (upWay != null) {
+            ways.add(upWay);
+            ways.add(upWay.getClockWise());
+            ways.add(upWay.getCounterClockWise());
+            ways.add(upWay.getOpposite());
+        }
+        for (Direction d : Direction.Plane.HORIZONTAL) ways.add(d);
+        if (upWay != null && ways.iterator().next() != upWay && home == null) {
+            // no home to make for: keep on the way it was going
+            java.util.List<Direction> l = new java.util.ArrayList<>(ways);
+            l.remove(upWay);
+            l.add(0, upWay);
+            return l;
+        }
+        return new java.util.ArrayList<>(ways);
+    }
+
+    /** Where it would come out if it could choose: the head of its stairs, its plot, its town. */
+    @Nullable
+    private BlockPos ascentTarget() {
+        if (!stairPath.isEmpty()) return stairPath.get(0);
+        com.jrpetty.mcassistant.entity.WorkZone zone = assistant.workZone();
+        if (zone != null) return zone.center();
+        if (assistant instanceof com.jrpetty.mcassistant.entity.VillageFolkEntity folk) return folk.villageCentre();
+        return null;
+    }
+
+    /**
+     * One step up this way: the room to rise in (over its head where it stands, and two high where it
+     * steps to) cut, water and lava beside it walled off first, and a floor laid if there is none.
+     * False when this way is shut (something it may not cut, a fluid it cannot wall off).
+     */
+    private boolean planRise(Direction d) {
+        net.minecraft.world.level.Level lv = assistant.level();
+        BlockPos newFeet = cursor.relative(d).above();
+        BlockPos[] room = { cursor.above(2), newFeet, newFeet.above() };
+        for (BlockPos cell : room) {
+            BlockState cs = lv.getBlockState(cell);
+            if (!cs.getFluidState().isEmpty()) return false;
+            if (!cs.getCollisionShape(lv, cell).isEmpty() && !allowed(cell)) return false;
+        }
+        for (BlockPos cell : room) {
+            for (Direction n : Direction.values()) {
+                BlockPos side = cell.relative(n);
+                net.minecraft.world.level.material.FluidState fl = lv.getFluidState(side);
+                if (fl.isEmpty()) continue;
+                if (!seal(side, fl.is(net.minecraft.tags.FluidTags.LAVA))) return false;
+            }
+        }
+        BlockPos floor = newFeet.below();
+        BlockState fs = lv.getBlockState(floor);
+        if (!fs.isFaceSturdy(lv, floor, Direction.UP)) {
+            if (!fs.canBeReplaced() || !placeFiller(floor)) return false;
+        }
+        for (BlockPos cell : room) {
+            if (!lv.getBlockState(cell).getCollisionShape(lv, cell).isEmpty()) digQueue.addLast(cell);
+        }
+        moveTarget = newFeet;
+        moveStuck = 0;
+        return true;
+    }
+
+    /** A step it cut and could not climb (a fall of gravel, something in the way): round another way. */
+    private void ascendStuck() {
+        if (++ascentFails > 8) {
+            finish("Couldn't climb my way out of there — I'll try again in a while (" + oresMined + " ore).");
+            return;
+        }
+        cursor = assistant.feetPos();
+        if (upWay != null) upWay = upWay.getClockWise();
+    }
+
+    /** Out under the sky. The stairs it cut are stairs like any other: kept, for the next one down there. */
+    private void finishAscent() {
+        if (ascent.size() > 3 && assistant.level() instanceof net.minecraft.server.level.ServerLevel sl) {
+            java.util.List<BlockPos> headFirst = new java.util.ArrayList<>(ascent);
+            java.util.Collections.reverse(headFirst);
+            BlockPos top = headFirst.get(0);
+            com.jrpetty.mcassistant.entity.MineStairs.record(sl, BlockPos.asLong(top.getX(), 1, top.getZ()), headFirst);
+        }
+        String done = returnReason != null ? returnReason : "Dug my way out — " + oresMined + " ore.";
+        finish(done);
+        if (assistant.stashable() > 0) assistant.enqueueFront(Job.deposit());
+    }
+
+    /** Tests: the phase it is in. */
+    public String phaseForTests() {
+        return phase.name();
     }
 
     private void sweepDrops(BlockPos around) {

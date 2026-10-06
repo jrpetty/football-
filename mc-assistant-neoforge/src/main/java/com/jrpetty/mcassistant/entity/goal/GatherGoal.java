@@ -499,6 +499,7 @@ public class GatherGoal extends Goal {
         if (!st.isSolid()) return false;
         if (assistant.level().getBlockEntity(p) != null) return false; // don't smash chests/etc.
         if (!diggable(st)) return false;  // only the ground: never a wall, a floor or a house
+        if (com.jrpetty.mcassistant.entity.MineStairs.isFloor(assistant.level(), p)) return false;   // nor a step of the mine stairs
         assistant.getLookControl().setLookAt(p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5);
         assistant.equipBestTool(st);
         if (assistant.level().destroyBlock(p, true, assistant)) {
@@ -666,6 +667,9 @@ public class GatherGoal extends Goal {
             if (!assistant.inZone(pos)) continue;    // stay inside the marked work zone
             BlockState rankSt = assistant.level().getBlockState(pos);
             if (!request.kind().matches(rankSt) || !rankAllows(request.kind(), rankSt)) continue;
+            // Never the step of somebody's mine stairs: the nearest stone to a plot's middle was the head
+            // of its own stairs, and the miner came back up to a drop it could not climb (MineStairs).
+            if (com.jrpetty.mcassistant.entity.MineStairs.isFloor(assistant.level(), pos)) continue;
             // Crew checks last: they cost a map lookup each, and the block
             // test above rejects all but a handful of positions.
             if (respectCrew && assistant.takenByCrew(pos)) continue;
