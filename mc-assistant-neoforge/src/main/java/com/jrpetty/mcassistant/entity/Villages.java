@@ -424,8 +424,7 @@ public final class Villages {
         Elections.resetForTests();
         Homes.resetForTests();
         FOUNDED.clear();
-        LEAD.clear();
-        LEAD_AT.clear();
+        CREWS.clear();
         LAST_BAKE.clear();
         STOCK.clear();
         STOCK_TICK.clear();
@@ -508,8 +507,7 @@ public final class Villages {
         WHY_NOT.remove(villageId);
         LAPS.remove(villageId);
         FOUNDED.remove(villageId);
-        LEAD.remove(villageId);
-        LEAD_AT.remove(villageId);
+        CREWS.remove(villageId);
         LAST_BAKE.remove(villageId);
         ALL.remove(villageId);
         AGE.remove(villageId);
@@ -1388,7 +1386,34 @@ public final class Villages {
      *  a great deal more to put up, and waiting the same four minutes between houses
      *  left a big village standing in front of the list. */
     private static long gapFor(UUID villageId) {
-        return Math.max(1200L, PROJECT_GAP * 12L / Math.max(12, headcount(villageId)));
+        long gap = Math.max(1200L, PROJECT_GAP * 12L / Math.max(12, headcount(villageId)));
+        // A town with food to spare and a bed for nearly everyone does not stand about between one building
+        // and the next: half a minute, and the next crew is at it (thriving).
+        return thriving(villageId) ? Math.min(gap, THRIVING_GAP) : gap;
+    }
+
+    /** The wait between projects in a thriving town. */
+    static final long THRIVING_GAP = 600L;
+
+    /**
+     * Can the town afford to build as fast as it has hands and materials: food to spare (the leader's
+     * plan is plenty), a bed for all but a few, and no raid at the gates. Building is what a town does
+     * with what it has over; a town short of any of these builds at the old, careful pace.
+     */
+    public static boolean thriving(UUID villageId) {
+        int folk = headcount(villageId);
+        if (folk == 0) return false;
+        if (Leader.plan(villageId) != Leader.Plan.PLENTY) return false;
+        if (folk - housing(villageId) > 4) return false;
+        return !Raids.underAlarm(villageId);
+    }
+
+    /** How many buildings a town may have going up at once: one; two in a thriving town of twelve or more;
+     *  three in a thriving town of forty or more. Each crew raises a different building. */
+    public static int crewsAllowed(UUID villageId) {
+        int folk = headcount(villageId);
+        if (folk < 12 || !thriving(villageId)) return 1;
+        return folk >= 40 ? 3 : 2;
     }
 
     public static boolean projectDue(UUID villageId, long gameTime) {
@@ -1465,8 +1490,7 @@ public final class Villages {
             }
         }
         if (pending != null) pending.remove(structure);      // its ground is spoken for now
-        LEAD.remove(villageId);                              // and the next one starts fresh
-        LEAD_AT.remove(villageId);
+        crewDone(villageId, structure);                      // and its crew starts fresh on the next
     }
 
     private static int built(UUID villageId, String structure) {
@@ -1634,6 +1658,9 @@ public final class Villages {
         // growing is the whole of how it gets the hands for everything after this. A leader
         // elected for homes (Elections) keeps more spare.
         int spare = Elections.mandate(villageId) == Values.Value.HOMES ? 6 : 2;
+        // A thriving town builds its houses ahead of the folk who will want them, so a town with the timber
+        // and the food is not putting up one house a day as the children come (thriving).
+        if (thriving(villageId)) spare = Math.max(spare, Math.min(10, 2 + folk / 6));
         boolean house = folk >= housing(villageId) - spare || built(villageId, "house") < 1 || HOUSE_WANTED.getOrDefault(villageId, false);
         if (house) out.add("house");
         if (built(villageId, "well") < 1) out.add("well");
@@ -2076,58 +2103,114 @@ public final class Villages {
         LAST_BAKE.put(villageId, gameTime);
     }
 
-    // ---- who is raising the next building ----
+    // ---- who is raising the town's buildings ----
 
-    private static final Map<UUID, UUID> LEAD = new ConcurrentHashMap<>();
-    private static final Map<UUID, Long> LEAD_AT = new ConcurrentHashMap<>();
+    /** A hand raising one of the town's buildings: the project it is on (null till it settles on one),
+     *  when it took the post, and when it last got anywhere. */
+    private static final class Crew {
+        final UUID folk;
+        final long started;
+        volatile String project;
+        volatile long since;
+
+        Crew(UUID folk, long now) {
+            this.folk = folk;
+            this.started = now;
+            this.since = now;
+        }
+    }
+
+    /** Each town's building crews, by the hand leading each. */
+    private static final Map<UUID, Map<UUID, Crew>> CREWS = new ConcurrentHashMap<>();
     private static final long LEAD_TERM = 6000L;      // five minutes without progress
 
+    /** The town's crews still at it: a lead five minutes without progress, dead or gone gives its post up. */
+    private static Map<UUID, Crew> crews(UUID villageId, long now) {
+        Map<UUID, Crew> m = CREWS.computeIfAbsent(villageId, k -> new ConcurrentHashMap<>());
+        m.values().removeIf(c -> now - c.since >= LEAD_TERM || !livesHere(villageId, c.folk));
+        return m;
+    }
+
     /**
-     * Is this hand the one raising the village's next building? The first to
-     * ask becomes the lead and stays it: its pack is where the timber, the
-     * chests and the ladders pile up over several visits, so the next
-     * volunteer must not start again from nothing with a pack of its own —
-     * half a building's fixtures scattered across a dozen packs is a building
-     * nobody can ever start. The post passes on when the lead dies, is nowhere
-     * to be found, or five minutes go by without it getting anywhere.
+     * Is this hand one of those raising the village's buildings? A hand that leads a crew stays its
+     * lead: its pack is where the timber, the chests and the ladders pile up over several visits, so
+     * the next volunteer must not start again from nothing with a pack of its own. While the town has
+     * a crew to spare (crewsAllowed) the first to ask takes one. The post passes on when the lead dies,
+     * is nowhere to be found, or five minutes go by without it getting anywhere.
      */
     public static boolean isLead(UUID villageId, UUID me, long now) {
-        UUID cur = LEAD.get(villageId);
-        Long since = LEAD_AT.get(villageId);
-        boolean valid = cur != null && since != null && now - since < LEAD_TERM && livesHere(villageId, cur);
-        if (!valid) {
-            LEAD.put(villageId, me);
-            LEAD_AT.put(villageId, now);
-            return true;
-        }
-        return cur.equals(me);
+        Map<UUID, Crew> m = crews(villageId, now);
+        if (m.containsKey(me)) return true;
+        if (m.size() >= crewsAllowed(villageId)) return false;
+        m.put(me, new Crew(me, now));
+        return true;
     }
 
-    /** Who is raising the village's building now, or null. */
+    /** The hand that has led a building longest just now, or null (the one idle hands go to help). */
     @Nullable
     public static UUID currentLead(UUID villageId, long now) {
-        UUID cur = LEAD.get(villageId);
-        Long since = LEAD_AT.get(villageId);
-        return cur != null && since != null && now - since < LEAD_TERM ? cur : null;
+        Crew best = null;
+        for (Crew c : crews(villageId, now).values()) if (best == null || c.started < best.started) best = c;
+        return best == null ? null : best.folk;
     }
 
-    /** Is the village's building in another living hand's charge just now (one that died or left
-     *  gives the post up at once, as {@link #isLead} has it)? */
+    /** Every crew is in other living hands just now, and none is this one's. */
     public static boolean ledByAnother(UUID villageId, UUID me, long now) {
-        UUID cur = currentLead(villageId, now);
-        return cur != null && !cur.equals(me) && livesHere(villageId, cur);
+        Map<UUID, Crew> m = crews(villageId, now);
+        return !m.containsKey(me) && m.size() >= crewsAllowed(villageId);
     }
 
-    /** Is this hand the lead right now (without taking the post if it is free)? */
+    /** Is this hand leading one of the town's buildings right now (without taking a post if one is free)? */
     public static boolean holdsTheLead(UUID villageId, UUID me, long now) {
-        UUID cur = LEAD.get(villageId);
-        Long since = LEAD_AT.get(villageId);
-        return me.equals(cur) && since != null && now - since < LEAD_TERM;
+        Map<UUID, Crew> m = CREWS.get(villageId);
+        Crew c = m == null ? null : m.get(me);
+        return c != null && now - c.since < LEAD_TERM;
     }
 
     /** The lead got somewhere — a load drawn, a fixture crafted: the term restarts. */
     public static void leadProgress(UUID villageId, UUID me, long now) {
-        if (me.equals(LEAD.get(villageId))) LEAD_AT.put(villageId, now);
+        Map<UUID, Crew> m = CREWS.get(villageId);
+        Crew c = m == null ? null : m.get(me);
+        if (c != null) c.since = now;
+    }
+
+    /**
+     * The building this hand is to raise: the one its crew is on, while the town still wants it and it
+     * is not set aside; else the first the town wants that no other crew is raising. Two crews never
+     * raise the same building.
+     */
+    @Nullable
+    public static String projectFor(UUID villageId, UUID me) {
+        Map<UUID, Crew> m = CREWS.get(villageId);
+        Crew mine = m == null ? null : m.get(me);
+        List<String> wanted = projectsWanted(villageId);
+        if (mine != null && mine.project != null && wanted.contains(mine.project) && open(villageId, mine.project)) return mine.project;
+        java.util.Set<String> taken = new java.util.HashSet<>();
+        if (m != null) for (Crew c : m.values()) if (!c.folk.equals(me) && c.project != null) taken.add(c.project);
+        for (String p : wanted) if (open(villageId, p) && !taken.contains(p)) return p;
+        return null;
+    }
+
+    /** This hand's crew is on this building now. */
+    public static void leadOn(UUID villageId, UUID me, String project) {
+        Map<UUID, Crew> m = CREWS.get(villageId);
+        Crew c = m == null ? null : m.get(me);
+        if (c != null) c.project = project;
+    }
+
+    /** The building is up, or its lot given up: the crew on it is free for the next. */
+    private static void crewDone(UUID villageId, String project) {
+        Map<UUID, Crew> m = CREWS.get(villageId);
+        if (m == null) return;
+        boolean any = m.values().removeIf(c -> project.equals(c.project));
+        if (!any && m.size() == 1) m.clear();          // the one crew there was, whatever it called its building
+    }
+
+    /** Tests and the books: the buildings going up now, a line each. */
+    public static List<String> crewsReport(UUID villageId, long now) {
+        List<String> out = new ArrayList<>();
+        for (Crew c : crews(villageId, now).values()) out.add(c.folk + " on " + c.project);
+        return out;
     }
 
     private static boolean livesHere(UUID villageId, UUID folk) {
@@ -2762,8 +2845,7 @@ public final class Villages {
             BAD_LOTS.computeIfAbsent(villageId, k -> ConcurrentHashMap.newKeySet())
                 .add(BlockPos.asLong(gone.anchor().getX(), 0, gone.anchor().getZ()));
         }
-        LEAD.remove(villageId);
-        LEAD_AT.remove(villageId);
+        crewDone(villageId, project);
         long gap = gapFor(villageId);
         LAST_PROJECT.put(villageId, gameTime - gap + Math.min(600L, gap / 8));
     }

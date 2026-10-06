@@ -6367,7 +6367,9 @@ public class VillageFolkEntity extends AssistantEntity {
         if (!(level() instanceof net.minecraft.server.level.ServerLevel server)) return;
         long now = level().getGameTime();
         if (!Villages.projectDue(village, now)) { buildNote("build: not due yet"); return; }
-        String project = Villages.nextProject(village);
+        // The first building no other crew is raising (a thriving town has two or three going up at once:
+        // Villages.crewsAllowed), or the one this hand's crew is already on.
+        String project = Villages.projectFor(village, getUUID());
         if (project == null) { buildNote("build: nothing wanted"); return; }
         // Only a folk standing near the village heart takes the job on — the
         // buildings go up where people live, not wherever the volunteer was.
@@ -6410,6 +6412,7 @@ public class VillageFolkEntity extends AssistantEntity {
             buildNote("build: another hand leads");
             return;
         }
+        Villages.leadOn(village, getUUID(), project);
         // The builder fetches what it builds with itself: it walks to the stores, loads up
         // there, and carries the load to the site — the storehouse's units, the timber, the
         // stone — and lays it block by block. (Three tries to get there: a store it cannot

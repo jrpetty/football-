@@ -1234,6 +1234,13 @@ shelves, with a nudge to bring them to the stalls or look at the quest board.
 
 ### The buildings
 
+**Building as fast as the town can afford.** A town that is getting by builds one thing at a time,
+with a few minutes between projects. A thriving town builds faster: food to spare (the leader's
+plan is *plenty*), a bed for all but a few, and no raid at the gates. It has two crews raising two
+different buildings at once from twelve folk, and three from forty. It waits half a minute
+between projects, and it builds its houses ahead of the folk who will want them. Fall short of
+any of those and it goes back to the careful pace.
+
 **A way in at every door.** A building is laid out at one height, but the ground in front of
 its door is whatever the world made. Now and then a door opened onto a bank of earth a block
 high, or over a drop too deep to step up from. On its rounds of the streets the town checks its
