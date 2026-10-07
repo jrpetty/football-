@@ -79,7 +79,9 @@ public class BuildGoal extends Goal {
         // [batchF] the post office (Post), and the statue the town's own fund pays for (PublicFund)
         "postoffice", "statue",
         // [econ-store] the town store, once the town has outgrown its little shop (Store)
-        "store");
+        "store",
+        // [war-prep] the armoury and the training yard, on a war footing (entity/WarWorks)
+        "armoury", "trainingyard");
 
     /** Half the width of a structure's footprint: the meeting hall, the market, the
      *  barracks, the chapel's length and the gateway's step are seven across, the rest

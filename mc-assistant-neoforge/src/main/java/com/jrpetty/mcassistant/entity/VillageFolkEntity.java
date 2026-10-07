@@ -2847,6 +2847,7 @@ public class VillageFolkEntity extends AssistantEntity {
             if (!isSleeping()) bedtime();
             return;
         }
+        if (Militia.muster(this)) return;               // [war-prep] a morning of the war: the militia musters and drills
         // Nobody goes looking for ground after dark: a folk with no trade yet spends the
         // night like everybody else, and looks in the morning.
         if (workZone() == null && !onShift()) {
@@ -6406,7 +6407,8 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected boolean onBreak() {
         // On the road with a caravan, its own work waits until it is home.
-        return trip != null || expedition != null || Drover.busy(this) || Stables.busy(this) || Nether.away(this) || JobSeekers.busy(this) || breakNow();
+        return trip != null || expedition != null || Drover.busy(this) || Stables.busy(this) || Nether.away(this) || JobSeekers.busy(this) || breakNow()
+            || Militia.mustering(this);                  // [war-prep] at the militia's muster, its own work waits
     }
 
     /** The caravan this folk is taking to a colony and back, or null (Caravans). */

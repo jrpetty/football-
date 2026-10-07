@@ -88,6 +88,7 @@ public final class RestDay {
         if (!today(village, day) || t < SERVICE_FROM || t >= EVENING) return false;
         KEPT.put(village, day);
         if (t < GAMES_FROM) return service(f, level, village, heart, day);
+        if (t < WALKING_FROM && Militia.drill(f)) return true;      // [war-prep] the militia drills instead of the games
         if (t < WALKING_FROM) return games(f, level, heart);
         return walkingOut(f, level, day);
     }

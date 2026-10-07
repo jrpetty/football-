@@ -210,6 +210,8 @@ public final class TownPlan {
             case "watchtower" -> "corner";
             case "range" -> "corner";                                       // [batchC] the watch's range, by the wall
             case "pitch" -> "field";                                        // [batchC] a long lot for the football pitch
+            case "armoury" -> "civic";                // [war-prep] the armoury faces the square with the trades
+            case "trainingyard" -> "corner";          // [war-prep] the training yard by the watchtower, at a corner
             case "lighthouse", "pen", "gateway", "graveyard" -> "edge";
             default -> "home";
         };

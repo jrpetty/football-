@@ -353,6 +353,7 @@ public final class Market {
         PriceIndex.morning(level, v, day);               // [econ-prices] the day's prices, by yesterday's supply and demand
         Annals.record(level, v, day);                    // and the morning written into the town's books
         Leader.morning(level, v, day);                   // the leader's books, the plan and the day's pay
+        WarFooting.morning(level, v, day);               // [war-prep] the town on a war footing: the watch, the militia, the defences
         CityTree.morning(level, v, day);                 // the day's research points, and the leader's next civic
         JobWorth.morning(level, v, day);                 // [econ-wages] the day's pay scale: what every job is worth
         mint(level, v);
@@ -388,7 +389,7 @@ public final class Market {
         UUID id = v.id();
         int head = Math.max(1, Villages.headcount(id));
         int foodStock = Villages.stock(level, v.centre(), Villages.Task.FOOD, Villages.storesRadius(id));
-        int foodKeep = Math.max(256, 3 * Villages.larderForBirth(id));
+        int foodKeep = WarStores.foodKeep(id, Math.max(256, 3 * Villages.larderForBirth(id)));   // [war-prep] and a siege's food
         List<String> sold = new ArrayList<>();
         int coins = 0;
         for (Good g : GOODS) {

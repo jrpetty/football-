@@ -1,0 +1,36 @@
+# The training yard: a fenced square of beaten earth where the watch and the militia drill. Three
+# dummies along the back (a hay bale on a post, to cut and thrust at), an archery butt of hay two
+# bales high at either end of them, a gate onto the street in the front fence, and a lantern on each
+# corner post. Whoever drills stands two paces in front of a dummy (Militia).
+# Rows run from the back (top, the dummies) to the front (bottom, the gate).
+name trainingyard
+layer -1
+...........
+.ddddddddd.
+.ddddddddd.
+.ddddddddd.
+.ddddddddd.
+.ddddddddd.
+.ddddddddd.
+.ddddddddd.
+...........
+layer 0
+...........
+.PPPPPPPPP.
+.PyP.P.PyP.
+.P.......P.
+.P.......P.
+.P.......P.
+.P.......P.
+.PPPPgPPPP.
+...........
+layer 1
+...........
+.l.......l.
+..yy.y.yy..
+...........
+...........
+...........
+...........
+.l.......l.
+...........

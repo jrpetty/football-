@@ -161,6 +161,7 @@ public final class Raids {
         long now = level.getGameTime();
         long t = level.getDayTime() % 24000L;
         long day = level.getDayTime() / 24000L;
+        WarWorks.keep(level, v);                           // [war-prep] the works on the wall and the armoury, on a war footing
         // The wall's gates, the posts' ladders and the bell, seen to every minute.
         if (now - KEPT.getOrDefault(id, -100000L) >= 1200L) {
             KEPT.put(id, now);
@@ -455,7 +456,7 @@ public final class Raids {
         if (a == null) {
             if (g.post() != null) leavePost(g);
             SENT.remove(g.getUUID());
-            return false;
+            return Militia.yard(g);                       // [war-prep] between the bells, a turn at the training yard
         }
         if (!(g.level() instanceof ServerLevel level)) return false;
         Villages.Village v = Villages.get(id);

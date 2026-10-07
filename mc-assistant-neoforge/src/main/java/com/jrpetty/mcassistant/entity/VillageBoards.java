@@ -373,6 +373,7 @@ public final class VillageBoards {
         out.add((content >= 60 ? "RG" : content >= 35 ? "RN" : "RW") + "|Contentment: " + Contentment.line(level, id) + ".");
         String alarm = Raids.why(id);
         out.add(alarm != null ? "RB|THE BELL IS RINGING: " + alarm + "!" : "RM|The watch: all quiet.");
+        out.addAll(WarFooting.board(id));                   // [war-prep] on a war footing: the watch, the militia, the defences
         String bounty = PlayerServices.boardLine(level, id);     // [players] the night's bounty, when the watch is busy
         if (bounty != null) out.add("RW|" + bounty);
         out.addAll(TownCalendar.board(level, id));          // today's bells, Founding Day, the week's birthdays
