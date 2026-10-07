@@ -4294,6 +4294,8 @@ public final class CaveDwellers {
         Villages.Village v = here(ctx);
         if (v == null) return 0;
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer p)) return cmdPage(ctx);
+        // A player whose game cannot take the books (a test's stand-in) is told the page instead.
+        if (p.connection == null || !p.connection.hasChannel(com.jrpetty.mcassistant.net.CityStatsPayload.TYPE)) return cmdPage(ctx);
         CompoundTag books = Annals.snapshot(ctx.getSource().getLevel(), v);
         books.putString("page", "Caves");
         net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p, new com.jrpetty.mcassistant.net.CityStatsPayload(books));

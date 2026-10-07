@@ -120,7 +120,8 @@ public final class FolkTalk {
         String vote = Referendums.playerSays(f, p, text);
         if (vote != null) return manner(f, vote);
         // [library] Books: borrowing one, bringing it back, the shelves, a copy; what it is reading or writing (Library).
-        String library = Library.talk(f, p, topic, text);
+        // [caves] Not the cave team's map ("a copy of the cave map"): that is the team's to sell (CaveGuests).
+        String library = topic == TalkTopic.CAVES ? null : Library.talk(f, p, topic, text);
         if (library != null && !library.isEmpty()) return manner(f, library);
         String said = switch (topic) {
             case OPEN -> greet(f, p, op, firstMeeting, heard);
