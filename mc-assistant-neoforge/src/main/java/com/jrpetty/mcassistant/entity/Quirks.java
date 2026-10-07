@@ -44,8 +44,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * <li><b>Born Leader</b>: the town looks to it: it stands for office sooner and draws more votes.</li>
  * <li><b>Bookworm</b>: learns its trade a tenth faster, and reads in its own time.</li>
  * <li><b>Animal Lover</b>: a rancher or a beekeeper eight quicker, and drawn to the herds and the hives.</li>
- * <li><b>Fearless</b>: never shaken by a blow (its spirits shrug it off), hits a point harder, and runs to help a neighbour a
- *     monster has set on, whatever its trade.</li>
+ * <li><b>Fearless</b>: never shaken by a blow (its spirits shrug it off), hits a point harder, does not run indoors from a
+ *     monster as the rest do, and runs to help a neighbour a monster has set on, whatever its trade.</li>
  * <li><b>Squeamish</b>: never a hunter: sent to the hunt, it takes up the fields instead.</li>
  * <li><b>Musical</b>: takes up music, and a passer-by is the likelier to drop a coin in its hat; 2 the happier for
  *     an evening's playing.</li>
@@ -80,7 +80,7 @@ public final class Quirks {
         BORN_LEADER("Born Leader", "the town looks to it: stands for office, wins votes", "a born leader", "folk listen when I speak"),
         BOOKWORM("Bookworm", "learns its trade a tenth faster", "a bookworm", "I always have my nose in a book"),
         ANIMAL_LOVER("Animal Lover", "herds and hives 8% quicker", "an animal lover", "beasts trust me"),
-        FEARLESS("Fearless", "never shaken; +1 attack; runs to help", "fearless", "nothing frightens me"),
+        FEARLESS("Fearless", "never flees; +1 attack; runs to help", "fearless", "nothing frightens me"),
         SQUEAMISH("Squeamish", "never a hunter (the fields instead)", "squeamish", "I can't stand the sight of blood"),
         MUSICAL("Musical", "busks well; plays of an evening", "musical", "there's always a tune in my head"),
         HAWK_EYED("Hawk-eyed", "a guard sees 4 further", "hawk-eyed", "I can spot a rabbit at a hundred paces"),

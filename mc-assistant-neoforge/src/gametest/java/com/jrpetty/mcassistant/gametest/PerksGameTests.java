@@ -185,16 +185,20 @@ public class PerksGameTests {
      * least five pairs, each of one tier of one branch; at the top of every branch one wonder, each a real building
      * (a sound drawing the builders know, on the lot it wants). A Merchant at heart weighs the Free Market above the
      * Guild Monopolies and a Traditionalist the other way; once the Monopolies are done the Free Market is closed for
-     * good (granted, picked by the leader or not, it stays closed, and the books say why). The town's ethos leans the
-     * choice (its seam: the Sea, by its ways), a leader sets the study, and the books and the identity tell it all.
+     * good (granted, picked by the leader or not, it stays closed, and the books say why). A second town under a
+     * Merchant takes the Free Market, and the two come out measurably different: a pickaxe 11 coins in the one and 9 in
+     * the other, the other's smiths 6% quicker. The town's ethos leans the choice (its seam: the Sea, by its ways), a
+     * leader sets the study, and the books and the identity tell it all.
      */
     @GameTest(template = EMPTY, timeoutTicks = 200, batch = "pk01_perks_tree")
     public static void pk01_perks_tree(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Villages.Village v = town(helper, 1480000, Z, 5, true, false);
-        UUID id = v.id();
-        helper.runAtTickTime(5, () -> {
+        Villages.Village second = town(helper, 1480700, Z, 5, false, false);
+        UUID id = v.id(), other = second.id();
+        helper.runAtTickTime(10, () -> {
             long day = level.getDayTime() / 24000L;
+            helper.assertTrue(!id.equals(other), "two towns");
             helper.assertTrue(CityTree.Branch.values().length == 10, "ten branches: " + CityTree.Branch.values().length);
             helper.assertTrue(CityTree.ALL >= 60, "sixty civics or more: " + CityTree.ALL);
             for (String old : OLD_TWENTY) helper.assertTrue(CityTree.byKey(old) != null, "the old civic " + old + " kept");
@@ -237,6 +241,22 @@ public class PerksGameTests {
             helper.assertTrue(free.getString("state").equals("closed") && free.getString("rival").equals("Guild Monopolies"),
                 "the books show it closed: " + free);
             helper.assertTrue(told(id, "Free Market"), "the chronicle says the Free Market is closed");
+            // Another town, under a Merchant, goes the other way, and the two come out measurably different.
+            VillageFolkEntity merchantLeader = grown(other).get(0);
+            Villages.electElder(other, merchantLeader, day);
+            lean(merchantLeader, Values.Value.WEALTH);
+            upTo(level, other, Civic.MASTER_WORKSHOPS, day);
+            double[] theirs = pairScores(level, other);
+            CityTree.grant(level, other, theirs[1] > theirs[0] ? Civic.FREE_MARKET : Civic.GUILD_MONOPOLIES, day);
+            ItemStack tool = new ItemStack(Items.IRON_PICKAXE);
+            double ours = Perks.priceEach(id, tool, null, 10.0), theirPrice = Perks.priceEach(other, tool, null, 10.0);
+            Kit.log("pk01 two towns: a pickaxe " + ours + " here, " + theirPrice + " there; the smith " + CityTree.workPercent(id, StationTask.SMITH)
+                + "% here, " + CityTree.workPercent(other, StationTask.SMITH) + "% there");
+            helper.assertTrue(CityTree.has(other, Civic.FREE_MARKET) && CityTree.locked(other, Civic.GUILD_MONOPOLIES),
+                "the Merchant's town takes the Free Market");
+            helper.assertTrue(near(ours, 11.0) && near(theirPrice, 9.0)
+                && CityTree.workPercent(other, StationTask.SMITH) == CityTree.workPercent(id, StationTask.SMITH) + 6,
+                "the one town's tools dearer, the other's cheaper and its smiths quicker");
             // The town's ethos leans the choice.
             CityTree.ETHOS = (village, b) -> b == CityTree.Branch.SEA ? 500 : 0;
             Civic chosen;
@@ -634,8 +654,10 @@ public class PerksGameTests {
             helper.assertTrue(Perks.coldLength(other, 1000) == 750 && content == 1, "a Traditionalist: colds a quarter shorter, +1: " + good);
             lean(leader, Values.Value.LEISURE);
             Reigns.forgetForTests();
-            List<String> keys = Perks.moodKeysForTests(other);
-            helper.assertTrue(keys.contains("reign"), "a Free Spirit: everybody's spirits: " + keys);
+            List<Object[]> why = new ArrayList<>();
+            int spirits = Perks.mood(other, day, 50, why);
+            boolean said = why.stream().anyMatch(o -> "reign".equals(o[0]));
+            helper.assertTrue(spirits == 52 && said, "a Free Spirit: everybody 2 the happier: " + spirits);
             String card = Reigns.cardLine(leader);
             helper.assertTrue(card.contains("Free Spirit") || card.contains("level"), "the leader's card says so: " + card);
             // The tests' quiet: no perk.

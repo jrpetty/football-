@@ -502,6 +502,7 @@ public final class WatchClears {
     static boolean exempt(VillageFolkEntity f, ServerLevel level) {
         if (f.stationTask() == StationTask.GUARD || Patrols.escorting(f) || f.isShowcase()) return true;
         if (f.isSleeping() || f.isHired() || f.trip() != null || f.expedition() != null || Nether.away(f)) return true;
+        if (Quirks.answersCries(f)) return true;                        // [perks] the Fearless do not run indoors from a monster
         BlockPos me = f.blockPosition();
         int ground = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, me.getX(), me.getZ());
         return me.getY() < ground - 6 && !level.canSeeSky(me);           // below ground (the mine), or deep indoors already

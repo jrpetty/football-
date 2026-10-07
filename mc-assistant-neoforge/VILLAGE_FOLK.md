@@ -7917,7 +7917,7 @@ Every folk has one or two quirks from birth (a founder from the founding, the sa
 | Born Leader | stands for office the sooner, and draws more votes |
 | Bookworm | a tenth more experience; takes up reading |
 | Animal Lover | a rancher or a beekeeper 8% quicker |
-| Fearless | shrugs off a blow, a point more blow, runs to help a neighbour a monster has set on whatever its trade |
+| Fearless | never runs indoors from a monster, shrugs off a blow, a point more blow, runs to help a neighbour a monster has set on whatever its trade |
 | Squeamish | never a hunter: sent to the hunt, it takes up the fields |
 | Musical | takes up music; a listener the likelier to tip it busking; 2 happier for an evening's playing |
 | Hawk-eyed | a guard sees four blocks further |
@@ -7954,8 +7954,9 @@ The game tests `PerksGameTests` (pk01 to pk10) check that:
 * the tree has ten branches and sixty civics or more with the first twenty kept, at least five pairs each of one tier,
   and at the top of every branch one wonder that is a sound building the builders know; a Merchant leans to the Free
   Market and a Traditionalist to the Monopolies; the Monopolies done, the Free Market is closed (neither granted nor
-  picked), and the books and the chronicle say why; the town's ethos leans its choice; a leader sets the study; the
-  books and the identity show it all;
+  picked), and the books and the chronicle say why; a second town under a Merchant takes the Free Market, and the two
+  come out measurably different (their tools' prices, their smiths' pace); the town's ethos leans its choice; a leader
+  sets the study; the books and the identity show it all;
 * the Watch House, the Standing Army, the Fletchers' Charter, the Militia, the Earthworks and the Arena do what they
   say, the Arena only once raised;
 * Primers, the Printing Press (on a book from the stores, and not without one), the Scholars, the Surveyors, the

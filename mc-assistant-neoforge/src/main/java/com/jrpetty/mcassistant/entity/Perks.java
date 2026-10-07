@@ -737,6 +737,7 @@ public final class Perks {
 
     /** Tests: a folk's mood worked out now, and its reasons' keys. */
     public static List<String> moodKeysForTests(VillageFolkEntity f) {
+        f.ensurePersona();
         f.refreshMood();
         return new ArrayList<>(f.persona().moodWhy());
     }
