@@ -416,7 +416,9 @@ public final class JobWorth {
         if (had != null && had.day == day) return had;
         State st = state(id);
         Scale s = build(lvl, id, day, st, st.afford);
-        SCALES.put(id, s);
+        // A town nobody is near (a notice of its read far away) is reckoned without its folk or its stores in view:
+        // good for the asking, not kept for the day.
+        if (!AssistantEntity.allFor(id).isEmpty()) SCALES.put(id, s);
         return s;
     }
 

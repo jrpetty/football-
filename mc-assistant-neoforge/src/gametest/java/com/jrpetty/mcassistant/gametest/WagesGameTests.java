@@ -131,11 +131,14 @@ public class WagesGameTests {
         helper.runAtTickTime(5, () -> {
             Villages.ageForTests(id, Villages.Age.STONE);
             long day0 = level.getDayTime() / 24000L;
-            String news = "";
+            String news = "", gazette = null;
             for (int d = 1; d <= 8; d++) {
                 JobWorth.morningForTests(level, v, day0 + d, null);
                 String n = JobWorth.newsForTests(id, day0 + d);
-                if (news.isEmpty() && !n.isEmpty()) news = n;
+                if (news.isEmpty() && !n.isEmpty()) {
+                    news = n;
+                    gazette = JobWorth.gazette(id, day0 + d);     // the morning's issue, as the gazette prints it
+                }
             }
             JobWorth.Worth shortW = JobWorth.scale(level, id).worth("MINE");
             int wageShort = Wealth.wage(miner);
@@ -161,8 +164,8 @@ public class WagesGameTests {
                 "its card says the mines are short: " + cardShort);
             helper.assertTrue(news.toLowerCase(java.util.Locale.ROOT).contains("miners' pay is up"),
                 "the gazette tells of the miners' rise: " + news);
-            String gazette = JobWorth.gazette(id, day0 + 1);
-            helper.assertTrue(gazette != null && gazette.contains("Wages"), "the gazette's wages column: " + gazette);
+            helper.assertTrue(gazette != null && gazette.contains("Wages") && gazette.contains("pay is up"),
+                "the gazette's wages column: " + gazette);
             helper.succeed();
         });
     }
