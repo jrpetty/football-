@@ -87,7 +87,7 @@ public final class Tavern {
         Ledger.Building tav = of(village);
         if (tav == null || f.isBaby() || !(f.level() instanceof ServerLevel level) || !level.isLoaded(tav.anchor())) return false;
         long day = level.getDayTime() / 24000L;
-        if (!goingTonight(f, day)) return false;
+        if (!goingTonight(f, day) && !Bard.playing(level, village)) return false;   // [batchG] a bard in: the whole town comes
         Direction back = tav.facing(), right = back.getClockWise();
         int h = f.getUUID().hashCode();
         BlockPos spot = tav.anchor().relative(right, Math.floorMod(h, 4)).relative(back, Math.floorMod(h >> 3, 5) - 2);

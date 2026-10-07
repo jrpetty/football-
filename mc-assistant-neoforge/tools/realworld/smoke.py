@@ -994,6 +994,65 @@ def sights_stage(r, look, cx, cz):
     say("alive after the sights: %s" % client_alive())
 
 
+def visitors_stage(r, look, cx, cz):
+    """Visitors and the player (entity/Visitors, MapRoom): the travelling bard by the tavern's hearth of an
+    evening, the merchant from afar at the market on a morning, and the town's map in its frame on the
+    hall's wall. Each is brought about now with /village visitors: the bard and the merchant still come in
+    from the edge of the world, and "evening" sets the visitors in town at their places; the map is drawn on
+    the town's own paper by a hand at its works (nothing is made for the pictures). After the books, so the
+    town has its tavern, its market and its hall."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("weather clear")
+    r.cmd("gamemode spectator %s" % USER)
+    where = "execute positioned %d 100 %d run " % (cx, cz)
+    xyz = r"(-?\d+) (-?\d+) (-?\d+)"
+    dirs = {"north": (0, -1), "south": (0, 1), "east": (1, 0), "west": (-1, 0)}
+    say("visitors: " + r.cmd(where + "village visitors")[:1200])
+
+    # The bard, of an evening, by the tavern's hearth.
+    r.cmd("time set 13500")
+    say("bard: " + r.cmd(where + "village visitors bard")[:400])
+    out = r.cmd(where + "village visitors evening")
+    m = re.search(r"VISITOR bard (\S+) " + xyz, out)
+    if m:
+        x, y, z = int(m.group(2)), int(m.group(3)), int(m.group(4))
+        time.sleep(8)                                    # a phrase or two of its tune, and a line of news
+        look("24-visitors-1-bard", x + 3.5, y + 1.2, z + 2.5, x + 0.5, y + 1.4, z + 0.5, wait=5)
+    else:
+        say("no bard to photograph (no tavern, or no ground at the edge): %s" % out[:300])
+
+    # The merchant from afar, at the market in the morning.
+    r.cmd("time set 4000")
+    say("merchant: " + r.cmd(where + "village visitors merchant")[:400])
+    out = r.cmd(where + "village visitors evening")
+    m = re.search(r"VISITOR merchant (\S+) " + xyz, out)
+    if m:
+        x, y, z = int(m.group(2)), int(m.group(3)), int(m.group(4))
+        time.sleep(4)
+        look("24-visitors-2-merchant", x + 4.5, y + 1.6, z + 3.5, x + 0.5, y + 1.3, z + 0.5, wait=5)
+    else:
+        say("no merchant to photograph (no market, or nothing its land lacks): %s" % out[:300])
+
+    # The map room: the town's map on the hall's wall (paper first, as a player would leave it in the stores).
+    bell = r.cmd(where + "village bell")
+    st = re.search(r"STORES " + xyz, bell)
+    if st:
+        sx, sy, sz = (int(v) for v in st.groups())
+        for slot, item in ((23, "minecraft:paper 36"), (24, "minecraft:item_frame 4")):
+            say("stores: " + r.cmd("item replace block %d %d %d container.%d with %s" % (sx, sy, sz, slot, item)))
+    out = r.cmd(where + "village visitors map")
+    say("map: " + out[:600])
+    m = re.search(r"MAPFRAME " + xyz + r" (\w+)", out)
+    if m:
+        x, y, z = int(m.group(1)), int(m.group(2)), int(m.group(3))
+        dx, dz = dirs.get(m.group(4), (0, 1))
+        look("24-visitors-3-map-room", x + 0.5 + dx * 3.2, y + 0.4, z + 0.5 + dz * 3.2, x + 0.5, y + 0.4, z + 0.5, wait=6)
+    else:
+        say("no map on the hall's wall (no hall, or no paper): %s" % out[:300])
+    r.cmd("gamemode creative %s" % USER)
+    say("alive after the visitors: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

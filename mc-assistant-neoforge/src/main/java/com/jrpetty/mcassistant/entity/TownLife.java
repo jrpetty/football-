@@ -118,6 +118,9 @@ public final class TownLife {
         // [townlife] The gazette on the meeting hall's lectern, and the welcome sign at the edge of town: once a day each.
         Gazette.tick(level, v);
         WelcomeSign.tick(level, v);
+        // [batchG] Visitors (the bard, tourists, the merchant), friends' visits, the map room, the watch's dogs,
+        // gifts kept on show, and its players' advancements (Visitors.tick).
+        Visitors.tick(level, v);
         // The café's and the shop's counters.
         if (turn % 6 == 3) {
             Cafe.dress(level, v, "cafe");

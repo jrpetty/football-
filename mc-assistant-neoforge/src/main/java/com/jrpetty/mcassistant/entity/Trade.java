@@ -247,6 +247,7 @@ public final class Trade {
         }
         f.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
         f.playSound(net.minecraft.sounds.SoundEvents.VILLAGER_TRADE, 1.0F, 1.0F);
+        if (p instanceof net.minecraft.server.level.ServerPlayer sp) Advancements.firstTrade(sp);   // [batchG] the first trade with a folk
         return pick(r, "Pleasure doing business!", "A fair trade. Enjoy them!", "Done! Come back any time.")
             + (inKind ? pick(r, " That'll go straight to the stores.", " The village will be glad of it.") : "");
     }
@@ -287,4 +288,20 @@ public final class Trade {
     }
 
     public static void resetForTests() { DEALS.clear(); }
+
+    // [batchG] A visitor's offer (Merchants: the merchant from afar) goes on the table like any folk's, so the
+    // talk screen shows it and its "Hand over" can be pressed; the merchant closes its own deals.
+
+    static void table(VillageFolkEntity f, Deal d) {
+        DEALS.put(f.getUUID(), d);
+    }
+
+    @javax.annotation.Nullable
+    static Deal tabled(VillageFolkEntity f) {
+        return DEALS.get(f.getUUID());
+    }
+
+    static void untable(VillageFolkEntity f) {
+        DEALS.remove(f.getUUID());
+    }
 }

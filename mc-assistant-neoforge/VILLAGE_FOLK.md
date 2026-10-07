@@ -4692,3 +4692,87 @@ back, the charcoal and the charcoal torches; a sapling from the crowns on every 
 ground planted and the saplings fed; a rod a building, of three copper ingots; a fire put out with a
 bucket made of the stores' iron and noted in the books; the snow shovelled off the square into the
 storehouse and not off a garden; and a farmer in out of the storm while the watch stays out.
+
+## Visitors and the player
+
+Towns are visited now, by strangers from far away and by friends from the next town, and the game keeps
+note of your own milestones among them.
+
+* **Visitors are nobody's.** A bard, a tourist or a merchant comes in on foot from the edge of the world
+  near the town, a folk like any other to look at and talk to, but of no village: never on a town's roll or
+  in its headcount, never given a bed, a trade, a wage or a vote, never called to the town's work. Its name
+  says what it is ("Wren the bard", "Ash the merchant", "Rowan (visiting)"), and its card says where it came
+  from, when it leaves and what it carries. Ask it about itself, or how it is; anything about the town it
+  leaves to the people who live there. What a visitor brings, it brings from outside, as the game's
+  wandering trader does, and it is kept small: the bard's bedroll, a tourist's purse of four to ten coins, a
+  merchant's few lots. What it takes away (its purse, a souvenir, unsold goods) goes with it.
+* **The travelling bard.** Every four to six days a town of fifteen or more with a tavern has a bard come
+  in. It makes for the tavern and says who it is; nearby players hear of it. For two or three nights:
+  * **of an evening** it stands by the tavern's hearth and plays, a phrase at a time with the notes rising
+    over its head, and between tunes tells the news of the towns round about, real lines out of their own
+    chronicles ("News from Oakford, 300 blocks east: the smithy went up, on day 12"), or one of its tales.
+    With a bard in, the whole town comes to the tavern, not two evenings in five. Whoever hears it is
+    happier that day and the next ("There's a bard at the tavern — what songs!") and remembers it;
+  * **by day** it sees the town and busks on the square; a folk who likes the song may drop a coin of its
+    own in the bard's hat, once a visit;
+  * **at night** it sleeps at the inn (a town's inn if it has one, else the tavern), in a bed nobody calls
+    their own or on its own bedroll laid by the wall, rolled up again in the morning;
+  * then it goes on its way, and the chronicle says so.
+* **Tourists.** A town of renown draws people to see it: its renown (its great works and its museum) and
+  five more for each statue to a hero. At fifteen it has tourists, one or two at a time, a few days apart
+  (the more renowned, the oftener). A tourist walks the sights in turn (the museum first, the statues, the
+  monument, the park, the fountain, the bell tower and the rest), stops a while before each and says what
+  it thinks, has a drink or a bite at the café and buys a souvenir at the shop, at their prices, out of its
+  own purse into the treasury. With an inn it stays the night; without one it goes home at dusk.
+* **The merchant from afar.** On market day a town with a market has a merchant come with up to four lots
+  of what its own land has not got: cocoa, glow berries, sugar cane, cactus, bamboo, coral, dyes, melon,
+  honeycomb, and saplings of the woods that do not grow there. It never brings what the town's ground grows
+  or what its stores already hold. **The town buys what it needs** as soon as the stall is up, out of the
+  treasury (never out of what it keeps for the wages), two lots at most: cane when it is short of paper,
+  cocoa for the café, saplings when the woodcutters have few, berries when the larder is low, dyes while
+  houses wait on coloured rugs. **You can buy too**: ask the merchant "Trade?" for its lots in turn, and
+  press **Hand over** with the coin (or an emerald). It leaves at dusk.
+* **Friends from other towns.** Folk with a friend or family in another town within five hundred blocks
+  (one moved there on the job market, went out with a colony, or grew up and left) now and then walk over
+  to see them for the day: one from a town every three days at most, never the watch or the leader. It goes
+  on foot by the road between the towns, finds its friend, is welcomed, and they eat together, a bite each
+  of their own. It keeps its friend company till the afternoon, then walks home. Both remember it, think
+  the warmer of each other (a friendship kept up across the miles does not fade), are happier for a day or
+  two, and both chronicles take it down. Its card says where it is while it is away.
+* **Gifts kept.** Give a folk something precious (worth five coins or more and not food: a diamond, an
+  emerald, gold, an enchanted book, a music disc, a fine tool) and it is its own: never put in the stores,
+  carried with it when it moves house. Of an evening at home it hangs the finest it has in an item frame on
+  the wall by its bed, a frame it buys out of its own purse at the stores' price; a finer gift later takes
+  its place. Its card has a **Keeps** line, and it mentions it: "I keep the diamond you gave me by my bed."
+* **The map room.** Once the hall stands, a hand at the town's works (the clerk) draws a map of the town and
+  hangs it in a frame on the hall's wall: on a sheet of nine of the stores' paper (or eight and a compass
+  the town can spare), filled in from the ground as it stands, in a frame the stores have or make of their
+  sticks and a leather. A town of forty or more has a two-by-two of maps, each a quarter of the town at
+  twice the detail. Every seven days a fresh map is drawn on fresh paper and last week's goes back to the
+  stores, where you may have it.
+* **Watch dogs.** The watch keeps a dog for every two guards. A guard takes bones (or raw meat) out of the
+  stores, walks out to a wild wolf about the town and holds them out one at a time, as you would; what it
+  does not use goes back. The dog is named, follows its guard on its rounds by day, growls and barks at a
+  monster near the town and goes for it (never a creeper), and at night lies down by its guard's bed. The
+  guard's card has an **Its dog** line.
+* **Advancements.** A page of its own on the advancements screen, **Village Life** (the village board's
+  icon), with a toast as each comes: founding a village; a town you founded or are a citizen of reaching
+  twenty-five, fifty and a hundred folk, and each age from the Stone Age to the Nether; becoming a citizen;
+  being made an honoured guest; your first trade with a folk; a letter from a friend in a village; and,
+  hidden until won, winning at a town fair or a football cup.
+* **Seeing it.** The town's books, **News** page, have a **Visitors** section: the week's visitors and what
+  they spent, who is in town now, friends' visits this week and who is away today, when the hall's map was
+  drawn, and the watch's dogs. The chronicle takes down every coming and going. Operators can use
+  `/village visitors` (who is visiting and where, the map's frames, the dogs) and `/village visitors
+  <bard|tourist|merchant|friend|map|dog|gifts|evening>` to bring one about now with the town's own stores,
+  purses and hands.
+
+The game tests `VisitorsGameTests` (vp01 to vp08) check each: the bard is on nobody's roll, its news is the
+other town's real line, the room hears it and is the happier, it beds down on its bedroll and rolls it up;
+a tourist's coin goes from its own purse into the treasury and the books count it; the town buys what it
+needs off the merchant's stall out of the treasury, and a player buys a lot; the advancements are all loaded
+and granted (the founder's, the ages, citizenship); the map is drawn on the stores' paper, hung, renewed a
+week on with the old map back in the stores, and grows into a two-by-two; a guard tames a wolf with one of
+the stores' bones, and the dog lies down at night and goes for a zombie by day; a friend's visit is walked,
+welcomed, eaten together and remembered on both sides; and a player's diamond is hung in a frame the folk
+bought, mentioned, and given way to a finer gift.

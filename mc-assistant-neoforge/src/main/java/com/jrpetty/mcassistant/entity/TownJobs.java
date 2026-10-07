@@ -243,6 +243,7 @@ public final class TownJobs {
     static boolean fit(VillageFolkEntity f, String works) {
         if (!f.isAlive() || f.isBaby() || f.isSleeping() || f.isHired() || f.getTarget() != null) return false;
         if (f.trip() != null || f.expedition() != null || Nether.away(f) || Drover.busy(f)) return false;
+        if (FriendVisits.away(f) || Visitors.is(f)) return false;               // [batchG] away at a friend's; or nobody's to call on
         if (f.talkPartner() != null || f.companionPlayer() != null || f.guidePlayer() != null) return false;
         if (Assemblies.attending(f) || Patrols.escorting(f)) return false;      // (or walking with the leader)
         if (FireBrigade.onIt(f) || Weather.sheltering(f)) return false;          // [wf] at a fire, or in out of a storm

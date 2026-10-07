@@ -555,6 +555,7 @@ public final class Annals {
         out.put("needs", strings(needs(level, id)));
         out.put("neighbours", strings(neighbours(id)));
         out.put("calendar", strings(TownCalendar.book(level, id)));   // the day's bells, Founding Day, birthdays (News)
+        out.put("visitors", strings(Visitors.book(level, id)));       // [batchG] visitors, friends' visits, the map room, the dogs (News)
         out.put("society", society(id, folk));
         out.put("league", league(level, v));
         out.put("production", production(level, v));

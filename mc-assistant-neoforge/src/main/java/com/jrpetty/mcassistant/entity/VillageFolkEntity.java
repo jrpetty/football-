@@ -299,6 +299,9 @@ public class VillageFolkEntity extends AssistantEntity {
             FolkTalk.speak(this, laterLine);
             laterLine = null;
         }
+        // [batchG] A visitor from afar (the bard, a tourist, the merchant), one of ours away for the day at a friend's
+        // in another town, or a guard out taming a dog for the watch: that is its day (Visitors).
+        if (Visitors.drive(this)) return;
         Leisure.tick(this);
         if (tickCount % 100 == 53) Meals.tick(this);           // breakfast, the midday meal, supper
         // Lost underground with no way up it can walk (a mine run cut short, a fall into a cave): sent up
@@ -1103,6 +1106,7 @@ public class VillageFolkEntity extends AssistantEntity {
         m = FolkSkills.mood(this, m, why);              // Bright Spirit, a bright friend near, Unflappable's floor
         m = Birthdays.mood(this, day, m, why);          // its birthday (Birthdays)
         m = Families.mood(this, day, m, why);           // its wedding anniversary (Families)
+        m = Visitors.mood(this, day, m, why);           // [batchG] a night of the bard's songs, a day with a friend from away
         why.sort((a, b) -> Integer.compare((Integer) b[1], (Integer) a[1]));
         java.util.List<String> keys = new java.util.ArrayList<>();
         for (Object[] w : why) keys.add((String) w[0]);
