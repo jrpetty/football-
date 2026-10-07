@@ -3572,7 +3572,14 @@ public class VillageGameTests {
         int goodDay = com.jrpetty.mcassistant.entity.Wealth.wage(f);
         Kit.log("t48 wages: farmer " + farmerWage + ", smith " + smithWage + ", smith after a good day " + goodDay
             + "; worth: " + com.jrpetty.mcassistant.entity.Wealth.line(f) + "; skill: " + com.jrpetty.mcassistant.entity.Skill.line(f));
-        helper.assertTrue(smithWage > com.jrpetty.mcassistant.entity.Wealth.baseWage(StationTask.FARM), "a smith earns more than a farmer");
+        // [econ-wages] Pay by worth (JobWorth): for the same years at it, a smith's day is worth more than a field
+        // hand's (harder work, much more skill), and the town's posted rates say so. This folk is a seasoned farmer
+        // and a smith new to the forge, whose own day is worth about the same in a hamlet: that is its hand, not its trade.
+        int farmRate = com.jrpetty.mcassistant.entity.Wealth.tradeWage(StationTask.FARM, f.ownerId());
+        int smithRate = com.jrpetty.mcassistant.entity.Wealth.tradeWage(StationTask.SMITH, f.ownerId());
+        Kit.log("t48 the posted rates: a farmer " + farmRate + ", a smith " + smithRate + "; the smith's day: "
+            + com.jrpetty.mcassistant.entity.Wealth.breakdown(f));
+        helper.assertTrue(smithRate > farmRate, "a smith earns more than a farmer: " + smithRate + " against " + farmRate);
         helper.assertTrue(goodDay == smithWage + 2, "a hard day's work earns two more: " + goodDay);
         com.jrpetty.mcassistant.village.Ledger.addCoins(f.ownerId(), 100);      // the village has sold its surplus
         int paid = com.jrpetty.mcassistant.entity.Market.payWages(level, Villages.get(f.ownerId()));

@@ -413,7 +413,9 @@ public final class JobWorth {
         ServerLevel lvl = level != null ? level : levelOf(id);
         if (lvl == null) return had != null ? had : light(id, 0L, state(id));
         long day = lvl.getDayTime() / 24000L;
-        if (had != null && had.day == day) return had;
+        // Kept for the day, unless the place has come up (or down) in the world since: a village made a town at
+        // noon pays as a town from then on, as it always did.
+        if (had != null && had.day == day && Math.round(had.standing * 10) == Wealth.standing(id)) return had;
         State st = state(id);
         Scale s = build(lvl, id, day, st, st.afford);
         // A town nobody is near (a notice of its read far away) is reckoned without its folk or its stores in view:
