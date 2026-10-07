@@ -113,6 +113,9 @@ public final class Market {
         new Good("Fish pie", s -> s.is(com.jrpetty.mcassistant.item.KitchenItems.FISH_PIE.get()), 1.2, 4, Villages.Task.FOOD),
         new Good("Herbal tea", s -> s.is(com.jrpetty.mcassistant.item.KitchenItems.HERBAL_TEA.get()), 0.6, 2, Villages.Task.NONE),
         new Good("Bandages", s -> s.is(com.jrpetty.mcassistant.item.KitchenItems.BANDAGE.get()), 0.3, 4, Villages.Task.NONE),
+        // [nether] The Nether runners' kit (NetherItems): the smith's gold charm (an ingot and a third of gold), the tailor's satchel.
+        new Good("Gold charm", s -> s.is(com.jrpetty.mcassistant.item.NetherItems.GOLD_CHARM.get()), 13.0, 1, Villages.Task.NONE),
+        new Good("Runner's satchel", s -> s.is(com.jrpetty.mcassistant.item.NetherItems.RUNNERS_SATCHEL.get()), 6.0, 1, Villages.Task.NONE),
         good("Beetroot", Items.BEETROOT, 0.1, 16, Villages.Task.FOOD),
         good("Melon", Items.MELON_SLICE, 0.1, 16, Villages.Task.FOOD),
         good("Berries", Items.SWEET_BERRIES, 0.1, 16, Villages.Task.FOOD),

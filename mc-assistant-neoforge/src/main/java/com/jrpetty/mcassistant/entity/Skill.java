@@ -38,6 +38,7 @@ public final class Skill {
             case SOCIABLE -> switch (trade) {
                 case SHOP, COOK, STORE, HAUL -> new Fit(12, "good with people, made for this");
                 case CAVE -> new Fit(-6, "misses company down in the dark");          // [caves]
+                case NETHER -> new Fit(4, "keeps the team's spirits up in the heat");   // [nether]
                 case SCOUT -> new Fit(6, "talks to everybody it meets on the road");
                 case HUNT -> new Fit(-8, "can't keep quiet long enough to get near anything");
                 case MINE, FISH -> new Fit(-5, "misses company down there");
@@ -58,6 +59,7 @@ public final class Skill {
             case GRUMPY -> switch (trade) {
                 case GUARD -> new Fit(8, "nothing gets past a scowl like that");
                 case CAVE -> new Fit(6, "takes it out on the rock, and on what lives in it");   // [caves]
+                case NETHER -> new Fit(6, "glowers right back at a ghast");                    // [nether]
                 case MINE, SMITH -> new Fit(4, "takes it out on the stone");
                 case SHOP, COOK, STORE -> new Fit(-6, "puts the customers off");
                 default -> new Fit(0, "");
@@ -70,6 +72,7 @@ public final class Skill {
                 case MINE, ENCHANT, BREW, SMITH -> new Fit(10, "loves finding out how things work");
                 case SCOUT -> new Fit(18, "born to see what's over the next hill");
                 case CAVE -> new Fit(14, "can't pass a dark passage without seeing where it goes");   // [caves]
+                case NETHER -> new Fit(12, "wants to see what's past the next lava fall");             // [nether]
                 case HUNT -> new Fit(8, "reads the tracks like a book");
                 case HAUL, STORE -> new Fit(-4, "wanders off to look at things");
                 default -> new Fit(3, "always learning something");

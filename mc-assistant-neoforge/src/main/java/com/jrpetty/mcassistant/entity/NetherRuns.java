@@ -233,6 +233,7 @@ public final class NetherRuns {
         }
 
         public List<UUID> members() { return List.copyOf(members); }
+        public String planWords() { return planWords; }
         public UUID leader() { return leader; }
         public Phase phase() { return phase; }
         public String phaseWords() { return homeward && phase != Phase.STORE ? "homeward" : phase.name().toLowerCase(Locale.ROOT); }
@@ -249,6 +250,15 @@ public final class NetherRuns {
         public int barters() { return barters; }
         public int blazes() { return blazes; }
         public int deflected() { return deflected; }
+        public int retreats() { return retreats; }
+        public int potions() { return potions; }
+        public int slain() { return slain; }
+        public int placed() { return placed; }
+        public int cut() { return cut; }
+        public String guestName() { return guestName; }
+        @Nullable public UUID guest() { return guest; }
+        public List<String> fallen() { return List.copyOf(fallen); }
+        public List<String> lost() { return List.copyOf(lost); }
         public boolean homeward() { return homeward; }
         public boolean reported() { return reported; }
         public String why() { return why; }
@@ -280,8 +290,11 @@ public final class NetherRuns {
         long next, stillTick, spoke = -100000, ate = -100000, drank = -100000, shield = -100000, deflect = -100000, crossed = -100000,
             seen, digTick, waitFrom = -1, scan = -100000, collect = -100000, called = -100000, gateSince = -1;
         @Nullable BlockPos stillAt, digging, claim, lastSeen, pillarFrom;
-        int dug, digNeeded, pillar, cutSteps;
-        boolean retreating, arrived;
+        int dug, digNeeded, pillar, cutSteps, stuck;
+        boolean retreating, arrived, cutting;
+        /** Where it is making for (NetherWork.makeFor), and when it started cutting its way there. */
+        @Nullable BlockPos goal;
+        long cutSince = -1, threw = -100000, shot = -100000, shielding = -1;
         @Nullable UUID foe;
         /** What came into its pack out of the Nether (the haul it carries), by item. */
         final Map<Item, Integer> got = new HashMap<>();
@@ -727,6 +740,7 @@ public final class NetherRuns {
                         return;
                     }
                     if (searching(level, f, r, leg)) return;
+                    if (NetherGuests.waitForPlayer(level, f, r)) return;
                     NetherWork.lead(level, f, r, leg);
                 } else {
                     NetherWork.help(level, f, r, leg, lead);
@@ -774,6 +788,8 @@ public final class NetherRuns {
                 f.hobbyNow = "through the gateway, waiting for the others";
                 return;
             }
+            // A player along: waited for on the far side till it comes through after them (NetherGuests).
+            if (f == lead && NetherGuests.waitForPlayer(level, f, r)) return;
             if (f == lead) {
                 r.phase(Run.Phase.ARRIVE, now);
                 keep(r);
@@ -1162,7 +1178,7 @@ public final class NetherRuns {
     static void putIn(ServerLevel level, VillageFolkEntity f, Run r) {
         Villages.Village v = Villages.get(r.village);
         if (v == null) return;
-        NetherWork.unpackSatchels(f);
+        List<ItemStack> satchels = NetherWork.unpackSatchels(f);
         StorehouseBlockEntity house = Storehouses.storeFor(level, r.village);
         String who = f.displayNameCap();
         Leg leg = r.legs.get(f.getUUID());
@@ -1176,29 +1192,40 @@ public final class NetherRuns {
             int keep = CaveDwellers.food(s) && !got.containsKey(s.getItem()) ? Math.min(s.getCount(), 4) : 0;
             int n = s.getCount() - keep;
             if (n <= 0) continue;
-            int found = Math.min(n, got.getOrDefault(s.getItem(), 0));
-            if (found > 0) got.merge(s.getItem(), -found, Integer::sum);
             ItemStack lot = s.copyWithCount(n);
             s.shrink(n);
             if (s.isEmpty()) pack.set(i, ItemStack.EMPTY);
-            if (found > 0) {
-                ItemStack mine = lot.copyWithCount(found);
-                Economy.produced(f, mine.copy());
-                r.stored0.merge(mine.getHoverName().getString().toLowerCase(Locale.ROOT), found, Integer::sum);
-                r.storedItems.merge(mine.getItem(), found, Integer::sum);
-                NetherHome.broughtHome(r.village, mine, who, level.getDayTime() / 24000L);
-            }
-            ItemStack left = house != null ? house.insert(lot.copy()) : lot.copy();
-            int in = lot.getCount() - (house != null ? left.getCount() : 0);
-            if (house != null && in > 0 && found > 0) lots.add(lot.copyWithCount(Math.min(in, found)));
-            if (!left.isEmpty() || house == null) Crafts.store(level, v, house == null ? lot.copy() : left);
+            bank(level, v, f, r, house, got, lots, lot);
         }
+        // What the satchel carried: all of it the haul.
+        for (ItemStack lot : satchels) bank(level, v, f, r, house, got, lots, lot);
         if (house != null) {
             house.setChanged();
             if (!lots.isEmpty()) Storekeeping.bookIn(level, r.village, who, lots, false);
         }
         f.swing(InteractionHand.MAIN_HAND);
         f.brain("put the Nether's haul into the " + (house != null ? "storehouse" : "stores"));
+    }
+
+    /** One lot of what it carried into the storehouse: what of it was found in the Nether booked as found (its work, the
+     *  run's haul, the trophies), what it took and did not use back without being counted. */
+    private static void bank(ServerLevel level, Villages.Village v, VillageFolkEntity f, Run r, @javax.annotation.Nullable StorehouseBlockEntity house,
+                             Map<Item, Integer> got, List<ItemStack> lots, ItemStack lot) {
+        String who = f.displayNameCap();
+        int n = lot.getCount();
+        int found = Math.min(n, got.getOrDefault(lot.getItem(), 0));
+        if (found > 0) got.merge(lot.getItem(), -found, Integer::sum);
+        if (found > 0) {
+            ItemStack mine = lot.copyWithCount(found);
+            Economy.produced(f, mine.copy());
+            r.stored0.merge(mine.getHoverName().getString().toLowerCase(Locale.ROOT), found, Integer::sum);
+            r.storedItems.merge(mine.getItem(), found, Integer::sum);
+            NetherHome.broughtHome(r.village, mine, who, level.getDayTime() / 24000L);
+        }
+        ItemStack left = house != null ? house.insert(lot.copy()) : lot.copy();
+        int in = lot.getCount() - (house != null ? left.getCount() : 0);
+        if (house != null && in > 0 && found > 0) lots.add(lot.copyWithCount(Math.min(in, found)));
+        if (!left.isEmpty() || house == null) Crafts.store(level, v, house == null ? lot.copy() : left);
     }
 
     /** "6 quartz, 3 blaze rods, a ghast tear": the most of a haul first. */
@@ -1420,6 +1447,13 @@ public final class NetherRuns {
     static boolean searching(ServerLevel level, VillageFolkEntity lead, Run r, Leg leadLeg) {
         long now = level.getGameTime();
         MinecraftServer server = level.getServer();
+        // The lost one a rescue came for (not one of the team till it is found), seen by the leader: found.
+        if (r.missing != null && !r.members.contains(r.missing)) {
+            VillageFolkEntity m = find(server, r.village, r.missing);
+            if (m != null && inNether(m) && m.distanceToSqr(lead) <= 32 * 32 && (m.distanceToSqr(lead) <= 6 * 6 || lead.hasLineOfSight(m))) {
+                found(level, lead, r, m);
+            }
+        }
         // Each of the team seen by the leader (in the Nether, within sight and reach) is seen now.
         for (UUID u : r.members) {
             Leg l = r.legs.computeIfAbsent(u, k -> new Leg());
@@ -1623,6 +1657,23 @@ public final class NetherRuns {
     /** Tests: the run's phase set. */
     public static void phaseForTests(Run r, Run.Phase p, long now) {
         r.phase(p, now);
+    }
+
+    /** Tests: this runner lost in the Nether now (the search given up). */
+    public static void loseForTests(ServerLevel level, VillageFolkEntity m, Run r) {
+        lose(level, m, r, "the others searched for it, and could not find it");
+    }
+
+    /** Tests: is this runner falling back to the outpost, hurt? */
+    public static boolean retreatingForTests(Run r, UUID folk) {
+        Leg l = r.legs.get(folk);
+        return l != null && l.retreating;
+    }
+
+    /** Tests: the run under way by town, whoever asks (the stage too). */
+    @Nullable
+    public static Run runForTests(UUID village) {
+        return run(village);
     }
 
     /** Tests: who went through today forgotten. */

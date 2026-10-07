@@ -70,7 +70,9 @@ public class CityScreen extends Screen {
         // [library] The town library, after them (LibraryPage): its catalogue, its writers, its loans.
         "Library",
         // [transport] The railways, the carts, the ferry and the bridge, after them (TransportPage).
-        "Transport" };
+        "Transport",
+        // [nether] The Nether runners' page, after them (NetherPage): the runs, the outpost, the finds, the hauls.
+        "Nether" };
     /** The pages that read today's figures, not the books (so they show from the first day). */
     private static final java.util.Set<String> TODAY_PAGES = java.util.Set.of("Folk", "Society", "Leader", "Buildings", "Why", "News", "Board",
         "Shops", "Homes", "Stock", "Research", "School", "Museum", "Culture", "Prices", "Trade", "War map", "War", "Caves",
@@ -78,7 +80,8 @@ public class CityScreen extends Screen {
         "Cases",                                                                                      // [crime]
         "Auction",                                                                                    // [fleet]
         "Library",                                                                                    // [library]
-        "Transport");                                                                                 // [transport]
+        "Transport",                                                                                  // [transport]
+        "Nether");                                                                                    // [nether]
     private static final int[] RANGES = { 7, 30, 100, 0 };
     private static final String[] RANGE_NAMES = { "7d", "30d", "100d", "All" };
 
@@ -333,6 +336,10 @@ public class CityScreen extends Screen {
                 }
                 case "War map" -> warMap(g, x, y, cw, ch, mouseX, mouseY);   // [war-scouting]
                 case "War" -> WarPage.draw(g, font, data.getCompound("war"), x, y, cw, ch, scroll);   // [war-peace]
+                case "Nether" -> {                                                     // [nether] the runners' report (NetherPage)
+                    List<Component> tip = NetherPage.draw(g, font, data.getCompound("nether"), x, y, cw, ch, scroll, mouseX, mouseY);
+                    if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
+                }
                 case "Caves" -> {                                                      // [caves] the caves' report (CavesPage)
                     List<Component> tip = CavesPage.draw(g, font, data.getCompound("caves"), x, y, cw, ch, scroll, mouseX, mouseY);
                     if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }

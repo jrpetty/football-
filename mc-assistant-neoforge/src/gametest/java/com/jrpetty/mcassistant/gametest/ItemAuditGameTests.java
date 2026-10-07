@@ -290,7 +290,8 @@ public class ItemAuditGameTests {
             many(Items.REDSTONE, 16), many(Items.HONEYCOMB, 8), many(Items.AMETHYST_SHARD, 8), many(Items.SAND, 32),
             many(Items.GLASS, 16), many(Items.SPIDER_EYE, 8), many(Items.TORCH, 16), many(Items.DIRT, 16), many(Items.SMOOTH_STONE, 16),
             many(Items.OAK_SIGN, 8), many(Items.CHEST, 2), many(Items.BOWL, 8), many(Items.BRICK, 16), many(Items.CLAY_BALL, 16),
-            many(Items.CRAFTING_TABLE, 1), many(Items.FURNACE, 1), many(Items.OAK_SLAB, 8)));
+            many(Items.CRAFTING_TABLE, 1), many(Items.FURNACE, 1), many(Items.OAK_SLAB, 8),
+            many(Items.MAGMA_CREAM, 2)));   // [nether] the runner's satchel is waxed with it
         // A master's hands, with every bench and fire to hand: what is asked is whether the stores run to it.
         Bench.Hand hand = new Bench.Hand(40, "", true, true, true, true, true);
         List<String> wanting = new ArrayList<>();

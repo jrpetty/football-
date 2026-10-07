@@ -130,5 +130,7 @@
   "item.mc_assistant.heirloom_locket": "Heirloom Locket",
   "item.mc_assistant.town_medal": "Medal of the Town",
   "item.mc_assistant.town_key": "Key to the Town",
-  "block.mc_assistant.ferry_bell": "Ferry Bell"
+  "block.mc_assistant.ferry_bell": "Ferry Bell",
+  "item.mc_assistant.gold_charm": "Gold Charm",
+  "item.mc_assistant.runners_satchel": "Runner's Satchel"
 }

@@ -66,6 +66,8 @@ public final class FolkTalk {
         Persona.Opinion op = me.opinionOf(p.getUUID(), p.getName().getString());
         // [caves] Said to one of the cave team: an ask of it, going along, its map, a share (CaveGuests.meant).
         if (topic == TalkTopic.SAY && f.stationTask() == AssistantEntity.StationTask.CAVE && CaveGuests.meant(text)) topic = TalkTopic.CAVES;
+        // [nether] Said to one of the Nether runners: an ask of them, going through with them, their chart, a share.
+        if (topic == TalkTopic.SAY && f.stationTask() == AssistantEntity.StationTask.NETHER && NetherGuests.meant(text)) topic = TalkTopic.NETHER;
         if (topic == TalkTopic.SAY) {
             TalkTopic quest = QuestTalk.heard(f, p, text);              // [quests] "any work?", "I'll do it", a choice by name
             if (quest != null) topic = quest;
@@ -177,6 +179,7 @@ public final class FolkTalk {
             case KNACK -> knack(f);
             case ATLAS -> Scouts.tell(f);
             case CAVES -> CaveGuests.talk(f, p, text);                         // [caves] the report; an ask, going along, the map
+            case NETHER -> NetherGuests.talk(f, p, text);                      // [nether] the report; an ask, going through, the chart
             case FASHION -> Fashion.talk(f);                                   // [fashion] the season's look
             case WATCH -> p instanceof ServerPlayer sp ? Crime.talk(f, sp, text) : puzzled(f);   // [crime] seen anything amiss?
             case FOR_SALE -> Budget.answer(f, p);
@@ -386,6 +389,7 @@ public final class FolkTalk {
         line(sb, "War", WarFooting.cardLine(f));            // [war-prep] the watch for the war, the militia, danger money
         line(sb, "Kit", WatchKit.cardLine(f));              // [guard-kit] a guard's kit, issued by the town
         line(sb, "Caves", CaveDwellers.cardLine(f));        // [caves] where it went today, what it found, its kit
+        line(sb, "Nether", NetherRunners.cardLine(f));      // [nether] the run it is on or its last, and its kit
         line(sb, f.isBaby() ? "Apprenticed" : "Apprentices", PlayerTrades.cardLine(f));   // [player-civic] its apprentices, or its trade
         line(sb, "The fleet", Fleet.cardLine(f));            // [fleet] out with the fishing fleet, and its catch
         line(sb, "Auction", Auctions.cardLine(f));           // [fleet] at the auction, or what it won there
@@ -736,6 +740,7 @@ public final class FolkTalk {
             case BANK -> Bank.doing(f, r);                // the banker: its books, its vault, its borrowers
             case CAVE -> CaveDwellers.doing(f, r);        // [caves] down the caves, or home with the report
             case FERRY -> Ferries.doing(f, r);            // [transport] at the landing, or out on the water
+            case NETHER -> NetherRunners.doing(f, r);     // [nether] through the gateway, or resting from the last run
         };
         if (!f.missingEssentials().isEmpty()) work += " Or I would be, if I had " + f.missingEssentials().get(0) + ".";
         if (f.life().has(Social.Trait.HARDWORKING) && r.nextBoolean()) work += " Can't stop long.";
@@ -1271,6 +1276,8 @@ public final class FolkTalk {
                 "poach", "smuggl", "constable", "the stocks", "suspect")
                 || has(t, "i saw") && has(t, " take", " took", " steal", " stole", " broke", " break", " smash", " pinch", " nick",
                     " did it", " do it", " purse", " window", " lamp", " fence")) return TalkTopic.WATCH;
+        // [nether] The Nether runners: their chart, going through with them, the Nether itself: before the maps and the guide.
+        if (has(t, "nether", "piglin", "ghast", "blaze", "the runners", "come through", "runners' chart", "runners chart")) return TalkTopic.NETHER;
         // [caves] The cave team's map, going along with the team, an ask of it: before the town's map and the guide.
         if (has(t, "cave map", "map of the caves", "caves map", "cave team", "delvers", "come down the caves", "come caving",
                 "go caving")) return TalkTopic.CAVES;

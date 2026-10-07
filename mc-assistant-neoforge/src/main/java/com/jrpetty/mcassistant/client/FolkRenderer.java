@@ -51,6 +51,8 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
     private static final ResourceLocation MINER_GLOW = texture("miner_glow");
     /** [caves] The cave dweller's helm lamp, lit. */
     private static final ResourceLocation CAVE_GLOW = texture("cavedweller_glow");
+    /** [nether] The Nether runner's brow stone and the embers in its coat's hem. */
+    private static final ResourceLocation NETHER_GLOW = texture("netherrunner_glow");
     /** What its wealth adds to its clothes, by standing (Wealth.Tier): patches, a belt, a collar, gold. */
     private static final ResourceLocation[] FINERY = {
         texture("wealth_0"), null, texture("wealth_2"), texture("wealth_3"), texture("wealth_4") };
@@ -104,6 +106,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
             new HumanoidModel<>(context.bakeLayer(FolkArmourModel.INNER)),
             new HumanoidModel<>(context.bakeLayer(FolkArmourModel.OUTER))));
         this.addLayer(new TabardLayer(this, context.getModelSet()));      // [arms] a festival tabard of the town's arms
+        this.addLayer(new NetherClient.CharmLayer(this, context.getItemInHandRenderer()));   // [nether] the gold charm on the brow
         this.addLayer(new ItemInHandLayer<>(this, context.getItemInHandRenderer()));
     }
 
@@ -186,7 +189,8 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
                            float netHeadYaw, float headPitch) {
             if (folk.isInvisible()) return;
             String t = FolkModel.TRADES[trade(folk)];
-            ResourceLocation lit = "miner".equals(t) ? MINER_GLOW : "cavedweller".equals(t) ? CAVE_GLOW : null;
+            ResourceLocation lit = "miner".equals(t) ? MINER_GLOW : "cavedweller".equals(t) ? CAVE_GLOW
+                : "netherrunner".equals(t) ? NETHER_GLOW : null;                                     // [nether]
             if (lit == null || folk.isBaby()) return;
             VertexConsumer glow = buffer.getBuffer(RenderType.eyes(lit));
             getParentModel().renderToBuffer(pose, glow, 0xF000F0, OverlayTexture.NO_OVERLAY, -1);
@@ -368,6 +372,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
             case BANK -> Items.GOLD_INGOT;
             case CAVE -> Items.LANTERN;                    // [caves] a lantern held up in the dark
             case FERRY -> Items.OAK_BOAT;                  // [transport] the ferryman's boat
+            case NETHER -> Items.BLAZE_ROD;                // [nether] what the runners bring home through the gateway
             case NONE -> Items.AIR;
         });
     }

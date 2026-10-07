@@ -363,6 +363,8 @@ public final class Economy {
             case GUARD -> k == Kind.ANIMAL;                                    // what the night's monsters drop
             // [caves] The ore it digs and what it brings out of the old chests: gems, books, gold apples, saddles.
             case CAVE -> k == Kind.ORE || k == Kind.CRAFT || k == Kind.ANIMAL || CaveDwellers.valuable(s);
+            // [nether] All the Nether gives up: its ore, its stone and sand, its wart, the blazes' rods, the piglins' barter.
+            case NETHER -> k != null;
             default -> k == Kind.CRAFT || k == Kind.ANIMAL;                     // the crafts: smith, tailor, brewer, enchanter, shop
         };
     }

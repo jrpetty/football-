@@ -159,6 +159,7 @@ public final class ClientSetup {
                 case BANK -> Items.GOLD_INGOT;
                 case CAVE -> Items.LANTERN;                // [caves]
                 case FERRY -> Items.OAK_BOAT;              // [transport]
+                case NETHER -> Items.BLAZE_ROD;            // [nether]
                 case NONE -> Items.AIR;
             });
         }

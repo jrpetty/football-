@@ -454,6 +454,42 @@ public final class NetherOutpost {
         return n;
     }
 
+    /**
+     * Tests and the stage: the outpost put up round this portal at once, the whole room (walls, roof, floor made good, the
+     * inside cut out, the door, soul lanterns), and kept with the town as built. Returns the room, or null if there is no
+     * portal there.
+     */
+    @Nullable
+    public static Room stampForTests(ServerLevel level, UUID village, BlockPos anyPortal, long day) {
+        Room room = measure(level, anyPortal, openSide(level, anyPortal));
+        if (room == null) return null;
+        for (Cell c : plan(room)) {
+            BlockPos p = c.pos();
+            switch (c.kind()) {
+                case FLOOR -> { if (!floor(level, p)) level.setBlock(p, Blocks.COBBLESTONE.defaultBlockState(), 3); }
+                case WALL, ROOF -> level.setBlock(p, Blocks.COBBLESTONE.defaultBlockState(), 3);
+                case CLEAR -> { if (!level.getBlockState(p).isAir() && !level.getBlockState(p).is(Blocks.NETHER_PORTAL)) level.setBlock(p, Blocks.AIR.defaultBlockState(), 3); }
+                default -> { }
+            }
+        }
+        for (Cell c : plan(room)) {
+            BlockPos p = c.pos();
+            if (c.kind() == DOOR) {
+                BlockState lower = Blocks.OAK_DOOR.defaultBlockState().setValue(DoorBlock.FACING, room.front().getOpposite())
+                    .setValue(DoorBlock.HINGE, DoorHingeSide.LEFT).setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER);
+                level.setBlock(p, lower, 3);
+                level.setBlock(p.above(), lower.setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER), 3);
+            } else if (c.kind() == LIGHT) {
+                BlockState lantern = Blocks.SOUL_LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true);
+                if (lantern.canSurvive(level, p)) level.setBlock(p, lantern, 3);
+            }
+        }
+        Room done = room.done(day);
+        keep(village, done);
+        PLANS.remove(village);
+        return done;
+    }
+
     /** Tests: how much of the room's work is left (the walls, floor, roof and inside; the door and lights besides). */
     public static int leftForTests(ServerLevel level, UUID village) {
         Room room = room(village);

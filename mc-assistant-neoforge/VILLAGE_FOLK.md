@@ -8014,3 +8014,198 @@ name, for a thing that has no recipe, no age, no worth, no maker, or makings the
 * with no master in the town, its best cook (not its greenest) bakes the pies one turn in three, and once a master
   cook comes up the master bakes them at every turn and the other no longer; the best smith rivets the miners' pick,
   an apprentice's work that wears through sooner, with its name on it.
+
+## The Nether runners
+
+A town in the Nether Age that has built and lit its gateway sends a small, picked team through it: the **Nether
+runners**. They really go: into the portal and out of the Nether's own portal on the far side, to work the Nether for
+what the town cannot get any other way, and back through the same portal with it. The brewer's nether wart and blaze
+rods, the builders' quartz and glowstone, the enchanter's obsidian and the town's ender pearls are all theirs to bring.
+Nothing the town has of the Nether is made up: it is what the runners carried home.
+
+**The trade.** It opens once the gateway is lit (with flint and steel: a flint and an iron out of the stores). A town of
+twenty takes one runner, two at sixty, three at a hundred, never more. Nobody applies for it: the town picks its runners
+from its veterans, the watch's and the cave team's best first (level five or more), then its miners of long years
+(level eight or more, counted at half); never a new hand, never one out of a trade the town is short of, and between
+twenty and fifty years old. A pick starts a couple of levels short of what it knew of the blade or the dark. The runners
+have the watch's health, they are the best paid in the town (the most dangerous and the most skilled work there is),
+and the most experienced of them leads. The board, the chronicle and the gazette say who was picked.
+
+**The kit**, out of the stores, made by the town's makers, before every run:
+* the watch's armour and blade (WatchKit), a **bow** and arrows (the fletcher keeps a bow and its arrows for each
+  runner as for each guard), and a **shield**;
+* **a piece of gold worn**: a piglin leaves anybody in gold alone. The runner wears the **Gold Charm** the smith makes,
+  or a piece of gold armour out of the stores, in whichever slot costs it the least armour (its own charm first). With
+  none to be had it goes without, and keeps clear of the piglins;
+* **fire resistance** from the brewer: two a runner a day on a run that goes for blazes, one in hand on any other;
+* food for the days out and one over, cobblestone to wall and bridge with (and on a first run, the outpost's), the
+  best pick the stores hold, torches for the ways it cuts, a crafting table and sticks (it beats its gold nuggets into
+  ingots there for a barter), the **Runner's Satchel** the tailor stitches, and gold ingots to barter with when the plan
+  barters;
+* the leader: the flint and steel (a portal a ghast puts out is lit again), and on a first run the outpost's door and its
+  soul lanterns.
+
+It looks the part: a long coat gone soot-dark and scorched at the hem, gold trim down its front and at its cuffs,
+leather over the shoulders, a crimson scarf against the ash, a blackened iron skullcap banded in gold with a gold
+medallion at the brow (its stone glows, and it stays on over an iron helmet), a mail curtain at the neck, and its
+satchel at its hip, waxed orange at the seams. The gold charm shows as a gold band round the head.
+
+**The plan.** Of a morning, rested a day since the last run, the leader plans the run by what the town is short of,
+against what it keeps of each:
+
+| Need | The town keeps | For | How the runners get it |
+|---|---|---|---|
+| nether wart | 16 (4, for seed, once the wart farm grows) | the brewer's awkward potions | picked ripe in a fortress, one put back in each bed |
+| blaze rods | 8 (powder counted two to a rod) | the brewing stand's fire; magma cream | shot down at a blaze spawner, from range, fire resistance drunk first |
+| quartz | 64 (a block counts four) | the quartz trim of the great buildings | dug out of the rock round the outpost |
+| glowstone dust | 32 (a block counts four) | the glowstone street lamps | knocked down, up a pillar of cobblestone to a ceiling |
+| soul sand | 8, till the wart farm has its eight | the wart farm at home | dug, in the fortress or the valleys |
+| ender pearls, obsidian, magma cream | 12, 16, 4 | eyes of ender; enchanting tables and a colony's gateway; fire resistance | bartered from the piglins with the town's spare gold |
+
+A player's ask comes first. The work is reckoned at so long a piece, the walk through the gateway and out to the work
+and back added (the fortress's path twice when it goes there), a first run's outpost added, over a working day:
+half a day at the least, three at the most, a day more when the brewer is out of wart with no farm or the town is out of
+fire resistance. Then it is cut to what the town can spare: two meals a runner a day and one over, thirty-two arrows a
+runner a day, two potions of fire resistance a runner a day (without them no blazes), and the cobblestone. No food, or
+no cobblestone for a first outpost, and nobody goes; the board says why. The plan and its reckoning are on the Nether
+page.
+
+**Through the gateway.** The team walks to the gateway, the leader first; the others wait before it till it has gone
+through, then each steps into the portal and goes through: really into the Nether, by the portal's own rule (the
+far side's portal found, or made, as for a player), the same folk on the far side. Nobody else of the town ever goes
+through a portal: a folk that wanders into one stays where it is. The ground round each runner in the Nether, and round
+the outpost, is kept awake while they are there and let go when they leave. The town knows where they are all the
+while: away through the gateway, not lost, not idle, their beds kept.
+
+**The outpost.** On the first run, before anything else, the runners wall the portal in on the far side: a room of
+the stores' cobblestone round it (a ghast's fireball goes through netherrack, not cobblestone), its floor made good,
+a roof over the portal's top, the netherrack inside cut away, a wooden door in its front wall, soul lanterns hung from
+the roof (a piglin keeps off soul fire), a block at a time from their own packs, the walls first. Short of cobblestone,
+it is finished on the next run. Every run after looks it over and makes good what a ghast knocked out. It is where a
+hurt runner falls back to, and where the team sleeps on a run of more than a day: in at dusk, the door shut, one on watch
+by turns, out at first light.
+
+**The work.** The leader picks the next thing by the plan, from what it can see (a look round every two seconds): the
+nearest quartz, glowstone, ripe wart or soul sand; a blaze, or a blaze spawner; a piglin to barter with. The others take
+a share of the same work beside it, or keep watch. With nothing of the plan in sight it goes on toward the fortress,
+when the plan wants wart, rods or soul sand: the fortress the runners know of, or the nearest one the lie of the land
+puts within sixteen chunks of the outpost (noted in the report). Where there is no walking there, the way is cut a block
+at a time, as a player does it: the netherrack ahead cut out, the lava beside the way walled off first, a floor of
+cobblestone laid over a drop or a lava lake, a rail at the edge, a torch every eight blocks. What they make stays, and
+the next run walks it: a walled, lit way toward the fortress, a little further every run. With nothing to do and no
+fortress to make for, it looks about the outpost a different way each time; nothing left near the outpost the town
+wants, the team turns for home.
+* **Digging**: with the pick in hand, as long as the pick takes. What drops goes into the pack, and the satchel when the
+  pack fills. Glowstone on a ceiling is reached by a pillar of cobblestone under its own feet, taken down again after.
+  Nether gold ore is never dug with a piglin about (a piglin seeing its gold dug turns on you); its nuggets, nine at a
+  time, are made into an ingot at the crafting table, for a barter. Ancient debris comes out only with a diamond pick.
+* **Wart**: picked ripe (two to four a plant), one planted back in each bed for the next run.
+* **Blazes**: a potion of fire resistance drunk first, then shot from range with the bow; too close, the runner backs
+  off. The game's tables give a blaze's rods, and a wither skeleton's skull, only to a player's kill; the runners, doing a
+  player's work with a player's bow, are counted as one for that, so half the blazes give a rod, as for a player. The
+  rods are picked up where they fall.
+* **A barter**: the leader, in gold, goes up to a piglin and throws it a gold ingot. The piglin takes it, turns it over a
+  few seconds, and throws back what the game's bartering table gives (pearls, obsidian, string, quartz, a potion, iron
+  boots...), which the team picks up. Six ingots a piglin at most. A player along is told when to watch.
+
+**The risks**, seen to before anything else:
+* *On fire or in lava*: the runner drinks its fire resistance, and gets out of the lava.
+* *Hurt*: it eats. *Badly hurt*: it falls back to the outpost and binds its wounds, eating, till it is better (the
+  others carry on near it); before the outpost is built it falls back to the portal.
+* *A ghast*: its fireball, coming close, is turned back the way it came, off a raised shield or the flat of the blade;
+  the ghast is shot down.
+* *Piglins*: never struck first (the whole crowd answers it); a runner without gold on that a piglin sees is turned on, as
+  a player would be. *Hoglins* are kept clear of, unless the food is running short: then they are hunted for meat.
+* *A fall, a wither skeleton, a magma cube*: fought, with the blade.
+* *A runner can die.* The town is told where and how, the team takes up what it dropped if it can get to it (a satchel
+  floats on lava, whole), and goes home.
+* *Missing*: a runner out of sight of the team a minute is missed. The leader goes back to where it was last seen,
+  calling, and the missing one calls back. Not found in two minutes, the team goes home without it, and it is *lost*:
+  it waits in the Nether to be found, and the town sends a **rescue party** through on the next run: the runners and two
+  of the watch's best, who go straight to where it was lost, find it, and bring it home.
+* *Home before the food or the arrows run out*, or the packs and satchels are full, or the days planned are up.
+
+**Home.** Back through the portal, a wait before the gateway for the rest, then to the storehouse: the satchels emptied
+and everything that came out of the Nether put in, booked as the runners' work; what they took and did not use (the
+arrows, the cobblestone, the gold) goes back, not counted. The town hears of it as a small story in the chronicle
+("Rook led Ada through the gateway into the Nether: they walled in the outpost round the portal, dug 14 blocks of quartz,
+glowstone and the rest, shot down 3 blazes, turned a ghast's fireball back on its ghast, and bartered 4 gold with the
+piglins; home with 14 quartz, 2 blaze rods, 6 nether wart, into the storehouse"), the gazette's headline ("the runners
+are back from the Nether with 14 blaze rods and a ghast tear"), the board, the next morning's assembly, and each
+runner's memory and card. The runners rest a day.
+
+**At home it comes to:**
+* **The wart farm.** Eight blocks of the runners' soul sand, laid in two rows by the brewery (by the gateway without
+  one), planted with the stores' wart, and picked when ripe (two to four a plant, one planted again). The brewer keeps
+  it, and with no brewer a farmer. Once four plants grow, the runners bring home only a little wart for seed.
+* **Fire resistance.** The brewer grinds the runners' blaze rods to powder for its stand, makes its magma cream of a
+  blaze powder and a slime ball (the game's recipe), and keeps two potions of fire resistance a runner and a spare: the
+  potion that sends the runners back for more rods.
+* **Glowstone lamps.** In the Nether Age the street lamps are glowstone, four of the runners' dust to a block, where the
+  stores have it (eight dust kept for the brewer).
+* **Quartz.** The Nether Age's great buildings get footings of quartz brick out of the runners' quartz, as the stores
+  can pay.
+* **Trophies.** The first of each rare thing the runners bring home (a wither skeleton skull, ancient debris, a ghast
+  tear, crying obsidian, an ender pearl, a blaze rod, magma cream, nether wart) is noted with who brought it, and goes up
+  in an item frame on the gateway's frame (never the last of them out of the stores), named for who brought it. The
+  museum's curator puts the skull and the tear on show as well, "brought home from the Nether".
+
+**The highway.** Not built: planned. One block in the Nether is eight at home, so a colony's or an ally's gateway,
+once it has one, would come out in the Nether at an eighth of its distance. The runners' chart and the Nether page give
+the highway's plan in words: where that town's portal would be, and how long a walled, lit way of cobblestone (cut the
+same way as the fortress's) would join the two portals: an eighth of the overland road.
+
+**You and the runners.** Talk to a runner:
+* *"Bring us blaze rods"* (or wart, quartz, glowstone, soul sand, pearls, obsidian, magma cream): first on the next run's
+  list; the run says whose ask it went on.
+* *"Can I come through with you?"* (add *"for a share"*): you are booked for the next run. Be at the gateway in the
+  morning: the team waits a while for you there, and on the far side for you to come through after it, and waits for you
+  as for one of the team. What comes home goes to the town, or with a share agreed, an equal share is kept for you at the
+  storehouse and handed over the next time you ask a runner (*"Is my share ready?"*).
+* *"Sell me a copy of your chart"*: eight coins for a map of the Nether round the outpost with the runners' finds
+  marked (it fills in as you walk it) and, out of the stores' books, the chart's book: each find, where it lies in the
+  Nether, and over it at home.
+* *"What's it like down there?"*, *"How do I barter?"*, and anything about the Nether: they tell you.
+The talk screen's **Village** tab has *The Nether*, *Ask the runners*, *Go through* and *Runners' chart*.
+
+**Where to look.** The **Nether** page of the town's books: a chart of the Nether round the outpost (the fortress, the
+bastion, the spawners, the quartz and glowstone dug, the lava, where a runner was lost, the runners there now), the
+runners and their cards, the run under way or the last plan with its reckoning, all the runs have brought home, what the
+brewer and the enchanter have now, the wart farm, the outpost, the highway's plan, the finds, the lost, and the runs run
+by run. The folk's card has a **Nether** line. `/village nether` gives it as text; `/village nether books` opens the
+page. Operators: `/village nether now` sends the runners through now (picking them first), and `/village nether stage`
+sets up the pictures where you stand: a lit gateway with three runners in their gear before it, trophies on its frame
+and the wart farm beside it; and on the far side, in a pocket of the Nether, the outpost round the portal, a quartz wall
+with runners at it, a barter with a piglin, and a blaze over its spawner with a runner's bow drawn on it; and sends the
+town's runners through for real.
+
+**The two things the runners carry.**
+
+| Thing | Recipe | Age | Worth | Made by | What it's for |
+|---|---|---|---|---|---|
+| Gold Charm | a string over a gold ingot between two gold nuggets, a nugget under | Iron | 13c | the smith (else the shop's workshop), for each runner with no gold to wear | worn on the head: piglins leave the wearer be, as gold armour does; a point of armour, and it never wears out |
+| Runner's Satchel | a string over a leather, a magma cream and a leather, three leather under | Nether | 6c | the tailor (else the shop's workshop), for each runner without one | nine stacks of the haul, and fire-proof: dropped in lava it floats, whole, with everything in it |
+
+*The Gold Charm* is a brow band of hammered gold with a medallion and a crimson stone, an ingot and a third of gold where
+a gold helmet takes five. Right-click to wear it (or put it in your helmet's place); on your head it shows as a gold
+band. *The Runner's Satchel* is scorched leather waxed with magma cream, a gold buckle on its flap. Right-click to pack
+your pack's haul into it (what stacks and is not food; your hotbar left alone), sneak and right-click to empty it back
+out; full, it shows its haul poking out of the top. Its tooltip lists what is in it. The runners pack theirs as their
+packs fill, and empty them into the storehouse at home.
+
+The game tests `NetherRunnerGameTests` (nr01 to nr10) check that the trade opens in the Nether Age once the gateway is
+lit (by the town's own flint and iron), one runner in a town of twenty-two, the guard of seven picked before the miner of
+ten and the cave dweller of five, never the new hand, the idle or the farmer, with a head start, and the runs the most
+skilled and dangerous post; that the smith beats two gold charms and a flint and steel and the tailor stitches two
+satchels by their recipes, the runners are fitted out with the charm on the brow and the watch's iron elsewhere, a bow,
+arrows, a shield, fire resistance and a satchel, a piglin leaves the runner in gold alone and turns on a folk without,
+and the satchel packs and unpacks and floats on lava whole where leather burns; that two runners go through the gateway
+into the server's own Nether, the same folk on the far side, their ground there kept awake and let go after, the town
+counting them away, and come home through it; that a day's run digs quartz and glowstone, picks the fortress's wart,
+shoots blazes with fire resistance drunk, fills a satchel, and brings it all home into the storehouse, counted and told;
+that a runner in gold barters with a piglin and the bartering table's loot comes home; that the brewer lays the wart
+farm of the runners' soul sand, plants it, picks it grown, makes magma cream of their blaze powder and brews fire
+resistance; that a first run walls the portal in with cobblestone, a door and lanterns; that a runner on fire drinks its
+potion and one badly hurt falls back into the outpost and lives; that a runner out of sight is missed, searched for and
+found, and lost, is brought home by a rescue party with the watch; and that a player goes along, is waited for at the
+gateway and on the far side, and has its share kept and handed over.

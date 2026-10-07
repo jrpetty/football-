@@ -103,6 +103,12 @@ public final class Ages {
                 return (landStone != null ? landStone : Blocks.STONE_BRICKS).defaultBlockState();
             }
             case FOUNDATION, WALL_LOW -> {
+                // [nether] The Nether Age's great buildings stand on quartz brick, of the runners' quartz (affordable: it
+                // waits till the stores have it).
+                if (age == Villages.Age.NETHER && great && (now.is(Blocks.STONE_BRICKS) || now.is(Blocks.MOSSY_STONE_BRICKS)
+                        || now.is(Blocks.COBBLESTONE) || now.is(Blocks.MOSSY_COBBLESTONE))) {
+                    return Blocks.QUARTZ_BRICKS.defaultBlockState();
+                }
                 // Moss in the old footings: only where the stores have the vines for it (affordable).
                 if (diamond && Math.floorMod(pos.hashCode(), 3) == 0) {
                     if (now.is(Blocks.STONE_BRICKS)) return Blocks.MOSSY_STONE_BRICKS.defaultBlockState();

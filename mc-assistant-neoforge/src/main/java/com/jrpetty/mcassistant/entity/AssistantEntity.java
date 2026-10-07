@@ -3833,6 +3833,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // enderman, a witch, a pack of zombies. Only the watch takes that on,
         // and not the things nobody should take on for fun. Anything that hits
         // a folk is still answered — that is a different goal.
+        // [nether] In the Nether, nobody of the town strikes a piglin first (the whole crowd answers it).
+        if (isSettler() && level().dimension() == net.minecraft.world.level.Level.NETHER && !NetherRuns.mayTakeOn(this, target)) return false;
         if (isSettler()) {
             // [caves] Armed too: at home anything near it, on the team's day out its share of the fight (CaveDwellers).
             if (stationTask != StationTask.GUARD && !(stationTask == StationTask.CAVE && CaveDwellers.mayTakeOn(this, target))
@@ -5265,6 +5267,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             if (slot != EquipmentSlot.HEAD && slot != EquipmentSlot.CHEST
                 && slot != EquipmentSlot.LEGS && slot != EquipmentSlot.FEET) continue;
             ItemStack current = this.getItemBySlot(slot);
+            if (this instanceof VillageFolkEntity vf && NetherRunners.keepsGold(vf, current)) continue;   // [nether] its gold stays on
             int currentDefense = current.getItem() instanceof ArmorItem worn ? worn.getDefense() : -1;
             if (current.isEmpty() || candidate.getDefense() > currentDefense) {
                 this.setItemSlot(slot, s);

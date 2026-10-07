@@ -963,6 +963,8 @@ public final class School {
         LINES.put(StationTask.GUARD, new String[]{ "Keep your back to the wall and your eyes on the dark." });
         LINES.put(StationTask.CAVE, new String[]{ "A torch every few steps: it's the way home.",           // [caves]
             "Never dig the block you stand on, and never dig toward water or lava." });
+        LINES.put(StationTask.NETHER, new String[]{ "Gold on before you go through, and never strike a piglin.",   // [nether]
+            "Drink your fire resistance before you need it, not after.", "A ghast's fireball: hit it back the way it came." });
     }
 
     private static final String[] ANY_DAY = { "Reading, writing and counting: every trade stands on those three.",

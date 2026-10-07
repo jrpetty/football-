@@ -54,7 +54,9 @@ TRADES = ["none", "farmer", "lumberjack", "miner", "rancher", "guard",
           "smelter", "fisher", "storekeeper", "hauler",
           "blacksmith", "tailor", "beekeeper", "brewer", "enchanter", "cook", "shopkeeper", "scout", "hunter",
           # [caves] Not in StationTask's order: the cave dweller's own (FolkModel.outfit picks it for CAVE).
-          "cavedweller"]
+          "cavedweller",
+          # [nether] And the Nether runner's (FolkModel.outfit picks it for NETHER).
+          "netherrunner"]
 
 PARTS = [
     # The body every folk has: a villager's head and nose, a coat over a body,
@@ -200,6 +202,13 @@ PARTS = [
     ("cavedweller_haft", "body", (0, 6, 4.4), (0, 0, 0.7), [(64, 24, -0.5, -6, 0, 1, 12, 1, 0)], "cavedweller"),
     ("cavedweller_pickhead", "body", (0, 6, 4.4), (0, 0, 0.7), [(68, 24, -3.5, -7, 0, 7, 1, 1, 0)], "cavedweller"),
     ("cavedweller_rope", "body", (0, 0, 0), (0, 0, 0), [(84, 24, -6.2, 7, -2, 2, 4, 4, 0)], "cavedweller"),
+
+    # [nether] Nether runner: a blackened iron skullcap banded in gold, a gold medallion at its brow (it stays on over
+    # an iron helmet, and its stone glows), a mail curtain at the back of the neck, and the runner's satchel at its hip.
+    ("netherrunner_helm", "head", (0, 0, 0), (0, 0, 0), [(64, 0, -4, -11, -4, 8, 4, 8, 0.6)], "netherrunner"),
+    ("netherrunner_neckguard", "head", (0, 0, 0), (0, 0, 0), [(64, 12, -4.5, -7, 3.6, 9, 4, 1, 0)], "netherrunner"),
+    ("netherrunner_crest", "head", (0, 0, 0), (0, 0, 0), [(104, 0, -1, -10, -5.6, 2, 2, 1, 0)], "netherrunner"),
+    ("netherrunner_satchel", "body", (0, 0, 0), (0, 0, 0), [(100, 4, 4.0, 6, -2.5, 2, 5, 5, 0)], "netherrunner"),
 ]
 
 
@@ -980,6 +989,111 @@ def cavedweller_glow():
     return cv
 
 
+def outfit_netherrunner():
+    """[nether] The Nether runners: a long coat gone soot-dark and scorched at the hem from the heat, gold trim down
+    its front and at its cuffs (gold is what the piglins look for), leather over the shoulders, a crimson scarf at the
+    throat against the ash; blackened breeches and boots with gold buckles; a blackened iron skullcap banded in gold
+    with a gold medallion at its brow (the medallion stays on over an iron helmet, and its stone glows), a mail curtain
+    at the back of the neck; and the runner's satchel at its hip, waxed with magma cream, its seams stitched orange."""
+    cv = Canvas()
+    soot = (46, 40, 38)
+    gold = (222, 174, 58)
+    dark_gold = (156, 108, 32)
+
+    def scorched(x, y):
+        c = grain(soot, x, y, 5, 400)
+        n = noise(x, y, 401)
+        if n > 0.80:
+            c = grain((74, 46, 34), x, y, 4, 402)                           # scorch
+        elif n < -0.88:
+            c = lit(c, 0.72)                                                  # ash
+        return c
+    coat = coat_to(cv, scorched, 17)
+    yoke = leather((88, 56, 38))
+    coat.row(0, lambda x: yoke(x, 0))                                         # leather over the shoulders
+    coat.row(1, lambda x: yoke(x, 1))
+    for y in range(2, 17):                                                    # gold trim down the front edges
+        coat.put("front", 3, y, gold if y % 4 else dark_gold)
+        coat.put("front", 4, y, lit(gold, 0.86) if y % 4 else dark_gold)
+    # The scarf at the throat: crimson, its ends down the front.
+    scarf = (150, 38, 34)
+    coat.row(0, lambda x: grain(scarf, x, 0, 5, 403), ("front",))
+    for y in (1, 2, 3):
+        coat.put("front", 2, y, grain(scarf if y < 3 else lit(scarf, 0.8), 2, y, 5, 403))
+    belt(coat, 10, strap=(52, 36, 26), buckle=gold)
+    coat.put("front", 3, 10, gold)
+    coat.put("front", 4, 10, lit(gold, 0.7))
+    # The satchel's strap across the chest, shoulder to hip.
+    for y in range(1, 10):
+        coat.put("front", min(7, 1 + (y * 6) // 9), y, grain((104, 70, 46), y, 1, 4, 404))
+        coat.put("back", max(0, 6 - (y * 6) // 9), y, grain((104, 70, 46), y, 2, 4, 404))
+    # The hem: scorched to ember and burnt ragged.
+    for face in Box.SIDES:
+        w, h = coat.size(face)
+        for x in range(w):
+            coat.put(face, x, 16, (128, 58, 26) if (x + len(face)) % 3 else (196, 96, 34))
+            if noise(x, 15, 405) > 0.5:
+                coat.put(face, x, 15, (92, 48, 30))
+    sleeves(cv, scorched, 9, cuff=gold)
+    for name in ("right_arm", "left_arm"):
+        arm = Box(cv, name)
+        arm.around(lambda s, y, sw, h, face, x: grain((76, 52, 38), s, y, 5, 406) if y >= 10 else None)   # gauntlets
+        arm.row(10, lambda x: lit((76, 52, 38), 1.2))
+    legs(cv, cloth((52, 44, 40), 5, 407), leather((34, 28, 26)), boot_from=7, sole=(20, 16, 14))
+    for name in ("right_leg", "left_leg"):
+        leg = Box(cv, name)
+        leg.row(7, (58, 44, 34))                                              # the boot tops
+        leg.put("front", 1, 8, gold)                                          # gold buckles
+        leg.put("front", 2, 8, lit(gold, 0.75))
+        leg.put("front", 0, 11, (60, 58, 62))
+        leg.put("front", 3, 11, (60, 58, 62))
+    face_paint(cv, [(0, 7, (92, 76, 70)), (7, 6, (92, 76, 70)), (6, 7, (100, 84, 76))])   # soot
+    # The skullcap: blackened iron, banded in gold, a gold ridge over the crown.
+    iron = (66, 64, 70)
+    helm = Box(cv, "netherrunner_helm")
+    crown(helm, lambda x, y: grain(lit(iron, 1.18) if noise(x, y, 408) > 0.75 else iron, x, y, 6, 409), band=gold, band_rows=1)
+    helm.fill("top", lambda x, y, w, h: (gold if x in (3, 4) else grain(lit(iron, 1.08), x, y, 6, 409)))
+    for face in Box.SIDES:
+        w, h = helm.size(face)
+        helm.put(face, 1, h - 2, dark_gold)                                    # rivets on the band
+        helm.put(face, w - 2, h - 2, dark_gold)
+    neck = Box(cv, "netherrunner_neckguard")
+    neck.all(lambda face, x, y, w, h: (96, 94, 100) if (x + y) % 2 == 0 else (44, 42, 48))   # mail
+    neck.row(0, dark_gold)
+    crest = Box(cv, "netherrunner_crest")
+    crest.all(lambda face, x, y, w, h: gold)
+    crest.fill("front", lambda x, y, w, h: (182, 32, 40) if (x, y) == (0, 1) or (x, y) == (1, 0) else
+               ((226, 70, 60) if (x, y) == (0, 0) else (120, 18, 26)))
+    # The satchel at its hip: scorched leather, a flap, orange stitching, a gold buckle.
+    sat = Box(cv, "netherrunner_satchel")
+    sat.all(lambda face, x, y, w, h: grain((70, 47, 37), x, y, 5, 410))
+    sat.fill("top", lambda x, y, w, h: grain((97, 66, 48), x, y, 5, 411))
+    for face in Box.SIDES:
+        w, h = sat.size(face)
+        for x in range(w):
+            sat.put(face, x, 0, grain((97, 66, 48), x, 0, 5, 411))          # the flap's edge
+            sat.put(face, x, 1, (232, 112, 28) if x % 2 == 0 else (150, 52, 12))   # stitched with the wax
+            sat.put(face, x, h - 1, (40, 28, 22))
+    sat.put("left", 2, 2, gold)
+    sat.put("left", 2, 3, dark_gold)
+    sat.put("right", 2, 2, gold)
+    return cv
+
+
+def netherrunner_glow():
+    """[nether] The stone in the runner's brow medallion, and the embers in its coat's hem, glowing in the dark."""
+    cv = Canvas()
+    crest = Box(cv, "netherrunner_crest")
+    crest.fill("front", lambda x, y, w, h: (255, 96, 70) if (x, y) in ((0, 0), (0, 1), (1, 0)) else (200, 40, 40))
+    coat = Box(cv, "coat")
+    for face in Box.SIDES:
+        w, h = coat.size(face)
+        for x in range(w):
+            if (x + len(face)) % 3 == 0:
+                coat.put(face, x, 16, (255, 140, 60))
+    return cv
+
+
 def outfit_rancher():
     """A leather waistcoat over a blue shirt, chaps, a wool shawl, a wide hat."""
     cv = Canvas()
@@ -1708,8 +1822,9 @@ OUTFITS = {
     "scout": outfit_scout,
     "hunter": outfit_hunter,
     "cavedweller": outfit_cavedweller,                                    # [caves]
+    "netherrunner": outfit_netherrunner,                                  # [nether]
 }
-GLOWS = {"miner": miner_glow, "cavedweller": cavedweller_glow}
+GLOWS = {"miner": miner_glow, "cavedweller": cavedweller_glow, "netherrunner": netherrunner_glow}
 DYED = ("none", "farmer", "lumberjack", "rancher", "guard", "storekeeper", "hauler",
         "tailor", "enchanter", "shopkeeper")
 

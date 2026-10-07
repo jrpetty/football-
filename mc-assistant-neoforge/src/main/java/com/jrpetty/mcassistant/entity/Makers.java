@@ -149,6 +149,11 @@ public final class Makers {
         for (String t : List.of("job_board", "village_charter", "assistant_spawner", "village_folk_spawner", "place_marker", "zone_marker")) {
             declare(t, "the shop's workshop", PLAYERS, "Workshop.order");
         }
+        // [nether] The Nether runners' kit (NetherRunners.smith / tailor, from Crafts; the shop's book through Workshop.demand).
+        declare("gold_charm", "the smith (else the shop's workshop)", "for each Nether runner with no gold to wear, so the piglins leave it be",
+            "NetherRunners.smith / Workshop.demand");
+        declare("runners_satchel", "the tailor (else the shop's workshop)", "for each Nether runner without a satchel to carry the haul in",
+            "NetherRunners.tailor / Workshop.demand");
         unmade("memory_core", "it forms only when a companion falls, holding all it was; a made one would hold nobody");
     }
 }

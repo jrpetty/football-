@@ -122,10 +122,11 @@ public final class NetherRunners {
         return team(n);
     }
 
-    /** What a folk knows that the Nether wants: the runs, the watch, the caves; the rock a little less. */
+    /** What a folk knows that the Nether wants: the runs, the watch, the caves; the rock at half (a veteran of the watch
+     *  or the caves before a miner of the same years: the runs are a fight more than a dig). */
     public static int skill(VillageFolkEntity f) {
         return Math.max(f.tradeLevel(StationTask.NETHER), Math.max(Math.max(f.tradeLevel(StationTask.GUARD), f.tradeLevel(StationTask.CAVE)),
-            f.tradeLevel(StationTask.MINE) - 3));
+            f.tradeLevel(StationTask.MINE) / 2));
     }
 
     /** How the town ranks a veteran for the runners: its skill, its years at the blade and in the dark, its nerve. */
@@ -185,7 +186,7 @@ public final class NetherRunners {
         }
         if (best == null) return null;
         StationTask was = best.stationTask();
-        int knows = Math.max(Math.max(best.tradeLevel(StationTask.GUARD), best.tradeLevel(StationTask.CAVE)), best.tradeLevel(StationTask.MINE) - 3);
+        int knows = Math.max(Math.max(best.tradeLevel(StationTask.GUARD), best.tradeLevel(StationTask.CAVE)), best.tradeLevel(StationTask.MINE) / 2);
         int has = AssistantEntity.xpForLevel(best.tradeLevel(StationTask.NETHER)), start = AssistantEntity.xpForLevel(Math.max(0, knows - 2));
         if (start > has) best.schoolXp(StationTask.NETHER, start - has);
         BlockPos post = post(level, v);
@@ -471,7 +472,6 @@ public final class NetherRunners {
             int g = draw(level, v, f, s -> s.is(Items.GOLD_INGOT), plan.gold(), NetherPlan.GOLD_KEPT, false);
             if (g > 0) got.add(g + " gold ingots to barter with");
         }
-        f.setHealth(Math.max(f.getHealth(), f.getMaxHealth() * 0.5F));
         if (!got.isEmpty()) f.brain("fitted out for the Nether by the town: " + String.join(", ", got));
         return got;
     }

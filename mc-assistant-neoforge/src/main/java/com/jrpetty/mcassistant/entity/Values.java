@@ -91,6 +91,7 @@ public final class Values {
             case MINE, SMELT, SMITH, ENCHANT -> Value.PROGRESS;
             case GUARD, SCOUT -> Value.SAFETY;
             case CAVE -> Value.PROGRESS;                 // [caves] the ore the age wants
+            case NETHER -> Value.PROGRESS;               // [nether] what only the Nether has
             case SHOP, STORE, HAUL, TAILOR, BREW, BANK -> Value.WEALTH;
             default -> null;
         };

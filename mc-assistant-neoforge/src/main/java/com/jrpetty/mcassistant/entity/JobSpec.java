@@ -55,6 +55,8 @@ public final class JobSpec {
             case CAVE -> List.of("a pickaxe and a sword (the town's)", "torches (it lights the caves)");
             // [transport] The town's boat, moored at the landing (Ferries): nothing of its own to set up.
             case FERRY -> List.of("the town's boat (moored at the landing)");
+            // [nether] All of it issued by the town before each run (NetherRunners.kitUp): nothing to set up first.
+            case NETHER -> List.of("armour, a sword and a bow (the town's)", "a piece of gold to wear", "fire resistance (the brewer's)");
         };
     }
 

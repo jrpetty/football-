@@ -2499,6 +2499,67 @@ def kitchen_stage(r, look, cx, cz):
     say("alive after the kitchen: %s" % client_alive())
 
 
+def nether_stage(r, look, cx, cz):
+    """[nether] The Nether runners (entity/NetherRunners, NetherRuns, NetherWork, NetherOutpost). Out past the town's
+    south-east, /village nether stage levels a patch of ground and puts up a lit gateway (an obsidian frame) with three
+    runners in their gear stood before it (the soot-dark coat with its gold trim, the gold-banded skullcap, a gold charm
+    or a gold helmet, a bow, the satchel), trophies hung on its frame (a ghast tear, a blaze rod, a wither skull, an ender
+    pearl) and the wart farm beside it, the wart at every age; and on the far side, in a pocket cut out of the Nether over
+    it at an eighth of the distance, the portal the gateway comes out of with the runners' outpost walled round it, a wall
+    of quartz with two runners at it, a piglin turning a gold ingot over before a runner in gold with what it threw back
+    on the ground, and a blaze over its spawner with a runner's bow drawn on it. Then it sends the town's runners through
+    the gateway for real. Pictures: the gateway and the runners; the wart farm; in the Nether the outpost, the quartz
+    wall, the barter and the blaze; then the town's books open at the Nether page (the chart, the plan, the hauls)."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    r.cmd("weather clear")
+    hy = ground_height(r, cx, cz)
+    sx, sz = cx + 70, cz + 60                          # out past the town, on ground the stage levels for itself
+    r.cmd("tp %s %d %d %d" % (USER, sx, hy + 14, sz - 14))
+    time.sleep(8)                                      # the ground arrives at the server and the client
+    out = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village nether stage" % (sx, sz))
+    say("nether stage: " + out[:1400])
+    home, far = {}, {}
+    for kind, name, x, y, z, ax, ay, az in re.findall(r"(N?VIEW) (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        (far if kind == "NVIEW" else home)[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not home and not far:
+        say("nothing staged for the Nether runners; nothing to photograph")
+        return
+
+    def shoot(views, name, picture, wait):
+        if name not in views:
+            return
+        x, y, z, ax, ay, az = views[name]
+        look("34-nether-" + picture, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    shoot(home, "nether-1-gateway", "1-gateway", 8)
+    shoot(home, "nether-5-wart-farm", "6-wart-farm", 5)
+    if far:
+        # Into the Nether for the far side's pictures (a spectator, so the heat does nothing), and home again after.
+        x, y, z = far["nether-2-outpost"][:3] if "nether-2-outpost" in far else list(far.values())[0][:3]
+        say("into the Nether: " + r.cmd("execute in minecraft:the_nether run tp %s %d %d %d" % (USER, x, y, z))[:200])
+        time.sleep(10)                                 # the far side arrives at the client
+        shoot(far, "nether-2-outpost", "2-outpost", 8)
+        shoot(far, "nether-3-quartz-wall", "3-quartz-wall", 6)
+        shoot(far, "nether-4-barter", "4-barter", 6)
+        shoot(far, "nether-5-blaze", "5-blaze", 6)
+        say("home again: " + r.cmd("execute in minecraft:overworld run tp %s %d %d %d" % (USER, cx, hy + 20, cz))[:200])
+        time.sleep(8)
+    say("nether: " + r.cmd("execute positioned %d %d %d run village nether" % (cx, hy + 1, cz))[:1400])
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
+    time.sleep(3)
+    say("books: " + r.cmd("execute as %s at @s run village nether books" % USER))
+    time.sleep(4)
+    shot("34-nether-7-page")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("kill @e[tag=nether_lineup,type=!player]")
+    r.cmd("execute in minecraft:the_nether run kill @e[tag=nether_lineup,type=!player]")
+    say("alive after the Nether runners: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

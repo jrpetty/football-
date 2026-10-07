@@ -525,6 +525,8 @@ public final class VillageBoards {
         if (trade != null) out.add("FN|" + trade);
         String caves = CaveDwellers.boardLine(id);              // [caves] the caves' report, and the latest big find
         if (caves != null) out.add("FN|" + caves);
+        String nether = NetherRunners.boardLine(id);            // [nether] the run under way, or the runs' tally and the last haul
+        if (nether != null) out.add("FN|" + nether);
         String about = Transport.boardLine(level, id);          // [transport] the lines, the ore carts, the ferry and the bridge
         if (about != null) out.add("FN|" + about);
         String scouts = Scouts.boardLine(id);

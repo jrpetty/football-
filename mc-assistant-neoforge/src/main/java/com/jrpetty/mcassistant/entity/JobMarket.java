@@ -401,6 +401,7 @@ public final class JobMarket {
         if (t.name().contains("TEACH")) return new int[]{ 35, 200 };
         return switch (t) {
             case GUARD, SCOUT, HUNT, CAVE -> new int[]{ 18, 50 };          // [caves]
+            case NETHER -> new int[]{ 20, 50 };                            // [nether]
             case MINE, WOOD -> new int[]{ 18, 60 };
             default -> new int[]{ 0, 200 };
         };
@@ -414,6 +415,7 @@ public final class JobMarket {
             case GUARD -> "able-bodied, for the watch";
             case SCOUT, HUNT -> "fit for long days out";
             case CAVE -> "fit and able to fight, for a day underground";      // [caves]
+            case NETHER -> "a seasoned hand, fit to fight through the Nether";   // [nether]
             case MINE, WOOD -> "strong enough for the work";
             default -> "";
         };
@@ -427,7 +429,7 @@ public final class JobMarket {
     /** Heavy work, for younger backs. */
     static boolean heavy(@Nullable StationTask t) {
         return t == StationTask.MINE || t == StationTask.WOOD || t == StationTask.GUARD || t == StationTask.HUNT
-            || t == StationTask.SCOUT || t == StationTask.HAUL || t == StationTask.CAVE;            // [caves]
+            || t == StationTask.SCOUT || t == StationTask.HAUL || t == StationTask.CAVE || t == StationTask.NETHER;   // [caves] [nether]
     }
 
     /** "the mines", "the watch": the work, for a refusal. */
@@ -440,6 +442,7 @@ public final class JobMarket {
             case HUNT -> "the hunt";
             case SCOUT -> "the scouting";
             case CAVE -> "the caves";                    // [caves]
+            case NETHER -> "the Nether runs";            // [nether]
             case HAUL -> "the carrying";
             default -> "the work";
         };
@@ -698,6 +701,7 @@ public final class JobMarket {
     /** How many hands short the town is at a trade, as its shape has it (the trade's share, less who works it). */
     static double shortOf(UUID town, StationTask t) {
         if (t == StationTask.CAVE) return 0.0;              // [caves] the team is chosen from the town's own (CaveDwellers.appoint)
+        if (t == StationTask.NETHER) return 0.0;            // [nether] the runners are picked from its veterans (NetherRunners.appoint)
         return -Villages.share(town, t);
     }
 
