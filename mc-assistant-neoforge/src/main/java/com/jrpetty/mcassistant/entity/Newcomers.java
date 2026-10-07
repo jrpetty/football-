@@ -342,6 +342,7 @@ public final class Newcomers {
         m.setWorkZone(null);
         m.setStation(null, StationTask.NONE);           // (a guard's kit, a cave dweller's, back to the stores as it goes)
         m.leftItsPlot();
+        handBack(level, m, from);
         Homes.left(from, me);
         Bank.left(from, m, false);
         Villages.recordDeath(from);
@@ -354,6 +355,25 @@ public final class Newcomers {
         m.getPersistentData().put(DATA, d);
         if (!m.isBaby()) m.persona().remember(day, "we left " + Villages.name(from) + ", " + c.words + ", for " + Villages.name(to.id()), 8);
         WALKS.remove(me);
+    }
+
+    /**
+     * What it carries of the town's goods (the day's harvest, a load for the stores) goes into the old town's stores
+     * before it goes: it carries away its tools, its keepsakes and a little food for the road, and nothing else.
+     */
+    private static void handBack(ServerLevel level, VillageFolkEntity m, UUID from) {
+        if (m.isBaby() || !Villages.hasStores(level, from)) return;
+        net.minecraft.core.NonNullList<ItemStack> pack = m.getInventoryItems();
+        int food = 0;
+        for (int i = 0; i < pack.size(); i++) {
+            ItemStack s = pack.get(i);
+            if (s.isEmpty() || Homes.isKeepsake(s) || s.isDamageableItem()) continue;
+            if (s.get(net.minecraft.core.component.DataComponents.FOOD) != null && food < 8) {
+                food += s.getCount();
+                continue;
+            }
+            pack.set(i, Market.intoStores(level, from, s.copy()));
+        }
     }
 
     /** The trade it knows best (its levels), or its own trade if it has never risen in any. */
@@ -498,23 +518,39 @@ public final class Newcomers {
         return pid;
     }
 
-    /** The trades the town has nobody at (or wants hands for), the most wanted first; then the crafts its age allows that it lacks. */
+    /** The crafts and their workplaces: a smithy wants a smith, a brewery a brewer, the café a cook, the workshop a tailor. */
+    private static final Object[][] CRAFTS = {
+        { "smithy", StationTask.SMITH, Villages.Age.IRON }, { "brewery", StationTask.BREW, Villages.Age.IRON },
+        { "cafe", StationTask.COOK, Villages.Age.STONE }, { "workshop", StationTask.TAILOR, Villages.Age.STONE },
+        { "library", StationTask.ENCHANT, Villages.Age.DIAMOND }, { "", StationTask.BEEKEEP, Villages.Age.STONE } };
+
+    /**
+     * The trades the town lacks, as a newcomer would bring them: first a craft whose workplace stands empty (a smithy
+     * with no smith), then a craft its age allows that nobody works at, then whatever its job market wants hands for.
+     */
     static List<StationTask> lacking(Villages.Village v) {
         List<StationTask> out = new ArrayList<>();
-        for (JobMarket.Want w : JobMarket.wanted(v)) if (!out.contains(w.trade())) out.add(w.trade());
-        Villages.Age age = Villages.ageOf(v.id());
-        StationTask[][] crafts = { { StationTask.SMITH, null }, { StationTask.BREW, null }, { StationTask.TAILOR, null }, { StationTask.COOK, null },
-            { StationTask.BEEKEEP, null } };
-        for (StationTask[] c : crafts) {
-            StationTask t = c[0];
-            if (out.contains(t)) continue;
-            int at = 0;
-            for (AssistantEntity a : Villages.folkOf(v.id())) if (a.stationTask() == t) at++;
-            boolean allowed = t == StationTask.SMITH || t == StationTask.BREW ? age.ordinal() >= Villages.Age.IRON.ordinal() : age.ordinal() >= Villages.Age.STONE.ordinal();
-            if (at == 0 && allowed) out.add(t);
+        UUID id = v.id();
+        Villages.Age age = Villages.ageOf(id);
+        for (int pass = 0; pass < 2; pass++) {
+            for (Object[] c : CRAFTS) {
+                StationTask t = (StationTask) c[1];
+                String building = (String) c[0];
+                boolean stands = !building.isEmpty() && Villages.hasBuilt(id, building);
+                if (out.contains(t) || pass == 0 && !stands) continue;
+                if (pass == 1 && age.ordinal() < ((Villages.Age) c[2]).ordinal()) continue;
+                if (nobodyAt(id, t)) out.add(t);
+            }
         }
-        out.removeIf(t -> t == StationTask.GUARD || t == StationTask.SCOUT || t == StationTask.BANK || t == StationTask.CAVE);
+        for (JobMarket.Want w : JobMarket.wanted(v)) if (!out.contains(w.trade())) out.add(w.trade());
+        out.removeIf(t -> t == StationTask.NONE || t == StationTask.GUARD || t == StationTask.SCOUT || t == StationTask.BANK || t == StationTask.CAVE);
         return out;
+    }
+
+    /** Does nobody of the town work at this trade? */
+    static boolean nobodyAt(UUID village, StationTask t) {
+        for (AssistantEntity a : Villages.folkOf(village)) if (a.stationTask() == t) return false;
+        return true;
     }
 
     // ------------------------------------------------------------------ a newcomer's day
@@ -895,7 +931,7 @@ public final class Newcomers {
     static StationTask tradeFor(VillageFolkEntity f, Villages.Village v) {
         StationTask best = bestTrade(f);
         List<StationTask> lack = lacking(v);
-        if (best != null && (lack.contains(best) || JobMarket.shortOf(v.id(), best) >= 0.5)) return best;
+        if (best != null && (nobodyAt(v.id(), best) || lack.contains(best) || JobMarket.shortOf(v.id(), best) >= 0.5)) return best;
         for (StationTask t : lack) if (f.tradeLevel(t) > 0) return t;
         return JobMarket.fitFor(f, v.id());
     }

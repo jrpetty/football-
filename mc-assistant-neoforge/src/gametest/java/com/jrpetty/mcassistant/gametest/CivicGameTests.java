@@ -310,11 +310,18 @@ public class CivicGameTests {
             helper.assertTrue(count[2] == 0 && count[1] > count[0], "voted down: " + count[0] + "/" + count[1]);
             helper.assertTrue(BigWorks.stateForTests(id).isEmpty(), "nothing built");
             helper.assertTrue(waits == day + 7, "it waits a season: " + waits + " (today " + day + ")");
-            // Asked about the works in the days after: not the bridge again.
+            // Asked about the works in the days after: not the bridge again. (No fields laid out yet: no canal to ask about.)
+            Ledger.note(id, "fields.side", "");
             level.setDayTime((day + 4) * 24000L + 3000L);
             String again = Referendums.considerForTests(level, v);
             Kit.log("civ02 four days on, the town is asked: '" + again + "'");
             helper.assertTrue(!again.contains("stone bridge"), "the bridge waits: " + again);
+            // (Anything else it was asked instead goes the same way, so that only the season stands between it and the bridge.)
+            for (String open : Referendums.openForTests(id)) {
+                int other = Integer.parseInt(open.split(" ", 2)[0]);
+                Referendums.castAllForTests(level, v, other);
+                Kit.log("civ02 meanwhile: " + open + " -> " + java.util.Arrays.toString(Referendums.countForTests(level, v, other)));
+            }
             // The season out: it may be put again.
             level.setDayTime((day + 8) * 24000L + 3000L);
             String later = Referendums.considerForTests(level, v);
