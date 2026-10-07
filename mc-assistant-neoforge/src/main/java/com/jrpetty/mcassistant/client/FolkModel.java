@@ -145,6 +145,11 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
     private final ModelPart[] worn;
     private final String[] wornBy;
     private final boolean[] onHead;
+    /** [guard-kit] The folk's hair and coat, put away under a helmet and a breastplate (FolkArmourModel). */
+    private final ModelPart hair;
+    private final ModelPart coat;
+    /** [guard-kit] The trade's things worn round the body, put away under a breastplate: aprons, a shawl, a mantle. */
+    private final boolean[] wraps;
 
     public FolkModel(ModelPart root) {
         this.root = root;
@@ -157,6 +162,9 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         this.worn = new ModelPart[WEARERS.length];
         this.wornBy = new String[WEARERS.length];
         this.onHead = new boolean[WEARERS.length];
+        this.hair = head.getChild("hair");
+        this.coat = body.getChild("coat");
+        this.wraps = new boolean[WEARERS.length];
         for (int i = 0; i < WEARERS.length; i++) {
             ModelPart parent = switch (WEARERS[i][1]) {
                 case "head" -> head;
@@ -166,6 +174,9 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
             worn[i] = parent.getChild(WEARERS[i][0]);
             wornBy[i] = WEARERS[i][2];
             onHead[i] = "head".equals(WEARERS[i][1]);
+            String name = WEARERS[i][0];
+            wraps[i] = !onHead[i] && (name.contains("apron") || name.contains("shawl") || name.contains("mantle")
+                || name.contains("tape") || name.contains("cloak") || name.contains("cape"));
         }
     }
 
@@ -303,6 +314,13 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
                 : by.equals(trade);
             worn[i].visible = show && !(helmet && onHead[i] && !by.equals("beard"));
         }
+        // [guard-kit] Armour over the clothes, not under them: the hair under a helmet, the coat under a breastplate or
+        // leggings, and what is worn round the body (an apron, a shawl, a mantle, a cape) under a breastplate.
+        boolean breastplate = folk.getItemBySlot(EquipmentSlot.CHEST).getItem() instanceof net.minecraft.world.item.ArmorItem;
+        boolean leggings = folk.getItemBySlot(EquipmentSlot.LEGS).getItem() instanceof net.minecraft.world.item.ArmorItem;
+        hair.visible = !(folk.getItemBySlot(EquipmentSlot.HEAD).getItem() instanceof net.minecraft.world.item.ArmorItem);
+        coat.visible = !(breastplate || leggings);
+        if (breastplate) for (int i = 0; i < worn.length; i++) if (wraps[i]) worn[i].visible = false;
 
         head.yRot = netHeadYaw * Mth.DEG_TO_RAD;
         head.xRot = headPitch * Mth.DEG_TO_RAD;

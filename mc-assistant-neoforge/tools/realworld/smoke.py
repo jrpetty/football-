@@ -1731,19 +1731,22 @@ def guard_kit_stage(r, look, cx, cz):
     hy = ground_height(r, cx, cz)
     say("the watch fitted: " + r.cmd("execute positioned %d %d %d run village watch now" % (cx, hy + 1, cz))[:300])
     say("the watch: " + r.cmd("execute positioned %d %d %d run village watch" % (cx, hy + 1, cz))[:1500])
-    sx, sz = cx + 36, cz - 30                         # out past the first houses, on open ground
+    sx, sz = cx + 36, cz - 30                         # out past the first houses; the stage looks for dry ground
     sy = ground_height(r, sx, sz)
     r.cmd("tp %s %d %d %d" % (USER, sx + 2, sy + 6, sz + 10))
     time.sleep(6)                                     # the stage's chunks arrive
     out = r.cmd("execute positioned %d %d %d run village watch stage" % (sx, sy + 1, sz))
     say("watch stage: " + out[:300])
-    m = re.search(r"watch (-?\d+) (-?\d+) (-?\d+)", out)
+    num = r"(-?\d+(?:\.\d+)?)"
+    m = re.search(r"watch (-?\d+) (-?\d+) (-?\d+) look " + " ".join([num] * 6), out)
     if not m:
         say("no guards stood up; nothing to photograph")
         return
-    wx, wy, wz = int(m.group(1)), int(m.group(2)), int(m.group(3))
-    # The three face south (+z), two blocks apart: the camera five blocks in front of the middle one.
-    look("24-watch-kit-1-lineup", wx + 2.5, wy + 1.7, wz + 5.5, wx + 2.5, wy + 1.0, wz + 0.5, wait=5)
+    # The stage stood them on the nearest dry, open ground, facing south (+z), a block and a half apart, and says
+    # where the camera's eyes go and what they look at: just under two blocks in front of the middle one, all three
+    # from about the knees up. look() takes the feet, a player's eyes 1.62 above them.
+    ex, ey, ez, ax, ay, az = (float(v) for v in m.groups()[3:])
+    look("24-watch-kit-1-lineup", ex, ey - 1.62, ez, ax, ay, az, wait=6)
     say("alive after the watch's kit: %s" % client_alive())
 
 

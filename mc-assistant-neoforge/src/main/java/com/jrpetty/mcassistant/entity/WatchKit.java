@@ -1043,23 +1043,32 @@ public final class WatchKit {
     /** The tag on the stage's guards. */
     static final String LINEUP = "watch_kit_lineup";
 
+    /** The stage's guards: a block and a half apart, so that the three fill a picture from the knees up. */
+    static final double STAGE_GAP = 1.5;
+    /** How far the stage looks for dry, open ground from where it was asked for. */
+    static final int STAGE_SEARCH = 48;
+
     /**
-     * The pictures' stage: three guards in a row, two blocks apart, facing south, in the town's kit as the
-     * ages bring it (leather and a stone blade; iron, an iron blade and a shield; diamond and a diamond blade) —
-     * a showcase's, for nothing. Returns "watch x y z" (the first guard's feet).
+     * The pictures' stage: three guards in a row, a block and a half apart, facing south, in the town's kit as
+     * the ages bring it (leather and a stone blade; iron, an iron blade and a shield; diamond and a diamond
+     * blade), a showcase's, for nothing. They stand on the nearest dry, solid, open ground to the spot asked
+     * for (stageGround): the first stage stood them on a river. Returns "watch x y z look ex ey ez ax ay az":
+     * the first guard's feet, and where a camera stands and looks to have all three from the knees up.
      */
     static List<String> stage(ServerLevel level, BlockPos at) {
         List<Entity> old = new ArrayList<>();
         for (Entity e : level.getAllEntities()) if (e.getTags().contains(LINEUP)) old.add(e);
         for (Entity e : old) e.discard();
+        BlockPos ground = stageGround(level, at);
+        if (ground == null) return List.of("watch none: no dry, open ground within " + STAGE_SEARCH + " blocks");
         Metal[] rows = { Metal.LEATHER, Metal.IRON, Metal.DIAMOND };
-        BlockPos first = null;
+        String[] names = { "Leather", "Iron", "Diamond" };
+        int stood = 0;
         for (int i = 0; i < rows.length; i++) {
-            int x = at.getX() + i * 2, z = at.getZ();
-            int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+            double x = ground.getX() + 0.5 + i * STAGE_GAP;
             VillageFolkEntity g = com.jrpetty.mcassistant.McAssistantMod.VILLAGE_FOLK.get().create(level);
             if (g == null) continue;
-            g.moveTo(x + 0.5, y, z + 0.5, 0.0F, 0.0F);
+            g.moveTo(x, ground.getY(), ground.getZ() + 0.5, 0.0F, 0.0F);
             g.setYHeadRot(0.0F);
             g.setYBodyRot(0.0F);
             g.makeShowcase(StationTask.GUARD);
@@ -1067,11 +1076,72 @@ public final class WatchKit {
             Item blade = rows[i] == Metal.LEATHER ? Items.STONE_SWORD : piece(Kind.SWORD, rows[i]);
             g.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(blade));
             if (rows[i] != Metal.LEATHER) g.setItemSlot(EquipmentSlot.OFFHAND, new ItemStack(Items.SHIELD));
-            g.rename("The watch in " + rows[i].word);
+            g.rename(names[i]);
             g.addTag(LINEUP);
-            if (level.addFreshEntity(g) && first == null) first = new BlockPos(x, y, z);
+            if (level.addFreshEntity(g)) stood++;
         }
-        if (first == null) return List.of("watch none");
-        return List.of("watch", Integer.toString(first.getX()), Integer.toString(first.getY()), Integer.toString(first.getZ()));
+        if (stood == 0) return List.of("watch none: nobody stood up");
+        // The camera's eyes: 1.9 blocks in front of the middle guard, level with its eyes, looking at its chest. The
+        // row is a little over four blocks wide with its arms and shields; at 1.9 blocks a wide picture (16 by 9, the
+        // game's seventy degrees up and down) is four and three-quarter blocks across and two and a half high, so it
+        // holds all three, from about the knees to just over their heads.
+        double mx = ground.getX() + 0.5 + STAGE_GAP, mz = ground.getZ() + 0.5;
+        double ey = ground.getY() + 1.6, ay = ground.getY() + 1.25;
+        return List.of("watch", Integer.toString(ground.getX()), Integer.toString(ground.getY()), Integer.toString(ground.getZ()),
+            "look", fmt(mx), fmt(ey), fmt(mz + 1.9), fmt(mx), fmt(ay), fmt(mz));
+    }
+
+    private static String fmt(double d) {
+        return String.format(Locale.ROOT, "%.2f", d);
+    }
+
+    /**
+     * Dry, solid, open ground for the stage, the nearest to {@code at}, ring by ring out to STAGE_SEARCH: under
+     * each of the guards' columns a solid block with no water or lava in it, the columns level to a block, two
+     * blocks of air above each and nothing overhead (no leaves); and in front of them, where the camera stands
+     * and looks, nothing higher than a step above their feet. Returns the first guard's feet, or null if there
+     * is no such ground loaded.
+     */
+    @Nullable
+    static BlockPos stageGround(ServerLevel level, BlockPos at) {
+        for (int r = 0; r <= STAGE_SEARCH; r += 2) {
+            for (int dx = -r; dx <= r; dx += 2) {
+                for (int dz = -r; dz <= r; dz += 2) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) != r) continue;          // the ring's edge only
+                    BlockPos p = standHere(level, at.getX() + dx, at.getZ() + dz);
+                    if (p != null) return p;
+                }
+            }
+        }
+        return null;
+    }
+
+    /** The stage's feet with the first guard's column at x, z, if the ground there will do; else null. */
+    @Nullable
+    private static BlockPos standHere(ServerLevel level, int x, int z) {
+        int feet = Integer.MIN_VALUE;
+        int span = (int) Math.ceil(2 * STAGE_GAP) + 1;                         // the guards' columns, and their shields
+        for (int i = 0; i <= span; i++) {
+            int cx = x + i;
+            if (!level.hasChunk(cx >> 4, z >> 4) || !level.hasChunk(cx >> 4, (z + 3) >> 4)) return null;
+            int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, cx, z);
+            if (level.getHeight(Heightmap.Types.MOTION_BLOCKING, cx, z) != y) return null;   // leaves overhead
+            BlockPos under = new BlockPos(cx, y - 1, z);
+            net.minecraft.world.level.block.state.BlockState below = level.getBlockState(under);
+            if (!below.getFluidState().isEmpty() || !below.isFaceSturdy(level, under, net.minecraft.core.Direction.UP)) return null;
+            for (int up = 0; up < 2; up++) {
+                BlockPos air = new BlockPos(cx, y + up, z);
+                if (!level.getBlockState(air).isAir() || !level.getFluidState(air).isEmpty()) return null;
+            }
+            if (feet == Integer.MIN_VALUE) feet = y;
+            else if (Math.abs(y - feet) > 1) return null;
+        }
+        // In front, where the camera stands and looks: nothing higher than a step above their feet.
+        for (int fx = x - 1; fx <= x + span + 1; fx++) {
+            for (int fz = z + 1; fz <= z + 3; fz++) {
+                if (level.getHeight(Heightmap.Types.MOTION_BLOCKING, fx, fz) > feet + 1) return null;
+            }
+        }
+        return new BlockPos(x, feet, z);
     }
 }

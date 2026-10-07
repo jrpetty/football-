@@ -45,6 +45,8 @@ public final class ClientSetup {
     @SubscribeEvent
     public static void onRegisterLayers(EntityRenderersEvent.RegisterLayerDefinitions event) {
         event.registerLayerDefinition(FolkModel.LAYER, FolkModel::createBodyLayer);
+        event.registerLayerDefinition(FolkArmourModel.OUTER, FolkArmourModel::outer);     // [guard-kit] armour cut to a folk
+        event.registerLayerDefinition(FolkArmourModel.INNER, FolkArmourModel::inner);
     }
 
     @SubscribeEvent
