@@ -173,6 +173,7 @@ public final class Orders {
         if (!now && g != null && day >= g.day() && day - g.day() < 3) return;
         if (Villages.headcount(village) < 8 || day - Math.max(0, com.jrpetty.mcassistant.village.Chronicle.foundedOn(village)) < 2) return;
         VillageFolkEntity elder = elderOf(village);
+        if (elder == null) elder = PlayerLeader.steward(level, village, day);   // [player-civic] a player leads: its plan, or its steward's
         if (elder == null) return;
         Order pick = choose(level, village, elder, g == null ? null : g.order());
         Order was = g == null ? null : g.order();

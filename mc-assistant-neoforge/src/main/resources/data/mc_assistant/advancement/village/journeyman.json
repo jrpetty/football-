@@ -1,0 +1,28 @@
+{
+  "parent": "mc_assistant:village/apprentice",
+  "display": {
+    "icon": {
+      "id": "mc_assistant:reinforced_pickaxe"
+    },
+    "title": {
+      "text": "Journeyman"
+    },
+    "description": {
+      "text": "Learn a master's own recipe, or the second lesson of a trade"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "granted"
+    ]
+  ]
+}

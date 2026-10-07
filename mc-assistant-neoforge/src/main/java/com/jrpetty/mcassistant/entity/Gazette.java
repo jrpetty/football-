@@ -270,6 +270,8 @@ public final class Gazette {
         entries.add(TradeDeals.gazette(level, v, day));          // [econ-trade] the deals with the neighbours, and yesterday's caravans
         String war = WarAndPeace.gazette(level, id, day);           // [war-peace] the war, the ultimatum, the treaty
         if (war != null) entries.add(war);
+        String word = PlayerLeader.gazette(level, id, day);         // [player-civic] the leader's promises, kept and broken
+        if (word != null) entries.add(word);
         if (!other.isEmpty()) entries.add(section("Also", other, ""));
         ItemStack book = Services.book("The " + town + " Gazette", town, front, entries);
         CompoundTag mark = new CompoundTag();

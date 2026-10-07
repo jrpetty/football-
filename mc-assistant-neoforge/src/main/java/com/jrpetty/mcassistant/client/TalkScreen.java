@@ -219,6 +219,11 @@ public class TalkScreen extends Screen {
                 out.add(Choice.of("Pay a fine", TalkTopic.FINE, "Pay what you owe the village"));
                 out.add(new Choice("The board", TalkTopic.OPEN, "", "Read the village board: what it is doing, how it is getting on, what it is working towards"));
                 out.add(new Choice("Suggest a build", TalkTopic.BUILD, "", "Type what you think the village should build next"));
+                // [player-civic] Standing for leader, the campaign, and the Leader's page.
+                out.add(new Choice("Stand for leader", TalkTopic.SAY, "I'd like to stand for election",
+                    "Put your name forward at the next election (a citizen the town counts a friend, at the board or the hall)"));
+                out.add(new Choice("Vote for me?", TalkTopic.SAY, "Will you vote for me?", "Canvass: it weighs what you stand for against what it cares for"));
+                out.add(new Choice("Leader's page", TalkTopic.SAY, "Show me the leader's page", "Your promises and powers, or the hustings if you don't lead"));
             }
             case DEAL -> {
                 out.add(new Choice("Give…", TalkTopic.GIFT, "", "Give it what you are holding"));
@@ -235,6 +240,10 @@ public class TalkScreen extends Screen {
                 out.add(Choice.of("Godparent", TalkTopic.GODPARENT, "Ask a child if you may be its godparent (a friend of the village only)"));
                 out.add(Choice.of("Keepsake?", TalkTopic.KEEPSAKE, "A close friend gives you something of its own to remember it by"));
                 out.add(Choice.of("Feast on me", TalkTopic.SPONSOR, "Pay for a feast for the whole village tonight: ten coins and one for every mouth"));
+                // [player-civic] An apprenticeship with a master of its trade.
+                out.add(new Choice("Apprentice me", TalkTopic.SAY, "Will you take me as your apprentice?",
+                    "Learn its trade (a master of level 25 or more): lessons that open recipes, bonuses and titles"));
+                out.add(new Choice("My lesson", TalkTopic.SAY, "What's my next lesson?", "Your master's next lesson; hand over what it asked for"));
             }
             case MONEY -> {
                 out.add(new Choice("Order goods…", TalkTopic.BULK, "", "Order a quantity of anything at a tenth off: type what and how many"));

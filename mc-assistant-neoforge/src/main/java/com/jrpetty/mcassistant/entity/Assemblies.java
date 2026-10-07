@@ -290,6 +290,7 @@ public final class Assemblies {
                 if (l.effect() != null) com.jrpetty.mcassistant.Guard.run("assembly line", l.effect());
                 VillageFolkEntity speaker = l.by() == null ? host(level, a)
                     : level.getEntity(l.by()) instanceof VillageFolkEntity s ? s : host(level, a);
+                if (l.by() != null && Hustings.says(level, a.village, a.focus, l.by(), l.text())) speaker = null;   // [player-civic] a player's own line
                 String text = l.text();
                 if (DECISION.equals(text)) {
                     String d = Council.lastDecision(a.village);
@@ -645,6 +646,7 @@ public final class Assemblies {
         // Who leads it.
         UUID elder = Villages.elder(a.village);
         a.host = elder;
+        a.host = PlayerLeader.host(a.village, a.host);                  // [player-civic] a player leads: its steward speaks for it
         if (a.kind == Kind.WATCH) {
             // The changing of the watch is the senior guard's to lead.
             VillageFolkEntity senior = null;

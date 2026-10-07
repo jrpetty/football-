@@ -6228,3 +6228,134 @@ The game tests `WatchClearsGameTests` (wc01 to wc05) check that:
 * a raiding band gathers at the town's edge; two raiders among the folk get two guards each, and none is sent out to
   the band still at the edge; deaths while the bell rings are put down as what took them, with where and doing what;
   and the status, the books and `/village monsters` count the watch's and the golem's kills.
+
+## Standing for leader
+
+The town chooses its leader every ten days (the *thane*, the *mayor*, the *elder*: whatever the land calls it), and
+now you can stand too.
+
+* **Who may stand.** A citizen of the town whom the town counts at least a friend, owing it nothing. Put your name
+  forward at the board or in the hall (anywhere in a town that has neither yet): say *I'd like to stand for
+  election* to any folk there, or use the **Stand for leader** button on the talk screen's Village page. Your name
+  goes down for the next vote, or into the one already called until the polls open on the day.
+* **Promises.** Make up to three, out of what the town wants just now: *build the schoolhouse within 10 days* (its
+  next buildings), *lower the tithe*, *better wages*, *more guards* (once it keeps a watch), *peace with Kingsgate*
+  (a neighbour it is at odds or at war with), *feed everyone*, *a festival every season*, *a bed for everyone* (while
+  somebody sleeps on the ground). Say *I promise to lower the tithe*, or press a promise on the hustings page
+  (`/village civic`). What you promise is what you stand for: a Merchant hears *a lower tithe*, a Guardian *more
+  guards*, a Visionary *the schoolhouse*. The board, the gossip and the evening count say your pledge as they say a
+  folk candidate's.
+* **The campaign.**
+  * *Will you vote for me?* Each folk hears you out once a campaign. It weighs what you stand for against what it
+    cares for and what the others stand for, and how it likes you, and tells you straight: *You stand for good wages
+    and trade — and that's what I care about. You'll have my vote.*
+  * **A speech at the board**, once a day (*Make a speech* on the hustings page, or say *I'd like to make a speech*
+    standing there). Everybody within earshot hears it, those who care for what you promise most of all; a few cheer,
+    and a grump says *Words are cheap*.
+  * **Gifts** help the way gifts always do: the folk think the better of you.
+  * **Bribes** (*I'll give you five coins for your vote*). A folk short of coin or keen on it may take one, and it
+    sways it a long way. An honest one refuses, remembers, and as often as not tells the town. A bribe seen by
+    another folk is an offence under the town's laws (the fine, the trial, banishment), and a bribe taken can come out
+    any day after, when the folk who took it boasts: a scandal, a fine owed, and every voter turns from you.
+  * **The folk who stand campaign too**, each day of the campaign, among the folk who care for what they stand for.
+* **The vote.** Each folk weighs you as it weighs a folk candidate: what you stand for and what the town needs, then
+  how it likes you, the campaign, and, if you have led before, your record: promises kept and broken.
+* **If you win**, you are the town's leader in name: the title over your name, the board and the gazette say so,
+  and the *By the Folk's Vote* advancement is yours. The town's folk still run its days, and the one the town thinks
+  most of after you is your **steward**: it speaks for you at the gatherings when you are not there, and runs the
+  orders when you leave them to it. You set the town's direction from **the Leader's page** (`/village leader`, or
+  *Leader's page* on the talk screen):
+  * **the plan**: food first, growth (timber in the Wood Age, then the mines), defence, trade, steady, or left to the
+    steward. In a famine the steward calls the town to the fields whatever the plan;
+  * **the next building**, out of what the town would build anyway;
+  * **the tithe**, from none to one coin in five (the town's own is one in ten), and **the wages**, from 85 to 120 in
+    the hundred. The folk feel both in their purses, Merchants most of all;
+  * **envoys**: when one comes you are told, with *[Yes]* and *[No]* to click; your answer is the town's at the
+    board (an offer of trade, or the business of war, is the council's to bargain);
+  * **a referendum**: `/village leader referendum should we build a tavern`. Until the town-wide votes on great works
+    are in, it is a show of hands at the board, each folk by what it cares for, its liking for you and your approval;
+    carried, a building it names goes up next.
+* **Held to your word.** Every promise has its deadline, and every morning the town looks at it. Kept, your
+  approval rises, the town thinks the better of you, and the chronicle and gazette say so. Broken, your approval
+  falls, the folk who cared for it grumble (out loud, and to each other), and the gazette and the morning assembly
+  say so. A lower tithe raised again, or better wages cut, is broken after all. Approval drifts toward how content
+  the town is, and slips for a leader never seen in town. **Under 30%, the town calls a recall vote** for the next
+  morning: carried, you are out, and an election follows in two days. At the next election you stand again on your
+  record.
+* **If you lose**, the town thinks the better of you for standing, and the winner may offer you **a seat on the
+  council** (it does if it likes you, or you took a quarter of the vote): your proposals for what to build next count
+  a councillor's vote as well as a citizen's, until the next election.
+
+Commands: `/village leader` (and `plan`, `build`, `tithe`, `wages`, `envoy yes|no`, `referendum`), `/village civic`
+(and `stand`, `promise`, `speech`, `withdraw`). For operators: `/village civic now` calls an election in the nearest
+town for tomorrow, `/village civic count` counts it, and `/village civic judge` has the town judge its leader's
+promises now.
+
+The game test `PlayerCivicGameTests.pc01` checks that a citizen the town likes stands while the election is called,
+promises a lower tithe and the town's next building, canvasses and makes a speech, and wins the count over the folk
+who stood; that in office it sets the tithe (the town then pays half what it did) and the plan; and that the next
+morning the tithe promise is kept and approval rises, and past the building's deadline, nothing built, it is broken
+and approval falls.
+
+## Apprenticeship
+
+You can learn a trade from a master: a folk of **level 25 or more** at the smith's, the farmer's, the miner's, the
+cave dweller's, the enchanter's, the tailor's, the brewer's or the cook's trade. Ask it *Will you take me as your
+apprentice?* (the **Apprentice me** button on the talk screen's Deal page). A master takes you on if it doesn't
+dislike you and you owe its town nothing. Its fee is six coins and one for every five of its levels, into its own
+purse. Without the coin you pay in kind: your first lesson's work is half as much again. It gives you an
+**Apprentice's Journal** out of the town's stores (binding one there and then if the stores have a book, a feather,
+an ink sac and a strap of leather), and the town hears of it.
+
+**Lessons** are real work, three to a trade. A lesson you bring is handed over (*What's my next lesson?*, or the **My
+lesson** button): the master makes something of it before your eyes, and the rest goes into its stores as your keep.
+The rest are done with your master by. Work in its town counts while it is at home, or ask for the lesson and it
+walks out with you for work in the world (it goes home at dusk). Away from your master, nothing counts.
+
+| Trade | Lessons | What they open |
+|---|---|---|
+| Smith | bring 20 iron (an iron pickaxe forged for you); smelt 16 iron; forge a reinforced pickaxe | the smith's made-to-order a sixth cheaper; **the reinforced pickaxe recipe**; a quarter off |
+| Farmer | harvest 64 ripe wheat; bake 16 bread; harvest 32 carrots, potatoes or beetroots | crops grow faster near you; one ripe harvest in four gives one more |
+| Miner | mine 10 iron ore; 24 coal; 2 diamonds | one ore in five gives one more; quicker digging below ground (Haste) |
+| Cave dweller | set 16 torches below ground; put down 10 monsters below ground; mine 16 ores deep down | eyes for the dark deep underground (night vision); one ore in five gives one more |
+| Enchanter | bring 16 lapis (a book enchanted for you); enchant 5 things; make 6 bookshelves | a lapis back on every enchanting; a level back as well |
+| Tailor | bring 32 wool (a bed made for you); sew 4 pieces of leather armour; weave 4 banners | the tailor's made-to-order a sixth cheaper; your leathers last a third longer, with your mark |
+| Brewer | brew 3 potions; bring 32 wheat (a stout brewed for you); brew 4 stouts | your potions last a quarter longer; **the brewer's stout recipe** |
+| Cook | cook 16 meats or fish; bake 16 bread; bake 4 farmhouse pies | one dish in five comes out of the fire with one more; **the farmhouse pie recipe** |
+
+* **Titles.** *Apprentice Smith* after the first lesson, *Journeyman Smith* after the second, *Master Smith* after
+  the third, shown after your name (with your office and your citizenship). The advancements *Learning the Trade*,
+  *Journeyman* and *Master of the Craft* mark the way.
+* **The master's recipes.** The reinforced pickaxe, the brewer's stout and the farmhouse pie craft at any crafting
+  table, but only for a player taught them: before the lesson the grid gives you nothing, after it the recipe is in
+  your recipe book. The folk make them all the same (below).
+* **Your master** likes you the better for every lesson, speaks of your progress when asked about itself (*My
+  apprentice Steve is coming along: two lessons done*), and its card on the talk screen lists its apprentices. At
+  the end it gives you a graduation piece of its own make with its mark on it, out of the town's stores: an iron
+  axe, hoe, pickaxe or sword, a leather tunic, an enchanted book, its own stouts or pies. If the stores can't run to
+  it yet, it is owed: ask again.
+* **The Apprentice's Journal** (use it, or `/village trades`) shows your trades: who you learn from, the lessons
+  done, what each opened, and the next one.
+
+**The folk's side.**
+
+* **The reinforced pickaxe** (an iron pickaxe, three iron and a copper strap; Iron Age): iron at the face, but three
+  times the wear in it. A master smith rivets one for the town's miners and cave dwellers when the stores can spare
+  the iron and hold fewer than two, and they carry it as any pick.
+* **The brewer's stout** (a bottle, two wheat and sugar): Haste for two minutes, and the bottle comes back. A master
+  brewer brews it for the tavern while the town is fed, and of an evening a folk with the coin buys one at the bar,
+  half the time, before the café's drinks.
+* **The farmhouse pie** (a pumpkin, an egg, a carrot and three wheat, two to a baking): ten hunger. A master cook
+  bakes it into the stores, and the town eats it.
+* **The apprentice's journal** (a book, a feather, an ink sac and leather): the tailor binds them when the town's
+  young apprentices want them. A child learning a trade at a grown-up's side (they follow their master about its
+  work) takes one out of the stores and writes up its day in it: a little of the trade's experience every day, put
+  by for when it takes the trade up. Its card says *Apprenticed: learning smithing at a grown-up's side, and keeps a
+  journal of it*, and its master's card lists *young Tam at its side*.
+
+The game tests `PlayerCivicGameTests.pc02` and `pc03` check that a player taken on by a master smith brings twenty
+iron, smelts sixteen with the smith by and so learns the reinforced pickaxe: the very same crafting grid that made
+nothing before makes one after. Forging one makes the player a Master Smith with the smith's axe, and the master
+smith makes reinforced pickaxes for the miners out of the stores. They also check that a master miner likes its
+apprentice better on taking it on and again after the first lesson, that work far from the master counts for
+nothing, and that the master speaks of the apprentice's progress and names it on its card.

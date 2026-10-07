@@ -23,5 +23,9 @@
   "block.mc_assistant.storehouse_unit": "Storehouse Unit",
   "container.mc_assistant.storehouse": "Village Storehouse",
   "block.mc_assistant.village_board": "Village Board",
-  "item.mc_assistant.village_board": "Village Board"
+  "item.mc_assistant.village_board": "Village Board",
+  "item.mc_assistant.reinforced_pickaxe": "Reinforced Pickaxe",
+  "item.mc_assistant.brewers_stout": "Brewer's Stout",
+  "item.mc_assistant.farmhouse_pie": "Farmhouse Pie",
+  "item.mc_assistant.apprentice_journal": "Apprentice's Journal"
 }

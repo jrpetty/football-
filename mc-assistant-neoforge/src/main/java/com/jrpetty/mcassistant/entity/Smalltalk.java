@@ -76,6 +76,8 @@ public final class Smalltalk {
             options.add(t);
             options.add(t);
         }
+        String[] word = PlayerLeader.gossip(a, b);           // [player-civic] the leader's promises, kept and broken
+        if (word != null) options.add(new Talk(word[0], word[1], word[2]));
         // The weather.
         if (level.isRaining()) {
             options.add(new Talk(pick(r, "Wet one today.", "Will this rain never stop?"),

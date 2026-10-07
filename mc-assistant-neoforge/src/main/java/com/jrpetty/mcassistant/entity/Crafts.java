@@ -90,6 +90,7 @@ public final class Crafts {
         String made;
         try {
             made = Luxuries.craft(level, v, f, true);                 // a turn at what the houses wait on (Luxuries)
+            if (made == null) made = TradeGoods.craft(level, v, f);   // [player-civic] a master's own: the reinforced pick, the stout, the pie, a journal
             if (made == null) made = switch (f.stationTask()) {
                 case SMITH -> smith(level, v, f);
                 case TAILOR -> tailor(level, v, f);

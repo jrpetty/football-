@@ -413,6 +413,7 @@ public final class Dealings {
         double work = Prices.each(want) * 0.2 * Craftsmanship.grade(skill).worth;
         int price = (int) Math.max(1, Math.round(storesWorth * Budget.PLAYER_MARKUP + work));
         price = haggled(village, p.getUUID(), d, price);
+        price = PlayerTrades.orderPrice(p, f.stationTask(), price);    // [player-civic] cheaper to one who learned the trade
         if (Market.coinsHeld(p) < price) return "That'd be " + coins(price) + ", makings and work. You've " + Market.coinsHeld(p) + ".";
         // Take it all.
         for (Map.Entry<Integer, Integer> e : fromPlayer.entrySet()) p.getInventory().getItem(e.getKey()).shrink(e.getValue());

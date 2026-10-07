@@ -221,6 +221,7 @@ public final class McAssistantMod {
         ITEMS.register(modBus);
         TABS.register(modBus);
         BLOCK_ENTITIES.register(modBus);
+        com.jrpetty.mcassistant.item.CivicItems.register(modBus);      // [player-civic] the masters' goods, and their recipes
         modBus.addListener(this::onEntityAttributes);
         modBus.addListener(this::onBuildCreativeTabs);
         modBus.addListener(ChunkLoad::onRegisterControllers);

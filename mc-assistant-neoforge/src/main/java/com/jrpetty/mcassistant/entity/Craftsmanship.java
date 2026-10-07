@@ -103,6 +103,7 @@ public final class Craftsmanship {
         if (path.startsWith("netherite_")) return 40;
         if (path.startsWith("diamond_")) return 25;              // [guard-kit] diamond armour with the diamond tools
         if (path.startsWith("chainmail_") || item == Items.SHIELD || item == Items.CROSSBOW) return 15;
+        if (path.equals("reinforced_pickaxe")) return Lessons.MASTER;   // [player-civic] a master smith's own (TradeGoods)
         if (item == Items.ANVIL) return 20;
         if ((path.startsWith("iron_") || path.startsWith("golden_")) && armour(path)) {
             return path.endsWith("_helmet") || path.endsWith("_boots") ? 5 : 10;
