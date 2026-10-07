@@ -218,8 +218,9 @@ public final class TownWork {
         return u >= TownPlan.RING && u < TownPlan.RING + TownPlan.STREET;
     }
 
-    /** Lamps stand at the street's edge, every few blocks along it. */
-    private static boolean lampSpot(int dx, int dz) {
+    /** Lamps stand at the street's edge, every few blocks along it. [redstone] Not private: the redstone engineer
+     *  puts his daylight lamps where the street lamps stand. */
+    static boolean lampSpot(int dx, int dz) {
         int ax = Math.abs(dx), az = Math.abs(dz);
         if (ax == TownPlan.AVENUE && az > TownPlan.RING + TownPlan.STREET && az % LAMP_EVERY == 0) return true;
         if (az == TownPlan.AVENUE && ax > TownPlan.RING + TownPlan.STREET && ax % LAMP_EVERY == 0) return true;

@@ -206,6 +206,7 @@ public final class TownPlan {
                  "auction",                                                    // [fleet] the auction house (entity/Auctions)
                  "infirmary",                                                  // [batchA] the infirmary (entity/Infirmary)
                  "lodge",                                                      // [caves] the Delvers' Lodge (entity/Lodge)
+                 "redstoneworks",                                              // [redstone] the redstone workshop (entity/Engineers)
                  "theatre",                                                    // [batchD] the theatre
                  "townlibrary",                                                // [library] the town library
                  "bakery", "inn" -> "civic";                                   // [batchE] the bakery and the inn

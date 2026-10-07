@@ -188,7 +188,10 @@ public final class Couriers {
     @Nullable
     static BlockPos depot(ServerLevel level, UUID village) {
         BlockPos d = Villages.depot(level, village);
-        return d != null ? d : base(level, village);
+        d = d != null ? d : base(level, village);
+        // [redstone] With the engineer's sorter working, a mixed load goes into its delivery chest, and its hoppers
+        // sort it into the storehouse's chests (Engineers.delivery); the storehouse as before when it is full.
+        return d == null ? null : Engineers.delivery(level, village, d);
     }
 
     // ------------------------------------------------------------------ the run list

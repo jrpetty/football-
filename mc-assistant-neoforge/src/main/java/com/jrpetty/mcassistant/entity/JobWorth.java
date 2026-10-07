@@ -183,6 +183,10 @@ public final class JobWorth {
             // [transport] Out on the water in all weathers but the worst: it makes nothing, and carries everybody over.
             case "FERRY" -> new Post(key, title, trade, role, 1, 1, 0.9, 0.0, "out on the water, and steady",
                 "carries the town's folk over the water");
+            // [redstone] The engineer: skilled, learned work (redstone is a craft of its own), with a little danger in
+            // the pistons; what the machines make is counted to the trade, as a maker's half (the parts are others' goods).
+            case "REDSTONE" -> new Post(key, title, trade, role, 1, 4, 1.0, 1.0, "learned, skilled work at the bench and the machines",
+                "builds the machines that work by themselves");
             // The shop's jobs (ShopRoles): the keeper makes a little and runs the place; the assistants and the
             // stock keeper make nothing, and are paid for what they do for the shop.
             case "SHOP/KEEPER" -> new Post(key, title, trade, role, 1, 2, 1.0, 0.5, "runs the place", "keeps the shop and its sales");
@@ -201,7 +205,7 @@ public final class JobWorth {
     /** How much of what the trade makes is its own work: a maker's half (the rest was another trade's goods). */
     static double own(StationTask t) {
         return switch (t.name()) {
-            case "SMELT", "COOK", "TAILOR", "BREW", "SMITH", "ENCHANT", "SHOP" -> 0.5;
+            case "SMELT", "COOK", "TAILOR", "BREW", "SMITH", "ENCHANT", "SHOP", "REDSTONE" -> 0.5;   // [redstone] the parts were others' goods
             default -> 1.0;
         };
     }
@@ -890,6 +894,7 @@ public final class JobWorth {
             case "BANK" -> "the bank";
             case "CAVE" -> "the caves";                // [caves]
             case "FERRY" -> "the ferry";               // [transport]
+            case "REDSTONE" -> "the redstone workshop";  // [redstone]
             default -> "the " + JobMarket.noun(t) + "s";
         };
     }
@@ -898,6 +903,7 @@ public final class JobWorth {
         return switch (t.name()) {
             case "FARM", "WOOD", "MINE", "RANCH", "SMELT", "HAUL", "BEEKEEP", "SCOUT", "HUNT" -> true;
             case "GUARD", "FISH", "STORE", "SMITH", "TAILOR", "BREW", "ENCHANT", "COOK", "SHOP", "BANK" -> false;
+            case "REDSTONE" -> false;                    // [redstone] "the redstone workshop is short of hands"
             default -> true;
         };
     }

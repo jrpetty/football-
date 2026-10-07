@@ -54,7 +54,9 @@ TRADES = ["none", "farmer", "lumberjack", "miner", "rancher", "guard",
           "smelter", "fisher", "storekeeper", "hauler",
           "blacksmith", "tailor", "beekeeper", "brewer", "enchanter", "cook", "shopkeeper", "scout", "hunter",
           # [caves] Not in StationTask's order: the cave dweller's own (FolkModel.outfit picks it for CAVE).
-          "cavedweller"]
+          "cavedweller",
+          # [redstone] The redstone engineer's own (FolkModel.outfit picks it for REDSTONE).
+          "engineer"]
 
 PARTS = [
     # The body every folk has: a villager's head and nose, a coat over a body,
@@ -200,6 +202,18 @@ PARTS = [
     ("cavedweller_haft", "body", (0, 6, 4.4), (0, 0, 0.7), [(64, 24, -0.5, -6, 0, 1, 12, 1, 0)], "cavedweller"),
     ("cavedweller_pickhead", "body", (0, 6, 4.4), (0, 0, 0.7), [(68, 24, -3.5, -7, 0, 7, 1, 1, 0)], "cavedweller"),
     ("cavedweller_rope", "body", (0, 0, 0), (0, 0, 0), [(84, 24, -6.2, 7, -2, 2, 4, 4, 0)], "cavedweller"),
+
+    # [redstone] Redstone engineer: brass-rimmed goggles with red-tinted lenses, pushed up on a leather strap; a
+    # leather toolbelt over the work coat, with a pouch of parts at the right hip, a spanner at the left and a
+    # coil of red wire at the back.
+    ("engineer_strap", "head", (0, 0, 0), (0, 0, 0), [(64, 0, -4, -9.5, -4, 8, 2, 8, 0.6)], "engineer"),
+    ("engineer_lens_right", "head", (0, 0, 0), (0, 0, 0), [(96, 0, -3.7, -10.2, -5.9, 3, 3, 1, 0)], "engineer"),
+    ("engineer_lens_left", "head", (0, 0, 0), (0, 0, 0), [(96, 0, 0.7, -10.2, -5.9, 3, 3, 1, 0)], "engineer"),
+    ("engineer_belt", "body", (0, 0, 0), (0, 0, 0), [(64, 12, -4, 9, -3, 8, 2, 6, 0.85)], "engineer"),
+    ("engineer_pouch", "body", (0, 0, 0), (0, 0, 0), [(96, 12, -5.6, 9.6, -2, 2, 3, 4, 0)], "engineer"),
+    ("engineer_spanner", "body", (0, 0, 0), (0, 0, 0),
+     [(110, 12, 4.5, 9.6, -1, 1, 5, 1, 0), (114, 12, 4, 14.4, -1.5, 2, 2, 2, 0)], "engineer"),
+    ("engineer_coil", "body", (0, 0, 0), (0, 0, 0), [(64, 22, -2, 8.2, 3.6, 4, 4, 2, 0)], "engineer"),
 ]
 
 
@@ -980,6 +994,103 @@ def cavedweller_glow():
     return cv
 
 
+def outfit_engineer():
+    """[redstone] The redstone engineer: a long slate-grey canvas work coat piped in redstone red down its front, at
+    its collar, its cuffs and its hem, brass buttons and a breast pocket with a pencil in it; sleeves turned back at
+    the forearm; a leather toolbelt with a pouch of parts, a spanner and a coil of red wire; dark drill trousers and
+    stout boots; and brass-rimmed goggles with red-tinted lenses pushed up on the brow. A little red dust on the
+    gloves, from the work."""
+    cv = Canvas()
+    canvas = (76, 82, 92)
+    red = (176, 30, 26)
+    brass = (198, 160, 72)
+
+    def drill(x, y):
+        c = canvas if (x + y) % 3 else lit(canvas, 0.9)                 # the canvas's twill
+        c = grain(c, x, y, 5, 400)
+        if noise(x, y, 401) > 0.9:
+            c = lit(c, 0.8)                                               # oil and wear
+        return c
+    coat = coat_to(cv, drill, 16)
+    # The red piping: the collar, the front edges either side of the buttons, and the hem.
+    coat.row(0, lambda x: grain(red, x, 0, 4, 402))
+    for y in range(1, 16):
+        coat.put("front", 3, y, grain(red, 3, y, 3, 403))
+        coat.put("front", 4, y, lit(canvas, 0.7))                         # the coat's front edge
+    coat.row(15, lambda x: grain(red, x, 15, 4, 404))
+    coat.fill("top", lambda x, y, w, h: grain(red, x, y, 4, 402) if y in (0, h - 1) or x in (0, w - 1) else drill(x, y))
+    for y in (2, 5, 8, 12):                                               # brass buttons
+        coat.put("front", 5, y, brass)
+    for x in range(0, 3):                                                 # the breast pocket, piped
+        coat.put("front", x, 3, grain(red, x, 3, 3, 405))
+    coat.put("front", 1, 4, lit(canvas, 0.62))
+    coat.put("front", 1, 2, (214, 178, 96))                               # a pencil in it
+    coat.put("front", 1, 1, (70, 60, 52))
+    for y in range(11, 16):                                               # a vent up the back
+        coat.put("back", 4, y, lit(canvas, 0.6))
+    for face in ("right", "left"):                                        # the side pockets' flaps
+        w, _ = coat.size(face)
+        for x in range(1, w - 1):
+            coat.put(face, x, 12, lit(canvas, 0.78))
+    sleeves(cv, drill, 7, cuff=red)
+    for name in ("right_arm", "left_arm"):
+        arm = Box(cv, name)
+        arm.row(6, lambda x: lit(canvas, 0.82))                           # turned back at the forearm
+        arm.around(lambda s, y, sw, h, face, x: grain((112, 84, 56), s, y, 5, 406) if y >= 10 else None)   # gloves
+        arm.around(lambda s, y, sw, h, face, x: grain(red, s, y, 6, 407) if y == 11 and s % 4 == 1 else None)  # dust
+        arm.fill("bottom", lambda x, y, w, h: (96, 72, 48))
+    legs(cv, cloth((54, 56, 62), 5, 408), leather((52, 38, 28)), boot_from=9, sole=(26, 22, 20))
+    for name in ("right_leg", "left_leg"):
+        leg = Box(cv, name)
+        leg.row(9, (70, 52, 36))                                          # the boot tops
+        leg.put("front", 1, 10, (150, 140, 120))                          # laced
+        leg.put("front", 2, 10, (150, 140, 120))
+    face_paint(cv, [(6, 6, (150, 96, 84))])                               # a smudge of red dust on the cheek
+    # The goggles: a leather strap round the head, brass rims, red glass.
+    strap = Box(cv, "engineer_strap")
+    strap.all(lambda face, x, y, w, h: grain((70, 48, 32), x, y, 4, 409))
+    strap.fill("top", lambda x, y, w, h: False if 1 <= x <= 6 and 1 <= y <= 6 else (70, 48, 32))
+    strap.fill("bottom", lambda x, y, w, h: False if 1 <= x <= 6 and 1 <= y <= 6 else (70, 48, 32))
+    strap.row(0, (96, 68, 44))
+    strap.fill("back", lambda x, y, w, h: brass if x in (3, 4) else None)   # the buckle at the back
+    lens = Box(cv, "engineer_lens_right")
+    lens.all(lambda face, x, y, w, h: grain(brass, x, y, 4, 410))
+
+    def glass(x, y, w, h):
+        if x in (0, w - 1) and y in (0, h - 1):
+            return brass                                                    # the rim, round the corners
+        if (x, y) == (0, 0) or (x, y) == (1, 0):
+            return (238, 112, 96)                                           # a glint in the red glass
+        return (166, 32, 28) if (x + y) % 2 else (148, 26, 24)
+    lens.fill("front", glass)
+    # The toolbelt, its pouch, its spanner and the coil of red wire behind.
+    tb = Box(cv, "engineer_belt")
+    tb.all(lambda face, x, y, w, h: grain((96, 64, 38), x, y, 4, 411))
+    tb.row(0, lambda x: lit((96, 64, 38), 1.12))
+    tb.put("front", 3, 0, brass)                                          # the buckle
+    tb.put("front", 4, 0, lit(brass, 0.75))
+    tb.put("front", 3, 1, lit(brass, 0.8))
+    tb.put("front", 4, 1, lit(brass, 0.6))
+    for face in ("right", "left"):                                        # loops for the tools
+        w, _ = tb.size(face)
+        tb.put(face, 1, 1, (70, 46, 28))
+        tb.put(face, w - 2, 1, (70, 46, 28))
+    tb.fill("top", lambda x, y, w, h: False if 1 <= x <= w - 2 and 1 <= y <= h - 2 else (96, 64, 38))
+    tb.fill("bottom", lambda x, y, w, h: False if 1 <= x <= w - 2 and 1 <= y <= h - 2 else (80, 54, 32))
+    pouch = Box(cv, "engineer_pouch")
+    pouch.all(lambda face, x, y, w, h: grain((118, 82, 50), x, y, 4, 412))
+    pouch.fill("right", lambda x, y, w, h: (92, 62, 38) if y == 0 else (brass if (x, y) == (2, 1) else None))   # its flap
+    pouch.fill("top", lambda x, y, w, h: (92, 62, 38))
+    sp = Box(cv, "engineer_spanner")
+    sp.all(lambda face, x, y, w, h: grain((168, 172, 180), x, y, 5, 413))
+    sp.fill("front", lambda x, y, w, h: (200, 204, 210) if y < h - 1 else (120, 124, 130))
+    coil = Box(cv, "engineer_coil")
+    coil.all(lambda face, x, y, w, h: (184, 36, 28) if (x + y) % 2 else (118, 22, 18))
+    coil.fill("back", lambda x, y, w, h: (60, 16, 14) if 1 <= x <= 2 and 1 <= y <= 2 else
+              ((196, 44, 34) if (x + y) % 2 else (128, 24, 20)))            # wound round, the hole in the middle
+    return cv
+
+
 def outfit_rancher():
     """A leather waistcoat over a blue shirt, chaps, a wool shawl, a wide hat."""
     cv = Canvas()
@@ -1708,6 +1819,7 @@ OUTFITS = {
     "scout": outfit_scout,
     "hunter": outfit_hunter,
     "cavedweller": outfit_cavedweller,                                    # [caves]
+    "engineer": outfit_engineer,                                          # [redstone]
 }
 GLOWS = {"miner": miner_glow, "cavedweller": cavedweller_glow}
 DYED = ("none", "farmer", "lumberjack", "rancher", "guard", "storekeeper", "hauler",

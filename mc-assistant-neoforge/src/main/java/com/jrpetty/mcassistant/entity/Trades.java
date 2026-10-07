@@ -175,6 +175,17 @@ public final class Trades {
                 List.of(need("a boat", s -> s.is(net.minecraft.tags.ItemTags.BOATS), 1, "the town's, moored at the landing")),
                 List.of(),
                 "folk across the water, and a coin a crossing into my purse");
+            // [redstone] The redstone engineer (Engineers): parts made at the bench from the stores' redstone, quartz,
+            // iron and stone, and the machines built of them, which then work by themselves.
+            case REDSTONE -> new Trade("I build the town's machines in real redstone: the cane and melon farms that harvest"
+                    + " themselves, the lamps that light at dusk, the sorter by the storehouse, the furnaces that feed themselves"
+                    + " and the gate the guards shut at night. I make every part at my bench and mend what breaks",
+                List.of(),
+                List.of(need("redstone", s -> s.is(Items.REDSTONE), 16, "the miners and the cave dwellers"),
+                    need("nether quartz", s -> s.is(Items.QUARTZ), 4, "the Nether"),
+                    need("iron for hoppers and pistons", s -> s.is(Items.IRON_INGOT), 8, "the smelter"),
+                    need("cobblestone and planks", s -> s.is(Items.COBBLESTONE) || s.is(net.minecraft.tags.ItemTags.PLANKS), 16, "the miners and the lumberjack")),
+                "sugar cane, melons, pumpkins and smelted ingots into the stores, sorted goods in the storehouse, lit streets and a gate that shuts");
             case NONE -> new Trade("I'm between trades just now", List.of(), List.of(), "whatever the village needs a hand with");
         };
     }

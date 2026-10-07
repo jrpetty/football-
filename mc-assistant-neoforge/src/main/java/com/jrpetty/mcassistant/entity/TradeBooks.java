@@ -165,6 +165,7 @@ public final class TradeBooks {
             case SCOUT -> new String[]{ "scout", "scouting" };
             case CAVE -> new String[]{ "cave" };
             case BEEKEEP -> new String[]{ "hive", "bee" };
+            case REDSTONE -> new String[]{ "redstone", "engineer", "machine", "piston" };   // [redstone]
             default -> new String[]{};
         };
     }
@@ -481,6 +482,7 @@ public final class TradeBooks {
                 if (smelted > 0) out.add("Between us we've smelted " + Quill.number(smelted) + " loads.");
                 if (Villages.hasBuilt(id, "smeltery")) out.add("The smeltery's three furnaces are the town's. Keep all three going.");
             }
+            case REDSTONE -> out.addAll(Engineers.bookNotes(id));      // [redstone] its machines, its parts, what it has learned
             case COOK -> {
                 if (Villages.hasBuilt(id, "cafe")) out.add("The café is where folk spend their coins on their break. Keep its counter stocked.");
                 if (Villages.hasBuilt(id, "bakery")) out.add("The bakery's oven bakes for the whole town. Keep it fed.");

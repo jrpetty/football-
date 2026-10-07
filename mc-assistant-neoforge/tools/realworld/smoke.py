@@ -2447,6 +2447,53 @@ def transport_stage(r, look, cx, cz):
     say("alive after the transport: %s" % client_alive())
 
 
+def redstone_stage(r, look, cx, cz):
+    """[redstone] The redstone engineer's works (entity/Engineers, RedstoneStage). Run from well out to the east of the
+    town, /village redstone stage lays out, for nothing and from the engineer's own drawings: the redstone workshop with
+    the engineer before its door, in its red-piped coat and goggles; the sugar cane farm with one of its pistons caught
+    as it fires; three lamp posts along a path; the hopper sorter laid against a storehouse, its filters stocked; and a
+    stretch of wall with the piston gate in it. Pictures: the engineer at the workshop, the cane farm, the sorter by the
+    storehouse, the gate open and then shut (/village redstone stage gate throws its lever), and last the lamps along
+    the path at night, lit by their sensors alone. Then /village redstone, the town's own works in words."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("time set 6000")
+    r.cmd("weather clear")
+    hy = ground_height(r, cx, cz)
+    sx, sz = cx + 140, cz - 60                         # out past the town to the east, on ground of its own
+    r.cmd("tp %s %d %d %d" % (USER, sx + 30, hy + 30, sz + 30))
+    time.sleep(8)                                      # the ground arrives at the server and the client
+    out = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village redstone stage" % (sx, sz))
+    say("redstone stage: " + out[:900])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("nothing staged for the redstone works; nothing to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            return
+        x, y, z, ax, ay, az = views[name]
+        look("33-redstone-" + picture, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    shoot("engineer", "1-engineer", 10)
+    shoot("cane", "2-cane-farm", 8)
+    shoot("sorter", "3-sorter", 8)
+    shoot("gate", "4-gate-open", 8)
+    say("gate: " + r.cmd("village redstone stage gate"))
+    time.sleep(2)                                      # the pistons take their three ticks; the client draws them
+    shoot("gate", "5-gate-shut", 6)
+    shoot("gate-inside", "6-gate-lever", 6)
+    r.cmd("time set 18000")                            # night: the sensors turn the lamps on
+    time.sleep(4)
+    shoot("lamps", "7-lamps-night", 8)
+    r.cmd("time set 6000")
+    say("redstone: " + r.cmd("execute positioned %d %d %d run village redstone" % (cx, hy + 1, cz))[:1200])
+    say("alive after the redstone works: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

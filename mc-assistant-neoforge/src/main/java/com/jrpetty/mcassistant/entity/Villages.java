@@ -110,7 +110,10 @@ public final class Villages {
         // chosen by the town from its most skilled (CaveDwellers.team, appoint).
         new Slot(AssistantEntity.StationTask.CAVE, 1, CaveDwellers.FROM, Age.IRON, CaveDwellers.MOST),
         // [transport] The ferryman: one, while the town's ferry runs (Ferries), whatever its size and age.
-        new Slot(AssistantEntity.StationTask.FERRY, 1, 1, Age.WOOD, 1));
+        new Slot(AssistantEntity.StationTask.FERRY, 1, 1, Age.WOOD, 1),
+        // [redstone] The redstone engineer: one from sixteen in the Diamond Age once the stores hold redstone and quartz,
+        // two at a hundred (Engineers.wanted), chosen by the town from the hands it can spare (Engineers.appoint).
+        new Slot(AssistantEntity.StationTask.REDSTONE, 1, Engineers.FROM, Age.DIAMOND, 2));
 
     /** Forget every settlement. For tests, which share one JVM and would
      *  otherwise inherit each other's villages. */
@@ -340,6 +343,7 @@ public final class Villages {
             case "trainingyard" -> "the training yard";            // [war-prep]
             case "firestation" -> "the fire station";              // [disasters]
             case "lodge" -> "the Delvers' Lodge";                 // [caves]
+            case "redstoneworks" -> "the redstone workshop";      // [redstone]
             default -> "the " + structure;
         };
     }
@@ -403,6 +407,7 @@ public final class Villages {
         Economy.resetForTests();
         Scouts.resetForTests();
         CaveDwellers.resetForTests();       // [caves]
+        Engineers.resetForTests();          // [redstone]
         Fashion.resetForTests();            // [fashion] the season's looks, the tailor's book, the shows
         Quests.resetForTests();
         Services.resetForTests();
@@ -697,6 +702,7 @@ public final class Villages {
             if (!craftReady(villageId, slot.trade())) continue;   // a smith with no smithy has nothing to work at
             if (slot.trade() == AssistantEntity.StationTask.BANK) continue;   // the banker is appointed (Bank.appoint)
             if (slot.trade() == AssistantEntity.StationTask.CAVE) continue;   // [caves] the team is chosen (CaveDwellers.appoint)
+            if (slot.trade() == AssistantEntity.StationTask.REDSTONE) continue;   // [redstone] the engineer is chosen (Engineers.appoint)
             double target = target(villageId, slot, total) * fit;
             double deficit = target - have.getOrDefault(slot.trade(), 0);
             // The first hand of a craft the village has grown into comes before one more of a trade
@@ -756,6 +762,7 @@ public final class Villages {
             if (slot.age() == Age.WOOD || !wantedHere(slot, villageId, total, at)) continue;
             if (slot.trade() == AssistantEntity.StationTask.BANK) continue;   // the banker is appointed (Bank.appoint)
             if (slot.trade() == AssistantEntity.StationTask.CAVE) continue;   // [caves] the team is chosen (CaveDwellers.appoint)
+            if (slot.trade() == AssistantEntity.StationTask.REDSTONE) continue;   // [redstone] the engineer is chosen (Engineers.appoint)
             if (have.getOrDefault(slot.trade(), 0) > 0) continue;
             if (craftReady(villageId, slot.trade())) return slot.trade();
         }
@@ -768,6 +775,7 @@ public final class Villages {
         for (Slot slot : SLOTS) {
             if (!wantedHere(slot, villageId, total, at) || slot.trade().isCraft() || slot.trade() == AssistantEntity.StationTask.GUARD) continue;
             if (slot.trade() == AssistantEntity.StationTask.CAVE) continue;   // [caves] the team is chosen (CaveDwellers.appoint)
+            if (slot.trade() == AssistantEntity.StationTask.REDSTONE) continue;   // [redstone] the engineer is chosen (Engineers.appoint)
             if (!craftReady(villageId, slot.trade())) continue;
             double short_ = target(villageId, slot, total) * fit - have.getOrDefault(slot.trade(), 0);
             if (short_ > worst) { worst = short_; most = slot.trade(); }
@@ -797,6 +805,7 @@ public final class Villages {
         for (Slot slot : SLOTS) {
             if (!wantedHere(slot, villageId, total, at) || slot.trade().isCraft() || slot.trade() == AssistantEntity.StationTask.GUARD) continue;
             if (slot.trade() == AssistantEntity.StationTask.CAVE) continue;   // [caves] the team is chosen (CaveDwellers.appoint)
+            if (slot.trade() == AssistantEntity.StationTask.REDSTONE) continue;   // [redstone] the engineer is chosen (Engineers.appoint)
             if (!craftReady(villageId, slot.trade())) continue;
             double short_ = target(villageId, slot, total) * fit - have.getOrDefault(slot.trade(), 0);
             if (short_ > 1.5) { by.put(slot.trade(), short_); out.add(slot.trade()); }
@@ -842,6 +851,7 @@ public final class Villages {
         if (trade == AssistantEntity.StationTask.FISH) return !dryForFishers(villageId);
         if (trade == AssistantEntity.StationTask.CAVE) return CaveDwellers.ready(villageId);   // [caves] a few miners and a watch first
         if (trade == AssistantEntity.StationTask.FERRY) return Ferries.wanted(villageId);      // [transport] while the ferry runs
+        if (trade == AssistantEntity.StationTask.REDSTONE) return Engineers.ready(villageId);  // [redstone] redstone and quartz in the stores
         if (trade == AssistantEntity.StationTask.STORE || trade == AssistantEntity.StationTask.HAUL) {
             return villageId != null && (Storehouses.stands(villageId) || hasBuilt(villageId, "storage")
                 || builtAt(villageId, "storage") != null);
@@ -912,6 +922,7 @@ public final class Villages {
             * glut(villageId, slot.trade()) * Homeland.lean(villageId, slot.trade());
         if (slot.trade() == AssistantEntity.StationTask.CAVE) t = CaveDwellers.team(total);   // [caves] two, three at sixty, four at a hundred
         if (slot.trade() == AssistantEntity.StationTask.FERRY) t = Ferries.wanted(villageId) ? 1.0 : 0.0;  // [transport] one ferryman
+        if (slot.trade() == AssistantEntity.StationTask.REDSTONE) t = Engineers.wanted(villageId);          // [redstone] one, two at a hundred
         // A courier for every five workers out on plots of their own (their production chests).
         if (slot.trade() == AssistantEntity.StationTask.HAUL && villageId != null) {
             int producers = 0;
@@ -955,6 +966,7 @@ public final class Villages {
         int have = 0;
         for (AssistantEntity a : folk) if (a.stationTask() == trade) have++;
         if (trade == AssistantEntity.StationTask.CAVE) return have - CaveDwellers.wanted(villageId);   // [caves] the team, whole
+        if (trade == AssistantEntity.StationTask.REDSTONE) return have - Engineers.wanted(villageId);  // [redstone] the engineers, whole
         for (Slot slot : SLOTS) {
             if (slot.trade() != trade) continue;
             if (!wantedHere(slot, villageId, total, at) || !craftReady(villageId, trade)) return 0.0;
@@ -978,6 +990,7 @@ public final class Villages {
         int have = 0;
         for (AssistantEntity a : folk) if (a.stationTask() == trade) have++;
         if (trade == AssistantEntity.StationTask.CAVE) return have > CaveDwellers.wanted(villageId);   // [caves] the team, whole
+        if (trade == AssistantEntity.StationTask.REDSTONE) return have > Engineers.wanted(villageId);  // [redstone] the engineers, whole
         Age at = villageId == null ? Age.WOOD : ageOf(villageId);
         for (Slot slot : SLOTS) {
             if (slot.trade() != trade) continue;
@@ -1799,6 +1812,8 @@ public final class Villages {
         if (FireSafety.wanted(villageId)) extras.add(FireSafety.STATION);
         // [caves] The Delvers' Lodge, once the town keeps a cave team (Lodge).
         if (Lodge.wanted(villageId)) extras.add(Lodge.STRUCTURE);
+        // [redstone] The redstone workshop, once the stores hold redstone and quartz (Diamond Age on: Engineers).
+        if (Engineers.wantsWorkshop(villageId)) extras.add(Engineers.WORKSHOP);
         if (at == Age.IRON) { homesAndAmenities(villageId, folk, out, extras); return out; }
 
         if (built(villageId, "lighthouse") < 1) out.add("lighthouse");
@@ -2169,6 +2184,7 @@ public final class Villages {
             case "museum" -> "a museum, to put the town's rare finds on show and keep its chronicle as books";
             case "infirmary" -> Infirmary.why(villageId);          // [batchA]
             case "lodge" -> Lodge.why(villageId);                  // [caves]
+            case "redstoneworks" -> Engineers.why(villageId);      // [redstone]
             case "theatre" -> Theatre.why(villageId);             // [batchD]
             case "windmill", "bakery", "inn", "orchard", "allotments" -> TownLook.why(villageId, project);   // [batchE]
             case "postoffice" -> Post.why(villageId);                     // [batchF]
@@ -2419,6 +2435,8 @@ public final class Villages {
         } finally {
             ZoneChests.askAs(before);
         }
+        // [redstone] The engineer's sorter's chests are the stores wherever its line runs (it may reach past the store area).
+        for (BlockPos p : Engineers.sortedChests(level, villageId)) if (!out.contains(p)) out.add(p);
         BlockPos heart = v.centre();
         BlockPos store = Storehouses.doorFor(level, villageId);
         out.sort(java.util.Comparator.<BlockPos>comparingInt(p -> p.equals(store) ? -1 : house != null && p.distSqr(house) <= 36 ? 0 : 1)

@@ -254,6 +254,7 @@ public final class TownJobs {
         if (FireBrigade.onIt(f) || Weather.sheltering(f)) return false;          // [wf] at a fire, or in out of a storm
         if (Sport.busy(f)) return false;                                         // [batchC] at a match, a contest, the butts, away
         if (Fleet.out(f) || Auctions.busy(f) || FishMarket.busy(f)) return false;   // [fleet] at sea, at the auction, at the fish market
+        if (Engineers.abroad(f)) return false;                                   // [redstone] at a machine, or sent to the gate's lever
         if (f.stationTask() == AssistantEntity.StationTask.GUARD && (f.level().isNight() || f.onWatch()) && !works.endsWith("watch")) return false;
         UUID id = f.ownerId();
         return id == null || !Villages.holdsTheLead(id, f.getUUID(), f.level().getGameTime());
@@ -311,6 +312,7 @@ public final class TownJobs {
                 case SCOUT -> score -= 40;
                 case CAVE -> score -= 40;                // [caves] its day is down the caves
                 case FERRY -> score -= 40;               // [transport] its day is at the ferry
+                case REDSTONE -> score -= 20;            // [redstone] its day is at the machines, and its one hand
                 default -> { if (trade.isCraft()) score -= 10; }
             }
             if (f.workedOut()) score += 25;                              // nothing to work at in its own trade

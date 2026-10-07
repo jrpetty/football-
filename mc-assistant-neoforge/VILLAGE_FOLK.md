@@ -7749,3 +7749,115 @@ The game tests `TransportGameTests` (tr01 to tr05) check that:
   takes another trade, and the chronicle tells it;
 * in a town of nine, the bridge is put to everybody in a referendum as a great work drawn beside the ferry, carried,
   built by the town's hands out of its stone and opened, and then the ferry retires.
+
+## The redstone engineer
+
+A late trade. The redstone engineer builds the town's machines out of the game's own redstone, block by block, from the
+town's stores, and from then on the machines run by themselves by the game's own rules: nobody puts anything in their
+chests but their hoppers.
+
+**When the town takes one on.** In the Diamond Age or the Nether Age, once the stores hold 32 redstone and 8 Nether
+quartz (redstone dust is deep ore; observers, comparators and daylight sensors all want quartz). The chronicle says so.
+A town of 16 or more wants one engineer, and a second at 100. The town picks the hand itself: the one it can best spare
+who knows metal and rock (a smith's or a miner's years at it count, and a curious nature), never a farmer or a miner the
+town is short of, nor a craftsman, its storekeeper, couriers, banker, scouts, cave team or ferryman. An old smith or miner
+starts a few levels into the trade.
+
+**Its workshop.** The redstone workshop goes on the town's wish list once the trade opens: a stone workroom under a hipped
+roof, with a lectern of plans between two tall bookcases at the back, the workbench, chests and barrels of parts, windows
+down both sides and lanterns under the beams. The engineer works out of it once it stands.
+
+**How it works.** The engineer keeps the town's machines on its books, each from a drawing of its own (in the mod's
+`blueprints/machines/` folder, one block to a character, layer by layer, in the same way as the buildings'). It takes on
+a machine only when the stores can spare its makings (it never touches what the town keeps back: the smith's iron, the
+builders' timber and stone, the masons' stone bricks, anything the age is short of). It walks out to the site and lays
+the machine three blocks a second: the frame first, then the hoppers, chests, furnaces and pistons, the redstone and the
+observers last, and the crop when the machine is whole, so nothing fires half built. Every block comes out of the
+stores. A part the stores have none of (a hopper, a piston, a sticky piston, an observer, a comparator, a repeater, a
+redstone torch, a daylight sensor, a redstone lamp, a lever, a chest, a furnace) it makes at the bench first by the
+game's recipe from what they hold. What stood on the site (earth, stone, an old fence post and its lantern, a wooden
+gate's doors) goes back into the stores.
+
+On its rounds, every two minutes or so for each machine, it looks the machine over and puts back from the stores any
+block not as drawn (a piston a player took, a block a creeper blew out), clears what has fallen into it, keeps the
+auto-smelter in ore and fuel and the sorter's filters at their twenty-two, and keeps its books: what each machine has
+made, on what day, when it was last looked at, and what it waits for.
+
+**The machines.**
+* **The sugar cane farm.** Eight canes on mud, with water behind them. Behind each cane's second block is a piston, and
+  on the piston an observer watching the cane's third block. When a cane grows that tall the observer fires, the
+  redstone along the back powers the pistons, the second block is broken and the top falls; the bottom cane is never
+  touched, so it grows again. A hopper under every mud block and under the slabs in front picks up what falls (mud and
+  slabs are not whole blocks, so a hopper beneath still reaches through them) and passes it along to the chest at the
+  end. Glass along the front, if the stores can spare it; the engineer's stone if not.
+* **The melon and pumpkin farm.** Eight stems on watered farmland, melon and pumpkin turn about if the stores have both
+  seeds. Each stem has one bare spot of mud in front of it for its fruit. An observer looks down at each stem; when the
+  fruit comes, the stem turns, the observer fires, and the piston over the fruit's spot comes down and breaks it. The
+  slices and pumpkins fall on the mud and the hoppers under it carry them to the chest. The glass front lets the light
+  in to the stems.
+* **Street lamps.** A redstone lamp on a stone post with a daylight sensor on top, turned to work the other way about:
+  it gives power while the sky is dark. The lamps light at dusk and go out at dawn by the sky alone. The engineer gives
+  the town's old lantern posts a lamp each (the lantern and the fence go back to the stores) and puts up new posts where
+  the streets have none, four at a time between its other machines.
+* **The hopper sorter.** Laid against the storehouse where there is room for it (it takes a line of twenty-two blocks
+  clear of the streets), or near the storehouse in the stores' ground. The couriers empty their packs into its delivery
+  chest while it works and its filters are stocked. A line of hoppers carries everything along; under each hopper of
+  the line is a filter hopper holding twenty-two of one of the town's ten commonest goods (eighteen in its first slot and
+  one in each of the others). When a twenty-third of its good drops in, its comparator reads it, a redstone torch goes
+  out, and the hopper below is unlocked long enough to take the good down into its own chest (a four-tick repeater keeps
+  a stream of goods from burning the torch out). Everything no filter wants goes on to the end of the line and into the
+  storehouse (any face of a storehouse now takes what a hopper gives it, and passes it to the store). The ten chests are
+  part of the stores.
+* **The auto-smelter.** Four furnaces in a stone and brick housing. Double chests of ore stand over them and double
+  chests of fuel behind them; hoppers carry the ore down into the furnaces' tops, the fuel in at their backs, and the
+  ingots out of their bottoms along to the chest below. The engineer keeps the ore chests and the fuel chests filled from
+  the stores (raw iron, copper and gold; the kelp diver's dried kelp blocks first, then coal or charcoal) and keeps a few
+  back for the smelter's own furnaces.
+* **The piston gate.** In the wall's main gate, in place of the wooden doors (the other gates keep theirs). Four sticky
+  pistons in the gate's posts push four blocks of the wall's own stone into a doorway two wide and two high, worked by a
+  lever on the inside of the wall; the redstone runs up the post and along the top of the gate under a capping course of
+  stone. When the watch shuts the gates at dusk (or the bell rings), the nearest guard walks to the lever and throws it,
+  and the gate is shut tight; in the morning a guard throws it back.
+
+**What it makes, and where it goes.** Everything a machine makes lands in its own chest; the couriers carry it in from a
+chest out on the plots, as they do a worker's. It is counted to the engineer's trade on the Production page as it comes,
+and in the trade's book. The parts it makes at the bench are on the books too, as the trade's work, with the redstone,
+quartz and iron that went into them as used.
+
+**Talk and the town's books.** Ask the engineer what it's doing: what it is building and how far it has got, what it is
+waiting on, or how its machines are doing. Its card has a *Machines* line. The board has a *Works* line. The chronicle,
+and so the gazette, tell the trade opening, who took it up, each machine begun and finished, and every mend. The trade's
+book (in the library) lists the machines and what they have made, the parts made at the bench, the blocks mended, and
+what it has learned: build the redstone last; never let an observer watch the place a piston's head comes into, or the
+machine sets itself going for ever; leave the bottom cane; mud under cane, not dirt, so a hopper reaches through it; and
+a sorter's filter holds twenty-two, no more and no fewer, with a slow repeater behind each torch.
+
+`/village redstone` lists the town's works in the chat. For operators, `/village redstone now` looks at the stores, takes
+on an engineer if the town is ready, and plans its next machine; `/village redstone stage` lays out one of everything for
+the pictures (`/village redstone stage gate` throws the staged gate's lever).
+
+**The look.** A long slate-grey canvas work coat piped in redstone red down the front, at the collar, cuffs and hem, with
+brass buttons and a pencil in the breast pocket; a leather toolbelt with a pouch of parts, a spanner and a coil of red
+wire; dark trousers and laced boots; and brass-rimmed goggles with red glass pushed up on the brow.
+
+The game tests `RedstoneGameTests` (rs01 to rs10) check that:
+* the trade opens in the Diamond Age with redstone and quartz in the stores (not in the Iron Age, not without quartz),
+  the town takes the idle hand who was a smith (not its farmer or miner), a second at a hundred, and the engineer talks
+  about its work;
+* the workshop is wished for, built from its drawing with its lectern, bench, chests and books, and is then off the list;
+* the cane farm is laid from the stores, every part made at the bench by its recipe and every ingot, plank and dust
+  accounted for, exactly as drawn; the cane grows, the observers fire the pistons, the hoppers carry 16 cane to the
+  chest, the bottom canes stay, the cane is counted to the trade, and a piston a player took out is put back on the rounds;
+* the melon and pumpkin farm puts melons and pumpkins in its chest by the pistons and hoppers alone;
+* a lantern post is given a lamp (its lantern and fence back in the stores) and a new post put up beside it; both are
+  out at noon, lit at night by their sensors alone, and out again in the morning;
+* the sorter is laid against the storehouse with forty-one hoppers, ten comparators and ten repeaters made for it; its
+  filters hold twenty-two each of the town's ten commonest goods; it is the couriers' depot; a mixed load is sorted into
+  the goods' own chests, and the dirt and flint no filter wants go on into the storehouse;
+* the piston gate replaces the wall's wooden gate (its doors back in the stores), the lever shuts it tight with four
+  blocks of the wall's stone and opens it again, a guard walks to the lever and throws it when the watch shuts the gates
+  at dusk, and throws it back in the morning;
+* the auto-smelter is fed from the stores and turns out iron ingots into its chest by its hoppers alone, all four
+  furnaces burning, counted to the trade;
+* every part comes from its real recipe out of the stores, and no observer is made without quartz;
+* left to its own day, the engineer plans a street lamp the stores can run to, walks out to it and builds it.

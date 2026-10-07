@@ -173,6 +173,28 @@ public final class Economy {
         d.names.put(f.getUUID(), f.displayNameCap());
     }
 
+    /**
+     * [redstone] What one of the engineer's machines made by itself (Engineers.tally): its cane, its melons, the
+     * auto-smelter's ingots. Nobody's hands picked it up, so it is booked here, as the trade's output and its worth
+     * and, for the day's best producers, the engineer's (its machine). The couriers who carry it in make nothing.
+     */
+    public static void machineMade(UUID village, @Nullable VillageFolkEntity engineer, ItemStack s, int n) {
+        if (village == null || s.isEmpty() || n <= 0) return;
+        ItemStack lot = s.copyWithCount(n);
+        tally(village, StationTask.REDSTONE, lot, n, true);
+        Kind k = kindOf(lot);
+        if (k == Kind.FOOD) Leader.foodIn(village, lot);
+        double v = worthOf(lot);
+        if (k == null || v <= 0) return;
+        Day d = TODAY.computeIfAbsent(village, x -> new Day());
+        d.kinds[k.ordinal()] += v;
+        d.trades.merge(StationTask.REDSTONE, v, Double::sum);
+        if (engineer != null) {
+            d.folk.merge(engineer.getUUID(), v, Double::sum);
+            d.names.put(engineer.getUUID(), engineer.displayNameCap());
+        }
+    }
+
     // ------------------------------------------------------------------ item by item
 
     /** An item's short name in the books: "oak_log" for the game's own, "mod:thing" for anything else's. */

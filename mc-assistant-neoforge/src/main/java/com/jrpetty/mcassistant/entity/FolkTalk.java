@@ -385,6 +385,7 @@ public final class FolkTalk {
         line(sb, "War", WarFooting.cardLine(f));            // [war-prep] the watch for the war, the militia, danger money
         line(sb, "Kit", WatchKit.cardLine(f));              // [guard-kit] a guard's kit, issued by the town
         line(sb, "Caves", CaveDwellers.cardLine(f));        // [caves] where it went today, what it found, its kit
+        line(sb, "Machines", Engineers.cardLine(f));        // [redstone] what it is building, what its machines have made
         line(sb, f.isBaby() ? "Apprenticed" : "Apprentices", PlayerTrades.cardLine(f));   // [player-civic] its apprentices, or its trade
         line(sb, "The fleet", Fleet.cardLine(f));            // [fleet] out with the fishing fleet, and its catch
         line(sb, "Auction", Auctions.cardLine(f));           // [fleet] at the auction, or what it won there
@@ -733,6 +734,7 @@ public final class FolkTalk {
             case BANK -> Bank.doing(f, r);                // the banker: its books, its vault, its borrowers
             case CAVE -> CaveDwellers.doing(f, r);        // [caves] down the caves, or home with the report
             case FERRY -> Ferries.doing(f, r);            // [transport] at the landing, or out on the water
+            case REDSTONE -> Engineers.doing(f, r);       // [redstone] at the bench, or at a machine
         };
         if (!f.missingEssentials().isEmpty()) work += " Or I would be, if I had " + f.missingEssentials().get(0) + ".";
         if (f.life().has(Social.Trait.HARDWORKING) && r.nextBoolean()) work += " Can't stop long.";

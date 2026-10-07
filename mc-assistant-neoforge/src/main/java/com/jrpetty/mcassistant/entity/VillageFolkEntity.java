@@ -3073,6 +3073,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // The storehouse's couriers wait at its door between runs; they are not lent out.
         if (stationTask() == StationTask.HAUL && Couriers.employed(this)) return;
         if (workedOut() && lendAHand()) return;        // my trade has nothing: help
+        if (Engineers.abroad(this)) return;            // [redstone] a machine in hand: the town's buildings can wait for it
         considerVillageWork();
     }
 
@@ -4302,7 +4303,8 @@ public class VillageFolkEntity extends AssistantEntity {
     protected boolean walksAbroad() {
         // (And a courier out on one of the storehouse's runs: the whole village is its ground.)
         return super.walksAbroad() || Patrols.escorting(this) || Patrols.onTheStreets(this) || Couriers.onARun(this)
-            || Sweepers.sweeping(this);                // (and the street sweeper about the town's streets)
+            || Sweepers.sweeping(this)                 // (and the street sweeper about the town's streets)
+            || Engineers.abroad(this);                 // [redstone] the engineer at a machine, a guard sent to the gate's lever
     }
 
     /** What it just drew out of the Village Storehouse: one request, served by the storekeeper at the
@@ -4528,6 +4530,7 @@ public class VillageFolkEntity extends AssistantEntity {
             case BANK -> "The Bank";
             case CAVE -> "The Caves";             // [caves]
             case FERRY -> "The Ferry";            // [transport]
+            case REDSTONE -> "The Works";         // [redstone] the engineer's machines round the town
             default -> "The Commons";
         };
         // Two farms in one village should not share a name.
@@ -5074,6 +5077,7 @@ public class VillageFolkEntity extends AssistantEntity {
             case COOK -> "cafe";
             case SHOP -> "shop";
             case BANK -> "bank";                  // the banker (Bank)
+            case REDSTONE -> Engineers.WORKSHOP;  // [redstone] the engineer's bench and plans (Engineers)
             default -> null;
         };
     }
@@ -5730,6 +5734,12 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected boolean ferryWork() {
         return level() instanceof net.minecraft.server.level.ServerLevel server && Ferries.duty(this, server);
+    }
+
+    /** [redstone] The engineer's day at the town's machines (Engineers.work). */
+    @Override
+    protected boolean redstoneWork() {
+        return level() instanceof net.minecraft.server.level.ServerLevel server && Engineers.work(this, server);
     }
 
     /** A village's storekeeper keeps its stores in order from the first day, not from its

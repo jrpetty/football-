@@ -89,7 +89,9 @@ public class BuildGoal extends Goal {
         // [caves] the Delvers' Lodge: the cave team's maps, trophies, bunks and gear (entity/Lodge)
         "lodge",
         // [library] the town library, its real books on its shelves (entity/Library)
-        "townlibrary");
+        "townlibrary",
+        // [redstone] the redstone engineer's workshop: its bench, its lectern of plans, its chests of parts (entity/Engineers)
+        "redstoneworks");
 
     /** Half the width of a structure's footprint: the meeting hall, the market, the
      *  barracks, the chapel's length and the gateway's step are seven across, the rest

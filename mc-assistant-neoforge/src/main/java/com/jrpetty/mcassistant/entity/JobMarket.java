@@ -402,6 +402,7 @@ public final class JobMarket {
         return switch (t) {
             case GUARD, SCOUT, HUNT, CAVE -> new int[]{ 18, 50 };          // [caves]
             case MINE, WOOD -> new int[]{ 18, 60 };
+            case REDSTONE -> new int[]{ 20, 200 };                         // [redstone] a learned trade, not a youngster's
             default -> new int[]{ 0, 200 };
         };
     }
@@ -415,13 +416,15 @@ public final class JobMarket {
             case SCOUT, HUNT -> "fit for long days out";
             case CAVE -> "fit and able to fight, for a day underground";      // [caves]
             case MINE, WOOD -> "strong enough for the work";
+            case REDSTONE -> "old enough to have learned a trade first";      // [redstone]
             default -> "";
         };
     }
 
     /** A trade where an old head is valued: the teaching and the learned trades, the stores. */
     static boolean wise(@Nullable StationTask t) {
-        return t != null && (t.name().contains("TEACH") || t == StationTask.ENCHANT || t == StationTask.STORE || t == StationTask.BREW);
+        return t != null && (t.name().contains("TEACH") || t == StationTask.ENCHANT || t == StationTask.STORE || t == StationTask.BREW
+            || t == StationTask.REDSTONE);                                          // [redstone]
     }
 
     /** Heavy work, for younger backs. */
@@ -698,6 +701,7 @@ public final class JobMarket {
     /** How many hands short the town is at a trade, as its shape has it (the trade's share, less who works it). */
     static double shortOf(UUID town, StationTask t) {
         if (t == StationTask.CAVE) return 0.0;              // [caves] the team is chosen from the town's own (CaveDwellers.appoint)
+        if (t == StationTask.REDSTONE) return 0.0;          // [redstone] the engineer is chosen from the town's own (Engineers.appoint)
         return -Villages.share(town, t);
     }
 

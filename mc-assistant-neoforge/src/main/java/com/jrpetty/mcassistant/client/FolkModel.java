@@ -47,10 +47,14 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         "guard", "smelter", "fisher", "storekeeper", "hauler",
         "blacksmith", "tailor", "beekeeper", "brewer", "enchanter", "cook", "shopkeeper", "scout", "hunter",
         "cavedweller",                                         // [caves] not in StationTask's order: see outfit()
+        "engineer",                                            // [redstone] the redstone engineer's: see outfit()
     };
 
     /** [caves] The cave dweller's outfit, after the trades drawn in StationTask's order (those before it). */
     public static final int CAVE_OUTFIT = 19;
+
+    /** [redstone] The redstone engineer's outfit: the work coat piped in red, the toolbelt and the goggles. */
+    public static final int ENGINEER_OUTFIT = 20;
 
     /** Which part each trade wears: {part, the part it hangs from, the trade}. */
     private static final String[][] WEARERS = {
@@ -142,6 +146,13 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         {"cavedweller_haft", "body", "cavedweller"},
         {"cavedweller_pickhead", "body", "cavedweller"},
         {"cavedweller_rope", "body", "cavedweller"},
+        {"engineer_strap", "head", "engineer"},
+        {"engineer_lens_right", "head", "engineer"},
+        {"engineer_lens_left", "head", "engineer"},
+        {"engineer_belt", "body", "engineer"},
+        {"engineer_pouch", "body", "engineer"},
+        {"engineer_spanner", "body", "engineer"},
+        {"engineer_coil", "body", "engineer"},
         // END GENERATED WEARERS
     };
 
@@ -294,6 +305,13 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         body.addOrReplaceChild("cavedweller_haft", CubeListBuilder.create().texOffs(64, 24).addBox(-0.5F, -6.0F, 0.0F, 1.0F, 12.0F, 1.0F), PartPose.offsetAndRotation(0.0F, 6.0F, 4.4F, 0.0F, 0.0F, 0.7F));
         body.addOrReplaceChild("cavedweller_pickhead", CubeListBuilder.create().texOffs(68, 24).addBox(-3.5F, -7.0F, 0.0F, 7.0F, 1.0F, 1.0F), PartPose.offsetAndRotation(0.0F, 6.0F, 4.4F, 0.0F, 0.0F, 0.7F));
         body.addOrReplaceChild("cavedweller_rope", CubeListBuilder.create().texOffs(84, 24).addBox(-6.2F, 7.0F, -2.0F, 2.0F, 4.0F, 4.0F), PartPose.ZERO);
+        head.addOrReplaceChild("engineer_strap", CubeListBuilder.create().texOffs(64, 0).addBox(-4.0F, -9.5F, -4.0F, 8.0F, 2.0F, 8.0F, new CubeDeformation(0.6F)), PartPose.ZERO);
+        head.addOrReplaceChild("engineer_lens_right", CubeListBuilder.create().texOffs(96, 0).addBox(-3.7F, -10.2F, -5.9F, 3.0F, 3.0F, 1.0F), PartPose.ZERO);
+        head.addOrReplaceChild("engineer_lens_left", CubeListBuilder.create().texOffs(96, 0).addBox(0.7F, -10.2F, -5.9F, 3.0F, 3.0F, 1.0F), PartPose.ZERO);
+        body.addOrReplaceChild("engineer_belt", CubeListBuilder.create().texOffs(64, 12).addBox(-4.0F, 9.0F, -3.0F, 8.0F, 2.0F, 6.0F, new CubeDeformation(0.85F)), PartPose.ZERO);
+        body.addOrReplaceChild("engineer_pouch", CubeListBuilder.create().texOffs(96, 12).addBox(-5.6F, 9.6F, -2.0F, 2.0F, 3.0F, 4.0F), PartPose.ZERO);
+        body.addOrReplaceChild("engineer_spanner", CubeListBuilder.create().texOffs(110, 12).addBox(4.5F, 9.6F, -1.0F, 1.0F, 5.0F, 1.0F).texOffs(114, 12).addBox(4.0F, 14.4F, -1.5F, 2.0F, 2.0F, 2.0F), PartPose.ZERO);
+        body.addOrReplaceChild("engineer_coil", CubeListBuilder.create().texOffs(64, 22).addBox(-2.0F, 8.2F, 3.6F, 4.0F, 4.0F, 2.0F), PartPose.ZERO);
         return LayerDefinition.create(mesh, 128, 128);
         // END GENERATED GEOMETRY
     }
@@ -328,6 +346,7 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         int job = folk.clientJobOrdinal();
         if (job == AssistantEntity.StationTask.CAVE.ordinal()) return CAVE_OUTFIT;  // "cavedweller"
         if (job == AssistantEntity.StationTask.FERRY.ordinal()) return 7;           // [transport] "fisher": a waterman's clothes
+        if (job == AssistantEntity.StationTask.REDSTONE.ordinal()) return ENGINEER_OUTFIT;   // [redstone] "engineer"
         return Math.floorMod(job, CAVE_OUTFIT);
     }
 
