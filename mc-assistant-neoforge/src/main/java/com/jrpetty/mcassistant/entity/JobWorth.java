@@ -180,6 +180,9 @@ public final class JobWorth {
             // and a small team: among the best paid in the town.
             case "CAVE" -> new Post(key, title, trade, role, 3, 4, 1.0, 1.0, "dangerous, skilled work underground; a small team",
                 "finds the town its ore, and its dangers");
+            // [transport] Out on the water in all weathers but the worst: it makes nothing, and carries everybody over.
+            case "FERRY" -> new Post(key, title, trade, role, 1, 1, 0.9, 0.0, "out on the water, and steady",
+                "carries the town's folk over the water");
             // The shop's jobs (ShopRoles): the keeper makes a little and runs the place; the assistants and the
             // stock keeper make nothing, and are paid for what they do for the shop.
             case "SHOP/KEEPER" -> new Post(key, title, trade, role, 1, 2, 1.0, 0.5, "runs the place", "keeps the shop and its sales");
@@ -210,7 +213,7 @@ public final class JobWorth {
         return switch (n) {
             case "GUARD" -> 0.15;
             case "SCOUT" -> 0.1;
-            case "HAUL", "STORE", "BANK" -> 0.0;
+            case "HAUL", "STORE", "BANK", "FERRY" -> 0.0;                 // [transport] the ferryman makes nothing
             default -> 1.0;
         };
     }
@@ -886,6 +889,7 @@ public final class JobWorth {
             case "HUNT" -> "the hunters";
             case "BANK" -> "the bank";
             case "CAVE" -> "the caves";                // [caves]
+            case "FERRY" -> "the ferry";               // [transport]
             default -> "the " + JobMarket.noun(t) + "s";
         };
     }

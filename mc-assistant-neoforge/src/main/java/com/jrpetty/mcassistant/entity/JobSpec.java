@@ -53,6 +53,8 @@ public final class JobSpec {
             case NONE, SMITH, TAILOR, BEEKEEP, BREW, ENCHANT, COOK, SHOP, SCOUT, HUNT, BANK -> List.of();
             // [caves] All of it issued by the town each morning (CaveDwellers.kitUp): nothing to set up first.
             case CAVE -> List.of("a pickaxe and a sword (the town's)", "torches (it lights the caves)");
+            // [transport] The town's boat, moored at the landing (Ferries): nothing of its own to set up.
+            case FERRY -> List.of("the town's boat (moored at the landing)");
         };
     }
 

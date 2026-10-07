@@ -327,6 +327,7 @@ public final class TownMine {
             BlockPos a = b.anchor();
             out.add(new int[]{ a.getX() - half, a.getZ() - half, a.getX() + half, a.getZ() + half });
         }
+        Railways.ground(village, out);                             // [transport] the lines and their stations: no face under them
         int[][] arr = out.toArray(new int[0][]);
         BUILT.put(village, arr);
         BUILT_AT.put(village, now);

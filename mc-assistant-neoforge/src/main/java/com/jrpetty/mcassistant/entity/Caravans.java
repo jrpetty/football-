@@ -349,6 +349,7 @@ public final class Caravans {
             Envoys.waitThere(level, f, t);
             return f.trip() != null;
         }
+        if (RailCarts.caravan(f, level, t)) return true;        // [transport] by the line between the two towns, where there is one
         // The pack donkey fetched from the stable, tied and loaded, and kept up with (Riding).
         if (Riding.caravan(f, level, t)) return true;
         Llama llama = llama(level, t);

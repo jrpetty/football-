@@ -428,6 +428,8 @@ public final class VillageBoards {
         if (trade != null) out.add("FN|" + trade);
         String caves = CaveDwellers.boardLine(id);              // [caves] the caves' report, and the latest big find
         if (caves != null) out.add("FN|" + caves);
+        String about = Transport.boardLine(level, id);          // [transport] the lines, the ore carts, the ferry and the bridge
+        if (about != null) out.add("FN|" + about);
         String scouts = Scouts.boardLine(id);
         if (scouts != null) out.add("FN|" + scouts);
         String museum = Museum.boardLine(id, day);              // what is new in the museum (Museum)

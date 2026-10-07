@@ -113,6 +113,38 @@ final class Kit {
         }
     }
 
+    /**
+     * Every chunk of this held square live, here and now: a mob set down on it is seen (level.getEntity,
+     * getEntitiesOfClass) and moves from its first tick. A chunk held and prepared this tick is there at once, but its
+     * creatures only come alive once the ground two chunks round it is made as well, and the game finishes that in
+     * its own time: on the square's outer chunks (the ground beyond them not yet made) it took a hundred ticks and
+     * more. Till then a mob set down there is in the world and in nobody's sight, and comes into it all at once when
+     * the ground is done. So: the chunk system worked through now, as a sync chunk load works it, till the whole
+     * square is live, for ten seconds at most. Whether it is.
+     */
+    static boolean live(ServerLevel level, int cx, int cz, int radius) {
+        long until = System.nanoTime() + 10_000_000_000L;
+        while (true) {
+            if (notLive(level, cx, cz, radius) == 0) return true;
+            if (System.nanoTime() > until) return false;
+            if (!level.getChunkSource().pollTask()) {
+                Thread.yield();
+                java.util.concurrent.locks.LockSupport.parkNanos(100_000L);
+            }
+        }
+    }
+
+    /** How many chunks of this square are not yet live (their creatures not seen, or not ticking). */
+    static int notLive(ServerLevel level, int cx, int cz, int radius) {
+        int n = 0;
+        for (int x = (cx - radius) >> 4; x <= (cx + radius) >> 4; x++) {
+            for (int z = (cz - radius) >> 4; z <= (cz + radius) >> 4; z++) {
+                if (!level.isPositionEntityTicking(new BlockPos(x << 4, 0, z << 4))) n++;
+            }
+        }
+        return n;
+    }
+
     /** Water at ground level: the grass under it becomes the pond. */
     static void pond(ServerLevel level, int cx, int cz, int r) {
         for (int dx = -r; dx <= r; dx++) {

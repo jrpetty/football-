@@ -327,6 +327,7 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
     public static int outfit(AssistantEntity folk) {
         int job = folk.clientJobOrdinal();
         if (job == AssistantEntity.StationTask.CAVE.ordinal()) return CAVE_OUTFIT;  // "cavedweller"
+        if (job == AssistantEntity.StationTask.FERRY.ordinal()) return 7;           // [transport] "fisher": a waterman's clothes
         return Math.floorMod(job, CAVE_OUTFIT);
     }
 

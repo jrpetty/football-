@@ -343,6 +343,9 @@ public final class CaveDwellers {
         @Nullable BlockPos camp;
         final List<BlockPos> campWalls = new ArrayList<>();
         long campStart;
+        /** When the camp was pitched, by the game's clock (the wait for the team to come in: not the day's clock, which
+         *  a night's sleep or a test's skip moves on in jumps). */
+        long campTick;
         @Nullable Phase campFrom;
         boolean campLit, campNoCobble;
         /** What it made down there (CaveCraft), in a line each; a spare pick wanted before a long dig. */

@@ -321,6 +321,11 @@ public class VillageFolkEntity extends AssistantEntity {
             laterLine = null;
         }
         if (tickCount % 20 == 17) Aboard.step(this);           // [mine-safety] out of a boat it never meant to board
+        // [transport] Sat in a cart or the ferry: the ride (or the rowing) is its day till it is off again.
+        if (level() instanceof net.minecraft.server.level.ServerLevel riding && Transport.aboard(this)) {
+            Transport.hold(this, riding);
+            return;
+        }
         // [batchG] A visitor from afar (the bard, a tourist, the merchant), one of ours away for the day at a friend's
         // in another town, or a guard out taming a dog for the watch: that is its day (Visitors).
         if (Visitors.drive(this)) return;
@@ -474,6 +479,8 @@ public class VillageFolkEntity extends AssistantEntity {
         // [batchC] Sport and play (Sport): a match to play or watch on the rest day, an away day at a neighbour's
         // pitch, the fishing contest or the children's race, the watch at the butts of a morning.
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel sport && Sport.hold(this, sport)) return;
+        // [transport] To the station or the ferry landing to cross, and waiting there; the ferryman at its ferry (Transport).
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel transit && Transport.hold(this, transit)) return;
         // [civic] The town's great work, built together (BigWorks): everybody on the works day, and anybody free after it.
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel greatWork
                 && (tickCount % 4 == 1 ? BigWorks.hold(this, greatWork) : BigWorks.busy(this))) return;
@@ -4520,6 +4527,7 @@ public class VillageFolkEntity extends AssistantEntity {
             case HUNT -> "Hunting Grounds";
             case BANK -> "The Bank";
             case CAVE -> "The Caves";             // [caves]
+            case FERRY -> "The Ferry";            // [transport]
             default -> "The Commons";
         };
         // Two farms in one village should not share a name.
@@ -5716,6 +5724,12 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected boolean caveWork() {
         return level() instanceof net.minecraft.server.level.ServerLevel server && CaveDwellers.work(this, server);
+    }
+
+    /** [transport] The ferryman's day at the landings (Ferries.duty). */
+    @Override
+    protected boolean ferryWork() {
+        return level() instanceof net.minecraft.server.level.ServerLevel server && Ferries.duty(this, server);
     }
 
     /** A village's storekeeper keeps its stores in order from the first day, not from its
@@ -7759,6 +7773,7 @@ public class VillageFolkEntity extends AssistantEntity {
         return FireBrigade.onIt(this) || Weather.sheltering(this) || Health.laidUp(this) || Neighbourly.busy(this)   // [batchA]
             || Inn.lodged(this)                                  // [batchE] asleep in a room at an inn on the road
             || WatchClears.sheltering(this)                      // [watch-clears] indoors out of a monster's way
+            || Transport.busy(this)                              // [transport] on a ride, a crossing, or at the ferry
             || Crime.calledAway(this)                            // [crime] on a case, at a trial, in the stocks, at community work
             || Disasters.busy(this);                             // [disasters] a bucket chain, a flood, a night away, the fire watch
     }

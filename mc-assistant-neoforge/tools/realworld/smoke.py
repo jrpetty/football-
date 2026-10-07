@@ -2391,6 +2391,62 @@ def library_stage(r, look, cx, cz):
     say("alive after the library: %s" % client_alive())
 
 
+def transport_stage(r, look, cx, cz):
+    """[transport] The railways and the ferry (entity/Railways, RailCarts, Ferries, Bridges). Run from well out to the
+    west of the town, /village transport stage plans the town's line to its mine (a mine site set out east of the town
+    if it has none) and lays it for nothing, with a station at each end, an ore cart and a riders' cart on it; and cuts
+    a river eight wide twenty blocks east of where it is run, with the town's ferry across it (a jetty and a lantern
+    each side, the ferry bell, the boat and a ferryman). Pictures: the town's station, the line out across the land, the
+    mine's station, the ferry; then /village transport stage bridge builds the stone bridge beside it, and it is
+    photographed. Last, /village transport said, and the town's books open at the Transport page (the map, the lines,
+    the carts, the ferry and the bridge)."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    r.cmd("weather clear")                            # nobody rows out in the rain
+    hy = ground_height(r, cx, cz)
+    sx, sz = cx - 110, cz + 40                        # out past the town to the west: the river is cut twenty blocks east of here
+    r.cmd("tp %s %d %d %d" % (USER, sx + 20, hy + 24, sz + 16))
+    time.sleep(8)                                      # the ground arrives at the server and the client
+    out = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village transport stage" % (sx, sz))
+    if "not planned yet" in out:                       # the line's chunks were still loading: once more
+        time.sleep(5)
+        out = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village transport stage" % (sx, sz))
+    say("transport stage: " + out[:900])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("nothing staged for transport; nothing to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            return
+        x, y, z, ax, ay, az = views[name]
+        look("32-transport-" + picture, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    shoot("station", "1-station", 10)
+    shoot("line", "2-line", 8)
+    shoot("mine-station", "3-mine-station", 8)
+    shoot("ferry", "4-ferry", 8)
+    time.sleep(20)                                     # the ferryman takes its seat in the boat
+    shoot("ferry", "5-ferryman", 4)
+    say("bridge: " + r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village transport stage bridge"
+                           % (sx, sz))[:500])
+    shoot("bridge", "6-bridge", 8)
+    say("transport: " + r.cmd("execute positioned %d %d %d run village transport" % (cx, hy + 1, cz))[:1200])
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
+    time.sleep(3)
+    say("books: " + r.cmd("execute as %s at @s run village transport books" % USER))
+    time.sleep(4)
+    shot("32-transport-7-page")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the transport: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")
@@ -2734,6 +2790,10 @@ def main():
         library_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("library stage failed: %s" % e)
+    try:
+        transport_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("transport stage failed: %s" % e)
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the founding: %s" % client_alive())
     try:

@@ -168,6 +168,13 @@ public final class Trades {
                 List.of(need("torches", s -> s.is(Items.TORCH), 16, "the stores, or the stores' coal and sticks"),
                     need("food for the day", s -> s.get(DataComponents.FOOD) != null, 4, "the stores")),
                 "ore and the old chests' treasure for the stores, and the caves' report: veins for the miners, spawners and lava to keep clear of");
+            // [transport] The ferryman (Ferries): the town's boat between the two landings, a coin a crossing.
+            case FERRY -> new Trade("I row the town's boat between the two landings, carrying whoever needs to cross the water: the"
+                    + " farmers to their fields, the miners to the mine, a traveller to the neighbours. A coin a crossing, and"
+                    + " nobody goes out in a storm",
+                List.of(need("a boat", s -> s.is(net.minecraft.tags.ItemTags.BOATS), 1, "the town's, moored at the landing")),
+                List.of(),
+                "folk across the water, and a coin a crossing into my purse");
             case NONE -> new Trade("I'm between trades just now", List.of(), List.of(), "whatever the village needs a hand with");
         };
     }

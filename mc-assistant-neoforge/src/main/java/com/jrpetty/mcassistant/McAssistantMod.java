@@ -187,7 +187,21 @@ public final class McAssistantMod {
     public static final DeferredItem<net.minecraft.world.item.Item> VILLAGE_COIN =
         ITEMS.registerSimpleItem("village_coin");
 
-    // [arms] The town's arms (entity/Arms): the festival tabard, seven wool cut like a tunic, given a banner's arms at
+    /** [transport] The ferry bell: stands on the bank by each of a ferry's landings; rung, it calls the ferry over
+     *  (block/FerryBellBlock, entity/Ferries). Made at the bench of a copper ingot, a stick and two planks. */
+    public static final DeferredBlock<com.jrpetty.mcassistant.block.FerryBellBlock> FERRY_BELL =
+        BLOCKS.registerBlock("ferry_bell",
+            com.jrpetty.mcassistant.block.FerryBellBlock::new,
+            BlockBehaviour.Properties.of()
+                .mapColor(MapColor.COLOR_ORANGE)
+                .strength(1.5F, 3.0F)
+                .sound(SoundType.COPPER)
+                .noOcclusion()
+                .requiresCorrectToolForDrops());
+
+    public static final DeferredItem<BlockItem> FERRY_BELL_ITEM =
+        ITEMS.registerSimpleBlockItem(FERRY_BELL);
+    // [arms] The town's arms (entity/Arms): the festival tabard, eight wool cut like a tunic, given a banner's arms at
     // the crafting table as a shield is (TabardDecorationRecipe); and the loom's patterns for the three charges a town
     // is granted for what it lives by, each a sheet of paper and a fish, a pickaxe or wheat.
     private static final DeferredRegister<net.minecraft.world.item.crafting.RecipeSerializer<?>> RECIPE_SERIALIZERS =
@@ -328,6 +342,7 @@ public final class McAssistantMod {
                         SMUGGLERS_LEDGER, MINERS_JOURNAL, WOODEN_TOY, CHILDS_DRAWING, HEIRLOOM_RING, HEIRLOOM_LOCKET, TOWN_MEDAL, TOWN_KEY)) {
                     out.accept(q.get());
                 }
+                out.accept(FERRY_BELL_ITEM.get());                       // [transport]
             })
             .build());
 
@@ -380,6 +395,7 @@ public final class McAssistantMod {
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Founding.class);
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.WarScouting.class);   // [war-scouting] spies, pickets, captives
         NeoForge.EVENT_BUS.register(TimeSpeed.class);
+        NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Transport.class);    // [transport] railways, carts, ferries, bridges
     }
 
     private void onEntityAttributes(EntityAttributeCreationEvent event) {
@@ -397,6 +413,7 @@ public final class McAssistantMod {
             event.accept(JOB_BOARD_ITEM);
             event.accept(STOREHOUSE_ITEM);
             event.accept(VILLAGE_BOARD_ITEM);
+            event.accept(FERRY_BELL_ITEM);                               // [transport]
         }
         if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
             event.accept(VILLAGE_COIN);

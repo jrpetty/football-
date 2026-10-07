@@ -158,6 +158,7 @@ public final class ClientSetup {
                 case HUNT -> Items.BOW;
                 case BANK -> Items.GOLD_INGOT;
                 case CAVE -> Items.LANTERN;                // [caves]
+                case FERRY -> Items.OAK_BOAT;              // [transport]
                 case NONE -> Items.AIR;
             });
         }

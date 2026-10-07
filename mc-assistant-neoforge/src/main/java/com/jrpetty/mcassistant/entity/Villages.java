@@ -108,7 +108,9 @@ public final class Villages {
         new Slot(AssistantEntity.StationTask.BANK, 1, Bank.FROM, Age.IRON, 1),
         // [caves] The cave dwellers: a team of two from twenty-five in the Iron Age, three at sixty, four at a hundred,
         // chosen by the town from its most skilled (CaveDwellers.team, appoint).
-        new Slot(AssistantEntity.StationTask.CAVE, 1, CaveDwellers.FROM, Age.IRON, CaveDwellers.MOST));
+        new Slot(AssistantEntity.StationTask.CAVE, 1, CaveDwellers.FROM, Age.IRON, CaveDwellers.MOST),
+        // [transport] The ferryman: one, while the town's ferry runs (Ferries), whatever its size and age.
+        new Slot(AssistantEntity.StationTask.FERRY, 1, 1, Age.WOOD, 1));
 
     /** Forget every settlement. For tests, which share one JVM and would
      *  otherwise inherit each other's villages. */
@@ -840,6 +842,7 @@ public final class Villages {
         // good, and every newcomer it sent to the trade looked for the water that was not there.
         if (trade == AssistantEntity.StationTask.FISH) return !dryForFishers(villageId);
         if (trade == AssistantEntity.StationTask.CAVE) return CaveDwellers.ready(villageId);   // [caves] a few miners and a watch first
+        if (trade == AssistantEntity.StationTask.FERRY) return Ferries.wanted(villageId);      // [transport] while the ferry runs
         if (trade == AssistantEntity.StationTask.STORE || trade == AssistantEntity.StationTask.HAUL) {
             return villageId != null && (Storehouses.stands(villageId) || hasBuilt(villageId, "storage")
                 || builtAt(villageId, "storage") != null);
@@ -909,6 +912,7 @@ public final class Villages {
         double t = (slot.weight() + boost) * total / (double) VILLAGE_SIZE * Orders.scale(villageId)
             * glut(villageId, slot.trade()) * Homeland.lean(villageId, slot.trade());
         if (slot.trade() == AssistantEntity.StationTask.CAVE) t = CaveDwellers.team(total);   // [caves] two, three at sixty, four at a hundred
+        if (slot.trade() == AssistantEntity.StationTask.FERRY) t = Ferries.wanted(villageId) ? 1.0 : 0.0;  // [transport] one ferryman
         // A courier for every five workers out on plots of their own (their production chests).
         if (slot.trade() == AssistantEntity.StationTask.HAUL && villageId != null) {
             int producers = 0;
@@ -1152,7 +1156,12 @@ public final class Villages {
                 need(wants, level, v, "coal", Task.COAL,
                     com.jrpetty.mcassistant.village.VillageMath.coalWanted(ageFolk));
                 if (built(villageId, "fortify") < 1) wants.add(new Need("a wall around the village", Task.BUILD, 1));
-                if (folk >= housing(villageId) - 5) {
+                // A growing town is always a few beds behind its births, and its houses are planned for them all the
+                // same (projectsWantedInOrder). Asking for five beds to spare before the Iron Age held a town of sixty,
+                // with its wall, smeltery and hall built and stone and coal enough, in the Stone Age from day 23 to
+                // day 44 and on: every new house filled before the next one went up. The age waits on houses only
+                // when more than one in ten has no bed.
+                if (folk - housing(villageId) > Math.max(2, folk / 10)) {
                     wants.add(new Need("more houses", Task.BUILD, 1));
                 }
                 if (built(villageId, "smeltery") < 1) wants.add(new Need("a smeltery", Task.BUILD, 1));
@@ -2700,6 +2709,8 @@ public final class Villages {
         int hz = turned ? lot.halfAcross() : lot.halfDeep();
         if (lot.kind() == com.jrpetty.mcassistant.village.TownPlan.Kind.SQUARE) return false;
         if (onFarmland(villageId, lot.x(), lot.z(), hx, hz)) return true;
+        if (Railways.crosses(villageId, heart.getX() + lot.x() - hx, heart.getZ() + lot.z() - hz,
+                heart.getX() + lot.x() + hx, heart.getZ() + lot.z() + hz)) return true;   // [transport] a railway runs there
         for (AssistantEntity a : folkOf(villageId)) {
             AssistantEntity.StationTask t = a.stationTask();
             if (t != AssistantEntity.StationTask.FARM && t != AssistantEntity.StationTask.RANCH

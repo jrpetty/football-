@@ -1801,8 +1801,17 @@ public class VillageGameTests {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
         level.setDayTime(14000);
+        level.updateSkyBrightness();
         Kit.hold(level, 14400, 12000, 56);
         Kit.prepare(level, 14400, 12000, 56);
+        // The band gathers at the town's edge (Raids.edge: its reach and eight, forty-nine blocks out), which is the
+        // held square's outermost chunks: live before it comes, or it is set down there unseen, comes into sight
+        // after the watch has beaten the rest off, and keeps the bell ringing all night.
+        long settling = System.nanoTime();
+        boolean live = Kit.live(level, 14400, 12000, 56);
+        Kit.log("t33 the ground live " + live + " in " + (System.nanoTime() - settling) / 1_000_000L + " ms ("
+            + Kit.notLive(level, 14400, 12000, 56) + " chunks not)");
+        helper.assertTrue(live, "the town's ground live before the band comes: " + Kit.notLive(level, 14400, 12000, 56) + " chunks not");
         BlockPos heart = Kit.surface(level, 14400, 12000);
         VillageFolkEntity guard = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
         VillageFolkEntity farmer = VillageFolkSpawnerBlock.raise(level, heart.east(2), 0.0F);
@@ -1871,12 +1880,30 @@ public class VillageGameTests {
             }
             if (upAt[0] >= 0 && !cleared[0] && t >= upAt[0] + 40) {
                 // The band is beaten off.
+                int killed = 0, unseen = 0;
                 for (java.util.UUID u : com.jrpetty.mcassistant.entity.Raids.band(village)) {
-                    if (level.getEntity(u) instanceof net.minecraft.world.entity.LivingEntity m && m.isAlive()) m.kill();
+                    if (level.getEntity(u) instanceof net.minecraft.world.entity.LivingEntity m) {
+                        if (m.isAlive()) { m.kill(); killed++; }
+                    } else unseen++;
                 }
+                Kit.log("t33 the band beaten off at tick " + t + ": " + killed + " killed, " + unseen + " not in sight");
                 cleared[0] = true;
             }
             if (cleared[0] && endedAt[0] < 0) {
+                // Any of the band that comes into sight after (it was set down on ground not yet live) goes the same way.
+                for (java.util.UUID u : com.jrpetty.mcassistant.entity.Raids.band(village)) {
+                    if (level.getEntity(u) instanceof net.minecraft.world.entity.LivingEntity m && m.isAlive()) {
+                        Kit.log("t33 one of the band came into sight at tick " + t + " at " + m.blockPosition().toShortString() + ": beaten off too");
+                        m.kill();
+                    }
+                }
+                if (t % 100 == 0) {
+                    var about = com.jrpetty.mcassistant.entity.WatchClears.aboutForTests(level, village);
+                    StringBuilder seen = new StringBuilder();
+                    for (var m : about) seen.append(m.getType().toShortString()).append('@').append(m.blockPosition().toShortString()).append(' ');
+                    Kit.log("t33 at tick " + t + " the bell still rings (" + com.jrpetty.mcassistant.entity.Raids.why(village) + "); monsters about "
+                        + about.size() + " [" + seen.toString().trim() + "]; the guard: " + guard.debugLine() + " post " + guard.post());
+                }
                 if (t % 20 == 0) com.jrpetty.mcassistant.entity.Raids.tick(level, v);
                 if (!com.jrpetty.mcassistant.entity.Raids.underAlarm(village)) {
                     endedAt[0] = t;

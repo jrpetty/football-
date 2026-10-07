@@ -328,6 +328,9 @@ public final class Crafts {
             String fletched = fletch(level, v, guards(v));
             if (fletched != null) return fletched;
         }
+        // [transport] The railway's rails, powered rails, torches, levers and carts, of the stores' iron and gold (Railways).
+        String rails = Railways.smith(level, v, f);
+        if (rails != null) return rails;
         // The tools and the watch seen to: the village's lights and pots, of the iron it can spare.
         return ironwork(level, v);
     }
