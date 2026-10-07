@@ -562,6 +562,7 @@ public final class Workshop {
             if (out.size() >= most) break;
             ItemStack one = Stockroom.sampleOf(e.getKey());
             if (one.isEmpty() || Cafe.isDrink(one) || RecipeBook.waysFor(level, one.getItem()).isEmpty()) continue;
+            if (com.jrpetty.mcassistant.item.Garment.of(one) != null) continue;      // [fashion] the tailor's, dyed at the loom (Tailoring)
             out.add(one.getItem());
         }
         return out;

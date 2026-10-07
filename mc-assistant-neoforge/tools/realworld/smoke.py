@@ -1856,6 +1856,17 @@ def arms_buskers_stage(r, look, cx, cz):
     carrier with the banner in hand, two folk in the festival tabard, and the banner on its pole), from in front; and
     the town's musicians sent out to busk at their pitches (/village busk now), from over the first one's shoulder with
     the passers-by stopped round it. /village busk said at the end; the lineup cleared away (tag arms_lineup)."""
+
+
+def fashion_stage(r, look, cx, cz):
+    """[fashion] The town's fashion (entity/Fashion, Tailoring, FashionShow): a day of it run at once (/village fashion
+    now: the season's look set if there is none, a day's spreading, the tailor's turns at its book, the folk buying),
+    and /village fashion said (the season's look and who set it, everybody's style, the tailor's book, the shows).
+    Then a crowd stood up on the square (/village fashion stage): nine folk of different trades three rows deep, six in
+    the season's colour (a long coat and a felt hat with a feather and the show's rosette, a leather jacket and a flat
+    cap, a waistcoat, a top hat and a brooch, shawls and scarves) and three holding out in blue, green and yellow; and
+    a few steps off, the tailor at a loom with a coat in its hand. Pictures: the crowd from in front, the tailor at the
+    loom, and the town's books open at the Fashion page."""
     say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
     r.cmd("gamemode spectator %s" % USER)
     midday(r)
@@ -1935,6 +1946,40 @@ def pets_stage(r, look, cx, cz):
     say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the pets: %s" % client_alive())
+
+
+    say("fashion now: " + r.cmd("execute positioned %d %d %d run village fashion now" % (cx, hy + 1, cz))[:900])
+    say("fashion: " + r.cmd("execute positioned %d %d %d run village fashion" % (cx, hy + 1, cz))[:1500])
+    sx, sz = cx + 5, cz + 5                           # on the square, clear of the well
+    r.cmd("tp %s %d %d %d" % (USER, sx + 2, hy + 6, sz + 12))
+    time.sleep(6)                                     # the square's chunks arrive
+    out = r.cmd("execute positioned %d %d %d run village fashion stage" % (sx, ground_height(r, sx, sz) + 1, sz))
+    say("fashion stage: " + out[:600])
+    num = r"(-?\d+(?:\.\d+)?)"
+    views = {}
+    for name, ex, ey, ez, ax, ay, az in re.findall(r"VIEW (\S+) " + " ".join([num] * 6), out):
+        views[name] = tuple(float(v) for v in (ex, ey, ez, ax, ay, az))
+    if not views:
+        say("nobody stood up; nothing to photograph")
+        return
+    # Each view: the feet of the one looking, and what it looks at.
+    for i, name in enumerate(("fashion-1-crowd", "fashion-2-tailor")):
+        if name in views:
+            ex, ey, ez, ax, ay, az = views[name]
+            look("27-" + name, ex, ey, ez, ax, ay, az, wait=8 if i == 0 else 5)
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
+    time.sleep(3)
+    say("books: " + r.cmd("execute as %s at @s run village fashion books" % USER))
+    time.sleep(4)
+    shot("27-fashion-3-page")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("kill @e[tag=fashion_lineup,type=!player]")
+    m = re.search(r"LOOM (-?\d+) (-?\d+) (-?\d+)", out)
+    if m:
+        r.cmd("setblock %s %s %s air" % m.groups())
+    say("alive after the fashion: %s" % client_alive())
 
 
 def main():

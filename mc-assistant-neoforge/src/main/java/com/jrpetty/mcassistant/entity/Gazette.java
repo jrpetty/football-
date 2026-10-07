@@ -272,6 +272,8 @@ public final class Gazette {
         if (war != null) entries.add(war);
         String street = Buskers.gazette(level, id, day);            // [arms] yesterday's buskers and their hats
         if (street != null) entries.add(street);
+        String fashion = Fashion.gazette(level, v, day);            // [fashion] the season's look, who set it, the show
+        if (fashion != null) entries.add(fashion);
         if (!other.isEmpty()) entries.add(section("Also", other, ""));
         ItemStack book = Services.book("The " + town + " Gazette", town, front, entries);
         CompoundTag mark = new CompoundTag();

@@ -6480,3 +6480,127 @@ dog follows the child, the cat sleeps on the child's bed and on the roof, the bo
 eats, the new things have recipes, ages and a worth and the tailor, the cook and the shop make them, a litter finds a
 home within the town's cap, a player adopts a stray, befriends a dog and buys a pup, a bark brings out the watch, a lost
 dog is brought home, and the best-kept pet wins at the show.
+## Fashion
+
+Walk through a town and you can see what it is wearing this season. Every folk has its own colours and its own
+things to wear, and every season the town takes up a colour, set by the people it looks up to. The tailor is busy
+making it, the shop stocks it, and by the end of the week most of the town is in it. A few hold out.
+
+**Each folk's own style.**
+
+* Every folk has two colours of its own. The first is its favourite (a gardener's is a flower's, a stargazer's the
+  night's blue), and its trade's dyed cloth is in it: the farmer's neckerchief, the tailor's waistcoat, the
+  storekeeper's. The second goes on the trimmings of whatever it buys: a coat's cuffs and lapels, a hat's band, a
+  scarf's stripes, a waistcoat's back.
+* Over its trade's clothes it wears what it has bought, been given or won: a **long coat** (open down the front, so
+  the smith's apron and the shopkeeper's still show), a **leather jacket**, a **shawl** or a **waistcoat**; a **felt
+  hat**, a **flat cap** or a **top hat** when it is off work, at a gathering or on the rest day (at work it wears its
+  trade's hat); a **scarf**; a **brooch** (a vain folk who is well off has one made, once the town has gold); the
+  fashion show's **rosette**; and, if it is a little vain, a **feather** in its felt hat. All of it is drawn on the
+  folk in its own dye. A guard's armour goes over all of it.
+* Its card has a **Style** line: what it wears, its colours, and how it stands with the season's fashion (*In
+  fashion: crimson, since day 15*, *Wants a crimson scarf: on the tailor's book (short of a red dye)*, *Keeps to its
+  own colours: a Traditionalist*).
+
+**The season's fashion.** Each time a season turns (a week: see *Seasons and festivals*) the town takes up a new
+colour, and often a thing to wear it as (*crimson long coats*). It comes from the folk the town looks up to most:
+
+* the wealthiest, the leader and the leader's partner, the best liked (by how many count it a friend), and the young,
+  who set fashions;
+* a player who is famous in the town (a friend of it, better an honoured guest, best its hero) and has been about the
+  town lately in **dyed leather**. The colour you wear most of is the one it takes; a dyed leather tunic makes it
+  *crimson leather jackets*.
+
+It is the colour of what that one wears (its coat, its hat, its scarf, else its own colour), never last season's.
+The town's chronicle, the board and the gazette say what it is and who set it: *Crimson is all the rage this autumn,
+set by Ada, the wealthiest in town and the leader's partner.*
+
+**How it spreads.** Every day each folk comes round to it a little: quicker the more of its friends wear it and the
+more of the town does. The sociable and the vain (those who love wool, gems or gold) follow fastest, the young faster
+than the old, the poor slowest. A Traditionalist keeps its own colours. Come round, a folk wants the season's look in
+what it can run to: a wealthy folk the season's long coat, a poor one a scarf. By the end of the week most of the town
+is in it, and last season's colour fades.
+
+**The tailor follows demand.** A folk that wants something the town has none of puts it on the **tailor's book**. The
+setter's own order comes first, and the show's rosette is made before a show.
+
+* The tailor makes each piece at the loom, between the town's beds and the watch's leather. It uses the stores' real
+  wool, string and leather (and gold for a waistcoat's buttons or a top hat's buckle), and dyes it with the stores'
+  dye. The dye is made there and then from the flowers, cocoa, ink sacs, lapis or bone meal the stores hold, by the
+  game's own recipes: a poppy makes red, red and blue make purple. Its maker's mark goes on it, with whom it was made
+  for.
+* Short of a dye, the book says so, and a farm hand goes out past the houses to pick the flowers that make it. If
+  none grow round the town, it sows some with the stores' bone meal. Nothing comes from nothing.
+* With nothing on the book, early in a season, the tailor makes a couple of the season's things for the shop.
+* The shop's books count every garment wanted and not there, so the **price rises with demand**. A crimson scarf in
+  a crimson week costs more than a plain one in a quiet week.
+
+**Buying it.** Off work, a folk goes to the store (or the shop, or the stores) and buys what it wants out of its own
+purse, at the town's price, weighed against what it expects to pay. If it is too dear it leaves it and waits, and the
+price comes down. Before the town has a shop the stores clothe it, as they feed it. It shows off what it bought: *Have
+you seen my new scarf?*
+
+**Old clothes.** What a folk had on in that place goes to somebody with less. A poor neighbour with nothing there
+gets it through the **poor box**, the giver's friends first. Otherwise it is **sold second-hand** to the stores for a
+third of its worth, and a poor folk can buy it there for a third of the price. The poor wear last season's colours.
+
+**The new things.** All of them are made by the tailor at the loom, and you can make them at a crafting table.
+Every one but the brooch can be dyed in a crafting grid with any dye, as leather armour is.
+
+| Item | Recipe | Age | Worn as |
+|---|---|---|---|
+| Long Coat | six wool and a string | Wood | over its clothes, to the knee |
+| Leather Jacket | four leather and a string | Stone | over its clothes, to the waist |
+| Wool Shawl | three wool and two string | Wood | round its shoulders |
+| Waistcoat | five wool and a gold nugget | Iron | over its shirt |
+| Felt Hat | three wool round a leather band | Stone | a hat, off work |
+| Flat Cap | two wool and a string | Wood | a hat, off work |
+| Top Hat | four wool and a gold nugget | Iron | a hat, off work |
+| Wool Scarf | two wool and a string | Wood | round its neck |
+| Brooch | two gold nuggets and a lapis | Iron | pinned on |
+| Rosette | wool, paper and string | Wood | the best-dressed's prize |
+
+They are all in the price list, worth their cloth, a quarter more for the cutting and stitching, and a dye's worth.
+The shop and the store keep them on their counters, the season's thing first.
+
+**The fashion show.** At the May dance, the fair and the harvest festival, after the festival's own words, the elder
+calls the parade and judges the best-dressed. The scoring is two points for each thing of its own a folk wears, three
+for the season's colour (and one more for the season's very thing), two if its colours go together, up to three for
+a master's work, and one for something new this season. A player standing with them in dyed leather is judged too.
+The winner gets the tailor's blue rosette (or a paper ribbon if none was made) and wears it pinned on. Second and
+third are named, and it goes into the chronicle and the gazette.
+
+**You and the fashion.**
+
+* Wear dyed leather about a town that thinks well of you and you may set its next fashion.
+* Buy garments at the shop's and the store's counters like anything else. Dye them at a crafting table.
+* Give a folk a garment (hold it and press **Give…**). It puts it on there and then and thinks the better of you,
+  more if it is the season's colour or its own.
+* Ask a folk **What's in fashion?** (the **Fashion** button on the Village tab, or just ask about fashion, its coat
+  or its hat). It tells you the season's look, who set it, whether it has one, what it costs, or why it won't.
+
+**Where to see it.** The folk's cards (Style), the board (*Fashion: crimson long coats all the rage this autumn (9
+of 14 wear it)*), the gazette's **Fashion** column, and the town's books' **Fashion** page. The page shows the
+season's look in a swatch of its colour, who set it, how many wear it, the days of its going round against last
+season's, what the town wears colour by colour, who the town looks to, the tailor's book and what each order waits
+on, the season's price, the shows, the old clothes passed on, and everybody's style.
+
+* `/village fashion` says all of it in the chat; `/village fashion books` opens the page.
+* Operators: `/village fashion now` runs a day of it at once (the season's look set if there is none, a day's
+  spreading, the tailor's turns, and the folk buying). `/village fashion set <colour> [garment]` makes a colour the
+  season's look. `/village fashion show` holds the show now. `/village fashion stage` stands up a crowd for the
+  pictures (most in the season's colour, three holding out) and a tailor at a loom; `/kill @e[tag=fashion_lineup]`
+  clears them.
+
+The boxes the clothes are drawn on, and their pictures, are made by `tools/fashion_art.py`. The game tests
+`FashionGameTests` (fa01 to fa07) check that:
+* the wealthiest, best-liked folk, the leader's partner, sets the season's look in her own crimson, and the
+  chronicle, board, gazette, books and her card say so;
+* it spreads to her friends within a day or two, a stranger follows later, and a Traditionalist keeps its own;
+* the tailor makes the season's scarf from the stores' wool and string and a poppy made into red dye, and a blue one
+  from a cornflower a farm hand picks;
+* a folk buys it at the town's price out of its own purse, puts it on, is drawn in it, and passes its old scarf to a
+  poor neighbour;
+* every new item has a recipe, its age and a worth;
+* the fashion show's rosette goes to the best-dressed;
+* a famous player in dyed leather sets the season's look, and a scarf given to a folk is worn.

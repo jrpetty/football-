@@ -229,6 +229,9 @@ public final class McAssistantMod {
     /** No food of the folk's (it has no food in it for them to eat at a meal): what a pet is given, by hand. */
     public static final DeferredItem<net.minecraft.world.item.Item> PET_TREAT =
         ITEMS.registerSimpleItem("pet_treat");
+    /** [fashion] The tailor's garments (item/Garment): coats, a jacket, a shawl, a waistcoat, hats, a scarf, a brooch, the show's rosette. */
+    public static final java.util.List<DeferredItem<com.jrpetty.mcassistant.item.GarmentItem>> GARMENTS =
+        com.jrpetty.mcassistant.item.GarmentItem.register(ITEMS);
 
     /** The mod's own creative tab: everything it adds, in one place, the village folk spawner first. */
     public static final DeferredHolder<net.minecraft.world.item.CreativeModeTab, net.minecraft.world.item.CreativeModeTab> TAB =
@@ -256,6 +259,7 @@ public final class McAssistantMod {
                 out.accept(CAT_BED_ITEM.get());
                 out.accept(COLLAR.get());
                 out.accept(PET_TREAT.get());
+                for (DeferredItem<com.jrpetty.mcassistant.item.GarmentItem> g : GARMENTS) out.accept(g.get());   // [fashion]
             })
             .build());
 

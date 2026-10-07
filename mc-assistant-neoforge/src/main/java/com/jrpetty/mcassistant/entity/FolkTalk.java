@@ -156,6 +156,7 @@ public final class FolkTalk {
             case KNACK -> knack(f);
             case ATLAS -> Scouts.tell(f);
             case CAVES -> CaveDwellers.tell(f);                                // [caves] the caves' report
+            case FASHION -> Fashion.talk(f);                                   // [fashion] the season's look
             case FOR_SALE -> Budget.answer(f, p);
             case LETTER -> Bonds.letter(f, p, text);
             case BROKER -> Bonds.broker(f, p, text);
@@ -363,6 +364,7 @@ public final class FolkTalk {
             : "A bed of its own" + (f.comforts() > 0 ? ", and " + f.comforts() + (f.comforts() == 1 ? " comfort" : " comforts") + " it bought" : "") + "."));
         line(sb, "Own house", HousingMarket.cardLine(f));   // [econ-housing] its own house going up, built, or saved for
         line(sb, "Comforts", Decor.cardLine(f));            // its home's things, its trade's and its colour (Decor)
+        line(sb, "Style", Fashion.cardLine(f));             // [fashion] what it wears, its colours, the season's look
         for (String[] l : Visitors.cardLines(f)) line(sb, l[0], l[1]);   // [batchG] its gifts on show, its dog, its visits
         line(sb, "Quarter", Quarters.cardLine(f));          // its quarter of the town, the smoke, the park (Quarters)
         line(sb, "Nature", life.traitsLabel());
@@ -1042,6 +1044,8 @@ public final class FolkTalk {
         // A letter from a neighbour's elder: delivered, not kept (Bonds).
         String letter = Bonds.deliver(f, p, held);
         if (letter != null) return letter;
+        String worn = Fashion.gifted(f, p, held);           // [fashion] a garment: put on there and then
+        if (worn != null) return worn;
         long day = f.level().getDayTime() / 24000L;
         Persona.Opinion op = me.opinionOf(p.getUUID(), you);
         if (op.lastGiftDay != day) { op.lastGiftDay = day; op.giftsToday = 0; }
@@ -1236,6 +1240,8 @@ public final class FolkTalk {
                 "prices", "how dear", "cost of living", "the slate")) return TalkTopic.WORTH;    // [econ-prices] prices, too
         if (has(t, "good at", "your skill", "talent", "best at", "your level", "what level", "how skilled", "your knack")) return TalkTopic.KNACK;
         if (has(t, "cave", "underground", "mineshaft", "spawner", "dungeon", "ravine")) return TalkTopic.CAVES;     // [caves]
+        if (has(t, "fashion", "in style", "the rage", "trend", "what are you wearing", "your coat", "your hat", "your scarf",
+                "your jacket", "your shawl", "best dressed", "best-dressed")) return TalkTopic.FASHION;      // [fashion]
         if (has(t, "scout", "atlas", "out there", "explore", "explored", "landmark", "beyond the", "what's around", "whats around",
                 "found anything", "discover")) return TalkTopic.ATLAS;
         if (has(t, "become a ", "be a ", "work as a ", "change your trade", "change your job", "change jobs", "switch to ",
@@ -1360,6 +1366,10 @@ public final class FolkTalk {
             line = pick(r, "Hmph.", "Oh. It's you.", "Out of my way, " + b.displayNameCap() + ".", "Must you stand there?");
         } else if (partners) {
             line = pick(r, "There you are, love.", "Long day?", "Shall we turn in soon?", "Supper's on me tonight.");
+        } else if (Fashion.smallTalk(a, b) instanceof String[] style) {      // [fashion] "Have you seen my new scarf?"
+            speak(a, style[0]);
+            b.sayLater(style[1], 40);
+            return;
         } else {
             List<String> options = new ArrayList<>(List.of(
                 "Lovely evening, " + b.displayNameCap() + ".", "How's the " + b.stationTask().label + " going?",
