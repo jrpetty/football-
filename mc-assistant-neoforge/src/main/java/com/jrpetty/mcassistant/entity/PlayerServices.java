@@ -158,7 +158,7 @@ public final class PlayerServices {
     static double marketPrice(ServerLevel level, UUID village, ItemStack one) {
         Market.Good g = Market.goodFor(one);
         if (g == null) return Prices.each(one.getItem());
-        double each = Market.each(g, Market.stock(level, village, g.what()));
+        double each = PriceIndex.each(level, village, g);                // [econ-prices] the town's price today
         return Market.marketDay(village, day(level)) ? each * 0.9 : each;
     }
 

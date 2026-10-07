@@ -568,7 +568,7 @@ public final class Commerce {
             Villages.Village dear = null, cheap = null;
             double hi = -1, lo = Double.MAX_VALUE;
             for (Villages.Village v : places) {
-                double each = Market.each(g, Market.stock(level, v.id(), g.what()));
+                double each = PriceIndex.each(level, v.id(), g);            // [econ-prices] each town's own price
                 if (each > hi) { hi = each; dear = v; }
                 if (each < lo) { lo = each; cheap = v; }
             }

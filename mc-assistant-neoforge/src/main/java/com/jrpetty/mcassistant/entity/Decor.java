@@ -740,6 +740,10 @@ public final class Decor {
             BlockPos near = nearFor(household, p, h.anchor);
             Spot spot = spotFor(level, room, p, near, taken);
             if (spot == null) { wanted(id, h.anchor, p.key()); continue; }            // no room for it: a small house shows less
+            // [econ-prices] A house its household owns is furnished at its own cost once the town has a shop (Purchases);
+            // short of the coin, the thing waits. One the town lets, it furnishes as its landlord.
+            int cost = Purchases.homePrice(level, id, h.tenure == Homes.Tenure.OWNED, new ItemStack(p.item()));
+            if (cost > 0 && Homes.purses(household) < cost) continue;
             List<ItemStack> got = obtain(level, v, h, p, where);
             if (got == null) continue;
             if (!TownJobs.atWork(level, v, "interiors", spot.at(), "setting out " + p.words() + " in " + where)) {
@@ -752,6 +756,10 @@ public final class Decor {
                 continue;
             }
             wanted(id, h.anchor, p.key());
+            if (cost > 0 && Homes.pay(household, cost)) {
+                com.jrpetty.mcassistant.village.Ledger.addCoins(id, cost);
+                Purchases.homeBought(level, id, new ItemStack(p.item()), cost);    // [econ-prices]
+            }
             book.put(p.key(), spot.at().asLong());
             taken.add(spot.at());
             done++;

@@ -696,11 +696,9 @@ public final class TownBell {
         List<ItemStack> menu = Cafe.menuGoods(level, v.id());
         if (menu.isEmpty()) return null;
         ItemStack pick = menu.get(f.getRandom().nextInt(menu.size()));
-        Market.Good g = Market.goodFor(pick);
-        int price = g == null ? 1 : Market.sellPrice(g, Market.stock(level, v.id(), s -> ItemStack.isSameItemSameComponents(s, pick)), false);
-        price = Math.max(1, price / Math.max(1, g == null ? 1 : g.bundle()));
-        price = Stockroom.asked(level, v.id(), pick, price, 1);
-        price = FolkSkills.thrifty(f, price);
+        // [econ-prices] One dish at the town's price, in whole coins (Purchases.coinPrice: slow stock marked down, the
+        // Thrifty a tenth off).
+        int price = Purchases.coinPrice(level, v.id(), pick, f);
         if (f.purse() < price) return null;
         if (!TownWork.take(level, v, s -> ItemStack.isSameItemSameComponents(s, pick), 1)) return null;
         ItemStack dish = pick.copyWithCount(1);
@@ -711,6 +709,8 @@ public final class TownBell {
         }
         f.spend(price);
         Ledger.addCoins(v.id(), price);
+        Economy.spentInTown(v.id(), price);                     // [econ-prices] it was left out of the town's books
+        PriceIndex.bought(v.id(), pick, 1);
         Stockroom.sold(level, v.id(), seller, pick, 1, price);
         return lower(pick.getHoverName().getString());
     }

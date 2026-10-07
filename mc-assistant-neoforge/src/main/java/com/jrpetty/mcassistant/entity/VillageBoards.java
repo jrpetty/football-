@@ -365,6 +365,8 @@ public final class VillageBoards {
         if (open != null) out.add("RN|Open: " + open + ".");
         String look = TownLook.boardLine(level, id);              // [batchE] the bakery, the inn's rooms, the mill, the avenues' trees
         if (look != null) out.add("RN|" + look);
+        String prices = PriceIndex.boardLine(id);               // [econ-prices] the week's big moves in prices
+        if (prices != null) out.add((PriceIndex.boardWarns(id) ? "RW|" : "RG|") + prices + ".");
         int content = Contentment.score(id);
         out.add((content >= 60 ? "RG" : content >= 35 ? "RN" : "RW") + "|Contentment: " + Contentment.line(level, id) + ".");
         String alarm = Raids.why(id);

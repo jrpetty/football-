@@ -2447,7 +2447,7 @@ load in its pack. So:
   done; a folk away with a caravan, scouting, through the gateway, out after a wild animal or
   on the road to another town is let be. Its card reads "Putting the day's work away" while it
   is about it; the town's books say "Banked yesterday at noon 11 of 12 hands, at dusk 12 of 12",
-  the Stores page and `/village economy` today's so far.
+  the Stores page and `/village larder` today's so far.
 * **A farmer keeps its seed, not the harvest.** It keeps sixteen of each crop it plants for a
   first field, two more for each ring the field has grown, and never more than thirty-two;
   every carrot, potato and seed past that goes in with the rest of the harvest. (A grown field's
@@ -2506,7 +2506,7 @@ load in its pack. So:
   the town keeps awake) is brought home; one on its shift that has done no work in half a day
   and has not moved in five minutes, off its own plot, is put back on it.
 
-`/village economy` says it all in chat: food grown against eaten and whether a child may be
+`/village larder` says it all in chat: food grown against eaten and whether a child may be
 raised, the coal in the stores against the floor, who carries the builders' stock about, the
 food in by where it came from (yesterday's and today's so far), the fields' pace and each
 farmer's care, the week's deaths and the watch wanted, and what the village's dead died of. The
@@ -4278,10 +4278,12 @@ ripen, days pass, folk work and houses go up at that pace.
   stores; `museum stage` (operators) sets a museum out where you stand for the pictures, on a
   forecourt of smooth stone, its places filled with one of everything, the chronicle so far bound
   into its archive, and its name and the town's banners up over the door.
-* `/village economy` — the nearest village's larder against its mouths (grown a day, eaten a
+* `/village larder` — the nearest village's larder against its mouths (grown a day, eaten a
   day, whether a child may be raised and why), its coal and charcoal against the floor it keeps,
-  who carries the builders' stock about, and what its dead died of. `economy charcoal`
-  (operators) has its smelter burn logs into charcoal now, if the village wants it.
+  who carries the builders' stock about, and what its dead died of. `larder charcoal`
+  (operators) has its smelter burn logs into charcoal now, if the village wants it; `larder fields`
+  tells of each farmer's field. (It used to answer to `/village economy` too, which hid the economy
+  page: that is `/village economy` again.)
 * `/village standing` — what every village you have met thinks of you.
 * `/village ledger` — the nearest village's town ledger, as a book.
 * `/village relations` — every pair of neighbouring villages: allies, friends, uneasy,
@@ -4711,7 +4713,7 @@ had its garden, and when the next wedding anniversary falls.
   stores hold half as much again as the age wants, so the mines do not go up and down their stairs with
   every swing of the stores; then they go back down to the iron. The third keeps on at the iron. The
   smelters burn the logs the builders can spare into charcoal first and put no coal on the fire, and the
-  stores' torches are made of charcoal while coal is short. `/village economy` shows the fuel.
+  stores' torches are made of charcoal while coal is short. `/village larder` shows the fuel.
 * **The woods kept growing.** A woodcutter puts a sapling on every stump it makes. Out of saplings, it
   knocks down the crown of a tree it has felled and takes up what falls (saplings, sticks, the odd apple)
   rather than wait for the leaves to drop. With saplings to spare (it keeps four for the stumps), it
@@ -5287,3 +5289,56 @@ A folk's card has a *Town life* line (its letters, its quarter if it is a warden
 turns, what it gave to the fund), and the books' News page has *The town's affairs*: the meetings, the
 petitions, the fund, the post, the wardens' reports, the searches and the good neighbours. `/village civic`
 prints the same. Tested by `TownAffairsGameTests` (tg01 to tg07).
+
+## Prices and paying for things
+
+Every town now has prices of its own, set by supply and demand, and once it has a shop its folk buy what they
+want for themselves.
+
+* **Prices by supply and demand.** Every morning each town reckons a price for every good on the board and
+  every ware its sellers deal in. Supply is what its stores and its shop hold and what it made yesterday;
+  demand is what was sold at its counters, what was asked for and not there, what folk drew from the stores
+  and what went into making other things. Three days' want on hand is the usual price; less makes it dear,
+  more makes it cheap. What folk would not pay brings a price down. A price stays between four tenths and
+  three times what the thing is usually worth, and moves a little each day (never more than fifteen in the
+  hundred), so bread does not double overnight. A new town sells at the usual worth until its first morning.
+  Market day's tenth off, a slow ware's markdown and the shop's floor at what a thing cost to make still apply.
+* **One price everywhere.** The board's stall signs, the shop's and the café's price signs, what the shop
+  charges, what passing traders pay, the gazette and the books all go by the same price. A price sign shows
+  "↑ dearer" or "↓ cheaper" under the price when it is moving.
+* **Free until the shop opens.** In a young town folk take their meals, rations, packed lunches, the tool of
+  their trade and a child's bed out of the stores, free, as before. From the day the shop opens, all of that
+  is bought at the town's price out of the folk's own purse, and the coin goes into the treasury that pays
+  the wages. What their work uses stays the town's: the fields' seed, the mine's torches, the builders'
+  blocks, the watch's arrows and the guards' kit and blades.
+* **Homes.** A household that owns its house pays for a child's bed and the furnishing set out in it, at the
+  town's price. A house the town lets is furnished by the town, its landlord.
+* **Buyers who mind the price.** A folk weighs a price against what it expects: the usual worth, nudged by
+  what it paid last time. How far over that it will go depends on how well off it is and its nature (thrifty
+  folk and Merchants less, the generous and Free Spirits more). A hungry folk buys its meal and a worker its
+  tool whatever the price, though it picks the cheaper food when its favourite is dear. A treat or a luxury
+  that is too dear stays on the shelf, and the refusal counts toward bringing the price down. When something
+  is cheap, folk buy more: a day or two's food put by, a second treat, a luxury for the home sooner.
+* **Change and the slate.** Prices go to the hundredth of a coin; a folk pays in whole coins and its change
+  is kept at the counter for next time. One that cannot pay for its food or its tool has it on the slate,
+  paid back first out of its next wages: nobody goes hungry or without its tool. A child's food is its
+  family's to pay; a folk with no wage and no coin is fed from the poor box, and a slate past two weeks of a
+  field hand's wage is let go.
+* **The living wage.** Two meals and the cheapest rent at today's prices must fit in the lowest wage. If they
+  do not, the books say so, the chronicle tells of it and the elder raises it at the morning assembly.
+* **Where you see it.** `/village prices` lists every price today against its usual worth, which way it is
+  going, the stock against what is made and wanted, what folk thought too dear, the bargains, the slates and
+  the cost of living against the lowest wage. `/village prices page` opens the town's books at the new
+  **Prices** page, with the same figures and a line a good (hover over a row for its supply and demand).
+  A big move in a week goes on the board, in the gazette and in the chronicle ("bread dear this week: the
+  harvest failed"). A folk's card has an "At the counter" line (what it owes, its change, what it last bought
+  and what it left as too dear), folk grumble or cheer at the prices when they buy, and ask any folk "how are
+  prices?" for its view.
+* **`/village economy` and `/village larder`.** `/village economy` is the economy page again (what the town
+  makes, sells and is worth); the larder, fuel and fields report is `/village larder`.
+
+The game tests `PricesGameTests` (px01 to px06) check that scarce, wanted bread grows dearer day by day and a
+stack nobody buys grows cheaper; that a rug at three times its worth goes unbought while dear bread is still
+bought by a hungry folk; that cheap cookies are bought two at a time; that a supper is free before the shop
+opens and paid for into the treasury after; that a folk with an empty purse still eats and its slate is paid
+back from its wages; and that a rug costs one rug's price, not a lot of four's.

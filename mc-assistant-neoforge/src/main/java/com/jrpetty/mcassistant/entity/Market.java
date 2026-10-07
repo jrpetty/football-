@@ -228,21 +228,53 @@ public final class Market {
         return n;
     }
 
-    /** One of a thing's worth today: dear when the stores hold little, cheap when they hold plenty. */
+    /** One of a thing's worth by the stores' count alone: dear when they hold little, cheap when they hold plenty.
+     *  [econ-prices] The board's old reading, kept for what has no town to ask; in a town the price is the town's
+     *  (PriceIndex, by supply and demand: each(level, village, g)), which heads for this for a thing little wanted. */
     static double each(Good g, int stock) {
-        int target = g.bundle() * 4;
-        double scarcity = Math.sqrt((target + g.bundle()) / (double) (stock + g.bundle()));
-        return g.value() * Math.max(0.5, Math.min(3.0, scarcity));
+        return g.value() * scarcity(g, stock);
     }
 
-    /** What the village asks for a lot of this. */
+    /** The stores' count against four lots of a thing (the usual), as a factor of its worth: 0.5 to 3. */
+    public static double scarcity(Good g, int stock) {
+        return scarcity(g.bundle(), stock);
+    }
+
+    static double scarcity(int bundle, int stock) {
+        int target = bundle * 4;
+        double s = Math.sqrt((target + bundle) / (double) (Math.max(0, stock) + bundle));
+        return Math.max(0.5, Math.min(3.0, s));
+    }
+
+    /** What the village asks for a lot of this, by the stores' count alone (no town to ask: the tests of the curve). */
     public static int sellPrice(Good g, int stock, boolean marketDay) {
         return Math.max(1, (int) Math.round(each(g, stock) * g.bundle() * (marketDay ? 0.9 : 1.0)));
     }
 
-    /** What the village pays for a lot of this. Always less than it would ask for it back. */
+    /** What the village pays for a lot of this, by the stores' count alone. Always less than it would ask for it back. */
     public static int buyPrice(Good g, int stock, boolean marketDay) {
         return Math.max(1, (int) Math.floor(each(g, stock) * g.bundle() * 0.55 * (marketDay ? 1.1 : 1.0)));
+    }
+
+    /** [econ-prices] One of a good on the board, at this town's price today (PriceIndex). */
+    public static double each(ServerLevel level, UUID village, Good g) {
+        return PriceIndex.each(level, village, g);
+    }
+
+    /** [econ-prices] What this town asks for a lot of a good on the board today: its price (PriceIndex), a tenth off on
+     *  market day. */
+    public static int sellPrice(ServerLevel level, UUID village, Good g, boolean marketDay) {
+        return Math.max(1, (int) Math.round(PriceIndex.each(level, village, g) * g.bundle() * (marketDay ? 0.9 : 1.0)));
+    }
+
+    /** [econ-prices] As sellPrice, for a lot of this very thing (a ware the board does not name: Budget.goodFor). */
+    public static int sellPrice(ServerLevel level, UUID village, Good g, ItemStack one, boolean marketDay) {
+        return Math.max(1, (int) Math.round(PriceIndex.each(level, village, one) * g.bundle() * (marketDay ? 0.9 : 1.0)));
+    }
+
+    /** [econ-prices] What this town pays for a lot of a good today: a little over half its price, a tenth more on market day. */
+    public static int buyPrice(ServerLevel level, UUID village, Good g, boolean marketDay) {
+        return Math.max(1, (int) Math.floor(PriceIndex.each(level, village, g) * g.bundle() * 0.55 * (marketDay ? 1.1 : 1.0)));
     }
 
     /** What the village would buy, most wanted first: what it is short of, by what it needs now. */
@@ -260,7 +292,7 @@ public final class Market {
         }
         List<Integer> order = new ArrayList<>();
         for (int i = 0; i < out.size(); i++) order.add(i);
-        order.sort(Comparator.comparingDouble(i -> -each(out.get(i), stock.get(i)) / out.get(i).value()));
+        order.sort(Comparator.comparingDouble(i -> -PriceIndex.each(level, village, out.get(i)) / out.get(i).value()));   // [econ-prices]
         List<Good> sorted = new ArrayList<>();
         for (int i : order) sorted.add(out.get(i));
         return sorted.size() > 3 ? sorted.subList(0, 3) : sorted;
@@ -276,7 +308,7 @@ public final class Market {
             ItemStack one = new ItemStack(it);
             Good g = goodFor(one);
             if (g == null) continue;
-            int p = Stockroom.asked(level, village, one, sellPrice(g, stock(level, village, s -> s.is(it)), md), g.bundle());
+            int p = Stockroom.asked(level, village, one, sellPrice(level, village, g, one, md), g.bundle());   // [econ-prices] the town's price
             lines[k++] = g.bundle() + " " + g.name() + " " + p + "c";
         }
         return lines;
@@ -293,7 +325,7 @@ public final class Market {
         }
         int k = 1;
         for (Good g : wanted(level, village)) {
-            int p = buyPrice(g, stock(level, village, g.what()), md);
+            int p = buyPrice(level, village, g, md);                                       // [econ-prices]
             lines[k++] = g.bundle() + " " + g.name() + " " + p + "c";
             if (k > 3) break;
         }
@@ -318,6 +350,7 @@ public final class Market {
         HUNGRY.put(id, Villages.steadyStock(level, v, Villages.Task.FOOD, day) * 2
             < Villages.larderForBirth(id));
         Economy.closeTheDay(level, v, day);              // yesterday's output, and what the village is worth
+        PriceIndex.morning(level, v, day);               // [econ-prices] the day's prices, by yesterday's supply and demand
         Annals.record(level, v, day);                    // and the morning written into the town's books
         Leader.morning(level, v, day);                   // the leader's books, the plan and the day's pay
         CityTree.morning(level, v, day);                 // the day's research points, and the leader's next civic
@@ -368,7 +401,7 @@ public final class Market {
             int n = Math.min(192, have - keep);
             if (g.need() == Villages.Task.FOOD) n = Math.min(n, foodStock - foodKeep);
             if (n < 32) continue;
-            int paid = (int) Math.floor(n * each(g, have) * 0.5 * CityTree.takingsPercent(id) / 100.0);   // the Market Charter
+            int paid = (int) Math.floor(n * PriceIndex.each(level, id, g) * 0.5 * CityTree.takingsPercent(id) / 100.0);   // the Market Charter
             if (paid < 1 || !TownWork.take(level, v, g.what(), n)) continue;
             if (g.need() == Villages.Task.FOOD) foodStock -= n;
             coins += paid;
@@ -439,12 +472,12 @@ public final class Market {
             int plenty = g.bundle() * 4;
             if (have < plenty + g.bundle()) continue;
             // As much as is wanted, from what it has to spare: up to eight lots of a thing.
-            int lotWorth = Math.max(1, (int) Math.floor(g.bundle() * each(g, have) * 0.8));
+            int lotWorth = Math.max(1, (int) Math.floor(g.bundle() * PriceIndex.each(level, id, g) * 0.8));   // [econ-prices]
             int lots = Math.min(Math.min(8, (have - plenty) / g.bundle()), Math.max(1, (want - in + lotWorth - 1) / lotWorth));
             if (food) lots = Math.min(lots, foodSpare / g.bundle());
             if (lots <= 0) continue;
             int n = lots * g.bundle();
-            int paid = (int) Math.floor(n * each(g, have) * 0.8);
+            int paid = (int) Math.floor(n * PriceIndex.each(level, id, g) * 0.8);
             if (paid < 1 || !TownWork.take(level, v, g.what(), n)) continue;
             in += paid;
             sold.add(n + " " + g.name().toLowerCase());
@@ -580,6 +613,7 @@ public final class Market {
             int got = net <= 0 ? 0 : Ledger.takeCoins(id, net);
             if (net > 0 && got <= 0) break;
             hands.get(i).paid(got);
+            Purchases.payday(level, hands.get(i));     // [econ-prices] its slate at the counter paid back first
             PAID.put(hands.get(i).getUUID(), new long[]{ day, got });
             paid += got;
             taxed += tax;
@@ -799,7 +833,7 @@ public final class Market {
         Good g = goodFor(new ItemStack(Items.WHITE_WOOL));
         if (g == null) return 0;
         int lots = Math.min(2, (short_ + g.bundle() - 1) / g.bundle());
-        int price = sellPrice(g, wool, marketDay(id, day));
+        int price = sellPrice(level, id, g, marketDay(id, day));                  // [econ-prices] the town's price
         int other = saved(id, now) - savedFor(id, "wool", now);
         // Half of what the treasury has free at most: the beds came before the wages and took all
         // of it, and nobody was paid for a fortnight.
@@ -837,23 +871,27 @@ public final class Market {
             // price this folk thinks fair, and no dearer than the village's own (PlayerStalls).
             String atStall = PlayerStalls.instead(level, v, f, s -> s.is(it), PlayerStalls.Use.TREAT, it == fav ? fav : null);
             if (atStall != null) return atStall;
-            Good g = goodFor(new ItemStack(it));
+            ItemStack one = new ItemStack(it);
             int have = stock(level, v.id(), s -> s.is(it));
-            int price = g == null ? 1 : Math.max(1, (int) Math.round(each(g, have)));
-            price = Stockroom.asked(level, v.id(), new ItemStack(it), price, 1);
-            price = FolkSkills.thrifty(f, price);                             // a Thrifty folk pays a tenth less
-            if (f.purse() < price) continue;
             // Its favourite not to be had: the market's books count the sale it had not got (Stockroom).
-            if (have <= 0 && it == fav) Stockroom.missed(level, v.id(), Stockroom.Seller.MARKET, new ItemStack(it));
-            if (!TownWork.take(level, v, s -> s.is(it), 1)) continue;
-            f.spend(price);
-            Ledger.addCoins(v.id(), price);
-            Economy.spentInTown(v.id(), price);
-            Stockroom.sold(level, v.id(), Stockroom.Seller.MARKET, new ItemStack(it), 1, price);
-            ItemStack bought = new ItemStack(it);
+            if (have <= 0) {
+                if (it == fav) Stockroom.missed(level, v.id(), Stockroom.Seller.MARKET, one);
+                continue;
+            }
+            // [econ-prices] At the town's price (one of it, a tenth off for the Thrifty: Purchases.priceEach), weighed
+            // against what it expects to pay: too dear and it goes on to the next treat (the refusal in the town's
+            // prices); cheap, and it has two.
+            double each = Purchases.priceEach(level, v.id(), one, f);
+            int n = Math.min(have, Purchases.decide(level, f, one, each, Purchases.Need.TREAT, 1));
+            if (n <= 0 || !Purchases.canPay(f, each * n)) continue;
+            if (!TownWork.take(level, v, s -> s.is(it), n)) continue;
+            int paid = Purchases.charge(level, f, v.id(), each * n, false, one, n);
+            Stockroom.sold(level, v.id(), Stockroom.Seller.MARKET, one, n, Math.max(0, paid));
+            PriceIndex.bought(v.id(), one, n);
+            ItemStack bought = new ItemStack(it, n);
             ItemStack left = f.insertItem(bought);
             if (!left.isEmpty()) net.minecraft.world.level.block.Block.popResource(level, f.blockPosition(), left);
-            return it.getDescription().getString().toLowerCase();
+            return (n > 1 ? n + " " : "") + it.getDescription().getString().toLowerCase();
         }
         return null;
     }
@@ -967,10 +1005,13 @@ public final class Market {
         return (int) Math.max(1, Math.round(p * Craftsmanship.worth(shown)));
     }
 
-    /** As price, at this village's counters: what its sellers make is marked down when it is slow, and
-     *  never sold for less than it cost (Stockroom). */
+    /** As price, at this village's counters: at the town's price today (PriceIndex: [econ-prices]), what its sellers
+     *  make marked down when it is slow, and never sold for less than it cost (Stockroom). */
     public static int price(ServerLevel level, UUID village, Good g, ItemStack shown, int stock, boolean marketDay) {
-        return Stockroom.asked(level, village, shown, price(g, shown, stock, marketDay), g.bundle());
+        int p = sellPrice(level, village, g, shown, marketDay);
+        if (shown.isEnchanted()) p *= 3;
+        p = (int) Math.max(1, Math.round(p * Craftsmanship.worth(shown)));
+        return Stockroom.asked(level, village, shown, p, g.bundle());
     }
 
     /** A counter's price tag: what is on it and what a lot costs. */
@@ -989,14 +1030,16 @@ public final class Market {
             two = name.substring(cut).trim();
             if (two.length() > 15) two = two.substring(0, 15);
         }
-        return new String[]{ one, two, p + coinWord(p), md ? "Market day!" : "" };
+        // [econ-prices] Which way the price is going, under it, unless it is market day.
+        int trend = PriceIndex.trend(village, shown);
+        return new String[]{ one, two, p + coinWord(p), md ? "Market day!" : trend > 0 ? "\u2191 dearer" : trend < 0 ? "\u2193 cheaper" : "" };
     }
 
     private static String sell(ServerLevel level, Villages.Village v, Player p, ItemStack hand, Good g, boolean md) {
         UUID id = v.id();
         if (hand.getCount() < g.bundle()) return "The village buys " + g.name().toLowerCase() + " by the " + g.bundle() + ".";
         if (hand.isDamaged()) return "Nobody here wants a worn " + hand.getHoverName().getString().toLowerCase() + ".";
-        int price = buyPrice(g, stock(level, id, g.what()), md);
+        int price = buyPrice(level, id, g, md);                                     // [econ-prices]
         if (hand.isEnchanted()) price *= 2;
         if (p.isShiftKeyDown()) return "The village would pay " + price + coinWord(price) + " for " + lotName(g, hand) + ".";
         if (Ledger.coins(id) < price) return "The village hasn't the coin to pay for that.";

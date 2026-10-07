@@ -440,7 +440,7 @@ def epic_day(r, x, z, day, began, last_age, metrics_file="epic-metrics.jsonl"):
     if day % 5 == 0 or day == 1:
         # The economy's own word: food in by where it came from, the fields, the deaths by name, trade and cause.
         try:
-            econ = r.cmd("execute positioned %d 64 %d run village economy" % (x, z))
+            econ = r.cmd("execute positioned %d 64 %d run village larder" % (x, z))
             say("ECONOMY day %d: %s" % (day, econ.replace("\n", " | ")))
         except Exception as e:  # noqa: BLE001
             say("economy failed: %s" % e)

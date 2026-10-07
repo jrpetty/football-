@@ -872,8 +872,8 @@ def economy_stage(r, look, cx, cz):
     say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
     r.cmd("gamemode spectator %s" % USER)
     midday(r)
-    say("economy: " + r.cmd("execute positioned %d 100 %d run village economy" % (cx, cz))[:900])
-    out = r.cmd("execute positioned %d 100 %d run village economy charcoal" % (cx, cz))
+    say("economy: " + r.cmd("execute positioned %d 100 %d run village larder" % (cx, cz))[:900])
+    out = r.cmd("execute positioned %d 100 %d run village larder charcoal" % (cx, cz))
     say("charcoal: " + out[:300])
     m = re.search(r"SMELTER (.+?) (-?\d+) (-?\d+) (-?\d+)", out)
     if m:
@@ -897,13 +897,13 @@ def economy_stage(r, look, cx, cz):
 
 
 def fields_stage(r, look, cx, cz):
-    """The town's tended fields (entity/Fields): what /village economy says of the food in, by where it
+    """The town's tended fields (entity/Fields): what /village larder says of the food in, by where it
     came from, and of the fields' pace; then the first farmer's field from above, its torches round the
     edge and its composter by the work chest, and the same field a game hour later, grown."""
     r.cmd("gamemode spectator %s" % USER)
     midday(r)
-    say("economy: " + r.cmd("execute positioned %d 100 %d run village economy" % (cx, cz))[:1200])
-    out = r.cmd("execute positioned %d 100 %d run village economy fields" % (cx, cz))
+    say("economy: " + r.cmd("execute positioned %d 100 %d run village larder" % (cx, cz))[:1200])
+    out = r.cmd("execute positioned %d 100 %d run village larder fields" % (cx, cz))
     say("fields: " + out[:900])
     # The field with the most tilled ground, and the middle of its farmland (seldom the middle of the plot:
     # a riverside field is a strip along the bank).
@@ -923,10 +923,43 @@ def fields_stage(r, look, cx, cz):
     look("21-fields-1-tended", fx + 6.5, cy + 0.5, fz + 6.5, fx, fy, fz, wait=4)
     r.cmd("time add 1000")
     time.sleep(50)                                   # a game hour less the jump: the field grows on
-    say("fields an hour on: " + r.cmd("execute positioned %d 100 %d run village economy fields" % (cx, cz))[:600])
+    say("fields an hour on: " + r.cmd("execute positioned %d 100 %d run village larder fields" % (cx, cz))[:600])
     look("21-fields-2-later", fx + 6.5, cy + 0.5, fz + 6.5, fx, fy, fz, wait=4)
     r.cmd("gamemode creative %s" % USER)
     say("alive after the fields: %s" % client_alive())
+
+
+def prices_stage(r, look, cx, cz):
+    """The town's prices (entity/PriceIndex, Purchases): reckoned now and read out in chat (each good today against
+    its usual worth, supply against demand, what was too dear, the cost of living against the lowest wage); the
+    Prices page of the town's books; and one of the shop's price signs with its live price, the shop put up for the
+    picture first if the town has none (as the workshop stage does)."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("time set 6000")
+    say("prices: " + r.cmd("execute positioned %d 100 %d run village prices now" % (cx, cz))[:1500])
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, cx, ground_height(r, cx, cz) + 1, cz))
+    time.sleep(3)
+    say("prices page: " + r.cmd("execute as %s at @s run village prices page" % USER))
+    time.sleep(4)
+    shot("25-prices-1-page")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    out = r.cmd("execute positioned %d 100 %d run village prices shop" % (cx, cz))
+    if "SHOP" not in out:
+        say("no shop: " + r.cmd("execute positioned %d 100 %d run village workshop stage" % (cx + 44, cz + 10))[:300])
+        out = r.cmd("execute positioned %d 100 %d run village prices shop" % (cx, cz))
+    say("shop: " + out[:900])
+    m = re.search(r"SIGN (-?\d+) (-?\d+) (-?\d+) out (\w+)", out)
+    if m:
+        x, y, z = int(m.group(1)), int(m.group(2)), int(m.group(3))
+        dx, dz = {"north": (0, -1), "south": (0, 1), "east": (1, 0), "west": (-1, 0)}.get(m.group(4), (1, 0))
+        r.cmd("gamemode spectator %s" % USER)
+        # Two blocks out in front of the counter's sign, looking at it.
+        look("25-prices-2-sign", x + 0.5 + dx * 2.2, y, z + 0.5 + dz * 2.2, x + 0.5, y + 0.4, z + 0.5, wait=5)
+        r.cmd("gamemode creative %s" % USER)
+    else:
+        say("no price sign at the shop's counters to photograph")
+    say("alive after the prices: %s" % client_alive())
 
 
 def ageing_stage(r, look, cx, cz):
@@ -1531,6 +1564,10 @@ def main():
         townlife_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("townlife stage failed: %s" % e)
+    try:
+        prices_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("prices stage failed: %s" % e)
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the founding: %s" % client_alive())
     try:

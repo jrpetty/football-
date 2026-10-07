@@ -263,7 +263,10 @@ public final class Meals {
         }
         Villages.Village v = Villages.get(village);
         if (v != null && (fedWhereItStands || f.blockPosition().closerThan(v.centre(), STORES_REACH))) {
-            if (f.mealFromTheStores() > 0) return f.eatFromPack();
+            // [econ-prices] Free out of the stores until the town has a shop; from then on bought at the town's price,
+            // the cheaper food if its own is dear, on the slate if it has no coin (Purchases).
+            // (What it bought is eaten, if it is what its own trade keeps for seed: it paid for it.)
+            if (Purchases.get(level, f, FOOD, 1, Purchases.Need.FOOD) > 0) return f.eatFromPack() || f.eatFromSeed();
         }
         return f.eatFromSeed();                             // [economy] a carrot of its seed, before it goes without
     }

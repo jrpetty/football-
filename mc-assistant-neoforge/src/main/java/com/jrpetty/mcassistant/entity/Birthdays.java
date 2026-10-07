@@ -351,15 +351,14 @@ public final class Birthdays {
             if (Market.stock(level, v.id(), want) <= 0) continue;
             ItemStack got = Crafts.takeOne(level, v, want);
             if (got.isEmpty()) continue;
-            Market.Good g = Market.goodFor(got);
-            int price = g == null ? 1 : Market.sellPrice(g, Market.stock(level, v.id(), s -> ItemStack.isSameItemSameComponents(s, got)), false);
-            price = Math.max(1, price / Math.max(1, g == null ? 1 : g.bundle()));
-            price = FolkSkills.thrifty(giver, price);
+            int price = Purchases.coinPrice(level, v.id(), got, giver);     // [econ-prices] the town's price for the one
             if (!giver.spend(price)) {
                 Crafts.store(level, v, got);                    // too dear: back it goes
                 return ItemStack.EMPTY;
             }
             Ledger.addCoins(v.id(), price);
+            Economy.spentInTown(v.id(), price);                 // [econ-prices] it was left out of the town's books
+            PriceIndex.bought(v.id(), got, 1);
             Stockroom.sold(level, v.id(), Stockroom.Seller.STORES, got, 1, price);
             return got;
         }

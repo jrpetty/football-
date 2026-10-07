@@ -635,6 +635,7 @@ public final class Couriers {
             if (to == null) { r.stage = Stage.IN; r.tries = 0; return carryIn(c, level, v, o, r, base); }   // gone: back into the stores
             if (c.distanceToSqr(to) > 3.0 * 3.0) return walk(c, level, v, o, r, to.blockPosition());
             int given = handOver(c, to, what, r.kind == Kind.KIT ? r.count : Integer.MAX_VALUE);
+            if (r.kind == Kind.KIT) Purchases.delivered(level, to, r.ask, what, given);   // [econ-prices] its food or its tool, paid for
             r.moved += given;
             c.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
             c.note(AssistantEntity.Deed.LOADS_HAULED, 1);

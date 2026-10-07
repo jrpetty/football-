@@ -258,8 +258,9 @@ public final class Trade {
             if (s.isEmpty() || !g.what().test(s)) continue;
             Market.Good mg = Market.goodFor(s);
             if (mg == null) break;
-            int stock = f.ownerId() == null || !(f.level() instanceof ServerLevel sl) ? 0 : Market.stock(sl, f.ownerId(), g.what());
-            return Math.max(1, (int) Math.round(Market.each(mg, stock) * count));
+            // [econ-prices] At its town's price today (PriceIndex); its usual worth with no town to ask.
+            double each = f.ownerId() == null || !(f.level() instanceof ServerLevel sl) ? mg.value() : PriceIndex.each(sl, f.ownerId(), mg);
+            return Math.max(1, (int) Math.round(each * count));
         }
         return Math.max(1, count / 4);
     }

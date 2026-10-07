@@ -1712,13 +1712,12 @@ public final class Families {
         if (Market.stock(level, v.id(), what) <= 0) return ItemStack.EMPTY;
         ItemStack got = Crafts.takeOne(level, v, what);
         if (got.isEmpty()) return ItemStack.EMPTY;
-        Market.Good g = Market.goodFor(got);
-        int price = g == null ? 1 : Market.sellPrice(g, Market.stock(level, v.id(), s -> ItemStack.isSameItemSameComponents(s, got)), false);
-        price = Math.max(1, price / Math.max(1, g == null ? 1 : g.bundle()));
         for (VillageFolkEntity f : payers) {
-            int mine = FolkSkills.thrifty(f, price);
+            int mine = Purchases.coinPrice(level, v.id(), got, f);           // [econ-prices] the town's price for the one
             if (!f.spend(mine)) continue;
             Ledger.addCoins(v.id(), mine);
+            Economy.spentInTown(v.id(), mine);                              // [econ-prices] it was left out of the books
+            PriceIndex.bought(v.id(), got, 1);
             Stockroom.sold(level, v.id(), Stockroom.Seller.STORES, got, 1, mine);
             return got;
         }

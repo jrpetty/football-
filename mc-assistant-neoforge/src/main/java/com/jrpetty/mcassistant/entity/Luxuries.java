@@ -182,7 +182,8 @@ public final class Luxuries {
             return false;
         }
         if (e.want == null) {
-            if (day - f.comfortDay() < 2) return false;
+            // [econ-prices] Every other day at most; every day while the shop's luxuries are cheap (PriceIndex).
+            if (day - f.comfortDay() < (PriceIndex.luxuriesCheap(village) ? 1 : 2)) return false;
             Wealth.Tier tier = Wealth.tier(f);
             if (tier.ordinal() < Wealth.Tier.COMFORTABLE.ordinal() || f.comforts() >= tier.comforts) return false;
             e.want = choose(level, v, h, b, f, tier, day, e);
@@ -326,12 +327,11 @@ public final class Luxuries {
         return ItemStack.EMPTY;
     }
 
-    /** What the shop asks a folk for one of these: the price list's, as Cafe.folkShops charges it. */
+    /** What the shop asks a folk for one of these, in whole coins: the town's price for the one thing, as Cafe.folkShops
+     *  charges it. [econ-prices] It was a whole lot's price (four rugs' for one rug). */
     static int priceOf(ServerLevel level, UUID village, ItemStack sample) {
         if (sample.isEmpty()) return 3;
-        Market.Good g = Budget.goodFor(sample);
-        int price = g == null ? 3 : Market.sellPrice(g, Market.stock(level, village, s -> ItemStack.isSameItemSameComponents(s, sample)), false);
-        return Math.max(1, Stockroom.asked(level, village, sample, Math.max(1, price), 1));
+        return Math.max(1, (int) Math.ceil(Purchases.priceEach(level, village, sample, null) - 1e-6));
     }
 
     /**
@@ -344,6 +344,7 @@ public final class Luxuries {
         Predicate<ItemStack> what = forSale(level, v.id(), f, kind);
         if (what == null) return null;
         int before = f.purse();
+        long spent = Purchases.spentToday(f);                  // [econ-prices] to the hundredth: the change stays at the counter
         if (Cafe.folkShops(level, v, f, false, what) == null) return null;
         int n = 1;
         if (kind == Kind.POT && flowerIn(f) == null) Cafe.folkShops(level, v, f, false, Luxuries::pottable);
@@ -358,7 +359,7 @@ public final class Luxuries {
         booked(level, v.id(), n, paid);
         f.persona().remember(level.getDayTime() / 24000L, "I bought " + kind.words + " for my home with my own savings", 2);
         String words = kind == Kind.PANE ? n + (n == 1 ? " pane" : " panes") + " of glass for the windows" : kind.words;
-        return words + " for " + paid + (paid == 1 ? " coin" : " coins");
+        return words + " for " + String.format(java.util.Locale.ROOT, "%.2f coins", (Purchases.spentToday(f) - spent) / 100.0);
     }
 
     /** A flower it has with it, for a pot. */
