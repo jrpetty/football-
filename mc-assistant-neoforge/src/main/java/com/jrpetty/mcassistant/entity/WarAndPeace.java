@@ -2248,7 +2248,11 @@ public final class WarAndPeace {
         return s.length() <= 15 ? s : s.substring(0, 15);
     }
 
-    /** Where the memorial goes: before the chapel (or the graveyard), out from its front; else by the board. */
+    /**
+     * Where the memorial goes: before the chapel (or the graveyard), out from its front; else out on the
+     * square before the board's face, past the far end of the board from the war banner's pole (which tries
+     * the near end first: WarBanner.byBoard), never behind the board; else by the middle of the town.
+     */
     static BlockPos memorialMark(UUID village) {
         for (String s : new String[]{ "chapel", "graveyard" }) {
             for (Ledger.Building b : Ledger.buildings(village)) {
@@ -2258,9 +2262,54 @@ public final class WarAndPeace {
             }
         }
         BlockPos at = VillageBoards.lectern(village);
+        Direction f = VillageBoards.facingOf(village);
+        int far = com.jrpetty.mcassistant.block.VillageBoardBlock.WIDE - com.jrpetty.mcassistant.block.VillageBoardBlock.WIDE / 2 + 1;
+        if (at != null && f != null && f.getAxis().isHorizontal()) return at.relative(com.jrpetty.mcassistant.block.VillageBoardBlock.right(f), far).relative(f, 2);
         if (at != null) return at.offset(3, 0, 3);
         Villages.Village v = Villages.get(village);
         return v == null ? BlockPos.ZERO : v.centre().offset(4, 0, 4);
+    }
+
+    /** The town's newest war memorial (wanted or up), or null if it has made no peace. */
+    @Nullable
+    private static Plaques.Plaque newestMemorial(UUID village) {
+        Plaques.Plaque out = null;
+        for (Plaques.Plaque p : Plaques.plaques(village)) if (p.site() == Plaques.Site.MEMORIAL && (out == null || p.day() >= out.day())) out = p;
+        return out;
+    }
+
+    /**
+     * The command (/village war memorial, for the pictures): the town's newest war memorial put up now,
+     * whatever the hour and without waiting for a hand to walk over (as /village decor now does), but out of
+     * the stores as ever: a sign and a post, or planks. "MEMORIAL x y z &lt;facing&gt; &lt;its words&gt;" (the post,
+     * the sign on top of it, its face looking {@code facing}), or why it is not up.
+     */
+    public static String memorialForPictures(ServerLevel level, Villages.Village v) {
+        Plaques.Plaque m = newestMemorial(v.id());
+        if (m == null) return "NO-MEMORIAL " + name(v.id()) + " has made no peace to remember";
+        if (!m.up()) {
+            boolean was = TownJobs.instantNow();
+            TownJobs.instantForTests(true);
+            try {
+                for (int i = 0; i < 12 && !m.up(); i++) {
+                    if (!Plaques.putUp(level, v)) break;                    // nothing more it can put up
+                    m = newestMemorial(v.id());
+                }
+            } finally {
+                TownJobs.instantForTests(was);
+            }
+        }
+        if (m == null || !m.up()) {
+            String s = Plaques.shortForTests(v.id());
+            return "NO-MEMORIAL " + name(v.id()) + "'s memorial is not up: " + (s == null ? "nowhere to put it" : "waiting on " + s);
+        }
+        String facing = "south";
+        net.minecraft.world.level.block.state.BlockState sign = level.getBlockState(m.at().above());
+        if (sign.hasProperty(net.minecraft.world.level.block.StandingSignBlock.ROTATION)) {
+            int rot = sign.getValue(net.minecraft.world.level.block.StandingSignBlock.ROTATION);
+            if (rot % 4 == 0) facing = Direction.from2DDataValue(rot / 4).getName();
+        }
+        return "MEMORIAL " + m.at().getX() + " " + m.at().getY() + " " + m.at().getZ() + " " + facing + " " + String.join(" / ", m.lines());
     }
 
     /** [TownCalendar] The town's next Remembrance Day, for the board and the books, or null. */

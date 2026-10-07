@@ -37,6 +37,10 @@ import java.util.UUID;
  *                           foot, "BANNER x y z south Oakford BOARD x y z")
  *   /village war cloth      (ops) a red banner put into the nearest town's stores (for the pictures)
  *   /village war peace      (ops) the nearest town's war ended now, on the terms the balance of strength makes
+ *   /village war memorial   (ops) the nearest town's newest war memorial put up now, whatever the hour and with no
+ *                           walk for the hand, out of the stores as ever; prints where its post stands and which
+ *                           way the sign on it looks ("MEMORIAL x y z south The war with / Oakford / ..."), or
+ *                           "NO-MEMORIAL" and why
  * </pre>
  */
 public final class WarCommands {
@@ -50,7 +54,8 @@ public final class WarCommands {
             .then(Commands.literal("council").requires(src -> src.hasPermission(2)).executes(WarCommands::council))
             .then(Commands.literal("declare").requires(src -> src.hasPermission(2)).executes(WarCommands::declare))
             .then(Commands.literal("cloth").requires(src -> src.hasPermission(2)).executes(WarCommands::cloth))
-            .then(Commands.literal("peace").requires(src -> src.hasPermission(2)).executes(WarCommands::peace));
+            .then(Commands.literal("peace").requires(src -> src.hasPermission(2)).executes(WarCommands::peace))
+            .then(Commands.literal("memorial").requires(src -> src.hasPermission(2)).executes(WarCommands::memorial));
     }
 
     @Nullable
@@ -166,6 +171,14 @@ public final class WarCommands {
         ctx.getSource().sendSuccess(() -> Component.literal("CLOTH " + (in ? "a red banner put into the stores of " : "no room in the stores of ")
             + Villages.name(v.id())), false);
         return in ? 1 : 0;
+    }
+
+    private static int memorial(CommandContext<CommandSourceStack> ctx) {
+        Villages.Village v = near(ctx);
+        if (v == null) return 0;
+        String said = WarAndPeace.memorialForPictures(ctx.getSource().getLevel(), v);
+        ctx.getSource().sendSuccess(() -> Component.literal(said), false);
+        return said.startsWith("MEMORIAL ") ? 1 : 0;
     }
 
     private static int peace(CommandContext<CommandSourceStack> ctx) {

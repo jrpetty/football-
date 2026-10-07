@@ -87,6 +87,11 @@ public final class TownJobs {
         instant = on;
     }
 
+    /** [war-peace] Whether the works are being done at once (so a command that turns it on can put it back as it was). */
+    public static boolean instantNow() {
+        return instant;
+    }
+
     public static boolean atWork(ServerLevel level, Villages.Village v, String works, BlockPos at, String what) {
         return atWork(level, v, works, at, what, null);
     }

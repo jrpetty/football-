@@ -373,7 +373,7 @@ public class WarAndPeaceGameTests {
             guards(a.id(), 4);
             feud(a.id(), b.id(), day);
             Ledger.addCoins(b.id(), 30);
-            stock(level, a.id(), new ItemStack(Items.RED_BANNER));
+            stock(level, a.id(), new ItemStack(Items.RED_BANNER), new ItemStack(Items.OAK_SIGN, 4), new ItemStack(Items.OAK_FENCE, 4));
             helper.assertTrue(WarAndPeace.declare(level, a.id(), b.id(), day, WarAndPeace.Goal.TRIBUTE, 10, "10 coins in tribute"), "war declared");
             WarAndPeace.backdateForTests(a.id(), b.id(), 8);
             Intel.file(b.id(), new Intel.Report(a.id(), day, 6, 4, 0, 0, 0, 0, 10, "four guards on the walls"));
@@ -401,6 +401,13 @@ public class WarAndPeaceGameTests {
             helper.assertTrue(stoodDown.get() == 2, "both towns stood down: " + stoodDown.get());
             helper.assertTrue(banner == null || !(level.getBlockState(banner).getBlock() instanceof AbstractBannerBlock), "the war banner taken down");
             helper.assertTrue(Wars.footing(a.id()) == Wars.Footing.PEACE && Wars.footing(b.id()) == Wars.Footing.PEACE, "both at peace");
+            // A war that cost no lives still has its memorial: the war itself and the peace, put up out of the stores.
+            int signs = Market.stock(level, a.id(), s -> s.is(Items.OAK_SIGN));
+            String memorial = WarAndPeace.memorialForPictures(level, a);
+            Kit.log("wp05 the memorial: " + memorial + "; signs in the stores " + signs + " -> " + Market.stock(level, a.id(), s -> s.is(Items.OAK_SIGN)));
+            helper.assertTrue(memorial.startsWith("MEMORIAL ") && memorial.contains("The war with / " + Villages.name(b.id())) && memorial.contains("and the peace"),
+                "with nobody lost, the memorial names the war itself, and is up: " + memorial);
+            helper.assertTrue(Market.stock(level, a.id(), s -> s.is(Items.OAK_SIGN)) < signs, "its sign out of the stores");
             helper.succeed();
         });
     }
