@@ -22,7 +22,6 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.SwordItem;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -196,11 +195,12 @@ public class WarFootingGameTests {
         int guards = count(v, StationTask.GUARD);
         WarFooting.morning(level, vil, day);
         int called = Militia.called(v), fighting = WarFooting.militia(v).size(), armed = 0;
-        for (VillageFolkEntity f : folk) if (Militia.calledUp(f) && f.countCarried(s -> s.getItem() instanceof SwordItem) > 0) armed++;
+        // Iron: every founder carries a stone sword of its own (the starter kit); what the call-up issues is the stores' iron.
+        for (VillageFolkEntity f : folk) if (Militia.calledUp(f) && f.countCarried(s -> s.is(Items.IRON_SWORD)) > 0) armed++;
         WarFooting.Cost cost = WarFooting.dailyCost(v);
         int danger = 0;
         for (VillageFolkEntity f : folk) if (f.stationTask() == StationTask.GUARD) danger = Math.max(danger, WarFooting.dangerPay(f));
-        Kit.log("wr02 at war: " + called + " called up, " + armed + " armed with a sword; " + fighting + " fight for the town (" + guards
+        Kit.log("wr02 at war: " + called + " called up, " + armed + " armed with an iron sword; " + fighting + " fight for the town (" + guards
             + " guards); danger money " + danger + "%; a day costs " + cost.dangerPay() + " coin and " + cost.hoursLost() + " hours (" + cost.coins() + " coin)");
         helper.assertTrue(called == Militia.members(v).size() && called >= 2, "at war the militia is called up: " + called);
         helper.assertTrue(fighting > guards, "the militia fights with the watch: " + fighting + " against " + guards + " guards");
