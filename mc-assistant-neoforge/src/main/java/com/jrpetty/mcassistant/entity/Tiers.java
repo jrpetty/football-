@@ -68,6 +68,8 @@ public final class Tiers {
     @Nullable
     static Villages.Age material(Item it) {
         if (it == Items.AIR) return Villages.Age.WOOD;
+        Villages.Age set = WorkTools.ageOf(it);                 // [workitems] the rope coil the Wood Age's; the saw and the crate the Stone Age's
+        if (set != null) return set;
         ItemStack s = new ItemStack(it);
         String path = BuiltInRegistries.ITEM.getKey(it).getPath().toLowerCase(Locale.ROOT);
         List<String> words = List.of(path.split("_"));

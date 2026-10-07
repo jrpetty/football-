@@ -429,6 +429,14 @@ public final class Prices {
         // planks and wool, a basket of sticks and wool, a collar of leather and string, four treats of wheat and meat).
         "mc_assistant:pet_bowl 0.8 C", "mc_assistant:dog_bed 1.6 C", "mc_assistant:cat_bed 1.2 C", "mc_assistant:collar 1.4 C",
         "mc_assistant:pet_treat 0.15 C",
+        // [workitems] The tools of the mine, the woods and the roads, and the roofs' thatch (item/WorkItems): a little over what
+        // goes into each by its recipe, so the board, the shop and the makers agree on it. A pit prop is four from two logs and
+        // three planks; a coil four string and a leather; a sack three leathers and two string; a saw two bars, two sticks and a
+        // string; thatch six wheat for four (its stairs and slab cut from it); a milestone five cobble and a sign; a crate six
+        // planks, two logs and a nugget; a window box three planks, earth and a flower.
+        "mc_assistant:pit_prop 0.25 T", "mc_assistant:rope_coil 1.6 C", "mc_assistant:ore_sack 2.5 C", "mc_assistant:felling_saw 4.0 C",
+        "mc_assistant:thatch 0.18 C", "mc_assistant:thatch_stairs 0.3 C", "mc_assistant:thatch_slab 0.1 C",
+        "mc_assistant:milestone 0.8 S", "mc_assistant:shipping_crate 1.4 C", "mc_assistant:window_box 0.6 C",
         // [crime] A forged coin is worth its scrap of copper and no more, whatever it was cast to pass for (Mischief).
         "mc_assistant:forged_coin 0.1 C",
     };

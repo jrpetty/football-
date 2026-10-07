@@ -318,7 +318,7 @@ public final class FolkTalk {
         String delivery = StoreDeliveries.doing(f);            // [econ-store] a delivery for the shop
         if (delivery != null) return delivery;
         String run = Couriers.doing(f);
-        if (run != null) return "For the storehouse: " + run;
+        if (run != null) return "For the storehouse: " + run + Crates.doingWords(f);   // [workitems] its crates packed
         String store = StoreStaff.doing(f);                     // [econ-store] at the counter, at the stock book
         if (store != null) return store;
         String making = Workshop.doing(f);                      // at the shop's bench: "Making a stone sword for the shop"
@@ -385,6 +385,7 @@ public final class FolkTalk {
         line(sb, "War", WarFooting.cardLine(f));            // [war-prep] the watch for the war, the militia, danger money
         line(sb, "Kit", WatchKit.cardLine(f));              // [guard-kit] a guard's kit, issued by the town
         line(sb, "Caves", CaveDwellers.cardLine(f));        // [caves] where it went today, what it found, its kit
+        line(sb, "Tools", WorkTools.cardLine(f));            // [workitems] its props, rope, ore sack, felling saw, crates
         line(sb, f.isBaby() ? "Apprenticed" : "Apprentices", PlayerTrades.cardLine(f));   // [player-civic] its apprentices, or its trade
         line(sb, "The fleet", Fleet.cardLine(f));            // [fleet] out with the fishing fleet, and its catch
         line(sb, "Auction", Auctions.cardLine(f));           // [fleet] at the auction, or what it won there
@@ -655,6 +656,7 @@ public final class FolkTalk {
             case "letter", "meeting", "favour", "found" -> Civics.moodWords(f, why);   // [batchF]
             case "robbed", "repaid", "shamed", "cleared" -> Crime.moodWords(f, why);  // [crime]
             case "builtit", "grateful", "clash" -> Referendums.moodWords(f, why);      // [civic]
+            case "windowbox" -> WindowBoxes.moodWords(f);                            // [workitems]
             default -> "";
         };
     }
@@ -680,8 +682,8 @@ public final class FolkTalk {
         }
         if (f.trip() != null) {
             String where = Villages.name(f.trip().destination());
-            return f.trip().homeward() ? "Taking the caravan home to " + where + ", with what they could spare."
-                : "Taking the caravan to " + where + " — the colony needs what we've got.";
+            return (f.trip().homeward() ? "Taking the caravan home to " + where + ", with what they could spare."
+                : "Taking the caravan to " + where + " — the colony needs what we've got.") + Crates.caravanWords(f);   // [workitems]
         }
         String about = Transport.doing(f);                      // [transport] on its way by the cart or the ferry
         if (about != null) return cap(about) + ".";

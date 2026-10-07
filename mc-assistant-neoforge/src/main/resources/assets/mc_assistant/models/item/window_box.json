@@ -1,0 +1,77 @@
+{
+  "parent": "mc_assistant:block/window_box_poppy",
+  "overrides": [
+    {
+      "predicate": {
+        "mc_assistant:flower": 0.03125
+      },
+      "model": "mc_assistant:block/window_box_poppy"
+    },
+    {
+      "predicate": {
+        "mc_assistant:flower": 0.09375
+      },
+      "model": "mc_assistant:block/window_box_dandelion"
+    },
+    {
+      "predicate": {
+        "mc_assistant:flower": 0.15625
+      },
+      "model": "mc_assistant:block/window_box_blue_orchid"
+    },
+    {
+      "predicate": {
+        "mc_assistant:flower": 0.21875
+      },
+      "model": "mc_assistant:block/window_box_allium"
+    },
+    {
+      "predicate": {
+        "mc_assistant:flower": 0.28125
+      },
+      "model": "mc_assistant:block/window_box_azure_bluet"
+    },
+    {
+      "predicate": {
+        "mc_assistant:flower": 0.34375
+      },
+      "model": "mc_assistant:block/window_box_red_tulip"
+    },
+    {
+      "predicate": {
+        "mc_assistant:flower": 0.40625
+      },
+      "model": "mc_assistant:block/window_box_orange_tulip"
+    },
+    {
+      "predicate": {
+        "mc_assistant:flower": 0.46875
+      },
+      "model": "mc_assistant:block/window_box_white_tulip"
+    },
+    {
+      "predicate": {
+        "mc_assistant:flower": 0.53125
+      },
+      "model": "mc_assistant:block/window_box_pink_tulip"
+    },
+    {
+      "predicate": {
+        "mc_assistant:flower": 0.59375
+      },
+      "model": "mc_assistant:block/window_box_oxeye_daisy"
+    },
+    {
+      "predicate": {
+        "mc_assistant:flower": 0.65625
+      },
+      "model": "mc_assistant:block/window_box_cornflower"
+    },
+    {
+      "predicate": {
+        "mc_assistant:flower": 0.71875
+      },
+      "model": "mc_assistant:block/window_box_lily_of_the_valley"
+    }
+  ]
+}

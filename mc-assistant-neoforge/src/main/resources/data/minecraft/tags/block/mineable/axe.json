@@ -2,6 +2,9 @@
   "replace": false,
   "values": [
     "mc_assistant:storehouse_unit",
+    "mc_assistant:window_box",
+    "mc_assistant:shipping_crate",
+    "mc_assistant:pit_prop",
     "mc_assistant:village_board",
     "mc_assistant:stocks"
   ]

@@ -329,6 +329,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // [batchG] A visitor from afar (the bard, a tourist, the merchant), one of ours away for the day at a friend's
         // in another town, or a guard out taming a dog for the watch: that is its day (Visitors).
         if (Visitors.drive(this)) return;
+        if (WorkTools.hold(this)) return;                      // [workitems] on a rope, or carrying a window box home to hang
         if (Newcomers.drive(this)) return;                     // [civic] a newcomer on the road, or camped at a town's edge
         // [fleet] Once a second for its town: the fishing fleet and the fish market (Fleet), the auction (Auctions).
         if (tickCount % 20 == 9 && ownerId() != null && level() instanceof net.minecraft.server.level.ServerLevel quay) {
@@ -1210,6 +1211,7 @@ public class VillageFolkEntity extends AssistantEntity {
         m = Civics.mood(this, day, m, why);             // [batchF] a letter, the town meeting, a good turn, found and home
         m = Crime.mood(this, day, m, why);              // [crime] robbed, paid back, shamed, wrongly accused and cleared
         m = Referendums.mood(this, day, m, why);        // [civic] proud of the work it built; a newcomer's gratitude
+        m = WindowBoxes.mood(this, day, m, why);        // [workitems] its household's window boxes in flower
         why.sort((a, b) -> Integer.compare((Integer) b[1], (Integer) a[1]));
         java.util.List<String> keys = new java.util.ArrayList<>();
         for (Object[] w : why) keys.add((String) w[0]);
@@ -3023,6 +3025,7 @@ public class VillageFolkEntity extends AssistantEntity {
         guardKitFromTheStores();                       // the town's best armour and blade, on the watch (WatchKit)
         betterToolFromTheStores();                     // the smith's iron and the enchanter's work, in use
         clothesFromTheStores();                        // the tailor's boots
+        WorkTools.kitUp(this);                         // [workitems] a miner's props, rope and sack, a woodcutter's saw, a courier's crates
         bucketFromTheStores();                         // a farmer's water, when the village is hungry
         obsidianFromLava();                            // the gateway's obsidian, made where the lava is
         growTheForge();                                // a smelter's furnaces: one, and up to four in a row
@@ -7111,8 +7114,12 @@ public class VillageFolkEntity extends AssistantEntity {
         topUp(heart, st -> st.is(net.minecraft.tags.ItemTags.LOGS), logs, r);
         topUpRanked(heart, com.jrpetty.mcassistant.entity.goal.Blueprints.Style.WALL, st -> st.is(net.minecraft.tags.ItemTags.PLANKS), boards, r);
         // The roof first, out of the planks: it is the thing that makes a building look like one.
-        java.util.function.Predicate<net.minecraft.world.item.ItemStack> woodStairs = st -> st.is(net.minecraft.tags.ItemTags.WOODEN_STAIRS);
-        java.util.function.Predicate<net.minecraft.world.item.ItemStack> woodSlabs = st -> st.is(net.minecraft.tags.ItemTags.WOODEN_SLABS);
+        // [workitems] A town roofing in thatch: the roof's thatch first (Thatch), and it stands for the wooden pieces.
+        Thatch.stock(this, heart, stairs, slabs, want.getOrDefault(com.jrpetty.mcassistant.entity.goal.Blueprints.Style.ROOF_BLOCK, 0), r);
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> woodStairs = st -> st.is(net.minecraft.tags.ItemTags.WOODEN_STAIRS)
+            || st.is(com.jrpetty.mcassistant.item.WorkItems.THATCH_STAIRS_ITEM.get());
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> woodSlabs = st -> st.is(net.minecraft.tags.ItemTags.WOODEN_SLABS)
+            || st.is(com.jrpetty.mcassistant.item.WorkItems.THATCH_SLAB_ITEM.get());
         java.util.function.Predicate<net.minecraft.world.item.ItemStack> rockSlabs =
             st -> st.is(net.minecraft.tags.ItemTags.SLABS) && !st.is(net.minecraft.tags.ItemTags.WOODEN_SLABS);
         java.util.function.Predicate<net.minecraft.world.item.ItemStack> rockStairs =

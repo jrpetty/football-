@@ -245,6 +245,7 @@ public final class VillageCommands {
             .then(com.jrpetty.mcassistant.entity.Transport.command())       // [transport] /village transport: lines, carts, ferry, bridge
             .then(com.jrpetty.mcassistant.entity.CaveDwellers.command())    // [caves] the cave dwellers and the caves' report
             .then(com.jrpetty.mcassistant.entity.Pets.command())            // [pets] /village pets: the town's pets; now, stage (ops)
+            .then(com.jrpetty.mcassistant.entity.WorkTools.command())       // [workitems] /village items work: the tools of the mine, woods, roads; stage (ops)
             .then(com.jrpetty.mcassistant.entity.Fashion.command())         // [fashion] the season's look, the tailor's book, the show
             .then(com.jrpetty.mcassistant.entity.Crime.command())           // [crime] the casebook, the Cases page; a deed, a trial, the stocks staged
             .then(com.jrpetty.mcassistant.entity.Fleet.command())           // [fleet] /village fleet: the boats, the catch, the market

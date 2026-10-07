@@ -51,6 +51,7 @@ public final class TownWork {
         MineSafety.tick(level, v);                  // [mine-safety] the mine's stair heads fenced, the sign up
         TownLook.tick(level, v);                    // [batchE] the trees, benches, allotments, orchard, mill, bakery and inn
         Store.tick(level, v);                       // [econ-store] the shop's staff, its stock book and its deliveries
+        WorkTools.rounds(level, v);                 // [workitems] the milestones, the window boxes, the thatch, the shop's book
         int reach = Villages.townReach(id);
         List<int[]> cells = cellsWithin(reach);
         if (cells.isEmpty()) return;

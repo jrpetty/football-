@@ -156,6 +156,17 @@ public final class Market {
         good("Flint", Items.FLINT, 0.2, 8, Villages.Task.NONE),
         good("Sand", Items.SAND, 0.05, 32, Villages.Task.NONE),
         good("Bones", Items.BONE, 0.1, 16, Villages.Task.NONE),
+        // [workitems] The tools of the mine, the woods and the roads, and thatch (item/WorkItems): sold at the shop, bought of a
+        // player. Matched when asked, not at load: the items are registered after this list is made.
+        new Good("Pit props", s -> s.is(com.jrpetty.mcassistant.item.WorkItems.PIT_PROP_ITEM.get()), 0.25, 8, Villages.Task.NONE),
+        new Good("Rope coil", s -> s.is(com.jrpetty.mcassistant.item.WorkItems.ROPE_COIL.get()), 1.6, 1, Villages.Task.NONE),
+        new Good("Ore sack", s -> s.is(com.jrpetty.mcassistant.item.WorkItems.ORE_SACK.get()) && com.jrpetty.mcassistant.item.OreSackItem.count(s) == 0,
+            2.5, 1, Villages.Task.NONE),
+        new Good("Felling saw", s -> s.is(com.jrpetty.mcassistant.item.WorkItems.FELLING_SAW.get()), 4.0, 1, Villages.Task.NONE),
+        new Good("Thatch", s -> s.is(com.jrpetty.mcassistant.item.WorkItems.THATCH_ITEM.get()), 0.18, 16, Villages.Task.NONE),
+        new Good("Shipping crate", s -> s.is(com.jrpetty.mcassistant.item.WorkItems.SHIPPING_CRATE_ITEM.get())
+            && com.jrpetty.mcassistant.block.ShippingCrateBlock.contents(s).isEmpty(), 1.4, 1, Villages.Task.NONE),
+        new Good("Window box", s -> s.is(com.jrpetty.mcassistant.item.WorkItems.WINDOW_BOX_ITEM.get()), 0.6, 1, Villages.Task.NONE),
         // What the crafts make, sold one at a time at the shop and the café.
         good("Iron pickaxe", Items.IRON_PICKAXE, 6.0, 1, Villages.Task.NONE),
         good("Iron sword", Items.IRON_SWORD, 4.0, 1, Villages.Task.NONE),
