@@ -469,6 +469,10 @@ public class VillageFolkEntity extends AssistantEntity {
         // [fields] A short errand with its tools: the can filled at the rain barrel, the nesting box emptied, the fish traps
         // gone round on a day the boats stay in, the garden watered of an evening (FieldTools).
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel fieldLevel && FieldTools.hold(this, fieldLevel)) return;
+        // [police] The watch's own business before the law's: a prisoner in the cells or on the lead, a folk running to the
+        // watch or from it, in a fight or walked home; a guard on an incident, a prisoner in hand, or posted at a gathering (Police).
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel policeLevel
+                && (tickCount % 4 == 1 ? Police.hold(this, policeLevel) : Police.busy(this))) return;
         // [crime] The law first: in the stocks or at its community work, called to a trial, a guard on a case; or a folk up
         // to no good in its own free time (Crime).
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel lawLevel
@@ -1251,6 +1255,7 @@ public class VillageFolkEntity extends AssistantEntity {
         m = Health.mood(this, day, m, why);             // [batchA] a cold (Health)
         m = Civics.mood(this, day, m, why);             // [batchF] a letter, the town meeting, a good turn, found and home
         m = Crime.mood(this, day, m, why);              // [crime] robbed, paid back, shamed, wrongly accused and cleared
+        m = Police.mood(this, day, m, why);             // [police] a night in the cells, a fine, helped by the watch
         m = Referendums.mood(this, day, m, why);        // [civic] proud of the work it built; a newcomer's gratitude
         m = Individual.mood(this, day, m, why);         // [individual] a dream come true, a habit kept, its season, a fright
         m = WindowBoxes.mood(this, day, m, why);        // [workitems] its household's window boxes in flower
@@ -1684,9 +1689,21 @@ public class VillageFolkEntity extends AssistantEntity {
         builder.define(DATA_WEALTH, 1);
         builder.define(DATA_CHILD, false);
         builder.define(DATA_STYLE, 0L);                 // [fashion]
+        builder.define(DATA_POLICE, 0);                 // [police]
         builder.define(DATA_LOOK, 0L);                  // [individual]
         builder.define(DATA_MARKS, 0);
         builder.define(DATA_MANNER, 0);
+    }
+
+    /** [police] The watch's duty and kit, for its clothes (Police.flags, client/WatchLayer): the duty, the constable, the badge. */
+    private static final net.minecraft.network.syncher.EntityDataAccessor<Integer> DATA_POLICE =
+        net.minecraft.network.syncher.SynchedEntityData.defineId(
+            VillageFolkEntity.class, net.minecraft.network.syncher.EntityDataSerializers.INT);
+
+    public int clientPolice() { return this.entityData.get(DATA_POLICE); }
+
+    public void showPolice(int flags) {
+        if (this.entityData.get(DATA_POLICE) != flags) this.entityData.set(DATA_POLICE, flags);
     }
 
     // ------------------------------ [individual] its own: face, body, manner, life ------------
@@ -1965,6 +1982,7 @@ public class VillageFolkEntity extends AssistantEntity {
                 double len = Math.max(0.1, Math.sqrt(dx * dx + dz * dz));
                 BlockPos away = surfaceAt((int) (getX() + dx / len * 10), (int) (getZ() + dz / len * 10));
                 if (away != null) walkTo(away, 1.0D);
+                Incidents.quarrel(server, this, other, day);    // [police] now and then it comes to blows, and the watch is called
             }
             refreshMood();
             other.refreshMood();
@@ -2743,6 +2761,8 @@ public class VillageFolkEntity extends AssistantEntity {
         // The town bell (TownBell): the day's work from the dawn bell to the dusk bell, and the bell's own business first.
         Boolean bell = TownBell.shift(this);
         if (bell != null) return bell;
+        Boolean roster = Police.shift(this);                // [police] a guard's day off on the roster; every guard out to a fire or flood
+        if (roster != null) return roster;
         if (stationTask() != StationTask.GUARD || shift() != Shift.ALWAYS || !level().isNight()) return super.onShift();
         return firstWatch() == (level().getDayTime() % 24000L < MIDNIGHT);
     }
@@ -4431,6 +4451,7 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected boolean streetRound() {
         if (villageCentre == null || isHired() || !(level() instanceof net.minecraft.server.level.ServerLevel server)) return false;
+        if (Police.duty(this, server)) return true;           // [police] the roster's duty: the walls, the beat, the desk, an event, rest
         return Patrols.round(this, server);
     }
 
@@ -8039,6 +8060,7 @@ public class VillageFolkEntity extends AssistantEntity {
             || WatchClears.sheltering(this)                      // [watch-clears] indoors out of a monster's way
             || Transport.busy(this)                              // [transport] on a ride, a crossing, or at the ferry
             || Crime.calledAway(this)                            // [crime] on a case, at a trial, in the stocks, at community work
+            || Police.calledAway(this)                           // [police] in the cells, a chase, a fight, a report, an escort
             || Disasters.busy(this)                              // [disasters] a bucket chain, a flood, a night away, the fire watch
             || Individual.busy(this)                             // [individual] home before dark, a habit at its hour
             || WorkTools.busy(this)                              // [workitems] on a rope, or hanging or watering a window box

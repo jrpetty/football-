@@ -487,7 +487,7 @@ public final class Raids {
         UUID id = g.ownerId();
         Alarm a = id == null ? null : ALARMS.get(id);
         if (a == null) {
-            if (g.post() != null) leavePost(g);
+            if (g.post() != null && !Beats.onTheWall(g)) leavePost(g);   // [police] the roster's night watch keeps its post
             SENT.remove(g.getUUID());
             return Militia.yard(g);                       // [war-prep] between the bells, a turn at the training yard
         }

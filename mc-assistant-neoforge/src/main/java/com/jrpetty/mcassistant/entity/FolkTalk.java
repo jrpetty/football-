@@ -181,7 +181,8 @@ public final class FolkTalk {
             case PROPOSE -> Council.propose(f, p, text);
             case PEACE -> Diplomacy.peace(f, p, text);
             case STIR -> Diplomacy.stir(f, p, text);
-            case QUESTS -> Quests.talk(f, p) + PlayerServices.bountyTalk(f);   // and the night's bounty, if one is up
+            case QUESTS -> Quests.talk(f, p) + PlayerServices.bountyTalk(f)    // and the night's bounty, if one is up
+                + PlayerLaw.bountyTalk(f);                                     // [police] and the watch's on the wanted
             case HIRE -> Hire.ask(f, p);
             case COMMISSION -> Services.commission(f, p);
             case LEDGER -> Services.ledgerFor(f, p);
@@ -459,6 +460,7 @@ public final class FolkTalk {
         line(sb, "About town", TownLook.cardLine(f));       // [batchE] its allotment, the bakery, the inn (TownLook)
         line(sb, "Town life", Civics.cardLine(f));          // [batchF] its letters, its quarter as warden, its good turns (Civics)
         line(sb, "The law", Crime.cardLine(f));             // [crime] its case, its record, robbed, cleared, a new leaf (Crime)
+        line(sb, "The watch", Police.cardLine(f));          // [police] today's duty and its record; the cells, the curfew, a bounty
         line(sb, "Fire and flood", Disasters.cardLine(f));  // [disasters] a bucket chain, the flood, a night away, the fire watch
         line(sb, "Votes and works", Referendums.cardLine(f));   // [civic] its vote, the works it built, where it came from
         line(sb, "Pastimes", Pastimes.cardLine(f));         // [leisure] its quilt, its draughts, its kite, its lute, its slate
@@ -703,6 +705,7 @@ public final class FolkTalk {
             case "proud" -> Museum.prideWords(f);
             case "letter", "meeting", "favour", "found" -> Civics.moodWords(f, why);   // [batchF]
             case "robbed", "repaid", "shamed", "cleared" -> Crime.moodWords(f, why);  // [crime]
+            case "cells", "fined", "helped" -> Police.moodWords(f, why);               // [police]
             case "builtit", "grateful", "clash" -> Referendums.moodWords(f, why);      // [civic]
             case "faith", "remembrance", "alms", "larders", "reign", "cathedral",
                  "homesick", "athome", "wander", "fearless", "tune" -> Perks.moodWords(f, why);   // [perks]
@@ -720,6 +723,8 @@ public final class FolkTalk {
         Persona me = f.persona();
         if (f.isFollowing(p)) return pick(r, "Walking with you, of course!", "Following you. Where are we off to?");
         if (f.isSleeping()) return "Sleeping, until you woke me.";
+        String watch = Police.doingLine(f);                     // [police] a chase, a fight, the cells, an escort, walked home
+        if (watch != null) return capFirst(watch) + ".";
         String law = Crime.doing(f);                            // [crime] on a case, at a trial, in the stocks
         if (law != null) return capFirst(law) + ".";
         String rest = RestDay.now(f.ownerId(), f.level().getDayTime());
@@ -758,7 +763,7 @@ public final class FolkTalk {
                     ? "diamonds" : "iron") + ".";
             }
             case RANCH -> "Minding the animals" + place + ".";
-            case GUARD -> Patrols.doing(f);
+            case GUARD -> Police.doing(f);                      // [police] its duty on today's roster (else Patrols.doing)
             case SMELT -> "Running the furnaces" + place + ".";
             case FISH -> Fleet.doing(f, r, "Fishing for the village" + place + ".");   // [fleet] or out with the fleet
             case STORE -> "Keeping the stores in order. You wouldn't believe the mess.";
@@ -1340,7 +1345,10 @@ public final class FolkTalk {
         // [crime] The watch's business: a theft, a vandal, what a witness saw, a thing found at the scene.
         if (has(t, "theft", "thief", "steal", "stole", "robbed", "robber", "pickpocket", "vandal", "crime", "witness", "who did it",
                 "anything amiss", "seen anything", "report a", "the culprit", "evidence", "found this", "a clue", "forged", "forger",
-                "poach", "smuggl", "constable", "the stocks", "suspect")
+                "poach", "smuggl", "constable", "the stocks", "suspect",
+                // [police] the watch as the town's police: swearing in, the patrol, bounties, bail, the roster, the curfew
+                "swear me", "sworn in", "swear in", "deputy", "deputise", "deputize", "the patrol", "on patrol", "who's wanted",
+                "who is wanted", "anyone wanted", " bail", "roster", "on duty", "curfew", "watch house", "the cells", "prisoner")
                 || has(t, "i saw") && has(t, " take", " took", " steal", " stole", " broke", " break", " smash", " pinch", " nick",
                     " did it", " do it", " purse", " window", " lamp", " fence")) return TalkTopic.WATCH;
         // [nether] The Nether runners: their chart, going through with them, the Nether itself: before the maps and the guide.
@@ -1571,6 +1579,7 @@ public final class FolkTalk {
         List<Villages.News> n = Villages.news(village);
         if (!n.isEmpty()) said.add("Did you hear? " + cap(n.get(0).text()) + ".");
         said.addAll(Crime.gossip(f));                   // [crime] a thief about, who was had up, who sat in the stocks
+        said.addAll(Police.gossip(f));                  // [police] the chase, the arrest, a fight in the street, the curfew
         said.addAll(QuestTalk.gossip(f, p));                  // [quests] who did what for whom, and the story going on
         said.addAll(TownSpeech.gossip(f));                    // [culture2] who the town calls what now, and why
         said.addAll(Individual.gossip(f));                    // [individual] who's afraid of what, who's always where

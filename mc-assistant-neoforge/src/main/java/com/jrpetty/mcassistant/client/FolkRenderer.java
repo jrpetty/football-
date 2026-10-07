@@ -108,6 +108,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
             new HumanoidModel<>(context.bakeLayer(FolkArmourModel.INNER)),
             new HumanoidModel<>(context.bakeLayer(FolkArmourModel.OUTER))));
         this.addLayer(new TabardLayer(this, context.getModelSet()));      // [arms] a festival tabard of the town's arms
+        this.addLayer(new WatchLayer(this, new WatchModel(context.bakeLayer(WatchModel.LAYER))));   // [police] the sash, the coat, the badge
         this.addLayer(new NetherClient.CharmLayer(this, context.getItemInHandRenderer()));   // [nether] the gold charm on the brow
         this.addLayer(new ItemInHandLayer<>(this, context.getItemInHandRenderer()));
     }

@@ -258,6 +258,7 @@ public final class VillageCommands {
             .then(com.jrpetty.mcassistant.entity.Kitchen.command())         // [kitchen] /village items kitchen: its books; stage (ops)
             .then(com.jrpetty.mcassistant.entity.Fashion.command())         // [fashion] the season's look, the tailor's book, the show
             .then(com.jrpetty.mcassistant.entity.Crime.command())           // [crime] the casebook, the Cases page; a deed, a trial, the stocks staged
+            .then(com.jrpetty.mcassistant.entity.Police.command())          // [police] the watch: its books, the roster; stage, chase, fight, curfew (ops)
             .then(com.jrpetty.mcassistant.entity.Fleet.command())           // [fleet] /village fleet: the boats, the catch, the market
             .then(com.jrpetty.mcassistant.entity.Auctions.command())        // [fleet] /village auction: the lots, the bids, the sales
             .then(com.jrpetty.mcassistant.entity.Civics.donateCommand())    // [batchF] the public works fund

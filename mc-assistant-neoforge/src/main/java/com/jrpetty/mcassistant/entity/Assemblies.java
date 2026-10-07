@@ -1048,6 +1048,12 @@ public final class Assemblies {
         return NOW.get(village);
     }
 
+    /** [police] The gathering under way in a town, or null: the watch on event duty posts itself round it (Incidents.eventPost). */
+    @Nullable
+    static Assembly current(UUID village) {
+        return NOW.get(village);
+    }
+
     /** For the board: what is under way, or null. */
     @Nullable
     public static String now(UUID village) {

@@ -367,6 +367,7 @@ public final class McAssistantMod {
         com.jrpetty.mcassistant.item.FieldItems.register(modBus);      // [fields] the tools of the fields and the pens, the bees and the water
         com.jrpetty.mcassistant.item.InterviewItems.register(modBus);  // [interviews] the letter of application
         com.jrpetty.mcassistant.item.KitchenItems.register(modBus);    // [kitchen] the kitchen, the cellar and the healer's shelf
+        com.jrpetty.mcassistant.item.PoliceItems.register(modBus);     // [police] the Constable's Badge
         com.jrpetty.mcassistant.item.DishItems.register(modBus);       // [culture2] the towns' own dishes
         com.jrpetty.mcassistant.entity.TownWays.joinIdentity();        // [culture2] its sections of the Identity page
         com.jrpetty.mcassistant.entity.Perks.joinIdentity();           // [perks] its section of the Identity page, and the ethos's lean

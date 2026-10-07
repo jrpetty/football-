@@ -3437,6 +3437,61 @@ def perks_stage(r, look, cx, cz):
     say("alive after the perks: %s" % client_alive())
 
 
+
+def police_stage(r, look, cx, cz):
+    """[police] The watch as the town's police (entity/Police, Roster, WatchHouse, Beats, Incidents, PlayerLaw). By day,
+    /village police stage puts a watch house up on open ground south-east of the square if the town has none (on the
+    town's books, its cells fitted with iron bars and iron doors, its notice board and its casebook), locks a folk in a
+    cell for a night's disorder, sets a guard on the beat greeting a folk on the square by name, starts a folk running
+    down the east avenue with a guard after it, and has a guard walk another folk to the cells on a lead. Each scene
+    says where to look from (VIEW name eye target). Pictures, in the order the scenes run out: the chase while it is
+    on, the greeting on the beat while its words are up, the arrest on its lead on the way to the cells, the prisoner
+    behind the cell's bars, the watch house from the street, the board with the day's roster; then /village police
+    said, and the town's books open at the Watch page (the roster, the week's grid, the chart, the cells, the beats)."""
+    num = r"(-?\d+)"
+    pattern = r"VIEW (\S+) " + " ".join([num] * 6)
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    r.cmd("weather clear")
+    hy = ground_height(r, cx, cz)
+    sx, sz = cx + 46, cz + 40                          # open ground off the square for the watch house, if it wants one
+    r.cmd("tp %s %d %d %d" % (USER, cx + 20, hy + 14, cz + 20))
+    time.sleep(8)                                      # the ground arrives at the server and the client
+    out = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village police stage" % (sx, sz))
+    say("police stage: " + out[:1400])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(pattern, out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("no watch house staged; nothing to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            say("no view for %s; nothing to photograph" % name)
+            return
+        x, y, z, ax, ay, az = views[name]
+        look("43-police-" + picture, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    shoot("chase", "1-chase", 2)                       # while it runs: a guard is quick, and it is soon over
+    shoot("beat", "2-beat", 2)                         # "Afternoon, Bree. All well at home?", and the answer
+    shoot("arrest", "3-arrest", 3)                     # on the lead, walking to the cells
+    shoot("cell", "4-cell", 4)
+    shoot("house", "5-house", 4)
+    shoot("board", "6-board", 4)
+    say("police: " + r.cmd("execute positioned %d %d %d run village police" % (cx, hy + 1, cz))[:1400])
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
+    time.sleep(3)
+    say("books: " + r.cmd("execute as %s at @s run village police books" % USER))
+    time.sleep(4)
+    shot("43-police-7-page")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the police: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

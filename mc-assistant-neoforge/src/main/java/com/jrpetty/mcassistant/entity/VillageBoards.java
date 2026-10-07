@@ -483,6 +483,7 @@ public final class VillageBoards {
         String alarm = Raids.why(id);
         out.add(alarm != null ? "RB|THE BELL IS RINGING: " + alarm + "!" : "RM|The watch: all quiet.");
         out.addAll(Crime.board(level, id));                 // [crime] a theft reported, a trial, the stocks, the month's crime
+        out.addAll(Police.board(level, id));                // [police] today's roster and its captain, the cells, the wanted, the curfew
         out.addAll(Disasters.board(level, id));              // [disasters] a fire now, the flood, the drought, the rebuilding
         String kit = WatchKit.boardLine(id);                // [guard-kit] the watch, and what the town has it in
         if (kit != null) out.add("RN|" + kit);

@@ -281,6 +281,7 @@ public final class WatchClears {
         LivingEntity t = g.getTarget();
         if (t != null && t.isAlive()) return "after " + a(name(t));
         if (!bell && Patrols.escorting(g)) return "with the leader";       // the leader's, while it walks
+        if (!bell && Police.engaged(g)) return "on the watch's business";  // [police] a chase, a prisoner, a fight broken up
         if (g.talkPartner() != null || g.companionPlayer() != null || g.guidePlayer() != null) return "with a player";
         if (g.getHealth() < g.getMaxHealth() * 0.5F) return "hurt (" + (int) g.getHealth() + " of " + (int) g.getMaxHealth() + ")";
         if (g.shouldDisengage()) return "outmatched";
