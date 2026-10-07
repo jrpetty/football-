@@ -4384,8 +4384,9 @@ ripen, days pass, folk work and houses go up at that pace.
 * `/village watch` (or `watch kit`) — the watch's kit: each guard and what it wears and carries, what is
   on order for the watch, who makes it and what it is waiting on, the shop's book for the watch, what
   was made for it today, and what it has cost the town. `watch now` (operators) fits every guard out of
-  the stores at once; `watch stage` (operators, the client smoke) stands three guards in a row where you
-  are, in leather, iron and diamond (clear them with `/kill @e[tag=watch_kit_lineup]`).
+  the stores at once; `watch stage` (operators, the client smoke) stands three guards in a row on the
+  nearest dry, open ground to you, in leather, iron and diamond (clear them with
+  `/kill @e[tag=watch_kit_lineup]`).
 * `/village mine` — the town's mine: where it was opened, the faces worked out, who works which face and how deep
 * `/village stores` — the storehouse's day: its slots, its storekeeper, what went in and out
   and who served the requests, its last tidy, its staff and their runs, and its run list.

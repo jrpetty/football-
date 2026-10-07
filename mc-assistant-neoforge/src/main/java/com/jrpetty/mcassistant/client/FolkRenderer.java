@@ -6,7 +6,6 @@ import com.jrpetty.mcassistant.entity.VillageFolkEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.model.HumanoidModel;
-import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -98,9 +97,9 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         this.addLayer(new Colours(this));
         this.addLayer(new Finery(this));
         this.addLayer(new Glow(this));
-        this.addLayer(new Armour(this,
-            new HumanoidModel<>(context.bakeLayer(ModelLayers.PLAYER_INNER_ARMOR)),
-            new HumanoidModel<>(context.bakeLayer(ModelLayers.PLAYER_OUTER_ARMOR))));
+        this.addLayer(new Armour(this,                // [guard-kit] armour cut to a folk (FolkArmourModel)
+            new HumanoidModel<>(context.bakeLayer(FolkArmourModel.INNER)),
+            new HumanoidModel<>(context.bakeLayer(FolkArmourModel.OUTER))));
         this.addLayer(new ItemInHandLayer<>(this, context.getItemInHandRenderer()));
     }
 
@@ -188,8 +187,13 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
 
     /**
      * Armour, on a body the game's armour layer does not know: the game's own armour
-     * models, posed limb for limb like the folk under them, and let out a little —
-     * a folk's head is taller than a player's and its coat deeper than a chest.
+     * pictures on boxes cut to a folk (FolkArmourModel), posed limb for limb like the folk
+     * under them. [guard-kit] A model is a child's until it is told otherwise (the game's
+     * EntityModel starts out young, and its armour layer copies the wearer's age across): the
+     * armour was drawn as a child's, the body half size and low, the head shrunk, all of it
+     * inside the folk, and a guard in a full suit showed only a patch of grey at its collar.
+     * Now it is grown, sits just outside the folk, and the folk's coat and hair (and an apron,
+     * a shawl) are put away under it (FolkModel.setupAnim).
      */
     private static class Armour extends RenderLayer<VillageFolkEntity, FolkModel> {
         private final HumanoidModel<VillageFolkEntity> inner;
@@ -219,10 +223,11 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
             boolean legs = slot == EquipmentSlot.LEGS;
             HumanoidModel<VillageFolkEntity> model = legs ? inner : outer;
             FolkModel folkModel = getParentModel();
+            model.young = false;                     // [guard-kit] grown: a child's model is drawn half size
             model.setAllVisible(false);
-            follow(folkModel.getHead(), model.head, 1.0F, 1.2F, 1.0F);
-            follow(folkModel.getHead(), model.hat, 1.0F, 1.2F, 1.0F);
-            follow(folkModel.body(), model.body, 1.0F, 1.0F, 1.34F);
+            follow(folkModel.getHead(), model.head, 1.0F, 1.0F, 1.0F);
+            follow(folkModel.getHead(), model.hat, 1.0F, 1.0F, 1.0F);
+            follow(folkModel.body(), model.body, 1.0F, 1.0F, 1.0F);
             follow(folkModel.rightArm(), model.rightArm, 1.0F, 1.0F, 1.0F);
             follow(folkModel.leftArm(), model.leftArm, 1.0F, 1.0F, 1.0F);
             follow(folkModel.rightLeg(), model.rightLeg, 1.0F, 1.0F, 1.0F);
@@ -248,9 +253,9 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
             to.xRot = from.xRot;
             to.yRot = from.yRot;
             to.zRot = from.zRot;
-            to.xScale = xs;
-            to.yScale = ys;
-            to.zScale = zs;
+            to.xScale = from.xScale * xs;          // a child's big head keeps its helmet on
+            to.yScale = from.yScale * ys;
+            to.zScale = from.zScale * zs;
         }
     }
 
