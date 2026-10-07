@@ -652,6 +652,13 @@ public class PoliceGameTests {
         at(tempted, heart.offset(-36, 0, 0), Direction.NORTH);
         UUID village = beat.ownerId();
         Villages.Village v = Villages.get(village);
+        // The town's leader at its own work by the heart: a leader out about the streets has a guard walk with it, and a
+        // leader stood still out on a street all test long (the folk minded to steal, were it the leader) took the beat.
+        VillageFolkEntity leader = folk(helper, level, heart.offset(-4, 0, -4), "the leader");
+        leader.setJob(StationTask.FARM);
+        leader.setWorkZone(com.jrpetty.mcassistant.entity.WorkZone.around(leader.blockPosition(), 6, com.jrpetty.mcassistant.entity.WorkZone.DEFAULT_DEPTH));
+        leader.keepTradeForTests();
+        Villages.electElder(village, leader, level.getDayTime() / 24000L);
         Villages.builtAtForTests(village, "market", heart.offset(-12, 0, 12));
         tempted.setNoAi(true);
         BlockPos far = heart.offset(0, 0, 38);
@@ -675,10 +682,11 @@ public class PoliceGameTests {
         helper.onEachTick(() -> {
             long t = helper.getTick();
             if (phase[0] != 1) return;
-            if (t % 4 == 0) Police.dutyStepForTests(level, beat);
+            boolean onDuty = t % 4 != 0 || Police.dutyStepForTests(level, beat);
             double atMarket = Police.chanceAtForTests(level, village, market[0]);
             if (t % 100 == 0) Kit.log("pl06 tick " + t + ": the guard " + String.format("%.1f", Math.sqrt(beat.blockPosition().distSqr(market[0])))
-                + " from the market stop; the chance there " + String.format("%.2f", atMarket));
+                + " from the market stop; the chance there " + String.format("%.2f", atMarket) + "; its duty " + Police.dutyForTests(level, beat)
+                + (onDuty ? "" : " (the duty let it be)") + " | " + beat.debugLine());
             if (atMarket > 0.5) {
                 if (t > 1400) helper.fail("pl06 the beat never stood at the market");
                 return;

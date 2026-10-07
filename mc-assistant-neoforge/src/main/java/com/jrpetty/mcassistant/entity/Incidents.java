@@ -428,10 +428,12 @@ final class Incidents {
             lost(level, v, g, f, t, fled);
             return null;
         }
-        if (gt % 8 < 4 || g.getNavigation().isDone()) {
-            double speed = 1.3D + Math.min(0.25D, g.veteranLevel() / 80.0);
-            g.getNavigation().moveTo(f, speed);
-        }
+        // Every step, and to where the culprit will be a few strides on: a path to where it stood ran out short of it, and
+        // the guard, quicker as it is, trailed it by as far as it ran between paths (four blocks) clean out of the town.
+        double speed = 1.3D + Math.min(0.25D, g.veteranLevel() / 80.0);
+        net.minecraft.world.phys.Vec3 run = f.getDeltaMovement();
+        double ahead = Math.min(6.0, d);
+        if (!g.getNavigation().moveTo(f.getX() + run.x * ahead, f.getY(), f.getZ() + run.z * ahead, speed)) g.getNavigation().moveTo(f, speed);
         g.setSprinting(true);
         if ((gt - t.since) % 80 < 4 && gt > t.since + 20) {
             FolkTalk.speak(g, FolkTalk.pick(g.getRandom(), "Stop!", "In the name of the watch — stop!", "You can't run for ever, " + f.displayNameCap() + "!"));
