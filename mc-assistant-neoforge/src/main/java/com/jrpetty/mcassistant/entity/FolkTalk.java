@@ -334,6 +334,7 @@ public final class FolkTalk {
             line(sb, "Keeps", "the storehouse: its counter, its books" + (couriers > 0 ? ", and its " + couriers
                 + (couriers == 1 ? " courier" : " couriers") : ""));
         }
+        line(sb, "Wage", JobWorth.cardLine(f));            // [econ-wages] what it is paid and why: its job's worth here
         // Its schooling (a child: what it is learning and how far; the teacher: its school).
         line(sb, f.isBaby() ? "School" : "Teaches", School.cardLine(f));
         String levels = f.tradeLevels();

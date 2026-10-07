@@ -9,14 +9,15 @@ import net.minecraft.world.item.Tiers;
  * What a folk is worth, and what it is paid.
  *
  * <p>Every working folk is paid each morning out of the village's treasury (Market). The
- * wage is the trade's rate — a hand in the fields or the woods a coin a day, a miner, a guard
- * or a cook two, a smith, a tailor, a brewer or an enchanter three — times what the place is:
- * a hamlet pays the rate, a village half as much again, a town twice, a city two and a half
- * times and a capital three. On top: a coin at level ten and another at twenty-five, one for
- * the elder, and up to two for a good day's work, counted from what it actually did since it
- * was last paid. A tenth of it is the village's tax, and stays in the treasury (the poor pay
- * none). The coin comes from the village's own trade (market days, traders, gold minted into
- * coin, the tax, the tithe, the rent): none of it out of thin air.
+ * wage is what its job is worth (JobWorth): the town's pay level — what the place is, a hamlet
+ * the unit, a village half as much again, a town twice, a city two and a half times and a
+ * capital three, at what its treasury can afford — times the job's value to the town, how hard
+ * it is to fill, how hard it is and the skill it takes, and times the folk's own hand at it. It
+ * is never under a living wage (two meals and the rent) and never over five times the lowest.
+ * On top: one for the elder, and up to two for a good day's work, counted from what it actually
+ * did since it was last paid. A tenth of it is the village's tax, and stays in the treasury (the
+ * poor pay none). The coin comes from the village's own trade (market days, traders, gold minted
+ * into coin, the tax, the tithe, the rent): none of it out of thin air.
  *
  * <p>What it is worth is what it has saved (with its share of what its household has put by
  * toward buying its house: Homes), what it carries (valued at the market's
@@ -42,14 +43,14 @@ public final class Wealth {
         }
     }
 
-    /** What a trade pays a day, before level, office and a good day. */
+    /**
+     * [econ-wages] What a trade is worth in a hamlet's coin for how hard it is and the skill it takes, before its
+     * value to the town, its scarcity and the folk's own hand (JobWorth): a field hand 2, a miner 2, a smith 3.
+     * The fixed tiers of one, two and three a day it used to be are gone: a job is paid what it is worth.
+     */
     public static int baseWage(StationTask t) {
-        return switch (t) {
-            case NONE -> 0;
-            case FARM, WOOD, FISH, HAUL, STORE -> 1;
-            case MINE, RANCH, GUARD, SMELT, COOK, SHOP, BEEKEEP, SCOUT, HUNT -> 2;
-            case SMITH, TAILOR, BREW, ENCHANT, BANK -> 3;              // the banker too (Bank)
-        };
+        if (t == StationTask.NONE) return 0;
+        return Math.max(1, (int) Math.round(JobWorth.UNIT * JobWorth.wantedPost(t, null).difficulty()));
     }
 
     /** The bonus for what it did since it was last paid: two for a hard day, one for a fair one. */
@@ -85,20 +86,13 @@ public final class Wealth {
         };
     }
 
-    /** A trade's day's wage in this village, before level, office and a good day. */
-    public static int tradeWage(StationTask t, @javax.annotation.Nullable java.util.UUID village) {
-        int b = baseWage(t);
-        return b == 0 ? 0 : Math.max(1, (b * standing(village) + 5) / 10);
-    }
-
     /**
-     * Its share of what it made yesterday: a quarter of its output's worth, up to twice its trade's
-     * rate. The hardest workers are the best paid, in every trade: a farmer whose field has grown
-     * to twenty-five across earns more than one with a few rows.
+     * [econ-wages] A trade's posted day's wage in this village today: a journeyman's (level five), by what the job
+     * is worth here (JobWorth), before its own hand, office and a good day. A field hand's is what the rents are
+     * reckoned by (Homes).
      */
-    public static int madeShare(VillageFolkEntity f) {
-        int made = Economy.madeYesterday(f);
-        return made <= 0 ? 0 : Math.min(2 * tradeWage(f.stationTask(), f.ownerId()), made / 4);
+    public static int tradeWage(StationTask t, @javax.annotation.Nullable java.util.UUID village) {
+        return JobWorth.rate(t, village);
     }
 
     /** Today's wage: what its work earns, and a Haggler's twentieth more on top (FolkSkills). */
@@ -108,32 +102,25 @@ public final class Wealth {
         return w + FolkSkills.haggled(f, w);
     }
 
-    /** Today's wage before any haggling: its trade's rate, its level, its office, a good day and what it made. */
+    /**
+     * Today's wage before any haggling: what its job is worth here with its own hand at it (JobWorth), the
+     * teacher's mornings at the school, the elder's coin and a good day's work.
+     */
     static int earned(VillageFolkEntity f) {
-        int lv = f.veteranLevel();
-        return tradeWage(f.stationTask(), f.ownerId()) + (lv >= 10 ? 1 : 0) + (lv >= 25 ? 1 : 0) + (f.isElder() ? 1 : 0) + bonus(f)
-            + madeShare(f) + School.pay(f);                    // the village's teacher: a teacher's wage on top (School)
+        int w = JobWorth.payOf(f).total();                     // [econ-wages] pay by worth
+        // Anything paid on top of the job's worth (a guard's danger money in wartime, say) goes in here.
+        return w;
     }
 
-    /** How today's wage is made up: "6 as a smith in a town, +1 at level ten, +2 for a hard day". */
+    /** How today's wage is made up: "6 as a miner (2.00 pay level × ... = 5.71), +1 as the elder, +2 for a hard day's work". */
     public static String breakdown(VillageFolkEntity f) {
         if (f.isBaby() || f.stationTask() == StationTask.NONE) return "no trade, no wage";
-        int lv = f.veteranLevel(), b = bonus(f);
-        String place = f.ownerId() == null ? "hamlet" : Villages.rank(f.ownerId()).label.replace("a ", "");
-        StringBuilder sb = new StringBuilder();
-        // The couriers are the storehouse's staff (Couriers), and paid as such: the same rate.
-        sb.append(tradeWage(f.stationTask(), f.ownerId())).append(" as a ")
-            .append(f.stationTask() == StationTask.HAUL ? "courier of the storehouse"
-                : Workshop.isHand(f) ? "hand at the shop's bench"
-                : f.stationTask().title.toLowerCase(java.util.Locale.ROOT)).append(" in a ").append(place);
-        if (lv >= 10) sb.append(", +1 at level ten");
-        if (lv >= 25) sb.append(", +1 at twenty-five");
-        if (f.isElder()) sb.append(", +1 as the elder");
-        int teaching = School.pay(f);
-        if (teaching > 0) sb.append(", +").append(teaching).append(" for teaching the school");
+        JobWorth.Pay pay = JobWorth.payOf(f);
+        StringBuilder sb = new StringBuilder(JobWorth.figures(f));
+        if (pay.elder() > 0) sb.append(", +").append(pay.elder()).append(" as the elder");
+        if (pay.teaching() > 0) sb.append(", +").append(pay.teaching()).append(" for teaching the school");
+        int b = pay.deeds();
         if (b > 0) sb.append(", +").append(b).append(b == 2 ? " for a hard day's work" : " for a fair day's work");
-        int made = madeShare(f);
-        if (made > 0) sb.append(", +").append(made).append(" for what it made yesterday");
         int haggled = FolkSkills.haggled(f, earned(f));
         if (haggled > 0) sb.append(", +").append(haggled).append(" haggled (its knack)");
         return sb.toString();
@@ -161,13 +148,11 @@ public final class Wealth {
         return String.join(", ", out);
     }
 
-    /** The pay scale in a village of this standing, a line to each rate. */
+    /** [econ-wages] The pay scale in a village today, a line to each rate: what a journeyman at each job here is paid. */
     public static java.util.List<String> payScale(java.util.UUID village) {
         java.util.Map<Integer, java.util.List<String>> byPay = new java.util.TreeMap<>(java.util.Comparator.reverseOrder());
-        for (StationTask t : StationTask.values()) {
-            int w = tradeWage(t, village);
-            if (w <= 0) continue;
-            byPay.computeIfAbsent(w, k -> new java.util.ArrayList<>()).add(t.title.toLowerCase(java.util.Locale.ROOT));
+        for (JobWorth.Worth w : JobWorth.shown(JobWorth.scale(null, village))) {
+            byPay.computeIfAbsent(w.rate(), k -> new java.util.ArrayList<>()).add(w.post().title.toLowerCase(java.util.Locale.ROOT));
         }
         java.util.List<String> out = new java.util.ArrayList<>();
         for (var e : byPay.entrySet()) {
@@ -177,17 +162,17 @@ public final class Wealth {
     }
 
     /**
-     * The village's wages, on a page (the journal's Wages page, /village wages): what the place
-     * pays each trade, then everybody who works, best paid first, with what its wage is made of,
-     * what it has earned in all and what it is worth; then the richest.
+     * The village's wages, on a page (the journal's Wages page, /village wages): what every job is
+     * worth here and why (JobWorth), the living wage and the top of the scale, the day's bill against
+     * what comes in, then everybody who works, best paid first, with what its wage is made of, what
+     * it has earned in all and what it is worth; then the richest.
      */
     public static String wagesPage(net.minecraft.server.level.ServerLevel level, Villages.Village v) {
         java.util.UUID id = v.id();
         StringBuilder sb = new StringBuilder();
-        int st = standing(id);
-        sb.append("Pay in ").append(Villages.rank(id).label).append(": ").append(standingWords(st)).append(".\n");
-        for (String line : payScale(id)) sb.append(line).append(".\n");
-        sb.append("On top: a coin at level ten and another at twenty-five, one for the elder, and up to two for a hard day's work.\n");
+        sb.append("Pay in ").append(Villages.rank(id).label).append(".\n");
+        for (String line : JobWorth.pageLines(level, id)) sb.append(line).append("\n");      // [econ-wages] every job's worth
+        sb.append("On top: one for the elder, up to two for a hard day's work, and a Haggler's twentieth.\n");
         sb.append("A tenth of every wage stays in the treasury as the village's tax (the odd part of a coin carried to the next payday), "
             + "while the treasury holds less than a week's wages; the poor pay none"
             + (Market.taxing(id) ? "" : ". The treasury holds a week's wages now: no tax is taken") + ".\n");
@@ -204,8 +189,8 @@ public final class Wealth {
         int i = 0;
         for (VillageFolkEntity f : ranked) {
             if (++i > 40) { sb.append("... and ").append(ranked.size() - 40).append(" more.\n"); break; }
-            sb.append(i).append(". ").append(f.displayNameCap()).append(", ").append(f.stationTask().title.toLowerCase(java.util.Locale.ROOT))
-                .append(" L").append(f.veteranLevel()).append(" — ").append(wage(f)).append(" a day (").append(breakdown(f))
+            sb.append(i).append(". ").append(f.displayNameCap()).append(", ").append(JobWorth.postOf(f).noun())
+                .append(" L").append(f.veteranLevel()).append(" — ").append(wage(f)).append(" a day (").append(JobWorth.why(f, false))
                 .append("); ").append(f.earnedInAll()).append(" earned in all, worth ").append(worth(f)).append(".\n");
         }
         java.util.List<VillageFolkEntity> rich = new java.util.ArrayList<>();
@@ -280,7 +265,8 @@ public final class Wealth {
             + Bank.worthWords(f)
             + ", things worth " + belongings(f)
             + (f.comforts() > 0 ? ", " + f.comforts() + (f.comforts() == 1 ? " comfort" : " comforts") + " at home" : "")
-            + ". " + (wage > 0 ? "Paid " + wage + (wage == 1 ? " coin" : " coins") + " a day (" + breakdown(f) + "); "
+            // What the wage is and why is its card's Wage line (JobWorth.cardLine); here, only the sum.
+            + ". " + (wage > 0 ? "Paid " + wage + (wage == 1 ? " coin" : " coins") + " a day; "
                 + f.earnedInAll() + " earned in all." : "No wage yet: no trade.");
     }
 
@@ -291,11 +277,12 @@ public final class Wealth {
         java.util.List<VillageFolkEntity> ranked = byWage(id);
         if (ranked.isEmpty()) return "Nobody's on a wage yet. We're only just starting out.";
         VillageFolkEntity top = ranked.get(0);
-        String trade = top.stationTask().title.toLowerCase(java.util.Locale.ROOT);
-        String first = top == f ? "Me, as it happens — " + wage(f) + " a day as a " + trade + ". I've earned it, mind."
+        String trade = JobWorth.postOf(top).noun();
+        // [econ-wages] Why the best paid is paid what it is, as the town's pay scale has it (JobWorth.why).
+        String first = top == f ? "Me, as it happens — " + wage(f) + " a day as " + JobMarket.a(trade) + ": " + JobWorth.why(f, true)
+                + ". I've earned it, mind."
             : top.displayNameCap() + ", the " + trade + ": " + wage(top) + " a day. "
-              + (top.isElder() ? "The elder's pay, on top of the trade." : top.veteranLevel() >= 25 ? "Been at it longer than anyone."
-                 : baseWage(top.stationTask()) >= 3 ? "Skilled work pays." : "Works harder than the rest of us put together.");
+              + capital(JobWorth.why(top, false)) + (top.isElder() ? ", and the elder's coin on top." : ".");
         String place = Villages.rank(id).label;
         String scale = " In " + place + " like this a field hand gets " + tradeWage(StationTask.FARM, id) + ", a miner "
             + tradeWage(StationTask.MINE, id) + " and a smith " + tradeWage(StationTask.SMITH, id) + ".";
@@ -320,11 +307,12 @@ public final class Wealth {
         Tier t = tier(w);
         StationTask job = f.stationTask();
         String place = f.ownerId() == null ? "here" : "in " + Villages.rank(f.ownerId()).label;
-        int base = tradeWage(job, f.ownerId());
+        int paid = wage(f);
+        // [econ-wages] What it is paid, and why: the job's worth here and its own hand at it (JobWorth.why).
         String pay = job == StationTask.NONE ? "I've no trade yet, so no wage."
-            : "As a " + job.title.toLowerCase(java.util.Locale.ROOT) + " " + place + " I get " + base + (base == 1 ? " coin" : " coins")
-              + " a day from the treasury" + (wage(f) > base ? ", " + wage(f) + " with what I've earned on top" : "")
-              + (!Market.taxing(f.ownerId()) ? "" : t == Tier.POOR ? ", and no tax while I've next to nothing" : ", less a tenth for the village's tax")
+            : "As " + JobMarket.a(JobWorth.postOf(f).noun()) + " " + place + " I get " + paid + (paid == 1 ? " coin" : " coins")
+              + " a day from the treasury: " + JobWorth.why(f, true)
+              + (!Market.taxing(f.ownerId()) ? "" : t == Tier.POOR ? ". No tax while I've next to nothing" : ". Less a tenth for the village's tax")
               + (f.earnedInAll() > 0 ? " — " + f.earnedInAll() + " all told since I started" : "") + ".";
         String how = switch (t) {
             case POOR -> "Truth is, I'm poor. " + f.purse() + (f.purse() == 1 ? " coin" : " coins") + " to my name.";

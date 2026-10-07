@@ -31,8 +31,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p><b>Openings.</b> A town short of hands at a trade (a whole hand under its share, or nobody at
  * all at a trade it wants), or with a new workplace standing empty (a smithy with no smith, a café
  * with no cook; a school, a bank or a stable too, once the town has them), puts a notice up on its
- * village board: the trade, the wage it pays (its trade's rate at the place's standing, at the
- * leader's rate, the same coin it will really pay out of the treasury), and what it wants — some
+ * village board: the trade, the wage it pays (what the job is worth there, the more for being short of
+ * hands, at the leader's rate, the same coin it will really pay out of the treasury: JobWorth), and what it wants — some
  * years at the trade, and an age where it matters (the watch able-bodied, the mines strong backs, a
  * teacher an older, wiser head). Idle hands at home take up the first of the town's wants
  * themselves; a town that cannot pay posts nothing; three notices at most; a notice nobody answers
@@ -458,11 +458,13 @@ public final class JobMarket {
         return lv;
     }
 
-    /** What a place pays a hand of this trade a day: the trade's rate at its standing, at the leader's rate. */
+    /**
+     * What a place pays a hand of this trade a day: what the job is worth there for a hand of the years at it the
+     * notice asks for, at the leader's rate (JobWorth.offer). A trade the town is short of is worth more there, so
+     * its notice offers more. [econ-wages]
+     */
     public static int offer(@Nullable StationTask t, UUID town) {
-        int base = t == null ? 0 : Wealth.tradeWage(t, town);
-        if (base <= 0) base = Math.max(1, (2 * Wealth.standing(town) + 5) / 10);
-        return Math.max(1, (int) Math.round(base * Leader.payRate(town) / 100.0));
+        return JobWorth.offer(t, town);
     }
 
     /** What a hand can count on there: the wage, at what the place's last payday really paid. */
@@ -471,11 +473,15 @@ public final class JobMarket {
         return share < 0 ? wage : (int) Math.floor(wage * Math.min(100, share) / 100.0);
     }
 
-    /** What this folk is paid at home now: its trade's rate there, at what the place really pays. */
+    /**
+     * What this folk is paid at home now: its own wage there (its job's worth and its own hand at it), at the
+     * leader's rate and at what the place really pays. A skilled hand weighs a notice against what it really
+     * earns, not against what a beginner at its trade would. [econ-wages]
+     */
     static int paidNow(VillageFolkEntity f) {
         UUID home = f.ownerId();
         if (home == null || f.stationTask() == StationTask.NONE) return 0;
-        return likely(offer(f.stationTask(), home), home);
+        return likely(JobWorth.atLeadersRate(home, Wealth.wage(f)), home);
     }
 
     /** Can the town pay the wage? A town with no treasury yet pays from its first payday; one that pays short posts nothing. */

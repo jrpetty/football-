@@ -354,6 +354,7 @@ public final class Market {
         Annals.record(level, v, day);                    // and the morning written into the town's books
         Leader.morning(level, v, day);                   // the leader's books, the plan and the day's pay
         CityTree.morning(level, v, day);                 // the day's research points, and the leader's next civic
+        JobWorth.morning(level, v, day);                 // [econ-wages] the day's pay scale: what every job is worth
         mint(level, v);
         int sold = trade(level, v);
         takings(level, v, sold);                         // what the village made yesterday is its revenue
@@ -578,7 +579,7 @@ public final class Market {
             int w = wage(f);
             if (w <= 0) continue;
             // At the rate the leader set today (Leader.payRate): over the odds, or part held back.
-            w = Math.max(1, (int) Math.round(w * Leader.payRate(id) / 100.0));
+            w = JobWorth.atLeadersRate(id, w);         // [econ-wages] never under the living wage
             hands.add(f);
             wages.add(w);
             bill += w;

@@ -1215,6 +1215,7 @@ public class CityScreen extends Screen {
             boolean picked = j.getString("id").equals(selectedTrade);
             boolean over = mx >= x && mx < x + cw && my >= ry && my < ry + 11;
             g.fill(x - 2, ry - 1, x + cw, ry + 10, picked ? Ui.ROW_PICK : over ? Ui.HI : (i % 2 == 0 ? Ui.ROW : Ui.ROW_ALT));
+            if (over) worthTip(j.getString("id"), mx, my);                 // [econ-wages] what the job is worth here, part by part
             Ui.chip(g, x, ry + 1, Ui.job(j.getInt("ordinal")));
             g.drawString(font, Ui.clip(font, j.getString("title"), 80), x + 10, ry + 1, Ui.INK, false);
             g.drawString(font, Integer.toString(j.getInt("hands")), x + cols[1], ry + 1, Ui.INK, false);
@@ -1240,6 +1241,7 @@ public class CityScreen extends Screen {
         if (jobs.size() > maxRows) small(g, "(scroll for more trades)", x, ry, Ui.FAINT);
         // The chosen trade's history, or the five biggest earners'.
         int cy = y + tableH + 8;
+        cy = payScaleLines(g, x, cy, cw, mx, my);                          // [econ-wages] the living wage, the top, the bill
         // The horses the couriers and scouts ride, and the donkeys the caravans load (Stables).
         String horses = horsesLine();
         if (horses != null) {
@@ -1261,6 +1263,38 @@ public class CityScreen extends Screen {
             chart(g, x + half + 6, cy, half, chartH, "Hands, the five biggest trades", mx, my,
                 tradeSeries("trade_hands", 5).toArray(new Series[0]));
         }
+    }
+
+    /** [econ-wages] The mouse over a trade on the Jobs page: what each of its jobs is worth here, part by part (JobWorth). */
+    private void worthTip(String trade, int mx, int my) {
+        String worth = data.getCompound("payscale").getCompound("rows").getString(trade);
+        if (worth.isEmpty()) return;
+        List<Component> tip = new ArrayList<>();
+        for (String part : worth.split("\n")) {
+            for (FormattedCharSequence l : font.split(Component.literal(part), 260)) tip.add(Component.literal(toPlain(l)));
+        }
+        hover = tip;
+        hoverX = mx;
+        hoverY = my;
+    }
+
+    /** [econ-wages] The pay scale's head under the trades (JobWorth.summary), a line each; the mouse over one for all of it. */
+    private int payScaleLines(GuiGraphics g, int x, int cy, int cw, int mx, int my) {
+        net.minecraft.nbt.ListTag lines = data.getCompound("payscale").getList("summary", net.minecraft.nbt.Tag.TAG_STRING);
+        for (int i = 0; i < lines.size(); i++) {
+            String text = lines.getString(i);
+            String shown = Ui.clip(font, text, (int) (cw / 0.75));
+            small(g, shown, x, cy - 4, text.contains("(over it") ? Ui.BAD : Ui.MUTED);
+            if (!shown.equals(text) && mx >= x && mx < x + cw && my >= cy - 4 && my < cy + 5) {
+                List<Component> tip = new ArrayList<>();
+                for (FormattedCharSequence l : font.split(Component.literal(text), 260)) tip.add(Component.literal(toPlain(l)));
+                hover = tip;
+                hoverX = mx;
+                hoverY = my;
+            }
+            cy += 8;
+        }
+        return cy;
     }
 
     /** The stable's line ("3 horses (2 saddled) · 1 donkey (1 with a chest) · ..."), or null when the village has none of it. */
@@ -1378,6 +1412,9 @@ public class CityScreen extends Screen {
                 tip.add(Component.literal("Net worth: " + p.getInt("worth") + "c — " + p.getString("wealth")).withColor(0x9EE07A));
                 tip.add(Component.literal("Paid " + p.getInt("wage") + "c a day; " + p.getInt("earned") + "c earned in all").withColor(0x9AA3B2));
                 if (!p.getString("ill").isEmpty()) tip.add(Component.literal("Ill: " + p.getString("ill")).withColor(0xE0A070));   // [batchA]
+                if (!p.getString("why").isEmpty()) {                        // [econ-wages] and why (JobWorth)
+                    for (FormattedCharSequence l : font.split(Component.literal(p.getString("why")), 260)) tip.add(Component.literal(toPlain(l)).withColor(0x9AA3B2));
+                }
                 hover = tip;
                 hoverX = mx;
                 hoverY = my;

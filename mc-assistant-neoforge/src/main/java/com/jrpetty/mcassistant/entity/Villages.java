@@ -386,6 +386,7 @@ public final class Villages {
         Market.resetForTests();
         PriceIndex.resetForTests();         // [econ-prices] the towns' prices
         Purchases.resetForTests();          // [econ-prices] the folk's accounts at the counter
+        JobWorth.resetForTests();           // [econ-wages] the day's pay scales
         Homeland.resetForTests();
         Economy.resetForTests();
         Scouts.resetForTests();

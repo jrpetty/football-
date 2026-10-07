@@ -896,6 +896,48 @@ def economy_stage(r, look, cx, cz):
     say("alive after the economy: %s" % client_alive())
 
 
+def wages_stage(r, look, cx, cz):
+    """What every job is worth (entity/JobWorth): the day's pay scale drawn up now; the wages page on the screen
+    (the pay level, the lowest wage against the cost of living, the bill against what comes in, every job's worth
+    part by part, and who is paid what and why); the cards of the three best paid, each a couple of blocks off
+    so the talk screen stays open, at the About page with its Wage line; and the town's books at the Jobs page,
+    the pay scale's lines under the trades. Best called after the stats stage, so the books have days in them."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    midday(r)
+    r.cmd("gamemode creative %s" % USER)
+    gy = ground_height(r, cx, cz)
+    r.cmd("tp %s %d %d %d" % (USER, cx, gy + 1, cz))
+    time.sleep(4)
+    say("wages reckon: " + r.cmd("execute as %s at @s run village wages reckon" % USER)[:600])
+    say("wages: " + r.cmd("execute as %s at @s run village wages" % USER)[:1500])
+    say("wages show: " + r.cmd("execute as %s at @s run village wages show" % USER))
+    time.sleep(4)
+    shot("wages-1-page")
+    for n in (1, 2, 3):
+        out = r.cmd("execute as %s at @s run village wages card %d" % (USER, n))
+        say("wages card %d: %s" % (n, out[:400]))
+        m = re.search(r"CARD (.+?) (-?\d+) (-?\d+) (-?\d+) ", out)
+        if not m:
+            continue
+        fx, fy, fz = int(m.group(2)), int(m.group(3)), int(m.group(4))
+        # Two and a half blocks east of it, looking at it: the talk screen shuts past ten blocks.
+        px, pz = fx + 3.0, fz + 0.5
+        yaw = math.degrees(math.atan2(-(fx + 0.5 - px), fz + 0.5 - pz))
+        r.cmd("tp %s %.2f %d %.2f %.1f 10" % (USER, px, fy, pz, yaw))
+        time.sleep(3)
+        say("wages card %d, close to: %s" % (n, r.cmd("execute as %s at @s run village wages card %d" % (USER, n))[:200]))
+        time.sleep(3)
+        shot("wages-%d-card" % (n + 1))
+    r.cmd("tp %s %d %d %d" % (USER, cx, gy + 1, cz))
+    time.sleep(2)
+    say("wages books: " + r.cmd("execute as %s at @s run village wages books" % USER))
+    time.sleep(4)
+    shot("wages-5-jobs-page")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the wages: %s" % client_alive())
+
+
 def fields_stage(r, look, cx, cz):
     """The town's tended fields (entity/Fields): what /village larder says of the food in, by where it
     came from, and of the fields' pace; then the first farmer's field from above, its torches round the
@@ -1618,6 +1660,10 @@ def main():
         store_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("store stage failed: %s" % e)
+    try:
+        wages_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("wages stage failed: %s" % e)
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the founding: %s" % client_alive())
     try:

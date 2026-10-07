@@ -543,6 +543,7 @@ public final class Annals {
         List<VillageFolkEntity> folk = new ArrayList<>();
         for (AssistantEntity a : Villages.folkOf(id)) if (a instanceof VillageFolkEntity f && !f.isShowcase()) folk.add(f);
         out.put("jobs", jobs(id, folk, days));
+        JobWorth.intoBooks(level, id, out);                      // [econ-wages] every job's worth, for the Jobs page
         out.put("people", people(level, id, folk, today));
         out.put("players", players(level, id));
         out.put("leader", leader(level, id, folk, today));
@@ -677,6 +678,7 @@ public final class Annals {
                 c.putInt("goods", Wealth.belongings(f));
                 c.putInt("comforts", f.comforts() * 3);
                 c.putInt("earned", f.earnedInAll());
+                c.putString("why", JobWorth.cardLine(f));         // [econ-wages] its wage and why
             }
             c.putString("partner", f.life().partnerName());
             c.putBoolean("leader", f.getUUID().equals(Villages.elder(id)));
