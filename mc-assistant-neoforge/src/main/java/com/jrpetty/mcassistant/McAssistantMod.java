@@ -187,6 +187,21 @@ public final class McAssistantMod {
     public static final DeferredItem<net.minecraft.world.item.Item> VILLAGE_COIN =
         ITEMS.registerSimpleItem("village_coin");
 
+    /** [transport] The ferry bell: stands on the bank by each of a ferry's landings; rung, it calls the ferry over
+     *  (block/FerryBellBlock, entity/Ferries). Made at the bench of a copper ingot, a stick and two planks. */
+    public static final DeferredBlock<com.jrpetty.mcassistant.block.FerryBellBlock> FERRY_BELL =
+        BLOCKS.registerBlock("ferry_bell",
+            com.jrpetty.mcassistant.block.FerryBellBlock::new,
+            BlockBehaviour.Properties.of()
+                .mapColor(MapColor.COLOR_ORANGE)
+                .strength(1.5F, 3.0F)
+                .sound(SoundType.COPPER)
+                .noOcclusion()
+                .requiresCorrectToolForDrops());
+
+    public static final DeferredItem<BlockItem> FERRY_BELL_ITEM =
+        ITEMS.registerSimpleBlockItem(FERRY_BELL);
+
     /** The mod's own creative tab: everything it adds, in one place, the village folk spawner first. */
     public static final DeferredHolder<net.minecraft.world.item.CreativeModeTab, net.minecraft.world.item.CreativeModeTab> TAB =
         TABS.register("village_folk", () -> net.minecraft.world.item.CreativeModeTab.builder()
@@ -204,6 +219,7 @@ public final class McAssistantMod {
                 out.accept(ZONE_MARKER.get());
                 out.accept(PLACE_MARKER.get());
                 out.accept(MEMORY_CORE.get());
+                out.accept(FERRY_BELL_ITEM.get());                       // [transport]
             })
             .build());
 
@@ -253,6 +269,7 @@ public final class McAssistantMod {
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Founding.class);
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.WarScouting.class);   // [war-scouting] spies, pickets, captives
         NeoForge.EVENT_BUS.register(TimeSpeed.class);
+        NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Transport.class);    // [transport] railways, carts, ferries, bridges
     }
 
     private void onEntityAttributes(EntityAttributeCreationEvent event) {
@@ -270,6 +287,7 @@ public final class McAssistantMod {
             event.accept(JOB_BOARD_ITEM);
             event.accept(STOREHOUSE_ITEM);
             event.accept(VILLAGE_BOARD_ITEM);
+            event.accept(FERRY_BELL_ITEM);                               // [transport]
         }
         if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
             event.accept(VILLAGE_COIN);

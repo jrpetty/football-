@@ -107,7 +107,9 @@ public final class Villages {
         // The banker, once the bank stands: one, and chosen for its nature (Bank.appoint), not by who asks first.
         new Slot(AssistantEntity.StationTask.BANK, 1, Bank.FROM, Age.IRON, 1),
         // [caves] The cave dwellers: from twenty-five in the Iron Age, one to every twenty-seven, four at most (CaveDwellers).
-        new Slot(AssistantEntity.StationTask.CAVE, 1, CaveDwellers.FROM, Age.IRON, CaveDwellers.MOST));
+        new Slot(AssistantEntity.StationTask.CAVE, 1, CaveDwellers.FROM, Age.IRON, CaveDwellers.MOST),
+        // [transport] The ferryman: one, while the town's ferry runs (Ferries), whatever its size and age.
+        new Slot(AssistantEntity.StationTask.FERRY, 1, 1, Age.WOOD, 1));
 
     /** Forget every settlement. For tests, which share one JVM and would
      *  otherwise inherit each other's villages. */
@@ -826,6 +828,7 @@ public final class Villages {
         // good, and every newcomer it sent to the trade looked for the water that was not there.
         if (trade == AssistantEntity.StationTask.FISH) return !dryForFishers(villageId);
         if (trade == AssistantEntity.StationTask.CAVE) return CaveDwellers.ready(villageId);   // [caves] a few miners and a watch first
+        if (trade == AssistantEntity.StationTask.FERRY) return Ferries.wanted(villageId);      // [transport] while the ferry runs
         if (trade == AssistantEntity.StationTask.STORE || trade == AssistantEntity.StationTask.HAUL) {
             return villageId != null && (Storehouses.stands(villageId) || hasBuilt(villageId, "storage")
                 || builtAt(villageId, "storage") != null);
@@ -895,6 +898,7 @@ public final class Villages {
         double t = (slot.weight() + boost) * total / (double) VILLAGE_SIZE * Orders.scale(villageId)
             * glut(villageId, slot.trade()) * Homeland.lean(villageId, slot.trade());
         if (slot.trade() == AssistantEntity.StationTask.CAVE) t = t * VILLAGE_SIZE / CaveDwellers.PER;   // [caves] one to twenty-seven
+        if (slot.trade() == AssistantEntity.StationTask.FERRY) t = Ferries.wanted(villageId) ? 1.0 : 0.0;  // [transport] one ferryman
         // A courier for every five workers out on plots of their own (their production chests).
         if (slot.trade() == AssistantEntity.StationTask.HAUL && villageId != null) {
             int producers = 0;
@@ -2670,6 +2674,8 @@ public final class Villages {
         int hz = turned ? lot.halfAcross() : lot.halfDeep();
         if (lot.kind() == com.jrpetty.mcassistant.village.TownPlan.Kind.SQUARE) return false;
         if (onFarmland(villageId, lot.x(), lot.z(), hx, hz)) return true;
+        if (Railways.crosses(villageId, heart.getX() + lot.x() - hx, heart.getZ() + lot.z() - hz,
+                heart.getX() + lot.x() + hx, heart.getZ() + lot.z() + hz)) return true;   // [transport] a railway runs there
         for (AssistantEntity a : folkOf(villageId)) {
             AssistantEntity.StationTask t = a.stationTask();
             if (t != AssistantEntity.StationTask.FARM && t != AssistantEntity.StationTask.RANCH

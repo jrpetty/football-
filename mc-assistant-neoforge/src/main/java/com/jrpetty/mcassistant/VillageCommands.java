@@ -239,6 +239,7 @@ public final class VillageCommands {
             .then(com.jrpetty.mcassistant.entity.Civics.command())          // [batchF] the town's affairs
             .then(com.jrpetty.mcassistant.entity.WatchKit.command())        // [guard-kit] the watch's kit, on order, and its cost
             .then(com.jrpetty.mcassistant.entity.WatchClears.command())     // [watch-clears] /village monsters: about, killed, fallen
+            .then(com.jrpetty.mcassistant.entity.Transport.command())       // [transport] /village transport: lines, carts, ferry, bridge
             .then(com.jrpetty.mcassistant.entity.CaveDwellers.command())    // [caves] the cave dwellers and the caves' report
             .then(com.jrpetty.mcassistant.entity.Civics.donateCommand())    // [batchF] the public works fund
             // [flats] The village's blocks of flats: each flat, who lives there, on what terms. `stage`
@@ -561,6 +562,7 @@ public final class VillageCommands {
                     case HUNT -> net.minecraft.world.item.Items.BOW;
                     case BANK -> net.minecraft.world.item.Items.GOLD_INGOT;
                     case CAVE -> net.minecraft.world.item.Items.LANTERN;          // [caves]
+                    case FERRY -> net.minecraft.world.item.Items.OAK_BOAT;        // [transport]
                     case NONE -> net.minecraft.world.item.Items.AIR;
                 }));
             folk.rename(switch (trades[i]) {

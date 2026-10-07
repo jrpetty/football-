@@ -1,0 +1,56 @@
+# [transport] A railway station: a platform of slabs beside the track, two posts carrying a roof over the
+# platform and the track both, a lantern hung under it, and the buffer stop at the end of the line (a lever
+# on it works the two powered rails beside it: Railways). The track itself (the middle column) is the line's
+# to lay, not the drawing's, and the signpost stands at the platform's open end.
+# Rows run from the back of the building (top: the buffer end) to the front (bottom: the way the line goes out).
+name station
+layer -1
+..F..
+...FF
+...FF
+...FF
+...FF
+...FF
+...FF
+...FF
+.....
+layer 0
+..S..
+...ss
+...ss
+...ss
+...ss
+...ss
+...ss
+...ss
+.....
+layer 1
+.....
+....P
+.....
+.....
+.....
+.....
+.....
+....P
+.....
+layer 2
+.....
+....P
+.....
+.....
+...j.
+.....
+.....
+....P
+.....
+layer 3
+.....
+..___
+..___
+..___
+..___
+..___
+..___
+..___
+.....

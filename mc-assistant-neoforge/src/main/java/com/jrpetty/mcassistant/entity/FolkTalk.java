@@ -640,6 +640,8 @@ public final class FolkTalk {
             return f.trip().homeward() ? "Taking the caravan home to " + where + ", with what they could spare."
                 : "Taking the caravan to " + where + " — the colony needs what we've got.";
         }
+        String about = Transport.doing(f);                      // [transport] on its way by the cart or the ferry
+        if (about != null) return cap(about) + ".";
         String hobby = f.hobbyNow();
         if (hobby != null) return pick(r, "My own time now — ", "Day's work's done, so ") + hobby + ".";
         if (f.offWorkNow() && f.onShift()) return pick(r, "Taking a breather. ", "A short break. ") + "Back to work in a bit.";
@@ -687,6 +689,7 @@ public final class FolkTalk {
                 "Hunting" + place + ". Only the full-grown, mind, and never the last pair.");
             case BANK -> Bank.doing(f, r);                // the banker: its books, its vault, its borrowers
             case CAVE -> CaveDwellers.doing(f, r);        // [caves] down the caves, or home with the report
+            case FERRY -> Ferries.doing(f, r);            // [transport] at the landing, or out on the water
         };
         if (!f.missingEssentials().isEmpty()) work += " Or I would be, if I had " + f.missingEssentials().get(0) + ".";
         if (f.life().has(Social.Trait.HARDWORKING) && r.nextBoolean()) work += " Can't stop long.";
