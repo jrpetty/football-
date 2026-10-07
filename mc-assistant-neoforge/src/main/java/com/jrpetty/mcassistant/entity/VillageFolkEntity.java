@@ -154,6 +154,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // [guard-kit] A guard going to live in another town leaves the watch's kit in its old town's stores.
         if (ownerId() != null && !ownerId().equals(village) && stationTask() == StationTask.GUARD) WatchKit.handBack(this, "leaving the town");
         if (ownerId() != null && !ownerId().equals(village) && stationTask() == StationTask.CAVE) CaveDwellers.handBack(this, "leaving the town");   // [caves]
+        if (ownerId() != null && !ownerId().equals(village) && stationTask() == StationTask.NETHER) NetherRunners.handBack(this, "leaving the town");   // [nether]
         this.villageCentre = centre;
         adoptVillage(village);
         setHome(centre);
@@ -320,6 +321,9 @@ public class VillageFolkEntity extends AssistantEntity {
             FolkTalk.speak(this, laterLine);
             laterLine = null;
         }
+        // [nether] Out on a Nether run, on either side of the gateway (or one of the town's in the Nether by itself): the
+        // run is its day, and nothing of the town's that would send it home to bed or the square reaches it (NetherRuns).
+        if (level() instanceof net.minecraft.server.level.ServerLevel runs && NetherRuns.hold(this, runs)) return;
         if (tickCount % 20 == 17) Aboard.step(this);           // [mine-safety] out of a boat it never meant to board
         // [transport] Sat in a cart or the ferry: the ride (or the rowing) is its day till it is off again.
         if (level() instanceof net.minecraft.server.level.ServerLevel riding && Transport.aboard(this)) {
@@ -1332,6 +1336,7 @@ public class VillageFolkEntity extends AssistantEntity {
     protected void tradeTakenUp(StationTask from, StationTask to) {
         if (from == StationTask.GUARD && to != StationTask.GUARD) WatchKit.handBack(this, "off the watch");   // [guard-kit] the town's kit
         if (from == StationTask.CAVE && to != StationTask.CAVE && to != StationTask.GUARD) CaveDwellers.handBack(this, "out of the caves");   // [caves]
+        if (from == StationTask.NETHER && to != StationTask.NETHER) NetherRunners.handBack(this, "off the Nether runs");   // [nether]
         if (tickCount < 40 || to == StationTask.NONE || !persona.rolled()) return;    // loading, or not settled yet
         long day = level().getDayTime() / 24000L;
         int lv = tradeLevel(to);
@@ -1494,6 +1499,7 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     public void die(net.minecraft.world.damagesource.DamageSource cause) {
         if (!level().isClientSide) WarAndPeace.died(this, cause, level().getDayTime() / 24000L);   // [war-peace] lost to the war (before its errand is let go)
+        if (!level().isClientSide) NetherRuns.fell(this, cause);         // [nether] lost on a Nether run: the team and the town know where
         if (!level().isClientSide) Fashion.died(this);                   // [fashion] what it wore falls where it fell, with its pack
         if (trip != null && level() instanceof net.minecraft.server.level.ServerLevel road) Caravans.abandon(road, this);
         if (level() instanceof net.minecraft.server.level.ServerLevel horses) Riding.fell(horses, this);   // a horse it had out (Riding)
@@ -4205,6 +4211,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (stationTask() == StationTask.GUARD && path.startsWith("iron_")) return true;
         if (stationTask() == StationTask.GUARD && WatchKit.kitPath(path)) return true;   // [guard-kit] the town's kit, at any level
         if (stationTask() == StationTask.CAVE && (WatchKit.kitPath(path) || path.endsWith("_pickaxe"))) return true;   // [caves] the same
+        if (stationTask() == StationTask.NETHER && (WatchKit.kitPath(path) || path.endsWith("_pickaxe") || path.startsWith("golden_"))) return true;   // [nether]
         return super.mayUseTier(s);
     }
 
@@ -4528,6 +4535,7 @@ public class VillageFolkEntity extends AssistantEntity {
             case BANK -> "The Bank";
             case CAVE -> "The Caves";             // [caves]
             case FERRY -> "The Ferry";            // [transport]
+            case NETHER -> "The Gateway";         // [nether]
             default -> "The Commons";
         };
         // Two farms in one village should not share a name.
@@ -5732,6 +5740,20 @@ public class VillageFolkEntity extends AssistantEntity {
         return level() instanceof net.minecraft.server.level.ServerLevel server && Ferries.duty(this, server);
     }
 
+    /** [nether] A Nether runner's day at home (NetherRunners): fitted out and through the gateway of a morning, else at
+     *  its post by the gateway with the charts, resting and healing after a run. */
+    @Override
+    protected boolean netherWork() {
+        return level() instanceof net.minecraft.server.level.ServerLevel server && NetherRunners.work(this, server);
+    }
+
+    /** [nether] A town's folk never stumble through a portal: the Nether runners go through the gateway on purpose
+     *  (NetherRuns.cross), and nobody else does. A hired hand goes where its player goes, as before. */
+    @Override
+    public boolean canUsePortal(boolean allowPassengers) {
+        return isHired() && super.canUsePortal(allowPassengers);
+    }
+
     /** A village's storekeeper keeps its stores in order from the first day, not from its
      *  tenth level: nothing else a storekeeper does earns it the experience to get there. */
     @Override
@@ -5797,6 +5819,7 @@ public class VillageFolkEntity extends AssistantEntity {
      */
     @Override
     protected boolean carriesChunkWindow() {
+        if (NetherRuns.elsewhere(this)) return false;          // [nether] out of its town's world: the run keeps its own (NetherRuns)
         if (super.carriesChunkWindow()) return true;
         UUID village = ownerId();
         BlockPos heart = villageCentre;
@@ -8092,7 +8115,8 @@ public class VillageFolkEntity extends AssistantEntity {
             // its settlement back on the map for the rest — age, buildings
             // and all.
             UUID id = ownerId();
-            if (id != null) {
+            // [nether] Not from a Nether runner loaded in the Nether: the town is on the map of its own world, not this one.
+            if (id != null && !NetherRuns.loadedAway(this)) {
                 Villages.Age age = Villages.Age.WOOD;
                 try {
                     if (tag.contains("VillageAge")) age = Villages.Age.valueOf(tag.getString("VillageAge"));

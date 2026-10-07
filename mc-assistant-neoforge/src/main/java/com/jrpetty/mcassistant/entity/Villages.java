@@ -110,7 +110,10 @@ public final class Villages {
         // chosen by the town from its most skilled (CaveDwellers.team, appoint).
         new Slot(AssistantEntity.StationTask.CAVE, 1, CaveDwellers.FROM, Age.IRON, CaveDwellers.MOST),
         // [transport] The ferryman: one, while the town's ferry runs (Ferries), whatever its size and age.
-        new Slot(AssistantEntity.StationTask.FERRY, 1, 1, Age.WOOD, 1));
+        new Slot(AssistantEntity.StationTask.FERRY, 1, 1, Age.WOOD, 1),
+        // [nether] The Nether runners: once the gateway is lit in the Nether Age, one; two at sixty folk, three at a hundred,
+        // picked by the town from its veterans (NetherRunners.team, appoint).
+        new Slot(AssistantEntity.StationTask.NETHER, 1, NetherRunners.FROM, Age.NETHER, NetherRunners.MOST));
 
     /** Forget every settlement. For tests, which share one JVM and would
      *  otherwise inherit each other's villages. */
@@ -641,6 +644,7 @@ public final class Villages {
         java.util.Set<BlockPos> out = new java.util.HashSet<>();
         for (AssistantEntity a : folkOf(villageId)) if (a.bedPos() != null) out.add(a.bedPos());
         out.addAll(CaveDwellers.awayBeds(villageId));          // [caves] the cave team's, away on a trip, stay theirs
+        out.addAll(NetherRuns.awayBeds(villageId));            // [nether] and the Nether runners', away through the gateway
         return out;
     }
 
@@ -697,6 +701,7 @@ public final class Villages {
             if (!craftReady(villageId, slot.trade())) continue;   // a smith with no smithy has nothing to work at
             if (slot.trade() == AssistantEntity.StationTask.BANK) continue;   // the banker is appointed (Bank.appoint)
             if (slot.trade() == AssistantEntity.StationTask.CAVE) continue;   // [caves] the team is chosen (CaveDwellers.appoint)
+            if (slot.trade() == AssistantEntity.StationTask.NETHER) continue;   // [nether] the runners are picked (NetherRunners.appoint)
             double target = target(villageId, slot, total) * fit;
             double deficit = target - have.getOrDefault(slot.trade(), 0);
             // The first hand of a craft the village has grown into comes before one more of a trade
@@ -756,6 +761,7 @@ public final class Villages {
             if (slot.age() == Age.WOOD || !wantedHere(slot, villageId, total, at)) continue;
             if (slot.trade() == AssistantEntity.StationTask.BANK) continue;   // the banker is appointed (Bank.appoint)
             if (slot.trade() == AssistantEntity.StationTask.CAVE) continue;   // [caves] the team is chosen (CaveDwellers.appoint)
+            if (slot.trade() == AssistantEntity.StationTask.NETHER) continue;   // [nether] the runners are picked (NetherRunners.appoint)
             if (have.getOrDefault(slot.trade(), 0) > 0) continue;
             if (craftReady(villageId, slot.trade())) return slot.trade();
         }
@@ -768,6 +774,7 @@ public final class Villages {
         for (Slot slot : SLOTS) {
             if (!wantedHere(slot, villageId, total, at) || slot.trade().isCraft() || slot.trade() == AssistantEntity.StationTask.GUARD) continue;
             if (slot.trade() == AssistantEntity.StationTask.CAVE) continue;   // [caves] the team is chosen (CaveDwellers.appoint)
+            if (slot.trade() == AssistantEntity.StationTask.NETHER) continue;   // [nether] the runners are picked (NetherRunners.appoint)
             if (!craftReady(villageId, slot.trade())) continue;
             double short_ = target(villageId, slot, total) * fit - have.getOrDefault(slot.trade(), 0);
             if (short_ > worst) { worst = short_; most = slot.trade(); }
@@ -797,6 +804,7 @@ public final class Villages {
         for (Slot slot : SLOTS) {
             if (!wantedHere(slot, villageId, total, at) || slot.trade().isCraft() || slot.trade() == AssistantEntity.StationTask.GUARD) continue;
             if (slot.trade() == AssistantEntity.StationTask.CAVE) continue;   // [caves] the team is chosen (CaveDwellers.appoint)
+            if (slot.trade() == AssistantEntity.StationTask.NETHER) continue;   // [nether] the runners are picked (NetherRunners.appoint)
             if (!craftReady(villageId, slot.trade())) continue;
             double short_ = target(villageId, slot, total) * fit - have.getOrDefault(slot.trade(), 0);
             if (short_ > 1.5) { by.put(slot.trade(), short_); out.add(slot.trade()); }
@@ -841,6 +849,7 @@ public final class Villages {
         // good, and every newcomer it sent to the trade looked for the water that was not there.
         if (trade == AssistantEntity.StationTask.FISH) return !dryForFishers(villageId);
         if (trade == AssistantEntity.StationTask.CAVE) return CaveDwellers.ready(villageId);   // [caves] a few miners and a watch first
+        if (trade == AssistantEntity.StationTask.NETHER) return NetherRunners.ready(villageId);   // [nether] the gateway lit, and veterans to send
         if (trade == AssistantEntity.StationTask.FERRY) return Ferries.wanted(villageId);      // [transport] while the ferry runs
         if (trade == AssistantEntity.StationTask.STORE || trade == AssistantEntity.StationTask.HAUL) {
             return villageId != null && (Storehouses.stands(villageId) || hasBuilt(villageId, "storage")
@@ -911,6 +920,7 @@ public final class Villages {
         double t = (slot.weight() + boost) * total / (double) VILLAGE_SIZE * Orders.scale(villageId)
             * glut(villageId, slot.trade()) * Homeland.lean(villageId, slot.trade());
         if (slot.trade() == AssistantEntity.StationTask.CAVE) t = CaveDwellers.team(total);   // [caves] two, three at sixty, four at a hundred
+        if (slot.trade() == AssistantEntity.StationTask.NETHER) t = NetherRunners.team(total);   // [nether] one, two at sixty, three at a hundred
         if (slot.trade() == AssistantEntity.StationTask.FERRY) t = Ferries.wanted(villageId) ? 1.0 : 0.0;  // [transport] one ferryman
         // A courier for every five workers out on plots of their own (their production chests).
         if (slot.trade() == AssistantEntity.StationTask.HAUL && villageId != null) {
@@ -955,6 +965,7 @@ public final class Villages {
         int have = 0;
         for (AssistantEntity a : folk) if (a.stationTask() == trade) have++;
         if (trade == AssistantEntity.StationTask.CAVE) return have - CaveDwellers.wanted(villageId);   // [caves] the team, whole
+        if (trade == AssistantEntity.StationTask.NETHER) return have - NetherRunners.wanted(villageId);   // [nether] the team, whole
         for (Slot slot : SLOTS) {
             if (slot.trade() != trade) continue;
             if (!wantedHere(slot, villageId, total, at) || !craftReady(villageId, trade)) return 0.0;
@@ -978,6 +989,7 @@ public final class Villages {
         int have = 0;
         for (AssistantEntity a : folk) if (a.stationTask() == trade) have++;
         if (trade == AssistantEntity.StationTask.CAVE) return have > CaveDwellers.wanted(villageId);   // [caves] the team, whole
+        if (trade == AssistantEntity.StationTask.NETHER) return have > NetherRunners.wanted(villageId);   // [nether] the team, whole
         Age at = villageId == null ? Age.WOOD : ageOf(villageId);
         for (Slot slot : SLOTS) {
             if (slot.trade() != trade) continue;
