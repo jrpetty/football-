@@ -101,6 +101,9 @@ public final class FolkTalk {
         // [batchG] A visitor from afar answers for itself: its own story, the bard's news, the merchant's wares.
         String visitor = Visitors.talk(f, p, topic, text);
         if (visitor != null) return manner(f, visitor);
+        // [library] Books: borrowing one, bringing it back, the shelves, a copy; what it is reading or writing (Library).
+        String library = Library.talk(f, p, topic, text);
+        if (library != null && !library.isEmpty()) return manner(f, library);
         String said = switch (topic) {
             case OPEN -> greet(f, p, op, firstMeeting, heard);
             case HOW -> howAreYou(f);
@@ -367,6 +370,7 @@ public final class FolkTalk {
         line(sb, "Knacks", FolkSkills.cardLine(f));         // what it chose for itself: the Skills page has the rest
         line(sb, "Curator", Museum.curatorLine(f));         // the museum's keeper (Museum)
         line(sb, "In the museum", Museum.cardLine(f));      // its finds on show there
+        line(sb, "Library", Library.cardLine(f));           // [library] the librarian, what it wrote, its trade's book read
         line(sb, "The war", WarAndPeace.cardLine(f));        // [war-peace] its town's war, its vote in the council of war
         String family = life.partnerName().isEmpty() ? "" : "partner " + life.partnerName();
         if (life.children() > 0) family += (family.isEmpty() ? "" : "; ") + life.children() + (life.children() == 1 ? " child" : " children");

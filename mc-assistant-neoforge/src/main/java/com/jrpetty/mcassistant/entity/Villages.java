@@ -332,6 +332,7 @@ public final class Villages {
             case "pitch" -> "the football pitch";                 // [batchC]
             case "range" -> "the archery range";                  // [batchC]
             case "postoffice" -> "the post office";               // [batchF]
+            case "townlibrary" -> "the town library";             // [library]
             case "statue" -> "the statue on the square";          // [batchF]
             case "trainingyard" -> "the training yard";            // [war-prep]
             default -> "the " + structure;
@@ -343,6 +344,7 @@ public final class Villages {
         Bank.resetForTests();
         Culture.resetForTests();                                   // [batchD] the banner's works, the customs, the theatre, the band
         Museum.resetForTests();
+        Library.resetForTests();                                   // [library] the writing, the readers, the seats
         Storehouses.resetForTests();
         Storekeeping.resetForTests();
         Couriers.resetForTests();
@@ -1736,6 +1738,8 @@ public final class Villages {
         if (com.jrpetty.mcassistant.village.Ledger.graves(villageId).size() > Graves.room(villageId)) extras.add(0, "graveyard");
         // [batchE] The town's look: the windmill, the bakery, the orchard, the allotments and (Iron Age, or thirty folk) the inn.
         TownLook.wanted(villageId, folk, at, extras, s -> built(villageId, s) < 1);
+        // [library] A library for the town's books, once it is twelve strong (Library).
+        if (Library.wanted(villageId, folk) && built(villageId, Library.STRUCTURE) < 1) extras.add(Library.STRUCTURE);
         if (at == Age.STONE) { homesAndAmenities(villageId, folk, out, extras); return out; }
 
         if (built(villageId, "workshop") < 1) out.add("workshop");
@@ -2137,6 +2141,7 @@ public final class Villages {
             case "windmill", "bakery", "inn", "orchard", "allotments" -> TownLook.why(villageId, project);   // [batchE]
             case "postoffice" -> Post.why(villageId);                     // [batchF]
             case "statue" -> PublicFund.why(villageId);                   // [batchF]
+            case "townlibrary" -> Library.why(villageId);                 // [library]
             default -> "the " + project;
         };
     }

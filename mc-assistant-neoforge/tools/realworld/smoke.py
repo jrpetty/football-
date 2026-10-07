@@ -1847,6 +1847,45 @@ def cave_stage(r, look, cx, cz):
     say("alive after the caves: %s" % client_alive())
 
 
+def library_stage(r, look, cx, cz):
+    """The town library (entity/Library), set out on a stage in clear air beside the village the smoke spawned at
+    cx, cz (/village library stage: the hall with its lectern, shelves, reading table and desks, the shelves put up
+    and the town's books written into it from its real books: each trade's book by its master, then the poems,
+    histories, lives, how-to books and storybooks its writers would write). Pictures: the hall from inside the door
+    (the lectern with the newest book open, the chiseled shelves full of books, the reading table), the front from
+    the square at noon, then a fair copy of the Farmer's Book in the player's hand (/village library read), what
+    /village library says, and the town's books open at the Library page (the catalogue, the writers, the loans)."""
+    lx, ly, lz = cx + 60, 150, cz - 40
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    midday(r)
+    r.cmd("weather clear")
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, lx, ly + 10, lz - 20))
+    time.sleep(10)                                     # the stage's chunks arrive
+    out = r.cmd("execute positioned %d %d %d run village library stage" % (lx, ly, lz))
+    say("library stage: " + out[:900])
+    views = dict((v[0], [float(n) for n in v[1:]]) for v in
+                 re.findall(r"VIEW (\S+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+)", out))
+    if not views:
+        say("no library staged; nothing to photograph")
+        return
+    for name in ("library-hall", "library-front"):
+        if name in views:
+            look("26-" + name, *views[name], wait=8)
+    say("library: " + r.cmd("execute positioned %d %d %d run village library" % (lx, ly, lz))[:900])
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, cx, ground_height(r, cx, cz) + 1, cz))
+    time.sleep(3)
+    say("a copy: " + r.cmd("execute as %s at @s run village library read farmer" % USER)[:300])
+    # The Library page is the last tab of the town's books (CityScreen.TABS): number 27 while Caves is 26 before it.
+    say("stats library: " + r.cmd("execute as %s at @s run village stats 27" % USER))
+    time.sleep(3)
+    shot("26-library-page")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the library: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

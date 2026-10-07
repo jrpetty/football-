@@ -298,6 +298,8 @@ public final class VillageCommands {
             .then(Commands.literal("chronicle").executes(VillageCommands::chronicle))
             // The museum and its archive: what is on show, who found it, the volumes (MuseumCommands).
             .then(MuseumCommands.build())
+            // [library] The town library: its librarian, its books and their editions, its loans (LibraryCommands).
+            .then(LibraryCommands.build())
             // [batchD] The town's culture: its banner and motto, customs, theatre, band and choir, pictures, plaques.
             .then(CultureCommands.build())
             // [war-peace] The war: its goal, its course, the allies, the treaties; and (ops) a council, a declaration, a peace now.
