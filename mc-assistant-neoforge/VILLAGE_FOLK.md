@@ -175,8 +175,10 @@ own, and each step is there for a reason the village can see.
 5. **A well** at the middle marks the camp as a village, and the Wood Age asks for it
    with timber, food in the stores, the storehouse, the shelter and enough houses.
 6. **The Stone Age:** quarry stone and coal, a **wall** round the village (it follows
-   the ground and goes round the houses, fields and ponds already there), more
-   houses, a **smeltery** of three furnaces, and a **meeting hall**. The miners take
+   the ground and goes round the houses, fields and ponds already there), houses
+   enough that no more than one in ten goes without a bed (a growing town is always a
+   few beds behind its births, and builds for them all the same), a **smeltery** of
+   three furnaces, and a **meeting hall**. The miners take
    their mines down to the iron seam (height 16, where this game puts the most
    iron) to be ready for the next age.
 7. **The Iron Age:** iron in the stores for the watch's armour and a smith's stock, a
