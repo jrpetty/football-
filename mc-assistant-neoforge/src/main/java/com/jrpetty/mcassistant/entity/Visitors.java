@@ -49,7 +49,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * goes looking for a village to join.
  *
  * <p>What a visitor brings, it brings from outside, as the game's own wandering trader does, and it is kept
- * small: the bard's bedroll, a tourist's purse of four to ten coins, a merchant's few lots. It is the one way
+ * small: the bard's bedroll and the price of its rooms, a tourist's purse of four to ten coins (and a room's
+ * price, with an inn to stay at), a merchant's few lots. It is the one way
  * coin and goods come into a town from beyond it, and the town pays for anything it keeps (the merchant's
  * wares, out of the treasury). What a visitor takes away goes with it: its purse, a souvenir, its bedroll.
  */
@@ -567,10 +568,28 @@ public final class Visitors {
 
     // ------------------------------------------------------------------ a night at the inn
 
-    /** The town's inn, if it has one of that name; else null (the tavern is the bard's inn: Bard). */
+    /** The town's inn (Inn), if it has one; else null (the tavern is the bard's lodging then: Bard). */
     @Nullable
     static Ledger.Building inn(UUID village) {
-        return building(village, "inn");
+        return Inn.inn(village);
+    }
+
+    /**
+     * A night at the town's inn, as any traveller has one (Inn): a room taken from its keeper at the inn's price,
+     * out of the purse the visitor brought, into the till; then to its bed and asleep till morning (Inn.lodging).
+     * True while it is lodging; false if there is no inn, nobody keeping it, no bed free or not the coin, and the
+     * visitor makes do some other way.
+     */
+    static boolean lodge(ServerLevel level, VillageFolkEntity f) {
+        if (inn(townOfOr(f)) == null) return false;
+        if (!Inn.lodged(f) && Inn.takeARoom(level, f) == null) return false;
+        Inn.lodging(f, level);
+        return true;
+    }
+
+    private static UUID townOfOr(VillageFolkEntity f) {
+        UUID t = townOf(f);
+        return t != null ? t : new UUID(0L, 0L);
     }
 
     /**
@@ -627,7 +646,7 @@ public final class Visitors {
             BlockState st = level.getBlockState(p);
             if (!(st.getBlock() instanceof BedBlock) || st.getValue(BedBlock.PART) != BedPart.HEAD) continue;
             if (st.getValue(BedBlock.OCCUPIED) || claimed.contains(p)) continue;
-            if (Homes.inAHome(town, p)) continue;
+            if (Homes.inAHome(town, p) || Inn.isInnBed(town, p)) continue;          // the inn's beds are let (Inn)
             return p.immutable();
         }
         return null;

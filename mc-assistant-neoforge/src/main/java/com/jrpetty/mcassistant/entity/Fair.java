@@ -444,6 +444,7 @@ public final class Fair {
                 if (p != null) give(p, s);
                 else town.owed.add(new Festivals.Owed(w.owner, w.name, s));
             }
+            if (p != null) Advancements.wonTheFair(p);          // [batchG] Best in Show
             if (p != null) p.sendSystemMessage(Component.literal("You won " + w.cat.title + " at " + Villages.name(id) + "'s fair with "
                 + w.words + "!" + (ribbon.isEmpty() ? "" : " A blue ribbon") + (coins > 0 ? (ribbon.isEmpty() ? " " : " and ") + coins
                 + (coins == 1 ? " coin" : " coins") + " from the treasury." : ".")).withStyle(ChatFormatting.GOLD));

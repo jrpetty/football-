@@ -29,7 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * moves house), and the most precious it has is kept on show at home: in an item frame on the wall by its
  * bed.
  * <ul>
- * <li>The frame is the folk's own: bought out of its purse at the stores' price (one the stores have, or one
+ * <li>The frame is the folk's own: bought out of its purse at the town's price (one the stores have, or one
  *     made there and then of their sticks and a leather, by the game's recipe). With no frame to be had, or
  *     no coin, the gift waits in its chest.</li>
  * <li>It hangs it when it is at home of an evening, on a wall the house's furnishing leaves free, the
@@ -50,8 +50,10 @@ public final class KeptGifts {
     private static final String MARK_DAY = "mca_gift_day";
     /** The frame's tag, and (with the folk's id after it) whose it is. */
     static final String FRAME = "mca_kept_gift";
-    /** What a frame costs at the stores. */
-    static final int FRAME_PRICE = 2;
+    /** What a frame costs: the town's price for one (Purchases.priceEach), in whole coins, a coin at least. */
+    static int framePrice(ServerLevel level, UUID village, VillageFolkEntity f) {
+        return Math.max(1, (int) Math.ceil(Purchases.priceEach(level, village, new ItemStack(Items.ITEM_FRAME), f) - 1e-6));
+    }
 
     /** The day each folk last looked to hang a gift (it looks once an evening). */
     private static final Map<UUID, Long> LOOKED = new ConcurrentHashMap<>();
@@ -225,13 +227,14 @@ public final class KeptGifts {
 
     /**
      * A frame, the folk's own: one it has already (taken down from its last house), else one bought at the
-     * stores' price out of its purse, from their stock or made there of four planks' sticks and a leather.
+     * town's price out of its purse, from the stores' stock or made there of four planks' sticks and a leather.
      * How it came by it, or null if it could not.
      */
     @Nullable
     static String frameFor(ServerLevel level, Villages.Village v, VillageFolkEntity f) {
         if (f.removeMatching(s -> s.is(Items.ITEM_FRAME), 1) == 1) return "its own frame";
-        if (f.purse() < FRAME_PRICE) return null;
+        int price = framePrice(level, v.id(), f);
+        if (f.purse() < price) return null;
         boolean got = Crafts.take(level, v, s -> s.is(Items.ITEM_FRAME), 1);
         if (!got) {
             if (Crafts.stock(level, v, s -> s.is(Items.LEATHER)) < 1) return null;
@@ -241,9 +244,9 @@ public final class KeptGifts {
                 return null;
             }
         }
-        f.spend(FRAME_PRICE);
-        Ledger.addCoins(v.id(), FRAME_PRICE);
-        Economy.spentInTown(v.id(), FRAME_PRICE);
+        f.spend(price);
+        Ledger.addCoins(v.id(), price);
+        Economy.spentInTown(v.id(), price);
         return got ? "a frame from the stores" : "a frame made of the stores' sticks and leather";
     }
 

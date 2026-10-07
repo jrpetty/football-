@@ -4844,8 +4844,8 @@ note of your own milestones among them.
   says what it is ("Wren the bard", "Ash the merchant", "Rowan (visiting)"), and its card says where it came
   from, when it leaves and what it carries. Ask it about itself, or how it is; anything about the town it
   leaves to the people who live there. What a visitor brings, it brings from outside, as the game's
-  wandering trader does, and it is kept small: the bard's bedroll, a tourist's purse of four to ten coins, a
-  merchant's few lots. What it takes away (its purse, a souvenir, unsold goods) goes with it.
+  wandering trader does, and it is kept small: the bard's bedroll and the price of its rooms, a tourist's purse
+  of four to ten coins (and a room's price, if the town has an inn), a merchant's few lots. What it takes away (its purse, a souvenir, unsold goods) goes with it.
 * **The travelling bard.** Every four to six days a town of fifteen or more with a tavern has a bard come
   in. It makes for the tavern and says who it is; nearby players hear of it. For two or three nights:
   * **of an evening** it stands by the tavern's hearth and plays, a phrase at a time with the notes rising
@@ -4855,15 +4855,18 @@ note of your own milestones among them.
     happier that day and the next ("There's a bard at the tavern — what songs!") and remembers it;
   * **by day** it sees the town and busks on the square; a folk who likes the song may drop a coin of its
     own in the bard's hat, once a visit;
-  * **at night** it sleeps at the inn (a town's inn if it has one, else the tavern), in a bed nobody calls
-    their own or on its own bedroll laid by the wall, rolled up again in the morning;
+  * **at night** it takes a room at the inn, if the town has one with a keeper and a bed free, and pays for
+    it like any traveller (three coins a night into the till); else it sleeps at the tavern on its own
+    bedroll laid by the wall, rolled up again in the morning;
   * then it goes on its way, and the chronicle says so.
 * **Tourists.** A town of renown draws people to see it: its renown (its great works and its museum) and
   five more for each statue to a hero. At fifteen it has tourists, one or two at a time, a few days apart
   (the more renowned, the oftener). A tourist walks the sights in turn (the museum first, the statues, the
   monument, the park, the fountain, the bell tower and the rest), stops a while before each and says what
-  it thinks, has a drink or a bite at the café and buys a souvenir at the shop, at their prices, out of its
-  own purse into the treasury. With an inn it stays the night; without one it goes home at dusk.
+  it thinks, has a drink or a bite at the café and buys a souvenir at the shop, at the town's prices, out of
+  its own purse into the treasury (in whole coins: a visitor keeps no account and runs up no slate). With an
+  inn it takes a room for the night, as any traveller does, and goes home in the morning; without one it
+  goes home at dusk.
 * **The merchant from afar.** On market day a town with a market has a merchant come with up to four lots
   of what its own land has not got: cocoa, glow berries, sugar cane, cactus, bamboo, coral, dyes, melon,
   honeycomb, and saplings of the woods that do not grow there. It never brings what the town's ground grows
@@ -4882,7 +4885,7 @@ note of your own milestones among them.
 * **Gifts kept.** Give a folk something precious (worth five coins or more and not food: a diamond, an
   emerald, gold, an enchanted book, a music disc, a fine tool) and it is its own: never put in the stores,
   carried with it when it moves house. Of an evening at home it hangs the finest it has in an item frame on
-  the wall by its bed, a frame it buys out of its own purse at the stores' price; a finer gift later takes
+  the wall by its bed, a frame it buys out of its own purse at the town's price; a finer gift later takes
   its place. Its card has a **Keeps** line, and it mentions it: "I keep the diamond you gave me by my bed."
 * **The map room.** Once the hall stands, a hand at the town's works (the clerk) draws a map of the town and
   hangs it in a frame on the hall's wall: on a sheet of nine of the stores' paper (or eight and a compass
@@ -4899,7 +4902,8 @@ note of your own milestones among them.
   icon), with a toast as each comes: founding a village; a town you founded or are a citizen of reaching
   twenty-five, fifty and a hundred folk, and each age from the Stone Age to the Nether; becoming a citizen;
   being made an honoured guest; your first trade with a folk; a letter from a friend in a village; and,
-  hidden until won, winning at a town fair or a football cup.
+  hidden until won, a ribbon at a town fair. A football cup has its advancement too, hidden, for when a
+  player can win one: the town's matches are played by its folk.
 * **Seeing it.** The town's books, **News** page, have a **Visitors** section: the week's visitors and what
   they spent, who is in town now, friends' visits this week and who is away today, when the hall's map was
   drawn, and the watch's dogs. The chronicle takes down every coming and going. Operators can use
@@ -4907,7 +4911,7 @@ note of your own milestones among them.
   <bard|tourist|merchant|friend|map|dog|gifts|evening>` to bring one about now with the town's own stores,
   purses and hands.
 
-The game tests `VisitorsGameTests` (vp01 to vp08) check each: the bard is on nobody's roll, its news is the
+The game tests `VisitorsGameTests` (vp01 to vp09) check each: the bard is on nobody's roll, its news is the
 other town's real line, the room hears it and is the happier, it beds down on its bedroll and rolls it up;
 a tourist's coin goes from its own purse into the treasury and the books count it; the town buys what it
 needs off the merchant's stall out of the treasury, and a player buys a lot; the advancements are all loaded
@@ -4915,7 +4919,8 @@ and granted (the founder's, the ages, citizenship); the map is drawn on the stor
 week on with the old map back in the stores, and grows into a two-by-two; a guard tames a wolf with one of
 the stores' bones, and the dog lies down at night and goes for a zombie by day; a friend's visit is walked,
 welcomed, eaten together and remembered on both sides; and a player's diamond is hung in a frame the folk
-bought, mentioned, and given way to a finer gift.
+bought, mentioned, and given way to a finer gift; and, in a town with an inn, a tourist and the bard each pay for a
+room there for the night.
 
 ## Health and care
 
