@@ -214,6 +214,8 @@ public final class VillageCommands {
                         .executes(ctx -> house(ctx, "let", IntegerArgumentType.getInteger(ctx, "coins"))))))
             // The bank (entity/Bank): its books; your account (deposit, withdraw), a mortgage on a house, repay it.
             .then(com.jrpetty.mcassistant.entity.Bank.command())
+            .then(com.jrpetty.mcassistant.entity.Civics.command())          // [batchF] the town's affairs
+            .then(com.jrpetty.mcassistant.entity.Civics.donateCommand())    // [batchF] the public works fund
             // [flats] The village's blocks of flats: each flat, who lives there, on what terms. `stage`
             // sets a furnished block out on a stage at the spot, for the pictures (from a palette, not the stores).
             .then(Commands.literal("flats")

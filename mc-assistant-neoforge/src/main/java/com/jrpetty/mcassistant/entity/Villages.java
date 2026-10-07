@@ -327,6 +327,8 @@ public final class Villages {
             case "manor" -> "a manor house";
             case "belltower" -> "the bell tower";
             case "flats" -> "a block of flats";                   // [flats]
+            case "postoffice" -> "the post office";               // [batchF]
+            case "statue" -> "the statue on the square";          // [batchF]
             default -> "the " + structure;
         };
     }
@@ -410,6 +412,7 @@ public final class Villages {
         Woods.resetForTests();              // [wf] the woodcutters' stumps and errands
         FireBrigade.resetForTests();        // [wf] the fires and the hands at them
         Weather.resetForTests();            // [wf] the storm (and a test's storm let go), the rods looked at
+        Civics.resetForTests();             // [batchF] the post, petitions, the meeting, wardens, the fund, searches, favours
         Roads.reset();
         LAST_PROJECT.clear();
         POP.clear();
@@ -1614,7 +1617,8 @@ public final class Villages {
      */
     public static List<String> projectsWanted(UUID villageId) {
         // [flats] a block of flats ahead of the next house, in the Iron Age when the town wants one (Flats)
-        return requestedFirst(villageId, Flats.wanted(villageId, ageBeforeTheHouse(villageId, projectsWantedInOrder(villageId))));
+        // [batchF] and, after everything else, the post office and the statue its own people paid for (Civics.wanted)
+        return requestedFirst(villageId, Civics.wanted(villageId, Flats.wanted(villageId, ageBeforeTheHouse(villageId, projectsWantedInOrder(villageId)))));
     }
 
     /** The buildings an age asks for before the next (Villages.needs): the wall, the smeltery and the hall;
@@ -2075,6 +2079,8 @@ public final class Villages {
             case "barracks" -> "barracks (great work " + (greatWorks(villageId) + 1) + "), room for six more and a home for the watch";
             case "monument" -> "a monument (great work " + (greatWorks(villageId) + 1) + ") to how far the village has come";
             case "museum" -> "a museum, to put the town's rare finds on show and keep its chronicle as books";
+            case "postoffice" -> Post.why(villageId);                     // [batchF]
+            case "statue" -> PublicFund.why(villageId);                   // [batchF]
             default -> "the " + project;
         };
     }

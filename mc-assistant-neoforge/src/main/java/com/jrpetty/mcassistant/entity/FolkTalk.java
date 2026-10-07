@@ -348,6 +348,7 @@ public final class FolkTalk {
         if (!life.parents().isEmpty()) family += (family.isEmpty() ? "" : "; ") + "child of " + life.parents();
         if (!family.isEmpty()) line(sb, "Family", family);
         line(sb, "Household", Families.cardLine(f));        // its pet, its garden, its wedding anniversary (Families)
+        line(sb, "Town life", Civics.cardLine(f));          // [batchF] its letters, its quarter as warden, its good turns (Civics)
         java.util.List<String> friends = new java.util.ArrayList<>();
         for (Social.Bond b : life.friends()) {
             if (b.name != null && !b.name.isEmpty()) friends.add(b.name);
@@ -579,6 +580,7 @@ public final class FolkTalk {
             case "anniversary" -> Families.moodWords(f);
             case "smoke", "noise", "parkside", "park" -> Quarters.words(f, why);      // where it lives (Quarters, Park)
             case "proud" -> Museum.prideWords(f);
+            case "letter", "meeting", "favour", "found" -> Civics.moodWords(f, why);   // [batchF]
             default -> "";
         };
     }

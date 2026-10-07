@@ -994,6 +994,33 @@ def sights_stage(r, look, cx, cz):
     say("alive after the sights: %s" % client_alive())
 
 
+def townlife_stage(r, look, cx, cz):
+    """Town life and governance (entity/Civics and the rest): beside the town, on ground levelled for them
+    (/village civic stage), a post office with its name on the sign by its door and a statue with the names
+    of its givers on a sign before it; a petition got up by whoever has a grievance; and the town meeting
+    called now, the town gathering before its hall (or its board) to hear the elder's account of the week.
+    Photographed: the post office from the street, the statue and its sign, the meeting from behind the
+    crowd while the elder speaks; then what /village civic says of the town's affairs."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("time set 6000")
+    r.cmd("weather clear")
+    r.cmd("gamemode spectator %s" % USER)
+    sx, sz = cx - 100, cz - 100                      # out past the town, where the stage levels its own ground
+    gy = ground_height(r, sx, sz)
+    r.cmd("tp %s %d %d %d" % (USER, sx, gy + 8, sz + 18))
+    time.sleep(8)                                      # the stage's chunks arrive
+    out = r.cmd("execute positioned %d %d %d run village civic stage" % (sx, gy, sz))
+    say("civic stage: " + out[:600])
+    views = re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out)
+    for name, x, y, z, ax, ay, az in views:
+        x, y, z, ax, ay, az = int(x), int(y), int(z), int(ax), int(ay), int(az)
+        if name.endswith("meeting"):
+            time.sleep(20)                             # the bell rung: the town walks over and finds its places
+        look("24-%s" % name, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=6)
+    say("civic: " + r.cmd("execute positioned %d 100 %d run village civic" % (cx, cz))[:900])
+    say("alive after the town's affairs: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

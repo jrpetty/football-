@@ -65,7 +65,9 @@ public class BuildGoal extends Goal {
         // the museum, where the town's rare finds go on show and its chronicle is kept as books (Museum)
         "museum",
         // the stable, once the village has horses (Stables)
-        "stable");
+        "stable",
+        // [batchF] the post office (Post), and the statue the town's own fund pays for (PublicFund)
+        "postoffice", "statue");
 
     /** Half the width of a structure's footprint: the meeting hall, the market, the
      *  barracks, the chapel's length and the gateway's step are seven across, the rest

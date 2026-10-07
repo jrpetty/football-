@@ -1,0 +1,98 @@
+# The post office (the Stone Age): a small timber office on a stone footing under a steep roof,
+# its gable over the door. Inside, a counter across the room with a way through the middle, the
+# clerk's lectern behind it, and the pigeonholes (a row of barrels) along the back wall, where the
+# letters wait for the round or for a carrier going their way. A lantern stands at each end of the
+# counter and one hangs over the room. Its name goes on the sign by the door (TownLife), and a
+# player posts a letter there (Post).
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name postoffice
+layer -1
+.........
+.FFFFFFF.
+.FFFFFFF.
+.FFFFFFF.
+.FFFFFFF.
+.FFFFFFF.
+.FFFFFFF.
+.FFFFFFF.
+....k....
+layer 0
+.........
+.LwwwwwL.
+.wQQQQQw.
+.w..r..w.
+.w==.==w.
+.w.....w.
+.w.....w.
+.LwwDwwL.
+.........
+layer 1
+.........
+.LWWWWWL.
+.W.....W.
+.G.....G.
+.Wl...lW.
+.G.....G.
+.W.....W.
+.LGW.WGL.
+.........
+layer 2
+.........
+.LWWWWWL.
+.W.....W.
+.W.....W.
+.W.....W.
+.W..j..W.
+.W.....W.
+.LWWWWWL.
+.........
+layer 3
+>.......<
+>L-----L<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>L-----L<
+>.......<
+layer 4
+.>.....<.
+.>WWWWW<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>WWWWW<.
+.>.....<.
+layer 5
+..>...<..
+..>WWW<..
+..>...<..
+..>...<..
+..>...<..
+..>...<..
+..>...<..
+..>WWW<..
+..>...<..
+layer 6
+...>.<...
+...>W<...
+...>.<...
+...>.<...
+...>.<...
+...>.<...
+...>.<...
+...>W<...
+...>.<...
+layer 7
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....

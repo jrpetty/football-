@@ -2548,6 +2548,13 @@ public class CityScreen extends Screen {
             for (String s : cal) all.add("  " + s);
             all.add("");
         }
+        // [batchF] The town's affairs (Civics): the meetings, the petitions, the fund, the post, the wardens, searches, good neighbours.
+        List<String> civic = strings("civics");
+        if (!civic.isEmpty()) {
+            all.add("The town's affairs:");
+            for (String s : civic) all.add("  " + s);
+            all.add("");
+        }
         all.add("The chronicle, latest first:");
         all.addAll(strings("news"));
         lines(g, all, x, y, cw, ch);
