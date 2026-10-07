@@ -120,6 +120,8 @@ public final class PriceIndex {
         final Map<String, Line> lines = new LinkedHashMap<>();
         /** Since the last reckoning, a thing: {drawn free, bought by folk, refused as too dear, bought more for cheapness}. */
         final Map<String, int[]> tally = new HashMap<>();
+        /** Are the shop's luxuries cheap, as this morning reckoned them (Luxuries asks often)? */
+        boolean luxuriesCheap;
 
         Town(UUID village) {
             this.village = village;
@@ -195,18 +197,27 @@ public final class PriceIndex {
         return name.equals("Potion") ? new ItemStack(Items.POTION) : ItemStack.EMPTY;
     }
 
-    /** One of a good on the board, to show: the first item it matches. */
+    /** One of a good on the board, to show: the first item it matches (looked up once, then kept). */
     static ItemStack sampleOfGood(Market.Good g) {
+        ItemStack kept = SAMPLE_OF.get(g.name());
+        if (kept != null) return kept.copy();
+        ItemStack found = ItemStack.EMPTY;
         for (Item it : SAMPLES) {
             ItemStack s = new ItemStack(it);
-            if (g.what().test(s)) return s;
+            if (g.what().test(s)) { found = s; break; }
         }
-        for (Item it : BuiltInRegistries.ITEM) {
-            ItemStack s = new ItemStack(it);
-            if (g.what().test(s)) return s;
+        if (found.isEmpty()) {
+            for (Item it : BuiltInRegistries.ITEM) {
+                ItemStack s = new ItemStack(it);
+                if (g.what().test(s)) { found = s; break; }
+            }
         }
-        return ItemStack.EMPTY;
+        SAMPLE_OF.put(g.name(), found);
+        return found.copy();
     }
+
+    /** The board's goods' samples, by name, once found. */
+    private static final Map<String, ItemStack> SAMPLE_OF = new ConcurrentHashMap<>();
 
     /** The goods whose first match in the registry is not the one to show (the board's "Wool" is white wool). */
     private static final List<Item> SAMPLES = List.of(Items.WHITE_WOOL, Items.OAK_LOG, Items.OAK_PLANKS, Items.WHITE_BED,
@@ -348,6 +359,7 @@ public final class PriceIndex {
         }
         t.tally.clear();
         t.day = day;
+        t.luxuriesCheap = cheapLuxuries(t);
         tellTheMoves(level, v, t, day);
         save(t);
         saveTally(t);
@@ -646,9 +658,13 @@ public final class PriceIndex {
     /** Is a luxury cheap in this town just now (the rugs, the candles, the banners, a fifth or more under their worth)?
      *  Folk buy something for their homes sooner (Luxuries). */
     public static boolean luxuriesCheap(UUID village) {
+        return town(village).luxuriesCheap;
+    }
+
+    private static boolean cheapLuxuries(Town t) {
         double sum = 0;
         int n = 0;
-        for (Line l : town(village).lines.values()) {
+        for (Line l : t.lines.values()) {
             ItemStack one = sampleOf(l.key);
             if (one.isEmpty() || !Luxuries.isLuxury(one)) continue;
             sum += l.factor;
