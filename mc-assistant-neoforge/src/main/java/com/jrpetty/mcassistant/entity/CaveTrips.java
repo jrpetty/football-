@@ -585,10 +585,12 @@ public final class CaveTrips {
             if (leading) breakCamp(level, f, p);
             return true;
         }
-        double dist = f.position().distanceToSqr(c.getX() + 0.5, c.getY(), c.getZ() + 0.5);
+        // In: inside the ring the walls go up on, the same test as the leader's (wallUp). It was "within a block and a
+        // half of the middle" here and "within two" there: one standing in the ring was in for the leader, who walled up
+        // round it, and out for itself, so it never settled and stood "making for the camp" all night.
         // One of the others that could not get in for all the waiting (CAMP_WAIT) settles down where it is.
         boolean settle = !leading && level.getGameTime() - p.campTick > CAMP_WAIT;
-        if (dist > 1.5 * 1.5 && !settle) {
+        if (!inside(c, f.blockPosition()) && !settle) {
             if (f.getNavigation().isDone() || f.tickCount - d.followTick > 40) {
                 // The others to the camp's middle or a step to its side, so all fit in.
                 List<VillageFolkEntity> team = CaveDwellers.members(level, p);
@@ -624,6 +626,11 @@ public final class CaveTrips {
         return true;
     }
 
+    /** Is this spot inside the camp's walls (the nine columns round its middle, a block up or down)? */
+    static boolean inside(BlockPos c, BlockPos at) {
+        return Math.abs(at.getX() - c.getX()) <= 1 && Math.abs(at.getZ() - c.getZ()) <= 1 && Math.abs(at.getY() - c.getY()) <= 1;
+    }
+
     /** How long the leader waits for the team to come into camp before the walls go up without one (game ticks). */
     static final long CAMP_WAIT = 1200;
 
@@ -637,7 +644,7 @@ public final class CaveTrips {
         // outside them, "making for the camp", all night.
         if (level.getGameTime() - p.campTick < CAMP_WAIT) {
             for (VillageFolkEntity m : CaveDwellers.members(level, p)) {
-                if (m.position().distanceToSqr(c.getX() + 0.5, c.getY(), c.getZ() + 0.5) <= 2.2 * 2.2) continue;
+                if (inside(c, m.blockPosition())) continue;
                 letIn(level, lead, p, m);
                 return;
             }
@@ -671,7 +678,8 @@ public final class CaveTrips {
         BlockPos c = p.camp;
         if (c == null || p.campWalls.isEmpty() || m.blockPosition().distSqr(c) > 8 * 8) return;
         for (BlockPos q : ring(c)) {
-            if (q.getY() == c.getY() && open(level, q) && open(level, q.above())) return;     // a way in still open
+            boolean corner = Math.abs(q.getX() - c.getX()) == 2 && Math.abs(q.getZ() - c.getZ()) == 2;   // no way in past two walls
+            if (!corner && q.getY() == c.getY() && open(level, q) && open(level, q.above())) return;     // a way in still open
         }
         BlockPos nearest = null;
         for (BlockPos q : p.campWalls) {
