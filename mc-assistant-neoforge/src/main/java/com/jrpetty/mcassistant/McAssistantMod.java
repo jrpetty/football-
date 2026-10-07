@@ -187,6 +187,28 @@ public final class McAssistantMod {
     public static final DeferredItem<net.minecraft.world.item.Item> VILLAGE_COIN =
         ITEMS.registerSimpleItem("village_coin");
 
+    // [pets] The town's pets (entity/Pets). The pet bowl, the dog bed and the cat basket are blocks a household sets
+    // out at home; the collar (the tailor's, of leather, dyeable) is put on its pet; the treats are the cook's. Each
+    // has a real recipe, so the town's makers know it (Bench, Tiers, Prices), and the household gets it out of the
+    // stores or buys it at the shop (Purchases).
+    public static final DeferredBlock<com.jrpetty.mcassistant.block.PetBowlBlock> PET_BOWL =
+        BLOCKS.registerBlock("pet_bowl", com.jrpetty.mcassistant.block.PetBowlBlock::new,
+            BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(0.6F).sound(SoundType.WOOD).noOcclusion());
+    public static final DeferredItem<BlockItem> PET_BOWL_ITEM = ITEMS.registerSimpleBlockItem(PET_BOWL);
+    public static final DeferredBlock<com.jrpetty.mcassistant.block.PetBedBlock> DOG_BED =
+        BLOCKS.registerBlock("dog_bed", p -> new com.jrpetty.mcassistant.block.PetBedBlock(p, false),
+            BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_RED).strength(0.4F).sound(SoundType.WOOL).noOcclusion());
+    public static final DeferredItem<BlockItem> DOG_BED_ITEM = ITEMS.registerSimpleBlockItem(DOG_BED);
+    public static final DeferredBlock<com.jrpetty.mcassistant.block.PetBedBlock> CAT_BED =
+        BLOCKS.registerBlock("cat_bed", p -> new com.jrpetty.mcassistant.block.PetBedBlock(p, true),
+            BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(0.4F).sound(SoundType.BAMBOO_WOOD).noOcclusion());
+    public static final DeferredItem<BlockItem> CAT_BED_ITEM = ITEMS.registerSimpleBlockItem(CAT_BED);
+    public static final DeferredItem<net.minecraft.world.item.Item> COLLAR =
+        ITEMS.registerSimpleItem("collar", new net.minecraft.world.item.Item.Properties().stacksTo(16));
+    /** No food of the folk's (it has no food in it for them to eat at a meal): what a pet is given, by hand. */
+    public static final DeferredItem<net.minecraft.world.item.Item> PET_TREAT =
+        ITEMS.registerSimpleItem("pet_treat");
+
     /** The mod's own creative tab: everything it adds, in one place, the village folk spawner first. */
     public static final DeferredHolder<net.minecraft.world.item.CreativeModeTab, net.minecraft.world.item.CreativeModeTab> TAB =
         TABS.register("village_folk", () -> net.minecraft.world.item.CreativeModeTab.builder()
@@ -204,6 +226,11 @@ public final class McAssistantMod {
                 out.accept(ZONE_MARKER.get());
                 out.accept(PLACE_MARKER.get());
                 out.accept(MEMORY_CORE.get());
+                out.accept(PET_BOWL_ITEM.get());                 // [pets]
+                out.accept(DOG_BED_ITEM.get());
+                out.accept(CAT_BED_ITEM.get());
+                out.accept(COLLAR.get());
+                out.accept(PET_TREAT.get());
             })
             .build());
 

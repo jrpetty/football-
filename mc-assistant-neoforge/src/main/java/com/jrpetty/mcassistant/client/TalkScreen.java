@@ -181,6 +181,7 @@ public class TalkScreen extends Screen {
                 out.add(Choice.of("Your work?", TalkTopic.DOING));
                 out.add(Choice.of("About you", TalkTopic.ABOUT));
                 out.add(Choice.of("Family?", TalkTopic.PEOPLE));
+                out.add(Choice.of("Your pet?", TalkTopic.PET, "Its household's dog or cat: how it is, what it gets up to; a pup or a kitten looking for a home"));   // [pets]
                 out.add(Choice.of("Your home?", TalkTopic.HOUSE, "Where it lives, who with, and whether the house is its own"));
                 out.add(Choice.of("Any news?", TalkTopic.VILLAGE));
                 out.add(Choice.of("Your hopes?", TalkTopic.DREAMS));

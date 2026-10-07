@@ -559,6 +559,7 @@ public final class Annals {
         if (WarFooting.ready(id)) out.put("war_footing", strings(WarFooting.page(level, id)));   // [war-prep] the News page's panel
         out.put("calendar", strings(TownCalendar.book(level, id)));   // the day's bells, Founding Day, birthdays (News)
         out.put("visitors", strings(Visitors.book(level, id)));       // [batchG] visitors, friends' visits, the map room, the dogs (News)
+        out.put("pets", strings(Pets.book(level, id)));               // [pets] the town's pets, their things, litters, the show (News)
         out.put("sport", strings(Sport.book(level, id)));             // [batchC] the pitch, the range, the league, the cup, the contests (News)
         out.put("civics", strings(Civics.book(level, id)));           // [batchF] the town's affairs (News)
         out.put("society", society(id, folk));

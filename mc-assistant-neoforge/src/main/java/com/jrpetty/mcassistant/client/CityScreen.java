@@ -2841,6 +2841,13 @@ public class CityScreen extends Screen {
             for (String s : guests) all.add("  " + s);
             all.add("");
         }
+        // [pets] The town's pets (entity/Pets): who has one, fed and kept, the young, the strays, litters, the show, the lost.
+        List<String> pets = strings("pets");
+        if (!pets.isEmpty()) {
+            all.add("Pets:");
+            for (String s : pets) all.add("  " + s);
+            all.add("");
+        }
         // [batchC] Sport and play: the pitch, the range, the league table, the cup, the contests (entity/Sport).
         List<String> sport = strings("sport");
         if (!sport.isEmpty()) {

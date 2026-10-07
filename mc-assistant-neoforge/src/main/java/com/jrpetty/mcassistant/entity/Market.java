@@ -171,7 +171,10 @@ public final class Market {
         good("Iron boots", Items.IRON_BOOTS, 7.0, 1, Villages.Task.NONE),
         new Good("Bed", s -> s.is(ItemTags.BEDS), 4.0, 1, Villages.Task.NONE),
         new Good("Rugs", s -> s.is(ItemTags.WOOL_CARPETS), 0.3, 4, Villages.Task.NONE),
-        new Good("Banner", s -> s.is(ItemTags.BANNERS), 2.5, 1, Villages.Task.NONE));
+        new Good("Banner", s -> s.is(ItemTags.BANNERS), 2.5, 1, Villages.Task.NONE),
+        // [pets] The cook's pet treats (Pets): sold at the shop, and bought of a player. Matched when asked, not at
+        // load: the item is registered after this list is made.
+        new Good("Pet treats", s -> s.is(McAssistantMod.PET_TREAT.get()), 0.15, 8, Villages.Task.NONE));
 
     /** The café's drinks, each its own good; then the brewer's potions. */
     private static final List<Good> DRINKS_AND_POTIONS = drinksAndPotions();

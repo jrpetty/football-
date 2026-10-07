@@ -90,6 +90,7 @@ public final class Crafts {
         String made;
         try {
             made = Luxuries.craft(level, v, f, true);                 // a turn at what the houses wait on (Luxuries)
+            if (made == null) made = Pets.craft(level, v, f);         // [pets] a turn at the pets' beds, collars, bowls, treats
             if (made == null) made = switch (f.stationTask()) {
                 case SMITH -> smith(level, v, f);
                 case TAILOR -> tailor(level, v, f);

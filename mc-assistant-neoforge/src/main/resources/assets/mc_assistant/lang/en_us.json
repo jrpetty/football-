@@ -23,5 +23,10 @@
   "block.mc_assistant.storehouse_unit": "Storehouse Unit",
   "container.mc_assistant.storehouse": "Village Storehouse",
   "block.mc_assistant.village_board": "Village Board",
-  "item.mc_assistant.village_board": "Village Board"
+  "item.mc_assistant.village_board": "Village Board",
+  "block.mc_assistant.pet_bowl": "Pet Bowl",
+  "block.mc_assistant.dog_bed": "Dog Bed",
+  "block.mc_assistant.cat_bed": "Cat Basket",
+  "item.mc_assistant.collar": "Pet Collar",
+  "item.mc_assistant.pet_treat": "Pet Treat"
 }
