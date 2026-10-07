@@ -1523,6 +1523,15 @@ public final class WarAndPeace {
      */
     static void warDay(ServerLevel level, Villages.Village a, Villages.Village b, long day) {
         UUID x = a.id(), y = b.id();
+        // A war begun on the shared seam alone (Wars.begin, with no declaration): its pages opened now, neither side's.
+        for (UUID[] p : new UUID[][]{ { x, y }, { y, x } }) {
+            if (WarBooks.book(p[0], p[1]) != null) continue;
+            WarBooks.Book nb = new WarBooks.Book();
+            nb.began = Math.max(0, Wars.since(p[0], p[1]));
+            nb.goalText = "to stand firm";
+            nb.watch = WarFooting.militia(p[0]).size();
+            WarBooks.save(p[0], p[1], nb);
+        }
         account(level, x, y, day);
         account(level, y, x, day);
         if (Envoys.travelling(x, y)) return;                          // a white flag (or a herald) already on the road
