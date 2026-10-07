@@ -149,6 +149,9 @@ public final class NetherWork {
     private static final Map<UUID, Scan> SCANS = new ConcurrentHashMap<>();
     /** Where a fallen runner's things lie, for the others to take up. */
     private static final Map<UUID, BlockPos> PICKUP = new ConcurrentHashMap<>();
+    /** When the team set about taking it up: half a minute, and what could not be got at is left (out of reach on a
+     *  ledge, in a wall). */
+    private static final Map<UUID, Long> PICKUP_SINCE = new ConcurrentHashMap<>();
     /** Tests: digging done quickly; the fortress where the test built it (found without looking). */
     private static boolean quick;
     @Nullable private static BlockPos fortressForTests;
@@ -158,6 +161,7 @@ public final class NetherWork {
     public static void resetForTests() {
         SCANS.clear();
         PICKUP.clear();
+        PICKUP_SINCE.clear();
         quick = false;
         fortressForTests = null;
         boundsForTests = null;
@@ -944,8 +948,11 @@ public final class NetherWork {
         if (b == null) return;
         if (f.getEyePosition().distanceToSqr(Vec3.atCenterOf(b)) > 4.5 * 4.5) {
             BlockPos stand = CaveDwellers.standBy(level, f, b);
-            if (!makeFor(level, f, r, leg, stand != null ? stand : b, 1.0D) || level.getGameTime() - t.since > GIVE_UP) {
-                r.passed.add(b.asLong());                                   // no way to it, or a minute and not there: left
+            // At the spot to stand and still short of it: right up to the bed itself. Only a minute without reaching it
+            // leaves it (the spot to stand is a guess; being there is not the same as having no way to it).
+            if (!makeFor(level, f, r, leg, stand != null ? stand : b, 1.0D)) f.getNavigation().moveTo(b.getX() + 0.5, b.getY(), b.getZ() + 0.5, 1.0D);
+            if (level.getGameTime() - t.since > GIVE_UP) {
+                r.passed.add(b.asLong());
                 if (r.task == t) r.task = null;
             }
             return;
@@ -1184,7 +1191,8 @@ public final class NetherWork {
                 List<BlockPos> list = s.found.get(Job.WART);
                 BlockPos mine = null;
                 if (list != null) for (BlockPos b : list) {
-                    if (t.at != null && b.equals(t.at) || jobOf(level.getBlockState(b)) != Job.WART || s.claims.containsKey(b.asLong())) continue;
+                    if (t.at != null && b.equals(t.at) || jobOf(level.getBlockState(b)) != Job.WART || s.claims.containsKey(b.asLong())
+                        || r.passed.contains(b.asLong())) continue;
                     mine = b;
                     break;
                 }
@@ -1262,19 +1270,28 @@ public final class NetherWork {
     /** A fallen runner's things taken up by the others, if they can get to them (NetherRuns.fell). */
     static void pickUpAfter(ServerLevel level, NetherRuns.Run r, BlockPos at) {
         PICKUP.put(r.village, at.immutable());
+        PICKUP_SINCE.remove(r.village);
     }
 
     /** To where a fallen runner's things lie, and taken up: a minute, then on. True while at it. */
     static boolean pickUp(ServerLevel level, VillageFolkEntity f, NetherRuns.Run r, NetherRuns.Leg leg) {
         BlockPos at = PICKUP.get(r.village);
         if (at == null) return false;
+        long since = PICKUP_SINCE.computeIfAbsent(r.village, k -> level.getGameTime());
+        if (level.getGameTime() - since > 600 || level.getGameTime() < since) {
+            PICKUP.remove(r.village);
+            PICKUP_SINCE.remove(r.village);
+            return false;
+        }
         if (level.getEntitiesOfClass(ItemEntity.class, new net.minecraft.world.phys.AABB(at).inflate(6), e -> e.isAlive() && !junk(e.getItem())).isEmpty()
                 || f.blockPosition().distSqr(at) > 32 * 32) {
             PICKUP.remove(r.village);
+            PICKUP_SINCE.remove(r.village);
             return false;
         }
         if (NetherOutpost.lava(level, at) && !roomInSatchel(f)) {
             PICKUP.remove(r.village);
+            PICKUP_SINCE.remove(r.village);
             return false;
         }
         makeFor(level, f, r, leg, at, 1.0D);
@@ -1484,6 +1501,7 @@ public final class NetherWork {
         BlockPos fell = e.blockPosition();                                  // its drops, to be taken up where they land
         for (int k = 0; k < 24 && fell.getY() > level.getMinBuildHeight() && level.getBlockState(fell.below()).isAir(); k++) fell = fell.below();
         PICKUP.put(r.village, fell.immutable());
+        PICKUP_SINCE.remove(r.village);
         r.slain++;
         if (e instanceof Blaze) {
             r.blazes++;
