@@ -1546,7 +1546,9 @@ public class VillageGameTests {
             + " in wages; " + folk.displayNameCap() + " has " + folk.purse() + "; treasury " + com.jrpetty.mcassistant.village.Ledger.coins(village));
         helper.assertTrue(opened == com.jrpetty.mcassistant.entity.Market.FOUNDING_PURSE, "a new village has the founders' purse");
         helper.assertTrue(minted == 18 && ((ItemStack) box.getItem(3)).getCount() == 2, "two bars of gold minted into eighteen coins");
-        helper.assertTrue(paid == 1 && folk.purse() == 1, "a working folk is paid its wage");
+        // [econ-wages] Its wage by what its job is worth, never under the living wage (JobWorth), at the leader's rate.
+        int due = com.jrpetty.mcassistant.entity.JobWorth.atLeadersRate(village, com.jrpetty.mcassistant.entity.Wealth.wage(folk));
+        helper.assertTrue(paid >= 1 && paid == due && folk.purse() == paid, "a working folk is paid its wage: " + paid + " of " + due);
         // Prices move with the stores.
         var bread = com.jrpetty.mcassistant.entity.Market.goodFor(new ItemStack(Items.BREAD));
         int plenty = com.jrpetty.mcassistant.entity.Market.sellPrice(bread, 64, false);
