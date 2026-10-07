@@ -147,6 +147,7 @@ public final class Smalltalk {
             }
         }
         for (String[] t : Seasons.talk(a, b, level, r)) options.add(new Talk(t[0], t[1], t[2]));   // [batchB] the season, now and then
+        for (String[] t : Disasters.talk(a, b, level, r)) options.add(new Talk(t[0], t[1], t[2]));   // [disasters] the fire, the flood, the drought
         if (options.isEmpty()) return null;
         return options.get(r.nextInt(options.size()));
     }

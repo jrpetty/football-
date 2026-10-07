@@ -334,6 +334,7 @@ public final class Villages {
             case "postoffice" -> "the post office";               // [batchF]
             case "statue" -> "the statue on the square";          // [batchF]
             case "trainingyard" -> "the training yard";            // [war-prep]
+            case "firestation" -> "the fire station";              // [disasters]
             default -> "the " + structure;
         };
     }
@@ -1765,6 +1766,8 @@ public final class Villages {
         if (folk >= 20 && built(villageId, "manor") < 1 + (folk - 20) / 30 || Homes.wantsAManor(villageId)) extras.add("manor");
         // [batchC] An archery range by the wall, once the town keeps a watch of two or more (Archery).
         if (Archery.wanted(villageId)) extras.add(Archery.STRUCTURE);
+        // [disasters] A fire station, once an Iron Age town has had two fires (FireSafety).
+        if (FireSafety.wanted(villageId)) extras.add(FireSafety.STATION);
         if (at == Age.IRON) { homesAndAmenities(villageId, folk, out, extras); return out; }
 
         if (built(villageId, "lighthouse") < 1) out.add("lighthouse");
@@ -2137,6 +2140,7 @@ public final class Villages {
             case "windmill", "bakery", "inn", "orchard", "allotments" -> TownLook.why(villageId, project);   // [batchE]
             case "postoffice" -> Post.why(villageId);                     // [batchF]
             case "statue" -> PublicFund.why(villageId);                   // [batchF]
+            case "firestation" -> FireSafety.why(villageId);              // [disasters]
             default -> "the " + project;
         };
     }
@@ -2809,6 +2813,7 @@ public final class Villages {
                 BlockPos ground = groundFor(level, x, z, hx, hz, true, heartGround, laps,
                     great ? 4 : 2, whyNot(villageId));
                 if (ground == null) continue;
+                if (Floods.lowGround(villageId, ground)) continue;     // [disasters] not on the low ground the river came over
                 // [districts] A park's lawn at the middle height of its lot, cut and filled to it (ParkGround).
                 ground = ParkGround.floorFor(level, project, ground);
                 valid++;

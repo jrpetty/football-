@@ -412,6 +412,10 @@ public class VillageFolkEntity extends AssistantEntity {
         // fists, before anything else (FireBrigade; the town is looked over every two seconds).
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel fireLevel
                 && FireBrigade.hold(this, fireLevel)) return;
+        // [disasters] Out of a flood, to a neighbour's bed while its home is burnt or flooded, the fire watch's round,
+        // a farmer's water carried to its parched field (Disasters).
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel disasterLevel
+                && Disasters.hold(this, disasterLevel)) return;
         // [wf] A thunderstorm: indoors, everybody but the watch, and there till it has passed (Weather).
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel stormLevel
                 && Weather.shelter(this, stormLevel)) return;
@@ -4360,6 +4364,7 @@ public class VillageFolkEntity extends AssistantEntity {
     private int rationsWanted() {
         UUID village = ownerId();
         if (village != null && Market.hungry(village)) return RATIONS_LOW + 2;
+        if (Droughts.rationing(village)) return RATIONS_LOW + 2;   // [disasters] short rations in a drought
         return tripToStores() >= 48 ? 12 : 8;
     }
 
@@ -7680,7 +7685,8 @@ public class VillageFolkEntity extends AssistantEntity {
     protected boolean calledAway() {
         return FireBrigade.onIt(this) || Weather.sheltering(this) || Health.laidUp(this) || Neighbourly.busy(this)   // [batchA]
             || Inn.lodged(this)                                  // [batchE] asleep in a room at an inn on the road
-            || WatchClears.sheltering(this);                     // [watch-clears] indoors out of a monster's way
+            || WatchClears.sheltering(this)                      // [watch-clears] indoors out of a monster's way
+            || Disasters.busy(this);                             // [disasters] a bucket chain, a flood, a night away, the fire watch
     }
 
     /** [wf] The woodcutter's wood kept growing between its fellings (Woods). */

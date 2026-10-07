@@ -47,8 +47,19 @@ import java.util.concurrent.ConcurrentHashMap;
  *     water on the way. Water poured on a fire puts out the flames round it and is scooped back up, as a
  *     player does it. With no water to be had, it punches the flames out one by one, as a player can.</li>
  * <li><b>Written down.</b> When the last of it is out, the town's books note the fire (Annals.fire): the
- *     day, where, how it started (lightning, lava, a campfire, or nobody saw) and who put it out, and
- *     the news says so. A fire nobody could get to that burns itself out is noted too.</li>
+ *     day, where, how it started (lightning, lava, a campfire, a spark from a forge, or nobody saw) and who
+ *     put it out, and the news says so. A fire nobody could get to that burns itself out is noted too.</li>
+ * <li><b>[disasters] The bell.</b> A new fire rings the town's bell (the fire station's, once there is
+ *     one): a quick peal of a dozen strokes, heard all round, the nearest folk to the bell crying where it
+ *     is ("Fire at the smithy!"), and the chronicle says so.</li>
+ * <li><b>[disasters] A bucket chain.</b> A big fire (six blocks alight or more) with water within thirty
+ *     blocks gets a chain besides its hands: four to ten folk in a line from the water to the fire, the
+ *     stores' buckets passed hand to hand (BucketChain). The buckets each hand or link had of the stores
+ *     go back when the fire is out.</li>
+ * <li><b>[disasters] What burned.</b> Each of the town's buildings the fire reaches is taken down as it
+ *     stands the moment it is seen, so what burns can be put back (Rebuilding); and no fire takes more than
+ *     two buildings: a flame on a third is beaten out by its neighbours at once. Afterwards the town takes
+ *     care (FireSafety).</li>
  * </ul>
  */
 @EventBusSubscriber(modid = McAssistantMod.MODID)
@@ -91,6 +102,11 @@ public final class FireBrigade {
         int out;
         boolean water;
         boolean closed;
+        /** [disasters] The town's buildings it has reached, each as it stood when the fire was first seen by it. */
+        final Map<Long, Map<Long, BlockState>> stood = new java.util.LinkedHashMap<>();
+        /** [disasters] Its bucket chain's part, written in when the chain stands down; and when one was last tried for. */
+        String chain = "";
+        long chainTried = -100000L;
 
         Blaze(BlockPos first, long now) {
             this.first = first.immutable();
@@ -117,6 +133,8 @@ public final class FireBrigade {
         int walkTick = -1000;
         int punchTick = -1000;
         @Nullable BlockPos going;
+        /** [disasters] Buckets it had of the stores (or the fire station) for this fire: they go back after. */
+        int lent;
 
         Hand(UUID village, Blaze blaze, long now) {
             this.village = village;
@@ -131,11 +149,14 @@ public final class FireBrigade {
     public static void resetForTests() {
         TOWNS.clear();
         HANDS.clear();
+        ALARMS.clear();
+        RUNG.clear();
+        Disasters.resetForTests();          // [disasters] the chains, the floods' folk, the lodgers, the fire watch
     }
 
-    /** Is this folk at a fire just now? */
+    /** Is this folk at a fire just now (a hand, or a link in a bucket chain)? */
     public static boolean onIt(VillageFolkEntity f) {
-        return HANDS.containsKey(f.getUUID());
+        return HANDS.containsKey(f.getUUID()) || BucketChain.inChain(f);
     }
 
     // ------------------------------------------------------------------ from the folk's tick
@@ -150,6 +171,7 @@ public final class FireBrigade {
         Villages.Village v = Villages.get(id);
         if (v == null) return false;
         watch(level, v, false);
+        if (BucketChain.inChain(f)) return BucketChain.hold(f, level);     // [disasters] a link in the bucket chain
         Hand h = HANDS.get(f.getUUID());
         if (h == null) return false;
         if (h.blaze.closed || !f.isAlive() || !h.village.equals(id)) {
@@ -184,11 +206,16 @@ public final class FireBrigade {
             }
             if (into == null) {
                 into = new Blaze(p, now);
-                into.cause = cause(level, t, p, now);
+                String sparked = FireSafety.sparkCause(v.id(), p, now);      // [disasters] a spark from a forge
+                into.cause = sparked != null ? sparked : cause(level, t, p, now);
                 into.where = where(level, v, p);
                 t.blazes.add(into);
-                Villages.tell(v.id(), level.getDayTime() / 24000L, "fire " + into.where + (into.cause.isEmpty() ? "" : " (" + into.cause + ")"));
+                Villages.tell(v.id(), level.getDayTime() / 24000L, "Fire " + into.where + "!" + (into.cause.isEmpty() ? "" : " (" + into.cause + ")")
+                    + " The bell rang and the town turned out");
+                alarm(level, v, into);                                        // [disasters] the bell
             }
+            // [disasters] What it reaches, as it stood; and never a third building.
+            if (!stood(level, v, into, p)) continue;
             into.burning.add(p.asLong());
         }
         // Out: into the books, and the hands back to their day.
@@ -284,7 +311,7 @@ public final class FireBrigade {
                 best = b;
             }
         }
-        if (best != null) return "at " + Villages.spoken(best.structure());
+        if (best != null) return "at " + named(best.structure());
         BlockPos c = v.centre();
         return Math.max(Math.abs(p.getX() - c.getX()), Math.abs(p.getZ() - c.getZ())) <= com.jrpetty.mcassistant.village.TownPlan.PLAZA
             ? "on the square" : "in the town";
@@ -298,12 +325,17 @@ public final class FireBrigade {
         });
         int want = Math.min(MOST_HANDS, 1 + (b.burning.size() - b.unreachable.size()) / 6);
         if (b.burning.size() <= b.unreachable.size()) return;          // all of it out of reach: it burns out
+        // [disasters] A big fire: a bucket chain from the nearest water, besides its hands.
+        if (b.burning.size() - b.unreachable.size() >= BucketChain.CHAIN_AT && (now - b.chainTried >= 200L || now < b.chainTried)) {
+            b.chainTried = now;
+            BucketChain.form(level, v, b);
+        }
         while (b.crew.size() < want) {
             BlockPos at = BlockPos.of(b.burning.iterator().next());
             VillageFolkEntity best = null;
             double bestScore = Double.MAX_VALUE;
             for (AssistantEntity a : Villages.folkOf(v.id())) {
-                if (!(a instanceof VillageFolkEntity f) || !fit(f) || HANDS.containsKey(f.getUUID())) continue;
+                if (!(a instanceof VillageFolkEntity f) || !fit(f) || onIt(f)) continue;     // [disasters] not one in the chain
                 double d = Math.sqrt(f.blockPosition().distSqr(at));
                 if (d > CALL_REACH) continue;
                 double score = d + (f.isSleeping() ? 24.0 : 0.0);
@@ -335,7 +367,11 @@ public final class FireBrigade {
     /** The fire out: written into the town's books, and the news. */
     private static void close(ServerLevel level, Villages.Village v, Blaze b) {
         b.closed = true;
-        for (UUID u : b.crew) HANDS.remove(u);
+        for (UUID u : b.crew) {
+            Hand h = HANDS.remove(u);
+            if (h != null && level.getEntity(u) instanceof VillageFolkEntity f) giveBack(level, v, f, h);   // [disasters] the buckets back
+        }
+        BucketChain.standDown(level, v, b);                               // [disasters] the chain's buckets back
         long day = level.getDayTime() / 24000L;
         String how = b.cause.isEmpty() ? "" : ", started by " + b.cause;
         String line;
@@ -346,8 +382,24 @@ public final class FireBrigade {
                 : String.join(", ", b.names.subList(0, b.names.size() - 1)) + " and " + b.names.get(b.names.size() - 1);
             line = "a fire " + b.where + how + " was put out by " + who + (b.water ? " with a bucket of water" : " by hand");
         }
+        if (!b.chain.isEmpty()) line += ", " + b.chain;
         Annals.fire(v.id(), day, line);
         Villages.tell(v.id(), day, line);
+        // [disasters] What burned put back from the stores, and the town takes care after it.
+        Rebuilding.afterFire(level, v, b.stood, b.where.replaceFirst("^(at|on|in) ", ""), b.cause);
+        FireSafety.afterFire(level, v, b.cause, b.where, day);
+    }
+
+    /** [disasters] A hand's buckets of the stores back where they came from (the fire station, else the stores). */
+    private static void giveBack(ServerLevel level, Villages.Village v, VillageFolkEntity f, Hand h) {
+        for (int i = 0; i < h.lent; i++) {
+            ItemStack back = ItemStack.EMPTY;
+            if (f.removeMatching(s -> s.is(Items.BUCKET), 1) == 1) back = new ItemStack(Items.BUCKET);
+            else if (f.removeMatching(s -> s.is(Items.WATER_BUCKET), 1) == 1) back = new ItemStack(Items.WATER_BUCKET);
+            if (back.isEmpty()) break;
+            FireSafety.putBack(level, v, back);
+        }
+        h.lent = 0;
     }
 
     // ------------------------------------------------------------------ at the fire
@@ -359,6 +411,7 @@ public final class FireBrigade {
         if (fire == null) {
             HANDS.remove(f.getUUID());
             b.crew.remove(f.getUUID());
+            giveBack(level, v, f, h);                                     // [disasters]
             return false;
         }
         if (!h.kitted) {
@@ -457,15 +510,24 @@ public final class FireBrigade {
     private static void kit(VillageFolkEntity f, ServerLevel level, Villages.Village v, Hand h, BlockPos fire) {
         if (f.countCarried(s -> s.is(Items.WATER_BUCKET)) > 0) return;
         if (f.countCarried(s -> s.is(Items.BUCKET)) == 0) {
-            if (Crafts.take(level, v, s -> s.is(Items.WATER_BUCKET), 1)) {
+            // [disasters] The fire station's buckets first, hanging ready; whatever it takes it gives back after.
+            ItemStack racked = FireSafety.takeBucket(level, v);
+            if (!racked.isEmpty()) {
+                give(f, level, v, racked);
+                h.lent++;
+                f.brain("took a bucket off the fire station's rack");
+                if (racked.is(Items.WATER_BUCKET)) return;
+            } else if (Crafts.take(level, v, s -> s.is(Items.WATER_BUCKET), 1)) {
                 give(f, level, v, new ItemStack(Items.WATER_BUCKET));
+                h.lent++;
                 f.brain("took a bucket of water from the stores for the fire");
                 return;
-            }
-            if (Crafts.take(level, v, s -> s.is(Items.BUCKET), 1)) {
+            } else if (Crafts.take(level, v, s -> s.is(Items.BUCKET), 1)) {
                 give(f, level, v, new ItemStack(Items.BUCKET));
+                h.lent++;
             } else if (Market.stock(level, v.id(), s -> s.is(Items.IRON_INGOT)) >= 3 && Crafts.take(level, v, s -> s.is(Items.IRON_INGOT), 3)) {
                 give(f, level, v, new ItemStack(Items.BUCKET));             // three iron, as the game makes one
+                h.lent++;
                 f.brain("made a bucket of three of the stores' iron for the fire");
             }
         }
@@ -484,7 +546,8 @@ public final class FireBrigade {
         double bd = Double.MAX_VALUE;
         for (BlockPos from : new BlockPos[]{ me, fire }) {
             for (BlockPos p : BlockPos.betweenClosed(from.offset(-WATER_NEAR, -4, -WATER_NEAR), from.offset(WATER_NEAR, 3, WATER_NEAR))) {
-                if (!level.getBlockState(p).is(Blocks.WATER) || !level.getFluidState(p).isSource()) continue;
+                if (!fullCauldron(level.getBlockState(p))                  // [disasters] a workshop's cauldron of water
+                        && (!level.getBlockState(p).is(Blocks.WATER) || !level.getFluidState(p).isSource())) continue;
                 double d = p.distSqr(me);
                 if (d < bd) {
                     bd = d;
@@ -499,7 +562,8 @@ public final class FireBrigade {
     /** To the water and fill the bucket. True while it is at it. */
     private static boolean fill(VillageFolkEntity f, ServerLevel level, Hand h, long now) {
         BlockPos w = h.water;
-        if (w == null || !level.getBlockState(w).is(Blocks.WATER) || !level.getFluidState(w).isSource()) {
+        boolean cauldron = w != null && fullCauldron(level.getBlockState(w));
+        if (w == null || !cauldron && (!level.getBlockState(w).is(Blocks.WATER) || !level.getFluidState(w).isSource())) {
             h.water = null;
             return false;
         }
@@ -525,13 +589,18 @@ public final class FireBrigade {
             f.brain("filling a bucket for the fire");
             return true;
         }
-        // A source with water either side of it fills again (as the game's does); a lone one is taken up.
-        int sources = 0;
-        for (Direction dir : Direction.Plane.HORIZONTAL) {
-            BlockPos n = w.relative(dir);
-            if (level.getFluidState(n).is(FluidTags.WATER) && level.getFluidState(n).isSource()) sources++;
+        // A source with water either side of it fills again (as the game's does); a lone one is taken up;
+        // [disasters] a full cauldron is emptied into it, as a player empties one.
+        if (cauldron) {
+            level.setBlockAndUpdate(w, Blocks.CAULDRON.defaultBlockState());
+        } else {
+            int sources = 0;
+            for (Direction dir : Direction.Plane.HORIZONTAL) {
+                BlockPos n = w.relative(dir);
+                if (level.getFluidState(n).is(FluidTags.WATER) && level.getFluidState(n).isSource()) sources++;
+            }
+            if (sources < 2) level.setBlockAndUpdate(w, Blocks.AIR.defaultBlockState());
         }
-        if (sources < 2) level.setBlockAndUpdate(w, Blocks.AIR.defaultBlockState());
         if (f.removeMatching(s -> s.is(Items.BUCKET), 1) == 1) {
             ItemStack left = f.insertItem(new ItemStack(Items.WATER_BUCKET));
             if (!left.isEmpty()) net.minecraft.world.level.block.Block.popResource(level, f.blockPosition(), left);
@@ -542,6 +611,144 @@ public final class FireBrigade {
         h.going = null;
         f.brain("filled a bucket at the water for the fire");
         return true;
+    }
+
+    // ------------------------------------------------------------------ [disasters] the bell, what burns, the names
+
+    /** The fire bell: a dozen quick strokes. */
+    static final int ALARM_STROKES = 12;
+    static final long ALARM_STROKE = 8L;
+
+    /** A peal for a fire: the bell (or null: called aloud, as the hours are with no bell), the strokes left, the next. */
+    static final class Alarm {
+        @Nullable final BlockPos bell;
+        final BlockPos fire;
+        final String where;
+        int left = ALARM_STROKES;
+        long next;
+
+        Alarm(@Nullable BlockPos bell, BlockPos fire, String where, long now) {
+            this.bell = bell == null ? null : bell.immutable();
+            this.fire = fire.immutable();
+            this.where = where;
+            this.next = now;
+        }
+    }
+
+    private static final Map<UUID, Alarm> ALARMS = new ConcurrentHashMap<>();
+    /** Strokes rung for fire, by town, all told (the books, the tests). */
+    private static final Map<UUID, Integer> RUNG = new ConcurrentHashMap<>();
+
+    /** A new fire: the bell rung for it (the fire station's, else the town's), and the cry raised by the nearest to it. */
+    static void alarm(ServerLevel level, Villages.Village v, Blaze b) {
+        if (ALARMS.containsKey(v.id())) return;                          // one peal at a time
+        BlockPos bell = FireSafety.stationBell(level, v);
+        if (bell == null) bell = TownBell.bellAt(level, v);
+        ALARMS.put(v.id(), new Alarm(bell, b.first, b.where, level.getGameTime()));
+        // Whoever is nearest the bell cries it out, as the town crier would.
+        BlockPos at = bell != null ? bell : v.centre();
+        VillageFolkEntity crier = null;
+        double cd = 32.0 * 32.0;
+        for (AssistantEntity a : Villages.folkOf(v.id())) {
+            if (!(a instanceof VillageFolkEntity f) || f.isBaby() || f.isSleeping() || !f.isAlive()) continue;
+            double d = f.blockPosition().distSqr(at);
+            if (d < cd) { cd = d; crier = f; }
+        }
+        if (crier != null) {
+            String where = Disasters.capital(b.where);
+            FolkTalk.speak(crier, FolkTalk.pick(level.getRandom(), "Fire " + b.where + "! Fire! Bring your buckets!",
+                "Fire! " + where + "! Everybody to the water!", "Ring the bell! Fire " + b.where + "!"));
+        }
+    }
+
+    @SubscribeEvent
+    public static void onServerTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
+        if (ALARMS.isEmpty()) return;
+        com.jrpetty.mcassistant.Guard.run("the fire bell", () -> strike(event.getServer()));
+    }
+
+    /** The fire bell's strokes, each in its turn. */
+    private static void strike(net.minecraft.server.MinecraftServer server) {
+        for (Map.Entry<UUID, Alarm> e : ALARMS.entrySet()) {
+            Villages.Village v = Villages.get(e.getKey());
+            ServerLevel level = v == null ? null : server.getLevel(v.dim());
+            Alarm a = e.getValue();
+            if (level == null || a.left <= 0) {
+                ALARMS.remove(e.getKey());
+                continue;
+            }
+            long now = level.getGameTime();
+            if (now < a.next) continue;
+            a.next = now + ALARM_STROKE;
+            a.left--;
+            RUNG.merge(e.getKey(), 1, Integer::sum);
+            BlockState st = a.bell == null || !level.isLoaded(a.bell) ? null : level.getBlockState(a.bell);
+            if (st != null && st.getBlock() instanceof net.minecraft.world.level.block.BellBlock bell) {
+                bell.attemptToRing(level, a.bell, st.getValue(net.minecraft.world.level.block.BellBlock.FACING));
+            } else {
+                level.playSound(null, v.centre(), SoundEvents.BELL_BLOCK, SoundSource.BLOCKS, 3.0F, 1.1F);
+            }
+        }
+    }
+
+    /**
+     * What a fire reaches, as it stood: the first time a flame is seen on or beside one of the town's buildings,
+     * the building is taken down as it stands (Rebuilding.snapshot). A third building is never let burn: a
+     * flame on it is beaten out by its neighbours there and then. False if this flame was put out so.
+     */
+    static boolean stood(ServerLevel level, Villages.Village v, Blaze b, BlockPos p) {
+        com.jrpetty.mcassistant.village.Ledger.Building on = Rebuilding.buildingAt(v.id(), p, 2);
+        if (on == null || b.stood.containsKey(on.anchor().asLong())) return true;
+        if (b.stood.size() >= 2) {
+            level.removeBlock(p, false);
+            level.levelEvent(null, 1009, p, 0);                          // the hiss of a flame put out
+            Disasters.town(v.id()).keptFrom++;
+            Disasters.dirty();
+            return false;
+        }
+        b.stood.put(on.anchor().asLong(), Rebuilding.snapshot(level, v.id(), on));
+        return true;
+    }
+
+    /** A building's name, for the cry and the books: "the smithy", "the house", "the meeting hall". */
+    static String named(String structure) {
+        return switch (structure) {
+            case "house", "house2" -> "the house";
+            case "guesthouse" -> "the guest house";
+            case "storage", "storehouse" -> "the storehouse";
+            default -> Villages.spoken(structure).replaceFirst("^(a|an) ", "the ");
+        };
+    }
+
+    /** A cauldron full of water (a workshop's, FireSafety), to fill a bucket at. */
+    static boolean fullCauldron(BlockState st) {
+        return st.is(Blocks.WATER_CAULDRON) && st.getValue(net.minecraft.world.level.block.LayeredCauldronBlock.LEVEL)
+            >= net.minecraft.world.level.block.LayeredCauldronBlock.MAX_FILL_LEVEL;
+    }
+
+    /** Where the town is on fire now ("at the smithy"), for the board; null if nowhere. */
+    @Nullable
+    static String burningNow(UUID village) {
+        Town t = TOWNS.get(village);
+        if (t == null) return null;
+        for (Blaze b : t.blazes) if (!b.closed && !b.burning.isEmpty()) return b.where;
+        return null;
+    }
+
+    /** Is a fire still burning near this spot (a building being rebuilt waits for it)? */
+    static boolean burningNear(UUID village, BlockPos p) {
+        Town t = TOWNS.get(village);
+        if (t == null) return false;
+        for (Blaze b : t.blazes) {
+            if (b.closed) continue;
+            for (Long l : b.burning) if (BlockPos.of(l).distManhattan(p) <= 16) return true;
+        }
+        return false;
+    }
+
+    /** Tests: the strokes the fire bell has rung for this town, all told. */
+    public static int alarmForTests(UUID village) {
+        return RUNG.getOrDefault(village, 0);
     }
 
     // ------------------------------------------------------------------ lightning

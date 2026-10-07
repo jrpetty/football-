@@ -2855,6 +2855,13 @@ public class CityScreen extends Screen {
             for (String s : civic) all.add("  " + s);
             all.add("");
         }
+        // [disasters] Fire, flood and drought (entity/Disasters): the weather, the fires, floods and droughts, what it built after.
+        List<String> disasters = strings("disasters");
+        if (!disasters.isEmpty()) {
+            all.add("Fire, flood and drought:");
+            for (String s : disasters) all.add("  " + s);
+            all.add("");
+        }
         all.add("The chronicle, latest first:");
         all.addAll(strings("news"));
         lines(g, all, x, y, cw, ch);

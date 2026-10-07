@@ -841,6 +841,7 @@ public final class TownLife {
             case "watchtower" -> "The Watchtower";
             case "lighthouse" -> "The Lighthouse";
             case "postoffice" -> "The Post Office";            // [batchF] (Post)
+            case "firestation" -> "The Fire Station";          // [disasters] (FireSafety)
             default -> "The " + Character.toUpperCase(structure.charAt(0)) + structure.substring(1);
         };
     }

@@ -592,6 +592,7 @@ public final class Annals {
         out.put("causes", c);
         out.putInt("fires", fires(id));                          // [wf] the town's fires, and the last of them (FireBrigade)
         out.put("fire_log", strings(fireLog(id)));
+        out.put("disasters", strings(Disasters.book(level, id)));      // [disasters] fire, flood and drought (the News page)
         String[] page = VillageBoards.page(VillageBoards.compose(level, id));
         out.putString("board_title", page[0]);
         out.putString("board", page[1].length() > 20000 ? page[1].substring(0, 20000) : page[1]);
