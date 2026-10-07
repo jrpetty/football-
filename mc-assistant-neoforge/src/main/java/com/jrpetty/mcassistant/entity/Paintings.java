@@ -3,16 +3,20 @@ package com.jrpetty.mcassistant.entity;
 import com.jrpetty.mcassistant.village.Ledger;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ItemParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.ItemTags;
+import net.minecraft.tags.PaintingVariantTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.decoration.Painting;
+import net.minecraft.world.entity.decoration.PaintingVariant;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.CustomData;
@@ -300,18 +304,20 @@ public final class Paintings {
         UUID id = v.id();
         if (!free && Crafts.stock(level, v, s -> s.is(Items.PAINTING)) <= 0) return false;
         for (Ledger.Building b : rooms(id)) {
-            if (!level.isLoaded(b.anchor()) || hanging(level, id, b) >= EACH) continue;
+            int up = level.isLoaded(b.anchor()) ? hanging(level, id, b) : EACH;
+            if (up >= EACH) continue;
             Decor.Room room = Decor.room(id, b);
             Set<BlockPos> taken = Decor.reserved(level, id, b);
             String where = Villages.spoken(b.structure());
-            for (Decor.Spot s : Decor.wallSpots(level, room, b.anchor(), 1, taken)) {
-                if (Painting.create(level, s.at(), s.facing()).isEmpty()) continue;
+            List<Decor.Spot> spots = Decor.wallSpots(level, room, b.anchor(), 1, taken);
+            for (Decor.Spot s : spots) {
+                if (fit(level, s, spots, up + 1 < EACH).isEmpty()) continue;
                 if (!free && !TownJobs.atWork(level, v, "paintings", s.at(), "hanging a painting in " + where)) return true;
                 ItemStack p = free ? picture("A View of " + Villages.name(id), "a townsman", 0, Villages.name(id))
                     : Crafts.takeOne(level, v, st -> st.is(Items.PAINTING) && about(st) != null);
                 if (p.isEmpty()) p = Crafts.takeOne(level, v, st -> st.is(Items.PAINTING));
                 if (p.isEmpty()) return false;
-                Optional<Painting> made = Painting.create(level, s.at(), s.facing());
+                Optional<Painting> made = fit(level, s, spots, up + 1 < EACH);
                 if (made.isEmpty()) {
                     Crafts.store(level, v, p);
                     return false;
@@ -329,6 +335,42 @@ public final class Paintings {
                 }
                 return true;
             }
+        }
+        return false;
+    }
+
+    /**
+     * The picture for this place on a wall, or none if none fits there: the largest that fits, as a player's
+     * would be, but while the room wants another after it, the largest that still leaves another of its places
+     * clear (a wall of a tavern has room for a big picture or for two small ones, and the town wants two).
+     */
+    static Optional<Painting> fit(ServerLevel level, Decor.Spot s, List<Decor.Spot> spots, boolean another) {
+        List<Painting> best = new ArrayList<>();
+        int bestArea = -1;
+        boolean bestLeaves = false;
+        for (Holder<PaintingVariant> h : level.registryAccess().registryOrThrow(Registries.PAINTING_VARIANT)
+                .getTagOrEmpty(PaintingVariantTags.PLACEABLE)) {
+            Painting p = new Painting(level, s.at(), s.facing(), h);
+            if (!p.survives()) continue;
+            boolean leaves = !another || leavesRoom(level, p, s, spots);
+            int area = h.value().area();
+            if (bestLeaves && !leaves) continue;
+            if (leaves && !bestLeaves || area > bestArea) {
+                best.clear();
+                bestArea = area;
+                bestLeaves = leaves;
+            }
+            if (area == bestArea) best.add(p);
+        }
+        return best.isEmpty() ? Optional.empty() : Optional.of(best.get(level.random.nextInt(best.size())));
+    }
+
+    /** Would another of these places still take a picture with this one hung? */
+    private static boolean leavesRoom(ServerLevel level, Painting p, Decor.Spot s, List<Decor.Spot> spots) {
+        AABB box = p.getBoundingBox();
+        for (Decor.Spot o : spots) {
+            if (o.at().equals(s.at()) || box.intersects(new AABB(o.at()).inflate(0.05))) continue;
+            if (Painting.create(level, o.at(), o.facing()).isPresent()) return true;
         }
         return false;
     }
