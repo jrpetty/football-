@@ -809,6 +809,26 @@ def culture_stage(r, look, cx, cz):
     say("alive after the culture stage: %s" % client_alive())
 
 
+# The second towns the stages found, so that a later stage wanting one near the same spot reuses it rather than
+# founding a town on top of a town (the job market's, trade's and the wars' towns all lie 200-240 blocks out).
+_towns = []
+
+
+def other_town(r, tx, tz, what="second town"):
+    """A town of eight at about (tx, tz): the one a stage already founded within 150 blocks of it, else a new one
+    there (the spectator taken over it first so its ground loads, then time for its board and trades)."""
+    for x, z in _towns:
+        if math.hypot(x - tx, z - tz) < 150:
+            say("%s: the one at %d %d" % (what, x, z))
+            return x, z
+    r.cmd("tp %s %d 140 %d" % (USER, tx, tz))
+    time.sleep(15)                                     # the ground arrives
+    say("%s: %s" % (what, r.cmd("village spawnat %d %d 8" % (tx, tz))[:200]))
+    _towns.append((tx, tz))
+    time.sleep(20)                                     # its board goes up, its folk take up their trades
+    return tx, tz
+
+
 def jobs_stage(r, look, cx, cz):
     """The job market between towns (entity/JobMarket, JobSeekers): a second town a little way off,
     the two agreeing to trade, a Wanted notice put up on the second town's board, a folk of the first
@@ -818,10 +838,7 @@ def jobs_stage(r, look, cx, cz):
     r.cmd("gamemode spectator %s" % USER)
     midday(r)
     tx, tz = cx + 230, cz + 20
-    r.cmd("tp %s %d 140 %d" % (USER, tx, tz))
-    time.sleep(15)                                     # the ground arrives
-    say("second town: " + r.cmd("village spawnat %d %d 8" % (tx, tz))[:200])
-    time.sleep(20)                                     # its board goes up, its folk take up their trades
+    tx, tz = other_town(r, tx, tz, "second town")
     hy = ground_height(r, cx, cz)
     ty = ground_height(r, tx, tz)
     say("pact: " + r.cmd("execute positioned %d %d %d run village jobs pact" % (cx, hy + 1, cz)))
@@ -1451,10 +1468,7 @@ def trade_stage(r, look, cx, cz):
     out = r.cmd("execute positioned %d %d %d run village trade stage" % (cx, hy + 1, cz))
     if "no neighbour" in out:
         tx, tz = cx - 240, cz + 30
-        r.cmd("tp %s %d 140 %d" % (USER, tx, tz))
-        time.sleep(15)                                 # the ground arrives
-        say("second town: " + r.cmd("village spawnat %d %d 8" % (tx, tz))[:200])
-        time.sleep(20)                                 # its board goes up, its folk take up their trades
+        tx, tz = other_town(r, tx, tz, "second town")
         out = r.cmd("execute positioned %d %d %d run village trade stage" % (cx, hy + 1, cz))
     say("trade stage: " + out[:1500])
     say("trade: " + r.cmd("execute positioned %d %d %d run village trade" % (cx, hy + 1, cz))[:1500])
@@ -1509,10 +1523,7 @@ def war_scouting_stage(r, look, cx, cz):
     r.cmd("gamemode spectator %s" % USER)
     midday(r)
     tx, tz = cx + 200, cz - 40
-    r.cmd("tp %s %d 140 %d" % (USER, tx, tz))
-    time.sleep(15)                                     # the ground arrives
-    say("enemy town: " + r.cmd("village spawnat %d %d 8" % (tx, tz))[:200])
-    time.sleep(20)                                     # its board goes up, its folk take up their trades
+    tx, tz = other_town(r, tx, tz, "enemy town")
     hy = ground_height(r, cx, cz)
     here = "execute positioned %d %d %d run " % (cx, hy + 1, cz)
     say("war: " + r.cmd(here + "village war scout stage"))
@@ -1595,10 +1606,7 @@ def war_peace_stage(r, look, cx, cz):
     r.cmd("gamemode spectator %s" % USER)
     midday(r)
     tx, tz = cx - 240, cz + 40                       # the far side from the job market's town (jobs_stage)
-    r.cmd("tp %s %d 140 %d" % (USER, tx, tz))
-    time.sleep(15)                                     # the ground arrives
-    say("the other town: " + r.cmd("village spawnat %d %d 8" % (tx, tz))[:200])
-    time.sleep(20)                                     # its board goes up, its folk take up their trades
+    tx, tz = other_town(r, tx, tz, "the other town")
     hy = ground_height(r, cx, cz)
     # A red banner in the stores, for the war banner (the town makes one of six wool and a stick if it has those).
     say("cloth: " + r.cmd("execute positioned %d %d %d run village war cloth" % (cx, hy + 1, cz)))
@@ -1907,6 +1915,18 @@ def main():
         trade_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("trade stage failed: %s" % e)
+    try:
+        war_peace_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("war peace stage failed: %s" % e)
+    try:
+        war_scouting_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("war scouting stage failed: %s" % e)
+    try:
+        war_footing_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("war footing stage failed: %s" % e)
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the founding: %s" % client_alive())
     try:
