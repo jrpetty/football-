@@ -6399,9 +6399,9 @@ the books say what of ("a guard's shield waits on 2 blue dye").
   on it, a dye for each, when the stores have the dyes. Taken down at the peace, it goes back into the stores as
   it is, ready for next time.
 * **Festival tabards** (new item: *Tabard*). The tailor keeps the town a set of tabards, one for each grown folk
-  who is not on the watch, six at most. Each is seven wool cut like a tunic with the town's banner put on it.
+  who is not on the watch, six at most. Each is eight wool cut like a tunic with the town's banner put on it.
   On a festival's day and on Founding Day they come out of the stores in the morning, and the folk wear them over
-  their clothes, front and back, until night, when they go back in. You can make one too: seven wool in the shape
+  their clothes, front and back, until night, when they go back in. You can make one too: eight wool in the shape
   of a chestplate, then the tabard and any banner together at the crafting table give the tabard the banner's
   arms, as a shield does.
 * **Your own banner.** Buy a copy at the shop's "Our banner" sign, as before (at the town store if the town has
@@ -6429,7 +6429,8 @@ the books say what of ("a guard's shield waits on 2 blue dye").
 The game tests `ArmsBuskersGameTests` check that a guard's shield is given the town's arms, layer for layer, out of
 six wool, a stick and a dye a charge (ab01); that the banner flies either side of the hall's door, woven of the
 stores' wool (ab02); that the board carries the arms, and that a new age grants a river town a fish (ab03); and
-that a tabard is made of thirteen wool, worn on Founding Day and back in the stores the day after (ab07).
+that a tabard is made of fourteen wool (eight for it, six for the banner on it), worn on Founding Day and back in
+the stores the day after (ab07).
 
 ## Buskers
 
