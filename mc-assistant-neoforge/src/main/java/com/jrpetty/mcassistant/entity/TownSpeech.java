@@ -235,7 +235,8 @@ public final class TownSpeech {
      * kind before it has two); null if the line coins none.
      */
     @Nullable
-    static String[] coin(Chronicle.Entry e) {
+    static String[] coin(UUID village, Chronicle.Entry e) {
+        String home = TownWays.of(Villages.name(village));
         String text = e.text();
         String t = text.toLowerCase(Locale.ROOT);
         long d = e.day() + 1;
@@ -253,7 +254,7 @@ public final class TownSpeech {
         if (t.startsWith("the fire burnt") || t.startsWith("fire ")) return new String[]{ "fire", "quick as the bucket line on day " + d };
         if ((m = RISING.matcher(text)).find() && !t.contains("raider")) return new String[]{ "flood", "high as " + m.group(1).toLowerCase(Locale.ROOT)
             .replaceFirst("^the ", "the ") + " on day " + d };
-        if (t.contains("the levee was finished")) return new String[]{ "levee", "solid as the levee" };
+        if (t.contains("the levee was finished")) return new String[]{ "levee", "solid as " + home + " levee" };
         if ((m = WED.matcher(text)).find()) return new String[]{ "wedding", "happy as " + m.group(1) + " and " + m.group(2) };
         if ((m = OLD.matcher(text)).find() && Integer.parseInt(m.group(2)) >= 50) return new String[]{ "old", "old as " + m.group(1) };
         if ((m = DREAM.matcher(text)).find()) return new String[]{ "dream", "as sure as " + m.group(1) + "'s dream" };
@@ -263,7 +264,7 @@ public final class TownSpeech {
         if ((m = SAVED.matcher(text)).find()) return new String[]{ "saved", "safe as " + m.group(2) + " with " + m.group(1) + " by" };
         if (t.contains("settlers left to found")) return new String[]{ "settlers", "bold as the settlers of day " + d };
         if (t.startsWith("settlers from")) return new String[]{ "founded", "far as the road from home" };
-        if (t.contains("the town's mine was opened")) return new String[]{ "mine", "deep as the town's mine" };
+        if (t.contains("the town's mine was opened")) return new String[]{ "mine", "deep as " + home + " mine" };
         if ((m = AGE.matcher(t)).find() && (t.contains("came into") || t.contains("entered") || t.contains("reached"))) {
             return new String[]{ "age", "bright as the coming of the " + capital(m.group(1)) + " Age" };
         }
@@ -330,7 +331,7 @@ public final class TownSpeech {
         List<Saying> coinedNow = new ArrayList<>();
         Map<String, Integer> perKind = new HashMap<>();
         for (Chronicle.Entry e : Chronicle.of(village)) {
-            String[] c = coin(e);
+            String[] c = coin(village, e);
             if (c == null || texts.contains(c[1])) continue;
             int n = perKind.getOrDefault(c[0], 0) + (kinds.contains(c[0]) ? 1 : 0);
             if (n >= 2) continue;
@@ -558,7 +559,7 @@ public final class TownSpeech {
         String[] p = pet(Homeland.of(village));
         out.add("Its folk say \"" + w[0] + "\" (and, being " + TownWays.temperWord(TownWays.heart(village)) + ", \"" + temperGreeting(village)
             + "\"); goodbye is \"" + w[1] + "\".");
-        out.add("Its own words: the stores are \"" + p[0] + "\", the board \"" + p[1] + "\", a coin " + FolkTalk.article(p[2]) + " \"" + p[2] + "\".");
+        out.add("Its own words: the stores are \"" + p[0] + "\", the board \"" + p[1] + "\", a coin \"" + FolkTalk.article(p[2]) + "\".");
         List<Saying> s = sayings(village);
         for (Saying x : s) {
             String from = x.day() < 0 ? "the land's own" : "day " + (x.day() + 1) + ": " + (x.from().contains(": ")
