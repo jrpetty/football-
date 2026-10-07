@@ -355,6 +355,14 @@ public final class Prices {
         "deepslate_diamond_ore 25.5 O", "nether_quartz_ore 0.6 O", "ancient_debris 40.0 O",
         "coal 0.4 O", "raw_iron 1.0 O", "raw_copper 0.3 O", "raw_gold 7.0 O", "redstone 0.3 O", "lapis_lazuli 0.5 O",
         "quartz 0.5 O", "diamond 24.0 O", "emerald 6.0 O", "echo_shard 10.0 O",
+        // [fields] The tools of the fields and the pens (FieldTools), made, their worth set here so the board, the shop and
+        // the makers agree on it: a little over what goes into each (a can of five copper, a sickle of three and a stick,
+        // a smoker of two and a leather and a coal, a satchel of two leather and a string, a box of five planks and a
+        // wheat, a trough of four planks and a slab, a trap of sticks, string and a fish, a barrel of seven planks and a
+        // copper hoop).
+        "mc_assistant:copper_watering_can 2.6 C", "mc_assistant:seed_satchel 1.6 C", "mc_assistant:copper_sickle 1.6 C",
+        "mc_assistant:nesting_box 0.6 C", "mc_assistant:feed_trough 0.5 C", "mc_assistant:fish_trap 0.8 C",
+        "mc_assistant:rain_barrel 1.1 C", "mc_assistant:bee_smoker 2.0 C",
         // ---- the farm, the orchard and the garden
         "wheat 0.1 F", "wheat_seeds 0.02 F", "beetroot 0.1 F", "beetroot_seeds 0.03 F", "carrot 0.15 F",
         "potato 0.15 F", "poisonous_potato 0.01 F", "pumpkin 0.4 F", "melon_slice 0.1 F", "melon 0.8 F",
@@ -439,6 +447,8 @@ public final class Prices {
         "mc_assistant:milestone 0.8 S", "mc_assistant:shipping_crate 1.4 C", "mc_assistant:window_box 0.6 C",
         // [crime] A forged coin is worth its scrap of copper and no more, whatever it was cast to pass for (Mischief).
         "mc_assistant:forged_coin 0.1 C",
+        // [interviews] A letter of application: its sheet of paper and its ink, and a little for the hand that wrote it.
+        "mc_assistant:letter_of_application 0.3 C",
         // [itemaudit] The town's coin is worth a coin, whatever its minting took (a ninth of a bar of gold and the fire);
         // and a companion's memory core is nobody's to buy or sell: it is a friend, and nothing makes another.
         "mc_assistant:village_coin 1.0 C", "mc_assistant:memory_core 0 C",

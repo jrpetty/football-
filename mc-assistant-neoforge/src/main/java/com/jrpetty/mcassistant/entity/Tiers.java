@@ -70,6 +70,8 @@ public final class Tiers {
         if (it == Items.AIR) return Villages.Age.WOOD;
         Villages.Age set = WorkTools.ageOf(it);                 // [workitems] the rope coil the Wood Age's; the saw and the crate the Stone Age's
         if (set != null) return set;
+        Villages.Age fixed = com.jrpetty.mcassistant.item.FieldItems.ageOf(it);    // [fields] the satchel's and the barrel's own age
+        if (fixed != null) return fixed;
         ItemStack s = new ItemStack(it);
         String path = BuiltInRegistries.ITEM.getKey(it).getPath().toLowerCase(Locale.ROOT);
         List<String> words = List.of(path.split("_"));

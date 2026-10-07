@@ -244,7 +244,7 @@ public final class WindowBoxes {
         } else {
             watered(level, e.at, f.displayNameCap());
             Villages.Village v = Villages.get(e.village);
-            if (v != null) Crafts.store(level, v, new ItemStack(Items.BUCKET));
+            if (v != null) Crafts.store(level, v, emptied(e.carried));
             f.brain("watered the window boxes");
         }
         f.setItemSlot(EquipmentSlot.MAINHAND, e.wasInHand);
@@ -255,9 +255,19 @@ public final class WindowBoxes {
     private static void giveUp(ServerLevel level, VillageFolkEntity f, Errand e) {
         ERRANDS.remove(f.getUUID());
         Villages.Village v = Villages.get(e.village);
-        if (v != null) Crafts.store(level, v, e.hang ? e.carried : new ItemStack(Items.WATER_BUCKET));
+        if (v != null) Crafts.store(level, v, e.carried);
         f.setItemSlot(EquipmentSlot.MAINHAND, e.wasInHand);
         f.hobbyNow = null;
+    }
+
+    /** What goes back into the stores after a watering: the bucket, empty; the copper can, a watering the lighter. */
+    static ItemStack emptied(ItemStack carried) {
+        if (carried.getItem() instanceof com.jrpetty.mcassistant.item.WateringCanItem) {
+            ItemStack can = carried.copy();
+            com.jrpetty.mcassistant.item.WateringCanItem.setWater(can, com.jrpetty.mcassistant.item.WateringCanItem.water(can) - 1);
+            return can;
+        }
+        return new ItemStack(Items.BUCKET);
     }
 
     /** A box set under a window, its back to the wall, its flower the one it was made with. */
@@ -351,7 +361,10 @@ public final class WindowBoxes {
         if (home == null) return;
         VillageFolkEntity g = gardener(id, home);
         if (g == null || ERRANDS.containsKey(g.getUUID())) return;
-        ItemStack water = Crafts.takeOne(level, v, s -> s.is(Items.WATER_BUCKET));
+        // The town's copper can with water in it first (FieldTools: the farmers' and the gardeners'), else a bucket.
+        ItemStack water = Crafts.takeOne(level, v, s -> s.getItem() instanceof com.jrpetty.mcassistant.item.WateringCanItem
+            && com.jrpetty.mcassistant.item.WateringCanItem.water(s) > 0);
+        if (water.isEmpty()) water = Crafts.takeOne(level, v, s -> s.is(Items.WATER_BUCKET));
         if (water.isEmpty()) return;
         g.clearQueue();
         g.getNavigation().stop();
@@ -360,7 +373,7 @@ public final class WindowBoxes {
         BlockState s = level.getBlockState(box);
         Direction out = s.getBlock() instanceof WindowBoxBlock ? s.getValue(WindowBoxBlock.FACING) : Direction.SOUTH;
         ERRANDS.put(g.getUUID(), new Errand(id, box.immutable(), out, false, water, inHand, level.getGameTime()));
-        g.brain("off to water the window boxes with a bucket from the stores");
+        g.brain("off to water the window boxes with " + (water.is(Items.WATER_BUCKET) ? "a bucket" : "the copper can") + " from the stores");
     }
 
     /** Houses raised a storey (Grow) given their boxes by the builders as they are finished: one a visit, out of the stores. */

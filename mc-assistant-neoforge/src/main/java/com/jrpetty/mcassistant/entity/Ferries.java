@@ -651,10 +651,12 @@ public final class Ferries {
             int score = f.tradeLevel(AssistantEntity.StationTask.FERRY) * 5 + f.tradeLevel(AssistantEntity.StationTask.FISH) * 2
                 + (t == AssistantEntity.StationTask.NONE ? 30 : t == AssistantEntity.StationTask.FISH ? 20 : 0)
                 + (f.life().has(Social.Trait.SOCIABLE) ? 8 : 0) + (f.life().has(Social.Trait.EASYGOING) ? 4 : 0)
-                - (int) Math.sqrt(f.blockPosition().distSqr(c.bankA)) / 8;
+                - (int) Math.sqrt(f.blockPosition().distSqr(c.bankA)) / 8
+                + Interviews.preferred(id, "ferryman", f);                          // [interviews] the panel's choice first
             if (score > bestScore) { bestScore = score; best = f; }
         }
         if (best == null) return null;
+        if (Interviews.vacancy(level, id, "ferryman", best)) return null;      // [interviews] the post held open for its interview
         take(level, v, c, best, best.stationTask());
         return best;
     }

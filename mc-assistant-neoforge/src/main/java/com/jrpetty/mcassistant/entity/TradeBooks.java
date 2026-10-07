@@ -152,6 +152,8 @@ public final class TradeBooks {
             case HAUL -> AssistantEntity.Deed.LOADS_HAULED;
             case STORE -> AssistantEntity.Deed.CHESTS_SORTED;
             case SMITH, TAILOR, BEEKEEP, BREW, ENCHANT, COOK, SHOP -> AssistantEntity.Deed.THINGS_MADE;
+            case FLETCHER, GOLEMS -> AssistantEntity.Deed.THINGS_MADE;     // [fletcher] [golems]
+            case FIREWORKS -> AssistantEntity.Deed.THINGS_MADE;          // [fireworks] its rockets
             default -> null;
         };
     }
@@ -179,6 +181,9 @@ public final class TradeBooks {
             case HUNT -> new String[]{ "hunt", "wolf", "the wild" };
             case SCOUT -> new String[]{ "scout", "scouting" };
             case CAVE -> new String[]{ "cave" };
+            case FLETCHER -> new String[]{ "arrow", "fletch", "the butts", "crossbow", "the raid" };   // [fletcher]
+            case GOLEMS -> new String[]{ "golem" };                                                     // [golems]
+            case FIREWORKS -> new String[]{ "firework", "rocket", "powder" };   // [fireworks]
             case BEEKEEP -> new String[]{ "hive", "bee" };
             default -> new String[]{};
         };
@@ -496,10 +501,13 @@ public final class TradeBooks {
                 if (smelted > 0) out.add("Between us we've smelted " + Quill.number(smelted) + " loads.");
                 if (Villages.hasBuilt(id, "smeltery")) out.add("The smeltery's three furnaces are the town's. Keep all three going.");
             }
+            case FIREWORKS -> out.addAll(FireworksMaker.bookNotes(c.level, c.v));   // [fireworks] its real numbers, and what it learned
             case COOK -> {
                 if (Villages.hasBuilt(id, "cafe")) out.add("The café is where folk spend their coins on their break. Keep its counter stocked.");
                 if (Villages.hasBuilt(id, "bakery")) out.add("The bakery's oven bakes for the whole town. Keep it fed.");
             }
+            case FLETCHER -> out.addAll(Fletchers.bookNotes(c.level, c.v));     // [fletcher] the arrows, the flint, the butts
+            case GOLEMS -> out.addAll(Golems.bookNotes(c.level, c.v));           // [golems] the golems raised, mended and lost
             default -> { }
         }
         out.addAll(Weave.notes(c.level, c.v, t, m, at));      // [weave] the caves, the watch's cases, the fleet, the season's fashion

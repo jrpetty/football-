@@ -6,6 +6,10 @@
     "mc_assistant:shipping_crate",
     "mc_assistant:pit_prop",
     "mc_assistant:village_board",
-    "mc_assistant:stocks"
+    "mc_assistant:stocks",
+    "mc_assistant:nesting_box",
+    "mc_assistant:feed_trough",
+    "mc_assistant:fish_trap",
+    "mc_assistant:rain_barrel"
   ]
 }

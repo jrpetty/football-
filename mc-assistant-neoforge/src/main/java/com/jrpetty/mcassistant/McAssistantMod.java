@@ -364,6 +364,8 @@ public final class McAssistantMod {
         RECIPE_SERIALIZERS.register(modBus);                          // [arms] the tabard given a banner's arms
         com.jrpetty.mcassistant.item.CivicItems.register(modBus);      // [player-civic] the masters' goods, and their recipes
         com.jrpetty.mcassistant.item.WorkItems.register(modBus);       // [workitems] the mine's, the woods' and the roads' tools, thatch
+        com.jrpetty.mcassistant.item.FieldItems.register(modBus);      // [fields] the tools of the fields and the pens, the bees and the water
+        com.jrpetty.mcassistant.item.InterviewItems.register(modBus);  // [interviews] the letter of application
         com.jrpetty.mcassistant.item.KitchenItems.register(modBus);    // [kitchen] the kitchen, the cellar and the healer's shelf
         modBus.addListener(this::onEntityAttributes);
         modBus.addListener(this::onBuildCreativeTabs);
@@ -399,6 +401,7 @@ public final class McAssistantMod {
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.WarScouting.class);   // [war-scouting] spies, pickets, captives
         NeoForge.EVENT_BUS.register(TimeSpeed.class);
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Transport.class);    // [transport] railways, carts, ferries, bridges
+        NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Golems.class);       // [golems] a golem fallen, its iron left lying
     }
 
     private void onEntityAttributes(EntityAttributeCreationEvent event) {

@@ -551,6 +551,9 @@ public final class CaveDwellers {
     /** The town's team's leader (at home or out), or null with no team. */
     @Nullable
     public static VillageFolkEntity leaderOf(UUID village) {
+        // [interviews] The one the panel chose to lead it, while it is of the team.
+        VillageFolkEntity chosen = Interviews.holder(village, "caveleader");
+        if (chosen != null && chosen.stationTask() == StationTask.CAVE && !chosen.isBaby()) return chosen;
         VillageFolkEntity best = null;
         for (VillageFolkEntity f : dwellers(village)) if (best == null || better(f, best)) best = f;
         return best;
@@ -600,10 +603,11 @@ public final class CaveDwellers {
             if (!spare(id, f.stationTask())) continue;
             int age = f.ageYears();
             if (age < 18 || age > 50) continue;                       // fit for a day underground (JobMarket.ages)
-            int score = fitness(f);
+            int score = fitness(f) + Interviews.preferred(id, "caveplace", f);     // [interviews] the panel's choice first
             if (score > bestScore) { bestScore = score; best = f; }
         }
         if (best == null) return null;
+        if (Interviews.vacancy(level, id, "caveplace", best)) return null;     // [interviews] the place held open for its interview
         StationTask was = best.stationTask();
         // A head start: a skilled miner or guard knows the most of what the caves want, and is a level or two short of it there.
         int knows = Math.max(best.tradeLevel(StationTask.MINE), best.tradeLevel(StationTask.GUARD));

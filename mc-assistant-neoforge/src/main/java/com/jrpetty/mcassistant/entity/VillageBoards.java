@@ -386,6 +386,7 @@ public final class VillageBoards {
         }
         // The job market (JobMarket): our Wanted notices, who is on the road here, who came and went, word from other towns.
         out.addAll(JobMarket.board(level, id));
+        out.addAll(Interviews.board(level, id));                  // [interviews] the interviews coming, on, or just held
         Orders.Order order = Orders.current(id);
         out.add(order == null ? "LM|Elder's orders: none yet — the elder is watching how things go."
             : "LN|Elder's orders: " + order.title + ". " + order.words);
@@ -492,6 +493,8 @@ public final class VillageBoards {
         if (gathering != null) out.add("RG|Now: " + gathering + " — come along!");
         Gatherings.Kind tonight = Gatherings.tonight(id, day);
         if (tonight != null) out.add("RG|Tonight: " + Gatherings.describe(tonight, id) + " — everybody welcome.");
+        String fireworks = FireworkShows.boardLine(id, day);        // [fireworks] a display on now; the rockets ready, the next display
+        if (fireworks != null) out.add(fireworks);
         for (String p : Assemblies.planned(id)) out.add("RG|This evening: " + p + ".");
         if (day % 7 == 3) out.add("RM|The council sits this evening.");
         out.addAll(Elections.board(id, day));
@@ -525,6 +528,10 @@ public final class VillageBoards {
         if (trade != null) out.add("FN|" + trade);
         String caves = CaveDwellers.boardLine(id);              // [caves] the caves' report, and the latest big find
         if (caves != null) out.add("FN|" + caves);
+        String arrows = Fletchers.boardLine(level, id);         // [fletcher] the watch's arrows, or none to be had
+        if (arrows != null) out.add("FN|" + arrows);
+        String golems = Golems.boardLine(level, id);            // [golems] the golems at their posts, a fallen one
+        if (golems != null) out.add("FN|" + golems);
         String about = Transport.boardLine(level, id);          // [transport] the lines, the ore carts, the ferry and the bridge
         if (about != null) out.add("FN|" + about);
         String scouts = Scouts.boardLine(id);

@@ -148,7 +148,7 @@ public class WindowBoxBlock extends Block {
         return state.rotate(mirror.getRotation(state.getValue(FACING)));
     }
 
-    /** Is this the watering can (a modpack's or a town's) or a bucket of water? */
+    /** Is this a watering can (the town's copper can, or a modpack's) or a bucket of water? */
     public static boolean waters(ItemStack s) {
         if (s.is(Items.WATER_BUCKET)) return true;
         return BuiltInRegistries.ITEM.getKey(s.getItem()).getPath().contains("watering_can");
@@ -159,13 +159,22 @@ public class WindowBoxBlock extends Block {
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
                                               InteractionHand hand, BlockHitResult hit) {
         if (!waters(stack)) return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        if (stack.getItem() instanceof com.jrpetty.mcassistant.item.WateringCanItem && com.jrpetty.mcassistant.item.WateringCanItem.water(stack) <= 0) {
+            if (!level.isClientSide) player.displayClientMessage(Component.literal("The can is empty: fill it at water or a rain barrel."), true);
+            return ItemInteractionResult.FAIL;
+        }
         if (level instanceof ServerLevel server) {
             boolean bloom = com.jrpetty.mcassistant.entity.WindowBoxes.watered(server, pos, player.getName().getString());
             server.sendParticles(ParticleTypes.SPLASH, pos.getX() + 0.5, pos.getY() + 0.95, pos.getZ() + 0.5, 12, 0.35, 0.05, 0.2, 0.0);
             level.playSound(null, pos, SoundEvents.BUCKET_EMPTY, SoundSource.BLOCKS, 0.4F, 1.4F);
-            // A bucket of water is poured out, not kept full (a can is a modpack's, and minds its own water).
-            if (stack.is(Items.WATER_BUCKET) && !player.getAbilities().instabuild) {
-                player.setItemInHand(hand, net.minecraft.world.item.ItemUtils.createFilledResult(stack, player, new ItemStack(Items.BUCKET)));
+            // A bucket of water is poured out, not kept full; the town's copper can is a watering the lighter (a modpack's
+            // can minds its own water).
+            if (!player.getAbilities().instabuild) {
+                if (stack.is(Items.WATER_BUCKET)) {
+                    player.setItemInHand(hand, net.minecraft.world.item.ItemUtils.createFilledResult(stack, player, new ItemStack(Items.BUCKET)));
+                } else if (stack.getItem() instanceof com.jrpetty.mcassistant.item.WateringCanItem) {
+                    com.jrpetty.mcassistant.item.WateringCanItem.setWater(stack, com.jrpetty.mcassistant.item.WateringCanItem.water(stack) - 1);
+                }
             }
             player.displayClientMessage(Component.literal(bloom ? "You water the window box. The " + state.getValue(FLOWER).plural()
                 + " lift their heads." : "You water the window box. The flowers will be back in the spring."), true);
