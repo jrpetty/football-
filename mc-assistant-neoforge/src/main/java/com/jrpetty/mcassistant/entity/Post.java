@@ -902,6 +902,8 @@ public final class Post {
 
     /** Tests: this folk sets out on the road from one town to another (as a caravan's carrier does), or comes home. */
     public static void setOutForTests(VillageFolkEntity carrier, @Nullable Villages.Village from, @Nullable Villages.Village to) {
+        // Any trip it had let go properly (the written one too, or it is handed back to it on the road: TradeTrips).
+        if (carrier.trip() != null && carrier.level() instanceof ServerLevel level) Caravans.abandon(level, carrier);
         carrier.trip(from == null || to == null ? null : new Caravans.Trip(from.id(), to.id(), Caravans.way(from, to)));
     }
 

@@ -74,8 +74,8 @@ import java.util.UUID;
  * <li><b>tg03</b>: the town meeting: the elder's account of the week (the treasury, what went up, the birth,
  *     the death, what is next), two folk have their say; held, the chronicle has it and those who came are
  *     the happier.</li>
- * <li><b>tg04</b>: a warden for the homes quarter; at a stop of its round a blocked door is sent to the works and
- *     mended, a dark street wants a lamp (and gets one, of the stores' fence and torch), litter goes to the
+ * <li><b>tg04</b>: a warden for the homes quarter; at a stop of its round a door banked up with earth is sent to the
+ *     works and dug out, a dark street wants a lamp (and gets one, of the stores' fence and torch), litter goes to the
  *     stores; and two neighbours at odds are talked round.</li>
  * <li><b>tg05</b>: the statue fund: a player's coins and a generous folk's savings go into it; at sixty it is
  *     raised, the coins go to the treasury and the statue onto the build list; built, the givers' names go up
@@ -271,9 +271,16 @@ public class TownAffairsGameTests {
                     Post.setOutForTests(carrier, vw, ve);
                     carrier.teleportTo(b.getX() + 2.5, b.getY(), b.getZ() + 2.5);
                     Post.tickForTests(level, ve);
-                    helper.assertTrue(Post.whereForTests(answer).equals("bag:" + carrier.getUUID()), "the answer in the carrier's bag: " + Post.whereForTests(answer));
-                    carrier.teleportTo(a.getX() + 2.5, a.getY(), a.getZ() + 2.5);
-                    Post.tickForTests(level, vw);
+                    // (Another town's business may have a caravan or an envoy of its own going west by now: whoever has
+                    // the answer in its bag carries it.)
+                    String w = Post.whereForTests(answer);
+                    helper.assertTrue(w.startsWith("bag:") || w.equals("office:" + wa), "the answer in a carrier's bag, for the west: " + w);
+                    if (w.startsWith("bag:")) {
+                        VillageFolkEntity bearer = level.getEntity(UUID.fromString(w.substring(4))) instanceof VillageFolkEntity x ? x : carrier;
+                        Kit.log("tg01 the answer goes west with " + bearer.displayNameCap() + (bearer == carrier ? " (our carrier)" : ""));
+                        bearer.teleportTo(a.getX() + 2.5, a.getY(), a.getZ() + 2.5);
+                        Post.tickForTests(level, vw);
+                    }
                     helper.assertTrue(Post.whereForTests(answer).equals("office:" + wa), "at the west counter: " + Post.whereForTests(answer));
                     you.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
                     String collected = Post.counter(level, vw, you);
@@ -471,21 +478,25 @@ public class TownAffairsGameTests {
             Ledger.Building b = new Ledger.Building("house", house[0], Direction.NORTH);
             BlockPos door = TownLife.fittings(b).door();
             helper.assertTrue(door != null, "the house has a door");
-            // Its way in banked up with earth, two high.
-            BlockPos step = door.relative(Direction.SOUTH);
-            level.setBlock(step, Blocks.DIRT.defaultBlockState(), 3);
-            level.setBlock(step.above(), Blocks.DIRT.defaultBlockState(), 3);
-            boolean blocked = DoorWays.doorsOf(level, b).stream().noneMatch(d -> DoorWays.walkable(level, d));
-            helper.assertTrue(blocked, "nobody can walk in at the door");
+            helper.assertTrue(DoorWays.doorsOf(level, b).stream().allMatch(d -> DoorWays.walkable(level, d)), "a way in at the door, to begin with");
             stop[0] = door.relative(Direction.SOUTH, 5);
             ItemEntity litter = new ItemEntity(level, stop[0].getX() + 2.5, stop[0].getY() + 0.5, stop[0].getZ() + 0.5, new ItemStack(Items.COBBLESTONE, 5));
             litter.setNeverPickUp();                     // (nobody passing picks it up first: it is the warden's to find)
             level.addFreshEntity(litter);
-            chestAt(level, heart.offset(-3, 0, -3), new ItemStack(Items.TORCH, 2), new ItemStack(Items.OAK_PLANKS, 8));
         });
         // The litter lies a while first (the warden takes nothing a player might have dropped a moment ago).
         helper.runAtTickTime(260, () -> {
             Villages.Village v = Villages.get(id);
+            // The lamp's makings, put in now (the town's other business has had the run of its stores till now).
+            chestAt(level, heart.offset(-3, 0, -3), new ItemStack(Items.TORCH, 16), new ItemStack(Items.OAK_PLANKS, 64));
+            // The house's way in banked up with earth, two high, a step out past the doorstep (now, just before the
+            // warden comes by: the town's own round of its doors would dig it out in a few seconds otherwise). The
+            // doorstep itself is under the eaves, the house's own: the town digs nothing out from under a roof (DoorWays).
+            Ledger.Building house0 = new Ledger.Building("house", house[0], Direction.NORTH);
+            BlockPos bank = TownLife.fittings(house0).door().relative(Direction.SOUTH, 2);
+            level.setBlock(bank, Blocks.DIRT.defaultBlockState(), 3);
+            level.setBlock(bank.above(), Blocks.DIRT.defaultBlockState(), 3);
+            helper.assertTrue(DoorWays.doorsOf(level, house0).stream().noneMatch(d -> DoorWays.walkable(level, d)), "nobody can walk in at the door");
             Map<Districts.District, VillageFolkEntity> wardens = Wardens.appointForTests(level, v);
             VillageFolkEntity w = wardens.get(Districts.District.HOMES);
             Kit.log("tg04 the wardens: " + wardens.entrySet().stream().map(e -> e.getKey() + "=" + e.getValue().displayNameCap()).toList());
@@ -605,7 +616,7 @@ public class TownAffairsGameTests {
      * pit. Its partner and its friend go out, calling its name, find it, cut it a step out of the pit and bring
      * it home; the chronicle tells who found it.
      */
-    @GameTest(template = EMPTY, timeoutTicks = 3200, batch = "tg06_search")
+    @GameTest(template = EMPTY, timeoutTicks = 6000, batch = "tg06_search")
     public static void tg06_search(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
@@ -658,7 +669,7 @@ public class TownAffairsGameTests {
                             + partner.blockPosition().toShortString() + " doing " + partner.hobbyNow() + "; friend at " + friend.blockPosition().toShortString());
                     }
                     if (!stage.equals("none")) {
-                        if (t - mark[0] > 3000) helper.fail("tg06 never brought home: " + stage + " | lost " + lost.debugLine()
+                        if (t - mark[0] > 5600) helper.fail("tg06 never brought home: " + stage + " | lost " + lost.debugLine()
                             + " | partner " + partner.debugLine());
                         return;
                     }

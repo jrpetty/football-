@@ -124,9 +124,14 @@ public final class Civics extends SavedData {
         return t.getCompound(key);
     }
 
+    /**
+     * The list kept under this key, itself (made the first time it is asked for), whatever it holds: compounds,
+     * names or places. (CompoundTag.getList hands back a fresh empty list, kept nowhere, when the kept one holds
+     * anything but what it was asked for: the wardens' lamps, a list of places, were all written into thin air.)
+     */
     static ListTag list(CompoundTag t, String key) {
-        if (!t.contains(key, Tag.TAG_LIST)) t.put(key, new ListTag());
-        return t.getList(key, Tag.TAG_COMPOUND);
+        if (!(t.get(key) instanceof ListTag)) t.put(key, new ListTag());
+        return (ListTag) t.get(key);
     }
 
     public static Civics load(CompoundTag tag, HolderLookup.Provider registries) {
