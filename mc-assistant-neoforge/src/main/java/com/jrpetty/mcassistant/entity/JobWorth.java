@@ -767,8 +767,12 @@ public final class JobWorth {
         st.day = day;
         save(id, st);
         SCALES.put(id, s);
+        LOG.info("[MCA-WAGES] {} day {}: pay level {} (afford {}), living wage {} (cost {}), lowest {}, top {}, bill {} against {} coming in",
+            Villages.name(id), day, fmt(s.payLevel), fmt(s.afford), s.floor, fmt(s.costOfLiving), s.lowest, s.cap, s.bill, s.income);
         return s;
     }
+
+    private static final org.slf4j.Logger LOG = com.mojang.logging.LogUtils.getLogger();
 
     /**
      * How hard the trade is to fill today: the share it should have against the hands it has, more for a notice
