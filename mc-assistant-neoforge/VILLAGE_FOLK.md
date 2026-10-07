@@ -4729,3 +4729,108 @@ back, the charcoal and the charcoal torches; a sapling from the crowns on every 
 ground planted and the saplings fed; a rod a building, of three copper ingots; a fire put out with a
 bucket made of the stores' iron and noted in the books; the snow shovelled off the square into the
 storehouse and not off a garden; and a farmer in out of the storm while the watch stays out.
+
+## Building your own home: the housing market
+
+Every house the village builds is **the council's**: it lets them first, and sells them to the tenants
+who save up for them, as it always has (see *Homes*). Later on, a household that has done well can
+have a house **built for itself**, and pays for every block, every hour of the builders' work, the
+ground it stands on and the council's permit. And what a house fetches, and what it lets for, now
+follow supply and demand.
+
+* **The council's houses, on the books.** Each house the council builds is costed the first day it is
+  on the books: every block of its drawing at what that block costs in the town that day, and its
+  builders' hours (twelve blocks an hour, at a craftsman's rate: a smith's day of ten hours). The cost
+  is written against the treasury's books ("the council's 9 houses cost 342c to build"), and costed
+  again when the house is raised a storey or the town comes into a new age and its houses are rebuilt
+  in stone and brick. What a house cost to build is what it is **worth**: the market prices it from
+  that, no longer at a flat 35, 55 or 120 coins.
+* **The housing market.** Each morning the town weighs the households wanting a home (the waiting
+  list, the grown children still at home, the newcomers), the families outgrowing their house (more
+  of them than beds) and, a little, the tenants saving to buy, against the houses and flats standing
+  empty. The **housing index** moves by what is short or over: up to about five in the hundred a week,
+  never under six tenths of what a house costs to build nor over nearly twice it. House prices are the
+  house's worth times the index (and, as before, its quarter: dearer by the park, cheaper in the
+  crafts' smoke; its furnishing; the town's Home Loans); **rents** are the old rent times the index,
+  never under a coin, so they rise when homes are scarce and fall when they stand empty. With the two
+  about even it drifts back toward what a house costs. The founders' rent-free start and the slate are
+  as they were.
+* **Who builds its own.** Past the Wood Age, in a town of sixteen, a household with a trade can
+  commission a house: the well-off (and the comfortable, a little), a family outgrowing its house, a
+  Visionary who wants a house to its own drawing, a Merchant with a front to show, a couple wed this
+  week, any household that wants to own; a Free Spirit would rather rent and keep its coin. One house
+  of a folk's own goes up at a time; the others save.
+* **What it builds.** By its taste and its purse, the dearest it likes that it can pay for:
+  - **a cottage**: the council's house, in timber on a stone footing (four beds);
+  - **a family house**: the two-storey house, in dressed stone under a shingled roof (six beds);
+  - **a town house**: the two-storey house in dressed stone under slate;
+  - **a villa**, a drawing of its own: detached and square, brick under a hipped slate roof coming down
+    on all four sides, a porch on two posts with a lantern hung under it and flowers by the step, a
+    chimney stack up the side, a parlour below and the bedrooms upstairs (six beds).
+  A Visionary wants the villa first, a Merchant the town house, a Traditionalist the cottage, a family
+  the family house. It is laid in what the stores can pay for all of (Masonry): brick short, dressed
+  stone; or, with even that short, the council's timber.
+* **The plot.** A lot of the town's plan where homes go, the homes' quarter first, as the builders
+  choose any (the gardens, the woods and the sweepers keep off it while it goes up). Its price: eight
+  coins in a Wood Age hamlet, a quarter more an age and as much more as the place's wages are, a
+  quarter more on the first ring of streets round the square and a fifth less out at the edge, dearer
+  by the park, cheaper in the smoke, and as the housing market stands.
+* **The bill.** Every block of the drawing at the town's price today, line by line ("98 oak planks at
+  0.07, 47 bricks at 0.55, ..."), the ground made up under it on a slope, the builders' hours at their
+  rate, the plot, the **furnishing** it wants (its beds, one each and one to spare, its rugs, its
+  flowers, a barrel) and the **permit** (a twentieth of the building, two coins at least). The
+  chronicle has the whole of it: "Tansy and Rook commissioned a family house of their own at No. 6,
+  Elm Street: 142 coins all told — blocks 61, builders' labour 18, plot 12, furnishing 24, permit 3".
+* **Can it pay?** All of it, or no house: its purses (a dozen coins a head kept back to live on), what
+  it had put by toward the house it rents, its savings at the bank, and, once the town has a bank, the
+  bank's **mortgage** for the rest with a fifth down, if its wages carry the week's payment: no more
+  than a third of them (the bank's rule), and no more than they leave over its week's bread (two loaves
+  a day each, at the town's price), its rent while it waits and any payment on the house it has. A
+  household that cannot says so and keeps saving ("Saving for a family house of our own — 24 of the
+  29 down put by. We'll get there."), and its card shows what it is saving for.
+* **Paying, and building.** The plot and the permit go to the treasury the day it is agreed; the rest
+  is held for the build. The town's hands build it a course at a time (the hand the town's work calls,
+  one its own trade can spare: so its hours are its own, and the household pays it for them, into its
+  purse, as it lays each course). Each course's blocks come **out of the stores** there and then
+  (stone bricks cut, bricks and slate made of their makings if need be; timber a plank a board) and are
+  paid for into the treasury at the price agreed; then the beds and rugs. Short of anything, the build
+  **waits** for the stores ("waiting on the stores for 12 glass panes"); three days on the same thing
+  and the rest goes up in what they have, at no more than the price agreed. The town's own buildings
+  come first, unless the town is thriving. If the bank takes the mortgage back while it is going up,
+  the council finishes it as one of its own.
+* **Moving in.** When it stands the household **owns it outright** (or on the bank's mortgage) and
+  moves in with its things; anything left over of what was held pays the mortgage down or goes back to
+  the purses. A house it rented goes back to the council to let. The chronicle, the gazette ("Built")
+  and the morning's assembly have it: "Tansy and Rook moved into the family house they had built at
+  No. 6, Elm Street: 142 coins all told, every block of it paid for (... labour 18 to Bramble 9, Fen
+  9 ...)". The council never rebuilds, raises or furnishes a folk's own house: it keeps the look it
+  paid for.
+* **Selling.** An owner leaving its house (moving up to a manor or into a house it had built, into its
+  partner's house, into the leader's hall) sells it **at the going price**, not back at half: to a
+  household that wants a home and can pay (those waiting first, then the tenants saving to buy; out of
+  what it has, and the bank's loan if it needs one), which moves in owning it; with nobody able to buy,
+  back to the council at four-fifths of the going price. The seller's mortgage is paid off out of the
+  price. Every sale is kept.
+* **Where to see it.** The books' **Homes** page has the market under the beds: the index, its
+  fortnight drawn small and the week's move, a house's and a manor's price and rent, the waiting and
+  outgrowing against the empty, what the council's houses cost to build, and the house going up (a bar
+  of what is laid, and its bill) or the last one built and the last sale; the mouse over it for the
+  bill item by item, the builders' pay, the plans folk are saving for, and the sales. `/village house`
+  starts with the market's lines; `/village house market` adds the bill line by line. A folk's card
+  has an **Own house** line ("Its own family house going up at No. 6, Elm Street: 120 of 290 blocks
+  laid (41%). The bill 142c: ..." / "Built its own villa on day 41: 162c all told ..." / "Saving to
+  build a cottage of its own: about 66c all told, 34 to hand — a fifth down wanted"), and asked where
+  it lives it says so too ("... And we're having a family house of our own built at No. 6, Elm Street —
+  the walls are going up, every block paid for.").
+* **For operators and the pictures.** `/village house market custom` has the best-placed household
+  commission a house now (a grant from the treasury making up what it lacks, said in the chronicle);
+  `/village house market build 100` lays a hundred blocks of it now, out of the stores, as the builders
+  would; `/village house market day` runs the morning's reckoning.
+
+The game tests `HousingMarketGameTests` (hm01 to hm05) check that a house's bill is its every block at
+the town's price plus the builders' hours plus the plot, the furnishing and the permit, line by line;
+that a folk that cannot pay commissions nothing, and nothing is taken; that one that can pays, the
+treasury has the plot, the permit, the blocks and the furnishing and the builders the labour to the
+coin, real blocks leave the stores, and it moves in owning the house; that the index, prices and rents
+rise while homes are scarce and fall while they stand empty; and that an owner moving up sells at the
+going price to a buyer (or to the council at four-fifths), every coin counted.

@@ -1811,6 +1811,31 @@ public final class HousingMarket {
         return "Saving to build " + d.a + " of its own: about " + plan[1] + "c all told, " + plan[2] + " to hand — " + plan[4] + ".";
     }
 
+    /**
+     * What a folk adds when asked where it lives (Homes.talk), in its own words: " And we're having a family house
+     * built at No. 6, Elm Street — near half of it up, every block paid for." / " We're saving to build a cottage of
+     * our own: 34 of about 66 coins." Empty if neither.
+     */
+    public static String talkTail(VillageFolkEntity f) {
+        UUID id = f.ownerId();
+        if (id == null || f.isBaby()) return "";
+        Commission c = load(id);
+        if (c != null && c.members.contains(f.getUUID())) {
+            int pct = c.cells == 0 ? 0 : 100 * c.laidCount / c.cells;
+            String up = pct < 10 ? "the footing's going in" : pct < 45 ? "the walls are going up" : pct < 90 ? "past half of it up" : "nearly done";
+            return " And we're having " + c.design.a + " of our own built at " + c.address + " — " + up + ", every block paid for"
+                + (c.waiting.startsWith("waiting on the stores") ? ", though the builders wait on the stores just now" : "") + ".";
+        }
+        String[] plan = planOf(id, f.getUUID());
+        if (plan == null && f.life().partner() != null) plan = planOf(id, f.life().partner());
+        if (plan == null) return "";
+        try {
+            return " We're saving to build " + Design.valueOf(plan[0]).a + " of our own: " + plan[2] + " of about " + plan[1] + " coins.";
+        } catch (IllegalArgumentException e) {
+            return "";
+        }
+    }
+
     /** "1.12 (up 4 in the hundred this week)". */
     public static String indexWords(UUID village) {
         int w = weekChange(village);

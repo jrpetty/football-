@@ -1901,7 +1901,8 @@ public final class Homes {
             case RENTED -> tenancy(village, h);
             case PLAYER -> "we rent it from " + h.landlordName + " at " + h.rent + coins(h.rent) + " a day";
         };
-        return (Flats.isFlat(h) ? "I live in " : "I live at ") + address(village, v, h) + with + " — " + terms + ".";   // [flats] "in flat 2B"
+        return (Flats.isFlat(h) ? "I live in " : "I live at ") + address(village, v, h) + with + " — " + terms + "."   // [flats] "in flat 2B"
+            + HousingMarket.talkTail(f);                  // [econ-housing] a house of its own going up, or saved for
     }
 
     /** "we rent it from the village at 1 coin a day; we're saving to buy it: 34 of 44 coins put by". */

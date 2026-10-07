@@ -652,6 +652,48 @@ def bank_stage(r, look, cx, cz):
     say("alive after the bank: %s" % client_alive())
 
 
+def housing_stage(r, look, cx, cz):
+    """A folk's own house going up (entity/HousingMarket): the best-placed household commissions one now
+    (/village house market custom: an operator's grant from the treasury makes up what it lacks, and the
+    chronicle says so), its lot chosen in the homes' quarter, its bill agreed; the builders lay a third of it
+    out of the stores (/village house market build); photographed from its street, half up; then the books'
+    Homes page with the market strip (the index, prices and rents, the house going up with its bill); then the
+    rest laid, and the finished house from the street. Best called after the stats stage, so the books have
+    days in them."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    out = r.cmd("execute positioned %d 100 %d run village house market custom" % (cx, cz))
+    say("housing custom: " + out[:400])
+    m = re.search(r"BUILD (.+?) (cottage|family house|town house|villa) at (-?\d+) (-?\d+) (-?\d+) facing (\w+) bill (\d+)", out)
+    if not m:
+        say("no house of a folk's own commissioned; nothing to photograph")
+        return
+    ax, ay, az, facing = int(m.group(3)), int(m.group(4)), int(m.group(5)), m.group(6).lower()
+    tall = 16 if m.group(2) in ("family house", "town house", "villa") else 12
+    step = {"north": (0, -1), "south": (0, 1), "east": (1, 0), "west": (-1, 0)}
+    back = step.get(facing, (0, -1))
+    front = (-back[0], -back[1])                        # the door's side, toward its street
+    right = (-back[1], back[0])
+    ex, ez = ax + 0.5 + front[0] * 17 + right[0] * 7, az + 0.5 + front[1] * 17 + right[1] * 7
+    r.cmd("tp %s %.1f %d %.1f" % (USER, ex, ay + 8, ez))
+    time.sleep(8)
+    say("housing build: " + r.cmd("execute positioned %d %d %d run village house market build %d" % (ax, ay, az, 160))[:400])
+    look("housing-1-going-up", ex, ay + 7, ez, ax + 0.5, ay + 3, az + 0.5, wait=8)
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, cx, ground_height(r, cx, cz) + 1, cz))
+    time.sleep(3)
+    say("housing market: " + r.cmd("execute positioned %d %d %d run village house market" % (ax, ay, az))[:900])
+    say("stats homes: " + r.cmd("execute as %s at @s run village stats 9" % USER))
+    time.sleep(4)
+    shot("housing-2-homes-page")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    say("housing finish: " + r.cmd("execute positioned %d %d %d run village house market build %d" % (ax, ay, az, 2000))[:400])
+    look("housing-3-built", ex, ay + tall * 0.5 + 2, ez, ax + 0.5, ay + tall * 0.4, az + 0.5, wait=8)
+    say("alive after the housing market: %s" % client_alive())
+
+
 def districts_stage(r, look, cx, cz):
     """The town's quarters and its park (Quarters, Park, ParkGround): the park put up at once on its lot in
     the homes quarter (as the showcase does), its ground made level first (cut and filled to one height,
