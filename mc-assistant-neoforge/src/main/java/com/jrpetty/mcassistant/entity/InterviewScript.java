@@ -126,7 +126,8 @@ final class InterviewScript {
         String chairFirst = iv.chairName.contains(" ") ? iv.chairName.substring(iv.chairName.lastIndexOf(' ') + 1) : iv.chairName;
         String hello;
         if (!c.letter) {
-            hello = "Good morning. I've no letter, I'm afraid: there was no paper to be had" + (c.outside ? " in " + c.homeName : "") + ".";
+            hello = "Good morning. I've no letter, I'm afraid: " + (c.noLetter.isEmpty() ? "there was no paper to be had" : c.noLetter)
+                + (c.outside && !c.noLetter.startsWith("I ") ? " in " + c.homeName : "") + ".";
         } else if (shy) {
             hello = FolkTalk.pick(r, "Oh — good morning. Here's my letter… I wrote it out twice.", "G-good morning. My letter. Sorry, my hands are cold.");
         } else if (grumpy) {
@@ -143,6 +144,11 @@ final class InterviewScript {
             hello = "Good morning. My letter of application.";
         }
         out.add(Line.of("cand", hello, c.letter ? Act.LETTER : Act.NONE));
+        if (!c.letter) {
+            // Heard all the same: the panel notes it, and the want of it tells in its preparation (c.prep).
+            out.add(Line.of("chair", FolkTalk.pick(r, "No letter. Well — we'll hear you all the same.",
+                "Then tell us yourself what it would have said."), Act.BROW));
+        }
         if (c.letter) {
             String neat = c.prep >= 3 ? FolkTalk.pick(r, "A neat hand.", "Well set out.") : FolkTalk.pick(r, "A bit blotted, but it's all here.", "Short and to the point.");
             out.add(Line.of("chair", "\"" + clip(c.letterWords, 90) + "\" " + neat, Act.READ));

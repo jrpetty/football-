@@ -217,7 +217,10 @@ public final class WindowBoxes {
             return false;
         }
         double dx = f.getX() - (e.at.getX() + 0.5), dz = f.getZ() - (e.at.getZ() + 0.5);
-        double reach = 3.0;
+        // Within three blocks of it; or, once the path-finder has had ten seconds and brought it no nearer than a few
+        // blocks (a fence, a lamp post or the house's own corner in the way, or indoors at that very window), it leans
+        // out of the window or over the fence and sees to it from where it stands.
+        double reach = now - e.started > 200L ? 5.5 : 3.0;
         if (dx * dx + dz * dz > reach * reach || Math.abs(f.getY() - e.at.getY()) > 3.0) {
             if (f.getNavigation().isDone() || f.tickCount - e.walkTick > 60) {
                 BlockPos stand = e.at.relative(e.out);

@@ -2692,15 +2692,22 @@ def interviews_stage(r, look, cx, cz):
         clock_to(2600)
         out = r.cmd(at + " now")
         say("interviews now, the next morning: " + out[:300])
-    if "begin now" not in out:
+    if "on already" in out:                            # the town's own under way at the same table: photograph that
+        say("photographing the interview already on")
+    elif "begin in a minute" in out:                   # one from away on the road: give it its minute
+        time.sleep(60)
+        out = r.cmd(at + " now")
+        say("interviews now, a minute on: " + out[:300])
+    if "begin now" not in out and "on already" not in out:
         say("the interview did not begin; nothing more to photograph")
         return
     # 1. The panel at the table, the candidates on the bench with their letters: as the chair opens.
     if wait_for(lambda s: re.search(r"#\d+ sitting:", s), 120, "seating"):
         shoot("iv-bench", "1-bench", 2)
-    # 2. The first across the table, its letter read out: from the side, and over its shoulder at the panel.
-    if wait_for(lambda s: ': "I, ' in last_said(s), 150, "letter read"):
-        time.sleep(1)
+    # 2. The first across the table, greeting the panel and its letter read out (or its want of one noted): from the side,
+    # and over its shoulder at the panel. Called across, it sits and says good morning in the next few seconds.
+    if wait_for(lambda s: "across the table" in s, 150, "candidate across the table"):
+        time.sleep(7)
         shoot("iv-table", "2-across", 1)
         shoot("iv-shoulder", "3-shoulder", 1)
     # 3. The smith holding up its work, its maker's mark on it, and the master looking it over.
