@@ -85,7 +85,7 @@ public class JobBoardBlock extends Block {
         if (crew.isEmpty()) {
             player.sendSystemMessage(Component.literal(
                 "Job Board — no crew yet. Craft an Assistant Spawner (8 rotten flesh around a "
-                + "diamond block) and place it to hire your first specialist.").withStyle(ChatFormatting.GRAY));
+                + "diamond) and place it to hire your first specialist.").withStyle(ChatFormatting.GRAY));
             return;
         }
         int stuck = 0;

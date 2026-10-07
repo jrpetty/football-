@@ -128,9 +128,19 @@ public class CaveLodgeGameTests {
         long day = level.getDayTime() / 24000L;
         Lodge.broughtUp(id, new ItemStack(Items.DIAMOND), "Ada", "the big cave east", day);
         Lodge.broughtUp(id, new ItemStack(Items.EMERALD), "Ada", "the great cave west", day);
-        // One of the team at home, in the hall.
+        // An afternoon at home (no trip to set out on). The frames go up a second on: hung the tick the lodge's ground was
+        // first held, they stood in a part of the world not yet open to a look for them, and the test (and the wall's own
+        // look for a frame already there) found none.
+        level.setDayTime(day * 24000L + 8000);
+        level.updateSkyBrightness();
         VillageFolkEntity d = t.folk().get(0);
         BlockPos hall = Lodge.hall(id);
+        helper.runAfterDelay(20, () -> fitted(helper, level, t, b, d, hall, day));
+    }
+
+    private static void fitted(GameTestHelper helper, ServerLevel level, Town t, Ledger.Building b, VillageFolkEntity d, BlockPos hall, long day) {
+        UUID id = t.village();
+        // One of the team at home, in the hall.
         d.moveTo(hall.getX() + 0.5, hall.getY(), hall.getZ() + 0.5, 0.0F, 0.0F);
         Lodge.tick(level, t.v(), day);
         Lodge.tick(level, t.v(), day);
@@ -165,6 +175,7 @@ public class CaveLodgeGameTests {
         VillageFolkEntity e = t.folk().get(1);
         e.moveTo(t.heart().getX() + 0.5, t.heart().getY(), t.heart().getZ() + 0.5, 0.0F, 0.0F);
         level.setDayTime(day * 24000L + 1500);
+        level.updateSkyBrightness();
         boolean waits = CaveDwellers.gatheringForTests(d, level), walks = CaveDwellers.gatheringForTests(e, level);
         e.moveTo(hall.getX() + 1.5, hall.getY(), hall.getZ() + 0.5, 0.0F, 0.0F);
         boolean off = CaveDwellers.gatheringForTests(d, level);
@@ -276,14 +287,21 @@ public class CaveLodgeGameTests {
         CaveDwellerGameTests.fill(t, CaveDwellerGameTests.kit(2, true, 4, new ItemStack(Items.RAW_IRON, 9)));
         long day = level.getDayTime() / 24000L;
         level.setDayTime(day * 24000L + 800);                          // before first light
+        level.updateSkyBrightness();
+        // The player in the world (the team looks for it there, and waits for it); its words said through a stand-in of
+        // the same id that is not in the world (the talk screen's buttons are a payload a test's player cannot take).
         ServerPlayer you = helper.makeMockServerPlayerInLevel();
         you.teleportTo(t.heart().getX() + 60.5, t.heart().getY(), t.heart().getZ() + 0.5);
+        Player talker = helper.makeMockPlayer(GameType.SURVIVAL);
+        talker.setUUID(you.getUUID());
+        talker.setPos(you.getX(), you.getY(), you.getZ());
         VillageFolkEntity d = t.folk().get(0), e = t.folk().get(1);
         d.ensurePersona();
         d.persona().feelFor(you.getUUID(), you.getName().getString(), 12);
-        String said = FolkTalk.answer(d, you, TalkTopic.SAY, "Can I come along with the cave team, for a share?");
+        String said = FolkTalk.answer(d, talker, TalkTopic.SAY, "Can I come along with the cave team, for a share?");
         CaveGuests.Guest g = CaveGuests.guest(id);
         level.setDayTime(day * 24000L + 1500);                         // first light: the team gathers
+        level.updateSkyBrightness();
         BlockPos post = d.blockPosition();
         e.moveTo(post.getX() + 1.5, post.getY(), post.getZ() + 0.5, 0.0F, 0.0F);
         boolean waits = CaveDwellers.gatheringForTests(d, level);
@@ -293,15 +311,16 @@ public class CaveLodgeGameTests {
         boolean stillWaits = CaveDwellers.gatheringForTests(d, level);
         CaveDwellers.Party p = CaveDwellers.setOutForTests(level, t.v());
         String with = p == null ? "" : CaveDwellers.askedForTests(p);
+        Kit.noLeftoverPlayers(level);                                   // out of the world again, before anything can fail
         Kit.log("cl05 booked: " + said + " | " + g + " | waits " + waits + " (" + hobby + "), then " + stillWaits + " | set out: " + with);
         helper.assertTrue(g != null && g.share() && g.player().equals(you.getUUID()), "booked to go along, for a share: " + said);
         helper.assertTrue(waits && hobby != null && hobby.contains("waiting") && !stillWaits, "the team waits for it of a morning, and goes when it comes");
         helper.assertTrue(p != null && with.contains("with " + you.getName().getString()) && with.contains("share"), "it goes with the team: " + with);
         // Home with nine raw iron into the storehouse: a third is its (two of the team and it), kept for it, and handed over.
         String home = CaveGuests.homeForTests(level, p, you, true, Map.of(Items.RAW_IRON, 9));
-        int before = you.getInventory().countItem(Items.RAW_IRON);
-        String handed = FolkTalk.answer(e, you, TalkTopic.SAY, "Is my share of the haul ready?");
-        int after = you.getInventory().countItem(Items.RAW_IRON);
+        int before = talker.getInventory().countItem(Items.RAW_IRON);
+        String handed = FolkTalk.answer(e, talker, TalkTopic.SAY, "Is my share of the haul ready?");
+        int after = talker.getInventory().countItem(Items.RAW_IRON);
         Kit.log("cl05 home: " + home + " | handed: " + handed + " | raw iron " + before + " -> " + after + ", stores "
             + CaveDwellerGameTests.stock(level, id, Items.RAW_IRON));
         helper.assertTrue(after - before == 3 && handed.contains("share"), "its share (a third) kept and handed over: " + handed);

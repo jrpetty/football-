@@ -440,6 +440,7 @@ public final class Villages {
         Weather.resetForTests();            // [wf] the storm (and a test's storm let go), the rods looked at
         Civics.resetForTests();             // [batchF] the post, petitions, the meeting, wardens, the fund, searches, favours
         Crime.resetForTests();              // [crime] the cases, the folk's records, the plans, the court
+        Weave.resetForTests();              // [weave] the homeless waiting to go, the day's looks; the round off again
         Roads.reset();
         LAST_PROJECT.clear();
         POP.clear();

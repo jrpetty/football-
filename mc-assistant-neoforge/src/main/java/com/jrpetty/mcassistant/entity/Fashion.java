@@ -162,7 +162,8 @@ public final class Fashion {
         UUID id = f.ownerId();
         if (id == null) return false;
         Trend t = trend(id);
-        return t.set() && (f.style().wears(t.colour) || f.getUUID().equals(t.setterId) && f.style().main == t.colour);
+        return t.set() && (f.style().wears(t.colour) || f.getUUID().equals(t.setterId) && f.style().main == t.colour)
+            || Weave.wonFinery(f);                                          // [weave] what it won at the auction this season
     }
 
     /** The season's key: its year and its season. */
@@ -250,6 +251,7 @@ public final class Fashion {
         List<Setter> out = new ArrayList<>();
         for (VillageFolkEntity f : folk) {
             double s = score.get(f);
+            s += Weave.admired(f, why.get(f));                              // [weave] the steward, the auctioneer: the town looks to them
             if (f.ageYears() < 28) { s += 1.0; why.get(f).add("young"); }
             if (f.life().has(Social.Trait.SOCIABLE)) s += 0.5;
             if (vain(f)) s += 0.5;
@@ -474,6 +476,7 @@ public final class Fashion {
         if (vain(f)) n *= 1.5;
         if (traditional(f)) n *= 0.05;
         else if (f.persona().rolled() && Values.top(f) == Values.Value.LEISURE) n *= 1.2;
+        n *= Weave.fitIn(f);                                                // [weave] a newcomer wants to fit in
         return n;
     }
 
@@ -545,6 +548,8 @@ public final class Fashion {
     static Garment choose(VillageFolkEntity f, Trend t, Villages.Age age) {
         int reach = reach(f);
         if (t.kind != null && t.kind.rank <= reach && t.kind.age.ordinal() <= age.ordinal()) return t.kind;
+        Garment office = Weave.roleGarment(f, t.colour, age, reach);       // [weave] its office's garment: the librarian's waistcoat
+        if (office != null) return office;
         Style s = f.style();
         Garment best = null;
         int bestScore = Integer.MIN_VALUE;
@@ -602,6 +607,7 @@ public final class Fashion {
         long day = level.getDayTime() / 24000L;
         boolean watch = f.stationTask() == AssistantEntity.StationTask.GUARD && f.onWatch();
         s.dressed = !watch && (f.offWorkNow() || id != null && (Assemblies.now(id) != null || RestDay.today(id, day)));
+        if (!watch && Weave.dressedForRole(f)) s.dressed = true;           // [weave] its office's hat on: the constable on a case
         Villages.Village v = id == null ? null : Villages.get(id);
         // A garment of its own it is carrying (a treat from the shop, a thing from a player's stall) goes on, if it has
         // nothing in that place or it is the season's colour and what it has on is not. Never a courier's load.

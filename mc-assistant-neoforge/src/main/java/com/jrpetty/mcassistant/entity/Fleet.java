@@ -1031,6 +1031,22 @@ public final class Fleet {
         return out;
     }
 
+    /** [itemaudit] A net's haul, as a boat's comes up: what a player's cast brings in (item/FishingNetItem). */
+    public static List<ItemStack> netHaul(ServerLevel level, RandomSource r) {
+        return roll(level, r, true);
+    }
+
+    /** [itemaudit] Tests: a haul with the net or with a line. */
+    public static List<ItemStack> rollForTests(ServerLevel level, RandomSource r, boolean net) {
+        return roll(level, r, net);
+    }
+
+    /** [itemaudit] Tests: the tailor's turn at the fleet's nets (Crafts.tailor), now. */
+    @Nullable
+    public static String makeNetForTests(ServerLevel level, Villages.Village v, VillageFolkEntity f) {
+        return makeNet(level, v, f);
+    }
+
     private static void catchOne(ServerLevel level, VillageFolkEntity f, Town t, Hand h) {
         List<ItemStack> haul = roll(level, f.getRandom(), h.net);
         f.swing(InteractionHand.MAIN_HAND);

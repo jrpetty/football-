@@ -227,12 +227,18 @@ public class FamilyGameTests {
                 "a household with a pet takes in no other");
             Wolf other = wolves[0] == w ? wolves[1] : wolves[0];
             helper.assertFalse(other.isTame(), "the other wolf is still wild");
-            // By day it follows the child.
+            // By day it follows the child (the nearest of them, should the birth have been twins).
             level.setDayTime(DAY + 9000);
             level.updateSkyBrightness();
+            List<String> kids = new ArrayList<>();
+            for (var k : Villages.folkOf(id)) {
+                if (k instanceof VillageFolkEntity f && f.isBaby() && home.equals(Homes.homeOf(f))) kids.add(f.displayNameCap());
+            }
             String day = Families.walkPetForTests(level, child);
-            Kit.log("fm01 by day: " + day + "; the child's card: " + Families.cardLine(child));
-            helper.assertTrue(day != null && day.contains(child.displayNameCap()), "by day it follows the child: " + day);
+            Kit.log("fm01 by day: " + day + "; the household's children " + kids + "; the child's card: " + Families.cardLine(child));
+            helper.assertTrue(kids.contains(child.displayNameCap()), "the child is one of the household's children: " + kids);
+            helper.assertTrue(day != null && kids.stream().anyMatch(n -> day.equals("following " + n)),
+                "by day it follows a child of the household " + kids + ": " + day);
             helper.assertFalse(w.isOrderedToSit(), "and is up and about");
             helper.assertTrue(Families.cardLine(child).contains(w.getName().getString()), "the child's card names it: " + Families.cardLine(child));
             // At night it sits at home.
