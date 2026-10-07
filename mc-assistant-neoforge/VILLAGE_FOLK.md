@@ -768,6 +768,58 @@ there are and whether they are shut, and how many posts are on the wall. If the 
 built but has no gates or posts, it says why, side by side (no gap in the wall, the gap
 blocked, no wall-top to stand on).
 
+### The watch's kit
+
+The town kits out its guards with the best armour and weapons it can make, and the town pays
+for it. A guard never spends a coin of its own on its kit.
+
+* **Leather in the Stone Age.** Before there is iron, the watch goes in leather: a cap of five
+  leather, a tunic of eight, trousers of seven and boots of four, the same as you would make them.
+  The tailor cuts them out of the stores' leather (the smith does it if the town has no tailor,
+  and the shop's workshop once the shop stands). The stores keep as many of each piece as there
+  are guards who wear worse, and a little leather is always kept back for books and the like. A
+  tailor of ten years and more makes them in the town's colour.
+* **Iron in the Iron Age.** The smith's iron helmets, chestplates, leggings, boots and swords, as
+  before. While the town is putting iron by for its next age the armour waits (unless the town is
+  on a war footing), and the guards keep their leather meanwhile.
+* **Diamond in the Diamond Age.** Once the town has come into the Diamond Age, is not putting its
+  diamonds by for the next age, and the miners have their diamond pick, the smith forges the watch
+  a diamond sword first, then the chestplate, the leggings, the helmet and the boots, a couple of
+  diamonds always kept back. In the Nether Age it takes them on to netherite at the smithing table,
+  with the stores' netherite ingot and upgrade template.
+* **The maker's hand still counts.** A smith makes iron chestplates from level 10 and diamond
+  armour from level 30; a tailor makes the tunic and trousers from level 5 (see *The makers'
+  hands*). What the hand cannot make yet waits for it.
+* **The best goes on.** Every so often each guard looks in the stores (and the shop's round does
+  the same for the whole watch): in each slot it puts on the best piece there is that beats what it
+  wears (netherite, then diamond, iron, chainmail, leather), takes the blade that bites hardest if
+  it beats its own, and a bow with a few arrows and a shield if it has none. The piece it took off
+  goes back into the stores for the next guard or the militia. A guard's own wooden or stone sword
+  stays in its pack.
+* **No rank on the town's kit.** A guard new to the watch wears diamond and wields a diamond sword
+  as soon as the town issues them: it is the town's kit, not a tool it has to earn the skill for.
+  Other trades still need their levels for diamond and netherite tools.
+* **The town pays.** Every piece is made out of the stores' own leather, iron and diamonds by the
+  town's makers, and issued free. A guard is never sold its blade at the shop, never charged for
+  one off the storehouse's rack, and never pays for armour. The shop's takings go into the
+  treasury anyway, so the town has nothing to pay its own shop; instead, what the kit is worth at
+  the town's prices is booked as the watch's kit.
+
+**Where you see it.**
+
+* A guard's card has a **Kit** line: *iron helmet, iron chestplate, iron leggings, leather boots,
+  iron sword, bow, 16 arrows: issued by the town, not a coin of it from its own purse.*
+* The board says how the watch is dressed: *The watch: 4 guards, 3 in iron, 1 in leather.*
+* The town's money page (`/village economy`) adds what the kit has cost the town, all told and
+  this week.
+* The chronicle notes the day the watch first went into iron, into diamond and into netherite.
+* A guard handed a better piece often says so: *New diamond chestplate from the stores. Let them
+  come.*
+* `/village watch` (or `/village watch kit`) lists each guard and its kit, what is on order for the
+  watch (and who will make it, and what it is waiting on: the age, the diamonds put by, the
+  miners' pick, the maker's level), the shop's order book for the watch, what was made for it
+  today, and what it has all cost.
+
 ### The crafts, the café and the shop
 
 As a village grows, some of the newcomers take up a craft instead of the fields. Each
@@ -1206,7 +1258,8 @@ hands back to their own work the same morning.
 * **The best tool of the trade.** Every few minutes a miner, woodcutter, farmer or guard
   takes the best tool of its kind the stores hold, if it beats its own: the smith's iron
   and the enchanter's work. Its old tool goes back.
-* **The watch's iron.** Guards put on the smith's iron armour and take its swords.
+* **The watch's kit.** Guards put on the best armour the town has made them (leather, then iron,
+  then diamond) and take its best blade, free: see *The watch's kit*.
 * **Potions at work.** A miner deep down takes fire resistance (or night vision), a
   carrier swiftness for its rounds, a fisher in the water water breathing. Anybody badly
   hurt sends for the brewer's healing.
@@ -2837,7 +2890,7 @@ a piece every twenty seconds or so each.
   on the quest board as before.
 * **The watch fitted out.** A guard who wears worse than the best piece in the shop's stock is given
   it, the village paying (no coin changes hands: the shop's takings are the treasury's), and its
-  old piece goes back into the stores. Workers take their spares off the rack and buy their tools at
+  old piece goes back into the stores: the same fitting as a guard's own (see *The watch's kit*). Workers take their spares off the rack and buy their tools at
   the counter; you buy at the counter.
 * **Its hands.** One for every fifteen folk in the town, four at the most, while the order book has
   work in it: hands the village can spare (a folk between trades, or idle in a trade with more hands
@@ -4233,6 +4286,11 @@ ripen, days pass, folk work and houses go up at that pace.
   town's books opened at the workshop; `workshop hire`, `workshop work` and `workshop stage`
   (operators) take the nearest grown folk on as a hand, have every maker do a piece of work, or (the
   client smoke) put a shop up by you if the village has none, with a keeper and a hand at work in it.
+* `/village watch` (or `watch kit`) — the watch's kit: each guard and what it wears and carries, what is
+  on order for the watch, who makes it and what it is waiting on, the shop's book for the watch, what
+  was made for it today, and what it has cost the town. `watch now` (operators) fits every guard out of
+  the stores at once; `watch stage` (operators, the client smoke) stands three guards in a row where you
+  are, in leather, iron and diamond (clear them with `/kill @e[tag=watch_kit_lineup]`).
 * `/village mine` — the town's mine: where it was opened, the faces worked out, who works which face and how deep
 * `/village stores` — the storehouse's day: its slots, its storekeeper, what went in and out
   and who served the requests, its last tidy, its staff and their runs, and its run list.

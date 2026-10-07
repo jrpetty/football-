@@ -698,7 +698,8 @@ public class VillageFolkEntity extends AssistantEntity {
         long day = level().getDayTime() / 24000L;
         if (shopDay == day) return false;
         java.util.function.Predicate<net.minecraft.world.item.ItemStack> tool = Cafe.toolFor(stationTask());
-        boolean forWork = tool != null && countCarried(tool) == 0;
+        boolean forWork = tool != null && countCarried(tool) == 0
+            && stationTask() != StationTask.GUARD;     // [guard-kit] the watch's blade is issued (WatchKit), never bought
         boolean treat = Wealth.tier(this).ordinal() >= Wealth.Tier.WELL_OFF.ordinal() && Math.floorMod(getUUID().hashCode() + day, 4L) == 0;
         if (!forWork && !treat) { shopDay = day; return false; }
         BlockPos shop = Villages.builtAt(village, "shop");
@@ -2917,7 +2918,7 @@ public class VillageFolkEntity extends AssistantEntity {
         shearsFromTheStores();                         // a rancher's shears, for the wool
         rodFromTheStores();                            // a fisher's rod, of the stores' string and wood
         stoneToolFromTheStores();                      // no more wooden tools once there is stone
-        guardKitFromTheStores();                       // the smith's iron armour and sword, on the watch
+        guardKitFromTheStores();                       // the town's best armour and blade, on the watch (WatchKit)
         betterToolFromTheStores();                     // the smith's iron and the enchanter's work, in use
         clothesFromTheStores();                        // the tailor's boots
         bucketFromTheStores();                         // a farmer's water, when the village is hungry
@@ -4028,6 +4029,9 @@ public class VillageFolkEntity extends AssistantEntity {
      * stores hold, and one with no iron sword takes one. The smithy kept a rack of helmets,
      * chestplates and swords for the watch, and none ever left the stores: the guards wore what
      * they had made themselves out of the iron the smith also wanted.
+     * [guard-kit] Now the best of everything the town has made its watch, whatever its metal: the
+     * tailor's leather, the smith's iron and diamond, a bow and arrows, a shield, the old piece back
+     * into the stores; the same fitting as the shop's round (WatchKit.fit), and free.
      */
     private void guardKitFromTheStores() {
         if (stationTask() != StationTask.GUARD || tickCount - guardKitTick < 1200) return;
@@ -4035,52 +4039,7 @@ public class VillageFolkEntity extends AssistantEntity {
         UUID village = ownerId();
         Villages.Village v = village == null ? null : Villages.get(village);
         if (v == null || !(level() instanceof net.minecraft.server.level.ServerLevel server)) return;
-        net.minecraft.world.entity.EquipmentSlot[] slots = { net.minecraft.world.entity.EquipmentSlot.HEAD,
-            net.minecraft.world.entity.EquipmentSlot.CHEST, net.minecraft.world.entity.EquipmentSlot.LEGS,
-            net.minecraft.world.entity.EquipmentSlot.FEET };
-        net.minecraft.world.item.Item[] iron = { net.minecraft.world.item.Items.IRON_HELMET,
-            net.minecraft.world.item.Items.IRON_CHESTPLATE, net.minecraft.world.item.Items.IRON_LEGGINGS,
-            net.minecraft.world.item.Items.IRON_BOOTS };
-        int put = 0;
-        for (int i = 0; i < slots.length; i++) {
-            net.minecraft.world.item.ItemStack worn = getItemBySlot(slots[i]);
-            String wornPath = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(worn.getItem()).getPath();
-            // An empty slot, or one with only leather, chainmail or gold in it.
-            if (!worn.isEmpty() && !wornPath.startsWith("leather_") && !wornPath.startsWith("chainmail_")
-                    && !wornPath.startsWith("golden_")) continue;
-            final net.minecraft.world.item.Item piece = iron[i];
-            net.minecraft.world.item.ItemStack got = Crafts.takeOne(server, v, st -> st.is(piece));
-            if (got.isEmpty()) continue;
-            if (!worn.isEmpty()) {
-                net.minecraft.world.item.ItemStack off = worn.copy();
-                net.minecraft.world.item.ItemStack left = insertItem(off);
-                if (!left.isEmpty()) Crafts.store(server, v, left);
-            }
-            setItemSlot(slots[i], got);
-            put++;
-        }
-        if (countCarried(st -> st.getItem() instanceof net.minecraft.world.item.SwordItem
-                && !net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(st.getItem()).getPath().startsWith("wooden_")
-                && !net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(st.getItem()).getPath().startsWith("stone_")
-                && !net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(st.getItem()).getPath().startsWith("golden_")) == 0) {
-            net.minecraft.world.item.ItemStack sword = Crafts.takeOne(server, v, st -> st.is(net.minecraft.world.item.Items.IRON_SWORD));
-            if (!sword.isEmpty()) {
-                net.minecraft.world.item.ItemStack left = insertItem(sword);
-                if (!left.isEmpty()) Crafts.store(server, v, left);
-                else put++;
-            }
-        }
-        // A shield, for a guard that can work one, once the smith has the hand to make them (Craftsmanship).
-        if (can(Ability.GUARD_SHIELD) && countCarried(st -> st.is(net.minecraft.world.item.Items.SHIELD)) == 0
-                && !getItemBySlot(net.minecraft.world.entity.EquipmentSlot.OFFHAND).is(net.minecraft.world.item.Items.SHIELD)) {
-            net.minecraft.world.item.ItemStack shield = Crafts.takeOne(server, v, st -> st.is(net.minecraft.world.item.Items.SHIELD));
-            if (!shield.isEmpty()) {
-                net.minecraft.world.item.ItemStack left = insertItem(shield);
-                if (!left.isEmpty()) Crafts.store(server, v, left);
-                else put++;
-            }
-        }
-        if (put > 0) brain("took " + put + " piece" + (put == 1 ? "" : "s") + " of the smith's iron from the stores");
+        WatchKit.fit(server, v, this);                 // [guard-kit]
     }
 
     /** What its trade works with, by the end of its name: a miner's pickaxe, a woodcutter's axe. */
@@ -4103,6 +4062,7 @@ public class VillageFolkEntity extends AssistantEntity {
         String tool = tradeTool();
         if (tool != null && path.endsWith(tool) && (path.startsWith("iron_") || path.startsWith("diamond_"))) return true;
         if (stationTask() == StationTask.GUARD && path.startsWith("iron_")) return true;
+        if (stationTask() == StationTask.GUARD && WatchKit.kitPath(path)) return true;   // [guard-kit] the town's kit, at any level
         return super.mayUseTier(s);
     }
 

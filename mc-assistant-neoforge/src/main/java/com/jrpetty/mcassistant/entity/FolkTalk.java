@@ -352,6 +352,7 @@ public final class FolkTalk {
         line(sb, "At the counter", Purchases.cardLine(f));  // [econ-prices] its slate, its change, what it bought and refused
         line(sb, "Bank", Bank.cardLine(f));                 // its savings at the bank, its mortgage, how careful it is
         line(sb, "War", WarFooting.cardLine(f));            // [war-prep] the watch for the war, the militia, danger money
+        line(sb, "Kit", WatchKit.cardLine(f));              // [guard-kit] a guard's kit, issued by the town
         net.minecraft.core.BlockPos bed = f.bedPos();
         String house = Homes.talk(f);
         line(sb, "Home", (house != null && !house.isEmpty() ? house + " " : "") + (bed == null ? "No bed of its own yet."

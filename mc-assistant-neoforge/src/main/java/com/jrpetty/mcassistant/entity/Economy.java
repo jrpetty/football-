@@ -608,6 +608,7 @@ public final class Economy {
             .append(stores == null || stores.isEmpty() ? "?" : stores).append(", the treasury ").append(Ledger.coins(id))
             .append(", the folk's savings ").append(purses).append(put > 0 ? " (" + put + " of it put by toward their houses)" : "").append(".");
         sb.append(Bank.economyLine(id));                  // the bank's vault, its deposits and loans, its week (Bank)
+        sb.append(WatchKit.economyLine(level, id));       // [guard-kit] what the watch's kit has cost the town, in kind
         return sb.toString();
     }
 
