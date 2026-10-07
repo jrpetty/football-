@@ -145,6 +145,7 @@ public final class Contentment {
         // The town's Feast Days (CityTree): a little more content, all year round.
         int feasts = CityTree.contentment(id);
         if (feasts > 0) good.add("feast days kept");
+        feasts += Festivals.contentment(id, day, good);           // [batchB] a festival kept in the last few days
         int score = Math.max(0, Math.min(100, foodPts + homesPts + moodPts + safety + amenities + wages + rest + feasts));
         return new View(score, word(score), foodPts, homesPts, moodPts, safety, amenities, wages, good, bad);
     }

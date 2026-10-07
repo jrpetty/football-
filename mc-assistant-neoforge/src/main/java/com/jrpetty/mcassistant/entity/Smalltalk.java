@@ -146,6 +146,7 @@ public final class Smalltalk {
                     pick(r, "Me too.", "Brave souls, those scouts.", "")));
             }
         }
+        for (String[] t : Seasons.talk(a, b, level, r)) options.add(new Talk(t[0], t[1], t[2]));   // [batchB] the season, now and then
         if (options.isEmpty()) return null;
         return options.get(r.nextInt(options.size()));
     }

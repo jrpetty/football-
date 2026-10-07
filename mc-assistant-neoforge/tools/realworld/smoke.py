@@ -994,6 +994,68 @@ def sights_stage(r, look, cx, cz):
     say("alive after the sights: %s" % client_alive())
 
 
+def seasons_stage(r, look, cx, cz):
+    """[batchB] The town's seasons and festivals (entity/Seasons, Festivals, Fair, Midwinter, Winter), in the village
+    spawned at cx, cz: the maypole up on the square and the town dancing round it, from outside the ring once the
+    ring has begun to turn; the midsummer bonfire at dusk with the town gathered round it; and the town's books at
+    the News page, the season and the year's festivals in the town's calendar. The makings go into the stores
+    first (fence posts, wool of four colours, logs, coal and sticks), as a player would bring them, and the
+    town's calendar is turned to each festival's day (/village season set)."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("time set 9000")
+    r.cmd("weather clear")
+    r.cmd("gamemode spectator %s" % USER)
+    here = "execute positioned %d 100 %d run " % (cx, cz)
+    xyz = r"(-?\d+) (-?\d+) (-?\d+)"
+    say("season: " + r.cmd(here + "village season")[:600])
+    st = re.search(r"STORES " + xyz, r.cmd(here + "village bell"))
+    if st:
+        sx, sy, sz = (int(v) for v in st.groups())
+        goods = ((26, "minecraft:oak_fence 5"), (25, "minecraft:red_wool 1"), (24, "minecraft:yellow_wool 1"),
+                 (23, "minecraft:light_blue_wool 1"), (22, "minecraft:lime_wool 1"), (21, "minecraft:oak_log 16"),
+                 (20, "minecraft:coal 6"), (19, "minecraft:stick 16"))
+        for slot, item in goods:
+            say("stores: " + r.cmd("item replace block %d %d %d container.%d with %s" % (sx, sy, sz, slot, item)))
+    else:
+        say("no stores found for the festivals' makings; going on with what the town has")
+
+    # Spring: the maypole, and the May dance round it.
+    say("calendar: " + r.cmd(here + "village season set 3"))
+    out = r.cmd(here + "village festival maypole now")
+    say("maypole: " + out[:700])
+    m = re.search(r"AT " + xyz, out)
+    if m and "0 blocks put up" not in out:
+        x, y, z = (int(v) for v in m.groups())
+        time.sleep(50)                                 # they gather, the elder's three lines, and the ring turns
+        say("dance: " + r.cmd(here + "village festival maypole")[:300])
+        look("24-seasons-1-maypole", x + 11.5, y + 5, z + 11.5, x + 0.5, y + 2.5, z + 0.5, wait=3)
+    else:
+        say("no maypole to photograph")
+
+    # Midsummer: the bonfire at dusk, the town round it.
+    r.cmd("time set 12400")
+    say("calendar: " + r.cmd(here + "village season set 11"))
+    out = r.cmd(here + "village festival bonfire now")
+    say("bonfire: " + out[:700])
+    m = re.search(r"AT " + xyz, out)
+    if m and "0 blocks put up" not in out:
+        x, y, z = (int(v) for v in m.groups())
+        time.sleep(40)                                 # gathered round and singing
+        look("24-seasons-2-bonfire", x + 9.5, y + 4, z + 9.5, x + 0.5, y + 0.5, z + 0.5, wait=3)
+    else:
+        say("no bonfire to photograph")
+
+    # The town's books, the News page: the season, the fields in every season, the year's festivals.
+    r.cmd("time set 9000")
+    say("season now: " + r.cmd(here + "village season")[:600])
+    say("stats news: " + r.cmd("execute as %s at @s run village stats 17" % USER))
+    time.sleep(3)
+    shot("24-seasons-3-news")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode creative %s" % USER)
+    say("alive after the seasons: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

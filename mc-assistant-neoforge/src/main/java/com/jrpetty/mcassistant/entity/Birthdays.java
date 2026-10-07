@@ -340,7 +340,7 @@ public final class Birthdays {
     }
 
     /** Bought from the stores out of its own purse: the kind they love first, at the market's price, into the treasury. */
-    private static ItemStack buy(ServerLevel level, VillageFolkEntity giver, VillageFolkEntity to) {
+    static ItemStack buy(ServerLevel level, VillageFolkEntity giver, VillageFolkEntity to) {     // [batchB] midwinter presents too (Midwinter)
         Villages.Village v = Villages.get(giver.ownerId());
         if (v == null || giver.purse() < 1) return ItemStack.EMPTY;
         Persona.Gift loves = to.persona().loves(), hates = to.persona().hates();

@@ -413,6 +413,9 @@ public class VillageFolkEntity extends AssistantEntity {
         // home at the dusk bell; round to a friend with a birthday present.
         if (!withAPlayer && tickCount % 4 == 0 && level() instanceof net.minecraft.server.level.ServerLevel calendar
                 && TownCalendar.hold(this, calendar)) return;
+        // [batchB] The year's festivals (Festivals): a midwinter present bought and taken round, a snowman built by the playground.
+        if (!withAPlayer && tickCount % 4 == 0 && level() instanceof net.minecraft.server.level.ServerLevel festive
+                && Festivals.hold(this, festive)) return;
         // The museum's curator on its errand (Museum): a find fetched out of the stores and set out, a year bound.
         if (!withAPlayer && tickCount % 4 == 0 && level() instanceof net.minecraft.server.level.ServerLevel museum
                 && Museum.hold(this, museum)) return;
