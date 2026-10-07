@@ -5125,7 +5125,8 @@ says it all in chat.
   paints until it is done. It names the picture ("The Well at Dusk", "Portrait of Fern", "The Sea at
   Ashford") and signs it, and the town buys it from the treasury for the stores. From there it is sold
   at the shop like any painting, and a comfortable folk buys one for its own wall. The town's works hang
-  two in each public room (the hall, the museum, the tavern) wherever one fits on a wall.
+  two in each public room (the hall, the museum, the tavern) wherever one fits on a wall. The first is
+  hung no bigger than leaves room on the walls for the second.
 * **Plaques.** A hand at the town's works puts up oak signs where something happened, out of the stores
   (a sign, and a post for one on open ground):
   * "Here Ashford was founded" by the heart of the town, once it is a day old;
