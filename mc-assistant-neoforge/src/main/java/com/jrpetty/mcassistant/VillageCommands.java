@@ -262,7 +262,9 @@ public final class VillageCommands {
             // The storehouse: its books for the day, its storekeeper and couriers, and its run list.
             .then(Commands.literal("stores").executes(ctx -> page(ctx, 5)))
             // The town's mine (TownMine): where it was opened, the faces worked out, who works which face and how deep.
-            .then(Commands.literal("mine").executes(VillageCommands::mine))
+            .then(Commands.literal("mine").executes(VillageCommands::mine)
+                // [mine-safety] Operators: a mine's stairs cut where you stand, fenced round and signed, to be looked at.
+                .then(Commands.literal("showcase").requires(src -> src.hasPermission(2)).executes(VillageCommands::mineShowcase)))
             // The street sweeper (Sweepers): what it swept in today and what lies about the town; and, for ops
             // and the client smoke, the nearest grown folk made the storehouse's sweeper now.
             .then(Commands.literal("sweeper").executes(ctx -> sweeper(ctx, false))
@@ -455,6 +457,19 @@ public final class VillageCommands {
         }
         java.util.List<String> lines = com.jrpetty.mcassistant.entity.TownMine.report(v.id(), v.centre());
         ctx.getSource().sendSuccess(() -> Component.literal("The mine of " + Villages.name(v.id()) + " | " + String.join(" | ", lines)), false);
+        return lines.size();
+    }
+
+    /** [mine-safety] /village mine showcase: stairs cut where the operator stands, fenced and signed (MineSafety.showcase). */
+    private static int mineShowcase(CommandContext<CommandSourceStack> ctx) {
+        net.minecraft.core.BlockPos at = net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition());
+        Villages.Village v = Villages.nearest(ctx.getSource().getLevel(), at, Villages.VILLAGE_RANGE * 2);
+        if (v == null) {
+            ctx.getSource().sendFailure(Component.literal("No village near enough to sign its mine."));
+            return 0;
+        }
+        java.util.List<String> lines = com.jrpetty.mcassistant.entity.MineSafety.showcase(ctx.getSource().getLevel(), v, at);
+        ctx.getSource().sendSuccess(() -> Component.literal(String.join("\n", lines)), false);
         return lines.size();
     }
 

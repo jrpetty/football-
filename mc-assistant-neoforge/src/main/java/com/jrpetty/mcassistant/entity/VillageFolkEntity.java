@@ -86,6 +86,24 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected boolean drawsWages() { return false; }
 
+    // [mine-safety] Never carried off in a boat or a cart it did not mean to board (Aboard).
+    @Override
+    protected boolean canRide(net.minecraft.world.entity.Entity vehicle) {
+        return Aboard.mayBoard(this, vehicle) && super.canRide(vehicle);
+    }
+
+    // [mine-safety] Below ground in the town's mine it climbs out, by the stairs or steps of its own;
+    // it is never lifted out (MineSafety.climbInstead).
+    @Override
+    protected boolean rescueToPlot() {
+        return MineSafety.climbInstead(this) || super.rescueToPlot();
+    }
+
+    @Override
+    public boolean putBeside(BlockPos target) {
+        return MineSafety.climbInstead(this) || super.putBeside(target);
+    }
+
     /** A villager is not a hired hand on a clock: it eats a ration every five and a
      *  half minutes of work where an assistant eats one every two and a half (it was four
      *  and a half, and a third less now the town keeps two meals a day, not three).
@@ -301,6 +319,7 @@ public class VillageFolkEntity extends AssistantEntity {
             FolkTalk.speak(this, laterLine);
             laterLine = null;
         }
+        if (tickCount % 20 == 17) Aboard.step(this);           // [mine-safety] out of a boat it never meant to board
         // [batchG] A visitor from afar (the bard, a tourist, the merchant), one of ours away for the day at a friend's
         // in another town, or a guard out taming a dog for the watch: that is its day (Visitors).
         if (Visitors.drive(this)) return;
@@ -3350,14 +3369,37 @@ public class VillageFolkEntity extends AssistantEntity {
         return false;
     }
 
+    /** [mine-safety] Tests: the ground a hand with nothing to do would be lent out to for this, or null. */
+    @Nullable
+    public WorkZone groundForTests(com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind kind) {
+        return level() instanceof net.minecraft.server.level.ServerLevel server && ownerId() != null ? groundFor(server, ownerId(), kind) : null;
+    }
+
+    /** [mine-safety] Tests: lent out now, as a hand with nothing to do is; the ground it is lent to, or null. */
+    @Nullable
+    public WorkZone lendOutForTests() {
+        if (!(level() instanceof net.minecraft.server.level.ServerLevel server) || ownerId() == null) return null;
+        endLending();
+        lendOut(server, ownerId());
+        return lentZone();
+    }
+
+    /** [mine-safety] Tests: the lend over, as when its time is up. */
+    public void lendLapsedForTests() {
+        lentUntil = tickCount;
+    }
+
     /**
-     * Ground with timber or stone on it: its own plot if that has some, else the nearest
-     * woodcutter's or miner's of the village.
+     * Ground with timber or stone on it: its own plot if that has some, else (timber) the nearest
+     * woodcutter's of the village.
      */
     @Nullable
     private WorkZone groundFor(net.minecraft.server.level.ServerLevel server, UUID village,
                                com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind kind) {
         if (workZone() != null && workZone().containsColumn(blockPosition()) && resourceNearby(kind, 16)) return workZone();
+        // [mine-safety] Never a miner's ground for stone: a hand lent out to one cut its way down the stairs after
+        // the nearest rock, and only a miner at work goes down the mine. Timber instead (lendOut).
+        if (kind == com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.STONE) return null;
         StationTask trade = kind == com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.LOGS ? StationTask.WOOD : StationTask.MINE;
         WorkZone best = null;
         double bestDist = Double.MAX_VALUE;

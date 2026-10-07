@@ -556,6 +556,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             sb.append(" zone=none");
         }
         sb.append(" [").append(clientStatus()).append(']');
+        String aboard = Aboard.riding(this);                // [mine-safety] sat in a boat goes nowhere
+        if (aboard != null) sb.append(" aboard=").append(aboard);
         Job j = peekJob();
         sb.append(" job=").append(j == null ? "-" : j.type() + (j.arg() != null ? ":" + j.arg() : ""));
         sb.append(getNavigation().isDone() ? " idle-legs" : " walking");

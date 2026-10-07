@@ -133,6 +133,25 @@ public final class MineStairs extends SavedData {
         return new Near(steps, index, Math.sqrt(best));
     }
 
+    /** [mine-safety] The head of the staircase at this key (its first step, at the top), or null. */
+    @Nullable
+    public static BlockPos head(ServerLevel level, long key) {
+        List<Long> list = of(level).stairs.get(key);
+        return list == null || list.isEmpty() ? null : BlockPos.of(list.get(0));
+    }
+
+    /** [mine-safety] The first few steps of every staircase, head first (MineSafety fences their tops). */
+    public static List<List<BlockPos>> tops(ServerLevel level, int steps) {
+        List<List<BlockPos>> out = new ArrayList<>();
+        for (List<Long> list : of(level).stairs.values()) {
+            if (list.isEmpty()) continue;
+            List<BlockPos> top = new ArrayList<>(Math.min(steps, list.size()));
+            for (int i = 0; i < list.size() && i < steps; i++) top.add(BlockPos.of(list.get(i)));
+            out.add(top);
+        }
+        return out;
+    }
+
     private void floor(long step) {
         floors.merge(BlockPos.of(step).below().asLong(), 1, Integer::sum);
     }
@@ -219,7 +238,9 @@ public final class MineStairs extends SavedData {
         if (j != null && j.type() == Job.Type.MINE) { BELOW.remove(id); return; }   // its own run sees it home
         if (!f.isAlive() || f.isPassenger() || f.isSleeping()) return;
         BlockPos feet = f.blockPosition();
-        if (!underground(level, feet)) {
+        // [mine-safety] Or deep in the town's mine with the sky over it (the open top of a pit, a gallery out
+        // into a hillside): below ground all the same (MineSafety.below).
+        if (!underground(level, feet) && !MineSafety.below(level, f.ownerId(), feet)) {
             BELOW.remove(id);
             SENT.remove(id);
             return;
