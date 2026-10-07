@@ -272,7 +272,7 @@ public final class Crafts {
     private static int guards(Villages.Village v) {
         int n = 0;
         for (AssistantEntity a : Villages.folkOf(v.id())) if (a.stationTask() == AssistantEntity.StationTask.GUARD) n++;
-        return n;
+        return WarFooting.armsFor(v.id(), n);         // [war-prep] and the militia's, on a war footing
     }
 
     // ------------------------------------------------------------------ the blacksmith
@@ -402,6 +402,7 @@ public final class Crafts {
             if (n.task() == Villages.Task.IRON) saving = true;
             if (n.task() == Villages.Task.DIAMOND) savingDiamonds = true;
         }
+        if (WarFooting.ready(v.id())) saving = false;      // [war-prep] on a war footing the arms come before the age
         int skill = f.veteranLevel();
         for (Smithing w : wants) {
             Item it = w.item();

@@ -61,7 +61,9 @@ public final class Leader {
     private Leader() {}
 
     public enum Plan {
-        FAMINE("famine"), SHORT("short of food"), STEADY("steady"), PLENTY("plenty");
+        FAMINE("famine"), SHORT("short of food"), STEADY("steady"), PLENTY("plenty"),
+        // [war-prep] At war: the larder kept against a siege (WarStores).
+        WAR("kept for a siege");
 
         public final String word;
 
@@ -229,7 +231,7 @@ public final class Leader {
     /** How many days' food the leader likes to keep put by. */
     public static double reserveDays(@Nullable UUID village) {
         Nature n = natureOf(village);
-        if (n == null || n.traits().isEmpty()) return 2.0;
+        if (n == null || n.traits().isEmpty()) return 2.0 + WarStores.siegeDays(village);   // [war-prep]
         double sum = 0;
         for (Social.Trait t : n.traits()) {
             sum += switch (t) {
@@ -242,7 +244,7 @@ public final class Leader {
         }
         // Elected for a full larder (Elections): half a day more put by.
         double extra = Elections.mandate(village) == Values.Value.FOOD ? 0.5 : 0.0;
-        return sum / n.traits().size() + extra;
+        return sum / n.traits().size() + extra + WarStores.siegeDays(village);    // [war-prep] and more against a siege
     }
 
     /** The leader's usual pay, in the hundred of the standard wage. */
@@ -337,6 +339,7 @@ public final class Leader {
         return switch (p) {
             case FAMINE -> trade == StationTask.HUNT ? 1.5 : 2.0;
             case SHORT -> trade == StationTask.HUNT ? 1.25 : 1.5;
+            case WAR -> WarStores.foodFactor(village, trade);           // [war-prep] up to the siege reserve
             default -> 1.0;
         };
     }
@@ -446,6 +449,7 @@ public final class Leader {
         boolean settled = kept >= 4;
         boolean draining = settled && draining(stock, inAvg, eat, reserve, was);
         Plan plan = decide(stock, heads, inAvg, eat, reserve, was, settled);
+        plan = WarStores.plan(id, plan, stock / Math.max(1.0, eat), reserve);    // [war-prep] at war, kept for a siege
         if (plan == Plan.SHORT || plan == Plan.FAMINE) SHORT_ON.put(id, day);     // [economy] the hands held a while after
         Books b = new Books(stock, in, use, inAvg, useAvg, days, plan, day);
         BOOKS.put(id, b);
@@ -484,6 +488,8 @@ public final class Leader {
                         : inAvg < eat ? "and more eaten than grown" : "less than " + String.format(Locale.ROOT, "%.1f", reserve) + " days'");
                 case PLENTY -> who + " said the larder is full: " + daysWords + " food, and more grown than eaten";
                 case STEADY -> who + " said the village is fed again: " + daysWords + " food put by";
+                case WAR -> who + " put the larder on a war footing: " + daysWords + " food put by, and "      // [war-prep]
+                    + String.format(Locale.ROOT, "%.1f", reserve) + " days' kept against a siege";
             };
             Villages.tell(id, day, line + (calls.isEmpty() ? "" : " — " + String.join("; ", calls)));
             if (elder != null) {
@@ -492,6 +498,7 @@ public final class Leader {
                     case SHORT -> "We're eating faster than we grow. More hands to the fields, and widen them.";
                     case PLENTY -> "The larder's full. The fields can spare a hand for the rest of the work.";
                     case STEADY -> "We're fed. Back to the work in hand.";
+                    case WAR -> "We're at war. What's in the larder is kept against a siege: nobody sells it, nobody wastes it.";   // [war-prep]
                 });
             }
         }
@@ -641,6 +648,8 @@ public final class Leader {
             case SHORT -> " We've " + daysWords + " food put by and I want more. The fields are being widened.";
             case PLENTY -> " The larder's full — " + daysWords + " food. We can turn our hands to other things.";
             case STEADY -> " We've " + daysWords + " food put by. That'll do.";
+            case WAR -> " We're at war: " + daysWords + " food put by, and I keep "                         // [war-prep]
+                + String.format(Locale.ROOT, "%.1f", reserveDays(village)) + " days' of it against a siege.";
         };
     }
 

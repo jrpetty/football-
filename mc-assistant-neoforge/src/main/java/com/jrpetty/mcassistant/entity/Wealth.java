@@ -105,6 +105,7 @@ public final class Wealth {
     public static int wage(VillageFolkEntity f) {
         if (f.isBaby() || f.stationTask() == StationTask.NONE) return 0;
         int w = earned(f);
+        w += tradeWage(f.stationTask(), f.ownerId()) * WarFooting.dangerPay(f) / 100;   // [war-prep] danger money on a war footing (WarFooting)
         return w + FolkSkills.haggled(f, w);
     }
 

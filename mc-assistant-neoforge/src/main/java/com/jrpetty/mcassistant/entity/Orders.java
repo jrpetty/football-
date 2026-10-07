@@ -247,6 +247,8 @@ public final class Orders {
             }
         }
         if (Raids.underAlarm(village)) score.merge(Order.WATCH, 3, Integer::sum);
+        Order war = WarFooting.order(level, village);        // [war-prep] on a war footing: the mines for the arms' iron, or the walls manned
+        if (war != null) score.merge(war, 6, Integer::sum);
         boolean fisher = false, tailor = false;
         for (AssistantEntity a : Villages.folkOf(village)) {
             if (a.stationTask() == StationTask.FISH) fisher = true;

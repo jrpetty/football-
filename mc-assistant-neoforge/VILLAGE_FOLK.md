@@ -4744,3 +4744,65 @@ back, the charcoal and the charcoal torches; a sapling from the crowns on every 
 ground planted and the saplings fed; a rod a building, of three copper ingots; a fire put out with a
 bucket made of the stores' iron and noted in the books; the snow shovelled off the square into the
 storehouse and not off a garden; and a farmer in out of the storm while the watch stays out.
+
+## A town on a war footing
+
+When a town falls out badly with a neighbour (a feud) it goes **on its guard**; when the two go to war it is
+**at war**. Either way it changes the way it works, and at peace it goes back to its old ways. The page for it
+is `/village war footing`, and the News page of the town's books has a panel "On a war footing" whenever there
+is anything to show. The board says so too, and a folk's card has a **War** line when it has a part in it.
+
+* **More guards, sized by the scouts.** The town wants more of its folk on the watch: enough to meet what it
+  reckons the enemy has, by its scouts' last report of the enemy's guards and how many of them are in iron.
+  With no report, or one more than ten days old, the leader makes a cautious guess from the enemy's size
+  (a shy or grumpy leader one guard more). A wall lets a few hold against more. On its guard the town goes
+  half-way to that number; at war, all the way, never more than three in ten of its grown folk. The hands come
+  out of the woods, the pens, the hives and the crafts' benches, never the fields, the fishing or the hunt:
+  the farmers' share does not change by a single hand. The page shows how the enemy was reckoned.
+* **Volunteers.** Each morning the leader calls for volunteers to make up the watch: one a day on its guard,
+  two at war. Those who care most for safe streets (the Guardians) come forward first, then the hardworking
+  and the generous; the shy and the easygoing hang back, and somebody who has drilled with the militia is
+  readier. Never a town's last hand at a trade, its storekeeper, banker or elder, nor a farmer while the town
+  is short of food. At peace each goes back to the trade it left.
+* **The work changes.** The smith makes swords, armour, bows and arrows for the militia as well as the watch,
+  and stops holding the armour back for the next age; the elder orders the mines dug when the arms want
+  iron, or the walls manned while the watch is short; the couriers carry the arms to the armoury.
+* **Danger money.** A guard is paid a tenth more on its guard and a quarter more at war (more again when the
+  enemy is reckoned the stronger); a militia hand called up gets a tenth on top of its own trade's wage.
+* **The militia.** A quarter of the town's able grown folk are enrolled on its guard, a third at war. They keep
+  their own trades. On the day of rest, while everybody else plays games on the square, the militia drills at
+  the training yard (before the barracks if there is no yard, on the square failing both), and every drill
+  teaches it a little of the watch's trade. At war it is called up: armed out of the armoury (a sword, and a
+  helmet or a breastplate if there is one), counted among those who fight for the town, and every morning of
+  the war it musters and drills for an hour and a half, away from its own work. At peace it hands its arms
+  back and is stood down.
+* **Fortifications.** On its guard the town builds its wall before anything else; the armoury and the training
+  yard come after its next house; at war a well, if it has none, comes first of all, for water in a siege. A Wood
+  Age town with no wall stands a **palisade** of logs two high on the wall's line (at war, or on its guard if it
+  has a good pile of logs), and takes it down again, logs back to the stores, when the stone wall is to go up.
+  A walled town raises **corner towers** (each corner built out three across and two over the wall, with
+  battlements), and at war builds a **gatehouse** over every gate and digs a **ditch** two deep along the
+  outside foot of the wall, with a causeway at every avenue. All of it is done by hand, a few blocks at a time,
+  out of the stores' stone (sixty-four always kept back for the builders), and the earth dug goes into the
+  stores.
+* **The armoury.** A small stone house with racks of chests, an anvil and a grindstone. What is in it is not
+  the town's stores: it is never sold or spent. The couriers fill it from the smith's work up to what the
+  militia wants, the militia draws its arms from it when called up, and hands them back to it at peace.
+* **The training yard.** A fenced yard with three dummies and two archery butts. The militia drills there, and
+  every guard takes a turn at the dummies each day the town has one; the watch grows better at its trade.
+* **Siege stores.** The leader keeps more food put by: half a day more on its guard, four days more at war.
+  At war the leader's plan is **War** (on the board and in the books): the larder is kept against a siege, more
+  hands go to the fields while it is under that, and no food is sold to the traders out of it on market day. A
+  famine is still a famine. Arrows are made for everybody who would fight, and sugar cane is pressed into paper
+  for bandages (one for every two folk at war).
+* **What it costs.** The page shows what standing armed costs a day: the danger money, and the hours of work
+  lost (the volunteers' old trades, the militia's muster), in coin.
+
+Ops can try it with `/village war footing tension`, `war` and `peace` (against the nearest other town) and
+`/village war footing now` (the leader's morning at once). The game tests `WarFootingGameTests` (wr01 to wr06)
+check it: more guards and fewer woodcutters on its guard, the farmers untouched, the scouts' report sizing the
+enemy and a stale one making the leader guess, and volunteers on the wall; the militia enrolled, drilling,
+called up and armed at war, the watch's pay up; everybody back at their old trades at peace and the swords
+back in the stores; the palisade, the wall at the head of the list and why; the leader keeping more food and
+the plan going to War; and the armoury filled from the stores, the militia armed out of it, and a guard at
+the dummies.

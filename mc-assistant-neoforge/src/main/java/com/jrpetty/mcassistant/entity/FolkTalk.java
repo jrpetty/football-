@@ -333,6 +333,7 @@ public final class FolkTalk {
         line(sb, "Worth", Wealth.line(f));
         line(sb, "Meals", Meals.line(f));
         line(sb, "Bank", Bank.cardLine(f));                 // its savings at the bank, its mortgage, how careful it is
+        line(sb, "War", WarFooting.cardLine(f));            // [war-prep] the watch for the war, the militia, danger money
         net.minecraft.core.BlockPos bed = f.bedPos();
         String house = Homes.talk(f);
         line(sb, "Home", (house != null && !house.isEmpty() ? house + " " : "") + (bed == null ? "No bed of its own yet."

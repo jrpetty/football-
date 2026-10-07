@@ -327,6 +327,7 @@ public final class Villages {
             case "manor" -> "a manor house";
             case "belltower" -> "the bell tower";
             case "flats" -> "a block of flats";                   // [flats]
+            case "trainingyard" -> "the training yard";            // [war-prep]
             default -> "the " + structure;
         };
     }
@@ -899,7 +900,8 @@ public final class Villages {
             : slot.max() + Math.max(0, boost) + Homeland.extraMost(villageId, slot.trade());
         // And the shop's hands at its bench (Workshop): the shop's share is its keeper and the hands it wants.
         double hands = slot.trade() == AssistantEntity.StationTask.SHOP && villageId != null ? Workshop.handsWanted(villageId) : 0;
-        return Math.max(0.0, Math.min(max + hands, t + hands));
+        // [war-prep] On a war footing the watch's share rises to meet the enemy, out of the trades a town can spare (WarFooting).
+        return WarFooting.share(villageId, slot.trade(), Math.max(0.0, Math.min(max + hands, t + hands)));
     }
 
     /** How many hands a trade has over (positive) or under (negative) its share, as the order has
@@ -1614,7 +1616,8 @@ public final class Villages {
      */
     public static List<String> projectsWanted(UUID villageId) {
         // [flats] a block of flats ahead of the next house, in the Iron Age when the town wants one (Flats)
-        return requestedFirst(villageId, Flats.wanted(villageId, ageBeforeTheHouse(villageId, projectsWantedInOrder(villageId))));
+        // [war-prep] and on a war footing, the defences at the head of the list (WarWorks)
+        return requestedFirst(villageId, WarWorks.wanted(villageId, Flats.wanted(villageId, ageBeforeTheHouse(villageId, projectsWantedInOrder(villageId)))));
     }
 
     /** The buildings an age asks for before the next (Villages.needs): the wall, the smeltery and the hall;
@@ -2036,6 +2039,8 @@ public final class Villages {
     /** Why the village wants the building it wants next, in a line a player can read. */
     public static String whyBuild(UUID villageId, @Nullable String project) {
         if (project == null) return "nothing for now — the village is gathering what its age asks for";
+        String war = WarWorks.whyBuild(villageId, project);        // [war-prep] the defences, on a war footing
+        if (war != null) return war;
         int folk = headcount(villageId);
         return switch (project) {
             case "guesthouse" -> {
@@ -2317,6 +2322,7 @@ public final class Villages {
                 if (!f.stillThere() || !ZoneChests.isStashable(f)) continue;
                 if (inAGuestHouse(villageId, f.pos())) continue;
                 if (Homes.inAHome(villageId, f.pos())) continue;          // a household's own chest (Homes)
+                if (WarWorks.inArmoury(villageId, f.pos())) continue;     // [war-prep] the armoury's racks are not the stores
                 if (inUse.contains(f.pos().asLong())) continue;
                 out.add(f.pos().immutable());
             }

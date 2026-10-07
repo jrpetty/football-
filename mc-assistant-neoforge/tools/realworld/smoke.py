@@ -994,6 +994,47 @@ def sights_stage(r, look, cx, cz):
     say("alive after the sights: %s" % client_alive())
 
 
+def war_footing_stage(r, look, cx, cz):
+    """A town on a war footing (entity/WarFooting, Militia, WarWorks): put on its guard against the nearest
+    other town, if the world has one (/village war footing tension); then the armoury and the training yard
+    put up side by side on cleared ground beside the village (/village war footing stage), the armoury's
+    racks filled, up to six of the town's folk enrolled, called up, armed and set drilling at the dummies, and
+    the watch sent to its daily turn at the yard. By day: the yard from beyond its gate, the militia thrusting
+    at the dummies with the archery butts either side; the armoury from just inside its door, the racks of
+    chests along the back, the anvil and the grindstone; and the town's books open on the News page with its
+    "On a war footing" panel. Peace again at the end."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("time set 2500")
+    r.cmd("weather clear")
+    sx, sz = cx + 40, cz - 10
+    gy = ground_height(r, sx, sz)
+    r.cmd("tp %s %d %d %d" % (USER, sx + 7, gy + 12, sz + 20))
+    time.sleep(8)                                     # the stage's chunks arrive
+    say("on its guard: " + r.cmd("execute positioned %d %d %d run village war footing tension" % (cx, gy, cz))[:800])
+    out = r.cmd("execute positioned %d %d %d run village war footing stage" % (sx, gy, sz))
+    say("war stage: " + out[:300])
+    m = re.search(r"armoury (-?\d+) (-?\d+) (-?\d+) yard (-?\d+) (-?\d+) (-?\d+) militia (\d+)", out)
+    if not m:
+        say("no war stage went up; nothing to photograph")
+        return
+    ax, ay, az, yx, yy, yz, n = (int(v) for v in m.groups())
+    say("militia at the dummies: %d" % n)
+    time.sleep(6)                                     # the militia walks to its places before the dummies
+    # Both face north (their backs, the dummies and the racks, toward -z). The yard's dummies stand two north
+    # of its middle, its gate three south; the armoury's racks one north of its anchor, its door three south.
+    look("war-1-yard", yx + 0.5, yy + 4, yz + 10.5, yx + 0.5, yy + 1, yz - 1.5, wait=8)
+    look("war-2-armoury", ax + 0.5, ay + 0.2, az + 2.5, ax + 0.5, ay + 0.6, az - 1.5, wait=5)
+    say("war page: " + r.cmd("execute positioned %d %d %d run village war footing" % (cx, gy, cz))[:1500])
+    r.cmd("tp %s %d %d %d" % (USER, cx, gy + 2, cz))
+    say("stats news: " + r.cmd("execute as %s at @s run village stats 17" % USER))
+    time.sleep(4)
+    shot("war-3-news-page")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    say("peace: " + r.cmd("execute positioned %d %d %d run village war footing peace" % (cx, gy, cz))[:300])
+    say("alive after the war footing: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

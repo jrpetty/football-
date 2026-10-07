@@ -2535,6 +2535,13 @@ public class CityScreen extends Screen {
             ch -= 27 + shown * 9 + 6;
         }
         List<String> all = new ArrayList<>();
+        // [war-prep] The town on a war footing (WarFooting.page): the watch, the militia, the defences, the stores.
+        List<String> war = strings("war_footing");
+        if (!war.isEmpty()) {
+            all.add("On a war footing:");
+            for (String s : war) all.add("  " + s);
+            all.add("");
+        }
         List<String> n = strings("neighbours");
         if (!n.isEmpty()) {
             all.add("Neighbours:");

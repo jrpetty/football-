@@ -202,6 +202,8 @@ public final class TownPlan {
             case "storage", "storehouse", "market", "workshop", "smeltery", "granary", "cafe", "shop", "smithy", "brewery", "library",
                  "tavern", "school", "bank", "museum", "stable" -> "civic";
             case "watchtower" -> "corner";
+            case "armoury" -> "civic";                // [war-prep] the armoury faces the square with the trades
+            case "trainingyard" -> "corner";          // [war-prep] the training yard by the watchtower, at a corner
             case "lighthouse", "pen", "gateway", "graveyard" -> "edge";
             default -> "home";
         };
