@@ -36,7 +36,8 @@ public final class Showcase {
         "market", "watchtower", "lighthouse", "monument", "gateway", "hall", "chapel", "barracks",
         "smithy", "brewery", "library", "cafe", "shop", "tavern", "graveyard", "house2", "fountain", "manor", "belltower",
         "school", "museum", "stable", "theatre",                   // [batchD] the theatre
-        "windmill", "bakery", "inn", "orchard", "allotments");                        // [batchE] the town's look
+        "windmill", "bakery", "inn", "orchard", "allotments",                         // [batchE] the town's look
+        "villa");                                                                     // [econ-housing] a house of its own
 
     /** A palette: the woods and stones a building is made of. */
     public record Palette(Block walls, Block frame, Block roofStair, Block roofSlab, Block roofBlock, Block floor,

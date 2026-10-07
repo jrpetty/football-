@@ -83,6 +83,7 @@ public final class Grow {
         Luxuries.candles(level, v);                                  // the households' candles, lit at dusk (Luxuries)
         if (!furnish(level, v)) shelve(level, v);
         work(level, v, 24);
+        HousingMarket.tick(level, v);                                // [econ-housing] the council's houses costed; a folk's own house going up
     }
 
     /**
@@ -135,6 +136,7 @@ public final class Grow {
                 default -> null;
             };
             if (plan == null || !Land.areaLoaded(level, b.anchor(), 9)) continue;
+            if (HousingMarket.isPrivate(id, b.anchor())) continue;     // [econ-housing] a folk's own: it buys its own beds (Homes.childBed)
             if (level.getGameTime() - FURNISHED.getOrDefault(b.anchor().asLong(), -100000L) < 6000L) continue;
             for (BuildGoal.Placement p : BuildGoal.plan(plan, b.anchor(), b.facing(), 13)) {
                 if (p.part() != BuildGoal.Part.BED) continue;
@@ -197,6 +199,7 @@ public final class Grow {
         int done = 0;
         for (Ledger.Building b : Ledger.buildings(id)) {
             if (!b.structure().equals("house") || !Land.areaLoaded(level, b.anchor(), 7)) continue;
+            if (HousingMarket.isPrivate(id, b.anchor())) continue;     // [econ-housing] a folk's own: not the council's to rebuild or raise
             done += garden(level, v, b, false);
             if (done >= budget) break;
             done += reface(level, v, b, age, budget - done, Ledger.grown(id, b.anchor()), false);

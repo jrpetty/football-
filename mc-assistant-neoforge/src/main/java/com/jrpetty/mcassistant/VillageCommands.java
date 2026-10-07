@@ -225,7 +225,9 @@ public final class VillageCommands {
                 .then(Commands.literal("rent").executes(ctx -> house(ctx, "rent", 0)))
                 .then(Commands.literal("let")
                     .then(Commands.argument("coins", IntegerArgumentType.integer(0, 20))
-                        .executes(ctx -> house(ctx, "let", IntegerArgumentType.getInteger(ctx, "coins"))))))
+                        .executes(ctx -> house(ctx, "let", IntegerArgumentType.getInteger(ctx, "coins")))))
+                // [econ-housing] The housing market: its index, prices, the house going up and its bill (HousingMarket).
+                .then(com.jrpetty.mcassistant.entity.HousingMarket.command()))
             // The bank (entity/Bank): its books; your account (deposit, withdraw), a mortgage on a house, repay it.
             .then(com.jrpetty.mcassistant.entity.Bank.command())
             // [batchA] The town's care: who is ill, the infirmary, the poor box, the old visited, newcomers welcomed;

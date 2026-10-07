@@ -781,6 +781,7 @@ public final class Bank {
                 }
                 continue;
             }
+            if (HousingMarket.goingUp(id, l.anchor)) continue;     // [econ-housing] a folk's own house going up: its mortgage stands
             Homes.Home h = homes.get(l.anchor);
             boolean owned = h != null && h.tenure == Homes.Tenure.OWNED;
             boolean theirs = false;
@@ -844,6 +845,25 @@ public final class Bank {
         return Math.max(0, Ledger.coins(village) - Market.wageBill(village));
     }
 
+    /**
+     * [econ-housing] Coin toward the mortgage on a house there and then (HousingMarket: the house sold, its seller's
+     * mortgage paid off out of the price; or what was held for a house built and not spent): the interest first, then
+     * what was lent, into the vault; paid off, the mortgage is closed. Returns what it took.
+     */
+    static int payDown(UUID village, long anchor, int coin) {
+        if (coin <= 0 || !STATES.containsKey(village) && building(village) == null) return 0;
+        State s = state(village);
+        Loan l = s.loans.get(anchor);
+        if (l == null) return 0;
+        int k = Math.min(coin, l.owed());
+        s.cash += k;
+        book(s, l, k);
+        if (l.owed() <= 0) close(village, s, l);
+        else save(village, l);
+        saveHead(village, s);
+        return k;
+    }
+
     /** Coin paid on a loan: the interest first, then what was lent. */
     private static void book(State s, Loan l, int paid) {
         int toInterest = Math.min(paid, l.interest);
@@ -888,6 +908,7 @@ public final class Bank {
         int due = Math.min(l.owed(), l.weekly + l.arrears);
         int paid = 0;
         Homes.Home h = Homes.homes(id).get(l.anchor);
+        if (h == null && !l.player) h = HousingMarket.standIn(id, l.anchor);   // [econ-housing] a house going up: its household pays
         if (l.player) {
             UUID who = l.borrowers.isEmpty() ? null : l.borrowers.get(0);
             Account a = who == null ? null : s.accounts.get(who);

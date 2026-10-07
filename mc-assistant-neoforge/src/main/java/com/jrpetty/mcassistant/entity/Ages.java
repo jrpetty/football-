@@ -239,6 +239,7 @@ public final class Ages {
         }
         for (Ledger.Building b : Ledger.buildings(id)) {
             if (AS_BUILT.contains(b.structure()) || !Land.areaLoaded(level, b.anchor(), 9)) continue;
+            if (HousingMarket.isPrivate(id, b.anchor())) continue;     // [econ-housing] a folk's own house keeps the look it paid for
             if (DONE.getOrDefault(b.anchor().asLong(), -1) >= age.ordinal()) continue;
             if (Grow.raisingNow(id, b.anchor())) continue;
             // A house waiting on (or raising) its second storey is Grow's first: its old roof is coming off.

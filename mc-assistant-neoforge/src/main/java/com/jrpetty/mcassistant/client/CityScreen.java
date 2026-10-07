@@ -1617,8 +1617,10 @@ public class CityScreen extends Screen {
             + "; founders live rent-free till they can afford it, the rest rent, and buy when they have saved the price",
             (int) ((cw * 3 / 4 - 30) / 0.75)),
             x + 28 + cw / 4, by, Ui.MUTED);
+        // [econ-housing] The housing market: its index and fortnight, prices and rents, the waiting against the empty,
+        // the council's houses on the treasury's books, the house a folk is having built, and the last sale (HousingMarket).
+        int hy = housingMarket(g, hm.getCompound("market"), x, by + 11, cw, mx, my) + 2;
         // Every household.
-        int hy = by + 12;
         int[] cols = { 0, cw * 26 / 100, cw * 42 / 100, cw * 55 / 100, cw * 61 / 100, cw * 80 / 100 };
         for (int i = 0; i < HOME_HEADS.length; i++) small(g, HOME_HEADS[i], x + cols[i], hy, Ui.FAINT);
         hy += 10;
@@ -1699,6 +1701,93 @@ public class CityScreen extends Screen {
             + (waits.size() > 1 ? " and " + (waits.size() - 1) + " more" : "");
         small(g, Ui.clip(font, rows.size() + " households · the mouse over a row for the whole of it" + (rows.size() > rowsFit ? " · scroll for more" : "")
             + waiting, (int) (cw / 0.75)), x, y + ch - 9, Ui.FAINT);
+    }
+
+    /**
+     * [econ-housing] The Homes page's market strip (HousingMarket.report): the index with its fortnight drawn small and
+     * the week's move; a house's and a manor's price and rent; the households waiting and outgrowing against the homes
+     * empty; the council's houses as the treasury's books cost them; then the house a folk is having built, a bar of
+     * what is laid and its bill, else the last built; and the last sale. The mouse over it for the bill item by item,
+     * the plans folk are saving for, and every sale kept. Returns the line under it.
+     */
+    private int housingMarket(GuiGraphics g, CompoundTag m, int x, int y, int cw, int mx, int my) {
+        if (m.isEmpty()) return y;
+        int index = m.getInt("index"), week = m.getInt("week");
+        int col = index > 1050 ? RED : index < 950 ? TEAL : GREEN;
+        String head = "Housing market " + String.format(java.util.Locale.ROOT, "%.2f", index / 1000.0) + (week > 0 ? " up " + week + "%" : week < 0
+            ? " down " + (-week) + "%" : " steady") + " this week";
+        small(g, head, x, y, col);
+        // The fortnight of the index, as little bars from six tenths to nearly twice what a house costs to build.
+        int[] hist = m.getIntArray("history");
+        int sx = x + (int) (font.width(head) * 0.75) + 4, bw = 3;
+        for (int i = 0; i < hist.length; i++) {
+            int hgt = Math.max(1, Math.min(8, (hist[i] - 600) * 8 / 1200));
+            g.fill(sx + i * bw, y + 8 - hgt, sx + i * bw + bw - 1, y + 8, hist[i] > 1000 ? RED : TEAL);
+        }
+        int rx = sx + Math.max(hist.length, 1) * bw + 6;
+        String prices = "a house " + m.getInt("house_price") + "c, " + m.getInt("house_rent") + "c a day · a manor " + m.getInt("manor_price") + "c, "
+            + m.getInt("manor_rent") + "c a day · " + m.getInt("waiting") + " waiting, " + m.getInt("outgrowing") + " outgrowing against "
+            + m.getInt("empty") + " empty" + (m.getInt("council_houses") > 0 ? " · the council's " + m.getInt("council_houses") + " houses cost "
+            + (m.getInt("council_blocks") + m.getInt("council_labour")) + "c to build" : "");
+        small(g, Ui.clip(font, prices, (int) ((x + cw - rx) / 0.75)), rx, y, Ui.MUTED);
+        int y2 = y + 10;
+        String second;
+        CompoundTag b = m.getCompound("build");
+        if (!b.isEmpty()) {
+            int cells = Math.max(1, b.getInt("cells"));
+            small(g, "Building", x, y2, AMBER);
+            Ui.bar(g, x + 32, y2, cw / 8, 6, Math.min(1f, b.getInt("laid") / (float) cells), AMBER);
+            second = b.getString("names") + "'s " + b.getString("design") + " at " + b.getString("address") + ", " + (100 * b.getInt("laid") / cells)
+                + "% · the bill " + b.getInt("total") + "c: blocks " + b.getInt("blocks") + ", labour " + b.getInt("labour") + ", plot " + b.getInt("plot")
+                + ", furnishing " + b.getInt("furnish") + ", permit " + b.getInt("permit") + (b.getInt("loan") > 0 ? " (" + b.getInt("loan") + " on a mortgage)" : "")
+                + (b.getString("waiting").isEmpty() ? "" : " · " + b.getString("waiting"));
+            small(g, Ui.clip(font, second, (int) ((cw - 40 - cw / 8) / 0.75)), x + 36 + cw / 8, y2, Ui.INK);
+        } else {
+            ListTag built = m.getList("built", Tag.TAG_COMPOUND), sales = m.getList("sales", Tag.TAG_COMPOUND);
+            List<String> bits = new ArrayList<>();
+            if (!built.isEmpty()) bits.add("built for itself: " + built.getCompound(0).getString("names") + "'s " + built.getCompound(0).getString("design")
+                + ", " + built.getCompound(0).getInt("total") + "c");
+            if (!sales.isEmpty()) bits.add("last sold: " + sales.getCompound(0).getString("where") + " for " + sales.getCompound(0).getInt("price") + "c"
+                + ("council".equals(sales.getCompound(0).getString("kind")) ? " to the council" : " to " + sales.getCompound(0).getString("buyer")));
+            if (bits.isEmpty()) bits.add(m.getBoolean("open") ? "no house of a folk's own yet: the households save for one" : "every house is the council's: folk build their own past the Wood Age, in a town of sixteen");
+            small(g, Ui.clip(font, String.join(" · ", bits), (int) (cw / 0.75)), x, y2, Ui.MUTED);
+        }
+        if (mx >= x && mx < x + cw && my >= y - 1 && my < y2 + 9) {
+            List<Component> tip = new ArrayList<>();
+            tip.add(Component.literal("The housing market: " + String.format(java.util.Locale.ROOT, "%.2f", index / 1000.0)
+                + " — 1.00 is what a house costs to build (its blocks at the town's prices and its builders' hours)"));
+            tip.add(Component.literal("Wanting a home: " + m.getInt("waiting") + " waiting, " + m.getInt("outgrowing") + " outgrowing, "
+                + m.getInt("saving") + " tenants saving to buy; standing empty: " + m.getInt("empty") + ". Scarce, prices and rents rise; empty, they fall."));
+            if (!b.isEmpty()) {
+                tip.add(Component.literal(b.getString("names") + "'s " + b.getString("design") + ": " + b.getInt("laid") + " of " + b.getInt("cells")
+                    + " blocks laid; " + b.getInt("paid") + "c of " + b.getInt("total") + "c paid out" + (b.getString("builders").isEmpty() ? ""
+                    : "; the builders: " + b.getString("builders"))).withColor(0xFFE0B060));
+                ListTag pl = b.getList("prices", Tag.TAG_STRING);
+                StringBuilder sb = new StringBuilder("Its blocks at: ");
+                for (int i = 0; i < pl.size(); i++) {
+                    if (i > 0) sb.append(", ");
+                    sb.append(pl.getString(i));
+                    if (sb.length() > 90) { tip.add(Component.literal(sb.toString())); sb = new StringBuilder("  "); }
+                }
+                if (sb.length() > 2) tip.add(Component.literal(sb.toString()));
+            }
+            ListTag plans = m.getList("plans", Tag.TAG_COMPOUND);
+            for (int i = 0; i < plans.size(); i++) {
+                CompoundTag p = plans.getCompound(i);
+                tip.add(Component.literal("Saving: " + p.getString("name") + " for a " + p.getString("design") + " (" + p.getInt("have") + " of about "
+                    + p.getInt("total") + "c) — " + p.getString("why")).withColor(0xFFA0A0A0));
+            }
+            ListTag sales = m.getList("sales", Tag.TAG_COMPOUND);
+            for (int i = 0; i < Math.min(5, sales.size()); i++) {
+                CompoundTag s = sales.getCompound(i);
+                tip.add(Component.literal("Day " + s.getLong("day") + ": " + s.getString("seller") + " sold " + s.getString("where") + " for " + s.getInt("price") + "c"
+                    + ("council".equals(s.getString("kind")) ? " to the council (the going price " + s.getInt("going") + "c)" : " to " + s.getString("buyer"))));
+            }
+            hover = tip;
+            hoverX = mx;
+            hoverY = my;
+        }
+        return y2 + 10;
     }
 
     /** A house's furnishing from the books (Decor), by its anchor; null if not counted. */
