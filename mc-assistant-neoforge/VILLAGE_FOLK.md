@@ -4945,9 +4945,9 @@ bought, mentioned, and given way to a finer gift.
   carrots in the stores to see colds off quickly.
 * **Neighbours look after the old.** Every day somebody looks in on each very old (eighty and over) or frail
   folk: one of its family if there is one, else a friend, else a neighbour it gets on with. In its own time it
-  fetches a meal from the stores (the old one's favourite, if there is one), carries it over, hands it to the
-  old one and sits down with it a while. They are the fonder of each other, and both remember it. An old
-  folk's card says it is looked in on.
+  fetches a meal from the stores (the old one's favourite if there is one, else bread or something cooked),
+  carries it over, hands it to the old one and sits down with it a while. They are the fonder of each other, and
+  both remember it. An old folk's card says it is looked in on.
 * **The poor box.** In the chapel (the meeting hall until there is one) there is a poor box. Once a week every
   well-off folk walks there and puts a coin in out of its own purse (a wealthy one two, a generous one one more).
   On payday a household that cannot make its rent has what it is short of paid out of the box, and a poor folk
