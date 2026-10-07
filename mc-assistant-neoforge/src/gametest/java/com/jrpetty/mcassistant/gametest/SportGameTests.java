@@ -115,6 +115,11 @@ public class SportGameTests {
         return Market.stock(level, village, s -> s.is(item));
     }
 
+    private static int fishIn(ServerLevel level, UUID village) {
+        return stock(level, village, Items.COD) + stock(level, village, Items.SALMON) + stock(level, village, Items.PUFFERFISH)
+            + stock(level, village, Items.TROPICAL_FISH);
+    }
+
     private static boolean told(UUID village, String words) {
         for (Chronicle.Entry e : Chronicle.of(village)) if (e.text().contains(words)) return true;
         return false;
@@ -139,6 +144,7 @@ public class SportGameTests {
     private static long morning(ServerLevel level) {
         long day = level.getDayTime() / 24000L + 1;
         level.setDayTime(day * 24000L + 2000L);
+        level.updateSkyBrightness();
         level.setWeatherParameters(24000, 0, false, false);
         return day;
     }
@@ -306,7 +312,8 @@ public class SportGameTests {
         List<VillageFolkEntity> folk = raise(helper, level, heart, 2);
         UUID id = folk.get(0).ownerId();
         Villages.Village v = Villages.get(id);
-        FoundingDay.foundedForTests(id, day - 20);                     // eight days to the year's end
+        // Its year counted from today (a day of the world's own; the world may be young, so never before day 0).
+        FoundingDay.foundedForTests(id, day);
         BlockPos hallAt = heart.offset(0, 0, 20);
         BuildGoal.stamp(level, "hall", hallAt, Direction.NORTH, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
         Ledger.built(id, "hall", hallAt, Direction.NORTH);
@@ -322,10 +329,11 @@ public class SportGameTests {
             helper.assertTrue(rows.size() == 3 && rows.get(0).team.equals("the North End") && rows.get(0).points() == 4
                 && rows.get(1).team.equals("the East End") && rows.get(2).team.equals("the South End"), "the table in order: " + sb);
             // The year turns.
-            String champs = null;
-            League.daily(level, v, day + 8);
-            champs = League.cupHolder(id);
-            List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, new AABB(hallAt).inflate(8, 8, 12), f -> f.isAlive());
+            int gold0 = stock(level, id, Items.GOLD_INGOT), frame0 = stock(level, id, Items.ITEM_FRAME);
+            League.daily(level, v, day + 28);
+            String champs = League.cupHolder(id);
+            List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, new AABB(hallAt).inflate(8, 8, 12),
+                f -> f.isAlive() && f.getItem().is(Items.GOLD_INGOT));
             ItemFrame cup = frames.isEmpty() ? null : frames.get(0);
             Kit.log("sp03 the champions " + champs + "; frames in the hall " + frames.size() + (cup == null ? "" : " at " + cup.blockPosition().toShortString()
                 + " holding " + cup.getItem() + " " + cup.getItem().get(DataComponents.CUSTOM_NAME)) + "; the chronicle: " + chronicle(id));
@@ -337,16 +345,18 @@ public class SportGameTests {
             helper.assertTrue(name.equals("The " + Villages.name(id) + " Cup"), "the cup named for the town: " + name);
             ItemLore lore = cup.getItem().get(DataComponents.LORE);
             helper.assertTrue(lore != null && lore.lines().size() == 1 && lore.lines().get(0).getString().contains("the North End"), "the champions on it: " + lore);
-            helper.assertTrue(stock(level, id, Items.GOLD_INGOT) == 0 && stock(level, id, Items.ITEM_FRAME) == 0, "the stores' gold ingot and frame went into it");
+            helper.assertTrue(stock(level, id, Items.GOLD_INGOT) == gold0 - 1 && stock(level, id, Items.ITEM_FRAME) == frame0 - 1,
+                "the stores' gold ingot and frame went into it");
             // The next year: the South End's, on the same cup, no gold wanted.
-            League.played(level, v, day + 9, "the South End", "the North End", 2, 0, true);
-            League.daily(level, v, day + 36);
+            League.played(level, v, day + 29, "the South End", "the North End", 2, 0, true);
+            League.daily(level, v, day + 56);
             ItemLore again = cup.getItem().get(DataComponents.LORE);
             Kit.log("sp03 the second year: " + League.cupHolder(id) + "; the cup reads " + again + "; " + level.getEntitiesOfClass(ItemFrame.class,
-                new AABB(hallAt).inflate(8, 8, 12), f -> f.isAlive()).size() + " frames");
+                new AABB(hallAt).inflate(8, 8, 12), f -> f.isAlive() && f.getItem().is(Items.GOLD_INGOT)).size() + " cups");
             helper.assertTrue("the South End".equals(League.cupHolder(id)), "the South End's year: " + League.cupHolder(id));
             helper.assertTrue(cup.isAlive() && again != null && again.lines().size() == 2, "the same cup, both years on it: " + again);
-            helper.assertTrue(level.getEntitiesOfClass(ItemFrame.class, new AABB(hallAt).inflate(8, 8, 12), f -> f.isAlive()).size() == 1, "one cup");
+            helper.assertTrue(level.getEntitiesOfClass(ItemFrame.class, new AABB(hallAt).inflate(8, 8, 12),
+                f -> f.isAlive() && f.getItem().is(Items.GOLD_INGOT)).size() == 1, "one cup");
             helper.succeed();
         });
     }
@@ -449,12 +459,14 @@ public class SportGameTests {
                         if (t % 200 == 0) Kit.log("sp04 walking home, tick " + t + ": " + java.util.Arrays.toString(s));
                         return;
                     }
-                    for (VillageFolkEntity f : side) {
-                        if (f.trip() != null) continue;                                   // (an envoy of its own town's, if any)
-                        helper.assertTrue(f.distanceToSqr(vHeart.getX(), f.getY(), vHeart.getZ()) < 24 * 24, "home again: " + f.blockPosition().toShortString());
-                        helper.assertTrue(!f.getPersistentData().hasUUID("mca_sport_away"), "the mark of an away day off");
+                    // Where each got home (it goes on with its own day from there, so where it is now says nothing).
+                    List<BlockPos> ended = Friendlies.homeForTests(tour[0]);
+                    Kit.log("sp04 the side home at tick " + t + ", got in at " + ended);
+                    helper.assertTrue(ended.size() == s[0], "every walker home: " + ended.size() + " of " + s[0]);
+                    for (BlockPos p : ended) {
+                        helper.assertTrue(p.distSqr(new BlockPos(vHeart.getX(), p.getY(), vHeart.getZ())) < 24 * 24, "home again: " + p.toShortString());
                     }
-                    Kit.log("sp04 the side home at tick " + t);
+                    helper.assertTrue(side.stream().noneMatch(f -> f.getPersistentData().hasUUID("mca_sport_away")), "the mark of an away day off");
                     helper.succeed();
                 }
                 default -> { }
@@ -474,7 +486,8 @@ public class SportGameTests {
         BlockPos heart = flat(level, x, Z, 30, 30);
         Kit.pond(level, x + 10, Z, 3);
         long day = morning(level);
-        level.setDayTime(day * 24000L + 7000L);           // past the morning's wages: the treasury moves for the purse alone
+        level.setDayTime(day * 24000L + 7000L);           // past the morning's wages
+        level.updateSkyBrightness();
         List<VillageFolkEntity> folk = raise(helper, level, heart, 3);
         UUID id = folk.get(0).ownerId();
         Villages.Village v = Villages.get(id);
@@ -484,31 +497,34 @@ public class SportGameTests {
         a.insertItem(new ItemStack(Items.FISHING_ROD));
         chestAt(level, heart.offset(-3, 0, -3), new ItemStack(Items.FISHING_ROD, 1));
         Ledger.addCoins(id, 20);
-        int[] purse0 = { folk.get(0).purse(), a.purse(), b.purse() };
-        int coins0 = Ledger.coins(id);
         Contests.quickForTests(true);
         String r = Contests.fishingForTests(level, v);
         Kit.log("sp05 " + r);
         helper.assertTrue(r.contains("fishing contest is on"), "the contest begun: " + r);
         helper.assertTrue(stock(level, id, Items.FISHING_ROD) == 0, "a rod borrowed from the stores");
+        // The weigh-in is called here, once a few fish are in, and read back at once: the town's other doings
+        // (a pedlar paid out of the treasury, wages, a fisher back at its trade drawing a rod from the stores the
+        // moment it is free) go on round the contest, and what is measured is the weigh-in's own doing.
         helper.onEachTick(() -> {
             long t = helper.getTick();
             int[] s = Contests.fishingStateForTests(id);
-            if (s != null) {
-                if (t % 100 == 0) Kit.log("sp05 tick " + t + ": " + s[0] + " at the bank, " + s[1] + " fish; " + a.blockPosition().toShortString() + " / " + b.blockPosition().toShortString());
-                return;
-            }
-            int fish = stock(level, id, Items.COD) + stock(level, id, Items.SALMON) + stock(level, id, Items.PUFFERFISH) + stock(level, id, Items.TROPICAL_FISH);
-            int coins = Ledger.coins(id), winners = 0;
+            helper.assertTrue(s != null, "the contest still on until the weigh-in");
+            if (t % 100 == 0) Kit.log("sp05 tick " + t + ": " + s[0] + " at the bank, " + s[1] + " fish; " + a.blockPosition().toShortString() + " / " + b.blockPosition().toShortString());
+            if (s[1] < 4 && t < 900) return;
+            int caught = s[1];
+            int fish0 = fishIn(level, id), rods0 = stock(level, id, Items.FISHING_ROD), coins0 = Ledger.coins(id);
+            int[] purse0 = { folk.get(0).purse(), a.purse(), b.purse() };
+            String line = Contests.weighInForTests(level, id);
+            int fish = fishIn(level, id), rods = stock(level, id, Items.FISHING_ROD), coins = Ledger.coins(id), winners = 0;
             int[] won = new int[3];
             for (int i = 0; i < 3; i++) {
                 won[i] = folk.get(i).purse() - purse0[i];
                 if (won[i] == Contests.PURSE) winners++;
             }
-            Kit.log("sp05 the weigh-in: " + fish + " fish in the stores; the treasury " + coins0 + " -> " + coins + "; purses +"
-                + java.util.Arrays.toString(won) + "; the chronicle: " + chronicle(id));
-            helper.assertTrue(fish > 0, "the catch in the stores: " + fish);
-            helper.assertTrue(stock(level, id, Items.FISHING_ROD) == 1, "the borrowed rod back in the stores");
+            Kit.log("sp05 the weigh-in at tick " + t + ": " + line + "; " + caught + " fish caught, the stores' fish " + fish0 + " -> " + fish
+                + "; rods " + rods0 + " -> " + rods + "; the treasury " + coins0 + " -> " + coins + "; purses +" + java.util.Arrays.toString(won));
+            helper.assertTrue(caught > 0 && fish - fish0 == caught, "the catch into the stores: " + (fish - fish0) + " of " + caught);
+            helper.assertTrue(rods - rods0 == 1, "the borrowed rod back in the stores: " + rods0 + " -> " + rods);
             helper.assertTrue(told(id, "won the fishing contest"), "the winner in the chronicle");
             helper.assertTrue(coins0 - coins == Contests.PURSE && winners == 1, "the purse out of the treasury to the winner alone");
             helper.assertTrue(!Sport.busy(a) && !Sport.busy(b), "back to their own day");
@@ -574,6 +590,7 @@ public class SportGameTests {
         morning(level);
         long day = level.getDayTime() / 24000L;
         level.setDayTime(day * 24000L + 5000L);           // past the morning's practice: nobody goes down to the butts unbidden
+        level.updateSkyBrightness();
         List<VillageFolkEntity> folk = raise(helper, level, heart, 3);
         UUID id = folk.get(0).ownerId();
         Villages.Village v = Villages.get(id);
@@ -583,6 +600,10 @@ public class SportGameTests {
         g1.removeMatching(s -> s.is(Items.BOW), 64);
         if (g1.getMainHandItem().is(Items.BOW)) g1.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, ItemStack.EMPTY);
         g2.insertItem(new ItemStack(Items.BOW));
+        // A full quiver each for the watch's own use: a guard with a bow and few arrows tops its kit up from the
+        // stores (AssistantEntity), which is its trade's doing and not the range's.
+        g1.insertItem(new ItemStack(Items.ARROW, 32));
+        g2.insertItem(new ItemStack(Items.ARROW, 32));
         Villages.ageForTests(id, Villages.Age.IRON);
         helper.assertTrue(Archery.wanted(id), "an Iron Age town with two guards wants a range");
         helper.assertTrue("corner".equals(TownPlan.placeFor(Archery.STRUCTURE)), "by the wall, on a corner lot");

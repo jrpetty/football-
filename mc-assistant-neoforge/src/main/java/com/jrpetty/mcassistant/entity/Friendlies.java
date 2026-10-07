@@ -55,6 +55,8 @@ public final class Friendlies {
         int gainedTick, walkTick = -1000;
         @Nullable BlockPos window;
         boolean there, home;
+        /** Where it was when it got home (the tests: it goes on with its own day from there). */
+        @Nullable BlockPos endedAt;
     }
 
     /** A side on its way to a neighbour's pitch, there, or on its way home. */
@@ -328,6 +330,7 @@ public final class Friendlies {
     /** Home again: the mark off, the ground let go, back to its own day. */
     static void done(ServerLevel level, VillageFolkEntity f, Tour t, Walk w) {
         w.home = true;
+        w.endedAt = f.blockPosition().immutable();
         release(level, f, w);
         BY_WALKER.remove(f.getUUID());
         f.getPersistentData().remove(AWAY);
@@ -400,6 +403,13 @@ public final class Friendlies {
     @Nullable
     public static Tour sendForTests(ServerLevel level, Villages.Village from, Villages.Village to) {
         return setOut(level, from, to, level.getDayTime() / 24000L);
+    }
+
+    /** Tests: where each walker that has got home was when it got there. */
+    public static List<BlockPos> homeForTests(Tour t) {
+        List<BlockPos> out = new ArrayList<>();
+        for (Walk w : t.walkers.values()) if (w.endedAt != null) out.add(w.endedAt);
+        return out;
     }
 
     /** Tests: {walkers, there, home, back (1/0), played (1/0)}. */

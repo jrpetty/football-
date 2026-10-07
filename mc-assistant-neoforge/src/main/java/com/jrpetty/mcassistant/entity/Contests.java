@@ -75,7 +75,7 @@ public final class Contests {
 
     private static volatile boolean quick;
 
-    /** Tests: a contest of a quarter of a minute's fishing, the fish biting fast. */
+    /** Tests: the fish biting fast (a minute's contest, which a test weighs in for itself sooner). */
     public static void quickForTests(boolean on) {
         quick = on;
     }
@@ -171,7 +171,7 @@ public final class Contests {
         List<BlockPos[]> banks = banks(level, water, entrants.size());
         if (banks.isEmpty()) return "no bank to stand on";
         long now = level.getGameTime();
-        Fishing c = new Fishing(v.id(), level.dimension(), now, now + (quick ? 400 : HOUR));
+        Fishing c = new Fishing(v.id(), level.dimension(), now, now + (quick ? 1200 : HOUR));
         int i = 0;
         for (VillageFolkEntity f : entrants) {
             boolean borrowed = false;
