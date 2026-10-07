@@ -371,7 +371,12 @@ public final class SearchParties {
                 home(level, s, lost, v);
                 return null;
             }
-            // Keep to its pace: wait for it if it has fallen behind.
+            // Fallen well behind (or the leader taken off on other business a while): back for it.
+            if (f.distanceToSqr(lost) > 16 * 16) {
+                Civics.goTo(f, beside(level, lost, f), 2.5, 0.9);
+                return "going back for " + s.lostName;
+            }
+            // Keep to its pace: wait for it if it has fallen a little behind.
             if (f.distanceToSqr(lost) > 10 * 10) {
                 f.getNavigation().stop();
                 f.getLookControl().setLookAt(lost, 30.0F, 30.0F);

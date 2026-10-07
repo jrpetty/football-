@@ -631,6 +631,9 @@ public class TownAffairsGameTests {
         level.setDayTime(day * 24000L + 2500L);
         List<VillageFolkEntity> folk = raise(helper, level, heart, 5);
         UUID id = folk.get(0).ownerId();
+        // The town's mine out to the west, before any miner chooses a face: on this flat ground it would otherwise
+        // be opened fifty-odd blocks east (TownMine.site), its faces dug three deep right across the way home.
+        Ledger.note(id, "mine.site", (x - 90) + "," + Z);
         VillageFolkEntity lost = folk.get(4), partner = folk.get(1), friend = folk.get(2);
         BlockPos pit = new BlockPos(x + 72, heart.getY() - 2, Z);
         int[] phase = { 0 };
