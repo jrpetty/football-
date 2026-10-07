@@ -2,6 +2,7 @@ package com.jrpetty.mcassistant.gametest;
 
 import com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock;
 import com.jrpetty.mcassistant.entity.Annals;
+import com.jrpetty.mcassistant.entity.Persona;
 import com.jrpetty.mcassistant.entity.AssistantEntity;
 import com.jrpetty.mcassistant.entity.AssistantEntity.StationTask;
 import com.jrpetty.mcassistant.entity.Fashion;
@@ -126,7 +127,7 @@ public class FashionGameTests {
     }
 
     private static void friends(VillageFolkEntity a, VillageFolkEntity b) {
-        a.life().feel(b.getUUID(), b.displayNameCap(), 45);
+        Fashion.feelForTests(a, b, 60);                             // a friend outright, whatever it came with
     }
 
     private static boolean chronicled(UUID village, String words) {
@@ -139,8 +140,8 @@ public class FashionGameTests {
     // ============================================================ the season's look, from the rich and the popular
 
     /**
-     * Five folk: Bram the elected leader, Ada its partner, the wealthiest in town and the best liked (three count her a
-     * friend), in crimson of her own; the rest in their own colours. As the season turns the town takes her colour for its
+     * Five folk: Bram the elected leader, Ada its partner, the wealthiest in town and the best liked (all four count her a
+     * friend) and fond of fine things, in crimson of her own; the rest in their own colours. As the season turns the town takes her colour for its
      * own: the season's look is crimson, set by Ada, and why; the chronicle, the board, the gazette and the town's books
      * say so; Ada has the season's long coat put on the tailor's book first; and her card says she set it.
      */
@@ -157,7 +158,10 @@ public class FashionGameTests {
         bram.life().partnerWith(ada.getUUID(), "Ada");
         ada.earn(300);
         bram.earn(60);
-        for (VillageFolkEntity f : List.of(bram, cora, dell)) friends(f, ada);
+        for (VillageFolkEntity f : List.of(bram, cora, dell, eve)) friends(f, ada);
+        for (VillageFolkEntity f : List.of(cora, dell, eve)) Fashion.feelForTests(f, bram, 0);   // the town's friend is Ada, not Bram
+        Fashion.lovesForTests(ada, Persona.Gift.WOOL);                 // she loves fine things
+        for (VillageFolkEntity f : List.of(bram, cora, dell, eve)) Fashion.lovesForTests(f, Persona.Gift.FLOWERS);
         Fashion.coloursForTests(ada, DyeColor.RED, DyeColor.WHITE);
         Fashion.coloursForTests(bram, DyeColor.BLUE, DyeColor.WHITE);
         Fashion.coloursForTests(cora, DyeColor.GREEN, DyeColor.YELLOW);
