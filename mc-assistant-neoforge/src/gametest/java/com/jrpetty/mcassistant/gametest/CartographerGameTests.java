@@ -461,7 +461,8 @@ public class CartographerGameTests {
     @GameTest(template = EMPTY, timeoutTicks = 300, batch = "ca05_mineshaft")
     public static void ca05_mineshaft(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
-        Town t = town(helper, 1408000, Villages.Age.IRON, 120, StationTask.CAVE, StationTask.FARM, StationTask.FARM, StationTask.MINE);
+        Town t = town(helper, 1408000, Villages.Age.IRON, 120, StationTask.CAVE, StationTask.FARM, StationTask.FARM, StationTask.MINE,
+            StationTask.SCOUT);                                              // the scout: the one the town can spare for its maps
         UUID id = t.village();
         build(level, t, Cartographers.STRUCTURE, -30, 30);
         CaveDwellerGameTests.fill(t, new ItemStack(Items.PAPER, 16), new ItemStack(Items.COMPASS, 2), new ItemStack(Items.BREAD, 32));
