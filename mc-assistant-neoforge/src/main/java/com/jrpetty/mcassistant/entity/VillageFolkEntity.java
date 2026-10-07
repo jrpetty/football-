@@ -2458,6 +2458,21 @@ public class VillageFolkEntity extends AssistantEntity {
      * the other half sleep first and stand the second, from midnight to dawn. A village
      * with one guard has it watch until midnight and sleep after.
      */
+    /** Tests and the books: why this folk is off work now, in a word or two ("" when it is at work). */
+    public String offWorkWhy() {
+        UUID id = ownerId();
+        if (Health.laidUp(this)) return "laid up";
+        if (Assemblies.attending(this)) return "at a gathering";
+        if (TownJobs.busy(this)) return "on the town's work";
+        if (School.teaching(this)) return "teaching";
+        if (id != null && Raids.underAlarm(id)) return "the alarm";
+        if (id != null && RestDay.now(id, level().getDayTime()) != null) return "the day of rest";
+        Boolean bell = TownBell.shift(this);
+        if (bell != null && !bell) return "the town bell";
+        if (!onShift()) return "off shift";
+        return onBreak() ? "on a break" : "";
+    }
+
     @Override
     public boolean onShift() {
         // [batchA] Laid up in bed (Health): no work till it is up.

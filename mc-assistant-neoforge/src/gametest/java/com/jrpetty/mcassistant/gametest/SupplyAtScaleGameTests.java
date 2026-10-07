@@ -88,17 +88,24 @@ public class SupplyAtScaleGameTests {
      * shift, not on its break, and past the morning assembly.
      */
     private static boolean atWorkFor(ServerLevel level, VillageFolkEntity f, long span) {
-        for (long t = 1500; t + span <= 12000; t += 250) {
-            boolean ok = true;
-            for (long k = t; k <= t + span && ok; k += 200) {
-                level.setDayTime(k);
-                ok = !f.offWorkNow();
-            }
-            if (ok) {
-                level.setDayTime(t);
-                return true;
+        // Any day of the week: the day a test begins on may be the town's day of rest, or a festival's.
+        long day0 = level.getDayTime() / 24000L * 24000L;
+        java.util.Set<String> why = new java.util.TreeSet<>();
+        for (int d = 0; d < 7; d++) {
+            for (long t = day0 + d * 24000L + 1500; t + span <= day0 + d * 24000L + 12000; t += 250) {
+                boolean ok = true;
+                for (long k = t; k <= t + span && ok; k += 200) {
+                    level.setDayTime(k);
+                    ok = !f.offWorkNow();
+                    if (!ok) why.add(f.offWorkWhy());
+                }
+                if (ok) {
+                    level.setDayTime(t);
+                    return true;
+                }
             }
         }
+        Kit.log("atWorkFor: " + f.getAssistantName() + " never at work in a week: " + why);
         return false;
     }
 

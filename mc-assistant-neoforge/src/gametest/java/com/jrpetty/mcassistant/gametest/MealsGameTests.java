@@ -125,10 +125,12 @@ public class MealsGameTests {
                 c.setChanged();
                 level.setDayTime(at[m]);
                 int before = bread(c);
+                String held = Meals.heldForTests(child);
                 Meals.tick(child);
                 ate[m] = before - bread(c);
                 said[0] = Meals.line(child);
-                Kit.log("me01 " + meal[m] + ": " + said[0] + "; a loaf out of the stores? " + ate[m] + " (" + bread(c) + " left)");
+                Kit.log("me01 " + meal[m] + ": " + said[0] + "; a loaf out of the stores? " + ate[m] + " (" + bread(c) + " left)"
+                    + (held.isEmpty() ? "" : "; held back: " + held) + "; " + child.debugLine());
             });
         }
         helper.runAtTickTime(1401, () -> {

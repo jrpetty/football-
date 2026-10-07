@@ -159,6 +159,21 @@ public final class Meals {
     // ------------------------------------------------------------------ mealtimes
 
     /** A look at the clock, every few seconds: if it is a mealtime and this meal is not had, it is eaten now. */
+    /** Tests: what, if anything, holds this folk's meal back at this moment (the crier's news, the noon bell,
+     *  the meal already taken), or "" when nothing does. */
+    public static String heldForTests(VillageFolkEntity f) {
+        UUID village = f.ownerId();
+        if (village == null) return "no village";
+        long time = f.level().getDayTime();
+        Meal m = Meal.at((int) (time % 24000L));
+        if (m == null) return "no mealtime";
+        if (Crier.busy(f)) return "crying the news";
+        if (m == Meal.LUNCH && TownBell.lunchWaits(village, time)) return "waiting for the noon bell";
+        Book b = f.meals();
+        if (b.day == time / 24000L && (b.taken & (1 << m.ordinal())) != 0) return "taken already";
+        return "";
+    }
+
     public static void tick(VillageFolkEntity f) {
         if (!(f.level() instanceof ServerLevel level) || !f.isAlive()) return;
         UUID village = f.ownerId();

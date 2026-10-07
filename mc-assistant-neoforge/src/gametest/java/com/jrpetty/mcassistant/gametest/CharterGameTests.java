@@ -115,11 +115,14 @@ public class CharterGameTests {
             UUID id = v.id();
             List<VillageFolkEntity> folk = level.getEntitiesOfClass(VillageFolkEntity.class,
                 new AABB(v.centre()).inflate(96), f -> id.equals(f.ownerId()));
+            // In a wall: the game's own reckoning, a block that suffocates where its eyes are (an open door's
+            // upper half over its head is not one, and nor is a bed it stands on).
             int stuck = 0;
             for (VillageFolkEntity f : folk) {
-                BlockPos p = f.blockPosition();
-                if (!level.getBlockState(p.above()).getCollisionShape(level, p.above()).isEmpty()
-                        && !level.getBlockState(p.above()).is(Blocks.WATER)) stuck++;
+                if (f.isInWall()) {
+                    stuck++;
+                    Kit.log("ch01 in a wall: " + f.debugLine());
+                }
             }
             Kit.log("ch01 two hundred ticks on: " + folk.size() + " alive, " + stuck + " in a wall");
             helper.assertTrue(folk.size() == 70 && stuck == 0, "every founder alive and in the open: " + folk.size() + ", stuck " + stuck);
