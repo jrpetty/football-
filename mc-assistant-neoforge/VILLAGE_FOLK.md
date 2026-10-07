@@ -7214,3 +7214,190 @@ The game tests `CivicGameTests` check that:
 * civ05: an aqueduct keeps its channel level over a knoll with its piers on the ground, and runs with water when
   built; a side of the wall follows the ground over a mound and leaves a gateway for a path;
 * civ06: a family of three from outside, each grown one with a trade the town lacks, is voted in.
+## Quests
+
+The folk now ask players for help, and every quest comes from something that is really the matter in the town:
+a folk laid up with no honey left in the stores, a friend in the next town who has not heard from them, spiders
+gathering by the fields, a war that needs scouting, a spawner the cave team found. Nothing is a fixed list, and
+nothing is made out of thin air: the letters, rings and reports are made at a bench from the town's own stores,
+and the pay comes out of somebody's purse or the treasury.
+
+**Finding work.**
+
+* A folk with work to give has a gold **!** over its head. A folk that one of your quests is waiting on (to talk
+  to, to hand something to, or to choose before) has a pale **?** instead. The marks show to you alone, within
+  about forty blocks.
+* Talk to it and press **Any work?** on the Ask tab (or type *any work for me?*). It tells you what is wrong in
+  its own way: a grumpy folk is short with you, a shy one stammers, a cheerful one gushes. It also says what it
+  can pay and where the money comes from. Answer with **I'll do it** or **Not now**. A folk with nothing of its
+  own points you to the nearest one that has, and to the quest board.
+* While a step waits on a folk, its talk screen shows a button for it: **Hand it over**, **About** the quest, or
+  one button for each choice a story gives you.
+* An offer stands for three days. A town has at most four offers up at once, besides its story. You can carry
+  six quests at a time.
+* With several players, each quest belongs to the one who took it. Once you have taken a favour, the next player
+  to ask is told you are already seeing to it. Quests are saved with the world.
+
+**Favours** (a folk's own, paid out of its own purse):
+
+* **Remedies for the sick.** A folk with a cold or a bad hurt, and fewer than two remedies in the stores: its
+  partner, a parent or the folk itself asks you for three (honey bottles, golden carrots or healing potions). One
+  goes to the patient at once and it feels better; the rest go into the stores for the healer's round.
+* **A smith's masterpiece.** An experienced smith in an Iron Age town with no diamonds in the stores asks for two.
+  It makes a diamond sword of them, with its maker's mark, and the sword is yours.
+* **A letter, or a parcel.** A folk with a close friend, a partner or family in another town writes to them. The
+  sealed letter is made from the stores' paper and wax, and a parcel is four of the stores' loaves that the folk
+  pays for. Carry it over. If that town has the paper, the friend writes back and you carry the reply home. Both
+  folk grow closer, and so do the two towns, a little.
+* **A cake for the wedding.** A couple about to be wed: a parent or a friend asks you to take them a cake (or a
+  pumpkin pie).
+* **A lost pet.** A household's cat or dog has strayed far from home. Find it and bring it back (a lead helps).
+  This is ready for the pets of a later day as well.
+
+**The town's quests** (offered by the elder, paid from the treasury, and pinned on the quest board beside the
+usual postings):
+
+* **The shortfall:** what the town lacks for its next building or age, such as *48 iron for the smeltery*.
+* **A den:** three or more monsters gathered about the town. Clear them out.
+* **The elder's letter** to a neighbouring town it is on uneasy terms with. Delivered and read, it warms the two
+  towns towards each other.
+
+**War** (a town at war or in a feud): **scout the rival** and bring back a spy's report, written on the spot
+about what is really there and filed as the town's latest word on them; **carry the peace terms**, sealed, to
+the enemy's elder after three days of war (if it will hear them, peace is made there and then); **free the
+captured spy** from the town that holds it (that town won't thank you); **supply the besieged** with food when
+the larder is low.
+
+**Below ground** (from the cave team's report): **recover a find**, such as a vein of diamonds, emeralds, gold,
+lapis or redstone the team saw but could not take; **seal a spawner** they found near the town; **find the
+lost**, a folk the town's search party is out looking for (a cave dweller among them). Bring them home at your
+heels.
+
+### The four stories
+
+Stories are the big quests. They are rarer than favours: a town has one story at a time, at least four days pass
+between one story ending and the next beginning, and one only begins while a player the town knows is about.
+Each story shows its title in the journal, lists its chapters as you reach them (not before), and ends with a
+page that tells how it turned out. Each one uses the town's real folk, places and things, and changes them for
+good.
+
+* **Lost at Dusk.** At dusk a child of a real household does not come home. It has wandered to a real place: a
+  cave or ravine the cave team found, or the woods beyond the town. The town's search party goes out and turns
+  back at dark, and the parent comes to you. The chapters: *Where they played* (the child's friend says which
+  way it went, and that it had its wooden horse with it); *The toy in the grass* (the horse its parent whittled,
+  made of the stores' wood, lies on the way; pick it up, and small footprints only you can see lead on);
+  *The tracks* to the child, which may have fallen and hurt its ankle at the foot of a ravine (give it food or a
+  remedy so it can walk); *A promise* (it begs you not to tell where it went, because its friend dared it: keep
+  the secret, or say its parents must know); *The way home*, with the child at your heels even after dark;
+  *Home*. The parents pay out of their purses and the child draws you a picture on the stores' paper. It greets
+  you by name for good. If you told, the parents put up a sign where the toy lay to warn the children off. If
+  the search party finds the child first, it brings it home and the parents thank you for trying.
+* **The Smugglers' Cave.** Only a friend of the town is asked. Two folk are robbing the stores: a hauler or a
+  poor hand, and somebody the town looks up to. A third of the iron, the gold and the like really goes, into a
+  chest in a camp in a cave out past the town, with the stores' own torches at the mouth. A little more goes
+  each night. The storekeeper counts, comes up short and asks you quietly. The chapters: the gossip, who knows
+  who has been standing rounds on a hauler's wage; a word with the accomplice ("won it at dice"); *Lights by
+  night* at the hillside it named; *The camp*, and *The ledger* in the chest (a share for the accomplice and the
+  biggest for "R."); then *The choice*:
+  - **Turn it in.** The ledger goes to the elder, and the council tries the ring. A guilty ring is fined into
+    the treasury and the town turns against them, so a councillor among them soon loses its seat (the council
+    is the five folk the town thinks most of). A ringleader with friends on the council may be let off. The
+    goods go back into the stores.
+  - **Take a cut** out of their purses and say nothing. For ten days there is a one-in-five chance each day that
+    it comes out. If it does, the town and the storekeeper think much the worse of you, and the chronicle says so.
+  - **Make it name "R."**, then go to the camp at midnight and find the ringleader counting the goods. Turn it in,
+    or let it bribe you (a one-in-three chance a day that this comes out).
+* **The Cursed Mine.** Something really is wrong under the town's mine: a spawner the cave team found, one in the
+  rock beneath it, or monsters gathered in the dark. During working hours the miners stand at the mine head and
+  will not go down, and the foreman gives you sixteen of the stores' torches. The chapters: *The old miner's
+  tale*, and its journal (a book and coal from the stores) with the place written in it; *Alone, or with the
+  cave team* (a town with cave dwellers lends you one, which follows you down and shares the credit); *The deep
+  level*, where you break the spawner or kill what is there; *Light it*, with six lights about the place; and
+  *The mine reopens*, where you choose a feast for the miners that night (paid by the treasury) or a plaque at
+  the mine head. The miners go back to work and you become the town's Curse-lifter.
+* **The Stolen Heirloom.** A family's ring or locket, struck by the smith from the stores' gold and paid for
+  from the family's purses into the treasury, is really taken from the family's chest by one of three: a jealous
+  neighbour (into its own pack or chest), the family's own grown child (pawned at the store, so it is in the
+  stores and the treasury paid the child), or a pedlar who sold it on in the next town (so it is in that town's
+  stores). The chapters: *The chest* (the latch forced from outside, not forced at all, or a pedlar's ribbon);
+  *The suspects* (the neighbour, the child, and the innkeeper's word about the pedlar; the guilty one gives
+  itself away); *Who took it?*, an accusation made before the family; *Getting it back*; *The reunion*. Accuse
+  the wrong one and it lasts: the accused never quite forgives you, it and the family fall out, and you must
+  think again. Getting it back is your choice too. Ask the neighbour quietly (it returns the heirloom, ashamed)
+  or shame it before the town. Buy it back from the store yourself and keep the child's secret, make the child
+  buy it back out of its own purse, or tell the family. Buy it back from the pedlar's town, or demand it as
+  stolen goods, which works if the towns are on good terms. The chronicle names the thief, or nobody, as you
+  chose.
+
+**The Quest Journal.** The first folk you take a quest from gives you a Quest Journal out of the stores (or has
+one made). Once quests are going in a town, the shop's workshop keeps two journals in the stores. Use it to open
+the journal: quests *Under way* and *Done*, each with its giver and town, the reward, the days left, the steps
+so far and the step now, a story's chapters, and its ending page. A step with a place says where it is, with
+coordinates, and how far and which way from where you stand, updated as you walk. To give a quest up, press
+**Give up** twice. `/village quests` lists the same in chat, and `/village quests journal` opens the book.
+`/village quests abandon <number>` gives one up, and `/village quests offers` lists the offers standing in the
+town near you.
+
+**Quest items.** Each has a recipe, so the town's makers know it. When a quest needs one, it is made at a bench
+from the stores (Bench works its way back from what the stores hold), stamped with the quest's number, a name
+and a line of writing, so another letter will not do. A quest's item in a folk's pack is kept, never banked.
+
+| Item | Made of | Made by |
+|---|---|---|
+| Quest Journal | a book, a feather, an ink sac, paper | the shop's workshop; the first giver |
+| Sealed Letter | paper and honeycomb (or red dye) | the letter's writer; the friend for the reply; the elder |
+| Parcel | two paper and string (four loaves inside) | the sender |
+| Peace Terms | two paper, string, honeycomb (or red dye) | the elder |
+| Spy's Report | paper and an ink sac | the scout's giver, filled in on the spot |
+| Smugglers' Ledger | three paper, string, an ink sac | the accomplice |
+| Old Miner's Journal | a book and coal (or charcoal) | the old miner |
+| Wooden Toy | planks and two sticks | the lost child's parent |
+| Child's Drawing | paper, yellow dye, blue dye | the child, at the end |
+| Heirloom Ring | four gold nuggets round an emerald, diamond or lapis | the smith |
+| Heirloom Locket | gold nuggets, string, and amethyst, glass or emerald | the smith |
+| Medal of the Town | a gold ingot on a ribbon (red or blue wool, or string) | the smith (else the shop) |
+| Key to the Town | two gold ingots and a nugget | the smith (else the shop) |
+
+**Rewards.** A favour is paid out of the giver's own purse (or the family's), and a town's quest out of the
+treasury, with the elder making up a little from its own purse if the treasury is short. Nobody promises more
+than they have. A town's quest may add goods from the stores, if they are still there. The giver warms to you
+and remembers what you did; for the town's quests and stories, the whole town does a little. Your standing
+rises, and the chronicle, the crier and the gazette (under *Quests and deeds*) tell of it. Stories give a title
+(*Finder of the Lost*, *Thief-taker*, *Curse-lifter*, *Finder*) that the folk use when they speak to you.
+
+* **The Medal of the Town** is struck for you when you finish a story there.
+* **The Key to the Town** comes after two stories, or ten quests, once the town counts you a friend. The town
+  holds a feast in your honour and calls you *Freeman*.
+* Both are made by the smith from the stores' gold. A town short of gold votes you the honour and owes it until
+  the gold comes in. They are worth carrying: with the medal on you, the town's folk warm to you a little faster
+  each day and its stores sell to you a twentieth cheaper; with the key, faster still and a tenth cheaper.
+
+**Letting them down.** Give a quest up and the giver is let down: it thinks less of you, says so when it sees
+you, and remembers. Leaving a quest past its day is nearly as bad. For a town's quest or a story, the whole town
+cools a little and the chronicle notes who gave up. Folk talk about what you have done: thanks from the people
+you helped, a reproach from the ones you let down, and gossip about who did what for whom, or the story going
+on now.
+
+The quest board keeps working as before. Its postings now include the town's own quests, and a posting you take
+from the board appears in your journal and is ticked off there when you claim it.
+
+The game tests `QuestGameTests` (qg01 to qg10) check that:
+* a folk badly hurt, with no remedies in the stores, has its partner offer a quest for three; asked, it says so
+  with a "!" over it; taken, it is in the player's journal with a "?" over the partner; handed over, one remedy
+  heals the patient, two go into the stores, the partner's purse pays exactly what it promised, and the partner
+  and the town think better of the player;
+* a den of spiders gets the elder's quest, paid from the treasury (counted before and after); a second player
+  asking is told it is taken; a second den taken and given up leaves the elder at least twelve points cooler;
+* a sealed letter is made from the stores' paper and dye (counted), the friend in the next town writes back on
+  its own town's paper, and the quest moves on to carrying the reply home;
+* each story's main path, step by step: the lost child (the toy of the stores' wood, the friend, the tracks, the
+  secret, home, the parents' purses, the drawing, the title); the smugglers (the goods really in the camp, the
+  ledger, the trial, the fine, the goods back, the treasury's pay); the cursed mine (the miners held, the torches
+  from the stores, the journal, the spawner, the lights, the plaque, the miners back at work); and the heirloom
+  (made from the stores' gold, questioned, accused, given back, paid, and the town's medal struck);
+* two branches: the heirloom's wrong accusation (lasting bad feeling, the son struck off, the neighbour shamed
+  before the town) and the smugglers' cut (paid from the ring's purses, the ledger burnt, nothing from the town,
+  then it comes out);
+* a half-done quest comes back the same after saving and loading; the journal and `/village quests` show it; a
+  board posting appears in the journal and is done there when claimed; and the Key to the Town takes a tenth off
+  the town's prices.

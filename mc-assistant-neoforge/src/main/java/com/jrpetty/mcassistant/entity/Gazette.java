@@ -280,6 +280,8 @@ public final class Gazette {
         if (disasters != null) entries.add(disasters);
         String word = PlayerLeader.gazette(level, id, day);         // [player-civic] the leader's promises, kept and broken
         if (word != null) entries.add(word);
+        String quests = QuestRun.gazette(id, day);                  // [quests] help wanted, and the week's deeds
+        if (quests != null) entries.add(quests);
         if (!other.isEmpty()) entries.add(section("Also", other, ""));
         ItemStack book = Services.book("The " + town + " Gazette", town, front, entries);
         CompoundTag mark = new CompoundTag();

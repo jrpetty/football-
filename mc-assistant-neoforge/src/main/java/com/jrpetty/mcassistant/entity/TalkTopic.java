@@ -76,7 +76,11 @@ public enum TalkTopic {
     CAVES("What have the cave dwellers found down there?"), // [caves] CaveDwellers
     PET("Tell me about your pet"),                           // [pets] Pets
     FASHION("What's in fashion?"),                         // [fashion] Fashion
-    WATCH("Seen anything amiss?");                          // [crime] Crime: what a witness saw; a clue handed in
+    WATCH("Seen anything amiss?"),                          // [crime] Crime: what a witness saw; a clue handed in
+    JOBS("Any work for me?"),                              // [quests] QuestTalk: its quest, in its own words
+    QUEST_YES("I'll do it."),                              // [quests] take the quest on
+    QUEST_NO("Not just now."),                             // [quests] leave it for somebody else
+    QUEST_CHOICE("");                                      // [quests] a quest's choice (the text is its key)
 
     public final String line;
 

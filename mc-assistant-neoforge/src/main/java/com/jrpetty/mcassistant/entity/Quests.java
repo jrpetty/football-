@@ -92,6 +92,7 @@ public final class Quests {
 
         /** "40 iron for the smeltery", "clear 5 spiders from the east mine". */
         public String words() {
+            if (kind.equals("quest")) return "see " + placeName + ": " + purpose;        // [quests] a town quest pinned up
             return kind.equals("bring") ? Errands.words(item, count).replace(" (ingots or raw)", "") + " for " + purpose
                 : "clear " + count + " " + mob + " from " + placeName;
         }
@@ -135,6 +136,7 @@ public final class Quests {
         Services.overdue(level, id, day);
         List<Posting> board = postings(id);
         boolean changed = board.removeIf(p -> p.takenBy == null ? day - p.posted > LASTS_DAYS : day - p.takenDay > LASTS_DAYS);
+        changed |= QuestRun.pin(level, v, board, MOST - (Orders.sign(id) != null ? 1 : 0));   // [quests] the town's own quests, pinned up
         // The elder's orders take the board's first spot: one posting fewer, or the last was never seen.
         int room = MOST - (Orders.sign(id) != null ? 1 : 0);
         if (board.size() < room && LAST_NEW.getOrDefault(id, -1L) < day && Villages.headcount(id) >= 4) {
@@ -426,6 +428,7 @@ public final class Quests {
     }
 
     static String[] lines(Posting p) {
+        if (p.kind.equals("quest")) return QuestRun.boardLines(p);                       // [quests]
         String first = p.kind.equals("bring") ? "WANTED" : "CLEAR";
         String what, where;
         if (p.kind.equals("bring")) {
@@ -486,6 +489,7 @@ public final class Quests {
         long day = level.getDayTime() / 24000L;
         Standing.Title title = Standing.of(id, p.getUUID(), level.getGameTime()).title();
         if (title == Standing.Title.OUTCAST || Laws.banished(id, p.getUUID(), day)) return "The village wants nothing from you.";
+        if (q.kind.equals("quest")) return QuestRun.boardUse(level, v, p, q);              // [quests] whose it is, and where
         if (q.takenBy == null) {
             for (Posting o : postings(id)) {
                 if (p.getUUID().equals(o.takenBy) && !o.finished()) return "Finish what you took on first: " + o.words() + ".";
@@ -493,6 +497,7 @@ public final class Quests {
             q.takenBy = p.getUUID();
             q.takenName = p.getName().getString();
             q.takenDay = day;
+            QuestRun.fromBoard(level, v, p, q);                                            // [quests] into the taker's journal
             return "You took on the posting: " + q.words() + ". The reward is " + q.reward + " coins. "
                 + (q.kind.equals("bring") ? "Bring it here to the board." : "Come back to the board when it's done.");
         }
@@ -554,6 +559,7 @@ public final class Quests {
         }
         Standing.stir(id, p.getUUID());
         Villages.tell(id, day, name + " answered the quest board: " + q.words());
+        QuestRun.boardDone(level, p, q);                                                    // [quests] done in the journal too
         postings(id).remove(q);
         return "Done: " + q.words() + ". The village pays you " + paid + " coins" + (paid < q.reward ? " (all it could find)" : "")
             + ", with its thanks.";

@@ -2218,6 +2218,70 @@ def player_civic_stage(r, look, cx, cz):
     say("alive after the referendum: %s" % client_alive())
 
 
+def quests_stage(r, look, cx, cz):
+    """Quests (entity/QuestRun, QuestMaker, QuestStories): a folk of the town with a real need offers work (/village
+    quests stage: the first offer the town's state calls for, its giver stood still for a minute). When the town has
+    no need just now, a folk is hurt (nine points of harm, out of its twenty) so its partner or kin asks for remedies, and failing
+    that one of the four stories is begun. Pictures: the giver with the gold "!" over its head; "Any work for me?"
+    asked, the talk screen with the offer in the folk's own words and its "I'll do it" and "Not now" buttons; and,
+    the quest taken, the Quest Journal open on it (its steps, where to go, the giver and the reward). Best called
+    after the visitors stage, so the town is a few days old and the player known to it."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    midday(r)
+    r.cmd("weather clear")
+    r.cmd("gamemode creative %s" % USER)
+    gy = ground_height(r, cx, cz)
+    r.cmd("tp %s %d %d %d" % (USER, cx, gy + 1, cz))
+    time.sleep(4)
+    stage = "execute as %s at @s run village quests " % USER
+    say("quests offered: " + r.cmd(stage + "offers")[:900])
+    out = r.cmd(stage + "stage")
+    if "GIVER" not in out:
+        say("nothing to offer yet (%s); a folk hurt, so its kin asks for remedies" % out[:200])
+        say("hurt: " + r.cmd("execute as %s at @s run damage @e[type=%s,limit=1,sort=nearest,distance=..24] 9 minecraft:magic"
+                             % (USER, FOLK)))
+        time.sleep(2)
+        out = r.cmd(stage + "stage")
+    for story in ("heirloom", "child", "mine", "smugglers"):
+        if "GIVER" in out:
+            break
+        out = r.cmd(stage + "story " + story)
+    say("quests stage: " + out[:400])
+    m = re.search(r"GIVER (\S+) (-?\d+) (-?\d+) (-?\d+)", out)
+    if not m:
+        say("no quest giver to photograph")
+        r.cmd("gamemode spectator %s" % USER)
+        return
+    name = m.group(1).replace("_", " ")
+    gx, gy2, gz = int(m.group(2)), int(m.group(3)), int(m.group(4))
+    # Where it stands now (it was asked to stand still, but it may have been mid-stride).
+    now = re.search(r"by %s at (-?\d+) (-?\d+) (-?\d+)" % re.escape(name), r.cmd(stage + "offers"))
+    if now:
+        gx, gy2, gz = int(now.group(1)), int(now.group(2)), int(now.group(3))
+    # The giver with its "!" (the marks go out every five seconds to a player within forty blocks).
+    r.cmd("gamemode spectator %s" % USER)
+    look("quests-1-giver", gx + 3.5, gy2 + 0.6, gz + 4.5, gx + 0.5, gy2 + 2.3, gz + 0.5, wait=8)
+    # "Any work for me?": a step and a half from it, facing it, so it is the nearest folk; the talk screen opens.
+    r.cmd("gamemode creative %s" % USER)
+    px, pz = gx + 0.5, gz + 2.0
+    r.cmd("tp %s %.2f %d %.2f 180 10" % (USER, px, gy2, pz))
+    time.sleep(3)
+    say("quests ask: " + r.cmd("execute as %s at @s run village talk Any work for me?" % USER)[:300])
+    time.sleep(4)
+    shot("quests-2-offer")
+    # Taken on: the journal (the giver hands the player one out of the stores, the first time).
+    say("quests take: " + r.cmd("execute as %s at @s run village talk I'll do it." % USER)[:300])
+    time.sleep(3)
+    say("quests: " + r.cmd(stage.rstrip())[:900])
+    say("quests journal: " + r.cmd(stage + "journal"))
+    time.sleep(4)
+    shot("quests-3-journal")
+    say("quests journal shut: " + r.cmd(stage + "journal close"))
+    r.cmd("tp %s %d %d %d" % (USER, cx, gy + 1, cz))     # out of reach: the talk screen shuts past ten blocks
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the quests: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

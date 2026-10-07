@@ -106,5 +106,18 @@
   "item.mc_assistant.brewers_stout": "Brewer's Stout",
   "item.mc_assistant.farmhouse_pie": "Farmhouse Pie",
   "item.mc_assistant.apprentice_journal": "Apprentice's Journal",
-  "block.mc_assistant.opening_ribbon": "Opening Ribbon"
+  "block.mc_assistant.opening_ribbon": "Opening Ribbon",
+  "item.mc_assistant.quest_journal": "Quest Journal",
+  "item.mc_assistant.sealed_letter": "Sealed Letter",
+  "item.mc_assistant.parcel": "Parcel",
+  "item.mc_assistant.peace_terms": "Peace Terms",
+  "item.mc_assistant.spy_report": "Spy's Report",
+  "item.mc_assistant.smugglers_ledger": "Smugglers' Ledger",
+  "item.mc_assistant.miners_journal": "Old Miner's Journal",
+  "item.mc_assistant.wooden_toy": "Wooden Toy",
+  "item.mc_assistant.childs_drawing": "Child's Drawing",
+  "item.mc_assistant.heirloom_ring": "Heirloom Ring",
+  "item.mc_assistant.heirloom_locket": "Heirloom Locket",
+  "item.mc_assistant.town_medal": "Medal of the Town",
+  "item.mc_assistant.town_key": "Key to the Town"
 }

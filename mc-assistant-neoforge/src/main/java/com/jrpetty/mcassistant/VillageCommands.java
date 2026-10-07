@@ -101,6 +101,7 @@ public final class VillageCommands {
                             .executes(ctx -> found(ctx, true))))))
             .then(Commands.literal("folk").executes(VillageCommands::folk))
             .then(com.jrpetty.mcassistant.entity.FolkTeleport.command())          // [teleport] /village tp <name> (ops)
+            .then(com.jrpetty.mcassistant.entity.QuestRun.command())              // [quests] /village quests [journal|offers|abandon <id>]
             // The town's quarters, the homes in the crafts' smoke and by the park, and the park (Quarters, Park).
             .then(com.jrpetty.mcassistant.entity.Quarters.command())
             .then(com.jrpetty.mcassistant.entity.Sport.command())                 // [batchC] /village sport

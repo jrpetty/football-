@@ -174,7 +174,7 @@ public class TalkScreen extends Screen {
     }
 
     private List<Choice> choices(Tab t) {
-        List<Choice> out = new ArrayList<>();
+        List<Choice> out = new ArrayList<>(questChoices());     // [quests] take it on, not now, a choice, hand it over: on every tab
         switch (t) {
             case TALK -> {
                 out.add(Choice.of("How are you?", TalkTopic.HOW));
@@ -193,6 +193,7 @@ public class TalkScreen extends Screen {
                 out.add(new Choice("I'm sorry", TalkTopic.SAY, "I'm sorry", "Apologise for whatever you did"));
             }
             case ASK -> {
+                out.add(Choice.of("Any work?", TalkTopic.JOBS, "Ask if it has a quest for you: a favour of its own, the town's work, the war's, the caves', a story"));   // [quests]
                 out.add(Choice.of("Can I help?", TalkTopic.HELP, "Ask if there's an errand you could run for it"));
                 out.add(Choice.of("A favour?", TalkTopic.FAVOUR));
                 out.add(Choice.of("What's short?", TalkTopic.SHORT, "What the village is short of, and how you could help"));
@@ -270,6 +271,21 @@ public class TalkScreen extends Screen {
                 out.add(Choice.of("Mend this", TalkTopic.REPAIR, "The smith (or, with no smith, a smelter at its forge) mends the worn thing in your hand: its metal from the stores at the market's price, a unit a quarter of the wear, and a fee"));
             }
             default -> { }
+        }
+        return out;
+    }
+
+    /** [quests] The quest buttons the folk sent with its last answer (QuestClient): "label|TOPIC|text|tip" a line. */
+    private List<Choice> questChoices() {
+        List<Choice> out = new ArrayList<>();
+        for (String line : QuestClient.choicesFor(last.entityId()).split("\n")) {
+            String[] f = line.split("\\|", -1);
+            if (f.length < 4) continue;
+            try {
+                out.add(new Choice(f[0], TalkTopic.valueOf(f[1]), f[2], f[3]));
+            } catch (IllegalArgumentException ignored) {
+                // a topic from a newer server
+            }
         }
         return out;
     }
