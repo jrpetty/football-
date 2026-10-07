@@ -163,6 +163,7 @@ public final class Fears {
         if (tod < HOME_FROM || tod >= HOME_TILL) return false;
         BlockPos bed = f.bedPos();
         if (bed == null || Assemblies.attending(f) || TownJobs.busy(f) || Families.busy(f) || f.getTarget() != null) return false;
+        if (f.peekJob() != null && tod < 12000L) return false;     // the job in its hands finished first, then home
         if (f.stationTask() == StationTask.GUARD) return false;
         long day = level.getDayTime() / 24000L;
         boolean home = f.distanceToSqr(bed.getX() + 0.5, bed.getY(), bed.getZ() + 0.5) <= 2.5 * 2.5;
@@ -198,6 +199,7 @@ public final class Fears {
             if (d < best) { best = d; m = o; }
         }
         if (m == null) return false;
+        f.clearQueue();                                              // its work waits: it is off
         BlockPos bed = f.bedPos();
         if (bed != null && bed.distSqr(f.blockPosition()) < 64 * 64) f.walkTo(bed, 1.2D);
         else {
@@ -332,7 +334,7 @@ public final class Fears {
     @Nullable
     static String talk(VillageFolkEntity f) {
         Individual.Self s = f.individual();
-        if (s.fears.isEmpty()) return s.overcome.isEmpty() ? null : "I used to be afraid of " + s.overcome.get(s.overcome.size() - 1) + ". Not now.";
+        if (s.fears.isEmpty()) return null;                      // (one it got over is in its story: Backstory)
         Fear fear = s.fears.iterator().next();
         return "Truth be told, I'm " + fear.said + ".";
     }

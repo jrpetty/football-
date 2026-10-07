@@ -431,7 +431,10 @@ public final class Individual {
             if (!(a instanceof VillageFolkEntity o) || o == f) continue;
             boolean close = f.getUUID().equals(o.life().partner()) || o.parentIds().contains(f.getUUID())
                 || f.parentIds().contains(o.getUUID()) || o.life().affinity(f.getUUID()) >= Social.CLOSE;
-            if (close) o.individual().mourns = f.displayNameCap();
+            if (close) {
+                o.individual().mourns = f.displayNameCap();
+                if (!o.isBaby() && o.getRandom().nextBoolean()) Habits.takeUp(o, Habits.Habit.GRAVE);   // out to the grave each day of rest
+            }
         }
     }
 
@@ -492,7 +495,8 @@ public final class Individual {
     /** "Tell me about yourself": its story, after what it says of itself (FolkTalk.aboutMe). */
     public static String about(VillageFolkEntity f) {
         ensure(f);
-        return Backstory.tell(f);
+        String fear = Fears.talk(f);
+        return Backstory.tell(f) + (fear == null ? "" : " " + fear);
     }
 
     /** What the town says about this one (FolkTalk.gossipFor): "Fen's always up the hill at dusk". */

@@ -218,12 +218,12 @@ public final class Habits {
         return switch (h) {
             case MORNING_WALK -> !rest && tod >= 1400L && tod < 2600L;
             case FEED_BIRDS -> tod >= 3000L && tod < 11800L;
-            case PIPE -> tod >= 12000L && tod < Math.min(13400L, bed);
+            case PIPE -> tod >= 12000L && tod < Math.min(13800L, bed);
             case TIDY -> tod >= 12000L && tod < Math.min(13000L, bed) || rest && tod >= 4000L && tod < 8000L;
             case GRAVE -> rest && tod >= 8000L && tod < 11400L;
             case READING -> tod >= bed - 1300L && tod < bed;
             case TAVERN -> false;                               // Tavern.goingTonight: every evening (regular)
-            case WHITTLING -> tod >= 12200L && tod < Math.min(13600L, bed);
+            case WHITTLING -> tod >= 12200L && tod < Math.min(14000L, bed);
         };
     }
 
@@ -641,6 +641,11 @@ public final class Habits {
                 "You can see half the town from here.", "Quiet here. Just how I like it."));
         }
         return true;
+    }
+
+    /** Tests: the tidying of its doorstep, now: how many things it put away. */
+    public static int tidyForTests(VillageFolkEntity f) {
+        return f.level() instanceof ServerLevel level ? tidy(f, level) : 0;
     }
 
     /** Tests: where its favourite place is, as it would go there now. */

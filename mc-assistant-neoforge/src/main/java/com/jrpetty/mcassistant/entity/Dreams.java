@@ -167,6 +167,14 @@ public final class Dreams {
         COURTED.clear();
     }
 
+    /** Tests: this dream, not yet come true. */
+    public static void dreamForTests(VillageFolkEntity f, Persona.Ambition a) {
+        f.ensurePersona();
+        f.persona().ambition = a;
+        f.persona().ambitionMet = false;
+        f.individual().dreamMetDay = -1;
+    }
+
     /** Tests: the day's courting, now. */
     public static void courtForTests(VillageFolkEntity f) {
         if (f.level() instanceof ServerLevel level) court(f, level, level.getDayTime() / 24000L);

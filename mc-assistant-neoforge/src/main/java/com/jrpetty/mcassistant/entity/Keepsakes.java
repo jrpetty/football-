@@ -123,9 +123,10 @@ public final class Keepsakes {
             s.keepsakeDay = -1;                               // gone: stolen, or lost in the river
             f.persona().remember(day, "I lost " + s.keepsake.word + " I'd carried for years", 5);
         }
-        if (s.keepsakeDay < 0) comeBy(f, level, v, s, day);
-        if (wantsSpectacles(f) && !wearsSpectacles(f) && f.tickCount % 1200 < 200) spectacles(f, level, v, day);
-        if (!f.isBaby() && f.ageYears() >= 80 && !hasStick(f)) stick(f, level, v);
+        // One look a day for each, at most: the stores and the bench are not asked every ten seconds for what they lack.
+        if (s.keepsakeDay < 0 && tryToday(f, "keep", day)) comeBy(f, level, v, s, day);
+        if (wantsSpectacles(f) && !wearsSpectacles(f) && tryToday(f, "specs", day)) spectacles(f, level, v, day);
+        if (!f.isBaby() && f.ageYears() >= 80 && !hasStick(f) && tryToday(f, "stick", day)) stick(f, level, v);
         Individual.refreshLook(f);
     }
 
@@ -145,6 +146,22 @@ public final class Keepsakes {
         treasure(f, got.copyWithCount(1), s.keepsake, s.keepsakeStory);
         s.keepsakeDay = day;
         f.persona().remember(day, "I have " + s.keepsake.word + " of my own: " + s.keepsakeStory, 3);
+    }
+
+    private static final java.util.Map<String, Long> TRIED = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** The first try today at this? (Then not again till tomorrow.) */
+    private static boolean tryToday(VillageFolkEntity f, String what, long day) {
+        String key = f.getUUID() + "/" + what;
+        Long last = TRIED.get(key);
+        if (last != null && last == day) return false;
+        TRIED.put(key, day);
+        if (TRIED.size() > 8192) TRIED.clear();
+        return true;
+    }
+
+    public static void resetForTests() {
+        TRIED.clear();
     }
 
     /** Make this its keepsake: named, storied, marked, in its pack. */
@@ -353,6 +370,14 @@ public final class Keepsakes {
 
     private static String capFirst(String s) {
         return s == null || s.isEmpty() ? "" : Character.toUpperCase(s.charAt(0)) + s.substring(1);
+    }
+
+    /** Tests: this keepsake, not yet come by. */
+    public static void kindForTests(VillageFolkEntity f, Kind kind, String story) {
+        Individual.ensure(f);
+        f.individual().keepsake = kind;
+        f.individual().keepsakeStory = story;
+        f.individual().keepsakeDay = -1;
     }
 
     /** Tests: the keepsake comes by now, as on its own round. */

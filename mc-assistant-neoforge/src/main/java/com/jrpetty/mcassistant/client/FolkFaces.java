@@ -48,6 +48,7 @@ public final class FolkFaces {
     static final int DARK = 0x221816, SOOT = 0x302C2A;
     static final float[] SHADOW = {0.56F, 0.45F, 0.5F}, LIGHT_GAIN = {0.46F, 0.42F, 0.34F};
     static final int[] GREY_AT = {0, 55, 105, 160, 215, 256};
+    static final double GREY_KEEP = 0.22, GREY_FADE = 0.13;
     static final int[][] MOLE_SPOTS = {{9, 15}, {14, 15}, {10, 17}, {13, 17}, {8, 13}, {15, 14}, {14, 10}, {9, 10}};
     // {from, its colour if fixed, scaled by (thousandths), toward, its colour if fixed, how far (thousandths)}
     static final int[][] DERIVED = {{0, 0x000000, 1000, 6, 0x000000, 0}, {1, 0x000000, 1000, 6, 0x000000, 0}, {1, 0x000000, 860, 6, 0x000000, 0}, {1, 0x000000, 920, 6, 0x000000, 0}, {2, 0x000000, 1000, 6, 0x000000, 0}, {6, 0xF0ECE4, 1000, 0, 0x000000, 200}, {0, 0x000000, 860, 6, 0xB04A4A, 240}, {0, 0x000000, 1000, 6, 0xE86868, 300}, {6, 0x221816, 1000, 0, 0x000000, 120}, {0, 0x000000, 860, 6, 0xA86036, 220}, {0, 0x000000, 1000, 6, 0xECB0A8, 420}, {6, 0x302C2A, 1000, 6, 0x000000, 0}, {0, 0x000000, 1000, 6, 0xE25C46, 300}, {3, 0x000000, 1000, 6, 0x000000, 0}, {4, 0x000000, 1000, 6, 0x000000, 0}, {5, 0x000000, 1000, 6, 0x000000, 0}, {0, 0x000000, 500, 6, 0x543224, 400}};
@@ -179,9 +180,9 @@ public final class FolkFaces {
                     int base = pal < colour.length ? colour[pal] : 0xFF00FF;
                     int level = grey - (pal == BROW ? 1 : 0);
                     if ((pal == HAIR || pal == BROW || pal == BEARD) && level > 0) {
-                        if (level >= 5) base = WHITE_HAIR;
-                        else if (order < GREY_AT[level]) base = GREY_HAIR;
-                        else if (level >= 4) base = mix(base, GREY_HAIR, 0.5);
+                        if (level >= 5) base = WHITE_HAIR;                          // salt and pepper, as folk_looks has it
+                        else if (order < GREY_AT[level]) base = mix(GREY_HAIR, base, GREY_KEEP);
+                        else base = mix(base, GREY_HAIR, GREY_FADE * level);
                     }
                     col = ramp(base, v);
                 }

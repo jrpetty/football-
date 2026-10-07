@@ -215,23 +215,25 @@ public final class Manner {
      * a woman's, the old lower again, the tall and the broad deeper, the slight a touch higher, and a little of its own.
      */
     public static float basePitch(VillageFolkEntity f) {
-        Individual.Self s = f.individual();
-        Looks.Genes g = s.genes;
+        // From what the client is sent as well as the server (a hurt sound is played on both): its face's number.
+        long look = f.clientLook();
+        Looks.Genes g = f.individual().genes;
+        float own = g.rolled ? g.voice : 0.0F;
         if (f.isBaby()) {
             int growth = Individual.growthOf(f.clientMarks());
-            return clamp(1.55F - growth * 0.025F + g.voice * 0.04F);
+            return clamp(1.55F - growth * 0.025F + own * 0.04F);
         }
-        float p = g.rolled && g.male ? 0.90F : 1.10F;
-        int age = f.ageYears();
-        if (age >= 80) p *= 0.88F;
-        else if (age >= 60) p *= 0.94F;
-        float h = g.rolled ? Looks.height(g) : 1.0F;
+        if (!Looks.known(look)) return 1.0F;
+        float p = Looks.male(look) ? 0.90F : 1.10F;
+        int years = Looks.lines(look);                 // the lines of its years: in its sixties, past seventy-five
+        if (years >= 3) p *= 0.88F;
+        else if (years == 2) p *= 0.94F;
+        float h = Looks.heightOfStep(Looks.heightStepOf(look));
         p *= 1.0F - (h - 1.0F) * 1.6F;
-        long look = f.clientLook();
-        int build = Looks.known(look) ? Looks.build(look) : 1;
+        int build = Looks.build(look);
         if (build == 2) p *= 0.95F;
         else if (build == 0) p *= 1.03F;
-        p *= 1.0F + g.voice * 0.05F;
+        p *= 1.0F + own * 0.05F;
         return clamp(p);
     }
 

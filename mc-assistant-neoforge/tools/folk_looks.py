@@ -314,9 +314,11 @@ def paint_eyes(shape):
             p(x, 5, c)
         p(1, 6, C(SKIN, 120))
         p(6, 6, C(SKIN, 120))
-    elif shape == "narrow":                                 # a squint: a lash line, no white showing
-        for x, c in ((1, C(DARKP, 128, 210)), (2, C(IRIS, 92)), (5, C(IRIS, 92)), (6, C(DARKP, 128, 210))):
+    elif shape == "narrow":                                 # a squint: a lash line, a sliver of white
+        for x, c in ((1, C(WHITE, 84)), (2, C(IRIS, 100)), (5, C(IRIS, 100)), (6, C(WHITE, 84))):
             p(x, 4, c)
+        for x in (1, 2, 5, 6):
+            p(x, 3, C(DARKP, 128, 120))
         for x in (1, 2, 5, 6):
             p(x, 5, C(SKIN, 112))
     elif shape == "hooded":                                 # a heavy lid over the eye, set a row lower
@@ -777,7 +779,7 @@ def paint_sun():
 
 # Plain layers: drawn as they are.
 LEATHER, LEATHER_HI, STRAP = (44, 34, 30), (74, 58, 48), (32, 26, 24)
-GOLD, GOLD_DARK, GOLD_HI = (204, 166, 70), (140, 104, 38), (240, 214, 130)
+GOLD, GOLD_DARK, GOLD_HI = (168, 134, 62), (104, 80, 38), (214, 186, 112)
 WOOD, WOOD_DARK, WOOD_HI = (116, 82, 48), (78, 54, 32), (150, 112, 70)
 
 
@@ -819,7 +821,7 @@ def paint_spectacles():
     frame = {(1, 0), (2, 0), (5, 0), (6, 0), (0, 1), (3, 1), (4, 1), (7, 1), (1, 2), (2, 2), (5, 2), (6, 2)}
     sp.fill("front", lambda x, y, w, h: (GOLD_HI if (x, y) in ((1, 0), (5, 0)) else GOLD) if (x, y) in frame else False)
     sp.fill("back", lambda x, y, w, h: GOLD_DARK if (7 - x, y) in frame else False)
-    sp.fill("top", lambda x, y, w, h: GOLD if x in (1, 2, 5, 6) else False)
+    sp.fill("top", lambda x, y, w, h: GOLD_DARK if x in (1, 2, 5, 6) else False)
     sp.fill("bottom", lambda x, y, w, h: GOLD_DARK if x in (1, 2, 5, 6) else False)
     sp.fill("right", lambda x, y, w, h: GOLD if y == 1 else False)
     sp.fill("left", lambda x, y, w, h: GOLD if y == 1 else False)
@@ -966,6 +968,12 @@ def stack(g):
 
 
 GREY_AT = [0, 55, 105, 160, 215, 256]           # a pixel whose greying order is below this has gone grey
+GREY_KEEP, GREY_FADE = 0.22, 0.13               # how much colour a grey hair keeps; how fast the rest fade, a level
+
+
+def mixr(a, b, t):
+    """mixc to the unit, as FolkFaces.mix has it."""
+    return tuple(int(math.floor(a[i] + (b[i] - a[i]) * t + 0.5)) for i in range(3))
 
 
 def compose(g, all_layers):
@@ -988,12 +996,14 @@ def compose(g, all_layers):
                     base = pal.get(which, (255, 0, 255))
                     level = g["grey"] - (1 if which == BROW else 0)
                     if which in GREYING and level > 0:
+                        # Salt and pepper, not a chequerboard: a hair gone grey keeps a touch of its colour, and the
+                        # rest fade towards grey as the years go on.
                         if level >= 5:
                             base = WHITE_HAIR
                         elif order < GREY_AT[level]:
-                            base = GREY_HAIR
-                        elif level >= 4:
-                            base = mixc(base, GREY_HAIR, 0.5)
+                            base = mixr(GREY_HAIR, base, GREY_KEEP)
+                        else:
+                            base = mixr(base, GREY_HAIR, GREY_FADE * level)
                     col = ramp(base, v)
                 a = p[3]
                 under = out[y][x]
@@ -1022,6 +1032,7 @@ def java_tables():
         "    static final int DARK = 0x%02X%02X%02X, SOOT = 0x%02X%02X%02X;" % (DARK + SOOT),
         "    static final float[] SHADOW = {%sF, %sF, %sF}, LIGHT_GAIN = {%sF, %sF, %sF};" % (SHADOW + LIGHT_GAIN),
         "    static final int[] GREY_AT = {%s};" % ", ".join(str(k) for k in GREY_AT),
+        "    static final double GREY_KEEP = %s, GREY_FADE = %s;" % (GREY_KEEP, GREY_FADE),
         "    static final int[][] MOLE_SPOTS = {%s};" % ", ".join("{%d, %d}" % (x + 8, y + 8) for x, y in MOLE_SPOTS),
         "    // {from, its colour if fixed, scaled by (thousandths), toward, its colour if fixed, how far (thousandths)}",
         "    static final int[][] DERIVED = {%s};" % ", ".join(

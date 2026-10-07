@@ -255,7 +255,8 @@ public final class IndividualStage {
             if (d < near && !f.isBaby()) { near = d; best = f; }
         }
         if (best == null) return false;
-        FolkTalk.handle(best, p, TalkTopic.SAY, "Tell me who you are");
+        FolkTalk.open(best, p);                                    // the talk screen opened on it, then turned to its card
+        FolkTalk.handle(best, p, TalkTopic.SAY, "Tell me about yourself, who you are");
         return true;
     }
 }

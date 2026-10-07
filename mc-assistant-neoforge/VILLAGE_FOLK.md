@@ -8256,3 +8256,113 @@ town's old golem is taken in hand and named, mended with ingots twenty-five heal
 and when it falls is mourned and its iron gathered back; that a snow golem is built on the watchtower in a snowy
 winter, none in a desert town (and why), and that it melts away in spring; and that no golem is built, and no iron
 touched, while the watch's armour still wants the iron, and that with iron enough for both, it is.
+
+## Every folk its own person
+
+No two folk in a town look alike now, unless they are twins, and none of them live alike either. Each is a person of
+its own: a face it was born with, a body, a way of moving and a voice, and a life with dreams, fears, habits, a
+favourite spot and a keepsake in it.
+
+**Faces, built from parts.** A folk's face is put together from layers, not picked from ten: one of ten skin tones from
+very fair to very dark; brown, dark, hazel, amber, green, blue or grey eyes in one of six shapes; seven kinds of brows;
+twelve ways of wearing its hair (cropped, short, long, a braid, a bun, curls, shaved, a ponytail, tied back, thinning
+on top, a wild mop, a bob) in straight, wavy or curly hair, black, dark brown, brown, chestnut, auburn, red, ginger,
+blonde, ash or flaxen; a face round, oval, square, long or heart-shaped and a nose to go with it; freckles, rosy cheeks
+or a mole for some; and for the men stubble, a moustache, a full or a long beard, sideburns or a goatee. Their plain
+clothes differ too (you see them on the children). The buns, ponytails, braids, curls and long beards are shapes of
+their own, not just paint. Out of the rain, of an evening and on the day of rest, folk take their work hats off, so you
+can see their hair.
+
+**Taken from their parents.** A child's skin is a shade between its parents', its eyes and hair come from one or the
+other, and every so often a grandparent's blue eyes or red hair turns up in a child of two dark-haired, brown-eyed
+parents. The shape of its face, its nose, its eyes and its brows are a parent's, now and then its own, so families look
+like families. Twins are alike. A town's founders lean a little to the land the town is on (fairer in the snow and the
+pine woods, darker on the savanna and in the desert), with every kind of face everywhere.
+
+**The years and a life on its face.** Hair greys at the temples from a folk's fifties (sooner in a family that greys
+early), goes salt and pepper and at last white; men with the gene for it go bald; lines come at the eyes and the mouth.
+Past seventy-five the old stoop, and the oldest walk with a stick, a real one out of the stores. A real wound (a
+zombie's blow, a raider's, a blast) leaves a scar across the cheek, and in a raid, rarely, a folk loses an eye and wears
+a patch. The smith and the smelter have soot on their faces at work; a fair farmer is sunburnt in summer.
+
+**Spectacles.** An old folk who reads (the scholar, the librarian and the storekeeper first) has the smith make it a pair
+of spectacles out of the stores: three gold nuggets and two glass panes, at the crafting table (`N N` over `GNG`). It
+pays the smith what its purse allows and wears them for good. In them, an old folk at close work (the enchanter, the
+tailor, the smith, the brewer, the storekeeper, the shopkeeper, the banker) works five in a hundred quicker, which its
+card's Pace line shows. You can make a pair yourself and hand it to an old folk who has none: it puts them on there and
+then.
+
+| Item | Recipe | Maker | Use |
+| --- | --- | --- | --- |
+| Spectacles | 3 gold nuggets, 2 glass panes | the smith (else the shop) | worn by an old reader: close work 5% quicker; a gift for an old folk |
+
+**Height and build.** Grown folk stand from about nine tenths of a villager's height to a little over it, between their
+parents', a man a little taller; a child grows through its childhood. Some are slight, some broad, and a smith, a miner
+or a woodcutter broadens over its years at the work. Only the picture is taller: the tallest folk's hitbox is a
+villager's, so doors and beds work as ever.
+
+**How they move.** Children skip. The old walk bent with short steps and plant their stick. The leader, the wealthy and
+the cheerful hard workers stride with their chins up; the shy keep their heads down; the tired drag their feet at the
+end of a long day. A miserable folk's head hangs, and a happy one looks about it. Watch for the small moments: a stretch
+in the morning, a yawn of an evening, a scratch of the head when it is stuck, arms folded when it is cross, a wave to a
+friend going by (who waves back), a laugh at a joke, a foot tapping to a tune at the well.
+
+**Voices.** Each folk has its own pitch: children high, women higher than men, the old lower, the tall and broad deeper.
+It is on every sound it makes, the little sound when it speaks included, and its idle sounds come in a hum, a murmur, a
+grunt or a chirp, as its nature runs.
+
+**Dreams.** Every folk hopes for something, and works towards it: to marry (it courts the friend it is fondest of), to see
+the sea (it makes the water's edge its favourite spot), a house of its own or to be rich (it saves, passing up the café
+and the shop's treats), to write a book (the library's writers take it on first), to go to the Nether (it volunteers for
+the party), to lead the town (it stands at the elections), to raise a big family; or the old hopes, to master its trade,
+find a diamond and the rest. When a dream comes true the folk is delighted for days and the chronicle says so ("Wren's
+dream came true: to see the sea"); a few days later it dreams of something new. A dream it can no longer have, it lets go.
+
+**Fears, and getting over them.** A folk may be afraid of the dark (home before dusk, every evening; never a miner or one
+of the cave team), of deep water (never a fisher or the ferryman), of heights (nobody sends it up the bell tower), of the
+Nether (never through the gateway), of crowds (it stays away from the feasts and festivals) or of monsters (never on the
+watch or out hunting, and off home at the first sight of one). The town gives the trade it will not take to somebody
+braver. Every day it comes through what it fears unharmed, it grows braver, and on the fifth such day the fear is gone:
+the chronicle says so.
+
+**Habits.** One or two each, done at their own time: a morning walk round the town before work; feeding the hens with a
+handful of seed (its own, or the stores'); a pipe on the step at dusk, the smoke going up; tidying round its house,
+whatever lies about put away in the household's chest; a grave visited on the day of rest, a flower laid; a book by its
+bed before sleep (it learns a little of its trade each night); an evening at the tavern, every evening; whittling on its
+step, the stick turned over three evenings into a wooden toy (made by the toy's own recipe out of the stores) given to a
+child of the town, who keeps it.
+
+**A favourite place.** The bench by the well, the quay, the hill above the town (at dusk), the library window, the park,
+the tavern hearth, the chapel steps, its garden gate or the market square: in its free time it goes there and stays a
+while.
+
+**A keepsake.** Every folk carries something it will never part with: a feather from the first hen it kept, a pressed
+flower, the first coin it earned (out of its own purse), a lucky stone, a wooden toy a parent carved, the first book it
+read, a ring, a drawing by its child. Each is a real thing come by the real way (out of the stores, its purse, or made
+by its recipe), named for it, and never put in the stores, sold, auctioned or given away; ask it for a keepsake and it
+will give you something else. When it dies, its eldest child carries it after it.
+
+**Where it came from.** Ask a folk to "Tell me about yourself" and it tells you its story: where it was born (a hamlet
+it names, for a founder; here, for a child of the town) and who raised it, the big moments of its life as it remembers
+them, how it got its scar, the fear it got over, the keepsake it carries, whether it can read and its favourite book. A
+town that writes its folks' lives in the library writes this in. Children who went to the town's school can read; the
+rest learn at home, or not. Some folk are left-handed, and hold their tools in the left hand. Each has a favourite
+colour (it dresses in it), a favourite food and a favourite season (it is happier in it).
+
+**Where you see it.** A folk's card has a **Looks** line under its trade, and **Dream**, **Fears**, **Habits**,
+**Favourite place**, **Keepsake**, **Learning** and **Favourites** lines with its nature. The town gossips about it
+("Fen's always up the hill at dusk", "Wick's scared stiff of the Nether"). `/village individual` sums a town's people up
+(how many faces it has, its heights, fears, habits, places, dreams and keepsakes); `/village individual folk NAME` reads
+one folk out in full.
+
+The game tests `IndividualGameTests` (id01 to id10) check that two children the old ten faces gave the same face, born
+to different parents, look different; that a child's skin, hair and eyes come from its parents, a grandparent's blue eyes
+coming back now and then, twins alike, and a hundred founders a hundred faces; that hair greys and thins with the years
+and the very old stoop, that spectacles are made by the smith out of the stores' gold and glass and worn (and quicken
+close work), and the oldest get a stick; that a zombie's blow leaves a scar and a fall does not; that the tallest folk
+finds its way out of a room through a door two blocks high and sleeps in a bed, and height is inherited; that a dream is
+worked towards (courting, saving, standing) and coming true lifts the mood and makes the chronicle; that the dark-fearing
+are home before dusk, get over it after five brave days, and that fears keep folk from the trades and the feasts they
+dread; that a pipe is smoked on the step at dusk and not at noon, and a doorstep is tidied; that a folk goes to its
+favourite place in its free time; that a keepsake is carried, kept back from the stores and from a player, and handed
+down; and that a child's voice is higher than a woman's, a woman's than a man's, the old lower and the big deeper.
