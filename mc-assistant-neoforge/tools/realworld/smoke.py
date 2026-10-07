@@ -878,6 +878,39 @@ def fields_stage(r, look, cx, cz):
     say("alive after the fields: %s" % client_alive())
 
 
+def prices_stage(r, look, cx, cz):
+    """The town's prices (entity/PriceIndex, Purchases): reckoned now and read out in chat (each good today against
+    its usual worth, supply against demand, what was too dear, the cost of living against the lowest wage); the
+    Prices page of the town's books; and one of the shop's price signs with its live price, the shop put up for the
+    picture first if the town has none (as the workshop stage does)."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("time set 6000")
+    say("prices: " + r.cmd("execute positioned %d 100 %d run village prices now" % (cx, cz))[:1500])
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, cx, ground_height(r, cx, cz) + 1, cz))
+    time.sleep(3)
+    say("prices page: " + r.cmd("execute as %s at @s run village prices page" % USER))
+    time.sleep(4)
+    shot("25-prices-1-page")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    out = r.cmd("execute positioned %d 100 %d run village prices shop" % (cx, cz))
+    if "SHOP" not in out:
+        say("no shop: " + r.cmd("execute positioned %d 100 %d run village workshop stage" % (cx + 44, cz + 10))[:300])
+        out = r.cmd("execute positioned %d 100 %d run village prices shop" % (cx, cz))
+    say("shop: " + out[:900])
+    m = re.search(r"SIGN (-?\d+) (-?\d+) (-?\d+) out (\w+)", out)
+    if m:
+        x, y, z = int(m.group(1)), int(m.group(2)), int(m.group(3))
+        dx, dz = {"north": (0, -1), "south": (0, 1), "east": (1, 0), "west": (-1, 0)}.get(m.group(4), (1, 0))
+        r.cmd("gamemode spectator %s" % USER)
+        # Two blocks out in front of the counter's sign, looking at it.
+        look("25-prices-2-sign", x + 0.5 + dx * 2.2, y, z + 0.5 + dz * 2.2, x + 0.5, y + 0.4, z + 0.5, wait=5)
+        r.cmd("gamemode creative %s" % USER)
+    else:
+        say("no price sign at the shop's counters to photograph")
+    say("alive after the prices: %s" % client_alive())
+
+
 def ageing_stage(r, look, cx, cz):
     """Growing old slowly (entity/VillageFolkEntity.ageYears, Lifespans): grown folk age a year every
     three days and the founders come eighteen to forty-five. What /village lifespans says of the town
