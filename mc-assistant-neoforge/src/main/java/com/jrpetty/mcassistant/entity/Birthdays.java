@@ -157,6 +157,7 @@ public final class Birthdays {
         if (notable(f, age)) {
             Villages.tell(v.id(), day, f.displayNameCap() + " turned " + turned(age) + (age >= VillageFolkEntity.OLD_AT ? ", and the town wished them many more" : ""));
         }
+        Kitchen.birthday(level, v, f, day);                    // [kitchen] a honey cake cut for it and its friends, if the stores have one
         // Who comes round: its friends, its partner, its family, the fondest first.
         List<VillageFolkEntity> givers = new ArrayList<>();
         for (AssistantEntity a : Villages.folkOf(v.id())) {

@@ -7748,3 +7748,102 @@ The game tests `TransportGameTests` (tr01 to tr05) check that:
   takes another trade, and the chronicle tells it;
 * in a town of nine, the bridge is put to everybody in a referendum as a great work drawn beside the ferry, carried,
   built by the town's hands out of its stone and opened, and then the ferry retires.
+
+## The kitchen and the cellar
+
+Eight new things come out of the town's kitchen, its cellar and the healer's shelf. Each has a real recipe, so the
+town's makers know it and you can make it too; each is made by a trade of the town out of the stores, whenever the
+town wants one, and each is used.
+
+| Thing | Recipe | Age | Worth | Made by | What it's for |
+|---|---|---|---|---|---|
+| Packed Lunch | bread, any cooked meat or fish and an apple make two | Wood | 0.8c | the cook | a hand working far off eats it where it is at midday |
+| Cheese Wheel | three milk buckets over three wheat round an egg (the buckets come back) | Stone | 4c | the cook, of the rancher's milk | the town's reserve; set out on the café's and the tavern's tables |
+| Slice of Cheese | a cheese wheel cut into four | Stone | 1c | the stores, when food runs short | a meal |
+| Honey Cake | a honey bottle, two wheat, an egg and sugar (the honey's bottle comes back) | Wood | 2.5c | the cook | birthdays, weddings, Founding Day and the festivals |
+| Mead | a honey bottle, sugar and a glass bottle | Stone | 1.8c | the brewer | the tavern's bar, and the toasts at weddings and Founding Day |
+| Cider | three apples, sugar and a glass bottle | Stone | 1.5c | the brewer | the harvest festival; the tavern and the café in the autumn |
+| Fish Pie | cod or salmon, a potato, wheat and an egg | Wood | 1.2c | the cook | a hearty meal; the cook's answer to a glut of fish |
+| Herbal Tea | sweet berries or any small flower, sugar and a water bottle | Wood | 0.6c | the healer (else the café) | a cup for a cold; the café's on cold days |
+| Bandage | two paper and a string, or a wool and two string, make three | Wood | 0.3c | the healer (else the tailor) | the watch's and the cave team's kit; the healer's round |
+
+Mead and cider, with no brewer in town yet, are brewed at the café, as it brews its own drinks. Whatever no trade of the
+town makes, the shop's workshop does. The healer is the town's brewer (it sees to the town's care).
+
+**The packed lunch.** The cook packs a lunch in a red-checked cloth for everybody whose work today lies far off: a
+plot more than forty-eight blocks from its home and from the stores, the cave team, the scouts, the fishing fleet, a
+caravan or an envoy on the road. Before it sets out, the hand picks one up at the stores, and at the midday meal it
+sits down where it is and eats it, instead of walking all the way back in for food. You'll see it in its hand. The cook
+keeps a lunch in the stores for every far hand and one over. The town counts the lunches eaten out: the cook's book
+on the **Shops** page ("5 eaten out this week" against the packed lunch), the **Production** page's reading, the
+folk's card ("Kitchen: ate its packed lunch out at the north field") and the gazette. You can eat one yourself: it is
+a full meal (nine hunger, and filling with it).
+
+**The cheese wheel.** The rancher milks the pen's cows into the stores' buckets, and more while the cook wants cheese.
+The cook makes a wheel of three buckets of milk, three wheat and an egg, and the buckets go back to the stores. A
+wheel sits on its own board with a waxed golden rind, and as it is eaten a quarter goes at a time, showing the pale
+cheese and its holes where it was cut.
+* *It keeps.* Two wheels are kept in the stores as the town's reserve (a third put by in the autumn for the winter).
+  When food runs short (short rations, a drought's rationing, a hungry winter) and the stores are nearly bare, the
+  stores cut a wheel into four slices, and the folk eat them at their meals. The chronicle notes it.
+* *On the tables.* In good times the cook sets a wheel out on a table at the café and at the tavern, in place of the
+  cloth, keeping one in reserve. Folk taking their meal there eat a slice off it. When it's eaten to the board the
+  cloth goes back on.
+* *You:* right-click a wheel to eat a slice (four hunger), like a cake. Broken, a whole wheel drops itself; a cut one
+  drops the slices left.
+
+**The honey cake.** Golden with the beekeeper's honey, a little honeycomb on top. The cook bakes it a day or so ahead
+of a birthday, a wedding, Founding Day and the festivals (the May dance, the bonfire, the fair, the harvest). At the
+gathering it is cut, eight slices to a cake, and everybody there has a slice. They are happier for the rest of the
+day: "I had a slice of Ada's honey cake at the wedding. Still smiling." The folk's card says whose cake it was, and so
+does the chronicle ("the wedding of Wren and Kit had Ada's honey cake"). On a birthday a cake is cut for the one whose
+day it is and its friends. You can eat one: seven hunger and a heart of good cheer (absorption).
+
+**Mead and cider.** The brewer's, in bottles of their own: the mead amber, the cider pale gold with an apple on its
+label.
+* *At the bar.* The tavern sells mead beside the stout, and cider in the autumn; the café pours cider in the autumn
+  too. A drink lifts a folk's spirits for the evening, with a little regeneration, and the bottle goes back to the
+  stores. Folk drink in moderation: a sensible one has one of an evening, a merry one (cheerful, sociable, or a Free
+  Spirit at heart) two.
+* *In the toasts.* Weddings and Founding Day are toasted in mead, the harvest festival in cider: four cups to a
+  bottle.
+* *The apples* come from the oaks and dark oaks the woodcutters fell. A woodcutter takes up the apples lying under its
+  trees for the stores, and while the brewer is short of them it shakes the felled crowns down for them too.
+* *You:* drink one from the bottle (mead: regeneration; cider: a heart of absorption for a minute). The bottle comes
+  back.
+
+**The fish pie.** A dish of fish under a lattice crust: a hearty meal, more than bread, eaten by the folk like any good
+food and sold at the café and the market. When the fishing fleet brings in more than the usual catch (a glut: the fish
+market's price falls), the fish left unsold at dusk go into the stores and the cook bakes them into pies, up to a dozen.
+The gazette says so: "The cook turned yesterday's catch into twelve fish pies."
+
+**Herbal tea.** A green-brown bottle with a sprig of mint at the cork. The healer steeps it of sweet berries or a
+flower and a spoon of sugar, in a bottle of water drawn at the well. On its round the healer gives a cup to a folk
+laid up with a cold, once a cold, and it is well a whole day sooner (honey takes a quarter of a day off). The café
+sells it on cold days, in the rain and all winter. You can drink one for a short regeneration.
+
+**The bandage.** A white roll of clean cloth. Every guard and every member of the cave team carries two to four out of
+the stores: the kit tops them up to three when they're down to one. A guard or a delver left hurt after a fight binds
+its own wound (you'll see the bandage in its hand), and mends over a few seconds. The healer binds the wounded laid up
+in the infirmary or at home. You bind your own by right-clicking with one: four hearts over five seconds, then a short
+wait before the next. You can't bind a wound you haven't got.
+
+**Where to look.** The folk's card has a **Kitchen** line: its packed lunch, its bandages, and what it had of the
+kitchen's today. The cook's book (the café on the **Shops** page) keeps the lunches, the cheese, the cakes, the pies and
+the tea, with what became of them; the **Production** page's reading counts the lunches eaten out and the pies of the
+catch; the gazette has a **The kitchen** piece about yesterday. `/village items kitchen` lists what the town wants of
+each, what the stores hold and who makes it, and the week. Operators: `/village items kitchen stage` sets out the
+scene for the pictures where you stand (a wall of the things in frames, the cheese in its four cuts, a café table, and
+the town's folk with the things in hand), and `/village items kitchen stage release` lets the folk go.
+
+The game tests `KitchenGameTests` (kt01 to kt10) check that the cook packs lunches of the stores' bread, roast and
+apples and a far hand eats one at its plot with no walk back (where one without is sent in), and a player eats one; the
+rancher milks for the cheese, the cook makes a wheel (the buckets back), sets one out on the café's table and folk eat
+it to the board, a player eats a slice, and short of food the stores cut a wheel that feeds a folk; the cook bakes honey
+cakes for Founding Day, the guests are happier for a slice and the card and chronicle say whose, the toast is in mead
+and a birthday has the other cake; the brewer brews mead for the tavern, a sensible folk has one and a merry one two,
+with the bottle back; the brewer brews cider in the autumn, the woodcutter takes up apples and the harvest is toasted in
+cider; a glut becomes twelve fish pies and the gazette says so; the healer's tea sees a cold off a day sooner, once a
+cold, and the café makes it with no healer; the tailor rolls bandages, the watch's kit takes them, a hurt guard binds
+its own and mends, and the healer binds the wounded; every thing has its recipe, age and worth and the shop's workshop
+makes what no trade does; and the cook's book, the Production page, the card and the stage show it all.

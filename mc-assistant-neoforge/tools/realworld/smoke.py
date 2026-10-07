@@ -2447,6 +2447,47 @@ def transport_stage(r, look, cx, cz):
     say("alive after the transport: %s" % client_alive())
 
 
+def kitchen_stage(r, look, cx, cz):
+    """[kitchen] The kitchen, the cellar and the healer's shelf (entity/Kitchen, item/KitchenItems). Run out past the town's
+    east side, /village items kitchen stage levels a patch of ground and sets out a wall of item frames with the packed
+    lunch, the cheese wheel and its slice, the honey cake, mead, cider, the fish pie, herbal tea and the bandage; the cheese
+    wheel in its four cuts on a table of slabs before it; a café table (a post) with a wheel a slice down; and brings the
+    town's folk to stand in a row, each with one of the things in its hand (a guard with the bandage). Pictures: the wall
+    close up, the folk with the things in hand, the café table, the four cuts of the cheese. Then the folk are let go, and
+    /village items kitchen gives the kitchen's books."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    r.cmd("weather clear")
+    hy = ground_height(r, cx, cz)
+    sx, sz = cx + 40, cz - 30                          # beside the town, where the stage levels its own ground
+    r.cmd("tp %s %d %d %d" % (USER, sx, hy + 14, sz - 12))
+    time.sleep(8)                                      # the ground arrives at the server and the client
+    out = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village items kitchen stage" % (sx, sz))
+    say("kitchen stage: " + out[:1200])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("nothing staged for the kitchen; nothing to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            return
+        x, y, z, ax, ay, az = views[name]
+        look("33-kitchen-" + picture, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    shoot("kitchen-1-showcase", "1-showcase", 8)
+    shoot("kitchen-2-in-hand", "2-in-hand", 6)
+    shoot("kitchen-3-cafe-table", "3-cafe-table", 5)
+    shoot("kitchen-4-cheese-cuts", "4-cheese-cuts", 5)
+    say("released: " + r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village items kitchen stage release"
+                             % (sx, sz))[:200])
+    say("kitchen: " + r.cmd("execute positioned %d %d %d run village items kitchen" % (cx, hy + 1, cz))[:1200])
+    say("alive after the kitchen: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

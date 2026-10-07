@@ -337,6 +337,7 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         Leisure.tick(this);
         if (tickCount % 100 == 53) Meals.tick(this);           // breakfast, the midday meal, supper
+        if (tickCount % 20 == 15 && level() instanceof net.minecraft.server.level.ServerLevel kitchen) Kitchen.second(this, kitchen);   // [kitchen] a lunch packed, a wound bound
         // [fleet] Out with the fishing fleet: down the quay, rowing, fishing, home with the catch (Fleet). Before the storm
         // and the gatherings: a boat at sea is rowed home in a storm, not left to drift while its crew looks for a roof.
         if (level() instanceof net.minecraft.server.level.ServerLevel sea && Fleet.hold(this, sea)) return;
@@ -1210,6 +1211,7 @@ public class VillageFolkEntity extends AssistantEntity {
         m = Civics.mood(this, day, m, why);             // [batchF] a letter, the town meeting, a good turn, found and home
         m = Crime.mood(this, day, m, why);              // [crime] robbed, paid back, shamed, wrongly accused and cleared
         m = Referendums.mood(this, day, m, why);        // [civic] proud of the work it built; a newcomer's gratitude
+        m = Kitchen.mood(this, day, m, why);            // [kitchen] a slice of honey cake at the wedding, a mead at the tavern
         why.sort((a, b) -> Integer.compare((Integer) b[1], (Integer) a[1]));
         java.util.List<String> keys = new java.util.ArrayList<>();
         for (Object[] w : why) keys.add((String) w[0]);

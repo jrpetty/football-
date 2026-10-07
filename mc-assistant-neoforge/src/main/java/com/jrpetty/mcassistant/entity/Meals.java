@@ -212,6 +212,10 @@ public final class Meals {
                 return;
             }
         }
+        if (Kitchen.mealOut(level, f, village, m)) {           // [kitchen] its packed lunch where it is, or a slice off the café's cheese
+            had(f, b, m, bit, village, day);
+            return;
+        }
         if (eat(level, f, village)) {
             had(f, b, m, bit, village, day);
             return;
