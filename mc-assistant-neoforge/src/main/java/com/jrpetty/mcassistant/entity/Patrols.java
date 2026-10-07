@@ -130,6 +130,15 @@ public final class Patrols {
         return out;
     }
 
+    /**
+     * May an operator's stage take this folk for a post (the smith, the ferry, the fletcher's hut, the gateway...)? A grown
+     * hand of the town, but never one of the watch nor the leader: in the smoke run the stages took a town's only guard
+     * in turn for the smithy, the ferry, the fletcher's hut and the Nether, and left it with no watch at all.
+     */
+    public static boolean spareForStage(VillageFolkEntity f) {
+        return f.isAlive() && !f.isBaby() && !f.isShowcase() && !f.isHired() && f.stationTask() != StationTask.GUARD && !f.isElder();
+    }
+
     /** Off on the road, out on the land, through the gateway: not about the village at all. */
     static boolean away(VillageFolkEntity f) {
         return f.isHired() || f.trip() != null || f.expedition() != null || Nether.away(f) || Scouts.out(f);

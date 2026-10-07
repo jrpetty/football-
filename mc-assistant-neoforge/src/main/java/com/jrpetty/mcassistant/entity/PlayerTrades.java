@@ -986,7 +986,7 @@ public final class PlayerTrades extends SavedData {
         VillageFolkEntity m = masterOf(v.id(), StationTask.SMITH);
         if (m == null) {
             for (AssistantEntity a : Villages.folkOf(v.id())) {
-                if (a instanceof VillageFolkEntity f && !f.isBaby() && !f.isShowcase()
+                if (a instanceof VillageFolkEntity f && Patrols.spareForStage(f)            // never the watch nor the leader
                         && (m == null || f.stationTask() == StationTask.SMITH || f.stationTask() == StationTask.SMELT)) m = f;
             }
             if (m == null) {
