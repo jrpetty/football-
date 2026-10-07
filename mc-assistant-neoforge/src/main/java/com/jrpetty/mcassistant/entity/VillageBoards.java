@@ -376,6 +376,7 @@ public final class VillageBoards {
         out.addAll(WarFooting.board(id));                   // [war-prep] on a war footing: the watch, the militia, the defences
         String bounty = PlayerServices.boardLine(level, id);     // [players] the night's bounty, when the watch is busy
         if (bounty != null) out.add("RW|" + bounty);
+        out.addAll(WarAndPeace.board(level, id, day));      // [war-peace] the war, the council of war, the herald, the treaty
         out.addAll(TownCalendar.board(level, id));          // today's bells, Founding Day, the week's birthdays
         out.addAll(Sport.board(level, id));                 // [batchC] the match on now, a side away, the league and the cup
         String gathering = Assemblies.now(id);

@@ -1584,6 +1584,54 @@ def war_footing_stage(r, look, cx, cz):
     say("alive after the war footing: %s" % client_alive())
 
 
+def war_peace_stage(r, look, cx, cz):
+    """War and peace between towns (entity/WarAndPeace): a second town a little way off; the first town's
+    council called to its hall as a council of war over it (/village war council: the leader's case, each
+    councillor's vote and why); war declared (/village war declare: the bell in both towns, the war banner
+    out of the stores hung over the gate, else on the front of the hall, else on a pole by the board), the
+    banner photographed from the side it faces; the town's books at the War page; then peace made
+    (/village war peace) and the banner taken down again."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    tx, tz = cx - 240, cz + 40                       # the far side from the job market's town (jobs_stage)
+    r.cmd("tp %s %d 140 %d" % (USER, tx, tz))
+    time.sleep(15)                                     # the ground arrives
+    say("the other town: " + r.cmd("village spawnat %d %d 8" % (tx, tz))[:200])
+    time.sleep(20)                                     # its board goes up, its folk take up their trades
+    hy = ground_height(r, cx, cz)
+    # A red banner in the stores, for the war banner (the town makes one of six wool and a stick if it has those).
+    say("cloth: " + r.cmd("execute positioned %d %d %d run village war cloth" % (cx, hy + 1, cz)))
+    ty = ground_height(r, tx, tz)
+    say("cloth there: " + r.cmd("execute positioned %d %d %d run village war cloth" % (tx, ty + 1, tz)))
+    out = r.cmd("execute positioned %d %d %d run village war council" % (cx, hy + 1, cz))
+    say("council: " + out[:700])
+    m = re.search(r"AT (-?\d+) (-?\d+) (-?\d+)", out)
+    if m:
+        ax, ay, az = int(m.group(1)), int(m.group(2)), int(m.group(3))
+        time.sleep(20)                                 # the councillors come in and take their places; the vote
+        look("23-war-1-council", ax + 7.5, ay + 4, az + 7.5, ax + 0.5, ay + 1, az + 0.5, wait=6)
+    out = r.cmd("execute positioned %d %d %d run village war declare" % (cx, hy + 1, cz))
+    say("declare: " + out[:700])
+    step = {"north": (0, -1), "south": (0, 1), "east": (1, 0), "west": (-1, 0), "up": (1, 1)}
+    for i, b in enumerate(re.findall(r"BANNER (-?\d+) (-?\d+) (-?\d+) (\w+) (\S+)", out)[:2]):
+        bx, by, bz, facing = int(b[0]), int(b[1]), int(b[2]), b[3]
+        dx, dz = step.get(facing, (1, 1))
+        look("23-war-%d-banner-%s" % (2 + i, b[4].lower()), bx + 0.5 + dx * 6, by + 1, bz + 0.5 + dz * 6, bx + 0.5, by, bz + 0.5,
+             wait=8)
+    say("war: " + r.cmd("execute positioned %d %d %d run village war" % (cx, hy + 1, cz))[:1500])
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
+    time.sleep(3)
+    say("books: " + r.cmd("execute as %s at @s run village war books" % USER))
+    time.sleep(4)
+    shot("23-war-4-books")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    say("peace: " + r.cmd("execute positioned %d %d %d run village war peace" % (cx, hy + 1, cz))[:500])
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the war: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

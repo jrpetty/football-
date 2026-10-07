@@ -379,6 +379,7 @@ public final class Villages {
         Sport.resetForTests();              // [batchC] the pitch, the matches, the league, the contests, the range
         Tavern.resetForTests();
         Council.resetForTests();
+        WarAndPeace.resetForTests();        // [war-peace]
         Laws.resetForTests();
         Diplomacy.resetForTests();
         Envoys.resetForTests();

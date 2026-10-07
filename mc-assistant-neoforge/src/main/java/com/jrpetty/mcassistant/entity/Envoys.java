@@ -66,7 +66,9 @@ public final class Envoys {
     public enum Errand {
         GREETING("to greet them"), TRADE("to offer them trade"), ALLIANCE("to offer them an alliance"),
         PEACE("with gifts, to make peace"), TRIBUTE("to demand tribute"), COMPLAINT("with a complaint about the boundary"),
-        GIFT("with a gift");
+        GIFT("with a gift"),
+        // [war-peace] A herald with an ultimatum, a call to arms to an ally, or an ally's guard to the walls (WarAndPeace).
+        WAR("on the business of war");
 
         public final String purpose;
         Errand(String purpose) { this.purpose = purpose; }
@@ -211,6 +213,7 @@ public final class Envoys {
     /** Once a day for each pair of neighbours (Diplomacy.daily): does either elder send somebody? */
     static void consider(ServerLevel level, Villages.Village a, Villages.Village b, long day, java.util.Random rng) {
         String key = Ledger.pair(a.id(), b.id());
+        if (WarAndPeace.quiet(a.id(), b.id())) return;                // [war-peace] at war or in a quarrel: the war's own envoys only
         Long last = SENT.get(key);
         if (last != null && day - last < DAYS_BETWEEN) return;
         if (travelling(a.id(), b.id())) return;
@@ -291,6 +294,7 @@ public final class Envoys {
             }
             if (errand == Errand.PEACE) t.purse = Ledger.takeCoins(from.id(), Math.min(8, Ledger.coins(from.id()) / 4));
         }
+        t.purse += WarAndPeace.peacePurse(level, from.id(), to.id(), errand);   // [war-peace] what a white flag will concede, in coin
         envoy.trip(t);
         Ledger.note(from.id(), "envoyed/" + to.id(), Long.toString(day));
         String fromName = Villages.name(from.id()), toName = Villages.name(to.id());
@@ -304,6 +308,7 @@ public final class Envoys {
             case TRIBUTE -> "Off to " + toName + " to collect what they owe us.";
             case COMPLAINT -> "To " + toName + ". The elder has words for them.";
             case GIFT -> "Taking a few things over to " + toName + ". Neighbourly, isn't it?";
+            case WAR -> "To " + toName + ", on the elder's business. Grave business.";   // [war-peace]
         });
         LATEST.put(from.id(), envoy.displayNameCap() + " went to " + toName + " " + errand.purpose);
         LOG.info("[MCA-ENVOY] {} sends {} to {} {} (temper {}, relation {})",
@@ -343,6 +348,7 @@ public final class Envoys {
 
     /** The envoy has reached the village it was sent to: it asks to be heard, and waits. */
     static void arrived(ServerLevel level, VillageFolkEntity envoy, Caravans.Trip t) {
+        if (WarAndPeace.garrisonArrived(level, envoy, t)) return;      // [war-peace] an ally's guard to the walls, or home from them
         t.waiting = true;
         t.waitSince = level.getGameTime();
         WAITING.computeIfAbsent(t.to, k -> new ArrayList<>()).add(envoy.getUUID());
@@ -375,6 +381,7 @@ public final class Envoys {
 
     /** While it waits: to the board, to stand and look about; then, heard or out of patience, home. */
     static void waitThere(ServerLevel level, VillageFolkEntity envoy, Caravans.Trip t) {
+        if (WarAndPeace.onGarrison(level, envoy, t)) return;           // [war-peace] an ally's guard on the walls till the peace
         if (Assemblies.attend(envoy, level)) return;
         Villages.Village host = Villages.get(t.to), home = Villages.get(t.from);
         if (host == null || home == null) {
@@ -462,6 +469,8 @@ public final class Envoys {
 
     /** What the envoy says on arriving: who sent it, and what it wants. */
     static String asks(UUID from, UUID host, Errand errand, VillageFolkEntity envoy, Caravans.Trip t) {
+        String war = WarAndPeace.asks(from, host, errand, t);             // [war-peace] the ultimatum, the call to arms, the white flag
+        if (war != null) return war;
         String fn = Villages.name(from), elder = Villages.elderName(from);
         String sender = elder.isEmpty() ? "The folk of " + fn : "Elder " + elder + " of " + fn;
         return switch (errand) {
@@ -472,11 +481,14 @@ public final class Envoys {
             case TRIBUTE -> sender + " says you owe " + Diplomacy.tributeAsked(from) + " coins in tribute. Pay up.";
             case COMPLAINT -> sender + " says your folk are on our side of the boundary. Keep off our land!";
             case GIFT -> sender + " sends you a few things from our stores, with our good wishes.";
+            case WAR -> sender + " sends word of war.";                    // [war-peace]
         };
     }
 
     /** What the host's elder says to it — by its temper, how the villages stand, and what is in it for them. */
     static Answer answer(ServerLevel level, UUID host, UUID from, Errand errand, VillageFolkEntity envoy, Caravans.Trip t) {
+        Answer war = WarAndPeace.answer(level, host, from, errand, envoy, t);   // [war-peace] yield, bargain or refuse; join; make peace
+        if (war != null) return war;
         Temper ht = temper(host);
         int r = Ledger.relation(host, from);
         int chem = chemistry(host, from);

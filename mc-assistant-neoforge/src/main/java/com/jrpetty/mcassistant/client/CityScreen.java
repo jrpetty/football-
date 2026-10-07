@@ -56,10 +56,12 @@ public class CityScreen extends Screen {
         // [econ-trade] Trade between towns, after them (TradePage).
         "Trade",
         // [war-scouting] The war map: the enemy where it lies, the scouts' reports and their age (WarMapPage).
-        "War map" };
+        "War map",
+        // [war-peace] The war, after them for the same reason (WarPage).
+        "War" };
     /** The pages that read today's figures, not the books (so they show from the first day). */
     private static final java.util.Set<String> TODAY_PAGES = java.util.Set.of("Folk", "Society", "Leader", "Buildings", "Why", "News", "Board",
-        "Shops", "Homes", "Stock", "Research", "School", "Museum", "Culture", "Prices", "Trade", "War map");
+        "Shops", "Homes", "Stock", "Research", "School", "Museum", "Culture", "Prices", "Trade", "War map", "War");
     private static final int[] RANGES = { 7, 30, 100, 0 };
     private static final String[] RANGE_NAMES = { "7d", "30d", "100d", "All" };
 
@@ -310,6 +312,7 @@ public class CityScreen extends Screen {
                     if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
                 }
                 case "War map" -> warMap(g, x, y, cw, ch, mouseX, mouseY);   // [war-scouting]
+                case "War" -> WarPage.draw(g, font, data.getCompound("war"), x, y, cw, ch, scroll);   // [war-peace]
                 default -> board(g, x, y, cw, ch);
             }
         }
