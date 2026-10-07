@@ -238,6 +238,7 @@ public final class VillageCommands {
             .then(com.jrpetty.mcassistant.entity.Health.command())
             .then(com.jrpetty.mcassistant.entity.Civics.command())          // [batchF] the town's affairs
             .then(com.jrpetty.mcassistant.entity.WatchKit.command())        // [guard-kit] the watch's kit, on order, and its cost
+            .then(com.jrpetty.mcassistant.entity.WatchClears.command())     // [watch-clears] /village monsters: about, killed, fallen
             .then(com.jrpetty.mcassistant.entity.Civics.donateCommand())    // [batchF] the public works fund
             // [flats] The village's blocks of flats: each flat, who lives there, on what terms. `stage`
             // sets a furnished block out on a stage at the spot, for the pictures (from a palette, not the stores).
@@ -1534,6 +1535,8 @@ public final class VillageCommands {
             if ((gates == 0 || posts == 0) && com.jrpetty.mcassistant.entity.Villages.hasBuilt(v.id(), "fortify")) {
                 sb.append(" [").append(com.jrpetty.mcassistant.entity.Watch.trouble(level, v.id())).append(']');
             }
+            // [watch-clears] How many monsters are about the town now, and the week's kills (the long game reads it).
+            sb.append("; ").append(com.jrpetty.mcassistant.entity.WatchClears.statusLine(level, v));
         }
         {
             java.util.UUID id = v.id();

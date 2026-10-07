@@ -6094,3 +6094,79 @@ The game tests `MineSafetyGameTests` (mf01 to mf05) check that:
 * a farmer with nothing to do is lent out for timber, never to a miner's face for stone, keeps its
   trade and field, and is back on its own field once the lend is over;
 * a miner at the foot of its stairs sets its work chest down at the surface of its face.
+
+## The watch clears the town
+
+A town's watch used to stand the wall round the square when the bell rang, and between the bells only went after
+a monster that came within sixteen blocks of somebody. In a big town that left the streets where the folk live
+unwatched on the worst nights, and left creepers, spiders and anything in the shade standing about the town for
+days. Now the watch clears the town, and everybody else keeps out of the way.
+
+* **Every monster is the watch's business.** Once a second the town looks for every hostile monster up about it:
+  inside its reach or a little past it, in the open, under a roof or a tree, or in the water (not one down a cave
+  under the town). The nearest guard who is free goes after each one at a run, by night and by day: the ones
+  attacking somebody first, then raiders, then any near a child, then any near anybody, then the rest. A monster
+  that lived through the night in the shade is hunted down in the morning.
+* **Creepers are shot, not fought.** A creeper goes to a guard with a bow, and any guard of the watch may draw the
+  town's bow for it, however new to the job. If no free guard has one, one is armed out of the town's stores.
+* **Raiders get two guards each.** A vindicator's axe is more than one guard's match, so the watch pairs up on them.
+* **Under the bell.** A third of the watch keeps the posts on the wall with their bows. The rest go out among the
+  houses, through the gates, after anything that has come within twenty blocks of the town's folk. The town's
+  raiding band now gathers out past its last houses, not in its streets, and a raider goes for a guard near it
+  before it goes for a folk.
+* **The iron golem helps.** With nothing else to fight it goes for the nearest monster within twenty-odd blocks
+  (never a creeper; no golem will).
+* **A guard that cannot get at its monster** (on a roof, across water, down a hole) gives up after three quarters
+  of a minute, and another guard tries.
+
+**Folk keep out of harm's way.**
+
+* A folk who is not one of the watch, with a monster within ten blocks (sixteen for a child, twelve for a creeper,
+  more if it is coming for it), goes indoors. It goes home if that is the nearer way and not past the monster,
+  otherwise into the nearest of the town's buildings with a roof and a door, and stays there till the monster has
+  gone. A bed out in the open (the founders' camp) doesn't count as cover. It says so: *There's a zombie out
+  there. Indoors!*, and a child: *Mum! There's a zombie!*
+* A creeper in a hand's yard keeps it from its work until the watch has dealt with it.
+* Set on by a monster, a folk runs for it rather than trading blows, and only fights back if it is cornered. Only
+  the watch (and a folk hired to fight) answers a shout for help with a fight; everybody else's shout still brings
+  the nearest guard.
+* With the bell ringing, a folk whose bed is more than thirty-two blocks away goes into the nearest building
+  instead of walking across the town to it, children included.
+* So that one stuck creeper can't shut a street indoors for days, a grown folk that has waited two minutes for a
+  monster that is after nobody goes back to its day and minds that monster no more for half a day. Children keep
+  waiting.
+
+**What the books say.**
+
+* A folk who dies while the bell rings is put down as what killed it, with the raid after it, such as *fighting a
+  vindicator when the raiders came*. A fall or the lava is a fall or the lava, bell or no bell. Before, any death
+  while the bell rang was put down as *when the raiders came*.
+* The status (`/village status`, and the town screen) says how many monsters are about the town now, of what kinds,
+  and what the watch and the golem have killed this week: *monsters about: 2 (1 zombie, 1 creeper); the watch has
+  killed 21 this week and the golem 4*.
+* The town's books (the board, `/village stats`) give the week's tally, how many are still about, and who was lost
+  to monsters: where they fell (*at home*, *in the street, 40 blocks east of the square*, *in its field*, *on the
+  wall*, *down the mine*) and what they were doing (*asleep*, *walking home*, *hunting a zombie*, *making for
+  cover*).
+* `/village monsters` lists every monster about the town now: what it is, where, whether it is in the shade or the
+  water, and which guards are after it. It also gives the tally day by day, how many guards are out on a hunt, how
+  many folk are indoors out of the way, and the last dozen folk lost with where and doing what. Operators can use
+  `/village monsters now` to have the watch look round the town at once.
+
+The long game (`tools/realworld/soak.py`) now keeps each stop at its time of day, so the dusk raid comes at dusk
+and the midnight bed count is at midnight. After each raid it prints a `MONSTERS` line at midnight, the next
+morning and the next noon, giving the town's own count of monsters about it and every one of the raid's tagged
+monsters anywhere.
+
+The game tests `WatchClearsGameTests` (wc01 to wc05) check that:
+* at dusk, four zombies, two skeletons, a spider and a creeper put about a town of five with three guards are all
+  killed within three minutes, mostly by the watch, and no folk dies;
+* a zombie under a stone canopy at noon, twenty-five blocks from anybody, is counted as about the town, and a guard
+  is sent after it and kills it;
+* a folk with a zombie seven blocks off goes into a house nearby, stays in while the zombie is there, and comes
+  out once it has gone;
+* a child goes indoors from a zombie twelve blocks off (a grown folk at the same distance carries on), and is never
+  out in the open with it near until it has gone;
+* a raiding band gathers at the town's edge; two raiders among the folk get two guards each, and none is sent out to
+  the band still at the edge; deaths while the bell rings are put down as what took them, with where and doing what;
+  and the status, the books and `/village monsters` count the watch's and the golem's kills.

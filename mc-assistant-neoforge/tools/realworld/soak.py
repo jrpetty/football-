@@ -135,6 +135,36 @@ def sprint(r, ticks):
         last = now
 
 
+def daytime(r):
+    """The time of day (0 to 23999), or None."""
+    m = re.search(r"(\d+)", r.cmd("time query daytime"))
+    return int(m.group(1)) % 24000 if m else None
+
+
+def sprint_to(r, t, nominal):
+    """[watch-clears] On to the time of day t, not a set count of ticks. Each sprint ran on by whatever passed
+    between two looks at the clock, and over the hundred days that added up to a third of a day: from night
+    sixty-two the beds were counted after dawn (nobody asleep), and by day a hundred the dusk's raid came at
+    daybreak. Already a little past t (a slow command), it goes on at once rather than a whole day later."""
+    now = daytime(r)
+    if now is None:
+        return sprint(r, nominal)
+    ticks = (t - now) % 24000
+    if ticks > 20000:
+        ticks = 100
+    return sprint(r, max(100, ticks))
+
+
+def monsters(r, x, z):
+    """[watch-clears] The town's own count of the monsters about it (the status's Watch clause), and every one of the
+    raid's tagged monsters anywhere in the loaded world beside it."""
+    status = r.cmd("execute positioned %d 64 %d run village status" % (x, z)).replace("\n", " ")
+    m = re.search(r"(monsters about: \d+[^.]*)", status)
+    tagged = re.search(r"count: (\d+)", r.cmd("execute if entity @e[tag=raid]"))
+    return "%s; the raid's tagged monsters anywhere: %s" % (m.group(1) if m else "no monsters line in the status",
+                                                           tagged.group(1) if tagged else "0")
+
+
 def where(r, what, dim="minecraft:overworld"):
     """/locate → (x, z), or None."""
     out = r.cmd("locate %s" % what)
@@ -333,16 +363,26 @@ def twin(r, days=3):
 def epic_day(r, x, z, day, began, last_age, metrics_file="epic-metrics.jsonl"):
     """One game day of the long game: the dusk (every fifth with a raid), the night's beds,
     the morning, then the village in numbers. Returns the age it is in now."""
+    # [watch-clears] Each stop at its time of day (sprint_to), and the monsters about the town after the raid's night
+    # and at noon the day after: the watch should have the town clear by then.
     if day % 5 == 1:
         # Dusk, with the things that come out at night among them (nothing spawns on
         # a server with nobody on it, so the watch would otherwise never be tested).
-        sprint(r, 13500)
+        sprint_to(r, 14500, 13500)
         raid(r, x, z)
-        sprint(r, 3500)
+        sprint_to(r, 18000, 3500)
+    elif day % 5 == 2:
+        sprint_to(r, 6000, 5000)
+        say("MONSTERS at noon after the raid, day %d: %s" % (day, monsters(r, x, z)))
+        sprint_to(r, 18000, 12000)
     else:
-        sprint(r, 17000)
+        sprint_to(r, 18000, 17000)
     night(r, x, z, "the long game, night %d" % day)
-    sprint(r, 7000)
+    if day % 5 == 1:
+        say("MONSTERS the raid's night %d, at midnight: %s" % (day, monsters(r, x, z)))
+    sprint_to(r, 1000, 7000)
+    if day % 5 == 2 or day % 5 == 1:
+        say("MONSTERS morning of day %d: %s" % (day, monsters(r, x, z)))
     status = r.cmd("execute positioned %d 64 %d run village status" % (x, z)).replace("\n", " ")
     listing = r.cmd("village list")
     villages = [l for l in listing.split("\n") if l.strip().startswith("Village at")]

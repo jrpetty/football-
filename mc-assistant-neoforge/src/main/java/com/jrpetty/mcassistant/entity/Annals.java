@@ -1203,6 +1203,8 @@ public final class Annals {
         // [economy] The deaths of the week, by what took them (Mishap): the long runs read them here.
         String dead = Mishap.line(id, level.getDayTime() / 24000L - 6, "over the last 7 days");
         if (dead != null) out.add(dead);
+        // [watch-clears] The watch's week: monsters killed by it and the golem, any still about, who fell where doing what.
+        out.addAll(WatchClears.booksLines(level, v));
         // [economy] The day's work put away at noon and at dusk, or carried about overnight (PutAway).
         String banked = PutAway.booksLine(id, level.getDayTime() / 24000L);
         if (banked != null) out.add(banked);

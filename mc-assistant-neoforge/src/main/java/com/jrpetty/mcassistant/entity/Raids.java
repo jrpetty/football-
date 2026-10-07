@@ -109,6 +109,7 @@ public final class Raids {
         CLIMB.clear();
         Watch.resetForTests();
         Patrols.resetForTests();
+        WatchClears.resetForTests();                       // [watch-clears]
     }
 
     /** Is the bell ringing in this village? */
@@ -149,6 +150,14 @@ public final class Raids {
             for (ServerLevel level : event.getServer().getAllLevels()) {
                 for (Villages.Village v : Villages.every()) {
                     if (v.dim().equals(level.dimension())) Patrols.tick(level, v);
+                }
+            }
+        });
+        // [watch-clears] And every monster about the town the watch's business, by night and by day, bell or none.
+        Guard.run("watch clears", () -> {
+            for (ServerLevel level : event.getServer().getAllLevels()) {
+                for (Villages.Village v : Villages.every()) {
+                    if (v.dim().equals(level.dimension())) WatchClears.tick(level, v);
                 }
             }
         });
@@ -284,7 +293,9 @@ public final class Raids {
         Direction from = Watch.SIDES[Math.floorMod((int) day + id.hashCode(), 4)];
         Villages.Age age = Villages.ageOf(id);
         int n = Math.max(3, Math.min(10, 2 + 2 * guards(id) + age.ordinal()));
-        BlockPos base = v.centre().relative(from, Watch.R + 18);
+        // [watch-clears] At the town's edge, not thirty blocks from the heart: in a town of ninety that was among its
+        // houses, and the band was in the streets before the bell had stopped its first peal.
+        BlockPos base = edge(level, v, from);
         Direction across = from.getClockWise();
         List<UUID> band = new ArrayList<>();
         for (int i = 0; i < n; i++) {
@@ -304,6 +315,18 @@ public final class Raids {
         a.band.addAll(band);
         a.size = band.size();
         return a;
+    }
+
+    /** [watch-clears] Where a band gathers: out past the town's last houses on that side, or as near that as the
+     *  ground is loaded; never nearer the heart than just outside the wall. */
+    static BlockPos edge(ServerLevel level, Villages.Village v, Direction from) {
+        int near = Watch.R + 18;
+        for (int out = Math.max(near, Villages.townReach(v.id()) + 8); out > near; out -= 8) {
+            BlockPos at = v.centre().relative(from, out);
+            if (level.isLoaded(at) && level.isLoaded(at.relative(from.getClockWise(), 10))
+                && level.isLoaded(at.relative(from.getCounterClockWise(), 10))) return at;
+        }
+        return v.centre().relative(from, near);
     }
 
     /** One of a band: what comes depends on how far the village has come. */
@@ -339,7 +362,7 @@ public final class Raids {
             if (!(level.getEntity(u) instanceof Mob m) || !m.isAlive()) continue;
             LivingEntity target = m.getTarget();
             if (target != null && target.isAlive() && target.distanceToSqr(m) < 24 * 24) continue;
-            VillageFolkEntity prey = nearestFolk(v, m, 20.0);
+            VillageFolkEntity prey = WatchClears.preyFor(v, m, 20.0);    // [watch-clears] a guard near it before a folk
             if (prey != null) {
                 m.setTarget(prey);
             } else if (m.getNavigation().isDone()) {
@@ -462,6 +485,7 @@ public final class Raids {
         Villages.Village v = Villages.get(id);
         if (v == null) return false;
         if (a.armed.add(g.getUUID())) arm(level, v, g);
+        if (WatchClears.hunting(g)) return true;              // [watch-clears] out among the houses after one
         boolean archer = g.countCarried(s -> s.is(Items.BOW) || s.is(Items.CROSSBOW)) > 0 && g.hasArrows();
         if (archer) {
             Watch.Post p = postFor(level, v, g, a);
@@ -642,10 +666,7 @@ public final class Raids {
         if (id == null) return best;
         double bd = Double.MAX_VALUE;
         for (com.jrpetty.mcassistant.village.Ledger.Building b : com.jrpetty.mcassistant.village.Ledger.buildings(id)) {
-            switch (b.structure()) {
-                case "house", "house2", "hall", "townhall", "tavern", "storage", "barracks", "granary", "chapel", "cafe", "shop" -> { }
-                default -> { continue; }
-            }
+            if (!WatchClears.shelters(b.structure())) continue;   // [watch-clears] any building with a roof and a door
             double d = b.anchor().distSqr(f.blockPosition());
             if (d < bd) { bd = d; best = b.anchor(); }
         }

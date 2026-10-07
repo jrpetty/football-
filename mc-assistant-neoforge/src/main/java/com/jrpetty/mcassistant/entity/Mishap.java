@@ -94,7 +94,7 @@ public final class Mishap {
         for (Death x : d) {
             if (x.gameTime() < fromGameTime) continue;
             String h = x.how();
-            if (h.startsWith("fighting a") && !h.contains("player") || h.equals("when the raiders came") || h.equals("in an explosion")) n++;
+            if (WatchClears.toMonsters(h)) n++;          // [watch-clears] "fighting a vindicator when the raiders came" and the rest
         }
         return n;
     }
