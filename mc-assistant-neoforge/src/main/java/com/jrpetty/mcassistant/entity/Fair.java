@@ -414,6 +414,7 @@ public final class Fair {
                 () -> award(level, v, town, w, d)));
         }
         if (!any) s.add(new Assemblies.Line(null, "Not one entry this year! Next summer I hope to see your best.", '~', null));
+        Pets.show(level, v, s, r, d);                              // [pets] the pet show: the best-kept pet's ribbon
         s.add(new Assemblies.Line(null, FolkTalk.pick(r, "Well done, everybody — take your entries home!", "That's the fair. Thank you all!"),
             '!', () -> finish(level, v, d, true)));
     }

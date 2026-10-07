@@ -24,7 +24,7 @@
   "container.mc_assistant.storehouse": "Village Storehouse",
   "block.mc_assistant.village_board": "Village Board",
   "item.mc_assistant.village_board": "Village Board",
-  "item.mc_assistant.fish_banner_pattern": "Banner Pattern",
+"item.mc_assistant.fish_banner_pattern": "Banner Pattern",
   "item.mc_assistant.fish_banner_pattern.desc": "Fish",
   "block.mc_assistant.banner.fish.white": "White Fish",
   "block.mc_assistant.banner.fish.orange": "Orange Fish",
@@ -78,5 +78,10 @@
   "block.mc_assistant.banner.sheaf.green": "Green Sheaf",
   "block.mc_assistant.banner.sheaf.red": "Red Sheaf",
   "block.mc_assistant.banner.sheaf.black": "Black Sheaf",
-  "item.mc_assistant.tabard": "Tabard"
+  "item.mc_assistant.tabard": "Tabard",
+"block.mc_assistant.pet_bowl": "Pet Bowl",
+  "block.mc_assistant.dog_bed": "Dog Bed",
+  "block.mc_assistant.cat_bed": "Cat Basket",
+  "item.mc_assistant.collar": "Pet Collar",
+  "item.mc_assistant.pet_treat": "Pet Treat"
 }

@@ -95,6 +95,7 @@ public final class FolkTalk {
             VillageFolkEntity other = mentioned(f, lower);
             if (other != null) return manner(f, opinionOf(f, other));
         }
+        if (topic == TalkTopic.PET) return manner(f, Pets.talk(f, p, text), true);    // [pets] its household's pet, a child's above all
         if (f.isBaby() && topic != TalkTopic.GIFT) return child(f, p, topic, op);
         String kept = topic == TalkTopic.OPEN ? Welcome.handOver(f, p) : "";
         if (!kept.isEmpty()) return manner(f, kept.trim());
@@ -179,6 +180,7 @@ public final class FolkTalk {
             case ESCORT -> Commerce.escort(f, p);
             case CHARTER -> Commerce.charter(f, p, text);
             case PRICES -> Commerce.prices(f, p, text);
+            case PET -> Pets.talk(f, p, text);                                 // [pets]
             default -> puzzled(f);
         };
         said = KeptGifts.mention(f, p, topic, said);          // [batchG] "I keep the diamond you gave me by my bed"
@@ -373,6 +375,7 @@ public final class FolkTalk {
         if (!life.parents().isEmpty()) family += (family.isEmpty() ? "" : "; ") + "child of " + life.parents();
         if (!family.isEmpty()) line(sb, "Family", family);
         line(sb, "Household", Families.cardLine(f));        // its pet, its garden, its wedding anniversary (Families)
+        line(sb, "Pet", Pets.cardLine(f));                  // [pets] its age, its bowl and bed, its collar, its young, its friends
         line(sb, "Health", Health.cardLine(f));              // [batchA] a cold, laid up, seen to (Health)
         line(sb, "Neighbours", Neighbourly.cardLine(f));     // [batchA] looked in on, a welcome, a housewarming (Neighbourly)
         line(sb, "About town", TownLook.cardLine(f));       // [batchE] its allotment, the bakery, the inn (TownLook)
@@ -1217,6 +1220,8 @@ public final class FolkTalk {
         // [players] Before "could I have" (the stores) and "where is" (the guide): a map, and the Lost and Found.
         if (has(t, "map of the town", "map of town", "map of the village", "town map", "village map", "a map of", "a map please",
                 "draw me a map")) return TalkTopic.TOWN_MAP;
+        if (has(t, " pet ", " pets ", " dog ", " dogs ", " cat ", " cats ", "puppy", "puppies", "kitten", " pup ", " pups ", "doggy", "kitty",
+                "your pet", "your dog", "your cat")) return TalkTopic.PET;                                // [pets]
         if (has(t, "lost and found", "lost property", "lost my", "i lost", "dropped my", "i dropped", "anything of mine", "my things",
                 "turned up")) return TalkTopic.LOST;
         if (has(t, "stir trouble", "stir up", "rumours about", "rumors about", "they say about you", "saying about you")) return TalkTopic.STIR;

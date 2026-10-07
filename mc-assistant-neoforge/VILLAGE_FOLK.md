@@ -6390,3 +6390,93 @@ The game tests check that a busker plays on a note block lent out of the stores,
 one coin out of their own purses into its purse, and the note block goes back afterwards (ab04); that a player's
 coin moves from the player to the busker (ab05); and that a good busker is booked by the tavern and plays there on
 the day of rest, paid its fee once out of the treasury (ab06).
+
+## Pets
+
+The towns keep dogs and cats now, and not just the odd stray a family with children coaxes home (see *Families, pets
+and gardens*): a pet is part of a household for the whole of its life.
+
+**Who has one.** A settled household (the town a few days old, fed and content enough) wants a pet if it is that sort of household:
+six in ten with children, a quarter without, so in time a third to a half of the town's homes have one. The town keeps
+one for every two households and a couple over, twelve at the most, counting the young and the strays.
+
+**Where they come from.**
+* *A stray* turns up about the town now and then while a household wants one. A grown-up of that household takes a bit
+  of meat or fish out of its chest (else the stores), goes out to it, and brings it home.
+* *A litter.* A well-fed pet in its prime has a litter now and then with another of its kind about the town: one to
+  three, never past the town's cap. The parents eat first (out of the bowl or the stores). The young go to the
+  mother's family's friends, then to any household that wants one; after a couple of days any household with room
+  takes one in. One that nobody takes goes off about the town as a stray.
+* *The merchant from afar* may have a pup or a kitten on its lead on market day. A household that wants one and has
+  six coins buys it; at dusk an unsold one goes on with the merchant.
+
+A child of the house names it (Biscuit, Shadow, Pip, Whiskers, Smudge, Marmalade…), never a name somebody in the town
+already has, and the name is on its tag. It belongs to the household and moves house with it.
+
+**A dog's day.** It follows the children while they play, and now and then a child throws a stick for it to fetch.
+With the children at school it trots along with a grown-up of the house to work. At night it sleeps in its dog bed by
+the door, or curled up at the foot of a sleeping child's bed. If a monster or a raider comes near after dark it barks,
+and the first bark at each one wakes the nearest guard and sends it out. A dog warns; it never fights. Next morning you
+will hear about it: *Biscuit kept us up barking at a zombie all night.*
+
+**A cat's day.** It sleeps in its basket or on a child's bed at night, up on the roof in the sun on a fine afternoon,
+and of a morning or an evening it sits in a window or potters about the house and garden. Creepers keep away from a
+cat and phantoms avoid one, as in the game; a creeper it sees off the step is talked about. It calls on the town's
+fishers, and a fisher with fish in its pack spares it one.
+
+**Food and care.**
+* The **pet bowl** stands by the hearth. A child (they love it) or a grown-up fills it from the household's chest or
+  the stores: bones or meat for a dog, fish for a cat. Once the shop is open, the household pays for the food. You can
+  see what's in the bowl, and you can put a bone, meat or fish in it yourself. A pet eats once a day; one that is
+  hungry with an empty bowl follows a grown-up about and begs.
+* A household that has had nothing to feed its pet with for three days gives it to a better-off neighbour.
+* A sick or hurt pet is seen to by the town's healer, with a bit of its own food or a drop of honey from the stores.
+* Pets grow old (a year every five days, like the folk) and die of it in their sleep: a dog at eleven to fifteen, a
+  cat a little older. The family buries it in the garden under a small sign, with a flower if the stores have one,
+  and the chronicle remembers it.
+
+**The new things.** Each has a real recipe, so the town's makers know it, and the shop's order book keeps them once
+there are pets.
+
+| Thing | Recipe | Age | Worth | Made by |
+|---|---|---|---|---|
+| Pet Bowl | planks, a bowl, planks in a row (or five bricks for two) | Wood | 0.8c | the shop's workshop; a household with no shop to go to knocks its own together |
+| Dog Bed | wool in a box of five planks | Wood | 1.6c | the tailor |
+| Cat Basket | wool in a basket of five sticks | Wood | 1.2c | the tailor |
+| Pet Collar | string, leather, string | Stone | 1.4c | the tailor; dye it at the crafting table like leather armour |
+| Pet Treat | two wheat and a piece of meat or fish make four | Wood | 0.15c | the cook |
+
+A household gets each one out of the stores (free until the shop opens, bought after). It sets the bowl by the hearth,
+the dog bed by the door and the cat basket under a window, buckles the collar on (the collar's dye is the colour its
+pet wears), and the children give it a treat now and then. You can place a bowl or a bed in a folk's house yourself
+and the household will use it.
+
+**You and the pets.**
+* *Befriend one:* right-click a household's pet with a **pet treat**. It eats from your hand and trots after you for a
+  while, and its family thinks the better of you. After two treats it counts you a friend.
+* *Adopt a stray:* right-click a stray about the town with a pet treat and it's yours, named by the town's children.
+* *Buy a pup or a kitten* from a litter for 3 coins (paid to the family), or the merchant's for 6: hold the coins and
+  right-click it.
+* *Ask about it:* the **Your pet?** button on a folk's card. The card has a **Pet** line too: the pet's age, whether it
+  has been fed today, its collar, bowl and bed, its litters, ribbons and friends.
+* *A lost dog:* now and then a dog goes off after a rabbit and comes home by itself the next morning. The quest board
+  can send one missing too ("find my lost dog"). Find it out past the edge of town, right-click it, and it follows you
+  home.
+
+**At the fair.** After the fair's own classes comes the **pet show**: every household's pet, and your own dog or cat if
+you have brought it to the board. The best-kept pet wins a blue ribbon (fed today, a collar, a bed of its own, a treat
+lately, friends among the guests). The ribbon is a sheet of the stores' paper with the year on it, and the chronicle
+names the winner.
+
+**Where to look.** The town's books (the board, the **News** page) have a **Pets** panel: how many pets, fed and kept,
+the young looking for homes, the strays, what the makers are wanted for, the litters, the barking and the creepers seen
+off, the healer's visits, the pet show's winner, and those remembered. `/village pets` gives the same, with where each
+pet is; `/village pets books` opens the books there. Operators: `/village pets now stray|takein|litter|fill|things|
+merchant|lost|homes` brings one about now out of the town's own stores and purses, and `/village pets stage` sets the
+scene for the pictures.
+
+The game tests `PetsGameTests` (pe01 to pe10) check that a household with a child takes in a stray and names it, the
+dog follows the child, the cat sleeps on the child's bed and on the roof, the bowl is filled from the stores and the dog
+eats, the new things have recipes, ages and a worth and the tailor, the cook and the shop make them, a litter finds a
+home within the town's cap, a player adopts a stray, befriends a dog and buys a pup, a bark brings out the watch, a lost
+dog is brought home, and the best-kept pet wins at the show.

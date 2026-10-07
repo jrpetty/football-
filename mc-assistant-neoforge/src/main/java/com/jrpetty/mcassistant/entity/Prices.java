@@ -419,5 +419,10 @@ public final class Prices {
         "bell 12.0 C", "enchanted_book 4.0 C", "written_book 2.5 C", "filled_map 1.5 C",
         "suspicious_stew 0.4 F", "tipped_arrow 0.5 C", "firework_star 0.5 C", "potion 1.0 C",
         "splash_potion 4.5 C", "lingering_potion 6.0 C",
+        // [pets] The pets' things (entity/Pets), made, not gathered, but their worth set here so the board, the shop and the
+        // makers agree on it: a little over what goes into each by its recipe (a bowl of planks and a bowl, a dog bed of
+        // planks and wool, a basket of sticks and wool, a collar of leather and string, four treats of wheat and meat).
+        "mc_assistant:pet_bowl 0.8 C", "mc_assistant:dog_bed 1.6 C", "mc_assistant:cat_bed 1.2 C", "mc_assistant:collar 1.4 C",
+        "mc_assistant:pet_treat 0.15 C",
     };
 }

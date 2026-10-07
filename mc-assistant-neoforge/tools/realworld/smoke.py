@@ -1895,6 +1895,48 @@ def arms_buskers_stage(r, look, cx, cz):
     say("alive after the arms and the buskers: %s" % client_alive())
 
 
+def pets_stage(r, look, cx, cz):
+    """[pets] The town's pets (entity/Pets), in the village spawned at cx, cz, of an afternoon: bones, fish, a pet bowl and
+    a dog bed put in the stores first, as a player would bring them; then /village pets stage gives a household with a
+    child a dog (a stray taken in now with the stores' bones) and sends it to the child, sets the bowl and the bed out in
+    that home and fills the bowl, and gives another household a cat, up on its roof in the sun (or on a bed). Pictures:
+    the dog at the child's heels, the bowl and the bed inside the house, the cat on the roof; then /village pets said, and
+    the town's books open at the News page (its Pets panel)."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("time set 8000")                              # the afternoon: the children out, a cat on the roof till half past nine
+    r.cmd("weather clear")
+    where = "execute positioned %d 100 %d run " % (cx, cz)
+    bell = r.cmd(where + "village bell")
+    st = re.search(r"STORES (-?\d+) (-?\d+) (-?\d+)", bell)
+    if st:
+        sx, sy, sz = (int(v) for v in st.groups())
+        for slot, item in ((23, "minecraft:bone 16"), (24, "minecraft:cod 12"), (25, "mc_assistant:pet_bowl 1"),
+                           (26, "mc_assistant:dog_bed 1")):
+            say("stores: " + r.cmd("item replace block %d %d %d container.%d with %s" % (sx, sy, sz, slot, item)))
+    else:
+        say("no stores found to put the bones and the bowl in")
+    out = r.cmd(where + "village pets stage")
+    say("pets stage: " + out[:1500])
+    views = re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out)
+    if not views:
+        say("no pets staged; nothing to photograph")
+    time.sleep(4)                                       # the dog trots to the child, the bowl is filled
+    for name, x, y, z, ax, ay, az in views:
+        x, y, z, ax, ay, az = int(x), int(y), int(z), int(ax), int(ay), int(az)
+        look("26-" + name, x + 0.5, y + 0.2, z + 0.5, ax + 0.5, ay + 0.4, az + 0.5, wait=6)
+    say("pets: " + r.cmd(where + "village pets")[:1500])
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, cx, ground_height(r, cx, cz) + 2, cz))
+    time.sleep(3)
+    say("books: " + r.cmd("execute as %s at @s run village pets books" % USER))
+    time.sleep(4)
+    shot("26-pets-4-books")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the pets: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")
