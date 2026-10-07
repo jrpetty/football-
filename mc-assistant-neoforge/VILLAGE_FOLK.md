@@ -8257,7 +8257,6 @@ and when it falls is mourned and its iron gathered back; that a snow golem is bu
 winter, none in a desert town (and why), and that it melts away in spring; and that no golem is built, and no iron
 touched, while the watch's armour still wants the iron, and that with iron enough for both, it is.
 
-<<<<<<< HEAD
 ## Interviews
 
 When a town fills a post that matters and more than one folk wants it, it holds a real interview. It happens in the
@@ -8396,7 +8395,7 @@ day it was written. Right-click it to read it. One you craft yourself is blank.
 * the letter is made from the stores' paper and ink, paid into the treasury, held on the bench, held by the chair while
   read, and kept afterwards;
 * a candidate from a town two hundred blocks away arrives in time and takes its seat.
-=======
+
 ## The fireworks maker
 
 Every rocket a town sends up is one of its own fireworks maker's, made from the gunpowder, paper and dye in its stores
@@ -8520,4 +8519,3 @@ The game tests `FireworksGameTests` (fw01 to fw10) check that:
   war won puts the victory's rockets first on the maker's list;
 * the hut is brought back down to a dozen gunpowder; nothing is lit while folk stand on the rack, and the display goes
   on once they step off; and the display is in the chronicle and the next morning's gazette.
->>>>>>> worktree-agent-a6156817326098f06
