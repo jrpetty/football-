@@ -167,6 +167,13 @@ public final class VillageCommands {
                 .then(Commands.argument("what", com.mojang.brigadier.arguments.StringArgumentType.word())
                     .suggests((ctx, b) -> net.minecraft.commands.SharedSuggestionProvider.suggest(com.jrpetty.mcassistant.entity.Sights.kinds(), b))
                     .executes(ctx -> sights(ctx, com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "what")))))
+            // [batchG] Visitors and the player (entity/Visitors): who is visiting and where, the books' lines, the map room's
+            // frames and the watch's dogs; for operators and the pictures, a bard, a tourist or the merchant brought in now, a
+            // friend's visit sent, the map drawn, a dog tamed, gifts hung, or the evening's visitors set in their places.
+            .then(Commands.literal("visitors").requires(src -> src.hasPermission(2)).executes(ctx -> visitors(ctx, null))
+                .then(Commands.argument("what", com.mojang.brigadier.arguments.StringArgumentType.word())
+                    .suggests((ctx, b) -> net.minecraft.commands.SharedSuggestionProvider.suggest(com.jrpetty.mcassistant.entity.Visitors.kinds(), b))
+                    .executes(ctx -> visitors(ctx, com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "what")))))
             // The ground of a town already standing levelled round it, as a founding at a board levels it (a town
             // the world founded, or one from before its ground was levelled). An operator, or the world's owner.
             .then(Commands.literal("level").executes(VillageCommands::levelGround))
@@ -843,6 +850,18 @@ public final class VillageCommands {
         net.minecraft.server.level.ServerLevel level = ctx.getSource().getLevel();
         java.util.List<String> lines = what == null ? com.jrpetty.mcassistant.entity.Sights.lines(level, v)
             : com.jrpetty.mcassistant.entity.Sights.now(level, v, what);
+        for (String l : lines) ctx.getSource().sendSuccess(() -> Component.literal(l), false);
+        return lines.size();
+    }
+
+    /** [batchG] /village visitors [what]: the visitors, the map room and the dogs; or one of them brought about now. */
+    private static int visitors(CommandContext<CommandSourceStack> ctx, @javax.annotation.Nullable String what) {
+        Villages.Village v = villageHere(ctx);
+        if (v == null) {
+            ctx.getSource().sendFailure(Component.literal("No village yet."));
+            return 0;
+        }
+        java.util.List<String> lines = com.jrpetty.mcassistant.entity.Visitors.command(ctx.getSource().getLevel(), v, what);
         for (String l : lines) ctx.getSource().sendSuccess(() -> Component.literal(l), false);
         return lines.size();
     }

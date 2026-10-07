@@ -1,0 +1,28 @@
+{
+  "parent": "mc_assistant:village/town_25",
+  "display": {
+    "icon": {
+      "id": "minecraft:bell"
+    },
+    "title": {
+      "text": "A Proper Town"
+    },
+    "description": {
+      "text": "A town you founded, or are a citizen of, reaches fifty folk"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "granted"
+    ]
+  ]
+}

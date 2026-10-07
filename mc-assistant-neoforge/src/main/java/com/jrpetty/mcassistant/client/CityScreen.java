@@ -2548,6 +2548,13 @@ public class CityScreen extends Screen {
             for (String s : cal) all.add("  " + s);
             all.add("");
         }
+        // [batchG] Visitors (the bard, tourists, the merchant) and what they spent, friends' visits, the map room, the dogs.
+        List<String> guests = strings("visitors");
+        if (!guests.isEmpty()) {
+            all.add("Visitors:");
+            for (String s : guests) all.add("  " + s);
+            all.add("");
+        }
         all.add("The chronicle, latest first:");
         all.addAll(strings("news"));
         lines(g, all, x, y, cw, ch);

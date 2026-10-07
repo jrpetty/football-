@@ -98,6 +98,9 @@ public final class FolkTalk {
         if (f.isBaby() && topic != TalkTopic.GIFT) return child(f, p, topic, op);
         String kept = topic == TalkTopic.OPEN ? Welcome.handOver(f, p) : "";
         if (!kept.isEmpty()) return manner(f, kept.trim());
+        // [batchG] A visitor from afar answers for itself: its own story, the bard's news, the merchant's wares.
+        String visitor = Visitors.talk(f, p, topic, text);
+        if (visitor != null) return manner(f, visitor);
         String said = switch (topic) {
             case OPEN -> greet(f, p, op, firstMeeting, heard);
             case HOW -> howAreYou(f);
@@ -175,6 +178,7 @@ public final class FolkTalk {
             case PRICES -> Commerce.prices(f, p, text);
             default -> puzzled(f);
         };
+        said = KeptGifts.mention(f, p, topic, said);          // [batchG] "I keep the diamond you gave me by my bed"
         // Somebody who can't stand you says as little as it can.
         if (me.affinity(p.getUUID()) <= -50 && topic != TalkTopic.GIFT && topic != TalkTopic.STAY && topic != TalkTopic.FINE) {
             said = pick(f.getRandom(), "I've nothing to say to you.", "Leave me be.",
@@ -257,7 +261,9 @@ public final class FolkTalk {
 
     /** What it is doing this minute, in a line for the top of the talk screen. */
     public static String nowDoing(VillageFolkEntity f) {
-        if (f.isSleeping()) return "Asleep";
+        if (f.isSleeping() && !Visitors.is(f)) return "Asleep";    // [batchG] (a visitor sleeps "at the inn")
+        String visit = Visitors.doing(f);                     // [batchG] a visitor's stay, or away at a friend's in another town
+        if (visit != null) return visit;
         String school = School.doing(f);                     // at a desk, or at the lectern (School)
         if (school != null) return school;
         String family = Families.doing(f);                    // a game, supper at home, a story, a family errand (Families)
@@ -293,6 +299,7 @@ public final class FolkTalk {
      * family and friends, what it loves and hopes for, and what it needs.
      */
     public static String card(VillageFolkEntity f) {
+        if (Visitors.is(f)) return Visitors.card(f);           // [batchG] a visitor from afar: who it is, and its stay
         StringBuilder sb = new StringBuilder();
         Persona me = f.persona();
         Social.Life life = f.life();
@@ -338,6 +345,7 @@ public final class FolkTalk {
         line(sb, "Home", (house != null && !house.isEmpty() ? house + " " : "") + (bed == null ? "No bed of its own yet."
             : "A bed of its own" + (f.comforts() > 0 ? ", and " + f.comforts() + (f.comforts() == 1 ? " comfort" : " comforts") + " it bought" : "") + "."));
         line(sb, "Comforts", Decor.cardLine(f));            // its home's things, its trade's and its colour (Decor)
+        for (String[] l : Visitors.cardLines(f)) line(sb, l[0], l[1]);   // [batchG] its gifts on show, its dog, its visits
         line(sb, "Quarter", Quarters.cardLine(f));          // its quarter of the town, the smoke, the park (Quarters)
         line(sb, "Nature", life.traitsLabel());
         line(sb, "Knacks", FolkSkills.cardLine(f));         // what it chose for itself: the Skills page has the rest
@@ -577,6 +585,7 @@ public final class FolkTalk {
             case "homely" -> Decor.moodWords(f);
             case "birthday" -> Birthdays.moodWords(f);
             case "anniversary" -> Families.moodWords(f);
+            case "bard", "visit" -> Visitors.moodWords(f, why);        // [batchG] the bard's songs, a friend from away
             case "smoke", "noise", "parkside", "park" -> Quarters.words(f, why);      // where it lives (Quarters, Park)
             case "proud" -> Museum.prideWords(f);
             default -> "";
@@ -1037,6 +1046,7 @@ public final class FolkTalk {
             said = pick(r, "Oh. Er — thank you, I suppose.", "A " + what + ". Well. That's… something.");
         }
         ItemStack one = held.split(1);
+        KeptGifts.received(f, one, you, day);                 // [batchG] a precious gift is its own, to keep on show at home
         // A loved thing that isn't eaten is kept: its own, not the stores', and it moves house with it (Homes).
         if (kind != null && kind == me.loves() && one.get(DataComponents.FOOD) == null) Homes.keepsake(one, f);
         ItemStack left = f.insertItem(one);

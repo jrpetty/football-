@@ -925,6 +925,7 @@ public final class Founding extends SavedData {
         }
         Villages.tell(id, day, folk + " founders came to " + Villages.name(id) + ", and the ground was levelled for them, "
             + across + " blocks across");
+        Advancements.founded(level, s.founder, id);          // [batchG] its founder written down, and the founder's toast
         LOG.info("[MCA-FOUND] {} is founded: {} folk, the ground levelled {} across", Villages.name(id), folk, across);
         if (s.ground != null && s.level != UNSET) LOG.info("[MCA-FOUND] {}: {}", Villages.name(id), flatness(level, s));
         Villages.Village v = Villages.get(id);

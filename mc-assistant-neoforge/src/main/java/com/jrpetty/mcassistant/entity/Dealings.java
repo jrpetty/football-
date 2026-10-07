@@ -328,6 +328,7 @@ public final class Dealings {
                     + "\n\nYour friend,\n" + best.displayNameCap(), List.of());
             give(p, letter);
             p.displayClientMessage(Component.literal(best.displayNameCap() + " of " + Villages.name(v.id()) + " has written you a letter."), false);
+            if (p instanceof net.minecraft.server.level.ServerPlayer sp) Advancements.letter(sp);   // [batchG] You've Got Post
         }
     }
 
