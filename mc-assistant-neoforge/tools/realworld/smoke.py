@@ -3038,6 +3038,62 @@ def cartographer_stage(r, look, cx, cz):
     say("alive after the maps: %s" % client_alive())
 
 
+
+def individual_stage(r, look, cx, cz):
+    """[individual] Every folk its own person (entity/Individual, Looks, Manner; client/FolkFaces, FolkPoses). In clear
+    air out past the town, /village individual stage stands up a crowd of eighteen of every age on a lawn, the back row
+    a step up, their work hats off (children at three ages of growing, the young, the greying, a scarred guard, an
+    eyepatch, a sooty smith, a sunburnt farmer, the old in spectacles, the oldest bent over their sticks); beside them a
+    family of five made by the town's own sums (two parents, their eldest, and twins); and past them a well and a bench
+    with an old folk sat smoking its pipe. Pictures at noon: the whole crowd, close on each half of it, the family; then
+    at dusk the pipe at the well; then the card of the folk nearest the player, opened at its About page (its Looks,
+    Dream, Fears, Habits, Favourite place and Keepsake lines). Last, /village individual for the town."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    r.cmd("weather clear")
+    sx, sy, sz = cx + 120, 150, cz + 90                # clear air out past the town: the stage lays its own lawn
+    r.cmd("tp %s %d %d %d" % (USER, sx, sy + 3, sz + 10))
+    time.sleep(10)                                     # the stage's chunks arrive
+    out = r.cmd("execute positioned %d %d %d run village individual stage" % (sx, sy, sz))
+    say("individual stage: " + out[:900])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("nothing staged for every folk its own person; nothing to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            return
+        x, y, z, ax, ay, az = views[name]
+        look("39-individual-" + picture, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    time.sleep(6)                                      # the faces are built as they come into sight, a few a frame
+    shoot("crowd", "1-crowd", 8)
+    shoot("crowd-left", "2-faces-left", 5)
+    shoot("crowd-right", "3-faces-right", 5)
+    shoot("family", "4-family", 5)
+    m = re.search(r"(\d+)", r.cmd("time query daytime"))
+    now = int(m.group(1)) % 24000 if m else 6000
+    r.cmd("time add %d" % ((12900 - now) % 24000))     # dusk, the same day: the pipe at the well
+    shoot("pipe", "5-pipe-at-dusk", 8)
+    midday(r)
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d facing %d %d %d" % (USER, sx, sy, sz + 2, sx, sy + 1, sz))
+    time.sleep(3)
+    say("card: " + r.cmd("execute as %s at @s run village individual card" % USER))
+    time.sleep(4)
+    shot("39-individual-6-card")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("kill @e[tag=folk_lineup,type=!player]")
+    r.cmd("gamemode spectator %s" % USER)
+    hy = ground_height(r, cx, cz)
+    say("individual: " + r.cmd("execute positioned %d %d %d run village individual" % (cx, hy + 1, cz))[:1500])
+    say("alive after every folk its own person: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

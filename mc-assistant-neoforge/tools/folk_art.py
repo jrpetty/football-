@@ -224,6 +224,28 @@ PARTS = [
     ("golemkeeper_scarf", "body", (0, 0, 0), (0, 0, 0), [(64, 17, -4.5, -1, -3.5, 9, 2, 7, 0.25)], "golemkeeper"),
     ("golemkeeper_scarf_end", "body", (0, 0, 0), (0, 0, 0), [(100, 0, 0.8, 0.6, -5.6, 2, 6, 1, 0)], "golemkeeper"),
     ("golemkeeper_shears", "body", (0, 0, 0), (0, 0, 0), [(108, 0, -5.6, 8.5, -1, 1, 3, 2, 0)], "golemkeeper"),
+    # [individual] Who a folk is, in the round: what its own face picture (tools/folk_looks.py) paints, and only
+    # that, on boxes no trade's picture touches (the bottom half of the sheet). A box its picture leaves clear is
+    # not there at all, so these are worn-by "look": a bun on the folk that wears one, nothing on the rest.
+    # Long hair down its back, a bun, a ponytail, a braid, hair tied back at the nape, the volume of curls or a
+    # wild mop, and a long beard below the short one.
+    ("hair_fall", "head", (0, 0, 0), (0, 0, 0), [(0, 60, -4, -0.5, 3.6, 8, 6, 1, 0)], "look"),
+    ("hair_bun", "head", (0, 0, 0), (0, 0, 0), [(20, 60, -2, -9.5, 4.2, 4, 3, 3, 0)], "look"),
+    ("hair_tail", "head", (0, -7.5, 4.4), (0.42, 0, 0), [(36, 60, -1, 0, -0.5, 2, 8, 2, 0)], "look"),
+    ("hair_braid", "head", (0, -4.5, 4.3), (0.2, 0, 0), [(46, 60, -1, 0, -0.5, 2, 11, 2, 0)], "look"),
+    ("hair_knot", "head", (0, -4, 4.4), (0.55, 0, 0), [(56, 60, -1, 0, -0.5, 2, 3, 2, 0)], "look"),
+    ("hair_puff", "head", (0, 0, 0), (0, 0, 0), [(64, 60, -4, -10, -4, 8, 5, 8, 1.0)], "look"),
+    ("beard_long", "head", (0, 0, 0), (0, 0, 0), [(96, 60, -3, 2, -5, 6, 6, 1, 0)], "look"),
+    # Spectacles on its nose, the frames a block's sixteenth proud of its face.
+    ("spectacles", "head", (0, 0, 0), (0, 0, 0), [(0, 76, -4, -7, -5, 8, 3, 1, 0)], "look"),
+    # A pipe at the corner of its mouth, out only when it is smoking it (FolkModel: the manner).
+    ("pipe", "head", (-2.5, -2, -4.5), (0.3, 0.25, 0), [(20, 76, -0.5, -0.5, -4, 1, 1, 4, 0),
+                                                        (30, 76, -1, -2.5, -5, 2, 2, 2, 0)], "pipe"),
+    # A walking stick in the hand that is not its working hand, its foot on the ground.
+    ("cane_right", "right_arm", (-1, 9, -1), (0, 0, 0), [(40, 76, -0.5, -1, -0.5, 1, 14, 1, 0),
+                                                          (44, 76, -0.5, -2, -2.5, 1, 1, 3, 0)], "cane"),
+    ("cane_left", "left_arm", (1, 9, -1), (0, 0, 0), [(52, 76, -0.5, -1, -0.5, 1, 14, 1, 0),
+                                                       (56, 76, -0.5, -2, -2.5, 1, 1, 3, 0)], "cane"),
 
     # [fireworks] Fireworks maker: a canvas apron gone grey with soot, two rockets in its pocket, brass goggles with
     # smoked lenses pushed up on its forehead, and a bright scarf of red and gold round its neck, its tail hanging down.
@@ -1517,15 +1539,8 @@ def outfit_storekeeper():
     legs(cv, pin, lambda x, y: grain((28, 26, 28), x, y, 3, 125), boot_from=10, sole=(20, 18, 18))
     for name in ("right_leg", "left_leg"):
         Box(cv, name).put("front", 1, 10, (96, 96, 104))                # a polish shine
-    # Spectacles.
-    gl = (210, 176, 80)
-    face_paint(cv, [(0, 4, gl), (3, 4, gl), (4, 4, gl), (7, 4, gl),
-                    (1, 5, gl), (2, 5, gl), (5, 5, gl), (6, 5, gl), (1, 3, gl), (2, 3, gl), (5, 3, gl), (6, 3, gl)])
-    head = Box(cv, "head")
-    for face in ("right", "left"):
-        for x in range(8):
-            if (face == "right" and x >= 4) or (face == "left" and x <= 3):
-                head.put(face, x, 4, gl)
+    # [individual] No spectacles painted on: a storekeeper wears them when its own eyes want them (entity/Keepsakes,
+    # tools/folk_looks.py), not because it keeps the stores.
     # The derby.
     dk = (44, 38, 36)
     cr = Box(cv, "storekeeper_crown")
