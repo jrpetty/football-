@@ -1,0 +1,55 @@
+{
+  "ambientocclusion": false,
+  "textures": {
+    "ribbon": "mc_assistant:block/opening_ribbon",
+    "particle": "mc_assistant:block/opening_ribbon"
+  },
+  "elements": [
+    {
+      "from": [0, 12, 7.5],
+      "to": [16, 14, 8.5],
+      "faces": {
+        "north": { "uv": [0, 6, 16, 8], "texture": "#ribbon" },
+        "south": { "uv": [0, 6, 16, 8], "texture": "#ribbon" },
+        "up": { "uv": [0, 6, 16, 7], "texture": "#ribbon" },
+        "down": { "uv": [0, 7, 16, 8], "texture": "#ribbon" },
+        "east": { "uv": [7, 6, 8, 8], "texture": "#ribbon", "cullface": "east" },
+        "west": { "uv": [8, 6, 9, 8], "texture": "#ribbon", "cullface": "west" }
+      }
+    },
+    {
+      "from": [7, 11.5, 7],
+      "to": [9, 14.5, 9],
+      "faces": {
+        "north": { "uv": [6, 7, 8, 10], "texture": "#ribbon" },
+        "south": { "uv": [6, 7, 8, 10], "texture": "#ribbon" },
+        "east": { "uv": [8, 7, 10, 10], "texture": "#ribbon" },
+        "west": { "uv": [8, 7, 10, 10], "texture": "#ribbon" },
+        "up": { "uv": [6, 8, 8, 10], "texture": "#ribbon" },
+        "down": { "uv": [6, 8, 8, 10], "texture": "#ribbon" }
+      }
+    },
+    {
+      "from": [6.5, 9, 7.75],
+      "to": [7.5, 11.5, 8.25],
+      "faces": {
+        "north": { "uv": [2, 10, 3, 12.5], "texture": "#ribbon" },
+        "south": { "uv": [2, 10, 3, 12.5], "texture": "#ribbon" },
+        "east": { "uv": [3, 10, 3.5, 12.5], "texture": "#ribbon" },
+        "west": { "uv": [3, 10, 3.5, 12.5], "texture": "#ribbon" },
+        "down": { "uv": [2, 12, 3, 12.5], "texture": "#ribbon" }
+      }
+    },
+    {
+      "from": [8.5, 9.5, 7.75],
+      "to": [9.5, 11.5, 8.25],
+      "faces": {
+        "north": { "uv": [12, 10, 13, 12], "texture": "#ribbon" },
+        "south": { "uv": [12, 10, 13, 12], "texture": "#ribbon" },
+        "east": { "uv": [13, 10, 13.5, 12], "texture": "#ribbon" },
+        "west": { "uv": [13, 10, 13.5, 12], "texture": "#ribbon" },
+        "down": { "uv": [12, 11.5, 13, 12], "texture": "#ribbon" }
+      }
+    }
+  ]
+}

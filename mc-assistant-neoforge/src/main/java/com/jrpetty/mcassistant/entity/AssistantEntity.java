@@ -3850,6 +3850,18 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      *  anywhere in it. */
     @Nullable public UUID ownerId() { return ownerId; }
 
+    /** [civic] Off its town's roll and nobody's for now: one of a party of newcomers on the road to ask another town
+     *  to take it in (Newcomers). Taken off the register too, or the town it left would go on counting it. */
+    public void leaveTheRoll() {
+        if (registeredOwner != null && registeredName != null) {
+            Map<String, AssistantEntity> old = BY_OWNER.get(registeredOwner);
+            if (old != null) old.remove(registeredName.toLowerCase(), this);
+        }
+        registeredOwner = null;
+        registeredName = null;
+        ownerId = null;
+    }
+
     /** Join a settlement. The same bookkeeping as being hired, minus the
      *  hirer. */
     public void adoptVillage(UUID villageId) {

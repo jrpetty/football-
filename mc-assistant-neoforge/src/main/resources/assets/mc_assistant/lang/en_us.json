@@ -105,5 +105,6 @@
   "item.mc_assistant.reinforced_pickaxe": "Reinforced Pickaxe",
   "item.mc_assistant.brewers_stout": "Brewer's Stout",
   "item.mc_assistant.farmhouse_pie": "Farmhouse Pie",
-  "item.mc_assistant.apprentice_journal": "Apprentice's Journal"
+  "item.mc_assistant.apprentice_journal": "Apprentice's Journal",
+  "block.mc_assistant.opening_ribbon": "Opening Ribbon"
 }

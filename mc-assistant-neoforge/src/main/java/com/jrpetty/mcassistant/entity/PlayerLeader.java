@@ -56,8 +56,8 @@ public final class PlayerLeader {
         @Nullable String call(ServerLevel level, Villages.Village v, UUID caller, String question);
     }
 
-    /** The seam for the town-wide votes (left open for the referendums). */
-    public static volatile Referendums REFERENDUMS = null;
+    /** The seam for the town-wide votes: a great work named is put to the whole town (entity/Referendums.leaderCalls). */
+    public static volatile Referendums REFERENDUMS = com.jrpetty.mcassistant.entity.Referendums::leaderCalls;
 
     /** The envoys a leader has been told of (once each). */
     private static final java.util.Set<UUID> TOLD = java.util.concurrent.ConcurrentHashMap.newKeySet();

@@ -324,6 +324,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // [batchG] A visitor from afar (the bard, a tourist, the merchant), one of ours away for the day at a friend's
         // in another town, or a guard out taming a dog for the watch: that is its day (Visitors).
         if (Visitors.drive(this)) return;
+        if (Newcomers.drive(this)) return;                     // [civic] a newcomer on the road, or camped at a town's edge
         Leisure.tick(this);
         if (tickCount % 100 == 53) Meals.tick(this);           // breakfast, the midday meal, supper
         // Lost underground with no way up it can walk (a mine run cut short, a fall into a cave): sent up
@@ -451,12 +452,18 @@ public class VillageFolkEntity extends AssistantEntity {
         // Election day (Elections): at its own hour, to the board to cast its vote.
         if (!withAPlayer && tickCount % 4 == 2 && level() instanceof net.minecraft.server.level.ServerLevel polling
                 && Elections.goVote(this, polling)) return;
+        // [civic] The town's vote on a great work or on newcomers (Referendums): to the board, at its own hour.
+        if (!withAPlayer && tickCount % 4 == 2 && level() instanceof net.minecraft.server.level.ServerLevel referendum
+                && Referendums.goVote(this, referendum)) return;
         // The school's morning (School): the children to their desks, the teacher to the lectern.
         if (!withAPlayer && tickCount % 4 == 0 && level() instanceof net.minecraft.server.level.ServerLevel schooling
                 && School.hold(this, schooling)) return;
         // [batchC] Sport and play (Sport): a match to play or watch on the rest day, an away day at a neighbour's
         // pitch, the fishing contest or the children's race, the watch at the butts of a morning.
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel sport && Sport.hold(this, sport)) return;
+        // [civic] The town's great work, built together (BigWorks): everybody on the works day, and anybody free after it.
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel greatWork
+                && (tickCount % 4 == 1 ? BigWorks.hold(this, greatWork) : BigWorks.busy(this))) return;
         // Called to the town's own work (TownJobs): to the spot, and at it.
         if (!withAPlayer && tickCount % 4 == 3 && level() instanceof net.minecraft.server.level.ServerLevel works
                 && TownJobs.hold(this, works)) return;
@@ -1178,6 +1185,7 @@ public class VillageFolkEntity extends AssistantEntity {
         m = Health.mood(this, day, m, why);             // [batchA] a cold (Health)
         m = Civics.mood(this, day, m, why);             // [batchF] a letter, the town meeting, a good turn, found and home
         m = Crime.mood(this, day, m, why);              // [crime] robbed, paid back, shamed, wrongly accused and cleared
+        m = Referendums.mood(this, day, m, why);        // [civic] proud of the work it built; a newcomer's gratitude
         why.sort((a, b) -> Integer.compare((Integer) b[1], (Integer) a[1]));
         java.util.List<String> keys = new java.util.ArrayList<>();
         for (Object[] w : why) keys.add((String) w[0]);

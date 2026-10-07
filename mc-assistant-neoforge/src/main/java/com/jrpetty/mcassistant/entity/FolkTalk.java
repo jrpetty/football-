@@ -104,6 +104,11 @@ public final class FolkTalk {
         if (visitor != null) return manner(f, visitor);
         String civic = PlayerCivic.talk(f, p, topic, text);          // [player-civic] standing for leader; an apprenticeship
         if (civic != null) return manner(f, civic);
+        // [civic] A newcomer at the town's edge answers for itself; and "I vote aye" is a citizen's vote (Referendums).
+        String newcomer = Newcomers.talk(f, p, topic, text);
+        if (newcomer != null) return manner(f, newcomer);
+        String vote = Referendums.playerSays(f, p, text);
+        if (vote != null) return manner(f, vote);
         String said = switch (topic) {
             case OPEN -> greet(f, p, op, firstMeeting, heard);
             case HOW -> howAreYou(f);
@@ -132,7 +137,7 @@ public final class FolkTalk {
             case CHRONICLE -> chronicle(f, p, op, day);
             case CENSUS -> census(f, p);
             case CITIZEN -> Citizens.ask(f, p);
-            case COUNCIL -> Council.news(f) + " " + Elections.talk(f);
+            case COUNCIL -> Council.news(f) + " " + Elections.talk(f) + Referendums.talk(f);   // [civic] and the town's vote
             case HOUSE -> Homes.talk(f);
             case HOUSING -> Homes.ask(f, p, text);
             case FINE -> Laws.pay(f, p);
@@ -316,6 +321,7 @@ public final class FolkTalk {
      */
     public static String card(VillageFolkEntity f) {
         if (Visitors.is(f)) return Visitors.card(f);           // [batchG] a visitor from afar: who it is, and its stay
+        if (Newcomers.is(f)) return Newcomers.card(f);         // [civic] a newcomer asking to settle: from where, why, its trade
         StringBuilder sb = new StringBuilder();
         Persona me = f.persona();
         Social.Life life = f.life();
@@ -389,6 +395,7 @@ public final class FolkTalk {
         line(sb, "Town life", Civics.cardLine(f));          // [batchF] its letters, its quarter as warden, its good turns (Civics)
         line(sb, "The law", Crime.cardLine(f));             // [crime] its case, its record, robbed, cleared, a new leaf (Crime)
         line(sb, "Fire and flood", Disasters.cardLine(f));  // [disasters] a bucket chain, the flood, a night away, the fire watch
+        line(sb, "Votes and works", Referendums.cardLine(f));   // [civic] its vote, the works it built, where it came from
         java.util.List<String> friends = new java.util.ArrayList<>();
         for (Social.Bond b : life.friends()) {
             if (b.name != null && !b.name.isEmpty()) friends.add(b.name);
@@ -627,6 +634,7 @@ public final class FolkTalk {
             case "proud" -> Museum.prideWords(f);
             case "letter", "meeting", "favour", "found" -> Civics.moodWords(f, why);   // [batchF]
             case "robbed", "repaid", "shamed", "cleared" -> Crime.moodWords(f, why);  // [crime]
+            case "builtit", "grateful", "clash" -> Referendums.moodWords(f, why);      // [civic]
             default -> "";
         };
     }

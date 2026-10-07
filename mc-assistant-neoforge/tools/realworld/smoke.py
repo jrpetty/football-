@@ -1894,6 +1894,18 @@ def disasters_stage(r, look, cx, cz):
          side, the new bank.
     Then /village disasters said (the weather, the fires, the flood, the levee, the record). Not wired in: call
     it after cave_stage in main(). What is left alight at the fire is put out after (fire to air in its box)."""
+
+
+def referendum_stage(r, look, cx, cz):
+    """[civic] Referendums and newcomers (entity/Referendums, BigWorks, Newcomers): beside the town, on ground levelled
+    for it, a river seven wide (/village referendum stage), the masons' stock for a bridge put into the town's stores,
+    and a stone bridge over the river put to the town with the vote today. Late in the day, every folk's hour come,
+    the town walks to the board to vote: photographed at the board. The count (/village referendum count); the next
+    morning is the works day, and the town walks out to the river and builds the bridge together: photographed from
+    the bank. What is left laid and the opening ribbon strung (/village referendum finish): the ribbon across the
+    bridge's end, photographed. Then a family from outside camped at the town's edge asking to settle
+    (/village newcomers stage), photographed with the town behind them; and what /village referendum and
+    /village newcomers say."""
     say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
     r.cmd("gamemode spectator %s" % USER)
     midday(r)
@@ -2142,6 +2154,51 @@ def player_civic_stage(r, look, cx, cz):
     say("page shut: " + r.cmd("execute as %s run village civic close" % USER))
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the civic stage: %s" % client_alive())
+
+
+    sx, sz = cx + 70, cz - 95                        # beside the town, where the stage levels its own ground
+    r.cmd("tp %s %d %d %d" % (USER, sx - 12, hy + 20, sz + 18))
+    time.sleep(8)                                      # the stage's chunks arrive
+    out = r.cmd("execute positioned %d %d %d run village referendum stage" % (sx, hy, sz))
+    say("referendum stage: " + out[:800])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if "CALLED" not in out:
+        say("no bridge put to the town; nothing to photograph")
+        return
+
+    def shoot(name, wait):
+        if name not in views:
+            return
+        x, y, z, ax, ay, az = views[name]
+        look("26-" + name, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    def clock_to(target):
+        m = re.search(r"(\d+)", r.cmd("time query daytime"))
+        now = int(m.group(1)) % 24000 if m else 6000
+        r.cmd("time add %d" % ((target - now) % 24000))   # forward only (time set would put the world's days back)
+
+    say("the citizen's vote: " + r.cmd("execute as %s at @s run village referendum vote aye" % USER))
+    clock_to(10300)                                    # every folk's hour to vote has come
+    time.sleep(30)                                     # they walk to the board and vote
+    shoot("referendum-1-board", 6)
+    say("count: " + r.cmd("execute positioned %d %d %d run village referendum count" % (cx, hy + 1, cz))[:500])
+    clock_to(2500)                                     # the works day: the next morning
+    say("works: " + r.cmd("execute positioned %d %d %d run village referendum works" % (cx, hy + 1, cz))[:300])
+    time.sleep(45)                                     # the town walks out to the river and sets to
+    shoot("referendum-2-works", 8)
+    say("finish: " + r.cmd("execute positioned %d %d %d run village referendum finish" % (cx, hy + 1, cz))[:300])
+    shoot("referendum-3-ribbon", 6)
+    out = r.cmd("execute positioned %d %d %d run village newcomers stage" % (cx, hy + 1, cz))
+    say("newcomers stage: " + out[:500])
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    time.sleep(4)
+    shoot("newcomers-1-camp", 8)
+    say("referendum: " + r.cmd("execute positioned %d %d %d run village referendum" % (cx, hy + 1, cz))[:1500])
+    say("newcomers: " + r.cmd("execute positioned %d %d %d run village newcomers" % (cx, hy + 1, cz))[:900])
+    say("alive after the referendum: %s" % client_alive())
 
 
 def main():

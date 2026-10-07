@@ -513,6 +513,8 @@ public final class Crafts {
             store(level, v, string.copy());
             return "four lengths of string, spun from wool";
         }
+        String ribbon = BigWorks.tailorRibbon(level, v);       // [civic] the opening ribbon for the great work under way
+        if (ribbon != null) return ribbon;
         // [guard-kit] The watch's leather (WatchKit): a cap, a tunic, trousers and boots for every guard who wears
         // worse, out of the stores' leather, a little kept back for the books. Wool is for the beds; this is not.
         String kit = WatchKit.make(level, v, f);
