@@ -1847,6 +1847,73 @@ def cave_stage(r, look, cx, cz):
     say("alive after the caves: %s" % client_alive())
 
 
+def fleet_stage(r, look, cx, cz):
+    """[fleet] The fishing fleet, the fish market and the auction (entity/Fleet, FishMarket, Auctions). Early in the
+    morning, a bay is cut out past the town (/village fleet stage): a quay run out into it, the fish market on the bank
+    by it, the fleet's boats put in (a stage's, for nothing), and the town's fishers sent down to them. Pictures: the
+    bay from over the bank with the boats rowing out; the fish market on the quay; then the boats called home (/village
+    fleet home), tied up at the quay with the catch landed, the market open. Then the auction: a diamond put up by the
+    player, the town's lots drawn and the crowd called (/village auction now), the square from above with the auctioneer
+    and the lot held up over its stand; and the town's books at the Auction page."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("weather clear")
+    m = re.search(r"(\d+)", r.cmd("time query daytime"))
+    now = int(m.group(1)) % 24000 if m else 6000
+    if not 600 <= now <= 2000:
+        r.cmd("time add %d" % ((24000 + 800 - now) % 24000))     # the morning: the boats go out
+    hy = ground_height(r, cx, cz)
+    sx, sz = cx + 95, cz + 45                          # out past the first houses, on ground of its own
+    r.cmd("tp %s %d %d %d" % (USER, sx + 30, hy + 25, sz))
+    time.sleep(8)                                      # the ground arrives at the server and the client
+    out = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village fleet stage" % (sx, sz))
+    say("fleet stage: " + out[:700])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("no bay staged; nothing to photograph")
+        return
+
+    def shoot(name, wait):
+        if name not in views:
+            return
+        x, y, z, ax, ay, az = views[name]
+        look("27-" + name, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    time.sleep(30)                                     # the fishers walk down the quay and row out
+    say("fleet: " + r.cmd("execute positioned %d %d %d run village fleet" % (cx, hy + 1, cz))[:900])
+    shoot("fleet-1-bay", 6)
+    shoot("fleet-2-market", 5)
+    say("fleet home: " + r.cmd("execute positioned %d %d %d run village fleet home" % (cx, hy + 1, cz)))
+    time.sleep(40)                                     # rowed home, tied up, the catch carried up the quay
+    shoot("fleet-3-quay", 5)
+    shoot("fleet-2-market", 3)
+    say("fleet after: " + r.cmd("execute positioned %d %d %d run village fleet" % (cx, hy + 1, cz))[:900])
+    # The auction: the player puts a diamond up, and the auction is called now.
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, cx + 3, hy + 1, cz + 3))
+    time.sleep(2)
+    r.cmd("item replace entity %s weapon.mainhand with minecraft:diamond" % USER)
+    say("auction put: " + r.cmd("execute as %s at @s run village auction put" % USER))
+    say("auction now: " + r.cmd("execute positioned %d %d %d run village auction now" % (cx, hy + 1, cz))[:600])
+    r.cmd("gamemode spectator %s" % USER)
+    time.sleep(15)                                     # the crowd gathers before the stand, the first lot is called
+    look("27-fleet-4-auction", cx - 9.5, hy + 9, cz - 9.5, cx + 0.5, hy + 1, cz + 0.5, wait=4)
+    time.sleep(20)
+    look("27-fleet-5-bidding", cx + 10.5, hy + 7, cz - 8.5, cx + 0.5, hy + 1, cz + 0.5, wait=3)
+    say("auction: " + r.cmd("execute positioned %d %d %d run village auction" % (cx, hy + 1, cz))[:900])
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
+    time.sleep(3)
+    say("books: " + r.cmd("execute as %s at @s run village auction books" % USER))
+    time.sleep(4)
+    shot("27-fleet-6-page")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the fleet: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

@@ -268,6 +268,10 @@ public final class Gazette {
         String pay = JobWorth.gazette(id, day);                 // [econ-wages] a trade's pay up while it is short of hands
         if (pay != null) entries.add(pay);
         entries.add(TradeDeals.gazette(level, v, day));          // [econ-trade] the deals with the neighbours, and yesterday's caravans
+        String quay = Fleet.gazette(id, day);                     // [fleet] the fleet's catch and the fish market
+        if (quay != null) entries.add(quay);
+        String auction = Auctions.gazette(id, day);               // [fleet] what sold at the auction, and to whom
+        if (auction != null) entries.add(auction);
         String war = WarAndPeace.gazette(level, id, day);           // [war-peace] the war, the ultimatum, the treaty
         if (war != null) entries.add(war);
         if (!other.isEmpty()) entries.add(section("Also", other, ""));

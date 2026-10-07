@@ -175,7 +175,7 @@ public final class FolkTalk {
             case STALL -> Commerce.stall(f, p, text);
             case BANK -> Commerce.bank(f, p, text);
             case INVEST -> Commerce.invest(f, p, text);
-            case AUCTION -> Commerce.auction(f, p, text);
+            case AUCTION -> Auctions.holds(f.ownerId()) ? Auctions.talk(f, p, text) : Commerce.auction(f, p, text);   // [fleet] the auction on the square
             case ESCORT -> Commerce.escort(f, p);
             case CHARTER -> Commerce.charter(f, p, text);
             case PRICES -> Commerce.prices(f, p, text);
@@ -355,6 +355,8 @@ public final class FolkTalk {
         line(sb, "War", WarFooting.cardLine(f));            // [war-prep] the watch for the war, the militia, danger money
         line(sb, "Kit", WatchKit.cardLine(f));              // [guard-kit] a guard's kit, issued by the town
         line(sb, "Caves", CaveDwellers.cardLine(f));        // [caves] where it went today, what it found, its kit
+        line(sb, "The fleet", Fleet.cardLine(f));            // [fleet] out with the fishing fleet, and its catch
+        line(sb, "Auction", Auctions.cardLine(f));           // [fleet] at the auction, or what it won there
         net.minecraft.core.BlockPos bed = f.bedPos();
         String house = Homes.talk(f);
         line(sb, "Home", (house != null && !house.isEmpty() ? house + " " : "") + (bed == null ? "No bed of its own yet."
@@ -657,7 +659,7 @@ public final class FolkTalk {
             case RANCH -> "Minding the animals" + place + ".";
             case GUARD -> Patrols.doing(f);
             case SMELT -> "Running the furnaces" + place + ".";
-            case FISH -> "Fishing for the village" + place + ".";
+            case FISH -> Fleet.doing(f, r, "Fishing for the village" + place + ".");   // [fleet] or out with the fleet
             case STORE -> "Keeping the stores in order. You wouldn't believe the mess.";
             case HAUL -> "Carrying for everyone. My back knows all about it.";
             case NONE -> "Looking for a trade. The village will tell me what it needs.";

@@ -461,7 +461,8 @@ public final class Commerce {
             Ledger.note(v.id(), "auction", "");
             a = null;
         }
-        if (a == null && Market.marketDay(v.id(), day)) {
+        // [fleet] A town that holds its auction on the square (Auctions) puts nothing up here: its finds go under the hammer there.
+        if (a == null && Market.marketDay(v.id(), day) && !Auctions.holds(v.id())) {
             List<Budget.Offer> offers = Budget.forSale(level, v.id(), 12);
             Budget.Offer finest = null;
             for (Budget.Offer o : offers) if (o.each() >= 5 && (finest == null || o.each() > finest.each())) finest = o;

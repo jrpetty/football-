@@ -240,6 +240,8 @@ public final class VillageCommands {
             .then(com.jrpetty.mcassistant.entity.WatchKit.command())        // [guard-kit] the watch's kit, on order, and its cost
             .then(com.jrpetty.mcassistant.entity.WatchClears.command())     // [watch-clears] /village monsters: about, killed, fallen
             .then(com.jrpetty.mcassistant.entity.CaveDwellers.command())    // [caves] the cave dwellers and the caves' report
+            .then(com.jrpetty.mcassistant.entity.Fleet.command())           // [fleet] /village fleet: the boats, the catch, the market
+            .then(com.jrpetty.mcassistant.entity.Auctions.command())        // [fleet] /village auction: the lots, the bids, the sales
             .then(com.jrpetty.mcassistant.entity.Civics.donateCommand())    // [batchF] the public works fund
             // [flats] The village's blocks of flats: each flat, who lives there, on what terms. `stage`
             // sets a furnished block out on a stage at the spot, for the pictures (from a palette, not the stores).

@@ -187,6 +187,11 @@ public final class McAssistantMod {
     public static final DeferredItem<net.minecraft.world.item.Item> VILLAGE_COIN =
         ITEMS.registerSimpleItem("village_coin");
 
+    /** [fleet] The fishing fleet's net: knotted of five string by the tailor, a boat's haul two to four fish at a cast,
+     *  worn a little with each haul (entity/Fleet). */
+    public static final DeferredItem<net.minecraft.world.item.Item> FISHING_NET =
+        ITEMS.registerSimpleItem("fishing_net", new net.minecraft.world.item.Item.Properties().durability(96));
+
     /** The mod's own creative tab: everything it adds, in one place, the village folk spawner first. */
     public static final DeferredHolder<net.minecraft.world.item.CreativeModeTab, net.minecraft.world.item.CreativeModeTab> TAB =
         TABS.register("village_folk", () -> net.minecraft.world.item.CreativeModeTab.builder()
@@ -197,6 +202,7 @@ public final class McAssistantMod {
                 out.accept(FOLK_SPAWNER_ITEM.get());
                 out.accept(VILLAGE_CHARTER.get());
                 out.accept(VILLAGE_COIN.get());
+                out.accept(FISHING_NET.get());                           // [fleet]
                 out.accept(STOREHOUSE_ITEM.get());
                 out.accept(VILLAGE_BOARD_ITEM.get());
                 out.accept(ASSISTANT_SPAWNER_ITEM.get());

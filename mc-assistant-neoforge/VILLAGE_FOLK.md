@@ -6228,3 +6228,133 @@ The game tests `WatchClearsGameTests` (wc01 to wc05) check that:
 * a raiding band gathers at the town's edge; two raiders among the folk get two guards each, and none is sent out to
   the band still at the edge; deaths while the bell rings are put down as what took them, with where and doing what;
   and the status, the books and `/village monsters` count the watch's and the golem's kills.
+
+## The fishing fleet
+
+A waterside town of **twelve** or more with a quay over open water fits out a **fishing fleet**:
+two boats at first, then one to every ten folk, four at the most. The quay is the first
+fisher's jetty, or one run out for the fleet where the town meets the water. The town wants a
+fisher for every boat, and its fishers crew them.
+
+* **Real boats, made by the town.** Each boat is a boat out of the stores, or five of its planks
+  made into one, put in the water alongside the quay by a hand on the town's works. A boat left
+  adrift away from the quay is brought in and hauled up into the stores, and put in again from
+  there.
+* **Out at dawn.** Each fisher walks down the quay to its boat, gets in (the only boat a folk ever
+  gets into on its own: nobody else is carried off in one) and rows out to a fishing ground of
+  its own, ten to forty blocks out where the water is wide. It keeps to the open water on a way
+  charted over the water, so it never runs aground; if it bumps something, it backs off and
+  goes round.
+* **A better catch than from the bank.** The fish bite quicker out there, and one bite in four
+  brings up a second fish off the same shoal. There is less junk, and now and then something
+  off the bottom: a saddle, a nautilus shell, a name tag or an enchanted book. With a **fishing
+  net** from the stores, every haul is two to four fish.
+* **Home by the afternoon.** At two in the afternoon, or with a full boat, the fisher rows home,
+  ties up at its berth, steps out onto the quay and carries the catch to the **fish market**.
+  The cod and salmon go into the market's barrels; everything else goes into the stores. All of
+  it counts as the fisher's work.
+* **The weather.** Rain or a thunderstorm at dawn keeps the boats in, and so do the day of rest
+  and the bell. If a storm blows up while they are at sea, they turn for home at once.
+
+**The fishing net** is a new item: five string in an X on a crafting table. The town's tailor
+knots one for every boat in the fleet out of the stores' string, and the fishers take them out
+in the boats and bring them back. A net wears a little with every haul and lasts about a
+hundred hauls.
+
+### The fish market on the quay
+
+The fleet's town puts up a stall on the bank by the quay: three barrels for a counter under a
+plank awning, a sign with the day's prices, the fish of the day on the counter and, from the
+Stone Age, a smoker. It is built by a hand on the town's works out of the stores' barrels,
+fences and planks.
+
+* **It opens when the boats come in**, and shuts at dusk. A fisher's husband or wife sells,
+  or the first fisher in if none of them has one, crying the fish from behind the counter.
+* **The folk buy** on their breaks and on their way home: a fish for themselves, or two for the
+  household, at the town's price, out of their own purses into the treasury. **The price
+  follows the catch**: a catch four times the usual sells at half the town's price, and a poor
+  one at a quarter over it. When fish are cheap, the folk buy more.
+* **You can buy too.** Right-click the counter for four of the fish of the day; sneak and
+  right-click to see the price first. You can't help yourself from the barrels.
+* **What is left at dusk** is smoked by the town's cook in the stall's smoker, using the stores'
+  coal or logs, and goes into the stores. Without a cook, a smoker or fuel, it goes into the
+  stores raw for the café's cook.
+
+**Where to see it.** The board says where the fleet is and what the market has landed, at what
+price. The **Prices** page has the market's catch and prices. The new **Auction** page of the
+town's books has a panel for the fleet and the market: the boats, who is out today, the catch,
+the prices, and the last fortnight at sea and at the market. The gazette has a **The quay**
+piece on yesterday's catch and sales, and the chronicle tells when the boats go out, when they
+come in and with how many fish. A fisher's card says where it is with the fleet and what is in
+its boat. `/village fleet` lists it all. For operators, `/village fleet now` sends the boats out
+at once, `/village fleet home` calls them home, and `/village fleet stage` cuts a bay beside you
+with a quay, the market and the fleet in it.
+
+The game tests `FleetAuctionGameTests` check that two boats go out at dawn, row out well off
+the quay, fish, come home and land the catch into the market's barrels (fa01); that a folk buys
+at the market out of its purse into the treasury, that the price falls by more than a third
+with a big catch, that a folk buys at least as much when it is cheap, and that a player can buy
+a lot of four (fa02); and that rain keeps the boats in and a storm at sea sends them home before
+the afternoon (fa03).
+
+## The auction house
+
+On market day, a town of **twelve** or more from the Stone Age holds an **auction on the square**.
+
+* **The lots** are drawn in the morning, and the board, the chronicle and the folk say what is
+  up. They are:
+  * the town's **rare finds**: what the cave dwellers bring up and the fleet's nets now and then
+    (diamonds over the five it keeps for its tools, enchanted books, golden apples, music discs,
+    saddles over the stables' two, name tags, horse armour, nautilus shells and hearts of the
+    sea, totems, the smith's templates);
+  * the **museum's spares**: another of something it already has on show, but never what it has
+    asked the stores to keep for it;
+  * a **curio** that a merchant from afar brought in with it (a shell, a goat's horn, a
+    spyglass, a music disc, a book);
+  * anything **players** have put up since the last auction.
+
+  It puts up three of its own at the most, the finest first. Every lot is a real thing: the
+  town's stay in the stores until they are sold, a player's is held by the town, and a merchant's
+  stays in its pack.
+* **The auction** starts at nine. The elder (or the leader) takes a stand on the square with the
+  lot held up over it, and the folk who want something and can afford it gather in front. The
+  lots are called in turn from a reserve of half their worth. Folk bid with their own coin up to
+  what the thing is worth to them. That depends on their **means** (the poor bow out early and the
+  wealthy go high), their **nature** (the thrifty least of all, the generous and the free spirits
+  more), their **wants** (a smith for a diamond, the enchanter for a book, a musician for a disc,
+  the rancher for a saddle) and whether they are **collectors** (a Traditionalist, or a curious
+  soul with the means). They never bid past what is in their purse. The keen and the well off
+  sometimes jump the bid to see the others off. When nobody raises it: *Going once... going
+  twice... Sold!*
+* **You bid** by right-clicking the auctioneer. A bid screen shows the lot, where it came from,
+  the bid and who has it, the last bids and your coin. One button bids the next step, another two
+  steps, and a box takes a bid of your own. The screen follows the auction live. You can also
+  say "I bid 30" to the auctioneer, or use `/village auction bid 30`. The town holds your bid's
+  coin as soon as you bid, and gives it back the moment somebody beats you.
+* **Selling your own goods.** Hold the thing and press **Put up** on the bid screen, or say "put
+  it up" to any folk, or use `/village auction put`. The town keeps it until the next auction
+  (today's, if it is still to come), with a reserve of half its worth. Two lots a player at a
+  time, four in all.
+* **The proceeds** go to the seller: the treasury for the town's finds, the player who put the
+  lot up, or the merchant, who takes them away with it. The lot goes to the winner. A folk keeps
+  it as its own and takes it home to its chest, or wears it if it is something to wear. A player
+  gets it at once, or finds it waiting the next time they come by the town, along with anything
+  else the town owes them (a bid handed back, a sale's proceeds, an unsold lot).
+* On market day a town that holds the auction no longer puts its "finest spare thing" up for the
+  sealed bids of before; its finds go under the hammer on the square instead.
+
+**Where to see it.** The board shows the day's lots, the lot under the hammer and the bid, and
+afterwards what sold. The chronicle and the gazette's **The auction** piece say what sold, for
+how much and to whom (*A diamond sold for 48 coins to Mara, the smith's partner*). The winner's
+card says what it won, and it remembers it. The **Auction** page of the town's books (the last
+tab) shows today's lots with their bids and how each went (move the mouse over a lot for its
+bids), the players' lots waiting for the next auction, and the past sales. `/village auction`
+lists it all and `/village auction books` opens the page. For operators, `/village auction now`
+draws the lots and calls the auction at once.
+
+The game tests `FleetAuctionGameTests` check that a diamond from the stores goes under the
+hammer, the folk who can afford it come and the poor one does not, every bid is within the
+bidder's purse and what the diamond is worth to it, the one to whom it is worth most takes it,
+the coin goes from its purse to the treasury and the diamond from the stores into its pack
+(fa04); and that a player outbids a folk, gets the diamond, pays only the winning bid into the
+treasury, and the folk keeps its purse (fa05).

@@ -128,6 +128,8 @@ public final class Merchants {
             if (sb.length() > 0) sb.append(',');
             sb.append(BuiltInRegistries.ITEM.getKey(w.item()).getPath());
         }
+        ItemStack curio = Auctions.curio(level, v, day);              // [fleet] a curio from far away, for the auction
+        if (!curio.isEmpty()) kit.add(curio);
         VillageFolkEntity f = Visitors.arrive(level, v, Visitors.Kind.MERCHANT, day, 0, 0, kit, "a merchant from far away");
         if (f == null) return null;
         Visitors.Visit vis = Visitors.visit(f);

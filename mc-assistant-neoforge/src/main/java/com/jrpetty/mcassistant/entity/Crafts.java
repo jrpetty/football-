@@ -515,6 +515,8 @@ public final class Crafts {
         // worse, out of the stores' leather, a little kept back for the books. Wool is for the beds; this is not.
         String kit = WatchKit.make(level, v, f);
         if (kit != null) return kit;
+        String knotted = Fleet.makeNet(level, v, f);              // [fleet] a net for each of the fishing fleet's boats
+        if (knotted != null) return knotted;
         if (bedsFirst) return null;
         // Books for the library's shelves (three to a bookshelf) and the enchanter's table: three paper
         // pressed from the farmers' cane and a piece of the rancher's leather. Shelves were only ever
