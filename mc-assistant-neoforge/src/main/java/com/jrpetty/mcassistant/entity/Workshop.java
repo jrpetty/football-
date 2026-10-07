@@ -813,10 +813,10 @@ public final class Workshop {
     }
 
     /** The best of the stores' that the score likes better than {@code over}: where it is. */
-    private record Found(Container box, int slot, int score) {}
+    record Found(Container box, int slot, int score) {}       // [guard-kit] WatchKit fits the watch with these too
 
     @Nullable
-    private static Found bestInStores(ServerLevel level, UUID village, Predicate<ItemStack> what, java.util.function.ToIntFunction<ItemStack> score, int over) {
+    static Found bestInStores(ServerLevel level, UUID village, Predicate<ItemStack> what, java.util.function.ToIntFunction<ItemStack> score, int over) {
         Found best = null;
         for (BlockPos p : Villages.storeChests(level, village)) {
             if (!(level.getBlockEntity(p) instanceof Container c)) continue;
@@ -835,7 +835,7 @@ public final class Workshop {
      * books as brought in by the guard: not a making (the watch's round may come in a maker's piece of work,
      * and Market.intoStores would count it the maker's).
      */
-    private static void backIntoStores(ServerLevel level, Villages.Village v, ItemStack stack, String who) {
+    static void backIntoStores(ServerLevel level, Villages.Village v, ItemStack stack, String who) {
         List<Container> boxes = new ArrayList<>();
         int storehouse = -1;
         for (BlockPos p : Villages.storeChests(level, v.id())) {
@@ -850,7 +850,7 @@ public final class Workshop {
     }
 
     /** One of what was found, out of the stores and booked out of the storehouse if it came out of it. */
-    private static ItemStack takeOut(ServerLevel level, UUID village, Found f, String to) {
+    static ItemStack takeOut(ServerLevel level, UUID village, Found f, String to) {
         ItemStack got = f.box().getItem(f.slot()).split(1);
         if (f.box().getItem(f.slot()).isEmpty()) f.box().setItem(f.slot(), ItemStack.EMPTY);
         f.box().setChanged();
@@ -860,56 +860,31 @@ public final class Workshop {
 
     /**
      * The watch fitted out of the shop's stock: each guard that wears worse than the best piece the stores
-     * hold for a slot (and may wear it) is given it, and its old piece goes back into the stores; a guard
-     * whose best blade is worse than the stores' best is given that. The village pays: no coin changes
-     * hands, the shop's takings being the treasury's, but the shop's books count it, and keep more of what
-     * the watch takes. Returns how many pieces went out.
+     * hold for a slot is given it, and its old piece goes back into the stores; a guard whose best blade is
+     * worse than the stores' best is given that. The village pays: no coin changes hands, the shop's takings
+     * being the treasury's, but the shop's books count it (toTheWatch), and keep more of what the watch takes.
+     * [guard-kit] The same fitting as a guard's own visit to the stores (WatchKit.fit), so that the two never
+     * disagree: any guard of any level, a bow and arrows and a shield as well. Returns how many pieces went out.
      */
     public static int outfit(ServerLevel level, Villages.Village v) {
-        UUID id = v.id();
-        Shop s = shop(id);
+        return WatchKit.fitAll(level, v);
+    }
+
+    /**
+     * [guard-kit] Pieces the watch was issued out of the stores (WatchKit.fit) while the shop keeps them: in the
+     * shop's books as gone to the watch, paid for by the village (no coin), and in the workshop's day.
+     */
+    static void toTheWatch(ServerLevel level, Villages.Village v, VillageFolkEntity g, List<ItemStack> given, String words) {
+        Shop s = shop(v.id());
         roll(level, s);
-        int put = 0;
-        for (AssistantEntity a : Villages.folkOf(id)) {
-            if (!(a instanceof VillageFolkEntity g) || g.stationTask() != StationTask.GUARD || g.isBaby() || !g.isAlive()) continue;
-            List<String> given = new ArrayList<>();
-            for (EquipmentSlot slot : ARMOUR) {
-                ItemStack worn = g.getItemBySlot(slot);
-                Found f = bestInStores(level, id, st -> st.getItem() instanceof ArmorItem ai && ai.getEquipmentSlot() == slot && g.mayUseTier(st),
-                    Workshop::armour, armour(worn));
-                if (f == null) continue;
-                ItemStack got = takeOut(level, id, f, g.displayNameCap());
-                if (!worn.isEmpty()) backIntoStores(level, v, worn.copy(), g.displayNameCap());   // the old piece back into the stores
-                g.setItemSlot(slot, got);
-                given.add(Bench.words(got.getItem(), 1));
-                Stockroom.sold(level, id, Stockroom.Seller.SHOP, got, 1, 0);       // to the watch, paid for by the village
-            }
-            if (!g.isPackFull()) {
-                Found f = bestInStores(level, id, st -> st.getItem() instanceof SwordItem && g.mayUseTier(st), Workshop::blade, bestBlade(g));
-                if (f != null) {
-                    ItemStack got = takeOut(level, id, f, g.displayNameCap());
-                    ItemStack left = g.insertGiven(got.copy());
-                    if (left.isEmpty()) {
-                        given.add(Bench.words(got.getItem(), 1));
-                        Stockroom.sold(level, id, Stockroom.Seller.SHOP, got, 1, 0);
-                    } else {
-                        backIntoStores(level, v, left, g.displayNameCap());
-                    }
-                }
-            }
-            if (given.isEmpty()) continue;
-            put += given.size();
-            s.toTheWatch += given.size();
-            String words = String.join(", ", given);
-            s.log.add(new Entry(clock(level), g.displayNameCap(), "guard", words, "the shop's stock", "the watch, paid by the village"));
-            if (s.log.size() > 40) s.log.remove(0);
-            g.brain("fitted out from the shop: " + words);
-            if (level.getRandom().nextInt(2) == 0) {
-                FolkTalk.speak(g, FolkTalk.pick(level.getRandom(), "New " + (given.size() == 1 ? words.replaceFirst("^(a|an) ", "") : "kit") + " from the shop. Let them come.",
-                    "The shop's fitted me out: " + words + ". The village's coin well spent."));
+        for (ItemStack got : given) {
+            if (got.getItem() instanceof ArmorItem || got.getItem() instanceof SwordItem) {
+                Stockroom.sold(level, v.id(), Stockroom.Seller.SHOP, got, 1, 0);          // to the watch, paid for by the village
             }
         }
-        return put;
+        s.toTheWatch += given.size();
+        s.log.add(new Entry(clock(level), g.displayNameCap(), "guard", words, "the shop's stock", "the watch, paid by the village"));
+        if (s.log.size() > 40) s.log.remove(0);
     }
 
     // ------------------------------------------------------------------ orders and refusals

@@ -235,6 +235,7 @@ public final class VillageCommands {
             // for operators, a cold caught now and an infirmary set out on a stage (Health).
             .then(com.jrpetty.mcassistant.entity.Health.command())
             .then(com.jrpetty.mcassistant.entity.Civics.command())          // [batchF] the town's affairs
+            .then(com.jrpetty.mcassistant.entity.WatchKit.command())        // [guard-kit] the watch's kit, on order, and its cost
             .then(com.jrpetty.mcassistant.entity.Civics.donateCommand())    // [batchF] the public works fund
             // [flats] The village's blocks of flats: each flat, who lives there, on what terms. `stage`
             // sets a furnished block out on a stage at the spot, for the pictures (from a palette, not the stores).

@@ -315,6 +315,10 @@ public final class Crafts {
         }
         String forged = forge(level, v, f, wants);
         if (forged != null) return forged;
+        // [guard-kit] Its forging seen to: the watch's diamond (the blade first) once the age, the diamonds and the
+        // miners' pick allow, netherite in the Nether Age, and the leather when the town has no tailor (WatchKit).
+        String kit = WatchKit.make(level, v, f);
+        if (kit != null) return kit;
         if (!fletchFirst) {
             String fletched = fletch(level, v, guards(v));
             if (fletched != null) return fletched;
@@ -500,6 +504,10 @@ public final class Crafts {
             store(level, v, string.copy());
             return "four lengths of string, spun from wool";
         }
+        // [guard-kit] The watch's leather (WatchKit): a cap, a tunic, trousers and boots for every guard who wears
+        // worse, out of the stores' leather, a little kept back for the books. Wool is for the beds; this is not.
+        String kit = WatchKit.make(level, v, f);
+        if (kit != null) return kit;
         if (bedsFirst) return null;
         // Books for the library's shelves (three to a bookshelf) and the enchanter's table: three paper
         // pressed from the farmers' cane and a piece of the rancher's leather. Shelves were only ever

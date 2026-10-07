@@ -472,6 +472,7 @@ public final class Cafe {
     public static String folkShops(ServerLevel level, Villages.Village v, VillageFolkEntity f, boolean forWork,
                                    @Nullable Predicate<ItemStack> after) {
         if (!open(v.id(), "shop")) return null;
+        if (forWork && f.stationTask() == AssistantEntity.StationTask.GUARD) return null;   // [guard-kit] the watch's blade is issued, never bought
         Predicate<ItemStack> want;
         if (forWork) {
             want = toolFor(f.stationTask());
