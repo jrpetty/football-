@@ -382,7 +382,10 @@ final class Trial {
                 int fine = fine(c);
                 int took = Math.min(f.purse(), fine);
                 if (took > 0 && f.spend(took)) Ledger.addCoins(v.id(), took);
+                else took = 0;
                 if (fine - took > 0) owe(f, null, "the town", fine - took);
+                c.fine = fine;
+                c.finePaid = took;
                 done += (done.isEmpty() ? "" : "; ") + "fined " + fine + (fine - took > 0 ? " (" + (fine - took) + " owed)" : "");
             }
             case STOCKS -> {
@@ -830,13 +833,17 @@ final class Trial {
         if (at == null || !canMake(level, v)) return false;
         if (!TownJobs.atWork(level, v, "stocks", at, "putting up the stocks on the square")) return false;
         boolean paid = Crafts.take(level, v, s -> s.is(McAssistantMod.STOCKS_ITEM.get()), 1);
+        String how = "a pair put by";
         if (!paid) {
             if (Crafts.usePlanks(level, v, 3)) {
                 if (Crafts.take(level, v, s -> s.is(ItemTags.LOGS), 2)) paid = true;
                 else Crafts.store(level, v, new ItemStack(Items.OAK_PLANKS, 3));
             }
+            how = "three planks and two logs";
         }
         if (!paid) return false;
+        Crime.town(v.id()).putString("stocksPaid", how);
+        Crime.changed();
         Direction facing = towards(at, v.centre());
         level.setBlockAndUpdate(at, McAssistantMod.STOCKS.get().defaultBlockState().setValue(StocksBlock.FACING, facing));
         Ledger.note(v.id(), STOCKS, at.getX() + "," + at.getY() + "," + at.getZ() + "," + facing.getName());
