@@ -379,6 +379,8 @@ public final class JobMarket {
     public static String noun(StationTask t) {
         return switch (t) {
             case HAUL -> "courier";
+            case FLETCHER -> "fletcher";                 // [fletcher]
+            case GOLEMS -> "golem keeper";               // [golems]
             case FIREWORKS -> "fireworks maker";        // [fireworks]
             case NONE -> "hand";
             default -> t.title.toLowerCase(Locale.ROOT);
@@ -441,6 +443,8 @@ public final class JobMarket {
             case HUNT -> "the hunt";
             case SCOUT -> "the scouting";
             case CAVE -> "the caves";                    // [caves]
+            case FLETCHER -> "the fletching";            // [fletcher]
+            case GOLEMS -> "the golems";                 // [golems]
             case FIREWORKS -> "the powder hut";          // [fireworks]
             case HAUL -> "the carrying";
             default -> "the work";
@@ -696,6 +700,8 @@ public final class JobMarket {
         { "smithy", "SMITH" }, { "cafe", "COOK" }, { "shop", "SHOP" }, { "brewery", "BREW" }, { "library", "ENCHANT" },
         { "workshop", "TAILOR" }, { "school", "TEACHER" }, { "school", "TEACH" }, { "bank", "BANKER" }, { "bank", "BANK" },
         { "stable", "GROOM" }, { "stables", "GROOM" }, { "stable", "STABLEHAND" },
+        { "fletcher", "FLETCHER" },                                                    // [fletcher] the fletcher's hut
+        { "golemyard", "GOLEMS" },                                                     // [golems] the golem yard
         { "powderhut", "FIREWORKS" },                                                       // [fireworks]
     };
 

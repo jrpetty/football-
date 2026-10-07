@@ -111,6 +111,10 @@ public final class Villages {
         new Slot(AssistantEntity.StationTask.CAVE, 1, CaveDwellers.FROM, Age.IRON, CaveDwellers.MOST),
         // [transport] The ferryman: one, while the town's ferry runs (Ferries), whatever its size and age.
         new Slot(AssistantEntity.StationTask.FERRY, 1, 1, Age.WOOD, 1),
+        // [fletcher] The fletcher: from the Stone Age, once the watch carries bows (or the range stands); one, two at sixty (Fletchers).
+        new Slot(AssistantEntity.StationTask.FLETCHER, 1, 1, Age.STONE, 2),
+        // [golems] The golem keeper: from the Iron Age, after two raids in a fortnight or at sixty folk; one (Golems).
+        new Slot(AssistantEntity.StationTask.GOLEMS, 1, 1, Age.IRON, 1),
         // [fireworks] The fireworks maker: one, in a Stone Age town of eight that has kept its festivals and has gunpowder
         // put by, once its powder hut stands; chosen by the town for its nature (FireworksMaker.appoint).
         new Slot(AssistantEntity.StationTask.FIREWORKS, 1, FireworksMaker.FROM, Age.STONE, 1));
@@ -343,6 +347,8 @@ public final class Villages {
             case "trainingyard" -> "the training yard";            // [war-prep]
             case "firestation" -> "the fire station";              // [disasters]
             case "lodge" -> "the Delvers' Lodge";                 // [caves]
+            case "fletcher" -> "the fletcher's hut";              // [fletcher]
+            case "golemyard" -> "the golem yard";                 // [golems]
             case "powderhut" -> "the powder hut";                // [fireworks]
             default -> "the " + structure;
         };
@@ -407,6 +413,8 @@ public final class Villages {
         Economy.resetForTests();
         Scouts.resetForTests();
         CaveDwellers.resetForTests();       // [caves]
+        Fletchers.resetForTests();          // [fletcher]
+        Golems.resetForTests();             // [golems]
         FireworksMaker.resetForTests();     // [fireworks]
         FireworkShows.resetForTests();      // [fireworks]
         Fashion.resetForTests();            // [fashion] the season's looks, the tailor's book, the shows
@@ -443,6 +451,7 @@ public final class Villages {
         Weather.resetForTests();            // [wf] the storm (and a test's storm let go), the rods looked at
         Civics.resetForTests();             // [batchF] the post, petitions, the meeting, wardens, the fund, searches, favours
         Crime.resetForTests();              // [crime] the cases, the folk's records, the plans, the court
+        Weave.resetForTests();              // [weave] the homeless waiting to go, the day's looks; the round off again
         Roads.reset();
         LAST_PROJECT.clear();
         POP.clear();
@@ -850,6 +859,8 @@ public final class Villages {
         if (trade == AssistantEntity.StationTask.FISH) return !dryForFishers(villageId);
         if (trade == AssistantEntity.StationTask.CAVE) return CaveDwellers.ready(villageId);   // [caves] a few miners and a watch first
         if (trade == AssistantEntity.StationTask.FERRY) return Ferries.wanted(villageId);      // [transport] while the ferry runs
+        if (trade == AssistantEntity.StationTask.FLETCHER) return Fletchers.wanted(villageId); // [fletcher] a watch with bows, or the range
+        if (trade == AssistantEntity.StationTask.GOLEMS) return Golems.wanted(villageId);      // [golems] the raids, or sixty folk
         if (trade == AssistantEntity.StationTask.FIREWORKS) return FireworksMaker.ready(villageId);   // [fireworks] opened, and its hut up
         if (trade == AssistantEntity.StationTask.STORE || trade == AssistantEntity.StationTask.HAUL) {
             return villageId != null && (Storehouses.stands(villageId) || hasBuilt(villageId, "storage")
@@ -921,6 +932,8 @@ public final class Villages {
             * glut(villageId, slot.trade()) * Homeland.lean(villageId, slot.trade());
         if (slot.trade() == AssistantEntity.StationTask.CAVE) t = CaveDwellers.team(total);   // [caves] two, three at sixty, four at a hundred
         if (slot.trade() == AssistantEntity.StationTask.FERRY) t = Ferries.wanted(villageId) ? 1.0 : 0.0;  // [transport] one ferryman
+        if (slot.trade() == AssistantEntity.StationTask.FLETCHER) t = Fletchers.wanted(villageId) ? Fletchers.hands(villageId) : 0.0;   // [fletcher]
+        if (slot.trade() == AssistantEntity.StationTask.GOLEMS) t = Golems.wanted(villageId) ? 1.0 : 0.0;   // [golems] one keeper
         if (slot.trade() == AssistantEntity.StationTask.FIREWORKS) t = FireworksMaker.ready(villageId) ? 1.0 : 0.0;   // [fireworks] one maker
         // A courier for every five workers out on plots of their own (their production chests).
         if (slot.trade() == AssistantEntity.StationTask.HAUL && villageId != null) {
@@ -1779,6 +1792,8 @@ public final class Villages {
         if (FireworksMaker.hutWanted(villageId)) extras.add(FireworksMaker.STRUCTURE);
         // [library] A library for the town's books, once it is twelve strong (Library).
         if (Library.wanted(villageId, folk) && built(villageId, Library.STRUCTURE) < 1) extras.add(Library.STRUCTURE);
+        // [fletcher] The fletcher's hut, once the town keeps a fletcher (Fletchers).
+        if (Fletchers.hutWanted(villageId)) extras.add(Fletchers.STRUCTURE);
         if (at == Age.STONE) { homesAndAmenities(villageId, folk, out, extras); return out; }
 
         if (built(villageId, "workshop") < 1) out.add("workshop");
@@ -1812,6 +1827,8 @@ public final class Villages {
         if (FireSafety.wanted(villageId)) extras.add(FireSafety.STATION);
         // [caves] The Delvers' Lodge, once the town keeps a cave team (Lodge).
         if (Lodge.wanted(villageId)) extras.add(Lodge.STRUCTURE);
+        // [golems] The golem yard, once the town keeps a golem keeper (Golems).
+        if (Golems.yardWanted(villageId)) extras.add(Golems.STRUCTURE);
         if (at == Age.IRON) { homesAndAmenities(villageId, folk, out, extras); return out; }
 
         if (built(villageId, "lighthouse") < 1) out.add("lighthouse");
@@ -2182,6 +2199,8 @@ public final class Villages {
             case "museum" -> "a museum, to put the town's rare finds on show and keep its chronicle as books";
             case "infirmary" -> Infirmary.why(villageId);          // [batchA]
             case "lodge" -> Lodge.why(villageId);                  // [caves]
+            case "fletcher" -> Fletchers.why(villageId);           // [fletcher]
+            case "golemyard" -> Golems.why(villageId);             // [golems]
             case "powderhut" -> FireworksMaker.why(villageId);     // [fireworks]
             case "theatre" -> Theatre.why(villageId);             // [batchD]
             case "windmill", "bakery", "inn", "orchard", "allotments" -> TownLook.why(villageId, project);   // [batchE]

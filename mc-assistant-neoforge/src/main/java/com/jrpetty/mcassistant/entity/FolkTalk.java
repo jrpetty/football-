@@ -120,7 +120,8 @@ public final class FolkTalk {
         String vote = Referendums.playerSays(f, p, text);
         if (vote != null) return manner(f, vote);
         // [library] Books: borrowing one, bringing it back, the shelves, a copy; what it is reading or writing (Library).
-        String library = Library.talk(f, p, topic, text);
+        // [caves] Not the cave team's map ("a copy of the cave map"): that is the team's to sell (CaveGuests).
+        String library = topic == TalkTopic.CAVES ? null : Library.talk(f, p, topic, text);
         if (library != null && !library.isEmpty()) return manner(f, library);
         String rockets = FireworksMaker.talk(f, p, text);            // [fireworks] rockets for a player's elytra; the next display
         if (rockets != null) return manner(f, rockets);
@@ -387,10 +388,14 @@ public final class FolkTalk {
         line(sb, "War", WarFooting.cardLine(f));            // [war-prep] the watch for the war, the militia, danger money
         line(sb, "Kit", WatchKit.cardLine(f));              // [guard-kit] a guard's kit, issued by the town
         line(sb, "Caves", CaveDwellers.cardLine(f));        // [caves] where it went today, what it found, its kit
+        line(sb, "Fletching", Fletchers.cardLine(f));        // [fletcher] what it has made, the stores' arrows, the reserve
+        line(sb, "At the butts", Fletchers.aimLine(f));      // [fletcher] a guard's best at the butts, its practised aim
+        line(sb, "Golems", Golems.cardLine(f));              // [golems] the town's golems at their posts, mended, waited on
         line(sb, "Fireworks", FireworksMaker.cardLine(f));  // [fireworks] its stars, rockets and displays
         line(sb, f.isBaby() ? "Apprenticed" : "Apprentices", PlayerTrades.cardLine(f));   // [player-civic] its apprentices, or its trade
         line(sb, "The fleet", Fleet.cardLine(f));            // [fleet] out with the fishing fleet, and its catch
         line(sb, "Auction", Auctions.cardLine(f));           // [fleet] at the auction, or what it won there
+        line(sb, "Tools", FieldTools.cardLine(f));            // [fields] its can, satchel, sickle or smoker; the box, the trough, the traps
         net.minecraft.core.BlockPos bed = f.bedPos();
         String house = Homes.talk(f);
         line(sb, "Home", (house != null && !house.isEmpty() ? house + " " : "") + (bed == null ? "No bed of its own yet."
@@ -413,6 +418,7 @@ public final class FolkTalk {
         line(sb, "Household", Families.cardLine(f));        // its pet, its garden, its wedding anniversary (Families)
         line(sb, "Pet", Pets.cardLine(f));                  // [pets] its age, its bowl and bed, its collar, its young, its friends
         line(sb, "Health", Health.cardLine(f));              // [batchA] a cold, laid up, seen to (Health)
+        line(sb, "Kitchen", Kitchen.cardLine(f));            // [kitchen] its packed lunch, its bandages, a slice of cake, a drink
         line(sb, "Neighbours", Neighbourly.cardLine(f));     // [batchA] looked in on, a welcome, a housewarming (Neighbourly)
         line(sb, "About town", TownLook.cardLine(f));       // [batchE] its allotment, the bakery, the inn (TownLook)
         line(sb, "Town life", Civics.cardLine(f));          // [batchF] its letters, its quarter as warden, its good turns (Civics)
@@ -658,6 +664,7 @@ public final class FolkTalk {
             case "letter", "meeting", "favour", "found" -> Civics.moodWords(f, why);   // [batchF]
             case "robbed", "repaid", "shamed", "cleared" -> Crime.moodWords(f, why);  // [crime]
             case "builtit", "grateful", "clash" -> Referendums.moodWords(f, why);      // [civic]
+            case "cake", "drink" -> Kitchen.moodWords(f, why);                         // [kitchen]
             default -> "";
         };
     }
@@ -688,6 +695,8 @@ public final class FolkTalk {
         }
         String about = Transport.doing(f);                      // [transport] on its way by the cart or the ferry
         if (about != null) return cap(about) + ".";
+        String tools = FieldTools.doing(f);                     // [fields] filling its can, round its traps, at the nesting box
+        if (tools != null) return cap(tools) + ".";
         String hobby = f.hobbyNow();
         if (hobby != null) return pick(r, "My own time now — ", "Day's work's done, so ") + hobby + ".";
         if (f.offWorkNow() && f.onShift()) return pick(r, "Taking a breather. ", "A short break. ") + "Back to work in a bit.";
@@ -736,6 +745,8 @@ public final class FolkTalk {
             case BANK -> Bank.doing(f, r);                // the banker: its books, its vault, its borrowers
             case CAVE -> CaveDwellers.doing(f, r);        // [caves] down the caves, or home with the report
             case FERRY -> Ferries.doing(f, r);            // [transport] at the landing, or out on the water
+            case FLETCHER -> Fletchers.doing(f, r);       // [fletcher] at its table, the gravel, the range
+            case GOLEMS -> Golems.doing(f, r);            // [golems] round the golems, or building one
             case FIREWORKS -> FireworksMaker.doing(f, r); // [fireworks] at the powder hut, or at the rack
         };
         if (!f.missingEssentials().isEmpty()) work += " Or I would be, if I had " + f.missingEssentials().get(0) + ".";

@@ -1798,6 +1798,8 @@ public final class Pets {
                 if (d < best) { best = d; child = k; }
             }
         }
+        String reading = child == null ? null : Weave.library(dog, child, c.name);   // [weave] at the child's feet in the library
+        if (reading != null) return reading;
         if (child != null) return fetchStick(level, dog, child, c, t);
         return walkies(level, village, h, dog, t);
     }

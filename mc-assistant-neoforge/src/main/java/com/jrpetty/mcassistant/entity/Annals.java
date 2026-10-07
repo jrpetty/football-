@@ -450,6 +450,7 @@ public final class Annals {
                 ? " — " + Math.round(need.amount() / rate) + " days at this rate: more hands to it" : " — there in " + Math.max(1, Math.round(need.amount() / rate)) + " days";
             reading.add(line);
         }
+        reading.addAll(Kitchen.reading(id, level.getDayTime() / 24000L));   // [kitchen] the packed lunches eaten out, the pies of the catch
         out.put("reading", strings(reading));
         return out;
     }

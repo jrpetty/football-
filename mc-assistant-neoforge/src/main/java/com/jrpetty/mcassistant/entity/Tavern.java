@@ -115,6 +115,7 @@ public final class Tavern {
         DRANK.put(f.getUUID(), day);
         if (DRANK.size() > 4096) DRANK.clear();
         if (TradeGoods.stout(level, v, f, day)) return;              // [player-civic] the master brewer's stout, half the evenings
+        if (Kitchen.atTheBar(level, v, f, day)) return;             // [kitchen] the brewer's mead, or in the autumn its cider
         net.minecraft.world.item.ItemStack d = pour(level, v, f.getRandom());
         if (d.isEmpty()) {
             Cafe.Drink usual = Cafe.DRINKS.get(Math.floorMod(f.getUUID().hashCode(), Cafe.DRINKS.size()));
