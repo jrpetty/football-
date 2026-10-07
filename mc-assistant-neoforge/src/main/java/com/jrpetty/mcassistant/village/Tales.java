@@ -211,12 +211,22 @@ public final class Tales {
             case "WAR" -> Quill.fit("The War with " + h.about(), "The War");
             case "YEAR" -> Quill.fit("The " + cap(ordinal(Long.parseLong(h.about().isEmpty() ? "1" : h.about()))) + " Year of " + h.town(),
                 "The " + cap(ordinal(Long.parseLong(h.about().isEmpty() ? "1" : h.about()))) + " Year", "A Year");
+            // [weave] the new events' books
+            case "FLOOD" -> great(h) ? Quill.fit("The Great Flood of " + h.town(), "The Great Flood") : Quill.fit("The Flood of Day " + h.about(), "The Flood");
+            case "GREATFIRE" -> Quill.fit("The Great Fire of " + h.town(), "The Great Fire");
+            case "SMUGGLERS" -> Quill.fit(d.pick("The Smugglers' Cave", "The Tale of the Smugglers"), "The Smugglers");
             default -> Quill.fit("A History of " + h.town(), "A History");
         };
     }
 
     private static String shortAge(String age) {
         return cap(age.replaceFirst("^the ", "").replace(" Age", ""));
+    }
+
+    /** [weave] A great flood (the river up two blocks), as its chronicle line calls it. */
+    private static boolean great(History h) {
+        for (Event e : h.events()) if (e.text().toLowerCase(Locale.ROOT).contains("great flood")) return true;
+        return false;
     }
 
     /** A history, written. */
@@ -238,8 +248,14 @@ public final class Tales {
         Map<String, List<Event>> chapters = chapters(h);
         for (Map.Entry<String, List<Event>> c : chapters.entrySet()) {
             b.add(Block.heading(c.getKey()));
+            if (h.kind().equals("SMUGGLERS")) {                              // [weave] a tale in its chapters, told as it was found out
+                for (Event e : c.getValue()) b.add(Block.para(told(e.text())));
+                continue;
+            }
             String open = opening(c.getKey(), d);
-            if (!open.isEmpty() && !h.kind().equals("FIRE") && !h.kind().equals("RAID")) b.add(Block.para(open));
+            if (!open.isEmpty() && !h.kind().equals("FIRE") && !h.kind().equals("RAID") && !h.kind().equals("FLOOD") && !h.kind().equals("GREATFIRE")) {
+                b.add(Block.para(open));
+            }
             long prev = Long.MIN_VALUE;
             List<Event> day0 = new ArrayList<>();
             for (Event e : c.getValue()) {
@@ -266,6 +282,9 @@ public final class Tales {
             case "RAID" -> "a history of the raids on the town";
             case "WAR" -> "a history of the war with " + h.about();
             case "YEAR" -> "a history of the town's " + ordinal(Long.parseLong(h.about().isEmpty() ? "1" : h.about())) + " year";
+            case "FLOOD" -> great(h) ? "a history of the great flood" : "a history of the flood of day " + h.about();     // [weave]
+            case "GREATFIRE" -> "a history of the great fire, and the rebuilding after it";
+            case "SMUGGLERS" -> "the tale of the smugglers, and how they were found out";
             default -> "a history of the town";
         };
         return new Quill.Book("HISTORY", title, v.name(), Quill.pages(b), blurb, "history:" + h.kind() + ":" + h.about(), List.of());
@@ -287,7 +306,7 @@ public final class Tales {
                     out.computeIfAbsent(now, x -> new ArrayList<>()).add(e);
                 }
             }
-            case "FIRE", "RAID", "WAR" -> {
+            case "FIRE", "RAID", "WAR", "FLOOD", "GREATFIRE" -> {               // [weave] the flood, the great fire: day by day
                 int n = 0;
                 for (Event e : h.events()) {
                     String head = h.kind().equals("WAR") ? (n == 0 ? "How it began" : "Day " + e.day()) : "Day " + e.day()
@@ -326,14 +345,21 @@ public final class Tales {
             case "RAID" -> "the nights the raiders came";
             case "WAR" -> "the war with " + h.about();
             case "YEAR" -> "the town's " + ordinal(Long.parseLong(h.about().isEmpty() ? "1" : h.about())) + " year";
+            case "FLOOD" -> great(h) ? "the great flood" : "the flood of day " + h.about();         // [weave]
+            case "GREATFIRE" -> "the great fire";
+            case "SMUGGLERS" -> "the business of the smugglers";
             default -> "the town";
         };
-        String founders = h.founders().isEmpty() || h.kind().equals("FOUNDING") ? "" : " The founders were " + list(h.founders()) + ".";
+        String founders = h.founders().isEmpty() || h.kind().equals("FOUNDING") || h.kind().equals("SMUGGLERS") ? "" : " The founders were " + list(h.founders()) + ".";
         String why = switch (v.tone()) {
             case "curious" -> "I wanted to know " + what + ", so I read the chronicle from the start and asked everybody who was there.";
             case "grumpy" -> "Nobody else was going to write down " + what + ", so I have. Read it properly.";
             case "shy" -> "I've tried to set down " + what + " as truly as I can. I hope I've done it justice.";
-            case "cheerful" -> "What a story " + what + " is! I've loved every minute of writing it down.";
+            case "cheerful" -> switch (h.kind()) {
+                // [weave] A hard time is not "a story I loved": the cheerful remember how the town pulled together.
+                case "FLOOD", "GREATFIRE", "FIRE", "RAID", "WAR" -> "Nobody would wish " + what + " on anybody, but oh, how we pulled together! Here it is.";
+                default -> "What a story " + what + " is! I've loved every minute of writing it down.";
+            };
             case "sociable" -> "Everybody tells " + what + " a little differently at the tavern. Here it is as the chronicle has it, so we can stop arguing.";
             case "hardworking" -> "This is " + what + ", day by day, as the chronicle has it.";
             default -> "This is " + what + ", as the chronicle tells it.";
@@ -347,6 +373,9 @@ public final class Tales {
             case "FIRE" -> "The fires taught us to keep water by every hearth and a bucket at every door. ";
             case "RAID" -> "The wall stands, and the bell still hangs on the square. That is the lesson of it. ";
             case "WAR" -> "Wars end. Towns go on. " + h.town() + " did. ";
+            case "FLOOD" -> "The river taught us to build above where the water reaches, and to raise a bank against it. ";    // [weave]
+            case "GREATFIRE" -> "We put it back, every block of it, out of the stores. And there's water by every forge now. ";
+            case "SMUGGLERS" -> "The stores' books add up again, and the storekeeper counts twice now. ";
             default -> "";
         };
         String motto = h.motto().isEmpty() ? "" : " Our motto says it best: \"" + stop(h.motto()) + "\"";

@@ -105,6 +105,7 @@ public final class VillageCommands {
             // The town's quarters, the homes in the crafts' smoke and by the park, and the park (Quarters, Park).
             .then(com.jrpetty.mcassistant.entity.Quarters.command())
             .then(com.jrpetty.mcassistant.entity.Sport.command())                 // [batchC] /village sport
+            .then(com.jrpetty.mcassistant.entity.Pastimes.command())              // [leisure] /village items leisure [stage|make]
             // [batchE] The town's look: the avenues' trees, the street furniture, the allotments, the orchard, the
             // windmill, the bakery and the inn; `showcase` and `now` for operators and the pictures (TownLook).
             .then(com.jrpetty.mcassistant.entity.TownLook.command())
@@ -244,8 +245,14 @@ public final class VillageCommands {
             .then(com.jrpetty.mcassistant.entity.WatchClears.command())     // [watch-clears] /village monsters: about, killed, fallen
             .then(com.jrpetty.mcassistant.entity.Transport.command())       // [transport] /village transport: lines, carts, ferry, bridge
             .then(com.jrpetty.mcassistant.entity.CaveDwellers.command())    // [caves] the cave dwellers and the caves' report
+            .then(com.jrpetty.mcassistant.entity.Fletchers.command())       // [fletcher] the fletcher, the watch's arrows, practice
+            .then(com.jrpetty.mcassistant.entity.Golems.command())          // [golems] the golem keeper and the town's golems
+            .then(com.jrpetty.mcassistant.entity.FireworkShows.command())   // [fireworks] /village fireworks: the hut, the rockets, a display; stage (ops)
+            .then(com.jrpetty.mcassistant.entity.Cartographers.command())   // [cartographer] /village maps: the map room; now, stage (ops)
             .then(com.jrpetty.mcassistant.entity.Divers.command())          // [diver] /village diver: the water, the beds, the stage
             .then(com.jrpetty.mcassistant.entity.Pets.command())            // [pets] /village pets: the town's pets; now, stage (ops)
+            .then(com.jrpetty.mcassistant.entity.WorkTools.command())       // [workitems] /village items work: the tools of the mine, woods, roads; stage (ops)
+            .then(com.jrpetty.mcassistant.entity.Kitchen.command())         // [kitchen] /village items kitchen: its books; stage (ops)
             .then(com.jrpetty.mcassistant.entity.Fashion.command())         // [fashion] the season's look, the tailor's book, the show
             .then(com.jrpetty.mcassistant.entity.Crime.command())           // [crime] the casebook, the Cases page; a deed, a trial, the stocks staged
             .then(com.jrpetty.mcassistant.entity.Fleet.command())           // [fleet] /village fleet: the boats, the catch, the market
@@ -258,6 +265,8 @@ public final class VillageCommands {
                 .then(Commands.literal("stage").requires(src -> src.hasPermission(2)).executes(VillageCommands::flatsStage)))
             // The job market between towns: the notices, the applications, who came and went (JobMarketCommands).
             .then(JobMarketCommands.node())
+            // [interviews] The town's interviews, set and held; a word put in, a seat on the panel, a choice; (ops) one staged now.
+            .then(InterviewCommands.build())
             // [econ-wages] What every job is worth (WagesCommands): the page, on screen, the books, a folk's card, reckon now.
             .then(WagesCommands.node())
             // [econ-prices] The economy page (what the town makes, sells and is worth). It was registered twice, here and
@@ -577,6 +586,10 @@ public final class VillageCommands {
                     case BANK -> net.minecraft.world.item.Items.GOLD_INGOT;
                     case CAVE -> net.minecraft.world.item.Items.LANTERN;          // [caves]
                     case FERRY -> net.minecraft.world.item.Items.OAK_BOAT;        // [transport]
+                    case FLETCHER -> net.minecraft.world.item.Items.ARROW;        // [fletcher]
+                    case GOLEMS -> net.minecraft.world.item.Items.IRON_INGOT;     // [golems]
+                    case FIREWORKS -> net.minecraft.world.item.Items.FIREWORK_ROCKET;   // [fireworks]
+                    case CARTOGRAPHER -> net.minecraft.world.item.Items.FILLED_MAP;   // [cartographer]
                     case DIVER -> net.minecraft.world.item.Items.KELP;            // [diver]
                     case NONE -> net.minecraft.world.item.Items.AIR;
                 }));

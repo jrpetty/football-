@@ -365,6 +365,7 @@ public final class TownMine {
                 : "face " + c[0] + "," + c[1]) + ", down to Y" + z.depth() + (lead == null ? "" : ", toward the cave team's " + lead));
         }
         out.addAll(MineSafety.report(village));                    // [mine-safety] who is down there; the stair heads fenced
+        out.addAll(WorkTools.mineReport(village));                 // [workitems] its pit props, the falls they held, its ropes, the sacks
         return out;
     }
 

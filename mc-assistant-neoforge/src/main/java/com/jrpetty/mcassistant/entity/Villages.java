@@ -111,6 +111,16 @@ public final class Villages {
         new Slot(AssistantEntity.StationTask.CAVE, 1, CaveDwellers.FROM, Age.IRON, CaveDwellers.MOST),
         // [transport] The ferryman: one, while the town's ferry runs (Ferries), whatever its size and age.
         new Slot(AssistantEntity.StationTask.FERRY, 1, 1, Age.WOOD, 1),
+        // [fletcher] The fletcher: from the Stone Age, once the watch carries bows (or the range stands); one, two at sixty (Fletchers).
+        new Slot(AssistantEntity.StationTask.FLETCHER, 1, 1, Age.STONE, 2),
+        // [golems] The golem keeper: from the Iron Age, after two raids in a fortnight or at sixty folk; one (Golems).
+        new Slot(AssistantEntity.StationTask.GOLEMS, 1, 1, Age.IRON, 1),
+        // [fireworks] The fireworks maker: one, in a Stone Age town of eight that has kept its festivals and has gunpowder
+        // put by, once its powder hut stands; chosen by the town for its nature (FireworksMaker.appoint).
+        new Slot(AssistantEntity.StationTask.FIREWORKS, 1, FireworksMaker.FROM, Age.STONE, 1),
+        // [cartographer] The cartographer: one, from the Stone Age once the town has scouts or thirty folk, at its map room;
+        // chosen by the town for its nature (Cartographers.appoint), not taken by whoever asks first.
+        new Slot(AssistantEntity.StationTask.CARTOGRAPHER, 1, Cartographers.FROM, Age.STONE, 1),
         // [diver] The kelp farmer and diver: one from fifteen in a town with a river, a lake or the sea close by, two at
         // fifty, from the Wood Age (Divers); none at all in a town with no water.
         new Slot(AssistantEntity.StationTask.DIVER, 1, Divers.FROM, Age.WOOD, Divers.MOST));
@@ -138,6 +148,7 @@ public final class Villages {
         d.addFirst(new News(day, text));
         while (d.size() > 12) d.pollLast();
         com.jrpetty.mcassistant.village.Chronicle.record(villageId, day, text);
+        Identity.heard(villageId, day, text);                      // [identity] what happened to it, toward its traits and its ethos
     }
 
     // ------------------------------ a village's name --------------------------
@@ -226,7 +237,7 @@ public final class Villages {
         ELECTED_ON.put(villageId, day);
         com.jrpetty.mcassistant.village.Ledger.note(villageId, "elder", who + "|" + name + "|" + day);
         if (was == null || !was.id().equals(who)) {
-            tell(villageId, day, name + " was elected " + Homeland.leaderTitle(villageId));
+            tell(villageId, day, Government.installedLine(villageId, name));   // [identity] elected, or a lord's heir succeeding
             if (f != null) f.persona().remember(day, "the village elected me its " + Homeland.leaderTitle(villageId), 9);
         }
     }
@@ -343,6 +354,10 @@ public final class Villages {
             case "trainingyard" -> "the training yard";            // [war-prep]
             case "firestation" -> "the fire station";              // [disasters]
             case "lodge" -> "the Delvers' Lodge";                 // [caves]
+            case "fletcher" -> "the fletcher's hut";              // [fletcher]
+            case "golemyard" -> "the golem yard";                 // [golems]
+            case "powderhut" -> "the powder hut";                // [fireworks]
+            case "maproom" -> "the map room";                     // [cartographer]
             case "divershed" -> "the diver's shed";               // [diver]
             default -> "the " + structure;
         };
@@ -352,6 +367,7 @@ public final class Villages {
         MADE_UP.clear();
         Bank.resetForTests();
         Culture.resetForTests();                                   // [batchD] the banner's works, the customs, the theatre, the band
+        Identity.resetForTests();                                  // [identity] every town plain again till a test asks for it live
         Museum.resetForTests();
         Library.resetForTests();                                   // [library] the writing, the readers, the seats
         Storehouses.resetForTests();
@@ -399,6 +415,7 @@ public final class Villages {
         Envoys.resetForTests();
         TownJobs.resetForTests();
         JobMarket.resetForTests();
+        Interviews.resetForTests();         // [interviews] the interviews, set and held
         Market.resetForTests();
         PriceIndex.resetForTests();         // [econ-prices] the towns' prices
         Purchases.resetForTests();          // [econ-prices] the folk's accounts at the counter
@@ -407,6 +424,11 @@ public final class Villages {
         Economy.resetForTests();
         Scouts.resetForTests();
         CaveDwellers.resetForTests();       // [caves]
+        Fletchers.resetForTests();          // [fletcher]
+        Golems.resetForTests();             // [golems]
+        FireworksMaker.resetForTests();     // [fireworks]
+        FireworkShows.resetForTests();      // [fireworks]
+        Cartographers.resetForTests();      // [cartographer]
         Divers.resetForTests();             // [diver]
         Fashion.resetForTests();            // [fashion] the season's looks, the tailor's book, the shows
         Quests.resetForTests();
@@ -442,6 +464,7 @@ public final class Villages {
         Weather.resetForTests();            // [wf] the storm (and a test's storm let go), the rods looked at
         Civics.resetForTests();             // [batchF] the post, petitions, the meeting, wardens, the fund, searches, favours
         Crime.resetForTests();              // [crime] the cases, the folk's records, the plans, the court
+        Weave.resetForTests();              // [weave] the homeless waiting to go, the day's looks; the round off again
         Roads.reset();
         LAST_PROJECT.clear();
         POP.clear();
@@ -702,6 +725,9 @@ public final class Villages {
             if (!craftReady(villageId, slot.trade())) continue;   // a smith with no smithy has nothing to work at
             if (slot.trade() == AssistantEntity.StationTask.BANK) continue;   // the banker is appointed (Bank.appoint)
             if (slot.trade() == AssistantEntity.StationTask.CAVE) continue;   // [caves] the team is chosen (CaveDwellers.appoint)
+            if (slot.trade() == AssistantEntity.StationTask.FIREWORKS) continue;   // [fireworks] the maker is chosen (FireworksMaker.appoint)
+            if (slot.trade() == AssistantEntity.StationTask.CARTOGRAPHER) continue;   // [cartographer] appointed (Cartographers.appoint)
+            if (slot.trade() == AssistantEntity.StationTask.DIVER) continue;          // [diver] appointed (Divers.appoint)
             double target = target(villageId, slot, total) * fit;
             double deficit = target - have.getOrDefault(slot.trade(), 0);
             // The first hand of a craft the village has grown into comes before one more of a trade
@@ -742,6 +768,7 @@ public final class Villages {
         for (Slot slot : SLOTS) {
             if (!wantedHere(slot, villageId, total, at)) continue;   // too small (or too young) to want one yet
             if (slot.age() != Age.WOOD) continue;    // crafts below, once the trades have their hands
+            if (slot.trade() == AssistantEntity.StationTask.DIVER) continue;          // [diver] appointed (Divers.appoint)
             if (!craftReady(villageId, slot.trade())) continue;   // nowhere to work at it yet
             if (have.getOrDefault(slot.trade(), 0) == 0) return slot.trade();
         }
@@ -761,6 +788,9 @@ public final class Villages {
             if (slot.age() == Age.WOOD || !wantedHere(slot, villageId, total, at)) continue;
             if (slot.trade() == AssistantEntity.StationTask.BANK) continue;   // the banker is appointed (Bank.appoint)
             if (slot.trade() == AssistantEntity.StationTask.CAVE) continue;   // [caves] the team is chosen (CaveDwellers.appoint)
+            if (slot.trade() == AssistantEntity.StationTask.FIREWORKS) continue;   // [fireworks] the maker is chosen (FireworksMaker.appoint)
+            if (slot.trade() == AssistantEntity.StationTask.CARTOGRAPHER) continue;   // [cartographer] appointed (Cartographers.appoint)
+            if (slot.trade() == AssistantEntity.StationTask.DIVER) continue;          // [diver] appointed (Divers.appoint)
             if (have.getOrDefault(slot.trade(), 0) > 0) continue;
             if (craftReady(villageId, slot.trade())) return slot.trade();
         }
@@ -773,6 +803,8 @@ public final class Villages {
         for (Slot slot : SLOTS) {
             if (!wantedHere(slot, villageId, total, at) || slot.trade().isCraft() || slot.trade() == AssistantEntity.StationTask.GUARD) continue;
             if (slot.trade() == AssistantEntity.StationTask.CAVE) continue;   // [caves] the team is chosen (CaveDwellers.appoint)
+            if (slot.trade() == AssistantEntity.StationTask.CARTOGRAPHER) continue;   // [cartographer] appointed (Cartographers.appoint)
+            if (slot.trade() == AssistantEntity.StationTask.DIVER) continue;          // [diver] appointed (Divers.appoint)
             if (!craftReady(villageId, slot.trade())) continue;
             double short_ = target(villageId, slot, total) * fit - have.getOrDefault(slot.trade(), 0);
             if (short_ > worst) { worst = short_; most = slot.trade(); }
@@ -802,6 +834,8 @@ public final class Villages {
         for (Slot slot : SLOTS) {
             if (!wantedHere(slot, villageId, total, at) || slot.trade().isCraft() || slot.trade() == AssistantEntity.StationTask.GUARD) continue;
             if (slot.trade() == AssistantEntity.StationTask.CAVE) continue;   // [caves] the team is chosen (CaveDwellers.appoint)
+            if (slot.trade() == AssistantEntity.StationTask.CARTOGRAPHER) continue;   // [cartographer] appointed (Cartographers.appoint)
+            if (slot.trade() == AssistantEntity.StationTask.DIVER) continue;          // [diver] appointed (Divers.appoint)
             if (!craftReady(villageId, slot.trade())) continue;
             double short_ = target(villageId, slot, total) * fit - have.getOrDefault(slot.trade(), 0);
             if (short_ > 1.5) { by.put(slot.trade(), short_); out.add(slot.trade()); }
@@ -847,6 +881,10 @@ public final class Villages {
         if (trade == AssistantEntity.StationTask.FISH) return !dryForFishers(villageId);
         if (trade == AssistantEntity.StationTask.CAVE) return CaveDwellers.ready(villageId);   // [caves] a few miners and a watch first
         if (trade == AssistantEntity.StationTask.FERRY) return Ferries.wanted(villageId);      // [transport] while the ferry runs
+        if (trade == AssistantEntity.StationTask.FLETCHER) return Fletchers.wanted(villageId); // [fletcher] a watch with bows, or the range
+        if (trade == AssistantEntity.StationTask.GOLEMS) return Golems.wanted(villageId);      // [golems] the raids, or sixty folk
+        if (trade == AssistantEntity.StationTask.FIREWORKS) return FireworksMaker.ready(villageId);   // [fireworks] opened, and its hut up
+        if (trade == AssistantEntity.StationTask.CARTOGRAPHER) return Cartographers.ready(villageId);   // [cartographer] its map room stands
         if (trade == AssistantEntity.StationTask.DIVER) return Divers.ready(villageId);        // [diver] water near enough to dive in
         if (trade == AssistantEntity.StationTask.STORE || trade == AssistantEntity.StationTask.HAUL) {
             return villageId != null && (Storehouses.stands(villageId) || hasBuilt(villageId, "storage")
@@ -905,6 +943,8 @@ public final class Villages {
      * lives by it (Homeland): a coast town fishes from its first days.
      */
     static boolean wantedHere(Slot slot, @Nullable UUID villageId, int total, Age at) {
+        // [cartographer] A Stone Age town with scouts out wants its maps drawn before it is thirty (Cartographers.wanted).
+        if (slot.trade() == AssistantEntity.StationTask.CARTOGRAPHER) return Cartographers.wanted(villageId);
         if (slot.wanted(total, at)) return true;
         int sooner = Homeland.sooner(villageId, slot.trade());
         return sooner > 0 && total >= sooner && at.ordinal() >= slot.age().ordinal();
@@ -918,6 +958,10 @@ public final class Villages {
             * glut(villageId, slot.trade()) * Homeland.lean(villageId, slot.trade());
         if (slot.trade() == AssistantEntity.StationTask.CAVE) t = CaveDwellers.team(total);   // [caves] two, three at sixty, four at a hundred
         if (slot.trade() == AssistantEntity.StationTask.FERRY) t = Ferries.wanted(villageId) ? 1.0 : 0.0;  // [transport] one ferryman
+        if (slot.trade() == AssistantEntity.StationTask.FLETCHER) t = Fletchers.wanted(villageId) ? Fletchers.hands(villageId) : 0.0;   // [fletcher]
+        if (slot.trade() == AssistantEntity.StationTask.GOLEMS) t = Golems.wanted(villageId) ? 1.0 : 0.0;   // [golems] one keeper
+        if (slot.trade() == AssistantEntity.StationTask.FIREWORKS) t = FireworksMaker.ready(villageId) ? 1.0 : 0.0;   // [fireworks] one maker
+        if (slot.trade() == AssistantEntity.StationTask.CARTOGRAPHER) t = Cartographers.ready(villageId) ? 1.0 : 0.0;   // [cartographer] one
         if (slot.trade() == AssistantEntity.StationTask.DIVER) t = Divers.team(villageId);      // [diver] one, two at fifty
         // A courier for every five workers out on plots of their own (their production chests).
         if (slot.trade() == AssistantEntity.StationTask.HAUL && villageId != null) {
@@ -944,8 +988,11 @@ public final class Villages {
         if (slot.trade() == AssistantEntity.StationTask.RANCH && villageId != null && Market.bedsShort(villageId) >= 6) t *= 2.0;
         // [economy] The watch grows with the town, and by half again when monsters have been killing its folk (Mishap.watch).
         if (slot.trade() == AssistantEntity.StationTask.GUARD) t = Mishap.watch(villageId, t, total, CLOCK);
+        // [identity] The town's character, laws and history lean the shares: a martial town's watch, a reserved hunt (Ethos).
+        double ways = Ethos.extraHands(villageId, slot.trade());
+        t = t * Ethos.shareLean(villageId, slot.trade()) + ways;
         int max = slot.max() == Integer.MAX_VALUE ? Integer.MAX_VALUE
-            : slot.max() + Math.max(0, boost) + Homeland.extraMost(villageId, slot.trade());
+            : slot.max() + Math.max(0, boost) + Homeland.extraMost(villageId, slot.trade()) + (int) Math.ceil(ways);
         // And the shop's hands at its bench (Workshop): the shop's share is its keeper and the hands it wants.
         double hands = slot.trade() == AssistantEntity.StationTask.SHOP && villageId != null
             ? Workshop.handsWanted(villageId) + ShopRoles.staffWanted(villageId) : 0;   // [econ-store] and its assistants and stock keeper
@@ -1775,8 +1822,17 @@ public final class Villages {
         if (com.jrpetty.mcassistant.village.Ledger.graves(villageId).size() > Graves.room(villageId)) extras.add(0, "graveyard");
         // [batchE] The town's look: the windmill, the bakery, the orchard, the allotments and (Iron Age, or thirty folk) the inn.
         TownLook.wanted(villageId, folk, at, extras, s -> built(villageId, s) < 1);
+        // [fireworks] The powder hut, out at the edge of the town, once the town takes up fireworks (FireworksMaker): from the
+        // Stone Age on, so it is asked for wherever the list stops.
+        if (FireworksMaker.hutWanted(villageId)) extras.add(FireworksMaker.STRUCTURE);
         // [library] A library for the town's books, once it is twelve strong (Library).
         if (Library.wanted(villageId, folk) && built(villageId, Library.STRUCTURE) < 1) extras.add(Library.STRUCTURE);
+        // [fletcher] The fletcher's hut, once the town keeps a fletcher (Fletchers).
+        if (Fletchers.hutWanted(villageId)) extras.add(Fletchers.STRUCTURE);
+        // [identity] What its character wants early, and first: a devout town's chapel, a worldly one's tavern (Ethos.extras).
+        Ethos.extras(villageId, folk, at, extras, s -> built(villageId, s) < 1);
+        // [cartographer] The map room, once a Stone Age town has scouts or thirty folk: the cartographer's (Cartographers).
+        if (Cartographers.wantsMapRoom(villageId) && built(villageId, Cartographers.STRUCTURE) < 1) extras.add(Cartographers.STRUCTURE);
         if (at == Age.STONE) { homesAndAmenities(villageId, folk, out, extras); return out; }
 
         if (built(villageId, "workshop") < 1) out.add("workshop");
@@ -1810,6 +1866,8 @@ public final class Villages {
         if (FireSafety.wanted(villageId)) extras.add(FireSafety.STATION);
         // [caves] The Delvers' Lodge, once the town keeps a cave team (Lodge).
         if (Lodge.wanted(villageId)) extras.add(Lodge.STRUCTURE);
+        // [golems] The golem yard, once the town keeps a golem keeper (Golems).
+        if (Golems.yardWanted(villageId)) extras.add(Golems.STRUCTURE);
         if (at == Age.IRON) { homesAndAmenities(villageId, folk, out, extras); return out; }
 
         if (built(villageId, "lighthouse") < 1) out.add("lighthouse");
@@ -1985,7 +2043,8 @@ public final class Villages {
      * rarer the more (Museum). It is what the ranks ask for past the Town.
      */
     public static int renown(UUID villageId) {
-        return Museum.GREAT_WORK_RENOWN * greatWorks(villageId) + Museum.renown(villageId);
+        return Museum.GREAT_WORK_RENOWN * greatWorks(villageId) + Museum.renown(villageId)
+            + Fame.renown(villageId);                                  // [identity] its deeds, its fame, its masters, its traits
     }
 
     /** How many great works this village has raised. */
@@ -2012,11 +2071,13 @@ public final class Villages {
         int colonies = 0;
         for (String s : BUILT.getOrDefault(villageId, List.of())) if ("colony".equals(s)) colonies++;
         Age age = ageOf(villageId);
-        if (age == Age.NETHER && renown >= 6 * Museum.GREAT_WORK_RENOWN && folk >= 80 && colonies >= 2) return Rank.CAPITAL;
-        if (age.ordinal() >= Age.DIAMOND.ordinal() && renown >= 2 * Museum.GREAT_WORK_RENOWN && folk >= 50) return Rank.CITY;
-        if (age.ordinal() >= Age.IRON.ordinal() && folk >= 30) return Rank.TOWN;
-        if (age.ordinal() >= Age.STONE.ordinal() && folk >= 12) return Rank.VILLAGE;
-        return Rank.HAMLET;
+        Rank by;
+        if (age == Age.NETHER && renown >= 6 * Museum.GREAT_WORK_RENOWN && folk >= 80 && colonies >= 2) by = Rank.CAPITAL;
+        else if (age.ordinal() >= Age.DIAMOND.ordinal() && renown >= 2 * Museum.GREAT_WORK_RENOWN && folk >= 50) by = Rank.CITY;
+        else if (age.ordinal() >= Age.IRON.ordinal() && folk >= 30) by = Rank.TOWN;
+        else if (age.ordinal() >= Age.STONE.ordinal() && folk >= 12) by = Rank.VILLAGE;
+        else by = Rank.HAMLET;
+        return Fame.lift(villageId, by, age, folk, renown, colonies);   // [identity] renown raises the title too
     }
 
     /** What the next rank asks for, in words (for the status and the journal). */
@@ -2180,6 +2241,10 @@ public final class Villages {
             case "museum" -> "a museum, to put the town's rare finds on show and keep its chronicle as books";
             case "infirmary" -> Infirmary.why(villageId);          // [batchA]
             case "lodge" -> Lodge.why(villageId);                  // [caves]
+            case "fletcher" -> Fletchers.why(villageId);           // [fletcher]
+            case "golemyard" -> Golems.why(villageId);             // [golems]
+            case "powderhut" -> FireworksMaker.why(villageId);     // [fireworks]
+            case "maproom" -> Cartographers.why(villageId);        // [cartographer]
             case "divershed" -> Divers.shedWhy(villageId);         // [diver]
             case "theatre" -> Theatre.why(villageId);             // [batchD]
             case "windmill", "bakery", "inn", "orchard", "allotments" -> TownLook.why(villageId, project);   // [batchE]

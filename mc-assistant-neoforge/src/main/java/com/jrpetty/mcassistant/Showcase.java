@@ -107,6 +107,7 @@ public final class Showcase {
                 case CAMPFIRE -> Blocks.CAMPFIRE;
                 case NOTE_BLOCK -> Blocks.NOTE_BLOCK;
                 case STOREHOUSE -> McAssistantMod.STOREHOUSE.get();
+                case CARTOGRAPHY -> Blocks.CARTOGRAPHY_TABLE;                   // [cartographer]
                 case CLEAR -> null;
             };
             return b == null ? null : b.defaultBlockState();

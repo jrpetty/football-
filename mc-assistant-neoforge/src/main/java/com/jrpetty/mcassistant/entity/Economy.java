@@ -364,6 +364,13 @@ public final class Economy {
             case GUARD -> k == Kind.ANIMAL;                                    // what the night's monsters drop
             // [caves] The ore it digs and what it brings out of the old chests: gems, books, gold apples, saddles.
             case CAVE -> k == Kind.ORE || k == Kind.CRAFT || k == Kind.ANIMAL || CaveDwellers.valuable(s);
+            // [fletcher] The flint it sifts out of the gravel, and the arrows, bows and crossbows it makes of it.
+            case FLETCHER -> k == Kind.CRAFT || s.is(Items.FLINT) || s.is(Items.ARROW) || s.is(Items.SPECTRAL_ARROW);
+            // [golems] The blocks of iron and the carved pumpkins it makes for its golems, and the seeds the carving gives.
+            case GOLEMS -> k == Kind.CRAFT || s.is(Items.IRON_BLOCK) || s.is(Items.CARVED_PUMPKIN) || s.is(Items.PUMPKIN_SEEDS);
+            // [cartographer] Its maps and the makings it presses and forges for them: paper, compasses, a table.
+            case CARTOGRAPHER -> s.is(Items.FILLED_MAP) || s.is(Items.MAP) || s.is(Items.PAPER) || s.is(Items.COMPASS)
+                || s.is(Items.CARTOGRAPHY_TABLE);
             // [diver] The kelp and what is dried and packed of it, the bed's clay, sand and gravel, the seagrass and the
             // pickles, the turtles' scutes, and the monument's prismarine.
             case DIVER -> true;

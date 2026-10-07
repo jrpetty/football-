@@ -410,7 +410,13 @@ public final class Divers {
             if (w.shedAt == null && shedOf(id) == null) shedPlace(level, w, id);
             save(id, w);
         }
-        if (divers(id).size() < wanted(id)) appoint(level, v);
+        if (divers(id).size() < wanted(id) && Interviews.pending(id, POST) == null) {
+            // [interviews] Two or more of the town who want the place: it is held open a day for its interview
+            // (InterviewPosts), and given after it to the panel's choice (shortlist puts it first). One alone, or no
+            // interviews in this world: given now.
+            List<VillageFolkEntity> few = shortlist(id);
+            if (!few.isEmpty() && !Interviews.vacancy(level, id, POST, few.get(0))) appoint(level, v);
+        }
         TurtleBeach.issueHelmets(level, v, w);
         DiverRaids.tick(level, v, w);
         KelpBeds.keepShed(level, v);
@@ -675,39 +681,63 @@ public final class Divers {
 
     // ------------------------------------------------------------------ taking one on
 
+    /** The diver's place in the interviews' books (InterviewPosts). */
+    static final String POST = "diver";
+
     /**
-     * A diver taken on: one already at the trade, else a hand that can be spared: one with nothing to do, a fisher (it
-     * knows the water) while the fishers are not short, or a hand from a trade over its share. Never a craft's one hand,
-     * the watch, the storehouse's staff, the cave team, the scouts, the ferry or the bank.
+     * How fit a folk is to be taken on as a diver, by the town's own reckoning (more is better), or Integer.MIN_VALUE
+     * if it may not be: a hand that can be spared (one with nothing to do; a fisher, who knows the water, while the
+     * fishers are not short; a hand from a trade over its share), never a craft's one hand, the watch, the storehouse's
+     * staff, the cave team, the scouts, the ferry or the bank. Its hand at diving and fishing, a quiet hardworking
+     * nature, young lungs, and living near the water count for it.
+     */
+    static int fitness(VillageFolkEntity f, UUID village) {
+        Waterside w = water(village);
+        if (w == null || f.isBaby() || f.isShowcase() || f.isHired() || !f.isAlive() || !village.equals(f.ownerId())) return Integer.MIN_VALUE;
+        if (f.trip() != null || f.expedition() != null) return Integer.MIN_VALUE;
+        StationTask t = f.stationTask();
+        if (t == StationTask.DIVER) return Integer.MIN_VALUE;
+        if (t.isCraft() || t == StationTask.GUARD || t == StationTask.STORE || t == StationTask.HAUL || t == StationTask.CAVE
+            || t == StationTask.SCOUT || t == StationTask.FERRY || t == StationTask.BANK) return Integer.MIN_VALUE;
+        boolean spare = t == StationTask.NONE || Villages.share(village, t) >= 0.5
+            || t == StationTask.FISH && Villages.share(village, StationTask.FISH) >= 0.0;
+        if (!spare) return Integer.MIN_VALUE;
+        return f.tradeLevel(StationTask.DIVER) * 6 + f.tradeLevel(StationTask.FISH) * 2
+            + (t == StationTask.NONE ? 30 : t == StationTask.FISH ? 20 : 0)
+            + (f.life().has(Social.Trait.SHY) ? 4 : 0) + (f.life().has(Social.Trait.HARDWORKING) ? 4 : 0)
+            - (f.isOld() ? 25 : 0)
+            - (int) Math.sqrt(f.blockPosition().distSqr(w.bank)) / 8;
+    }
+
+    /** The few best for the place, best first: the interview panel's choice above them all ([interviews] the seam). */
+    static List<VillageFolkEntity> shortlist(UUID village) {
+        List<VillageFolkEntity> out = new ArrayList<>();
+        Map<VillageFolkEntity, Integer> score = new java.util.HashMap<>();
+        for (AssistantEntity a : Villages.folkOf(village)) {
+            if (!(a instanceof VillageFolkEntity f)) continue;
+            int s = fitness(f, village);
+            if (s == Integer.MIN_VALUE) continue;
+            score.put(f, s + Interviews.preferred(village, POST, f));
+            out.add(f);
+        }
+        out.sort((a, b) -> Integer.compare(score.get(b), score.get(a)));
+        return out.size() > 4 ? new ArrayList<>(out.subList(0, 4)) : out;
+    }
+
+    /**
+     * A diver taken on, the best of the shortlist (the interview's choice, when the place went to interview).
      *
-     * <p>[interviews] When the town comes to interview for its places (Interviews), the diver's place is filled through
-     * it here: the hands below are the field it interviews.
+     * <p>[interviews] The diver's place is one the town gives its own: with two or more who want it, it is held open a
+     * day for its interview (Divers.tick, InterviewPosts), and the panel's choice is taken here.
      */
     @Nullable
     static VillageFolkEntity appoint(ServerLevel level, Villages.Village v) {
         UUID id = v.id();
         Waterside w = water(id);
         if (w == null) return null;
-        VillageFolkEntity best = null;
-        int bestScore = Integer.MIN_VALUE;
-        for (AssistantEntity a : Villages.folkOf(id)) {
-            if (!(a instanceof VillageFolkEntity f) || f.isBaby() || f.isShowcase() || f.isHired() || !f.isAlive()) continue;
-            if (f.trip() != null || f.expedition() != null) continue;
-            StationTask t = f.stationTask();
-            if (t == StationTask.DIVER) continue;
-            if (t.isCraft() || t == StationTask.GUARD || t == StationTask.STORE || t == StationTask.HAUL || t == StationTask.CAVE
-                || t == StationTask.SCOUT || t == StationTask.FERRY || t == StationTask.BANK) continue;
-            boolean spare = t == StationTask.NONE || Villages.share(id, t) >= 0.5
-                || t == StationTask.FISH && Villages.share(id, StationTask.FISH) >= 0.0;
-            if (!spare) continue;
-            int score = f.tradeLevel(StationTask.DIVER) * 6 + f.tradeLevel(StationTask.FISH) * 2
-                + (t == StationTask.NONE ? 30 : t == StationTask.FISH ? 20 : 0)
-                + (f.life().has(Social.Trait.SHY) ? 4 : 0) + (f.life().has(Social.Trait.HARDWORKING) ? 4 : 0)
-                - (f.isOld() ? 25 : 0)
-                - (int) Math.sqrt(f.blockPosition().distSqr(w.bank)) / 8;
-            if (score > bestScore) { bestScore = score; best = f; }
-        }
-        if (best == null) return null;
+        List<VillageFolkEntity> few = shortlist(id);
+        if (few.isEmpty()) return null;
+        VillageFolkEntity best = few.get(0);
         take(level, v, w, best);
         return best;
     }

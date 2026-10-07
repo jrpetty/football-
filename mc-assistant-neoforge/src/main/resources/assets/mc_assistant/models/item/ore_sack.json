@@ -1,0 +1,14 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "mc_assistant:item/ore_sack"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "mc_assistant:filled": 0.5
+      },
+      "model": "mc_assistant:item/ore_sack_full"
+    }
+  ]
+}

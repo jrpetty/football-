@@ -389,6 +389,8 @@ public class GatherGoal extends Goal {
             // [wf] A village's woodcutter keeps the stump on its wood's books too, till a sapling is on it
             // (Woods): the crown's own saplings, shaken down, if it has none in hand now.
             com.jrpetty.mcassistant.entity.Woods.felled(assistant, pos);
+            // [workitems] With a felling saw, the rest of the tree comes down with it, the logs at the stump (WorkTools).
+            collected += com.jrpetty.mcassistant.entity.WorkTools.fellRest(assistant, pos);
         }
         if (assistant.level().destroyBlock(pos, true, assistant)) {
             collected++;

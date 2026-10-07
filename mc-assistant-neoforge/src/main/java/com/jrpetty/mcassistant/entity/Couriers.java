@@ -550,6 +550,7 @@ public final class Couriers {
             if (!c.transferReady()) return true;                     // still handling the last load
             boolean all = c.can(AssistantEntity.Ability.HAUL_FULL_PACK);
             int n = c.loadFrom(at, all ? 512 : 256, s -> AssistantEntity.haulWeight(s) > 0);
+            n += Crates.packFrom(c, at);                            // [workitems] and what is left packed into its crates, nine stacks a crate
             r.moved += n;
             if (r.moved <= 0) {                                       // nothing worth carrying after all
                 close(level, v, o, c, r, 1200L);

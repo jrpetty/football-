@@ -65,7 +65,7 @@ public final class Tourists {
         int draw = draw(id);
         if (draw < DRAW || Raids.underAlarm(id) || Weather.stormy(level) || level.isRaining()) return;
         long last = Bard.parse(Ledger.note(id, "visit/tourist"));
-        int gap = Math.max(2, 5 - draw / 20);
+        int gap = Math.max(1, Math.max(2, 5 - draw / 20) + Ethos.tourGap(id));   // [identity] an open town sooner, a closed one later
         if (last >= 0 && day >= last && day - last < gap) return;
         if (!Visitors.inTown(level, id, Visitors.Kind.TOURIST).isEmpty()) return;
         int party = draw >= 30 && Math.floorMod(id.hashCode() + (int) day, 2) == 0 ? 2 : 1;

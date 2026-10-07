@@ -290,6 +290,7 @@ public final class JobSeekers {
         if (j != null) return travel(f, level, j);
         Leaving l = LEAVING.get(me);
         if (l != null) return leaving(f, level, l);
+        if (Interviews.busy(f)) return false;                     // [interviews] at an interview or on the road to one: the board waits
         if (f.ownerId() == null || f.isShowcase() || f.isHired()) return false;
         Visit v = VISITS.get(me);
         if (v != null) return visit(f, level, v);
@@ -466,6 +467,7 @@ public final class JobSeekers {
         if (f.talkPartner() != null || f.companionPlayer() != null || f.guidePlayer() != null) return false;
         if (f.trip() != null || f.expedition() != null || Nether.away(f) || Drover.busy(f) || TownJobs.busy(f)) return false;
         if (Assemblies.attending(f) || Patrols.escorting(f)) return false;
+        if (FireBrigade.onIt(f) || Disasters.busy(f)) return false;          // [disasters] at a fire, in the bucket chain, out of a flood
         long t = f.level().getDayTime() % 24000L;
         if (t >= 13500L && t < 23500L) return false;                         // in bed by now, or should be
         if (FORCED.contains(f.getUUID())) return true;
@@ -565,7 +567,8 @@ public final class JobSeekers {
         UUID me = f.getUUID(), home = f.ownerId();
         long now = level.getGameTime();
         boolean gone = home == null || f.isSleeping() || Raids.underAlarm(home) || Assemblies.attending(f) || f.trip() != null
-            || f.getTarget() != null || f.talkPartner() != null || now - v.started > VISIT_MOST;
+            || f.getTarget() != null || f.talkPartner() != null || now - v.started > VISIT_MOST
+            || FireBrigade.onIt(f) || Disasters.busy(f);                     // [disasters] called to a fire, or a flood: the board waits
         if (gone) {
             VISITS.remove(me);
             if (!v.forced || now - v.started > VISIT_MOST) FORCED.remove(me);

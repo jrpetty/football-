@@ -12,7 +12,9 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
@@ -40,9 +42,11 @@ import java.util.concurrent.ConcurrentHashMap;
  * on duty), nor the old, the children, or anybody away or on the road. With three or more a side, one of
  * them keeps goal.
  *
- * <p><b>The ball</b> is a real one: a slime ball out of the stores, or a scrap of leather if the town has no
- * slime, lying on the grass as any dropped thing lies (nobody picks it up while the match is on), and back in
- * the stores at the final whistle. No ball, no match.
+ * <p><b>The ball</b> is a real one: [leisure] the town's leather football out of the stores (FootballEntity: it rolls,
+ * bounces off the posts and slows on the grass, and a player who runs into it dribbles it), or, with none made yet, a
+ * slime ball, or a scrap of leather if the town has no slime, lying on the grass as any dropped thing lies (nobody picks
+ * it up while the match is on); back in the stores at the final whistle. No ball, no match. A player at the match can
+ * kick the leather ball too: a goal is the goal of whoever touched it last, the player's own name in the score.
  *
  * <p><b>The match.</b> The players walk out onto the pitch, each to its place in its own half, and the home
  * side kicks off. They run at the ball and kick it, toward the other side's goal, a little this way or that:
@@ -273,10 +277,16 @@ public final class Football {
         return m == null ? "no ball in the stores" : "the sides are out: " + home.name + " and " + away.name;
     }
 
-    /** The ball out of the stores: a slime ball, else a scrap of leather. Empty if the stores have neither. */
+    /** The ball out of the stores: [leisure] the leather football, else a slime ball, else a scrap of leather. Empty with none. */
     static ItemStack takeBall(ServerLevel level, Villages.Village v) {
-        ItemStack s = Crafts.takeOne(level, v, st -> st.is(Items.SLIME_BALL));
+        ItemStack s = Crafts.takeOne(level, v, Kickabout::isFootball);
+        if (s.isEmpty()) s = Crafts.takeOne(level, v, st -> st.is(Items.SLIME_BALL));
         return s.isEmpty() ? Crafts.takeOne(level, v, st -> st.is(Items.LEATHER)) : s;
+    }
+
+    /** [leisure] The ball's own stack: what goes back into the stores at the final whistle. */
+    static ItemStack stackOf(Entity ball) {
+        return ball instanceof FootballEntity fb ? fb.getItem() : ball instanceof ItemEntity ie ? ie.getItem() : ItemStack.EMPTY;
     }
 
     /** A match begun: the ball out of the stores, the players called out to the pitch. Null with no ball. */
@@ -286,7 +296,7 @@ public final class Football {
         ItemStack ball = takeBall(level, v);
         long day = level.getDayTime() / 24000L;
         if (ball.isEmpty()) {
-            Villages.tell(v.id(), day, "no football today: not a slime ball or a bit of leather in the stores for a ball");
+            Villages.tell(v.id(), day, "no football today: not a leather football, a slime ball or a bit of leather in the stores for a ball");
             return null;
         }
         home.attack = 1;
@@ -318,9 +328,11 @@ public final class Football {
         return u != null && level.getEntity(u) instanceof VillageFolkEntity f && f.isAlive() ? f : null;
     }
 
+    /** The match's ball: the leather football ([leisure] FootballEntity), or a slime ball or leather lying on the grass. */
     @Nullable
-    static ItemEntity ball(ServerLevel level, Match m) {
-        return m.ball != null && level.getEntity(m.ball) instanceof ItemEntity e && e.isAlive() ? e : null;
+    static Entity ball(ServerLevel level, Match m) {
+        Entity e = m.ball == null ? null : level.getEntity(m.ball);
+        return e != null && e.isAlive() && (e instanceof FootballEntity || e instanceof ItemEntity) ? e : null;
     }
 
     // ------------------------------------------------------------------ the referee: every tick
@@ -364,12 +376,22 @@ public final class Football {
             }
             return;
         }
-        ItemEntity ball = ball(level, m);
+        Entity ball = ball(level, m);
         if (ball == null) {
             if (++m.missing > 40) end(level, m, "the ball was lost");
             return;
         }
         m.missing = 0;
+        if (ball instanceof FootballEntity fb) {
+            // [leisure] The leather ball: in play (it does not go home by itself), and a touch by anybody, a player's run into
+            // it or a punch, is that one's touch: the scorer's, if it goes in.
+            fb.inUse(now);
+            if (fb.lastKicker() != null && fb.lastKickAt() > m.lastKick) {
+                m.lastTouch = fb.lastKicker();
+                m.lastKick = fb.lastKickAt();
+                if (now < m.pauseUntil) m.pauseUntil = now;
+            }
+        }
         if (now >= m.endAt) { end(level, m, null); return; }
         // Where the ball is: in the net, over a line, or in play.
         int call = judge(m.pitch, ball.position());
@@ -412,7 +434,7 @@ public final class Football {
     }
 
     /** The ball set down on the field, still. */
-    static void place(Match m, ItemEntity ball, double u, double w) {
+    static void place(Match m, Entity ball, double u, double w) {
         Vec3 p = Pitch.point(m.pitch, u, w);
         ball.moveTo(p.x, p.y + 0.1, p.z);
         ball.setDeltaMovement(Vec3.ZERO);
@@ -423,14 +445,26 @@ public final class Football {
     static void kickOff(ServerLevel level, Match m) {
         long now = level.getGameTime();
         Vec3 c = Pitch.point(m.pitch, 0, 0);
-        ItemEntity ball = new ItemEntity(level, c.x, c.y + 0.1, c.z, m.ballStack.copy(), 0, 0, 0);
-        ball.setNeverPickUp();
-        ball.setUnlimitedLifetime();
-        ball.addTag(Sport.BALL);
-        // Spoken for (Sweepers.playersOwn): nobody sweeps it up, or pockets it on an idle look round, mid-match.
-        ball.setTarget(m.village);
-        level.addFreshEntity(ball);
-        m.ball = ball.getUUID();
+        if (Kickabout.isFootball(m.ballStack)) {
+            // [leisure] The town's leather football: a real ball on the centre spot, the town's (it goes home by itself if a
+            // match is ever left without its whistle).
+            FootballEntity fb = FootballEntity.setDown(level, c.x, c.y + 0.1, c.z, m.ballStack.copy(), m.village);
+            if (fb == null) {
+                end(level, m, "the ball would not go down");
+                return;
+            }
+            fb.addTag(Sport.BALL);
+            m.ball = fb.getUUID();
+        } else {
+            ItemEntity ball = new ItemEntity(level, c.x, c.y + 0.1, c.z, m.ballStack.copy(), 0, 0, 0);
+            ball.setNeverPickUp();
+            ball.setUnlimitedLifetime();
+            ball.addTag(Sport.BALL);
+            // Spoken for (Sweepers.playersOwn): nobody sweeps it up, or pockets it on an idle look round, mid-match.
+            ball.setTarget(m.village);
+            level.addFreshEntity(ball);
+            m.ball = ball.getUUID();
+        }
         m.stage = PLAYING;
         m.kickOff = now;
         m.endAt = now + (quick ? 600 : LENGTH);
@@ -443,7 +477,7 @@ public final class Football {
     }
 
     /** The nearest player to the ball who can reach it kicks it, if anybody can. */
-    static void kicks(ServerLevel level, Match m, ItemEntity ball, long now) {
+    static void kicks(ServerLevel level, Match m, Entity ball, long now) {
         if (now - m.lastKick < 5) return;
         Vec3 bp = ball.position();
         VillageFolkEntity best = null;
@@ -469,7 +503,7 @@ public final class Football {
      * out, more again for a clearance). A shot from close in is struck hard and low; a pass from further out
      * goes a few blocks up the field; a goalkeeper's clearance goes high and long.
      */
-    static void kick(ServerLevel level, Match m, ItemEntity ball, VillageFolkEntity f, Side s, long now) {
+    static void kick(ServerLevel level, Match m, Entity ball, VillageFolkEntity f, Side s, long now) {
         RandomSource r = level.getRandom();
         double[] uw = Pitch.local(m.pitch, ball.position());
         boolean keeper = f.getUUID().equals(s.keeper);
@@ -481,10 +515,17 @@ public final class Football {
         double angle = Math.atan2(du, dw) + (r.nextDouble() * 2 - 1) * spread;
         double power = keeper ? 0.8 + r.nextDouble() * 0.15 : shot ? 0.62 + r.nextDouble() * 0.2 : 0.34 + r.nextDouble() * 0.16;
         double lift = keeper ? 0.3 : shot ? 0.1 + r.nextDouble() * 0.1 : 0.14 + r.nextDouble() * 0.06;
+        // [leisure] The leather ball rolls on where a slime ball stops in the grass: struck a little softer to go as far.
+        if (ball instanceof FootballEntity) power *= keeper ? 0.72 : shot ? 0.88 : 0.8;
         double lu = Math.sin(angle) * power, lw = Math.cos(angle) * power;
         Direction right = m.pitch.facing().getClockWise(), along = m.pitch.facing();
-        ball.setDeltaMovement(right.getStepX() * lu + along.getStepX() * lw, lift, right.getStepZ() * lu + along.getStepZ() * lw);
-        ball.hasImpulse = true;
+        Vec3 v = new Vec3(right.getStepX() * lu + along.getStepX() * lw, lift, right.getStepZ() * lu + along.getStepZ() * lw);
+        if (ball instanceof FootballEntity fb) {
+            fb.kick(v, f);
+        } else {
+            ball.setDeltaMovement(v);
+            ball.hasImpulse = true;
+        }
         f.swing(InteractionHand.MAIN_HAND);
         f.getLookControl().setLookAt(ball, 30.0F, 30.0F);
         level.playSound(null, ball.blockPosition(), SoundEvents.SLIME_SQUISH_SMALL, SoundSource.NEUTRAL, 0.7F, shot ? 0.8F : 1.1F);
@@ -498,12 +539,17 @@ public final class Football {
     }
 
     /** A goal at that end: to the side attacking it; the scorer named (an own goal if the other side touched it last). */
-    static void goal(ServerLevel level, Match m, ItemEntity ball, int end) {
+    static void goal(ServerLevel level, Match m, Entity ball, int end) {
         Side scored = m.home.attack == end ? m.home : m.away, let = scored == m.home ? m.away : m.home;
         scored.goals++;
         VillageFolkEntity by = live(level, m.lastTouch);
-        String who = by == null ? "a scramble" : scored.has(by.getUUID()) ? by.displayNameCap() : "an own goal";
+        Player kicker = by == null && m.lastTouch != null ? level.getPlayerByUUID(m.lastTouch) : null;     // [leisure] a player's goal
+        String who = by == null ? (kicker != null ? kicker.getName().getString() : "a scramble") : scored.has(by.getUUID()) ? by.displayNameCap() : "an own goal";
         scored.scorers.add(who);
+        if (kicker != null) {
+            kicker.sendSystemMessage(net.minecraft.network.chat.Component.literal("GOAL! You scored for " + scored.name + " — " + m.score() + ".")
+                .withStyle(net.minecraft.ChatFormatting.GOLD));
+        }
         level.sendParticles(ParticleTypes.HAPPY_VILLAGER, ball.getX(), ball.getY() + 0.5, ball.getZ(), 20, 0.6, 0.4, 0.6, 0.1);
         level.playSound(null, ball.blockPosition(), SoundEvents.VILLAGER_CELEBRATE, SoundSource.NEUTRAL, 1.0F, 1.0F);
         RandomSource r = level.getRandom();
@@ -540,11 +586,11 @@ public final class Football {
         for (Side s : new Side[]{ m.home, m.away }) for (UUID u : s.players) PLAYERS.remove(u, m);
         Villages.Village v = Villages.get(m.village);
         long day = level.getDayTime() / 24000L;
-        ItemEntity ball = ball(level, m);
+        Entity ball = ball(level, m);
         if (ball != null) {
-            ItemStack back = ball.getItem().copy();
+            ItemStack back = stackOf(ball).copy();
             ball.discard();
-            if (v != null) Crafts.store(level, v, back);
+            if (v != null && !back.isEmpty()) Crafts.store(level, v, back);
         } else if (m.stage == GATHERING && v != null) {
             Crafts.store(level, v, m.ballStack);                            // never kicked: still in hand, back it goes
         }
@@ -560,6 +606,7 @@ public final class Football {
         }
         String full = result + (why == null ? "" : " (stopped early: " + why + ")");
         LAST.put(m.village, full);
+        Pastimes.news(m.village, day, "football:" + full);             // [leisure] the gazette's "Home and play"
         if (m.tour != null) {
             Friendlies.over(level, m.tour, m.home.goals, m.away.goals, full);
         } else {
@@ -678,7 +725,7 @@ public final class Football {
         if (f.getTarget() != null) return;
         long now = level.getGameTime();
         int i = s.players.indexOf(f.getUUID());
-        ItemEntity ball = ball(level, m);
+        Entity ball = ball(level, m);
         Vec3 to;
         double speed = 1.0;
         boolean keeper = f.getUUID().equals(s.keeper);
@@ -716,7 +763,7 @@ public final class Football {
     }
 
     /** Is this one of the two of its side nearest the ball (the ones who go for it)? */
-    static boolean chaser(ServerLevel level, Match m, Side s, VillageFolkEntity f, ItemEntity ball) {
+    static boolean chaser(ServerLevel level, Match m, Side s, VillageFolkEntity f, Entity ball) {
         double mine = f.distanceToSqr(ball);
         int nearer = 0;
         for (UUID u : s.players) {
@@ -743,7 +790,7 @@ public final class Football {
             return;
         }
         f.getNavigation().stop();
-        ItemEntity ball = ball(level, m);
+        Entity ball = ball(level, m);
         if (ball != null) f.getLookControl().setLookAt(ball, 30.0F, 30.0F);
         if (m.stage == PLAYING && level.getRandom().nextInt(700) == 0) {
             String side = cheersFor(f, m);
@@ -793,8 +840,16 @@ public final class Football {
         return m.stage == PLAYING;
     }
 
+    /** Tests: the match's ball if it is a slime ball or leather lying on the grass (null for the leather football). */
     @Nullable
     public static ItemEntity ballForTests(ServerLevel level, UUID village) {
+        Match m = MATCHES.get(village);
+        return m != null && ball(level, m) instanceof ItemEntity e ? e : null;
+    }
+
+    /** Tests: [leisure] the match's ball, whatever it is (the leather football, or a slime ball). */
+    @Nullable
+    public static Entity ballEntityForTests(ServerLevel level, UUID village) {
         Match m = MATCHES.get(village);
         return m == null ? null : ball(level, m);
     }

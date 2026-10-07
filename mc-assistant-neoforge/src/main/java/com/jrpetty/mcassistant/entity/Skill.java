@@ -33,12 +33,14 @@ public final class Skill {
                 case FISH, BEEKEEP -> new Fit(0, "unhurried, which suits the water and the hives");
                 case DIVER -> new Fit(4, "calm under the water, and slow to use its breath");          // [diver]
                 case SCOUT -> new Fit(-10, "dawdles on the road");
+                case CARTOGRAPHER -> new Fit(-6, "dawdles on its rounds");          // [cartographer]
                 case HUNT -> new Fit(4, "patient enough to wait for the game to come to it");
                 default -> new Fit(-8, "takes its time");
             };
             case SOCIABLE -> switch (trade) {
                 case SHOP, COOK, STORE, HAUL -> new Fit(12, "good with people, made for this");
                 case CAVE -> new Fit(-6, "misses company down in the dark");          // [caves]
+                case FIREWORKS -> new Fit(6, "loves the crowd's cheer when the rockets go up");   // [fireworks]
                 case SCOUT -> new Fit(6, "talks to everybody it meets on the road");
                 case HUNT -> new Fit(-8, "can't keep quiet long enough to get near anything");
                 case MINE, FISH -> new Fit(-5, "misses company down there");
@@ -46,21 +48,26 @@ public final class Skill {
             };
             case SHY -> switch (trade) {
                 case FISH, BEEKEEP, ENCHANT, TAILOR -> new Fit(10, "quiet, careful work suits it");
+                case FLETCHER -> new Fit(10, "quiet, careful work at the table suits it");   // [fletcher]
                 case SHOP, COOK -> new Fit(-8, "finds serving folk hard going");
                 case SCOUT -> new Fit(4, "happy on its own out on the land");
                 case CAVE -> new Fit(6, "happy on its own in the dark");               // [caves]
+                case FIREWORKS -> new Fit(8, "quiet, careful hands with the powder");     // [fireworks]
+                case CARTOGRAPHER -> new Fit(6, "happy alone with a sheet and the land");   // [cartographer]
                 case DIVER -> new Fit(8, "happy on its own on the bed of the water");     // [diver]
                 case HUNT -> new Fit(12, "quiet as the woods: the game never hears it coming");
                 default -> new Fit(0, "");
             };
             case CHEERFUL -> switch (trade) {
                 case COOK, SHOP -> new Fit(10, "brightens the counter and the kitchen");
+                case FIREWORKS -> new Fit(12, "born to put on a show");                    // [fireworks]
                 default -> new Fit(5, "whistles while it works");
             };
             case GRUMPY -> switch (trade) {
                 case GUARD -> new Fit(8, "nothing gets past a scowl like that");
                 case CAVE -> new Fit(6, "takes it out on the rock, and on what lives in it");   // [caves]
                 case MINE, SMITH -> new Fit(4, "takes it out on the stone");
+                case GOLEMS -> new Fit(4, "has a lot in common with an iron golem");        // [golems]
                 case SHOP, COOK, STORE -> new Fit(-6, "puts the customers off");
                 default -> new Fit(0, "");
             };
@@ -72,6 +79,8 @@ public final class Skill {
                 case MINE, ENCHANT, BREW, SMITH -> new Fit(10, "loves finding out how things work");
                 case SCOUT -> new Fit(18, "born to see what's over the next hill");
                 case CAVE -> new Fit(14, "can't pass a dark passage without seeing where it goes");   // [caves]
+                case FIREWORKS -> new Fit(10, "always trying a new star to see what it does");      // [fireworks]
+                case CARTOGRAPHER -> new Fit(16, "has to know what's round the next bend, and draw it");   // [cartographer]
                 case DIVER -> new Fit(8, "always wants to see what's on the bottom");                  // [diver]
                 case HUNT -> new Fit(8, "reads the tracks like a book");
                 case HAUL, STORE -> new Fit(-4, "wanders off to look at things");

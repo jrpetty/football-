@@ -292,6 +292,7 @@ public final class Roads {
                 }
             }
         }
+        Milestones.onStep(level, mother, colony, index);           // [workitems] a milestone every hundred blocks, at the ends and the crossings
         return want;
     }
 

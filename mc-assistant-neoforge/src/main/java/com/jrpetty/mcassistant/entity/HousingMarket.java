@@ -322,6 +322,10 @@ public final class HousingMarket {
      * flat figure (35 a house, 55 a two-storey house, 120 a manor, a quarter more an age).
      */
     static double worth(UUID village, Homes.Home h) {
+        return worthBare(village, h) * WindowBoxes.premium(village, h.anchor);   // [workitems] its window boxes in flower
+    }
+
+    private static double worthBare(UUID village, Homes.Home h) {
         // A flat is never sold: what a household in one saves toward is a house's price (Flats).
         boolean flat = Flats.isFlat(h);
         String drawing = flat ? "house" : Homes.drawing(village, h);

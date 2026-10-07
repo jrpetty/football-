@@ -469,8 +469,9 @@ public class PlayerServicesGameTests {
 
     /**
      * The first look notes where the town stands and celebrates nothing; then the first diamond, a new age
-     * and twenty-five folk each go into the chronicle as a milestone, with fireworks of the stores' paper and
-     * gunpowder over the square; and none twice.
+     * and twenty-five folk each go into the chronicle as a milestone, with a salute of the stores' own rockets
+     * (the fireworks maker's: FireworkShows.salute) over the square; and none twice. [fireworks] The stores'
+     * paper and gunpowder are left as they were: no rocket is made out of nothing at a milestone.
      */
     @GameTest(template = EMPTY, timeoutTicks = 200, batch = "ps_ps06_milestones")
     public static void ps06_milestones(GameTestHelper helper) {
@@ -484,18 +485,22 @@ public class PlayerServicesGameTests {
         VillageFolkEntity folk = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
         helper.assertTrue(folk != null, "a village");
         UUID village = folk.ownerId();
-        Container box = stores(level, heart, 6, 6, new ItemStack(Items.PAPER, 10), new ItemStack(Items.GUNPOWDER, 10));
+        ItemStack made = new ItemStack(Items.FIREWORK_ROCKET, 10);          // [fireworks] a maker's rockets, put by
+        made.set(DataComponents.FIREWORKS, new net.minecraft.world.item.component.Fireworks(2, List.of(new net.minecraft.world.item.component.FireworkExplosion(
+            net.minecraft.world.item.component.FireworkExplosion.Shape.STAR, it.unimi.dsi.fastutil.ints.IntList.of(0xB3312C), it.unimi.dsi.fastutil.ints.IntList.of(), false, true))));
+        Container box = stores(level, heart, 6, 6, new ItemStack(Items.PAPER, 10), new ItemStack(Items.GUNPOWDER, 10), made);
         Villages.forgetStores(village);
         List<String> first = PlayerServices.milestonesForTests(level, village, -1);
         helper.assertTrue(first.isEmpty() && PlayerServices.milestones(village).contains("seen"), "the first look celebrates nothing: " + first);
         box.setItem(2, new ItemStack(Items.DIAMOND));
         box.setChanged();
         List<String> diamond = PlayerServices.milestonesForTests(level, village, -1);
-        int paper = count(box, Items.PAPER), powder = count(box, Items.GUNPOWDER);
-        Kit.log("ps06 the first diamond: " + diamond + "; paper " + paper + ", gunpowder " + powder);
+        int paper = count(box, Items.PAPER), powder = count(box, Items.GUNPOWDER), rockets = count(box, Items.FIREWORK_ROCKET);
+        Kit.log("ps06 the first diamond: " + diamond + "; paper " + paper + ", gunpowder " + powder + ", rockets " + rockets);
         helper.assertTrue(diamond.size() == 1 && diamond.get(0).contains("diamond"), "the first diamond is a milestone: " + diamond);
-        helper.assertTrue(paper == 10 - 3 && powder == 10 - 3, "three rockets of the stores' paper and gunpowder: " + paper + ", " + powder);
-        helper.assertTrue(PlayerServices.milestonesForTests(level, village, -1).isEmpty() && count(box, Items.PAPER) == paper, "and not twice");
+        helper.assertTrue(rockets == 10 - 3 && paper == 10 && powder == 10,
+            "three of the stores' rockets, and the paper and gunpowder left alone: " + rockets + ", " + paper + ", " + powder);
+        helper.assertTrue(PlayerServices.milestonesForTests(level, village, -1).isEmpty() && count(box, Items.FIREWORK_ROCKET) == rockets, "and not twice");
         Villages.ageForTests(village, Villages.Age.STONE);
         List<String> age = PlayerServices.milestonesForTests(level, village, -1);
         List<String> folk25 = PlayerServices.milestonesForTests(level, village, 25);
@@ -509,9 +514,9 @@ public class PlayerServicesGameTests {
             && chronicle.stream().anyMatch(l -> l.startsWith("a milestone") && l.contains("twenty-five"));
         helper.assertTrue(written, "each written into the chronicle: " + chronicle);
         helper.runAfterDelay(2, () -> {
-            int rockets = level.getEntitiesOfClass(FireworkRocketEntity.class, new AABB(heart).inflate(12, 24, 12)).size();
-            Kit.log("ps06 rockets over the square: " + rockets + "; paper left " + count(box, Items.PAPER));
-            helper.assertTrue(rockets >= 1, "fireworks over the square: " + rockets);
+            int up = level.getEntitiesOfClass(FireworkRocketEntity.class, new AABB(heart).inflate(20, 32, 20)).size();
+            Kit.log("ps06 rockets over the square: " + up + "; rockets left " + count(box, Items.FIREWORK_ROCKET));
+            helper.assertTrue(up >= 1, "fireworks over the square: " + up);
             helper.succeed();
         });
     }

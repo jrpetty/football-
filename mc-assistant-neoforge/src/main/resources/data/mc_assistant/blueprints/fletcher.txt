@@ -1,0 +1,72 @@
+# [fletcher] The fletcher's hut: a little timber house on a stone course under a steep roof, a window in each side
+# wall and one at the back, where the fletcher makes the watch's arrows (entity/Fletchers). Inside, the back wall has
+# a barrel for the finished arrows and a chest for the makings, with the fletching table's place left between them:
+# the fletcher makes its own table, of two flint and four planks out of the stores, and sets it there. A lantern hangs
+# from the ceiling over the table. Outside, to the right of the door, the ground is left bare for the sifting floor,
+# where the gravel is set down and broken for its flint.
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name fletcher
+layer -1
+.......
+.FFFFF.
+.FfffF.
+.FfffF.
+.FfffF.
+.FFFFF.
+.......
+layer 0
+.......
+.LwwwL.
+.wQ.Cw.
+.w...w.
+.w...w.
+.LwDwL.
+.......
+layer 1
+.......
+.LWGWL.
+.W...W.
+.G...G.
+.W...W.
+.LW.WL.
+.......
+layer 2
+.......
+.LWWWL.
+.W...W.
+.W.j.W.
+.W...W.
+.LWWWL.
+.......
+layer 3
+>.....<
+>L---L<
+>|fff|<
+>|fff|<
+>|fff|<
+>L---L<
+>.....<
+layer 4
+.>...<.
+.>WWW<.
+.>...<.
+.>...<.
+.>...<.
+.>WWW<.
+.>...<.
+layer 5
+..>.<..
+..>W<..
+..>.<..
+..>.<..
+..>.<..
+..>W<..
+..>.<..
+layer 6
+..._...
+..._...
+..._...
+..._...
+..._...
+..._...
+..._...

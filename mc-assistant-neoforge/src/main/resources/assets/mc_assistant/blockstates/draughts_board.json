@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "mc_assistant:block/draughts_board"
+    },
+    "facing=east": {
+      "model": "mc_assistant:block/draughts_board"
+    },
+    "facing=south": {
+      "model": "mc_assistant:block/draughts_board"
+    },
+    "facing=west": {
+      "model": "mc_assistant:block/draughts_board"
+    }
+  }
+}

@@ -161,6 +161,19 @@ public class PetsGameTests {
         helper.assertTrue(child != null, "a child born");
         Homes.tickForTests(level, v);
         helper.assertTrue(home.equals(Homes.homeOf(child)), "the child lives with its parents: " + Homes.homeOf(child));
+        // One child to a household here: should the birth have been twins (or more), the others are not part of these
+        // tests (which child a dog runs after, which of them names it), so they are taken out of the world.
+        List<String> twins = new ArrayList<>();
+        for (var a : Villages.folkOf(id)) {
+            if (a instanceof VillageFolkEntity k && k != child && k.isBaby() && home.equals(Homes.homeOf(k))) {
+                twins.add(k.displayNameCap());
+                k.discard();
+            }
+        }
+        if (!twins.isEmpty()) {
+            Homes.tickForTests(level, v);
+            Kit.log("pets: " + child.displayNameCap() + " was born a twin; set aside for the test: " + twins);
+        }
         return new Object[]{ home, child };
     }
 

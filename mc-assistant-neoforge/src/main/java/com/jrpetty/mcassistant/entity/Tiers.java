@@ -68,6 +68,10 @@ public final class Tiers {
     @Nullable
     static Villages.Age material(Item it) {
         if (it == Items.AIR) return Villages.Age.WOOD;
+        Villages.Age set = WorkTools.ageOf(it);                 // [workitems] the rope coil the Wood Age's; the saw and the crate the Stone Age's
+        if (set != null) return set;
+        Villages.Age fixed = com.jrpetty.mcassistant.item.FieldItems.ageOf(it);    // [fields] the satchel's and the barrel's own age
+        if (fixed != null) return fixed;
         ItemStack s = new ItemStack(it);
         String path = BuiltInRegistries.ITEM.getKey(it).getPath().toLowerCase(Locale.ROOT);
         List<String> words = List.of(path.split("_"));
@@ -124,6 +128,8 @@ public final class Tiers {
     /** The age this thing belongs to (the rule in the class comment). */
     public static synchronized Villages.Age of(ServerLevel level, Item item) {
         ensure(level);
+        Villages.Age fixed = Pastimes.age(item);                         // [leisure] the football and the paper lanterns: the Wood Age's
+        if (fixed != null) return fixed;
         Villages.Age a = AGES.get(item);
         if (a != null) return a;
         a = work(level, item, new HashSet<>(), 0);
@@ -142,6 +148,8 @@ public final class Tiers {
     private static Villages.Age work(ServerLevel level, Item item, Set<Item> path, int depth) {
         Villages.Age named = material(item);
         if (named != null) return named;
+        Villages.Age kitchen = Kitchen.age(item);                         // [kitchen] the lunch and the cake the Wood Age's, the cheese and mead the Stone Age's
+        if (kitchen != null) return kitchen;
         Villages.Age known = AGES.get(item);
         if (known != null) return known;
         List<RecipeBook.Way> ways = RecipeBook.waysFor(level, item);
