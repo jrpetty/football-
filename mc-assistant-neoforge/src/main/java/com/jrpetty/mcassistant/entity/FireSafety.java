@@ -104,6 +104,7 @@ public final class FireSafety {
             LOOKED.put(id, now);
             spark(level, v, t, false);
         }
+        Thatch.chimneySpark(level, v, t);                          // [workitems] a chimney's spark on a thatched roof (once a minute)
         keepTheWatch(level, v);
         if (now - WORKED.getOrDefault(id, -100000L) >= WORKS) {
             WORKED.put(id, now);
@@ -186,7 +187,7 @@ public final class FireSafety {
             if (level.getRandom().nextDouble() >= p) return null;
         }
         BlockPos at = sparkSpot(level, forge, burn);
-        if (at == null) return null;
+        if (at == null || FireworksMaker.inHut(id, at)) return null;     // [fireworks] stone and a cauldron: nothing catches in the powder hut
         String from = FireBrigade.named(b.structure()) + "'s " + (level.getBlockState(forge).is(Blocks.SMOKER) ? "oven" : "forge");
         long day = level.getDayTime() / 24000L;
         // The fire watch, near enough to see it, stamps it out before it catches.
@@ -204,6 +205,11 @@ public final class FireSafety {
         t.sparks++;
         Disasters.dirty();
         return at;
+    }
+
+    /** [workitems] A spark from somewhere else than a forge (a chimney onto thatch: Thatch), remembered as a forge's is. */
+    static void sparked(UUID village, BlockPos at, long when, String from) {
+        SPARKS.put(village, new Spark(at, when, from));
     }
 
     /** A spark lately near here, and what it came from ("a spark from the smithy's forge"); else null. */

@@ -671,6 +671,8 @@ public final class FieldTools {
             for (StreetFurniture.Box box : StreetFurniture.boxes(b)) {
                 BlockState pot = level.getBlockState(box.pot());
                 if (pot.is(BlockTags.FLOWER_POTS) && !pot.is(net.minecraft.world.level.block.Blocks.FLOWER_POT)) out.add(box.pot());
+                // [workitems] A window box of the household's own (a block of its own under the window, not a pot on a ledge).
+                if (level.getBlockState(box.ledge()).getBlock() instanceof com.jrpetty.mcassistant.block.WindowBoxBlock) out.add(box.ledge());
             }
         }
         return out;
@@ -681,7 +683,13 @@ public final class FieldTools {
         if (can.isEmpty() || WateringCanItem.water(can) <= 0) return;
         show(f, FieldItems.WATERING_CAN.get(), 50);
         can = carried(f, FieldItems.WATERING_CAN.get());
-        WateringCanItem.Poured p = WateringCanItem.pour(level, at);
+        WateringCanItem.Poured p;
+        if (level.getBlockState(at).getBlock() instanceof com.jrpetty.mcassistant.block.WindowBoxBlock) {
+            WindowBoxes.watered(level, at, f.displayNameCap());            // [workitems] a window box's earth watered (WindowBoxes)
+            p = new WateringCanItem.Poured(0, 1, 0);
+        } else {
+            p = WateringCanItem.pour(level, at);
+        }
         if (!p.any()) return;
         WateringCanItem.setWater(can, WateringCanItem.water(can) - 1);
         f.swing(InteractionHand.OFF_HAND);

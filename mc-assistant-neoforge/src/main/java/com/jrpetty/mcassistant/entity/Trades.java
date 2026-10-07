@@ -194,6 +194,17 @@ public final class Trades {
                 List.of(need("iron ingots", s -> s.is(Items.IRON_INGOT), 9, "the smelter"),
                     need("a pumpkin", s -> s.is(Items.PUMPKIN) || s.is(Items.CARVED_PUMPKIN), 1, "the farmers")),
                 "iron golems at the gates and the square, mended when they're hurt, and snow golems on the towers in winter");
+            // [fireworks] The fireworks maker (FireworksMaker): the stores' gunpowder, paper and dye, at the powder hut.
+            case FIREWORKS -> new Trade("I make the town's fireworks at the powder hut: stars of gunpowder and dye (a gold nugget for a"
+                    + " star, a feather for a burst, glowstone for a twinkle), rockets of paper and one to three gunpowder, and I set"
+                    + " them off at the festivals, the weddings and the victories. Never in a thunderstorm, and never at anybody",
+                List.of(),
+                List.of(need("gunpowder", s -> s.is(Items.GUNPOWDER), 4, "the watch's creepers, the hunters, the Nether runners"),
+                    need("paper", s -> s.is(Items.PAPER) || s.is(Items.SUGAR_CANE), 3, "the farmers' sugar cane"),
+                    need("dyes", s -> s.getItem() instanceof net.minecraft.world.item.DyeItem || s.is(net.minecraft.tags.ItemTags.FLOWERS)
+                        || s.is(Items.LAPIS_LAZULI) || s.is(Items.INK_SAC) || s.is(Items.BONE_MEAL) || s.is(Items.COCOA_BEANS), 2,
+                        "the meadows' flowers, the miners' lapis, the fishers' ink, the cocoa and the bone meal")),
+                "firework rockets for the stores: the town's displays, in its colours, and elytra rockets for the shop");
             // [cartographer] The cartographer (Cartographers): the town's paper and compasses, a pane for each finished map.
             case CARTOGRAPHER -> new Trade("I keep the map room: I walk the town with fresh sheets till they fill in, mark its places with"
                     + " banners and hang the map in the hall; I walk the country round it for the region's map, find the old places round"
@@ -587,6 +598,8 @@ public final class Trades {
     /** What a hand of this trade keeps in its pack and never banks: its kit, and its workstation
      *  until it is set down. */
     public static int keeps(StationTask t, ItemStack s) {
+        int work = WorkTools.keeps(t, s);                       // [workitems] a miner's props, rope and sack, a woodcutter's saw, a courier's crates
+        if (work > 0) return work;
         int field = FieldTools.keeps(t, s);                    // [fields] its can, sickle and satchel, its smoker, its traps to set
         if (field > 0) return field;
         return switch (t) {

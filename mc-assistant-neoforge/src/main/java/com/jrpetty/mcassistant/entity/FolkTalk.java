@@ -107,6 +107,8 @@ public final class FolkTalk {
         // [interviews] "Any interviews coming up?", "I'd recommend Ada for the post", a seat on the panel, the interview page.
         String interview = Interviews.talk(f, p, topic, text);
         if (interview != null) return manner(f, interview);
+        String ways = text.isEmpty() || f.isBaby() ? null : Identity.talk(f, p, text);   // [identity] "What's this town like?"; a proposal
+        if (ways != null) return manner(f, ways, true);
         if (!text.isEmpty()) {
             VillageFolkEntity other = mentioned(f, lower);
             if (other != null && topic != TalkTopic.WATCH) return manner(f, opinionOf(f, other));   // [crime] "I saw Fen take it" is for the watch
@@ -129,6 +131,8 @@ public final class FolkTalk {
         // [caves] Not the cave team's map ("a copy of the cave map"): that is the team's to sell (CaveGuests).
         String library = topic == TalkTopic.CAVES ? null : Library.talk(f, p, topic, text);
         if (library != null && !library.isEmpty()) return manner(f, library);
+        String rockets = FireworksMaker.talk(f, p, text);            // [fireworks] rockets for a player's elytra; the next display
+        if (rockets != null) return manner(f, rockets);
         String said = switch (topic) {
             case OPEN -> greet(f, p, op, firstMeeting, heard);
             case HOW -> howAreYou(f);
@@ -328,7 +332,7 @@ public final class FolkTalk {
         String delivery = StoreDeliveries.doing(f);            // [econ-store] a delivery for the shop
         if (delivery != null) return delivery;
         String run = Couriers.doing(f);
-        if (run != null) return "For the storehouse: " + run;
+        if (run != null) return "For the storehouse: " + run + Crates.doingWords(f);   // [workitems] its crates packed
         String store = StoreStaff.doing(f);                     // [econ-store] at the counter, at the stock book
         if (store != null) return store;
         String making = Workshop.doing(f);                      // at the shop's bench: "Making a stone sword for the shop"
@@ -396,9 +400,11 @@ public final class FolkTalk {
         line(sb, "War", WarFooting.cardLine(f));            // [war-prep] the watch for the war, the militia, danger money
         line(sb, "Kit", WatchKit.cardLine(f));              // [guard-kit] a guard's kit, issued by the town
         line(sb, "Caves", CaveDwellers.cardLine(f));        // [caves] where it went today, what it found, its kit
+        line(sb, "Tools", WorkTools.cardLine(f));            // [workitems] its props, rope, ore sack, felling saw, crates
         line(sb, "Fletching", Fletchers.cardLine(f));        // [fletcher] what it has made, the stores' arrows, the reserve
         line(sb, "At the butts", Fletchers.aimLine(f));      // [fletcher] a guard's best at the butts, its practised aim
         line(sb, "Golems", Golems.cardLine(f));              // [golems] the town's golems at their posts, mended, waited on
+        line(sb, "Fireworks", FireworksMaker.cardLine(f));  // [fireworks] its stars, rockets and displays
         line(sb, "Maps", Cartographers.cardLine(f));        // [cartographer] its survey, the hall's map, what it found and sold
         line(sb, f.isBaby() ? "Apprenticed" : "Apprentices", PlayerTrades.cardLine(f));   // [player-civic] its apprentices, or its trade
         line(sb, "The fleet", Fleet.cardLine(f));            // [fleet] out with the fishing fleet, and its catch
@@ -433,6 +439,7 @@ public final class FolkTalk {
         line(sb, "The law", Crime.cardLine(f));             // [crime] its case, its record, robbed, cleared, a new leaf (Crime)
         line(sb, "Fire and flood", Disasters.cardLine(f));  // [disasters] a bucket chain, the flood, a night away, the fire watch
         line(sb, "Votes and works", Referendums.cardLine(f));   // [civic] its vote, the works it built, where it came from
+        line(sb, "Pastimes", Pastimes.cardLine(f));         // [leisure] its quilt, its draughts, its kite, its lute, its slate
         java.util.List<String> friends = new java.util.ArrayList<>();
         for (Social.Bond b : life.friends()) {
             if (b.name != null && !b.name.isEmpty()) friends.add(b.name);
@@ -451,6 +458,7 @@ public final class FolkTalk {
         line(sb, "Birthday", Birthdays.cardLine(f));        // its birthday, its age and the next (Birthdays)
         line(sb, "The bell", TownBell.cardLine(f));         // when it answered today's bells (TownBell)
         line(sb, "Culture", Culture.cardLine(f));           // [batchD] the band, the choir, the stage, its pictures
+        line(sb, "Its town", Identity.cardLine(f));         // [identity] a true Seafarer; of the ruling house; chafes at the curfew
         return sb.toString();
     }
 
@@ -672,8 +680,10 @@ public final class FolkTalk {
             case "letter", "meeting", "favour", "found" -> Civics.moodWords(f, why);   // [batchF]
             case "robbed", "repaid", "shamed", "cleared" -> Crime.moodWords(f, why);  // [crime]
             case "builtit", "grateful", "clash" -> Referendums.moodWords(f, why);      // [civic]
+            case "windowbox" -> WindowBoxes.moodWords(f);                            // [workitems]
             case "interviewed", "passedover" -> Interviews.moodWords(f, why);          // [interviews]
             case "cake", "drink" -> Kitchen.moodWords(f, why);                         // [kitchen]
+            case "quilt", "warmquilt", "draughts", "kite", "kickabout", "lanterns" -> Pastimes.moodWords(f, why);   // [leisure]
             default -> "";
         };
     }
@@ -699,8 +709,8 @@ public final class FolkTalk {
         }
         if (f.trip() != null) {
             String where = Villages.name(f.trip().destination());
-            return f.trip().homeward() ? "Taking the caravan home to " + where + ", with what they could spare."
-                : "Taking the caravan to " + where + " — the colony needs what we've got.";
+            return (f.trip().homeward() ? "Taking the caravan home to " + where + ", with what they could spare."
+                : "Taking the caravan to " + where + " — the colony needs what we've got.") + Crates.caravanWords(f);   // [workitems]
         }
         String about = Transport.doing(f);                      // [transport] on its way by the cart or the ferry
         if (about != null) return cap(about) + ".";
@@ -756,6 +766,7 @@ public final class FolkTalk {
             case FERRY -> Ferries.doing(f, r);            // [transport] at the landing, or out on the water
             case FLETCHER -> Fletchers.doing(f, r);       // [fletcher] at its table, the gravel, the range
             case GOLEMS -> Golems.doing(f, r);            // [golems] round the golems, or building one
+            case FIREWORKS -> FireworksMaker.doing(f, r); // [fireworks] at the powder hut, or at the rack
             case CARTOGRAPHER -> Cartographers.doing(f, r);   // [cartographer] at the table, or out walking with a sheet
         };
         if (!f.missingEssentials().isEmpty()) work += " Or I would be, if I had " + f.missingEssentials().get(0) + ".";

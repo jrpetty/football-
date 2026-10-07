@@ -220,6 +220,7 @@ public final class TownPlan {
             case "firestation" -> "civic";            // [disasters] the fire station, among the trades it guards
             case "trainingyard" -> "corner";          // [war-prep] the training yard by the watchtower, at a corner
             case "lighthouse", "pen", "gateway", "graveyard" -> "edge";
+            case "powderhut" -> "edge";               // [fireworks] the powder hut, away from the houses (FireworksMaker)
             default -> "home";
         };
     }

@@ -189,6 +189,10 @@ public final class JobWorth {
             // [golems] Iron blocks are heavy and a golem's fists are heavier: hard, learned work that keeps the town.
             case "GOLEMS" -> new Post(key, title, trade, role, 2, 3, 1.1, 0.0, "heavy, skilled work with the town's iron",
                 "keeps the town's golems at the gates");
+            // [fireworks] Gunpowder and a steady hand: as hard as the smelter's, as skilled as the tailor's, and the town's
+            // nights to show for it.
+            case "FIREWORKS" -> new Post(key, title, trade, role, 2, 2, 0.6, 1.0, "careful work with gunpowder",
+                "lights up the town's festivals, weddings and victories");
             // [cartographer] Long walks and a steady hand; learned work; the town's maps, and the finds for the scouts and the cave team.
             case "CARTOGRAPHER" -> new Post(key, title, trade, role, 1, 3, 0.8, 1.0, "long walks and a steady hand",
                 "maps the town, and finds the old places round it for the scouts and the cave team");
@@ -904,6 +908,7 @@ public final class JobWorth {
             case "FERRY" -> "the ferry";               // [transport]
             case "FLETCHER" -> "the fletcher's";       // [fletcher]
             case "GOLEMS" -> "the golem yard";         // [golems]
+            case "FIREWORKS" -> "the powder hut";      // [fireworks]
             case "CARTOGRAPHER" -> "the map room";     // [cartographer]
             default -> "the " + JobMarket.noun(t) + "s";
         };
@@ -913,6 +918,7 @@ public final class JobWorth {
         return switch (t.name()) {
             case "FARM", "WOOD", "MINE", "RANCH", "SMELT", "HAUL", "BEEKEEP", "SCOUT", "HUNT" -> true;
             case "GUARD", "FISH", "STORE", "SMITH", "TAILOR", "BREW", "ENCHANT", "COOK", "SHOP", "BANK" -> false;
+            case "FIREWORKS" -> false;                 // [fireworks] "the powder hut is short of hands"
             case "CARTOGRAPHER" -> false;              // [cartographer] "the map room is"
             default -> true;
         };

@@ -612,6 +612,7 @@ public final class School {
         String learning = "learning to be " + a(d.leaning());
         if (!inClass(f, b) && tooLate(level, village)) return false;    // not there by now: the morning is gone
         f.lastLeisureTick = f.tickCount;
+        Slates.inHand(f);                                               // [leisure] its slate in its hand, to school and at its desk
         if (!inClass(f, b)) {
             if (f.getNavigation().isDone() || f.tickCount % 40 == 0) f.walkTo(seat, 1.1D);
             f.hobbyNow = "on the way to school";
@@ -641,6 +642,7 @@ public final class School {
                 keep(village, f, d);
                 countTaught(village, day);
             }
+            Slates.beat(level, v, f, teacher, topic(level, village, day));   // [leisure] handed a slate, the lesson chalked on it, its chalk worn
             learn(f, teacher, d.leaning(), topic(level, village, day));
         }
         if (r.nextInt(500) == 0) FolkTalk.speak(f, FolkTalk.pick(r, "I know! I know!", "Like this?", "Why, though?",
@@ -786,6 +788,7 @@ public final class School {
         if (p.has(Social.Trait.HARDWORKING)) pct += 15;
         if (p.has(Social.Trait.CURIOUS)) pct += 10;
         if (p.has(Social.Trait.EASYGOING)) pct -= 15;
+        pct += Slates.bonus(pupil);                                      // [leisure] a slate and chalk: a quarter quicker
         return Math.max(1, (cap * pct + BEATS_TO_CAP * 100 - 1) / (BEATS_TO_CAP * 100));     // rounded up: sixty beats fill it
     }
 
@@ -968,6 +971,8 @@ public final class School {
             "Gravel gives a flint one time in ten. Patience is half the trade." });
         LINES.put(StationTask.GOLEMS, new String[]{ "Four blocks of iron in a T, and the pumpkin last: never the other way round.",   // [golems]
             "An iron golem never turns on its own town. Be kind to it all the same." });
+        LINES.put(StationTask.FIREWORKS, new String[]{ "One gunpowder to a star, one to three to a rocket: no more.",   // [fireworks]
+            "Never a flame in the powder hut, and never a rocket in a thunderstorm." });
         LINES.put(StationTask.CARTOGRAPHER, new String[]{ "A map only fills in where somebody has walked. So walk it.",   // [cartographer]
             "North at the top, the town in the middle, and every place with its name." });
     }

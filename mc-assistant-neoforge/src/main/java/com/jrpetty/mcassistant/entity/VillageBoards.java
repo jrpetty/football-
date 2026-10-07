@@ -406,6 +406,7 @@ public final class VillageBoards {
 
         // ---- how we're doing
         out.add("RH|How we're doing");
+        out.addAll(Identity.board(level, id));                    // [identity] who we are: character, rulers, fame, traits; renown and laws
         StringBuilder t = new StringBuilder();
         for (Map.Entry<AssistantEntity.StationTask, Integer> e : trades.entrySet()) {
             if (t.length() > 0) t.append(", ");
@@ -493,6 +494,8 @@ public final class VillageBoards {
         if (gathering != null) out.add("RG|Now: " + gathering + " — come along!");
         Gatherings.Kind tonight = Gatherings.tonight(id, day);
         if (tonight != null) out.add("RG|Tonight: " + Gatherings.describe(tonight, id) + " — everybody welcome.");
+        String fireworks = FireworkShows.boardLine(id, day);        // [fireworks] a display on now; the rockets ready, the next display
+        if (fireworks != null) out.add(fireworks);
         for (String p : Assemblies.planned(id)) out.add("RG|This evening: " + p + ".");
         if (day % 7 == 3) out.add("RM|The council sits this evening.");
         out.addAll(Elections.board(id, day));

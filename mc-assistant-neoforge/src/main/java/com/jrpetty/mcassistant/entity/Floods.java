@@ -136,7 +136,7 @@ public final class Floods {
             if (!fl.draining && (now - fl.since > STANDS_MOST || now < fl.since)) drain(level, v, t, "the river fell of its own accord");
             return;
         }
-        if (!t.levee.isEmpty() && now % 60 < 20) levee(level, v, t, 3);
+        if (!t.levee.isEmpty() && now % 60 < 20) levee(level, v, t, TownTraits.leveePace(v.id(), 3));   // [identity] Flood-hardy: twice as fast
         if (!Disasters.on() || !Disasters.raining(level, v)) return;
         long day = level.getDayTime() / 24000L;
         Seasons.Season s = Seasons.season(v.id(), day);
@@ -494,7 +494,8 @@ public final class Floods {
             double d = f.blockPosition().distSqr(first);
             if (d < nd) { nd = d; near = f; }
         }
-        if (near != null) FolkTalk.speak(near, FolkTalk.pick(level.getRandom(), "The river's up! It's in the low houses!",
+        String calm = TownTraits.floodWords(id, level.getRandom());     // [identity] a Flood-hardy town does not panic
+        if (near != null) FolkTalk.speak(near, calm != null ? calm : FolkTalk.pick(level.getRandom(), "The river's up! It's in the low houses!",
             "Flood! Get the little ones up the hill!", "Look at the water! Everybody up to the high ground!"));
         Disasters.dirty();
     }
@@ -862,6 +863,13 @@ public final class Floods {
             n += k;
         }
         return n;
+    }
+
+    /** [identity] Tests: one of the town's own steps at its levee, as its look every second takes it (Flood-hardy: twice the blocks). */
+    public static int leveeStepForTests(ServerLevel level, UUID village) {
+        Villages.Village v = Villages.get(village);
+        Disasters.Town t = Disasters.known(village);
+        return v == null || t == null ? 0 : levee(level, v, t, TownTraits.leveePace(village, 3));
     }
 
     /** Tests: how many times the flood has given this folk its breath. */

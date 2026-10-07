@@ -210,6 +210,7 @@ public class TalkScreen extends Screen {
                 out.add(Choice.of("History", TalkTopic.CHRONICLE, "Ask for a copy of the village's chronicle"));
             }
             case VILLAGE -> {
+                out.add(new Choice("Town's ways", TalkTopic.SAY, "What's this town like?", "Its character, who rules it, its laws, what it is famous for and what history has made of it — in this folk's own words"));   // [identity]
                 out.add(Choice.of("Residents", TalkTopic.CENSUS));
                 out.add(Choice.of("The council", TalkTopic.COUNCIL, "Who sits on the council, and what it voted. Say \"you should build a tavern\" to put it to the vote"));
                 out.add(Choice.of("Neighbours", TalkTopic.RIVALS, "What this village thinks of the villages round about, who leads them, and who trades with whom"));
@@ -221,6 +222,9 @@ public class TalkScreen extends Screen {
                 out.add(new Choice("Ask the delvers", TalkTopic.CAVES, "ask", "Ask the cave team to look a way or find something on its next trip: type it (\"look east\", \"find us diamonds\")"));
                 out.add(new Choice("Go caving", TalkTopic.SAY, "Can I come along with the cave team?", "Go down the caves with the cave team: it waits for you at its lodge at first light. Say \"for a share\" to take a share of the haul"));
                 out.add(new Choice("Cave map", TalkTopic.SAY, "Could I buy a copy of the cave map?", "A copy of the cave team's map, every cave it has found marked: a few coins, from one of the team at its lodge"));
+                // [fireworks] The fireworks maker's rockets: the next display, and rockets for an elytra (FireworksMaker).
+                out.add(new Choice("Fireworks", TalkTopic.SAY, "When are the next fireworks?", "The town's next display, and the rockets it has ready"));
+                out.add(new Choice("Elytra rockets", TalkTopic.SAY, "Could I buy some rockets for my elytra?", "Rockets to fly with, of the stores' paper and gunpowder: eight to a lot, from the fireworks maker at its powder hut or the shop. Say \"flight two\" or \"flight three\" for the longer ones"));
                 out.add(Choice.of("My standing", TalkTopic.REPUTE));
                 out.add(Choice.of("Live here?", TalkTopic.CITIZEN, "Ask to become a citizen: a vote on the council and a house of your own"));
                 out.add(Choice.of("Pay a fine", TalkTopic.FINE, "Pay what you owe the village"));

@@ -321,6 +321,7 @@ public class VillageFolkEntity extends AssistantEntity {
             laterLine = null;
         }
         if (tickCount % 20 == 17) Aboard.step(this);           // [mine-safety] out of a boat it never meant to board
+        if (tickCount % 20 == 3) persona.town = ownerId();      // [identity] how fast it trusts a player is its town's (Treatment)
         // [transport] Sat in a cart or the ferry: the ride (or the rowing) is its day till it is off again.
         if (level() instanceof net.minecraft.server.level.ServerLevel riding && Transport.aboard(this)) {
             Transport.hold(this, riding);
@@ -329,6 +330,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // [batchG] A visitor from afar (the bard, a tourist, the merchant), one of ours away for the day at a friend's
         // in another town, or a guard out taming a dog for the watch: that is its day (Visitors).
         if (Visitors.drive(this)) return;
+        if (WorkTools.hold(this)) return;                      // [workitems] on a rope, or carrying a window box home to hang
         if (Newcomers.drive(this)) return;                     // [civic] a newcomer on the road, or camped at a town's edge
         // [fleet] Once a second for its town: the fishing fleet and the fish market (Fleet), the auction (Auctions).
         if (tickCount % 20 == 9 && ownerId() != null && level() instanceof net.minecraft.server.level.ServerLevel quay) {
@@ -440,6 +442,9 @@ public class VillageFolkEntity extends AssistantEntity {
         // [watch-clears] A monster near, and it not one of the watch: indoors till it has gone (WatchClears).
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel coverLevel
                 && WatchClears.takeCover(this, coverLevel)) return;
+        // [fireworks] A creeper it killed dropped its gunpowder: over to it, and the powder to the stores (FireworksMaker.fetch).
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel powderLevel
+                && FireworksMaker.fetch(this, powderLevel)) return;
         // [batchA] Laid up: a cold or its wounds, in bed at the infirmary or at home, and kept there (Health).
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel careLevel && Health.hold(this, careLevel)) return;
         // [interviews] Called to an interview (Interviews): on the road to it from another town, waiting its turn on the bench
@@ -459,6 +464,8 @@ public class VillageFolkEntity extends AssistantEntity {
         // play at the theatre (on the stage or a bench), the band at the tavern or a wedding, a toast, a picture painted.
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel culture
                 && (tickCount % 4 == 3 ? Culture.hold(this, culture) : Culture.busy(this))) return;
+        // [fireworks] One of a display's crew, at the rack behind the launch spot (FireworkShows): before the gathering.
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel rack && FireworkShows.hold(this, rack)) return;
         // The village coming together (Assemblies): the bell rung, it goes, finds a place and takes part.
         if (!withAPlayer && tickCount % 4 == 1 && level() instanceof net.minecraft.server.level.ServerLevel gathering
                 && Assemblies.attend(this, gathering)) {
@@ -547,6 +554,7 @@ public class VillageFolkEntity extends AssistantEntity {
                     CaveDwellers.tick(polls, home);      // [caves] an Iron Age town takes up its cave dwellers
                     Fletchers.tick(polls, home);         // [fletcher] its fletcher, and the afternoon's practice at the range
                     Golems.look(polls, home);            // [golems] its golem keeper, after the raids
+                    FireworksMaker.tick(polls, home);    // [fireworks] a Stone Age town takes up fireworks: the hut, the maker
                     Cartographers.tick(polls, home);     // [cartographer] the town chooses its cartographer once its map room stands
                     PlayerCivic.tick(polls, home);       // [player-civic] the campaign, a player leader's morning, young apprentices' journals
                 }
@@ -1224,8 +1232,10 @@ public class VillageFolkEntity extends AssistantEntity {
         m = Civics.mood(this, day, m, why);             // [batchF] a letter, the town meeting, a good turn, found and home
         m = Crime.mood(this, day, m, why);              // [crime] robbed, paid back, shamed, wrongly accused and cleared
         m = Referendums.mood(this, day, m, why);        // [civic] proud of the work it built; a newcomer's gratitude
+        m = WindowBoxes.mood(this, day, m, why);        // [workitems] its household's window boxes in flower
         m = Interviews.mood(this, day, m, why);          // [interviews] a post won at interview, or missed
         m = Kitchen.mood(this, day, m, why);            // [kitchen] a slice of honey cake at the wedding, a mead at the tavern
+        m = Pastimes.mood(this, day, m, why);           // [leisure] a night under a quilt, a game won, a kite, a kickabout, the lanterns
         why.sort((a, b) -> Integer.compare((Integer) b[1], (Integer) a[1]));
         java.util.List<String> keys = new java.util.ArrayList<>();
         for (Object[] w : why) keys.add((String) w[0]);
@@ -1379,7 +1389,8 @@ public class VillageFolkEntity extends AssistantEntity {
     protected int skillWorkPercent() {
         return CityTree.workPercent(ownerId(), stationTask()) + FolkSkills.workPercent(this)
             + Library.workPercent(this)                                                         // [library] its trade's book, read
-            + FieldTools.workPercent(this);                                                     // [fields] its seed satchel
+            + FieldTools.workPercent(this)                                                      // [fields] its seed satchel
+            + Ethos.workPercent(ownerId(), stationTask());                                      // [identity] a practical town; Golden Fields, Seafarers
     }
 
     /** A good mood makes for quick hands, a black one for slow ones. */
@@ -1965,7 +1976,7 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         if (!(level() instanceof net.minecraft.server.level.ServerLevel server) || villageCentre == null) return;
         // Mornings, once it is old enough: at a grown-up's side at work, learning the trade.
-        if (day - bornDay >= 1 && level().getDayTime() % 24000L < 7000L && apprentice(server)) return;
+        if (day - bornDay >= LawBook.apprenticeFrom(ownerId(), 1) && level().getDayTime() % 24000L < 7000L && apprentice(server)) return;   // [identity] the apprentice age
         // Afternoons in the park, when the town has one (Park).
         if (Park.play(this, server)) return;
         // Tag with the other children, when there are any.
@@ -2375,6 +2386,7 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected boolean eveningSocial() {
         if (Assemblies.attending(this)) return true;          // at the village's gathering (Assemblies)
+        if (FireworkShows.crewing(this)) return true;         // [fireworks] at the rack, setting off the display
         if (TownJobs.busy(this)) return true;                 // at the town's work (TownJobs)
         if (School.teaching(this)) return true;               // at the school's lectern (School)
         if (TownCalendar.busy(this)) return true;             // ringing the bell, home at the dusk bell, a birthday present (TownCalendar)
@@ -2656,8 +2668,8 @@ public class VillageFolkEntity extends AssistantEntity {
 
     /** This folk's own hour for bed: a sociable one stays up, a hard worker turns in early. */
     public long bedtimeTick() {
-        return 14000L + Math.floorMod(getUUID().getMostSignificantBits(), 600L)
-            + (life.has(Social.Trait.SOCIABLE) ? 1500L : 0L) - (life.has(Social.Trait.HARDWORKING) ? 800L : 0L);
+        return LawBook.bedtime(ownerId(), 14000L + Math.floorMod(getUUID().getMostSignificantBits(), 600L)   // [identity] a curfew
+            + (life.has(Social.Trait.SOCIABLE) ? 1500L : 0L) - (life.has(Social.Trait.HARDWORKING) ? 800L : 0L));
     }
 
     /** Where this hand's ground was when the agenda last looked, and since when. */
@@ -3053,6 +3065,7 @@ public class VillageFolkEntity extends AssistantEntity {
         guardKitFromTheStores();                       // the town's best armour and blade, on the watch (WatchKit)
         betterToolFromTheStores();                     // the smith's iron and the enchanter's work, in use
         clothesFromTheStores();                        // the tailor's boots
+        WorkTools.kitUp(this);                         // [workitems] a miner's props, rope and sack, a woodcutter's saw, a courier's crates
         bucketFromTheStores();                         // a farmer's water, when the village is hungry
         obsidianFromLava();                            // the gateway's obsidian, made where the lava is
         growTheForge();                                // a smelter's furnaces: one, and up to four in a row
@@ -4563,6 +4576,7 @@ public class VillageFolkEntity extends AssistantEntity {
             case FERRY -> "The Ferry";            // [transport]
             case FLETCHER -> "The Fletcher's";    // [fletcher]
             case GOLEMS -> "The Golem Yard";      // [golems]
+            case FIREWORKS -> "The Powder Hut";   // [fireworks]
             case CARTOGRAPHER -> "The Map Room";  // [cartographer]
             default -> "The Commons";
         };
@@ -5112,6 +5126,7 @@ public class VillageFolkEntity extends AssistantEntity {
             case BANK -> "bank";                  // the banker (Bank)
             case FLETCHER -> Fletchers.STRUCTURE; // [fletcher] the fletcher's hut
             case GOLEMS -> Golems.STRUCTURE;      // [golems] the golem yard
+            case FIREWORKS -> FireworksMaker.STRUCTURE;   // [fireworks] the powder hut
             case CARTOGRAPHER -> Cartographers.STRUCTURE;   // [cartographer] the map room
             default -> null;
         };
@@ -5772,6 +5787,12 @@ public class VillageFolkEntity extends AssistantEntity {
         return level() instanceof net.minecraft.server.level.ServerLevel server && Ferries.duty(this, server);
     }
 
+    /** [fireworks] The fireworks maker's day at the powder hut: stars and rockets out of the stores (FireworksMaker.work). */
+    @Override
+    protected boolean fireworksWork() {
+        return level() instanceof net.minecraft.server.level.ServerLevel server && FireworksMaker.work(this, server);
+    }
+
     /** [cartographer] The cartographer's day: at the map room's table, or out walking the town with a sheet (Cartographers). */
     @Override
     protected boolean cartographerWork() {
@@ -6256,7 +6277,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (!(level() instanceof net.minecraft.server.level.ServerLevel server)) return false;
         UUID village = ownerId();
         if (village == null || villageCentre == null) return false;
-        if (tickCount - breedCheckTick < 6000) return false;     // five minutes apiece
+        if (tickCount - breedCheckTick < TownTraits.breedEvery(village, 6000)) return false;     // five minutes apiece ([identity] Well-wed: sooner)
         breedCheckTick = tickCount;
         if (tickCount - breedTick < 6000) return false;          // not straight after the last
 
@@ -7158,8 +7179,12 @@ public class VillageFolkEntity extends AssistantEntity {
         topUp(heart, st -> st.is(net.minecraft.tags.ItemTags.LOGS), logs, r);
         topUpRanked(heart, com.jrpetty.mcassistant.entity.goal.Blueprints.Style.WALL, st -> st.is(net.minecraft.tags.ItemTags.PLANKS), boards, r);
         // The roof first, out of the planks: it is the thing that makes a building look like one.
-        java.util.function.Predicate<net.minecraft.world.item.ItemStack> woodStairs = st -> st.is(net.minecraft.tags.ItemTags.WOODEN_STAIRS);
-        java.util.function.Predicate<net.minecraft.world.item.ItemStack> woodSlabs = st -> st.is(net.minecraft.tags.ItemTags.WOODEN_SLABS);
+        // [workitems] A town roofing in thatch: the roof's thatch first (Thatch), and it stands for the wooden pieces.
+        Thatch.stock(this, heart, stairs, slabs, want.getOrDefault(com.jrpetty.mcassistant.entity.goal.Blueprints.Style.ROOF_BLOCK, 0), r);
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> woodStairs = st -> st.is(net.minecraft.tags.ItemTags.WOODEN_STAIRS)
+            || st.is(com.jrpetty.mcassistant.item.WorkItems.THATCH_STAIRS_ITEM.get());
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> woodSlabs = st -> st.is(net.minecraft.tags.ItemTags.WOODEN_SLABS)
+            || st.is(com.jrpetty.mcassistant.item.WorkItems.THATCH_SLAB_ITEM.get());
         java.util.function.Predicate<net.minecraft.world.item.ItemStack> rockSlabs =
             st -> st.is(net.minecraft.tags.ItemTags.SLABS) && !st.is(net.minecraft.tags.ItemTags.WOODEN_SLABS);
         java.util.function.Predicate<net.minecraft.world.item.ItemStack> rockStairs =
@@ -7826,7 +7851,9 @@ public class VillageFolkEntity extends AssistantEntity {
             || Transport.busy(this)                              // [transport] on a ride, a crossing, or at the ferry
             || Crime.calledAway(this)                            // [crime] on a case, at a trial, in the stocks, at community work
             || Disasters.busy(this)                              // [disasters] a bucket chain, a flood, a night away, the fire watch
-            || Interviews.busy(this);                            // [interviews] at an interview, or on the road to one
+            || WorkTools.busy(this)                              // [workitems] on a rope, or hanging or watering a window box
+            || Interviews.busy(this)                             // [interviews] at an interview, or on the road to one
+            || FireworksMaker.fetching(this) || FireworkShows.crewing(this);   // [fireworks] a creeper's powder, a display's rack
     }
 
     /** [wf] The woodcutter's wood kept growing between its fellings (Woods). */
