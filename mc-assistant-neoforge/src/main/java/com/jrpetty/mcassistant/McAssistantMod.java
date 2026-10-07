@@ -187,6 +187,24 @@ public final class McAssistantMod {
     public static final DeferredItem<net.minecraft.world.item.Item> VILLAGE_COIN =
         ITEMS.registerSimpleItem("village_coin");
 
+    // [crime] The stocks: the council's sentence for a second offence, sat in on the square for a day (entity/Trial).
+    // Three planks over two logs; the town puts a pair up out of its stores the first time a sentence wants them.
+    public static final DeferredBlock<com.jrpetty.mcassistant.block.StocksBlock> STOCKS =
+        BLOCKS.registerBlock("stocks",
+            com.jrpetty.mcassistant.block.StocksBlock::new,
+            BlockBehaviour.Properties.of()
+                .mapColor(MapColor.WOOD)
+                .strength(2.0F, 3.0F)
+                .sound(SoundType.WOOD)
+                .noOcclusion());
+
+    public static final DeferredItem<BlockItem> STOCKS_ITEM =
+        ITEMS.registerSimpleBlockItem(STOCKS);
+
+    /** [crime] A copper coin cast to pass for the town's own: what a forger passes at the stores (entity/Mischief). */
+    public static final DeferredItem<net.minecraft.world.item.Item> FORGED_COIN =
+        ITEMS.registerSimpleItem("forged_coin");
+
     /** The mod's own creative tab: everything it adds, in one place, the village folk spawner first. */
     public static final DeferredHolder<net.minecraft.world.item.CreativeModeTab, net.minecraft.world.item.CreativeModeTab> TAB =
         TABS.register("village_folk", () -> net.minecraft.world.item.CreativeModeTab.builder()
@@ -204,6 +222,8 @@ public final class McAssistantMod {
                 out.accept(ZONE_MARKER.get());
                 out.accept(PLACE_MARKER.get());
                 out.accept(MEMORY_CORE.get());
+                out.accept(STOCKS_ITEM.get());              // [crime]
+                out.accept(FORGED_COIN.get());              // [crime]
             })
             .build());
 

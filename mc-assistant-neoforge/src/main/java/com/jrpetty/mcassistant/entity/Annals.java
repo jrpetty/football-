@@ -583,6 +583,7 @@ public final class Annals {
         out.put("trade", TradeDeals.report(level, v));             // [econ-trade] the Trade page: the book, the deals, the talks
         out.put("warmap", WarMap.report(level, v));              // [war-scouting] the war map: rivals, reports, pickets, spies
         out.put("caves", CaveDwellers.report(level, v));         // [caves] the caves' report: the Caves page
+        out.put("crime", Crime.report(level, v));                // [crime] the casebook and the crime rate: the Cases page
         List<String> queue = new ArrayList<>();
         for (String p : Villages.projectsWanted(id)) queue.add(Villages.spoken(p));
         out.put("queue", strings(queue));

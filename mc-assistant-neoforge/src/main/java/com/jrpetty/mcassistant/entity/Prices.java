@@ -419,5 +419,7 @@ public final class Prices {
         "bell 12.0 C", "enchanted_book 4.0 C", "written_book 2.5 C", "filled_map 1.5 C",
         "suspicious_stew 0.4 F", "tipped_arrow 0.5 C", "firework_star 0.5 C", "potion 1.0 C",
         "splash_potion 4.5 C", "lingering_potion 6.0 C",
+        // [crime] A forged coin is worth its scrap of copper and no more, whatever it was cast to pass for (Mischief).
+        "mc_assistant:forged_coin 0.1 C",
     };
 }

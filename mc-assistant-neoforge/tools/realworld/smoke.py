@@ -1847,6 +1847,64 @@ def cave_stage(r, look, cx, cz):
     say("alive after the caves: %s" % client_alive())
 
 
+def crime_stage(r, look, cx, cz):
+    """[crime] Petty crime and the watch (entity/Crime, Mischief, Inquiry, Trial): a purse picked on the square among the
+    town's own folk, in front of a witness nine blocks off (/village crime stage): the coins really move, the culprit
+    makes off leaving muddy footprints, and a guard is sent to the scene. From above the square, the scene. Twenty
+    seconds on, /village crime said (the guard asking about); then the watch's case finished and the council sat on it,
+    at the hall or on the square (/village crime try), photographed from behind the dock while it is heard; then the
+    stocks put up on the square out of the stores and the convicted sat in them (/village crime stocks), from in front;
+    and the town's books open at the Cases page (the month's crime, what keeps it down, the case file)."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    r.cmd("weather clear")
+    hy = ground_height(r, cx, cz)
+    sx, sz = cx + 7, cz - 6                           # on the square, off the middle where the board and the well stand
+    r.cmd("tp %s %d %d %d" % (USER, sx + 6, hy + 4, sz + 6))
+    time.sleep(5)                                     # the square's chunks arrive
+    views = {}
+
+    def read(out):
+        for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+            views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+
+    def shoot(name, wait):
+        if name not in views:
+            say("no view for %s; nothing to photograph" % name)
+            return
+        x, y, z, ax, ay, az = views[name]
+        look("27-" + name, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    out = r.cmd("execute positioned %d %d %d run village crime stage" % (sx, hy + 1, sz))
+    say("crime stage: " + out[:700])
+    read(out)
+    shoot("crime-1-scene", 5)
+    time.sleep(20)                                    # the guard walks to the scene and starts asking about
+    say("crime: " + r.cmd("execute positioned %d %d %d run village crime" % (cx, hy + 1, cz))[:1200])
+    out = r.cmd("execute positioned %d %d %d run village crime try" % (cx, hy + 1, cz))
+    say("crime try: " + out[:700])
+    read(out)
+    time.sleep(15)                                    # the accused, the witnesses and the council gather; the hearing begins
+    shoot("crime-2-court", 6)
+    time.sleep(25)                                    # the verdict, and the sentence
+    say("crime after the court: " + r.cmd("execute positioned %d %d %d run village crime" % (cx, hy + 1, cz))[:1200])
+    out = r.cmd("execute positioned %d %d %d run village crime stocks" % (cx, hy + 1, cz))
+    say("crime stocks: " + out[:500])
+    read(out)
+    time.sleep(3)
+    shoot("crime-3-stocks", 6)
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
+    time.sleep(3)
+    say("books: " + r.cmd("execute as %s at @s run village crime books" % USER))
+    time.sleep(4)
+    shot("27-crime-4-page")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after crime: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

@@ -6228,3 +6228,134 @@ The game tests `WatchClearsGameTests` (wc01 to wc05) check that:
 * a raiding band gathers at the town's edge; two raiders among the folk get two guards each, and none is sent out to
   the band still at the edge; deaths while the bell rings are put down as what took them, with where and doing what;
   and the status, the books and `/village monsters` count the watch's and the golem's kills.
+
+## Crime and the watch
+
+A town is not all good neighbours. Now and then somebody who is poor, in debt, hungry, low or bitter, and not honest
+enough to let it go, does something about it, and the watch has a case on its hands.
+
+**Who is tempted, and why.** Every morning each grown folk's lot is weighed against its honesty. Its lot is what it
+is short of: an empty purse, a debt at the bank, missed meals, a low mood, a miserable town, a grudge against a rival,
+or a greedy streak (a folk that cares more for wages and trade than anything). Its honesty is its own nature (the
+generous and hard-working are honest, grumps and idlers less so, folk who hold to the old ways most of all) and its
+record (a conviction makes the next easier; a folk that has turned over a new leaf is much harder to tempt). A folk in
+good spirits lets it go, whatever it is short of. Even when the lot outweighs the honesty, it is only a chance, and a
+smaller one in a town with a watch to match its size and much smaller in a contented one. No town has more than one
+such folk a day. The guards and the leader never take part.
+
+**What they do.** It follows from the motive:
+* **Pickpocketing.** A few coins from a purse at the market on market day, at the tavern of an evening, or on the
+  square. The coins really leave one purse and go into the other.
+* **Theft from a house.** Something from a better-off neighbour's chest while the neighbour is out. It goes home to
+  the thief's own chest.
+* **Theft from the stores**, after dark: food, for the hungry.
+* **Vandalism**, after dark: a rival's window, a lamp on a post, a garden fence, really broken.
+* **Poaching**, after dark: a beast taken from the pen.
+* **A forged coin** (rarer, a smelter's or a smith's trick): a copper ingot cast into three coins, one passed at the
+  stores for a treat and two kept for another day.
+* **Smuggling** (rarer, a carrier's): a lot of the stores' goods slipped home and out of the town's books.
+
+Nobody is ever hurt, and no deed takes more than a few coins' worth. The culprit waits until nobody is close enough
+to see and the watch is out of sight. After dark it keeps out of the lamps' light. If the moment never comes, it
+thinks better of it, and the town's books count what put it off.
+
+**Clues and witnesses.** A deed leaves what deeds leave:
+* **Footprints.** A trail of mud (little brown specks you can see on the ground) from the scene towards where the
+  culprit went, until the watch reads it or the rain washes it out.
+* **Something dropped.** The nervous and the careless sometimes drop something: a keepsake with its owner's mark on
+  it, a tool of their trade, or some odd thing. It lies where it fell. No folk and no street sweeper picks it up.
+* **The hour, and who was about.**
+* **A purse fuller than its wages.**
+* **The stolen thing**, in somebody's pack or chest.
+
+Now and then somebody saw it from further off than the culprit thought. How well it saw depends on the distance,
+whether it was looking that way, and the light. It might name who it was, describe their clothes ("somebody in a
+miner's gear, going off east"), or, half-seeing, honestly mistake one folk of a trade for another. If you see a deed
+yourself, you are told what you saw.
+
+**The watch investigates.** The victim notices: its purse light, its chest short, its window broken. The stores'
+losses are found at the morning count. The board posts it (*Theft at the market: 3 coins from Bree's purse*), the
+chronicle and the crier have it, and the crier asks for witnesses. A guard takes the case. Once the town reaches the
+Iron Age, its most seasoned guard becomes the **constable** and takes every case. A town with no watch leaves it to
+its leader. By day, the investigator:
+* walks to the scene and reads it: the damage, the hour, whose door the footprints lead to, and whose the dropped
+  thing is;
+* asks the victim and everyone who was about, nearest first, walking up to each. They answer by what they saw and
+  who they are. An honest witness tells it as it saw it. One who loves the culprit saw nothing at all (a sharp
+  constable notices they are holding something back). A dishonest one with a grudge who saw too little to be sure
+  names its own rival. The culprit says it was elsewhere, and a lie is found out if somebody put it there. An honest
+  culprit sometimes owns up;
+* weighs it all and searches the likeliest: their purses against their wages, their packs and their home chests;
+* names the one the evidence points to, or gives the case up. A green or grumpy guard names somebody on less
+  evidence, and may name the wrong folk.
+
+**The court.** The morning after the watch names somebody, the council sits: at the leader's hall if there is one,
+otherwise on the square. The leader presides. The accused, the investigator, the victim and the witnesses are
+called, and the case is heard line by line: the charge, the evidence, what the witnesses saw, the victim, and the
+accused's denial or confession. Each councillor votes by the weight of the evidence, and a friend of the accused
+wants more of it. The sentence depends on the deed and the record:
+* **A first theft:** pay back what was taken, and a fine to the town.
+* **A first vandal:** **community work**. It mends what it broke, with a pane, lamp or fence from the stores at its
+  own cost, then sweeps the streets until sundown, sweeping loose litter into the stores.
+* **A second offence, or a forger's or smuggler's first:** **the stocks**. It sits in them on the square until sundown,
+  and passers-by have their say (children are merciless; friends bring a drink of water). The first time a sentence
+  calls for them, the town puts up a pair of **Stocks** on the square from its stores (three planks and two logs).
+* **A third offence:** banishment. The culprit leaves for another town, or the wide world.
+
+The victim is made whole: its own things back from the culprit's pack or chest, and any coins from the culprit's
+purse. Whatever cannot be paid now is paid out of the culprit's wages as it earns. Everyone thinks less of a
+convicted folk, the victim most of all, and it feels the shame for a few days. Some turn over a new leaf, more often
+if a partner or a close friend stands by them or they are no longer poor. An innocent folk who is acquitted is
+cleared. It remembers who named it, and the watch looks again. If a culprit later owns up in court, it owns up to its
+other deeds too: cases nobody solved are closed, and anyone wrongly convicted of them is cleared and has its fine
+given back.
+
+**Prevention.** Lamps, the watch walking the streets at night, and a contented town all mean less crime.
+
+**Where you see it.**
+* **The board** shows open cases, today's trial, who is in the stocks, and the month's crime.
+* **The gazette** has a *Watch and the court* section.
+* **The chronicle and the crier** carry the news.
+* **A folk's card** has a *The law* line: a constable, a case, a conviction, a debt, a new leaf, robbed, or cleared.
+* **The Cases page** of the town's books (`/village crime books`) shows:
+  * the month's crime: how many crimes, how many solved, and how many in every hundred folk;
+  * an eight-week chart of crimes, cases solved and deeds put off;
+  * what keeps crime down here: the watch, the lamps, the town's spirits, what put deeds off, and how many folk are
+    tempted right now;
+  * the casebook. Scroll to pick a case and read its file: what was done, where and when, the clues, the
+    witnesses' statements, the suspects and the weight of evidence on each, and the detective's notes.
+
+**What you can do.**
+* **Witness.** If you see a deed, you are told what you saw. Tell a guard who did it by typing something like *I saw
+  Fen take it*. A player who saw it is believed.
+* **Help investigate.** Ask any folk *Seen anything amiss?* (the *Seen anything?* button, or type *theft*, *witness*,
+  *who did it*). A witness tells you what it saw, and that goes into the case as if the watch had asked. A friend may
+  tell you what it would not tell the watch.
+* **Bring in clues.** Follow the footprints. Pick up whatever was dropped and hand it to a guard by holding it and
+  asking. Your help goes into the case file.
+
+You are still under the town's own Laws for anything you take or break yourself.
+
+**New things.**
+* **Stocks.** Three planks over two logs; a block in the Wood Age. The town makes and puts up its own from its
+  stores.
+* **Forged Coin.** A copper ingot makes three. It is worth its copper and no more.
+
+**Commands.**
+* `/village crime` gives the casebook as text.
+* `/village crime books` opens the Cases page.
+* Operators can use:
+  * `/village crime now` to send the town's most tempted folk to do what it would do;
+  * `/village crime stage` to have a purse picked where you stand, in front of a witness, with a guard on it;
+  * `/village crime try` to finish the watch's case at once and have the council sit;
+  * `/village crime stocks` to put up the stocks and sit the latest convicted in them.
+
+The game tests `CrimeGameTests` (cr01 to cr08) check that:
+* a poor, unhappy, greedy and dishonest folk is tempted, picks a purse at the market, and the coins really move;
+* a folk across the square looking that way is recorded as a witness, and thinks it knows who did it;
+* the guard walks to the scene, asks around, searches, names the culprit, and the council convicts;
+* the victim is paid back from the culprit's purse, and the fine is owed;
+* a town of content folk has no crime over four weeks of mornings;
+* an innocent with nothing against it is acquitted and cleared;
+* a vandal mends the window it broke with a pane from the stores, at its own cost;
+* a second offender sits in stocks the town puts up on the square from its own timber.

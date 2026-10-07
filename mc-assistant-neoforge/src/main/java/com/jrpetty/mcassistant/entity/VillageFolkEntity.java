@@ -420,6 +420,10 @@ public class VillageFolkEntity extends AssistantEntity {
                 && WatchClears.takeCover(this, coverLevel)) return;
         // [batchA] Laid up: a cold or its wounds, in bed at the infirmary or at home, and kept there (Health).
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel careLevel && Health.hold(this, careLevel)) return;
+        // [crime] The law first: in the stocks or at its community work, called to a trial, a guard on a case; or a folk up
+        // to no good in its own free time (Crime).
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel lawLevel
+                && (tickCount % 4 == 2 ? Crime.hold(this, lawLevel) : Crime.busy(this))) return;
         // [batchD] The town's culture (Culture): a minute's silence at the bell, the choir at the morning service, the
         // play at the theatre (on the stage or a bench), the band at the tavern or a wedding, a toast, a picture painted.
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel culture
@@ -1167,6 +1171,7 @@ public class VillageFolkEntity extends AssistantEntity {
         m = Visitors.mood(this, day, m, why);           // [batchG] a night of the bard's songs, a day with a friend from away
         m = Health.mood(this, day, m, why);             // [batchA] a cold (Health)
         m = Civics.mood(this, day, m, why);             // [batchF] a letter, the town meeting, a good turn, found and home
+        m = Crime.mood(this, day, m, why);              // [crime] robbed, paid back, shamed, wrongly accused and cleared
         why.sort((a, b) -> Integer.compare((Integer) b[1], (Integer) a[1]));
         java.util.List<String> keys = new java.util.ArrayList<>();
         for (Object[] w : why) keys.add((String) w[0]);
@@ -7680,7 +7685,8 @@ public class VillageFolkEntity extends AssistantEntity {
     protected boolean calledAway() {
         return FireBrigade.onIt(this) || Weather.sheltering(this) || Health.laidUp(this) || Neighbourly.busy(this)   // [batchA]
             || Inn.lodged(this)                                  // [batchE] asleep in a room at an inn on the road
-            || WatchClears.sheltering(this);                     // [watch-clears] indoors out of a monster's way
+            || WatchClears.sheltering(this)                      // [watch-clears] indoors out of a monster's way
+            || Crime.calledAway(this);                           // [crime] on a case, at a trial, in the stocks, at community work
     }
 
     /** [wf] The woodcutter's wood kept growing between its fellings (Woods). */
