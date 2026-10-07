@@ -1768,6 +1768,56 @@ def mine_safety_stage(r, look, cx, cz):
     say("alive after the mine: %s" % client_alive())
 
 
+def cave_stage(r, look, cx, cz):
+    """The cave dwellers (entity/CaveDwellers): a small cave cut into the ground well out past the town (/village caves
+    stage), a ramp down into it from the west, a chamber with iron in its east wall, coal and copper in its south, a
+    diamond and obsidian in its north, and an old chest with the world's dungeon loot in it; a cave dweller in the
+    town's iron kit stood at the mouth (a showcase's), and the town's own cave dweller (taken up for it if the town has
+    none) sent into it. Pictures: the cave dweller in its kit at the cave mouth; inside, once the real one has walked out
+    to it, gone in and lit it, the iron vein in the east wall being mined; the old chest being looked into; then
+    /village caves said, and the town's books open at the Caves page (the map, the finds, the hauls)."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    r.cmd("weather clear")
+    hy = ground_height(r, cx, cz)
+    sx, sz = cx + 130, cz + 20                        # well out past the town: nothing is mined or opened in a town
+    r.cmd("tp %s %d %d %d" % (USER, sx + 10, hy + 20, sz + 14))
+    time.sleep(8)                                      # the ground arrives at the server and the client
+    out = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village caves stage" % (sx, sz))
+    say("caves stage: " + out[:700])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("no cave staged; nothing to photograph")
+        return
+
+    def shoot(name, wait):
+        if name not in views:
+            return
+        x, y, z, ax, ay, az = views[name]
+        look("25-" + name, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    shoot("caves-1-mouth", 8)
+    time.sleep(60)                                     # the town's cave dweller walks out to it, goes in and lights it
+    say("caves: " + r.cmd("execute positioned %d %d %d run village caves" % (cx, hy + 1, cz))[:900])
+    shoot("caves-2-vein", 10)
+    time.sleep(15)
+    shoot("caves-3-chest", 8)
+    say("caves after: " + r.cmd("execute positioned %d %d %d run village caves" % (cx, hy + 1, cz))[:900])
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
+    time.sleep(3)
+    say("books: " + r.cmd("execute as %s at @s run village caves books" % USER))
+    time.sleep(4)
+    shot("25-caves-4-page")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("kill @e[tag=caves_lineup,type=!player]")
+    say("alive after the caves: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

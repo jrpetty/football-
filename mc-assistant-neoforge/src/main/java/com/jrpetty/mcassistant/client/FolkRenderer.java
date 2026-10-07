@@ -116,7 +116,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
     }
 
     private static int trade(AssistantEntity folk) {
-        return Math.floorMod(folk.clientJobOrdinal(), FolkModel.TRADES.length);
+        return FolkModel.outfit(folk);                     // [caves] the cave dweller in the miner's lamp
     }
 
     /** The trade's clothes, over the folk's own. */
@@ -352,6 +352,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
             case SCOUT -> Items.COMPASS;
             case HUNT -> Items.BOW;
             case BANK -> Items.GOLD_INGOT;
+            case CAVE -> Items.LANTERN;                    // [caves] a lantern held up in the dark
             case NONE -> Items.AIR;
         });
     }

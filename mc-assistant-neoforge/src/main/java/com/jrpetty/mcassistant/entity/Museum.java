@@ -348,6 +348,7 @@ public final class Museum {
             case MINE -> k == Kind.FOSSIL ? "dug out" : "mined";
             case FISH -> "fished up";
             case HUNT -> "brought home";
+            case CAVE -> "brought up from the caves";      // [caves]
             case GUARD -> "won";
             default -> "found";
         };

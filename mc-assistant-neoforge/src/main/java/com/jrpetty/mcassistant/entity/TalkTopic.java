@@ -72,7 +72,8 @@ public enum TalkTopic {
     HOUSE("Where do you live?"),
     HOUSING("Any houses to buy?"),
     TOWN_MAP("Could I have a map of the town?"),           // [players] PlayerServices
-    LOST("Has anything of mine turned up?");               // [players] the Lost and Found
+    LOST("Has anything of mine turned up?"),               // [players] the Lost and Found
+    CAVES("What have the cave dwellers found down there?"); // [caves] CaveDwellers
 
     public final String line;
 

@@ -154,6 +154,7 @@ public final class FolkTalk {
                 ? Purchases.talk(f) : Wealth.talk(f, text) + Bank.talkLine(f);
             case KNACK -> knack(f);
             case ATLAS -> Scouts.tell(f);
+            case CAVES -> CaveDwellers.tell(f);                                // [caves] the caves' report
             case FOR_SALE -> Budget.answer(f, p);
             case LETTER -> Bonds.letter(f, p, text);
             case BROKER -> Bonds.broker(f, p, text);
@@ -353,6 +354,7 @@ public final class FolkTalk {
         line(sb, "Bank", Bank.cardLine(f));                 // its savings at the bank, its mortgage, how careful it is
         line(sb, "War", WarFooting.cardLine(f));            // [war-prep] the watch for the war, the militia, danger money
         line(sb, "Kit", WatchKit.cardLine(f));              // [guard-kit] a guard's kit, issued by the town
+        line(sb, "Caves", CaveDwellers.cardLine(f));        // [caves] where it went today, what it found, its kit
         net.minecraft.core.BlockPos bed = f.bedPos();
         String house = Homes.talk(f);
         line(sb, "Home", (house != null && !house.isEmpty() ? house + " " : "") + (bed == null ? "No bed of its own yet."
@@ -684,6 +686,7 @@ public final class FolkTalk {
                 "Tracking" + place + ". There's a pig about somewhere; I've seen its prints.",
                 "Hunting" + place + ". Only the full-grown, mind, and never the last pair.");
             case BANK -> Bank.doing(f, r);                // the banker: its books, its vault, its borrowers
+            case CAVE -> CaveDwellers.doing(f, r);        // [caves] down the caves, or home with the report
         };
         if (!f.missingEssentials().isEmpty()) work += " Or I would be, if I had " + f.missingEssentials().get(0) + ".";
         if (f.life().has(Social.Trait.HARDWORKING) && r.nextBoolean()) work += " Can't stop long.";
@@ -1227,6 +1230,7 @@ public final class FolkTalk {
                 "richest", "most money",
                 "prices", "how dear", "cost of living", "the slate")) return TalkTopic.WORTH;    // [econ-prices] prices, too
         if (has(t, "good at", "your skill", "talent", "best at", "your level", "what level", "how skilled", "your knack")) return TalkTopic.KNACK;
+        if (has(t, "cave", "underground", "mineshaft", "spawner", "dungeon", "ravine")) return TalkTopic.CAVES;     // [caves]
         if (has(t, "scout", "atlas", "out there", "explore", "explored", "landmark", "beyond the", "what's around", "whats around",
                 "found anything", "discover")) return TalkTopic.ATLAS;
         if (has(t, "become a ", "be a ", "work as a ", "change your trade", "change your job", "change jobs", "switch to ",

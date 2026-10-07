@@ -236,6 +236,7 @@ public final class VillageCommands {
             .then(com.jrpetty.mcassistant.entity.Health.command())
             .then(com.jrpetty.mcassistant.entity.Civics.command())          // [batchF] the town's affairs
             .then(com.jrpetty.mcassistant.entity.WatchKit.command())        // [guard-kit] the watch's kit, on order, and its cost
+            .then(com.jrpetty.mcassistant.entity.CaveDwellers.command())    // [caves] the cave dwellers and the caves' report
             .then(com.jrpetty.mcassistant.entity.Civics.donateCommand())    // [batchF] the public works fund
             // [flats] The village's blocks of flats: each flat, who lives there, on what terms. `stage`
             // sets a furnished block out on a stage at the spot, for the pictures (from a palette, not the stores).
@@ -556,6 +557,7 @@ public final class VillageCommands {
                     case SCOUT -> net.minecraft.world.item.Items.COMPASS;
                     case HUNT -> net.minecraft.world.item.Items.BOW;
                     case BANK -> net.minecraft.world.item.Items.GOLD_INGOT;
+                    case CAVE -> net.minecraft.world.item.Items.LANTERN;          // [caves]
                     case NONE -> net.minecraft.world.item.Items.AIR;
                 }));
             folk.rename(switch (trades[i]) {

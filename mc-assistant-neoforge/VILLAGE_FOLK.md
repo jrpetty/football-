@@ -4202,6 +4202,63 @@ town climbs out through the rock, never through a cellar floor.
 `/village mine` shows where the mine is, how many faces are worked out, and which face each
 miner works and how deep.
 
+## The cave dwellers
+
+An Iron Age town of **twenty-five** or more, with a couple of miners at its mine and a watch on
+its walls, takes up a **cave dweller**: half miner, half guard. It has one for every
+twenty-seven folk, and never more than four. The town takes an idle hand first, then a miner or
+a guard it has more of than it needs. It never takes one from a trade it is short of. A cave
+dweller wears the miner's helmet and lamp, with the town's armour over them, and a lantern
+floats over its head from far off.
+
+* **Kitted out by the town, free.** Each morning it goes to the stores. It gets the armour,
+  blade and shield the watch has (leather, iron or diamond, as the town can make them). It also
+  gets the best pickaxe in the stores (iron in the Iron Age, diamond once there are diamonds),
+  a stack and a half of torches (made from the stores' coal and sticks if there are none), food
+  for the day and a little cobblestone for walling off lava. It leaves what it does not need,
+  such as seed, saplings and a bench, in the stores. The town's pieces carry its mark. When it
+  takes up another trade, they go back into the stores; nothing comes out of its purse.
+* **Out by day, home by dusk.** It makes for a cave its town knows and has not worked out.
+  Knowing none, it walks out along the way it has looked least, to a hundred blocks in the Iron
+  Age, a hundred and fifty in the Diamond Age and two hundred in the Nether Age. As it walks it
+  looks for a way down under the rock that it can walk, and goes in.
+* **In the cave.** It lights its way with torches where it is dark, and the torches mark the
+  way home. It mines every ore it sees that its pick allows, the whole vein, including the
+  blocks behind the first: coal, copper, iron, gold, redstone, lapis, emerald and amethyst;
+  diamond with an iron pick or better; obsidian only with a diamond pick. It never digs the
+  block it stands on, a block with lava or water behind it, a step of the miners' stairs, a
+  portal's obsidian, or anything in a town. It fights what comes at it and clears the way. It
+  backs off from a creeper, never goes near a warden, eats when it is hurt and turns for home
+  when badly hurt.
+* **Old chests.** It opens the chests the world left: a mineshaft's carts, a dungeon's chests,
+  and the chests of the jungle temples, strongholds, ruined portals, igloos and shipwrecks. It
+  takes what is worth carrying: ore and metal, gems, enchanted books, golden apples, saddles,
+  name tags and music discs. It leaves the bones and the string. It only opens a chest that
+  still has the world's loot in it, or one inside something the world built. It never opens a
+  named chest, a chest near any town, or a chest in a village of villagers. It leaves the deep
+  dark's ancient cities and the trial chambers alone. It only opens a desert temple's chests
+  once the TNT trap under them is gone.
+* **What it notes.** It notes caves and ravines (how deep and how big), every ore vein (blocks
+  seen and blocks mined), mineshafts, dungeons and spawners (it leaves them alone, but says
+  so), the old structures, and pools of lava as a danger to the miners.
+* **Never trapped.** It comes home along its own marks. If it cannot get to one, it goes on to
+  the next. If it is underground with no way it can walk, it cuts its own stairs up, as a lost
+  miner does. If even that fails, it calls for help, and its family and friends go out to look
+  for it. It is never lifted out.
+* **Home.** What it brought out goes into the stores as its work, so it shows in the town's
+  production and its pay. A cave dweller is paid as dangerous, skilled work.
+
+**Where to see it.** The **Caves** page of the town's books (the last tab) has a map of the
+finds round the town, every find with its coordinates (the big ones first; scroll for more),
+the cave dwellers and their day, and the hauls brought home. The board has a line on the
+caves. The chronicle and the gazette tell of diamonds, a mineshaft, a dungeon or a temple's
+treasure, and so does the next morning assembly. A cave dweller's card shows where it went
+today, what it found and its kit. Ask anybody "What's down in the caves?" (or press
+**Underground** on the Village tab); a cave dweller gives the exact spot. `/village caves` lists
+it all, and `/village caves books` opens the page. For operators, `/village caves now` sends the
+cave dwellers out at once (or takes one up), and `/village caves stage` cuts a small cave with
+ore and an old chest beside you and sends the town's cave dweller into it.
+
 ## Names
 
 There are close to six hundred names: hedgerow and meadow, birds and beasts, old names, trade

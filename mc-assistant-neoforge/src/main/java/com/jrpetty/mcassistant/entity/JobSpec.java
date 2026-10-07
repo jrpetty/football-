@@ -51,6 +51,8 @@ public final class JobSpec {
             case FISH -> List.of("a fishing rod", "water in the zone", "a chest");
             case STORE -> List.of("two chests in the zone");
             case NONE, SMITH, TAILOR, BEEKEEP, BREW, ENCHANT, COOK, SHOP, SCOUT, HUNT, BANK -> List.of();
+            // [caves] All of it issued by the town each morning (CaveDwellers.kitUp): nothing to set up first.
+            case CAVE -> List.of("a pickaxe and a sword (the town's)", "torches (it lights the caves)");
         };
     }
 

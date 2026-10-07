@@ -162,6 +162,10 @@ public final class Decor {
             case ENCHANT -> List.of(floor("enchant.shelf", t, Items.BOOKSHELF, true, "a shelf of the enchanter's books"));
             case COOK -> List.of(floor("cook.smoker", t, Items.SMOKER, true, "the cook's smoker"));
             case SHOP -> List.of(floor("shop.bench", t, Items.CRAFTING_TABLE, true, "the shopkeeper's own bench"));
+            // [caves] A lantern for the dark, and a pick on the wall.
+            case CAVE -> List.of(new Piece("cave.lantern", t, Shape.LAMP, s -> s.is(Items.LANTERN), Items.LANTERN, null, 0, NOTHING,
+                    false, "the cave dweller's lantern"),
+                frame("cave.pick", t, s -> s.getItem() instanceof PickaxeItem, Items.WOODEN_PICKAXE, "a pickaxe on the wall"));
             case SCOUT -> List.of(floor("scout.table", t, Items.CARTOGRAPHY_TABLE, true, "a map table"),
                 frame("scout.compass", t, s -> s.is(Items.COMPASS) || s.is(Items.MAP) || s.is(Items.FILLED_MAP), Items.COMPASS,
                     "a compass on the wall"));

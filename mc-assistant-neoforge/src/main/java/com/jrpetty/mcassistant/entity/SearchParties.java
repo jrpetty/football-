@@ -89,6 +89,11 @@ public final class SearchParties {
 
     // ------------------------------------------------------------------ who is where
 
+    /** [caves] Is the town out looking for this folk (a cave dweller that called for help waits for them)? */
+    static boolean searchedFor(UUID lost) {
+        return SEARCHES.containsKey(lost);
+    }
+
     /** Is this folk where a folk should be (or away on business the town knows of)? */
     static boolean seen(ServerLevel level, Villages.Village v, VillageFolkEntity f) {
         if (f.isSleeping() || f.isHired() || f.isShowcase()) return true;

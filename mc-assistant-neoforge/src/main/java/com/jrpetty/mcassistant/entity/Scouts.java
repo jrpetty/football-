@@ -137,6 +137,8 @@ public final class Scouts {
         int spokeTick = -100000;
         /** [war-scouting] Sent to watch an enemy town, not to explore (Spying): what it is about, and what it counts. */
         @Nullable Spying.Mission mission;
+        /** [caves] A cave dweller's day down the caves, not a scout's over the land (CaveDwellers): the cave's part of it. */
+        @Nullable CaveDwellers.Delve delve;
 
         Expedition(UUID village, BlockPos home, int bearing, BlockPos target) {
             this.village = village;
@@ -151,6 +153,8 @@ public final class Scouts {
         public int finds() { return found.size(); }
         /** [war-scouting] The enemy town it was sent to watch, and what it has counted (Spying); null when out exploring. */
         @Nullable public Spying.Mission mission() { return mission; }
+        /** [caves] The cave dweller's day in the caves (CaveDwellers); null for a scout's. */
+        @Nullable public CaveDwellers.Delve delve() { return delve; }
     }
 
     /** What the scouts have come home with, for the next morning assembly. */
@@ -428,6 +432,7 @@ public final class Scouts {
     public static boolean drive(VillageFolkEntity f, ServerLevel level) {
         Expedition e = f.expedition();
         if (e == null) return false;
+        if (e.delve != null) return CaveDwellers.drive(level, f, e);          // [caves] a cave dweller's day down the caves
         keepAwake(level, f, e);
         long time = level.getDayTime() % 24000L;
         // Something hostile close by: away from it, quick.

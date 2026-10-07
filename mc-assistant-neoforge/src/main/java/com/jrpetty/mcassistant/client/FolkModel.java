@@ -285,7 +285,17 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
 
     /** The trade's name, as the pictures and the parts know it. */
     public static String tradeOf(AssistantEntity folk) {
-        return TRADES[Math.floorMod(folk.clientJobOrdinal(), TRADES.length)];
+        return TRADES[outfit(folk)];
+    }
+
+    /**
+     * [caves] Which trade's outfit a folk wears: its own, by StationTask's order. The cave dweller has none of its own
+     * drawn: it goes in the miner's helmet, lamp and lantern (lit in the dark), with the town's armour over them.
+     */
+    public static int outfit(AssistantEntity folk) {
+        int job = folk.clientJobOrdinal();
+        if (job == AssistantEntity.StationTask.CAVE.ordinal()) return 3;          // "miner"
+        return Math.floorMod(job, TRADES.length);
     }
 
     @Override

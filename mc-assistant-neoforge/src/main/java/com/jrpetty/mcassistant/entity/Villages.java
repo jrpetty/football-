@@ -105,7 +105,9 @@ public final class Villages {
         // [economy] From ten, one to every ten, up to four (more when the larder is short: Leader), while there is game.
         new Slot(AssistantEntity.StationTask.HUNT, 1, 10, Age.WOOD, 4),
         // The banker, once the bank stands: one, and chosen for its nature (Bank.appoint), not by who asks first.
-        new Slot(AssistantEntity.StationTask.BANK, 1, Bank.FROM, Age.IRON, 1));
+        new Slot(AssistantEntity.StationTask.BANK, 1, Bank.FROM, Age.IRON, 1),
+        // [caves] The cave dwellers: from twenty-five in the Iron Age, one to every twenty-seven, four at most (CaveDwellers).
+        new Slot(AssistantEntity.StationTask.CAVE, 1, CaveDwellers.FROM, Age.IRON, CaveDwellers.MOST));
 
     /** Forget every settlement. For tests, which share one JVM and would
      *  otherwise inherit each other's villages. */
@@ -392,6 +394,7 @@ public final class Villages {
         Homeland.resetForTests();
         Economy.resetForTests();
         Scouts.resetForTests();
+        CaveDwellers.resetForTests();       // [caves]
         Quests.resetForTests();
         Services.resetForTests();
         PlayerServices.resetForTests();     // [players] the nights' bounties, the milestones' looks
@@ -822,6 +825,7 @@ public final class Villages {
         // of the town, the village wants none for a few days: the mountain town kept one fisher on "0 fish" for
         // good, and every newcomer it sent to the trade looked for the water that was not there.
         if (trade == AssistantEntity.StationTask.FISH) return !dryForFishers(villageId);
+        if (trade == AssistantEntity.StationTask.CAVE) return CaveDwellers.ready(villageId);   // [caves] a few miners and a watch first
         if (trade == AssistantEntity.StationTask.STORE || trade == AssistantEntity.StationTask.HAUL) {
             return villageId != null && (Storehouses.stands(villageId) || hasBuilt(villageId, "storage")
                 || builtAt(villageId, "storage") != null);
@@ -890,6 +894,7 @@ public final class Villages {
         // coast, more woodcutters and hunters in the forest, more miners in the hills.
         double t = (slot.weight() + boost) * total / (double) VILLAGE_SIZE * Orders.scale(villageId)
             * glut(villageId, slot.trade()) * Homeland.lean(villageId, slot.trade());
+        if (slot.trade() == AssistantEntity.StationTask.CAVE) t = t * VILLAGE_SIZE / CaveDwellers.PER;   // [caves] one to twenty-seven
         // A courier for every five workers out on plots of their own (their production chests).
         if (slot.trade() == AssistantEntity.StationTask.HAUL && villageId != null) {
             int producers = 0;

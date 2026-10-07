@@ -236,6 +236,7 @@ public final class MineStairs extends SavedData {
         UUID id = f.getUUID();
         Job j = f.peekJob();
         if (j != null && j.type() == Job.Type.MINE) { BELOW.remove(id); return; }   // its own run sees it home
+        if (CaveDwellers.caving(f)) { BELOW.remove(id); return; }       // [caves] down there on purpose: its own marks see it home
         if (!f.isAlive() || f.isPassenger() || f.isSleeping()) return;
         BlockPos feet = f.blockPosition();
         // [mine-safety] Or deep in the town's mine with the sky over it (the open top of a pit, a gallery out

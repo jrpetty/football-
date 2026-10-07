@@ -159,6 +159,15 @@ public final class Trades {
                 List.of(need("a book, an ink sac and a feather for the ledger", s -> s.is(Items.BOOK) || s.is(Items.INK_SAC)
                     || s.is(Items.FEATHER), 1, "the stores")),
                 "interest for the savers, houses for the borrowers, and a share of what the bank earns for the treasury");
+            // [caves] The cave dweller (CaveDwellers): the town's kit, its torches and its rations; the ore and the old chests' finds home.
+            case CAVE -> new Trade("I go down the caves round the town, armed and in the town's armour: I mine every ore my pick"
+                    + " will take (diamond with iron, obsidian only with diamond), look in the old chests the world left in its"
+                    + " mineshafts, dungeons and temples, fight what comes at me, and light my way home with torches",
+                List.of(need("a pickaxe", s -> s.getItem() instanceof net.minecraft.world.item.PickaxeItem, 1, "the smith (the town's, issued free)"),
+                    need("a sword", s -> s.is(net.minecraft.tags.ItemTags.SWORDS), 1, "the smith (the town's, issued free)")),
+                List.of(need("torches", s -> s.is(Items.TORCH), 16, "the stores, or the stores' coal and sticks"),
+                    need("food for the day", s -> s.get(DataComponents.FOOD) != null, 4, "the stores")),
+                "ore and the old chests' treasure for the stores, and the caves' report: veins for the miners, spawners and lava to keep clear of");
             case NONE -> new Trade("I'm between trades just now", List.of(), List.of(), "whatever the village needs a hand with");
         };
     }

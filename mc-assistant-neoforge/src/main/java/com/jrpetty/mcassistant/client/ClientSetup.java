@@ -155,6 +155,7 @@ public final class ClientSetup {
                 case SCOUT -> Items.COMPASS;
                 case HUNT -> Items.BOW;
                 case BANK -> Items.GOLD_INGOT;
+                case CAVE -> Items.LANTERN;                // [caves]
                 case NONE -> Items.AIR;
             });
         }
