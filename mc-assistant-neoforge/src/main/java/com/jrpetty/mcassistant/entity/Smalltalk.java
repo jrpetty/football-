@@ -36,6 +36,7 @@ public final class Smalltalk {
         FolkTalk.speak(a, voice(a, t.open()));
         b.sayLater(voice(b, t.answer()), 50 + a.getRandom().nextInt(20));
         if (!t.last().isEmpty()) a.sayLater(voice(a, t.last()), 110 + a.getRandom().nextInt(20));
+        if (a.getRandom().nextInt(3) == 0) Manner.laugh(b);   // [individual] a laugh at it
         a.life().feel(b.getUUID(), b.displayNameCap(), 1);
         b.life().feel(a.getUUID(), a.displayNameCap(), 1);
         return true;

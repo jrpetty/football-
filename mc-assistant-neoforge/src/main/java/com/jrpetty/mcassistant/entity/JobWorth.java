@@ -196,6 +196,10 @@ public final class JobWorth {
             // [cartographer] Long walks and a steady hand; learned work; the town's maps, and the finds for the scouts and the cave team.
             case "CARTOGRAPHER" -> new Post(key, title, trade, role, 1, 3, 0.8, 1.0, "long walks and a steady hand",
                 "maps the town, and finds the old places round it for the scouts and the cave team");
+            // [emerald] Long days on the road among strangers, and a head for a bargain: it sells the town's surplus for
+            // emeralds and buys what nobody here can make. Paid like the scouts and a little over, for the bargaining.
+            case "EMERALD" -> new Post(key, title, trade, role, 2, 2, 1.0, 1.0, "long days on the road, and a head for a bargain",
+                "trades the town's surplus with the villagers for what it cannot make");
             // [diver] Under the water all day, on its own breath, and the one the town shouts for when somebody's in.
             case "DIVER" -> new Post(key, title, trade, role, 2, 2, 1.0, 1.0, "cold, deep work on your own breath",
                 "fuels the furnaces with kelp, and pulls folk out of the water");
@@ -913,6 +917,7 @@ public final class JobWorth {
             case "GOLEMS" -> "the golem yard";         // [golems]
             case "FIREWORKS" -> "the powder hut";      // [fireworks]
             case "CARTOGRAPHER" -> "the map room";     // [cartographer]
+            case "EMERALD" -> "the trading post";      // [emerald]
             case "DIVER" -> "the kelp beds";            // [diver]
             default -> "the " + JobMarket.noun(t) + "s";
         };
@@ -924,6 +929,7 @@ public final class JobWorth {
             case "GUARD", "FISH", "STORE", "SMITH", "TAILOR", "BREW", "ENCHANT", "COOK", "SHOP", "BANK" -> false;
             case "FIREWORKS" -> false;                 // [fireworks] "the powder hut is short of hands"
             case "CARTOGRAPHER" -> false;              // [cartographer] "the map room is"
+            case "EMERALD" -> false;                                       // [emerald] the trading post
             default -> true;
         };
     }

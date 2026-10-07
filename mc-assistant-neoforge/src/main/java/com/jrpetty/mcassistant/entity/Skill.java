@@ -41,6 +41,7 @@ public final class Skill {
                 case SHOP, COOK, STORE, HAUL -> new Fit(12, "good with people, made for this");
                 case CAVE -> new Fit(-6, "misses company down in the dark");          // [caves]
                 case FIREWORKS -> new Fit(6, "loves the crowd's cheer when the rockets go up");   // [fireworks]
+                case EMERALD -> new Fit(14, "can talk any villager into a better bargain");   // [emerald]
                 case SCOUT -> new Fit(6, "talks to everybody it meets on the road");
                 case HUNT -> new Fit(-8, "can't keep quiet long enough to get near anything");
                 case MINE, FISH -> new Fit(-5, "misses company down there");
@@ -54,6 +55,7 @@ public final class Skill {
                 case CAVE -> new Fit(6, "happy on its own in the dark");               // [caves]
                 case FIREWORKS -> new Fit(8, "quiet, careful hands with the powder");     // [fireworks]
                 case CARTOGRAPHER -> new Fit(6, "happy alone with a sheet and the land");   // [cartographer]
+                case EMERALD -> new Fit(-8, "finds haggling with strangers hard going");     // [emerald]
                 case DIVER -> new Fit(8, "happy on its own on the bed of the water");     // [diver]
                 case HUNT -> new Fit(12, "quiet as the woods: the game never hears it coming");
                 default -> new Fit(0, "");
@@ -61,6 +63,7 @@ public final class Skill {
             case CHEERFUL -> switch (trade) {
                 case COOK, SHOP -> new Fit(10, "brightens the counter and the kitchen");
                 case FIREWORKS -> new Fit(12, "born to put on a show");                    // [fireworks]
+                case EMERALD -> new Fit(8, "the villagers are always glad to see it");      // [emerald]
                 default -> new Fit(5, "whistles while it works");
             };
             case GRUMPY -> switch (trade) {
@@ -69,6 +72,7 @@ public final class Skill {
                 case MINE, SMITH -> new Fit(4, "takes it out on the stone");
                 case GOLEMS -> new Fit(4, "has a lot in common with an iron golem");        // [golems]
                 case SHOP, COOK, STORE -> new Fit(-6, "puts the customers off");
+                case EMERALD -> new Fit(-6, "the villagers grumble back at it");             // [emerald]
                 default -> new Fit(0, "");
             };
             case GENEROUS -> switch (trade) {
@@ -78,6 +82,7 @@ public final class Skill {
             case CURIOUS -> switch (trade) {
                 case MINE, ENCHANT, BREW, SMITH -> new Fit(10, "loves finding out how things work");
                 case SCOUT -> new Fit(18, "born to see what's over the next hill");
+                case EMERALD -> new Fit(8, "learns every villager's wares by heart");       // [emerald]
                 case CAVE -> new Fit(14, "can't pass a dark passage without seeing where it goes");   // [caves]
                 case FIREWORKS -> new Fit(10, "always trying a new star to see what it does");      // [fireworks]
                 case CARTOGRAPHER -> new Fit(16, "has to know what's round the next bend, and draw it");   // [cartographer]

@@ -121,6 +121,9 @@ public final class Villages {
         // [cartographer] The cartographer: one, from the Stone Age once the town has scouts or thirty folk, at its map room;
         // chosen by the town for its nature (Cartographers.appoint), not taken by whoever asks first.
         new Slot(AssistantEntity.StationTask.CARTOGRAPHER, 1, Cartographers.FROM, Age.STONE, 1),
+        // [emerald] The emerald trader: one from the Stone Age once the town knows of a village of villagers within reach and
+        // has goods to spare, two when it trades with several (EmeraldTrader.wanted, traders).
+        new Slot(AssistantEntity.StationTask.EMERALD, 1, EmeraldTrader.FROM, Age.STONE, EmeraldTrader.MOST),
         // [diver] The kelp farmer and diver: one from fifteen in a town with a river, a lake or the sea close by, two at
         // fifty, from the Wood Age (Divers); none at all in a town with no water.
         new Slot(AssistantEntity.StationTask.DIVER, 1, Divers.FROM, Age.WOOD, Divers.MOST));
@@ -358,6 +361,7 @@ public final class Villages {
             case "golemyard" -> "the golem yard";                 // [golems]
             case "powderhut" -> "the powder hut";                // [fireworks]
             case "maproom" -> "the map room";                     // [cartographer]
+            case "tradingpost" -> "the Trading Post";             // [emerald]
             case "divershed" -> "the diver's shed";               // [diver]
             default -> "the " + structure;
         };
@@ -429,6 +433,7 @@ public final class Villages {
         FireworksMaker.resetForTests();     // [fireworks]
         FireworkShows.resetForTests();      // [fireworks]
         Cartographers.resetForTests();      // [cartographer]
+        EmeraldTrader.resetForTests();      // [emerald] the trader, the villagers' villages, the two peoples' sweep
         Divers.resetForTests();             // [diver]
         Fashion.resetForTests();            // [fashion] the season's looks, the tailor's book, the shows
         Quests.resetForTests();
@@ -885,6 +890,7 @@ public final class Villages {
         if (trade == AssistantEntity.StationTask.GOLEMS) return Golems.wanted(villageId);      // [golems] the raids, or sixty folk
         if (trade == AssistantEntity.StationTask.FIREWORKS) return FireworksMaker.ready(villageId);   // [fireworks] opened, and its hut up
         if (trade == AssistantEntity.StationTask.CARTOGRAPHER) return Cartographers.ready(villageId);   // [cartographer] its map room stands
+        if (trade == AssistantEntity.StationTask.EMERALD) return EmeraldTrader.wanted(villageId);   // [emerald] villagers to trade with, goods to spare
         if (trade == AssistantEntity.StationTask.DIVER) return Divers.ready(villageId);        // [diver] water near enough to dive in
         if (trade == AssistantEntity.StationTask.STORE || trade == AssistantEntity.StationTask.HAUL) {
             return villageId != null && (Storehouses.stands(villageId) || hasBuilt(villageId, "storage")
@@ -962,6 +968,7 @@ public final class Villages {
         if (slot.trade() == AssistantEntity.StationTask.GOLEMS) t = Golems.wanted(villageId) ? 1.0 : 0.0;   // [golems] one keeper
         if (slot.trade() == AssistantEntity.StationTask.FIREWORKS) t = FireworksMaker.ready(villageId) ? 1.0 : 0.0;   // [fireworks] one maker
         if (slot.trade() == AssistantEntity.StationTask.CARTOGRAPHER) t = Cartographers.ready(villageId) ? 1.0 : 0.0;   // [cartographer] one
+        if (slot.trade() == AssistantEntity.StationTask.EMERALD) t = EmeraldTrader.traders(villageId);     // [emerald] one, two with several villages
         if (slot.trade() == AssistantEntity.StationTask.DIVER) t = Divers.team(villageId);      // [diver] one, two at fifty
         // A courier for every five workers out on plots of their own (their production chests).
         if (slot.trade() == AssistantEntity.StationTask.HAUL && villageId != null) {
@@ -1833,6 +1840,8 @@ public final class Villages {
         Ethos.extras(villageId, folk, at, extras, s -> built(villageId, s) < 1);
         // [cartographer] The map room, once a Stone Age town has scouts or thirty folk: the cartographer's (Cartographers).
         if (Cartographers.wantsMapRoom(villageId) && built(villageId, Cartographers.STRUCTURE) < 1) extras.add(Cartographers.STRUCTURE);
+        // [emerald] The Trading Post, once the town trades with the villagers (EmeraldTrader).
+        if (EmeraldTrader.postWanted(villageId)) extras.add(EmeraldTrader.POST);
         if (at == Age.STONE) { homesAndAmenities(villageId, folk, out, extras); return out; }
 
         if (built(villageId, "workshop") < 1) out.add("workshop");
@@ -1995,6 +2004,7 @@ public final class Villages {
                     }
                     if (guest != null && p.distSqr(guest) <= 100) continue;
                     if (Inn.isInnBed(villageId, p)) continue;     // [batchE] the inn's rooms are the travellers', not a home
+                    if (VanillaVillages.within(level, p.getX(), p.getZ(), 0)) continue;   // [emerald] a villager's bed is the villagers'
                     // A bed buried in the ground (a ruin's, a vault's) is nobody's home and nobody sleeps
                     // in it (VillageFolkEntity.bedFit): counted, a mountain town of twenty-five thought
                     // it had four beds more than it had, and built and bought for four fewer.
@@ -2245,6 +2255,7 @@ public final class Villages {
             case "golemyard" -> Golems.why(villageId);             // [golems]
             case "powderhut" -> FireworksMaker.why(villageId);     // [fireworks]
             case "maproom" -> Cartographers.why(villageId);        // [cartographer]
+            case "tradingpost" -> EmeraldTrader.why(villageId);    // [emerald]
             case "divershed" -> Divers.shedWhy(villageId);         // [diver]
             case "theatre" -> Theatre.why(villageId);             // [batchD]
             case "windmill", "bakery", "inn", "orchard", "allotments" -> TownLook.why(villageId, project);   // [batchE]
@@ -2866,6 +2877,9 @@ public final class Villages {
                 if (y != Integer.MIN_VALUE) ground = new BlockPos(v.centre().getX(), y, v.centre().getZ());
             }
             if (ground != null) site = new Site(ground, net.minecraft.core.Direction.NORTH, WALL_RADIUS);
+            // [emerald] No wall round a town whose ring would come within the margin of a village of villagers' ground.
+            if (site != null && VanillaVillages.meets(level, v.centre().getX() - WALL_RADIUS, v.centre().getZ() - WALL_RADIUS,
+                    v.centre().getX() + WALL_RADIUS, v.centre().getZ() + WALL_RADIUS, VanillaVillages.MARGIN)) site = null;
         } else if (project.equals("court")) {
             // The courtyard lies before the board, its back along the board's foot: no lot of its own.
             site = courtSite(level, villageId);
@@ -2911,6 +2925,9 @@ public final class Villages {
                 if (lotKeptOff(villageId, v.centre(), lot)) continue;
                 int x = v.centre().getX() + lot.x();
                 int z = v.centre().getZ() + lot.z();
+                // [emerald] Never on a village of villagers' ground, nor within its margin (VanillaVillages).
+                int lh = Math.max(lot.halfAcross(), lot.halfDeep());
+                if (VanillaVillages.meets(level, x - lh, z - lh, x + lh, z + lh, VanillaVillages.MARGIN)) continue;
                 if (bad.contains(BlockPos.asLong(x, 0, z))) continue;
                 // Too big for the lot (a hall on an ordinary lot): not this one.
                 if (half[0] > lot.halfAcross() || half[1] > lot.halfDeep()) continue;

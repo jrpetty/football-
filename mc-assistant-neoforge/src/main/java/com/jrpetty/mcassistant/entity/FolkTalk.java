@@ -69,6 +69,10 @@ public final class FolkTalk {
         // [cartographer] Said to the cartographer, about a map: its maps (Cartographers.talk); a map of the town from it is its copy.
         if (f.stationTask() == AssistantEntity.StationTask.CARTOGRAPHER && (topic == TalkTopic.SAY && Cartographers.meant(text)
             || topic == TalkTopic.TOWN_MAP)) topic = TalkTopic.MAPS;
+        // [emerald] Said to the emerald trader: an ask ("find us a Mending book"), or what the villagers sell (EmeraldTrader).
+        if (topic == TalkTopic.SAY && f.stationTask() == AssistantEntity.StationTask.EMERALD && EmeraldTrader.meant(text)) {
+            return EmeraldTrader.talk(f, p, text);
+        }
         if (topic == TalkTopic.SAY) {
             TalkTopic quest = QuestTalk.heard(f, p, text);              // [quests] "any work?", "I'll do it", a choice by name
             if (quest != null) topic = quest;
@@ -222,6 +226,7 @@ public final class FolkTalk {
             default -> puzzled(f);
         };
         said = KeptGifts.mention(f, p, topic, said);          // [batchG] "I keep the diamond you gave me by my bed"
+        said = Individual.mention(f, p, topic, said);         // [individual] "Not this feather — it was my mother's"
         said = PlayerTrades.mention(f, p, topic, said);       // [player-civic] a master speaks of its apprentice
         said = QuestTalk.hint(f, p, topic, said);             // [quests] work to give, let known; the quest buttons sent
         // Somebody who can't stand you says as little as it can.
@@ -365,6 +370,7 @@ public final class FolkTalk {
             : (Sweepers.appointed(f) ? "Street sweeper (a hauler of the storehouse)"
                 : job == AssistantEntity.StationTask.SHOP ? StoreStaff.title(f) : job.title) + ", level " + f.veteranLevel()   // [econ-store]
                 + (f.isElder() ? " · the elder" : ""));
+        line(sb, "Looks", Individual.looksLine(f));         // [individual] its face, its build, the marks of its life
         // The storehouse's staff: the couriers work for it, under its storekeeper (Couriers).
         if (job == AssistantEntity.StationTask.HAUL && !f.isBaby() && f.ownerId() != null) {
             VillageFolkEntity keeper = Storekeeping.keeper(f.ownerId());
@@ -410,6 +416,7 @@ public final class FolkTalk {
         line(sb, "Golems", Golems.cardLine(f));              // [golems] the town's golems at their posts, mended, waited on
         line(sb, "Fireworks", FireworksMaker.cardLine(f));  // [fireworks] its stars, rockets and displays
         line(sb, "Maps", Cartographers.cardLine(f));        // [cartographer] its survey, the hall's map, what it found and sold
+        line(sb, "Trading", EmeraldTrader.cardLine(f));     // [emerald] its trips to the villagers, its emeralds, what it bought
         line(sb, "The water", Divers.cardLine(f));          // [diver] its kelp bed, its blocks, its clay, its rescues
         line(sb, f.isBaby() ? "Apprenticed" : "Apprentices", PlayerTrades.cardLine(f));   // [player-civic] its apprentices, or its trade
         line(sb, "The fleet", Fleet.cardLine(f));            // [fleet] out with the fishing fleet, and its catch
@@ -425,6 +432,7 @@ public final class FolkTalk {
         for (String[] l : Visitors.cardLines(f)) line(sb, l[0], l[1]);   // [batchG] its gifts on show, its dog, its visits
         line(sb, "Quarter", Quarters.cardLine(f));          // its quarter of the town, the smoke, the park (Quarters)
         line(sb, "Nature", life.traitsLabel());
+        for (String[] l : Individual.cardLines(f)) line(sb, l[0], l[1]);   // [individual] Dream, Fears, Habits, Favourite place, Keepsake...
         line(sb, "Knacks", FolkSkills.cardLine(f));         // what it chose for itself: the Skills page has the rest
         line(sb, "Curator", Museum.curatorLine(f));         // the museum's keeper (Museum)
         line(sb, "In the museum", Museum.cardLine(f));      // its finds on show there
@@ -453,7 +461,6 @@ public final class FolkTalk {
         if (!friends.isEmpty()) line(sb, "Friends", String.join(", ", friends));
         if (me.rolled()) {
             line(sb, "Loves", me.hobby().doing);
-            line(sb, "Hopes", me.ambitionMet() ? "done — " + me.ambition().done : me.ambition().hope);
             line(sb, "Feeling", Persona.moodWord(me.mood()));
         }
         java.util.List<String> needs = f.missingEssentials();
@@ -483,6 +490,7 @@ public final class FolkTalk {
         }
         if (!heard) return;
         text = Health.cough(f, text);                        // [batchA] a cough in it, with a cold
+        Manner.blip(f);                                      // [individual] the sound of its own voice
         String said = text.length() > 170 ? text.substring(0, 167) + "…" : text;
         int ticks = Math.min(200, 60 + said.length() * 2);
         PacketDistributor.sendToPlayersTrackingEntity(f, new FolkSpeechPayload(f.getId(), said, ticks));
@@ -773,6 +781,7 @@ public final class FolkTalk {
             case GOLEMS -> Golems.doing(f, r);            // [golems] round the golems, or building one
             case FIREWORKS -> FireworksMaker.doing(f, r); // [fireworks] at the powder hut, or at the rack
             case CARTOGRAPHER -> Cartographers.doing(f, r);   // [cartographer] at the table, or out walking with a sheet
+            case EMERALD -> EmeraldTrader.doing(f, r);    // [emerald] on the road to the villagers, at their stalls, or home
             case DIVER -> Divers.doing(f, r);             // [diver] on the bed of the water, at the shed, or watching it
         };
         if (!f.missingEssentials().isEmpty()) work += " Or I would be, if I had " + f.missingEssentials().get(0) + ".";
@@ -794,6 +803,8 @@ public final class FolkTalk {
         sb.append("I ").append(me.quirkOfMine()).append(". ");
         sb.append("When I've time to myself it's ").append(me.hobby().doing).append(", ");
         sb.append("and I'd do anything for ").append(foodWords(me.food())).append('.');
+        String story = Individual.about(f);                   // [individual] where it came from, the big moments of its life
+        if (!story.isEmpty()) sb.append(' ').append(story);
         return sb.toString();
     }
 
@@ -896,6 +907,7 @@ public final class FolkTalk {
             case NETHER, GREAT_WORK -> " We're in " + (f.ownerId() == null ? "no age at all" : Villages.ageOf(f.ownerId()).label) + " now.";
             case GARDEN -> " " + me.flowersPlanted() + " flowers planted so far.";
             case WELL_FED -> " Full stores, that's all I ask.";
+            case MARRY, SEE_THE_SEA, OWN_HOUSE, WRITE_BOOK, GO_NETHER, LEAD, BIG_FAMILY, RICH -> Dreams.progress(f);   // [individual]
         };
         return pick(r, "Me? I want ", "One day I'd like ", "What I really want is ") + me.ambition().hope + "." + progress;
     }
@@ -1128,6 +1140,11 @@ public final class FolkTalk {
         if (letter != null) return letter;
         String worn = Fashion.gifted(f, p, held);           // [fashion] a garment: put on there and then
         if (worn != null) return worn;
+        if (Keepsakes.takeSpectacles(f, held)) {             // [individual] spectacles for old eyes: on, there and then
+            if (!p.getAbilities().instabuild) held.shrink(1);
+            f.persona().feelFor(p.getUUID(), you, 12);
+            return pick(r, "Spectacles! Oh — I can see your face properly at last. Thank you!", "For me? Well, look at that: I can read again!");
+        }
         long day = f.level().getDayTime() / 24000L;
         Persona.Opinion op = me.opinionOf(p.getUUID(), you);
         if (op.lastGiftDay != day) { op.lastGiftDay = day; op.giftsToday = 0; }
@@ -1534,6 +1551,7 @@ public final class FolkTalk {
         if (!n.isEmpty()) said.add("Did you hear? " + cap(n.get(0).text()) + ".");
         said.addAll(Crime.gossip(f));                   // [crime] a thief about, who was had up, who sat in the stocks
         said.addAll(QuestTalk.gossip(f, p));                  // [quests] who did what for whom, and the story going on
+        said.addAll(Individual.gossip(f));                    // [individual] who's afraid of what, who's always where
         if (said.isEmpty()) return pick(r, "Nothing worth repeating. It's been quiet.", "Gossip? Me? Never.");
         String line = said.get(r.nextInt(said.size()));
         if (f.life().has(Social.Trait.SHY)) line = "Oh — well, I shouldn't, but… " + line;

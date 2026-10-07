@@ -434,6 +434,21 @@ public final class TradeBookWriter {
             "the country's map, carried down every road by the caravans",
             "the ruined portals on the map, and the lands beyond them",
         }, "Why did the cartographer take a pencil to the hall? To draw a crowd."));
+        // [emerald] The emerald trader's book: what it has learned of the villagers and their prices.
+        craft("EMERALD", new Craft("emerald trader", "Emerald Trader's", "the villagers' villages", "trading", "the emeralds",
+            "trades made", new String[]{
+            "Sell only what the town can spare. The stores' own needs come first, every time.",
+            "Go back to the same villager. Every trade teaches it more, and a master's wares are the best there are.",
+            "A villager's price rises when it is pestered: let its stall rest, and its price falls again.",
+            "Never trade where pillagers are about, and never cut in while a traveller is at a villager's stall.",
+            "Write down who sells Mending. There's no finer book for the town's best tools.",
+        }, new String[]{
+            "a pack on our backs, and wheat to sell",
+            "a donkey from the stable, and a farmer who buys our carrots",
+            "a librarian who knows us, and books for the enchanter",
+            "masters in three villages, and a bell for the square",
+            "every villager for a day's walk, and Mending for every pick",
+        }, "Why did the villager raise its prices? The trader kept coming back for more."));
         // [diver] The kelp farmer and diver (entity/Divers).
         craft("DIVER", new Craft("diver", "Diver's", "the kelp beds", "diving", "the kelp", "kelp beds cut", new String[]{
             "Go up for air before you need it, not when you do. The bed will wait; your lungs won't.",

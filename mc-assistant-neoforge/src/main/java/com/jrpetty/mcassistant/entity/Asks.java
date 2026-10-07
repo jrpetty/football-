@@ -74,6 +74,8 @@ public final class Asks {
         BUILDINGS.put("map room", "maproom");             // [cartographer] the map room (Cartographers)
         BUILDINGS.put("maproom", "maproom");
         BUILDINGS.put("cartographer", "maproom");
+        BUILDINGS.put("trading", "tradingpost");          // [emerald] the Trading Post (EmeraldTrader)
+        BUILDINGS.put("tradingpost", "tradingpost");
         BUILDINGS.put("diver", "divershed");              // [diver] the diver's shed (Divers)
         BUILDINGS.put("kelp", "divershed");
     }

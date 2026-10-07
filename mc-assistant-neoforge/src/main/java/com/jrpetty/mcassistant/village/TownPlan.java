@@ -209,6 +209,7 @@ public final class TownPlan {
                  "fletcher",                                                   // [fletcher] the fletcher's hut (entity/Fletchers)
                  "golemyard",                                                  // [golems] the golem yard (entity/Golems)
                  "maproom",                                                    // [cartographer] the map room (entity/Cartographers)
+                 "tradingpost",                                                // [emerald] the emerald trader's stall
                  "theatre",                                                    // [batchD] the theatre
                  "townlibrary",                                                // [library] the town library
                  "bakery", "inn" -> "civic";                                   // [batchE] the bakery and the inn

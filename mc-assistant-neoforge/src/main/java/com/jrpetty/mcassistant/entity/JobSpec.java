@@ -63,6 +63,8 @@ public final class JobSpec {
             case FIREWORKS -> List.of("the powder hut", "gunpowder, paper and dye in the stores");
             // [cartographer] Its table stands at the map room; its paper, compasses and panes are the stores' (Cartographers).
             case CARTOGRAPHER -> List.of("a cartography table (at the map room)");
+            // [emerald] The town's surplus and emeralds, drawn from the stores for each trip (EmeraldTrader): nothing to set up.
+            case EMERALD -> List.of("the town's surplus and its emeralds (drawn for each trip)");
             // [diver] Water three deep near the town, and kelp to plant (out of the stores, or cut wild); shears for the
             // seagrass and a turtle helmet as the town has them (Divers).
             case DIVER -> List.of("water three deep near the town", "kelp to plant (the stores', or the wild kelp's)");

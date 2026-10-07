@@ -371,6 +371,9 @@ public final class Economy {
             // [cartographer] Its maps and the makings it presses and forges for them: paper, compasses, a table.
             case CARTOGRAPHER -> s.is(Items.FILLED_MAP) || s.is(Items.MAP) || s.is(Items.PAPER) || s.is(Items.COMPASS)
                 || s.is(Items.CARTOGRAPHY_TABLE);
+            // [emerald] What it brings home from the villagers: emeralds for the surplus, and what the emeralds bought.
+            // (What it took out of the stores and brings back unsold is no new work: Economy.given knows it.)
+            case EMERALD -> true;
             // [diver] The kelp and what is dried and packed of it, the bed's clay, sand and gravel, the seagrass and the
             // pickles, the turtles' scutes, and the monument's prismarine.
             case DIVER -> true;

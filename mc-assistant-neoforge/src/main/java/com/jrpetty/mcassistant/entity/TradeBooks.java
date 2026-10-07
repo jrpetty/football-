@@ -187,6 +187,7 @@ public final class TradeBooks {
             case GOLEMS -> new String[]{ "golem" };                                                     // [golems]
             case FIREWORKS -> new String[]{ "firework", "rocket", "powder" };   // [fireworks]
             case CARTOGRAPHER -> new String[]{ "map", "cartographer", "explorer" };   // [cartographer]
+            case EMERALD -> new String[]{ "emerald", "villagers", "trading post" };   // [emerald]
             case DIVER -> new String[]{ "diver", "kelp", "turtle", "drown", "out of the water", "monument" };   // [diver]
             case BEEKEEP -> new String[]{ "hive", "bee" };
             default -> new String[]{};
@@ -433,6 +434,7 @@ public final class TradeBooks {
             sum[3] += f.deedCount(AssistantEntity.Deed.FISH_CAUGHT);
         }
         switch (t) {
+            case EMERALD -> out.addAll(EmeraldTrader.bookNotes(c.v.id()));   // [emerald] the villages it knows, who sells Mending, its account
             case FARM -> {
                 String care = Fields.careLine(m);
                 if (care != null && care.startsWith("its field grows at ")) {

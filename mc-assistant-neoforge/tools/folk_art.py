@@ -11,8 +11,9 @@ drift apart:
   * outfits  one picture per trade (textures/entity/folk/<trade>.png) laid over
              the skin: what a folk does. Hats, aprons, packs and shields are
              boxes of their own, painted only on their trade's picture.
-  * glow     the light a miner carries (textures/entity/folk/miner_glow.png), and the
-             cave dweller's helm lamp (cavedweller_glow.png).
+  * glow     the light a miner carries (textures/entity/folk/miner_glow.png), the
+             cave dweller's helm lamp (cavedweller_glow.png) and the emerald trader's
+             lantern at its pack (emerald_glow.png).
 
     python3 tools/folk_art.py            # write the pictures and the Java
     python3 tools/folk_art.py --check    # only say what would change
@@ -61,6 +62,8 @@ TRADES = ["none", "farmer", "lumberjack", "miner", "rancher", "guard",
           "fireworks",
           # [cartographer] Likewise the cartographer's (FolkModel.outfit picks it for CARTOGRAPHER).
           "cartographer",
+          # [emerald] The emerald trader's own (FolkModel.outfit picks it for EMERALD).
+          "emerald",
           # [diver] Its own too, after the cave dweller's (FolkModel.outfit picks it for DIVER).
           "diver"]
 
@@ -226,6 +229,28 @@ PARTS = [
     ("golemkeeper_scarf", "body", (0, 0, 0), (0, 0, 0), [(64, 17, -4.5, -1, -3.5, 9, 2, 7, 0.25)], "golemkeeper"),
     ("golemkeeper_scarf_end", "body", (0, 0, 0), (0, 0, 0), [(100, 0, 0.8, 0.6, -5.6, 2, 6, 1, 0)], "golemkeeper"),
     ("golemkeeper_shears", "body", (0, 0, 0), (0, 0, 0), [(108, 0, -5.6, 8.5, -1, 1, 3, 2, 0)], "golemkeeper"),
+    # [individual] Who a folk is, in the round: what its own face picture (tools/folk_looks.py) paints, and only
+    # that, on boxes no trade's picture touches (the bottom half of the sheet). A box its picture leaves clear is
+    # not there at all, so these are worn-by "look": a bun on the folk that wears one, nothing on the rest.
+    # Long hair down its back, a bun, a ponytail, a braid, hair tied back at the nape, the volume of curls or a
+    # wild mop, and a long beard below the short one.
+    ("hair_fall", "head", (0, 0, 0), (0, 0, 0), [(0, 60, -4, -0.5, 3.6, 8, 6, 1, 0)], "look"),
+    ("hair_bun", "head", (0, 0, 0), (0, 0, 0), [(20, 60, -2, -9.5, 4.2, 4, 3, 3, 0)], "look"),
+    ("hair_tail", "head", (0, -7.5, 4.4), (0.42, 0, 0), [(36, 60, -1, 0, -0.5, 2, 8, 2, 0)], "look"),
+    ("hair_braid", "head", (0, -4.5, 4.3), (0.2, 0, 0), [(46, 60, -1, 0, -0.5, 2, 11, 2, 0)], "look"),
+    ("hair_knot", "head", (0, -4, 4.4), (0.55, 0, 0), [(56, 60, -1, 0, -0.5, 2, 3, 2, 0)], "look"),
+    ("hair_puff", "head", (0, 0, 0), (0, 0, 0), [(64, 60, -4, -10, -4, 8, 5, 8, 1.0)], "look"),
+    ("beard_long", "head", (0, 0, 0), (0, 0, 0), [(96, 60, -3, 2, -5, 6, 6, 1, 0)], "look"),
+    # Spectacles on its nose, the frames a block's sixteenth proud of its face.
+    ("spectacles", "head", (0, 0, 0), (0, 0, 0), [(0, 76, -4, -7, -5, 8, 3, 1, 0)], "look"),
+    # A pipe at the corner of its mouth, out only when it is smoking it (FolkModel: the manner).
+    ("pipe", "head", (-2.5, -2, -4.5), (0.3, 0.25, 0), [(20, 76, -0.5, -0.5, -4, 1, 1, 4, 0),
+                                                        (30, 76, -1, -2.5, -5, 2, 2, 2, 0)], "pipe"),
+    # A walking stick in the hand that is not its working hand, its foot on the ground.
+    ("cane_right", "right_arm", (-1, 9, -1), (0, 0, 0), [(40, 76, -0.5, -1, -0.5, 1, 14, 1, 0),
+                                                          (44, 76, -0.5, -2, -2.5, 1, 1, 3, 0)], "cane"),
+    ("cane_left", "left_arm", (1, 9, -1), (0, 0, 0), [(52, 76, -0.5, -1, -0.5, 1, 14, 1, 0),
+                                                       (56, 76, -0.5, -2, -2.5, 1, 1, 3, 0)], "cane"),
 
     # [fireworks] Fireworks maker: a canvas apron gone grey with soot, two rockets in its pocket, brass goggles with
     # smoked lenses pushed up on its forehead, and a bright scarf of red and gold round its neck, its tail hanging down.
@@ -246,6 +271,15 @@ PARTS = [
     ("cartographer_vane", "head", (-4.4, -6, 1), (-0.45, 0, -0.2), [(100, 0, -0.5, -5.5, -1.6, 1, 4, 2, 0)], "cartographer"),
     ("cartographer_compass", "body", (0, 0, 0), (0, 0, 0), [(108, 0, -1, 3, -3.9, 2, 2, 1, 0)], "cartographer"),
     ("cartographer_roll", "body", (0, 0, 0), (0, 0, 0), [(64, 8, 3.6, 2.5, -6, 3, 3, 11, 0)], "cartographer"),
+    # [emerald] Emerald trader: a travelling merchant's long coat in emerald green, a wide-brimmed felt hat with an
+    # emerald pinned in its band, a canvas pack on its back with a bedroll strapped over it and a little brass lantern
+    # hung at its side, and a leather purse at its hip with an emerald for a clasp.
+    ("emerald_crown", "head", (0, 0, 0), (0, 0, 0), [(64, 0, -4, -12, -4, 8, 3, 8, 0.6)], "emerald"),
+    ("emerald_brim", "head", (0, 0, 0), (0, 0, 0), [(64, 11, -8, -9, -8, 16, 1, 16, 0)], "emerald"),
+    ("emerald_pack", "body", (0, 0, 0), (0, 0, 0), [(64, 28, -4, 0.5, 3.6, 8, 10, 4, 0)], "emerald"),
+    ("emerald_roll", "body", (0, 0, 0), (0, 0, 0), [(88, 28, -5, -2.5, 4.1, 10, 3, 3, 0)], "emerald"),
+    ("emerald_lamp", "body", (0, 0, 0), (0, 0, 0), [(100, 36, 4.2, 3, 5, 1, 3, 2, 0)], "emerald"),
+    ("emerald_purse", "body", (0, 0, 0), (0, 0, 0), [(114, 28, 2.5, 8.5, -4.6, 2, 3, 1, 0)], "emerald"),
 
     # [diver] Kelp farmer and diver: a close neoprene hood, a goggle strap round it with the goggles pushed up on the
     # forehead, a coil of rope at its hip on a line across its chest, and a dive knife at the other hip.
@@ -1226,6 +1260,95 @@ def outfit_cartographer():
     return cv
 
 
+def outfit_emerald():
+    """[emerald] The emerald trader: a travelling merchant's long coat in emerald green, its front edges and cuffs
+    trimmed in gold braid and its lapels a darker green, brass buttons, a cream shirt collar and a red sash for a belt;
+    brown breeches and tall riding boots for the road; a wide-brimmed brown felt hat, its band green with an emerald
+    pinned to it; a canvas pack on its back, strapped and buckled, a grey wool bedroll across the top of it and a small
+    brass lantern hung at its side; and a leather purse at its hip, clasped with an emerald."""
+    cv = Canvas()
+    green = (28, 128, 74)
+    deep = (16, 84, 48)
+    gold = (214, 178, 76)
+
+    def coat_f(x, y):
+        c = grain(green, x, y, 6, 320)
+        if (x + y) % 6 == 0:
+            c = lit(c, 1.08)                                              # the weave's sheen
+        return c
+    coat = coat_to(cv, coat_f, 17)
+    # The lapels, the shirt collar at the throat, and the gold braid down both front edges.
+    for y in range(0, 5):
+        coat.put("front", 2, y, grain(deep, 2, y, 4, 321))
+        coat.put("front", 5, y, grain(deep, 5, y, 4, 321))
+    for x in range(3, 5):
+        coat.put("front", x, 0, (232, 222, 196))
+        coat.put("front", x, 1, (214, 204, 176))
+    coat.row(0, lambda x: (232, 222, 196), ("right", "left", "back"))
+    for y in range(5, 17):
+        coat.put("front", 3, y, grain(gold, 3, y, 6, 322))
+        coat.put("front", 4, y, lit(green, 0.7))
+        if y in (6, 8, 13, 15):
+            coat.put("front", 5, y, (236, 204, 104))                     # brass buttons
+    # A red sash round its middle, its knot at the left hip.
+    sash = dyed((168, 40, 44), 230)
+    coat.row(10, lambda x: grain(sash, x, 10, 6, 323))
+    coat.row(11, lambda x: grain(lit(sash, 0.86), x, 11, 6, 323))
+    coat.put("left", 1, 12, sash)
+    coat.put("left", 1, 13, lit(sash, 0.8))
+    # Pocket flaps, the hem in braid, and a vent up the back for the saddle.
+    for x in (1, 2):
+        coat.put("front", x, 13, lit(green, 0.66))
+    for x in (5, 6):
+        coat.put("front", x, 13, lit(green, 0.66))
+    coat.row(16, lambda x: grain(gold, x, 16, 6, 324))
+    for y in range(12, 16):
+        coat.put("back", 4, y, lit(green, 0.55))
+    # The sleeves, to the wrist, turned back in a gold-trimmed cuff.
+    sleeves(cv, coat_f, 9, cuff=lit(gold, 0.95))
+    for name in ("right_arm", "left_arm"):
+        arm = Box(cv, name)
+        arm.row(8, lambda x: grain(deep, x, 8, 4, 325))
+    # Breeches and tall riding boots.
+    legs(cv, cloth((112, 86, 58), 5, 326), leather((62, 40, 26)), boot_from=4, sole=(30, 22, 16))
+    for name in ("right_leg", "left_leg"):
+        leg = Box(cv, name)
+        leg.row(4, (88, 60, 38))                                          # the boot tops, folded over
+        leg.put("front", 1, 7, (110, 76, 46))                             # a highlight down the shin
+        leg.put("front", 1, 8, (110, 76, 46))
+    face_paint(cv, [(2, 8, (200, 150, 120))])                             # sun on its cheek from the road
+    # The hat: brown felt, a green band with an emerald pinned in it, a wide brim with a darker rim.
+    felt = (92, 64, 42)
+    crown(Box(cv, "emerald_crown"), cloth(felt, 6, 327), band=deep, band_rows=1)
+    hat = Box(cv, "emerald_crown")
+    hat.fill("top", lambda x, y, w, h: lit(grain(felt, x, y, 6, 327), 1.06) if 2 <= x <= 5 and 3 <= y <= 4 else grain(felt, x, y, 6, 327))
+    hat.put("front", 3, 2, (90, 230, 150))                                # the emerald on the band
+    hat.put("front", 4, 2, (40, 176, 96))
+    hat.put("front", 3, 1, (180, 250, 210))
+    brim(Box(cv, "emerald_brim"), cloth(felt, 6, 328), lit(felt, 0.6), ragged=0.1, seed=329)
+    # The pack: canvas, two leather straps with brass buckles, a flap over the top.
+    canvas = (176, 156, 112)
+    pack = Box(cv, "emerald_pack")
+    pack.all(lambda face, x, y, w, h: grain(canvas, x, y, 7, 330) if (x + 2 * y) % 5 else grain(lit(canvas, 0.9), x, y, 7, 330))
+    pack.fill("back", lambda x, y, w, h: (96, 66, 40) if x in (1, w - 2) else (lit(canvas, 0.8) if y < 3 else None))
+    pack.fill("back", lambda x, y, w, h: (220, 188, 92) if x in (1, w - 2) and y == 6 else None)
+    pack.fill("top", lambda x, y, w, h: lit(canvas, 0.86))
+    pack.fill("back", lambda x, y, w, h: (36, 150, 84) if (x, y) == (w // 2, 1) else None)   # a trader's mark: an emerald stitched on
+    roll = Box(cv, "emerald_roll")
+    roll.all(lambda face, x, y, w, h: grain((128, 130, 140), x, y, 6, 331) if (x + y) % 3 else (104, 106, 116))
+    roll.fill("front", lambda x, y, w, h: (96, 66, 40) if x in (2, w - 3) else None)
+    roll.fill("back", lambda x, y, w, h: (96, 66, 40) if x in (2, w - 3) else None)
+    roll.fill("top", lambda x, y, w, h: (96, 66, 40) if x in (2, w - 3) else None)
+    for face in ("right", "left"):                                         # the roll's ends, wound
+        roll.fill(face, lambda x, y, w, h: (150, 152, 162) if (x + y) % 2 else (112, 114, 124))
+    lamp = Box(cv, "emerald_lamp")
+    lamp.all(lambda face, x, y, w, h: (176, 136, 62) if y in (0, h - 1) else (250, 196, 96))
+    purse = Box(cv, "emerald_purse")
+    purse.all(lambda face, x, y, w, h: grain((116, 78, 46), x, y, 5, 332))
+    purse.fill("front", lambda x, y, w, h: (48, 200, 116) if (x, y) == (0, 0) else ((24, 140, 78) if (x, y) == (1, 0) else None))
+    return cv
+
+
 def cavedweller_glow():
     """[caves] The cave dweller's helm lamp, lit whatever the light around it."""
     cv = Canvas()
@@ -1625,15 +1748,8 @@ def outfit_storekeeper():
     legs(cv, pin, lambda x, y: grain((28, 26, 28), x, y, 3, 125), boot_from=10, sole=(20, 18, 18))
     for name in ("right_leg", "left_leg"):
         Box(cv, name).put("front", 1, 10, (96, 96, 104))                # a polish shine
-    # Spectacles.
-    gl = (210, 176, 80)
-    face_paint(cv, [(0, 4, gl), (3, 4, gl), (4, 4, gl), (7, 4, gl),
-                    (1, 5, gl), (2, 5, gl), (5, 5, gl), (6, 5, gl), (1, 3, gl), (2, 3, gl), (5, 3, gl), (6, 3, gl)])
-    head = Box(cv, "head")
-    for face in ("right", "left"):
-        for x in range(8):
-            if (face == "right" and x >= 4) or (face == "left" and x <= 3):
-                head.put(face, x, 4, gl)
+    # [individual] No spectacles painted on: a storekeeper wears them when its own eyes want them (entity/Keepsakes,
+    # tools/folk_looks.py), not because it keeps the stores.
     # The derby.
     dk = (44, 38, 36)
     cr = Box(cv, "storekeeper_crown")
@@ -2193,9 +2309,19 @@ OUTFITS = {
     "golemkeeper": outfit_golemkeeper,                                    # [golems]
     "fireworks": outfit_fireworks,                                        # [fireworks]
     "cartographer": outfit_cartographer,                                  # [cartographer]
+    "emerald": outfit_emerald,                                            # [emerald]
     "diver": outfit_diver,                                                # [diver]
 }
-GLOWS = {"miner": miner_glow, "cavedweller": cavedweller_glow}
+def emerald_glow():
+    """[emerald] The emerald trader's little lantern, lit whatever the light round it."""
+    cv = Canvas()
+    lamp = Box(cv, "emerald_lamp")
+    for face in Box.SIDES:
+        lamp.fill(face, lambda x, y, w, h: (255, 214, 120) if 0 < y < h - 1 else None)
+    return cv
+
+
+GLOWS = {"miner": miner_glow, "cavedweller": cavedweller_glow, "emerald": emerald_glow}
 DYED = ("none", "farmer", "lumberjack", "rancher", "guard", "storekeeper", "hauler",
         "tailor", "enchanter", "shopkeeper")
 

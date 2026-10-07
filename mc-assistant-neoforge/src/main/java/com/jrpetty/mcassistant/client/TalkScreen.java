@@ -93,6 +93,7 @@ public class TalkScreen extends Screen {
         String asked = reply.asked() == null ? "" : reply.asked().toLowerCase(java.util.Locale.ROOT);
         if (asked.contains("skill") || asked.contains("knack")) tab = lastTab = Tab.SKILLS;
         else if (asked.contains("your wage")) tab = lastTab = Tab.ABOUT;      // [econ-wages] its card: its wage and why
+        else if (asked.contains("who you are")) tab = lastTab = Tab.ABOUT;    // [individual] its card: its looks, its life
         else if (!reply.open() && !asked.isBlank() && (tab == Tab.ABOUT || tab == Tab.SKILLS)) tab = lastTab = Tab.TALK;
     }
 

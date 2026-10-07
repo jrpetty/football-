@@ -98,6 +98,8 @@ public class BuildGoal extends Goal {
         "fletcher",
         // [golems] the golem yard, where the iron is made into blocks for the golems (entity/Golems)
         "golemyard",
+        // [emerald] the Trading Post: the emerald trader's stall and its book of the villagers' villages (entity/EmeraldTrader)
+        "tradingpost",
         // [diver] the diver's shed on the bank: a smoker, a campfire, a bench and a barrel (entity/Divers)
         "divershed");
 

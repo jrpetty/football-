@@ -406,6 +406,7 @@ public final class JobMarket {
             case GUARD, SCOUT, HUNT, CAVE -> new int[]{ 18, 50 };          // [caves]
             case DIVER -> new int[]{ 16, 50 };                             // [diver] a young diver's lungs
             case MINE, WOOD -> new int[]{ 18, 60 };
+            case EMERALD -> new int[]{ 18, 65 };                          // [emerald] a day's walk there and back
             default -> new int[]{ 0, 200 };
         };
     }
@@ -417,6 +418,7 @@ public final class JobMarket {
         return switch (t) {
             case GUARD -> "able-bodied, for the watch";
             case SCOUT, HUNT -> "fit for long days out";
+            case EMERALD -> "fit for a day's walk, and a head for a bargain";   // [emerald]
             case CAVE -> "fit and able to fight, for a day underground";      // [caves]
             case DIVER -> "a strong swimmer with good lungs";                  // [diver]
             case MINE, WOOD -> "strong enough for the work";
@@ -449,6 +451,7 @@ public final class JobMarket {
             case FLETCHER -> "the fletching";            // [fletcher]
             case GOLEMS -> "the golems";                 // [golems]
             case FIREWORKS -> "the powder hut";          // [fireworks]
+            case EMERALD -> "the trading";               // [emerald]
             case DIVER -> "the diving";                  // [diver]
             case HAUL -> "the carrying";
             default -> "the work";

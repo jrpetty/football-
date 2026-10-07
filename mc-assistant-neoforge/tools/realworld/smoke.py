@@ -3038,6 +3038,118 @@ def cartographer_stage(r, look, cx, cz):
     say("alive after the maps: %s" % client_alive())
 
 
+
+def individual_stage(r, look, cx, cz):
+    """[individual] Every folk its own person (entity/Individual, Looks, Manner; client/FolkFaces, FolkPoses). In clear
+    air out past the town, /village individual stage stands up a crowd of eighteen of every age on a lawn, the back row
+    a step up, their work hats off (children at three ages of growing, the young, the greying, a scarred guard, an
+    eyepatch, a sooty smith, a sunburnt farmer, the old in spectacles, the oldest bent over their sticks); beside them a
+    family of five made by the town's own sums (two parents, their eldest, and twins); and past them a well and a bench
+    with an old folk sat smoking its pipe. Pictures at noon: the whole crowd, close on each half of it, the family; then
+    at dusk the pipe at the well; then the card of the folk nearest the player, opened at its About page (its Looks,
+    Dream, Fears, Habits, Favourite place and Keepsake lines). Last, /village individual for the town."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    r.cmd("weather clear")
+    sx, sy, sz = cx + 120, 150, cz + 90                # clear air out past the town: the stage lays its own lawn
+    r.cmd("tp %s %d %d %d" % (USER, sx, sy + 3, sz + 10))
+    time.sleep(10)                                     # the stage's chunks arrive
+    out = r.cmd("execute positioned %d %d %d run village individual stage" % (sx, sy, sz))
+    say("individual stage: " + out[:900])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("nothing staged for every folk its own person; nothing to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            return
+        x, y, z, ax, ay, az = views[name]
+        look("39-individual-" + picture, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    time.sleep(6)                                      # the faces are built as they come into sight, a few a frame
+    shoot("crowd", "1-crowd", 8)
+    shoot("crowd-left", "2-faces-left", 5)
+    shoot("crowd-right", "3-faces-right", 5)
+    shoot("family", "4-family", 5)
+    m = re.search(r"(\d+)", r.cmd("time query daytime"))
+    now = int(m.group(1)) % 24000 if m else 6000
+    r.cmd("time add %d" % ((12900 - now) % 24000))     # dusk, the same day: the pipe at the well
+    shoot("pipe", "5-pipe-at-dusk", 8)
+    midday(r)
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d facing %d %d %d" % (USER, sx, sy, sz + 2, sx, sy + 1, sz))
+    time.sleep(3)
+    say("card: " + r.cmd("execute as %s at @s run village individual card" % USER))
+    time.sleep(4)
+    shot("39-individual-6-card")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("kill @e[tag=folk_lineup,type=!player]")
+    r.cmd("gamemode spectator %s" % USER)
+    hy = ground_height(r, cx, cz)
+    say("individual: " + r.cmd("execute positioned %d %d %d run village individual" % (cx, hy + 1, cz))[:1500])
+    say("alive after every folk its own person: %s" % client_alive())
+
+
+def emerald_stage(r, look, cx, cz):
+    """[emerald] The emerald trader (entity/EmeraldTrader), and the two peoples kept apart (TwoPeoples, VanillaVillages).
+    Run well out past the town to the north (the villagers' ground must not be the town's), /village emerald stage sets
+    a little village of the game's own villagers there: a bell on a stone post, a farmer's composter, a librarian's
+    lectern and a cleric's brewing stand, a bed behind each, and a real villager of each trade with the game's own
+    offers, each given its workstation and the bell as a villager the world made has them. The town's trader (taken on
+    for it if the town has none) is set down at the bell with the town's goods to sell and emeralds and books to buy
+    with, and trades through the villagers' own offers. Pictures: the village with its villagers at their stalls; the
+    trader at the farmer's stall, selling the town's wheat; the trader at the librarian's lectern; then /village emerald
+    said, and the town's books open at the Trading Post page (the emerald account, the village, its villagers and their
+    offers as they stand, what the trader brought home)."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    # The middle of the morning (the trader turns for home in the afternoon wherever it is). Not /time set: see midday.
+    m = re.search(r"(\d+)", r.cmd("time query daytime"))
+    now = int(m.group(1)) % 24000 if m else 3000
+    if not 2000 <= now <= 5000:
+        r.cmd("time add %d" % ((3000 - now) % 24000))
+    r.cmd("weather clear")
+    hy = ground_height(r, cx, cz)
+    sx, sz = cx + 20, cz - 170                        # well out past the town's ground: theirs is not the town's
+    r.cmd("tp %s %d %d %d" % (USER, sx - 12, hy + 18, sz - 16))
+    time.sleep(8)                                      # the ground arrives at the server and the client
+    out = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village emerald stage" % (sx, sz))
+    say("emerald stage: " + out[:900])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("no village of villagers staged; nothing to photograph")
+        return
+
+    def shoot(name, wait):
+        if name not in views:
+            return
+        x, y, z, ax, ay, az = views[name]
+        look("33-" + name, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    shoot("emerald-1-village", 8)
+    time.sleep(6)                                      # a look round the stalls, then to the farmer with the wheat
+    shoot("emerald-2-farmer", 6)
+    time.sleep(12)                                     # the selling done, to the librarian with the emeralds
+    shoot("emerald-3-librarian", 6)
+    time.sleep(6)
+    say("emerald: " + r.cmd("execute positioned %d %d %d run village emerald" % (cx, hy + 1, cz))[:1500])
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
+    time.sleep(3)
+    say("books: " + r.cmd("execute as %s at @s run village emerald books" % USER))
+    time.sleep(4)
+    shot("33-emerald-4-page")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the emerald trader: %s" % client_alive())
+
+
 def diver_stage(r, look, cx, cz):
     """[diver] The kelp farmer and diver (entity/Divers, KelpBeds, DiverSwim, TurtleBeach, FuelBook). /village diver
     stage, run at the town: its diving water found (a lake eighteen across and six deep cut beside the town if it has
@@ -3471,6 +3583,18 @@ def main():
         leisure_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("leisure stage failed: %s" % e)
+    try:
+        cartographer_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("cartographer stage failed: %s" % e)
+    try:
+        individual_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("individual stage failed: %s" % e)
+    try:
+        emerald_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("emerald stage failed: %s" % e)
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the founding: %s" % client_alive())
     try:

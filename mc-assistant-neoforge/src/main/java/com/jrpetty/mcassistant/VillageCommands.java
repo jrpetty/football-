@@ -249,6 +249,7 @@ public final class VillageCommands {
             .then(com.jrpetty.mcassistant.entity.Golems.command())          // [golems] the golem keeper and the town's golems
             .then(com.jrpetty.mcassistant.entity.FireworkShows.command())   // [fireworks] /village fireworks: the hut, the rockets, a display; stage (ops)
             .then(com.jrpetty.mcassistant.entity.Cartographers.command())   // [cartographer] /village maps: the map room; now, stage (ops)
+            .then(com.jrpetty.mcassistant.entity.EmeraldTrader.command())   // [emerald] /village emerald: the trader, the villagers' villages
             .then(com.jrpetty.mcassistant.entity.Divers.command())          // [diver] /village diver: the water, the beds, the stage
             .then(com.jrpetty.mcassistant.entity.Pets.command())            // [pets] /village pets: the town's pets; now, stage (ops)
             .then(com.jrpetty.mcassistant.entity.WorkTools.command())       // [workitems] /village items work: the tools of the mine, woods, roads; stage (ops)
@@ -590,6 +591,7 @@ public final class VillageCommands {
                     case GOLEMS -> net.minecraft.world.item.Items.IRON_INGOT;     // [golems]
                     case FIREWORKS -> net.minecraft.world.item.Items.FIREWORK_ROCKET;   // [fireworks]
                     case CARTOGRAPHER -> net.minecraft.world.item.Items.FILLED_MAP;   // [cartographer]
+                    case EMERALD -> net.minecraft.world.item.Items.EMERALD;       // [emerald]
                     case DIVER -> net.minecraft.world.item.Items.KELP;            // [diver]
                     case NONE -> net.minecraft.world.item.Items.AIR;
                 }));

@@ -214,6 +214,14 @@ public final class Trades {
                     need("a compass", s -> s.is(Items.COMPASS), 1, "me, from the stores' iron and redstone"),
                     need("glass panes", s -> s.is(Items.GLASS_PANE), 4, "the smelter's glass")),
                 "the hall's map of the town, the region's for the caravans, explorer maps for the cave team, the scouts and travellers");
+            // [emerald] The emerald trader (EmeraldTrader): the town's surplus and its emeralds out of the stores for each trip.
+            case EMERALD -> new Trade("I walk out to the villages of the game's own villagers, the way a scout goes, with what the"
+                    + " town has to spare: I sell it to whichever villager buys it, at the villager's own price, for emeralds, and"
+                    + " spend the emeralds on what nobody here can make: enchanted books, a bell, explorer maps, the cleric's lapis",
+                List.of(),
+                List.of(need("the town's surplus (only what it can spare)", EmeraldTrader::sellable, 1, "the stores, past the town's own needs"),
+                    need("food for the road", s -> s.get(DataComponents.FOOD) != null, 2, "the stores")),
+                "emeralds for the surplus, and enchanted books, bells, maps and lapis for the emeralds");
             // [diver] The kelp farmer and diver (Divers): kelp beds on the bed of the water, dried and packed into fuel.
             case DIVER -> new Trade("I farm kelp on the bed of the water: planted three deep and more, cut above the lowest piece so"
                     + " it grows again, dried in the shed's smoker and over its campfire and packed nine to a block, so the furnaces"
