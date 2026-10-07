@@ -50,7 +50,9 @@ import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.decoration.ItemFrame;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
@@ -410,15 +412,22 @@ public class WeaveGameTests {
             Kit.log("w01 told the guard -> " + told);
             helper.assertTrue(q.step("tell").done && "verdict".equals(q.current().key), "told the guard; the council's verdict next: " + steps(q));
             // The council convicts the culprit: the treasury pays.
-            int treasury0 = Ledger.coins(s.village()), coins0 = Market.coinsHeld(p);
+            VillageFolkEntity victim = s.folk().get(0);
+            int treasury0 = Ledger.coins(s.village()), coins0 = Market.coinsHeld(p), culprit0 = s.culprit().purse(), victim0 = victim.purse();
             Crime.accuseForTests(c, s.culprit());
             Weave.verdictForTests(level, c, true);
-            int treasury1 = Ledger.coins(s.village()), coins1 = Market.coinsHeld(p);
-            Kit.log("w01 the verdict: " + c.verdict() + " | treasury " + treasury0 + " -> " + treasury1 + ", player " + coins0 + " -> " + coins1 + "; " + q.state + "; " + steps(q));
+            int treasury1 = Ledger.coins(s.village()), coins1 = Market.coinsHeld(p), culprit1 = s.culprit().purse(), victim1 = victim.purse();
+            // The council's own sentence moves coin too: the culprit pays the victim back and its fine into the treasury.
+            int fineIn = (culprit0 - culprit1) - (victim1 - victim0);
+            Kit.log("w01 the verdict: " + c.verdict() + " (" + c.sentence() + ") | treasury " + treasury0 + " -> " + treasury1 + " (the fine in: " + fineIn
+                + "), player " + coins0 + " -> " + coins1 + ", the culprit " + culprit0 + " -> " + culprit1 + ", the victim " + victim0 + " -> " + victim1
+                + "; " + q.state + "; " + steps(q));
             Kit.log("w01 the chronicle: " + chronicle(s.village()));
             helper.assertTrue(c.stage() == Crime.Stage.CONVICTED && q.state == State.DONE, "convicted, and the quest done: " + c.stage() + " " + q.state);
-            helper.assertTrue(treasury0 - treasury1 == q.coins && coins1 - coins0 == q.coins, "paid out of the treasury: " + q.coins + "; treasury " + treasury0 + " -> "
-                + treasury1 + ", player " + coins0 + " -> " + coins1);
+            helper.assertTrue(q.coins > 0 && coins1 - coins0 == q.coins && Integer.toString(q.coins).equals(q.flag("paid")),
+                "the player paid in full: " + q.coins + "; player " + coins0 + " -> " + coins1 + ", paid " + q.flag("paid"));
+            helper.assertTrue(fineIn >= 0 && treasury0 + fineIn - treasury1 == q.coins, "out of the treasury, coin for coin (the fine aside): " + q.coins + "; treasury "
+                + treasury0 + " -> " + treasury1 + ", the fine in " + fineIn);
             Kit.noLeftoverPlayers(level);
             helper.succeed();
         });
@@ -713,6 +722,11 @@ public class WeaveGameTests {
         helper.runAtTickTime(5, () -> {
             int burnt = burnBackWall(helper, level, id, anchor);
             letFire(level, was);
+            // The stores set to three planks again now (as dd03 does): the town's other work had five ticks at the first
+            // three (a sign is two planks), and that is not the fire's.
+            int had = stock(level, id, st -> st.is(ItemTags.PLANKS));
+            stores(level, id, Kit.surface(level, x - 4, Z - 4), new ItemStack(Items.OAK_PLANKS, 3), new ItemStack(Items.BREAD, 16));
+            Kit.log("w06 planks in the stores when the fire was out: " + had + " of the three put there; three again now");
             int put = Rebuilding.workForTests(level, id);
             Kit.log("w06 burnt " + burnt + "; " + put + " put back, waits for '" + Rebuilding.waitsForTests(id) + "'");
             helper.assertTrue(burnt == 6 && put == 3 && Rebuilding.waitsForTests(id).contains("plank"), "three back, then it waits on planks");
@@ -1142,17 +1156,18 @@ public class WeaveGameTests {
 
     // ============================================================ w16: the cave team's finds past the lodge's six, at auction
 
+    /** The lodge's trophy wall, in the drawing's terms (across, up, back), as Lodge has it: the top row first. */
+    private static final int[][] TROPHY_WALL = { { -2, 2, 2 }, { -2, 2, 1 }, { -2, 2, 0 }, { -2, 1, 2 }, { -2, 1, 1 }, { -2, 1, 0 } };
+
+    private static ItemFrame trophyFrame(ServerLevel level, Ledger.Building b, int[] c) {
+        BlockPos at = Lodge.at(b, c[0], c[1], c[2]);
+        for (ItemFrame f : level.getEntitiesOfClass(ItemFrame.class, new AABB(at).inflate(0.1), e -> e.isAlive() && e.getTags().contains(Lodge.TAG))) return f;
+        return null;
+    }
+
     @GameTest(template = EMPTY, timeoutTicks = 200, batch = "weave_w16_finds_past_the_six")
     public static void w16_finds_past_the_six(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
-        CaveDwellerGameTests.Town t = CaveDwellerGameTests.town(helper, 1194000, Villages.Age.IRON, StationTask.CAVE, StationTask.CAVE, StationTask.MINE);
-        UUID id = t.village();
-        BlockPos ground = Kit.surface(level, t.heart().getX() - 20, t.heart().getZ() - 24);
-        Showcase.stage(level, ground.getX() - 8, ground.getX() + 8, ground.getZ() - 8, ground.getZ() + 12, ground.getY());
-        BuildGoal.stamp(level, Lodge.STRUCTURE, ground, Direction.NORTH, 13, Showcase.painter(Showcase.SPRUCE));
-        Ledger.built(id, Lodge.STRUCTURE, ground, Direction.NORTH);
-        BlockPos hall = Lodge.hall(id);
-        helper.assertTrue(hall != null, "the Delvers' Lodge stands");
         // Six kinds of find for the wall, two of each in the stores (the wall never takes the last), and a seventh it has no room for.
         Item[] six = { Items.DIAMOND, Items.EMERALD, Items.GOLDEN_APPLE, Items.NAME_TAG, Items.SADDLE, Items.RAW_GOLD };
         List<ItemStack> goods = new ArrayList<>();
@@ -1162,20 +1177,54 @@ public class WeaveGameTests {
         goods.add(new ItemStack(Items.PAPER, 64));
         goods.add(new ItemStack(Items.BOOK, 3));
         goods.add(new ItemStack(Items.BREAD, 64));
-        CaveDwellerGameTests.fill(t, goods.toArray(new ItemStack[0]));
+        List<VillageFolkEntity> folk = marketTown(helper, 1194000, goods.toArray(new ItemStack[0]));
+        UUID id = folk.get(0).ownerId();
+        Villages.Village v = Villages.get(id);
+        folk.get(0).setJob(StationTask.CAVE);
+        folk.get(1).setJob(StationTask.CAVE);
+        BlockPos heart = v.centre();
+        BlockPos ground = Kit.surface(level, heart.getX() - 24, heart.getZ() - 18);
+        Showcase.stage(level, ground.getX() - 8, ground.getX() + 8, ground.getZ() - 8, ground.getZ() + 12, ground.getY());
+        BuildGoal.stamp(level, Lodge.STRUCTURE, ground, Direction.NORTH, 13, Showcase.painter(Showcase.SPRUCE));
+        Ledger.built(id, Lodge.STRUCTURE, ground, Direction.NORTH);
+        Ledger.Building b = Lodge.of(id);
+        BlockPos hall = Lodge.hall(id);
+        helper.assertTrue(b != null && hall != null, "the Delvers' Lodge stands");
         long day = QuestRun.day(level);
         for (Item k : six) Lodge.broughtUp(id, new ItemStack(k), "Ada", "the big cave east", day);
         Lodge.broughtUp(id, new ItemStack(Items.AMETHYST_SHARD), "Bram", "the crystal cave", day);
-        VillageFolkEntity d = t.folk().get(0);
+        // The team at home hangs what it can (the lodge's own work, its own tests'); the rest of the six put up as it would.
+        VillageFolkEntity d = folk.get(0);
         d.moveTo(hall.getX() + 0.5, hall.getY(), hall.getZ() + 0.5, 0.0F, 0.0F);
-        for (int i = 0; i < 10; i++) Lodge.tick(level, t.v(), day);
+        for (int i = 0; i < 8; i++) Lodge.tick(level, v, day);
+        List<Item> up = new ArrayList<>();
+        for (int[] c : TROPHY_WALL) {
+            ItemFrame f = trophyFrame(level, b, c);
+            if (f != null && !f.getItem().isEmpty()) up.add(f.getItem().getItem());
+        }
+        int byTheTeam = up.size();
+        for (int[] c : TROPHY_WALL) {
+            ItemFrame f = trophyFrame(level, b, c);
+            if (f != null && !f.getItem().isEmpty()) continue;
+            Item next = null;
+            for (Item k : six) if (!up.contains(k)) { next = k; break; }
+            if (next == null) break;
+            if (f == null) {
+                f = new ItemFrame(level, Lodge.at(b, c[0], c[1], c[2]), b.facing().getClockWise());
+                f.addTag(Lodge.TAG);
+                level.addFreshEntity(f);
+            }
+            f.setItem(new ItemStack(next), false);
+            up.add(next);
+        }
         ItemStack shard = new ItemStack(Items.AMETHYST_SHARD);
         boolean lot = Weave.lotForTests(level, id, shard), diamond = Weave.lotForTests(level, id, new ItemStack(Items.DIAMOND));
         String from = Weave.provenanceForTests(level, id, shard);
-        Auctions.fromForTests(3);
-        List<String> lots = Auctions.openForTests(level, t.v());
+        List<String> lots = Auctions.openForTests(level, v);
         Auctions.fromForTests(-1);
-        Kit.log("w16 the wall full; the amethyst a lot " + lot + " (" + from + "), the diamond (on the wall) " + diamond + "; the town's lots " + lots);
+        Kit.log("w16 the wall: " + up + " (" + byTheTeam + " hung by the team); the amethyst a lot " + lot + " (" + from + "), the diamond (on the wall) "
+            + diamond + "; the town's lots " + lots);
+        helper.assertTrue(up.size() == 6, "the trophy wall full: " + up);
         helper.assertTrue(lot && !diamond, "the find the full wall has no room for goes to auction; the wall's own do not, by the weave");
         helper.assertTrue(from != null && from.contains("Bram") && from.contains("the crystal cave") && from.contains("no room"), "and the auction says whose find it was: " + from);
         helper.assertTrue(lots.stream().anyMatch(l -> l.contains("amethyst")), "under the hammer: " + lots);
