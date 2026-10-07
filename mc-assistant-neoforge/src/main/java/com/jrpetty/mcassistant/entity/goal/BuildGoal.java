@@ -489,6 +489,9 @@ public class BuildGoal extends Goal {
         // furnace/chest/table/ladder is a real item from the pack.
         Map<Part, Integer> pending = new EnumMap<>(Part.class);
         for (Placement p : plan) {
+            // Clearing takes nothing out of the pack. A plant to be cleared stands in a soft cell, and counted
+            // here it asked for "7 nothing" that no stores could ever hold: no house was built for sixty days.
+            if (p.part() == Part.CLEAR) continue;
             if (soft(assistant.level().getBlockState(p.pos()))) {
                 pending.merge(p.part(), 1, Integer::sum);
             }
