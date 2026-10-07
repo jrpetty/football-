@@ -49,7 +49,7 @@ public final class Palettes {
     /** The village's look, worked out from its land (and kept). */
     public static Look of(@Nullable UUID village) {
         if (village == null) return forLand(Homeland.Land.PLAINS);
-        return LOOKS.computeIfAbsent(village, v -> forLand(Homeland.of(v)));
+        return LOOKS.computeIfAbsent(village, v -> Architecture.look(v, forLand(Homeland.of(v))));   // [culture2] the style's woods
     }
 
     /** Forget a village's look (its land surveyed afresh). */

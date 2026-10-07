@@ -139,6 +139,8 @@ public final class QuestMaker {
         QuestRun.script("caves.missing", MISSING);
         QuestRun.script("board", BOARD);
         Weave.registerQuests(MAKERS);           // [weave] help the watch, water for the fire, the flood, the rebuilding; the real lost pets
+        MAKERS.put("bounty", PlayerLaw::bountyQuest);              // [police] the watch's bounty on a folk who fled it
+        QuestRun.script("watch.bounty", PlayerLaw.BOUNTY);
     }
 
     // ------------------------------------------------------------------ the town's look

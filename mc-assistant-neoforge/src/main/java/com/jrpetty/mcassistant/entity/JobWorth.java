@@ -196,6 +196,21 @@ public final class JobWorth {
             // [cartographer] Long walks and a steady hand; learned work; the town's maps, and the finds for the scouts and the cave team.
             case "CARTOGRAPHER" -> new Post(key, title, trade, role, 1, 3, 0.8, 1.0, "long walks and a steady hand",
                 "maps the town, and finds the old places round it for the scouts and the cave team");
+            // [emerald] Long days on the road among strangers, and a head for a bargain: it sells the town's surplus for
+            // emeralds and buys what nobody here can make. Paid like the scouts and a little over, for the bargaining.
+            case "EMERALD" -> new Post(key, title, trade, role, 2, 2, 1.0, 1.0, "long days on the road, and a head for a bargain",
+                "trades the town's surplus with the villagers for what it cannot make");
+            // [diver] Under the water all day, on its own breath, and the one the town shouts for when somebody's in.
+            case "DIVER" -> new Post(key, title, trade, role, 2, 2, 1.0, 1.0, "cold, deep work on your own breath",
+                "fuels the furnaces with kelp, and pulls folk out of the water");
+            // [nether] Through the gateway: lava, ghasts, blazes and the piglins' tempers, and the most skill the town asks of
+            // anybody: the best paid of all, a small picked team.
+            case "NETHER" -> new Post(key, title, trade, role, 4, 4, 1.2, 1.0, "the most dangerous work there is, and highly skilled; a small picked team",
+                "brings the town what only the Nether has");
+            // [redstone] The engineer: skilled, learned work (redstone is a craft of its own), with a little danger in
+            // the pistons; what the machines make is counted to the trade, as a maker's half (the parts are others' goods).
+            case "REDSTONE" -> new Post(key, title, trade, role, 1, 4, 1.0, 1.0, "learned, skilled work at the bench and the machines",
+                "builds the machines that work by themselves");
             // The shop's jobs (ShopRoles): the keeper makes a little and runs the place; the assistants and the
             // stock keeper make nothing, and are paid for what they do for the shop.
             case "SHOP/KEEPER" -> new Post(key, title, trade, role, 1, 2, 1.0, 0.5, "runs the place", "keeps the shop and its sales");
@@ -214,7 +229,7 @@ public final class JobWorth {
     /** How much of what the trade makes is its own work: a maker's half (the rest was another trade's goods). */
     static double own(StationTask t) {
         return switch (t.name()) {
-            case "SMELT", "COOK", "TAILOR", "BREW", "SMITH", "ENCHANT", "SHOP" -> 0.5;
+            case "SMELT", "COOK", "TAILOR", "BREW", "SMITH", "ENCHANT", "SHOP", "REDSTONE" -> 0.5;   // [redstone] the parts were others' goods
             case "FLETCHER" -> 0.5;                                     // [fletcher] the flint, feathers and sticks are others' work
             default -> 1.0;
         };
@@ -821,6 +836,7 @@ public final class JobWorth {
         }
         if (postFor(t, ShopRoles.Role.KEEPER).learned >= 2 && target >= 0.75 && skilled < Math.max(1, Math.round(target))) raw *= 1.08;
         if (t == StationTask.CAVE) raw = Math.max(raw, 1.3);    // [caves] a small, picked team: never to be had for the asking
+        if (t == StationTask.NETHER) raw = Math.max(raw, 1.45); // [nether] fewer still, and picked from the veterans
         return clamp(raw, SCARCE_LO, SCARCE_HI);
     }
 
@@ -910,6 +926,10 @@ public final class JobWorth {
             case "GOLEMS" -> "the golem yard";         // [golems]
             case "FIREWORKS" -> "the powder hut";      // [fireworks]
             case "CARTOGRAPHER" -> "the map room";     // [cartographer]
+            case "EMERALD" -> "the trading post";      // [emerald]
+            case "DIVER" -> "the kelp beds";            // [diver]
+            case "NETHER" -> "the Nether runs";        // [nether]
+            case "REDSTONE" -> "the redstone workshop";  // [redstone]
             default -> "the " + JobMarket.noun(t) + "s";
         };
     }
@@ -920,6 +940,8 @@ public final class JobWorth {
             case "GUARD", "FISH", "STORE", "SMITH", "TAILOR", "BREW", "ENCHANT", "COOK", "SHOP", "BANK" -> false;
             case "FIREWORKS" -> false;                 // [fireworks] "the powder hut is short of hands"
             case "CARTOGRAPHER" -> false;              // [cartographer] "the map room is"
+            case "EMERALD" -> false;                                       // [emerald] the trading post
+            case "REDSTONE" -> false;                    // [redstone] "the redstone workshop is short of hands"
             default -> true;
         };
     }

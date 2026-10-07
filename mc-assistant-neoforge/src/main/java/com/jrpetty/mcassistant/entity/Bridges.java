@@ -126,7 +126,7 @@ public final class Bridges {
             case ASKED -> ask(level, v, c);
             case BUILDING -> {
                 if (byTheWorks(v.id())) watchTheWorks(level, v, c);
-                else build(level, v, c, STEPS, false);
+                else build(level, v, c, CityTree.worksSteps(v.id(), "bridges", STEPS), false);   // [perks] Turnpikes
             }
             case OPEN -> {
                 if (c.state != Ferries.State.RETIRED) Ferries.retire(level, v, c);

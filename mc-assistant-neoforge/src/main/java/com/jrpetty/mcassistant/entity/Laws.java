@@ -67,9 +67,9 @@ public final class Laws {
         return Ledger.record(village, player)[0];
     }
 
-    /** Is the player banished from the village today? */
+    /** Is the player banished from the village today? (Or barred by its watch till it pays its fine: PlayerLaw.) */
     public static boolean banished(@Nullable UUID village, UUID player, long day) {
-        return village != null && Ledger.record(village, player)[2] > day;
+        return village != null && (Ledger.record(village, player)[2] > day || PlayerLaw.barred(village, player));   // [police] barred
     }
 
     // ------------------------------------------------------------------ seeing it done
@@ -123,6 +123,7 @@ public final class Laws {
         int taken = 0;
         double worth = 0;
         String what = null;
+        Map<Item, Integer> gones = new HashMap<>();                  // [police] what it took, for the watch to have back
         for (Map.Entry<Item, Integer> had : look.had().entrySet()) {
             // What left the chest AND turned up in the player's pack: a courier emptying the chest
             // at the same moment is not the player's doing.
@@ -130,6 +131,7 @@ public final class Laws {
             int gone = Math.min(gained, had.getValue() - now.getOrDefault(had.getKey(), 0));
             if (gone <= 0) continue;
             taken += gone;
+            gones.put(had.getKey(), gone);
             ItemStack one = new ItemStack(had.getKey());
             Market.Good g = Market.goodFor(one);
             worth += gone * (g == null ? 0.2 : g.value());
@@ -138,6 +140,7 @@ public final class Laws {
         if (taken == 0) return;
         Villages.Village v = Villages.get(look.village());
         if (v == null) return;
+        PlayerLaw.taken(p, gones);                                   // [police]
         offence(level, v, p, "taking " + taken + " " + what + (taken > 1 && !what.endsWith("s") ? "s" : "") + " from the stores",
             Math.max(2, (int) Math.round(worth * 2)));
     }
@@ -211,6 +214,7 @@ public final class Laws {
 
     /** A player was seen breaking the village's law: the fine, the trial or banishment. */
     public static void offence(ServerLevel level, Villages.Village v, Player p, String what, int fine) {
+        if (PlayerLaw.offence(level, v, p, what, fine)) return;     // [police] the watch's way: warned, fined, barred (PlayerLaw)
         VillageFolkEntity seen = witness(level, v.id(), p);
         if (seen == null) return;                                    // nobody saw
         UUID id = v.id();
@@ -271,6 +275,8 @@ public final class Laws {
     public static String pay(VillageFolkEntity f, Player p) {
         UUID village = f.ownerId();
         if (village == null) return "Pay what? To whom?";
+        String watch = PlayerLaw.pay(f, p);                          // [police] barred: the fine paid at the watch house
+        if (watch != null) return watch;
         int[] r = Ledger.record(village, p.getUUID());
         if (r[1] <= 0) return r[0] > 0 ? "You owe us nothing now. Mind how you go." : "You don't owe the village a thing.";
         int coins = Market.coinsHeld(p);
@@ -292,6 +298,9 @@ public final class Laws {
 
     /** The watch turns out a banished player found inside the village. */
     public static boolean outlaw(@Nullable UUID village, net.minecraft.world.entity.LivingEntity e) {
-        return e instanceof Player p && !exempt(p) && banished(village, p.getUUID(), p.level().getDayTime() / 24000L);
+        // [police] Banished by the council; or, barred by the watch, it struck back at the guards driving it out (PlayerLaw).
+        // Barred alone is not fought: the gates are shut to it and the shops refuse it, till it pays.
+        return e instanceof Player p && !exempt(p) && village != null
+            && (Ledger.record(village, p.getUUID())[2] > p.level().getDayTime() / 24000L || PlayerLaw.resisting(village, p.getUUID()));
     }
 }

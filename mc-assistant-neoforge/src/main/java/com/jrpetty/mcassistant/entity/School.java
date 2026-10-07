@@ -788,6 +788,7 @@ public final class School {
         if (p.has(Social.Trait.HARDWORKING)) pct += 15;
         if (p.has(Social.Trait.CURIOUS)) pct += 10;
         if (p.has(Social.Trait.EASYGOING)) pct -= 15;
+        pct += CityTree.schoolPercent(pupil.ownerId());                // [perks] Primers, the Scholars' Endowment
         pct += Slates.bonus(pupil);                                      // [leisure] a slate and chalk: a quarter quicker
         return Math.max(1, (cap * pct + BEATS_TO_CAP * 100 - 1) / (BEATS_TO_CAP * 100));     // rounded up: sixty beats fill it
     }
@@ -965,6 +966,8 @@ public final class School {
         LINES.put(StationTask.STORE, new String[]{ "A place for everything, and everything in its place." });
         LINES.put(StationTask.SCOUT, new String[]{ "Mark every hill on the map, and always know the way home." });
         LINES.put(StationTask.GUARD, new String[]{ "Keep your back to the wall and your eyes on the dark." });
+        LINES.put(StationTask.EMERALD, new String[]{ "Sell only what the town can spare, and count the emeralds twice.",   // [emerald]
+            "The villagers are their own people: trade fair, and never cut in on a traveller at a stall." });
         LINES.put(StationTask.CAVE, new String[]{ "A torch every few steps: it's the way home.",           // [caves]
             "Never dig the block you stand on, and never dig toward water or lava." });
         LINES.put(StationTask.FLETCHER, new String[]{ "A flint, a stick and a feather make four arrows: count them twice.",   // [fletcher]
@@ -975,6 +978,10 @@ public final class School {
             "Never a flame in the powder hut, and never a rocket in a thunderstorm." });
         LINES.put(StationTask.CARTOGRAPHER, new String[]{ "A map only fills in where somebody has walked. So walk it.",   // [cartographer]
             "North at the top, the town in the middle, and every place with its name." });
+        LINES.put(StationTask.DIVER, new String[]{ "Up for air before you need it, not when you do.",       // [diver]
+            "Cut the kelp above the root and it grows again." });
+        LINES.put(StationTask.NETHER, new String[]{ "Gold on before you go through, and never strike a piglin.",   // [nether]
+            "Drink your fire resistance before you need it, not after.", "A ghast's fireball: hit it back the way it came." });
     }
 
     private static final String[] ANY_DAY = { "Reading, writing and counting: every trade stands on those three.",

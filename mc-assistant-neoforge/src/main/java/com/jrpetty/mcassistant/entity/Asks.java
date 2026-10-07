@@ -39,6 +39,7 @@ public final class Asks {
         for (String w : new String[]{ "enchanter" }) TRADES.put(w, StationTask.ENCHANT);
         for (String w : new String[]{ "cook", "baker" }) TRADES.put(w, StationTask.COOK);
         for (String w : new String[]{ "shopkeeper" }) TRADES.put(w, StationTask.SHOP);
+        for (String w : new String[]{ "engineer" }) TRADES.put(w, StationTask.REDSTONE);   // [redstone]
     }
 
     /** The buildings the elder may be asked for (the crafts' amenities are the council's). */
@@ -74,6 +75,11 @@ public final class Asks {
         BUILDINGS.put("map room", "maproom");             // [cartographer] the map room (Cartographers)
         BUILDINGS.put("maproom", "maproom");
         BUILDINGS.put("cartographer", "maproom");
+        BUILDINGS.put("trading", "tradingpost");          // [emerald] the Trading Post (EmeraldTrader)
+        BUILDINGS.put("tradingpost", "tradingpost");
+        BUILDINGS.put("diver", "divershed");              // [diver] the diver's shed (Divers)
+        BUILDINGS.put("kelp", "divershed");
+        BUILDINGS.put("redstoneworks", "redstoneworks");  // [redstone] the redstone workshop (Engineers)
     }
 
     /** The trade named in a line, or null. */

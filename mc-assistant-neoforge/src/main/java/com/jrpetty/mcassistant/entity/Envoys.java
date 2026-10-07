@@ -341,6 +341,7 @@ public final class Envoys {
             if (isElder) score += errand == Errand.ALLIANCE || errand == Errand.PEACE ? 100 : -40;
             if (f.stationTask() == AssistantEntity.StationTask.HAUL) score += 10;
             score += Math.min(20, f.veteranLevel());
+            score += Quirks.envoyPull(f);                                   // [perks] a Smooth-talker, a wanderer; never a homebody
             if (score > bestScore) { bestScore = score; best = f; }
         }
         return best;
@@ -499,7 +500,8 @@ public final class Envoys {
         long day = level.getDayTime() / 24000L;
         String fn = Villages.name(from);
         UUID envoyId = envoy.getUUID();
-        int warmth = (ht.kindly() ? 15 : 0) + (ht == Temper.PRICKLY ? -15 : 0) + (ht == Temper.WARY ? -10 : 0) + chem * 10;
+        int warmth = (ht.kindly() ? 15 : 0) + (ht == Temper.PRICKLY ? -15 : 0) + (ht == Temper.WARY ? -10 : 0) + chem * 10
+            + Perks.envoyWarmth(from, envoy);                       // [perks] a Diplomat's envoy, a Smooth-talker sent
         switch (errand) {
             case GREETING -> {
                 if (ht == Temper.WARY || ht == Temper.PRICKLY && r < 0) {

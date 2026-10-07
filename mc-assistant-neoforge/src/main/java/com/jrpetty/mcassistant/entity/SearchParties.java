@@ -184,6 +184,7 @@ public final class SearchParties {
             for (VillageFolkEntity f : grown) if (f != lost && fit(f, level) && s.party.size() < 2) s.party.add(f.getUUID());
         }
         if (s.party.isEmpty()) return false;
+        Incidents.leadSearch(level, v, s.party);              // [police] a guard of the watch at its head, if one is free
         // Where they look: where it was last seen, round about there, then the way it was seen heading.
         s.points.add(last);
         for (int r : new int[]{ 16, 32 }) {

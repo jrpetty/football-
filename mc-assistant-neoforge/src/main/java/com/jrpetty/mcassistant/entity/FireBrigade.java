@@ -661,6 +661,8 @@ public final class FireBrigade {
             double d = f.blockPosition().distSqr(at);
             if (d < cd) { cd = d; crier = f; }
         }
+        // [police] The watch is first to it: the guard nearest the bell cries it, the rest clear the folk back (Incidents.fire).
+        crier = Incidents.fire(level, v, b.first, b.where, at, crier);
         if (crier != null) {
             String where = Disasters.capital(b.where);
             FolkTalk.speak(crier, FolkTalk.pick(level.getRandom(), "Fire " + b.where + "! Fire! Bring your buckets!",

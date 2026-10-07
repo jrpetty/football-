@@ -91,9 +91,11 @@ public class SmeltGoal extends Goal {
     // furnaces lit while nobody is watching: a coal block is 16000 ticks, a
     // stick is 100. Feeding sticks first means walking the row again in eight
     // seconds; feeding coal blocks first means it runs for thirteen minutes.
+    // [diver] The diver's kelp blocks before anything: a town's coal is for its torches, its forge and its watch
+    // (FuelBook), and a coal block is nine coals.
     private static final java.util.List<Predicate<ItemStack>> FUEL_PRIORITY = java.util.List.of(
-        s -> s.is(Items.COAL_BLOCK),            // 16000 ticks
         s -> s.is(Items.DRIED_KELP_BLOCK),      //  4000
+        s -> s.is(Items.COAL_BLOCK),            // 16000 ticks
         s -> s.is(Items.BLAZE_ROD),             //  2400
         s -> s.is(Items.COAL) || s.is(Items.CHARCOAL),   // 1600
         s -> s.is(ItemTags.LOGS),               //   300
@@ -120,8 +122,20 @@ public class SmeltGoal extends Goal {
 
     /** The fuels this smelter burns just now, best first. */
     private java.util.List<Predicate<ItemStack>> fuels() {
-        if (assistant.savingCoal()) return NO_COAL;
-        return assistant.coalLow() ? WOOD_FIRST : FUEL_PRIORITY;
+        return fuelsFor(assistant);
+    }
+
+    private static java.util.List<Predicate<ItemStack>> fuelsFor(AssistantEntity a) {
+        if (a.savingCoal()) return NO_COAL;
+        // [diver] The stores have dried kelp blocks: they are burnt, and no coal at all (FuelBook).
+        if (a.kelpForFuel()) return NO_COAL;
+        return a.coalLow() ? WOOD_FIRST : FUEL_PRIORITY;
+    }
+
+    /** [diver] Would this smelter put this on its fire just now, as its village stands (its coal, the diver's kelp)? */
+    public static boolean burnsNow(AssistantEntity a, ItemStack s) {
+        for (Predicate<ItemStack> f : fuelsFor(a)) if (f.test(s)) return true;
+        return false;
     }
 
     /** Would a smelter put this on the fire — with the village putting coal by for its age, or not?
@@ -366,6 +380,7 @@ public class SmeltGoal extends Goal {
                     if (s.isEmpty() || !fuelType.test(s)) continue;
                     int mv = Math.min(4, s.getCount());
                     furnace.setItem(1, s.copyWithCount(mv));
+                    com.jrpetty.mcassistant.entity.FuelBook.burnt(assistant, s.copyWithCount(mv));   // [diver] the town's fuel books
                     // A smelter's Fire Tender (FolkSkills): the fire well kept, a piece of the load goes further.
                     int saved = assistant instanceof com.jrpetty.mcassistant.entity.VillageFolkEntity folk
                         ? com.jrpetty.mcassistant.entity.FolkSkills.fuelSaved(folk, mv) : 0;

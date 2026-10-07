@@ -328,7 +328,7 @@ public final class Golems {
         if (f.isBaby() || f.isShowcase() || f.isHired() || !f.isAlive() || f.trip() != null || f.expedition() != null) return Integer.MIN_VALUE;
         StationTask t = f.stationTask();
         if (t == StationTask.GOLEMS) return 1000 + f.tradeLevel(t);
-        if (t.isCraft() || t == StationTask.GUARD || t == StationTask.STORE || t == StationTask.HAUL || t == StationTask.CAVE
+        if (t.isCraft() || t == StationTask.GUARD || t == StationTask.STORE || t == StationTask.HAUL || t == StationTask.CAVE || t == StationTask.NETHER   // [nether]
             || t == StationTask.SCOUT || t == StationTask.FERRY) return Integer.MIN_VALUE;
         if (t != StationTask.NONE && Villages.share(village, t) < 0.5) return Integer.MIN_VALUE;
         return f.tradeLevel(StationTask.GOLEMS) * 5 + (t == StationTask.NONE ? 30 : t == StationTask.MINE || t == StationTask.SMELT ? 18 : 0)

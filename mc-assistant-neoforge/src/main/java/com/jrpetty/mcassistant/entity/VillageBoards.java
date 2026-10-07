@@ -414,6 +414,8 @@ public final class VillageBoards {
         }
         out.add("RN|Our trades: " + (t.length() == 0 ? "none yet" : t) + (idle > 0 ? "; " + idle + " still choosing" : "")
             + (children > 0 ? "; " + children + (children == 1 ? " child" : " children") : "") + ".");
+        String diving = Divers.jobsLine(id);                       // [diver] a town by no water says why it keeps no diver
+        if (diving != null) out.add("RN|" + diving);
         out.add("RN|At work right now: " + working + " of " + Math.max(0, folk - children) + ".");
         // Who is on duty: the watch, the town's works, the scouts and envoys out on the road.
         List<String> watch = new ArrayList<>(), works = new ArrayList<>(), away = new ArrayList<>();
@@ -481,6 +483,7 @@ public final class VillageBoards {
         String alarm = Raids.why(id);
         out.add(alarm != null ? "RB|THE BELL IS RINGING: " + alarm + "!" : "RM|The watch: all quiet.");
         out.addAll(Crime.board(level, id));                 // [crime] a theft reported, a trial, the stocks, the month's crime
+        out.addAll(Police.board(level, id));                // [police] today's roster and its captain, the cells, the wanted, the curfew
         out.addAll(Disasters.board(level, id));              // [disasters] a fire now, the flood, the drought, the rebuilding
         String kit = WatchKit.boardLine(id);                // [guard-kit] the watch, and what the town has it in
         if (kit != null) out.add("RN|" + kit);
@@ -535,10 +538,18 @@ public final class VillageBoards {
         if (golems != null) out.add("FN|" + golems);
         String maps = Cartographers.boardLine(id);              // [cartographer] the hall's map, the country's, the latest find
         if (maps != null) out.add("FN|" + maps);
+        String water = Divers.boardLine(level, id);             // [diver] the kelp beds, the coal they kept, the rescues
+        if (water != null) out.add("FN|" + water);
+        String nether = NetherRunners.boardLine(id);            // [nether] the run under way, or the runs' tally and the last haul
+        if (nether != null) out.add("FN|" + nether);
+        String machines = Engineers.boardLine(id);                // [redstone] the engineer's machines and what they have made
+        if (machines != null) out.add("FN|" + machines);
         String about = Transport.boardLine(level, id);          // [transport] the lines, the ore carts, the ferry and the bridge
         if (about != null) out.add("FN|" + about);
         String scouts = Scouts.boardLine(id);
         if (scouts != null) out.add("FN|" + scouts);
+        String trading = EmeraldTrader.boardLine(id);           // [emerald] the trader: the villagers' villages, the emeralds, a raid
+        if (trading != null) out.add("FN|" + trading);
         String museum = Museum.boardLine(id, day);              // what is new in the museum (Museum)
         if (museum != null) out.add("FN|" + museum);
         out.addAll(Culture.board(level, id));                   // [batchD] the banner and the motto, the customs, the theatre tonight

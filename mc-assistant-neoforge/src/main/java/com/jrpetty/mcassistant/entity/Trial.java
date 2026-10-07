@@ -96,7 +96,9 @@ final class Trial {
         }
     }
 
-    enum Sentence { FINE, WORK, STOCKS, BANISH }
+    enum Sentence { FINE, WORK, STOCKS, BANISH,
+        /** [police] Served in the cells at the watch house, a day or two (WatchHouse). */
+        JAIL }
 
     private static final Map<UUID, Sitting> SITTINGS = new ConcurrentHashMap<>();
     /** Folk sat in the stocks just now: when they were last set down there. */
@@ -341,6 +343,8 @@ final class Trial {
     /** The sentence by the offence and the record. */
     static Sentence sentence(ServerLevel level, Villages.Village v, Case c, int priors) {
         if (priors >= 2) return Sentence.BANISH;
+        Sentence cells = WatchHouse.sentence(level, v, c, priors);            // [police] the graver crimes, with cells to hold them
+        if (cells != null) return cells;
         if (priors == 1 || c.kind.grave() || c.worth >= 10) return stocksAt(level, v) != null || canMake(level, v) ? Sentence.STOCKS : Sentence.WORK;
         if (c.kind == Kind.VANDALISM) return Sentence.WORK;
         return Sentence.FINE;
@@ -359,6 +363,8 @@ final class Trial {
                 + till + ".";
             case STOCKS -> (back.isEmpty() ? "You'll pay for the damage" : back) + ", and sit in the stocks on the square " + till + ".";
             case BANISH -> "This is your third time before us. You'll pay back what you can, and leave " + Villages.name(c.village) + " for good.";
+            case JAIL -> (back.isEmpty() ? "You'll pay for the damage" : back) + ", and serve " + (WatchHouse.jailDays(c) == 1 ? "a day" : WatchHouse.jailDays(c)
+                + " days") + " in the cells at the watch house.";                                                   // [police]
         };
     }
 
@@ -402,6 +408,12 @@ final class Trial {
                 done += (done.isEmpty() ? "" : "; ") + (c.kind == Kind.VANDALISM ? "to mend it and sweep the streets" : "community work");
             }
             case BANISH -> done += (done.isEmpty() ? "" : "; ") + "banished";
+            case JAIL -> {                                                   // [police] the cells at the watch house (WatchHouse)
+                r.putString("sentence", "jail");
+                r.putLong("until", now + WatchHouse.jailDays(c) * 24000L);
+                r.putInt("sentenceCase", c.id);
+                done += (done.isEmpty() ? "" : "; ") + (WatchHouse.jailDays(c) == 1 ? "a day" : WatchHouse.jailDays(c) + " days") + " in the cells";
+            }
         }
         c.stage = Stage.CONVICTED;
         c.closedDay = day;
@@ -428,6 +440,7 @@ final class Trial {
         if (c.confessed && id.equals(c.culprit)) ownsUpToTheRest(level, v, c, f, day);
         if (sentence == Sentence.BANISH) banish(level, v, c, f, day);
         else reform(level, v, f, priors, day);
+        WatchHouse.verdict(level, v, c, f, sentence == Sentence.JAIL ? WatchHouse.jailDays(c) : 0, false);   // [police] back to the cells, or let go
         f.refreshMood();
         Crime.closed(c, id.equals(c.culprit));
         Crime.changed();
@@ -668,6 +681,7 @@ final class Trial {
             returnEvidence(level, v, c);
             Crime.closed(c, false);
         }
+        WatchHouse.verdict(level, v, c, f, 0, true);                      // [police] let go at the court; a wrong arrest on the watch's books
         f.refreshMood();
         Crime.changed();
     }
@@ -703,6 +717,7 @@ final class Trial {
             Crime.changed();
             return null;
         }
+        if (sentence.equals("jail")) return null;                           // [police] served in the cells (WatchHouse.prisonerHold)
         if (t >= 12500L || t < 1000L || f.isSleeping()) {
             standUp(f);
             return null;

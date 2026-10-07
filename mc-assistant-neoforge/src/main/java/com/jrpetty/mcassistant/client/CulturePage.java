@@ -94,6 +94,14 @@ public final class CulturePage {
         section(lines, font, "Plaques", c.getCompound("plaques"), width, "");
         section(lines, font, "The town's arms, beyond its hall", c.getCompound("arms"), width, "");       // [arms]
         section(lines, font, "Buskers", c.getCompound("buskers"), width, "");                             // [arms]
+        // [culture2] The town's own ways (TownWays): its table, its tongue, its building, its feast and its faith.
+        CompoundTag ways = c.getCompound("ways");
+        section(lines, font, "Our own ways", ways.getCompound("ways"), width, "Worked out once its land is known.");
+        section(lines, font, "Our table: the town's own dish", ways.getCompound("table"), width, "");
+        section(lines, font, "Our tongue: greetings, words, sayings, nicknames", ways.getCompound("tongue"), width, "");
+        section(lines, font, "How we build", ways.getCompound("building"), width, "");
+        section(lines, font, "Our own festival", ways.getCompound("feast"), width, "");
+        section(lines, font, "Our faith and its rites", ways.getCompound("faith"), width, "");
 
         int rows = Math.max(1, ch / ROW);
         int start = Math.max(0, Math.min(scroll, Math.max(0, lines.size() - rows)));

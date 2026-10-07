@@ -69,6 +69,12 @@ public final class FolkTalk {
         // [cartographer] Said to the cartographer, about a map: its maps (Cartographers.talk); a map of the town from it is its copy.
         if (f.stationTask() == AssistantEntity.StationTask.CARTOGRAPHER && (topic == TalkTopic.SAY && Cartographers.meant(text)
             || topic == TalkTopic.TOWN_MAP)) topic = TalkTopic.MAPS;
+        // [emerald] Said to the emerald trader: an ask ("find us a Mending book"), or what the villagers sell (EmeraldTrader).
+        if (topic == TalkTopic.SAY && f.stationTask() == AssistantEntity.StationTask.EMERALD && EmeraldTrader.meant(text)) {
+            return EmeraldTrader.talk(f, p, text);
+        }
+        // [nether] Said to one of the Nether runners: an ask of them, going through with them, their chart, a share.
+        if (topic == TalkTopic.SAY && f.stationTask() == AssistantEntity.StationTask.NETHER && NetherGuests.meant(text)) topic = TalkTopic.NETHER;
         if (topic == TalkTopic.SAY) {
             TalkTopic quest = QuestTalk.heard(f, p, text);              // [quests] "any work?", "I'll do it", a choice by name
             if (quest != null) topic = quest;
@@ -100,6 +106,10 @@ public final class FolkTalk {
         // [quests] A quest's step waiting on it (a word, a hand-over, a choice), work asked for, an offer taken: a child's too.
         String quest = QuestTalk.answer(f, p, topic, text);
         if (quest != null) return manner(f, quest);
+        // [diver] Asked of a diver: clay or sea pickles brought up from the bed, or the order collected (Divers.meant).
+        if (topic == TalkTopic.SAY && f.stationTask() == AssistantEntity.StationTask.DIVER && Divers.meant(text)) {
+            return manner(f, Divers.talk(f, p, text));
+        }
         String lower = text.toLowerCase(Locale.ROOT);
         if (!text.isEmpty() && (lower.contains("sorry") || lower.contains("apolog"))) {
             return manner(f, apology(f, p, op, day));
@@ -108,7 +118,7 @@ public final class FolkTalk {
         String interview = Interviews.talk(f, p, topic, text);
         if (interview != null) return manner(f, interview);
         String ways = text.isEmpty() || f.isBaby() ? null : Identity.talk(f, p, text);   // [identity] "What's this town like?"; a proposal
-        if (ways != null) return manner(f, ways, true);
+        if (ways != null) return manner(f, TownWays.alongside(f, text, ways), true);   // [culture2] and its own ways after
         if (!text.isEmpty()) {
             VillageFolkEntity other = mentioned(f, lower);
             if (other != null && topic != TalkTopic.WATCH) return manner(f, opinionOf(f, other));   // [crime] "I saw Fen take it" is for the watch
@@ -131,6 +141,8 @@ public final class FolkTalk {
         // [caves] Not the cave team's map ("a copy of the cave map"): that is the team's to sell (CaveGuests).
         String library = topic == TalkTopic.CAVES ? null : Library.talk(f, p, topic, text);
         if (library != null && !library.isEmpty()) return manner(f, library);
+        String townWays = TownWays.talk(f, p, topic, text);          // [culture2] its dish, its faith, its sayings, its nickname
+        if (townWays != null) return manner(f, townWays, true);
         String rockets = FireworksMaker.talk(f, p, text);            // [fireworks] rockets for a player's elytra; the next display
         if (rockets != null) return manner(f, rockets);
         String said = switch (topic) {
@@ -169,7 +181,8 @@ public final class FolkTalk {
             case PROPOSE -> Council.propose(f, p, text);
             case PEACE -> Diplomacy.peace(f, p, text);
             case STIR -> Diplomacy.stir(f, p, text);
-            case QUESTS -> Quests.talk(f, p) + PlayerServices.bountyTalk(f);   // and the night's bounty, if one is up
+            case QUESTS -> Quests.talk(f, p) + PlayerServices.bountyTalk(f)    // and the night's bounty, if one is up
+                + PlayerLaw.bountyTalk(f);                                     // [police] and the watch's on the wanted
             case HIRE -> Hire.ask(f, p);
             case COMMISSION -> Services.commission(f, p);
             case LEDGER -> Services.ledgerFor(f, p);
@@ -187,6 +200,7 @@ public final class FolkTalk {
             case KNACK -> knack(f);
             case ATLAS -> Scouts.tell(f);
             case CAVES -> CaveGuests.talk(f, p, text);                         // [caves] the report; an ask, going along, the map
+            case NETHER -> NetherGuests.talk(f, p, text);                      // [nether] the report; an ask, going through, the chart
             case FASHION -> Fashion.talk(f);                                   // [fashion] the season's look
             case WATCH -> p instanceof ServerPlayer sp ? Crime.talk(f, sp, text) : puzzled(f);   // [crime] seen anything amiss?
             case FOR_SALE -> Budget.answer(f, p);
@@ -218,6 +232,7 @@ public final class FolkTalk {
             default -> puzzled(f);
         };
         said = KeptGifts.mention(f, p, topic, said);          // [batchG] "I keep the diamond you gave me by my bed"
+        said = Individual.mention(f, p, topic, said);         // [individual] "Not this feather — it was my mother's"
         said = PlayerTrades.mention(f, p, topic, said);       // [player-civic] a master speaks of its apprentice
         said = QuestTalk.hint(f, p, topic, said);             // [quests] work to give, let known; the quest buttons sent
         // Somebody who can't stand you says as little as it can.
@@ -268,7 +283,8 @@ public final class FolkTalk {
         String others = levels.isEmpty() ? "" : " All told: " + levels + ".";
         String nature = Skill.line(f);
         String knacks = FolkSkills.talk(f);
-        return now + others + " " + nature + (knacks.isEmpty() ? "" : " " + knacks);
+        String quirks = Quirks.talk(f);                              // [perks] its quirks, in its own words
+        return now + others + " " + nature + (knacks.isEmpty() ? "" : " " + knacks) + (quirks.isEmpty() ? "" : " " + quirks);
     }
 
     /** Right-click: open the talk screen with a greeting. */
@@ -361,6 +377,7 @@ public final class FolkTalk {
             : (Sweepers.appointed(f) ? "Street sweeper (a hauler of the storehouse)"
                 : job == AssistantEntity.StationTask.SHOP ? StoreStaff.title(f) : job.title) + ", level " + f.veteranLevel()   // [econ-store]
                 + (f.isElder() ? " · the elder" : ""));
+        line(sb, "Looks", Individual.looksLine(f));         // [individual] its face, its build, the marks of its life
         // The storehouse's staff: the couriers work for it, under its storekeeper (Couriers).
         if (job == AssistantEntity.StationTask.HAUL && !f.isBaby() && f.ownerId() != null) {
             VillageFolkEntity keeper = Storekeeping.keeper(f.ownerId());
@@ -406,6 +423,10 @@ public final class FolkTalk {
         line(sb, "Golems", Golems.cardLine(f));              // [golems] the town's golems at their posts, mended, waited on
         line(sb, "Fireworks", FireworksMaker.cardLine(f));  // [fireworks] its stars, rockets and displays
         line(sb, "Maps", Cartographers.cardLine(f));        // [cartographer] its survey, the hall's map, what it found and sold
+        line(sb, "Trading", EmeraldTrader.cardLine(f));     // [emerald] its trips to the villagers, its emeralds, what it bought
+        line(sb, "The water", Divers.cardLine(f));          // [diver] its kelp bed, its blocks, its clay, its rescues
+        line(sb, "Nether", NetherRunners.cardLine(f));      // [nether] the run it is on or its last, and its kit
+        line(sb, "Machines", Engineers.cardLine(f));        // [redstone] what it is building, what its machines have made
         line(sb, f.isBaby() ? "Apprenticed" : "Apprentices", PlayerTrades.cardLine(f));   // [player-civic] its apprentices, or its trade
         line(sb, "The fleet", Fleet.cardLine(f));            // [fleet] out with the fishing fleet, and its catch
         line(sb, "Auction", Auctions.cardLine(f));           // [fleet] at the auction, or what it won there
@@ -420,7 +441,10 @@ public final class FolkTalk {
         for (String[] l : Visitors.cardLines(f)) line(sb, l[0], l[1]);   // [batchG] its gifts on show, its dog, its visits
         line(sb, "Quarter", Quarters.cardLine(f));          // its quarter of the town, the smoke, the park (Quarters)
         line(sb, "Nature", life.traitsLabel());
+        line(sb, "Quirks", Quirks.cardLine(f));             // [perks] its quirks and what they do, and whose they are
+        for (String[] l : Individual.cardLines(f)) line(sb, l[0], l[1]);   // [individual] Dream, Fears, Habits, Favourite place, Keepsake...
         line(sb, "Knacks", FolkSkills.cardLine(f));         // what it chose for itself: the Skills page has the rest
+        line(sb, "Leads", Reigns.cardLine(f));              // [perks] the leader: its perk in office, its level and skills
         line(sb, "Curator", Museum.curatorLine(f));         // the museum's keeper (Museum)
         line(sb, "In the museum", Museum.cardLine(f));      // its finds on show there
         line(sb, "Library", Library.cardLine(f));           // [library] the librarian, what it wrote, its trade's book read
@@ -437,6 +461,7 @@ public final class FolkTalk {
         line(sb, "About town", TownLook.cardLine(f));       // [batchE] its allotment, the bakery, the inn (TownLook)
         line(sb, "Town life", Civics.cardLine(f));          // [batchF] its letters, its quarter as warden, its good turns (Civics)
         line(sb, "The law", Crime.cardLine(f));             // [crime] its case, its record, robbed, cleared, a new leaf (Crime)
+        line(sb, "The watch", Police.cardLine(f));          // [police] today's duty and its record; the cells, the curfew, a bounty
         line(sb, "Fire and flood", Disasters.cardLine(f));  // [disasters] a bucket chain, the flood, a night away, the fire watch
         line(sb, "Votes and works", Referendums.cardLine(f));   // [civic] its vote, the works it built, where it came from
         line(sb, "Pastimes", Pastimes.cardLine(f));         // [leisure] its quilt, its draughts, its kite, its lute, its slate
@@ -448,7 +473,6 @@ public final class FolkTalk {
         if (!friends.isEmpty()) line(sb, "Friends", String.join(", ", friends));
         if (me.rolled()) {
             line(sb, "Loves", me.hobby().doing);
-            line(sb, "Hopes", me.ambitionMet() ? "done — " + me.ambition().done : me.ambition().hope);
             line(sb, "Feeling", Persona.moodWord(me.mood()));
         }
         java.util.List<String> needs = f.missingEssentials();
@@ -458,6 +482,7 @@ public final class FolkTalk {
         line(sb, "Birthday", Birthdays.cardLine(f));        // its birthday, its age and the next (Birthdays)
         line(sb, "The bell", TownBell.cardLine(f));         // when it answered today's bells (TownBell)
         line(sb, "Culture", Culture.cardLine(f));           // [batchD] the band, the choir, the stage, its pictures
+        line(sb, "Town ways", TownWays.cardLine(f));        // [culture2] its nickname, its town's soul, its faith, its dish
         line(sb, "Its town", Identity.cardLine(f));         // [identity] a true Seafarer; of the ruling house; chafes at the curfew
         return sb.toString();
     }
@@ -478,6 +503,8 @@ public final class FolkTalk {
         }
         if (!heard) return;
         text = Health.cough(f, text);                        // [batchA] a cough in it, with a cold
+        text = TownSpeech.local(f, text);                    // [culture2] its town's own words for the stores, the board, the coin
+        Manner.blip(f);                                      // [individual] the sound of its own voice
         String said = text.length() > 170 ? text.substring(0, 167) + "…" : text;
         int ticks = Math.min(200, 60 + said.length() * 2);
         PacketDistributor.sendToPlayersTrackingEntity(f, new FolkSpeechPayload(f.getId(), said, ticks));
@@ -517,7 +544,7 @@ public final class FolkTalk {
         if (life.has(Social.Trait.GENEROUS) && r.nextInt(5) == 0) {
             said += " " + pick(r, "If you ever need anything, just ask.", "Have you eaten? There's bread in the stores.");
         }
-        return said;
+        return TownSpeech.flavour(f, said, answering);       // [culture2] one of its town's sayings, now and then
     }
 
     private static String firstSentence(String s) {
@@ -679,10 +706,14 @@ public final class FolkTalk {
             case "proud" -> Museum.prideWords(f);
             case "letter", "meeting", "favour", "found" -> Civics.moodWords(f, why);   // [batchF]
             case "robbed", "repaid", "shamed", "cleared" -> Crime.moodWords(f, why);  // [crime]
+            case "cells", "fined", "helped" -> Police.moodWords(f, why);               // [police]
             case "builtit", "grateful", "clash" -> Referendums.moodWords(f, why);      // [civic]
+            case "faith", "remembrance", "alms", "larders", "reign", "cathedral",
+                 "homesick", "athome", "wander", "fearless", "tune" -> Perks.moodWords(f, why);   // [perks]
             case "windowbox" -> WindowBoxes.moodWords(f);                            // [workitems]
             case "interviewed", "passedover" -> Interviews.moodWords(f, why);          // [interviews]
             case "cake", "drink" -> Kitchen.moodWords(f, why);                         // [kitchen]
+            case "homecooking", "delicacy", "townfeast", "ownfeast", "blessed" -> TownWays.moodWords(f, why);   // [culture2]
             case "quilt", "warmquilt", "draughts", "kite", "kickabout", "lanterns" -> Pastimes.moodWords(f, why);   // [leisure]
             default -> "";
         };
@@ -693,6 +724,8 @@ public final class FolkTalk {
         Persona me = f.persona();
         if (f.isFollowing(p)) return pick(r, "Walking with you, of course!", "Following you. Where are we off to?");
         if (f.isSleeping()) return "Sleeping, until you woke me.";
+        String watch = Police.doingLine(f);                     // [police] a chase, a fight, the cells, an escort, walked home
+        if (watch != null) return capFirst(watch) + ".";
         String law = Crime.doing(f);                            // [crime] on a case, at a trial, in the stocks
         if (law != null) return capFirst(law) + ".";
         String rest = RestDay.now(f.ownerId(), f.level().getDayTime());
@@ -731,7 +764,7 @@ public final class FolkTalk {
                     ? "diamonds" : "iron") + ".";
             }
             case RANCH -> "Minding the animals" + place + ".";
-            case GUARD -> Patrols.doing(f);
+            case GUARD -> Police.doing(f);                      // [police] its duty on today's roster (else Patrols.doing)
             case SMELT -> "Running the furnaces" + place + ".";
             case FISH -> Fleet.doing(f, r, "Fishing for the village" + place + ".");   // [fleet] or out with the fleet
             case STORE -> "Keeping the stores in order. You wouldn't believe the mess.";
@@ -768,6 +801,10 @@ public final class FolkTalk {
             case GOLEMS -> Golems.doing(f, r);            // [golems] round the golems, or building one
             case FIREWORKS -> FireworksMaker.doing(f, r); // [fireworks] at the powder hut, or at the rack
             case CARTOGRAPHER -> Cartographers.doing(f, r);   // [cartographer] at the table, or out walking with a sheet
+            case EMERALD -> EmeraldTrader.doing(f, r);    // [emerald] on the road to the villagers, at their stalls, or home
+            case DIVER -> Divers.doing(f, r);             // [diver] on the bed of the water, at the shed, or watching it
+            case NETHER -> NetherRunners.doing(f, r);     // [nether] through the gateway, or resting from the last run
+            case REDSTONE -> Engineers.doing(f, r);       // [redstone] at the bench, or at a machine
         };
         if (!f.missingEssentials().isEmpty()) work += " Or I would be, if I had " + f.missingEssentials().get(0) + ".";
         if (f.life().has(Social.Trait.HARDWORKING) && r.nextBoolean()) work += " Can't stop long.";
@@ -788,6 +825,8 @@ public final class FolkTalk {
         sb.append("I ").append(me.quirkOfMine()).append(". ");
         sb.append("When I've time to myself it's ").append(me.hobby().doing).append(", ");
         sb.append("and I'd do anything for ").append(foodWords(me.food())).append('.');
+        String story = Individual.about(f);                   // [individual] where it came from, the big moments of its life
+        if (!story.isEmpty()) sb.append(' ').append(story);
         return sb.toString();
     }
 
@@ -890,6 +929,7 @@ public final class FolkTalk {
             case NETHER, GREAT_WORK -> " We're in " + (f.ownerId() == null ? "no age at all" : Villages.ageOf(f.ownerId()).label) + " now.";
             case GARDEN -> " " + me.flowersPlanted() + " flowers planted so far.";
             case WELL_FED -> " Full stores, that's all I ask.";
+            case MARRY, SEE_THE_SEA, OWN_HOUSE, WRITE_BOOK, GO_NETHER, LEAD, BIG_FAMILY, RICH -> Dreams.progress(f);   // [individual]
         };
         return pick(r, "Me? I want ", "One day I'd like ", "What I really want is ") + me.ambition().hope + "." + progress;
     }
@@ -1060,6 +1100,8 @@ public final class FolkTalk {
         int aff = f.persona().affinity(p.getUUID());
         if (aff <= -15) return pick(r, "Good.", "Finally.");
         if (f.life().has(Social.Trait.GRUMPY)) return pick(r, "Right. Back to it.", "Mm. Bye.");
+        String farewell = TownSpeech.bye(f, p);              // [culture2] its town's own farewell ("Fair winds to you!")
+        if (farewell != null) return farewell;
         if (aff >= 55) return pick(r, "Come back soon, " + p.getName().getString() + "!", "Take care of yourself!");
         return pick(r, "Goodbye!", "See you around.", "Safe travels.", "Mind how you go.");
     }
@@ -1122,6 +1164,11 @@ public final class FolkTalk {
         if (letter != null) return letter;
         String worn = Fashion.gifted(f, p, held);           // [fashion] a garment: put on there and then
         if (worn != null) return worn;
+        if (Keepsakes.takeSpectacles(f, held)) {             // [individual] spectacles for old eyes: on, there and then
+            if (!p.getAbilities().instabuild) held.shrink(1);
+            f.persona().feelFor(p.getUUID(), you, 12);
+            return pick(r, "Spectacles! Oh — I can see your face properly at last. Thank you!", "For me? Well, look at that: I can read again!");
+        }
         long day = f.level().getDayTime() / 24000L;
         Persona.Opinion op = me.opinionOf(p.getUUID(), you);
         if (op.lastGiftDay != day) { op.lastGiftDay = day; op.giftsToday = 0; }
@@ -1300,9 +1347,14 @@ public final class FolkTalk {
         // [crime] The watch's business: a theft, a vandal, what a witness saw, a thing found at the scene.
         if (has(t, "theft", "thief", "steal", "stole", "robbed", "robber", "pickpocket", "vandal", "crime", "witness", "who did it",
                 "anything amiss", "seen anything", "report a", "the culprit", "evidence", "found this", "a clue", "forged", "forger",
-                "poach", "smuggl", "constable", "the stocks", "suspect")
+                "poach", "smuggl", "constable", "the stocks", "suspect",
+                // [police] the watch as the town's police: swearing in, the patrol, bounties, bail, the roster, the curfew
+                "swear me", "sworn in", "swear in", "deputy", "deputise", "deputize", "the patrol", "on patrol", "who's wanted",
+                "who is wanted", "anyone wanted", " bail", "roster", "on duty", "curfew", "watch house", "the cells", "prisoner")
                 || has(t, "i saw") && has(t, " take", " took", " steal", " stole", " broke", " break", " smash", " pinch", " nick",
                     " did it", " do it", " purse", " window", " lamp", " fence")) return TalkTopic.WATCH;
+        // [nether] The Nether runners: their chart, going through with them, the Nether itself: before the maps and the guide.
+        if (has(t, "nether", "piglin", "ghast", "blaze", "the runners", "come through", "runners' chart", "runners chart")) return TalkTopic.NETHER;
         // [caves] The cave team's map, going along with the team, an ask of it: before the town's map and the guide.
         if (has(t, "cave map", "map of the caves", "caves map", "cave team", "delvers", "come down the caves", "come caving",
                 "go caving")) return TalkTopic.CAVES;
@@ -1420,6 +1472,8 @@ public final class FolkTalk {
         if (aff <= -50) return pick(r, "…", "Keep walking.", "Hmph.");
         if (aff <= -15) return pick(r, "Oh. You.", "Hm.");
         if (f.life().has(Social.Trait.GRUMPY) && aff < 30) return pick(r, "Hm.", "Mm.", "'Lo.");
+        String town = TownSpeech.passing(f, p);              // [culture2] its town's own hello ("Steady stone, Alex.")
+        if (town != null) return town;
         if (aff >= 55) return pick(r, you + "! Lovely to see you.", "Hello, " + you + "!", "There's my friend " + you + "!");
         if (aff >= 20) return pick(r, timeOfDay(f) + ", " + you + ".", "Hello, " + you + ".", "Oh, hi " + you + ".");
         return pick(r, timeOfDay(f) + ".", "Hello there.", "Afternoon, stranger.", "Hello!");
@@ -1527,7 +1581,10 @@ public final class FolkTalk {
         List<Villages.News> n = Villages.news(village);
         if (!n.isEmpty()) said.add("Did you hear? " + cap(n.get(0).text()) + ".");
         said.addAll(Crime.gossip(f));                   // [crime] a thief about, who was had up, who sat in the stocks
+        said.addAll(Police.gossip(f));                  // [police] the chase, the arrest, a fight in the street, the curfew
         said.addAll(QuestTalk.gossip(f, p));                  // [quests] who did what for whom, and the story going on
+        said.addAll(TownSpeech.gossip(f));                    // [culture2] who the town calls what now, and why
+        said.addAll(Individual.gossip(f));                    // [individual] who's afraid of what, who's always where
         if (said.isEmpty()) return pick(r, "Nothing worth repeating. It's been quiet.", "Gossip? Me? Never.");
         String line = said.get(r.nextInt(said.size()));
         if (f.life().has(Social.Trait.SHY)) line = "Oh — well, I shouldn't, but… " + line;

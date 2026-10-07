@@ -270,6 +270,8 @@ public final class Gazette {
         entries.add(TradeDeals.gazette(level, v, day));          // [econ-trade] the deals with the neighbours, and yesterday's caravans
         String quay = Fleet.gazette(id, day);                     // [fleet] the fleet's catch and the fish market
         if (quay != null) entries.add(quay);
+        String waterside = Divers.gazette(id, day);               // [diver] the kelp blocks, the clay, a rescue
+        if (waterside != null) entries.add(waterside);
         String auction = Auctions.gazette(id, day);               // [fleet] what sold at the auction, and to whom
         if (auction != null) entries.add(auction);
         String books = Library.gazette(id, day);                    // [library] yesterday's new books and editions
@@ -288,6 +290,8 @@ public final class Gazette {
         if (kitchen != null) entries.add(kitchen);
         String crime = Crime.gazette(level, id, day);              // [crime] the watch and the court
         if (crime != null) entries.add(crime);
+        String police = Police.gazette(level, id, day);            // [police] the chase, the arrests, the cells, the curfew
+        if (police != null) entries.add(police);
         String disasters = Disasters.gazette(level, v, day);        // [disasters] the weather's danger, yesterday's fire or flood
         if (disasters != null) entries.add(disasters);
         String word = PlayerLeader.gazette(level, id, day);         // [player-civic] the leader's promises, kept and broken

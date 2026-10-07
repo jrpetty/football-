@@ -256,6 +256,7 @@ public final class Budget {
         // work, the tailor's banners and rugs — is the village's to sell whenever it has it: nobody
         // here needs an enchanted pick to eat.
         if (luxury(sample)) return Market.stock(level, village, s -> ItemStack.isSameItemSameComponents(s, sample));
+        if (Cuisine.isDish(sample)) return Cuisine.spare(level, village, sample);   // [culture2] the cook's to sell, two kept for the feast
         Books b = books(level, village);
         int held = b.held.getOrDefault(sample.getItem(), 0);
         int keep = keep(b, sample);

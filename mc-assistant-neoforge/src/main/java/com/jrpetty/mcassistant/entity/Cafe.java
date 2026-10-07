@@ -201,6 +201,9 @@ public final class Cafe {
         out.add(Stockroom.ware(Items.GLASS_PANE, 8, 0, 24, 16, false));
         out.add(Stockroom.ware(Items.BUCKET, 1, 1, 4, 1, false));
         out.add(Stockroom.ware(Items.SHEARS, 1, 1, 3, 1, false));
+        // [diver] The diver's kelp blocks for a player's furnace, and a turtle helmet of the beach's scutes (Divers).
+        out.add(Stockroom.ware(Items.DRIED_KELP_BLOCK, 4, 0, 16, 1, false));
+        out.add(Stockroom.ware(Items.TURTLE_HELMET, 1, 0, 1, 1, false));
         for (Item tool : new Item[]{ Items.STONE_PICKAXE, Items.STONE_AXE, Items.STONE_HOE, Items.STONE_SHOVEL, Items.STONE_SWORD }) {
             out.add(Stockroom.ware(tool, 1, 1, 4, 1, false));
         }
@@ -343,8 +346,9 @@ public final class Cafe {
     /** What the café has ready, drinks first: one of each, up to a counterful. */
     public static List<ItemStack> menuGoods(ServerLevel level, UUID village) {
         // What the village can spare (Budget): no bread off the counter while the larder is low.
-        return fromStores(level, village, s -> (isDrink(s) || MENU.stream().anyMatch(s::is)
-            || Kitchen.onMenu(level, village, s)) && Budget.spare(level, village, s) > 0, true);   // [kitchen] the fish pie; cider, tea in season
+        return Cuisine.ownFirst(village, fromStores(level, village, s -> (isDrink(s) || MENU.stream().anyMatch(s::is)
+            || Kitchen.onMenu(level, village, s)                                                   // [kitchen] the fish pie; cider, tea in season
+            || Cuisine.isDish(s)) && Budget.spare(level, village, s) > 0, true));                  // [culture2] the town's dish, by the door
     }
 
     private static final List<Item> MENU = List.of(Items.BAKED_POTATO, Items.COOKIE, Items.PUMPKIN_PIE, Items.COOKED_BEEF,
@@ -397,7 +401,7 @@ public final class Cafe {
     }
 
     private static int rank(ItemStack s, boolean drinksFirst) {
-        if (drinksFirst) return isDrink(s) ? 2 : 1;
+        if (drinksFirst) return isDrink(s) || Cuisine.isDish(s) ? 2 : 1;   // [culture2] a dish is never cut off a full counter
         if (s.isEnchanted()) return 4;
         if (s.is(Items.POTION)) return 3;
         if (s.isDamageableItem()) return 2;

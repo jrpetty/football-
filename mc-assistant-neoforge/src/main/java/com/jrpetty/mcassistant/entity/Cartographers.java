@@ -231,7 +231,7 @@ public final class Cartographers {
         if (f.trip() != null || f.expedition() != null) return false;
         StationTask t = f.stationTask();
         if (t == StationTask.CARTOGRAPHER || t == StationTask.BANK || t == StationTask.CAVE || t == StationTask.FERRY
-            || t == StationTask.FLETCHER || t == StationTask.GOLEMS) return false;
+            || t == StationTask.FLETCHER || t == StationTask.GOLEMS || t == StationTask.NETHER) return false;   // [nether]
         if (t == StationTask.STORE && hands(id, t) < 2) return false;
         // Never the last of a trade the town is short of; a scout leaves the scouting to the others.
         if (t != StationTask.NONE && t != StationTask.SCOUT && !Villages.overStaffed(id, t) && hands(id, t) < 3) return false;

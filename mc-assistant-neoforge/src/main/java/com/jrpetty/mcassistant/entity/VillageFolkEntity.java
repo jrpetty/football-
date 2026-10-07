@@ -112,7 +112,8 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     public int traitUpkeepPercent() {
         // And the town's Granaries (CityTree) make the larder go a tenth further: meals a little further apart.
-        return super.traitUpkeepPercent() * 9 / 4 * CityTree.mealPercent(ownerId()) / 100;
+        return super.traitUpkeepPercent() * 9 / 4 * CityTree.mealPercent(ownerId()) / 100
+            * Quirks.upkeepPercent(this) / 100;                                                 // [perks] an Iron Stomach's 120
     }
 
     /**
@@ -154,6 +155,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // [guard-kit] A guard going to live in another town leaves the watch's kit in its old town's stores.
         if (ownerId() != null && !ownerId().equals(village) && stationTask() == StationTask.GUARD) WatchKit.handBack(this, "leaving the town");
         if (ownerId() != null && !ownerId().equals(village) && stationTask() == StationTask.CAVE) CaveDwellers.handBack(this, "leaving the town");   // [caves]
+        if (ownerId() != null && !ownerId().equals(village) && stationTask() == StationTask.NETHER) NetherRunners.handBack(this, "leaving the town");   // [nether]
         this.villageCentre = centre;
         adoptVillage(village);
         setHome(centre);
@@ -279,7 +281,13 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     @Nullable
     protected net.minecraft.sounds.SoundEvent getAmbientSound() {
-        return net.minecraft.sounds.SoundEvents.VILLAGER_AMBIENT;
+        return Manner.voice(this).sound;                       // [individual] a hum, a murmur, a grunt or a chirp, as it is made
+    }
+
+    /** [individual] Its own voice: by its sex, its years and its size (Manner.basePitch), on every sound it makes. */
+    @Override
+    public float getVoicePitch() {
+        return Manner.pitch(this);
     }
 
     @Override
@@ -320,6 +328,9 @@ public class VillageFolkEntity extends AssistantEntity {
             FolkTalk.speak(this, laterLine);
             laterLine = null;
         }
+        // [nether] Out on a Nether run, on either side of the gateway (or one of the town's in the Nether by itself): the
+        // run is its day, and nothing of the town's that would send it home to bed or the square reaches it (NetherRuns).
+        if (level() instanceof net.minecraft.server.level.ServerLevel runs && NetherRuns.hold(this, runs)) return;
         if (tickCount % 20 == 17) Aboard.step(this);           // [mine-safety] out of a boat it never meant to board
         if (tickCount % 20 == 3) persona.town = ownerId();      // [identity] how fast it trusts a player is its town's (Treatment)
         // [transport] Sat in a cart or the ferry: the ride (or the rowing) is its day till it is off again.
@@ -327,6 +338,9 @@ public class VillageFolkEntity extends AssistantEntity {
             Transport.hold(this, riding);
             return;
         }
+        // [diver] A diver on a dive is steered a tick at a time (its swim, its breath, its work); one being pulled out of
+        // the water is held; a guard out with the diver at the monument keeps at its shoulder (Divers).
+        if (level() instanceof net.minecraft.server.level.ServerLevel diving && Divers.hold(this, diving)) return;
         // [batchG] A visitor from afar (the bard, a tourist, the merchant), one of ours away for the day at a friend's
         // in another town, or a guard out taming a dog for the watch: that is its day (Visitors).
         if (Visitors.drive(this)) return;
@@ -338,6 +352,7 @@ public class VillageFolkEntity extends AssistantEntity {
             Auctions.tick(quay, ownerId());
         }
         Leisure.tick(this);
+        Individual.tick(this);                                 // [individual] its looks, its manner, its keepsake, its dream
         if (tickCount % 100 == 53) Meals.tick(this);           // breakfast, the midday meal, supper
         if (tickCount % 20 == 15 && level() instanceof net.minecraft.server.level.ServerLevel kitchen) Kitchen.second(this, kitchen);   // [kitchen] a lunch packed, a wound bound
         // [fleet] Out with the fishing fleet: down the quay, rowing, fishing, home with the catch (Fleet). Before the storm
@@ -454,6 +469,10 @@ public class VillageFolkEntity extends AssistantEntity {
         // [fields] A short errand with its tools: the can filled at the rain barrel, the nesting box emptied, the fish traps
         // gone round on a day the boats stay in, the garden watered of an evening (FieldTools).
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel fieldLevel && FieldTools.hold(this, fieldLevel)) return;
+        // [police] The watch's own business before the law's: a prisoner in the cells or on the lead, a folk running to the
+        // watch or from it, in a fight or walked home; a guard on an incident, a prisoner in hand, or posted at a gathering (Police).
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel policeLevel
+                && (tickCount % 4 == 1 ? Police.hold(this, policeLevel) : Police.busy(this))) return;
         // [crime] The law first: in the stocks or at its community work, called to a trial, a guard on a case; or a folk up
         // to no good in its own free time (Crime).
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel lawLevel
@@ -528,6 +547,9 @@ public class VillageFolkEntity extends AssistantEntity {
         // [batchF] The town's affairs (Civics): out with a search party, the post, a warden's round, a petition, a good turn.
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel civic
                 && (tickCount % 4 == 3 ? Civics.hold(this, civic) : Civics.busy(this))) return;
+        // [individual] Its own life: home before dark, off at the sight of a monster; its habits at their hours (Individual).
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel own
+                && (tickCount % 2 == 0 ? Individual.hold(this, own) : Individual.busy(this))) return;
         if (tickCount - agendaTick < 100) return;   // folk think slowly, on purpose
         agendaTick = tickCount;
         flyTheColours();
@@ -556,6 +578,7 @@ public class VillageFolkEntity extends AssistantEntity {
                     Golems.look(polls, home);            // [golems] its golem keeper, after the raids
                     FireworksMaker.tick(polls, home);    // [fireworks] a Stone Age town takes up fireworks: the hut, the maker
                     Cartographers.tick(polls, home);     // [cartographer] the town chooses its cartographer once its map room stands
+                    Divers.tick(polls, home);            // [diver] a town by the water finds it, and takes up its diver
                     PlayerCivic.tick(polls, home);       // [player-civic] the campaign, a player leader's morning, young apprentices' journals
                 }
             }
@@ -789,7 +812,8 @@ public class VillageFolkEntity extends AssistantEntity {
         java.util.function.Predicate<net.minecraft.world.item.ItemStack> tool = Cafe.toolFor(stationTask());
         boolean forWork = tool != null && countCarried(tool) == 0
             && stationTask() != StationTask.GUARD;     // [guard-kit] the watch's blade is issued (WatchKit), never bought
-        boolean treat = Wealth.tier(this).ordinal() >= Wealth.Tier.WELL_OFF.ordinal() && Math.floorMod(getUUID().hashCode() + day, 4L) == 0;
+        boolean treat = Wealth.tier(this).ordinal() >= Wealth.Tier.WELL_OFF.ordinal() && Math.floorMod(getUUID().hashCode() + day, 4L) == 0
+            && !Dreams.saving(this);                    // [individual] not while it saves for its dream
         if (!forWork && !treat) { shopDay = day; return false; }
         BlockPos shop = Villages.builtAt(village, "shop");
         if (shop == null || !Cafe.open(village, "shop")) { shopDay = day; return false; }
@@ -823,7 +847,7 @@ public class VillageFolkEntity extends AssistantEntity {
      */
     private boolean cafeVisit(net.minecraft.server.level.ServerLevel server) {
         UUID village = ownerId();
-        if (village == null || purse < 2 || isBaby()) return false;
+        if (village == null || purse < 2 || isBaby() || Dreams.saving(this)) return false;   // [individual] saving for its dream
         long day = level().getDayTime() / 24000L;
         if (cafeDay == day) return false;
         if (Math.floorMod(getUUID().hashCode() + day, 3L) != 0) { cafeDay = day; return false; }
@@ -1231,11 +1255,15 @@ public class VillageFolkEntity extends AssistantEntity {
         m = Health.mood(this, day, m, why);             // [batchA] a cold (Health)
         m = Civics.mood(this, day, m, why);             // [batchF] a letter, the town meeting, a good turn, found and home
         m = Crime.mood(this, day, m, why);              // [crime] robbed, paid back, shamed, wrongly accused and cleared
+        m = Police.mood(this, day, m, why);             // [police] a night in the cells, a fine, helped by the watch
         m = Referendums.mood(this, day, m, why);        // [civic] proud of the work it built; a newcomer's gratitude
+        m = Individual.mood(this, day, m, why);         // [individual] a dream come true, a habit kept, its season, a fright
         m = WindowBoxes.mood(this, day, m, why);        // [workitems] its household's window boxes in flower
         m = Interviews.mood(this, day, m, why);          // [interviews] a post won at interview, or missed
         m = Kitchen.mood(this, day, m, why);            // [kitchen] a slice of honey cake at the wedding, a mead at the tavern
+        m = TownWays.mood(this, day, m, why);           // [culture2] its town's dish, its own festival, a rite's blessing
         m = Pastimes.mood(this, day, m, why);           // [leisure] a night under a quilt, a game won, a kite, a kickabout, the lanterns
+        m = Perks.mood(this, day, m, why);              // [perks] Vespers, Remembrance, the almshouse, the Cathedral, its quirks
         why.sort((a, b) -> Integer.compare((Integer) b[1], (Integer) a[1]));
         java.util.List<String> keys = new java.util.ArrayList<>();
         for (Object[] w : why) keys.add((String) w[0]);
@@ -1304,7 +1332,10 @@ public class VillageFolkEntity extends AssistantEntity {
         addPacePart(parts, "the town's research", research);
         addPacePart(parts, Library.paceWord(this), Library.workPercent(this));          // [library] its trade's book, read
         addPacePart(parts, FieldTools.paceWord(), FieldTools.workPercent(this));         // [fields] seed at its hip: a field sown a trip
-        addPacePart(parts, "its knacks", skillWorkPercent() - research - Library.workPercent(this) - FieldTools.workPercent(this));
+        addPacePart(parts, "its spectacles", Keepsakes.spectaclesPercent(this));         // [individual] old eyes at close work
+        addPacePart(parts, "its quirks", Perks.workPercent(this));                       // [perks] an early bird's morning, clumsy hands
+        addPacePart(parts, "its knacks", skillWorkPercent() - research - Library.workPercent(this) - FieldTools.workPercent(this)
+            - Keepsakes.spectaclesPercent(this) - Perks.workPercent(this));
     }
 
     // ------------------------------ a level in every trade ------------------------
@@ -1370,6 +1401,8 @@ public class VillageFolkEntity extends AssistantEntity {
     protected void tradeTakenUp(StationTask from, StationTask to) {
         if (from == StationTask.GUARD && to != StationTask.GUARD) WatchKit.handBack(this, "off the watch");   // [guard-kit] the town's kit
         if (from == StationTask.CAVE && to != StationTask.CAVE && to != StationTask.GUARD) CaveDwellers.handBack(this, "out of the caves");   // [caves]
+        if (from == StationTask.DIVER && to != StationTask.DIVER) Divers.handBack(this, "out of the water");   // [diver] its helmet to the stores
+        if (from == StationTask.NETHER && to != StationTask.NETHER) NetherRunners.handBack(this, "off the Nether runs");   // [nether]
         if (tickCount < 40 || to == StationTask.NONE || !persona.rolled()) return;    // loading, or not settled yet
         long day = level().getDayTime() / 24000L;
         int lv = tradeLevel(to);
@@ -1390,7 +1423,9 @@ public class VillageFolkEntity extends AssistantEntity {
         return CityTree.workPercent(ownerId(), stationTask()) + FolkSkills.workPercent(this)
             + Library.workPercent(this)                                                         // [library] its trade's book, read
             + FieldTools.workPercent(this)                                                      // [fields] its seed satchel
-            + Ethos.workPercent(ownerId(), stationTask());                                      // [identity] a practical town; Golden Fields, Seafarers
+            + Keepsakes.spectaclesPercent(this)                                                 // [individual] spectacles on old eyes
+            + Ethos.workPercent(ownerId(), stationTask())                                       // [identity] a practical town; Golden Fields, Seafarers
+            + Perks.workPercent(this);                                                          // [perks] its quirks
     }
 
     /** A good mood makes for quick hands, a black one for slow ones. */
@@ -1399,6 +1434,9 @@ public class VillageFolkEntity extends AssistantEntity {
         int m = persona.mood();
         return m >= 80 ? 8 : m >= 65 ? 4 : m < 30 ? -10 : m < 45 ? -4 : 0;
     }
+
+    /** [individual] Tests: its look at whether its dream has come true, now. */
+    public void dreamCheckForTests() { dreamCameTrue(); }
 
     /** Has what it hoped for come true? Once it has, it is remembered for good. */
     private void dreamCameTrue() {
@@ -1417,12 +1455,15 @@ public class VillageFolkEntity extends AssistantEntity {
                 && persona.since() >= 0 && level().getDayTime() / 24000L - persona.since() >= 6
                 && Villages.stock(server, villageCentre, Villages.Task.FOOD, Villages.storesRadius(village))
                     >= 2 * com.jrpetty.mcassistant.village.VillageMath.foodWanted(Villages.headcount(village));
+            // [individual] The dreams of a life (Dreams).
+            case MARRY, SEE_THE_SEA, OWN_HOUSE, WRITE_BOOK, GO_NETHER, LEAD, BIG_FAMILY, RICH -> Dreams.met(this);
         };
         if (!met) return;
         long day = level().getDayTime() / 24000L;
         persona.meetAmbition();
         persona.remember(day, FolkTalk.cap(persona.ambition().done), 10);
-        if (village != null) Villages.tell(village, day, displayNameCap() + "'s dream came true");
+        Dreams.cameTrue(this, day);                    // [individual] days of delight, and a new dream after them
+        if (village != null) Villages.tell(village, day, Dreams.news(this));
         FolkTalk.speak(this, "I did it! " + FolkTalk.cap(persona.ambition().done) + "!");
         if (level() instanceof net.minecraft.server.level.ServerLevel server) {
             server.sendParticles(net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER,
@@ -1455,6 +1496,7 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     public boolean hurt(net.minecraft.world.damagesource.DamageSource source, float amount) {
         boolean took = super.hurt(source, amount);
+        if (took) Individual.wounded(this, source, amount);   // [individual] a real wound leaves a scar
         if (took && !level().isClientSide && source.getEntity() instanceof net.minecraft.world.entity.player.Player p
                 && persona.rolled()) {
             long day = level().getDayTime() / 24000L;
@@ -1534,13 +1576,16 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     public void die(net.minecraft.world.damagesource.DamageSource cause) {
         if (!level().isClientSide) WarAndPeace.died(this, cause, level().getDayTime() / 24000L);   // [war-peace] lost to the war (before its errand is let go)
+        if (!level().isClientSide) NetherRuns.fell(this, cause);         // [nether] lost on a Nether run: the team and the town know where
         if (!level().isClientSide) Fashion.died(this);                   // [fashion] what it wore falls where it fell, with its pack
+        if (!level().isClientSide) Individual.died(this);                // [individual] its keepsake to its eldest child; mourned
         if (trip != null && level() instanceof net.minecraft.server.level.ServerLevel road) Caravans.abandon(road, this);
         if (level() instanceof net.minecraft.server.level.ServerLevel horses) Riding.fell(horses, this);   // a horse it had out (Riding)
         if (expedition != null && level() instanceof net.minecraft.server.level.ServerLevel land) {
             UUID home = ownerId();
             if (home != null) Villages.tell(home, level().getDayTime() / 24000L, displayNameCap() + (expedition.delve() != null
-                ? " was lost in the caves " : " was lost while scouting the ") + expedition.heading());          // [caves]
+                ? " was lost in the caves " : expedition.venture() != null ? " was lost on the road " : " was lost while scouting the ")
+                + expedition.heading());          // [caves] [emerald]
             Scouts.abandon(land, this);
         }
         UUID village = ownerId();
@@ -1557,6 +1602,7 @@ public class VillageFolkEntity extends AssistantEntity {
             if (!passing) Plaques.fell(this, how, day);                                 // [batchD] a plaque where a hero fell (Plaques)
             com.jrpetty.mcassistant.village.Ledger.buried(village, new com.jrpetty.mcassistant.village.Ledger.Grave(
                 displayNameCap(), bornDay, day, how, life.parents(), life.partnerName(), stationTask().title));
+            Beliefs.died(this, day);                                                    // [culture2] to the sea, a cairn, or the yard
             Villages.tell(village, day, passing
                 ? displayNameCap() + " died peacefully in their sleep, aged " + age
                 : displayNameCap() + " died, aged " + age + ", " + how);
@@ -1643,6 +1689,69 @@ public class VillageFolkEntity extends AssistantEntity {
         builder.define(DATA_WEALTH, 1);
         builder.define(DATA_CHILD, false);
         builder.define(DATA_STYLE, 0L);                 // [fashion]
+        builder.define(DATA_POLICE, 0);                 // [police]
+        builder.define(DATA_LOOK, 0L);                  // [individual]
+        builder.define(DATA_MARKS, 0);
+        builder.define(DATA_MANNER, 0);
+    }
+
+    /** [police] The watch's duty and kit, for its clothes (Police.flags, client/WatchLayer): the duty, the constable, the badge. */
+    private static final net.minecraft.network.syncher.EntityDataAccessor<Integer> DATA_POLICE =
+        net.minecraft.network.syncher.SynchedEntityData.defineId(
+            VillageFolkEntity.class, net.minecraft.network.syncher.EntityDataSerializers.INT);
+
+    public int clientPolice() { return this.entityData.get(DATA_POLICE); }
+
+    public void showPolice(int flags) {
+        if (this.entityData.get(DATA_POLICE) != flags) this.entityData.set(DATA_POLICE, flags);
+    }
+
+    // ------------------------------ [individual] its own: face, body, manner, life ------------
+
+    /** Its genes, its marks, its fears, habits, dream, keepsake and story (Individual). Saved with it. */
+    private final Individual.Self self = new Individual.Self();
+
+    public Individual.Self individual() { return self; }
+
+    /** Its face as it is (Looks.pack), its marks (Individual.marks), and how it carries itself (Manner.pack): the
+     *  client draws it from these three numbers, sent only when they change. */
+    private static final net.minecraft.network.syncher.EntityDataAccessor<Long> DATA_LOOK =
+        net.minecraft.network.syncher.SynchedEntityData.defineId(
+            VillageFolkEntity.class, net.minecraft.network.syncher.EntityDataSerializers.LONG);
+    private static final net.minecraft.network.syncher.EntityDataAccessor<Integer> DATA_MARKS =
+        net.minecraft.network.syncher.SynchedEntityData.defineId(
+            VillageFolkEntity.class, net.minecraft.network.syncher.EntityDataSerializers.INT);
+    private static final net.minecraft.network.syncher.EntityDataAccessor<Integer> DATA_MANNER =
+        net.minecraft.network.syncher.SynchedEntityData.defineId(
+            VillageFolkEntity.class, net.minecraft.network.syncher.EntityDataSerializers.INT);
+
+    public long clientLook() { return this.entityData.get(DATA_LOOK); }
+
+    public int clientMarks() { return this.entityData.get(DATA_MARKS); }
+
+    public int clientManner() { return this.entityData.get(DATA_MANNER); }
+
+    public void showLook(long look, int marks) {
+        if (this.entityData.get(DATA_LOOK) != look) this.entityData.set(DATA_LOOK, look);
+        if (this.entityData.get(DATA_MARKS) != marks) this.entityData.set(DATA_MARKS, marks);
+    }
+
+    public void showManner(int manner) {
+        if (this.entityData.get(DATA_MANNER) != manner) this.entityData.set(DATA_MANNER, manner);
+    }
+
+    /**
+     * [individual] Its height in its hitbox, a little: a short folk's box is a touch lower, a tall one's never higher
+     * than a villager's, so the tallest still walks through a door two blocks high and lies in a bed like anybody.
+     * Its picture is drawn at its full height (client/FolkRenderer).
+     */
+    @Override
+    protected net.minecraft.world.entity.EntityDimensions getDefaultDimensions(net.minecraft.world.entity.Pose pose) {
+        net.minecraft.world.entity.EntityDimensions base = super.getDefaultDimensions(pose);
+        if (this.entityData == null || pose == net.minecraft.world.entity.Pose.SLEEPING) return base;
+        long look = this.entityData.get(DATA_LOOK);
+        if (!Looks.known(look)) return base;
+        return base.scale(1.0F, Individual.hitboxScale(Looks.heightOfStep(Looks.heightStepOf(look))));
     }
 
     /** [fashion] Its style (Fashion): its colours, what it wears of its own, how it stands with the season's look. */
@@ -1683,7 +1792,7 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     public void onSyncedDataUpdated(net.minecraft.network.syncher.EntityDataAccessor<?> key) {
         super.onSyncedDataUpdated(key);
-        if (DATA_CHILD.equals(key)) refreshDimensions();
+        if (DATA_CHILD.equals(key) || DATA_LOOK.equals(key)) refreshDimensions();   // [individual] its height
     }
 
     /** The village's colours, for the client: a guard's tabard and shield are dyed in them. */
@@ -1713,6 +1822,7 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected void ateFood(net.minecraft.world.item.ItemStack meal) {
         meals.ate(level().getGameTime(), meal.getHoverName().getString());
+        Cuisine.ate(this, meal);                                    // [culture2] its town's own dish, or a neighbour's
     }
 
     /** One meal's worth out of the village's stores and into the pack (Meals), booked; how many came. */
@@ -1775,7 +1885,7 @@ public class VillageFolkEntity extends AssistantEntity {
             boolean partners = other.getUUID().equals(life.partner());
             if (offWork) getLookControl().setLookAt(other, 30.0F, 30.0F);
             if (!partners && life.partner() == null && other.life.partner() == null && !isBaby() && !other.isBaby()
-                    && now >= 75 && other.life.affinity(getUUID()) >= 75
+                    && now >= Beliefs.weddingWarmth(village) && other.life.affinity(getUUID()) >= Beliefs.weddingWarmth(village)   // [culture2] sooner by the Hearth
                     && !life.parents().contains(other.displayNameCap()) && !other.life.parents().contains(displayNameCap())) {
                 courted(other, server, village);
             }
@@ -1872,6 +1982,7 @@ public class VillageFolkEntity extends AssistantEntity {
                 double len = Math.max(0.1, Math.sqrt(dx * dx + dz * dz));
                 BlockPos away = surfaceAt((int) (getX() + dx / len * 10), (int) (getZ() + dz / len * 10));
                 if (away != null) walkTo(away, 1.0D);
+                Incidents.quarrel(server, this, other, day);    // [police] now and then it comes to blows, and the watch is called
             }
             refreshMood();
             other.refreshMood();
@@ -1919,6 +2030,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (day - bornDay >= GROW_DAYS) {
             setChild(false);
             persona.remember(day, "I grew up", 8);
+            Individual.cameOfAge(this, day);                  // [individual] its own hair, its letters, a child's fears outgrown
             UUID village = ownerId();
             // An apprentice takes up the trade it learned, unless the village has more than enough
             // hands at it already, and starts it with a few years' knack already in its hands.
@@ -2253,6 +2365,7 @@ public class VillageFolkEntity extends AssistantEntity {
             if (away != null) { walkTo(away, 0.9D); socialWalkTick = tickCount; }
             return;
         }
+        if (Habits.favouritePlace(this, server)) return;   // [individual] its favourite spot in town
         if (homeComfort(server)) return;              // its savings, spent on its home
         if (Fashion.shopping(this, server)) return;   // [fashion] to the shop for the season's look it wants
         if (PlayerStalls.errand(this, server)) return;   // a player's stall on the square, for what it wants (PlayerStalls)
@@ -2540,6 +2653,8 @@ public class VillageFolkEntity extends AssistantEntity {
      */
     @Override
     protected boolean bedFit(BlockPos bed) {
+        // [emerald] A bed in a village of the game's villagers is a villager's: no folk ever sleeps in one (TwoPeoples).
+        if (VanillaVillages.within(level(), bed.getX(), bed.getZ(), 0)) return false;
         if (!level().hasChunkAt(bed)) return true;                   // out of sight: as it was
         UUID village = ownerId();
         if (village == null) {
@@ -2646,6 +2761,8 @@ public class VillageFolkEntity extends AssistantEntity {
         // The town bell (TownBell): the day's work from the dawn bell to the dusk bell, and the bell's own business first.
         Boolean bell = TownBell.shift(this);
         if (bell != null) return bell;
+        Boolean roster = Police.shift(this);                // [police] a guard's day off on the roster; every guard out to a fire or flood
+        if (roster != null) return roster;
         if (stationTask() != StationTask.GUARD || shift() != Shift.ALWAYS || !level().isNight()) return super.onShift();
         return firstWatch() == (level().getDayTime() % 24000L < MIDNIGHT);
     }
@@ -3116,6 +3233,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // The storehouse's couriers wait at its door between runs; they are not lent out.
         if (stationTask() == StationTask.HAUL && Couriers.employed(this)) return;
         if (workedOut() && lendAHand()) return;        // my trade has nothing: help
+        if (Engineers.abroad(this)) return;            // [redstone] a machine in hand: the town's buildings can wait for it
         considerVillageWork();
     }
 
@@ -3766,7 +3884,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // before it lost its trade (married into another town, moved away, gave up
         // its fishing) stood about with none for up to two minutes more.
         if (stationTask() == StationTask.NONE) {
-            setStation(blockPosition(), Villages.needed(ownerId()));
+            setStation(blockPosition(), Fears.steer(this, Villages.needed(ownerId())));   // [individual] not a trade it fears
         }
         // Looking for ground is expensive and the answer rarely changes from
         // one second to the next. Once a minute is plenty, and it stops every
@@ -4250,6 +4368,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (stationTask() == StationTask.GUARD && path.startsWith("iron_")) return true;
         if (stationTask() == StationTask.GUARD && WatchKit.kitPath(path)) return true;   // [guard-kit] the town's kit, at any level
         if (stationTask() == StationTask.CAVE && (WatchKit.kitPath(path) || path.endsWith("_pickaxe"))) return true;   // [caves] the same
+        if (stationTask() == StationTask.NETHER && (WatchKit.kitPath(path) || path.endsWith("_pickaxe") || path.startsWith("golden_"))) return true;   // [nether]
         return super.mayUseTier(s);
     }
 
@@ -4333,6 +4452,7 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected boolean streetRound() {
         if (villageCentre == null || isHired() || !(level() instanceof net.minecraft.server.level.ServerLevel server)) return false;
+        if (Police.duty(this, server)) return true;           // [police] the roster's duty: the walls, the beat, the desk, an event, rest
         return Patrols.round(this, server);
     }
 
@@ -4348,7 +4468,9 @@ public class VillageFolkEntity extends AssistantEntity {
         // (And a courier out on one of the storehouse's runs: the whole village is its ground.)
         return super.walksAbroad() || Patrols.escorting(this) || Patrols.onTheStreets(this) || Couriers.onARun(this)
             || Sweepers.sweeping(this)                 // (and the street sweeper about the town's streets)
-            || Cartographers.surveying(this);          // [cartographer] out walking the town (or the country) with its sheets
+            || Cartographers.surveying(this)          // [cartographer] out walking the town (or the country) with its sheets
+            || Divers.busy(this)                       // [diver] on a dive: the water and the shed are its ground
+            || Engineers.abroad(this);                 // [redstone] the engineer at a machine, a guard sent to the gate's lever
     }
 
     /** What it just drew out of the Village Storehouse: one request, served by the storekeeper at the
@@ -4578,6 +4700,10 @@ public class VillageFolkEntity extends AssistantEntity {
             case GOLEMS -> "The Golem Yard";      // [golems]
             case FIREWORKS -> "The Powder Hut";   // [fireworks]
             case CARTOGRAPHER -> "The Map Room";  // [cartographer]
+            case EMERALD -> "The Trading Post";   // [emerald]
+            case DIVER -> "The Kelp Beds";        // [diver]
+            case NETHER -> "The Gateway";         // [nether]
+            case REDSTONE -> "The Works";         // [redstone] the engineer's machines round the town
             default -> "The Commons";
         };
         // Two farms in one village should not share a name.
@@ -4664,6 +4790,8 @@ public class VillageFolkEntity extends AssistantEntity {
                 BlockPos p = surfaceAt(at.getX(), at.getZ());
                 if (p == null || Math.abs(p.getY() - heart.getY()) > FIELD_CLIMB) continue;
                 if (Villages.builtOver(town, f[0], f[1], FIELD_MOST, FIELD_MOST)) { score -= 4; continue; }
+                // [emerald] Toward a village of the game's villagers the ground is theirs: the fields go another way.
+                if (VanillaVillages.within(level(), at.getX(), at.getZ(), FIELD_MOST + VanillaVillages.MARGIN)) { score -= 4; continue; }
                 if (!soilField(p) && !farmable(p)) continue;
                 // The nearest row counts twice: it is the one farmed first, and walked to every day.
                 int weight = i < 2 ? 2 : 1;
@@ -4758,7 +4886,8 @@ public class VillageFolkEntity extends AssistantEntity {
         java.util.function.Predicate<BlockPos> clear = p -> !outdoor || town == null
             || Villages.outsideTown(town, heart, p, keep)
                && (trade == StationTask.FARM || trade == StationTask.FISH || !Villages.onFarmland(town, heart, p, radius))
-               && !Bonds.overBorder(town, heart, p, keep);                 // never over the line toward a neighbour
+               && !Bonds.overBorder(town, heart, p, keep)                  // never over the line toward a neighbour
+               && !VanillaVillages.within(level(), p.getX(), p.getZ(), keep + VanillaVillages.MARGIN);   // [emerald] nor the villagers' ground
         BlockPos from = heart.offset(
             (int) Math.round(Math.cos(angle) * reach), 0,
             (int) Math.round(Math.sin(angle) * reach));
@@ -4833,6 +4962,11 @@ public class VillageFolkEntity extends AssistantEntity {
             case HUNT -> {
                 BlockPos game = scan(from, SCAN, 8, radius, p -> clear.test(p) && gameAround(p));
                 yield game != null ? game : scan(from, SCAN, 8, radius, p -> clear.test(p) && (meadow(p) || woodland(p)));
+            }
+            // [diver] The bank of the town's diving water (Divers); none, and no ground for the trade.
+            case DIVER -> {
+                Divers.Waterside w = Divers.water(town);
+                yield w == null ? null : w.bank();
             }
             // The indoor trades belong in the village rather than out in a
             // field — but not all three in the same square. Each takes its own
@@ -4916,6 +5050,8 @@ public class VillageFolkEntity extends AssistantEntity {
         WorkZone mine = WorkZone.around(pos, plotRadius + 2, WorkZone.DEFAULT_DEPTH);
         // Ground we are deliberately leaving counts as somebody else's.
         if (avoidHere != null && mine.overlaps(avoidHere)) return true;
+        // [emerald] And a village of the game's villagers, and its margin, is theirs: no field, wood, pen or mine on it.
+        if (VanillaVillages.within(level(), pos.getX(), pos.getZ(), plotRadius + VanillaVillages.MARGIN)) return true;
         java.util.List<AssistantEntity> crew =
             neighbours != null ? neighbours : Villages.folkOf(ownerId());
         for (AssistantEntity mate : crew) {
@@ -5128,6 +5264,8 @@ public class VillageFolkEntity extends AssistantEntity {
             case GOLEMS -> Golems.STRUCTURE;      // [golems] the golem yard
             case FIREWORKS -> FireworksMaker.STRUCTURE;   // [fireworks] the powder hut
             case CARTOGRAPHER -> Cartographers.STRUCTURE;   // [cartographer] the map room
+            case DIVER -> Divers.SHED;            // [diver] the diver's shed on the bank
+            case REDSTONE -> Engineers.WORKSHOP;  // [redstone] the engineer's bench and plans (Engineers)
             default -> null;
         };
     }
@@ -5166,7 +5304,7 @@ public class VillageFolkEntity extends AssistantEntity {
      *  with its fists only gave it a second to kill (WatchClears; the shout still brings a guard, Patrols.cryForHelp). */
     @Override
     public boolean respondToDistress(AssistantEntity ally, net.minecraft.world.entity.monster.Monster attacker) {
-        if (stationTask() != StationTask.GUARD && !hiredToFight()) return false;
+        if (stationTask() != StationTask.GUARD && !hiredToFight() && !Quirks.answersCries(this)) return false;   // [perks] the Fearless run in
         return super.respondToDistress(ally, attacker);
     }
 
@@ -5702,20 +5840,35 @@ public class VillageFolkEntity extends AssistantEntity {
         Villages.Village vill = Villages.get(village);
         for (AssistantEntity a : Villages.folkOf(village)) {
             if (!(a instanceof VillageFolkEntity f) || f.stationTask() != StationTask.SMELT || !f.isAlive()) continue;
-            if (f.countCarried(AssistantEntity.SMELTABLE_ORE) >= 8) continue;
-            int got = drawFrom(villageCentre, AssistantEntity.SMELTABLE_ORE, 32, buildStoresRadius());
+            // [diver] A smelter with its ore but nothing it may burn now (the stores' kelp blocks, while there are any) is
+            // brought kelp blocks on their own; one with ore and fuel is left to it, as before.
+            boolean stocked = f.countCarried(AssistantEntity.SMELTABLE_ORE) >= 8;
+            boolean kelpWanted = FuelBook.kelpInStores(server, village) && f.countCarried(FuelBook.KELP_BLOCK) < 2;
+            if (stocked && (FuelBook.fuelled(f) || !kelpWanted)) continue;
+            int got = stocked ? 0 : drawFrom(villageCentre, AssistantEntity.SMELTABLE_ORE, 32, buildStoresRadius());
             String what = "ore";
-            if (got <= 0 && vill != null && f.countCarried(Masonry.MAKINGS) < 16) {
+            if (!stocked && got <= 0 && vill != null && f.countCarried(Masonry.MAKINGS) < 16) {
                 for (Masonry.Lot lot : Masonry.makings(server, vill)) {
                     int n = drawFrom(villageCentre, lot.what(), lot.n(), buildStoresRadius());
                     if (n > 0 && got == 0) what = lot.word();
                     got += n;
                 }
             }
-            if (got <= 0) break;
+            // [diver] The diver's kelp blocks go out first while the stores have them, and then no coal at all (FuelBook).
+            int kelp = kelpWanted ? drawFrom(villageCentre, FuelBook.KELP_BLOCK, 4, buildStoresRadius()) : 0;
+            if (kelp > 0) {
+                FuelBook.forget(village);
+                if (got <= 0) what = "kelp blocks";
+            }
+            if (got <= 0 && kelp <= 0) {
+                if (stocked) continue;
+                break;
+            }
             // Fuel with it — but not the coal the age is putting by: the smelter burns wood then
             // (SmeltGoal), and what goes out to it is logs the builders can spare.
-            if (!savingCoal() && !coalLow()) {        // [economy] nor the last of it, under the floor (Fuel)
+            if (kelp > 0) {
+                // [diver] (the kelp blocks are its fuel)
+            } else if (!savingCoal() && !coalLow()) {        // [economy] nor the last of it, under the floor (Fuel)
                 drawFrom(villageCentre, s -> s.is(net.minecraft.world.item.Items.COAL) || s.is(net.minecraft.world.item.Items.CHARCOAL), 8, buildStoresRadius());
             } else {
                 int wood = Math.min(8, logsToSpare(server, village));
@@ -5731,7 +5884,8 @@ public class VillageFolkEntity extends AssistantEntity {
     /** What a courier carries out to the smelter: ore, fuel, and the makings of its mason's work. */
     static final java.util.function.Predicate<net.minecraft.world.item.ItemStack> FOR_THE_SMELTER =
         s -> AssistantEntity.SMELTABLE_ORE.test(s) || s.is(net.minecraft.world.item.Items.COAL)
-            || s.is(net.minecraft.world.item.Items.CHARCOAL) || s.is(net.minecraft.tags.ItemTags.LOGS) || Masonry.MAKINGS.test(s);
+            || s.is(net.minecraft.world.item.Items.CHARCOAL) || s.is(net.minecraft.tags.ItemTags.LOGS) || Masonry.MAKINGS.test(s)
+            || s.is(net.minecraft.world.item.Items.DRIED_KELP_BLOCK);          // [diver] the diver's kelp blocks
 
     /** A worker's load (what it would bank: its output, not its kit) into this carrier's pack. */
     int takeLoadFrom(VillageFolkEntity worker) {
@@ -5799,6 +5953,59 @@ public class VillageFolkEntity extends AssistantEntity {
         return level() instanceof net.minecraft.server.level.ServerLevel server && Cartographers.work(this, server);
     }
 
+    /** [emerald] The emerald trader's day (EmeraldTrader.work): out to the villagers in the morning, the book at home. */
+    @Override
+    protected boolean emeraldWork() {
+        return level() instanceof net.minecraft.server.level.ServerLevel server && EmeraldTrader.work(this, server);
+    }
+
+    /** [diver] The diver's day (Divers.work): its next dive, or the bank to watch the water from. */
+    @Override
+    protected boolean diverWork() {
+        return level() instanceof net.minecraft.server.level.ServerLevel server && Divers.work(this, server);
+    }
+
+    /** [diver] Under the water on purpose, or being pulled out of it (Divers). */
+    @Override
+    protected boolean underwaterWork() {
+        return Divers.underwater(this);
+    }
+
+    private int kelpCheckTick = -100000;
+    private boolean kelpFuel;
+
+    /** [diver] Has the town dried kelp blocks in its stores for its fires (FuelBook)? Looked at once a minute. */
+    @Override
+    public boolean kelpForFuel() {
+        UUID village = ownerId();
+        if (village == null || !(level() instanceof net.minecraft.server.level.ServerLevel server)) return false;
+        if (tickCount - kelpCheckTick >= 1200 || tickCount < kelpCheckTick) {
+            kelpCheckTick = tickCount;
+            kelpFuel = FuelBook.kelpInStores(server, village);
+        }
+        return kelpFuel;
+    }
+
+    /** [nether] A Nether runner's day at home (NetherRunners): fitted out and through the gateway of a morning, else at
+     *  its post by the gateway with the charts, resting and healing after a run. */
+    @Override
+    protected boolean netherWork() {
+        return level() instanceof net.minecraft.server.level.ServerLevel server && NetherRunners.work(this, server);
+    }
+
+    /** [nether] A town's folk never stumble through a portal: the Nether runners go through the gateway on purpose
+     *  (NetherRuns.cross), and nobody else does. A hired hand goes where its player goes, as before. */
+    @Override
+    public boolean canUsePortal(boolean allowPassengers) {
+        return isHired() && super.canUsePortal(allowPassengers);
+    }
+
+    /** [redstone] The engineer's day at the town's machines (Engineers.work). */
+    @Override
+    protected boolean redstoneWork() {
+        return level() instanceof net.minecraft.server.level.ServerLevel server && Engineers.work(this, server);
+    }
+
     /** A village's storekeeper keeps its stores in order from the first day, not from its
      *  tenth level: nothing else a storekeeper does earns it the experience to get there. */
     @Override
@@ -5864,6 +6071,7 @@ public class VillageFolkEntity extends AssistantEntity {
      */
     @Override
     protected boolean carriesChunkWindow() {
+        if (NetherRuns.elsewhere(this)) return false;          // [nether] out of its town's world: the run keeps its own (NetherRuns)
         if (super.carriesChunkWindow()) return true;
         UUID village = ownerId();
         BlockPos heart = villageCentre;
@@ -6331,6 +6539,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // settlement fills out over a few in-game days rather than doubling
         // overnight.
         int odds = lean ? 8 : content >= 70 ? 2 : content >= 50 ? 3 : 4;
+        odds = Dreams.birthOdds(this, partner, odds);          // [individual] a couple who dream of a big family
         if (getRandom().nextInt(odds) != 0) return false;
         return raiseChildWith(partner) != null;
     }
@@ -6352,7 +6561,7 @@ public class VillageFolkEntity extends AssistantEntity {
         VillageFolkEntity child = com.jrpetty.mcassistant.McAssistantMod.VILLAGE_FOLK.get().create(server);
         if (child == null) return null;
         child.moveTo(getX(), getY(), getZ(), getYRot(), 0.0F);
-        child.rename(Names.freshFor(village, server.getRandom()));
+        child.rename(Beliefs.childName(village, server.getRandom(), this, partner));   // [culture2] a name of its town's faith
         // Less than its parents spent on it — see childKit. A village that
         // could breed its way to a full larder would never have to farm.
         com.jrpetty.mcassistant.VillageSpawner.childKit(child);
@@ -6363,6 +6572,8 @@ public class VillageFolkEntity extends AssistantEntity {
         partner.life.hadAChild();
         child.life.roll(getRandom(), life, partner.life);
         child.life.setParents(displayNameCap(), partner.displayNameCap());
+        Individual.born(child, this, partner);                // [individual] its looks from its parents, a life of its own
+        Quirks.born(child, this, partner);              // [perks] one time in two, a parent's quirk
         child.parentIds.add(getUUID());
         child.parentIds.add(partner.getUUID());
         child.life.feel(getUUID(), displayNameCap(), 70);
@@ -6424,6 +6635,7 @@ public class VillageFolkEntity extends AssistantEntity {
             VillageFolkEntity twin = bear(server, partner, village, bornOn);
             if (twin != null) brood.add(twin);
         }
+        Individual.twins(brood);                               // [individual] born together, alike to look at
         if (brood.size() == 1) {
             Villages.tell(village, bornOn, displayNameCap() + " and " + partner.displayNameCap() + " had a child, " + child.displayNameCap());
         } else {
@@ -6491,7 +6703,7 @@ public class VillageFolkEntity extends AssistantEntity {
      */
     @Nullable
     private VillageFolkEntity betterHandFor(UUID village, StationTask wanted) {
-        int mine = tradeLevel(wanted);
+        int mine = tradeLevel(wanted) + Quirks.pull(this, wanted);                 // [perks] a quirk's pull to a trade
         VillageFolkEntity best = null;
         int bestLevel = mine;
         for (AssistantEntity a : Villages.folkOf(village)) {
@@ -6499,7 +6711,7 @@ public class VillageFolkEntity extends AssistantEntity {
             StationTask theirs = f.stationTask();
             if (theirs == wanted || theirs == StationTask.NONE && !f.isAutonomous()) continue;
             if (theirs != StationTask.NONE && !Villages.overStaffed(village, theirs)) continue;
-            int lv = f.tradeLevel(wanted);
+            int lv = f.tradeLevel(wanted) + Quirks.pull(f, wanted);               // [perks] Green Fingers to the fields...
             if (lv > bestLevel) { bestLevel = lv; best = f; }
         }
         return best;
@@ -6529,7 +6741,14 @@ public class VillageFolkEntity extends AssistantEntity {
             if (vacancy == null || vacancy == mine) return false;
             ordered = true;
         }
+        vacancy = Quirks.instead(this, vacancy);        // [perks] a Squeamish folk will not hunt: the fields instead
+        if (vacancy == mine) return false;
 
+        // [individual] Not a trade it is frightened of (Fears): the fishing to one not afraid of deep water.
+        if (Fears.shuns(this, vacancy)) {
+            brain("leaving the " + vacancy.label + " to somebody braver");
+            return false;
+        }
         // Who goes: whoever has worked that trade before goes first. A hand that has never
         // smelted waits while one that has — and could be spared — takes the place; after
         // two waits it goes all the same, so the work never goes undone for want of one.
@@ -6612,7 +6831,8 @@ public class VillageFolkEntity extends AssistantEntity {
     protected boolean onBreak() {
         // On the road with a caravan, its own work waits until it is home.
         return trip != null || expedition != null || Drover.busy(this) || Stables.busy(this) || Nether.away(this) || JobSeekers.busy(this) || breakNow()
-            || Militia.mustering(this);                  // [war-prep] at the militia's muster, its own work waits
+            || Militia.mustering(this)                   // [war-prep] at the militia's muster, its own work waits
+            || Beliefs.keepsTaboo(this);                 // [culture2] the faith's day: no fishing on the Sea's, no mining on the Stone's
     }
 
     /** The caravan this folk is taking to a colony and back, or null (Caravans). */
@@ -7850,10 +8070,13 @@ public class VillageFolkEntity extends AssistantEntity {
             || WatchClears.sheltering(this)                      // [watch-clears] indoors out of a monster's way
             || Transport.busy(this)                              // [transport] on a ride, a crossing, or at the ferry
             || Crime.calledAway(this)                            // [crime] on a case, at a trial, in the stocks, at community work
+            || Police.calledAway(this)                           // [police] in the cells, a chase, a fight, a report, an escort
             || Disasters.busy(this)                              // [disasters] a bucket chain, a flood, a night away, the fire watch
+            || Individual.busy(this)                             // [individual] home before dark, a habit at its hour
             || WorkTools.busy(this)                              // [workitems] on a rope, or hanging or watering a window box
             || Interviews.busy(this)                             // [interviews] at an interview, or on the road to one
-            || FireworksMaker.fetching(this) || FireworkShows.crewing(this);   // [fireworks] a creeper's powder, a display's rack
+            || FireworksMaker.fetching(this) || FireworkShows.crewing(this)   // [fireworks] a creeper's powder, a display's rack
+            || Divers.busy(this);                                // [diver] on a dive, or being pulled out of the water
     }
 
     /** [wf] The woodcutter's wood kept growing between its fellings (Woods). */
@@ -8037,6 +8260,7 @@ public class VillageFolkEntity extends AssistantEntity {
         tag.put("Meals", meals.save());
         Health.save(this, tag);                         // [batchA]
         Fashion.save(this, tag);                        // [fashion] its colours, what it wears, what it wants
+        if (self.rolled || self.genes.rolled) tag.put("Individual", self.save());   // [individual]
         if (productionChest != null) tag.putLong("ProductionChest", productionChest.asLong());
         if (oldProductionChest != null) tag.putLong("OldProductionChest", oldProductionChest.asLong());
         tag.putLong("BornDay", bornDay);
@@ -8109,6 +8333,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (tag.contains("Meals")) meals.load(tag.getCompound("Meals"));
         Health.load(this, tag);                         // [batchA]
         Fashion.load(this, tag);                        // [fashion]
+        if (tag.contains("Individual")) self.load(tag.getCompound("Individual"));   // [individual]
         this.productionChest = tag.contains("ProductionChest") ? BlockPos.of(tag.getLong("ProductionChest")) : null;
         this.oldProductionChest = tag.contains("OldProductionChest") ? BlockPos.of(tag.getLong("OldProductionChest")) : null;
         this.bornDay = tag.contains("BornDay") ? tag.getLong("BornDay") : UNKNOWN;
@@ -8170,7 +8395,8 @@ public class VillageFolkEntity extends AssistantEntity {
             // its settlement back on the map for the rest — age, buildings
             // and all.
             UUID id = ownerId();
-            if (id != null) {
+            // [nether] Not from a Nether runner loaded in the Nether: the town is on the map of its own world, not this one.
+            if (id != null && !NetherRuns.loadedAway(this)) {
                 Villages.Age age = Villages.Age.WOOD;
                 try {
                     if (tag.contains("VillageAge")) age = Villages.Age.valueOf(tag.getString("VillageAge"));

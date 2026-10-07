@@ -163,6 +163,8 @@ public final class VillageSpawner {
         BlockPos flat = com.jrpetty.mcassistant.entity.Land.flattest(level, ground, 32);
         if (flat != null) ground = flat;
         if (!liveable(level, ground)) return;
+        // [emerald] Never on (or beside) a village of the game's own villagers: theirs is theirs (VanillaVillages).
+        if (com.jrpetty.mcassistant.entity.VanillaVillages.inTheWayOfFounding(level, ground) != null) return;
         found(level, ground);
     }
 

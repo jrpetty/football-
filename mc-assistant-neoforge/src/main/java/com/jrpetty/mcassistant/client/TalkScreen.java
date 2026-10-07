@@ -93,6 +93,7 @@ public class TalkScreen extends Screen {
         String asked = reply.asked() == null ? "" : reply.asked().toLowerCase(java.util.Locale.ROOT);
         if (asked.contains("skill") || asked.contains("knack")) tab = lastTab = Tab.SKILLS;
         else if (asked.contains("your wage")) tab = lastTab = Tab.ABOUT;      // [econ-wages] its card: its wage and why
+        else if (asked.contains("who you are")) tab = lastTab = Tab.ABOUT;    // [individual] its card: its looks, its life
         else if (!reply.open() && !asked.isBlank() && (tab == Tab.ABOUT || tab == Tab.SKILLS)) tab = lastTab = Tab.TALK;
     }
 
@@ -218,6 +219,11 @@ public class TalkScreen extends Screen {
                 out.add(Choice.of("Out there", TalkTopic.ATLAS, "What the village's scouts have found: towns, ruins, peaks, ore — and which way"));
                 out.add(Choice.of("Underground", TalkTopic.CAVES, "What the town's cave dwellers have found: caves, ore, mineshafts, spawners, old chests — and where"));   // [caves]
                 out.add(Choice.of("Fashion", TalkTopic.FASHION, "What the town is wearing this season, who set it, and what this folk thinks of it"));   // [fashion]
+                // [nether] The Nether runners: their report, an ask, going through with them, their chart (NetherGuests).
+                out.add(Choice.of("The Nether", TalkTopic.NETHER, "What the town's Nether runners have found through the gateway: the outpost, the fortress, the hauls"));
+                out.add(new Choice("Ask the runners", TalkTopic.NETHER, "ask", "Ask the Nether runners to bring something on their next run: type it (\"bring us blaze rods\")"));
+                out.add(new Choice("Go through", TalkTopic.SAY, "Can I come through with you?", "Go through the gateway with the Nether runners: they wait for you there in the morning. Say \"for a share\" to take a share of the haul"));
+                out.add(new Choice("Runners' chart", TalkTopic.SAY, "Could I buy a copy of your chart?", "A copy of the runners' chart of the Nether round their outpost, their finds marked: a few coins, from one of the runners"));
                 // [caves] The cave team: ask it a way or an ore, go along with it, buy its map (CaveGuests, Lodge).
                 out.add(new Choice("Ask the delvers", TalkTopic.CAVES, "ask", "Ask the cave team to look a way or find something on its next trip: type it (\"look east\", \"find us diamonds\")"));
                 out.add(new Choice("Go caving", TalkTopic.SAY, "Can I come along with the cave team?", "Go down the caves with the cave team: it waits for you at its lodge at first light. Say \"for a share\" to take a share of the haul"));
@@ -230,6 +236,12 @@ public class TalkScreen extends Screen {
                 out.add(Choice.of("Pay a fine", TalkTopic.FINE, "Pay what you owe the village"));
                 out.add(Choice.of("Seen anything?", TalkTopic.WATCH, "A theft or a vandal: ask what it saw (a friend tells you what it would not "
                     + "tell the watch). To a guard: the case it is on; hold what was dropped at the scene to hand it in, or type \"I saw Fen take it\""));   // [crime]
+                // [police] The watch as the town's police: a crime reported, the day's roster, sworn in as a special constable.
+                out.add(new Choice("Report a crime", TalkTopic.SAY, "I want to report a crime",
+                    "Tell a guard (or the desk at the watch house) what you saw: it goes on the books and the watch goes at a run"));
+                out.add(new Choice("The roster", TalkTopic.SAY, "Who's on the roster today?", "Who of the watch is on the walls, the beat, the desk and the cases today, and who drew it"));
+                out.add(new Choice("Swear me in", TalkTopic.SAY, "Swear me in as a special constable",
+                    "A citizen or a friend of the town with a clean record can be sworn in: a Constable's Badge, an arrest by right-clicking a culprit with it, the beat with the watch, and a wage for every case closed"));
                 out.add(new Choice("The board", TalkTopic.OPEN, "", "Read the village board: what it is doing, how it is getting on, what it is working towards"));
                 out.add(new Choice("Suggest a build", TalkTopic.BUILD, "", "Type what you think the village should build next"));
                 // [player-civic] Standing for leader, the campaign, and the Leader's page.
@@ -344,6 +356,11 @@ public class TalkScreen extends Screen {
         }
         if (c.topic() == TalkTopic.MAPS && "commission".equals(c.text())) {    // [cartographer] a commission, the way typed yourself
             say.setValue("Map me the land to the east");
+            setFocused(say);
+            return;
+        }
+        if (c.topic() == TalkTopic.NETHER && "ask".equals(c.text())) {         // [nether] an ask of the runners, finished yourself
+            say.setValue("Runners, bring us blaze rods");
             setFocused(say);
             return;
         }

@@ -254,6 +254,7 @@ public final class TownJobs {
         if (FireBrigade.onIt(f) || Weather.sheltering(f)) return false;          // [wf] at a fire, or in out of a storm
         if (Sport.busy(f)) return false;                                         // [batchC] at a match, a contest, the butts, away
         if (Fleet.out(f) || Auctions.busy(f) || FishMarket.busy(f)) return false;   // [fleet] at sea, at the auction, at the fish market
+        if (Engineers.abroad(f)) return false;                                   // [redstone] at a machine, or sent to the gate's lever
         if (f.stationTask() == AssistantEntity.StationTask.GUARD && (f.level().isNight() || f.onWatch()) && !works.endsWith("watch")) return false;
         UUID id = f.ownerId();
         return id == null || !Villages.holdsTheLead(id, f.getUUID(), f.level().getGameTime());
@@ -314,6 +315,10 @@ public final class TownJobs {
                 case GOLEMS -> score += works.equals("golem") ? 40 : -20;   // [golems] the town's golem is its work
                 case FIREWORKS -> score -= 15;           // [fireworks] its day is at the powder hut
                 case CARTOGRAPHER -> score -= Cartographers.surveying(f) ? 60 : 15;   // [cartographer] out with its sheets, or at its table
+                case EMERALD -> score -= 40;             // [emerald] its day is on the road to the villagers
+                case DIVER -> score -= 40;               // [diver] its day is in the water (and it watches it)
+                case NETHER -> score -= 60;              // [nether] its day is through the gateway, or resting from it
+                case REDSTONE -> score -= 20;            // [redstone] its day is at the machines, and its one hand
                 default -> { if (trade.isCraft()) score -= 10; }
             }
             if (f.workedOut()) score += 25;                              // nothing to work at in its own trade

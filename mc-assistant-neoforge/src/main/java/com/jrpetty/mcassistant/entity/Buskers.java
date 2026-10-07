@@ -528,6 +528,7 @@ public final class Buskers {
         double chance = 0.15 + s.skill / 120.0 + (s.lute ? 0.1 : 0.0);          // [leisure] a lute fills the hat the quicker
         if (o.life().has(Social.Trait.GENEROUS)) chance += 0.2;
         if (o.life().has(Social.Trait.GRUMPY)) chance -= 0.15;
+        chance += Perks.tips(busker);                                   // [perks] Patronage of the Arts, a Patron in office, a Musical busker
         if (roll >= chance || !o.spend(1)) return false;
         busker.earn(1);
         s.take++;

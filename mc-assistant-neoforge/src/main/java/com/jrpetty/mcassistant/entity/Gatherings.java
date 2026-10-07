@@ -115,6 +115,7 @@ public final class Gatherings {
         if (died != null && day - died <= 0) return Kind.VIGIL;
         if (day > 0 && day % 7 == 6 || sponsored(village, day)
             || Government.extraFeast(village, day)) return Kind.FEAST;      // [identity] the chaplain's mid-week feast day
+        if (CityTree.saintsDay(village, day)) return Kind.FEAST;            // [perks] Saints' Days: a feast to open each season
         return null;
     }
 

@@ -151,6 +151,7 @@ public final class Caravans {
             ItemStack left = carrier.insertGiven(s);
             if (!left.isEmpty()) Market.intoStores(level, from.id(), left);
         }
+        Cuisine.packDelicacy(level, from, carrier, to.id());              // [culture2] a couple of the town's own dish, a delicacy there
         Trip t = new Trip(from.id(), to.id(), way(from, to));
         t.trade = true;
         t.gainedTick = carrier.tickCount;
@@ -211,6 +212,7 @@ public final class Caravans {
             ItemStack left = carrier.insertGiven(s);
             if (!left.isEmpty()) Market.intoStores(level, mother.id(), left);
         }
+        Cuisine.packDelicacy(level, mother, carrier, colony.id());        // [culture2] a taste of home for the colony
         Crates.packCaravan(level, mother, colony.id(), carrier);   // [workitems] crates of the town's surplus besides the loose load
         Trip t = new Trip(mother.id(), colony.id(), way(mother, colony));
         t.gainedTick = carrier.tickCount;
@@ -249,6 +251,7 @@ public final class Caravans {
             if (Villages.holdsTheLead(v.id(), f.getUUID(), now)) continue;
             double score = f.blockPosition().distSqr(v.centre());
             if (f.stationTask() == AssistantEntity.StationTask.HAUL) score -= 1e6;
+            score += Quirks.tripPull(f);                                    // [perks] a wanderer first, a homebody last
             if (score < bestScore) { bestScore = score; best = f; }
         }
         return best;
@@ -283,8 +286,9 @@ public final class Caravans {
             for (Market.Good g : Market.GOODS) if (!order.contains(g) && g.need() != Villages.Task.NONE) order.add(g);
         }
         List<ItemStack> out = new ArrayList<>();
+        int lots = 4 + Perks.caravanLots(from.id());                       // [perks] Open Borders, the Grand Bazaar, a Quartermaster
         for (Market.Good g : order) {
-            if (out.size() >= 4) break;
+            if (out.size() >= lots) break;
             if (brought.contains(g)) continue;
             int have = Market.stock(level, from.id(), g.what());
             int plenty = g.bundle() * 4;

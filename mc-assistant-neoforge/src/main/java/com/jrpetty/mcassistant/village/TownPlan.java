@@ -194,6 +194,8 @@ public final class TownPlan {
 
     /** What sort of place a building wants. */
     public static String placeFor(String structure) {
+        String wonder = com.jrpetty.mcassistant.entity.Wonders.placeFor(structure);   // [perks] a wonder's lot (Wonders)
+        if (wonder != null) return wonder;
         return switch (structure) {
             case "well" -> "well";
             case "monument", "fountain", "belltower" -> "monument";
@@ -209,6 +211,8 @@ public final class TownPlan {
                  "fletcher",                                                   // [fletcher] the fletcher's hut (entity/Fletchers)
                  "golemyard",                                                  // [golems] the golem yard (entity/Golems)
                  "maproom",                                                    // [cartographer] the map room (entity/Cartographers)
+                 "tradingpost",                                                // [emerald] the emerald trader's stall
+                 "redstoneworks",                                              // [redstone] the redstone workshop (entity/Engineers)
                  "theatre",                                                    // [batchD] the theatre
                  "townlibrary",                                                // [library] the town library
                  "bakery", "inn" -> "civic";                                   // [batchE] the bakery and the inn
@@ -218,9 +222,11 @@ public final class TownPlan {
             case "pitch" -> "field";                                        // [batchC] a long lot for the football pitch
             case "armoury" -> "civic";                // [war-prep] the armoury faces the square with the trades
             case "firestation" -> "civic";            // [disasters] the fire station, among the trades it guards
+            case "watchhouse" -> "civic";             // [police] the watch house, on the square with the trades it keeps the peace among
             case "trainingyard" -> "corner";          // [war-prep] the training yard by the watchtower, at a corner
             case "lighthouse", "pen", "gateway", "graveyard" -> "edge";
             case "powderhut" -> "edge";               // [fireworks] the powder hut, away from the houses (FireworksMaker)
+            case "divershed" -> "edge";               // [diver] on the bank of its water (Divers.shedSite), out at the edge
             default -> "home";
         };
     }

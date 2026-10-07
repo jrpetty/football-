@@ -3038,6 +3038,507 @@ def cartographer_stage(r, look, cx, cz):
     say("alive after the maps: %s" % client_alive())
 
 
+
+def individual_stage(r, look, cx, cz):
+    """[individual] Every folk its own person (entity/Individual, Looks, Manner; client/FolkFaces, FolkPoses). In clear
+    air out past the town, /village individual stage stands up a crowd of eighteen of every age on a lawn, the back row
+    a step up, their work hats off (children at three ages of growing, the young, the greying, a scarred guard, an
+    eyepatch, a sooty smith, a sunburnt farmer, the old in spectacles, the oldest bent over their sticks); beside them a
+    family of five made by the town's own sums (two parents, their eldest, and twins); and past them a well and a bench
+    with an old folk sat smoking its pipe. Pictures at noon: the whole crowd, close on each half of it, the family; then
+    at dusk the pipe at the well; then the card of the folk nearest the player, opened at its About page (its Looks,
+    Dream, Fears, Habits, Favourite place and Keepsake lines). Last, /village individual for the town."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    r.cmd("weather clear")
+    sx, sy, sz = cx + 120, 150, cz + 90                # clear air out past the town: the stage lays its own lawn
+    r.cmd("tp %s %d %d %d" % (USER, sx, sy + 3, sz + 10))
+    time.sleep(10)                                     # the stage's chunks arrive
+    out = r.cmd("execute positioned %d %d %d run village individual stage" % (sx, sy, sz))
+    say("individual stage: " + out[:900])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("nothing staged for every folk its own person; nothing to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            return
+        x, y, z, ax, ay, az = views[name]
+        look("39-individual-" + picture, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    time.sleep(6)                                      # the faces are built as they come into sight, a few a frame
+    shoot("crowd", "1-crowd", 8)
+    shoot("crowd-left", "2-faces-left", 5)
+    shoot("crowd-right", "3-faces-right", 5)
+    shoot("family", "4-family", 5)
+    m = re.search(r"(\d+)", r.cmd("time query daytime"))
+    now = int(m.group(1)) % 24000 if m else 6000
+    r.cmd("time add %d" % ((12900 - now) % 24000))     # dusk, the same day: the pipe at the well
+    shoot("pipe", "5-pipe-at-dusk", 8)
+    midday(r)
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d facing %d %d %d" % (USER, sx, sy, sz + 2, sx, sy + 1, sz))
+    time.sleep(3)
+    say("card: " + r.cmd("execute as %s at @s run village individual card" % USER))
+    time.sleep(4)
+    shot("39-individual-6-card")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("kill @e[tag=folk_lineup,type=!player]")
+    r.cmd("gamemode spectator %s" % USER)
+    hy = ground_height(r, cx, cz)
+    say("individual: " + r.cmd("execute positioned %d %d %d run village individual" % (cx, hy + 1, cz))[:1500])
+    say("alive after every folk its own person: %s" % client_alive())
+
+
+def emerald_stage(r, look, cx, cz):
+    """[emerald] The emerald trader (entity/EmeraldTrader), and the two peoples kept apart (TwoPeoples, VanillaVillages).
+    Run well out past the town to the north (the villagers' ground must not be the town's), /village emerald stage sets
+    a little village of the game's own villagers there: a bell on a stone post, a farmer's composter, a librarian's
+    lectern and a cleric's brewing stand, a bed behind each, and a real villager of each trade with the game's own
+    offers, each given its workstation and the bell as a villager the world made has them. The town's trader (taken on
+    for it if the town has none) is set down at the bell with the town's goods to sell and emeralds and books to buy
+    with, and trades through the villagers' own offers. Pictures: the village with its villagers at their stalls; the
+    trader at the farmer's stall, selling the town's wheat; the trader at the librarian's lectern; then /village emerald
+    said, and the town's books open at the Trading Post page (the emerald account, the village, its villagers and their
+    offers as they stand, what the trader brought home)."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    # The middle of the morning (the trader turns for home in the afternoon wherever it is). Not /time set: see midday.
+    m = re.search(r"(\d+)", r.cmd("time query daytime"))
+    now = int(m.group(1)) % 24000 if m else 3000
+    if not 2000 <= now <= 5000:
+        r.cmd("time add %d" % ((3000 - now) % 24000))
+    r.cmd("weather clear")
+    hy = ground_height(r, cx, cz)
+    sx, sz = cx + 20, cz - 170                        # well out past the town's ground: theirs is not the town's
+    r.cmd("tp %s %d %d %d" % (USER, sx - 12, hy + 18, sz - 16))
+    time.sleep(8)                                      # the ground arrives at the server and the client
+    out = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village emerald stage" % (sx, sz))
+    say("emerald stage: " + out[:900])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("no village of villagers staged; nothing to photograph")
+        return
+
+    def shoot(name, wait):
+        if name not in views:
+            return
+        x, y, z, ax, ay, az = views[name]
+        look("33-" + name, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    shoot("emerald-1-village", 8)
+    time.sleep(6)                                      # a look round the stalls, then to the farmer with the wheat
+    shoot("emerald-2-farmer", 6)
+    time.sleep(12)                                     # the selling done, to the librarian with the emeralds
+    shoot("emerald-3-librarian", 6)
+    time.sleep(6)
+    say("emerald: " + r.cmd("execute positioned %d %d %d run village emerald" % (cx, hy + 1, cz))[:1500])
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
+    time.sleep(3)
+    say("books: " + r.cmd("execute as %s at @s run village emerald books" % USER))
+    time.sleep(4)
+    shot("33-emerald-4-page")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the emerald trader: %s" % client_alive())
+
+
+def diver_stage(r, look, cx, cz):
+    """[diver] The kelp farmer and diver (entity/Divers, KelpBeds, DiverSwim, TurtleBeach, FuelBook). /village diver
+    stage, run at the town: its diving water found (a lake eighteen across and six deep cut beside the town if it has
+    none, a sandy beach on its west side), the diver's shed stamped on the bank with its door to the water, a kelp bed
+    planted and grown ripe, two wild turtles on the beach, and a diver taken on, in its turtle helmet, sent down to cut
+    the bed. Pictures: the shed from over the water; the bed from the bank; the bed from under the water with the diver
+    cutting it (and again after a while, the diver up for air or back at its work); the turtle beach. Then /village
+    diver said (the water, the bed, the books, the fuel the town burnt by kind), and the town's books open at the
+    Production page (the fuel line: what the kelp blocks kept)."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    r.cmd("weather clear")                            # no diving in a thunderstorm
+    hy = ground_height(r, cx, cz)
+    r.cmd("tp %s %d %d %d" % (USER, cx + 40, hy + 24, cz))
+    time.sleep(8)                                      # the ground east of the town arrives at the server and the client
+    out = r.cmd("execute positioned %d %d %d run village diver stage" % (cx, hy + 1, cz))
+    say("diver stage: " + out[:900])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("no diving water staged; nothing to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            return
+        x, y, z, ax, ay, az = views[name]
+        look("42-diver-" + picture, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    shoot("diver-shed", "1-shed", 10)
+    shoot("diver-bed", "2-bed", 6)
+    time.sleep(10)                                     # the diver walks to the bank and goes in
+    shoot("diver-under", "3-under", 6)
+    time.sleep(25)                                     # a few plants cut; up for air, perhaps, and down again
+    shoot("diver-under", "4-cutting", 4)
+    shoot("diver-beach", "5-beach", 6)
+    say("diver: " + r.cmd("execute positioned %d %d %d run village diver" % (cx, hy + 1, cz))[:1400])
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
+    time.sleep(3)
+    say("books: " + r.cmd("execute as %s at @s run village stats 3" % USER))      # the Production page
+    time.sleep(4)
+    shot("42-diver-6-production")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the diver: %s" % client_alive())
+
+
+def culture2_stage(r, look, cx, cz):
+    """[culture2] A town's own ways (entity/TownWays, Cuisine, TownSpeech, Architecture, TownFeast, Beliefs): walking from
+    one town into the next must look, sound and taste different. The spawned village (cx, cz) and a second town about
+    220 blocks east (other_town) have their ways worked out now (/village ways now: houses dressed in the town's style out
+    of its stores, its shrine hung, the tavern's house-dish board); if both came out in the same style the second is set
+    to another, so the pictures can tell them apart. Pictures: each town's square and houses from above; /village ways
+    stage beside the first town (a street of the six styles, two pairs close up, and a wall of the eight dishes in
+    frames); the folk of each town greeting in their own way (/village ways speak: the bubbles); the first town's own
+    festival called on its square (/village ways feast); and each town's books open at the Culture page, where its
+    ways are written up. Not wired into main: call it after kitchen_stage, as culture2_stage(r, look, cx, cz)."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    r.cmd("weather clear")
+    num = r"(-?\d+)"
+    view_pattern = r"VIEW (\S+) " + " ".join([num] * 6)
+
+    def ground(x, z):
+        return "execute positioned %d 0 %d positioned over motion_blocking_no_leaves run " % (x, z)
+
+    def views_of(out):
+        return dict((v[0], [int(n) for n in v[1:]]) for v in re.findall(view_pattern, out))
+
+    # The two towns, and their ways worked out now.
+    ax, az = cx, cz
+    bx, bz = other_town(r, cx + 220, cz, "the ways' second town")
+    styles = {}
+    for label, (x, z) in (("first", (ax, az)), ("second", (bx, bz))):
+        r.cmd("tp %s %d %d %d" % (USER, x, ground_height(r, x, z) + 20, z))
+        time.sleep(6)                                  # the town's ground and its folk load
+        out = r.cmd(ground(x, z) + "village ways now")
+        say("ways now (%s town): %s" % (label, out[:600]))
+        m = re.search(r"WAYS [^:]+: ([^;]*?) houses", out)
+        styles[label] = m.group(1).strip() if m else ""
+    if styles.get("first") and styles.get("first") == styles.get("second"):
+        other = "HILL_FORT" if styles["first"] != "Hill Fort" else "COASTAL"
+        say("both towns build %s: the second set to %s for the pictures: %s"
+            % (styles["first"], other, r.cmd(ground(bx, bz) + "village ways set style " + other)[:200]))
+        say("ways now (second town, again): " + r.cmd(ground(bx, bz) + "village ways now")[:400])
+    for label, (x, z) in (("first", (ax, az)), ("second", (bx, bz))):
+        say("ways (%s town): %s" % (label, r.cmd(ground(x, z) + "village ways")[:1500]))
+        hy = ground_height(r, x, z)
+        look("34-ways-%s-town" % label, x + 18, hy + 14, z + 18, x, hy + 2, z, wait=8)
+
+    # The street of the six styles and the wall of the dishes, on level ground of its own beside the first town.
+    sx, sz = ax - 110, az + 60
+    r.cmd("tp %s %d %d %d" % (USER, sx + 30, ground_height(r, sx, sz) + 20, sz + 20))
+    time.sleep(8)                                      # the ground arrives at the server and the client
+    out = r.cmd(ground(sx, sz) + "village ways stage")
+    say("ways stage: " + out[:800])
+    views = views_of(out)
+    if not views:
+        say("nothing staged for the town's ways; no street to photograph")
+    for name, picture, wait in (("ways-street", "1-street", 8), ("ways-fort-coast", "2-fort-coast", 5),
+                                ("ways-lodge-civic", "3-lodge-civic", 5), ("ways-dishes", "4-dishes", 5)):
+        if name in views:
+            x, y, z, tx, ty, tz = views[name]
+            look("34-ways-" + picture, x + 0.5, y, z + 0.5, tx + 0.5, ty + 0.5, tz + 0.5, wait=wait)
+
+    # Each town's folk greet the way their town does: the bubble photographed while it is up.
+    for label, (x, z) in (("first", (ax, az)), ("second", (bx, bz))):
+        hy = ground_height(r, x, z)
+        r.cmd("tp %s %d %d %d" % (USER, x + 3, hy + 3, z + 3))
+        time.sleep(4)
+        out = r.cmd(ground(x, z) + "village ways speak")
+        say("ways speak (%s town): %s" % (label, out[:600]))
+        v = views_of(out).get("ways-speak")
+        if v:
+            look("34-ways-5-speak-%s" % label, v[0] + 0.5, v[1] - 1.0, v[2] + 0.5, v[3] + 0.5, v[4], v[5] + 0.5, wait=2)
+
+    # The first town's own festival, called on its square.
+    out = r.cmd(ground(ax, az) + "village ways feast")
+    say("ways feast: " + out[:400])
+    time.sleep(25)                                     # the town gathers on the square, the decorations out
+    hy = ground_height(r, ax, az)
+    look("34-ways-6-feast", ax + 12, hy + 9, az + 12, ax, hy + 1, az, wait=6)
+
+    # The Culture page of each town's books: its ways written up there.
+    r.cmd("gamemode creative %s" % USER)
+    for label, (x, z) in (("first", (ax, az)), ("second", (bx, bz))):
+        r.cmd("tp %s %d %d %d" % (USER, x + 2, ground_height(r, x, z) + 1, z + 2))
+        time.sleep(4)
+        say("stats culture (%s town): %s" % (label, r.cmd("execute as %s at @s run village stats 21" % USER)))
+        time.sleep(3)
+        shot("34-ways-7-culture-page-%s" % label)
+        say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the town's ways: %s" % client_alive())
+
+
+
+def nether_stage(r, look, cx, cz):
+    """[nether] The Nether runners (entity/NetherRunners, NetherRuns, NetherWork, NetherOutpost). Out past the town's
+    south-east, /village nether stage levels a patch of ground and puts up a lit gateway (an obsidian frame) with three
+    runners in their gear stood before it (the soot-dark coat with its gold trim, the gold-banded skullcap, a gold charm
+    or a gold helmet, a bow, the satchel), trophies hung on its frame (a ghast tear, a blaze rod, a wither skull, an ender
+    pearl) and the wart farm beside it, the wart at every age; and on the far side, in a pocket cut out of the Nether over
+    it at an eighth of the distance, the portal the gateway comes out of with the runners' outpost walled round it, a wall
+    of quartz with two runners at it, a piglin turning a gold ingot over before a runner in gold with what it threw back
+    on the ground, and a blaze over its spawner with a runner's bow drawn on it. Then it sends the town's runners through
+    the gateway for real. Pictures: the gateway and the runners; the wart farm; in the Nether the outpost, the quartz
+    wall, the barter and the blaze; then the town's books open at the Nether page (the chart, the plan, the hauls)."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    r.cmd("weather clear")
+    hy = ground_height(r, cx, cz)
+    sx, sz = cx + 70, cz + 60                          # out past the town, on ground the stage levels for itself
+    r.cmd("tp %s %d %d %d" % (USER, sx, hy + 14, sz - 14))
+    time.sleep(8)                                      # the ground arrives at the server and the client
+    out = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village nether stage" % (sx, sz))
+    say("nether stage: " + out[:1400])
+    home, far = {}, {}
+    for kind, name, x, y, z, ax, ay, az in re.findall(r"(N?VIEW) (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        (far if kind == "NVIEW" else home)[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not home and not far:
+        say("nothing staged for the Nether runners; nothing to photograph")
+        return
+
+    def shoot(views, name, picture, wait):
+        if name not in views:
+            return
+        x, y, z, ax, ay, az = views[name]
+        look("34-nether-" + picture, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    shoot(home, "nether-1-gateway", "1-gateway", 8)
+    shoot(home, "nether-5-wart-farm", "6-wart-farm", 5)
+    if far:
+        # Into the Nether for the far side's pictures (a spectator, so the heat does nothing), and home again after.
+        x, y, z = far["nether-2-outpost"][:3] if "nether-2-outpost" in far else list(far.values())[0][:3]
+        say("into the Nether: " + r.cmd("execute in minecraft:the_nether run tp %s %d %d %d" % (USER, x, y, z))[:200])
+        time.sleep(10)                                 # the far side arrives at the client
+        shoot(far, "nether-2-outpost", "2-outpost", 8)
+        shoot(far, "nether-3-quartz-wall", "3-quartz-wall", 6)
+        shoot(far, "nether-4-barter", "4-barter", 6)
+        shoot(far, "nether-5-blaze", "5-blaze", 6)
+        say("home again: " + r.cmd("execute in minecraft:overworld run tp %s %d %d %d" % (USER, cx, hy + 20, cz))[:200])
+        time.sleep(8)
+    say("nether: " + r.cmd("execute positioned %d %d %d run village nether" % (cx, hy + 1, cz))[:1400])
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
+    time.sleep(3)
+    say("books: " + r.cmd("execute as %s at @s run village nether books" % USER))
+    time.sleep(4)
+    shot("34-nether-7-page")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("kill @e[tag=nether_lineup,type=!player]")
+    r.cmd("execute in minecraft:the_nether run kill @e[tag=nether_lineup,type=!player]")
+    say("alive after the Nether runners: %s" % client_alive())
+
+
+def books_page(name):
+    """[perks] The number of a page of the town's books ("/village stats <n>"), by its tab's name, read from the books'
+    own list of tabs (CityScreen.TABS), so a page added before it does not send the smoke to the wrong one. -1 if none."""
+    src = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "src", "main", "java", "com", "jrpetty",
+                       "mcassistant", "client", "CityScreen.java")
+    try:
+        text = open(src).read()
+    except OSError:
+        return -1
+    m = re.search(r"String\[\] TABS = \{(.*?)\};", text, re.S)
+    if not m:
+        return -1
+    body = re.sub(r"//[^\n]*", "", m.group(1))
+    tabs = re.findall(r'"([^"]*)"', body)
+    return tabs.index(name) if name in tabs else -1
+
+
+def perks_stage(r, look, cx, cz):
+    """[perks] The town's, the leader's and the folk's perks (entity/Perks, CityTree, Wonders, Reigns, Quirks,
+    FolkSkills). Run from beside the town that cx, cz is the heart of: /village perks stage gives the nearest town a
+    history to photograph (two tiers of every branch studied, the first of each pair so the other shows closed, the
+    Faith branch to its top and the Cathedral, or the first wonder no other town holds, raised on a stage beside it and
+    claimed; a civic set to study; its leader five days in office with three skills of its heart's line; a past reign's
+    legacy and its plaque before the hall; every grown folk's quirks), and says where to look from ("VIEW name x y z ax
+    ay az"). Pictures: the town's wonder, the legacy plaque; then /village perks wonders show sets all ten wonders side
+    by side out past the town, and each is photographed; last, the town's books at the Research page (the whole tree,
+    the pairs, the wonders), the Leader page and the Perks page, and what /village perks says.
+    Not yet called from main(): call it after the other stages, as perks_stage(r, look, cx, cz)."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    midday(r)
+    r.cmd("weather clear")
+    r.cmd("gamemode spectator %s" % USER)
+    hy = ground_height(r, cx, cz)
+    sx, sy, sz = cx + 70, 150, cz + 50                 # in clear air beside the town, within its reach (the nearest town's)
+    r.cmd("tp %s %d %d %d" % (USER, sx + 20, sy + 12, sz + 36))
+    time.sleep(10)                                     # the stage's chunks arrive
+    out = r.cmd("execute positioned %d %d %d run village perks stage" % (sx, sy, sz))
+    say("perks stage: " + out[:1500])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("no perks staged; nothing to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            return
+        x, y, z, ax, ay, az = views[name]
+        look("40-perks-" + picture, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    shoot("perks-wonder", "1-wonder", 10)
+    shoot("perks-plaque", "2-legacy-plaque", 6)
+    # All ten wonders side by side, out past the town where the ground is its own.
+    wx, wy, wz = cx - 160, 160, cz + 120               # in clear air, well away from the town
+    r.cmd("tp %s %d %d %d" % (USER, wx + 36, wy + 30, wz + 60))
+    time.sleep(10)
+    shown = r.cmd("execute positioned %d %d %d run village perks wonders show" % (wx, wy, wz))
+    say("wonders shown: " + shown[:900])
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (wonder-\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", shown):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    k = 3
+    for name in sorted(n for n in views if n.startswith("wonder-")):
+        shoot(name, "%d-%s" % (k, name), 8)
+        k += 1
+    say("perks: " + r.cmd("execute positioned %d %d %d run village perks" % (cx, hy + 1, cz))[:1500])
+    say("wonders: " + r.cmd("execute positioned %d %d %d run village perks wonders" % (cx, hy + 1, cz))[:900])
+    # The books: the Research, Leader and Perks pages, found by name in the books' own list of tabs (CityScreen.TABS),
+    # so the numbers follow whatever pages are added before them.
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
+    time.sleep(3)
+    for name, label in (("Research", "research"), ("Leader", "leader"), ("Perks", "perks")):
+        page = books_page(name)
+        if page < 0:
+            say("no %s page in the books' tabs" % name)
+            continue
+        say("stats %s: " % label + r.cmd("execute as %s at @s run village stats %d" % (USER, page)))
+        time.sleep(4)
+        shot("40-perks-page-%s" % label)
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the perks: %s" % client_alive())
+
+
+
+def police_stage(r, look, cx, cz):
+    """[police] The watch as the town's police (entity/Police, Roster, WatchHouse, Beats, Incidents, PlayerLaw). By day,
+    /village police stage puts a watch house up on open ground south-east of the square if the town has none (on the
+    town's books, its cells fitted with iron bars and iron doors, its notice board and its casebook), locks a folk in a
+    cell for a night's disorder, sets a guard on the beat greeting a folk on the square by name, starts a folk running
+    down the east avenue with a guard after it, and has a guard walk another folk to the cells on a lead. Each scene
+    says where to look from (VIEW name eye target). Pictures, in the order the scenes run out: the chase while it is
+    on, the greeting on the beat while its words are up, the arrest on its lead on the way to the cells, the prisoner
+    behind the cell's bars, the watch house from the street, the board with the day's roster; then /village police
+    said, and the town's books open at the Watch page (the roster, the week's grid, the chart, the cells, the beats)."""
+    num = r"(-?\d+)"
+    pattern = r"VIEW (\S+) " + " ".join([num] * 6)
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    r.cmd("weather clear")
+    hy = ground_height(r, cx, cz)
+    sx, sz = cx + 46, cz + 40                          # open ground off the square for the watch house, if it wants one
+    r.cmd("tp %s %d %d %d" % (USER, cx + 20, hy + 14, cz + 20))
+    time.sleep(8)                                      # the ground arrives at the server and the client
+    out = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village police stage" % (sx, sz))
+    say("police stage: " + out[:1400])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(pattern, out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("no watch house staged; nothing to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            say("no view for %s; nothing to photograph" % name)
+            return
+        x, y, z, ax, ay, az = views[name]
+        look("43-police-" + picture, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    shoot("chase", "1-chase", 2)                       # while it runs: a guard is quick, and it is soon over
+    shoot("beat", "2-beat", 2)                         # "Afternoon, Bree. All well at home?", and the answer
+    shoot("arrest", "3-arrest", 3)                     # on the lead, walking to the cells
+    shoot("cell", "4-cell", 4)
+    shoot("house", "5-house", 4)
+    shoot("board", "6-board", 4)
+    say("police: " + r.cmd("execute positioned %d %d %d run village police" % (cx, hy + 1, cz))[:1400])
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
+    time.sleep(3)
+    say("books: " + r.cmd("execute as %s at @s run village police books" % USER))
+    time.sleep(4)
+    shot("43-police-7-page")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the police: %s" % client_alive())
+
+
+def redstone_stage(r, look, cx, cz):
+    """[redstone] The redstone engineer's works (entity/Engineers, RedstoneStage). Run from well out to the east of the
+    town, /village redstone stage lays out, for nothing and from the engineer's own drawings: the redstone workshop with
+    the engineer before its door, in its red-piped coat and goggles; the sugar cane farm with one of its pistons caught
+    as it fires; three lamp posts along a path; the hopper sorter laid against a storehouse, its filters stocked; and a
+    stretch of wall with the piston gate in it. Pictures: the engineer at the workshop, the cane farm, the sorter by the
+    storehouse, the gate open and then shut (/village redstone stage gate throws its lever), and last the lamps along
+    the path at night, lit by their sensors alone. Then /village redstone, the town's own works in words."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("time set 6000")
+    r.cmd("weather clear")
+    hy = ground_height(r, cx, cz)
+    sx, sz = cx + 140, cz - 60                         # out past the town to the east, on ground of its own
+    r.cmd("tp %s %d %d %d" % (USER, sx + 30, hy + 30, sz + 30))
+    time.sleep(8)                                      # the ground arrives at the server and the client
+    out = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village redstone stage" % (sx, sz))
+    say("redstone stage: " + out[:900])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("nothing staged for the redstone works; nothing to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            return
+        x, y, z, ax, ay, az = views[name]
+        look("33-redstone-" + picture, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    shoot("engineer", "1-engineer", 10)
+    shoot("cane", "2-cane-farm", 8)
+    shoot("sorter", "3-sorter", 8)
+    shoot("gate", "4-gate-open", 8)
+    say("gate: " + r.cmd("village redstone stage gate"))
+    time.sleep(2)                                      # the pistons take their three ticks; the client draws them
+    shoot("gate", "5-gate-shut", 6)
+    shoot("gate-inside", "6-gate-lever", 6)
+    r.cmd("time set 18000")                            # night: the sensors turn the lamps on
+    time.sleep(4)
+    shoot("lamps", "7-lamps-night", 8)
+    r.cmd("time set 6000")
+    say("redstone: " + r.cmd("execute positioned %d %d %d run village redstone" % (cx, hy + 1, cz))[:1200])
+    say("alive after the redstone works: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")
@@ -3421,6 +3922,42 @@ def main():
         leisure_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("leisure stage failed: %s" % e)
+    try:
+        cartographer_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("cartographer stage failed: %s" % e)
+    try:
+        individual_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("individual stage failed: %s" % e)
+    try:
+        emerald_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("emerald stage failed: %s" % e)
+    try:
+        diver_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("diver stage failed: %s" % e)
+    try:
+        nether_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("nether stage failed: %s" % e)
+    try:
+        perks_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("perks stage failed: %s" % e)
+    try:
+        police_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("police stage failed: %s" % e)
+    try:
+        redstone_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("redstone stage failed: %s" % e)
+    try:
+        culture2_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("culture2 stage failed: %s" % e)
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the founding: %s" % client_alive())
     try:

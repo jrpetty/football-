@@ -90,6 +90,13 @@ public final class Makers {
         declare("fish_pie", "the cook", "after a glut at the fish market", "Kitchen.cook");
         declare("herbal_tea", "the healer (the café with no healer)", "for a folk with a cold, and the café on cold days", "Kitchen.brew");
         declare("bandage", "the healer (the tailor with no healer)", "to keep the watch and the cave team at three each, and for the healer's round", "Kitchen.bind");
+        // [culture2] The towns' own dishes (Cuisine.cook, from Crafts.now: the cook's first care; a hand at the town's works
+        // on a feast day in a town with no cook).
+        for (String d : List.of("fish_stew", "game_pie", "berry_tart", "harvest_loaf", "hotpot", "spiced_mutton", "cocoa_cake", "fen_broth")) {
+            declare(d, "the cook (a hand at the town's works on a feast day, with no cook)",
+                "while the stores keep fewer of the town's own dish than four and one for every four folk, and on feast days",
+                "Cuisine.cook / Cuisine.tick");
+        }
         // [pets] The pets' things (Pets.craft, from Crafts.now; the shop's book through Workshop.demand).
         declare("pet_bowl", "the shop's workshop", "when a household with a pet has no bowl", "Pets.craft / Workshop.demand");
         declare("dog_bed", "the tailor", "when a household's dog has no bed of its own", "Pets.craft");
@@ -162,6 +169,10 @@ public final class Makers {
         // ink at the bench, paid for out of its purse, before it goes to an interview for a post.
         declare("letter_of_application", "the candidate itself, at its town's bench",
             "when it is shortlisted for a post that goes to interview (one kept, written over for the next)", "Interviews.write");
+        // [police] The Constable's Badge, of the stores' iron and gold (Police.makeBadge).
+        declare("constable_badge", "the smith (the shop's workshop with no smith)",
+            "for the town's constable when it has none, and for each player the watch swears in as a special constable",
+            "Police.smith / Police.badges");
         // [leisure] Home and play (entity/Pastimes: the trades' turns from Crafts.now, the shop's book through
         // Workshop.demand, and the town's own bench where the town has neither trade nor shop; the busker's own lute).
         declare("patchwork_quilt", "the tailor (the shop's workshop with no tailor)",
@@ -196,6 +207,13 @@ public final class Makers {
         for (String t : List.of("job_board", "village_charter", "assistant_spawner", "village_folk_spawner", "place_marker", "zone_marker")) {
             declare(t, "the shop's workshop", PLAYERS, "Workshop.order");
         }
+        declare("spectacles", "the smith (else the shop)", "for an old folk who reads and has none: the scholar, the librarian, "
+            + "the storekeeper first", "Keepsakes.spectacles");                                                     // [individual]
+        // [nether] The Nether runners' kit (NetherRunners.smith / tailor, from Crafts; the shop's book through Workshop.demand).
+        declare("gold_charm", "the smith (else the shop's workshop)", "for each Nether runner with no gold to wear, so the piglins leave it be",
+            "NetherRunners.smith / Workshop.demand");
+        declare("runners_satchel", "the tailor (else the shop's workshop)", "for each Nether runner without a satchel to carry the haul in",
+            "NetherRunners.tailor / Workshop.demand");
         unmade("memory_core", "it forms only when a companion falls, holding all it was; a made one would hold nobody");
     }
 }

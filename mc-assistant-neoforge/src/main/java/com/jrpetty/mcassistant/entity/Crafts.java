@@ -95,6 +95,7 @@ public final class Crafts {
             if (made == null) made = WorkTools.craft(level, v, f);    // [workitems] ropes and sacks, the saw, props, crates, boxes, milestones
             if (made == null) made = FieldTools.craft(level, v, f);   // [fields] the copper can, sickle and smoker, the satchel; the shop's any of them
             if (made == null) made = Kitchen.craft(level, v, f);      // [kitchen] lunches, cheese, cakes, pies; mead, cider; tea and bandages
+            if (made == null) made = Cuisine.cook(level, v, f);       // [culture2] the town's own dish, before the café's usual menu
             if (made == null) made = Pastimes.craft(level, v, f);     // [leisure] the quilts, lutes, boards, kites, footballs, lanterns, slates
             if (made == null) made = switch (f.stationTask()) {
                 case SMITH -> smith(level, v, f);
@@ -295,6 +296,9 @@ public final class Crafts {
             Trades.workstation(f, level, v, Blocks.ANVIL, s -> s.is(ItemTags.ANVIL),
                 com.jrpetty.mcassistant.entity.goal.BuildGoal.Part.ANVIL);
         }
+        // [emerald] A book the trader bought from the villagers, laid on the town's best tool at the anvil (EmeraldTrader).
+        String laid = EmeraldTrader.layBook(level, v, f);
+        if (laid != null) return laid;
         int watch = Math.max(1, guards(v));
         List<Smithing> wants = List.of(
             new Smithing(Items.IRON_PICKAXE, 3, 2, 2),
@@ -322,12 +326,18 @@ public final class Crafts {
             String best = WatchKit.makeBest(level, v, f);     // [guard-kit] the watch's diamond, turn about with the forging
             if (best != null) return best;
         }
+        // [nether] A gold charm for each Nether runner with no gold to wear; the leader's flint and steel (NetherRunners).
+        String nether = NetherRunners.smith(level, v, f);
+        if (nether != null) return nether;
         String forged = forge(level, v, f, wants);
         if (forged != null) return forged;
         // [guard-kit] Its forging seen to: the watch's diamond (the blade first) once the age, the diamonds and the
         // miners' pick allow, netherite in the Nether Age, and the leather when the town has no tailor (WatchKit).
         String kit = WatchKit.make(level, v, f);
         if (kit != null) return kit;
+        // [police] The watch house's iron: the cells' bars and doors; and a Constable's Badge when the town wants one (Police).
+        String police = Police.smith(level, v, f);
+        if (police != null) return police;
         if (!fletchFirst) {
             String fletched = fletch(level, v, guards(v));
             if (fletched != null) return fletched;
@@ -335,6 +345,9 @@ public final class Crafts {
         // [transport] The railway's rails, powered rails, torches, levers and carts, of the stores' iron and gold (Railways).
         String rails = Railways.smith(level, v, f);
         if (rails != null) return rails;
+        // [diver] Turtle helmets of the beach's scutes: the divers', the fleet's fishers', one for the shop (TurtleBeach).
+        String helmet = TurtleBeach.smith(level, v, f);
+        if (helmet != null) return helmet;
         // The tools and the watch seen to: the village's lights and pots, of the iron it can spare.
         return ironwork(level, v);
     }
@@ -450,6 +463,7 @@ public final class Crafts {
      *  gravel if the stores have none; the feathers are the rancher's chickens'. */
     @Nullable
     static String fletch(ServerLevel level, Villages.Village v, int watch) {
+        watch += NetherRunners.bows(v.id());                      // [nether] a bow, and its arrows, for each Nether runner too
         if (watch <= 0) return null;
         if (Fletchers.keeps(v.id())) return null;                      // [fletcher] the town's fletcher makes them (Fletchers)
         if (stock(level, v, s -> s.is(Items.BOW)) < watch && stock(level, v, s -> s.is(Items.STRING)) >= 3
@@ -528,6 +542,8 @@ public final class Crafts {
         if (kit != null) return kit;
         String knotted = Fleet.makeNet(level, v, f);              // [fleet] a net for each of the fishing fleet's boats
         if (knotted != null) return knotted;
+        String satchel = NetherRunners.tailor(level, v, f);        // [nether] a runner's satchel for each Nether runner without one
+        if (satchel != null) return satchel;
         if (bedsFirst) return null;
         // [fashion] The fashion's garments, at the loom: the book's orders, dyed with the stores' dyes (Tailoring).
         String garment = Tailoring.work(level, v, f, loom);
@@ -962,7 +978,7 @@ public final class Crafts {
             new Brew(Potions.REGENERATION, Items.GHAST_TEAR, 2),
             new Brew(Potions.LEAPING, Items.RABBIT_FOOT, 2),
             new Brew(Potions.WATER_BREATHING, Items.PUFFERFISH, 2),
-            new Brew(Potions.FIRE_RESISTANCE, Items.MAGMA_CREAM, 2),
+            new Brew(Potions.FIRE_RESISTANCE, Items.MAGMA_CREAM, NetherHome.fireResistanceKept(v.id())),   // [nether] two a runner a day
             new Brew(Potions.STRENGTH, Items.BLAZE_POWDER, 2));
     }
 
@@ -982,13 +998,15 @@ public final class Crafts {
     static String brew(ServerLevel level, Villages.Village v, VillageFolkEntity f) {
         BlockPos at = Trades.workstation(f, level, v, Blocks.BREWING_STAND, s -> s.is(Items.BREWING_STAND),
             com.jrpetty.mcassistant.entity.goal.BuildGoal.Part.BREWING);
-        String patch = wartPatch(level, v, f, at != null ? at : (f.workZone() != null ? f.workZone().center() : f.blockPosition()));
+        // [nether] The town's wart farm of the runners' soul sand first (NetherHome), else its own small patch.
+        String patch = NetherHome.tend(level, v, f);
+        if (patch == null) patch = wartPatch(level, v, f, at != null ? at : (f.workZone() != null ? f.workZone().center() : f.blockPosition()));
         if (at == null || !(level.getBlockEntity(at) instanceof net.minecraft.world.level.block.entity.BrewingStandBlockEntity stand)) {
             return patch;
         }
         // Blaze powder ground from the rods the Nether parties bring (Nether): two to a rod.
         if (have(level, v, f, s -> s.is(Items.BLAZE_POWDER)) < 6 && take(level, v, s -> s.is(Items.BLAZE_ROD), 1)) {
-            store(level, v, new ItemStack(Items.BLAZE_POWDER, 2));
+            store(level, v, new ItemStack(Items.BLAZE_POWDER, CityTree.powderPerRod(v.id())));   // [perks] the Alchemists' Guild grinds three
         }
         // Fire: a blaze powder in the fuel slot (it burns for twenty brews).
         if (stand.getItem(4).isEmpty() && use(level, v, f, s -> s.is(Items.BLAZE_POWDER), 1)) {
@@ -1086,6 +1104,8 @@ public final class Crafts {
             return have(level, v, f, s -> s.is(Items.BLAZE_POWDER)) >= 5 && (!use || use(level, v, f, s -> s.is(Items.BLAZE_POWDER), 1));
         }
         if (have(level, v, f, s -> s.is(r)) >= 1) return !use || use(level, v, f, s -> s.is(r), 1);
+        // [nether] Magma cream for fire resistance: a blaze powder (the runners' rods) and a slime ball, by the game's recipe.
+        if (r == Items.MAGMA_CREAM) return NetherHome.magmaCream(level, v, use);
         Predicate<ItemStack> base = r == Items.GLISTERING_MELON_SLICE ? s -> s.is(Items.MELON_SLICE)
             : r == Items.GOLDEN_CARROT ? s -> s.is(Items.CARROT)
             : r == Items.SUGAR ? s -> s.is(Items.SUGAR_CANE) : null;
@@ -1184,6 +1204,9 @@ public final class Crafts {
             }
         }
         if (table == null) return null;
+        // [emerald] A book the trader bought from the villagers, laid on the town's best tool (EmeraldTrader.layBook).
+        String laid = EmeraldTrader.layBook(level, v, f);
+        if (laid != null) return laid;
         if (have(level, v, f, s -> s.is(Items.LAPIS_LAZULI)) < 3 || stock(level, v, s -> s.is(Items.BOOK)) < 1) return null;
         // Bookshelves as the game counts them: two blocks out from the table, level with it or one
         // up, with nothing but air between (fifteen is as strong as it gets).

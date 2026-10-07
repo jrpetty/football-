@@ -97,7 +97,18 @@ public class BuildGoal extends Goal {
         // [fletcher] the fletcher's hut, its table and its sifting floor (entity/Fletchers)
         "fletcher",
         // [golems] the golem yard, where the iron is made into blocks for the golems (entity/Golems)
-        "golemyard");
+        "golemyard",
+        // [police] the watch house: the front desk, the notice board of the wanted, the records and the cells (entity/WatchHouse)
+        "watchhouse",
+        // [emerald] the Trading Post: the emerald trader's stall and its book of the villagers' villages (entity/EmeraldTrader)
+        "tradingpost",
+        // [diver] the diver's shed on the bank: a smoker, a campfire, a bench and a barrel (entity/Divers)
+        "divershed",
+        // [perks] the wonders of the world, one of each in the world, the first town to raise it keeping it (entity/Wonders)
+        "greatforge", "skygarden", "clockworkgate", "colossus", "grandbazaar", "arena", "grandlibrary", "cathedral",
+        "greatlighthouse", "observatory",
+        // [redstone] the redstone engineer's workshop: its bench, its lectern of plans, its chests of parts (entity/Engineers)
+        "redstoneworks");
 
     /** Half the width of a structure's footprint: the meeting hall, the market, the
      *  barracks, the chapel's length and the gateway's step are seven across, the rest

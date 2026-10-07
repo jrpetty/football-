@@ -65,7 +65,8 @@ public final class Culture {
     private Culture() {}
 
     /** What a folk is about, of the town's culture. */
-    enum Role { SILENCE, CHOIR, ACTOR, AUDIENCE, BAND, TOAST, PAINTER, BUSK, LISTEN }   // [arms] a busker, a passer-by stopped to hear it
+    enum Role { SILENCE, CHOIR, ACTOR, AUDIENCE, BAND, TOAST, PAINTER, BUSK, LISTEN,   // [arms] a busker, a passer-by stopped to hear it
+        RITE }                                                                    // [culture2] the faith's rites (Beliefs)
 
     /** A folk held by the town's culture: as what, till when (its last look and a little), and its seat if it sat. */
     static final class Held {
@@ -91,6 +92,7 @@ public final class Culture {
         Paintings.resetForTests();
         Plaques.resetForTests();
         Buskers.resetForTests();                                         // [arms]
+        TownWays.resetForTests();                                        // [culture2] the town's own ways
     }
 
     // ------------------------------------------------------------------ the town's part
@@ -160,7 +162,8 @@ public final class Culture {
         }
         boolean held = Music.choir(f, level, v) || Theatre.hold(f, level, v)
             || Music.band(f, level, v) || Traditions.toast(f, level, v) || Paintings.easel(f, level, v)
-            || Buskers.hold(f, level, v);                                // [arms] busking, or stopped to listen
+            || Buskers.hold(f, level, v)                                 // [arms] busking, or stopped to listen
+            || Beliefs.hold(f, level, v);                                // [culture2] the morning's rite, the Stars' vigil
         if (!held) release(f);
         return held;
     }
@@ -382,6 +385,8 @@ public final class Culture {
         if (customs != null) out.add("FN|" + customs);
         String stage = Theatre.boardLine(level, village);
         if (stage != null) out.add("FG|" + stage);
+        String ways = TownWays.boardLine(village);                       // [culture2] its style, its dish, its feast, its faith
+        if (ways != null) out.add(ways);
         return out;
     }
 
@@ -396,6 +401,7 @@ public final class Culture {
         out.put("plaques", Plaques.report(level, v));
         out.put("arms", Arms.report(level, v));                          // [arms]
         out.put("buskers", Buskers.report(level, v));                    // [arms]
+        out.put("ways", TownWays.report(level, v));                      // [culture2] its table, tongue, building, feast and faith
         return out;
     }
 

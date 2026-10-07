@@ -101,7 +101,8 @@ public final class Wealth {
         int w = earned(f);
         w += tradeWage(f.stationTask(), f.ownerId()) * WarFooting.dangerPay(f) / 100;   // [war-prep] danger money on a war footing (WarFooting)
         w = Ethos.wage(f, w);                                     // [identity] drawn together (egalitarian, a commune) or spread by rank
-        return w + FolkSkills.haggled(f, w);
+        return w + FolkSkills.haggled(f, w)
+            + Perks.wageExtra(f, w);                         // [perks] a Standing Army's guard pay, Private Larders' twentieth
     }
 
     /**
@@ -125,6 +126,8 @@ public final class Wealth {
         if (b > 0) sb.append(", +").append(b).append(b == 2 ? " for a hard day's work" : " for a fair day's work");
         int haggled = FolkSkills.haggled(f, earned(f));
         if (haggled > 0) sb.append(", +").append(haggled).append(" haggled (its knack)");
+        int ways = Perks.wageExtra(f, earned(f));                                          // [perks]
+        if (ways > 0) sb.append(", +").append(ways).append(" by the town's ways");
         return sb.toString();
     }
 

@@ -52,6 +52,17 @@ import java.util.UUID;
  *   and Nest Egg, once only: about three tenths of its house's price toward buying it.</li>
  * </ul>
  *
+ * <p>[perks] And now fifty in four families. The trades that had none have their own (Pathfinder for the scout,
+ * Sharp Ledger at the bank, Tunnel Rat in the caves, Strong Oar at the ferry, each 8% quicker), and the new trades
+ * theirs, found by their title or a word of their name the day they come into the game, and meanwhile the nearest
+ * old trades' (Surveyor's Eye, a scout a quarter further; Deep Lungs, three times the breath; Fireproof, half the
+ * fire; Piglin-Friend, left be by the piglins; Blaze Hunter, a rod more from a blaze; True Shot,
+ * arrows a quarter harder; Featherlight, eight arrows more; Iron Whisperer, golems mended; Tinkerer, the railway a
+ * quarter quicker; Circuit Sense, redstone dust from the ore; Silver Tongue, the town's takings 5% higher; Showman, a
+ * feast to remember). The <b>Master</b> family (ten) opens at level thirty in a trade: a master's pace (12%) and a
+ * master's gift (the Master Miner's ore, the Master Grower's seed, the Master Host's tips, the Veteran's armour and
+ * blow, the Master Porter's load), and the Grand Master's for the trades without a master of their own.
+ *
  * <p>How it chooses: it scores every knack open to it by its trade (the knacks of the trade it
  * works, more as it masters it), its traits (the knack of its own nature), what it cares about
  * most (Values: a Merchant minds its coin, a Homemaker wants a house of its own, a Free Spirit its
@@ -75,9 +86,11 @@ public final class FolkSkills {
     /** Nest Egg: this share of the house's price, in the hundred. */
     public static final int NEST_EGG_PERCENT = 30;
 
-    /** The three families of knack. */
+    /** The families of knack. */
     public enum Family {
-        TRADE("Trade"), NATURE("Nature"), PURSE("Purse");
+        TRADE("Trade"), NATURE("Nature"), PURSE("Purse"),
+        /** [perks] A master's knack: open only at level thirty of one of its trades, and worth more. */
+        MASTER("Master");
 
         public final String title;
 
@@ -141,7 +154,63 @@ public final class FolkSkills {
         HAGGLER("haggler", "Haggler", Family.PURSE, "+5% on its wages: an extra coin now and then", 0, null,
             "it drives a hard bargain for its wage"),
         NEST_EGG("nest_egg", "Nest Egg", Family.PURSE, "once: about 30% of its house's price toward buying it", 0, null,
-            "it wants a house of its own");
+            "it wants a house of its own"),
+        // ---------------------------------------------------------------- [perks] the trades that had none
+        PATHFINDER("pathfinder", "Pathfinder", Family.TRADE, "+8% pace scouting", 8, null,
+            "it never loses the way", StationTask.SCOUT),
+        SURVEYORS_EYE("surveyors_eye", "Surveyor's Eye", Family.TRADE, "scouts a quarter further afield", 0, null,
+            "an eye for the lie of the land", StationTask.CARTOGRAPHER, StationTask.SCOUT),
+        SHARP_LEDGER("sharp_ledger", "Sharp Ledger", Family.TRADE, "+8% pace at the bank", 8, null,
+            "it never loses a coin", StationTask.BANK),
+        TUNNEL_RAT("tunnel_rat", "Tunnel Rat", Family.TRADE, "+8% pace in the caves", 8, null,
+            "it is at home in the dark", StationTask.CAVE),
+        STRONG_OAR("strong_oar", "Strong Oar", Family.TRADE, "+8% pace at the ferry", 8, null,
+            "it pulls a steady oar", StationTask.FERRY),
+        DEEP_LUNGS("deep_lungs", "Deep Lungs", Family.TRADE, "holds its breath three times as long", 0, null,
+            "it is at home under water", StationTask.DIVER, StationTask.FISH),
+        // ---------------------------------------------------------------- [perks] the new trades' (and the nearest old ones')
+        FIREPROOF("fireproof", "Fireproof", Family.TRADE, "half the harm from fire and lava", 0, null,
+            "it has walked through fire", StationTask.NETHER, StationTask.SMELT),
+        PIGLIN_FRIEND("piglin_friend", "Piglin-Friend", Family.TRADE, "piglins leave it be (unless it strikes them)", 0, null,
+            "it knows the piglins' ways", StationTask.NETHER),
+        BLAZE_HUNTER("blaze_hunter", "Blaze Hunter", Family.TRADE, "a blaze it kills drops a rod more", 0, null,
+            "it has a way with blazes", StationTask.NETHER),
+        TRUE_SHOT("true_shot", "True Shot", Family.TRADE, "its arrows hit a quarter harder", 0, null,
+            "its arrows fly true", StationTask.FLETCHER, StationTask.GUARD, StationTask.HUNT),
+        FEATHERLIGHT("featherlight", "Featherlight", Family.TRADE, "8 more arrows in its quiver", 0, null,
+            "it fletches light and true", StationTask.FLETCHER, StationTask.GUARD),
+        IRON_WHISPERER("iron_whisperer", "Iron Whisperer", Family.TRADE, "iron golems near it mend", 0, null,
+            "the golems trust it", StationTask.GOLEMS),
+        TINKERER("tinkerer", "Tinkerer", Family.TRADE, "+8% pace at its trade; the railway laid 25% faster while it works", 8, null,
+            "it can't leave a mechanism alone", NewTrades.with("Redstone engineer", "REDSTONE", StationTask.SMITH)),
+        CIRCUIT_SENSE("circuit_sense", "Circuit Sense", Family.TRADE, "one redstone ore in two gives four dust more", 0, null,
+            "it can feel the redstone in the rock", NewTrades.with("Redstone engineer", "REDSTONE", StationTask.MINE, StationTask.CAVE)),
+        SILVER_TONGUE("silver_tongue", "Silver Tongue", Family.TRADE, "+5% on the town's takings while it works", 0, null,
+            "it could sell sand in the desert", StationTask.EMERALD, StationTask.SHOP),
+        SHOWMAN("showman", "Showman", Family.TRADE, "a feast it is at lifts the town 2 for two days", 0, null,
+            "it knows how to put on a show", StationTask.FIREWORKS),
+        // ---------------------------------------------------------------- [perks] the masters' (level thirty)
+        MASTER_MINER("master_miner", "Master Miner", Family.MASTER, "+12% pace; one ore in five gives one more", 12, null,
+            "a lifetime at the rock face", StationTask.MINE, StationTask.CAVE),
+        MASTER_GROWER("master_grower", "Master Grower", Family.MASTER, "+12% pace; a seed back from every harvest", 12, null,
+            "the fields know its hand", StationTask.FARM),
+        MASTER_FORESTER("master_forester", "Master Forester", Family.MASTER, "+12% pace felling trees", 12, null,
+            "it reads a tree like a book", StationTask.WOOD),
+        MASTER_CRAFTSMAN("master_craftsman", "Master Craftsman", Family.MASTER, "+12% pace at the bench and the furnace", 12, null,
+            "a master of its craft", StationTask.SMITH, StationTask.TAILOR, StationTask.BREW, StationTask.ENCHANT, StationTask.SMELT),
+        MASTER_HOST("master_host", "Master Host", Family.MASTER, "+12% pace; a tip at every sale it can", 12, null,
+            "nobody leaves its counter unhappy", StationTask.COOK, StationTask.SHOP),
+        MASTER_HUNTSMAN("master_huntsman", "Master Huntsman", Family.MASTER, "+12% pace at the water and in the woods", 12, null,
+            "it knows every fish and every deer", StationTask.FISH, StationTask.HUNT),
+        MASTER_HERDSMAN("master_herdsman", "Master Herdsman", Family.MASTER, "+12% pace with the herds and the hives", 12, null,
+            "the beasts come when it calls", StationTask.RANCH, StationTask.BEEKEEP),
+        VETERAN("veteran", "Veteran", Family.MASTER, "+2 armour and +2 attack on the watch", 0, null,
+            "it has stood a hundred watches", StationTask.GUARD),
+        MASTER_PORTER("master_porter", "Master Porter", Family.MASTER, "+12% pace in the storehouse; 64 more a load", 12, null,
+            "it could carry the town on its back", StationTask.HAUL, StationTask.STORE),
+        GRAND_MASTER("grand_master", "Grand Master", Family.MASTER, "+12% pace at its trade", 12, null,
+            "there is nothing left to teach it", NewTrades.all(StationTask.SCOUT, StationTask.BANK, StationTask.FERRY, StationTask.FLETCHER, StationTask.GOLEMS,
+                StationTask.FIREWORKS, StationTask.CARTOGRAPHER, StationTask.EMERALD, StationTask.DIVER, StationTask.NETHER));
 
         public final String key, title, effect, why;
         public final Family family;
@@ -181,6 +250,46 @@ public final class FolkSkills {
             return String.join(" / ", out);
         }
     }
+
+    /**
+     * [perks] A trade still to come (the redstone engineer), found by its title or a word of its name once it is in the
+     * game, so its knacks open to it the day it lands; till then each of its knacks belongs to the nearest old trades,
+     * where it does its work now. The trades that have come (the Nether runner, the fletcher, the golem keeper, the
+     * diver, the cartographer, the emerald trader, the fireworks maker) are named outright.
+     */
+    static final class NewTrades {
+        private NewTrades() {}
+
+        static final String[] HINTS = { "REDSTONE" };
+
+        /**
+         * The old trades given, and the new trade by its title or a word of its name ({@code hints}: one or more,
+         * "KELP|DIVE"), if the game has it.
+         */
+        static StationTask[] with(String title, String hints, StationTask... old) {
+            List<StationTask> out = new ArrayList<>(Arrays.asList(old));
+            for (StationTask t : StationTask.values()) {
+                if (out.contains(t) || t == StationTask.NONE) continue;
+                boolean named = t.title.equalsIgnoreCase(title);
+                for (String h : hints.split("\\|")) named |= t.name().contains(h);
+                if (named) out.add(t);
+            }
+            return out.toArray(new StationTask[0]);
+        }
+
+        /** The old trades given, and every new trade the game has. */
+        static StationTask[] all(StationTask... old) {
+            List<StationTask> out = new ArrayList<>(Arrays.asList(old));
+            for (StationTask t : StationTask.values()) {
+                if (out.contains(t)) continue;
+                for (String h : HINTS) if (t.name().contains(h)) { out.add(t); break; }
+            }
+            return out.toArray(new StationTask[0]);
+        }
+    }
+
+    /** The level of a trade at which its master's knack opens. */
+    public static final int MASTER_LEVEL = 30;
 
     /** A knack it chose: which, on what day, and why. */
     public record Chosen(Knack knack, long day, String why) {}
@@ -323,6 +432,11 @@ public final class FolkSkills {
                 Social.Trait opp = k.trait == null ? null : k.trait.opposite();
                 return opp == null || !f.life().has(opp);
             }
+            case MASTER -> {
+                // [perks] A master of one of its trades: level thirty at it.
+                for (StationTask t : k.trades) if (f.tradeLevel(t) >= MASTER_LEVEL) return true;
+                return false;
+            }
             default -> {
                 // Nest Egg, once a household: not if its partner has had it.
                 if (k == Knack.NEST_EGG) {
@@ -385,6 +499,20 @@ public final class FolkSkills {
                         && top == Values.Value.FOOD) s += 1;
                 if ((k == Knack.STEADY_HANDS || k == Knack.KEEN_EYE || k == Knack.FIRE_TENDER || k == Knack.PRACTISED_HAND)
                         && top == Values.Value.PROGRESS) s += 1;
+                // [perks] The Nether's knacks are worth little to a town that never goes there, unless the Nether is its trade.
+                if ((k == Knack.PIGLIN_FRIEND || k == Knack.BLAZE_HUNTER) && !netherTrade(job)
+                        && Villages.ageOf(f.ownerId()) != Villages.Age.NETHER) s -= 4;
+                if (k == Knack.CIRCUIT_SENSE && top == Values.Value.PROGRESS) s += 1;
+                if ((k == Knack.TRUE_SHOT || k == Knack.FEATHERLIGHT || k == Knack.IRON_WHISPERER) && top == Values.Value.SAFETY) s += 1.5;
+                if ((k == Knack.SILVER_TONGUE || k == Knack.SHOWMAN) && (top == Values.Value.WEALTH || life.has(Social.Trait.SOCIABLE))) s += 1;
+            }
+            case MASTER -> {
+                // [perks] A master wants its mastery above anything.
+                StationTask was = null;
+                for (StationTask t : k.trades) if (was == null || f.tradeLevel(t) > f.tradeLevel(was)) was = t;
+                int lv = was == null ? 0 : f.tradeLevel(was);
+                s = 9 + (k.trades.contains(job) ? 2 : 0) + lv / 20.0;
+                why = "a master " + (was == null ? "of its trade" : was.title.toLowerCase(Locale.ROOT)) + " at level " + lv + ": " + k.why;
             }
             case NATURE -> {
                 boolean mine = k.trait != null && life.has(k.trait);
@@ -508,6 +636,8 @@ public final class FolkSkills {
             case PURSE -> k == Knack.THRIFTY
                 ? FolkTalk.pick(r, "A coin saved is a coin earned. Thrifty, that's me now.", "No more spending like there's no tomorrow.")
                 : FolkTalk.pick(r, "I'll drive a harder bargain for my wage from now on.", "They'll not short me again. Haggler, that's me.");
+            case MASTER -> FolkTalk.pick(r, "Thirty years of it, and now I'm its master: " + k.title + ".",
+                "There's nobody in the town can teach me this trade now. " + k.title + ".", k.title + " — I've earned that, I think.");
         };
         FolkTalk.speak(f, line);
     }
@@ -589,7 +719,53 @@ public final class FolkSkills {
     /** Has it this knack, and does it work just now (a trade's knack only in its trade)? */
     public static boolean active(VillageFolkEntity f, Knack k) {
         if (!f.knacks().has(k) || f.isBaby()) return false;
-        return k.family != Family.TRADE || k.trades.contains(f.stationTask());
+        return k.family != Family.TRADE && k.family != Family.MASTER || k.trades.contains(f.stationTask());
+    }
+
+    /** [perks] Is this the trade of going through to the Nether (the Nether runner, when the game has it)? */
+    static boolean netherTrade(StationTask t) {
+        return t == StationTask.NETHER;
+    }
+
+    /** [perks] Has any grown folk of the town this knack at work just now (looked up at most once in ten seconds)? */
+    static boolean atWork(@Nullable UUID village, Knack k) {
+        if (village == null) return false;
+        String key = village + "|" + k.name();
+        long now = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer() == null ? 0L
+            : net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer().overworld().getGameTime();
+        Object[] seen = AT_WORK.get(key);
+        if (seen != null && now - (Long) seen[0] < 200 && now >= (Long) seen[0]) return (Boolean) seen[1];
+        boolean yes = false;
+        for (AssistantEntity a : Villages.folkOf(village)) {
+            if (a instanceof VillageFolkEntity f && active(f, k) && !f.offWorkNow()) { yes = true; break; }
+        }
+        AT_WORK.put(key, new Object[]{ now, yes });
+        return yes;
+    }
+
+    private static final java.util.Map<String, Object[]> AT_WORK = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** [perks] Forget what was looked up (Perks.resetForTests). */
+    static void resetLooks() {
+        AT_WORK.clear();
+    }
+
+    /** [perks] Tinkerer: the railway's rails laid so much quicker, in percent, while one is at its work (CityTree.worksPercent). */
+    static final int TINKER_RAILS = 25;
+
+    /** [perks] Featherlight: so many more arrows in this guard's quiver (WatchKit.fit, through Perks.quiver). */
+    static int featherlight(VillageFolkEntity f) {
+        return active(f, Knack.FEATHERLIGHT) ? 8 : 0;
+    }
+
+    /** [perks] Surveyor's Eye: a scout's range, in percent more (Scouts, through Perks.scoutRange). */
+    static int surveyorsEye(VillageFolkEntity f) {
+        return active(f, Knack.SURVEYORS_EYE) ? 25 : 0;
+    }
+
+    /** [perks] Silver Tongue: the town's takings, in percent, while one is at work (Perks.takingsPercent). */
+    static int silverTongue(@Nullable UUID village) {
+        return atWork(village, Knack.SILVER_TONGUE) ? 105 : 100;
     }
 
     /**
@@ -663,8 +839,9 @@ public final class FolkSkills {
 
     /** Experience at its trade (VillageFolkEntity.creditTrade): Quick Study a tenth more, the odd part by chance. */
     public static int extraXp(VillageFolkEntity f, int amount) {
-        if (amount <= 0 || !f.knacks().has(Knack.QUICK_STUDY)) return 0;
-        return amount / 10 + (f.getRandom().nextInt(10) < amount % 10 ? 1 : 0);
+        int bookworm = Quirks.extraXp(f, amount);                    // [perks] a Bookworm learns a tenth faster
+        if (amount <= 0 || !f.knacks().has(Knack.QUICK_STUDY)) return bookworm;
+        return bookworm + amount / 10 + (f.getRandom().nextInt(10) < amount % 10 ? 1 : 0);
     }
 
     /**
@@ -692,12 +869,13 @@ public final class FolkSkills {
      */
     public static int tip(UUID village, StationTask counter, VillageFolkEntity buyer, int price) {
         if (price <= 0 || buyer.purse() < 1) return 0;
-        boolean friendly = false;
+        boolean friendly = false, host = false;
         for (AssistantEntity a : Villages.folkOf(village)) {
-            if (a instanceof VillageFolkEntity k && k != buyer && k.stationTask() == counter && active(k, Knack.FRIENDLY_FACE)
-                    && !k.offWorkNow()) { friendly = true; break; }
+            if (!(a instanceof VillageFolkEntity k) || k == buyer || k.stationTask() != counter || k.offWorkNow()) continue;
+            if (active(k, Knack.MASTER_HOST)) { friendly = true; host = true; break; }      // [perks] a Master Host: a tip at every sale
+            if (active(k, Knack.FRIENDLY_FACE)) friendly = true;
         }
-        if (!friendly || buyer.getRandom().nextInt(100) >= Math.min(100, price * 5)) return 0;
+        if (!friendly || !host && buyer.getRandom().nextInt(100) >= Math.min(100, price * 5)) return 0;
         if (!buyer.spend(1)) return 0;
         Ledger.addCoins(village, 1);
         Economy.spentInTown(village, 1);
@@ -706,15 +884,29 @@ public final class FolkSkills {
 
     /** Keen Eye: one ore in eight dug by a miner at its trade gives one more of what it drops. */
     public static void oreLuck(VillageFolkEntity f, BlockState ore, BlockPos pos) {
-        if (!active(f, Knack.KEEN_EYE) || !(f.level() instanceof ServerLevel level) || f.getRandom().nextInt(8) != 0) return;
+        if (!(f.level() instanceof ServerLevel level)) return;
+        // [perks] Circuit Sense: a redstone ore gives four dust more, one time in two.
+        if ((ore.is(net.minecraft.world.level.block.Blocks.REDSTONE_ORE) || ore.is(net.minecraft.world.level.block.Blocks.DEEPSLATE_REDSTONE_ORE))
+                && active(f, Knack.CIRCUIT_SENSE) && f.getRandom().nextBoolean()) {
+            Block.popResource(level, pos, new ItemStack(net.minecraft.world.item.Items.REDSTONE, 4));
+        }
+        // Keen Eye one in eight; [perks] a Master Miner one in five, a Lucky folk one in twelve, the Observatory one in ten.
+        int more = 0;
+        if (active(f, Knack.KEEN_EYE) && f.getRandom().nextInt(8) == 0) more++;
+        if (active(f, Knack.MASTER_MINER) && f.getRandom().nextInt(5) == 0) more++;
+        if (Quirks.lucky(f)) more++;
+        if (CityTree.observatoryLuck(f.ownerId(), f.getRandom())) more++;
+        if (more == 0) return;
         List<ItemStack> drops = Block.getDrops(ore, level, pos, null, f, f.getMainHandItem());
         if (drops.isEmpty() || drops.get(0).isEmpty()) return;
-        Block.popResource(level, pos, drops.get(0).copyWithCount(1));
+        Block.popResource(level, pos, drops.get(0).copyWithCount(more));
     }
 
-    /** Careful Harvest: one harvest in three gives a farmer at its trade a seed back, into its pack. */
+    /** Careful Harvest: one harvest in three gives a farmer at its trade a seed back, into its pack. [perks] A Master Grower every harvest. */
     public static void seedBack(VillageFolkEntity f, @Nullable Item seed) {
-        if (seed == null || !active(f, Knack.CAREFUL_HARVEST) || f.getRandom().nextInt(3) != 0) return;
+        if (seed == null) return;
+        boolean master = active(f, Knack.MASTER_GROWER);
+        if (!master && (!active(f, Knack.CAREFUL_HARVEST) || f.getRandom().nextInt(3) != 0)) return;
         ItemStack left = f.insertItem(new ItemStack(seed));
         if (!left.isEmpty() && f.level() instanceof ServerLevel level) Block.popResource(level, f.blockPosition(), left);
     }
@@ -726,17 +918,24 @@ public final class FolkSkills {
 
     /** Strong Back: so many more on each load of a courier's round (AssistantEntity's HAUL work). */
     public static int haulBonus(VillageFolkEntity f) {
-        return active(f, Knack.STRONG_BACK) ? 32 : 0;
+        return (active(f, Knack.STRONG_BACK) ? 32 : 0) + (active(f, Knack.MASTER_PORTER) ? 64 : 0)   // [perks] a Master Porter
+            + Quirks.haulBonus(f);                                                                    // [perks] Broad Shoulders
     }
 
     /** Sharp Eyes: so many blocks further a guard on the wall picks its mark from (Raids.targetFrom). */
     public static double sightBonus(VillageFolkEntity f) {
-        return active(f, Knack.SHARP_EYES) ? 4.0 : 0.0;
+        return (active(f, Knack.SHARP_EYES) ? 4.0 : 0.0) + Perks.sight(f);    // [perks] Earthworks, Hawk-eyed, a Night Owl by night
     }
 
     private static final ResourceLocation DRILLED_ARMOUR = ResourceLocation.fromNamespaceAndPath("mc_assistant", "knack_drilled");
+    private static final ResourceLocation VETERAN_ARMOUR = ResourceLocation.fromNamespaceAndPath("mc_assistant", "knack_veteran_armour");
+    private static final ResourceLocation VETERAN_HIT = ResourceLocation.fromNamespaceAndPath("mc_assistant", "knack_veteran_hit");
+    private static final ResourceLocation DEEP_LUNGS = ResourceLocation.fromNamespaceAndPath("mc_assistant", "knack_deep_lungs");
 
-    /** Drilled: a point of armour while it is a guard, and none when it is not. Kept up from its beat. */
+    /**
+     * Drilled: a point of armour while it is a guard, and none when it is not. Kept up from its beat. [perks] And a
+     * Veteran's two of armour and two of blow on the watch, Deep Lungs' breath, and an Iron Whisperer's golems mended.
+     */
     static void keepUp(VillageFolkEntity f) {
         AttributeInstance armour = f.getAttribute(Attributes.ARMOR);
         if (armour == null) return;
@@ -746,6 +945,33 @@ public final class FolkSkills {
         } else if (!want && armour.hasModifier(DRILLED_ARMOUR)) {
             armour.removeModifier(DRILLED_ARMOUR);
         }
+        boolean veteran = active(f, Knack.VETERAN);
+        CityTree.modifier(f, Attributes.ARMOR, VETERAN_ARMOUR, veteran ? 2.0 : 0.0, AttributeModifier.Operation.ADD_VALUE);
+        CityTree.modifier(f, Attributes.ATTACK_DAMAGE, VETERAN_HIT, veteran ? 2.0 : 0.0, AttributeModifier.Operation.ADD_VALUE);
+        CityTree.modifier(f, Attributes.OXYGEN_BONUS, DEEP_LUNGS, active(f, Knack.DEEP_LUNGS) ? 2.0 : 0.0, AttributeModifier.Operation.ADD_VALUE);
+        if (active(f, Knack.IRON_WHISPERER) && f.level() instanceof ServerLevel level) mendGolems(level, f);
+    }
+
+    /** Iron Whisperer: every iron golem within sixteen blocks of it mends a heart (every five seconds). Returns how many. */
+    static int mendGolems(ServerLevel level, VillageFolkEntity f) {
+        int n = 0;
+        for (net.minecraft.world.entity.animal.IronGolem g : level.getEntitiesOfClass(net.minecraft.world.entity.animal.IronGolem.class,
+                f.getBoundingBox().inflate(16.0), g -> g.isAlive() && g.getHealth() < g.getMaxHealth())) {
+            g.heal(2.0F);
+            level.sendParticles(net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER, g.getX(), g.getY() + 2.2, g.getZ(), 2, 0.3, 0.2, 0.3, 0.0);
+            n++;
+        }
+        return n;
+    }
+
+    /** Tests: an Iron Whisperer's mending, now. */
+    public static int mendGolemsForTests(VillageFolkEntity f) {
+        return f.level() instanceof ServerLevel level && active(f, Knack.IRON_WHISPERER) ? mendGolems(level, f) : 0;
+    }
+
+    /** Tests: the knacks' marks put on it now (Drilled, Veteran, Deep Lungs). */
+    public static void keepUpForTests(VillageFolkEntity f) {
+        keepUp(f);
     }
 
     // ------------------------------------------------------------------ shown

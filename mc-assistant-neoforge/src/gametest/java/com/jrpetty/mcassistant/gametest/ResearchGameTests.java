@@ -175,9 +175,10 @@ public class ResearchGameTests {
     /**
      * A civic is open only once the one before it in its branch is done: Apprentice Halls can be
      * neither picked nor granted before Common Tools, nor Master Workshops before the rest of Industry;
-     * the five first tiers are open at the start; with Common Tools done, Apprentice Halls can be
+     * the first tiers (one a branch) are open at the start; with Common Tools done, Apprentice Halls can be
      * picked. And left to the leader, every civic it ever chooses is open when it chooses it, all the
-     * way through the twenty.
+     * way through the tree. [perks] Ten branches now, and eight pairs of which a town may have only one: the
+     * leader's way ends with every branch done to its top and one of each pair, the other closed.
      */
     @GameTest(template = EMPTY, timeoutTicks = 200, batch = "r03_research_prerequisites")
     public static void r03_research_prerequisites(GameTestHelper helper) {
@@ -191,7 +192,7 @@ public class ResearchGameTests {
             String picked = CityTree.pick(level, id, Civic.APPRENTICE_HALLS, day);
             String granted = CityTree.grant(level, id, Civic.MASTER_WORKSHOPS, day);
             Kit.log("r03 at the start: open " + open + "; pick Apprentice Halls: " + picked + "; grant Master Workshops: " + granted);
-            helper.assertTrue(open.size() == 5, "the five first tiers are open: " + open);
+            helper.assertTrue(open.size() == CityTree.Branch.values().length, "the first tiers are open, one a branch: " + open);   // [perks]
             for (Civic c : open) helper.assertTrue(c.tier == 1, "only first tiers: " + c);
             helper.assertTrue(CityTree.current(id) != Civic.APPRENTICE_HALLS && !CityTree.open(id, Civic.APPRENTICE_HALLS),
                 "Apprentice Halls is not open before Common Tools: " + picked);
@@ -202,19 +203,24 @@ public class ResearchGameTests {
             // The leader's way, through the whole tree.
             CityTree.clearForTests(id);
             List<Civic> order = new ArrayList<>();
+            // [perks] Until there is nothing left to choose: every civic but the closed half of each pair.
             for (int i = 0; i < CityTree.ALL; i++) {
                 Civic c = CityTree.chooseForTests(level, id, day + i);
-                helper.assertTrue(c != null, "something to choose at step " + i);
+                if (c == null) break;
                 Civic before = c.before();
                 helper.assertTrue(before == null || CityTree.has(id, before), c + " chosen before " + before);
+                Civic rival = c.rival();
+                helper.assertTrue(rival == null || !CityTree.has(id, rival), c + " chosen after its pair " + rival);
                 CityTree.grant(level, id, c, day + i);
                 order.add(c);
             }
             Civic after = CityTree.chooseForTests(level, id, day + CityTree.ALL);
             List<String> board = CityTree.board(id);
+            int closed = CityTree.pairs().size();
             Kit.log("r03 the leader's order: " + order + "; then " + after + "; board " + board);
-            helper.assertTrue(CityTree.done(id).size() == CityTree.ALL && after == null, "all twenty done, nothing left: " + CityTree.done(id).size());
-            helper.assertTrue(!board.isEmpty() && board.get(0).contains("all twenty done"), "the board says so: " + board);
+            helper.assertTrue(CityTree.done(id).size() == CityTree.ALL - closed && after == null && CityTree.finished(id),
+                "all done but the closed half of each pair, nothing left: " + CityTree.done(id).size() + " of " + CityTree.ALL);
+            helper.assertTrue(!board.isEmpty() && board.get(0).contains("whole tree done"), "the board says so: " + board);
             helper.succeed();
         });
     }
@@ -362,7 +368,8 @@ public class ResearchGameTests {
                 if (s.equals("open")) open++;
             }
             helper.assertTrue(locked > 0 && open > 0, "some open, some locked: " + open + " open, " + locked + " locked");
-            helper.assertTrue(said.size() == 6 && said.get(0).contains(next.title), "/village research: a head and a line a branch: " + said);
+            helper.assertTrue(said.size() == 1 + CityTree.Branch.values().length && said.get(0).contains(next.title),
+                "/village research: a head and a line a branch: " + said);                                                 // [perks] ten branches
             helper.succeed();
         });
     }

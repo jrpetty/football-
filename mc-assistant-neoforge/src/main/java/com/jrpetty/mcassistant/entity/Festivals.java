@@ -867,7 +867,7 @@ public final class Festivals extends SavedData {
             Assemblies.Assembly a = gathering(level, v, f, d, day);
             if (a != null) return a;
         }
-        return null;
+        return TownFeast.evening(level, v, day);                       // [culture2] the town's own festival, on its own day
     }
 
     /** The gathering for a festival: round the maypole, round the fire, before the board, at the long tables. */
@@ -940,12 +940,14 @@ public final class Festivals extends SavedData {
 
     /** What it is, in a few words (Assemblies.describe): "the May dance". */
     static String describe(String subject) {
+        if (TownFeast.ours(subject)) return TownFeast.describe(subject);    // [culture2]
         Feast f = feastOf(subject);
         return f == null ? "a festival" : f.words;
     }
 
     /** What is said, line by line (Assemblies.script). */
     static void script(ServerLevel level, Assemblies.Assembly a, List<Assemblies.Line> s, RandomSource r) {
+        if (TownFeast.ours(a.subject)) { TownFeast.script(level, a, s, r); return; }   // [culture2] the town's own festival
         Feast f = feastOf(a.subject);
         if (f == null) return;
         String name = Villages.name(a.village);
@@ -968,6 +970,7 @@ public final class Festivals extends SavedData {
 
     /** Does it go on to the dancing, the singing or the eating (Assemblies.step)? The fair ends with its prizes. */
     static boolean mingles(Assemblies.Assembly a) {
+        if (TownFeast.ours(a.subject)) return true;                        // [culture2] the dish, the tune, the contest
         Feast f = feastOf(a.subject);
         return f == Feast.MAYPOLE || f == Feast.BONFIRE || f == Feast.HARVEST;
     }
@@ -983,6 +986,7 @@ public final class Festivals extends SavedData {
      * tune; swaying and singing round the fire; eating at the long tables, out of the stores.
      */
     static boolean mingle(VillageFolkEntity f, ServerLevel level, Assemblies.Assembly a, RandomSource r) {
+        if (TownFeast.ours(a.subject)) return TownFeast.mingle(f, level, a, r);   // [culture2]
         Feast feast = feastOf(a.subject);
         if (feast == null) return false;
         long now = level.getGameTime();
@@ -1023,7 +1027,8 @@ public final class Festivals extends SavedData {
                 if (!a.ate.contains(me) && r.nextInt(25) == 0) {
                     a.ate.add(me);
                     Villages.Village v = Villages.get(a.village);
-                    ItemStack food = v == null ? ItemStack.EMPTY : Crafts.takeOne(level, v,
+                    ItemStack food = v == null ? ItemStack.EMPTY : Cuisine.feast(level, v, f);   // [culture2] the town's own dish first
+                    if (food.isEmpty() && v != null) food = Crafts.takeOne(level, v,
                         s -> s.get(net.minecraft.core.component.DataComponents.FOOD) != null && !s.is(Items.ROTTEN_FLESH)
                             && !s.is(Items.SPIDER_EYE) && !s.is(Items.POISONOUS_POTATO) && !s.is(Items.PUFFERFISH));
                     if (!food.isEmpty()) {
@@ -1121,6 +1126,7 @@ public final class Festivals extends SavedData {
 
     /** At its close (Assemblies.close): kept, into the chronicle, and everybody there the better for it. */
     static void closed(ServerLevel level, Assemblies.Assembly a) {
+        if (TownFeast.ours(a.subject)) { TownFeast.closed(level, a); return; }   // [culture2] the contest judged, the chronicle
         Feast f = feastOf(a.subject);
         if (f == null) return;
         UUID id = a.village;
@@ -1158,6 +1164,8 @@ public final class Festivals extends SavedData {
     /** Assemblies.startNow's FESTIVAL: the one called now, for its day this year. */
     @Nullable
     static Assemblies.Assembly calledNow(ServerLevel level, Villages.Village v, long day) {
+        Assemblies.Assembly own = TownFeast.calledNow(level, v, day);       // [culture2] TownFeast.callNow
+        if (own != null) return own;
         Feast f = CALLED.get(v.id());
         return f == null ? null : gathering(level, v, f, dayThisYear(v.id(), day, f), day);
     }

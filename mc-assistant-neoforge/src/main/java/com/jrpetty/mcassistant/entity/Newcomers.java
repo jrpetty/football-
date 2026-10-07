@@ -544,7 +544,8 @@ public final class Newcomers {
             }
         }
         for (JobMarket.Want w : JobMarket.wanted(v)) if (!out.contains(w.trade())) out.add(w.trade());
-        out.removeIf(t -> t == StationTask.NONE || t == StationTask.GUARD || t == StationTask.SCOUT || t == StationTask.BANK || t == StationTask.CAVE);
+        out.removeIf(t -> t == StationTask.NONE || t == StationTask.GUARD || t == StationTask.SCOUT || t == StationTask.BANK || t == StationTask.CAVE
+            || t == StationTask.NETHER);                         // [nether] picked from the town's own veterans (NetherRunners.appoint)
         return out;
     }
 

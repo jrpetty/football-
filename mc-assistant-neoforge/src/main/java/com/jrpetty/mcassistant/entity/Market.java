@@ -113,6 +113,9 @@ public final class Market {
         new Good("Fish pie", s -> s.is(com.jrpetty.mcassistant.item.KitchenItems.FISH_PIE.get()), 1.2, 4, Villages.Task.FOOD),
         new Good("Herbal tea", s -> s.is(com.jrpetty.mcassistant.item.KitchenItems.HERBAL_TEA.get()), 0.6, 2, Villages.Task.NONE),
         new Good("Bandages", s -> s.is(com.jrpetty.mcassistant.item.KitchenItems.BANDAGE.get()), 0.3, 4, Villages.Task.NONE),
+        // [nether] The Nether runners' kit (NetherItems): the smith's gold charm (an ingot and a third of gold), the tailor's satchel.
+        new Good("Gold charm", s -> s.is(com.jrpetty.mcassistant.item.NetherItems.GOLD_CHARM.get()), 13.0, 1, Villages.Task.NONE),
+        new Good("Runner's satchel", s -> s.is(com.jrpetty.mcassistant.item.NetherItems.RUNNERS_SATCHEL.get()), 6.0, 1, Villages.Task.NONE),
         good("Beetroot", Items.BEETROOT, 0.1, 16, Villages.Task.FOOD),
         good("Melon", Items.MELON_SLICE, 0.1, 16, Villages.Task.FOOD),
         good("Berries", Items.SWEET_BERRIES, 0.1, 16, Villages.Task.FOOD),
@@ -187,6 +190,13 @@ public final class Market {
         new Good("Shipping crate", s -> s.is(com.jrpetty.mcassistant.item.WorkItems.SHIPPING_CRATE_ITEM.get())
             && com.jrpetty.mcassistant.block.ShippingCrateBlock.contents(s).isEmpty(), 1.4, 1, Villages.Task.NONE),
         new Good("Window box", s -> s.is(com.jrpetty.mcassistant.item.WorkItems.WINDOW_BOX_ITEM.get()), 0.6, 1, Villages.Task.NONE),
+        // [diver] The diver's: kelp blocks for a player's furnace (two and a half coals' burning each), dried kelp for the
+        // larder, clay off the bed, the turtles' scutes, and a turtle helmet.
+        good("Dried kelp blocks", Items.DRIED_KELP_BLOCK, 0.9, 4, Villages.Task.NONE),
+        good("Dried kelp", Items.DRIED_KELP, 0.08, 16, Villages.Task.FOOD),
+        good("Clay", Items.CLAY_BALL, 0.05, 16, Villages.Task.NONE),
+        good("Turtle scutes", Items.TURTLE_SCUTE, 3.0, 1, Villages.Task.NONE),
+        good("Turtle helmet", Items.TURTLE_HELMET, 18.0, 1, Villages.Task.NONE),
         // What the crafts make, sold one at a time at the shop and the café.
         good("Iron pickaxe", Items.IRON_PICKAXE, 6.0, 1, Villages.Task.NONE),
         good("Iron sword", Items.IRON_SWORD, 4.0, 1, Villages.Task.NONE),
@@ -218,6 +228,16 @@ public final class Market {
         new Good("Reinforced pickaxe", s -> s.is(com.jrpetty.mcassistant.item.CivicItems.REINFORCED_PICKAXE.get()), 11.0, 1, Villages.Task.NONE),
         new Good("Brewer's stout", s -> s.is(com.jrpetty.mcassistant.item.CivicItems.BREWERS_STOUT.get()), 1.2, 4, Villages.Task.NONE),
         new Good("Farmhouse pie", s -> s.is(com.jrpetty.mcassistant.item.CivicItems.FARMHOUSE_PIE.get()), 1.2, 4, Villages.Task.NONE),
+        // [culture2] The towns' own dishes (Cuisine): one at a time at the café's counter, the tavern's board and off a caravan.
+        new Good("Fish stew", s -> s.is(com.jrpetty.mcassistant.item.DishItems.FISH_STEW.get()), 1.5, 1, Villages.Task.NONE),
+        new Good("Game pie", s -> s.is(com.jrpetty.mcassistant.item.DishItems.GAME_PIE.get()), 1.3, 1, Villages.Task.NONE),
+        new Good("Berry tart", s -> s.is(com.jrpetty.mcassistant.item.DishItems.BERRY_TART.get()), 1.0, 1, Villages.Task.NONE),
+        new Good("Harvest loaf", s -> s.is(com.jrpetty.mcassistant.item.DishItems.HARVEST_LOAF.get()), 0.8, 1, Villages.Task.NONE),
+        new Good("Miner's hotpot", s -> s.is(com.jrpetty.mcassistant.item.DishItems.HOTPOT.get()), 1.6, 1, Villages.Task.NONE),
+        new Good("Spiced mutton", s -> s.is(com.jrpetty.mcassistant.item.DishItems.SPICED_MUTTON.get()), 1.4, 1, Villages.Task.NONE),
+        new Good("Cocoa cake", s -> s.is(com.jrpetty.mcassistant.item.DishItems.COCOA_CAKE.get()), 1.0, 1, Villages.Task.NONE),
+        new Good("Fen broth", s -> s.is(com.jrpetty.mcassistant.item.DishItems.FEN_BROTH.get()), 1.1, 1, Villages.Task.NONE),
+        good("Rabbit stew", Items.RABBIT_STEW, 1.2, 1, Villages.Task.NONE),
         // [itemaudit] The pets' things a household buys at the shop (Pets, Purchases), on the board at their worth.
         new Good("Pet bowls", s -> s.is(McAssistantMod.PET_BOWL_ITEM.get()), 0.8, 1, Villages.Task.NONE),
         new Good("Dog beds", s -> s.is(McAssistantMod.DOG_BED_ITEM.get()), 1.6, 1, Villages.Task.NONE),

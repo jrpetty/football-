@@ -68,7 +68,7 @@ public final class Roads {
             Villages.Village mother = Villages.get(link.getValue());
             if (colony == null || mother == null) continue;
             if (!colony.dim().equals(level.dimension()) || !mother.dim().equals(level.dimension())) continue;
-            lay(level, mother, colony, STEPS);
+            lay(level, mother, colony, CityTree.worksSteps(mother.id(), "roads", STEPS));   // [perks] Turnpikes
         }
     }
 
@@ -212,6 +212,8 @@ public final class Roads {
     static int step(ServerLevel level, Villages.Village mother, Villages.Village colony, int x, int z, int lastY,
                     boolean alongX, int index) {
         if (inATown(level, x, z)) return lastY;
+        // [emerald] Through a village of the game's villagers the road is their paths: nothing laid, nothing cleared.
+        if (VanillaVillages.within(level, x, z, 4)) return lastY;
         Ground g = ground(level, x, z);
         if (g == null) return lastY;
         if (g.water) {
