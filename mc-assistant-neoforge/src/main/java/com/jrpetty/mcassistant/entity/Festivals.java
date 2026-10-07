@@ -445,6 +445,7 @@ public final class Festivals extends SavedData {
         }
         if (due(id, day, Feast.HARVEST) && t >= 8000L && t < 12400L) why(id, Feast.HARVEST, layTables(level, v, dayThisYear(id, day, Feast.HARVEST), false));
         Midwinter.tick(level, v, town, day, t);
+        Lanterns.tick(level, v, day, t);                             // [leisure] paper lanterns strung across the square on a festival night
         Winter.tick(level, v, town, day, t);
         Fair.tick(level, v, town, day, t);
         harvestMissed(level, v, town, day, t);

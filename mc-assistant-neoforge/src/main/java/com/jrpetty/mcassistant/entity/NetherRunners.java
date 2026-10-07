@@ -179,9 +179,11 @@ public final class NetherRunners {
             if (!(a instanceof VillageFolkEntity f) || f.isBaby() || f.isShowcase() || f.isHired() || !f.isAlive() || f.isElder()) continue;
             if (f.trip() != null || f.expedition() != null || NetherRuns.away(f)) continue;
             if (!veteran(f) || !spare(id, f.stationTask())) continue;
+            if (Fears.staysThisSide(f)) continue;               // [individual] never one afraid of the Nether, however good
             int age = f.ageYears();
             if (age < 20 || age > 50) continue;
-            int score = fitness(f);
+            // [individual] One who dreams of the Nether volunteers first: ahead of a veteran a level or so better at it.
+            int score = fitness(f) + (Dreams.volunteersForNether(f) ? 1500 : 0);
             if (score > bestScore) { bestScore = score; best = f; }
         }
         if (best == null) return null;
@@ -438,6 +440,10 @@ public final class NetherRunners {
         // Torches for the ways it cuts (a light every eight blocks).
         int torches = draw(level, v, f, s -> s.is(Items.TORCH), 16, Masonry.townTorches(id), false);
         if (torches > 0) got.add(torches + " torches");
+        // [kitchen] The healer's bandages, three of them, as the watch and the cave team carry (Kitchen.bandages).
+        List<ItemStack> bound = new ArrayList<>();
+        Kitchen.bandages(level, v, f, bound);
+        for (ItemStack b : bound) got.add(b.getCount() + (b.getCount() == 1 ? " bandage" : " bandages"));
         // The makings of crafting on the far side (a stone pick, if its own breaks): a table and a few sticks.
         if (f.countMatching(s -> s.is(Items.CRAFTING_TABLE)) == 0
                 && (Crafts.take(level, v, s -> s.is(Items.CRAFTING_TABLE), 1) || Crafts.usePlanks(level, v, 4))) {
@@ -871,6 +877,7 @@ public final class NetherRunners {
         int pots = f.countMatching(NetherPlan::fireResistance);
         if (pots > 0) out.add(pots + " fire resistance");
         if (f.countMatching(s -> s.getItem() instanceof RunnersSatchelItem) > 0) out.add("a satchel");
+        Kitchen.kitWords(f, out);                                      // [kitchen] its bandages, its packed lunch
         return String.join(", ", out);
     }
 

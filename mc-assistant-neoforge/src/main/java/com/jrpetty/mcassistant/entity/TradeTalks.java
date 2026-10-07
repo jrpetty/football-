@@ -228,7 +228,8 @@ public final class TradeTalks {
             if (want.status() != TradeBook.Status.SHORT) continue;
             int n = lots(Math.min(offerEach(e, every), wantEach(want, every)), e.ware().lot);
             if (n < e.ware().lot) continue;
-            double vs = TradeBook.worth(level, s.town(), e.item()), vb = TradeBook.worth(level, b.town(), e.item());
+            double vs = TradeBook.worth(level, s.town(), e.item()), vb = TradeBook.worth(level, b.town(), e.item())
+                * Fame.importWorth(b.town(), s.town(), e.item());   // [identity] its tariffs; the seller's fame and rank
             double gain = (vb - vs) * n;
             if (gain > bestX) { bestX = gain; x = e.item(); qx = n; sx = vs; bx = vb; }
         }
@@ -243,7 +244,8 @@ public final class TradeTalks {
             if (want.status() != TradeBook.Status.SHORT) continue;
             int n = lots(Math.min(offerEach(e, every), wantEach(want, every)), e.ware().lot);
             if (n < e.ware().lot) continue;
-            double vs = TradeBook.worth(level, s.town(), e.item()), vb = TradeBook.worth(level, b.town(), e.item());
+            double vs = TradeBook.worth(level, s.town(), e.item()) * Fame.importWorth(s.town(), b.town(), e.item()),   // [identity]
+                vb = TradeBook.worth(level, b.town(), e.item());
             double gain = (vs - vb) * n;
             if (gain > bestY) { bestY = gain; y = e.item(); yMax = n; sy = vs; by = vb; }
         }

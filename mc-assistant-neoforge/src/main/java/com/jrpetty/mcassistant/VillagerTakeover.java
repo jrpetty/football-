@@ -32,6 +32,12 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
  * <p>What this costs is honest and worth saying: THE VILLAGERS ARE GONE. There
  * is nobody left to trade with in a taken-over village. Wandering traders are
  * untouched, and the whole thing is one switch in the config.
+ *
+ * <p>[emerald] And that switch (replaceVillagers) is OFF unless somebody turns it on. The player asked for the folk
+ * and the villagers to be two peoples, completely separate: off, nothing here runs (the join event, the sweep and the
+ * conversion all ask first), no vanilla village is founded on or credited to a town, and the two are kept apart
+ * instead (entity/TwoPeoples, entity/VanillaVillages). A town trades with the villagers through its emerald trader.
+ * Kept, whole, for anybody who wants the takeover back.
  */
 public final class VillagerTakeover {
 
@@ -227,6 +233,7 @@ public final class VillagerTakeover {
 
     /** Forget everything remembered about villages. For tests. */
     public static void resetForTests() {
+        AssistantConfig.replaceVillagersForTests(null);          // [emerald] the file's word again, after a takeover test
         QUEUE.clear();
         RING_TAKEN.clear();
         READ.clear();

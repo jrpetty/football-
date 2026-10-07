@@ -544,7 +544,8 @@ public final class Newcomers {
             }
         }
         for (JobMarket.Want w : JobMarket.wanted(v)) if (!out.contains(w.trade())) out.add(w.trade());
-        out.removeIf(t -> t == StationTask.NONE || t == StationTask.GUARD || t == StationTask.SCOUT || t == StationTask.BANK || t == StationTask.CAVE);
+        out.removeIf(t -> t == StationTask.NONE || t == StationTask.GUARD || t == StationTask.SCOUT || t == StationTask.BANK || t == StationTask.CAVE
+            || t == StationTask.NETHER);                         // [nether] picked from the town's own veterans (NetherRunners.appoint)
         return out;
     }
 
@@ -822,6 +823,11 @@ public final class Newcomers {
         s += led;
         if (led > best) { best = led; bestWhy = "our " + Homeland.leaderTitle(id) + " says we should, and I agree"; }
         if (-led > worst) { worst = -led; worstWhy = "our " + Homeland.leaderTitle(id) + " doesn't trust it, and nor do I"; }
+        // [identity] The town's character and its law: an open town takes them in, a closed one keeps to its own (Ethos).
+        double ways = Ethos.newcomerLean(id);
+        s += ways;
+        if (ways > best) { best = ways; bestWhy = Ethos.newcomerWhy(id, true); }
+        if (-ways > worst) { worst = -ways; worstWhy = Ethos.newcomerWhy(id, false); }
         // What drove them.
         Cause c = Cause.named(p.getString("cause"));
         s += c == Cause.OUTSIDE ? -2 : c == Cause.FIRE || c == Cause.FLOOD ? 8 : 6;

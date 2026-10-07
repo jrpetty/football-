@@ -17,7 +17,7 @@ Everything is obtainable in **survival**.
 | **/village spawn [1-100]** | Out of reach of a village, founds one two blocks ahead of you, its ground made level first (at least two folk); in reach of one, stands that many more up in it. `spawnat <x> <z> [n]` for the console and scripts founds at once, levelling nothing. |
 | **The world** | Villages generate as you explore (config `naturalVillages`), in groups of three to five. Each has its ground made level before its folk come, as a founding at a board does. |
 | **/village level** | A town already standing (one from before its ground was levelled) has the ground round it made level now: trees cleared, hills cut, hollows filled, nothing built touched, and its folk kept clear of the moving ground. Operators, or the world's owner. |
-| **Vanilla villagers** | Turned into folk as you meet them (config `replaceVillagers`). Trading with them stops working; wandering traders are untouched. |
+| **Vanilla villagers** | Left as they are. The folk and the game's villagers are two peoples, kept apart (see *Folk and villagers: two peoples*), and a town's emerald trader walks out to trade with them. The old takeover, which turned villagers into folk as you met them and ended trading with them, is still there behind the config `replaceVillagers` (off). Wandering traders are untouched either way. |
 
 ## Founding a village: choose how many
 
@@ -4080,8 +4080,9 @@ And nothing comes from nothing:
   folk puts down is named **Village Store**. Folk use *only* containers with that name, so a village founded next
   to your base leaves your chests alone. To let them use a chest of yours,
   rename it *Village Store* in an anvil. A sign on a chest still hides it from
-  everybody. The chests and barrels of a vanilla village a spawner takes over
-  become its stores too. Your guest house's chest is never one.
+  everybody. A village of the game's villagers keeps its own chests and barrels: no folk takes
+  from them. (With the old takeover on, `replaceVillagers`, the chests and barrels of a vanilla
+  village a spawner takes over become its stores.) Your guest house's chest is never one.
 * **The storehouse** — the village's stores are the chests round its square,
   and the storehouse's come first. Every load for the stores goes to the
   storehouse: a builder's leftovers, a miner's or woodcutter's surplus, the
@@ -4618,9 +4619,13 @@ ripen, days pass, folk work and houses go up at that pace.
 ## Config (`config/mc_assistant-common.toml`, section `[villages]`)
 
 `naturalVillages`, `villageSpacing`, `villageMinFolk`, `villageMaxFolk`, `villageCharterFolk` (70),
-`villageFoundingMost` (500), `villageBreeding`, `villageGrowthCap`, `villageLoadedChunks`, `replaceVillagers`,
+`villageFoundingMost` (500), `villageBreeding`, `villageGrowthCap`, `villageLoadedChunks`, `replaceVillagers` (off),
 `protectTradedVillagers`, `villageColonies` (on), `villageColonyAt` (40),
 `villageWorldCap` (200).
+
+* `replaceVillagers` (off) is the old takeover. Off, the folk and the game's own villagers are two
+  peoples, kept apart (see *Folk and villagers: two peoples*). On, villagers are turned into folk as
+  you meet them and their villages become towns, and there is nobody left to trade with.
 
 * `villageCharterFolk` (70) is how many a Village Charter founds a village with, and where the
   founding screen at a spawner's board starts; a player may choose 2 to `villageFoundingMost` there.
@@ -4663,7 +4668,8 @@ Every push to CI:
 * boots a real headless server and runs the game tests in
   `src/gametest/java` — recipes load, the spawner block, the charter and the
   commands work, a village founded at a chosen size on rough ground ends on level
-  ground with sloped edges, a vanilla villager is swapped for a folk, and twelve folk are
+  ground with sloped edges, villagers stay villagers beside a town (and with the old takeover
+  switched on for the test, a vanilla villager is swapped for a folk), and twelve folk are
   left alone for **three game days** on ground of the test's own making;
 * starts a real dedicated server with vanilla world generation, settles a
   village in a chosen biome over RCON (`tools/realworld/soak.py`), lets three
@@ -4671,8 +4677,10 @@ Every push to CI:
   spiders among the settlers at dusk, and reports — for plains, forest, taiga
   and savanna;
 * settles a hundred folk on one map and reports what that costs a tick;
-* checks a generated vanilla village's villagers are converted without
-  freezing the server;
+* with the old takeover switched on for that scenario only, checks a generated vanilla village's
+  villagers are converted without freezing the server; and in the `natural` scenario, with it off,
+  checks a vanilla village's villagers are all still villagers four thousand ticks on, with no town
+  founded on their ground;
 * builds a storehouse on a hillside and among trees (game tests `t11`, `t12`),
   so the ground work — filling the low side, felling the tree in the way — runs;
 * plays **the long game** in a workflow of its own that a push never cancels
@@ -6835,10 +6843,13 @@ something, and is answered, so the next one costs less. None of them is ruinous,
   ones, off the fire station's rack, out of the stores, or made there and then from three of the stores' iron
   each, and you can see them in the folk's hands. Full buckets go along the line toward the fire and empty ones
   come back, swapped hand to hand. The first in line fills them at the water and the last throws them on the
-  flames. When the fire is out, every bucket goes back where it came from. A folk's card shows its place in the
-  chain.
+  flames. A folk in the line is never so far from the next that a bucket cannot be handed on: one that cannot get
+  any nearer its place in eight seconds is set down at it, and one called away for ten seconds is let go and the
+  rest spread out again (short of four, the chain stands down and the brigade carries on with its own buckets).
+  Nobody is off reading the job notices while the town burns. When the fire is out, every bucket goes back where
+  it came from. A folk's card shows its place in the chain.
 * **Never more than two buildings.** A fire that reaches a third building has that flame beaten out by the
-  neighbours at once.
+  neighbours at once, and whatever catches beyond it is still the same fire, so that is beaten out too.
 * **Rebuilding.** Each of the town's buildings a fire reaches is noted, block by block, from its own drawing, the
   moment the fire is seen. When the fire is out, whatever burned is put back exactly as it stood, on the town's
   works, by a hand at the building, a few blocks every couple of seconds. Every block is paid for out of the
@@ -6930,7 +6941,7 @@ The game tests `DisastersGameTests` (dd01 to dd07) check that:
 * six burnt planks are put back exactly as they stood out of the stores' planks, the work waiting when the
   planks run out;
 * a forced flood puts water only in empty cells a block over the river, the folk in the low house gets out to the
-  high ground without drowning, and when it drains every block is as it was;
+  high ground without drowning, and when it drains every cell of it is as it was and no water is left anywhere;
 * after the flood a levee is raised out of the stores' earth, and the same flood then stays off the low ground;
 * a drought slows a dry field to under three fifths of its pace and not a watered one, and the town then digs
   irrigation through the dry field;
@@ -7850,6 +7861,275 @@ cider; a glut becomes twelve fish pies and the gazette says so; the healer's tea
 cold, and the café makes it with no healer; the tailor rolls bandages, the watch's kit takes them, a hurt guard binds
 its own and mends, and the healer binds the wounded; every thing has its recipe, age and worth and the shop's workshop
 makes what no trade does; and the cook's book, the Production page, the card and the stage show it all.
+
+## Tools of the mine, the woods and the roads
+
+Eight new things for the town's working hands and its roofs: the miner's pit props, rope and ore sack, the woodcutter's
+felling saw, thatch for the cottages, milestones for the roads, shipping crates for the haulers and window boxes for
+the houses. Each has a real recipe, so the town's makers know it and you can make it too; each is made by a trade of
+the town out of the stores whenever the town wants one (the shop's workshop makes it for a town without the trade);
+and each is used, by the folk and by you.
+
+| Thing | Recipe | Age | Worth | Made by, and when | Used by the folk | Used by you |
+|---|---|---|---|---|---|---|
+| Pit Prop | three planks over two logs make four | Wood | 0.25 | the woodcutter, while the town has miners (eight a miner kept, thirty-two at most) | stood in the mine's galleries: gravel and sand over them stay up, and a propped face is dug quicker | stand one under a loose roof |
+| Rope Coil | four string round a leather | Wood | 1.6 | the tailor, while a miner has no rope or a cave dweller fewer than two | let down a shaft or a cliff and climbed, down and back up | let it down any drop and climb it; break it to take it up |
+| Ore Sack | three leathers and two string | Stone | 2.5 | the tailor, for each miner and cave dweller without one | a full pack's ore tipped into it, so the work goes on | carries four stacks of ore, raw metal, coal and gems |
+| Felling Saw | two iron bars, two sticks and a string | Stone | 4 | the smith, for each woodcutter without one | a tree's foot cut, the whole tree comes down | sneak as you cut a tree's log |
+| Thatch | six wheat make four; stairs of six, four; slabs of three, six | Wood | 0.18 (stairs 0.3, slab 0.1) | the farmer, of the wheat the town can spare; the builders cut the stairs and slabs at the bench | the Wood Age's roofs | build with it |
+| Milestone | five cobblestone round a sign | Stone | 0.8 | the road crew, out of the mother town's stores, as its roads want them | set beside the roads, lettered with the towns and their distance | ask it the way; set one by a road |
+| Shipping Crate | six planks, two logs and an iron nugget | Stone | 1.4 | the woodcutter: two for each courier, three while the town sends caravans | nine stacks of goods in one slot of a hauler's pack | a chest you can pick up full |
+| Window Box | three planks under a block of earth under a flower (twelve kinds, one a flower) | Wood | 0.6 | the shop's workshop, for each well-off house with a window still bare | hung under the windows: a happier household, a house worth more | hang one under a window and water it |
+
+**The pit prop.** A squared oak post with a beam across its cap, two blocks high. A miner takes six out of the stores
+when it is down to its last few, and stands one at the foot of its stairs and every five steps along its gallery
+wherever there is rock overhead and no prop near. A prop holds the roof three blocks either side and up to six above:
+gravel and sand there do not fall in on the miner, they stay where they are. Folk walk through a prop (you can too),
+and a miner trusts a propped roof: a face with two props in it or more is dug a sixth quicker. `/village mine` says how
+many props stand in the mine and how many falls of gravel they have held. You can stand one anywhere, like a door, and
+it holds a roof for you just the same.
+
+**The rope coil.** A coil of good hemp rope, its end whipped with leather. Use it on the edge of a drop, against the
+side of the block you stand on (or on its top, toward the way you face), and it lets down as far as it will go, up to
+twenty-four blocks, hitched to the edge. Climb it like a ladder. Break any piece of it and the whole rope comes up as
+the coil again.
+* *The miners* carry one. Cutting its stairs down, a miner that comes to a shaft four deep or more under its next step
+  lets its rope down the shaft and climbs down to go on from the bottom, rather than bridging it, and climbs back up it
+  coming home. The rope stays as the mine's way down, and `/village mine` counts the ropes down its shafts.
+* *The cave team* carries two each. Where there is no walking down to the cave it is making for (a ravine, a pit, the
+  foot of a cliff), the leader looks along the edge for a drop that comes down nearer the cave, lets a rope down it and
+  climbs down; the others follow it down. On the way home they climb back up it, and the last one up takes the rope up,
+  the coil back in its pack. So the team gets at caves it used to have to pass by. The chronicle tells of it: "Wren let
+  a rope down eight blocks for the cave team, to get at a cave there was no walking down to."
+
+**The ore sack.** A stout leather sack with a drawstring, bulging when it is full. It holds four stacks of ore, raw
+metal, coal, gems and the like and nothing else. A miner or a cave dweller whose pack fills tips its ore and coal into
+its sack and works on, instead of walking all the way home with a full pack; at the stores the sack's load goes in
+with the rest, and the empty sack goes back down the mine with it. The folk's card says what is in it ("an ore sack
+with 198 of ore and coal in it"), and `/village mine` how often a full pack was tipped into a sack and the work went
+on. You: carry one, and ore, raw metal, coal and gems you pick up go into it first. Put a stack into it or take one out
+in your inventory as you would with a bundle, and right-click to tip the lot out into your pack.
+
+**The felling saw.** A long two-handled saw, good for two hundred and fifty cuts. A woodcutter with one, cutting the
+bottom log of a tree, brings the whole tree down at once (up to sixty-four logs), the logs falling at the stump where
+it sweeps them up, the saw worn a cut a log; it replants as ever. It is never used on a building: logs on the town's
+built ground, or with planks, glass, a fence or anything else a hand put there beside them, are no tree, and a log cabin
+is safe. Its card counts the trees ("felled 3 whole trees with it (17 logs)"). You: hold it and sneak as you cut a
+tree's log, and the whole tree comes down at the stump.
+
+**Thatch.** Bundled straw, golden on top, stairs and slabs of it for the roof. A fed Wood Age town with wheat to spare
+(four stacks over its seed) roofs its houses in thatch: its builders take it first for the roofs, cutting the stairs and
+slabs they need at the bench out of the stores' thatch or wheat, and the farmer keeps two dozen bundles made. The
+chronicle notes the day the town began. Thatch burns like a hay bale. Of an evening and at meals, with the hearths lit,
+a spark from a chimney can catch a thatched roof: the more thatched houses, the likelier, three times as likely in a
+drought and half as likely in the rain, and the fire watch nearby stamps it out. If it catches, the fire's cause is the
+chimney's spark on the thatch. From the Stone Age, as the town makes its buildings over for the age, the builders take
+the thatch off and roof the house in tiles (slate in the Iron Age; stone bricks where the stores have no brick), the
+old thatch back into the stores. You: build with it (a hoe takes it down quickest); a fall onto thatch hurts a fifth as
+much.
+
+**The milestone.** A short post of grey stone with a rounded top, the town each way cut into its face with the distance
+and an arrow ("← ALDERTOR 120"). From the Stone Age a road between a town and its colony gets a stone at each end, one
+every hundred blocks along it and one where it crosses another road, two blocks off the road on the side away from its
+lamps, its face to the road. The road crew sets each as it lays the road, out of the mother town's stores (made there of
+five cobblestone and a sign if none is put by), and a road laid before the Stone Age gets its stones afterwards, one a
+visit. Right-click one to be told each town's name, how far it is by the road, which way, and how far as the crow
+flies. A stone you set within six blocks of a road is lettered for it; anywhere else, for the nearest town.
+
+**The shipping crate.** A plank crate with battens round its edges, stencilled with arrows. It holds nine stacks, and
+broken it keeps everything in it, like a shulker box, so a hauler can carry nine stacks of goods in one slot of its
+pack. A crate can't go inside another, nor in a sack or a bundle.
+* *The couriers* carry two empty crates each. At a production chest a courier fills its pack as ever, then packs what
+  is left in the chest into its crates, nine stacks to a crate; at the storehouse the stores unpack them with the rest,
+  and the crates go out empty again. Its "doing" line counts them: "For the storehouse: ..., 2 crates packed (18
+  stacks)".
+* *The caravans* take up to three empty crates out of the stores and pack them with the town's surplus besides the
+  loose load they always took. At the colony the crates are unpacked onto the carrier's back and sold off it as ever;
+  the crates come home with it and go back into the stores. The carrier's "doing" line on the road says how many
+  crates it has packed and how many stacks, and the chronicle notes how much more the caravan carried.
+
+**The window box.** A planter of oak under a window, a fringe of leaves and three clumps of its flower, one look for each
+of the twelve flowers. The shop's workshop makes one for each well-off household whose house still has a bare window
+(four ready at most), of the stores' planks and earth and a flower they can spare. The household's gardener (one who
+loves gardening, else the one with most put by) carries it home in its hands and hangs it under the window; the
+builders hang them on a house they have raised a storey. A household with its boxes in flower is the happier for it
+("Our window boxes are a picture this week"), and the house is worth four in the hundred more for each box in flower,
+two at most. The rain waters them, and so does a household's gardener with a copper watering can, on its evening round
+of the garden. Three days without water and the flowers wilt, and the gardener is sent with the stores' copper can (or a
+bucket of water); in winter they die back, and in the spring they are up again. You: hang one against a wall under a
+window, water it with a bucket of water or the copper can (a watering out of it), and right-click it to see how it is
+doing.
+
+**Where to look.** The folk's card has a **Tools** line: its props, its rope, its sack and what is in it, its saw and
+the trees it has felled, its crates and what is packed in them. `/village items work` lists what the town's stores hold
+of each, what the town wants made, the props, ropes and sacks of the mine, the trees felled, the crates unpacked and the
+caravans' crates, the thatched roofs and their sparks, the milestones and the window boxes, and each folk's tools.
+`/village mine` has the mine's props, falls held, ropes and sacks. Operators: `/village items work stage` sets the
+scene for the pictures east of where you stand: a wall of the eight in frames with the blocks before it, a propped
+tunnel under a gravel seam, a rope down a drop, a felled tree and its saw, a thatched cottage with its window boxes, a
+road with its milestone, and a courier with a packed crate.
+
+The game tests `WorkItemsGameTests` (wi01 to wi10) check that every one of the eight has its recipe, age, worth and
+maker; the woodcutter makes eight props of the stores' logs and planks for the miner, who stands them at the foot of its
+gallery and every five steps, the gravel over the propped stretch stays up while the gravel past it falls, the propped
+face is dug in 85 of every 100 ticks, and a player stands one by hand; the tailor knots a coil, the miner lets it down a
+shaft ten deep and climbs down and up it, and a player's coil let down a tower comes up whole when a piece halfway down
+is broken; the tailor sews two sacks, a full pack's 198 ore and coal go into one and out at the chest, the empty sack
+is kept, a cave dweller's haul comes out of its sack, and a player's sack takes up the ore it walks over and tips it
+out; the smith makes one saw, the woodcutter fells a whole tree at its foot (the logs at the stump, the saw worn four)
+but never a cabin's post, and a player sneaking fells a tree; a fed Wood Age town with wheat to spare roofs in thatch,
+the farmer makes it, a builder cuts the roof's stairs and slabs, it burns like hay, a chimney's spark catches a
+thatched roof and the Stone Age re-roofs the house in tiles with the thatch back in the stores; the road between two
+towns gets its four stones out of the mother's cobblestone and signs, each lettered with both towns and their distance
+by the road, a player is told the way, a player's stone is lettered for the road and a stone taken away is set again;
+the woodcutter makes two crates for the courier, who packs eighteen stacks into them past its pack and unpacks them at
+the stores, and a crate broken keeps its sixty bread; the shop's hand makes a box of cornflowers, the gardener hangs it,
+the household is happier and the house worth four in the hundred more, five days dry it wilts and the gardener waters
+it with the stores' bucket, a player waters it too, and it dies back in winter and is up in the spring; a caravan takes
+two crates of surplus besides its load, the colony buys the lot and the crates come home; and the cave team's leader
+ropes down a cliff to its cave, the other follows, and the last up takes the rope home as a coil.
+## Home comforts and play
+
+Seven new things for the town's homes, its children and its evenings: a patchwork quilt for the bed, a lute for the
+buskers, a draughts board for the tavern, kites and a leather football for the children, paper lanterns for the
+festivals, and a slate and chalk for the schoolroom. Each has a real recipe (you can make every one at a crafting
+table), each is made by a trade of the town out of the stores whenever the town wants one, and each is used, by the
+folk and by you.
+
+| Thing | Recipe | Age | Worth | Made by | What it's for |
+|---|---|---|---|---|---|
+| Patchwork Quilt | six wool in two rows of three, of three colours or more | Wood | 3.2c | the tailor, of the stores' odd wool (the shop's workshop with no tailor) | laid over a bed: a better night, warm in winter |
+| Lute | three planks, two sticks and three string | Wood | 2.6c | the shop's workshop; a busker in a town with no maker makes its own | the buskers' instrument, and the tavern band's |
+| Draughts Board | two planks under a black dye (or an ink sac) and a white dye (or bone meal) | Wood | 1.8c | the shop's workshop | on the tavern's table and in the park, for real games of an evening |
+| Kite | three paper, two sticks, a string and any dye: a kite of the dye's colour | Wood | 1.4c | the tailor or the shop's workshop | the children fly them on dry, windy afternoons |
+| Leather Football | four leather round a wool | Wood | 3.0c | the tailor (the shop's workshop with no tailor) | a real ball: the children's kickabouts and the league's matches |
+| Paper Lantern (16 colours) | paper, a torch and a dye make two | Wood | 0.6c | the tailor or the shop's workshop | strung across the square on festival nights; light 12 |
+| Slate and Chalk | smooth stone, a stick and bone meal | Stone | 1.0c | the shop's workshop (the mason at the town's bench with no shop) | the schoolchildren's: they learn a quarter faster |
+
+The football and the lanterns are the Wood Age's, though leather and a torch would make them the Stone Age's by the
+usual rule: a young town has its hunters' hides and the torches on its lamp posts. A town with neither a tailor nor a
+shop yet still gets what it wants: a hand it can spare goes to the storehouse's bench and makes it there (the rancher
+the quilts, kites and footballs, the woodcutter the lutes and boards, the smelter the slates, anybody the lanterns).
+
+**The patchwork quilt.** A quilt of bright patches, plain cloth between cream squares sewn with little flowers, laid
+over a bed: the foot and half the head, hanging down the sides and the foot, the pillow left showing. When somebody
+sleeps in the bed, the quilt is drawn up over them to the shoulders.
+* *Made* by the tailor of the town's odd wool: six of it, the colours the stores have least of first, never the wool
+  the town's beds are waiting on.
+* *Bought.* Of an evening, a household with a bed and no quilt, and the coins to spare, buys one at the shop out of its
+  own purse; the one who bought it carries it home and lays it on the bed. The tailor keeps one or two made while
+  households are saving up for one.
+* *Slept under.* A folk who sleeps under a quilt wakes the happier for it ("I slept like a log under my patchwork
+  quilt"), and in winter the happier again ("snug as anything"). A cold mends quicker under one: a sixth of a day a
+  night, a third in winter. Its card says it sleeps under a patchwork quilt.
+* *A wedding's gift.* With a wedding coming, the tailor makes one more, and at the wedding the town gives it to the
+  couple before everybody, to lay on their bed.
+* *You:* right-click either half of a bed with one to lay it over the bed. Break it to take it up again.
+
+**The lute.** A round-bellied lute with a long neck and three strings: the busker's own instrument.
+* *The buskers.* A busker goes out with its lute: its own, or one it buys at the shop out of what its hat has taken
+  (keeping a few coins by), or the stores' lute lent for the evening and put back after. Only with no lute to be had
+  does it fall back on a note block. It holds the lute in its hands and plays a real tune on the guitar's voice, the
+  harp ringing over it on the strong beats and a low string at the start of each bar, the notes rising off it, and it
+  slips less than on a note block. A lute draws one more listener, and more readily, and the coins come the readier.
+* *The band.* At the tavern and at weddings, a musician with a lute plays it in the band, and one with nothing to play
+  borrows the stores' lute when there is no note block to lend.
+* *Made* by the shop's workshop: a lute for each busker without one of its own (three at most), and one for the band.
+  In a town with no shop, a busker with nothing to play makes itself a lute at the bench of an evening, out of the
+  stores, and keeps it (its card: "plays a lute of its own").
+* *You:* hold right-click to strum a tune.
+
+**The draughts board.** A green and buff board with its red and black men on it.
+* *Set out.* A hand sets the town's board on one of the tavern's tables (its cloth back into the stores), and puts up
+  a table in the park for the second: a fence post with a bench either side.
+* *Played.* Of an evening at the tavern, and on the day of rest in the park when it is dry, two of the town sit down to
+  a game: a real one, by the rules (a capture must be taken, jumps go on, a man reaching the far row is crowned). The
+  men move on the board for you to watch, a move every few seconds, with a "King me!" or "Got you!" now and then. A
+  sharp player (curious, hardworking, the quiet and the old, and those who have won before) plays the better move more
+  often, and wins the more; the easygoing and the chatterers less.
+* *After.* The winner is the happier the next day ("crowned three, I did!"), the two are the friendlier for a game (the
+  more for a close one), each card keeps its record ("draughts: 5 won, 2 lost"), and the gazette has the result.
+* *The fair's tournament.* At the fair, the town's best four play two semi-finals and a final, each a real game; the
+  champion goes in the chronicle, with a purse of three coins out of the treasury.
+* *You:* right-click a board to challenge whoever of the town is nearest. It sits down with you to a short game (a
+  dozen moves on the board), then it is settled by its skill and a roll of the dice against yours and the board as it
+  stands, and the result is said aloud.
+
+**The kite.** A diamond of paper on two sticks, in its dye's colour, with a tail of bows.
+* *The wind.* Every day has its wind, from hardly a breath to a blustery day, a little stronger in spring and autumn and
+  weaker in summer. No kite goes up in the rain or without wind enough.
+* *The children.* On a dry afternoon with wind enough (some afternoons it is a kickabout, some kites, some their own
+  games), the children fly kites in the park, or on the square with no park: each with a kite of its own or one lent
+  out of the stores and put back after. It runs to its place on the green and sends it up: the kite climbs high over
+  its head on its string, downwind, swaying and bobbing, higher the windier it is. The children are the happier for it
+  the next day ("My kite went ever so high!"), and the gazette notices.
+* *Made* by the tailor or the shop's workshop, in whatever colour the stores have the dye for (a colour the town's kites
+  lack first): one for every two children, four at most.
+* *You:* right-click to send it up; it flies over your head and follows you wherever you walk. Right-click again (or
+  put it away) to reel it in. Dye it again at the crafting table, as you would leather.
+
+**The leather football.** A real ball of stitched leather panels with a lace at its mouth.
+* *A real ball.* It falls and bounces (a little less each time), rolls and slows on the grass, and comes back off a wall
+  or a goal post. Walk or run into it and it goes on ahead of you (a dribble); punch it to kick it the way you look;
+  right-click it for a tap; sneak and right-click to pick it up. It knows who touched it last.
+* *The kickabout.* On a kickabout afternoon the children take the town's football out of the stores to the park (or the
+  square), stand in a ring and pass it about: the one nearest runs to the ball and passes to another, who comes to meet
+  it. Join in and they pass to you too. They are the happier for it the next day, and at the end of the afternoon the
+  ball goes back into the stores. A town's ball nobody has played with for a minute takes itself home.
+* *The league.* The league's matches are played with the leather football when the town has one (else a slime ball, or
+  a scrap of leather, as before): a real ball on the centre spot, struck and rolling. A goal is the goal of whoever
+  touched it last, so a player at a match can score, with its own name in the score, the chronicle and the gazette.
+* *Made* by the tailor: one for the kickabouts once the town has two children, and one for its pitch.
+* *You:* right-click the ground to set one down.
+
+**The paper lanterns.** A round paper shade in any of the sixteen colours on a light frame with dark wooden caps, lit
+from inside (light 12). It stands on the ground, or hangs under a block, a fence, a wall, a chain or a line of string,
+with a tassel below.
+* *Festival nights.* On the evening of a festival the town gathers for (the May dance, the midsummer bonfire, the fair
+  and the harvest festival), before dusk a hand strings lanterns across the square out of the stores: a post at each
+  end of a line, string between their tops, and a lantern hung every other block in all the colours the stores have,
+  and a second line when there are lanterns enough. The square glows all evening; the folk who are there are the
+  happier for a lit festival ("like stars, they were"), and the chronicle and the gazette have it. The morning after, a
+  hand takes them down, and every lantern, string and post goes back into the stores (what is up is written in the
+  town's books, so nothing is lost over a restart).
+* *Made* by the tailor or the shop's workshop: the town keeps eight for its festivals, one of each of eight colours.
+* *You:* place one on the ground, or under anything that holds it up. String a line of your own across a street.
+
+**The slate and chalk.** A dark slate in a wooden frame, a stick of chalk with it.
+* *The schoolroom.* The teacher keeps a set of slates out of the stores. A pupil at its desk with no slate is handed
+  one at the lesson and keeps it for its schooling, carrying it in its hand on the way to school and at its desk, with
+  the day's lesson chalked on it ("The farmer's trade: sow, weed, reap"). A child with a slate learns about a quarter
+  faster. Each beat of the lesson uses a little chalk; when it is gone, another slate comes out of the stores. A child
+  who grows up gives its slate back for the next.
+* *Made* by the shop's workshop while the school stands: a slate for each pupil without one, and a spare.
+* *You:* right-click to chalk a line on it (rename it at an anvil to choose the words, or let it doodle); sneak and
+  right-click to wipe it. The chalk wears as you write.
+
+**Where to look.** The folk's card has a **Pastimes** line (its quilt, its draughts record, its kite, its lute, its
+slate), and its doing line says what it is about ("flying a red kite in the park", "playing draughts with Wren at the
+tavern (31 moves; 9 pieces to 7)"). The gazette has a **Home and play** piece: yesterday's football and its goals, the
+draughts, the kites and the lanterns. `/village items leisure` lists what the town has and wants of each, who made
+what lately and what it is short of. Operators: `/village items leisure make` sets the town's makers at it now, and
+`/village items leisure stage` sets the scene for the pictures where you stand: a wall with the seven in frames and
+lanterns along its top, a quilt on a bed with somebody asleep under it, a game of draughts under way, a lute being
+played, children flying kites and having a kickabout, and the lanterns strung across the square.
+
+The game tests `LeisureGameTests` (ls01 to ls10) check that the quilt's recipe wants three colours, the tailor makes
+one of the odd wool, a household buys it and lays it on its bed, a winter's night under it is a happier, warmer morning
+and a shorter cold, the wedding's gift is given, and a player lays one; that the shop's workshop makes a lute for the
+buskers, a busker with no note block plays the stores' lute in its hands and takes a coin where a note block's busker
+does not, the lute goes back after, a busker in a town with no maker makes its own, and a player strums; that the
+board is made and set on the tavern's table, two folk play a real game to its end with the men moving on the board,
+the winner is the happier and the two the friendlier, the sharper player wins the more, a player's challenge is
+settled, and the fair's champion is in the chronicle; that the kite takes its dye's colour, a child flies the stores'
+kite high and downwind, is the happier, and the kite goes back, and a player flies one and reels it in; that the
+football is made and is a real ball (it bounces and settles, rolls and slows, comes off a wall, and a punch kicks it)
+and a player sets it down and picks it up; that the children's kickabout passes the ball and a player joins in; that
+the league's match uses the leather ball, counts a player's goal to the player and a shot that rolls in; that the
+sixteen lanterns light the square on a festival night and all come down into the stores after; that a child with a
+slate learns about a quarter faster; and that all seven are in the books, the town's own bench makes what a town with
+no tailor or shop wants, and the stage sets out.
+
 ## How it all fits together
 
 The town's systems were built one at a time; this is where they hear of each other (`entity/Weave`, and a line in
@@ -7892,6 +8172,132 @@ for, a lost dog found and one given up, water for a fire, a household's things o
 the quest is given up), planks for a rebuilding, refugees from a burnt house, short rations, nothing stolen sold, a
 coat won and worn, the offices' clothes, the pledge's guards, the front page, the library's new books, and the cave
 team's finds past the six at auction. The unit test `LibraryTextTest` checks that the new books say what happened.
+## Tools of the fields and the pens
+
+Eight new things go out to the town's fields, its pens, its pond and its hives. Each has a real recipe, so the town's
+makers know it and you can make it too; each is made by a trade of the town out of the stores whenever the town wants
+one, and each is put to work.
+
+| Thing | Recipe | Age | Worth | Made by | What it's for |
+|---|---|---|---|---|---|
+| Copper Watering Can | five copper ingots, a can with its spout | Stone | 2.6c | the smith (else the shop's workshop) | sixteen waterings: each soaks a three-by-three and gives its crops a little growth |
+| Seed Satchel | a string over two leather | Wood | 1.6c | the tailor (else the rancher, else the shop) | four stacks of seed at the hip: a whole field sown off one trip to the stores |
+| Copper Sickle | three copper ingots in a curve on a stick | Stone | 1.6c | the smith (else the shop's workshop) | two hundred cuts: a ripe crop and the eight round it reaped in one swing, and sown again |
+| Nesting Box | five planks round a wheat | Wood | 0.6c | the rancher (else the shop's workshop) | the hens lay into it, and lay sooner on its hay |
+| Feed Trough | four planks round a wooden slab | Wood | 0.5c | the rancher (else the shop's workshop) | the herd eats and breeds off it, and stays near it |
+| Fish Trap | six sticks and two string round a bait (a cod, a salmon, a tropical fish or a spider eye) | Wood | 0.8c | the fisher (else the shop's workshop) | catches fish (and some junk) by itself, six at a time |
+| Rain Barrel | seven planks round a copper ingot | Wood | 1.1c | the shop's workshop (else a hand of the town's at the bench) | catches the rain, four buckets' worth, for the cans, the drought and fires |
+| Bee Smoker | two copper ingots, a leather and a coal or charcoal | Stone | 2.0c | the smith (else the shop's workshop) | calms the bees: every full hive emptied without a sting, and more from each |
+
+With no smith and no shop in town, the smelter beats the copper tools cold at its furnace (and leaves them to the smith
+once there is one). The shop's order book keeps whatever the town still wants of the eight. The smelter takes the
+miners' raw copper out of the stores to its furnace with the iron, so the copper is there.
+
+**Who wants one, and when.** The town keeps a can, a sickle and a satchel for every farmer who has none, a smoker for
+every beekeeper, a nesting box for a rancher whose ground has hens and no box, a feed trough for one with two grown
+animals and no trough, two traps for every fisher (four in all), and a rain barrel for every workshop and every field
+with none by it. A farmer, a beekeeper or a fisher takes its tool out of the stores on its round; it keeps it in its
+pack (never banked) and you see it in the free hand while it is at work.
+
+**The copper watering can.** Every ten seconds or so, as it goes about its field, the farmer tips the can over a patch
+of its young rows: the farmland under the three-by-three is soaked and each crop on it grows a little, with a splash
+and the sound of water. It waters the driest first and not the same patch twice within five minutes; a full can is
+sixteen waterings, shown by the blue bar under it and the water in it. Dry, it walks to the nearest rain barrel with
+water in it (failing that, to its field's pond or river) and fills it. Of an evening, before bed, it waters its own
+house's garden and window boxes with it, a quiet hour it enjoys. **In a drought** a farmer with a can carries no
+bucket: it waters the parched ground round it every round, walking out to the driest of its field if need be, and a
+watered crop grows at its full pace, not stunted. A farmer without one still carries a bucket, but draws it from a
+rain barrel before it walks to a pond. *You:* right-click water (or a rain barrel, or a cauldron of water) to fill
+it, and right-click farmland, a crop or a flower to water the three-by-three round it.
+
+**The seed satchel.** At the stores the farmer packs it with the field's seed (wheat, carrots, potatoes, beetroot),
+half of what the stores hold of each and never their last twelve. Out in the field it hands itself twenty seed
+whenever its hand runs below a dozen, so it sows on with no walk back; run dry and far from the stores, it makes
+one trip to fill it. A farmer with seed at its hip works a little quicker (its pace line says *its seed satchel*), and
+its card counts the seed sown out of it and the trips to the stores it saved. *You:* click seed onto it (or it onto
+seed) to put it in, as with a bundle; it takes only seed. Right-click farmland to sow the three-by-three round it.
+
+**The copper sickle.** When the farmer cuts a ripe crop at harvest, the sickle takes the ripe crops of the
+three-by-three round it in the same swing. The swing's drops are gathered together and every square is sown again
+from them before the rest goes into its pack, so a wheat that happened to give no seed is sown from its neighbours'
+spare. Its card counts the crops reaped. *You:* break a ripe crop with it and the ripe crops round it are reaped too
+and sown again (the one you broke as well, from the swing's seed or your own). A cut a swing. It is a light weapon at a
+pinch.
+
+**The nesting box.** The rancher sets it in a far corner of its pen, lined with a wheat's worth of hay. A hen within
+six blocks lays into it instead of onto the ground, and while it has hay in it a hen near it lays a fifth sooner. On
+its round the rancher empties the eggs into the stores for the cook's cakes, pies and cheese, and lines it afresh with
+a wheat. You can see what is in it: the hay, and one egg, two, or a clutch. *You:* take the eggs with an empty hand;
+line it with a wheat or a bale of hay. A comparator reads how full it is.
+
+**The feed trough.** The rancher sets it by the middle of the pen's far fence and fills it out of its pack, then the
+stores beyond their last dozen, with the right feed for what is near it: wheat for sheep, cows and goats, seed for
+hens, carrots for pigs and rabbits, sixteen of each. While there is feed in it the grown animals that wander off come
+back to it, and about every half-minute a ready pair near it breeds, each eating one of the feed, so long as the pen
+keeps to its limit (eight of a kind, sixteen in all, near the trough). With a trough feeding the pen, the rancher no
+longer walks about holding wheat out. How full it is shows in the grain heaped in it. *You:* right-click it with feed
+to tip in a handful; look in with an empty hand.
+
+**The fish trap.** The fisher sets two in open water by its fishing ground (off the end of its quay first), the town's
+four at most. Now and then a fish swims in: a cod, or a salmon in a river or cold water, with a little junk now and
+then (a stick, a bone, a string, kelp, seagrass), up to six. The catch shows in the cage. A fisher passing one empties
+it, and on a day the boats stay in for the weather it goes round them all; the fish go to the fish market's barrels
+(else the stores), the junk to the stores. *You:* set one in water and take the catch with an empty hand. A
+comparator reads it.
+
+**The rain barrel.** The town sets one by each workshop and at the edge of each field, under the open sky, out of the
+stores and by hand (the town's works). It fills in the rain (not the snow), up to four buckets, faster than a
+cauldron; the water stands in it, and a comparator reads it. The farmers fill their cans at it; the fire brigade fills
+its buckets at it; the bucket chain draws from a barrel nearer the fire than its pond when there is no pond close; in
+a drought the farmers draw from the barrels before the ponds. A workshop the town wants a cauldron of water by, with no
+cauldron in the stores and no iron to spare for one, gets a rain barrel instead. *You:* fill a bucket or a can at it,
+or tip a bucket of water in.
+
+**The bee smoker.** With a smoker (its own, or the stores'), the beekeeper smokes and empties every full hive on its
+meadow on the one round instead of a hive at a time: four comb to the shears instead of three, or a bottle of honey
+and a comb. The bees never anger, and any that were angry are calmed. You see the smoke rise and hear the hives. *You:*
+right-click near hives for a puff of smoke: the bees within eight blocks stay calm for thirty seconds, and a full hive
+gives you its comb (shears) or its honey (a bottle) without a bee coming out angry.
+
+**Where to look.** The folk's card has a **Tools** line: the can's water and the patches watered today (and in the
+drought), the satchel's seed and the trips saved, the sickle's cuts left and the crops reaped, the hives smoked, the
+eggs from the box, the trough filled and the pairs bred off it, the fish from the traps and the traps set. What a folk
+says it is doing names the errand (*filling my watering can at the rain barrel*, *going round my fish traps while the
+boats stay in*). The chronicle has each town's first: the first can, satchel, sickle and the rest made, the first
+field kept green through a drought, the first field sown off one trip, the first harvest reaped three rows at a stroke,
+the first eggs from the box, the first pair bred off the trough, the first trap set and its first catch landed, the
+first rain barrel, and the first hives smoked. The town's books list the eight among the stores, the makings and the
+prices. `/village items fields` gives each of the eight (in the stores, wanted, its age and worth), the boxes,
+troughs, traps and barrels set out (and the rain in the barrels), and every folk's tools and what they did today.
+Operators: `/village items fields stage` sets the scene for the pictures.
+
+The game tests `FieldsGameTests` (fi01 to fi10) check that:
+* the smith makes the can of five of the stores' copper; the farmer takes it, fills it at the rain barrel (a bucket's
+  worth out of it), waters its young wheat (the ground soaked, the crops grown, the can in its hand, its card and its
+  words), fills it at the pond with the barrel dry; and a player waters with it;
+* in a drought a farmer with a can carries no bucket and its watering keeps a crop from being stunted, while a farmer
+  without one fills a bucket at the rain barrel first;
+* the tailor makes the satchel of two leather and a string; the farmer packs it at the stores, sows out of it with no
+  trip back (quicker, its card counting the trips saved), goes back once to fill it when it runs dry; and a player
+  sows a three-by-three out of it, the satchel taking only seed;
+* the smith makes the sickle when the stores have copper for it but not for the can; the farmer's one cut reaps and
+  sows again the eight round it, their wheat in its pack; and a player's swing does the same;
+* the rancher makes the nesting box of five planks and a wheat and sets it out; a hen lays into it (and sooner on its
+  hay); the rancher takes the eggs to the stores and lines it afresh; and the cook bakes a pumpkin pie with one;
+* the rancher makes the feed trough of planks and a slab and sets it out, fills it with sixteen of the stores' wheat
+  for its cows; a pair breeds off it, eating two; a stray makes for it; its own breeding stands aside; and at eight
+  cows the limit holds;
+* the fisher weaves a trap of sticks, two string and a cod and sets it in the pond; it catches six at most; on a rainy
+  day the fisher goes round and lands the catch, junk and all; it empties one in passing; and a player empties its own;
+* the shop's hand coopers a rain barrel of seven planks and a copper; the town sets it at the edge of the field under
+  the sky; the rain fills it and the snow does not; a player fills a bucket at it; the bucket chain draws from it with
+  no pond near; and a workshop with no iron for its cauldron gets a barrel instead;
+* the smith makes the smoker of two copper, a leather and a coal; the beekeeper empties all three full hives on one
+  round, more from them than unsmoked, the angry bee calmed; and a player's puff calms the bees and lets it take a full
+  hive's comb;
+* the eight have their recipes, ages, worth and place on the market; the smelter takes the stores' raw copper to its
+  furnace; with no smith it beats the can cold, and stands aside once a smith comes.
+
 ## Every thing the town makes
 
 Everything the mod adds is a real thing of real makings. It has a recipe of what a town gathers, an age, a worth on
@@ -8014,6 +8420,1005 @@ name, for a thing that has no recipe, no age, no worth, no maker, or makings the
 * with no master in the town, its best cook (not its greenest) bakes the pies one turn in three, and once a master
   cook comes up the master bakes them at every turn and the other no longer; the best smith rivets the miners' pick,
   an apprentice's work that wears through sooner, with its name on it.
+
+## The fletcher
+
+A Stone Age town whose watch carries bows (or that has built the archery range) takes up a **fletcher**: one at first,
+and a second once the town is sixty strong. If nobody takes the trade up of their own accord within a day, the town
+asks one of its own: a hand between trades or a hunter for choice, never one of the watch, nor a craft's only hand.
+The fletcher wears a tan leather bib apron over a green tunic, a quiver of arrows slung over its shoulder, and a green
+felt cap with a goose feather in its band.
+
+**Its hut.** Once the town keeps a fletcher, the builders put up a little timber fletcher's hut facing the square: a
+barrel for the finished arrows and a chest against the back wall, with the place between them left for the fletching
+table. The fletcher makes that table itself, of two of the stores' flint and four planks (the game's recipe), and sets
+it there; until the hut stands it works at a table on the square, and carries it in when the hut is built.
+
+**Everything it uses is real.**
+
+| What | Where it comes from |
+|---|---|
+| Flint | The miners' and diggers' gravel in the stores. The fletcher sets a block down on the sifting floor in front of its hut and breaks it with the stores' shovel, as you would: the game's own loot gives a flint about one time in ten, and the gravel otherwise, which goes back in the stores to be sifted again. |
+| Feathers | The rancher's hens. When the pen has more hens than it keeps (four), the rancher culls an old one, and while the fletcher is short of feathers it takes a hen before any other animal. A pen with no hens fetches a wild pair home. The feathers and the meat come home in its pack. |
+| Sticks | The stores' planks: two planks make four sticks, the rest kept. |
+| String | The spiders the watch and the hunters kill. |
+| Iron, glowstone, redstone, hay | The smelter's ingots; the Nether's glowstone, once it is in the stores; the miners' redstone; the farmers' wheat as bales. |
+
+**What it makes**, a piece at a time at its table, all into the stores, and booked as its making on the Production page
+and in the fletcher's trade book:
+
+| Thing | Recipe | When |
+|---|---|---|
+| Arrows | a flint, a stick and a feather make four | first, until the stores hold the raid's reserve; then some for the shop |
+| Bow | three sticks, three string | for each guard without one, and a spare; one for the shop when string is plentiful |
+| Crossbow | three sticks, two string, an ingot and a tripwire hook (an ingot, a stick and a plank make two hooks) | in the Iron Age, for the town's best archers, who are given them in place of their bows |
+| Target | a bale of hay and four redstone | for each butt at the range without one |
+| Redstone lamp | four redstone round a block of glowstone | set over a butt's target, it lights when an arrow strikes home |
+| Spectral arrows | four glowstone dust round an arrow make two | once the Nether's glowstone is in the stores; sixteen kept |
+
+**The watch, kept stocked.** In a town with a fletcher, every guard with a bow goes up the wall with a quiver of
+thirty-two arrows, filled again from the stores when it runs below sixteen. A guard with an empty quiver goes for more
+at once. The stores keep a reserve of thirty-two arrows a guard (and a turn at the butts) for a raid, and the shop will
+not sell you those, only what the fletcher makes past them. After a raid every quiver is filled at once, the chronicle
+says how many arrows went out, and the fletcher goes straight back to its table to make the reserve good. If a guard's
+quiver is empty and the stores have none, the board says so, and names the guards.
+
+**Practice.** On a quiet working afternoon (no bell, no rain, not the rest day) the fletcher runs practice at the
+range. The guards whose aim is least steady go first, one at a time: ten of the stores' arrows each, shot at the
+targets as real arrows, while the fletcher stands behind the line calling the shots. The guard pulls its arrows and
+they go back in the stores; the fletcher sweeps up any strays. Every session at the butts (the morning's practice and
+the contest too) steadies a guard's aim for good: its arrows fly truer at the butts, and in a fight the spread of its
+shots narrows, to half an unpractised guard's at best. A guard's card shows its best ("best at the butts: 8 of 10"),
+its sessions and its spread in a fight; a new best of seven or more out of ten that beats the whole watch goes into the
+chronicle.
+
+**You can** buy the arrows and bows the fletcher makes past the watch's needs at the shop; and `/village fletcher` says
+the whole of it: the fletcher, its hut and table, the stores' arrows and makings, all it has made, every guard's quiver
+and aim. An operator can call practice with `/village fletcher practice`.
+
+The game tests `DefenceTradesGameTests` (fd01 to fd06) check that a Stone Age town wants a fletcher only once its watch
+carries a bow, gives the place to one of its own (never the watch) and puts the hut on the builders' list, and that the
+fletcher makes its table of two flint and four planks in the hut; that a hundred blocks of gravel broken on the sifting
+floor give flint as the game gives it, the rest back in the stores; that a rancher culls hens first for a town with a
+fletcher and the feathers come home; that the stores' makings become arrows, bows, a crossbow (issued to the best
+archer), a target and spectral arrows by their recipes; that quivers are filled to thirty-two and refilled after a raid,
+that the reserve is not sold, and that an empty quiver with empty stores is on the board; and that practice at the
+range steadies a guard's aim, narrows its spread and gets the arrows back into the stores.
+
+## The golem keeper
+
+An Iron Age town that has been raided twice within a fortnight, or has grown to sixty folk, takes up a **golem keeper**:
+one, from its own folk if nobody comes forward within a day (a hand between trades, or a strong back from the mines or
+the furnaces for choice, never the watch). It wears a heavy dark leather apron studded with iron rivets, a
+pumpkin-orange scarf wound round its neck, a riveted leather cap, and the shears it carves pumpkins with at its hip.
+Its workplace is the **golem yard**, an open-fronted shed by the square with a crafting table, a chest and an anvil.
+
+**Iron golems, built the real way.** The keeper makes blocks of iron out of the stores' ingots at the yard, nine to a
+block, until it has four. At the golem's post it stands them in a T, legs, body and both arms, clearing the grass round
+it, and sets a pumpkin on top: a carved one from the stores, or a farm pumpkin carved where it sits with the stores'
+shears (its four seeds go into the stores). The pumpkin is placed the ordinary way, so the game's own check stands the
+golem up, exactly as when you build one: a golem made by hand, which never turns on the town's folk. The keeper names
+it (Ironside, Old Rust, Bolt...), and the chronicle tells who raised whom, and where.
+
+* **How many.** A golem on the square always; one at every gate while the raids are frequent (two in a fortnight); and
+  two more about the square in a big town of eighty. Never one the town cannot afford: a golem takes thirty-six ingots,
+  and none is built if that would leave the stores short of the iron the watch's armour and blades still want. The
+  keeper's card and `/village golems` say what it is waiting on.
+* **At its post.** Each golem keeps to its post, a gate or the square. It goes after a monster about the town as any
+  golem does, and walks back to its post when the fight is done.
+* **Mending.** A hurt golem is mended with the stores' iron ingots, as you mend one: twenty-five health an ingot, by the
+  keeper on its round. Its cracks fade as it mends.
+* **Losses.** A golem that falls is mourned a little ("Old Rust fell at the east gate"), the folk who knew it remember
+  it, and the keeper gathers the iron it dropped back into the stores on its next round. The post is built again when
+  the town can afford it.
+* **The golem from before.** A town that already has an iron golem (the one the town raised itself before it had a
+  keeper) hands it to the keeper, who names it if it has no name and gives it a post. A town with no keeper still raises
+  its first golem when it comes into the Iron Age, now in the same real way, by a town hand at the square.
+
+**Snow golems in winter.** In the town's winter, if the biome is not one a snow golem melts in, the keeper builds snow
+golems on the watchtower's deck, two to a tower: two blocks of snow (packed four snowballs to a block from the
+sweeper's snowballs, or snow it shovels where it lies) and a pumpkin, and the game stands each up to pelt whatever comes
+at the town with snowballs. In spring they are let go, and melt away. In a warm biome (a desert, a savanna, the badlands)
+it builds none, and says why.
+
+**You can** see the golems at their posts and their state on the board and the keeper's card, and read the whole of it
+with `/village golems`: the keeper, the yard, the posts wanted, every golem and how it is, the fallen, the stores' iron
+against what the watch still wants, and all the keeper has done. Its trade book keeps the same numbers.
+
+The game tests `DefenceTradesGameTests` (fd07 to fd10) check that a town raided twice in a fortnight (not twice in a
+month) wants a keeper and gives the place to one of its own, with the golem yard on the builders' list; that four
+blocks of the stores' iron and a pumpkin carved with the stores' shears stand up a player-made iron golem at the square
+by the game's own check, named, with the seeds in the stores, and that carried away it walks back to its post; that the
+town's old golem is taken in hand and named, mended with ingots twenty-five health at a time until its cracks are gone,
+and when it falls is mourned and its iron gathered back; that a snow golem is built on the watchtower in a snowy
+winter, none in a desert town (and why), and that it melts away in spring; and that no golem is built, and no iron
+touched, while the watch's armour still wants the iron, and that with iron enough for both, it is.
+
+## Interviews
+
+When a town fills a post that matters and more than one folk wants it, it holds a real interview. It happens in the
+world, in the morning, and you can walk up and watch it. The candidates on the shortlist wait their turn on a bench
+with their letters in their hands. Each one sits across the table from the panel in turn, and both sides talk in
+speech bubbles. Then the panel huddles, calls everyone back in, and tells them who got the post and why. Last, the
+chosen one shakes hands across the table.
+
+**When a town interviews.**
+* *A notice on the board* with two or more fit applicants. The elder used to choose on paper; now the best three are
+  shortlisted (a fourth if it is within a whisker of the third). The rest are told no on paper, kindly.
+* *A new workplace's first keeper*: the new smithy wants a blacksmith. The town's own folk who want the work stand
+  alongside any applicants from other towns.
+* *The posts a town gives its own*: the schoolteacher, the librarian, the ferryman, the bank clerk, a place on the cave
+  team, the fletcher, the golem keeper, and the steward of a player who leads. When one of these falls vacant and two or
+  more folk want it, the post is held open for a day for its interview. Whether a folk wants a post depends on its
+  ambition, what it cares about, its nature and its hand at the work, and on whether it can take the post without
+  leaving its own trade short. With only one candidate, the post simply goes to that one.
+* *The posts a town works out each day from who is best*: the constable of the watch (from the Iron Age, with a watch
+  of two or more), the leader of the cave team, the auctioneer, and the master of a trade when the old master retires
+  or dies. Once a panel has chosen someone, the town keeps that choice for as long as the folk stays fit for the post.
+  (There is no captain of the watch: the constable leads it.)
+* A town holds one interview at a time, and never at night, in a raid, a fire, a thunderstorm or on a festival day. Then
+  it is put off a day. After three put-offs the panel decides on paper.
+
+**The day before.** The board says so ("Interviews at the hall tomorrow morning: the post of blacksmith. Three
+candidates: Ada, Bram and Cole."), and so do the crier, the gazette and the morning assembly. Each candidate writes its
+**letter of application**. A candidate from another town sets out along the road in time to arrive, and the town pays
+for its room at the inn. If it can't come, its letter is read out instead.
+
+**The table.** If the town has a meeting hall, the interview uses the hall's long table: the panel sits at the head, the
+candidate in the chair across from them, and the bench is the chairs at the far end by the door. A town with no hall
+sets out a table by its board, in the leader's courtyard if it has one. The table is three slabs on end, with three
+chairs behind it for the panel, one across it for the candidate, and a bench of three a few steps back. A hand the town
+sends makes them from the stores' own stairs and slabs (or saws them from planks) and leaves them there for next time.
+With nothing in the stores to make them from, everyone stands.
+
+**The panel.** The leader takes the chair. When a player leads, its steward chairs and the player chooses. Next to the
+chair sits the post's master or the town's best hand at the trade. A big post (the constable, the steward, the bank,
+the school, the cave team's leader) adds a councillor. An honoured guest can sit at the end of the table.
+
+**The interview.** It starts after the morning assembly. The chair names the post and the candidates, then calls each
+in turn: "First, Ada. Come and sit down."
+* *The greeting*, in the candidate's own manner. A shy folk stammers ("G-good morning. My letter. Sorry, my hands are
+  cold."), a grumpy one wants to get on with it, a proud one says its letter makes the case, and a cheerful one beams.
+  It hands its letter across, and the chair holds it and reads it aloud.
+* *How long at it*: the candidate's real level, what it has done in its life ("Nine trees felled, all told.") and
+  how long it has worked here. A teacher is asked what it knows that is worth teaching a child; a librarian, what it
+  reads.
+* *Its best work.* A smith or a tailor holds up a piece with its own maker's mark, fetched from its pack, its home
+  chest or the town's stores, and the master looks it over ("A master's work. Look at the temper on that edge."). A
+  cook offers a taste from its own pack, and the master eats it. A guard gives its tally of hostiles. Anyone else
+  talks about the knack it chose or its fondest day.
+* *A real question* the post meets: raiders at the east gate at night, a child who won't learn its letters, the stores
+  down to two iron when the watch wants blades (counted from the real stores), a torn book coming back, a mortgage
+  that can't be met. A skilled, ready candidate answers well; a nervous one stumbles ("Um. Hope for rain.").
+* *Why it wants the post*: what it cares about most, its ambition, or family in town.
+* *A proud folk's boast* is checked against the record: borne out ("Level 16, and nobody here above it.") or seen
+  through ("Level 3, Cole. I can count. Dara is level 16.").
+* *A record before the court* is asked about. Owning up counts for it; denying counts against it.
+* *References.* A partner, a friend, an old master at the trade or a rival walks over, stands to one side, says its
+  piece and goes. The panel discounts a grudge.
+
+The panel's faces show what it thinks: green sparkles for a nod, a puff of smoke for a frown, a note for a raised
+eyebrow. On the bench, the others fidget and whisper ("Have you done this before?" "Once. Didn't get it.").
+
+**The decision.** The candidates step out and the panel huddles, each line a whisper about one of them ("Ada's work
+spoke for itself: an iron sword, a master's work."). Then the chair calls them back in and announces the choice, with
+the reason in a sentence: "We've decided. The post of blacksmith goes to Ada: the finest work we saw (an iron sword, a master's work)." The chosen
+comes to the table for the handshake (sparkles and a chime), and each of the others is thanked and told what to work
+on ("too new to it yet; another year at it and you'll walk it").
+
+**How it is scored.** The paper (the post's usual weighing of level, knacks, years and family) is the core. The
+interview can move a candidate up to twelve points either way: nerves, the letter, the answers, the work shown, the
+references (eight at most), honesty about the past, a boast, and not turning up at all. Each panel member votes for
+the best by that score, leaning a little towards friends, and the chair breaks a tie.
+
+**After.** The chosen takes the post. A newcomer from another town goes home to fetch its things and then comes back
+for good; one of the town's own starts at once. The chronicle, the board, the crier and the next gazette all report it.
+Every candidate's card shows the result ("Interviewed for town librarian on day 12: not chosen — nerves got the better
+of you; you know more than you showed us"). The chosen is in high spirits for a few days. The others are a little down
+for a day or two, but they work harder for a week and learn their trade a fifth quicker. Friends console them, and the
+ambitious ones go and read the board for a place elsewhere.
+
+**You and the interviews.**
+* Walk up and watch. The chair greets you ("Come to watch? Stand by the wall.").
+* Ask any folk "any interviews coming up?" and it tells you when, where, for what post and who is standing.
+* If the town counts you a friend, put in a word: say "I'd recommend Ada for the post" to any folk, or use
+  `/village interviews recommend Ada`. The chair reads it out at Ada's turn. It counts for more the better the town
+  knows you (a hero's word most), and you get one word per interview.
+* An honoured guest can ask to sit on the panel ("can I sit on the panel?", or `/village interviews panel`). You get a
+  chair at the end and one vote in three.
+* **If you lead the town**, the choice is yours. When the panel has heard everyone, the interview page opens with each
+  candidate's particulars and a Choose button. Your choice stands, even over the panel's, and the announcement says so.
+  If you aren't there, you have until sundown, and after that the panel decides. You can also use
+  `/village interviews choose <name>`, or `/village interviews choose panel` to leave it to them.
+* The town's books have an **Interviews** page, after Transport. It shows interviews coming and held, every
+  candidate's score part by part (paper, nerves, letter, answers, work, references, honesty, boast, absence, total),
+  who got the post and why, and the last lines said.
+
+**The letter of application.** An upright sheet in a candidate's own hand: the post written across the top in red and
+underlined, a few wandering lines, a signature with a flourish, and an ink blot.
+
+| Thing | Recipe | Age | Worth | Made by | What it's for |
+|---|---|---|---|---|---|
+| Letter of Application | a paper and an ink sac | Wood | 0.3c | the candidate, at its own town's bench | handed to the panel at an interview |
+
+The candidate writes it from its own town's paper and ink and pays for them from its purse into the treasury. It holds
+the letter while waiting, hands it across the table, and gets it back afterwards as a keepsake. Its tooltip shows who
+wrote it and where from, the post and town, its trade and level, its age, its knacks, why it wants the post, and the
+day it was written. Right-click it to read it. One you craft yourself is blank.
+
+**Commands.**
+* `/village interviews`: the nearest town's interviews, set, on and held, with each candidate's score.
+* `/village interviews page` and `/village interviews books`: the interview page, and the town's books open at
+  Interviews.
+* `/village interviews choose <name>`, `recommend <name>` and `panel`: as above.
+* Operators: `/village interviews stage <post>` sets up an interview now with the town's best candidates (`teacher`,
+  `librarian`, `constable`, `caveleader`, `caveplace`, `ferryman`, `auctioneer`, `banker`, `steward`, `fletcher`,
+  `golemkeeper`, `master_<trade>`, or another trade's name such as `smith`, which puts a notice up for it).
+  `/village interviews now` starts the next one at once, and `/village interviews hurry on|off` makes it a line every
+  half-second for a quick look.
+
+**Tested.** The game tests `InterviewGameTests` (iv01 to iv10) check that:
+* four miners from a town ninety blocks away apply for a notice, and three are shortlisted. They travel over, sit on the
+  bench, take the chair in turn, and real lines are said. The best by combined score is chosen, and the notice is
+  filled;
+* a staged smith interview has the candidate hold up its own marked sword, and it goes back afterwards;
+* the librarian's candidates' cards, moods, memories and week of harder work all show the result;
+* the constable's post goes to interview in an Iron Age town, and the board, crier, chronicle and gazette tell it,
+  before and after; the watch's own reckoning keeps the panel's choice;
+* a reference (a friend's and a hero player's word) turns a close result;
+* a proud folk's boast is seen through, and another's is borne out;
+* when the teacher's post falls vacant, the school waits for the interview, and the best of the town's own gets it;
+* a player who leads chooses the lowest-scoring candidate, and its choice stands, with the reason saying so;
+* the letter is made from the stores' paper and ink, paid into the treasury, held on the bench, held by the chair while
+  read, and kept afterwards;
+* a candidate from a town two hundred blocks away arrives in time and takes its seat.
+
+## The fireworks maker
+
+Every rocket a town sends up is one of its own fireworks maker's, made from the gunpowder, paper and dye in its stores
+by the game's own recipes, and taken out of the stores as it is lit. A town with no rockets put by has a quieter
+night: no rocket is ever made out of nothing.
+
+* **When a town takes it up.** A Stone Age town of eight folk or more that has kept a couple of its festivals (the May
+  dance, the bonfire, the fair, the harvest, Founding Day, a new age seen in) and has gunpowder in its stores wants
+  fireworks of its own. The chronicle says so, and the town asks its builders for a **powder hut**. When the hut
+  stands, the town picks one maker from its own folk: a cheerful, curious hand (a stargazer most of all) from a trade
+  with hands to spare, never the watch, the storekeeper, the banker, the cave team or a craft's only hand.
+* **The powder hut.** A small stone hut out at the edge of the town, away from the houses: stone walls on a stone
+  footing, a stone slab roof, glass in the windows, a lantern hanging from the roof and nothing in it that burns. Inside
+  are a crafting table, the powder chest, a stock chest, a barrel and a **cauldron**, which the maker keeps full of
+  water from the stores' bucket (or one filled at the well), with the bucket going back to the stores. Over the door
+  hangs its sign: *POWDER HUT, Fireworks, No naked flames*, and the maker's name. The hut's chests are the hut's own,
+  named "Powder Hut", not the town's stores. The powder chest keeps a dozen gunpowder to work from and never more than
+  sixteen; the rest goes back to the stores. A town fire never starts in the hut.
+* **Stars.** A firework star is a gunpowder and a dye of each colour, on the crafting table, with a shape and an effect
+  if the town has the makings:
+  * a fire charge for a **large ball** (made there and then from blaze powder, coal and gunpowder);
+  * a gold nugget for a **star** shape (cut from an ingot if there are no nuggets);
+  * a feather for a **burst**;
+  * a creeper head for a **creeper face**, if the stores ever hold one;
+  * glowstone dust for a **twinkle** (a crackle on a large ball);
+  * a diamond for a **trail**, but only in a rich town (a well-off treasury, or half a dozen diamonds put by);
+  * and a second turn on the table with another dye for the colour it **fades** to.
+  Short of a shape's makings, the maker uses the next best, down to a plain small ball. The dyes are the stores' own,
+  or made then and there by the recipes: from flowers, lapis, ink sacs, cocoa beans, beetroot and bone meal (a bone
+  ground down if need be), and mixed (red and yellow make orange, blue and white make light blue, and so on). Green
+  comes out of the furnace from cactus, so it has to be in the stores already.
+* **Rockets.** A sheet of paper (three sugar cane make three sheets, if the stores have none), one to three gunpowder
+  for the flight, and the stars, by the rocket recipe: three real firework rockets to a filling, each with its flight
+  and its stars in it, straight into the stores. Stars rolled for a filling that cannot be finished wait in the stock
+  chest for the next one.
+* **A design for each occasion.**
+
+  | Occasion | Colours | Stars | Flight |
+  |---|---|---|---|
+  | Festivals, a new age, a hero honoured | the town's colours, off its arms | stars with a twinkle | 2 |
+  | Founding Day | the town's colours, fading to white, and a second star of gold | bursts with a trail and a twinkle | 2 |
+  | A wedding | the couple's own colours (their style's), fading to white | stars with a twinkle | 2 |
+  | A victory in war | the town's colours | large balls with crackle, and bursts with a trail | 3 |
+  | Remembrance Day | white alone | plain small balls | 2 |
+
+  The maker looks ahead: rockets for a wedding pledged, for a victory feast called, and for Remembrance Day, Founding
+  Day or a festival within three days, then six in the town's colours always kept by for a night nobody saw coming, and
+  then the elytra rockets. A town short of the dye for its colours still gets on with the rest.
+
+**The displays.** As the speeches end at a festival, Founding Day, a new age, a hero's honour, a wedding (once the vows
+are said) or the feast for a war won, and after Remembrance Day's minute's silence, the town has a display if its
+stores hold rockets for it.
+
+* The maker and two helpers walk to a **launch spot** on the square, a dozen blocks from where the town stands to
+  watch, on open ground under the open sky. It is a rack of five places abreast, and they stand back behind it. The
+  couple never crew their own wedding, and the watch stays on watch by night.
+* It goes up as a **programme**: an opening volley, the middle a rocket or two at a time, and a finale. A wedding opens
+  with two together (one for each of them), a victory has big volleys and a bigger finale, and Remembrance is one white
+  rocket at a time, slowly. With fewer rockets than the programme wants, the opening and the finale are kept and the
+  middle is cut short.
+* Every rocket is taken out of the stores the moment it is lit: the occasion's own design first, then any display
+  rocket put by (never anything but white for Remembrance). With none put by, there is no display: the chronicle
+  stays quiet and the gazette says the bonfire's glow had to do.
+* The crowd looks up and cheers ("Ooooh!", "To the happy couple!"). Everyone who watched remembers it, and the crew
+  remember setting it off.
+* A milestone you helped the town to (its first diamond, a new age, its twenty-fifth folk) gets a **salute** of three
+  of the stores' rockets over the square. With none put by, it gets a bonfire's sparks instead.
+
+**Safety.**
+* **No launches in a thunderstorm.** The crew waits for the thunder to pass. If it has not passed in two minutes the
+  display is called off, and the rockets stay in the stores.
+* **Never at folk.** A rocket goes straight up, only from a place on the rack with nobody on it, beside it or over it.
+  If somebody stands on the rack, nothing goes up until they move off.
+* The hut keeps its cauldron full and never more than sixteen gunpowder in it.
+
+**Elytra rockets for you.** The maker keeps the stores stocked with plain rockets of paper and gunpowder for flying,
+while the town has gunpowder to spare: sixteen of flight one, twelve of flight two and eight of flight three. The
+shop sells them in lots of eight, and the longer they fly the dearer they are. Ask the maker at its powder hut, or a
+shopkeeper, with "Could I buy some rockets for my elytra?" (the **Elytra rockets** choice on a folk's card), and say
+"flight two" or "flight three" for the longer ones.
+
+**Gunpowder from the watch.** A creeper the town's folk kill before it blows drops its gunpowder, and whoever killed it
+goes over, picks it up and takes it to the stores. The maker's book thanks the watch for every one.
+
+Where to see it:
+* The maker's card says what it is doing and its tally: display and elytra rockets made, stars rolled, displays put on
+  and rockets fired. Ask any folk "When are the next fireworks?" (the **Fireworks** choice) for the rockets ready and
+  the next display.
+* The board says when a display is on ("Fireworks now: ... 6 of 9 rockets up. Eyes to the sky!"). Otherwise it says
+  the rockets ready, the elytra rockets, and the next display.
+* The next morning's **gazette** reviews the show under *Last night's fireworks*: how many went up, in what colours
+  and shapes, the opening and the finale, and its verdict, from "A triumph." to "Over almost before it began." The
+  chronicle tells who put on a display of how many rockets for what.
+* The Production page counts the rockets made and used, and the Fireworks Maker's book holds the trade's real numbers,
+  the hut's rule and the town's colours.
+* `/village fireworks` says it all in the chat: the hut, the maker, the rockets in the stores, the next thing to make
+  and the next display, the tally, and the last review. Operators also have `/village fireworks now` (a piece of the
+  maker's work now), `/village fireworks show <occasion>` (a display now, from the stores) and `/village fireworks
+  stage` / `stage show` (the smoke run's pictures).
+
+The game tests `FireworksGameTests` (fw01 to fw10) check that:
+* the trade opens only in the Stone Age, with festivals kept and gunpowder put by; the powder hut is wished for at the
+  edge of the town; once it stands, the cheerful, curious hand takes it up, and only one;
+* the hut is fitted out: its chests named and the town's goods in them moved to the storehouse, the cauldron filled
+  from the stores' water bucket with the bucket put back, the sign over the door, a dozen gunpowder fetched in, and
+  nothing in it that burns;
+* stars and rockets are made by the recipes from the stores' gunpowder, paper made of sugar cane, the town's dyes, a
+  nugget cut from an ingot and glowstone. The rocket's flight, shape, colours and twinkle match the design, and so do
+  Founding Day's (a diamond's trail in a rich town, a fade to white of bone meal, a star of gold). The Production page
+  and the trade's book count them;
+* the maker makes for a wedding in the couple's colours, and at the real wedding gathering real rockets go up in those
+  colours, every one of them out of the stores;
+* with no display rockets in the stores there is no display, no salute and not a rocket in the sky, the paper and
+  gunpowder are left alone, and the gazette says so;
+* elytra rockets of all three flights are made from paper and gunpowder (even with no dye in the stores) and priced
+  by flight, and a lot of eight is sold to a player, the coins going to the treasury;
+* nothing is lit in a thunderstorm and nothing leaves the stores; once the thunder passes, up they go;
+* a creeper killed by the watch drops its gunpowder, and the guard brings it to the stores;
+* a victory's rockets fly high with large balls, crackle and a burst with a trail (a fire charge made of blaze powder,
+  coal and gunpowder); Remembrance's are white alone, and its display takes only the white ones, one at a time; and a
+  war won puts the victory's rockets first on the maker's list;
+* the hut is brought back down to a dozen gunpowder; nothing is lit while folk stand on the rack, and the display goes
+  on once they step off; and the display is in the chronicle and the next morning's gazette.
+## What makes a town itself
+
+No two towns are alike. Each one is shaped by where it stands, who founded and led it, what has happened to it, what
+it makes and what its people vote for, and all of that changes how it works, not just what it says about itself. Open
+the town's books at the **Identity** page (the last tab, or `/village identity books`), read the one line under
+"How we're doing" on the board, or ask any folk *"What's this town like?"* (the **Town's ways** button on its card).
+
+### Its character: seven axes
+
+Each town leans one way or the other on seven axes, from -100 to +100, drawn as bars on the Identity page (with a mark
+where its founding put it). At its first morning the town is given its leanings by its land (a port is mercantile and
+open, a hill-town martial and practical, a desert town devout and old-fashioned, a meadow town peaceable and worldly)
+and by its founders (a party of Guardians makes a martial, closed town; Merchants a mercantile one; Free Spirits a
+worldly, open one; grumpy founders shut the gates, generous ones level the wages). After that it drifts, a point or two
+a day, toward what its folk care about and above all toward whoever leads it while they are in office, and toward the
+standing order they give. What happens to it pushes it too: a raid makes it martial and wary, a war won warlike, a peace
+peaceable, a trade deal mercantile, a book learned, newcomers taken in open, a great work forward-looking, an election
+for good wages mercantile. Half of every push stays for good. When a town grows martial (or stops being so) the
+chronicle and the gazette say so.
+
+A leaning of 35 or more counts as being that thing outright. Each end does something modest and real, scaled by how far
+the town leans:
+
+| Axis | One end | The other end |
+|------|---------|---------------|
+| Mercantile / Self-sufficient | a second market day each week, less kept back from the traders, keener envoys for trade, more hands at the shop | up to three fifths more kept in the stores before selling, outsiders' goods valued less, more farmers |
+| Martial / Peaceable | up to three tenths more on the watch, a new golem the day after one is lost, quicker to war, the walls manned | fewer guards, envoys sent more often and a peace sought in a feud, slower to war, happier at peace |
+| Devout / Worldly | the chapel wanted from the Stone Age (at twelve folk), fewer evenings at the tavern | the tavern wanted at eight folk, the theatre early, three evenings in five at the tavern |
+| Learned / Practical | the library at nine folk and the school early, up to two more research points a day | up to five in a hundred quicker at every trade |
+| Open / Closed | newcomers voted in, players trusted half again as fast, tourists sooner, the gates open at first light and shut late | newcomers voted down, players trusted slowly, the gates shut at sunset, a little less crime |
+| Traditional / Progressive | four customs kept, fashion slow to change, the houses made over slowly | a research point more, fashion quick, the houses made over sooner |
+| Egalitarian / Hierarchical | wages pulled toward the town's average, a coin more in the poor box | wages spread wider by rank, the leader's hall wanted at twelve folk, only householders vote |
+
+The town's character is named from its strongest two or three leanings and its land: *a martial, closed hill-town*,
+*an open, mercantile port*, *a seafaring, worldly port* once it has earned the name.
+
+### How it is ruled
+
+Each town is founded under the government its character suits, and it can change it by a vote, or be driven to change
+it by a crisis:
+
+* **An elected leader**, called by the land's own title (harbourmaster, thane, reeve...): elections every ten days as
+  before. The leader decides the laws by its own lights.
+* **A council of elders**: only the eldest five vote, choosing a speaker of the elders from among themselves every
+  fourteen days. They vote on the laws among themselves. Orders come every five days and stick: slower, but steadier.
+* **A hereditary lord**: no elections. When the lord dies its eldest grown child takes the seat; with no child, its
+  partner holds it; with nobody of the line, the town's most esteemed founds a new house. The chronicle keeps the line,
+  and the board names the heir. If the town is miserable under its lord three mornings running, it votes on no
+  confidence; carried, the house leaves the seat and the town elects its leader two days later.
+* **A guild republic**: the masters of the trades (level ten and over) elect the guildmaster, and each trade votes on
+  its own laws (the traders on tariffs, the hunters on hunting).
+* **A commune**: every change to the law goes to the whole town's vote, the steward is elected every seven days, and
+  everybody is paid the same.
+* **The chaplain's rule**: the town's most devout leads it as its chaplain, chosen by the chapel and never voted on.
+  The chapel is wanted early and there is a feast day in the middle of the week as well as the usual one.
+
+When a town's character has come to suit another government much better, it is put to the town in a referendum.
+
+**A player who wants to lead** stands at the elections where the town has them (an honoured guest only, before the
+elders or the masters). In a lordship there are only two ways in: marry into the ruling house (say *"Will you marry
+me?"* to an unwed lord or heir who thinks the world of you, once you are an honoured citizen; the lord's consort takes
+the seat when the lord dies), or wait for the town to vote its lord out and then stand. The chaplain's town has no
+election at all.
+
+### Its law-book
+
+Each town keeps its own laws, set at its founding from its character and government and reviewed by whoever governs
+(every two days for a lord, three for an elected leader, four for a guild, six for the elders). A raid makes a curfew
+likelier, a war conscription. A player who leads a town sets them with `/village identity law <law> <choice>`.
+
+| Law | Choices | What it does |
+|-----|---------|--------------|
+| The tithe | one coin in twenty, ten, three in twenty, five | the tax on wages and the tithe on savings, into the treasury; a heavy one is grumbled at |
+| Trade with outsiders | free trade, tariffs | outsiders' goods are valued a tenth less in a bargain under tariffs |
+| The curfew | none, after dark | everybody to bed soon after dusk, the tavern shut, the gates shut sooner, less crime |
+| Weapons | all may go armed, the watch alone | a visitor walking about with a blade or bow in hand is asked to put it away, and fined if it doesn't |
+| The borders | open, closed | closed borders turn newcomers away |
+| Conscription | none, in war | in a war every fit adult joins the militia and drills, not just a third |
+| The apprentice age | from the first day, as usual, school longer | when children start their mornings at a grown-up's side |
+| Drink | open late, shut at nightfall, a dry town | when the tavern empties, or whether anything is sold at the bar |
+| The day of rest | loosely, kept, strictly | every other week, every week, or every week with a longer service |
+| Hunting rights | common, reserved | fewer hunters where reserved, and a visitor's kill inside the town is poaching |
+| Who may own a house | anyone in good standing, citizens only, nobody | who may buy a house there (`/village house buy`) |
+
+A visitor is told the laws that matter to it as it walks in, *"Thornhurst's law: the watch alone goes armed; a curfew
+after dark."* Breaking them goes on its record under the town's laws, with fines, trials and banishment as for theft.
+
+### Earned traits
+
+A town's history becomes its character. These are badges it earns from what really happened to it, each with its
+story ("Flood-hardy: the floods of days 12, 31 and 44") and a small perk. Most fade once what earned them is long past;
+the founding ones never do.
+
+| Trait | Earned by | What it gives |
+|-------|-----------|---------------|
+| Flood-hardy | three floods weathered | the levee raised twice as fast, and nobody panics when the river rises |
+| Iron-willed | three raids held off | a guard more on the watch, steadier spirits |
+| Raid-scarred | folk lost to raiders twice | the gates shut earlier, strangers trusted slowly, a few more on the watch |
+| Golden Fields | two record harvests | farm work five in a hundred quicker, pride in its fields |
+| Deep Delvers | its first diamond in its first weeks, or three finds from the mine | mine work five in a hundred quicker |
+| Hospitable | many visitors, guests and heroes honoured, newcomers taken in | players trusted a quarter faster, tourists sooner, newcomers welcomed |
+| Mourning Town | three lost in five days | sombre for a fortnight: spirits down, the tavern quiet |
+| Lucky | a whole year without a death | spirits up, until the next death |
+| Fire-born | rebuilt after a fire | rebuilds after a fire twice as fast |
+| Well-wed | four weddings | children a little more often |
+| Warlike | two wars won | quicker to war, more on the watch |
+| Peacemakers | two peaces or truces made | more envoys, warmer with every neighbour |
+| Seafarers | three great catches by the fleet | fishing five in a hundred quicker |
+| Bookish | four books written | a research point more a day |
+| Merchant Princes | three trade deals struck | the traders pay a twentieth more |
+| Merrymakers | six festivals kept | spirits up |
+| Builders' Town | two great works raised | the houses made over faster |
+| Hero-honoured | two heroes named | renown, and visitors come to see the statues |
+| Hardy (founding) | founded on snow, desert, badlands or mountain | steadier spirits |
+| Colonists (founding) | a colony | warmer with its mother town every day |
+
+A fisher in a Seafaring town has *"a true Seafarer of Thornhurst"* on its card; a folk whose own values sit badly with
+its town's says it chafes at them.
+
+### Fame, renown and the town's title
+
+**Fame.** Each morning the town's books are read for what it makes most, and how well: the finest steel, smoked fish,
+honey, glass, wool and cloth, fireworks, maps, bread and pies, timber, dressed stone, leather, bricks and pottery,
+books, garden produce, beef and mutton, gold, diamonds and emeralds. A town becomes famous for something when it makes
+enough of it to be talked of and no other town makes it better (two things at most), and loses the name when another
+town does it better by a tenth. The traders pay a quarter more for what it is famous for, other towns value its famous
+goods more when they bargain (so their caravans ask for it, at a better price), and once a season it holds a fair for
+it, when buyers from round about take some of it out of the stores at half again the town's price.
+
+**Renown** comes from deeds: a war won (10), a great work of its own (6), a hero named (6), the first diamond (3), a
+peace made (3), a book written, a guest house, a record harvest or a fame fair (2), a festival, a great catch or a trade
+deal (1). It also comes from what the town is: 8 for each thing it is famous for, 2 for each master of a trade
+(level 25, ten at most), 2 for each trait it has earned, along with the great works and the museum as before.
+
+**The title.** Renown raises a town's title as well as its age and size: renown 6 makes a hamlet of eight a village,
+18 makes a village of twenty-two a town (from the Stone Age), 45 makes an Iron Age town of forty a city, and 110 makes a
+Diamond Age city with a colony a capital. A city's leader wears a mayor's chain, made out of the stores' gold. A city or
+capital gets better terms from the traders and envoys from much further away, and a capital is the seat of its colonies,
+whose laws become its laws. Other towns think better of a town of renown, a little each day.
+
+### How a town treats you
+
+All of this decides how a player is treated. An open, hospitable town greets you warmly and points you to the tavern; a
+closed, raid-scarred one asks your business and tells you to keep to the road. Where the watch alone goes armed, a guard
+at the gate looks at your weapons first. In an open town every kindness counts for more (a quarter more again if it is
+Hospitable), and in a closed one for less, and a closed town holds a grudge longer. The Identity page's *How it treats
+you* section and `/village identity` spell it out.
+
+### For the curious
+
+`/village identity` prints the nearest town's summary, axes, government, laws, traits, fame, renown and how it treats
+players. Operators can also use `/village identity set <axis> <value>`, `gov <form>`, `trait <trait>`, `fair`,
+`morning`, `seed` and `profile port|hold|abbey|commune` (a whole character at once, for pictures).
+
+Other parts of the mod add their own sections to the Identity page and words to the board's line through
+`Identity.contribute` and `Identity.contributeTag`.
+
+The game tests `IdentityGameTests` (id01 to id10) check that:
+* a port founded by Merchants and Free Spirits and a hill-town founded by Guardians and Traditionalists come out with
+  different axes, governments and laws, earn different names from their histories (Merchant Princes, Raid-scarred), and
+  differ measurably in their watch, their gates, how fast they trust a player, how they take newcomers, their tavern
+  evenings and the buildings they want first;
+* a Guardian in office makes its town martial day by day, a raid and an election push it too, and the chronicle says
+  when it has grown martial;
+* three real floods make a town Flood-hardy with its story, after which it raises its levee twice as fast and its folk
+  keep calm, and the name fades when the floods are long past;
+* the town that makes the most cooked cod becomes famous for smoked fish, the traders pay it more for the same cod,
+  other towns value its cod more, its fair brings coin into the treasury, and its renown rises;
+* a book, a festival and a hero raise a hamlet's renown until it becomes a village, as the chronicle says;
+* a curfew sends every folk to bed after dusk and empties the tavern, the gates shut sooner, a loosely kept day of rest
+  comes every other week, and the apprentice age and the tithe follow the law;
+* when a lord dies, its eldest child takes the seat without an election, a player can't stand, and a vote of no
+  confidence puts the house out so the town elects its leader;
+* a commune puts a curfew to the whole town's vote while an elected leader decrees it and the elders vote among
+  themselves; a commune pays everybody alike; the chaplain's town keeps a feast mid-week;
+* the same newcomers are voted into an open town and turned away by a closed one;
+* an open, hospitable town warms to a player faster than a closed, raid-scarred one, and a visitor walking the closed
+  town with a sword is first asked to put it away and then fined.
+
+## The cartographer
+
+A Stone Age town that has sent scouts out, or has grown to thirty folk, takes on a cartographer. It walks the town and
+the country round it with real maps, the same maps you carry, and they fill in as it walks. It hangs the town's map in
+the hall, finds the old places round the town for the scouts and the cave team, and sells you explorer maps that point
+at real structures in your world.
+
+* **The map room.** The town puts a map room on its building list as soon as it wants a cartographer. It is a little
+  timber house on a stone footing with a lantern over the door. Inside, the cartography table stands against the back
+  wall between two bookcases, with the wall above it kept for the cartographer's own maps. There is a chest down each
+  side, a lectern by the door and a barrel of cane. The builders set the table like any other part, and if it goes
+  missing the cartographer makes another from two of the stores' paper and four planks, as you would.
+* **Who takes it.** Nobody takes the post on their own; the town chooses, once the map room stands. It picks a scout
+  who knows the land first, then the most curious and patient of its folk. It never takes the last hand of a trade the
+  town is short of. When two or more of the town want the post, it is held open for an interview (see *Interviews*),
+  and the panel's choice takes it. The town has one cartographer, however big it grows, and the chronicle says who
+  took the post and why.
+* **Its look.** The cartographer wears a long blue scholar's coat to the knee, with a buff collar and turned-back cuffs
+  (one of them ink-stained), brass buttons, a claret waistcoat and a white stock. Add round brass spectacles, a goose
+  quill tucked behind its ear and a brass compass on a chain. The day's map is rolled under its arm, tied with a red
+  ribbon. When it is out walking, it holds the sheet it is working on up in its hand.
+* **Paper and compasses.** The cartographer makes its own makings from the stores, by the game's recipes. It presses
+  paper from the town's sugar cane (three cane make three sheets) until about two dozen are put by. When the map room
+  has fewer than two compasses, it makes one from four iron and a redstone. It always makes the first compass, even
+  when the town is saving its iron. Glass panes for locking finished maps come from the stores too. All of this is
+  counted on the Production page and in its trade book.
+
+**The town's map in the hall.** The map really is walked. The cartographer takes fresh sheets out of the stores (a
+paper each) and sets out with them in the morning. A map fills in round whoever carries it, exactly as one does in
+your hand, and only where it goes: so it walks to the middle of each sheet (or each quarter of one) and stands there
+until the sheet has filled in round it. Watch a sheet in the hall's frames and you can see the town come up on it,
+street by street.
+
+* A small town gets a two-by-two of sheets at full detail. A bigger town gets a three-by-three, if the hall has a
+  stretch of wall for it (or a two-by-two of the same ground at half the detail if it hasn't). The biggest towns get
+  the same layouts at half the detail.
+* On the way back, it stops at the hall, the leader's hall, each gate of the wall, the storehouse and the market. At
+  each it sets up a banner named for the place, in the town's colour if it can, made from six of the stores' wool and
+  a plank for the stick. Then it touches every sheet to the banner, as you would click a map on one. The places show
+  on the map as the game's own banner markers, with their names.
+* At its table it locks each sheet under a pane of glass, so the map never changes again. Then it hangs the sheets in
+  frames on the hall's wall, north-west at the top left, with a sign under them: *Map of (the town), by (its name),
+  day (the day)*.
+* It sets out only between early morning and early afternoon, and only by day. At dusk it puts its sheets away and
+  goes home, and the next morning it goes on from where it left off.
+* The wall is drawn afresh every week, or sooner if the town has grown (six new buildings, or too big for the layout)
+  or a sheet has gone from the wall.
+
+**The archive.** When a new map goes up, the old one isn't thrown away. It is named for the town as it was (*Thornhurst
+in its Stone Age*). If the town has a museum, the first map of each age hangs there, in frames on a free stretch of
+its wall, so you can walk along and watch the town grow. Every other old map goes into the map room's chest, where you
+may take one out to look at.
+
+**The country's map.** After the town's first map is up, and every fortnight after that, the cartographer walks one
+sheet of the country round the town at a quarter of the detail. It goes round a ring of stations about a hundred and
+fifty blocks out, and to the mine. If the town's colonies or neighbours lie far off, it uses an eighth of the detail
+and walks a wider ring. It marks the sheet with the town, its colonies, the neighbours its folk have met, the mine,
+the caves the cave team knows and every place it has found. It frames the sheet in the hall (or in the map room if the
+hall has no room), and this one is never locked. Caravans and envoys setting out are given a copy for the road (a sheet
+of the stores' paper). A copy is the same map, so as they travel, the roads fill in on the one in the hall.
+
+**The old places round the town.** Between its walks, a few times a day, the cartographer looks for one kind of place
+at a time, and only in land the town has been to: its own country, where the scouts have explored, near what the
+scouts and the cave team have found, and along the roads to its colonies, neighbours and mine.
+
+* Mineshafts and dungeons go to the cave team, and so do the trial chambers and ancient cities from the Iron Age and
+  strongholds from the Diamond Age. A mineshaft or a dungeon found this way is the team's next place to set out for.
+* Villages of villagers, pillager outposts, desert and jungle temples, witch huts and woodland mansions go to the
+  scouts.
+* Ruined portals go to a Nether runner, and ocean monuments to a kelp diver, if the town has those trades. Otherwise
+  their maps go into the stores.
+
+Each find goes on the town's books and in the scouts' atlas (a cave team's find goes on the caves' report too). The
+folk it is for get an explorer map to it, made from eight of the stores' paper and a compass.
+
+**Maps for you.** Talk to the cartographer and choose **Maps** to hear what it has and the prices, or pick one
+straight off:
+
+* **Ocean map**: the game's own ocean explorer map, to the nearest ocean monument the town's land reaches.
+* **Woodland map**: a woodland explorer map, to a mansion the scouts have been near.
+* **Treasure map**: a buried treasure map. It is one the town brought home from a wreck if it has one, otherwise one
+  to treasure the town found itself.
+* A map to any place the town knows of: say which ("a map to the desert temple").
+* **Town map copy**: a copy of every sheet of the hall's map, at a sheet of paper and a coin each. The copies are
+  locked like the hall's, so hang them two by two (or three by three) and they meet up as they do in the hall.
+
+They are real explorer maps, with the game's names and marks, and they point at real structures in your world. The
+cartographer never sells you a map of somewhere the town hasn't seen. The price is the makings, two coins for the work
+and a coin for every hundred blocks to the place. That is multiplied by how rare the place is (a mineshaft once, a
+temple twice, buried treasure three times, a monument four times, a mansion five), and is never more than eighty coins.
+
+**Commissions.** Choose **Commission…** and say which way: "map me the land to the east", or north, south-west, any
+of the eight. You pay when you ask: the sheet and the pane at their worth, and four coins for the walk. The cartographer
+walks it that day (or first thing the next morning if you ask late), on one sheet at half the detail, centred about two
+hundred blocks out that way. It locks the sheet under glass and leaves it in the map room's chest with your name on
+it, and you are told when it's ready. Take it from the chest, or ask the cartographer for it.
+
+**Quests.** Take on a quest that sends you well away from the town (fifty blocks or so) and the cartographer sends
+you a map to the place, marked with a cross, made from the stores' paper and a compass.
+
+Where to see it:
+* The cartographer's card has a **Maps** line: the survey it is out on (stop by stop), when the hall's map was drawn
+  and when the next is due, what it has found and sold, and anything it is waiting for.
+* Ask it what it does: it tells you whether it is walking the town, the country or a commission, or at its table.
+* The board gives the hall's map, the country's, and the latest find with who it went to. The gazette has a *From the
+  map room* piece the day after anything happens. The chronicle tells who took the post, each map hung, each place
+  found and each commission drawn.
+* Its trade book has what the map room has learnt and its numbers.
+* The town's books have a **Maps** page. It shows the country's map as the cartographer drew it (or the hall's map put
+  together, before there is one), every place found, the archive, commissions waiting, and the map room's numbers.
+  `/village maps` says the same in the chat.
+* For operators: `/village maps now` has the cartographer do its next piece of work at once. `/village maps stage`
+  puts up a map room (and a hall if the town has none) where you stand, appoints a cartographer, walks and hangs the
+  hall's map at once and hands you an ocean explorer map. `/village maps stage walk` sends the cartographer out on the
+  country's walk, and `/village maps books` opens the Maps page.
+
+The game tests `CartographerGameTests` (ca01 to ca10) check that:
+* the trade opens in the Stone Age with scouts out or at thirty folk (not in the Wood Age), the map room goes on the
+  town's list, and once it stands the town appoints its best candidate, just one, at the map room; fallen vacant with
+  three who want it, the place is held open for an interview and the panel's choice takes it;
+* the map room is built with its table, lectern, chests and bookcases, and a missing table is made from the stores'
+  two paper and four planks;
+* a sheet fills in only round where the cartographer stands and fills in further as it walks on, each pixel the
+  colour of the ground under it, and on a live walk the sheets fill as it goes;
+* the wall hangs in the hall: four locked sheets in frames, the hall, the storehouse and the market marked with named
+  banners as the game's banner markers, a sign under them, and the paper, panes and wool out of the stores;
+* a real mineshaft is found and handed to the cave team with an explorer map to it, and is on the caves' report as
+  their next lead, while one far out where the town has never been is not found;
+* a player buys an ocean explorer map that points at a real ocean monument, priced by its distance and rarity, and a
+  player with no coin gets none;
+* paper is made from the stores' sugar cane and a compass from their iron and redstone, counted in the day's
+  production and the map room's books;
+* a week on, the redraw replaces the wall with fresh sheets and the old one goes to the archive, named for the town in
+  its Stone Age, and the next week's goes there too;
+* a commission for the land to the east is paid for, walked, locked and handed over;
+* the country's map is framed in the hall and stays open, a caravan's copy fills in the hall's map as the carrier
+  walks, and a far quest comes with a map to its place.
+## Every folk its own person
+
+No two folk in a town look alike now, unless they are twins, and none of them live alike either. Each is a person of
+its own: a face it was born with, a body, a way of moving and a voice, and a life with dreams, fears, habits, a
+favourite spot and a keepsake in it.
+
+**Faces, built from parts.** A folk's face is put together from layers, not picked from ten: one of ten skin tones from
+very fair to very dark; brown, dark, hazel, amber, green, blue or grey eyes in one of six shapes; seven kinds of brows;
+twelve ways of wearing its hair (cropped, short, long, a braid, a bun, curls, shaved, a ponytail, tied back, thinning
+on top, a wild mop, a bob) in straight, wavy or curly hair, black, dark brown, brown, chestnut, auburn, red, ginger,
+blonde, ash or flaxen; a face round, oval, square, long or heart-shaped and a nose to go with it; freckles, rosy cheeks
+or a mole for some; and for the men stubble, a moustache, a full or a long beard, sideburns or a goatee. Their plain
+clothes differ too (you see them on the children). The buns, ponytails, braids, curls and long beards are shapes of
+their own, not just paint. Out of the rain, of an evening and on the day of rest, folk take their work hats off, so you
+can see their hair.
+
+**Taken from their parents.** A child's skin is a shade between its parents', its eyes and hair come from one or the
+other, and every so often a grandparent's blue eyes or red hair turns up in a child of two dark-haired, brown-eyed
+parents. The shape of its face, its nose, its eyes and its brows are a parent's, now and then its own, so families look
+like families. Twins are alike. A town's founders lean a little to the land the town is on (fairer in the snow and the
+pine woods, darker on the savanna and in the desert), with every kind of face everywhere.
+
+**The years and a life on its face.** Hair greys at the temples from a folk's fifties (sooner in a family that greys
+early), goes salt and pepper and at last white; men with the gene for it go bald; lines come at the eyes and the mouth.
+Past seventy-five the old stoop, and the oldest walk with a stick, a real one out of the stores. A real wound (a
+zombie's blow, a raider's, a blast) leaves a scar across the cheek, and in a raid, rarely, a folk loses an eye and wears
+a patch. The smith and the smelter have soot on their faces at work; a fair farmer is sunburnt in summer.
+
+**Spectacles.** An old folk who reads (the scholar, the librarian and the storekeeper first) has the smith make it a pair
+of spectacles out of the stores: three gold nuggets and two glass panes, at the crafting table (`N N` over `GNG`). It
+pays the smith what its purse allows and wears them for good. In them, an old folk at close work (the enchanter, the
+tailor, the smith, the brewer, the storekeeper, the shopkeeper, the banker) works five in a hundred quicker, which its
+card's Pace line shows. You can make a pair yourself and hand it to an old folk who has none: it puts them on there and
+then.
+
+| Item | Recipe | Maker | Use |
+| --- | --- | --- | --- |
+| Spectacles | 3 gold nuggets, 2 glass panes | the smith (else the shop) | worn by an old reader: close work 5% quicker; a gift for an old folk |
+
+**Height and build.** Grown folk stand from about nine tenths of a villager's height to a little over it, between their
+parents', a man a little taller; a child grows through its childhood. Some are slight, some broad, and a smith, a miner
+or a woodcutter broadens over its years at the work. Only the picture is taller: the tallest folk's hitbox is a
+villager's, so doors and beds work as ever.
+
+**How they move.** Children skip. The old walk bent with short steps and plant their stick. The leader, the wealthy and
+the cheerful hard workers stride with their chins up; the shy keep their heads down; the tired drag their feet at the
+end of a long day. A miserable folk's head hangs, and a happy one looks about it. Watch for the small moments: a stretch
+in the morning, a yawn of an evening, a scratch of the head when it is stuck, arms folded when it is cross, a wave to a
+friend going by (who waves back), a laugh at a joke, a foot tapping to a tune at the well.
+
+**Voices.** Each folk has its own pitch: children high, women higher than men, the old lower, the tall and broad deeper.
+It is on every sound it makes, the little sound when it speaks included, and its idle sounds come in a hum, a murmur, a
+grunt or a chirp, as its nature runs.
+
+**Dreams.** Every folk hopes for something, and works towards it: to marry (it courts the friend it is fondest of), to see
+the sea (it makes the water's edge its favourite spot), a house of its own or to be rich (it saves, passing up the café
+and the shop's treats), to write a book (the library's writers take it on first), to go to the Nether (it volunteers for
+the party), to lead the town (it stands at the elections), to raise a big family; or the old hopes, to master its trade,
+find a diamond and the rest. When a dream comes true the folk is delighted for days and the chronicle says so ("Wren's
+dream came true: to see the sea"); a few days later it dreams of something new. A dream it can no longer have, it lets go.
+
+**Fears, and getting over them.** A folk may be afraid of the dark (home before dusk, every evening; never a miner or one
+of the cave team), of deep water (never a fisher or the ferryman), of heights (nobody sends it up the bell tower), of the
+Nether (never through the gateway), of crowds (it stays away from the feasts and festivals) or of monsters (never on the
+watch or out hunting, and off home at the first sight of one). The town gives the trade it will not take to somebody
+braver. Every day it comes through what it fears unharmed, it grows braver, and on the fifth such day the fear is gone:
+the chronicle says so.
+
+**Habits.** One or two each, done at their own time: a morning walk round the town before work; feeding the hens with a
+handful of seed (its own, or the stores'); a pipe on the step at dusk, the smoke going up; tidying round its house,
+whatever lies about put away in the household's chest; a grave visited on the day of rest, a flower laid; a book by its
+bed before sleep (it learns a little of its trade each night); an evening at the tavern, every evening; whittling on its
+step, the stick turned over three evenings into a wooden toy (made by the toy's own recipe out of the stores) given to a
+child of the town, who keeps it.
+
+**A favourite place.** The bench by the well, the quay, the hill above the town (at dusk), the library window, the park,
+the tavern hearth, the chapel steps, its garden gate or the market square: in its free time it goes there and stays a
+while.
+
+**A keepsake.** Every folk carries something it will never part with: a feather from the first hen it kept, a pressed
+flower, the first coin it earned (out of its own purse), a lucky stone, a wooden toy a parent carved, the first book it
+read, a ring, a drawing by its child. Each is a real thing come by the real way (out of the stores, its purse, or made
+by its recipe), named for it, and never put in the stores, sold, auctioned or given away; ask it for a keepsake and it
+will give you something else. When it dies, its eldest child carries it after it.
+
+**Where it came from.** Ask a folk to "Tell me about yourself" and it tells you its story: where it was born (a hamlet
+it names, for a founder; here, for a child of the town) and who raised it, the big moments of its life as it remembers
+them, how it got its scar, the fear it got over, the keepsake it carries, whether it can read and its favourite book. A
+town that writes its folks' lives in the library writes this in. Children who went to the town's school can read; the
+rest learn at home, or not. Some folk are left-handed, and hold their tools in the left hand. Each has a favourite
+colour (it dresses in it), a favourite food and a favourite season (it is happier in it).
+
+**Where you see it.** A folk's card has a **Looks** line under its trade, and **Dream**, **Fears**, **Habits**,
+**Favourite place**, **Keepsake**, **Learning** and **Favourites** lines with its nature. The town gossips about it
+("Fen's always up the hill at dusk", "Wick's scared stiff of the Nether"). `/village individual` sums a town's people up
+(how many faces it has, its heights, fears, habits, places, dreams and keepsakes); `/village individual folk NAME` reads
+one folk out in full.
+
+The game tests `IndividualGameTests` (id01 to id10) check that two children the old ten faces gave the same face, born
+to different parents, look different; that a child's skin, hair and eyes come from its parents, a grandparent's blue eyes
+coming back now and then, twins alike, and a hundred founders a hundred faces; that hair greys and thins with the years
+and the very old stoop, that spectacles are made by the smith out of the stores' gold and glass and worn (and quicken
+close work), and the oldest get a stick; that a zombie's blow leaves a scar and a fall does not; that the tallest folk
+finds its way out of a room through a door two blocks high and sleeps in a bed, and height is inherited; that a dream is
+worked towards (courting, saving, standing) and coming true lifts the mood and makes the chronicle; that the dark-fearing
+are home before dusk, get over it after five brave days, and that fears keep folk from the trades and the feasts they
+dread; that a pipe is smoked on the step at dusk and not at noon, and a doorstep is tidied; that a folk goes to its
+favourite place in its free time; that a keepsake is carried, kept back from the stores and from a player, and handed
+down; and that a child's voice is higher than a woman's, a woman's than a man's, the old lower and the big deeper.
+
+## Folk and villagers: two peoples
+
+The folk and the game's own villagers are two peoples. They live side by side and never mix: villagers stay
+villagers, their villages stay theirs, and neither side uses the other's beds, job blocks, bells or chests. The one
+folk who crosses between them is the town's emerald trader (see *The emerald trader*), and only to trade.
+
+The old takeover, which turned villagers into folk as you met them and made their villages into towns, is still in
+the mod for anybody who wants it: set `replaceVillagers = true` in the `[villages]` section of the config. It is off
+unless you turn it on. With it on, everything below is switched off and the villagers' villages become towns, as they
+always did.
+
+**How the folk know a village of villagers.** Two ways, and either will do:
+* **By what the world built.** A village the world generated is a structure, and its ground is the structure's own:
+  every house, field and path the world laid. The mod looks these up the way the game's own locator does, round each
+  town, round a place a town is to be founded, and along the trader's road, each stretch of the world once a session;
+  a folk standing in one knows it at no cost.
+* **By its people.** Villagers meet at a bell. A bell that villagers have taken for their meeting place, anywhere
+  outside one of our towns, is a village of villagers, whether the world built it or a player did. Its ground runs as
+  far as their beds and workstations (up to sixty-four blocks from the bell) and sixteen blocks past. If the bell goes,
+  or nobody is seen at it for ten days, it is forgotten.
+
+**The folk keep off the villagers' things.**
+* **No town on their doorstep.** No town is founded within 128 blocks of a village of villagers' edge. The board a
+  spawner puts up, a charter, `/village spawn`, the world's own new villages and the colonies all look first. A
+  spawner set down too near says so: how far off the village is, which way, and how much further to go.
+* **No town's ground on theirs.** No lot, field, wood, pen or mine of a town comes within 32 blocks of a village of
+  villagers' edge, and no wall goes round a town whose ring would. A founding's levelled ground stops short of that
+  margin and leaves the land as the world made it. A road between towns lays and clears nothing on their ground
+  (their own paths are the road there), and no railway line is laid on it.
+* **Nothing of theirs is used.** No folk sleeps in a villager's bed, and their beds are never counted among the
+  town's. No folk works at their workstations or rings their bell (the town's bell is never one of theirs). No folk
+  takes from their chests or barrels: the folk only ever use their own town's *Village Store* containers, scouts
+  passing through a village of villagers look in none of its chests, and the cave team never loots one. A folk
+  walking through leaves everything as it is.
+
+**The villagers keep off the town's things.** A villager claims a bed, a workstation and a meeting bell through its
+own brain: it remembers the place and takes a ticket at the game's point of interest there. Once a second, every
+villager in the world is looked over, and a claim on anything inside one of our towns (its streets and eight blocks
+past) is undone the way the game undoes one when a villager dies: the ticket is handed back and the memory let go. A
+villager asleep in one of the town's beds is woken. A villager trying for the town's composter or bell holds it for a
+second at most, never gets there, and never takes up a trade from it.
+
+Why not mark the town's points of interest as taken, so villagers never try? Because the game counts taken points of
+interest when it decides where a village of villagers is, and a town that looked like one to the game would get its
+raids, its sieges and its stray cats. The town's beds and workstations are never taken by the town itself.
+
+**A villager in town.** One that wanders into a town is left alone: not turned into folk, not driven off, never
+attacked (the watch only ever fights monsters). It is never counted among the town's folk, beds or job market, and
+the folk are never counted among the villagers' (the game counts only villagers for its iron golems, its gossip and
+its breeding).
+
+**Where to see it.** `/village emerald` ends with a line on the two peoples: kept apart or taken over, the villages of
+villagers known near the town (built by the world or known by their bell, how big, how far), and how many villagers'
+claims on the town's things have been undone. The Trading Post page shows the same count.
+
+The game tests `EmeraldGameTests` (ep01 to ep04) check that:
+* a villager free to wander beside a town for three minutes stays a villager: it tries for the town's composter and
+  bell, each claim is undone within a second and a half, its own bed outside the town stays its own, it takes up no
+  trade, nobody joins the town and nobody harms it;
+* claims on the town's bed, composter and bell are undone at once with their tickets handed back (even a ticket the
+  game's own release would keep), a villager asleep in the town's bed is woken, and a villager of a village outside
+  the town keeps every claim, its bell making its village known; and the sweep the server runs every second does
+  the same unasked;
+* a founding on a village of villagers' doorstep is refused with the reason, one far enough off is not, and a town
+  standing near one puts no house lot within its margin and no wall whose ring would come within it;
+* with `replaceVillagers` off nobody is turned, and with it switched on for the test the villager is turned into a
+  folk of a new town, as the old takeover always did.
+
+## The emerald trader
+
+The town's go-between with the game's villagers. It walks to their villages, sells the town's surplus to them for
+emeralds, and spends the emeralds on what the town cannot make for itself: enchanted books, a bell, maps, and more.
+Every trade is a real trade with a real villager, through the villager's own offers.
+
+**When the trade opens.** From the Stone Age, in a town of twelve folk or more that:
+* knows of a village of villagers within a morning's walk (640 blocks): the scouts found it and it is in their atlas,
+  the trader found it, or it lies plainly on the land round the town for the trader to find; and
+* has goods to spare, or eight emeralds or more and something it wants.
+
+One trader. A town of thirty or more that has traded with two villages takes on a second. With the old takeover on,
+there are no villagers to trade with, and no trader.
+
+**Who takes it.** The town's choice, out of its grown folk fit for the road (eighteen to sixty-five): the sociable,
+the cheerful and the curious first, the shy and the grumpy last, and one who has traded before ahead of everybody.
+Never the watch, a craft, the storekeeper, a carrier, the cave team, the bank, the ferryman, a scout or the leader.
+When two or more want the place, it is held open for an interview (see *Interviews*): the candidates are weighed on
+paper as the town weighs a trader, asked how long they have traded with the villagers and what they would do with
+pillagers at the bell, and the panel's choice takes the place.
+
+**The Trading Post.** Once the trade opens, the town builds the Trading Post on a lot of its plan: the trader's stall
+with its counter and its book of the villagers' villages. It is the trader's post. Till it stands, the trader works
+beside the village board. You can ask a folk for it ("build a trading post").
+
+**Exploring, like a scout.** With no village of villagers in its book to go to, the trader goes looking for one: toward
+a village plainly on the land round the town that its book does not have yet, else the way the scouts' atlas knows
+least, up to 448 blocks out. It sees a village of villagers 96 blocks off. One it finds goes into the scouts' atlas,
+the trader's book and the town's news, and the trader goes straight there to trade.
+
+**The trip.** In the morning it chooses where to go: a village where somebody sells what the town wants most (it
+learns who sells Mending, and goes back), else where most of what the town can spare is bought, the nearer the
+better; one never seen close is worth the walk; one raided in the last two days is not. It draws from the stores:
+* the goods: what the villagers there buy, by their offers as last seen (what villagers buy, for a village never seen
+  close), only what the town can spare (its own needs first, and only a glut while it is short of anything), up to a
+  stack of each, five kinds at most;
+* the emeralds, up to a stack, if there is anything on the buying list, and a book for each enchanted book wanted
+  (the librarian asks one with the emeralds), a compass for a map;
+* a bite to eat for the road;
+* a pack donkey from the stable, if the town has one with a chest, to carry the load.
+
+It walks there as a caravan does, the ground round it kept loaded as it goes, running from monsters (it is a trader,
+not a fighter). In the afternoon it turns for home wherever it has got to; hurt, it comes home at once.
+
+**Trading with the villagers.** At the village it looks round and writes every villager into its book: a name of its
+own for it (the game gives villagers none), its trade, its level, and every offer it makes as it stands. Then:
+* **Selling.** It goes round the villagers who buy what it brought, nearest first, and sells to each through the
+  villager's own offer: the farmer's twenty wheat for an emerald, the librarian's paper, the cleric's rotten flesh. It
+  sells only what it brought from the stores.
+* **Buying.** It goes round the villagers who sell what the town wants, the cheapest for each first, and buys through
+  their offers with the emeralds.
+* **Each trade is a player's trade.** It stands at the villager's stall, pays the whole price as the offer has it now
+  (with the demand on it, as the game sets it), and takes what the offer gives. The offer's use goes up, the villager
+  gets the offer's trade experience, and when it has earned a level it takes it up a couple of seconds later with new
+  wares, exactly as after a player's trade. The trader is pleased to say so, and a villager made a master is the
+  town's news.
+* **What it never does.** It never trades on an offer that is used up (the villager restocks at its workstation, as
+  the game has it), never with a villager asleep, never with a villager a player is trading with, and never at a
+  village while a player is at any of its stalls (it waits its turn, and goes home after half a minute). It never
+  takes anything for nothing, never pays for what it cannot carry home, and never harms or takes a villager.
+
+**The buying list,** from the town's real wants, most wanted first:
+* what a player asked for (see below);
+* a Mending book for the town's best tools;
+* a bell, for a town with none;
+* from the Iron Age, Efficiency and Protection books;
+* lapis for the enchanter while it is short;
+* an explorer map for the scouts, while they know of no mansion or monument;
+* from the Iron Age, a diamond sword and a diamond chestplate for a watch of two or more;
+* a saddle for a town with a stable.
+
+**Home.** The emeralds and everything bought go into the stores, with what it did not sell. A player's ask that is met
+comes off the list. The smith at its anvil, or the enchanter, lays a bought enchanted book on the town's best thing it
+makes better (Mending on the best pick, blade or armour; Efficiency on the best pick; Protection on the best
+chestplate), as an anvil does: only where it goes, only with nothing on the thing that it will not sit with, and only
+where it is stronger. The book is used up, one a day. Emeralds are worth what the town's prices say they are.
+
+**A raided village.** Pillagers at a village of villagers when the trader arrives, or while it is there: it turns for
+home at once without a trade, the book marks the village raided, and the town is told (the news, the trader's log,
+the board). It does not go back there for two days. The watch stays at home: the villagers' fight is not the town's.
+
+**Asking the trader.** Talk to it:
+* *"find us a Mending book"*, *"buy us a bell"*, *"get us a map"*, or any enchantment by name; ender pearls,
+  redstone, lapis, glowstone, a saddle, a name tag, diamond tools and armour, and the other things the villagers sell.
+  It puts it at the head of its buying list (four asks at most), tells you who sells one if its book knows, and how
+  many emeralds the town has put by.
+* *"who sells Mending?"*, *"what do the villagers sell?"*: what the villagers it knows sell, village by village.
+
+**The Trading Post page** of the town's books (`/village emerald books`, or the books' *Trading Post* tab):
+* the emerald account: held in the stores, earned, spent, and the trips made;
+* the buying list, with a player's asks marked;
+* the traders and what each is doing;
+* every village of villagers the town knows: its name, its kind, how far and which way, when it was last visited,
+  whether it was raided, and what the town earned and spent there;
+* each of its villagers, with its trade, its level and how many times the town has traded with it, and every offer it
+  makes as it stands: *"sells Mending (a book) for 24 emeralds and a book (3 of 12 left)"*, *"buys 20 wheat for an
+  emerald (used up: it restocks at its workstation)"*;
+* the trader's log: what it sold and bought, who went up a level, where it turned back and why.
+
+The trader's card says its trips, the emeralds earned and spent, the villages it knows and its last trip. The board
+carries the trade's news, the trade book notes who sells Mending and the town's best customer, and the chronicle tells
+the first trade with each village and what was bought.
+
+**Commands.** `/village emerald` says it all in the chat. `/village emerald books` opens the Trading Post page.
+Operators: `/village emerald now` takes on a trader if the town has none and sends it out now; `/village emerald stage`
+sets a little village of villagers beside where it is run (a bell, three stalls with their workstations, a bed each,
+and a farmer, a librarian and a cleric with the game's own offers) and sets the town's trader down at it with goods to
+sell and emeralds and books to buy with. Run it well away from the town: villagers in the town's ground would be kept
+off their own beds and workstations.
+
+**Its look.** A travelling merchant's emerald-green coat, a wide hat and a pack with a little lantern on it
+(`textures/entity/folk/emerald.png`, `emerald_glow.png`, drawn by `tools/folk_art.py`).
+
+The game tests `EmeraldGameTests` (ep05 to ep10) check that:
+* the trade opens in a Stone Age town of thirteen with goods to spare once a village of villagers is known within
+  reach, and not before, not in the Wood Age and not with the takeover on; a folk who is not a guard or the smith takes
+  it; the Trading Post is wanted, goes up on a lot of the plan and is the trader's post; and the page has the buying
+  list;
+* the trader explores like a scout, sees a village of villagers from the road, writes it into the atlas, its book and
+  the town's news, walks to it, and records its villagers, their trades and levels, and every offer;
+* it sells the town's real surplus of wheat and potatoes to a real farmer through the farmer's own offers: the uses go
+  up, the farmer gets its trade experience and goes up a level, the emeralds come home to the stores and the account,
+  and the page lists the offers as they stand;
+* asked for a Mending book, it buys one from a real librarian with twelve emeralds and a book, brings it home to the
+  stores, the ask comes off the list, and the smith lays it on the town's diamond pickaxe;
+* it never sells what the town needs, never trades on a used-up offer or with a villager a player is trading with,
+  never takes anything for nothing, and pays the price as it stands with the demand on it;
+* a village under a raid is left alone: home without a trade, the town told, and not walked back to while the raid is
+  fresh.
 
 ## The Nether runners
 

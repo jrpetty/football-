@@ -577,7 +577,9 @@ public final class WatchKit {
         }
         if (watch && g.countCarried(AssistantEntity.RANGED_WEAPON) > 0) {                                 // [caves] (watch)
             int have = g.countCarried(s -> s.is(Items.ARROW));
-            int n = have >= ARROWS_LOW ? 0 : Math.min(ARROWS - have, Crafts.stock(level, v, s -> s.is(Items.ARROW)));
+            // [fletcher] A full quiver of thirty-two once the town keeps a fletcher (Fletchers.quiver).
+            int full = Fletchers.quiver(id, ARROWS), low = Fletchers.quiverLow(id, ARROWS_LOW);
+            int n = have >= low ? 0 : Math.min(full - have, Crafts.stock(level, v, s -> s.is(Items.ARROW)));
             if (n > 0 && Crafts.take(level, v, s -> s.is(Items.ARROW), n)) handOver(level, v, g, new ItemStack(Items.ARROW, n), given);
         }
         if (g.countCarried(s -> s.getItem() instanceof ShieldItem) == 0 && !g.isPackFull()) {

@@ -206,6 +206,10 @@ public final class TownPlan {
                  "auction",                                                    // [fleet] the auction house (entity/Auctions)
                  "infirmary",                                                  // [batchA] the infirmary (entity/Infirmary)
                  "lodge",                                                      // [caves] the Delvers' Lodge (entity/Lodge)
+                 "fletcher",                                                   // [fletcher] the fletcher's hut (entity/Fletchers)
+                 "golemyard",                                                  // [golems] the golem yard (entity/Golems)
+                 "maproom",                                                    // [cartographer] the map room (entity/Cartographers)
+                 "tradingpost",                                                // [emerald] the emerald trader's stall
                  "theatre",                                                    // [batchD] the theatre
                  "townlibrary",                                                // [library] the town library
                  "bakery", "inn" -> "civic";                                   // [batchE] the bakery and the inn
@@ -217,6 +221,7 @@ public final class TownPlan {
             case "firestation" -> "civic";            // [disasters] the fire station, among the trades it guards
             case "trainingyard" -> "corner";          // [war-prep] the training yard by the watchtower, at a corner
             case "lighthouse", "pen", "gateway", "graveyard" -> "edge";
+            case "powderhut" -> "edge";               // [fireworks] the powder hut, away from the houses (FireworksMaker)
             default -> "home";
         };
     }

@@ -1302,6 +1302,10 @@ public final class NetherWork {
             }
             f.getNavigation().stop();
             f.hobbyNow = "in the outpost, binding its wounds";
+            // [kitchen] A bandage from its pack, now it is out of the fight (the kitchen's rules: once in a while, not
+            // under attack). The town's tick never reaches a runner on a run, so the run binds its wounds itself.
+            Villages.Village home = Villages.get(r.village);
+            if (home != null) Kitchen.bind(f, level, home, now);
             if (now - leg.ate > 60) {
                 leg.ate = now;
                 f.eatFromPack();

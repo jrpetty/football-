@@ -115,6 +115,18 @@ public final class Prices {
         return VALUE.size();
     }
 
+    /**
+     * [cartographer] What a map to a place costs a player at the map room (Cartographers): its makings (an empty locator
+     * map's: eight paper and a compass, at their worth) and the cartographer's work, a coin for every hundred blocks to
+     * where it points (the walk the town made to find it), all of it by how rare the place is (a monument or a mansion
+     * four or five times a mineshaft). Never less than the makings and a coin, never more than eighty.
+     */
+    public static int mapOf(int blocksAway, double rarity) {
+        double makings = each(Items.PAPER) * 8 + each(Items.COMPASS);
+        double v = (makings + 2.0 + Math.max(0, blocksAway) / 100.0) * Math.max(1.0, rarity);
+        return (int) Math.max(Math.ceil(makings) + 1, Math.min(80, Math.round(v)));
+    }
+
     /** Is this item on the list by name or by recipe (not merely guessed at by rarity)? */
     public static boolean known(Item item) {
         ensure();
@@ -355,6 +367,14 @@ public final class Prices {
         "deepslate_diamond_ore 25.5 O", "nether_quartz_ore 0.6 O", "ancient_debris 40.0 O",
         "coal 0.4 O", "raw_iron 1.0 O", "raw_copper 0.3 O", "raw_gold 7.0 O", "redstone 0.3 O", "lapis_lazuli 0.5 O",
         "quartz 0.5 O", "diamond 24.0 O", "emerald 6.0 O", "echo_shard 10.0 O",
+        // [fields] The tools of the fields and the pens (FieldTools), made, their worth set here so the board, the shop and
+        // the makers agree on it: a little over what goes into each (a can of five copper, a sickle of three and a stick,
+        // a smoker of two and a leather and a coal, a satchel of two leather and a string, a box of five planks and a
+        // wheat, a trough of four planks and a slab, a trap of sticks, string and a fish, a barrel of seven planks and a
+        // copper hoop).
+        "mc_assistant:copper_watering_can 2.6 C", "mc_assistant:seed_satchel 1.6 C", "mc_assistant:copper_sickle 1.6 C",
+        "mc_assistant:nesting_box 0.6 C", "mc_assistant:feed_trough 0.5 C", "mc_assistant:fish_trap 0.8 C",
+        "mc_assistant:rain_barrel 1.1 C", "mc_assistant:bee_smoker 2.0 C",
         // ---- the farm, the orchard and the garden
         "wheat 0.1 F", "wheat_seeds 0.02 F", "beetroot 0.1 F", "beetroot_seeds 0.03 F", "carrot 0.15 F",
         "potato 0.15 F", "poisonous_potato 0.01 F", "pumpkin 0.4 F", "melon_slice 0.1 F", "melon 0.8 F",
@@ -429,8 +449,18 @@ public final class Prices {
         // planks and wool, a basket of sticks and wool, a collar of leather and string, four treats of wheat and meat).
         "mc_assistant:pet_bowl 0.8 C", "mc_assistant:dog_bed 1.6 C", "mc_assistant:cat_bed 1.2 C", "mc_assistant:collar 1.4 C",
         "mc_assistant:pet_treat 0.15 C",
+        // [workitems] The tools of the mine, the woods and the roads, and the roofs' thatch (item/WorkItems): a little over what
+        // goes into each by its recipe, so the board, the shop and the makers agree on it. A pit prop is four from two logs and
+        // three planks; a coil four string and a leather; a sack three leathers and two string; a saw two bars, two sticks and a
+        // string; thatch six wheat for four (its stairs and slab cut from it); a milestone five cobble and a sign; a crate six
+        // planks, two logs and a nugget; a window box three planks, earth and a flower.
+        "mc_assistant:pit_prop 0.25 T", "mc_assistant:rope_coil 1.6 C", "mc_assistant:ore_sack 2.5 C", "mc_assistant:felling_saw 4.0 C",
+        "mc_assistant:thatch 0.18 C", "mc_assistant:thatch_stairs 0.3 C", "mc_assistant:thatch_slab 0.1 C",
+        "mc_assistant:milestone 0.8 S", "mc_assistant:shipping_crate 1.4 C", "mc_assistant:window_box 0.6 C",
         // [crime] A forged coin is worth its scrap of copper and no more, whatever it was cast to pass for (Mischief).
         "mc_assistant:forged_coin 0.1 C",
+        // [interviews] A letter of application: its sheet of paper and its ink, and a little for the hand that wrote it.
+        "mc_assistant:letter_of_application 0.3 C",
         // [itemaudit] The town's coin is worth a coin, whatever its minting took (a ninth of a bar of gold and the fire);
         // and a companion's memory core is nobody's to buy or sell: it is a friend, and nothing makes another.
         "mc_assistant:village_coin 1.0 C", "mc_assistant:memory_core 0 C",

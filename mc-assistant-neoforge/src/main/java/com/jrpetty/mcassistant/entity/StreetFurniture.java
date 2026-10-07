@@ -202,7 +202,8 @@ public final class StreetFurniture {
 
     /** Is there a window box under this window? */
     static boolean boxed(ServerLevel level, Box box) {
-        return level.getBlockState(box.pot()).getBlock() instanceof net.minecraft.world.level.block.FlowerPotBlock;
+        return level.getBlockState(box.pot()).getBlock() instanceof net.minecraft.world.level.block.FlowerPotBlock
+            || level.getBlockState(box.ledge()).getBlock() instanceof com.jrpetty.mcassistant.block.WindowBoxBlock;   // [workitems]
     }
 
     /** Room for a box: both cells open, and not in anybody's doorway. */
@@ -221,6 +222,8 @@ public final class StreetFurniture {
             if (boxedCount(level, b) >= BOXES) continue;
             for (Box box : boxes(b)) {
                 if (boxed(level, box) || !boxFits(level, box)) continue;
+                // [workitems] A window box of the household's own, carried home and hung by its gardener (WindowBoxes).
+                if (WindowBoxes.hang(level, v, h, box.ledge(), box.out())) return true;
                 if (!canFurnish(level, v)) return false;
                 if (!TownJobs.atWork(level, v, "furniture", box.ledge(), "putting a window box up")) return false;
                 return putUp(level, v, box);

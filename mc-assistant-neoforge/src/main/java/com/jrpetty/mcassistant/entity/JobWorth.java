@@ -183,6 +183,23 @@ public final class JobWorth {
             // [transport] Out on the water in all weathers but the worst: it makes nothing, and carries everybody over.
             case "FERRY" -> new Post(key, title, trade, role, 1, 1, 0.9, 0.0, "out on the water, and steady",
                 "carries the town's folk over the water");
+            // [fletcher] Skilled bench work, a craftsman's: the watch's arrows and bows, and the range's practice.
+            case "FLETCHER" -> new Post(key, title, trade, role, 0, 2, 0.6, 1.0, "skilled work at the bench",
+                "keeps the watch's quivers full");
+            // [golems] Iron blocks are heavy and a golem's fists are heavier: hard, learned work that keeps the town.
+            case "GOLEMS" -> new Post(key, title, trade, role, 2, 3, 1.1, 0.0, "heavy, skilled work with the town's iron",
+                "keeps the town's golems at the gates");
+            // [fireworks] Gunpowder and a steady hand: as hard as the smelter's, as skilled as the tailor's, and the town's
+            // nights to show for it.
+            case "FIREWORKS" -> new Post(key, title, trade, role, 2, 2, 0.6, 1.0, "careful work with gunpowder",
+                "lights up the town's festivals, weddings and victories");
+            // [cartographer] Long walks and a steady hand; learned work; the town's maps, and the finds for the scouts and the cave team.
+            case "CARTOGRAPHER" -> new Post(key, title, trade, role, 1, 3, 0.8, 1.0, "long walks and a steady hand",
+                "maps the town, and finds the old places round it for the scouts and the cave team");
+            // [emerald] Long days on the road among strangers, and a head for a bargain: it sells the town's surplus for
+            // emeralds and buys what nobody here can make. Paid like the scouts and a little over, for the bargaining.
+            case "EMERALD" -> new Post(key, title, trade, role, 2, 2, 1.0, 1.0, "long days on the road, and a head for a bargain",
+                "trades the town's surplus with the villagers for what it cannot make");
             // [nether] Through the gateway: lava, ghasts, blazes and the piglins' tempers, and the most skill the town asks of
             // anybody: the best paid of all, a small picked team.
             case "NETHER" -> new Post(key, title, trade, role, 4, 4, 1.2, 1.0, "the most dangerous work there is, and highly skilled; a small picked team",
@@ -206,6 +223,7 @@ public final class JobWorth {
     static double own(StationTask t) {
         return switch (t.name()) {
             case "SMELT", "COOK", "TAILOR", "BREW", "SMITH", "ENCHANT", "SHOP" -> 0.5;
+            case "FLETCHER" -> 0.5;                                     // [fletcher] the flint, feathers and sticks are others' work
             default -> 1.0;
         };
     }
@@ -218,6 +236,8 @@ public final class JobWorth {
             case "GUARD" -> 0.15;
             case "SCOUT" -> 0.1;
             case "HAUL", "STORE", "BANK", "FERRY" -> 0.0;                 // [transport] the ferryman makes nothing
+            case "GOLEMS" -> 0.0;                                         // [golems] its golems are kept, not sold
+            case "CARTOGRAPHER" -> 0.3;                                    // [cartographer] its maps, and its sales
             default -> 1.0;
         };
     }
@@ -895,6 +915,11 @@ public final class JobWorth {
             case "BANK" -> "the bank";
             case "CAVE" -> "the caves";                // [caves]
             case "FERRY" -> "the ferry";               // [transport]
+            case "FLETCHER" -> "the fletcher's";       // [fletcher]
+            case "GOLEMS" -> "the golem yard";         // [golems]
+            case "FIREWORKS" -> "the powder hut";      // [fireworks]
+            case "CARTOGRAPHER" -> "the map room";     // [cartographer]
+            case "EMERALD" -> "the trading post";      // [emerald]
             case "NETHER" -> "the Nether runs";        // [nether]
             default -> "the " + JobMarket.noun(t) + "s";
         };
@@ -904,6 +929,9 @@ public final class JobWorth {
         return switch (t.name()) {
             case "FARM", "WOOD", "MINE", "RANCH", "SMELT", "HAUL", "BEEKEEP", "SCOUT", "HUNT" -> true;
             case "GUARD", "FISH", "STORE", "SMITH", "TAILOR", "BREW", "ENCHANT", "COOK", "SHOP", "BANK" -> false;
+            case "FIREWORKS" -> false;                 // [fireworks] "the powder hut is short of hands"
+            case "CARTOGRAPHER" -> false;              // [cartographer] "the map room is"
+            case "EMERALD" -> false;                                       // [emerald] the trading post
             default -> true;
         };
     }

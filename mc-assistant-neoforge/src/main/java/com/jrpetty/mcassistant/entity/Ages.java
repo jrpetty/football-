@@ -93,6 +93,8 @@ public final class Ages {
         boolean iron = age.ordinal() >= Villages.Age.IRON.ordinal();
         boolean diamond = age.ordinal() >= Villages.Age.DIAMOND.ordinal();
         boolean great = GREAT.contains(structure);
+        BlockState thatch = Thatch.reroof(age, style, now);           // [workitems] a thatched roof re-roofed in tiles, then slate
+        if (thatch != null) return thatch;
         switch (style) {
             case WALL -> {
                 // A manor is brick from the Iron Age it is built in.
@@ -187,6 +189,7 @@ public final class Ages {
     @Nullable
     static BlockState affordable(ServerLevel level, Villages.Village v, BlockState want, BlockState now,
                                  @Nullable Homeland.Stone local, Map<Block, Boolean> known) {
+        if (Thatch.isThatch(now)) return Thatch.affordable(level, v, want, now);   // [workitems] tiles, or stone bricks for want of them
         Block b = want.getBlock();
         if (!Masonry.fitForARoof(b) && (b instanceof net.minecraft.world.level.block.StairBlock
                 || b instanceof net.minecraft.world.level.block.SlabBlock)) return null;

@@ -92,7 +92,10 @@ public final class Crafts {
             made = Luxuries.craft(level, v, f, true);                 // a turn at what the houses wait on (Luxuries)
             if (made == null) made = Pets.craft(level, v, f);         // [pets] a turn at the pets' beds, collars, bowls, treats
             if (made == null) made = TradeGoods.craft(level, v, f);   // [player-civic] a master's own: the reinforced pick, the stout, the pie, a journal
+            if (made == null) made = WorkTools.craft(level, v, f);    // [workitems] ropes and sacks, the saw, props, crates, boxes, milestones
+            if (made == null) made = FieldTools.craft(level, v, f);   // [fields] the copper can, sickle and smoker, the satchel; the shop's any of them
             if (made == null) made = Kitchen.craft(level, v, f);      // [kitchen] lunches, cheese, cakes, pies; mead, cider; tea and bandages
+            if (made == null) made = Pastimes.craft(level, v, f);     // [leisure] the quilts, lutes, boards, kites, footballs, lanterns, slates
             if (made == null) made = switch (f.stationTask()) {
                 case SMITH -> smith(level, v, f);
                 case TAILOR -> tailor(level, v, f);
@@ -292,6 +295,9 @@ public final class Crafts {
             Trades.workstation(f, level, v, Blocks.ANVIL, s -> s.is(ItemTags.ANVIL),
                 com.jrpetty.mcassistant.entity.goal.BuildGoal.Part.ANVIL);
         }
+        // [emerald] A book the trader bought from the villagers, laid on the town's best tool at the anvil (EmeraldTrader).
+        String laid = EmeraldTrader.layBook(level, v, f);
+        if (laid != null) return laid;
         int watch = Math.max(1, guards(v));
         List<Smithing> wants = List.of(
             new Smithing(Items.IRON_PICKAXE, 3, 2, 2),
@@ -452,6 +458,7 @@ public final class Crafts {
     static String fletch(ServerLevel level, Villages.Village v, int watch) {
         watch += NetherRunners.bows(v.id());                      // [nether] a bow, and its arrows, for each Nether runner too
         if (watch <= 0) return null;
+        if (Fletchers.keeps(v.id())) return null;                      // [fletcher] the town's fletcher makes them (Fletchers)
         if (stock(level, v, s -> s.is(Items.BOW)) < watch && stock(level, v, s -> s.is(Items.STRING)) >= 3
                 && planks(level, v, 2)) {
             if (!take(level, v, s -> s.is(Items.STRING), 3)) return null;
@@ -461,9 +468,8 @@ public final class Crafts {
         }
         if (stock(level, v, s -> s.is(Items.ARROW)) < 32 * watch && stock(level, v, s -> s.is(Items.FEATHER)) >= 1) {
             if (stock(level, v, s -> s.is(Items.FLINT)) < 1) {
-                if (stock(level, v, s -> s.is(Items.GRAVEL)) < 3 || !take(level, v, s -> s.is(Items.GRAVEL), 3)) return null;
-                store(level, v, new ItemStack(Items.FLINT));
-                return "a flint knapped out of the gravel, for arrowheads";
+                // [fletcher] Sifted out of the gravel as the game gives it: set down and broken, a flint one time in ten.
+                return Fletchers.siftFor(level, v, 4);
             }
             if (!planks(level, v, 1)) return null;
             if (!take(level, v, s -> s.is(Items.FLINT), 1) || !take(level, v, s -> s.is(Items.FEATHER), 1)) return null;
@@ -666,6 +672,9 @@ public final class Crafts {
         int r = Math.min(6, z.radius());
         if (!Land.areaLoaded(level, c, r + 8)) return null;
         List<BlockPos> hives = hivesAt(level, c, r);
+        // [fields] With a bee smoker, every full hive smoked and emptied on the one round, and more from each (FieldTools).
+        String smoked = FieldTools.smokedHarvest(level, v, f, hives);
+        if (smoked != null) return smoked;
         // Honey first: a full hive is a hive about to swarm.
         for (BlockPos p : hives) {
             BlockState st = level.getBlockState(p);
@@ -1188,6 +1197,9 @@ public final class Crafts {
             }
         }
         if (table == null) return null;
+        // [emerald] A book the trader bought from the villagers, laid on the town's best tool (EmeraldTrader.layBook).
+        String laid = EmeraldTrader.layBook(level, v, f);
+        if (laid != null) return laid;
         if (have(level, v, f, s -> s.is(Items.LAPIS_LAZULI)) < 3 || stock(level, v, s -> s.is(Items.BOOK)) < 1) return null;
         // Bookshelves as the game counts them: two blocks out from the table, level with it or one
         // up, with nothing but air between (fifteen is as strong as it gets).

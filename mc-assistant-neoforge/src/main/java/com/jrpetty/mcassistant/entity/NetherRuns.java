@@ -1291,6 +1291,7 @@ public final class NetherRuns {
             if (m != null) {
                 m.persona().remember(day, big.isEmpty() ? "We went through the gateway into the Nether, and came home" : "We went into the Nether and found " + big.get(0), 4);
                 m.awardXp(6);
+                m.individual().beenNether = true;      // [nether] [individual] through and home: a dream come true, a friend's courage
             }
         }
         if (!r.stored0.isEmpty() || !big.isEmpty()) {
