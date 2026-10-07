@@ -360,6 +360,7 @@ public final class FolkTalk {
         line(sb, "Household", Families.cardLine(f));        // its pet, its garden, its wedding anniversary (Families)
         line(sb, "Health", Health.cardLine(f));              // [batchA] a cold, laid up, seen to (Health)
         line(sb, "Neighbours", Neighbourly.cardLine(f));     // [batchA] looked in on, a welcome, a housewarming (Neighbourly)
+        line(sb, "About town", TownLook.cardLine(f));       // [batchE] its allotment, the bakery, the inn (TownLook)
         java.util.List<String> friends = new java.util.ArrayList<>();
         for (Social.Bond b : life.friends()) {
             if (b.name != null && !b.name.isEmpty()) friends.add(b.name);

@@ -71,7 +71,9 @@ public class BuildGoal extends Goal {
         // [batchC] the football pitch (entity/Pitch) and the watch's archery range (entity/Archery)
         "pitch", "range",
         // [batchD] the open-air stage where the town's players put on its stories (Theatre)
-        "theatre");
+        "theatre",
+        // [batchE] the town's look: the windmill, the bakery, the inn, the orchard and the allotments (TownLook)
+        "windmill", "bakery", "inn", "orchard", "allotments");
 
     /** Half the width of a structure's footprint: the meeting hall, the market, the
      *  barracks, the chapel's length and the gateway's step are seven across, the rest

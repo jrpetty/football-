@@ -346,6 +346,8 @@ public class VillageFolkEntity extends AssistantEntity {
                 return;
             }
         }
+        // [batchE] A traveller in a town with an inn after dusk: a room for the night, and on its way in the morning (Inn).
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel innLevel && Inn.lodging(this, innLevel)) return;
         // On the road with a caravan: walked step by step, not thought about once in five seconds.
         if (trip != null && !withAPlayer && tickCount % 10 == 0 && level() instanceof net.minecraft.server.level.ServerLevel road) {
             Caravans.drive(this, road);
@@ -2058,6 +2060,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (village == null) return true;
         if (Villages.inAGuestHouse(village, pos)) return false;
         if (Infirmary.isInfirmaryBed(village, pos)) return false;     // [batchA] kept for the sick and the hurt
+        if (Inn.isInnBed(village, pos)) return false;           // [batchE] the inn's rooms are for travellers (Inn)
         return level() instanceof net.minecraft.server.level.ServerLevel server
             ? !Homes.someoneElses(server, village, pos, this) : !Homes.someoneElses(village, pos, this);
     }
@@ -2240,6 +2243,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (isBaby()) return false;
         if (familySupper(t)) return true;
         if (Tavern.evening(this, t)) return true;
+        if (Allotments.evening(this, t)) return true;         // [batchE] some evenings, the household's allotment (Allotments)
         if (Park.evening(this, t)) return true;               // some evenings, an hour in the park (Park)
         if (Leisure.evening(this, t)) return true;
         socialise();
@@ -7582,7 +7586,8 @@ public class VillageFolkEntity extends AssistantEntity {
     /** [wf] At a fire (FireBrigade), or in out of a thunderstorm (Weather): its own work waits. */
     @Override
     protected boolean calledAway() {
-        return FireBrigade.onIt(this) || Weather.sheltering(this) || Health.laidUp(this) || Neighbourly.busy(this);   // [batchA]
+        return FireBrigade.onIt(this) || Weather.sheltering(this) || Health.laidUp(this) || Neighbourly.busy(this)   // [batchA]
+            || Inn.lodged(this);                                 // [batchE] asleep in a room at an inn on the road
     }
 
     /** [wf] The woodcutter's wood kept growing between its fellings (Woods). */

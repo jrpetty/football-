@@ -98,6 +98,9 @@ public final class VillageCommands {
             // The town's quarters, the homes in the crafts' smoke and by the park, and the park (Quarters, Park).
             .then(com.jrpetty.mcassistant.entity.Quarters.command())
             .then(com.jrpetty.mcassistant.entity.Sport.command())                 // [batchC] /village sport
+            // [batchE] The town's look: the avenues' trees, the street furniture, the allotments, the orchard, the
+            // windmill, the bakery and the inn; `showcase` and `now` for operators and the pictures (TownLook).
+            .then(com.jrpetty.mcassistant.entity.TownLook.command())
             .then(Commands.literal("people").executes(VillageCommands::people))
             // The knacks each folk chose for itself (FolkSkills): every folk of the nearest village, or one
             // by name; and, for operators and tests, a knack given to a folk as though it chose it.

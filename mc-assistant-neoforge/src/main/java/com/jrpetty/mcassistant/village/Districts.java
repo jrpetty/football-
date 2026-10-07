@@ -138,6 +138,7 @@ public final class Districts {
      */
     public static boolean isIndustry(String structure) {
         String s = structure.toLowerCase(Locale.ROOT);
+        if (s.equals("windmill")) return false;            // [batchE] a mill by the fields: sails, no smoke and no din
         if (INDUSTRY.contains(s)) return true;
         return s.contains("smith") || s.contains("forge") || s.contains("smelt") || s.contains("kiln")
             || s.contains("foundry") || s.endsWith("works") || s.endsWith("mill") || s.contains("tanner");

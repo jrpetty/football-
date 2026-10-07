@@ -48,6 +48,7 @@ public final class TownWork {
         golem(level, v);
         Weather.rods(level, v);                     // [wf] a lightning rod on each tall roof, of the stores' copper
         DoorWays.tick(level, v);                    // a way in a folk can walk at every door
+        TownLook.tick(level, v);                    // [batchE] the trees, benches, allotments, orchard, mill, bakery and inn
         int reach = Villages.townReach(id);
         List<int[]> cells = cellsWithin(reach);
         if (cells.isEmpty()) return;

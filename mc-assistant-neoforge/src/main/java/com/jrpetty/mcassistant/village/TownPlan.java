@@ -202,7 +202,9 @@ public final class TownPlan {
             case "storage", "storehouse", "market", "workshop", "smeltery", "granary", "cafe", "shop", "smithy", "brewery", "library",
                  "tavern", "school", "bank", "museum", "stable",
                  "infirmary",                                                  // [batchA] the infirmary (entity/Infirmary)
-                 "theatre" -> "civic";                                         // [batchD] the theatre
+                 "theatre",                                                    // [batchD] the theatre
+                 "bakery", "inn" -> "civic";                                   // [batchE] the bakery and the inn
+            case "windmill", "orchard", "allotments" -> "fields";        // [batchE] by the farm gate (entity/TownLook.fieldLots)
             case "watchtower" -> "corner";
             case "range" -> "corner";                                       // [batchC] the watch's range, by the wall
             case "pitch" -> "field";                                        // [batchC] a long lot for the football pitch
