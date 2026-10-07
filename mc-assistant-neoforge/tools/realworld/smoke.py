@@ -2447,6 +2447,80 @@ def transport_stage(r, look, cx, cz):
     say("alive after the transport: %s" % client_alive())
 
 
+def fireworks_stage(r, look, cx, cz):
+    """[fireworks] The fireworks maker (entity/FireworksMaker, FireworkShows). By day, on ground of its own out past the
+    town to the north-west, /village fireworks stage puts up the powder hut (stone walls and a stone roof, the bench,
+    the powder chest, the cauldron of water, the sign over the door) on the town's books, opens the trade and takes up
+    a maker, gives the stores the makings (gunpowder, paper, the town's dyes, white and yellow, gold nuggets, feathers,
+    glowstone dust) and makes the town's rockets out of them there and then by the game's own recipes. A fireworks maker
+    in its own look (the soot-smudged apron, the brass goggles, the bright scarf) stands at the bench. Pictures: the hut
+    from the path, the maker at the bench, the sign.
+
+    Then the night: the clock moved on to the middle of the night (time add, not time set), the sky cleared, the camera
+    over the square, and /village fireworks stage show sends the stage's eighteen rockets up from a rack on the square,
+    six volleys of three, the first four seconds after the command and one every second and a half after it. They are
+    flight-two rockets, each bursting a second or so after it is lit, nine to twenty blocks up, and the sparks hang for
+    two seconds or more: so the pictures, taken five and a half to thirteen seconds after the command (timed from it,
+    not from the last picture), all have bursts on screen. Last, /village fireworks said (the stock, the tally, the
+    review) and the morning brought back."""
+    num = r"(-?\d+)"
+    pattern = r"VIEW (\S+) " + " ".join([num] * 6)
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    r.cmd("weather clear")
+    hy = ground_height(r, cx, cz)
+    sx, sz = cx - 60, cz - 55                          # out at the edge of the town, away from the houses
+    r.cmd("tp %s %d %d %d" % (USER, sx + 10, hy + 20, sz + 16))
+    time.sleep(8)                                      # the ground arrives at the server and the client
+    out = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village fireworks stage" % (sx, sz))
+    say("fireworks stage: " + out[:1200])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(pattern, out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("no powder hut staged; nothing to photograph")
+        return
+
+    def shoot(vs, name, picture, wait):
+        if name not in vs:
+            return
+        x, y, z, ax, ay, az = vs[name]
+        look("33-fireworks-" + picture, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    shoot(views, "hut", "1-hut", 8)
+    shoot(views, "maker", "2-maker", 5)
+    shoot(views, "sign", "3-sign", 4)
+    # The night: the middle of it, the sky clear, the camera over the square first so the ground and the sky are drawn.
+    m = re.search(r"(\d+)", r.cmd("time query daytime"))
+    now = int(m.group(1)) % 24000 if m else 6000
+    r.cmd("time add %d" % ((18000 - now) % 24000))
+    r.cmd("weather clear")
+    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 12, cz))
+    time.sleep(6)
+    sout = r.cmd("execute positioned %d %d %d run village fireworks stage show" % (cx, hy + 1, cz))
+    t0 = time.time()                                   # the first volley goes four seconds after this
+    say("fireworks show: " + sout[:600])
+    sviews = {}
+    for name, x, y, z, ax, ay, az in re.findall(pattern, sout):
+        sviews[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if "show" not in sviews:
+        say("no display: nothing to photograph by night")
+    else:
+        def since(secs):
+            return max(0.3, secs - (time.time() - t0))
+
+        shoot(sviews, "show", "4-display", since(5.8))     # the opening volley's bursts
+        shoot(sviews, "show", "5-display", since(8.2))
+        shoot(sviews, "crowd" if "crowd" in sviews else "show", "6-over-the-square", since(10.6))
+        shoot(sviews, "show", "7-finale", since(13.0))     # the finale's bursts
+        time.sleep(4)
+    say("fireworks: " + r.cmd("execute positioned %d %d %d run village fireworks" % (cx, hy + 1, cz))[:1400])
+    r.cmd("kill @e[tag=fireworks_stage,type=!player]")
+    midday(r)                                          # the morning, for whatever comes next
+    say("alive after the fireworks: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

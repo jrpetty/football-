@@ -267,7 +267,8 @@ public final class Budget {
     static boolean luxury(ItemStack s) {
         return Cafe.isDrink(s) || s.is(Items.POTION) || s.is(Items.SPLASH_POTION) || s.is(Items.LINGERING_POTION)
             || s.isEnchanted() || s.is(Items.ENCHANTED_BOOK) || s.is(ItemTags.BANNERS) || s.is(ItemTags.WOOL_CARPETS)
-            || s.is(Items.BOOK) || s.is(Items.HONEY_BOTTLE);
+            || s.is(Items.BOOK) || s.is(Items.HONEY_BOTTLE)
+            || FireworksMaker.elytra(s);                              // [fireworks] made for the players' wings, not the town's
     }
 
     /** One thing for sale: what, how many, and its price each. */

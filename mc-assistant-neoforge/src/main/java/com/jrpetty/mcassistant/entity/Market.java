@@ -178,7 +178,11 @@ public final class Market {
         // [player-civic] The masters' own (CivicItems): read lazily, the items being registered after this list is made.
         new Good("Reinforced pickaxe", s -> s.is(com.jrpetty.mcassistant.item.CivicItems.REINFORCED_PICKAXE.get()), 11.0, 1, Villages.Task.NONE),
         new Good("Brewer's stout", s -> s.is(com.jrpetty.mcassistant.item.CivicItems.BREWERS_STOUT.get()), 1.2, 4, Villages.Task.NONE),
-        new Good("Farmhouse pie", s -> s.is(com.jrpetty.mcassistant.item.CivicItems.FARMHOUSE_PIE.get()), 1.2, 4, Villages.Task.NONE));
+        new Good("Farmhouse pie", s -> s.is(com.jrpetty.mcassistant.item.CivicItems.FARMHOUSE_PIE.get()), 1.2, 4, Villages.Task.NONE),
+        // [fireworks] The fireworks maker's elytra rockets (FireworksMaker), by the eight, dearer the longer they fly.
+        new Good("Elytra rockets, flight 1", s -> FireworksMaker.elytra(s, 1), 0.2, 8, Villages.Task.NONE),
+        new Good("Elytra rockets, flight 2", s -> FireworksMaker.elytra(s, 2), 0.35, 8, Villages.Task.NONE),
+        new Good("Elytra rockets, flight 3", s -> FireworksMaker.elytra(s, 3), 0.5, 8, Villages.Task.NONE));
 
     /** The café's drinks, each its own good; then the brewer's potions. */
     private static final List<Good> DRINKS_AND_POTIONS = drinksAndPotions();

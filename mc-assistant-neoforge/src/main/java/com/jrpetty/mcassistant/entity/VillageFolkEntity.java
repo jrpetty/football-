@@ -439,6 +439,9 @@ public class VillageFolkEntity extends AssistantEntity {
         // [watch-clears] A monster near, and it not one of the watch: indoors till it has gone (WatchClears).
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel coverLevel
                 && WatchClears.takeCover(this, coverLevel)) return;
+        // [fireworks] A creeper it killed dropped its gunpowder: over to it, and the powder to the stores (FireworksMaker.fetch).
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel powderLevel
+                && FireworksMaker.fetch(this, powderLevel)) return;
         // [batchA] Laid up: a cold or its wounds, in bed at the infirmary or at home, and kept there (Health).
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel careLevel && Health.hold(this, careLevel)) return;
         // [crime] The law first: in the stocks or at its community work, called to a trial, a guard on a case; or a folk up
@@ -451,6 +454,8 @@ public class VillageFolkEntity extends AssistantEntity {
         // play at the theatre (on the stage or a bench), the band at the tavern or a wedding, a toast, a picture painted.
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel culture
                 && (tickCount % 4 == 3 ? Culture.hold(this, culture) : Culture.busy(this))) return;
+        // [fireworks] One of a display's crew, at the rack behind the launch spot (FireworkShows): before the gathering.
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel rack && FireworkShows.hold(this, rack)) return;
         // The village coming together (Assemblies): the bell rung, it goes, finds a place and takes part.
         if (!withAPlayer && tickCount % 4 == 1 && level() instanceof net.minecraft.server.level.ServerLevel gathering
                 && Assemblies.attend(this, gathering)) {
@@ -534,6 +539,7 @@ public class VillageFolkEntity extends AssistantEntity {
                     Neighbourly.tick(polls, home);       // [batchA] the old, newcomers, housewarmings, the poor box (Neighbourly)
                     Bank.tick(polls, home);              // the bank opens the day it stands, and gets its banker
                     CaveDwellers.tick(polls, home);      // [caves] an Iron Age town takes up its cave dwellers
+                    FireworksMaker.tick(polls, home);    // [fireworks] a Stone Age town takes up fireworks: the hut, the maker
                     PlayerCivic.tick(polls, home);       // [player-civic] the campaign, a player leader's morning, young apprentices' journals
                 }
             }
@@ -2346,6 +2352,7 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected boolean eveningSocial() {
         if (Assemblies.attending(this)) return true;          // at the village's gathering (Assemblies)
+        if (FireworkShows.crewing(this)) return true;         // [fireworks] at the rack, setting off the display
         if (TownJobs.busy(this)) return true;                 // at the town's work (TownJobs)
         if (School.teaching(this)) return true;               // at the school's lectern (School)
         if (TownCalendar.busy(this)) return true;             // ringing the bell, home at the dusk bell, a birthday present (TownCalendar)
@@ -4528,6 +4535,7 @@ public class VillageFolkEntity extends AssistantEntity {
             case BANK -> "The Bank";
             case CAVE -> "The Caves";             // [caves]
             case FERRY -> "The Ferry";            // [transport]
+            case FIREWORKS -> "The Powder Hut";   // [fireworks]
             default -> "The Commons";
         };
         // Two farms in one village should not share a name.
@@ -5074,6 +5082,7 @@ public class VillageFolkEntity extends AssistantEntity {
             case COOK -> "cafe";
             case SHOP -> "shop";
             case BANK -> "bank";                  // the banker (Bank)
+            case FIREWORKS -> FireworksMaker.STRUCTURE;   // [fireworks] the powder hut
             default -> null;
         };
     }
@@ -5730,6 +5739,12 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected boolean ferryWork() {
         return level() instanceof net.minecraft.server.level.ServerLevel server && Ferries.duty(this, server);
+    }
+
+    /** [fireworks] The fireworks maker's day at the powder hut: stars and rockets out of the stores (FireworksMaker.work). */
+    @Override
+    protected boolean fireworksWork() {
+        return level() instanceof net.minecraft.server.level.ServerLevel server && FireworksMaker.work(this, server);
     }
 
     /** A village's storekeeper keeps its stores in order from the first day, not from its
@@ -7775,7 +7790,8 @@ public class VillageFolkEntity extends AssistantEntity {
             || WatchClears.sheltering(this)                      // [watch-clears] indoors out of a monster's way
             || Transport.busy(this)                              // [transport] on a ride, a crossing, or at the ferry
             || Crime.calledAway(this)                            // [crime] on a case, at a trial, in the stocks, at community work
-            || Disasters.busy(this);                             // [disasters] a bucket chain, a flood, a night away, the fire watch
+            || Disasters.busy(this)                              // [disasters] a bucket chain, a flood, a night away, the fire watch
+            || FireworksMaker.fetching(this) || FireworkShows.crewing(this);   // [fireworks] a creeper's powder, a display's rack
     }
 
     /** [wf] The woodcutter's wood kept growing between its fellings (Woods). */

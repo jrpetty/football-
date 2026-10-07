@@ -366,6 +366,7 @@ public final class Cafe {
         if (s.isDamaged() || isDrink(s) || Budget.goodFor(s) == null) return false;
         if (s.is(Items.POTION)) return true;
         if (Budget.kitOf(s) != null && Prices.each(s.getItem()) >= 2.0) return true;
+        if (FireworksMaker.elytra(s)) return true;                    // [fireworks] the maker's elytra rockets, by the eight
         if (houseware(s)) return true;
         // The workshop's tools, arms and armour (Workshop), whatever their price: the village keeps its own first (Budget).
         if (Budget.kitOf(s) != null && Workshop.wareFor(Stockroom.key(s)) != null) return true;

@@ -186,7 +186,7 @@ public final class FireSafety {
             if (level.getRandom().nextDouble() >= p) return null;
         }
         BlockPos at = sparkSpot(level, forge, burn);
-        if (at == null) return null;
+        if (at == null || FireworksMaker.inHut(id, at)) return null;     // [fireworks] stone and a cauldron: nothing catches in the powder hut
         String from = FireBrigade.named(b.structure()) + "'s " + (level.getBlockState(forge).is(Blocks.SMOKER) ? "oven" : "forge");
         long day = level.getDayTime() / 24000L;
         // The fire watch, near enough to see it, stamps it out before it catches.

@@ -314,6 +314,7 @@ public final class Traditions {
                 Villages.tell(v.id(), day, "the town kept " + c.name() + ", a minute's silence at the bell for " + c.toWhom()
                     + " (" + s.kept.size() + (s.kept.size() == 1 ? " folk" : " folk") + ")");
                 kept(v.id(), c, day);
+                if (c.why() == Why.WAR) FireworkShows.remembrance(level, v, c.toWhom());   // [fireworks] white rockets, slow
             }
         }
     }

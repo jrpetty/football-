@@ -47,10 +47,13 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         "guard", "smelter", "fisher", "storekeeper", "hauler",
         "blacksmith", "tailor", "beekeeper", "brewer", "enchanter", "cook", "shopkeeper", "scout", "hunter",
         "cavedweller",                                         // [caves] not in StationTask's order: see outfit()
+        "fireworks",                                           // [fireworks] nor this: see outfit()
     };
 
     /** [caves] The cave dweller's outfit, after the trades drawn in StationTask's order (those before it). */
     public static final int CAVE_OUTFIT = 19;
+    /** [fireworks] The fireworks maker's outfit: the sooty apron, the goggles, the bright scarf, the rockets in its pocket. */
+    public static final int FIREWORKS_OUTFIT = 20;
 
     /** Which part each trade wears: {part, the part it hangs from, the trade}. */
     private static final String[][] WEARERS = {
@@ -142,6 +145,14 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         {"cavedweller_haft", "body", "cavedweller"},
         {"cavedweller_pickhead", "body", "cavedweller"},
         {"cavedweller_rope", "body", "cavedweller"},
+        {"fireworks_apron", "body", "fireworks"},
+        {"fireworks_band", "head", "fireworks"},
+        {"fireworks_lens_right", "head", "fireworks"},
+        {"fireworks_lens_left", "head", "fireworks"},
+        {"fireworks_scarf", "body", "fireworks"},
+        {"fireworks_tail", "body", "fireworks"},
+        {"fireworks_rocket_a", "body", "fireworks"},
+        {"fireworks_rocket_b", "body", "fireworks"},
         // END GENERATED WEARERS
     };
 
@@ -294,6 +305,14 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         body.addOrReplaceChild("cavedweller_haft", CubeListBuilder.create().texOffs(64, 24).addBox(-0.5F, -6.0F, 0.0F, 1.0F, 12.0F, 1.0F), PartPose.offsetAndRotation(0.0F, 6.0F, 4.4F, 0.0F, 0.0F, 0.7F));
         body.addOrReplaceChild("cavedweller_pickhead", CubeListBuilder.create().texOffs(68, 24).addBox(-3.5F, -7.0F, 0.0F, 7.0F, 1.0F, 1.0F), PartPose.offsetAndRotation(0.0F, 6.0F, 4.4F, 0.0F, 0.0F, 0.7F));
         body.addOrReplaceChild("cavedweller_rope", CubeListBuilder.create().texOffs(84, 24).addBox(-6.2F, 7.0F, -2.0F, 2.0F, 4.0F, 4.0F), PartPose.ZERO);
+        body.addOrReplaceChild("fireworks_apron", CubeListBuilder.create().texOffs(64, 0).addBox(-4.0F, 1.5F, -4.5F, 8.0F, 15.0F, 1.0F), PartPose.ZERO);
+        head.addOrReplaceChild("fireworks_band", CubeListBuilder.create().texOffs(82, 0).addBox(-4.0F, -9.0F, -4.0F, 8.0F, 2.0F, 8.0F, new CubeDeformation(0.6F)), PartPose.ZERO);
+        head.addOrReplaceChild("fireworks_lens_right", CubeListBuilder.create().texOffs(114, 0).addBox(-3.2F, -9.2F, -5.7F, 2.0F, 2.0F, 1.0F), PartPose.ZERO);
+        head.addOrReplaceChild("fireworks_lens_left", CubeListBuilder.create().texOffs(114, 0).addBox(1.2F, -9.2F, -5.7F, 2.0F, 2.0F, 1.0F), PartPose.ZERO);
+        body.addOrReplaceChild("fireworks_scarf", CubeListBuilder.create().texOffs(64, 20).addBox(-4.5F, -0.5F, -3.5F, 9.0F, 2.0F, 7.0F, new CubeDeformation(0.3F)), PartPose.ZERO);
+        body.addOrReplaceChild("fireworks_tail", CubeListBuilder.create().texOffs(98, 20).addBox(-1.0F, 0.0F, -0.5F, 2.0F, 6.0F, 1.0F), PartPose.offsetAndRotation(2.5F, 0.8F, -4.6F, -0.14F, 0.0F, 0.1F));
+        body.addOrReplaceChild("fireworks_rocket_a", CubeListBuilder.create().texOffs(64, 32).addBox(-3.6F, 5.5F, -5.3F, 1.0F, 4.0F, 1.0F), PartPose.ZERO);
+        body.addOrReplaceChild("fireworks_rocket_b", CubeListBuilder.create().texOffs(70, 32).addBox(-2.3F, 6.5F, -5.3F, 1.0F, 3.0F, 1.0F), PartPose.ZERO);
         return LayerDefinition.create(mesh, 128, 128);
         // END GENERATED GEOMETRY
     }
@@ -328,6 +347,7 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         int job = folk.clientJobOrdinal();
         if (job == AssistantEntity.StationTask.CAVE.ordinal()) return CAVE_OUTFIT;  // "cavedweller"
         if (job == AssistantEntity.StationTask.FERRY.ordinal()) return 7;           // [transport] "fisher": a waterman's clothes
+        if (job == AssistantEntity.StationTask.FIREWORKS.ordinal()) return FIREWORKS_OUTFIT;   // [fireworks] "fireworks"
         return Math.floorMod(job, CAVE_OUTFIT);
     }
 

@@ -138,7 +138,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         CAVE("caving", "Cave dweller"),
         // [transport] Where a river lies between the town and its fields, its mine or a neighbour, and no bridge spans
         // it yet, a ferryman rows folk across for a coin (Ferries); the bridge, when the town votes one, retires it.
-        FERRY("the ferry", "Ferryman");
+        FERRY("the ferry", "Ferryman"),
+        // [fireworks] A Stone Age town that has kept a few festivals, and has gunpowder put by, takes up a fireworks
+        // maker: stars and rockets by the real recipes out of the stores, shown at its festivals, weddings and
+        // victories, and plain rockets for the players' elytra at the shop (FireworksMaker, FireworkShows).
+        FIREWORKS("fireworks", "Fireworks maker");
 
         /** The trades of a grown village, which work out of a building of their own. */
         public boolean isCraft() {
@@ -1423,6 +1427,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case FISH, STORE, HAUL, NONE, SMITH, TAILOR, BEEKEEP, BREW, ENCHANT, COOK, SHOP, BANK, SCOUT -> null;
             case CAVE -> null;                    // [caves] kitted by the town each morning (CaveDwellers.kitUp)
             case FERRY -> null;                   // [transport] the town's boat is its kit (Ferries)
+            case FIREWORKS -> null;               // [fireworks] its powder and paper are the stores', drawn at the hut (FireworksMaker)
         };
         // ONE restock, one pace. This used to be three separate paced scoops in
         // a row, and only the first of them could ever run: the food scoop took
@@ -1722,6 +1727,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     /** [transport] A ferryman's day at the landings (Ferries): VillageFolkEntity does it. */
     protected boolean ferryWork() { return false; }
+
+    /** [fireworks] The fireworks maker's day at the powder hut (VillageFolkEntity: FireworksMaker.work). */
+    protected boolean fireworksWork() { return false; }
 
     /** Is this animal one of its village's own herd (penned, led, brought home), not game? (VillageFolkEntity) */
     public boolean spareTheHerd(net.minecraft.world.entity.animal.Animal a) { return false; }
@@ -2652,6 +2660,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case STORE, HAUL, NONE, SMITH, TAILOR, BEEKEEP, BREW, ENCHANT, COOK, SHOP, BANK, SCOUT -> false;
             case CAVE -> false;                   // [caves] kitted by the town each morning (CaveDwellers.kitUp)
             case FERRY -> false;                  // [transport] the town's boat is its kit (Ferries)
+            case FIREWORKS -> false;              // [fireworks] its powder and paper are the stores', drawn at the hut (FireworksMaker)
         };
     }
 
@@ -4309,6 +4318,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case HUNT -> s.is(Items.ARROW) ? 32 : s.is(Items.BOW) ? 1 : GAME.test(s) ? 0
                 : (s.get(DataComponents.FOOD) != null ? 8 : 0);
             case FERRY -> s.get(DataComponents.FOOD) != null ? 8 : 0;   // [transport] a bite between crossings
+            case FIREWORKS -> s.get(DataComponents.FOOD) != null ? 8 : 0;   // [fireworks] never powder in a pocket: the hut's chest or the stores
             case NONE -> 0;
         };
     }
@@ -5605,6 +5615,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 case HUNT -> new Branch[]{ SENTINEL, HUSBANDRY };
                 case CAVE -> new Branch[]{ SENTINEL, PROSPECTOR };     // [caves]
                 case FERRY -> new Branch[]{ PORTER, SENTINEL };        // [transport]
+                case FIREWORKS -> new Branch[]{ PORTER, PROSPECTOR };  // [fireworks]
                 case NONE -> new Branch[]{};
             };
         }
@@ -7225,6 +7236,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 // [transport] At the landing with the town's boat, rowing folk across for a coin (Ferries).
                 if (ferryWork()) return true;
             }
+            case FIREWORKS -> {
+                // [fireworks] At the powder hut, stars and rockets out of the stores (FireworksMaker).
+                if (fireworksWork()) return true;
+            }
             case NONE -> { }
         }
         // Nothing to do right where it's stood. On a zone bigger than its own
@@ -7774,6 +7789,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case STORE, HAUL, NONE, SMITH, TAILOR, BEEKEEP, BREW, ENCHANT, COOK, SHOP, BANK, SCOUT -> 0;
             case CAVE -> 0;                       // [caves] its finds go into the stores when it is home (CaveDwellers.home)
             case FERRY -> 0;                      // [transport] its fares go into its purse, not the stores
+            case FIREWORKS -> 0;                  // [fireworks] its rockets go into the stores as they are made (FireworksMaker)
         };
         // Never more than a stash would actually move. The trade's own sums kept back less
         // than the stash keeps back (a village miner keeps 32 cobble, the sum kept 16), so

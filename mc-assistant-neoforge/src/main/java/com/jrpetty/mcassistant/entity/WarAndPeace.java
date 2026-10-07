@@ -1781,6 +1781,9 @@ public final class WarAndPeace {
             feast(level, side, other, day);
             onPeace(level, side);
         }
+        // [fireworks] The war won: the winner's feast for the peace is a victory, and its fireworks maker makes for it.
+        UUID won = terms.share() >= 1 ? a : repaid > 0 ? d : null;
+        if (won != null) FireworksMaker.victory(won, won.equals(a) ? d : a, feastDay(won));
         LOG.info("[MCA-WAR] peace between {} and {} {} (balance {}): {}", name(a), name(d), how, String.format(Locale.ROOT, "%.2f", terms.balance()), text);
         return text;
     }

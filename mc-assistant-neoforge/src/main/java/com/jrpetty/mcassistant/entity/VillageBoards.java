@@ -395,6 +395,8 @@ public final class VillageBoards {
         if (gathering != null) out.add("RG|Now: " + gathering + " — come along!");
         Gatherings.Kind tonight = Gatherings.tonight(id, day);
         if (tonight != null) out.add("RG|Tonight: " + Gatherings.describe(tonight, id) + " — everybody welcome.");
+        String fireworks = FireworkShows.boardLine(id, day);        // [fireworks] a display on now; the rockets ready, the next display
+        if (fireworks != null) out.add(fireworks);
         for (String p : Assemblies.planned(id)) out.add("RG|This evening: " + p + ".");
         if (day % 7 == 3) out.add("RM|The council sits this evening.");
         out.addAll(Elections.board(id, day));

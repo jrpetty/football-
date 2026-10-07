@@ -175,6 +175,17 @@ public final class Trades {
                 List.of(need("a boat", s -> s.is(net.minecraft.tags.ItemTags.BOATS), 1, "the town's, moored at the landing")),
                 List.of(),
                 "folk across the water, and a coin a crossing into my purse");
+            // [fireworks] The fireworks maker (FireworksMaker): the stores' gunpowder, paper and dye, at the powder hut.
+            case FIREWORKS -> new Trade("I make the town's fireworks at the powder hut: stars of gunpowder and dye (a gold nugget for a"
+                    + " star, a feather for a burst, glowstone for a twinkle), rockets of paper and one to three gunpowder, and I set"
+                    + " them off at the festivals, the weddings and the victories. Never in a thunderstorm, and never at anybody",
+                List.of(),
+                List.of(need("gunpowder", s -> s.is(Items.GUNPOWDER), 4, "the watch's creepers, the hunters, the Nether runners"),
+                    need("paper", s -> s.is(Items.PAPER) || s.is(Items.SUGAR_CANE), 3, "the farmers' sugar cane"),
+                    need("dyes", s -> s.getItem() instanceof net.minecraft.world.item.DyeItem || s.is(net.minecraft.tags.ItemTags.FLOWERS)
+                        || s.is(Items.LAPIS_LAZULI) || s.is(Items.INK_SAC) || s.is(Items.BONE_MEAL) || s.is(Items.COCOA_BEANS), 2,
+                        "the meadows' flowers, the miners' lapis, the fishers' ink, the cocoa and the bone meal")),
+                "firework rockets for the stores: the town's displays, in its colours, and elytra rockets for the shop");
             case NONE -> new Trade("I'm between trades just now", List.of(), List.of(), "whatever the village needs a hand with");
         };
     }
